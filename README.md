@@ -2,4 +2,4 @@
 
 [Work in progress]
 
-Render engine
+This is my hobby project. More detailed readme is coming soon.
