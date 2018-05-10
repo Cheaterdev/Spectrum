@@ -1,0 +1,234 @@
+# Electric-Cloud automatically generated...
+# ECAddIn v5.1.0.36374 Dec  3 2016 08:28:38
+
+# Global variables
+FrameworkDir=C:\Windows\Microsoft.NET\Framework\ 
+FrameworkVersion=v4.0.30319 
+FrameworkSDKDir=C:\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\ 
+ConfigurationName=Release 
+PlatformName=Win32 
+IntDir=H:\Spectrum\3rdparty\ZipLib\Win32\Release\ 
+OutDir=H:\Spectrum\Win32\Release\ 
+RootNameSpace=ZipLib 
+DevEnvDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\ 
+ProjectDir=H:\Spectrum\3rdparty\ZipLib\ 
+ProjectPath=H:\Spectrum\3rdparty\ZipLib\ZipLib.vcxproj 
+ProjectName=ZipLib 
+ProjectFileName=ZipLib.vcxproj 
+ProjectExt=.vcxproj 
+SolutionDir=H:\Spectrum\ 
+SolutionPath=H:\Spectrum\Spectrum.sln 
+SolutionName=Spectrum 
+SolutionFileName=Spectrum.sln 
+SolutionExt=.sln 
+VSInstallDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\ 
+VCInstallDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\ 
+Xbox360InstallDir= 
+
+BUILD_ORDER_USING_PCH= 
+
+BUILD_ORDER_NOT_USING_PCH= 
+
+LINK32_OBJS= 
+
+SBR_FILES= 
+
+LIBRARIAN_FILES= 
+
+LINKER_FILES= 
+
+NMAKE_FILES= 
+
+BSC_FILES= 
+
+XML_DATA_GEN_FILES= 
+
+MIDL_FILES= 
+
+RESOURCE_FILES= 
+
+MANAGED_RESOURCE_FILES= 
+
+ASSEMBLY_RESOURCES= 
+
+XDCMAKE_FILES= 
+
+FORCED_USING_LIST= 
+
+WEB_REFERENCE_FILES= 
+
+MT_FILES= 
+
+
+# Targets...
+rebuild:: clean build
+
+
+LINK32_OBJS= \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchive.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchiveEntry.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipFile.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\EndOfCentralDirectoryBlock.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipCentralDirectoryFileHeader.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipGenericExtraField.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipLocalFileHeader.obj" \
+
+
+BUILD_ORDER_USING_PCH= \
+
+
+BUILD_ORDER_NOT_USING_PCH= \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchive.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchiveEntry.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipFile.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\EndOfCentralDirectoryBlock.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipCentralDirectoryFileHeader.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipGenericExtraField.obj" \
+	"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipLocalFileHeader.obj" \
+
+
+SBR_FILES= \
+
+
+
+"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchive.obj":: "H:\Spectrum\3rdparty\ZipLib\ZipArchive.cpp" 
+	@cl.exe @<<cltmpfileSpectrum_ZipLib_Release_Win32173
+ /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _LIB /D _UNICODE /D UNICODE /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchive.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP /wd4996 "H:\Spectrum\3rdparty\ZipLib\ZipArchive.cpp"
+<<
+
+"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchiveEntry.obj":: "H:\Spectrum\3rdparty\ZipLib\ZipArchiveEntry.cpp" 
+	@cl.exe @<<cltmpfileSpectrum_ZipLib_Release_Win32174
+ /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _LIB /D _UNICODE /D UNICODE /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchiveEntry.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP /wd4996 "H:\Spectrum\3rdparty\ZipLib\ZipArchiveEntry.cpp"
+<<
+
+"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipFile.obj":: "H:\Spectrum\3rdparty\ZipLib\ZipFile.cpp" 
+	@cl.exe @<<cltmpfileSpectrum_ZipLib_Release_Win32175
+ /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _LIB /D _UNICODE /D UNICODE /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipFile.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP /wd4996 "H:\Spectrum\3rdparty\ZipLib\ZipFile.cpp"
+<<
+
+"H:\Spectrum\3rdparty\ZipLib\Win32\Release\EndOfCentralDirectoryBlock.obj":: "H:\Spectrum\3rdparty\ZipLib\detail\EndOfCentralDirectoryBlock.cpp" 
+	@cl.exe @<<cltmpfileSpectrum_ZipLib_Release_Win32176
+ /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _LIB /D _UNICODE /D UNICODE /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"H:\Spectrum\3rdparty\ZipLib\Win32\Release\EndOfCentralDirectoryBlock.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP /wd4996 "H:\Spectrum\3rdparty\ZipLib\detail\EndOfCentralDirectoryBlock.cpp"
+<<
+
+"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipCentralDirectoryFileHeader.obj":: "H:\Spectrum\3rdparty\ZipLib\detail\ZipCentralDirectoryFileHeader.cpp" 
+	@cl.exe @<<cltmpfileSpectrum_ZipLib_Release_Win32177
+ /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _LIB /D _UNICODE /D UNICODE /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipCentralDirectoryFileHeader.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP /wd4996 "H:\Spectrum\3rdparty\ZipLib\detail\ZipCentralDirectoryFileHeader.cpp"
+<<
+
+"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipGenericExtraField.obj":: "H:\Spectrum\3rdparty\ZipLib\detail\ZipGenericExtraField.cpp" 
+	@cl.exe @<<cltmpfileSpectrum_ZipLib_Release_Win32178
+ /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _LIB /D _UNICODE /D UNICODE /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipGenericExtraField.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP /wd4996 "H:\Spectrum\3rdparty\ZipLib\detail\ZipGenericExtraField.cpp"
+<<
+
+"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipLocalFileHeader.obj":: "H:\Spectrum\3rdparty\ZipLib\detail\ZipLocalFileHeader.cpp" 
+	@cl.exe @<<cltmpfileSpectrum_ZipLib_Release_Win32179
+ /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _LIB /D _UNICODE /D UNICODE /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipLocalFileHeader.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP /wd4996 "H:\Spectrum\3rdparty\ZipLib\detail\ZipLocalFileHeader.cpp"
+<<
+
+IMPORT_LIBS= 
+LIBRARIAN_FILES=$(LIBRARIAN_FILES) "H:\Spectrum\Win32\Release\ZipLib.lib" 
+"H:\Spectrum\Win32\Release\ZipLib.lib" ::  $(IMPORT_LIBS) $(BUILD_ORDER_NOT_USING_PCH) $(BUILD_ORDER_USING_PCH) $(RESOURCE_FILES)
+	@echo Creating library...
+	@lib.exe @<<libtmpfileSpectrum_ZipLib_Release_Win32172
+ /OUT:"H:\Spectrum\Win32\Release\ZipLib.lib" /NOLOGO /LTCG
+  $(IMPORT_LIBS) $(LINK32_OBJS) $(RESOURCE_FILES)
+<<
+
+	@echo #v4.0:v140:false> "Win32\Release\ZipLib.lastbuildstate"
+	@echo Release^|Win32^|H:\Spectrum\^|>> "Win32\Release\ZipLib.lastbuildstate"
+
+custombuild::
+
+prebuild::
+
+prelink::
+
+postbuild::
+
+ecprebuild:: prebuild
+
+ecwebserviceproxygen:: $(WEB_REFERENCE_FILES)
+
+eccustombuild::
+
+ecmidl:: $(MIDL_FILES)
+
+ecxmldatagenerator:: $(XML_DATA_GEN_FILES)
+
+eccompiler:: $(BUILD_ORDER_NOT_USING_PCH) $(BUILD_ORDER_USING_PCH)
+
+ecmanagedresourcecompiler:: $(MANAGED_RESOURCE_FILES)
+
+ecresourcecompiler:: $(RESOURCE_FILES)
+
+ecprelink:: prelink
+
+eclinker:: $(LINKER_FILES)
+
+eclibrarian:: $(LIBRARIAN_FILES)
+
+ecxdcmake::
+
+ecbscmake:: $(BSC_FILES)
+
+ecfxcop::
+
+ecpostbuild:: custombuild postbuild
+
+build:: ecmakedirs eccopyrefs ecprebuild eccustombuild ecxmldatagenerator ecmidl eccompiler ecmanagedresourcecompiler ecresourcecompiler ecprelink eclinker ecxdcmake ecbscmake eclibrarian ecpostbuild  $(NMAKE_FILES)
+
+clean::
+	@-<<del_files_Spectrum_Release_Win32_Release_Win32202.bat
+@echo OFF
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.idb" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.iobj" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.ilk" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.obj.enc" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipLocalFileHeader.obj" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.resources" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.tlb" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*_manifest.rc" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.tlog" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.rep" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.pgc" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipCentralDirectoryFileHeader.obj" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchive.obj" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.manifest" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.pgd" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.cache" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipFile.obj" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipArchiveEntry.obj" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.pdb" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.exp" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.res" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.rsp" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.ipdb" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.bi" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.tlh" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\EndOfCentralDirectoryBlock.obj" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.meta" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.tli" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.metagen" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.sbr" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.bsc" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.pch" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.cdf" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.xml" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.xdc" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.tmp" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\*.obj" > nul 2>&1
+del /Q "H:\Spectrum\3rdparty\ZipLib\Win32\Release\ZipGenericExtraField.obj" > nul 2>&1
+<<
+
+
+ecmakedirs::
+	@-<<make_dirs_Spectrum_Release_Win32_Release_Win32203.bat
+@echo OFF
+if not exist "H:\Spectrum\Win32\Release" mkdir "H:\Spectrum\Win32\Release"
+if not exist "H:\Spectrum\3rdparty\ZipLib\Win32\Release" mkdir "H:\Spectrum\3rdparty\ZipLib\Win32\Release"
+<<
+
+
+eccopyrefs::
+

@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Flow">
+      <UniqueIdentifier>{045587a6-05cb-4277-980e-3231cc574c61}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="FlowGraph.cpp">
+      <Filter>Flow</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="FlowGraph.h">
+      <Filter>Flow</Filter>
+    </ClInclude>
+    <ClInclude Include="thread_pool.h">
+      <Filter>Flow</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="FlowSystem.h">
+      <Filter>Flow</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

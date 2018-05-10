@@ -1,0 +1,470 @@
+# Electric-Cloud automatically generated...
+# ECAddIn v5.1.0.36374 Dec  3 2016 08:28:38
+
+# Global variables
+FrameworkDir=C:\Windows\Microsoft.NET\Framework\ 
+FrameworkVersion=v4.0.30319 
+FrameworkSDKDir=C:\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\ 
+ConfigurationName=Release 
+PlatformName=Win32 
+IntDir=H:\Spectrum\RenderSystem\Win32\Release\ 
+OutDir=H:\Spectrum\Win32\Release\ 
+RootNameSpace=RenderSystem 
+DevEnvDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\ 
+ProjectDir=H:\Spectrum\RenderSystem\ 
+ProjectPath=H:\Spectrum\RenderSystem\RenderSystem.vcxproj 
+ProjectName=RenderSystem 
+ProjectFileName=RenderSystem.vcxproj 
+ProjectExt=.vcxproj 
+SolutionDir=H:\Spectrum\ 
+SolutionPath=H:\Spectrum\Spectrum.sln 
+SolutionName=Spectrum 
+SolutionFileName=Spectrum.sln 
+SolutionExt=.sln 
+VSInstallDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\ 
+VCInstallDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\ 
+Xbox360InstallDir= 
+
+BUILD_ORDER_USING_PCH= 
+
+BUILD_ORDER_NOT_USING_PCH= 
+
+LINK32_OBJS= 
+
+SBR_FILES= 
+
+LIBRARIAN_FILES= 
+
+LINKER_FILES= 
+
+NMAKE_FILES= 
+
+BSC_FILES= 
+
+XML_DATA_GEN_FILES= 
+
+MIDL_FILES= 
+
+RESOURCE_FILES= 
+
+MANAGED_RESOURCE_FILES= 
+
+ASSEMBLY_RESOURCES= 
+
+XDCMAKE_FILES= 
+
+FORCED_USING_LIST= 
+
+WEB_REFERENCE_FILES= 
+
+MT_FILES= 
+
+
+# Targets...
+rebuild: clean build
+
+
+LINK32_OBJS= \
+	"H:\Spectrum\RenderSystem\Win32\Release\AssimpLoader.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Mesh.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Vertexes.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\SceneObject.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TextSystem.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Occluder.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Context2.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\GPUCachedRenderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\GPUMeshRender.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MeshRenderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\StencilRenderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\GUI.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Skin.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\AssetExplorer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Button.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\CheckBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\CheckBoxText.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\CircleSelector.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ColoredRect.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ComboBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Container.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\DockBase.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Dragger.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\EditText.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\HorizontalLayout.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Image.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Label.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ListBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MenuList.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\OptionBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Resizable.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Resizer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ScrollBar.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ScrollContainer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\StatusBar.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TabControl.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Tree.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ValueBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Window.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Canvas.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Comment.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ComponentWindow.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\OutputWindow.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TaskViewer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TimerGraph.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Renderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Asset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\AssetRenderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\BinaryAsset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MaterialAsset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MeshAsset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TextureAsset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TiledTexture.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\PSSM.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ShaderMaterial.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\universal_material.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Values.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\VoxelGI.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\DynamicTileGenerator.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\GPUTilesBuffer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Texture3DTiled.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\VisibilityBuffer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\SMAA.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\SSR.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Sky.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MipMapGeneration.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\pch.obj" \
+
+
+BUILD_ORDER_USING_PCH= \
+	"H:\Spectrum\RenderSystem\Win32\Release\AssimpLoader.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Mesh.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Vertexes.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\SceneObject.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TextSystem.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Occluder.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Context2.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\GPUCachedRenderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\GPUMeshRender.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MeshRenderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\StencilRenderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\GUI.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Skin.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\AssetExplorer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Button.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\CheckBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\CheckBoxText.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\CircleSelector.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ColoredRect.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ComboBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Container.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\DockBase.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Dragger.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\EditText.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\HorizontalLayout.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Image.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Label.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ListBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MenuList.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\OptionBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Resizable.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Resizer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ScrollBar.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ScrollContainer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\StatusBar.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TabControl.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Tree.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ValueBox.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Window.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Canvas.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Comment.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ComponentWindow.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\OutputWindow.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TaskViewer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TimerGraph.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Renderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Asset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\AssetRenderer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\BinaryAsset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MaterialAsset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MeshAsset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TextureAsset.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\TiledTexture.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\PSSM.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\ShaderMaterial.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\universal_material.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Values.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\VoxelGI.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\DynamicTileGenerator.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\GPUTilesBuffer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Texture3DTiled.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\VisibilityBuffer.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\SMAA.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\SSR.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\Sky.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\MipMapGeneration.obj" \
+	"H:\Spectrum\RenderSystem\Win32\Release\pch.obj" \
+
+
+BUILD_ORDER_NOT_USING_PCH= \
+
+
+SBR_FILES= \
+
+
+
+"H:\Spectrum\RenderSystem\Win32\Release\AssimpLoader.obj": "H:\Spectrum\RenderSystem\Mesh\AssimpLoader.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\AssimpLoader.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Mesh.obj": "H:\Spectrum\RenderSystem\Mesh\Mesh.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Mesh.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Vertexes.obj": "H:\Spectrum\RenderSystem\Mesh\Vertexes.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Vertexes.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\SceneObject.obj": "H:\Spectrum\RenderSystem\Scene\SceneObject.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\SceneObject.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\TextSystem.obj": "H:\Spectrum\RenderSystem\Font\TextSystem.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\TextSystem.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Occluder.obj": "H:\Spectrum\RenderSystem\Occlusion\Occluder.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Occluder.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Context2.obj": "H:\Spectrum\RenderSystem\Context\Context2.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Context2.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\GPUCachedRenderer.obj": "H:\Spectrum\RenderSystem\Renderer\GPUCachedRenderer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\GPUCachedRenderer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\GPUMeshRender.obj": "H:\Spectrum\RenderSystem\Renderer\GPUMeshRender.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\GPUMeshRender.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\MeshRenderer.obj": "H:\Spectrum\RenderSystem\Renderer\MeshRenderer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\MeshRenderer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\StencilRenderer.obj": "H:\Spectrum\RenderSystem\Renderer\StencilRenderer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\StencilRenderer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\GUI.obj": "H:\Spectrum\RenderSystem\GUI\GUI.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\GUI.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Skin.obj": "H:\Spectrum\RenderSystem\GUI\Skin.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Skin.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\AssetExplorer.obj": "H:\Spectrum\RenderSystem\GUI\Elements\AssetExplorer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\AssetExplorer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Button.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Button.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Button.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\CheckBox.obj": "H:\Spectrum\RenderSystem\GUI\Elements\CheckBox.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\CheckBox.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\CheckBoxText.obj": "H:\Spectrum\RenderSystem\GUI\Elements\CheckBoxText.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\CheckBoxText.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\CircleSelector.obj": "H:\Spectrum\RenderSystem\GUI\Elements\CircleSelector.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\CircleSelector.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\ColoredRect.obj": "H:\Spectrum\RenderSystem\GUI\Elements\ColoredRect.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\ColoredRect.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\ComboBox.obj": "H:\Spectrum\RenderSystem\GUI\Elements\ComboBox.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\ComboBox.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Container.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Container.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Container.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\DockBase.obj": "H:\Spectrum\RenderSystem\GUI\Elements\DockBase.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\DockBase.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Dragger.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Dragger.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Dragger.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\EditText.obj": "H:\Spectrum\RenderSystem\GUI\Elements\EditText.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\EditText.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\HorizontalLayout.obj": "H:\Spectrum\RenderSystem\GUI\Elements\HorizontalLayout.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\HorizontalLayout.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Image.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Image.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Image.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Label.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Label.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Label.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\ListBox.obj": "H:\Spectrum\RenderSystem\GUI\Elements\ListBox.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\ListBox.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\MenuList.obj": "H:\Spectrum\RenderSystem\GUI\Elements\MenuList.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\MenuList.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\OptionBox.obj": "H:\Spectrum\RenderSystem\GUI\Elements\OptionBox.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\OptionBox.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Resizable.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Resizable.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Resizable.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Resizer.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Resizer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Resizer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\ScrollBar.obj": "H:\Spectrum\RenderSystem\GUI\Elements\ScrollBar.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\ScrollBar.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\ScrollContainer.obj": "H:\Spectrum\RenderSystem\GUI\Elements\ScrollContainer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\ScrollContainer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\StatusBar.obj": "H:\Spectrum\RenderSystem\GUI\Elements\StatusBar.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\StatusBar.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\TabControl.obj": "H:\Spectrum\RenderSystem\GUI\Elements\TabControl.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\TabControl.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Tree.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Tree.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Tree.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\ValueBox.obj": "H:\Spectrum\RenderSystem\GUI\Elements\ValueBox.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\ValueBox.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Window.obj": "H:\Spectrum\RenderSystem\GUI\Elements\Window.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Window.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Canvas.obj": "H:\Spectrum\RenderSystem\GUI\Elements\FlowGraph\Canvas.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Canvas.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Comment.obj": "H:\Spectrum\RenderSystem\GUI\Elements\FlowGraph\Comment.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Comment.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\ComponentWindow.obj": "H:\Spectrum\RenderSystem\GUI\Elements\FlowGraph\ComponentWindow.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\ComponentWindow.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\OutputWindow.obj": "H:\Spectrum\RenderSystem\GUI\Debug\OutputWindow.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\OutputWindow.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\TaskViewer.obj": "H:\Spectrum\RenderSystem\GUI\Debug\TaskViewer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\TaskViewer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\TimerGraph.obj": "H:\Spectrum\RenderSystem\GUI\Debug\TimerGraph.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\TimerGraph.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Renderer.obj": "H:\Spectrum\RenderSystem\GUI\Renderer\Renderer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Renderer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Asset.obj": "H:\Spectrum\RenderSystem\Assets\Asset.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Asset.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\AssetRenderer.obj": "H:\Spectrum\RenderSystem\Assets\AssetRenderer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\AssetRenderer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\BinaryAsset.obj": "H:\Spectrum\RenderSystem\Assets\BinaryAsset.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\BinaryAsset.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\MaterialAsset.obj": "H:\Spectrum\RenderSystem\Assets\MaterialAsset.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\MaterialAsset.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\MeshAsset.obj": "H:\Spectrum\RenderSystem\Assets\MeshAsset.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\MeshAsset.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\TextureAsset.obj": "H:\Spectrum\RenderSystem\Assets\TextureAsset.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\TextureAsset.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\TiledTexture.obj": "H:\Spectrum\RenderSystem\Assets\TiledTexture.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\TiledTexture.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\PSSM.obj": "H:\Spectrum\RenderSystem\Lighting\PSSM.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\PSSM.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\ShaderMaterial.obj": "H:\Spectrum\RenderSystem\Materials\ShaderMaterial.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\ShaderMaterial.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\universal_material.obj": "H:\Spectrum\RenderSystem\Materials\universal_material.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\universal_material.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Values.obj": "H:\Spectrum\RenderSystem\Materials\Values.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Values.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\VoxelGI.obj": "H:\Spectrum\RenderSystem\Effects\VoxelGI\VoxelGI.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\VoxelGI.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\DynamicTileGenerator.obj": "H:\Spectrum\RenderSystem\TiledTextures\DynamicTileGenerator.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\DynamicTileGenerator.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\GPUTilesBuffer.obj": "H:\Spectrum\RenderSystem\TiledTextures\GPUTilesBuffer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\GPUTilesBuffer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Texture3DTiled.obj": "H:\Spectrum\RenderSystem\TiledTextures\Texture3DTiled.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Texture3DTiled.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\VisibilityBuffer.obj": "H:\Spectrum\RenderSystem\TiledTextures\VisibilityBuffer.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\VisibilityBuffer.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\SMAA.obj": "H:\Spectrum\RenderSystem\Effects\PostProcess\SMAA.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\SMAA.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\SSR.obj": "H:\Spectrum\RenderSystem\Effects\PostProcess\SSR.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\SSR.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\Sky.obj": "H:\Spectrum\RenderSystem\Effects\Sky.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\Sky.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\MipMapGeneration.obj": "H:\Spectrum\RenderSystem\MipMapGeneration.cpp"  "H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\MipMapGeneration.obj" is out-of-date
+
+"H:\Spectrum\RenderSystem\Win32\Release\RenderSystem.pch" : "H:\Spectrum\RenderSystem\Win32\Release\pch.obj"
+
+"H:\Spectrum\RenderSystem\Win32\Release\pch.obj" : "H:\Spectrum\RenderSystem\pch.cpp"
+	@echo Target "H:\Spectrum\RenderSystem\Win32\Release\pch.obj" is out-of-date
+
+IMPORT_LIBS= 
+LIBRARIAN_FILES=$(LIBRARIAN_FILES) "H:\Spectrum\Win32\Release\RenderSystem.lib" 
+"H:\Spectrum\Win32\Release\RenderSystem.lib" :  $(IMPORT_LIBS) $(BUILD_ORDER_USING_PCH) $(BUILD_ORDER_NOT_USING_PCH) $(RESOURCE_FILES)
+	@echo Target "H:\Spectrum\Win32\Release\RenderSystem.lib" is out-of-date
+
+
+custombuild:
+
+prebuild:
+
+prelink:
+
+postbuild:
+
+ecprebuild: prebuild
+
+ecwebserviceproxygen: $(WEB_REFERENCE_FILES)
+
+eccustombuild:
+
+ecmidl: $(MIDL_FILES)
+
+ecxmldatagenerator: $(XML_DATA_GEN_FILES)
+
+eccompiler: $(BUILD_ORDER_USING_PCH) $(BUILD_ORDER_NOT_USING_PCH)
+
+ecmanagedresourcecompiler: $(MANAGED_RESOURCE_FILES)
+
+ecresourcecompiler: $(RESOURCE_FILES)
+
+ecprelink: prelink
+
+eclinker: $(LINKER_FILES)
+
+eclibrarian: $(LIBRARIAN_FILES)
+
+ecxdcmake:
+
+ecbscmake: $(BSC_FILES)
+
+ecfxcop:
+
+ecpostbuild: custombuild postbuild
+
+build: ecmakedirs eccopyrefs ecprebuild eccustombuild ecxmldatagenerator ecmidl eccompiler ecmanagedresourcecompiler ecresourcecompiler ecprelink eclinker ecxdcmake ecbscmake eclibrarian ecpostbuild  $(NMAKE_FILES)
+
+clean:
+
+
+ecmakedirs:
+
+
+eccopyrefs:
+

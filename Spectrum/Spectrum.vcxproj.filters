@@ -1,0 +1,444 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Engine">
+      <UniqueIdentifier>{162f51c2-9a41-4d59-833b-75ef462fe8c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{181e3315-85c6-459d-8e71-3158b78c10dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\shaders">
+      <UniqueIdentifier>{45f43d18-5777-4b2e-85dc-327dd6041b4d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\shaders\font">
+      <UniqueIdentifier>{a86e0f17-f5d6-4454-85f5-4441e00c13f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\shaders\debug">
+      <UniqueIdentifier>{2b2fc658-94bf-49e9-9313-01a1a8c42836}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Threads">
+      <UniqueIdentifier>{dba53b9b-3857-491a-a9cb-813414c148b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Engine\Application">
+      <UniqueIdentifier>{9988793b-a821-45cc-9321-0766ddbe8f29}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\shaders\gui">
+      <UniqueIdentifier>{0ffed0e4-1bf0-47bb-9594-6f53efe7d7f4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tests">
+      <UniqueIdentifier>{8f49c29b-269e-4a0a-bc61-d9c2fff7bf66}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\textures">
+      <UniqueIdentifier>{ea84280d-3940-4c9d-9247-00503461d621}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\textures\gui">
+      <UniqueIdentifier>{81290d73-b80d-44c4-bb92-12e8e9d6d948}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Platform">
+      <UniqueIdentifier>{cb3c4a18-6f09-4dfe-9b3c-aa1e72d06c08}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\shaders\materials">
+      <UniqueIdentifier>{2799fc75-73fd-40cb-8b78-1c627b9d2eed}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Application\Application.cpp">
+      <Filter>Engine\Application</Filter>
+    </ClCompile>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="Engine\Engine.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\TaskManager.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\Scheduler.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Engine\SystemInfo.cpp">
+      <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="Platform\Window.cpp">
+      <Filter>Platform</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Application\Application.h">
+      <Filter>Engine\Application</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Platform\Window.h">
+      <Filter>Platform</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Engine.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\TaskManager.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\Scheduler.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Engine\SystemInfo.h">
+      <Filter>Engine</Filter>
+    </ClInclude>
+    <ClInclude Include="Threads\thread_pool.h">
+      <Filter>Threads</Filter>
+    </ClInclude>
+    <ClInclude Include="Header.h">
+      <Filter>Resources\shaders</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\font\gsClip.hlsl">
+      <Filter>Resources\shaders\font</Filter>
+    </None>
+    <None Include="shaders\font\gsSimple.hlsl">
+      <Filter>Resources\shaders\font</Filter>
+    </None>
+    <None Include="shaders\font\psClip.hlsl">
+      <Filter>Resources\shaders\font</Filter>
+    </None>
+    <None Include="shaders\font\psSimple.hlsl">
+      <Filter>Resources\shaders\font</Filter>
+    </None>
+    <None Include="shaders\font\vsClip.hlsl">
+      <Filter>Resources\shaders\font</Filter>
+    </None>
+    <None Include="shaders\font\vsEmpty.hlsl">
+      <Filter>Resources\shaders\font</Filter>
+    </None>
+    <None Include="shaders\font\vsSimple.hlsl">
+      <Filter>Resources\shaders\font</Filter>
+    </None>
+    <None Include="shaders\debug\box.hlsl">
+      <Filter>Resources\shaders\debug</Filter>
+    </None>
+    <None Include="shaders\gui\button.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\window.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\label.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\editbox.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\checkbox.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\scrollbar.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\area.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\listbox.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\container.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\editcursor.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\combobox.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\color.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="material.hlsl">
+      <Filter>Resources\shaders\materials</Filter>
+    </None>
+    <None Include="shaders\gui\flow_line.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\link_item.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\image.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\canvas.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\component_window.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\tabbutton.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\tabstrip.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\comment.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="cubes.mtl" />
+    <None Include="shaders\texture_drawer.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\gui\virtual.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\cs_test.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="cubes.obj">
+      <Filter>Threads</Filter>
+    </None>
+    <None Include="shaders\UniversalMaterial.hlsl">
+      <Filter>Resources\shaders\materials</Filter>
+    </None>
+    <None Include="shaders\gui\ninepatch.hlsl">
+      <Filter>Resources\shaders\gui</Filter>
+    </None>
+    <None Include="shaders\DeferredShading.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="nanosuit\nanosuit2.obj" />
+    <None Include="shaders\tiles.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\Lighting.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\PSSM.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\Reflection.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\sky.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\Ambient.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\SMAA.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\SMAA_impl.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\Sky_common.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\ReflectionPixel.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\GenerateMips.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\Downsample.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\cubemap_down.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\cubemap.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\no_color.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\earth.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="SSAO.h" />
+    <None Include="shaders\ViewPortRender.hlsl" />
+    <None Include="shaders\occluder.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\occluder_cs.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\occluder_cs_invisible.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\Common.hlsl" />
+    <None Include="resources\axis.mtl">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="shaders\PBR.hlsl" />
+    <None Include="shaders\PSSM_impl.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\occluder_frustum.hlsl" />
+    <None Include="shaders\SSGI.hlsl" />
+    <None Include="shaders\voxel_screen_reflection.hlsl" />
+    <None Include="shaders\voxelization.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\v.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\stencil.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\occluder_cs_dispatch_init.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\HDR_histo.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\HDR_exp.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\downsample_depth.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\depth_render.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\copy_texture.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\contour.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
+    <None Include="shaders\gbuffer_quality.hlsl" />
+    <None Include="shaders\gui\rect.hlsl" />
+    <None Include="shaders\HDR_Luma_extract.hlsl" />
+    <None Include="shaders\HDR_tonemap.hlsl" />
+    <None Include="shaders\voxel_lighting.hlsl" />
+    <None Include="shaders\voxel_mipmap.hlsl" />
+    <None Include="shaders\voxel_screen.hlsl" />
+    <None Include="shaders\ReflectionPixelDilate.hlsl" />
+    <None Include="shaders\voxel_screen_blur.hlsl" />
+    <None Include="shaders\triangle.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="texture.png" />
+    <Image Include="textures\gui\down.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\window_close.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="resources\best_fit_normals.dds">
+      <Filter>Resources</Filter>
+    </Image>
+    <Image Include="textures\gui\back_fill.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\background.jpg">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\background.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\background2.jpg">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\button.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\button_hover.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\button_pressed.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\check_checked.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\check_normal.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\circle.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\circle_inner.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\combo.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\combo_hover.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\combo_pressed.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\container.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\debug_back.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\edit.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\flow_comment.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\flow_window.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\flow_window_active.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\item_hover.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\item_normal.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\option_checked.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\option_normal.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\shadow.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\tab.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\tab_button.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\tab_button_back.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\tab_button_hover.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\tab_strip.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\tree_closed.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\tree_folder.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\tree_opened.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\virtual.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\window_active.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+    <Image Include="textures\gui\window_inactive.png">
+      <Filter>Resources\textures\gui</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="resources\axis.obj">
+      <Filter>Resources</Filter>
+    </Object>
+  </ItemGroup>
+</Project>

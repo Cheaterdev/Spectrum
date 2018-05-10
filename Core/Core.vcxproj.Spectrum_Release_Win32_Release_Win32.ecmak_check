@@ -1,0 +1,210 @@
+# Electric-Cloud automatically generated...
+# ECAddIn v5.1.0.36374 Dec  3 2016 08:28:38
+
+# Global variables
+FrameworkDir=C:\Windows\Microsoft.NET\Framework\ 
+FrameworkVersion=v4.0.30319 
+FrameworkSDKDir=C:\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\ 
+ConfigurationName=Release 
+PlatformName=Win32 
+IntDir=H:\Spectrum\Core\Win32\Release\ 
+OutDir=H:\Spectrum\Win32\Release\ 
+RootNameSpace=Core 
+DevEnvDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\ 
+ProjectDir=H:\Spectrum\Core\ 
+ProjectPath=H:\Spectrum\Core\Core.vcxproj 
+ProjectName=Core 
+ProjectFileName=Core.vcxproj 
+ProjectExt=.vcxproj 
+SolutionDir=H:\Spectrum\ 
+SolutionPath=H:\Spectrum\Spectrum.sln 
+SolutionName=Spectrum 
+SolutionFileName=Spectrum.sln 
+SolutionExt=.sln 
+VSInstallDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\ 
+VCInstallDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\ 
+Xbox360InstallDir= 
+
+BUILD_ORDER_USING_PCH= 
+
+BUILD_ORDER_NOT_USING_PCH= 
+
+LINK32_OBJS= 
+
+SBR_FILES= 
+
+LIBRARIAN_FILES= 
+
+LINKER_FILES= 
+
+NMAKE_FILES= 
+
+BSC_FILES= 
+
+XML_DATA_GEN_FILES= 
+
+MIDL_FILES= 
+
+RESOURCE_FILES= 
+
+MANAGED_RESOURCE_FILES= 
+
+ASSEMBLY_RESOURCES= 
+
+XDCMAKE_FILES= 
+
+FORCED_USING_LIST= 
+
+WEB_REFERENCE_FILES= 
+
+MT_FILES= 
+
+
+# Targets...
+rebuild: clean build
+
+
+LINK32_OBJS= \
+	"H:\Spectrum\Core\Win32\Release\GeometryPrimitives.obj" \
+	"H:\Spectrum\Core\Win32\Release\Matrices.obj" \
+	"H:\Spectrum\Core\Win32\Release\Quaternions.obj" \
+	"H:\Spectrum\Core\Win32\Release\ScalarMath.obj" \
+	"H:\Spectrum\Core\Win32\Release\Vectors.obj" \
+	"H:\Spectrum\Core\Win32\Release\EditObject.obj" \
+	"H:\Spectrum\Core\Win32\Release\Log.obj" \
+	"H:\Spectrum\Core\Win32\Release\md5.obj" \
+	"H:\Spectrum\Core\Win32\Release\Debug.obj" \
+	"H:\Spectrum\Core\Win32\Release\StackWalker.obj" \
+	"H:\Spectrum\Core\Win32\Release\guid.obj" \
+	"H:\Spectrum\Core\Win32\Release\Threading.obj" \
+	"H:\Spectrum\Core\Win32\Release\InputSystem.obj" \
+	"H:\Spectrum\Core\Win32\Release\pch.obj" \
+	"H:\Spectrum\Core\Win32\Release\Platform.obj" \
+
+
+BUILD_ORDER_USING_PCH= \
+	"H:\Spectrum\Core\Win32\Release\GeometryPrimitives.obj" \
+	"H:\Spectrum\Core\Win32\Release\Matrices.obj" \
+	"H:\Spectrum\Core\Win32\Release\Quaternions.obj" \
+	"H:\Spectrum\Core\Win32\Release\ScalarMath.obj" \
+	"H:\Spectrum\Core\Win32\Release\Vectors.obj" \
+	"H:\Spectrum\Core\Win32\Release\EditObject.obj" \
+	"H:\Spectrum\Core\Win32\Release\Log.obj" \
+	"H:\Spectrum\Core\Win32\Release\md5.obj" \
+	"H:\Spectrum\Core\Win32\Release\Debug.obj" \
+	"H:\Spectrum\Core\Win32\Release\StackWalker.obj" \
+	"H:\Spectrum\Core\Win32\Release\guid.obj" \
+	"H:\Spectrum\Core\Win32\Release\Threading.obj" \
+	"H:\Spectrum\Core\Win32\Release\InputSystem.obj" \
+	"H:\Spectrum\Core\Win32\Release\pch.obj" \
+	"H:\Spectrum\Core\Win32\Release\Platform.obj" \
+
+
+BUILD_ORDER_NOT_USING_PCH= \
+
+
+SBR_FILES= \
+
+
+
+"H:\Spectrum\Core\Win32\Release\GeometryPrimitives.obj": "H:\Spectrum\Core\Math\GeometryPrimitives.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\GeometryPrimitives.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\Matrices.obj": "H:\Spectrum\Core\Math\Matrices.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\Matrices.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\Quaternions.obj": "H:\Spectrum\Core\Math\Quaternions.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\Quaternions.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\ScalarMath.obj": "H:\Spectrum\Core\Math\ScalarMath.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\ScalarMath.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\Vectors.obj": "H:\Spectrum\Core\Math\Vectors.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\Vectors.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\EditObject.obj": "H:\Spectrum\Core\Patterns\EditObject.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\EditObject.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\Log.obj": "H:\Spectrum\Core\Log\Log.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\Log.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\md5.obj": "H:\Spectrum\Core\Data\md5.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\md5.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\Debug.obj": "H:\Spectrum\Core\DebugInfo\Debug.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\Debug.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\StackWalker.obj": "H:\Spectrum\Core\DebugInfo\StackWalker.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\StackWalker.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\guid.obj": "H:\Spectrum\Core\GUID\guid.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\guid.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\Threading.obj": "H:\Spectrum\Core\Threads\Threading.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\Threading.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\InputSystem.obj": "H:\Spectrum\Core\Input\InputSystem.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\InputSystem.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\Core.pch" : "H:\Spectrum\Core\Win32\Release\pch.obj"
+
+"H:\Spectrum\Core\Win32\Release\pch.obj" : "H:\Spectrum\Core\pch.cpp"
+	@echo Target "H:\Spectrum\Core\Win32\Release\pch.obj" is out-of-date
+
+"H:\Spectrum\Core\Win32\Release\Platform.obj": "H:\Spectrum\Core\Platform.cpp"  "H:\Spectrum\Core\Win32\Release\Core.pch"
+	@echo Target "H:\Spectrum\Core\Win32\Release\Platform.obj" is out-of-date
+
+IMPORT_LIBS= 
+LIBRARIAN_FILES=$(LIBRARIAN_FILES) "H:\Spectrum\Win32\Release\Core.lib" 
+"H:\Spectrum\Win32\Release\Core.lib" :  $(IMPORT_LIBS) $(BUILD_ORDER_USING_PCH) $(BUILD_ORDER_NOT_USING_PCH) $(RESOURCE_FILES)
+	@echo Target "H:\Spectrum\Win32\Release\Core.lib" is out-of-date
+
+
+custombuild:
+
+prebuild:
+
+prelink:
+
+postbuild:
+
+ecprebuild: prebuild
+
+ecwebserviceproxygen: $(WEB_REFERENCE_FILES)
+
+eccustombuild:
+
+ecmidl: $(MIDL_FILES)
+
+ecxmldatagenerator: $(XML_DATA_GEN_FILES)
+
+eccompiler: $(BUILD_ORDER_USING_PCH) $(BUILD_ORDER_NOT_USING_PCH)
+
+ecmanagedresourcecompiler: $(MANAGED_RESOURCE_FILES)
+
+ecresourcecompiler: $(RESOURCE_FILES)
+
+ecprelink: prelink
+
+eclinker: $(LINKER_FILES)
+
+eclibrarian: $(LIBRARIAN_FILES)
+
+ecxdcmake:
+
+ecbscmake: $(BSC_FILES)
+
+ecfxcop:
+
+ecpostbuild: custombuild postbuild
+
+build: ecmakedirs eccopyrefs ecprebuild eccustombuild ecxmldatagenerator ecmidl eccompiler ecmanagedresourcecompiler ecresourcecompiler ecprelink eclinker ecxdcmake ecbscmake eclibrarian ecpostbuild  $(NMAKE_FILES)
+
+clean:
+
+
+ecmakedirs:
+
+
+eccopyrefs:
+

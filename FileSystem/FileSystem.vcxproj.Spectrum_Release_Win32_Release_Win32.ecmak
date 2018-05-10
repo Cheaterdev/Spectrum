@@ -1,0 +1,197 @@
+# Electric-Cloud automatically generated...
+# ECAddIn v5.1.0.36374 Dec  3 2016 08:28:38
+
+# Global variables
+FrameworkDir=C:\Windows\Microsoft.NET\Framework\ 
+FrameworkVersion=v4.0.30319 
+FrameworkSDKDir=C:\Program Files (x86)\Microsoft SDKs\Windows\v8.1A\ 
+ConfigurationName=Release 
+PlatformName=Win32 
+IntDir=H:\Spectrum\FileSystem\Win32\Release\ 
+OutDir=H:\Spectrum\Win32\Release\ 
+RootNameSpace=FileSystem 
+DevEnvDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\Common7\IDE\ 
+ProjectDir=H:\Spectrum\FileSystem\ 
+ProjectPath=H:\Spectrum\FileSystem\FileSystem.vcxproj 
+ProjectName=FileSystem 
+ProjectFileName=FileSystem.vcxproj 
+ProjectExt=.vcxproj 
+SolutionDir=H:\Spectrum\ 
+SolutionPath=H:\Spectrum\Spectrum.sln 
+SolutionName=Spectrum 
+SolutionFileName=Spectrum.sln 
+SolutionExt=.sln 
+VSInstallDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\ 
+VCInstallDir=C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\ 
+Xbox360InstallDir= 
+
+BUILD_ORDER_USING_PCH= 
+
+BUILD_ORDER_NOT_USING_PCH= 
+
+LINK32_OBJS= 
+
+SBR_FILES= 
+
+LIBRARIAN_FILES= 
+
+LINKER_FILES= 
+
+NMAKE_FILES= 
+
+BSC_FILES= 
+
+XML_DATA_GEN_FILES= 
+
+MIDL_FILES= 
+
+RESOURCE_FILES= 
+
+MANAGED_RESOURCE_FILES= 
+
+ASSEMBLY_RESOURCES= 
+
+XDCMAKE_FILES= 
+
+FORCED_USING_LIST= 
+
+WEB_REFERENCE_FILES= 
+
+MT_FILES= 
+
+
+# Targets...
+rebuild:: clean build
+
+
+LINK32_OBJS= \
+	"H:\Spectrum\FileSystem\Win32\Release\FileSystem.obj" \
+	"H:\Spectrum\FileSystem\Win32\Release\pch.obj" \
+
+
+BUILD_ORDER_USING_PCH= \
+	"H:\Spectrum\FileSystem\Win32\Release\FileSystem.obj" \
+	"H:\Spectrum\FileSystem\Win32\Release\pch.obj" \
+
+
+BUILD_ORDER_NOT_USING_PCH= \
+
+
+SBR_FILES= \
+
+
+
+"H:\Spectrum\FileSystem\Win32\Release\FileSystem.obj":: "H:\Spectrum\FileSystem\FileSystem.cpp"  "H:\Spectrum\FileSystem\Win32\Release\FileSystem.pch"
+	@cl.exe @<<cltmpfileSpectrum_FileSystem_Release_Win3218
+ /O2 /Oi /Oy- /GL /sdl /D _MBCS /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Yu"pch.h" /Fp"H:\Spectrum\FileSystem\Win32\Release\FileSystem.pch" /Fo"H:\Spectrum\FileSystem\Win32\Release\FileSystem.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP -Zm200  "H:\Spectrum\FileSystem\FileSystem.cpp"
+<<
+
+"H:\Spectrum\FileSystem\Win32\Release\FileSystem.pch" :: "H:\Spectrum\FileSystem\Win32\Release\pch.obj"
+
+"H:\Spectrum\FileSystem\Win32\Release\pch.obj" :: "H:\Spectrum\FileSystem\pch.cpp"
+	@cl.exe @<<cltmpfileSpectrum_FileSystem_Release_Win3219
+ /O2 /Oi /Oy- /GL /sdl /D _MBCS /EHsc /analyze- /MT /GS /Gy /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Yc"pch.h" /YlFileSystem /Fp"H:\Spectrum\FileSystem\Win32\Release\FileSystem.pch" /Fo"H:\Spectrum\FileSystem\Win32\Release\pch.obj" /W3 /WX- /MP /nologo /c /Z7 /Gd /errorReport:none /fp:precise /TP -Zm200  "H:\Spectrum\FileSystem\pch.cpp"
+<<
+
+IMPORT_LIBS= 
+LIBRARIAN_FILES=$(LIBRARIAN_FILES) "H:\Spectrum\Win32\Release\FileSystem.lib" 
+"H:\Spectrum\Win32\Release\FileSystem.lib" ::  $(IMPORT_LIBS) $(BUILD_ORDER_USING_PCH) $(BUILD_ORDER_NOT_USING_PCH) $(RESOURCE_FILES)
+	@echo Creating library...
+	@lib.exe @<<libtmpfileSpectrum_FileSystem_Release_Win3217
+ /OUT:"H:\Spectrum\Win32\Release\FileSystem.lib" /NOLOGO /LTCG
+  $(IMPORT_LIBS) $(LINK32_OBJS) $(RESOURCE_FILES)
+<<
+
+	@echo #v4.0:v140:false> "Win32\Release\FileSystem.lastbuildstate"
+	@echo Release^|Win32^|H:\Spectrum\^|>> "Win32\Release\FileSystem.lastbuildstate"
+
+custombuild::
+
+prebuild::
+
+prelink::
+
+postbuild::
+
+ecprebuild:: prebuild
+
+ecwebserviceproxygen:: $(WEB_REFERENCE_FILES)
+
+eccustombuild::
+
+ecmidl:: $(MIDL_FILES)
+
+ecxmldatagenerator:: $(XML_DATA_GEN_FILES)
+
+eccompiler:: $(BUILD_ORDER_USING_PCH) $(BUILD_ORDER_NOT_USING_PCH)
+
+ecmanagedresourcecompiler:: $(MANAGED_RESOURCE_FILES)
+
+ecresourcecompiler:: $(RESOURCE_FILES)
+
+ecprelink:: prelink
+
+eclinker:: $(LINKER_FILES)
+
+eclibrarian:: $(LIBRARIAN_FILES)
+
+ecxdcmake::
+
+ecbscmake:: $(BSC_FILES)
+
+ecfxcop::
+
+ecpostbuild:: custombuild postbuild
+
+build:: ecmakedirs eccopyrefs ecprebuild eccustombuild ecxmldatagenerator ecmidl eccompiler ecmanagedresourcecompiler ecresourcecompiler ecprelink eclinker ecxdcmake ecbscmake eclibrarian ecpostbuild  $(NMAKE_FILES)
+
+clean::
+	@-<<del_files_Spectrum_Release_Win32_Release_Win32165.bat
+@echo OFF
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.pgd" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.resources" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.iobj" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.pdb" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.exp" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.res" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.rsp" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.tlh" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.bi" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*_manifest.rc" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.tlog" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.tli" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.obj.enc" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.cache" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.sbr" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.bsc" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.pch" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.ipdb" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.cdf" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.xml" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.xdc" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.meta" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.tmp" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.obj" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.idb" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.manifest" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\pch.obj" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.ilk" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\FileSystem.pch" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.metagen" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.tlb" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\FileSystem.obj" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.rep" > nul 2>&1
+del /Q "H:\Spectrum\FileSystem\Win32\Release\*.pgc" > nul 2>&1
+<<
+
+
+ecmakedirs::
+	@-<<make_dirs_Spectrum_Release_Win32_Release_Win32166.bat
+@echo OFF
+if not exist "H:\Spectrum\Win32\Release" mkdir "H:\Spectrum\Win32\Release"
+if not exist "H:\Spectrum\FileSystem\Win32\Release" mkdir "H:\Spectrum\FileSystem\Win32\Release"
+<<
+
+
+eccopyrefs::
+

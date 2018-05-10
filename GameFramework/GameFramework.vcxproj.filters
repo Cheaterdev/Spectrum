@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClInclude Include="GameFramework\UObject.h">
+      <Filter>GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="GameSystem\AIController.h">
+      <Filter>GameSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="GameSystem\Camera.h">
+      <Filter>GameSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="GameSystem\Controller.h">
+      <Filter>GameSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="GameSystem\GameObject.h">
+      <Filter>GameSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="GameSystem\GameSystem.h">
+      <Filter>GameSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="GameSystem\Pawn.h">
+      <Filter>GameSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="GameSystem\PlayerController.h">
+      <Filter>GameSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="GameFramework\World.h">
+      <Filter>GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="GameFramework\base_system.h">
+      <Filter>GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="GameFramework\uscene.h">
+      <Filter>GameFramework</Filter>
+    </ClInclude>
+    <ClInclude Include="pch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="GameFramework\UObject.cpp">
+      <Filter>GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="GameSystem\AIController.cpp">
+      <Filter>GameSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GameSystem\Camera.cpp">
+      <Filter>GameSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GameSystem\Controller.cpp">
+      <Filter>GameSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GameSystem\GameObject.cpp">
+      <Filter>GameSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GameSystem\GameSystem.cpp">
+      <Filter>GameSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GameSystem\Pawn.cpp">
+      <Filter>GameSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GameSystem\PlayerController.cpp">
+      <Filter>GameSystem</Filter>
+    </ClCompile>
+    <ClCompile Include="GameFramework\World.cpp">
+      <Filter>GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="GameFramework\base_system.cpp">
+      <Filter>GameFramework</Filter>
+    </ClCompile>
+    <ClCompile Include="GameFramework\uscene.cpp">
+      <Filter>GameFramework</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="GameFramework">
+      <UniqueIdentifier>{d4c5e665-a773-413b-bdab-237bddd59cb5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameSystem">
+      <UniqueIdentifier>{ddc898aa-6f4d-4574-b7ce-fc2362ba8fe0}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
