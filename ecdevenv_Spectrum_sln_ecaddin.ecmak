@@ -1,7 +1,0 @@
-# ecdevenv v5.1.0.36374 master makefile
-
-rebuild: rebuild_Spectrum_0_Release_Win32
-
-rebuild_Spectrum_0_Release_Win32:
-	@emake -f "H:\Spectrum\Spectrum.sln.Release_Win32.ecmak" rebuild
-
