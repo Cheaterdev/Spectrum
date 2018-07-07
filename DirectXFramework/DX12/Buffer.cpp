@@ -16,7 +16,7 @@ namespace DX12
 	}
 
     GPUBuffer::GPUBuffer(UINT count, UINT stride) : count(count),
-        stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(count * stride), HeapType::DEFAULT, ResourceState::COMMON)
+        stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(std::max(4u,count * stride)), HeapType::DEFAULT, ResourceState::COMMON)
     {
         size = count * stride;
     }

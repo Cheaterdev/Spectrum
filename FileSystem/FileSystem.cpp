@@ -38,9 +38,9 @@ std::string native_file_provider::load_all(file* info)
     return result;
 }
 
-void native_file_provider::on_change(std::wstring s, std::function<void()> f)
+void native_file_provider::on_change(const std::filesystem::path& path, std::function<void()> f)
 {
-    auto s2 = s.substr(0, s.find_last_of(L"\\/"));
+	auto s2 = path.parent_path().generic_wstring();
     thread_pool::get().enqueue([s2, f]()
     {
         while (thread_pool::is_good())

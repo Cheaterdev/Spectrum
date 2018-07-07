@@ -63,13 +63,27 @@ class variant
 	public:
 		T value;
 
-		var_typed(const T& v) : var_base(typeid(T)), value(v)
+	/*	var_typed(const T& v) : var_base(typeid(T)), value(v)
 		{
+		}
+		*/
+		template<class ...Args>
+		var_typed(Args...args) : var_base(typeid(T)), value(args...)
+		{
+		
+		}
+
+		var_typed() : var_base(typeid(T))
+		{
+
 		}
 
 		virtual std::shared_ptr<var_base> clone() override
 		{
-			return std::make_shared<var_typed<T>>(value);
+			if constexpr (std::is_copy_constructible_v<T>)
+				return std::make_shared<var_typed<T>>(value);
+			else
+				return std::make_shared<var_typed<T>>();
 		}
 
 		virtual ~var_typed()
@@ -90,11 +104,23 @@ public:
 		typed.reset(new var_typed<T>(value));
 	}
 
+	template<class T, class ...Args>
+	void create(Args...args)
+	{
+		typed.reset(new var_typed<T>(args...));
+	}
+	/*
+	template<class T>
+	void create()
+	{
+		typed.reset(new var_typed<T>());
+	}
 
+	*/
 	void operator = (variant value);
 
 	template<class T>
-	T get() const
+	T& get() const
 	{
 		var_typed<T>* var = dynamic_cast<var_typed<T>*>(typed.get());
 

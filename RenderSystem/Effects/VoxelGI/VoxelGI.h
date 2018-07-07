@@ -69,19 +69,37 @@ private:
 
 	G_Buffer& buffer;
 
-	TextureSwapper gi_textures;
-
-	Render::Texture::ptr current_gi_texture;
-
+	
 	HandleTable gi_rtv;
 	ReflectionEffectPixel reflection_effect;
+
+	struct EyeData:public prop_handler
+	{
+		TextureSwapper gi_textures;
+		TextureSwapper downsampled_light;
+		Render::Texture::ptr downsampled_reflection;
+		Render::Texture::ptr current_gi_texture;
+
+		Events::prop<ivec2> size;
+		EyeData()
+		{
+			size.register_change(this, [this](const ivec2& size)
+			{
+				if (size.x <= 0) return;
+				//downsampled_light.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, size.x/2, size.y/2, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+				gi_textures.resize(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, { size.x, size.y });
+				downsampled_light.resize(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, { size.x / 2, size.y / 2 });
+				current_gi_texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+				downsampled_reflection.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, size.x / 2, size.y / 2, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+
+			});
+		}
+	};
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
 
 	Texture3DTiledDynamic::ptr tiled_volume_albedo;
 	ivec3 lighed_to_albedo_coeff;
-	TextureSwapper downsampled_light;
-	Render::Texture::ptr downsampled_reflection;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;
 
 	Render::Texture::ptr volume_albedo;

@@ -74,8 +74,8 @@ void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_
 	//	UINT values[4] = { 0 };
 	///	graphics.get_native_list()->ClearUnorderedAccessViewUint(id_buffer->get_uav().get_base().gpu, id_buffer->get_static_uav().get_base().cpu, id_buffer->get_native().Get(), values, 0, nullptr);
 	//	graphics.get_native_list()->ClearUnorderedAccessViewUint(axis_id_buffer->get_uav().get_base().gpu, axis_id_buffer->get_static_uav().get_base().cpu, axis_id_buffer->get_native().Get(), values, 0, nullptr);
-		graphics.clear_uav(id_buffer, id_buffer->get_uav()[0]);
-		graphics.clear_uav(axis_id_buffer, axis_id_buffer->get_uav()[0]);
+		graphics.clear_uav(id_buffer, id_buffer->get_raw_uav());
+		graphics.clear_uav(axis_id_buffer, axis_id_buffer->get_raw_uav());
 
 		graphics.set(1, cam.get_const_buffer());
         graphics.set_uav(4, id_buffer->get_gpu_address());

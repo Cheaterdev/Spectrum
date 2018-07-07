@@ -180,18 +180,18 @@ public:
 };
 
 
-struct EffectSignature: public Signature<EffectSignature>
+struct EffectSignature : public Signature<EffectSignature>
 {
-	Descriptors::Table<0,Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV,  0, 8> gi_table;
-	Descriptors::Constants<1,Render::ShaderVisibility::PIXEL, 1, 7> constants;
-	Descriptors::Table<2,Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 2, 1> voxel_lighted;
-	Descriptors::ConstBuffer<3,Render::ShaderVisibility::PIXEL, 0> camera_data;
-	Descriptors::Table<4,Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 6, 2> help_table2;
+	Descriptors::Table<0, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 8> gi_table;
+	Descriptors::Constants<1, Render::ShaderVisibility::PIXEL, 1, 7> constants;
+	Descriptors::Table<2, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 2, 1> voxel_lighted;
+	Descriptors::ConstBuffer<3, Render::ShaderVisibility::PIXEL, 0> camera_data;
+	Descriptors::Table<4, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 6, 2> help_table2;
 
 	EffectSignature() :S(
-		gi_table,constants,voxel_lighted,camera_data,help_table2
-		,Descriptors::Sampler<0, Render::ShaderVisibility::PIXEL, 0>(Render::Samplers::SamplerLinearWrapDesc)
-		,Descriptors::Sampler<1, Render::ShaderVisibility::PIXEL, 1>(Render::Samplers::SamplerPointClampDesc)
+		gi_table, constants, voxel_lighted, camera_data, help_table2
+		, Descriptors::Sampler<0, Render::ShaderVisibility::PIXEL, 0>(Render::Samplers::SamplerLinearWrapDesc)
+		, Descriptors::Sampler<1, Render::ShaderVisibility::PIXEL, 1>(Render::Samplers::SamplerPointClampDesc)
 	)
 	{
 
@@ -209,7 +209,7 @@ struct MipMapSignature : public Signature<MipMapSignature>
 	Descriptors::ConstBuffer<3, Render::ShaderVisibility::ALL, 0> voxels_per_tile;
 
 	MipMapSignature() :S(
-		source,dest_mips, visibility, voxels_per_tile,Descriptors::Sampler<0, Render::ShaderVisibility::ALL, 0>(Render::Samplers::SamplerLinearBorderDesc))
+		source, dest_mips, visibility, voxels_per_tile, Descriptors::Sampler<0, Render::ShaderVisibility::ALL, 0>(Render::Samplers::SamplerLinearBorderDesc))
 	{
 	}
 
@@ -227,65 +227,65 @@ void VoxelGI::init_states()
 	desc.blend.render_target[0].dest = D3D12_BLEND_ONE;
 	desc.blend.render_target[0].source = D3D12_BLEND_ONE;
 
-//		desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	//		desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 	desc.rtv.stencil_desc.StencilFunc = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_EQUAL;
 	desc.vertex = Render::vertex_shader::get_resource({ "shaders\\voxel_screen.hlsl", "VS", 0,{} });
 
 
-	for (int i = 0; i <screen_states.size(); i++)
+	for (int i = 0; i < screen_states.size(); i++)
 	{
 
 		std::vector<D3D::shader_macro> macros;
 
-		if (i==static_cast<int>(VISUALIZE_TYPE::REFLECTION))
+		if (i == static_cast<int>(VISUALIZE_TYPE::REFLECTION))
 			macros.emplace_back("REFLECTION", "1");
 
-		if (i==static_cast<int>(VISUALIZE_TYPE::INDIRECT))
+		if (i == static_cast<int>(VISUALIZE_TYPE::INDIRECT))
 			macros.emplace_back("INDIRECT", "1");
 
 
 		if (i == static_cast<int>(VISUALIZE_TYPE::VOXEL))
 			macros.emplace_back("SCREEN", "1");
 
-	desc.rtv.enable_stencil = true;	
-	desc.blend.render_target[0].enabled = false;
-	desc.blend.render_target[1].enabled = false;
-	desc.rtv.stencil_read_mask = 1;
-	desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen.hlsl", "PS", 0,macros });
-	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
-	screen_states[i][1].reset(new  Render::PipelineState(desc));
+		desc.rtv.enable_stencil = true;
+		desc.blend.render_target[0].enabled = false;
+		desc.blend.render_target[1].enabled = false;
+		desc.rtv.stencil_read_mask = 1;
+		desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen.hlsl", "PS", 0,macros });
+		desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
+		screen_states[i][1].reset(new  Render::PipelineState(desc));
 
 
-	desc.rtv.enable_stencil = false;
-	desc.blend.render_target[0].enabled = false;
-	desc.rtv.ds_format = DXGI_FORMAT_UNKNOWN;
-	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen.hlsl", "PS_Low", 0,macros });
-	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
-	screen_states[i][0].reset(new  Render::PipelineState(desc));
+		desc.rtv.enable_stencil = false;
+		desc.blend.render_target[0].enabled = false;
+		desc.rtv.ds_format = DXGI_FORMAT_UNKNOWN;
+		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen.hlsl", "PS_Low", 0,macros });
+		desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
+		screen_states[i][0].reset(new  Render::PipelineState(desc));
 
 
-	desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen.hlsl", "PS_Resize", 0,macros });
+		desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen.hlsl", "PS_Resize", 0,macros });
 
-	desc.rtv.enable_stencil = true;
-	desc.rtv.stencil_read_mask = 1;
-	desc.blend.render_target[0].enabled = false;
-	desc.blend.render_target[1].enabled = false;
+		desc.rtv.enable_stencil = true;
+		desc.rtv.stencil_read_mask = 1;
+		desc.blend.render_target[0].enabled = false;
+		desc.blend.render_target[1].enabled = false;
 
-	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
+		desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
 
-	screen_states[i][2].reset(new  Render::PipelineState(desc));
+		screen_states[i][2].reset(new  Render::PipelineState(desc));
 
 
 
-	desc.rtv.ds_format = DXGI_FORMAT_UNKNOWN;
-	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen_blur.hlsl", "PS", 0,macros });
-	desc.rtv.enable_stencil = true;
-	desc.blend.render_target[0].enabled = false;
-	desc.blend.render_target[1].enabled = false;
-	desc.rtv.rtv_formats = {/*DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,*/ DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
-	screen_states[i][3].reset(new  Render::PipelineState(desc));
+		desc.rtv.ds_format = DXGI_FORMAT_UNKNOWN;
+		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen_blur.hlsl", "PS", 0,macros });
+		desc.rtv.enable_stencil = true;
+		desc.blend.render_target[0].enabled = false;
+		desc.blend.render_target[1].enabled = false;
+		desc.rtv.rtv_formats = {/*DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,*/ DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
+		screen_states[i][3].reset(new  Render::PipelineState(desc));
 
 
 	}
@@ -362,10 +362,10 @@ void VoxelGI::start_new()
 {
 	//Log::get() << 1 << Log::endl;
 
-	all_scene_regen_counter =2;
+	all_scene_regen_counter = 2;
 	tiled_volume_lighted->remove_all();
 
-//	Log::get() << 2 << Log::endl;
+	//	Log::get() << 2 << Log::endl;
 
 	tiled_volume_normal_static->remove_all();
 	tiled_volume_albedo_static->remove_all();
@@ -373,30 +373,30 @@ void VoxelGI::start_new()
 
 	tiled_volume_normal->remove_all();
 	tiled_volume_albedo->remove_all();
-//	Log::get() << 4 << Log::endl;
+	//	Log::get() << 4 << Log::endl;
 
 	dynamic_generator.remove_all();
 	dynamic_generator_voxelizing.remove_all();
-//	Log::get() << 5 << Log::endl;
+	//	Log::get() << 5 << Log::endl;
 
 	for (auto &&b : gpu_tiles_buffer)
 		if (b)b->clear();
 	tiled_volume_lighted->load_all();
-//	Log::get() << 6 << Log::endl;
+	//	Log::get() << 6 << Log::endl;
 
 
-//	tiled_volume_albedo->test();
+	//	tiled_volume_albedo->test();
 }
 
 void VoxelGI::resize(ivec2 size)
 {
-
+	/*
 	//downsampled_light.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, size.x/2, size.y/2, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 	gi_textures.resize(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, { size.x, size.y });
 	downsampled_light.resize(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, { size.x/2, size.y/2 });
 	current_gi_texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 	downsampled_reflection.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, size.x/2, size.y/2, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
-
+	*/
 
 }
 VoxelGI::VoxelGI(Scene::ptr& scene, G_Buffer& buffer) :scene(scene), buffer(buffer), reflection_effect(buffer)
@@ -474,7 +474,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, G_Buffer& buffer) :scene(scene), buffer(buff
 			}
 		};
 
-		
+
 		tiled_volume_lighted->load_all();
 
 
@@ -508,7 +508,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, G_Buffer& buffer) :scene(scene), buffer(buff
 	}
 	init_states();
 
-	buffer.size.register_change(this, [this](ivec2 size) {resize(size); });
+	//	buffer.size.register_change(this, [this](ivec2 size) {resize(size); });
 }
 
 void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer::ptr r)
@@ -687,7 +687,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer::ptr r)
 		visibility->update(context->list);
 
 	}
-	
+
 	for (auto&&b : gpu_tiles_buffer)
 		if (b)
 			b->update(context->list);
@@ -700,15 +700,15 @@ void VoxelGI::generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PS
 {
 	auto timer = context->list->start(L"GI");
 	{
-	
+
 		if (need_start_new)
 		{
 			start_new();
 			need_start_new = false;
 		}
-		
+
 		context->voxel_min = scene->get_min() - float3(1, 1, 1);
-		context->voxel_size = scene->get_max()+  float3(1, 1, 1) - context->voxel_min;
+		context->voxel_size = scene->get_max() + float3(1, 1, 1) - context->voxel_min;
 		context->voxel_size.x = context->voxel_size.y = context->voxel_size.z = max(200.0f, context->voxel_size.max_element());
 
 		context->voxel_tiles_count = tiled_volume_lighted->get_tiles_count(0);
@@ -718,17 +718,17 @@ void VoxelGI::generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PS
 		if (voxelize_scene)
 			voxelize(context, r);
 
-		light_counter=(light_counter+1)%5;
-	
-		if (light_scene&&light_counter==0|| all_scene_regen_counter>0)
+		light_counter = (light_counter + 1) % 5;
+
+		if (light_scene&&light_counter == 0 || all_scene_regen_counter > 0)
 		{
-		lighting(context, pssm, skymap);
-		mipmapping(context);
-		//	auto& compute = context->list->get_compute();
-		//	compute.transition(volume_lighted, Render::ResourceState::UNORDERED_ACCESS);
-		//	compute.flush_transitions();
-		///	float values[4] = {1,1,1,1};
-		//	compute.get_native_list()->ClearUnorderedAccessViewFloat(volume_lighted->texture_3d()->get_uav().get_base().gpu, volume_lighted->texture_3d()->get_static_uav().get_base().cpu, volume_lighted.Get(), values, 0, nullptr);
+			lighting(context, pssm, skymap);
+			mipmapping(context);
+			//	auto& compute = context->list->get_compute();
+			//	compute.transition(volume_lighted, Render::ResourceState::UNORDERED_ACCESS);
+			//	compute.flush_transitions();
+			///	float values[4] = {1,1,1,1};
+			//	compute.get_native_list()->ClearUnorderedAccessViewFloat(volume_lighted->texture_3d()->get_uav().get_base().gpu, volume_lighted->texture_3d()->get_static_uav().get_base().cpu, volume_lighted.Get(), values, 0, nullptr);
 
 		}
 
@@ -746,8 +746,8 @@ void VoxelGI::lighting(MeshRenderContext::ptr& context, PSSM& pssm, Render::Cube
 	auto timer = context->list->start(L"lighting");
 
 	auto& compute = context->list->get_compute();
-	if(GetAsyncKeyState('G'))
-	compute.set_pipeline(lighting_state);
+	if (GetAsyncKeyState('G'))
+		compute.set_pipeline(lighting_state);
 	else
 		compute.set_pipeline(lighting_state_second_bounce);
 
@@ -832,207 +832,220 @@ void VoxelGI::mipmapping(MeshRenderContext::ptr& context)
 		mip_count += current_mips;
 	}
 
-//	compute.assume_state(volume_lighted.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
+	//	compute.assume_state(volume_lighted.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
 }
 
 void VoxelGI::screen(MeshRenderContext::ptr& context, scene_object::ptr scene, Render::CubemapArrayView::ptr skymap)
 {
+	//return;
 	auto timer = context->list->start(L"screen");
 
-	auto& list = context->list->get_graphics();
-	buffer.result_tex.swap(context->list);
-	downsampled_light.swap(context->list);
-	auto &states = screen_states[static_cast<int>(VISUALIZE_TYPE(render_type))];
-	///	list.transition(downsampled_light, Render::ResourceState::RENDER_TARGET);
-	list.transition(buffer.result_tex.first(), Render::ResourceState::RENDER_TARGET);
-	list.transition(current_gi_texture, Render::ResourceState::RENDER_TARGET);
-
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-	list.set_pipeline(states[0]);
-	list.set_dynamic(sig.gi_table, 0, buffer.srv_table);
-	list.set_dynamic(sig.voxel_lighted, 0, volume_lighted->texture_3d()->get_srv());
-	list.set(sig.camera_data, context->cam->get_const_buffer());
-	list.set_dynamic(sig.help_table2, 0, skymap->get_srv());
-	//	if(ssgi_tex->texture_2d())
-	list.set_dynamic(sig.help_table2, 2, buffer.speed_tex->texture_2d()->get_srv());
-	list.set_dynamic(sig.help_table2, 3, buffer.result_tex.second()->texture_2d()->get_srv());
-
-	list.set_constants(sig.constants, context->voxel_min.x, context->voxel_min.y, context->voxel_min.z, context->voxel_size.x, context->voxel_size.y, context->voxel_size.z, ((context->current_time) % 10000) * 0.001f);
-
+	for (auto &eye : context->eye_context->eyes)
 	{
-		auto timer = context->list->start(L"downsampled");
-		list.set_viewport(downsampled_light.first()->texture_2d()->get_viewport(0));
-		list.set_scissor(downsampled_light.first()->texture_2d()->get_scissor(0));
-		list.set_rtv(1, downsampled_light.first()->texture_2d()->get_rtv(0), Render::Handle());
+		auto &gi_data = eye.get_or_create<EyeData>();
 
-		list.draw(4);
-	}
+		gi_data.size = eye.g_buffer->size.get();
+		auto & buffer = *eye.g_buffer;
 
-	{
-	auto timer = context->list->start(L"filter");
-	list.set_pipeline(states[3]);
-
-	for (int i = 0; i < 3; i++)
-	{
-
-		downsampled_light.swap(context->list);
 	
-     	list.set_dynamic(sig.help_table2, 3, downsampled_light.second()->texture_2d()->get_srv());
+		auto& list = context->list->get_graphics();
+		buffer.result_tex.swap(context->list);
+		gi_data.downsampled_light.swap(context->list);
+		auto &states = screen_states[static_cast<int>(VISUALIZE_TYPE(render_type))];
+		///	list.transition(downsampled_light, Render::ResourceState::RENDER_TARGET);
+		list.transition(buffer.result_tex.first(), Render::ResourceState::RENDER_TARGET);
+		list.transition(gi_data.current_gi_texture, Render::ResourceState::RENDER_TARGET);
 
-		list.set_rtv(1, downsampled_light.first()->texture_2d()->get_rtv(0), Render::Handle());
+		list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-		list.draw(4);
+		list.set_pipeline(states[0]);
+		list.set_dynamic(sig.gi_table, 0, buffer.srv_table);
+		list.set_dynamic(sig.voxel_lighted, 0, volume_lighted->texture_3d()->get_srv());
+		list.set(sig.camera_data, context->cam->get_const_buffer());
+		list.set_dynamic(sig.help_table2, 0, skymap->get_srv());
+		//	if(ssgi_tex->texture_2d())
+		list.set_dynamic(sig.help_table2, 2, buffer.speed_tex->texture_2d()->get_srv());
+		list.set_dynamic(sig.help_table2, 3, buffer.result_tex.second()->texture_2d()->get_srv());
+
+		list.set_constants(sig.constants, context->voxel_min.x, context->voxel_min.y, context->voxel_min.z, context->voxel_size.x, context->voxel_size.y, context->voxel_size.z, ((context->current_time) % 10000) * 0.001f);
+
+		{
+			auto timer = context->list->start(L"downsampled");
+			list.set_viewport(gi_data.downsampled_light.first()->texture_2d()->get_viewport(0));
+			list.set_scissor(gi_data.downsampled_light.first()->texture_2d()->get_scissor(0));
+			list.set_rtv(1, gi_data.downsampled_light.first()->texture_2d()->get_rtv(0), Render::Handle());
+
+			list.draw(4);
+		}
+	
+		{
+			auto timer = context->list->start(L"filter");
+			list.set_pipeline(states[3]);
+
+			for (int i = 0; i < 3; i++)
+			{
+
+				gi_data.downsampled_light.swap(context->list);
+
+				list.set_dynamic(sig.help_table2, 3, gi_data.downsampled_light.second()->texture_2d()->get_srv());
+
+				list.set_rtv(1, gi_data.downsampled_light.first()->texture_2d()->get_rtv(0), Render::Handle());
+
+				list.draw(4);
+			}
+		}
+
+
+
+		list.set_dynamic(sig.help_table2, 3, buffer.result_tex.second()->texture_2d()->get_srv());
+
+
+		gi_data.gi_textures.swap(context->list);
+
+		list.set_viewport(buffer.result_tex.first()->texture_2d()->get_viewport(0));
+		list.set_scissor(buffer.result_tex.first()->texture_2d()->get_scissor(0));
+
+		gi_rtv[0].place(buffer.result_tex.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		gi_rtv[1].place(gi_data.gi_textures.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		list.set_rtv(gi_rtv, buffer.quality_table.dsv_table[0]);
+		list.set_dynamic(sig.help_table2, 4, gi_data.gi_textures.second()->texture_2d()->get_srv());
+		list.set_dynamic(sig.help_table2, 5, buffer.depth_tex_mips_prev->texture_2d()->get_srv());
+		list.set_dynamic(sig.help_table2, 1, gi_data.downsampled_light.first()->texture_2d()->get_srv());
+
+		{
+			auto timer = context->list->start(L"full");
+			list.get_native_list()->OMSetStencilRef(1);
+			list.set_pipeline(states[1]);
+			list.draw(4);
+		}
+
+
+		{
+			auto timer = context->list->start(L"resize");
+
+			list.get_native_list()->OMSetStencilRef(0);
+			list.set_pipeline(states[2]);
+			list.draw(4);
+		}
+
+
 	}
-}
+	//	list.transition(downsampled_light, Render::ResourceState::RENDER_TARGET);
+	//	gi_textures.swap(context->list);
 
 
+	//	
+		/*
+		gi_textures.swap(context->list);
 
-	list.set_dynamic(sig.help_table2, 3, buffer.result_tex.second()->texture_2d()->get_srv());
+		list.set_dynamic(4, 3, current_gi_texture->texture_2d()->get_srv());
+		list.set_dynamic(4, 4, gi_textures.second()->texture_2d()->get_srv());
 
-
-	gi_textures.swap(context->list);
-
-	list.set_viewport(buffer.result_tex.first()->texture_2d()->get_viewport(0));
-	list.set_scissor(buffer.result_tex.first()->texture_2d()->get_scissor(0));
 
 	gi_rtv[0].place(buffer.result_tex.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	gi_rtv[1].place(gi_textures.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-	list.set_rtv(gi_rtv, buffer.quality_table.dsv_table[0]);
-	list.set_dynamic(sig.help_table2, 4, gi_textures.second()->texture_2d()->get_srv());
-	list.set_dynamic(sig.help_table2, 5, buffer.depth_tex_mips_prev->texture_2d()->get_srv());
-	list.set_dynamic(sig.help_table2, 1, downsampled_light.first()->texture_2d()->get_srv());
+	list.set_rtv(gi_rtv, Render::Handle());
 
-	{
-		auto timer = context->list->start(L"full");
-		list.get_native_list()->OMSetStencilRef(1);		
-		list.set_pipeline(states[1]);
-		list.draw(4);
-	}
+		{
+			auto timer = context->list->start(L"filter");
 
-	
-	{
-		auto timer = context->list->start(L"resize");
-
-		list.get_native_list()->OMSetStencilRef(0);		
-		list.set_pipeline(states[2]);
-		list.draw(4);
-	}
-	
-
-//	list.transition(downsampled_light, Render::ResourceState::RENDER_TARGET);
-//	gi_textures.swap(context->list);
-
-
-//	
-	/*
-	gi_textures.swap(context->list);
-
-	list.set_dynamic(4, 3, current_gi_texture->texture_2d()->get_srv());
-	list.set_dynamic(4, 4, gi_textures.second()->texture_2d()->get_srv());
-
-
-gi_rtv[0].place(buffer.result_tex.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-gi_rtv[1].place(gi_textures.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-list.set_rtv(gi_rtv, Render::Handle());
-
-	{
-		auto timer = context->list->start(L"filter");
-
-		list.get_native_list()->OMSetStencilRef(0);
-		list.set_pipeline(states[3]);
-	//	list.set_dynamic(4, 1, gi_textures.second()->texture_2d()->get_srv());
-		list.draw(4);
-	}
-	*/
+			list.get_native_list()->OMSetStencilRef(0);
+			list.set_pipeline(states[3]);
+		//	list.set_dynamic(4, 1, gi_textures.second()->texture_2d()->get_srv());
+			list.draw(4);
+		}
+		*/
 
 }
 
-void VoxelGI::screen_reflection(MeshRenderContext::ptr& context, scene_object::ptr scene,  Render::CubemapArrayView::ptr skymap)
+void VoxelGI::screen_reflection(MeshRenderContext::ptr& context, scene_object::ptr scene, Render::CubemapArrayView::ptr skymap)
 {
 	auto timer = context->list->start(L"screen_reflection");
-
-
-
-		//reflection_effect.process(context, buffer, skymap);
-
-	//	return;
-	//MipMapGenerator::get().generate(context->list->get_compute(), buffer.result_tex.first());
-
-
-
-	buffer.result_tex.swap(context->list, Render::ResourceState::RENDER_TARGET, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-
-	auto& list = context->list->get_graphics();
-//	buffer.result_tex.swap(context->list);
-
-	auto &states = screen_states[static_cast<int>(VISUALIZE_TYPE(render_type))];
-//	list.transition(downsampled_light, Render::ResourceState::RENDER_TARGET);
-	//list.transition(buffer.result_tex.first(), Render::ResourceState::RENDER_TARGET);
-	list.transition(downsampled_reflection, Render::ResourceState::RENDER_TARGET);
-
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-	list.set_pipeline(states[0]);
-	list.set_dynamic(sig.gi_table, 0, buffer.srv_table);
-	list.set_dynamic(sig.voxel_lighted, 0, volume_lighted->texture_3d()->get_srv());
-
-	list.set(sig.camera_data, context->cam->get_const_buffer());
-
-
-	list.set_dynamic(sig.help_table2, 0, skymap->get_srv());
-	list.set_dynamic(sig.help_table2, 2, buffer.speed_tex->texture_2d()->get_srv());
-	list.set_dynamic(sig.help_table2,3, buffer.result_tex.second()->texture_2d()->get_srv());
-	list.set_dynamic(sig.help_table2, 4, reflection_effect.reflect_tex_dilated->texture_2d()->get_srv());
-
-	list.set_constants(1, context->voxel_min.x, context->voxel_min.y, context->voxel_min.z, context->voxel_size.x, context->voxel_size.y, context->voxel_size.z, ((context->current_time) % 10000) * 0.001f);
-
-	{
-
-
-		auto timer = context->list->start(L"downsampled");
-		list.set_viewport(downsampled_reflection->texture_2d()->get_viewport(0));
-		list.set_scissor(downsampled_reflection->texture_2d()->get_scissor(0));
-		list.set_rtv(1, downsampled_reflection->texture_2d()->get_rtv(0), Render::Handle());
-		list.set_pipeline(downsampled_reflection_state);
-
-		list.draw(4);
-	}
 	
-	list.transition(downsampled_reflection, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-
-//	gi_textures.swap(context->list);
-
-	list.set_viewport(buffer.result_tex.first()->texture_2d()->get_viewport(0));
-	list.set_scissor(buffer.result_tex.first()->texture_2d()->get_scissor(0));
-
-//	gi_rtv[0].place(buffer.result_tex.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-//	gi_rtv[1].place(gi_textures.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-	list.set_rtv(1,buffer.result_tex.first()->texture_2d()->get_rtv(0), buffer.quality_table.dsv_table[0]);
-
-
-	list.set_dynamic(sig.help_table2, 4, downsampled_reflection->texture_2d()->get_srv());
-
+	for (auto &eye : context->eye_context->eyes)
 	{
-		auto timer = context->list->start(L"full");
-		list.get_native_list()->OMSetStencilRef(2);		
-		list.set_pipeline(reflection_state);
-		list.draw(4);
-	}
-	{
-		auto timer = context->list->start(L"downs");
-		list.get_native_list()->OMSetStencilRef(0);
-		list.set_pipeline(reflection_resize_state);
-		list.draw(4);
+		auto &gi_data = eye.get_or_create<EyeData>();
+
+		gi_data.size = eye.g_buffer->size.get();
+		auto & buffer = *eye.g_buffer;
+
+
+
+
+		buffer.result_tex.swap(context->list, Render::ResourceState::RENDER_TARGET, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+
+		auto& list = context->list->get_graphics();
+		//	buffer.result_tex.swap(context->list);
+
+		auto &states = screen_states[static_cast<int>(VISUALIZE_TYPE(render_type))];
+		//	list.transition(downsampled_light, Render::ResourceState::RENDER_TARGET);
+			//list.transition(buffer.result_tex.first(), Render::ResourceState::RENDER_TARGET);
+		list.transition(gi_data.downsampled_reflection, Render::ResourceState::RENDER_TARGET);
+
+		list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+		list.set_pipeline(states[0]);
+		list.set_dynamic(sig.gi_table, 0, buffer.srv_table);
+		list.set_dynamic(sig.voxel_lighted, 0, volume_lighted->texture_3d()->get_srv());
+
+		list.set(sig.camera_data, context->cam->get_const_buffer());
+
+
+		list.set_dynamic(sig.help_table2, 0, skymap->get_srv());
+		list.set_dynamic(sig.help_table2, 2, buffer.speed_tex->texture_2d()->get_srv());
+		list.set_dynamic(sig.help_table2, 3, buffer.result_tex.second()->texture_2d()->get_srv());
+		list.set_dynamic(sig.help_table2, 4, reflection_effect.reflect_tex_dilated->texture_2d()->get_srv());
+
+		list.set_constants(1, context->voxel_min.x, context->voxel_min.y, context->voxel_min.z, context->voxel_size.x, context->voxel_size.y, context->voxel_size.z, ((context->current_time) % 10000) * 0.001f);
+
+		{
+
+
+			auto timer = context->list->start(L"downsampled");
+			list.set_viewport(gi_data.downsampled_reflection->texture_2d()->get_viewport(0));
+			list.set_scissor(gi_data.downsampled_reflection->texture_2d()->get_scissor(0));
+			list.set_rtv(1, gi_data.downsampled_reflection->texture_2d()->get_rtv(0), Render::Handle());
+			list.set_pipeline(downsampled_reflection_state);
+
+			list.draw(4);
+		}
+
+		list.transition(gi_data.downsampled_reflection, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+
+		//	gi_textures.swap(context->list);
+
+		list.set_viewport(buffer.result_tex.first()->texture_2d()->get_viewport(0));
+		list.set_scissor(buffer.result_tex.first()->texture_2d()->get_scissor(0));
+
+		//	gi_rtv[0].place(buffer.result_tex.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		//	gi_rtv[1].place(gi_textures.first()->texture_2d()->get_rtv(0), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+		list.set_rtv(1, buffer.result_tex.first()->texture_2d()->get_rtv(0), buffer.quality_table.dsv_table[0]);
+
+
+		list.set_dynamic(sig.help_table2, 4, gi_data.downsampled_reflection->texture_2d()->get_srv());
+
+		{
+			auto timer = context->list->start(L"full");
+			list.get_native_list()->OMSetStencilRef(2);
+			list.set_pipeline(reflection_state);
+			list.draw(4);
+		}
+		{
+			auto timer = context->list->start(L"downs");
+			list.get_native_list()->OMSetStencilRef(0);
+			list.set_pipeline(reflection_resize_state);
+			list.draw(4);
+		}
+
 	}
 	/*
 	{
 		auto timer = context->list->start(L"resize");
 
-		list.get_native_list()->OMSetStencilRef(0);		
+		list.get_native_list()->OMSetStencilRef(0);
 		list.set_pipeline(reflection_state);
 //		list.set_dynamic(4, 1, downsampled_light->texture_2d()->get_srv());
 		list.draw(4);

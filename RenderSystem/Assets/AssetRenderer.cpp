@@ -11,6 +11,7 @@ void AssetRenderer::draw(scene_object::ptr scene, Render::Texture::ptr result)
     MeshRenderContext::ptr context(new MeshRenderContext());
     context->list = list;
 	context->g_buffer = gbuffer.get();
+	context->eye_context = std::make_shared<Render::OVRContext>();
 	gbuffer->reset(context);
 
 

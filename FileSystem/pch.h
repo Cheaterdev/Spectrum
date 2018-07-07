@@ -7,5 +7,6 @@
 // CURRENT includes
 #include "FileSystem/FileSystem.h"
 
+#include <filesystem>
 
 #pragma comment(lib, "FileSystem")

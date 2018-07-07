@@ -23,9 +23,6 @@
     <Filter Include="Threads">
       <UniqueIdentifier>{dba53b9b-3857-491a-a9cb-813414c148b9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Engine\Application">
-      <UniqueIdentifier>{9988793b-a821-45cc-9321-0766ddbe8f29}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Resources\shaders\gui">
       <UniqueIdentifier>{0ffed0e4-1bf0-47bb-9594-6f53efe7d7f4}</UniqueIdentifier>
     </Filter>
@@ -46,9 +43,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Application\Application.cpp">
-      <Filter>Engine\Application</Filter>
-    </ClCompile>
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="Engine\Engine.cpp">
       <Filter>Engine</Filter>
@@ -68,9 +62,6 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application\Application.h">
-      <Filter>Engine\Application</Filter>
-    </ClInclude>
     <ClInclude Include="pch.h" />
     <ClInclude Include="Platform\Window.h">
       <Filter>Platform</Filter>

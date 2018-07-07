@@ -15,7 +15,7 @@ class file_provider
         virtual void iterate(std::wstring path, std::function<void(s_ptr<file>)> f, bool recursive) {};
         virtual void iterate_dirs(std::wstring path, std::function<void(std::wstring)> f, bool recursive) {};
 
-        virtual void on_change(std::wstring, std::function<void()>) {};
+        virtual void on_change(const std::filesystem::path&, std::function<void()>) {};
         // TODO:
         /*
         save_file
@@ -91,7 +91,7 @@ class native_file_provider : public file_provider
         virtual bool save_data(std::wstring file_name , std::string data);
         virtual void iterate(std::wstring path, std::function<void(file::ptr)> f, bool recursive);
         virtual void iterate_dirs(std::wstring path, std::function<void(std::wstring)> f, bool recursive);
-        virtual void on_change(std::wstring, std::function<void()>);
+        virtual void on_change(const std::filesystem::path&, std::function<void()>) override;
         virtual std::shared_ptr<istream> create_stream(std::wstring);
 
 		virtual ~native_file_provider()

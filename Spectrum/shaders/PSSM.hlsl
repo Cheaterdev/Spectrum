@@ -53,7 +53,7 @@ void CS(uint3 group_id :  SV_GroupID, uint3 thread_id : SV_GroupThreadID)
 	
 	if (raw_z < 1)
 	//	result[tc.xy] = float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, gbuffer[0][tc.xy].w), 1);
-	result[tc.xy] = shadow;// float4(get_debug_color(info), 1);
+	result[tc.xy] = float4(get_debug_color(info), 1);
 	else
 		result[tc.xy] = 1;
 }
@@ -101,8 +101,9 @@ float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 //uint3 pos = uint3(light_tc * shadow_dims, level);
 
  
-float tc_scaler = 2.0/10 /pow(2,level);
-if (any(light_tc.xy< tc_scaler) || any(light_tc.xy >1-tc_scaler)) discard;
+float tc_scaler = 0;// 0.5 / pow(2, level);
+if (any(light_tc.xy < tc_scaler) || any(light_tc.xy > 1 - tc_scaler))
+discard;
 
 
 float sini = sin(time * 220 + float(i.tc.x));
@@ -209,7 +210,7 @@ float get_sss(float z, float3 pos, float2 tc, float3 n)
 	float res = 1;
 	float dist = 0.0;
 
-	float step = distance(camera.position, pos) / 100;
+	float step = distance(camera.position, pos) / 1000;
 	float errorer = step/1;
 
 //	float errorrer = 0.02/SCALE;
@@ -275,6 +276,6 @@ float3 light_dir = -light_cameras[0].direction;
 
 float3 direct = shadow*max(0, dot(light_dir, info.normal));
 float3 reflection = 0;// shadow*pow(saturate(dot(info.reflection, light_dir)), 2 * info.roughness);
-//return float4(info.roughness.xxx,1);
+//return float4(get_debug_color(info),0);
 return  float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, packed_0.w), 1);
 }

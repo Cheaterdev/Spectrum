@@ -28,6 +28,9 @@
     <Filter Include="Tree">
       <UniqueIdentifier>{b0a15dd9-c018-4566-a26a-fef73a4004e7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Application">
+      <UniqueIdentifier>{3e8a00ec-3c76-40f5-9afc-f3539d9cabb8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math\Constants.h">
@@ -125,6 +128,12 @@
     <ClInclude Include="DebugInfo\StackWalker.h">
       <Filter>DebugInfo</Filter>
     </ClInclude>
+    <ClInclude Include="patterns\Holdable.h">
+      <Filter>Patterns</Filter>
+    </ClInclude>
+    <ClInclude Include="Application\Application.h">
+      <Filter>Application</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -171,6 +180,12 @@
     </ClCompile>
     <ClCompile Include="Log\Tasks.cpp">
       <Filter>Log</Filter>
+    </ClCompile>
+    <ClCompile Include="patterns\Holdable.cpp">
+      <Filter>Patterns</Filter>
+    </ClCompile>
+    <ClCompile Include="Application\Application.cpp">
+      <Filter>Application</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

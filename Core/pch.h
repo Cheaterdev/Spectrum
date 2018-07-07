@@ -177,12 +177,14 @@ void unreferenced_parameter(const T&)
 
 // CORE includes
 #include "../3rdparty/alllibs.h"
+
+#include "Data/Data.h"
 #include "patterns/Singleton.h"
 #include "patterns/SharedObject.h"
 #include "patterns/EditObject.h"
 #include "Patterns/IdGenerator.h"
+#include "Patterns/Holdable.h"
 
-#include "Data/Data.h"
 #include "Data/md5.h"
 #include "Serialization/Serializer.h"
 
@@ -204,6 +206,7 @@ void unreferenced_parameter(const T&)
 
 #include "Threads/Scheduler.h"
 
+#include "Application/Application.h"
 
 #define GUID_WINDOWS
 #include "guid/guid.h"

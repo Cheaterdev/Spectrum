@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "SSAO.h"
+#include <filesystem>
 
 #ifdef OCULUS_SUPPORT
 // Include the Oculus SDK
@@ -618,7 +619,7 @@ class GBufferDownsamplerNode :public EditorNode
 	{
 		//	if (!downsampler) downsampler = std::make_shared<GBufferDownsampler>(*context->g_buffer);
 		//	downsampler->process(context->mesh_context);
-		for(auto &eye:context->mesh_context->eye_context.eyes)
+		for(auto &eye:context->mesh_context->eye_context->eyes)
 		MipMapGenerator::get().generate_quality(context->mesh_context->list->get_graphics(), eye.cam, *eye.g_buffer);
 
 		get_output(0)->put(0);
@@ -863,16 +864,16 @@ public:
 		list.set_constants(1, time);
 
 
-		for (auto &e : context->eye_context.eyes)
+		for (auto &e : context->eye_context->eyes)
 		{
 			auto target = e.color_buffer;
 			auto g_buffer = e.g_buffer;
 
-			list.transition(target, Render::ResourceState::RENDER_TARGET);
+			list.transition(target, Render::ResourceState::RENDER_TARGET); //////////////////////////////////////////////////////////////////////////////////////////////////
 			list.transition(g_buffer->albedo_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 		}
 
-		for (auto &e : context->eye_context.eyes)
+		for (auto &e : context->eye_context->eyes)
 		{
 			auto target = e.color_buffer;
 			auto g_buffer = e.g_buffer;
@@ -959,7 +960,7 @@ public:
 	MeshAssetInstance::ptr instance;
 	triangle_drawer()
 	{
-
+	
 		auto t = CounterManager::get().start_count<triangle_drawer>();
 		thinkable = true;
 		clickable = true;
@@ -1070,7 +1071,7 @@ public:
 
 		auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count = -3;
+		int count = 3;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
@@ -1280,7 +1281,7 @@ public:
 
 	}
 
-	void update_texture(Render::CommandList::ptr _list, float dt, OVRContext vr)
+	void update_texture(Render::CommandList::ptr _list, float dt, std::shared_ptr<OVRContext> vr)
 	{
 
 
@@ -1322,7 +1323,7 @@ public:
 
 
 
-		while (eyes.size() < vr.eyes.size())
+		while (eyes.size() < vr->eyes.size())
 		{
 			eyes.emplace_back(new EyeData(gpu_meshes_renderer_static->my_signature));
 			eyes.back()->g_buffer.size = get_render_bounds().size;
@@ -1335,15 +1336,16 @@ public:
 		{
 			eyes[i]->cam = cam;
 
-			eyes[i]->cam.eye_rot = vr.eyes[i].dir;
-			eyes[i]->cam.offset = vr.eyes[i].offset;
-			context->eye_context.eyes[i].g_buffer = &eyes[i]->g_buffer;
-			context->eye_context.eyes[i].cam = &eyes[i]->cam;
+			eyes[i]->cam.eye_rot = vr->eyes[i].dir;
+			eyes[i]->cam.offset = vr->eyes[i].offset;
+			context->eye_context->eyes[i].g_buffer = &eyes[i]->g_buffer;
+			context->eye_context->eyes[i].cam = &eyes[i]->cam;
 
 			//	eyes[i]->g_buffer=
 			
 			
 			
+			//TODO: VR SWITHC HEREEEEEEEEEEEEEEE
 		//	eyes[i]->cam.set_projection_params(eyeRenderDesc[i].Fov, 0.2f, 1000.0f);
 			eyes[i]->cam.update(eyes[i]->temporal.get_current_offset() / *eyes[i]->g_buffer.size);
 
@@ -1355,7 +1357,7 @@ public:
 			auto & g_buffer = eyes[i]->g_buffer;
 			auto& temporal = eyes[i]->temporal;
 			//	auto& last_renderer = eyes[i]->last_renderer;
-			auto& target = vr.eyes[i].color_buffer;
+			auto& target = vr->eyes[i].color_buffer;
 
 
 			g_buffer.reset(context);
@@ -1408,12 +1410,14 @@ public:
 		for(auto &eye:eyes)
 			eye->g_buffer.result_tex.swap(list);
 
-		if (!context->eye_context.eyes[0].color_buffer)
+
+		/// HERE NEED TO SWAP OCULUS TO 2D
+		//if (!context->eye_context->eyes[0].color_buffer)
 		{
 
 		
 		
-		context->eye_context.eyes[0].color_buffer = eyes[0]->g_buffer.result_tex.first();
+			context->eye_context->eyes[0].color_buffer = texture.texture;// eyes[0]->g_buffer.result_tex.first();
 	}
 
 
@@ -1435,24 +1439,38 @@ public:
 	virtual void draw(Render::context& t) override
 	{
 
-	//	texture.srv[0] = t.command_list->get_graphics().get_desc_manager().get(2, 0);
-		if(eyes.size())
-			texture = eyes[0]->g_buffer.result_tex.first();
-	image::draw(t);
+	//	auto r = get_render_bounds();
+	//	cam.set_projection_params(pi / 4, float(r.w) / r.h, 1, 1500);
+	//	for (auto& e : eyes)
+	//		e->g_buffer.size = { r.w,r.h };
 
-		Handle h = t.command_list->get_graphics().get_desc_manager().get(2, 0);
+//	renderer->flush(t);
+	t.command_list->transition(texture.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+
+		image::draw(t);
+	//	renderer->flush(t);
+
+	//	texture.srv[0] = t.command_list->get_graphics().get_desc_manager().get(2, 0);
+	//	if(eyes.size())
+	//		texture = eyes[0]->g_buffer.result_tex.first();
+
+	//	Handle h = t.command_list->get_graphics().get_desc_manager().get(7, 0);
 		float dt = t.delta_time;
 		auto& list = t.command_list->get_sub_list();
 
 		auto v = t.ovr_context;
-		thread_pool::get().enqueue([this, dt, list, h, v]() {
+	thread_pool::get().enqueue([this, dt, list, v ]() {
 		//	
 
 			list->begin("__draw");
-			update_texture(list, dt,v);
-			list->transition(eyes[0]->g_buffer.result_tex.first(), Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-			h.place(eyes[0]->g_buffer.result_tex.first()->texture_2d()->get_static_srv());  //;'///////////////////////////////////////////////////////////
+			list->transition(texture.texture, Render::ResourceState::RENDER_TARGET);
+			list->clear_rtv(texture.texture->texture_2d()->get_rtv(), { 1,0,0,1 });
 
+			update_texture(list, dt,v);
+		//	texture = eyes[0]->g_buffer.result_tex.first();
+		
+	//	h.place(eyes[0]->g_buffer.result_tex.first()->texture_2d()->get_static_srv());  //;'///////////////////////////////////////////////////////////
+		
 			list->end();
 			list->execute();
 			//		h.place(g_buffer.speed_tex->texture_2d()->get_static_srv());
@@ -1460,11 +1478,10 @@ public:
 			//h.place(lighting.pssm.screen_light_mask->texture_2d()->get_static_srv());
 	//		h.place(voxel_renderer->downsampled_light->texture_2d()->get_static_srv());
 		//	h.place(hdr.tex_luma->texture_2d()->get_static_srv());
-
-
 		});
 
-
+		//	texture = eyes[0]->g_buffer.result_tex.first();
+	
 	}
 
 
@@ -1476,6 +1493,11 @@ public:
 		base::on_bounds_changed(r);
 	//	std::this_thread::sleep_for(1s);
 		if (r.w <= 64 || r.h <= 64) return;
+
+		auto size = r.size;
+		texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+
+
 		//	g_buffer.size = { r.w, r.h };
 		cam.set_projection_params(pi / 4, float(r.w) / r.h, 1, 1500);
 		for (auto& e : eyes)
@@ -1546,7 +1568,7 @@ class UIWindow : public Window, public GUI::user_interface
 	timer main_timer;
 	ivec2 new_size;
 
-
+	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
 protected:
 	virtual	void render()
 	{
@@ -1572,10 +1594,11 @@ protected:
 
 			Render::context render_context(command_list);
 			render_context.delta_time = static_cast<float>(main_timer.tick());
-			render_context.ovr_context.eyes.resize(1);
-			render_context.ovr_context.eyes[0].dir = quat();
+			render_context.ovr_context = vr_context;
+			render_context.ovr_context->eyes.resize(1);
+			render_context.ovr_context->eyes[0].dir = quat();
 
-			render_context.ovr_context.eyes[0].offset = vec3(0, 0, 0);
+			render_context.ovr_context->eyes[0].offset = vec3(0, 0, 0);
 	//		render_context.ovr_context.eyes[0].color_buffer = swap_chain->get_current_frame();
 
 
@@ -1761,6 +1784,8 @@ public:
 	ovrRecti eyeRenderViewport[2];
 
 	ovrHmdDesc hmdDesc;
+
+	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
 	virtual	void render()
 	{
 
@@ -1792,6 +1817,8 @@ public:
 
 
 			Render::context render_context(command_list);
+
+			render_context.ovr_context = vr_context;
 			// Render Scene to Eye Buffers
 			for (int eye = 0; eye < 2; ++eye)
 			{
@@ -1807,19 +1834,18 @@ public:
 
 
 			}
-			render_context.ovr_context.eyes.resize(2);
+			vr_context->eyes.resize(2);
 
-			render_context.ovr_context.eyes[0].dir = { EyeRenderPose[0].Orientation.x, EyeRenderPose[0].Orientation.y,
+			vr_context->eyes[0].dir = { EyeRenderPose[0].Orientation.x, EyeRenderPose[0].Orientation.y,
 				-EyeRenderPose[0].Orientation.z, EyeRenderPose[0].Orientation.w };
-
-			render_context.ovr_context.eyes[0].offset = { EyeRenderPose[0].Position.x, EyeRenderPose[0].Position.y,
+			vr_context->eyes[0].offset = { EyeRenderPose[0].Position.x, EyeRenderPose[0].Position.y,
 				-EyeRenderPose[0].Position.z };
 
 
-			render_context.ovr_context.eyes[1].dir = { EyeRenderPose[1].Orientation.x, EyeRenderPose[1].Orientation.y,
+			vr_context->eyes[1].dir = { EyeRenderPose[1].Orientation.x, EyeRenderPose[1].Orientation.y,
 				-EyeRenderPose[1].Orientation.z, EyeRenderPose[1].Orientation.w };
 
-			render_context.ovr_context.eyes[1].offset = { EyeRenderPose[1].Position.x, EyeRenderPose[1].Position.y,
+			vr_context->eyes[1].offset = { EyeRenderPose[1].Position.x, EyeRenderPose[1].Position.y,
 				-EyeRenderPose[1].Position.z };
 
 		//	render_context.ovr_context.eyes[0].fov = eyeRenderDesc[0].Fov.;
@@ -1828,8 +1854,8 @@ public:
 
 		
 
-			render_context.ovr_context.eyes[0].color_buffer = pEyeRenderTexture[0]->GetD3DColorResource();
-			render_context.ovr_context.eyes[1].color_buffer = pEyeRenderTexture[1]->GetD3DColorResource();
+			vr_context->eyes[0].color_buffer = pEyeRenderTexture[0]->GetD3DColorResource();
+			vr_context->eyes[1].color_buffer = pEyeRenderTexture[1]->GetD3DColorResource();
 
 			render_context.delta_time = static_cast<float>(main_timer.tick());
 
@@ -1838,7 +1864,7 @@ public:
 				//	auto timer = command_list->start(L"draw ui");
 			//		drawer->draw(render_context);
 				drawer->think(render_context.delta_time);
-				drawer->update_texture(command_list, render_context.delta_time, render_context.ovr_context);
+				drawer->update_texture(command_list, render_context.delta_time, vr_context);
 			}
 
 
@@ -2440,10 +2466,12 @@ protected:
 		EVENT("AssetManager");
 		AssetManager::create();
 		EVENT("WindowRender");
-		main_window = std::make_shared<WindowRender>();
 #ifdef OCULUS_SUPPORT
 		//ovr = std::make_shared<OVRRender>();
 #endif
+
+		main_window = std::make_shared<WindowRender>();
+
 		if(main_window)main_window->render();
 
 #ifdef OCULUS_SUPPORT
@@ -2555,8 +2583,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 
 		return nullptr;
 	});
-
-
 
 
 	auto result_code = 0;

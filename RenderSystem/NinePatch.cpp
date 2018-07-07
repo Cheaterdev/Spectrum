@@ -72,7 +72,7 @@ namespace GUI
 		{
 			//   c.command_list->get_graphics().set(2, item.texture->texture_2d()->get_srv());
 
-			c.command_list->get_graphics().flush_binds();
+		//	c.command_list->get_graphics().flush_binds();
 			added = true;
 			//	c.command_list->get_graphics().get_desc_manager().set(2, 0, item.srv[0]);
 			textures_handles.emplace_back(item.srv[0]);

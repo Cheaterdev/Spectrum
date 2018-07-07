@@ -78,6 +78,8 @@ quad_output VS(uint index : SV_VERTEXID)
 
 float4 PS(quad_output i): SV_Target0
 {
+
+
     float2 dims;
     color_tex[0].GetDimensions(dims.x, dims.y);
 
@@ -92,7 +94,7 @@ float4 PS(quad_output i): SV_Target0
  
 
 //	for(int j=0;j<COUNT;j++)
-   color += color_tex[0].Sample(LinearSampler, i.tc );
+	color = color_tex[0].Sample(LinearSampler, i.tc);
    // color += color_tex[1].Sample(PixelSampler, i.tc);
  //color /= 2;
  // color.xyz*=vignette;wqq

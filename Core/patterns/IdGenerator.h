@@ -47,4 +47,5 @@ class IdGenerator: public IdGeneratorUnsafe
             std::lock_guard<std::mutex> g(m);
 			IdGeneratorUnsafe::put(i);
         }
+
 };

@@ -23,7 +23,15 @@ class Singleton
 
         static std::mutex create_mutex;
         friend class SingletonAccessor<T>;
+
+	/*	std::set<std::shared_ptr<void>> dependencies;*/
     protected:
+	/*	template<class ...Args>
+		void depends_on()
+		{
+			(Args::get(), ...);
+		}
+		*/
         Singleton()
         {
             if (!std::is_same<T, Log>::value)
@@ -31,6 +39,7 @@ class Singleton
                     ClassLogger<singleton_system>::get() << Log::LEVEL_DEBUG << "Singleton creating " << typeid(T).name() << Log::endl;
                 else
                     OutputDebugStringA((string("Singleton creating  ") + typeid(T).name() + "\n").c_str());
+
         }
 
         virtual  ~Singleton()

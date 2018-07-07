@@ -173,7 +173,7 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 
 
 			graphics.transition(visible_id_buffer, Render::ResourceState::UNORDERED_ACCESS);
-			graphics.clear_uav(visible_id_buffer, visible_id_buffer->get_uav()[0]);
+			graphics.clear_uav(visible_id_buffer, visible_id_buffer->get_raw_uav());
 
 	
 			compute.set_pipeline(gpu_frustum_pipeline[check_occlusion]);

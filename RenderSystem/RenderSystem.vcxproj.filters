@@ -492,7 +492,6 @@
     <ClCompile Include="Renderer\GPUMeshRender.cpp">
       <Filter>Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Effects\Sky.cpp" />
     <ClCompile Include="Renderer\GPUCachedRenderer.cpp">
       <Filter>Renderer</Filter>
     </ClCompile>
@@ -524,6 +523,9 @@
     </ClCompile>
     <ClCompile Include="NinePatch.cpp">
       <Filter>GUI\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="Effects\Sky.cpp">
+      <Filter>Effects</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

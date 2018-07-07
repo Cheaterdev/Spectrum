@@ -71,7 +71,7 @@ void SkyRender::process(MeshRenderContext::ptr& context)
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 
-	for (auto &e : context->eye_context.eyes)
+	for (auto &e : context->eye_context->eyes)
 	{
 		auto g_buffer = e.g_buffer;
 		auto cam = e.cam;
@@ -79,7 +79,7 @@ void SkyRender::process(MeshRenderContext::ptr& context)
 
 	}
 
-	for (auto &e : context->eye_context.eyes)
+	for (auto &e : context->eye_context->eyes)
 	{
 		auto g_buffer = e.g_buffer;
 		auto cam = e.cam;

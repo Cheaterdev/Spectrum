@@ -20,7 +20,7 @@ namespace DX12
 			HandleTable uavs;
 			HandleTable srv;
 			HandleTable static_uav;
-
+		
 			void set_data(DX12::CommandList::ptr& list, unsigned int offset, const  std::string& v);
 
 
@@ -58,6 +58,16 @@ namespace DX12
 
 
 			void place_srv_buffer(const Handle& handle);
+
+			void place_raw_uav(const Handle & h)
+			{
+				D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+				desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+				desc.Format = DXGI_FORMAT_R32_TYPELESS;
+				desc.Buffer.NumElements = get_desc().Width/4;
+				desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+				Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), nullptr, &desc, h.cpu);
+			}
 
 			void place_structured_uav(const Handle& h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
 
@@ -198,6 +208,8 @@ namespace DX12
 	template<class T>
 	class StructuredBuffer : public GPUBuffer
 	{
+			HandleTable static_raw_uav;
+
 			StructuredBuffer() = default;
 			bool counted = false;
 			void init_views();
@@ -225,6 +237,11 @@ namespace DX12
 			void place_uav(const Handle& h);
 
 			void place_uav(const Handle& h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
+
+			const Handle& get_raw_uav() const
+			{
+				return static_raw_uav.get_base();
+			}
 		private:
 			friend class boost::serialization::access;
 			template<class Archive>
@@ -652,6 +669,10 @@ namespace DX12
 			place_uav(uavs[0]);
 			static_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
 			place_uav(static_uav[0]);
+			static_raw_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+
+			place_raw_uav(static_raw_uav[0]);
+
 		}
 	}
 	template<class T>

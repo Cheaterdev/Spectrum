@@ -428,7 +428,7 @@ void PSSM::process(MeshRenderContext::ptr & context)
 
 
 
-	for (auto &eye : context->eye_context.eyes)
+	for (auto &eye : context->eye_context->eyes)
 	{
 
 

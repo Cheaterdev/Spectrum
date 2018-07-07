@@ -11,7 +11,7 @@ namespace Render
 {
 	
 
-	struct EyeInfo
+	struct EyeInfo:public Holder
 	{
 		Render::Texture::ptr color_buffer;
 		quat dir;
@@ -20,6 +20,7 @@ namespace Render
 		camera* cam;
 		G_Buffer* g_buffer;
 	};
+
 	struct  OVRContext
 	{
 		std::vector<EyeInfo> eyes;
@@ -39,7 +40,7 @@ namespace Render
             float delta_time;
             vec2 window_size;
             float scale = 1;
-			OVRContext ovr_context;
+			std::shared_ptr<OVRContext> ovr_context;
 
 			void commit_scissor()
 			{
@@ -112,8 +113,8 @@ struct MeshRenderContext
         MaterialProvider* mat_provider;
 
         Render::PipelineStateDesc pipeline;
-		Render::OVRContext eye_context;
-
+		std::shared_ptr<Render::OVRContext> eye_context;
+	
         Render::CommandList::ptr list;
         std::shared_ptr<vertex_transform> transformer;
         camera* cam;

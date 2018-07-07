@@ -161,7 +161,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ShowIncludes>false</ShowIncludes>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(OVRSDKROOT)LibOVR/Include/</AdditionalIncludeDirectories>
       <EnableModules>true</EnableModules>
     </ClCompile>

@@ -297,7 +297,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 			{
 				auto timer = graphics.start(L"occluders draw");
 				graphics.transition(visible_id_buffer, Render::ResourceState::UNORDERED_ACCESS);
-				graphics.clear_uav(visible_id_buffer, visible_id_buffer->get_uav()[0]);
+				graphics.clear_uav(visible_id_buffer, visible_id_buffer->get_raw_uav());
 			/*	UINT values[4] = { 0 };
 				graphics.flush_transitions();
 				graphics.get_native_list()->ClearUnorderedAccessViewUint(visible_id_buffer->get_uav().get_base().gpu, visible_id_buffer->get_static_uav().get_base().cpu, visible_id_buffer->get_native().Get(), values, 0, nullptr);*/

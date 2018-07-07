@@ -385,8 +385,9 @@ namespace DX12
 
 	Device::Device()
 	{
+	//	Singleton::depends_on<Application>();
 		auto t = CounterManager::get().start_count<Device>();
-#ifdef DEBUG
+//#ifdef DEBUG
 		// Enable the D3D12 debug layer.
 		
 			ComPtr<ID3D12Debug> debugController;
@@ -394,7 +395,7 @@ namespace DX12
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 				debugController->EnableDebugLayer();
 	
-#endif
+//#endif
 		{
 			auto t = CounterManager::get().start_count<IDXGIFactory2>();
 			CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));

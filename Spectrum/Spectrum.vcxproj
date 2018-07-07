@@ -170,7 +170,7 @@
       <AdditionalOptions>-Zm634 /bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(OVRSDKROOT)LibOVR/Include/</AdditionalIncludeDirectories>
       <EnableModules>true</EnableModules>
     </ClCompile>
@@ -259,7 +259,7 @@
       <AdditionalOptions>-Zm634 /bigobj %(AdditionalOptions)</AdditionalOptions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
       <AdditionalIncludeDirectories>$(OVRSDKROOT)LibOVR/Include/</AdditionalIncludeDirectories>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <EnableModules>true</EnableModules>
@@ -302,7 +302,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Application\Application.cpp" />
     <ClCompile Include="Engine\Engine.cpp" />
     <ClCompile Include="Engine\Scheduler.cpp" />
     <ClCompile Include="Engine\SystemInfo.cpp" />
@@ -319,7 +318,6 @@
     <ClCompile Include="Platform\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Application\Application.h" />
     <ClInclude Include="Engine\Engine.h" />
     <ClInclude Include="Engine\Scheduler.h" />
     <ClInclude Include="Engine\SystemInfo.h" />

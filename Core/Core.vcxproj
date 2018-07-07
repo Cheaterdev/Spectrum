@@ -27,6 +27,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Application\Application.h" />
     <ClInclude Include="BinaryObjects.h" />
     <ClInclude Include="Data\Data.h" />
     <ClInclude Include="Data\md5.h" />
@@ -47,6 +48,7 @@
     <ClInclude Include="Math\ScalarMath.h" />
     <ClInclude Include="Math\Vectors.h" />
     <ClInclude Include="Patterns\EditObject.h" />
+    <ClInclude Include="patterns\Holdable.h" />
     <ClInclude Include="patterns\IdGenerator.h" />
     <ClInclude Include="Patterns\SharedObject.h" />
     <ClInclude Include="Patterns\Singleton.h" />
@@ -64,6 +66,7 @@
     <ClInclude Include="Tree\Tree.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Application\Application.cpp" />
     <ClCompile Include="Data\Data.cpp" />
     <ClCompile Include="Data\md5.cpp" />
     <ClCompile Include="DebugInfo\Debug.cpp" />
@@ -78,6 +81,7 @@
     <ClCompile Include="Math\ScalarMath.cpp" />
     <ClCompile Include="Math\Vectors.cpp" />
     <ClCompile Include="Patterns\EditObject.cpp" />
+    <ClCompile Include="patterns\Holdable.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -226,7 +230,7 @@
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>-Zm600 %(AdditionalOptions)</AdditionalOptions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <EnableModules>true</EnableModules>
     </ClCompile>
     <Link>
