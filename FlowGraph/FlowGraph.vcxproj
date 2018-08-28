@@ -101,33 +101,39 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>D:\Spectrum\3rdparty\assimp\include;$(SPECTRUM_BOOST_PATH);$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>H:\Spectrum\3rdparty\assimp\include;$(SPECTRUM_BOOST_PATH);$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>H:\Spectrum\3rdparty\assimp\include;$(SPECTRUM_BOOST_PATH);$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Normal|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>H:\Spectrum\3rdparty\assimp\include;$(SPECTRUM_BOOST_PATH);$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <LibraryPath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>D:\Spectrum\3rdparty\assimp\include;$(SPECTRUM_BOOST_PATH);$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath />
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Normal|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>H:\Spectrum\3rdparty\assimp\include;$(SPECTRUM_BOOST_PATH);$(IncludePath)</IncludePath>
+    <IncludePath>$(IncludePath)</IncludePath>
+    <LibraryPath />
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -234,7 +240,7 @@
       <SDLCheck>true</SDLCheck>
       <AdditionalOptions>-Zm600 %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <WholeProgramOptimization>false</WholeProgramOptimization>

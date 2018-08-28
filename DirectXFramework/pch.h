@@ -25,10 +25,10 @@ using namespace Microsoft::WRL;
 #include "helper.h"
 #include "d3dx12.h"
 
-#include "../3rdparty/DirectXTex/DirectXTex/DirectXTex.h"
+#include <DirectXTex.h>
 
 
-#include "../3rdparty/DirectXTex/ScreenGrab/ScreenGrab.h"
+//#include "../3rdparty/DirectXTex/ScreenGrab/ScreenGrab.h"
 
 HRESULT device_fail();
 #ifdef  DEBUG

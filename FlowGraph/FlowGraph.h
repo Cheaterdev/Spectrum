@@ -175,8 +175,8 @@ namespace FlowGraph
     struct parameter : public std::enable_shared_from_this<parameter>
     {
             // LEAK_TEST
-            variant value;
-            variant default_value;
+		MyVariant value;
+		MyVariant default_value;
 
             data_types type;
             std::string name;
@@ -308,7 +308,7 @@ namespace FlowGraph
             void registrate(graph* g, parameter::ptr& from, parameter::ptr& to);
             void registrate(graph* g);
 
-            void pass(variant value)
+            void pass(MyVariant value)
             {
                 if (enabled)
                     to->put(value);
@@ -645,7 +645,7 @@ namespace FlowGraph
 
 			virtual void add_task(Node* node);
         public:
-			virtual std::list<Node::ptr> on_drop(variant value);
+			virtual std::list<Node::ptr> on_drop(MyVariant value);
             GraphContext* context = nullptr;
 
             bool start_child_nodes = false;

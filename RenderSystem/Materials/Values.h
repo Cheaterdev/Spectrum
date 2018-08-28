@@ -252,7 +252,7 @@ class MaterialFunction : public MaterialGraphNode
 
     protected:
 
-        virtual std::list<Node::ptr>  on_drop(variant value) override;
+        virtual std::list<Node::ptr>  on_drop(MyVariant value) override;
 
 
         virtual void on_finish() override;

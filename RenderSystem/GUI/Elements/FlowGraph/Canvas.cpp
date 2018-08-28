@@ -507,7 +507,7 @@ bool GUI::Elements::FlowGraph::canvas::can_accept(drag_n_drop_package::ptr p)
 bool GUI::Elements::FlowGraph::canvas::on_drop(drag_n_drop_package::ptr p, vec2 pos)
 {
     auto item = p->element.lock()->get_ptr<GUI::Elements::asset_item>();
-   variant v;
+	MyVariant v;
     v = item;
 
 	if (item)

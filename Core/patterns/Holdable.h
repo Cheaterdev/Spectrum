@@ -10,12 +10,12 @@
 class Holder
 {
 
-	std::map<std::type_index, variant> objects;
+	std::map<std::type_index, MyVariant> objects;
 public:
 	template<class T>
 	T& get_or_create()
 	{
-		variant& obj = objects[std::type_index(typeid(T))];
+		MyVariant& obj = objects[std::type_index(typeid(T))];
 
 		if (!obj.exists())
 		{

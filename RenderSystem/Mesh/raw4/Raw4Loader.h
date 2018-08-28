@@ -5,7 +5,15 @@
 #include "raw4.h"
 //#include "FS.h"
 #include "Raw4Context.h"
-#include "../../../3rdparty/assimp.h"
+#include <assimp\Importer.hpp>
+#include <assimp\postprocess.h>
+#include <assimp\scene.h>
+#include <assimp\DefaultLogger.hpp>
+#include <assimp\LogStream.hpp>
+#include <assimp\ProgressHandler.hpp>
+#include <assimp\IOStream.hpp>
+#include <assimp\IOSystem.hpp>
+
 //-----------------------------------------------------------------------------
 struct Raw4SceneAdaptor
 {

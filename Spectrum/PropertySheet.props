@@ -3,22 +3,12 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
     <OVRSDKROOT>D:\OculusSDK\</OVRSDKROOT>
-    <SPECTRUM_BOOST>D:\shared_libs\boost_1_66_0\</SPECTRUM_BOOST>
-    <SPECTRUM_BOOST_PATH>D:\shared_libs\boost_1_66_0\</SPECTRUM_BOOST_PATH>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup />
   <ItemGroup>
     <BuildMacro Include="OVRSDKROOT">
       <Value>$(OVRSDKROOT)</Value>
-      <EnvironmentVariable>true</EnvironmentVariable>
-    </BuildMacro>
-    <BuildMacro Include="SPECTRUM_BOOST">
-      <Value>$(SPECTRUM_BOOST)</Value>
-      <EnvironmentVariable>true</EnvironmentVariable>
-    </BuildMacro>
-    <BuildMacro Include="SPECTRUM_BOOST_PATH">
-      <Value>$(SPECTRUM_BOOST_PATH)</Value>
       <EnvironmentVariable>true</EnvironmentVariable>
     </BuildMacro>
   </ItemGroup>

@@ -385,7 +385,7 @@ namespace FlowGraph
 		context->add_task(node);
 	}
 
-	std::list<Node::ptr>  graph::on_drop(variant value)
+	std::list<Node::ptr>  graph::on_drop(MyVariant value)
 	{
 
 		return {};

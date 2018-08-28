@@ -42,12 +42,12 @@ template <typename T> inline size_t HashState(const T* StateDesc, size_t Initial
 }
 
 
-class variant
+class MyVariant
 {
 
 	class var_base
 	{
-		friend class variant;
+		friend class MyVariant;
 	protected:
 
 		var_base(std::reference_wrapper<const std::type_info> r);
@@ -94,9 +94,9 @@ class variant
 
 public:
 	//      LEAK_TEST
-	variant() = default;
-	variant(const variant& r);
-	virtual ~variant();
+	MyVariant() = default;
+	MyVariant(const MyVariant& r);
+	virtual ~MyVariant();
 
 	template<class T>
 	void operator = (const T& value)
@@ -117,7 +117,7 @@ public:
 	}
 
 	*/
-	void operator = (variant value);
+	void operator = (MyVariant value);
 
 	template<class T>
 	T& get() const

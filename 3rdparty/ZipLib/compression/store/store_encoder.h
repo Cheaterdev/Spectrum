@@ -4,7 +4,7 @@
 #include "store_encoder_properties.h"
 
 #include "../../streams/crc32stream.h"
-#include "../../extlibs/zlib/zlib.h"
+#include <zlib.h>
 
 #include <cstdint>
 

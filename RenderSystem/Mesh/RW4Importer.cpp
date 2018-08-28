@@ -1,9 +1,17 @@
 #include "pch.h"
-#include "../../3rdparty/assimp\code/BaseImporter.h"
 
-#include "../../3rdparty/assimp.h"
+#include <assimp\Importer.hpp>
+#include <assimp\importerdesc.h>
+#include <assimp\postprocess.h>
+#include <assimp\scene.h>
+#include <assimp\DefaultLogger.hpp>
+#include <assimp\LogStream.hpp>
+#include <assimp\ProgressHandler.hpp>
+#include <assimp\IOStream.hpp>
+
 #include "raw4/Raw4Loader.h"
 
+#include "BaseImporter.h"
 
 namespace Assimp
 {

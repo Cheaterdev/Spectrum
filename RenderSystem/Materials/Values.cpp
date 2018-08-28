@@ -252,7 +252,7 @@ MaterialContext::~MaterialContext()
 {
 }
 
-std::list<FlowGraph::Node::ptr>  MaterialFunction::on_drop(variant value)
+std::list<FlowGraph::Node::ptr>  MaterialFunction::on_drop(MyVariant value)
 {
 	auto item = value.get<GUI::Elements::asset_item::ptr>();
 

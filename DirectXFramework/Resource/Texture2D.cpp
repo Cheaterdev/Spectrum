@@ -10,8 +10,8 @@ namespace DX11
 
     void Texture2D::save_screenshot(Context &context, std::string file_name)
     {
-		HRESULT hr = DirectX::SaveWICTextureToFile(NativeContextAccessor::get_native_context(context), get_native(),
-                     GUID_ContainerFormatPng, convert(file_name).c_str());
+//		HRESULT hr = DirectX::SaveWICTextureToFile(NativeContextAccessor::get_native_context(context), get_native(),
+   //                  GUID_ContainerFormatPng, convert(file_name).c_str());
     }
 
 	Texture2D::Texture2D(texture2d_desc desc, std::vector<D3D11_SUBRESOURCE_DATA>* data)

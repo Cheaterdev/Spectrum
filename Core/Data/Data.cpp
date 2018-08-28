@@ -63,16 +63,16 @@ namespace DataPacker
 
 
 
-	variant::var_base::var_base(std::reference_wrapper<const std::type_info> r) : type(r) {}
+MyVariant::var_base::var_base(std::reference_wrapper<const std::type_info> r) : type(r) {}
 	
 
 
-	variant::variant(const variant& r)
+MyVariant::MyVariant(const MyVariant& r)
 	{
 		typed = r.typed;
 	}
 
-	variant::~variant()
+MyVariant::~MyVariant()
 	{
 		typed.reset();
 	}
@@ -80,7 +80,7 @@ namespace DataPacker
 
 
 
-	void variant::operator = (variant value)
+	void MyVariant::operator = (MyVariant value)
 	{
 		typed = value.typed->clone();
 
@@ -88,11 +88,11 @@ namespace DataPacker
 			typed = nullptr;
 	}
 
-	bool variant::exists()
+	bool MyVariant::exists()
 	{
 		return !!typed;
 	}
-	void variant::clear()
+	void MyVariant::clear()
 	{
 		typed.reset();
 	}

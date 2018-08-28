@@ -1,6 +1,15 @@
 #include "pch.h"
-#include "../../3rdparty/assimp.h"
+
 #include "Simplifyer/Simplifyer.h"
+#include <assimp\Importer.hpp>
+#include <assimp\postprocess.h>
+#include <assimp\scene.h>
+#include <assimp\DefaultLogger.hpp>
+#include <assimp\LogStream.hpp>
+#include <assimp\ProgressHandler.hpp>
+#include <assimp\IOStream.hpp>
+#include <assimp\IOSystem.hpp>
+
 
 struct MeshLoadingSettings
 {

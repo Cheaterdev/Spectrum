@@ -3,7 +3,7 @@
 
 #include "deflate_decoder_properties.h"
 
-#include "../../extlibs/zlib/zlib.h"
+#include <zlib.h>
 
 #include <cstdint>
 
