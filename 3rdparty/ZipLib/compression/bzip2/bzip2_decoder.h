@@ -3,10 +3,9 @@
 
 #include "bzip2_decoder_properties.h"
 
-#include "../../extlibs/bzip2/bzlib.h"
-
 #include <cstdint>
 
+#include <bzlib.h>
 template <typename ELEM_TYPE, typename TRAITS_TYPE>
 class basic_bzip2_decoder
   : public compression_decoder_interface_basic<ELEM_TYPE, TRAITS_TYPE>

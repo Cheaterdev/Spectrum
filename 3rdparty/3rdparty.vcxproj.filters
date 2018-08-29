@@ -1,38 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="bzip2">
-      <UniqueIdentifier>{8f79c0d2-f8f6-4832-8930-40ea47501358}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="zlib">
-      <UniqueIdentifier>{aa14589d-ddab-4af1-add6-9475a8668238}</UniqueIdentifier>
-    </Filter>
     <Filter Include="lzma">
       <UniqueIdentifier>{45b9b4ae-067f-457b-9821-bdbe07d09bb3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="bzip2\blocksort.c">
-      <Filter>bzip2</Filter>
-    </ClCompile>
-    <ClCompile Include="bzip2\bzerror.c">
-      <Filter>bzip2</Filter>
-    </ClCompile>
-    <ClCompile Include="bzip2\bzlib.c">
-      <Filter>bzip2</Filter>
-    </ClCompile>
-    <ClCompile Include="bzip2\crctable.c">
-      <Filter>bzip2</Filter>
-    </ClCompile>
-    <ClCompile Include="bzip2\decompress.c">
-      <Filter>bzip2</Filter>
-    </ClCompile>
-    <ClCompile Include="bzip2\huffman.c">
-      <Filter>bzip2</Filter>
-    </ClCompile>
-    <ClCompile Include="bzip2\randtable.c">
-      <Filter>bzip2</Filter>
-    </ClCompile>
     <ClCompile Include="lzma\7zAlloc.c">
       <Filter>lzma</Filter>
     </ClCompile>
@@ -141,18 +114,9 @@
     <ClCompile Include="lzma\XzIn.c">
       <Filter>lzma</Filter>
     </ClCompile>
-    <ClCompile Include="bzip2\bcompress.c">
-      <Filter>bzip2</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="alllibs.h" />
-    <ClInclude Include="bzip2\bzlib.h">
-      <Filter>bzip2</Filter>
-    </ClInclude>
-    <ClInclude Include="bzip2\bzlib_private.h">
-      <Filter>bzip2</Filter>
-    </ClInclude>
     <ClInclude Include="lzma\7z.h">
       <Filter>lzma</Filter>
     </ClInclude>

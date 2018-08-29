@@ -233,14 +233,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="bzip2\blocksort.c" />
-    <ClCompile Include="bzip2\bzerror.c" />
-    <ClCompile Include="bzip2\bzlib.c" />
-    <ClCompile Include="bzip2\bcompress.c" />
-    <ClCompile Include="bzip2\crctable.c" />
-    <ClCompile Include="bzip2\decompress.c" />
-    <ClCompile Include="bzip2\huffman.c" />
-    <ClCompile Include="bzip2\randtable.c" />
     <ClCompile Include="lzma\7zAlloc.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Normal|Win32'">false</ExcludedFromBuild>
@@ -532,8 +524,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="alllibs.h" />
-    <ClInclude Include="bzip2\bzlib.h" />
-    <ClInclude Include="bzip2\bzlib_private.h" />
     <ClInclude Include="lzma\7z.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Normal|Win32'">false</ExcludedFromBuild>
