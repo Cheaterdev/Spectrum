@@ -7,40 +7,23 @@ Timer::Timer(Timer&& t) : block(t.block), root(t.root)
 	t.root = nullptr;
 }
 
-Timer::Timer(TimedBlock& block, TimedRoot* root) : block(block), root(root)
+Timer::Timer(TimedBlock* block, TimedRoot* root) : block(block), root(root)
 {
-	root->on_start(this);
+	if(block)
+	root->start(this);
 }
 
 Timer::~Timer()
 {
 	if (root)
-		root->on_end(this);
+		root->end(this);
 }
 
-TimedBlock& TimedBlock::get_child(std::wstring name)
-{
-	std::lock_guard<std::mutex> g(m);
-	auto it = std::find_if(childs.begin(), childs.end(), [name](const TimedBlock::ptr & p)->bool
-	{
-		return p->get_name() == name;
-	});
-
-	if (it == childs.end())
-	{
-		auto c = std::shared_ptr<TimedBlock>(new TimedBlock(name));
-		add_child(c);
-		return *c;
-	}
-
-	// it.reset(new TimedBlock(name, this));
-	return **it;
-}
-
+/*
 float2 TimedBlock::get_time()
 {
 	return time.get();
-}
+}*/
 
 std::wstring TimedBlock::get_name() const
 {
@@ -49,9 +32,9 @@ std::wstring TimedBlock::get_name() const
 
 TimedBlock::TimedBlock(std::wstring name) : name(name)
 {
-	time.register_change(on_time);
+	
 }
-
+/*
 void TimedBlock::begin_timings(Render::Eventer* list)
 {
 	enabled = true;
@@ -78,43 +61,44 @@ void TimedBlock::end_timings(Render::Eventer * list)
 
 	Profiler::get().on_cpu_timer_end(this);
 }
-
+*/
 void TimedBlock::update()
 {
 	std::lock_guard<std::mutex> g(m);
 
 	Profiler::get().on_gpu_timer(this);
-
-	time = float2(timer.get_time(), elapsed_time.count());
-
+	
 	for (auto& c : childs)
 		c->update();
 }
 
 Timer Profiler::start(const wchar_t* name)
 {
-	//TimedBlock * block = this;
 	m.lock();
 	TimedBlock * block= blocks[std::this_thread::get_id()];
 	if (!block)
 		block = this;
 	m.unlock();
-
-	return Timer(block->get_child(name), this);
+	if(enabled)
+	return Timer(&block->get_child(name), this);
+	else return Timer(nullptr,nullptr);
 }
 
 void Profiler::on_start(Timer* timer)
 {
 	m.lock();
-	blocks[std::this_thread::get_id()] =&timer->block;
+	blocks[std::this_thread::get_id()] =timer->block;
+	timer->block->cpu_counter.start_time = std::chrono::high_resolution_clock::now();
+	on_cpu_timer_start(timer->block);
 	m.unlock();
-	timer->block.begin_timings(nullptr);
 }
 
 void Profiler::on_end(Timer* timer)
 {
 	m.lock();
-	blocks[std::this_thread::get_id()] = timer->block.parent;
+	blocks[std::this_thread::get_id()] = timer->block->parent;
+	timer->block->cpu_counter.end_time = std::chrono::high_resolution_clock::now();
+	timer->block->cpu_counter.elapsed_time = timer->block->cpu_counter.end_time - timer->block->cpu_counter.start_time;
+	on_cpu_timer_end(timer->block);
 	m.unlock();
-	timer->block.end_timings(nullptr);
 }

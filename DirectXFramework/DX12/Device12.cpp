@@ -22,8 +22,9 @@ namespace DX12
 			// Create an event handle to use for frame synchronization.
 			m_fenceEvent = CreateEventEx(nullptr, FALSE, FALSE, EVENT_ALL_ACCESS);
 		}
-
-	
+		static int counter = 0;
+		name = std::wstring(L"Queue_")+std::to_wstring(++counter);
+		native->SetName(name.c_str());
 		queue_thread = std::thread([this]
 		{
 			std::string name;

@@ -49,6 +49,12 @@
     <Filter Include="Header Files\compression\bzip2">
       <UniqueIdentifier>{97bbccd3-0914-492c-94c1-20dfd544f0fd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\extlibs">
+      <UniqueIdentifier>{7d50ce09-79c2-403c-bba6-cee6cf45fc03}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\extlibs\lzma">
+      <UniqueIdentifier>{07697e5c-89af-4539-8b84-453db98cd22a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ZipFile.h">
@@ -216,6 +222,96 @@
     <ClInclude Include="streams\nullstream.h">
       <Filter>Header Files\streams</Filter>
     </ClInclude>
+    <ClInclude Include="extlibs\lzma\7z.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\7zAlloc.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\7zBuf.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\7zCrc.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\7zFile.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\7zVersion.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Alloc.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Bcj2.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Bra.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\CpuArch.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Delta.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\LzFind.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\LzFindMt.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\LzHash.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Lzma2Dec.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Lzma2Enc.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Lzma86.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\LzmaDec.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\LzmaEnc.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\LzmaLib.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\MtCoder.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Ppmd.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Ppmd7.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\RotateDefs.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Sha256.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Threads.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Types.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\Xz.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\XzCrc64.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
+    <ClInclude Include="extlibs\lzma\XzEnc.h">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ZipFile.cpp">
@@ -239,5 +335,127 @@
     <ClCompile Include="detail\ZipLocalFileHeader.cpp">
       <Filter>Source Files\detail</Filter>
     </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zAlloc.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zBuf.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zBuf2.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zCrc.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zCrcOpt.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zDec.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zFile.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zIn.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\7zStream.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Alloc.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Bcj2.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Bra.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Bra86.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\BraIA64.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\CpuArch.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Delta.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\LzFind.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\LzFindMt.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Lzma2Dec.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Lzma2Enc.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Lzma86Dec.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Lzma86Enc.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\LzmaDec.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\LzmaEnc.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\LzmaLib.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\MtCoder.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Ppmd7.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Ppmd7Dec.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Ppmd7Enc.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Sha256.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Threads.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\Xz.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\XzCrc64.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\XzDec.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\XzEnc.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+    <ClCompile Include="extlibs\lzma\XzIn.c">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="extlibs\lzma\lzma.sln">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </None>
+    <None Include="extlibs\lzma\lzma.vcxproj">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </None>
+    <None Include="extlibs\lzma\lzma.vcxproj.filters">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </None>
+    <None Include="extlibs\lzma\lzma.vcxproj.user">
+      <Filter>Header Files\extlibs\lzma</Filter>
+    </None>
   </ItemGroup>
 </Project>

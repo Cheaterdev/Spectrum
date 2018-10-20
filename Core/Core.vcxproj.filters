@@ -31,6 +31,9 @@
     <Filter Include="Application">
       <UniqueIdentifier>{3e8a00ec-3c76-40f5-9afc-f3539d9cabb8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Profiling">
+      <UniqueIdentifier>{441bc377-78aa-4795-ab38-e52672dc0eca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math\Constants.h">
@@ -134,6 +137,9 @@
     <ClInclude Include="Application\Application.h">
       <Filter>Application</Filter>
     </ClInclude>
+    <ClInclude Include="Profiling\Profiling.h">
+      <Filter>Profiling</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -186,6 +192,9 @@
     </ClCompile>
     <ClCompile Include="Application\Application.cpp">
       <Filter>Application</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiling\Profiling.cpp">
+      <Filter>Profiling</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -5,13 +5,26 @@ void AssetRenderer::draw(scene_object::ptr scene, Render::Texture::ptr result)
 {
  //  return;
     std::lock_guard<std::mutex> g(lock);
+
+	if (!vr_context)
+	{
+		vr_context = std::make_shared<Render::OVRContext>();
+	}
     Render::CommandList::ptr list = frames.start_frame("AssetRenderer");
 	list->get_graphics().set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
 
     MeshRenderContext::ptr context(new MeshRenderContext());
     context->list = list;
 	context->g_buffer = gbuffer.get();
-	context->eye_context = std::make_shared<Render::OVRContext>();
+	//context->eye_context = std::make_shared<Render::OVRContext>();
+
+	context->eye_context = vr_context;
+	context->eye_context->eyes.resize(1);
+	context->eye_context->eyes[0].dir = quat();
+	context->eye_context->eyes[0].color_buffer = result;
+	context->eye_context->eyes[0].offset = vec3(0, 0, 0);
+	context->eye_context->eyes[0].cam = &cam;
+	context->eye_context->eyes[0].g_buffer = gbuffer.get();
 	gbuffer->reset(context);
 
 

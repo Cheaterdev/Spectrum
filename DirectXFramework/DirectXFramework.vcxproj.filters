@@ -184,7 +184,6 @@
     <ClInclude Include="DX12\GPUTimer.h">
       <Filter>DX12</Filter>
     </ClInclude>
-    <ClInclude Include="Profiling\Profiling.h" />
     <ClInclude Include="DX12\Samplers.h">
       <Filter>DX12</Filter>
     </ClInclude>
@@ -343,10 +342,11 @@
     <ClCompile Include="DX12\Buffer.cpp">
       <Filter>DX12</Filter>
     </ClCompile>
-    <ClCompile Include="Profiling\Profiling.cpp" />
     <ClCompile Include="DX12\Samplers.cpp">
       <Filter>DX12</Filter>
     </ClCompile>
-    <ClCompile Include="DX12\GPUTimer.cpp" />
+    <ClCompile Include="DX12\GPUTimer.cpp">
+      <Filter>DX12</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

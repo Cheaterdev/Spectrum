@@ -2,8 +2,6 @@
 
 namespace DX12
 {
-	class GPUTimer;
-
 	class GPUTimeManager : public Singleton<GPUTimeManager>
 	{
 		friend class Singleton<GPUTimeManager>;
@@ -95,50 +93,5 @@ namespace DX12
 		}*/
 	};
 
-
-	class GPUTimer
-	{
-		friend class GPUTimeManager;
-
-		int id;
-	public:
-		GPUTimer()
-		{
-			id = Singleton<GPUTimeManager>::get().get_id();
-		}
-
-		virtual ~GPUTimer()
-		{
-			Singleton<GPUTimeManager>::get().put_id(id);
-		}
-		void start(DX12::Eventer*  list)
-		{
-			Singleton<GPUTimeManager>::get().start(*this, list);
-		}
-
-		void end(DX12::Eventer*  list)
-		{
-			Singleton<GPUTimeManager>::get().end(*this, list);
-			list = nullptr;
-		}
-
-		float get_time()
-		{
-			return  Singleton<GPUTimeManager>::get().get_time(*this);
-		}
-
-
-		double get_start()
-		{
-			return  Singleton<GPUTimeManager>::get().get_start(*this);
-		}
-
-		double get_end()
-		{
-			return  Singleton<GPUTimeManager>::get().get_end(*this);
-		}
-
-
-	};
 
 }

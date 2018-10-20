@@ -618,10 +618,12 @@ namespace GUI
             f();
     }
 
-    void base::draw_recursive(Render::context& c, base* p)
+    void base::draw_recursive(RecursiveContext& rec_c, base* p)
     {
         if (!test_local_visible())
             return;
+
+		auto &c = rec_c.render_context;
 
         bool visibility = true;
         rect r_bounds = render_bounds.get();
@@ -638,13 +640,21 @@ namespace GUI
         else
         {
             c.ui_clipping = user_ui->get_render_bounds();
-			c.commit_scissor();
+
+			rec_c.execute(c.commit_scissor());
+			
         }
 
         c.scale = result_scale;
 
         if (visibility)
-            draw(c);
+		{
+
+			rec_c.execute([this](Render::context &c) {
+				draw(c);
+			});
+		}
+       
 
         if (clip_child && !visibility)
             return;
@@ -670,13 +680,19 @@ namespace GUI
        
                 for (auto& child : childs)
                     if (child->visible.get())
-                        child->draw_recursive(c, this);
+                        child->draw_recursive(rec_c, this);
             }
 
         c.ui_clipping = orig;
+		c.scale = result_scale;
 
-        if (visibility)
-            draw_after(c);
+
+    //    if (visibility)
+    //        draw_after(c);
+
+		rec_c.execute([this](Render::context &c) {
+			draw_after(c);
+		});
     }
 
     bool base::need_drag_drop()
@@ -854,6 +870,8 @@ namespace GUI
         c.offset = { 0, 0 };
         c.window_size = size.get();
         c.scale = 1;
+
+
         auto&& g2 = lock();
 		{
 			auto timer = c.command_list->start(L"think");
@@ -867,13 +885,36 @@ namespace GUI
 			update_layout({ pos.get(), pos.get() + size.get() }, scale);
 			is_updating_layout = false;
 		}
+
 		{
 			auto timer = c.command_list->start(L"draw");
-			draw_recursive(c);
-			drag.draw(c);
+			RecursiveContext context(c);
+
+			//if (!c.command_list_label)
+			{
+				c.labeled = &context.pre_executor;
+
+				c.command_list_label = c.command_list->get_sub_list();
+				c.command_list_label->begin("Label");
+			}
+
+
+			draw_recursive(context);
+			
+			drag.draw(context);
+			context.stop_and_wait();
 		}
 
+		if(c.command_list_label)
+		{
+			c.command_list_label->end();
+			c.command_list_label->execute();
+			c.command_list_label = nullptr;
+		}
+		
 		renderer->flush(c);
+	
+	
     }
 
     void user_interface::mouse_action_event(mouse_action action, mouse_button button, vec2 pos)
@@ -1240,7 +1281,7 @@ namespace GUI
     {
     }
 
-    void drag_n_drop::draw(Render::context& c)
+    void drag_n_drop::draw(RecursiveContext& c)
     {
         if (!dragging) return;
 
@@ -1249,10 +1290,11 @@ namespace GUI
         if (!p)
             return;
 
-        c.offset = cur_pos - start_pos;
-
-        if (p->drag_n_drop_copy)
-            p->draw_recursive(c);
+        c.render_context.offset = cur_pos - start_pos;
+		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+       if (p->drag_n_drop_copy)
+		   p->draw_recursive(c);
+           
     }
 
     void drag_n_drop::on_drop(vec2 at) const

@@ -29,7 +29,7 @@ namespace GUI
 					margin = { 5, 0, 0, 0 };
 
 				//	wptr weak = get_ptr<TimedLabel>();
-					timer->on_time.register_handler(this, [this](const float2 & time)
+					timer->cpu_counter.on_time.register_handler(this, [this](const float2 & time)
 					{
 					//	auto ptr = weak.lock();
 					//	if (!ptr) return;

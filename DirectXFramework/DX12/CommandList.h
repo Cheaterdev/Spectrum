@@ -301,6 +301,60 @@ namespace DX12
 		ReadBackInfo read_data(UINT64 uploadBufferSize);
 
 	};
+	class GPUTimeManager;
+	class Eventer;
+	
+	class GPUTimer
+	{
+		friend class GPUTimeManager;
+
+		int id;
+	public:
+		GPUTimer();
+
+		virtual ~GPUTimer();
+
+		void start(Eventer* list);
+
+		void end(Eventer* list);
+
+		float get_time();
+
+
+		double get_start();
+
+		double get_end();
+	};
+
+
+	class GPUCounter
+	{
+		
+	public:
+		GPUTimer timer;
+		bool enabled = true;
+
+		//Events::prop<float2>::event_type on_time;
+
+		std::chrono::time_point<std::chrono::high_resolution_clock>  start_time;
+		std::chrono::time_point<std::chrono::high_resolution_clock>  end_time;
+
+		//Events::prop<float2> time;
+
+		//std::chrono::duration<double> elapsed_time;
+
+
+	};
+
+	class GPUBlock:public TimedBlock
+	{
+	public:
+		GPUBlock(std::wstring name) :TimedBlock(name) {};
+
+
+		GPUCounter gpu_counter;
+	};
+
 
 	class Eventer : public virtual CommandListBase, public TimedRoot
 	{

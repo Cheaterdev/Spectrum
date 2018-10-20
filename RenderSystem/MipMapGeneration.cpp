@@ -180,7 +180,8 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
         cb.TexelSize = { 1.0f / DstWidth, 1.0f / DstHeight };
         //	Context.SetConstants(0, TopMip, NumMips, 1.0f / DstWidth, 1.0f / DstHeight);
         compute_context.set_const_buffer(0, cb);
-        compute_context.set_dynamic(2,0, tex->texture_2d()->get_uav(TopMip + 1));
+		for(int i=0;i< NumMips;i++)
+        compute_context.set_dynamic(2,i, tex->texture_2d()->get_uav(TopMip + 1+i));
         compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
         compute_context.transition_uav(tex.get());
         TopMip += NumMips;

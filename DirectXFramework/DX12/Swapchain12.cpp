@@ -47,8 +47,8 @@ namespace DX12
 	
 			Device::get().get_queue(CommandListType::DIRECT)->wait(frames[m_frameIndex].fence_event);
 
-	//	for (auto &f : frames)
-		//	Device::get().get_queue(CommandListType::DIRECT)->wait(f.fence_event);
+//		for (auto &f : frames)
+	//		Device::get().get_queue(CommandListType::DIRECT)->wait(f.fence_event);
 				
 
 	}
@@ -63,7 +63,9 @@ namespace DX12
 
 	void SwapChain::resize(ivec2 size)
 	{
-		Device::get().get_queue(CommandListType::DIRECT)->wait(last_time);
+		auto & q = Device::get().get_queue(CommandListType::DIRECT);
+
+		q->wait(q->signal());
 
 		//	frames[0].m_renderTarget.
 		for (auto && f : frames)

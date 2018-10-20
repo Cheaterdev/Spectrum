@@ -2,6 +2,9 @@
 
 #include <ppltasks.h>
 #include <ppl.h>
+#include <agents.h>
+#include "../Profiling/Profiling.h"
+#include <boost/lockfree/spsc_queue.hpp>
 using namespace concurrency;
 
 #define GSysInfo SystemInfo::get()
@@ -23,139 +26,19 @@ public:
 	auto enqueue(F&& f, TaskPriority priority = TaskPriority::NORMAL/*, Args&& ... args*/)
 		->std::future<typename std::result_of<F(/*Args...*/)>::type>;
 
-	/*    void enqueue_task(std::function<void()> f)
-		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
-			tasks.emplace(f);
-			condition.notify_one();
-		}
-		*/
-	bool is_free() const
-	{
-		return free_count == workers.size();
-	}
-
-	void wait_for_all()
-	{
-		{
-			std::unique_lock<std::mutex> lock(this->free_mutex);
-			this->condition_free.wait(lock,
-				[this]
-			{
-
-				return is_free() && this->tasks.empty();
-
-			});
-		}
-	}
-
-
 private:
 
-	explicit thread_pool(size_t size = 32);
+	explicit thread_pool();
 	virtual    ~thread_pool();
 
-
-
-	uint32_t free_count = 0;
-	uint32_t high_tasks = 0;
-	// need to keep track of threads so we can join them
-	std::vector< std::thread > workers;
-
-	struct TaskInfo
-	{
-		std::function<void()> func;
-		TaskPriority priority = TaskPriority::NORMAL;
-		std::string task_name;
-		TaskInfo(const std::function<void()>& f, TaskPriority p) noexcept : func(std::move(f)), priority(p) {}
-
-		TaskInfo(const TaskInfo&& o) noexcept : func(std::move(o.func)), priority(o.priority) {}
-		TaskInfo() = default;
-
-		void operator=(const TaskInfo&& o)
-		{
-			func = (std::move(o.func));
-			priority = (o.priority);
-		};
-	};
-	// the task queue
-	std::priority_queue<TaskInfo, std::vector<TaskInfo>, std::function<bool(const TaskInfo&, const TaskInfo&)>> tasks;
-
-	// synchronization
-	std::mutex queue_mutex;
-	std::condition_variable condition;
-
-	std::mutex free_mutex;
-
-	std::condition_variable condition_free;
 	bool stop;
 };
 
 // the constructor just launches some amount of workers
-inline thread_pool::thread_pool(size_t threads)
-	: stop(false), tasks([](const TaskInfo & a, const TaskInfo & b)->bool
+inline thread_pool::thread_pool()
+	: stop(false)
 {
-	return static_cast<int>(a.priority) < static_cast<int>(b.priority);
-})
-{
-	for (size_t i = 0; i < threads; ++i)
-		workers.emplace_back(
-			[this, i]
-	{
-
-
-		SetThreadName(std::string("thread_pool: ") + std::to_string(i));
-
-		for (;;)
-		{
-			TaskInfo task;
-			bool need_restart = false;
-			auto started = false;
-			{
-				std::unique_lock<std::mutex> lock(this->queue_mutex);
-				this->condition.wait(lock,
-					[this, &started, &task]
-				{
-					if (!started)
-					{
-						free_count++;
-						condition_free.notify_all();
-						started = true;
-					}
-					return this->stop || !this->tasks.empty();
-				});
-
-				if (this->stop && this->tasks.empty())
-					return;
-
-				if (i < 8 && this->tasks.top().priority != TaskPriority::HIGH) // buggy, but useful kostil'
-					need_restart = true;
-				else
-				{
-					free_count--;
-					task = std::move(this->tasks.top());
-					this->tasks.pop();
-				}
-
-				//   if (task.priority == TaskPriority::HIGH)
-				//   high_tasks++;
-			}
-
-			SPECTRUM_TRY
-				if (need_restart)
-				{
-					this->condition.notify_one();
-					continue;
-				}
-
-				task.func();
-				//     if (task.priority == TaskPriority::HIGH)
-				//      high_tasks--;
-			SPECTRUM_CATCH
-			//	if (stop) return;
-		}
-	}
-	);
+	
 }
 
 // add new work item to the pool
@@ -163,6 +46,7 @@ template<class F/*, class... Args*/>
 auto thread_pool::enqueue(F&& f, TaskPriority priority/*, Args&& ... args*/)
 -> std::future<typename std::result_of<F(/*Args...*/)>::type>
 {
+	if (stop) throw std::exception("wtf");
 	using return_type = typename std::result_of<F(/*Args...*/)>::type;
 
 	auto task = std::make_shared< std::packaged_task<return_type()> >(
@@ -170,30 +54,16 @@ auto thread_pool::enqueue(F&& f, TaskPriority priority/*, Args&& ... args*/)
 		);
 
 	std::future<return_type> res = task->get_future();
-	{
-		std::unique_lock<std::mutex> lock(queue_mutex);
 
-		// don't allow enqueueing after stopping the pool
-		if (!stop)
-			//   throw std::runtime_error("enqueue on stopped ThreadPool");
 
-			tasks.emplace([task]() { (*task)(); }, priority);
-	}
-	condition.notify_one();
+	create_task([task]() {(*task)(); });
 	return res;
 }
 
 // the destructor joins all threads
 inline thread_pool::~thread_pool()
 {
-	{
-		std::unique_lock<std::mutex> lock(queue_mutex);
-		stop = true;
-	}
-	condition.notify_all();
-
-	for (auto& worker : workers)
-		worker.join();
+	stop = true;
 }
 
 
@@ -349,3 +219,142 @@ public:
 
 };
 
+
+class SingleThreadExecutor : public concurrency::agent, public concurrency::unbounded_buffer<std::function<void()>>
+
+{
+public:
+	explicit SingleThreadExecutor(bool start = true)
+	{
+		if (start)
+			concurrency::agent::start();
+	}
+
+	void stop_and_wait()
+	{
+		enqueue(nullptr);
+
+		concurrency::agent::wait(this);
+	}
+
+protected:
+	void run()
+	{
+
+		// Read from the source block until we receive the 
+		// sentinel value.
+		std::function<void()> n;
+		while ((n = receive(*this)) != nullptr)
+		{
+			n();
+		}
+
+
+		// Set the agent to the finished state.
+		done();
+	}
+
+private:
+	// The source buffer to read from.
+	//ISource<std::function<void()>>& _source;
+
+};
+
+
+
+
+using Batch = std::vector<std::function<void()>>;
+class SingleThreadExecutorBatched /*: public concurrency::agent, public concurrency::unbounded_buffer<Batch>*/
+
+{
+	concurrency::task<void> task;
+	boost::lockfree::spsc_queue<int, boost::lockfree::capacity<7> > spsc_queue;
+public:
+	explicit SingleThreadExecutorBatched(int count = 16, bool start = true)
+	{
+		for(auto &d:datas)
+d.reserve(count);
+
+		index = 0;
+	/*	if (start)
+			concurrency::agent::start();*/
+
+		task= create_task([this]
+	{
+		run();
+	});
+	}
+
+	void flush()
+	{
+		while (!spsc_queue.push(index));
+
+		index = (index+1)%datas.size();
+		
+		//current_data->clear();
+	}
+
+	void stop_and_wait()
+	{
+		add(nullptr);
+		flush();
+		task.wait();
+	//	
+	/*	enqueue(Batch());*/
+
+	//	wait(this);
+	}
+
+	void add(std::function<void()>&& f)
+	{
+
+	//	while (!spsc_queue.push(f));
+		//auto new_c = std::make_shared<Render::context>(render_context);
+		datas[index].emplace_back(std::forward<std::function<void()>>(f));
+
+		if (datas[index].capacity() == datas[index].size())
+		{
+			flush();
+		}
+
+	
+	}
+
+protected:
+	std::array<Batch,8> datas;
+	int index;
+
+	void run()
+	{
+		bool alive = true;
+		while(alive)
+		while (alive&&spsc_queue.consume_one([&](int id)
+		{	
+		//	auto &timer = Profiler::get().start(L"Batch");
+			for (auto &f : datas[id]) 
+				if(f)
+					f();
+			else
+				alive = false;
+
+			datas[id].clear();
+		}));
+		// Read from the source block until we receive the 
+		// sentinel value.
+	/*	Batch n;
+		while (!(n = receive(*this)).empty())
+		{
+			auto &timer = Profiler::get().start(L"Batch");
+			for (auto &f : n) f();
+		}
+
+
+		// Set the agent to the finished state.
+		done();*/
+	}
+
+private:
+	// The source buffer to read from.
+	//ISource<std::function<void()>>& _source;
+
+};

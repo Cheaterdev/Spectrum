@@ -54,6 +54,7 @@
     <ClInclude Include="Patterns\Singleton.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Platform.h" />
+    <ClInclude Include="Profiling\Profiling.h" />
     <ClInclude Include="Serialization\polymorphic_portable_archive.hpp" />
     <ClInclude Include="Serialization\portable_archive.hpp" />
     <ClInclude Include="Serialization\portable_archive_exception.hpp" />
@@ -96,6 +97,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Normal|x64'">pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="Platform.cpp" />
+    <ClCompile Include="Profiling\Profiling.cpp" />
     <ClCompile Include="Threads\Threading.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

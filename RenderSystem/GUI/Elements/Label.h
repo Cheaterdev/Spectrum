@@ -3,8 +3,22 @@ namespace GUI
 {
     namespace Elements
     {
+		/*
+		class label_internal : public base
+		{
+		public:
+			using ptr = s_ptr<label_internal>;
+			using wptr = w_ptr<label_internal>;
+
+			GUI::Texture cache;
+
+			virtual void draw(Render::context& c) override;
+
+		};*/
+
         class label : public base
         {
+				/*label_internal::ptr internal_label;*/
 
                 Fonts::Font::ptr font;
                 Fonts::FontGeometry::ptr geomerty;
@@ -20,6 +34,7 @@ namespace GUI
                 rect text_size;
                 ivec2 w;
                 float scaled = 1;
+
 				GUI::Texture cache;
 
             public:

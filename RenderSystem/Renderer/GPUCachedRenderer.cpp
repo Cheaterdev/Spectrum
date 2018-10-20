@@ -162,8 +162,8 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 		/////////////////////////////
 		/////gpu frustum culling/////
 
-		bool check_occlusion = mesh_render_context->g_buffer&&mesh_render_context->render_type == RENDER_TYPE::PIXEL;
-		bool frustum_culling =  mesh_render_context->render_type == RENDER_TYPE::PIXEL;
+	const bool check_occlusion = mesh_render_context->g_buffer&&mesh_render_context->render_type == RENDER_TYPE::PIXEL;
+	const bool frustum_culling =  mesh_render_context->render_type == RENDER_TYPE::PIXEL;
 		if (frustum_culling)
 		{
 			auto timer = graphics.start(L"frustum culling");
@@ -231,7 +231,7 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 
 
 		if(check_occlusion)
-		for (int stage = 0; stage < 2; stage++)
+		for (auto stage = 0; stage < 2; stage++)
 		{
 		
 			// get_invisible instances
@@ -461,7 +461,7 @@ gpu_cached_renderer::gpu_cached_renderer(Scene::ptr scene, MESH_TYPE _mesh_type)
 		{
 
 
-			auto mt = render_object->overrided_material[r.mesh->material];
+			auto& mt = render_object->overrided_material[r.mesh->material];
 			materials::universal_material* mat = dynamic_cast<materials::universal_material*>((*mt).get());
 
 			auto mat_id = mat->get_id();
@@ -633,9 +633,9 @@ void gpu_cached_renderer::init_material(MaterialAsset* m)
 	}
 	if (handles.size())
 	{
-		auto index = material_offsets[mat] = textures.get_free(handles.size());
+		const auto index = material_offsets[mat] = textures.get_free(handles.size());
 
-		for (int i = 0; i < handles.size(); i++)
+		for (auto i = 0; i < handles.size(); i++)
 		{
 			textures[index + i] = handles[i];
 		}
@@ -644,7 +644,7 @@ void gpu_cached_renderer::init_material(MaterialAsset* m)
 	{
 		material_offsets[mat] = -1;
 	}
-	auto mat_id = mat->get_id();
+	const auto mat_id = mat->get_id();
 
 
 	if (direction[mat_id].index == 0)
@@ -663,14 +663,14 @@ void gpu_cached_renderer::init_material(MaterialAsset* m)
 
 void gpu_cached_renderer::on_add(scene_object* object)
 {
-	auto inst = dynamic_cast<MeshAssetInstance*>(object);
+	const auto inst = dynamic_cast<MeshAssetInstance*>(object);
 
 	if (inst->type != mesh_type) return;
 
 	gpu_mesh_renderer::on_add(object);
 
 
-	Render::renderable* render_object = dynamic_cast<Render::renderable*>(object);
+	const auto render_object = dynamic_cast<Render::renderable*>(object);
 
 	if (render_object)
 	{

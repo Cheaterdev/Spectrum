@@ -348,6 +348,7 @@ namespace DX12
 		for (auto &e : root_tables)
 		{
 			if (!e.second.changed) continue;
+		
 			auto table = heap->get_table_view(offset, e.second.handles.size());
 
 			for (unsigned int j = 0; j < e.second.handles.size(); j++)

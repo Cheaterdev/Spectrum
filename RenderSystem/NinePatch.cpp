@@ -86,7 +86,7 @@ namespace GUI
 				textures_handles.emplace_back(item.texture->texture_2d()->get_static_srv());
 			}
 
-		if (!added)
+		if (!added&&current_state== state)
 		{
 			return;
 		}
@@ -368,8 +368,8 @@ namespace GUI
 		//c.command_list->get_graphics().draw_indexed(9 * 2 * 3, 0, 0, vertexes.size() / 16);
 		//vertexes.clear();
 
-		//if(textures_handles.size()==1)
-	//	flush(c);
+		if(textures_handles.size()==512)
+		flush(c);
 	}
 
 	void NinePatch::flush(Render::context& c)

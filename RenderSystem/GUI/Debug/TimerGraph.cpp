@@ -228,7 +228,7 @@ namespace GUI
 				back->texture.padding = { 16,16,16,16 };
 				back->padding = { 4,4,4,4 };
 				//back->size = {100,100 };
-				add_child(back);
+				scroll_container::add_child(back);
 
 				front = back;
 				Profiler::get().on_frame.register_handler(this, [this](UINT64 frame) {
@@ -259,15 +259,25 @@ namespace GUI
 
 
 				Profiler::get().on_gpu_timer.register_handler(this, [this](TimedBlock* block) {
+
+					
 					if (ended) return;
+
+					GPUBlock * b = dynamic_cast<GPUBlock*>(block);
+					if (!b) return;
+
+				
+
 					m.lock();
 
 					this->data.gpu_blocks.emplace_back();
 					auto data = &this->data.gpu_blocks.back();
 					//	data->thread_id = thread_id;
 					data->block = block;
-					data->start_time = block->get_timer().get_start();
-					data->end_time = block->get_timer().get_end();
+
+
+					data->start_time = b->gpu_counter.timer.get_start();
+					data->end_time = b->gpu_counter.timer.get_end();
 
 					m.unlock();
 
@@ -299,53 +309,13 @@ namespace GUI
 					data = &this->data.blocks.back();
 					data->thread_id = thread_id;
 					data->block = block;
-					data->start_time = block->start_time;
+					data->start_time = block->cpu_counter.start_time;
 					m.unlock();
 
 
 
 
 
-					/*
-
-					blocks[block] = obj;
-					//	auto& t_id = root_ids[block->get_root().get()];
-
-					auto & id = root_ids[block];
-
-					if (block->get_name() == L"game window")
-						Log::get() << "game window " << this_id << " " << id << Log::endl;
-					if (block->get_name() == L"GI")
-						Log::get() << "GI " << this_id << " " << id << Log::endl;
-
-
-					if (id == 0)
-					{
-						auto & 	id2 = threads[this_id];
-
-						if (id2 == 0)
-						{
-							id2 = threads.size();
-
-							image::ptr back(new image());
-							back->docking = dock::TOP;
-							back->height_size = size_type::MATCH_CHILDREN;
-							back->width_size = size_type::MATCH_CHILDREN;
-							back->x_type = pos_x_type::LEFT;
-							back->texture.texture = Render::Texture::get_resource(Render::texure_header("textures/gui/debug_back.png"));
-							back->texture.padding = { 16,16,16,16 };
-							back->padding = { 4,4,4,4 };
-							thread_backs.emplace_back(back);
-							add_child(back);
-						}
-						id = id2;
-					}
-
-
-
-					obj->pos = { 80000 * std::chrono::duration<double>(block->start_time - start).count(), 50 * (block->calculate_depth() - 1) };
-					thread_backs[id - 1]->add_child(obj);
-					*/
 				});
 
 
@@ -355,21 +325,14 @@ namespace GUI
 
 					m.lock();
 					auto &data = current_data[block];
-					//	bool need_build = false;
 					if (data)
 					{
 
-						data->end_time = block->end_time;
-						//	need_build = std::chrono::duration<double>(data->end_time - start).count() > 0.15;
-
+						data->end_time = block->cpu_counter.end_time;
+			
 					}
 					m.unlock();
 
-					//	if (!data)
-						//	return;
-
-
-					//if (need_build) build();
 				});
 
 

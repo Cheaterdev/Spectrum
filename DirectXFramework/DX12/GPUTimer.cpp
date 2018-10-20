@@ -27,6 +27,39 @@ namespace DX12
 		return static_cast<double>(read_back_data[2 * timer.id + 1]) / frequency;
 	}
 
+	GPUTimer::GPUTimer()
+	{
+		id = Singleton<GPUTimeManager>::get().get_id();
+	}
 
+	GPUTimer::~GPUTimer()
+	{
+		Singleton<GPUTimeManager>::get().put_id(id);
+	}
 
+	void GPUTimer::start(DX12::Eventer* list)
+	{
+		Singleton<GPUTimeManager>::get().start(*this, list);
+	}
+
+	void GPUTimer::end(DX12::Eventer* list)
+	{
+		Singleton<GPUTimeManager>::get().end(*this, list);
+		list = nullptr;
+	}
+
+	float GPUTimer::get_time()
+	{
+		return Singleton<GPUTimeManager>::get().get_time(*this);
+	}
+
+	double GPUTimer::get_start()
+	{
+		return Singleton<GPUTimeManager>::get().get_start(*this);
+	}
+
+	double GPUTimer::get_end()
+	{
+		return Singleton<GPUTimeManager>::get().get_end(*this);
+	}
 }

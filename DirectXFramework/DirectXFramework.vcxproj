@@ -297,7 +297,6 @@
     <ClInclude Include="helper.h" />
     <ClInclude Include="InputLayouts.h" />
     <ClInclude Include="pch.h" />
-    <ClInclude Include="Profiling\Profiling.h" />
     <ClInclude Include="ResourceViews\RenderTarget.h" />
     <ClInclude Include="ResourceViews\ShaderResourceView.h" />
     <ClInclude Include="Resource\Buffer.h" />
@@ -373,7 +372,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Normal|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="Profiling\Profiling.cpp" />
     <ClCompile Include="ResourceViews\RenderTarget.cpp" />
     <ClCompile Include="ResourceViews\ShaderResourceView.cpp" />
     <ClCompile Include="Resource\InputLayout.cpp" />

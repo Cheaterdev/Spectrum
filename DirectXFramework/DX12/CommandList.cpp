@@ -849,15 +849,42 @@ void ComputeContext::dispach(int x,int y,int z)
 	  }*/
 	void Eventer::on_start(Timer* timer)
 	{
-		names.push_back(timer->block.get_name());
+		names.push_back(timer->get_block().get_name());
 		start_event(names.back().c_str());
-		timer->block.begin_timings(executed ? nullptr : this);
-		current = &timer->block;
+
+		for (auto& c : timer->get_block().get_childs())
+		{
+			GPUBlock * b = dynamic_cast<GPUBlock*>(c.get());
+			if(b)
+			{
+				b->gpu_counter.enabled = false;
+			}
+		}
+	//		static_cast<GPUBlock*>(c.get())
+
+		GPUBlock * b = dynamic_cast<GPUBlock*>(&timer->get_block());
+		if (b)
+		{
+			b->gpu_counter.timer.start(this);
+		}
+
+
+	//	static_cast<GPUBlock&>(timer->get_block()).gpu_counter.timer.start(this);
+	//	timer->block.begin_timings(executed ? nullptr : this);
+		current = &timer->get_block();
 	}
 	void  Eventer::on_end(Timer* timer)
 	{
-		timer->block.end_timings(executed ? nullptr : this);
-		current = timer->block.parent;
+		//timer->get_block().end_timings(executed ? nullptr : this);
+	//	static_cast<GPUBlock&>(timer->get_block()).gpu_counter.timer.end(this);
+
+		GPUBlock * b = dynamic_cast<GPUBlock*>(&timer->get_block());
+		if (b)
+		{
+			b->gpu_counter.timer.end(this);
+		}
+
+		current = timer->get_block().get_parent().get();
 		end_event();
 	}
 
@@ -870,7 +897,7 @@ void ComputeContext::dispach(int x,int y,int z)
 	{
 
 		current = t ? &t->get_block() : &Profiler::get();
-
+		TimedRoot::parent = t ? t->get_root(): &Profiler::get();
 		if (name.size())
 		{
 			timer.reset(new Timer(start(convert(name).c_str())));
@@ -885,7 +912,11 @@ void ComputeContext::dispach(int x,int y,int z)
 
 	Timer  Eventer::start(const wchar_t* name)
 	{
-		return std::move(Timer(current->get_child(std::wstring(name)), this));
+		if (Profiler::get().enabled)
+			return std::move(Timer(&current->get_child<GPUBlock>(std::wstring(name)), this));
+		else return Timer(nullptr, nullptr);
+		//return std::move(Timer(nullptr,nullptr));
+		
 	}
 
 

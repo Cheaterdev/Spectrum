@@ -58,44 +58,6 @@ if (FAILED(hr)) \
 #include "D3D/TextureLoader.h"
 
 
-
-class Timer;
-
-class TimedBlock;
-class TimedRoot
-{
-        friend class Timer;
-        //TimedBlock root;
-        //TimedBlock* current;
-        //Render::CommandList* list;
-
-        virtual    void on_start(Timer* timer) = 0;
-        /*  {
-        timer->block.begin_timings(list);
-        }*/
-
-        virtual  void on_end(Timer* timer) = 0;
-        /* {
-        timer->block.end_timings(list);
-        }*/
-    public:
-
-        /*  void begin(Render::CommandList* list)
-        {
-        this->list = list;
-        }*/
-
-        virtual Timer start(const wchar_t* name) = 0;
-        /*{
-        return Timer(current->get(name), this);
-        }*/
-
-
-};
-
-
-
-
 //HRESULT TEST(HRESULT hr);
 namespace DX11
 {
@@ -199,7 +161,6 @@ namespace Render
 
 #include "../3rdparty/FW1FontWrapper/Source/FW1CompileSettings.h"
 #include "../3rdparty/FW1FontWrapper/Source/FW1FontWrapper.h"
-#include "Profiling/Profiling.h"
 
 
 typedef CComPtr<IFW1Factory>			FW1_Factory;

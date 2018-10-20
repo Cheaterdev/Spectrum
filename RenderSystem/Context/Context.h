@@ -1,3 +1,4 @@
+
 class camera;
 class debug_drawer;
 class vertex_transform;
@@ -32,26 +33,36 @@ namespace Render
     {
         public:
 
-            Render::CommandList::ptr command_list;
-            debug_drawer* drawer;
+            Render::CommandList::ptr& command_list;
+			Render::CommandList::ptr& command_list_label;
+			std::shared_ptr<OVRContext>& ovr_context;
+
+			SingleThreadExecutorBatched* labeled;
+			Batch* data;
+			debug_drawer* drawer;
             sizer_long ui_clipping;
 			sizer_long scissors;
             vec2 offset;
             float delta_time;
             vec2 window_size;
             float scale = 1;
-			std::shared_ptr<OVRContext> ovr_context;
-
-			void commit_scissor()
+			
+			std::function<void(Render::context &c)> commit_scissor()
 			{
 				scissors = ui_clipping;
-				command_list->get_graphics().set_scissors(ui_clipping);
+				auto list = command_list;
+				auto clip = ui_clipping;
+				return [list, clip](Render::context &c) {list->get_graphics().set_scissors(clip); };
 			}
-            context(Render::CommandList::ptr list): command_list(list)
+
+			
+            context(Render::CommandList::ptr& list, Render::CommandList::ptr& command_list_label, std::shared_ptr<OVRContext>& ovr_context): command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
             {
                 drawer = nullptr;
 //                cam = nullptr;
                 delta_time = 0;
+				
+
             }
     };
 

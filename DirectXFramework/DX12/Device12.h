@@ -7,8 +7,9 @@ namespace DX12
 	class Device;
 	class Queue
 	{
+		std::wstring name;
 		ComPtr<ID3D12CommandQueue> native;
-
+		
 		ComPtr<ID3D12Fence> m_fence;
 		HANDLE m_fenceEvent;
 		UINT64 m_fenceValue;
@@ -27,8 +28,7 @@ namespace DX12
 		std::condition_variable condition;
 
 		bool stop = false;
-		UINT64 signal();
-
+	
 		std::mutex ended_mutex;
 
 		std::condition_variable condition_ended;
@@ -42,6 +42,7 @@ namespace DX12
 		UINT64 execute_internal(CommandList* list);
 	
 	public:
+		UINT64 signal();
 
 		void unused(ComPtr<ID3D12Pageable> resource);
 

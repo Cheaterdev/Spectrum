@@ -531,7 +531,15 @@ void materials::universal_material::generate_material()
 
 	//   if (textures_changed)
 	{
+		for (auto & t : textures)
+		{
+			t->asset.destroy();
+		}
 		textures = context->get_textures();
+		/*for(auto & t:textures)
+		{
+			t->asset = register_asset(*t->asset);
+		}*/
 		compile();
 	}
 

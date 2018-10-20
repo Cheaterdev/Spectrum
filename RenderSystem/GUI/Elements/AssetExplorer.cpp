@@ -5,12 +5,61 @@ namespace GUI
 {
     namespace Elements
     {
+		class dummy_context:public ::FlowGraph::GraphContext
+		{
+			
+		};
+		using dummy_options = ::FlowGraph::ContextOptions<dummy_context>;
 
+		class dummy_node: public dummy_options::NodeType, public GUI::Elements::FlowGraph::VisualGraph
+		{
+			virtual  void operator()(dummy_options::ContextType* type)
+			{
+				
+			};
+		public:
+			dummy_node()
+			{
+
+				register_input(::FlowGraph::data_types::INT, "Ref")->only_one_input = false;
+				register_output(::FlowGraph::data_types::INT, "Ref");
+			}
+			using ptr = std::shared_ptr<dummy_node>;
+			GUI::Elements::image::ptr img_inner;
+			AssetStorage::ptr asset_storage;
+
+			GUI::base::ptr create_editor_window() override
+			{
+
+			//	if (!debug_texture)
+			//		debug_texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+				GUI::Elements::image::ptr img(new GUI::Elements::image);
+				img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+				img->texture.padding = { 9, 9, 9, 9 };
+				img->padding = { 9, 9, 9, 9 };
+				img->width_size = GUI::size_type::MATCH_CHILDREN;
+				img->height_size = GUI::size_type::MATCH_CHILDREN;
+				//   img->size = { 64, 64 };
+				img_inner.reset(new GUI::Elements::image);
+
+
+				img_inner->texture.texture = asset_storage->get_preview();
+				img_inner->docking = GUI::dock::TOP;
+				img_inner->size = { 128, 128 };
+				img->add_child(img_inner);
+				return img;
+			}
+
+
+
+		};
         bool asset_item::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
         {
             if (action == mouse_action::UP && button == mouse_button::RIGHT)
             {
-                menu_list::ptr menu(new menu_list());
+				auto loaded_asset = asset->get_asset();
+				if (!loaded_asset) return true;
+            	menu_list::ptr menu(new menu_list());
                 menu->add_item("Test")->on_click = [this](menu_list_element::ptr e)
                 {
                     auto material = asset->get_asset()->get_ptr<MaterialAsset>();
@@ -58,7 +107,7 @@ namespace GUI
                         user_ui->message_box("info", s.str(), [](bool v) {});
                     }
                 };
-                auto texture = asset->get_asset()->get_ptr<TextureAsset>();
+			   auto texture = loaded_asset->get_ptr<TextureAsset>();
 
                 if (texture)
                     menu->add_item("Compress")->on_click = [this](menu_list_element::ptr e)
@@ -71,6 +120,60 @@ namespace GUI
                 {
                     asset->update_preview();
                 };
+
+				menu->add_item("show references")->on_click = [this](menu_list_element::ptr e)
+				{
+			
+				dummy_options::GraphType::ptr graph(new dummy_options::GraphType());
+
+				graph->register_input(::FlowGraph::data_types::INT, "Ref");
+
+				std::function<void(::FlowGraph::parameter::ptr, AssetStorage::ptr)> generate_references;
+
+
+				std::map<AssetStorage::ptr, dummy_node::ptr> ready_nodes;
+				generate_references = [&generate_references,&graph,&ready_nodes](::FlowGraph::parameter::ptr prm, AssetStorage::ptr asset)
+				{	auto references = asset->get_references();
+
+				for (auto& ref : references)
+				{
+
+					auto asset_storage = AssetManager::get().get_storage(ref);
+
+					dummy_node::ptr& node = ready_nodes[asset_storage];
+
+					if(!node)
+					{
+						node.reset(new dummy_node());
+						node->name = convert(asset_storage->get_name());
+						node->asset_storage = asset_storage;
+						graph->register_node(node);
+						generate_references(node->get_output(0), asset_storage);
+					}
+				
+				
+
+					prm->link(node->get_input(0));
+
+				
+
+				}
+
+				};
+				generate_references(graph->get_input(0), asset);
+
+					run_on_ui([this, graph]()
+					{
+						window::ptr wnd(new window);
+						user_ui->add_child(wnd);
+						dock_base::ptr dock(new dock_base);
+						wnd->add_child(dock);
+						dock->get_tabs()->add_button(FlowGraph::manager::get().add_graph(graph));
+						wnd->pos = { 200, 200 };
+						wnd->size = { 300, 300 };
+					});
+
+				};
 
                 menu->pos = vec2(pos);
 

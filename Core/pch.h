@@ -7,7 +7,7 @@
 #define SPECTRUM_ENABLE_EXEPTIONS
 // support windows 7
 #include <WinSDKVer.h>
-#define _WIN32_WINNT _WIN32_WINNT_WIN7
+//#define _WIN32_WINNT _WIN32_WINNT_WIN7
 #include <SDKDDKVer.h>
 
 // Exclude rarely-used stuff from Windows headers
@@ -207,6 +207,7 @@ void unreferenced_parameter(const T&)
 #include "Threads/Scheduler.h"
 
 #include "Application/Application.h"
+#include "Profiling/Profiling.h"
 
 #define GUID_WINDOWS
 #include "guid/guid.h"

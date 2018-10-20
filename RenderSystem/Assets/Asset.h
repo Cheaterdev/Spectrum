@@ -61,11 +61,12 @@ class AssetReferenceBase
 		//     virtual bool is_same_internal(const void*) const = 0;
 	protected:
 		std::shared_ptr<Asset> base_asset;
-		AssetHolder* const owner;
+		AssetHolder*  owner;
 		void init();
-		void destroy();
+	
 
 	public:
+		void destroy();
 		const  AssetHolder* get_owner() const;
 		/*    template<class T2>
 			bool is_same(const std::shared_ptr<T2>& _asset) const
@@ -135,13 +136,21 @@ class AssetReference : public AssetReferenceBase
 		 }
 		*/
 
-		void operator=(AssetReference<T> r)
+		void operator=(const AssetReference<T> &r)
+		{
+			destroy();
+			base_asset = r.base_asset;
+			asset = r.asset;
+			owner = r.owner;
+			init();
+		}
+		/*void operator=(AssetReference<T>&& r)
 		{
 			base_asset = r.base_asset;
 			asset = r.asset;
 			init();
-		}
-
+			
+		}*/
 		const bool operator!=(const AssetReference<T>& r)const
 		{
 			return base_asset != r.base_asset;
@@ -290,7 +299,7 @@ class AssetHolder
 		template<class T>
 		AssetReference<T> register_asset(const s_ptr<T>& link)
 		{
-			return (AssetReference<T>(this, link));
+			return AssetReference<T>(this, link);
 		}
 
 	protected:
@@ -496,6 +505,10 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 		folder_item* get_folder();
 		static AssetStorage::ptr try_load(file::ptr f);
 
+	std::set<Guid> get_references()
+	{
+		return header->references;
+	}
 		const Render::Texture::ptr& get_preview();
 
 		virtual void update_preview();
@@ -666,6 +679,8 @@ inline AssetReference<T>::AssetReference(const AssetReference<T>& other) : Asset
 template<class T>
 inline AssetReference<T>::~AssetReference()
 {
+	//destroy();
+
 }
 
 

@@ -21,6 +21,7 @@ enum class mouse_wheel : int
 };
 
 
+
 struct InputHandler
 {
 	virtual	void mouse_move_event(vec2 pos) = 0;
@@ -247,7 +248,37 @@ namespace GUI
             this->texture = texture;
         }
     };
+	struct RecursiveContext
+	{
+		Render::context& render_context;
+		SingleThreadExecutorBatched executor;
+		SingleThreadExecutorBatched pre_executor;
+		RecursiveContext(Render::context& c):render_context(c)
+		{
+	
+		}
 
+		void flush()
+		{
+			executor.flush();
+		}
+
+		void execute(std::function<void(Render::context&)> f)
+		{
+			//auto new_c = std::make_shared<Render::context>(render_context);
+			executor.add(std::move([f, new_c = render_context]() {
+				f(const_cast<Render::context&>(new_c));
+			}));
+
+		}
+
+		void stop_and_wait()
+		{
+			executor.stop_and_wait();
+			pre_executor.stop_and_wait();
+
+		}
+	};
     class drag_n_drop;
     class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public ParameterHolder, public Events::prop_handler //, public Render::renderable
     {
@@ -285,7 +316,7 @@ namespace GUI
 
             virtual bool test_local_visible();
 
-            virtual void draw_recursive(Render::context&, base* = nullptr);
+            virtual void draw_recursive(RecursiveContext&, base* = nullptr);
 
             virtual void draw(Render::context&); // override;;
             virtual void draw_after(Render::context&);;
@@ -488,7 +519,7 @@ namespace GUI
 
             std::set<base*> dragdrop;
 
-            virtual void draw(Render::context& c);
+            virtual void draw(RecursiveContext& c);
 
             void on_drop(vec2 at) const;
 

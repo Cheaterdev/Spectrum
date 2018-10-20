@@ -1,4 +1,8 @@
 #include  "pch.h"
+#include <wincodec.h>
+
+
+
 texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
 {
     DirectX::TexMetadata metadata = image.GetMetadata();
@@ -120,21 +124,24 @@ texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int fla
         auto name = file->file_name;
         std::wstring ext = to_lower(name.substr(name.find_last_of(L".") + 1));
 
+		HRESULT hri = CoInitialize(NULL);
+
+		HRESULT hr = NULL;
         if (ext == L"tga")
         {
-            if (FAILED(DirectX::LoadFromTGAMemory(data.data(), data.size(), &metadata, orig_image)))
-                return nullptr;
+			hr = DirectX::LoadFromTGAMemory(data.data(), data.size(), &metadata, orig_image);
         }
 
         else if (ext == L"dds")
         {
-            if (FAILED(DirectX::LoadFromDDSMemory(data.data(), data.size(), 0, &metadata, orig_image)))
-                return nullptr;
+			hr = DirectX::LoadFromDDSMemory(data.data(), data.size(), 0, &metadata, orig_image);
         }
 
-        else if (FAILED(DirectX::LoadFromWICMemory(data.data(), data.size(), 0, &metadata, orig_image)))
-            return nullptr;
+		else 	hr = DirectX::LoadFromWICMemory(data.data(), data.size(), 0, &metadata, orig_image);
+	
 
+ if (FAILED(hr))
+            return nullptr;
         DirectX::ScratchImage mipChain;
         bool res = true;
 

@@ -261,3 +261,4 @@ __pycache__/
 *.pyc
 /Spectrum/cache
 /Spectrum/log.txt
+/Spectrum/assets

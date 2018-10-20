@@ -270,7 +270,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <Profile>true</Profile>
       <IgnoreSpecificDefaultLibraries>assimp.lib</IgnoreSpecificDefaultLibraries>
-      <AdditionalDependencies>$(OVRSDKROOT)LibOVR/Lib/Windows/$(Platform)/$(Configuration)/VS2017/LibOVR.lib;lzma.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(OVRSDKROOT)LibOVR/Lib/Windows/$(Platform)/$(Configuration)/VS2017/LibOVR.lib;windowscodecs.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>

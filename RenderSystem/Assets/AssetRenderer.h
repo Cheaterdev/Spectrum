@@ -2,6 +2,11 @@ class G_Buffer;
 class LightSystem;
 class SSGI;
 class SkyRender;
+
+namespace Render
+{
+	class OVRContext;
+}
 class AssetRenderer : public Singleton<AssetRenderer>
 {
         friend class Singleton<AssetRenderer>;
@@ -25,6 +30,7 @@ class AssetRenderer : public Singleton<AssetRenderer>
         mutex lock;
 		std::shared_ptr<SSGI> ssgi;
 		std::shared_ptr<SkyRender> sky;
+		std::shared_ptr<Render::OVRContext> vr_context ;
     public:
 
         virtual void draw(scene_object::ptr scene, Render::Texture::ptr result);

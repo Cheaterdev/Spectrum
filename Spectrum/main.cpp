@@ -698,7 +698,7 @@ public:
 
 	virtual void draw(Render::context& t) override
 	{
-		tiles->update(t.command_list);
+		tiles->update(t.command_list->get_ptr());
 		auto& list = t.command_list->get_graphics();
 		list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		list.set_pipeline(state);
@@ -1281,7 +1281,7 @@ public:
 
 	}
 
-	void update_texture(Render::CommandList::ptr _list, float dt, std::shared_ptr<OVRContext> vr)
+	void update_texture(Render::CommandList::ptr _list, float dt,const std::shared_ptr<OVRContext>& vr)
 	{
 
 
@@ -1456,7 +1456,7 @@ public:
 
 	//	Handle h = t.command_list->get_graphics().get_desc_manager().get(7, 0);
 		float dt = t.delta_time;
-		auto& list = t.command_list->get_sub_list();
+		auto list = t.command_list->get_sub_list();
 
 		auto v = t.ovr_context;
 	thread_pool::get().enqueue([this, dt, list, v ]() {
@@ -1464,7 +1464,7 @@ public:
 
 			list->begin("__draw");
 			list->transition(texture.texture, Render::ResourceState::RENDER_TARGET);
-			list->clear_rtv(texture.texture->texture_2d()->get_rtv(), { 1,0,0,1 });
+			list->clear_rtv(texture.texture->texture_2d()->get_rtv());
 
 			update_texture(list, dt,v);
 		//	texture = eyes[0]->g_buffer.result_tex.first();
@@ -1508,12 +1508,12 @@ public:
 
 };
 
-class timer
+class tick_timer
 {
 	std::chrono::time_point<std::chrono::system_clock> last_tick;
 
 public:
-	timer()
+	tick_timer()
 	{
 		last_tick = std::chrono::system_clock::now();
 	}
@@ -1530,7 +1530,7 @@ public:
 class count_meter
 {
 	double time = 0;
-	timer t;
+	tick_timer t;
 	unsigned int ticks = 0;
 
 	double average = 0;
@@ -1565,10 +1565,11 @@ class UIWindow : public Window, public GUI::user_interface
 {
 	Render::SwapChain::ptr swap_chain;
 
-	timer main_timer;
+	tick_timer main_timer;
 	ivec2 new_size;
 
 	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
+	std::future<void> task_future;
 protected:
 	virtual	void render()
 	{
@@ -1592,9 +1593,10 @@ protected:
 			command_list->get_graphics().set_rtv(1, swap_chain->get_current_frame()->texture_2d()->get_rtv(), Render::Handle());
 			command_list->get_graphics().set_viewports({ swap_chain->get_current_frame()->texture_2d()->get_viewport() });
 
-			Render::context render_context(command_list);
+			std::shared_ptr<Render::CommandList> label_list;
+			Render::context render_context(command_list, label_list, vr_context);
 			render_context.delta_time = static_cast<float>(main_timer.tick());
-			render_context.ovr_context = vr_context;
+
 			render_context.ovr_context->eyes.resize(1);
 			render_context.ovr_context->eyes[0].dir = quat();
 
@@ -1618,7 +1620,14 @@ protected:
 				auto &timer = Profiler::get().start(L"present");
 
 				swap_chain->present(res);
-				scheduler::get().enqueue(std::bind(&UIWindow::render, this), std::chrono::steady_clock::now());
+				if (Application::get().is_alive())
+				{
+					auto ptr = get_ptr();
+					task_future = scheduler::get().enqueue([ptr,this]() {
+						render();
+					}, std::chrono::steady_clock::now());
+				}
+					
 			});
 			command_list->execute();
 		}
@@ -1647,6 +1656,12 @@ protected:
 		//	GUI::user_interface::size.register_handler(this, [this](ivec2 size) {	if (swap_chain)	swap_chain->resize(size); });
 	}
 
+	virtual ~UIWindow()
+	{
+
+		if(task_future.valid())
+			task_future.wait();
+	}
 	void on_resize(vec2 size) override
 	{
 		new_size = size;
@@ -1767,7 +1782,7 @@ class OVRRender
 {
 public:
 
-	timer main_timer;
+	tick_timer main_timer;
 
 	using ptr = std::shared_ptr<OVRRender>;
 	triangle_drawer::ptr drawer;
@@ -1814,11 +1829,10 @@ public:
 
 
 			command_list->begin("main window");
+			std::shared_ptr<Render::CommandList> label_list;
 
+			Render::context render_context(command_list, label_list, vr_context);
 
-			Render::context render_context(command_list);
-
-			render_context.ovr_context = vr_context;
 			// Render Scene to Eye Buffers
 			for (int eye = 0; eye < 2; ++eye)
 			{
@@ -2395,7 +2409,8 @@ public:
 	{
 		{
 			auto timer = c.command_list->start(L"read timings");
-			Render::GPUTimeManager::get().read_buffer(c.command_list, [this]() {
+			auto ptr = get_ptr();
+			Render::GPUTimeManager::get().read_buffer(c.command_list, [ptr,this]() {
 				run_on_ui([]() {	Profiler::get().update(); });
 
 			});
@@ -2483,8 +2498,15 @@ protected:
 	virtual ~RenderApplication()
 	{
 		shutdown();// really need this?
-		scheduler::reset();
+
 		main_window = nullptr;
+
+	std::this_thread::sleep_for(100ms);
+		scheduler::reset();
+		//
+	
+
+	//	
 		//   Render::Device::get().get_queue(Render::CommandListType::DIRECT)->stop_all();
 		Render::Device::get().stop_all();
 		Skin::reset();
