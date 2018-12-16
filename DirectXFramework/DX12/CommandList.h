@@ -12,6 +12,8 @@ namespace DX12
 	class CPUBuffer;
 
 	class GPUBuffer;
+
+	template<class T> class StructuredBuffer;
 	//  using BufferBase = GPUBuffer;
 	class QueryHeap;
 
@@ -455,7 +457,7 @@ namespace DX12
 	{
 	public:
 		using ptr = shared_ptr<CommandList>;
-
+		std::map<Resource*, int> resource_update_counter;
 	protected:
 		CommandList() = default;
 		friend class Queue;
@@ -575,6 +577,11 @@ namespace DX12
 			get_native_list()->ClearRenderTargetView( h.cpu, ClearColor.data(), 0, nullptr);
 		}
 
+		template<class T>
+		void clear_counter(std::shared_ptr<StructuredBuffer<T>>& buffer)
+		{
+			clear_uav(buffer->help_buffer, buffer->counted_uav[0]);
+		}
 
 		void copy_resource(Resource* dest, Resource* source);
 		void copy_resource(const Resource::ptr& dest, const Resource::ptr& source);

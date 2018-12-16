@@ -28,7 +28,7 @@ namespace DX12
 	
 		for (auto& e : heaps)
 			e = nullptr;
-
+		resource_update_counter.clear();
 
 		Uploader::reset();
 		Readbacker::reset();
@@ -235,6 +235,10 @@ namespace DX12
 	}
 	void  CommandList::update_buffer(Resource* resource, UINT offset, const  char* data, UINT size)
 	{
+		auto & count = resource_update_counter[resource];
+		count++;
+		if (count > 1) 
+			Log::get() << "count " << count << Log::endl;
 		flush_transitions();
 		//     return;
 		auto info = place_data(size);
@@ -448,10 +452,11 @@ namespace DX12
 
 	std::future<bool> CommandList::read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)> f)
 	{
+		auto result = std::make_shared<std::promise<bool>>();
+
 		if (size == 0)
 		{
-			auto result = std::make_shared<std::promise<bool>>();
-			f(nullptr, 0);
+				f(nullptr, 0);
 			result->set_value(true);
 			return result->get_future();
 		}
@@ -462,7 +467,6 @@ namespace DX12
 		auto info = read_data(size);
 		//  m_commandList->CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
 		m_commandList->CopyBufferRegion(info.resource->get_native().Get(), info.offset, resource->get_native().Get(), offset, size);
-		auto result = std::make_shared<std::promise<bool>>();
 		on_execute_funcs.push_back([result, info, f, size]()
 		{
 			char* data;
@@ -730,8 +734,11 @@ namespace DX12
 				}
 			}
 		}
-		//return nullptr;
-		return std::make_shared<CPUBuffer>(size, 1);
+
+	auto buffer = std::make_shared<CPUBuffer>(size, 1);
+	buffer->set_name("readback_buffer");
+	return buffer;
+
 	}
 
 

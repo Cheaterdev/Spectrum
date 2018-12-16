@@ -120,7 +120,7 @@ public:
 
 	VoxelGI(Scene::ptr& scene, G_Buffer& buffer);
 	void voxelize(MeshRenderContext::ptr& context, main_renderer::ptr r);
-	void generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm, Render::CubemapArrayView::ptr skymap);
+	void generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm, Enviroment enviroment);
 
 	void lighting(MeshRenderContext::ptr& context, PSSM& pssm, Render::CubemapArrayView::ptr skymap);
 	void mipmapping(MeshRenderContext::ptr& context);

@@ -37,12 +37,14 @@ static const float scaler = voxel_size / 256;
 
 Texture2D<float4> gbuffer[3] : register(t0);
 Texture2D<float> depth_buffer : register(t3);
+Texture3D<float4> brdf : register(t4);
 Texture3D<float4> voxels : register(t0,space1);
 
 SamplerState LinearSampler: register(s0);
 SamplerState PixelSampler : register(s1);
+SamplerState LinearSamplerClamp : register(s2);
 
-TextureCubeArray<float4> tex_cube : register(t0,space2);
+TextureCube<float4> tex_cube : register(t0,space2);
 Texture2D<float2> speed_tex : register(t2, space2);
 Texture2D<float4> tex_color : register(t3, space2);
 //Texture2D<float4> tex_gi_prev : register(t4, space2);
@@ -85,7 +87,7 @@ float4 get_voxel(float3 pos, float level)
 {
 float4 color= voxels.SampleLevel(LinearSampler,pos,level);
 //color.rgb *= 1 + level / 2;
-
+//color.w *= 2;
 return color;
 }
 float get_alpha(float3 pos, float level)
@@ -93,21 +95,88 @@ float get_alpha(float3 pos, float level)
 return voxels.SampleLevel(LinearSampler,pos,level).a;
 }
 
-float4 get_sky(float3 dir, float level)
+
+
+/*
+float4 get_PBR(float3 vNormal, float3 vView, float roughness)
 {
+	roughness = max(0.01, roughness);
+//	roughness = 0.5;
+	vView *= -1;
+//	return get_sky(reflect(vView, vNormal), roughness);
+	float4 vPrefilteredColor = 0;
+	float fTotalWeight = 0.0f;
+	const uint iNumSamples =  1 + 63*roughness;
+	const uint EnvMapSize = 128;
+	for (uint i = 0; i < iNumSamples; i++)
+	{
+		float2 vXi = hammersley2d(i, iNumSamples);
 
-	//return 0;
-	level *= 16;
-	//return tex_cube.Sample(LinearSampler, float4(dir,6));
-	int l0 = level;
-	int l1 = l0 + 1;
+		float3 vHalf = ImportanceSampleGGX(vXi, roughness, vNormal);
+		float3 vLight = 2.0f * dot(vView, vHalf) * vHalf - vView;
 
+		float fNdotL = saturate(dot(vNormal, vLight));
+		if (fNdotL > 0.0f)
+		{
+			// Vectors to evaluate pdf
+			float fNdotH = saturate(dot(vNormal, vHalf));
+			float fVdotH = saturate(dot(vView, vHalf));
 
-	return lerp(tex_cube.Sample(LinearSampler, float4(dir, l0)), tex_cube.Sample(LinearSampler, float4(dir, l1)), level - l0);
+			// Probability Distribution Function
+			float fPdf = D_GGX(roughness,fNdotH) * fNdotH / (4.0f * fVdotH);
 
+			// Solid angle represented by this sample
+			float fOmegaS = 1.0 / (iNumSamples * fPdf);
 
+			// Solid angle covered by 1 pixel with 6 faces that are EnvMapSize X EnvMapSize
+			float fOmegaP = 4.0 * PI / (6.0 * EnvMapSize * EnvMapSize);
+			// Original paper suggest biasing the mip to improve the results
+			float fMipBias = 1.0f;
+			float fMipLevel = max(0.5 * log2(fOmegaS / fOmegaP) + fMipBias, 0.0f);
+			vPrefilteredColor += tex_cube.SampleLevel(LinearSampler, float4(vLight, 0), fMipLevel) * fNdotL;// EnvironmentCubemapTexture.SampleLevel(LinearSamplerWrap, vLight, fMipLevel).rgb * fNdotL;
+			fTotalWeight += fNdotL;
+
+		}
+	}
+
+	return vPrefilteredColor / fTotalWeight;
+
+}*/
+
+float3 PrefilterEnvMap(float Roughness, float3 R)
+{
+	return  tex_cube.SampleLevel(LinearSampler, R, Roughness*5).rgb;
 }
-float4 trace_refl(float4 start_color, float3 origin,float3 dir, float3 normal, float angle)
+
+
+
+
+
+float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
+{
+	return brdf.SampleLevel(LinearSamplerClamp, float3(Roughness, Metallic, NoV), 0);
+}
+
+
+
+float3 get_PBR(float3 SpecularColor, float3 ReflectionColor, float3 N, float3 V, float Roughness, float Metallic)
+{
+	V *= -1;
+	float NoV = saturate(dot(N, V));
+//	float3 R = 2 * dot(V, N) * N - V;
+//	float3 PrefilteredColor = PrefilterEnvMap(Roughness, R);
+	float2 EnvBRDF = IntegrateBRDF(Roughness, Metallic, NoV);
+	return    ReflectionColor *(SpecularColor * EnvBRDF.x + EnvBRDF.y);
+}
+
+
+
+float3 get_sky(float3 dir, float level)
+{
+	return PrefilterEnvMap(level, dir);
+}
+
+float4 trace_refl(float4 start_color, float3 view,  float3 origin,float3 dir, float3 normal, float angle)
 {
 	//return 0;
 	float max_angle = saturate((3.14 / 2 - acos(dot(normal, dir))) / 3.14)/1;
@@ -121,7 +190,7 @@ float4 trace_refl(float4 start_color, float3 origin,float3 dir, float3 normal, f
 
 
 	float angle_error = abs(best_angle - angle);
-	angle = min(angle, 0.34);
+	//angle = min(angle, 0.34);
 	
 	//dir=normalize(lerp(dir,normal,angle_error));
 
@@ -130,7 +199,7 @@ float4 trace_refl(float4 start_color, float3 origin,float3 dir, float3 normal, f
 	float3 samplePos = 0;
     float4 accum = start_color;
     // the starting sample diameter
-	float minDiameter = 1.0 / 512;// *(1 + 4 * angle);
+	float minDiameter = 1.0 / 1024;// *(1 + 4 * angle);
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 	float maxDist = 1;
 	float dist = minDiameter;// +angle_error * minDiameter;// +angle*minDiameter / 2;// +16 * angle_bad*minDiameter;
@@ -157,10 +226,10 @@ float4 trace_refl(float4 start_color, float3 origin,float3 dir, float3 normal, f
 
 //	accum.xyz *= angle_coeff;
 
-	float4 sky = get_sky(dir, angle);
+	float3 sky = get_sky( dir, angle);
    float sampleWeight = saturate(max_accum - accum.w)/ max_accum;
-   accum += sky * pow(sampleWeight, 1);// *angle_coeff;
-		
+   accum.xyz += sky * pow(sampleWeight, 1);// *angle_coeff;
+   //accum.xyz = sky;
 		return accum;// / accum.w;
 }
 
@@ -192,8 +261,71 @@ float calc_vignette(float2 inTex)
 	float vignette = 4 * (T.y * ((1 - T.y)));
 	return vignette;
 }
-float4 get_ssr2(float3 pos, float3 normal, float2 tc,float3 r, float angle, out float dist)
+
+
+float4 get_ssr2(float3 pos, float3 normal, float2 tc, float3 r, float angle, out float dist)
 {
+	dist = 0;
+	float2 dims;
+	return 0;
+	gbuffer[0].GetDimensions(dims.x, dims.y);
+
+	float4 res = 0;
+	float w = 0.1;
+
+	float cosa = cos(angle);
+#define R 18
+	angle = max(0.1, angle);
+	float bestw = 0;
+	int num_good_samples = 1;
+
+	float total_angle_left = 0;
+	for (int x = -R; x <= R; x++)
+		for (int y = -R; y <= R; y++)
+		{
+
+			if (x == 0 && y == 0) continue;
+			float2 t_tc = tc + 2*float2(x, y) / dims;
+
+			float t_raw_z = depth_buffer.SampleLevel(PixelSampler, t_tc, 0);
+			float3 t_pos = depth_to_wpos(t_raw_z, t_tc, camera.inv_view_proj);
+			float3 t_normal = normalize(gbuffer[1].SampleLevel(PixelSampler, t_tc, 0).xyz * 2 - 1);
+
+			float3 direction = normalize(t_pos - pos);
+			if (dot(normal, direction) > 0.1)
+			{
+				float delta = dot(r, direction);
+				float4 t_gi =  tex_color.SampleLevel(LinearSampler, t_tc, 0) *saturate(dot(t_normal, delta) > 0);
+
+
+				float delta_angle = abs((acos(delta) - angle));
+				float cur_w = 1 - saturate(delta_angle / angle);
+				//	float cur_w = saturate(1 - length(t_pos - pos) / 2);// 1.0 / (8 * length(t_pos - pos) + 0.1);
+					//cur_w *= pow(saturate(dot(t_normal, normal)), 4);
+					//	cur_w = saturate(cur_w - 0.1);
+
+				res += cur_w * cur_w * cur_w * t_gi;
+
+				w += cur_w;
+
+				total_angle_left -= cur_w;
+				bestw = max(bestw, w);
+				//
+			
+			}
+			num_good_samples += 1;
+		}
+
+	total_angle_left += num_good_samples * angle;
+	float total_pixels =  10 * angle;
+return  float4( saturate(total_angle_left/angle).xxx,1);
+
+	return float4(res.xyz/ w, 1-saturate(total_angle_left / angle));
+}
+float4 get_ssr3(float3 pos, float3 normal, float2 tc,float3 r, float angle, out float dist)
+{
+	dist = 0;
+	return 0;
 	float3 refl_pos = pos;
 	float sini = sin(time * 220 + float(tc.x));
 	float cosi = cos(time * 220 + float(tc.y));
@@ -213,7 +345,7 @@ float4 get_ssr2(float3 pos, float3 normal, float2 tc,float3 r, float angle, out 
 	float errorer = distance(camera.position, pos) / 1;
 
 	float orig_dist = distance(camera.position, pos);
-	dist = orig_dist/10 ; //lerp(10,20,1-fresnel);
+	dist = orig_dist/1 ; //lerp(10,20,1-fresnel);
 
 	float raw_z_reflected = 0;
 	float2 reflect_tc = tc;
@@ -243,7 +375,7 @@ float4 get_ssr2(float3 pos, float3 normal, float2 tc,float3 r, float angle, out 
 	float vignette = calc_vignette(reflect_tc);
 	float bad = 1;// pow(saturate((dot(r, -delta_position) / dist)), 1);
 
-	//bad*= pow(saturate((dot(r, -delta_position) / dist)), 1);
+	bad*= pow(saturate((dot(r, -delta_position) / dist)), 1);
 	bad *=saturate((dot(normal, -delta_position ) ))>0;
 	
 
@@ -261,8 +393,8 @@ float4 get_ssr2(float3 pos, float3 normal, float2 tc,float3 r, float angle, out 
 	float3 direct = vignette * reflect_color.xyz *(bad);// pow(0.9, (1 - bad) * 32);
 
 
-	dist*=bad;
-	return float4(direct, vignette *bad);// *saturate(1 - dist*angle / orig_dist);
+	//dist*=bad;
+	return  float4(direct, vignette *bad);// *saturate(1 - dist*angle / orig_dist);
 }
 
 float4 get_ssr(float3 pos, float3 normal, float2 tc, float3 r, float angle, out float dist)
@@ -317,7 +449,9 @@ GI_RESULT PS(quad_output i)
 
  float angle = roughness;
  float m = 1 * max(max(abs(normal.x), abs(normal.y)), abs(normal.z));
- float4 ssr =0;
+
+ float dist = 0;
+ float4 ssr = get_ssr2(pos, normal, i.tc, r, angle, dist);
 
 
 
@@ -326,10 +460,10 @@ GI_RESULT PS(quad_output i)
 
 
 
- float4 reflection = trace_refl(ssr, pos + scaler*normal / m, normalize(r), normal, angle);
+ float4 reflection = trace_refl(ssr, v, pos + scaler * normal / m, normalize(r), normal, angle);
 
  //ssr = ssr+get_sky(r,1)*(1 - ssr.w);
- result.screen = tex_color[tc] +  float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+ result.screen.xyz =  tex_color[tc].xyz + get_PBR(metallic*albedo, reflection, normal, v, roughness, metallic);// + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
  return result;
 
 	}
@@ -379,10 +513,11 @@ GI_RESULT PS_resize(quad_output i)
 
 
 
-	float4 reflection = downsampled;// downsampled;// trace_refl(ssr, pos + scaler*normal / m, normalize(r), normal, angle);
-
+	float4 reflection = downsampled;// trace_refl(ssr, v, pos + scaler * normal / m, normalize(r), normal, angle);
+//	reflection = float4(get_PBR(1, normal, v, 1),1);
 									//ssr = ssr+get_sky(r,1)*(1 - ssr.w);
-	result.screen = tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+	result.screen.xyz =   tex_color[tc].xyz + get_PBR(metallic*albedo, reflection, normal, v, roughness, metallic);//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+	result.screen.w = 1;
 	return result;
 
 }
@@ -430,16 +565,16 @@ GI_RESULT PS_low(quad_output i)
 	//if (angle < 0.1)
 
 	float dist = 0;
-	ssr = get_ssr(pos, normal, i.tc, r, angle, dist);
+	ssr = get_ssr2(pos, normal, i.tc, r, angle, dist);
 
 	//ssr*= saturate(4 - dist/5)*saturate(1- roughness);
 
 
 	//ssr.w = 1;
-	float4 reflection = trace_refl(ssr, pos + scaler*normal / m, normalize(r), normal, angle);
+	float3 reflection =  trace_refl(ssr, v, pos + scaler*normal / m, normalize(r), normal, angle);
 
 	//ssr = ssr+get_sky(r,1)*(1 - ssr.w);
-	result.screen = reflection;;/// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+	result.screen.xyz = reflection;// ssr;// 0 * tex_color[tc] + get_PBR(metallic*albedo, reflection, normal, v, roughness);// float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
 	return result;
 
 }

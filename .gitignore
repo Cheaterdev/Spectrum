@@ -262,3 +262,5 @@ __pycache__/
 /Spectrum/cache
 /Spectrum/log.txt
 /Spectrum/assets
+/Spectrum/scene.dat
+/Spectrum/pbr

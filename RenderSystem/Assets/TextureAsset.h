@@ -17,8 +17,9 @@ public:
 
 class TextureAsset : public Asset
 {
+protected:
 	Render::Texture::ptr texture;
-	TextureAsset();
+
 	//  LEAK_TEST(TextureAsset)
 
 public:
@@ -28,6 +29,7 @@ public:
 	using ref = AssetReference<TextureAsset>;
 
 	TextureAsset(std::wstring file_name);
+	TextureAsset();
 
 	Render::Texture::ptr get_texture();
 	bool compress();

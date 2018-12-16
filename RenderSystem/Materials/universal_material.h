@@ -104,7 +104,7 @@ namespace materials
 
             std::vector<Events::prop_handler> handlers;
             Render::GPUBuffer::ptr pixel_buffer;
-            Render::GPUBuffer::ptr tess_buffer;
+         //   Render::GPUBuffer::ptr tess_buffer;
 
             BinaryData<MaterialGraph> graph;
 

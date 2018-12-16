@@ -38,12 +38,14 @@ static const float scaler = voxel_size / 256;
 
 Texture2D<float4> gbuffer[3] : register(t0);
 Texture2D<float> depth_buffer : register(t3);
+Texture3D<float4> brdf : register(t4);
 Texture3D<float4> voxels : register(t0,space1);
 
 SamplerState LinearSampler: register(s0);
 SamplerState PixelSampler : register(s1);
+SamplerState LinearSamplerClamp: register(s2);
 
-TextureCubeArray<float4> tex_cube : register(t0,space2);
+TextureCube<float4> tex_cube : register(t0,space2);
 Texture2D<float2> speed_tex : register(t2, space2);
 Texture2D<float4> tex_color : register(t3, space2);
 Texture2D<float4> tex_gi_prev : register(t4, space2);
@@ -130,20 +132,30 @@ float prev_dist=dist;
 	return minDiameter;
 }
 
-float4 get_sky(float3 dir, float level)
+
+float3 PrefilterEnvMap(float Roughness, float3 R)
 {
-
-	//return 0;
-	level *=64;
-	//return tex_cube.Sample(LinearSampler, float4(dir,6));
-	int l0 = level;
-	int l1 = l0 + 1;
-
-
-	return lerp(tex_cube.Sample(LinearSampler, float4(dir, l0)), tex_cube.Sample(LinearSampler, float4(dir, l1)), level - l0);
-
-
+	return  tex_cube.SampleLevel(LinearSampler, R, Roughness * 5).rgb;
 }
+
+
+
+
+float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
+{
+	return brdf.SampleLevel(LinearSamplerClamp, float3(Roughness, Metallic, NoV), 0);
+}
+
+
+
+
+
+float3 get_sky(float3 dir, float level)
+{
+	return PrefilterEnvMap(1, dir);
+}
+
+
 
 float4 trace_screen(float3 origin, float3 dir, float level)
 {
@@ -190,12 +202,12 @@ float4 trace_screen(float3 origin, float3 dir, float level)
 	return accum;
 }
 
-float4 trace(float4 start_color, float3 origin,float3 dir,float3 normal, float angle)
+float4 trace(float4 start_color, float3 view, float3 origin,float3 dir,float3 normal, float angle)
 {
 	float max_angle = saturate((3.14 / 2 - acos(dot(normal, dir))) / 3.14) ;
 
 	float angle_coeff = saturate(max_angle/(angle+0.01));
-	angle = min(angle, max_angle);
+	//angle = min(angle, max_angle);
 	origin = saturate(((origin - (voxel_min)) / voxel_size));
  
 	float3 samplePos = 0;
@@ -227,9 +239,9 @@ float4 trace(float4 start_color, float3 origin,float3 dir,float3 normal, float a
 	//accum.xyz *= pow(dist,0.7);
 	//accum.xyz *= angle_coeff;
 	//accum *= 1.0 / 0.9;
-	float4 sky = get_sky(dir,angle*2);
+	float3 sky = get_sky(normal, angle);
 	float sampleWeight = saturate(max_accum - accum.w*SCALER) / max_accum;
-	accum+= 1*sky * pow(sampleWeight,2);
+	accum.xyz+= 1*sky * pow(sampleWeight,2);
 		
    return accum;// / saturate(accum.w);
 }
@@ -300,6 +312,7 @@ float4 get_ssgi(float3 pos, float3 normal, float3 dir,float dist, float2 orig_tc
 		float3 delta = (t_pos - pos) / len;
 		float s =  dist*pow(saturate(dot(normal, delta)),3) / (len);
 
+		s *= 4;
 		s = saturate(s);
 		float w = dist / (len*len + dist);
 		w *= saturate(dot(-n, delta) * 4);
@@ -321,7 +334,7 @@ float4 get_ssgi(float3 pos, float3 normal, float3 dir,float dist, float2 orig_tc
 	return res;
 
 }
-float4 get_direction(float3 pos, float3 orig_pos,float3 normal,  float3 dir, float k,float a,float dist, float2 orig_tc)
+float4 get_direction(float3 pos,float v, float3 orig_pos, float3 normal,  float3 dir, float k,float a,float dist, float2 orig_tc)
 {
 	
 	float4 ssgi =  get_ssgi(orig_pos, normal, dir, dist, orig_tc);
@@ -329,12 +342,12 @@ float4 get_direction(float3 pos, float3 orig_pos,float3 normal,  float3 dir, flo
 
 //return ssgi;
 
-float4 gi = trace(ssgi,pos, dir, normal, a);
+float4 gi = trace(ssgi,v, pos, dir, normal, a);
 	return gi;
 //	return ssgi+gi*(1 - ssgi.w);// // *pow(saturate(dot(normal, dir)), 4);
 }
 
-float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,float r)
+float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,float r, float roughness, float metallic)
 {
 	float a = 0.4;
 
@@ -357,7 +370,10 @@ float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,floa
 	//float3 right = t*normalize(cross(Normal, float3(0, 1, 0.1)));
 	//float3 tangent = t*normalize(cross(right, Normal));
 
-	Color= get_direction(Pos, orig_pos, Normal,normalize(Normal + right + tangent), k, a, length(Pos - camera.position)/20,tc);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
+	float3 dir = normalize(Normal + right + tangent);
+	float2 EnvBRDF = IntegrateBRDF(roughness, metallic, dot(Normal,dir));
+
+	Color= EnvBRDF.x*get_direction(Pos,V, orig_pos, Normal,normalize(Normal + right + tangent), k, a, length(Pos - camera.position)/20,tc);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
 
 	/*Color += get_direction(Pos, orig_pos, Normal, normalize(Normal + right), k,a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
 	Color += get_direction(Pos, orig_pos, Normal, normalize(Normal - right), k, a);//trace(Pos + k*normalize(Normal - right), normalize(Normal - right), a);
@@ -413,37 +429,37 @@ GI_RESULT PS(quad_output i)
   float3 v = normalize(pos-camera.position);
   float3 r = normalize(reflect(v,normal));
 #ifdef SCREEN
-//  result.screen= trace_screen(camera.position, v, 0);
+  result.screen= trace_screen(camera.position, v, 0);
 
  return result;
 #endif
   //return voxels.SampleLevel(LinearSampler,index,0);
 	float m = 1*max(max(abs(normal.x),abs(normal.y)),abs(normal.z));
  
-	float4 help_gi = max(0, getGI(i.tc, pos, pos + scaler*normal / m, normal, v, r));
 
-  
-	float4 res = 0;// help_gi;
-
-	float w =0;
+	
+	float w = 0.01;
+	float4 res = tex_downsampled.SampleLevel(PixelSampler, i.tc, 0)*w;
 
 #define R 1
 
 	for (int x = -R; x <= R; x++)
 		for (int y = -R; y <= R; y++)
 		{
-			float2 t_tc = i.tc + 2 * float2(x, y) / dims;
+			float2 t_tc = i.tc + float2(x, y) / dims;
 
-			float t_raw_z = depth_buffer[t_tc.xy*dims];
+			float t_raw_z = depth_buffer.SampleLevel(PixelSampler, t_tc, 1);
 			float3 t_pos = depth_to_wpos(t_raw_z, t_tc, camera.inv_view_proj);
-			float3 t_normal = normalize(gbuffer[1][t_tc*dims].xyz * 2 - 1);
+			float3 t_normal = normalize(gbuffer[1].SampleLevel(PixelSampler, t_tc, 1).xyz * 2 - 1);
 
 
-			float4 t_gi = tex_downsampled.SampleLevel(LinearSampler, i.tc-0.5/dims, 0, int2(x, y));
+			float4 t_gi = tex_downsampled.SampleLevel(PixelSampler, t_tc, 0);
 
-
-			float cur_w = saturate(1 - 1 * length(t_pos - pos));
-			cur_w *= pow(saturate(dot(t_normal, normal)), 64);
+		
+			float cur_w = saturate(1 - length(t_pos - pos)/2);// 1.0 / (8 * length(t_pos - pos) + 0.1);
+			cur_w *= pow(saturate(dot(t_normal, normal)), 4);
+		//	cur_w = saturate(cur_w - 0.1);
+			
 			res += cur_w*t_gi;
 
 			w += cur_w;
@@ -451,12 +467,9 @@ GI_RESULT PS(quad_output i)
 
 
 		}
-	float4 gi = res / w;
+	float4 gi =  res / w;
 
 	
-
-	
-
 
 
 
@@ -501,7 +514,8 @@ GI_RESULT PS(quad_output i)
  return result;
 #endif
 
- result.screen = 1 * tex_color[tc] + float4(PBR(gi, reflection, albedo, normal, v, 0.2, roughness, metallic), 1);
+
+ result.screen = 1 * tex_color[tc] + albedo*gi;// float4(PBR(gi, reflection, albedo, normal, v, 0.2, roughness, metallic), 1);
  return result;
 //	
 	}
@@ -531,9 +545,9 @@ GI_RESULT PS(quad_output i)
 
 	//return voxels.SampleLevel(LinearSampler,index,0);
 	float m = 1 * max(max(abs(normal.x),abs(normal.y)),abs(normal.z));
-	float4 gi = max(0,getGI(i.tc, pos, pos + scaler*normal / m,normal,v,r));
+	float4 gi = max(0,getGI(i.tc, pos, pos + scaler*normal / m,normal,v,r, gbuffer[1][tc].w, albedo.w));
 
-	//return gi;
+//	return 1;
 	return  gi;
 	
 	}
@@ -619,7 +633,7 @@ GI_RESULT PS_Resize(quad_output i) : SV_Target0
 	float dist = length(pos - camera.position) / 100;
 	float l = length(pos - prev_pos) / dist;
 
-	gi = lerp(gi, prev_gi, saturate(0.95 - l));
+	gi =  lerp(gi, prev_gi, saturate(0.95 - l));
 
 #ifdef INDIRECT
 	GI_RESULT result;
@@ -632,8 +646,8 @@ GI_RESULT PS_Resize(quad_output i) : SV_Target0
 
 
 	GI_RESULT res;
-	res.screen = 1 * tex_color[tc] +float4(PBR(gi, 0, albedo, normal, v, 0.2, roughness, metallic), 1);
-	res.gi = gi;
+	res.screen = 1 * tex_color[tc] + albedo*gi;// float4(PBR(gi, 0, albedo, normal, v, 0.2, roughness, metallic), 1);
+	res.gi =  gi;
 	return  res;
 
 	}

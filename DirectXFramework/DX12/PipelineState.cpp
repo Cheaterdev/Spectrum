@@ -282,6 +282,9 @@ if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 
 		psoDesc.DSVFormat = desc.rtv.ds_format;
 		psoDesc.SampleDesc.Count = 1;
+		if(m_pipelineState)
+		Device::get().unused(m_pipelineState);
+
 		TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
 	 ComPtr<ID3D12PipelineState> PipelineState::get_native()
@@ -304,6 +307,9 @@ if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 		unregister_shader(desc.hull);
 		unregister_shader(desc.domain);
 		unregister_shader(desc.geometry);
+
+		if (m_pipelineState)
+			Device::get().unused(m_pipelineState);
 	}
 	 PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc & desc)
 	{
@@ -328,5 +334,8 @@ if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 	 ComputePipelineState::~ComputePipelineState()
 	{
 		unregister_shader(desc.shader);
+
+		if (m_pipelineState)
+			Device::get().unused(m_pipelineState);
 	}
 }

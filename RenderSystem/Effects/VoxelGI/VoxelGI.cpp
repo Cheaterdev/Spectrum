@@ -192,6 +192,7 @@ struct EffectSignature : public Signature<EffectSignature>
 		gi_table, constants, voxel_lighted, camera_data, help_table2
 		, Descriptors::Sampler<0, Render::ShaderVisibility::PIXEL, 0>(Render::Samplers::SamplerLinearWrapDesc)
 		, Descriptors::Sampler<1, Render::ShaderVisibility::PIXEL, 1>(Render::Samplers::SamplerPointClampDesc)
+		, Descriptors::Sampler<2, Render::ShaderVisibility::PIXEL, 2>(Render::Samplers::SamplerLinearClampDesc)
 	)
 	{
 
@@ -696,7 +697,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer::ptr r)
 		all_scene_regen_counter--;
 }
 
-void VoxelGI::generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm, Render::CubemapArrayView::ptr skymap)
+void VoxelGI::generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm, Enviroment enviroment)
 {
 	auto timer = context->list->start(L"GI");
 	{
@@ -722,7 +723,7 @@ void VoxelGI::generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PS
 
 		if (light_scene&&light_counter == 0 || all_scene_regen_counter > 0)
 		{
-			lighting(context, pssm, skymap);
+			lighting(context, pssm, enviroment.prefiltered_cubemap_diffuse->array_cubemap());
 			mipmapping(context);
 			//	auto& compute = context->list->get_compute();
 			//	compute.transition(volume_lighted, Render::ResourceState::UNORDERED_ACCESS);
@@ -736,8 +737,8 @@ void VoxelGI::generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PS
 		downsampler->process(context);
 
 
-		screen(context, scene, skymap);
-		screen_reflection(context, scene, skymap);
+		screen(context, scene, enviroment.prefiltered_cubemap_diffuse->array_cubemap());
+		screen_reflection(context, scene, enviroment.prefiltered_cubemap->array_cubemap());
 	}
 }
 
@@ -837,6 +838,7 @@ void VoxelGI::mipmapping(MeshRenderContext::ptr& context)
 
 void VoxelGI::screen(MeshRenderContext::ptr& context, scene_object::ptr scene, Render::CubemapArrayView::ptr skymap)
 {
+	if (render_type == VISUALIZE_TYPE::REFLECTION) return;
 	//return;
 	auto timer = context->list->start(L"screen");
 
@@ -860,6 +862,7 @@ void VoxelGI::screen(MeshRenderContext::ptr& context, scene_object::ptr scene, R
 
 		list.set_pipeline(states[0]);
 		list.set_dynamic(sig.gi_table, 0, buffer.srv_table);
+		list.set_dynamic(sig.gi_table, 4, EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->get_srv());
 		list.set_dynamic(sig.voxel_lighted, 0, volume_lighted->texture_3d()->get_srv());
 		list.set(sig.camera_data, context->cam->get_const_buffer());
 		list.set_dynamic(sig.help_table2, 0, skymap->get_srv());
@@ -962,6 +965,7 @@ void VoxelGI::screen(MeshRenderContext::ptr& context, scene_object::ptr scene, R
 
 void VoxelGI::screen_reflection(MeshRenderContext::ptr& context, scene_object::ptr scene, Render::CubemapArrayView::ptr skymap)
 {
+	if (!(render_type == VISUALIZE_TYPE::REFLECTION|| render_type == VISUALIZE_TYPE::FULL)) return;
 	auto timer = context->list->start(L"screen_reflection");
 	
 	for (auto &eye : context->eye_context->eyes)
@@ -983,12 +987,14 @@ void VoxelGI::screen_reflection(MeshRenderContext::ptr& context, scene_object::p
 		//	list.transition(downsampled_light, Render::ResourceState::RENDER_TARGET);
 			//list.transition(buffer.result_tex.first(), Render::ResourceState::RENDER_TARGET);
 		list.transition(gi_data.downsampled_reflection, Render::ResourceState::RENDER_TARGET);
-
+		list.transition(buffer.result_tex.first(), Render::ResourceState::RENDER_TARGET);
+		
 		list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 		list.set_pipeline(states[0]);
 		list.set_dynamic(sig.gi_table, 0, buffer.srv_table);
 		list.set_dynamic(sig.voxel_lighted, 0, volume_lighted->texture_3d()->get_srv());
+		list.set_dynamic(sig.gi_table, 4, EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->get_srv());
 
 		list.set(sig.camera_data, context->cam->get_const_buffer());
 

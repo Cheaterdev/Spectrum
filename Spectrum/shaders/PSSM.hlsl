@@ -1,4 +1,4 @@
-#define SIZE 8
+#define SIZE 18
 
 #include "Common.hlsl"
 
@@ -16,7 +16,8 @@ Texture2D<float> depth_buffer : register(t3);
 RWTexture2D<float4> result: register(u0);
 //groupshared float4 shared_mem[SIZE][SIZE];
 SamplerComparisonState cmp_sampler: register(s0);
-
+SamplerState LinearSamplerClamp : register(s2);
+Texture3D<float4> brdf : register(t6);
 #include "PSSM_impl.hlsl"
 
 #include "PBR.hlsl"
@@ -37,8 +38,9 @@ void CS(uint3 group_id :  SV_GroupID, uint3 thread_id : SV_GroupThreadID)
     pixel_info info;
     info.albedo = gbuffer[0][tc.xy];
     info.normal = normalize(gbuffer[1][tc.xy].xyz * 2 - 1);
-    info.specular = gbuffer[2][tc.xy].xyz;
-	info.roughness = gbuffer[1][tc.xy].w+0.1;// gbuffer[2][tc.xy].w;
+	info.metallic = gbuffer[0][tc.xy].w;
+   // info.specular = gbuffer[2][tc.xy].xyz;
+	info.roughness = gbuffer[1][tc.xy].w;// gbuffer[2][tc.xy].w;
     float raw_z = depth_buffer[tc.xy];
 
     info.pos = depth_to_wpos(raw_z, float2(tc.xy) / dims, camera.inv_view_proj);
@@ -141,7 +143,7 @@ float result = 0;
 float blur_scaler = 0.0;
 
 
-for (int i = 1; i < 16; i++)
+for (int i = 1; i < 2; i++)
 {
 	float2 cur_tc = light_tc + float2(rsin,rcos)*poisson[i] * tc_scaler;
 	float light_raw_z = light_buffer.SampleLevel(pixel_sampler, float3(cur_tc, level), 0) ;
@@ -163,7 +165,7 @@ for (int i = 1; i < 16; i++)
 }
 //return blur_scaler;
 
-for (int i = 1; i < 16; i++)
+for (int i = 1; i < 2; i++)
 {
 
 	float2 cur_tc = light_tc + float2(rsin, rcos)*blur_scaler*poisson[i] * tc_scaler;
@@ -186,7 +188,7 @@ for (int i = 0; i < 16; i++)
 	sum += cur_rad;
 }*/
 //return  float(level) / 6;
-return result/16;// light_raw_z > pos_l.z;
+return result/1;// light_raw_z > pos_l.z;
 }
 
 
@@ -211,7 +213,7 @@ float get_sss(float z, float3 pos, float2 tc, float3 n)
 	float dist = 0.0;
 
 	float step = distance(camera.position, pos) / 1000;
-	float errorer = step/1;
+	float errorer = step*2;
 
 //	float errorrer = 0.02/SCALE;
 
@@ -233,11 +235,16 @@ float get_sss(float z, float3 pos, float2 tc, float3 n)
 		float l2 = length(p2 - camera.position);
 
 
-		if ((l1 < l2- errorer /1) )
-			res = min(res, abs(l2-l1)*errorer);
+		if ((l1 < l2-errorer) )
+			res = min(res, abs(l2-l1));
 	}
 
 	return res;
+}
+
+float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
+{
+	return brdf.SampleLevel(LinearSamplerClamp, float3(Roughness, Metallic, NoV), 0);
 }
 
 float4 PS_RESULT(quad_output i) : SV_Target0
@@ -249,17 +256,19 @@ float4 packed_0 = gbuffer[0].SampleLevel(pixel_sampler, i.tc, 0);
 
 //return packed_0;
 info.albedo = packed_0.rgb;
+info.metallic = packed_0.w;
+
 info.normal = normalize(gbuffer[1].SampleLevel(pixel_sampler, i.tc, 0).xyz * 2 - 1);
 float raw_z = depth_buffer.SampleLevel(pixel_sampler, i.tc, 0);
-
+if (raw_z >= 1) return 0;
 info.pos = depth_to_wpos(raw_z, i.tc, camera.inv_view_proj);
 
 
-info.specular = gbuffer[2].SampleLevel(pixel_sampler, i.tc, 0);
-info.roughness = gbuffer[1].SampleLevel(pixel_sampler, i.tc, 0).w + 0.1;// gbuffer[2][tc.xy].w;
+//info.specular = gbuffer[2].SampleLevel(pixel_sampler, i.tc, 0);
+info.roughness = max(0.04,gbuffer[1].SampleLevel(pixel_sampler, i.tc, 0).w);// gbuffer[2][tc.xy].w;
 
 info.view_z = camera.proj._34 * raw_z / (raw_z - camera.proj._33);
-info.view = -normalize(camera.position - info.pos);
+info.view = normalize(camera.position - info.pos);
 info.reflection = reflect(info.view, info.normal);
 
 float sss = get_sss(info.view_z,info.pos, i.tc, info.normal);// *saturate(dot(-light_cameras[0].direction, info.normal));
@@ -268,14 +277,41 @@ float3 res_color = calc_color(info, -light_cameras[0].direction, shadow);
 //sss = saturate(sss * 2 - 1);
 //shadow = light_cameras[0].direction.x;
 
-shadow = min(shadow, sss);
+//shadow = min(shadow, sss);
 
 //return shadow;
 //return min(shadow,sss);
-float3 light_dir = -light_cameras[0].direction;
+float3 light_dir = normalize(-light_cameras[0].direction);
 
-float3 direct = shadow*max(0, dot(light_dir, info.normal));
-float3 reflection = 0;// shadow*pow(saturate(dot(info.reflection, light_dir)), 2 * info.roughness);
+//float3 direct = shadow*max(0, dot(light_dir, info.normal));
+//float3 reflection = 0;// shadow*pow(saturate(dot(info.reflection, light_dir)), 2 * info.roughness);
 //return float4(get_debug_color(info),0);
-return  float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, packed_0.w), 1);
+
+//float3 F;
+
+
+float3 Fk=0;
+
+float NV = dot(info.normal, info.view);
+float NL = dot(info.normal, light_dir);
+float3 h = normalize(info.view + light_dir);
+
+float HV = dot(h, info.view);
+float2 EnvBRDF = 1;
+
+EnvBRDF = IntegrateBRDF(info.roughness, saturate(info.metallic), NL);
+/*
+if(NL>0)
+EnvBRDF *= IntegrateBRDF(info.roughness, NL).x;
+else
+EnvBRDF = 0;*/
+
+//float3 F = FresnelSchlick(saturate(info.metallic), saturate(NV));
+
+//return (EnvBRDF.xxxx);
+float3 refl = CookTorrance_GGX_sample(light_dir, info,Fk);
+
+return float4(shadow*(EnvBRDF.x*info.albedo), 0);
+
+//return  float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, packed_0.w), 1);
 }

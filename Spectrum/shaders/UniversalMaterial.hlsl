@@ -221,8 +221,8 @@ PS_RESULT universal(vertex_output i, float4 albedo, float metallic,float roughne
     float3 r = reflect(v, normal);         
     //  return float4(bump.xyz, 1);  
     PS_RESULT result;   
-	if (metallic < 1.0f / 255.0f) 
-		roughness = 1; 
+	//if (metallic < 1.0f / 255.0f) 
+	//	roughness = 1; 
 	result.albedo =  float4(albedo.xyz, metallic); 
     result.normals = float4(compress_normals(normal), (roughness));
 	result.specular = 0;// float4(metallic, roughness); 

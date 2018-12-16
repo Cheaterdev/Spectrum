@@ -337,6 +337,7 @@
     <ClInclude Include="GUI\Renderer\Renderer.h" />
     <ClInclude Include="GUI\Skin.h" />
     <ClInclude Include="Helpers\MipMapGeneration.h" />
+    <ClInclude Include="Lighting\BRDF.h" />
     <ClInclude Include="Lighting\GBuffer.h" />
     <ClInclude Include="Lighting\Light.h" />
     <ClInclude Include="Materials\ShaderMaterial.h" />
@@ -349,6 +350,7 @@
     <ClInclude Include="Mesh\raw4\raw4_history.h" />
     <ClCompile Include="Camera\Camera.cpp" />
     <ClCompile Include="Effects\PostProcess\SSGI.cpp" />
+    <ClCompile Include="Lighting\BRDF.cpp" />
     <ClCompile Include="Mesh\RW4Importer.cpp" />
     <ClInclude Include="Mesh\Simplifyer\Simplifyer.h" />
     <ClInclude Include="Mesh\Vertexes.h" />

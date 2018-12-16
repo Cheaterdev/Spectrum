@@ -1,28 +1,6 @@
 #pragma once
-/*
-class CPUTimer
-{
 
-public:
-
-	void start(DX12::CommandList*  list)
-	{
-		Singleton<GPUTimeManager>::get().start(*this, list);
-	}
-
-	void end(DX12::CommandList*  list)
-	{
-		Singleton<GPUTimeManager>::get().end(*this, list);
-		list = nullptr;
-	}
-
-	float get_time()
-	{
-		return  Singleton<GPUTimeManager>::get().get_time(*this);
-	}
-};
-*/
-//#define PROFILING
+#define PROFILING
 
 class Timer;
 class TimedRoot
@@ -175,7 +153,7 @@ public:
 	/*	Render::GPUTimeManager::create();*/
 	}
 
-	bool enabled = false;
+	bool enabled = true;
 
 	using TimedBlock::update;
 

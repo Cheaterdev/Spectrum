@@ -334,7 +334,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 			{
 				auto timer = graphics.start(L"invisible gather");
 				compute.transition(invisible_commands, Render::ResourceState::COPY_DEST);
-				compute.copy_buffer(invisible_commands.get(), invisible_commands->get_counter_offset(), buffers.clear_buffer.get(), 0, 4);
+				compute.clear_counter(invisible_commands);
 				compute.transition(invisible_commands, Render::ResourceState::UNORDERED_ACCESS);
 				compute.transition(second_draw_dispatch, Render::ResourceState::UNORDERED_ACCESS);
 				compute.set_pipeline(gather_invisible);
@@ -344,7 +344,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 				compute.set_constants(3, UINT(boxes.size()), UINT(0), UINT(max(1u, UINT(boxes.size() / 64))));
 				compute.set_dynamic(4, 0, second_draw_dispatch->get_uav());
 				compute.dispach(ivec3(1, 1, 1), ivec3(1, 1, 1));
-				graphics.copy_buffer(second_draw_arguments.get(), sizeof(UINT) * 2, invisible_commands.get(), invisible_commands->get_counter_offset(), 4);
+				graphics.copy_buffer(second_draw_arguments.get(), sizeof(UINT) * 2, invisible_commands->help_buffer.get(), 0, 4);
 
 				graphics.transition(invisible_commands, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
 				graphics.transition(second_draw_arguments, Render::ResourceState::INDIRECT_ARGUMENT);
@@ -479,12 +479,12 @@ gpu_mesh_renderer::gpu_mesh_renderer(Scene::ptr scene)
 	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0,{} });
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0,{} });
 	Render::RootSignatureDesc root_desc;
-	root_desc[0] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::PIXEL); // material constants
-	root_desc[1] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::DOMAIN); // material constants
+	root_desc[0] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::ALL); // material constants
+	root_desc[1] = Render::DescriptorConstBuffer(5, Render::ShaderVisibility::DOMAIN); // material constants
 	root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 32); // material textures
 	root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 8); // material virtual texture
 	root_desc[4] = Render::DescriptorSRV(0, Render::ShaderVisibility::VERTEX, 1); //vertex buffer
-	root_desc[5] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::VERTEX); // vertex node data
+	root_desc[5] = Render::DescriptorConstBuffer(5, Render::ShaderVisibility::VERTEX); // vertex node data
 	root_desc[6] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL); // camera
 	root_desc[7] = Render::DescriptorSRV(2, Render::ShaderVisibility::VERTEX, 1); // instance data
 	root_desc[8] = Render::DescriptorConstants(2, 2, Render::ShaderVisibility::ALL); // material offsets
@@ -541,10 +541,10 @@ gpu_mesh_renderer::gpu_mesh_renderer(Scene::ptr scene)
 	desc.rasterizer.conservative = true;
 	//	desc.blend.render_target[0].enabled = true;
 	state = Render::PipelineStateCache::get().get_cache(desc);
-	visible_id_buffer = std::make_shared<Render::StructuredBuffer<UINT>>(2048, false, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	visible_id_buffer = std::make_shared<Render::StructuredBuffer<UINT>>(2048, Render::counterType::NONE, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	//	cpu_commands = std::make_shared<Render::FrameStorage<IndirectCommand>>();
 	//	cpu_instances = std::make_shared<Render::FrameStorage<instance>>();
-	invisible_commands = std::make_shared<Render::StructuredBuffer<instance>>(2044, true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	invisible_commands = std::make_shared<Render::StructuredBuffer<instance>>(2044, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	// Create the command signature used for indirect drawing.
 	{
 		/*
@@ -602,7 +602,7 @@ gpu_mesh_renderer::gpu_mesh_renderer(Scene::ptr scene)
 	args.args.StartIndexLocation = 0;
 	args.args.StartInstanceLocation = 0;
 	second_draw_arguments->set_data(args);
-	second_draw_dispatch = std::make_shared<Render::StructuredBuffer<gather_second>>(1, false, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	second_draw_dispatch = std::make_shared<Render::StructuredBuffer<gather_second>>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	Render::ComputePipelineStateDesc compute_desc;
 	compute_desc.root_signature = std::make_shared<Render::RootSignature>(
 		Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 1),

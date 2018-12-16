@@ -19,8 +19,10 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
         std::mutex m;
     public:
         MipMapGenerator();
-        void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex);
-        void downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr& tex, Render::Texture::ptr& to);
+		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex/*, Render::Texture2DView::ptr view*/);
+		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::Texture2DView::ptr view);
+		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::CubemapView::ptr view);
+		void downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr& tex, Render::Texture::ptr& to);
 
 
 		void generate_quality(Render::GraphicsContext& context, camera* cam, G_Buffer& buffer);

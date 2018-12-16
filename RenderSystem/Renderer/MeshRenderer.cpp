@@ -295,16 +295,23 @@ void DynamicSizeUAVBuffer::start_write(Render::CommandList& list, int binded_cou
 {
 	{
 		//    auto timer = graphics.start(L"preparing buffers");
+	//	for (int i = 0; i < binded_count; i++)
+	//		list.transition(command_buffers[i]->help_buffer, Render::ResourceState::COPY_DEST);
+
+		
 		for (int i = 0; i < binded_count; i++)
-			list.transition(command_buffers[i], Render::ResourceState::COPY_DEST);
+			list.transition(command_buffers[i]->help_buffer,Render::ResourceState::UNORDERED_ACCESS);
+
+		for (int i = 0; i < binded_count; i++)
+			list.transition(command_buffers[i], Render::ResourceState::UNORDERED_ACCESS);
+
 
 		for (int i = 0; i < binded_count; i++)
 		{
-			list.copy_buffer(command_buffers[i].get(), command_buffers[i]->get_counter_offset(), clear_buffer.get(), 0, 4);
+			list.clear_counter(command_buffers[i]);
+			//	list.copy_buffer(command_buffers[i].get(), command_buffers[i]->get_counter_offset(), clear_buffer.get(), 0, 4);
 		}
-		
-		for (int i = 0; i < binded_count; i++)
-			list.transition(command_buffers[i], Render::ResourceState::UNORDERED_ACCESS);
+
 	}
 }
 
@@ -315,9 +322,15 @@ Render::HandleTable DynamicSizeUAVBuffer::get_handles()
 void DynamicSizeUAVBuffer::start_indirect(Render::CommandList& list, int binded_count)
 {
 	{
-		//     auto timer = graphics.start(L"preparing buffers 2");
+
+		for (int i = 0; i < binded_count; i++)
+			list.transition(command_buffers[i]->help_buffer, Render::ResourceState::INDIRECT_ARGUMENT);
+
 		for (int i = 0; i < binded_count; i++)
 			list.transition(command_buffers[i], Render::ResourceState::INDIRECT_ARGUMENT);
+
+
+		//     auto timer = graphics.start(L"preparing buffers 2");
 	}
 }
 

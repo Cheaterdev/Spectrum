@@ -105,6 +105,8 @@
 #include "Effects/Sky.h"
 #include "Effects/VoxelGI/VoxelGI.h"
 
+#include "Lighting/BRDF.h"
+
 namespace EngineAssets
 {
 	extern EngineAsset<MeshAsset> material_tester;
@@ -114,6 +116,9 @@ namespace EngineAssets
 
 	extern EngineAsset<TextureAsset> best_fit_normals;
 	extern EngineAsset<TextureAsset> missing_texture;
+
+	extern EngineAsset<BRDF> brdf;
+
 }
 
 #pragma comment(lib, "RenderSystem")

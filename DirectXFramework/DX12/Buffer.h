@@ -186,13 +186,16 @@ namespace DX12
 	class CPUBuffer: public Resource
 	{
 			int stride;
+
 		public:
 			CPUBuffer(int count, int stride);
 
+			bool mapped = false;
 			template<class T = char>
 			T * map(int from, int to)
 			{
 				T* result = nullptr;
+				mapped = true;
 				D3D12_RANGE Range;
 				Range.Begin = from * stride;
 				Range.End = to * stride;
@@ -205,18 +208,24 @@ namespace DX12
 
 	};
 
+	enum class counterType:int
+	{
+		NONE,
+		SELF,
+		HELP_BUFFER
+	};
 	template<class T>
 	class StructuredBuffer : public GPUBuffer
 	{
 			HandleTable static_raw_uav;
 
 			StructuredBuffer() = default;
-			bool counted = false;
+			counterType counted = counterType::NONE;
 			void init_views();
 		public:
 			using ptr = std::shared_ptr<StructuredBuffer<T>>;
 			using type = T;
-			StructuredBuffer(UINT count, bool counted = false, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE);
+			StructuredBuffer(UINT count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE);
 
 			UINT get_counter_offset();
 
@@ -242,7 +251,10 @@ namespace DX12
 			{
 				return static_raw_uav.get_base();
 			}
+			GPUBuffer::ptr help_buffer;
+			HandleTable counted_uav;
 		private:
+	
 			friend class boost::serialization::access;
 			template<class Archive>
 			void serialize(Archive& ar, const unsigned int)
@@ -674,21 +686,38 @@ namespace DX12
 			place_raw_uav(static_raw_uav[0]);
 
 		}
+
+		if (counted == counterType::HELP_BUFFER)
+		{
+			counted_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+
+			help_buffer->place_raw_uav(counted_uav[0]);
+		}
+	
 	}
 	template<class T>
-	inline StructuredBuffer<T>::StructuredBuffer(UINT count, bool counted, D3D12_RESOURCE_FLAGS flags) : GPUBuffer(counted ? (Math::AlignUp(count * sizeof(T), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + counted * sizeof(UINT)) : (count * sizeof(T)), flags)
+	inline StructuredBuffer<T>::StructuredBuffer(UINT count, counterType counted, D3D12_RESOURCE_FLAGS flags) : GPUBuffer(counted== counterType::SELF ? (Math::AlignUp(count * sizeof(T), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(T)), flags)
 	{
 		stride = sizeof(T);
 		this->count = count;
 		this->counted = counted;
-		init_views();
+	
+
+		if (counted == counterType::HELP_BUFFER) 
+			help_buffer = std::make_shared<GPUBuffer>(4, flags);
+
+	//	if (count>0)
+			init_views();
+
+
 	}
 	template<class T>
 	inline UINT StructuredBuffer<T>::get_counter_offset()
 	{
-		assert(counted, "needs to be counted");
+		assert(counted== counterType::SELF, "needs to be counted");
 		return size - sizeof(UINT);
 	}
+
 	template<class T>
 	inline void StructuredBuffer<T>::set_data(DX12::CommandList::ptr & list, unsigned int offset, std::vector<T>& v)
 	{
@@ -704,9 +733,19 @@ namespace DX12
 		desc.Format = DXGI_FORMAT_UNKNOWN;
 		desc.Buffer.NumElements = count;
 		desc.Buffer.StructureByteStride = stride;
-		desc.Buffer.CounterOffsetInBytes = counted ? size - sizeof(UINT) : 0;
+		desc.Buffer.CounterOffsetInBytes = 0;
+
+		if (counted == counterType::SELF)
+		desc.Buffer.CounterOffsetInBytes = std::max(0, (int)size - (int)sizeof(UINT));
+
+
 		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-		Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), counted ? get_native().Get() : nullptr, &desc, h.cpu);
+		Resource * counter_resource = nullptr;
+
+		if (counted == counterType::SELF) counter_resource = this;
+		if (counted == counterType::HELP_BUFFER) counter_resource = help_buffer.get();
+
+		Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), counter_resource ? counter_resource->get_native().Get() : nullptr, &desc, h.cpu);
 	}
 	template<class T>
 	inline void StructuredBuffer<T>::place_uav(const Handle & h, GPUBuffer::ptr counter_resource, unsigned int offset)

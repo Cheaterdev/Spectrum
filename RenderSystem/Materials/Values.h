@@ -202,6 +202,16 @@ class MaterialContext : public FlowGraph::GraphContext
         std::vector<TextureSRVParams::ptr> textures;
 
         std::vector<Uniform::ptr> uniforms;
+		
+		std::map<Uniform::ptr, std::string> shader_parameter_uniform;
+		std::map<TextureSRVParams::ptr, std::string> shader_parameter_srv;
+
+		// TODO: tiled
+		// std::map < { TextureSRVParams::ptr, shader_parameter},  shader_parameter  > shader_parameter_srv_tiled;
+
+
+		
+	
         std::string uniform_struct;
 		int uniform_offset = 0;
         int texture_counter;
@@ -218,6 +228,7 @@ class MaterialContext : public FlowGraph::GraphContext
 
         using ptr = s_ptr<MaterialContext>;
         std::string get_new_param();
+
 
         virtual void add_task(FlowGraph::Node* node) override;
 
@@ -236,7 +247,7 @@ class MaterialContext : public FlowGraph::GraphContext
         std::string get_tess_result();
         void start(std::string orig_file,MaterialGraph* graph);
 
-
+		void clear_parameters();
 
         /*	virtual FlowGraph::graph* create_graph(){
         return new MaterialGraph();

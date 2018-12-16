@@ -113,8 +113,8 @@ void materials::universal_material::set(MESH_TYPE type, MeshRenderContext::ptr& 
 	context->pipeline.domain = pass->ds_shader;
 	context->pipeline.hull = pass->hs_shader;
 
-	if (tess_buffer)
-		context->set_material_tess_buffer(tess_buffer);
+//	if (tess_buffer)
+	//	context->set_material_tess_buffer(tess_buffer);
 
 	if (pixel_buffer)
 		context->set_material_const_buffer(pixel_buffer);
@@ -190,7 +190,7 @@ void materials::universal_material::update(MeshRenderContext::ptr& c)
 		buffer->set_data(c->list, data);
 	};
 	generate(pixel_buffer, ps_uniforms);
-	generate(tess_buffer, tess_uniforms);
+//	generate(tess_buffer, tess_uniforms);
 	need_update_uniforms = false;
 
 	mark_contents_changed();
@@ -381,7 +381,7 @@ void materials::universal_material::compile()
 
   
 	pixel_buffer = generate(ps_uniforms);
-	tess_buffer = generate(tess_uniforms);
+//	tess_buffer = generate(tess_uniforms);
 
 
 	end_changing_contents();
@@ -524,7 +524,7 @@ void materials::universal_material::generate_material()
   }
 	
 	ps_uniforms = context->uniforms_ps;
-	tess_uniforms = context->uniforms_tess;
+//	tess_uniforms = context->uniforms_tess;
 
 
 	//generate_texture_handles();

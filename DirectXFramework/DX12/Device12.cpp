@@ -443,27 +443,7 @@ namespace DX12
 		D3D12_FEATURE_DATA_D3D12_OPTIONS featureData;
 		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));
 		auto m_tiledResourcesTier = featureData.TiledResourcesTier;
-		Samplers::SamplerLinearWrapDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		Samplers::SamplerAnisoWrapDesc.MaxAnisotropy = 8;
-		Samplers::SamplerShadowDesc.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT;
-		Samplers::SamplerShadowDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-		Samplers::SamplerShadowDesc.set_adress(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-		Samplers::SamplerLinearClampDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		Samplers::SamplerLinearClampDesc.set_adress(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-		Samplers::SamplerVolumeWrapDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		Samplers::SamplerPointClampDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		Samplers::SamplerPointClampDesc.set_adress(D3D12_TEXTURE_ADDRESS_MODE_CLAMP);
-		Samplers::SamplerLinearBorderDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		Samplers::SamplerLinearBorderDesc.set_adress(D3D12_TEXTURE_ADDRESS_MODE_BORDER);
-		Samplers::SamplerLinearBorderDesc.set_color({ 0.0f, 0.0f, 0.0f, 0.0f });
-		Samplers::SamplerPointBorderDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		Samplers::SamplerPointBorderDesc.set_adress(D3D12_TEXTURE_ADDRESS_MODE_BORDER);
-		Samplers::SamplerPointBorderDesc.set_color({ 0.0f, 0.0f, 0.0f, 0.0f });
-
-		Samplers::SamplerShadowComparisonDesc.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-		Samplers::SamplerShadowComparisonDesc.set_adress(D3D12_TEXTURE_ADDRESS_MODE_WRAP);
-		Samplers::SamplerShadowComparisonDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
-
+	
 
 
 	}

@@ -8,7 +8,7 @@ void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_
 
 	axis->update_transforms();
     cam = *mesh_render_context->cam;
-	cam.set_projection_params(0.1, 10000);
+	cam.set_projection_params(0.01,1,0.1, 10000);
 
     cam.target = cam.position + direction;
 //	cam.set_projection_params(cam.angle)
@@ -50,9 +50,10 @@ void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_
                 auto& e = l->rendering[i];
                 auto& node = l->nodes[e.node_index];
 
-               auto in = intersect(cam, e.mesh->primitive.get());
+               auto in = intersect(cam, e.primitive_global.get());
 
-       //        if (!in) continue;
+             if (in== INTERSECT_TYPE::FULL_OUT)
+				  continue;
 
                 current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
                 graphics.set(0, l->mesh_asset->vertex_buffer->get_gpu_address());
@@ -356,8 +357,8 @@ stencil_renderer::stencil_renderer()
     state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/stencil.hlsl", "VS_COLOR", 0, {} });
     state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS_COLOR", 0, {} });
     axis_render_state.reset(new Render::PipelineState(state_desc));
-    id_buffer.reset(new Render::StructuredBuffer<UINT>(1, false, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
-    axis_id_buffer.reset(new Render::StructuredBuffer<UINT>(1, false, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+    id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+    axis_id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 
 
 	id_buffer->set_name("stencil_renderer::id_buffer");

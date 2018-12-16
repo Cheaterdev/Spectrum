@@ -24,4 +24,11 @@ namespace EngineAssets
 	 EngineAsset<BinaryAsset> material_header(L"material_header", [] {
 		 return  new BinaryAsset(L"shaders\\UniversalMaterial.hlsl");
 	 });
+
+
+	 EngineAsset<BRDF> brdf(L"brdf", [] {
+		 BRDF *brdf = new BRDF();
+		 brdf->create_new();
+		 return  brdf;
+	 });
 }

@@ -123,11 +123,19 @@ MipMapGenerator::MipMapGenerator()
 }
 
 
-
-
 void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex)
 {
+	generate(compute_context, tex, tex->texture_2d());
+}
+void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, CubemapView::ptr view)
+{
+	for(int i=0;i<6;i++) generate(compute_context, tex, view->face(i));
+}
+
+void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Texture2DView::ptr view)
+{
     std::lock_guard<std::mutex> g(m);
+	//auto view = tex->texture_2d();
     auto timer = compute_context.start(L"downsampling");
     //list->transition(tex.get(), before, after);
     //  return;//
@@ -135,7 +143,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
     //   tex->change_state(list, before, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE, 0);
     compute_context.transition(tex, Render::ResourceState::UNORDERED_ACCESS);
     compute_context.set_signature(linear[0]->desc.root_signature);
-    compute_context.set_dynamic(1,0, tex->texture_2d()->get_srv());
+    compute_context.set_dynamic(1,0, view->get_srv());
     compute_context.set(3, samplers);
     uint32_t maps = tex->get_desc().MipLevels - 1;
 
@@ -181,7 +189,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
         //	Context.SetConstants(0, TopMip, NumMips, 1.0f / DstWidth, 1.0f / DstHeight);
         compute_context.set_const_buffer(0, cb);
 		for(int i=0;i< NumMips;i++)
-        compute_context.set_dynamic(2,i, tex->texture_2d()->get_uav(TopMip + 1+i));
+        compute_context.set_dynamic(2,i, view->get_uav(TopMip + 1+i));
         compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
         compute_context.transition_uav(tex.get());
         TopMip += NumMips;

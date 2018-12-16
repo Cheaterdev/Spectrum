@@ -227,7 +227,7 @@ namespace DX12
 
         return nullptr;
     }
-	CubemapArrayView::CubemapArrayView(Resource* _resource) : resource(_resource)
+	CubemapArrayView::CubemapArrayView(Resource* _resource) : View(_resource)
 	{
 		auto res_desc = resource->get_desc();
 
@@ -258,7 +258,7 @@ namespace DX12
 
 			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
 			srvDesc.TextureCubeArray.First2DArrayFace = 0;
-			srvDesc.TextureCubeArray.MipLevels = 1;
+			srvDesc.TextureCubeArray.MipLevels = -1;
 
 			srvDesc.TextureCubeArray.MostDetailedMip = 0;
 			srvDesc.TextureCubeArray.NumCubes = count;
@@ -277,7 +277,7 @@ namespace DX12
 
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
 		srvDesc.TextureCubeArray.First2DArrayFace = offset*6;
-		srvDesc.TextureCubeArray.MipLevels = 1;
+		srvDesc.TextureCubeArray.MipLevels = -1;
 
 		srvDesc.TextureCubeArray.MostDetailedMip = 0;
 		srvDesc.TextureCubeArray.NumCubes = 1;
@@ -285,7 +285,7 @@ namespace DX12
 
 		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 	}
-    CubemapView::CubemapView(Resource* _resource,int offset) : resource(_resource)
+    CubemapView::CubemapView(const Resource* _resource,int offset) : View(_resource)
     {
         auto res_desc = resource->get_desc();
 	    single_count =  6*res_desc.MipLevels;
@@ -336,6 +336,11 @@ namespace DX12
             p[i].MaxDepth = 1;
             scissor[i] = { 0, 0, p[i].Width , p[i].Height };
         }
+
+		for(int i=0;i<6;i++)
+		{
+			faces[i] = std::make_shared<Texture2DView>(_resource,i+offset*6);
+		}
     }
 
 	Handle CubemapView::get_rtv(UINT index, UINT mip)
@@ -399,7 +404,7 @@ namespace DX12
 		return static_srv[0];
 	}
 
-    Texture2DView::Texture2DView(Resource* _resource, HandleTable t) : resource(_resource)
+    Texture2DView::Texture2DView(const Resource* _resource, HandleTable t) : View(_resource)
     {
         rtvs = t;
         auto res_desc = resource->get_desc();
@@ -418,7 +423,7 @@ namespace DX12
             scissor[i] = { 0, 0, p[i].Width , p[i].Height };
         }
     }
-    Texture2DView::Texture2DView(Resource* _resource) : resource(_resource)
+    Texture2DView::Texture2DView(const Resource* _resource, int array_index ) : View(_resource), array_index(array_index)
     {
         auto res_desc = resource->get_desc();
         //    single_count = 6 * res_desc.MipLevels;
@@ -502,8 +507,18 @@ namespace DX12
 	{
 		D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
 		desc.Format = to_dsv(resource->get_desc().Format);
-		desc.ViewDimension = D3D12_DSV_DIMENSION::D3D12_DSV_DIMENSION_TEXTURE2D;
-		desc.Texture2D.MipSlice = mip;
+		if(array_index==-1)
+		{
+			desc.ViewDimension = D3D12_DSV_DIMENSION::D3D12_DSV_DIMENSION_TEXTURE2D;
+			desc.Texture2D.MipSlice = mip;
+		}else
+		{
+			desc.ViewDimension = D3D12_DSV_DIMENSION::D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+			desc.Texture2DArray.MipSlice = mip;
+			desc.Texture2DArray.FirstArraySlice = array_index;
+			desc.Texture2DArray.ArraySize = 1;
+		}
+		
 		Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &desc, h.cpu);
 	}
 	 void Texture2DView::place_uav(const Handle & h, UINT mip, UINT slice)
@@ -518,9 +533,19 @@ namespace DX12
 
 			D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
 			desc.Format = resource->get_desc().Format;
-			desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2D;
-			desc.Texture2D.PlaneSlice = slice;
-			desc.Texture2D.MipSlice = mip;
+			if (array_index == -1)
+			{
+				desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2D;
+				desc.Texture2D.PlaneSlice = slice;
+				desc.Texture2D.MipSlice = mip;
+			}else
+			{
+				desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+				desc.Texture2DArray.PlaneSlice = slice;
+				desc.Texture2DArray.MipSlice = mip;
+				desc.Texture2DArray.FirstArraySlice = array_index;
+				desc.Texture2DArray.ArraySize = 1;
+			}
 			Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
 		};
 	}
@@ -536,11 +561,23 @@ namespace DX12
 
 			if(space==PixelSpace::MAKE_LINERAR)
 				srvDesc.Format = to_linear(srvDesc.Format);
+			if (array_index == -1)
+			{
+				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				srvDesc.Texture2D.MipLevels = resource->get_desc().MipLevels;
+				srvDesc.Texture2D.MostDetailedMip = 0;
+				srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+			}else
+			{
+				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+				srvDesc.Texture2DArray.MipLevels = resource->get_desc().MipLevels;
+				srvDesc.Texture2DArray.MostDetailedMip = 0;
+				srvDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
 
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = resource->get_desc().MipLevels;
-			srvDesc.Texture2D.MostDetailedMip = 0;
-			srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+				srvDesc.Texture2DArray.FirstArraySlice = array_index;
+				srvDesc.Texture2DArray.PlaneSlice = 0;
+				srvDesc.Texture2DArray.ArraySize = 1;
+			}
 			Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 		};
 	}
@@ -551,10 +588,22 @@ namespace DX12
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);
 			srvDesc.Format = to_srv(resource->get_desc().Format);
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = levels;
-			srvDesc.Texture2D.MostDetailedMip = mip;
-			srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+			if (array_index == -1)
+			{
+				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+				srvDesc.Texture2D.MipLevels = levels;
+				srvDesc.Texture2D.MostDetailedMip = mip;
+				srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+			}else
+			{
+				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+				srvDesc.Texture2DArray.MipLevels = levels;
+				srvDesc.Texture2DArray.MostDetailedMip = mip;
+				srvDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;	
+				srvDesc.Texture2DArray.FirstArraySlice = array_index;
+				srvDesc.Texture2DArray.PlaneSlice = 0;
+				srvDesc.Texture2DArray.ArraySize = 1;
+			}
 			Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 		};
 	}
@@ -564,9 +613,19 @@ namespace DX12
 		{
 			D3D12_RENDER_TARGET_VIEW_DESC desc = {};
 			desc.Format = to_srv(resource->get_desc().Format);
-			desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2D;
-			desc.Texture2D.MipSlice = mip;
-			desc.Texture2D.PlaneSlice = 0;
+			if (array_index == -1)
+			{
+				desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2D;
+				desc.Texture2D.MipSlice = mip;
+				desc.Texture2D.PlaneSlice = 0;
+			}else
+			{
+				desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+				desc.Texture2DArray.MipSlice = mip;
+				desc.Texture2DArray.PlaneSlice = 0;
+				desc.Texture2DArray.FirstArraySlice = array_index;
+				desc.Texture2DArray.ArraySize = 1;
+			}
 			Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, h.cpu);
 		};
 	}
@@ -604,7 +663,7 @@ namespace DX12
 		 return static_srv[0];
 	 }
 
-    Texture3DView::Texture3DView(Resource* _resource) : resource(_resource)
+    Texture3DView::Texture3DView(Resource* _resource) : View(_resource)
     {
         srvs = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1 + resource->get_desc().MipLevels);
         place_srv(srvs[0]);
@@ -615,13 +674,13 @@ namespace DX12
         if (resource->get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
         {
             uavs = DescriptorHeapManager::get().get_csu_static()->create_table(resource->get_desc().MipLevels);
-            static_uavs = DescriptorHeapManager::get().get_csu_static()->create_table(resource->get_desc().MipLevels);
+            static_uav = DescriptorHeapManager::get().get_csu_static()->create_table(resource->get_desc().MipLevels);
 
             //		for (int i = 0; i < resource->get_desc().MipLevels; i++)
             for (int i = 0; i < resource->get_desc().MipLevels; i++)
             {
                 uavs[i] = uav(i);//place_uav(uavs[i], i);
-                static_uavs[i] = uav(i);
+                static_uav[i] = uav(i);
             }
         }
 
@@ -664,13 +723,19 @@ namespace DX12
 	{
 		return srvs[i + 1];
 	}
+
+	 Handle Texture3DView::get_srv()
+	 {
+		 return srvs[0];
+	 }
+
 	 Handle Texture3DView::get_uav(int i)
 	{
 		return uavs[i];
 	}
 	 Handle Texture3DView::get_static_uav()
 	{
-		return static_uavs.get_base();
+		return static_uav.get_base();
 	}
 	 std::function<void(const Handle&)> Texture3DView::srv(int level, int levels)
 	{
@@ -699,7 +764,7 @@ namespace DX12
 			Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
 		};
 	}
-    Array2DView::Array2DView(Resource* _resource) : resource(_resource)
+    Array2DView::Array2DView(Resource* _resource) : View(_resource)
     {
         if (resource->get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
         {

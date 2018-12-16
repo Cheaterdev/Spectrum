@@ -31,7 +31,7 @@ HDRAdaptation::HDRAdaptation(G_Buffer & buffer)
 	draw_histo_state.reset(new  Render::ComputePipelineState(desc));
 
 
-	buf_exp = std::make_shared<Render::StructuredBuffer<float>>(8, false, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	buf_exp = std::make_shared<Render::StructuredBuffer<float>>(8, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	buf_histogram = std::make_shared<Render::ByteBuffer>(256 * 4);
 
 

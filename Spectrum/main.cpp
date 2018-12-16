@@ -400,14 +400,13 @@ public:
 	}
 };
 
-
 class SkyEnviromentNode :public EditorNode
 {
 	void operator()(PostProcessContext* context)
 	{
 		auto sky = get_input(0)->get<SkyRender::ptr>();
 		sky->update_cubemap(context->mesh_context);
-		get_output(0)->put(sky->cubemap);
+		get_output(0)->put(sky->enviroment);
 	}
 public:
 	SkyEnviromentNode()
@@ -461,7 +460,7 @@ class VoxelNode :public EditorNode
 			auto buf = context->mesh_context->g_buffer;
 			context->mesh_context->g_buffer = nullptr;
 			gi->render_type = viz_type;
-			gi->generate(context->mesh_context, context->renderer, *context->pssm, enviroment->get<Render::Texture::ptr>()->array_cubemap());
+			gi->generate(context->mesh_context, context->renderer, *context->pssm, enviroment->get<Enviroment>());
 			context->mesh_context->g_buffer = buf;
 		}
 		get_output(0)->put(0);
@@ -1071,7 +1070,7 @@ public:
 
 		auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count = 3;
+		int count = 8;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
@@ -1342,9 +1341,9 @@ public:
 			context->eye_context->eyes[i].cam = &eyes[i]->cam;
 
 			//	eyes[i]->g_buffer=
-			
-			
-			
+
+
+
 			//TODO: VR SWITHC HEREEEEEEEEEEEEEEE
 		//	eyes[i]->cam.set_projection_params(eyeRenderDesc[i].Fov, 0.2f, 1000.0f);
 			eyes[i]->cam.update(eyes[i]->temporal.get_current_offset() / *eyes[i]->g_buffer.size);
@@ -1387,12 +1386,24 @@ public:
 				//	if (debug_draw) scene->debug_draw(drawer);
 
 			}
-
-
+		
 
 		}
 
+	{
+				stenciler->player_cam = &eyes[0]->cam;
 
+			MeshRenderContext::ptr context_gbuffer(new MeshRenderContext(*context));
+			context_gbuffer->list = list->get_sub_list();
+			thread_pool::get().enqueue([this, context_gbuffer]() {
+				auto c = context_gbuffer;
+				auto list = c->list;
+				list->begin("stenciler");
+				stenciler->render(c, scene);
+				list->end();
+				list->execute();
+			});
+		}
 
 
 		PostProcessContext render_context(scene);
@@ -1407,10 +1418,12 @@ public:
 		render_graph->get_input(0)->put(0);
 		render_context.wait();
 
+		stenciler->draw_after(context, eyes[0]->g_buffer);
+
 		for(auto &eye:eyes)
 			eye->g_buffer.result_tex.swap(list);
 
-
+	
 		/// HERE NEED TO SWAP OCULUS TO 2D
 		//if (!context->eye_context->eyes[0].color_buffer)
 		{
@@ -1423,6 +1436,7 @@ public:
 
 
 		{
+		
 			//temporal.make_current(g_buffer.result_tex.first());
 			//dont insert here anything
 			last_renderer.process(context);
@@ -2170,6 +2184,8 @@ public:
 	{
 		Profiler::create();
 		EVENT("Start WindowRender");
+
+		EngineAssets::brdf.get_asset();
 
 		GUI::Elements::image::ptr back(new GUI::Elements::image);
 		back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));

@@ -70,6 +70,7 @@ GUI::Elements::menu_list::menu_list(bool vertical)
         height_size = size_type::MATCH_CHILDREN;
     }
 
+	clip_to_parent = true;
     // size = { padding->left + padding->right, padding->top + padding->bottom };
 }
 

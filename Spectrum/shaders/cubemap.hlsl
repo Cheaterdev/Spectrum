@@ -211,7 +211,7 @@ float3 get_sky(float3 p, float3 v, float t)
     float3 inscatterColor = inscatter(x, t, v, s, r, mu, attenuation);
     float3 sunColor_ = sunColor(x, t, v, s, r, mu);
 
-    return sunColor_ + 1*inscatterColor;
+    return 0.1*sunColor_ + 1*inscatterColor;
 }
 
 	float4 PS(quad_output i) : SV_TARGET0

@@ -133,6 +133,7 @@ PSSM::PSSM()
 	root_desc[4] = Render::DescriptorSRV(5, Render::ShaderVisibility::ALL);
 	root_desc[5] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, 1);
 	root_desc[6] = Render::DescriptorConstants(1, 2, Render::ShaderVisibility::ALL);
+	
 	Render::ComputePipelineStateDesc desc;
 	desc.shader = Render::compute_shader::get_resource({ "shaders\\PSSM.hlsl", "CS", 0,{} });
 	desc.root_signature.reset(new Render::RootSignature(root_desc));
@@ -219,10 +220,12 @@ PSSM::PSSM()
 			root_desc[3] = Render::DescriptorSRV(5, Render::ShaderVisibility::ALL);
 			//		root_desc[5] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, 1);
 			root_desc[4] = Render::DescriptorConstants(1, 2, Render::ShaderVisibility::ALL);
+			root_desc[5] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 6, 1);
 
 
 			root_desc.set_sampler(0, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerLinearWrapDesc);
 			root_desc.set_sampler(1, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerPointClampDesc);
+			root_desc.set_sampler(2, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerLinearClampDesc);
 			desc.root_signature.reset(new Render::RootSignature(root_desc));
 		}
 		desc.rtv.rtv_formats = { DXGI_FORMAT_R8_UNORM };
@@ -476,6 +479,7 @@ void PSSM::process(MeshRenderContext::ptr & context)
 		list.transition(eye.g_buffer->result_tex.first(), Render::ResourceState::RENDER_TARGET);
 		list.set_pipeline(draw_result_state);
 		list.set_dynamic(2, 0, screen_light_mask->texture_2d()->get_static_srv());
+		list.set_dynamic(5, 0, EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->get_srv());
 
 		list.draw(4);
 	}

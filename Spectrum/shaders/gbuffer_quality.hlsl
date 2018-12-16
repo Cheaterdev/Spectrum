@@ -78,12 +78,13 @@ SamplerState LinearSampler : register(s0);
 SamplerState PixelSampler : register(s1);
 
 
-static const int2 delta[4] =
+static const int2 delta2[4] =
 {
 	int2(0, 1),
 	int2(1, 1),
 	int2(1, 0),
-	int2(0, 0)
+	int2(0, 0),
+
 };
 
 
@@ -108,13 +109,17 @@ float3 r = normalize(reflect(v, low_normals));
 
 
 
-for (int j = 0; j < 4;j++)
+
+#define R 1
+
+for (int x = -R; x <= R; x++)
+for (int y = -R; y <= R; y++)
 {
+	//float2 t_tc = i.tc + 2 * float2(x, y) / dims;
+	int2 deltas = int2(x, y);
 
-
-
-	float3 full_normals = normalize(normals_buffer.SampleLevel(PixelSampler, full_tc, 0,delta[j]).xyz * 2 - 1);
-	float full_depth = depth_buffer.SampleLevel(PixelSampler, full_tc, 0, delta[j]);
+	float3 full_normals = normalize(normals_buffer.SampleLevel(PixelSampler, full_tc, 0, deltas).xyz * 2 - 1);
+	float full_depth = depth_buffer.SampleLevel(PixelSampler, full_tc, 0, deltas);
 
 
 
@@ -128,8 +133,8 @@ for (int j = 0; j < 4;j++)
 
 
 	float my_result = 1;
-float pos_w = length(delta)<(length(p2 - camera.position)*0.02);
-float normal_w = pow(saturate(dot(full_normals, low_normals)),256);
+	float pos_w = length(delta) <  (length(p2 - camera.position)*0.02);
+float normal_w =  pow(saturate(dot(full_normals, low_normals)), 32);
 float refl_w = pow(saturate(dot(r, _r)), 256);
 
 	

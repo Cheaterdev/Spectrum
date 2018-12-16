@@ -8,14 +8,17 @@ namespace DX12
 		friend class GPUTimer;
 
 		QueryHeap heap;
-		CPUBuffer buffer;
+		std::mutex buffer_lock;
+		std::queue<std::shared_ptr<CPUBuffer>> buffers;
+	
+
 		static const int MAX_TIMERS = 4096;
 		IdGenerator ids;
 		std::array<UINT64, MAX_TIMERS*2> read_back_data;
 
 		UINT64 fence = -1;
 		UINT64 frequency;
-		GPUTimeManager() : heap(MAX_TIMERS * 2), buffer(MAX_TIMERS * 2, sizeof(UINT64))
+		GPUTimeManager() : heap(MAX_TIMERS * 2)
 		{
 			DX12::Device::get().get_queue(CommandListType::DIRECT)->get_native()->GetTimestampFrequency(&frequency);
 		}
@@ -65,10 +68,27 @@ namespace DX12
 			*/
 		void read_buffer(CommandList::ptr &list, std::function<void()> f)
 		{
+			std::shared_ptr<CPUBuffer> current_buffer;
+			{
+				std::lock_guard<std::mutex> g(buffer_lock);
 
-			list->resolve_times(&buffer, heap, MAX_TIMERS * 2, [this, f]() {
-				memcpy(read_back_data.data(),buffer.map<UINT64>(0, MAX_TIMERS * 2), sizeof(UINT64)*MAX_TIMERS*2);
-				buffer.unmap();
+				if(buffers.empty())
+				{
+					current_buffer.reset(new CPUBuffer(MAX_TIMERS * 2, sizeof(UINT64)));
+				}
+				else {
+					current_buffer = buffers.front();
+					buffers.pop();
+				}
+			}
+
+			list->resolve_times(current_buffer.get(), heap, MAX_TIMERS * 2, [this, f, current_buffer]() {
+				memcpy(read_back_data.data(), current_buffer->map<UINT64>(0, MAX_TIMERS * 2), sizeof(UINT64)*MAX_TIMERS*2);
+				current_buffer->unmap();
+				{
+					std::lock_guard<std::mutex> g(buffer_lock);
+					buffers.push(current_buffer);
+				}
 				f();
 			
 			});

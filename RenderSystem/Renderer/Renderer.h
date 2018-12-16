@@ -212,7 +212,7 @@ class DynamicSizeUAVBuffer
                         old_buffers.push_back(current);
 
                 //    changed = true;
-                    current = std::make_shared<Render::StructuredBuffer<IndirectCommand>>(std::max(2048u, max_counts[i]), true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+                    current = std::make_shared<Render::StructuredBuffer<IndirectCommand>>(std::max(2048u, max_counts[i]), Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 					current->place_uav(handles[i]);
                 }
             }
@@ -692,7 +692,7 @@ public:
 		Events::Event<int> second_stage_test;
 		Events::Event<DrawInfo> draw_infos;
 
-		bool enabled = true;
+		bool enabled = false;
 	}statistic;
 	void update(MeshRenderContext::ptr mesh_render_context);
 

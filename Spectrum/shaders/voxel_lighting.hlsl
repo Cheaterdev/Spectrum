@@ -19,6 +19,7 @@ Texture3D<float4> tex_lower : register(t2);
 
 SamplerState BilinearClamp : register(s0);
 SamplerComparisonState cmp_sampler: register(s1);
+SamplerState LinearSamplerClamp : register(s2);
 
 #define SINGLE_SAMPLE
 

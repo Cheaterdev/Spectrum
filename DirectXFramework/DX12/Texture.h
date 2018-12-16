@@ -21,29 +21,115 @@ namespace DX12
     };
     bool operator<(const texure_header& l, const texure_header& r);
 
+	enum class PixelSpace : int {
+		NONE,
+		MAKE_LINERAR,
+		MAKE_SRGB
+	};
 
-    class CubemapView
-    {
-            HandleTable rtvs;
-            HandleTable srvs;
-			Resource* resource;
-            int single_count;
-            std::vector<Viewport> p;
-            std::vector<sizer_long> scissor;
-            HandleTable static_srv;
-            //     std::vector<HandleTable> array_rtv;
-        public:
-            using ptr = std::shared_ptr<CubemapView>;
-            CubemapView(Resource* _resource, int offset = 0);
+	class View
+	{
+		protected:
+		HandleTable rtvs;
+		HandleTable srvs;
+		HandleTable uavs;
 
-			Handle get_rtv(UINT index, UINT mip);
-			Handle get_srv(UINT mip);
+		HandleTable static_srv;
+		HandleTable static_uav;
 
-			Handle get_srv();
-			void place_srv(const Handle& h);
+		const Resource* resource;
+		 View(const Resource* resource):resource(resource)
+		 {
+			 
+		 }
 
-			void place_srv(const Handle& h, UINT mip);
+		virtual Handle get_srv() = 0;
+	};
 
+	class Texture2DView:public View
+	{
+		
+		int single_count;
+		std::vector<Viewport> p;
+		std::vector<sizer_long> scissor;
+		//     std::vector<HandleTable> array_rtv;
+
+		int array_index = 0;
+	
+
+	public:
+		using ptr = std::shared_ptr<Texture2DView>;
+		Texture2DView(const Resource* _resource, HandleTable t);
+		Texture2DView(const Resource* _resource, int array_index = -1);
+
+		Handle get_rtv(UINT mip = 0);
+
+		void place_srv(const Handle& h);
+		void place_srv(const Handle& h, UINT mip);
+
+		void place_rtv(const Handle& h, int i = 0);
+
+
+		void place_dsv(const Handle& h, UINT mip = 0);
+
+		void place_uav(const Handle& h, UINT mip = 0, UINT slice = 0);
+
+
+		std::function<void(const Handle&)>uav(UINT mip = 0, UINT slice = 0);
+
+
+		std::function<void(const Handle&)>srv(PixelSpace space = PixelSpace::NONE);
+
+		std::function<void(const Handle&)>srv(UINT mip, UINT levels = 1);
+
+		std::function<void(const Handle&)>rtv(UINT mip);
+
+		Handle get_srv(UINT mip);
+		Handle get_srv();
+		Handle get_static_srv();
+
+		Handle get_static_uav();
+		Handle get_uav(UINT mip = 0);
+
+		Viewport get_viewport(UINT mip = 0);
+
+		sizer_long get_scissor(UINT mip = 0);
+		/*
+		const HandleTable& get_rtv(UINT index, UINT mip)
+		{
+		return rtv[mip][index];
+		}
+
+		const HandleTable& get_rtv(UINT mip)
+		{
+		return array_rtv[mip];
+		}*/
+	};
+
+	class CubemapView :public View
+	{
+
+		int single_count;
+		std::vector<Viewport> p;
+		std::vector<sizer_long> scissor;
+		std::array<Texture2DView::ptr, 6> faces;
+		//     std::vector<HandleTable> array_rtv;
+	public:
+		using ptr = std::shared_ptr<CubemapView>;
+		CubemapView(const Resource* _resource, int offset = 0);
+
+		Handle get_rtv(UINT index, UINT mip);
+		Handle get_srv(UINT mip);
+
+		Handle get_srv();
+		void place_srv(const Handle& h);
+
+		void place_srv(const Handle& h, UINT mip);
+
+		Texture2DView::ptr face(int i)
+		{
+			return  faces[i];
+		}
 			Viewport get_viewport(UINT mip = 0);
 			sizer_long get_scissor(UINT mip = 0);
 			Handle get_static_srv();
@@ -59,14 +145,15 @@ namespace DX12
             }*/
     };
 
-	class CubemapArrayView
+	class CubemapArrayView :public View
 	{
 		
-		HandleTable srvs;
-		Resource* resource;
+	
 		std::vector<CubemapView::ptr> views;
 		int offset = 0;
 		//     std::vector<HandleTable> array_rtv;
+
+	
 	public:
 		using ptr = std::shared_ptr<CubemapArrayView>;
 		CubemapArrayView(Resource* _resource);
@@ -104,21 +191,15 @@ namespace DX12
 		}*/
 	};
 
-    class Array2DView
+    class Array2DView :public View
     {
-            HandleTable rtvs;
-            HandleTable srvs;
-            HandleTable uavs;
-
-			Resource* resource;
+         
             int single_count;
 
-            HandleTable static_uav;
-            HandleTable static_srv;
-
-            //     std::vector<HandleTable> array_rtv;
+			std::vector<Texture2DView::ptr> views;
         public:
             using ptr = std::shared_ptr<Array2DView>;
+
             Array2DView(Resource* _resource);
 
 			Handle get_rtv(UINT index, UINT mip);
@@ -132,7 +213,12 @@ namespace DX12
 
 
 
-			std::function<void(const Handle&)>uav(UINT first = 0, UINT count = 0, UINT mip = 0);
+			Texture2DView::ptr tex2d(int i)
+			{
+				return views[i];
+			}
+
+			std::function<void(const Handle&)> uav(UINT first = 0, UINT count = 0, UINT mip = 0);
 
 			Handle get_srv();
 
@@ -152,83 +238,10 @@ namespace DX12
             }*/
     };
 
-	enum class PixelSpace : int {
-		NONE,
-		MAKE_LINERAR,
-		MAKE_SRGB
-	};
-    class Texture2DView
+
+    class Texture3DView :public View
     {
-            HandleTable rtvs;
-            HandleTable srvs;
-            HandleTable uavs;
 
-			Resource* resource;
-            int single_count;
-            std::vector<Viewport> p;
-            std::vector<sizer_long> scissor;
-            //     std::vector<HandleTable> array_rtv;
-
-
-            HandleTable static_srv;
-            HandleTable static_uav;
-
-        public:
-            using ptr = std::shared_ptr<Texture2DView>;
-            Texture2DView(Resource* _resource, HandleTable t);
-            Texture2DView(Resource* _resource);
-
-			Handle get_rtv(UINT mip = 0);
-
-			void place_srv(const Handle& h);
-			void place_srv(const Handle& h, UINT mip);
-
-			void place_rtv(const Handle& h, int i = 0);
-
-
-			void place_dsv(const Handle& h, UINT mip = 0);
-
-			void place_uav(const Handle& h, UINT mip = 0, UINT slice = 0);
-
-
-			std::function<void(const Handle&)>uav(UINT mip = 0, UINT slice = 0);
-
-
-			std::function<void(const Handle&)>srv(PixelSpace space = PixelSpace::NONE);
-
-			std::function<void(const Handle&)>srv(UINT mip, UINT levels = 1);
-
-			std::function<void(const Handle&)>rtv(UINT mip);
-
-			Handle get_srv(UINT mip);
-			Handle get_srv();
-			Handle get_static_srv();
-
-			Handle get_static_uav();
-			Handle get_uav(UINT mip = 0);
-
-			Viewport get_viewport(UINT mip = 0);
-
-			sizer_long get_scissor(UINT mip = 0);
-            /*
-            const HandleTable& get_rtv(UINT index, UINT mip)
-            {
-            return rtv[mip][index];
-            }
-
-            const HandleTable& get_rtv(UINT mip)
-            {
-            return array_rtv[mip];
-            }*/
-    };
-    class Texture3DView
-    {
-            HandleTable rtvs;
-            HandleTable srvs;
-            HandleTable uavs;
-            HandleTable static_uavs;
-			HandleTable static_srv;
-			Resource* resource;
             int single_count;
             //     std::vector<HandleTable> array_rtv;
         public:
@@ -242,9 +255,11 @@ namespace DX12
 
 
 			void place_uav(const Handle& h, int level = 0);
-			Handle get_srv(int i = -1);
+			Handle get_srv(int i);
 			Handle get_uav(int i = 0);
 			Handle get_static_srv();
+			Handle get_srv();
+
 
 			Handle get_static_uav();
 			std::function<void(const Handle&)>srv(int level = -1, int levels = -1);

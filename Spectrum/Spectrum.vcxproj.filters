@@ -432,4 +432,9 @@
       <Filter>Resources</Filter>
     </Object>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="shaders\brdf.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>

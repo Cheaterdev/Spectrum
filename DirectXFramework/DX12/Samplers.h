@@ -7,7 +7,7 @@ namespace DX12
     {
         struct SamplerDesc: public D3D12_SAMPLER_DESC
         {
-			SamplerDesc();
+		//	SamplerDesc();
 
 			void set_adress(D3D12_TEXTURE_ADDRESS_MODE AddressMode);
 

@@ -195,9 +195,17 @@ namespace GUI
         vertexes[1].pos = float2(r.size.x, r.size.y);
         vertexes[0].pos = float2(r.size.x, 0);
 
-        for (int i = 0; i < 6; i++)
-            vertexes[i].pos += float2(r.pos) + c.offset;
+		auto &clip = c.ui_clipping;
 
+
+		for (int i = 0; i < 6; i++)
+		{
+			vertexes[i].pos += float2(r.pos) + c.offset;
+			vertexes[i].pos = float2::max(vertexes[i].pos, float2(clip.left_top));
+			vertexes[i].pos = float2::min(vertexes[i].pos, float2(clip.right_bottom));
+
+		}
+           
         for (int i = 0; i < 6; i++)
         {
             float2 t = 2 * vertexes[i].pos / c.window_size - float2(1, 1);

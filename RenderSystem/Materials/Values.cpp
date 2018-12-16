@@ -46,15 +46,44 @@ shader_parameter::shader_parameter(std::string str, FlowGraph::data_types type)
 					name = other.name + ".xyzw";
 					*/
 }
+
+void MaterialContext::clear_parameters()
+{
+	shader_parameter_uniform.clear();
+	shader_parameter_srv.clear();
+	textures.clear();
+	//tiled_textures.clear();
+	texture_counter = 0;
+	unordered_counter = 0;
+
+	uniforms.clear();
+}
+
 shader_parameter MaterialContext::create_value(Uniform::ptr f)
 {
-	auto shader_name = get_new_param();
-	uniforms.emplace_back(f);
-	uniform_struct += f->type.to_string();
-	uniform_struct += " ";
-	uniform_struct += shader_name;
+	std::string shader_name;
 
-	uniform_struct += ":packoffset(c" + std::to_string(uniform_offset / 4) + ")";
+	auto it = shader_parameter_uniform.find(f);
+	if (it == shader_parameter_uniform.end())
+	{
+		shader_name = get_new_param();
+		shader_parameter_uniform[f] = shader_name;
+
+		uniforms.emplace_back(f);
+		uniform_struct += f->type.to_string();
+		uniform_struct += " ";
+		uniform_struct += shader_name;
+
+		uniform_struct += ":packoffset(c" + std::to_string(uniform_offset / 4) + ")";
+
+		uniform_struct += ";\n";
+		uniform_offset += 4;// get_size(f->type);
+	}
+	else
+		shader_name = it->second;
+
+
+
 
 	/*uniform_struct += ":";
 	uniform_struct += "packoffset(c";
@@ -69,15 +98,24 @@ shader_parameter MaterialContext::create_value(Uniform::ptr f)
 
 
 	uniform_struct += ")";*/
-	uniform_struct += ";\n";
-	uniform_offset += 4;// get_size(f->type);
+
 	return graph->add_value(f->type, shader_name);
 }
 
 std::string MaterialContext::get_texture(TextureSRVParams::ptr& p)
 {
+	auto it = shader_parameter_srv.find(p);
+	if (it != shader_parameter_srv.end())
+	{
+
+		return it->second;
+	}
+
 	textures.push_back(p);
-	return std::string("get_texture(") + std::to_string(texture_counter++) + std::string(")");
+	auto res = std::string("get_texture(") + std::to_string(texture_counter++) + std::string(")");
+	shader_parameter_srv[p] = res;
+
+	return res;
 }
 
 shader_parameter MaterialContext::get_texture(TextureSRVParams::ptr& p, shader_parameter tc)
@@ -119,14 +157,11 @@ std::string MaterialContext::generate_uniform_struct()
 void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 {
 	this->graph = graph;
-	textures.clear();
-	//tiled_textures.clear();
-	texture_counter = 0;
-	unordered_counter = 0;
+	clear_parameters();
 	text = "";//file->get_data();
 	// std::string universal = file->get_data();
 	functions.clear();
-	uniforms.clear();
+
 	params = 0;
 	graph->get_normals()->set_enabled(true);
 	graph->get_texcoord()->set_enabled(true);
@@ -138,7 +173,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 	graph->start(this);
 	//  text += "\n";
 	//	graph->func_name
-	std::string ps_uniforms = generate_uniform_struct();
+	
 	std::string pixel_shader_func = "\
 PS_RESULT PS(vertex_output i)\n\
 {\n\
@@ -167,13 +202,10 @@ void PS_VOXEL(vertex_output i)\n\
 
 	voxel_shader_func += "	universal_voxel(i,color,metallic,roughness,normal);\n";
 	voxel_shader_func += "}";
-	pixel_shader = /*universal +*/ ps_uniforms + text + pixel_shader_func;
-	voxel_shader = /*universal +*/ ps_uniforms + text + voxel_shader_func;
-	uniforms_ps = uniforms;
+	std::string ps_text = text;
 	text = "";
 	functions.clear();
-	uniforms.clear();
-	params = 0;
+
 	graph->get_normals()->set_enabled(false);
 	graph->get_texcoord()->set_enabled(false);
 	graph->get_mettalic()->set_enabled(false);
@@ -182,7 +214,7 @@ void PS_VOXEL(vertex_output i)\n\
 	graph->get_base_color()->set_enabled(false);
 	graph->get_tess_displacement()->set_enabled(true);
 	graph->start(this);
-	std::string tess_uniforms = generate_uniform_struct();
+//	std::string tess_uniforms = generate_uniform_struct();
 	std::string tess_shader_func = "\
 float TESS(vertex_output2 i)\n\
 {\n\
@@ -195,12 +227,24 @@ float TESS(vertex_output2 i)\n\
 	tess_shader_func += "	return displacement;\n";
 	tess_shader_func += "}";
 
+	
+
+	//uniforms_tess = uniforms;
+
+
+	std::string uniforms_string = generate_uniform_struct();
+	pixel_shader = /*universal +*/ uniforms_string + ps_text + pixel_shader_func;
+	voxel_shader = /*universal +*/ uniforms_string + ps_text + voxel_shader_func;
+
 	if (graph->get_tess_displacement()->has_input())
-		tess_shader =/* universal + */tess_uniforms + text + tess_shader_func;
+		tess_shader =/* universal + */uniforms_string + text + tess_shader_func;
 	else
 		tess_shader = "";
 
-	uniforms_tess = uniforms;
+
+	uniforms_ps = uniforms;
+
+
 	text = pixel_shader;
 	// Log::get() << text << Log::endl;
 

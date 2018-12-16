@@ -32,7 +32,7 @@ float GGX_Specular(float3 normal, float3 viewVector, float roughness, float3 F0,
 	//	float sinT = sqrt(1 - cosT * cosT);
 
 	// Calculate fresnel
-	float3 fresnel = Fresnel_Schlick(clamp(dot(normal, viewVector),0.2,1), F0);
+	float3 fresnel = Fresnel_Schlick(clamp(NoV,0.2,1), F0);
 
 
 	// Geometry term

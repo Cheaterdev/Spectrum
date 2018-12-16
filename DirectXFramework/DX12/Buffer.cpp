@@ -161,6 +161,7 @@ namespace DX12
 
 	 void DX12::CPUBuffer::unmap()
 	{
+		 mapped = false;
 		m_Resource->Unmap(0, nullptr);
 	}
 

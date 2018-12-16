@@ -61,12 +61,12 @@ void gpu_cached_renderer::update(MeshRenderContext::ptr mesh_render_context)
 
 	if (boxes_instances.size() > visible_id_buffer->get_count())
 	{
-		visible_id_buffer = std::make_shared<Render::StructuredBuffer<UINT>>(boxes_instances.size(), false, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		invisible_commands = std::make_shared<Render::StructuredBuffer<instance>>(boxes_instances.size(), true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		visible_id_buffer = std::make_shared<Render::StructuredBuffer<UINT>>(boxes_instances.size(), Render::counterType::NONE, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		invisible_commands = std::make_shared<Render::StructuredBuffer<instance>>(boxes_instances.size(), Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	//	frustum_culled_commands = std::make_shared<Render::StructuredBuffer<instance>>(boxes_instances.size(), true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
-		frustum_culled_commands = std::make_shared<Render::StructuredBuffer<unsigned int>>(boxes_instances.size(), true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		second_commands = std::make_shared<Render::StructuredBuffer<unsigned int>>(boxes_instances.size(), true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		frustum_culled_commands = std::make_shared<Render::StructuredBuffer<unsigned int>>(boxes_instances.size(), Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		second_commands = std::make_shared<Render::StructuredBuffer<unsigned int>>(boxes_instances.size(), Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	}
 
 }
@@ -168,7 +168,7 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 		{
 			auto timer = graphics.start(L"frustum culling");
 			compute.transition(invisible_commands, Render::ResourceState::COPY_DEST);
-			compute.copy_buffer(invisible_commands.get(), invisible_commands->get_counter_offset(), buffers.clear_buffer.get(), 0, 4);
+			compute.clear_counter(invisible_commands);
 			compute.transition(invisible_commands, Render::ResourceState::UNORDERED_ACCESS);
 
 
@@ -177,9 +177,10 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 
 	
 			compute.set_pipeline(gpu_frustum_pipeline[check_occlusion]);
-			compute.transition(frustum_culled_commands, Render::ResourceState::COPY_DEST);
-			compute.copy_buffer(frustum_culled_commands.get(), frustum_culled_commands->get_counter_offset(), buffers.clear_buffer.get(), 0, 4);
 			compute.transition(frustum_culled_commands, Render::ResourceState::UNORDERED_ACCESS);
+			compute.transition(frustum_culled_commands->help_buffer, Render::ResourceState::UNORDERED_ACCESS);
+			compute.clear_counter(frustum_culled_commands);
+		//	compute.transition(frustum_culled_commands, Render::ResourceState::UNORDERED_ACCESS);
 			compute.transition(second_draw_dispatch, Render::ResourceState::UNORDERED_ACCESS);
 
 			compute.set_srv(0, boxes_instances.get_gpu()->get_gpu_address());
@@ -203,8 +204,8 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 			compute.set(5, mesh_render_context->cam->get_const_buffer());
 			compute.dispach(ivec3(boxes_instances.size(), 1, 1), ivec3(64 * 32, 1, 1));
 
-			compute.transition_uav(frustum_culled_commands.get());
-			compute.copy_buffer(second_draw_arguments.get(), sizeof(UINT) * 2, frustum_culled_commands.get(), frustum_culled_commands->get_counter_offset(), 4);
+		//	compute.transition_uav(frustum_culled_commands.get());
+			compute.copy_buffer(second_draw_arguments.get(), sizeof(UINT) * 2, frustum_culled_commands->help_buffer.get(), 0, 4);
 	
 
 			compute.set_pipeline(dispatch_init_pipeline);
@@ -216,7 +217,7 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 
 			if (statistic.enabled)
 			{
-				graphics.read_buffer(frustum_culled_commands.get(), frustum_culled_commands->get_counter_offset(), 4, [this](const char* data, UINT64 count) {
+				graphics.read_buffer(frustum_culled_commands->help_buffer.get(), 0, 4, [this](const char* data, UINT64 count) {
 				
 					statistic.frustum_visible_commands(*reinterpret_cast<const UINT*>(data));
 				});
@@ -239,11 +240,12 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 			{
 				auto timer = graphics.start(L"invisible gather");
 
-				compute.transition(invisible_commands, Render::ResourceState::COPY_DEST);
-				compute.transition(second_commands, Render::ResourceState::COPY_DEST);
-				compute.copy_buffer(invisible_commands.get(), invisible_commands->get_counter_offset(), buffers.clear_buffer.get(), 0, 4);
-				compute.copy_buffer(second_commands.get(), second_commands->get_counter_offset(), buffers.clear_buffer.get(), 0, 4);
+				compute.transition(invisible_commands, Render::ResourceState::UNORDERED_ACCESS);
+				compute.transition(invisible_commands->help_buffer, Render::ResourceState::UNORDERED_ACCESS);
 				compute.transition(second_commands, Render::ResourceState::UNORDERED_ACCESS);
+				compute.clear_counter(invisible_commands);
+				compute.clear_counter(second_commands);
+		//		compute.transition(second_commands, Render::ResourceState::UNORDERED_ACCESS);
 
 				compute.transition(second_draw_dispatch, Render::ResourceState::UNORDERED_ACCESS);
 				compute.transition(frustum_culled_commands, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
@@ -259,7 +261,7 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 
 
 				compute.dispach(ivec3(1, 1, 1), ivec3(1, 1, 1));
-				compute.copy_buffer(second_draw_arguments.get(), sizeof(UINT) * 2, invisible_commands.get(), invisible_commands->get_counter_offset(), 4);
+				compute.copy_buffer(second_draw_arguments.get(), sizeof(UINT) * 2, invisible_commands->help_buffer.get(), 0, 4);
 
 				compute.set_pipeline(dispatch_init_pipeline);
 				compute.set_dynamic(1, 0, invisible_commands->get_uav());
@@ -272,7 +274,7 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 
 				if (statistic.enabled)
 				{
-					graphics.read_buffer(invisible_commands.get(), invisible_commands->get_counter_offset(), 4, [this](const char* data, UINT64 count) {
+					graphics.read_buffer(invisible_commands->help_buffer.get(), 0, 4, [this](const char* data, UINT64 count) {
 
 						statistic.second_stage_test (*reinterpret_cast<const UINT*>(data));
 					});
@@ -417,12 +419,12 @@ void gpu_cached_renderer::render_buffers(global_pipeline& pipeline, MeshRenderCo
 					direction[indirection[i + start_index]].draw_count,
 					command_buffer.get(),
 					0,
-					command_buffer.get(),
-					command_buffer->get_counter_offset());
+					command_buffer->help_buffer.get(),
+					0);
 					
 				if (statistic.enabled)
 				{
-					graphics.read_buffer(command_buffer.get(), command_buffer->get_counter_offset(), 4, [ i, statistic_infos](const char* data, UINT64 count) {
+					graphics.read_buffer(command_buffer->help_buffer.get(), 0, 4, [ i, statistic_infos](const char* data, UINT64 count) {
 
 						auto& stat = *statistic_infos;
 
@@ -612,8 +614,8 @@ gpu_cached_renderer::gpu_cached_renderer(Scene::ptr scene, MESH_TYPE _mesh_type)
 	compute_desc.shader = Render::compute_shader::get_resource({ "shaders/occluder_cs_dispatch_init.hlsl", "CS_Dispatch", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES | D3DCOMPILE_SKIP_OPTIMIZATION });
 
 	dispatch_init_pipeline = std::make_shared<Render::ComputePipelineState>(compute_desc);
-	frustum_culled_commands=std::make_shared<Render::StructuredBuffer<unsigned int>>(2044, true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	second_commands = std::make_shared<Render::StructuredBuffer<unsigned int>>(2044, true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	frustum_culled_commands=std::make_shared<Render::StructuredBuffer<unsigned int>>(2044, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	second_commands = std::make_shared<Render::StructuredBuffer<unsigned int>>(2044, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
 void gpu_cached_renderer::init_material(MaterialAsset* m)
 {

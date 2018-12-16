@@ -305,6 +305,9 @@
     <ClInclude Include="Effects\PostProcess\SSGI.h">
       <Filter>Effects\PostProcess</Filter>
     </ClInclude>
+    <ClInclude Include="Lighting\BRDF.h">
+      <Filter>Lighting</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -495,7 +498,6 @@
     <ClCompile Include="Renderer\GPUCachedRenderer.cpp">
       <Filter>Renderer</Filter>
     </ClCompile>
-    <ClCompile Include="Lighting\Light.cpp" />
     <ClCompile Include="Effects\PostProcess\Adaptation.cpp">
       <Filter>Effects\PostProcess</Filter>
     </ClCompile>
@@ -526,6 +528,12 @@
     </ClCompile>
     <ClCompile Include="Effects\Sky.cpp">
       <Filter>Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="Lighting\Light.cpp">
+      <Filter>Lighting</Filter>
+    </ClCompile>
+    <ClCompile Include="Lighting\BRDF.cpp">
+      <Filter>Lighting</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
