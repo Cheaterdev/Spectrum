@@ -137,6 +137,30 @@ float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
 }
 
 
+float3 ImportanceSampleGGXPdf(float2 Xi, float Roughness, float3 N, out float PDF)
+{
+	float a = Roughness * Roughness;
+	float Phi = 2 * PI * Xi.x;
+	float CosTheta = sqrt((1 - Xi.y) / (1 + (a*a - 1) * Xi.y));
+	float SinTheta = sqrt(1 - min(1.0f, CosTheta * CosTheta));
+	float3 H;
+	H.x = SinTheta * cos(Phi);
+	H.y = SinTheta * sin(Phi);
+	H.z = CosTheta;
+	float3 UpVector = abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+	float3 TangentX = normalize(cross(UpVector, N));
+	float3 TangentY = cross(N, TangentX);
+
+	float m2 = a * a;
+	float d = (CosTheta * m2 - CosTheta) * CosTheta + 1;
+	float D = m2 / (PI*d*d);
+	 PDF = D * CosTheta;
+
+	// Tangent to world space
+	return TangentX * H.x + TangentY * H.y + N * H.z;
+}
+
+
 
 float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N, float3 TangentX, float3 TangentY)
 {
@@ -208,9 +232,77 @@ float3 CookTorrance_GGX_sample( float3 l, pixel_info info, out float3 FK) {
 	float3 F = FresnelSchlick(info.metallic, NV);
 	FK = F;
 
-	//mix
-	float3 specK = G * D*F*0.25 / NV;
+	float pdf = D * NH / (4.0*HV); //и вычисление самой pdf
+
+	float3 specK =  G * F*HV / (NV*NH);
 	return max(0.0, specK);
+}
+
+
+float4 CookTorrance_GGX(float3 l, pixel_info info) {
+
+
+
+	float3 n = normalize(info.normal);
+	float3 v = normalize(info.view);
+	l = normalize(l);
+	float3 h = normalize(v + l);
+	//precompute dots
+	float NL = dot(n, l);
+	if (NL <= 0.0) return 0.0;
+	float NV = dot(n, v);
+	if (NV <= 0.0) return 0.0;
+	float NH = dot(n, h);
+	float HV = dot(h, v);
+
+	//precompute roughness square
+	float roug_sqr = info.roughness*info.roughness;
+
+	//calc coefficients
+	float G = GGX_PartialGeometry(NV, roug_sqr) * GGX_PartialGeometry(NL, roug_sqr);
+	float D = GGX_Distribution(NH, roug_sqr);
+
+//	float3 F = FresnelSchlick(info.metallic, NV);
+
+	float pdf = D * NH / (4.0*HV); //и вычисление самой pdf
+
+	float3 specK = G *HV / (NV*NH);
+	return  float4(specK, pdf);
+}
+
+/*
+float D_GGX(float Roughness, float NdotH) {
+	float m = Roughness * Roughness;
+	float m2 = m * m;
+
+	float D = m2 / (PI * sqr(sqr(NdotH) * (m2 - 1) + 1));
+
+	return D;
+}*/
+
+
+float G_GGX(float Roughness, float NdotL, float NdotV) {
+	float m = Roughness * Roughness;
+	float m2 = m * m;
+
+	float G_L = 1 / (NdotL + sqrt(0.01+m2 + (1 - m2) * NdotL * NdotL));
+	float G_V = 1 / (NdotV + sqrt(0.01+m2 + (1 - m2) * NdotV * NdotV));
+	float G = G_L * G_V;
+
+	return G;
+}
+
+float BRDF_UE4(float3 V, float3 L, float3 N, float Roughness) {
+	float3 H = normalize(L + V);
+
+	float NdotH = saturate(dot(N, H));
+	float NdotL = saturate(dot(N, L));
+	float NdotV = saturate(dot(N, V));
+
+	float D = D_GGX(Roughness, NdotH);
+	float G = G_GGX(Roughness, NdotL, NdotV);
+
+	return D * G;
 }
 
 

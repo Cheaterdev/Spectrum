@@ -1,12 +1,12 @@
 class PSSM
 {
 	Render::Texture::ptr depth_tex;
-	Render::ComputePipelineState::ptr state;
+	//Render::ComputePipelineState::ptr state;
 		Render::PipelineState::ptr draw_mask_state;
 		Render::PipelineState::ptr draw_result_state;
 
 	ShaderMaterial::ptr mat;
-	Render::HandleTable compareSampler;
+	//Render::HandleTable compareSampler;
 
 	ivec2 size = { 1024, 1024 };
 	float2 pixel_size = float2(1, 1) / float2(1024, 1024);
@@ -62,37 +62,6 @@ public:
 
 	void end(MeshRenderContext::ptr& context);
 
-
-
 	void process(MeshRenderContext::ptr& context);
 
-
-	/*
-	void process(MeshRenderContext::ptr& context, G_Buffer& buffer)
-	{
-		auto& timer = context->list->start(L"pssm::process");wdqw
-		auto& list = context->list->get_compute();
-		//   list.assume_state(depth_tex, Render::ResourceState::DEPTH_WRITE);
-		list.transition(depth_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-		//    list.assume_state(depth_tex, Render::ResourceState::DEPTH_WRITE);
-		context->list->transition(screen_light_mask, Render::ResourceState::UNORDERED_ACCESS);
-		//   depth_tex->change_state(context->list, Render::ResourceState::DEPTH_WRITE, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-		context->list->get_compute().set_pipeline(state);
-		context->list->get_compute().set_dynamic(0, 0, buffer.srv_table);
-	//	context->list->get_compute().set_dynamic(1, 0, buffer.result_tex.first()->texture_2d()->get_static_uav());
-		context->list->get_compute().set_dynamic(1, 0, screen_light_mask->texture_2d()->get_static_uav());
-
-
-		context->list->get_compute().set(2, context->cam->get_const_buffer());
-		context->list->get_compute().set_dynamic(3, 0, depth_tex->array2d()->get_static_srv());
-		context->list->get_compute().set_srv(4, srv_buffer);
-		context->list->get_compute().set(5, compareSampler);
-		context->list->get_compute().set_constants(6, scaler);
-		context->list->get_compute().dispach(buffer.size);
-
-		context->list->transition(screen_light_mask, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-
-		//    context->list->transition_uav(buffer.result_tex.first().get());
-		// depth_tex->change_state(context->list, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::ResourceState::DEPTH_WRITE);
-	}*/
 };

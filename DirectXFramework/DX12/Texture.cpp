@@ -75,7 +75,7 @@ namespace DX12
         return false;
     }
 
-    texure_header::texure_header(std::string name, bool force_srgb /*= false*/, bool mips /*= true*/)
+    texure_header::texure_header(boost::filesystem::path name, bool force_srgb /*= false*/, bool mips /*= true*/)
     {
         this->name = name;
         this->force_srgb = force_srgb;
@@ -128,7 +128,7 @@ namespace DX12
                 for (unsigned int m = 0; m < desc.MipLevels; m++)
                 {
                     int i = D3D12CalcSubresource(m, a, 0, desc.MipLevels, desc.ArraySize());
-                    list->update_texture(this, { 0, 0, 0 }, { tex_data->array[a]->mips[m]->width, tex_data->array[a]->mips[m]->height, tex_data->array[a]->mips[m]->depth }, i, tex_data->array[a]->mips[m]->data.data(), tex_data->array[a]->mips[m]->width_stride, tex_data->array[a]->mips[m]->slice_stride);
+                    list->get_copy().update_texture(this, { 0, 0, 0 }, { tex_data->array[a]->mips[m]->width, tex_data->array[a]->mips[m]->height, tex_data->array[a]->mips[m]->depth }, i, tex_data->array[a]->mips[m]->data.data(), tex_data->array[a]->mips[m]->width_stride, tex_data->array[a]->mips[m]->slice_stride);
                 }
             }
 
@@ -157,7 +157,7 @@ namespace DX12
 			for (unsigned int m = 0; m < desc.MipLevels; m++)
 			{
 				int i = D3D12CalcSubresource(m, a, 0, desc.MipLevels, desc.ArraySize());
-				tasks.emplace_back(list->read_texture(this, ivec3(0, 0, 0), ivec3(data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth), i, [desc, &data, a, m](const char* mem, UINT64 pitch, UINT64 slice, UINT64 size)
+				tasks.emplace_back(list->get_copy().read_texture(this, ivec3(0, 0, 0), ivec3(data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth), i, [desc, &data, a, m](const char* mem, UINT64 pitch, UINT64 slice, UINT64 size)
 				{
 					auto c = desc;
 

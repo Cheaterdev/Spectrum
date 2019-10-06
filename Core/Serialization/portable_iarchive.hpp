@@ -124,9 +124,11 @@ namespace fp = boost::spirit::math;
 
 // namespace alias endian
 #if BOOST_VERSION < 104800
-namespace endian = boost::detail;
+namespace endian_space = boost::detail;
+//namespace endian_space = boost;
 #else
-namespace endian = boost::spirit::detail;
+namespace endian_space = boost::spirit::detail;
+//namespace endian_space = boost;
 #endif
 
 #ifndef BOOST_NO_STD_WSTRING
@@ -339,7 +341,7 @@ namespace eos {
 
 				// load the value from little endian - is is then converted
 				// to the target type T and fits it because size <= sizeof(T)
-				t = endian::load_little_endian<T, sizeof(T)>(&temp);
+				t = endian_space::load_little_endian<T, sizeof(T)>(&temp);
 			}
 
 			else t = 0; // zero optimization

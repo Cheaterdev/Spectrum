@@ -44,6 +44,13 @@ albedo_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::D
 	quality_stencil.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT_S8X24_UINT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL | D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE), Render::ResourceState::DEPTH_WRITE));
 	quality_color.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM, size.x / 2, size.y / 2, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::RENDER_TARGET));
 
+
+	ivec2 size_pow2(1, 1);
+	while (size_pow2.x < size.x)size_pow2.x <<= 1;
+	while (size_pow2.y < size.y)size_pow2.y <<= 1;
+
+	depth_tex_mips_pow2.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, size_pow2.x, size_pow2.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+
 	depth_tex_mips_prev.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, size.x, size.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 
 	normal_tex->debug = true;
@@ -156,7 +163,7 @@ albedo_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::D
 	auto& list = context->list;
 
 	if(copy_prev)
-		list->copy_texture(depth_tex_mips_prev, 0, depth_tex, 0);
+		list->get_copy().copy_texture(depth_tex_mips_prev, 0, depth_tex, 0);
 
 	//	result_tex.reset(list);
 	context->list->transition(albedo_tex, Render::ResourceState::RENDER_TARGET);
@@ -186,7 +193,7 @@ albedo_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::D
 	list->transition(depth_tex_downscaled, Render::ResourceState::DEPTH_WRITE);
 	set_downsapled(list);
 	list->get_graphics().set_pipeline(render_depth_state);
-	list->get_graphics().set_dynamic(13, 0, depth_tex_downscaled_uav->texture_2d()->get_static_uav());
+	((SignatureDataSetter*)&list->get_graphics())->set_dynamic(13, 0, depth_tex_downscaled_uav->texture_2d()->get_static_uav());
 	list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	list->get_graphics().draw(4);
 	list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -199,7 +206,7 @@ albedo_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::D
 	context->list->transition(normal_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 	context->list->transition(specular_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 	context->list->transition(speed_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-	list->copy_texture(depth_tex_mips, 0, depth_tex, 0);
+	list->get_copy().copy_texture(depth_tex_mips, 0, depth_tex, 0);
 
 	//context->list->transition(depth_tex_mips, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 	//	context->list->transition(depth_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);

@@ -122,9 +122,9 @@ namespace DX12
 
     class PipelineStateBase
     {
-
+	
         protected:
-
+			ComPtr<ID3D12PipelineState> m_pipelineState;
             virtual ~PipelineStateBase() {};
 
             template<class T>
@@ -142,23 +142,33 @@ namespace DX12
             }
         public:
             virtual	void on_change() = 0;
+			ComPtr<ID3D12PipelineState> get_native();
+
 
     };
+
     class PipelineState: public PipelineStateBase
-    {
-            ComPtr<ID3D12PipelineState> m_pipelineState;
+    {       
 
         public:
             using ptr = s_ptr<PipelineState>;
             const  PipelineStateDesc desc;
 			void on_change() override;
-			ComPtr<ID3D12PipelineState> get_native();
+		
 			PipelineState(PipelineStateDesc _desc);
 
 			virtual ~PipelineState();
 
     };
 
+	template<class T>
+	class PipelineStateTyped :public PipelineState
+	{
+	public:
+		using PipelineState::PipelineState;
+		using ptr = s_ptr<PipelineStateTyped<T>>;
+
+	};
 
     class PipelineStateCache: public Singleton<PipelineStateCache>
     {
@@ -183,6 +193,8 @@ namespace DX12
     };
 
 
+	class ComputePipelineState;
+
 
     struct ComputePipelineStateDesc
     {
@@ -190,7 +202,9 @@ namespace DX12
 
         compute_shader::ptr shader;
 
-        ComputePipelineStateDesc() = default;
+     //   ComputePipelineStateDesc() = default;
+
+		std::shared_ptr<ComputePipelineState> create();
 
     };
 
@@ -198,16 +212,13 @@ namespace DX12
 
     class ComputePipelineState: public PipelineStateBase
     {
-            ComPtr<ID3D12PipelineState> m_pipelineState;
 			void on_change() override;
         public:
             using ptr = s_ptr<ComputePipelineState>;
             const ComputePipelineStateDesc desc;
 
-			ComPtr<ID3D12PipelineState> get_native();
 
-
-            explicit ComputePipelineState(ComputePipelineStateDesc _desc): desc(_desc)
+            explicit ComputePipelineState(const ComputePipelineStateDesc &_desc): desc(_desc)
             {
                 on_change();
                 register_shader(desc.shader);

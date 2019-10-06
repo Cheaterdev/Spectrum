@@ -5,6 +5,7 @@
 #include "CFW1GlyphRenderStates.h"
 
 
+
 namespace FW1FontWrapper
 {
 
@@ -29,16 +30,9 @@ namespace FW1FontWrapper
 // Set render states for glyph drawing
     void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(Render::CommandList::ptr& list, UINT Flags)
     {
-        if ((Flags & FW1_CLIPRECT) != 0)
-            list->get_graphics().set_pipeline(geometry_state_clip);
-        else
-            list->get_graphics().set_pipeline(geometry_state);
-
-        list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
-        //  list->set(0, const_buffer_table);
-//           list->set(1, geometry_buffer_table);
-        //       list->set(2, pixel_texture_table);
-        list->get_graphics().set(3, pixel_sampler_table);
+		auto current_state = ((Flags & FW1_CLIPRECT) != 0) ? geometry_state_clip : geometry_state;
+		list->get_graphics().set_pipeline_typed(current_state).pixel_sampler = pixel_sampler_table;
+        list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_POINTLIST);	
     }
 
 
@@ -96,10 +90,8 @@ namespace FW1FontWrapper
             constants.ClipRect[2] = FLT_MAX;
             constants.ClipRect[3] = FLT_MAX;
         }
-
-        list->get_graphics().set_const_buffer(0, constants);
-        //  (*m_pConstantBuffer) = constants;
-        //  m_pConstantBuffer->update(list);
+		list->get_graphics().get_shader_data<FontSig>().geometry.set_raw(constants);
+  
     }
 
 

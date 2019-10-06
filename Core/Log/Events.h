@@ -217,13 +217,13 @@ namespace Events
 			if(value)
 			func(*value);
 		}
-		void register_change(event_type& e)
+		void register_change(event_type& event)
 		{
 			std::lock_guard<std::mutex> g(m);
 
-			auto func = [&e](const T & d)
+			auto func = [&event](const T & d)
 			{
-				e(d);
+				event(d);
 			};
 			std::shared_ptr<prop_helper> helper(new prop_helper());
 			auto f = std::make_shared<std::function<function_type>>(func);
@@ -234,9 +234,9 @@ namespace Events
 
 				on_change.erase(f);
 			};
-			e.helpers.push_back(helper);
+			event.helpers.push_back(helper);
 			helpers.insert(helper);
-			e.default_state = [this](std::function<function_type> f2)
+			event.default_state = [this](std::function<function_type> f2)
 			{
 				if (value)
 					send_one(f2);

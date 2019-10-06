@@ -84,7 +84,7 @@ class HeapPage
 		void clear(Render::CommandList& list)
 		{
 			list.transition(data, Render::ResourceState::UNORDERED_ACCESS);
-			list.get_graphics().clear_uav(data, data->texture_2d()->get_static_uav());
+			list.clear_uav(data, data->texture_2d()->get_static_uav());
 		}
 
         void place_region(ivec3 pos, ivec3 size, unsigned int subresource, unsigned int offset);

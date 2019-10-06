@@ -20,33 +20,37 @@ struct mat_info
 	int index;
 	int draw_count;
 };
+#include "Signature.h"
+
+
 #pragma pack(push, 1)
 struct IndirectCommand
 {
-        D3D12_GPU_VIRTUAL_ADDRESS  material_cb_pixel;
 
-        D3D12_GPU_VIRTUAL_ADDRESS vb_srv;
-      //  D3D12_GPU_VIRTUAL_ADDRESS  vertex_node_srv;
+	decltype(GPUMeshSignature<Indirect>::mat_const)  mat_const;
+	decltype(GPUMeshSignature<Indirect>::vertex_buffer)  vertex_buffer; 
+	decltype(GPUMeshSignature<Indirect>::mat_texture_offsets)  mat_texture_offsets;
+	decltype(Descriptors::index_buffer)::IndirectType  index_buffer;
+	decltype(Descriptors::draw_indirect)::IndirectType  draw_indirect;
 
-        struct
-        {
-            UINT texture_offset;
-			UINT node_offset;
-        } material;
-
-
-        D3D12_INDEX_BUFFER_VIEW index_buffer;
-
-        D3D12_DRAW_INDEXED_ARGUMENTS drawArguments;
+	static std::vector<D3D12_INDIRECT_ARGUMENT_DESC> get_desc()
+	{
+		return {
+			decltype(GPUMeshSignature<Signature>::mat_const)::create_indirect(),
+			decltype(GPUMeshSignature<Signature>::vertex_buffer)::create_indirect(),
+			decltype(GPUMeshSignature<Signature>::mat_texture_offsets)::create_indirect(),
+			decltype(Descriptors::index_buffer)::create_indirect(),
+			decltype(Descriptors::draw_indirect)::create_indirect()
+		};
+	}
 
     private:
         friend class boost::serialization::access;
         template<class Archive>
         void serialize(Archive& ar, const unsigned int)
         {
-            ar& NVP(material_cb_pixel);
+        /*    ar& NVP(material_cb_pixel);
             ar& NVP(vb_srv);
-          //  ar& NVP(vertex_node_srv);
             ar& NVP(material.texture_offset);
 			ar& NVP(material.node_offset);
             ar& NVP(index_buffer.SizeInBytes);
@@ -56,7 +60,7 @@ struct IndirectCommand
             ar& NVP(drawArguments.BaseVertexLocation);
             ar& NVP(drawArguments.InstanceCount);
             ar& NVP(drawArguments.StartIndexLocation);
-            ar& NVP(drawArguments.StartInstanceLocation);
+            ar& NVP(drawArguments.StartInstanceLocation);*/
         }
 };
 #pragma pack(pop)
@@ -118,59 +122,6 @@ struct pipeline_draws
    // UINT index = 0;
     D3D_PRIMITIVE_TOPOLOGY topology;
 };
-/*
-class DynamicSizeUAVBuffer2
-{
-	Render::StructuredBuffer<IndirectCommand>::ptr command_buffers;
-	std::array<UINT, 16> max_counts;
-
-
-	Render::HandleTable handles;
-public:
-	void new_frame()
-	{
-		//old_buffers.clear();
-	}
-	void process_pipeline(std::map<int, mat_info>& draws)
-	{
-		//     bool changed = false;
-
-		for (auto& m : max_counts)
-			m = 0;
-
-		int all_count = 0;
-		for (auto& p : draws)
-		{
-			UINT index = (p.second.index - 1) % 16;
-			UINT count = std::max(p.second.draw_count, 2038 - 4);
-			max_counts[index] = std::max(max_counts[index], count);
-			all_count += count;
-		}
-
-		if(!command_buffers|| command_buffers->get_count()<all_count)
-		command_buffers = std::make_shared<Render::StructuredBuffer<IndirectCommand>>(all_count, true, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
-		for (UINT i = 0; i < 16; i++)
-		{
-			command_buffers->place_uav(handles[i]);
-		}
-
-	}
-	Render::GPUBuffer::ptr clear_buffer;
-	DynamicSizeUAVBuffer2();
-
-	void start_write(Render::CommandList& list, int binded_count);
-	void start_indirect(Render::CommandList& list, int binded_count);
-
-
-	Render::HandleTable get_handles();
-	Render::StructuredBuffer<IndirectCommand>::ptr& get_buffer(UINT i)
-	{
-		return command_buffers[i];
-	}
-
-};
-*/
 
 class DynamicSizeUAVBuffer
 {
@@ -179,8 +130,7 @@ class DynamicSizeUAVBuffer
 
         std::list<Render::StructuredBuffer<IndirectCommand>::ptr> old_buffers;
 
-		Render::HandleTable handles;// [2];
-   //     bool current_handles = false;
+		Render::HandleTable handles;
 		Render::HandleTable  null_uav;
 
     public:
@@ -244,14 +194,7 @@ class DynamicSizeUAVBuffer
             return command_buffers[i];
         }
 
-        /*	Render::GPUBuffer::ptr get_counter()
-        	{
-        		return counter_buffer;
-        	}
-        	UINT get_counter_offset(int i)
-        	{
-        		return i*D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT;
-        	}*/
+    
 };
 
 struct _voxel_info
@@ -702,3 +645,5 @@ public:
 
 	gpu_cached_renderer(Scene::ptr scene = nullptr, MESH_TYPE mesh_type = MESH_TYPE::ALL);
 };
+
+

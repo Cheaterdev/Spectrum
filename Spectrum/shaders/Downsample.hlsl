@@ -85,20 +85,23 @@ static const int2 delta[4] =
 
 PS_RESULT PS(quad_output i)
 {
-    PS_RESULT result;
-    float2 low_dimensions;
-    depth_tex.GetDimensions(low_dimensions.x, low_dimensions.y);
-//   i.tc -= 0.5/ low_dimensions;
-    float depths[4] = (float[4]) depth_tex.GatherRed(PixelSampler, i.tc + 0.5 / low_dimensions);
-    float3 normals[4];
+	PS_RESULT result;
+	float2 low_dimensions;
+	depth_tex.GetDimensions(low_dimensions.x, low_dimensions.y);
+  // i.tc-= 0.5/ low_dimensions;
+	float depths[4] = (float[4]) depth_tex.Gather(PixelSampler, i.tc );
+	float4 normals[4];
 
-    for (int j = 0; j < 4; j++)
-        normals[j] = normal_tex.Sample(PixelSampler, i.tc, delta[j]).xyz * 2 - 1;
-
+	for (int j = 0; j < 4; j++)
+	{
+	//	depths[j]= depth_tex.Sample(PixelSampler, i.tc, delta[j]).x;
+		float4 n = normal_tex.Sample(PixelSampler, i.tc, delta[j]);
+		normals[j] = float4(normalize(n.xyz * 2 - 1), n.w);
+}
     float mind = depths[0];
-    float3 minN = normals[0];
+    float4 minN = normals[0];
     float maxd = depths[0];
-    float3 maxN = normals[0];
+    float4 maxN = normals[0];
     float sumd = depths[0];
     float3 sumn = normals[0];
 
@@ -123,10 +126,25 @@ PS_RESULT PS(quad_output i)
     //result.depth = float4((sumd - mind - maxd) / 2,0,0,1);
     //  result.normal = float4(((sumn - minN - maxN) /2).xyz * 0.5 + 0.5, 1);
     result.depth = float4(mind, 0, 0, 1);
-    result.normal = float4(minN.xyz * 0.5 + 0.5, 1);
-   result.depth = float4(maxd, 0, 0, 1);
-  result.normal = float4(maxN.xyz * 0.5 + 0.5, 1);
-    // result.depth = float4(depths[0].xxx, 1) ;
+    result.normal = float4(minN.xyz * 0.5 + 0.5, minN.w);
+  // result.depth = float4(maxd, 0, 0, 1);
+ // result.normal = float4(maxN.xyz * 0.5 + 0.5, maxN.w);
+    //result.depth = float4(depths[0].xxx, 1) ;
     // result.normal  = float4(normals[0], 1) ;
     return result;
+}
+
+PS_RESULT PS_Copy(quad_output i)
+{
+	PS_RESULT result;
+	float2 low_dimensions;
+	depth_tex.GetDimensions(low_dimensions.x, low_dimensions.y);
+	
+	result.depth = depth_tex.Sample(PixelSampler, i.tc);
+	result.normal = 0;
+	// result.depth = float4(maxd, 0, 0, 1);
+   // result.normal = float4(maxN.xyz * 0.5 + 0.5, maxN.w);
+	  //result.depth = float4(depths[0].xxx, 1) ;
+	  // result.normal  = float4(normals[0], 1) ;
+	return result;
 }

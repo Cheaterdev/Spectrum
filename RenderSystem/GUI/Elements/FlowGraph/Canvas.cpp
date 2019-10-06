@@ -20,7 +20,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
     } cb;
     cb.size = vec4(render_bounds->size, user_ui->size.get());
     cb.offset_scale = vec4(contents->pos.get(), 1.0f / contents->scale,0);
-    c.command_list->get_graphics().set_const_buffer(1, cb);
+    c.command_list->get_graphics().set_const_buffer_raw(1, cb);
     renderer->draw(c, state, get_render_bounds());
 
 	renderer->flush(c);
@@ -54,7 +54,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
 
         //    line_vertex->update(c.command_list);
         c.command_list->get_graphics().set_pipeline(line_state);
-        c.command_list->get_graphics().set_const_buffer(4, inv_pixel);
+        c.command_list->get_graphics().set_const_buffer_raw(4, inv_pixel);
         c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
         auto res = c.command_list->get_graphics().place_vertex_buffer(vertexes);
         c.command_list->get_graphics().set_vertex_buffer(0, res);

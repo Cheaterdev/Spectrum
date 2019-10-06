@@ -69,7 +69,7 @@ MyVariant::var_base::var_base(std::reference_wrapper<const std::type_info> r) : 
 
 MyVariant::MyVariant(const MyVariant& r)
 	{
-		typed = r.typed;
+		typed = r.typed->clone();
 	}
 
 MyVariant::~MyVariant()

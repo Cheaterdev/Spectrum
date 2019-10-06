@@ -51,10 +51,11 @@ class MyVariant
 	protected:
 
 		var_base(std::reference_wrapper<const std::type_info> r);
-		virtual ~var_base() = default;
-		virtual   std::shared_ptr<var_base> clone() = 0;
+		
+		virtual   std::unique_ptr<var_base> clone() = 0;
 	public:
 		std::reference_wrapper<const std::type_info> type;
+		virtual ~var_base() = default;
 	};
 
 	template<class T>
@@ -78,19 +79,19 @@ class MyVariant
 
 		}
 
-		virtual std::shared_ptr<var_base> clone() override
+		virtual std::unique_ptr<var_base> clone() override
 		{
 			if constexpr (std::is_copy_constructible_v<T>)
-				return std::make_shared<var_typed<T>>(value);
+				return std::make_unique<var_typed<T>>(value);
 			else
-				return std::make_shared<var_typed<T>>();
+				return nullptr;// std::make_unique<var_typed<T>>();
 		}
 
 		virtual ~var_typed()
 		{
 		};
 	};
-	std::shared_ptr<var_base> typed;
+	std::unique_ptr<var_base> typed;
 
 public:
 	//      LEAK_TEST
@@ -147,7 +148,7 @@ class Cache
 public:
 	std::function<V(const I&)> create_func;
 
-	int size()
+	size_t size()
 	{
 		return table.size();
 	}

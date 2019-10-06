@@ -1,5 +1,7 @@
 #include "pch.h"
 
+
+
 namespace GUI
 {
 
@@ -25,13 +27,17 @@ namespace GUI
     {
 		flush(c);
         c.command_list->get_graphics().set_signature(root_signature);
-        c.command_list->get_graphics().set(3, sampler_table);
+		UISignature<Signature> sig(&c.command_list->get_graphics());
+		sig.pixel_samples = sampler_table;
+      //  c.command_list->get_graphics().set(3, sampler_table);
         simple_rect->draw(c, color, r);
     }
 
     void Renderer::set(Render::context& c)
     {
-        c.command_list->get_graphics().set(3, sampler_table);
+		UISignature<Signature> sig(&c.command_list->get_graphics());
+		sig.pixel_samples = sampler_table;
+		//c.command_list->get_graphics().set(3, sampler_table);
     }
 	void Renderer::flush(Render::context& c)
 	{
@@ -39,7 +45,7 @@ namespace GUI
 	}
     Renderer::Renderer()
     {
-        Render::RootSignatureDesc root_desc;
+      /*  Render::RootSignatureDesc root_desc;
         root_desc[0] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::VERTEX);
         root_desc[1] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::PIXEL);
         root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 5);
@@ -48,7 +54,7 @@ namespace GUI
 		root_desc[5] = Render::DescriptorSRV(0, Render::ShaderVisibility::VERTEX,1);
 		root_desc[6] = Render::DescriptorSRV(1, Render::ShaderVisibility::VERTEX, 1);
 		root_desc[7] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 1,1);
-
+		
         root_signature.reset(new Render::RootSignature(root_desc));/*
 		{
 			{ Render::DescriptorRange::CBV, Render::ShaderVisibility::VERTEX, 0, 2 },
@@ -59,6 +65,9 @@ namespace GUI
 			{ Render::DescriptorRange::CBV, Render::ShaderVisibility::GEOMETRY, 0, 5 }
 
 		}));*/
+
+
+		root_signature = UISignature<SignatureCreator>().create_root();
 
 		root_signature->set_unfixed(7);
         sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(3);
@@ -81,73 +90,7 @@ namespace GUI
         wrapSamplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
         wrapSamplerDesc.MaxLOD = 1;
         Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[2].cpu);
-        /*D3D11_SAMPLER_DESC sampDesc;
-        sampDesc.Filter = D3D11_FILTER_ANISOTROPIC;
-        sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-        sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-        sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-        sampDesc.MipLODBias = 0.0f;
-        sampDesc.MaxAnisotropy = 16;
-        sampDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
-        sampDesc.BorderColor[0] = sampDesc.BorderColor[1] = sampDesc.BorderColor[2] = sampDesc.BorderColor[3] = 0;
-        sampDesc.MinLOD = 0;
-        sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-        sampler = DX11::sampler_state::get_resource(sampDesc);
 
-
-        D3D11_BLEND_DESC b_desc;
-        ZeroMemory(&b_desc, sizeof(b_desc));
-
-        for (int i = 0; i < 4; ++i)
-        {
-        	b_desc.RenderTarget[i].BlendEnable = TRUE;
-        	b_desc.RenderTarget[i].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-        	b_desc.RenderTarget[i].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-        	b_desc.RenderTarget[i].BlendOp = D3D11_BLEND_OP_ADD;
-        	b_desc.RenderTarget[i].SrcBlendAlpha = D3D11_BLEND_SRC_ALPHA;
-        	b_desc.RenderTarget[i].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
-        	b_desc.RenderTarget[i].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-        	b_desc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-        }
-
-        blend = DX11::blend_state::get_resource(b_desc);
-        D3D11_DEPTH_STENCIL_DESC depth_desc;
-        depth_desc.DepthEnable = false;
-        depth_desc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
-        depth_desc.DepthFunc = D3D11_COMPARISON_ALWAYS;
-        depth_desc.StencilEnable = false;
-        depth_desc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
-        depth_desc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
-        depth_desc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
-        depth_desc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
-        depth_desc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
-        depth_desc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
-        depth_desc.BackFace = depth_desc.FrontFace;
-        depth = DX11::depth_stencil_state::get_resource(depth_desc);
-
-
-        D3D11_RASTERIZER_DESC raster_desc;
-        ZeroMemory(&raster_desc, sizeof(raster_desc));
-        raster_desc.CullMode = D3D11_CULL_NONE;
-        raster_desc.FillMode = D3D11_FILL_SOLID;
-        raster_desc.ScissorEnable = false;
-        raster = DX11::rasterizer_state::get_resource(raster_desc);
-        */
-        /*
-        #define X(x) 	x##_renderer.reset(new GUI::Elements::x::renderer(this));
-        ELEMENTS_LIST
-        #undef X*/
-#define X(x) 	flow_##x##_renderer.reset(new GUI::Elements::FlowGraph::x::renderer(this));
-        ELEMENTS_LIST_FLOW
-#undef X
-        /* Render::PipelineStateDesc state_desc;
-         state_desc.root_signature = root_signature;
-         state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\area.hlsl", "PS", 0, {} });
-         state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\area.hlsl", "VS", 0, {} });
-         state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\color.hlsl", "PS", 0, {} });
-         state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\color.hlsl", "VS", 0, {} });
-         state_desc.blend.blend_enabled[0] = true;*/
-        //   color_state.reset(new Render::PipelineState(state_desc));
         nine_patch.reset(new NinePatch(root_signature));
         simple_rect.reset(new SimpleRect(root_signature));
         area_tex.texture = Render::Texture::get_resource({ "textures/gui/edit.png", false, false });
@@ -160,15 +103,11 @@ namespace GUI
 
     void Renderer::draw(Render::context& c, Render::PipelineState::ptr& state, rect r)
     {
-     //   c.command_list->get_graphics().set_signature(root_signature);
-     //   c.command_list->get_graphics().set(3, sampler_table);
         nine_patch->draw(c, state, r);
     }
 
     void Renderer::draw(Render::context& c, GUI::Texture& item, rect r)
     {
-    //    c.command_list->get_graphics().set_signature(root_signature);
-    //    c.command_list->get_graphics().set(3, sampler_table);
         nine_patch->draw(c, item, r);
     }
 
@@ -214,9 +153,12 @@ namespace GUI
 
         //    vertexes.update(c.command_list);
         vblist[0] = c.command_list->get_graphics().place_vertex_buffer(vertexes);
+		UISignature<Signature> sig(&c.command_list->get_graphics());
+
+
         c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         c.command_list->get_graphics().set_vertex_buffers(0, vblist);
-        c.command_list->get_graphics().set_const_buffer(1, color);
+		sig.pixel_const_buffer.set_raw(color);
         c.command_list->get_graphics().set_pipeline(pipeline_state);
         c.command_list->get_graphics().draw(6);
     }

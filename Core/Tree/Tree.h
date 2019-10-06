@@ -95,7 +95,7 @@ public:
 	}
 
 	virtual base_tree* get_child(int i) = 0;
-	virtual int get_child_count() = 0;
+	virtual size_t get_child_count() = 0;
 
 	virtual int calculate_depth() = 0;
 
@@ -148,7 +148,7 @@ protected:
 		std::advance(it, i);
 		return it->get();
 	}
-	virtual int get_child_count()override
+	virtual size_t get_child_count()override
 	{
 		return get_childs().size();
 	}
@@ -228,10 +228,10 @@ virtual 	int calculate_depth() override
 		return root->get_ptr<T2>();
 	}
 
-	virtual void on_add(T* parent)
+	virtual void on_add(T* _parent)
 	{
 		base_tree::on_add();
-		this->parent = parent;
+		this->parent = _parent;
 	}
 
 	virtual void on_parent_removed()

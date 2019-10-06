@@ -8,7 +8,7 @@
 namespace Exceptions
 {
 
-	Exception::Exception(const char* wtf) : std::exception((std::string(wtf) + "\n At:" + ::get_stack_trace().to_string()).c_str())
+	Exception::Exception(const char* wtf) : std::exception((std::string(wtf) + "\n At:" + ::get_stack_trace().to_string()).c_str()) 
 	{
 		stack = ::get_stack_trace();
 	}

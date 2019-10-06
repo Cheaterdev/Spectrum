@@ -146,7 +146,7 @@ namespace DX12
 #include "DX12/Buffer.h"
 #include "DX12/GPUTimer.h"
 #include "DX12/Samplers.h"
-
+#include "DX12/SignatureCreator.h"
 
 
 

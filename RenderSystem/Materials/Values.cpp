@@ -608,7 +608,7 @@ void TextureNode::operator()(MaterialContext* context)
 	auto mat_graph = static_cast<MaterialFunction*>(owner);
 	//auto val = mat_graph->add_value(ShaderParams::FLOAT4, "float4(1,0,0,1)");
 	auto val = mat_graph->add_value(ShaderParams::FLOAT4, std::string("sample(") + context->get_texture(texture_info) + ",Sampler, " + i_tc->get<shader_parameter>().name + ".xy)");
-	o_vec4->put(val);
+	o_vec4->put(shader_parameter("float4("+val.name + ".xyz,1)", ShaderParams::FLOAT4));
 	o_r->put(shader_parameter(val.name + ".r", ShaderParams::FLOAT1));
 	o_g->put(shader_parameter(val.name + ".g", ShaderParams::FLOAT1));
 	o_b->put(shader_parameter(val.name + ".b", ShaderParams::FLOAT1));
@@ -648,14 +648,8 @@ VectorNode::VectorNode()
 
 void VectorNode::operator()(MaterialContext* c)
 {
-	// auto mat_graph = static_cast<MaterialFunction*>(owner);
-	// std::stringstream s;
-	//  s << "float4(" << value.x << "," << value.y << "," << value.z << "," << value.w << ")";
-	// auto res = mat_graph->add_value(ShaderParams::FLOAT4, s.str());
-	// Uniform v;
 	auto res = c->create_value(uniform);
 	o_value->put(res);
-	//	mat_graph
 }
 
 GUI::base::ptr VectorNode::create_editor_window()
@@ -663,6 +657,8 @@ GUI::base::ptr VectorNode::create_editor_window()
 	GUI::Elements::colored_rect::ptr img(new GUI::Elements::colored_rect);
 	img->color = uniform->value.f4_value;
 	img->size = { 64, 64 };
+
+
 	return img;
 }
 

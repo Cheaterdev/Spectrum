@@ -12,11 +12,11 @@ namespace GUI
                 dragger::ptr title_bar;
 
 
-                button::ptr close_button;
-
+               
             public:
                 bool remove_if_empty = false;
                 base::ptr contents;
+				button::ptr close_button;
 
 
                 Skin::Window skin;

@@ -9,11 +9,8 @@ namespace GUI
 		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES,{} });
 		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "VS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES/* | D3DCOMPILE_SKIP_OPTIMIZATION*/,{} });
 		state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	//	state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-	//	state_desc.layout.inputs.push_back({ "TEXCOORD", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+
 		state.reset(new Render::PipelineState(state_desc));
-		//  vertex_buffer.reset(new Render::VertexBuffer<Vertex>(16));
-		//  vblist.emplace_back(vertex_buffer->get_view());
 		std::vector<unsigned int> index_data(9 * 2 * 3);
 		auto data = index_data.data();
 
@@ -36,8 +33,7 @@ namespace GUI
 
 
 		sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(3);
-		//   descriptor_sr_cb.reset(new Render::DescriptorHeap(512, Render::DescriptorHeapType::CBV_SRV_UAV, Render::DescriptorHeapFlags::SHADER_VISIBLE));
-		//   descriptor_sampler.reset(new Render::DescriptorHeap(2, Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapFlags::SHADER_VISIBLE));
+
 		D3D12_SAMPLER_DESC wrapSamplerDesc = {};
 		wrapSamplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
 		wrapSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -70,19 +66,13 @@ namespace GUI
 		bool added = false;
 		if (item.srv.valid())
 		{
-			//   c.command_list->get_graphics().set(2, item.texture->texture_2d()->get_srv());
-
-		//	c.command_list->get_graphics().flush_binds();
-			added = true;
-			//	c.command_list->get_graphics().get_desc_manager().set(2, 0, item.srv[0]);
+				added = true;
 			textures_handles.emplace_back(item.srv[0]);
 		}
 		else
 			if (item.texture)
 			{
 				added = true;
-				//   c.command_list->get_graphics().set(2, item.texture->texture_2d()->get_srv());
-				//	c.command_list->get_graphics().get_desc_manager().set(2, 0, item.texture->texture_2d()->get_static_srv());
 				textures_handles.emplace_back(item.texture->texture_2d()->get_static_srv());
 			}
 
@@ -92,17 +82,14 @@ namespace GUI
 		}
 		current_state = pipeline_state;
 
-		//int offset = vertexes.size();
 		vertexes.resize(vertexes.size() + 16);
 
 		auto _vertexes = vertexes.data()+ vertexes.size() - 16;
 
 		auto margin = c.scale * item.margins;
 		auto padding = c.scale * item.padding;
-		//   r.pos += c.offset;
 		r += { -margin.left, -margin.top, margin.left + margin.right, margin.top + margin.bottom};
-		//    auto& vertexes = *vertex_buffer;
-
+	
 		float tl = 0, tt = 0, tr = 0, tb = 0;
 
 		if (item.texture)
@@ -277,61 +264,6 @@ namespace GUI
 		_vertexes[14].pos = float2(x_pos.z, y_pos.w);
 		_vertexes[15].pos = float2(x_pos.w, y_pos.w);
 
-
-
-	/*	_vertexes[0].pos = float2(0, 0);
-		_vertexes[1].pos = float2(padding.left, 0);
-		_vertexes[2].pos = float2(r.size.x - padding.right, 0);
-		_vertexes[3].pos = float2(r.size.x, 0);
-		_vertexes[4].pos = float2(0, padding.top);
-		_vertexes[5].pos = float2(padding.left, padding.top);
-		_vertexes[6].pos = float2(r.size.x - padding.right, padding.top);
-		_vertexes[7].pos = float2(r.size.x, padding.top);
-		_vertexes[8].pos = float2(0, r.size.y - padding.bottom);
-		_vertexes[9].pos = float2(padding.left, r.size.y - padding.bottom);
-		_vertexes[10].pos = float2(r.size.x - padding.right, r.size.y - padding.bottom);
-		_vertexes[11].pos = float2(r.size.x, r.size.y - padding.bottom);
-		_vertexes[12].pos = float2(0, r.size.y);
-		_vertexes[13].pos = float2(padding.left, r.size.y);
-		_vertexes[14].pos = float2(r.size.x - padding.right, r.size.y);
-		_vertexes[15].pos = float2(r.size.x, r.size.y);*/
-
-	/*	for (int i = 0; i < 16; i++)
-		{
-			/*  if (rotation != 0)
-			{
-			vertexes[i].pos -= float2(r.size) / 2;
-			vertexes[i].pos = float2(vertexes[i].pos.x * cos(rotation) - vertexes[i].pos.y * sin(rotation), vertexes[i].pos.x * sin(rotation) + vertexes[i].pos.y * cos(rotation));
-			vertexes[i].pos += float2(r.size) / 2;
-			}
-			_vertexes[i].pos += float2(r.pos) + c.offset;
-		}
-		*/
-
-	/*	if (item.tiled)
-		{
-			tc.right = r.w / item.texture->get_size().x;
-			tc.bottom = r.h / item.texture->get_size().y;
-
-		}
-		_vertexes[0].tc = float2(tc.left, tc.top);
-		_vertexes[1].tc = float2(tc.left + tl, tc.top);
-		_vertexes[2].tc = float2(tc.right - tr, tc.top);
-		_vertexes[3].tc = float2(tc.right, tc.top);
-		_vertexes[4].tc = float2(tc.left, tc.top + tt);
-		_vertexes[5].tc = float2(tc.left + tl, tc.top + tt);
-		_vertexes[6].tc = float2(tc.right - tr, tc.top + tt);
-		_vertexes[7].tc = float2(tc.right, tc.top + tt);
-		_vertexes[8].tc = float2(tc.left, tc.bottom - tb);
-		_vertexes[9].tc = float2(tc.left + tl, tc.bottom - tb);
-		_vertexes[10].tc = float2(tc.right - tr, tc.bottom - tb);
-		_vertexes[11].tc = float2(tc.right, tc.bottom - tb);
-		_vertexes[12].tc = float2(tc.left, tc.bottom);
-		_vertexes[13].tc = float2(tc.left + tl, tc.bottom);
-		_vertexes[14].tc = float2(tc.right - tr, tc.bottom);
-		_vertexes[15].tc = float2(tc.right, tc.bottom);
-		*/
-
 		_vertexes[0].tc = float2(x_tc.x, y_tc.x);
 		_vertexes[1].tc = float2(x_tc.y, y_tc.x);
 		_vertexes[2].tc = float2(x_tc.z, y_tc.x);
@@ -357,17 +289,7 @@ namespace GUI
 			float2 t = 2 * _vertexes[i].pos / c.window_size - float2(1, 1);
 			_vertexes[i].pos = { t.x, -t.y };
 		}
-		//   
-
-		//    vertexes.update(c.command_list);
-//		vblist[0] = c.command_list->get_graphics().place_vertex_buffer(vertexes);
 	
-	
-	
-
-		//c.command_list->get_graphics().draw_indexed(9 * 2 * 3, 0, 0, vertexes.size() / 16);
-		//vertexes.clear();
-
 		if(textures_handles.size()==512)
 		flush(c);
 	}
@@ -379,9 +301,17 @@ namespace GUI
 		c.command_list->get_graphics().set_vertex_buffers(0, vblist);
 		c.command_list->get_graphics().set_index_buffer(index_buffer->get_index_buffer_view(true));
 		c.command_list->get_graphics().set_pipeline(current_state);
-		c.command_list->get_graphics().set(3, sampler_table);
-		c.command_list->get_graphics().set_srv(5, vertexes);
-		c.command_list->get_graphics().set(7, textures_handles);
+
+		UISignature<Signature> sig(&c.command_list->get_graphics());
+
+
+
+		sig.pixel_samples = sampler_table;
+		sig.vertex_buffer = vertexes;
+		sig.pixel_textures = textures_handles;
+
+	//	c.command_list->get_graphics().set_srv(5, vertexes);
+	//	c.command_list->get_graphics().set(7, textures_handles);
 
 		c.command_list->get_graphics().draw_indexed(9 * 2 * 3, 0, 0, vertexes.size()/16);
 

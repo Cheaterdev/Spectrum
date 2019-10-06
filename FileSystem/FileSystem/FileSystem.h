@@ -7,15 +7,15 @@ public:
 	using ptr = s_ptr<file_provider>;
 
 	virtual std::string load_all(file*) = 0;
-	virtual std::shared_ptr<file> get_file(std::wstring) = 0;
-	virtual std::shared_ptr<istream> create_stream(std::wstring) = 0;
+	virtual std::shared_ptr<file> get_file(boost::filesystem::path) = 0;
+	virtual std::shared_ptr<istream> create_stream(boost::filesystem::path) = 0;
 
-	virtual bool save_data(std::wstring, std::string) { return false; };
+	virtual bool save_data(boost::filesystem::path, std::string) { return false; };
 
-	virtual void iterate(std::wstring path, std::function<void(s_ptr<file>)> f, bool recursive) {};
-	virtual void iterate_dirs(std::wstring path, std::function<void(std::wstring)> f, bool recursive) {};
+	virtual void iterate(boost::filesystem::path, std::function<void(s_ptr<file>)> f, bool recursive) {};
+	virtual void iterate_dirs(boost::filesystem::path, std::function<void(boost::filesystem::path)> f, bool recursive) {};
 
-	virtual void on_change(const std::filesystem::path&, std::function<void()>) {};
+	virtual void on_change(const boost::filesystem::path&, std::function<void()>) {};
 	// TODO:
 	/*
 	save_file
@@ -34,12 +34,15 @@ struct file
 	std::string load_all();
 	std::shared_ptr<istream> get_new_stream()
 	{
+		boost::filesystem::path full_path(boost::filesystem::current_path());
+	Log::get()<< "Current path is : " << full_path.generic_string() << Log::endl;
+
 		return provider->create_stream(file_name);
 	}
-	file(file_provider* _provider, std::wstring _file_name) : provider(_provider), file_name(_file_name) {};
+	file(file_provider* _provider, boost::filesystem::path _file_name) : provider(_provider), file_name(_file_name) {};
 public:
 	using ptr = s_ptr<file>;
-	std::wstring file_name;
+	boost::filesystem::path file_name;
 	std::time_t edit_time;
 
 	file_provider* provider;
@@ -59,9 +62,9 @@ public:
 	}
 
 
-	virtual file::ptr get_file(std::wstring);
-	virtual file::ptr get_file(std::string);
-	virtual bool save_data(std::wstring file_name, std::string data);
+//	virtual file::ptr get_file(std::wstring);
+	virtual file::ptr get_file(boost::filesystem::path);
+	virtual bool save_data(boost::filesystem::path file_name, std::string data);
 
 	template<class T>
 	s_ptr<T> get_provider()
@@ -76,8 +79,8 @@ public:
 
 		return nullptr;
 	}
-	virtual void iterate(std::wstring path, std::function<void(file::ptr)> f, bool recursive);
-	virtual void iterate_dirs(std::wstring path, std::function<void(std::wstring)> f, bool recursive);
+	virtual void iterate(boost::filesystem::path path, std::function<void(file::ptr)> f, bool recursive);
+	virtual void iterate_dirs(boost::filesystem::path path, std::function<void(boost::filesystem::path)> f, bool recursive);
 
 	//	virtual void save_file(const std::string &, const std::string &) = 0;
 };
@@ -87,12 +90,12 @@ class native_file_provider : public file_provider
 public:
 	virtual std::string load_all(file*);
 
-	virtual std::shared_ptr<file> get_file(std::wstring);
-	virtual bool save_data(std::wstring file_name, std::string data);
-	virtual void iterate(std::wstring path, std::function<void(file::ptr)> f, bool recursive);
-	virtual void iterate_dirs(std::wstring path, std::function<void(std::wstring)> f, bool recursive);
-	virtual void on_change(const std::filesystem::path&, std::function<void()>) override;
-	virtual std::shared_ptr<istream> create_stream(std::wstring);
+	virtual std::shared_ptr<file> get_file(boost::filesystem::path dir);
+	virtual bool save_data(boost::filesystem::path dir, std::string data);
+	virtual void iterate(boost::filesystem::path path, std::function<void(file::ptr)> f, bool recursive);
+	virtual void iterate_dirs(boost::filesystem::path, std::function<void(boost::filesystem::path)> f, bool recursive);
+	virtual void on_change(const boost::filesystem::path&, std::function<void()>) override;
+	virtual std::shared_ptr<istream> create_stream(boost::filesystem::path);
 
 	virtual ~native_file_provider()
 	{

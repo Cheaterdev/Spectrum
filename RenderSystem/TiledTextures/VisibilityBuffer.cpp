@@ -67,7 +67,7 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 
 	});*/
 
-	waiter = list->read_buffer(buffer.get(), 0, buffer->get_size(), [this](const char* data, UINT64 size)
+	waiter = list->get_copy().read_buffer(buffer.get(), 0, buffer->get_size(), [this](const char* data, UINT64 size)
 	{
 
 
@@ -120,7 +120,7 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 
 	list->transition_uav(buffer.get());
 	list->transition(buffer.get(), Render::ResourceState::COPY_DEST);
-	list->update_buffer(buffer.get(), 0, reinterpret_cast<char*>(clear_data.data()), clear_data.size());
+	list->get_copy().update_buffer(buffer.get(), 0, reinterpret_cast<char*>(clear_data.data()), clear_data.size());
 	list->transition(buffer.get(), Render::ResourceState::UNORDERED_ACCESS);
 	list->transition_uav(buffer.get());
 

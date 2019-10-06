@@ -1,10 +1,14 @@
 #include "pch.h"
 
+
 void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_object::ptr obj)
 {
 	// return;
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
+	auto& copy = mesh_render_context->list->get_copy();
+	auto& list = *mesh_render_context->list;
+
 	//  std::list<MeshAssetInstance*> meshes;
 	instances_count = 0;
 	if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
@@ -22,13 +26,17 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 	default_pipeline.vertex = shader;
 	default_pipeline.rasterizer.conservative = false;
 
+	//auto& signature = GPUMeshSignature::signature;
+
+	GPUMeshSignature<Signature> signature(&graphics);
+
 	mesh_render_context->pipeline = default_pipeline;
 	mesh_render_context->begin();
 	mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
 
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	if (best_fit_normals)
-		graphics.set_dynamic(12, 0, best_fit_normals->get_texture()->texture_2d()->get_static_srv());
+		signature.best_fit[0]= best_fit_normals->get_texture()->texture_2d()->get_static_srv();
 	using render_list = std::map<int, std::vector<MeshAssetInstance::render_info>>;
 	//std::map<int, int> pipeline_ids;
 	std::map<int, pipeline_draws> pipeline_infos;
@@ -154,7 +162,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 			}
 		}
 
-		auto nodes = l->node_buffer.get_for(*graphics.get_manager());
+		auto nodes = l->node_buffer.get_for(*list.get_manager());
 
 		
 			for (auto& p : rendering)
@@ -167,11 +175,11 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 					if (!mesh_render_context->override_material)
 					l->use_material(m.mesh->material, mesh_render_context);
 
-					graphics.set(4, l->mesh_asset->vertex_buffer->get_gpu_address());
 					graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 				//	graphics.set_const_buffer(5, nodes.resource->get_gpu_address() + nodes.offset + m.node_index * sizeof(decltype(l->node_buffer)::type));
-				graphics.set_srv(14, nodes.resource->get_gpu_address() + nodes.offset);
-					graphics.set_constants(8,0, m.node_index);
+					signature.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();
+					signature.vertex_unknown = nodes.resource->get_gpu_address() + nodes.offset;
+					signature.mat_texture_offsets.set(0, m.node_index);
 					mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, m.mesh->vertex_offset);
 					continue;
 					}
@@ -190,23 +198,23 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 					inst.instance_id = boxes.size();
 					boxes.push_back(inst);
 					IndirectCommand command;
-					command.material.texture_offset = info.texture_offset;
-					command.material.node_offset = m.node_index;
-					command.drawArguments.InstanceCount = 1;
-					command.drawArguments.StartInstanceLocation = 0;
-					command.drawArguments.IndexCountPerInstance = m.mesh->index_count;
-					command.drawArguments.StartIndexLocation = m.mesh->index_offset;
-					command.drawArguments.BaseVertexLocation = m.mesh->vertex_offset;
+					command.mat_texture_offsets.texture_offset = info.texture_offset;
+					command.mat_texture_offsets.node_offset = m.node_index;
+					command.draw_indirect.InstanceCount = 1;
+					command.draw_indirect.StartInstanceLocation = 0;
+					command.draw_indirect.IndexCountPerInstance = m.mesh->index_count;
+					command.draw_indirect.StartIndexLocation = m.mesh->index_offset;
+					command.draw_indirect.BaseVertexLocation = m.mesh->vertex_offset;
 					command.index_buffer = l->mesh_asset->index_buffer->get_index_buffer_view(true);
 					//command.index_buffer.BufferLocation += m.mesh->index_offset * sizeof(UINT32);
 					//ommand.index_buffer.SizeInBytes -= m.mesh->index_offset * sizeof(UINT32);
-					command.vb_srv = l->mesh_asset->vertex_buffer->get_gpu_address();
+					command.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();
 					nodes_buff.push_back(inst.node);
 					//command.vertex_node_srv = nodes.resource->get_gpu_address() + nodes.offset + m.node_index * sizeof(decltype(l->node_buffer)::type);
 					//Log::get() << "nodes offset " << nodes.offset << Log::endl;
 
 					if (mt->get_pixel_buffer())
-						command.material_cb_pixel = mt->get_pixel_buffer()->get_gpu_address();
+						command.mat_const = mt->get_pixel_buffer()->get_gpu_address();
 
 					commands.push_back(command);
 					first = false;
@@ -218,7 +226,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 
 	if ((MESH_TYPE::STATIC&mesh_render_context->render_mesh) && static_objects.size())
 	{
-	auto timer =	graphics.start(L"static");
+	auto timer = list.start(L"static");
 		for (auto & instance : static_objects)
 		{
 			if (instance->is_inside(*mesh_render_context->cam))
@@ -232,7 +240,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 	if ((MESH_TYPE::DYNAMIC&mesh_render_context->render_mesh) && dynamic_objects.size())
 	{
 
-		auto timer = graphics.start(L"dynamic");
+		auto timer = list.start(L"dynamic");
 		for (auto & instance : dynamic_objects)
 			if (instance->is_inside(*mesh_render_context->cam))
 				mesh_func(instance);
@@ -284,38 +292,38 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 
 		///////////////////////		buffers.process_pipeline(direction);
 		unsigned int pipeline_per_cycle = min((unsigned int)pipeline_infos.size(), 16u);
-		auto timer = graphics.start(L"gpu culling");
-		auto all_commands = graphics.get_manager()->set_data(commands.data(), commands.size());
-		auto all_instances = graphics.get_manager()->set_data(boxes.data(), boxes.size());
+		auto timer = list.start(L"gpu culling");
+		auto all_commands = list.get_manager()->set_data(commands.data(), commands.size());
+		auto all_instances = list.get_manager()->set_data(boxes.data(), boxes.size());
 	
-		graphics.set(2, textures);
-		graphics.set_srv(14, nodes_resource->get_gpu_address());
+		signature.mat_textures= textures;
+	signature.vertex_unknown=nodes_resource->get_gpu_address();
 
 		for (int stage = 0; stage <2; stage++)
 		{
-			auto timer = graphics.start(stage == 0 ? L"render_1" : L"render_2");
+			auto timer = list.start(stage == 0 ? L"render_1" : L"render_2");
 			{
-				auto timer = graphics.start(L"occluders draw");
-				graphics.transition(visible_id_buffer, Render::ResourceState::UNORDERED_ACCESS);
-				graphics.clear_uav(visible_id_buffer, visible_id_buffer->get_raw_uav());
+				auto timer = list.start(L"occluders draw");
+				list.transition(visible_id_buffer, Render::ResourceState::UNORDERED_ACCESS);
+				list.clear_uav(visible_id_buffer, visible_id_buffer->get_raw_uav());
 			/*	UINT values[4] = { 0 };
 				graphics.flush_transitions();
 				graphics.get_native_list()->ClearUnorderedAccessViewUint(visible_id_buffer->get_uav().get_base().gpu, visible_id_buffer->get_static_uav().get_base().cpu, visible_id_buffer->get_native().Get(), values, 0, nullptr);*/
 				graphics.set_pipeline(state);
 				graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
-				graphics.set(4, vertex_buffer->get_gpu_address());
-				graphics.set_dynamic(3, 0, visible_id_buffer->get_static_uav());
+				signature.vertex_buffer=vertex_buffer->get_gpu_address();
+				signature.mat_virtual_textures[0]=visible_id_buffer->get_static_uav();
 				mesh_render_context->g_buffer->set_downsapled(mesh_render_context);
 
 				if (stage == 0)
 				{
-					graphics.set_srv(7, all_instances.get_gpu_address());
+					signature.instance_buffer= all_instances.get_gpu_address();
 					graphics.draw_indexed(36, 0, 0, boxes.size());
 				}
 
 				else
 				{
-					graphics.set_srv(7, invisible_commands->get_gpu_address());
+					signature.instance_buffer= invisible_commands->get_gpu_address();
 					graphics.execute_indirect(
 						second_draw_commands,
 						1, \
@@ -325,45 +333,47 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 
 
 			{
-				graphics.transition(visible_id_buffer, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				list.transition(visible_id_buffer, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
 			}
 
+			//auto& compsig = GPUCacheComputeStateSignature::signature;
+			GPUCacheComputeStateSignature<Signature> compsig(&compute);
 
 			// get_invisible instances
 			if (stage == 0)
 			{
-				auto timer = graphics.start(L"invisible gather");
-				compute.transition(invisible_commands, Render::ResourceState::COPY_DEST);
-				compute.clear_counter(invisible_commands);
-				compute.transition(invisible_commands, Render::ResourceState::UNORDERED_ACCESS);
-				compute.transition(second_draw_dispatch, Render::ResourceState::UNORDERED_ACCESS);
+				auto timer = list.start(L"invisible gather");
+				list.transition(invisible_commands, Render::ResourceState::COPY_DEST);
+				list.clear_counter(invisible_commands);
+				list.transition(invisible_commands, Render::ResourceState::UNORDERED_ACCESS);
+				list.transition(second_draw_dispatch, Render::ResourceState::UNORDERED_ACCESS);
 				compute.set_pipeline(gather_invisible);
-				compute.set_dynamic(0, 0, visible_id_buffer->get_srv());
-				compute.set_srv(1, all_instances.get_gpu_address());
-				compute.set_dynamic(2, 0, invisible_commands->get_uav());
-				compute.set_constants(3, UINT(boxes.size()), UINT(0), UINT(max(1u, UINT(boxes.size() / 64))));
-				compute.set_dynamic(4, 0, second_draw_dispatch->get_uav());
+				compsig.visible_id_buffer[0]=visible_id_buffer->get_srv();
+				compsig.instances= all_instances.get_gpu_address();
+				compsig.commands[0]=invisible_commands->get_uav();
+				compsig.constants.set( UINT(boxes.size()), UINT(0), UINT(max(1u, UINT(boxes.size() / 64))));
+				compsig.seconds_dispatch[0]=second_draw_dispatch->get_uav();
 				compute.dispach(ivec3(1, 1, 1), ivec3(1, 1, 1));
-				graphics.copy_buffer(second_draw_arguments.get(), sizeof(UINT) * 2, invisible_commands->help_buffer.get(), 0, 4);
+				copy.copy_buffer(second_draw_arguments.get(), sizeof(UINT) * 2, invisible_commands->help_buffer.get(), 0, 4);
 
-				graphics.transition(invisible_commands, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-				graphics.transition(second_draw_arguments, Render::ResourceState::INDIRECT_ARGUMENT);
-				compute.transition(second_draw_dispatch, Render::ResourceState::INDIRECT_ARGUMENT);
+				list.transition(invisible_commands, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				list.transition(second_draw_arguments, Render::ResourceState::INDIRECT_ARGUMENT);
+				list.transition(second_draw_dispatch, Render::ResourceState::INDIRECT_ARGUMENT);
 			}
 
 			for (unsigned int start_index = 0; start_index < pipeline_infos.size(); start_index += pipeline_per_cycle)
 			{
 				unsigned int current_count = min(pipeline_per_cycle, UINT(pipeline_infos.size() - start_index));
 				{
-					buffers.start_write(compute, current_count);
-					auto timer = graphics.start(L"gather all");
+					buffers.start_write(compute.get_base(), current_count);
+					auto timer = list.start(L"gather all");
 					compute.set_pipeline(compute_state[stage]);
-					compute.flush_transitions();
-					compute.set_dynamic(0, 0, visible_id_buffer->get_srv());
-					compute.set_srv(1, all_commands.get_gpu_address());
-					compute.set_dynamic(2, 0, buffers.get_handles());
-					compute.set_constants(3, UINT(boxes.size()), start_index + 1, 32);
-					compute.set_dynamic(5, 0, invisible_commands->get_srv());
+					list.flush_transitions();
+					compsig.visible_id_buffer[0]= visible_id_buffer->get_srv();
+					compsig.instances=all_commands.get_gpu_address();
+					compsig.commands[0]=buffers.get_handles();
+					compsig.constants.set(UINT(boxes.size()), start_index + 1, 32);
+					compsig.from_buffer[0]= invisible_commands->get_srv();
 
 					{
 						if (stage == 0)
@@ -376,13 +386,13 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 					}
 				}
 				{
-					buffers.start_indirect(compute, current_count);
-					auto timer = graphics.start(L"ExecuteIndirect");
+					buffers.start_indirect(compute.get_base(), current_count);
+					auto timer = list.start(L"ExecuteIndirect");
 
 					for (unsigned int i = 0; i < current_count; i++)
 					{
 						auto& p = pipeline_infos[indirection[i + start_index]];
-						auto timer = graphics.start(std::to_wstring(i).c_str());
+						auto timer = list.start(std::to_wstring(i).c_str());
 						auto& command_buffer = buffers.get_buffer(i);
 						graphics.set_pipeline(p.pipeline);
 						graphics.set_topology(p.topology);
@@ -478,28 +488,9 @@ gpu_mesh_renderer::gpu_mesh_renderer(Scene::ptr scene)
 	}
 	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0,{} });
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0,{} });
-	Render::RootSignatureDesc root_desc;
-	root_desc[0] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::ALL); // material constants
-	root_desc[1] = Render::DescriptorConstBuffer(5, Render::ShaderVisibility::DOMAIN); // material constants
-	root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 32); // material textures
-	root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 8); // material virtual texture
-	root_desc[4] = Render::DescriptorSRV(0, Render::ShaderVisibility::VERTEX, 1); //vertex buffer
-	root_desc[5] = Render::DescriptorConstBuffer(5, Render::ShaderVisibility::VERTEX); // vertex node data
-	root_desc[6] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL); // camera
-	root_desc[7] = Render::DescriptorSRV(2, Render::ShaderVisibility::VERTEX, 1); // instance data
-	root_desc[8] = Render::DescriptorConstants(2, 2, Render::ShaderVisibility::ALL); // material offsets
-	root_desc[9] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 3, 1); //for voxels
-	root_desc[10] = Render::DescriptorConstBuffer(3, Render::ShaderVisibility::GEOMETRY); // voxel scale info
-	root_desc[11] = Render::DescriptorConstBuffer(3, Render::ShaderVisibility::PIXEL); // voxel scale info
-	root_desc[12] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 1, 1); //best fit normals
-	root_desc[13] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 1, 2); //best fit normals
-	root_desc[14] = Render::DescriptorSRV(1, Render::ShaderVisibility::VERTEX, 1); // instance data
-																													 // root_desc[8] = Render::DescriptorSRV(1, Render::ShaderVisibility::VERTEX, 1); // node buffer
-																													 //  root_desc[8] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 1, 1); // Occlusion visible buffer
-	root_desc.set_sampler(0, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerLinearWrapDesc);
-	root_desc.set_sampler(1, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerPointClampDesc);
-	root_desc.set_sampler(2, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerAnisoWrapDesc);
-	my_signature.reset(new Render::RootSignature(root_desc));
+
+my_signature= GPUMeshSignature<SignatureCreator>().create_root();
+
 	my_signature->set_unfixed(2);
 	std::vector<unsigned int> data = { 3, 1, 0,
 		2, 1, 3,
@@ -514,6 +505,9 @@ gpu_mesh_renderer::gpu_mesh_renderer(Scene::ptr scene)
 		6, 4, 5,
 		7, 4, 6,
 	};
+
+
+
 	std::vector<vec4> verts(8);
 	vec3 v0(-0.5, -0.5, 0.5);
 	vec3 v1(0.5, 0.5, 0.5);
@@ -545,54 +539,37 @@ gpu_mesh_renderer::gpu_mesh_renderer(Scene::ptr scene)
 	//	cpu_commands = std::make_shared<Render::FrameStorage<IndirectCommand>>();
 	//	cpu_instances = std::make_shared<Render::FrameStorage<instance>>();
 	invisible_commands = std::make_shared<Render::StructuredBuffer<instance>>(2044, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+//	auto& signature = GPUMeshSignature::signature;
+	GPUMeshSignature<Signature> signature(nullptr);
+
+
+
+
 	// Create the command signature used for indirect drawing.
 	{
-		/*
-		D3D12_GPU_VIRTUAL_ADDRESS index_buffer;
-		CD3DX12_GPU_DESCRIPTOR_HANDLE vb_srv;
-		CD3DX12_GPU_DESCRIPTOR_HANDLE textures_srv;
+		auto desc = IndirectCommand::get_desc();
 
-		D3D12_DRAW_INDEXED_ARGUMENTS drawArguments;
-		*/
-		// Each command consists of a CBV update and a DrawInstanced call.
-		D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[5] = {};
-		int i = 0;
-		argumentDescs[i].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
-		argumentDescs[i].ConstantBufferView.RootParameterIndex = 0;
-		i++;
-		argumentDescs[i].Type = D3D12_INDIRECT_ARGUMENT_TYPE_SHADER_RESOURCE_VIEW;
-		argumentDescs[i].ShaderResourceView.RootParameterIndex = 4;
-	//	i++;
-		//argumentDescs[i].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
-	//	argumentDescs[i].ConstantBufferView.RootParameterIndex = 5;
-		i++;
-		argumentDescs[i].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
-		argumentDescs[i].Constant.RootParameterIndex = 8;
-		argumentDescs[i].Constant.DestOffsetIn32BitValues = 0;
-		argumentDescs[i].Constant.Num32BitValuesToSet = 2;
-		i++;
-		argumentDescs[i].Type = D3D12_INDIRECT_ARGUMENT_TYPE_INDEX_BUFFER_VIEW;
-		i++;
-		argumentDescs[i].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 		D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
-		commandSignatureDesc.pArgumentDescs = argumentDescs;
-		commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
+		commandSignatureDesc.pArgumentDescs = desc.data();
+		commandSignatureDesc.NumArgumentDescs = desc.size();
 		commandSignatureDesc.ByteStride = sizeof(IndirectCommand);
 		TEST(Render::Device::get().get_native_device()->CreateCommandSignature(&commandSignatureDesc, my_signature->get_native().Get(), IID_PPV_ARGS(&m_commandSignature)));
 	}
+
 	{
-		D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[2] = {};
-		argumentDescs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
-		argumentDescs[0].Constant.RootParameterIndex = 8;
-		argumentDescs[0].Constant.DestOffsetIn32BitValues = 0;
-		argumentDescs[0].Constant.Num32BitValuesToSet = 1;
-		argumentDescs[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+		D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[] = {
+			signature.mat_texture_offsets.create_indirect(0,1),
+			Descriptors::DrawIndirect::create_indirect()
+		};
+
 		D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
 		commandSignatureDesc.pArgumentDescs = argumentDescs;
 		commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
 		commandSignatureDesc.ByteStride = sizeof(second_draw);
 		TEST(Render::Device::get().get_native_device()->CreateCommandSignature(&commandSignatureDesc, my_signature->get_native().Get(), IID_PPV_ARGS(&second_draw_commands)));
 	}
+
 	second_draw_arguments = std::make_shared<Render::GPUBuffer>(sizeof(second_draw));
 	second_draw args;
 	args.constant = 0;
@@ -603,16 +580,10 @@ gpu_mesh_renderer::gpu_mesh_renderer(Scene::ptr scene)
 	args.args.StartInstanceLocation = 0;
 	second_draw_arguments->set_data(args);
 	second_draw_dispatch = std::make_shared<Render::StructuredBuffer<gather_second>>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+
 	Render::ComputePipelineStateDesc compute_desc;
-	compute_desc.root_signature = std::make_shared<Render::RootSignature>(
-		Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 1),
-		Render::DescriptorSRV(1, Render::ShaderVisibility::ALL),
-		Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, 16),
-		Render::DescriptorConstants(0, 3),
-		Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, 1, 1),
-		Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 1, 1),
-		Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 1, 1, 1)
-		);
+	compute_desc.root_signature = GPUCacheComputeStateSignature<SignatureCreator>().create_root();
 
 	for (int i = 0; i < compute_state.size();i++)
 	{
@@ -628,17 +599,18 @@ gpu_mesh_renderer::gpu_mesh_renderer(Scene::ptr scene)
 		compute_state[i] = std::make_shared<Render::ComputePipelineState>(compute_desc);
 	}
 
+	GPUCacheComputeStateSignature<Signature> compsig(nullptr);
 
 
 	compute_desc.shader = Render::compute_shader::get_resource({ "shaders/occluder_cs_invisible.hlsl", "CS", 0,{} });
 	gather_invisible = std::make_shared<Render::ComputePipelineState>(compute_desc);
 	{
-		D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[2] = {};
-		argumentDescs[0].Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
-		argumentDescs[0].Constant.RootParameterIndex = 3;
-		argumentDescs[0].Constant.DestOffsetIn32BitValues = 0;
-		argumentDescs[0].Constant.Num32BitValuesToSet = 1;
-		argumentDescs[1].Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+		D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[] = {
+			 compsig.constants.create_indirect(0,1),
+			 Descriptors::Dispatch::create_indirect()
+		};
+
+
 		D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
 		commandSignatureDesc.pArgumentDescs = argumentDescs;
 		commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);

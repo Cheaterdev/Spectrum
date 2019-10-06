@@ -59,7 +59,7 @@ public:
 
 
 };
-
+/*
 class DeferredShading
 {
 	Render::ComputePipelineState::ptr state;
@@ -85,14 +85,14 @@ public:
 		context->list->get_compute().set_pipeline(state);
 		context->list->get_compute().set(0, buffer.srv_table);
 		//      context->list->get_compute().set_table(1, buffer.light_tex->texture_2d()->get_uav());
-		context->list->get_compute().set(2, context->cam->get_const_buffer());
+		context->list->get_compute().set_const_buffer(2, context->cam->get_const_buffer());
 		context->list->get_compute().set_table(3, map.depth_tex->texture_2d()->get_srv());
-		context->list->get_compute().set(4, map.light_cam.get_const_buffer());
+		context->list->get_compute().set_const_buffer(4, map.light_cam.get_const_buffer());
 		//     ivec2 sizes = { buffer.light_tex->get_desc().Width , buffer.light_tex->get_desc().Height };
 		//    context->list->get_compute().dispach(sizes);
 	}
 };
-
+*/
 class PostProcessGraph;
 class PostProcessContext;
 
@@ -168,7 +168,7 @@ protected:
 		if (c->realtime_debug&&debug_texture)
 		{
 			MipMapGenerator::get().copy_texture_2d_slow(c->mesh_context->list->get_graphics(), img_inner->texture.texture, c->g_buffer->result_tex.first());
-			c->mesh_context->list->get_graphics().transition(img_inner->texture.texture, ResourceState::PIXEL_SHADER_RESOURCE);
+			c->mesh_context->list->transition(img_inner->texture.texture, ResourceState::PIXEL_SHADER_RESOURCE);
 		}
 		timer.reset();
 		ContextPostProcess::NodeType::on_done(c);
@@ -287,7 +287,7 @@ protected:
 		}
 
 		{
-			O::type t;
+			typename O::type t;
 			register_o_type<0>(t);
 		}
 	}
@@ -667,7 +667,7 @@ public:
 	}
 };
 
-
+/*
 
 class tiled_image : public GUI::base
 {
@@ -704,13 +704,13 @@ public:
 		auto bounds = get_render_bounds();
 		float2 p1 = (vec2(bounds.pos)) / get_user_ui()->size.get();
 		float2 p2 = (vec2(bounds.pos) + vec2(bounds.size)) / get_user_ui()->size.get();
-		list.set_const_buffer(0, sizer(p1, p2));
+		list.set_const_buffer_raw(0, sizer(p1, p2));
 		list.set(2, tiles->table);
 		list.set(3, tiles->sampler_table);
 		list.set(4, tiles->visibility_texture->get_uav());
 		list.draw(4);
 	}
-};
+};*/
 /*
 class CubeMapDrawer
 {
@@ -779,11 +779,29 @@ class CubeMapDrawer
 */
 
 
+template <class T>
+struct ViewportSignatureDesc : public T
+{
+	using T::T;
+
+	typename T::template Table			<0, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 8> input_array = this;
+	typename T::template Constants		<1, Render::ShaderVisibility::PIXEL, 1, 1>								 constants = this;
+	typename T::template Table			<2, Render::ShaderVisibility::ALL, Render::DescriptorRange::UAV, 0, 1, 1>motion = this;
+	
+	typename T::template Sampler<0, Render::ShaderVisibility::ALL, 0> linear{ Render::Samplers::SamplerLinearWrapDesc, this };
+	typename T::template Sampler<1, Render::ShaderVisibility::ALL, 0> point{ Render::Samplers::SamplerPointClampDesc, this };
+
+};
+
+using ViewportSignature = SignatureTypes <ViewportSignatureDesc>;
+
+
+
 class ViewPortRenderer
 {
 //	Render::PipelineState::ptr state;
-	Render::RootSignature::ptr root_sig;
-	Cache<DXGI_FORMAT, Render::PipelineState::ptr > states;
+	ViewportSignature::RootSignature::ptr root_sig;
+	Cache<DXGI_FORMAT, ViewportSignature::Pipeline::ptr > states;
 	float time = 0;
 public:
 
@@ -792,20 +810,10 @@ public:
 
 	ViewPortRenderer()
 	{
-		{
-			Render::RootSignatureDesc root_desc;
-			root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 8);
-			root_desc[1] = Render::DescriptorConstants(1, 1, Render::ShaderVisibility::PIXEL);
-			root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 1, 1);
-			root_desc.set_sampler(0, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerLinearWrapDesc);
-			root_desc.set_sampler(1, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerPointClampDesc);
-			root_sig.reset(new Render::RootSignature(root_desc));
-
-			
-		}
-
 		
-		states.create_func = [this](const DXGI_FORMAT &format) ->Render::PipelineState::ptr {
+		root_sig = ViewportSignature::create_typed_root();
+		
+		states.create_func = [this](const DXGI_FORMAT &format) ->ViewportSignature::Pipeline::ptr {
 
 			Render::PipelineStateDesc desc;
 			desc.root_signature = root_sig;
@@ -813,7 +821,7 @@ public:
 			desc.blend.render_target[0].enabled = false;
 			desc.vertex = Render::vertex_shader::get_resource({ "shaders\\ViewPortRender.hlsl", "VS", 0,{} });
 			desc.pixel = Render::pixel_shader::get_resource({ "shaders\\ViewPortRender.hlsl", "PS", 0,{} });
-		return std::make_shared<Render::PipelineState>(desc);
+		return std::make_shared<ViewportSignature::Pipeline>(desc);
 		};
 
 
@@ -824,30 +832,35 @@ public:
 	{
 		auto timer = context->list->start(L"last renderer");
 		time += context->delta_time;
-		auto& list = context->list->get_graphics();
+		auto& list =* context->list;
+		auto& graphics = context->list->get_graphics();
 		//	buffer->result_tex.swap(context->list, Render::ResourceState::RENDER_TARGET, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 
 		list.transition(target, Render::ResourceState::RENDER_TARGET);
 		list.transition(context->g_buffer->albedo_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-		list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		list.set_pipeline(states[target->get_desc().Format]);
+		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		auto & shader_data = graphics.set_pipeline_typed(states[target->get_desc().Format]);
+		//ViewportSignature<Signature> shader_data(&graphics);
+
+
+
 	//	auto& tex = temporal.get_current();
-		list.set_viewport(target->texture_2d()->get_viewport(0));
-		list.set_scissor(target->texture_2d()->get_scissor(0));
-		list.set_rtv(1, target->texture_2d()->get_rtv(0), Render::Handle());
+		graphics.set_viewport(target->texture_2d()->get_viewport(0));
+		graphics.set_scissor(target->texture_2d()->get_scissor(0));
+		graphics.set_rtv(1, target->texture_2d()->get_rtv(0), Render::Handle());
 		//temporal.set(context->list, 0);
 
-		list.set_dynamic(2, 0, context->g_buffer->speed_tex->texture_2d()->get_static_srv());
+		shader_data.motion[0]=context->g_buffer->speed_tex->texture_2d()->get_static_srv();
+		shader_data.input_array[0] = context->g_buffer->result_tex.first()->texture_2d()->get_static_srv();
 
 
-
-		list.set_dynamic(0, 0, context->g_buffer->result_tex.first()->texture_2d()->get_static_srv());
+	//	graphics.set_dynamic(0, 0,);
 		//list.set_dynamic(0, 1, context->g_buffer->albedo_tex->texture_2d()->get_static_srv());
 		//list.set_dynamic(0, 2, context->g_buffer->albedo_tex->texture_2d()->get_static_srv());
 		//	list.set_const_buffer(1, const_buffer);
 		//list.set(1, Render::DescriptorHeapManager::get().get_default_samplers());
-		list.set_constants(1, time);
-		list.draw(4);
+		shader_data.constants.set(1, time);
+		graphics.draw(4);
 	}
 
 
@@ -855,12 +868,15 @@ public:
 	{
 		auto timer = context->list->start(L"last renderer");
 		time += context->delta_time;
-		auto& list = context->list->get_graphics();
+		auto& list = *context->list;
+		auto& graphics = context->list->get_graphics();
 
-		list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	
-		list.set_signature(root_sig);
-		list.set_constants(1, time);
+		auto& shader_data = graphics.set_signature_typed<ViewportSignature>(root_sig);
+	//	ViewportSignature<Signature> shader_data(&graphics);
+
+		shader_data.constants.set(time);
 
 
 		for (auto &e : context->eye_context->eyes)
@@ -876,15 +892,16 @@ public:
 		{
 			auto target = e.color_buffer;
 			auto g_buffer = e.g_buffer;
-			list.set_pipeline(states[target->get_desc().Format]);
-			list.set_viewport(target->texture_2d()->get_viewport(0));
-			list.set_scissor(target->texture_2d()->get_scissor(0));
-			list.set_rtv(1, target->texture_2d()->get_rtv(0), Render::Handle());
+			graphics.set_pipeline_typed(states[target->get_desc().Format]);
+			graphics.set_viewport(target->texture_2d()->get_viewport(0));
+			graphics.set_scissor(target->texture_2d()->get_scissor(0));
+			graphics.set_rtv(1, target->texture_2d()->get_rtv(0), Render::Handle());
 
-			list.set_dynamic(2, 0, g_buffer->speed_tex->texture_2d()->get_static_srv());
-			list.set_dynamic(0, 0, g_buffer->result_tex.second()->texture_2d()->get_static_srv());
-		
-			list.draw(4);
+
+			shader_data.motion[0] = g_buffer->speed_tex->texture_2d()->get_static_srv();
+			shader_data.input_array[0] = g_buffer->result_tex.second()->texture_2d()->get_static_srv();
+
+			graphics.draw(4);
 		}
 	
 	
@@ -1070,14 +1087,14 @@ public:
 
 		auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count = 8;
+		int count = 1;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
 			{
 				MeshAssetInstance::ptr instance(new MeshAssetInstance(asset_ptr));
 				instance->override_material(0, base_mat);
-				instance->override_material(1, make_material({ 1,1,1 }, float(i) / count, float(j) / count));
+				instance->override_material(1, make_material({ 1,0,0 }, float(i) / count, float(j) / count));
 
 				instance->local_transform[3] = { i*distance,0,j * distance,1 };
 
@@ -2609,6 +2626,18 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 		res->name = "Scalar";
 		return res;
 	});
+
+
+
+	FlowGraph::FlowSystem::get().register_node("ZeroColor", []()->VectorNode::ptr
+		{
+			auto res = std::make_shared<VectorNode>(float4{ 0,0,0,0 });
+			res->name = "ZeroColor";
+			return res;
+		});
+
+
+
 	//	FlowGraph::FlowSystem::get().register_node<ResultNode>("Material");
 	//	FlowGraph::FlowSystem::get().register_node<MaterialGraph>("MaterialGraph");
 	FlowGraph::FlowSystem::get().register_node<MaterialFunction>("MaterialFunction");

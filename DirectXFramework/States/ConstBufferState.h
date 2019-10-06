@@ -49,7 +49,7 @@ protected:
 
         if (changed)
         {
-            get_native_context(context)->PSSetConstantBuffers(0, data.size(), data.data());
+            get_native_context(context)->PSSetConstantBuffers(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
         }
         else
@@ -67,7 +67,7 @@ protected:
 
         if (changed)
         {
-            get_native_context(context)->VSSetConstantBuffers(0, data.size(), data.data());
+            get_native_context(context)->VSSetConstantBuffers(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
         }
         else
@@ -85,7 +85,7 @@ protected:
 
         if (changed)
         {
-            get_native_context(context)->GSSetConstantBuffers(0, data.size(), data.data());
+            get_native_context(context)->GSSetConstantBuffers(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
         }
         else

@@ -1,5 +1,5 @@
 #pragma once
-
+/*
 class ReflectionEffect
 {
 	Render::ComputePipelineState::ptr state;
@@ -12,7 +12,7 @@ public:
 	void process(MeshRenderContext::ptr& context, G_Buffer& buffer, Render::Texture::ptr cubemap, Render::Texture::ptr ao);
 };
 
-
+*/
 
 class ReflectionEffectPixel :public Events::prop_handler
 {
@@ -26,7 +26,9 @@ class ReflectionEffectPixel :public Events::prop_handler
 	G_Buffer* buffer;
 public:
 	Render::Texture::ptr reflect_tex;
-	Render::Texture::ptr reflect_tex_dilated;
+	TextureSwapper reflect_tex_dilated;
+
+	//Render::Texture::ptr reflect_tex_dilated;
 
 
 	ReflectionEffectPixel(G_Buffer& buffer);

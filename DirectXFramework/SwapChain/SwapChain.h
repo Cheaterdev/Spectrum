@@ -17,8 +17,8 @@ class Device;
 
 class SwapChainTexture: public Texture2D
 {
-    int left_index;
-    int right_index;
+	size_t left_index;
+	size_t right_index;
 
     void init_views()
     {

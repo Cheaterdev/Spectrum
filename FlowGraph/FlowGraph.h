@@ -635,8 +635,8 @@ namespace FlowGraph
 
             std::set<connection::ptr> connections;
 
-            uint32_t output_count;
-            uint32_t connected_outputs;
+			size_t output_count;
+            size_t connected_outputs;
 
             virtual  void operator()(GraphContext*) override;
 			virtual void on_output(output* i) override;

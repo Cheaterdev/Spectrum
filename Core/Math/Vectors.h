@@ -14,11 +14,11 @@ class Vector : public T
 		if constexpr (std::is_compound_v<D>) {
 			constexpr int size = std::min(T::N, D::N);
 			for (int t = 0; t < size; t++)
-				T::values[i + t] = static_cast<T::Format>(d.values[t]);
+				T::values[i + t] = static_cast<typename T::Format>(d.values[t]);
 			set_internal<i + size>( args...);
 		}
 		else {
-			T::values[i] = static_cast<T::Format>(d);
+			T::values[i] = static_cast<typename T::Format>(d);
 			set_internal<i + 1>( args...);
 		}
 

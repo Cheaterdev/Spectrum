@@ -118,8 +118,6 @@ INTERSECT_TYPE intersect(const Frustum& f, const Sphere& s, const mat4x4* )
 
 INTERSECT_TYPE intersect(const Frustum& f, const AABB& aabb, const mat4x4* mat)
 {
-    // return true;
-  //  const  mat4x4& mi = mat;// *f.get_transform();
     vec3 p[8];
     p[0] = vec3(aabb.max.x, aabb.max.y, aabb.max.z) ;
     p[1] = vec3(aabb.max.x, aabb.max.y, aabb.min.z) ;
@@ -131,14 +129,13 @@ INTERSECT_TYPE intersect(const Frustum& f, const AABB& aabb, const mat4x4* mat)
     p[7] = vec3(aabb.min.x, aabb.min.y, aabb.min.z);
 
 
-	if(mat) for (auto &e : p)
-		e = e**mat;
+	if (mat) for (auto& el : p)
+		el = el **mat;
     bool out_near = false;
 
     for (int i = 0; i < Frustum::planes::COUNT; ++i)
     {
-        //  if (i != 0)
-        //     continue;
+    
         bool bFullyOut = true;
 
         for (int j = 0; j < 8; ++j)
@@ -155,60 +152,7 @@ INTERSECT_TYPE intersect(const Frustum& f, const AABB& aabb, const mat4x4* mat)
             return INTERSECT_TYPE::FULL_OUT;
     }
 
-    /* bool bFullyOut[6] = { true, true, true, true, true, true };
-
-     //for (int i = 0; i < Frustum::planes::COUNT; ++i)
-     for (int j = 0; j < 8; ++j)
-     {
-         //float d = f.GetFrustumPlane(Frustum::planes(i))(p[j]);
-         if (p[j].x * p[j].z < 1)
-             bFullyOut[0] = false;
-
-         if (p[j].y * p[j].z < 1)
-             bFullyOut[1] = false;
-
-         if (p[j].z < 1)
-             bFullyOut[2] = false;
-
-         if (p[j].x * p[j].z > -1)
-             bFullyOut[3] = false;
-
-         if (p[j].y * p[j].z > -1)
-             bFullyOut[4] = false;
-
-         if (p[j].z > -1)
-             bFullyOut[5] = false;
-     }
-
-     for (int i = 0; i < 6; i++)
-         if (bFullyOut[i])
-             return false;
-    		*/
     return out_near ? INTERSECT_TYPE::IN_NEAR : INTERSECT_TYPE::FULL_IN;
-    /*
-    char bOutside[8] = {0};
-    char inside_count = 0;
-    for (int j = 0; j < 8; ++j)
-    {
-    	vec4 pos = vec4(p[j], 1)*mat;
-    	vec3 pp = vec3(pos.xyz) / pos.w;
-    	bOutside[j] = 0;
-
-    	for (int i = 0; i < 6; ++i)
-    	if (f.GetFrustumPlane(Frustum::planes(i))(pp)<0)
-    		bOutside[j] |= (1 << i);
-
-    	if (bOutside[j] == 0)
-    		inside_count++;
-    }
-
-    if (inside_count == 8)
-    	return true;
-    if ((bOutside[0] & bOutside[1] & bOutside[2] & bOutside[3] &
-    	bOutside[4] & bOutside[5] & bOutside[6] & bOutside[7]) != 0)
-    	return false;
-
-    return true;*/
 }
 
 INTERSECT_TYPE intersect(const Frustum& f, const OBB& obb, const mat4x4* )

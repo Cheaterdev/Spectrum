@@ -15,7 +15,7 @@ struct MeshLoadingSettings
 {
 	float scale = 1;
 	bool materials_remove = true;
-	std::map<wstring, AssetStorage::ptr> load_textures;
+	std::map<boost::filesystem::path, AssetStorage::ptr> load_textures;
 
 };
 class LoadingWindow : public GUI::Elements::window
@@ -124,10 +124,10 @@ public:
 
 			item->docking = GUI::dock::TOP;
 			item->x_type = GUI::pos_x_type::LEFT;
-			auto file_name = p.first.substr(p.first.find_last_of(L"\\") + 1);
+			auto file_name = p.first.filename();
 
 			
-			item->get_label()->text = convert(file_name);
+			item->get_label()->text = file_name.generic_string();
 
 			item->get_check()->set_checked(true);
 
@@ -192,11 +192,11 @@ class MyIOSystem : public Assimp::IOSystem
 {
         resource_file_depender& files;
 
-        std::string path;
+		boost::filesystem::path path;
         // Check whether a specific file exists
         bool Exists(const char* pFile) const
         {
-            return !!FileSystem::get().get_file(path + pFile);
+            return !!FileSystem::get().get_file(path / pFile);
         }
         // Get the path delimiter character we'd like to see
         virtual char getOsSeparator() const override
@@ -206,9 +206,11 @@ class MyIOSystem : public Assimp::IOSystem
         // ... and finally a method to open a custom stream
         virtual Assimp::IOStream* Open(const char* pFile, const char* pMode = "rb") override
         {
-            auto file = FileSystem::get().get_file(path + pFile);
+			auto new_path = path / pFile;
+			new_path = boost::filesystem::canonical(new_path);
+            auto file = FileSystem::get().get_file(new_path);
             files.add_depend(file);
-            return new MyIOStream(path + pFile);
+            return new MyIOStream(new_path.generic_string());
         }
 
         virtual void Close(Assimp::IOStream* pFile) override
@@ -217,7 +219,7 @@ class MyIOSystem : public Assimp::IOSystem
         }
 
     public:
-        MyIOSystem(std::string path, resource_file_depender& _files) : files(_files)
+        MyIOSystem(boost::filesystem::path path, resource_file_depender& _files) : files(_files)
         {
             this->path = path;
         }
@@ -246,10 +248,10 @@ public:
 std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, resource_file_depender& files, AssetLoadingContext::ptr & context)
 {
     Assimp::Importer importer;
-    std::string directory = boost::filesystem::path(file_name).parent_path().generic_string();
+	boost::filesystem::path directory = boost::filesystem::path(file_name).parent_path();
 
-    if (directory.size())
-        directory += std::string("\\");
+ //   if (directory.size())
+   //     directory += std::string("\\");
 
 	// TODO: need delete?
     importer.SetIOHandler(new MyIOSystem(directory, files));
@@ -280,16 +282,16 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			return nullptr;
 		MeshLoadingSettings settings;
 
-		std::map<wstring, AssetStorage::ptr>& load_textures =settings.load_textures;
+		std::map<boost::filesystem::path, AssetStorage::ptr>& load_textures =settings.load_textures;
 
 
-		auto check_texture = [&load_textures](wstring name)
+		auto check_texture = [&load_textures](boost::filesystem::path name)
 		{
 			auto it = load_textures.find(name);
 
 			if (it == load_textures.end())
 			{
-				auto file_name = name.substr(name.find_last_of(L"\\") + 1);
+				auto file_name = name.filename();
 
 
 				load_textures[name] = AssetManager::get().find<AssetStorage>([&file_name](AssetStorage::ptr& p) {
@@ -304,10 +306,10 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			aiString path;
 			if (AI_SUCCESS == native_material->GetTexture(type, 0, &path))
 			{
-				std::string native_path = directory + std::string(path.C_Str());
+				auto native_path = directory / std::string(path.C_Str());
 
 
-				check_texture(convert(native_path));
+				check_texture(native_path);
 			}
 
 		};
@@ -391,9 +393,9 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
         std::vector<unsigned int> indices(index_count);
         vertex_count = 0;
         index_count = 0;
-        auto get_texture = [&load_textures, &m](std::string name)->TextureAsset::ptr
+        auto get_texture = [&load_textures, &m](boost::filesystem::path name)->TextureAsset::ptr
         {
-            return load_textures[convert(name)]->get_asset()->get_ptr<TextureAsset>();
+            return load_textures[name]->get_asset()->get_ptr<TextureAsset>();
         };
         std::vector<std::future<bool>> tasks;
 
@@ -415,7 +417,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path))
                 {
-                    std::string native_path = directory + std::string(path.C_Str());
+                   auto native_path = directory / std::string(path.C_Str());
                     auto diff = get_texture(native_path);
                     tex_node = std::make_shared<TextureNode>(diff, true);
                     graph->register_node(tex_node);
@@ -434,8 +436,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_NORMALS, 0, &path))
                 {
-                    std::string native_path = directory + std::string(path.C_Str());
-                    auto diff = get_texture(native_path);
+					auto native_path = directory / std::string(path.C_Str());
+					auto diff = get_texture(native_path);
                     auto tex_node = std::make_shared<TextureNode>(diff);
                     graph->register_node(tex_node);
                     graph->get_texcoord()->link(tex_node->get_input(0));
@@ -444,8 +446,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 else if (AI_SUCCESS == native_material->GetTexture(aiTextureType_HEIGHT, 0, &path))
                 {
-                    std::string native_path = directory + std::string(path.C_Str());
-                    auto diff = get_texture(native_path);
+					auto native_path = directory / std::string(path.C_Str());
+					auto diff = get_texture(native_path);
                     auto tex_node = std::make_shared<TextureNode>(diff);
                     graph->register_node(tex_node);
                     graph->get_texcoord()->link(tex_node->get_input(0));

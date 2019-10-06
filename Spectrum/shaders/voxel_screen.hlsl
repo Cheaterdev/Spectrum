@@ -143,7 +143,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R)
 
 float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 {
-	return brdf.SampleLevel(LinearSamplerClamp, float3(Roughness, Metallic, NoV), 0);
+	return brdf.SampleLevel(LinearSamplerClamp, float3(Roughness, Metallic, 0.5 + 0.5*NoV), 0);
 }
 
 
@@ -164,7 +164,7 @@ float4 trace_screen(float3 origin, float3 dir, float level)
 	float3 samplePos = 0;
 	float4 accum = 0;
 	// the starting sample diameter
-	float minDiameter = 10.0 / 512;// *(1 + 2 * angle);
+	float minDiameter = 1.0 / 512;// *(1 + 2 * angle);
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 	// push out the starting point to avoid self-intersection
 	float startDist = 0;// get_start_dist(origin, dir, minDiameter, angle);
@@ -373,7 +373,7 @@ float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,floa
 	float3 dir = normalize(Normal + right + tangent);
 	float2 EnvBRDF = IntegrateBRDF(roughness, metallic, dot(Normal,dir));
 
-	Color= EnvBRDF.x*get_direction(Pos,V, orig_pos, Normal,normalize(Normal + right + tangent), k, a, length(Pos - camera.position)/20,tc);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
+	Color= 3*EnvBRDF.x*get_direction(Pos+ 2*Normal,V, orig_pos, Normal,normalize(Normal + right + tangent), k, a, length(Pos - camera.position)/20,tc);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
 
 	/*Color += get_direction(Pos, orig_pos, Normal, normalize(Normal + right), k,a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
 	Color += get_direction(Pos, orig_pos, Normal, normalize(Normal - right), k, a);//trace(Pos + k*normalize(Normal - right), normalize(Normal - right), a);
@@ -479,7 +479,7 @@ GI_RESULT PS(quad_output i)
 
   float2 delta = speed_tex.SampleLevel(PixelSampler, i.tc, 0).xy;
 
-  float2 prev_tc = i.tc - delta*0.5;
+  float2 prev_tc = i.tc - delta;
   float4 prev_gi = tex_gi_prev.SampleLevel(LinearSampler, prev_tc, 0);
   float prev_z = tex_depth_prev.SampleLevel(LinearSampler, prev_tc, 0);
 

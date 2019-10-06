@@ -23,7 +23,7 @@ class thread_pool : public Singleton<thread_pool>
 public:
 
 	template<class F/*, class... Args*/>
-	auto enqueue(F&& f, TaskPriority priority = TaskPriority::NORMAL/*, Args&& ... args*/)
+	auto enqueue(F&& f)
 		->std::future<typename std::result_of<F(/*Args...*/)>::type>;
 
 private:
@@ -43,7 +43,7 @@ inline thread_pool::thread_pool()
 
 // add new work item to the pool
 template<class F/*, class... Args*/>
-auto thread_pool::enqueue(F&& f, TaskPriority priority/*, Args&& ... args*/)
+auto thread_pool::enqueue(F&& f)
 -> std::future<typename std::result_of<F(/*Args...*/)>::type>
 {
 	if (stop) throw std::exception("wtf");
@@ -96,7 +96,7 @@ class scheduler : public Singleton<scheduler>
 			alive = true;
 			auto need_wait = true;
 			auto local_alive = true;
-			std::chrono::steady_clock::time_point start_time;
+			std::chrono::steady_clock::time_point start_time_local;
 
 			while (local_alive)
 			{
@@ -114,7 +114,7 @@ class scheduler : public Singleton<scheduler>
 						// yeah! we have a task!
 						if (!tasks.empty())
 						{
-							start_time = tasks.front().start_time;
+							start_time_local = tasks.front().start_time;
 							return true;
 						}
 
@@ -127,7 +127,7 @@ class scheduler : public Singleton<scheduler>
 
 				//wait for timed task
 				std::unique_lock<std::mutex>locker(queue_mutex);
-				condition.wait_until(locker, start_time, [&]
+				condition.wait_until(locker, start_time_local, [&]
 				{
 					if (!alive)
 					{
@@ -136,9 +136,9 @@ class scheduler : public Singleton<scheduler>
 					}
 
 					// if new task was inserted and we need to reinitialize wait_until
-					if (tasks.size() && tasks.front().start_time < start_time)
+					if (tasks.size() && tasks.front().start_time < start_time_local)
 					{
-						start_time = tasks.front().start_time;
+						start_time_local = tasks.front().start_time;
 						need_wait = false;
 						return true;
 					}
@@ -147,12 +147,12 @@ class scheduler : public Singleton<scheduler>
 					while (tasks.size())
 						if (tasks.front().start_time <= std::chrono::steady_clock::now())
 						{
-							thread_pool::get().enqueue(tasks.front().function, TaskPriority::HIGH);
+							thread_pool::get().enqueue(tasks.front().function);
 							tasks.pop_front();
 							need_wait = tasks.empty();
 
 							if (!need_wait)
-								start_time = tasks.front().start_time;
+								start_time_local = tasks.front().start_time;
 						}
 
 						else
@@ -185,7 +185,7 @@ public:
 	{
 
 		if (time <= std::chrono::steady_clock::now())
-			return  thread_pool::get().enqueue(f, TaskPriority::HIGH);
+			return  thread_pool::get().enqueue(f);
 
 		using return_type = typename std::result_of<F(Args...)>::type;
 
@@ -230,33 +230,12 @@ public:
 			concurrency::agent::start();
 	}
 
-	void stop_and_wait()
-	{
-		enqueue(nullptr);
-
-		concurrency::agent::wait(this);
-	}
+	void stop_and_wait();
 
 protected:
-	void run()
-	{
-
-		// Read from the source block until we receive the 
-		// sentinel value.
-		std::function<void()> n;
-		while ((n = receive(*this)) != nullptr)
-		{
-			n();
-		}
-
-
-		// Set the agent to the finished state.
-		done();
-	}
+	void run();
 
 private:
-	// The source buffer to read from.
-	//ISource<std::function<void()>>& _source;
 
 };
 
@@ -264,20 +243,18 @@ private:
 
 
 using Batch = std::vector<std::function<void()>>;
-class SingleThreadExecutorBatched /*: public concurrency::agent, public concurrency::unbounded_buffer<Batch>*/
+class SingleThreadExecutorBatched
 
 {
 	concurrency::task<void> task;
 	boost::lockfree::spsc_queue<int, boost::lockfree::capacity<7> > spsc_queue;
 public:
-	explicit SingleThreadExecutorBatched(int count = 16, bool start = true)
+	explicit SingleThreadExecutorBatched(int count = 16)
 	{
 		for(auto &d:datas)
 d.reserve(count);
 
 		index = 0;
-	/*	if (start)
-			concurrency::agent::start();*/
 
 		task= create_task([this]
 	{
@@ -285,76 +262,17 @@ d.reserve(count);
 	});
 	}
 
-	void flush()
-	{
-		while (!spsc_queue.push(index));
+	void flush();
 
-		index = (index+1)%datas.size();
-		
-		//current_data->clear();
-	}
+	void stop_and_wait();
 
-	void stop_and_wait()
-	{
-		add(nullptr);
-		flush();
-		task.wait();
-	//	
-	/*	enqueue(Batch());*/
-
-	//	wait(this);
-	}
-
-	void add(std::function<void()>&& f)
-	{
-
-	//	while (!spsc_queue.push(f));
-		//auto new_c = std::make_shared<Render::context>(render_context);
-		datas[index].emplace_back(std::forward<std::function<void()>>(f));
-
-		if (datas[index].capacity() == datas[index].size())
-		{
-			flush();
-		}
-
-	
-	}
+	void add(std::function<void()>&& f);
 
 protected:
 	std::array<Batch,8> datas;
 	int index;
 
-	void run()
-	{
-		bool alive = true;
-		while(alive)
-		while (alive&&spsc_queue.consume_one([&](int id)
-		{	
-		//	auto &timer = Profiler::get().start(L"Batch");
-			for (auto &f : datas[id]) 
-				if(f)
-					f();
-			else
-				alive = false;
+	void run();
 
-			datas[id].clear();
-		}));
-		// Read from the source block until we receive the 
-		// sentinel value.
-	/*	Batch n;
-		while (!(n = receive(*this)).empty())
-		{
-			auto &timer = Profiler::get().start(L"Batch");
-			for (auto &f : n) f();
-		}
-
-
-		// Set the agent to the finished state.
-		done();*/
-	}
-
-private:
-	// The source buffer to read from.
-	//ISource<std::function<void()>>& _source;
 
 };

@@ -55,7 +55,7 @@ namespace DX12
         }
 
         auto info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
-        ClassLogger<Resource>::get() << "creating resource " << info.SizeInBytes << " heap: " << int(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] += info.SizeInBytes) << Log::endl;
+        ClassLogger<Resource>::get() << "creating resource " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] += info.SizeInBytes) << Log::endl;
         TEST(Device::get().get_native_device()->CreateCommittedResource(
                  &CD3DX12_HEAP_PROPERTIES(static_cast<D3D12_HEAP_TYPE>(type)),
                  D3D12_HEAP_FLAG_NONE,
@@ -89,11 +89,11 @@ namespace DX12
     }
 
 
-    Resource::Resource(const ComPtr<ID3D12Resource>& resouce)
+    Resource::Resource(const ComPtr<ID3D12Resource>& resouce, bool own)
     {
         m_Resource = resouce;
         desc = CD3DX12_RESOURCE_DESC(m_Resource->GetDesc());
-        force_delete = true;
+        force_delete = !own;
 		 id = counter_id.fetch_add(1);
 
         if (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
@@ -112,7 +112,7 @@ namespace DX12
 			std::stringstream stream;
 			stream << std::hex << gpu_adress;
 			std::string result(stream.str());
-            ClassLogger<Resource>::get() << "deleting resource " << id<<" "<< result <<" "<< m_Resource.Get() << " " << info.SizeInBytes << " heap: " << int(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] -= info.SizeInBytes) << Log::endl;
+            ClassLogger<Resource>::get() << "deleting resource " << id<<" "<< result <<" "<< m_Resource.Get() << " " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] -= info.SizeInBytes) << Log::endl;
         }
     }
 	/*

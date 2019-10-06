@@ -2,6 +2,19 @@
 
 
 
+template <class T>
+struct DebugSignature : public T
+{
+	using T::T;
+	/*
+	 root_desc[0] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::VERTEX); //frame data
+	root_desc[1] = Render::DescriptorSRV(0, Render::ShaderVisibility::VERTEX);
+	*/
+	typename T::template ConstBuffer	<0, Render::ShaderVisibility::VERTEX,0>								camera_data = this;
+	typename T::template SRV			<1, Render::ShaderVisibility::VERTEX, 0>								nodes = this;
+};
+
+
 
 void debug_drawer::draw(Render::CommandList& list, camera* cam)
 {
@@ -13,6 +26,7 @@ void debug_drawer::draw(Render::CommandList& list, camera* cam)
     unsigned int index = 0;
     nodes.resize(count);
     int i = 0;
+	DebugSignature<Signature> shader_data(&list.get_graphics());
 
     for (auto& p : aabbs)
     {
@@ -30,8 +44,8 @@ void debug_drawer::draw(Render::CommandList& list, camera* cam)
         i++;
     }
 
-    list.get_graphics().set(0, cam->get_const_buffer());
-    list.get_graphics().set_srv(1, nodes);
+	shader_data.camera_data= cam->get_const_buffer();
+	shader_data.nodes =  nodes;
     list.get_graphics().draw(24, 0, count);
     aabbs.clear();
 }
@@ -55,7 +69,7 @@ debug_drawer::debug_drawer()
     Render::RootSignatureDesc root_desc;
     root_desc[0] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::VERTEX); //frame data
     root_desc[1] = Render::DescriptorSRV(0, Render::ShaderVisibility::VERTEX);
-    desc.root_signature.reset(new Render::RootSignature(root_desc));
+	desc.root_signature = DebugSignature<SignatureCreator>().create_root();// .reset(new Render::RootSignature(root_desc));
     state.reset(new Render::PipelineState(desc));
     /*	const_buffer.reset(new DX11::Buffer<node>(D3D11_USAGE_DEFAULT, D3D11_BIND_CONSTANT_BUFFER, 0, 0, 64));
 

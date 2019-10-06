@@ -77,6 +77,11 @@ public:
 
 	//RenderTargetTable table_light;
 	Events::prop<ivec2> size;
+
+	Render::Texture::ptr depth_tex_mips_pow2;
+
+
+
 	Render::Texture::ptr depth_tex_mips;
 
 	Render::Texture::ptr depth_tex_mips_prev;

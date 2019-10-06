@@ -1,5 +1,5 @@
 #pragma once
-
+#ifdef _NEED_SSAO_
 enum QualityLevel { kSsaoQualityVeryLow, kSsaoQualityLow, kSsaoQualityMedium, kSsaoQualityHigh, kSsaoQualityVeryHigh, kNumSsaoQualitySettings };
 
 class NewSSAO:public Events::prop_handler
@@ -230,7 +230,7 @@ class NewSSAO:public Events::prop_handler
             SsaoCB[25] = 1.0f / BufferHeight;
             SsaoCB[26] = 1.0f / -RejectionFalloff;
             SsaoCB[27] = 1.0f / (1.0f + Accentuation);
-            compute.set_const_buffer(1, SsaoCB, sizeof(SsaoCB));  //.SetDynamicConstantBufferView(1, sizeof(SsaoCB), SsaoCB);
+            compute.set_const_buffer_raw(1, SsaoCB, sizeof(SsaoCB));  //.SetDynamicConstantBufferView(1, sizeof(SsaoCB), SsaoCB);
             compute.set_dynamic(2, 0, Destination->texture_2d()->get_static_uav());
             compute.set_dynamic(3, 0, ArrayCount == 1 ? DepthBuffer->texture_2d()->get_static_srv() : DepthBuffer->array2d()->get_static_srv());
 
@@ -270,29 +270,29 @@ class NewSSAO:public Events::prop_handler
                 1.0f / LoWidth, 1.0f / LoHeight, 1.0f / HiWidth, 1.0f / HiHeight,
                 kNoiseFilterWeight, 1920.0f / (float)LoWidth, kBlurTolerance, kUpsampleTolerance
             };
-            Context.set_const_buffer(1, cbData, sizeof(cbData));
-            Context.transition(Destination, Render::ResourceState::UNORDERED_ACCESS);
-            Context.transition(LoResDepth, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-            Context.transition(HiResDepth, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+            Context.set_const_buffer_raw(1, cbData, sizeof(cbData));
+            Context.get_base().transition(Destination, Render::ResourceState::UNORDERED_ACCESS);
+            Context.get_base().transition(LoResDepth, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+            Context.get_base().transition(HiResDepth, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
             Context.set_dynamic(2, 0, Destination->texture_2d()->get_static_uav());
             Context.set_dynamic(3, 0, LoResDepth->texture_2d()->get_static_srv());
             Context.set_dynamic(3, 1, HiResDepth->texture_2d()->get_static_srv());
 
             if (InterleavedAO != nullptr)
             {
-                Context.transition(*InterleavedAO, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+                Context.get_base().transition(*InterleavedAO, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
                 Context.set_dynamic(3, 2, (*InterleavedAO)->texture_2d()->get_static_srv());
             }
 
             if (HighQualityAO != nullptr)
             {
-                Context.transition(*HighQualityAO, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+                Context.get_base().transition(*HighQualityAO, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
                 Context.set_dynamic(3, 3, (*HighQualityAO)->texture_2d()->get_static_srv());
             }
 
             if (HiResAO != nullptr)
             {
-                Context.transition(*HiResAO, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+                Context.get_base().transition(*HiResAO, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
                 Context.set_dynamic(3, 4, (*HiResAO)->texture_2d()->get_static_srv());
             }
 
@@ -333,13 +333,13 @@ class NewSSAO:public Events::prop_handler
                 // Phase 1:  Decompress, linearize, downsample, and deinterleave the depth buffer
                 {
                     auto timer = BaseContext.start(L"transitions");
-                    Context.transition(tex_ao_full, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                    Context.transition(tex_depth_linear, Render::ResourceState::UNORDERED_ACCESS);
-                    Context.transition(tex_depth_downsample[0], Render::ResourceState::UNORDERED_ACCESS);
-                    Context.transition(tex_depth_tiled[0], Render::ResourceState::UNORDERED_ACCESS);
-                    Context.transition(tex_depth_downsample[1], Render::ResourceState::UNORDERED_ACCESS);
-                    Context.transition(tex_depth_tiled[1], Render::ResourceState::UNORDERED_ACCESS);
-                    Context.flush_transitions();
+					BaseContext.transition(tex_ao_full, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+					BaseContext.transition(tex_depth_linear, Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.transition(tex_depth_downsample[0], Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.transition(tex_depth_tiled[0], Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.transition(tex_depth_downsample[1], Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.transition(tex_depth_tiled[1], Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.flush_transitions();
                 }
                 {
                     auto timer = BaseContext.start(L"constants");
@@ -361,11 +361,11 @@ class NewSSAO:public Events::prop_handler
                 if (HierarchyDepth > 2)
                 {
                     Context.set_constants(0, 1.0f / tex_depth_downsample[1]->get_desc().Width, 1.0f / tex_depth_downsample[1]->get_desc().Height);
-                    Context.transition(tex_depth_downsample[1], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                    Context.transition(tex_depth_downsample[2], Render::ResourceState::UNORDERED_ACCESS);
-                    Context.transition(tex_depth_tiled[2], Render::ResourceState::UNORDERED_ACCESS);
-                    Context.transition(tex_depth_downsample[3], Render::ResourceState::UNORDERED_ACCESS);
-                    Context.transition(tex_depth_tiled[3], Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.transition(tex_depth_downsample[1], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+					BaseContext.transition(tex_depth_downsample[2], Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.transition(tex_depth_tiled[2], Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.transition(tex_depth_downsample[3], Render::ResourceState::UNORDERED_ACCESS);
+					BaseContext.transition(tex_depth_tiled[3], Render::ResourceState::UNORDERED_ACCESS);
                     // Context.set(2, table_uav2);
                     Context.set_dynamic(2, 0, tex_depth_downsample[2]->texture_2d()->get_static_uav());
                     Context.set_dynamic(2, 1, tex_depth_tiled[2]->array2d()->get_static_uav());
@@ -381,22 +381,22 @@ class NewSSAO:public Events::prop_handler
                 //   ScopedTimer _prof(L"Analyze depth volumes", Context);
                 // Load first element of projection matrix which is the cotangent of the horizontal FOV divided by 2.
                 const float FovTangent = 1.0f / proj.a11;
-                Context.transition(tex_ao_merged[0], Render::ResourceState::UNORDERED_ACCESS);
-                Context.transition(tex_ao_merged[1], Render::ResourceState::UNORDERED_ACCESS);
-                Context.transition(tex_ao_merged[2], Render::ResourceState::UNORDERED_ACCESS);
-                Context.transition(tex_ao_merged[3], Render::ResourceState::UNORDERED_ACCESS);
-                Context.transition(tex_ao_hq[0], Render::ResourceState::UNORDERED_ACCESS);
-                Context.transition(tex_ao_hq[1], Render::ResourceState::UNORDERED_ACCESS);
-                Context.transition(tex_ao_hq[2], Render::ResourceState::UNORDERED_ACCESS);
-                Context.transition(tex_ao_hq[3], Render::ResourceState::UNORDERED_ACCESS);
-                Context.transition(tex_depth_tiled[0], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                Context.transition(tex_depth_tiled[1], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                Context.transition(tex_depth_tiled[2], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                Context.transition(tex_depth_tiled[3], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                Context.transition(tex_depth_downsample[0], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                Context.transition(tex_depth_downsample[1], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                Context.transition(tex_depth_downsample[2], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-                Context.transition(tex_depth_downsample[3], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				BaseContext.transition(tex_ao_merged[0], Render::ResourceState::UNORDERED_ACCESS);
+				BaseContext.transition(tex_ao_merged[1], Render::ResourceState::UNORDERED_ACCESS);
+				BaseContext.transition(tex_ao_merged[2], Render::ResourceState::UNORDERED_ACCESS);
+				BaseContext.transition(tex_ao_merged[3], Render::ResourceState::UNORDERED_ACCESS);
+				BaseContext.transition(tex_ao_hq[0], Render::ResourceState::UNORDERED_ACCESS);
+				BaseContext.transition(tex_ao_hq[1], Render::ResourceState::UNORDERED_ACCESS);
+				BaseContext.transition(tex_ao_hq[2], Render::ResourceState::UNORDERED_ACCESS);
+				BaseContext.transition(tex_ao_hq[3], Render::ResourceState::UNORDERED_ACCESS);
+				BaseContext.transition(tex_depth_tiled[0], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				BaseContext.transition(tex_depth_tiled[1], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				BaseContext.transition(tex_depth_tiled[2], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				BaseContext.transition(tex_depth_tiled[3], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				BaseContext.transition(tex_depth_downsample[0], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				BaseContext.transition(tex_depth_downsample[1], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				BaseContext.transition(tex_depth_downsample[2], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				BaseContext.transition(tex_depth_downsample[3], Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
                 // Phase 2:  Render SSAO for each sub-tile
                 if (HierarchyDepth > 3)
@@ -489,14 +489,14 @@ class NewSSAO:public Events::prop_handler
                 BlurAndUpsample(Context, tex_ao_full, tex_depth_linear, tex_depth_downsample[0], NextSRV,
                                 g_QualityLevel >= kSsaoQualityVeryHigh ? &tex_ao_hq[0] : nullptr , nullptr);
             } // End blur and upsample
-            Context.transition(tex_ao_full, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+			BaseContext.transition(tex_ao_full, Render::ResourceState::PIXEL_SHADER_RESOURCE);
             {
                 auto timer = BaseContext.start(L"Blending to scene");
-                auto& list = Context.get_graphics();
-                list.set_pipeline(scene_add_state);
-                list.transition(buffer->result_tex.first(), Render::ResourceState::RENDER_TARGET);
-                list.set_viewport(buffer->result_tex.first()->texture_2d()->get_viewport());
-                list.set_scissor(buffer->result_tex.first()->texture_2d()->get_scissor());
+                auto& graphics = BaseContext.get_graphics();
+                graphics.set_pipeline(scene_add_state);
+				BaseContext.transition(buffer->result_tex.first(), Render::ResourceState::RENDER_TARGET);
+				graphics.set_viewport(buffer->result_tex.first()->texture_2d()->get_viewport());
+				graphics.set_scissor(buffer->result_tex.first()->texture_2d()->get_scissor());
                // list.set_rtv(1, buffer->result_tex.first()->texture_2d()->get_rtv(), Render::Handle());
              //   list.set(3, buffer->srv_table);
               //  list.set_dynamic(4, 0, tex_ao_full->texture_2d()->get_static_srv());
@@ -509,3 +509,5 @@ class NewSSAO:public Events::prop_handler
         }
 
 };
+
+#endif

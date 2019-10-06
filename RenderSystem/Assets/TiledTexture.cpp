@@ -45,7 +45,7 @@ HeapPage::HeapPage()
 
 		CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UINT, 256, 256, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		Render::Device::get().get_native_device()->CreatePlacedResource(tile_heap.Get(), i * 65536, &desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
-		tiles.emplace_back(new Render::Resource(m_Resource));
+		tiles.emplace_back(new Render::Resource(m_Resource, true));
 	}
 }
 
@@ -506,7 +506,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
     std::lock_guard<std::mutex> g(tile_mutex);
     heap_manager.flush_tilings(tiled_tex.get());
     list->transition(visibility_texture.get(),  Render::ResourceState::COPY_SOURCE);
-    list->read_buffer(visibility_texture.get(), 0, visibility_texture->get_size(), [this](const char* data, UINT64 size)
+    list->get_copy().read_buffer(visibility_texture.get(), 0, visibility_texture->get_size(), [this](const char* data, UINT64 size)
     {
         std::vector<task<std::vector<std::pair<int, ivec3>>>> tasks;
         int thread_count = visibility_texture->get_desc().Height;
@@ -575,14 +575,14 @@ void TiledTexture::update(Render::CommandList::ptr& list)
         });
     });
     list->transition(visibility_texture.get(),  Render::ResourceState::COPY_DEST);
-    list->update_buffer(visibility_texture.get(), 0, reinterpret_cast<char*>(clear_data.data()), clear_data.size() * 4);
+    list->get_copy().update_buffer(visibility_texture.get(), 0, reinterpret_cast<char*>(clear_data.data()), clear_data.size() * 4);
     list->transition(visibility_texture.get(),  Render::ResourceState::COMMON);
 
     if (residency_changed)
     {
         memcpy(residency_data_uploaded->array[0]->mips[0]->data.data(), residency_data->array[0]->mips[0]->data.data(), residency_data->array[0]->mips[0]->data.size());
         list->transition(residency_texture.get(),  Render::ResourceState::COPY_DEST);
-        list->update_texture(residency_texture, ivec3(0, 0, 0), ivec3(mips[0].tiles), 0, reinterpret_cast<const char*>(residency_data->array[0]->mips[0]->data.data()), residency_data->array[0]->mips[0]->width_stride);
+        list->get_copy().update_texture(residency_texture, ivec3(0, 0, 0), ivec3(mips[0].tiles), 0, reinterpret_cast<const char*>(residency_data->array[0]->mips[0]->data.data()), residency_data->array[0]->mips[0]->width_stride);
         list->transition(residency_texture.get(),  Render::ResourceState::PIXEL_SHADER_RESOURCE);
         residency_changed = false;
     }
@@ -595,7 +595,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
         {
             ivec3 gpu_size = one_tile_size;
             //   gpu_size.y = mips[t->mip_level].rows_per_tile;
-            list->update_texture(tiled_tex, t->position * gpu_size, gpu_size, t->mip_level, reinterpret_cast<const char*>(t->data.data()), mips[t->mip_level].stride_per_tile);
+            list->get_copy().update_texture(tiled_tex, t->position * gpu_size, gpu_size, t->mip_level, reinterpret_cast<const char*>(t->data.data()), mips[t->mip_level].stride_per_tile);
             t->data.clear();
         }
 

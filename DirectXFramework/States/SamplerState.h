@@ -44,7 +44,7 @@ protected:
     {
         if (changed || force)
         {
-            get_native_context(context)->PSSetSamplers(0, data.size(), data.data());
+            get_native_context(context)->PSSetSamplers(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
         }
         else
@@ -57,7 +57,7 @@ protected:
     {
         if (changed || force)
         {
-			get_native_context(context)->VSSetSamplers(0, data.size(), data.data());
+			get_native_context(context)->VSSetSamplers(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
         }
         else
@@ -71,7 +71,7 @@ protected:
     {
         if (changed || force)
         {
-			get_native_context(context)->GSSetSamplers(0, data.size(), data.data());
+			get_native_context(context)->GSSetSamplers(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
         }
         else

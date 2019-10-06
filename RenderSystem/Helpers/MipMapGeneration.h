@@ -6,8 +6,6 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
         Render::ComputePipelineState::ptr gamma[4];
         Render::ComputePipelineState::ptr state_downsample_depth;
 
-        Render::HandleTable samplers;
-
 		Render::PipelineState::ptr quality_buffer_state;
 		Render::PipelineState::ptr quality_buffer_stencil_state;
 		Render::PipelineState::ptr quality_buffer_refl_stencil_state;

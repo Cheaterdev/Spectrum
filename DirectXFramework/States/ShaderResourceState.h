@@ -47,7 +47,7 @@ protected:
     {
         if (changed)
         {
-			get_native_context(context)->PSSetShaderResources(0, data.size(), data.data());
+			get_native_context(context)->PSSetShaderResources(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
 		}
 else
@@ -61,7 +61,7 @@ else
     {
         if (changed)
         {
-			get_native_context(context)->VSSetShaderResources(0, data.size(), data.data());
+			get_native_context(context)->VSSetShaderResources(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
 		}
 		else
@@ -75,7 +75,7 @@ else
     {
         if (changed)
         {
-			get_native_context(context)->GSSetShaderResources(0, data.size(), data.data());
+			get_native_context(context)->GSSetShaderResources(0, static_cast<UINT>(data.size()), data.data());
             changed = false;
 		}
 		else

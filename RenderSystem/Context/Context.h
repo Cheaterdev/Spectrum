@@ -1,4 +1,4 @@
-
+#include "../Renderer/Signature.h"
 class camera;
 class debug_drawer;
 class vertex_transform;
@@ -78,7 +78,7 @@ namespace Render
 
 
 }
-
+using namespace Render;
 struct MeshRenderContext;
 class MaterialProvider
 {
@@ -108,7 +108,6 @@ inline bool operator &(MESH_TYPE a, MESH_TYPE b)
 {
 	return static_cast<int>(a) & static_cast<int>(b);
 }
-
 
 struct MeshRenderContext
 {
@@ -190,7 +189,9 @@ struct MeshRenderContext
             }*/
         void set_nodes_buffer(Render::FrameResource& resource)
         {
-            list->get_graphics().set_srv(8, resource);
+			GPUMeshSignature<Signature> signature(&list->get_graphics());
+
+          //  list->get_graphics().set_srv(8, resource);
         }
         /*  template<class T>
           void set_mesh_const_buffer(const T& buffer)
@@ -201,7 +202,9 @@ struct MeshRenderContext
         */
         void set_mesh_const_data(unsigned int node_index)
         {
-            list->get_graphics().set_constants(2, node_index);
+         //   list->get_graphics().set_constants(2, node_index);
+			GPUMeshSignature<Signature> signature(&list->get_graphics());
+
         }
         /* void set_material_const_buffer(Render::BufferBase::ptr buffer)
          {
@@ -217,30 +220,44 @@ struct MeshRenderContext
 
         void set_material_const_buffer(Render::GPUBuffer::ptr buffer)
         {
-            list->get_graphics().set_const_buffer(0, buffer);
+  //          list->get_graphics().set_const_buffer(0, buffer);
+
+			GPUMeshSignature<Signature> signature(&list->get_graphics());
+			signature.mat_const = buffer;
         }
 
         void set_material_tess_buffer(Render::GPUBuffer::ptr buffer)
         {
-            list->get_graphics().set_const_buffer(1, buffer);
+       //     list->get_graphics().set_const_buffer(1, buffer);
+			GPUMeshSignature<Signature> signature(&list->get_graphics());
+			signature.mat_const_tess = buffer;
         }
         void set_material_textures(std::vector<Render::Handle> table)
         {
-            list->get_graphics().get_desc_manager().set(2,0, table);
-        }
+			GPUMeshSignature<Signature> signature(&list->get_graphics());
+       //     list->get_graphics().get_desc_manager().set(2,0, table);
+			signature.mat_textures = table;
+		}
 
         void set_material_unordered(Render::HandleTable& table)
         {
-            list->get_graphics().set_dynamic(6,0, table);
+			GPUMeshSignature<Signature> signature(&list->get_graphics());
+			//    list->get_graphics().set_dynamic(6,0, table);
+	
+
         }
         void set_frame_data(Render::FrameResource& resource)
         {
-            list->get_graphics().set(6, resource);
+			GPUMeshSignature<Signature> signature(&list->get_graphics());
+			// list->get_graphics().set_const_buffer(6, resource);
+			signature.camera_info = resource;
         }
 
         void set_uav(const Render::HandleTable& table)
-        {
-            list->get_graphics().set_dynamic(9,0, table);
+		{
+			GPUMeshSignature<Signature> signature(&list->get_graphics());
+			//             list->get_graphics().set_dynamic(9,0, table);
+			signature.voxel_output[0] = table;
         }
 
         /*   template<class T>
@@ -250,7 +267,7 @@ struct MeshRenderContext
            }*/
         void set_frame_data(const D3D12_GPU_VIRTUAL_ADDRESS& buffer)
         {
-            list->get_graphics().set_const_buffer(0, buffer);
+           // list->get_graphics().set_const_buffer(0, buffer);
         }
 
 };

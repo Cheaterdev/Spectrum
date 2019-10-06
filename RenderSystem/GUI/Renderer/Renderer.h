@@ -1,42 +1,22 @@
 namespace GUI
 {
-    /*
-    #define ELEMENTS_LIST\
-    X(check_box)\
-    X(scroll_bar)\
-    X(list_element)\
-    X(menu_list_element)\
-    X(combo_box)\
-    X(image)\
-    X(edit_text)\
-    X(edit_cursor)
-    */
-#define ELEMENTS_LIST_FLOW
 
-    /*\
-    X(component_window)\
-    X(canvas)\
-    X(link_item)\
-    X(comment)
+	template <class T>
+	struct UISignature : public T
+	{
+		using T::T;
 
-    */
-    /*  struct SimpleData2 : public RenderData
-      {
-          struct v_c_b
-          {
-              vec2 p1;
-              vec2 p2;
-          };
+		typename T::template ConstBuffer	<0, Render::ShaderVisibility::VERTEX, 0>									vertex_const_buffer = this;
+		typename T::template ConstBuffer	<1, Render::ShaderVisibility::PIXEL, 0>										pixel_const_buffer = this;
+		typename T::template Table			<2, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 5>	pixel_strange = this;
+		typename T::template Table			<3, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SAMPLER, 0, 3>pixel_samples = this;
+		typename T::template ConstBuffer	<4, Render::ShaderVisibility::GEOMETRY, 0>									geometry_data = this;
+		typename T::template SRV			<5, Render::ShaderVisibility::VERTEX, 0, 1>									vertex_buffer = this;
+		typename T::template SRV			<6, Render::ShaderVisibility::VERTEX, 1, 1>									instance_buffer = this;
+		typename T::template Table			<7, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 1, 1>	pixel_textures = this;
+	};
 
-          struct p_c_b
-          {
-              vec4 size;
-          };
 
-          BUILD_BUFFERS(SimpleData2);
-      };
-
-    */
     class NinePatch
     {
             struct Vertex
@@ -50,7 +30,6 @@ namespace GUI
            Render::PipelineState::ptr state;
 		   std::vector<Vertex> vertexes;
 
-		  // std::vector<std::uint32_t> textures_offsets;
 		   std::vector<Render::Handle> textures_handles;
 
 		   std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
@@ -72,7 +51,6 @@ namespace GUI
 
             };
 
-            //     Render::VertexBuffer<Vertex>::ptr vertex_buffer;
 
             Render::PipelineState::ptr state;
             std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
@@ -87,24 +65,11 @@ namespace GUI
             void draw(Render::context& c, float4 color, rect r);
     };
 
-    class Renderer //: public renderer_base<base, SimpleData>
+    class Renderer 
     {
-
-
-
-
-            //     Render::PipelineState::ptr color_state;
+       
             Render::HandleTable sampler_table;
 
-            /*
-
-            #define X(x) GUI::Elements::x::renderer::ptr x##_renderer;
-            ELEMENTS_LIST
-            #undef X
-            	*/
-#define X(x) GUI::Elements::FlowGraph::x::renderer::ptr flow_##x##_renderer;
-            ELEMENTS_LIST_FLOW
-#undef X
             NinePatch::ptr nine_patch;
             SimpleRect::ptr simple_rect;
 
@@ -126,14 +91,6 @@ namespace GUI
             void draw_virtual(base::ptr obj, Render::context& c);
             void draw_color(Render::context& c, float4 color, rect r);
 			void flush(Render::context& c);
-            /*
-            #define X(x) 	void draw(Elements::x * obj, Render::context &c) {x##_renderer->draw(obj, c);}
-                        ELEMENTS_LIST
-            #undef X
-            */
-#define X(x) 	void draw(Elements::FlowGraph::x * obj, Render::context &c) {flow_##x##_renderer->draw(obj, c);}
-            ELEMENTS_LIST_FLOW
-#undef X
 
             void draw(Render::context& c, GUI::Texture& item, rect r);
             void draw(Render::context& c, Render::PipelineState::ptr& state, rect r);

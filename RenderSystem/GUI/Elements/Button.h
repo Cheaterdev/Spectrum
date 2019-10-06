@@ -23,7 +23,7 @@ namespace GUI
 
                 using ptr = s_ptr<button>;
                 using wptr = w_ptr<button>;
-                std::function<void(ptr)> on_click;
+               Events::Event<ptr> on_click;
                 view_style background_style = view_style::DEFAULT;
                 click_styles click_style = click_styles::DEFAULT;
                 Skin::Button skin;

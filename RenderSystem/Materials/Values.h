@@ -442,7 +442,7 @@ class VectorNode : public MaterialNode
 
         VectorNode();
     public:
-        using ptr = s_ptr<PowerNode>;
+        using ptr = s_ptr<VectorNode>;
 
         VectorNode(vec4 value);
 

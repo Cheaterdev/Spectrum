@@ -350,8 +350,8 @@ namespace GUI
             {
                 if (childs.size())
                 {
-                    float min_x = childs[0]->get_render_bounds().x - padding->left * scale - childs[0]->margin->left * scale;
-                    float max_x = childs[0]->get_render_bounds().x + childs[0]->get_render_bounds().w + padding->right * scale + childs[0]->margin->right * scale;
+					std::optional<float> min_x;
+					std::optional<float> max_x;
 
                     for (auto && c : childs)
                     {
@@ -361,11 +361,20 @@ namespace GUI
 
                         if (c->width_size == size_type::SQUARE && c->height_size == size_type::SQUARE) continue;
 
-                        min_x = std::min(min_x, c->get_render_bounds().x - padding->left * scale - c->margin->left * scale);
-                        max_x = std::max(max_x, c->get_render_bounds().x + c->get_render_bounds().w + c->margin->right * scale + padding->right * scale);
-                    }
 
-                    new_size.x = (max_x - min_x) / scale;
+						float current_min = c->get_render_bounds().x - padding->left * scale - c->margin->left * scale;
+						float current_max = c->get_render_bounds().x + c->get_render_bounds().w + c->margin->right * scale + padding->right * scale;
+
+
+
+						min_x = min_x ? std::min(*min_x, current_min) : current_min;
+						max_x = max_x ? std::max(*max_x, current_max) : current_max;
+					}
+
+					if (max_x&&min_x)
+						new_size.x = (*max_x - *min_x) / scale;
+					else
+						new_size.x = 0;
 
                     if (parent && width_size == size_type::MATCH_PARENT_CHILDREN) new_size.x = std::max(new_size.x, parent->get_render_bounds().w/scale);
                 }
@@ -381,8 +390,8 @@ namespace GUI
             {
                 if (childs.size())
                 {
-                    float min_y = childs[0]->get_render_bounds().y - padding->top * scale - childs[0]->margin->top * scale;
-                    float max_y = childs[0]->get_render_bounds().y + childs[0]->get_render_bounds().h + padding->bottom * scale + childs[0]->margin->bottom * scale;
+					std::optional<float> min_y;
+					std::optional<float> max_y;
 
                     for (auto && c : childs)
                     {
@@ -391,12 +400,19 @@ namespace GUI
                         if (c->height_size == size_type::MATCH_PARENT) continue;
 
                         if (c->height_size == size_type::SQUARE && c->width_size == size_type::SQUARE) continue;
+						
+						float current_min = c->get_render_bounds().y - padding->top * scale - c->margin->top * scale;
+						float current_max = c->get_render_bounds().y + c->get_render_bounds().h + padding->bottom * scale + c->margin->bottom * scale;
 
-                        min_y = std::min(min_y, c->get_render_bounds().y - padding->top * scale - c->margin->top * scale);
-                        max_y = std::max(max_y, c->get_render_bounds().y + c->get_render_bounds().h + padding->bottom * scale + c->margin->bottom * scale);
+
+                        min_y = min_y?std::min(*min_y, current_min): current_min;
+                        max_y = max_y?std::max(*max_y, current_max) : current_max;
                     }
 
-                    new_size.y = (max_y - min_y) / scale;
+					if (max_y&&min_y)
+						new_size.y = (*max_y - *min_y) / scale;
+					else
+						new_size.y = 0;
 
                     if (parent && height_size == size_type::MATCH_PARENT_CHILDREN) new_size.y = std::max(new_size.y, parent->get_render_bounds().h / scale);
                 }
@@ -1223,28 +1239,47 @@ namespace GUI
         exit_window->size = { 250, 100 };
         exit_window->minimal_size = { 250, 100 };
         exit_window->width_size = size_type::FIXED;
-        exit_window->height_size = size_type::FIXED;
+        exit_window->height_size = size_type::MATCH_CHILDREN;
+		exit_window->contents->docking = dock::TOP;
+		exit_window->contents->height_size = size_type::MATCH_CHILDREN;
         exit_window->set_title(title);
         exit_window->pos = ivec2(size.get() / 2 - vec2(exit_window->size.get()) / 2);
         GUI::Elements::label::ptr info_text(new GUI::Elements::label());
         info_text->docking = dock::TOP;
         info_text->text = text;
         info_text->margin = { 10, 10, 10, 10 };
-        exit_window->add_child(info_text);
+	    exit_window->add_child(info_text);
+
+		base::ptr bottom_row = std::make_shared<base>();
+		
+		bottom_row->docking = dock::TOP;
+		bottom_row->width_size = size_type::MATCH_CHILDREN;
+		bottom_row->size = { 75, 25 };
+		bottom_row->margin = {10,10,10,10};
+		bottom_row->height_size = size_type::FIXED;
+		exit_window->add_child(bottom_row);
+
         GUI::Elements::button::ptr yes(new GUI::Elements::button());
         yes->get_label()->text = "OK";
         yes->size = { 75, 25 };
-        yes->margin = { 30, 0, 0, 0 };
+        yes->margin = { 10, 0, 10, 0 };
         yes->on_click = [result](GUI::Elements::button::ptr) {  result(true); };
         yes->docking = dock::LEFT;
-        exit_window->add_child(yes);
+
+
+		bottom_row->add_child(yes);
         GUI::Elements::button::ptr no(new GUI::Elements::button());
         no->get_label()->text = "Cancel";
         no->size = { 75, 25 };
         no->on_click = [result](GUI::Elements::button::ptr) { result(false); };;// std::bind([](std::shared_ptr<std::promise<bool>> pr){pr->set_value(false); }, pr);
-        no->docking = dock::RIGHT;
-        no->margin = { 0, 0, 30, 0 };
-        exit_window->add_child(no);
+        no->docking = dock::LEFT;
+        no->margin = { 10, 0, 10, 0 };
+
+		bottom_row->add_child(no);
+
+		exit_window->close_button->on_click = [result](GUI::Elements::button::ptr) {
+			result(false);
+		};
         run_on_ui([this, exit_window]()
         {
             back->to_front();

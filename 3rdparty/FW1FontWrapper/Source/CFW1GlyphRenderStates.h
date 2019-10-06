@@ -8,7 +8,22 @@
 
 namespace FW1FontWrapper
 {
+	using namespace Render;
 
+	template <class T>
+	struct FontSignature : public T
+	{
+		using T::T;
+
+		typename T::template ConstBuffer	<0, Render::ShaderVisibility::GEOMETRY, 0>									geometry = this;
+		typename T::template Table			<1, Render::ShaderVisibility::GEOMETRY, Render::DescriptorRange::SRV, 0, 1>	geometry_data = this;
+		typename T::template Table			<2, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 1>	pixel_data = this;
+		typename T::template Table			<3, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SAMPLER, 0, 1>	pixel_sampler = this;
+
+		//constexpr typename T::SRV_2 srv = { 0,  Render::ShaderVisibility::PIXEL, 0_offset };
+	};
+
+	using FontSig = SignatureTypes<FontSignature>;
 
     // Shader etc. needed to draw glyphs
     class CFW1GlyphRenderStates : public CFW1Object<IFW1GlyphRenderStates>, protected DX11::NativeContextAccessor
@@ -65,13 +80,11 @@ namespace FW1FontWrapper
             Render::HandleTable pixel_sampler_table;
 
 
-            Render::PipelineState::ptr geometry_state;
-            Render::PipelineState::ptr geometry_state_clip;
+			FontSig::Pipeline::ptr geometry_state;
+			FontSig::Pipeline::ptr geometry_state_clip;
 
-            Render::RootSignature::ptr root_signature;
+			FontSig::RootSignature::ptr root_signature;
 
-
-            //   Render::Buffer<ShaderConstants>::ptr m_pConstantBuffer;
             bool							m_hasGeometryShader;
 
 

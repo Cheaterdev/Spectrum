@@ -169,7 +169,7 @@ PS_RESULT universal(vertex_output i, float4 albedo, float metallic,float roughne
    // clip(albedo.a - 0.2);  
     bump.xyz = normalize(bump.xyz * 2.0 - 1.0);
     //float3 bump = xy.x > 0 ? normalize(tex_normal.Sample(point_sampler, i.tc).xyz * 2.0 - 1.0) : float3(0, 0, 1);
-	float3 normal =  normalize(bump.x * i.tangent - bump.y * i.binormal + 1 * bump.z * i.normal);
+	float3 normal =  normalize(-bump.x * i.tangent + bump.y * i.binormal + bump.z * i.normal);
     //  normal = i.normal;
     //  float bump_len = length(bump);
 //   if (isinf(normal))

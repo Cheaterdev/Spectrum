@@ -4,7 +4,7 @@ namespace DX12
 {
 
 
-	class GPUBuffer: public Resource
+	class  GPUBuffer : public Resource
 	{
 		protected:
 			GPUBuffer() = default;
@@ -81,7 +81,7 @@ namespace DX12
 			{
 				auto list = Device::get().get_upload_list();
 				list->transition(this, ResourceState::COPY_DEST);
-				list->update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), v.size() * sizeof(T));
+				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 				list->transition(this,  ResourceState::COMMON);
 				list->end();
 				list->execute();
@@ -92,7 +92,7 @@ namespace DX12
 			{
 				auto list = Device::get().get_upload_list();
 				list->transition(this,  ResourceState::COPY_DEST);
-				list->update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
+				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 				list->transition(this, ResourceState::COMMON);
 				list->end();
 				list->execute();
@@ -102,21 +102,21 @@ namespace DX12
 			void set_data(DX12::CommandList::ptr& list, std::vector<T>& v)
 			{
 				list->transition(this, ResourceState::COPY_DEST);
-				list->update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), v.size() * sizeof(T));
+				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
 			template<class T>
 			void set_data(DX12::CommandList::ptr& list, const T&v)
 			{
 				list->transition(this, ResourceState::COPY_DEST);
-				list->update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
+				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
 			template<class T>
 			void set_data(DX12::CommandList::ptr& list, UINT offset, const T* data, UINT size)
 			{
 				list->transition(this, ResourceState::COPY_DEST);
-				list->update_buffer(this, offset, reinterpret_cast<const char*>(data), size * sizeof(T));
+				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(data), size * sizeof(T));
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
 
@@ -141,7 +141,7 @@ namespace DX12
 					std::string data;
 					auto list = Device::get().get_upload_list();
 					list->transition(this, ResourceState::COPY_SOURCE);
-					auto task =  list->read_buffer(this, 0, get_size(), [&data](const char* mem,  UINT64 size)
+					auto task =  list->get_copy().read_buffer(this, 0, get_size(), [&data](const char* mem,  UINT64 size)
 					{
 						data.assign(mem, mem + size);
 					});
@@ -239,7 +239,7 @@ namespace DX12
 			void set_data(DX12::CommandList::ptr& list, const T&v)
 			{
 				list->transition(this, ResourceState::COPY_DEST);
-				list->update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
+				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
 
@@ -280,7 +280,7 @@ namespace DX12
 			void set_data(DX12::CommandList::ptr& list, unsigned int offset, const  std::vector<T>& v)
 			{
 				list->transition(this, ResourceState::COPY_DEST);
-				list->update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), v.size() * sizeof(T));
+				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 				list->transition(this, ResourceState::COMMON);
 			}
 
@@ -324,7 +324,7 @@ namespace DX12
 
 			explicit IndexBuffer(UINT size);
 			template<class T>
-			explicit IndexBuffer(const std::vector<T>& v) : GPUBuffer(v.size(), sizeof(T))
+			explicit IndexBuffer(const std::vector<T>& v) : GPUBuffer(static_cast<UINT>(v.size()), sizeof(T))
 			{
 				set_data(0, v);
 			}
@@ -332,7 +332,7 @@ namespace DX12
 			void set_data(DX12::CommandList::ptr& list, unsigned int offset, const  std::vector<T>& v)
 			{
 				list->transition(this,  ResourceState::COPY_DEST);
-				list->update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), v.size() * sizeof(T));
+				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 				list->transition(this,  ResourceState::COMMON);
 			}
 
@@ -722,7 +722,7 @@ namespace DX12
 	inline void StructuredBuffer<T>::set_data(DX12::CommandList::ptr & list, unsigned int offset, std::vector<T>& v)
 	{
 		list->transition(this,ResourceState::COPY_DEST);
-		list->update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), v.size() * sizeof(T));
+		list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), v.size() * sizeof(T));
 		list->transition(this,  ResourceState::COMMON);
 	}
 	template<class T>

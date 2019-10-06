@@ -1,5 +1,5 @@
 
-
+#include "Common.hlsl"
 struct quad_output
 {
 	float4 pos : SV_POSITION;
@@ -31,20 +31,6 @@ quad_output VS(uint index : SV_VERTEXID)
 
 
 
-
-struct camera_info
-{
-	matrix view;
-	matrix proj;
-	matrix view_proj;
-	matrix inv_view;
-	matrix inv_proj;
-	matrix inv_view_proj;
-	float3 position;
-	float3 direction;
-};
-
-
 cbuffer cbCamera : register(b0)
 {
 	camera_info camera;
@@ -54,20 +40,6 @@ cbuffer cbEffect : register(b1)
 {
 	float time;
 };
-
-
-float3 depth_to_wpos(float d, float2 tc, matrix mat)
-{
-	float4 P = mul(mat, float4(tc * float2(2, -2) + float2(-1, 1), d, 1));
-	return P.xyz / P.w;
-}
-
-float3 depth_to_wpos_center(float d, float2 tc, matrix mat)
-{
-	float4 P = mul(mat, float4(tc, d, 1));
-	return P.xyz / P.w;
-}
-
 float3 project_tc(float3 pos, matrix mat)
 {
 	float4 res = mul(mat, float4(pos, 1));
@@ -76,21 +48,18 @@ float3 project_tc(float3 pos, matrix mat)
 }
 
 Texture2D<float4> gbuffer[3] : register(t0);
-Texture2D<float> depth_buffer : register(t3);
+Texture2D<float> depth_buffer_old : register(t3);
 Texture2D<float4> dist_buffer : register(t4);
 Texture2D<float4> light_buffer: register(t5);
+
+Texture2D<float4> depth_buffer: register(t7);
 
 RWTexture2D<float4> result: register(u0);
 //groupshared float4 shared_mem[SIZE][SIZE];
 SamplerState LinearSampler : register(s0);
 SamplerState PixelSampler : register(s1);
 
-float calc_fresnel(float k0, float3 n, float3 v)
-{
-	float ndv = saturate(dot(n, -v));
-	return k0 + (1 - k0) * pow(1 - ndv, 5);
-	return k0 + (1 - k0) * (1 - pow(dot(n, -v), 1));
-}
+
 
 float calc_vignette(float2 inTex)
 {
@@ -104,167 +73,168 @@ float rnd(float2 uv)
 	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
 }
 
+float2 cell(float2 ray, float2 cell_count, uint camera) {
+	return floor(ray.xy * cell_count);
+}
+
+float2 cell_count(float2 input_texture2_size, float level) {
+	return input_texture2_size / (level == 0.0 ? 1.0 : exp2(level));
+}
+
+float3 intersect_cell_boundary(float3 pos, float3 dir, float2 cell_id, float2 cell_count, float2 cross_step, float2 cross_offset, uint camera) {
+	float2 cell_size = 1.0 / cell_count;
+	float2 planes = cell_id / cell_count + cell_size * cross_step;
+
+	float2 solutions = (planes - pos) / dir.xy;
+	float3 intersection_pos = pos + dir * min(solutions.x, solutions.y);
+
+	intersection_pos.xy += (solutions.x < solutions.y) ? float2(cross_offset.x, 0.0) : float2(0.0, cross_offset.y);
+
+	return intersection_pos;
+}
+
+bool crossed_cell_boundary(float2 cell_id_one, float2 cell_id_two) {
+	return (int)cell_id_one.x != (int)cell_id_two.x || (int)cell_id_one.y != (int)cell_id_two.y;
+}
+
+float minimum_depth_plane(float2 ray, float level, float2 cell_count, uint _camera) {
+
+	float raw_z = depth_buffer.Load(int3(ray.xy * cell_count, level)).r;
+	return raw_z;
+	float3 pos = depth_to_wpos(raw_z, ray.xy, camera.inv_proj);
+
+	return pos.z;
+}
+#define HIZ_START_LEVEL 0
+#define HIZ_STOP_LEVEL 0
+#define MAX_ITERATIONS 32
+#define HIZ_MAX_LEVEL 8
+#define depth_threshold 0.1
+float3 hi_z_trace(float3 p, float3 v, out uint iterations) {
+	float level = HIZ_START_LEVEL;
+	float3 v_z = v / v.z;
+	float2 dims;
+	uint camera = 0;
+	depth_buffer.GetDimensions(dims.x, dims.y);
+
+	float2 hi_z_size = cell_count(dims, level);
+	float3 ray = p;
+
+	float2 cross_step = float2(v.x >= 0.0 ? 1.0 : -1.0, v.y >= 0.0 ? 1.0 : -1.0);
+	float2 cross_offset = cross_step * 0.001;
+	cross_step = saturate(cross_step);
+
+	float2 ray_cell = cell(ray.xy, hi_z_size.xy, camera);
+	ray = intersect_cell_boundary(ray, v, ray_cell, hi_z_size, cross_step, cross_offset, camera);
+
+	iterations = 0;
+	while (level >= HIZ_STOP_LEVEL && iterations < MAX_ITERATIONS&&all(ray<1) && all(ray >0)) {
+		// get the cell number of the current ray
+		float2 current_cell_count = cell_count(dims, level);
+		float2 old_cell_id = cell(ray.xy, current_cell_count, camera);
+
+		// get the minimum depth plane in which the current ray resides
+		float min_z = minimum_depth_plane(ray.xy, level, current_cell_count, camera);
+
+		// intersect only if ray depth is below the minimum depth plane
+		float3 tmp_ray = ray;
+		if (v.z > 0) {
+			float min_minus_ray = min_z - ray.z;
+			tmp_ray = min_minus_ray > 0 ? ray + v_z * min_minus_ray : tmp_ray;
+			float2 new_cell_id = cell(tmp_ray.xy, current_cell_count, camera);
+			if (crossed_cell_boundary(old_cell_id, new_cell_id)) {
+				tmp_ray = intersect_cell_boundary(ray, v, old_cell_id, current_cell_count, cross_step, cross_offset, camera);
+				level = min(HIZ_MAX_LEVEL, level + 2.0f);
+			}
+			else {
+				if (level == HIZ_START_LEVEL && min_minus_ray > depth_threshold) {
+					tmp_ray = intersect_cell_boundary(ray, v, old_cell_id, current_cell_count, cross_step, cross_offset, camera);
+					level = HIZ_START_LEVEL + 1;
+				}
+			}
+		}
+		else if (ray.z < min_z) {
+			tmp_ray = intersect_cell_boundary(ray, v, old_cell_id, current_cell_count, cross_step, cross_offset, camera);
+			level = min(HIZ_MAX_LEVEL, level + 2.0f);
+		}
+
+		ray.xyz = tmp_ray.xyz;
+		--level;
+
+		++iterations;
+	}
+	return ray;
+}
 
 float4 PS(quad_output i) : SV_TARGET0
 {
 	float2 dims;
-	gbuffer[0].GetDimensions(dims.x, dims.y);
-	//i.tc-=float2(0.5,0.5)/dims;
-		float level = 0;
+depth_buffer.GetDimensions(dims.x, dims.y);
+	float roughness = gbuffer[1].SampleLevel(PixelSampler, i.tc, 0).w;
+	float raw_z = depth_buffer.SampleLevel(PixelSampler, i.tc,0);
+	if (raw_z == 1) return 0;
+	float3 pos = depth_to_wpos(raw_z, i.tc, camera.inv_proj);
+//	float3 wpos = depth_to_wpos(raw_z, i.tc, camera.inv_view_proj);
 
-		// float4 albedo = gbuffer[0].SampleLevel(PixelSampler, i.tc, 0);
-		 float3 normal = normalize(gbuffer[1].SampleLevel(PixelSampler, i.tc, level).xyz * 2 - 1);
-		 //	float4 specular = gbuffer[1].SampleLevel(PixelSampler, i.tc, 0).w;
-			// specular.w = 1;
+	float3 normal = mul((float3x3)camera.view, normalize(gbuffer[1].SampleLevel(PixelSampler, i.tc, 0).xyz * 2 - 1));
 
+	float3 V = -normalize(pos);
+	//return float4(V, 1);
 
-			 float raw_z = depth_buffer.SampleLevel(PixelSampler, i.tc, level);
-			 if (raw_z == 1) return 0;
-			 float3 pos = depth_to_wpos(raw_z, i.tc,   camera.inv_view_proj);
-			 float3 v = -normalize(camera.position - pos);
-			 float len = length(camera.position - pos);
-			 //   float fresnel = calc_fresnel(specular.w, normal, v);
+	float sini = sin(time * 220 + float(i.tc.x));
+	float cosi = cos(time * 220 + float(i.tc.y));
+	float rand = rnd(float2(sini, cosi));
+	float rand2 = rnd(float2(cosi, sini));
 
-				float3 r = reflect(v, normal);
+	float rcos = cos(6.14*rand);
+	float rsin = sin(6.14*rand);
 
-				//r+=0.005*normal*pow(fresnel,0.25);//*(1-specular.w);
-					//r=normalize(r);
-					float3 refl_pos = pos;
-					// float sini = sin(time * 220 + float(i.tc.x));
-					// float cosi = cos(time * 220 + float(i.tc.y));
-					 //float rand = rnd(float2(sini, cosi));
-					 //float rand2 = rnd(float2(cosi, sini));
+	float2 Xi = hammersley2d(rand * 1000, 1000);
+	float PDF;
+	float3 H = ImportanceSampleGGXPdf(Xi, roughness, normal, PDF);
+	float3 L = 2 * dot(V, H) * H - V;
+	float3 r = L;// reflect(v, normal);
 
-					 //float rcos = cos(6.14*rand);
-					 //float rsin = sin(6.14*rand);
+	if (dot(r, normal) < 0)
+		r = normalize(r+normal);
+//	pos -= V * 0.3;
+//	float3 r = normalize(reflect(-V, normal));
+//	return float4(pos.zzz/30,1);
 
-					 //float3 right = normalize(cross(r, float3(0, 1, 0.1)));
-					 //float3 tangent = normalize(cross(right, r));
+	//return float4(r, 1);
 
-
-					 //r += rand2*specular.w*(tangent*rsin + right*rcos);
-
-					 r = normalize(r);
-					 float errorer = distance(camera.position, pos) / 10;
-
-					 float orig_dist = distance(camera.position, pos);
-
-
-					 float start_offset = orig_dist / 100;
-
-					// float error = orig_dist/
-					 float dist = start_offset/1; //lerp(10,20,1-fresnel);
-
-					 float raw_z_reflected = 0;
-					 float3 reflect_tc = float3(i.tc, raw_z);
-
-
-					 float delta = 0.1;
-					 bool direction = true;
-					 bool hit = false;
-					 for (int i = 0; i < 120; i++)
-					 {
-
-						 float3 cur_pos = pos + dist * r;
-						 reflect_tc = project_tc(cur_pos, camera.view_proj);
-						 raw_z_reflected = depth_buffer.SampleLevel(PixelSampler, reflect_tc.xy, level).x;
-						 refl_pos = depth_to_wpos(raw_z_reflected, float2(reflect_tc.xy), camera.inv_view_proj);
+	float3 posr = pos +normalize(r);
+	float3 pss = float3(i.tc, raw_z);// pos.z);
+	float4 pcs = mul(camera.proj,float4(posr,1));
+	float3 pss_ = pcs.xyz / pcs.w;
+	pss_.xy = pss_.xy * float2(0.5, -0.5) + float2(0.5, 0.5); 
+	
+	//pss_.z = posr.z;
+	uint iters = 0;
+	float3 ftc = hi_z_trace(pss, (pss_- pss), iters);
 
 
 
-						 if (raw_z_reflected < reflect_tc.z&&length(refl_pos - cur_pos) < start_offset)
-						 {
+	{
+		float raw_z2 = depth_buffer.SampleLevel(PixelSampler, ftc, 0);
+		 if (raw_z2 == 1) return 0;
+		float3 rpos = depth_to_wpos(raw_z2, ftc, camera.inv_proj);
 
-							 
-							hit = true;
+		if (any(ftc.x > 1)) return 0;
+		if (any(ftc.x <0)) return 0;
+		float3 delta = (rpos - pos);
 
-							if (!direction) delta /= 2;
-							dist -= delta;
-							direction = true;
-							 
-							//break;
-							 //delta /= 2;
-						 }
-						 else
-						 {
-							 if (!hit) delta = delta * 1.042;// min(delta * 2, 1);
-							 if (direction) delta /= 2;
-							 direction = false;
+		float dist = length(delta);
+		bool good = (dot(delta / dist, normalize(r)) > 0.9);// *(saturate(1 - dist / 5));
+	//	if (!good) return 0;
+		return float4(ftc.xy, good? dist :0, PDF);
+	
+	}
+	//float2 ftc = project_tc(ray, camera.proj);
 
-							 dist += delta;
-						 }
-						 //else
-						 //	dist += 0.5;
-
-
-						 // distance(pos, refl_pos);
-
-
-					 //	if(raw_z_reflected)
-					 //	 level = clamp(dist/8, 0, 5);
-						 /*if(raw_z_reflected<raw_z)
-						 {/
-						 dist*=3;
-						 level*=2;
-						 }	//level=12;*/
-					 }
-
-					 /**/
-
-					 //if (dot(v, r) < 0.5)
-					 {
-						 //dist = orig_dist /2;
-					 }
-					 for (int i = 0; i < -18; i++)
-					 {
-						 reflect_tc = project_tc(pos + dist * r, camera.view_proj);
-						 raw_z_reflected = depth_buffer.SampleLevel(LinearSampler, reflect_tc.xy, level).x;
-						 refl_pos = depth_to_wpos(raw_z_reflected, float2(reflect_tc.xy), camera.inv_view_proj);
-						 dist = distance(pos, refl_pos);
-						 // level = clamp(8 * dist * (1 - fresnel) / orig_dist, 0, 5);
-
-					  }
-
-					  reflect_tc = project_tc(pos + dist * r, camera.view_proj);
-					  float3 delta_position = pos - refl_pos;
-					  float reflection_distance = distance(pos + dist * r, refl_pos);
-					  float  dist2 = distance(pos, refl_pos);
-
-
-
-					  float vignette = calc_vignette(reflect_tc);
-					  float bad = 1;// pow(saturate((dot(r, -delta_position) / dist2)), 264);
-					    bad *= saturate(1 - 2 * reflection_distance / errorer);
-					// bad *= saturate(1-dot(v,r));
-					 bad *= (raw_z_reflected < 1);
-
-
-					 //dist += (1-bad) * 100;
-				 //	bad *= saturate(1-8*abs(dist-dist2));
-					// level +=  8 * saturate(1 - 1 * bad);
-
-
-				   ///  float4 reflect_color = light_buffer.SampleLevel(LinearSampler, reflect_tc, 6*dist);
-					 //float3 reflect_normal = normalize(gbuffer[1].SampleLevel(LinearSampler, reflect_tc, 0).xyz*2-1);
-
-
-
-					 //float4 res = 0 ;
-
-					 //return reflect_color;
-					// float lerper = 1 - reflect_color.w * pow(0.9, (1 - bad) * 32);
-
-					 //float3 direct = vignette * reflect_color.xyz *( bad);// pow(0.9, (1 - bad) * 32);
-
-
-					 //bad *= saturate(0.5+0.5*dot(-reflect_normal.xyz,normal.xyz));
-					 //float3 indirect = 0;// cube_probe.SampleLevel(LinearSampler, r, (1 - fresnel) * 8.0f);
-					 //res.xyz = fresnel*direct;// lerp(direct, indirect, lerper);
-
-				  //   res.xyz += ambient_texture.SampleLevel(LinearSampler, reflect_tc, level);
-					   // res =1;
-					 return float4(dist, raw_z_reflected, raw_z, bad);// float4(direct.xyz, bad);
 }
+	//return float4(minimum_depth_plane(i.tc,3, cell_count(dims, 3),3).xxx,1);
+
 
 
 
@@ -301,7 +271,7 @@ float4 PS_LAST(quad_output i) : SV_TARGET0
 		float w = 1;// saturate(1 - dist.x / 8);
 
 		//return float4(dist.xxx/18, 1);
-		return  float4(w*vignette*albedo.xyz*dist.w,0.1);
+		return  float4(normal, 1);// w*vignette*albedo.xyz*dist.w, 0.1);
 }
 
 

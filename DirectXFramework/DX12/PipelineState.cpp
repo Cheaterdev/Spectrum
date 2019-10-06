@@ -216,7 +216,7 @@ if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		//                psoDesc.InputLayout = inputLayoutDesc;
 		D3D12_INPUT_LAYOUT_DESC layout_desc;
-		layout_desc.NumElements = desc.layout.inputs.size();
+		layout_desc.NumElements = static_cast<UINT>(desc.layout.inputs.size());
 		layout_desc.pInputElementDescs = desc.layout.inputs.data();
 		psoDesc.InputLayout = layout_desc;
 
@@ -275,7 +275,7 @@ if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = desc.topology;
-		psoDesc.NumRenderTargets = desc.rtv.rtv_formats.size();
+		psoDesc.NumRenderTargets = static_cast<UINT>(desc.rtv.rtv_formats.size());
 
 		for (unsigned int i = 0; i < desc.rtv.rtv_formats.size(); i++)
 			psoDesc.RTVFormats[i] = desc.rtv.rtv_formats[i];
@@ -285,9 +285,9 @@ if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 		if(m_pipelineState)
 		Device::get().unused(m_pipelineState);
 
-		TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+ 		TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
-	 ComPtr<ID3D12PipelineState> PipelineState::get_native()
+	 ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
 	{
 		return m_pipelineState;
 	}
@@ -327,10 +327,7 @@ if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 
 		TEST(Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
-	 ComPtr<ID3D12PipelineState> ComputePipelineState::get_native()
-	{
-		return m_pipelineState;
-	}
+
 	 ComputePipelineState::~ComputePipelineState()
 	{
 		unregister_shader(desc.shader);
@@ -338,4 +335,11 @@ if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 		if (m_pipelineState)
 			Device::get().unused(m_pipelineState);
 	}
+
+
+
+	 std::shared_ptr<ComputePipelineState> ComputePipelineStateDesc::create()
+	 {
+		 return std::make_shared<Render::ComputePipelineState>(*this);
+	 }
 }

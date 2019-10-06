@@ -5,6 +5,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 	// return;
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
+	auto& list = *mesh_render_context->list;
+
 	//  std::list<MeshAssetInstance*> meshes;
 	instances_count = 0;
 	bool current_cpu_culling = use_cpu_culling && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
@@ -45,12 +47,14 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 	mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
 
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	GPUMeshSignature<Signature> signature(&graphics);
+
 	if (best_fit_normals)
-		graphics.set_dynamic(12, 0, best_fit_normals->get_texture()->texture_2d()->get_static_srv());
+		signature.best_fit[0]= best_fit_normals->get_texture()->texture_2d()->get_static_srv();
 
 	using render_list = std::map<int, std::vector<MeshAssetInstance::render_info>>;
 
-	
+
 	bool first = true;
 	auto mesh_func = [&](MeshAssetInstance * l)
 	{
@@ -114,12 +118,12 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 			}
 		}
 
-		auto nodes = l->node_buffer.get_for(*graphics.get_manager());
-		graphics.set_srv(14,nodes.resource->get_gpu_address()+ nodes.offset);
+		auto nodes = l->node_buffer.get_for(*list.get_manager());
+		signature.vertex_unknown = nodes.resource->get_gpu_address() + nodes.offset;
 		if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 		{
-			graphics.set_const_buffer(10, voxel_info);
-			graphics.set_const_buffer(11, voxel_info);
+			signature.vertex_consts_geometry.set_raw(voxel_info);
+			signature.vertex_consts_vertex.set_raw(voxel_info);
 		}
 			for (auto& p : rendering)
 			{
@@ -128,10 +132,13 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 					if (!mesh_render_context->override_material)
 						l->use_material(m.mesh->material, mesh_render_context);
 
-					graphics.set(4, l->mesh_asset->vertex_buffer->get_gpu_address());
+				//	graphics.set_srv(4, l->mesh_asset->vertex_buffer->get_gpu_address());
 					graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 					//graphics.set_const_buffer(5, nodes.resource->get_gpu_address() + nodes.offset + m.node_index * sizeof(decltype(l->node_buffer)::type));
-					graphics.set_constants(8,0, m.node_index);
+				//	graphics.set_constants(8,0, m.node_index);
+
+					signature.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();
+					signature.mat_texture_offsets.set(0, m.node_index);
 
 					mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, m.mesh->vertex_offset);
 				}
@@ -235,7 +242,7 @@ mesh_renderer::mesh_renderer(Scene::ptr scene)
 	}
 	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
-	Render::RootSignatureDesc root_desc;
+	/*Render::RootSignatureDesc root_desc;
 	root_desc[0] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::PIXEL); // material constants
 	root_desc[1] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::DOMAIN); // material constants
 	root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 32); // material textures
@@ -255,8 +262,8 @@ mesh_renderer::mesh_renderer(Scene::ptr scene)
 	//  root_desc[8] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 1, 1); // Occlusion visible buffer
 	root_desc.set_sampler(0, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerLinearWrapDesc);
 	root_desc.set_sampler(1, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerPointClampDesc);
-	root_desc.set_sampler(2, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerAnisoWrapDesc);
-	my_signature.reset(new Render::RootSignature(root_desc));
+	root_desc.set_sampler(2, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerAnisoWrapDesc);*/
+	my_signature = GPUMeshSignature<SignatureCreator>().create_root();// .reset(new Render::RootSignature(root_desc));
 	my_signature->set_unfixed(2);
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();

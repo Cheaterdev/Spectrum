@@ -48,7 +48,8 @@ TextureCube<float4> tex_cube : register(t0,space2);
 Texture2D<float2> speed_tex : register(t2, space2);
 Texture2D<float4> tex_color : register(t3, space2);
 //Texture2D<float4> tex_gi_prev : register(t4, space2);
-Texture2D<float4> tex_ray : register(t4, space2);
+Texture2D<float4> tex_ssr : register(t4, space2);
+Texture2D<float4> tex_downsampled: register(t5, space2);
 
 struct quad_output
 {
@@ -154,7 +155,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R)
 
 float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 {
-	return brdf.SampleLevel(LinearSamplerClamp, float3(Roughness, Metallic, NoV), 0);
+	return brdf.SampleLevel(LinearSamplerClamp, float3(Roughness, 0, 0.5 + 0.5*NoV), 0);
 }
 
 
@@ -162,11 +163,12 @@ float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 float3 get_PBR(float3 SpecularColor, float3 ReflectionColor, float3 N, float3 V, float Roughness, float Metallic)
 {
 	V *= -1;
-	float NoV = saturate(dot(N, V));
+	float NoV = dot(N, V);
+	//return NoV<0;
 //	float3 R = 2 * dot(V, N) * N - V;
 //	float3 PrefilteredColor = PrefilterEnvMap(Roughness, R);
 	float2 EnvBRDF = IntegrateBRDF(Roughness, Metallic, NoV);
-	return    ReflectionColor *(SpecularColor * EnvBRDF.x + EnvBRDF.y);
+	return     ReflectionColor *(Metallic*SpecularColor * EnvBRDF.x + EnvBRDF.y);
 }
 
 
@@ -178,10 +180,12 @@ float3 get_sky(float3 dir, float level)
 
 float4 trace_refl(float4 start_color, float3 view,  float3 origin,float3 dir, float3 normal, float angle)
 {
+	float orig_angle = angle;
+	angle = angle / 8;// pow(angle, 8);
 	//return 0;
 	float max_angle = saturate((3.14 / 2 - acos(dot(normal, dir))) / 3.14)/1;
-
-	float angle_bad = saturate(abs(angle - max_angle)-0.5);
+//
+	//float angle_bad = saturate(abs(angle - max_angle)-0.8);
 	//dir = normalize(dir+angle_bad*normal);
 
 	max_angle = saturate((3.14 / 2 - acos(dot(normal, dir))) / 3.14) / 1;
@@ -195,11 +199,11 @@ float4 trace_refl(float4 start_color, float3 view,  float3 origin,float3 dir, fl
 	//dir=normalize(lerp(dir,normal,angle_error));
 
 	origin = saturate(((origin + 12*scaler*normal*angle_error- (voxel_min)) / voxel_size));
-
+	angle = best_angle;
 	float3 samplePos = 0;
     float4 accum = start_color;
     // the starting sample diameter
-	float minDiameter = 1.0 / 1024;// *(1 + 4 * angle);
+	float minDiameter = lerp(1.0 / 2048, 1.0 / 512, pow(angle,1/4));// *(1 + 4 * angle);
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 	float maxDist = 1;
 	float dist = minDiameter;// +angle_error * minDiameter;// +angle*minDiameter / 2;// +16 * angle_bad*minDiameter;
@@ -226,9 +230,10 @@ float4 trace_refl(float4 start_color, float3 view,  float3 origin,float3 dir, fl
 
 //	accum.xyz *= angle_coeff;
 
-	float3 sky = get_sky( dir, angle);
+	float3 sky = get_sky( dir, orig_angle);
    float sampleWeight = saturate(max_accum - accum.w)/ max_accum;
-   accum.xyz += sky * pow(sampleWeight, 1);// *angle_coeff;
+   accum.xyz += sky *pow(sampleWeight, 1);// *angle_coeff;
+//   accum.w = 1;
    //accum.xyz = sky;
 		return accum;// / accum.w;
 }
@@ -263,7 +268,7 @@ float calc_vignette(float2 inTex)
 }
 
 
-float4 get_ssr2(float3 pos, float3 normal, float2 tc, float3 r, float angle, out float dist)
+float4 get_ssr3(float3 pos, float3 normal, float2 tc, float3 r, float angle, out float dist)
 {
 	dist = 0;
 	float2 dims;
@@ -318,14 +323,17 @@ float4 get_ssr2(float3 pos, float3 normal, float2 tc, float3 r, float angle, out
 
 	total_angle_left += num_good_samples * angle;
 	float total_pixels =  10 * angle;
-return  float4( saturate(total_angle_left/angle).xxx,1);
+//return  float4( saturate(total_angle_left/angle).xxx,1);
 
 	return float4(res.xyz/ w, 1-saturate(total_angle_left / angle));
 }
-float4 get_ssr3(float3 pos, float3 normal, float2 tc,float3 r, float angle, out float dist)
+float4 get_ssr(float3 pos, float3 normal, float2 tc,float3 r, float angle, out float dist)
 {
-	dist = 0;
-	return 0;
+	dist = 1;
+
+	float4 ssr = tex_ssr.SampleLevel(LinearSampler, tc, 0);
+	return ssr;// +float4(get_sky(r, angle), 1)*(1 - ssr.w);
+	return 1;
 	float3 refl_pos = pos;
 	float sini = sin(time * 220 + float(tc.x));
 	float cosi = cos(time * 220 + float(tc.y));
@@ -338,20 +346,29 @@ float4 get_ssr3(float3 pos, float3 normal, float2 tc,float3 r, float angle, out 
 	float3 right = normalize(cross(r, float3(0, 1, 0.1)));
 	float3 tangent = normalize(cross(right, r));
 
+	float3 V = -normalize(pos - camera.position);
 
-	r += 0.1*rand2*angle*(tangent*rsin + right*rcos)/4;
+	float2 Xi = hammersley2d(rand*100, 100);
+	float3 H = ImportanceSampleGGX(Xi, angle, normal);
+	float3 L = 2 * dot(V, H) * H - V;
+	float NoL = (L.z);
+	float NoH = saturate(H.z);
+	float VoH = saturate(dot(V, H));
 
-	r = normalize(r);
+	r = L;
+	//r += 0.1*rand2*angle*(tangent*rsin + right*rcos)/4;
+
+//	r = normalize(r);
 	float errorer = distance(camera.position, pos) / 1;
 
 	float orig_dist = distance(camera.position, pos);
-	dist = orig_dist/1 ; //lerp(10,20,1-fresnel);
+	dist = orig_dist/100 ; //lerp(10,20,1-fresnel);
 
 	float raw_z_reflected = 0;
 	float2 reflect_tc = tc;
 	float	level = 0;// clamp(angle * 32 * dist / orig_dist, 0, 8);
 
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 32; i++)
 	{
 		reflect_tc = project_tc(pos + dist * r, camera.view_proj);
 		raw_z_reflected = depth_buffer.SampleLevel(LinearSampler, reflect_tc, 0).x;
@@ -373,7 +390,7 @@ float4 get_ssr3(float3 pos, float3 normal, float2 tc,float3 r, float angle, out 
 	float reflection_distance = distance(pos + dist * r, refl_pos);
 	dist = distance(pos, refl_pos);
 	float vignette = calc_vignette(reflect_tc);
-	float bad = 1;// pow(saturate((dot(r, -delta_position) / dist)), 1);
+	float bad = pow(saturate((dot(r, -delta_position) / dist)), 1);
 
 	bad*= pow(saturate((dot(r, -delta_position) / dist)), 1);
 	bad *=saturate((dot(normal, -delta_position ) ))>0;
@@ -384,7 +401,7 @@ float4 get_ssr3(float3 pos, float3 normal, float2 tc,float3 r, float angle, out 
 	// level +=  8 * saturate(1 - 1 * bad);
 
 
-	float4 reflect_color = tex_color.SampleLevel(LinearSampler, reflect_tc,min(18*dist*angle, 8));
+	float4 reflect_color = tex_color.SampleLevel(LinearSampler, reflect_tc,0);
 	float4 res = 0;
 
 	//return reflect_color;
@@ -393,14 +410,16 @@ float4 get_ssr3(float3 pos, float3 normal, float2 tc,float3 r, float angle, out 
 	float3 direct = vignette * reflect_color.xyz *(bad);// pow(0.9, (1 - bad) * 32);
 
 
+
+
 	//dist*=bad;
-	return  float4(direct, vignette *bad);// *saturate(1 - dist*angle / orig_dist);
+	return  float4(direct, 1);// *saturate(1 - dist*angle / orig_dist);
 }
 
-float4 get_ssr(float3 pos, float3 normal, float2 tc, float3 r, float angle, out float dist)
+float4 get_ssr2(float3 pos, float3 normal, float2 tc, float3 r, float angle, out float dist)
 {
 
-	float4 ray = tex_ray.SampleLevel(LinearSampler, tc, 0);
+	float4 ray = tex_ssr.SampleLevel(LinearSampler, tc, 0);
 
 
 	float2 rtc = project_tc(pos + ray.x * r, camera.view_proj);
@@ -451,19 +470,29 @@ GI_RESULT PS(quad_output i)
  float m = 1 * max(max(abs(normal.x), abs(normal.y)), abs(normal.z));
 
  float dist = 0;
- float4 ssr = get_ssr2(pos, normal, i.tc, r, angle, dist);
+ float4 ssr = get_ssr(pos, normal, i.tc, r, angle, dist);
 
 
 
 
- float4 downsampled = tex_ray.SampleLevel(LinearSampler, i.tc, 0);
+ //float4 downsampled = tex_ray.SampleLevel(LinearSampler, i.tc, 0);
 
 
 
  float4 reflection = trace_refl(ssr, v, pos + scaler * normal / m, normalize(r), normal, angle);
 
  //ssr = ssr+get_sky(r,1)*(1 - ssr.w);
- result.screen.xyz =  tex_color[tc].xyz + get_PBR(metallic*albedo, reflection, normal, v, roughness, metallic);// + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+
+
+ float3 screen = get_PBR(metallic * albedo, reflection, normal, v, roughness, metallic);
+#ifdef REFLECTION
+ result.screen.xyz = reflection;// screen;//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+
+#else
+ result.screen.xyz = tex_color[tc].xyz + screen;//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+
+#endif
+ //result.screen.xyz = tex_color[tc].xyz + get_PBR(metallic*albedo, reflection, normal, v, roughness, metallic);// + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
  return result;
 
 	}
@@ -508,15 +537,23 @@ GI_RESULT PS_resize(quad_output i)
 
 
 
-
-	float4 downsampled = tex_ray.SampleLevel(LinearSampler, i.tc, 0);
+	float4 downsampled = tex_downsampled.SampleLevel(LinearSampler, i.tc, 0);
 
 
 
 	float4 reflection = downsampled;// trace_refl(ssr, v, pos + scaler * normal / m, normalize(r), normal, angle);
 //	reflection = float4(get_PBR(1, normal, v, 1),1);
 									//ssr = ssr+get_sky(r,1)*(1 - ssr.w);
-	result.screen.xyz =   tex_color[tc].xyz + get_PBR(metallic*albedo, reflection, normal, v, roughness, metallic);//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+
+
+	float3 screen = get_PBR(metallic * albedo, reflection, normal, v, roughness, metallic);
+#ifdef REFLECTION
+	result.screen.xyz = reflection;// screen;//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+
+#else
+	result.screen.xyz = tex_color[tc].xyz + screen;//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+
+#endif
 	result.screen.w = 1;
 	return result;
 
@@ -538,7 +575,7 @@ GI_RESULT PS_low(quad_output i)
 	int2 tc = i.tc*dims;
 
 	float raw_z = depth_buffer[tc.xy];
-	if (raw_z >= 1) return result;
+//	if (raw_z >= 1) return result;
 	float3 pos = depth_to_wpos(raw_z, i.tc, camera.inv_view_proj);
 	float3 normal = normalize(gbuffer[1][tc].xyz * 2 - 1);
 
@@ -565,16 +602,23 @@ GI_RESULT PS_low(quad_output i)
 	//if (angle < 0.1)
 
 	float dist = 0;
-	ssr = get_ssr2(pos, normal, i.tc, r, angle, dist);
+	ssr = get_ssr(pos, normal, i.tc, r, angle, dist);
 
 	//ssr*= saturate(4 - dist/5)*saturate(1- roughness);
 
 
 	//ssr.w = 1;
-	float3 reflection =  trace_refl(ssr, v, pos + scaler*normal / m, normalize(r), normal, angle);
+	float3 reflection = trace_refl(ssr, v, pos + scaler * normal / m, normalize(r), normal, angle);
+
+	//float w = BRDF_UE4(v, r, normal, info.roughness);
+
+	float4 res = ssr;// float4(ssr, 1);
+	//res.xyz += reflection * w;
+	//res.w += w;
+
 
 	//ssr = ssr+get_sky(r,1)*(1 - ssr.w);
-	result.screen.xyz = reflection;// ssr;// 0 * tex_color[tc] + get_PBR(metallic*albedo, reflection, normal, v, roughness);// float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+	result.screen.xyz = reflection;// 0 * tex_color[tc] + get_PBR(metallic*albedo, reflection, normal, v, roughness);// float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
 	return result;
 
 }

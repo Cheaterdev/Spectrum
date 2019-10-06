@@ -32,7 +32,7 @@ namespace DX12
     void GPUBuffer::set_data(DX12::CommandList::ptr& list, unsigned int offset, const std::string& v)
     {
         list->transition(this,  ResourceState::COPY_DEST);
-        list->update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), v.size() * sizeof(char));
+        list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(char)));
         list->transition(this, ResourceState::COMMON);
     }
 

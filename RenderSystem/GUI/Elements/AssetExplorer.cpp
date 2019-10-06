@@ -106,6 +106,33 @@ namespace GUI
                         s << "mips: " << t.MipLevels;
                         user_ui->message_box("info", s.str(), [](bool v) {});
                     }
+
+
+					auto mesh = asset->get_asset()->get_ptr<MeshAsset>();
+
+					if (mesh)
+					{
+					//	auto t = mesh->get_texture()
+						std::stringstream s;
+						size_t total_vertexes = 0;
+						size_t total_indices = 0;
+						for (auto &info : mesh->meshes)
+						{
+							s << "mesh vertex: " << info.vertex_count << " index: " << info.index_count << std::endl;
+							total_vertexes += info.vertex_count;
+							total_indices += info.index_count;
+
+						}
+
+						s << "TOTAL vertex: " << total_vertexes << " index: " << total_indices << std::endl;
+
+
+
+			//			s << "mips: " << t.MipLevels;
+						user_ui->message_box("info", s.str(), [](bool v) {});
+					}
+
+
                 };
 			   auto texture = loaded_asset->get_ptr<TextureAsset>();
 
@@ -267,31 +294,126 @@ namespace GUI
                 {
                     run_on_ui([this]()
                     {
-                        std::string s = file_open("Choose your destiny", "", "png|*.png|" "jpg|*.jpg|" "all|*.*|"   "|");
+							auto files = file_open("Choose your destiny", "", "png|*.png|" "jpg|*.jpg|" "all|*.*|"   "|");
 
-                        if (!s.empty())
-                            (new TiledTexture(s))->try_register();
+							if (!files.empty())
+                            (new TiledTexture(files[0]))->try_register();
                     });
                 };
                 menu->add_item("Import asset")->on_click = [this](menu_list_element::ptr e)
                 {
-                    run_on_ui([this]()
-                    {
-                        std::string s = file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|"  "blend|*.blend|"  "all|*.*|"   "|");
+					run_on_ui([this] {
+                       auto files = file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|"  "blend|*.blend|"  "all|*.*|"   "|");
 
-                        if (!s.empty())
+					   struct material_info
+					   {
+						   TextureAsset::ptr albedo;
+						   TextureAsset::ptr metallic;
+						   TextureAsset::ptr roughness;
+						   TextureAsset::ptr height;
+						   TextureAsset::ptr normals;
+
+						   void create()
+						   {
+							   MaterialGraph::ptr graph(new MaterialGraph);
+
+
+							   if(albedo)
+							   {
+
+								   auto value_node = std::make_shared<TextureNode>(albedo,true);
+								   graph->register_node(value_node);
+								   value_node->get_output(0)->link(graph->get_base_color());
+
+								   graph->get_texcoord()->link(value_node->get_input(0));
+							   }
+
+							   if (roughness)
+
+							   {
+								   auto value_node = std::make_shared<TextureNode>(roughness);
+								   graph->register_node(value_node);
+								   value_node->get_output(1)->link(graph->get_roughness());
+								   graph->get_texcoord()->link(value_node->get_input(0));
+							   }
+
+							   if (metallic)
+							   {
+								   auto value_node = std::make_shared<TextureNode>(metallic);
+								   graph->register_node(value_node);
+								   value_node->get_output(1)->link(graph->get_mettalic());
+								   graph->get_texcoord()->link(value_node->get_input(0));
+							   }
+
+							   if (normals)
+							   {
+								   auto value_node = std::make_shared<TextureNode>(normals);
+								   graph->register_node(value_node);
+								   value_node->get_output(0)->link(graph->get_normals());
+								   graph->get_texcoord()->link(value_node->get_input(0));
+
+							   }
+
+							   if (height)
+							   {
+
+								   auto mul_node = std::make_shared<MulNode>();
+								   auto scalar_node = std::make_shared<ScalarNode>(1);
+								   auto value_node = std::make_shared<TextureNode>(height);
+								   graph->register_node(mul_node);
+								   graph->register_node(scalar_node);
+								   graph->register_node(value_node);
+
+
+								   graph->get_texcoord()->link(value_node->get_input(0));
+								   value_node->get_output(1)->link(mul_node->get_input(0));
+								   scalar_node->get_output(0)->link(mul_node->get_input(1));		 
+								
+								   mul_node->get_output(0)->link(graph->get_tess_displacement());
+ 
+							   }
+
+							   materials::universal_material* m = (new materials::universal_material(graph));
+							   //m->generate_material();
+							   m->register_new();
+							
+						   }
+					   };
+
+					   auto mat_info = std::make_shared<material_info>();
+					   std::vector<task<void>> tasks;
+					   tasks.reserve(files.size());
+                      for(auto s:files)
                         {
                             std::string ext = to_lower(s.substr(s.find_last_of(".") + 1));
 
                             if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "dds" || ext == "tga")
-                                thread_pool::get().enqueue([s]()
-                            {
-                                (new TextureAsset(convert(s)))->try_register();
-                            }
-                                                      );
+								tasks.emplace_back(create_task([s, mat_info](){
+								auto asset = (new TextureAsset(convert(s)));
+								asset->try_register();
+
+								if (s.find("albedo") != std::string::npos || s.find("diffuse") != std::string::npos || s.find("alb") != std::string::npos || s.find("base") != std::string::npos || s.find("color") != std::string::npos)
+									mat_info->albedo = asset->get_ptr<TextureAsset>();
+
+								if (s.find("metal") != std::string::npos)
+									mat_info->metallic = asset->get_ptr<TextureAsset>();
+
+								if (s.find("rough") != std::string::npos )
+									mat_info->roughness = asset->get_ptr<TextureAsset>();
+
+
+								if (s.find("height") != std::string::npos)
+									mat_info->height = asset->get_ptr<TextureAsset>();
+
+								if (s.find("normal") != std::string::npos)
+									mat_info->normals = asset->get_ptr<TextureAsset>();
+
+
+
+                            }));
 							else
                          //   if (ext == "blend" || ext == "obj" || ext == "3ds" || ext == "dae" || ext == "fbx" || ext == "rw4" || ext == "stl")
-                                thread_pool::get().enqueue([this,s]()
+								create_task([this,s]()
                             {
 
 								auto context = std::make_shared<AssetLoadingContext>();
@@ -300,7 +422,18 @@ namespace GUI
                             });
                             ext = "";
                         }
-                    });
+
+					  when_all(begin(tasks), end(tasks)).then([mat_info,this]() {
+
+						  bool any = !!mat_info->albedo | !!mat_info->metallic | !!mat_info->roughness | !!mat_info->height | !!mat_info->normals;
+						  if(any)
+						  user_ui->message_box("create_material", "yes, we can", [mat_info](bool v) {
+							  if(v)
+							  mat_info->create();
+						  });
+					  });
+				
+			});
                 };
                 menu->add_item("Compress All")->on_click = [this](menu_list_element::ptr e)
                 {

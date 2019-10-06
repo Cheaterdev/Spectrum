@@ -274,7 +274,7 @@ namespace FW1FontWrapper
                         data.pData = srcMem;//+dstBox.top * (m_sheetWidth >> i) + dstBox.left;
                         data.RowPitch = m_sheetWidth >> i;
                         data.SlicePitch = m_sheetWidth >> i;
-                        pContext->update_texture(m_pTexture, ivec3(dirtyRect.left, dirtyRect.top, 0), ivec3(dirtyRect.right - dirtyRect.left, dirtyRect.bottom - dirtyRect.top, 1),
+                        pContext->get_copy().update_texture(m_pTexture, ivec3(dirtyRect.left, dirtyRect.top, 0), ivec3(dirtyRect.right - dirtyRect.left, dirtyRect.bottom - dirtyRect.top, 1),
                                                  D3D12CalcSubresource(i, 0, 0, m_mipLevelCount, 1),  reinterpret_cast<const char*>(srcMem + dstBox.top * (m_sheetWidth >> i) + dstBox.left), m_sheetWidth >> i);
                   	
                         if (i + 1 < m_mipLevelCount)

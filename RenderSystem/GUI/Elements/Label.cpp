@@ -107,7 +107,7 @@ namespace GUI
 
 
 
-				command_list->get_graphics().set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
+				command_list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
 				command_list->transition(cache.texture, Render::ResourceState::RENDER_TARGET);
 				command_list->clear_rtv(cache.texture->texture_2d()->get_rtv());
 

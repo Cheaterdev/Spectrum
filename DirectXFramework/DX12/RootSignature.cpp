@@ -4,16 +4,10 @@ namespace DX12
 {
     RootSignature::RootSignature(std::initializer_list<DescriptorTable> table)
     {
-        //     std::vector<CD3DX12_ROOT_PARAMETER> root_parameters(table.size());
-        //   std::vector<CD3DX12_DESCRIPTOR_RANGE> ranges(table.size());
         UINT i = 0;
 
         for (auto && e : table)
         {
-            /* CD3DX12_DESCRIPTOR_RANGE& range = ranges[i];
-             range.Init(static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(e.range), e.count, e.offset);
-             root_parameters[i].InitAsDescriptorTable(1, &range, static_cast<D3D12_SHADER_VISIBILITY>(e.visibility));
-             i++;*/
             desc[i++] = e;
         }
 
@@ -23,7 +17,7 @@ namespace DX12
     void  RootSignature::finalize()
     {
         CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init(desc.parameters.size(), desc.parameters.data(), 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+        rootSignatureDesc.Init(static_cast<UINT>(desc.parameters.size()), desc.parameters.data(), 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
         TEST(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
@@ -43,8 +37,6 @@ namespace DX12
 
         if (error)
         {
-            //  Log::get() << Log::LEVEL_ERROR << static_cast<char*>(error->GetBufferPointer()) << Log::endl;
-            //  assert(false, static_cast<char*>(error->GetBufferPointer()));
             Log::get().crash_error(static_cast<char*>(error->GetBufferPointer()));
         }
 

@@ -34,51 +34,26 @@ void MatOnMatX87(mat4x4& result, const mat4x4& m1, const mat4x4& m2)
 
 void Vec3PointTransform(vec3& pRes, vec3& pData, const mat4x4& m)
 {
-	assert((((int)&m) & 0xF) == 0);
 	Vec3PointTransformSSE(pRes, pData, m);
 }
 
 void Vec3PointTransformArray(vec3* pRes, vec3* pData, const mat4x4& m, unsigned long count)
 {
-	assert((((int)&m) & 0xF) == 0);
 	Vec3PointTransformArraySSE(pRes, pData, m, count);
 }
 
 void Vec4PointTransformArray(vec4* pRes, vec4* pData, const mat4x4& m, unsigned long count)
 {
-	assert(((int)&m & 0xF) == 0);
-	assert(((int)pRes & 0xF) == 0);
-	assert(((int)pData & 0xF) == 0);
+
 	Vec4PointTransformArraySSE(pRes, pData, m, count);
 }
 
 void Vec3NormalTransform(vec3& pRes, vec3& pData, const mat4x4& m)
 {
-	assert(((int)&m & 0xF) == 0);
 	Vec3NormalTransformSSE(pRes, pData, m);
 }
 
 void Vec3NormalTransformArray(vec3* pRes, vec3* pData, const mat4x4& m, unsigned long count)
 {
-	assert(((int)&m & 0xF) == 0);
 	Vec3NormalTransformArraySSE(pRes, pData, m, count);
 }
-
-/*
-mat4x4 mat4x4::operator*(const mat4x4& m2) const
-{
-mat4x4 r;
-MatOnMatX87(r, *this, m2);
-// need to align
-//Vec4PointTransformArray((Vec4*)&r, (Vec4*)this, m2, 4);
-return r;
-}*/
-/*
-mat4x4& mat4x4::operator*=(const mat4x4& m2)
-{
-mat4x4 r;
-MatOnMatX87(r, *this, m2);
-*this = r;
-return *this;
-}
-*/

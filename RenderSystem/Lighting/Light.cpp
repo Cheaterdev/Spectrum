@@ -1,6 +1,31 @@
 #include "pch.h"
 #include "Light.h"
 
+
+
+template <class T>
+struct LightSignature : public T
+{
+	using T::T;
+
+	/*	root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 4);
+	root_desc[1] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, 1);
+	root_desc[2] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL);
+	root_desc[3] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::ALL);
+	root_desc[4] = Render::DescriptorSRV(5, Render::ShaderVisibility::ALL);
+	root_desc[5] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, 3);*/
+
+
+	typename T::template Table			<0, Render::ShaderVisibility::ALL, Render::DescriptorRange::SRV, 0, 4>	g_buffer = this;
+	typename T::template Table			<1, Render::ShaderVisibility::ALL, Render::DescriptorRange::UAV, 0, 1>	target = this;
+	typename T::template ConstBuffer	<2, Render::ShaderVisibility::ALL, 0>									camera_data = this;
+	typename T::template ConstBuffer	<3, Render::ShaderVisibility::ALL, 1>									light_count = this;
+	typename T::template SRV			<4, Render::ShaderVisibility::ALL, 5>									light_data = this;
+	typename T::template Table			<5, Render::ShaderVisibility::ALL, Render::DescriptorRange::SAMPLER, 0, 3>	samplers = this;
+
+};
+
+
  LightSystem::LightSystem()
 {
 	std::minstd_rand m_gen;
@@ -22,15 +47,11 @@
 	}
 
 	Render::RootSignatureDesc root_desc;
-	root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 4);
-	root_desc[1] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, 1);
-	root_desc[2] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL);
-	root_desc[3] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::ALL);
-	root_desc[4] = Render::DescriptorSRV(5, Render::ShaderVisibility::ALL);
-	root_desc[5] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, 3);
 	Render::ComputePipelineStateDesc desc;
+
 	desc.shader = Render::compute_shader::get_resource({ "shaders\\Lighting.hlsl", "CS", 0,{} });
-	desc.root_signature.reset(new Render::RootSignature(root_desc));
+	desc.root_signature = LightSignature<SignatureCreator>().create_root();
+
 	state.reset(new  Render::ComputePipelineState(desc));
 }
 
@@ -51,12 +72,21 @@
 		}
 
 		context->list->get_compute().set_pipeline(state);
-		context->list->get_compute().set_dynamic(0, 0, buffer.srv_table);
-		context->list->get_compute().set_table(1, buffer.result_tex.first()->texture_2d()->get_uav());
-		context->list->get_compute().set(2, context->cam->get_const_buffer());
-		context->list->get_compute().set_const_buffer(3, light_count);
-		context->list->get_compute().set_srv(4, light_cb);
-		context->list->get_compute().set(5, Render::DescriptorHeapManager::get().get_default_samplers());
+		LightSignature<Signature> sig(&context->list->get_compute());
+
+
+		sig.g_buffer[0]= buffer.srv_table;
+		sig.target[0] = buffer.result_tex.first()->texture_2d()->get_uav();
+
+		sig.camera_data = context->cam->get_const_buffer();
+		sig.light_count.set_raw(light_count); //WTF
+		sig.light_data=light_cb; 
+		sig.samplers = Render::DescriptorHeapManager::get().get_default_samplers();
+
+	//	context->list->get_compute().set_const_buffer(2, context->cam->get_const_buffer());
+		//context->list->get_compute().set_const_buffer(3, light_count);
+	//	context->list->get_compute().set_srv(4, light_cb);
+		//context->list->get_compute().set(5, Render::DescriptorHeapManager::get().get_default_samplers());
 		ivec2 sizes = { buffer.result_tex.first()->get_desc().Width , buffer.result_tex.first()->get_desc().Height };
 		context->list->get_compute().dispach(sizes, { 16, 16 });
 		context->list->transition_uav(buffer.result_tex.first().get());

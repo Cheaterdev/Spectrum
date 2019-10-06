@@ -122,17 +122,17 @@ texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int fla
         DirectX::TexMetadata metadata;
         DirectX::ScratchImage orig_image;
         auto name = file->file_name;
-        std::wstring ext = to_lower(name.substr(name.find_last_of(L".") + 1));
+		std::wstring ext = name.extension().generic_wstring();
 
 		HRESULT hri = CoInitialize(NULL);
 
 		HRESULT hr = NULL;
-        if (ext == L"tga")
+        if (ext == L".tga")
         {
 			hr = DirectX::LoadFromTGAMemory(data.data(), data.size(), &metadata, orig_image);
         }
 
-        else if (ext == L"dds")
+        else if (ext == L".dds")
         {
 			hr = DirectX::LoadFromDDSMemory(data.data(), data.size(), 0, &metadata, orig_image);
         }

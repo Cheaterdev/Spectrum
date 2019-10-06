@@ -11,7 +11,7 @@ void AssetRenderer::draw(scene_object::ptr scene, Render::Texture::ptr result)
 		vr_context = std::make_shared<Render::OVRContext>();
 	}
     Render::CommandList::ptr list = frames.start_frame("AssetRenderer");
-	list->get_graphics().set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
+	list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
 
     MeshRenderContext::ptr context(new MeshRenderContext());
     context->list = list;
@@ -67,7 +67,7 @@ void AssetRenderer::draw(scene_object::ptr scene, Render::Texture::ptr result)
 	ssgi->process(context, *gbuffer, sky->cubemap->array_cubemap(),true,1);
 	sky->process(context);
 
-    context->list->copy_resource(result.get(), gbuffer->result_tex.first().get());
+    context->list->get_copy().copy_resource(result.get(), gbuffer->result_tex.first().get());
     context->list->transition(gbuffer->result_tex.first(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
     MipMapGenerator::get().generate(context->list->get_compute(), result);
 	context->list->transition(result, Render::ResourceState::PIXEL_SHADER_RESOURCE);

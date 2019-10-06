@@ -242,44 +242,66 @@ ivec2 Window::get_size() const
 }
 
 
-std::string file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension)
+std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension)
 {
-    char Filestring[256];
-    std::string returnstring;
-    char FilterBuffer[512];
-    {
-        memset(FilterBuffer, 0, sizeof(FilterBuffer));
-        memcpy(FilterBuffer, Extension.c_str(), std::min<unsigned int>(Extension.size(), 512));
+	std::vector<std::string> result;
 
-        for (int i = 0; i < 512; i++)
-        {
-            if (FilterBuffer[i] == '|')
-                FilterBuffer[i] = 0;
-        }
-    }
-    OPENFILENAMEA opf;
-    opf.hwndOwner = 0;
-    opf.lpstrFilter = FilterBuffer;
-    opf.lpstrCustomFilter = 0;
-    opf.nMaxCustFilter = 0L;
-    opf.nFilterIndex = 1L;
-    opf.lpstrFile = Filestring;
-    opf.lpstrFile[0] = '\0';
-    opf.nMaxFile = 256;
-    opf.lpstrFileTitle = 0;
-    opf.nMaxFileTitle = 50;
-    opf.lpstrInitialDir = StartPath.c_str();
-    opf.lpstrTitle = Name.c_str();
-    opf.nFileOffset = 0;
-    opf.nFileExtension = 0;
-    opf.lpstrDefExt = "*.*";
-    opf.lpfnHook = NULL;
-    opf.lCustData = 0;
-    opf.Flags = (OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR | OFN_FILEMUSTEXIST);//&~OFN_ALLOWMULTISELECT;
-    opf.lStructSize = sizeof(OPENFILENAME);
+	char Filestring[256];
+	std::string returnstring;
+	char FilterBuffer[512];
+	{
+		memset(FilterBuffer, 0, sizeof(FilterBuffer));
+		memcpy(FilterBuffer, Extension.c_str(), std::min<unsigned int>(Extension.size(), 512));
 
-    if (GetOpenFileNameA(&opf))
-        return opf.lpstrFile;
+		for (int i = 0; i < 512; i++)
+		{
+			if (FilterBuffer[i] == '|')
+				FilterBuffer[i] = 0;
+		}
+	}
+	OPENFILENAMEA opf;
+	opf.hwndOwner = 0;
+	opf.lpstrFilter = FilterBuffer;
+	opf.lpstrCustomFilter = 0;
+	opf.nMaxCustFilter = 0L;
+	opf.nFilterIndex = 1L;
+	opf.lpstrFile = Filestring;
+	opf.lpstrFile[0] = '\0';
+	opf.nMaxFile = 256;
+	opf.lpstrFileTitle = 0;
+	opf.nMaxFileTitle = 50;
+	opf.lpstrInitialDir = StartPath.c_str();
+	opf.lpstrTitle = Name.c_str();
+	opf.nFileOffset = 0;
+	opf.nFileExtension = 0;
+	opf.lpstrDefExt = "*.*";
+	opf.lpfnHook = NULL;
+	opf.lCustData = 0;
+	opf.Flags = (OFN_NOCHANGEDIR | OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_ALLOWMULTISELECT);//&~OFN_ALLOWMULTISELECT;
+	opf.lStructSize = sizeof(OPENFILENAME);
 
-    return "";
+	if (GetOpenFileNameA(&opf))
+	{
+		if (opf.nFileExtension)
+		{
+			result.push_back(opf.lpstrFile);
+		}
+		else
+		{
+			char* start = opf.lpstrFile;
+
+			std::string dir = start;
+			start += dir.size() + 1;
+			dir += "\\";
+		
+			while (*start)
+			{
+				std::string file = start;
+				start += file.size()+1;
+				result.push_back(dir+file);
+			}
+		}
+		
+}
+	return result;
 }

@@ -11,6 +11,7 @@ namespace FW1FontWrapper
 {
 
 
+
     // Construct
     CFW1GlyphRenderStates::CFW1GlyphRenderStates() :
         m_featureLevel(D3D_FEATURE_LEVEL_9_1),
@@ -39,23 +40,11 @@ namespace FW1FontWrapper
         if (FAILED(hResult))
             return hResult;
 
-        m_featureLevel = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_1; //DX11::Device::get().get_native_device()->GetFeatureLevel();
-        Render::RootSignatureDesc root_desc;
-        root_desc[0] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::GEOMETRY); //frame data
-        root_desc[1] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::GEOMETRY, 0, 1);
-        root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 1);
-        root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::PIXEL, 0, 1);
-        root_signature.reset(new Render::RootSignature(root_desc));
-        /*  {
-              { Render::DescriptorRange::CBV, Render::ShaderVisibility::GEOMETRY, 0, 1 },
-              { Render::DescriptorRange::SRV, Render::ShaderVisibility::GEOMETRY, 0, 1 },
+        m_featureLevel = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_1;
+	
+		Render::PipelineStateDesc desc;
+		desc.root_signature = SignatureTypes<FontSignature>::create_root();
 
-              { Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 1 },
-              { Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::PIXEL, 0, 1 }
-
-          }));*/
-        Render::PipelineStateDesc desc;
-        desc.root_signature = root_signature;
         desc.vertex = Render::vertex_shader::get_resource({ "shaders/font/vsSimple.hlsl", "VS", 0, {} });
         desc.pixel = Render::pixel_shader::get_resource({ "shaders/font/psSimple.hlsl", "PS", 0, {} });
         desc.layout.inputs.push_back({ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
@@ -71,10 +60,10 @@ namespace FW1FontWrapper
         desc.vertex = Render::vertex_shader::get_resource({ "shaders/font/vsEmpty.hlsl", "VS", 0, {} });
         desc.geometry = Render::geometry_shader::get_resource({ "shaders/font/gsSimple.hlsl", "GS", 0, {} });
         desc.pixel = Render::pixel_shader::get_resource({ "shaders/font/psSimple.hlsl", "PS", 0, {} });
-        geometry_state.reset(new Render::PipelineState(desc));
+        geometry_state.reset(new Render::PipelineStateTyped<FontSig>(desc));
         ///////////////////////////////////////////////////
         desc.geometry = Render::geometry_shader::get_resource({ "shaders/font/gsClip.hlsl", "GS", 0, {} });
-        geometry_state_clip.reset(new Render::PipelineState(desc));
+        geometry_state_clip.reset(new Render::PipelineStateTyped<FontSig>(desc));
 
         // Create all needed resources
         if (SUCCEEDED(hResult))

@@ -485,7 +485,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 		}
 		folder_item* folder;
 
-		std::wstring file_path;
+		boost::filesystem::path file_path;
 		std::mutex m;
 		std::mutex archive_mutex;
 
@@ -536,7 +536,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 
 class folder_item : public ::tree<folder_item, my_unique_vector<std::shared_ptr<folder_item>>>
 {
-		std::wstring name;
+	boost::filesystem::path name;
 		std::vector<AssetStorage::ptr> assets;
 		std::mutex m;
 
@@ -544,7 +544,7 @@ class folder_item : public ::tree<folder_item, my_unique_vector<std::shared_ptr<
 
 	public:
 
-		folder_item(std::wstring name)
+		folder_item(boost::filesystem::path name)
 		{
 			this->name = name;
 		}
@@ -554,7 +554,7 @@ class folder_item : public ::tree<folder_item, my_unique_vector<std::shared_ptr<
 		void add_asset(AssetStorage::ptr a);
 
 		void iterate_assets(std::function<void(AssetStorage::ptr)> f);
-		folder_item::ptr get_folder(std::wstring name);
+		folder_item::ptr get_folder(boost::filesystem::path name);
 };
 
 

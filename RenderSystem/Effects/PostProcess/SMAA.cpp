@@ -1,5 +1,30 @@
 #include "pch.h"
 
+
+template <class T>
+struct SMAASignature : public T
+{
+	using T::T;
+	/*
+		root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 5);
+		root_desc[1] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL);
+		root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 5, 1);
+		root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 6, 1);
+		root_desc.set_sampler(0, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerLinearWrapDesc);
+		root_desc.set_sampler(1, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerPointClampDesc);
+
+*/
+	typename T::template Table			<0, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 5>g_buffer = this;
+	typename T::template ConstBuffer	<1, Render::ShaderVisibility::ALL, 0>									camera_data = this;
+	typename T::template Table			<2, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 5,1 >color_tex = this;
+	
+	typename T::template Sampler<0, Render::ShaderVisibility::ALL, 0> linear{ Render::Samplers::SamplerLinearWrapDesc, this };
+	typename T::template Sampler<1, Render::ShaderVisibility::ALL, 0> point{ Render::Samplers::SamplerPointClampDesc, this };
+};
+
+using SMSig = SignatureTypes<SMAASignature>;
+
+
 SMAA::SMAA(G_Buffer& buffer)
 {
 	this->buffer = &buffer;
@@ -7,19 +32,13 @@ SMAA::SMAA(G_Buffer& buffer)
 	area_tex = Render::Texture::get_resource({ "textures\\AreaTex.dds", false, false });
 	search_tex = Render::Texture::get_resource({ "textures\\SearchTex.dds", false, false });
 	//     D3D::shader_macro HLSL_VERSION("SMAA_HLSL_4_1");
+
+
+	
 	Render::PipelineStateDesc desc;
-	{
-		Render::RootSignatureDesc root_desc;
-		root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 5);
-		root_desc[1] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL);
-		//root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::PIXEL, 0, 2);
-		root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 5, 1);
-		root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 6, 1);
-		//  root_desc[3] = Render::DescriptorConstants(1, 3, Render::ShaderVisibility::PIXEL);
-		root_desc.set_sampler(0, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerLinearWrapDesc);
-		root_desc.set_sampler(1, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerPointClampDesc);
-		desc.root_signature.reset(new Render::RootSignature(root_desc));
-	}
+
+	desc.root_signature = SMSig::create_root();
+
 	desc.blend.render_target[0].enabled = false;
 	desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAAEdgeDetectionVS", 0,{} });
 	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM };
@@ -56,7 +75,11 @@ SMAA::SMAA(G_Buffer& buffer)
 void SMAA::process(MeshRenderContext::ptr& context)
 {
 	auto timer = context->list->start(L"smaa");
-	auto& list = context->list->get_graphics();
+	auto& list = *context->list;
+	auto& graphics = context->list->get_graphics();
+	SMAASignature<Signature> shader_data(&graphics);
+
+
 	buffer->result_tex.swap(context->list, Render::ResourceState::RENDER_TARGET, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 	/*  list.transition(buffer->light_tex.get(), Render::ResourceState::RENDER_TARGET);*/
 	//	list.assume_state(edges_tex.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
@@ -67,14 +90,14 @@ void SMAA::process(MeshRenderContext::ptr& context)
 
 	list.flush_transitions();
 	const float clearColor[] = { 0, 0, 0, 0 };
-	list.get_native_list()->ClearRenderTargetView(edges_tex->texture_2d()->get_rtv().cpu, clearColor, 0, nullptr);
-	list.get_native_list()->ClearRenderTargetView(blend_tex->texture_2d()->get_rtv().cpu, clearColor, 0, nullptr);
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-	list.set_pipeline(state_edge_detect);
-	list.set_viewport(edges_tex->texture_2d()->get_viewport(0));
-	list.set_scissor(edges_tex->texture_2d()->get_scissor(0));
-	list.set_rtv(1, edges_tex->texture_2d()->get_rtv(0), Render::Handle());
-	list.set_dynamic(0, 0, srvs_table);
+	graphics.get_native_list()->ClearRenderTargetView(edges_tex->texture_2d()->get_rtv().cpu, clearColor, 0, nullptr);
+	graphics.get_native_list()->ClearRenderTargetView(blend_tex->texture_2d()->get_rtv().cpu, clearColor, 0, nullptr);
+	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	graphics.set_pipeline(state_edge_detect);
+	graphics.set_viewport(edges_tex->texture_2d()->get_viewport(0));
+	graphics.set_scissor(edges_tex->texture_2d()->get_scissor(0));
+	graphics.set_rtv(1, edges_tex->texture_2d()->get_rtv(0), Render::Handle());
+	shader_data.g_buffer[0] = srvs_table;
 	struct buff
 	{
 		float4 offsets;
@@ -83,18 +106,17 @@ void SMAA::process(MeshRenderContext::ptr& context)
 	} b;
 	b.size = float4(1.0f / size.x, 1.0f / size.y, size);
 	b.offsets = vec4(context->screen_subsample,0,0);// temporal.get_current_subsample();
-	list.set_const_buffer(1, b);
-	//     list.set(2, Render::DescriptorHeapManager::get().get_default_samplers());
-	list.set_dynamic(2, 0, buffer->result_tex.second()->texture_2d()->get_srv());
-	list.draw(4);
-	list.set_pipeline(state_blend_weight);
-	list.set_rtv(1, blend_tex->texture_2d()->get_rtv(0), Render::Handle());
-	list.draw(4);
+	shader_data.camera_data.set_raw(b);
+	shader_data.color_tex[0] = buffer->result_tex.second()->texture_2d()->get_srv();
+	graphics.draw(4);
+	graphics.set_pipeline(state_blend_weight);
+	graphics.set_rtv(1, blend_tex->texture_2d()->get_rtv(0), Render::Handle());
+	graphics.draw(4);
 	list.transition(edges_tex.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
 	list.transition(blend_tex.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
-	list.set_pipeline(state_neighborhood_blending);
-	list.set_rtv(1, buffer->result_tex.first()->texture_2d()->get_rtv(0), Render::Handle());
-	list.draw(4);
+	graphics.set_pipeline(state_neighborhood_blending);
+	graphics.set_rtv(1, buffer->result_tex.first()->texture_2d()->get_rtv(0), Render::Handle());
+	graphics.draw(4);
 	//resolving
 	/*    {
 	list.set_pipeline(state_resolve);

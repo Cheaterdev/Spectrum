@@ -133,9 +133,9 @@ namespace fp = boost::spirit::math;
 
 // namespace alias endian
 #if BOOST_VERSION < 104800
-namespace endian = boost::detail;
+namespace endian_space = boost::detail;
 #else
-namespace endian = boost::spirit::detail;
+namespace endian_space = boost::spirit::detail;
 #endif
 
 #ifndef BOOST_NO_STD_WSTRING
@@ -324,7 +324,7 @@ namespace eos {
 
 				// we choose to use little endian because this way we just
 				// save the first size bytes to the stream and skip the rest
-				endian::store_little_endian<T, sizeof(T)>(&temp, t);
+				endian_space::store_little_endian<T, sizeof(T)>(&temp, t);
 				save_binary(&temp, size);
 			}
 			// zero optimization

@@ -4,12 +4,12 @@ namespace DX12
 
     struct texure_header
     {
-            std::string name;
+            boost::filesystem::path name;
             bool force_srgb;
             bool mips = true;
             texure_header() = default;
 
-            texure_header(std::string name, bool force_srgb = false, bool mips = true);
+            texure_header(boost::filesystem::path name, bool force_srgb = false, bool mips = true);
         private:
             friend class boost::serialization::access;
 
@@ -365,7 +365,7 @@ namespace DX12
                         for (unsigned int m = 0; m < desc.MipLevels; m++)
                         {
                             int i = m * desc.ArraySize() + a;
-                            list->update_texture(this, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
+                            list->get_copy().update_texture(this, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
                         }
 
                     list->transition(this,  ResourceState::PIXEL_SHADER_RESOURCE);

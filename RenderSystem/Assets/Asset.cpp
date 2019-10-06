@@ -8,11 +8,11 @@ AssetManager::AssetManager()
     has_worker = false;
     GuidGenerator::create();
     tree_folders.reset(new folder_item(L"All assets"));
-    std::function<void(std::wstring, folder_item::ptr)> iter;
-    iter = [this, &iter](std::wstring name, folder_item::ptr & w)
+    std::function<void(boost::filesystem::path, folder_item::ptr)> iter;
+    iter = [this, &iter](boost::filesystem::path name, folder_item::ptr & w)
     {
-        std::wstring new_path = name + L'\\';
-        std::wstring folder_name = name.substr(name.find_last_of('\\') + 1);
+        auto new_path = name/"";
+		auto  folder_name = name.filename();
         folder_item::ptr f_item(new folder_item(folder_name));
         w->add_child(f_item);
         FileSystem::get().iterate(name, [this, f_item](file::ptr f)
@@ -460,7 +460,7 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
     if (header->type == Asset_Type::TILED_TEXTURE)
         s_type = L"TiledTextures";
 
-    file_path = L"assets\\" + s_type + L"\\" + header->name + L"_" + convert(to_string(header->id)) + L".asset";
+    file_path = boost::filesystem::path(L"assets") / s_type / (header->name + L"_" + convert(to_string(header->id)) + L".asset");
     folder = AssetManager::get().get_folders()->get_folder(file_path).get();
     folder->add_asset(ptr(this));
     update_preview();
@@ -626,14 +626,16 @@ std::future<Asset::ptr> AssetStorage::load_asset()
                         p->set_value(nullptr);
                         return;
                     }
-					assert(dec_stream && !dec_stream->bad());
+					if (!dec_stream||dec_stream->bad())
+					{
+						Log::get() << "asset loading fail" << Log::endl;
+					}
                     auto s_stream = Serializer::get_stream(*dec_stream);
                     s_stream >> asset;
                     asset->holder = this;
                 }
                 entry->CloseDecompressionStream();
             }
-
             catch (std::exception e)
             {
                 Log::get() << "asset loading fail" << e.what() << Log::endl;
@@ -662,7 +664,7 @@ Asset::ptr AssetStorage::get_asset()
 
 void AssetStorage::save()
 {
-    auto task = TaskInfoManager::get().create_task(std::wstring(L"saving") + file_path);
+    auto task = TaskInfoManager::get().create_task(std::wstring(L"saving") + file_path.generic_wstring());
 
     try
     {
@@ -737,7 +739,7 @@ void AssetStorage::save()
 
 std::wstring  folder_item::get_name() const
 {
-	return name;
+	return name.generic_wstring();
 }
 
 void folder_item::add_asset(AssetStorage::ptr a)
@@ -757,16 +759,22 @@ void folder_item::iterate_assets(std::function<void(AssetStorage::ptr)> f)
 	m.unlock();
 }
 
-folder_item::ptr folder_item::get_folder(std::wstring name)
+folder_item::ptr folder_item::get_folder(boost::filesystem::path name)
 {
 	std::lock_guard<std::mutex> g(m);
-	name = name.substr(0, name.find_last_of(L"\\") + 1);
-	int delim = name.find_first_of(L"\\");
-	std::wstring folder_name = name.substr(0, delim);
-	std::wstring other_name = name.substr(delim + 1);
+//	name = name.substr(0, name.find_last_of(L"\\") + 1);
+//	int delim = name.find_first_of(L"\\");
 
-	if (folder_name.empty())
+	if(boost::filesystem::is_regular_file(name))
 		return get_ptr();
+
+	auto folder_name = *name.begin();// name.substr(0, delim);
+	if(folder_name==name)
+		return get_ptr();
+	auto other_name = boost::filesystem::relative(name, folder_name);
+
+	//if (folder_name.empty())
+	//	return get_ptr();
 
 	for (auto p : childs)
 	{

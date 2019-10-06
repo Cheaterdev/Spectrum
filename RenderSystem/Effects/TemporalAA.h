@@ -23,7 +23,7 @@
 				{
 					list->transition(textures[i], Render::ResourceState::PIXEL_SHADER_RESOURCE);
 
-					list->get_graphics().set_dynamic(slot, i, textures[std::min(all_count-1,i)]->texture_2d()->get_static_srv());
+					((SignatureDataSetter*)&list->get_graphics())->set_dynamic(slot, i, textures[std::min(all_count-1,i)]->texture_2d()->get_static_srv());
 				}
                 // list->get_graphics().set_dynamic(slot, 0, current->texture_2d()->get_static_srv());
                 //list->get_graphics().set_dynamic(slot, 1, prev->texture_2d()->get_static_srv());

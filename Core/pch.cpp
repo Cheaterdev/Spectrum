@@ -8,10 +8,6 @@ void com_deleter(IUnknown* pComResource)
 
 std::wstring convert(const std::string& s)
 {
-    /*typedef std::codecvt_utf8<wchar_t> convert_typeX;
-    std::wstring_convert<convert_typeX, wchar_t> converterX;
-
-    return converterX.from_bytes(str);*/
     std::wstring w;
     w.resize(s.size());
     std::transform(s.begin(), s.end(), w.begin(), btowc);
@@ -20,13 +16,9 @@ std::wstring convert(const std::string& s)
 
 std::string convert(const std::wstring& s)
 {
-    /*typedef std::codecvt_utf8<wchar_t> convert_typeX;
-    std::wstring_convert<convert_typeX, wchar_t> converterX;
-
-    return converterX.to_bytes(wstr);*/
     std::string w;
     w.resize(s.size());
-    std::transform(s.begin(), s.end(), w.begin(), wctob);
+	std::transform(s.begin(), s.end(), w.begin(), [](wint_t c) {return static_cast<char>(wctob(c)); });
     return w;
 }
 

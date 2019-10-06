@@ -64,8 +64,7 @@ namespace GUI
             {
                 if (action == mouse_action::UP)
                 {
-                    if (on_click)
-                        on_click(get_ptr<GUI::Elements::button>());
+                    on_click(get_ptr<GUI::Elements::button>());
                 }
             }
 
@@ -73,8 +72,7 @@ namespace GUI
             {
                 if (action == mouse_action::DOWN)
                 {
-                    if (on_click)
-                        on_click(get_ptr<GUI::Elements::button>());
+                    on_click(get_ptr<GUI::Elements::button>());
                 }
             }
 

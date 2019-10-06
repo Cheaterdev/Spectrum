@@ -196,5 +196,8 @@
     <ClCompile Include="Profiling\Profiling.cpp">
       <Filter>Profiling</Filter>
     </ClCompile>
+    <ClCompile Include="Threads\Scheduler.cpp">
+      <Filter>Threads</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

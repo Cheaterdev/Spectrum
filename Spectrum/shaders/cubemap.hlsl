@@ -6,7 +6,7 @@ struct quad_output
 };
 
 #ifdef BUILD_FUNC_VS
-cbuffer p:register(b0)
+cbuffer p:register(b2)
 {
 uint face_index;
 };

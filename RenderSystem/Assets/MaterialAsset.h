@@ -3,12 +3,11 @@ class MaterialAsset;
 namespace materials
 {
 
-    class material//: public AssetHoldable<MaterialAsset>
+    class material
     {
         protected:
             size_t pipeline_id = 0;
         public:
-            //      std::string name;
             using ptr = s_ptr<material>;
             virtual void set(MESH_TYPE type,MeshRenderContext::ptr&) = 0;
 			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) = 0;
@@ -22,7 +21,6 @@ namespace materials
             template<class Archive>
             void serialize(Archive& ar, const unsigned int)
             {
-                //      ar& NVP(name);
                 ar& NVP(pipeline_id);
             }
 
@@ -33,7 +31,6 @@ namespace materials
 BOOST_CLASS_EXPORT_KEY(materials::material);
 class MaterialAsset : public Asset, public materials::material
 {
-        //     materials::material::ptr mat;
         LEAK_TEST(MaterialAsset)
 
     public:
@@ -42,16 +39,8 @@ class MaterialAsset : public Asset, public materials::material
 
         MaterialAsset(materials::material::ptr);
 
-        //   materials::material::ptr get_material();
-
         virtual Asset_Type get_type() override;
         virtual void update_preview(Render::Texture::ptr preview);
-        /*     virtual void set(MeshRenderContext::ptr& c)
-             {
-                 mat->set(c);
-             };
-
-        	*/
         virtual ~MaterialAsset() = default;
     protected:
         MaterialAsset() = default;

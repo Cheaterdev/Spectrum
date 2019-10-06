@@ -239,6 +239,6 @@ void ConsoleLogger::on_log(const LogBlock& log)
         SetConsoleTextAttribute(hConsole, color);
         // Print message
         auto str = log.get_string() + "\n";
-        WriteConsoleA(hConsole, str.c_str(), str.length(), NULL, NULL);
+        WriteConsoleA(hConsole, str.c_str(), static_cast<DWORD>(str.length()), NULL, NULL);
     }
 }

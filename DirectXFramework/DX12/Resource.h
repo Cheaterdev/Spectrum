@@ -580,7 +580,7 @@ namespace DX12
 		using ptr = std::shared_ptr<Resource>;
 
 		Resource(const CD3DX12_RESOURCE_DESC& desc, HeapType type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
-		Resource(const ComPtr<ID3D12Resource>& resouce);
+		Resource(const ComPtr<ID3D12Resource>& resouce, bool own = false);
 		Resource()
 		{
 			//  states.resize(50);

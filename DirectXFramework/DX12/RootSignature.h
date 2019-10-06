@@ -33,6 +33,7 @@ namespace DX12
     };
 
     struct RootSignatureDesc;
+	struct HandleTable;
 
     struct DescriptorTable//:public DescriptorParam
     {
@@ -124,7 +125,7 @@ namespace DX12
                 CD3DX12_ROOT_PARAMETER& param;
                 CD3DX12_DESCRIPTOR_RANGE& range;
                 std::map<int, table_info>& tables;
-                int index;
+                size_t index;
 
 
                 void operator=(const DescriptorTable& table)
@@ -155,7 +156,7 @@ namespace DX12
                 {
                     param.InitAsConstants(table.count, table.buffer_offset, 0, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
                 }
-                helper(int index, CD3DX12_ROOT_PARAMETER& _param, CD3DX12_DESCRIPTOR_RANGE& _range, std::map<int, table_info>& tables): index(index), param(_param), range(_range), tables(tables)
+                helper(size_t index, CD3DX12_ROOT_PARAMETER& _param, CD3DX12_DESCRIPTOR_RANGE& _range, std::map<int, table_info>& tables): index(index), param(_param), range(_range), tables(tables)
                 {
                 }
 
@@ -245,7 +246,7 @@ namespace DX12
                 set(++i, args...);
             }
 
-
+	
         public:
             using ptr = std::shared_ptr<RootSignature>;
 
@@ -270,138 +271,18 @@ namespace DX12
             }
     };
 
-
-
-
-	namespace Descriptors
-	{
-
-		template <int slot, ShaderVisibility v, int offset, int count, int space = 0>
-		struct Constants
-		{
-			operator int()
-			{
-				return slot;
-			}
-			/*	DescriptorConstants get_native()
-			{
-			return DescriptorConstants(offset,count,v);
-			}
-			*/
-			void process(RootSignatureDesc & desc)
-			{
-				desc[slot] = DescriptorConstants(offset, count, v);
-			}
-		};
-
-		template <int slot, ShaderVisibility v, DescriptorRange range, int offset, int count, int space = 0>
-		struct Table
-		{
-			operator int()
-			{
-				return slot;
-			}
-			/*DescriptorTable get_native()
-			{
-			return DescriptorTable(range, v,offset,count,space);
-			}*/
-
-			void process(RootSignatureDesc & desc)
-			{
-				desc[slot] = DescriptorTable(range, v, offset, count, space);
-
-			}
-		};
-
-		template <int slot, ShaderVisibility v, int offset, int space = 0>
-		struct ConstBuffer
-		{
-			operator int()
-			{
-				return slot;
-			}
-			/*DescriptorConstBuffer get_native()
-			{
-			return DescriptorConstBuffer(offset,v);
-			}*/
-
-			void process(RootSignatureDesc & desc)
-			{
-				desc[slot] = DescriptorConstBuffer(offset, v);
-			}
-		};
-
-		template<int slot, ShaderVisibility v, int offset, int space = 0>
-		struct Sampler
-		{
-			D3D12_SAMPLER_DESC s;
-			Sampler(D3D12_SAMPLER_DESC s) :s(s)
-			{
-
-			}
-
-			operator int()
-			{
-				return slot;
-			}
-
-			void process(RootSignatureDesc & desc)
-			{
-				desc.set_sampler(slot, space, v, s);
-			}
-		};
-
-	}
-
-
-	struct desc_creator
-	{
-		RootSignatureDesc  desc;
-		//int i = 0;
-
-
-		template<class T>
-		desc_creator& operator&(T&obj)
-		{
-
-
-			obj.process(desc);
-
-			return *this;
-		}
-
-
-	};
 	template<class T>
-	struct Signature
+	class RootSignatureTyped: public RootSignature
 	{
-		RootSignatureDesc  desc;
-		
-		using S = Signature<T>;
-		template<class T>
-		void set(int i, T obj)
-		{
-			obj.process(desc);
-		}
-		template<class T, class ...Args>
-		void set(int i, T v, Args...args)
-		{
-			set(i, v);
-			set(++i, args...);
-		}
+	public:
+
+		using ptr = std::shared_ptr<RootSignatureTyped<T>>;
 
 
-		//	RootSignatureDesc root_desc;
-		template <class ...Args>
-		Signature(Args...args)
+		RootSignatureTyped(const RootSignatureDesc& desc):RootSignature(desc)
 		{
-			set(0, args...);
-		}
-		RootSignatureDesc create_desc()
-		{
-			return desc;
-		}
 
-		//	void operate(Signature);
+		}
 	};
+
 }

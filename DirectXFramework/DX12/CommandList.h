@@ -5,7 +5,9 @@ namespace DX12
 
 	typedef D3D12_VIEWPORT Viewport;
 	class PipelineState;
+	template<class T> class  PipelineStateTyped;
 	class ComputePipelineState;
+	class PipelineStateBase;
 
 	class IndexBufferBase;
 	class UploadBuffer;
@@ -47,6 +49,7 @@ namespace DX12
 	};
 	class GraphicsContext;
 	class ComputeContext;
+	class CopyContext;
 	class FrameResourceManager;
 	class FrameResources
 	{
@@ -212,6 +215,7 @@ namespace DX12
 
 	class CommandListBase
 	{
+	
 	protected:
 		int id = -1;
 		std::uint64_t global_id;
@@ -223,7 +227,7 @@ namespace DX12
 		std::vector<std::function<void()>> on_execute_funcs;
 		ComPtr<ID3D12GraphicsCommandList> m_commandList;
 	public:
-		ComPtr<ID3D12GraphicsCommandList> get_native_list()
+		ComPtr<ID3D12GraphicsCommandList>& get_native_list()
 		{
 			return m_commandList;
 		}
@@ -245,15 +249,9 @@ namespace DX12
 
 		std::shared_ptr<TransitionCommandList> fix_pretransitions();
 		
-	//	void assume_state(const Resource::ptr& resource, ResourceState state);
-	//	void assume_state(Resource* resource, ResourceState state);
-
 		void transition(const Resource* resource, unsigned int state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 		void transition(const Resource::ptr& resource, unsigned int state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 		void transition(const std::shared_ptr<Texture>& resource, unsigned int state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-		//void transition(Resource* resource, unsigned int from, unsigned int to, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-		//void transition(const Resource::ptr& resource, unsigned int from, unsigned int to, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-
 		void transition_uav(Resource* resource);
 		void transition(Resource* from, Resource* to);
 
@@ -336,15 +334,8 @@ namespace DX12
 		GPUTimer timer;
 		bool enabled = true;
 
-		//Events::prop<float2>::event_type on_time;
-
 		std::chrono::time_point<std::chrono::high_resolution_clock>  start_time;
 		std::chrono::time_point<std::chrono::high_resolution_clock>  end_time;
-
-		//Events::prop<float2> time;
-
-		//std::chrono::duration<double> elapsed_time;
-
 
 	};
 
@@ -453,58 +444,52 @@ namespace DX12
 		void on_done(std::function<void()> f);
 
 	};
+
+
+
+
 	class CommandList : public std::enable_shared_from_this<CommandList>, public Uploader,public Readbacker, public Transitions, public Eventer, public Sendable
 	{
+
+
 	public:
 		using ptr = shared_ptr<CommandList>;
 		std::map<Resource*, int> resource_update_counter;
 	protected:
 		CommandList() = default;
 		friend class Queue;
-		friend class FrameResourceManager;
-	
+		friend class FrameResourceManager;	
+		friend class CopyContext;
+		friend class GraphicsContext;
+		friend class ComputeContext;
+
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-
-		bool valid_scissor = false;
-		std::vector<Viewport> viewports;
-		D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-		//	std::vector<std::shared_ptr<BufferBase>>::iterator upload_iterator;
-
-		//	std::vector<std::function<void(Queue*)>> on_pre_execute_funcs;
-
-
-
-		//  UINT64 resource_index;
-	
-		std::shared_ptr<PipelineState> current_pipeline;
-		std::shared_ptr<RootSignature> current_root_signature;
-
-		std::shared_ptr<ComputePipelineState> current_compute_pipeline;
-
-		std::shared_ptr<RootSignature> current_compute_root_signature;
-
-	
 
 		// TODO: make references?
 	
-
-
 		virtual void on_execute() override;
 		DynamicDescriptorManager descriptor_manager_shared;
 	
-		DynamicDescriptorManager descriptor_manager_graphics;
-		DynamicDescriptorManager descriptor_manager_compute;
 
 		bool heaps_changed = false;
 
 		std::array<DescriptorHeap::ptr, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> heaps;
 	
-	
+		std::unique_ptr<GraphicsContext> graphics;
+		std::unique_ptr<ComputeContext> compute;
+		std::unique_ptr<CopyContext> copy;
+		PipelineStateBase* current_pipeline;
+
+		void set_pipeline_internal(PipelineStateBase* pipeline);
 	public:
 		ptr get_sub_list();
 		FrameResources* frame_resources = nullptr;
 
-		
+
+		GraphicsContext& get_graphics();
+		ComputeContext& get_compute();
+		CopyContext& get_copy();
+
 		void set_heap(DescriptorHeapType type, DescriptorHeap::ptr heap)
 		{
 			auto i_type = static_cast<int>(type);
@@ -583,42 +568,148 @@ namespace DX12
 			clear_uav(buffer->help_buffer, buffer->counted_uav[0]);
 		}
 
+		
+
+	};
+
+	class CopyContext
+	{
+		friend class CommandList;
+
+		CommandList& base;
+
+		CopyContext(CommandList& base) :base(base) {}
+		CopyContext(const CopyContext&) = delete;
+		CopyContext(CopyContext&&) = delete;
+	public:
 		void copy_resource(Resource* dest, Resource* source);
 		void copy_resource(const Resource::ptr& dest, const Resource::ptr& source);
 		void copy_texture(const Resource::ptr& dest, int, const Resource::ptr& source, int);
 		void copy_texture(const Resource::ptr& dest, ivec3, const Resource::ptr& source, ivec3, ivec3);
-
 		void copy_buffer(Resource* dest, int s_dest, Resource* source, int s_source, int size);
 
-
-		GraphicsContext& get_graphics();
-		ComputeContext& get_compute();
-
-
-
-
-	
 
 		//TODO: remove
 		void update_resource(Resource::ptr resource, UINT first_subresource, UINT sub_count, D3D12_SUBRESOURCE_DATA* data);
 		void update_buffer(Resource::ptr resource, UINT offset, const char* data, UINT size);
 		void update_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
-
 		void update_buffer(Resource* resource, UINT offset, const char* data, UINT size);
 		void update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
+
+
 
 		std::future<bool> read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>);
 		std::future<bool> read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>);
 		std::future<bool> read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)>);
 		std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(const char*, UINT64)>);
-
 	};
 
 
 
-	class GraphicsContext : public CommandList
+	class SignatureDataSetter
 	{
-		GraphicsContext() = default;
+	
+
+		template<class T>
+		void set_constants_internal(UINT i, UINT offset, T args)
+		{
+			set_constant(i, offset, *reinterpret_cast<UINT*>(&args));
+		}
+
+		template<class T, class... Args>
+		void set_constants_internal(UINT i, UINT offset, T v, Args...args)
+		{
+			set_constants_internal(i, offset, v);
+			set_constants_internal(i, offset + 1, args...);
+		}
+	protected:
+		CommandList& base;
+		SignatureDataSetter(CommandList& base) :base(base) {	}
+	public:
+		virtual void set_signature(const RootSignature::ptr&) = 0;
+
+		virtual void set(UINT, const HandleTable&) = 0;
+		virtual void set(UINT, const Handle&) = 0;	
+		virtual void set(UINT, std::vector<Handle>&) = 0;
+
+		virtual void set_dynamic(UINT, UINT, const Handle&) = 0;
+		virtual void set_dynamic(UINT, UINT, const HandleTable&) = 0;
+
+
+		virtual void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
+
+
+		virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
+		virtual	void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) = 0;
+		virtual void set_const_buffer(UINT i, const FrameResources::UploadInfo& info) = 0;
+		virtual void set_const_buffer(UINT i, FrameResource& info) = 0;
+
+		virtual void set_constant(UINT i, UINT offset, UINT data) = 0;
+		template<class... Args>
+		void set_constants(UINT i, Args...args)
+		{
+			set_constants_internal(i, 0, args...);
+		}
+
+
+
+		virtual void set_srv(UINT i, FrameResource& info) = 0;
+		virtual void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
+
+
+		template<class T>
+		void set_const_buffer_raw(UINT i, const T* data, int size)
+		{
+			//       assert(Math::IsAligned(data.data(), 16));
+			//  size_t BufferSize = Math::AlignUp(sizeof(T), 16);
+			auto info = base.place_data(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+			memcpy(info.resource->get_data() + info.offset, data, size);
+			set_const_buffer(i, info.resource->get_gpu_address() + info.offset);
+		}
+
+
+		template<class T>
+		void set_const_buffer_raw(UINT i, const T& data)
+		{
+			//       assert(Math::IsAligned(data.data(), 16));
+			//  size_t BufferSize = Math::AlignUp(sizeof(T), 16);
+			auto info = base.place_data( sizeof(T), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+			memcpy(info.resource->get_data() + info.offset, &data,  sizeof(T));
+			set_const_buffer(i, info.resource->get_gpu_address() + info.offset);
+		}
+
+
+		template<class T>
+		void set_srv(UINT i, const std::vector<T>& data)
+		{
+			size_t BufferSize = Math::AlignUp(data.size() * sizeof(T), 16);
+			auto info = base.place_data(BufferSize);
+			memcpy(info.resource->get_data() + info.offset, data.data(), data.size() * sizeof(T));
+			set_srv(i, info.resource->get_gpu_address() + info.offset);
+		}
+
+
+
+		template<class T>
+		std::unique_ptr<T> wrap()
+		{
+			auto res = std::make_unique<T>();		
+			res->begin(this);
+			return res;
+		}
+	};
+
+
+
+
+
+	class GraphicsContext: public SignatureDataSetter
+	{
+		friend class CommandList;
+		ComPtr<ID3D12GraphicsCommandList>& list;
+
+		GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()){
+		}
 		GraphicsContext(const GraphicsContext&) = delete;
 		GraphicsContext(GraphicsContext&&) = delete;
 
@@ -636,24 +727,70 @@ namespace DX12
 			//what->update(this);
 			set(_where++, args...);
 		}
-		template<class T>
-		void set_constants_internal(UINT i, UINT offset, T args)
+	
+
+		bool valid_scissor = false;
+		std::vector<Viewport> viewports;
+		D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+
+	//	std::shared_ptr<PipelineState> current_pipeline;
+		std::shared_ptr<RootSignature> current_root_signature;
+		DynamicDescriptorManager descriptor_manager_graphics;
+
+	
+		MyVariant current_shader_data;
+
+		void begin();
+		void end();
+		void on_execute();
+
+		void set_dynamic(UINT, UINT, const Handle&)override;
+		void set_dynamic(UINT, UINT, const HandleTable&)override;
+
+
+
+		void set_srv(UINT i, FrameResource& info)override;
+		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
+		using SignatureDataSetter::set_srv;
+
+
+		void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
+
+
+		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
+		void set_const_buffer(UINT i, const FrameResources::UploadInfo& info) override;
+		void set_const_buffer(UINT i, FrameResource& info);
+		using SignatureDataSetter::set_const_buffer;
+		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
+
+
+		void set_constant(UINT i, UINT offset, UINT data)
 		{
-			m_commandList->SetGraphicsRoot32BitConstant(i, *reinterpret_cast<UINT*>(&args), offset);
+			list->SetGraphicsRoot32BitConstant(i, data, offset);
 		}
 
-		template<class T, class... Args>
-		void set_constants_internal(UINT i, UINT offset, T v, Args...args)
-		{
-			set_constants_internal(i, offset, v);
-			set_constants_internal(i, offset + 1, args...);
-		}
+
+		void set(UINT, const HandleTable&)override;
+		void set(UINT, const Handle&)override;
+
+		void set(UINT, std::vector<Handle>&)override;
+
 	public:
+
+		CommandList& get_base()
+		{
+			return base;
+		}
+
+		ComPtr<ID3D12GraphicsCommandList>& get_native_list()
+		{
+			return list;
+		}
 		void flush_binds(bool force = false);
 		void set_topology(D3D_PRIMITIVE_TOPOLOGY topology)
 		{
 			if (this->topology != topology)
-				m_commandList->IASetPrimitiveTopology(topology);
+				list->IASetPrimitiveTopology(topology);
 
 			this->topology = topology;
 		}
@@ -661,17 +798,63 @@ namespace DX12
 		DynamicDescriptorManager& get_desc_manager()
 		{
 			return descriptor_manager_graphics;
+		}	
+		
+	
+		template<class T>
+		typename T::Signature& set_signature_typed(typename RootSignatureTyped<T>::ptr& s)
+		{
+
+			if (current_root_signature != s)
+			{
+				base.get_native_list()->SetGraphicsRootSignature(s->get_native().Get());
+				current_root_signature = s;
+				descriptor_manager_graphics.parse(current_root_signature);
+				current_shader_data.create<typename T::Signature>(this);// = std::any(std::in_place_type, this);// std::make_any<typename T::Signature>(this);// .emplace<typename T::Signature>(this);
+			}
+
+			return get_shader_data<T>();
 		}
 
-		void set_signature(const RootSignature::ptr&);
-		void set_pipeline(std::shared_ptr<PipelineState>&);
-		void set(UINT, const HandleTable&);
-		void set(UINT, const Handle&);
-		void set(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
-		void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
+		template<class T>
+		typename T::Signature& set_signature_typed(const RootSignature::ptr& s)
+		{
 
-		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
-		void set(UINT, std::vector<Handle>&);
+			if (current_root_signature != s)
+			{
+				base.get_native_list()->SetGraphicsRootSignature(s->get_native().Get());
+				current_root_signature = s;
+				descriptor_manager_graphics.parse(current_root_signature);
+				current_shader_data.create<typename T::Signature>(this);// = std::any(std::in_place_type, this);// std::make_any<typename T::Signature>(this);// .emplace<typename T::Signature>(this);
+			}
+
+			return get_shader_data<T>();
+		}
+
+
+		template<class T>
+		typename T::Signature& get_shader_data()
+		{
+			return  current_shader_data.get< T::Signature>();
+		}
+
+
+		template<class T>
+		typename T::Signature& set_pipeline_typed(std::shared_ptr<PipelineStateTyped<T>>& state)
+		{
+			set_signature_typed<T>(state->desc.root_signature);
+			base.set_pipeline_internal(state.get());
+
+			return get_shader_data<T>();
+		}
+
+
+		void set_signature(const RootSignature::ptr&) override;
+		void set_pipeline(std::shared_ptr<PipelineState>&);
+
+		
+
+
 
 		void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
 
@@ -682,25 +865,13 @@ namespace DX12
 
 		void set_scissors(sizer_long rect);
 		void set_viewports(std::vector<Viewport> viewports);
-		//        void set_const_buffer(UINT i, std::shared_ptr<BufferBase>& buff);
-		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff);
-		void set_const_buffer(UINT i, const FrameResources::UploadInfo& info);
-		void set(UINT i, FrameResource& info);
-
-		template<class... Args>
-		void set_constants(UINT i, Args...args)
-		{
-			set_constants_internal(i, 0, args...);
-		}
-
+		
+		
 
 		void set_rtv(const HandleTable&, Handle);
 		void set_rtv(int c, Handle rt, Handle h);
-		void set_dynamic(UINT, UINT, const Handle&);
-		void set_dynamic(UINT, UINT, const HandleTable&);
 
-		void set_srv(UINT i, FrameResource& info);
-		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
+
 
 		void set_rtvs_internal(D3D12_CPU_DESCRIPTOR_HANDLE* t, Handle h)
 		{
@@ -736,30 +907,30 @@ namespace DX12
 			int count = sizeof...(Args);
 			D3D12_VERTEX_BUFFER_VIEW views[sizeof...(Args)];
 			set(views, args...);
-			m_commandList->IASetVertexBuffers(offset, count, views);
+			list->IASetVertexBuffers(offset, count, views);
 		}
 
-		void set_vertex_buffers(UINT offset, std::vector<D3D12_VERTEX_BUFFER_VIEW>& list)
+		void set_vertex_buffers(UINT offset, std::vector<D3D12_VERTEX_BUFFER_VIEW>& data)
 		{
-			m_commandList->IASetVertexBuffers(offset, list.size(), list.data());
+			list->IASetVertexBuffers(offset, static_cast<UINT>(data.size()), data.data());
 		}
 
-		void set_vertex_buffer(UINT offset, D3D12_VERTEX_BUFFER_VIEW& list)
+		void set_vertex_buffer(UINT offset, D3D12_VERTEX_BUFFER_VIEW& data)
 		{
-			m_commandList->IASetVertexBuffers(offset, 1, &list);
+			list->IASetVertexBuffers(offset, 1, &data);
 		}
 
 		void set_index_buffer(D3D12_INDEX_BUFFER_VIEW view)
 		{
-			//   buffer->update(this);
-			m_commandList->IASetIndexBuffer(&view);
+			list->IASetIndexBuffer(&view);
 		}
+
 		template<class T>
 		D3D12_VERTEX_BUFFER_VIEW place_vertex_buffer(const std::vector<T>& data)
 		{
 			//       assert(Math::IsAligned(data.data(), 16));
 			size_t BufferSize = Math::AlignUp(data.size() * sizeof(T), 16);
-			auto info = place_data(BufferSize);
+			auto info = base.place_data(BufferSize);
 			memcpy(info.resource->get_data() + info.offset, data.data(), data.size() * sizeof(T));
 			D3D12_VERTEX_BUFFER_VIEW res;
 			res.SizeInBytes = BufferSize;
@@ -771,38 +942,20 @@ namespace DX12
 		D3D12_VERTEX_BUFFER_VIEW place_vertex_buffer(const T* data, size_t size)
 		{
 			//       assert(Math::IsAligned(data.data(), 16));
-			auto info = place_data(size * sizeof(T));
+			auto info = base.place_data(size * sizeof(T));
 			memcpy(info.resource->get_data() + info.offset, data, size * sizeof(T));
 			D3D12_VERTEX_BUFFER_VIEW res;
-			res.SizeInBytes = size * sizeof(T);
+			res.SizeInBytes = static_cast<UINT>(size * sizeof(T));
 			res.StrideInBytes = sizeof(T);
 			res.BufferLocation = info.resource->get_gpu_address() + info.offset;
 			return res;
 		}
 
-		template<class T>
-		void set_const_buffer(UINT i, const T& data)
-		{
-			//       assert(Math::IsAligned(data.data(), 16));
-			//  size_t BufferSize = Math::AlignUp(sizeof(T), 16);
-			auto info = place_data(sizeof(T), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			memcpy(info.resource->get_data() + info.offset, &data, sizeof(T));
-			m_commandList->SetGraphicsRootConstantBufferView(i, info.resource->get_gpu_address() + info.offset);
-		}
-
-
-
+	
 
 		void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
 		void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
-		template<class T>
-		void set_srv(UINT i, const std::vector<T>& data)
-		{
-			size_t BufferSize = Math::AlignUp(data.size() * sizeof(T), 16);
-			auto info = place_data(BufferSize);
-			memcpy(info.resource->get_data() + info.offset, data.data(), data.size() * sizeof(T));
-			m_commandList->SetGraphicsRootShaderResourceView(i, info.resource->get_gpu_address() + info.offset);
-		}
+	
 
 
 		void execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset = 0, Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
@@ -811,92 +964,76 @@ namespace DX12
 
 
 
-	class ComputeContext : public CommandList
+	class ComputeContext : public SignatureDataSetter
 	{
-		ComputeContext() = default;
+		friend class CommandList;
+
+	
+		ComPtr<ID3D12GraphicsCommandList>& list;
+
+		ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {}
 		ComputeContext(const ComputeContext&) = delete;
 		ComputeContext(ComputeContext&&) = delete;
 
-		template<class T>
-		void set_constants_internal(UINT i, UINT offset, T args)
-		{
-			m_commandList->SetComputeRoot32BitConstant(i, *reinterpret_cast<UINT*>(&args), offset);
-		}
 
-		template<class T, class... Args>
-		void set_constants_internal(UINT i, UINT offset, T v, Args...args)
-		{
-			set_constants_internal(i, offset, v);
-			set_constants_internal(i, offset + 1, args...);
-		}
-	public:
-		void flush_binds(bool force = false);
-		void set_signature(const RootSignature::ptr&);
-		void set_pipeline(std::shared_ptr<ComputePipelineState>&);
+		DynamicDescriptorManager descriptor_manager_compute;
+	//	std::shared_ptr<ComputePipelineState> current_compute_pipeline;
+		std::shared_ptr<RootSignature> current_compute_root_signature;
+
+		void begin();
+		void end();
+		void on_execute();
+
+
+
 		void set(UINT, const HandleTable&);
-		//        void set(UINT, const Handle&);
 		void set_dynamic(UINT, UINT, const Handle&);
 		void set_dynamic(UINT, UINT, const HandleTable&);
 
 		void set_table(UINT, const Handle&);
+
+		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer> buff);
+		void set_const_buffer(UINT i, const FrameResources::UploadInfo& info);
+		void set_const_buffer(UINT i, FrameResource& info);
+
+		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
+		void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
+		using SignatureDataSetter::set_srv;
+		using SignatureDataSetter::set_const_buffer;
+
+		void set(UINT, std::vector<Handle>&);
+		virtual void set(UINT, const Handle&) override;
+		virtual void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) override;
+		virtual void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
+		virtual void set_srv(UINT i, FrameResource& info) override;
+
+
+	public:
+		void set_constant(UINT i, UINT offset, UINT data)
+		{
+			list->SetComputeRoot32BitConstant(i, data, offset);
+		}
+
+		CommandList& get_base()
+		{
+			return base;
+		}
+
+		void flush_binds(bool force = false);
+		void set_signature(const RootSignature::ptr&);
+		void set_pipeline(std::shared_ptr<ComputePipelineState>&);
+	
 		void dispach(int=1,int= 1,int=1);
 		void dispach(ivec2, ivec2 = ivec2(8, 8));
 		void dispach(ivec3, ivec3 = ivec3(4, 4, 4));
 
-		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer> buff);
-		void set_const_buffer(UINT i, const FrameResources::UploadInfo& info);
-		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
-		void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
-
-		void set(UINT i, FrameResource& info);
-
-		/* template<class T>
-		 void set_constants(UINT i, T v1)
-		 {
-			 m_commandList->SetComputeRoot32BitConstant(i, *reinterpret_cast<UINT*>(&v1), offset);
-		 }*/
-
-		template<class... Args>
-		void set_constants(UINT i, Args...args)
-		{
-			set_constants_internal(i, 0, args...);
-		}
-
-		template<class T>
-		void set_srv(UINT i, const std::vector<T>& data)
-		{
-			size_t BufferSize = Math::AlignUp(data.size() * sizeof(T), 16);
-			auto info = place_data(BufferSize);
-			memcpy(info.resource->get_data() + info.offset, data.data(), data.size() * sizeof(T));
-			m_commandList->SetComputeRootShaderResourceView(i, info.resource->get_gpu_address() + info.offset);
-		}
-
-
-		template<class T>
-		void set_const_buffer(UINT i, const T& data)
-		{
-			//       assert(Math::IsAligned(data.data(), 16));
-			//  size_t BufferSize = Math::AlignUp(sizeof(T), 16);
-			auto info = place_data(sizeof(T), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			memcpy(info.resource->get_data() + info.offset, &data, sizeof(T));
-			m_commandList->SetComputeRootConstantBufferView(i, info.resource->get_gpu_address() + info.offset);
-		}
-
-		template<class T>
-		void set_const_buffer(UINT i, const T* data, int size)
-		{
-			//       assert(Math::IsAligned(data.data(), 16));
-			//  size_t BufferSize = Math::AlignUp(sizeof(T), 16);
-			auto info = place_data(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			memcpy(info.resource->get_data() + info.offset, data, size);
-			m_commandList->SetComputeRootConstantBufferView(i, info.resource->get_gpu_address() + info.offset);
-		}
+	
 
 
 		void execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset = 0, Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
-	};
 
+	};
 
 
 	class TransitionCommandList

@@ -113,34 +113,34 @@ struct texture_mip_data
 
     using ptr = std::shared_ptr<texture_mip_data>;
     texture_mip_data() {}
-    texture_mip_data(int w, int h, int d, DXGI_FORMAT format)
+    texture_mip_data(UINT w, UINT h, UINT d, DXGI_FORMAT format)
     {
         width = w;
         height = h;
         depth = d;
         size_t a, b, c;
         GetSurfaceInfo2(w, h, format, &a, &b, &c);
-        width_stride = b;
-        slice_stride = a;
+        width_stride = static_cast<UINT>(b);
+        slice_stride = static_cast<UINT>(a);
         num_rows = c;
         data.resize(slice_stride * d);
     }
     std::vector<char> data;
-    int width;
-    int height;
-    int depth;
-    int num_rows;
-    int width_stride;
-    int slice_stride;
+	UINT width;
+	UINT height;
+	UINT depth;
+	UINT num_rows;
+	UINT width_stride;
+	UINT slice_stride;
 
 
     friend class boost::serialization::access;
     template<class Archive>
     void save(Archive& ar, const unsigned int) const
     {
-        uint32_t size = data.size();
+		UINT size = static_cast<UINT>(data.size());
         ar& NVP(size);
-        ar.save_binary(data.data(), data.size());
+        ar.save_binary(data.data(), size);
         ar& NVP(width);
         ar& NVP(height);
         ar& NVP(depth);
@@ -152,10 +152,10 @@ struct texture_mip_data
     void load(Archive& ar, const unsigned int)
     {
         auto t = CounterManager::get().start_count<texture_mip_data>();
-        uint32_t size;
+		UINT size;
         ar& NVP(size);
         data.resize(size);
-        ar.load_binary(data.data(), data.size());
+        ar.load_binary(data.data(), size);
         ar& NVP(width);
         ar& NVP(height);
         ar& NVP(depth);
@@ -241,8 +241,9 @@ class texture_data : public texture_data_header
 
         static std::unique_ptr<DirectX::TexMetadata> get_metadata(std::shared_ptr<file> file)
         {
-            auto name = file->file_name;
-            std::wstring ext = to_lower(name.substr(name.find_last_of(L".") + 1));
+			auto name = file->file_name.generic_wstring();
+			auto ext = file->file_name.extension().generic_wstring();
+          //  std::wstring ext = to_lower(name.substr(name.find_last_of(L".") + 1));
             DirectX::TexMetadata metadata;
 
             if (ext == L"tga")

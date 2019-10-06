@@ -1,5 +1,5 @@
 
-std::string file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension);
+std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension);
 
 class SystemInfo : public Singleton<SystemInfo>
 {

@@ -10,7 +10,7 @@ namespace DX11
 	void RenderTargetState::set(DX11_DeviceContext context, bool force)
 	{
 		if (changed){
-			context->OMSetRenderTargets(data.size(), data.data(), depth?**depth:nullptr);
+			context->OMSetRenderTargets(static_cast<UINT>(data.size()), data.data(), depth?**depth:nullptr);
 		changed = false;
 	}
     }

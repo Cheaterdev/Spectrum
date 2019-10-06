@@ -12,7 +12,7 @@ namespace DX11
 
     void pixel_shader::set(NativeContext& context)
     {
-        get_native_context(context)->PSSetShader(native_shader, class_instances.data(), class_instances.size());
+        get_native_context(context)->PSSetShader(native_shader, class_instances.data(), static_cast<UINT>(class_instances.size()));
     }
 
     void pixel_shader::compile()
@@ -23,7 +23,7 @@ namespace DX11
 
     void vertex_shader::set(NativeContext& context)
     {
-        get_native_context(context)->VSSetShader(native_shader, class_instances.data(), class_instances.size());
+        get_native_context(context)->VSSetShader(native_shader, class_instances.data(), static_cast<UINT>(class_instances.size()));
     }
 
     void vertex_shader::compile()
@@ -45,7 +45,7 @@ namespace DX11
 
     void geometry_shader::set(NativeContext& context)
     {
-        get_native_context(context)->GSSetShader(native_shader, class_instances.data(), class_instances.size());
+        get_native_context(context)->GSSetShader(native_shader, class_instances.data(), static_cast<UINT>(class_instances.size()));
     }
 
     void geometry_shader::compile()
@@ -56,7 +56,7 @@ namespace DX11
 
     void hull_shader::set(NativeContext& context)
     {
-        get_native_context(context)->HSSetShader(native_shader, class_instances.data(), class_instances.size());
+        get_native_context(context)->HSSetShader(native_shader, class_instances.data(), static_cast<UINT>(class_instances.size()));
     }
 
     void hull_shader::compile()
@@ -68,7 +68,7 @@ namespace DX11
 
     void domain_shader::set(NativeContext& context)
     {
-        get_native_context(context)->DSSetShader(native_shader, class_instances.data(), class_instances.size());
+        get_native_context(context)->DSSetShader(native_shader, class_instances.data(), static_cast<UINT>(class_instances.size()));
     }
 
     void domain_shader::compile()
