@@ -115,7 +115,7 @@
 #include <boost/spirit/home/support/detail/math/fpclassify.hpp>
 #else
 #include <boost/spirit/home/support/detail/endian/endian.hpp>
-#include <boost/spirit/home/support/detail/math/special_functions/fpclassify.hpp>
+#include <boost/math/special_functions/fpclassify.hpp>
 #endif
 
 // namespace alias
