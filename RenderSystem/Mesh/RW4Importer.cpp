@@ -90,7 +90,7 @@ namespace Assimp
 			if (!pScene->mRootNode)
 				pScene->mRootNode = new aiNode();
 
-			aiMatrix4x4::RotationX(-Math::m_pi_2, pScene->mRootNode->mTransformation);
+			aiMatrix4x4::RotationX(-::Math::m_pi_2, pScene->mRootNode->mTransformation);
 				mCurNode = pScene->mRootNode;
 
 			//	mCurNode->mMeshes = new unsigned int[1024 * 32];

@@ -121,15 +121,15 @@
 #include <boost/spirit/home/support/detail/math/fpclassify.hpp>
 #else
 #include <boost/spirit/home/support/detail/endian/endian.hpp>
-#include <boost/spirit/home/support/detail/math/fpclassify.hpp>
+#include <boost/math/special_functions/fpclassify.hpp>
 #endif
 
 // namespace alias fp_classify
-#if BOOST_VERSION < 103800
+//#if BOOST_VERSION < 103800
 namespace fp = boost::math;
-#else
-namespace fp = boost::spirit::math;
-#endif
+//#else
+//namespace fp = boost::spirit::math;
+//#endif
 
 // namespace alias endian
 #if BOOST_VERSION < 104800
@@ -382,7 +382,7 @@ namespace eos {
 			switch (fp::fpclassify(t))
 			{
 			//case FP_ZERO: bits = 0; break; 
-			case FP_NAN: bits = traits::exponent | traits::mantissa; break;
+			case FP_NAN: bits = traits::exponent | traits::significand; break;
 			case FP_INFINITE: bits = traits::exponent | (t<0) * traits::sign; break;
 			case FP_SUBNORMAL: assert(std::numeric_limits<T>::has_denorm); // pass
 			case FP_ZERO: // note that floats can be ±0.0

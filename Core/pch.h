@@ -43,6 +43,8 @@
 #include <comdef.h>
 // BOOST includes
 #define BOOST_DECL_EXPORTS
+#define BOOST_WARCHIVE_SOURCE
+#define BOOST_ARCHIVE_DECL
 
 using namespace std;
 

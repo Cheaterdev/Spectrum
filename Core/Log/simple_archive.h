@@ -1,3 +1,7 @@
+
+#define BOOST_DECL_EXPORTS
+#define BOOST_WARCHIVE_SOURCE
+#define BOOST_ARCHIVE_DECL
 #include <boost/archive/xml_oarchive.hpp>
 
 class simple_log_archive

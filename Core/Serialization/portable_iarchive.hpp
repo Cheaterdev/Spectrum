@@ -119,11 +119,11 @@
 #endif
 
 // namespace alias
-#if BOOST_VERSION < 103800
+//#if BOOST_VERSION < 103800
 namespace fp = boost::math;
-#else
-namespace fp = boost::spirit::math;
-#endif
+//#else
+//namespace fp = boost::spirit::math;
+//#endif
 
 // namespace alias endian
 #if BOOST_VERSION < 104800

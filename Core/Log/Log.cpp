@@ -1,4 +1,7 @@
 #include "pch.h"
+#define BOOST_DECL_EXPORTS
+#define BOOST_WARCHIVE_SOURCE
+#define BOOST_ARCHIVE_DECL
 #include <boost/archive/impl/basic_xml_oarchive.ipp>
 #include <boost/archive/impl/xml_oarchive_impl.ipp>
 
