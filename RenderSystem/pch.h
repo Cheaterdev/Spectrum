@@ -1,8 +1,14 @@
 #pragma once
 
+
+#ifndef APPVEYOR 
 #ifndef DEBUG
 #define OCULUS_SUPPORT
 #endif
+#endif
+
+
+
 #include "../DirectXFramework/pch.h"
 #include "../FlowGraph/pch.h"
 
