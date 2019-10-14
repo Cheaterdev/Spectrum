@@ -3,7 +3,7 @@
 
 #ifndef APPVEYOR 
 #ifndef DEBUG
-#define OCULUS_SUPPORT
+//#define OCULUS_SUPPORT
 #endif
 #endif
 
