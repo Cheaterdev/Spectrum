@@ -53,10 +53,10 @@ using namespace std;
 #pragma warning(disable:4310)
 
 //#include <boost/move/move.hpp>
-#include <boost/iostreams/stream.hpp>
+//#include <boost/iostreams/stream.hpp>
 
-#include <boost/format.hpp>
-#include <boost/functional/hash.hpp>
+//#include <boost/format.hpp>
+//#include <boost/functional/hash.hpp>
 //#include <boost/timer.hpp>
 //#include <boost/type_traits/is_enum.hpp>
 //#include <boost/mpl/bool.hpp>
@@ -121,10 +121,10 @@ typedef  eos::portable_oarchive serialization_portable_oarchive;
 typedef  eos::portable_iarchive serialization_portable_iarchive;
 
 
-#include <boost/system/error_code.hpp>
-#include <boost/uuid/uuid.hpp>            // uuid class
-#include <boost/uuid/uuid_generators.hpp> // generators
-#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
+//#include <boost/system/error_code.hpp>
+//#include <boost/uuid/uuid.hpp>            // uuid class
+//#include <boost/uuid/uuid_generators.hpp> // generators
+//#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
 
 #include <string>
 #include <locale>
