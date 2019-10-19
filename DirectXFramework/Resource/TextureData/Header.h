@@ -122,7 +122,7 @@ struct texture_mip_data
         GetSurfaceInfo2(w, h, format, &a, &b, &c);
         width_stride = static_cast<UINT>(b);
         slice_stride = static_cast<UINT>(a);
-        num_rows = c;
+        num_rows = static_cast<UINT>(c);
         data.resize(slice_stride * d);
     }
     std::vector<char> data;

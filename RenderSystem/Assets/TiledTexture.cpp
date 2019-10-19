@@ -196,7 +196,7 @@ void TiledTexture::zero_tile(Tile::ptr& tile)
 {
     tile->state = TileState::FREED;
     heap_manager.remove(tile);
-    int pixels = pow(2, tile->mip_level);
+    int pixels = 1<<tile->mip_level;
     ivec3 mip_position = tile->position * pixels;
     int mip_index = mip_position.x + mip_position.y * residency_data->width + mip_position.z * residency_data->width * residency_data->height;
 

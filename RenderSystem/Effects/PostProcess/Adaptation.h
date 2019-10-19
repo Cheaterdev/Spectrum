@@ -19,7 +19,7 @@ class HDRAdaptation
 	float Exposure = 2.0f;
 	const float kInitialMinLog = -12.0f;
 	const float kInitialMaxLog = 4.0f;
-	const float g_ToeStrength = 0.01;
+	const float g_ToeStrength = 0.01f;
 	bool inited = false;
 	Texture::ptr tex_luma;
 

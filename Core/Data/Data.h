@@ -234,3 +234,73 @@ public:
 		return get().get();
 	}
 };
+
+
+
+std::strong_ordering operator<=>(const std::string& l, const std::string& r);
+
+
+template<class type, size_t size>
+std::strong_ordering operator<=>(const std::array<type, size>& l, const std::array<type, size>& r)
+{
+	for (size_t i = 0; i < l.size(); i++)
+		if (auto cmp = (l[i] <=> r[i]); cmp != 0) return cmp;
+
+	return  std::strong_ordering::equal;
+}
+
+
+
+
+template<class type>
+std::strong_ordering operator<=>(const std::vector<type>& l, const std::vector<type>& r)
+{
+
+	if (auto cmp = l.size() <=> r.size(); cmp != 0) return cmp;
+
+
+	for (size_t i = 0; i < l.size(); i++)
+		if (auto cmp = (l[i] <=> r[i]); cmp != 0) return cmp;
+
+	return  std::strong_ordering::equal;
+}
+
+
+
+
+template<class type>
+bool operator==(const std::vector<type>& l, const std::vector<type>& r)
+{
+
+	if (l.size() != r.size()) return false;
+
+
+	for (size_t i = 0; i < l.size(); i++)
+		if (l[i] != r[i])  return false;
+
+	return  true;
+}
+
+
+
+
+/*
+
+
+template<class type>
+std::strong_ordering operator<=>(const std::shared_ptr<type>& l, const std::shared_ptr<type>& r)
+{
+	//if (auto cmp = l.get() <=> r.get(); cmp != 0) return cmp;
+	return  *l <=> *r;
+}
+
+
+
+
+template<class type>
+bool operator==(const std::shared_ptr<type>& l, const std::shared_ptr<type>& r)
+{
+
+	return  *l == *r;
+}
+*/

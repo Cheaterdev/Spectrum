@@ -124,7 +124,7 @@ namespace DX12
             {
                 CD3DX12_ROOT_PARAMETER& param;
                 CD3DX12_DESCRIPTOR_RANGE& range;
-                std::map<int, table_info>& tables;
+                std::map<size_t, table_info>& tables;
                 size_t index;
 
 
@@ -156,7 +156,7 @@ namespace DX12
                 {
                     param.InitAsConstants(table.count, table.buffer_offset, 0, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
                 }
-                helper(size_t index, CD3DX12_ROOT_PARAMETER& _param, CD3DX12_DESCRIPTOR_RANGE& _range, std::map<int, table_info>& tables): index(index), param(_param), range(_range), tables(tables)
+                helper(size_t index, CD3DX12_ROOT_PARAMETER& _param, CD3DX12_DESCRIPTOR_RANGE& _range, std::map<size_t, table_info>& tables): index(index), param(_param), range(_range), tables(tables)
                 {
                 }
 
@@ -217,7 +217,7 @@ namespace DX12
                 sampler.RegisterSpace = space;
                 sampler.ShaderRegister = i;
             }
-            std::map<int, table_info> tables;
+            std::map<size_t, table_info> tables;
 
         private:
             std::vector<CD3DX12_ROOT_PARAMETER> parameters;

@@ -42,12 +42,12 @@ namespace DX12
                 this->id = shader_ids[blob_hash.hexdigest()];
             }
         public:
-            static Cache<std::string, int> shader_ids;
+            static Cache<std::string, size_t> shader_ids;
             const MD5& get_hash() const
             {
                 return hash;
             }
-            int id;
+			size_t id;
             std::string& get_blob()
             {
                 return blob;
@@ -193,7 +193,7 @@ namespace DX12
     };
 
     template<class _shader_type>
-    Cache<std::string, int> Shader<_shader_type>::shader_ids([](const std::string& blob)
+    Cache<std::string, size_t> Shader<_shader_type>::shader_ids([](const std::string& blob)
     {
         return Shader<_shader_type>::shader_ids.size();
     });

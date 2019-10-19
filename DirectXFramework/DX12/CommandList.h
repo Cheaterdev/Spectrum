@@ -41,8 +41,8 @@ namespace DX12
 
 	public:
 
-		std::shared_ptr<UploadBuffer> get_upload(UINT size);
-		std::shared_ptr<CPUBuffer> get_readback(UINT size);
+		std::shared_ptr<UploadBuffer> get_upload(UINT64 size);
+		std::shared_ptr<CPUBuffer> get_readback(UINT64 size);
 
 		void on_execute_list(CommandList* list);
 		void unused_upload(std::vector<std::shared_ptr<UploadBuffer>>& upload_resources);
@@ -266,7 +266,7 @@ namespace DX12
 
 		std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
 		UINT64 resource_offset;
-		size_t heap_size = 0x200000;
+		UINT heap_size = 0x200000;
 	protected:
 		void reset();
 

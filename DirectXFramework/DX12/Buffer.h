@@ -9,13 +9,13 @@ namespace DX12
 		protected:
 			GPUBuffer() = default;
 
-			GPUBuffer(UINT count, UINT stride);
+			GPUBuffer(UINT64 count, UINT stride);
 
 
-			UINT count;
+			UINT64 count;
 			UINT stride;
 
-			UINT size;
+			UINT64 size;
 
 			HandleTable uavs;
 			HandleTable srv;
@@ -31,7 +31,7 @@ namespace DX12
 				size = 0;
 			}
 			using ptr = std::shared_ptr<GPUBuffer>;
-			GPUBuffer(UINT size, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE);
+			GPUBuffer(UINT64 size, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE);
 
 			template<class T>
 			static ptr create_const_buffer()
@@ -64,7 +64,7 @@ namespace DX12
 				D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 				desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 				desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				desc.Buffer.NumElements = get_desc().Width/4;
+				desc.Buffer.NumElements = static_cast<UINT>(get_desc().Width/4);
 				desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 				Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), nullptr, &desc, h.cpu);
 			}
@@ -164,7 +164,7 @@ namespace DX12
 			char* data;
 
 			template<class T = char>
-			T * map(int from, int to)
+			T * map(SIZE_T  from, SIZE_T  to)
 			{
 				T* result = nullptr;
 				D3D12_RANGE Range;
@@ -177,7 +177,7 @@ namespace DX12
 
 			void unmap();
 		public:
-			UploadBuffer(int count);
+			UploadBuffer(UINT64 count);
 			virtual ~UploadBuffer();
 			char* get_data();
 	};
@@ -188,7 +188,7 @@ namespace DX12
 			int stride;
 
 		public:
-			CPUBuffer(int count, int stride);
+			CPUBuffer(UINT64 count, int stride);
 
 			bool mapped = false;
 			template<class T = char>
@@ -225,11 +225,11 @@ namespace DX12
 		public:
 			using ptr = std::shared_ptr<StructuredBuffer<T>>;
 			using type = T;
-			StructuredBuffer(UINT count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE);
+			StructuredBuffer(UINT64 count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE);
 
 			UINT get_counter_offset();
 
-			UINT get_count()
+			UINT64 get_count()
 			{
 				return count;// get_desc().Width / sizeof(T);
 			}
@@ -322,7 +322,7 @@ namespace DX12
 		public:
 			using ptr = std::shared_ptr<IndexBuffer>;
 
-			explicit IndexBuffer(UINT size);
+			explicit IndexBuffer(UINT64 size);
 			template<class T>
 			explicit IndexBuffer(const std::vector<T>& v) : GPUBuffer(static_cast<UINT>(v.size()), sizeof(T))
 			{
@@ -346,7 +346,7 @@ namespace DX12
 			}
 
 
-			D3D12_INDEX_BUFFER_VIEW get_index_buffer_view(bool is_32, unsigned int offset = 0, unsigned int size = 0);
+			D3D12_INDEX_BUFFER_VIEW get_index_buffer_view(bool is_32, unsigned int offset = 0, UINT size = 0);
 
 		private:
 			friend class boost::serialization::access;
@@ -696,7 +696,7 @@ namespace DX12
 	
 	}
 	template<class T>
-	inline StructuredBuffer<T>::StructuredBuffer(UINT count, counterType counted, D3D12_RESOURCE_FLAGS flags) : GPUBuffer(counted== counterType::SELF ? (Math::AlignUp(count * sizeof(T), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(T)), flags)
+	inline StructuredBuffer<T>::StructuredBuffer(UINT64 count, counterType counted, D3D12_RESOURCE_FLAGS flags) : GPUBuffer(counted== counterType::SELF ? (Math::AlignUp(count * sizeof(T), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(T)), flags)
 	{
 		stride = sizeof(T);
 		this->count = count;
@@ -714,7 +714,7 @@ namespace DX12
 	template<class T>
 	inline UINT StructuredBuffer<T>::get_counter_offset()
 	{
-		assert(counted== counterType::SELF, "needs to be counted");
+		assert(counted== counterType::SELF && "needs to be counted");
 		return size - sizeof(UINT);
 	}
 

@@ -128,9 +128,6 @@
     <ClInclude Include="Tree\Tree.h">
       <Filter>Tree</Filter>
     </ClInclude>
-    <ClInclude Include="DebugInfo\StackWalker.h">
-      <Filter>DebugInfo</Filter>
-    </ClInclude>
     <ClInclude Include="patterns\Holdable.h">
       <Filter>Patterns</Filter>
     </ClInclude>
@@ -177,9 +174,6 @@
     <ClCompile Include="Platform.cpp" />
     <ClCompile Include="Threads\Threading.cpp">
       <Filter>Threads</Filter>
-    </ClCompile>
-    <ClCompile Include="DebugInfo\StackWalker.cpp">
-      <Filter>DebugInfo</Filter>
     </ClCompile>
     <ClCompile Include="Data\Data.cpp">
       <Filter>Data</Filter>

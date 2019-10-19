@@ -161,9 +161,9 @@ namespace DX12
 				{
 					auto c = desc;
 
-					for (int z = 0; z < data.array[a]->mips[m]->depth; z++)
+					for (unsigned int z = 0; z < data.array[a]->mips[m]->depth; z++)
 					{
-						for (int w = 0; w < data.array[a]->mips[m]->num_rows; w++)
+						for (unsigned int w = 0; w < data.array[a]->mips[m]->num_rows; w++)
 							memcpy(data.array[a]->mips[m]->data.data() + w * data.array[a]->mips[m]->width_stride + z * data.array[a]->mips[m]->slice_stride
 								, mem + w * pitch + z * slice,
 								data.array[a]->mips[m]->width_stride);
@@ -327,9 +327,9 @@ namespace DX12
 
         for (int i = 0; i < res_desc.MipLevels; i++)
         {
-            int mm = pow(2, i);
-            p[i].Width = std::max(1ull, resource->get_desc().Width / mm);
-            p[i].Height = std::max(1u, resource->get_desc().Height / mm);
+            int mm = 1<<i;
+            p[i].Width = std::max(1.0f, static_cast<float>(resource->get_desc().Width / mm));
+            p[i].Height = std::max(1.0f, static_cast<float>(resource->get_desc().Height / mm));
             p[i].TopLeftX = 0;
             p[i].TopLeftY = 0;
             p[i].MinDepth = 0;

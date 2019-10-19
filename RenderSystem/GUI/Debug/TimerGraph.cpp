@@ -12,7 +12,7 @@ namespace GUI
 
 			GraphElement::GraphElement(block_data * data)
 			{
-				trace = get_stack_trace();
+			//	trace = get_stack_trace();
 
 				clickable = true;
 			//	draw_helper = true;

@@ -4,40 +4,25 @@
 #pragma comment(lib, "Dbghelp")
 
 
-
 namespace Exceptions
 {
 
-	Exception::Exception(const char* wtf) : std::exception((std::string(wtf) + "\n At:" + ::get_stack_trace().to_string()).c_str()) 
+	Exception::Exception(std::string_view wtf)  : std::exception((std::string(wtf) + "\n At:" + boost::stacktrace::to_string(stack)).c_str())
 	{
-		stack = ::get_stack_trace();
 	}
 
 	stack_trace Exception::get_stack_trace()
 	{
 		return 	stack;
 	}
-}
-
-stack_trace get_stack_trace()
-{
-	stack_trace result;
-
-#define DEPTH 16
-	void*          stack[DEPTH];
-	unsigned short frames;
 
 
-	//SymInitialize(process, NULL, TRUE);
-	frames = CaptureStackBackTrace(0, DEPTH, stack, NULL);
-	result.reserve(frames);
-	for (int i = 0; i < frames; i++)
+	stack_trace get_stack_trace()
 	{
-		result.emplace_back((DWORD64)(stack[i]));
+		return boost::stacktrace::stacktrace();
 	}
-
-	return result;
 }
+
 
 
 #ifdef LEAK_TEST_ENABLE
@@ -85,7 +70,7 @@ LeakDetector::~LeakDetector()
 
 
 #endif
-
+/*
 std::string stack_trace_element::get_name()
 {
 	SYMBOL_INFO*   symbol;
@@ -115,3 +100,4 @@ std::string stack_trace::to_string()
 
 	return res;
 }
+*/

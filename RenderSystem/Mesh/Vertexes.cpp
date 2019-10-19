@@ -45,8 +45,8 @@ namespace Render
                         if (l.name == s.name && l.index == s.index)
                         {
                             //    stage.add(b.buffer, b.layouts);
-                            D3D12_INPUT_ELEMENT_DESC elem;
-                            elem.SemanticName = l.name.c_str();
+							input_layout_row elem;
+                            elem.SemanticName = l.name;
                             elem.AlignedByteOffset = l.offset;
                             elem.Format = l.format;
                             elem.InputSlot = l.slot;
@@ -96,8 +96,8 @@ namespace Render
             {
                 if (l.name == s.name && l.index == s.index)
                 {
-                    D3D12_INPUT_ELEMENT_DESC elem;
-                    elem.SemanticName = l.name.c_str();
+					input_layout_row elem;
+                    elem.SemanticName = l.name;
                     elem.AlignedByteOffset = l.offset;
                     elem.Format = l.format;
                     elem.InputSlot = l.slot;

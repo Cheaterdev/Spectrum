@@ -238,7 +238,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 				scene->on_changed(this);
         }
 
-		int register_material(MaterialAsset::ptr mat)
+		size_t register_material(MaterialAsset::ptr mat)
 		{
 			overrided_material.push_back( register_asset(mat));
 

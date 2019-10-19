@@ -27,7 +27,7 @@ namespace DX11
         if (this->vps != vps)
         {
             this->vps = vps;
-            native_context->RSSetViewports(vps.size(), vps.data());
+            native_context->RSSetViewports(static_cast<UINT>(vps.size()), vps.data());
         }
         else
         {
@@ -45,7 +45,7 @@ namespace DX11
 		if (this->scissors != scissors)
 		{
 			this->scissors = scissors;
-			native_context->RSSetScissorRects(scissors.size(), reinterpret_cast<D3D11_RECT *>(scissors.data()));
+			native_context->RSSetScissorRects(static_cast<UINT>(scissors.size()), reinterpret_cast<D3D11_RECT *>(scissors.data()));
 		}
 		else
 		{

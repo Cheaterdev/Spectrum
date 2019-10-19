@@ -1,4 +1,4 @@
-struct stack_trace_element
+/*struct stack_trace_element
 {
 	DWORD64 address;
 	stack_trace_element(DWORD64 address) :address(address)
@@ -7,28 +7,35 @@ struct stack_trace_element
 	}
 	std::string get_name();
 };
-
+*/
+/*
 struct stack_trace :public std::vector<stack_trace_element>
 {
 
 	std::string to_string();
 };
 
-stack_trace get_stack_trace();
+*/
+
+#include <boost/stacktrace.hpp>
 
 
 namespace Exceptions
 {
+	using stack_trace = boost::stacktrace::stacktrace;
+
+
 	class Exception : public std::exception
 	{
 		stack_trace stack;
 	public:
-		Exception(const char* wtf) throw();
+		Exception(std::string_view wtf);
 		stack_trace get_stack_trace();
 
 
 	};
 
+	stack_trace get_stack_trace();
 }
 #ifdef SPECTRUM_ENABLE_EXEPTIONS
 #define SPECTRUM_TRY try{

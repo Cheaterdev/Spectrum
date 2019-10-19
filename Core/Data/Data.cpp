@@ -97,3 +97,16 @@ MyVariant::~MyVariant()
 		typed.reset();
 	}
 
+
+
+	std::strong_ordering operator<=>(const std::string& l, const std::string& r) {
+
+		if (auto cmp = l.size() <=> r.size(); cmp != 0) return cmp;
+
+
+		for (size_t i = 0; i < l.size(); i++)
+			if (auto cmp = (l[i] <=> r[i]); cmp != 0) return cmp;
+
+		return  std::strong_ordering::equal;
+	}
+

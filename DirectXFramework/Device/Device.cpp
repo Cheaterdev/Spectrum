@@ -32,12 +32,12 @@ namespace DX11
         DX11_DeviceContext native_context;
         std::vector<D3D_FEATURE_LEVEL> feature_requested = { /*D3D_FEATURE_LEVEL_11_3, D3D_FEATURE_LEVEL_11_2,*/ D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0 };
         D3D_FEATURE_LEVEL FeatureLevelsSupported;
-        D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, feature_requested.data(), feature_requested.size(), D3D11_SDK_VERSION, &device,
+        D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, flags, feature_requested.data(), static_cast<UINT>(feature_requested.size()), D3D11_SDK_VERSION, &device,
                           &FeatureLevelsSupported,
                           &native_context);
         immediate_context.reset(new Context(native_context));
         /*
-        D3D11_FEATURE_DATA_D3D11_OPTIONS1 featureData;
+        D3D11_FEATURE_DATA_D3D11_OPTIONS1 featureData)*999
         HRESULT hr = device->CheckFeatureSupport(D3D11_FEATURE_D3D11_OPTIONS1, &featureData, sizeof(featureData));
         */
         device->QueryInterface(__uuidof(DXGI_Device), (void**)&gi_device);

@@ -40,30 +40,22 @@
 #include <functional>
 #include <stdexcept>
 #include <queue>
+#include <compare>
 #include <comdef.h>
 // BOOST includes
-#define BOOST_DECL_EXPORTS
-#define BOOST_WARCHIVE_SOURCE
-#define BOOST_ARCHIVE_DECL
-
+//#define BOOST_DECL_EXPORTS
+//#define BOOST_WARCHIVE_SOURCE
+//#define BOOST_ARCHIVE_DECL
 using namespace std;
 
 #pragma warning(disable:4512)
 #pragma warning(disable:4100)
 #pragma warning(disable:4310)
 
-//#include <boost/move/move.hpp>
-//#include <boost/iostreams/stream.hpp>
 
-//#include <boost/format.hpp>
-//#include <boost/functional/hash.hpp>
-//#include <boost/timer.hpp>
-//#include <boost/type_traits/is_enum.hpp>
-//#include <boost/mpl/bool.hpp>
-//#include <boost/mpl/eval_if.hpp>
-//#include <boost/mpl/int.hpp>
-//#include <boost/mpl/equal_to.hpp>
-//#include <boost/algorithm/string.hpp>
+#include <boost/predef/other/endian.h>
+#define BOOST_PREDEF_DETAIL_ENDIAN_COMPAT_H
+
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
@@ -107,6 +99,7 @@ private:
 #include "serialization/shared_ptr.h"
 
 #include "serialization/portable_iarchive.hpp"
+
 #include "serialization/portable_oarchive.hpp"
 
 #pragma warning(default:4512)

@@ -238,7 +238,7 @@ namespace DX12
 
 		HandleTable get_table_view(int offset, int count)
 		{
-			assert((offset + count) <= max_count, "Not enought handles");
+			assert((offset + count) <= max_count && "Not enought handles");
 			HandleTable res;
 			res.info = std::shared_ptr<HandleTable::helper>(new HandleTable::helper);
 

@@ -5,7 +5,7 @@ class SkyRender;
 
 namespace Render
 {
-	class OVRContext;
+	struct OVRContext;
 }
 class AssetRenderer : public Singleton<AssetRenderer>
 {

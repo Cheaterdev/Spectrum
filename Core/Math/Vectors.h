@@ -59,7 +59,7 @@ public:
 	Vector& operator=(const Vector<T2>& v)
 	{
 		for (int i = 0; i < T::N; ++i)
-			values[i] = v[i];
+			values[i] = static_cast<typename T::Format>(v[i]);
 		return *this;
 	}
 

@@ -27,9 +27,9 @@ namespace DX12
     RootSignature::RootSignature(const RootSignatureDesc& desc, D3D12_ROOT_SIGNATURE_FLAGS flags)
     {
         CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init(desc.parameters.size(), desc.parameters.data(), 0, nullptr, flags);
+        rootSignatureDesc.Init(static_cast<UINT>(desc.parameters.size()), desc.parameters.data(), 0, nullptr, flags);
         rootSignatureDesc.pStaticSamplers = desc.samplers().data();
-        rootSignatureDesc.NumStaticSamplers = desc.samplers().size();
+        rootSignatureDesc.NumStaticSamplers = static_cast<UINT>(desc.samplers().size());
         this->desc = desc;
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;

@@ -2,224 +2,94 @@
 #include "pch.h"
 #include "PipelineState.h"
 
+
+
+
+#define E(x) 	if ( l.x != r.x) return false;
+#define C(x) 	if (auto cmp = l.x <=> r.x; cmp != 0) return cmp;
+
+bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
+{
+	E(StencilDepthFailOp)
+	E(StencilFailOp)
+	E(StencilFunc)
+	E(StencilPassOp)
+
+
+	return true;
+}
+
+
+std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC & l, const D3D12_DEPTH_STENCILOP_DESC & r)
+{
+	C(StencilDepthFailOp)
+	C(StencilFailOp)
+	C(StencilFunc)
+	C(StencilPassOp)
+
+
+	return std::strong_ordering::equal;
+}
+
+
 namespace DX12
 {
 
 
-#define LESS_ID(x) if((l.x ? l.x->id : -5)<(r.x ? r.x->id : -5)) return true; if((r.x ? r.x->id : -5)<(l.x ? l.x->id : -5)) return false;
 
-#define OP_SHADER(x,y)\
-if (l.x == r.x)\
-{\
-	y\
-}\
-else\
-{\
-	if(l.x&&r.x)\
-		return l.x->id < r.x->id;\
-	else\
-	return l.x < r.x;\
-}
+#define EQ_ID(x)  if((x?x->id:-5)!=(r.x?r.x->id:-5)) return false;
+#define CMP_ID(x)  if (auto cmp =((x?x->id:-5)<=> (r.x?r.x->id:-5)); cmp != 0) return cmp;
+#define _E(x) 	if ( x != r.x) return false;
+#define _C(x) 	if (auto cmp = x <=> r.x; cmp != 0) return cmp;
 
 
-#define OP_E_SHADER(x)\
-if((l.x?l.x->id:-5)!=(r.x?r.x->id:-5)) return false;
 
 
-    bool operator<(const input_layout_header& l, const input_layout_header& r)
-    {
-        OP(inputs.size(),
-
-           for (unsigned int i = 0; i < l.inputs.size(); i++)
-    {
-        OP(inputs[i].SemanticIndex,
-           OP(inputs[i].Format,
-              OP(inputs[i].InputSlot,
-                 OP(inputs[i].AlignedByteOffset,
-                    OP(inputs[i].InputSlotClass,
-                       OP(inputs[i].InstanceDataStepRate,
-                          return strcmp(l.inputs[i].SemanticName, r.inputs[i].SemanticName) < (int)0;
-                         )
-                      )
-                   )
-                )
-             )
-          );
-        }
-          );
-        return false;
-    }
-    bool operator==(const input_layout_header& l, const input_layout_header& r)
-    {
-        OP_E(inputs.size())
-
-        for (unsigned int i = 0; i < l.inputs.size(); i++)
-        {
-            OP_E(inputs[i].SemanticIndex)
-            OP_E(inputs[i].Format)
-            OP_E(inputs[i].InputSlot)
-            OP_E(inputs[i].AlignedByteOffset)
-            OP_E(inputs[i].InputSlotClass)
-            OP_E(inputs[i].InstanceDataStepRate)
-
-            if (strcmp(l.inputs[i].SemanticName, r.inputs[i].SemanticName))
-                return false;
-        }
-
-        return true;
-    }
-    bool operator==(const RasterizerState& l, const RasterizerState& r)
-    {
-        OP_E(cull_mode);
-        OP_E(fill_mode);
-        OP_E(conservative);
-        return true;
-    }
-    bool operator==(const RTVState& l, const RTVState& r)
-    {
-        OP_E(enable_depth)
-        OP_E(enable_depth_write)
-        OP_E(ds_format);
-        OP_E(rtv_formats.size())
-        OP_E(func)
-			OP_E(enable_stencil)
-			OP_E(stencil_read_mask)
-			OP_E(stencil_write_mask)
-
-			OP_E(stencil_desc.StencilFailOp)
-			OP_E(stencil_desc.StencilDepthFailOp)
-			OP_E(stencil_desc.StencilPassOp)
-			OP_E(stencil_desc.StencilFunc)
-
-        return true;
-    }
-    bool operator==(const BlendState& l, const BlendState& r)
-    {
-        OP_E(independ_blend)
-
-        for (int i = 0; i < 8; i++)
-            OP_E(render_target[i])
-            return true;
-    }
-
-    bool operator==(const RenderTarget& l, const RenderTarget& r)
-    {
-        OP_E(enabled)
-        OP_E(source)
-			OP_E(dest) 
-			OP_E(source_alpha)
-			OP_E(dest_alpha)
-        return true;
-    }
-    bool operator==(const PipelineStateDesc& l, const PipelineStateDesc& r)
-    {
-        OP_E(root_signature)
-        OP_E(blend)
-        OP_E(rasterizer)
-        OP_E(rtv)
-        OP_E_SHADER(vertex)
-        OP_E_SHADER(pixel)
-        OP_E_SHADER(geometry)
-        OP_E_SHADER(hull)
-        OP_E_SHADER(domain)
-        OP(topology)
-        OP(hull)
-        OP_E(layout)
-        return true;
-    }
-    bool operator<(const RasterizerState& l, const RasterizerState& r)
-    {
-        LESS(cull_mode);
-        LESS(fill_mode);
-        LESS(conservative);
-        return false;
-    }
-	bool operator<(const RTVState& l, const RTVState& r)
+	bool PipelineStateDesc::operator==(const  PipelineStateDesc& r)  const
 	{
-		LESS(enable_depth)
-			LESS(enable_depth_write)
-			LESS(rtv_formats.size())
-			LESS(ds_format)
-			LESS(func)
+			_E(root_signature)
+			_E(blend)
+			_E(rasterizer)
+			_E(rtv)
+			EQ_ID(vertex)
+			EQ_ID(pixel)
+			EQ_ID(geometry)
+			EQ_ID(hull)
+			EQ_ID(domain)
+			_E(topology)
 
-			LESS(enable_stencil)
-			LESS(stencil_read_mask)
-			LESS(stencil_write_mask)
-
-			LESS(stencil_desc.StencilFailOp)
-			LESS(stencil_desc.StencilDepthFailOp)
-			LESS(stencil_desc.StencilPassOp)
-			LESS(stencil_desc.StencilFunc)
-
-
-
-			return false;
+			return true;
+		
 	}
-	bool operator<(const BlendState& l, const BlendState& r)
-    {
-        LESS(independ_blend)
 
-        for (int i = 0; i < 8; i++)
-            LESS(render_target[i])
-            return false;
-    }
+	std::strong_ordering  PipelineStateDesc::operator<=>(const  PipelineStateDesc& r)  const
+	{
+			_C(root_signature.get())
+			_C(blend)
+			_C(rasterizer)
+			_C(rtv)
+			_C(topology)
+			_C(layout)
+			CMP_ID(vertex)
+			CMP_ID(pixel)
+			CMP_ID(geometry)
+			CMP_ID(hull)
+			CMP_ID(domain)
 
-
-    bool operator<(const RenderTarget& l, const RenderTarget& r)
-    {
-        LESS(enabled)
-        LESS(source)
-        LESS(dest)
-        return false;
-    }
-
-    bool operator<(const PipelineStateDesc& l, const PipelineStateDesc& r)
-    {
-        LESS(root_signature)
-        LESS(blend)
-        LESS(rasterizer)
-        LESS(rtv)
-        LESS(topology)
-        LESS(layout)
-        LESS_ID(vertex)
-        LESS_ID(pixel)
-        LESS_ID(geometry)
-        LESS_ID(hull)
-        LESS_ID(domain)
-        /*
-        OP(root_signature,
-           OP(blend,
-              OP(rasterizer,
-                 OP(rtv,
-                    OP_SHADER(vertex,
-                              OP_SHADER(pixel,
-                                        OP_SHADER(geometry,
-                                                OP_SHADER(hull,
-                                                        OP_SHADER(domain,
-                                                                OP(topology,
-                                                                        OP_LAST(layout)
-                                                                  )
-                                                                 )
-                                                         )
-                                                 )
-                                       )
-                             )
-                   )
-                )
-             )
-          )*/
-        return false;
-    }
+			return std::strong_ordering::equal;
+	}
 	 void PipelineState::on_change()
 	{
 		auto t = CounterManager::get().start_count<PipelineState>();
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		//                psoDesc.InputLayout = inputLayoutDesc;
-		D3D12_INPUT_LAYOUT_DESC layout_desc;
-		layout_desc.NumElements = static_cast<UINT>(desc.layout.inputs.size());
-		layout_desc.pInputElementDescs = desc.layout.inputs.data();
-		psoDesc.InputLayout = layout_desc;
+		std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
 
+		for (const auto& item : desc.layout.inputs)
+			elements.push_back(item.create_native());
+
+		psoDesc.InputLayout.NumElements = static_cast<UINT>(elements.size());
+		psoDesc.InputLayout.pInputElementDescs = elements.data();
+	
 		if (desc.root_signature)
 			psoDesc.pRootSignature = desc.root_signature->get_native().Get();
 

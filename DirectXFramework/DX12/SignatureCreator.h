@@ -209,7 +209,7 @@ namespace DX12
 		{
 
 
-			template <int slot, ShaderVisibility v, int offset, int count, int space = 0, class Type = Vector<vecN_t<UINT32, count>>>
+			template <int slot, ShaderVisibility v, int offset, int count, int space, class Type>
 			struct Constants
 			{
 			/*	operator int()
@@ -269,7 +269,7 @@ namespace DX12
 
 			};
 
-			template <int slot, ShaderVisibility v, DescriptorRange range, int offset, int count, int space = 0>
+			template <int slot, ShaderVisibility v, DescriptorRange range, int offset, int count, int space>
 			struct Table
 			{
 
@@ -319,7 +319,7 @@ namespace DX12
 				DX12::SignatureDataSetter*& context;
 			};
 
-			template <int slot, ShaderVisibility v, int offset, int space = 0>
+			template <int slot, ShaderVisibility v, int offset, int space>
 			struct ConstBuffer
 			{
 			/*	operator int()
@@ -405,7 +405,7 @@ namespace DX12
 
 
 
-			template <int slot, ShaderVisibility v, int offset, int space = 0>
+			template <int slot, ShaderVisibility v, int offset, int space>
 			struct SRV
 			{
 			/*	operator int()
@@ -456,7 +456,7 @@ namespace DX12
 				DX12::SignatureDataSetter*& context;
 			};
 
-			template <int slot, ShaderVisibility v, int offset, int space = 0>
+			template <int slot, ShaderVisibility v, int offset, int space>
 			struct UAV
 			{
 			/*	operator int()
@@ -494,7 +494,7 @@ namespace DX12
 			};
 
 
-			template<int slot, ShaderVisibility v, int offset, int space = 0>
+			template<int slot, ShaderVisibility v, int offset, int space>
 			struct Sampler
 			{
 
@@ -513,7 +513,7 @@ namespace DX12
 		namespace Creation
 		{
 
-			template <int slot, ShaderVisibility v, int offset, int count, int space = 0, class Type = Vector<vecN_t<UINT32, count>>>
+			template <int slot, ShaderVisibility v, int offset, int count, int space, class Type>
 			struct Constants
 			{
 
@@ -538,7 +538,7 @@ namespace DX12
 
 			};
 
-			template <int slot, ShaderVisibility v, DescriptorRange range, int offset, int count, int space = 0>
+			template <int slot, ShaderVisibility v, DescriptorRange range, int offset, int count, int space>
 			struct Table
 			{
 
@@ -554,7 +554,7 @@ namespace DX12
 
 			};
 
-			template <int slot, ShaderVisibility v, int offset, int space = 0>
+			template <int slot, ShaderVisibility v, int offset, int space>
 			struct ConstBuffer
 			{
 
@@ -587,7 +587,7 @@ namespace DX12
 
 
 
-			template <int slot, ShaderVisibility v, int offset, int space = 0>
+			template <int slot, ShaderVisibility v, int offset, int space>
 			struct SRV
 			{
 
@@ -616,7 +616,7 @@ namespace DX12
 
 			};
 
-			template <int slot, ShaderVisibility v, int offset, int space = 0>
+			template <int slot, ShaderVisibility v, int offset, int space>
 			struct UAV
 			{
 
@@ -645,7 +645,7 @@ namespace DX12
 			};
 
 
-			template<int slot, ShaderVisibility v, int offset, int space = 0>
+			template<int slot, ShaderVisibility v, int offset, int space>
 			struct Sampler
 			{
 				D3D12_SAMPLER_DESC s;

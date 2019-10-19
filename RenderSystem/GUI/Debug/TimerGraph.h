@@ -39,7 +39,7 @@ namespace GUI
 			};
 			class GraphElement :public image
 			{
-				stack_trace trace;
+			//	stack_trace trace;
 				std::wstring name;
 
 

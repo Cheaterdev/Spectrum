@@ -31,7 +31,7 @@ public:
 	{
 		depth_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, size.x, size.y, 0, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 		table = RenderTargetTable({}, depth_tex);
-		light_cam.set_projection_params(pi / 4, 1, 0.1, 100);
+		light_cam.set_projection_params(pi / 4.0f, 1.0f, 0.1f, 100.f);
 		light_cam.position = { 0, 40, 1 };
 		light_cam.target = { 0, 0, 0 };
 		light_cam.update();
@@ -1305,7 +1305,7 @@ public:
 		MeshRenderContext::ptr context(new MeshRenderContext());
 		context->delta_time = dt;
 		//	context->g_buffer = &g_buffer;
-		time += dt * 1000;
+		time += static_cast<size_t>(dt * 1000.0f);
 		context->current_time = time;
 		context->sky_dir = lighting->lighting.pssm.get_position();
 		context->priority = TaskPriority::HIGH;
@@ -1525,7 +1525,7 @@ public:
 	//	std::this_thread::sleep_for(1s);
 		if (r.w <= 64 || r.h <= 64) return;
 
-		auto size = r.size;
+		ivec2 size = r.size;
 		texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 
 

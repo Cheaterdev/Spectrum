@@ -291,7 +291,7 @@ namespace DX12
 	}
 	Uploader::UploadInfo Uploader::place_data(UINT64 uploadBufferSize, unsigned int alignment)
 	{
-		const auto AlignedSize = Math::AlignUp(uploadBufferSize, alignment);
+		const auto AlignedSize = static_cast<UINT>(Math::AlignUp(uploadBufferSize, alignment));
 		resource_offset = Math::AlignUp(resource_offset, alignment);
 
 		if (upload_resources.empty() || (resource_offset + uploadBufferSize > upload_resources.back()->get_size()))
@@ -749,7 +749,7 @@ namespace DX12
 	}
 
 
-	std::shared_ptr<UploadBuffer> BufferCache::get_upload(UINT size)
+	std::shared_ptr<UploadBuffer> BufferCache::get_upload(UINT64 size)
 	{
 		{
 			std::lock_guard<std::mutex> m(upload);
@@ -768,7 +768,7 @@ namespace DX12
 		//     upload_resources.emplace_back(new BufferBase(size, HeapType::UPLOAD, ResourceState::GEN_READ));
 	}
 
-	std::shared_ptr<CPUBuffer> BufferCache::get_readback(UINT size)
+	std::shared_ptr<CPUBuffer> BufferCache::get_readback(UINT64 size)
 	{
 		{
 			std::lock_guard<std::mutex> m(read_back);

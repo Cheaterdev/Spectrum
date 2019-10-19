@@ -417,6 +417,7 @@ namespace DX12
 			}
 		}
 		{
+
 			auto t = CounterManager::get().start_count<ID3D12Device>();
 			D3D12CreateDevice(
 				vAdapters[0],
