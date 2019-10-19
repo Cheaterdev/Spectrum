@@ -13,7 +13,7 @@ texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
     {
         size_t depth = metadata.depth;
         size_t idx = 0;
-        tex_data.reset(new texture_data(1, metadata.mipLevels, metadata.width, metadata.height, metadata.depth, metadata.format));
+        tex_data.reset(new texture_data(1u, (UINT)metadata.mipLevels, (UINT)metadata.width, (UINT)metadata.height, (UINT)metadata.depth, metadata.format));
 
         for (size_t level = 0; level < metadata.mipLevels; ++level)
         {
@@ -23,10 +23,10 @@ texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
             const DirectX::Image& img = image.GetImages()[index];
             assert(idx < (metadata.mipLevels * metadata.arraySize));
             int  a = 0;
-            int m = level;
+			size_t m = level;
             memcpy(tex_data->array[a]->mips[m]->data.data(), img.pixels, tex_data->array[a]->mips[m]->data.size());
-            tex_data->array[a]->mips[m]->width_stride = img.rowPitch;
-            tex_data->array[a]->mips[m]->slice_stride = img.slicePitch;
+            tex_data->array[a]->mips[m]->width_stride = static_cast<UINT>(img.rowPitch);
+            tex_data->array[a]->mips[m]->slice_stride = static_cast<UINT>(img.slicePitch);
             /*             sub_data[idx].pData = img.pixels;
             sub_data[idx].RowPitch = static_cast<DWORD>(img.rowPitch);
             sub_data[idx].SlicePitch = static_cast<DWORD>(img.slicePitch);*/
@@ -41,7 +41,7 @@ texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
     {
         //--- 1D or 2D texture case ---------------------------------------------------
         size_t idx = 0;
-        tex_data.reset(new texture_data(metadata.arraySize, metadata.mipLevels, metadata.width, metadata.height, metadata.depth, metadata.format));
+        tex_data.reset(new texture_data((UINT)metadata.arraySize, (UINT)metadata.mipLevels, (UINT)metadata.width, (UINT)metadata.height, (UINT)metadata.depth, metadata.format));
 
         for (size_t item = 0; item < metadata.arraySize; ++item)
         {
@@ -61,11 +61,11 @@ texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
                     return nullptr;
 
                 assert(idx < (metadata.mipLevels * metadata.arraySize));
-                int  a = item;
-                int m = level;
+				size_t  a = item;
+				size_t m = level;
                 memcpy(tex_data->array[a]->mips[m]->data.data(), img.pixels, tex_data->array[a]->mips[m]->data.size());
-                tex_data->array[a]->mips[m]->width_stride = img.rowPitch;
-                tex_data->array[a]->mips[m]->slice_stride = img.slicePitch;
+                tex_data->array[a]->mips[m]->width_stride = static_cast<UINT>(img.rowPitch);
+                tex_data->array[a]->mips[m]->slice_stride = static_cast<UINT>(img.slicePitch);
                 /*   sub_data[idx].pData = img.pixels;
                 sub_data[idx].RowPitch = static_cast<DWORD>(img.rowPitch);
                 sub_data[idx].SlicePitch = static_cast<DWORD>(img.slicePitch);*/

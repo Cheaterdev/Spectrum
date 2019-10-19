@@ -131,11 +131,11 @@ namespace DX12
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 
 		UINT descriptor_size;
-		int current_offset = 0;
-		int max_count;
+		UINT current_offset = 0;
+		UINT max_count;
 		std::mutex m;
-		std::map<int, std::deque<int>> frees;
-		HandleTable make_table(int count, int offset)
+		std::map<UINT, std::deque<UINT>> frees;
+		HandleTable make_table(UINT count, UINT offset)
 		{
 			HandleTable res;
 			std::weak_ptr<DescriptorHeap> ptr = shared_from_this();
@@ -155,13 +155,13 @@ namespace DX12
 			return res;
 		}
 		template<class T>
-		void place(HandleTable& table, int i, T smth)
+		void place(HandleTable& table, UINT i, T smth)
 		{
 			smth(table[i]);
 		}
 
 		template<class T, class ...Args>
-		void place(HandleTable& table, int i, T smth, Args...args)
+		void place(HandleTable& table, UINT i, T smth, Args...args)
 		{
 			place(table, i, smth);
 			place(table, i + 1, args...);
@@ -183,7 +183,7 @@ namespace DX12
 			current_offset = 0;
 		}
 
-		int size()
+		size_t size()
 		{
 			return max_count;
 		}
@@ -196,7 +196,7 @@ namespace DX12
 			if (frees[count].size())
 			{
 				auto&& list = frees[count];
-				int offset = list.front();
+				UINT offset = list.front();
 				list.pop_front();
 				return make_table(count, offset);
 			}
@@ -213,13 +213,13 @@ namespace DX12
 		template<class ...Args>
 		HandleTable create_table(Args... t)
 		{
-			const int count = sizeof...(t);
+			const size_t count = sizeof...(t);
 			std::lock_guard<std::mutex> g(m);
 
 			if (frees[count].size())
 			{
 				auto&& list = frees[count];
-				int offset = list.front();
+				size_t offset = list.front();
 				list.pop_front();
 				return make_table(count, offset);
 			}
@@ -236,7 +236,7 @@ namespace DX12
 		CD3DX12_CPU_DESCRIPTOR_HANDLE get_handle(UINT i);
 		CD3DX12_GPU_DESCRIPTOR_HANDLE get_gpu_handle(UINT i);
 
-		HandleTable get_table_view(int offset, int count)
+		HandleTable get_table_view(UINT offset, UINT count)
 		{
 			assert((offset + count) <= max_count && "Not enought handles");
 			HandleTable res;
@@ -300,7 +300,7 @@ namespace DX12
 	{
 		std::vector<DescriptorHeap::ptr> pages;
 
-		unsigned int offset;
+		UINT offset;
 		// std::vector<bool> setted;
 		// std::vector<int> offsets;
 
@@ -310,10 +310,10 @@ namespace DX12
 			std::vector<Handle> handles;
 			bool changed;
 			bool fixed;
-			int count;
+			UINT count;
 		};
 
-		std::map<int, row> root_tables;
+		std::map<UINT, row> root_tables;
 		//static std::mutex free_mutex;
 
 		static DescriptorHeap::ptr get_free_table();
@@ -330,24 +330,24 @@ namespace DX12
 
 		void reset();
 
-		void set(int i, int offset, Handle h);
-		void set(int i, int offset, HandleTable h);
-		void set(int i, int offset, std::vector<Handle>& h);
-		Handle& get(int i, int offset)
+		void set(UINT i, UINT offset, Handle h);
+		void set(UINT i, UINT offset, HandleTable h);
+		void set(UINT i, UINT offset, std::vector<Handle>& h);
+		Handle& get(UINT i, UINT offset)
 		{
 			return root_tables[i].handles[offset];
 		}
 
 		Handle place(const Handle &h);
-		bool has_free_size(int count);
+		bool has_free_size(UINT count);
 
 
-		int calculate_needed_size();
+		UINT calculate_needed_size();
 
 		void unbind_all();
-		void bind(CommandList * list, std::function<void(int, Handle)> f);
+		void bind(CommandList * list, std::function<void(UINT, Handle)> f);
 		void bind(CommandList * list);
-		void bind_table(int i, std::vector<Handle>& h);
+		void bind_table(UINT i, std::vector<Handle>& h);
 		/*void set(int i, int offset, HandleTable h)
 		{
 			handles[i][offset] = h;
@@ -560,7 +560,7 @@ namespace DX12
 		D3D12_GPU_VIRTUAL_ADDRESS gpu_adress;
 		HeapType heap_type;
 		//  std::vector< unsigned int> states;
-		int id=0;
+		size_t id=0;
 
 		/*unsigned int states;*/
 	protected:

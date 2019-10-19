@@ -282,10 +282,12 @@ Vector<T> operator/(float n, Vector<T> v)
 	return v;
 }
 
-template<typename T>
-Vector<T> operator/(Vector<T> v, float n)
+template<typename T, typename T2>
+Vector<T> operator/(Vector<T> v, T2 n)
 {
-	v /= n;
+	for (int i = 0; i < T::N; ++i)
+		v[i] = static_cast<typename T::Format>(static_cast<T2>(v[i])/n);
+
 	return v;
 }
 

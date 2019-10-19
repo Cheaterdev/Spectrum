@@ -45,7 +45,7 @@ namespace DX12
 		srv.Buffer.FirstElement = 0;
 		srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE;
 		srv.Buffer.StructureByteStride = 0;
-		srv.Buffer.NumElements = count / sizeof(vec4);
+		srv.Buffer.NumElements = static_cast<UINT>(count / sizeof(vec4));
 		Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &srv, handle.cpu);
 	}
 
@@ -54,7 +54,7 @@ namespace DX12
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.Buffer.NumElements = count;
+		desc.Buffer.NumElements = static_cast<UINT>(count);
 		desc.Buffer.StructureByteStride = stride;
 		desc.Buffer.CounterOffsetInBytes = offset;
 		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
@@ -74,7 +74,7 @@ namespace DX12
     {
         return static_uav;
     }
-	 UINT GPUBuffer::get_count()
+	 UINT64 GPUBuffer::get_count()
 	{
 		return count;
 	}
@@ -99,7 +99,7 @@ namespace DX12
         D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
         desc.Format = DXGI_FORMAT_R32_TYPELESS;
-        desc.Buffer.NumElements = count / 4;
+        desc.Buffer.NumElements = static_cast<UINT>(count / 4);
         desc.Buffer.StructureByteStride = 0;
         desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
         Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), nullptr, &desc, h.cpu);
@@ -111,7 +111,7 @@ namespace DX12
         desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
         desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
         desc.Format = DXGI_FORMAT_R32_TYPELESS;
-        desc.Buffer.NumElements = count / 4;
+        desc.Buffer.NumElements = static_cast<UINT>(count / 4);
         desc.Buffer.StructureByteStride = 0;
         desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
         Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &desc, h.cpu);
@@ -129,7 +129,7 @@ namespace DX12
         D3D12_INDEX_BUFFER_VIEW view;
         view.BufferLocation = get_gpu_address() + offset;
         view.Format = is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
-        view.SizeInBytes = size ? size : this->size;
+        view.SizeInBytes = static_cast<UINT>(size ? size : this->size);
         return view;
     }
 

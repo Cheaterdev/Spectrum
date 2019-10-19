@@ -26,7 +26,7 @@ namespace DX12
 
 	 ivec3 Texture::get_size(int mip)
 	{
-		return ivec3(get_desc().Width, get_desc().Height, get_desc().DepthOrArraySize) / pow(2, mip);
+		return ivec3(get_desc().Width, get_desc().Height, get_desc().DepthOrArraySize) / (1<<mip);
 	}
 
 	 CubemapView::ptr & Texture::cubemap()
@@ -411,11 +411,11 @@ namespace DX12
         p.resize(res_desc.MipLevels);
         scissor.resize(res_desc.MipLevels);
 
-        for (int i = 0; i < res_desc.MipLevels; i++)
+        for (UINT i = 0; i < res_desc.MipLevels; i++)
         {
-            int mm = pow(2, i);
-            p[i].Width = std::max(1ull, resource->get_desc().Width / mm);
-            p[i].Height = std::max(1u, resource->get_desc().Height / mm);
+            UINT mm = 1<<i;
+            p[i].Width = std::max(1.0f, static_cast<float>(resource->get_desc().Width / mm));
+            p[i].Height = std::max(1.0f, static_cast<float>(resource->get_desc().Height / mm));
             p[i].TopLeftX = 0;
             p[i].TopLeftY = 0;
             p[i].MinDepth = 0;
@@ -460,11 +460,11 @@ namespace DX12
         p.resize(res_desc.MipLevels);
         scissor.resize(res_desc.MipLevels);
 
-        for (int i = 0; i < res_desc.MipLevels; i++)
+        for (UINT16 i = 0; i < res_desc.MipLevels; i++)
         {
-            int mm = pow(2, i);
-            p[i].Width = std::max(1ull, resource->get_desc().Width / mm);
-            p[i].Height = std::max(1u, resource->get_desc().Height / mm);
+            int mm = 1<<i;
+            p[i].Width = (float)std::max(1ull, resource->get_desc().Width / mm);
+            p[i].Height = (float)std::max(1u, resource->get_desc().Height / mm);
             p[i].TopLeftX = 0;
             p[i].TopLeftY = 0;
             p[i].MinDepth = 0;

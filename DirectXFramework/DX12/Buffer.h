@@ -74,7 +74,7 @@ namespace DX12
 			const HandleTable& get_srv();
 			const HandleTable& get_uav();
 			const HandleTable& get_static_uav();
-			UINT get_count();
+			UINT64 get_count();
 
 			template<class T>
 			void set_raw_data(std::vector<T>& v)

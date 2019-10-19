@@ -19,9 +19,9 @@ class Device: public Singleton<Device>
 	std::recursive_mutex device_mutex;
 public:
 
-	const std::lock_guard<std::recursive_mutex>& lock()
+	 std::lock_guard<std::recursive_mutex> lock()
 	{
-		return std::lock_guard<std::recursive_mutex>(device_mutex);
+		 return std::lock_guard<std::recursive_mutex>{ device_mutex };
 	}
 
 	DX11_Device get_native_device()

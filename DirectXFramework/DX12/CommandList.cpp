@@ -353,7 +353,7 @@ namespace DX12
 	{
 		base.flush_transitions();
 		D3D12_RESOURCE_DESC Desc = resource->get_desc();
-		int rows_count = box.y;
+		UINT rows_count = box.y;
 
 		if (Desc.Format == DXGI_FORMAT_BC7_UNORM_SRGB || Desc.Format == DXGI_FORMAT_BC7_UNORM)
 			rows_count /= 4;
@@ -458,8 +458,8 @@ namespace DX12
 			return str.get_future();
 		}
 
-		int res_stride = RowSizesInBytes + (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - (RowSizesInBytes) % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-		int size = res_stride * box.y * box.z;
+		UINT res_stride = static_cast<UINT>(RowSizesInBytes + (D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - (RowSizesInBytes) % D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+		UINT size = res_stride * box.y * box.z;
 		auto info = base.read_data(size);
 		CD3DX12_TEXTURE_COPY_LOCATION source(resource->get_native().Get(), sub_resource);
 		CD3DX12_TEXTURE_COPY_LOCATION dest;
@@ -1226,7 +1226,7 @@ void ComputeContext::dispach(int x,int y,int z)
 	{
 		m_commandAllocator->Reset();
 		m_commandList->Reset(m_commandAllocator.Get(), nullptr);
-		m_commandList->ResourceBarrier(transitions.size(), transitions.data());
+		m_commandList->ResourceBarrier(static_cast<UINT>(transitions.size()), transitions.data());
 		m_commandList->Close();
 	}
 

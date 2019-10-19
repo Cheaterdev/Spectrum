@@ -2,8 +2,8 @@
 
 namespace DX12
 {
-    static std::atomic_int counter[3] = {0, 0, 0};
-	std::atomic_int counter_id;
+    static std::atomic_size_t counter[3] = {0, 0, 0};
+	std::atomic_size_t counter_id;
     DescriptorHeap::DescriptorHeap(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags)
     {
         max_count = num;
@@ -251,18 +251,18 @@ namespace DX12
 
 		pages.clear();
 	}
-	void DynamicDescriptorManager::set(int i, int offset, std::vector<Handle>& h)
+	void DynamicDescriptorManager::set(UINT i, UINT offset, std::vector<Handle>& h)
 	{
 
 		if (h.size() == 0) return;
 		if (!root_tables[i].fixed)
 			root_tables[i].handles.resize(h.size());
 
-		for(int j=0;j<h.size();j++)
+		for(size_t j=0;j<h.size();j++)
 		root_tables[i].handles[offset+j] = h[j];
 		root_tables[i].changed = true;
 	}
-	void DynamicDescriptorManager::set(int i, int offset, Handle h)
+	void DynamicDescriptorManager::set(UINT i, UINT offset, Handle h)
 	{
 		if ((!root_tables[i].fixed)&&root_tables[i].handles.size()<=offset)
 			root_tables[i].handles.resize(offset+1);
@@ -270,28 +270,28 @@ namespace DX12
 		root_tables[i].handles[offset] = h;
 		root_tables[i].changed = true;
 	}
-	void DynamicDescriptorManager::set(int i, int offset, HandleTable h)
+	void DynamicDescriptorManager::set(UINT i, UINT offset, HandleTable h)
 	{
 		if (h.get_count() == 0) return;
 		if ((!root_tables[i].fixed)&&root_tables[i].handles.size() <= offset+h.get_count())
 			root_tables[i].handles.resize(offset + h.get_count() + 1);
 
-		for(int j=0;j<std::min(root_tables[i].handles.size(),size_t(offset+h.get_count()))- offset;j++)
+		for(UINT j=0;j<std::min(static_cast<UINT>(root_tables[i].handles.size()),offset+h.get_count())- offset;j++)
 		root_tables[i].handles[offset+j] = h[j];
 		root_tables[i].changed = true;
 	}
-	bool DynamicDescriptorManager::has_free_size(int count)
+	bool DynamicDescriptorManager::has_free_size(UINT count)
 	{
-		return (!pages.empty() && offset + count < pages.back()->size());
+		return (!pages.empty() && (offset + count < pages.back()->size()));
 	}
 
-	int DynamicDescriptorManager::calculate_needed_size()
+	UINT DynamicDescriptorManager::calculate_needed_size()
 	{
-		int size = 0;
+		UINT size = 0;
 		for (auto &e : root_tables)
 		{
 			if (!e.second.changed) continue;
-			size += e.second.handles.size();
+			size += static_cast<UINT>(e.second.handles.size());
 		}
 		return size;
 	}
@@ -327,7 +327,7 @@ namespace DX12
 		return table[0];
 	}
 
-	void DynamicDescriptorManager::bind(CommandList * list, std::function<void(int, Handle)> f)
+	void DynamicDescriptorManager::bind(CommandList * list, std::function<void(UINT, Handle)> f)
 	{
 		int needed_size = calculate_needed_size();
 
@@ -349,7 +349,7 @@ namespace DX12
 		{
 			if (!e.second.changed) continue;
 		
-			auto table = heap->get_table_view(offset, e.second.handles.size());
+			auto table = heap->get_table_view(offset, static_cast<UINT>(e.second.handles.size()));
 
 			for (unsigned int j = 0; j < e.second.handles.size(); j++)
 				if (e.second.handles[j].is_valid())
@@ -357,14 +357,14 @@ namespace DX12
 
 			e.second.changed = false;
 			f(e.first, table[0]);
-			offset += e.second.handles.size();
+			offset += static_cast<UINT>(e.second.handles.size());
 
 		//	if (!e.second.fixed)
 			//	e.second.handles.resize(e.second.count);
 		}
 	}
 
-	void DynamicDescriptorManager::bind_table(int i, std::vector<Handle>& h)
+	void DynamicDescriptorManager::bind_table(UINT i, std::vector<Handle>& h)
 	{
 	//	root_tables[i].changed = true;
 	//	swap(root_tables[i].handles, h);
