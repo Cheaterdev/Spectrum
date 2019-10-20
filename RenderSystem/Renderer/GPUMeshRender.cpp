@@ -37,10 +37,10 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	if (best_fit_normals)
 		signature.best_fit[0]= best_fit_normals->get_texture()->texture_2d()->get_static_srv();
-	using render_list = std::map<int, std::vector<MeshAssetInstance::render_info>>;
+	using render_list = std::map<size_t, std::vector<MeshAssetInstance::render_info>>;
 	//std::map<int, int> pipeline_ids;
-	std::map<int, pipeline_draws> pipeline_infos;
-	std::vector<int> indirection;
+	std::map<size_t, pipeline_draws> pipeline_infos;
+	std::vector<size_t> indirection;
 	std::map<materials::universal_material*, int> material_offsets;
 	std::vector<Handle> textures;
 	struct draw_info
@@ -83,8 +83,8 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 
 		if (it == material_offsets.end())
 		{
-			res.texture_offset = textures.size();
-			material_offsets[mat] = textures.size();
+			res.texture_offset = (UINT)textures.size();
+			material_offsets[mat] = (UINT)textures.size();
 			mat->place_textures(textures);
 		}
 
@@ -105,17 +105,17 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 
 		render_list rendering;
 		//rendering.clear();
-		int count = l->rendering.size();
-		int count_per_thread = std::max(32, count / 8);
-		int thread_count = count / count_per_thread;
+		size_t count = l->rendering.size();
+		size_t count_per_thread = std::max(32_t, count / 8);
+		size_t thread_count = count / count_per_thread;
 
 		if (!use_parrallel) thread_count = 1;
 
-		auto thread_func = [this, &l, &mesh_render_context, current_cpu_culling](int offset, int count)->render_list
+		auto thread_func = [this, &l, &mesh_render_context, current_cpu_culling](size_t offset, size_t count)->render_list
 		{
 			render_list result;
 
-			for (int i = offset; i < offset + count; i++)
+			for (size_t i = offset; i < offset + count; i++)
 			{
 				auto& e = l->rendering[i];
 				auto& node = l->nodes[e.node_index];
@@ -139,9 +139,9 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 		else
 		{
 			std::vector<std::future<render_list>> results;
-			int current_offset = 0;
+			size_t current_offset = 0;
 
-			for (int i = 0; i < thread_count; i++)
+			for (size_t i = 0; i < thread_count; i++)
 			{
 				results.emplace_back(thread_pool::get().enqueue(std::bind(thread_func, current_offset, count_per_thread)));
 				current_offset += count_per_thread;
@@ -195,7 +195,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 					inst.pipeline_id = info.pipeline_id;
 					inst.b = { m.mesh->primitive->get_min(), m.mesh->primitive->get_max() };
 					inst.node = l->global_transform*l->mesh_asset->nodes[m.node_index]->mesh_matrix;
-					inst.instance_id = boxes.size();
+					inst.instance_id = (UINT)boxes.size();
 					boxes.push_back(inst);
 					IndirectCommand command;
 					command.mat_texture_offsets.texture_offset = info.texture_offset;
@@ -318,7 +318,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 				if (stage == 0)
 				{
 					signature.instance_buffer= all_instances.get_gpu_address();
-					graphics.draw_indexed(36, 0, 0, boxes.size());
+					graphics.draw_indexed(36, 0, 0, (UINT)boxes.size());
 				}
 
 				else
@@ -552,7 +552,7 @@ my_signature= GPUMeshSignature<SignatureCreator>().create_root();
 
 		D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
 		commandSignatureDesc.pArgumentDescs = desc.data();
-		commandSignatureDesc.NumArgumentDescs = desc.size();
+		commandSignatureDesc.NumArgumentDescs = (UINT)desc.size();
 		commandSignatureDesc.ByteStride = sizeof(IndirectCommand);
 		TEST(Render::Device::get().get_native_device()->CreateCommandSignature(&commandSignatureDesc, my_signature->get_native().Get(), IID_PPV_ARGS(&m_commandSignature)));
 	}
@@ -585,7 +585,7 @@ my_signature= GPUMeshSignature<SignatureCreator>().create_root();
 	Render::ComputePipelineStateDesc compute_desc;
 	compute_desc.root_signature = GPUCacheComputeStateSignature<SignatureCreator>().create_root();
 
-	for (int i = 0; i < compute_state.size();i++)
+	for (size_t i = 0; i < compute_state.size();i++)
 	{
 		std::vector<D3D::shader_macro> macros;
 

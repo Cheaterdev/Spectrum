@@ -584,6 +584,8 @@ namespace DX12
 
 		std::vector<D3D12_RESOURCE_BARRIER> result;
 
+		result.reserve(used_resources.size());
+
 
 		for (auto &r : used_resources)
 		{

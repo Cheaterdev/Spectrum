@@ -138,7 +138,7 @@ class DynamicSizeUAVBuffer
         {
             old_buffers.clear();
         }
-        void process_pipeline(std::map<int, mat_info>& draws)
+        void process_pipeline(std::map<size_t, mat_info>& draws)
         {
        //     bool changed = false;
 
@@ -149,6 +149,7 @@ class DynamicSizeUAVBuffer
             {
                 UINT index = (p.second.index - 1) % command_buffers.size();
                 UINT count = p.second.draw_count;
+				if(p.second.draw_count >0)
                 max_counts[index] = std::max(max_counts[index], count);
             }
 
@@ -386,7 +387,7 @@ public:
 	void add(T* obj, Args...args)
 	{
 		memory.emplace_back(obj);
-		set_index(obj, memory.size() - 1, args...);
+		set_index(obj, int(memory.size() - 1), args...);
 	}
 
 	void remove(int index , Args...args)
@@ -441,7 +442,7 @@ public:
 		changed = false;
 	}
 
-	T& operator[](int i)
+	T& operator[](size_t i)
 	{
 		changed = true;
 		return cpu_buffer[i];
@@ -473,21 +474,21 @@ class ArraysHolder:public std::vector<T>
 
 	
 
-	std::map<int, int> free_sections_begins;
-	std::map<int, int> free_sections_ends;
+	std::map<size_t, size_t> free_sections_begins;
+	std::map<size_t, size_t> free_sections_ends;
 
-	std::map<int, std::set<int>> free_sections_sizes;
+	std::map<size_t, std::set<size_t>> free_sections_sizes;
 
 
-	std::map<int, int> used_sections;
-	void remove_free_section(int index, int count)
+	std::map<size_t, size_t> used_sections;
+	void remove_free_section(size_t index, size_t count)
 	{
 		free_sections_begins.erase(index);
 		free_sections_ends.erase(index + count);
 		free_sections_sizes[count].erase(index);
 	}
 
-	void add_free_section(int index, int count)
+	void add_free_section(size_t index, size_t count)
 	{
 
 		auto begins = free_sections_begins.find(index + count);
@@ -515,7 +516,7 @@ class ArraysHolder:public std::vector<T>
 public:
 
 
-	int get_free(int size)
+	size_t get_free(size_t size)
 	{
 		auto res = free_sections_sizes.lower_bound(size);
 
@@ -539,7 +540,7 @@ public:
 			return index;
 		}
 		
-		int result = std::vector<T>::size();
+		size_t result = std::vector<T>::size();
 		resize(result + size);
 
 
@@ -549,7 +550,7 @@ public:
 
 	}
 
-	void release(int index)
+	void release(size_t index)
 	{
 
 		add_free_section(index, used_sections[index]);
@@ -565,7 +566,7 @@ class gpu_cached_renderer : public gpu_mesh_renderer,
 
 	struct global_pipeline
 	{
-		std::map<int, pipeline_draws> pipeline_infos;
+		std::map<size_t, pipeline_draws> pipeline_infos;
 		std::mutex init_mutex;
 	};
 
@@ -580,8 +581,8 @@ class gpu_cached_renderer : public gpu_mesh_renderer,
 	};
 	std::map<std::tuple<RENDER_TYPE,MESH_TYPE, std::shared_ptr<materials::material> >, render_type_desc> type_pipelines;
 
-	std::vector<int> indirection;
-	std::map<int, mat_info> direction;
+	std::vector<size_t> indirection;
+	std::map<size_t, mat_info> direction;
 
 
 	struct material_data
@@ -591,7 +592,7 @@ class gpu_cached_renderer : public gpu_mesh_renderer,
 	};
 
 	ArraysHolder<Render::Handle> textures;
-	std::map<MaterialAsset*, int> material_offsets;
+	std::map<MaterialAsset*, size_t> material_offsets;
 	//std::vector<Render::Handle> textures;
 
 

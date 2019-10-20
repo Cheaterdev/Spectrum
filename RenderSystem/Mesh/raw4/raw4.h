@@ -11,6 +11,7 @@
 // Required uint32_t, uint16_t, uint8_t types.
 #include <stdint.h>
 
+#pragma warning(disable:4200)
 /*******************************************************************************
 
 Little-endian format used.
@@ -560,5 +561,6 @@ struct raw4_block_extension
 //------------------------------------------------------------------------------
 #include "raw4_history.h"
 
+#pragma warning(default:4200)
 //------------------------------------------------------------------------------
 #endif

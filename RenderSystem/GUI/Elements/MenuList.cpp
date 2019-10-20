@@ -86,9 +86,9 @@ namespace GUI
     void Elements::menu_list_element::draw(Render::context& c)
     {
             if (is_hovered())
-				renderer->draw_color(c, float4(53, 114, 202, 255) / 255, get_render_bounds());
+				renderer->draw_color(c, float4(53, 114, 202, 255) / 255.0f, get_render_bounds());
 			else
-				renderer->draw_color(c, float4(5, 5, 5, 150) / 255, get_render_bounds());
+				renderer->draw_color(c, float4(5, 5, 5, 150) / 255.0f, get_render_bounds());
 
     }
 

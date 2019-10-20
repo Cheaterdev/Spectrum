@@ -86,7 +86,7 @@ class MaterialProvider
         virtual ~MaterialProvider() {};
 
 
-        virtual void use_material(int i, std::shared_ptr<MeshRenderContext>& context) = 0;
+        virtual void use_material(size_t i, std::shared_ptr<MeshRenderContext>& context) = 0;
 };
 enum class RENDER_TYPE
 {

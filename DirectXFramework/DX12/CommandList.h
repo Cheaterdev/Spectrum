@@ -89,7 +89,7 @@ namespace DX12
 			return info;
 		}
 		template<class T>
-		UploadInfo set_data(T* data, int size)
+		UploadInfo set_data(T* data, size_t size)
 		{
 			auto info = place_data(size * sizeof(T), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 			memcpy(info.resource->get_data() + info.offset, data, size * sizeof(T));
@@ -658,7 +658,7 @@ namespace DX12
 
 
 		template<class T>
-		void set_const_buffer_raw(UINT i, const T* data, int size)
+		void set_const_buffer_raw(UINT i, const T* data, UINT64 size)
 		{
 			//       assert(Math::IsAligned(data.data(), 16));
 			//  size_t BufferSize = Math::AlignUp(sizeof(T), 16);
@@ -933,7 +933,7 @@ namespace DX12
 			auto info = base.place_data(BufferSize);
 			memcpy(info.resource->get_data() + info.offset, data.data(), data.size() * sizeof(T));
 			D3D12_VERTEX_BUFFER_VIEW res;
-			res.SizeInBytes = BufferSize;
+			res.SizeInBytes = static_cast<UINT>(BufferSize);
 			res.StrideInBytes = sizeof(T);
 			res.BufferLocation = info.resource->get_gpu_address() + info.offset;
 			return res;

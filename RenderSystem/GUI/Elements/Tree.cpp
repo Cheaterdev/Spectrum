@@ -150,9 +150,9 @@ void GUI::Elements::line::on_drop_enter(GUI::drag_n_drop_package::ptr)
 void GUI::Elements::line::draw(Render::context& c)
 {
     if (dropping)
-		renderer->draw_color(c, float4(153, 114, 202, 255) / 255, get_render_bounds());
+		renderer->draw_color(c, float4(153, 114, 202, 255) / 255.0f, get_render_bounds());
     else if (owner->selected)
-		renderer->draw_color(c, float4(53, 114, 202, 255) / 255, get_render_bounds());
+		renderer->draw_color(c, float4(53, 114, 202, 255) / 255.0f, get_render_bounds());
 }
 
 bool GUI::Elements::line::can_accept(GUI::drag_n_drop_package::ptr p)

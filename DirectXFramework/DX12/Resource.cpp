@@ -53,8 +53,11 @@ namespace DX12
             value.DepthStencil.Depth = 1.0f;
             value.DepthStencil.Stencil = 0;
         }
-
+		
         auto info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
+
+		if (info.SizeInBytes > 257698037)
+			ClassLogger<Resource>::get() << "Ololo" << Log::endl;
         ClassLogger<Resource>::get() << "creating resource " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] += info.SizeInBytes) << Log::endl;
         TEST(Device::get().get_native_device()->CreateCommittedResource(
                  &CD3DX12_HEAP_PROPERTIES(static_cast<D3D12_HEAP_TYPE>(type)),

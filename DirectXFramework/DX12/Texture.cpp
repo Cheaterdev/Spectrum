@@ -128,7 +128,7 @@ namespace DX12
                 for (unsigned int m = 0; m < desc.MipLevels; m++)
                 {
                     int i = D3D12CalcSubresource(m, a, 0, desc.MipLevels, desc.ArraySize());
-                    list->get_copy().update_texture(this, { 0, 0, 0 }, { tex_data->array[a]->mips[m]->width, tex_data->array[a]->mips[m]->height, tex_data->array[a]->mips[m]->depth }, i, tex_data->array[a]->mips[m]->data.data(), tex_data->array[a]->mips[m]->width_stride, tex_data->array[a]->mips[m]->slice_stride);
+                    list->get_copy().update_texture(this, { 0, 0, 0 }, { tex_data->array[a]->mips[m]->width, tex_data->array[a]->mips[m]->height, tex_data->array[a]->mips[m]->depth }, i, (const char* )tex_data->array[a]->mips[m]->data.data(), tex_data->array[a]->mips[m]->width_stride, tex_data->array[a]->mips[m]->slice_stride);
                 }
             }
 

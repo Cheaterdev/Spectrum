@@ -13,7 +13,7 @@ namespace GUI
 				std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
 
 
-				int thread_id;
+				size_t thread_id;
 			};
 
 
@@ -68,8 +68,8 @@ namespace GUI
 				std::mutex m;
 
 				std::map<TimedBlock*, block_data*> current_data;
-				std::map<std::thread::id, int> threads;
-				std::map<TimedBlock*, int> thread_ids;
+				std::map<std::thread::id, size_t> threads;
+				std::map<TimedBlock*, size_t> thread_ids;
 
 				collected_data data;
 

@@ -119,7 +119,7 @@ namespace GUI
 		}
 
 		float scale = 1;
-		auto& clip = c.ui_clipping;
+		sizer clip = c.ui_clipping;
 		float4 x_pos = { 0, padding.left * scale, r.size.x - padding.right * scale, r.size.x };
 		float4 y_pos = { 0, padding.top * scale, r.size.y - padding.bottom * scale, r.size.y };
 
@@ -313,7 +313,7 @@ namespace GUI
 	//	c.command_list->get_graphics().set_srv(5, vertexes);
 	//	c.command_list->get_graphics().set(7, textures_handles);
 
-		c.command_list->get_graphics().draw_indexed(9 * 2 * 3, 0, 0, vertexes.size()/16);
+		c.command_list->get_graphics().draw_indexed(9 * 2 * 3, 0, 0, UINT(vertexes.size()/16));
 
 		current_state = nullptr;
 		vertexes.clear();

@@ -15,7 +15,7 @@ namespace Render
     void vertex_buffer_stage::add(GPUBuffer::ptr buffer, std::vector<vertex_buffer_layout>& layouts)
     {
         for (auto& layout : layouts)
-            layout.slot = base_buffers.size();
+            layout.slot = (UINT)base_buffers.size();
 
         base_buffers.push_back(buffer);
 ///////////////////////////////////////////////////////////////////        native_handles.push_back(buffer->get_vertex_buffer_view());

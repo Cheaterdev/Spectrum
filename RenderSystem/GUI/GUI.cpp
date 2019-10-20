@@ -1098,9 +1098,9 @@ namespace GUI
             return;
         }
 
-        int remove_index = hovered_controls.size();
+        size_t remove_index = hovered_controls.size();
 
-        for (int i = 0; i < hovered_controls.size(); i++)
+        for (size_t i = 0; i < hovered_controls.size(); i++)
         {
             base::ptr control = hovered_controls[i];
             auto hover = hovered.lock();
@@ -1128,13 +1128,13 @@ namespace GUI
             break;
         }
 
-        for (unsigned int i = remove_index; i < hovered_controls.size(); i++)
+        for (size_t i = remove_index; i < hovered_controls.size(); i++)
         {
             base::ptr control = hovered_controls[i];
 
-            for (unsigned int i_button = 0; i_button < 3; i_button++)
+            for (size_t i_button = 0; i_button < 3; i_button++)
             {
-                for (unsigned int j = 0; j < pressed[i_button].size(); j++)
+                for (size_t j = 0; j < pressed[i_button].size(); j++)
                 {
                     if (pressed[i_button][j] == control)
                     {
@@ -1297,7 +1297,7 @@ namespace GUI
 
     void user_interface::mouse_wheel_event(mouse_wheel type, float value, vec2 pos)
     {
-        for (int i = hovered_controls.size() - 1; i >= 0; i--)
+        for (int i = (int)hovered_controls.size() - 1; i >= 0; i--)
         {
             base::ptr control = hovered_controls[i];
 

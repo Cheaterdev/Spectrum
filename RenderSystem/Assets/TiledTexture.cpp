@@ -34,12 +34,12 @@ HeapPage::HeapPage()
 
 	ComPtr<ID3D12Resource> m_Resource;
 
-	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UINT,min(h.SizeInBytes, UINT64(16384u)),Math::AlignUp(h.SizeInBytes, 16384)/ 16384,1,1,1,0,D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UINT,min(h.SizeInBytes, UINT64(16384u)),(UINT)(Math::AlignUp(h.SizeInBytes, 16384)/ 16384),1,1,1,0,D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	Render::Device::get().get_native_device()->CreatePlacedResource(tile_heap.Get(), 0, &desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
 	data.reset(new Render::Texture(m_Resource));
 	data->assume_gpu_state(Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
-	for (int i = 0; i<max_count; i++)
+	for (unsigned int i = 0; i<max_count; i++)
 	{
 		ComPtr<ID3D12Resource> m_Resource;
 
@@ -131,11 +131,11 @@ void HeapPage::flush_tilings(Render::Resource* res)
     if (startCoordinates.size())
         Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
             res->get_native().Get(),
-            startCoordinates.size(),
+            UINT(startCoordinates.size()),
             &startCoordinates[0],
             &regionSizes[0],
             tile_heap.Get(),
-            startCoordinates.size(),
+			UINT(startCoordinates.size()),
             &rangeFlags[0],
             &heapRangeStartOffsets[0],
             &rangeTileCounts[0],
@@ -176,7 +176,7 @@ Tile::ptr& TiledTexture::get_tile(int mip_level, ivec3 pos)
 
 void TiledTexture::clear_tilings()
 {
-    heap_manager.clear_all(mips[0].tiles, mips.size());
+    heap_manager.clear_all(mips[0].tiles, (UINT)(mips.size()));
 }
 
 void TiledTexture::make_tile_visible(int mip_level, ivec3 pos)
@@ -196,12 +196,12 @@ void TiledTexture::zero_tile(Tile::ptr& tile)
 {
     tile->state = TileState::FREED;
     heap_manager.remove(tile);
-    int pixels = 1<<tile->mip_level;
+    UINT pixels = 1<<tile->mip_level;
     ivec3 mip_position = tile->position * pixels;
-    int mip_index = mip_position.x + mip_position.y * residency_data->width + mip_position.z * residency_data->width * residency_data->height;
+	UINT mip_index = mip_position.x + mip_position.y * residency_data->width + mip_position.z * residency_data->width * residency_data->height;
 
-    for (int i = 0; i < pixels; i++)
-        for (int j = 0; j < pixels; j++)
+    for (UINT i = 0; i < pixels; i++)
+        for (UINT j = 0; j < pixels; j++)
         {
             auto position = mip_index + i + j *  residency_data->width;
             residency_data->array[0]->mips[0]->data[position * 4] = std::max((int)(unsigned char)residency_data->array[0]->mips[0]->data[position * 4], tile->mip_level + 1);
@@ -279,19 +279,19 @@ TiledTexture::TiledTexture(std::string file_name)
     ComPtr<ID3D12Resource> m_Resource;
     CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(tex_data->format, tex_data->width, tex_data->height, 1, tex_data->mip_maps - 7, 1, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
     format = tex_data->format;
-    format_size = DirectX::BitsPerPixel(tex_data->format) / 4;
+    format_size = (UINT)(DirectX::BitsPerPixel(tex_data->format) / 4);
     Render::Device::get().get_native_device()->CreateReservedResource(&desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
     tiled_tex.reset(new Render::Texture(m_Resource));
     UINT num_tiles = 1;
     D3D12_PACKED_MIP_INFO mip_info;
     D3D12_TILE_SHAPE tile_shape;
     UINT num_sub_res = 20;
-    UINT first_sub_res;
+  //  UINT first_sub_res;
     D3D12_SUBRESOURCE_TILING tilings[20];
     Render::Device::get().get_native_device()->GetResourceTiling(m_Resource.Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
     num_sub_res = mip_info.NumStandardMips;
 
-    for (int i = 0; i < num_sub_res; i++)
+    for (UINT i = 0; i < num_sub_res; i++)
     {
         mips.emplace_back(ivec3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles), tilings[i].StartTileIndexInOverallResource);
         mips.back().rows_per_tile = tex_data->array[0]->mips[i]->num_rows / mips[i].tiles.y;
@@ -317,10 +317,10 @@ TiledTexture::TiledTexture(std::string file_name)
                 data.resize(a * one_tile_size.z);
                 //       data.resize(one_tile_size.x * one_tile_size.y * one_tile_size.z * format_size);
                 auto width = tex_data->array[0]->mips[mip]->width_stride;
-                int data_i = j * width * num_rows + i *  mips[mip].stride_per_tile; //(i + mips[mip].tiles.x * j) * one_tile_size.x * format_size;
+                size_t data_i = j * width * num_rows + i *  mips[mip].stride_per_tile; //(i + mips[mip].tiles.x * j) * one_tile_size.x * format_size;
                 ivec3 cropped_rect = one_tile_size;//ivec3::min(ivec3(tex_data->array[0]->mips[mip].width - i * one_tile_size.x, tex_data->array[0]->mips[mip].height - j * one_tile_size.y, 1), one_tile_size);
 
-                for (int y = 0; y < num_rows; y++)
+                for (size_t y = 0; y < num_rows; y++)
                     memcpy(const_cast<char*>(data.data()) + y * row_bytes, &tex_data->array[0]->mips[mip]->data[data_i + y * width], row_bytes);
 
                 DataPacker::create_entry(archive, std::to_string(index), data, true);
@@ -336,7 +336,7 @@ void TiledTexture::init()
     if (!tiled_tex)
     {
         ComPtr<ID3D12Resource> m_Resource;
-        CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(format, sizes.x, sizes.y, sizes.z, mips.size(), 1, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
+        CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(format, sizes.x, sizes.y, sizes.z, (UINT16)mips.size(), 1, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
         Render::Device::get().get_native_device()->CreateReservedResource(&desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
         tiled_tex.reset(new Render::Texture(m_Resource));
     }
@@ -407,7 +407,7 @@ TiledTexture::~TiledTexture()
 
 void TiledTexture::load_tile(Tile::ptr& tile)
 {
-    int pixels = pow(2, tile->mip_level);
+	UINT pixels = 1u<< tile->mip_level;
     int index = mips[tile->mip_level].tile_offset + tile->position.x + mips[tile->mip_level].tiles.x * tile->position.y + mips[tile->mip_level].tiles.y * mips[tile->mip_level].tiles.x * tile->position.z; // one_tile_size.x / pixels * (tile->position.y + tile->position.z * one_tile_size.y / pixels);
     auto entry = archive->GetEntry(index);
     tile->data.resize(entry->GetSize(), 255);
@@ -429,8 +429,8 @@ void TiledTexture::load_tile(Tile::ptr& tile)
         std::lock_guard<std::mutex> g(tile_mutex);
         add_tile(tile);
 
-        for (int i = 0; i < pixels; i++)
-            for (int j = 0; j < pixels; j++)
+        for (UINT i = 0; i < pixels; i++)
+            for (UINT j = 0; j < pixels; j++)
             {
                 auto position = mip_index + i + j *  residency_data->width;
                 residency_data->array[0]->mips[0]->data[position * 4] = std::min((int)(unsigned char)residency_data->array[0]->mips[0]->data[position * 4], tile->mip_level);
@@ -474,7 +474,7 @@ void TiledTexture::load_tilings()
 
     create_task([this_load_queue, this]()
     {
-        for (int i = this_load_queue.size() - 1; i >= 0; i--)
+        for (size_t i = this_load_queue.size() - 1; i >= 0; i--)
         {
             for (auto& tile : this_load_queue[i])
                 load_tile(const_cast<Tile::ptr&>(tile));
@@ -510,7 +510,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
     {
         std::vector<task<std::vector<std::pair<int, ivec3>>>> tasks;
         int thread_count = visibility_texture->get_desc().Height;
-        int one_thread = size / thread_count / 4;
+        int one_thread = int(size / thread_count / 4);
         memcpy(resolved_data.data(), data, size);
         //   auto int_data = reinterpret_cast<const unsigned int*>(data);
 
@@ -525,8 +525,8 @@ void TiledTexture::update(Render::CommandList::ptr& list)
             {
                 int i = t % mips[0].tiles.x;
                 int j = t / mips[0].tiles.y;
-                int mip = resolved_data[t];
-                int pixels = pow(2, mip);
+				unsigned int mip = resolved_data[t];
+                int pixels = 1<< mip;
                 ivec3 pos = { i / pixels, j / pixels, 0 };
 
                 if (mip > 7) continue;
@@ -575,7 +575,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
         });
     });
     list->transition(visibility_texture.get(),  Render::ResourceState::COPY_DEST);
-    list->get_copy().update_buffer(visibility_texture.get(), 0, reinterpret_cast<char*>(clear_data.data()), clear_data.size() * 4);
+    list->get_copy().update_buffer(visibility_texture.get(), 0, reinterpret_cast<char*>(clear_data.data()), UINT(clear_data.size() * 4));
     list->transition(visibility_texture.get(),  Render::ResourceState::COMMON);
 
     if (residency_changed)

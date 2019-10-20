@@ -259,7 +259,7 @@ template <class O, class ...I> class TemplatedNode : public EditorNode
 	template<int i, class P>
 	void register_o_type(P t)
 	{
-		std::get<i>(t);
+	//	std::get<i>(t);
 
 		register_output(FlowGraph::data_types::INT, "life");
 	}

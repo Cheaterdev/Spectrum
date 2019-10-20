@@ -203,7 +203,7 @@ void MeshAsset::update_preview(Render::Texture::ptr preview)
     // c.generate_mipmaps(preview->get_shader_view());
     mark_changed();
 }
-void MeshAssetInstance::use_material(int i, std::shared_ptr<MeshRenderContext>& context)
+void MeshAssetInstance::use_material(size_t i, std::shared_ptr<MeshRenderContext>& context)
 {
     overrided_material[i]->set(this->type,context);
 }

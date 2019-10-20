@@ -944,7 +944,7 @@ void VoxelGI::mipmapping(MeshRenderContext::ptr& context)
 		compute.set_pipeline(downsample_state[current_mips - 1]);
 		mip_sig.source[0] = volume_lighted->texture_3d()->get_srv(mip_count - 1);
 
-		for (int i = 0; i < current_mips; i++)
+		for (unsigned int i = 0; i < current_mips; i++)
 		{
 			mip_sig.dest_mips[i] = volume_lighted->texture_3d()->get_uav(mip_count + i);
 		}
@@ -955,7 +955,7 @@ void VoxelGI::mipmapping(MeshRenderContext::ptr& context)
 
 		//compute.dispach(volume_lighted->get_size(mip_count));
 
-		for (int i = 0; i < current_mips; i++)
+		for (unsigned int i = 0; i < current_mips; i++)
 		{
 			list.transition(volume_lighted.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE, mip_count + i);
 		}

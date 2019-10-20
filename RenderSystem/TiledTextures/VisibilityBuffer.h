@@ -2,7 +2,7 @@
 
 class VisibilityBuffer
 {
-	std::vector<char> clear_data;
+	std::vector<unsigned char> clear_data;
 	ivec3 sizes;
 	Render::ByteBuffer::ptr buffer;
 	std::future<bool> waiter;

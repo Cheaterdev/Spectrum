@@ -30,7 +30,7 @@ void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_
 
 	axis->update_transforms();
 	cam = *mesh_render_context->cam;
-	cam.set_projection_params(0.01, 1, 0.1, 10000);
+	cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
 	cam.target = cam.position + direction;
 	cam.update();
 

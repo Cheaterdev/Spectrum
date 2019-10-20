@@ -670,7 +670,7 @@ namespace DX12
 		SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 		SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
 		SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		SRVDesc.Buffer.NumElements = count;
+		SRVDesc.Buffer.NumElements = static_cast<UINT>(count);
 		SRVDesc.Buffer.StructureByteStride = stride;
 		SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 		Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &SRVDesc, srv[0].cpu);
@@ -722,7 +722,7 @@ namespace DX12
 	inline void StructuredBuffer<T>::set_data(DX12::CommandList::ptr & list, unsigned int offset, std::vector<T>& v)
 	{
 		list->transition(this,ResourceState::COPY_DEST);
-		list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), v.size() * sizeof(T));
+		list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 		list->transition(this,  ResourceState::COMMON);
 	}
 	template<class T>
@@ -731,7 +731,7 @@ namespace DX12
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.Buffer.NumElements = count;
+		desc.Buffer.NumElements = static_cast<UINT>(count);
 		desc.Buffer.StructureByteStride = stride;
 		desc.Buffer.CounterOffsetInBytes = 0;
 
@@ -753,7 +753,7 @@ namespace DX12
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.Buffer.NumElements = count;
+		desc.Buffer.NumElements = static_cast<UINT>(count);
 		desc.Buffer.StructureByteStride = stride;
 		desc.Buffer.CounterOffsetInBytes = offset;
 		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;

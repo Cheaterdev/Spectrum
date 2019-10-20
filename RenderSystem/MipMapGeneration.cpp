@@ -155,8 +155,8 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 
 	for (uint32_t TopMip = 0; TopMip < maps;)
 	{
-		uint32_t SrcWidth = tex->get_desc().Width >> TopMip;
-		uint32_t SrcHeight = tex->get_desc().Height >> TopMip;
+		uint32_t SrcWidth = uint32_t(tex->get_desc().Width >> TopMip);
+		uint32_t SrcHeight = uint32_t(tex->get_desc().Height >> TopMip);
 		uint32_t DstWidth = SrcWidth >> 1;
 		uint32_t DstHeight = SrcHeight >> 1;
 		uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
@@ -194,7 +194,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 		cb.TexelSize = { 1.0f / DstWidth, 1.0f / DstHeight };
 		//	Context.SetConstants(0, TopMip, NumMips, 1.0f / DstWidth, 1.0f / DstHeight);
 		shader_data.constants.set_raw(cb);
-		for (int i = 0; i < NumMips; i++)
+		for (uint32_t i = 0; i < NumMips; i++)
 			shader_data.target[i]=view->get_uav(TopMip + 1 + i);
 		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
 		compute_context.get_base().transition_uav(tex.get());

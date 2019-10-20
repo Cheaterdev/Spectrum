@@ -62,6 +62,7 @@ using namespace std;
 #define NVP(name) boost::serialization::make_nvp(BOOST_PP_STRINGIZE(name), name)
 #define NP(name, param) boost::serialization::make_nvp(name, param)
 
+std::size_t operator "" _t(unsigned long long int x);
 
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>

@@ -155,8 +155,8 @@ void HDRAdaptation::process_exposition(MeshRenderContext::ptr & context)
 	shader_data.source[0] = buf_histogram->get_srv();
 
 
-	float TargetLuminance = 0.08;
-	float AdaptationRate = 0.05;
+	float TargetLuminance = 0.08f;
+	float AdaptationRate = 0.05f;
 	float MinExposure = 1.0f / 64.0f;
 	float MaxExposure = 64.0f;
 

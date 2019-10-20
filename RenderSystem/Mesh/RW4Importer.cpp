@@ -101,7 +101,7 @@ namespace Assimp
 
 
 			pScene->mMaterials = new aiMaterial*[scene_materials.size()];
-			pScene->mNumMaterials = scene_materials.size();
+			pScene->mNumMaterials = (UINT)scene_materials.size();
 			for (auto it : scene_materials)
 			{
 				auto mat = pScene->mMaterials[it.first] = new aiMaterial();
@@ -115,15 +115,15 @@ namespace Assimp
 
 
 			pScene->mMeshes = new aiMesh*[scene_meshes.size()];
-			pScene->mNumMeshes = scene_meshes.size();
-			for (int i = 0; i < scene_meshes.size(); i++)
+			pScene->mNumMeshes = (UINT)scene_meshes.size();
+			for (size_t i = 0; i < scene_meshes.size(); i++)
 			{
 				auto mesh = pScene->mMeshes[i] = new aiMesh();
 				auto rw4_mesh = scene_meshes[i];
 
 				mesh->mName = "name";
 				mesh->mVertices = new aiVector3D[rw4_mesh.poses.size()];
-				mesh->mNumVertices = rw4_mesh.poses.size();
+				mesh->mNumVertices = (UINT)rw4_mesh.poses.size();
 				mesh->mMaterialIndex = rw4_mesh.mat_id;
 				memcpy(mesh->mVertices, rw4_mesh.poses.data(), rw4_mesh.poses.size()*sizeof(vec3));
 
@@ -143,11 +143,11 @@ namespace Assimp
 
 
 
-				mesh->mNumFaces = rw4_mesh.index_data.size() / 3;
+				mesh->mNumFaces = (UINT)(rw4_mesh.index_data.size() / 3);
 
 				mesh->mFaces = new aiFace[mesh->mNumFaces];
 
-				for (int i = 0; i < mesh->mNumFaces; i++)
+				for (UINT i = 0; i < mesh->mNumFaces; i++)
 
 				{
 					auto &face = mesh->mFaces[i];
@@ -313,8 +313,8 @@ namespace Assimp
 			};
 
 			aiMatrix4x4 my;
-				for (int i = 0; i < 3; i++)
-					for (int j = 0; j < 4; j++)
+				for (uint32_t i = 0; i < 3; i++)
+					for (uint32_t j = 0; j < 4; j++)
 						my[i][j]=obj.lparent.rows[j][i];
 
 				auto prev = matrix_stack.end();
@@ -381,7 +381,7 @@ namespace Assimp
 
 				Mesh& new_mesh = scene_meshes.back();
 
-				child->mMeshes[child->mNumMeshes++] = scene_meshes.size() - 1;
+				child->mMeshes[child->mNumMeshes++] = (UINT)(scene_meshes.size() - 1);
 
 				new_mesh.mat_id = lod.material;
 
@@ -389,9 +389,9 @@ namespace Assimp
 				bool fix = false;
 
 				if (arrays->attrs[0].offset != 0) fix = true;
-				int stride = arrays->attrs[0].stride;
+				uint32_t stride = arrays->attrs[0].stride;
 
-				for (int i = 0; i < arrays->attributes_count; i++)
+				for (uint32_t i = 0; i < arrays->attributes_count; i++)
 				{
 					auto &a = arrays->attrs[i];
 					if (a.stride != stride || a.stride == 0)
@@ -406,7 +406,7 @@ namespace Assimp
 				{
 				
 				stride = 0;// (arrays->attrs[1].format == RAW4_FORMAT_F32) ? 32 : 24;
-				for (int i = 0; i < arrays->attributes_count; i++)
+				for (uint32_t i = 0; i < arrays->attributes_count; i++)
 					stride += arrays->attrs[i].count*RAW4_FORMAT_SIZE[arrays->attrs[i].format];
 				}
 
@@ -415,17 +415,17 @@ namespace Assimp
 				uint32_t verts_count = vb_pos->size /stride;
 				
 				if (mesh->index_format == RAW4_FORMAT_U8)
-					for (int i = 0; i < mesh->index_count; i++)
+					for (uint32_t i = 0; i < mesh->index_count; i++)
 						new_mesh.index_data.emplace_back(((char*)ics)[i]);
 
 				if (mesh->index_format == RAW4_FORMAT_U16&&mesh->render_type == RAW4_RENDER_TRIANGLES)
 				{
-					bool clocked = !model.render_opts&RAW4_RENDER_OPTS_FRONT_CW;
+					bool clocked = (model.render_opts&RAW4_RENDER_OPTS_FRONT_CW)==0;
 					if(clocked)
-					for (int i = 0; i < mesh->index_count; i++)
+					for (uint32_t i = 0; i < mesh->index_count; i++)
 						new_mesh.index_data.emplace_back(ics[i]);
 					else
-						for (int i = 0; i < mesh->index_count; i += 3)
+						for (uint32_t i = 0; i < mesh->index_count; i += 3)
 						{
 							new_mesh.index_data.emplace_back(ics[i]);
 							new_mesh.index_data.emplace_back(ics[i+2]);
@@ -439,7 +439,7 @@ namespace Assimp
 					
 					bool clocked = model.render_opts&RAW4_RENDER_OPTS_FRONT_CW;
 
-					for (int i = 0; i < mesh->index_count; i++)
+					for (uint32_t i = 0; i < mesh->index_count; i++)
 					{
 						if (clocked)
 						{
@@ -466,18 +466,18 @@ namespace Assimp
 				}
 
 				if (mesh->index_format == RAW4_FORMAT_U32)
-					for (int i = 0; i < mesh->index_count; i++)
+					for (uint32_t i = 0; i < mesh->index_count; i++)
 						new_mesh.index_data.emplace_back(((uint32_t*)ics)[i]);
 
 				bool has_normal = false;
 				bool has_tc = false;
 
-				for (int i = 0; i < arrays->attributes_count; i++)
+				for (uint32_t i = 0; i < arrays->attributes_count; i++)
 				{
 					if (arrays->attrs[i].type == RAW4_ATTR_TYPE_POS)
 					{
 				
-						for (int j = 0; j < verts_count; j++)
+						for (uint32_t j = 0; j < verts_count; j++)
 						{
 							vec3 *pos = (vec3*)(vpos + j*stride + arrays->attrs[i].offset);
 							new_mesh.poses.emplace_back(*pos);
@@ -492,7 +492,7 @@ namespace Assimp
 
 
 						if(arrays->attrs[i].format == RAW4_FORMAT_S8)
-						for (int j = 0; j < verts_count; j++)
+						for (uint32_t j = 0; j < verts_count; j++)
 						{
 							norm8 *pos = (norm8*)(vpos + j*stride + arrays->attrs[i].offset);
 
@@ -501,7 +501,7 @@ namespace Assimp
 							new_mesh.normals.emplace_back(normal);
 						}
 						else
-							for (int j = 0; j < verts_count; j++)
+							for (uint32_t j = 0; j < verts_count; j++)
 							{
 								float3 *pos = (float3*)(vpos + j*stride + arrays->attrs[i].offset);
 
@@ -513,7 +513,7 @@ namespace Assimp
 					if (arrays->attrs[i].type == RAW4_ATTR_TYPE_UV)
 					{
 
-						for (int j = 0; j < verts_count; j++)
+						for (uint32_t j = 0; j < verts_count; j++)
 						{
 							vec2 *pos = (vec2*)(vpos + j*stride + arrays->attrs[i].offset);
 							new_mesh.tcs.emplace_back(pos->x,1-pos->y,0);

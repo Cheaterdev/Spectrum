@@ -237,10 +237,12 @@ bool operator!=(const Vector<T>& a, const Vector<T>& b)
 	return false;
 }
 
-template<typename T>
-Vector<T> operator*(float n, Vector<T> v)
+template<typename T, typename T2, typename std::enable_if < std::is_scalar <T2>::value >::type * = nullptr >
+Vector<T> operator*(T2 n, Vector<T> v)
 {
-	v *= n;
+	for (int i = 0; i < T::N; ++i)
+		v[i] = static_cast<typename T::Format>(n * v[i]);
+
 	return v;
 }
 
@@ -266,15 +268,16 @@ auto operator/(const Vector<T> &a,const Vector<T2> &b)
 	return v;
 }
 
-template<typename T>
-Vector<T> operator*(Vector<T> v, float n)
+template<typename T, typename T2, typename std::enable_if < std::is_scalar <T2>::value >::type * = nullptr >
+Vector<T> operator*(Vector<T> v, T2 n)
 {
-	v *= n;
+	for (int i = 0; i < T::N; ++i)
+		v[i] = static_cast<typename T::Format>(n *v[i]);
 	return v;
 }
 
-template<typename T>
-Vector<T> operator/(float n, Vector<T> v)
+template<typename T, typename T2, typename std::enable_if < std::is_scalar <T2>::value >::type * = nullptr >
+Vector<T> operator/(T2 n, Vector<T> v)
 {
 	for (int i = 0; i < T::N; ++i)
 		v[i] = n / v[i];
@@ -282,7 +285,7 @@ Vector<T> operator/(float n, Vector<T> v)
 	return v;
 }
 
-template<typename T, typename T2>
+template<typename T, typename T2, typename std::enable_if < std::is_scalar <T2>::value >::type * = nullptr >
 Vector<T> operator/(Vector<T> v, T2 n)
 {
 	for (int i = 0; i < T::N; ++i)

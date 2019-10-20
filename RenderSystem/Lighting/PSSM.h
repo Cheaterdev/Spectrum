@@ -41,7 +41,7 @@ class PSSM
 
 	std::mutex pos_mutex;
 	float3 position;
-	int counter = 0;
+	size_t counter = 0;
 public:
 	bool optimize_far = true;
 	Render::Texture::ptr screen_light_mask;

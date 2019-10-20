@@ -22,7 +22,7 @@ void debug_drawer::draw(Render::CommandList& list, camera* cam)
     list.get_graphics().set_topology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
     visible_count = 0;
     std::vector<node> nodes;
-    unsigned int count = aabbs.size() ;
+    size_t count = aabbs.size() ;
     unsigned int index = 0;
     nodes.resize(count);
     int i = 0;
@@ -46,7 +46,7 @@ void debug_drawer::draw(Render::CommandList& list, camera* cam)
 
 	shader_data.camera_data= cam->get_const_buffer();
 	shader_data.nodes =  nodes;
-    list.get_graphics().draw(24, 0, count);
+    list.get_graphics().draw(24, 0, (UINT)count);
     aabbs.clear();
 }
 

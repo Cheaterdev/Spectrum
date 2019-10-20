@@ -123,7 +123,7 @@ class TileHeapManager
 			D3D12_PACKED_MIP_INFO mip_info;
 			D3D12_TILE_SHAPE tile_shape;
 			UINT num_sub_res = 20;
-			UINT first_sub_res;
+			//UINT first_sub_res;
 			D3D12_SUBRESOURCE_TILING tilings[20];
 			Render::Device::get().get_native_device()->GetResourceTiling(res->get_native().Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 
@@ -159,11 +159,11 @@ class TileHeapManager
 			}
 			Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
 				res->get_native().Get(),
-				startCoordinates.size(),
+				static_cast<UINT>(startCoordinates.size()),
 				&startCoordinates[0],
 				&regionSizes[0],
 				nullptr,
-				startCoordinates.size(),
+				static_cast<UINT>(startCoordinates.size()),
 				&rangeFlags[0],
 				nullptr,
 				&rangeTileCounts[0],
@@ -185,7 +185,7 @@ class TileHeapManager
 			}
 		}
 
-		int get_used_tiles()
+		size_t get_used_tiles()
 		{
 			return	pages.size()*128;
 
@@ -200,8 +200,8 @@ struct mip_info
         unsigned int tile_offset;
         std::vector<Tile::ptr> tile_positions;
         std::list<Tile::ptr> load_queue;
-        int rows_per_tile;
-        int stride_per_tile;
+		UINT rows_per_tile;
+        UINT stride_per_tile;
 
         mip_info(ivec3 tiles, unsigned int tile_offset);
 
@@ -250,7 +250,7 @@ class TiledTexture : public Asset
 
         texture_data::ptr  residency_data_uploaded;
 
-        std::vector<int> resolved_data;
+        std::vector<unsigned int> resolved_data;
         long step = 0;
         bool residency_changed = false;
 
@@ -274,7 +274,7 @@ class TiledTexture : public Asset
         std::string file_name;
         std::string tiles_file_name;
         ivec3 sizes;
-        int format_size = 4;
+        UINT format_size = 4;
         DXGI_FORMAT format;
     public:
         using ptr = std::shared_ptr<TiledTexture>;

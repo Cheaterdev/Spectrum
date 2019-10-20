@@ -53,3 +53,9 @@ std::wstring to_lower(const std::wstring& str)
                    ::towlower);
     return lowered;
 }
+
+
+std::size_t operator "" _t(unsigned long long int x)
+{
+	return x;
+}

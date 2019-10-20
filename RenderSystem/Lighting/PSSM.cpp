@@ -63,7 +63,7 @@ PSSM::PSSM()
 
 	//	renders.resize(4);
 	srv_buffer.resize(renders.size());
-	depth_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, size.x, size.y, renders.size(), 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL), Render::ResourceState::DEPTH_WRITE));
+	depth_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, size.x, size.y, (UINT16)renders.size(), 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL), Render::ResourceState::DEPTH_WRITE));
 
 	full_scene_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL), Render::ResourceState::DEPTH_WRITE));
 
@@ -162,7 +162,7 @@ void PSSM::generate_shadow_map(MeshRenderContext::ptr& c, main_renderer::ptr ren
 	results.clear();
 
 
-	scaler = cam->z_far / (exp(renders.size()));
+	scaler = cam->z_far / (exp((float)renders.size()));
 	//scaler = cam->z_far / ((renders.size()));
 
 	static float t = 0;
@@ -182,7 +182,7 @@ void PSSM::generate_shadow_map(MeshRenderContext::ptr& c, main_renderer::ptr ren
 
 	for (int i = 0; i <= counter; i++)
 	{
-		zfar = cam->z_near + (exp(i + 1)) * scaler;
+		zfar = cam->z_near + (exp(float(i + 1))) * scaler;
 		//	zfar = znear + (i + 1)*scaler;
 		auto & render = renders[i];
 
@@ -340,7 +340,10 @@ void PSSM::process(MeshRenderContext::ptr & context)
 
 	sig.g_buffer[0]=eye.g_buffer->srv_table;
 	sig.camera_info=eye.cam->get_const_buffer();
-		for (int i = renders.size() - 1; i >= 0; i--)
+
+
+
+	for (int i = (int)renders.size() - 1; i >= 0; i--) //rangeees
 		{
 			auto timer = context->list->start((std::wstring(L"renders") + std::to_wstring(i)).c_str());
 			sig.pass_constants.set(i, ((context->current_time) % 10000) * 0.001f);

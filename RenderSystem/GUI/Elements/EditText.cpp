@@ -91,7 +91,7 @@ void GUI::Elements::edit_text::process_keys()
 
 		else if (isprint(key))
 		{
-			text.insert(text.begin() + cursor_pos, key);
+			text.insert(text.begin() + cursor_pos, char(key));
 			cursor_pos++;
 		}
 

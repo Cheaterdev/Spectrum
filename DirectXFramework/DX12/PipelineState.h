@@ -128,6 +128,7 @@ namespace DX12
 		std::strong_ordering  operator<=>(const  PipelineStateDesc& r)  const ;
 
 	};
+	
 
 	template<class K0, class K1, class...Ks>
 	struct my_map;

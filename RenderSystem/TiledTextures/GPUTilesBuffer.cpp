@@ -15,7 +15,7 @@ void GPUTilesBuffer::clear()
 
 uint32_t GPUTilesBuffer::size()
 {
-	return used_tiles.size();
+	return (uint32_t)used_tiles.size();
 }
 
 void GPUTilesBuffer::insert(ivec3 pos)

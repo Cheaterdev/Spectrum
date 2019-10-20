@@ -358,7 +358,7 @@ namespace GUI
 							   {
 
 								   auto mul_node = std::make_shared<MulNode>();
-								   auto scalar_node = std::make_shared<ScalarNode>(1);
+								   auto scalar_node = std::make_shared<ScalarNode>(1.0f);
 								   auto value_node = std::make_shared<TextureNode>(height);
 								   graph->register_node(mul_node);
 								   graph->register_node(scalar_node);

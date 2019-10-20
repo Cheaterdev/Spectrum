@@ -12,7 +12,7 @@ struct MeshInfo
 {
         unsigned int vertex_offset;
         unsigned int vertex_count;
-        unsigned int material;
+        size_t material;
 
         unsigned int index_offset;
         unsigned int index_count;
@@ -214,7 +214,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
             unsigned int node_index;
 			unsigned int global_index;
 			unsigned int node_global_index;
-			unsigned int pipeline_id;
+			size_t pipeline_id;
             bool inside;
 			MeshAssetInstance * owner;
 			std::shared_ptr<Primitive> primitive_global;
@@ -224,13 +224,13 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 		std::vector<int> nodes_indexes;
 
         std::vector<MaterialAsset::ref> overrided_material;
-        void use_material(int i, std::shared_ptr<MeshRenderContext>& context) override;
+        void use_material(size_t i, std::shared_ptr<MeshRenderContext>& context) override;
 
         using ptr = s_ptr<MeshAssetInstance>;
         virtual ~MeshAssetInstance();
         MeshAssetInstance(MeshAsset::ptr asset);
         void draw(MeshRenderContext::ptr context);
-        void override_material(int i, MaterialAsset::ptr mat)
+        void override_material(size_t i, MaterialAsset::ptr mat)
         {
             overrided_material[i] = register_asset(mat);
 

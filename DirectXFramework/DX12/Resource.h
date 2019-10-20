@@ -188,9 +188,11 @@ namespace DX12
 			return max_count;
 		}
 		template<class T>
-		HandleTable create_table(T count,
+		HandleTable create_table(T _count,
 			typename std::enable_if<std::is_scalar<T>::value>::type* = 0)
 		{
+
+			UINT count = static_cast<UINT>(_count);
 			std::lock_guard<std::mutex> g(m);
 
 			if (frees[count].size())
@@ -213,7 +215,7 @@ namespace DX12
 		template<class ...Args>
 		HandleTable create_table(Args... t)
 		{
-			const size_t count = sizeof...(t);
+			const UINT count = sizeof...(t);
 			std::lock_guard<std::mutex> g(m);
 
 			if (frees[count].size())

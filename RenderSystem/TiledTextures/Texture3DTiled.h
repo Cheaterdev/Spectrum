@@ -15,7 +15,7 @@ public:
 
 	ivec3 get_tiles_count(int mip_level = 0);
 	ivec3 get_voxels_per_tile();
-	virtual int get_used_tiles();
+	virtual size_t get_used_tiles();
 	Tile::ptr& get_tile(int mip_level, ivec3 pos);
 
 
@@ -67,7 +67,7 @@ public:
 	using ptr = std::shared_ptr<Texture3DTiledDynamic>;
 	Texture3DTiledDynamic(CD3DX12_RESOURCE_DESC desc);
 
-	virtual int get_used_tiles();
+	virtual size_t get_used_tiles();
 
 
 	virtual void remove_all() override;

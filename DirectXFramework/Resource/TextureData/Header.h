@@ -125,7 +125,7 @@ struct texture_mip_data
         num_rows = static_cast<UINT>(c);
         data.resize(slice_stride * d);
     }
-    std::vector<char> data;
+    std::vector<unsigned char> data;
 	UINT width;
 	UINT height;
 	UINT depth;

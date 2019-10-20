@@ -130,11 +130,11 @@ namespace GUI
                     if (selected)
                     {
                         float l = 0.5f + 0.5f * sin(Math::m_2_pi * (phase += dt));
-                        color = vec4(50, 150, 200, 255) / 255 * l + (1 - l) * vec4(16, 46, 100, 255) / 255;
+                        color = vec4(50, 150, 200, 255) / 255.0f * l + (1 - l) * vec4(16, 46, 100, 255) / 255.0f;
                     }
 
                     else
-                        color = vec4(26, 96, 146, 255) / 255;
+                        color = vec4(26, 96, 146, 255) / 255.0f;
                 }
             };
 

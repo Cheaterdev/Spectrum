@@ -52,7 +52,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 	if (best_fit_normals)
 		signature.best_fit[0]= best_fit_normals->get_texture()->texture_2d()->get_static_srv();
 
-	using render_list = std::map<int, std::vector<MeshAssetInstance::render_info>>;
+	using render_list = std::map<size_t, std::vector<MeshAssetInstance::render_info>>;
 
 
 	bool first = true;
@@ -61,17 +61,17 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 		if (l->rendering.empty()) return;
 		render_list rendering;
 		//rendering.clear();
-		int count = l->rendering.size();
-		int count_per_thread = std::max(32, count / 8);
-		int thread_count = 1;// count / count_per_thread;
+		size_t count = l->rendering.size();
+		UINT count_per_thread = std::max(32u, UINT(count / 8));
+		UINT thread_count = 1;// count / count_per_thread;
 
 		if (!use_parrallel) thread_count = 1;
 
-		auto thread_func = [this, &l, &mesh_render_context, current_cpu_culling](int offset, int count)->render_list
+		auto thread_func = [this, &l, &mesh_render_context, current_cpu_culling](size_t offset, size_t count)->render_list
 		{
 			render_list result;
 
-			for (int i = offset; i < offset + count; i++)
+			for (size_t i = offset; i < offset + count; i++)
 			{
 				auto& e = l->rendering[i];
 				auto& node = l->nodes[e.node_index];
@@ -95,9 +95,9 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 		else
 		{
 			std::vector<std::future<render_list>> results;
-			int current_offset = 0;
+			size_t current_offset = 0;
 
-			for (int i = 0; i < thread_count; i++)
+			for (UINT i = 0; i < thread_count; i++)
 			{
 				results.emplace_back(thread_pool::get().enqueue(std::bind(thread_func, current_offset, count_per_thread)));
 				current_offset += count_per_thread;

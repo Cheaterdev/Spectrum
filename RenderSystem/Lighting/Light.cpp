@@ -58,7 +58,7 @@ struct LightSignature : public T
  void LightSystem::process(MeshRenderContext::ptr & context, G_Buffer & buffer, main_renderer::ptr r, scene_object::ptr scene)
 {
 	auto timer = context->list->start(L"lighting");
-	int light_count = lights.size();
+	size_t light_count = lights.size();
 
 	if (light_count)
 	{

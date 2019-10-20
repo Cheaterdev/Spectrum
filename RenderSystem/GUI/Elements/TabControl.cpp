@@ -95,7 +95,7 @@ namespace GUI
 			auto bounds = get_render_bounds();
 			bounds.y += bounds.h - 3;
 			bounds.h = 3;
-			renderer->draw_color(c, float4(53, 114, 202,255)/255, bounds);
+			renderer->draw_color(c, float4(53, 114, 202,255)/255.0f, bounds);
 		}
 
 		inline tab_strip::tab_strip()
@@ -176,7 +176,7 @@ namespace GUI
                 tab_button::ptr but = elem->get_ptr<tab_button>();
                 owner->add_button(but);
                 float w = get_render_bounds().x;
-                int best = -1;
+				size_t best = -1;
                 float len = abs(get_render_bounds().x - p.x);
                 auto& strip_buttons = strip->get_childs();
                 strip_buttons.erase(elem);

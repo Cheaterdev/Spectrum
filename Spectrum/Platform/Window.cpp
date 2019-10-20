@@ -173,7 +173,7 @@ LRESULT Window::MsgProc(MSG msg)
 
         case  WM_KEYDOWN:
         {
-			if(input_handler)input_handler->key_action_event(msg.wParam);
+			if(input_handler)input_handler->key_action_event((long)msg.wParam);
             break;
         }
 
@@ -251,7 +251,7 @@ std::vector<std::string> file_open(const std::string& Name, const std::string& S
 	char FilterBuffer[512];
 	{
 		memset(FilterBuffer, 0, sizeof(FilterBuffer));
-		memcpy(FilterBuffer, Extension.c_str(), std::min<unsigned int>(Extension.size(), 512));
+		memcpy(FilterBuffer, Extension.c_str(), std::min(Extension.size(), 512_t));
 
 		for (int i = 0; i < 512; i++)
 		{

@@ -76,7 +76,7 @@ ivec3 Texture3DTiled::get_voxels_per_tile()
 	return one_tile_size;
 }
 
-int Texture3DTiled::get_used_tiles()
+size_t Texture3DTiled::get_used_tiles()
 {
 	return	heap_manager_static.get_used_tiles();
 }
@@ -184,18 +184,19 @@ Texture3DTiled::Texture3DTiled(CD3DX12_RESOURCE_DESC desc)
 	D3D12_PACKED_MIP_INFO mip_info;
 	D3D12_TILE_SHAPE tile_shape;
 	UINT num_sub_res = 20;
-	UINT first_sub_res;
+	//UINT first_sub_res;
 	D3D12_SUBRESOURCE_TILING tilings[20];
 	Render::Device::get().get_native_device()->GetResourceTiling(m_Resource.Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 
 	num_sub_res = mip_info.NumStandardMips;
 	one_tile_size = { tile_shape.WidthInTexels, tile_shape.HeightInTexels, tile_shape.DepthInTexels };
 
-	for (int i = 0; i < num_sub_res; i++)
+	for (UINT i = 0; i < num_sub_res; i++)
 	{
+		UINT scaler = 1 << i;
 		mips.emplace_back(ivec3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles), tilings[i].StartTileIndexInOverallResource);
-		mips.back().rows_per_tile = desc.Height / pow(2, i) / mips[i].tiles.y;
-		mips.back().stride_per_tile = BitsPerPixel(desc.Format)*desc.Width / pow(2, i) / mips[i].tiles.x;
+		mips.back().rows_per_tile = desc.Height / scaler / mips[i].tiles.y;
+		mips.back().stride_per_tile = (UINT)(BitsPerPixel(desc.Format)*desc.Width / scaler / mips[i].tiles.x);
 	}
 	texture->set_name("Texture3DTiled::texture");
 
@@ -241,7 +242,7 @@ Texture3DTiledDynamic::Texture3DTiledDynamic(CD3DX12_RESOURCE_DESC desc) :Textur
 
 }
 
-int Texture3DTiledDynamic::get_used_tiles()
+size_t Texture3DTiledDynamic::get_used_tiles()
 {
 	return	heap_manager_static.get_used_tiles() + heap_manager_dynamic.get_used_tiles();
 }

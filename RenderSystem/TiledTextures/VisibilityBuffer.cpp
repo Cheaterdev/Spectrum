@@ -79,7 +79,7 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 		size /= sizeof(int);
 
 		int thread_count = std::min(sizes.y, 8);
-		int one_thread = size / thread_count;
+		UINT one_thread = UINT(size / thread_count);
 		//memcpy(resolved_data.data(), data, size);
 		//   auto int_data = reinterpret_cast<const unsigned int*>(data);
 		std::atomic_int counter = 0;
@@ -89,7 +89,7 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 		{
 
 			std::vector<vec3> poses;
-			for (int i = one_thread*thread; i < one_thread*thread + one_thread; i++)
+			for (UINT i = one_thread*thread; i < one_thread*thread + one_thread; i++)
 			{
 
 
@@ -120,7 +120,7 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 
 	list->transition_uav(buffer.get());
 	list->transition(buffer.get(), Render::ResourceState::COPY_DEST);
-	list->get_copy().update_buffer(buffer.get(), 0, reinterpret_cast<char*>(clear_data.data()), clear_data.size());
+	list->get_copy().update_buffer(buffer.get(), 0, reinterpret_cast<char*>(clear_data.data()), (UINT)clear_data.size());
 	list->transition(buffer.get(), Render::ResourceState::UNORDERED_ACCESS);
 	list->transition_uav(buffer.get());
 

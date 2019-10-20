@@ -3,8 +3,6 @@
 #include "PipelineState.h"
 
 
-
-
 #define E(x) 	if ( l.x != r.x) return false;
 #define C(x) 	if (auto cmp = l.x <=> r.x; cmp != 0) return cmp;
 
@@ -43,7 +41,7 @@ namespace DX12
 #define _C(x) 	if (auto cmp = x <=> r.x; cmp != 0) return cmp;
 
 
-
+	
 
 	bool PipelineStateDesc::operator==(const  PipelineStateDesc& r)  const
 	{
@@ -78,6 +76,9 @@ namespace DX12
 
 			return std::strong_ordering::equal;
 	}
+
+
+
 	 void PipelineState::on_change()
 	{
 		auto t = CounterManager::get().start_count<PipelineState>();

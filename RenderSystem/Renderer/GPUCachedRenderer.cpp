@@ -513,7 +513,7 @@ gpu_cached_renderer::gpu_cached_renderer(Scene::ptr scene, MESH_TYPE _mesh_type)
 
 			//fix command pixel buffer
 			auto& command = gpu_commands[r.global_index];
-			command.mat_texture_offsets.texture_offset = material_offsets[mat];
+			command.mat_texture_offsets.texture_offset =(UINT)material_offsets[mat];
 			auto& material_cb = command.mat_const;
 			if (mat->get_pixel_buffer())
 				material_cb = mat->get_pixel_buffer()->get_gpu_address();
@@ -594,7 +594,7 @@ gpu_cached_renderer::gpu_cached_renderer(Scene::ptr scene, MESH_TYPE _mesh_type)
 
 		{
 			IndirectCommand& command = gpu_commands[index];
-			command.mat_texture_offsets.texture_offset = material_offsets[mat];
+			command.mat_texture_offsets.texture_offset =(UINT)material_offsets[mat];
 			command.mat_texture_offsets.node_offset = r->node_global_index;
 			command.draw_indirect.InstanceCount = 1;
 			command.draw_indirect.StartInstanceLocation = 0;
@@ -663,7 +663,7 @@ void gpu_cached_renderer::init_material(MaterialAsset* m)
 	if (direction[mat_id].index == 0)
 	{
 		indirection.push_back(mat_id);
-		direction[mat_id].index = indirection.size();
+		direction[mat_id].index = (int)indirection.size();
 	}
 
 	for (auto& p : type_pipelines)

@@ -13,7 +13,7 @@ namespace GUI
     {
         float w = get_render_bounds().w;// -vert->size->x;
         float elem_size = std::min(128.0f, w);
-        unsigned int best_count = Math::clamp<unsigned int>(unsigned int(w / elem_size), 1, elements.size());
+        unsigned int best_count = Math::clamp<unsigned int>(unsigned int(w / elem_size), 1u, unsigned int(elements.size()));
         elem_size = std::min(128.0f, (w - 20) / best_count);
         float offset = std::max<float>((w - elem_size * best_count) / (best_count + 1), 0);
         vec2 cursor = { offset, 0 };
