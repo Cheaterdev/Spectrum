@@ -609,12 +609,7 @@ class gpu_cached_renderer : public gpu_mesh_renderer,
 
 	BufferMapper<instance> boxes_instances;
 	BufferMapper<IndirectCommand> gpu_commands;
-	struct nodes
-	{
-		mat4x4 world;
-		mat4x4 inv;
-	};
-	BufferMapper<nodes> gpu_nodes;
+
 
 	std::mutex mtx;
 	Render::ComputePipelineState::ptr gpu_frustum_pipeline[2];
@@ -629,6 +624,13 @@ public:
 	using ptr = std::shared_ptr<gpu_cached_renderer>;
 	using 	DrawInfo = std::map<int, std::map<int, int>>;
 
+
+	struct nodes
+	{
+		mat4x4 world;
+		mat4x4 inv;
+	};
+	BufferMapper<nodes> gpu_nodes;
 	struct  
 	{
 	

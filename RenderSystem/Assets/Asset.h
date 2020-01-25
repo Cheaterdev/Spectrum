@@ -597,15 +597,49 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 		template<class T>
 		typename T::ptr find(std::function<bool(typename T::ptr&)> f)
 		{
-			for (auto p : assets)
+			for (auto & storage : assets)
 			{
-				auto asset = p.second->get_ptr<T>();
-
-				if (asset&&f(asset))return asset;
+				if (storage.second->get_type() == T::TYPE)
+				{
+					auto asset = storage.second->get_asset()->get_ptr<MeshAsset>();
+					if (asset && f(asset))return asset;
+				}
+		
 			}
 
 			return nullptr;
 		}
+
+		template<class T>
+		typename T::ptr find_by_name(std::wstring name)
+		{
+			for (auto& storage : assets)
+			{
+				if (storage.second->get_type() == T::TYPE)
+				{
+					auto asset = storage.second->get_asset()->get_ptr<MeshAsset>();
+					if (asset&&asset->get_name()== name)return asset;
+				}
+
+			}
+
+			return nullptr;
+		}
+
+
+		typename AssetStorage::ptr find_storage_by_name(std::wstring name)
+		{
+			for (auto& storage : assets)
+			{
+			
+			if (storage.second->get_name() == name) return storage.second;
+
+			}
+
+			return nullptr;
+		}
+
+
 		template <class T = Asset>
 		s_ptr<T> get(Guid id, std::function<T*()> create_func)
 		{

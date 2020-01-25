@@ -305,7 +305,7 @@ namespace GUI
 
 
             property<rect> render_bounds;
-            rect local_bounds;
+			rect local_bounds;
             bool pressed;
             bool thinkable;
             cursor_style cursor = cursor_style::ARROW;
@@ -434,6 +434,8 @@ namespace GUI
             property<bool> visible;
             property<sizer> margin;
             property<sizer> padding;
+			property<vec2> scaled_size;
+
             vec2 minimal_size; //todo: property?
             size_type width_size = size_type::NONE;
             size_type height_size = size_type::NONE;
@@ -453,6 +455,7 @@ namespace GUI
 
         protected:
             virtual void on_bounds_changed(const rect& r);
+			virtual void on_local_size_changed(const vec2& r);
 
             virtual void on_size_changed(const vec2& r);
 

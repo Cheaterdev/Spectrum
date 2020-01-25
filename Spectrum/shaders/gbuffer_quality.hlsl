@@ -112,8 +112,8 @@ float3 r = normalize(reflect(v, low_normals));
 
 #define R 1
 
-for (int x = -R; x <= R; x++)
-for (int y = -R; y <= R; y++)
+[unroll] for (int x = -R; x <= R; x++)
+[unroll] for (int y = -R; y <= R; y++)
 {
 	//float2 t_tc = i.tc + 2 * float2(x, y) / dims;
 	int2 deltas = int2(x, y);

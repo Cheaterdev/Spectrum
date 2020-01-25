@@ -25,6 +25,11 @@ namespace EngineAssets
 		 return  new BinaryAsset(L"shaders\\UniversalMaterial.hlsl");
 	 });
 
+	 EngineAsset<BinaryAsset> material_raytracing_header(L"material_header_raytracing", [] {
+		 return  new BinaryAsset(L"shaders\\UniversalMaterialRaytracing.hlsl");
+		 });
+
+
 
 	 EngineAsset<BRDF> brdf(L"brdf", [] {
 		 BRDF *brdf = new BRDF();

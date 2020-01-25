@@ -131,7 +131,7 @@ void TextureAssetRenderer::render(TextureAsset* asset, Render::Texture::ptr targ
 	shader_data.texture[0] = asset->get_texture()->texture_2d()->get_srv();
 	shader_data.sampler[0] = sampler_table;
     c->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-    c->get_graphics().draw(4, 0);
+    //c->get_graphics().draw(4, 0);
     MipMapGenerator::get().generate(c->get_compute(), target);
 
 	c->transition(target, Render::ResourceState::PIXEL_SHADER_RESOURCE);

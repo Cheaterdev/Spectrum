@@ -137,6 +137,8 @@ shader_parameter MaterialContext::get_texture(TextureSRVParams::ptr& p, shader_p
 
 std::string MaterialContext::generate_uniform_struct()
 {
+	if (uniform_struct.empty())
+		return "\n";
 	std::string result = "cbuffer UNIFORMS:register(b1)\n{\n";
 	result += uniform_struct;
 
@@ -156,6 +158,11 @@ std::string MaterialContext::generate_uniform_struct()
 
 void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 {
+	pixel_shader = ShaderSource();
+	voxel_shader = ShaderSource();
+	tess_shader = ShaderSource();
+	hit_shader = ShaderSource();
+
 	this->graph = graph;
 	clear_parameters();
 	text = "";//file->get_data();
@@ -171,97 +178,74 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 
 	graph->get_tess_displacement()->set_enabled(false);
 	graph->start(this);
-	//  text += "\n";
-	//	graph->func_name
-	
-	std::string pixel_shader_func = "\
-PS_RESULT PS(vertex_output i)\n\
-{\n\
-	float4 color = 1;\n\
-	float metallic=1;\n\
-	float roughness=1;\n\
-	float4 normal=0;\n\
-";
-
-	if (functions.find(graph) != functions.end())
-		pixel_shader_func += graph->func_name + "(i.wpos,i.tc, color, metallic,roughness,normal);\n";
-
-	pixel_shader_func += "	return universal(i,color,metallic,roughness,normal);\n";
-	pixel_shader_func += "}";
-	std::string voxel_shader_func = "\
-void PS_VOXEL(vertex_output i)\n\
-{\n\
-	float4 color = 1;\n\
-	float metallic=1;\n\
-	float roughness=1;\n\
-	float4 normal=0;\n\
-";
-
-	if (functions.find(graph) != functions.end())
-		voxel_shader_func += graph->func_name + "(i.wpos,i.tc, color, metallic,roughness,normal);\n";
-
-	voxel_shader_func += "	universal_voxel(i,color,metallic,roughness,normal);\n";
-	voxel_shader_func += "}";
-	std::string ps_text = text;
-	text = "";
-	functions.clear();
-
-	graph->get_normals()->set_enabled(false);
-	graph->get_texcoord()->set_enabled(false);
-	graph->get_mettalic()->set_enabled(false);
-	graph->get_roughness()->set_enabled(false);
-
-	graph->get_base_color()->set_enabled(false);
-	graph->get_tess_displacement()->set_enabled(true);
-	graph->start(this);
-//	std::string tess_uniforms = generate_uniform_struct();
-	std::string tess_shader_func = "\
-float TESS(vertex_output2 i)\n\
-{\n\
-	float displacement = 0;\n\
-";
-
-	if (functions.find(graph) != functions.end())
-		tess_shader_func += graph->func_name + "(i.wpos,i.tc, displacement);\n";
-
-	tess_shader_func += "	return displacement;\n";
-	tess_shader_func += "}";
-
-	
-
-	//uniforms_tess = uniforms;
 
 
 	std::string uniforms_string = generate_uniform_struct();
-	pixel_shader = /*universal +*/ uniforms_string + ps_text + pixel_shader_func;
-	voxel_shader = /*universal +*/ uniforms_string + ps_text + voxel_shader_func;
+	{
+
+
+		if (functions.find(graph) != functions.end())
+		{
+			pixel_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
+			voxel_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
+			hit_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
+		}
+
+
+		pixel_shader.text = uniforms_string + text;
+		voxel_shader.text = uniforms_string + text;
+		hit_shader.text = uniforms_string + text;
+
+
+		if (textures.empty())
+		{
+			hit_shader.macros.emplace_back("REFRACTION", "");
+		}
+	}
+
+
+
 
 	if (graph->get_tess_displacement()->has_input())
-		tess_shader =/* universal + */uniforms_string + text + tess_shader_func;
-	else
-		tess_shader = "";
+	{
+
+		text = "";
+		functions.clear();
+
+		graph->get_normals()->set_enabled(false);
+		graph->get_texcoord()->set_enabled(false);
+		graph->get_mettalic()->set_enabled(false);
+		graph->get_roughness()->set_enabled(false);
+
+		graph->get_base_color()->set_enabled(false);
+		graph->get_tess_displacement()->set_enabled(true);
+		graph->start(this);
+
+		if (functions.find(graph) != functions.end())
+		{
+			tess_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
+		}
+
+		tess_shader.text = uniforms_string + text;
+
+	}
 
 
 	uniforms_ps = uniforms;
-
-
-	text = pixel_shader;
-	// Log::get() << text << Log::endl;
-
-
+	text = pixel_shader.text;
 }
 
-std::string MaterialContext::get_tess_result()
+ShaderSource MaterialContext::get_tess_result()
 {
 	return tess_shader;
 }
 
-std::string MaterialContext::get_result()
+ShaderSource MaterialContext::get_pixel_result()
 {
 	return pixel_shader;
 }
 
-std::string MaterialContext::get_voxel_result()
+ShaderSource MaterialContext::get_voxel_result()
 {
 	return voxel_shader;
 }
@@ -608,7 +592,7 @@ void TextureNode::operator()(MaterialContext* context)
 	auto mat_graph = static_cast<MaterialFunction*>(owner);
 	//auto val = mat_graph->add_value(ShaderParams::FLOAT4, "float4(1,0,0,1)");
 	auto val = mat_graph->add_value(ShaderParams::FLOAT4, std::string("sample(") + context->get_texture(texture_info) + ",Sampler, " + i_tc->get<shader_parameter>().name + ".xy)");
-	o_vec4->put(shader_parameter("float4("+val.name + ".xyz,1)", ShaderParams::FLOAT4));
+	o_vec4->put(shader_parameter("float4(" + val.name + ".xyz,1)", ShaderParams::FLOAT4));
 	o_r->put(shader_parameter(val.name + ".r", ShaderParams::FLOAT1));
 	o_g->put(shader_parameter(val.name + ".g", ShaderParams::FLOAT1));
 	o_b->put(shader_parameter(val.name + ".b", ShaderParams::FLOAT1));
@@ -685,7 +669,7 @@ GUI::base::ptr ScalarNode::create_editor_window()
 	box->docking = GUI::dock::TOP;
 	// img->text = std::to_string(value);
 	// img->size = { 64, 64 };
-	box->on_change = [this](int value, GUI::Elements::value_box * b)
+	box->on_change = [this](int value, GUI::Elements::value_box* b)
 	{
 		uniform->value.f_value = float(value) / 100;
 		b->info->text = std::to_string(uniform->value.f_value).substr(0, 4);

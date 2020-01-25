@@ -137,10 +137,10 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 					//graphics.set_const_buffer(5, nodes.resource->get_gpu_address() + nodes.offset + m.node_index * sizeof(decltype(l->node_buffer)::type));
 				//	graphics.set_constants(8,0, m.node_index);
 
-					signature.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();
+					signature.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address() + m.mesh->vertex_offset * sizeof(Vertex);
 					signature.mat_texture_offsets.set(0, m.node_index);
 
-					mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, m.mesh->vertex_offset);
+					mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0*m.mesh->vertex_offset);
 				}
 			}
 	};

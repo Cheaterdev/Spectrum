@@ -187,6 +187,7 @@ void MeshAsset::try_register()
         Asset::try_register();
 }
 
+
 void MeshAsset::update_preview(Render::Texture::ptr preview)
 {
     if (!preview || !preview->is_rt())
@@ -286,10 +287,10 @@ bool MeshAssetInstance::update_transforms()
 		node_buffer.data()[e.node_index] = mat;
 		e.owner = this;
 
-		if (scene)
-			scene->on_moved(this);
 	}
 
+	if (scene)
+		scene->on_moved(this);
 }
 return res;
 }
@@ -351,6 +352,44 @@ void MeshAssetInstance::draw(MeshRenderContext::ptr context)
       }*/
 }
 
+
+
+
+
+std::vector<RaytracingAccelerationStructure::ptr> MeshAssetInstance::create_raytracing_as(D3D12_GPU_VIRTUAL_ADDRESS address)
+{
+	//std::vector<RaytracingAccelerationStructure::ptr> result;
+
+	for (auto& info : rendering)
+	{
+	//	if (info.node_index == 3) continue;
+		D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
+		geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+		geometryDesc.Triangles.IndexBuffer = mesh_asset->index_buffer->get_gpu_address() +info.mesh->index_offset * sizeof(UINT32);
+		geometryDesc.Triangles.IndexCount = info.mesh->index_count;
+		geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+		geometryDesc.Triangles.Transform3x4 =  address + info.node_index * sizeof(gpu_cached_renderer::nodes);
+		geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+		geometryDesc.Triangles.VertexCount = info.mesh->vertex_count;
+		geometryDesc.Triangles.VertexBuffer.StartAddress = mesh_asset->vertex_buffer->get_gpu_address() +info.mesh->vertex_offset * mesh_asset->vertex_buffer->get_stride();
+		geometryDesc.Triangles.VertexBuffer.StrideInBytes = mesh_asset->vertex_buffer->get_stride();
+		geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC > descs;
+		descs.push_back(geometryDesc);
+
+
+		RaytracingAccelerationStructure::ptr structure = std::make_shared<RaytracingAccelerationStructure>(descs);
+		raytracing_as.push_back(structure);
+		structure->srvs = DescriptorHeapManager::get().get_csu_static()->create_table(2);
+		mesh_asset->vertex_buffer->place_structured_srv(structure->srvs[0], sizeof(Vertex), info.mesh->vertex_offset, info.mesh->vertex_count);
+		mesh_asset->index_buffer->place_structured_srv(structure->srvs[1], sizeof(UINT), info.mesh->index_offset, info.mesh->index_count);
+		structure->material = info.mesh->material;
+
+		//break;
+	}
+	return raytracing_as;
+}
 
 BOOST_CLASS_EXPORT_IMPLEMENT(MeshAsset);
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MeshAsset>);

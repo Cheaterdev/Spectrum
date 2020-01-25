@@ -185,6 +185,11 @@ namespace DX12
         Device::get().get_native_device()->CopyDescriptorsSimple(1, cpu, r.cpu, type);
     }
 
+	void HandleTable::place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t)
+	{
+		Device::get().get_native_device()->CopyDescriptorsSimple(r.get_count(), get_base().cpu, r.get_base().cpu, t);
+	}
+
 
     static std::queue<DescriptorHeap::ptr> free_tables;
     static std::mutex tables_mutex;
@@ -296,13 +301,17 @@ namespace DX12
 			if (!e.second.changed) continue;
 			size += static_cast<UINT>(e.second.handles.size());
 		}
+
+	
 		return size;
 	}
 
 	void DynamicDescriptorManager::unbind_all()
 	{
 		for (auto &e : root_tables)
-			e.second.changed = true;
+			e.second.changed = true;	
+		
+	
 	}
 	void DynamicDescriptorManager::bind(CommandList * list)
 	{
@@ -365,6 +374,9 @@ namespace DX12
 		//	if (!e.second.fixed)
 			//	e.second.handles.resize(e.second.count);
 		}
+
+		
+
 	}
 
 	void DynamicDescriptorManager::bind_table(UINT i, std::vector<Handle>& h)

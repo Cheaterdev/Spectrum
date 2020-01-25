@@ -52,19 +52,22 @@ namespace GUI
     // ReSharper disable once CppPossiblyUninitializedMember
     base::base() :
         render_bounds(std::bind(&base::on_bounds_changed, this, std::placeholders::_1)),
-        size(std::bind(&base::on_size_changed, this, std::placeholders::_1)),
+        size(std::bind(&base::on_local_size_changed, this, std::placeholders::_1)),
         pos(std::bind(&base::on_pos_changed, this, std::placeholders::_1)),
         docking(std::bind(&base::on_dock_changed, this, std::placeholders::_1)),
         visible(std::bind(&base::on_visible_changed, this, std::placeholders::_1)),
         margin(std::bind(&base::on_margin_changed, this, std::placeholders::_1)),
-        padding(std::bind(&base::on_padding_changed, this, std::placeholders::_1))
-    {
+        padding(std::bind(&base::on_padding_changed, this, std::placeholders::_1)),
+		scaled_size(std::bind(&base::on_size_changed, this, std::placeholders::_1))
+	{
         minimal_size = { 0, 0 };
         clip_child = true;
         clickable = true;
         margin = { 0, 0, 0, 0 };
         padding = { 0, 0, 0, 0 };
         size = { 0, 0 };
+		scaled_size = { 0, 0 };
+
         pos = { 0, 0 };
         docking = dock::NONE;
         visible = true;
@@ -86,6 +89,28 @@ namespace GUI
             //	Log::get() << "size " << res << " " << r << Log::endl;
             return res;
         };
+
+
+        scaled_size.filter_func = [this](const vec2& r)->vec2
+        {
+            vec2 res = vec2::max(vec2((r)), minimal_size);
+
+            if (clip_to_parent && parent)
+            {
+                //		res = vec2::min(res, vec2(parent->render_bounds->size) - vec2(parent->padding->left + parent->padding->right, parent->padding->right + parent->padding->bottom));
+            }
+
+            /*
+                        if (width_size == size_type::FIXED)
+                            res.x = size->x;
+
+                        if (height_size == size_type::FIXED)
+                            res.y = size->y;*/
+                            //	Log::get() << "size " << res << " " << r << Log::endl;
+            return res;
+        };
+
+
         pos.filter_func = [this](const vec2 & r)->vec2
         {
             vec2 res = (r);
@@ -110,10 +135,10 @@ namespace GUI
             rect res = r;
 
             if (width_size == size_type::FIXED || width_size == size_type::MATCH_CHILDREN || width_size == size_type::MATCH_PARENT || width_size == size_type::MATCH_PARENT_CHILDREN)
-                res.size.x = size->x * result_scale;
+                res.size.x = scaled_size->x * result_scale;
 
             if (height_size == size_type::FIXED || height_size == size_type::MATCH_CHILDREN || height_size == size_type::MATCH_PARENT || width_size == size_type::MATCH_PARENT_CHILDREN)
-                res.size.y = size->y * result_scale;
+                res.size.y = scaled_size->y * result_scale;
 
             if (x_type == pos_x_type::LEFT)
                 res.pos.x = r.pos.x;
@@ -260,7 +285,7 @@ namespace GUI
 
         do
         {
-            sizer all_pos = { pos.get(), pos.get() + size.get() };
+            sizer all_pos = { pos.get(), pos.get() + scaled_size.get() };
             all_pos +=
             {	-margin->left, -margin->top, margin->right, margin->bottom};
             float2 all_size = { all_pos.right - all_pos.left, all_pos.bottom - all_pos.top };
@@ -298,25 +323,25 @@ namespace GUI
 
                 case dock::TOP:
                     my += scale * float4(margin->left, margin->top, -margin->right, -margin->bottom);
-                    my.bottom = my.top + size->y * scale;
+                    my.bottom = my.top + scaled_size->y * scale;
                     r.top += all_size.y;
                     break;
 
                 case dock::BOTTOM:
                     my += scale * float4(margin->left, margin->top, -margin->right, -margin->bottom);
-                    my.top = my.bottom - size->y * scale;
+                    my.top = my.bottom - scaled_size->y * scale;
                     r.bottom -= all_size.y;
                     break;
 
                 case dock::LEFT:
                     my += scale * float4(margin->left, margin->top, -margin->right, -margin->bottom);
-                    my.right = my.left + size->x * scale;
+                    my.right = my.left + scaled_size->x * scale;
                     r.left += all_size.x;
                     break;
 
                 case dock::RIGHT:
                     my += scale * float4(margin->left, margin->top, -margin->right, -margin->bottom);
-                    my.left = my.right - size->x * scale;
+                    my.left = my.right - scaled_size->x * scale;
                     r.right -= all_size.x;
                     break;
 
@@ -436,7 +461,7 @@ namespace GUI
 
             if (new_size.y != new_size.y) new_size.y = 0;
 
-            size = new_size; ///scale;
+            scaled_size = new_size; ///scale;
             max_iterations--;
 
             for (auto && c : childs)
@@ -491,6 +516,11 @@ namespace GUI
         //  else
         set_update_layout();
     }
+
+	void base::on_local_size_changed(const vec2& r)
+	{
+		scaled_size = r;
+	}
 
     bool base::test_local_visible()
     {
@@ -741,7 +771,7 @@ namespace GUI
 
     void base::on_parent_size_changed(const rect& r)
     {
-        vec2 new_size = size.get();
+        vec2 new_size = scaled_size.get();
 
         if (width_size == size_type::MATCH_PARENT)
             new_size.x = r.w;
@@ -884,7 +914,7 @@ namespace GUI
 		}
 
         c.offset = { 0, 0 };
-        c.window_size = size.get();
+        c.window_size = scaled_size.get();
         c.scale = 1;
 
 

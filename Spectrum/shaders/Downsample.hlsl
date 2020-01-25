@@ -83,19 +83,19 @@ static const int2 delta[4] =
     int2(0, 0)
 };
 
-PS_RESULT PS(quad_output i)
+PS_RESULT PS(quad_output input)
 {
 	PS_RESULT result;
 	float2 low_dimensions;
 	depth_tex.GetDimensions(low_dimensions.x, low_dimensions.y);
   // i.tc-= 0.5/ low_dimensions;
-	float depths[4] = (float[4]) depth_tex.Gather(PixelSampler, i.tc );
+	float depths[4] = (float[4]) depth_tex.Gather(PixelSampler, input.tc );
 	float4 normals[4];
 
-	for (int j = 0; j < 4; j++)
+    [unroll] for (int j = 0; j < 4; j++)
 	{
 	//	depths[j]= depth_tex.Sample(PixelSampler, i.tc, delta[j]).x;
-		float4 n = normal_tex.Sample(PixelSampler, i.tc, delta[j]);
+		float4 n = normal_tex.Sample(PixelSampler, input.tc, delta[j]);
 		normals[j] = float4(normalize(n.xyz * 2 - 1), n.w);
 }
     float mind = depths[0];
@@ -105,7 +105,7 @@ PS_RESULT PS(quad_output i)
     float sumd = depths[0];
     float3 sumn = normals[0];
 
-    for (int i = 1; i < 4; i++)
+    [unroll] for (int i = 1; i < 4; i++)
     {
         if (depths[i] < mind)
         {

@@ -131,9 +131,10 @@ namespace DX12
 		RootSignature::ptr create_root();
 
 		template<class T>
-		typename RootSignatureTyped<T>::ptr create_typed_root()
+		typename RootSignatureTyped<T>::ptr create_typed_root(bool local = false)
 		{
-			return std::make_shared<RootSignatureTyped<T>>(desc);
+			desc.local = local;
+			return std::make_shared<RootSignatureTyped<T>>(desc,local? D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE: D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 		}
 		
 	};
@@ -240,7 +241,7 @@ namespace DX12
 				}
 
 
-				Constants(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*>(sig->context))
+				Constants(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*&>(sig->context))
 				{
 
 				}
@@ -310,7 +311,7 @@ namespace DX12
 
 
 
-				Table(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*>(sig->context))
+				Table(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*&>(sig->context))
 				{
 
 				}
@@ -394,7 +395,7 @@ namespace DX12
 
 
 
-				ConstBuffer(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*>(sig->context))
+				ConstBuffer(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*&>(sig->context))
 				{
 
 				}
@@ -447,7 +448,7 @@ namespace DX12
 				}
 
 
-				SRV(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*>(sig->context))
+				SRV(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*&>(sig->context))
 				{
 
 				}
@@ -484,7 +485,7 @@ namespace DX12
 
 
 
-				UAV(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*>(sig->context))
+				UAV(Signature* sig) :context(const_cast<DX12::SignatureDataSetter*&>(sig->context))
 				{
 
 				}
@@ -757,9 +758,9 @@ namespace DX12
 			return Creator().create_root();
 		}
 
-		static typename RootSignatureTyped<SignatureTypes>::ptr create_typed_root()
+		static typename RootSignatureTyped<SignatureTypes>::ptr create_typed_root(bool local = false)
 		{
-			return Creator().create_typed_root<SignatureTypes<Type>>();
+			return Creator().create_typed_root<SignatureTypes<Type>>(local);
 		}
 
 

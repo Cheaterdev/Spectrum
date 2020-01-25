@@ -417,10 +417,24 @@ void materials::universal_material::generate_material()
 		context.reset(new MaterialContext);
 
 	context->start(include_file->get_data(), graph.get().get());
-	auto ps_str = include_file->get_data() + context->get_result();
-	auto tess_orig_shader = context->get_tess_result();
+
+
+	auto ps_str = include_file->get_data() + context->get_pixel_result().text;
+	auto tess_orig_shader = context->get_tess_result().text;
 	auto tess_str = include_file->get_data() + tess_orig_shader;
-	auto voxel_str = include_file->get_data() + context->get_voxel_result();
+	auto voxel_str = include_file->get_data() + context->get_voxel_result().text;
+
+	static IdGenerator ids;
+	
+
+	wshader_name = std::wstring(L"HitShader_") + std::to_wstring(ids.get());
+
+
+
+	auto raytracing_str = include_file_raytacing->get_data() + context->hit_shader.text;
+
+
+	raytracing_blob = *D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
 	//    Log::get() << "SHADER: " << ps_str << "\n" << Hasher::hash(ps_str) << Log::endl;
 	Render::pixel_shader::ptr res_p_shader = passes[PASS_TYPE::DEFERRED].ps_shader;
 	Render::hull_shader::ptr res_h_shader = passes[PASS_TYPE::DEFERRED].hs_shader;
@@ -438,7 +452,7 @@ void materials::universal_material::generate_material()
 	*/
 	if (!res_p_shader || res_p_shader->get_hash() != MD5(ps_str))
 	{
-		res_p_shader = Render::pixel_shader::create_from_memory(ps_str, "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES);
+		res_p_shader = Render::pixel_shader::create_from_memory(ps_str, "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_pixel_result().macros);
 		shaders_changed = true;
 
 		if (!res_p_shader) return;
@@ -446,8 +460,11 @@ void materials::universal_material::generate_material()
 
 	if (!res_voxel_shader || res_voxel_shader->get_hash() != MD5(voxel_str))
 	{
-		res_voxel_shader = Render::pixel_shader::create_from_memory(voxel_str, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES);
-		res_voxel_shader_dynamic = Render::pixel_shader::create_from_memory(voxel_str, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, { D3D::shader_macro("VOXEL_DYNAMIC","1") });
+		res_voxel_shader = Render::pixel_shader::create_from_memory(voxel_str, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_voxel_result().macros);
+
+		auto macros = context->get_voxel_result().macros;
+		macros.emplace_back("VOXEL_DYNAMIC", "1");
+		res_voxel_shader_dynamic = Render::pixel_shader::create_from_memory(voxel_str, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
 		shaders_changed = true;
 
 		if (!res_voxel_shader||!res_voxel_shader_dynamic) return;
@@ -459,14 +476,14 @@ void materials::universal_material::generate_material()
 		//      Log::get() << "TESSSHADER: " << context->get_tess_result() << Log::endl;
 		if (!res_h_shader || res_h_shader->get_hash() != MD5(tess_str))
 		{
-			res_h_shader = Render::hull_shader::create_from_memory(tess_str, "HS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES);
+			res_h_shader = Render::hull_shader::create_from_memory(tess_str, "HS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
 
 			if (!res_h_shader) return;
 		}
 
 		if (!res_d_shader || res_d_shader->get_hash() != MD5(tess_str))
 		{
-			res_d_shader = Render::domain_shader::create_from_memory(tess_str, "DS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES);
+			res_d_shader = Render::domain_shader::create_from_memory(tess_str, "DS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
 
 			if (!res_d_shader) return;
 		}
@@ -560,13 +577,13 @@ MaterialGraph::ptr materials::universal_material::get_graph()
 	return pixel_buffer;
 }
 
-materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this)
+materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this)
 {
 
 	passes.resize(PASS_TYPE::COUNTER);
 
 	include_file = register_asset(EngineAssets::material_header.get_asset());
-
+	include_file_raytacing = register_asset(EngineAssets::material_raytracing_header.get_asset());
 	this->graph = BinaryData<MaterialGraph>(graph);
 	graph->add_listener(this, false);
 	need_regenerate_material = true;
@@ -579,7 +596,7 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 	graph.test();
 }
 
-materials::universal_material::universal_material() : include_file(this)
+materials::universal_material::universal_material() : include_file(this), include_file_raytacing(this)
 {
 	graph.on_create = [this](MaterialGraph::ptr g)
 	{
@@ -590,7 +607,7 @@ materials::universal_material::universal_material() : include_file(this)
 
 void materials::universal_material::on_asset_change(std::shared_ptr<Asset> asset)
 {
-	if (asset == *include_file)
+	if (asset == *include_file||asset==*include_file_raytacing)
 		on_graph_changed();
 
 	if (asset->get_type() == Asset_Type::TEXTURE)
@@ -659,6 +676,8 @@ void materials::universal_material::serialize(Archive& ar, const unsigned int fi
 	ar& NVP(passes);
 	ar& NVP(graph);
 	ar& NVP(include_file);
+	ar& NVP(include_file_raytacing);
+
 	ar& NVP(ps_uniforms);
 	ar& NVP(tess_uniforms);
 
@@ -666,5 +685,6 @@ void materials::universal_material::serialize(Archive& ar, const unsigned int fi
 	{
 		//   if (include_file->is_changed())
 		compile();
+		generate_material(); //TODO: REMOVE, FOR RT NOW ONLY
 	}
 }

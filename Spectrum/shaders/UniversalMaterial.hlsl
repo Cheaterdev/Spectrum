@@ -162,81 +162,52 @@ void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out 
 	mat_albedo.w = albedo.w;  
 }
 
+
+#ifdef BUILD_FUNC_PS
+
+
 PS_RESULT universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump)
-   
 { 
    clip(albedo.w-0.5);
    // clip(albedo.a - 0.2);  
     bump.xyz = normalize(bump.xyz * 2.0 - 1.0);
     //float3 bump = xy.x > 0 ? normalize(tex_normal.Sample(point_sampler, i.tc).xyz * 2.0 - 1.0) : float3(0, 0, 1);
 	float3 normal =  normalize(-bump.x * i.tangent + bump.y * i.binormal + bump.z * i.normal);
-    //  normal = i.normal;
-    //  float bump_len = length(bump);
-//   if (isinf(normal))
-    //normal = i.normal; 
-   
-
-	/*
-	s_albedo = m_albedo*(1 - metallic);
-	 
-	s_specular = m_albedo*metallic; 
-
-	m_albedo = s_specular / metallic;
-
-
-
-		s_albedo/s_specular +1=  1/metallic ;
-
-
-		metallic = 1/(s_albedo/s_specular + 1);
-
-
-
-
-	metallic*(1 - metallic) = s_specular / s_albedo;
-
-	metallic - metallic*metallic = s_specular / s_albedo; 
-
-
-	metallic*metallic - metallic + s_specular / s_albedo = 0;
-
-
-	D = 1 - 2 * s_specular / s_albedo;
-
-
-	metallic = (1 + -sqrtf(D))/2;*/
-	//albedo.xyz = pow(albedo.xyz, 2.2);
-
-/*	float s_specular = metallic; 
- 
-	metallic = 1.0 / (albedo/s_specular +1);
-	albedo.rgb = float3(s_specular.xxx) / (1.0 / (albedo.rgb / s_specular + 1));
-	 
-
-
-	roughness = 1 - roughness; 
-	*/
 
     float3 v = -normalize(camera.position - i.wpos);  
     float3 r = reflect(v, normal);         
-    //  return float4(bump.xyz, 1);  
     PS_RESULT result;   
-	//if (metallic < 1.0f / 255.0f) 
-	//	roughness = 1; 
+
 	result.albedo =  float4(albedo.xyz, metallic); 
     result.normals = float4(compress_normals(normal), (roughness));
 	result.specular = 0;// float4(metallic, roughness); 
       
-	//result.albedo.xyz = 1;
-	 
+
     float2 cur_p = float2(0.5, 0.5) + float2(0.5, -0.5)*(i.cur_pos.xy / i.cur_pos.w);
     float2 prev_p = float2(0.5,0.5) + float2(0.5, -0.5)*(i.prev_pos.xy / i.prev_pos.w);
 	   
 	result.speed = (cur_p-prev_p);// +float2(-1, 1) *(camera.jitter - prev_camera.jitter);
     return result;       
 }    
+
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f);
+PS_RESULT PS(vertex_output i)
+{
+	float4 color = 1;
+	float metallic = 1;
+	float roughness = 1;
+	float4 normal = 0;
+
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal);
+
+	return universal(i, color, metallic, roughness, normal);
+}
+
+#endif
    
-      
+#ifdef BUILD_FUNC_PS_VOXEL
+
+
 void universal_voxel(vertex_output i, float4 albedo, float metallic, float roughness, float4 bump)
 {   
     clip(albedo.w - 0.5);
@@ -255,8 +226,21 @@ void universal_voxel(vertex_output i, float4 albedo, float metallic, float rough
 	int offset = 4 * (index.x+ cell_size.x*(index.y+ cell_size.y*index.z)); 
 	voxel_visibility.Store4(offset, 0);
 #endif
-}  
-      
+}
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f);
+void PS_VOXEL(vertex_output i)
+{
+	float4 color = 1;
+	float metallic = 1;
+	float roughness = 1;
+	float4 normal = 0;
+
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal);
+
+	universal_voxel(i, color, metallic, roughness, normal);
+}
+#endif
+
 float4 tile_sample(Texture2D<float4> tex, SamplerState s, float2 tc, Texture2D<float4> residency, RWByteAddressBuffer visibility)
 {
     float calculated_level = tex.CalculateLevelOfDetail(s, tc);
@@ -330,7 +314,7 @@ vertex_output2 HS(InputPatch<vertex_output2, 3> inputPatch,
     return output;
 }
 
-float TESS(vertex_output2 i);
+
 #ifdef BUILD_FUNC_PS
 #define sample(tex, s,  tc) tex.Sample(s, tc);
 
@@ -338,9 +322,16 @@ float TESS(vertex_output2 i);
 #define sample(tex, s,  tc) tex.SampleLevel(s, tc, 3);
 
 #endif 
+
+
+#ifdef BUILD_FUNC_DS
+
+
 //--------------------------------------------------------------------------------------
 // Domain Shader
 //--------------------------------------------------------------------------------------
+float TESS(vertex_output2 i);
+
 [domain("tri")]
 vertex_output2 DS(HS_CONSTANT_DATA_OUTPUT input, float3 BarycentricCoordinates : SV_DomainLocation,
                  const OutputPatch<vertex_output2, 3> TrianglePatch)
@@ -391,3 +382,16 @@ vertex_output2 DS(HS_CONSTANT_DATA_OUTPUT input, float3 BarycentricCoordinates :
     return output;
 }   
  
+
+void COMPILED_FUNC(in float3 a, in float2 b, out float c);
+
+
+float TESS(vertex_output2 i)
+{
+	float displacement = 0;
+	COMPILED_FUNC(i.wpos, i.tc, displacement);
+
+	return displacement;
+}
+
+#endif

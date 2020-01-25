@@ -190,12 +190,23 @@ private:
 		ar& NVP(to_linear);
 	}
 };
+
+struct ShaderSource
+{
+
+	std::string text;
+	std::string function_name;
+	std::vector<D3D::shader_macro> macros;
+};
 class MaterialContext : public FlowGraph::GraphContext
 {
         int params = 0;
-        std::string voxel_shader;
-        std::string pixel_shader;
-        std::string tess_shader;
+
+		ShaderSource voxel_shader;
+		ShaderSource pixel_shader;
+		ShaderSource tess_shader;
+
+	
         std::string text;
 
         std::map < MaterialFunction*, std::string > functions;
@@ -220,6 +231,7 @@ class MaterialContext : public FlowGraph::GraphContext
 
         std::string generate_uniform_struct();
     public:
+		ShaderSource hit_shader;
 
         std::vector<Uniform::ptr> uniforms_ps;
         std::vector<Uniform::ptr> uniforms_tess;
@@ -241,10 +253,10 @@ class MaterialContext : public FlowGraph::GraphContext
         shader_parameter get_texture(TextureSRVParams::ptr& p, shader_parameter tc);
         shader_parameter create_value(Uniform::ptr f);
 
-        std::string get_result();
-        std::string get_voxel_result();
+		ShaderSource get_pixel_result();
+		ShaderSource get_voxel_result();
+		ShaderSource get_tess_result();
 
-        std::string get_tess_result();
         void start(std::string orig_file,MaterialGraph* graph);
 
 		void clear_parameters();

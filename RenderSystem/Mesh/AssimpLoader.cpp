@@ -293,10 +293,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			{
 				auto file_name = name.filename();
 
+				load_textures[name] = AssetManager::get().find_storage_by_name(file_name.generic_wstring());
 
-				load_textures[name] = AssetManager::get().find<AssetStorage>([&file_name](AssetStorage::ptr& p) {
-					return p->get_name() == file_name;
-				});
 
 
 			}
@@ -602,9 +600,9 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 for (unsigned int f = 0; f < native_mesh->mNumFaces; f++)
                 {
                     auto& face = native_mesh->mFaces[f];
-                    indices[index_count + f * 3] = vertex_count + (face.mIndices[0]);
-                    indices[index_count + f * 3 + 1] = vertex_count + (face.mIndices[1]);
-                    indices[index_count + f * 3 + 2] = vertex_count + (face.mIndices[2]);
+                    indices[index_count + f * 3] = 0*vertex_count + (face.mIndices[0]);
+                    indices[index_count + f * 3 + 1] = 0*vertex_count + (face.mIndices[1]);
+                    indices[index_count + f * 3 + 2] = 0*vertex_count + (face.mIndices[2]);
                 }
 
 

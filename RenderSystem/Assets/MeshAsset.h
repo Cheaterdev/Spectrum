@@ -31,6 +31,7 @@ struct MeshInfo
             ar& NVP(index_count);
             ar& NVP(primitive);
             ar& NVP(node_index);
+	//		vertex_offset = 0;
         }
 };
 
@@ -103,10 +104,12 @@ class MeshAsset : public Asset
         MeshAsset();
         std::shared_ptr<MeshAssetInstance> preview_mesh;
     public:
+		static const Asset_Type TYPE = Asset_Type::MESH;
+
         using ptr = s_ptr<MeshAsset>;
         using ref = AssetReference<MeshAsset>;
 
-
+	
         Render::StructuredBuffer<Vertex>::ptr vertex_buffer;
         Render::IndexBuffer::ptr index_buffer;
         std::vector<MeshInfo> meshes;
@@ -169,7 +172,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
         friend class stencil_renderer;
 
-        MeshAsset::ref mesh_asset;
+     
         LEAK_TEST(MeshAssetInstance)
 
         virtual void set(MeshRenderContext::ptr context) override;
@@ -180,11 +183,11 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 
 
-
+		std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
 
     public:
 		MESH_TYPE type= MESH_TYPE::STATIC;
-
+		MeshAsset::ref mesh_asset;
         struct node_data
         {
             mat4x4 world;
@@ -224,6 +227,11 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 		std::vector<int> nodes_indexes;
 
         std::vector<MaterialAsset::ref> overrided_material;
+
+
+
+		std::vector<RaytracingAccelerationStructure::ptr> create_raytracing_as(D3D12_GPU_VIRTUAL_ADDRESS);
+	
         void use_material(size_t i, std::shared_ptr<MeshRenderContext>& context) override;
 
         using ptr = s_ptr<MeshAssetInstance>;

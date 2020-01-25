@@ -87,8 +87,8 @@ namespace DX12
 	class CommandList;
 	class Device : public Singleton<Device>
 	{
-		ComPtr<ID3D12Device> m_device;
-		ComPtr<IDXGIFactory2> factory;
+		ComPtr<ID3D12Device5> m_device;
+		ComPtr<IDXGIFactory4> factory;
 		std::vector<std::shared_ptr<SwapChain>> swap_chains;
 
 
@@ -103,7 +103,7 @@ namespace DX12
 		void unused(ComPtr<ID3D12Pageable> resource);
 
 		std::shared_ptr<CommandList> get_upload_list();
-		ComPtr<ID3D12Device> get_native_device();
+		ComPtr<ID3D12Device5> get_native_device();
 
 		Queue::ptr& get_queue(CommandListType type);
 

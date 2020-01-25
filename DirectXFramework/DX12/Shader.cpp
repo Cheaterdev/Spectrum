@@ -12,6 +12,14 @@ namespace DX12
     const char* Shader<compute_shader>::compile_code = "cs_5_1";
 
 
+	const char* Shader<pixel_shader>::compile_code_dxil = "ps_6_0";
+	const char* Shader<vertex_shader>::compile_code_dxil = "vs_6_0";
+	const char* Shader<geometry_shader>::compile_code_dxil = "gs_6_0";
+	const char* Shader<domain_shader>::compile_code_dxil = "ds_6_0";
+	const char* Shader<hull_shader>::compile_code_dxil = "hs_6_0";
+	const char* Shader<compute_shader>::compile_code_dxil = "cs_6_0";
+
+
 
     const vertex_shader::ptr vertex_shader::null(new vertex_shader());
     const pixel_shader::ptr pixel_shader::null(new pixel_shader());

@@ -289,6 +289,10 @@ namespace DX12
 		base.get_native_list()->CopyBufferRegion(
 			resource->get_native().Get(), offset, info.resource->get_native().Get(), info.offset, size);
 	}
+	D3D12_GPU_VIRTUAL_ADDRESS Uploader::UploadInfo::get_address()
+	{
+		return resource->get_gpu_address() + offset;
+	}
 	Uploader::UploadInfo Uploader::place_data(UINT64 uploadBufferSize, unsigned int alignment)
 	{
 		const auto AlignedSize = static_cast<UINT>(Math::AlignUp(uploadBufferSize, alignment));
@@ -326,6 +330,7 @@ namespace DX12
 		   if (resource_offset >= upload_resources.back()->get_size())
 			   resource_index++;
 			*/
+		info.size = uploadBufferSize;
 		return info;
 	}
 	Readbacker::ReadBackInfo Readbacker::read_data(UINT64 uploadBufferSize)

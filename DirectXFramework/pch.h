@@ -6,13 +6,12 @@
 #define USE_D3D_COMPILER
 #include <d3dcommon.h>
 
-#include <DXGI1_2.h>
 #include <d3d11.h>
 #include <d3d11shader.h>
 
 
 #include <d3d12.h>
-#include <dxgi1_4.h>
+#include <dxgi1_5.h>
 #include <wrl.h>
 #include <pix.h>
 using namespace Microsoft::WRL;
@@ -27,6 +26,7 @@ using namespace Microsoft::WRL;
 
 #include <DirectXTex.h>
 
+#include "dxc/dxcapi.use.h"
 
 //#include "../3rdparty/DirectXTex/ScreenGrab/ScreenGrab.h"
 
@@ -147,6 +147,8 @@ namespace DX12
 #include "DX12/GPUTimer.h"
 #include "DX12/Samplers.h"
 #include "DX12/SignatureCreator.h"
+
+#include "DX12/RayTracingAS.h"
 
 
 

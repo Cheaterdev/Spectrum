@@ -306,6 +306,7 @@
     <None Include="shaders\ReflectionPixelDilate.hlsl" />
     <None Include="shaders\voxel_screen_blur.hlsl" />
     <None Include="shaders\triangle.hlsl" />
+    <None Include="shaders\UniversalMaterialRaytracing.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="texture.png" />
@@ -436,5 +437,6 @@
     <FxCompile Include="shaders\brdf.hlsl">
       <Filter>Resources\shaders</Filter>
     </FxCompile>
+    <FxCompile Include="shaders\Common2D.hlsl" />
   </ItemGroup>
 </Project>

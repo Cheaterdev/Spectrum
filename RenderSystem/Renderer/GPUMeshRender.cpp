@@ -204,11 +204,11 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 					command.draw_indirect.StartInstanceLocation = 0;
 					command.draw_indirect.IndexCountPerInstance = m.mesh->index_count;
 					command.draw_indirect.StartIndexLocation = m.mesh->index_offset;
-					command.draw_indirect.BaseVertexLocation = m.mesh->vertex_offset;
+					command.draw_indirect.BaseVertexLocation = 0;// m.mesh->vertex_offset;
 					command.index_buffer = l->mesh_asset->index_buffer->get_index_buffer_view(true);
 					//command.index_buffer.BufferLocation += m.mesh->index_offset * sizeof(UINT32);
 					//ommand.index_buffer.SizeInBytes -= m.mesh->index_offset * sizeof(UINT32);
-					command.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();
+					command.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address() + m.mesh->vertex_offset*sizeof(Vertex);
 					nodes_buff.push_back(inst.node);
 					//command.vertex_node_srv = nodes.resource->get_gpu_address() + nodes.offset + m.node_index * sizeof(decltype(l->node_buffer)::type);
 					//Log::get() << "nodes offset " << nodes.offset << Log::endl;

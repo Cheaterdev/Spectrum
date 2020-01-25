@@ -40,7 +40,7 @@ void gpu_cached_renderer::update(MeshRenderContext::ptr mesh_render_context)
 	}
 
 	{
-		auto timer = list.start(L"transmitting data");
+	//	auto timer = list.start(L"transmitting data");
 
 		gpu_nodes.update_gpu(mesh_render_context->list);
 		gpu_commands.update_gpu(mesh_render_context->list);
@@ -521,8 +521,6 @@ gpu_cached_renderer::gpu_cached_renderer(Scene::ptr scene, MESH_TYPE _mesh_type)
 				material_cb = 0;
 
 
-
-
 		}
 
 		});
@@ -600,9 +598,9 @@ gpu_cached_renderer::gpu_cached_renderer(Scene::ptr scene, MESH_TYPE _mesh_type)
 			command.draw_indirect.StartInstanceLocation = 0;
 			command.draw_indirect.IndexCountPerInstance = r->mesh->index_count;
 			command.draw_indirect.StartIndexLocation = r->mesh->index_offset;
-			command.draw_indirect.BaseVertexLocation = r->mesh->vertex_offset;
+			command.draw_indirect.BaseVertexLocation = 0;// r->mesh->vertex_offset;
 			command.index_buffer = inst->mesh_asset->index_buffer->get_index_buffer_view(true);
-			command.vertex_buffer = inst->mesh_asset->vertex_buffer->get_gpu_address();
+			command.vertex_buffer = inst->mesh_asset->vertex_buffer->get_gpu_address()+ r->mesh->vertex_offset*sizeof(Vertex);
 
 			if (mat->get_pixel_buffer())
 				command.mat_const = mat->get_pixel_buffer()->get_gpu_address();

@@ -65,7 +65,6 @@ void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_
 		{
 			auto nodes = l->node_buffer.get_for(*list.get_manager());
 			shader_data.instance_data = nodes.resource->get_gpu_address() + nodes.offset;
-			shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();
 			graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 
 
@@ -82,8 +81,9 @@ void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_
 				current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
 				shader_data.vertex_constants.set(0, e.node_index);
 				shader_data.pixel_constants.set(current.size());
+				shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address() + e.mesh->vertex_offset*sizeof(Vertex);
 
-				graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, e.mesh->vertex_offset);
+				graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, 0* e.mesh->vertex_offset);
 			}
 		};
 		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -126,7 +126,6 @@ void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_
 				{
 					auto l = dynamic_cast<MeshAssetInstance*>(render_object);
 					auto nodes = l->node_buffer.get_for(*list.get_manager());
-					shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();
 					shader_data.instance_data = nodes.resource->get_gpu_address() + nodes.offset;
 
 					graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
@@ -139,7 +138,9 @@ void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_
 
 						shader_data.vertex_constants.set(0, e.node_index);
 						shader_data.pixel_constants.set(i + 1);
-						graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, e.mesh->vertex_offset);
+						shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address() + e.mesh->vertex_offset * sizeof(Vertex);
+
+						graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, 0*e.mesh->vertex_offset);
 					}
 				}
 
@@ -525,12 +526,12 @@ void stencil_renderer::draw_after(MeshRenderContext::ptr mesh_render_context, G_
 
 				auto nodes = l->node_buffer.get_for(*list.get_manager());
 				shader_data.instance_data = nodes.resource->get_gpu_address() + nodes.offset;
-				shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();
+				shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address()+ e.mesh->vertex_offset*sizeof(Vertex);
 
 				graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 				shader_data.vertex_constants.set(0, e.node_index);
 
-				graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, e.mesh->vertex_offset);
+				graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, 0*e.mesh->vertex_offset);
 			}
 		}
 	}
@@ -560,7 +561,6 @@ void stencil_renderer::draw_after(MeshRenderContext::ptr mesh_render_context, G_
 
 		shader_data.vertex_constants.set(0, 0, 0);
 		shader_data.instance_data = nodes.resource->get_gpu_address() + nodes.offset;
-		shader_data.vertex_buffer = axis->mesh_asset->vertex_buffer->get_gpu_address();
 		graphics.set_index_buffer(axis->mesh_asset->index_buffer->get_index_buffer_view(true));
 		for (auto& e : axis->rendering)
 		{
@@ -571,7 +571,9 @@ void stencil_renderer::draw_after(MeshRenderContext::ptr mesh_render_context, G_
 			i++;
 			shader_data.vertex_constants.set(0, e.node_index);
 
-			graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, e.mesh->vertex_offset);
+			shader_data.vertex_buffer = axis->mesh_asset->vertex_buffer->get_gpu_address()+ e.mesh->vertex_offset*sizeof(Vertex);
+
+			graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, 0);
 
 		}
 	}

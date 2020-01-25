@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 namespace materials
 {
 
@@ -87,7 +88,7 @@ namespace materials
             std::vector<TextureSRVParams::ptr> textures;
             //   std::vector<TiledTexture::ref> tiled_textures;
 
-
+		
 			Render::HandleTable texture_table;
 			std::vector<render_pass> passes;
 
@@ -110,6 +111,7 @@ namespace materials
 
             MaterialContext::ptr context;
             BinaryAsset::ref include_file;
+			BinaryAsset::ref include_file_raytacing;
 
             bool need_update_uniforms = false;
 
@@ -124,7 +126,9 @@ namespace materials
             using ptr = s_ptr<universal_material>;
 			std::vector<Uniform::ptr> ps_uniforms;
 			Events::Event<void> on_change;
+			std::wstring wshader_name;
 
+			std::string raytracing_blob;
             universal_material(MaterialGraph::ptr graph);
 
 			void test();

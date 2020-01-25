@@ -18,6 +18,8 @@ namespace DX12
     {
         CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
         rootSignatureDesc.Init(static_cast<UINT>(desc.parameters.size()), desc.parameters.data(), 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+	
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
         TEST(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
@@ -31,6 +33,9 @@ namespace DX12
         rootSignatureDesc.pStaticSamplers = desc.samplers().data();
         rootSignatureDesc.NumStaticSamplers = static_cast<UINT>(desc.samplers().size());
         this->desc = desc;
+
+
+		
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
         (D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));

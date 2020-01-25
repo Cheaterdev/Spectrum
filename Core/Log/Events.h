@@ -7,6 +7,7 @@ namespace Events
 		std::mutex m;
 		std::list<std::function<void()>> tasks;
 	protected:
+	public:
 		void process_tasks()
 		{
 			std::list<std::function<void()>> copy;
@@ -21,7 +22,7 @@ namespace Events
 			}
 
 		}
-	public:
+	
 
 		//template<class T>
 		void run(std::function<void()> f)

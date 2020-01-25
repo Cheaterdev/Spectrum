@@ -103,9 +103,9 @@ float result = 0;
 float blur_scaler = 0.0;
 
 
-for (int i = 1; i < 2; i++)
+for (int j = 1; j < 2; j++)
 {
-	float2 cur_tc = light_tc + float2(rsin,rcos) * poisson[i] * tc_scaler;
+	float2 cur_tc = light_tc + float2(rsin,rcos) * poisson[j] * tc_scaler;
 	float light_raw_z = light_buffer.SampleLevel(pixel_sampler, float3(cur_tc, level), 0);
 	float3 pos = depth_to_wpos(light_raw_z, cur_tc, light_cam.inv_view_proj);
 
@@ -119,16 +119,16 @@ for (int i = 1; i < 2; i++)
 	float cur_rad = (dot(normalize(pos - info.pos), -light_cam.direction) - 0.999) / 0.001;
 	//if (i == 0 && cur_rad < 0.1) break;
 
-	blur_scaler = max(blur_scaler, cur_rad * length(poisson[i]));
+	blur_scaler = max(blur_scaler, cur_rad * length(poisson[j]));
 
 	//blur_scaler = min(blur_scaler,dot(light_cam.direction,normalize(pos-info.pos)));
 }
 //return blur_scaler;
 
-for (int i = 1; i < 2; i++)
+for (int j = 1; j < 2; j++)
 {
 
-	float2 cur_tc = light_tc + float2(rsin, rcos) * blur_scaler * poisson[i] * tc_scaler;
+	float2 cur_tc = light_tc + float2(rsin, rcos) * blur_scaler * poisson[j] * tc_scaler;
 	float light_raw_z = light_buffer.SampleLevel(pixel_sampler, float3(cur_tc, level), 0) + (blur_scaler + 1) * 0.0003;
 
 	result += light_raw_z > pos_l.z;

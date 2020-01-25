@@ -114,6 +114,7 @@ namespace DX12
     {
             friend class RootSignature;
 
+			bool local = false;
 			struct table_info
 			{
 				int count;
@@ -279,7 +280,7 @@ namespace DX12
 		using ptr = std::shared_ptr<RootSignatureTyped<T>>;
 
 
-		RootSignatureTyped(const RootSignatureDesc& desc):RootSignature(desc)
+		RootSignatureTyped(const RootSignatureDesc& desc, D3D12_ROOT_SIGNATURE_FLAGS flags= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT):RootSignature(desc, flags)
 		{
 
 		}

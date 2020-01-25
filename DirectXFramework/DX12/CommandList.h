@@ -225,9 +225,9 @@ namespace DX12
 		LEAK_TEST(CommandListBase)
 
 		std::vector<std::function<void()>> on_execute_funcs;
-		ComPtr<ID3D12GraphicsCommandList> m_commandList;
+		ComPtr<ID3D12GraphicsCommandList4> m_commandList;
 	public:
-		ComPtr<ID3D12GraphicsCommandList>& get_native_list()
+		ComPtr<ID3D12GraphicsCommandList4>& get_native_list()
 		{
 			return m_commandList;
 		}
@@ -258,8 +258,12 @@ namespace DX12
 		void flush_transitions();
 	};
 
+	/*
+	template <class T>
+	concept vector_type = std::is_base_of<GPUPointer, T>::value;
 
 
+	*/
 	class Uploader : public virtual CommandListBase
 	{
 		friend class BufferCache;
@@ -269,6 +273,18 @@ namespace DX12
 		UINT heap_size = 0x200000;
 	protected:
 		void reset();
+	
+		template<class T>
+		size_t size_of(std::vector<T>&elem)
+		{
+			return sizeof(T)*elem.size();
+		}
+
+		template<class T>
+		size_t size_of(T& elem)
+		{
+			return sizeof(T);
+		}
 
 
 	public:
@@ -276,10 +292,57 @@ namespace DX12
 		{
 			std::shared_ptr<UploadBuffer> resource;
 			UINT64 offset;
+			UINT64 size;
+
+			D3D12_GPU_VIRTUAL_ADDRESS get_address();
 		};
 
 		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
 
+
+
+		template<class ...Args>
+		UploadInfo place_raw(Args... args)
+		{
+			size_t size = (0 + ... + size_of(args));
+
+			auto info =  place_data(size);
+
+
+		//	memcpy(info.resource->get_data() + info.offset, data, size);
+			size_t start = 0;
+			(write(info, start, std::forward<Args>(args)), ...);
+
+			return info;
+		}
+
+		/*
+		template<class T>
+		UploadInfo place_raw(const std::vector<T> & v)
+		{
+		
+			auto info = place_data(v.size()*sizeof(T));
+
+			size_t start = 0;
+			write(info, start, v);
+
+			return info;
+
+
+		}*/
+		template<class T>
+		void write(UploadInfo& info, size_t& offset, std::vector<T>& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset + offset, arg.data(), arg.size()*sizeof(T));
+			offset += arg.size() * sizeof(T);
+		}
+
+		template<class T>
+		void write(UploadInfo& info, size_t& offset, T& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset + offset, &arg, sizeof(T));
+			offset += sizeof(T);
+		}
 	};
 
 
@@ -706,7 +769,7 @@ namespace DX12
 	class GraphicsContext: public SignatureDataSetter
 	{
 		friend class CommandList;
-		ComPtr<ID3D12GraphicsCommandList>& list;
+		ComPtr<ID3D12GraphicsCommandList4>& list;
 
 		GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()){
 		}
@@ -782,7 +845,7 @@ namespace DX12
 			return base;
 		}
 
-		ComPtr<ID3D12GraphicsCommandList>& get_native_list()
+		ComPtr<ID3D12GraphicsCommandList4>& get_native_list()
 		{
 			return list;
 		}
@@ -969,7 +1032,7 @@ namespace DX12
 		friend class CommandList;
 
 	
-		ComPtr<ID3D12GraphicsCommandList>& list;
+		ComPtr<ID3D12GraphicsCommandList4>& list;
 
 		ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {}
 		ComputeContext(const ComputeContext&) = delete;
@@ -1007,8 +1070,14 @@ namespace DX12
 		virtual void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
 		virtual void set_srv(UINT i, FrameResource& info) override;
 
+		MyVariant current_shader_data;
 
 	public:
+
+		Handle place(HandleTable table)
+		{
+			return descriptor_manager_compute.place_additional(table);
+		}
 		void set_constant(UINT i, UINT offset, UINT data)
 		{
 			list->SetComputeRoot32BitConstant(i, data, offset);
@@ -1023,6 +1092,30 @@ namespace DX12
 		void set_signature(const RootSignature::ptr&);
 		void set_pipeline(std::shared_ptr<ComputePipelineState>&);
 	
+
+
+
+		template<class T>
+		typename T::Signature& set_signature_typed(typename RootSignatureTyped<T>::ptr& s)
+		{
+
+			if (current_compute_root_signature != s)
+			{
+				list->SetComputeRootSignature(s->get_native().Get());
+				current_compute_root_signature = s;
+				descriptor_manager_compute.parse(current_compute_root_signature);
+				current_shader_data.create<typename T::Signature>(this);// = std::any(std::in_place_type, this);// std::make_any<typename T::Signature>(this);// .emplace<typename T::Signature>(this);
+			}
+
+			return get_shader_data<T>();
+		}
+
+		template<class T>
+		typename T::Signature& get_shader_data()
+		{
+			return  current_shader_data.get< T::Signature>();
+		}
+
 		void dispach(int=1,int= 1,int=1);
 		void dispach(ivec2, ivec2 = ivec2(8, 8));
 		void dispach(ivec3, ivec3 = ivec3(4, 4, 4));

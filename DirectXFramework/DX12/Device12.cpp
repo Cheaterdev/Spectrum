@@ -334,7 +334,7 @@ namespace DX12
 		return list;
 	}
 
-	ComPtr<ID3D12Device> Device::get_native_device()
+	ComPtr<ID3D12Device5> Device::get_native_device()
 	{
 		return m_device;
 	}
@@ -402,8 +402,8 @@ namespace DX12
 			CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
 		}
 		UINT i = 0;
-		IDXGIAdapter* pAdapter;
-		std::vector <IDXGIAdapter*> vAdapters;
+		ComPtr<IDXGIAdapter> pAdapter;
+		std::vector <ComPtr<IDXGIAdapter> > vAdapters;
 		{
 			auto t = CounterManager::get().start_count<IDXGIAdapter>();
 
@@ -416,15 +416,28 @@ namespace DX12
 				++i;
 			}
 		}
+		
+		try
 		{
-
-			auto t = CounterManager::get().start_count<ID3D12Device>();
-			D3D12CreateDevice(
-				vAdapters[0],
-				D3D_FEATURE_LEVEL_11_1,
+			HRESULT hr = D3D12CreateDevice(
+				vAdapters[0].Get(),
+				D3D_FEATURE_LEVEL_12_1,
 				IID_PPV_ARGS(&m_device)
 			);
 		}
+		catch (_com_error  error)
+		{
+			Log::get() << error.ErrorMessage() << Log::endl;
+
+		}
+		catch (...)
+		{
+			Log::get() <<"*** Unhandled Exception ***" << Log::endl;
+		//	TRACE("*** Unhandled Exception ***");
+		}
+		
+
+		
 
 #ifdef DEBUG
 		ComPtr<ID3D12InfoQueue> d3dInfoQueue;

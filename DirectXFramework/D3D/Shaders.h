@@ -24,7 +24,6 @@
 #define D3DCOMPILE_WARNINGS_ARE_ERRORS            (1 << 18)
 #endif
 
-
 namespace D3D
 {
     enum class D3D_VERSION
@@ -69,26 +68,41 @@ namespace D3D
     };
     bool operator<(const shader_header& l, const shader_header& r);
 
-
-
-    class shader_include : public ID3DInclude
-    {
-            std::string dir;
-            std::string data;
-            resource_file_depender& depender;
-        public:
-            shader_include(std::string dir, resource_file_depender& _depender);
-
-            STDMETHOD(Open)(D3D10_INCLUDE_TYPE includeType,
-                            LPCSTR pFileName,
-                            LPCVOID /*pParentData*/,
-                            LPCVOID* ppData,
-                            UINT* pBytes
-                           );
-
-            STDMETHOD(Close)(LPCVOID pData);
-    };
-
+	class shader_include
+	{
+		std::string dir;
+		resource_file_depender& depender;
+	public:
+		shader_include(std::string dir, resource_file_depender& _depender);
+		std::unique_ptr<std::string> load_file(std::string filename);
+	};
 
 
 }
+
+
+
+
+struct D3D12ShaderCompilerInfo :public Singleton<D3D12ShaderCompilerInfo>
+{
+	dxc::DxcDllSupport		DxcDllHelper;
+	IDxcCompiler* compiler = nullptr;
+	IDxcLibrary* library = nullptr;
+
+
+    std::unique_ptr<std::string> Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", D3D::shader_include* includer = nullptr, std::string file_name="");
+	std::unique_ptr<std::string> Compile_Shader_File(std::string filename, std::vector < D3D::shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", D3D::shader_include* includer = nullptr);
+
+	D3D12ShaderCompilerInfo()
+	{
+		DxcDllHelper.Initialize();
+		//	Utils::Validate(hr, L"Failed to initialize DxCDllSupport!");
+
+		DxcDllHelper.CreateInstance(CLSID_DxcCompiler, &compiler);
+		//	Utils::Validate(hr, L"Failed to create DxcCompiler!");
+
+		DxcDllHelper.CreateInstance(CLSID_DxcLibrary, &library);
+		//	Utils::Validate(hr, L"Failed to create DxcLibrary!");
+	}
+};
+

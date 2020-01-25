@@ -78,8 +78,8 @@ float w = 0;
 
 #define R 2
 
-for(int x=-R;x<=R;x++)
-for (int y = -R; y <= R; y++)
+[unroll] for(int x=-R;x<=R;x++)
+[unroll] for (int y = -R; y <= R; y++)
 {
 	float2 t_tc = i.tc + 2*float2(x, y) / dims;
 

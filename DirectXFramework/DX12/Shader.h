@@ -14,6 +14,8 @@ namespace DX12
         protected:
             std::string blob;
             static const char* compile_code;
+			static const char* compile_code_dxil;
+
             MD5 hash;
 			MD5 blob_hash;
             D3D::reflection reflection;
@@ -27,7 +29,7 @@ namespace DX12
             void operator=(const Shader& r)
             {
                 resource_manager<_shader_type, D3D::shader_header>::operator=(r);
-                reflection = r.reflection;
+              // reflection = r.reflection;
                 blob = r.blob;
                 hash = r.hash;
 
@@ -43,11 +45,14 @@ namespace DX12
             }
         public:
             static Cache<std::string, size_t> shader_ids;
+
             const MD5& get_hash() const
             {
                 return hash;
             }
+
 			size_t id;
+
             std::string& get_blob()
             {
                 return blob;
@@ -57,123 +62,47 @@ namespace DX12
             {
                 return resource_manager<_shader_type, D3D::shader_header>::header;
             }
+
 			static std::shared_ptr<_shader_type> create_from_memory(std::string data, std::string func_name, UINT flags, std::vector<D3D::shader_macro> macros = {})
             {
                 auto t = CounterManager::get().start_count<_shader_type>();
-#ifdef USE_D3D_COMPILER
-                std::vector<D3D_SHADER_MACRO> Macros;
-                std::string build_macro = "BUILD_FUNC_" + func_name;
-                std::string build_def = "1";
-                D3D_SHADER_MACRO Macro;
-                Macro.Definition = build_def.c_str();
-                Macro.Name = build_macro.c_str();
-                Macros.push_back(Macro);
-                Macro.Definition = nullptr;
-                Macro.Name = nullptr;
-                Macros.push_back(Macro);
+                resource_file_depender depender;
+				D3D::shader_include In("unknown", depender);
 
-				for (unsigned int i = 0; i < macros.size(); i++)
-				{
-					D3D_SHADER_MACRO Macro;
-					Macro.Definition = macros[i].value.c_str();
-					Macro.Name = macros[i].name.c_str();
-					Macros.push_back(Macro);
-				}
+				std::unique_ptr<std::string> res_blob;
 
-
-                D3D_Blob res_blob = nullptr;
-                D3D_Blob error_blob = nullptr;
-
-                if (FAILED(D3DCompile(data.data(), data.size(), nullptr, Macros.data(), nullptr, func_name.c_str(), compile_code, flags, flags, &res_blob, &error_blob)))
-                    if (error_blob != nullptr)
-                        Log::get() << static_cast<char*>(error_blob->GetBufferPointer()) << Log::endl;
-
-                if (!res_blob)
-                    return nullptr;
-
+                while (!res_blob)
+                {
+                    depender.clear();
+                    res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader(data, macros, compile_code_dxil, func_name, &In);
+                }
                 auto result = std::make_shared<_shader_type>();
-                result->blob.assign(static_cast<char*>(res_blob->GetBufferPointer()), static_cast<char*>(res_blob->GetBufferPointer()) + res_blob->GetBufferSize());
-                result->own_id();
-                result->reflection = D3D::reflection(D3D::D3D_VERSION::V12, result->blob);
+				result->blob = std::move(*res_blob);
+				result->own_id();
                 result->compile();
-                result->hash = MD5(data);
-                return result;
-#else
-                MessageBoxA(0, "USE_D3D_COMPILER", "Error", 0);
-                return  std::shared_ptr<_shader_type>(new _shader_type());
-#endif
+				result->hash = MD5(result->blob);
+				return result;
             }
-
 
 			static std::shared_ptr<_shader_type> load_native(const D3D::shader_header& header, resource_file_depender& depender)
 			{
-#ifdef USE_D3D_COMPILER
-				D3D_Blob res_blob = nullptr;
+
+				std::unique_ptr<std::string> res_blob ;
 				D3D::shader_include In(header.file_name, depender);
-				std::vector<D3D_SHADER_MACRO> Macros;
-
-				for (unsigned int i = 0; i < header.macros.size(); i++)
-				{
-					D3D_SHADER_MACRO Macro;
-					Macro.Definition = header.macros[i].value.c_str();
-					Macro.Name = header.macros[i].name.c_str();
-					Macros.push_back(Macro);
-				}
-
-				std::string build_macro = "BUILD_FUNC_" + header.entry_point;
-				std::string build_def = "1";
-				D3D_SHADER_MACRO Macro;
-				Macro.Definition = build_def.c_str();
-				Macro.Name = build_macro.c_str();
-				Macros.push_back(Macro);
-				Macro.Definition = nullptr;
-				Macro.Name = nullptr;
-				Macros.push_back(Macro);
-				std::shared_ptr<file> file;
-				auto flags = header.flags | D3DCOMPILE_PARTIAL_PRECISION; // | D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-				std::string data;
-
+			
 				while (!res_blob)
 				{
 					depender.clear();
-					D3D_Blob error_blob = nullptr;
-					file = FileSystem::get().get_file(header.file_name);
-
-					if (file)
-					{
-						data = file->load_all();
-
-						if (FAILED(D3DCompile(data.data(), data.size(), header.file_name.c_str(), Macros.data(), &In, header.entry_point.c_str(), compile_code, flags, flags, &res_blob, &error_blob)))
-							if (error_blob != nullptr)
-							{
-								Log::get() << static_cast<char*>(error_blob->GetBufferPointer()) << Log::endl;
-								MessageBoxA(nullptr, static_cast<char*>(error_blob->GetBufferPointer()), "Error", 0);
-							}
-					}
-
-					else
-						MessageBoxA(nullptr, "no file found", "Error", 0);
+					res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
 				}
 
-			/*	D3D_Blob new_blob = nullptr;
-				D3DStripShader(res_blob->GetBufferPointer(), res_blob->GetBufferSize(), D3DCOMPILER_STRIP_REFLECTION_DATA
-			|D3DCOMPILER_STRIP_DEBUG_INFO,
-			|		D3DCOMPILER_STRIP_TEST_BLOBS ,
-			|		D3DCOMPILER_STRIP_PRIVATE_DATA,
-			|		D3DCOMPILER_STRIP_ROOT_SIGNATURE, &new_blob);*/
-                depender.add_depend(file);
                 auto result = std::make_shared<_shader_type>();
                 result->header = header;
-                result->blob.assign(static_cast<char*>(res_blob->GetBufferPointer()), static_cast<char*>(res_blob->GetBufferPointer()) + res_blob->GetBufferSize());
-                result->reflection = D3D::reflection(D3D::D3D_VERSION::V12, result->blob);
+                result->blob = std::move(*res_blob);
                 result->compile();
                 result->own_id();
-                result->hash = MD5(data);
+                result->hash = MD5(result->blob);
                 return result;
-#else
-                MessageBoxA(0, "USE_D3D_COMPILER", "Error", 0);
-                return  std::shared_ptr<_shader_type>(new _shader_type());
-#endif
             }
         private:
             friend class boost::serialization::access;
@@ -287,3 +216,113 @@ namespace DX12
     };
 
 }
+
+
+
+/*
+using namespace dxc;
+
+
+HRESULT CreateCompiler(IDxcCompiler** ppCompiler) {
+	return DxcCreateInstance(CLSID_DxcCompiler, __uuidof(IDxcCompiler),
+		(void**)ppCompiler);
+}
+
+
+HRESULT CompileFromBlob(IDxcBlobEncoding* pSource, LPCWSTR pSourceName,
+	const D3D_SHADER_MACRO* pDefines, IDxcIncludeHandler* pInclude,
+	LPCSTR pEntrypoint, LPCSTR pTarget, UINT Flags1,
+	UINT Flags2, ID3DBlob** ppCode,
+	ID3DBlob** ppErrorMsgs) {
+	CComPtr<IDxcCompiler> compiler;
+	CComPtr<IDxcOperationResult> operationResult;
+	HRESULT hr;
+
+	// Upconvert legacy targets
+	char Target[7] = "?s_6_0";
+	Target[6] = 0;
+	if (pTarget[3] < '6') {
+		Target[0] = pTarget[0];
+		pTarget = Target;
+	}
+
+	try {
+		CA2W pEntrypointW(pEntrypoint);
+		CA2W pTargetProfileW(pTarget);
+		std::vector<std::wstring> defineValues;
+		std::vector<DxcDefine> defines;
+		if (pDefines) {
+			CONST D3D_SHADER_MACRO* pCursor = pDefines;
+
+			// Convert to UTF-16.
+			while (pCursor->Name) {
+				defineValues.push_back(std::wstring(CA2W(pCursor->Name)));
+				if (pCursor->Definition)
+					defineValues.push_back(std::wstring(CA2W(pCursor->Definition)));
+				else
+					defineValues.push_back(std::wstring());
+				++pCursor;
+			}
+
+			// Build up array.
+			pCursor = pDefines;
+			size_t i = 0;
+			while (pCursor->Name) {
+				defines.push_back(
+					DxcDefine{ defineValues[i++].c_str(), defineValues[i++].c_str() });
+				++pCursor;
+			}
+		}
+
+		std::vector<LPCWSTR> arguments;
+		// /Gec, /Ges Not implemented:
+		//if(Flags1 & D3DCOMPILE_ENABLE_BACKWARDS_COMPATIBILITY) arguments.push_back(L"/Gec");
+		//if(Flags1 & D3DCOMPILE_ENABLE_STRICTNESS) arguments.push_back(L"/Ges");
+		if (Flags1 & D3DCOMPILE_IEEE_STRICTNESS) arguments.push_back(L"/Gis");
+		if (Flags1 & D3DCOMPILE_OPTIMIZATION_LEVEL2)
+		{
+			switch (Flags1 & D3DCOMPILE_OPTIMIZATION_LEVEL2)
+			{
+			case D3DCOMPILE_OPTIMIZATION_LEVEL0: arguments.push_back(L"/O0"); break;
+			case D3DCOMPILE_OPTIMIZATION_LEVEL2: arguments.push_back(L"/O2"); break;
+			case D3DCOMPILE_OPTIMIZATION_LEVEL3: arguments.push_back(L"/O3"); break;
+			}
+		}
+		// Currently, /Od turns off too many optimization passes, causing incorrect DXIL to be generated.
+		// Re-enable once /Od is implemented properly:
+		//if(Flags1 & D3DCOMPILE_SKIP_OPTIMIZATION) arguments.push_back(L"/Od");
+		if (Flags1 & D3DCOMPILE_DEBUG) arguments.push_back(L"/Zi");
+		if (Flags1 & D3DCOMPILE_PACK_MATRIX_ROW_MAJOR) arguments.push_back(L"/Zpr");
+		if (Flags1 & D3DCOMPILE_PACK_MATRIX_COLUMN_MAJOR) arguments.push_back(L"/Zpc");
+		if (Flags1 & D3DCOMPILE_AVOID_FLOW_CONTROL) arguments.push_back(L"/Gfa");
+		if (Flags1 & D3DCOMPILE_PREFER_FLOW_CONTROL) arguments.push_back(L"/Gfp");
+		// We don't implement this:
+		//if(Flags1 & D3DCOMPILE_PARTIAL_PRECISION) arguments.push_back(L"/Gpp");
+		if (Flags1 & D3DCOMPILE_RESOURCES_MAY_ALIAS) arguments.push_back(L"/res_may_alias");
+		arguments.push_back(L"-HV");
+		arguments.push_back(L"2016");
+
+		IFR(CreateCompiler(&compiler));
+		IFR(compiler->Compile(pSource, pSourceName, pEntrypointW, pTargetProfileW,
+			arguments.data(), (UINT)arguments.size(),
+			defines.data(), (UINT)defines.size(), pInclude,
+			&operationResult));
+	}
+	catch (const std::bad_alloc&) {
+		return E_OUTOFMEMORY;
+	}
+	catch (const CAtlException & err) {
+		return err.m_hr;
+	}
+
+	operationResult->GetStatus(&hr);
+	if (SUCCEEDED(hr)) {
+		return operationResult->GetResult((IDxcBlob**)ppCode);
+	}
+	else {
+		if (ppErrorMsgs)
+			operationResult->GetErrorBuffer((IDxcBlobEncoding**)ppErrorMsgs);
+		return hr;
+	}
+}
+*/

@@ -198,7 +198,10 @@ class camera : public Frustum
             return const_buffer;
         }
 
-
+		camera_const &get_raw_cb()
+		{
+			return const_buffer.data();
+		}
         virtual frustrum_points get_points(float znear, float zfar)
         {
             mat4x4 proj, v;

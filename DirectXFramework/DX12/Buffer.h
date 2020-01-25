@@ -31,7 +31,7 @@ namespace DX12
 				size = 0;
 			}
 			using ptr = std::shared_ptr<GPUBuffer>;
-			GPUBuffer(UINT64 size, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE);
+			GPUBuffer(UINT64 size, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, ResourceState state = ResourceState::COMMON);
 
 			template<class T>
 			static ptr create_const_buffer()
@@ -58,6 +58,8 @@ namespace DX12
 
 
 			void place_srv_buffer(const Handle& handle);
+			void place_structured_srv(const Handle& h, UINT stride, unsigned int offset, unsigned int count);
+
 
 			void place_raw_uav(const Handle & h)
 			{
@@ -70,7 +72,7 @@ namespace DX12
 			}
 
 			void place_structured_uav(const Handle& h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
-
+	
 			const HandleTable& get_srv();
 			const HandleTable& get_uav();
 			const HandleTable& get_static_uav();
@@ -132,6 +134,20 @@ namespace DX12
 					ar& NVP(size);
 					std::string data;
 					ar& NVP(data);
+
+					if (debug) {
+						UINT32* ptr = (UINT32*)data.data();
+
+						int count3 = data.size() / (sizeof(UINT32) * 3);
+
+						std::set<UINT32> indices[3];
+						for (int i = 0; i < count3*3; i++)
+						{
+							indices[i / (count3)].emplace(ptr[i]);
+						}
+
+
+					}
 					init(CD3DX12_RESOURCE_DESC::Buffer(size), HeapType::DEFAULT, ResourceState::COMMON);
 					set_data(0, data);
 				}
@@ -214,6 +230,8 @@ namespace DX12
 		SELF,
 		HELP_BUFFER
 	};
+
+
 	template<class T>
 	class StructuredBuffer : public GPUBuffer
 	{
@@ -250,6 +268,11 @@ namespace DX12
 			const Handle& get_raw_uav() const
 			{
 				return static_raw_uav.get_base();
+			}
+
+			UINT get_stride()
+			{
+				return sizeof(T);
 			}
 			GPUBuffer::ptr help_buffer;
 			HandleTable counted_uav;
@@ -344,8 +367,7 @@ namespace DX12
 				list->end();
 				list->execute();
 			}
-
-
+		
 			D3D12_INDEX_BUFFER_VIEW get_index_buffer_view(bool is_32, unsigned int offset = 0, UINT size = 0);
 
 		private:
@@ -353,6 +375,7 @@ namespace DX12
 			template<class Archive>
 			void serialize(Archive& ar, const unsigned int)
 			{
+				debug = true;
 				ar& NVP(boost::serialization::base_object<GPUBuffer>(*this));
 			}
 

@@ -30,6 +30,7 @@ namespace DX12
 		GEN_READ = D3D12_RESOURCE_STATE_GENERIC_READ,
 		PRESENT = D3D12_RESOURCE_STATE_PRESENT,
 		PREDICATION = D3D12_RESOURCE_STATE_PREDICATION,
+		RAYTRACING_STRUCTURE = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
 		UNKNOWN = -1
 	};
 
@@ -111,6 +112,9 @@ namespace DX12
 		{
 			return !!info;
 		}
+
+		void place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
 	private:
 		friend class DescriptorHeap;
 
@@ -318,6 +322,8 @@ namespace DX12
 		std::map<UINT, row> root_tables;
 		//static std::mutex free_mutex;
 
+
+		std::list<HandleTable> additional_handles;
 		static DescriptorHeap::ptr get_free_table();
 		static void free_table(DescriptorHeap::ptr);
 
@@ -343,7 +349,15 @@ namespace DX12
 		Handle place(const Handle &h);
 		bool has_free_size(UINT count);
 
+		Handle place_additional(HandleTable table)
+		{
+			auto& heap = pages.back();
 
+				auto gpu_table = heap->get_table_view(offset, static_cast<UINT>(table.get_count()));
+				gpu_table.place(table);
+				offset += static_cast<UINT>(table.get_count());
+				return gpu_table.get_base();
+		}
 		UINT calculate_needed_size();
 
 		void unbind_all();
@@ -394,11 +408,11 @@ namespace DX12
 			if (states.size() > id)
 				return states[id];
 
-		//	std::lock_guard<boost::detail::spinlock> guard(states_lock);
+//			std::lock_guard<boost::detail::spinlock> guard(states_lock);
 
 		//	if (states.size() > id)
 		//		return states[id];
-
+		
 			auto last_size = states.size();
 			states.resize(id + 1);
 
@@ -407,6 +421,7 @@ namespace DX12
 			{
 				states[last_size++].subres.resize(subres_count);
 			}
+
 		
 
 			return states[id];

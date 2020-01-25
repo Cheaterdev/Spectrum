@@ -50,8 +50,8 @@ SamplerState PointSampler : register (s0);
 	
 	
 float2 res = 0;
-for(int i=-1;i<=1;i++)
-for(int j=-1;j<=1;j++)
+[unroll]for(int i=-1;i<=1;i++)
+[unroll]for(int j=-1;j<=1;j++)
 {
 float w = 1-length(float2(i,j))/length(float2(2,2));
 res+=float2(tex.Sample(PointSampler, input.tc ,int2(i,j)).x*w,w);

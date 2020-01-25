@@ -4,9 +4,9 @@
 namespace DX12
 {
 
-    GPUBuffer::GPUBuffer(UINT64 size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/) : size(size),
+    GPUBuffer::GPUBuffer(UINT64 size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/ , ResourceState state) : size(size),
         count(size),
-        stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(size, flags), HeapType::DEFAULT, ResourceState::COMMON)
+        stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(size, flags), HeapType::DEFAULT, state)
     {
     }
 
@@ -60,6 +60,19 @@ namespace DX12
 		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 		Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), counter_resource ? counter_resource->get_native().Get() : nullptr, &desc, h.cpu);
 	}
+
+	 void GPUBuffer::place_structured_srv(const Handle& handle, UINT stride , unsigned int offset, unsigned int count)
+	 {
+		 D3D12_SHADER_RESOURCE_VIEW_DESC  srv = {};
+		 srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		 srv.Format = DXGI_FORMAT_UNKNOWN;
+		 srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		 srv.Buffer.FirstElement = offset;
+		 srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE;
+		 srv.Buffer.StructureByteStride = stride;
+		 srv.Buffer.NumElements = count;
+		 Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &srv, handle.cpu);
+	 }
 
 	const HandleTable& GPUBuffer::get_srv()
     {
@@ -140,7 +153,7 @@ namespace DX12
 		m_Resource->Unmap(0, nullptr);
 	}
 
-	 DX12::UploadBuffer::UploadBuffer(UINT64 count) : Resource(CD3DX12_RESOURCE_DESC::Buffer(count), HeapType::UPLOAD, ResourceState::GEN_READ)
+	 DX12::UploadBuffer::UploadBuffer(UINT64 count) : Resource(CD3DX12_RESOURCE_DESC::Buffer(count, D3D12_RESOURCE_FLAG_NONE), HeapType::UPLOAD, ResourceState::GEN_READ)
 	{
 		data = map(0, count);
 	}
