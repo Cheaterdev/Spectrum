@@ -1,6 +1,9 @@
 
-Texture2D<float> depth_tex: register(t0);
-RWTexture2D<float> result_tex: register(u0);
+#include "autogen/DownsampleDepth.h"
+
+
+static const Texture2D<float> depth_tex = GetDownsampleDepth().GetSrcTex();
+static const RWTexture2D<float> result_tex = GetDownsampleDepth().GetTargetTex();
 
 
 static const uint TotalNumThreads =8*8;

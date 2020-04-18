@@ -1,0 +1,6 @@
+CreateShaderResourceView CPU: 212ns
+CreateShaderResourceView GPU: 259ns
+CopyDescriptorsSimple from CPU to GPU 1 by 1: 68ns
+CopyDescriptorsSimple from CPU to CPU 1 by 1: 69ns
+CopyDescriptorsSimple all CPU to GPU: 6ns
+CopyDescriptorsSimple all CPU to CPU: 2ns

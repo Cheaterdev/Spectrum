@@ -98,13 +98,21 @@ DS_OUTPUT DS(HS_CONSTANT_OUTPUT input, OutputPatch<HS_OUTPUT, 4> op, float2 uv :
     return output;
 }
 #endif
+
+
+#include "../autogen/FlowGraph.h"
+
+static const float4 size = GetFlowGraph().GetSize();
+static const float4 offset_scale = GetFlowGraph().GetOffset_size();
+static const float2 inv_pixel_size = GetFlowGraph().GetInv_pixel();
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef BUILD_FUNC_GS
 
-cbuffer screen: register(b0)
-{
-    float2 inv_pixel_size;
-};
+
 
 [maxvertexcount(6)]
 void GS(line DS_OUTPUT input[2], inout TriangleStream<GS_OUTPUT> TriStream)
@@ -126,13 +134,6 @@ void GS(line DS_OUTPUT input[2], inout TriangleStream<GS_OUTPUT> TriStream)
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef BUILD_FUNC_PS
-
-cbuffer cbParams : register(b0)
-{
-    float4 size;
-//   float4 clip_size;
-    float3 offset_scale;
-};
 
 
 float4 PS(GS_OUTPUT i): SV_TARGET0

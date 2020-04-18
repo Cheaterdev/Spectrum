@@ -47,3 +47,20 @@ DX11::NativeContext::NativeContext(DX11_DeviceContext _native_context)
     native_context = _native_context;
     clear_optimized_count();
 }
+
+
+
+
+static std::array<DX12::RootSignature::ptr, static_cast<int>(Layouts::TOTAL)> signatures;
+void init_signatures()
+{
+	signatures[static_cast<int>(Layouts::FrameLayout)] = std::make_shared<AutoGenSignature<FrameLayout>>();
+	signatures[static_cast<int>(Layouts::DefaultLayout)] = std::make_shared<AutoGenSignature<DefaultLayout>>();
+}
+DX12::RootSignature::ptr get_Signature(Layouts id)
+{
+	return signatures[static_cast<int>(id)];
+}
+
+
+

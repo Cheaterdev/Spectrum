@@ -285,12 +285,19 @@ namespace DX12
 
 
 				void operator=(const HandleTable& table) {
-					context->set(slot, table);
+
+
+					std::vector<Handle> handles;
+					for(int i=0;i<table.get_count();i++)
+					handles.push_back(table[i]);
+					context->set(slot, handles);
 				}
 				void operator=(const Handle& handle) {
-					context->set(slot, handle);
+					std::vector<Handle> handles;
+					handles.push_back(handle);
+					context->set(slot, handles);
 				}
-
+				
 				void operator=(std::vector<Handle>& handles) {
 					context->set(slot, handles);
 				}

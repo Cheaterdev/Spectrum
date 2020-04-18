@@ -531,8 +531,6 @@ namespace GUI
             bool start_new_drag(base::ptr elem, vec2 pos);
 
             virtual void mouse_move_event(base::ptr elem, vec2 pos);
-
-
             virtual void mouse_action_event(base::ptr elem, mouse_action action, mouse_button button, vec2 pos);
 
     };
@@ -568,7 +566,8 @@ namespace GUI
 
             bool is_updating_layout = false;
 
-		
+			std::list<FrameGraphGenerator*> frame_generators;
+
         public:
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
@@ -587,7 +586,10 @@ namespace GUI
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
             virtual void key_action_event(long key);
 
-            virtual void draw_ui(Render::context&);
+         //   virtual void draw_ui(Render::context&);
+
+			virtual void process_ui(float dt);
+			virtual void create_graph(FrameGraph& graph);
 
             void add_task(std::function<void()> f)
             {
@@ -596,6 +598,24 @@ namespace GUI
                 tasks_mutex.unlock();
             }
 
+            void process_graph(FrameGraph & graph)
+            {
+				std::lock_guard<std::mutex> g(m);
+
+                auto f = [&](base* elem) {
+					  auto frame_gen = dynamic_cast<FrameGraphGenerator*>(elem);
+	                    if (frame_gen)
+                            frame_gen->generate(graph);
+
+                        return true;
+                };
+
+                iterate(f);
+            /*    for (auto& gen : frame_generators)
+                {
+                    gen->generate(graph);
+                }*/
+            }
             std::shared_future<bool> message_box(std::string title, std::string text, std::function<void(bool)> f);
 
             virtual void on_size_changed(const vec2& r) override;

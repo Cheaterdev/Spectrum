@@ -2,7 +2,7 @@
 class camera;
 class debug_drawer;
 class vertex_transform;
-class G_Buffer;
+class GBuffer;
 namespace materials
 {
     class material;
@@ -19,7 +19,7 @@ namespace Render
 		vec3 offset;
 		float fov = -1;
 		camera* cam;
-		G_Buffer* g_buffer;
+        GBuffer* g_buffer;
 	};
 
 	struct  OVRContext
@@ -34,7 +34,7 @@ namespace Render
         public:
 
             Render::CommandList::ptr& command_list;
-			Render::CommandList::ptr& command_list_label;
+			Render::CommandList::ptr command_list_label;
 			std::shared_ptr<OVRContext>& ovr_context;
 
 			SingleThreadExecutorBatched* labeled;
@@ -56,7 +56,7 @@ namespace Render
 			}
 
 			
-            context(Render::CommandList::ptr& list, Render::CommandList::ptr& command_list_label, std::shared_ptr<OVRContext>& ovr_context): command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
+            context(Render::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context): command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
             {
                 drawer = nullptr;
 //                cam = nullptr;
@@ -135,13 +135,14 @@ struct MeshRenderContext
         size_t current_time = 0;
         Render::Handle set_4_table;
 		vec2 screen_subsample = {0,0};
-        G_Buffer* g_buffer;
+        GBuffer* g_buffer;
         /*    void set_materials(std::vector<std::shared_ptr<materials::material>>& m)
             {
                 if (!override_material)
                     materials = m;
             }*/
 
+        Render::Texture::ptr target_tex;
         Render::HandleTable voxel_target;
         vec3 voxel_min;
         vec3 voxel_size;
@@ -157,8 +158,8 @@ struct MeshRenderContext
             set_4_table.cpu.ptr = 0;
             set_4_table.gpu.ptr = 0;
 
-            if (voxel_target.valid())
-                set_uav(voxel_target);
+         //   if (voxel_target.valid())
+          //      set_uav(voxel_target);
         }
 	
         void flush_pipeline()
@@ -173,50 +174,29 @@ struct MeshRenderContext
 
         void draw_indexed(int count, int offset, int v_offset)
         {
-            if (!current_state || !(current_state->desc == pipeline))
-            {
-                current_state = Render::PipelineStateCache::get_cache(pipeline);//new Render::PipelineState(pipeline));
-            }
+            flush_pipeline();
 
-            list->get_graphics().set_pipeline(current_state);
+       
             list->get_graphics().draw_indexed(count, offset, v_offset);
+
             draw_count++;
         }
-
-        /*    void set_instance_buffer(Render::BufferBase::ptr buffer)
-            {
-                list->get_graphics().set_const_buffer(3, buffer);
-            }*/
+        /*
+ 
         void set_nodes_buffer(Render::FrameResource& resource)
         {
 			GPUMeshSignature<Signature> signature(&list->get_graphics());
 
           //  list->get_graphics().set_srv(8, resource);
         }
-        /*  template<class T>
-          void set_mesh_const_buffer(const T& buffer)
-          {
-              list->get_graphics().set_const_buffer(2, buffer);
-          }
-
-        */
+  
         void set_mesh_const_data(unsigned int node_index)
         {
          //   list->get_graphics().set_constants(2, node_index);
 			GPUMeshSignature<Signature> signature(&list->get_graphics());
 
         }
-        /* void set_material_const_buffer(Render::BufferBase::ptr buffer)
-         {
-             list->get_graphics().set_const_buffer(1, buffer);
-             list->get_graphics().set_const_buffer(9, buffer);
-         }
-         template<class T>
-         void set_material_const_buffer(const T& buffer)
-         {
-             list->get_graphics().set_const_buffer(1, buffer);
-             list->get_graphics().set_const_buffer(9, buffer);
-         }*/
+
 
         void set_material_const_buffer(Render::GPUBuffer::ptr buffer)
         {
@@ -259,31 +239,22 @@ struct MeshRenderContext
 			//             list->get_graphics().set_dynamic(9,0, table);
 			signature.voxel_output[0] = table;
         }
-
-        /*   template<class T>
-           void set_frame_data(const T& buffer)
-           {
-               list->get_graphics().set_const_buffer(0, buffer);
-           }*/
-        void set_frame_data(const D3D12_GPU_VIRTUAL_ADDRESS& buffer)
-        {
-           // list->get_graphics().set_const_buffer(0, buffer);
-        }
-
+        */
+ 
 };
 
 
 
 class RenderTargetTable
 {
-        Render::HandleTable rtv_table;
+        Render::HandleTableLight rtv_table;
     
         std::vector<DXGI_FORMAT>formats;
         DXGI_FORMAT depth_format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
         //  Render::Handle depth_handle;
 
-        std::vector<Render::Texture::ptr> textures;
-        Render::Texture::ptr depth_texture;
+        std::vector<Render::TextureView> textures;
+        Render::TextureView depth_texture;
 
         std::vector<Render::Viewport> vps;
         std::vector<sizer_long> scissors;
@@ -301,14 +272,14 @@ class RenderTargetTable
             scissors[0] = { 0, 0, size.x, size.y };
         }
     public:
-		Render::HandleTable dsv_table;
+		Render::HandleTableLight dsv_table;
 
         void clear_depth(MeshRenderContext::ptr& context, float value = 1)
         {
             if (depth_texture)
                 context->list->get_native_list()->ClearDepthStencilView(dsv_table[0].cpu, D3D12_CLEAR_FLAG_DEPTH, value, 0, 0, nullptr);
         }
- void clear_stencil(Render::GraphicsContext& list, UINT8 stencil = 0)
+        void clear_stencil(Render::GraphicsContext& list, UINT8 stencil = 0)
         {
             if (depth_texture)
                 list.get_native_list()->ClearDepthStencilView(dsv_table[0].cpu,  D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
@@ -327,67 +298,91 @@ class RenderTargetTable
             context.set_viewports(vps);
             context.set_scissors(scissors[0]);
         }
-        RenderTargetTable(std::initializer_list<Render::Texture::ptr> list, Render::Texture::ptr depth, int depth_sclice)
+
+        RenderTargetTable(Render::GraphicsContext& graphics, std::initializer_list<Render::TextureView> list, Render::TextureView depth)
         {
-            rtv_table = Render::DescriptorHeapManager::get().get_rt()->create_table(list.size());
+           rtv_table = graphics.place_rtv(list.size());
             UINT i = 0;
 
             for (auto e : list)
             {
-                formats.emplace_back(e->get_desc().Format);
+                formats.emplace_back(e.get_desc().Format);
                 textures.emplace_back(e);
-                e->texture_2d()->place_rtv(rtv_table[i++]);
-            }
-
-            dsv_table = Render::DescriptorHeapManager::get().get_ds()->create_table(1);
-            {
-                depth_texture = depth;
-                depth_format = to_dsv(depth->get_desc().Format);
-                depth->array2d()->place_dsv(dsv_table[0], 0, depth_sclice);
-            }
-        }
-
-
-        RenderTargetTable(std::initializer_list<Render::Texture::ptr> list, Render::Texture::ptr depth)
-        {
-            rtv_table = Render::DescriptorHeapManager::get().get_rt()->create_table(list.size());
-            UINT i = 0;
-
-            for (auto e : list)
-            {
-                formats.emplace_back(e->get_desc().Format);
-                textures.emplace_back(e);
-                e->texture_2d()->place_rtv(rtv_table[i++]);
+                e.place_rtv(rtv_table[i++]);
             }
 
             if (depth)
             {
-				dsv_table = Render::DescriptorHeapManager::get().get_ds()->create_table(1);
+				dsv_table = graphics.place_dsv(1);
 
 
                 depth_texture = depth;
-                depth_format = to_dsv(depth->get_desc().Format);
-                depth->texture_2d()->place_dsv(dsv_table[0]);
-                on_init({depth->get_desc().Width, depth->get_desc().Height});
+                depth_format = to_dsv(depth.get_desc().Format);
+                depth.place_dsv(dsv_table[0]);
+                on_init(depth.get_size());
                 //      depth_handle = depth->get_ds();
             }
 
             else
             {
-                on_init({ textures[0]->get_desc().Width, textures[0]->get_desc().Height });
+                on_init(textures[0].get_size());
             }
         }
 
-        void set(MeshRenderContext::ptr& context)
+        void set(MeshRenderContext::ptr& context,bool clear_color = false, bool clear_depth = false)
         {
+ 
             context->pipeline.rtv.rtv_formats = formats;
             context->pipeline.rtv.ds_format = depth_format;
-            context->list->get_graphics().set_rtv(rtv_table, dsv_table[0]);
+            set(context->list->get_graphics(), clear_color, clear_depth);
         }
 
-        void set(Render::GraphicsContext& list)
-        {
+        void set(Render::GraphicsContext& graphics,bool clear_color = false, bool clear_depth = false)
+		{
 
-            list.set_rtv(rtv_table, dsv_table.valid()?dsv_table[0]:Render::Handle());
+            auto& list = graphics.get_base();
+            
+            for (auto& tex : textures)
+			{
+				list.transition(tex.resource, Render::ResourceState::RENDER_TARGET);
+			}
+
+            list.transition(depth_texture.resource, Render::ResourceState::DEPTH_WRITE);
+
+
+            if (clear_color)
+            {
+                for (auto& tex : textures)
+                    list.clear_rtv(tex.get_rtv());
+            }
+
+
+            if (clear_depth&& depth_texture)
+            {
+				if (depth_texture)
+                    list.get_native_list()->ClearDepthStencilView(dsv_table[0].cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+            }
+
+            graphics.set_rtv(rtv_table, dsv_table.valid()?dsv_table[0]:Render::Handle());
         }
 };
+
+
+class GBuffer
+{
+public:
+	Render::TextureView albedo;
+	Render::TextureView normals;
+	Render::TextureView depth;
+	Render::TextureView specular;
+	Render::TextureView speed;
+
+	RenderTargetTable rtv_table;
+
+
+    struct {
+		Render::TextureView hiZ_depth, hiZ_depth_uav;
+		RenderTargetTable hiZ_table;
+    }HalfBuffer;
+};
+

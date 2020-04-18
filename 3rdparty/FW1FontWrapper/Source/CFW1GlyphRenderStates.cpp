@@ -43,7 +43,7 @@ namespace FW1FontWrapper
         m_featureLevel = D3D_FEATURE_LEVEL::D3D_FEATURE_LEVEL_11_1;
 	
 		Render::PipelineStateDesc desc;
-		desc.root_signature = SignatureTypes<FontSignature>::create_root();
+        desc.root_signature = get_Signature(Layouts::DefaultLayout);
 
         desc.vertex = Render::vertex_shader::get_resource({ "shaders/font/vsSimple.hlsl", "VS", 0, {} });
         desc.pixel = Render::pixel_shader::get_resource({ "shaders/font/psSimple.hlsl", "PS", 0, {} });
@@ -60,10 +60,10 @@ namespace FW1FontWrapper
         desc.vertex = Render::vertex_shader::get_resource({ "shaders/font/vsEmpty.hlsl", "VS", 0, {} });
         desc.geometry = Render::geometry_shader::get_resource({ "shaders/font/gsSimple.hlsl", "GS", 0, {} });
         desc.pixel = Render::pixel_shader::get_resource({ "shaders/font/psSimple.hlsl", "PS", 0, {} });
-        geometry_state.reset(new Render::PipelineStateTyped<FontSig>(desc));
+        geometry_state.reset(new Render::PipelineState(desc));
         ///////////////////////////////////////////////////
         desc.geometry = Render::geometry_shader::get_resource({ "shaders/font/gsClip.hlsl", "GS", 0, {} });
-        geometry_state_clip.reset(new Render::PipelineStateTyped<FontSig>(desc));
+        geometry_state_clip.reset(new Render::PipelineState(desc));
 
         // Create all needed resources
         if (SUCCEEDED(hResult))
@@ -213,7 +213,7 @@ namespace FW1FontWrapper
              geometry_state_clip->depth_stencil = DX11::depth_stencil_state::get_resource(depthStencilDesc);
              vertex_state->depth_stencil = DX11::depth_stencil_state::get_resource(depthStencilDesc);
              vertex_state_clip->depth_stencil = DX11::depth_stencil_state::get_resource(depthStencilDesc);*/
-        pixel_sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(1);
+     //   pixel_sampler_table = Render::DescriptorHeapManager::get().gpu_smp->create_table(1);
         D3D12_SAMPLER_DESC samplerDesc = {};
 
         if (anisotropicFiltering)
@@ -232,7 +232,7 @@ namespace FW1FontWrapper
         samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
         samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-        Render::Device::get().create_sampler(samplerDesc, pixel_sampler_table[0].cpu);
+      //  Render::Device::get().create_sampler(samplerDesc, pixel_sampler_table[0].cpu);
         return S_OK;
     }
 }// namespace FW1FontWrapper

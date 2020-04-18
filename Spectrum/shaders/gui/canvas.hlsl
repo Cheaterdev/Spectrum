@@ -6,16 +6,14 @@ float2 tc: TEXCOORD0;
 };
 
 #ifdef BUILD_FUNC_PS
-cbuffer cbParams : register(b0)
-{
-    float4 size;
-    float3 offset_scale;
-};
+
+
+#include "../autogen/FlowGraph.h"
+
+static const   float4 size = GetFlowGraph().GetSize();
+static const float4 offset_scale = GetFlowGraph().GetOffset_size();
 
 #define SHADOW_SIZE 1.0/50.0
-Texture2D<float4> tex : register(t0);
-
-SamplerState PointSampler : register(s0);
 
 float4 PS(quad_output i) : SV_TARGET0
 {

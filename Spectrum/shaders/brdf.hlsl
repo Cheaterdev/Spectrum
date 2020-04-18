@@ -1,7 +1,11 @@
 #define SIZE 4
 static const uint TOTAL_THREADS = SIZE * SIZE;
-RWTexture3D<float4> output : register(u0);
+
 #include "Common.hlsl"
+
+#include "autogen/BRDF.h"
+
+static const RWTexture3D<float4> output  = GetBRDF().GetOutput();
 
 
 

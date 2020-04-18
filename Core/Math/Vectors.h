@@ -30,6 +30,7 @@ class Vector : public T
 
 public:
 
+	using raw = typename T;
 	template<typename = typename std::enable_if_t<T::GENERATE_CONSTRUCTOR>>
 	Vector()
 	{

@@ -6,6 +6,7 @@ class SSGI :public Events::prop_handler
 	Render::PipelineState::ptr state_last;
 
 	G_Buffer* buffer;
+	PlacedAllocator allocator;
 
 	TextureSwapper textures;
 public:

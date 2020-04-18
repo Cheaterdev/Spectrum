@@ -67,7 +67,7 @@ namespace DX12
             {
                 auto t = CounterManager::get().start_count<_shader_type>();
                 resource_file_depender depender;
-				D3D::shader_include In("unknown", depender);
+				D3D::shader_include In("shaders/", depender);
 
 				std::unique_ptr<std::string> res_blob;
 

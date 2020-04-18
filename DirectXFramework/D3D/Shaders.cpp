@@ -220,9 +220,12 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader_File(std::
 	auto data = includer->load_file(filename);
 	return Compile_Shader(*data, macros,target,entry_point,includer, filename);
 }
+//
 
 std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point , D3D::shader_include* includer, std::string file_name)
 {
+	static std::mutex m;
+	std::lock_guard<std::mutex> g(m);
 	std::vector<std::wstring> vdefines;
 
 	std::vector<DxcDefine> defines;

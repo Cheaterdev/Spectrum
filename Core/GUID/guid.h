@@ -33,13 +33,15 @@ THE SOFTWARE.
 #ifdef GUID_ANDROID
 #include <jni.h>
 #endif
-
-// Class to represent a GUID/UUID. Each instance acts as a wrapper around a
-// 16 byte value that can be passed around by value. It also supports
-// conversion to string (via the stream operator <<) and conversion from a
-// string via constructor.
-class Guid
+namespace Spectrum
 {
+
+    // Class to represent a GUID/UUID. Each instance acts as a wrapper around a
+    // 16 byte value that can be passed around by value. It also supports
+    // conversion to string (via the stream operator <<) and conversion from a
+    // string via constructor.
+    class Guid
+    {
     public:
 
         // create a guid from vector of bytes
@@ -100,15 +102,18 @@ class Guid
             ar& NVP(_bytes);
         }
 
-};
+    };
 
 
-template <>
-struct need_log_serialize<Guid>
-{
-    static const bool value = false;
-};
+    template <>
+    struct need_log_serialize<Guid>
+    {
+        static const bool value = false;
+    };
+}
 
+// :(
+using namespace Spectrum;
 
 // Class that can create new guids. The only reason this exists instead of
 // just a global "newGuid" function is because some platforms will require
@@ -126,7 +131,7 @@ class GuidGenerator : public Singleton<GuidGenerator>
         GuidGenerator() { }
 #endif
 
-        Guid newGuid();
+       Spectrum::Guid newGuid();
 
 #ifdef GUID_ANDROID
     private:

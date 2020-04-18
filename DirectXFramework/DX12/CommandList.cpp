@@ -5,7 +5,7 @@ namespace DX12
 {
 
 
-	CommandList::CommandList(CommandListType type)//:descriptor_manager_graphics(descriptor_manager), descriptor_manager_compute(descriptor_manager)
+	CommandList::CommandList(CommandListType type)
 
 	{
 		this->type = type;
@@ -53,8 +53,9 @@ namespace DX12
 		Eventer::begin(name,t);
 		Sendable::reset();
 
-		set_heap(DescriptorHeapType::SAMPLER, DescriptorHeapManager::get().get_samplers());
-		//	upload_iterator = upload_resources.begin()
+		set_heap(DescriptorHeapType::SAMPLER, DescriptorHeapManager::get().gpu_smp);
+		set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().gpu_srv);
+		//set_heap(DescriptorHeapType::SAMPLER, smp_descriptors.get_heap());
 	}
 
 
@@ -95,12 +96,14 @@ namespace DX12
 
 	void GraphicsContext::on_execute()
 	{
-		descriptor_manager_graphics.reset();
+		//descriptor_manager_graphics.reset();
+		rtv_descriptors.reset();
+		dsv_descriptors.reset();
 	}
 
 	void ComputeContext::on_execute()
 	{
-		descriptor_manager_compute.reset();
+		//descriptor_manager_compute.reset();
 	
 	}
 
@@ -171,6 +174,10 @@ namespace DX12
 	{
 		base.get_native_list()->SetGraphicsRootDescriptorTable(i, table.get_base().gpu);
 	}
+	void  GraphicsContext::set(UINT i, const HandleTableLight& table)
+	{
+		base.get_native_list()->SetGraphicsRootDescriptorTable(i, table.gpu);
+	}
 
 	void  GraphicsContext::set(UINT i, const Handle& table)
 	{
@@ -198,6 +205,10 @@ namespace DX12
 	{
 		set_rtv(table.get_count(), table.get_base(), h);
 	}
+	void GraphicsContext::set_rtv(const HandleTableLight& table, Handle h)
+	{
+		set_rtv(table.get_count(), table, h);
+	}
 
 	void GraphicsContext::set_rtv(int c, Handle rt, Handle h)
 	{
@@ -207,6 +218,7 @@ namespace DX12
 
 	void GraphicsContext::flush_binds(bool force)
 	{
+		if(use_dynamic)
 		descriptor_manager_graphics.bind(&base, [this](int i, Handle t)
 		{
 			set(i, t);
@@ -293,6 +305,7 @@ namespace DX12
 	{
 		return resource->get_gpu_address() + offset;
 	}
+
 	Uploader::UploadInfo Uploader::place_data(UINT64 uploadBufferSize, unsigned int alignment)
 	{
 		const auto AlignedSize = static_cast<UINT>(Math::AlignUp(uploadBufferSize, alignment));
@@ -442,6 +455,10 @@ namespace DX12
 		base.set_pipeline_internal(state.get());
 	}
 
+	void GraphicsContext::set_layout(Layouts layout)
+	{
+		set_signature(get_Signature(layout));
+	}
 	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
 	{
 		return read_texture(resource.get(), offset, box, sub_resource, f);
@@ -560,6 +577,9 @@ namespace DX12
 		for (auto && t : on_execute_funcs)
 			t();
 
+		srv_descriptors.reset();
+		smp_descriptors.reset();
+
 		if (graphics) graphics->on_execute();
 		if (compute) compute->on_execute();
 
@@ -663,7 +683,7 @@ namespace DX12
 
 	void Transitions::transition(Resource* from, Resource* to)
 	{
-		transitions[transition_count++] = CD3DX12_RESOURCE_BARRIER::Aliasing(from->get_native().Get(), to->get_native().Get());
+		transitions[transition_count++] = CD3DX12_RESOURCE_BARRIER::Aliasing(from?from->get_native().Get():nullptr, to->get_native().Get());
 
 		if (transition_count == transitions.size())
 			flush_transitions();
@@ -856,6 +876,10 @@ void ComputeContext::dispach(int x,int y,int z)
 	{
 		set_table(i, table.get_base());
 	}
+	void  ComputeContext::set(UINT i, const HandleTableLight& table)
+	{
+		set_table(i, table);
+	}
 
 	void  ComputeContext::set_dynamic(UINT i, UINT offset, const Handle& table)
 	{
@@ -1008,6 +1032,7 @@ void ComputeContext::dispach(int x,int y,int z)
 		UploadInfo info;
 		info.resource = upload_resources.back();
 		info.offset = resource_offset;
+		info.size = uploadBufferSize;
 		resource_offset += AlignedSize;
 		return info;
 	}
@@ -1027,7 +1052,35 @@ void ComputeContext::dispach(int x,int y,int z)
 	{
 		list->SetGraphicsRootConstantBufferView(i, info.resource->get_gpu_address() + info.offset);
 	}
+	void FrameResourceManager::begin_frame()
+	{
+		std::lock_guard<std::mutex> g(m);
 
+		finalizer = std::make_shared < Finalizer>([this]() {
+			std::lock_guard<std::mutex> g(m);
+
+			frames.pop_front();
+			});
+
+
+		frame_number++;
+		frames.emplace_back(new FrameResources);
+		current = frames.back().get();
+		frames.back()->frame_number = frame_number;
+	
+	}
+
+
+	void FrameResourceManager::propagate_frame(std::shared_ptr<CommandList> list)
+	{
+		list->frame_resources = frames.back().get();
+
+		auto finalizer = this->finalizer;
+		list->on_execute_funcs.emplace_back([finalizer]()
+			{
+
+			});
+	}
 
 	std::shared_ptr<CommandList> FrameResourceManager::start_frame(std::shared_ptr<CommandList> list, std::string name)
 	{
@@ -1136,6 +1189,7 @@ void ComputeContext::dispach(int x,int y,int z)
 
 	void ComputeContext::flush_binds(bool force)
 	{
+		if (use_dynamic)
 		descriptor_manager_compute.bind(&base, [this](int i, Handle t)
 		{
 			set_table(i, t);

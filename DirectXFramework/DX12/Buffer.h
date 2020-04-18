@@ -4,7 +4,7 @@ namespace DX12
 {
 
 
-	class  GPUBuffer : public Resource
+	class GPUBuffer : public Resource
 	{
 		protected:
 			GPUBuffer() = default;
@@ -138,17 +138,17 @@ namespace DX12
 					if (debug) {
 						UINT32* ptr = (UINT32*)data.data();
 
-						int count3 = data.size() / (sizeof(UINT32) * 3);
+						size_t count3 = data.size() / (sizeof(UINT32) * 3);
 
 						std::set<UINT32> indices[3];
-						for (int i = 0; i < count3*3; i++)
+						for (size_t i = 0; i < count3*3; i++)
 						{
 							indices[i / (count3)].emplace(ptr[i]);
 						}
 
 
 					}
-					init(CD3DX12_RESOURCE_DESC::Buffer(size), HeapType::DEFAULT, ResourceState::COMMON);
+					init(CD3DX12_RESOURCE_DESC::Buffer(size), DefaultAllocator::get(), ResourceState::COMMON);
 					set_data(0, data);
 				}
 
@@ -180,22 +180,26 @@ namespace DX12
 			char* data;
 
 			template<class T = char>
-			T * map(SIZE_T  from, SIZE_T  to)
+			T* map(SIZE_T  from, SIZE_T  to)
 			{
 				T* result = nullptr;
 				D3D12_RANGE Range;
-				Range.Begin = from ;
+				Range.Begin = from;
 				Range.End = to;
 				m_Resource->Map(0, &Range, reinterpret_cast<void**>(&result));
 				return result;
 			}
-
-
 			void unmap();
 		public:
+
+			using ptr = std::shared_ptr<UploadBuffer>;
 			UploadBuffer(UINT64 count);
 			virtual ~UploadBuffer();
 			char* get_data();
+
+
+
+
 	};
 
 

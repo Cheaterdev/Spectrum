@@ -250,7 +250,7 @@ class mesh_renderer : public renderer, public Events::prop_handler
 		Variable<bool> use_gpu_culling = Variable<bool>(false, "use_gpu_culling");
 		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth");
 	
-        Render::RootSignature::ptr my_signature;
+       // Render::RootSignature::ptr my_signature;
 
         using ptr = s_ptr<mesh_renderer>;
         mesh_renderer(Scene::ptr scene = nullptr);
@@ -620,6 +620,9 @@ class gpu_cached_renderer : public gpu_mesh_renderer,
 
 	bool updating_mats = false;
 	MESH_TYPE mesh_type;
+
+	Render::PipelineState::ptr render_depth_state;
+
 public:
 	using ptr = std::shared_ptr<gpu_cached_renderer>;
 	using 	DrawInfo = std::map<int, std::map<int, int>>;
@@ -647,6 +650,21 @@ public:
 	//using gpu_mesh_renderer::gpu_mesh_renderer;
 
 	gpu_cached_renderer(Scene::ptr scene = nullptr, MESH_TYPE mesh_type = MESH_TYPE::ALL);
+
+
+	void downsample_depth(Render::CommandList::ptr& list, GBuffer &buffer)
+	{
+		MipMapGenerator::get().downsample_depth(list->get_compute(), buffer.depth, buffer.HalfBuffer.hiZ_depth_uav);
+		list->transition(buffer.HalfBuffer.hiZ_depth_uav.resource, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+		buffer.HalfBuffer.hiZ_table.set(list->get_graphics(), false, false);
+		list->get_graphics().set_pipeline(render_depth_state);
+		((SignatureDataSetter*)&list->get_graphics())->set_dynamic(13, 0, buffer.HalfBuffer.hiZ_depth_uav.get_uav());
+		list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		list->get_graphics().draw(4);
+		list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	}
+
+
 };
 
 

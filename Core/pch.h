@@ -209,5 +209,202 @@ void unreferenced_parameter(const T&)
 
 #define GUID_WINDOWS
 #include "guid/guid.h"
+struct AllocationHandle;
+class Allocator
+{
+public:
+	struct Handle
+	{
+
+		size_t aligned_offset;
+
+		void Free()
+		{
+			if (owner) owner->Free(*this);
+		}
+
+		operator bool()
+		{
+			return owner;
+		}
+
+		Allocator* get_owner()
+		{
+			return owner;
+		}
+
+		bool operator==(const Handle& h)const
+		{
+			return (owner == h.owner) && (aligned_offset == h.aligned_offset);
+		}
+
+		bool operator!=(const Handle& h)const
+		{
+			return(owner != h.owner) || (aligned_offset != h.aligned_offset);
+		}
+	private:
+
+		friend  class LinearAllocator;
+		friend  class CommonAllocator;
+		size_t offset;
+		size_t size;
+		Allocator* owner = nullptr;
+	};
+	virtual Allocator::Handle Allocate(size_t size, size_t align) = 0;
+
+	virtual void Free(const Handle& handle) = 0;
+};
+
+
+//shitty allocator, write a good one
+// dont want to write now
+class CommonAllocator: public Allocator
+{
+
+	size_t size;
+	size_t max_usage;
+	std::map<size_t, size_t> free_blocks;
+
+public:
+	
+	
+
+	CommonAllocator(size_t size  = std::numeric_limits<size_t>::max()):size(size)
+	{
+		free_blocks[0] = size;
+		max_usage = 0;
+	}
+	
+	size_t get_max_usage()
+	{
+		return max_usage;
+	}
+
+	Allocator::Handle Allocate(size_t size, size_t align) override final
+	{
+	
+		for (auto& it : free_blocks)
+		{
+			auto offset = it.first;
+		
+			auto aligned_offset = Math::AlignUp(offset, align);
+
+			if ((offset+it.second - aligned_offset )>= size)
+			{						
+				size_t freeSize = it.second;
+
+				free_blocks.erase(it.first);
+
+
+				if (size < freeSize)
+				{
+					free_blocks[offset + size] = freeSize - size;
+				}
+			
+				Allocator::Handle res;
+				res.aligned_offset = aligned_offset;
+				res.offset = offset;
+				res.size = size;
+				res.owner = this;
+
+				max_usage = std::max(max_usage, offset + size);
+				return res;
+			}
+
+		}
+		assert(false);
+	}
+
+	
+
+	void Free(const Allocator::Handle& handle) override final
+	{
+
+		size_t offset = handle.offset;
+		size_t size = handle.size;
+
+		{
+			auto it = free_blocks.find(handle.offset + handle.size);
+			if (it != free_blocks.end())
+			{
+				size += it->second;
+				free_blocks.erase(it);
+			}
+		}
+
+		{
+			auto it = std::find_if(free_blocks.begin(), free_blocks.end(), 
+				[&](auto pair) { 
+					return pair.first + pair.second== handle.offset;
+				});
+
+
+			if (it != free_blocks.end())
+			{
+				size += it->second;
+				offset = it->first;
+				free_blocks.erase(it);
+			}
+		}
+
+
+		free_blocks[offset] = size;
+	}
+
+	void Reset()
+	{
+		free_blocks.clear();
+		free_blocks[0] = size;
+
+		max_usage = 0;
+	}
+};
+
+class LinearAllocator : public Allocator
+{
+	size_t max_usage;
+	size_t offset;
+	size_t size;
+public:
+
+	LinearAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size)
+	{
+		max_usage = 0;
+		offset = 0;
+	}
+
+	size_t get_max_usage()
+	{
+		return max_usage;
+	}
+	Allocator::Handle Allocate(size_t size, size_t align)
+	{	
+		offset = Math::AlignUp(offset, align);
+
+		Allocator::Handle res;
+				res.aligned_offset = offset;
+				res.offset = offset;
+				res.size = size;
+				res.owner = this;
+
+				max_usage = std::max(max_usage, offset + size);
+				return res;
+	}
+
+
+
+	void Free(const Allocator::Handle& handle)
+	{
+
+	}
+
+	void Reset()
+	{
+		max_usage = 0;
+		offset = 0;
+	}
+};
+
+
 
 #pragma comment(lib, "Core")

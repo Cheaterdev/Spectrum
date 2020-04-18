@@ -6,14 +6,14 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& list = *mesh_render_context->list;
-
+	graphics.use_dynamic = false;
 	//  std::list<MeshAssetInstance*> meshes;
 	instances_count = 0;
 	bool current_cpu_culling = use_cpu_culling && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
 	mesh_render_context->transformer = transformer;
 	Render::PipelineStateDesc default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	default_pipeline.root_signature = my_signature;
+	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
 	default_pipeline.rasterizer.fill_mode = D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID;
 	default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
@@ -27,7 +27,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 		default_pipeline.geometry = voxel_geometry_shader;
 		default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
 		default_pipeline.rtv.enable_depth = false;
-		graphics.set_signature(my_signature);
+		graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 
 
 
@@ -44,14 +44,31 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 
 	mesh_render_context->pipeline = default_pipeline;
 	mesh_render_context->begin();
-	mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
+	//mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
+
+
+
+	{
+		Slots::FrameInfo frameInfo;
+
+		auto camera = frameInfo.MapCamera();
+		memcpy(&camera.cb, &mesh_render_context->cam->get_raw_cb().current, sizeof(camera.cb));
+
+
+		if (best_fit_normals)
+		{
+			frameInfo.GetBestFitNormals() = best_fit_normals->get_texture()->texture_2d()->get_static_srv();
+		}
+
+		frameInfo.set(graphics);
+	}
+
 
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	GPUMeshSignature<Signature> signature(&graphics);
+	//GPUMeshSignature<Signature> signature(&graphics);
 
-	if (best_fit_normals)
-		signature.best_fit[0]= best_fit_normals->get_texture()->texture_2d()->get_static_srv();
 
+		
 	using render_list = std::map<size_t, std::vector<MeshAssetInstance::render_info>>;
 
 
@@ -119,12 +136,27 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 		}
 
 		auto nodes = l->node_buffer.get_for(*list.get_manager());
-		signature.vertex_unknown = nodes.resource->get_gpu_address() + nodes.offset;
+
+		auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
+
+
+
+		Slots::MeshData data;
+		data.GetNodes() = buffer_view.get_srv();
+		data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
+
+		data.set(graphics);
+	//	signature.vertex_unknown = nodes.resource->get_gpu_address() + nodes.offset;
+	//	signature.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();// +m.mesh->vertex_offset * sizeof(Vertex);
+
+		graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
+
 		if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 		{
-			signature.vertex_consts_geometry.set_raw(voxel_info);
-			signature.vertex_consts_vertex.set_raw(voxel_info);
+	///		signature.vertex_consts_geometry.set_raw(voxel_info);
+	///		signature.vertex_consts_vertex.set_raw(voxel_info);
 		}
+
 			for (auto& p : rendering)
 			{
 				for (auto& m : p.second)
@@ -132,15 +164,21 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 					if (!mesh_render_context->override_material)
 						l->use_material(m.mesh->material, mesh_render_context);
 
+
+					Slots::MeshInfo info;
+
+					info.GetNode_offset() = m.node_index;
+					info.GetTexture_offset() = 0;
+					info.GetVertex_offset() = m.mesh->vertex_offset;
+
+					info.set(graphics);
 				//	graphics.set_srv(4, l->mesh_asset->vertex_buffer->get_gpu_address());
-					graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 					//graphics.set_const_buffer(5, nodes.resource->get_gpu_address() + nodes.offset + m.node_index * sizeof(decltype(l->node_buffer)::type));
 				//	graphics.set_constants(8,0, m.node_index);
 
-					signature.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address() + m.mesh->vertex_offset * sizeof(Vertex);
-					signature.mat_texture_offsets.set(0, m.node_index);
+					//signature.mat_texture_offsets.set(0, m.node_index);
 
-					mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0*m.mesh->vertex_offset);
+					mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
 				}
 			}
 	};
@@ -195,6 +233,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 
 		return true;
 	});
+
+	graphics.use_dynamic = true;
 }
 void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)
 {
@@ -263,8 +303,8 @@ mesh_renderer::mesh_renderer(Scene::ptr scene)
 	root_desc.set_sampler(0, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerLinearWrapDesc);
 	root_desc.set_sampler(1, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerPointClampDesc);
 	root_desc.set_sampler(2, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerAnisoWrapDesc);*/
-	my_signature = GPUMeshSignature<SignatureCreator>().create_root();// .reset(new Render::RootSignature(root_desc));
-	my_signature->set_unfixed(2);
+	//my_signature = GPUMeshSignature<SignatureCreator>().create_root();// .reset(new Render::RootSignature(root_desc));
+	//my_signature->set_unfixed(2);
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 }

@@ -1,0 +1,23 @@
+struct Camera
+{
+	float4x4 view;
+	float4x4 proj;
+	float4x4 viewProj;
+	float4x4 invView;
+	float4x4 invProj;
+	float4x4 invViewProj;
+	float3 position;
+	float unused;
+	float3 direction;
+	float unused2;
+	float2 jitter; float2 unused3;
+}
+
+[Bind = FrameLayout::CameraData]
+struct FrameInfo
+{
+    Camera camera;
+    Camera prevCamera;
+
+    Texture2D bestFitNormals;
+}

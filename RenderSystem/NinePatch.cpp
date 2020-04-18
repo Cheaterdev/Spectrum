@@ -2,10 +2,10 @@
 
 namespace GUI
 {
-	NinePatch::NinePatch(Render::RootSignature::ptr root)
+	NinePatch::NinePatch()
 	{
 		Render::PipelineStateDesc state_desc;
-		state_desc.root_signature = root;
+		state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
 		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES,{} });
 		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "VS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES/* | D3DCOMPILE_SKIP_OPTIMIZATION*/,{} });
 		state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -30,7 +30,7 @@ namespace GUI
 		//vblist.resize(1);
 
 
-
+		/*
 
 		sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(3);
 
@@ -53,6 +53,11 @@ namespace GUI
 		Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[2].cpu);
 
 
+		samplers_handles.push_back(sampler_table[0]);
+
+		samplers_handles.push_back(sampler_table[1]);
+		samplers_handles.push_back(sampler_table[2]);
+		*/
 	}
 
 	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr& pipeline_state)
@@ -297,27 +302,47 @@ namespace GUI
 	void NinePatch::flush(Render::context& c)
 	{
 		if (vertexes.empty()) return;
-		c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		c.command_list->get_graphics().set_vertex_buffers(0, vblist);
-		c.command_list->get_graphics().set_index_buffer(index_buffer->get_index_buffer_view(true));
-		c.command_list->get_graphics().set_pipeline(current_state);
+		
+		auto& graphics = c.command_list->get_graphics();
+		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		graphics.set_vertex_buffers(0, vblist);
+		graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
+		graphics.set_pipeline(current_state);
 
-		UISignature<Signature> sig(&c.command_list->get_graphics());
+
+		graphics.use_dynamic = false;
+
+	//	UISignature<Signature> sig(&c.command_list->get_graphics());
+
+		Slots::NinePatch patch_data;
+		
+
+		auto data =  c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
+
+		 c.command_list->write(data, vertexes);
 
 
+		auto view = data.resource->create_view<StructuredBufferView<Vertex>>(*c.command_list->frame_resources, data.offset, data.size);
+		//data.resource->create_view<StructuredBufferView<Vertex>>()
 
-		sig.pixel_samples = sampler_table;
-		sig.vertex_buffer = vertexes;
-		sig.pixel_textures = textures_handles;
+		patch_data.GetVb() = view.get_srv();
 
+		patch_data.GetTextures() = textures_handles;
+
+		//sig.pixel_samples = samplers_handles;
+		//sig.vertex_buffer = vertexes;
+		//sig.pixel_textures = textures_handles;
+//
 	//	c.command_list->get_graphics().set_srv(5, vertexes);
 	//	c.command_list->get_graphics().set(7, textures_handles);
-
-		c.command_list->get_graphics().draw_indexed(9 * 2 * 3, 0, 0, UINT(vertexes.size()/16));
+		patch_data.set(graphics);
+		graphics.draw_indexed(9 * 2 * 3, 0, 0, UINT(vertexes.size()/16));
 
 		current_state = nullptr;
 		vertexes.clear();
 		textures_handles.clear();
+		graphics.use_dynamic = true;
+
 	}
 	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r)
 	{

@@ -1,5 +1,9 @@
-SamplerState sampler0 : register(s0);
-Texture2D<float> tex0 : register(t0);
+#include "../autogen/FontRendering.h"
+#include "../autogen/FontRenderingConstants.h"
+
+
+static const Texture2D<float> tex0 = GetFontRendering().GetTex0();
+static const float4x4  TransformMatrix = GetFontRenderingConstants().GetTransformMatrix();
 
 struct PSIn
 {
@@ -10,7 +14,7 @@ float2 TexCoord : TEXCOORD;
 
 float4 PS(PSIn Input) : SV_Target
 {
-    float a =  tex0.Sample(sampler0, Input.TexCoord);
+    float a =  tex0.Sample(pointClampSampler, Input.TexCoord);
     // return float4(Input.TexCoord, 0, 1);
     //  return 1;
 

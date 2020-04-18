@@ -12,20 +12,20 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
 	c.command_list->get_graphics().set_scissors(c.ui_clipping);
 
     c.command_list->get_graphics().set_pipeline(state);
-    struct CB
-    {
-        vec4 size;
-        vec4 offset_scale;
 
-    } cb;
-    cb.size = vec4(render_bounds->size, user_ui->size.get());
-    cb.offset_scale = vec4(contents->pos.get(), 1.0f / contents->scale,0);
-    c.command_list->get_graphics().set_const_buffer_raw(1, cb);
+    Slots::FlowGraph graph_data;
+    graph_data.GetSize() = vec4(render_bounds->size, user_ui->size.get());
+	graph_data.GetOffset_size() = vec4(contents->pos.get(), 1.0f / contents->scale, 0);
+    graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
+    graph_data.set(c.command_list->get_graphics());
+
+
+   // c.command_list->get_graphics().set_const_buffer_raw(1, cb);
     renderer->draw(c, state, get_render_bounds());
 
 	renderer->flush(c);
-    //return;
-    vec2 inv_pixel = vec2(1, 1) / user_ui->size.get(); //vec2(obj->contents->scale, obj->contents->scale) / obj->user_ui->size.get();
+  
+    c.command_list->get_graphics().use_dynamic = false;
     {
         //	auto& b = *line_vertex;
         int count = 0;
@@ -54,7 +54,6 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
 
         //    line_vertex->update(c.command_list);
         c.command_list->get_graphics().set_pipeline(line_state);
-        c.command_list->get_graphics().set_const_buffer_raw(4, inv_pixel);
         c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
         auto res = c.command_list->get_graphics().place_vertex_buffer(vertexes);
         c.command_list->get_graphics().set_vertex_buffer(0, res);
@@ -62,7 +61,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
     }
 
 	c.command_list->get_graphics().set_scissors(clip);
-
+    c.command_list->get_graphics().use_dynamic = true;
     //  this->renderer->draw(this, c);
 }
 
@@ -409,7 +408,7 @@ void GUI::Elements::FlowGraph::canvas::on_add(base* parent)
         return;
 
     Render::PipelineStateDesc state_desc;
-    state_desc.root_signature = renderer->root_signature;
+    state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
     state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "PS", 0, {} });
     state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "VS", 0, {} });
     state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -418,7 +417,7 @@ void GUI::Elements::FlowGraph::canvas::on_add(base* parent)
     state.reset(new Render::PipelineState(state_desc));
     {
         Render::PipelineStateDesc state_desc;
-        state_desc.root_signature = renderer->root_signature;
+        state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
         state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "PS", 0, {} });
         state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "VS", 0, {} });
         state_desc.geometry = Render::geometry_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "GS", 0, {} });
@@ -747,10 +746,10 @@ bool GUI::Elements::FlowGraph::link_item::on_mouse_action(mouse_action action, m
 
 void GUI::Elements::FlowGraph::link_item::init_properties(Elements::ParameterWindow* wnd)
 {
-    wnd->add_param(Elements::property_base::ptr(new Elements::property_enum(p->type, "base",
+/*    wnd->add_param(Elements::property_base::ptr(new Elements::property_enum(p->type, "base",
                    ::FlowGraph::data_types("float"), "float" ,
                    ::FlowGraph::data_types("float2"), "float2" ,
                    ::FlowGraph::data_types("float3"), "float3" ,
                    ::FlowGraph::data_types("float4"), "float4"
-                                                                           )));
+                                                                           )));*/
 }

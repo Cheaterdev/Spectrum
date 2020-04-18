@@ -1,6 +1,6 @@
 #include "pch.h"
 
-
+/*
 int get_size(FlowGraph::data_types v)
 {
 	if (v == ShaderParams::FLOAT1)
@@ -21,14 +21,13 @@ int get_size(FlowGraph::data_types v)
 	return 0;
 }
 
-
+*/
 
 std::string shader_parameter::to_string()
 {
-	return type.to_string();
+	return type.name;
 }
-
-shader_parameter::shader_parameter(std::string str, FlowGraph::data_types type)
+shader_parameter::shader_parameter(std::string str, ShaderParamType type)
 {
 	this->type = type;
 	name = str;
@@ -70,14 +69,14 @@ shader_parameter MaterialContext::create_value(Uniform::ptr f)
 		shader_parameter_uniform[f] = shader_name;
 
 		uniforms.emplace_back(f);
-		uniform_struct += f->type.to_string();
+		uniform_struct += f->type.name;
 		uniform_struct += " ";
 		uniform_struct += shader_name;
 
-		uniform_struct += ":packoffset(c" + std::to_string(uniform_offset / 4) + ")";
+		//uniform_struct += ":packoffset(c" + std::to_string(uniform_offset / 4) + ")";
 
 		uniform_struct += ";\n";
-		uniform_offset += 4;// get_size(f->type);
+		//uniform_offset += 4;// get_size(f->type);
 	}
 	else
 		shader_name = it->second;
@@ -99,7 +98,7 @@ shader_parameter MaterialContext::create_value(Uniform::ptr f)
 
 	uniform_struct += ")";*/
 
-	return graph->add_value(f->type, shader_name);
+	return graph->add_value(f->type, std::string("GetMaterialInfo().cb.") + shader_name);
 }
 
 std::string MaterialContext::get_texture(TextureSRVParams::ptr& p)
@@ -139,7 +138,7 @@ std::string MaterialContext::generate_uniform_struct()
 {
 	if (uniform_struct.empty())
 		return "\n";
-	std::string result = "cbuffer UNIFORMS:register(b1)\n{\n";
+	std::string result = "struct MaterialInfo_cb\n{\n";
 	result += uniform_struct;
 
 	for (auto u : uniforms)
@@ -191,15 +190,19 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 			hit_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
 		}
 
+		pixel_shader.uniforms = uniforms_string;
+		voxel_shader.uniforms = uniforms_string;
+		hit_shader.uniforms = uniforms_string;
 
-		pixel_shader.text = uniforms_string + text;
-		voxel_shader.text = uniforms_string + text;
-		hit_shader.text = uniforms_string + text;
+
+		pixel_shader.text = text;
+		voxel_shader.text = text;
+		hit_shader.text = text;
 
 
 		if (textures.empty())
 		{
-			hit_shader.macros.emplace_back("REFRACTION", "");
+		//	hit_shader.macros.emplace_back("REFRACTION", "");
 		}
 	}
 
@@ -225,8 +228,8 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		{
 			tess_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
 		}
-
-		tess_shader.text = uniforms_string + text;
+		tess_shader.uniforms = uniforms_string;
+		tess_shader.text = text;
 
 	}
 
@@ -352,10 +355,10 @@ std::string MaterialFunction::generate_struct(std::vector<FlowGraph::output::ptr
 	std::string struct_name = mat_context->get_new_param();
 	res += "struct " + mat_context->get_new_param() + "\n{\n";
 
-	for (auto p : parameters)
+	for (unsigned int i = 0; i < parameters.size(); i++)
 	{
 		std::string param_name = mat_context->get_new_param();
-		res += p->type.to_string() + " " + param_name + ";\n";
+		res += parameters[i]->get<shader_parameter>().type.name + " " + param_name + ";\n";
 	}
 
 	res += "\n};";
@@ -371,7 +374,7 @@ std::string MaterialFunction::generate_input(std::vector<FlowGraph::input::ptr>&
 	for (unsigned int i = 0; i < parameters.size(); i++)
 	{
 		std::string param_name = mat_context->get_new_param();
-		res += "in " + parameters[i]->type.to_string() + " " + param_name;
+		res += "in " + parameters[i]->get<shader_parameter>().type.name + " " + param_name;
 
 		if (owner)
 			func_call += parameters[i]->get<shader_parameter>().name;
@@ -410,13 +413,13 @@ std::string MaterialFunction::generate_output(std::vector<FlowGraph::output::ptr
 		}
 
 		std::string param_name = mat_context->get_new_param();
-		res += "out " + parameters[i]->type.to_string() + " " + param_name;
+		res += "out " + parameters[i]->get<shader_parameter>().type.name + " " + param_name;
 		f_output_names.push_back(param_name);
 
 		if (owner)
 		{
 			auto mat_graph = static_cast<MaterialFunction*>(owner);
-			outputs.push_back(mat_graph->add_value(parameters[i]->type));
+			outputs.push_back(mat_graph->add_value(parameters[i]->get<shader_parameter>().type));
 			func_call += outputs.back().name;
 		}
 
@@ -450,22 +453,22 @@ MaterialFunction::~MaterialFunction()
 {
 }
 
-shader_parameter MaterialFunction::add_value(const FlowGraph::data_types type)
+shader_parameter MaterialFunction::add_value(const ShaderParamType& type)
 {
 	auto mat_context = static_cast<MaterialContext*>(context);
 	auto param_name = mat_context->get_new_param();
-	text += std::string("\t") + type.to_string() + " " + param_name + ";\n";
+	text += std::string("\t") + type.name + " " + param_name + ";\n";
 	shader_parameter result;
 	result.name = param_name;
 	result.type = type;
 	return result;
 }
 
-shader_parameter MaterialFunction::add_value(const FlowGraph::data_types type, std::string s)
+shader_parameter MaterialFunction::add_value(const ShaderParamType& type, std::string s)
 {
 	auto mat_context = static_cast<MaterialContext*>(context);
 	auto param_name = mat_context->get_new_param();
-	text += std::string("\t") + type.to_string() + " " + param_name + " = " + s + ";\n";
+	text += std::string("\t") + type.name + " " + param_name + " = " + s + ";\n";
 	shader_parameter result;
 	result.name = param_name;
 	result.type = type;
@@ -485,16 +488,17 @@ BOOST_CLASS_EXPORT_IMPLEMENT(VectorNode);
 BOOST_CLASS_EXPORT_IMPLEMENT(TiledTextureNode);
 BOOST_CLASS_EXPORT_IMPLEMENT(MaterialGraph);
 BOOST_CLASS_EXPORT_IMPLEMENT(SpecToMetNode);
+BOOST_CLASS_EXPORT_IMPLEMENT(TextureSRVParams);
 
 MaterialGraph::MaterialGraph()
 {
-	position = register_input(ShaderParams::FLOAT3, "position");
-	texcoord = register_input(ShaderParams::FLOAT2, "texcoord");
-	i_base_color = register_output(ShaderParams::FLOAT4, "base color");
-	i_metallic = register_output(ShaderParams::FLOAT1, "metallic");
-	i_roughness = register_output(ShaderParams::FLOAT1, "roughness");
-	i_normal = register_output(ShaderParams::FLOAT4, "normal");
-	i_tess_displacement = register_output(ShaderParams::FLOAT1, "displacement");
+	position = register_input( "position",ShaderParams::FLOAT3);
+	texcoord = register_input(/*ShaderParams::FLOAT2,*/ "texcoord", ShaderParams::FLOAT2);
+	i_base_color = register_output(/*ShaderParams::FLOAT4,*/ "base color", ShaderParams::FLOAT4);
+	i_metallic = register_output(/*ShaderParams::FLOAT1,*/ "metallic", ShaderParams::FLOAT1);
+	i_roughness = register_output(/*ShaderParams::FLOAT1, */"roughness", ShaderParams::FLOAT1);
+	i_normal = register_output(/*ShaderParams::FLOAT4, */"normal", ShaderParams::FLOAT4);
+	i_tess_displacement = register_output(/*ShaderParams::FLOAT1,*/ "displacement", ShaderParams::FLOAT1);
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
 	i_roughness->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
@@ -542,7 +546,7 @@ void MaterialGraph::start(MaterialContext* context)
 {
 	this->context = context;
 	reset_for();
-	position->put(shader_parameter("pos", ShaderParams::FLOAT4));
+	position->put(shader_parameter("pos", ShaderParams::FLOAT3));
 	texcoord->put(shader_parameter("tc", ShaderParams::FLOAT2));
 
 	for (auto n : nodes)
@@ -566,12 +570,12 @@ TextureNode::TextureNode(TextureAsset::ptr _Asset, bool to_linear)
 	texture_info->asset = register_asset<Asset>(_Asset);
 	texture_info->to_linear = to_linear;
 
-	i_tc = register_input(ShaderParams::FLOAT2, "tc");
-	o_vec4 = register_output(ShaderParams::FLOAT4, "");
-	o_r = register_output(ShaderParams::FLOAT1, "");
-	o_g = register_output(ShaderParams::FLOAT1, "");
-	o_b = register_output(ShaderParams::FLOAT1, "");
-	o_a = register_output(ShaderParams::FLOAT1, "");
+	i_tc = register_input(/*ShaderParams::FLOAT2,*/ "tc", ShaderParams::FLOAT2);
+	o_vec4 = register_output(/*ShaderParams::FLOAT4,*/ "", ShaderParams::FLOAT4);
+	o_r = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
+	o_g = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
+	o_b = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
+	o_a = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
 	++::FlowGraph::counter;
 }
 
@@ -602,9 +606,9 @@ void TextureNode::operator()(MaterialContext* context)
 
 PowerNode::PowerNode()
 {
-	i_vec = register_input(ShaderParams::VECTOR, "value");
-	i_power = register_input(ShaderParams::VECTOR, "power");
-	o_value = register_output(ShaderParams::VECTOR, "result");
+	i_vec = register_input(/*ShaderParams::VECTOR, */"value", ShaderParams::VECTOR);
+	i_power = register_input(/*ShaderParams::VECTOR,*/ "power", ShaderParams::VECTOR);
+	o_value = register_output(/*ShaderParams::VECTOR,*/ "result", ShaderParams::VECTOR);
 }
 
 void PowerNode::operator()(MaterialContext*)
@@ -623,7 +627,7 @@ VectorNode::VectorNode(vec4 value)
 	uniform->value.f4_value = value;
 	uniform->name = "some_val";
 	uniform->type = ShaderParams::FLOAT4;
-	o_value = register_output(ShaderParams::VECTOR, "");
+	o_value = register_output(/*ShaderParams::VECTOR,*/ "", ShaderParams::VECTOR);
 }
 
 VectorNode::VectorNode()
@@ -652,7 +656,7 @@ ScalarNode::ScalarNode(float value)
 	uniform->value.f_value = value;
 	uniform->name = "some_val";
 	uniform->type = ShaderParams::FLOAT1;
-	o_value = register_output(ShaderParams::FLOAT1, "");
+	o_value = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
 }
 
 void ScalarNode::operator()(MaterialContext* c)
@@ -680,9 +684,9 @@ GUI::base::ptr ScalarNode::create_editor_window()
 
 SumNode::SumNode()
 {
-	i_vec = register_input(ShaderParams::VECTOR, "a");
-	i_power = register_input(ShaderParams::VECTOR, "b");
-	o_value = register_output(ShaderParams::VECTOR, "result");
+	i_vec = register_input(/*ShaderParams::VECTOR,*/ "a", ShaderParams::VECTOR);
+	i_power = register_input(/*ShaderParams::VECTOR,*/ "b", ShaderParams::VECTOR);
+	o_value = register_output(/*ShaderParams::VECTOR,*/ "result", ShaderParams::VECTOR);
 }
 
 void SumNode::operator()(MaterialContext*)
@@ -696,9 +700,9 @@ void SumNode::operator()(MaterialContext*)
 
 MulNode::MulNode()
 {
-	i_vec = register_input(ShaderParams::VECTOR, "a");
-	i_power = register_input(ShaderParams::VECTOR, "b");
-	o_value = register_output(ShaderParams::VECTOR, "result");
+	i_vec = register_input(/*ShaderParams::VECTOR,*/ "a", ShaderParams::VECTOR);
+	i_power = register_input(/*ShaderParams::VECTOR,*/ "b", ShaderParams::VECTOR);
+	o_value = register_output(/*ShaderParams::VECTOR, */"result", ShaderParams::VECTOR);
 }
 
 void MulNode::operator()(MaterialContext* c)
@@ -718,12 +722,12 @@ void MulNode::operator()(MaterialContext* c)
 TiledTextureNode::TiledTextureNode(TiledTexture::ptr _Asset) : asset(this)
 {
 	asset = register_asset(_Asset);
-	i_tc = register_input(ShaderParams::FLOAT2, "tc");
-	o_vec4 = register_output(ShaderParams::FLOAT4, "vec4");
-	o_r = register_output(ShaderParams::FLOAT1, "r");
-	o_g = register_output(ShaderParams::FLOAT1, "g");
-	o_b = register_output(ShaderParams::FLOAT1, "b");
-	o_a = register_output(ShaderParams::FLOAT1, "a");
+	i_tc = register_input(/*ShaderParams::FLOAT2,*/ "tc", ShaderParams::FLOAT2);
+	o_vec4 = register_output(/*ShaderParams::FLOAT4, */"vec4", ShaderParams::FLOAT4);
+	o_r = register_output(/*ShaderParams::FLOAT1,*/ "r", ShaderParams::FLOAT1);
+	o_g = register_output(/*ShaderParams::FLOAT1, */"g", ShaderParams::FLOAT1);
+	o_b = register_output(/*ShaderParams::FLOAT1,*/ "b"), ShaderParams::FLOAT1;
+	o_a = register_output(/*ShaderParams::FLOAT1, */"a", ShaderParams::FLOAT1);
 	++::FlowGraph::counter;
 }
 

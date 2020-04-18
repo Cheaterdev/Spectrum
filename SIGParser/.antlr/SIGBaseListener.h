@@ -1,0 +1,104 @@
+
+// Generated from SIG.g4 by ANTLR 4.7.1
+
+#pragma once
+
+
+#include "antlr4-runtime.h"
+#include "SIGListener.h"
+
+
+/**
+ * This class provides an empty implementation of SIGListener,
+ * which can be extended to create a listener which only needs to handle a subset
+ * of the available methods.
+ */
+class  SIGBaseListener : public SIGListener {
+public:
+
+  virtual void enterParse(SIGParser::ParseContext * /*ctx*/) override { }
+  virtual void exitParse(SIGParser::ParseContext * /*ctx*/) override { }
+
+  virtual void enterBind_option(SIGParser::Bind_optionContext * /*ctx*/) override { }
+  virtual void exitBind_option(SIGParser::Bind_optionContext * /*ctx*/) override { }
+
+  virtual void enterOptions_assign(SIGParser::Options_assignContext * /*ctx*/) override { }
+  virtual void exitOptions_assign(SIGParser::Options_assignContext * /*ctx*/) override { }
+
+  virtual void enterOptions(SIGParser::OptionsContext * /*ctx*/) override { }
+  virtual void exitOptions(SIGParser::OptionsContext * /*ctx*/) override { }
+
+  virtual void enterOption_block(SIGParser::Option_blockContext * /*ctx*/) override { }
+  virtual void exitOption_block(SIGParser::Option_blockContext * /*ctx*/) override { }
+
+  virtual void enterArray_count_id(SIGParser::Array_count_idContext * /*ctx*/) override { }
+  virtual void exitArray_count_id(SIGParser::Array_count_idContext * /*ctx*/) override { }
+
+  virtual void enterArray(SIGParser::ArrayContext * /*ctx*/) override { }
+  virtual void exitArray(SIGParser::ArrayContext * /*ctx*/) override { }
+
+  virtual void enterValue_declaration(SIGParser::Value_declarationContext * /*ctx*/) override { }
+  virtual void exitValue_declaration(SIGParser::Value_declarationContext * /*ctx*/) override { }
+
+  virtual void enterSlot_declaration(SIGParser::Slot_declarationContext * /*ctx*/) override { }
+  virtual void exitSlot_declaration(SIGParser::Slot_declarationContext * /*ctx*/) override { }
+
+  virtual void enterSampler_declaration(SIGParser::Sampler_declarationContext * /*ctx*/) override { }
+  virtual void exitSampler_declaration(SIGParser::Sampler_declarationContext * /*ctx*/) override { }
+
+  virtual void enterTemplated(SIGParser::TemplatedContext * /*ctx*/) override { }
+  virtual void exitTemplated(SIGParser::TemplatedContext * /*ctx*/) override { }
+
+  virtual void enterType_with_template(SIGParser::Type_with_templateContext * /*ctx*/) override { }
+  virtual void exitType_with_template(SIGParser::Type_with_templateContext * /*ctx*/) override { }
+
+  virtual void enterInherit_id(SIGParser::Inherit_idContext * /*ctx*/) override { }
+  virtual void exitInherit_id(SIGParser::Inherit_idContext * /*ctx*/) override { }
+
+  virtual void enterName_id(SIGParser::Name_idContext * /*ctx*/) override { }
+  virtual void exitName_id(SIGParser::Name_idContext * /*ctx*/) override { }
+
+  virtual void enterType_id(SIGParser::Type_idContext * /*ctx*/) override { }
+  virtual void exitType_id(SIGParser::Type_idContext * /*ctx*/) override { }
+
+  virtual void enterOption_id(SIGParser::Option_idContext * /*ctx*/) override { }
+  virtual void exitOption_id(SIGParser::Option_idContext * /*ctx*/) override { }
+
+  virtual void enterOwner_id(SIGParser::Owner_idContext * /*ctx*/) override { }
+  virtual void exitOwner_id(SIGParser::Owner_idContext * /*ctx*/) override { }
+
+  virtual void enterTemplate_id(SIGParser::Template_idContext * /*ctx*/) override { }
+  virtual void exitTemplate_id(SIGParser::Template_idContext * /*ctx*/) override { }
+
+  virtual void enterValue_id(SIGParser::Value_idContext * /*ctx*/) override { }
+  virtual void exitValue_id(SIGParser::Value_idContext * /*ctx*/) override { }
+
+  virtual void enterInherit(SIGParser::InheritContext * /*ctx*/) override { }
+  virtual void exitInherit(SIGParser::InheritContext * /*ctx*/) override { }
+
+  virtual void enterLayout_stat(SIGParser::Layout_statContext * /*ctx*/) override { }
+  virtual void exitLayout_stat(SIGParser::Layout_statContext * /*ctx*/) override { }
+
+  virtual void enterLayout_block(SIGParser::Layout_blockContext * /*ctx*/) override { }
+  virtual void exitLayout_block(SIGParser::Layout_blockContext * /*ctx*/) override { }
+
+  virtual void enterLayout_definition(SIGParser::Layout_definitionContext * /*ctx*/) override { }
+  virtual void exitLayout_definition(SIGParser::Layout_definitionContext * /*ctx*/) override { }
+
+  virtual void enterTable_stat(SIGParser::Table_statContext * /*ctx*/) override { }
+  virtual void exitTable_stat(SIGParser::Table_statContext * /*ctx*/) override { }
+
+  virtual void enterTable_block(SIGParser::Table_blockContext * /*ctx*/) override { }
+  virtual void exitTable_block(SIGParser::Table_blockContext * /*ctx*/) override { }
+
+  virtual void enterTable_definition(SIGParser::Table_definitionContext * /*ctx*/) override { }
+  virtual void exitTable_definition(SIGParser::Table_definitionContext * /*ctx*/) override { }
+
+
+  virtual void enterEveryRule(antlr4::ParserRuleContext * /*ctx*/) override { }
+  virtual void exitEveryRule(antlr4::ParserRuleContext * /*ctx*/) override { }
+  virtual void visitTerminal(antlr4::tree::TerminalNode * /*node*/) override { }
+  virtual void visitErrorNode(antlr4::tree::ErrorNode * /*node*/) override { }
+
+};
+

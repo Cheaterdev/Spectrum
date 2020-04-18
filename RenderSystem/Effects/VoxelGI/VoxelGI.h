@@ -73,12 +73,15 @@ private:
 
 	G_Buffer& buffer;
 
+//	PlacedAllocator allocator;
 	
 	HandleTable gi_rtv;
 	ReflectionEffectPixel reflection_effect;
 
 	struct EyeData:public prop_handler
 	{
+		PlacedAllocator allocator;
+
 		TextureSwapper gi_textures;
 		TextureSwapper downsampled_light;
 		Render::Texture::ptr downsampled_reflection;

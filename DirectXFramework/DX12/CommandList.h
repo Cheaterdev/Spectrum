@@ -1,9 +1,9 @@
 #pragma once
 
+enum class Layouts;
 namespace DX12
 {
 
-	typedef D3D12_VIEWPORT Viewport;
 	class PipelineState;
 	template<class T> class  PipelineStateTyped;
 	class ComputePipelineState;
@@ -62,7 +62,18 @@ namespace DX12
 
 		std::uint64_t frame_number = 0;
 		std::mutex m;
+
+		
+
 	public:
+
+		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV> srv_uav_cbv_cpu;
+		DynamicDescriptor<DescriptorHeapType::RTV> rtv_cpu;
+		DynamicDescriptor<DescriptorHeapType::DSV> dsv_cpu;
+		DynamicDescriptor<DescriptorHeapType::SAMPLER> smp_cpu;
+
+
+
 		using ptr = std::shared_ptr<FrameResources>;
 		std::uint64_t get_frame()
 		{
@@ -72,6 +83,7 @@ namespace DX12
 		{
 			std::shared_ptr<UploadBuffer> resource;
 			std::uint64_t offset;
+			std::uint64_t size;
 			std::uint64_t frame = -10;
 
 			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address();
@@ -117,7 +129,17 @@ namespace DX12
 
 	};
 
+	class Finalizer
+	{
+		std::function<void()> f;
+	public:
+		Finalizer(std::function<void()> f) :f(f) {};
 
+		~Finalizer()
+		{
+			f();
+		}
+	};
 	class FrameResourceManager
 	{
 		std::uint64_t frame_number = 0;
@@ -125,11 +147,7 @@ namespace DX12
 		std::mutex m;
 
 		FrameResources* current;
-		void end_frame()
-		{
-			std::lock_guard<std::mutex> g(m);
-			frames.pop_front();
-		}
+		std::shared_ptr<Finalizer> finalizer;
 	public:
 		std::uint64_t get_frame()
 		{
@@ -137,10 +155,16 @@ namespace DX12
 		}
 
 		std::shared_ptr<CommandList> start_frame(std::string name);
-
 		std::shared_ptr<CommandList> start_frame(std::shared_ptr<CommandList>, std::string name);
 		std::shared_ptr<CommandList> set_frame(std::shared_ptr<CommandList>, std::string name);
 
+
+		void begin_frame();
+		void propagate_frame(std::shared_ptr<CommandList>);
+		void end_frame()
+		{
+			finalizer = nullptr;
+		}
 		FrameResources& get_creator()
 		{
 			return *current;
@@ -330,6 +354,13 @@ namespace DX12
 
 
 		}*/
+		template<class T>
+		void write(UploadInfo& info, std::vector<T>& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
+		}
+
+
 		template<class T>
 		void write(UploadInfo& info, size_t& offset, std::vector<T>& arg)
 		{
@@ -531,10 +562,8 @@ namespace DX12
 		// TODO: make references?
 	
 		virtual void on_execute() override;
-		DynamicDescriptorManager descriptor_manager_shared;
-	
 
-		bool heaps_changed = false;
+			bool heaps_changed = false;
 
 		std::array<DescriptorHeap::ptr, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> heaps;
 	
@@ -544,14 +573,6 @@ namespace DX12
 		PipelineStateBase* current_pipeline;
 
 		void set_pipeline_internal(PipelineStateBase* pipeline);
-	public:
-		ptr get_sub_list();
-		FrameResources* frame_resources = nullptr;
-
-
-		GraphicsContext& get_graphics();
-		ComputeContext& get_compute();
-		CopyContext& get_copy();
 
 		void set_heap(DescriptorHeapType type, DescriptorHeap::ptr heap)
 		{
@@ -563,6 +584,19 @@ namespace DX12
 			flush_heaps();
 
 		}
+
+	public:
+		ptr get_sub_list();
+		FrameResources* frame_resources = nullptr;
+
+		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE> srv_descriptors;
+		DynamicDescriptor<DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE> smp_descriptors;
+
+		GraphicsContext& get_graphics();
+		ComputeContext& get_compute();
+		CopyContext& get_copy();
+
+	
 
 		void flush_heaps(bool force=false)
 		{
@@ -578,7 +612,11 @@ namespace DX12
 				count++;
 			}
 			if (count)
+			{
+				if (count == 2 && native_heaps[1] == native_heaps[0])
+					return;
 				m_commandList->SetDescriptorHeaps(count, native_heaps.data());
+			}
 
 		}
 		FrameResources* get_manager()
@@ -600,13 +638,24 @@ namespace DX12
 			return id;
 		}
 
+		/*
+		void set_my_heap()
+		{
+			set_heap(DescriptorHeapType::CBV_SRV_UAV, srv_descriptors.get_heap());
+			set_heap(DescriptorHeapType::SAMPLER, smp_descriptors.get_heap());
 
-
+		}*/
+		/*
+		HandleTable place_srv(UINT count)
+		{
+			return srv_descriptors.place(count);
+		}
+		*/
 		template<class T> 
 		void clear_uav(T& resource, const Handle& h, ivec4 ClearColor = ivec4(0,0,0,0))
 		{
 			flush_transitions();
-			auto handle = descriptor_manager_shared.place(h);	
+			auto handle = srv_descriptors.place(h);	
 			get_native_list()->ClearUnorderedAccessViewUint(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<UINT*>(ClearColor.data()), 0, nullptr);
 		}
 
@@ -614,7 +663,7 @@ namespace DX12
 		void clear_uav(T& resource, const Handle& h, vec4 ClearColor)
 		{
 			flush_transitions();
-			auto handle = descriptor_manager_shared.place(h);
+			auto handle = srv_descriptors.place(h);
 			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 		}
 
@@ -689,10 +738,15 @@ namespace DX12
 		CommandList& base;
 		SignatureDataSetter(CommandList& base) :base(base) {	}
 	public:
+		bool use_dynamic = true;
+		CommandList& get_base() {
+			return base;
+		}
 		virtual void set_signature(const RootSignature::ptr&) = 0;
 
 		virtual void set(UINT, const HandleTable&) = 0;
-		virtual void set(UINT, const Handle&) = 0;	
+		virtual void set(UINT, const HandleTableLight&) = 0;
+		virtual void set(UINT, const Handle&) = 0;
 		virtual void set(UINT, std::vector<Handle>&) = 0;
 
 		virtual void set_dynamic(UINT, UINT, const Handle&) = 0;
@@ -771,7 +825,7 @@ namespace DX12
 		friend class CommandList;
 		ComPtr<ID3D12GraphicsCommandList4>& list;
 
-		GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()){
+		GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()), descriptor_manager_graphics(base.srv_descriptors){
 		}
 		GraphicsContext(const GraphicsContext&) = delete;
 		GraphicsContext(GraphicsContext&&) = delete;
@@ -800,13 +854,17 @@ namespace DX12
 		std::shared_ptr<RootSignature> current_root_signature;
 		DynamicDescriptorManager descriptor_manager_graphics;
 
-	
+		DynamicDescriptor<DescriptorHeapType::RTV> rtv_descriptors;
+		DynamicDescriptor<DescriptorHeapType::DSV> dsv_descriptors;
+
 		MyVariant current_shader_data;
 
 		void begin();
 		void end();
 		void on_execute();
+	public:
 
+	
 		void set_dynamic(UINT, UINT, const Handle&)override;
 		void set_dynamic(UINT, UINT, const HandleTable&)override;
 
@@ -835,6 +893,7 @@ namespace DX12
 
 		void set(UINT, const HandleTable&)override;
 		void set(UINT, const Handle&)override;
+		void set(UINT, const HandleTableLight&)override;
 
 		void set(UINT, std::vector<Handle>&)override;
 
@@ -858,11 +917,13 @@ namespace DX12
 			this->topology = topology;
 		}
 
+
+		/*
 		DynamicDescriptorManager& get_desc_manager()
 		{
 			return descriptor_manager_graphics;
 		}	
-		
+		*/
 	
 		template<class T>
 		typename T::Signature& set_signature_typed(typename RootSignatureTyped<T>::ptr& s)
@@ -918,6 +979,7 @@ namespace DX12
 		
 
 
+		void set_layout(Layouts layout);
 
 		void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
 
@@ -934,7 +996,35 @@ namespace DX12
 		void set_rtv(const HandleTable&, Handle);
 		void set_rtv(int c, Handle rt, Handle h);
 
+		void set_rtv(const HandleTableLight&, Handle);
 
+
+/*
+		HandleTable place_uav(UINT count)
+		{
+			return uav_descriptors.place(count);
+		}
+		*/
+
+		HandleTableLight place_rtv(UINT count)
+		{
+			return rtv_descriptors.place(count);
+		}
+
+		HandleTableLight place_dsv(UINT count)
+		{
+			return dsv_descriptors.place(count);
+		}
+
+		HandleTableLight place_rtv(std::initializer_list<Handle> list)
+		{
+			return rtv_descriptors.place(list);
+		}
+
+		HandleTableLight place_dsv(std::initializer_list<Handle> list)
+		{
+			return dsv_descriptors.place(list);
+		}
 
 		void set_rtvs_internal(D3D12_CPU_DESCRIPTOR_HANDLE* t, Handle h)
 		{
@@ -1034,7 +1124,7 @@ namespace DX12
 	
 		ComPtr<ID3D12GraphicsCommandList4>& list;
 
-		ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {}
+		ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()), descriptor_manager_compute(base.srv_descriptors){}
 		ComputeContext(const ComputeContext&) = delete;
 		ComputeContext(ComputeContext&&) = delete;
 
@@ -1050,6 +1140,8 @@ namespace DX12
 
 
 		void set(UINT, const HandleTable&);
+		void set(UINT, const HandleTableLight&)override;
+
 		void set_dynamic(UINT, UINT, const Handle&);
 		void set_dynamic(UINT, UINT, const HandleTable&);
 
@@ -1073,11 +1165,11 @@ namespace DX12
 		MyVariant current_shader_data;
 
 	public:
-
+/*
 		Handle place(HandleTable table)
 		{
 			return descriptor_manager_compute.place_additional(table);
-		}
+		}*/
 		void set_constant(UINT i, UINT offset, UINT data)
 		{
 			list->SetComputeRoot32BitConstant(i, data, offset);

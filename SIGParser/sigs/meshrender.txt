@@ -1,0 +1,38 @@
+struct mesh_vertex_input
+{
+    float3 pos;
+    float3 normal;
+    float2 tc;
+    float4 tangent;
+}
+
+struct node_data
+{
+    float4x4 node_global_matrix;
+    float4x4 node_inverse_matrix;
+}
+
+
+
+[Bind = DefaultLayout::Instance1]
+struct MeshInfo
+{
+    uint texture_offset;
+    uint node_offset;
+	uint vertex_offset;
+}
+
+[Bind = DefaultLayout::Instance0]
+struct MeshData
+{
+	StructuredBuffer<mesh_vertex_input> vb;
+	StructuredBuffer<node_data> nodes;
+}
+
+[Bind = DefaultLayout::Instance2]
+struct MeshNodes
+{
+	StructuredBuffer<mesh_vertex_input> vb;
+	StructuredBuffer<node_data> nodes;
+}
+

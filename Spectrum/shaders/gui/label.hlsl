@@ -1,5 +1,10 @@
-SamplerState sampler0 : register(s0);
 Texture2D<float> tex0 : register(t0);
+
+struct Material_samplers
+{
+	SamplerState sam7ler0: register(s0);
+};
+
 
 struct PSIn {
 	float4 Position : SV_Position;
@@ -9,6 +14,8 @@ struct PSIn {
 };
 
 float4 PS(PSIn Input) : SV_Target{
+
+	return 1;
 	clip(Input.ClipDistance);
 
 	float a = tex0.Sample(sampler0, Input.TexCoord);

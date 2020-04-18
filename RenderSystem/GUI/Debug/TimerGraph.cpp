@@ -296,7 +296,7 @@ namespace GUI
 					auto &data = current_data[block];
 					auto &thread_id = thread_ids[block];
 
-					if (thread_id == 0)
+				//	if (thread_id == 0)
 					{
 						auto & 	id2 = threads[this_id];
 						if (id2 == 0)

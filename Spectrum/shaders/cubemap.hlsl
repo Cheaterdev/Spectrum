@@ -6,12 +6,8 @@ struct quad_output
 };
 
 #ifdef BUILD_FUNC_VS
-cbuffer p:register(b2)
-{
-uint face_index;
-};
 
-
+#include "autogen/SkyFace.h"
 static float2 Pos[] =
 	{	
 		float2(-1, -1),
@@ -36,23 +32,22 @@ float3x3(-1,0,0,   0,1,0,   0,0,-1)//Z-
 
 quad_output VS(uint index : SV_VERTEXID)
 {
-	
-
 	quad_output Output;
 	Output.pos = float4(Pos[index], 0.99999, 1); 
-	Output.tc = normalize(mul(mats[face_index],float3(Pos[index],1)));
+	Output.tc = normalize(mul(mats[GetSkyFace().GetFace()],float3(Pos[index],1)));
 
 	return Output;
 }
 #endif
 
 #ifdef BUILD_FUNC_PS
-Texture2D tex_transmittance:register(t0);//ground reflectance texture
-Texture2D tex_irradiance:register(t1);//precomputed skylight irradiance (E table)
-Texture3D tex_inscatter:register(t2);//precomputed inscattered light (S table)
 
-SamplerState LinearSampler: register(s0);
-SamplerState PixelSampler : register(s1);
+
+#include "autogen/SkyData.h"
+#include "autogen/FrameInfo.h"
+
+static const Camera camera = GetFrameInfo().GetCamera();
+
 
 #include "sky_common.hlsl"
 
@@ -190,11 +185,6 @@ float3 sunColor(float3 x, float t, float3 v, float3 s, float r, float mu) {
     }
 }
 
-
-cbuffer cbSkyParams : register(b1)
-{
-	float3 light_dir;
-};
 
 float3 get_sky(float3 p, float3 v, float t)
 {

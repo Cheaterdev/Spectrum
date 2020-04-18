@@ -1,8 +1,8 @@
+#include "autogen/CopyTexture.h"
+
+static const Texture2D<float4> full_tex = GetCopyTexture().GetSrcTex();
 
 
-Texture2D<float4> full_tex:register(t0);
-
-SamplerState LinearSampler: register(s0);
 
 struct quad_output
 {
@@ -35,5 +35,5 @@ quad_output VS(uint index : SV_VERTEXID)
 
 float4 PS(quad_output i):SV_TARGET0
 {
-  return float4(pow(full_tex.SampleLevel(LinearSampler, i.tc,0).rgb,1.0/2.2),1);
+  return float4(pow(full_tex.SampleLevel(linearClampSampler, i.tc,0).rgb,1.0/2.2),1);
 }

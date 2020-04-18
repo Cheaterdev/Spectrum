@@ -84,6 +84,7 @@
     <ClInclude Include="Header.h">
       <Filter>Resources\shaders</Filter>
     </ClInclude>
+    <ClInclude Include="testing.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\font\gsClip.hlsl">

@@ -43,7 +43,7 @@ public:
 
 	TextureSwapper();
 
-	void resize(DXGI_FORMAT format, ivec2 size);
+	void resize(DXGI_FORMAT format, ivec2 size, ResourceAllocator& allocator = DefaultAllocator::get());
 
 
 	void reset(Render::CommandList::ptr& list);

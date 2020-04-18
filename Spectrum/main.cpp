@@ -17,6 +17,7 @@ HRESULT device_fail()
 	return hr;
 }
 
+/*
 
 class ShadowMap
 {
@@ -60,7 +61,7 @@ public:
 
 
 
-};
+};*/
 /*
 class DeferredShading
 {
@@ -95,10 +96,43 @@ public:
 	}
 };
 */
+
+
+#include "testing.h"
+
+/*
 class PostProcessGraph;
 class PostProcessContext;
 
 using ContextPostProcess = FlowGraph::ContextOptions<PostProcessContext>;
+
+
+template<class T>
+struct PostProcessType :public FlowGraph::parameter_type
+{
+//	T type;
+
+
+	bool can_cast(parameter_type* other) override
+	{
+		PostProcessType<T>* type = dynamic_cast<PostProcessType<T>*>(other);
+
+		if (!type) return false;
+
+
+		return true;
+
+	}
+
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int)
+	{
+	//	ar& NVP(M);
+	//	ar& NVP(N);
+	}
+};
 
 
 class PostProcessContext :public FlowGraph::GraphContext
@@ -132,6 +166,17 @@ public:
 	}
 };
 
+class Life {};
+class Sky {};
+namespace PPTypes
+{
+	static PostProcessType<Life> LIFE;
+	static PostProcessType<Render::Texture> TEXTURE;
+	static PostProcessType<Sky> SKY;
+	static PostProcessType<Render::CubemapView> CUBEMAP;
+
+
+}
 
 class EditorNode :public ContextPostProcess::NodeType, public GUI::Elements::FlowGraph::VisualGraph
 {
@@ -143,7 +188,7 @@ protected:
 
 
 
-
+	/*
 	virtual FlowGraph::input::ptr register_input(FlowGraph::data_types type, std::string name)override
 	{
 		auto res = ContextPostProcess::NodeType::register_input(type, name);
@@ -158,7 +203,7 @@ protected:
 		res->immediate_send_next = false;
 		return res;
 	}
-
+	*
 	virtual void on_start(PostProcessContext* c) override
 	{
 		timer = std::make_unique<Timer>(std::move(c->mesh_context->list->start(convert(name).c_str())));
@@ -202,123 +247,6 @@ protected:
 
 
 };
-/*
-template<class... Args>
-class Params
-{
-	using type = Args...;
-};
-*/
-
-template <class ... Args> struct Inputs
-{
-	using type = std::tuple<Args...>;
-};
-template <class ... Args> struct Outputs
-{
-	using type = std::tuple<Args...>;
-};
-
-
-template <class O, class ...I> class TemplatedNode : public EditorNode
-{
-
-
-	template<int i>
-	void register_i_type()
-	{
-
-	}
-
-
-	template<int i, class P>
-	void register_i_type(P t)
-	{
-		//		std::get<i>(t);
-
-		register_input(FlowGraph::data_types::INT, "life");
-	}
-
-
-	template<int i, class P, class ...A>
-	void register_i_type(P o, A...a)
-	{
-		register_i_type<i>(o);
-		register_i_type<i + 1>(a...);
-
-
-	}
-
-
-
-	template<int i>
-	void register_o_type()
-	{
-
-	}
-
-
-	template<int i, class P>
-	void register_o_type(P t)
-	{
-		//	std::get<i>(t);
-
-		register_output(FlowGraph::data_types::INT, "life");
-	}
-
-
-	template<int i, class P, class ...A>
-	void register_o_type(P o, A...a)
-	{
-		register_o_type<i>(o);
-		register_o_type<i + 1>(a...);
-	}
-
-
-protected:
-	using result_type = typename O::type;
-	using input_type = std::tuple<I...>;
-
-	virtual result_type make_result(I...) = 0;
-
-	TemplatedNode()
-	{
-		{
-			input_type t;
-			register_i_type<0>(t);
-		}
-
-		{
-			typename O::type t;
-			register_o_type<0>(t);
-		}
-	}
-
-};
-
-class TestNode :public TemplatedNode< Inputs<int>, int >
-{
-public:
-	using ptr = std::shared_ptr<TestNode>;
-	void operator()(PostProcessContext* context)
-	{
-	}
-
-	virtual result_type make_result(int i)
-	{
-
-		return { i };
-	}
-
-
-	TestNode()
-	{
-		//register_input(FlowGraph::data_types::INT, "life");
-		//register_output(FlowGraph::data_types::INT, "life");
-		//name = "PostProcess";
-		auto res = make_result({ 2 });
-	}
-} *node;
 
 
 
@@ -328,8 +256,8 @@ public:
 	using ptr = std::shared_ptr<PostProcessGraph>;
 	PostProcessGraph()
 	{
-		register_input(FlowGraph::data_types::INT, "life");
-		register_output(FlowGraph::data_types::INT, "life");
+		register_input( "life", PPTypes::LIFE);
+		register_output( "life", PPTypes::LIFE);
 		name = "PostProcess";
 	}
 };
@@ -349,8 +277,8 @@ class AdaptationNode :public EditorNode
 public:
 	AdaptationNode()
 	{
-		register_input(FlowGraph::data_types::INT, "life");
-		register_output(FlowGraph::data_types::INT, "life");
+		register_input("life", PPTypes::LIFE);
+		register_output( "life", PPTypes::LIFE);
 		name = "Adaptation";
 	}
 };
@@ -373,7 +301,7 @@ class SkyNode :public EditorNode
 public:
 	SkyNode()
 	{
-		register_output(FlowGraph::data_types("sky"), "sky");
+		register_output("sky", PPTypes::SKY);
 		name = "Sky";
 	}
 };
@@ -395,9 +323,9 @@ class SkyRenderNode :public EditorNode
 public:
 	SkyRenderNode()
 	{
-		register_input(FlowGraph::data_types::INT, "life");
-		register_input(FlowGraph::data_types("sky"), "sky");
-		register_output(FlowGraph::data_types::INT, "life");
+		register_input("life", PPTypes::LIFE);
+		register_input( "sky", PPTypes::SKY);
+		register_output( "life", PPTypes::LIFE);
 		name = "SkyRender";
 	}
 };
@@ -414,8 +342,8 @@ public:
 	SkyEnviromentNode()
 	{
 
-		register_input(FlowGraph::data_types("sky"), "sky");
-		register_output(FlowGraph::data_types("cubemap"), "enviroment");
+		register_input( "sky", PPTypes::SKY);
+		register_output("enviroment", PPTypes::CUBEMAP);
 		name = "SkyEnv";
 	}
 };
@@ -433,8 +361,8 @@ class SMAANode :public EditorNode
 public:
 	SMAANode()
 	{
-		register_input(FlowGraph::data_types::INT, "life");
-		register_output(FlowGraph::data_types::INT, "life");
+		register_input( "life", PPTypes::LIFE);
+		register_output( "life", PPTypes::LIFE);
 		name = "SMAA";
 	}
 };
@@ -486,19 +414,7 @@ class VoxelNode :public EditorNode
 			res->add_child(check);
 
 		}
-		/*{
-			auto check = std::make_shared<GUI::Elements::check_box>();
-
-			check->docking = GUI::dock::TOP;
-			check->on_check = [this](bool v) {
-				ssgi_enabled = v;
-			};
-
-			check->set_checked(enabled);
-
-			res->add_child(check);
-		}*/
-
+	
 		auto type_selector = std::make_shared<GUI::Elements::combo_box>();
 		type_selector->add_item("Full")->on_select = [this]() {viz_type = VoxelGI::VISUALIZE_TYPE::FULL; };
 		type_selector->add_item("Reflection")->on_select = [this]() {viz_type = VoxelGI::VISUALIZE_TYPE::REFLECTION; };
@@ -516,10 +432,10 @@ class VoxelNode :public EditorNode
 public:
 	VoxelNode()
 	{
-		register_input(FlowGraph::data_types::INT, "life");
-		register_output(FlowGraph::data_types::INT, "life");
+		register_input("life", PPTypes::LIFE);
+		register_output( "life", PPTypes::LIFE);
 
-		enviroment = register_input(FlowGraph::data_types("cubemap"), "enviroment");
+		enviroment = register_input( "enviroment", PPTypes::CUBEMAP);
 		//	register_input(FlowGraph::data_types("ssgi"), "ssgi")->default_value = Render::Texture::null;
 
 		name = "VoxelGI";
@@ -611,7 +527,7 @@ class SkyRender
 
 */
 
-
+/*
 
 class GBufferDownsamplerNode :public EditorNode
 {
@@ -628,8 +544,8 @@ class GBufferDownsamplerNode :public EditorNode
 public:
 	GBufferDownsamplerNode()
 	{
-		register_input(FlowGraph::data_types::INT, "life");
-		register_output(FlowGraph::data_types::INT, "life");
+		register_input("life", PPTypes::LIFE);
+		register_output( "life", PPTypes::LIFE);
 		name = "Quality";
 	}
 };
@@ -663,11 +579,11 @@ public:
 
 	LightingNode()
 	{
-		register_input(FlowGraph::data_types::INT, "life");
-		register_output(FlowGraph::data_types::INT, "life");
+		register_input( "life", PPTypes::LIFE);
+		register_output( "life", PPTypes::LIFE);
 		name = "Lighting";
 	}
-};
+};*/
 
 /*
 
@@ -779,7 +695,7 @@ class CubeMapDrawer
 		}
 };
 */
-
+/*
 
 template <class T>
 struct ViewportSignatureDesc : public T
@@ -914,7 +830,7 @@ public:
 
 
 };
-
+*/
 
 template <class T>
 struct RaytracingDesc : public T
@@ -993,7 +909,8 @@ struct closesthit_identifier
 	//	RayGenConstantBuffer cb;
 };
 
-struct RayTracingShaders
+struct RayTracingShaders : public Events::prop_handler,
+	public Events::Runner
 {
 	Resource::ptr m_missShaderTable;
 	Resource::ptr m_hitGroupShaderTable;
@@ -1006,6 +923,8 @@ struct RayTracingShaders
 	std::vector<closesthit_identifier> hitGroupShaderIdentifiers;
 
 	ComPtr<ID3D12StateObject> m_dxrStateObject;
+	ComPtr<ID3D12StateObject> m_SharedCollection;
+	ComPtr<ID3D12StateObject> m_GlobalCollection;
 
 
 	RaytracingSignature::RootSignature::ptr signature;
@@ -1031,45 +950,63 @@ struct RayTracingShaders
 
 	ArraysHolder<InstanceData> instanceData;
 	std::vector<materials::universal_material::ptr> materials;
+	std::set<ComPtr<ID3D12StateObject>> all_objs;
+	//	Render::HandleTable gpu_textures;
 
-//	Render::HandleTable gpu_textures;
-
-	//ArraysHolder<Render::Handle> textures;
-	//std::map<materials::universal_material*, size_t> material_offsets;
+		//ArraysHolder<Render::Handle> textures;
+		//std::map<materials::universal_material*, size_t> material_offsets;
 	std::map<materials::universal_material*, Render::HandleTable> material_textures;
 
-	// Create a raytracing pipeline state object (RTPSO).
-	// An RTPSO represents a full set of shaders reachable by a DispatchRays() call,
-	// with all configuration options resolved, such as local signatures and other state.
-	void CreateRaytracingPipelineStateObject()
+	UINT get_material_id(materials::universal_material::ptr universal)
 	{
-	//	materials.resize(1);
-		// Create 7 subobjects that combine into a RTPSO:
-		// Subobjects need to be associated with DXIL exports (i.e. shaders) either by way of default or explicit associations.
-		// Default association applies to every exported shader entrypoint that doesn't have any of the same type of subobject associated with it.
-		// This simple sample utilizes default shader association except for local root signature subobject
-		// which has an explicit association specified purely for demonstration purposes.
-		// 1 - DXIL library
-		// 1 - Triangle hit group
-		// 1 - Shader config
-		// 2 - Local root signature and association
-		// 1 - Global root signature
-		// 1 - Pipeline config
-		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
+		UINT material_id = 0;
+		for (;material_id < materials.size(); material_id++)
+		{
+			if (materials[material_id] == universal)
+			{
+				break;
+			}
+		}
 
-		// Local root signature to be used in a ray gen shader.
+		if (material_id == materials.size())
+		{
+			materials.push_back(universal);
 
-		auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
-		localRootSignature->SetRootSignature(signature_local->get_native().Get());
+			universal->on_change.register_handler(this,[this]() {
 
-		// Shader association
-		auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
-		rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
+				run([this]() {
+					CreateGlobalCollection();
+					CreateRaytracingPipelineStateObject();
+					});				
+				});
+		}
+
+		return material_id;
+	}
+
+	void CreateCommonProps(CD3DX12_STATE_OBJECT_DESC &raytracingPipeline)
+	{
+
+		auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+		globalRootSignature->SetRootSignature(signature->get_native().Get());
+
+		auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+		pipelineConfig->Config(8);
+
+		auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+		UINT payloadSize = 6 * sizeof(float);   // float4 color
+		UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
+		shaderConfig->Config(payloadSize, attributeSize);
 
 
-		// DXIL library
-		// This contains the shaders and their entrypoints for the state object.
-		// Since shaders are not considered a subobject, they need to be passed in via DXIL library subobjects.
+	}
+
+	void CreateSharedCollection()
+	{
+		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_COLLECTION };
+
+
+		CreateCommonProps(raytracingPipeline);
 
 		{
 			auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
@@ -1094,66 +1031,35 @@ struct RayTracingShaders
 			hitGroup->SetHitGroupExport(L"ShadowClosestHitGroup");
 			hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
 
-		//	rootSignatureAssociation->AddExport(L"ShadowClosestHitGroup");
+			//	rootSignatureAssociation->AddExport(L"ShadowClosestHitGroup");
 		}
-
-
-
-
-
-			/*
-
-
-		{
-			auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)blob->GetBufferPointer(), blob->GetBufferSize());
-			lib->SetDXILLibrary(&libdxil);
-			// Define which shader exports to surface from the library.
-			// If no shader exports are defined for a DXIL library subobject, all shaders will be surfaced.
-			// In this sample, this could be omitted for convenience since the sample uses all shaders in the library.
-			{
-			//	lib->DefineExport(c_raygenShaderName);
-			//	lib->DefineExport(c_missShaderName);
-				lib->DefineExport(c_closestHitShaderName);
-			}
-		}
-		*/
-
 	
-		
+		TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_SharedCollection)), L"Couldn't create DirectX Raytracing state object.\n");
+	}
+
+	void CreateGlobalCollection()
+	{
+		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_COLLECTION};
+
+
+		auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
+		localRootSignature->SetRootSignature(signature_local->get_native().Get());
+
+		// Shader association
+		auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+		rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
+
+		CreateCommonProps(raytracingPipeline);
+
 		for (auto& mat : materials)
 		{
 
-		
-			/*auto handles = mat->get_texture_handles();
-			auto it = material_offsets.find(mat.get());
-			
-		/*	if (it != material_offsets.end())
-			{
-				if (it->second != -1)
-					textures.release(it->second);
-			}*/
-			/*if (handles.size())
-			{
-				const auto index = material_offsets[mat.get()] = textures.get_free(handles.size());
-
-				for (auto i = 0; i < handles.size(); i++)
-				{
-					textures[index + i] = handles[i];
-				}
-			}
-			*/
+	
 
 			auto& blob = mat->raytracing_blob;
-			// DXIL library
-			// This contains the shaders and their entrypoints for the state object.
-			// Since shaders are not considered a subobject, they need to be passed in via DXIL library subobjects.
 			auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
 			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)blob.data(), blob.size());
 			lib->SetDXILLibrary(&libdxil);
-			// Define which shader exports to surface from the library.
-			// If no shader exports are defined for a DXIL library subobject, all shaders will be surfaced.
-			// In this sample, this could be omitted for convenience since the sample uses all shaders in the library. 
 			{
 				lib->DefineExport(mat->wshader_name.c_str(),c_closestHitShaderName);
 				
@@ -1169,38 +1075,31 @@ struct RayTracingShaders
 
 			}
 
-		//	break;//
+		}
+
+		TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_GlobalCollection)), L"Couldn't create DirectX Raytracing state object.\n");
+		all_objs.insert(m_GlobalCollection);
+
+	}
+
+
+	void CreateRaytracingPipelineStateObject()
+	{
+		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
+
+		{
+			auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
+			sharedCollection->SetExistingCollection(m_SharedCollection.Get());
+		}
+
+		{
+			auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
+			sharedCollection->SetExistingCollection(m_GlobalCollection.Get());
 		}
 
 
-
-		// Shader config
-		// Defines the maximum sizes in bytes for the ray payload and attribute structure.
-		auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-		UINT payloadSize = 6 * sizeof(float);   // float4 color
-		UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
-		shaderConfig->Config(payloadSize, attributeSize);
-
-		// Local root signature and shader association
-
-
-		// This is a root signature that enables a shader to have unique arguments that come from shader tables.
-
-		// Global root signature
-		// This is a root signature that is shared across all raytracing shaders invoked during a DispatchRays() call.
-		auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-		globalRootSignature->SetRootSignature(signature->get_native().Get());
-
-		// Pipeline config
-		// Defines the maximum TraceRay() recursion depth.
-		auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-		// PERFOMANCE TIP: Set max recursion depth as low as needed 
-		// as drivers may apply optimization strategies for low recursion depths. 
-		UINT maxRecursionDepth = 8; // ~ primary rays only. 
-		pipelineConfig->Config(maxRecursionDepth);
-
 		TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)), L"Couldn't create DirectX Raytracing state object.\n");
-
+		all_objs.insert(m_dxrStateObject);
 
 		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
 		TEST(m_dxrStateObject.As(&stateObjectProperties));
@@ -1210,20 +1109,19 @@ struct RayTracingShaders
 		missShaderIdentifier = identify(stateObjectProperties->GetShaderIdentifier(c_missShaderName));
 		missShadowShaderIdentifier = identify(stateObjectProperties->GetShaderIdentifier(L"ShadowMissShader"));
 
-		hitGroupShaderIdentifiers.reserve(materials.size()*2);
+		hitGroupShaderIdentifiers.reserve(materials.size() * 2);
 
-	
-	
+
 
 		for (auto& mat : materials)
 		{
 			{
 				closesthit_identifier id;
-			id.identifier = identify(stateObjectProperties->GetShaderIdentifier((mat->wshader_name + L"HIT").c_str()));
-			id.mat_buffer = mat->get_pixel_buffer()->get_gpu_address();
-			hitGroupShaderIdentifiers.push_back(id);
+				id.identifier = identify(stateObjectProperties->GetShaderIdentifier((mat->wshader_name + L"HIT").c_str()));
+				id.mat_buffer = mat->get_pixel_buffer()?mat->get_pixel_buffer()->get_gpu_address():0;
+				hitGroupShaderIdentifiers.push_back(id);
 			}
-		
+
 			{
 				closesthit_identifier id;
 				id.identifier = identify(stateObjectProperties->GetShaderIdentifier(L"ShadowClosestHitGroup"));
@@ -1232,7 +1130,6 @@ struct RayTracingShaders
 				hitGroupShaderIdentifiers.push_back(id);
 			}
 		}
-
 
 	}
 	RayTracingShaders()
@@ -1253,6 +1150,8 @@ struct RayTracingShaders
 
 	void render(MeshRenderContext::ptr context, Render::Texture::ptr& texture, Render::RaytracingAccelerationStructure::ptr scene_as)
 	{
+
+		process_tasks();
 		auto timer = context->list->start(L"raytracing");
 
 		auto& _list = context->list;
@@ -1292,7 +1191,7 @@ struct RayTracingShaders
 		shader_data.target[0] = texture->texture_2d()->get_uav();
 		shader_data.scene = scene_as->get_gpu_address();
 		shader_data.camera = context->cam->get_const_buffer();
-		shader_data.g_buffer[0] = context->g_buffer->srv_table;
+	//	shader_data.g_buffer[0] = context->g_buffer->srv_table;
 
 		shader_data.instance_data = instanceData;
 		shader_data.vertex_buffers = buffersVertex;
@@ -1305,10 +1204,17 @@ struct RayTracingShaders
 
 		for (int i = 0; i < materials.size(); i++)
 		{
+
+			{
+
+				hitGroupShaderIdentifiers[2 * i].mat_buffer = materials[i]->get_pixel_buffer()? materials[i]->get_pixel_buffer()->get_gpu_address():0;
+			}
+
+
+
 			if (materials[i]->get_texture_handles().empty())
 				hitGroupShaderIdentifiers[2 * i].gpu.ptr = 0;
-			else
-			hitGroupShaderIdentifiers[2 * i].gpu = _list->get_compute().place(materials[i]->get_texture_srvs()).gpu;
+			else hitGroupShaderIdentifiers[2 * i].gpu = _list->srv_descriptors.place(materials[i]->get_texture_srvs()).gpu;
 		}
 		// Bind the heaps, acceleration structure and dispatch rays.
 		D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
@@ -1321,39 +1227,38 @@ struct RayTracingShaders
 };
 
 
-class triangle_drawer : public GUI::Elements::image
+class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
 {
 	main_renderer::ptr scene_renderer;
-	main_renderer::ptr gpu_scene_renderer;
-
+main_renderer::ptr gpu_scene_renderer;
 	stencil_renderer::ptr stenciler;
 
-	Render::FrameResourceManager frames;
-
+	
 
 
 
 	GUI::Elements::label::ptr info;
 
 	size_t time = 0;
-	ViewPortRenderer last_renderer;
+	//ViewPortRenderer last_renderer;
 	struct EyeData : public Events::prop_handler
 	{
 
 		using ptr = std::shared_ptr<EyeData>;
-		G_Buffer g_buffer;
+	//	G_Buffer g_buffer;
 		first_person_camera cam;
 
-		TemporalAA temporal;
+	//	TemporalAA temporal;
 
 		EyeData(Render::RootSignature::ptr sig)
 		{
-			g_buffer.init(sig);// gpu_meshes_renderer_static->my_signature);
+		//	g_buffer.init(sig);// gpu_meshes_renderer_static->my_signature);
 
-			g_buffer.size.register_change(this, [this](const ivec2& size) {
+		/*	g_buffer.size.register_change(this, [this](const ivec2& size) {
+				if(size.x>0)
 				temporal.resize(size);
 
-				});
+				});*/
 		}
 	};
 
@@ -1361,7 +1266,7 @@ class triangle_drawer : public GUI::Elements::image
 	first_person_camera cam;
 public:
 	using ptr = std::shared_ptr<triangle_drawer>;
-	PostProcessGraph::ptr render_graph;
+//	PostProcessGraph::ptr render_graph;
 
 
 	Variable<bool> enable_gi = Variable<bool>(true, "enable_gi");
@@ -1377,7 +1282,7 @@ public:
 	Scene::ptr scene;
 	Render::QueryHeap::ptr query_heap;
 	float draw_time;
-	std::shared_ptr<LightingNode> lighting;
+//	std::shared_ptr<LightingNode> lighting;
 
 	Variable<bool> realtime_debug = Variable<bool>(false, "realtime_debug");
 	MeshAssetInstance::ptr instance;
@@ -1402,30 +1307,11 @@ public:
 
 				for (auto& e : structures)
 				{
-					int material_id = 0;
 					MaterialAsset::ref& material  = mesh->overrided_material[e->material];
 					materials::universal_material::ptr universal = material->get_ptr<materials::universal_material>();
-					if (universal)
-					{
 
-				
-						for (material_id=0; material_id < shaders.materials.size(); material_id++)
-						{
-							if (shaders.materials[material_id] == universal)
-							{
-								break;
-							}
-						}
+					int material_id = shaders.get_material_id(universal);
 
-						if (material_id == shaders.materials.size())
-						{
-							shaders.materials.push_back(universal);
-						}
-							
-							//	shaders.material = universal;
-
-					//		break;
-					}
 
 					auto& instance_data = shaders.instanceData[shaders.instanceData.get_free(1)];
 
@@ -1468,11 +1354,15 @@ public:
 
 
 		scene_as = std::make_shared<RaytracingAccelerationStructure>(instances);
+		shaders.CreateSharedCollection();
+		shaders.CreateGlobalCollection();
 		shaders.CreateRaytracingPipelineStateObject();
 		//	shaders = std::make_shared<RayTracingShaders>(blobs);
 	}
 
-
+	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
+	PSSM pssm;
+	SkyRender sky;
 	triangle_drawer()
 	{
 
@@ -1489,8 +1379,12 @@ public:
 
 
 		gpu_scene_renderer = std::make_shared<main_renderer>();
-		gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
-		gpu_scene_renderer->register_renderer(gpu_meshes_renderer_dynamic = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::DYNAMIC));
+
+		gpu_scene_renderer->register_renderer( std::make_shared<mesh_renderer>(scene));
+	
+
+		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
+		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_dynamic = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::DYNAMIC));
 		cam.position = vec3(0, 5, -30);
 
 
@@ -1530,14 +1424,16 @@ public:
 
 
 		add_child(circle);
-		lighting = std::make_shared<LightingNode>();
+	//	lighting = std::make_shared<LightingNode>();
 
 		circle->on_change.register_handler(this, [this](const float2& value)
 			{
 				float2 v = value;
 				run_on_ui([this, v]() {
 					float3 dir = { v.x,sqrt(1.001 - v.length_squared()),-v.y };
-					lighting->lighting.pssm.set_position(dir);
+
+					pssm.set_position(dir);
+					//lighting->lighting.pssm.set_position(dir);
 					});
 
 			});
@@ -1586,7 +1482,7 @@ public:
 
 		auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count = 1;
+		int count = 2;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
@@ -1595,21 +1491,19 @@ public:
 				instance->override_material(0, base_mat);
 				instance->override_material(1, make_material({ 1,0,0 }, float(i) / count, float(j) / count));
 
-				instance->local_transform[3] = { i * distance,4,j * distance,1 };
+				instance->local_transform[3] = { i * distance - count* distance/2,0,j * distance- count * distance / 2,1 };
 
 				scene->add_child(instance);
 			}
 
 		{
-			MeshAsset::ptr ruins_ptr = AssetManager::get().find_by_name<MeshAsset>(L"plane.obj");
+			MeshAsset::ptr ruins_ptr = EngineAssets::plane.get_asset();
 
 
 			if (ruins_ptr)
 			{
 				MeshAssetInstance::ptr instance(new MeshAssetInstance(ruins_ptr));
-				//instance->local_transform.scaling(2);
-
-				//instance->local_transform.a42 = mn.y;
+			//	instance->local_transform = mat4x4::translation({ 0,3.8,0 });
 				scene->add_child(instance);
 			}
 
@@ -1623,13 +1517,12 @@ public:
 			if (ruins_ptr)
 			{
 				MeshAssetInstance::ptr instance(new MeshAssetInstance(ruins_ptr));
-				instance->local_transform=mat4x4::translation({ 0,3.8,0 });
+			//	instance->local_transform=mat4x4::translation({ 0,3.8,0 });
 				scene->add_child(instance);
 			}
-
+			
 		}
-
-
+		/*
 
 		render_graph.reset(new PostProcessGraph);
 		render_graph->start_child_nodes = true;
@@ -1698,7 +1591,7 @@ public:
 
 
 
-
+		*/
 
 		scene->update_transforms();
 		auto list = Device::get().get_upload_list();
@@ -1707,14 +1600,15 @@ public:
 		context->delta_time = 1;
 		context->list = list;
 
-		gpu_meshes_renderer_static->update(context);
+	//	gpu_meshes_renderer_static->update(context);
 
 
 		list->end();
 		list->execute_and_wait();
 
-		BuildAccelerationStructures();
+	//	BuildAccelerationStructures();
 
+		eyes.emplace_back(new EyeData(nullptr));
 
 
 	}
@@ -1754,12 +1648,12 @@ public:
 
 	void draw_eye(Render::CommandList::ptr _list, float dt, EyeData& data, Render::Texture::ptr target)
 	{
+		return;
 
-
-		auto& g_buffer = data.g_buffer;
+//		auto& g_buffer = data.g_buffer;
 
 		auto& cam = data.cam;
-		auto& temporal = data.temporal;
+	//	auto& temporal = data.temporal;
 		//		auto& last_renderer = data.last_renderer;
 
 
@@ -1834,11 +1728,11 @@ public:
 
 	}
 
-	void update_texture(Render::CommandList::ptr _list, float dt, const std::shared_ptr<OVRContext>& vr)
+	void update_texture(Render::CommandList::ptr list, float dt, const std::shared_ptr<OVRContext>& vr)
 	{
 
-
-		auto& list = frames.set_frame(_list, "game window");
+		/*
+		//auto& list = frames.set_frame(_list, "game window");
 		MeshRenderContext::ptr context(new MeshRenderContext());
 		context->delta_time = dt;
 		//	context->g_buffer = &g_buffer;
@@ -1891,6 +1785,7 @@ public:
 
 			eyes[i]->cam.eye_rot = vr->eyes[i].dir;
 			eyes[i]->cam.offset = vr->eyes[i].offset;
+			context->eye_context = vr_context;
 			context->eye_context->eyes[i].g_buffer = &eyes[i]->g_buffer;
 			context->eye_context->eyes[i].cam = &eyes[i]->cam;
 
@@ -1959,7 +1854,7 @@ public:
 				});
 		}
 
-
+		
 		PostProcessContext render_context(scene);
 		render_context.g_buffer = &eyes[0]->g_buffer;
 		render_context.mesh_context = context;
@@ -1971,6 +1866,7 @@ public:
 		render_graph->start(&render_context);
 		render_graph->get_input(0)->put(0);
 		render_context.wait();
+		
 
 		stenciler->draw_after(context, eyes[0]->g_buffer);
 
@@ -2004,7 +1900,166 @@ public:
 		list->flush_transitions();
 
 		shaders.render(context, texture.texture, scene_as);
+		*/
+	}
 
+
+
+	void generate(FrameGraph& graph)
+	{
+		vr_context->eyes.resize(1);
+		vr_context->eyes[0].dir = quat();
+
+		vr_context->eyes[0].offset = vec3(0, 0, 0);
+
+		ivec2 size = texture.texture->get_size();
+		struct pass_data
+		{
+
+		};
+		graph.builder.pass_texture("ResultTexture", texture.texture);
+		graph.frame_size = size;
+		graph.scene = scene.get();
+		graph.renderer = gpu_scene_renderer.get();
+		graph.cam = &cam;
+
+
+		cam.update({ 0,0 });
+
+
+		for (int i = 0; i < eyes.size(); i++)
+		{
+			eyes[i]->cam = cam;
+			eyes[i]->cam.update({ 0,0 });
+		}
+
+
+		/*
+		graph.add_pass<pass_data>("UPDATE",[](pass_data& data, TaskBuilder& builder) {
+			//	data.o_texture = builder.read_texture("swapchain");
+
+			}, [this](pass_data& data, FrameContext& _context) {
+
+				auto& command_list = _context.get_list();
+
+					MeshRenderContext::ptr context_gbuffer(new MeshRenderContext());
+					context_gbuffer->list = command_list;
+
+			});
+		*/
+	{
+			struct GBufferData
+			{
+				ResourceHandler* albedo;
+				ResourceHandler* normals;
+				ResourceHandler* depth;
+				ResourceHandler* specular;
+				ResourceHandler* speed;
+
+				ResourceHandler* hiz;
+				ResourceHandler* hiz_uav;
+
+			};
+
+			graph.add_pass<GBufferData>("GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
+				data.albedo = builder.create_texture("GBuffer_Albedo", size, 1,DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
+				data.normals = builder.create_texture("GBuffer_Normals", size,1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
+				data.depth = builder.create_texture("GBuffer_Depth", size, 1,DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
+				data.specular = builder.create_texture("GBuffer_Specular", size,1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
+				data.speed = builder.create_texture("GBuffer_Speed", size, 1,DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT, ResourceFlags::RenderTarget);
+
+
+				data.hiz = builder.create_texture("GBuffer_HiZ", size/8,1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
+				data.hiz_uav = builder.create_texture("GBuffer_HiZ_UAV", size / 8,1, DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, ResourceFlags::UnorderedAccess);
+
+				}, [this](GBufferData& data, FrameContext& _context) {
+
+					auto& command_list = _context.get_list();
+				
+					//std::this_thread::sleep_for(1ms);
+				//	gpu_scene_renderer->render(context_gbuffer, scene);
+					MeshRenderContext::ptr context(new MeshRenderContext());
+
+
+					context->current_time = time;
+			//		context->sky_dir = lighting->lighting.pssm.get_position();
+					context->priority = TaskPriority::HIGH;
+					context->list = command_list;
+					context->eye_context = vr_context;
+
+					context->cam = &eyes[0]->cam;
+
+
+
+	//				gpu_meshes_renderer_static->update(context);
+		//			gpu_meshes_renderer_dynamic->update(context);
+
+					GBuffer gbuffer;
+					gbuffer.albedo = _context.get_texture(data.albedo);
+					gbuffer.normals = _context.get_texture(data.normals);
+					gbuffer.depth = _context.get_texture(data.depth);
+					gbuffer.specular = _context.get_texture(data.specular);
+					gbuffer.speed = _context.get_texture(data.speed);
+
+					gbuffer.rtv_table = RenderTargetTable(context->list->get_graphics() ,{ gbuffer.albedo, gbuffer.normals, gbuffer.specular, gbuffer.speed }, gbuffer.depth);
+
+					gbuffer.HalfBuffer.hiZ_depth = _context.get_texture(data.hiz);
+					gbuffer.HalfBuffer.hiZ_table = RenderTargetTable(context->list->get_graphics() ,{  }, gbuffer.HalfBuffer.hiZ_depth);
+					gbuffer.HalfBuffer.hiZ_depth_uav = _context.get_texture(data.hiz_uav);
+
+					context->g_buffer = &gbuffer;
+
+					gbuffer.rtv_table.set(context,true, true);
+					gbuffer.rtv_table.set_window(context->list->get_graphics());
+
+					gpu_scene_renderer->render(context, scene);
+
+				//	stenciler->render(context, scene);
+
+				//	MipMapGenerator::get().copy_texture_2d_slow(command_list->get_graphics(), texture.texture, gbuffer.albedo);
+				});
+		}
+
+		stenciler->generate(graph);
+		pssm.generate(graph);
+		sky.generate(graph);
+
+		stenciler->generate_after(graph);
+
+		/*graph.add_pass<pass_data>("RAYTRACE",[](pass_data& data, TaskBuilder& builder) {
+		//	data.o_texture = builder.read_texture("swapchain");
+
+			}, [this](pass_data& data, FrameContext& _context) {
+
+				auto& command_list = _context.get_list();
+				MeshRenderContext::ptr context(new MeshRenderContext());
+
+				context->current_time = time;
+			//	context->sky_dir = lighting->lighting.pssm.get_position();
+				context->priority = TaskPriority::HIGH;
+				context->list = command_list;
+				context->eye_context = vr_context;
+
+		
+
+
+				for (int i = 0; i < eyes.size(); i++)
+				{
+					eyes[i]->cam = cam;
+
+				//	eyes[i]->cam.eye_rot = vr->eyes[i].dir;
+				//	eyes[i]->cam.offset = vr->eyes[i].offset;
+					context->eye_context->eyes[i].cam = &eyes[i]->cam;
+					eyes[i]->cam.update({0,0});
+
+					context->cam = &eyes[i]->cam;
+				}
+
+				shaders.render(context, texture.texture, scene_as);
+			});
+			
+			*/
+	
 	}
 
 	virtual void draw(Render::context& t) override
@@ -2026,7 +2081,7 @@ public:
 		//		texture = eyes[0]->g_buffer.result_tex.first();
 
 		//	Handle h = t.command_list->get_graphics().get_desc_manager().get(7, 0);
-		float dt = t.delta_time;
+/*		float dt = t.delta_time;
 		auto list = t.command_list->get_sub_list();
 
 		auto v = t.ovr_context;
@@ -2037,7 +2092,7 @@ public:
 			list->transition(texture.texture, Render::ResourceState::RENDER_TARGET);
 			list->clear_rtv(texture.texture->texture_2d()->get_rtv());
 
-			update_texture(list, dt, v);
+		//	update_texture(list, dt, v);
 			//	texture = eyes[0]->g_buffer.result_tex.first();
 
 		//	h.place(eyes[0]->g_buffer.result_tex.first()->texture_2d()->get_static_srv());  //;'///////////////////////////////////////////////////////////
@@ -2050,7 +2105,7 @@ public:
 	//		h.place(voxel_renderer->downsampled_light->texture_2d()->get_static_srv());
 		//	h.place(hdr.tex_luma->texture_2d()->get_static_srv());
 			});
-
+			*/
 		//	texture = eyes[0]->g_buffer.result_tex.first();
 
 	}
@@ -2071,8 +2126,8 @@ public:
 
 		//	g_buffer.size = { r.w, r.h };
 		cam.set_projection_params(pi / 4, float(r.w) / r.h, 1, 1500);
-		for (auto& e : eyes)
-			e->g_buffer.size = { r.w,r.h };
+	//	for (auto& e : eyes)
+//			e->g_buffer.size = { r.w,r.h };
 	}
 
 
@@ -2164,8 +2219,8 @@ protected:
 			command_list->get_graphics().set_rtv(1, swap_chain->get_current_frame()->texture_2d()->get_rtv(), Render::Handle());
 			command_list->get_graphics().set_viewports({ swap_chain->get_current_frame()->texture_2d()->get_viewport() });
 
-			std::shared_ptr<Render::CommandList> label_list;
-			Render::context render_context(command_list, label_list, vr_context);
+
+			Render::context render_context(command_list, vr_context);
 			render_context.delta_time = static_cast<float>(main_timer.tick());
 
 			render_context.ovr_context->eyes.resize(1);
@@ -2177,7 +2232,7 @@ protected:
 
 			{
 				auto timer = command_list->start(L"draw ui");
-				draw_ui(render_context);
+				//draw_ui(render_context);
 			}
 			command_list->transition(swap_chain->get_current_frame(), Render::ResourceState::PRESENT);
 			command_list->end();
@@ -2615,6 +2670,9 @@ public:
 	}
 };
 #endif
+
+
+
 class WindowRender : public UIWindow
 {
 	count_meter fps;
@@ -2638,7 +2696,7 @@ public:
 		Profiler::create();
 		EVENT("Start WindowRender");
 
-		EngineAssets::brdf.get_asset();
+	//	EngineAssets::brdf.get_asset();
 
 		GUI::Elements::image::ptr back(new GUI::Elements::image);
 		back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));
@@ -2745,76 +2803,10 @@ public:
 					instance_info->docking = GUI::dock::RIGHT;
 					label_tiles->margin = { 20,0,0,0 };
 					add_child(bar);
-					/*
-
-					if (false&&drawer)
-					{
-						drawer->gpu_meshes_renderer->statistic.enabled = true;
-						{
-							auto param = std::make_shared<GUI::Elements::label>();
-							param->docking = GUI::dock::RIGHT;
-							param->margin = { 20,0,0,0 };
-
-						bar->add_child(param);
-
-						auto f = param.get();
-						drawer->gpu_meshes_renderer->statistic.frustum_visible_commands.register_handler(f, [f](const int &v) {
-							f->text = std::to_string(v);
-						});
-
-						}
-
-
-						{
-							auto param = std::make_shared<GUI::Elements::label>();
-							param->docking = GUI::dock::RIGHT;
-							param->margin = { 20,0,0,0 };
-
-							bar->add_child(param);
-
-							auto f = param.get();
-							drawer->gpu_meshes_renderer->statistic.second_stage_test.register_handler(f, [f](const int &v) {
-								f->text = std::to_string(v);
-							});
-
-						}
-
-
-						{
-							auto param = std::make_shared<GUI::Elements::label>();
-							param->docking = GUI::dock::LEFT;
-							param->margin = { 20,0,0,0 };
-
-							bar->add_child(param);
-
-							auto f = param.get();
-							drawer->gpu_meshes_renderer->statistic.draw_infos.register_handler(f, [f](const gpu_cached_renderer::DrawInfo &v) {
-								std::string result;
-								for (auto s : v)
-								{
-									result += std::to_string(s.first)+" ";
-									for (auto di :s.second)
-									{
-										result += std::to_string(di.first) + ":"+ std::to_string(di.second)+"| " ;
-
-									}
-
-									result +=  "|| ";
-								}
-								f->text = result;
-							});
-
-						}
-
-
-
-					}*/
 				}
-				//Log::get()<<Log::LEVEL_ERROR << "Не удается найти указанный файл" << Log::endl;
+
 				auto dock = d->get_dock(GUI::dock::LEFT);
-				//            GUI::Elements::FlowGraph::manager::ptr m(new GUI::Elements::FlowGraph::manager());
 				auto m = GUI::Elements::FlowGraph::manager::get().get_ptr<GUI::Elements::FlowGraph::manager>();
-				//    dock->get_tabs()->add_button(m->add_graph(g));
 				dock->get_tabs()->add_button(m->create_parameter_view());
 				add_child(m);
 				dock->size = { 400, 400 };
@@ -2833,23 +2825,19 @@ public:
 					add_child(wnd);
 					GUI::Elements::dock_base::ptr dock(new GUI::Elements::dock_base);
 					wnd->add_child(dock);
-					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(drawer->render_graph));
+//					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(drawer->render_graph));
 					wnd->pos = { 200, 200 };
 					wnd->size = { 300, 300 };
 				}
 
 			}
 		}
-		/*        properties = PropertyWindow::ptr(new PropertyWindow());
-				properties->pos = { 70, 70 };
-				properties->size = { 170, 170 };
-				properties->docking = GUI::dock::NONE;
-				area->add_child(GUI::Elements::window::ptr(properties));*/
+	
 	}
 
 	UINT64 frame_counter = 0;
 
-	virtual void draw_ui(Render::context& c) override
+	 void draw_ui(Render::context& c) 
 	{
 		{
 			auto timer = c.command_list->start(L"read timings");
@@ -2860,7 +2848,7 @@ public:
 				});
 		}
 
-		user_interface::draw_ui(c);
+	//	user_interface::draw_ui(c);
 
 	}
 	virtual void render() override
@@ -2886,7 +2874,7 @@ public:
 
 		if (fps.tick())
 		{
-			label_fps->text = std::to_string(fps.get());
+			label_fps->text = std::to_string(fps.get()) + " "  + std::to_string(Device::get().get_vram());
 
 		}
 
@@ -2901,12 +2889,465 @@ public:
 };
 
 
+
+class FrameGraphRender : public Window, public GUI::user_interface
+{
+	Render::SwapChain::ptr swap_chain;
+
+	tick_timer main_timer;
+	ivec2 new_size;
+
+	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
+	std::future<void> task_future;
+
+	FrameGraph graph;
+
+	count_meter fps;
+
+	GUI::Elements::label::ptr label_fps;
+	GUI::Elements::label::ptr label_tiles;
+	GUI::Elements::label::ptr instance_info;
+
+	std::shared_ptr<triangle_drawer> drawer;
+
+	GUI::base::ptr area;
+	mouse::ptr pMouse;
+
+
+
+public:
+	void on_destroy() override
+	{
+		Application::get().shutdown();
+	}
+
+	virtual	void render()
+	{
+	//	auto& timer = Profiler::get().start(L"render");
+		Profiler::get().on_frame(frame_counter++);
+
+		GUI::user_interface::size = new_size;
+	if (fps.tick())
+		{
+			label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram());
+		}
+
+
+		process_ui(main_timer.tick());
+		{
+			auto& timer = Profiler::get().start(L"Wait next");
+			swap_chain->start_next();
+		}
+		setup_graph();
+		graph.render();
+
+		swap_chain->present(Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal());
+		{
+
+			auto& timer = Profiler::get().start(L"reset");
+
+			graph.reset();
+		}
+
+
+	
+
+
+		if (Application::get().is_alive())
+		{
+			auto ptr = get_ptr();
+			task_future = scheduler::get().enqueue([ptr, this]() {
+				render();
+				}, std::chrono::steady_clock::now());
+		}
+	}
+
+
+
+	void setup_graph()
+	{
+
+	
+		struct pass_data
+		{
+			ResourceHandler* o_texture;
+		};
+
+
+		struct pass_no
+		{
+
+		};
+
+		graph.start_new_frame();
+
+		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame());
+
+	
+		create_graph(graph);
+	
+
+		auto ptr = get_ptr();
+
+		graph.add_pass<pass_no>("PROFILER",[](pass_no& data, TaskBuilder& builder) {
+			}, [this,ptr](pass_no& data, FrameContext& context) {
+				{
+				
+					Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
+						run_on_ui([this,ptr]() {	Profiler::get().update(); });
+
+						});
+				}
+			});
+		
+		
+		graph.setup();
+		graph.compile(swap_chain->m_frameIndex);
+
+	}
+
+	FrameGraphRender()
+	{
+		Window::input_handler = this;
+		DX11::swap_chain_desc desc;
+		desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		desc.fullscreen = false;
+		desc.stereo = false;
+		desc.window = this;
+		swap_chain = Render::Device::get().create_swap_chain(desc);
+		/*
+		auto texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));;
+
+
+		DescriptorHeap::ptr heap = std::make_shared<DescriptorHeap>(32768,DescriptorHeapType::CBV_SRV_UAV);
+		DescriptorHeap::ptr gpu_heap = std::make_shared<DescriptorHeap>(32768, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
+		DescriptorHeap::ptr cpu_heap = std::make_shared<DescriptorHeap>(32768, DescriptorHeapType::CBV_SRV_UAV);
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.Shader4ComponentMapping = get_default_mapping(texture->get_desc().Format);
+		srvDesc.Format = to_srv(texture->get_desc().Format);
+
+
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = texture->get_desc().MipLevels;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+
+		auto res = texture->get_native().Get();
+
+
+
+		auto device = Device::get().get_native_device();
+		{
+			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
+			auto heap_view = heap->get_table_view(0, 32768);
+
+		
+
+			for (int i = 0; i < 32768; i++)
+			{
+				//texture->texture_2d()->place_srv(heap_view[i]);
+
+		//		auto h = heap_view[i];
+				device->CreateShaderResourceView(res, &srvDesc, heap->get_handle(i));
+
+
+			}
+			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
+
+			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
+
+			Log::get() << "CreateShaderResourceView CPU: " <<  elapsed_seconds.count() / 32768 << "ns"<<Log::endl;
+		}
+
+		{
+			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
+			auto heap_view = gpu_heap->get_table_view(0, 32768);
+			for (int i = 0; i < 32768; i++)
+			{
+			//	texture->texture_2d()->place_srv(heap_view[i]);
+
+			//	auto h = heap_view[i];
+				device->CreateShaderResourceView(res, &srvDesc, gpu_heap->get_handle(i));
+
+			}
+			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
+
+			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
+			Log::get() << "CreateShaderResourceView GPU: "  << elapsed_seconds.count() / 32768 << "ns" << Log::endl;
+		}
+
+
+		{
+			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
+			auto heap_view1 = heap->get_table_view(0, 32768);
+
+			auto heap_view2 = gpu_heap->get_table_view(0, 32768);
+			for (int i = 0; i < 32768; i++)
+			{
+				device->CopyDescriptorsSimple(1, heap_view2[i].cpu, heap_view1[i].cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
+
+			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
+			Log::get() << "CopyDescriptorsSimple from CPU to GPU 1 by 1: "  << elapsed_seconds.count() / 32768 << "ns" << Log::endl;
+		}
+
+		{
+			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
+			auto heap_view1 = heap->get_table_view(0, 32768);
+
+			auto heap_view2 = cpu_heap->get_table_view(0, 32768);
+			for (int i = 0; i < 32768; i++)
+			{
+				device->CopyDescriptorsSimple(1, heap_view2[i].cpu, heap_view1[i].cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			}
+			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
+
+			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
+			Log::get() << "CopyDescriptorsSimple from CPU to CPU 1 by 1: " << elapsed_seconds.count() / 32768 << "ns" << Log::endl;
+		}
+
+
+
+		{
+			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
+			auto heap_view1 = heap->get_table_view(0, 32768);
+
+			auto heap_view2 = gpu_heap->get_table_view(0, 32768);
+			device->CopyDescriptorsSimple(32768, heap_view2[0].cpu, heap_view1[0].cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
+			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
+			Log::get() << "CopyDescriptorsSimple from all CPU to GPU: " << elapsed_seconds.count() /32768<< "ns" << Log::endl;
+		}
+
+		{
+			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
+			auto heap_view1 = heap->get_table_view(0, 32768);
+
+			auto heap_view2 = cpu_heap->get_table_view(0, 32768);
+			device->CopyDescriptorsSimple(32768, heap_view2[0].cpu, heap_view1[0].cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
+			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
+			Log::get() << "CopyDescriptorsSimple from all CPU to CPU: " << elapsed_seconds.count() / 32768 << "ns" << Log::endl;
+
+
+		}*/
+	/*	auto shader = Render::pixel_shader::get_resource({ "shaders\\autogen_test.hlsl", "PS", 0, {} });
+		Slots::Bobo bobo;
+		Slots::Bobo2 bobo2;
+		Slots::Bobo3 bobo3;
+
+		bobo.GetB() = 5;
+		bobo.GetRw();
+
+		get_Signature(Layouts::FrameLayout);
+	*/
+		set_capture = [this](bool v)
+		{
+			if (v)
+				SetCapture(get_hwnd());
+			else
+				ReleaseCapture();
+		};
+
+
+
+	//	EngineAssets::brdf.get_asset();
+
+	
+		//  GUI::Elements::check_box::ptr butt(new GUI::Elements::check_box());
+		//   butt->docking = GUI::dock::FILL;
+		//   ui->add_child(butt);
+
+		on_resize(get_size());
+	
+		{
+			GUI::Elements::image::ptr back(new GUI::Elements::image);
+			back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));
+			back->texture.tiled = true;
+			back->width_size = GUI::size_type::MATCH_PARENT;
+			back->height_size = GUI::size_type::MATCH_PARENT;
+			add_child(back);
+		}
+		
+		EVENT("Start UI");
+// 		if (false)
+		{
+			area.reset(new GUI::base());
+			area->docking = GUI::dock::FILL;
+			add_child(area);
+			GUI::Elements::dock_base::ptr  d = std::make_shared<GUI::Elements::dock_base>();
+			d->docking = GUI::dock::FILL;
+			{
+				EVENT("Start Drawer");
+				drawer.reset(new triangle_drawer());
+				drawer->docking = GUI::dock::FILL;
+		//		area->add_child(drawer);
+				d->get_tabs()->add_page("Game", drawer);
+				EVENT("End Drawer");
+			}
+			 {
+				GUI::Elements::list_box::ptr l(new GUI::Elements::list_box());
+				auto& dock = d->get_dock(GUI::dock::BOTTOM);
+				dock->size = { 100, 100 };
+				area->add_child(d);
+				dock->get_tabs()->add_page("TaskViewer", std::make_shared<GUI::Elements::Debug::TaskViewer>());
+				//			dock->get_tabs()->add_page("output", std::make_shared<GUI::Elements::Debug::OutputWindow>());
+							//       GUI::Elements::tree::ptr t(new GUI::Elements::tree());
+			//                    t->init(drawer->scene.get());
+			//                    dock->get_tabs()->add_page("Scene", t);
+				{
+					//	GUI::Elements::Debug::TimerWatcher::ptr t(new GUI::Elements::Debug::TimerWatcher());
+					//	t->init(&Profiler::get());
+					//	dock->get_tabs()->add_page("Profiler", t);
+
+					GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
+
+					dock->get_tabs()->add_page("Graph", t2);
+
+
+				}
+			}
+	
+		 {
+				 {
+					GUI::Elements::menu_strip::ptr menu(new GUI::Elements::menu_strip());
+					auto file = menu->add_item("File")->get_menu();
+					auto edit = menu->add_item("Edit")->get_menu();
+					auto help = menu->add_item("Help");// ->get_menu();
+					file->add_item("New");
+					file->add_item("Open")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+					{
+						add_task([this]()
+							{
+								try
+								{
+									auto f = FileSystem::get().get_file("scene.dat")->load_all();
+
+									Scene::ptr scene(new Scene());
+
+									Serializer::deserialize(f, *scene);
+									//	drawer->scene = scene;
+								}
+								catch (std::exception e)
+								{
+									message_box("error", "cant open", [](bool) {});
+								}
+
+
+							});
+					};
+					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+					{
+						//	auto data = Serializer::serialize(*drawer->scene);
+						//	FileSystem::get().save_data(L"scene.dat", data);
+					};
+					file->add_item("Quit")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+					{
+						on_destroy();
+					};
+					auto add = edit->add_item("Add smth")->get_menu();
+					add->add_item("Mesh");
+					add->add_item("Material");
+					add->add_item("Sound");
+					//->get_menu()->add_item("12454");
+					add_child(menu);
+				}
+				 {
+					GUI::Elements::status_bar::ptr bar(new GUI::Elements::status_bar());
+					label_fps = GUI::Elements::label::ptr(new GUI::Elements::label());
+					instance_info = GUI::Elements::label::ptr(new GUI::Elements::label());
+					label_tiles = GUI::Elements::label::ptr(new GUI::Elements::label());
+
+					bar->add_child(label_fps);
+					bar->add_child(label_tiles);
+
+					bar->add_child(instance_info);
+					instance_info->docking = GUI::dock::RIGHT;
+					label_tiles->margin = { 20,0,0,0 };
+					add_child(bar);
+				}
+
+				auto dock = d->get_dock(GUI::dock::LEFT);
+				//auto m = GUI::Elements::FlowGraph::manager::get().get_ptr<GUI::Elements::FlowGraph::manager>();
+				//dock->get_tabs()->add_button(m->create_parameter_view());
+			//	add_child(m);
+				dock->size = { 400, 400 };
+			 {
+					EVENT("Start Asset Explorer");
+					auto dock = d->get_dock(GUI::dock::RIGHT);
+					GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
+					dock->get_tabs()->add_page("Asset Explorer", cont);
+					dock->size = { 400, 400 };
+					EVENT("End Asset Explorer");
+				}
+
+
+				 {
+					GUI::Elements::window::ptr wnd(new GUI::Elements::window);
+					add_child(wnd);
+					GUI::Elements::dock_base::ptr dock(new GUI::Elements::dock_base);
+					wnd->add_child(dock);
+					MaterialGraph::ptr graph(new MaterialGraph);
+
+
+					{
+
+						auto value_node = std::make_shared<VectorNode>(vec4(1,0,0, 1));
+						graph->register_node(value_node);
+						value_node->get_output(0)->link(graph->get_base_color());
+					}
+
+
+					{
+						auto value_node = std::make_shared<ScalarNode>(0.4);
+						graph->register_node(value_node);
+						value_node->get_output(0)->link(graph->get_roughness());
+					}
+
+					{
+						auto value_node = std::make_shared<ScalarNode>(1);
+						graph->register_node(value_node);
+						value_node->get_output(0)->link(graph->get_mettalic());
+
+					}
+					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(graph));
+					wnd->pos = { 200, 200 };
+					wnd->size = { 300, 300 };
+				}
+
+			}
+		}
+	}
+
+	virtual ~FrameGraphRender()
+	{
+
+		if (task_future.valid())
+			task_future.wait();
+	}
+	void on_resize(vec2 size) override
+	{
+		new_size = size;
+	}
+
+
+	virtual void on_size_changed(const vec2& r) override
+	{
+		user_interface::on_size_changed(r);
+		if (swap_chain)	swap_chain->resize(r);
+	}
+};
 class RenderApplication : public Application
 {
 
 	friend class Singleton<Application>;
 
-	std::shared_ptr<WindowRender> main_window;
+
+	std::shared_ptr<FrameGraphRender> main_window;
+	//std::shared_ptr<WindowRender> main_window;
 #ifdef OCULUS_SUPPORT
 	std::shared_ptr<OVRRender> ovr;
 #endif
@@ -2928,8 +3369,9 @@ protected:
 #ifdef OCULUS_SUPPORT
 		//ovr = std::make_shared<OVRRender>();
 #endif
-
-		main_window = std::make_shared<WindowRender>();
+		init_signatures();
+	//	main_window = std::make_shared<WindowRender>();
+		main_window = std::make_shared<FrameGraphRender>();
 
 
 		create_task([this]() {

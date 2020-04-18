@@ -2,22 +2,26 @@ class G_Buffer;
 class LightSystem;
 class SSGI;
 class SkyRender;
-
+class SceneRenderWorkflow;
 namespace Render
 {
 	struct OVRContext;
 }
 class AssetRenderer : public Singleton<AssetRenderer>
 {
+	FrameGraph graph;
+    UINT frame = 0;
+
         friend class Singleton<AssetRenderer>;
         main_renderer::ptr scene_renderer;
         Render::FrameResourceManager frames;
 
         camera cam;
         mesh_renderer::ptr meshes_renderer;
+        std::shared_ptr<SceneRenderWorkflow> rendering;
 
-        std::shared_ptr<G_Buffer> gbuffer;
-        std::shared_ptr<LightSystem> lighting;
+    //    std::shared_ptr<G_Buffer> gbuffer;
+   //     std::shared_ptr<LightSystem> lighting;
         Render::PipelineState::ptr mesh_render_state;
 
         MeshAssetInstance::ptr material_tester;

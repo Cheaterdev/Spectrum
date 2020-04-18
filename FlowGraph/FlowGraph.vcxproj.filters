@@ -10,6 +10,7 @@
       <Filter>Flow</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp" />
+    <ClCompile Include="FrameGraph.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FlowGraph.h">
@@ -22,5 +23,6 @@
     <ClInclude Include="FlowSystem.h">
       <Filter>Flow</Filter>
     </ClInclude>
+    <ClInclude Include="FrameGraph.h" />
   </ItemGroup>
 </Project>

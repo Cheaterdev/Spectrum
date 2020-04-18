@@ -11,34 +11,32 @@
 // Author:  James Stanard
 //
 
-#define RootSig \
-	"RootFlags(0), " \
-	"RootConstants(b0, num32BitConstants = 4), " \
-	"DescriptorTable(SRV(t0, numDescriptors = 1))," \
-	"DescriptorTable(UAV(u0, numDescriptors = 4))," \
-	"StaticSampler(s0," \
-		"addressU = TEXTURE_ADDRESS_CLAMP," \
-		"addressV = TEXTURE_ADDRESS_CLAMP," \
-		"addressW = TEXTURE_ADDRESS_CLAMP," \
-		"filter = FILTER_MIN_MAG_MIP_LINEAR)"
+#include "autogen/MipMapping.h"
 
 #ifndef NON_POWER_OF_TWO
 #define NON_POWER_OF_TWO 0
 #endif
 
+static const RWTexture2D<float4> OutMip1 = GetMipMapping().GetOutMip(0);
+static const RWTexture2D<float4> OutMip2 = GetMipMapping().GetOutMip(1);
+static const RWTexture2D<float4> OutMip3 = GetMipMapping().GetOutMip(2);
+static const RWTexture2D<float4> OutMip4 = GetMipMapping().GetOutMip(3);
+static const  Texture2D<float4> SrcMip = GetMipMapping().GetSrcMip();
+
+static const   SamplerState BilinearClamp = linearClampSampler;
+/*
 RWTexture2D<float4> OutMip1 : register(u0);
 RWTexture2D<float4> OutMip2 : register(u1);
 RWTexture2D<float4> OutMip3 : register(u2);
 RWTexture2D<float4> OutMip4 : register(u3);
 Texture2D<float4> SrcMip : register(t0);
-SamplerState BilinearClamp : register(s0);
+SamplerState BilinearClamp : register(s0);*/
 
-cbuffer CB : register(b0)
-{
-    uint SrcMipLevel;	// Texture level of source mip
-    uint NumMipLevels;	// Number of OutMips to write: [1, 4]
-    float2 TexelSize;	// 1.0 / OutMip1.Dimensions
-}
+
+static const  uint SrcMipLevel = GetMipMapping().GetSrcMipLevel();	// Texture level of source mip
+static const  uint NumMipLevels = GetMipMapping().GetNumMipLevels();	// Number of OutMips to write: [1, 4]
+static const  float2 TexelSize = GetMipMapping().GetTexelSize();	// 1.0 / OutMip1.Dimensions
+
 
 // The reason for separating channels is to reduce bank conflicts in the
 // local data memory controller.  A large stride will cause more threads

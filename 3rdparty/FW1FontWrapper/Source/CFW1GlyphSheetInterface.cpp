@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "CFW1GlyphSheet.h"
+#include "CFW1GlyphRenderStates.h"
 
 
 namespace FW1FontWrapper
@@ -69,8 +70,20 @@ namespace FW1FontWrapper
 // Set sheet shader resources
     HRESULT STDMETHODCALLTYPE CFW1GlyphSheet::BindSheet(Render::CommandList::ptr& list, UINT Flags)
     {
-        list->get_graphics().get_desc_manager().set(1, 0,  geometry_buffer_table);
-        list->get_graphics().get_desc_manager().set(2,0, m_pTexture->texture_2d()->get_static_srv());
+
+        Slots::FontRendering rendering;
+
+        rendering.GetPositions() = geometry_buffer_table[0];
+		rendering.GetTex0() = m_pTexture->texture_2d()->get_static_srv();
+
+        rendering.set(list->get_graphics());
+
+     //   list->get_graphics().get_shader_data<FontSig>().geometry_data = geometry_buffer_table;
+	//	list->get_graphics().get_shader_data<FontSig>().pixel_data = m_pTexture->texture_2d()->get_static_srv();
+
+
+      //  list->get_graphics().get_desc_manager().set(1, 0,  geometry_buffer_table);
+     //   list->get_graphics().get_desc_manager().set(2,0, m_pTexture->texture_2d()->get_static_srv());
 //        pContext.get_shader_state<DX11::pixel_shader>().shader_resource_state[0] = m_pTexture->get_shader_view();
         //    if ((Flags & FW1_NOGEOMETRYSHADER) == 0 && m_hardwareCoordBuffer)
         //      pContext.get_shader_state<DX11::geometry_shader>().shader_resource_state[0] = m_pCoordBuffer->get_shader_view();

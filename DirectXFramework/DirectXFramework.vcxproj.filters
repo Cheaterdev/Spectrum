@@ -193,6 +193,9 @@
     <ClInclude Include="DX12\RayTracingAS.h">
       <Filter>DX12</Filter>
     </ClInclude>
+    <ClInclude Include="DX12\Descriptors.h">
+      <Filter>DX12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -355,6 +358,12 @@
       <Filter>DX12</Filter>
     </ClCompile>
     <ClCompile Include="DX12\SignatureCreator.cpp">
+      <Filter>DX12</Filter>
+    </ClCompile>
+    <ClCompile Include="Resource\Views.cpp">
+      <Filter>DX12</Filter>
+    </ClCompile>
+    <ClCompile Include="DX12\Descriptors.cpp">
       <Filter>DX12</Filter>
     </ClCompile>
   </ItemGroup>

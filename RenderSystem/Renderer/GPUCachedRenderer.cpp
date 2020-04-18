@@ -5,8 +5,8 @@ void gpu_cached_renderer::init_pipeline(global_pipeline& infos, Render::Pipeline
 {
 	materials::universal_material* mat = dynamic_cast<materials::universal_material*>(m);
 
-
-	auto& info = infos.pipeline_infos[mat->get_id()];
+	auto mat_id = mat->get_id();
+	auto& info = infos.pipeline_infos[mat_id];
 
 	if (!info.pipeline)
 	{
@@ -27,18 +27,20 @@ void gpu_cached_renderer::update(MeshRenderContext::ptr mesh_render_context)
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& list = *mesh_render_context->list;
+for (auto& p : material_offsets)
+	{
+		materials::universal_material* mat = dynamic_cast<materials::universal_material*>(p.first);
+		mat->update(mesh_render_context);
+
+		//dafuq, mat_ids can be changed here
+	}
 
 	process_tasks();
 
 	if (!boxes_instances.size())
 		return;
 
-	for (auto& p : material_offsets)
-	{
-		materials::universal_material* mat = dynamic_cast<materials::universal_material*>(p.first);
-		mat->update(mesh_render_context);
-	}
-
+	
 	{
 	//	auto timer = list.start(L"transmitting data");
 
@@ -125,7 +127,8 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 
 	}
 	mesh_render_context->begin();
-	mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
+
+//////////////////////////////////////////////////////////////	mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
 
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -315,8 +318,14 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 
 				signature.vertex_buffer=vertex_buffer->get_gpu_address();
 				signature.mat_virtual_textures[0]= visible_id_buffer->get_static_uav();
-				mesh_render_context->g_buffer->set_downsapled(mesh_render_context);
 
+			//	assert(false);
+
+			//	mesh_render_context->g_buffer->set_downsapled(mesh_render_context);
+
+				//TODO: DOWNSAMPLEED!
+				mesh_render_context->g_buffer->HalfBuffer.hiZ_table.set(mesh_render_context);
+				mesh_render_context->g_buffer->HalfBuffer.hiZ_table.set_window(graphics);
 
 				signature.instance_buffer=invisible_commands->get_gpu_address();
 
@@ -333,7 +342,10 @@ void gpu_cached_renderer::render(MeshRenderContext::ptr mesh_render_context, sce
 			//	if (stage == 0)
 			{
 				//	auto timer = graphics.start(L"downsample_depth");
-				mesh_render_context->g_buffer->downsample_depth(mesh_render_context->list);
+					// TODO: DOWNSAMPLE MEEEEEEEEEEEEE
+				//mesh_render_context->g_buffer->downsample_depth(mesh_render_context->list);
+
+				downsample_depth(mesh_render_context->list, *mesh_render_context->g_buffer);
 			}
 		}
 	rendering = false;
@@ -427,7 +439,8 @@ void gpu_cached_renderer::render_buffers(global_pipeline& pipeline, MeshRenderCo
 				}
 				if (mesh_render_context->g_buffer)
 				{
-					mesh_render_context->g_buffer->set_original(mesh_render_context);
+					mesh_render_context->g_buffer->rtv_table.set(mesh_render_context);
+					mesh_render_context->g_buffer->rtv_table.set_window(graphics);
 				}
 
 
@@ -625,6 +638,25 @@ gpu_cached_renderer::gpu_cached_renderer(Scene::ptr scene, MESH_TYPE _mesh_type)
 
 	frustum_culled_commands = std::make_shared<Render::StructuredBuffer<unsigned int>>(2044, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	second_commands = std::make_shared<Render::StructuredBuffer<unsigned int>>(2044, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+
+	Render::PipelineStateDesc desc;
+	//	Render::RootSignatureDesc root_desc;
+	//	root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 1);
+	//root_desc.set_sampler(0, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerPointClampDesc);
+	desc.root_signature = GPUMeshSignature<SignatureCreator>().create_root();// std::make_shared<Render::RootSignature>(root_desc);
+	desc.vertex = Render::vertex_shader::get_resource({ "shaders/depth_render.hlsl", "VS", 0,{} });
+	desc.pixel = Render::pixel_shader::get_resource({ "shaders/depth_render.hlsl", "PS", 0,{} });
+	desc.rtv.rtv_formats = {};
+	desc.rtv.enable_depth = true;
+	desc.rtv.enable_depth_write = true;
+	desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT;
+	desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+	desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
+	//	desc.blend.render_target[0].enabled = true;
+	render_depth_state = Render::PipelineStateCache::get().get_cache(desc);
+
+
 }
 void gpu_cached_renderer::init_material(MaterialAsset* m)
 {

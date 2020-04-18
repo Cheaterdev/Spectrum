@@ -31,7 +31,7 @@ namespace FW1FontWrapper
     void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(Render::CommandList::ptr& list, UINT Flags)
     {
 		auto current_state = ((Flags & FW1_CLIPRECT) != 0) ? geometry_state_clip : geometry_state;
-		list->get_graphics().set_pipeline_typed(current_state).pixel_sampler = pixel_sampler_table;
+        list->get_graphics().set_pipeline(current_state);// .pixel_sampler = pixel_sampler_table;
         list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_POINTLIST);	
     }
 
@@ -90,7 +90,13 @@ namespace FW1FontWrapper
             constants.ClipRect[2] = FLT_MAX;
             constants.ClipRect[3] = FLT_MAX;
         }
-		list->get_graphics().get_shader_data<FontSig>().geometry.set_raw(constants);
+
+        Slots::FontRenderingConstants gpu_constants;
+
+        CopyMemory(&gpu_constants.cb, &constants, sizeof(ShaderConstants));
+        gpu_constants.set(list->get_graphics());
+
+	//	list->get_graphics().get_shader_data<FontSig>().geometry.set_raw(constants);
   
     }
 

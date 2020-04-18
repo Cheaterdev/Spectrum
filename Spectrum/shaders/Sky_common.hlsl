@@ -120,8 +120,8 @@ float4 texture4D(Texture3D table, float r, float mu, float muS, float nu)
     float lerp = (nu + 1.0) / 2.0 * (float(RES_NU) - 1.0);
     float uNu = floor(lerp);
     lerp = lerp - uNu;
-    return table.SampleLevel(LinearSampler, float3((uNu + uMuS) / float(RES_NU), uMu, uR),0) * (1.0 - lerp) +
-           table.SampleLevel(LinearSampler, float3((uNu + uMuS + 1.0) / float(RES_NU), uMu, uR),0) * lerp;
+    return table.SampleLevel(linearClampSampler, float3((uNu + uMuS) / float(RES_NU), uMu, uR),0) * (1.0 - lerp) +
+           table.SampleLevel(linearClampSampler, float3((uNu + uMuS + 1.0) / float(RES_NU), uMu, uR),0) * lerp;
 }
 
 void getMuMuSNu(float2 gl_FragCoord, float r, float4 dhdH, out float mu, out float muS, out float nu) {
@@ -174,7 +174,7 @@ float limit(float r, float mu) {
 // (mu=cos(view zenith angle)), intersections with ground ignored
 float3 transmittance(float r, float mu) {
 	float2 uv = getTransmittanceUV(r, mu);
-    return tex_transmittance.SampleLevel(LinearSampler, uv,0).rgb;
+    return GetSkyData().GetTransmittance().SampleLevel(linearClampSampler, uv,0).rgb;
 }
 
 // transmittance(=transparency) of atmosphere for infinite ray (r,mu)
@@ -235,7 +235,7 @@ float3 transmittance(float r, float mu, float d) {
 
 float3 irradiance(Texture2D tex, float r, float muS) {
     float2 uv = getIrradianceUV(r, muS);
-    return tex.Sample(LinearSampler, uv).rgb;
+    return tex.Sample(linearClampSampler, uv).rgb;
 }
 
 // Rayleigh phase function

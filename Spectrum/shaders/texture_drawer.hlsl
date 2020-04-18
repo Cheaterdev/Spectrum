@@ -15,7 +15,7 @@ quad_output VS(uint index : SV_VERTEXID)
 		float2(pos.x, pos.y),
 		float2(pos.z, pos.w),
 		float2(pos.z, pos.y)*/
-		
+
 		float2(-1, 1),
 		float2(-1, -1),
 		float2(1, 1),
@@ -31,23 +31,19 @@ quad_output VS(uint index : SV_VERTEXID)
 		float2(1, 0),
 	};
 	quad_output Output;
-	Output.pos = float4(Pos[index].x , -Pos[index].y, 0.99999, 1); //float4(Input.Pos.xy,0.3,1);
+	Output.pos = float4(Pos[index].x, -Pos[index].y, 0.99999, 1); //float4(Input.Pos.xy,0.3,1);
 	Output.tc = Tex[index];
 	return Output;
 }
 #endif
 
 #ifdef BUILD_FUNC_PS
-Texture2D<float4> tex : register(t0);
+#include "autogen/TextureRenderer.h"
+static const Texture2D<float4> tex = GetTextureRenderer().GetTexture();
 
-SamplerState PointSampler : register (s0);
-
-
-	float4 PS(quad_output i) : SV_TARGET0
-	{
-
-		return tex.Sample(PointSampler, i.tc);
-
-	}
+float4 PS(quad_output i) : SV_TARGET0
+{
+	return tex.Sample(linearSampler, i.tc);
+}
 
 #endif

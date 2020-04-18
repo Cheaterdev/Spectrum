@@ -1,24 +1,11 @@
-struct camera_info
-{
-	matrix view;
-	matrix proj;
-	matrix view_proj;
-	matrix inv_view;
-	matrix inv_proj;
-	matrix inv_view_proj;
-	float3 position;
-	float unused;
-	float3 direction;
-	float unused2;
-	float2 jitter; float2 unused3;
-};
+#include "autogen/FrameInfo.h"
+#include "autogen/MaterialInfo.h"
+#include "autogen/MeshInfo.h"
+#include "autogen/MeshData.h"
 
+static const Camera camera = GetFrameInfo().GetCamera();
 
-cbuffer cbCamera : register(b0)
-{
-    camera_info camera;
-	camera_info prev_camera;
-};
+#define Sampler linearSampler
 
 struct vertex_output   
 { 
@@ -52,12 +39,12 @@ float4 normals : SV_TARGET1;
 float4 specular : SV_TARGET2; 
     float2 speed : SV_TARGET3;
 };
-
+/*
 cbuffer cbMaterials : register(b2)
 {
     uint texture_offset;
 	uint  node_offset;
-};
+};*/
 #define _voxel_min float3(-50,-50,-50)
 #define _voxel_size float3(100,100,100) 
 /*
@@ -70,7 +57,7 @@ cbuffer Dims : register(b3)
     float voxel_size_y;
     float voxel_size_z; 
 
-	/*
+	
 	int voxel_mape_x; 
 	int voxel_mape_y;
 	int voxel_mape_z;*
@@ -94,13 +81,15 @@ cbuffer Dims : register(b3)
 	voxel_info_struct st
 };
 */
-
+/*
 cbuffer cbVoxels : register(b3)
 {
 	voxel_info_struct voxel_info;
 };
-
+*/
 //ConstantBuffer<voxel_info_struct> voxel_info: register(b3);
+
+/*
 Texture2D textures[] : register(t0); 
 RWByteAddressBuffer visibility[] : register(u0);  
 RWTexture3D<float4> voxel_tex[2] : register(u0,space1);
@@ -111,6 +100,7 @@ SamplerState PointSampler : register(s1);
  
 SamplerState Sampler : register(s2);
 Texture2D best_fit_normals : register(t0,space1);
+*/
 
 half3 compress_normals(inout half3 vNormal) 
 {
@@ -127,7 +117,7 @@ half3 compress_normals(inout half3 vNormal)
 	// fit normal into the edge of unit cube
 	vNormal.rgb /= maxNAbs;
 	// look-up fitting length and scale the normal to get the best fit
-	half fFittingScale = best_fit_normals.SampleLevel(PointSampler, vTexCoord,0).a;
+	half fFittingScale = GetFrameInfo().GetBestFitNormals().SampleLevel(pointClampSampler, vTexCoord,0).a;
 	// scale the normal to get the best fit
 	vNormal.rgb *= fFittingScale; 
 	// wrap to [0;1] unsigned form
@@ -138,7 +128,7 @@ half3 compress_normals(inout half3 vNormal)
  
 Texture2D get_texture(uint i) 
 {
-    return textures[i+texture_offset]; 
+    return GetMaterialInfo().GetTextures(i);
 }
 
 void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out float metallic)
@@ -168,17 +158,17 @@ void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out 
 
 PS_RESULT universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump)
 { 
-   clip(albedo.w-0.5);
+ //  clip(albedo.w-0.5);
    // clip(albedo.a - 0.2);  
     bump.xyz = normalize(bump.xyz * 2.0 - 1.0);
     //float3 bump = xy.x > 0 ? normalize(tex_normal.Sample(point_sampler, i.tc).xyz * 2.0 - 1.0) : float3(0, 0, 1);
 	float3 normal =  normalize(-bump.x * i.tangent + bump.y * i.binormal + bump.z * i.normal);
 
-    float3 v = -normalize(camera.position - i.wpos);  
+    float3 v = -normalize(camera.GetPosition() - i.wpos);  
     float3 r = reflect(v, normal);         
     PS_RESULT result;   
 
-	result.albedo =  float4(albedo.xyz, metallic); 
+    result.albedo = float4(albedo.xyz, metallic);
     result.normals = float4(compress_normals(normal), (roughness));
 	result.specular = 0;// float4(metallic, roughness); 
       
@@ -186,7 +176,7 @@ PS_RESULT universal(vertex_output i, float4 albedo, float metallic,float roughne
     float2 cur_p = float2(0.5, 0.5) + float2(0.5, -0.5)*(i.cur_pos.xy / i.cur_pos.w);
     float2 prev_p = float2(0.5,0.5) + float2(0.5, -0.5)*(i.prev_pos.xy / i.prev_pos.w);
 	   
-	result.speed = (cur_p-prev_p);// +float2(-1, 1) *(camera.jitter - prev_camera.jitter);
+    result.speed = 0;// (cur_p - prev_p);// +float2(-1, 1) *(camera.jitter - prev_camera.jitter);
     return result;       
 }    
 
@@ -210,7 +200,7 @@ PS_RESULT PS(vertex_output i)
 
 void universal_voxel(vertex_output i, float4 albedo, float metallic, float roughness, float4 bump)
 {   
-    clip(albedo.w - 0.5);
+ //   clip(albedo.w - 0.5);
   
     uint3 index = floor(voxel_info.voxel_map_size.xyz * ((i.wpos.xyz - (voxel_info.voxel_min.xyz)) / voxel_info.voxel_size.xyz)+0.5);
 //	uint3 index = 512 * ((i.wpos.xyz - (-150)) /300); 
@@ -243,7 +233,7 @@ void PS_VOXEL(vertex_output i)
 
 float4 tile_sample(Texture2D<float4> tex, SamplerState s, float2 tc, Texture2D<float4> residency, RWByteAddressBuffer visibility)
 {
-    float calculated_level = tex.CalculateLevelOfDetail(s, tc);
+  /*  float calculated_level = tex.CalculateLevelOfDetail(s, tc);
     float2 dims; 
     residency.GetDimensions(dims.x, dims.y);   
     float4 res_data = residency.Gather(PointSampler, tc) * 255;
@@ -252,7 +242,9 @@ float4 tile_sample(Texture2D<float4> tex, SamplerState s, float2 tc, Texture2D<f
     min_level = max(min_level, res_data.w);
     int offset = 4 * (floor(tc.x * dims.x) + floor(tc.y * dims.y + 0.5) * dims.x);
     visibility.InterlockedMin(offset, int(calculated_level));
-    return tex.SampleLevel(s, tc, max(calculated_level, min_level)); 
+    return tex.SampleLevel(s, tc, max(calculated_level, min_level)); */
+
+    return float4(1, 0, 0, 0);
 }
 
 
@@ -316,7 +308,9 @@ vertex_output2 HS(InputPatch<vertex_output2, 3> inputPatch,
 
 
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc) tex.Sample(s, tc);
+#define sample(tex, s,  tc) tex.SampleLevel(s, tc, 0);
+
+//tex.Sample(s, tc);
 
 #else
 #define sample(tex, s,  tc) tex.SampleLevel(s, tc, 3);
@@ -377,7 +371,7 @@ vertex_output2 DS(HS_CONSTANT_DATA_OUTPUT input, float3 BarycentricCoordinates :
     float vNormalHeight = TESS(output);
     vWorldPos += vNormalHeight * vNormal / 1;
     output.wpos = vWorldPos;
-    output.pos = mul(camera.view_proj, float4(output.wpos.xyz, 1));
+    output.pos = mul(camera.GetViewProj(), float4(output.wpos.xyz, 1));
 
     return output;
 }   

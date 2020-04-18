@@ -120,6 +120,18 @@ public:
 	*/
 	void operator = (MyVariant value);
 
+
+	template<class T>
+	bool operator!=(const T& other) const
+	{
+		var_typed<T>* var = dynamic_cast<var_typed<T>*>(typed.get());
+
+		if (var)
+			return var->value!=other;
+
+		return true;
+	}
+
 	template<class T>
 	T& get() const
 	{

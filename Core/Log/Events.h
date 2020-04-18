@@ -7,6 +7,11 @@ namespace Events
 		std::mutex m;
 		std::list<std::function<void()>> tasks;
 	protected:
+
+		bool has_tasks()
+		{
+			return !tasks.empty();
+		}
 	public:
 		void process_tasks()
 		{
@@ -173,7 +178,7 @@ namespace Events
 	private:
 		std::mutex m;
 
-		std::unique_ptr<T> value;
+		T value;
 		my_unique_vector<std::shared_ptr<std::function<function_type>>>on_change;
 		my_unique_vector<std::shared_ptr<prop_helper>> helpers;
 
@@ -183,7 +188,7 @@ namespace Events
 		template<class T>
 		void send_one(T f)
 		{
-			f(*value);
+			f(value);
 
 		}
 
@@ -196,7 +201,7 @@ namespace Events
 		Runner* runner = nullptr;
 		prop() = default;
 
-		prop(const T&t):value(std::make_unique<T>(t))  {};
+		prop(const T&t):value(t)  {};
 		using event_type = Event<const T&>;
 		void register_change(prop_handler* owner, std::function<function_type> func)
 		{
@@ -215,8 +220,8 @@ namespace Events
 				owner->helpers.push_back(helper);
 				helpers.insert(helper);
 			}
-			if(value)
-			func(*value);
+		//	if(value)
+			func(value);
 		}
 		void register_change(event_type& event)
 		{
@@ -239,28 +244,25 @@ namespace Events
 			helpers.insert(helper);
 			event.default_state = [this](std::function<function_type> f2)
 			{
-				if (value)
+			//	if (value)
 					send_one(f2);
 			};
-			if (value)
+		//	if (value)
 				send_one(func);
 		}
 
 		operator const T() const
 		{
-			return *value;
+			return value;
 		}
 
 		const T operator=(const T& r)
 		{
 
-			if (!value||*value != r)
+			if (value != r)
 			{
 
-				if (!value)
-					value = std::make_unique<T>(r);
-				else
-					*value = r;
+				value = r;
 				std::lock_guard<std::mutex> g(m);
 
 				send();
@@ -272,10 +274,8 @@ namespace Events
 
 		void set(const T& r)
 		{
-			if (!value)
-				value = std::make_unique<T>(r);
-			else
-				*value = r;
+		
+				value = r;
 
 			std::lock_guard<std::mutex> g(m);
 
@@ -283,9 +283,8 @@ namespace Events
 		}
 		const bool operator==(const T& r) const
 		{
-			if (!value)
-				return false;
-			return *value == r;
+		
+			return value == r;
 		}
 
 		const T* operator->() const
@@ -295,12 +294,12 @@ namespace Events
 
 		const T& get() const
 		{
-			return *value;
+			return value;
 		}
 
 		const T& operator*() const
 		{
-			return *value;
+			return value;
 		}
 
 		virtual~prop()
@@ -311,9 +310,7 @@ namespace Events
 				p->remove_func = nullptr;
 		}
 
-		const bool has_value() const {
-			return !!value;
-		}
+
 	private:
 		friend class boost::serialization::access;
 		template<class Archive>

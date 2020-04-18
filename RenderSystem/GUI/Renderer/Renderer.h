@@ -1,22 +1,6 @@
 namespace GUI
 {
 
-	template <class T>
-	struct UISignature : public T
-	{
-		using T::T;
-
-		typename T::template ConstBuffer	<0, Render::ShaderVisibility::VERTEX, 0>									vertex_const_buffer = this;
-		typename T::template ConstBuffer	<1, Render::ShaderVisibility::PIXEL, 0>										pixel_const_buffer = this;
-		typename T::template Table			<2, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 5>	pixel_strange = this;
-		typename T::template Table			<3, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SAMPLER, 0, 3>pixel_samples = this;
-		typename T::template ConstBuffer	<4, Render::ShaderVisibility::GEOMETRY, 0>									geometry_data = this;
-		typename T::template SRV			<5, Render::ShaderVisibility::VERTEX, 0, 1>									vertex_buffer = this;
-		typename T::template SRV			<6, Render::ShaderVisibility::VERTEX, 1, 1>									instance_buffer = this;
-		typename T::template Table			<7, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 1, 1>	pixel_textures = this;
-	};
-
-
     class NinePatch
     {
             struct Vertex
@@ -31,12 +15,13 @@ namespace GUI
 		   std::vector<Vertex> vertexes;
 
 		   std::vector<Render::Handle> textures_handles;
+		   std::vector<Render::Handle> samplers_handles;
 
 		   std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
 		   Render::PipelineState::ptr current_state;
         public:
             using ptr = s_ptr<NinePatch>;
-            NinePatch(Render::RootSignature::ptr root);
+            NinePatch();
             void draw(Render::context& c, Render::PipelineState::ptr& pipeline_state, rect r);
             void draw(Render::context& c, GUI::Texture& item, rect r);
             void draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr& pipeline_state);
@@ -58,7 +43,7 @@ namespace GUI
 
         public:
             using ptr = s_ptr<SimpleRect>;
-            SimpleRect(Render::RootSignature::ptr root);
+            SimpleRect();
 
 
 
@@ -68,7 +53,7 @@ namespace GUI
     class Renderer 
     {
        
-            Render::HandleTable sampler_table;
+          //  Render::HandleTable sampler_table;
 
             NinePatch::ptr nine_patch;
             SimpleRect::ptr simple_rect;
@@ -80,7 +65,7 @@ namespace GUI
 
         public:
 
-            Render::RootSignature::ptr root_signature;
+       //     Render::RootSignature::ptr root_signature;
 
             using ptr = s_ptr<Renderer>;
             using wptr = w_ptr<Renderer>;

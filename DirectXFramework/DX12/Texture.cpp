@@ -5,6 +5,8 @@ namespace DX12
 
     void Texture::init()
     {
+	//	auto& timer = Profiler::get().start(L"views");
+
         if (m_Resource)
         {
             if (get_desc().ArraySize() == 6)
@@ -110,8 +112,11 @@ namespace DX12
 	//	resource->debug = true;
         init();
     }
-	Texture::Texture(CD3DX12_RESOURCE_DESC desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, std::shared_ptr<texture_data> data /*= nullptr*/) :Resource(desc, HeapType::DEFAULT, data ? ResourceState::COPY_DEST : state)
+	Texture::Texture(CD3DX12_RESOURCE_DESC desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, ResourceAllocator& heap, std::shared_ptr<texture_data> data /*= nullptr*/) :Resource(desc, heap, data ? ResourceState::COPY_DEST : state)
     {
+
+	//	auto& timer = Profiler::get().start(L"Texture");
+
        // resource.reset(new Resource(desc, HeapType::DEFAULT, data ? ResourceState::COPY_DEST : state));
         set_name(std::string("Texture_")+std::to_string(desc.Width)+"_"+std::to_string(desc.Height) + "_" + std::to_string(desc.DepthOrArraySize));
         desc = get_desc();
@@ -191,7 +196,7 @@ namespace DX12
 		desc.MipLevels = data->mip_maps;
 		desc.Width = data->width;
 		desc.Height = data->height;
-		return std::make_shared<Texture>(desc, ResourceState::COMMON, data);
+		return std::make_shared<Texture>(desc, ResourceState::COMMON, DefaultAllocator::get(),data);
 	}
 	 Array2DView::ptr & Texture::array2d()
 	{
@@ -222,7 +227,7 @@ namespace DX12
             else
                 desc = CD3DX12_RESOURCE_DESC::Tex2D(tex_data->format, tex_data->width, tex_data->height, tex_data->array_size, tex_data->mip_maps);
 
-            return std::make_shared<Texture>(desc, ResourceState::PIXEL_SHADER_RESOURCE, tex_data);
+            return std::make_shared<Texture>(desc, ResourceState::PIXEL_SHADER_RESOURCE,DefaultAllocator::get() ,tex_data);
         }
 
         return nullptr;
@@ -292,7 +297,8 @@ namespace DX12
 
         if (res_desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
         {
-            rtvs = Render::DescriptorHeapManager::get().get_rt()->create_table(single_count);
+
+		rtvs = Render::DescriptorHeapManager::get().get_rt()->create_table(single_count);
 			
 	      for (int m = 0; m < res_desc.MipLevels; m++)
             {

@@ -327,7 +327,7 @@ namespace DX12
 
             Texture(ComPtr<ID3D12Resource> native, HandleTable rtv);
             Texture(ComPtr<ID3D12Resource> native);
-            Texture(CD3DX12_RESOURCE_DESC desc, ResourceState state = ResourceState::PIXEL_SHADER_RESOURCE, std::shared_ptr<texture_data> data = nullptr);
+            Texture(CD3DX12_RESOURCE_DESC desc, ResourceState state = ResourceState::PIXEL_SHADER_RESOURCE, ResourceAllocator & heap = DefaultAllocator::get(), std::shared_ptr<texture_data> data = nullptr);
 
 
 			texture_data::ptr get_data() const;
@@ -355,7 +355,7 @@ namespace DX12
                 else
                     desc = CD3DX12_RESOURCE_DESC::Tex2D(data.format, data.width, data.height, data.array_size, data.mip_maps);
 
-				Resource::init(desc, HeapType::DEFAULT, (desc.DepthOrArraySize * desc.MipLevels) ? ResourceState::COPY_DEST : ResourceState::PIXEL_SHADER_RESOURCE);
+				Resource::init(desc, DefaultAllocator::get(), (desc.DepthOrArraySize * desc.MipLevels) ? ResourceState::COPY_DEST : ResourceState::PIXEL_SHADER_RESOURCE);
 
                 if (desc.ArraySize() * desc.MipLevels)
                 {

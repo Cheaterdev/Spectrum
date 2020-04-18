@@ -254,13 +254,13 @@ bool GUI::Elements::FlowGraph::component_window::on_mouse_action(mouse_action ac
             if (type == window_type::GRAPH_IN)
                 menu->add_item("add input")->on_click = [this](menu_list_element::ptr e)
             {
-                node->register_input(::FlowGraph::data_types::INT, "ololo");
+                node->register_input(/*::FlowGraph::data_types::INT,*/ "ololo");
             };
 
             if (type == window_type::GRAPH_OUT)
                 menu->add_item("add output")->on_click = [this](menu_list_element::ptr e)
             {
-                node->register_output(::FlowGraph::data_types::INT, "ololo");
+                node->register_output(/*::FlowGraph::data_types::INT, */"ololo");
             };
 
             if (type == window_type::NODE && dynamic_cast<::FlowGraph::graph*>(node))

@@ -1,6 +1,6 @@
 #pragma once
 
-
+/*
 class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>
 {
 
@@ -16,7 +16,7 @@ public:
 };
 
 
-
+*/
 /*
 class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>
 {
@@ -77,7 +77,7 @@ struct Enviroment
 	Render::Texture::ptr prefiltered_cubemap_diffuse;
 };
 
-class SkyRender :public Events::prop_handler
+class SkyRender :public Events::prop_handler, public FrameGraphGenerator
 {
 	Render::PipelineState::ptr state;
 	Render::PipelineState::ptr cubemap_state;
@@ -85,8 +85,7 @@ class SkyRender :public Events::prop_handler
 	Render::Texture::ptr transmittance;
 	Render::Texture::ptr irradiance;
 	Render::Texture::ptr inscatter;
-	Render::HandleTable table;
-//	G_Buffer& buffer;
+	
 	bool processed = false;
 public:
 	using ptr = std::shared_ptr<SkyRender>;
@@ -98,9 +97,10 @@ public:
 
 	SkyRender();
 
+	virtual void generate(FrameGraph& graph) override;
 
-	void process(MeshRenderContext::ptr& context);
+//	void process(MeshRenderContext::ptr& context);
 
 
-	void update_cubemap(MeshRenderContext::ptr& context);
+	//void update_cubemap(MeshRenderContext::ptr& context);
 };

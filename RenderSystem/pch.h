@@ -12,6 +12,12 @@
 #include "../DirectXFramework/pch.h"
 #include "../FlowGraph/pch.h"
 
+using uint = UINT;
+using float4x4 = mat4x4;
+
+#include "autogen/includes.h"
+
+
 #include "Context/Context.h"
 #include "Helpers/MipMapGeneration.h"
 
@@ -88,10 +94,12 @@
 #include "GUI/Renderer/Renderer.h"
 
 #include "GUI/Elements/AssetExplorer.h"
-#include "Lighting/GBuffer.h"
 #include "Lighting/PSSM.h"
-#include "Lighting/Light.h"
+/*
+#include "Lighting/GBuffer.h"
 
+#include "Lighting/Light.h"
+*/
 
 
 #include "Renderer/StencilRenderer.h"
@@ -102,17 +110,21 @@
 #include "TiledTextures/DynamicTileGenerator.h"
 
 
+#include "Effects/Sky.h"
+
+/*
 #include "Effects/TemporalAA.h"
 
 #include "Effects/PostProcess/Adaptation.h"
 #include "Effects/PostProcess/SSR.h"
 #include "Effects/PostProcess/SSGI.h"
 #include "Effects/PostProcess/SMAA.h"
-#include "Effects/Sky.h"
+
 #include "Effects/VoxelGI/VoxelGI.h"
 
-#include "Lighting/BRDF.h"
 
+*/
+#include "Lighting/BRDF.h"
 namespace EngineAssets
 {
 	extern EngineAsset<MeshAsset> material_tester;

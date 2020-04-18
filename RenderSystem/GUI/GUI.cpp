@@ -887,50 +887,126 @@ namespace GUI
         wnd->add_param(std::make_shared<Elements::property_base>("visible"));
     }
 
+     void user_interface::process_ui(float delta_time)
+    {
+
+		 for (int i = 0; i < 3; i++)
+		 {
+			 press_interpret[i] = false;
+			 release_interpret[i] = false;
+		 }
+		 {
+			 while (true)
+			 {
+				 tasks_mutex.lock();
+				 std::vector<std::function<void()> > copy;
+				 std::swap(copy, tasks);
+				 tasks_mutex.unlock();
+
+				 if (copy.empty())break;
+
+				 for (auto t : copy)
+					 t();
+			 }
+		 }
+
+	
+
+
+		 auto&& g2 = lock();
+		 {
+		//	 auto timer = c.command_list->start(L"think");
+			 for (auto t : thinking)
+				 t->think(delta_time);
+
+		 }
+		 is_updating_layout = true;
+		 {
+			// auto timer = c.command_list->start(L"layout");
+			 update_layout({ pos.get(), pos.get() + size.get() }, scale);
+			 is_updating_layout = false;
+		 }
+
+
+    }
+
+
+     void user_interface::create_graph(FrameGraph& graph)
+     {
+         process_graph(graph);
+         struct pass_data
+         {
+             ResourceHandler* o_texture;
+         };
+
+		 graph.add_pass<pass_data>("UI RENDER",[](pass_data& data, TaskBuilder& builder) {
+			 data.o_texture = builder.need_texture("swapchain", ResourceFlags::RenderTarget);
+
+			 }, [this](pass_data& data, FrameContext& context) {
+				 std::lock_guard<std::mutex> g(m);
+
+				 auto command_list = context.get_list();
+				
+				 auto texture = context.get_texture(data.o_texture);
+
+				 command_list->transition(texture.resource, Render::ResourceState::RENDER_TARGET);
+				 command_list->get_graphics().set_rtv(1, texture.get_rtv(), Render::Handle());
+				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
+
+			
+                 std::shared_ptr<OVRContext> ovr_context;
+
+
+                 Render::context c(command_list, ovr_context);
+                 c.command_list = command_list;
+               
+				 c.offset = { 0, 0 };
+				 c.window_size = scaled_size.get();
+				 c.scale = 1;
+
+				 {
+					 auto timer = c.command_list->start(L"draw");
+					 RecursiveContext context(c);
+
+					 //if (!c.command_list_label)
+					 {
+						 c.labeled = &context.pre_executor;
+
+						 c.command_list_label = c.command_list->get_sub_list();
+						 c.command_list_label->begin("Label");
+					 }
+
+
+					 draw_recursive(context);
+
+					 drag.draw(context);
+					 context.stop_and_wait();
+				 }
+
+				 if (c.command_list_label)
+				 {
+					 c.command_list_label->end();
+					 c.command_list_label->execute();
+					 c.command_list_label = nullptr;
+				 }
+
+				 renderer->flush(c);
+
+				 command_list->transition(texture.resource, Render::ResourceState::PRESENT);
+
+
+			 });
+
+
+     }
+
+     /*
     void user_interface::draw_ui(Render::context& c)
     {
         std::lock_guard<std::mutex> g(m);
 
-        for (int i = 0; i < 3; i++)
-        {
-            press_interpret[i] = false;
-            release_interpret[i] = false;
-        }
-		{
-			auto timer = c.command_list->start(L"tasks");
+        process_ui();
 
-			while (true)
-			{
-				tasks_mutex.lock();
-				std::vector<std::function<void()> > copy;
-				std::swap(copy, tasks);
-				tasks_mutex.unlock();
-
-				if (copy.empty())break;
-
-				for (auto t : copy)
-					t();
-			}
-		}
-
-        c.offset = { 0, 0 };
-        c.window_size = scaled_size.get();
-        c.scale = 1;
-
-
-        auto&& g2 = lock();
-		{
-			auto timer = c.command_list->start(L"think");
-			for (auto t : thinking)
-				t->think(c.delta_time);
-
-		}
-        is_updating_layout = true;
-		{
-			auto timer = c.command_list->start(L"layout");
-			update_layout({ pos.get(), pos.get() + size.get() }, scale);
-			is_updating_layout = false;
-		}
 
 		{
 			auto timer = c.command_list->start(L"draw");
@@ -958,11 +1034,9 @@ namespace GUI
 			c.command_list_label = nullptr;
 		}
 		
-		renderer->flush(c);
-	
-	
+		renderer->flush(c);	
     }
-
+    */
     void user_interface::mouse_action_event(mouse_action action, mouse_button button, vec2 pos)
     {
         {
@@ -1227,12 +1301,17 @@ namespace GUI
 
     void user_interface::remove_base(base* object)
     {
-        //  components.erase(object);
+	/*	auto frame_gen = dynamic_cast<FrameGraphGenerator*>(object);
+		if (frame_gen)
+			frame_generators.emplace_back(frame_gen);*/
     }
 
     void user_interface::add_base(base* object)
     {
         //   components.insert(object);
+      //  auto frame_gen = dynamic_cast<FrameGraphGenerator*>(object);
+     //   if (frame_gen)
+      //      frame_generators.emplace_back(frame_gen);
     }
 
     void user_interface::key_action_event(long key)

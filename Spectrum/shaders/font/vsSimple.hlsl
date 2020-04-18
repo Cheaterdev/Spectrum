@@ -1,7 +1,10 @@
-cbuffer ShaderConstants : register(b0) {
-		float4x4 TransformMatrix : packoffset(c0);
-	};
-	
+#include "../autogen/FontRendering.h"
+#include "../autogen/FontRenderingConstants.h"
+
+
+static const Buffer<float4> tex0 = GetFontRendering().GetPositions();
+static const float4x4  TransformMatrix = GetFontRenderingConstants().GetTransformMatrix();
+
 	struct VSIn {
 		float4 Position : POSITION;
 		float4 GlyphColor : GLYPHCOLOR;

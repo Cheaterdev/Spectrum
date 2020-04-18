@@ -1,0 +1,60 @@
+
+#this is a comment
+layout FrameLayout { 
+	slot CameraData;
+}
+
+
+layout MyLayout: FrameLayout { 
+	slot my_slot;
+}
+
+
+struct Camera
+{
+	float4 pos;
+	float4 dir;
+	
+}
+
+[Bind = FrameLayout::CameraData]
+struct Bobo
+{
+	Texture2D<float4> a;
+	int b;
+	SamplerState sampler;
+	RWTexture2D<float4> rw;
+	
+	
+	Texture2D<float4> a2;
+	int b2;
+	SamplerState sampler2;
+	RWTexture2D<float4> rw2;
+	
+	Test tessst;
+}
+
+struct Test
+{
+Camera current;
+Camera prev;
+Texture2D<float4> lolo;
+	
+
+}
+
+
+[Bind = MyLayout::my_slot]
+struct Bobo2
+{
+	Test ololo;
+}
+
+
+[Bind = FrameLayout::CameraData]
+struct Bobo3
+{
+	Bobo2 bobo;
+	
+	Test tessst;
+}

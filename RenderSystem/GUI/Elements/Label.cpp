@@ -8,6 +8,7 @@ namespace GUI
 
 		void label::draw(Render::context& c)
 		{
+		//	return;
 			recalculate(c);		
 			rect p = render_bounds.get();
 			auto orig = c.ui_clipping;
@@ -103,11 +104,11 @@ namespace GUI
 				if (!my_ptr) return;
 				auto command_list = const_cast<CommandList*>(_command_list.get())->get_ptr(); //wtf is this
 
-				geomerty->set(command_list, convert(text.get()), font, font_size.get() /* scaled*/, lay2, color, magnet_text);
+				geomerty->set(command_list, convert(text.get()), font, font_size.get() , lay2, color, magnet_text);
 
 
 
-				command_list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
+			//	command_list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
 				command_list->transition(cache.texture, Render::ResourceState::RENDER_TARGET);
 				command_list->clear_rtv(cache.texture->texture_2d()->get_rtv());
 
@@ -130,16 +131,16 @@ namespace GUI
 				//	command_list->get_graphics().set(1, sampler_table);
 				//	command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 				//	command_list->get_graphics().draw(4, 0);
-
+				command_list->get_graphics().use_dynamic = false;
 				geomerty->draw(command_list, lay2, 0, { 0,0 });
-
+				command_list->get_graphics().use_dynamic = true;
 				MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
 
 				command_list->transition(cache.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 
 			
 			});
-
+			
 		//	cache.texture = new_preview;
 			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().Width,cache.texture->get_desc().Height) };
 			//}

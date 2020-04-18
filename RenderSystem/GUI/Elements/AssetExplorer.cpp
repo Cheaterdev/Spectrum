@@ -21,8 +21,8 @@ namespace GUI
 			dummy_node()
 			{
 
-				register_input(::FlowGraph::data_types::INT, "Ref")->only_one_input = false;
-				register_output(::FlowGraph::data_types::INT, "Ref");
+				register_input(/*::FlowGraph::data_types::INT,*/ "Ref")->only_one_input = false;
+				register_output(/*::FlowGraph::data_types::INT,*/ "Ref");
 			}
 			using ptr = std::shared_ptr<dummy_node>;
 			GUI::Elements::image::ptr img_inner;
@@ -153,7 +153,7 @@ namespace GUI
 			
 				dummy_options::GraphType::ptr graph(new dummy_options::GraphType());
 
-				graph->register_input(::FlowGraph::data_types::INT, "Ref");
+				graph->register_input(/*::FlowGraph::data_types::INT, */"Ref");
 
 				std::function<void(::FlowGraph::parameter::ptr, AssetStorage::ptr)> generate_references;
 

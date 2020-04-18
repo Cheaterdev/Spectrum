@@ -2,38 +2,15 @@
 
 
 
-
-
-template <class T>
-struct MipMapSignature : public T
-{
-	using T::T;
-
-	typename T::template ConstBuffer	<0, Render::ShaderVisibility::ALL, 0>									constants = this;
-	typename T::template Table			<1, Render::ShaderVisibility::ALL, Render::DescriptorRange::SRV, 0, 4>	source = this;
-	typename T::template Table			<2, Render::ShaderVisibility::ALL, Render::DescriptorRange::UAV, 0, 4>	target = this;
-
-
-	typename T::template Sampler<0, Render::ShaderVisibility::ALL, 0> linear{ Render::Samplers::SamplerLinearClampDesc, this };
-	typename T::template Sampler<1, Render::ShaderVisibility::ALL, 0> point{ Render::Samplers::SamplerPointClampDesc, this };
-
-	typename T::template Sampler<2, Render::ShaderVisibility::ALL, 0> point_border{ Render::Samplers::SamplerPointBorderDesc, this };
-};
-
-
-
-
-
 MipMapGenerator::MipMapGenerator()
 {
 	std::lock_guard<std::mutex> g(m);
 
 
-	auto root_sig = MipMapSignature<SignatureCreator>().create_root();
 	Render::ComputePipelineStateDesc dcdesc;
 	Render::RootSignatureDesc root_desc;
 
-	dcdesc.root_signature = root_sig;
+	dcdesc.root_signature = get_Signature(Layouts::DefaultLayout);
 	dcdesc.shader = Render::compute_shader::get_resource({ "shaders\\GenerateMips.hlsl", "CS", 0, { } });
 
 	for (int i = 0; i < 4; i++)
@@ -60,59 +37,8 @@ MipMapGenerator::MipMapGenerator()
 
 
 	{
-
-
-		{
-			Render::PipelineStateDesc state_desc;
-			state_desc.root_signature = root_sig;
-
-			state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "PS", 0,{} });
-			state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "VS", 0,{} });
-			state_desc.rtv.rtv_formats = { DXGI_FORMAT_R8G8_UNORM };
-			state_desc.blend.render_target[0].enabled = false;
-			state_desc.rtv.enable_stencil = false;
-			state_desc.rtv.enable_depth = false;
-			quality_buffer_state.reset(new Render::PipelineState(state_desc));
-
-
-
-			state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "PS_STENCIL", 0,{} });
-			state_desc.rtv.enable_stencil = true;
-			state_desc.rtv.enable_depth = false;
-			state_desc.rtv.stencil_desc.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-			state_desc.rtv.stencil_desc.StencilPassOp = D3D12_STENCIL_OP::D3D12_STENCIL_OP_REPLACE;
-			state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-			state_desc.rtv.stencil_read_mask = 1;
-			state_desc.rtv.stencil_write_mask = 1;
-			quality_buffer_stencil_state.reset(new Render::PipelineState(state_desc));
-
-
-
-			state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "PS_STENCIL_REFL", 0,{} });
-			state_desc.rtv.stencil_read_mask = 2;
-			state_desc.rtv.stencil_write_mask = 2;
-			quality_buffer_refl_stencil_state.reset(new Render::PipelineState(state_desc));
-
-
-
-		}
-
-
-	}
-
-
-
-	{
 		Render::PipelineStateDesc state_desc;
-		state_desc.root_signature = root_sig;
-		/*
-		{
-			Render::RootSignatureDesc root_desc;
-		
-		//	root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 1);
-			root_desc.set_sampler(0, 0, Render::ShaderVisibility::PIXEL, Render::Samplers::SamplerLinearWrapDesc);
-			state_desc.root_signature.reset(new Render::RootSignature(root_desc));
-		}*/
+		state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
 		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\copy_texture.hlsl", "PS", 0,{} });
 		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\copy_texture.hlsl", "VS", 0,{} });
 		state_desc.rtv.rtv_formats = { DXGI_FORMAT_R8G8B8A8_UNORM };
@@ -137,20 +63,10 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Texture2DView::ptr view)
 {
 	std::lock_guard<std::mutex> g(m);
-	//auto view = tex->texture_2d();
 	auto timer = compute_context.get_base().start(L"downsampling");
 
-	MipMapSignature<Signature> shader_data(&compute_context);
-
-
-	//list->transition(tex.get(), before, after);
-	//  return;//
-	//    Render::ComputePipelineState::ptr& compute = linear[0];
-	//   tex->change_state(list, before, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE, 0);
 	compute_context.get_base().transition(tex, Render::ResourceState::UNORDERED_ACCESS);
 	compute_context.set_signature(linear[0]->desc.root_signature);
-	shader_data.source[0] = view->get_srv();
-	// compute_context.set(3, samplers);
 	uint32_t maps = tex->get_desc().MipLevels - 1;
 
 	for (uint32_t TopMip = 0; TopMip < maps;)
@@ -193,10 +109,23 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 		cb.NumMipLevels = NumMips;
 		cb.TexelSize = { 1.0f / DstWidth, 1.0f / DstHeight };
 		//	Context.SetConstants(0, TopMip, NumMips, 1.0f / DstWidth, 1.0f / DstHeight);
-		shader_data.constants.set_raw(cb);
+
+
+		Slots::MipMapping data;
+		data.GetSrcMipLevel() = TopMip;
+		data.GetNumMipLevels() = NumMips;
+		data.GetTexelSize() = { 1.0f / DstWidth, 1.0f / DstHeight };
+
 		for (uint32_t i = 0; i < NumMips; i++)
-			shader_data.target[i]=view->get_uav(TopMip + 1 + i);
-		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
+			data.GetOutMip()[i] = view->get_uav(TopMip + 1 + i);
+
+		data.GetSrcMip() = view->get_srv();
+
+		data.set(compute_context);
+
+	
+		compute_context.use_dynamic = false;
+		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));	compute_context.use_dynamic = true;
 		compute_context.get_base().transition_uav(tex.get());
 		TopMip += NumMips;
 	}
@@ -211,14 +140,33 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 	compute_context.get_base().transition(to, Render::ResourceState::UNORDERED_ACCESS);
 	compute_context.set_pipeline(state_downsample_depth);
 
-	MipMapSignature<Signature> shader_data(&compute_context);
-
-	shader_data.source[0]=  tex->texture_2d()->get_static_srv();
-	shader_data.target[0] =  to->texture_2d()->get_static_uav();
+	Slots::DownsampleDepth data;
+	data.GetSrcTex() = tex->texture_2d()->get_static_srv();
+	data.GetTargetTex() = to->texture_2d()->get_static_uav();
+	data.set(compute_context);
+	compute_context.use_dynamic = false;
 	compute_context.dispach(ivec2(tex->get_desc().Width, tex->get_desc().Height), ivec2(8, 8));
+	compute_context.use_dynamic = true;
+
 }
 
+void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to){
+	std::lock_guard<std::mutex> g(m);
+	compute_context.get_base().transition(tex.resource, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+	compute_context.get_base().transition(to.resource, Render::ResourceState::UNORDERED_ACCESS);
+	compute_context.set_pipeline(state_downsample_depth);
 
+
+	Slots::DownsampleDepth data;
+	data.GetSrcTex() = tex.get_srv();
+	data.GetTargetTex() = to.get_uav();
+	data.set(compute_context);
+	compute_context.use_dynamic = false;
+	compute_context.dispach(ivec2(tex.get_size()), ivec2(8, 8));
+	compute_context.use_dynamic = true;
+
+}
+/*
 void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* cam, G_Buffer& buffer)
 {
 	std::lock_guard<std::mutex> g(m);
@@ -275,14 +223,14 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 
 }
 
-
+*/
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::Texture::ptr& from)
 {
 	list.get_base().transition(to, ResourceState::RENDER_TARGET);
 	list.get_base().transition(from, ResourceState::PIXEL_SHADER_RESOURCE);
 
 	list.set_pipeline(copy_texture_state);
-	MipMapSignature<Signature> shader_data(&list);
+	//MipMapSignature<Signature> shader_data(&list);
 
 	auto& view = to->texture_2d();
 
@@ -291,9 +239,34 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	list.set_scissor(view->get_scissor());
 
 
-	shader_data.source[0] = from->texture_2d()->get_srv();
-	list.set_rtv(1, view->get_rtv(), Handle());
-	list.draw(4);
-	list.get_base().transition(from, ResourceState::RENDER_TARGET);
+	Slots::CopyTexture data;
+	data.GetSrcTex()  = from->texture_2d()->get_srv();
+	data.set(list);
 
+	list.set_rtv(1, view->get_rtv(), Handle());	
+	list.use_dynamic = false;
+	list.draw(4);
+	list.use_dynamic = true;
+}
+void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::TextureView from)
+{
+	list.get_base().transition(to, ResourceState::RENDER_TARGET);
+	list.get_base().transition(from.resource, ResourceState::PIXEL_SHADER_RESOURCE);
+
+	list.set_pipeline(copy_texture_state);
+
+	auto& view = to->texture_2d();
+
+	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	list.set_viewport(view->get_viewport());
+	list.set_scissor(view->get_scissor());
+
+	Slots::CopyTexture data;
+	data.GetSrcTex() = from.get_srv();
+	data.set(list);
+
+	list.set_rtv(1, view->get_rtv(), Handle());	
+	list.use_dynamic = false;
+	list.draw(4);
+	list.use_dynamic = true;
 }

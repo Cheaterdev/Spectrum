@@ -96,7 +96,7 @@ namespace DX12
 
 
 
-					completed_value = fence;
+				completed_value = fence;
 				condition_ended.notify_all();
 
 				if (resources_copy.size())
@@ -210,8 +210,14 @@ namespace DX12
 		return native;
 	}
 
+
+	// synchronized
 	UINT64 Queue::execute_internal(CommandList* list)
 	{
+
+		bool need_wait = has_tasks();
+	
+
 		SPECTRUM_TRY
 
 
@@ -228,6 +234,8 @@ namespace DX12
 
 	//	fix_transitions
 		{
+			auto& timer = Profiler::get().start(L"fix_pretransitions");
+
 			auto transition_list = list->fix_pretransitions();
 			if (transition_list)
 			{		
@@ -261,6 +269,11 @@ namespace DX12
 
 		}
 
+		if (need_wait)
+		{
+			wait(last_known_fence);
+			process_tasks();
+		}
 
 		return last_known_fence;
 	}
@@ -382,19 +395,34 @@ namespace DX12
 	{
 		m_device->CreateSampler(&desc, handle);
 	}
+	size_t Device::get_vram()
+	{
+		DXGI_QUERY_VIDEO_MEMORY_INFO videoMemoryInfo;
+		vAdapters[0]->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
 
+		size_t usedVRAM = videoMemoryInfo.CurrentUsage / 1024 / 1024;
 
+		return usedVRAM;
+	}
+	
 	Device::Device()
 	{
 	//	Singleton::depends_on<Application>();
 		auto t = CounterManager::get().start_count<Device>();
 //#ifdef DEBUG
 		// Enable the D3D12 debug layer.
-		
+		/*
 			ComPtr<ID3D12Debug> debugController;
+			CComPtr<ID3D12Debug1> spDebugController1;
 
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+			{
 				debugController->EnableDebugLayer();
+
+				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
+				spDebugController1->SetEnableGPUBasedValidation(true);
+			}
+			*/
 	
 //#endif
 		{
@@ -402,13 +430,19 @@ namespace DX12
 			CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
 		}
 		UINT i = 0;
-		ComPtr<IDXGIAdapter> pAdapter;
-		std::vector <ComPtr<IDXGIAdapter> > vAdapters;
+		//ComPtr<IDXGIAdapter3> pAdapter;
+	
 		{
 			auto t = CounterManager::get().start_count<IDXGIAdapter>();
 
-			while (factory->EnumAdapters(i, &pAdapter) != DXGI_ERROR_NOT_FOUND)
+			IDXGIAdapter3* adapter;
+
+			while (factory->EnumAdapters(i, reinterpret_cast<IDXGIAdapter**>(&adapter)) != DXGI_ERROR_NOT_FOUND)
 			{
+		
+				ComPtr<IDXGIAdapter3> pAdapter;
+				pAdapter.Attach(adapter);
+
 				vAdapters.push_back(pAdapter);
 				DXGI_ADAPTER_DESC desc;
 				pAdapter->GetDesc(&desc);

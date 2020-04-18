@@ -2,21 +2,10 @@
 #include <pch.h>
 
 
-template <class T>
-struct BRDFSignature : public T
-{
-	using T::T;
-
-	typename T::template Table<0, Render::ShaderVisibility::ALL, Render::DescriptorRange::UAV, 0, 1> target = this;
-
-};
-
-
-
 void BRDF::create_new()
 {
 	Render::ComputePipelineStateDesc desc;
-	desc.root_signature = BRDFSignature<SignatureCreator>().create_root();
+	desc.root_signature = get_Signature(Layouts::DefaultLayout);
 	desc.shader = Render::compute_shader::get_resource({ "shaders\\BRDF.hlsl", "CS", 0,{} });
 	state = desc.create();
 
@@ -30,9 +19,12 @@ void BRDF::create_new()
 	Render::ComputeContext& compute_context = list->get_compute();
 	compute_context.set_pipeline(state);
 
-	BRDFSignature<Signature> sig(&compute_context);
-	sig.target[0]= texture->texture_3d()->get_static_uav();
+	Slots::BRDF data;
+	data.GetOutput() = texture->texture_3d()->get_static_uav();
+	data.set(compute_context);
+
 	list->transition(texture, Render::ResourceState::UNORDERED_ACCESS);
+	compute_context.use_dynamic = false;
 	compute_context.dispach(texture->get_size(), ivec3(4,4,4));
 	list->transition(texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 	list->end();

@@ -431,8 +431,6 @@ stencil_renderer::stencil_renderer()
 	clickable = true;
 	//catch_clicks = true;
 //   draw_helper = true;
-	depth_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1, 1, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL), Render::ResourceState::DEPTH_WRITE));
-	table = RenderTargetTable({}, depth_tex);
 	Render::PipelineStateDesc state_desc;
 
 	auto root_signature = StencilSignature<SignatureCreator>().create_root();
@@ -466,7 +464,7 @@ stencil_renderer::stencil_renderer()
 
 	id_buffer->set_name("stencil_renderer::id_buffer");
 	axis_id_buffer->set_name("stencil_renderer::axis_id_buffer");
-	depth_tex->set_name("stencil_renderer::depth_tex");
+
 
 
 	cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
@@ -494,9 +492,18 @@ void stencil_renderer::on_bounds_changed(const rect& r)
 {
 	base::on_bounds_changed(r);
 	auto size = ivec2::max(ivec2(r.size), ivec2{ 1,1 });
+	//allocator.reset();
 
-	color_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8_SNORM, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::RENDER_TARGET));
-	render_color_table = RenderTargetTable({ color_tex }, nullptr);
+	//color_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8_SNORM, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::RENDER_TARGET, allocator));
+////////////////////////////////////////////////////////////	render_color_table = RenderTargetTable({ color_tex }, nullptr);
+
+	//depth_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1, 1, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL), Render::ResourceState::DEPTH_WRITE, allocator));
+////////////////////////////////////////////////////////////	table = RenderTargetTable({}, depth_tex);
+
+//	depth_tex->set_name("stencil_renderer::depth_tex");
+
+
+
 }
 void stencil_renderer::draw_after(MeshRenderContext::ptr mesh_render_context, G_Buffer& buffer)
 {
@@ -541,9 +548,9 @@ void stencil_renderer::draw_after(MeshRenderContext::ptr mesh_render_context, G_
 		graphics.set_pipeline(last_render_state);
 		list.transition(color_tex, ResourceState::PIXEL_SHADER_RESOURCE);
 		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		graphics.set_viewport(buffer.result_tex.first()->texture_2d()->get_viewport());
-		graphics.set_scissor(buffer.result_tex.first()->texture_2d()->get_scissor());
-		graphics.set_rtv(1, buffer.result_tex.first()->texture_2d()->get_rtv(), Render::Handle());
+//		graphics.set_viewport(buffer.result_tex.first()->texture_2d()->get_viewport());
+//		graphics.set_scissor(buffer.result_tex.first()->texture_2d()->get_scissor());
+//		graphics.set_rtv(1, buffer.result_tex.first()->texture_2d()->get_rtv(), Render::Handle());
 		shader_data.pixel_source[0] = color_tex->texture_2d()->get_srv();
 		{
 			auto timer = list.start(L"blend");
@@ -582,4 +589,18 @@ void stencil_renderer::draw_after(MeshRenderContext::ptr mesh_render_context, G_
 void stencil_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&) > f)
 {
 	throw std::logic_error("The method or operation is not implemented.");
+}
+
+
+
+
+void stencil_renderer::generate(FrameGraph& graph)
+{
+
+}
+
+
+void stencil_renderer::generate_after(FrameGraph& graph)
+{
+
 }

@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="antlr">
+      <UniqueIdentifier>{8c2a2fb4-17db-4ca0-bdef-4ec61d914d3b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Parsing.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Parsed.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include=".antlr\SIGBaseListener.cpp">
+      <Filter>antlr</Filter>
+    </ClCompile>
+    <ClCompile Include=".antlr\SIGBaseVisitor.cpp">
+      <Filter>antlr</Filter>
+    </ClCompile>
+    <ClCompile Include=".antlr\SIGLexer.cpp">
+      <Filter>antlr</Filter>
+    </ClCompile>
+    <ClCompile Include=".antlr\SIGListener.cpp">
+      <Filter>antlr</Filter>
+    </ClCompile>
+    <ClCompile Include=".antlr\SIGParser.cpp">
+      <Filter>antlr</Filter>
+    </ClCompile>
+    <ClCompile Include=".antlr\SIGVisitor.cpp">
+      <Filter>antlr</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Parsed.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Parsing.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include=".antlr\SIGBaseListener.h">
+      <Filter>antlr</Filter>
+    </ClInclude>
+    <ClInclude Include=".antlr\SIGBaseVisitor.h">
+      <Filter>antlr</Filter>
+    </ClInclude>
+    <ClInclude Include=".antlr\SIGLexer.h">
+      <Filter>antlr</Filter>
+    </ClInclude>
+    <ClInclude Include=".antlr\SIGListener.h">
+      <Filter>antlr</Filter>
+    </ClInclude>
+    <ClInclude Include=".antlr\SIGParser.h">
+      <Filter>antlr</Filter>
+    </ClInclude>
+    <ClInclude Include=".antlr\SIGVisitor.h">
+      <Filter>antlr</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

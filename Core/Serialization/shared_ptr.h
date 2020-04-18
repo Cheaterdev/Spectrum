@@ -40,7 +40,7 @@ namespace boost
 		template<class Archive, class Type>
 		void save(Archive& archive, const std::unique_ptr<Type>& value, const unsigned int /*version*/)
 		{
-			Type &data = *value.get();
+			Type *data = value.get();
 			archive & NVP(data);
 		}
 
@@ -49,9 +49,13 @@ namespace boost
 		template<class Archive, class Type>
 		void load(Archive& archive, std::unique_ptr<Type>& value, const unsigned int /*version*/)
 		{
-			value.reset(new Type);
-			Type &data = *value.get();
-			archive & NVP(data);
+			Type* data;
+			archive >> NVP(data);
+
+
+			value.reset(data);
+		//	Type &data = *value.get();
+		//	archive & NVP(data);
 		}
 
 		template<class Archive, class Type>

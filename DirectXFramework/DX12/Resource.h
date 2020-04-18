@@ -1,7 +1,6 @@
 #pragma once
 namespace DX12
 {
-
 	enum class HeapType : int
 	{
 		DEFAULT = D3D12_HEAP_TYPE_DEFAULT,
@@ -34,358 +33,15 @@ namespace DX12
 		UNKNOWN = -1
 	};
 
-	enum class DescriptorHeapType : int
-	{
-		CBV_SRV_UAV = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-		SAMPLER = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-		RTV = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-		DSV = D3D12_DESCRIPTOR_HEAP_TYPE_DSV
-
-	};
-	enum class DescriptorHeapFlags : int
-	{
-		NONE = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		SHADER_VISIBLE = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
-
-	};
-
-	struct Handle
-	{
-		CD3DX12_CPU_DESCRIPTOR_HANDLE cpu;
-		CD3DX12_GPU_DESCRIPTOR_HANDLE gpu;
-
-		bool is_valid() const
-		{
-			return cpu.ptr != 0 || gpu.ptr != 0;
-		}
-
-		Handle()
-		{
-			gpu.ptr = 0;
-			cpu.ptr = 0;
-		}
-
-		void operator=(const std::function<void(const Handle&)>& f)
-		{
-			f(*this);
-		}
-
-		bool operator!=(const Handle& r)
-		{
-			if (cpu.ptr != r.cpu.ptr) return true;
-
-			if (gpu.ptr != r.gpu.ptr) return true;
-
-			return false;
-		}
-
-		void place(const Handle& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) const;
-
-		void clear(CommandList& list, float4 = { 0, 0, 0, 0 }) const;
-	};
-
-
-	class DescriptorHeap;
-	class CommandList;
-	struct HandleTable
-	{
-		Handle operator[](UINT i) const
-		{
-			assert(i < info->count);
-			Handle res = get_base();
-			res.cpu.Offset(i, info->descriptor_size);
-			res.gpu.Offset(i, info->descriptor_size);
-			return res;
-		}
-
-		const Handle& get_base() const
-		{
-			return info->base;
-		}
-
-		UINT get_count() const
-		{
-			return info->count;
-		}
-
-		bool valid() const
-		{
-			return !!info;
-		}
-
-		void place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-	private:
-		friend class DescriptorHeap;
-
-		struct helper
-		{
-			Handle base;
-			UINT descriptor_size;
-			UINT count;
-		};
-
-
-		std::shared_ptr<helper> info;
-	};
-
-	class DescriptorHeap : public std::enable_shared_from_this<DescriptorHeap>
-	{
-		//      std::vector<Handle> handles;
-		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-
-		UINT descriptor_size;
-		UINT current_offset = 0;
-		UINT max_count;
-		std::mutex m;
-		std::map<UINT, std::deque<UINT>> frees;
-		HandleTable make_table(UINT count, UINT offset)
-		{
-			HandleTable res;
-			std::weak_ptr<DescriptorHeap> ptr = shared_from_this();
-			res.info = std::shared_ptr<HandleTable::helper>(new HandleTable::helper, [ptr, count, offset](HandleTable::helper * e)
-			{
-				auto t = ptr.lock();
-
-				if (t)
-					t->frees[count].push_back(offset);
-
-				delete e;
-			});
-			res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-			res.info->base.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-			res.info->descriptor_size = descriptor_size;
-			res.info->count = count;
-			return res;
-		}
-		template<class T>
-		void place(HandleTable& table, UINT i, T smth)
-		{
-			smth(table[i]);
-		}
-
-		template<class T, class ...Args>
-		void place(HandleTable& table, UINT i, T smth, Args...args)
-		{
-			place(table, i, smth);
-			place(table, i + 1, args...);
-		}
-
-	public:
-		using ptr = std::shared_ptr<DescriptorHeap>;
-
-		ComPtr<ID3D12DescriptorHeap> get_native()
-		{
-			return m_rtvHeap;
-		}
-
-
-		DescriptorHeap(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE);
-
-		void reset()
-		{
-			current_offset = 0;
-		}
-
-		size_t size()
-		{
-			return max_count;
-		}
-		template<class T>
-		HandleTable create_table(T _count,
-			typename std::enable_if<std::is_scalar<T>::value>::type* = 0)
-		{
-
-			UINT count = static_cast<UINT>(_count);
-			std::lock_guard<std::mutex> g(m);
-
-			if (frees[count].size())
-			{
-				auto&& list = frees[count];
-				UINT offset = list.front();
-				list.pop_front();
-				return make_table(count, offset);
-			}
-
-			if (current_offset >= max_count)
-				Log::get() << Log::LEVEL_ERROR << "DescriptorHeap limit reached!" << Log::endl;
-
-			HandleTable res = make_table(count, current_offset);
-			current_offset += count;
-			return res;
-		}
-
-
-		template<class ...Args>
-		HandleTable create_table(Args... t)
-		{
-			const UINT count = sizeof...(t);
-			std::lock_guard<std::mutex> g(m);
-
-			if (frees[count].size())
-			{
-				auto&& list = frees[count];
-				size_t offset = list.front();
-				list.pop_front();
-				return make_table(count, offset);
-			}
-
-			if (current_offset >= max_count)
-				Log::get() << Log::LEVEL_ERROR << "DescriptorHeap limit reached!" << Log::endl;
-
-			HandleTable res = make_table(count, current_offset);
-			current_offset += count;
-			place(res, 0, t...);
-			return res;
-		}
-
-		CD3DX12_CPU_DESCRIPTOR_HANDLE get_handle(UINT i);
-		CD3DX12_GPU_DESCRIPTOR_HANDLE get_gpu_handle(UINT i);
-
-		HandleTable get_table_view(UINT offset, UINT count)
-		{
-			assert((offset + count) <= max_count && "Not enought handles");
-			HandleTable res;
-			res.info = std::shared_ptr<HandleTable::helper>(new HandleTable::helper);
-
-			res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-			res.info->base.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-			res.info->descriptor_size = descriptor_size;
-			res.info->count = count;
-			return res;
-		}
-	};
-
-	class DescriptorHeapManager : public Singleton<DescriptorHeapManager>
-	{
-		friend class Singleton<DescriptorHeapManager>;
-
-
-		DescriptorHeap::ptr heap_cb_sr_ua_static;
-
-		DescriptorHeap::ptr heap_cb_sr_ua;
-		DescriptorHeap::ptr heap_samplers;
-		DescriptorHeap::ptr heap_rt;
-		DescriptorHeap::ptr heap_ds;
-
-		HandleTable samplers_default_table;
-		DescriptorHeapManager();
-	public:
-
-		DescriptorHeap::ptr& get_csu_static()
-		{
-			return heap_cb_sr_ua_static;
-		}
-
-		DescriptorHeap::ptr& get_csu()
-		{
-			return heap_cb_sr_ua;
-		}
-		DescriptorHeap::ptr& get_samplers()
-		{
-			return heap_samplers;
-		}
-		DescriptorHeap::ptr& get_rt()
-		{
-			return heap_rt;
-		}
-		DescriptorHeap::ptr& get_ds()
-		{
-			return heap_ds;
-		}
-
-		HandleTable get_default_samplers()
-		{
-			return samplers_default_table;
-		}
-
-
-	};
-
-	class DynamicDescriptorManager
-	{
-		std::vector<DescriptorHeap::ptr> pages;
-
-		UINT offset;
-		// std::vector<bool> setted;
-		// std::vector<int> offsets;
-
-
-		struct row
-		{
-			std::vector<Handle> handles;
-			bool changed;
-			bool fixed;
-			UINT count;
-		};
-
-		std::map<UINT, row> root_tables;
-		//static std::mutex free_mutex;
-
-
-		std::list<HandleTable> additional_handles;
-		static DescriptorHeap::ptr get_free_table();
-		static void free_table(DescriptorHeap::ptr);
-
-		HandleTable null_srv;
-		HandleTable null_uav;
-
-	public:
-
-		DynamicDescriptorManager();
-
-		DescriptorHeap::ptr create_heap();
-
-		void reset();
-
-		void set(UINT i, UINT offset, Handle h);
-		void set(UINT i, UINT offset, HandleTable h);
-		void set(UINT i, UINT offset, std::vector<Handle>& h);
-		Handle& get(UINT i, UINT offset)
-		{
-			return root_tables[i].handles[offset];
-		}
-
-		Handle place(const Handle &h);
-		bool has_free_size(UINT count);
-
-		Handle place_additional(HandleTable table)
-		{
-			auto& heap = pages.back();
-
-				auto gpu_table = heap->get_table_view(offset, static_cast<UINT>(table.get_count()));
-				gpu_table.place(table);
-				offset += static_cast<UINT>(table.get_count());
-				return gpu_table.get_base();
-		}
-		UINT calculate_needed_size();
-
-		void unbind_all();
-		void bind(CommandList * list, std::function<void(UINT, Handle)> f);
-		void bind(CommandList * list);
-		void bind_table(UINT i, std::vector<Handle>& h);
-		/*void set(int i, int offset, HandleTable h)
-		{
-			handles[i][offset] = h;
-		}*/
-
-		void parse(RootSignature::ptr root);
-
-
-
-	};
-
-
-
 
 	class ResourceStateManager
 	{
 
 		struct ResourceListState
 		{
-			unsigned int first_state= ResourceState::UNKNOWN;
+			unsigned int first_state = ResourceState::UNKNOWN;
 
-			unsigned int current_state= ResourceState::UNKNOWN;
+			unsigned int current_state = ResourceState::UNKNOWN;
 
 			uint64_t last_list_full_id = -1;
 
@@ -395,7 +51,7 @@ namespace DX12
 		struct SubResources
 		{
 			std::vector<ResourceListState> subres;
-			unsigned int first_subres_state= ResourceState::UNKNOWN;
+			unsigned int first_subres_state = ResourceState::UNKNOWN;
 
 		};
 
@@ -403,16 +59,16 @@ namespace DX12
 
 		mutable std::vector<SubResources> states;
 
-		SubResources & get_state(int id) const
+		SubResources& get_state(int id) const
 		{
 			if (states.size() > id)
 				return states[id];
 
-//			std::lock_guard<boost::detail::spinlock> guard(states_lock);
+			//			std::lock_guard<boost::detail::spinlock> guard(states_lock);
 
-		//	if (states.size() > id)
-		//		return states[id];
-		
+					//	if (states.size() > id)
+					//		return states[id];
+
 			auto last_size = states.size();
 			states.resize(id + 1);
 
@@ -422,12 +78,12 @@ namespace DX12
 				states[last_size++].subres.resize(subres_count);
 			}
 
-		
+
 
 			return states[id];
 
 		}
-		
+
 
 
 	protected:
@@ -448,7 +104,7 @@ namespace DX12
 
 			std::lock_guard<SpinLock> guard(states_lock);
 			subres_count = 1 + count;
-			for (auto &e : states)
+			for (auto& e : states)
 				e.subres.resize(1 + count);
 		}
 		void assume_gpu_state(unsigned int state)
@@ -462,7 +118,7 @@ namespace DX12
 		{
 			std::lock_guard<SpinLock> guard(states_lock);
 
-			ResourceListState & s = get_state(id).subres[0];
+			ResourceListState& s = get_state(id).subres[0];
 			return  s.first_state;
 		}
 
@@ -470,7 +126,7 @@ namespace DX12
 		{
 			std::lock_guard<SpinLock> guard(states_lock);
 
-			ResourceListState & s = get_state(id).subres[0];
+			ResourceListState& s = get_state(id).subres[0];
 			return  s.current_state;
 		}
 
@@ -493,29 +149,29 @@ namespace DX12
 		{
 			std::lock_guard<SpinLock> guard(states_lock);
 
-		//	if (id >= states.size())
-		//		return true;
+			//	if (id >= states.size())
+			//		return true;
 
-			const ResourceListState & s = get_state(id).subres[0];
+			const ResourceListState& s = get_state(id).subres[0];
 
 			return  (s.last_list_full_id != full_id);
 
 		}
-		
-/*
-		unsigned int transition(unsigned int state, unsigned int subres, int id, uint64_t full_id) const
-		{
-			return const_cast<ResourceStateManager*>(this)->transition(state, subres, id, full_id);
-		}*/
+
+		/*
+				unsigned int transition(unsigned int state, unsigned int subres, int id, uint64_t full_id) const
+				{
+					return const_cast<ResourceStateManager*>(this)->transition(state, subres, id, full_id);
+				}*/
 
 		unsigned int transition(unsigned int state, unsigned int subres, int id, uint64_t full_id) const
 		{
-		//	assert(id < states.size());
+			//	assert(id < states.size());
 			std::lock_guard<SpinLock> guard(states_lock);
 
-			auto &states = get_state(id);
+			auto& states = get_state(id);
 			//	s.subres_used = subres != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			ResourceListState & s_all = states.subres[0];
+			ResourceListState& s_all = states.subres[0];
 
 			//	if (subres != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
 			{
@@ -527,11 +183,11 @@ namespace DX12
 					states.first_subres_state = ResourceState::UNKNOWN;
 				}
 
-			//	s_all.subres_used = true;
-				
+				//	s_all.subres_used = true;
+
 			}
 
-			ResourceListState & s = states.subres[subres + 1];
+			ResourceListState& s = states.subres[subres + 1];
 
 
 
@@ -539,17 +195,17 @@ namespace DX12
 			{
 				s.last_list_full_id = full_id;
 				s.first_state = state;
-			
 
-				if (subres != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES&&	states.first_subres_state == ResourceState::UNKNOWN)
+
+				if (subres != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && states.first_subres_state == ResourceState::UNKNOWN)
 				{
 					states.first_subres_state = s_all.current_state;
-				
+
 
 				}
 
 				s.current_state = states.first_subres_state;
-		//		return ResourceState::UNKNOWN;
+				//		return ResourceState::UNKNOWN;
 			}
 
 
@@ -567,9 +223,60 @@ namespace DX12
 
 	};
 
-	class Resource :public ResourceStateManager
+	struct ResourceHeap
+	{
+		ComPtr<ID3D12Heap > heap;
+		HeapType type;
+		D3D12_HEAP_FLAGS flags;
+
+		size_t heap_size = 0;
+
+		ResourceHeap(HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
+		{
+
+		}
+
+		void init(size_t size);
+
+	};
+
+	template<class AllocatorType >
+	struct ResourceHeapAllocator : public ResourceHeap, public AllocatorType
+	{
+		using ResourceHeap::ResourceHeap;
+
+		void allocate_for_allocator(bool reset = false)
+		{
+			auto max_usage = AllocatorType::get_max_usage();
+			if (max_usage > heap_size)
+			{
+				ResourceHeap::init(max_usage);
+			}
+		}
+	};
+
+
+	class Resource;
+	using Resource_ptr = std::shared_ptr<Resource>;
+
+	class ResourceAllocator
 	{
 
+	public:
+		virtual HeapType get_type() = 0;
+		virtual Resource_ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value) = 0;
+	};
+
+	class DefaultAllocator :public Singleton<DefaultAllocator>, public ResourceAllocator
+	{
+		virtual HeapType get_type()override;
+		virtual Resource_ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)  override;
+	};
+
+	class FrameResources;
+
+	class Resource :public std::enable_shared_from_this<Resource>, public ResourceStateManager
+	{
 		LEAK_TEST(Resource)
 
 			CD3DX12_RESOURCE_DESC desc;
@@ -577,17 +284,18 @@ namespace DX12
 		D3D12_GPU_VIRTUAL_ADDRESS gpu_adress;
 		HeapType heap_type;
 		//  std::vector< unsigned int> states;
-		size_t id=0;
+		size_t id = 0;
 
-		/*unsigned int states;*/
+		CommonAllocator::Handle alloc_handle;
 	protected:
 		ComPtr<ID3D12Resource> m_Resource;
-		void init(const CD3DX12_RESOURCE_DESC& desc, HeapType type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
+		void init(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 	public:
+		std::byte* buffer_data = nullptr;
 		bool debug = false;
 		void set_name(std::string name)
 		{
-
+			//	auto& timer = Profiler::get().start(L"set_name");
 			m_Resource->SetName(convert(name).c_str());
 		}
 		CD3DX12_RESOURCE_DESC get_desc() const
@@ -595,33 +303,408 @@ namespace DX12
 			return desc;
 		}
 		using ptr = std::shared_ptr<Resource>;
-
-		Resource(const CD3DX12_RESOURCE_DESC& desc, HeapType type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
+		Resource::ptr delete_me;
+		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 		Resource(const ComPtr<ID3D12Resource>& resouce, bool own = false);
+		Resource(const ComPtr<ID3D12Resource>& resouce, CommonAllocator::Handle, ResourceState state);
+
 		Resource()
 		{
 			//  states.resize(50);
 		}
 		virtual ~Resource();
 
+		HeapType get_heap_type()
+		{
+			return heap_type;
+		}
+
+		bool is_placed()
+		{
+			return alloc_handle;
+		}
+		void release_memory()
+		{
+			alloc_handle.Free();
+		}
+
 		ComPtr<ID3D12Resource> get_native() const
 		{
 			return m_Resource;
 		}
+
 		D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address() const
 		{
 			return gpu_adress;
 		}
-		/*  void change_state(std::shared_ptr<CommandList>& command_list, ResourceState from, ResourceState to, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-
-		   void assume_state(int id, unsigned int state);
-		   void assume_state( unsigned int state);
-
-		   unsigned int get_state(int id);*/
-		   // TODO:: works only for buffer now
+		// TODO:: works only for buffer now
 		auto get_size()
 		{
 			return desc.Width;
 		}
+
+		template<class T, class ...Args>
+		typename T create_view(FrameResources& frame, Args ...args)
+		{
+			return T(shared_from_this(), frame, args...);
+		}
 	};
+
+
+
+	class UploadAllocator :public Singleton<UploadAllocator>, public ResourceAllocator
+	{
+		virtual HeapType get_type()override;
+	public:	virtual Resource::ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)  override;
+	};
+
+	class ReadbackAllocator :public Singleton<ReadbackAllocator>, public ResourceAllocator
+	{
+		virtual HeapType get_type()override;
+	public:	virtual Resource::ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)  override;
+	};
+
+
+	class PlacedAllocator
+	{
+		ResourceHeapAllocator<CommonAllocator> heap_srv;
+		ResourceHeapAllocator<CommonAllocator> heap_rtv;
+		ResourceHeapAllocator<CommonAllocator> heap_uav;
+
+
+		struct FrameHeaps
+		{
+			ResourceHeapAllocator<LinearAllocator> heap_upload_buffer;
+			ResourceHeapAllocator<LinearAllocator> heap_upload_texture;
+			ResourceHeapAllocator<LinearAllocator> heap_readback;
+			FrameHeaps():heap_upload_texture(HeapType::UPLOAD, D3D12_HEAP_FLAG_NONE),
+				heap_upload_buffer(HeapType::UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS),
+				heap_readback(HeapType::READBACK, D3D12_HEAP_FLAG_NONE)
+			{
+
+			}
+		};
+	
+		std::vector<FrameHeaps> frames;
+		FrameHeaps* current_frame;
+		HeapType get_type();
+
+	public:
+		PlacedAllocator();
+
+		CommonAllocator::Handle allocate_resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type);
+		Resource::ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, CommonAllocator::Handle handle, ResourceState state, vec4 clear_value);
+		Resource::ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type, ResourceState state, vec4 clear_value);
+
+		void begin_frame(int i)
+		{
+			if (frames.size() <= i)
+				frames.resize(i + 1);
+
+			current_frame = &frames[i];
+		}
+
+		void allocate_heaps()
+		{
+
+			heap_srv.allocate_for_allocator();
+			heap_rtv.allocate_for_allocator();
+			heap_uav.allocate_for_allocator();
+			current_frame->heap_upload_buffer.allocate_for_allocator();
+			current_frame->heap_upload_texture.allocate_for_allocator();
+			current_frame->heap_readback.allocate_for_allocator();
+		}
+
+		void reset()
+		{
+			heap_srv.Reset();
+			heap_rtv.Reset();
+			heap_uav.Reset();
+
+			current_frame->heap_upload_buffer.Reset();
+			current_frame->heap_upload_texture.Reset();
+			current_frame->heap_readback.Reset();
+		}
+	};
+
+	enum class ResourceType : int
+	{
+
+		BUFFER,
+		TEXTURE1D,
+		//	TEXTURE1DARRAY,
+		TEXTURE2D,
+		//TEXTURE2DARRAY,
+		TEXTURE3D
+	};
+
+	struct ResourceViewDesc
+	{
+		ResourceType type;
+		DXGI_FORMAT format;
+
+		union
+		{
+			struct
+			{
+
+				UINT PlaneSlice;
+				UINT MipSlice;
+				UINT FirstArraySlice;
+				UINT MipLevels;
+				UINT ArraySize;
+			} Texture2D;
+
+			struct
+			{
+				UINT64 Size;
+				UINT64 Offset;
+				UINT64 Stride;
+			} Buffer;
+
+		};
+	};
+
+
+
+	class ResourceView
+	{
+
+		Handle srv;
+		Handle uav;
+		Handle rtv;
+		Handle dsv;
+
+	protected:
+		ResourceViewDesc view_desc;
+
+	public:
+		Resource::ptr resource; //////////////
+		ResourceView()
+		{
+
+		}
+
+		auto get_desc()
+		{
+			return resource->get_desc();
+		}
+
+		ResourceView(Resource::ptr resource) :resource(resource)
+		{
+
+		}
+
+		void init_desc()
+		{
+			auto& desc = resource->get_desc();
+
+			view_desc.format = desc.Format;
+
+			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+			{
+				view_desc.type = ResourceType::BUFFER;
+				view_desc.Buffer.Offset = 0;
+				view_desc.Buffer.Size = desc.Width;
+				view_desc.Buffer.Stride = 0;
+			}
+
+			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D)
+			{
+				view_desc.type = ResourceType::TEXTURE1D;
+			}
+
+			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
+			{
+				view_desc.type = ResourceType::TEXTURE2D;
+				view_desc.Texture2D.ArraySize = desc.ArraySize();
+				view_desc.Texture2D.MipSlice = 0;
+				view_desc.Texture2D.FirstArraySlice = 0;
+				view_desc.Texture2D.PlaneSlice = 0;
+				view_desc.Texture2D.MipLevels = desc.MipLevels;
+
+			}
+
+			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
+			{
+				view_desc.type = ResourceType::TEXTURE3D;
+			}
+		}
+		void init_views(FrameResources& frame);
+
+		virtual void place_srv(Handle& h) { assert(false); }
+		virtual void place_uav(Handle& h) { assert(false); }
+		virtual void place_rtv(Handle& h) { assert(false); }
+		virtual void place_dsv(Handle& h) { assert(false); }
+
+		Handle get_srv() { return srv; }
+		Handle get_uav() { return uav; }
+		Handle get_rtv() { return rtv; }
+		Handle get_dsv() { return dsv; }
+
+		operator bool() const
+		{
+			return !!resource;
+		}
+	};
+
+
+	class TextureView :public ResourceView
+	{
+
+	public:
+		TextureView() = default;
+		TextureView(Resource::ptr resource, FrameResources& frame) :ResourceView(resource)
+		{
+			init_desc();
+			init_views(frame);
+		}
+
+		TextureView(Resource::ptr resource, FrameResources& frame, ResourceViewDesc desc) :ResourceView(resource)
+		{
+
+			view_desc = desc;
+			init_views(frame);
+		}
+
+		virtual void place_srv(Handle& h) override;
+		virtual void place_uav(Handle& h)  override;
+		virtual void place_rtv(Handle& h)  override;
+		virtual void place_dsv(Handle& h)  override;
+
+		ivec3 get_size()
+		{
+			auto desc = resource->get_desc();
+			UINT scaler = 1 << view_desc.Texture2D.MipSlice;
+			return { std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) ,std::max(1u,desc.Depth() / scaler) };
+		}
+		Viewport get_viewport()
+		{
+
+			auto desc = resource->get_desc();
+			UINT scaler = 1 << view_desc.Texture2D.MipSlice;
+
+
+			Viewport p;
+			p.Width = std::max(1.0f, static_cast<float>(resource->get_desc().Width / scaler));
+			p.Height = std::max(1.0f, static_cast<float>(resource->get_desc().Height / scaler));
+			p.TopLeftX = 0;
+			p.TopLeftY = 0;
+			p.MinDepth = 0;
+			p.MaxDepth = 1;
+
+			return p;
+		}
+
+
+		sizer_long get_scissor()
+		{
+			auto desc = resource->get_desc();
+			UINT scaler = 1 << view_desc.Texture2D.MipSlice;
+
+
+			return { 0,0, std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) };
+		}
+
+		TextureView create_2d_slice(UINT slice, FrameResources & frame)
+		{
+			ResourceViewDesc desc = view_desc;
+			
+			desc.Texture2D.ArraySize = 1;
+			desc.Texture2D.FirstArraySlice = slice;
+
+			return TextureView(resource, frame, desc);
+		}
+
+	};
+
+
+	class BufferView : public ResourceView
+	{
+
+	public:
+		BufferView() = default;
+
+		BufferView(Resource::ptr resource, FrameResources& frame) :ResourceView(resource)
+		{
+			init_desc();
+			init_views(frame);
+		}
+
+		~BufferView()
+		{
+
+		}
+		virtual void place_srv(Handle& h) override;
+		virtual void place_uav(Handle& h) { assert(false); }
+		virtual void place_rtv(Handle& h) { assert(false); }
+		virtual void place_dsv(Handle& h) { assert(false); }
+
+		template<class T>
+		void write(UINT64 offset, T* data, UINT64 count)
+		{
+			memcpy(resource->buffer_data + offset, data, sizeof(T) * count);
+		}
+
+		
+	};
+
+
+
+template<class T>
+class StructuredBufferView :public ResourceView
+{
+	
+public:
+	StructuredBufferView() = default;
+
+	StructuredBufferView(Resource::ptr resource, FrameResources& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+	{
+		init_desc();
+		view_desc.Buffer.Offset = offset;
+		if(size) view_desc.Buffer.Size = size;
+
+		init_views(frame);
+	}
+
+	~StructuredBufferView()
+	{
+
+	}
+	virtual void place_srv(Handle & h) override {
+		if (!resource) return;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
+		desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		desc.Format = DXGI_FORMAT_UNKNOWN;
+	
+		desc.Buffer.StructureByteStride = sizeof(T);
+		desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+		
+		if (desc.Buffer.StructureByteStride > 0) {
+			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / desc.Buffer.StructureByteStride);
+			desc.Buffer.FirstElement =  view_desc.Buffer.Offset / desc.Buffer.StructureByteStride;
+
+		}
+		else {
+			desc.Buffer.NumElements = 0;
+			desc.Buffer.FirstElement = 0;
+
+		}
+
+		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
+	}
+
+	virtual void place_uav(Handle & h) { assert(false); }
+	virtual void place_rtv(Handle & h) { assert(false); }
+	virtual void place_dsv(Handle & h) { assert(false); }
+
+	void write(UINT64 offset, T * data, UINT64 count)
+	{
+		memcpy(resource->buffer_data + offset, data, sizeof(T) * count);
+	}
+};
+
+
 }

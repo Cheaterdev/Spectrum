@@ -340,7 +340,7 @@ void MeshAssetInstance::init_asset()
 void MeshAssetInstance::draw(MeshRenderContext::ptr context)
 {
     // std::lock_guard<std::mutex> g(m);
-    context->set_nodes_buffer(node_buffer);
+//    context->set_nodes_buffer(node_buffer);
     //context.set
     /*  auto& graph = context->list->get_graphics();
       graph.set_index_buffer(mesh_asset->index_buffer->get_index_buffer_view(true));

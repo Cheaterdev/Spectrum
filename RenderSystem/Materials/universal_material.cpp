@@ -113,11 +113,16 @@ void materials::universal_material::set(MESH_TYPE type, MeshRenderContext::ptr& 
 	context->pipeline.domain = pass->ds_shader;
 	context->pipeline.hull = pass->hs_shader;
 
+	Slots::MaterialInfo info;
+
+	info.cb = pixel_buffer->get_gpu_address();
+
+
 //	if (tess_buffer)
 	//	context->set_material_tess_buffer(tess_buffer);
 
-	if (pixel_buffer)
-		context->set_material_const_buffer(pixel_buffer);
+//	if (pixel_buffer)
+//		context->set_material_const_buffer(pixel_buffer);
 
 	if (pass->ds_shader)
 	{
@@ -133,11 +138,16 @@ void materials::universal_material::set(MESH_TYPE type, MeshRenderContext::ptr& 
 
 	if (textures.size())
 	{
-		context->set_material_textures(texture_handles);
 
-		if (uav_handles.valid())
-			context->set_material_unordered(uav_handles);
+		info.GetTextures() = texture_handles;
+	//	info.GetTextures().clear();
+//		context->set_material_textures(texture_handles);
+
+//		if (uav_handles.valid())
+//			context->set_material_unordered(uav_handles);
 	}
+
+	info.set(context->list->get_graphics());
 }
 
 void materials::universal_material::update(MeshRenderContext::ptr& c)
@@ -156,29 +166,29 @@ void materials::universal_material::update(MeshRenderContext::ptr& c)
 	{
 		std::vector<std::byte> data;
 
-		for (auto u : un)
+		for (auto &u : un)
 		{
 			if (u->type == ShaderParams::FLOAT1)
 			{
-				auto& v = u->value.f4_value;
+				auto& v = u->value;// .f_value;
 				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
 			}
 
 			if (u->type == ShaderParams::FLOAT2)
 			{
-				auto& v = u->value.f4_value;
+				auto& v = u->value;// .f2_value;
 				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
 			}
 
 			if (u->type == ShaderParams::FLOAT3)
 			{
-				auto& v = u->value.f4_value;
+				auto& v = u->value;// .f3_value;
 				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
 			}
 
 			if (u->type == ShaderParams::FLOAT4)
 			{
-				auto& v = u->value.f4_value;
+				auto& v = u->value;// .f4_value;
 				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
 			}
 		}
@@ -255,7 +265,7 @@ void materials::universal_material::compile()
 			auto asset = EngineAssets::missing_texture.get_asset();
 			auto func = asset->get_texture()->texture_2d()->srv();
 			func(texture_table[i]);
-			texture_handles[i] = texture_table[i];
+			texture_handles[i] = asset->get_texture()->texture_2d()->get_static_srv();// texture_table[i];
 		}
 		//	textures.push_back(t);
 
@@ -340,19 +350,19 @@ void materials::universal_material::compile()
 
 			if (u->type == ShaderParams::FLOAT1)
 			{
-				auto& v = u->value.f4_value;
+				auto& v = u->value.f_value;
 				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
 			}
 
 			if (u->type == ShaderParams::FLOAT2)
 			{
-				auto& v = u->value.f4_value;
+				auto& v = u->value.f2_value;
 				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
 			}
 
 			if (u->type == ShaderParams::FLOAT3)
 			{
-				auto& v = u->value.f4_value;
+				auto& v = u->value.f3_value;
 				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
 			}
 
@@ -419,10 +429,10 @@ void materials::universal_material::generate_material()
 	context->start(include_file->get_data(), graph.get().get());
 
 
-	auto ps_str = include_file->get_data() + context->get_pixel_result().text;
-	auto tess_orig_shader = context->get_tess_result().text;
-	auto tess_str = include_file->get_data() + tess_orig_shader;
-	auto voxel_str = include_file->get_data() + context->get_voxel_result().text;
+	auto ps_str = context->get_pixel_result().uniforms + include_file->get_data() + context->get_pixel_result().text;
+	auto tess_orig_shader =  context->get_tess_result().text;
+	auto tess_str = context->get_tess_result().uniforms + include_file->get_data() + tess_orig_shader;
+	auto voxel_str = context->get_voxel_result().uniforms + include_file->get_data() + context->get_voxel_result().text;
 
 	static IdGenerator ids;
 	
@@ -431,10 +441,10 @@ void materials::universal_material::generate_material()
 
 
 
-	auto raytracing_str = include_file_raytacing->get_data() + context->hit_shader.text;
+	auto raytracing_str = context->hit_shader.uniforms+ include_file_raytacing->get_data() + context->hit_shader.text;
 
 
-	raytracing_blob = *D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
+	//raytracing_blob = *D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
 	//    Log::get() << "SHADER: " << ps_str << "\n" << Hasher::hash(ps_str) << Log::endl;
 	Render::pixel_shader::ptr res_p_shader = passes[PASS_TYPE::DEFERRED].ps_shader;
 	Render::hull_shader::ptr res_h_shader = passes[PASS_TYPE::DEFERRED].hs_shader;
@@ -457,7 +467,7 @@ void materials::universal_material::generate_material()
 
 		if (!res_p_shader) return;
 	}
-
+	/*
 	if (!res_voxel_shader || res_voxel_shader->get_hash() != MD5(voxel_str))
 	{
 		res_voxel_shader = Render::pixel_shader::create_from_memory(voxel_str, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_voxel_result().macros);
@@ -470,7 +480,7 @@ void materials::universal_material::generate_material()
 		if (!res_voxel_shader||!res_voxel_shader_dynamic) return;
 	}
 
-	
+	*/
 	if (tess_orig_shader.size())
 	{
 		//      Log::get() << "TESSSHADER: " << context->get_tess_result() << Log::endl;

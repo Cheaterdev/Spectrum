@@ -29,7 +29,7 @@ namespace EngineAssets
 		 return  new BinaryAsset(L"shaders\\UniversalMaterialRaytracing.hlsl");
 		 });
 
-
+	 
 
 	 EngineAsset<BRDF> brdf(L"brdf", [] {
 		 BRDF *brdf = new BRDF();
@@ -37,3 +37,4 @@ namespace EngineAssets
 		 return  brdf;
 	 });
 }
+

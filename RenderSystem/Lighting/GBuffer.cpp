@@ -5,10 +5,10 @@
 {
 }
 
- void TextureSwapper::resize(DXGI_FORMAT format, ivec2 size)
+ void TextureSwapper::resize(DXGI_FORMAT format, ivec2 size, ResourceAllocator &allocator )
 {
-	data[0].reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(format, size.x, size.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
-	data[1].reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(format, size.x, size.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+	data[0].reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(format, size.x, size.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE, allocator));
+	data[1].reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(format, size.x, size.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE,allocator));
 
 	data[0]->set_name(std::string("TextureSwapper_0"));
 	data[1]->set_name(std::string("TextureSwapper_1"));
@@ -93,6 +93,7 @@ albedo_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::D
  G_Buffer::G_Buffer()
 {
 	size.register_change(this, [this](const ivec2& size) {
+		if(size.x>0)
 		resize(size);
 	});
 }
@@ -172,12 +173,9 @@ albedo_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::D
 	context->list->transition(speed_tex, Render::ResourceState::RENDER_TARGET);
 	context->list->transition(depth_tex, Render::ResourceState::DEPTH_WRITE);
 	list->flush_transitions();
-	table.clear_depth(context);
+	
 	table.set(context);
-	albedo_tex->texture_2d()->get_rtv().clear(*list);
-	normal_tex->texture_2d()->get_rtv().clear(*list);
-	specular_tex->texture_2d()->get_rtv().clear(*list);
-	speed_tex->texture_2d()->get_rtv().clear(*list);
+	
 	//	result_tex.first()->texture_2d()->get_rtv().clear(*list);
 	// result_tex.second()->texture_2d()->get_rtv().clear(*list);
 	list->get_graphics().set_viewports(vps);

@@ -14,17 +14,12 @@ namespace FlowGraph
 			windows.erase(node);
 	}
 
-	input::ptr graph::register_input(data_types type, std::string name)
+	/*input::ptr graph::register_input( std::string name)
 	{
-		/*   for (auto i : input_parametres)
-		{
-		if (i->name == name)
-		return i;
-		}
-		*/
+
 		graph_input::ptr i(new graph_input(this));
 		i->name = name;
-		i->type = type;
+		//i->type = type;
 		input_parametres.push_back(i);
 
 		for (auto listener : listeners)
@@ -33,16 +28,11 @@ namespace FlowGraph
 		return i;
 	}
 
-	output::ptr graph::register_output(data_types type, std::string name)
+	output::ptr graph::register_output( std::string name)
 	{
-		/*    for (auto i : output_parametres)
-		{
-		if (i->name == name)
-		return i;
-		}
-		*/
+
 		output::ptr p(new graph_output(this));
-		p->type = type;
+	//	p->type = type;
 		p->name = name;
 		output_parametres.push_back(p);
 
@@ -50,7 +40,7 @@ namespace FlowGraph
 			listener->on_add_output(p.get());
 
 		return p;
-	}
+	}*/
 
 	graph::graph()
 	{
@@ -160,10 +150,6 @@ namespace FlowGraph
 			e->shutdown();
 	}
 
-	bool Node::can_link(data_types a, data_types b)
-	{
-		return a == b;
-	}
 
 	bool Node::test_start()
 	{
@@ -258,7 +244,8 @@ namespace FlowGraph
 	{
 
 	}
-	input::ptr Node::register_input(data_types type, std::string name /*= "unnamed parameter"*/)
+	/*
+	input::ptr Node::register_input( std::string name)
 	{
 		for (auto i : input_parametres)
 		{
@@ -268,32 +255,17 @@ namespace FlowGraph
 
 		input::ptr i(new input(this));
 		i->name = name;
-		i->type = type;
+	//	i->type = type;
 		input_parametres.push_back(i);
 
 		for (auto listener : listeners)
 			listener->on_add_input(i.get());
 
 		return i;
-	}
+	}*/
 
-	output::ptr Node::register_output(data_types type, std::string name /*= "unnamed parameter"*/)
-	{
-		/* for (auto i : output_parametres)
-		 {
-			 if (i->name == name)
-				 return i;
-		 }*/
-		output::ptr p(new output(this));
-		p->type = type;
-		p->name = name;
-		output_parametres.push_back(p);
-
-		for (auto listener : listeners)
-			listener->on_add_output(p.get());
-
-		return p;
-	}
+//	output::ptr Node::register_output( std::string name /*= "unnamed parameter"*/)
+	
 
 	void window::on_tell(graph_listener* listener)
 	{
@@ -610,6 +582,10 @@ namespace FlowGraph
 		if (value.exists())
 			for (auto c : output_connections)
 				c->pass(value);
+
+
+		if(can_output)
+		value = nullptr;
 	}
 
 	bool parameter::can_link(parameter* p)
@@ -621,7 +597,7 @@ namespace FlowGraph
 		if (p->owner == owner)
 			return false;
 
-		if (!owner->can_link(type, p->type))
+		if (!type->can_cast(p->type.get()))
 			return false;
 
 		if (only_one_input)
@@ -702,8 +678,8 @@ namespace FlowGraph
 			o->remove_listener(this);
 	}
 
-	const data_types data_types::INT("int");
-	const data_types data_types::STRING("string");
+	//const data_types data_types::INT("int");
+	//const data_types data_types::STRING("string");
 
 	void GraphContext::run(Node * node)
 	{
@@ -719,7 +695,7 @@ namespace FlowGraph
 	{
 		run(node);
 	}
-
+/*
 	data_types::data_types(std::string name)
 	{
 		this->name = name;
@@ -733,7 +709,7 @@ namespace FlowGraph
 	std::string data_types::to_string() const
 	{
 		return name;
-	}
+	}*/
 
 	void graph::auto_layout()
 	{
@@ -950,4 +926,8 @@ BOOST_CLASS_EXPORT(FlowGraph::graph);
 BOOST_CLASS_EXPORT(FlowGraph::graph_input);
 
 BOOST_CLASS_EXPORT(FlowGraph::graph_output);
+BOOST_CLASS_EXPORT(FlowGraph::parameter_type);
+
+
+BOOST_CLASS_EXPORT(FlowGraph::strict_parameter);
 

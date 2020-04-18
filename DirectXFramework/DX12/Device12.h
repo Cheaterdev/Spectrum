@@ -5,7 +5,7 @@ namespace DX12
 
 	class TransitionCommandList;
 	class Device;
-	class Queue
+	class Queue: public Events::Runner //do not use runner, its obnly for testing here
 	{
 		std::wstring name;
 		ComPtr<ID3D12CommandQueue> native;
@@ -41,6 +41,7 @@ namespace DX12
 		UINT64 last_known_fence = 0;
 		UINT64 execute_internal(CommandList* list);
 	
+
 	public:
 		UINT64 signal();
 
@@ -90,7 +91,7 @@ namespace DX12
 		ComPtr<ID3D12Device5> m_device;
 		ComPtr<IDXGIFactory4> factory;
 		std::vector<std::shared_ptr<SwapChain>> swap_chains;
-
+		std::vector <ComPtr<IDXGIAdapter3> > vAdapters;
 
 		//   std::shared_ptr<CommandList> upload_list;
 		std::array<Queue::ptr, 4> queues;
@@ -107,7 +108,7 @@ namespace DX12
 
 		Queue::ptr& get_queue(CommandListType type);
 
-
+		size_t get_vram();
 
 		Device();
 

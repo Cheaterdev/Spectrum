@@ -26,17 +26,17 @@ namespace GUI
     void Renderer::draw_color(Render::context& c, float4 color, rect r)
     {
 		flush(c);
-        c.command_list->get_graphics().set_signature(root_signature);
-		UISignature<Signature> sig(&c.command_list->get_graphics());
-		sig.pixel_samples = sampler_table;
+       // c.command_list->get_graphics().set_signature(root_signature);
+		//UISignature<Signature> sig(&c.command_list->get_graphics());
+		//sig.pixel_samples = sampler_table;
       //  c.command_list->get_graphics().set(3, sampler_table);
         simple_rect->draw(c, color, r);
     }
 
     void Renderer::set(Render::context& c)
     {
-		UISignature<Signature> sig(&c.command_list->get_graphics());
-		sig.pixel_samples = sampler_table;
+	//	UISignature<Signature> sig(&c.command_list->get_graphics());
+	//	sig.pixel_samples = sampler_table;
 		//c.command_list->get_graphics().set(3, sampler_table);
     }
 	void Renderer::flush(Render::context& c)
@@ -67,10 +67,10 @@ namespace GUI
 		}));*/
 
 
-		root_signature = UISignature<SignatureCreator>().create_root();
+	//	root_signature = UISignature<SignatureCreator>().create_root();
 
-		root_signature->set_unfixed(7);
-        sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(3);
+	//	root_signature->set_unfixed(6);
+        /*sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(3);
         //   descriptor_sr_cb.reset(new Render::DescriptorHeap(512, Render::DescriptorHeapType::CBV_SRV_UAV, Render::DescriptorHeapFlags::SHADER_VISIBLE));
         //   descriptor_sampler.reset(new Render::DescriptorHeap(2, Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapFlags::SHADER_VISIBLE));
         D3D12_SAMPLER_DESC wrapSamplerDesc = {};
@@ -90,9 +90,9 @@ namespace GUI
         wrapSamplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
         wrapSamplerDesc.MaxLOD = 1;
         Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[2].cpu);
-
-        nine_patch.reset(new NinePatch(root_signature));
-        simple_rect.reset(new SimpleRect(root_signature));
+        */
+        nine_patch.reset(new NinePatch());
+        simple_rect.reset(new SimpleRect());
         area_tex.texture = Render::Texture::get_resource({ "textures/gui/edit.png", false, false });
         virtual_tex.texture = Render::Texture::get_resource({ "textures/gui/virtual.png", false , false });
         container_tex.texture = Render::Texture::get_resource({ "textures/gui/background.png", false, false });
@@ -111,10 +111,10 @@ namespace GUI
         nine_patch->draw(c, item, r);
     }
 
-    SimpleRect::SimpleRect(Render::RootSignature::ptr root)
+    SimpleRect::SimpleRect()
     {
         Render::PipelineStateDesc state_desc;
-        state_desc.root_signature = root;
+        state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
         state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\rect.hlsl", "PS_COLOR", 0, {} });
         state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\rect.hlsl", "VS", 0, {} });
         state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -153,14 +153,23 @@ namespace GUI
 
         //    vertexes.update(c.command_list);
         vblist[0] = c.command_list->get_graphics().place_vertex_buffer(vertexes);
-		UISignature<Signature> sig(&c.command_list->get_graphics());
+	//	UISignature<Signature> sig(&c.command_list->get_graphics());
 
 
         c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         c.command_list->get_graphics().set_vertex_buffers(0, vblist);
-		sig.pixel_const_buffer.set_raw(color);
+
+        Slots::ColorRect color_data;
+
+        color_data.GetColor() = color;
+
+        color_data.set(c.command_list->get_graphics());
+
+//		sig.pixel_const_buffer.set_raw(color);
         c.command_list->get_graphics().set_pipeline(pipeline_state);
+        c.command_list->get_graphics().use_dynamic = false;
         c.command_list->get_graphics().draw(6);
+        c.command_list->get_graphics().use_dynamic = true;
     }
 
 }

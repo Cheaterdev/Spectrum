@@ -34,6 +34,13 @@ namespace Math
 
     float cos(const float angle);
 
+
+    template <class A, class B>
+    auto pow(A a, B b)
+    {
+        return std::pow(a, b);
+    }
+
     template <typename T> __forceinline T AlignUpWithMask(T value, size_t mask)
     {
         return (T)(((size_t)value + mask) & ~mask);

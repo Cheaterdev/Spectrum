@@ -22,10 +22,12 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
 		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::CubemapView::ptr view);
 		void downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr& tex, Render::Texture::ptr& to);
 
+		void downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to);
 
-		void generate_quality(Render::GraphicsContext& context, camera* cam, G_Buffer& buffer);
+	//	void generate_quality(Render::GraphicsContext& context, camera* cam, G_Buffer& buffer);
 
 
 		void copy_texture_2d_slow(Render::GraphicsContext& context, Render::Texture::ptr& to, Render::Texture::ptr& from);
+		void copy_texture_2d_slow(Render::GraphicsContext& context, Render::Texture::ptr& to, Render::TextureView from);
 
 };

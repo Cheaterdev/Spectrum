@@ -1,0 +1,7 @@
+[Bind = FrameLayout::MaterialData]
+[CB = MaterialCB]
+struct MaterialInfo
+{
+	Texture2D textures[];
+}
+

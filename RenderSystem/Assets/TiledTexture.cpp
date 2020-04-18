@@ -360,7 +360,7 @@ void TiledTexture::init()
         residency_data_uploaded.reset(new texture_data(1, 1, mips[0].tiles.x, mips[0].tiles.y, 1, DXGI_FORMAT_R8G8B8A8_UNORM));
         memset(residency_data_uploaded->array[0]->mips[0]->data.data(), 255, residency_data_uploaded->array[0]->mips[0]->data.size());
         CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, mips[0].tiles.x, mips[0].tiles.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-        residency_texture.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, residency_data));
+        residency_texture.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, DefaultAllocator::get(), residency_data));
     }
     {
         //  CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, tiles.x, tiles.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_UNKNOWN);
@@ -374,7 +374,7 @@ void TiledTexture::init()
     table = Render::DescriptorHeapManager::get().get_csu_static()->create_table(2);
     residency_texture->texture_2d()->place_srv(table[0]);
     tiled_tex->texture_2d()->place_srv(table[1]);
-    sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(2);
+  /*  sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(2);
     D3D12_SAMPLER_DESC wrapSamplerDesc = {};
     wrapSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     wrapSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
@@ -388,7 +388,7 @@ void TiledTexture::init()
     wrapSamplerDesc.BorderColor[0] = wrapSamplerDesc.BorderColor[1] = wrapSamplerDesc.BorderColor[2] = wrapSamplerDesc.BorderColor[3] = 0;
     Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[0].cpu);
     wrapSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-    Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[1].cpu);
+    Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[1].cpu);*/
     //	FileSystem::get().
     stream.reset(new std::ifstream(tiles_file_name, ios::binary));
     archive = ZipArchive::Create(*stream);

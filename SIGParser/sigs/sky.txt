@@ -1,0 +1,18 @@
+[Bind = DefaultLayout::Instance0]
+struct SkyData
+{
+
+	float3 sunDir;
+	Texture2D depthBuffer;
+ 
+	Texture2D transmittance;
+	Texture3D inscatter;
+	Texture2D irradiance;
+}
+
+
+[Bind = DefaultLayout::Instance1]
+struct SkyFace
+{
+	uint face;
+}

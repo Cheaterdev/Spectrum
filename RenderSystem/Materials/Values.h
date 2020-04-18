@@ -1,4 +1,4 @@
-
+/*
 namespace ShaderParams
 {
     static const FlowGraph::data_types VECTOR("vector");
@@ -6,20 +6,65 @@ namespace ShaderParams
     static const FlowGraph::data_types FLOAT2("float2");
     static const FlowGraph::data_types FLOAT3("float3");
     static const FlowGraph::data_types FLOAT4("float4");
-};
+};*/
 
+
+
+struct ShaderParamType:public FlowGraph::parameter_type
+{
+	 int M;
+     int N;
+     std::string name;
+
+     bool can_cast(parameter_type* other) override
+     {
+         ShaderParamType* type = dynamic_cast<ShaderParamType*>(other);
+
+         if (!type) return false;
+
+         if (N == -1 || type->N == -1)
+             return M == type->M;
+
+         bool res = M == type->M && N == type->N;
+         return res;
+
+     }
+     ShaderParamType() = default;
+    ShaderParamType(int M, int N, std::string name):M(M),N(N), name(name)
+    {
+        
+    }
+
+    bool operator==(const ShaderParamType& t) const
+    {
+        return M == t.M && N == t.N;
+    }
+
+    int get_size()
+    {
+        return M * N * sizeof(float);
+    }
+
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int)
+	{
+		ar& NVP(M);
+		ar& NVP(N);
+	}
+};
 
 struct shader_parameter
 {
-        std::string name;
-        int M;
-        int N;
-        FlowGraph::data_types type;
-
-        std::string to_string();
+	std::string name;
+    ShaderParamType type;
+   
+    std::string to_string();
 
         shader_parameter() = default;
-        shader_parameter(std::string str, FlowGraph::data_types type);
+        shader_parameter(std::string str, ShaderParamType type);
+	//	shader_parameter(ShaderParamType type);
 
 
     private:
@@ -33,12 +78,27 @@ struct shader_parameter
 };
 
 
+namespace ShaderParams
+{
+    // TODO: make const
+   static  ShaderParamType VECTOR(1,4,"vector");
+    static  ShaderParamType FLOAT1(1,1,"float");
+    static  ShaderParamType FLOAT2(1,2,"float2");
+    static  ShaderParamType FLOAT3(1,3,"float3");
+    static  ShaderParamType FLOAT4(1,4,"float4");
+};
+template <class T, class N>
+class TemplatedParameter: public T
+{
+
+};
+
 class MaterialGraph;
 class MaterialContext;
 template<class T = FlowGraph::Node>
 class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
 {
-        bool is_vector(FlowGraph::data_types v)
+      /*  bool is_vector(FlowGraph::data_types v)
         {
             return true;
         }
@@ -61,7 +121,7 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
                 return 4;
 
             return 0;
-        }
+        }*/
     protected:
         void operator()(::FlowGraph::GraphContext* c);;
 
@@ -69,7 +129,7 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
 
     public:
 
-        virtual bool can_link(FlowGraph::data_types a, FlowGraph::data_types b)
+    /*    virtual bool can_link(FlowGraph::data_types a, FlowGraph::data_types b)
         {
             if (is_vector(a) && is_vector(b))
             {
@@ -80,8 +140,15 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
             }
 
             return a == b;
+        }*/
+/*
+        template<class ParamType>
+        TemplatedParameter<input, ParamType>::ptr get_input(int i)
+        {
+            T::get_input();
+            
         }
-
+      */
         virtual ~MaterialTNode()
         {}
 
@@ -113,9 +180,10 @@ class MaterialFunction;
 struct Uniform
 {
 	std::string name;
+    ShaderParamType type;
 	//  std::string shader_name;
 
-	FlowGraph::data_types type;
+	//FlowGraph::data_types type;
 
 	struct _value
 	{
@@ -193,7 +261,7 @@ private:
 
 struct ShaderSource
 {
-
+    std::string uniforms;
 	std::string text;
 	std::string function_name;
 	std::vector<D3D::shader_macro> macros;
@@ -296,9 +364,9 @@ class MaterialFunction : public MaterialGraphNode
         std::string func_name;
         MaterialFunction();
         virtual ~MaterialFunction();
-        shader_parameter add_value(const FlowGraph::data_types type, std::string s);
+        shader_parameter add_value(const ShaderParamType& type, std::string s);
 
-        shader_parameter add_value(const FlowGraph::data_types type);
+        shader_parameter add_value(const ShaderParamType& type);
 
         void add_function(std::string s);
 
@@ -576,11 +644,11 @@ public:
 
 	SpecToMetNode()
 	{
-		inputs.albedo = register_input(ShaderParams::FLOAT4, "albedo");
-		inputs.specular = register_input(ShaderParams::FLOAT4, "specular");
+		inputs.albedo = register_input(/*ShaderParams::FLOAT4, */"albedo");
+		inputs.specular = register_input(/*ShaderParams::FLOAT4, */"specular");
 
-		outputs.albedo = register_output(ShaderParams::FLOAT4, "albedo");
-		outputs.metallic = register_output(ShaderParams::FLOAT1, "metallic");
+		outputs.albedo = register_output(/*ShaderParams::FLOAT4,*/ "albedo");
+		outputs.metallic = register_output(/*ShaderParams::FLOAT1,*/ "metallic");
 
 	}
 
@@ -682,4 +750,4 @@ BOOST_CLASS_EXPORT_KEY(TextureNode);
 BOOST_CLASS_EXPORT_KEY(VectorNode);
 BOOST_CLASS_EXPORT_KEY(TiledTextureNode);
 BOOST_CLASS_EXPORT_KEY(MaterialGraph);
-BOOST_CLASS_EXPORT_KEY(SpecToMetNode);
+BOOST_CLASS_EXPORT_KEY(SpecToMetNode);BOOST_CLASS_EXPORT_KEY(TextureSRVParams);

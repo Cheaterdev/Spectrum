@@ -12,6 +12,7 @@ namespace FlowGraph
     */
 
     // todo: make string to int manager
+    /*
     struct data_types
     {
             virtual ~data_types()
@@ -43,7 +44,7 @@ namespace FlowGraph
             {
                 ar& NVP(name);
             }
-    };
+    };*/
 
     //typedef std::string  data_types;
 
@@ -172,13 +173,53 @@ namespace FlowGraph
     };
 
 
+    //template<class T>
+    struct parameter_type
+    {
+        virtual bool can_cast( parameter_type* other) = 0;
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+		
+		}
+
+
+    };
+
+    struct strict_parameter:public parameter_type
+    {
+
+ 
+        virtual bool can_cast(parameter_type* other) override
+        {
+            return true;
+        }
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			ar& NVP(boost::serialization::base_object<parameter_type>(*this));
+		
+		}
+
+
+
+    };
+	// concept to detect any derivered class from Resource
+	template <class T>
+	concept class_parameter_type = std::is_base_of<parameter_type, T>::value;
+
     struct parameter : public std::enable_shared_from_this<parameter>
     {
             // LEAK_TEST
 		MyVariant value;
 		MyVariant default_value;
 
-            data_types type;
+        std::unique_ptr<parameter_type> type;
             std::string name;
             bool only_one_input = true;
             bool can_input = false;
@@ -478,9 +519,12 @@ namespace FlowGraph
             int setted_params = 0;
             std::mutex m;
 
-			virtual   void reset_for();
+		
 
         protected:
+
+            virtual   void reset_for();
+
             bool start_if_output = false;
 			void shutdown();
 
@@ -488,7 +532,7 @@ namespace FlowGraph
             std::vector<input::ptr> input_parametres;
             std::vector<output::ptr> output_parametres;
 
-			virtual bool can_link(data_types a, data_types b);
+	//		virtual bool can_link(data_types a, data_types b);
             virtual bool test_start();
 
 			virtual void on_input(input* i);
@@ -503,9 +547,46 @@ namespace FlowGraph
 			virtual void on_start(GraphContext*);
 			using ptr = s_ptr<Node>;
 
+            template<class T = strict_parameter>
+            input::ptr register_input(std::string name = "unnamed parameter", const T& param = T())
+            {
+				{
+					for (auto i : input_parametres)
+					{
+						if (i->name == name)
+							return i;
+					}
 
-            virtual  input::ptr register_input(data_types type, std::string name = "unnamed parameter");
-            virtual  output::ptr register_output(data_types type, std::string name = "unnamed parameter");
+					input::ptr i(new input(this));
+					i->name = name;
+					i->type = std::make_unique<T>(param);
+					input_parametres.push_back(i);
+
+					for (auto listener : listeners)
+						listener->on_add_input(i.get());
+
+					return i;
+				}
+            }
+
+            template<class T = strict_parameter>
+            output::ptr register_output(std::string name = "unnamed parameter", const T& param = T())
+            {
+                /* for (auto i : output_parametres)
+                 {
+                     if (i->name == name)
+                         return i;
+                 }*/
+                output::ptr p(new output(this));
+				p->type = std::make_unique<T>(param);
+				p->name = name;
+                output_parametres.push_back(p);
+
+                for (auto listener : listeners)
+                    listener->on_add_output(p.get());
+
+                return p;
+            }
             virtual  void remove_input(input::ptr);
             virtual   void remove_output(output::ptr);
 
@@ -658,10 +739,47 @@ namespace FlowGraph
             void register_node(std::shared_ptr<window> node);
             void remove_node(std::shared_ptr<window> node);
 
-			virtual	input::ptr register_input(data_types type, std::string name = "unnamed parameter") override;
+            
+		//	input::ptr register_input(std::string name = "unnamed parameter");
+		//	output::ptr register_output(std::string name = "unnamed parameter");
 
-			virtual	output::ptr register_output(data_types type, std::string name = "unnamed parameter") override;
+            template<class_parameter_type T = strict_parameter>   input::ptr register_input(std::string name,const T &param = T())
+            {
+                /*   for (auto i : input_parametres)
+                {
+                if (i->name == name)
+                return i;
+                }
+                */
+                graph_input::ptr i(new graph_input(this));
+                i->name = name;
+				i->type = std::make_unique<T>(param);
+				input_parametres.push_back(i);
 
+                for (auto listener : listeners)
+                    listener->on_add_input(i.get());
+
+                return i;
+            }
+
+            template<class_parameter_type T = strict_parameter> output::ptr register_output(std::string name, const T& param = T())
+            {
+                /*    for (auto i : output_parametres)
+                {
+                if (i->name == name)
+                return i;
+                }
+                */
+                output::ptr p(new graph_output(this));
+				p->type = std::make_unique<T>(param);
+				p->name = name;
+                output_parametres.push_back(p);
+
+                for (auto listener : listeners)
+                    listener->on_add_output(p.get());
+
+                return p;
+            }
 
 			void auto_layout();
 			graph();

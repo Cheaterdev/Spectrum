@@ -12,7 +12,7 @@ namespace DX12
         rtvHeapDesc.Type = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type);
         rtvHeapDesc.Flags = static_cast<D3D12_DESCRIPTOR_HEAP_FLAGS>(flags);
         rtvHeapDesc.NodeMask = 1;
-         Device::get().get_native_device()->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap));
+        TEST(Device::get().get_native_device()->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
         descriptor_size = Device::get().get_native_device()->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type));
 		assert(m_rtvHeap);
         /*   for (UINT n = 0; n < num; n++)
@@ -36,10 +36,11 @@ namespace DX12
     }
 
 	
-    void Resource::init(const CD3DX12_RESOURCE_DESC& desc, HeapType type, ResourceState state, vec4 clear_value)
-    {
+    void Resource::init(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap, ResourceState state, vec4 clear_value)
+	{
+	//	auto& timer = Profiler::get().start(L"Resource");
         auto t = CounterManager::get().start_count<Resource>();
-        heap_type = type;
+        heap_type = heap.get_type();
         D3D12_CLEAR_VALUE value;
         value.Format = to_srv(desc.Format);
         value.Color[0] = clear_value.x;
@@ -54,41 +55,44 @@ namespace DX12
             value.DepthStencil.Stencil = 0;
         }
 		
+		if (state == ResourceState::UNKNOWN)
+		{
+			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+				state = ResourceState::DEPTH_WRITE;
+			else if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+				state = ResourceState::RENDER_TARGET;
+			else 
+					state = ResourceState::COMMON;
+		}
         auto info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
-
-		if (info.SizeInBytes > 257698037)
-			ClassLogger<Resource>::get() << "Ololo" << Log::endl;
-        ClassLogger<Resource>::get() << "creating resource " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] += info.SizeInBytes) << Log::endl;
-        TEST(Device::get().get_native_device()->CreateCommittedResource(
+		delete_me = heap.create_resource(desc, state, clear_value);
+		m_Resource = delete_me->m_Resource;
+     //   ClassLogger<Resource>::get() << "creating resource " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] += info.SizeInBytes) << Log::endl;
+       /* TEST(Device::get().get_native_device()->CreateCommittedResource(
                  &CD3DX12_HEAP_PROPERTIES(static_cast<D3D12_HEAP_TYPE>(type)),
                  D3D12_HEAP_FLAG_NONE,
                  &desc,
                  static_cast<D3D12_RESOURCE_STATES>(state),
                  (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
-                 IID_PPV_ARGS(&m_Resource)));
-	//	auto stack = get_stack_trace();
+                 IID_PPV_ARGS(&m_Resource)));*/
 
-	
 	 id = counter_id.fetch_add(1);
 
         m_Resource->SetName(std::to_wstring(id).c_str());
 	//	Log::get() << "resource creation: " << id << " at:\n" << get_stack_trace().to_string() << Log::endl;
         this->desc = CD3DX12_RESOURCE_DESC(m_Resource->GetDesc());
 
-        if (type != HeapType::READBACK && desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
+        if (heap_type != HeapType::READBACK && desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
             gpu_adress = m_Resource->GetGPUVirtualAddress();
 
 		gpu_state = state;
 		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()));
 
+
     }
-    Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, HeapType type, ResourceState state, vec4 clear_value)
+    Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator&heap, ResourceState state, vec4 clear_value)
     {
-        init(desc, type, state, clear_value);
-       // states.resize(20, state);
-		gpu_state = state;
-		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()));
-	
+        init(desc, heap, state, clear_value);
     }
 
 
@@ -104,18 +108,35 @@ namespace DX12
 
 		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()));
        // states.resize(20);
-    }
+	}
+	Resource::Resource(const ComPtr<ID3D12Resource>& resource, CommonAllocator::Handle handle, ResourceState state):Resource(resource, true)
+	{
+		this->alloc_handle = handle;
+		this->gpu_state = state;
+		D3D12_HEAP_PROPERTIES HeapProperties;
+		D3D12_HEAP_FLAGS  HeapFlags;
+		resource->GetHeapProperties(&HeapProperties,&HeapFlags);
+
+		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD)
+		{
+			resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
+		}
+	}
 
     Resource::~Resource()
     {
+		if (buffer_data)
+		{
+			m_Resource->Unmap(0, nullptr);
+		}
         if (!force_delete)
         {
             Device::get().unused(m_Resource);
             auto info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
-			std::stringstream stream;
-			stream << std::hex << gpu_adress;
-			std::string result(stream.str());
-            ClassLogger<Resource>::get() << "deleting resource " << id<<" "<< result <<" "<< m_Resource.Get() << " " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] -= info.SizeInBytes) << Log::endl;
+	//std::stringstream stream;
+	//	stream << std::hex << gpu_adress;
+	//		std::string result(stream.str());
+         //   ClassLogger<Resource>::get() << "deleting resource " << id<<" "<< result <<" "<< m_Resource.Get() << " " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] -= info.SizeInBytes) << Log::endl;
         }
     }
 	/*
@@ -152,270 +173,249 @@ namespace DX12
 
     }
 	*/
-    DescriptorHeapManager::DescriptorHeapManager()
-    {
-        heap_cb_sr_ua.reset(new DescriptorHeap(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE));
-        heap_cb_sr_ua_static.reset(new DescriptorHeap(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE));
-        heap_samplers.reset(new DescriptorHeap(64, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE));
-        heap_rt.reset(new DescriptorHeap(65536, DescriptorHeapType::RTV, DescriptorHeapFlags::NONE));
-        heap_ds.reset(new DescriptorHeap(65536, DescriptorHeapType::DSV, DescriptorHeapFlags::NONE));
-        samplers_default_table = heap_samplers->create_table(5);
-        D3D12_SAMPLER_DESC wrapSamplerDesc = {};
-        wrapSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-        wrapSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        wrapSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        wrapSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-        wrapSamplerDesc.MinLOD = 0;
-        wrapSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-        wrapSamplerDesc.MipLODBias = 0.0f;
-        wrapSamplerDesc.MaxAnisotropy = 16;
-        wrapSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-        wrapSamplerDesc.BorderColor[0] = wrapSamplerDesc.BorderColor[1] = wrapSamplerDesc.BorderColor[2] = wrapSamplerDesc.BorderColor[3] = 0;
-        Device::get().create_sampler(wrapSamplerDesc, samplers_default_table[0].cpu);
-        wrapSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-        Device::get().create_sampler(wrapSamplerDesc, samplers_default_table[1].cpu);
-        wrapSamplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
-        Device::get().create_sampler(wrapSamplerDesc, samplers_default_table[2].cpu);
-    }
 
 
-    void Handle::place(const Handle& r, D3D12_DESCRIPTOR_HEAP_TYPE type ) const
-    {
-		if(cpu!=r.cpu)
-        Device::get().get_native_device()->CopyDescriptorsSimple(1, cpu, r.cpu, type);
-    }
-
-	void HandleTable::place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t)
+	HeapType DefaultAllocator::get_type()
 	{
-		Device::get().get_native_device()->CopyDescriptorsSimple(r.get_count(), get_base().cpu, r.get_base().cpu, t);
+		return HeapType::DEFAULT;
 	}
-
-
-    static std::queue<DescriptorHeap::ptr> free_tables;
-    static std::mutex tables_mutex;
-
-
-	DescriptorHeap::ptr DynamicDescriptorManager::get_free_table()
-    {
-        std::lock_guard<std::mutex> g(tables_mutex);
-
-        if (!free_tables.empty())
-        {
-			DescriptorHeap::ptr res = free_tables.front();
-            free_tables.pop();
-            return res;
-        }
-
-		return std::make_shared<DescriptorHeap>(1024, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE); //::get().get_csu()->create_table(256);
-    }
-    void DynamicDescriptorManager::free_table(DescriptorHeap::ptr t)
-    {
-        std::lock_guard<std::mutex> g(tables_mutex);
-        free_tables.push(t);
-    }
-
-	DynamicDescriptorManager::DynamicDescriptorManager()
+	HeapType ReadbackAllocator::get_type()
 	{
-		//	original = DescriptorHeapManager::get().get_csu()->create_table(256);
-
-		null_srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
-		null_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = get_default_mapping(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM);
-		srvDesc.Format = to_srv(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM);
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = 1;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
-
-
-		D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
-		desc.Format = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
-		desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2D;
-		desc.Texture2D.PlaneSlice = 0;
-		desc.Texture2D.MipSlice = 0;
-
-
-		Device::get().get_native_device()->CreateShaderResourceView(nullptr, &srvDesc, null_srv[0].cpu);
-		Device::get().get_native_device()->CreateUnorderedAccessView(nullptr, nullptr, &desc, null_uav[0].cpu);
-//	heap_cb_sr_ua.reset(new DescriptorHeap(1024, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE));
-	}
-
-	DX12::DescriptorHeap::ptr DynamicDescriptorManager::create_heap()
+		return HeapType::READBACK;
+	}HeapType UploadAllocator::get_type()
 	{
-		pages.emplace_back(get_free_table());
-		offset = 0;
-		return pages.back();
-	}
+		return HeapType::UPLOAD;
+	}	
 
-	void DynamicDescriptorManager::reset()
+	PlacedAllocator::PlacedAllocator() :
+		heap_srv(HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES),
+		heap_rtv(HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES),
+		heap_uav(HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES)
+		
 	{
-		offset = 0;
-
-		for (auto& p : pages)
-			free_table(p);
-
-		pages.clear();
-	}
-	void DynamicDescriptorManager::set(UINT i, UINT offset, std::vector<Handle>& h)
-	{
-
-		if (h.size() == 0) return;
-		if (!root_tables[i].fixed)
-			root_tables[i].handles.resize(h.size());
-
-		for(size_t j=0;j<h.size();j++)
-		root_tables[i].handles[offset+j] = h[j];
-		root_tables[i].changed = true;
-	}
-	void DynamicDescriptorManager::set(UINT i, UINT offset, Handle h)
-	{
-		if ((!root_tables[i].fixed)&&root_tables[i].handles.size()<=offset)
-			root_tables[i].handles.resize(offset+1);
-
-		root_tables[i].handles[offset] = h;
-		root_tables[i].changed = true;
-	}
-	void DynamicDescriptorManager::set(UINT i, UINT offset, HandleTable h)
-	{
-		if (h.get_count() == 0) return;
-		if ((!root_tables[i].fixed)&&root_tables[i].handles.size() <= offset+h.get_count())
-			root_tables[i].handles.resize(offset + h.get_count() + 1);
-
-		for(UINT j=0;j<std::min(static_cast<UINT>(root_tables[i].handles.size()),offset+h.get_count())- offset;j++)
-		root_tables[i].handles[offset+j] = h[j];
-		root_tables[i].changed = true;
-	}
-	bool DynamicDescriptorManager::has_free_size(UINT count)
-	{
-		return (!pages.empty() && (offset + count < pages.back()->size()));
-	}
-
-	UINT DynamicDescriptorManager::calculate_needed_size()
-	{
-		UINT size = 0;
-		for (auto &e : root_tables)
-		{
-			if (!e.second.changed) continue;
-			size += static_cast<UINT>(e.second.handles.size());
-		}
-
 	
-		return size;
+
+		/*	heap_srv.init(1024 * 1024 * 128, HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);
+			heap_rtv.init(1024 * 1024 * 128, HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES);
+			heap_upload_texture.init(1024 * 1024 * 128, HeapType::UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES);
+			heap_upload_buffer.init(1024 * 1024 * 128, HeapType::UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);*/
 	}
 
-	void DynamicDescriptorManager::unbind_all()
+	CommonAllocator::Handle PlacedAllocator::allocate_resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type)
 	{
-		for (auto &e : root_tables)
-			e.second.changed = true;	
-		
+		D3D12_RESOURCE_ALLOCATION_INFO  info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
+
+		Allocator* heap = nullptr;
+
+
+		if (heap_type == HeapType::DEFAULT)
+		{
+			if (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+			{
+				heap = &heap_rtv;
+			}
+			else
+				heap = &heap_srv;
+		}
+		else if (heap_type == HeapType::UPLOAD)
+		{
+			heap = &current_frame->heap_upload_buffer;
+		}
+
+
+
+		return heap->Allocate(info.SizeInBytes, info.Alignment);
+	}
+
+	void ResourceHeap::init(size_t size)
+	{
+		heap = nullptr;
+
+		D3D12_HEAP_DESC desc;
+		desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+		desc.Flags = flags;
+		desc.SizeInBytes = size;
+		desc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+		desc.Properties.CreationNodeMask = 0;
+		desc.Properties.VisibleNodeMask = 0;
+		desc.Properties.Type = (D3D12_HEAP_TYPE)type;
+		desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+
+
+		TEST(Device::get().get_native_device()->CreateHeap(&desc, IID_PPV_ARGS(&heap)));
+
+		heap_size = size;
+	}
+
+
+	Resource::ptr PlacedAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, Allocator::Handle handle, ResourceState state, vec4 clear_value)
+	{
+		D3D12_CLEAR_VALUE value;
+		value.Format = to_srv(desc.Format);
+		value.Color[0] = clear_value.x;
+		value.Color[1] = clear_value.y;
+		value.Color[2] = clear_value.z;
+		value.Color[3] = clear_value.w;
+
+		if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+		{
+			value.Format = to_dsv(desc.Format);
+			value.DepthStencil.Depth = 1.0f;
+			value.DepthStencil.Stencil = 0;
+		}
+
+		ResourceHeap* heap = dynamic_cast<ResourceHeap*>(handle.get_owner());
+
+		if (state == ResourceState::UNKNOWN)
+		{
+			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+				state = ResourceState::DEPTH_WRITE;
+			else if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+				state = ResourceState::RENDER_TARGET;
+			else
+				state = ResourceState::COMMON;
+		}
+
+
+		ComPtr<ID3D12Resource> m_Resource;
+		TEST(Device::get().get_native_device()->CreatePlacedResource(
+			heap->heap.Get(),
+			handle.aligned_offset,
+			&desc,
+			static_cast<D3D12_RESOURCE_STATES>(state),
+			(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
+			IID_PPV_ARGS(&m_Resource)));
+
+
+		return std::make_shared<Resource>(m_Resource, handle, state);
+	}
+
+
+
+	Resource::ptr PlacedAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type, ResourceState state, vec4 clear_value)
+	{
+		CommonAllocator::Handle handle = allocate_resource(desc, heap_type);
+
+		return create_resource(desc, handle, state, clear_value);
+	}
+
+	Resource::ptr DefaultAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)
+		{
+			D3D12_CLEAR_VALUE value;
+			value.Format = to_srv(desc.Format);
+			value.Color[0] = clear_value.x;
+			value.Color[1] = clear_value.y;
+			value.Color[2] = clear_value.z;
+			value.Color[3] = clear_value.w;
+
+			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+			{
+				value.Format = to_dsv(desc.Format);
+				value.DepthStencil.Depth = 1.0f;
+				value.DepthStencil.Stencil = 0;
+			}
+
+
+			if (state == ResourceState::UNKNOWN)
+			{
+				if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+					state = ResourceState::DEPTH_WRITE;
+				else if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+					state = ResourceState::RENDER_TARGET;
+				else
+					state = ResourceState::COMMON;
+			}
+
+
+
+			ComPtr<ID3D12Resource> m_Resource;
+			TEST(Device::get().get_native_device()->CreateCommittedResource(
+				&CD3DX12_HEAP_PROPERTIES(static_cast<D3D12_HEAP_TYPE>(HeapType::DEFAULT)),
+				D3D12_HEAP_FLAG_NONE,
+				&desc,
+				static_cast<D3D12_RESOURCE_STATES>(state),
+				(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
+				IID_PPV_ARGS(&m_Resource)));
+
+			return std::make_shared<Resource>(m_Resource, true);
+		}
+
+		Resource::ptr UploadAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)
+		{
+			D3D12_CLEAR_VALUE value;
+			value.Format = to_srv(desc.Format);
+			value.Color[0] = clear_value.x;
+			value.Color[1] = clear_value.y;
+			value.Color[2] = clear_value.z;
+			value.Color[3] = clear_value.w;
+
+			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+			{
+				value.Format = to_dsv(desc.Format);
+				value.DepthStencil.Depth = 1.0f;
+				value.DepthStencil.Stencil = 0;
+			}
+
+			ComPtr<ID3D12Resource> m_Resource;
+			TEST(Device::get().get_native_device()->CreateCommittedResource(
+				&CD3DX12_HEAP_PROPERTIES(static_cast<D3D12_HEAP_TYPE>(HeapType::UPLOAD)),
+				D3D12_HEAP_FLAG_NONE,
+				&desc,
+				static_cast<D3D12_RESOURCE_STATES>(state),
+				(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
+				IID_PPV_ARGS(&m_Resource)));
+
+			return std::make_shared<Resource>(m_Resource, true);
+		}
 	
-	}
-	void DynamicDescriptorManager::bind(CommandList * list)
-	{
-		if (pages.size())
+	
+		Resource::ptr ReadbackAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)
 		{
-			auto &heap = pages.back();
-			list->set_heap(DescriptorHeapType::CBV_SRV_UAV, heap);
-		}
-	}
-	Handle DynamicDescriptorManager::place(const Handle &h)
-	{
+			D3D12_CLEAR_VALUE value;
+			value.Format = to_srv(desc.Format);
+			value.Color[0] = clear_value.x;
+			value.Color[1] = clear_value.y;
+			value.Color[2] = clear_value.z;
+			value.Color[3] = clear_value.w;
 
-		if (!has_free_size(1))
-		{
+			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+			{
+				value.Format = to_dsv(desc.Format);
+				value.DepthStencil.Depth = 1.0f;
+				value.DepthStencil.Stencil = 0;
+			}
+			ComPtr<ID3D12Resource> m_Resource;
+			TEST(Device::get().get_native_device()->CreateCommittedResource(
+				&CD3DX12_HEAP_PROPERTIES(static_cast<D3D12_HEAP_TYPE>(HeapType::READBACK)),
+				D3D12_HEAP_FLAG_NONE,
+				&desc,
+				static_cast<D3D12_RESOURCE_STATES>(state),
+				(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
+				IID_PPV_ARGS(&m_Resource)));
 
-			create_heap();
-			unbind_all();
-		}
-		auto &heap = pages.back();
-		auto table = heap->get_table_view(offset, 1);
-
-		offset += 1;
-		table[0].place(h);
-
-		return table[0];
-	}
-
-	void DynamicDescriptorManager::bind(CommandList * list, std::function<void(UINT, Handle)> f)
-	{
-		int needed_size = calculate_needed_size();
-
-		if (!has_free_size(needed_size))
-		{
-
-			create_heap();
-			unbind_all();
-			///////////////////////
-
+			return std::make_shared<Resource>(m_Resource, true);
 		}
 
 
-		auto &heap = pages.back();
-		if(needed_size)
-		list->set_heap(DescriptorHeapType::CBV_SRV_UAV, heap);
+		void ResourceView::init_views(FrameResources& frame) {
 
-		for (auto &e : root_tables)
-		{
-			if (!e.second.changed) continue;
-		
-			auto table = heap->get_table_view(offset, static_cast<UINT>(e.second.handles.size()));
+			auto& desc = resource->get_desc();
 
-			for (unsigned int j = 0; j < e.second.handles.size(); j++)
-				if (e.second.handles[j].is_valid())
-					table[j].place(e.second.handles[j]);
-
-			e.second.changed = false;
-			f(e.first, table[0]);
-			offset += static_cast<UINT>(e.second.handles.size());
-
-		//	if (!e.second.fixed)
-			//	e.second.handles.resize(e.second.count);
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+			{
+				rtv = frame.rtv_cpu.place();
+				place_rtv(rtv);
+			}
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) {
+				dsv = frame.dsv_cpu.place();
+				place_dsv(dsv);
+			}
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+				uav = frame.srv_uav_cbv_cpu.place();
+				place_uav(uav);
+			}
+			srv = frame.srv_uav_cbv_cpu.place();
+				place_srv(srv);
 		}
 
-		
-
-	}
-
-	void DynamicDescriptorManager::bind_table(UINT i, std::vector<Handle>& h)
-	{
-	//	root_tables[i].changed = true;
-	//	swap(root_tables[i].handles, h);
-
-		set(i,0, h);
-	}
-
-	void DynamicDescriptorManager::parse(RootSignature::ptr root)
-	{
-		auto& desc = root->get_desc();
-
-
-		root_tables.clear();
-		for (auto& e : desc.tables)
-		{
-			root_tables[e.first].fixed = e.second.fixed;
-			root_tables[e.first].count = e.second.count;
-			root_tables[e.first].handles.resize(e.second.count);
-			if (e.second.type == DescriptorRange::SRV)
-				for (auto&&l : root_tables[e.first].handles) l = null_srv[0];
-
-			if (e.second.type == DescriptorRange::UAV)
-				for (auto&&l : root_tables[e.first].handles) l = null_uav[0];
-
-			/*
-			memset(root_tables[e.first].handles.data(),&null_srv[0],sizeof(Handle)*e.second.count);
-
-			if (e.second.type == DescriptorRange::UAV)
-				memset(root_tables[e.first].handles.data(), &null_uav[0], sizeof(Handle)*e.second.count);*/
-			root_tables[e.first].changed = true;
-		}
-	}
-
-	void Handle::clear(CommandList& list, float4 color) const
-    {
-		list.flush_transitions();
-        list.get_native_list()->ClearRenderTargetView(cpu, &color.x, 0, nullptr);
-    }
 }

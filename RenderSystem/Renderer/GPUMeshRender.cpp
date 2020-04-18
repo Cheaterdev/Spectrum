@@ -32,7 +32,7 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 
 	mesh_render_context->pipeline = default_pipeline;
 	mesh_render_context->begin();
-	mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
+	////////////////////////////////////////////////////////////////////mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
 
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	if (best_fit_normals)
@@ -313,7 +313,15 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 				graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
 				signature.vertex_buffer=vertex_buffer->get_gpu_address();
 				signature.mat_virtual_textures[0]=visible_id_buffer->get_static_uav();
-				mesh_render_context->g_buffer->set_downsapled(mesh_render_context);
+			//	mesh_render_context->g_buffer->set_downsapled(mesh_render_context);
+
+
+				//TODO: DOWNSAPMPLED HERE!!!
+				//mesh_render_context->g_buffer->rtv_table.set(mesh_render_context);
+				//mesh_render_context->g_buffer->rtv_table.set_window(graphics);
+
+				mesh_render_context->g_buffer->HalfBuffer.hiZ_table.set(mesh_render_context);
+				mesh_render_context->g_buffer->HalfBuffer.hiZ_table.set_window(graphics);
 
 				if (stage == 0)
 				{
@@ -398,7 +406,10 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 						graphics.set_topology(p.topology);
 
 						{
-							mesh_render_context->g_buffer->set_original(mesh_render_context);
+						//	mesh_render_context->g_buffer->set_original(mesh_render_context);
+
+							mesh_render_context->g_buffer->rtv_table.set(mesh_render_context);
+							mesh_render_context->g_buffer->rtv_table.set_window(graphics);
 						}
 
 /*
@@ -422,7 +433,9 @@ void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene
 			//	if (stage == 0)
 			{
 				//	auto timer = graphics.start(L"downsample_depth");
-				mesh_render_context->g_buffer->downsample_depth(mesh_render_context->list);
+
+				// TODO: DOWNSAMPLE MEEEEEEEEEEEEE
+				//mesh_render_context->g_buffer->downsample_depth(mesh_render_context->list);
 			}
 		}
 

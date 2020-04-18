@@ -29,7 +29,7 @@ class camera : public Frustum
         {
             vec3 p[8];
 
-            box get_bounds_in(mat4x4 view_proj)
+            box get_bounds_in(mat4x4 view_proj) const
             {
                 box res;
 
@@ -263,6 +263,7 @@ class camera : public Frustum
         {
             //  const_buffer.reset(new Render::Buffer<shader_params>());
         }
+
     private:
 
 };

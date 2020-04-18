@@ -1,6 +1,6 @@
 #pragma once
 
-class stencil_renderer : public renderer, public GUI::base
+class stencil_renderer : public renderer, public GUI::base, public FrameGraphGenerator
 {
         RenderTargetTable table;
         Render::StructuredBuffer<UINT>::ptr id_buffer;
@@ -25,7 +25,7 @@ class stencil_renderer : public renderer, public GUI::base
         Render::StructuredBuffer<UINT>::ptr axis_id_buffer;
 
         MeshAssetInstance::ptr axis;
-
+        PlacedAllocator allocator;
         camera axis_cam;
 
         //  bool need_update = false;
@@ -60,6 +60,8 @@ class stencil_renderer : public renderer, public GUI::base
 		Plane current_plane;
 
     public:
+		virtual void generate(FrameGraph& graph) override;
+		void generate_after(FrameGraph& graph);
 
         scene_object::ptr scene;
         camera* player_cam;

@@ -66,9 +66,11 @@ namespace DX12
         DescriptorRange range;
         ShaderVisibility visibility;
         UINT offset;
+		UINT space;
 
-        DescriptorConstBuffer(UINT _offset, ShaderVisibility _visibility = ShaderVisibility::ALL
-                             ) :  visibility(_visibility), offset(_offset)
+		DescriptorConstBuffer(UINT _offset, ShaderVisibility _visibility = ShaderVisibility::ALL,
+			UINT space = 0
+                             ) :  visibility(_visibility), offset(_offset), space(space)
         {
         }
     };
@@ -142,7 +144,7 @@ namespace DX12
                 }
                 void operator=(const DescriptorConstBuffer& table)
                 {
-                    param.InitAsConstantBufferView(table.offset, 0, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
+                    param.InitAsConstantBufferView(table.offset, table.space, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
                 }
                 void operator=(const DescriptorSRV& table)
                 {
@@ -217,6 +219,11 @@ namespace DX12
                 sampler.MipLODBias = desc.MipLODBias;
                 sampler.RegisterSpace = space;
                 sampler.ShaderRegister = i;
+            }
+
+            void add_sampler( int space, ShaderVisibility visibility, D3D12_SAMPLER_DESC desc)
+            {
+                set_sampler(samplers_map.size(), space, visibility, desc);
             }
             std::map<UINT, table_info> tables;
 

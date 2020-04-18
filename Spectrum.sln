@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29905.134
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Spectrum", "Spectrum\Spectrum.vcxproj", "{4AFAC69E-480F-41C7-8032-83DB0721F669}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -53,6 +53,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "FlowGraph", "FlowGraph\Flow
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZipLib", "3rdparty\ZipLib\ZipLib.vcxproj", "{5C9FD859-DDF9-4510-8397-B329B0AE8C48}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SIGParser", "SIGParser\SIGParser.vcxproj", "{4717336F-4ADC-43BB-860C-31B3FC7F6713}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -82,8 +84,8 @@ Global
 		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Debug|x64.Build.0 = Release|x64
 		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Normal|Win32.ActiveCfg = Normal|Win32
 		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Normal|Win32.Build.0 = Normal|Win32
-		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Normal|x64.ActiveCfg = Normal|x64
-		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Normal|x64.Build.0 = Normal|x64
+		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Normal|x64.ActiveCfg = Release|x64
+		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Normal|x64.Build.0 = Release|x64
 		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Release|Win32.ActiveCfg = Release|Win32
 		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Release|Win32.Build.0 = Release|Win32
 		{1C472FEB-F52F-45A9-B312-3B0F200025F3}.Release|x64.ActiveCfg = Release|x64
@@ -172,42 +174,24 @@ Global
 		{5C9FD859-DDF9-4510-8397-B329B0AE8C48}.Release|Win32.Build.0 = Release|Win32
 		{5C9FD859-DDF9-4510-8397-B329B0AE8C48}.Release|x64.ActiveCfg = Release|x64
 		{5C9FD859-DDF9-4510-8397-B329B0AE8C48}.Release|x64.Build.0 = Release|x64
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Debug|Win32.Build.0 = Debug|Win32
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Debug|x64.ActiveCfg = Debug|x64
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Debug|x64.Build.0 = Debug|x64
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Normal|Win32.ActiveCfg = Release|Win32
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Normal|Win32.Build.0 = Release|Win32
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Normal|x64.ActiveCfg = Release|x64
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Normal|x64.Build.0 = Release|x64
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Release|Win32.ActiveCfg = Release|Win32
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Release|Win32.Build.0 = Release|Win32
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Release|x64.ActiveCfg = Release|x64
+		{4717336F-4ADC-43BB-860C-31B3FC7F6713}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 10
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = https://cheater.visualstudio.com/defaultcollection
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = Spectrum\\Spectrum.vcxproj
-		SccProjectName1 = Spectrum
-		SccLocalPath1 = Spectrum
-		SccProjectUniqueName2 = Core\\Core.vcxproj
-		SccProjectName2 = Core
-		SccLocalPath2 = Core
-		SccProjectUniqueName3 = FileSystem\\FileSystem.vcxproj
-		SccProjectName3 = FileSystem
-		SccLocalPath3 = FileSystem
-		SccProjectUniqueName4 = 3rdparty\\3rdparty.vcxproj
-		SccProjectName4 = 3rdparty
-		SccLocalPath4 = 3rdparty
-		SccProjectUniqueName5 = DirectXFramework\\DirectXFramework.vcxproj
-		SccProjectName5 = DirectXFramework
-		SccLocalPath5 = DirectXFramework
-		SccProjectUniqueName6 = GameFramework\\GameFramework.vcxproj
-		SccProjectName6 = GameFramework
-		SccLocalPath6 = GameFramework
-		SccProjectUniqueName7 = RenderSystem\\RenderSystem.vcxproj
-		SccProjectName7 = RenderSystem
-		SccLocalPath7 = RenderSystem
-		SccProjectUniqueName8 = FlowGraph\\FlowGraph.vcxproj
-		SccProjectName8 = FlowGraph
-		SccLocalPath8 = FlowGraph
-		SccProjectUniqueName9 = 3rdparty\\ZipLib\\ZipLib.vcxproj
-		SccProjectName9 = 3rdparty/ZipLib
-		SccLocalPath9 = 3rdparty\\ZipLib
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {764D1A8F-8143-4EB2-BE17-9E9FCCEC1BDB}
 	EndGlobalSection
 	GlobalSection(CodealikeProperties) = postSolution
 		SolutionGuid = a41936c5-8bb7-49f7-99b6-a966d9835b28

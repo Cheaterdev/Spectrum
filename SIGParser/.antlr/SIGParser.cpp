@@ -1,0 +1,2147 @@
+
+// Generated from SIG.g4 by ANTLR 4.7.1
+
+
+#include "SIGListener.h"
+#include "SIGVisitor.h"
+
+#include "SIGParser.h"
+
+
+using namespace antlrcpp;
+using namespace antlr4;
+
+SIGParser::SIGParser(TokenStream *input) : Parser(input) {
+  _interpreter = new atn::ParserATNSimulator(this, _atn, _decisionToDFA, _sharedContextCache);
+}
+
+SIGParser::~SIGParser() {
+  delete _interpreter;
+}
+
+std::string SIGParser::getGrammarFileName() const {
+  return "SIG.g4";
+}
+
+const std::vector<std::string>& SIGParser::getRuleNames() const {
+  return _ruleNames;
+}
+
+dfa::Vocabulary& SIGParser::getVocabulary() const {
+  return _vocabulary;
+}
+
+
+//----------------- ParseContext ------------------------------------------------------------------
+
+SIGParser::ParseContext::ParseContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::ParseContext::EOF() {
+  return getToken(SIGParser::EOF, 0);
+}
+
+std::vector<SIGParser::Layout_definitionContext *> SIGParser::ParseContext::layout_definition() {
+  return getRuleContexts<SIGParser::Layout_definitionContext>();
+}
+
+SIGParser::Layout_definitionContext* SIGParser::ParseContext::layout_definition(size_t i) {
+  return getRuleContext<SIGParser::Layout_definitionContext>(i);
+}
+
+std::vector<SIGParser::Table_definitionContext *> SIGParser::ParseContext::table_definition() {
+  return getRuleContexts<SIGParser::Table_definitionContext>();
+}
+
+SIGParser::Table_definitionContext* SIGParser::ParseContext::table_definition(size_t i) {
+  return getRuleContext<SIGParser::Table_definitionContext>(i);
+}
+
+std::vector<tree::TerminalNode *> SIGParser::ParseContext::COMMENT() {
+  return getTokens(SIGParser::COMMENT);
+}
+
+tree::TerminalNode* SIGParser::ParseContext::COMMENT(size_t i) {
+  return getToken(SIGParser::COMMENT, i);
+}
+
+
+size_t SIGParser::ParseContext::getRuleIndex() const {
+  return SIGParser::RuleParse;
+}
+
+void SIGParser::ParseContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterParse(this);
+}
+
+void SIGParser::ParseContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitParse(this);
+}
+
+
+antlrcpp::Any SIGParser::ParseContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitParse(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::ParseContext* SIGParser::parse() {
+  ParseContext *_localctx = _tracker.createInstance<ParseContext>(_ctx, getState());
+  enterRule(_localctx, 0, SIGParser::RuleParse);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(57);
+    _errHandler->sync(this);
+    _la = _input->LA(1);
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & ((1ULL << SIGParser::OSBRACE)
+      | (1ULL << SIGParser::LAYOUT)
+      | (1ULL << SIGParser::STRUCT)
+      | (1ULL << SIGParser::COMMENT))) != 0)) {
+      setState(55);
+      _errHandler->sync(this);
+      switch (_input->LA(1)) {
+        case SIGParser::LAYOUT: {
+          setState(52);
+          layout_definition();
+          break;
+        }
+
+        case SIGParser::OSBRACE:
+        case SIGParser::STRUCT: {
+          setState(53);
+          table_definition();
+          break;
+        }
+
+        case SIGParser::COMMENT: {
+          setState(54);
+          match(SIGParser::COMMENT);
+          break;
+        }
+
+      default:
+        throw NoViableAltException(this);
+      }
+      setState(59);
+      _errHandler->sync(this);
+      _la = _input->LA(1);
+    }
+    setState(60);
+    match(SIGParser::EOF);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Bind_optionContext ------------------------------------------------------------------
+
+SIGParser::Bind_optionContext::Bind_optionContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+SIGParser::Name_idContext* SIGParser::Bind_optionContext::name_id() {
+  return getRuleContext<SIGParser::Name_idContext>(0);
+}
+
+SIGParser::Owner_idContext* SIGParser::Bind_optionContext::owner_id() {
+  return getRuleContext<SIGParser::Owner_idContext>(0);
+}
+
+
+size_t SIGParser::Bind_optionContext::getRuleIndex() const {
+  return SIGParser::RuleBind_option;
+}
+
+void SIGParser::Bind_optionContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterBind_option(this);
+}
+
+void SIGParser::Bind_optionContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitBind_option(this);
+}
+
+
+antlrcpp::Any SIGParser::Bind_optionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitBind_option(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Bind_optionContext* SIGParser::bind_option() {
+  Bind_optionContext *_localctx = _tracker.createInstance<Bind_optionContext>(_ctx, getState());
+  enterRule(_localctx, 2, SIGParser::RuleBind_option);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(65);
+    _errHandler->sync(this);
+
+    switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 2, _ctx)) {
+    case 1: {
+      setState(62);
+      owner_id();
+      setState(63);
+      match(SIGParser::T__0);
+      break;
+    }
+
+    }
+    setState(67);
+    name_id();
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Options_assignContext ------------------------------------------------------------------
+
+SIGParser::Options_assignContext::Options_assignContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Options_assignContext::ASSIGN() {
+  return getToken(SIGParser::ASSIGN, 0);
+}
+
+SIGParser::Bind_optionContext* SIGParser::Options_assignContext::bind_option() {
+  return getRuleContext<SIGParser::Bind_optionContext>(0);
+}
+
+
+size_t SIGParser::Options_assignContext::getRuleIndex() const {
+  return SIGParser::RuleOptions_assign;
+}
+
+void SIGParser::Options_assignContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterOptions_assign(this);
+}
+
+void SIGParser::Options_assignContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitOptions_assign(this);
+}
+
+
+antlrcpp::Any SIGParser::Options_assignContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOptions_assign(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Options_assignContext* SIGParser::options_assign() {
+  Options_assignContext *_localctx = _tracker.createInstance<Options_assignContext>(_ctx, getState());
+  enterRule(_localctx, 4, SIGParser::RuleOptions_assign);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(69);
+    match(SIGParser::ASSIGN);
+    setState(70);
+    bind_option();
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- OptionsContext ------------------------------------------------------------------
+
+SIGParser::OptionsContext::OptionsContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+SIGParser::Name_idContext* SIGParser::OptionsContext::name_id() {
+  return getRuleContext<SIGParser::Name_idContext>(0);
+}
+
+SIGParser::Options_assignContext* SIGParser::OptionsContext::options_assign() {
+  return getRuleContext<SIGParser::Options_assignContext>(0);
+}
+
+
+size_t SIGParser::OptionsContext::getRuleIndex() const {
+  return SIGParser::RuleOptions;
+}
+
+void SIGParser::OptionsContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterOptions(this);
+}
+
+void SIGParser::OptionsContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitOptions(this);
+}
+
+
+antlrcpp::Any SIGParser::OptionsContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOptions(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::OptionsContext* SIGParser::options() {
+  OptionsContext *_localctx = _tracker.createInstance<OptionsContext>(_ctx, getState());
+  enterRule(_localctx, 6, SIGParser::RuleOptions);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(72);
+    name_id();
+    setState(74);
+    _errHandler->sync(this);
+
+    _la = _input->LA(1);
+    if (_la == SIGParser::ASSIGN) {
+      setState(73);
+      options_assign();
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Option_blockContext ------------------------------------------------------------------
+
+SIGParser::Option_blockContext::Option_blockContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Option_blockContext::OSBRACE() {
+  return getToken(SIGParser::OSBRACE, 0);
+}
+
+tree::TerminalNode* SIGParser::Option_blockContext::CSBRACE() {
+  return getToken(SIGParser::CSBRACE, 0);
+}
+
+std::vector<SIGParser::OptionsContext *> SIGParser::Option_blockContext::options() {
+  return getRuleContexts<SIGParser::OptionsContext>();
+}
+
+SIGParser::OptionsContext* SIGParser::Option_blockContext::options(size_t i) {
+  return getRuleContext<SIGParser::OptionsContext>(i);
+}
+
+
+size_t SIGParser::Option_blockContext::getRuleIndex() const {
+  return SIGParser::RuleOption_block;
+}
+
+void SIGParser::Option_blockContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterOption_block(this);
+}
+
+void SIGParser::Option_blockContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitOption_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Option_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOption_block(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Option_blockContext* SIGParser::option_block() {
+  Option_blockContext *_localctx = _tracker.createInstance<Option_blockContext>(_ctx, getState());
+  enterRule(_localctx, 8, SIGParser::RuleOption_block);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(76);
+    match(SIGParser::OSBRACE);
+    setState(80);
+    _errHandler->sync(this);
+    _la = _input->LA(1);
+    while (_la == SIGParser::ID) {
+      setState(77);
+      options();
+      setState(82);
+      _errHandler->sync(this);
+      _la = _input->LA(1);
+    }
+    setState(83);
+    match(SIGParser::CSBRACE);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Array_count_idContext ------------------------------------------------------------------
+
+SIGParser::Array_count_idContext::Array_count_idContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Array_count_idContext::INT_SCALAR() {
+  return getToken(SIGParser::INT_SCALAR, 0);
+}
+
+
+size_t SIGParser::Array_count_idContext::getRuleIndex() const {
+  return SIGParser::RuleArray_count_id;
+}
+
+void SIGParser::Array_count_idContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterArray_count_id(this);
+}
+
+void SIGParser::Array_count_idContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitArray_count_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Array_count_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitArray_count_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Array_count_idContext* SIGParser::array_count_id() {
+  Array_count_idContext *_localctx = _tracker.createInstance<Array_count_idContext>(_ctx, getState());
+  enterRule(_localctx, 10, SIGParser::RuleArray_count_id);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(85);
+    match(SIGParser::INT_SCALAR);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- ArrayContext ------------------------------------------------------------------
+
+SIGParser::ArrayContext::ArrayContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::ArrayContext::OSBRACE() {
+  return getToken(SIGParser::OSBRACE, 0);
+}
+
+tree::TerminalNode* SIGParser::ArrayContext::CSBRACE() {
+  return getToken(SIGParser::CSBRACE, 0);
+}
+
+SIGParser::Array_count_idContext* SIGParser::ArrayContext::array_count_id() {
+  return getRuleContext<SIGParser::Array_count_idContext>(0);
+}
+
+
+size_t SIGParser::ArrayContext::getRuleIndex() const {
+  return SIGParser::RuleArray;
+}
+
+void SIGParser::ArrayContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterArray(this);
+}
+
+void SIGParser::ArrayContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitArray(this);
+}
+
+
+antlrcpp::Any SIGParser::ArrayContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitArray(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::ArrayContext* SIGParser::array() {
+  ArrayContext *_localctx = _tracker.createInstance<ArrayContext>(_ctx, getState());
+  enterRule(_localctx, 12, SIGParser::RuleArray);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(87);
+    match(SIGParser::OSBRACE);
+    setState(89);
+    _errHandler->sync(this);
+
+    _la = _input->LA(1);
+    if (_la == SIGParser::INT_SCALAR) {
+      setState(88);
+      array_count_id();
+    }
+    setState(91);
+    match(SIGParser::CSBRACE);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Value_declarationContext ------------------------------------------------------------------
+
+SIGParser::Value_declarationContext::Value_declarationContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+SIGParser::Type_idContext* SIGParser::Value_declarationContext::type_id() {
+  return getRuleContext<SIGParser::Type_idContext>(0);
+}
+
+SIGParser::Name_idContext* SIGParser::Value_declarationContext::name_id() {
+  return getRuleContext<SIGParser::Name_idContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Value_declarationContext::SCOL() {
+  return getToken(SIGParser::SCOL, 0);
+}
+
+std::vector<SIGParser::Option_blockContext *> SIGParser::Value_declarationContext::option_block() {
+  return getRuleContexts<SIGParser::Option_blockContext>();
+}
+
+SIGParser::Option_blockContext* SIGParser::Value_declarationContext::option_block(size_t i) {
+  return getRuleContext<SIGParser::Option_blockContext>(i);
+}
+
+SIGParser::ArrayContext* SIGParser::Value_declarationContext::array() {
+  return getRuleContext<SIGParser::ArrayContext>(0);
+}
+
+
+size_t SIGParser::Value_declarationContext::getRuleIndex() const {
+  return SIGParser::RuleValue_declaration;
+}
+
+void SIGParser::Value_declarationContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterValue_declaration(this);
+}
+
+void SIGParser::Value_declarationContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitValue_declaration(this);
+}
+
+
+antlrcpp::Any SIGParser::Value_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitValue_declaration(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Value_declarationContext* SIGParser::value_declaration() {
+  Value_declarationContext *_localctx = _tracker.createInstance<Value_declarationContext>(_ctx, getState());
+  enterRule(_localctx, 14, SIGParser::RuleValue_declaration);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    size_t alt;
+    enterOuterAlt(_localctx, 1);
+    setState(96);
+    _errHandler->sync(this);
+    alt = getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 6, _ctx);
+    while (alt != 1 && alt != atn::ATN::INVALID_ALT_NUMBER) {
+      if (alt == 1 + 1) {
+        setState(93);
+        option_block(); 
+      }
+      setState(98);
+      _errHandler->sync(this);
+      alt = getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 6, _ctx);
+    }
+    setState(99);
+    type_id();
+    setState(100);
+    name_id();
+    setState(102);
+    _errHandler->sync(this);
+
+    _la = _input->LA(1);
+    if (_la == SIGParser::OSBRACE) {
+      setState(101);
+      array();
+    }
+    setState(104);
+    match(SIGParser::SCOL);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Slot_declarationContext ------------------------------------------------------------------
+
+SIGParser::Slot_declarationContext::Slot_declarationContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Slot_declarationContext::SLOT() {
+  return getToken(SIGParser::SLOT, 0);
+}
+
+SIGParser::Name_idContext* SIGParser::Slot_declarationContext::name_id() {
+  return getRuleContext<SIGParser::Name_idContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Slot_declarationContext::SCOL() {
+  return getToken(SIGParser::SCOL, 0);
+}
+
+
+size_t SIGParser::Slot_declarationContext::getRuleIndex() const {
+  return SIGParser::RuleSlot_declaration;
+}
+
+void SIGParser::Slot_declarationContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterSlot_declaration(this);
+}
+
+void SIGParser::Slot_declarationContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitSlot_declaration(this);
+}
+
+
+antlrcpp::Any SIGParser::Slot_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitSlot_declaration(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Slot_declarationContext* SIGParser::slot_declaration() {
+  Slot_declarationContext *_localctx = _tracker.createInstance<Slot_declarationContext>(_ctx, getState());
+  enterRule(_localctx, 16, SIGParser::RuleSlot_declaration);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(106);
+    match(SIGParser::SLOT);
+    setState(107);
+    name_id();
+    setState(108);
+    match(SIGParser::SCOL);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Sampler_declarationContext ------------------------------------------------------------------
+
+SIGParser::Sampler_declarationContext::Sampler_declarationContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+SIGParser::Name_idContext* SIGParser::Sampler_declarationContext::name_id() {
+  return getRuleContext<SIGParser::Name_idContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Sampler_declarationContext::ASSIGN() {
+  return getToken(SIGParser::ASSIGN, 0);
+}
+
+SIGParser::Value_idContext* SIGParser::Sampler_declarationContext::value_id() {
+  return getRuleContext<SIGParser::Value_idContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Sampler_declarationContext::SCOL() {
+  return getToken(SIGParser::SCOL, 0);
+}
+
+
+size_t SIGParser::Sampler_declarationContext::getRuleIndex() const {
+  return SIGParser::RuleSampler_declaration;
+}
+
+void SIGParser::Sampler_declarationContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterSampler_declaration(this);
+}
+
+void SIGParser::Sampler_declarationContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitSampler_declaration(this);
+}
+
+
+antlrcpp::Any SIGParser::Sampler_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitSampler_declaration(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Sampler_declarationContext* SIGParser::sampler_declaration() {
+  Sampler_declarationContext *_localctx = _tracker.createInstance<Sampler_declarationContext>(_ctx, getState());
+  enterRule(_localctx, 18, SIGParser::RuleSampler_declaration);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(110);
+    match(SIGParser::T__1);
+    setState(111);
+    name_id();
+    setState(112);
+    match(SIGParser::ASSIGN);
+    setState(113);
+    value_id();
+    setState(114);
+    match(SIGParser::SCOL);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- TemplatedContext ------------------------------------------------------------------
+
+SIGParser::TemplatedContext::TemplatedContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::TemplatedContext::LT() {
+  return getToken(SIGParser::LT, 0);
+}
+
+SIGParser::Template_idContext* SIGParser::TemplatedContext::template_id() {
+  return getRuleContext<SIGParser::Template_idContext>(0);
+}
+
+tree::TerminalNode* SIGParser::TemplatedContext::GT() {
+  return getToken(SIGParser::GT, 0);
+}
+
+
+size_t SIGParser::TemplatedContext::getRuleIndex() const {
+  return SIGParser::RuleTemplated;
+}
+
+void SIGParser::TemplatedContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterTemplated(this);
+}
+
+void SIGParser::TemplatedContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitTemplated(this);
+}
+
+
+antlrcpp::Any SIGParser::TemplatedContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTemplated(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::TemplatedContext* SIGParser::templated() {
+  TemplatedContext *_localctx = _tracker.createInstance<TemplatedContext>(_ctx, getState());
+  enterRule(_localctx, 20, SIGParser::RuleTemplated);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(116);
+    match(SIGParser::LT);
+    setState(117);
+    template_id();
+    setState(118);
+    match(SIGParser::GT);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Type_with_templateContext ------------------------------------------------------------------
+
+SIGParser::Type_with_templateContext::Type_with_templateContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Type_with_templateContext::ID() {
+  return getToken(SIGParser::ID, 0);
+}
+
+SIGParser::TemplatedContext* SIGParser::Type_with_templateContext::templated() {
+  return getRuleContext<SIGParser::TemplatedContext>(0);
+}
+
+
+size_t SIGParser::Type_with_templateContext::getRuleIndex() const {
+  return SIGParser::RuleType_with_template;
+}
+
+void SIGParser::Type_with_templateContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterType_with_template(this);
+}
+
+void SIGParser::Type_with_templateContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitType_with_template(this);
+}
+
+
+antlrcpp::Any SIGParser::Type_with_templateContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitType_with_template(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Type_with_templateContext* SIGParser::type_with_template() {
+  Type_with_templateContext *_localctx = _tracker.createInstance<Type_with_templateContext>(_ctx, getState());
+  enterRule(_localctx, 22, SIGParser::RuleType_with_template);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(120);
+    match(SIGParser::ID);
+    setState(122);
+    _errHandler->sync(this);
+
+    _la = _input->LA(1);
+    if (_la == SIGParser::LT) {
+      setState(121);
+      templated();
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Inherit_idContext ------------------------------------------------------------------
+
+SIGParser::Inherit_idContext::Inherit_idContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Inherit_idContext::ID() {
+  return getToken(SIGParser::ID, 0);
+}
+
+
+size_t SIGParser::Inherit_idContext::getRuleIndex() const {
+  return SIGParser::RuleInherit_id;
+}
+
+void SIGParser::Inherit_idContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterInherit_id(this);
+}
+
+void SIGParser::Inherit_idContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitInherit_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Inherit_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitInherit_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Inherit_idContext* SIGParser::inherit_id() {
+  Inherit_idContext *_localctx = _tracker.createInstance<Inherit_idContext>(_ctx, getState());
+  enterRule(_localctx, 24, SIGParser::RuleInherit_id);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(124);
+    match(SIGParser::ID);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Name_idContext ------------------------------------------------------------------
+
+SIGParser::Name_idContext::Name_idContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Name_idContext::ID() {
+  return getToken(SIGParser::ID, 0);
+}
+
+
+size_t SIGParser::Name_idContext::getRuleIndex() const {
+  return SIGParser::RuleName_id;
+}
+
+void SIGParser::Name_idContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterName_id(this);
+}
+
+void SIGParser::Name_idContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitName_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Name_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitName_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Name_idContext* SIGParser::name_id() {
+  Name_idContext *_localctx = _tracker.createInstance<Name_idContext>(_ctx, getState());
+  enterRule(_localctx, 26, SIGParser::RuleName_id);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(126);
+    match(SIGParser::ID);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Type_idContext ------------------------------------------------------------------
+
+SIGParser::Type_idContext::Type_idContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+SIGParser::Type_with_templateContext* SIGParser::Type_idContext::type_with_template() {
+  return getRuleContext<SIGParser::Type_with_templateContext>(0);
+}
+
+
+size_t SIGParser::Type_idContext::getRuleIndex() const {
+  return SIGParser::RuleType_id;
+}
+
+void SIGParser::Type_idContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterType_id(this);
+}
+
+void SIGParser::Type_idContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitType_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Type_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitType_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Type_idContext* SIGParser::type_id() {
+  Type_idContext *_localctx = _tracker.createInstance<Type_idContext>(_ctx, getState());
+  enterRule(_localctx, 28, SIGParser::RuleType_id);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(128);
+    type_with_template();
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Option_idContext ------------------------------------------------------------------
+
+SIGParser::Option_idContext::Option_idContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Option_idContext::ID() {
+  return getToken(SIGParser::ID, 0);
+}
+
+
+size_t SIGParser::Option_idContext::getRuleIndex() const {
+  return SIGParser::RuleOption_id;
+}
+
+void SIGParser::Option_idContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterOption_id(this);
+}
+
+void SIGParser::Option_idContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitOption_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Option_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOption_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Option_idContext* SIGParser::option_id() {
+  Option_idContext *_localctx = _tracker.createInstance<Option_idContext>(_ctx, getState());
+  enterRule(_localctx, 30, SIGParser::RuleOption_id);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(130);
+    match(SIGParser::ID);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Owner_idContext ------------------------------------------------------------------
+
+SIGParser::Owner_idContext::Owner_idContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Owner_idContext::ID() {
+  return getToken(SIGParser::ID, 0);
+}
+
+
+size_t SIGParser::Owner_idContext::getRuleIndex() const {
+  return SIGParser::RuleOwner_id;
+}
+
+void SIGParser::Owner_idContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterOwner_id(this);
+}
+
+void SIGParser::Owner_idContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitOwner_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Owner_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOwner_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Owner_idContext* SIGParser::owner_id() {
+  Owner_idContext *_localctx = _tracker.createInstance<Owner_idContext>(_ctx, getState());
+  enterRule(_localctx, 32, SIGParser::RuleOwner_id);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(132);
+    match(SIGParser::ID);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Template_idContext ------------------------------------------------------------------
+
+SIGParser::Template_idContext::Template_idContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Template_idContext::ID() {
+  return getToken(SIGParser::ID, 0);
+}
+
+
+size_t SIGParser::Template_idContext::getRuleIndex() const {
+  return SIGParser::RuleTemplate_id;
+}
+
+void SIGParser::Template_idContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterTemplate_id(this);
+}
+
+void SIGParser::Template_idContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitTemplate_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Template_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTemplate_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Template_idContext* SIGParser::template_id() {
+  Template_idContext *_localctx = _tracker.createInstance<Template_idContext>(_ctx, getState());
+  enterRule(_localctx, 34, SIGParser::RuleTemplate_id);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(134);
+    match(SIGParser::ID);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Value_idContext ------------------------------------------------------------------
+
+SIGParser::Value_idContext::Value_idContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Value_idContext::ID() {
+  return getToken(SIGParser::ID, 0);
+}
+
+
+size_t SIGParser::Value_idContext::getRuleIndex() const {
+  return SIGParser::RuleValue_id;
+}
+
+void SIGParser::Value_idContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterValue_id(this);
+}
+
+void SIGParser::Value_idContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitValue_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Value_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitValue_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Value_idContext* SIGParser::value_id() {
+  Value_idContext *_localctx = _tracker.createInstance<Value_idContext>(_ctx, getState());
+  enterRule(_localctx, 36, SIGParser::RuleValue_id);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(136);
+    match(SIGParser::ID);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- InheritContext ------------------------------------------------------------------
+
+SIGParser::InheritContext::InheritContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+std::vector<SIGParser::Inherit_idContext *> SIGParser::InheritContext::inherit_id() {
+  return getRuleContexts<SIGParser::Inherit_idContext>();
+}
+
+SIGParser::Inherit_idContext* SIGParser::InheritContext::inherit_id(size_t i) {
+  return getRuleContext<SIGParser::Inherit_idContext>(i);
+}
+
+
+size_t SIGParser::InheritContext::getRuleIndex() const {
+  return SIGParser::RuleInherit;
+}
+
+void SIGParser::InheritContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterInherit(this);
+}
+
+void SIGParser::InheritContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitInherit(this);
+}
+
+
+antlrcpp::Any SIGParser::InheritContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitInherit(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::InheritContext* SIGParser::inherit() {
+  InheritContext *_localctx = _tracker.createInstance<InheritContext>(_ctx, getState());
+  enterRule(_localctx, 38, SIGParser::RuleInherit);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    size_t alt;
+    enterOuterAlt(_localctx, 1);
+    setState(138);
+    match(SIGParser::T__2);
+    setState(139);
+    inherit_id();
+    setState(144);
+    _errHandler->sync(this);
+    alt = getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 9, _ctx);
+    while (alt != 1 && alt != atn::ATN::INVALID_ALT_NUMBER) {
+      if (alt == 1 + 1) {
+        setState(140);
+        match(SIGParser::T__3);
+        setState(141);
+        inherit_id(); 
+      }
+      setState(146);
+      _errHandler->sync(this);
+      alt = getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 9, _ctx);
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Layout_statContext ------------------------------------------------------------------
+
+SIGParser::Layout_statContext::Layout_statContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+SIGParser::Slot_declarationContext* SIGParser::Layout_statContext::slot_declaration() {
+  return getRuleContext<SIGParser::Slot_declarationContext>(0);
+}
+
+SIGParser::Sampler_declarationContext* SIGParser::Layout_statContext::sampler_declaration() {
+  return getRuleContext<SIGParser::Sampler_declarationContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Layout_statContext::COMMENT() {
+  return getToken(SIGParser::COMMENT, 0);
+}
+
+
+size_t SIGParser::Layout_statContext::getRuleIndex() const {
+  return SIGParser::RuleLayout_stat;
+}
+
+void SIGParser::Layout_statContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterLayout_stat(this);
+}
+
+void SIGParser::Layout_statContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitLayout_stat(this);
+}
+
+
+antlrcpp::Any SIGParser::Layout_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitLayout_stat(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Layout_statContext* SIGParser::layout_stat() {
+  Layout_statContext *_localctx = _tracker.createInstance<Layout_statContext>(_ctx, getState());
+  enterRule(_localctx, 40, SIGParser::RuleLayout_stat);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    setState(150);
+    _errHandler->sync(this);
+    switch (_input->LA(1)) {
+      case SIGParser::SLOT: {
+        enterOuterAlt(_localctx, 1);
+        setState(147);
+        slot_declaration();
+        break;
+      }
+
+      case SIGParser::T__1: {
+        enterOuterAlt(_localctx, 2);
+        setState(148);
+        sampler_declaration();
+        break;
+      }
+
+      case SIGParser::COMMENT: {
+        enterOuterAlt(_localctx, 3);
+        setState(149);
+        match(SIGParser::COMMENT);
+        break;
+      }
+
+    default:
+      throw NoViableAltException(this);
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Layout_blockContext ------------------------------------------------------------------
+
+SIGParser::Layout_blockContext::Layout_blockContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+std::vector<SIGParser::Layout_statContext *> SIGParser::Layout_blockContext::layout_stat() {
+  return getRuleContexts<SIGParser::Layout_statContext>();
+}
+
+SIGParser::Layout_statContext* SIGParser::Layout_blockContext::layout_stat(size_t i) {
+  return getRuleContext<SIGParser::Layout_statContext>(i);
+}
+
+
+size_t SIGParser::Layout_blockContext::getRuleIndex() const {
+  return SIGParser::RuleLayout_block;
+}
+
+void SIGParser::Layout_blockContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterLayout_block(this);
+}
+
+void SIGParser::Layout_blockContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitLayout_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Layout_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitLayout_block(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Layout_blockContext* SIGParser::layout_block() {
+  Layout_blockContext *_localctx = _tracker.createInstance<Layout_blockContext>(_ctx, getState());
+  enterRule(_localctx, 42, SIGParser::RuleLayout_block);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(155);
+    _errHandler->sync(this);
+    _la = _input->LA(1);
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & ((1ULL << SIGParser::T__1)
+      | (1ULL << SIGParser::SLOT)
+      | (1ULL << SIGParser::COMMENT))) != 0)) {
+      setState(152);
+      layout_stat();
+      setState(157);
+      _errHandler->sync(this);
+      _la = _input->LA(1);
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Layout_definitionContext ------------------------------------------------------------------
+
+SIGParser::Layout_definitionContext::Layout_definitionContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Layout_definitionContext::LAYOUT() {
+  return getToken(SIGParser::LAYOUT, 0);
+}
+
+SIGParser::Name_idContext* SIGParser::Layout_definitionContext::name_id() {
+  return getRuleContext<SIGParser::Name_idContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Layout_definitionContext::OBRACE() {
+  return getToken(SIGParser::OBRACE, 0);
+}
+
+SIGParser::Layout_blockContext* SIGParser::Layout_definitionContext::layout_block() {
+  return getRuleContext<SIGParser::Layout_blockContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Layout_definitionContext::CBRACE() {
+  return getToken(SIGParser::CBRACE, 0);
+}
+
+SIGParser::InheritContext* SIGParser::Layout_definitionContext::inherit() {
+  return getRuleContext<SIGParser::InheritContext>(0);
+}
+
+
+size_t SIGParser::Layout_definitionContext::getRuleIndex() const {
+  return SIGParser::RuleLayout_definition;
+}
+
+void SIGParser::Layout_definitionContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterLayout_definition(this);
+}
+
+void SIGParser::Layout_definitionContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitLayout_definition(this);
+}
+
+
+antlrcpp::Any SIGParser::Layout_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitLayout_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Layout_definitionContext* SIGParser::layout_definition() {
+  Layout_definitionContext *_localctx = _tracker.createInstance<Layout_definitionContext>(_ctx, getState());
+  enterRule(_localctx, 44, SIGParser::RuleLayout_definition);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(158);
+    match(SIGParser::LAYOUT);
+    setState(159);
+    name_id();
+    setState(161);
+    _errHandler->sync(this);
+
+    _la = _input->LA(1);
+    if (_la == SIGParser::T__2) {
+      setState(160);
+      inherit();
+    }
+    setState(163);
+    match(SIGParser::OBRACE);
+    setState(164);
+    layout_block();
+    setState(165);
+    match(SIGParser::CBRACE);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Table_statContext ------------------------------------------------------------------
+
+SIGParser::Table_statContext::Table_statContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+SIGParser::Value_declarationContext* SIGParser::Table_statContext::value_declaration() {
+  return getRuleContext<SIGParser::Value_declarationContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Table_statContext::COMMENT() {
+  return getToken(SIGParser::COMMENT, 0);
+}
+
+
+size_t SIGParser::Table_statContext::getRuleIndex() const {
+  return SIGParser::RuleTable_stat;
+}
+
+void SIGParser::Table_statContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterTable_stat(this);
+}
+
+void SIGParser::Table_statContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitTable_stat(this);
+}
+
+
+antlrcpp::Any SIGParser::Table_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTable_stat(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Table_statContext* SIGParser::table_stat() {
+  Table_statContext *_localctx = _tracker.createInstance<Table_statContext>(_ctx, getState());
+  enterRule(_localctx, 46, SIGParser::RuleTable_stat);
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    setState(169);
+    _errHandler->sync(this);
+    switch (_input->LA(1)) {
+      case SIGParser::OSBRACE:
+      case SIGParser::ID: {
+        enterOuterAlt(_localctx, 1);
+        setState(167);
+        value_declaration();
+        break;
+      }
+
+      case SIGParser::COMMENT: {
+        enterOuterAlt(_localctx, 2);
+        setState(168);
+        match(SIGParser::COMMENT);
+        break;
+      }
+
+    default:
+      throw NoViableAltException(this);
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Table_blockContext ------------------------------------------------------------------
+
+SIGParser::Table_blockContext::Table_blockContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+std::vector<SIGParser::Table_statContext *> SIGParser::Table_blockContext::table_stat() {
+  return getRuleContexts<SIGParser::Table_statContext>();
+}
+
+SIGParser::Table_statContext* SIGParser::Table_blockContext::table_stat(size_t i) {
+  return getRuleContext<SIGParser::Table_statContext>(i);
+}
+
+
+size_t SIGParser::Table_blockContext::getRuleIndex() const {
+  return SIGParser::RuleTable_block;
+}
+
+void SIGParser::Table_blockContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterTable_block(this);
+}
+
+void SIGParser::Table_blockContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitTable_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Table_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTable_block(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Table_blockContext* SIGParser::table_block() {
+  Table_blockContext *_localctx = _tracker.createInstance<Table_blockContext>(_ctx, getState());
+  enterRule(_localctx, 48, SIGParser::RuleTable_block);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    enterOuterAlt(_localctx, 1);
+    setState(174);
+    _errHandler->sync(this);
+    _la = _input->LA(1);
+    while ((((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & ((1ULL << SIGParser::OSBRACE)
+      | (1ULL << SIGParser::ID)
+      | (1ULL << SIGParser::COMMENT))) != 0)) {
+      setState(171);
+      table_stat();
+      setState(176);
+      _errHandler->sync(this);
+      _la = _input->LA(1);
+    }
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+//----------------- Table_definitionContext ------------------------------------------------------------------
+
+SIGParser::Table_definitionContext::Table_definitionContext(ParserRuleContext *parent, size_t invokingState)
+  : ParserRuleContext(parent, invokingState) {
+}
+
+tree::TerminalNode* SIGParser::Table_definitionContext::STRUCT() {
+  return getToken(SIGParser::STRUCT, 0);
+}
+
+SIGParser::Name_idContext* SIGParser::Table_definitionContext::name_id() {
+  return getRuleContext<SIGParser::Name_idContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Table_definitionContext::OBRACE() {
+  return getToken(SIGParser::OBRACE, 0);
+}
+
+SIGParser::Table_blockContext* SIGParser::Table_definitionContext::table_block() {
+  return getRuleContext<SIGParser::Table_blockContext>(0);
+}
+
+tree::TerminalNode* SIGParser::Table_definitionContext::CBRACE() {
+  return getToken(SIGParser::CBRACE, 0);
+}
+
+std::vector<SIGParser::Option_blockContext *> SIGParser::Table_definitionContext::option_block() {
+  return getRuleContexts<SIGParser::Option_blockContext>();
+}
+
+SIGParser::Option_blockContext* SIGParser::Table_definitionContext::option_block(size_t i) {
+  return getRuleContext<SIGParser::Option_blockContext>(i);
+}
+
+SIGParser::InheritContext* SIGParser::Table_definitionContext::inherit() {
+  return getRuleContext<SIGParser::InheritContext>(0);
+}
+
+
+size_t SIGParser::Table_definitionContext::getRuleIndex() const {
+  return SIGParser::RuleTable_definition;
+}
+
+void SIGParser::Table_definitionContext::enterRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->enterTable_definition(this);
+}
+
+void SIGParser::Table_definitionContext::exitRule(tree::ParseTreeListener *listener) {
+  auto parserListener = dynamic_cast<SIGListener *>(listener);
+  if (parserListener != nullptr)
+    parserListener->exitTable_definition(this);
+}
+
+
+antlrcpp::Any SIGParser::Table_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTable_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
+SIGParser::Table_definitionContext* SIGParser::table_definition() {
+  Table_definitionContext *_localctx = _tracker.createInstance<Table_definitionContext>(_ctx, getState());
+  enterRule(_localctx, 50, SIGParser::RuleTable_definition);
+  size_t _la = 0;
+
+  auto onExit = finally([=] {
+    exitRule();
+  });
+  try {
+    size_t alt;
+    enterOuterAlt(_localctx, 1);
+    setState(180);
+    _errHandler->sync(this);
+    alt = getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 15, _ctx);
+    while (alt != 1 && alt != atn::ATN::INVALID_ALT_NUMBER) {
+      if (alt == 1 + 1) {
+        setState(177);
+        option_block(); 
+      }
+      setState(182);
+      _errHandler->sync(this);
+      alt = getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 15, _ctx);
+    }
+    setState(183);
+    match(SIGParser::STRUCT);
+    setState(184);
+    name_id();
+    setState(186);
+    _errHandler->sync(this);
+
+    _la = _input->LA(1);
+    if (_la == SIGParser::T__2) {
+      setState(185);
+      inherit();
+    }
+    setState(188);
+    match(SIGParser::OBRACE);
+    setState(189);
+    table_block();
+    setState(190);
+    match(SIGParser::CBRACE);
+   
+  }
+  catch (RecognitionException &e) {
+    _errHandler->reportError(this, e);
+    _localctx->exception = std::current_exception();
+    _errHandler->recover(this, _localctx->exception);
+  }
+
+  return _localctx;
+}
+
+// Static vars and initialization.
+std::vector<dfa::DFA> SIGParser::_decisionToDFA;
+atn::PredictionContextCache SIGParser::_sharedContextCache;
+
+// We own the ATN which in turn owns the ATN states.
+atn::ATN SIGParser::_atn;
+std::vector<uint16_t> SIGParser::_serializedATN;
+
+std::vector<std::string> SIGParser::_ruleNames = {
+  "parse", "bind_option", "options_assign", "options", "option_block", "array_count_id", 
+  "array", "value_declaration", "slot_declaration", "sampler_declaration", 
+  "templated", "type_with_template", "inherit_id", "name_id", "type_id", 
+  "option_id", "owner_id", "template_id", "value_id", "inherit", "layout_stat", 
+  "layout_block", "layout_definition", "table_stat", "table_block", "table_definition"
+};
+
+std::vector<std::string> SIGParser::_literalNames = {
+  "", "'::'", "'Sampler'", "':'", "','", "'||'", "'&&'", "'=='", "'!='", 
+  "'>'", "'<'", "'>='", "'<='", "'+'", "'-'", "'*'", "'/'", "'%'", "'^'", 
+  "'!'", "';'", "'='", "'('", "')'", "'{'", "'}'", "'['", "']'", "'true'", 
+  "'false'", "'log'", "'layout'", "'struct'", "'slot'"
+};
+
+std::vector<std::string> SIGParser::_symbolicNames = {
+  "", "", "", "", "", "OR", "AND", "EQ", "NEQ", "GT", "LT", "GTEQ", "LTEQ", 
+  "PLUS", "MINUS", "MULT", "DIV", "MOD", "POW", "NOT", "SCOL", "ASSIGN", 
+  "OPAR", "CPAR", "OBRACE", "CBRACE", "OSBRACE", "CSBRACE", "TRUE", "FALSE", 
+  "LOG", "LAYOUT", "STRUCT", "SLOT", "ID", "INT_SCALAR", "FLOAT_SCALAR", 
+  "STRING", "COMMENT", "SPACE"
+};
+
+dfa::Vocabulary SIGParser::_vocabulary(_literalNames, _symbolicNames);
+
+std::vector<std::string> SIGParser::_tokenNames;
+
+SIGParser::Initializer::Initializer() {
+	for (size_t i = 0; i < _symbolicNames.size(); ++i) {
+		std::string name = _vocabulary.getLiteralName(i);
+		if (name.empty()) {
+			name = _vocabulary.getSymbolicName(i);
+		}
+
+		if (name.empty()) {
+			_tokenNames.push_back("<INVALID>");
+		} else {
+      _tokenNames.push_back(name);
+    }
+	}
+
+  _serializedATN = {
+    0x3, 0x608b, 0xa72a, 0x8133, 0xb9ed, 0x417c, 0x3be7, 0x7786, 0x5964, 
+    0x3, 0x29, 0xc3, 0x4, 0x2, 0x9, 0x2, 0x4, 0x3, 0x9, 0x3, 0x4, 0x4, 0x9, 
+    0x4, 0x4, 0x5, 0x9, 0x5, 0x4, 0x6, 0x9, 0x6, 0x4, 0x7, 0x9, 0x7, 0x4, 
+    0x8, 0x9, 0x8, 0x4, 0x9, 0x9, 0x9, 0x4, 0xa, 0x9, 0xa, 0x4, 0xb, 0x9, 
+    0xb, 0x4, 0xc, 0x9, 0xc, 0x4, 0xd, 0x9, 0xd, 0x4, 0xe, 0x9, 0xe, 0x4, 
+    0xf, 0x9, 0xf, 0x4, 0x10, 0x9, 0x10, 0x4, 0x11, 0x9, 0x11, 0x4, 0x12, 
+    0x9, 0x12, 0x4, 0x13, 0x9, 0x13, 0x4, 0x14, 0x9, 0x14, 0x4, 0x15, 0x9, 
+    0x15, 0x4, 0x16, 0x9, 0x16, 0x4, 0x17, 0x9, 0x17, 0x4, 0x18, 0x9, 0x18, 
+    0x4, 0x19, 0x9, 0x19, 0x4, 0x1a, 0x9, 0x1a, 0x4, 0x1b, 0x9, 0x1b, 0x3, 
+    0x2, 0x3, 0x2, 0x3, 0x2, 0x7, 0x2, 0x3a, 0xa, 0x2, 0xc, 0x2, 0xe, 0x2, 
+    0x3d, 0xb, 0x2, 0x3, 0x2, 0x3, 0x2, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x5, 
+    0x3, 0x44, 0xa, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 0x4, 0x3, 0x4, 0x3, 0x4, 
+    0x3, 0x5, 0x3, 0x5, 0x5, 0x5, 0x4d, 0xa, 0x5, 0x3, 0x6, 0x3, 0x6, 0x7, 
+    0x6, 0x51, 0xa, 0x6, 0xc, 0x6, 0xe, 0x6, 0x54, 0xb, 0x6, 0x3, 0x6, 0x3, 
+    0x6, 0x3, 0x7, 0x3, 0x7, 0x3, 0x8, 0x3, 0x8, 0x5, 0x8, 0x5c, 0xa, 0x8, 
+    0x3, 0x8, 0x3, 0x8, 0x3, 0x9, 0x7, 0x9, 0x61, 0xa, 0x9, 0xc, 0x9, 0xe, 
+    0x9, 0x64, 0xb, 0x9, 0x3, 0x9, 0x3, 0x9, 0x3, 0x9, 0x5, 0x9, 0x69, 0xa, 
+    0x9, 0x3, 0x9, 0x3, 0x9, 0x3, 0xa, 0x3, 0xa, 0x3, 0xa, 0x3, 0xa, 0x3, 
+    0xb, 0x3, 0xb, 0x3, 0xb, 0x3, 0xb, 0x3, 0xb, 0x3, 0xb, 0x3, 0xc, 0x3, 
+    0xc, 0x3, 0xc, 0x3, 0xc, 0x3, 0xd, 0x3, 0xd, 0x5, 0xd, 0x7d, 0xa, 0xd, 
+    0x3, 0xe, 0x3, 0xe, 0x3, 0xf, 0x3, 0xf, 0x3, 0x10, 0x3, 0x10, 0x3, 0x11, 
+    0x3, 0x11, 0x3, 0x12, 0x3, 0x12, 0x3, 0x13, 0x3, 0x13, 0x3, 0x14, 0x3, 
+    0x14, 0x3, 0x15, 0x3, 0x15, 0x3, 0x15, 0x3, 0x15, 0x7, 0x15, 0x91, 0xa, 
+    0x15, 0xc, 0x15, 0xe, 0x15, 0x94, 0xb, 0x15, 0x3, 0x16, 0x3, 0x16, 0x3, 
+    0x16, 0x5, 0x16, 0x99, 0xa, 0x16, 0x3, 0x17, 0x7, 0x17, 0x9c, 0xa, 0x17, 
+    0xc, 0x17, 0xe, 0x17, 0x9f, 0xb, 0x17, 0x3, 0x18, 0x3, 0x18, 0x3, 0x18, 
+    0x5, 0x18, 0xa4, 0xa, 0x18, 0x3, 0x18, 0x3, 0x18, 0x3, 0x18, 0x3, 0x18, 
+    0x3, 0x19, 0x3, 0x19, 0x5, 0x19, 0xac, 0xa, 0x19, 0x3, 0x1a, 0x7, 0x1a, 
+    0xaf, 0xa, 0x1a, 0xc, 0x1a, 0xe, 0x1a, 0xb2, 0xb, 0x1a, 0x3, 0x1b, 0x7, 
+    0x1b, 0xb5, 0xa, 0x1b, 0xc, 0x1b, 0xe, 0x1b, 0xb8, 0xb, 0x1b, 0x3, 0x1b, 
+    0x3, 0x1b, 0x3, 0x1b, 0x5, 0x1b, 0xbd, 0xa, 0x1b, 0x3, 0x1b, 0x3, 0x1b, 
+    0x3, 0x1b, 0x3, 0x1b, 0x3, 0x1b, 0x5, 0x62, 0x92, 0xb6, 0x2, 0x1c, 0x2, 
+    0x4, 0x6, 0x8, 0xa, 0xc, 0xe, 0x10, 0x12, 0x14, 0x16, 0x18, 0x1a, 0x1c, 
+    0x1e, 0x20, 0x22, 0x24, 0x26, 0x28, 0x2a, 0x2c, 0x2e, 0x30, 0x32, 0x34, 
+    0x2, 0x2, 0x2, 0xbb, 0x2, 0x3b, 0x3, 0x2, 0x2, 0x2, 0x4, 0x43, 0x3, 
+    0x2, 0x2, 0x2, 0x6, 0x47, 0x3, 0x2, 0x2, 0x2, 0x8, 0x4a, 0x3, 0x2, 0x2, 
+    0x2, 0xa, 0x4e, 0x3, 0x2, 0x2, 0x2, 0xc, 0x57, 0x3, 0x2, 0x2, 0x2, 0xe, 
+    0x59, 0x3, 0x2, 0x2, 0x2, 0x10, 0x62, 0x3, 0x2, 0x2, 0x2, 0x12, 0x6c, 
+    0x3, 0x2, 0x2, 0x2, 0x14, 0x70, 0x3, 0x2, 0x2, 0x2, 0x16, 0x76, 0x3, 
+    0x2, 0x2, 0x2, 0x18, 0x7a, 0x3, 0x2, 0x2, 0x2, 0x1a, 0x7e, 0x3, 0x2, 
+    0x2, 0x2, 0x1c, 0x80, 0x3, 0x2, 0x2, 0x2, 0x1e, 0x82, 0x3, 0x2, 0x2, 
+    0x2, 0x20, 0x84, 0x3, 0x2, 0x2, 0x2, 0x22, 0x86, 0x3, 0x2, 0x2, 0x2, 
+    0x24, 0x88, 0x3, 0x2, 0x2, 0x2, 0x26, 0x8a, 0x3, 0x2, 0x2, 0x2, 0x28, 
+    0x8c, 0x3, 0x2, 0x2, 0x2, 0x2a, 0x98, 0x3, 0x2, 0x2, 0x2, 0x2c, 0x9d, 
+    0x3, 0x2, 0x2, 0x2, 0x2e, 0xa0, 0x3, 0x2, 0x2, 0x2, 0x30, 0xab, 0x3, 
+    0x2, 0x2, 0x2, 0x32, 0xb0, 0x3, 0x2, 0x2, 0x2, 0x34, 0xb6, 0x3, 0x2, 
+    0x2, 0x2, 0x36, 0x3a, 0x5, 0x2e, 0x18, 0x2, 0x37, 0x3a, 0x5, 0x34, 0x1b, 
+    0x2, 0x38, 0x3a, 0x7, 0x28, 0x2, 0x2, 0x39, 0x36, 0x3, 0x2, 0x2, 0x2, 
+    0x39, 0x37, 0x3, 0x2, 0x2, 0x2, 0x39, 0x38, 0x3, 0x2, 0x2, 0x2, 0x3a, 
+    0x3d, 0x3, 0x2, 0x2, 0x2, 0x3b, 0x39, 0x3, 0x2, 0x2, 0x2, 0x3b, 0x3c, 
+    0x3, 0x2, 0x2, 0x2, 0x3c, 0x3e, 0x3, 0x2, 0x2, 0x2, 0x3d, 0x3b, 0x3, 
+    0x2, 0x2, 0x2, 0x3e, 0x3f, 0x7, 0x2, 0x2, 0x3, 0x3f, 0x3, 0x3, 0x2, 
+    0x2, 0x2, 0x40, 0x41, 0x5, 0x22, 0x12, 0x2, 0x41, 0x42, 0x7, 0x3, 0x2, 
+    0x2, 0x42, 0x44, 0x3, 0x2, 0x2, 0x2, 0x43, 0x40, 0x3, 0x2, 0x2, 0x2, 
+    0x43, 0x44, 0x3, 0x2, 0x2, 0x2, 0x44, 0x45, 0x3, 0x2, 0x2, 0x2, 0x45, 
+    0x46, 0x5, 0x1c, 0xf, 0x2, 0x46, 0x5, 0x3, 0x2, 0x2, 0x2, 0x47, 0x48, 
+    0x7, 0x17, 0x2, 0x2, 0x48, 0x49, 0x5, 0x4, 0x3, 0x2, 0x49, 0x7, 0x3, 
+    0x2, 0x2, 0x2, 0x4a, 0x4c, 0x5, 0x1c, 0xf, 0x2, 0x4b, 0x4d, 0x5, 0x6, 
+    0x4, 0x2, 0x4c, 0x4b, 0x3, 0x2, 0x2, 0x2, 0x4c, 0x4d, 0x3, 0x2, 0x2, 
+    0x2, 0x4d, 0x9, 0x3, 0x2, 0x2, 0x2, 0x4e, 0x52, 0x7, 0x1c, 0x2, 0x2, 
+    0x4f, 0x51, 0x5, 0x8, 0x5, 0x2, 0x50, 0x4f, 0x3, 0x2, 0x2, 0x2, 0x51, 
+    0x54, 0x3, 0x2, 0x2, 0x2, 0x52, 0x50, 0x3, 0x2, 0x2, 0x2, 0x52, 0x53, 
+    0x3, 0x2, 0x2, 0x2, 0x53, 0x55, 0x3, 0x2, 0x2, 0x2, 0x54, 0x52, 0x3, 
+    0x2, 0x2, 0x2, 0x55, 0x56, 0x7, 0x1d, 0x2, 0x2, 0x56, 0xb, 0x3, 0x2, 
+    0x2, 0x2, 0x57, 0x58, 0x7, 0x25, 0x2, 0x2, 0x58, 0xd, 0x3, 0x2, 0x2, 
+    0x2, 0x59, 0x5b, 0x7, 0x1c, 0x2, 0x2, 0x5a, 0x5c, 0x5, 0xc, 0x7, 0x2, 
+    0x5b, 0x5a, 0x3, 0x2, 0x2, 0x2, 0x5b, 0x5c, 0x3, 0x2, 0x2, 0x2, 0x5c, 
+    0x5d, 0x3, 0x2, 0x2, 0x2, 0x5d, 0x5e, 0x7, 0x1d, 0x2, 0x2, 0x5e, 0xf, 
+    0x3, 0x2, 0x2, 0x2, 0x5f, 0x61, 0x5, 0xa, 0x6, 0x2, 0x60, 0x5f, 0x3, 
+    0x2, 0x2, 0x2, 0x61, 0x64, 0x3, 0x2, 0x2, 0x2, 0x62, 0x63, 0x3, 0x2, 
+    0x2, 0x2, 0x62, 0x60, 0x3, 0x2, 0x2, 0x2, 0x63, 0x65, 0x3, 0x2, 0x2, 
+    0x2, 0x64, 0x62, 0x3, 0x2, 0x2, 0x2, 0x65, 0x66, 0x5, 0x1e, 0x10, 0x2, 
+    0x66, 0x68, 0x5, 0x1c, 0xf, 0x2, 0x67, 0x69, 0x5, 0xe, 0x8, 0x2, 0x68, 
+    0x67, 0x3, 0x2, 0x2, 0x2, 0x68, 0x69, 0x3, 0x2, 0x2, 0x2, 0x69, 0x6a, 
+    0x3, 0x2, 0x2, 0x2, 0x6a, 0x6b, 0x7, 0x16, 0x2, 0x2, 0x6b, 0x11, 0x3, 
+    0x2, 0x2, 0x2, 0x6c, 0x6d, 0x7, 0x23, 0x2, 0x2, 0x6d, 0x6e, 0x5, 0x1c, 
+    0xf, 0x2, 0x6e, 0x6f, 0x7, 0x16, 0x2, 0x2, 0x6f, 0x13, 0x3, 0x2, 0x2, 
+    0x2, 0x70, 0x71, 0x7, 0x4, 0x2, 0x2, 0x71, 0x72, 0x5, 0x1c, 0xf, 0x2, 
+    0x72, 0x73, 0x7, 0x17, 0x2, 0x2, 0x73, 0x74, 0x5, 0x26, 0x14, 0x2, 0x74, 
+    0x75, 0x7, 0x16, 0x2, 0x2, 0x75, 0x15, 0x3, 0x2, 0x2, 0x2, 0x76, 0x77, 
+    0x7, 0xc, 0x2, 0x2, 0x77, 0x78, 0x5, 0x24, 0x13, 0x2, 0x78, 0x79, 0x7, 
+    0xb, 0x2, 0x2, 0x79, 0x17, 0x3, 0x2, 0x2, 0x2, 0x7a, 0x7c, 0x7, 0x24, 
+    0x2, 0x2, 0x7b, 0x7d, 0x5, 0x16, 0xc, 0x2, 0x7c, 0x7b, 0x3, 0x2, 0x2, 
+    0x2, 0x7c, 0x7d, 0x3, 0x2, 0x2, 0x2, 0x7d, 0x19, 0x3, 0x2, 0x2, 0x2, 
+    0x7e, 0x7f, 0x7, 0x24, 0x2, 0x2, 0x7f, 0x1b, 0x3, 0x2, 0x2, 0x2, 0x80, 
+    0x81, 0x7, 0x24, 0x2, 0x2, 0x81, 0x1d, 0x3, 0x2, 0x2, 0x2, 0x82, 0x83, 
+    0x5, 0x18, 0xd, 0x2, 0x83, 0x1f, 0x3, 0x2, 0x2, 0x2, 0x84, 0x85, 0x7, 
+    0x24, 0x2, 0x2, 0x85, 0x21, 0x3, 0x2, 0x2, 0x2, 0x86, 0x87, 0x7, 0x24, 
+    0x2, 0x2, 0x87, 0x23, 0x3, 0x2, 0x2, 0x2, 0x88, 0x89, 0x7, 0x24, 0x2, 
+    0x2, 0x89, 0x25, 0x3, 0x2, 0x2, 0x2, 0x8a, 0x8b, 0x7, 0x24, 0x2, 0x2, 
+    0x8b, 0x27, 0x3, 0x2, 0x2, 0x2, 0x8c, 0x8d, 0x7, 0x5, 0x2, 0x2, 0x8d, 
+    0x92, 0x5, 0x1a, 0xe, 0x2, 0x8e, 0x8f, 0x7, 0x6, 0x2, 0x2, 0x8f, 0x91, 
+    0x5, 0x1a, 0xe, 0x2, 0x90, 0x8e, 0x3, 0x2, 0x2, 0x2, 0x91, 0x94, 0x3, 
+    0x2, 0x2, 0x2, 0x92, 0x93, 0x3, 0x2, 0x2, 0x2, 0x92, 0x90, 0x3, 0x2, 
+    0x2, 0x2, 0x93, 0x29, 0x3, 0x2, 0x2, 0x2, 0x94, 0x92, 0x3, 0x2, 0x2, 
+    0x2, 0x95, 0x99, 0x5, 0x12, 0xa, 0x2, 0x96, 0x99, 0x5, 0x14, 0xb, 0x2, 
+    0x97, 0x99, 0x7, 0x28, 0x2, 0x2, 0x98, 0x95, 0x3, 0x2, 0x2, 0x2, 0x98, 
+    0x96, 0x3, 0x2, 0x2, 0x2, 0x98, 0x97, 0x3, 0x2, 0x2, 0x2, 0x99, 0x2b, 
+    0x3, 0x2, 0x2, 0x2, 0x9a, 0x9c, 0x5, 0x2a, 0x16, 0x2, 0x9b, 0x9a, 0x3, 
+    0x2, 0x2, 0x2, 0x9c, 0x9f, 0x3, 0x2, 0x2, 0x2, 0x9d, 0x9b, 0x3, 0x2, 
+    0x2, 0x2, 0x9d, 0x9e, 0x3, 0x2, 0x2, 0x2, 0x9e, 0x2d, 0x3, 0x2, 0x2, 
+    0x2, 0x9f, 0x9d, 0x3, 0x2, 0x2, 0x2, 0xa0, 0xa1, 0x7, 0x21, 0x2, 0x2, 
+    0xa1, 0xa3, 0x5, 0x1c, 0xf, 0x2, 0xa2, 0xa4, 0x5, 0x28, 0x15, 0x2, 0xa3, 
+    0xa2, 0x3, 0x2, 0x2, 0x2, 0xa3, 0xa4, 0x3, 0x2, 0x2, 0x2, 0xa4, 0xa5, 
+    0x3, 0x2, 0x2, 0x2, 0xa5, 0xa6, 0x7, 0x1a, 0x2, 0x2, 0xa6, 0xa7, 0x5, 
+    0x2c, 0x17, 0x2, 0xa7, 0xa8, 0x7, 0x1b, 0x2, 0x2, 0xa8, 0x2f, 0x3, 0x2, 
+    0x2, 0x2, 0xa9, 0xac, 0x5, 0x10, 0x9, 0x2, 0xaa, 0xac, 0x7, 0x28, 0x2, 
+    0x2, 0xab, 0xa9, 0x3, 0x2, 0x2, 0x2, 0xab, 0xaa, 0x3, 0x2, 0x2, 0x2, 
+    0xac, 0x31, 0x3, 0x2, 0x2, 0x2, 0xad, 0xaf, 0x5, 0x30, 0x19, 0x2, 0xae, 
+    0xad, 0x3, 0x2, 0x2, 0x2, 0xaf, 0xb2, 0x3, 0x2, 0x2, 0x2, 0xb0, 0xae, 
+    0x3, 0x2, 0x2, 0x2, 0xb0, 0xb1, 0x3, 0x2, 0x2, 0x2, 0xb1, 0x33, 0x3, 
+    0x2, 0x2, 0x2, 0xb2, 0xb0, 0x3, 0x2, 0x2, 0x2, 0xb3, 0xb5, 0x5, 0xa, 
+    0x6, 0x2, 0xb4, 0xb3, 0x3, 0x2, 0x2, 0x2, 0xb5, 0xb8, 0x3, 0x2, 0x2, 
+    0x2, 0xb6, 0xb7, 0x3, 0x2, 0x2, 0x2, 0xb6, 0xb4, 0x3, 0x2, 0x2, 0x2, 
+    0xb7, 0xb9, 0x3, 0x2, 0x2, 0x2, 0xb8, 0xb6, 0x3, 0x2, 0x2, 0x2, 0xb9, 
+    0xba, 0x7, 0x22, 0x2, 0x2, 0xba, 0xbc, 0x5, 0x1c, 0xf, 0x2, 0xbb, 0xbd, 
+    0x5, 0x28, 0x15, 0x2, 0xbc, 0xbb, 0x3, 0x2, 0x2, 0x2, 0xbc, 0xbd, 0x3, 
+    0x2, 0x2, 0x2, 0xbd, 0xbe, 0x3, 0x2, 0x2, 0x2, 0xbe, 0xbf, 0x7, 0x1a, 
+    0x2, 0x2, 0xbf, 0xc0, 0x5, 0x32, 0x1a, 0x2, 0xc0, 0xc1, 0x7, 0x1b, 0x2, 
+    0x2, 0xc1, 0x35, 0x3, 0x2, 0x2, 0x2, 0x13, 0x39, 0x3b, 0x43, 0x4c, 0x52, 
+    0x5b, 0x62, 0x68, 0x7c, 0x92, 0x98, 0x9d, 0xa3, 0xab, 0xb0, 0xb6, 0xbc, 
+  };
+
+  atn::ATNDeserializer deserializer;
+  _atn = deserializer.deserialize(_serializedATN);
+
+  size_t count = _atn.getNumberOfDecisions();
+  _decisionToDFA.reserve(count);
+  for (size_t i = 0; i < count; i++) { 
+    _decisionToDFA.emplace_back(_atn.getDecisionState(i), i);
+  }
+}
+
+SIGParser::Initializer SIGParser::_init;

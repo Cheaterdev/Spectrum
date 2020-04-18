@@ -41,161 +41,162 @@ THE SOFTWARE.
 #endif
 
 using namespace std;
-
-// overload << so that it's easy to convert to a string
-ostream& operator<<(ostream& s, const Guid& guid)
+namespace Spectrum
 {
-    return s << hex << setfill('0')
-           << setw(2) << (int)guid._bytes[0]
-           << setw(2) << (int)guid._bytes[1]
-           << setw(2) << (int)guid._bytes[2]
-           << setw(2) << (int)guid._bytes[3]
-           << "-"
-           << setw(2) << (int)guid._bytes[4]
-           << setw(2) << (int)guid._bytes[5]
-           << "-"
-           << setw(2) << (int)guid._bytes[6]
-           << setw(2) << (int)guid._bytes[7]
-           << "-"
-           << setw(2) << (int)guid._bytes[8]
-           << setw(2) << (int)guid._bytes[9]
-           << "-"
-           << setw(2) << (int)guid._bytes[10]
-           << setw(2) << (int)guid._bytes[11]
-           << setw(2) << (int)guid._bytes[12]
-           << setw(2) << (int)guid._bytes[13]
-           << setw(2) << (int)guid._bytes[14]
-           << setw(2) << (int)guid._bytes[15];
-}
-
-// overload << so that it's easy to convert to a string
-wostream& operator<<(wostream& s, const Guid& guid)
-{
-    return s << hex << setfill(L'0')
-           << setw(2) << (int)guid._bytes[0]
-           << setw(2) << (int)guid._bytes[1]
-           << setw(2) << (int)guid._bytes[2]
-           << setw(2) << (int)guid._bytes[3]
-           << L"-"
-           << setw(2) << (int)guid._bytes[4]
-           << setw(2) << (int)guid._bytes[5]
-           << L"-"
-           << setw(2) << (int)guid._bytes[6]
-           << setw(2) << (int)guid._bytes[7]
-           << L"-"
-           << setw(2) << (int)guid._bytes[8]
-           << setw(2) << (int)guid._bytes[9]
-           << L"-"
-           << setw(2) << (int)guid._bytes[10]
-           << setw(2) << (int)guid._bytes[11]
-           << setw(2) << (int)guid._bytes[12]
-           << setw(2) << (int)guid._bytes[13]
-           << setw(2) << (int)guid._bytes[14]
-           << setw(2) << (int)guid._bytes[15];
-}
-// create a guid from vector of bytes
-Guid::Guid(const vector<unsigned char>& bytes)
-{
-    _bytes = bytes;
-}
-
-// create a guid from vector of bytes
-Guid::Guid(std::initializer_list<unsigned char> bytes)
-{
-    _bytes.reserve(16);
-
-    for (auto c : bytes)
-        _bytes.push_back(c);
-
-    _bytes.resize(16, 0);
-}
-
-// create a guid from array of bytes
-Guid::Guid(const unsigned char* bytes)
-{
-    _bytes.assign(bytes, bytes + 16);
-}
-
-// converts a single hex char to a number (0 - 15)
-unsigned char hexDigitToChar(char ch)
-{
-    if (ch > 47 && ch < 58)
-        return ch - 48;
-
-    if (ch > 96 && ch < 103)
-        return ch - 87;
-
-    if (ch > 64 && ch < 71)
-        return ch - 55;
-
-    return 0;
-}
-
-// converts the two hexadecimal characters to an unsigned char (a byte)
-unsigned char hexPairToChar(char a, char b)
-{
-    return hexDigitToChar(a) * 16 + hexDigitToChar(b);
-}
-
-// create a guid from string
-Guid::Guid(const string& fromString)
-{
-    _bytes.clear();
-    char charOne = 0, charTwo;
-    bool lookingForFirstChar = true;
-
-    for (const char& ch : fromString)
+    // overload << so that it's easy to convert to a string
+    ostream& operator<<(ostream& s, const Guid& guid)
     {
-        if (ch == '-')
-            continue;
+        return s << hex << setfill('0')
+            << setw(2) << (int)guid._bytes[0]
+            << setw(2) << (int)guid._bytes[1]
+            << setw(2) << (int)guid._bytes[2]
+            << setw(2) << (int)guid._bytes[3]
+            << "-"
+            << setw(2) << (int)guid._bytes[4]
+            << setw(2) << (int)guid._bytes[5]
+            << "-"
+            << setw(2) << (int)guid._bytes[6]
+            << setw(2) << (int)guid._bytes[7]
+            << "-"
+            << setw(2) << (int)guid._bytes[8]
+            << setw(2) << (int)guid._bytes[9]
+            << "-"
+            << setw(2) << (int)guid._bytes[10]
+            << setw(2) << (int)guid._bytes[11]
+            << setw(2) << (int)guid._bytes[12]
+            << setw(2) << (int)guid._bytes[13]
+            << setw(2) << (int)guid._bytes[14]
+            << setw(2) << (int)guid._bytes[15];
+    }
 
-        if (lookingForFirstChar)
-        {
-            charOne = ch;
-            lookingForFirstChar = false;
-        }
+    // overload << so that it's easy to convert to a string
+    wostream& operator<<(wostream& s, const Guid& guid)
+    {
+        return s << hex << setfill(L'0')
+            << setw(2) << (int)guid._bytes[0]
+            << setw(2) << (int)guid._bytes[1]
+            << setw(2) << (int)guid._bytes[2]
+            << setw(2) << (int)guid._bytes[3]
+            << L"-"
+            << setw(2) << (int)guid._bytes[4]
+            << setw(2) << (int)guid._bytes[5]
+            << L"-"
+            << setw(2) << (int)guid._bytes[6]
+            << setw(2) << (int)guid._bytes[7]
+            << L"-"
+            << setw(2) << (int)guid._bytes[8]
+            << setw(2) << (int)guid._bytes[9]
+            << L"-"
+            << setw(2) << (int)guid._bytes[10]
+            << setw(2) << (int)guid._bytes[11]
+            << setw(2) << (int)guid._bytes[12]
+            << setw(2) << (int)guid._bytes[13]
+            << setw(2) << (int)guid._bytes[14]
+            << setw(2) << (int)guid._bytes[15];
+    }
+    // create a guid from vector of bytes
+    Guid::Guid(const vector<unsigned char>& bytes)
+    {
+        _bytes = bytes;
+    }
 
-        else
+    // create a guid from vector of bytes
+    Guid::Guid(std::initializer_list<unsigned char> bytes)
+    {
+        _bytes.reserve(16);
+
+        for (auto c : bytes)
+            _bytes.push_back(c);
+
+        _bytes.resize(16, 0);
+    }
+
+    // create a guid from array of bytes
+    Guid::Guid(const unsigned char* bytes)
+    {
+        _bytes.assign(bytes, bytes + 16);
+    }
+
+    // converts a single hex char to a number (0 - 15)
+    unsigned char hexDigitToChar(char ch)
+    {
+        if (ch > 47 && ch < 58)
+            return ch - 48;
+
+        if (ch > 96 && ch < 103)
+            return ch - 87;
+
+        if (ch > 64 && ch < 71)
+            return ch - 55;
+
+        return 0;
+    }
+
+    // converts the two hexadecimal characters to an unsigned char (a byte)
+    unsigned char hexPairToChar(char a, char b)
+    {
+        return hexDigitToChar(a) * 16 + hexDigitToChar(b);
+    }
+
+    // create a guid from string
+    Guid::Guid(const string& fromString)
+    {
+        _bytes.clear();
+        char charOne = 0, charTwo;
+        bool lookingForFirstChar = true;
+
+        for (const char& ch : fromString)
         {
-            charTwo = ch;
-            auto byte = hexPairToChar(charOne, charTwo);
-            _bytes.push_back(byte);
-            lookingForFirstChar = true;
+            if (ch == '-')
+                continue;
+
+            if (lookingForFirstChar)
+            {
+                charOne = ch;
+                lookingForFirstChar = false;
+            }
+
+            else
+            {
+                charTwo = ch;
+                auto byte = hexPairToChar(charOne, charTwo);
+                _bytes.push_back(byte);
+                lookingForFirstChar = true;
+            }
         }
     }
-}
 
-// create empty guid
-Guid::Guid()
-{
-// _bytes = vector<unsigned char>(16, 0);
-}
+    // create empty guid
+    Guid::Guid()
+    {
+        // _bytes = vector<unsigned char>(16, 0);
+    }
 
-// copy constructor
-Guid::Guid(const Guid& other)
-{
-    _bytes = other._bytes;
-}
+    // copy constructor
+    Guid::Guid(const Guid& other)
+    {
+        _bytes = other._bytes;
+    }
 
-// overload assignment operator
-Guid& Guid::operator=(const Guid& other)
-{
-    _bytes = other._bytes;
-    return *this;
-}
+    // overload assignment operator
+    Guid& Guid::operator=(const Guid& other)
+    {
+        _bytes = other._bytes;
+        return *this;
+    }
 
-// overload equality operator
-bool Guid::operator==(const Guid& other) const
-{
-    return _bytes == other._bytes;
-}
+    // overload equality operator
+    bool Guid::operator==(const Guid& other) const
+    {
+        return _bytes == other._bytes;
+    }
 
-// overload inequality operator
-bool Guid::operator!=(const Guid& other) const
-{
-    return !((*this) == other);
+    // overload inequality operator
+    bool Guid::operator!=(const Guid& other) const
+    {
+        return !((*this) == other);
+    }
 }
-
 // This is the linux friendly implementation, but it could work on other
 // systems that have libuuid available
 #ifdef GUID_LIBUUID
@@ -239,7 +240,7 @@ Guid GuidGenerator::newGuid()
 
 // obviously this is the windows version
 #ifdef GUID_WINDOWS
-Guid GuidGenerator::newGuid()
+Spectrum::Guid GuidGenerator::newGuid()
 {
     GUID newId;
     CoCreateGuid(&newId);

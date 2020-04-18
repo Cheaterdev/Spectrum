@@ -410,7 +410,6 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 auto& native_material = scene->mMaterials[i];
                 aiString path;
                 MaterialGraph::ptr graph(new MaterialGraph);
-                materials::universal_material* m = (new materials::universal_material(graph));
                 TextureNode::ptr  tex_node;
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path))
@@ -523,6 +522,9 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 //if (aiGetMaterialString(native_material, AI_MATKEY_NAME, &mat_name) == aiReturn_SUCCESS)
                 //    m->name.assign(mat_name.C_Str(), mat_name.C_Str() + mat_name.length);
                 //MaterialAsset* mat = m;//(new MaterialAsset(m));
+
+				materials::universal_material* m = (new materials::universal_material(graph));
+
                 m->register_new();
 				materials[i] = m->get_ptr<MaterialAsset>();
                 return true;

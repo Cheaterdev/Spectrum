@@ -192,7 +192,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 #ifdef REFRACTION
 
-	if (payload2.recursion < 6)
+	if (payload2.recursion < 3)
 	{
 
 		RayPayload payload_refraction = { float4(0.1, 0.1, 0.1, 1) , payload.recursion + 1 ,0};
@@ -231,7 +231,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 #endif
 
-	float fresnel = calc_fresnel(0.1, vertex.normal, WorldRayDirection());
+	float fresnel = calc_fresnel(roughness, vertex.normal, WorldRayDirection());
 
 	
 	float3 reflected = payload2.color.xyz;

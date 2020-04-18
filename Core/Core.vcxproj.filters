@@ -34,6 +34,9 @@
     <Filter Include="Profiling">
       <UniqueIdentifier>{441bc377-78aa-4795-ab38-e52672dc0eca}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Allocators">
+      <UniqueIdentifier>{f52185c5-01ab-453d-8713-9baa9a0751f7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Math\Constants.h">

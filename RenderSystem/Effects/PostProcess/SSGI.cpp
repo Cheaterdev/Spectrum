@@ -36,8 +36,9 @@ SSGI::SSGI(G_Buffer& buffer)
 	this->buffer = &buffer;
 
 	buffer.size.register_change(this, [this](const ivec2& size) {
+		allocator.reset();
 
-		textures.resize(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, { size.x, size.y });
+		textures.resize(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, { size.x, size.y }, allocator);
 			reflect_tex = textures.first();
 //		reflect_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 	});

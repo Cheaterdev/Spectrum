@@ -1,0 +1,31 @@
+
+struct GBuffer
+{
+	Texture2D albedo;
+	Texture2D normals;
+	Texture2D specular;
+	Texture2D depth;
+}
+
+
+[Bind = DefaultLayout::Instance0]
+struct PSSMConstants
+{
+	int level;
+	float time;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct PSSMData
+{	
+	Texture2DArray<float> light_buffer;
+	StructuredBuffer<Camera> light_cameras;
+}
+
+[Bind = DefaultLayout::Instance2]
+struct PSSMLighting
+{
+	GBuffer gbuffer;
+	Texture2D<float> light_mask;
+	Texture3D<float4> brdf;
+}
