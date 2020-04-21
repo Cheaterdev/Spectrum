@@ -62,12 +62,13 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 
 void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Texture2DView::ptr view)
 {
+
 	std::lock_guard<std::mutex> g(m);
 	auto timer = compute_context.get_base().start(L"downsampling");
 
-	compute_context.get_base().transition(tex, Render::ResourceState::UNORDERED_ACCESS);
 	compute_context.set_signature(linear[0]->desc.root_signature);
 	uint32_t maps = tex->get_desc().MipLevels - 1;
+	uint32_t prev = 0;
 
 	for (uint32_t TopMip = 0; TopMip < maps;)
 	{
@@ -117,27 +118,40 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 		data.GetTexelSize() = { 1.0f / DstWidth, 1.0f / DstHeight };
 
 		for (uint32_t i = 0; i < NumMips; i++)
+		{
 			data.GetOutMip()[i] = view->get_uav(TopMip + 1 + i);
+			compute_context.get_base().transition(tex, Render::ResourceState::UNORDERED_ACCESS, TopMip + 1 + i);
+		}
+		data.GetSrcMip() = view->get_srv(TopMip);
 
-		data.GetSrcMip() = view->get_srv();
+		data.set(compute_context,false);
 
-		data.set(compute_context);
+		for (uint32_t i = prev; i <=TopMip; i++)
+		{
+			compute_context.get_base().transition(tex, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE, i);
+		}
 
-	
+	//	compute_context.get_base().transition(tex, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE, TopMip);
+
 		compute_context.use_dynamic = false;
 		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));	compute_context.use_dynamic = true;
-		compute_context.get_base().transition_uav(tex.get());
+	//	compute_context.get_base().transition_uav(tex.get());
+
+		prev = TopMip;
 		TopMip += NumMips;
 	}
+	for (uint32_t i = prev+1; i <=maps; i++)
+	{
+		compute_context.get_base().transition(tex, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE, i);
+	}
 
-	//   compute_context.transition(tex, after);
 }
 
 void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr& tex, Render::Texture::ptr& to)
 {
 	std::lock_guard<std::mutex> g(m);
-	compute_context.get_base().transition(tex, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-	compute_context.get_base().transition(to, Render::ResourceState::UNORDERED_ACCESS);
+	//compute_context.get_base().transition(tex, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+	//compute_context.get_base().transition(to, Render::ResourceState::UNORDERED_ACCESS);
 	compute_context.set_pipeline(state_downsample_depth);
 
 	Slots::DownsampleDepth data;
@@ -152,8 +166,8 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 
 void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to){
 	std::lock_guard<std::mutex> g(m);
-	compute_context.get_base().transition(tex.resource, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-	compute_context.get_base().transition(to.resource, Render::ResourceState::UNORDERED_ACCESS);
+//	compute_context.get_base().transition(tex.resource, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+//	compute_context.get_base().transition(to.resource, Render::ResourceState::UNORDERED_ACCESS);
 	compute_context.set_pipeline(state_downsample_depth);
 
 
@@ -226,8 +240,8 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 */
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::Texture::ptr& from)
 {
-	list.get_base().transition(to, ResourceState::RENDER_TARGET);
-	list.get_base().transition(from, ResourceState::PIXEL_SHADER_RESOURCE);
+	//list.get_base().transition(to, ResourceState::RENDER_TARGET);
+	//list.get_base().transition(from, ResourceState::PIXEL_SHADER_RESOURCE);
 
 	list.set_pipeline(copy_texture_state);
 	//MipMapSignature<Signature> shader_data(&list);
@@ -250,8 +264,8 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 }
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::TextureView from)
 {
-	list.get_base().transition(to, ResourceState::RENDER_TARGET);
-	list.get_base().transition(from.resource, ResourceState::PIXEL_SHADER_RESOURCE);
+//	list.get_base().transition(to, ResourceState::RENDER_TARGET);
+//	list.get_base().transition(from.resource, ResourceState::PIXEL_SHADER_RESOURCE);
 
 	list.set_pipeline(copy_texture_state);
 

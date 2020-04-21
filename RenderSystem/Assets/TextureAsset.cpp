@@ -29,8 +29,9 @@ void TextureAssetRenderer::render(TextureAsset* asset, Render::Texture::ptr targ
 
   //  c->get_graphics().set_heaps(Render::DescriptorHeapManager::get().get_csu(), Render::DescriptorHeapManager::get().get_samplers
 	//c->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
-	c->transition(target, Render::ResourceState::RENDER_TARGET);
-
+//	c->transition(target, Render::ResourceState::RENDER_TARGET);
+    
+    c->get_graphics().set_rtv(1, target->texture_2d()->get_rtv(), Render::Handle());
   //  target->change_state(c, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::ResourceState::RENDER_TARGET);
     c->get_native_list()->OMSetRenderTargets(1, &target->texture_2d()->get_rtv().cpu, FALSE, nullptr);
     c->get_graphics().set_pipeline(state);
@@ -54,7 +55,7 @@ void TextureAssetRenderer::render(TextureAsset* asset, Render::Texture::ptr targ
     c->get_graphics().draw(4, 0);
     MipMapGenerator::get().generate(c->get_compute(), target);
 
-	c->transition(target, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+//	c->transition(target, Render::ResourceState::PIXEL_SHADER_RESOURCE);
     c->get_graphics().use_dynamic = true;
 
 }

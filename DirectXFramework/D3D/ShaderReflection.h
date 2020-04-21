@@ -284,6 +284,9 @@ namespace D3D
             reflection() = default;
 
             reflection(D3D_VERSION ver, std::string data);
+
+            reflection(CComPtr<ID3D12ShaderReflection> refl);
+
         private:
 
             friend class boost::serialization::access;

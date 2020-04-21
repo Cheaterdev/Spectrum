@@ -6,7 +6,8 @@ namespace DX12
 		DEFAULT = D3D12_HEAP_TYPE_DEFAULT,
 		UPLOAD = D3D12_HEAP_TYPE_UPLOAD,
 		READBACK = D3D12_HEAP_TYPE_READBACK,
-		CUSTOM = D3D12_HEAP_TYPE_CUSTOM
+		CUSTOM = D3D12_HEAP_TYPE_CUSTOM,
+		PRESENT = 5
 	};
 
 	enum ResourceState
@@ -282,7 +283,7 @@ namespace DX12
 			CD3DX12_RESOURCE_DESC desc;
 		bool force_delete = false;
 		D3D12_GPU_VIRTUAL_ADDRESS gpu_adress;
-		HeapType heap_type;
+		HeapType heap_type = HeapType::CUSTOM;
 		//  std::vector< unsigned int> states;
 		size_t id = 0;
 
@@ -314,7 +315,7 @@ namespace DX12
 		}
 		virtual ~Resource();
 
-		HeapType get_heap_type()
+		HeapType get_heap_type() const
 		{
 			return heap_type;
 		}
@@ -693,6 +694,7 @@ public:
 
 		}
 
+		*h.resource_ptr = resource.get();
 		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
 	}
 

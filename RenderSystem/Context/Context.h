@@ -341,14 +341,14 @@ class RenderTargetTable
 		{
 
             auto& list = graphics.get_base();
-            
+      /*
             for (auto& tex : textures)
 			{
 				list.transition(tex.resource, Render::ResourceState::RENDER_TARGET);
 			}
 
             list.transition(depth_texture.resource, Render::ResourceState::DEPTH_WRITE);
-
+            */
 
             if (clear_color)
             {

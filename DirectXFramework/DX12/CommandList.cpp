@@ -212,6 +212,15 @@ namespace DX12
 
 	void GraphicsContext::set_rtv(int c, Handle rt, Handle h)
 	{
+
+		for (int i = 0; i < c; i++)
+		{
+			get_base().transition(rt.resource_ptr[i], ResourceState::RENDER_TARGET);
+		}
+
+		if(h.is_valid())
+			get_base().transition(*h.resource_ptr, ResourceState::DEPTH_WRITE);
+
 		list->OMSetRenderTargets(c, &rt.cpu, true, h.is_valid() ? &h.cpu : nullptr);
 	}
 
@@ -290,6 +299,8 @@ namespace DX12
 	}
 	void  CopyContext::update_buffer(Resource* resource, UINT offset, const  char* data, UINT size)
 	{
+		base.transition(resource, Render::ResourceState::COPY_DEST);
+
 	/*	auto & count = resource_update_counter[resource];
 		count++;
 		if (count > 1) 
@@ -357,6 +368,8 @@ namespace DX12
 	}
 	void  CopyContext::update_resource(Resource::ptr resource, UINT first_subresource, UINT sub_count, D3D12_SUBRESOURCE_DATA* data)
 	{
+		base.transition(resource, Render::ResourceState::COPY_DEST);
+
 		base.flush_transitions();
 		UINT64 uploadBufferSize = GetRequiredIntermediateSize(resource->get_native().Get(), first_subresource, sub_count);
 		auto info = base.place_data(uploadBufferSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
@@ -369,6 +382,7 @@ namespace DX12
 
 	void CopyContext::update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
+		base.transition(resource, Render::ResourceState::COPY_DEST);
 		base.flush_transitions();
 		D3D12_RESOURCE_DESC Desc = resource->get_desc();
 		UINT rows_count = box.y;
@@ -465,6 +479,7 @@ namespace DX12
 	}
 	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
 	{
+		base.transition(resource, Render::ResourceState::COPY_SOURCE);
 		base.flush_transitions();
 		UINT64 RequiredSize = 0;
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
@@ -625,9 +640,9 @@ namespace DX12
 					static_cast<D3D12_RESOURCE_STATES>(cpu_state),
 					D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES));
 
-				assert(!(cpu_state&D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-				assert(!(gpu_state &D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-				assert(!(r->get_end_state(id, global_id)&D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+			//	assert(!(cpu_state&D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+			///	assert(!(gpu_state &D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
+			//	assert(!(r->get_end_state(id, global_id)&D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 
 			}
 
@@ -655,14 +670,16 @@ namespace DX12
 
 	void Transitions::transition(const std::shared_ptr<Texture>& resource, unsigned int to, UINT subres )
 	{
-		transition(resource.get(), to);
+		transition(resource.get(), to, subres);
 	}
 	void Transitions::transition(const Resource::ptr& resource, unsigned int to, UINT subres )
 	{
-		transition(resource.get(), to);
+		transition(resource.get(), to, subres);
 	}
 	void Transitions::transition(const Resource* resource, unsigned int to, UINT subres )
 	{
+		assert(resource->get_heap_type() != HeapType::UPLOAD && resource->get_heap_type() != HeapType::READBACK);
+
 
 		if (resource->is_new(id, global_id))
 		{

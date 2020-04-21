@@ -68,6 +68,8 @@ namespace DX12
 				desc.Format = DXGI_FORMAT_R32_TYPELESS;
 				desc.Buffer.NumElements = static_cast<UINT>(get_desc().Width/4);
 				desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+
+				*h.resource_ptr = this;
 				Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), nullptr, &desc, h.cpu);
 			}
 
@@ -82,9 +84,9 @@ namespace DX12
 			void set_raw_data(std::vector<T>& v)
 			{
 				auto list = Device::get().get_upload_list();
-				list->transition(this, ResourceState::COPY_DEST);
+		//		list->transition(this, ResourceState::COPY_DEST);
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
-				list->transition(this,  ResourceState::COMMON);
+		//		list->transition(this,  ResourceState::COMMON);
 				list->end();
 				list->execute();
 			}
@@ -93,9 +95,9 @@ namespace DX12
 			void set_data(const T& v)
 			{
 				auto list = Device::get().get_upload_list();
-				list->transition(this,  ResourceState::COPY_DEST);
+	//			list->transition(this,  ResourceState::COPY_DEST);
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
-				list->transition(this, ResourceState::COMMON);
+	//			list->transition(this, ResourceState::COMMON);
 				list->end();
 				list->execute();
 			}
@@ -103,21 +105,21 @@ namespace DX12
 			template<class T>
 			void set_data(DX12::CommandList::ptr& list, std::vector<T>& v)
 			{
-				list->transition(this, ResourceState::COPY_DEST);
+		//		list->transition(this, ResourceState::COPY_DEST);
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
 			template<class T>
 			void set_data(DX12::CommandList::ptr& list, const T&v)
 			{
-				list->transition(this, ResourceState::COPY_DEST);
+			//	list->transition(this, ResourceState::COPY_DEST);
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
 			template<class T>
 			void set_data(DX12::CommandList::ptr& list, UINT offset, const T* data, UINT size)
 			{
-				list->transition(this, ResourceState::COPY_DEST);
+			//	list->transition(this, ResourceState::COPY_DEST);
 				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(data), size * sizeof(T));
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
@@ -156,12 +158,12 @@ namespace DX12
 				{
 					std::string data;
 					auto list = Device::get().get_upload_list();
-					list->transition(this, ResourceState::COPY_SOURCE);
+				//	list->transition(this, ResourceState::COPY_SOURCE);
 					auto task =  list->get_copy().read_buffer(this, 0, get_size(), [&data](const char* mem,  UINT64 size)
 					{
 						data.assign(mem, mem + size);
 					});
-					list->transition(this, ResourceState::COMMON);
+				//	list->transition(this, ResourceState::COMMON);
 					list->end();
 					list->execute();
 					task.wait();
@@ -260,7 +262,7 @@ namespace DX12
 
 			void set_data(DX12::CommandList::ptr& list, const T&v)
 			{
-				list->transition(this, ResourceState::COPY_DEST);
+				//list->transition(this, ResourceState::COPY_DEST);
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
@@ -748,9 +750,9 @@ namespace DX12
 	template<class T>
 	inline void StructuredBuffer<T>::set_data(DX12::CommandList::ptr & list, unsigned int offset, std::vector<T>& v)
 	{
-		list->transition(this,ResourceState::COPY_DEST);
+	//	list->transition(this,ResourceState::COPY_DEST);
 		list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
-		list->transition(this,  ResourceState::COMMON);
+	//	list->transition(this,  ResourceState::COMMON);
 	}
 	template<class T>
 	inline void StructuredBuffer<T>::place_uav(const Handle & h)

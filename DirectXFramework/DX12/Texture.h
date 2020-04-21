@@ -37,8 +37,8 @@ namespace DX12
 		HandleTable static_srv;
 		HandleTable static_uav;
 
-		const Resource* resource;
-		 View(const Resource* resource):resource(resource)
+		 Resource* resource;
+		 View( Resource* resource):resource(resource)
 		 {
 			 
 		 }
@@ -59,8 +59,8 @@ namespace DX12
 
 	public:
 		using ptr = std::shared_ptr<Texture2DView>;
-		Texture2DView(const Resource* _resource, HandleTable t);
-		Texture2DView(const Resource* _resource, int array_index = -1);
+		Texture2DView( Resource* _resource, HandleTable t);
+		Texture2DView( Resource* _resource, int array_index = -1);
 
 		Handle get_rtv(UINT mip = 0);
 
@@ -116,7 +116,7 @@ namespace DX12
 		//     std::vector<HandleTable> array_rtv;
 	public:
 		using ptr = std::shared_ptr<CubemapView>;
-		CubemapView(const Resource* _resource, int offset = 0);
+		CubemapView(Resource* _resource, int offset = 0);
 
 		Handle get_rtv(UINT index, UINT mip);
 		Handle get_srv(UINT mip);

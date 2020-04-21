@@ -72,7 +72,10 @@ namespace D3D
 	{
 		std::string dir;
 		resource_file_depender& depender;
+  
 	public:
+		std::vector<std::string> autogen;
+
 		shader_include(std::string dir, resource_file_depender& _depender);
 		std::unique_ptr<std::string> load_file(std::string filename);
 	};
@@ -88,8 +91,7 @@ struct D3D12ShaderCompilerInfo :public Singleton<D3D12ShaderCompilerInfo>
 	dxc::DxcDllSupport		DxcDllHelper;
 	IDxcCompiler* compiler = nullptr;
 	IDxcLibrary* library = nullptr;
-
-
+	
     std::unique_ptr<std::string> Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", D3D::shader_include* includer = nullptr, std::string file_name="");
 	std::unique_ptr<std::string> Compile_Shader_File(std::string filename, std::vector < D3D::shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", D3D::shader_include* includer = nullptr);
 
@@ -102,7 +104,7 @@ struct D3D12ShaderCompilerInfo :public Singleton<D3D12ShaderCompilerInfo>
 		//	Utils::Validate(hr, L"Failed to create DxcCompiler!");
 
 		DxcDllHelper.CreateInstance(CLSID_DxcLibrary, &library);
-		//	Utils::Validate(hr, L"Failed to create DxcLibrary!");
+	//	Utils::Validate(hr, L"Failed to create DxcLibrary!");
 	}
 };
 

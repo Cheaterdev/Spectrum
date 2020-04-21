@@ -1,16 +1,23 @@
 #include "pch.h"
 
+#define DXIL_FOURCC(ch0, ch1, ch2, ch3) (                            \
+  (uint32_t)(uint8_t)(ch0)        | (uint32_t)(uint8_t)(ch1) << 8  | \
+  (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24   \
+  )
+
+
+
 namespace D3D
 {
-    bool operator<(const shader_header& l, const shader_header& r)
-    {
-        if (l.file_name != r.file_name)
-            return l.file_name < r.file_name;
-        else
-        {
-            if (l.entry_point != r.entry_point)
-                return l.entry_point < r.entry_point;
-        }
+	bool operator<(const shader_header& l, const shader_header& r)
+	{
+		if (l.file_name != r.file_name)
+			return l.file_name < r.file_name;
+		else
+		{
+			if (l.entry_point != r.entry_point)
+				return l.entry_point < r.entry_point;
+		}
 
 		if (l.macros.size() == r.macros.size())
 		{
@@ -23,58 +30,59 @@ namespace D3D
 				{
 					if (ll.value == rr.value)
 					{
-						
+
 					}
 					else
 						return	ll.value < rr.value;
 
 
-				}else
+				}
+				else
 					return	ll.name < rr.name;
 			}
 		}
-        return l.macros.size() < r.macros.size();
-    }
+		return l.macros.size() < r.macros.size();
+	}
 
 
-    shader_macro::shader_macro(std::string name, std::string value /*= "1"*/)
-    {
-        this->name = name;
-        this->value = value;
-    }
+	shader_macro::shader_macro(std::string name, std::string value /*= "1"*/)
+	{
+		this->name = name;
+		this->value = value;
+	}
 
 
 
 
-		shader_include::shader_include(std::string dir, resource_file_depender& _depender) : depender(_depender)
+	shader_include::shader_include(std::string dir, resource_file_depender& _depender) : depender(_depender)
+	{
+
+		std::transform(dir.begin(), dir.end(), dir.begin(), [](char s) {
+			if (s == '/') return '\\';
+			return s;
+			});
+		this->dir = dir.substr(0, dir.find_last_of('\\')) + '\\';
+	}
+
+	std::unique_ptr<std::string> shader_include::load_file(std::string pFileName)
+	{
+
+		std::string file_name = dir + pFileName;
+		auto file = FileSystem::get().get_file(convert(file_name));
+
+
+		if (!file) file = FileSystem::get().get_file(convert(pFileName));
+		if (!file)
 		{
-
-			std::transform(dir.begin(), dir.end(), dir.begin(), [](char s) {
-				if (s == '/') return '\\';
-				return s;
-				});
-			this->dir = dir.substr(0, dir.find_last_of('\\')) + '\\';
+			return nullptr;
 		}
 
-		std::unique_ptr<std::string> shader_include::load_file(std::string pFileName)
-		{
+		auto data = file->load_all();
+		depender.add_depend(file);
 
-			std::string file_name = dir + pFileName;
-			auto file = FileSystem::get().get_file(convert(file_name));
+		return std::make_unique<std::string>(std::move(data));
 
-
-			if(!file) file = FileSystem::get().get_file(convert(pFileName));
-			if (!file)
-			{
-				return nullptr;
-			}
-
-			auto data = file->load_all();
-			depender.add_depend(file);
-		
-			return std::make_unique<std::string>(std::move(data));
-
-		}
+	}
 
 
 
@@ -218,11 +226,11 @@ public:
 std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader_File(std::string filename, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point, D3D::shader_include* includer)
 {
 	auto data = includer->load_file(filename);
-	return Compile_Shader(*data, macros,target,entry_point,includer, filename);
+	return Compile_Shader(*data, macros, target, entry_point, includer, filename);
 }
 //
 
-std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point , D3D::shader_include* includer, std::string file_name)
+std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point, D3D::shader_include* includer, std::string file_name)
 {
 	static std::mutex m;
 	std::lock_guard<std::mutex> g(m);
@@ -283,7 +291,7 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 
 			// Convert error blob to a string
 		std::string infoLog;
-		
+
 		infoLog.resize(error->GetBufferSize() + 1);
 		memcpy(infoLog.data(), error->GetBufferPointer(), error->GetBufferSize());
 		infoLog[error->GetBufferSize()] = 0;
@@ -301,6 +309,18 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 
 	std::string blob_str;
 	blob_str.assign(static_cast<char*>(resultBlob->GetBufferPointer()), static_cast<char*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
+
+/*	CComPtr<ID3D12ShaderReflection> pProgramReflection;
+
+	CComPtr<IDxcContainerReflection> pReflection;
+	UINT32 shaderIdx;
+	DxcDllHelper.CreateInstance(CLSID_DxcContainerReflection, &pReflection);
+	pReflection->Load(resultBlob.Get());
+	pReflection->FindFirstPartKind(DXIL_FOURCC('D', 'X', 'I', 'L'), &shaderIdx);
+	pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&pProgramReflection));
+
+	D3D::reflection reflection(pProgramReflection);
+	*/
 	return std::make_unique<std::string>(std::move(blob_str));
-	//	Utils::Validate(hr, L"Error: failed to get shader blob result!");
+
 }

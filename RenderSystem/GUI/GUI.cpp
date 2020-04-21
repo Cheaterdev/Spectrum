@@ -949,7 +949,7 @@ namespace GUI
 				
 				 auto texture = context.get_texture(data.o_texture);
 
-				 command_list->transition(texture.resource, Render::ResourceState::RENDER_TARGET);
+			//	 command_list->transition(texture.resource, Render::ResourceState::RENDER_TARGET);
 				 command_list->get_graphics().set_rtv(1, texture.get_rtv(), Render::Handle());
 				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
 

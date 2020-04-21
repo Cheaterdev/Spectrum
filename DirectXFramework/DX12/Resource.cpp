@@ -22,6 +22,8 @@ namespace DX12
                h.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), n, descriptor_size);
                handles.push_back(h);
            }*/
+
+		resources.resize(max_count);
     }
 
 

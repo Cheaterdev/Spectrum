@@ -269,6 +269,7 @@ namespace DX12
 			srvDesc.TextureCubeArray.NumCubes = count;
 			srvDesc.TextureCubeArray.ResourceMinLODClamp = 0;
 
+			*h.resource_ptr = resource;
 		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 	}
 
@@ -287,10 +288,10 @@ namespace DX12
 		srvDesc.TextureCubeArray.MostDetailedMip = 0;
 		srvDesc.TextureCubeArray.NumCubes = 1;
 		srvDesc.TextureCubeArray.ResourceMinLODClamp = 0;
-
+		*h.resource_ptr = resource;
 		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 	}
-    CubemapView::CubemapView(const Resource* _resource,int offset) : View(_resource)
+    CubemapView::CubemapView( Resource* _resource,int offset) : View(_resource)
     {
         auto res_desc = resource->get_desc();
 	    single_count =  6*res_desc.MipLevels;
@@ -311,6 +312,8 @@ namespace DX12
                     desc.Texture2DArray.MipSlice = m;
                     desc.Texture2DArray.ArraySize = 1;
                     desc.Texture2DArray.FirstArraySlice = offset*6+ i;
+
+					*rtvs[i + 6 * m].resource_ptr = resource;
                     Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, rtvs[i + 6 * m].cpu);
                 }
             }
@@ -375,7 +378,7 @@ namespace DX12
 		srvDesc.TextureCube.MipLevels = resource->get_desc().MipLevels;
 		srvDesc.TextureCube.MostDetailedMip = 0;
 		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
-		
+		*h.resource_ptr = resource;
 		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 	}
 
@@ -392,6 +395,8 @@ namespace DX12
 		srvDesc.TextureCube.MipLevels = 1;
 		srvDesc.TextureCube.MostDetailedMip = mip;
 		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+
+		*h.resource_ptr = resource;
 		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 	}
 
@@ -410,7 +415,7 @@ namespace DX12
 		return static_srv[0];
 	}
 
-    Texture2DView::Texture2DView(const Resource* _resource, HandleTable t) : View(_resource)
+    Texture2DView::Texture2DView(Resource* _resource, HandleTable t) : View(_resource)
     {
         rtvs = t;
         auto res_desc = resource->get_desc();
@@ -429,7 +434,7 @@ namespace DX12
             scissor[i] = { 0, 0, p[i].Width , p[i].Height };
         }
     }
-    Texture2DView::Texture2DView(const Resource* _resource, int array_index ) : View(_resource), array_index(array_index)
+    Texture2DView::Texture2DView( Resource* _resource, int array_index ) : View(_resource), array_index(array_index)
     {
         auto res_desc = resource->get_desc();
         //    single_count = 6 * res_desc.MipLevels;
@@ -524,7 +529,7 @@ namespace DX12
 			desc.Texture2DArray.FirstArraySlice = array_index;
 			desc.Texture2DArray.ArraySize = 1;
 		}
-		
+		*h.resource_ptr = resource;
 		Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &desc, h.cpu);
 	}
 	 void Texture2DView::place_uav(const Handle & h, UINT mip, UINT slice)
@@ -552,6 +557,7 @@ namespace DX12
 				desc.Texture2DArray.FirstArraySlice = array_index;
 				desc.Texture2DArray.ArraySize = 1;
 			}
+			*h.resource_ptr = resource;
 			Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
 		};
 	}
@@ -584,6 +590,7 @@ namespace DX12
 				srvDesc.Texture2DArray.PlaneSlice = 0;
 				srvDesc.Texture2DArray.ArraySize = 1;
 			}
+			*h.resource_ptr = resource;
 			Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 		};
 	}
@@ -610,6 +617,7 @@ namespace DX12
 				srvDesc.Texture2DArray.PlaneSlice = 0;
 				srvDesc.Texture2DArray.ArraySize = 1;
 			}
+			*h.resource_ptr = resource;
 			Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 		};
 	}
@@ -632,6 +640,7 @@ namespace DX12
 				desc.Texture2DArray.FirstArraySlice = array_index;
 				desc.Texture2DArray.ArraySize = 1;
 			}
+			*h.resource_ptr = resource;
 			Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, h.cpu);
 		};
 	}
@@ -754,6 +763,8 @@ namespace DX12
 			srvDesc.Texture3D.MipLevels = (levels == -1) ? (level == -1 ? resource->get_desc().MipLevels : resource->get_desc().MipLevels - level) : (levels);
 			srvDesc.Texture3D.MostDetailedMip = level == -1 ? 0 : level;
 			srvDesc.Texture3D.ResourceMinLODClamp = 0.0f;
+
+			*h.resource_ptr = resource;
 			Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 		};
 	}
@@ -767,6 +778,8 @@ namespace DX12
 			desc.Texture3D.MipSlice = level;
 			desc.Texture3D.FirstWSlice = 0;
 			desc.Texture3D.WSize = resource->get_desc().DepthOrArraySize / (1 << level);
+
+			*h.resource_ptr = resource;
 			Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
 		};
 	}
@@ -823,6 +836,8 @@ namespace DX12
 		srvDesc.Texture2DArray.ArraySize = resource->get_desc().DepthOrArraySize;
 		srvDesc.Texture2DArray.FirstArraySlice = 0;
 		srvDesc.Texture2DArray.PlaneSlice = 0;
+
+		*h.resource_ptr = resource;
 		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
 	}
 
@@ -834,6 +849,8 @@ namespace DX12
 		desc.Texture2DArray.MipSlice = mip;
 		desc.Texture2DArray.FirstArraySlice = slice;
 		desc.Texture2DArray.ArraySize = slice_count;
+
+		*h.resource_ptr = resource;
 		Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &desc, h.cpu);
 	}
 
@@ -846,6 +863,8 @@ namespace DX12
 		desc.Texture2DArray.MipSlice = mip;
 		desc.Texture2DArray.FirstArraySlice = first;
 		desc.Texture2DArray.ArraySize = count;
+
+		*h.resource_ptr = resource;
 		Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
 	}
 
@@ -862,6 +881,8 @@ namespace DX12
 			desc.Texture2DArray.MipSlice = mip;
 			desc.Texture2DArray.FirstArraySlice = first;
 			desc.Texture2DArray.ArraySize = count > 0 ? count : resource->get_desc().ArraySize();
+
+			*h.resource_ptr = resource;
 			Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
 		};
 	}

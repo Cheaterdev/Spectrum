@@ -21,7 +21,7 @@ void DX12::BufferView::place_srv(Handle& h) {
 		srv.Buffer.FirstElement = 0;
 
 	}*/
-	
+	* h.resource_ptr = resource.get();
 	Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
 }
 
@@ -40,7 +40,7 @@ void DX12::TextureView::place_rtv(Handle& h) {
 		desc.Texture2D.PlaneSlice = view_desc.Texture2D.FirstArraySlice;
 	}
 
-
+	*h.resource_ptr = resource.get();
 	Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, h.cpu);
 
 }
@@ -59,7 +59,7 @@ void DX12::TextureView::place_dsv(Handle& h) {
 	desc.Texture2DArray.MipSlice = view_desc.Texture2D.MipSlice;
 	desc.Texture2DArray.FirstArraySlice = view_desc.Texture2D.FirstArraySlice;
 	desc.Texture2DArray.ArraySize = 1;
-
+	*h.resource_ptr = resource.get();
 	Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &desc, h.cpu);
 }
 
@@ -89,7 +89,7 @@ void DX12::TextureView::place_srv(Handle& h) {
 
 
 	Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
-
+	*h.resource_ptr = resource.get();
 }
 
 void DX12::TextureView::place_uav(Handle& h) {
@@ -111,7 +111,7 @@ void DX12::TextureView::place_uav(Handle& h) {
 		desc.Texture2DArray.ArraySize = view_desc.Texture2D.ArraySize==(UINT)(-1)?1: view_desc.Texture2D.ArraySize;
 	}
 
-
+	*h.resource_ptr = resource.get();
 	Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
 }
 

@@ -127,7 +127,17 @@ namespace DX12
 
 	typedef D3D12_VIEWPORT Viewport;
     class CommandList;
+
+
 }
+enum class Layouts : int
+{
+	UNKNOWN = -1,
+	FrameLayout = 0,
+	DefaultLayout = 1,
+	TOTAL = 2
+};
+
 
 #include "InputLayouts.h"
 
@@ -197,9 +207,28 @@ struct CompiledData
 	Render::HandleTableLight table_uav;
 	Render::HandleTableLight table_smp;
 
-	void set(Render::SignatureDataSetter& graphics)
+	void set(Render::SignatureDataSetter& graphics, bool use_transitions = true)
 	{
-		if (table_srv.get_count()>0) graphics.set(Slot::SRV_ID, table_srv);
+		if (use_transitions) {
+			for (int i = 0; i < table_srv.get_count(); ++i)
+			{
+				auto h = table_srv[i];
+				if (h.resource_ptr && *h.resource_ptr)
+					if ((*h.resource_ptr)->get_heap_type() == Render::HeapType::DEFAULT)
+						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+
+			}
+
+			for (int i = 0; i < table_uav.get_count(); ++i)
+			{
+				auto h = table_uav[i];
+				if (h.resource_ptr && *h.resource_ptr)
+					if ((*h.resource_ptr)->get_heap_type() == Render::HeapType::DEFAULT)
+						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::UNORDERED_ACCESS);
+			}
+
+		}
+		if (table_srv.get_count() > 0) graphics.set(Slot::SRV_ID, table_srv);
 		if (table_smp.get_count() > 0) graphics.set(Slot::SMP_ID, table_smp);
 		if (table_uav.get_count() > 0) graphics.set(Slot::UAV_ID, table_uav);
 		if (cb)
@@ -313,7 +342,7 @@ struct DataHolder : public Table
 	{
 		compiled.cb = cb;
 	}
-	CompiledData<Slot> set(Render::SignatureDataSetter& context)
+	CompiledData<Slot> set(Render::SignatureDataSetter& context, bool use_transitions = true)
 	{
 		CompiledData<Slot> compiled;
 		
@@ -357,7 +386,7 @@ struct DataHolder : public Table
 		if constexpr (HasCB<Table>)
 			place_cb(compiled, context, Table::cb);
 
-		compiled.set(context);
+		compiled.set(context,use_transitions);
 		return compiled;
 	}
 
@@ -397,18 +426,11 @@ struct AutoGenSignatureDesc
 	}
 
 
-};
-
-template<class T>
-class AutoGenSignature :public Render::RootSignature
-{
-public:
-	AutoGenSignature() : Render::RootSignature(AutoGenSignatureDesc<T>().desc)
+	Render::RootLayout::ptr create_signature(Layouts layout)
 	{
-
+		return std::make_shared<Render::RootLayout>(desc, layout);
 	}
 };
-
 
 
 using uint = UINT;

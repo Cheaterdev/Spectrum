@@ -23,10 +23,10 @@ void BRDF::create_new()
 	data.GetOutput() = texture->texture_3d()->get_static_uav();
 	data.set(compute_context);
 
-	list->transition(texture, Render::ResourceState::UNORDERED_ACCESS);
+//	list->transition(texture, Render::ResourceState::UNORDERED_ACCESS);
 	compute_context.use_dynamic = false;
 	compute_context.dispach(texture->get_size(), ivec3(4,4,4));
-	list->transition(texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+//	list->transition(texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 	list->end();
 	list->execute_and_wait();
 

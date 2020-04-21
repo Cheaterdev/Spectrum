@@ -22,6 +22,8 @@ namespace DX12 {
 	{
 		if (cpu != r.cpu)
 			Device::get().get_native_device()->CopyDescriptorsSimple(1, cpu, r.cpu, type);
+
+		*resource_ptr = *r.resource_ptr;
 	}
 
 	void HandleTable::place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t)
@@ -199,8 +201,8 @@ namespace DX12 {
 
 	void Handle::clear(CommandList& list, float4 color) const
 	{
-		list.flush_transitions();
-		list.get_native_list()->ClearRenderTargetView(cpu, &color.x, 0, nullptr);
+
+		list.clear_rtv(*this, color);
 	}
 
 

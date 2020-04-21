@@ -101,10 +101,6 @@ void SkyRender::generate(FrameGraph& graph)
 
 
 
-			list.transition(target_tex.resource, Render::ResourceState::RENDER_TARGET);
-
-
-
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
 			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());

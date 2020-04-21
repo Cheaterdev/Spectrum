@@ -17,12 +17,14 @@ enum class DescriptorHeapFlags : int
 	SHADER_VISIBLE = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
 
 };
+class Resource;
 
 struct Handle
 {
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpu;
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu;
 
+	Resource** resource_ptr = nullptr;
 	bool is_valid() const
 	{
 		return cpu.ptr != 0 || gpu.ptr != 0;
@@ -106,6 +108,7 @@ struct HandleTableLight : public Handle
 		Handle res = *this;
 		res.cpu.Offset(i, descriptor_size);
 		res.gpu.Offset(i, descriptor_size);
+		res.resource_ptr = resource_ptr + i;
 		return res;
 	}
 
@@ -134,6 +137,7 @@ class DescriptorHeap : public std::enable_shared_from_this<DescriptorHeap>
 {
 	//      std::vector<Handle> handles;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+	std::vector<Resource*> resources;
 
 	UINT descriptor_size;
 	UINT current_offset = 0;
@@ -155,6 +159,7 @@ class DescriptorHeap : public std::enable_shared_from_this<DescriptorHeap>
 			});
 		res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.info->base.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
+		res.info->base.resource_ptr = resources.data()+ offset;
 		res.info->descriptor_size = descriptor_size;
 		res.info->count = count;
 		return res;
@@ -253,7 +258,7 @@ public:
 		Handle res;
 		res.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-
+		res.resource_ptr = resources.data() + offset;
 		return res;
 	}
 
@@ -265,6 +270,7 @@ public:
 
 		res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.info->base.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
+		res.info->base.resource_ptr = resources.data() + offset;
 		res.info->descriptor_size = descriptor_size;
 		res.info->count = count;
 		return res;
@@ -278,6 +284,7 @@ public:
 		res.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.descriptor_size = descriptor_size;
+		res.resource_ptr = resources.data() + offset;
 		res.count = count;
 		return res;
 	}

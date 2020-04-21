@@ -411,8 +411,8 @@ namespace DX12
 		auto t = CounterManager::get().start_count<Device>();
 //#ifdef DEBUG
 		// Enable the D3D12 debug layer.
-		/*
-			ComPtr<ID3D12Debug> debugController;
+		
+		/*	ComPtr<ID3D12Debug> debugController;
 			CComPtr<ID3D12Debug1> spDebugController1;
 
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))

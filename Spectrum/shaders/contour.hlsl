@@ -15,7 +15,7 @@ quad_output VS(uint index : SV_VERTEXID)
 		float2(pos.x, pos.y),
 		float2(pos.z, pos.w),
 		float2(pos.z, pos.y)*/
-		
+
 		float2(-1, 1),
 		float2(-1, -1),
 		float2(1, 1),
@@ -31,36 +31,29 @@ quad_output VS(uint index : SV_VERTEXID)
 		float2(1, 0),
 	};
 	quad_output Output;
-	Output.pos = float4(Pos[index].x , -Pos[index].y, 0.99999, 1); //float4(Input.Pos.xy,0.3,1);
+	Output.pos = float4(Pos[index].x, -Pos[index].y, 0.99999, 1); //float4(Input.Pos.xy,0.3,1);
 	Output.tc = Tex[index];
 	return Output;
 }
 #endif
 
 #ifdef BUILD_FUNC_PS
-Texture2D<float4> tex : register(t0);
 
-SamplerState PointSampler : register (s0);
+#include "autogen/Countour.h"
 
-
-	float4 PS(quad_output input) : SV_TARGET0
-	{
-	
-	float orig = tex.Sample(PointSampler, input.tc);
-	
-	
-float2 res = 0;
-[unroll]for(int i=-1;i<=1;i++)
-[unroll]for(int j=-1;j<=1;j++)
+float4 PS(quad_output input) : SV_TARGET0
 {
-float w = 1-length(float2(i,j))/length(float2(2,2));
-res+=float2(tex.Sample(PointSampler, input.tc ,int2(i,j)).x*w,w);
+	float orig = GetCountour().GetTex().Sample(pointClampSampler, input.tc);
 
-}
-
-
-		return float4(2*saturate((res.x/res.y-orig*0.99).xxx)*float3(1,0.5,0),1);
-
+	float2 res = 0;
+	[unroll] for (int i = -2; i <= 2; i++)
+	[unroll] for (int j = -2; j <= 2; j++)
+	{
+		float w = 1 - length(float2(i,j)) / length(float2(2,2));
+		res += float2(GetCountour().GetTex().Sample(pointClampSampler, input.tc ,int2(i,j)).x * w,w);
 	}
+
+	return  float4(saturate((res.x / res.y - orig * 0.99).xxx) * GetCountour().GetColor().xyz,1);
+}
 
 #endif

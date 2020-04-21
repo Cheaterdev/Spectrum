@@ -227,6 +227,12 @@ namespace DX12
             }
             std::map<UINT, table_info> tables;
 
+            UINT get_start_slot()
+            {
+                
+            }
+
+
         private:
             std::vector<CD3DX12_ROOT_PARAMETER> parameters;
             std::vector<std::shared_ptr<CD3DX12_DESCRIPTOR_RANGE>> ranges;
@@ -254,10 +260,12 @@ namespace DX12
                 set(++i, args...);
             }
 
-	
+
         public:
             using ptr = std::shared_ptr<RootSignature>;
 
+		
+            
             template <class ...Args>
             RootSignature(Args...args)
             {
@@ -279,6 +287,36 @@ namespace DX12
             }
     };
 
+
+    class RootLayout:public RootSignature
+    {
+		const Layouts layout;
+      
+	public:
+		using ptr = std::shared_ptr<RootLayout>;
+       
+        RootLayout(const RootSignatureDesc& desc, Layouts layout):RootSignature(desc), layout(layout)
+        {
+
+
+        }
+    };
+
+
+    /*
+    class RootLayoutManager
+    {
+        std::vector<Layouts> slots; 
+    public:
+
+        void set_layout(RootLayout::ptr &layout)
+        {
+            for (auto& e : layout->get_desc().tables)
+            {
+                slots[]
+            }
+        }
+    };*/
 	template<class T>
 	class RootSignatureTyped: public RootSignature
 	{

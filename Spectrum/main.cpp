@@ -98,7 +98,6 @@ public:
 */
 
 
-#include "testing.h"
 
 /*
 class PostProcessGraph;
@@ -1482,7 +1481,7 @@ public:
 
 		auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count = 2;
+		int count =2;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
@@ -2020,8 +2019,7 @@ public:
 				});
 		}
 
-		stenciler->generate(graph);
-		pssm.generate(graph);
+	pssm.generate(graph);
 		sky.generate(graph);
 
 		stenciler->generate_after(graph);
@@ -2071,7 +2069,7 @@ public:
 		//		e->g_buffer.size = { r.w,r.h };
 
 	//	renderer->flush(t);
-		t.command_list->transition(texture.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+		//t.command_list->transition(texture.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 
 		image::draw(t);
 		//	renderer->flush(t);
@@ -2121,7 +2119,7 @@ public:
 		if (r.w <= 64 || r.h <= 64) return;
 
 		ivec2 size = r.size;
-		texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+		texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 
 
 		//	g_buffer.size = { r.w, r.h };
@@ -2215,7 +2213,7 @@ protected:
 		{
 			command_list->begin("main window", &timer);
 
-			command_list->transition(swap_chain->get_current_frame(), Render::ResourceState::RENDER_TARGET);
+		//	command_list->transition(swap_chain->get_current_frame(), Render::ResourceState::RENDER_TARGET);
 			command_list->get_graphics().set_rtv(1, swap_chain->get_current_frame()->texture_2d()->get_rtv(), Render::Handle());
 			command_list->get_graphics().set_viewports({ swap_chain->get_current_frame()->texture_2d()->get_viewport() });
 
@@ -2932,7 +2930,7 @@ public:
 			label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram());
 		}
 
-
+		
 		process_ui(main_timer.tick());
 		{
 			auto& timer = Profiler::get().start(L"Wait next");
@@ -3366,6 +3364,10 @@ protected:
 		EVENT("AssetManager");
 		AssetManager::create();
 		EVENT("WindowRender");
+
+		Render::vertex_shader::get_resource({ "testing.h", "VS", 0, {} });
+
+
 #ifdef OCULUS_SUPPORT
 		//ovr = std::make_shared<OVRRender>();
 #endif
@@ -3419,6 +3421,9 @@ protected:
 		AssetManager::reset();
 		Render::Device::reset();
 		//   Render::Device::reset();
+
+
+	
 	}
 
 

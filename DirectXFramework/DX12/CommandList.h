@@ -200,7 +200,7 @@ namespace DX12
 		FrameResources::UploadInfo get_for(FrameResources& manager) override
 		{
 			m.lock();
-			if (info.frame != manager.get_frame())
+	//		if (info.frame != manager.get_frame())
 				info = manager.set_const_buffer(_data);
 
 			assert(info.resource);
@@ -654,6 +654,8 @@ namespace DX12
 		template<class T> 
 		void clear_uav(T& resource, const Handle& h, ivec4 ClearColor = ivec4(0,0,0,0))
 		{
+			transition(*h.resource_ptr, ResourceState::UNORDERED_ACCESS);
+
 			flush_transitions();
 			auto handle = srv_descriptors.place(h);	
 			get_native_list()->ClearUnorderedAccessViewUint(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<UINT*>(ClearColor.data()), 0, nullptr);
@@ -662,6 +664,8 @@ namespace DX12
 		template<class T>
 		void clear_uav(T& resource, const Handle& h, vec4 ClearColor)
 		{
+			transition(*h.resource_ptr, ResourceState::UNORDERED_ACCESS);
+
 			flush_transitions();
 			auto handle = srv_descriptors.place(h);
 			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
@@ -670,6 +674,7 @@ namespace DX12
 	
 		void clear_rtv(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 		{
+			transition(*h.resource_ptr, ResourceState::RENDER_TARGET);
 			flush_transitions();
 			get_native_list()->ClearRenderTargetView( h.cpu, ClearColor.data(), 0, nullptr);
 		}

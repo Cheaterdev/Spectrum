@@ -19,19 +19,11 @@ quad_output VS(float2 pos: SV_POSITION, uint index : SV_VERTEXID)
 #endif
 
 #ifdef BUILD_FUNC_PS_COLOR
-cbuffer cbParams : register(b0)
-{
-    float4 color;
-};
-
-
-SamplerState PointSampler : register(s0);
-SamplerState LinearSampler : register(s1);
-SamplerState UISampler : register(s2);
+#include "../autogen/ColorRect.h"
 
 float4 PS_COLOR(quad_output i) : SV_TARGET0
 {
-    return color;
+    return GetColorRect().GetColor();
 }
 #endif
 

@@ -18,15 +18,14 @@
 #include "slots\PSSMLighting.h"
 #include "slots\SkyData.h"
 #include "slots\SkyFace.h"
+#include "slots\Countour.h"
+#include "slots\PickerBuffer.h"
+#include "slots\Instance.h"
+#include "slots\Color.h"
 #include "slots\Test.h"
 #include "slots\NinePatch.h"
 #include "slots\ColorRect.h"
 #include "slots\FlowGraph.h"
-enum class Layouts: int
-{
-	FrameLayout,
-	DefaultLayout,
-	TOTAL
-};
+
 void init_signatures();
-Render::RootSignature::ptr get_Signature(Layouts id);
+Render::RootLayout::ptr get_Signature(Layouts id);

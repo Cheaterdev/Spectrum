@@ -37,7 +37,7 @@ PSSM::PSSM()
 		desc.vertex = Render::vertex_shader::get_resource({ "shaders\\PSSM.hlsl", "VS", 0,{} });
 		draw_mask_state.reset(new  Render::PipelineState(desc));
 
-		desc.rtv.rtv_formats = { DXGI_FORMAT_R8G8B8A8_UNORM };
+		desc.rtv.rtv_formats = { DXGI_FORMAT_R16G16B16A16_FLOAT };
 		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\PSSM.hlsl", "PS_RESULT", 0,{} });
 		draw_result_state.reset(new  Render::PipelineState(desc));
 	}
@@ -248,7 +248,7 @@ void PSSM::generate(FrameGraph& graph)
 			graphics.set_viewport(screen_light_mask.get_viewport());
 			graphics.set_scissor(screen_light_mask.get_scissor());
 
-			list.transition(screen_light_mask.resource, Render::ResourceState::RENDER_TARGET);
+		//	list.transition(screen_light_mask.resource, Render::ResourceState::RENDER_TARGET);
 
 			graphics.set_rtv(1, screen_light_mask.get_rtv(), Render::Handle());
 			graphics.set_pipeline(draw_mask_state);

@@ -3,170 +3,6 @@ using namespace GUI;
 
 using namespace Elements;
 
-
-
-template <class T>
-struct StencilSignature : public T
-{
-	using T::T;
-
-	typename T::template SRV			<0, Render::ShaderVisibility::VERTEX, 0>								vertex_buffer = this;
-	typename T::template ConstBuffer	<1, Render::ShaderVisibility::VERTEX, 0>								camera_data = this;
-	typename T::template Constants		<2, Render::ShaderVisibility::PIXEL, 0, 3>								pixel_constants = this;
-	typename T::template UAV			<3, Render::ShaderVisibility::PIXEL, 0>									id_buffer = this;
-
-	typename T::template Constants		<4, Render::ShaderVisibility::VERTEX, 2, 3>								vertex_constants = this;
-	typename T::template SRV			<5, Render::ShaderVisibility::VERTEX, 1, 1>								instance_data = this;
-
-	typename T::template Table			<6, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 1>pixel_source = this;
-
-
-	typename T::template Sampler<0, Render::ShaderVisibility::ALL, 0> point{ Render::Samplers::SamplerPointClampDesc, this };
-};
-
-
-void stencil_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_object::ptr obj)
-{
-
-	axis->update_transforms();
-	cam = *mesh_render_context->cam;
-	cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
-	cam.target = cam.position + direction;
-	cam.update();
-
-	axis_cam = *mesh_render_context->cam;
-
-
-	vec3 dir = /*axis_cam.position +*/ mesh_render_context->cam->target - mesh_render_context->cam->position;
-	dir.normalize();
-	axis_cam.set_projection_params(1, 1000);
-	axis_cam.position -= (center_pos);
-	axis_cam.position.normalize();
-	axis_cam.position *= 200;
-	axis_cam.target = axis_cam.position + dir;//float3(0, 0, 0);//;
-	vec2 local = mesh_render_context->cam->to_local(float3(0, 0, 0));
-	axis_cam.update();
-	axis_intersect_cam = axis_cam;
-	axis_intersect_cam.set_projection_params(1, 1000);
-	axis_intersect_cam.target = axis_intersect_cam.position + direction;
-	//	cam.set_projection_params(cam.angle)
-	axis_intersect_cam.update();
-	auto& graphics = mesh_render_context->list->get_graphics();
-	auto& compute = mesh_render_context->list->get_compute();
-	auto& copy = mesh_render_context->list->get_copy();
-	auto& list = *mesh_render_context->list;
-
-	StencilSignature<Signature> shader_data(&graphics);
-	{
-		current_frame = (current_frame + 1) % 2;
-		auto& current = all[current_frame];
-		current.clear();
-		auto mesh_func = [&](MeshAssetInstance* l)
-		{
-			auto nodes = l->node_buffer.get_for(*list.get_manager());
-			shader_data.instance_data = nodes.resource->get_gpu_address() + nodes.offset;
-			graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
-
-
-			for (unsigned int i = 0; i < l->rendering.size(); i++)
-			{
-				auto& e = l->rendering[i];
-				auto& node = l->nodes[e.node_index];
-
-				auto in = intersect(cam, e.primitive_global.get());
-
-				if (in == INTERSECT_TYPE::FULL_OUT)
-					continue;
-
-				current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
-				shader_data.vertex_constants.set(0, e.node_index);
-				shader_data.pixel_constants.set(current.size());
-				shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address() + e.mesh->vertex_offset*sizeof(Vertex);
-
-				graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, 0* e.mesh->vertex_offset);
-			}
-		};
-		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		graphics.set_pipeline(draw_state);
-		list.transition(depth_tex, Render::ResourceState::DEPTH_WRITE);
-		list.transition(id_buffer, Render::ResourceState::UNORDERED_ACCESS);
-		list.transition(axis_id_buffer, Render::ResourceState::UNORDERED_ACCESS);
-		list.flush_transitions();
-		list.clear_uav(id_buffer, id_buffer->get_raw_uav());
-		list.clear_uav(axis_id_buffer, axis_id_buffer->get_raw_uav());
-
-		shader_data.camera_data = cam.get_const_buffer();
-		shader_data.id_buffer = id_buffer->get_gpu_address();
-
-		table.clear_depth(graphics);
-		table.set(graphics);
-		graphics.set_viewports({ depth_tex->texture_2d()->get_viewport() });
-		graphics.set_scissors(depth_tex->texture_2d()->get_scissor());
-		obj->iterate([&](scene_object* node)
-			{
-				Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
-
-				if (render_object)
-				{
-					auto instance = dynamic_cast<MeshAssetInstance*>(render_object);
-					mesh_func(instance);
-				}
-
-				return true;
-			});
-		table.clear_depth(graphics);
-		shader_data.id_buffer = axis_id_buffer->get_gpu_address();
-		shader_data.camera_data = axis_intersect_cam.get_const_buffer();
-
-		axis->iterate([&](scene_object* node)
-			{
-				Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
-
-				if (render_object)
-				{
-					auto l = dynamic_cast<MeshAssetInstance*>(render_object);
-					auto nodes = l->node_buffer.get_for(*list.get_manager());
-					shader_data.instance_data = nodes.resource->get_gpu_address() + nodes.offset;
-
-					graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
-
-
-					for (unsigned int i = 0; i < l->rendering.size(); i++)
-					{
-						auto& e = l->rendering[i];
-						auto& node = l->nodes[e.node_index];
-
-						shader_data.vertex_constants.set(0, e.node_index);
-						shader_data.pixel_constants.set(i + 1);
-						shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address() + e.mesh->vertex_offset * sizeof(Vertex);
-
-						graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, 0*e.mesh->vertex_offset);
-					}
-				}
-
-				return true;
-			});
-
-		copy.read_buffer(id_buffer.get(), 0, 4, [current, this](const char* data, UINT64 size)
-			{
-				if (!data) device_fail();
-
-				UINT result = *reinterpret_cast<const UINT*>(data) - 1;
-				mouse_on_object.first = nullptr;
-
-				if (result >= current.size())
-					return;
-
-				mouse_on_object = (current[result]);
-			});
-		copy.read_buffer(axis_id_buffer.get(), 0, 4, [current, this](const char* data, UINT64 size)
-			{
-				mouse_on_axis = *reinterpret_cast<const UINT*>(data) - 1;
-			});
-	}
-}
-
-
 void stencil_renderer::select_current()
 {
 	selected.clear();
@@ -433,10 +269,10 @@ stencil_renderer::stencil_renderer()
 //   draw_helper = true;
 	Render::PipelineStateDesc state_desc;
 
-	auto root_signature = StencilSignature<SignatureCreator>().create_root();
+	auto root_signature = get_Signature(Layouts::DefaultLayout);// <SignatureCreator>().create_root();
 	state_desc.root_signature = root_signature;
 
-	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/stencil.hlsl", "VS", 0, {} });
+	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS", 0, {} });
 	state_desc.rtv.rtv_formats = {};
 	state_desc.rtv.enable_depth = true;
@@ -451,10 +287,12 @@ stencil_renderer::stencil_renderer()
 	state_desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8_SNORM };
 	state_desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
 	state_desc.rtv.enable_depth_write = false;
+	state_desc.rtv.enable_depth = false;
+
 	draw_selected_state.reset(new Render::PipelineState(state_desc));
 
 	state_desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
-	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/stencil.hlsl", "VS_COLOR", 0, {} });
+	//state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS_COLOR", 0, {} });
 	axis_render_state.reset(new Render::PipelineState(state_desc));
 
@@ -469,7 +307,7 @@ stencil_renderer::stencil_renderer()
 
 	cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
 	axis_intersect_cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
-	
+
 	{
 		Render::PipelineStateDesc state_desc;
 
@@ -488,108 +326,6 @@ stencil_renderer::stencil_renderer()
 	axis.reset(new MeshAssetInstance(EngineAssets::axis.get_asset()));
 
 }
-void stencil_renderer::on_bounds_changed(const rect& r)
-{
-	base::on_bounds_changed(r);
-	auto size = ivec2::max(ivec2(r.size), ivec2{ 1,1 });
-	//allocator.reset();
-
-	//color_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8_SNORM, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::RENDER_TARGET, allocator));
-////////////////////////////////////////////////////////////	render_color_table = RenderTargetTable({ color_tex }, nullptr);
-
-	//depth_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1, 1, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL), Render::ResourceState::DEPTH_WRITE, allocator));
-////////////////////////////////////////////////////////////	table = RenderTargetTable({}, depth_tex);
-
-//	depth_tex->set_name("stencil_renderer::depth_tex");
-
-
-
-}
-void stencil_renderer::draw_after(MeshRenderContext::ptr mesh_render_context, G_Buffer& buffer)
-{
-	if (selected.empty()) return;
-
-	auto& graphics = mesh_render_context->list->get_graphics();
-	auto& list = *mesh_render_context->list;
-	StencilSignature<Signature> shader_data(&graphics);
-
-	// draw mesh mask
-	{
-		list.transition(color_tex, ResourceState::RENDER_TARGET);
-		graphics.set_rtv(1, color_tex->texture_2d()->get_rtv(), Handle());
-		color_tex->texture_2d()->get_rtv().clear(*mesh_render_context->list);
-		graphics.set_pipeline(draw_selected_state);
-		shader_data.camera_data = mesh_render_context->cam->get_const_buffer();
-		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		for (auto& sel : selected)
-		{
-			auto l = sel.first;
-			auto nodes = l->node_buffer.get_for(*list.get_manager());
-			int i = sel.second;
-			{
-				auto& e = l->rendering[i];
-				auto& node = l->nodes[e.node_index];
-
-				auto nodes = l->node_buffer.get_for(*list.get_manager());
-				shader_data.instance_data = nodes.resource->get_gpu_address() + nodes.offset;
-				shader_data.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address()+ e.mesh->vertex_offset*sizeof(Vertex);
-
-				graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
-				shader_data.vertex_constants.set(0, e.node_index);
-
-				graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, 0*e.mesh->vertex_offset);
-			}
-		}
-	}
-
-	// apply color mask
-	{
-		graphics.set_pipeline(last_render_state);
-		list.transition(color_tex, ResourceState::PIXEL_SHADER_RESOURCE);
-		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-//		graphics.set_viewport(buffer.result_tex.first()->texture_2d()->get_viewport());
-//		graphics.set_scissor(buffer.result_tex.first()->texture_2d()->get_scissor());
-//		graphics.set_rtv(1, buffer.result_tex.first()->texture_2d()->get_rtv(), Render::Handle());
-		shader_data.pixel_source[0] = color_tex->texture_2d()->get_srv();
-		{
-			auto timer = list.start(L"blend");
-			graphics.draw(4);
-		}
-	}
-
-	// draw axis
-	{
-		graphics.set_pipeline(axis_render_state);
-		shader_data.camera_data= axis_cam.get_const_buffer();
-		auto nodes = axis->node_buffer.get_for(*list.get_manager());
-		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		int i = 0;
-
-		shader_data.vertex_constants.set(0, 0, 0);
-		shader_data.instance_data = nodes.resource->get_gpu_address() + nodes.offset;
-		graphics.set_index_buffer(axis->mesh_asset->index_buffer->get_index_buffer_view(true));
-		for (auto& e : axis->rendering)
-		{
-			auto& node = axis->nodes[e.node_index];
-
-			float lighted = (mouse_on_axis == i) * 0.7f;
-			shader_data.pixel_constants.set(i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted);
-			i++;
-			shader_data.vertex_constants.set(0, e.node_index);
-
-			shader_data.vertex_buffer = axis->mesh_asset->vertex_buffer->get_gpu_address()+ e.mesh->vertex_offset*sizeof(Vertex);
-
-			graphics.draw_indexed(e.mesh->index_count, e.mesh->index_offset, 0);
-
-		}
-	}
-}
-
-void stencil_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&) > f)
-{
-	throw std::logic_error("The method or operation is not implemented.");
-}
 
 
 
@@ -597,10 +333,409 @@ void stencil_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_obj
 void stencil_renderer::generate(FrameGraph& graph)
 {
 
+	process_tasks();
+
+	axis->update_transforms();
+	cam = *graph.cam;
+	cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
+	cam.target = cam.position + direction;
+	cam.update();
+
+	axis_cam = *graph.cam;
+
+
+	vec3 dir = /*axis_cam.position +*/ graph.cam->target - graph.cam->position;
+	dir.normalize();
+	axis_cam.set_projection_params(1, 1000);
+	axis_cam.position -= (center_pos);
+	axis_cam.position.normalize();
+	axis_cam.position *= 200;
+	axis_cam.target = axis_cam.position + dir;//float3(0, 0, 0);//;
+	vec2 local = graph.cam->to_local(float3(0, 0, 0));
+	axis_cam.update();
+	axis_intersect_cam = axis_cam;
+	axis_intersect_cam.set_projection_params(1, 1000);
+	axis_intersect_cam.target = axis_intersect_cam.position + direction;
+	//	cam.set_projection_params(cam.angle)
+	axis_intersect_cam.update();
+
+
+	{
+		struct Data
+		{
+			//		ResourceHandler* target_tex;
+			ResourceHandler* depth_tex;
+
+		};
+
+		graph.add_pass<Data>("stencil_renderer::before", [this, &graph](Data& data, TaskBuilder& builder) {
+			//			data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
+			data.depth_tex = builder.create_texture("Stencil::depth_tex", { 1,1 }, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
+
+			}, [this, &graph](Data& data, FrameContext& _context) {
+
+				//	auto color_tex = _context.get_texture(data.color_tex);
+				auto depth_tex = _context.get_texture(data.depth_tex);
+
+
+
+				auto& list = *_context.get_list();
+				auto& graphics = list.get_graphics();
+				auto& copy = list.get_copy();
+
+				graphics.use_dynamic = false;
+
+				auto obj = graph.scene;
+
+
+				RenderTargetTable table = RenderTargetTable(graphics, {}, depth_tex);
+				{
+					std::vector<std::pair<MeshAssetInstance::ptr, int>> current;
+					auto mesh_func = [&](MeshAssetInstance* l)
+					{
+						auto nodes = l->node_buffer.get_for(*list.get_manager());
+						auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
+						graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
+						{
+
+							Slots::MeshData data;
+							data.GetNodes() = buffer_view.get_srv();
+							data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
+							data.set(graphics);
+						}
+						for (unsigned int i = 0; i < l->rendering.size(); i++)
+						{
+							auto& m = l->rendering[i];
+
+							auto in = intersect(cam, m.primitive_global.get());
+
+							if (in == INTERSECT_TYPE::FULL_OUT)
+							continue;
+
+							current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
+
+							{
+								Slots::MeshInfo info;
+
+								info.GetNode_offset() = m.node_index;
+								info.GetTexture_offset() = 0;
+								info.GetVertex_offset() = m.mesh->vertex_offset;
+
+								info.set(graphics);
+							}
+
+							{
+								Slots::Instance instance;
+								instance.GetInstanceId() = current.size();
+								instance.set(graphics);
+							}
+
+
+							graphics.draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
+						}
+					};
+					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					graphics.set_pipeline(draw_state);
+		//			list.transition(depth_tex.resource, Render::ResourceState::DEPTH_WRITE);
+		//			list.transition(id_buffer, Render::ResourceState::UNORDERED_ACCESS);
+		//			list.transition(axis_id_buffer, Render::ResourceState::UNORDERED_ACCESS);
+			//		list.flush_transitions();
+					list.clear_uav(id_buffer, id_buffer->get_raw_uav());
+					list.clear_uav(axis_id_buffer, axis_id_buffer->get_raw_uav());
+
+
+					{
+						Slots::FrameInfo frameInfo;
+
+						auto camera = frameInfo.MapCamera();
+						memcpy(&camera.cb, &cam.get_raw_cb().current, sizeof(camera.cb));
+						frameInfo.set(graphics);
+					}
+
+					{
+						Slots::PickerBuffer buffer;
+						buffer.GetViewBuffer() = id_buffer->get_raw_uav();
+						buffer.set(graphics);
+					}
+					//////////////	shader_data.camera_data = cam.get_const_buffer();
+					/////////////////	shader_data.id_buffer = id_buffer->get_gpu_address();
+
+					table.clear_depth(graphics);
+					table.set(graphics);
+					graphics.set_viewports({ depth_tex.get_viewport() });
+					graphics.set_scissors(depth_tex.get_scissor());
+					obj->iterate([&](scene_object* node)
+						{
+							Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+
+							if (render_object)
+							{
+								auto instance = dynamic_cast<MeshAssetInstance*>(render_object);
+								mesh_func(instance);
+							}
+
+							return true;
+						});
+					table.clear_depth(graphics);
+
+					{
+						Slots::FrameInfo frameInfo;
+
+						auto camera = frameInfo.MapCamera();
+						memcpy(&camera.cb, &axis_intersect_cam.get_raw_cb().current, sizeof(camera.cb));
+						frameInfo.set(graphics);
+					}
+					{
+						Slots::PickerBuffer buffer;
+						buffer.GetViewBuffer() = axis_id_buffer->get_raw_uav();
+						buffer.set(graphics);
+					}
+		
+					axis->iterate([&](scene_object* node)
+						{
+							Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+
+							if (render_object)
+							{
+								auto l = dynamic_cast<MeshAssetInstance*>(render_object);
+
+								graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
+								auto nodes = l->node_buffer.get_for(*list.get_manager());
+								auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
+
+								{
+									Slots::MeshData data;
+									data.GetNodes() = buffer_view.get_srv();
+									data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
+									data.set(graphics);
+								}
+
+								for (unsigned int i = 0; i < l->rendering.size(); i++)
+								{
+									auto& m = l->rendering[i];
+					
+									{
+										Slots::MeshInfo info;
+
+										info.GetNode_offset() = m.node_index;
+										info.GetTexture_offset() = 0;
+										info.GetVertex_offset() = m.mesh->vertex_offset;
+
+										info.set(graphics);
+									}
+
+									{
+										Slots::Instance instance;
+										instance.GetInstanceId() = i + 1;
+										instance.set(graphics);
+									}
+						
+									graphics.draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0 * m.mesh->vertex_offset);
+								}
+							}
+
+							return true;
+						});
+
+					copy.read_buffer(id_buffer.get(), 0, 4, [current, this](const char* data, UINT64 size)
+						{
+
+							if (!data) device_fail();
+
+							UINT result = *reinterpret_cast<const UINT*>(data) - 1;
+
+							run([result,this,current]() {
+								mouse_on_object.first = nullptr;
+
+								if (result >= current.size())
+									return;
+
+								mouse_on_object = (current[result]);
+			
+								});
+						
+					
+
+						});
+
+					copy.read_buffer(axis_id_buffer.get(), 0, 4, [ this](const char* data, UINT64 size)
+						{
+
+							auto result = *reinterpret_cast<const UINT*>(data) - 1;
+							run([this, result]() {
+								mouse_on_axis = result;
+								});
+						});
+				}
+
+			});
+
+	}
+
 }
 
 
 void stencil_renderer::generate_after(FrameGraph& graph)
 {
+	if (selected.empty())
+		return;
 
+
+	{
+		struct Data
+		{
+			ResourceHandler* target_tex;
+			ResourceHandler* color_tex;
+
+		};
+
+		graph.add_pass<Data>("stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
+			data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
+			data.color_tex = builder.create_texture("Stencil::ColorTex", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R8_SNORM, ResourceFlags::RenderTarget);
+
+			}, [this, &graph](Data& data, FrameContext& _context) {
+
+				auto color_tex = _context.get_texture(data.color_tex);
+				auto target_tex = _context.get_texture(data.target_tex);
+
+				auto& list = *_context.get_list();
+				auto& graphics = list.get_graphics();
+				graphics.use_dynamic = false;
+
+				{
+			//		list.transition(color_tex.resource, ResourceState::RENDER_TARGET);
+					graphics.set_rtv(1, color_tex.get_rtv(), Handle());
+					color_tex.get_rtv().clear(list);
+
+					graphics.set_pipeline(draw_selected_state);
+					//////////////////////		shader_data.camera_data = mesh_render_context->cam->get_const_buffer();
+					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					graphics.set_viewports({ color_tex.get_viewport() });
+					graphics.set_scissors(color_tex.get_scissor());
+
+					{
+						Slots::FrameInfo frameInfo;
+
+						auto camera = frameInfo.MapCamera();
+						memcpy(&camera.cb, &graph.cam->get_raw_cb().current, sizeof(camera.cb));
+						frameInfo.set(graphics);
+					}
+
+
+
+					for (auto& sel : selected)
+					{
+
+						auto l = sel.first;
+						auto nodes = l->node_buffer.get_for(*list.get_manager());
+						auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
+						graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
+
+
+						Slots::MeshData data;
+						data.GetNodes() = buffer_view.get_srv();
+						data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
+						data.set(graphics);
+
+
+						int i = sel.second;
+						{
+							auto& m = l->rendering[i];
+							{
+								Slots::MeshInfo info;
+
+								info.GetNode_offset() = m.node_index;
+								info.GetTexture_offset() = 0;
+								info.GetVertex_offset() = m.mesh->vertex_offset;
+
+								info.set(graphics);
+							}
+							graphics.draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
+						}
+					}
+				}
+				
+
+				// apply color mask
+			{
+					graphics.set_pipeline(last_render_state);
+					list.transition(color_tex.resource, ResourceState::PIXEL_SHADER_RESOURCE);
+					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+					{
+						Slots::Countour contour;
+						contour.GetColor() = { 1,0.5,0,1 };
+						contour.GetTex() = color_tex.get_srv();
+						contour.set(graphics);
+					}
+
+					graphics.set_viewport(target_tex.get_viewport());
+					graphics.set_scissor(target_tex.get_scissor());
+					graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
+					{
+						auto timer = list.start(L"blend");
+						graphics.draw(4);
+					}
+				}
+
+				// draw axis
+			{
+
+
+					{
+						Slots::FrameInfo frameInfo;
+
+						auto camera = frameInfo.MapCamera();
+						memcpy(&camera.cb, &axis_cam.get_raw_cb().current, sizeof(camera.cb));
+						frameInfo.set(graphics);
+					}
+
+
+
+
+
+					graphics.set_pipeline(axis_render_state);
+					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					int i = 0;
+
+			
+					auto nodes = axis->node_buffer.get_for(*list.get_manager());
+					auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
+					graphics.set_index_buffer(axis->mesh_asset->index_buffer->get_index_buffer_view(true));
+
+					Slots::MeshData data;
+					data.GetNodes() = buffer_view.get_srv();
+					data.GetVb() = axis->mesh_asset->vertex_buffer->get_srv()[0];
+					data.set(graphics);
+
+					for (auto& m : axis->rendering)
+					{
+				
+						float lighted = (mouse_on_axis == i) * 0.7f;
+						//////////////////	shader_data.pixel_constants.set(i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted);
+				
+					
+						{
+							Slots::Color color;
+							color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted , 1};
+							color.set(graphics);
+						}
+						{
+							Slots::MeshInfo info;
+
+							info.GetNode_offset() = m.node_index;
+							info.GetTexture_offset() = 0;
+							info.GetVertex_offset() = m.mesh->vertex_offset;
+
+							info.set(graphics);
+						}
+						graphics.draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
+						i++;
+					}
+				}
+
+
+
+			});
+	}
 }

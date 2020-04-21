@@ -31,9 +31,9 @@ namespace DX12
 
     void GPUBuffer::set_data(DX12::CommandList::ptr& list, unsigned int offset, const std::string& v)
     {
-        list->transition(this,  ResourceState::COPY_DEST);
+  //      list->transition(this,  ResourceState::COPY_DEST);
         list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(char)));
-        list->transition(this, ResourceState::COMMON);
+    //    list->transition(this, ResourceState::COMMON);
     }
 
 	 void GPUBuffer::place_srv_buffer(const Handle & handle)
@@ -46,6 +46,7 @@ namespace DX12
 		srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE;
 		srv.Buffer.StructureByteStride = 0;
 		srv.Buffer.NumElements = static_cast<UINT>(count / sizeof(vec4));
+        *handle.resource_ptr = this;
 		Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &srv, handle.cpu);
 	}
 
@@ -58,6 +59,8 @@ namespace DX12
 		desc.Buffer.StructureByteStride = stride;
 		desc.Buffer.CounterOffsetInBytes = offset;
 		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+        *h.resource_ptr = this;
 		Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), counter_resource ? counter_resource->get_native().Get() : nullptr, &desc, h.cpu);
 	}
 
@@ -71,6 +74,7 @@ namespace DX12
 		 srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE;
 		 srv.Buffer.StructureByteStride = stride;
 		 srv.Buffer.NumElements = count;
+         *handle.resource_ptr = this;
 		 Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &srv, handle.cpu);
 	 }
 
@@ -115,6 +119,8 @@ namespace DX12
         desc.Buffer.NumElements = static_cast<UINT>(count / 4);
         desc.Buffer.StructureByteStride = 0;
         desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+
+        *h.resource_ptr = this;
         Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), nullptr, &desc, h.cpu);
     }
 
@@ -127,6 +133,8 @@ namespace DX12
         desc.Buffer.NumElements = static_cast<UINT>(count / 4);
         desc.Buffer.StructureByteStride = 0;
         desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+
+        *h.resource_ptr = this;
         Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &desc, h.cpu);
     }
     IndexBuffer::IndexBuffer(UINT64 size) : GPUBuffer(size)

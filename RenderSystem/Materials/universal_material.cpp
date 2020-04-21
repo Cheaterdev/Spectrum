@@ -5,6 +5,53 @@
 
 BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
 
+std::vector<std::byte> generate_data(std::vector<Uniform::ptr>& un)
+{
+	std::vector<std::byte> data;
+
+	int offset = 0;
+
+	for (auto& u : un)
+	{	
+		int need_size = u->type.get_size();
+
+		while (offset > 0 && (offset + need_size) > 16)
+		{
+			data.emplace_back(std::byte(0));
+			offset = (offset + 1) % 16;
+		}
+
+		std::byte* ptr = nullptr;
+
+
+		if (u->type == ShaderParams::FLOAT1)
+		{
+			ptr = reinterpret_cast<std::byte*>(&u->value.f_value);
+		}
+
+		if (u->type == ShaderParams::FLOAT2)
+		{
+			ptr = reinterpret_cast<std::byte*>(&u->value.f2_value);
+		}
+
+		if (u->type == ShaderParams::FLOAT3)
+		{
+			ptr = reinterpret_cast<std::byte*>(&u->value.f3_value);
+		}
+
+		if (u->type == ShaderParams::FLOAT4)
+		{
+			ptr = reinterpret_cast<std::byte*>(&u->value.f4_value);
+		}
+
+		data.insert(data.end(), ptr, ptr + need_size);
+
+
+		offset = (offset + need_size) % 16;
+	}
+
+	return data;
+}
 
 materials::render_pass & materials::universal_material::get_pass(RENDER_TYPE render_type, MESH_TYPE type)
 {
@@ -107,7 +154,7 @@ void materials::universal_material::set(MESH_TYPE type, MeshRenderContext::ptr& 
 
 	std::lock_guard<std::mutex> g(m);
  
-
+	context->list->transition(pixel_buffer, ResourceState::VERTEX_AND_CONSTANT_BUFFER);
 
 	context->pipeline.pixel = pass->ps_shader;
 	context->pipeline.domain = pass->ds_shader;
@@ -164,39 +211,14 @@ void materials::universal_material::update(MeshRenderContext::ptr& c)
 
 	auto generate = [this, c](Render::GPUBuffer::ptr & buffer, std::vector<Uniform::ptr>& un)
 	{
-		std::vector<std::byte> data;
+		std::vector<std::byte> data = generate_data(un);
 
-		for (auto &u : un)
-		{
-			if (u->type == ShaderParams::FLOAT1)
-			{
-				auto& v = u->value;// .f_value;
-				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
-			}
-
-			if (u->type == ShaderParams::FLOAT2)
-			{
-				auto& v = u->value;// .f2_value;
-				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
-			}
-
-			if (u->type == ShaderParams::FLOAT3)
-			{
-				auto& v = u->value;// .f3_value;
-				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
-			}
-
-			if (u->type == ShaderParams::FLOAT4)
-			{
-				auto& v = u->value;// .f4_value;
-				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
-			}
-		}
+	
 
 		if (data.empty())
 			return;
 
-		data.resize(Math::AlignUp(data.size(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), std::byte{ 0 });
+//		data.resize(Math::AlignUp(data.size(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), std::byte{ 0 });
 		buffer->set_data(c->list, data);
 	};
 	generate(pixel_buffer, ps_uniforms);
@@ -338,7 +360,7 @@ void materials::universal_material::compile()
 
 	auto generate = [this](std::vector<Uniform::ptr>& un)->Render::GPUBuffer::ptr
 	{
-		std::vector<std::byte> data;
+		std::vector<std::byte> data = generate_data(un);
 
 		for (auto u : un)
 		{
@@ -347,30 +369,6 @@ void materials::universal_material::compile()
 			{
 				need_update_uniforms = true;
 			});
-
-			if (u->type == ShaderParams::FLOAT1)
-			{
-				auto& v = u->value.f_value;
-				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
-			}
-
-			if (u->type == ShaderParams::FLOAT2)
-			{
-				auto& v = u->value.f2_value;
-				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
-			}
-
-			if (u->type == ShaderParams::FLOAT3)
-			{
-				auto& v = u->value.f3_value;
-				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
-			}
-
-			if (u->type == ShaderParams::FLOAT4)
-			{
-				auto& v = u->value.f4_value;
-				data.insert(data.end(), reinterpret_cast<std::byte*>(&v), reinterpret_cast<std::byte*>(&v) + sizeof(v));
-			}
 		}
 
 		if (data.empty())
@@ -378,7 +376,7 @@ void materials::universal_material::compile()
 
 
 
-		data.resize(Math::AlignUp(data.size(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), std::byte{ 0 });
+	//	data.resize(Math::AlignUp(data.size(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), std::byte{ 0 });
 
 		Render::GPUBuffer::ptr buff(new Render::GPUBuffer(data.size()));
 		buff->set_raw_data(data);
@@ -393,7 +391,7 @@ void materials::universal_material::compile()
 	pixel_buffer = generate(ps_uniforms);
 //	tess_buffer = generate(tess_uniforms);
 
-
+	pixel_buffer->set_name("material::pixel_buffer");
 	end_changing_contents();
 
 //	textures.clear();

@@ -505,7 +505,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
     //if (step % 100) return;
     std::lock_guard<std::mutex> g(tile_mutex);
     heap_manager.flush_tilings(tiled_tex.get());
-    list->transition(visibility_texture.get(),  Render::ResourceState::COPY_SOURCE);
+ //   list->transition(visibility_texture.get(),  Render::ResourceState::COPY_SOURCE);
     list->get_copy().read_buffer(visibility_texture.get(), 0, visibility_texture->get_size(), [this](const char* data, UINT64 size)
     {
         std::vector<task<std::vector<std::pair<int, ivec3>>>> tasks;

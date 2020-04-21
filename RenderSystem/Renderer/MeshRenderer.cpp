@@ -20,7 +20,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 	default_pipeline.blend.independ_blend = false;
 	default_pipeline.blend.render_target[0].enabled = false;
 	default_pipeline.vertex = shader;
-	default_pipeline.rasterizer.conservative =  GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
+	default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
 
 	if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 	{
@@ -33,7 +33,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 
 		voxel_info.voxel_min = { mesh_render_context->voxel_min,5 };
 		voxel_info.voxel_size = { mesh_render_context->voxel_size,6 };
-		voxel_info.voxel_map_size = { mesh_render_context->voxel_target_size ,0};// ivec3(512, 512, 512);
+		voxel_info.voxel_map_size = { mesh_render_context->voxel_target_size ,0 };// ivec3(512, 512, 512);
 		voxel_info.voxel_tiles_count = ivec4(mesh_render_context->voxel_tiles_count, 0);// ivec3(512, 512, 512);
 		voxel_info.voxels_per_tile = ivec4(mesh_render_context->voxels_per_tile, 0);// ivec3(512, 512, 512);
 
@@ -68,12 +68,12 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 	//GPUMeshSignature<Signature> signature(&graphics);
 
 
-		
+
 	using render_list = std::map<size_t, std::vector<MeshAssetInstance::render_info>>;
 
 
 	bool first = true;
-	auto mesh_func = [&](MeshAssetInstance * l)
+	auto mesh_func = [&](MeshAssetInstance* l)
 	{
 		if (l->rendering.empty()) return;
 		render_list rendering;
@@ -139,54 +139,46 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 
 		auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
 
+		{
 
-
-		Slots::MeshData data;
-		data.GetNodes() = buffer_view.get_srv();
-		data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
-
-		data.set(graphics);
-	//	signature.vertex_unknown = nodes.resource->get_gpu_address() + nodes.offset;
-	//	signature.vertex_buffer = l->mesh_asset->vertex_buffer->get_gpu_address();// +m.mesh->vertex_offset * sizeof(Vertex);
-
+			Slots::MeshData data;
+			data.GetNodes() = buffer_view.get_srv();
+			data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
+			data.set(graphics);
+		}
 		graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 
 		if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 		{
-	///		signature.vertex_consts_geometry.set_raw(voxel_info);
-	///		signature.vertex_consts_vertex.set_raw(voxel_info);
+			///		signature.vertex_consts_geometry.set_raw(voxel_info);
+			///		signature.vertex_consts_vertex.set_raw(voxel_info);
 		}
 
-			for (auto& p : rendering)
+		for (auto& p : rendering)
+		{
+			for (auto& m : p.second)
 			{
-				for (auto& m : p.second)
+			//	if (!mesh_render_context->override_material)
+					l->use_material(m.mesh->material, mesh_render_context);
+
+
 				{
-					if (!mesh_render_context->override_material)
-						l->use_material(m.mesh->material, mesh_render_context);
-
-
 					Slots::MeshInfo info;
 
 					info.GetNode_offset() = m.node_index;
 					info.GetTexture_offset() = 0;
 					info.GetVertex_offset() = m.mesh->vertex_offset;
-
 					info.set(graphics);
-				//	graphics.set_srv(4, l->mesh_asset->vertex_buffer->get_gpu_address());
-					//graphics.set_const_buffer(5, nodes.resource->get_gpu_address() + nodes.offset + m.node_index * sizeof(decltype(l->node_buffer)::type));
-				//	graphics.set_constants(8,0, m.node_index);
-
-					//signature.mat_texture_offsets.set(0, m.node_index);
-
-					mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
 				}
+				mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
 			}
+		}
 	};
 
-	if ((MESH_TYPE::STATIC&mesh_render_context->render_mesh) && static_objects.size())
+	if ((MESH_TYPE::STATIC & mesh_render_context->render_mesh) && static_objects.size())
 	{
 
-		for (auto & instance : static_objects)
+		for (auto& instance : static_objects)
 		{
 			if (instance->is_inside(*mesh_render_context->cam))
 				mesh_func(instance);
@@ -196,43 +188,43 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 		}
 	}
 
-	if ((MESH_TYPE::DYNAMIC&mesh_render_context->render_mesh) && dynamic_objects.size())
+	if ((MESH_TYPE::DYNAMIC & mesh_render_context->render_mesh) && dynamic_objects.size())
 	{
-		for (auto & instance : dynamic_objects)
+		for (auto& instance : dynamic_objects)
 		{
 			if (instance->is_inside(*mesh_render_context->cam))
 				mesh_func(instance);
 
-	/*		auto in = intersect(*mesh_render_context->cam, instance->primitive.get(), instance->global_transform);
-			if (in)
-				mesh_func(instance);*/
+			/*		auto in = intersect(*mesh_render_context->cam, instance->primitive.get(), instance->global_transform);
+					if (in)
+						mesh_func(instance);*/
 		}
 	}
 
 	if (!static_objects.size() && !dynamic_objects.size())
-		obj->iterate([&](scene_object * node)
-	{
-		Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+		obj->iterate([&](scene_object* node)
+			{
+				Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
 
-		if (render_object)
-		{
-			auto instance = dynamic_cast<MeshAssetInstance*>(render_object);
+				if (render_object)
+				{
+					auto instance = dynamic_cast<MeshAssetInstance*>(render_object);
 
-			if (!(instance->type&mesh_render_context->render_mesh)) return true;
-
-
-			if (instance->is_inside(*mesh_render_context->cam))
-				mesh_func(instance);
+					if (!(instance->type & mesh_render_context->render_mesh)) return true;
 
 
-		/*	auto in = intersect(*mesh_render_context->cam, instance->primitive.get(), instance->global_transform);
+					if (instance->is_inside(*mesh_render_context->cam))
+						mesh_func(instance);
 
-			if (in)
-				mesh_func(instance);*/
-		}
 
-		return true;
-	});
+					/*	auto in = intersect(*mesh_render_context->cam, instance->primitive.get(), instance->global_transform);
+
+						if (in)
+							mesh_func(instance);*/
+				}
+
+				return true;
+			});
 
 	graphics.use_dynamic = true;
 }
@@ -240,12 +232,12 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 {
 
 
-	if (mesh_type&MESH_TYPE::STATIC)
-		for (auto & instance : static_objects)
+	if (mesh_type & MESH_TYPE::STATIC)
+		for (auto& instance : static_objects)
 			f(instance->get_ptr<scene_object>());
 
-	if (mesh_type& MESH_TYPE::DYNAMIC)
-		for (auto & instance : dynamic_objects)
+	if (mesh_type & MESH_TYPE::DYNAMIC)
+		for (auto& instance : dynamic_objects)
 			f(instance->get_ptr<scene_object>());
 }
 mesh_renderer::mesh_renderer(Scene::ptr scene)
@@ -265,9 +257,9 @@ mesh_renderer::mesh_renderer(Scene::ptr scene)
 				dynamic_objects.insert(render_object);
 
 
-		});
+			});
 
-		scene->on_element_remove.register_handler(this, [this](scene_object*object) {
+		scene->on_element_remove.register_handler(this, [this](scene_object* object) {
 			auto render_object = dynamic_cast<MeshAssetInstance*>(object);
 
 			if (!render_object) return;
@@ -278,7 +270,7 @@ mesh_renderer::mesh_renderer(Scene::ptr scene)
 			if (render_object->type == MESH_TYPE::DYNAMIC)
 				dynamic_objects.erase(render_object);
 
-		});
+			});
 	}
 	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
@@ -345,9 +337,9 @@ void DynamicSizeUAVBuffer::start_write(Render::CommandList& list, int binded_cou
 	//	for (int i = 0; i < binded_count; i++)
 	//		list.transition(command_buffers[i]->help_buffer, Render::ResourceState::COPY_DEST);
 
-		
+
 		for (int i = 0; i < binded_count; i++)
-			list.transition(command_buffers[i]->help_buffer,Render::ResourceState::UNORDERED_ACCESS);
+			list.transition(command_buffers[i]->help_buffer, Render::ResourceState::UNORDERED_ACCESS);
 
 		for (int i = 0; i < binded_count; i++)
 			list.transition(command_buffers[i], Render::ResourceState::UNORDERED_ACCESS);

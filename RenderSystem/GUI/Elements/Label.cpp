@@ -109,7 +109,7 @@ namespace GUI
 
 
 			//	command_list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
-				command_list->transition(cache.texture, Render::ResourceState::RENDER_TARGET);
+			//	command_list->transition(cache.texture, Render::ResourceState::RENDER_TARGET);
 				command_list->clear_rtv(cache.texture->texture_2d()->get_rtv());
 
 				//  target->change_state(c, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::ResourceState::RENDER_TARGET);
@@ -136,7 +136,7 @@ namespace GUI
 				command_list->get_graphics().use_dynamic = true;
 				MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
 
-				command_list->transition(cache.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+			//	command_list->transition(cache.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 
 			
 			});
