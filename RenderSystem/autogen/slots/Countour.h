@@ -6,5 +6,6 @@ namespace Slots {
 		CB cb;
 		SRV srv;
 		Countour(): DataHolder(cb,srv){}
+		Countour(const Countour&other): DataHolder(cb,srv){cb = other.cb;srv = other.srv;}
 	};
 }

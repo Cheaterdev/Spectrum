@@ -381,7 +381,6 @@ namespace DX12
 			template<class Archive>
 			void serialize(Archive& ar, const unsigned int)
 			{
-				debug = true;
 				ar& NVP(boost::serialization::base_object<GPUBuffer>(*this));
 			}
 
@@ -702,6 +701,7 @@ namespace DX12
 		SRVDesc.Buffer.NumElements = static_cast<UINT>(count);
 		SRVDesc.Buffer.StructureByteStride = stride;
 		SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+		*srv[0].resource_ptr = this;
 		Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &SRVDesc, srv[0].cpu);
 
 		if (get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)

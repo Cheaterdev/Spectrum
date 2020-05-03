@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		UAV uav;
 		PickerBuffer(): DataHolder(uav){}
+		PickerBuffer(const PickerBuffer&other): DataHolder(uav){uav = other.uav;}
 	};
 }

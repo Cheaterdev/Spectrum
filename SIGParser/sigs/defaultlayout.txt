@@ -1,5 +1,6 @@
 layout FrameLayout { 
 	slot CameraData;
+	slot SceneData;
 	slot MaterialData;
 	
 	Sampler linearSampler = SamplerLinearWrapDesc;

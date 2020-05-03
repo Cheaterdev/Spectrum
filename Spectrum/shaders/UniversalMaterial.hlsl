@@ -2,6 +2,7 @@
 #include "autogen/MaterialInfo.h"
 #include "autogen/MeshInfo.h"
 #include "autogen/MeshData.h"
+#include "autogen/SceneData.h"
 
 static const Camera camera = GetFrameInfo().GetCamera();
 
@@ -128,7 +129,7 @@ half3 compress_normals(inout half3 vNormal)
  
 Texture2D get_texture(uint i) 
 {
-    return GetMaterialInfo().GetTextures(i);
+    return GetSceneData().GetMaterial_textures(i + GetMaterialInfo().GetTextureOffset());
 }
 
 void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out float metallic)

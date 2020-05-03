@@ -1,15 +1,15 @@
-#ifndef SLOT_2
-	#define SLOT_2
+#ifndef SLOT_3
+	#define SLOT_3
 #else
-	#error Slot 2 is already used
+	#error Slot 3 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/PSSMConstants.h"
-ConstantBuffer<PSSMConstants_cb> cb_2_0:register(b0,space2);
+ConstantBuffer<PSSMConstants_cb> cb_3_0:register(b0,space3);
 PSSMConstants CreatePSSMConstants()
 {
 	PSSMConstants result;
-	result.cb = cb_2_0;
+	result.cb = cb_3_0;
 	return result;
 }
 static const PSSMConstants pSSMConstants_global = CreatePSSMConstants();

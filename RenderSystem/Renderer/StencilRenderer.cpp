@@ -11,7 +11,7 @@ void stencil_renderer::select_current()
 	{
 		selected.push_back(mouse_on_object);
 		auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
-		pivot_pos = -(draw.mesh->primitive->get_min() + draw.mesh->primitive->get_max()) / 2;
+		pivot_pos = -(draw.primitive->get_min() + draw.primitive->get_max()) / 2;
 		//  center_pos = mouse_on_object.first->nodes[draw.node_index]->mesh_matrix[3] - pivot_pos
 		center_pos = vec3(mouse_on_object.first->local_transform[3].xyz) - pivot_pos;
 	}
@@ -55,7 +55,7 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 							dock_base::ptr dock(new dock_base);
 							wnd->add_child(dock);
 							auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
-							auto& mat = mouse_on_object.first->overrided_material[draw.mesh->material];
+							auto& mat = draw.material;
 							dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(static_cast<materials::universal_material*>(mat->get_ptr().get())->get_graph()));
 							wnd->pos = { 200, 200 };
 							wnd->size = { 300, 300 };
@@ -110,15 +110,17 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 							user_ui->add_child(wnd);
 							dock_base::ptr dock(new dock_base);
 							wnd->add_child(dock);
+
+					
 							auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
 							//mouse_on_object.first->overrided_material.emplace_back();// [draw.mesh->material];
 
 							//draw.mesh->material = mouse_on_object.first->overrided_material.size() - 1;
 
 							// fix me
-							draw.mesh->material = mouse_on_object.first->register_material(base_mat);
+						//	draw.mesh->material = mouse_on_object.first->register_material(base_mat);
 
-
+							mouse_on_object.first->override_material(mouse_on_object.second, base_mat);
 							dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(static_cast<materials::universal_material*>(base_mat->get_ptr().get())->get_graph()));
 							wnd->pos = { 200, 200 };
 							wnd->size = { 300, 300 };
@@ -249,8 +251,10 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 						//scene->add_child(m);
 						if (mouse_on_object.first)
 						{
-							auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
-							mouse_on_object.first->override_material(draw.mesh->material, material);
+
+							mouse_on_object.first->override_material(mouse_on_object.second, material);
+						//.	auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
+						//	mouse_on_object.first->override_material(draw.mesh->material, material);
 						}
 					});
 			}
@@ -323,8 +327,11 @@ stencil_renderer::stencil_renderer()
 		last_render_state.reset(new Render::PipelineState(state_desc));
 	}
 
-	axis.reset(new MeshAssetInstance(EngineAssets::axis.get_asset()));
+	axis = EngineAssets::axis.get_asset()->create_instance();
 
+	debug_scene = std::make_shared<Scene>();
+
+	debug_scene->add_child(axis);
 }
 
 
@@ -332,10 +339,11 @@ stencil_renderer::stencil_renderer()
 
 void stencil_renderer::generate(FrameGraph& graph)
 {
-
+	 
 	process_tasks();
 
-	axis->update_transforms();
+	debug_scene->update_transforms();
+	
 	cam = *graph.cam;
 	cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
 	cam.target = cam.position + direction;
@@ -374,7 +382,6 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 			}, [this, &graph](Data& data, FrameContext& _context) {
 
-				//	auto color_tex = _context.get_texture(data.color_tex);
 				auto depth_tex = _context.get_texture(data.depth_tex);
 
 
@@ -387,22 +394,16 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 				auto obj = graph.scene;
 
-
+				universal_nodes_manager::get().prepare(_context.get_list());
 				RenderTargetTable table = RenderTargetTable(graphics, {}, depth_tex);
 				{
 					std::vector<std::pair<MeshAssetInstance::ptr, int>> current;
 					auto mesh_func = [&](MeshAssetInstance* l)
 					{
-						auto nodes = l->node_buffer.get_for(*list.get_manager());
-						auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
-						graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
-						{
+					graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 
-							Slots::MeshData data;
-							data.GetNodes() = buffer_view.get_srv();
-							data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
-							data.set(graphics);
-						}
+						l->mesh_render_data.set(graphics);
+
 						for (unsigned int i = 0; i < l->rendering.size(); i++)
 						{
 							auto& m = l->rendering[i];
@@ -413,16 +414,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 							continue;
 
 							current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
-
-							{
-								Slots::MeshInfo info;
-
-								info.GetNode_offset() = m.node_index;
-								info.GetTexture_offset() = 0;
-								info.GetVertex_offset() = m.mesh->vertex_offset;
-
-								info.set(graphics);
-							}
+							m.mesh_info.set(graphics);
 
 							{
 								Slots::Instance instance;
@@ -430,16 +422,12 @@ void stencil_renderer::generate(FrameGraph& graph)
 								instance.set(graphics);
 							}
 
-
-							graphics.draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
+							graphics.draw_indexed(m.index_count, m.index_offset, 0);
 						}
 					};
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_pipeline(draw_state);
-		//			list.transition(depth_tex.resource, Render::ResourceState::DEPTH_WRITE);
-		//			list.transition(id_buffer, Render::ResourceState::UNORDERED_ACCESS);
-		//			list.transition(axis_id_buffer, Render::ResourceState::UNORDERED_ACCESS);
-			//		list.flush_transitions();
+
 					list.clear_uav(id_buffer, id_buffer->get_raw_uav());
 					list.clear_uav(axis_id_buffer, axis_id_buffer->get_raw_uav());
 
@@ -457,8 +445,16 @@ void stencil_renderer::generate(FrameGraph& graph)
 						buffer.GetViewBuffer() = id_buffer->get_raw_uav();
 						buffer.set(graphics);
 					}
-					//////////////	shader_data.camera_data = cam.get_const_buffer();
-					/////////////////	shader_data.id_buffer = id_buffer->get_gpu_address();
+
+					{
+						Slots::SceneData sceneData;
+						sceneData.GetNodes() = universal_nodes_manager::get().mesh_nodes->get_srv()[0];
+						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().textures_data;
+
+						sceneData.set(graphics);
+					}
+
+
 
 					table.clear_depth(graphics);
 					table.set(graphics);
@@ -491,6 +487,15 @@ void stencil_renderer::generate(FrameGraph& graph)
 						buffer.set(graphics);
 					}
 		
+					{
+						Slots::SceneData sceneData;
+						sceneData.GetNodes() = universal_nodes_manager::get().mesh_nodes->get_srv()[0];
+						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().textures_data;
+
+						sceneData.set(graphics);
+					}
+
+
 					axis->iterate([&](scene_object* node)
 						{
 							Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
@@ -500,37 +505,22 @@ void stencil_renderer::generate(FrameGraph& graph)
 								auto l = dynamic_cast<MeshAssetInstance*>(render_object);
 
 								graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
-								auto nodes = l->node_buffer.get_for(*list.get_manager());
-								auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
 
-								{
-									Slots::MeshData data;
-									data.GetNodes() = buffer_view.get_srv();
-									data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
-									data.set(graphics);
-								}
+								l->mesh_render_data.set(graphics);
 
 								for (unsigned int i = 0; i < l->rendering.size(); i++)
 								{
 									auto& m = l->rendering[i];
 					
-									{
-										Slots::MeshInfo info;
-
-										info.GetNode_offset() = m.node_index;
-										info.GetTexture_offset() = 0;
-										info.GetVertex_offset() = m.mesh->vertex_offset;
-
-										info.set(graphics);
-									}
-
+									m.mesh_info.set(graphics);
+								
 									{
 										Slots::Instance instance;
 										instance.GetInstanceId() = i + 1;
 										instance.set(graphics);
 									}
 						
-									graphics.draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0 * m.mesh->vertex_offset);
+									graphics.draw_indexed(m.index_count, m.index_offset, 0);
 								}
 							}
 
@@ -627,30 +617,17 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					{
 
 						auto l = sel.first;
-						auto nodes = l->node_buffer.get_for(*list.get_manager());
-						auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
 						graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 
+						l->mesh_render_data.set(graphics);
 
-						Slots::MeshData data;
-						data.GetNodes() = buffer_view.get_srv();
-						data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
-						data.set(graphics);
-
-
+				
 						int i = sel.second;
 						{
 							auto& m = l->rendering[i];
-							{
-								Slots::MeshInfo info;
+							m.mesh_info.set(graphics);
 
-								info.GetNode_offset() = m.node_index;
-								info.GetTexture_offset() = 0;
-								info.GetVertex_offset() = m.mesh->vertex_offset;
-
-								info.set(graphics);
-							}
-							graphics.draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
+							graphics.draw_indexed(m.index_count, m.index_offset, 0);
 						}
 					}
 				}
@@ -680,8 +657,6 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 
 				// draw axis
 			{
-
-
 					{
 						Slots::FrameInfo frameInfo;
 
@@ -690,46 +665,34 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 						frameInfo.set(graphics);
 					}
 
+					{
+						Slots::SceneData sceneData;
+						sceneData.GetNodes() = universal_nodes_manager::get().mesh_nodes->get_srv()[0];
+						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().textures_data;
 
-
+						sceneData.set(graphics);
+					}
 
 
 					graphics.set_pipeline(axis_render_state);
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					int i = 0;
 
-			
-					auto nodes = axis->node_buffer.get_for(*list.get_manager());
-					auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
 					graphics.set_index_buffer(axis->mesh_asset->index_buffer->get_index_buffer_view(true));
 
-					Slots::MeshData data;
-					data.GetNodes() = buffer_view.get_srv();
-					data.GetVb() = axis->mesh_asset->vertex_buffer->get_srv()[0];
-					data.set(graphics);
+					axis->mesh_render_data.set(graphics);
 
 					for (auto& m : axis->rendering)
 					{
 				
 						float lighted = (mouse_on_axis == i) * 0.7f;
-						//////////////////	shader_data.pixel_constants.set(i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted);
-				
-					
 						{
 							Slots::Color color;
 							color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted , 1};
 							color.set(graphics);
 						}
-						{
-							Slots::MeshInfo info;
-
-							info.GetNode_offset() = m.node_index;
-							info.GetTexture_offset() = 0;
-							info.GetVertex_offset() = m.mesh->vertex_offset;
-
-							info.set(graphics);
-						}
-						graphics.draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
+						m.mesh_info.set(graphics);
+						graphics.draw_indexed(m.index_count, m.index_offset, 0);
 						i++;
 					}
 				}

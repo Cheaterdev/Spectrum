@@ -27,7 +27,7 @@ class AssetRenderer : public Singleton<AssetRenderer>
         MeshAssetInstance::ptr material_tester;
 		MeshAssetInstance::ptr mesh_plane;
 
-		Scene::ptr material_scene;
+		Scene::ptr scene;
 		
 		AssetRenderer();
 
@@ -37,7 +37,8 @@ class AssetRenderer : public Singleton<AssetRenderer>
 		std::shared_ptr<Render::OVRContext> vr_context ;
     public:
 
-        virtual void draw(scene_object::ptr scene, Render::Texture::ptr result);
+        virtual void draw(Scene::ptr scene, Render::Texture::ptr result);
         virtual void draw(MaterialAsset::ptr m, Render::Texture::ptr result);
+		virtual void draw(scene_object::ptr scene, Render::Texture::ptr result);
 
 };

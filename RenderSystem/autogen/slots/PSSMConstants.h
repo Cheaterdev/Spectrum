@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		CB cb;
 		PSSMConstants(): DataHolder(cb){}
+		PSSMConstants(const PSSMConstants&other): DataHolder(cb){cb = other.cb;}
 	};
 }

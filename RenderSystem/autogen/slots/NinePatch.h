@@ -6,5 +6,6 @@ namespace Slots {
 		SRV srv;
 		Render::Bindless bindless;
 		NinePatch(): DataHolder(srv,bindless){}
+		NinePatch(const NinePatch&other): DataHolder(srv,bindless){srv = other.srv;}
 	};
 }

@@ -234,18 +234,22 @@ namespace DX12
 
 	//	fix_transitions
 		{
-			auto& timer = Profiler::get().start(L"fix_pretransitions");
-
+		
 			auto transition_list = list->fix_pretransitions();
+
 			if (transition_list)
 			{		
-				ID3D12CommandList* s = transition_list->get_native().Get();
+				ID3D12CommandList* s[2] = { transition_list->get_native().Get(), list->get_native_list().Get() };
+
+
+				native->ExecuteCommandLists(2, s);
+			}
+			else
+			{
+				ID3D12CommandList* s = list->get_native_list().Get();
 				native->ExecuteCommandLists(1, &s);
 			}
 		}
-
-		ID3D12CommandList* s = list->get_native_list().Get();
-		native->ExecuteCommandLists(1, &s);
 
 		last_known_fence = signal();
 		list->execute_fence.set_value(last_known_fence);
@@ -281,6 +285,7 @@ namespace DX12
 
 	std::shared_future<UINT64> Queue::execute(std::shared_ptr<CommandList> list)
 	{
+		assert(this->type==list->type);
 		std::unique_lock<std::mutex> lock(queue_mutex);
 
 		if (!list->wait_for_execution_count)
@@ -321,8 +326,8 @@ namespace DX12
 			//    debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
 			m_device.Get()->QueryInterface(IID_PPV_ARGS(&debugController));
 
-			if (debugController)
-				debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
+		//	if (debugController)
+		//		debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
 		}
 	}
 
@@ -342,7 +347,7 @@ namespace DX12
 			  upload_list->begin();
 		  }
 		  return upload_list;*/
-		auto list = queues[static_cast<int>(CommandListType::DIRECT)]->get_free_list();
+		auto list = queues[static_cast<int>(CommandListType::COPY)]->get_free_list();
 		list->begin("");
 		return list;
 	}
@@ -412,7 +417,7 @@ namespace DX12
 //#ifdef DEBUG
 		// Enable the D3D12 debug layer.
 		
-		/*	ComPtr<ID3D12Debug> debugController;
+			ComPtr<ID3D12Debug> debugController;
 			CComPtr<ID3D12Debug1> spDebugController1;
 
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
@@ -420,9 +425,9 @@ namespace DX12
 				debugController->EnableDebugLayer();
 
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
-				spDebugController1->SetEnableGPUBasedValidation(true);
+			//	spDebugController1->SetEnableGPUBasedValidation(true);
 			}
-			*/
+			
 	
 //#endif
 		{
@@ -486,7 +491,7 @@ namespace DX12
 		// Describe and create the command queue.
 		queues[static_cast<int>(CommandListType::DIRECT)].reset(new Queue(CommandListType::DIRECT, this));
 		// queues[static_cast<int>(CommandListType::COMPUTE)].reset(new Queue(CommandListType::COMPUTE));
-		// queues[static_cast<int>(CommandListType::COPY)].reset(new Queue(CommandListType::COPY));
+		queues[static_cast<int>(CommandListType::COPY)].reset(new Queue(CommandListType::COPY, this));
 		auto res = m_device->GetNodeCount();
 		D3D12_FEATURE_DATA_D3D12_OPTIONS featureData;
 		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));

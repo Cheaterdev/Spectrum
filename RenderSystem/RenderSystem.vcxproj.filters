@@ -233,9 +233,6 @@
     <ClInclude Include="Lighting\PSSM.h">
       <Filter>Lighting</Filter>
     </ClInclude>
-    <ClInclude Include="Assets\TiledTexture.h">
-      <Filter>Assets</Filter>
-    </ClInclude>
     <ClInclude Include="GUI\Elements\ColoredRect.h">
       <Filter>GUI\Elements</Filter>
     </ClInclude>
@@ -310,6 +307,12 @@
     </ClInclude>
     <ClInclude Include="Renderer\Signature.h">
       <Filter>Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="Assets\TiledTexture.h">
+      <Filter>Assets</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene\Scene.h">
+      <Filter>Scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		CB cb;
 		MeshInfo(): DataHolder(cb){}
+		MeshInfo(const MeshInfo&other): DataHolder(cb){cb = other.cb;}
 	};
 }

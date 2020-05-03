@@ -129,7 +129,7 @@ void PSSM::generate(FrameGraph& graph)
 				context->list = command_list;
 				context->cam = &light_cam;
 
-				auto depth_tex = _context.get_texture(data.shadow_depths).create_2d_slice(i, graph.builder.frames.get_creator());
+				auto depth_tex = _context.get_texture(data.shadow_depths).create_2d_slice(i, *graph.builder.current_frame);
 				auto shadow_cameras = _context.get_buffer(data.shadow_cameras);
 
 				auto scene = graph.scene;
@@ -175,7 +175,7 @@ void PSSM::generate(FrameGraph& graph)
 
 				table.set(context, false, true);
 
-				renderer->render(context, scene->get_ptr());
+				renderer->render(context, scene->get_ptr<Scene>());
 			}
 			);
 		znear = zfar;
@@ -256,7 +256,7 @@ void PSSM::generate(FrameGraph& graph)
 
 
 
-			auto buffer_view = shadow_cameras.resource->create_view<StructuredBufferView<camera::shader_params>>(graph.builder.frames.get_creator());
+			auto buffer_view = shadow_cameras.resource->create_view<StructuredBufferView<camera::shader_params>>(*graph.builder.current_frame);
 			{
 				Slots::PSSMData pssmdata;
 				pssmdata.GetLight_buffer() = depth_tex.get_srv();

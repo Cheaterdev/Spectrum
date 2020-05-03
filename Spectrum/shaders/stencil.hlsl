@@ -1,10 +1,10 @@
 #include "Common.hlsl"
 #include "Common2D.hlsl"
 #ifdef BUILD_FUNC_PS
-#include "autogen/Picker.h"
+#include "autogen/PickerBuffer.h"
 #include "autogen/Instance.h"
 
-static const RWStructuredBuffer<uint> viewBuffer = picker_global.GetViewBuffer();
+static const RWStructuredBuffer<uint> viewBuffer = GetPickerBuffer().GetViewBuffer();
 [earlydepthstencil]
 void PS(vertex_output i)
 {

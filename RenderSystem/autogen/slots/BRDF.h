@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		UAV uav;
 		BRDF(): DataHolder(uav){}
+		BRDF(const BRDF&other): DataHolder(uav){uav = other.uav;}
 	};
 }

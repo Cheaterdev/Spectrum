@@ -53,7 +53,7 @@ albedo_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::D
 
 	depth_tex_mips_prev.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, size.x, size.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 
-	normal_tex->debug = true;
+//	normal_tex->debug = true;
 	albedo_tex->set_name("albedo_tex");
 	normal_tex->set_name("normal_tex");
 	specular_tex->set_name("specular_tex");

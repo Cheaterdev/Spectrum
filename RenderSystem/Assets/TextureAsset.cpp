@@ -103,8 +103,8 @@ void TextureAsset::update_preview(Render::Texture::ptr preview)
     if (!preview || !preview->is_rt())
         preview.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 256, 256, 1, 6, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 
-    Render::CommandList::ptr list(new Render::CommandList(Render::CommandListType::DIRECT));
-    list->begin("TextureAsset");
+    auto list =  FrameResourceManager::get().begin_frame()->start_list("TextureAsset");
+
     TextureAssetRenderer::get().render(this, preview, list);
     list->end();
     list->execute();

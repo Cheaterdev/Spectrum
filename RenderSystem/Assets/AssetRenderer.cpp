@@ -44,7 +44,7 @@ public:
 				}, [this,&graph](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
-
+					universal_nodes_manager::get().prepare(command_list);
 					MeshRenderContext::ptr context(new MeshRenderContext());
 					context->current_time = time;
 					context->priority = TaskPriority::HIGH;
@@ -70,7 +70,7 @@ public:
 					gbuffer.rtv_table.set(context, true, true);
 					gbuffer.rtv_table.set_window(context->list->get_graphics());
 
-					scene_renderer->render(context, graph.scene->get_ptr());
+					scene_renderer->render(context, graph.scene->get_ptr<Scene>());
 
 
 					//	MipMapGenerator::get().copy_texture_2d_slow(command_list->get_graphics(), texture.texture, gbuffer.albedo);
@@ -88,11 +88,12 @@ public:
 
 
 
-void AssetRenderer::draw(scene_object::ptr scene, Render::Texture::ptr result)
+void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 {
- //  return;
-    std::lock_guard<std::mutex> g(lock);
 
+	//return;
+ //  return;
+ 
 
 	if (!vr_context)
 	{
@@ -134,18 +135,28 @@ void AssetRenderer::draw(scene_object::ptr scene, Render::Texture::ptr result)
 	graph.setup();
 	graph.compile(frame++);
 	graph.render();
-
 	graph.reset();
 	mesh_plane->remove_from_parent();
 }
 
 void AssetRenderer::draw(MaterialAsset::ptr mat, Render::Texture::ptr result)
 {
+	std::lock_guard<std::mutex> g(lock);
 
-	material_tester->overrided_material[1] = material_tester->register_asset(mat);
+	scene->add_child(material_tester);
+	material_tester->override_material(1, mat);
 
-	draw(material_scene,result);
+	draw(scene,result);
+	material_tester->remove_from_parent();
+}
 
+void AssetRenderer::draw(scene_object::ptr obj, Render::Texture::ptr result)
+{
+	std::lock_guard<std::mutex> g(lock);
+
+	scene->add_child(obj);
+	draw(scene, result);
+	obj->remove_from_parent();
 }
 
 AssetRenderer::AssetRenderer()
@@ -159,10 +170,9 @@ AssetRenderer::AssetRenderer()
 	mesh_plane.reset(new MeshAssetInstance(EngineAssets::plane.get_asset()));
     material_tester.reset(new MeshAssetInstance(EngineAssets::material_tester.get_asset()));
 
-	material_scene = std::make_shared<Scene>();
-
-	material_scene->add_child(material_tester);
-	material_scene->update_transforms();
+	scene = std::make_shared<Scene>();
+	
+	
 	rendering = std::make_shared<SceneRenderWorkflow>();
 	rendering->scene_renderer = scene_renderer;
 //	ssgi = std::make_shared<SSGI>(*gbuffer);

@@ -17,7 +17,6 @@ struct node_data
 [Bind = DefaultLayout::Instance1]
 struct MeshInfo
 {
-    uint texture_offset;
     uint node_offset;
 	uint vertex_offset;
 }
@@ -26,13 +25,5 @@ struct MeshInfo
 struct MeshData
 {
 	StructuredBuffer<mesh_vertex_input> vb;
-	StructuredBuffer<node_data> nodes;
-}
-
-[Bind = DefaultLayout::Instance2]
-struct MeshNodes
-{
-	StructuredBuffer<mesh_vertex_input> vb;
-	StructuredBuffer<node_data> nodes;
 }
 

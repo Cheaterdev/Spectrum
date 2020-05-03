@@ -21,8 +21,18 @@ void DX12::BufferView::place_srv(Handle& h) {
 		srv.Buffer.FirstElement = 0;
 
 	}*/
-	* h.resource_ptr = resource.get();
+	*h.resource_ptr = resource.get();
 	Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
+}
+ void DX12::BufferView::place_cb(Handle& h) {
+	if (!resource) return;
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
+	desc.BufferLocation = resource->get_gpu_address();
+	desc.SizeInBytes = view_desc.Buffer.Size;
+	assert(desc.SizeInBytes < 65536);
+	*h.resource_ptr = resource.get();
+	Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
 }
 
 

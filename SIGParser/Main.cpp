@@ -464,15 +464,21 @@ void generate_cpp_table(const Table& table)
 			stream.push();
 			for (auto& v : table.values)
 			{
-
+				if (v.find_option("dynamic"))
+					continue;
 				if (v.value_type != type) continue;
-				if (v.array_count == 0) continue;
+				if (v.array_count == 0)
+					continue;
+			
 
 				stream << get_cpp_for(v) << " " << v.name << generate_array(v) << ';' << std::endl;
 			}
 
 			for (auto& v : table.values)
 			{
+				if (v.find_option("dynamic")) 
+					continue;
+
 				if (v.value_type == ValueType::STRUCT)
 				{
 					stream << v.type << "::" << str_toupper(get_name_for(type)) << " " << v.name << generate_array(v) << ";" << std::endl;
@@ -481,6 +487,7 @@ void generate_cpp_table(const Table& table)
 
 			}
 
+			
 			stream.pop();
 		}
 		stream << "} &" << get_name_for(type) << ";" << std::endl;
@@ -507,9 +514,20 @@ void generate_cpp_table(const Table& table)
 
 			for (auto& v : table.values)
 			{
+				if (!v.find_option("dynamic"))
+					continue;
+
+				stream << "DynamicData " << v.name << generate_array(v) << ';' << std::endl;
+			}
+
+
+
+			for (auto& v : table.values)
+			{
 				if (v.value_type == ValueType::STRUCT) continue;
 				//	if (v.array_count == 0) continue;
-
+				if (v.find_option("dynamic"))
+					continue;
 				std::string cameled = v.name;
 				cameled[0] = std::toupper(cameled[0]);
 
@@ -519,6 +537,20 @@ void generate_cpp_table(const Table& table)
 				else
 					stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << get_name_for(v.value_type) << "." << v.name << "; }" << std::endl;
 			}
+
+
+			for (auto& v : table.values)
+			{
+				if (v.value_type == ValueType::STRUCT) continue;
+				//	if (v.array_count == 0) continue;
+				if (!v.find_option("dynamic"))
+					continue;
+				std::string cameled = v.name;
+				cameled[0] = std::toupper(cameled[0]);
+
+				stream << "DynamicData"<< generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
+			}
+
 
 
 			for (auto& v : table.values)
@@ -629,14 +661,17 @@ void generate_cpp_table(const Table& table)
 			//	stream << "using TableType = Table::" << table.name << ";" << std::endl;
 
 				std::string pass;
+				std::string copy;
 
 				auto f = [&](ValueType type) {
 					if (table.counts[type] == 0) return;
 					if (pass.size()) pass += ",";
 					pass += get_name_for(type);
 
-
+					copy+= get_name_for(type) + " = other." + get_name_for(type) +";";
 					stream << str_toupper(get_name_for(type)) << " " << get_name_for(type) << ";" << std::endl;
+
+
 				};
 
 				f(ValueType::CB);
@@ -656,6 +691,14 @@ void generate_cpp_table(const Table& table)
 					"DataHolder("
 					<< pass <<
 					"){}" << std::endl;
+
+
+				stream << table.name << "(const "<< table.name<<"&other): "\
+					"DataHolder("
+					<< pass <<
+					"){" << copy<< "}" << std::endl;
+
+
 				stream.pop();
 			}
 

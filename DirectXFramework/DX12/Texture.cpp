@@ -139,7 +139,7 @@ namespace DX12
 
           //  list->transition(resource.get(), state);
             list->end();
-            list->execute();
+            list->execute_and_wait();
         }
 
         init();
@@ -149,7 +149,7 @@ namespace DX12
 		auto desc = get_desc();
 		auto list = Device::get().get_upload_list();
 	//	auto type = resource->get_state(list->get_id());
-		list->transition(this, ResourceState::COPY_SOURCE);
+	//	list->transition(this, ResourceState::COPY_SOURCE);
 
 		desc.Format = to_typeless(desc.Format);
 

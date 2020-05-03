@@ -4,7 +4,7 @@ namespace Slots {
 	struct MaterialInfo:public DataHolder<Table::MaterialInfo,FrameLayout::MaterialData>
 	{
 		CB cb;
-		Render::Bindless bindless;
-		MaterialInfo(): DataHolder(cb,bindless){}
+		MaterialInfo(): DataHolder(cb){}
+		MaterialInfo(const MaterialInfo&other): DataHolder(cb){cb = other.cb;}
 	};
 }

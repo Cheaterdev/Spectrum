@@ -51,7 +51,7 @@ namespace DX12
 	class ComputeContext;
 	class CopyContext;
 	class FrameResourceManager;
-	class FrameResources
+	class FrameResources:public std::enable_shared_from_this<FrameResources>
 	{
 
 		friend class FrameResourceManager;
@@ -67,10 +67,10 @@ namespace DX12
 
 	public:
 
-		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV> srv_uav_cbv_cpu;
-		DynamicDescriptor<DescriptorHeapType::RTV> rtv_cpu;
-		DynamicDescriptor<DescriptorHeapType::DSV> dsv_cpu;
-		DynamicDescriptor<DescriptorHeapType::SAMPLER> smp_cpu;
+		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, Lockable> srv_uav_cbv_cpu;
+		DynamicDescriptor<DescriptorHeapType::RTV, Lockable> rtv_cpu;
+		DynamicDescriptor<DescriptorHeapType::DSV, Lockable> dsv_cpu;
+		DynamicDescriptor<DescriptorHeapType::SAMPLER, Lockable> smp_cpu;
 
 
 
@@ -87,6 +87,12 @@ namespace DX12
 			std::uint64_t frame = -10;
 
 			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address();
+
+			template<class T>
+			T get_view(CommandList& list)
+			{
+				return resource->create_view<T>(*list.frame_resources, offset, size);
+			}
 		};
 
 		UploadInfo place_data(std::uint64_t uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
@@ -121,6 +127,8 @@ namespace DX12
 				{
 
 				}*/
+
+		std::shared_ptr<CommandList> start_list(std::string name="");
 		~FrameResources()
 		{
 			std::lock_guard<std::mutex> g(m);
@@ -140,35 +148,14 @@ namespace DX12
 			f();
 		}
 	};
-	class FrameResourceManager
+
+
+	class FrameResourceManager:public Singleton<FrameResourceManager>
 	{
-		std::uint64_t frame_number = 0;
-		std::list<FrameResources::ptr> frames;
-		std::mutex m;
+		std::atomic_size_t frame_number = 0;
 
-		FrameResources* current;
-		std::shared_ptr<Finalizer> finalizer;
 	public:
-		std::uint64_t get_frame()
-		{
-			return frame_number;
-		}
-
-		std::shared_ptr<CommandList> start_frame(std::string name);
-		std::shared_ptr<CommandList> start_frame(std::shared_ptr<CommandList>, std::string name);
-		std::shared_ptr<CommandList> set_frame(std::shared_ptr<CommandList>, std::string name);
-
-
-		void begin_frame();
-		void propagate_frame(std::shared_ptr<CommandList>);
-		void end_frame()
-		{
-			finalizer = nullptr;
-		}
-		FrameResources& get_creator()
-		{
-			return *current;
-		}
+		FrameResources::ptr begin_frame();	
 	};
 
 	class FrameResource
@@ -226,7 +213,7 @@ namespace DX12
 		FrameResources::UploadInfo get_for(FrameResources& manager) override
 		{
 			m.lock();
-			if (info.frame != manager.get_frame())
+		//	if (info.frame != manager.get_frame())
 				info = manager.set_data(_data.data(), _data.size());
 
 			assert(info.resource);
@@ -319,6 +306,9 @@ namespace DX12
 			UINT64 size;
 
 			D3D12_GPU_VIRTUAL_ADDRESS get_address();
+
+
+			Handle create_cbv(CommandList& list);
 		};
 
 		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
@@ -330,6 +320,8 @@ namespace DX12
 		{
 			size_t size = (0 + ... + size_of(args));
 
+
+			
 			auto info =  place_data(size);
 
 
@@ -576,6 +568,7 @@ namespace DX12
 
 		void set_heap(DescriptorHeapType type, DescriptorHeap::ptr heap)
 		{
+			assert(this->type != CommandListType::COPY);
 			auto i_type = static_cast<int>(type);
 			if (heaps[i_type] == heap) return;
 
@@ -587,10 +580,10 @@ namespace DX12
 
 	public:
 		ptr get_sub_list();
-		FrameResources* frame_resources = nullptr;
+		FrameResources::ptr frame_resources;
 
-		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE> srv_descriptors;
-		DynamicDescriptor<DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE> smp_descriptors;
+		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, Free, DescriptorHeapFlags::SHADER_VISIBLE> srv_descriptors;
+		DynamicDescriptor<DescriptorHeapType::SAMPLER, Free, DescriptorHeapFlags::SHADER_VISIBLE> smp_descriptors;
 
 		GraphicsContext& get_graphics();
 		ComputeContext& get_compute();
@@ -600,6 +593,7 @@ namespace DX12
 
 		void flush_heaps(bool force=false)
 		{
+			assert(type != CommandListType::COPY);
 			if (!heaps_changed&&!force) return;
 			heaps_changed = false;
 			std::array<ID3D12DescriptorHeap*, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES - 1> native_heaps;
@@ -621,7 +615,7 @@ namespace DX12
 		}
 		FrameResources* get_manager()
 		{
-			return frame_resources;
+			return frame_resources.get();
 		}
 	
 		ptr get_ptr()
@@ -1234,7 +1228,7 @@ namespace DX12
 	public:
 		using ptr = std::shared_ptr<TransitionCommandList>;
 
-		TransitionCommandList();
+		TransitionCommandList(CommandListType type);
 		void create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER> &transitions);
 		ComPtr<ID3D12GraphicsCommandList> get_native();
 	};

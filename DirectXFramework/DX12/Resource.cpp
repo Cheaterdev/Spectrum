@@ -66,7 +66,7 @@ namespace DX12
 			else 
 					state = ResourceState::COMMON;
 		}
-        auto info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
+
 		delete_me = heap.create_resource(desc, state, clear_value);
 		m_Resource = delete_me->m_Resource;
      //   ClassLogger<Resource>::get() << "creating resource " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] += info.SizeInBytes) << Log::endl;
@@ -134,7 +134,7 @@ namespace DX12
         if (!force_delete)
         {
             Device::get().unused(m_Resource);
-            auto info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
+         
 	//std::stringstream stream;
 	//	stream << std::hex << gpu_adress;
 	//		std::string result(stream.str());
@@ -203,9 +203,24 @@ namespace DX12
 			heap_upload_buffer.init(1024 * 1024 * 128, HeapType::UPLOAD, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);*/
 	}
 
-	CommonAllocator::Handle PlacedAllocator::allocate_resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type)
+	CommonAllocator::Handle PlacedAllocator::allocate_resource(CD3DX12_RESOURCE_DESC& desc, HeapType heap_type)
 	{
-		D3D12_RESOURCE_ALLOCATION_INFO  info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
+
+		if (desc.Flags &( D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) == 0)
+		{
+			desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+		}
+
+		D3D12_RESOURCE_ALLOCATION_INFO info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
+
+		if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+		{
+			// If the alignment requested is not granted, then let D3D tell us
+			// the alignment that needs to be used for these resources.
+			desc.Alignment = 0;
+			info = Device::get().get_native_device()->GetResourceAllocationInfo(0, 1, &desc);
+		}
+
 
 		Allocator* heap = nullptr;
 
@@ -250,7 +265,7 @@ namespace DX12
 	}
 
 
-	Resource::ptr PlacedAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, Allocator::Handle handle, ResourceState state, vec4 clear_value)
+	Resource::ptr PlacedAllocator::create_resource( CD3DX12_RESOURCE_DESC& desc, Allocator::Handle handle, ResourceState state, vec4 clear_value)
 	{
 		D3D12_CLEAR_VALUE value;
 		value.Format = to_srv(desc.Format);
@@ -279,6 +294,7 @@ namespace DX12
 		}
 
 
+
 		ComPtr<ID3D12Resource> m_Resource;
 		TEST(Device::get().get_native_device()->CreatePlacedResource(
 			heap->heap.Get(),
@@ -294,7 +310,7 @@ namespace DX12
 
 
 
-	Resource::ptr PlacedAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type, ResourceState state, vec4 clear_value)
+	Resource::ptr PlacedAllocator::create_resource( CD3DX12_RESOURCE_DESC& desc, HeapType heap_type, ResourceState state, vec4 clear_value)
 	{
 		CommonAllocator::Handle handle = allocate_resource(desc, heap_type);
 
@@ -406,18 +422,33 @@ namespace DX12
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
 			{
 				rtv = frame.rtv_cpu.place();
+				assert(!*rtv.resource_ptr);
 				place_rtv(rtv);
+				assert(*rtv.resource_ptr == resource.get());
 			}
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) {
 				dsv = frame.dsv_cpu.place();
+				assert(!*dsv.resource_ptr);
 				place_dsv(dsv);
+				assert(*dsv.resource_ptr == resource.get());
 			}
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
 				uav = frame.srv_uav_cbv_cpu.place();
+				assert(!*uav.resource_ptr);
 				place_uav(uav);
+				assert(*uav.resource_ptr == resource.get());
 			}
-			srv = frame.srv_uav_cbv_cpu.place();
+
+			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER&&desc.Flags == D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE&&desc.Width<65536) {
+				cb = frame.srv_uav_cbv_cpu.place();
+				assert(!*cb.resource_ptr);
+				place_cb(cb);
+				assert(*cb.resource_ptr == resource.get());
+			}
+				srv = frame.srv_uav_cbv_cpu.place();
+				assert(!*srv.resource_ptr);
 				place_srv(srv);
+			assert(*srv.resource_ptr == resource.get());
 		}
 
 }

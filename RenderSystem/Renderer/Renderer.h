@@ -11,9 +11,9 @@ class renderer
         using ptr = s_ptr<renderer>;
 
         virtual  bool add_object(Render::renderable* obj) = 0;
-        virtual void render(MeshRenderContext::ptr c, scene_object::ptr obj) = 0;;
+        virtual void render(MeshRenderContext::ptr c, Scene::ptr obj) = 0;;
 
-		virtual void iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)=0;
+		virtual void iterate(MESH_TYPE mesh_type, std::function<void(Scene::ptr&)> f)=0;
 };
 struct mat_info
 {
@@ -82,7 +82,7 @@ class main_renderer
         {
             renderers.insert(std::static_pointer_cast<renderer>(r));
         }
-        void render(MeshRenderContext::ptr c, scene_object::ptr obj)
+        void render(MeshRenderContext::ptr c, Scene::ptr obj)
         {
             /*  obj->iterate([&](scene_object * node)
               {
@@ -108,7 +108,7 @@ class main_renderer
         }
 
 
-		void iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)>f)
+		void iterate(MESH_TYPE mesh_type, std::function<void(Scene::ptr&)>f)
 		{
 			for (auto && r : renderers)
 				r->iterate(mesh_type, f);
@@ -234,11 +234,11 @@ class mesh_renderer : public renderer, public Events::prop_handler
             return true;
         }
 
-        virtual void render(MeshRenderContext::ptr mesh_render_context, scene_object::ptr obj) override;
-		Scene::ptr scene;
+        virtual void render(MeshRenderContext::ptr mesh_render_context, Scene::ptr obj) override;
+//		Scene::ptr scene;
 		std::set<MeshAssetInstance*> static_objects;
 		std::set<MeshAssetInstance*> dynamic_objects;
-		void iterate(MESH_TYPE mesh_type,  std::function<void(scene_object::ptr&)> f) override;
+		void iterate(MESH_TYPE mesh_type,  std::function<void(Scene::ptr&)> f) override;
 	
     public:
         unsigned int rendered_simple;
@@ -257,7 +257,7 @@ class mesh_renderer : public renderer, public Events::prop_handler
 };
 
 
-
+#ifdef OLOLO
 class gpu_mesh_renderer : public renderer, public Events::prop_handler
 {
 	//  std::map<std::shared_ptr<Mesh>, std::list<shared_mesh_object*>> instanced_meshes;
@@ -468,95 +468,6 @@ public:
 	}
 };
 
-template <class T>
-class ArraysHolder:public std::vector<T> 
-{
-
-	
-
-	std::map<size_t, size_t> free_sections_begins;
-	std::map<size_t, size_t> free_sections_ends;
-
-	std::map<size_t, std::set<size_t>> free_sections_sizes;
-
-
-	std::map<size_t, size_t> used_sections;
-	void remove_free_section(size_t index, size_t count)
-	{
-		free_sections_begins.erase(index);
-		free_sections_ends.erase(index + count);
-		free_sections_sizes[count].erase(index);
-	}
-
-	void add_free_section(size_t index, size_t count)
-	{
-
-		auto begins = free_sections_begins.find(index + count);
-
-		if (begins != free_sections_begins.end())
-		{
-			count += begins->second;
-
-			remove_free_section(begins->first, begins->second);
-		}
-
-
-		auto ends = free_sections_ends.find(index);
-
-		if (ends != free_sections_ends.end())
-		{
-			index -= ends->second;
-			remove_free_section(ends->first - ends->second, ends->second);
-		}
-
-		free_sections_begins[index] = count;
-		free_sections_ends[index + count] = count;
-		free_sections_sizes[count].insert(index);
-	}
-public:
-
-
-	size_t get_free(size_t size)
-	{
-		auto res = free_sections_sizes.lower_bound(size);
-
-		while (res != free_sections_sizes.end() && res->first < size)
-			res++;
-
-		if (res != free_sections_sizes.end()&& !res->second.empty())
-		{
-	
-			auto index = *res->second.begin();
-
-			res->second.erase(res->second.begin());
-
-
-			auto free_section = free_sections_begins[index];
-			remove_free_section(index, free_section);
-			add_free_section(index + size, free_section - size);
-
-			used_sections[index] = size;
-	
-			return index;
-		}
-		
-		size_t result = std::vector<T>::size();
-		resize(result + size);
-
-
-		used_sections[result] = size;
-
-		return result;
-
-	}
-
-	void release(size_t index)
-	{
-
-		add_free_section(index, used_sections[index]);
-		used_sections.erase(index);
-	}
-};
 class gpu_cached_renderer : public gpu_mesh_renderer,
 	public Events::Runner
 {
@@ -668,3 +579,96 @@ public:
 };
 
 
+#endif
+
+
+
+template <class T>
+class ArraysHolder :public std::vector<T>
+{
+
+
+
+	std::map<size_t, size_t> free_sections_begins;
+	std::map<size_t, size_t> free_sections_ends;
+
+	std::map<size_t, std::set<size_t>> free_sections_sizes;
+
+
+	std::map<size_t, size_t> used_sections;
+	void remove_free_section(size_t index, size_t count)
+	{
+		free_sections_begins.erase(index);
+		free_sections_ends.erase(index + count);
+		free_sections_sizes[count].erase(index);
+	}
+
+	void add_free_section(size_t index, size_t count)
+	{
+
+		auto begins = free_sections_begins.find(index + count);
+
+		if (begins != free_sections_begins.end())
+		{
+			count += begins->second;
+
+			remove_free_section(begins->first, begins->second);
+		}
+
+
+		auto ends = free_sections_ends.find(index);
+
+		if (ends != free_sections_ends.end())
+		{
+			index -= ends->second;
+			remove_free_section(ends->first - ends->second, ends->second);
+		}
+
+		free_sections_begins[index] = count;
+		free_sections_ends[index + count] = count;
+		free_sections_sizes[count].insert(index);
+	}
+public:
+
+
+	size_t get_free(size_t size)
+	{
+		auto res = free_sections_sizes.lower_bound(size);
+
+		while (res != free_sections_sizes.end() && res->first < size)
+			res++;
+
+		if (res != free_sections_sizes.end() && !res->second.empty())
+		{
+
+			auto index = *res->second.begin();
+
+			res->second.erase(res->second.begin());
+
+
+			auto free_section = free_sections_begins[index];
+			remove_free_section(index, free_section);
+			add_free_section(index + size, free_section - size);
+
+			used_sections[index] = size;
+
+			return index;
+		}
+
+		size_t result = std::vector<T>::size();
+		resize(result + size);
+
+
+		used_sections[result] = size;
+
+		return result;
+
+	}
+
+	void release(size_t index)
+	{
+
+		add_free_section(index, used_sections[index]);
+		used_sections.erase(index);
+	}
+};

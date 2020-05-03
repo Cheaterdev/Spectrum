@@ -3,13 +3,16 @@ namespace Table
 {
 	struct MaterialInfo
 	{
-		using CB = DefaultCB;
-		CB &cb;
+		struct CB
+		{
+			uint textureOffset;
+		} &cb;
 		using SRV = Empty;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Bindless& bindless;
-		Render::Bindless& GetTextures() { return bindless; }
-		MaterialInfo(CB&cb,Render::Bindless &bindless) :cb(cb),bindless(bindless){}
+		DynamicData data;
+		uint& GetTextureOffset() { return cb.textureOffset; }
+		DynamicData& GetData() { return data; }
+		MaterialInfo(CB&cb) :cb(cb){}
 	};
 }

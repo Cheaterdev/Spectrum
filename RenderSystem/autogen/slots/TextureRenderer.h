@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		SRV srv;
 		TextureRenderer(): DataHolder(srv){}
+		TextureRenderer(const TextureRenderer&other): DataHolder(srv){srv = other.srv;}
 	};
 }

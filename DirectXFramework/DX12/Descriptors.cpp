@@ -8,7 +8,7 @@ namespace DX12 {
 		heap_ds.reset(new DescriptorHeap(65536, DescriptorHeapType::DSV, DescriptorHeapFlags::NONE));
 
 
-		gpu_srv.reset(new DescriptorHeapPaged(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE));
+		gpu_srv.reset(new DescriptorHeapPaged(65536*8, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE));
 		gpu_smp.reset(new DescriptorHeapPaged(2048, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE));
 	
 		cpu_srv.reset(new DescriptorHeapPaged(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE));
@@ -30,7 +30,7 @@ namespace DX12 {
 	{
 		Device::get().get_native_device()->CopyDescriptorsSimple(r.get_count(), get_base().cpu, r.get_base().cpu, t);
 	}
-
+	/*
 	void HandleTableLight::place(const HandleTableLight& r, D3D12_DESCRIPTOR_HEAP_TYPE t)
 	{
 		Device::get().get_native_device()->CopyDescriptorsSimple(r.get_count(), cpu, r.cpu, t);
@@ -38,7 +38,7 @@ namespace DX12 {
 	void HandleTableLight::place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t)
 	{
 		Device::get().get_native_device()->CopyDescriptorsSimple(r.get_count(), cpu, r.get_base().cpu, t);
-	}
+	}*/
 
 	DynamicDescriptorManager::DynamicDescriptorManager(Creator& creator) :creator(creator)
 	{
@@ -208,15 +208,24 @@ namespace DX12 {
 
 	Handle DescriptorPage::place()
 	{
-		return heap->handle(heap_offset + (offset++));
+	//	std::lock_guard<std::mutex> g(m);
+		Handle h =  heap->handle(heap_offset + (offset++));
+		*h.resource_ptr = nullptr;
+		return h;
 	}
 
 
 
 	HandleTableLight DescriptorPage::place(UINT count)
 	{
+		//std::lock_guard<std::mutex> g(m);
+		assert(offset+count<=this->count);
 		auto table = heap->get_light_table_view(heap_offset + offset, count);
 
+		for (int i = 0; i < table.get_count(); i++)
+		{
+			*table[i].resource_ptr = nullptr;
+		}
 		offset += count;
 		return table;
 	}
@@ -225,6 +234,7 @@ namespace DX12 {
 
 	void DescriptorPage::free()
 	{
+	//	std::lock_guard<std::mutex> g(m);
 		offset = 0;
 		heap->free_page(this);
 	}

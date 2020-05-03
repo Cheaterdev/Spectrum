@@ -4,9 +4,9 @@
 namespace DX12
 {
 
-    GPUBuffer::GPUBuffer(UINT64 size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/ , ResourceState state) : size(size),
-        count(size),
-        stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(size, flags), DefaultAllocator::get(), state)
+    GPUBuffer::GPUBuffer(UINT64 _size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/ , ResourceState state) : size(Math::AlignUp(_size,D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
+        count(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
+        stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), flags), DefaultAllocator::get(), state)
     {
     }
 

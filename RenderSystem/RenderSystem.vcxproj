@@ -378,6 +378,7 @@
     <ClInclude Include="Renderer\Renderer.h" />
     <ClInclude Include="Renderer\Signature.h" />
     <ClInclude Include="Renderer\StencilRenderer.h" />
+    <ClInclude Include="Scene\Scene.h" />
     <ClInclude Include="Scene\SceneObject.h" />
     <ClInclude Include="TiledTextures\DynamicTileGenerator.h" />
     <ClInclude Include="TiledTextures\GPUTilesBuffer.h" />
@@ -488,8 +489,12 @@
     <ClCompile Include="Mesh\raw4\Raw4Context.cpp" />
     <ClCompile Include="Mesh\raw4\Raw4Loader.cpp" />
     <ClCompile Include="NinePatch.cpp" />
-    <ClCompile Include="Renderer\GPUCachedRenderer.cpp" />
-    <ClCompile Include="Renderer\GPUMeshRender.cpp" />
+    <ClCompile Include="Renderer\GPUCachedRenderer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="Renderer\GPUMeshRender.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="TiledTextures\DynamicTileGenerator.cpp" />
     <ClCompile Include="TiledTextures\GPUTilesBuffer.cpp" />
     <ClCompile Include="TiledTextures\Texture3DTiled.cpp" />

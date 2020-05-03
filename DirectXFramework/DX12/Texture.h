@@ -355,12 +355,12 @@ namespace DX12
                 else
                     desc = CD3DX12_RESOURCE_DESC::Tex2D(data.format, data.width, data.height, data.array_size, data.mip_maps);
 
-				Resource::init(desc, DefaultAllocator::get(), (desc.DepthOrArraySize * desc.MipLevels) ? ResourceState::COPY_DEST : ResourceState::PIXEL_SHADER_RESOURCE);
+				Resource::init(desc, DefaultAllocator::get(), (desc.DepthOrArraySize * desc.MipLevels) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
 
                 if (desc.ArraySize() * desc.MipLevels)
                 {
                     auto list = Device::get().get_upload_list();
-					list->transition(this, ResourceState::COPY_DEST);
+			//		list->transition(this, ResourceState::COPY_DEST);
                     for (unsigned int a = 0; a < desc.ArraySize(); a++)
                         for (unsigned int m = 0; m < desc.MipLevels; m++)
                         {
@@ -368,7 +368,7 @@ namespace DX12
                             list->get_copy().update_texture(this, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, (const char* )data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
                         }
 
-                    list->transition(this,  ResourceState::PIXEL_SHADER_RESOURCE);
+            //        list->transition(this,  ResourceState::PIXEL_SHADER_RESOURCE);
                     list->end();
                     list->execute();
                 }

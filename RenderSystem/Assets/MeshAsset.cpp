@@ -181,6 +181,12 @@ AssetStorage::ptr  MeshAsset::register_new(std::wstring name, Guid g)
 MeshAsset::MeshAsset()
 {
 }
+
+std::shared_ptr<MeshAssetInstance> MeshAsset::create_instance()
+{
+	return std::make_shared<MeshAssetInstance>(get_ptr<MeshAsset>());
+}
+
 void MeshAsset::try_register()
 {
     if (meshes.size())
@@ -206,7 +212,7 @@ void MeshAsset::update_preview(Render::Texture::ptr preview)
 }
 void MeshAssetInstance::use_material(size_t i, std::shared_ptr<MeshRenderContext>& context)
 {
-    overrided_material[i]->set(this->type,context);
+    rendering[i].material->set(this->type,context);
 }
 
 void MeshAssetInstance::set(MeshRenderContext::ptr context)
@@ -230,7 +236,7 @@ template<class Archive>
 void MeshAssetInstance::serialize(Archive& ar, const unsigned int)
 {
     ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
-    ar& NVP(overrided_material);
+	ar& NVP(overrided_material);
     ar& NVP(mesh_asset);
     ar& NVP(boost::serialization::base_object<scene_object>(*this));
     ar& NVP(my_meshes);
@@ -243,11 +249,11 @@ void MeshAssetInstance::serialize(Archive& ar, const unsigned int)
 MeshAssetInstance::MeshAssetInstance(MeshAsset::ptr asset) : mesh_asset(this)
 {
     mesh_asset = register_asset(asset);
-    this->overrided_material.clear();// = mesh_asset->get_mesh()->materials;
+   this->overrided_material.clear();// = mesh_asset->get_mesh()->materials;
 
     for (auto& m : mesh_asset->materials)
         this->overrided_material.push_back(register_asset(*m));
-
+		
     init_asset();
     name = asset->get_name();
 }
@@ -256,10 +262,63 @@ MeshAssetInstance::MeshAssetInstance(): mesh_asset(this)
 {
 }
 
+void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
+{
+	UINT mat_id = rendering[i].material_id;
+
+	overrided_material[mat_id] = register_asset(mat);
+	rendering[i].material = overrided_material[mat_id]->get_ptr<MaterialAsset>().get();
+
+	if (scene)
+		scene->on_changed(this);
+}
+
+void MeshAssetInstance::on_asset_change(Asset::ptr asset)
+{
+	if (asset->get_type() == Asset_Type::MATERIAL)
+	{
+
+		std::vector<MaterialAsset::ptr> changed;
+		changed.reserve(overrided_material.size());
+
+		auto material = asset->get_ptr<MaterialAsset>();
+		for (auto& ref : overrided_material)
+		{
+
+			if (ref->get_ptr<MaterialAsset>() == material)
+				changed.push_back(material);
+			else
+				changed.push_back(nullptr);
+		}
+	}
+	if (scene)
+		scene->on_changed(this);
+}
+
 MeshAssetInstance::~MeshAssetInstance()
 {
 }
+void MeshAssetInstance::on_add(scene_object* parent)
+{
+	scene_object::on_add(parent);
 
+	if (scene)
+	{
+
+		Scene* render_scene = dynamic_cast<Scene*>(scene);
+
+
+	}
+}
+
+
+void MeshAssetInstance::on_remove()
+{
+	universal_nodes_manager::get().free(nodes_handle);
+	nodes_handle = Allocator::Handle();
+	//nodes_ptr = nullptr;
+	scene_object::on_remove();
+}
 bool MeshAssetInstance::update_transforms()
 {
 	bool res = scene_object::update_transforms();
@@ -275,17 +334,19 @@ bool MeshAssetInstance::update_transforms()
 	
 	for (auto &e : rendering)
 	{
-		auto m = e.mesh;
-		auto p = m->primitive;
+		uint index = e.mesh_info.GetNode_offset() - nodes_handle.aligned_offset;
+		auto& p = e.primitive;
 
 		if (!e.primitive_global)
 			e.primitive_global = std::make_shared<AABB>();
 
-		mat4x4 mat = nodes[e.node_index].asset_node->mesh_matrix*global_transform;
+		mat4x4 mat = nodes[index].asset_node->mesh_matrix*global_transform;
 
 		e.primitive_global->apply_transform(p, mat);
-		node_buffer.data()[e.node_index] = mat;
-		e.owner = this;
+	//	node_buffer[index] = mat;
+		universal_nodes_manager::get().nodes_data[e.mesh_info.GetNode_offset()] = mat;
+
+		//e.owner = this;
 
 	}
 
@@ -300,28 +361,70 @@ void MeshAssetInstance::update_nodes()
 {
 //	primitive.reset(new AABB());
 	
+	UINT count = 0;
+	mesh_asset->root_node.iterate([&](MeshNode*) {count++; return true; });
+
+	universal_nodes_manager::get().free(nodes_handle);
+	nodes_handle = universal_nodes_manager::get().allocate(count);
+//	nodes_ptr = universal_nodes_manager::get().nodes_data.data() + nodes_handle.aligned_offset;
+
+
+	mesh_render_data.GetVb() = mesh_asset->vertex_buffer->get_srv()[0];
+
+	//	mesh_render_data.GetNodes() = render_scene->mesh_nodes->get_srv()[0];
 
 	/////////////////
 
-   node_buffer.data().clear();
-    node_buffer.data().reserve(mesh_asset->nodes.size());
+  // node_buffer.clear();
+  //  node_buffer.reserve(mesh_asset->nodes.size());
 	nodes_indexes.resize(mesh_asset->nodes.size());
     nodes.clear();
     rendering.clear();
 	int index = 0;
+	
     std::function<bool(MeshNode*)> f = [this,&index](MeshNode * node)->bool
     {
 		node->index = index++;// node_buffer.data().size();
-        node_buffer.data().emplace_back(global_transform*node->mesh_matrix);
+     //   node_buffer.emplace_back(global_transform*node->mesh_matrix);
         nodes.emplace_back(node);
 
-        for (auto& m : node->meshes)
-            rendering.push_back({ &mesh_asset->meshes[m], node->index ,0,0,0,false, this});
+		for (auto& m : node->meshes)
+		{
+			render_info info;
+			info.index_offset = mesh_asset->meshes[m].index_offset;
+			info.index_count = mesh_asset->meshes[m].index_count;
 
+			info.primitive = mesh_asset->meshes[m].primitive;
+
+			info.primitive_global = std::make_shared<AABB>();
+
+			mat4x4 mat = nodes[node->index].asset_node->mesh_matrix * global_transform;
+
+			info.primitive_global->apply_transform(info.primitive, mat);
+
+
+		//	node_buffer[node->index] = mat;
+			//if(nodes_ptr) 
+		
+			info.mesh_info.GetNode_offset() = nodes_handle.aligned_offset+ node->index;
+			info.mesh_info.GetVertex_offset() = mesh_asset->meshes[m].vertex_offset;
+
+			universal_nodes_manager::get().nodes_data[info.mesh_info.GetNode_offset()] = mat;
+
+		//	info.mesh_info.GetTexture_offset() = 0;
+
+		
+			info.material_id = mesh_asset->meshes[m].material;
+
+			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
+
+			rendering.push_back(info);
+		}
 
 
         return true;
     };
+	
     mesh_asset->root_node.iterate(f);
 }
 
@@ -337,20 +440,6 @@ void MeshAssetInstance::init_asset()
     update_nodes();
     //mesh_root(mesh_asset->root_node);
 }
-void MeshAssetInstance::draw(MeshRenderContext::ptr context)
-{
-    // std::lock_guard<std::mutex> g(m);
-//    context->set_nodes_buffer(node_buffer);
-    //context.set
-    /*  auto& graph = context->list->get_graphics();
-      graph.set_index_buffer(mesh_asset->index_buffer->get_index_buffer_view(true));
-
-      for (auto mesh : mesh_asset->meshes)
-      {
-          overrided_material[mesh.material]->set(context);
-          context->draw_indexed(mesh.index_count, mesh.index_offset, mesh.vertex_offset);
-      }*/
-}
 
 
 
@@ -359,7 +448,7 @@ void MeshAssetInstance::draw(MeshRenderContext::ptr context)
 std::vector<RaytracingAccelerationStructure::ptr> MeshAssetInstance::create_raytracing_as(D3D12_GPU_VIRTUAL_ADDRESS address)
 {
 	//std::vector<RaytracingAccelerationStructure::ptr> result;
-
+	/*
 	for (auto& info : rendering)
 	{
 	//	if (info.node_index == 3) continue;
@@ -387,7 +476,7 @@ std::vector<RaytracingAccelerationStructure::ptr> MeshAssetInstance::create_rayt
 		structure->material = info.mesh->material;
 
 		//break;
-	}
+	}*/
 	return raytracing_as;
 }
 

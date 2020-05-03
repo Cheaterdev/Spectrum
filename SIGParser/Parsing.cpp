@@ -122,7 +122,7 @@ public:
 
 	virtual void enterType_id(SIGParser::Type_idContext* ctx) override {
 		type_ptr->type = ctx->children[0]->getText();
-		type_ptr->detect_type();
+		type_ptr->detect_type(options_ptr);
 	}
 
 	virtual void enterOwner_id(SIGParser::Owner_idContext* ctx) override {

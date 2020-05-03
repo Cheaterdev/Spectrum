@@ -1,7 +1,15 @@
 [Bind = FrameLayout::MaterialData]
-[CB = MaterialCB]
+
 struct MaterialInfo
 {
-	Texture2D textures[];
+	[dynamic] MaterialCB data;
+    uint textureOffset;	
+}
+
+[Bind = FrameLayout::SceneData]
+struct SceneData
+{
+	Texture2D material_textures[];
+	StructuredBuffer<node_data> nodes;
 }
 

@@ -6,5 +6,6 @@ namespace Slots {
 		CB cb;
 		SRV srv;
 		SkyData(): DataHolder(cb,srv){}
+		SkyData(const SkyData&other): DataHolder(cb,srv){cb = other.cb;srv = other.srv;}
 	};
 }

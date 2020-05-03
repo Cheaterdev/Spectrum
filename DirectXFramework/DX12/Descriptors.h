@@ -66,6 +66,7 @@ struct HandleTable
 		Handle res = get_base();
 		res.cpu.Offset(i, info->descriptor_size);
 		res.gpu.Offset(i, info->descriptor_size);
+		res.resource_ptr += i;
 		return res;
 	}
 
@@ -122,9 +123,9 @@ struct HandleTableLight : public Handle
 	{
 		return descriptor_size > 0;
 	}
-
-	void place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	void place(const HandleTableLight& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	 
+	//void place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	//void place(const HandleTableLight& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 private:
 	friend class DescriptorHeap;
@@ -294,6 +295,8 @@ public:
 class DescriptorHeapPaged;
 class DescriptorPage
 {
+
+//	std::mutex m;
 	friend class DescriptorHeapPaged;
 	UINT heap_offset;
 	UINT count;
@@ -366,6 +369,11 @@ public:
 		delete page;
 	}
 
+	UINT used_size()
+	{
+		return allocator.get_max_usage();
+	}
+
 };
 
 class DescriptorHeapManager : public Singleton<DescriptorHeapManager>
@@ -404,9 +412,35 @@ public:
 };
 
 
+struct Lockable
+{
+	using guard = std::lock_guard<std::mutex>;
+	using mutex = std::mutex;
+};
 
+struct thread_tester
+{
+	std::atomic<std::thread::id>& id;
+	thread_tester(std::atomic<std::thread::id>& id) :id(id)
+	{
+		auto prev = id.exchange(std::this_thread::get_id());
 
-template<DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE>
+		assert(prev== std::thread::id());
+	}
+
+	~thread_tester()
+	{
+		auto prev = id.exchange(std::thread::id());
+		assert(prev == std::this_thread::get_id());
+	}
+};
+struct  Free
+{
+	using guard = thread_tester;
+	using mutex = std::atomic<std::thread::id>;
+};
+
+template<DescriptorHeapType type, class LockPolicy = Free, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE>
 class DynamicDescriptor
 {
 	friend class CommandList;
@@ -415,7 +449,7 @@ class DynamicDescriptor
 
 	std::list<DescriptorPage*> pages;
 
-	std::mutex m;
+	typename LockPolicy::mutex m;
 	void create_heap(UINT count)
 	{
 
@@ -446,17 +480,33 @@ class DynamicDescriptor
 				pages.push_back(DescriptorHeapManager::get().cpu_dsv->create_page(count));
 
 		}
+
+	//	assert(pages.size() < 100);
 	}
 
 
 
 	void reset()
 	{
-		std::lock_guard<std::mutex> g(m);
+		LockPolicy::guard g(m);
+
 		for (auto& p : pages)
 			p->free();
 
 		pages.clear();
+	}
+
+
+	HandleTableLight prepare(UINT count)
+	{
+		LockPolicy::guard g(m);
+
+		if (pages.empty() || !pages.back()->has_free_size(count))
+		{
+			create_heap(count);
+		}
+
+		return pages.back()->place(count);
 	}
 
 public:
@@ -465,20 +515,8 @@ public:
 		reset();
 	}
 
-	void prepare(UINT count)
-	{
-	//	if (count > 32)
-	//		return;
-		std::lock_guard<std::mutex> g(m);
-		if (pages.empty() || !pages.back()->has_free_size(count))
-		{
-			create_heap(count);
-		}
-	}
-
 	Handle place(Handle e)
 	{
-	
 		auto table = place();
 		table.place(e);
 		return table;
@@ -486,7 +524,7 @@ public:
 
 	HandleTableLight place(std::initializer_list<Handle> list)
 	{
-		auto table = place(list.size());
+		auto table = prepare(list.size());
 
 		int i = 0;
 		for (auto& e : list)
@@ -498,28 +536,22 @@ public:
 
 	HandleTableLight place(UINT count)
 	{
-		prepare(count);
-
-		auto& page = pages.back();
-		auto table = page->place(count);
-		return table;
+		return prepare(count);
 	}
 
 	Handle place()
 	{
-		prepare(1);
-		auto& page = pages.back();
-		return page->place();
+		return prepare(1)[0];
 	}
 
-
+	/*
 	HandleTableLight place(HandleTable table)
 	{
 		auto gpu_table = place(table.get_count());
 		gpu_table.place(table);
 		return gpu_table;
 	}
-
+	*/
 
 };
 
@@ -532,7 +564,7 @@ class DynamicDescriptorManager
 {
 
 public:
-	using Creator = DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE>;
+	using Creator = DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV,Free, DescriptorHeapFlags::SHADER_VISIBLE>;
 private:
 
 	struct row

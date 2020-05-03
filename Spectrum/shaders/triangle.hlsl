@@ -19,11 +19,13 @@ struct vertex_output
 #include "autogen/FrameInfo.h"
 #include "autogen/MeshInfo.h"
 #include "autogen/MeshData.h"
+#include "autogen/SceneData.h"
 
 
 static const FrameInfo frameInfo = GetFrameInfo();
 static const MeshInfo meshInfo = GetMeshInfo();
 static const MeshData meshData = GetMeshData();
+static const SceneData sceneData = GetSceneData();
 
 
 vertex_output transform(matrix node_global_matrix, camera_info camera, mesh_vertex_input_cb i)
@@ -53,7 +55,7 @@ vertex_output VS(uint index: SV_VertexID)
 {
     //	matrix m = { {1,0,0,100}, { 0,1,0,0 }, { 0,0,1,0 }, {0,0,0,1 } };
 
-    matrix m = meshData.GetNodes()[meshInfo.GetNode_offset()].GetNode_global_matrix();
+    matrix m = sceneData.GetNodes()[meshInfo.GetNode_offset()].GetNode_global_matrix();
     return transform(m, frameInfo.GetCamera(), meshData.GetVb()[meshInfo.GetVertex_offset()+ index]);
 }
 

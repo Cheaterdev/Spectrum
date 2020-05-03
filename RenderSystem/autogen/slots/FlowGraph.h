@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		CB cb;
 		FlowGraph(): DataHolder(cb){}
+		FlowGraph(const FlowGraph&other): DataHolder(cb){cb = other.cb;}
 	};
 }

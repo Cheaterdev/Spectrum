@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		SRV srv;
 		PSSMLighting(): DataHolder(srv){}
+		PSSMLighting(const PSSMLighting&other): DataHolder(srv){srv = other.srv;}
 	};
 }

@@ -65,7 +65,7 @@ std::string get_cpp_for(Value v)
 	return "";
 }
 
-void have_type::detect_type()
+void have_type::detect_type(have_options * options)
 {
 	value_type = ValueType::STRUCT;
 	if (type.find("Texture") == 0) value_type = ValueType::SRV;
@@ -79,6 +79,9 @@ void have_type::detect_type()
 	if (type.find("matrix") == 0) value_type = ValueType::CB;
 	if (type.find("uint") == 0) value_type = ValueType::CB;
 	if (type.find("mat4x4") == 0) value_type = ValueType::CB;
+
+	if(options->find_option("dynamic"))
+		value_type = ValueType::CB;
 }
 
 Slot::Slot()

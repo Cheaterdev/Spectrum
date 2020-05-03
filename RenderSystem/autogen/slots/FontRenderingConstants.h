@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		CB cb;
 		FontRenderingConstants(): DataHolder(cb){}
+		FontRenderingConstants(const FontRenderingConstants&other): DataHolder(cb){cb = other.cb;}
 	};
 }

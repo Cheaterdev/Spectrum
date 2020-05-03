@@ -6,5 +6,6 @@ namespace Slots {
 		SRV srv;
 		UAV uav;
 		DownsampleDepth(): DataHolder(srv,uav){}
+		DownsampleDepth(const DownsampleDepth&other): DataHolder(srv,uav){srv = other.srv;uav = other.uav;}
 	};
 }

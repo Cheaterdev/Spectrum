@@ -80,6 +80,8 @@ using float4x4 = mat4x4;
 #include "Mesh/vertexes.h"
 #include "Mesh/Mesh.h"
 #include "Assets/MeshAsset.h"
+
+#include "Scene/Scene.h"
 #include "Renderer/Renderer.h"
 
 #include "Assets/AssetRenderer.h"
@@ -124,6 +126,7 @@ using float4x4 = mat4x4;
 
 
 */
+
 #include "Lighting/BRDF.h"
 namespace EngineAssets
 {

@@ -1,15 +1,15 @@
-#ifndef SLOT_2
-	#define SLOT_2
+#ifndef SLOT_3
+	#define SLOT_3
 #else
-	#error Slot 2 is already used
+	#error Slot 3 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/ColorRect.h"
-ConstantBuffer<ColorRect_cb> cb_2_0:register(b0,space2);
+ConstantBuffer<ColorRect_cb> cb_3_0:register(b0,space3);
 ColorRect CreateColorRect()
 {
 	ColorRect result;
-	result.cb = cb_2_0;
+	result.cb = cb_3_0;
 	return result;
 }
 static const ColorRect colorRect_global = CreateColorRect();

@@ -86,6 +86,7 @@ struct ResourceAllocInfo
 
 	bool need_recreate = false;
 	bool passed = false;
+	size_t frame_id;
 };
 
 
@@ -98,6 +99,7 @@ struct TaskBuilder
 	std::set<ResourceHandler*> passed_resources;
 	Render::PlacedAllocator allocator;
 	Render::FrameResourceManager frames;
+	Render::FrameResources::ptr current_frame;
 	Pass* current_pass;
 	void begin(Pass* pass);
 
@@ -135,7 +137,7 @@ struct FrameContext
 	Render::CommandList::ptr list;
 
 	Render::CommandList::ptr& get_list();
-	void begin(Pass* pass, Render::FrameResourceManager& mgr);
+	void begin(Pass* pass, Render::FrameResources::ptr& frame);
 
 	void end();
 
@@ -162,7 +164,7 @@ struct Pass
 
 	void compile(TaskBuilder& builder);
 
-	virtual void render(Render::FrameResourceManager& mgr) = 0;
+	virtual void render(Render::FrameResources::ptr& frame) = 0;
 	void wait();
 	void execute();
 };
@@ -195,10 +197,10 @@ struct TypedPass : public Pass
 		builder.end(this);
 	}
 
-	virtual void render(Render::FrameResourceManager& mgr) override
+	virtual void render(Render::FrameResources::ptr& frame) override
 	{
-		render_task = scheduler::get().enqueue([this, &mgr]() {
-			context.begin(this, mgr);
+		render_task = scheduler::get().enqueue([this, &frame]() {
+			context.begin(this, frame);
 			render_func(data, context);
 			context.end();
 			}, std::chrono::steady_clock::now());
@@ -206,14 +208,14 @@ struct TypedPass : public Pass
 };
 class camera;
 class main_renderer;
-class scene_object;
+class Scene;
 
 struct CreationContext
 {
 	ivec2 frame_size;
 	camera* cam;
 	main_renderer* renderer;
-	scene_object* scene;
+	Scene* scene;
 
 };
 

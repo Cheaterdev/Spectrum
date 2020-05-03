@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		CB cb;
 		Instance(): DataHolder(cb){}
+		Instance(const Instance&other): DataHolder(cb){cb = other.cb;}
 	};
 }

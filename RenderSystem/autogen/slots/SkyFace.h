@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		CB cb;
 		SkyFace(): DataHolder(cb){}
+		SkyFace(const SkyFace&other): DataHolder(cb){cb = other.cb;}
 	};
 }

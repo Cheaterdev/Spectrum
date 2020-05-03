@@ -490,11 +490,11 @@ gpu_cached_renderer::gpu_cached_renderer(Scene::ptr scene, MESH_TYPE _mesh_type)
 		if (!render_object) return;
 		if (render_object->type != mesh_type) return;
 
-		for (auto& m : render_object->overrided_material)
+		/*for (auto& m : render_object->overrided_material)
 		{
 			init_material((*m).get());
 		}
-
+		*/
 
 		for (auto& r : render_object->rendering)
 		{
@@ -718,11 +718,11 @@ void gpu_cached_renderer::on_add(scene_object* object)
 	if (render_object)
 	{
 		auto inst = dynamic_cast<MeshAssetInstance*>(render_object);
-
+/*
 		for (auto& m : inst->overrided_material)
 		{
 			init_material((*m).get());
-		}
+		}*/
 		for (auto& r : inst->nodes)
 		{
 			node_indices.add(&r, inst);

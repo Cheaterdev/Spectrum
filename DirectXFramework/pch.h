@@ -202,7 +202,8 @@ typedef CComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 template<class Slot>
 struct CompiledData
 {
-	D3D12_GPU_VIRTUAL_ADDRESS cb = 0;
+	Render::HandleTableLight table_cbv;
+
 	Render::HandleTableLight table_srv;
 	Render::HandleTableLight table_uav;
 	Render::HandleTableLight table_smp;
@@ -215,7 +216,11 @@ struct CompiledData
 				auto h = table_srv[i];
 				if (h.resource_ptr && *h.resource_ptr)
 					if ((*h.resource_ptr)->get_heap_type() == Render::HeapType::DEFAULT)
+					{
+						if ((*h.resource_ptr)->debug)
+							assert(false);
 						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+					}
 
 			}
 
@@ -227,12 +232,25 @@ struct CompiledData
 						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::UNORDERED_ACCESS);
 			}
 
+
+			for (int i = 0; i < table_cbv.get_count(); ++i)
+			{
+				auto h = table_cbv[i];
+				if (h.resource_ptr && *h.resource_ptr)
+					if ((*h.resource_ptr)->get_heap_type() == Render::HeapType::DEFAULT)
+						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::VERTEX_AND_CONSTANT_BUFFER);
+			}
+
 		}
 		if (table_srv.get_count() > 0) graphics.set(Slot::SRV_ID, table_srv);
 		if (table_smp.get_count() > 0) graphics.set(Slot::SMP_ID, table_smp);
 		if (table_uav.get_count() > 0) graphics.set(Slot::UAV_ID, table_uav);
-		if (cb)
-			graphics.set_const_buffer(Slot::CB_ID, cb);
+		if (table_cbv.get_count()> 0 ) graphics.set(Slot::CB_ID, table_cbv);
+
+
+
+		//if (cb)
+	//		graphics.set_const_buffer(Slot::CB_ID, cb);
 
 	}
 
@@ -242,11 +260,18 @@ struct CompiledData
 struct Empty
 {};
 
-using DefaultCB = D3D12_GPU_VIRTUAL_ADDRESS;// std::vector<std::byte>;
+using DefaultCB = Render::Resource*;// std::vector<std::byte>;
+using DynamicData = std::vector<std::byte>;// std::vector<std::byte>;
 
 template<typename T> concept HasSRV =
 requires (T t){
 	t.srv;
+};
+
+
+template<typename T> concept HasData =
+requires (T t) {
+	t.data;
 };
 
 
@@ -281,7 +306,7 @@ struct DataHolder : public Table
 
 
 	template<class SRV>
-	void place_srv(CompiledData<Slot> & compiled, Render::SignatureDataSetter& context, SRV& srv)
+	void place_srv(CompiledData<Slot> & compiled, Render::SignatureDataSetter& context, SRV& srv) const
 	{
 		compiled.table_srv = context.get_base().srv_descriptors.place(sizeof(srv) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
@@ -293,19 +318,20 @@ struct DataHolder : public Table
 	}
 
 	template<class SRV>
-	void place_srv(CompiledData<Slot>& compiled, Render::SignatureDataSetter& context, SRV& srv, Render::Bindless &bindless)
+	void place_srv(CompiledData<Slot>& compiled, Render::SignatureDataSetter& context, SRV& srv, Render::Bindless &bindless) const
 	{
 		compiled.table_srv = context.get_base().srv_descriptors.place(sizeof(srv) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
 		for (int i = 0; i < compiled.table_srv.get_count(); i++)
 		{
 			Render::Handle* handle = ptr + i;
+			assert(!(*handle[0].resource_ptr)->debug);
 			compiled.table_srv[i].place(*handle);
 		}
 	}
 
 	template<class UAV>
-	void place_uav(CompiledData<Slot>& compiled, Render::SignatureDataSetter& context, UAV& uav)
+	void place_uav(CompiledData<Slot>& compiled, Render::SignatureDataSetter& context, UAV& uav) const
 	{
 		compiled.table_uav = context.get_base().srv_descriptors.place(sizeof(uav) / sizeof(Render::Handle));
 
@@ -315,11 +341,14 @@ struct DataHolder : public Table
 			Render::Handle* handle = ptr + i;
 			if (ptr[i].cpu.ptr != 0)
 			compiled.table_uav[i].place(*handle);
+			else
+				*compiled.table_uav[i].resource_ptr = nullptr;
+
 		}
 	}
 	
 	template<class SMP>
-	void place_smp(CompiledData<Slot>& compiled, Render::SignatureDataSetter& context, SMP& smp)
+	void place_smp(CompiledData<Slot>& compiled, Render::SignatureDataSetter& context, SMP& smp) const
 	{
 		compiled.table_smp = context.get_base().smp_descriptors.place(sizeof(smp) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
@@ -332,17 +361,24 @@ struct DataHolder : public Table
 
 	
 	template<class CB>
-	void place_cb(CompiledData<Slot>& compiled, Render::SignatureDataSetter & context, CB& cb)
+	void place_cb(CompiledData<Slot>& compiled, Render::SignatureDataSetter & context, CB& cb) const
 	{
-		compiled.cb = context.get_base().place_raw(cb).get_address();
+		compiled.table_cbv = context.get_base().srv_descriptors.place(1);
+
+ 		auto info = context.get_base().place_raw(cb).create_cbv(context.get_base());
+
+		compiled.table_cbv[0].place(info);
 	}
 	
 	template<>
-	void place_cb<D3D12_GPU_VIRTUAL_ADDRESS>(CompiledData<Slot>& compiled, Render::SignatureDataSetter& context, D3D12_GPU_VIRTUAL_ADDRESS& cb)
+	void place_cb<Render::Resource*>(CompiledData<Slot>& compiled, Render::SignatureDataSetter& context, Render::Resource* &resource) const
 	{
-		compiled.cb = cb;
+		compiled.table_cbv = context.get_base().srv_descriptors.place(1);
+
+		// optimize
+		compiled.table_cbv[0].place(resource->create_view<Render::StructuredBufferView<CB>>(*context.get_base().frame_resources).get_cb());
 	}
-	CompiledData<Slot> set(Render::SignatureDataSetter& context, bool use_transitions = true)
+	CompiledData<Slot> set(Render::SignatureDataSetter& context, bool use_transitions = true) const
 	{
 		CompiledData<Slot> compiled;
 		
@@ -353,26 +389,38 @@ struct DataHolder : public Table
 			if constexpr (HasSRV<Table>) srv_count += sizeof(srv) / sizeof(Render::Handle);
 			if constexpr (HasBindless<Table>) srv_count += bindless.size();
 
+			if (srv_count > 0) {
+				compiled.table_srv = context.get_base().srv_descriptors.place(srv_count);
+				int offset = 0;
+				if constexpr (HasSRV<Table>) {
+					auto ptr = reinterpret_cast<Render::Handle*>(&srv);
+					for (int i = 0; i < sizeof(srv) / sizeof(Render::Handle); i++)
+					{
+						if (ptr[i].cpu.ptr != 0)
+							compiled.table_srv[offset++].place(ptr[i]);
+						else
+						{
+							*compiled.table_srv[offset++].resource_ptr = nullptr;
 
-			compiled.table_srv = context.get_base().srv_descriptors.place(srv_count);
-			int offset = 0;
-			if constexpr (HasSRV<Table>) {		
-				auto ptr = reinterpret_cast<Render::Handle*>(&srv);
-				for (int i = 0; i < sizeof(srv) / sizeof(Render::Handle); i++)
-				{
-					if (ptr[i].cpu.ptr != 0)
-						compiled.table_srv[offset++].place(ptr[i]);
-					else
-						offset++;
-					//else
-
+						}
+						//else
+						if (ptr[i].resource_ptr&&*ptr[i].resource_ptr)
+							assert((*ptr[i].resource_ptr)->debug != true);
+					}
 				}
-			}
 
-			if constexpr (HasBindless<Table>) {
-				for (int j = 0; j < bindless.size(); j++)
-				{
-					compiled.table_srv[offset++].place(bindless[j]);
+
+				if constexpr (HasBindless<Table>) {
+					for (int j = 0; j < bindless.size(); j++)
+					{
+						if (bindless[j].cpu.ptr != 0)
+						compiled.table_srv[offset++].place(bindless[j]);
+						else
+						{
+							*compiled.table_srv[offset++].resource_ptr = nullptr;
+
+						}
+					}
 				}
 			}
 		}
@@ -384,7 +432,18 @@ struct DataHolder : public Table
 			place_smp(compiled, context, Table::smp);
 
 		if constexpr (HasCB<Table>)
-			place_cb(compiled, context, Table::cb);
+		{
+			compiled.table_cbv = context.get_base().srv_descriptors.place(1);
+
+
+			Render::Uploader::UploadInfo info;
+			if constexpr ( HasData<Table>)
+				info= context.get_base().place_raw(data, cb);
+			else
+				info=	context.get_base().place_raw( cb);
+
+			compiled.table_cbv[0].place(info.create_cbv(context.get_base()));
+		}
 
 		compiled.set(context,use_transitions);
 		return compiled;
@@ -405,7 +464,9 @@ struct AutoGenSignatureDesc
 		if constexpr (T::SRV)	desc[T::SRV_ID] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, -1, T::ID);
 		if constexpr (T::UAV)	desc[T::UAV_ID] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, T::UAV, T::ID);
 		if constexpr (T::SMP)	desc[T::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::SMP, T::ID);
-		desc[T::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::ID);
+//		desc[T::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::ID);
+		if constexpr (T::CB)	desc[T::CB_ID] = Render::DescriptorTable(Render::DescriptorRange::CBV, Render::ShaderVisibility::ALL, 0, T::CB, T::ID);
+
 	}
 
 	template< class ...A>

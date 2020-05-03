@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		SRV srv;
 		CopyTexture(): DataHolder(srv){}
+		CopyTexture(const CopyTexture&other): DataHolder(srv){srv = other.srv;}
 	};
 }

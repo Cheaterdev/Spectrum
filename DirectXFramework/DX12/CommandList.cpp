@@ -53,8 +53,10 @@ namespace DX12
 		Eventer::begin(name,t);
 		Sendable::reset();
 
-		set_heap(DescriptorHeapType::SAMPLER, DescriptorHeapManager::get().gpu_smp);
-		set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().gpu_srv);
+		if (type != CommandListType::COPY) {	
+			set_heap(DescriptorHeapType::SAMPLER, DescriptorHeapManager::get().gpu_smp);
+			set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().gpu_srv);
+		}
 		//set_heap(DescriptorHeapType::SAMPLER, smp_descriptors.get_heap());
 	}
 
@@ -299,7 +301,8 @@ namespace DX12
 	}
 	void  CopyContext::update_buffer(Resource* resource, UINT offset, const  char* data, UINT size)
 	{
-		base.transition(resource, Render::ResourceState::COPY_DEST);
+		if (base.type!= CommandListType::COPY)
+			base.transition(resource, Render::ResourceState::COPY_DEST);
 
 	/*	auto & count = resource_update_counter[resource];
 		count++;
@@ -316,7 +319,20 @@ namespace DX12
 	{
 		return resource->get_gpu_address() + offset;
 	}
+	Handle Uploader::UploadInfo::create_cbv(CommandList& list)
+	{
 
+		D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
+		desc.BufferLocation = resource->get_gpu_address()+offset;
+		desc.SizeInBytes = Math::AlignUp(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+
+		assert(desc.SizeInBytes < 65536);
+		Handle h = list.frame_resources->srv_uav_cbv_cpu.place();
+		*h.resource_ptr = resource.get();
+
+		Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
+		return h;
+	}
 	Uploader::UploadInfo Uploader::place_data(UINT64 uploadBufferSize, unsigned int alignment)
 	{
 		const auto AlignedSize = static_cast<UINT>(Math::AlignUp(uploadBufferSize, alignment));
@@ -354,7 +370,7 @@ namespace DX12
 		   if (resource_offset >= upload_resources.back()->get_size())
 			   resource_index++;
 			*/
-		info.size = uploadBufferSize;
+		info.size = AlignedSize;
 		return info;
 	}
 	Readbacker::ReadBackInfo Readbacker::read_data(UINT64 uploadBufferSize)
@@ -368,6 +384,7 @@ namespace DX12
 	}
 	void  CopyContext::update_resource(Resource::ptr resource, UINT first_subresource, UINT sub_count, D3D12_SUBRESOURCE_DATA* data)
 	{
+		if (base.type != CommandListType::COPY)
 		base.transition(resource, Render::ResourceState::COPY_DEST);
 
 		base.flush_transitions();
@@ -382,6 +399,7 @@ namespace DX12
 
 	void CopyContext::update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
+		if (base.type != CommandListType::COPY)
 		base.transition(resource, Render::ResourceState::COPY_DEST);
 		base.flush_transitions();
 		D3D12_RESOURCE_DESC Desc = resource->get_desc();
@@ -603,6 +621,7 @@ namespace DX12
 		on_execute_funcs.clear();
 		//	on_send_funcs.clear();
 		BufferCache::get().on_execute_list(this);
+		frame_resources = nullptr;
 	}
 
 	void Transitions::flush_transitions()
@@ -621,6 +640,7 @@ namespace DX12
 	}
 	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
 	{
+		auto& timer = Profiler::get().start(L"fix_pretransitions");
 
 		std::vector<D3D12_RESOURCE_BARRIER> result;
 
@@ -635,6 +655,7 @@ namespace DX12
 			
 			if (cpu_state != gpu_state)
 			{
+				if(r->get_native().Get())
 				result.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(r->get_native().Get(),
 					static_cast<D3D12_RESOURCE_STATES>(gpu_state),
 					static_cast<D3D12_RESOURCE_STATES>(cpu_state),
@@ -652,7 +673,7 @@ namespace DX12
 		if (result.size())
 		{
 			if (!transition_list)
-				transition_list.reset(new TransitionCommandList());
+				transition_list.reset(new TransitionCommandList(type));
 
 			transition_list->create_transition_list(result);
 			return transition_list;
@@ -679,7 +700,7 @@ namespace DX12
 	void Transitions::transition(const Resource* resource, unsigned int to, UINT subres )
 	{
 		assert(resource->get_heap_type() != HeapType::UPLOAD && resource->get_heap_type() != HeapType::READBACK);
-
+		assert(resource->get_native().Get());
 
 		if (resource->is_new(id, global_id))
 		{
@@ -689,11 +710,21 @@ namespace DX12
 		auto prev_state = resource->transition(to, subres, id, global_id);
 		if (prev_state == ResourceState::UNKNOWN) return;
 
+		assert(resource->get_native().Get());
 		transitions[transition_count++] = CD3DX12_RESOURCE_BARRIER::Transition(resource->get_native().Get(),
 			static_cast<D3D12_RESOURCE_STATES>(prev_state),
 			static_cast<D3D12_RESOURCE_STATES>(to),
 			subres);
 	
+
+		for (int i = 0; i < transition_count-1; i++)
+		{
+			if (transitions[transition_count - 1].Type == transitions[i].Type)
+				if (transitions[transition_count - 1].Transition.pResource == transitions[i].Transition.pResource)
+					if (transitions[transition_count - 1].Transition.Subresource == transitions[i].Transition.Subresource)
+						assert(false);
+
+		}
 		if (transition_count == transitions.size())
 			flush_transitions();
 	}
@@ -717,29 +748,39 @@ namespace DX12
 	void CopyContext::copy_buffer(Resource* dest, int s_dest, Resource* source, int s_source, int size)
 
 	{
-		base.transition(source, Render::ResourceState::COPY_SOURCE);
-		base.transition(dest, Render::ResourceState::COPY_DEST);
+		if (base.type != CommandListType::COPY) {
+			base.transition(source, Render::ResourceState::COPY_SOURCE);
+			base.transition(dest, Render::ResourceState::COPY_DEST);
+		}
 		base.flush_transitions();
 		base.get_native_list()->CopyBufferRegion(dest->get_native().Get(), s_dest, source->get_native().Get(), s_source, size);
 	}
 	void CopyContext::copy_resource(Resource* dest, Resource* source)
 	{
-		base.transition(source, Render::ResourceState::COPY_SOURCE);
-		base.transition(dest, Render::ResourceState::COPY_DEST);
+		if (base.type != CommandListType::COPY) {
+			base.transition(source, Render::ResourceState::COPY_SOURCE);
+			base.transition(dest, Render::ResourceState::COPY_DEST);
+		}
 		base.flush_transitions();
 		base.get_native_list()->CopyResource(dest->get_native().Get(), source->get_native().Get());
 	}
 	void CopyContext::copy_resource(const Resource::ptr& dest, const Resource::ptr& source)
 	{
-		base.transition(source, Render::ResourceState::COPY_SOURCE);
-		base.transition(dest, Render::ResourceState::COPY_DEST);
+		if (base.type != CommandListType::COPY) {
+
+
+			base.transition(source, Render::ResourceState::COPY_SOURCE);
+			base.transition(dest, Render::ResourceState::COPY_DEST);
+		}
 		base.flush_transitions();
 		base.get_native_list()->CopyResource(dest->get_native().Get(), source->get_native().Get());
 	}
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
 	{
+		if (base.type != CommandListType::COPY) {
 		base.transition(source, Render::ResourceState::COPY_SOURCE);
 		base.transition(dest, Render::ResourceState::COPY_DEST);
+	}
 		base.flush_transitions();
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_native().Get(), dest_subres);
 		CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_native().Get(), source_subres);
@@ -748,8 +789,10 @@ namespace DX12
 
 	void CopyContext::copy_texture(const Resource::ptr& from, ivec3 from_pos, const Resource::ptr& to, ivec3 to_pos, ivec3 size)
 	{
-		base.transition(from, Render::ResourceState::COPY_SOURCE);
-		base.transition(to, Render::ResourceState::COPY_DEST);
+		if (base.type != CommandListType::COPY) {
+			base.transition(from, Render::ResourceState::COPY_SOURCE);
+			base.transition(to, Render::ResourceState::COPY_DEST);
+		}
 		base.flush_transitions();
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(to->get_native().Get(), 0);
 		CD3DX12_TEXTURE_COPY_LOCATION Src(from->get_native().Get(), 0);
@@ -1037,7 +1080,7 @@ void ComputeContext::dispach(int x,int y,int z)
 	FrameResources::UploadInfo FrameResources::place_data(std::uint64_t uploadBufferSize, unsigned int alignment)
 	{
 		std::lock_guard<std::mutex> g(m);
-		const size_t AlignedSize = uploadBufferSize;
+		const size_t AlignedSize =  Math::AlignUp(uploadBufferSize, alignment);
 		resource_offset = Math::AlignUp(resource_offset, alignment);
 
 		if (upload_resources.empty() || (resource_offset + uploadBufferSize > upload_resources.back()->get_size()))
@@ -1049,7 +1092,7 @@ void ComputeContext::dispach(int x,int y,int z)
 		UploadInfo info;
 		info.resource = upload_resources.back();
 		info.offset = resource_offset;
-		info.size = uploadBufferSize;
+		info.size = AlignedSize;
 		resource_offset += AlignedSize;
 		return info;
 	}
@@ -1069,86 +1112,27 @@ void ComputeContext::dispach(int x,int y,int z)
 	{
 		list->SetGraphicsRootConstantBufferView(i, info.resource->get_gpu_address() + info.offset);
 	}
-	void FrameResourceManager::begin_frame()
+
+	FrameResources::ptr FrameResourceManager::begin_frame()
 	{
-		std::lock_guard<std::mutex> g(m);
 
-		finalizer = std::make_shared < Finalizer>([this]() {
-			std::lock_guard<std::mutex> g(m);
-
-			frames.pop_front();
-			});
+		auto result = std::make_shared<FrameResources>();
 
 
-		frame_number++;
-		frames.emplace_back(new FrameResources);
-		current = frames.back().get();
-		frames.back()->frame_number = frame_number;
-	
+		result->frame_number = frame_number++;
+
+		return result;
 	}
 
-
-	void FrameResourceManager::propagate_frame(std::shared_ptr<CommandList> list)
+	Render::CommandList::ptr FrameResources::start_list(std::string name)
 	{
-		list->frame_resources = frames.back().get();
-
-		auto finalizer = this->finalizer;
-		list->on_execute_funcs.emplace_back([finalizer]()
-			{
-
-			});
-	}
-
-	std::shared_ptr<CommandList> FrameResourceManager::start_frame(std::shared_ptr<CommandList> list, std::string name)
-	{
-		std::lock_guard<std::mutex> g(m);
-		frame_number++;
-		frames.emplace_back(new FrameResources);
-		current = frames.back().get();
-		frames.back()->frame_number = frame_number;
-		//	auto list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
-		list->begin(name);
-		list->frame_resources = frames.back().get();
-		list->on_execute_funcs.emplace_back([this]()
-		{
-			end_frame();
-		});
-		return list;
-	}
-
-	std::shared_ptr<CommandList> FrameResourceManager::set_frame(std::shared_ptr<CommandList> list, std::string name)
-	{
-		std::lock_guard<std::mutex> g(m);
-		frame_number++;
-		frames.emplace_back(new FrameResources);
-		current = frames.back().get();
-		frames.back()->frame_number = frame_number;
-		//	auto list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
-	//	list->begin(name);
-		list->frame_resources = frames.back().get();
-		list->on_execute_funcs.emplace_back([this]()
-		{
-			end_frame();
-		});
-		return list;
-	}
-
-	std::shared_ptr<CommandList> FrameResourceManager::start_frame(std::string name)
-	{
-		std::lock_guard<std::mutex> g(m);
-		frame_number++;
-		frames.emplace_back(new FrameResources);
-		current = frames.back().get();
-		frames.back()->frame_number = frame_number;
 		auto list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
 		list->begin(name);
-		list->frame_resources = frames.back().get();
-		list->on_execute_funcs.emplace_back([this]()
-		{
-			end_frame();
-		});
+		list->frame_resources = shared_from_this();
 		return list;
 	}
+
+
 	void  ComputeContext::set_const_buffer(UINT i, const FrameResources::UploadInfo& info)
 	{
 		list->SetComputeRootConstantBufferView(i, info.resource->get_gpu_address() + info.offset);
@@ -1290,9 +1274,9 @@ void ComputeContext::dispach(int x,int y,int z)
 
 
 
-	TransitionCommandList::TransitionCommandList()
+	TransitionCommandList::TransitionCommandList(CommandListType type)
 	{
-		D3D12_COMMAND_LIST_TYPE t = D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT;
+		D3D12_COMMAND_LIST_TYPE t =static_cast<D3D12_COMMAND_LIST_TYPE>(type);
 
 		Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator));
 		Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList));

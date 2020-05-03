@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		CB cb;
 		Color(): DataHolder(cb){}
+		Color(const Color&other): DataHolder(cb){cb = other.cb;}
 	};
 }

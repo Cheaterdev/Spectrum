@@ -559,7 +559,7 @@ namespace GUI
             std::vector<std::function<void()>> tasks;
             drag_n_drop drag;
 
-            std::mutex m;
+          
 
             std::array<bool, 3> press_interpret;
             std::array<bool, 3> release_interpret;
@@ -571,7 +571,7 @@ namespace GUI
         public:
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
-
+            std::mutex m;
 
             std::function<void(bool)> set_capture;
             user_interface();
@@ -600,7 +600,7 @@ namespace GUI
 
             void process_graph(FrameGraph & graph)
             {
-				std::lock_guard<std::mutex> g(m);
+//				std::lock_guard<std::mutex> g(m);
 
                 auto f = [&](base* elem) {
 					  auto frame_gen = dynamic_cast<FrameGraphGenerator*>(elem);

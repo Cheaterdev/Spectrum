@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		SRV srv;
 		FontRendering(): DataHolder(srv){}
+		FontRendering(const FontRendering&other): DataHolder(srv){srv = other.srv;}
 	};
 }

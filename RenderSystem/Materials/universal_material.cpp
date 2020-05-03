@@ -5,9 +5,9 @@
 
 BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
 
-std::vector<std::byte> generate_data(std::vector<Uniform::ptr>& un)
+DynamicData generate_data(std::vector<Uniform::ptr>& un)
 {
-	std::vector<std::byte> data;
+	DynamicData data;
 
 	int offset = 0;
 
@@ -160,16 +160,7 @@ void materials::universal_material::set(MESH_TYPE type, MeshRenderContext::ptr& 
 	context->pipeline.domain = pass->ds_shader;
 	context->pipeline.hull = pass->hs_shader;
 
-	Slots::MaterialInfo info;
-
-	info.cb = pixel_buffer->get_gpu_address();
-
-
-//	if (tess_buffer)
-	//	context->set_material_tess_buffer(tess_buffer);
-
-//	if (pixel_buffer)
-//		context->set_material_const_buffer(pixel_buffer);
+	material_info.set(context->list->get_graphics());
 
 	if (pass->ds_shader)
 	{
@@ -183,18 +174,8 @@ void materials::universal_material::set(MESH_TYPE type, MeshRenderContext::ptr& 
 		context->list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	}
 
-	if (textures.size())
-	{
 
-		info.GetTextures() = texture_handles;
-	//	info.GetTextures().clear();
-//		context->set_material_textures(texture_handles);
 
-//		if (uav_handles.valid())
-//			context->set_material_unordered(uav_handles);
-	}
-
-	info.set(context->list->get_graphics());
 }
 
 void materials::universal_material::update(MeshRenderContext::ptr& c)
@@ -211,15 +192,15 @@ void materials::universal_material::update(MeshRenderContext::ptr& c)
 
 	auto generate = [this, c](Render::GPUBuffer::ptr & buffer, std::vector<Uniform::ptr>& un)
 	{
-		std::vector<std::byte> data = generate_data(un);
-
+		pixel_data = generate_data(un);
+	
 	
 
-		if (data.empty())
+		if (pixel_data.empty())
 			return;
 
 //		data.resize(Math::AlignUp(data.size(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), std::byte{ 0 });
-		buffer->set_data(c->list, data);
+		buffer->set_data(c->list, pixel_data);
 	};
 	generate(pixel_buffer, ps_uniforms);
 //	generate(tess_buffer, tess_uniforms);
@@ -231,7 +212,7 @@ void materials::universal_material::update(MeshRenderContext::ptr& c)
  void materials::universal_material::place_textures(std::vector<Render::Handle>& handles)
 {
 	//  for(auto &t:textures)
-	handles.insert(handles.end(), texture_handles.begin(), texture_handles.end());
+//	handles.insert(handles.end(), material_info.GetTextures().begin(), material_info.GetTextures().end());
 }
  size_t  materials::universal_material::get_id()
  {
@@ -248,9 +229,13 @@ void materials::universal_material::compile()
 {
 	start_changing_contents();
 	handlers.clear();
-	texture_handles.resize(textures.size());
+//	material_info.GetTextures().resize(textures.size());
 	texture_table = Render::DescriptorHeapManager::get().get_csu_static()->create_table(textures.size());
 
+	textures_handle.Free();
+	textures_handle = universal_material_manager::get().textures_allocator.Allocate(textures.size());
+	textures_srvs = universal_material_manager::get().textures_data.data() + textures_handle.aligned_offset;
+	material_info.GetTextureOffset() = textures_handle.aligned_offset;
 
 	for (unsigned int i = 0; i < textures.size(); i++)
 	{
@@ -275,10 +260,7 @@ void materials::universal_material::compile()
 
 			//		func(texture_handles[i]);
 			func(texture_table[i]);
-			texture_handles[i] = texture_table[i];
-			//	texture_handles[i] = tex->get_texture()->texture_2d()->srv;//place_srv(texture_handles[texture_count++]);
-				//texture_table[i].place(texture_handles[i]);
-
+			textures_srvs[i] = texture_table[i];
 		});
 
 		else
@@ -287,7 +269,7 @@ void materials::universal_material::compile()
 			auto asset = EngineAssets::missing_texture.get_asset();
 			auto func = asset->get_texture()->texture_2d()->srv();
 			func(texture_table[i]);
-			texture_handles[i] = asset->get_texture()->texture_2d()->get_static_srv();// texture_table[i];
+			textures_srvs[i] = asset->get_texture()->texture_2d()->get_static_srv();// texture_table[i];
 		}
 		//	textures.push_back(t);
 
@@ -360,7 +342,7 @@ void materials::universal_material::compile()
 
 	auto generate = [this](std::vector<Uniform::ptr>& un)->Render::GPUBuffer::ptr
 	{
-		std::vector<std::byte> data = generate_data(un);
+		pixel_data = generate_data(un);
 
 		for (auto u : un)
 		{
@@ -371,15 +353,15 @@ void materials::universal_material::compile()
 			});
 		}
 
-		if (data.empty())
+		if (pixel_data.empty())
 			return nullptr;
 
 
 
 	//	data.resize(Math::AlignUp(data.size(), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), std::byte{ 0 });
 
-		Render::GPUBuffer::ptr buff(new Render::GPUBuffer(data.size()));
-		buff->set_raw_data(data);
+		Render::GPUBuffer::ptr buff(new Render::GPUBuffer(pixel_data.size()));
+		buff->set_raw_data(pixel_data);
 		return buff;
 	};
 
@@ -389,9 +371,13 @@ void materials::universal_material::compile()
 
   
 	pixel_buffer = generate(ps_uniforms);
+	pixel_buffer->debug = true;
 //	tess_buffer = generate(tess_uniforms);
 
 	pixel_buffer->set_name("material::pixel_buffer");
+
+	material_info.GetData() = pixel_data;
+
 	end_changing_contents();
 
 //	textures.clear();

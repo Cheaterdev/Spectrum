@@ -66,28 +66,7 @@ SimpleMesh::SimpleMesh(mesh_data data) : vertexs(data.vertex_data), indices(data
     //  v_shader_instanced = DX11::vertex_shader::get_resource({ "triangle.hlsl", "VS_instanced", 0, {} });
 }
 
-void SimpleMesh::draw(MeshRenderContext::ptr context, unsigned int index)
-{
-    context->use_material(material_index, context);//[material_index]->set(context);
-    context->transformer->set(context, vertex_types::simple);
-    context->list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    vertexs.set(context);
-    indices.set(context);
-    auto& mesh = mesh_desc.index_data.meshes[index];
-    context->draw_indexed(mesh.size, mesh.offset, mesh.vertex_offset);
-}
 
-void SimpleMesh::draw_instanced(MeshRenderContext::ptr context, unsigned int index, unsigned int count)
-{
-    /*	context.materials[material_index]->set(context);
-    	context.transformer->set(context, vertex_types::instanced);
-        context.dx_context.set_topology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    	vertexs.set(context.dx_context, context.dx_context.get_vertex_shader());
-      //  context.dx_context.set(v_shader_instanced);
-        indices.set(context.dx_context);
-        auto &mesh = mesh_desc.index_data.meshes[index];
-        context.dx_context.draw_indexed_instanced(mesh.size, mesh.offset, mesh.vertex_offset, count, 0);*/
-}
 /*
 Mesh::Mesh(meshes_type data, std::vector<MaterialAsset::ptr> materials) : Mesh()
 {
@@ -104,20 +83,6 @@ bool Mesh::init_default_loaders()
 }
 */
 //////////////////////////////////////////////////////////////////////////
-
-void mesh_node::draw(MeshRenderContext::ptr context)
-{
-    mesh->set(context);
-
-    for (auto& mesh : meshes)
-    {
-        //assert(const_buffer != nullptr);
-        // context->set_mesh_const_buffer(const_buffer);
-        //  context->set_mesh_const_buffer(global_transform);
-//        context.dx_context.get_shader_state<DX11::vertex_shader>().const_buffer_state[1] = const_buffer;              HERE
-        mesh->draw(context, 0);
-    }
-}
 
 mesh_node::mesh_node(std::shared_ptr<node_object> node, material_holder* mesh)
 {

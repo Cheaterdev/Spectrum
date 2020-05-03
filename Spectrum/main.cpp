@@ -830,7 +830,7 @@ public:
 
 };
 */
-
+/*
 template <class T>
 struct RaytracingDesc : public T
 {
@@ -854,7 +854,7 @@ struct RaytracingDesc : public T
 };
 
 using RaytracingSignature = SignatureTypes <RaytracingDesc>;
-
+*/
 
 
 
@@ -865,13 +865,13 @@ const wchar_t* c_closestHitShaderName = L"MyClosestHitShader";
 const wchar_t* c_missShaderName = L"MyMissShader";
 
 
-
-
 struct RayGenConstantBuffer
 {
 	UINT texture_offset;
 	UINT node_offset;
 };
+
+/*
 
 template <class T>
 struct RaytracingLocalDesc : public T
@@ -883,7 +883,7 @@ struct RaytracingLocalDesc : public T
 };
 
 using RaytracingLocalSignature = SignatureTypes <RaytracingLocalDesc>;
-
+*/
 
 
 using shader_identifier = std::array<std::byte, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
@@ -926,8 +926,8 @@ struct RayTracingShaders : public Events::prop_handler,
 	ComPtr<ID3D12StateObject> m_GlobalCollection;
 
 
-	RaytracingSignature::RootSignature::ptr signature;
-	RaytracingLocalSignature::RootSignature::ptr signature_local;
+	//RaytracingSignature::RootSignature::ptr signature;
+	//RaytracingLocalSignature::RootSignature::ptr signature_local;
 
 	std::string blob;
 
@@ -987,7 +987,7 @@ struct RayTracingShaders : public Events::prop_handler,
 	{
 
 		auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-		globalRootSignature->SetRootSignature(signature->get_native().Get());
+		globalRootSignature->SetRootSignature(get_Signature(Layouts::DefaultLayout)->get_native().Get());
 
 		auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
 		pipelineConfig->Config(8);
@@ -1041,8 +1041,8 @@ struct RayTracingShaders : public Events::prop_handler,
 		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_COLLECTION};
 
 
-		auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
-		localRootSignature->SetRootSignature(signature_local->get_native().Get());
+	auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
+		localRootSignature->SetRootSignature(get_Signature(Layouts::DefaultLayout)->get_native().Get());
 
 		// Shader association
 		auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
@@ -1133,15 +1133,6 @@ struct RayTracingShaders : public Events::prop_handler,
 	}
 	RayTracingShaders()
 	{
-		signature = RaytracingSignature::create_typed_root();
-		signature->set_unfixed(5);
-		signature->set_unfixed(6);
-	//	signature->set_unfixed(7);
-
-		signature_local = RaytracingLocalSignature::create_typed_root(true);
-
-
-
 		blob = *D3D12ShaderCompilerInfo::get().Compile_Shader(FileSystem::get().get_file("raytracing.hlsl")->load_all(), {});
 		//	CreateRaytracingPipelineStateObject(blobs);
 
@@ -1184,7 +1175,7 @@ struct RayTracingShaders : public Events::prop_handler,
 		};
 
 
-
+		/*
 		auto& shader_data = _list->get_compute().set_signature_typed<RaytracingSignature>(signature);
 
 		shader_data.target[0] = texture->texture_2d()->get_uav();
@@ -1196,6 +1187,8 @@ struct RayTracingShaders : public Events::prop_handler,
 		shader_data.vertex_buffers = buffersVertex;
 		shader_data.index_buffers = buffersIndex;
 	//	shader_data.material_textures = textures;
+
+	*/
 		//shader_data.mat_const = materials[0]->get_pixel_buffer();
 		_list->get_compute().flush_binds(true);
 
@@ -1211,9 +1204,9 @@ struct RayTracingShaders : public Events::prop_handler,
 
 
 
-			if (materials[i]->get_texture_handles().empty())
-				hitGroupShaderIdentifiers[2 * i].gpu.ptr = 0;
-			else hitGroupShaderIdentifiers[2 * i].gpu = _list->srv_descriptors.place(materials[i]->get_texture_srvs()).gpu;
+//			if (materials[i]->get_texture_handles().empty())
+		//		hitGroupShaderIdentifiers[2 * i].gpu.ptr = 0;
+		//	else hitGroupShaderIdentifiers[2 * i].gpu = _list->srv_descriptors.place(materials[i]->get_texture_srvs()).gpu;
 		}
 		// Bind the heaps, acceleration structure and dispatch rays.
 		D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
@@ -1275,8 +1268,9 @@ public:
 	int visible_count;
 	debug_drawer drawer;
 	mesh_renderer::ptr meshes_renderer;
-	gpu_cached_renderer::ptr gpu_meshes_renderer_static;
-	gpu_cached_renderer::ptr gpu_meshes_renderer_dynamic;
+
+//	gpu_cached_renderer::ptr gpu_meshes_renderer_static;
+//	gpu_cached_renderer::ptr gpu_meshes_renderer_dynamic;
 
 	Scene::ptr scene;
 	Render::QueryHeap::ptr query_heap;
@@ -1293,7 +1287,7 @@ public:
 
 
 	// Build acceleration structures needed for raytracing.
-	void BuildAccelerationStructures()
+	/*void BuildAccelerationStructures()
 	{
 
 		std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
@@ -1357,7 +1351,7 @@ public:
 		shaders.CreateGlobalCollection();
 		shaders.CreateRaytracingPipelineStateObject();
 		//	shaders = std::make_shared<RayTracingShaders>(blobs);
-	}
+	}*/
 
 	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
 	PSSM pssm;
@@ -1974,7 +1968,7 @@ public:
 				}, [this](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
-				
+					universal_nodes_manager::get().prepare(command_list);
 					//std::this_thread::sleep_for(1ms);
 				//	gpu_scene_renderer->render(context_gbuffer, scene);
 					MeshRenderContext::ptr context(new MeshRenderContext());
@@ -2023,8 +2017,8 @@ public:
 		sky.generate(graph);
 
 		stenciler->generate_after(graph);
-
-		/*graph.add_pass<pass_data>("RAYTRACE",[](pass_data& data, TaskBuilder& builder) {
+		/*
+		graph.add_pass<pass_data>("RAYTRACE",[](pass_data& data, TaskBuilder& builder) {
 		//	data.o_texture = builder.read_texture("swapchain");
 
 			}, [this](pass_data& data, FrameContext& _context) {
@@ -2055,8 +2049,8 @@ public:
 
 				shaders.render(context, texture.texture, scene_as);
 			});
-			
 			*/
+			
 	
 	}
 
@@ -2912,6 +2906,7 @@ class FrameGraphRender : public Window, public GUI::user_interface
 	mouse::ptr pMouse;
 
 
+	size_t graph_usage = 0;
 
 public:
 	void on_destroy() override
@@ -2921,13 +2916,29 @@ public:
 
 	virtual	void render()
 	{
-	//	auto& timer = Profiler::get().start(L"render");
+		std::lock_guard<std::mutex> g(m);
+
 		Profiler::get().on_frame(frame_counter++);
 
 		GUI::user_interface::size = new_size;
 	if (fps.tick())
 		{
-			label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram());
+		size_t total = 0;
+
+		total += DescriptorHeapManager::get().cpu_dsv->used_size();
+		total += DescriptorHeapManager::get().cpu_srv->used_size();
+		total += DescriptorHeapManager::get().cpu_rtv->used_size();
+		total += DescriptorHeapManager::get().cpu_smp->used_size();
+
+
+		size_t total_gpu = 0;
+
+		total_gpu += DescriptorHeapManager::get().gpu_srv->used_size();
+
+		total_gpu += DescriptorHeapManager::get().gpu_smp->used_size();
+
+
+			label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 		}
 
 		
@@ -2939,13 +2950,13 @@ public:
 		setup_graph();
 		graph.render();
 
-		swap_chain->present(Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal());
 		{
 
 			auto& timer = Profiler::get().start(L"reset");
 
 			graph.reset();
 		}
+		swap_chain->present(Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal());
 
 
 	
@@ -2955,6 +2966,7 @@ public:
 		{
 			auto ptr = get_ptr();
 			task_future = scheduler::get().enqueue([ptr, this]() {
+		
 				render();
 				}, std::chrono::steady_clock::now());
 		}
@@ -3002,6 +3014,19 @@ public:
 		graph.setup();
 		graph.compile(swap_chain->m_frameIndex);
 
+		graph_usage = 0;
+		graph_usage += graph.builder.allocator.heap_rtv.get_max_usage();
+		graph_usage += graph.builder.allocator.heap_uav.get_max_usage();
+		graph_usage += graph.builder.allocator.heap_srv.get_max_usage();
+
+		for (auto& e : graph.builder.allocator.frames)
+		{
+			graph_usage += e.heap_readback.get_max_usage();
+			graph_usage += e.heap_upload_buffer.get_max_usage();
+			graph_usage += e.heap_upload_texture.get_max_usage();
+
+		}
+		graph_usage /= (1024 * 1024);
 	}
 
 	FrameGraphRender()

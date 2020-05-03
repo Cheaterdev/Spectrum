@@ -10,13 +10,6 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
         camera cam;
         camera axis_intersect_cam;
 
-    //    std::vector<std::pair<MeshAssetInstance::ptr, int>> all[2];
-    
-
-    //    Render::Texture::ptr depth_tex;
-
-   //     RenderTargetTable render_color_table;
-
 
         /////////////////////////////
         Render::PipelineState::ptr  last_render_state;
@@ -26,6 +19,8 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
         MeshAssetInstance::ptr axis;
         PlacedAllocator allocator;
         camera axis_cam;
+
+
 
         //  bool need_update = false;
         int selected_axis = -1;
@@ -61,8 +56,9 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
     public:
 		virtual void generate(FrameGraph& graph) override;
 		void generate_after(FrameGraph& graph);
+		Scene::ptr debug_scene;
 
-        scene_object::ptr scene;
+        Scene::ptr scene;
         camera* player_cam;
 
         using ptr = s_ptr<stencil_renderer>;

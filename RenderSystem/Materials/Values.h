@@ -10,7 +10,7 @@ namespace ShaderParams
 
 
 
-struct ShaderParamType:public FlowGraph::parameter_type
+struct ShaderParamType:public ::FlowGraph::parameter_type
 {
 	 int M;
      int N;
@@ -34,7 +34,7 @@ struct ShaderParamType:public FlowGraph::parameter_type
     {
         
     }
-
+    virtual ~ShaderParamType() = default;
     bool operator==(const ShaderParamType& t) const
     {
         return M == t.M && N == t.N;
@@ -50,8 +50,10 @@ private:
 	template<class Archive>
 	void serialize(Archive& ar, const unsigned int)
 	{
+        ar& NVP(boost::serialization::base_object<::FlowGraph::parameter_type>(*this));
 		ar& NVP(M);
 		ar& NVP(N);
+        ar& NVP(name);
 	}
 };
 

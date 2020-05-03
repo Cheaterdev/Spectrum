@@ -19,6 +19,7 @@ namespace DX12
 		UINT64 completed_value;
 
 
+		std::queue<std::shared_ptr<TransitionCommandList>> transition_lists;
 
 		std::queue<std::shared_ptr<CommandList>> lists;
 		std::mutex list_mutex;

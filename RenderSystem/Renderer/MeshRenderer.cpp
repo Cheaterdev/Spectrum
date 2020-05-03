@@ -1,6 +1,6 @@
 #include "pch.h"
 
-void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_object::ptr obj)
+void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
 	// return;
 	auto& graphics = mesh_render_context->list->get_graphics();
@@ -64,12 +64,18 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 	}
 
 
+	{
+		Slots::SceneData sceneData;
+		sceneData.GetNodes() = universal_nodes_manager::get().mesh_nodes->get_srv()[0];
+		sceneData.GetMaterial_textures() = materials::universal_material_manager::get().textures_data;
+
+		sceneData.set(graphics);
+	}
+
+
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//GPUMeshSignature<Signature> signature(&graphics);
 
-
-
-	using render_list = std::map<size_t, std::vector<MeshAssetInstance::render_info>>;
+	using render_list = std::map<size_t, std::vector<const MeshAssetInstance::render_info*>>;
 
 
 	bool first = true;
@@ -91,16 +97,16 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 			for (size_t i = offset; i < offset + count; i++)
 			{
 				auto& e = l->rendering[i];
-				auto& node = l->nodes[e.node_index];
+			//	auto& node = l->nodes[e.node_index];
 
 				if (!current_cpu_culling)
-					result[l->overrided_material[e.mesh->material]->get_pipeline_id()].push_back({ e.mesh, e.node_index, false });
+					result[e.material->get_pipeline_id()].push_back(&e);
 				else
 				{
 					auto in = intersect(*mesh_render_context->cam, e.primitive_global.get());
 
 					if (in)
-						result[l->overrided_material[e.mesh->material]->get_pipeline_id()].push_back({ e.mesh, e.node_index ,   in == INTERSECT_TYPE::IN_NEAR });
+						result[e.material->get_pipeline_id()].push_back(&e);
 				}
 			}
 
@@ -125,7 +131,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 
 			for (auto& r : results)
 			{
-				auto& res = r.get();
+				auto res = r.get();
 
 				for (auto& e : res)
 				{
@@ -135,17 +141,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 			}
 		}
 
-		auto nodes = l->node_buffer.get_for(*list.get_manager());
-
-		auto buffer_view = nodes.resource->create_view<StructuredBufferView<MeshAssetInstance::node_data>>(*list.frame_resources, nodes.offset, nodes.size);
-
-		{
-
-			Slots::MeshData data;
-			data.GetNodes() = buffer_view.get_srv();
-			data.GetVb() = l->mesh_asset->vertex_buffer->get_srv()[0];
-			data.set(graphics);
-		}
+		l->mesh_render_data.set(graphics);
 		graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 
 		if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
@@ -158,19 +154,11 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 		{
 			for (auto& m : p.second)
 			{
-			//	if (!mesh_render_context->override_material)
-					l->use_material(m.mesh->material, mesh_render_context);
+				if (!mesh_render_context->override_material)
+					m->material->set(MESH_TYPE::ALL, mesh_render_context);
 
-
-				{
-					Slots::MeshInfo info;
-
-					info.GetNode_offset() = m.node_index;
-					info.GetTexture_offset() = 0;
-					info.GetVertex_offset() = m.mesh->vertex_offset;
-					info.set(graphics);
-				}
-				mesh_render_context->draw_indexed(m.mesh->index_count, m.mesh->index_offset, 0);
+				m->mesh_info.set(graphics);
+				mesh_render_context->draw_indexed(m->index_count, m->index_offset, 0);
 			}
 		}
 	};
@@ -182,9 +170,6 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 		{
 			if (instance->is_inside(*mesh_render_context->cam))
 				mesh_func(instance);
-			/*auto in = intersect(*mesh_render_context->cam, instance->primitive.get(), instance->global_transform);
-			if (in)
-				mesh_func(instance);*/
 		}
 	}
 
@@ -194,15 +179,11 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 		{
 			if (instance->is_inside(*mesh_render_context->cam))
 				mesh_func(instance);
-
-			/*		auto in = intersect(*mesh_render_context->cam, instance->primitive.get(), instance->global_transform);
-					if (in)
-						mesh_func(instance);*/
 		}
 	}
 
 	if (!static_objects.size() && !dynamic_objects.size())
-		obj->iterate([&](scene_object* node)
+		scene->iterate([&](scene_object* node)
 			{
 				Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
 
@@ -215,12 +196,6 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 
 					if (instance->is_inside(*mesh_render_context->cam))
 						mesh_func(instance);
-
-
-					/*	auto in = intersect(*mesh_render_context->cam, instance->primitive.get(), instance->global_transform);
-
-						if (in)
-							mesh_func(instance);*/
 				}
 
 				return true;
@@ -228,21 +203,21 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_obj
 
 	graphics.use_dynamic = true;
 }
-void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)
+void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(Scene::ptr&)> f)
 {
 
 
 	if (mesh_type & MESH_TYPE::STATIC)
 		for (auto& instance : static_objects)
-			f(instance->get_ptr<scene_object>());
+			f(instance->get_ptr<Scene>());
 
 	if (mesh_type & MESH_TYPE::DYNAMIC)
 		for (auto& instance : dynamic_objects)
-			f(instance->get_ptr<scene_object>());
+			f(instance->get_ptr<Scene>());
 }
 mesh_renderer::mesh_renderer(Scene::ptr scene)
 {
-	this->scene = scene;
+//	this->scene = scene;
 	if (scene) {
 		scene->on_element_add.register_handler(this, [this](scene_object* object) {
 
@@ -272,31 +247,10 @@ mesh_renderer::mesh_renderer(Scene::ptr scene)
 
 			});
 	}
+
+
 	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
-	/*Render::RootSignatureDesc root_desc;
-	root_desc[0] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::PIXEL); // material constants
-	root_desc[1] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::DOMAIN); // material constants
-	root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 32); // material textures
-	root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 8); // material virtual texture
-	root_desc[4] = Render::DescriptorSRV(0, Render::ShaderVisibility::VERTEX, 1); //vertex buffer
-	root_desc[5] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::VERTEX); // vertex node data
-	root_desc[6] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL); // camera
-	root_desc[7] = Render::DescriptorSRV(2, Render::ShaderVisibility::VERTEX, 1); // instance data
-	root_desc[8] = Render::DescriptorConstants(2, 2, Render::ShaderVisibility::ALL); // material offsets
-	root_desc[9] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 3, 1); //for voxels
-	root_desc[10] = Render::DescriptorConstBuffer(3, Render::ShaderVisibility::GEOMETRY); // voxel scale info
-	root_desc[11] = Render::DescriptorConstBuffer(3, Render::ShaderVisibility::PIXEL); // voxel scale info
-	root_desc[12] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 1, 1); //best fit normals
-	root_desc[13] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 1, 2); //best fit normals
-	root_desc[14] = Render::DescriptorSRV(1, Render::ShaderVisibility::VERTEX, 1); // instance data
-	// root_desc[8] = Render::DescriptorSRV(1, Render::ShaderVisibility::VERTEX, 1); // node buffer
-	//  root_desc[8] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 1, 1); // Occlusion visible buffer
-	root_desc.set_sampler(0, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerLinearWrapDesc);
-	root_desc.set_sampler(1, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerPointClampDesc);
-	root_desc.set_sampler(2, 0, Render::ShaderVisibility::ALL, Render::Samplers::SamplerAnisoWrapDesc);*/
-	//my_signature = GPUMeshSignature<SignatureCreator>().create_root();// .reset(new Render::RootSignature(root_desc));
-	//my_signature->set_unfixed(2);
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 }

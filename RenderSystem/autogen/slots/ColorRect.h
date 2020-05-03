@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		CB cb;
 		ColorRect(): DataHolder(cb){}
+		ColorRect(const ColorRect&other): DataHolder(cb){cb = other.cb;}
 	};
 }

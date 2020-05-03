@@ -1,20 +1,19 @@
 #pragma once
-#include "mesh_vertex_input.h"
 #include "node_data.h"
 namespace Table 
 {
-	struct MeshNodes
+	struct SceneData
 	{
 		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle vb;
 			Render::Handle nodes;
 		} &srv;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Handle& GetVb() { return srv.vb; }
+		Render::Bindless& bindless;
 		Render::Handle& GetNodes() { return srv.nodes; }
-		MeshNodes(SRV&srv) :srv(srv){}
+		Render::Bindless& GetMaterial_textures() { return bindless; }
+		SceneData(SRV&srv,Render::Bindless &bindless) :srv(srv),bindless(bindless){}
 	};
 }

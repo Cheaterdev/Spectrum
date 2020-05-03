@@ -6,5 +6,6 @@ namespace Slots {
 		CB cb;
 		Render::Bindless bindless;
 		Test(): DataHolder(cb,bindless){}
+		Test(const Test&other): DataHolder(cb,bindless){cb = other.cb;}
 	};
 }

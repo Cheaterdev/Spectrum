@@ -7,5 +7,6 @@ namespace Slots {
 		SRV srv;
 		UAV uav;
 		MipMapping(): DataHolder(cb,srv,uav){}
+		MipMapping(const MipMapping&other): DataHolder(cb,srv,uav){cb = other.cb;srv = other.srv;uav = other.uav;}
 	};
 }

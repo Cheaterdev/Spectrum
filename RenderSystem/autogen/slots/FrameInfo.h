@@ -6,5 +6,6 @@ namespace Slots {
 		CB cb;
 		SRV srv;
 		FrameInfo(): DataHolder(cb,srv){}
+		FrameInfo(const FrameInfo&other): DataHolder(cb,srv){cb = other.cb;srv = other.srv;}
 	};
 }

@@ -94,7 +94,7 @@ class MeshData: public loader<MeshData, std::string, AssetLoadingContext::ptr>//
         static bool init_default_loaders();
 		virtual void calculate_size();
 };
-
+class MeshAssetInstance;
 class MeshAsset : public Asset
 {
         LEAK_TEST(MeshAsset)
@@ -108,17 +108,15 @@ class MeshAsset : public Asset
 
         using ptr = s_ptr<MeshAsset>;
         using ref = AssetReference<MeshAsset>;
-
 	
         Render::StructuredBuffer<Vertex>::ptr vertex_buffer;
         Render::IndexBuffer::ptr index_buffer;
+
         std::vector<MeshInfo> meshes;
         std::vector<MaterialAsset::ref> materials;
 
-        //   meshes_type meshes;
         std::shared_ptr<Primitive> primitive;
         mat4x4 local_transform;
-        //mat4x4 mesh_transform;
         MeshNode root_node;
         std::vector<MeshNode*> nodes;
 
@@ -131,7 +129,7 @@ class MeshAsset : public Asset
         {
             materials.clear();
         }
-
+        std::shared_ptr<MeshAssetInstance> create_instance();
         virtual void try_register();
 
         virtual Asset_Type get_type();
@@ -163,6 +161,7 @@ class MeshAsset : public Asset
 
 };
 
+
 class MeshAssetInstance : public scene_object, public material_holder, public AssetHolder, public MaterialProvider, public Render::renderable
 {
         friend class mesh_renderer;
@@ -184,7 +183,8 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 
 		std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
-
+		CommonAllocator::Handle nodes_handle;
+      
     public:
 		MESH_TYPE type= MESH_TYPE::STATIC;
 		MeshAsset::ref mesh_asset;
@@ -198,8 +198,8 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 				inv.inverse();
             }
 			node_data() = default;
-        };
-
+        }; 
+    //    node_data* nodes_ptr = nullptr;
 		struct mesh_asset_node
 		{
 			MeshNode* asset_node;
@@ -210,18 +210,23 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 			}
 		};
 
-        Render::FrameStorage<node_data> node_buffer;
+     //  std::vector<node_data> node_buffer;
+
+        Slots::MeshData mesh_render_data;
         struct render_info
         {
-            MeshInfo* mesh;
-            unsigned int node_index;
-			unsigned int global_index;
-			unsigned int node_global_index;
-			size_t pipeline_id;
-            bool inside;
-			MeshAssetInstance * owner;
-			std::shared_ptr<Primitive> primitive_global;
+  
+			std::shared_ptr<Primitive> primitive;
+            std::shared_ptr<Primitive> primitive_global;
+            Slots::MeshInfo mesh_info;
+            UINT index_count;
+            UINT index_offset;
+            UINT material_id;
+            MaterialAsset* material;
+
+
         };
+
         std::vector<render_info> rendering;
         std::vector<mesh_asset_node> nodes;
 		std::vector<int> nodes_indexes;
@@ -238,46 +243,15 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
         virtual ~MeshAssetInstance();
         MeshAssetInstance(MeshAsset::ptr asset);
         void draw(MeshRenderContext::ptr context);
-        void override_material(size_t i, MaterialAsset::ptr mat)
-        {
-            overrided_material[i] = register_asset(mat);
 
-			if (scene)
-				scene->on_changed(this);
-        }
+        void override_material(size_t i, MaterialAsset::ptr mat);
 
-		size_t register_material(MaterialAsset::ptr mat)
-		{
-			overrided_material.push_back( register_asset(mat));
-
-			if (scene)
-				scene->on_changed(this);
-
-			return overrided_material.size() - 1;
-		}
-
-		virtual void on_asset_change(Asset::ptr asset)
-		{
-			if (asset->get_type() == Asset_Type::MATERIAL)
-			{
-
-				std::vector<MaterialAsset::ptr> changed;
-				changed.reserve(overrided_material.size());
-
-				auto material = asset->get_ptr<MaterialAsset>();
-				for (auto&ref : overrided_material)
-				{
-
-					if (ref->get_ptr<MaterialAsset>() == material)
-						changed.push_back(material);
-					else
-						changed.push_back(nullptr);
-				}
-			}
-			if (scene)
-				scene->on_changed(this);
-		}
+		virtual void on_asset_change(Asset::ptr asset);
       
+	
+    virtual void on_add(scene_object * parent) override;
+
+	virtual void on_remove() override;
 	virtual	bool update_transforms()override;
     private:
         void debug_draw(debug_drawer& drawer) override
@@ -302,6 +276,52 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
         void serialize(Archive& ar, const unsigned int);
 
 };
+
+
+class universal_nodes_manager :public Singleton<universal_nodes_manager>
+{
+    std::mutex m;
+    CommonAllocator nodes_allocator;
+
+public:
+	Render::StructuredBuffer<MeshAssetInstance::node_data>::ptr mesh_nodes;
+
+
+	std::vector<MeshAssetInstance::node_data> nodes_data;
+
+    Allocator::Handle allocate(UINT n)
+    {
+        std::lock_guard<std::mutex> g(m);
+
+
+        return nodes_allocator.Allocate(n);
+    }
+
+
+    void free(Allocator::Handle &h)
+    {
+		std::lock_guard<std::mutex> g(m);
+
+        nodes_allocator.Free(h);
+    }
+	void prepare(CommandList::ptr list)
+    {
+        std::lock_guard<std::mutex> g(m);
+		mesh_nodes->set_data(list, 0, nodes_data);
+	}
+    universal_nodes_manager():nodes_allocator(1024)
+	{
+        nodes_data.resize(1024);
+		mesh_nodes = std::make_shared<Render::StructuredBuffer<MeshAssetInstance::node_data>>(1024);
+
+    }
+};
+
+
+
+
+
+
 //BOOST_CLASS_TRACKING(material_holder, boost::serialization::track_never);
 BOOST_CLASS_EXPORT_KEY(MeshAssetInstance);
 BOOST_CLASS_EXPORT_KEY(MeshAsset);

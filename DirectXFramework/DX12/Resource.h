@@ -344,6 +344,11 @@ namespace DX12
 			return desc.Width;
 		}
 
+		ptr get_ptr()
+		{
+			return shared_from_this();
+		}
+
 		template<class T, class ...Args>
 		typename T create_view(FrameResources& frame, Args ...args)
 		{
@@ -368,6 +373,7 @@ namespace DX12
 
 	class PlacedAllocator
 	{
+	public:
 		ResourceHeapAllocator<CommonAllocator> heap_srv;
 		ResourceHeapAllocator<CommonAllocator> heap_rtv;
 		ResourceHeapAllocator<CommonAllocator> heap_uav;
@@ -390,12 +396,12 @@ namespace DX12
 		FrameHeaps* current_frame;
 		HeapType get_type();
 
-	public:
+	
 		PlacedAllocator();
 
-		CommonAllocator::Handle allocate_resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type);
-		Resource::ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, CommonAllocator::Handle handle, ResourceState state, vec4 clear_value);
-		Resource::ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type, ResourceState state, vec4 clear_value);
+		CommonAllocator::Handle allocate_resource( CD3DX12_RESOURCE_DESC& desc, HeapType heap_type);
+		Resource::ptr create_resource( CD3DX12_RESOURCE_DESC& desc, CommonAllocator::Handle handle, ResourceState state, vec4 clear_value);
+		Resource::ptr create_resource( CD3DX12_RESOURCE_DESC& desc, HeapType heap_type, ResourceState state, vec4 clear_value);
 
 		void begin_frame(int i)
 		{
@@ -475,6 +481,7 @@ namespace DX12
 		Handle uav;
 		Handle rtv;
 		Handle dsv;
+		Handle cb;
 
 	protected:
 		ResourceViewDesc view_desc;
@@ -537,11 +544,14 @@ namespace DX12
 		virtual void place_uav(Handle& h) { assert(false); }
 		virtual void place_rtv(Handle& h) { assert(false); }
 		virtual void place_dsv(Handle& h) { assert(false); }
+		virtual void place_cb(Handle& h) { assert(false); }
+
 
 		Handle get_srv() { return srv; }
 		Handle get_uav() { return uav; }
 		Handle get_rtv() { return rtv; }
 		Handle get_dsv() { return dsv; }
+		Handle get_cb() { return cb; }
 
 		operator bool() const
 		{
@@ -572,6 +582,8 @@ namespace DX12
 		virtual void place_uav(Handle& h)  override;
 		virtual void place_rtv(Handle& h)  override;
 		virtual void place_dsv(Handle& h)  override;
+		virtual void place_cb(Handle& h) { assert(false); }
+
 
 		ivec3 get_size()
 		{
@@ -640,7 +652,7 @@ namespace DX12
 		virtual void place_uav(Handle& h) { assert(false); }
 		virtual void place_rtv(Handle& h) { assert(false); }
 		virtual void place_dsv(Handle& h) { assert(false); }
-
+		virtual void place_cb(Handle& h)override;
 		template<class T>
 		void write(UINT64 offset, T* data, UINT64 count)
 		{
@@ -696,12 +708,23 @@ public:
 
 		*h.resource_ptr = resource.get();
 		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
+
+		assert(*h.resource_ptr == resource.get());
 	}
 
 	virtual void place_uav(Handle & h) { assert(false); }
 	virtual void place_rtv(Handle & h) { assert(false); }
 	virtual void place_dsv(Handle & h) { assert(false); }
+	virtual void place_cb(Handle& h)override {
+		if (!resource) return;
 
+		D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
+		desc.BufferLocation = resource->get_gpu_address();
+		desc.SizeInBytes = view_desc.Buffer.Size;
+		assert(desc.SizeInBytes < 65536);
+		*h.resource_ptr = resource.get();
+		Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
+	}
 	void write(UINT64 offset, T * data, UINT64 count)
 	{
 		memcpy(resource->buffer_data + offset, data, sizeof(T) * count);

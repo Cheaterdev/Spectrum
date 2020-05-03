@@ -58,7 +58,7 @@ struct inherited
 	std::vector<std::string> parent;
 };
 
-
+struct have_options;
 struct have_type
 {
 	std::string type;
@@ -66,7 +66,7 @@ struct have_type
 	ValueType value_type;
 
 	bool bindless = false;
-	void detect_type();
+	void detect_type(have_options* options = nullptr);
 
 };
 
@@ -104,7 +104,7 @@ struct have_options
 {
 	std::vector<option> options;
 
-	option* find_option(std::string s)
+	const option* find_option(std::string s) const
 	{
 		for (auto& o : options)
 		{

@@ -248,11 +248,12 @@ public:
 		friend  class CommonAllocator;
 		size_t offset;
 		size_t size;
+		size_t reset_id;
 		Allocator* owner = nullptr;
 	};
 	virtual Allocator::Handle Allocate(size_t size, size_t align) = 0;
 
-	virtual void Free(const Handle& handle) = 0;
+	virtual void Free( Handle& handle) = 0;
 };
 
 
@@ -263,101 +264,41 @@ class CommonAllocator: public Allocator
 
 	size_t size;
 	size_t max_usage;
-	std::map<size_t, size_t> free_blocks;
+	size_t reset_id;
+	struct block
+	{
+		size_t begin;
+		size_t end;
+
+		bool operator< (const block& b) const
+		{
+			return begin < b.begin;
+		}
+	};
+
+	std::mutex m;
+	std::set<block> free_blocks;
+	std::map<size_t, const block*> fences;
+	void check();
+
+	size_t merge_prev(size_t start);
+	size_t merge_next(size_t end);
 
 public:
 	
 	
 
-	CommonAllocator(size_t size  = std::numeric_limits<size_t>::max()):size(size)
-	{
-		free_blocks[0] = size;
-		max_usage = 0;
-	}
+	CommonAllocator(size_t size  = std::numeric_limits<size_t>::max());
 	
-	size_t get_max_usage()
-	{
-		return max_usage;
-	}
+	size_t get_max_usage();
 
-	Allocator::Handle Allocate(size_t size, size_t align) override final
-	{
-	
-		for (auto& it : free_blocks)
-		{
-			auto offset = it.first;
-		
-			auto aligned_offset = Math::AlignUp(offset, align);
-
-			if ((offset+it.second - aligned_offset )>= size)
-			{						
-				size_t freeSize = it.second;
-
-				free_blocks.erase(it.first);
-
-
-				if (size < freeSize)
-				{
-					free_blocks[offset + size] = freeSize - size;
-				}
-			
-				Allocator::Handle res;
-				res.aligned_offset = aligned_offset;
-				res.offset = offset;
-				res.size = size;
-				res.owner = this;
-
-				max_usage = std::max(max_usage, offset + size);
-				return res;
-			}
-
-		}
-		assert(false);
-	}
+	Allocator::Handle Allocate(size_t size, size_t align = 1) override final;
 
 	
 
-	void Free(const Allocator::Handle& handle) override final
-	{
+	void Free( Allocator::Handle& handle) override final;
 
-		size_t offset = handle.offset;
-		size_t size = handle.size;
-
-		{
-			auto it = free_blocks.find(handle.offset + handle.size);
-			if (it != free_blocks.end())
-			{
-				size += it->second;
-				free_blocks.erase(it);
-			}
-		}
-
-		{
-			auto it = std::find_if(free_blocks.begin(), free_blocks.end(), 
-				[&](auto pair) { 
-					return pair.first + pair.second== handle.offset;
-				});
-
-
-			if (it != free_blocks.end())
-			{
-				size += it->second;
-				offset = it->first;
-				free_blocks.erase(it);
-			}
-		}
-
-
-		free_blocks[offset] = size;
-	}
-
-	void Reset()
-	{
-		free_blocks.clear();
-		free_blocks[0] = size;
-
-		max_usage = 0;
-	}
+	void Reset();
 };
 
 class LinearAllocator : public Allocator
@@ -393,7 +334,7 @@ public:
 
 
 
-	void Free(const Allocator::Handle& handle)
+	void Free(Allocator::Handle& handle)
 	{
 
 	}

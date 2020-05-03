@@ -41,28 +41,20 @@ namespace materials
 		}
 	};
 
-	/*struct TextureSRVParamsRef
+	class universal_material_manager :public Singleton<universal_material_manager>
 	{
-		Asset::ref asset;
-		bool to_linear = false;
-		TextureSRVParamsRef():asset(nullptr)
+	public:
+
+		CommonAllocator textures_allocator;
+		std::vector<Render::Handle> textures_data;
+
+		universal_material_manager():textures_allocator(1024)
 		{
-
+			textures_data.resize(1024);
 		}
-		TextureSRVParamsRef(Asset::ref asset, bool to_linear):asset(asset), to_linear(to_linear)
-		{}
-	private:
+	};
 
 
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int file_version)
-		{
-			ar& NVP(asset);
-			ar& NVP(to_linear);
-		}
-	};*/
     class universal_material : public MaterialAsset, ::FlowGraph::graph_listener
     {
             LEAK_TEST(universal_material)
@@ -81,7 +73,7 @@ namespace materials
             /*----------------------------------------------------------*/
 
 
-            std::vector<Render::Handle> texture_handles;
+        //    std::vector<Render::Handle> texture_handles;
             Render::HandleTable uav_handles;
 
 
@@ -90,6 +82,7 @@ namespace materials
 
 		
 			Render::HandleTable texture_table;
+
 			std::vector<render_pass> passes;
 
 			enum PASS_TYPE
@@ -107,6 +100,8 @@ namespace materials
             Render::GPUBuffer::ptr pixel_buffer;
          //   Render::GPUBuffer::ptr tess_buffer;
 
+			DynamicData pixel_data;
+
             BinaryData<MaterialGraph> graph;
 
             MaterialContext::ptr context;
@@ -122,6 +117,11 @@ namespace materials
             bool need_regenerate_material = false;
 
 			void generate_texture_handles();
+
+			Slots::MaterialInfo material_info;
+			Allocator::Handle textures_handle;
+			Render::Handle* textures_srvs = nullptr;
+
         public:
             using ptr = s_ptr<universal_material>;
 			std::vector<Uniform::ptr> ps_uniforms;
@@ -137,10 +137,11 @@ namespace materials
         
 			void place_textures(std::vector<Render::Handle>& handles);
 
-			std::vector<Render::Handle> get_texture_handles()
+		/*	std::vector<Render::Handle> get_texture_handles()
 			{
-				return texture_handles;
+				return material_info.GetTextures();
 			}
+			*/
 			Render::HandleTable get_texture_srvs()
 			{
 				return texture_table;
@@ -152,6 +153,11 @@ namespace materials
 			render_pass & get_pass(MESH_TYPE type, MeshRenderContext::ptr& context);
             void set_pipeline_states(MESH_TYPE type, MeshRenderContext::ptr& context,Render::PipelineStateDesc& desc);
             MaterialGraph::ptr get_graph();
+
+			Slots::MaterialInfo& get_render_info() {
+				return material_info;
+			}
+
 			Render::GPUBuffer::ptr get_pixel_buffer();
             /*   Render::HandleTable get_texture_handles()
                {

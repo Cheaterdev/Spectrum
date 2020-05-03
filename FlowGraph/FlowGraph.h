@@ -177,6 +177,7 @@ namespace FlowGraph
     struct parameter_type
     {
         virtual bool can_cast( parameter_type* other) = 0;
+        virtual ~parameter_type() = default;
 	private:
 		friend class boost::serialization::access;
 		template<class Archive>
@@ -196,7 +197,7 @@ namespace FlowGraph
         {
             return true;
         }
-
+        virtual ~strict_parameter() = default;
 	private:
 		friend class boost::serialization::access;
 		template<class Archive>

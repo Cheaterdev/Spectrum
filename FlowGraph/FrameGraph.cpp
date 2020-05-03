@@ -27,13 +27,13 @@
 	}
 	void TaskBuilder::pass_texture(std::string name, Render::Texture::ptr tex)
 	{
-		pass_texture(name, tex->create_view<Render::TextureView>(frames.get_creator()));
+		pass_texture(name, tex->create_view<Render::TextureView>(*current_frame));
 	}
 
 	void TaskBuilder::reset()
 	{
-		//resources.clear();
-		//alloc_resources.clear();
+
+	
 		current_pass = nullptr;
 		allocator.reset();
 
@@ -74,9 +74,8 @@
 		return list;
 	}
 
-	void FrameContext::begin(Pass * pass, Render::FrameResourceManager&mgr ) {
-		list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
-		list->begin(pass->name);
+	void FrameContext::begin(Pass * pass, Render::FrameResources::ptr & frame) {
+		list = frame->start_list(pass->name);
 //		list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().gpu_smp);
 
 		for (auto handle : pass->used.resources)
@@ -89,8 +88,6 @@
 			list->transition(nullptr, tex.resource.get());
 		}
 
-
-		mgr.propagate_frame(list);
 	}
 
 	void FrameContext::end()
@@ -134,7 +131,7 @@
 		{
 			auto& timer = Profiler::get().start(L"begin_frame");
 
-			builder.frames.begin_frame();
+			builder.current_frame = builder.frames.begin_frame();
 		}
 	}
 
@@ -165,7 +162,7 @@
 			auto& timer = Profiler::get().start(L"passes");
 
 			for (auto& pass : passes)
-				pass->render(builder.frames);
+				pass->render(builder.current_frame);
 
 		}
 
@@ -179,11 +176,7 @@
 
 
 		}
-
-	{	auto& timer = Profiler::get().start(L"end_frame");
-
-	builder.frames.end_frame();
-	}
+		builder.current_frame = nullptr;
 	}
 
 	void FrameGraph::reset()
@@ -217,7 +210,7 @@ ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT 
 
 	info.valid_from = current_pass->id;
 	info.valid_to = current_pass->id;
-
+	info.frame_id = current_frame->get_frame();
 	return &handler;
 }
 
@@ -240,6 +233,8 @@ ResourceHandler* TaskBuilder::need_texture(std::string name, UINT flags)
 
 ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, UINT flags)
 {
+	
+	size = Math::AlignUp(size, 256); // TODO: make in GAPI
 	ResourceHandler& handler = resources[name];
 	ResourceAllocInfo& info = alloc_resources[&handler];
 	handler.info = &info;
@@ -254,6 +249,7 @@ ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, UINT 
 	info.handler = &handler;
 	info.valid_from = current_pass->id;
 	info.valid_to = current_pass->id;
+	info.frame_id = current_frame->get_frame();
 
 	return &handler;
 }
@@ -290,6 +286,11 @@ void TaskBuilder::create_resources()
 	for (auto& pair : alloc_resources)
 	{
 		if (pair.second.passed) continue;
+
+		// here need to delete unused info
+		if (pair.second.frame_id != current_frame->get_frame())
+			continue;
+
 		events[pair.second.valid_from].create.insert(&pair.second);
 		events[pair.second.valid_to+1].free.insert(&pair.second);
 	}
@@ -356,9 +357,11 @@ void TaskBuilder::create_resources()
 				alloc_ptr = allocator.allocate_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size), heap_type);
 			}
 			if (info->alloc_ptr != alloc_ptr) {
-			info->alloc_ptr = alloc_ptr;
+			
 			info->need_recreate = true;
 		}
+
+			info->alloc_ptr = alloc_ptr;
 
 		}
 	}
@@ -378,6 +381,10 @@ void TaskBuilder::create_resources()
 		for (auto& pair : alloc_resources)
 		{
 			auto info = &pair.second;
+
+			// here need to delete unused info
+			if (pair.second.frame_id != current_frame->get_frame())
+				continue;
 
 			if (info->passed) continue;
 	//		if (!info->need_recreate) 
@@ -409,7 +416,7 @@ void TaskBuilder::create_resources()
 					info->resource->set_name(std::string("Graph Texture:") + std::to_string(id));
 				}
 
-				info->texture = info->resource->create_view<Render::TextureView>(frames.get_creator());
+				info->texture = info->resource->create_view<Render::TextureView>(*current_frame);
 
 				
 			}
@@ -423,7 +430,7 @@ void TaskBuilder::create_resources()
 					info->resource->set_name(std::string("Graph Buffer:") + std::to_string(id));
 				}
 
-				info->buffer = info->resource->create_view<Render::BufferView>(frames.get_creator());
+				info->buffer = info->resource->create_view<Render::BufferView>(*current_frame);
 			}
 			id++;
 		}

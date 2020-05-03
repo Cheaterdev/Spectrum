@@ -98,7 +98,7 @@ shader_parameter MaterialContext::create_value(Uniform::ptr f)
 
 	uniform_struct += ")";*/
 
-	return graph->add_value(f->type, std::string("GetMaterialInfo().cb.") + shader_name);
+	return graph->add_value(f->type, std::string("GetMaterialInfo().GetData().") + shader_name);
 }
 
 std::string MaterialContext::get_texture(TextureSRVParams::ptr& p)
@@ -138,7 +138,7 @@ std::string MaterialContext::generate_uniform_struct()
 {
 	if (uniform_struct.empty())
 		return "\n";
-	std::string result = "struct MaterialInfo_cb\n{\n";
+	std::string result = "struct MaterialCB\n{\n";
 	result += uniform_struct;
 
 	for (auto u : uniforms)
@@ -489,6 +489,10 @@ BOOST_CLASS_EXPORT_IMPLEMENT(TiledTextureNode);
 BOOST_CLASS_EXPORT_IMPLEMENT(MaterialGraph);
 BOOST_CLASS_EXPORT_IMPLEMENT(SpecToMetNode);
 BOOST_CLASS_EXPORT_IMPLEMENT(TextureSRVParams);
+
+
+BOOST_CLASS_EXPORT(ShaderParamType);
+
 
 MaterialGraph::MaterialGraph()
 {

@@ -1,15 +1,15 @@
-#ifndef SLOT_2
-	#define SLOT_2
+#ifndef SLOT_3
+	#define SLOT_3
 #else
-	#error Slot 2 is already used
+	#error Slot 3 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/PickerBuffer.h"
-RWStructuredBuffer<uint> uav_2_0: register(u0, space2);
+RWStructuredBuffer<uint> uav_3_0: register(u0, space3);
 PickerBuffer CreatePickerBuffer()
 {
 	PickerBuffer result;
-	result.uav.viewBuffer = uav_2_0;
+	result.uav.viewBuffer = uav_3_0;
 	return result;
 }
 static const PickerBuffer pickerBuffer_global = CreatePickerBuffer();

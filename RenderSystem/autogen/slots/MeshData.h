@@ -5,5 +5,6 @@ namespace Slots {
 	{
 		SRV srv;
 		MeshData(): DataHolder(srv){}
+		MeshData(const MeshData&other): DataHolder(srv){srv = other.srv;}
 	};
 }
