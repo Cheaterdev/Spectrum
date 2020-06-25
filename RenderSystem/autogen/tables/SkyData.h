@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct SkyData
 	{
 		struct CB
@@ -23,4 +24,5 @@ namespace Table
 		Render::Handle& GetIrradiance() { return srv.irradiance; }
 		SkyData(CB&cb,SRV&srv) :cb(cb),srv(srv){}
 	};
+	#pragma pack(pop)
 }

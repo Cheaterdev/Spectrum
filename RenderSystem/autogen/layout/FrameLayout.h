@@ -17,9 +17,9 @@ struct FrameLayout
 	{
 		static const unsigned int ID = 1;
 		static const unsigned int CB = 1;
-		static const unsigned int CB_ID = 3;
-		static const unsigned int SRV = 1;
-		static const unsigned int SRV_ID = 4;
+		static const unsigned int CB_ID = 2;
+		static const unsigned int SRV = 3;
+		static const unsigned int SRV_ID = 3;
 		static const unsigned int UAV = 0;
 		static const unsigned int UAV_ID = -1;
 		static const unsigned int SMP = 0;
@@ -29,7 +29,7 @@ struct FrameLayout
 	{
 		static const unsigned int ID = 2;
 		static const unsigned int CB = 2;
-		static const unsigned int CB_ID = 6;
+		static const unsigned int CB_ID = 5;
 		static const unsigned int SRV = 0;
 		static const unsigned int SRV_ID = -1;
 		static const unsigned int UAV = 0;

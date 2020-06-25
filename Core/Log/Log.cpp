@@ -98,14 +98,14 @@ LogBlock& LogBlock::operator<<(const char* smth)
 
     return *this;
 }
-
+/*
 LogBlock& LogBlock::operator<<(wchar_t smth)
 {
     if (need_logging())
         *s << smth;
 
     return (*this);
-}
+}*/
 
 LogBlock& LogBlock::operator<<(wchar_t* smth)
 {

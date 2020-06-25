@@ -44,7 +44,7 @@ void debug_drawer::draw(Render::CommandList& list, camera* cam)
         i++;
     }
 
-	shader_data.camera_data= cam->get_const_buffer();
+	// /////////////////////////////////////////////////////shader_data.camera_data= cam->camera_cb;
 	shader_data.nodes =  nodes;
     list.get_graphics().draw(24, 0, (UINT)count);
     aabbs.clear();

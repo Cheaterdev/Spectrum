@@ -40,7 +40,9 @@
 #include <functional>
 #include <stdexcept>
 #include <queue>
+#include <optional>
 #include <compare>
+#include <span>
 #include <comdef.h>
 // BOOST includes
 //#define BOOST_DECL_EXPORTS
@@ -62,7 +64,27 @@ using namespace std;
 #define NVP(name) boost::serialization::make_nvp(BOOST_PP_STRINGIZE(name), name)
 #define NP(name, param) boost::serialization::make_nvp(name, param)
 
-std::size_t operator "" _t(unsigned long long int x);
+
+
+constexpr std::size_t operator "" _t(unsigned long long int x)
+{
+	return x;
+}
+
+
+constexpr std::size_t operator "" _mb(unsigned long long int x) {
+	return x * 1024 * 1024;
+}
+
+constexpr std::size_t operator "" _gb(unsigned long long int x) {
+	return x * 1024 * 1024 * 1024;
+}
+
+constexpr std::size_t operator "" _kb(unsigned long long int x) {
+	return x * 1024;
+}
+
+
 
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>
@@ -141,11 +163,11 @@ class my_unique_vector : public std::vector<T>
 {
 public:
 	using 	std::vector<T>::insert;
-	void insert(T& elem)
+
+	void insert(const T& elem)
 	{
 		push_back(elem);
 	}
-
 	void erase(const T& elem)
 	{
 		auto it = std::find(begin(), end(), elem);
@@ -209,143 +231,6 @@ void unreferenced_parameter(const T&)
 
 #define GUID_WINDOWS
 #include "guid/guid.h"
-struct AllocationHandle;
-class Allocator
-{
-public:
-	struct Handle
-	{
-
-		size_t aligned_offset;
-
-		void Free()
-		{
-			if (owner) owner->Free(*this);
-		}
-
-		operator bool()
-		{
-			return owner;
-		}
-
-		Allocator* get_owner()
-		{
-			return owner;
-		}
-
-		bool operator==(const Handle& h)const
-		{
-			return (owner == h.owner) && (aligned_offset == h.aligned_offset);
-		}
-
-		bool operator!=(const Handle& h)const
-		{
-			return(owner != h.owner) || (aligned_offset != h.aligned_offset);
-		}
-	private:
-
-		friend  class LinearAllocator;
-		friend  class CommonAllocator;
-		size_t offset;
-		size_t size;
-		size_t reset_id;
-		Allocator* owner = nullptr;
-	};
-	virtual Allocator::Handle Allocate(size_t size, size_t align) = 0;
-
-	virtual void Free( Handle& handle) = 0;
-};
-
-
-//shitty allocator, write a good one
-// dont want to write now
-class CommonAllocator: public Allocator
-{
-
-	size_t size;
-	size_t max_usage;
-	size_t reset_id;
-	struct block
-	{
-		size_t begin;
-		size_t end;
-
-		bool operator< (const block& b) const
-		{
-			return begin < b.begin;
-		}
-	};
-
-	std::mutex m;
-	std::set<block> free_blocks;
-	std::map<size_t, const block*> fences;
-	void check();
-
-	size_t merge_prev(size_t start);
-	size_t merge_next(size_t end);
-
-public:
-	
-	
-
-	CommonAllocator(size_t size  = std::numeric_limits<size_t>::max());
-	
-	size_t get_max_usage();
-
-	Allocator::Handle Allocate(size_t size, size_t align = 1) override final;
-
-	
-
-	void Free( Allocator::Handle& handle) override final;
-
-	void Reset();
-};
-
-class LinearAllocator : public Allocator
-{
-	size_t max_usage;
-	size_t offset;
-	size_t size;
-public:
-
-	LinearAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size)
-	{
-		max_usage = 0;
-		offset = 0;
-	}
-
-	size_t get_max_usage()
-	{
-		return max_usage;
-	}
-	Allocator::Handle Allocate(size_t size, size_t align)
-	{	
-		offset = Math::AlignUp(offset, align);
-
-		Allocator::Handle res;
-				res.aligned_offset = offset;
-				res.offset = offset;
-				res.size = size;
-				res.owner = this;
-
-				max_usage = std::max(max_usage, offset + size);
-				return res;
-	}
-
-
-
-	void Free(Allocator::Handle& handle)
-	{
-
-	}
-
-	void Reset()
-	{
-		max_usage = 0;
-		offset = 0;
-	}
-};
-
-
+#include "Allocators/Allocators.h"
 
 #pragma comment(lib, "Core")

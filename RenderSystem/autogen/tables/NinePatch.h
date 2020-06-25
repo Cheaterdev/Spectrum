@@ -2,6 +2,7 @@
 #include "vertex_input.h"
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct NinePatch
 	{
 		using CB = Empty;
@@ -16,4 +17,5 @@ namespace Table
 		Render::Bindless& GetTextures() { return bindless; }
 		NinePatch(SRV&srv,Render::Bindless &bindless) :srv(srv),bindless(bindless){}
 	};
+	#pragma pack(pop)
 }

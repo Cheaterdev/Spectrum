@@ -3,11 +3,6 @@ class TextureAssetRenderer : public Singleton<TextureAssetRenderer>
 {
 	friend class Singleton<TextureAssetRenderer>;
 
-	Render::PipelineState::ptr state;
-	Render::Viewport vps;
-
-	Render::HandleTable sampler_table;
-
 	TextureAssetRenderer();
 	virtual ~TextureAssetRenderer();
 public:

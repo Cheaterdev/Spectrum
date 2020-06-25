@@ -23,6 +23,7 @@ namespace DX12
 		if (type == CommandListType::DIRECT)
 			graphics.reset(new GraphicsContext(*this));
 
+		m_commandList->SetName(L"SpectrumCommandList");
 	}
 
 
@@ -99,8 +100,8 @@ namespace DX12
 	void GraphicsContext::on_execute()
 	{
 		//descriptor_manager_graphics.reset();
-		rtv_descriptors.reset();
-		dsv_descriptors.reset();
+	//	rtv_descriptors.reset();
+		//dsv_descriptors.reset();
 	}
 
 	void ComputeContext::on_execute()
@@ -223,6 +224,7 @@ namespace DX12
 		if(h.is_valid())
 			get_base().transition(*h.resource_ptr, ResourceState::DEPTH_WRITE);
 
+		get_base().flush_transitions();
 		list->OMSetRenderTargets(c, &rt.cpu, true, h.is_valid() ? &h.cpu : nullptr);
 	}
 
@@ -335,6 +337,7 @@ namespace DX12
 	}
 	Uploader::UploadInfo Uploader::place_data(UINT64 uploadBufferSize, unsigned int alignment)
 	{
+		//auto timer = Profiler::get().start(L"place_data");
 		const auto AlignedSize = static_cast<UINT>(Math::AlignUp(uploadBufferSize, alignment));
 		resource_offset = Math::AlignUp(resource_offset, alignment);
 
@@ -610,8 +613,8 @@ namespace DX12
 		for (auto && t : on_execute_funcs)
 			t();
 
-		srv_descriptors.reset();
-		smp_descriptors.reset();
+	//	srv.reset();
+	//	smp.reset();
 
 		if (graphics) graphics->on_execute();
 		if (compute) compute->on_execute();
@@ -621,6 +624,9 @@ namespace DX12
 		on_execute_funcs.clear();
 		//	on_send_funcs.clear();
 		BufferCache::get().on_execute_list(this);
+
+		GPUCompiledManager::reset();
+
 		frame_resources = nullptr;
 	}
 
@@ -661,6 +667,8 @@ namespace DX12
 					static_cast<D3D12_RESOURCE_STATES>(cpu_state),
 					D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES));
 
+			//	if(r->debug)
+			//	Log::get() << "transition " << r->name << " from " << gpu_state << " to " << cpu_state << Log::endl;
 			//	assert(!(cpu_state&D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 			///	assert(!(gpu_state &D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
 			//	assert(!(r->get_end_state(id, global_id)&D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
@@ -838,6 +846,7 @@ namespace DX12
 
 	std::shared_ptr<UploadBuffer> BufferCache::get_upload(UINT64 size)
 	{
+
 		{
 			std::lock_guard<std::mutex> m(upload);
 
@@ -851,6 +860,7 @@ namespace DX12
 				}
 			}
 		}
+		auto timer = Profiler::get().start(L"UploadBuffer");
 		return std::make_shared<UploadBuffer>(size);
 		//     upload_resources.emplace_back(new BufferBase(size, HeapType::UPLOAD, ResourceState::GEN_READ));
 	}
@@ -871,6 +881,7 @@ namespace DX12
 			}
 		}
 
+	auto timer = 	Profiler::get().start(L"readback_buffer");
 	auto buffer = std::make_shared<CPUBuffer>(size, 1);
 	buffer->set_name("readback_buffer");
 	return buffer;
@@ -999,7 +1010,7 @@ void ComputeContext::dispach(int x,int y,int z)
 			GPUBlock * b = dynamic_cast<GPUBlock*>(c.get());
 			if(b)
 			{
-				b->gpu_counter.enabled = false;
+			//	b->gpu_counter.enabled = false;
 			}
 		}
 	//		static_cast<GPUBlock*>(c.get())
@@ -1077,26 +1088,6 @@ void ComputeContext::dispach(int x,int y,int z)
 		// ::PIXSetMarker(m_commandList.Get(), 0, label);
 	}
 
-	FrameResources::UploadInfo FrameResources::place_data(std::uint64_t uploadBufferSize, unsigned int alignment)
-	{
-		std::lock_guard<std::mutex> g(m);
-		const size_t AlignedSize =  Math::AlignUp(uploadBufferSize, alignment);
-		resource_offset = Math::AlignUp(resource_offset, alignment);
-
-		if (upload_resources.empty() || (resource_offset + uploadBufferSize > upload_resources.back()->get_size()))
-		{
-			upload_resources.push_back(BufferCache::get().get_upload(std::max(heap_size, AlignedSize)));
-			resource_offset = 0;
-		}
-
-		UploadInfo info;
-		info.resource = upload_resources.back();
-		info.offset = resource_offset;
-		info.size = AlignedSize;
-		resource_offset += AlignedSize;
-		return info;
-	}
-
 
 	void BufferCache::unused_upload(std::vector<std::shared_ptr<UploadBuffer>>& upload_list)
 	{
@@ -1139,24 +1130,6 @@ void ComputeContext::dispach(int x,int y,int z)
 	}
 
 
-	void ComputeContext::set_const_buffer(UINT i, FrameResource& resource)
-	{
-		set_const_buffer(i, resource.get_for(*base.frame_resources));
-	}
-
-
-	void GraphicsContext::set_const_buffer(UINT i, FrameResource& resource)
-	{
-		set_const_buffer(i, resource.get_for(*base.frame_resources));
-	}
-
-
-	void GraphicsContext::set_srv(UINT i, FrameResource& resource)
-	{
-		auto info = resource.get_for(*base.frame_resources);
-		list->SetGraphicsRootShaderResourceView(i, info.get_gpu_address());
-	}
-
 	CommandList::ptr CommandList::get_sub_list()
 	{
 		auto list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
@@ -1178,11 +1151,6 @@ void ComputeContext::dispach(int x,int y,int z)
 		list->SetComputeRootUnorderedAccessView(i, table);
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS FrameResources::UploadInfo::get_gpu_address()
-	{
-		return resource->get_gpu_address() + offset;
-	}
-
 	void  GraphicsContext::set_srv(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
 	{
 		list->SetGraphicsRootShaderResourceView(i, table);
@@ -1201,10 +1169,10 @@ void ComputeContext::dispach(int x,int y,int z)
 	void GraphicsContext::execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
 		base.flush_transitions();
-		  flush_binds(true);
+		//  flush_binds(true);
 		 //  get_compute().flush_binds();
 
-		descriptor_manager_graphics.bind(&base);
+	//	descriptor_manager_graphics.bind(&base);
 	//	descriptor_manager_compute.bind(this);
 		list->ExecuteIndirect(
 			command_types.Get(),
@@ -1216,12 +1184,13 @@ void ComputeContext::dispach(int x,int y,int z)
 	}
 	void ComputeContext::execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
+
 		base.flush_transitions();
-		flush_binds(true);
+		//flush_binds(true);
 		//  get_compute().flush_binds();
 
 		//descriptor_manager_graphics.bind(this);
-		descriptor_manager_compute.bind(&base);
+		// descriptor_manager_compute.bind(&base);
 		list->ExecuteIndirect(
 			command_types.Get(),
 			max_commands,
@@ -1248,12 +1217,6 @@ void ComputeContext::dispach(int x,int y,int z)
 		list->SetComputeRootConstantBufferView(i, buff->get_gpu_address());
 	}
 
-	void ComputeContext::set_srv(UINT i, FrameResource& resource)
-	{
-		auto info = resource.get_for(*base.frame_resources);
-		list->SetComputeRootShaderResourceView(i, info.get_gpu_address());
-
-	}
 
 	void Transitions::reset()
 	{
@@ -1262,8 +1225,12 @@ void ComputeContext::dispach(int x,int y,int z)
 	}
 	void Uploader::reset()
 	{
-		if (upload_resources.size())
+		if (!upload_resources.empty())
+		{
+			BufferCache::get().unused_upload(upload_resources);
 			upload_resources.clear();
+		}
+
 		resource_offset = 0;
 	}
 	void Readbacker::reset()
@@ -1281,7 +1248,7 @@ void ComputeContext::dispach(int x,int y,int z)
 		Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator));
 		Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList));
 		m_commandList->Close();
-
+		m_commandList->SetName(L"TransitionCommandList");
 	}
 
 	void TransitionCommandList::create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER> &transitions)

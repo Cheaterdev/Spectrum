@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct GBuffer
 	{
 		using CB = Empty;
@@ -19,4 +20,5 @@ namespace Table
 		Render::Handle& GetDepth() { return srv.depth; }
 		GBuffer(SRV&srv) :srv(srv){}
 	};
+	#pragma pack(pop)
 }

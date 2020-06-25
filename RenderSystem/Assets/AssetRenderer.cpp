@@ -44,7 +44,8 @@ public:
 				}, [this,&graph](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
-					universal_nodes_manager::get().prepare(command_list);
+					SceneFrameManager::get().prepare(command_list, *graph.scene);
+				
 					MeshRenderContext::ptr context(new MeshRenderContext());
 					context->current_time = time;
 					context->priority = TaskPriority::HIGH;
@@ -94,7 +95,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	//return;
  //  return;
  
-
+	graph.start_new_frame();
 	if (!vr_context)
 	{
 		vr_context = std::make_shared<Render::OVRContext>();
@@ -106,7 +107,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	auto mn = scene->get_min();
 	auto mx = scene->get_max();
 	scene->add_child(mesh_plane);
-
+	scene->update(*graph.builder.current_frame);
 
 	float x = mx.x - mn.x;
 	float y = mx.y - mn.y;
@@ -123,7 +124,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
     cam.update();
 
 
-	graph.start_new_frame();
+
 
 	graph.builder.pass_texture("ResultTexture", result);
 	graph.frame_size = result->get_size();

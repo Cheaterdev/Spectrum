@@ -356,10 +356,6 @@ namespace DX12
 					context->set_const_buffer(slot, info);
 				}
 
-				void operator = (FrameResource& res)
-				{
-					context->set_const_buffer(slot, res);
-				}
 
 
 				template<class V>
@@ -373,11 +369,7 @@ namespace DX12
 					context->set_const_buffer_raw(slot, data.data(), sizeof(V) * C);
 				}
 
-			/*	template<class V>
-				void operator=(const V& data)
-				{
-					context->set_const_buffer_raw(slot, &data, sizeof(V));
-				}*/
+
 
 				template<class V>
 				void set_raw(const V* data, size_t size)
@@ -440,12 +432,6 @@ namespace DX12
 				{
 					context->set_srv(slot, address);
 				}
-
-				void operator=(FrameResource& info)
-				{
-					context->set_srv(slot, info);
-				}
-
 
 
 				template<class T>

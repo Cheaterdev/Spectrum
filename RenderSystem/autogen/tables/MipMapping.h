@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct MipMapping
 	{
 		struct CB
@@ -25,4 +26,5 @@ namespace Table
 		Render::Handle& GetSrcMip() { return srv.SrcMip; }
 		MipMapping(CB&cb,SRV&srv,UAV&uav) :cb(cb),srv(srv),uav(uav){}
 	};
+	#pragma pack(pop)
 }

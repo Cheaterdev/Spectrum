@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct vertex_input
 	{
 		struct CB
@@ -15,4 +16,5 @@ namespace Table
 		float2& GetTc() { return cb.tc; }
 		vertex_input(CB&cb) :cb(cb){}
 	};
+	#pragma pack(pop)
 }

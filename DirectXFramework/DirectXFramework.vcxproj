@@ -305,6 +305,7 @@
     <ClInclude Include="DX12\SignatureCreator.h" />
     <ClInclude Include="DX12\Swapchain12.h" />
     <ClInclude Include="DX12\Texture.h" />
+    <ClInclude Include="DX12\Tiling.h" />
     <ClInclude Include="helper.h" />
     <ClInclude Include="InputLayouts.h" />
     <ClInclude Include="pch.h" />
@@ -374,6 +375,7 @@
     <ClCompile Include="DX12\SignatureCreator.cpp" />
     <ClCompile Include="DX12\Swapchain12.cpp" />
     <ClCompile Include="DX12\Texture.cpp" />
+    <ClCompile Include="DX12\Tiling.cpp" />
     <ClCompile Include="Header.cpp" />
     <ClCompile Include="helper.cpp" />
     <ClCompile Include="InputLayouts.cpp" />

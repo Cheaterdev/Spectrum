@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct Instance
 	{
 		struct CB
@@ -13,4 +14,5 @@ namespace Table
 		uint& GetInstanceId() { return cb.instanceId; }
 		Instance(CB&cb) :cb(cb){}
 	};
+	#pragma pack(pop)
 }

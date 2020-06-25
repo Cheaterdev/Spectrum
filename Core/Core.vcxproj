@@ -27,6 +27,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Allocators\Allocators.h" />
     <ClInclude Include="Application\Application.h" />
     <ClInclude Include="BinaryObjects.h" />
     <ClInclude Include="Data\Data.h" />
@@ -66,6 +67,7 @@
     <ClInclude Include="Tree\Tree.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Allocators\Allocators.cpp" />
     <ClCompile Include="Application\Application.cpp" />
     <ClCompile Include="Data\Data.cpp" />
     <ClCompile Include="Data\md5.cpp" />

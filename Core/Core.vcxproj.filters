@@ -140,6 +140,9 @@
     <ClInclude Include="Profiling\Profiling.h">
       <Filter>Profiling</Filter>
     </ClInclude>
+    <ClInclude Include="Allocators\Allocators.h">
+      <Filter>Allocators</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp" />
@@ -195,6 +198,9 @@
     </ClCompile>
     <ClCompile Include="Threads\Scheduler.cpp">
       <Filter>Threads</Filter>
+    </ClCompile>
+    <ClCompile Include="Allocators\Allocators.cpp">
+      <Filter>Allocators</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

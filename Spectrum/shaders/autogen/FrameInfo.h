@@ -12,8 +12,6 @@ FrameInfo CreateFrameInfo()
 	FrameInfo result;
 	result.cb = cb_0_0;
 	result.srv.bestFitNormals = srv_0_0;
-	result.camera = CreateCamera(result.cb.camera);
-	result.prevCamera = CreateCamera(result.cb.prevCamera);
 	return result;
 }
 static const FrameInfo frameInfo_global = CreateFrameInfo();

@@ -1,4 +1,5 @@
 #pragma once
+#include "Frustum.h"
 struct Camera_cb
 {
 	float4x4 view;
@@ -13,6 +14,7 @@ struct Camera_cb
 	float unused2;
 	float2 jitter;
 	float2 unused3;
+	Frustum_cb frustum;
 };
 struct Camera
 {
@@ -29,6 +31,7 @@ struct Camera
 	float GetUnused2() { return cb.unused2; }
 	float2 GetJitter() { return cb.jitter; }
 	float2 GetUnused3() { return cb.unused3; }
+	Frustum GetFrustum() { return CreateFrustum(cb.frustum); }
 };
  const Camera CreateCamera(Camera_cb cb)
 {

@@ -231,17 +231,126 @@ namespace DX12
 		D3D12_HEAP_FLAGS flags;
 
 		size_t heap_size = 0;
+		using ptr = std::shared_ptr<ResourceHeap>;
+
+		ResourceHeap(ResourceHeap& other) = default;
 
 		ResourceHeap(HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
 		{
 
 		}
 
+		ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
+		{
+			init(size);
+		}
+		virtual ~ResourceHeap() = default;
+	protected:
 		void init(size_t size);
+	};
+	
+	template<class AllocatorType>
+	struct ResourceHeapPage: AllocatorType, ResourceHeap
+	{
+		using ptr = std::shared_ptr<ResourceHeapPage>;
+		ResourceHeapPage(size_t size, HeapType type, D3D12_HEAP_FLAGS flags) :ResourceHeap(size,type,flags), AllocatorType(size)
+		{
 
+		}
+		ResourceHeapPage(ResourceHeapPage& heap) :ResourceHeap(heap), AllocatorType(size)
+		{
+
+		}
+		/*ResourceHeap::ptr m_heap;
+	
+		ResourceHeapPage(ResourceHeap::ptr heap): m_heap(heap), AllocatorType(m_heap->heap_size)
+		{
+		
+		}*/
+
+		/*
+		Allocator::Handle Allocate(size_t size, size_t alignment)
+		{
+			return allocator.Allocate(size, alignment);
+		}*/
 	};
 
-	template<class AllocatorType >
+	/*
+	template<class AllocatorType>
+	struct ResourceHeapPage : AllocatorType
+	{
+		Allocator::Handle handle;
+		ResourceHeap::ptr m_heap;
+
+		ResourceHeapPage(ResourceHeap::ptr heap, Allocator::Handle handle) :handle(handle), m_heap(heap), AllocatorType(m_heap->heap_size)
+		{
+
+		}
+
+	};
+	*/
+
+	
+
+	// for tiles now, only
+	class ResourceHeapPageManager : public Singleton<ResourceHeapPageManager>
+	{
+		using heap_list = std::queue<ResourceHeapPage<CommonAllocator>::ptr>;
+		using flags_map = std::map<D3D12_HEAP_FLAGS, heap_list>;
+		flags_map all_heaps;
+		std::mutex m;
+
+		ResourceHeapPage<CommonAllocator>::ptr current_heap;
+
+		std::set<ResourceHeapPage<CommonAllocator>::ptr> total_heaps;
+
+		ResourceHeapPage<CommonAllocator>::ptr AllocateHeap(/*size_t size, HeapType type,*/ D3D12_HEAP_FLAGS flags)
+		{
+		
+			auto heaps = all_heaps[flags];
+
+			if (heaps.size())
+			{
+				auto top = heaps.front();
+				heaps.pop();
+				return top;
+			}
+
+
+			auto res = std::make_shared<ResourceHeapPage<CommonAllocator>>(64 * 1024, HeapType::DEFAULT, flags);
+			total_heaps.insert(res);
+			return res;
+		}
+	public:
+		
+		TileHeapPosition create_tile(D3D12_HEAP_FLAGS flags)
+		{
+			std::lock_guard<std::mutex> g(m);
+
+
+			if (!current_heap )
+			{
+				current_heap = AllocateHeap(flags);
+			}
+
+			auto handle = current_heap->TryAllocate(64 * 1024);
+
+			if (!handle)
+			{
+				current_heap = AllocateHeap(flags);
+				handle = current_heap->TryAllocate(64 * 1024);
+			}
+
+			TileHeapPosition result;
+
+			result.offset = handle->get_offset()/ (64 * 1024);
+			result.heap = current_heap.get();
+
+			return result;
+		}
+	};
+
+	template<class AllocatorType>
 	struct ResourceHeapAllocator : public ResourceHeap, public AllocatorType
 	{
 		using ResourceHeap::ResourceHeap;
@@ -274,9 +383,16 @@ namespace DX12
 		virtual Resource_ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)  override;
 	};
 
+	class ReservedAllocator :public Singleton<ReservedAllocator>, public ResourceAllocator
+	{
+		virtual HeapType get_type()override;
+		virtual Resource_ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)  override;
+	};
+
+
 	class FrameResources;
 
-	class Resource :public std::enable_shared_from_this<Resource>, public ResourceStateManager
+	class Resource :public std::enable_shared_from_this<Resource>, public ResourceStateManager, public TiledResourceManager
 	{
 		LEAK_TEST(Resource)
 
@@ -288,14 +404,17 @@ namespace DX12
 		size_t id = 0;
 
 		CommonAllocator::Handle alloc_handle;
+
 	protected:
 		ComPtr<ID3D12Resource> m_Resource;
 		void init(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 	public:
 		std::byte* buffer_data = nullptr;
 		bool debug = false;
+		std::string name;
 		void set_name(std::string name)
 		{
+			this->name = name;
 			//	auto& timer = Profiler::get().start(L"set_name");
 			m_Resource->SetName(convert(name).c_str());
 		}
@@ -304,12 +423,12 @@ namespace DX12
 			return desc;
 		}
 		using ptr = std::shared_ptr<Resource>;
-		Resource::ptr delete_me;
+	//	Resource::ptr delete_me;
 		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 		Resource(const ComPtr<ID3D12Resource>& resouce, bool own = false);
 		Resource(const ComPtr<ID3D12Resource>& resouce, CommonAllocator::Handle, ResourceState state);
 
-		Resource()
+		Resource():TiledResourceManager(m_Resource)
 		{
 			//  states.resize(50);
 		}
@@ -326,7 +445,7 @@ namespace DX12
 		}
 		void release_memory()
 		{
-			alloc_handle.Free();
+//			alloc_handle.Free();
 		}
 
 		ComPtr<ID3D12Resource> get_native() const
@@ -726,6 +845,67 @@ public:
 		Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
 	}
 	void write(UINT64 offset, T * data, UINT64 count)
+	{
+		memcpy(resource->buffer_data + offset, data, sizeof(T) * count);
+	}
+};
+
+
+template<class T, DXGI_FORMAT format>
+class FormattedBufferView :public ResourceView
+{
+
+public:
+	FormattedBufferView() = default;
+
+	FormattedBufferView(Resource::ptr resource, FrameResources& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+	{
+		init_desc();
+		view_desc.Buffer.Offset = offset;
+		if (size) view_desc.Buffer.Size = size;
+
+		init_views(frame);
+	}
+
+	~FormattedBufferView()
+	{
+
+	}
+	virtual void place_srv(Handle& h) override {
+		if (!resource) return;
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
+		desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		desc.Format = format;
+
+		desc.Buffer.StructureByteStride =0;
+		desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+
+
+			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(T));
+			desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(T);
+
+		*h.resource_ptr = resource.get();
+		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
+
+		assert(*h.resource_ptr == resource.get());
+	}
+
+	virtual void place_uav(Handle& h) { assert(false); }
+	virtual void place_rtv(Handle& h) { assert(false); }
+	virtual void place_dsv(Handle& h) { assert(false); }
+	virtual void place_cb(Handle& h)override {
+		if (!resource) return;
+
+		D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
+		desc.BufferLocation = resource->get_gpu_address();
+		desc.SizeInBytes = view_desc.Buffer.Size;
+		assert(desc.SizeInBytes < 65536);
+		*h.resource_ptr = resource.get();
+		Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
+	}
+	void write(UINT64 offset, T* data, UINT64 count)
 	{
 		memcpy(resource->buffer_data + offset, data, sizeof(T) * count);
 	}

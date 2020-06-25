@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct TextureRenderer
 	{
 		using CB = Empty;
@@ -13,4 +14,5 @@ namespace Table
 		Render::Handle& GetTexture() { return srv.texture; }
 		TextureRenderer(SRV&srv) :srv(srv){}
 	};
+	#pragma pack(pop)
 }

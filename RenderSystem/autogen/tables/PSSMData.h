@@ -2,6 +2,7 @@
 #include "Camera.h"
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct PSSMData
 	{
 		using CB = Empty;
@@ -16,4 +17,5 @@ namespace Table
 		Render::Handle& GetLight_cameras() { return srv.light_cameras; }
 		PSSMData(SRV&srv) :srv(srv){}
 	};
+	#pragma pack(pop)
 }

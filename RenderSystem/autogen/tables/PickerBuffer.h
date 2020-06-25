@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct PickerBuffer
 	{
 		using CB = Empty;
@@ -13,4 +14,5 @@ namespace Table
 		Render::Handle& GetViewBuffer() { return uav.viewBuffer; }
 		PickerBuffer(UAV&uav) :uav(uav){}
 	};
+	#pragma pack(pop)
 }

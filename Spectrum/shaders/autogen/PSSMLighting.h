@@ -20,7 +20,6 @@ PSSMLighting CreatePSSMLighting()
 	result.srv.gbuffer.normals = srv_5_3;
 	result.srv.gbuffer.specular = srv_5_4;
 	result.srv.gbuffer.depth = srv_5_5;
-	result.gbuffer = CreateGBuffer(result.srv.gbuffer);
 	return result;
 }
 static const PSSMLighting pSSMLighting_global = CreatePSSMLighting();

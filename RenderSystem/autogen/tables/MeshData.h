@@ -1,17 +1,20 @@
 #pragma once
-#include "mesh_vertex_input.h"
 namespace Table 
 {
 	struct MeshData
 	{
-		using CB = Empty;
-		struct SRV
+		struct CB
 		{
-			Render::Handle vb;
-		} &srv;
+			uint material_id;
+			uint4 mesh_cb;
+			uint4 draw_commands;
+		} &cb;
+		using SRV = Empty;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Handle& GetVb() { return srv.vb; }
-		MeshData(SRV&srv) :srv(srv){}
+		uint& GetMaterial_id() { return cb.material_id; }
+		uint4& GetMesh_cb() { return cb.mesh_cb; }
+		uint4& GetDraw_commands() { return cb.draw_commands; }
+		MeshData(CB&cb) :cb(cb){}
 	};
 }

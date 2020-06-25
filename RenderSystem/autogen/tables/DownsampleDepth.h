@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct DownsampleDepth
 	{
 		using CB = Empty;
@@ -17,4 +18,5 @@ namespace Table
 		Render::Handle& GetTargetTex() { return uav.targetTex; }
 		DownsampleDepth(SRV&srv,UAV&uav) :srv(srv),uav(uav){}
 	};
+	#pragma pack(pop)
 }

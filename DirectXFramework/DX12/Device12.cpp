@@ -242,7 +242,11 @@ namespace DX12
 				ID3D12CommandList* s[2] = { transition_list->get_native().Get(), list->get_native_list().Get() };
 
 
-				native->ExecuteCommandLists(2, s);
+				//native->ExecuteCommandLists(2, s);
+
+
+				native->ExecuteCommandLists(1, &s[0]);
+				native->ExecuteCommandLists(1, &s[1]);
 			}
 			else
 			{
@@ -422,12 +426,16 @@ namespace DX12
 
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 			{
+
+
 				debugController->EnableDebugLayer();
 
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
 			//	spDebugController1->SetEnableGPUBasedValidation(true);
 			}
 			
+
+
 	
 //#endif
 		{
@@ -478,16 +486,24 @@ namespace DX12
 
 		
 
-#ifdef DEBUG
+//#ifdef DEBUG
 		ComPtr<ID3D12InfoQueue> d3dInfoQueue;
 		if (SUCCEEDED(m_device.As(&d3dInfoQueue)))
 		{
 
 		//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
 		//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+			D3D12_MESSAGE_ID hide[] =
+			{
+				D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS
+			};
+			D3D12_INFO_QUEUE_FILTER filter = {};
+			filter.DenyList.NumIDs = _countof(hide);
+			filter.DenyList.pIDList = hide;
+			d3dInfoQueue->AddStorageFilterEntries(&filter);
 
 		}
-#endif
+//#endif
 		// Describe and create the command queue.
 		queues[static_cast<int>(CommandListType::DIRECT)].reset(new Queue(CommandListType::DIRECT, this));
 		// queues[static_cast<int>(CommandListType::COMPUTE)].reset(new Queue(CommandListType::COMPUTE));

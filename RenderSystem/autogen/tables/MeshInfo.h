@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct MeshInfo
 	{
 		struct CB
@@ -15,4 +16,5 @@ namespace Table
 		uint& GetVertex_offset() { return cb.vertex_offset; }
 		MeshInfo(CB&cb) :cb(cb){}
 	};
+	#pragma pack(pop)
 }

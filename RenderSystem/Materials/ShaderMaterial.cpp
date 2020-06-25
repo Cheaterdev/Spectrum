@@ -10,7 +10,7 @@ void ShaderMaterial::load(Archive& ar, const unsigned int)
     ar& NVP(boost::serialization::base_object<material>(*this));
     ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
     //  ar& NVP(file);
-    ar& NVP(shader);
+    //ar& NVP(shader);
 }
 
 template<class Archive>
@@ -19,7 +19,7 @@ void ShaderMaterial::save(Archive& ar, const unsigned int) const
     ar& NVP(boost::serialization::base_object<material>(*this));
     ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
     //  ar& NVP(file);
-    ar& NVP(shader);
+   // ar& NVP(shader);
 }
 template<class Archive>
 void ShaderMaterial::serialize(Archive& ar, const unsigned int file_version)
@@ -46,7 +46,9 @@ inline ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)/
 	}
 	//   file = register_asset(asset_ptr);
 	//    shader = Render::pixel_shader::create_from_memory(file->get_data(), "PC", 0);*/
-	shader = Render::pixel_shader::get_resource({ file_name, entry,{} });
+	auto shader = Render::pixel_shader::get_resource({ file_name, entry,{} });
+
+	pipeline = std::make_shared<materials::PipelineSimple>(0, shader);
 }
 
 inline void ShaderMaterial::on_asset_change(std::shared_ptr<Asset> asset)
@@ -56,11 +58,11 @@ inline void ShaderMaterial::on_asset_change(std::shared_ptr<Asset> asset)
 }
 void ShaderMaterial::set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline)
 {
-	pipeline.pixel = shader;
+	//pipeline.pixel = shader;
 }
 void ShaderMaterial::set(MESH_TYPE type, MeshRenderContext::ptr& context)
 {
-    context->pipeline.pixel = shader;
+    //context->pipeline.pixel = shader;
 }
 
 template void ShaderMaterial::serialize(serialization_oarchive& arch, const unsigned int version);

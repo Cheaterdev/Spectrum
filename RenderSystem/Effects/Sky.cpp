@@ -123,7 +123,8 @@ void SkyRender::generate(FrameGraph& graph)
 				Slots::FrameInfo frameInfo;
 
 				auto camera = frameInfo.MapCamera();
-				memcpy(&camera.cb, &graph.cam->get_raw_cb().current, sizeof(camera.cb));
+				camera.cb = graph.cam->camera_cb.current;
+				//memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
 				frameInfo.set(graphics);
 			}
 

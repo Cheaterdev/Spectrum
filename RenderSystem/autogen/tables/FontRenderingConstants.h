@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct FontRenderingConstants
 	{
 		struct CB
@@ -15,4 +16,5 @@ namespace Table
 		float4& GetClipRect() { return cb.ClipRect; }
 		FontRenderingConstants(CB&cb) :cb(cb){}
 	};
+	#pragma pack(pop)
 }

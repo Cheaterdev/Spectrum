@@ -70,7 +70,7 @@ struct ResourceAllocInfo
 	UINT flags;
 	bool placed;
 
-	Allocator::Handle alloc_ptr;
+	CommonAllocator::Handle alloc_ptr;
 // setup
 	int valid_from;
 	int valid_to;

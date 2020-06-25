@@ -147,9 +147,10 @@ namespace DX12
 	 texture_data::ptr Texture::get_data() const
 	{
 		auto desc = get_desc();
-		auto list = Device::get().get_upload_list();
-	//	auto type = resource->get_state(list->get_id());
-	//	list->transition(this, ResourceState::COPY_SOURCE);
+		//auto list = Device::get().get_upload_list();
+	
+		auto list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
+		list->begin("readback");
 
 		desc.Format = to_typeless(desc.Format);
 

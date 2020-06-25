@@ -2,6 +2,7 @@
 #include "Camera.h"
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct FrameInfo
 	{
 		struct CB
@@ -22,4 +23,5 @@ namespace Table
 		Camera MapPrevCamera() { return Camera(cb.prevCamera); }
 		FrameInfo(CB&cb,SRV&srv) :cb(cb),srv(srv){}
 	};
+	#pragma pack(pop)
 }

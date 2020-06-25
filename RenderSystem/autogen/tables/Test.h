@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct Test
 	{
 		struct CB
@@ -15,4 +16,5 @@ namespace Table
 		Render::Bindless& GetTex() { return bindless; }
 		Test(CB&cb,Render::Bindless &bindless) :cb(cb),bindless(bindless){}
 	};
+	#pragma pack(pop)
 }

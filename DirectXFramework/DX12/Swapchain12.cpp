@@ -24,17 +24,22 @@ namespace DX12
 			ComPtr<ID3D12Resource> render_target;
 			m_swapChain->GetBuffer(n, IID_PPV_ARGS(&render_target));
 			auto handle = heap->create_table(1);
-			Device::get().get_native_device()->CreateRenderTargetView(render_target.Get(), nullptr, handle[0].cpu);
+
 			frames[n].m_renderTarget.reset(new Texture(render_target, handle));
 			frames[n].m_renderTarget->set_name(std::string("swap_chain_") + std::to_string(n));
 			frames[n].m_renderTarget->assume_gpu_state(Render::ResourceState::PRESENT);
-			//		if (m_frameIndex == n)
-				//		frames[n].m_renderTarget->debug = true;
+
+		//	frames[n].m_renderTarget->debug = true;
+			*handle[0].resource_ptr = frames[n].m_renderTarget.get();
+			Device::get().get_native_device()->CreateRenderTargetView(render_target.Get(), nullptr, handle[0].cpu);
 		}
 	}
 
 		void SwapChain::present(UINT64 event_time)
 		{
+		//	Log::get() << "present" << Log::endl;
+			assert(frames[m_frameIndex].m_renderTarget->get_gpu_state() == 0);
+
 			frames[m_frameIndex].fence_event = event_time;
 			last_time = event_time;
 			m_swapChain->Present(0, 0);

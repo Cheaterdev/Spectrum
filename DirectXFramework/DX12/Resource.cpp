@@ -67,7 +67,7 @@ namespace DX12
 					state = ResourceState::COMMON;
 		}
 
-		delete_me = heap.create_resource(desc, state, clear_value);
+		auto delete_me = heap.create_resource(desc, state, clear_value);
 		m_Resource = delete_me->m_Resource;
      //   ClassLogger<Resource>::get() << "creating resource " << info.SizeInBytes << " heap: " << static_cast<UINT>(heap_type) << " total: " << (counter[static_cast<int>(heap_type) - 1] += info.SizeInBytes) << Log::endl;
        /* TEST(Device::get().get_native_device()->CreateCommittedResource(
@@ -90,15 +90,15 @@ namespace DX12
 		gpu_state = state;
 		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()));
 
-
+		init_tilings();
     }
-    Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator&heap, ResourceState state, vec4 clear_value)
+    Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator&heap, ResourceState state, vec4 clear_value) :TiledResourceManager(m_Resource)
     {
         init(desc, heap, state, clear_value);
     }
 
 
-    Resource::Resource(const ComPtr<ID3D12Resource>& resouce, bool own)
+    Resource::Resource(const ComPtr<ID3D12Resource>& resouce, bool own) :TiledResourceManager(m_Resource)
     {
         m_Resource = resouce;
         desc = CD3DX12_RESOURCE_DESC(m_Resource->GetDesc());
@@ -177,6 +177,10 @@ namespace DX12
 	*/
 
 
+	HeapType ReservedAllocator::get_type()
+	{
+		return HeapType::DEFAULT;
+	}
 	HeapType DefaultAllocator::get_type()
 	{
 		return HeapType::DEFAULT;
@@ -265,7 +269,7 @@ namespace DX12
 	}
 
 
-	Resource::ptr PlacedAllocator::create_resource( CD3DX12_RESOURCE_DESC& desc, Allocator::Handle handle, ResourceState state, vec4 clear_value)
+	Resource::ptr PlacedAllocator::create_resource( CD3DX12_RESOURCE_DESC& desc, CommonAllocator::Handle handle, ResourceState state, vec4 clear_value)
 	{
 		D3D12_CLEAR_VALUE value;
 		value.Format = to_srv(desc.Format);
@@ -298,7 +302,7 @@ namespace DX12
 		ComPtr<ID3D12Resource> m_Resource;
 		TEST(Device::get().get_native_device()->CreatePlacedResource(
 			heap->heap.Get(),
-			handle.aligned_offset,
+			handle.get_offset(),
 			&desc,
 			static_cast<D3D12_RESOURCE_STATES>(state),
 			(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
@@ -316,6 +320,45 @@ namespace DX12
 
 		return create_resource(desc, handle, state, clear_value);
 	}
+
+
+	Resource::ptr ReservedAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)
+	{
+		D3D12_CLEAR_VALUE value;
+		value.Format = to_srv(desc.Format);
+		value.Color[0] = clear_value.x;
+		value.Color[1] = clear_value.y;
+		value.Color[2] = clear_value.z;
+		value.Color[3] = clear_value.w;
+
+		if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+		{
+			value.Format = to_dsv(desc.Format);
+			value.DepthStencil.Depth = 1.0f;
+			value.DepthStencil.Stencil = 0;
+		}
+
+
+		if (state == ResourceState::UNKNOWN)
+		{
+			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+				state = ResourceState::DEPTH_WRITE;
+			else if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+				state = ResourceState::RENDER_TARGET;
+			else
+				state = ResourceState::COMMON;
+		}
+
+		ComPtr<ID3D12Resource> m_Resource;
+		TEST(Device::get().get_native_device()->CreateReservedResource(
+			&desc,
+			static_cast<D3D12_RESOURCE_STATES>(state),
+			(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
+			IID_PPV_ARGS(&m_Resource)));
+
+		return std::make_shared<Resource>(m_Resource, true);
+	}
+
 
 	Resource::ptr DefaultAllocator::create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)
 		{
@@ -355,6 +398,8 @@ namespace DX12
 				(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
 				IID_PPV_ARGS(&m_Resource)));
 
+
+		
 			return std::make_shared<Resource>(m_Resource, true);
 		}
 

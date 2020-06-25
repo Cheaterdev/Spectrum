@@ -24,7 +24,7 @@ public:
 
 	template<class F/*, class... Args*/>
 	auto enqueue(F&& f)
-		->std::future<typename std::result_of<F(/*Args...*/)>::type>;
+		->std::future<typename std::invoke_result<F>::type>;
 
 private:
 
@@ -44,10 +44,10 @@ inline thread_pool::thread_pool()
 // add new work item to the pool
 template<class F/*, class... Args*/>
 auto thread_pool::enqueue(F&& f)
--> std::future<typename std::result_of<F(/*Args...*/)>::type>
+-> std::future<typename std::invoke_result<F>::type>
 {
 	if (stop) throw std::exception("wtf");
-	using return_type = typename std::result_of<F(/*Args...*/)>::type;
+	using return_type = typename std::invoke_result<F>::type;
 
 	auto task = std::make_shared< std::packaged_task<return_type()> >(
 		std::bind(std::forward<F>(f)/*, std::forward<Args>(args)...*/)
@@ -181,13 +181,13 @@ public:
 
 	template<class F, class... Args>
 	auto enqueue(F&& f, std::chrono::steady_clock::time_point time, Args&& ... args)
-		->std::future<typename std::result_of<F(Args...)>::type>
+		->std::future<typename std::invoke_result<F>::type>
 	{
 
 		if (time <= std::chrono::steady_clock::now())
 			return  thread_pool::get().enqueue(f);
 
-		using return_type = typename std::result_of<F(Args...)>::type;
+		using return_type = typename std::invoke_result<F>::type;
 
 		auto task = std::make_shared< std::packaged_task<return_type()> >(
 			std::bind(std::forward<F>(f), std::forward<Args>(args)...)

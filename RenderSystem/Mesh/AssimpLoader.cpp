@@ -388,7 +388,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
         }
 
         std::vector<Vertex> vertices(vertex_count);
-        std::vector<unsigned int> indices(index_count);
+        std::vector<UINT32> indices(index_count);
         vertex_count = 0;
         index_count = 0;
         auto get_texture = [&load_textures, &m](boost::filesystem::path name)->TextureAsset::ptr
@@ -627,12 +627,16 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
         for (auto && e : tasks)
             e.wait();
 
-        result->index_buffer.reset(new Render::IndexBuffer(indices));
-        auto list = Render::Device::get().get_upload_list();
-        result->vertex_buffer.reset(new Render::StructuredBuffer<Vertex>(vertices.size()));
-        result->vertex_buffer->set_data(list, 0, vertices);
-        list->end();
-        list->execute();
+   //     result->index_buffer.reset(new Render::IndexBuffer(indices));
+     //   auto list = Render::Device::get().get_upload_list();
+    //    result->vertex_buffer.reset(new Render::StructuredBuffer<Vertex>(vertices.size()));
+    //    result->vertex_buffer->set_data(list, 0, vertices);
+     //   list->end();
+    //    list->execute();
+
+        result->vertex_buffer = std::move(vertices);
+		result->index_buffer = std::move(indices);
+
         std::function<void(aiNode*, MeshNode& obj, MeshNode*)>  node_parser = [&](aiNode * node, MeshNode & obj, MeshNode * parent)
         {
             if (!node) return;

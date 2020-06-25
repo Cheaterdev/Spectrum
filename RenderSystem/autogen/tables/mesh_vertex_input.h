@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct mesh_vertex_input
 	{
 		struct CB
@@ -19,4 +20,5 @@ namespace Table
 		float4& GetTangent() { return cb.tangent; }
 		mesh_vertex_input(CB&cb) :cb(cb){}
 	};
+	#pragma pack(pop)
 }

@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct Countour
 	{
 		struct CB
@@ -17,4 +18,5 @@ namespace Table
 		Render::Handle& GetTex() { return srv.tex; }
 		Countour(CB&cb,SRV&srv) :cb(cb),srv(srv){}
 	};
+	#pragma pack(pop)
 }

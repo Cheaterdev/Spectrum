@@ -50,6 +50,10 @@ class Plane
         float operator()(const vec3& p) const;
         void ApplyTransform(const mat4x4& m);
 
+        operator vec4() const
+        {
+            return vec4(n, d);
+        }
         vec3 n;
         float d;
 

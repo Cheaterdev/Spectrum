@@ -6,10 +6,18 @@ struct mesh_vertex_input
     float4 tangent;
 }
 
+struct AABB
+{
+    float4 min;
+    float4 max;
+}
+
 struct node_data
 {
+    
     float4x4 node_global_matrix;
     float4x4 node_inverse_matrix;
+    AABB aabb;
 }
 
 
@@ -18,12 +26,59 @@ struct node_data
 struct MeshInfo
 {
     uint node_offset;
-	uint vertex_offset;
+    uint vertex_offset;
+}
+
+[shader_only]
+struct DrawIndexedArguments
+{
+	uint data[5];
+}
+
+[shader_only]
+struct GPUAddress
+{
+	uint2 data;
+}
+
+
+
+struct CommandData
+{
+	GPUAddress material_cb;
+	GPUAddress mesh_cb;
+	DrawIndexedArguments draw_commands;
+}
+
+
+struct MeshCommandData
+{
+	uint material_id;
+	uint node_offset;
+	GPUAddress mesh_cb;
+	DrawIndexedArguments draw_commands;
+}
+
+
+struct MaterialCommandData
+{
+	GPUAddress material_cb;
+	uint pipeline_id;
 }
 
 [Bind = DefaultLayout::Instance0]
-struct MeshData
+struct GatherPipelineGlobal
 {
-	StructuredBuffer<mesh_vertex_input> vb;
+	uint meshes_count;
+	StructuredBuffer<MeshCommandData> meshes;
+	StructuredBuffer<MaterialCommandData> materials;
+
+}
+
+[Bind = DefaultLayout::Instance1]
+struct GatherPipeline
+{
+		uint pip_ids[8];
+		AppendStructuredBuffer<CommandData> commands[8];
 }
 

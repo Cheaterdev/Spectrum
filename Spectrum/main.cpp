@@ -1117,7 +1117,7 @@ struct RayTracingShaders : public Events::prop_handler,
 			{
 				closesthit_identifier id;
 				id.identifier = identify(stateObjectProperties->GetShaderIdentifier((mat->wshader_name + L"HIT").c_str()));
-				id.mat_buffer = mat->get_pixel_buffer()?mat->get_pixel_buffer()->get_gpu_address():0;
+//////////////////////				id.mat_buffer = mat->get_pixel_buffer()?mat->get_pixel_buffer()->get_gpu_address():0;
 				hitGroupShaderIdentifiers.push_back(id);
 			}
 
@@ -1199,7 +1199,7 @@ struct RayTracingShaders : public Events::prop_handler,
 
 			{
 
-				hitGroupShaderIdentifiers[2 * i].mat_buffer = materials[i]->get_pixel_buffer()? materials[i]->get_pixel_buffer()->get_gpu_address():0;
+	///////////////			hitGroupShaderIdentifiers[2 * i].mat_buffer = materials[i]->get_pixel_buffer()? materials[i]->get_pixel_buffer()->get_gpu_address():0;
 			}
 
 
@@ -1368,12 +1368,12 @@ public:
 
 		query_heap = std::make_shared<  Render::QueryHeap>(2, D3D12_QUERY_HEAP_TYPE::D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS);
 		scene_renderer = std::make_shared<main_renderer>();
-		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>(scene));
+		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
 
 
 		gpu_scene_renderer = std::make_shared<main_renderer>();
 
-		gpu_scene_renderer->register_renderer( std::make_shared<mesh_renderer>(scene));
+		gpu_scene_renderer->register_renderer( std::make_shared<mesh_renderer>());
 	
 
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
@@ -1473,16 +1473,16 @@ public:
 
 
 
-		auto base_mat = make_material({ 1,1,1 }, 1, 0);
+	//	auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count =2;
+		int count =-2;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
 			{
 				MeshAssetInstance::ptr instance(new MeshAssetInstance(asset_ptr));
-				instance->override_material(0, base_mat);
-				instance->override_material(1, make_material({ 1,0,0 }, float(i) / count, float(j) / count));
+			//	instance->override_material(0, base_mat);
+			//	instance->override_material(1, make_material({ 1,0,0 }, float(i) / count, float(j) / count));
 
 				instance->local_transform[3] = { i * distance - count* distance/2,0,j * distance- count * distance / 2,1 };
 
@@ -1910,6 +1910,8 @@ public:
 		{
 
 		};
+
+		scene->update(*graph.builder.current_frame);
 		graph.builder.pass_texture("ResultTexture", texture.texture);
 		graph.frame_size = size;
 		graph.scene = scene.get();
@@ -1968,7 +1970,9 @@ public:
 				}, [this](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
-					universal_nodes_manager::get().prepare(command_list);
+					SceneFrameManager::get().prepare(command_list, *scene);
+
+
 					//std::this_thread::sleep_for(1ms);
 				//	gpu_scene_renderer->render(context_gbuffer, scene);
 					MeshRenderContext::ptr context(new MeshRenderContext());
@@ -2013,10 +2017,11 @@ public:
 				});
 		}
 
-	pssm.generate(graph);
+		pssm.generate(graph);
 		sky.generate(graph);
 
 		stenciler->generate_after(graph);
+
 		/*
 		graph.add_pass<pass_data>("RAYTRACE",[](pass_data& data, TaskBuilder& builder) {
 		//	data.o_texture = builder.read_texture("swapchain");
@@ -2052,6 +2057,8 @@ public:
 			*/
 			
 	
+
+
 	}
 
 	virtual void draw(Render::context& t) override
@@ -2918,6 +2925,18 @@ public:
 	{
 		std::lock_guard<std::mutex> g(m);
 
+		if (GetAsyncKeyState('R'))
+		{
+			//   AssetManager::get().reload_resources();
+			Render::pixel_shader::reload_all();
+			Render::vertex_shader::reload_all();
+			Render::geometry_shader::reload_all();
+			Render::hull_shader::reload_all();
+			Render::domain_shader::reload_all();
+			Render::compute_shader::reload_all();
+			Render::Texture::reload_all();
+		}
+
 		Profiler::get().on_frame(frame_counter++);
 
 		GUI::user_interface::size = new_size;
@@ -2999,15 +3018,20 @@ public:
 
 		auto ptr = get_ptr();
 
-		graph.add_pass<pass_no>("PROFILER",[](pass_no& data, TaskBuilder& builder) {
-			}, [this,ptr](pass_no& data, FrameContext& context) {
-				{
-				
-					Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
-						run_on_ui([this,ptr]() {	Profiler::get().update(); });
+		graph.add_pass<pass_data>("PROFILER",[](pass_data& data, TaskBuilder& builder) {
+			data.o_texture = builder.need_texture("swapchain");
+			}, [this, ptr](pass_data& data, FrameContext& context) {
 
-						});
-				}
+
+				context.get_list()->transition(context.get_texture(data.o_texture).resource, ResourceState::PRESENT);
+				context.get_list()->flush_transitions();
+
+
+				Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
+					run_on_ui([this, ptr]() {	Profiler::get().update(); });
+
+					});
+			
 			});
 		
 		

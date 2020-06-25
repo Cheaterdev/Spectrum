@@ -4,9 +4,9 @@
 namespace DX12
 {
 
-    GPUBuffer::GPUBuffer(UINT64 _size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/ , ResourceState state) : size(Math::AlignUp(_size,D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
+    GPUBuffer::GPUBuffer(UINT64 _size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/ , ResourceState state, ResourceAllocator& heap) : size(Math::AlignUp(_size,D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
         count(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
-        stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), flags), DefaultAllocator::get(), state)
+        stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), flags), heap, state)
     {
     }
 
@@ -145,7 +145,7 @@ namespace DX12
     {
     }
 
-    D3D12_INDEX_BUFFER_VIEW IndexBuffer::get_index_buffer_view(bool is_32, unsigned int offset /*= 0*/, UINT size /*= 0*/)
+    D3D12_INDEX_BUFFER_VIEW GPUBuffer::get_index_buffer_view(bool is_32, unsigned int offset /*= 0*/, UINT size /*= 0*/)
     {
         D3D12_INDEX_BUFFER_VIEW view;
         view.BufferLocation = get_gpu_address() + offset;

@@ -2,6 +2,7 @@
 #include "GBuffer.h"
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct PSSMLighting
 	{
 		using CB = Empty;
@@ -18,4 +19,5 @@ namespace Table
 		GBuffer MapGbuffer() { return GBuffer(srv.gbuffer); }
 		PSSMLighting(SRV&srv) :srv(srv){}
 	};
+	#pragma pack(pop)
 }

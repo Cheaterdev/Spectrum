@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct ColorRect
 	{
 		struct CB
@@ -13,4 +14,5 @@ namespace Table
 		float4& GetColor() { return cb.color; }
 		ColorRect(CB&cb) :cb(cb){}
 	};
+	#pragma pack(pop)
 }

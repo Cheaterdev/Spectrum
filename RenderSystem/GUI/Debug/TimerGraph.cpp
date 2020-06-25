@@ -112,7 +112,7 @@ namespace GUI
 			void TimeGraph::build()
 			{
 
-
+				Profiler::get().enabled = false;
 				ended = true;
 				end = std::chrono::high_resolution_clock::now();
 				run_on_ui([this]() {
@@ -235,6 +235,7 @@ namespace GUI
 					m.lock();
 					if (need_start)
 					{
+						Profiler::get().enabled = true;
 						need_start = false;
 
 						data.reset();

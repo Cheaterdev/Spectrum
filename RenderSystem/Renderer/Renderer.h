@@ -215,7 +215,8 @@ class mesh_renderer : public renderer, public Events::prop_handler
         Render::vertex_shader::ptr shader;
         Render::geometry_shader::ptr voxel_geometry_shader;
 
-        
+		ComPtr<ID3D12CommandSignature> indirect_command_signature;
+
 		TextureAsset::ptr best_fit_normals;
 
         //    MeshRenderContext::ptr mesh_render_context;
@@ -236,10 +237,13 @@ class mesh_renderer : public renderer, public Events::prop_handler
 
         virtual void render(MeshRenderContext::ptr mesh_render_context, Scene::ptr obj) override;
 //		Scene::ptr scene;
-		std::set<MeshAssetInstance*> static_objects;
-		std::set<MeshAssetInstance*> dynamic_objects;
+	//.std::set<MeshAssetInstance*> static_objects;
+		//std::set<MeshAssetInstance*> dynamic_objects;
 		void iterate(MESH_TYPE mesh_type,  std::function<void(Scene::ptr&)> f) override;
 	
+		Render::ComputePipelineState::ptr gather_pipeline;
+
+		virtual_gpu_buffer<command>::ptr commands_buffer[8];
     public:
         unsigned int rendered_simple;
         unsigned int rendered_instanced;
@@ -253,7 +257,7 @@ class mesh_renderer : public renderer, public Events::prop_handler
        // Render::RootSignature::ptr my_signature;
 
         using ptr = s_ptr<mesh_renderer>;
-        mesh_renderer(Scene::ptr scene = nullptr);
+        mesh_renderer();
 };
 
 

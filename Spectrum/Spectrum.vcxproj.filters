@@ -308,6 +308,9 @@
     <None Include="shaders\voxel_screen_blur.hlsl" />
     <None Include="shaders\triangle.hlsl" />
     <None Include="shaders\UniversalMaterialRaytracing.hlsl" />
+    <None Include="shaders\gather_pipeline.hlsl">
+      <Filter>Resources\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="texture.png" />

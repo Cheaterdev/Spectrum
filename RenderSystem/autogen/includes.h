@@ -9,7 +9,8 @@
 #include "slots\MaterialInfo.h"
 #include "slots\SceneData.h"
 #include "slots\MeshInfo.h"
-#include "slots\MeshData.h"
+#include "slots\GatherPipelineGlobal.h"
+#include "slots\GatherPipeline.h"
 #include "slots\MipMapping.h"
 #include "slots\CopyTexture.h"
 #include "slots\DownsampleDepth.h"
@@ -26,6 +27,5 @@
 #include "slots\NinePatch.h"
 #include "slots\ColorRect.h"
 #include "slots\FlowGraph.h"
-
 void init_signatures();
 Render::RootLayout::ptr get_Signature(Layouts id);

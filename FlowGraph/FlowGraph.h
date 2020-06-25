@@ -542,8 +542,38 @@ namespace FlowGraph
 
             virtual void on_remove();
 
-		
+         
         public:
+			virtual UINT get_id()
+			{
+                return "undefined"_crc32;
+			}
+
+			UINT get_graph_id()
+			{
+				return "undefined"_crc32;
+			}
+
+			virtual UINT get_id_with_links()
+			{
+
+                std::stringstream total;
+
+                total << "IN:";
+                for (auto p : input_parametres)
+                {
+                    if(p->has_input())
+                    total << p->owner->get_id()<<"_";
+                }
+				total << "OUT:";
+				for (auto p : output_parametres)
+				{
+					//if (p->())
+						total << p->owner->get_id() << "_";
+				}
+				return "undefined"_crc32;
+			}
+
 			virtual void on_done(GraphContext*);
 			virtual void on_start(GraphContext*);
 			using ptr = s_ptr<Node>;
@@ -792,6 +822,35 @@ namespace FlowGraph
                 return std::static_pointer_cast<M>(shared_from_this());
             }
 
+
+            size_t calculate_unique_id()
+            {
+                std::map<Node*, int> nodes_ids;
+
+                std::vector<Node*> node_vec;
+                for (auto &node : nodes)
+                {
+                    node_vec.push_back(node.get());
+                }
+
+                std::sort(node_vec.begin(), node_vec.end(), [](Node* a, Node* b) {
+                    if (a->get_id() == b->get_id())
+                    {
+                        return a->get_id_with_links() < b->get_id_with_links();
+                    }
+
+                    return (a->get_id() < b->get_id());
+                    });
+
+
+                for (int i = 0; i < node_vec.size(); i++)
+				{
+                    nodes_ids[node_vec[i]] = i;
+                }
+
+
+
+            }
 
 			virtual	void reset_for();
 			virtual void start(GraphContext* context);

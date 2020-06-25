@@ -4,20 +4,9 @@
 class camera : public Frustum
 {
     public:
-#pragma pack(push, 1)
-        struct shader_params
-        {
-            mat4x4 view;
-            mat4x4 proj;
-            mat4x4 view_proj;
-            mat4x4 inv_view;
-            mat4x4 inv_proj;
-            mat4x4 inv_view_proj;
-            vec3 position; float unused;
-            vec3 direction; float unused2;
-			vec2 jitter; vec2 unused3;
-        };
-#pragma pack(pop)
+
+        using shader_params = Table::Camera::CB;
+
 #pragma pack(push, 4)
         struct camera_const
         {
@@ -25,6 +14,7 @@ class camera : public Frustum
             shader_params prev;
         };
 #pragma pack(pop)
+
         struct frustrum_points
         {
             vec3 p[8];
@@ -58,13 +48,12 @@ class camera : public Frustum
         mat4x4 view_proj_mat;
         mat4x4 inv_view_proj_mat;
         //Frustum frustum;
-
-        Render::FrameStorageConstBuffer<camera_const> const_buffer;
-
+    
         shader_params params;
 
 
     public:
+		camera_const camera_cb;
 
         vec3 to_direction(vec2 local) const
         {
@@ -72,7 +61,7 @@ class camera : public Frustum
             dir.y = -dir.y;
             dir = dir * get_inv_view_proj();
             vec3 res(dir / dir.w);
-            res -= const_buffer.data().current.position;
+            res -= camera_cb.current.position;
             res.normalize();
             return res;
         }
@@ -193,15 +182,7 @@ class camera : public Frustum
 
 		}
 #endif
-        Render::FrameStorageConstBuffer<camera_const>& get_const_buffer()
-        {
-            return const_buffer;
-        }
-
-		camera_const &get_raw_cb()
-		{
-			return const_buffer.data();
-		}
+    
         virtual frustrum_points get_points(float znear, float zfar)
         {
             mat4x4 proj, v;

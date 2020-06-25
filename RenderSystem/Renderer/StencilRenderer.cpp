@@ -394,16 +394,15 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 				auto obj = graph.scene;
 
-				universal_nodes_manager::get().prepare(_context.get_list());
+				SceneFrameManager::get().prepare(_context.get_list(), *debug_scene);
+
 				RenderTargetTable table = RenderTargetTable(graphics, {}, depth_tex);
 				{
 					std::vector<std::pair<MeshAssetInstance::ptr, int>> current;
 					auto mesh_func = [&](MeshAssetInstance* l)
 					{
-					graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
-
-						l->mesh_render_data.set(graphics);
-
+			
+			
 						for (unsigned int i = 0; i < l->rendering.size(); i++)
 						{
 							auto& m = l->rendering[i];
@@ -421,8 +420,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 								instance.GetInstanceId() = current.size();
 								instance.set(graphics);
 							}
-
-							graphics.draw_indexed(m.index_count, m.index_offset, 0);
+							graphics.draw(m.draw_arguments);
 						}
 					};
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -436,7 +434,8 @@ void stencil_renderer::generate(FrameGraph& graph)
 						Slots::FrameInfo frameInfo;
 
 						auto camera = frameInfo.MapCamera();
-						memcpy(&camera.cb, &cam.get_raw_cb().current, sizeof(camera.cb));
+				//		memcpy(&camera.cb, &cam.camera_cb.current, sizeof(camera.cb));
+						camera.cb = cam.camera_cb.current;
 						frameInfo.set(graphics);
 					}
 
@@ -448,11 +447,14 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 					{
 						Slots::SceneData sceneData;
-						sceneData.GetNodes() = universal_nodes_manager::get().mesh_nodes->get_srv()[0];
-						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().textures_data;
+						sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
+						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
+						sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
+
 
 						sceneData.set(graphics);
 					}
+					graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
 
 
 
@@ -478,7 +480,8 @@ void stencil_renderer::generate(FrameGraph& graph)
 						Slots::FrameInfo frameInfo;
 
 						auto camera = frameInfo.MapCamera();
-						memcpy(&camera.cb, &axis_intersect_cam.get_raw_cb().current, sizeof(camera.cb));
+						camera.cb = axis_intersect_cam.camera_cb.current;
+				//		memcpy(&camera.cb, &axis_intersect_cam.camera_cb.current, sizeof(camera.cb));
 						frameInfo.set(graphics);
 					}
 					{
@@ -489,11 +492,13 @@ void stencil_renderer::generate(FrameGraph& graph)
 		
 					{
 						Slots::SceneData sceneData;
-						sceneData.GetNodes() = universal_nodes_manager::get().mesh_nodes->get_srv()[0];
-						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().textures_data;
+						sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
+						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
+						sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
 
 						sceneData.set(graphics);
 					}
+					graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
 
 
 					axis->iterate([&](scene_object* node)
@@ -504,10 +509,8 @@ void stencil_renderer::generate(FrameGraph& graph)
 							{
 								auto l = dynamic_cast<MeshAssetInstance*>(render_object);
 
-								graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
-
-								l->mesh_render_data.set(graphics);
-
+						
+					
 								for (unsigned int i = 0; i < l->rendering.size(); i++)
 								{
 									auto& m = l->rendering[i];
@@ -520,7 +523,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 										instance.set(graphics);
 									}
 						
-									graphics.draw_indexed(m.index_count, m.index_offset, 0);
+									graphics.draw(m.draw_arguments);
 								}
 							}
 
@@ -592,13 +595,24 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 				auto& graphics = list.get_graphics();
 				graphics.use_dynamic = false;
 
+				graphics.set_signature(draw_selected_state->desc.root_signature);
 				{
-			//		list.transition(color_tex.resource, ResourceState::RENDER_TARGET);
+					Slots::SceneData sceneData;
+					sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
+					sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
+					sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
+
+					sceneData.set(graphics);
+				}
+				graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
+
+
+
+				{
 					graphics.set_rtv(1, color_tex.get_rtv(), Handle());
 					color_tex.get_rtv().clear(list);
 
 					graphics.set_pipeline(draw_selected_state);
-					//////////////////////		shader_data.camera_data = mesh_render_context->cam->get_const_buffer();
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_viewports({ color_tex.get_viewport() });
 					graphics.set_scissors(color_tex.get_scissor());
@@ -607,7 +621,8 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 						Slots::FrameInfo frameInfo;
 
 						auto camera = frameInfo.MapCamera();
-						memcpy(&camera.cb, &graph.cam->get_raw_cb().current, sizeof(camera.cb));
+						camera.cb = graph.cam->camera_cb.current;
+						//memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
 						frameInfo.set(graphics);
 					}
 
@@ -617,17 +632,13 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					{
 
 						auto l = sel.first;
-						graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
-
-						l->mesh_render_data.set(graphics);
-
 				
 						int i = sel.second;
 						{
 							auto& m = l->rendering[i];
 							m.mesh_info.set(graphics);
 
-							graphics.draw_indexed(m.index_count, m.index_offset, 0);
+							graphics.draw(m.draw_arguments);
 						}
 					}
 				}
@@ -661,26 +672,14 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 						Slots::FrameInfo frameInfo;
 
 						auto camera = frameInfo.MapCamera();
-						memcpy(&camera.cb, &axis_cam.get_raw_cb().current, sizeof(camera.cb));
+						camera.cb = axis_cam.camera_cb.current;
+						//memcpy(&camera.cb, &axis_cam.camera_cb.current, sizeof(camera.cb));
 						frameInfo.set(graphics);
 					}
-
-					{
-						Slots::SceneData sceneData;
-						sceneData.GetNodes() = universal_nodes_manager::get().mesh_nodes->get_srv()[0];
-						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().textures_data;
-
-						sceneData.set(graphics);
-					}
-
-
+			
 					graphics.set_pipeline(axis_render_state);
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					int i = 0;
-
-					graphics.set_index_buffer(axis->mesh_asset->index_buffer->get_index_buffer_view(true));
-
-					axis->mesh_render_data.set(graphics);
 
 					for (auto& m : axis->rendering)
 					{
@@ -692,7 +691,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 							color.set(graphics);
 						}
 						m.mesh_info.set(graphics);
-						graphics.draw_indexed(m.index_count, m.index_offset, 0);
+						graphics.draw(m.draw_arguments);
 						i++;
 					}
 				}

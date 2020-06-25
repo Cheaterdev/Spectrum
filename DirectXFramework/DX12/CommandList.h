@@ -51,15 +51,157 @@ namespace DX12
 	class ComputeContext;
 	class CopyContext;
 	class FrameResourceManager;
-	class FrameResources:public std::enable_shared_from_this<FrameResources>
+
+
+
+	class Uploader
+	{
+		friend class BufferCache;
+
+		std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
+		UINT64 resource_offset;
+		UINT heap_size = 0x200000;
+	protected:
+		void reset();
+
+		template<class T>
+		size_t size_of(std::vector<T>& elem)
+		{
+			return sizeof(T) * elem.size();
+		}
+
+		template<class T>
+		size_t size_of(my_unique_vector<T>& elem)
+		{
+			return sizeof(T) * elem.size();
+		}
+
+		template<class T>
+		size_t size_of(T& elem)
+		{
+			return sizeof(T);
+		}
+
+
+	public:
+		struct UploadInfo
+		{
+			std::shared_ptr<UploadBuffer> resource;
+			UINT64 offset;
+			UINT64 size;
+
+			D3D12_GPU_VIRTUAL_ADDRESS get_address();
+
+
+			Handle create_cbv(CommandList& list);
+		};
+
+		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
+
+
+
+		template<class ...Args>
+		UploadInfo place_raw(Args... args)
+		{
+			size_t size = (0 + ... + size_of(args));
+
+
+
+			auto info = place_data(size);
+
+
+			//	memcpy(info.resource->get_data() + info.offset, data, size);
+			size_t start = 0;
+			{
+				auto timer = Profiler::get().start(L"write");
+				(write(info, start, std::forward<Args>(args)), ...);
+
+			}
+			return info;
+		}
+
+
+		template<class T>
+		void write(UploadInfo& info, std::vector<T>& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
+		}
+
+		template<class T>
+		void write(UploadInfo& info, my_unique_vector<T>& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
+		}
+
+		template<class T>
+		void write(UploadInfo& info, size_t& offset, std::vector<T>& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset + offset, arg.data(), arg.size() * sizeof(T));
+			offset += arg.size() * sizeof(T);
+		}
+
+
+		template<class T>
+		void write(UploadInfo& info, size_t& offset, my_unique_vector<T>& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset + offset, arg.data(), arg.size() * sizeof(T));
+			offset += arg.size() * sizeof(T);
+
+		}
+		template<class T>
+		void write(UploadInfo& info, size_t& offset, T& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset + offset, &arg, sizeof(T));
+			offset += sizeof(T);
+		}
+	};
+
+
+
+
+	template<class LockPolicy = Free>
+	class GPUCompiledManager: public Uploader
+	{
+	//	using cb_buffer = virtual_gpu_buffer<std::byte>;
+
+	//	static Cache<std::shared_ptr<cb_buffer>> cbv_cache;
+	public:
+		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, LockPolicy, DescriptorHeapFlags::SHADER_VISIBLE> srv;
+		DynamicDescriptor<DescriptorHeapType::SAMPLER, LockPolicy, DescriptorHeapFlags::SHADER_VISIBLE> smp;
+	
+		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, LockPolicy> srv_uav_cbv_cpu;
+		DynamicDescriptor<DescriptorHeapType::RTV, LockPolicy> rtv_cpu;
+		DynamicDescriptor<DescriptorHeapType::DSV, LockPolicy> dsv_cpu;
+		DynamicDescriptor<DescriptorHeapType::SAMPLER, LockPolicy> smp_cpu;
+
+	//	std::shared_ptr<cb_buffer> cb;
+
+		using Uploader::place_raw;
+
+		void reset()
+		{
+			srv.reset();
+			smp.reset();
+
+			srv_uav_cbv_cpu.reset();
+			rtv_cpu.reset();
+			dsv_cpu.reset();
+			smp_cpu.reset();
+			Uploader::reset();
+
+		}
+	};
+
+
+	class StaticCompiledGPUData:public Singleton<StaticCompiledGPUData>, public GPUCompiledManager<Lockable>
+	{
+
+	};
+	class FrameResources:public std::enable_shared_from_this<FrameResources>, public GPUCompiledManager<Lockable>
 	{
 
 		friend class FrameResourceManager;
-		std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
-		std::uint64_t  resource_offset = 0;
-
-		size_t heap_size = 0x200000;
-
+	
 		std::uint64_t frame_number = 0;
 		std::mutex m;
 
@@ -67,73 +209,20 @@ namespace DX12
 
 	public:
 
-		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, Lockable> srv_uav_cbv_cpu;
-		DynamicDescriptor<DescriptorHeapType::RTV, Lockable> rtv_cpu;
-		DynamicDescriptor<DescriptorHeapType::DSV, Lockable> dsv_cpu;
-		DynamicDescriptor<DescriptorHeapType::SAMPLER, Lockable> smp_cpu;
+	
 
 
-
+		~FrameResources()
+		{
+			reset();
+		}
 		using ptr = std::shared_ptr<FrameResources>;
 		std::uint64_t get_frame()
 		{
 			return frame_number;
 		}
-		struct UploadInfo
-		{
-			std::shared_ptr<UploadBuffer> resource;
-			std::uint64_t offset;
-			std::uint64_t size;
-			std::uint64_t frame = -10;
-
-			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address();
-
-			template<class T>
-			T get_view(CommandList& list)
-			{
-				return resource->create_view<T>(*list.frame_resources, offset, size);
-			}
-		};
-
-		UploadInfo place_data(std::uint64_t uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
-
-
-		template<class T>
-		UploadInfo set_const_buffer(const T& data)
-		{
-			auto info = place_data(sizeof(T), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			memcpy(info.resource->get_data() + info.offset, &data, sizeof(T));
-			info.frame = frame_number;
-			return info;
-		}
-		template<class T>
-		UploadInfo set_data(T* data, size_t size)
-		{
-			auto info = place_data(size * sizeof(T), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			memcpy(info.resource->get_data() + info.offset, data, size * sizeof(T));
-			info.frame = frame_number;
-			return info;
-		}
-		/*
-				void begin()
-				{
-					resource_offset = 0;
-
-					if (upload_resources.size())
-						upload_resources.clear();
-				}
-
-				void end()
-				{
-
-				}*/
 
 		std::shared_ptr<CommandList> start_list(std::string name="");
-		~FrameResources()
-		{
-			std::lock_guard<std::mutex> g(m);
-			BufferCache::get().unused_upload(upload_resources);
-		}
 
 	};
 
@@ -157,7 +246,7 @@ namespace DX12
 	public:
 		FrameResources::ptr begin_frame();	
 	};
-
+	/*
 	class FrameResource
 	{
 	protected:
@@ -223,7 +312,7 @@ namespace DX12
 
 		using type = T;
 	};
-
+	*/
 	class CommandListBase
 	{
 	
@@ -268,106 +357,6 @@ namespace DX12
 
 		void flush_transitions();
 	};
-
-	/*
-	template <class T>
-	concept vector_type = std::is_base_of<GPUPointer, T>::value;
-
-
-	*/
-	class Uploader : public virtual CommandListBase
-	{
-		friend class BufferCache;
-
-		std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
-		UINT64 resource_offset;
-		UINT heap_size = 0x200000;
-	protected:
-		void reset();
-	
-		template<class T>
-		size_t size_of(std::vector<T>&elem)
-		{
-			return sizeof(T)*elem.size();
-		}
-
-		template<class T>
-		size_t size_of(T& elem)
-		{
-			return sizeof(T);
-		}
-
-
-	public:
-		struct UploadInfo
-		{
-			std::shared_ptr<UploadBuffer> resource;
-			UINT64 offset;
-			UINT64 size;
-
-			D3D12_GPU_VIRTUAL_ADDRESS get_address();
-
-
-			Handle create_cbv(CommandList& list);
-		};
-
-		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
-
-
-
-		template<class ...Args>
-		UploadInfo place_raw(Args... args)
-		{
-			size_t size = (0 + ... + size_of(args));
-
-
-			
-			auto info =  place_data(size);
-
-
-		//	memcpy(info.resource->get_data() + info.offset, data, size);
-			size_t start = 0;
-			(write(info, start, std::forward<Args>(args)), ...);
-
-			return info;
-		}
-
-		/*
-		template<class T>
-		UploadInfo place_raw(const std::vector<T> & v)
-		{
-		
-			auto info = place_data(v.size()*sizeof(T));
-
-			size_t start = 0;
-			write(info, start, v);
-
-			return info;
-
-
-		}*/
-		template<class T>
-		void write(UploadInfo& info, std::vector<T>& arg)
-		{
-			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
-		}
-
-
-		template<class T>
-		void write(UploadInfo& info, size_t& offset, std::vector<T>& arg)
-		{
-			memcpy(info.resource->get_data() + info.offset + offset, arg.data(), arg.size()*sizeof(T));
-			offset += arg.size() * sizeof(T);
-		}
-
-		template<class T>
-		void write(UploadInfo& info, size_t& offset, T& arg)
-		{
-			memcpy(info.resource->get_data() + info.offset + offset, &arg, sizeof(T));
-			offset += sizeof(T);
-		}
-	};
-
 
 	class Readbacker : public virtual CommandListBase
 	{
@@ -534,7 +523,7 @@ namespace DX12
 
 
 
-	class CommandList : public std::enable_shared_from_this<CommandList>, public Uploader,public Readbacker, public Transitions, public Eventer, public Sendable
+	class CommandList : public std::enable_shared_from_this<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Free>
 	{
 
 
@@ -582,8 +571,8 @@ namespace DX12
 		ptr get_sub_list();
 		FrameResources::ptr frame_resources;
 
-		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, Free, DescriptorHeapFlags::SHADER_VISIBLE> srv_descriptors;
-		DynamicDescriptor<DescriptorHeapType::SAMPLER, Free, DescriptorHeapFlags::SHADER_VISIBLE> smp_descriptors;
+	//	DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, Free, DescriptorHeapFlags::SHADER_VISIBLE> srv_descriptors;
+	//	DynamicDescriptor<DescriptorHeapType::SAMPLER, Free, DescriptorHeapFlags::SHADER_VISIBLE> smp_descriptors;
 
 		GraphicsContext& get_graphics();
 		ComputeContext& get_compute();
@@ -651,7 +640,7 @@ namespace DX12
 			transition(*h.resource_ptr, ResourceState::UNORDERED_ACCESS);
 
 			flush_transitions();
-			auto handle = srv_descriptors.place(h);	
+			auto handle = srv.place(h);	
 			get_native_list()->ClearUnorderedAccessViewUint(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<UINT*>(ClearColor.data()), 0, nullptr);
 		}
 
@@ -661,7 +650,7 @@ namespace DX12
 			transition(*h.resource_ptr, ResourceState::UNORDERED_ACCESS);
 
 			flush_transitions();
-			auto handle = srv_descriptors.place(h);
+			auto handle = srv.place(h);
 			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 		}
 
@@ -758,7 +747,7 @@ namespace DX12
 		virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
 		virtual	void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) = 0;
 		virtual void set_const_buffer(UINT i, const FrameResources::UploadInfo& info) = 0;
-		virtual void set_const_buffer(UINT i, FrameResource& info) = 0;
+		//virtual void set_const_buffer(UINT i, FrameResource& info) = 0;
 
 		virtual void set_constant(UINT i, UINT offset, UINT data) = 0;
 		template<class... Args>
@@ -769,7 +758,7 @@ namespace DX12
 
 
 
-		virtual void set_srv(UINT i, FrameResource& info) = 0;
+	//	virtual void set_srv(UINT i, FrameResource& info) = 0;
 		virtual void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
 
 
@@ -824,7 +813,7 @@ namespace DX12
 		friend class CommandList;
 		ComPtr<ID3D12GraphicsCommandList4>& list;
 
-		GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()), descriptor_manager_graphics(base.srv_descriptors){
+		GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()), descriptor_manager_graphics(base.srv){
 		}
 		GraphicsContext(const GraphicsContext&) = delete;
 		GraphicsContext(GraphicsContext&&) = delete;
@@ -853,8 +842,8 @@ namespace DX12
 		std::shared_ptr<RootSignature> current_root_signature;
 		DynamicDescriptorManager descriptor_manager_graphics;
 
-		DynamicDescriptor<DescriptorHeapType::RTV> rtv_descriptors;
-		DynamicDescriptor<DescriptorHeapType::DSV> dsv_descriptors;
+	//	DynamicDescriptor<DescriptorHeapType::RTV> rtv_descriptors;
+	//	DynamicDescriptor<DescriptorHeapType::DSV> dsv_descriptors;
 
 		MyVariant current_shader_data;
 
@@ -869,7 +858,7 @@ namespace DX12
 
 
 
-		void set_srv(UINT i, FrameResource& info)override;
+		//void set_srv(UINT i, FrameResource& info)override;
 		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
 		using SignatureDataSetter::set_srv;
 
@@ -879,7 +868,7 @@ namespace DX12
 
 		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
 		void set_const_buffer(UINT i, const FrameResources::UploadInfo& info) override;
-		void set_const_buffer(UINT i, FrameResource& info);
+	//	void set_const_buffer(UINT i, FrameResource& info);
 		using SignatureDataSetter::set_const_buffer;
 		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
 
@@ -997,7 +986,10 @@ namespace DX12
 
 		void set_rtv(const HandleTableLight&, Handle);
 
-
+		void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
+		{
+			draw_indexed(args.IndexCountPerInstance, args.StartIndexLocation, args.BaseVertexLocation, args.InstanceCount, args.StartInstanceLocation);
+		}
 /*
 		HandleTable place_uav(UINT count)
 		{
@@ -1007,22 +999,22 @@ namespace DX12
 
 		HandleTableLight place_rtv(UINT count)
 		{
-			return rtv_descriptors.place(count);
+			return get_base().rtv_cpu.place(count);
 		}
 
 		HandleTableLight place_dsv(UINT count)
 		{
-			return dsv_descriptors.place(count);
+			return get_base().dsv_cpu.place(count);
 		}
 
 		HandleTableLight place_rtv(std::initializer_list<Handle> list)
 		{
-			return rtv_descriptors.place(list);
+			return get_base().rtv_cpu.place(list);
 		}
 
 		HandleTableLight place_dsv(std::initializer_list<Handle> list)
 		{
-			return dsv_descriptors.place(list);
+			return get_base().dsv_cpu.place(list);
 		}
 
 		void set_rtvs_internal(D3D12_CPU_DESCRIPTOR_HANDLE* t, Handle h)
@@ -1123,7 +1115,7 @@ namespace DX12
 	
 		ComPtr<ID3D12GraphicsCommandList4>& list;
 
-		ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()), descriptor_manager_compute(base.srv_descriptors){}
+		ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()), descriptor_manager_compute(base.srv){}
 		ComputeContext(const ComputeContext&) = delete;
 		ComputeContext(ComputeContext&&) = delete;
 
@@ -1148,7 +1140,7 @@ namespace DX12
 
 		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer> buff);
 		void set_const_buffer(UINT i, const FrameResources::UploadInfo& info);
-		void set_const_buffer(UINT i, FrameResource& info);
+	//	void set_const_buffer(UINT i, FrameResource& info);
 
 		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
 		void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
@@ -1159,7 +1151,7 @@ namespace DX12
 		virtual void set(UINT, const Handle&) override;
 		virtual void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) override;
 		virtual void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
-		virtual void set_srv(UINT i, FrameResource& info) override;
+//		virtual void set_srv(UINT i, FrameResource& info) override;
 
 		MyVariant current_shader_data;
 

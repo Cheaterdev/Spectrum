@@ -1,3 +1,8 @@
+struct Frustum
+{
+	float4 planes[6];
+}
+
 struct Camera
 {
 	float4x4 view;
@@ -11,6 +16,8 @@ struct Camera
 	float3 direction;
 	float unused2;
 	float2 jitter; float2 unused3;
+	
+	Frustum frustum;
 }
 
 [Bind = FrameLayout::CameraData]

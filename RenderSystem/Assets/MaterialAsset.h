@@ -3,6 +3,34 @@ class MaterialAsset;
 namespace materials
 {
 
+	class Pipeline
+	{
+		UINT id;
+	public:
+		using ptr = std::shared_ptr<Pipeline>;
+        _Big_uint128 hash;
+		Pipeline(UINT id) :id(id)
+		{
+
+		}
+        Pipeline() = default;
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc& pipeline) = 0;
+
+		UINT get_id() { return id; }
+	private:
+
+		friend class boost::serialization::access;
+
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int file_version)
+		{
+			ar& NVP(hash);
+            ar& NVP(id);
+		}
+    
+    };
+
+
     class material
     {
         protected:

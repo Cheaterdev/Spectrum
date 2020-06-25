@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct FlowGraph
 	{
 		struct CB
@@ -17,4 +18,5 @@ namespace Table
 		float2& GetInv_pixel() { return cb.inv_pixel; }
 		FlowGraph(CB&cb) :cb(cb){}
 	};
+	#pragma pack(pop)
 }

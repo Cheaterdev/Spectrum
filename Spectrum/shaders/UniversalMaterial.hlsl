@@ -1,7 +1,6 @@
 #include "autogen/FrameInfo.h"
 #include "autogen/MaterialInfo.h"
 #include "autogen/MeshInfo.h"
-#include "autogen/MeshData.h"
 #include "autogen/SceneData.h"
 
 static const Camera camera = GetFrameInfo().GetCamera();
@@ -309,7 +308,7 @@ vertex_output2 HS(InputPatch<vertex_output2, 3> inputPatch,
 
 
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc) tex.SampleLevel(s, tc, 0);
+#define sample(tex, s,  tc) tex.Sample(s, tc);
 
 //tex.Sample(s, tc);
 

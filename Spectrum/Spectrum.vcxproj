@@ -1070,6 +1070,9 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Normal|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <None Include="shaders\gather_pipeline.hlsl">
+      <FileType>Document</FileType>
+    </None>
     <None Include="shaders\UniversalMaterialRaytracing.hlsl">
       <FileType>Document</FileType>
     </None>

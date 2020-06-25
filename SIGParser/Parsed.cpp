@@ -74,6 +74,8 @@ void have_type::detect_type(have_options * options)
 	if (type == "SamplerState") value_type = ValueType::SMP;
 
 	if (type.find("RW") == 0) value_type = ValueType::UAV;
+	if (type.find("AppendStructuredBuffer") == 0) value_type = ValueType::UAV;
+	
 	if (type.find("int") == 0) value_type = ValueType::CB;
 	if (type.find("float") == 0) value_type = ValueType::CB;
 	if (type.find("matrix") == 0) value_type = ValueType::CB;

@@ -201,6 +201,10 @@ private:
 	}
 };
 
+template<class T> concept CanReload =
+requires (T t, T t2) {
+	t = t2;
+};
 template<class _resource, class _header>
 class resource_manager
 {
@@ -234,8 +238,11 @@ public:
 		if (result)
 		{
 			load_succeded(result, header, file_depends);
-			//   *((_resource*)this) = *result;
-			swap(*static_cast<_resource*>(this), *result);
+
+			if constexpr (CanReload<_resource>)
+		   *((_resource*)this) = *result;
+
+		//	swap(*static_cast<_resource*>(this), *result);
 			Logger::get() << Log::LEVEL_DEBUG << "reload is good with header " << NP(typeid(_header).name(), header) << Log::endl;
 		}
 

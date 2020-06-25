@@ -1,6 +1,8 @@
 #pragma once
+#include "Frustum.h"
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct Camera
 	{
 		struct CB
@@ -17,6 +19,7 @@ namespace Table
 			float unused2;
 			float2 jitter;
 			float2 unused3;
+			Frustum::CB frustum;
 		} &cb;
 		using SRV = Empty;
 		using UAV = Empty;
@@ -33,6 +36,8 @@ namespace Table
 		float& GetUnused2() { return cb.unused2; }
 		float2& GetJitter() { return cb.jitter; }
 		float2& GetUnused3() { return cb.unused3; }
+		Frustum MapFrustum() { return Frustum(cb.frustum); }
 		Camera(CB&cb) :cb(cb){}
 	};
+	#pragma pack(pop)
 }

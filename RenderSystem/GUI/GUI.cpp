@@ -992,7 +992,7 @@ namespace GUI
 
 				 renderer->flush(c);
 
-				 command_list->transition(texture.resource, Render::ResourceState::PRESENT);
+				 //command_list->transition(texture.resource, Render::ResourceState::PRESENT);
 
 
 			 });

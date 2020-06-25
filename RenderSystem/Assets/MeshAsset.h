@@ -6,6 +6,17 @@ struct Vertex
     float3 normal;
     float2 tc;
     float4 tangent;
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int)
+	{
+		ar& NVP(pos);
+		ar& NVP(normal);
+		ar& NVP(tc);
+		ar& NVP(tangent);
+	}
+
 };
 
 struct MeshInfo
@@ -34,6 +45,11 @@ struct MeshInfo
 	//		vertex_offset = 0;
         }
 };
+
+using command = Table::CommandData::CB;
+using mesh_info_part = Table::MeshCommandData::CB;
+using material_info_part = Table::MaterialCommandData::CB;
+
 
 struct MeshNode
 {
@@ -81,8 +97,8 @@ class MeshData: public loader<MeshData, std::string, AssetLoadingContext::ptr>//
 {
     public:
         using ptr = std::shared_ptr<MeshData>;
-        Render::StructuredBuffer<Vertex>::ptr vertex_buffer;
-        Render::IndexBuffer::ptr index_buffer;
+        std::vector<Vertex> vertex_buffer;
+        std::vector<UINT32> index_buffer;
 
         std::vector<MeshInfo> meshes;
         std::vector<MaterialAsset::ptr> materials;
@@ -109,8 +125,13 @@ class MeshAsset : public Asset
         using ptr = s_ptr<MeshAsset>;
         using ref = AssetReference<MeshAsset>;
 	
-        Render::StructuredBuffer<Vertex>::ptr vertex_buffer;
-        Render::IndexBuffer::ptr index_buffer;
+        std::vector<Vertex> vertex_buffer;
+        std::vector<UINT32> index_buffer;
+
+        TypedHandle<Vertex> vertex_handle;
+        TypedHandle<UINT32> index_handle;
+
+
 
         std::vector<MeshInfo> meshes;
         std::vector<MaterialAsset::ref> materials;
@@ -139,6 +160,9 @@ class MeshAsset : public Asset
         {
             // mesh->reload_resource();
         }
+
+
+        void init_gpu();
     private:
         friend class boost::serialization::access;
 
@@ -157,10 +181,14 @@ class MeshAsset : public Asset
             ar& NVP(root_node);
             ar& NVP(nodes);
             ar& NVP(boost::serialization::base_object<Asset>(*this));
+
+            if constexpr (Archive::is_loading::value)
+            {
+                init_gpu();
+            }
         }
 
 };
-
 
 class MeshAssetInstance : public scene_object, public material_holder, public AssetHolder, public MaterialProvider, public Render::renderable
 {
@@ -183,23 +211,15 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 
 		std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
-		CommonAllocator::Handle nodes_handle;
-      
+     
+        TypedHandle<mesh_info_part> meshpart_handle;
+
+        size_t nodes_count;
+        size_t rendering_count;
     public:
 		MESH_TYPE type= MESH_TYPE::STATIC;
 		MeshAsset::ref mesh_asset;
-        struct node_data
-        {
-            mat4x4 world;
-			mat4x4 inv;
-          // mat4x4 padding[3];
-            node_data(mat4x4& m) : world(m), inv(m)
-            {
-				inv.inverse();
-            }
-			node_data() = default;
-        }; 
-    //    node_data* nodes_ptr = nullptr;
+
 		struct mesh_asset_node
 		{
 			MeshNode* asset_node;
@@ -210,20 +230,23 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 			}
 		};
 
-     //  std::vector<node_data> node_buffer;
 
-        Slots::MeshData mesh_render_data;
+        TypedHandle<Table::node_data::CB> nodes_handle;
         struct render_info
         {
   
 			std::shared_ptr<Primitive> primitive;
             std::shared_ptr<Primitive> primitive_global;
             Slots::MeshInfo mesh_info;
-            UINT index_count;
-            UINT index_offset;
+
+            D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
             UINT material_id;
             MaterialAsset* material;
 
+
+            //compiled
+			Slots::MeshInfo::Compiled compiled_mesh_info;
+                
 
         };
 
@@ -278,44 +301,66 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 };
 
 
-class universal_nodes_manager :public Singleton<universal_nodes_manager>
+
+class universal_nodes_manager :public Singleton<universal_nodes_manager>, public virtual_gpu_buffer<Table::node_data::CB>
 {
-    std::mutex m;
-    CommonAllocator nodes_allocator;
-
+    static const int MAX_NODES_SIZE = 1_gb / sizeof(Table::node_data::CB);
 public:
-	Render::StructuredBuffer<MeshAssetInstance::node_data>::ptr mesh_nodes;
-
-
-	std::vector<MeshAssetInstance::node_data> nodes_data;
-
-    Allocator::Handle allocate(UINT n)
-    {
-        std::lock_guard<std::mutex> g(m);
-
-
-        return nodes_allocator.Allocate(n);
-    }
-
-
-    void free(Allocator::Handle &h)
-    {
-		std::lock_guard<std::mutex> g(m);
-
-        nodes_allocator.Free(h);
-    }
-	void prepare(CommandList::ptr list)
-    {
-        std::lock_guard<std::mutex> g(m);
-		mesh_nodes->set_data(list, 0, nodes_data);
-	}
-    universal_nodes_manager():nodes_allocator(1024)
+    universal_nodes_manager():virtual_gpu_buffer<Table::node_data::CB>(MAX_NODES_SIZE)
 	{
-        nodes_data.resize(1024);
-		mesh_nodes = std::make_shared<Render::StructuredBuffer<MeshAssetInstance::node_data>>(1024);
-
+      
     }
 };
+
+class universal_vertex_manager :public Singleton<universal_vertex_manager>, public virtual_gpu_buffer<Vertex>
+{
+	static const int MAX_VERTEXES_SIZE = 1_gb / sizeof(Vertex);
+public:
+    universal_vertex_manager() :virtual_gpu_buffer<Vertex>(MAX_VERTEXES_SIZE)
+	{
+
+	}
+};
+
+class universal_index_manager :public Singleton<universal_index_manager>, public virtual_gpu_buffer<UINT32>
+{
+	static const int MAX_INDEX_SIZE = 1_gb / sizeof(UINT32);
+public:
+    universal_index_manager() :virtual_gpu_buffer<UINT32>(MAX_INDEX_SIZE)
+	{
+
+	}
+};
+
+class universal_material_manager :public Singleton<universal_material_manager>, public virtual_gpu_buffer<std::byte>
+{
+    static const int MAX_bytes_SIZE = 1_gb;
+public:
+    universal_material_manager() :virtual_gpu_buffer<std::byte>(MAX_bytes_SIZE)
+	{
+
+	}
+};
+
+
+
+class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public virtual_gpu_buffer<material_info_part>
+{
+	static const int MAX_COMMANDS_SIZE = 1_gb/sizeof(material_info_part);
+public:
+    universal_material_info_part_manager() :virtual_gpu_buffer<material_info_part>(MAX_COMMANDS_SIZE)
+	{
+
+	}
+};
+
+class SceneFrameManager :public Singleton<SceneFrameManager>
+{
+
+public:
+    void prepare(CommandList::ptr& command_list, Scene & scene);
+};
+
 
 
 

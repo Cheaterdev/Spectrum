@@ -153,7 +153,7 @@ void PSSM::generate(FrameGraph& graph)
 				//	auto ptr = reinterpret_cast<camera::shader_params*>(shadow_cameras->get_data() )+ i;// *sizeof(camera::shader_params), (i + 1) * sizeof(camera::shader_params));
 				//	*ptr = light_cam.get_const_buffer().data().current;
 
-				shadow_cameras.write(i * sizeof(camera::shader_params), &light_cam.get_const_buffer().data().current, 1);
+				shadow_cameras.write(i * sizeof(camera::shader_params), &light_cam.camera_cb.current, 1);
 				viewport.resize(1);
 				viewport[0].MinDepth = 0.0f;
 				viewport[0].MaxDepth = 1.0f;
@@ -165,8 +165,8 @@ void PSSM::generate(FrameGraph& graph)
 				scissor.resize(1);
 				scissor[0] = { 0, 0, size.x, size.y };
 
-				context->override_material = mat;
-
+				context->overrided_pipeline = mat->get_pipeline();
+				//context->use_materials = false;
 				command_list->get_graphics().set_viewports(viewport);
 				command_list->get_graphics().set_scissors(scissor[0]);
 				context->pipeline.blend.render_target[0].enabled = false;
@@ -221,7 +221,8 @@ void PSSM::generate(FrameGraph& graph)
 				Slots::FrameInfo frameInfo;
 
 				auto camera = frameInfo.MapCamera();
-				memcpy(&camera.cb, &graph.cam->get_raw_cb().current, sizeof(camera.cb));
+			//	memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
+				camera.cb = graph.cam->camera_cb.current;
 				frameInfo.set(graphics);
 			}
 

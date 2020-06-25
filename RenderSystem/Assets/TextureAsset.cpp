@@ -9,55 +9,15 @@ template void AssetReference<TextureAsset>::serialize(serialization_iarchive& ar
 
 TextureAssetRenderer::TextureAssetRenderer()
 {
-    Render::PipelineStateDesc state_desc;
-    state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-    state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\texture_drawer.hlsl", "PS", 0, {} });
-    state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\texture_drawer.hlsl", "VS", 0, {} });
-    state_desc.rtv.rtv_formats = { DXGI_FORMAT_R16G16B16A16_FLOAT };
-    state.reset(new Render::PipelineState(state_desc));
-  
-    vps.TopLeftX = 0;
-    vps.TopLeftY = 0;
-    vps.MinDepth = 0.0f;
-    vps.MaxDepth = 1.0f;
+
 }
 TextureAssetRenderer::~TextureAssetRenderer() {}
 
 void TextureAssetRenderer::render(TextureAsset* asset, Render::Texture::ptr target, Render::CommandList::ptr c)
 {
     if (!asset->get_texture()->texture_2d()) return;
-
-  //  c->get_graphics().set_heaps(Render::DescriptorHeapManager::get().get_csu(), Render::DescriptorHeapManager::get().get_samplers
-	//c->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
-//	c->transition(target, Render::ResourceState::RENDER_TARGET);
-    
-    c->get_graphics().set_rtv(1, target->texture_2d()->get_rtv(), Render::Handle());
-  //  target->change_state(c, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::ResourceState::RENDER_TARGET);
-    c->get_native_list()->OMSetRenderTargets(1, &target->texture_2d()->get_rtv().cpu, FALSE, nullptr);
-    c->get_graphics().set_pipeline(state);
-	Render::Viewport vps;
-
-    vps.Width = static_cast<float>(target->get_desc().Width);
-    vps.Height = static_cast<float>(target->get_desc().Height);
-    c->get_graphics().set_pipeline(state);
-
-    c->get_graphics().set_viewports({ vps });
-    sizer_long s = { 0, 0, vps.Width , vps.Height };
-    c->get_graphics().set_scissors({ s });
-
-    Slots::TextureRenderer data;
-    data.GetTexture() = asset->get_texture()->texture_2d()->get_srv();
-
-    data.set(c->get_graphics());
-    c->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-    c->get_graphics().use_dynamic = false;
-    c->get_graphics().draw(4, 0);
+    MipMapGenerator::get().copy_texture_2d_slow(c->get_graphics(), target, asset->get_texture());
     MipMapGenerator::get().generate(c->get_compute(), target);
-
-//	c->transition(target, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-    c->get_graphics().use_dynamic = true;
-
 }
 
 

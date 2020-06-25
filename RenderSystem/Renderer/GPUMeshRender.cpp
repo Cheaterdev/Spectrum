@@ -1,7 +1,8 @@
 #include "pch.h"
 
 
-void gpu_mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, scene_object::ptr obj)
+void gpu_mesh_renderer
+::render(MeshRenderContext::ptr mesh_render_context, scene_object::ptr obj)
 {
 	// return;
 	auto& graphics = mesh_render_context->list->get_graphics();

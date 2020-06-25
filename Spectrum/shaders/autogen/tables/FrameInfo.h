@@ -14,16 +14,12 @@ struct FrameInfo
 	FrameInfo_cb cb;
 	FrameInfo_srv srv;
 	Texture2D GetBestFitNormals() { return srv.bestFitNormals; }
-	Camera camera;
-	Camera GetCamera() { return camera; }
-	Camera prevCamera;
-	Camera GetPrevCamera() { return prevCamera; }
+	Camera GetCamera() { return CreateCamera(cb.camera); }
+	Camera GetPrevCamera() { return CreateCamera(cb.prevCamera); }
 };
  const FrameInfo CreateFrameInfo(FrameInfo_cb cb,FrameInfo_srv srv)
 {
 	const FrameInfo result = {cb,srv
-	, CreateCamera(cb.camera)
-	, CreateCamera(cb.prevCamera)
 	};
 	return result;
 }

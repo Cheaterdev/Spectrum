@@ -12,8 +12,7 @@
 #include "../DirectXFramework/pch.h"
 #include "../FlowGraph/pch.h"
 
-using uint = UINT;
-using float4x4 = mat4x4;
+
 
 #include "autogen/includes.h"
 
@@ -81,10 +80,6 @@ using float4x4 = mat4x4;
 #include "Mesh/Mesh.h"
 #include "Assets/MeshAsset.h"
 
-#include "Scene/Scene.h"
-#include "Renderer/Renderer.h"
-
-#include "Assets/AssetRenderer.h"
 
 
 #include "Materials/Values.h"
@@ -92,6 +87,10 @@ using float4x4 = mat4x4;
 #include "Materials/ShaderMaterial.h" 
 
 
+#include "Scene/Scene.h"
+#include "Renderer/Renderer.h"
+
+#include "Assets/AssetRenderer.h"
 
 #include "GUI/Renderer/Renderer.h"
 

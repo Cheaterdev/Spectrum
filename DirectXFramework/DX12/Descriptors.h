@@ -303,9 +303,9 @@ class DescriptorPage
 	UINT offset;
 	DescriptorHeapPaged* heap;
 
-	Allocator::Handle alloc_handle;
+	CommonAllocator::Handle alloc_handle;
 public:
-	DescriptorPage(DescriptorHeapPaged* heap, Allocator::Handle alloc_handle,  UINT heap_offset, UINT count) :heap(heap), heap_offset(heap_offset), count(count), alloc_handle(alloc_handle)
+	DescriptorPage(DescriptorHeapPaged* heap, CommonAllocator::Handle alloc_handle,  UINT heap_offset, UINT count) :heap(heap), heap_offset(heap_offset), count(count), alloc_handle(alloc_handle)
 	{
 		offset = 0;
 	}
@@ -358,7 +358,7 @@ public:
 		std::lock_guard<std::mutex> g(m);
 		auto handle = allocator.Allocate(pages_count, 1);
 
-		return new DescriptorPage(this, handle, handle.aligned_offset*32, pages_count*32);
+		return new DescriptorPage(this, handle, handle.get_offset()*32, pages_count*32);
 	}
 
 	void free_page(DescriptorPage* page)
@@ -446,7 +446,8 @@ class DynamicDescriptor
 	friend class CommandList;
 	friend class GraphicsContext;
 	friend class ComputeContext;
-
+		template<class LockPolicy >
+		friend class GPUCompiledManager;
 	std::list<DescriptorPage*> pages;
 
 	typename LockPolicy::mutex m;
@@ -543,18 +544,50 @@ public:
 	{
 		return prepare(1)[0];
 	}
+};
 
-	/*
-	HandleTableLight place(HandleTable table)
-	{
-		auto gpu_table = place(table.get_count());
-		gpu_table.place(table);
-		return gpu_table;
-	}
-	*/
+
+class CBPage
+{
 
 };
 
+template<class LockPolicy = Free>
+class DynamicCB
+{
+	std::list<CBPage*> pages;
+	typename LockPolicy::mutex m;
+	void create_heap(UINT count)
+	{
+		pages.push_back(CBPageManager::get()->create_page(count));
+	}
+
+	void reset()
+	{
+		LockPolicy::guard g(m);
+
+		for (auto& p : pages)
+			p->free();
+
+		pages.clear();
+	}
+
+
+	HandleTableLight prepare(size_t size)
+	{
+		LockPolicy::guard g(m);
+
+		if (pages.empty() || !pages.back()->has_free_size(size))
+		{
+			create_heap(size);
+		}
+
+		return pages.back()->place(size);
+	}
+
+
+
+};
 //template<DescriptorHeapType type, DescriptorHeapFlags flags >  std::queue<DescriptorHeap::ptr> DynamicDescriptor<type, flags>::free_tables;
 //template<DescriptorHeapType type, DescriptorHeapFlags flags >  std::mutex DynamicDescriptor<type, flags>::tables_mutex;
 

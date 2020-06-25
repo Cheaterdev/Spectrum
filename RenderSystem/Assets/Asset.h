@@ -580,6 +580,8 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 		std::atomic_bool has_worker;
 
 		void add_preview(Asset::ptr a);
+		concurrency::task<void> last_update_task;
+		bool task_inited = false;
 	public:
 
 		using Singleton<AssetManager>::get;

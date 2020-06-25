@@ -6,6 +6,8 @@ class GBuffer;
 namespace materials
 {
     class material;
+	class universal_material;
+    class Pipeline;
 }
 
 namespace Render
@@ -119,7 +121,8 @@ struct MeshRenderContext
         using ptr = s_ptr<MeshRenderContext>;
         int draw_count = 0;
 
-        std::shared_ptr<materials::material> override_material;
+        std::shared_ptr<materials::Pipeline> overrided_pipeline;
+
         MaterialProvider* mat_provider;
 
         Render::PipelineStateDesc pipeline;
@@ -133,7 +136,7 @@ struct MeshRenderContext
        TaskPriority priority = TaskPriority::NORMAL;
         float delta_time = 0;
         size_t current_time = 0;
-        Render::Handle set_4_table;
+       // Render::Handle set_4_table;
 		vec2 screen_subsample = {0,0};
         GBuffer* g_buffer;
         /*    void set_materials(std::vector<std::shared_ptr<materials::material>>& m)
@@ -150,13 +153,13 @@ struct MeshRenderContext
 		ivec3 voxel_tiles_count;
 		ivec3 voxels_per_tile;
 		vec3 sky_dir;
-        void use_material(int i, ptr& t);
+  
         void begin()
         {
             list->get_graphics().set_signature(pipeline.root_signature);
             draw_count = 0;
-            set_4_table.cpu.ptr = 0;
-            set_4_table.gpu.ptr = 0;
+    //        set_4_table.cpu.ptr = 0;
+    //        set_4_table.gpu.ptr = 0;
 
          //   if (voxel_target.valid())
           //      set_uav(voxel_target);

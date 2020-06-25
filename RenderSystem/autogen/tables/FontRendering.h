@@ -1,6 +1,7 @@
 #pragma once
 namespace Table 
 {
+	#pragma pack(push, 1)
 	struct FontRendering
 	{
 		using CB = Empty;
@@ -15,4 +16,5 @@ namespace Table
 		Render::Handle& GetPositions() { return srv.positions; }
 		FontRendering(SRV&srv) :srv(srv){}
 	};
+	#pragma pack(pop)
 }

@@ -16,19 +16,25 @@ void camera::update(float2 offset )
 	view_mat.look_at(pos, pos + _dir, _up);
 	view_proj_mat = view_mat * proj_jittered;
 	(inv_view_proj_mat = view_proj_mat).inverse();
-	params.view_proj = view_proj_mat;
+	params.viewProj = view_proj_mat;
 	params.view = view_mat;
 	params.proj = proj_jittered;
 	params.position = pos;
 	params.direction = _dir.normalize();
-	params.inv_view_proj = inv_view_proj_mat;
-	(params.inv_proj = proj_jittered).inverse();
-	(params.inv_view = view_mat).inverse();
+	params.invViewProj = inv_view_proj_mat;
+	(params.invProj = proj_jittered).inverse();
+	(params.invView = view_mat).inverse();
 	mat4x4 test = view_proj_mat * inv_view_proj_mat;
 	calculate(inv_view_proj_mat);
 	vec3 right = vec3::cross(params.direction, _up);
 	res_up = vec3::cross(params.direction, right);
 	params.jitter = { 0, 0 };// offset;
-	const_buffer.data().prev = const_buffer.data().current;
-	const_buffer.data().current = params;
+	
+
+	for (int i = 0; i < 6; i++)
+		params.frustum.planes[i] = Frustum::GetFrustumPlane(planes(i));
+
+
+	camera_cb.prev = camera_cb.current;
+	camera_cb.current = params;
 }

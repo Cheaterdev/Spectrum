@@ -55,10 +55,34 @@ AssetManager::~AssetManager()
 	funcs.emplace_back(f);
 }
 
- void AssetManager::add_preview(Asset::ptr a)
+ void AssetManager::add_preview(Asset::ptr asset)
 {
 	std::lock_guard<std::mutex> g(update_preview_mutex);
-	update_preview.push(a);
+	
+
+	auto my_task = [this, asset]() {
+		SPECTRUM_TRY
+		auto& preview = asset->holder->get_preview();
+
+		if (!preview || !preview->is_rt())
+		{
+			Render::Texture::ptr new_preview;
+			new_preview.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, 256, 256, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+			asset->holder->editor->preview = new_preview;
+		}
+
+		asset->update_preview(asset->holder->get_preview());
+		asset->holder->on_preview(asset->holder->get_preview());
+		SPECTRUM_CATCH
+	};
+
+	if (task_inited)
+		last_update_task = last_update_task.then(my_task);
+	else
+		last_update_task = create_task(my_task);
+
+	task_inited = true;
+	/*update_preview.push(a);
 
 	if (!has_worker)
 	{
@@ -90,7 +114,7 @@ AssetManager::~AssetManager()
 			}
 		});
 		//  t.wait();
-	}
+	}*/
 }
 
  AssetStorage::ptr AssetManager::get_storage(Guid id)

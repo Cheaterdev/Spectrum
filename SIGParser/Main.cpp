@@ -127,7 +127,7 @@ void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& sl
 		generate_bind(stream, parent_to, *t, slot, offsets);
 	}
 
-	if (parent.empty())
+	/*if (parent.empty())
 		for (auto& v : table.values)
 		{
 			if (v.value_type != ValueType::STRUCT) continue;
@@ -149,7 +149,7 @@ void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& sl
 
 			stream << "result." << v.name << " = Create" << v.type << "(" << pass << ");" << std::endl;
 		}
-
+		*/
 
 }
 
@@ -257,7 +257,7 @@ void generate_table(Table& table)
 				stream << v.type << "_" << get_name_for(type) << " " << v.name << ";" << std::endl;
 			}
 		}
-
+		
 		stream.pop();
 		stream << "};" << std::endl;
 	};
@@ -306,19 +306,35 @@ void generate_table(Table& table)
 		for (auto& v : table.values)
 		{
 			if (v.value_type != ValueType::STRUCT) continue;
-			stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
+		//	stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
+
+
+				std::string pass;
+				auto t = parsed.find_table(v.type);
+				auto f = [&](ValueType type) {
+					if (t->counts[type] == 0) return;
+					if (pass.size()) pass += ",";
+					pass += get_name_for(type) + "." + v.name;
+				};
+
+				f(ValueType::CB);
+				f(ValueType::SRV);
+				f(ValueType::UAV);
+				f(ValueType::SMP);
 
 
 			std::string cameled = v.name;
 			cameled[0] = std::toupper(cameled[0]);
-
+/*
 			if (v.as_array)
 			{
 				stream << v.type << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
 			}
 			else
-				stream << v.type << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
+			
+			*/
 
+	stream << v.type << " Get" << cameled << "() { " << "return Create" << v.type << "(" << pass << "); }" << std::endl;
 		}
 
 		stream.pop();
@@ -371,27 +387,7 @@ void generate_table(Table& table)
 						*/
 
 
-			for (auto& v : table.values)
-			{
-				if (v.value_type != ValueType::STRUCT) continue;
-				std::string pass;
-				auto t = parsed.find_table(v.type);
-				auto f = [&](ValueType type) {
-					if (t->counts[type] == 0) return;
-
-
-					if (pass.size()) pass += ",";
-					pass += get_name_for(type) + "." + v.name;
-				};
-
-				f(ValueType::CB);
-				f(ValueType::SRV);
-				f(ValueType::UAV);
-				f(ValueType::SMP);
-
-				stream << ", Create" << v.type << "(" << pass << ")" << std::endl;
-			}
-
+		
 
 			stream << "};" << std::endl;
 
@@ -434,6 +430,9 @@ void generate_cpp_table(const Table& table)
 
 	for (auto& v : table.used_tables)
 	{
+		auto t = parsed.find_table(v);
+		if (t->find_option("shader_only")) continue;
+
 		stream << "#include \"" << v << ".h\"" << std::endl;
 	}
 
@@ -481,7 +480,13 @@ void generate_cpp_table(const Table& table)
 
 				if (v.value_type == ValueType::STRUCT)
 				{
-					stream << v.type << "::" << str_toupper(get_name_for(type)) << " " << v.name << generate_array(v) << ";" << std::endl;
+					
+						auto t = parsed.find_table(v.type);
+
+						if(t->find_option("shader_only"))
+							stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
+						else
+							stream << v.type << "::" << str_toupper(get_name_for(type)) << " " << v.name << generate_array(v) << ";" << std::endl;
 				}
 
 
@@ -498,6 +503,8 @@ void generate_cpp_table(const Table& table)
 	stream << "{" << std::endl;
 	{
 		stream.push();
+		stream << "#pragma pack(push, 1)" << std::endl;
+
 		stream << "struct " << table.name << std::endl;
 		stream << "{" << std::endl;
 		{
@@ -558,8 +565,21 @@ void generate_cpp_table(const Table& table)
 				if (v.value_type != ValueType::STRUCT) continue;
 				//	stream << '\t' << v.type << " " << v.name << ';' << std::endl;
 
+
+
+				auto& vtable = *parsed.find_table(v.type);
+
+
+			
+
 				std::string cameled = v.name;
 				cameled[0] = std::toupper(cameled[0]);
+
+				if (vtable.find_option("shader_only"))
+				{
+					stream << v.type << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << "cb." << v.name << "; }" << std::endl;
+					continue;
+				};
 
 
 				std::string pass;
@@ -576,7 +596,6 @@ void generate_cpp_table(const Table& table)
 				f(ValueType::SMP);
 
 
-				auto& vtable = *parsed.find_table(v.type);
 
 				if (vtable.bindless_table)
 				{
@@ -624,13 +643,12 @@ void generate_cpp_table(const Table& table)
 
 			}
 
-
-
-
 			stream << table.name << "(" << args << ") " << pass << "{}" << std::endl;
 			stream.pop();
 			stream << "};" << std::endl;
 		}
+
+		stream << "#pragma pack(pop)" << std::endl;
 
 		stream.pop();
 	}
@@ -728,7 +746,7 @@ void generate_include_list(const Parsed& parsed)
 		if (t.slot)
 			stream << "#include \"slots\\" << t.name << ".h\"" << std::endl;
 	}
-	stream << "enum class Layouts: int" << std::endl;
+/*	stream << "enum class Layouts: int" << std::endl;
 
 	stream << "{" << std::endl;
 	{
@@ -745,7 +763,7 @@ void generate_include_list(const Parsed& parsed)
 
 	stream << "};" << std::endl;
 
-
+	*/
 	//	stream << "static std::array<Render::RootSignature::ptr, static_cast<int>(Layouts::TOTAL)> signatures;" << std::endl;
 
 	stream << "void init_signatures();" << std::endl;
@@ -765,7 +783,7 @@ void generate_include_list(const Parsed& parsed)
 		stream << "}" << std::endl;
 		*/
 
-	stream << "Render::RootSignature::ptr get_Signature(Layouts id);" << std::endl;
+	stream << "Render::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
 	/*stream << "{" << std::endl;
 	stream << "\treturn signatures[static_cast<int>(id)];" << std::endl;
 	stream << "}" << std::endl;
@@ -899,7 +917,10 @@ int main() {
 
 	for (auto& table : parsed.tables)
 	{
+		
 		generate_table(table);
+
+		if (!table.find_option("shader_only"))
 		generate_cpp_table(table);
 	}
 

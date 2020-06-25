@@ -2,15 +2,22 @@
 
 void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
+
 	// return;
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& list = *mesh_render_context->list;
+
+	auto timer = list.start(L"mesh_renderer");
+
+
+
 	graphics.use_dynamic = false;
 	//  std::list<MeshAssetInstance*> meshes;
 	instances_count = 0;
 	bool current_cpu_culling = use_cpu_culling && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
 	mesh_render_context->transformer = transformer;
+
 	Render::PipelineStateDesc default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
@@ -36,223 +43,211 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		voxel_info.voxel_map_size = { mesh_render_context->voxel_target_size ,0 };// ivec3(512, 512, 512);
 		voxel_info.voxel_tiles_count = ivec4(mesh_render_context->voxel_tiles_count, 0);// ivec3(512, 512, 512);
 		voxel_info.voxels_per_tile = ivec4(mesh_render_context->voxels_per_tile, 0);// ivec3(512, 512, 512);
-
-	//	Log::get() << "params: " << mesh_render_context->voxel_min << " " << mesh_render_context->voxel_size << Log::endl;
-	//	graphics.set_const_buffer(10, voxel_info);
-	//	graphics.set_const_buffer(11, voxel_info);
 	}
 
 	mesh_render_context->pipeline = default_pipeline;
 	mesh_render_context->begin();
-	//mesh_render_context->set_frame_data(mesh_render_context->cam->get_const_buffer());
 
+	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
+	Slots::FrameInfo::Compiled compiledFrame;
 
 	{
+		auto timer = Profiler::get().start(L"FrameInfo");
 		Slots::FrameInfo frameInfo;
 
 		auto camera = frameInfo.MapCamera();
-		memcpy(&camera.cb, &mesh_render_context->cam->get_raw_cb().current, sizeof(camera.cb));
-
-
+		camera.cb = mesh_render_context->cam->camera_cb.current;
+	
 		if (best_fit_normals)
 		{
 			frameInfo.GetBestFitNormals() = best_fit_normals->get_texture()->texture_2d()->get_static_srv();
 		}
 
-		frameInfo.set(graphics);
+		compiledFrame = frameInfo.compile(list);
 	}
 
 
+	UINT meshes_count = scene->command_ids.size();
+	/*
+	auto info = list.place_raw(scene->command_ids);
+	auto srv = info.resource->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*list.frame_resources, info.offset, info.size).get_srv();
+	
 	{
+		auto timer = list.start(L"SceneData");
 		Slots::SceneData sceneData;
-		sceneData.GetNodes() = universal_nodes_manager::get().mesh_nodes->get_srv()[0];
-		sceneData.GetMaterial_textures() = materials::universal_material_manager::get().textures_data;
-
-		sceneData.set(graphics);
+		sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
+		sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
+		sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
+		sceneData.GetCommands() = srv;
+		compiledScene = sceneData.compile(list);
 	}
-
+	*/
+	{
+		auto timer = list.start(L"set_index_buffer");
+		graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
+	}
 
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	using render_list = std::map<size_t, std::vector<const MeshAssetInstance::render_info*>>;
 
 
-	bool first = true;
-	auto mesh_func = [&](MeshAssetInstance* l)
+	std::map<size_t, materials::Pipeline::ptr> pipelines;
+
+	if (mesh_render_context->overrided_pipeline)
 	{
-		if (l->rendering.empty()) return;
-		render_list rendering;
-		//rendering.clear();
-		size_t count = l->rendering.size();
-		UINT count_per_thread = std::max(32u, UINT(count / 8));
-		UINT thread_count = 1;// count / count_per_thread;
-
-		if (!use_parrallel) thread_count = 1;
-
-		auto thread_func = [this, &l, &mesh_render_context, current_cpu_culling](size_t offset, size_t count)->render_list
+		pipelines[0] = mesh_render_context->overrided_pipeline;
+	}
+	else
+		for (auto mat : scene->mats)
 		{
-			render_list result;
-
-			for (size_t i = offset; i < offset + count; i++)
-			{
-				auto& e = l->rendering[i];
-			//	auto& node = l->nodes[e.node_index];
-
-				if (!current_cpu_culling)
-					result[e.material->get_pipeline_id()].push_back(&e);
-				else
-				{
-					auto in = intersect(*mesh_render_context->cam, e.primitive_global.get());
-
-					if (in)
-						result[e.material->get_pipeline_id()].push_back(&e);
-				}
-			}
-
-			return result;
-		};
-
-		if (thread_count == 1)
-			rendering = thread_func(0, count);
-		else
-		{
-			std::vector<std::future<render_list>> results;
-			size_t current_offset = 0;
-
-			for (UINT i = 0; i < thread_count; i++)
-			{
-				results.emplace_back(thread_pool::get().enqueue(std::bind(thread_func, current_offset, count_per_thread)));
-				current_offset += count_per_thread;
-			}
-
-			if (count_per_thread * thread_count < count)
-				rendering = thread_func(count_per_thread * thread_count, count - count_per_thread * thread_count);
-
-			for (auto& r : results)
-			{
-				auto res = r.get();
-
-				for (auto& e : res)
-				{
-					auto& v = rendering[e.first];
-					v.insert(v.end(), e.second.begin(), e.second.end());
-				}
-			}
+			pipelines[mat->get_id()] = mat->get_pipeline();
 		}
 
-		l->mesh_render_data.set(graphics);
-		graphics.set_index_buffer(l->mesh_asset->index_buffer->get_index_buffer_view(true));
 
-		if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
-		{
-			///		signature.vertex_consts_geometry.set_raw(voxel_info);
-			///		signature.vertex_consts_vertex.set_raw(voxel_info);
-		}
+	if (meshes_count == 0) return;
 
-		for (auto& p : rendering)
-		{
-			for (auto& m : p.second)
-			{
-				if (!mesh_render_context->override_material)
-					m->material->set(MESH_TYPE::ALL, mesh_render_context);
+	//	auto timer = list.start(L"GatherMat");
+	Slots::GatherPipelineGlobal gather_global;
+	gather_global.GetMeshes_count() = meshes_count;
+	gather_global.GetMaterials() = universal_material_info_part_manager::get().buffer->get_srv()[0];
+	gather_global.GetMeshes() = scene->mesh_infos->buffer->get_srv()[0];
 
-				m->mesh_info.set(graphics);
-				mesh_render_context->draw_indexed(m->index_count, m->index_offset, 0);
-			}
-		}
-	};
 
-	if ((MESH_TYPE::STATIC & mesh_render_context->render_mesh) && static_objects.size())
+	auto gather_compiled = gather_global.compile(list);
+
+	Slots::GatherPipeline gather;
+
+	auto begin = pipelines.begin();
+	auto end = begin;
+
+	while (end != pipelines.end())
 	{
 
-		for (auto& instance : static_objects)
+		int total = 0;
+		while (total < 8)
 		{
-			if (instance->is_inside(*mesh_render_context->cam))
-				mesh_func(instance);
+			gather.GetPip_ids()[total] = end->second->get_id();
+			gather.GetCommands()[total] = commands_buffer[total]->buffer->get_uav()[0];
+			commands_buffer[total]->reserve(gather_global.GetMeshes_count());
+
+			list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
+			list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);
+			end++; total++;
+			if (end == pipelines.end()) break;
+		}
+
+		for(int i = total;i<8;i++)
+		{
+			gather.GetPip_ids()[i] = std::numeric_limits<uint>::max();
+			gather.GetCommands()[i] = commands_buffer[i]->buffer->get_uav()[0];
+		}
+
+		for (int i = 0; i < total; i++)
+			list.clear_counter(commands_buffer[i]->buffer);
+
+
+		{
+			auto timer = list.start(L"GatherMats");
+			compute.set_pipeline(gather_pipeline);
+
+			gather_compiled.set(compute);
+			gather.set(compute);
+
+
+			compiledScene.set(compute);
+			compiledFrame.set(compute);
+
+			{
+				auto timer = list.start(L"dispach");
+				compute.dispach(ivec3{ meshes_count, 1 ,1 }, ivec3{ 64,1,1 });
+			}
+
+
+			for (int i = 0; i < total; i++)
+			{
+				list.transition(commands_buffer[i]->buffer, ResourceState::INDIRECT_ARGUMENT);
+				list.transition(commands_buffer[i]->buffer->help_buffer, ResourceState::INDIRECT_ARGUMENT);
+
+			}
+
+		}
+
+		{
+			auto timer = list.start(L"YO");
+			int current = 0;
+			for (auto it = begin; it != end; it++)
+			{
+				{
+					auto timer = list.start(L"flush");
+					it->second->set(mesh_render_context->render_type, mesh_render_context->render_mesh, mesh_render_context->pipeline);
+					mesh_render_context->flush_pipeline();
+				}
+
+				compiledScene.set(graphics);
+				compiledFrame.set(graphics);
+				{
+					auto timer = list.start(L"execute_indirect");
+
+					graphics.execute_indirect(
+						indirect_command_signature,
+						meshes_count,
+						commands_buffer[current]->buffer.get(),
+						0,
+						commands_buffer[current]->buffer->help_buffer.get(),
+						0
+					);
+				}
+				current++;
+
+			}
 		}
 	}
-
-	if ((MESH_TYPE::DYNAMIC & mesh_render_context->render_mesh) && dynamic_objects.size())
-	{
-		for (auto& instance : dynamic_objects)
-		{
-			if (instance->is_inside(*mesh_render_context->cam))
-				mesh_func(instance);
-		}
-	}
-
-	if (!static_objects.size() && !dynamic_objects.size())
-		scene->iterate([&](scene_object* node)
-			{
-				Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
-
-				if (render_object)
-				{
-					auto instance = dynamic_cast<MeshAssetInstance*>(render_object);
-
-					if (!(instance->type & mesh_render_context->render_mesh)) return true;
-
-
-					if (instance->is_inside(*mesh_render_context->cam))
-						mesh_func(instance);
-				}
-
-				return true;
-			});
 
 	graphics.use_dynamic = true;
 }
 void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(Scene::ptr&)> f)
 {
 
-
-	if (mesh_type & MESH_TYPE::STATIC)
-		for (auto& instance : static_objects)
-			f(instance->get_ptr<Scene>());
-
-	if (mesh_type & MESH_TYPE::DYNAMIC)
-		for (auto& instance : dynamic_objects)
-			f(instance->get_ptr<Scene>());
 }
-mesh_renderer::mesh_renderer(Scene::ptr scene)
+
+
+mesh_renderer::mesh_renderer()
 {
-//	this->scene = scene;
-	if (scene) {
-		scene->on_element_add.register_handler(this, [this](scene_object* object) {
-
-			auto render_object = dynamic_cast<MeshAssetInstance*>(object);
-
-			if (!render_object) return;
-
-			if (render_object->type == MESH_TYPE::STATIC)
-				static_objects.insert(render_object);
-
-			if (render_object->type == MESH_TYPE::DYNAMIC)
-				dynamic_objects.insert(render_object);
-
-
-			});
-
-		scene->on_element_remove.register_handler(this, [this](scene_object* object) {
-			auto render_object = dynamic_cast<MeshAssetInstance*>(object);
-
-			if (!render_object) return;
-
-			if (render_object->type == MESH_TYPE::STATIC)
-				static_objects.erase(render_object);
-
-			if (render_object->type == MESH_TYPE::DYNAMIC)
-				dynamic_objects.erase(render_object);
-
-			});
-	}
-
-
 	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
+
+
+
+
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[] = {
+			Slots::MaterialInfo::create_indirect(),
+			Slots::MeshInfo::create_indirect(),
+			Descriptors::DrawIndirect::create_indirect()
+		};
+
+		D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
+		commandSignatureDesc.pArgumentDescs = argumentDescs;
+		commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
+		commandSignatureDesc.ByteStride = sizeof(command);
+		TEST(Render::Device::get().get_native_device()->CreateCommandSignature(&commandSignatureDesc, get_Signature(Layouts::DefaultLayout)->get_native().Get(), IID_PPV_ARGS(&indirect_command_signature)));
+	}
+
+
+
+	{
+		Render::ComputePipelineStateDesc compute_desc;
+		compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
+		compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS", D3DCOMPILE_SKIP_OPTIMIZATION, {} });
+		gather_pipeline = std::make_shared<Render::ComputePipelineState>(compute_desc);
+	}
+
+	for (int i = 0; i < 8; i++)
+		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<command>>(1024, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
 
 
