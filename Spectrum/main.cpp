@@ -1504,7 +1504,7 @@ public:
 
 
 		{
-			MeshAsset::ptr ruins_ptr = AssetManager::get().find_by_name<MeshAsset>(L"cubes.obj");
+			MeshAsset::ptr ruins_ptr = nullptr;// AssetManager::get().find_by_name<MeshAsset>(L"cubes.obj");
 
 
 			if (ruins_ptr)

@@ -66,6 +66,8 @@ class TimedBlock : public tree<TimedBlock, my_unique_vector<std::shared_ptr<Time
 public:
 	using ptr = std::shared_ptr<TimedBlock>;
 
+	int id;
+
 	template<class T = TimedBlock>
 	 TimedBlock& get_child(std::wstring name)
 	{
@@ -137,11 +139,14 @@ public:
 };
 
 
+static thread_local TimedBlock* current_block = nullptr;
 
 class Profiler : public Singleton<Profiler>, public TimedBlock, public TimedRoot
 {
 	std::mutex m;
-	std::map<std::thread::id, TimedBlock*> blocks;
+	//std::map<std::thread::id, TimedBlock*> blocks;
+
+	
 public:
 	Events::Event<TimedBlock*> on_cpu_timer_start;
 	Events::Event<TimedBlock*> on_cpu_timer_end;

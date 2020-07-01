@@ -8,7 +8,7 @@ namespace GUI
 	{
 		namespace Debug
 		{
-
+	//		static thread_local int my_id;
 
 			GraphElement::GraphElement(block_data * data)
 			{
@@ -117,6 +117,34 @@ namespace GUI
 				end = std::chrono::high_resolution_clock::now();
 				run_on_ui([this]() {
 
+						std::map<std::thread::id, size_t> threads;
+						std::map<TimedBlock*, size_t> thread_ids;
+
+						int blocks_size = data.block_id;
+						int gpu_blocks_size = data.gpu_block_id;
+					for (int i=0;i< blocks_size;i++)
+					{
+						auto& block = data.blocks[i];
+
+						auto& thread_id = thread_ids[block.block];
+
+						//	if (thread_id == 0)
+						{
+							auto& id2 = threads[block.native_id];
+							if (id2 == 0)
+								id2 = threads.size();
+							thread_id = id2;
+
+							block.thread_id = thread_id;
+							thread_ids[block.block] = thread_id;
+						}
+
+					}
+
+
+					
+
+
 					std::vector<base::ptr> thread_backs(threads.size());
 
 
@@ -152,8 +180,10 @@ namespace GUI
 					}
 
 
-					for (auto& block : data.blocks)
+					for (int i = 0; i < blocks_size; i++)
 					{
+						auto& block = data.blocks[i];
+
 						GraphElement::ptr obj(new GraphElement(&block));
 						obj->pos = { 80000 * std::chrono::duration<double>(block.start_time - start).count(), 50 * (block.block->calculate_depth() - 1) };
 						obj->size = { 80000 * std::chrono::duration<double>(block.end_time - block.start_time).count() ,50 };
@@ -182,9 +212,10 @@ namespace GUI
 					}
 
 
-
-					for (auto& block : data.gpu_blocks)
+					
+					for (int i = 0; i < gpu_blocks_size; i++)
 					{
+						auto& block = data.gpu_blocks[i];
 						GraphElement::ptr obj(new GraphElement(&block));
 						obj->pos = { 80000 * std::chrono::duration<double>(block.start_time - gpu_start).count(),  50 * (block.block->calculate_depth() - 1) };
 						obj->size = { 80000 * std::chrono::duration<double>(block.end_time - block.start_time).count() ,50 };
@@ -192,7 +223,7 @@ namespace GUI
 						gpu_block->add_child(obj);
 
 					}
-
+					
 				});
 			}
 
@@ -263,11 +294,22 @@ namespace GUI
 
 					
 					if (ended) return;
-
+					
 					GPUBlock * b = dynamic_cast<GPUBlock*>(block);
 					if (!b) return;
 
-				
+
+					auto my_id = data.gpu_block_id.fetch_add(1);
+					auto& data = this->data.gpu_blocks[my_id];
+
+					data.block = block;
+
+
+					data.start_time = b->gpu_counter.timer.get_start();
+					data.end_time = b->gpu_counter.timer.get_end();
+
+
+				/*
 
 					m.lock();
 
@@ -281,17 +323,23 @@ namespace GUI
 					data->end_time = b->gpu_counter.timer.get_end();
 
 					m.unlock();
-
+					*/
 				});
 
 
 				Profiler::get().on_cpu_timer_start.register_handler(this, [this](TimedBlock* block) {
 					if (ended) return;
-					auto this_id = std::this_thread::get_id();
+	
+					auto my_id = data.block_id.fetch_add(1);
+					assert(my_id < 4096*128);
+					auto &data = this->data.blocks[my_id];
 
+					block->id = my_id;
+					data.native_id = std::this_thread::get_id();
+					data.block = block;
+					data.start_time = block->cpu_counter.start_time;
 
-
-
+					/*
 
 					m.lock();
 					auto &data = current_data[block];
@@ -314,7 +362,7 @@ namespace GUI
 					m.unlock();
 
 
-
+					*/
 
 
 				});
@@ -323,8 +371,12 @@ namespace GUI
 
 				Profiler::get().on_cpu_timer_end.register_handler(this, [this](TimedBlock* block) {
 					if (ended) return;
+		   		auto& data = this->data.blocks[block->id];
+					data.end_time = block->cpu_counter.end_time;
 
-					m.lock();
+
+				/*	m.lock()
+;
 					auto &data = current_data[block];
 					if (data)
 					{
@@ -332,7 +384,7 @@ namespace GUI
 						data->end_time = block->cpu_counter.end_time;
 			
 					}
-					m.unlock();
+					m.unlock();*/
 
 				});
 

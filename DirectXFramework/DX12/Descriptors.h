@@ -114,7 +114,7 @@ struct HandleTableLight : public Handle
 	}
 
 
-	UINT get_count() const
+	inline UINT get_count() const
 	{
 		return count;
 	}

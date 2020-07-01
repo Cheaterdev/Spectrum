@@ -9,14 +9,18 @@ Timer::Timer(Timer&& t) : block(t.block), root(t.root)
 
 Timer::Timer(TimedBlock* block, TimedRoot* root) : block(block), root(root)
 {
+#ifdef PROFILING
 	if(block)
 	root->start(this);
+#endif
 }
 
 Timer::~Timer()
 {
+#ifdef PROFILING
 	if (root)
 		root->end(this);
+#endif
 }
 
 /*
@@ -74,31 +78,38 @@ void TimedBlock::update()
 
 Timer Profiler::start(const wchar_t* name)
 {
+
+#ifdef PROFILING
+	if (!enabled) 
+#endif
+	return Timer(nullptr, nullptr);
+
 	m.lock();
-	TimedBlock * block= blocks[std::this_thread::get_id()];
+	TimedBlock* block = current_block;// blocks[std::this_thread::get_id()];
 	if (!block)
 		block = this;
 	m.unlock();
-	if(enabled)
+	
 	return Timer(&block->get_child(name), this);
-	else return Timer(nullptr,nullptr);
+
 }
 
 void Profiler::on_start(Timer* timer)
 {
-	m.lock();
-	blocks[std::this_thread::get_id()] =timer->block;
+	//m.lock();
+	//blocks[std::this_thread::get_id()] =timer->block;
+	current_block = timer->block;
 	timer->block->cpu_counter.start_time = std::chrono::high_resolution_clock::now();
 	on_cpu_timer_start(timer->block);
-	m.unlock();
+	//m.unlock();
 }
 
 void Profiler::on_end(Timer* timer)
 {
-	m.lock();
-	blocks[std::this_thread::get_id()] = timer->block->parent;
+	//m.lock();
+	current_block = timer->block->parent;
 	timer->block->cpu_counter.end_time = std::chrono::high_resolution_clock::now();
 	timer->block->cpu_counter.elapsed_time = timer->block->cpu_counter.end_time - timer->block->cpu_counter.start_time;
 	on_cpu_timer_end(timer->block);
-	m.unlock();
+	//m.unlock();
 }

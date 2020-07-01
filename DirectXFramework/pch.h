@@ -209,10 +209,10 @@ struct CompiledData
 	Render::HandleTableLight table_uav;
 	Render::HandleTableLight table_smp;
 
-	CompiledData<Slot> set(Render::SignatureDataSetter& graphics, bool use_transitions = true) const
+	const CompiledData<Slot> & set(Render::SignatureDataSetter& graphics, bool use_transitions = true) const
 	{
 		if (use_transitions) {
-		//	auto timer = Profiler::get().start(L"transitions");
+			auto timer = Profiler::get().start(L"transitions");
 
 			for (int i = 0; i < table_srv.get_count(); ++i)
 			{
@@ -247,7 +247,7 @@ struct CompiledData
 		}
 
 
-		//auto timer = Profiler::get().start(L"set");
+		auto timer = Profiler::get().start(L"set");
 		if (table_srv.get_count() > 0) graphics.set(Slot::SRV_ID, table_srv);
 		if (table_smp.get_count() > 0) graphics.set(Slot::SMP_ID, table_smp);
 		if (table_uav.get_count() > 0) graphics.set(Slot::UAV_ID, table_uav);

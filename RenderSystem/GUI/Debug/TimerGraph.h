@@ -12,7 +12,7 @@ namespace GUI
 				std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 				std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
 
-
+				std::thread::id native_id;
 				size_t thread_id;
 			};
 
@@ -28,13 +28,20 @@ namespace GUI
 			};
 			struct collected_data
 			{
-				std::list<block_data> blocks;
-				std::list<gpu_block_data> gpu_blocks;
+				std::vector<block_data> blocks;
+				std::vector<gpu_block_data> gpu_blocks;
 
+
+
+				std::atomic_int block_id;
+
+				std::atomic_int gpu_block_id;
 				void reset()
 				{
-					blocks.clear();
-					gpu_blocks.clear();
+					block_id = 0;
+					gpu_block_id = 0;
+					blocks.resize(4096 * 128);
+					gpu_blocks.resize(4096 * 128);
 				}
 			};
 			class GraphElement :public image
@@ -59,6 +66,7 @@ namespace GUI
 
 			};
 
+
 			class TimeGraph : public scroll_container
 			{
 				std::chrono::time_point<std::chrono::high_resolution_clock>  start;
@@ -67,9 +75,9 @@ namespace GUI
 				double gpu_start;
 				std::mutex m;
 
-				std::map<TimedBlock*, block_data*> current_data;
-				std::map<std::thread::id, size_t> threads;
-				std::map<TimedBlock*, size_t> thread_ids;
+			//	std::map<TimedBlock*, block_data*> current_data;
+			//	std::map<std::thread::id, size_t> threads;
+			//	std::map<TimedBlock*, size_t> thread_ids;
 
 				collected_data data;
 
@@ -79,6 +87,9 @@ namespace GUI
 				bool need_start = false;
 
 				UINT64 started_frame;
+
+				//static thread_local block_data* data;
+
 			public:
 
 				TimeGraph();
