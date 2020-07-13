@@ -86,7 +86,7 @@ namespace DX12
 			// Top Level Acceleration Structure desc
 			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
 			{
-				topLevelInputs.InstanceDescs = instanceDescs.get_address();
+				topLevelInputs.InstanceDescs = instanceDescs.get_gpu_address();
 				topLevelBuildDesc.Inputs = topLevelInputs;
 				topLevelBuildDesc.DestAccelerationStructureData = resource->get_gpu_address();
 				topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_gpu_address();

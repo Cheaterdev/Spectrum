@@ -48,6 +48,22 @@ MipMapGenerator::MipMapGenerator()
 		copy_texture_state.reset(new Render::PipelineState(state_desc));
 
 	}
+
+
+	{
+
+		Render::PipelineStateDesc desc;
+		desc.root_signature = get_Signature(Layouts::DefaultLayout);
+		desc.vertex = Render::vertex_shader::get_resource({ "shaders/depth_render.hlsl", "VS", 0,{} });
+		desc.pixel = Render::pixel_shader::get_resource({ "shaders/depth_render.hlsl", "PS", 0,{} });
+		desc.rtv.rtv_formats = {};
+		desc.rtv.enable_depth = true;
+		desc.rtv.enable_depth_write = true;
+		desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT;
+		desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+		desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
+		render_depth_state = Render::PipelineStateCache::get().get_cache(desc);
+	}
 }
 
 
@@ -149,7 +165,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 
 void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr& tex, Render::Texture::ptr& to)
 {
-	std::lock_guard<std::mutex> g(m);
+//	std::lock_guard<std::mutex> g(m);
 	//compute_context.get_base().transition(tex, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
 	//compute_context.get_base().transition(to, Render::ResourceState::UNORDERED_ACCESS);
 	compute_context.set_pipeline(state_downsample_depth);
@@ -165,7 +181,7 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 }
 
 void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to){
-	std::lock_guard<std::mutex> g(m);
+//	std::lock_guard<std::mutex> g(m);
 //	compute_context.get_base().transition(tex.resource, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
 //	compute_context.get_base().transition(to.resource, Render::ResourceState::UNORDERED_ACCESS);
 	compute_context.set_pipeline(state_downsample_depth);
@@ -262,6 +278,8 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	list.draw(4);
 	list.use_dynamic = true;
 }
+
+
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::TextureView from)
 {
 //	list.get_base().transition(to, ResourceState::RENDER_TARGET);
@@ -283,4 +301,41 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	list.use_dynamic = false;
 	list.draw(4);
 	list.use_dynamic = true;
+}
+
+
+
+void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Render::TextureView to, Render::TextureView from)
+{
+
+	list.set_pipeline(copy_texture_state);
+	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+	Slots::CopyTexture data;
+	data.GetSrcTex() = from.get_srv();
+	data.set(list);
+
+	list.set_rtv(1,to.get_rtv(), Handle());
+	list.use_dynamic = false;
+	list.draw(4);
+	list.use_dynamic = true;
+}
+
+
+
+void MipMapGenerator::write_to_depth(Render::GraphicsContext& list, Render::TextureView from, Render::TextureView to)
+{
+	list.set_pipeline(render_depth_state);
+	Slots::CopyTexture data;
+	data.GetSrcTex() = from.get_srv();
+	data.set(list);
+
+	list.set_viewport(to.get_viewport());
+	list.set_scissor(to.get_scissor());
+
+	list.set_rtv(0, Handle(), to.get_dsv());
+
+	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	list.draw(4);
+	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 }

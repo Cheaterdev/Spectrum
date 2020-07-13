@@ -1157,15 +1157,15 @@ struct RayTracingShaders : public Events::prop_handler,
 			auto m_missShaderTable = _list->place_raw(missShaderIdentifier, missShadowShaderIdentifier);
 
 			// Since each shader table has only one shader record, the stride is same as the size.
-			dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable.get_address();
+			dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable.get_gpu_address();
 			dispatchDesc->HitGroupTable.SizeInBytes = m_hitGroupShaderTable.size;
 			dispatchDesc->HitGroupTable.StrideInBytes = sizeof(closesthit_identifier);
 
-			dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable.get_address();
+			dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable.get_gpu_address();
 			dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable.size;
 			dispatchDesc->MissShaderTable.StrideInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 
-			dispatchDesc->RayGenerationShaderRecord.StartAddress = m_rayGenShaderTable.get_address();
+			dispatchDesc->RayGenerationShaderRecord.StartAddress = m_rayGenShaderTable.get_gpu_address();
 			dispatchDesc->RayGenerationShaderRecord.SizeInBytes = m_rayGenShaderTable.size;
 			dispatchDesc->Width = texture->get_size().x;
 			dispatchDesc->Height = texture->get_size().y;
@@ -1964,7 +1964,7 @@ public:
 				data.speed = builder.create_texture("GBuffer_Speed", size, 1,DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT, ResourceFlags::RenderTarget);
 
 
-				data.hiz = builder.create_texture("GBuffer_HiZ", size/8,1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
+				data.hiz = builder.create_texture("GBuffer_HiZ", size/8,1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil | ResourceFlags::Static);
 				data.hiz_uav = builder.create_texture("GBuffer_HiZ_UAV", size / 8,1, DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, ResourceFlags::UnorderedAccess);
 
 				}, [this](GBufferData& data, FrameContext& _context) {
@@ -2013,7 +2013,7 @@ public:
 
 				//	stenciler->render(context, scene);
 
-				//	MipMapGenerator::get().copy_texture_2d_slow(command_list->get_graphics(), texture.texture, gbuffer.albedo);
+				
 				});
 		}
 
@@ -2056,8 +2056,28 @@ public:
 			});
 			*/
 			
-	
+		struct debug_data
+		{
+			ResourceHandler* o_texture;
+			ResourceHandler* debug_texture;
+		};
+		if(debug_draw)
+		graph.add_pass<debug_data>("DEBUG", [](debug_data& data, TaskBuilder& builder) {
+				data.o_texture = builder.need_texture("swapchain");
+				data.debug_texture = builder.need_texture("GBuffer_Albedo");
 
+			}, [this](debug_data& data, FrameContext& context) {
+
+				auto output_tex = context.get_texture(data.o_texture);
+				auto debug_tex = context.get_texture(data.debug_texture);
+
+				auto& list = context.get_list();
+
+				list->get_graphics().set_viewport(vec4{0,0,100,100});
+				list->get_graphics().set_scissor({ 0,0,100,100 });
+
+				MipMapGenerator::get().copy_texture_2d_slow(list->get_graphics(), texture.texture, debug_tex);
+			});
 
 	}
 

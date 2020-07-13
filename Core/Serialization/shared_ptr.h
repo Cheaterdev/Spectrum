@@ -64,5 +64,15 @@ namespace boost
 			split_free(archive, value, version);
 		}
 
+		template<class Archive, class Type>
+		inline void serialize(Archive& archive, std::span<Type>& values, const unsigned int version)
+		{
+			for (int i = 0; i < values.size(); i++)
+			{
+				archive& values[i];
+			}
+		}
+
+
 	}
 }

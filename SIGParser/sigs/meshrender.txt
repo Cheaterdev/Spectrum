@@ -36,6 +36,12 @@ struct DrawIndexedArguments
 }
 
 [shader_only]
+struct DispatchArguments
+{
+	uint3 counts;
+}
+
+[shader_only]
 struct GPUAddress
 {
 	uint2 data;
@@ -50,7 +56,6 @@ struct CommandData
 	DrawIndexedArguments draw_commands;
 }
 
-
 struct MeshCommandData
 {
 	uint material_id;
@@ -58,7 +63,6 @@ struct MeshCommandData
 	GPUAddress mesh_cb;
 	DrawIndexedArguments draw_commands;
 }
-
 
 struct MaterialCommandData
 {
@@ -70,15 +74,57 @@ struct MaterialCommandData
 struct GatherPipelineGlobal
 {
 	uint meshes_count;
-	StructuredBuffer<MeshCommandData> meshes;
-	StructuredBuffer<MaterialCommandData> materials;
+	Buffer<uint> commands;
 
 }
 
 [Bind = DefaultLayout::Instance1]
 struct GatherPipeline
 {
-		uint pip_ids[8];
-		AppendStructuredBuffer<CommandData> commands[8];
+	uint pip_ids[8]; # PACK TO!!!! uint4 pip_ids[2];
+	AppendStructuredBuffer<CommandData> commands[8];
+}
+
+struct BoxInfo
+{
+	uint node_offset;
+	uint mesh_id;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct GatherBoxes
+{
+	AppendStructuredBuffer<BoxInfo> culledMeshes;
+
+	AppendStructuredBuffer<uint> visibleMeshes;
+}
+
+
+
+[Bind = DefaultLayout::Instance1]
+struct DrawBoxes
+{
+	StructuredBuffer<float4> vertices;
+	StructuredBuffer<BoxInfo> input_meshes;
+	
+	RWStructuredBuffer<uint> visible_meshes;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct InitDispatch
+{
+	RWStructuredBuffer<uint> counter;	
+	#RWStructuredBuffer<GatherPipelineGlobal> pipelineGlobal;
+	RWStructuredBuffer<DispatchArguments> dispatch_data;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct GatherMeshesBoxes
+{
+	StructuredBuffer<BoxInfo> input_meshes;	
+	StructuredBuffer<uint> visible_boxes;	
+
+	AppendStructuredBuffer<uint> visibleMeshes;
+	AppendStructuredBuffer<uint> invisibleMeshes;
 }
 

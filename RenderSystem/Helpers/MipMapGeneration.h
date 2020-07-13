@@ -13,6 +13,7 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
 
 		Render::PipelineState::ptr copy_texture_state;
 
+		Render::PipelineState::ptr render_depth_state;
 
         std::mutex m;
     public:
@@ -25,9 +26,11 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
 		void downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to);
 
 	//	void generate_quality(Render::GraphicsContext& context, camera* cam, G_Buffer& buffer);
+		void write_to_depth(Render::GraphicsContext& list, Render::TextureView from, Render::TextureView to);
 
 
 		void copy_texture_2d_slow(Render::GraphicsContext& context, Render::Texture::ptr& to, Render::Texture::ptr& from);
 		void copy_texture_2d_slow(Render::GraphicsContext& context, Render::Texture::ptr& to, Render::TextureView from);
+		void render_texture_2d_slow(Render::GraphicsContext& context, Render::TextureView to, Render::TextureView from);
 
 };

@@ -428,10 +428,10 @@ namespace DX12
 			{
 
 
-				debugController->EnableDebugLayer();
+		//		debugController->EnableDebugLayer();
 
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
-			//	spDebugController1->SetEnableGPUBasedValidation(true);
+				//spDebugController1->SetEnableGPUBasedValidation(true);
 			}
 			
 

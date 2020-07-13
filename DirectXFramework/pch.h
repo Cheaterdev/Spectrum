@@ -204,7 +204,7 @@ template<class Slot>
 struct CompiledData
 {
 	//Render::HandleTableLight table_cbv;
-	D3D12_GPU_VIRTUAL_ADDRESS cb = 0;
+Render::ResourceAddress cb;
 	Render::HandleTableLight table_srv;
 	Render::HandleTableLight table_uav;
 	Render::HandleTableLight table_smp;
@@ -212,7 +212,7 @@ struct CompiledData
 	const CompiledData<Slot> & set(Render::SignatureDataSetter& graphics, bool use_transitions = true) const
 	{
 		if (use_transitions) {
-			auto timer = Profiler::get().start(L"transitions");
+		//	auto timer = Profiler::get().start(L"transitions");
 
 			for (int i = 0; i < table_srv.get_count(); ++i)
 			{
@@ -244,10 +244,16 @@ struct CompiledData
 						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::VERTEX_AND_CONSTANT_BUFFER);
 			}*/
 
+
+			if (cb)
+			{
+				if ((cb.resource)->get_heap_type() == Render::HeapType::DEFAULT)
+				graphics.get_base().transition(cb.resource, Render::ResourceState::VERTEX_AND_CONSTANT_BUFFER);
+			}
 		}
 
 
-		auto timer = Profiler::get().start(L"set");
+		//auto timer = Profiler::get().start(L"set");
 		if (table_srv.get_count() > 0) graphics.set(Slot::SRV_ID, table_srv);
 		if (table_smp.get_count() > 0) graphics.set(Slot::SMP_ID, table_smp);
 		if (table_uav.get_count() > 0) graphics.set(Slot::UAV_ID, table_uav);
@@ -256,7 +262,7 @@ struct CompiledData
 
 
 		if (cb)
-			graphics.set_const_buffer(Slot::CB_ID, cb);
+			graphics.set_const_buffer(Slot::CB_ID, cb.address);
 
 		return *this;
 	}
@@ -272,6 +278,7 @@ using float4x4 = mat4x4;
 
 using GPUAddress = D3D12_GPU_VIRTUAL_ADDRESS;
 using DrawIndexedArguments = D3D12_DRAW_INDEXED_ARGUMENTS;
+using DispatchArguments = D3D12_DISPATCH_ARGUMENTS;
 
 struct Empty
 {};
@@ -350,7 +357,7 @@ struct DataHolder : public Table
 	template<class Context, class UAV>
 	void place_uav(CompiledData<Slot>& compiled, Context& context, UAV& uav) const
 	{
-		auto timer = Profiler::get().start(L"UAV");
+		//auto timer = Profiler::get().start(L"UAV");
 
 		compiled.table_uav = context.srv.place(sizeof(uav) / sizeof(Render::Handle));
 
@@ -369,7 +376,7 @@ struct DataHolder : public Table
 	template<class Context, class SMP>
 	void place_smp(CompiledData<Slot>& compiled, Context& context, SMP& smp) const
 	{
-		auto timer = Profiler::get().start(L"SMP");
+		//auto timer = Profiler::get().start(L"SMP");
 
 		compiled.table_smp = context.smp.place(sizeof(smp) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
@@ -385,13 +392,13 @@ struct DataHolder : public Table
 	CompiledData<Slot> compile(Context& context) const
 	{
 	
-	 auto timer = Profiler::get().start(L"compile");
+	// auto timer = Profiler::get().start(L"compile");
 		CompiledData<Slot> compiled;
 		
 
 		if constexpr (HasSRV<Table>|| HasBindless<Table>)
 		{
-			auto timer = Profiler::get().start(L"SRV");
+	//		auto timer = Profiler::get().start(L"SRV");
 
 			int srv_count = 0;
 			if constexpr (HasSRV<Table>) srv_count += sizeof(srv) / sizeof(Render::Handle);
@@ -419,7 +426,7 @@ struct DataHolder : public Table
 
 
 				if constexpr (HasBindless<Table>) {
-					auto timer = Profiler::get().start(L"Bindless");
+				//	auto timer = Profiler::get().start(L"Bindless");
 
 					for (int j = 0; j < bindless.size(); j++)
 					{
@@ -445,12 +452,12 @@ struct DataHolder : public Table
 		{
 			//compiled.table_cbv = context.get_base().srv_descriptors.place(1);
 
-		    auto timer = Profiler::get().start(L"CB");
-
+		 //   auto timer = Profiler::get().start(L"CB");
+		
 			if constexpr ( HasData<Table>)
-				compiled.cb = context.place_raw(data, cb).get_address();
+				compiled.cb = context.place_raw(data, cb).get_resource_address();
 			else
-				compiled.cb = context.place_raw(cb).get_address();
+				compiled.cb = context.place_raw(cb).get_resource_address();
 		}
 
 	

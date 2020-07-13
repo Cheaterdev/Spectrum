@@ -16,8 +16,10 @@ enum ResourceFlags{
 	DepthStencil = 16,
 
 	GenCPU = 32,
-	ReadCPU = 64
+	ReadCPU = 64,
 
+	Temporal = 0,
+	Static = 128
 };
 
 inline int operator&(const ResourceFlags& a, const ResourceFlags& b)
@@ -98,6 +100,8 @@ struct TaskBuilder
 
 	std::set<ResourceHandler*> passed_resources;
 	Render::PlacedAllocator allocator;
+	Render::PlacedAllocator static_allocator;
+
 	Render::FrameResourceManager frames;
 	Render::FrameResources::ptr current_frame;
 	Pass* current_pass;

@@ -1,30 +1,34 @@
+#include "autogen/InitDispatch.h"
+#include "autogen/GatherPipelineGlobal.h"
 
-struct dispatch_info
-{
- 
-    unsigned int count;
-  uint3 dispatch_count;
-   
-};
+static const InitDispatch initDispatch = GetInitDispatch();
 
-RWStructuredBuffer<uint> visible_list: register(u0);
-RWStructuredBuffer<dispatch_info> dispach_buffer:register(u1);
+static const RWStructuredBuffer<DispatchArguments> result = initDispatch.GetDispatch_data();
+//static const RWStructuredBuffer<uint> counter = initDispatch.GetCounter();
+
+
+static const GatherPipelineGlobal pip = GetGatherPipelineGlobal();
+
 
 [numthreads(1, 1, 1)]
-void CS_Dispatch(
+void CS(
 	uint3 groupID       : SV_GroupID,
 	uint3 dispatchID : SV_DispatchThreadID,
 	uint3 groupThreadID : SV_GroupThreadID,
 	uint  groupIndex : SV_GroupIndex
 )
 {
-	uint max_count = visible_list.IncrementCounter();
-		//max_count
-		dispatch_info dinfo;
-		dinfo.count = max_count;
-		dinfo.dispatch_count = uint3(((max_count + 64 * 32 - 1) / (64 * 32)), 1, 1);
-		dispach_buffer[0] = dinfo;
-	
+
+	if (groupThreadID.x != 0) return;
+
+	uint max_count = pip.GetMeshes_count(); 
+
+
+		DispatchArguments dinfo;
+		dinfo.cb.counts =  uint3(((max_count + 64 - 1) / (64)), 1, 1);
+		//dinfo.cb.counts = uint3(7, 1, 1);
+
+	result[0] = dinfo;
 }
 
 

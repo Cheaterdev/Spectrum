@@ -1,4 +1,9 @@
-#define M_PI 3.141592653589793238462643383279f
+#include "autogen/CopyTexture.h"
+
+static const Texture2D<float4> full_tex = GetCopyTexture().GetSrcTex();
+
+
+
 struct quad_output
 {
 float4 pos : SV_POSITION;
@@ -33,13 +38,9 @@ quad_output VS(uint index : SV_VERTEXID)
 #endif
 
 #ifdef BUILD_FUNC_PS
-
-Texture2D<float> tex : register(t0,space2);
-
-SamplerState PointSampler : register(s0);
 float PS(quad_output i) : SV_Depth
 {
 
-    return tex.SampleLevel(PointSampler, i.tc,0);
+    return full_tex.SampleLevel(pointClampSampler, i.tc,0);
 }
 #endif

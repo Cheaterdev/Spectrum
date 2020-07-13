@@ -216,6 +216,7 @@ class mesh_renderer : public renderer, public Events::prop_handler
         Render::geometry_shader::ptr voxel_geometry_shader;
 
 		ComPtr<ID3D12CommandSignature> indirect_command_signature;
+		ComPtr<ID3D12CommandSignature> boxes_command;
 
 		TextureAsset::ptr best_fit_normals;
 
@@ -240,10 +241,51 @@ class mesh_renderer : public renderer, public Events::prop_handler
 	//.std::set<MeshAssetInstance*> static_objects;
 		//std::set<MeshAssetInstance*> dynamic_objects;
 		void iterate(MESH_TYPE mesh_type,  std::function<void(Scene::ptr&)> f) override;
-	
-		Render::ComputePipelineState::ptr gather_pipeline;
+		void  render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, Slots::FrameInfo::Compiled& compiledFrame, bool needCulling);
+		void  draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::FrameInfo::Compiled& compiledFrame);
+		void  generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling);
+		void  gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::FrameInfo::Compiled& compiledFrame, bool invisibleToo);
+		void  init_dispatch(MeshRenderContext::ptr mesh_render_context, Slots::GatherPipelineGlobal::Compiled & from);
 
+		Render::ComputePipelineState::ptr gather_pipeline;
+		Render::ComputePipelineState::ptr gather_pipeline_frustum;
+
+
+	
+		virtual_gpu_buffer<Table::BoxInfo::CB>::ptr commands_boxes;
 		virtual_gpu_buffer<command>::ptr commands_buffer[8];
+
+		Render::ComputePipelineState::ptr gather_meshes_from_boxes_pipeline;
+		Render::ComputePipelineState::ptr gather_meshes_from_boxes_pipeline_invisible;
+
+
+		Render::ComputePipelineState::ptr init_dispatch_pipeline;
+		Render::StructuredBuffer<Table::GatherPipelineGlobal::CB>::ptr dispatch_info;
+
+
+
+		Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer;
+		ComPtr<ID3D12CommandSignature> dispatch_command;
+
+
+		Render::ComputePipelineState::ptr gather_boxes;
+		Render::PipelineState::ptr pipeline_boxes;
+		Render::StructuredBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
+		Render::StructuredBuffer<vec4>::ptr vertex_buffer;
+		Render::IndexBuffer::ptr index_buffer;
+		virtual_gpu_buffer<UINT>::ptr visible_boxes;
+		virtual_gpu_buffer<UINT>::ptr meshes_ids;
+		virtual_gpu_buffer<UINT>::ptr meshes_invisible_ids;
+
+		Slots::GatherPipelineGlobal::Compiled gather_visible;
+		Slots::GatherPipelineGlobal::Compiled gather_invisible;
+		Slots::GatherPipelineGlobal::Compiled gather_boxes_commands;
+
+		Slots::InitDispatch::Compiled init_dispatch_compiled;
+		Slots::GatherMeshesBoxes::Compiled gather_neshes_boxes_compiled;
+
+		Slots::DrawBoxes::Compiled draw_boxes_compiled;
+		Slots::GatherBoxes::Compiled gather_boxes_compiled;
     public:
         unsigned int rendered_simple;
         unsigned int rendered_instanced;
@@ -258,6 +300,7 @@ class mesh_renderer : public renderer, public Events::prop_handler
 
         using ptr = s_ptr<mesh_renderer>;
         mesh_renderer();
+
 };
 
 

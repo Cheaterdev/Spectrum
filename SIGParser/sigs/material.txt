@@ -5,13 +5,3 @@ struct MaterialInfo
 	[dynamic] MaterialCB data;
     uint textureOffset;	
 }
-
-[Bind = FrameLayout::SceneData]
-struct SceneData
-{
-	Buffer<uint> commands;
-	Texture2D material_textures[];
-	StructuredBuffer<node_data> nodes;
-	StructuredBuffer<mesh_vertex_input> vertexes;
-}
-

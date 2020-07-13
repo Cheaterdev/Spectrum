@@ -157,6 +157,7 @@ struct MeshRenderContext
         void begin()
         {
             list->get_graphics().set_signature(pipeline.root_signature);
+            list->get_compute().set_signature(pipeline.root_signature);
             draw_count = 0;
     //        set_4_table.cpu.ptr = 0;
     //        set_4_table.gpu.ptr = 0;
@@ -170,6 +171,7 @@ struct MeshRenderContext
             if (!current_state || !(current_state->desc == pipeline))
             {
                 current_state = Render::PipelineStateCache::get_cache(pipeline);//new Render::PipelineState(pipeline));
+                assert(pipeline == current_state->desc);
             }
 
             list->get_graphics().set_pipeline(current_state);

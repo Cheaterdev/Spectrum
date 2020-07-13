@@ -250,6 +250,23 @@ namespace boost
             ar& g.RenderTarget;
         }
 
+		template<class Archive>
+		void serialize(Archive& ar, D3D12_DRAW_INDEXED_ARGUMENTS& g, const unsigned int)
+		{
+			ar& NVP(g.BaseVertexLocation);
+			ar& NVP(g.IndexCountPerInstance);
+			ar& NVP(g.InstanceCount);
+			ar& NVP(g.StartIndexLocation);
+			ar& NVP(g.StartInstanceLocation);
+		}
+		template<class Archive>
+		void serialize(Archive& ar, D3D12_DISPATCH_ARGUMENTS& g, const unsigned int)
+		{
+			ar& NVP(g.ThreadGroupCountX);
+			ar& NVP(g.ThreadGroupCountY);
+			ar& NVP(g.ThreadGroupCountZ);
+		}
+
     }
 }
 

@@ -317,10 +317,18 @@ namespace DX12
 		base.get_native_list()->CopyBufferRegion(
 			resource->get_native().Get(), offset, info.resource->get_native().Get(), info.offset, size);
 	}
-	D3D12_GPU_VIRTUAL_ADDRESS Uploader::UploadInfo::get_address()
+	D3D12_GPU_VIRTUAL_ADDRESS Uploader::UploadInfo::get_gpu_address()
 	{
 		return resource->get_gpu_address() + offset;
 	}
+	
+	ResourceAddress Uploader::UploadInfo::get_resource_address()
+	{
+		ResourceAddress address = resource->get_resource_address();
+		address.address += offset;
+		return address;
+	}
+	
 	Handle Uploader::UploadInfo::create_cbv(CommandList& list)
 	{
 
@@ -725,14 +733,13 @@ namespace DX12
 			subres);
 	
 
-		for (int i = 0; i < transition_count-1; i++)
-		{
+/*		{
 			if (transitions[transition_count - 1].Type == transitions[i].Type)
 				if (transitions[transition_count - 1].Transition.pResource == transitions[i].Transition.pResource)
 					if (transitions[transition_count - 1].Transition.Subresource == transitions[i].Transition.Subresource)
 						assert(false);
 
-		}
+		}*/
 		if (transition_count == transitions.size())
 			flush_transitions();
 	}
@@ -1168,12 +1175,11 @@ void ComputeContext::dispach(int x,int y,int z)
 	}
 	void GraphicsContext::execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
-		base.flush_transitions();
-		//  flush_binds(true);
-		 //  get_compute().flush_binds();
+		if(command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
+		if(counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
-	//	descriptor_manager_graphics.bind(&base);
-	//	descriptor_manager_compute.bind(this);
+		base.flush_transitions();
+
 		list->ExecuteIndirect(
 			command_types.Get(),
 			max_commands,
@@ -1184,13 +1190,11 @@ void ComputeContext::dispach(int x,int y,int z)
 	}
 	void ComputeContext::execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
+		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
+		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
 		base.flush_transitions();
-		//flush_binds(true);
-		//  get_compute().flush_binds();
-
-		//descriptor_manager_graphics.bind(this);
-		// descriptor_manager_compute.bind(&base);
+	
 		list->ExecuteIndirect(
 			command_types.Get(),
 			max_commands,

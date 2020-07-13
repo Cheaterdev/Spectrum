@@ -90,8 +90,8 @@ namespace DX12
 			UINT64 offset;
 			UINT64 size;
 
-			D3D12_GPU_VIRTUAL_ADDRESS get_address();
-
+			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address();
+			ResourceAddress get_resource_address();
 
 			Handle create_cbv(CommandList& list);
 		};
@@ -119,7 +119,6 @@ namespace DX12
 			}
 			return info;
 		}
-
 
 		template<class T>
 		void write(UploadInfo& info, std::vector<T>& arg)

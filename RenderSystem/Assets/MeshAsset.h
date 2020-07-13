@@ -51,6 +51,26 @@ using mesh_info_part = Table::MeshCommandData::CB;
 using material_info_part = Table::MaterialCommandData::CB;
 
 
+
+namespace boost
+{
+    namespace serialization
+    {
+
+        template<class Archive>
+        void serialize(Archive& ar, command& g, const unsigned int)
+        {
+            //	ar & g.DefaultValue;
+            ar& g.material_cb;
+            ar& g.mesh_cb;
+            ar& g.draw_commands;
+        }
+
+    }
+
+}
+using box_command = DrawIndexedArguments;
+
 struct MeshNode
 {
         mat4x4 local_matrix;

@@ -1,195 +1,195 @@
 
 #include "pch.h"
 
-	void TaskBuilder::begin(Pass* pass)
+void TaskBuilder::begin(Pass* pass)
+{
+	current_pass = pass;
+}
+
+void TaskBuilder::end(Pass* pass)
+{
+	current_pass = nullptr;
+}
+
+
+void TaskBuilder::pass_texture(std::string name, Render::TextureView tex)
+{
+	ResourceHandler& handler = resources[name];
+	ResourceAllocInfo& info = alloc_resources[&handler];
+	info.texture = tex;
+	info.placed = false;
+	info.type = ResourceType::Texture;
+	info.resource = tex.resource;
+	info.passed = true;
+	handler.info = &info;
+
+	passed_resources.insert(&handler);
+}
+void TaskBuilder::pass_texture(std::string name, Render::Texture::ptr tex)
+{
+	pass_texture(name, tex->create_view<Render::TextureView>(*current_frame));
+}
+
+void TaskBuilder::reset()
+{
+
+
+	current_pass = nullptr;
+	allocator.reset();
+
+	for (auto p : passed_resources)
 	{
-		current_pass = pass;
-	}
-
-	void TaskBuilder::end(Pass* pass)
-	{
-		current_pass = nullptr;
-	}
-
-
-	void TaskBuilder::pass_texture(std::string name, Render::TextureView tex)
-	{
-		ResourceHandler& handler = resources[name];
-		ResourceAllocInfo& info = alloc_resources[&handler];
-		info.texture = tex;
-		info.placed = false;
-		info.type = ResourceType::Texture;
-		info.resource = tex.resource;
-		info.passed = true;
-		handler.info = &info;
-
-		passed_resources.insert(&handler);
-	}
-	void TaskBuilder::pass_texture(std::string name, Render::Texture::ptr tex)
-	{
-		pass_texture(name, tex->create_view<Render::TextureView>(*current_frame));
-	}
-
-	void TaskBuilder::reset()
-	{
-
-	
-		current_pass = nullptr;
-		allocator.reset();
-
-		for (auto p : passed_resources)
-		{
-			p->info->resource = nullptr;
-			p->info->buffer = Render::BufferView();
-			p->info->texture = Render::TextureView();
-			p->info->passed = false;
-
-		}
-		passed_resources.clear();
-	}
-
-
-
-	Render::TextureView FrameContext::get_texture(ResourceHandler* handler)
-	{
-		return handler->info->texture;// textures[holder];
-	}
-
-	Render::BufferView FrameContext::get_buffer(ResourceHandler* handler)
-	{
-		return handler->info->buffer;// textures[holder];
-	}
-
-	/*void FrameContext::request_resources(UsedResources& resources, TaskBuilder& builder)
-	{
-		for (auto& uses : resources.textures)
-		{
-			textures[uses] = builder.request_texture(uses);
-		}
-	}
-	*/
-
-	Render::CommandList::ptr& FrameContext::get_list()
-	{
-		return list;
-	}
-
-	void FrameContext::begin(Pass * pass, Render::FrameResources::ptr & frame) {
-		list = frame->start_list(pass->name);
-//		list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().gpu_smp);
-
-		for (auto handle : pass->used.resources)
-		{
-			if (!handle->info->placed) continue;
-			//if (!handle->info->texture) continue;
-
-			auto &tex = get_texture(handle);
-			
-			list->transition(nullptr, tex.resource.get());
-		}
+		p->info->resource = nullptr;
+		p->info->buffer = Render::BufferView();
+		p->info->texture = Render::TextureView();
+		p->info->passed = false;
 
 	}
+	passed_resources.clear();
+}
 
-	void FrameContext::end()
+
+
+Render::TextureView FrameContext::get_texture(ResourceHandler* handler)
+{
+	return handler->info->texture;// textures[holder];
+}
+
+Render::BufferView FrameContext::get_buffer(ResourceHandler* handler)
+{
+	return handler->info->buffer;// textures[holder];
+}
+
+/*void FrameContext::request_resources(UsedResources& resources, TaskBuilder& builder)
+{
+	for (auto& uses : resources.textures)
 	{
-		list->end();
+		textures[uses] = builder.request_texture(uses);
+	}
+}
+*/
+
+Render::CommandList::ptr& FrameContext::get_list()
+{
+	return list;
+}
+
+void FrameContext::begin(Pass* pass, Render::FrameResources::ptr& frame) {
+	list = frame->start_list(pass->name);
+	//		list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().gpu_smp);
+
+	for (auto handle : pass->used.resources)
+	{
+		if (!handle->info->placed) continue;
+		//if (!handle->info->texture) continue;
+
+		auto& tex = get_texture(handle);
+
+		list->transition(nullptr, tex.resource.get());
 	}
 
+}
 
-	void FrameContext::execute()
-	{
-		list->execute();
-		list = nullptr;
-	}
+void FrameContext::end()
+{
+	list->end();
+}
 
 
-	void Pass::compile(TaskBuilder& builder)
-	{
+void FrameContext::execute()
+{
+	list->execute();
+	list = nullptr;
+}
+
+
+void Pass::compile(TaskBuilder& builder)
+{
 	//	builder.begin(this);
 	//	context.request_resources(used, builder);
 	//	builder.end(this);
-	}
+}
 
-	void Pass::wait()
-	{
-		//if(render_task)
+void Pass::wait()
+{
+	//if(render_task)
+	render_task.wait();
+}
+void Pass::execute()
+
+{
+	auto& timer = Profiler::get().start(L"wait"); {
 		render_task.wait();
 	}
-	void Pass::execute()
-		
-	{
-		auto& timer = Profiler::get().start(L"wait"); {
-			render_task.wait();
-		}
 
-		{	auto& timer = Profiler::get().start(L"execute");
-		context.execute();
-		}
+	{	auto& timer = Profiler::get().start(L"execute");
+	context.execute();
 	}
-	void FrameGraph::start_new_frame()
+}
+void FrameGraph::start_new_frame()
+{
 	{
-		{
-			auto& timer = Profiler::get().start(L"begin_frame");
+		auto& timer = Profiler::get().start(L"begin_frame");
 
-			builder.current_frame = builder.frames.begin_frame();
-		}
+		builder.current_frame = builder.frames.begin_frame();
 	}
+}
 
-	void FrameGraph::setup()
+void FrameGraph::setup()
+{
+	auto& timer = Profiler::get().start(L"FrameGraph::setup");
+
+	for (auto& pass : passes)
+		pass->setup(builder);
+}
+
+void FrameGraph::compile(int frame)
+{
+	auto& timer = Profiler::get().start(L"FrameGraph::compile");
+	builder.allocator.begin_frame(frame);
+	builder.create_resources();
+
+	for (auto& pass : passes)
+		pass->compile(builder);
+}
+
+void FrameGraph::render()
+{
+	auto& timer = Profiler::get().start(L"FrameGraph::render");
+
+
 	{
-		auto& timer = Profiler::get().start(L"FrameGraph::setup");
+		auto& timer = Profiler::get().start(L"passes");
 
 		for (auto& pass : passes)
-			pass->setup(builder);
+			pass->render(builder.current_frame);
+
 	}
 
-	void FrameGraph::compile(int frame)
 	{
-		auto& timer = Profiler::get().start(L"FrameGraph::compile");
-		builder.allocator.begin_frame(frame);
-		builder.create_resources();
-	
-		for (auto& pass : passes)
-			pass->compile(builder);
-	}
-
-	void FrameGraph::render()
-	{
-		auto& timer = Profiler::get().start(L"FrameGraph::render");
-
-
-		{
-			auto& timer = Profiler::get().start(L"passes");
-
-			for (auto& pass : passes)
-				pass->render(builder.current_frame);
-
-		}
-
-		{
-			auto& timer = Profiler::get().start(L"execute");
-
-			for (auto& pass : passes)
-			{
-				pass->execute();
-			}
-
-
-		}
-		builder.current_frame = nullptr;
-	}
-
-	void FrameGraph::reset()
-	{
+		auto& timer = Profiler::get().start(L"execute");
 
 		for (auto& pass : passes)
 		{
-			pass->wait();
+			pass->execute();
 		}
-		passes.clear();
-		builder.reset();
-		
+
+
 	}
+	builder.current_frame = nullptr;
+}
+
+void FrameGraph::reset()
+{
+
+	for (auto& pass : passes)
+	{
+		pass->wait();
+	}
+	passes.clear();
+	builder.reset();
+
+}
 
 ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, UINT flags)
 {
@@ -205,7 +205,7 @@ ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT 
 	info.type = ResourceType::Texture;
 	info.desc = desc;
 	info.flags = flags;
-	current_pass->used.resources.push_back(&handler);	
+	current_pass->used.resources.push_back(&handler);
 	info.handler = &handler;
 
 	info.valid_from = current_pass->id;
@@ -233,7 +233,7 @@ ResourceHandler* TaskBuilder::need_texture(std::string name, UINT flags)
 
 ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, UINT flags)
 {
-	
+
 	size = Math::AlignUp(size, 256); // TODO: make in GAPI
 	ResourceHandler& handler = resources[name];
 	ResourceAllocInfo& info = alloc_resources[&handler];
@@ -274,7 +274,7 @@ ResourceHandler* TaskBuilder::need_buffer(std::string name, UINT flags)
 
 void TaskBuilder::create_resources()
 {
-	
+
 	struct Events
 	{
 		std::set<ResourceAllocInfo*> create;
@@ -291,80 +291,84 @@ void TaskBuilder::create_resources()
 		if (pair.second.frame_id != current_frame->get_frame())
 			continue;
 
-		events[pair.second.valid_from].create.insert(&pair.second);
-		events[pair.second.valid_to+1].free.insert(&pair.second);
+		auto info = &pair.second;
+		if ((info->flags & ResourceFlags::Static) != 0) continue;
+		
+			events[pair.second.valid_from].create.insert(info);
+			events[pair.second.valid_to + 1].free.insert(info);
+		
 	}
 
 	{
 		auto& timer = Profiler::get().start(L"allocate memory");
 
-	for (auto [id, e] : events)
-	{
-		for (auto info : e.free)
+		for (auto [id, e] : events)
 		{
-			//auto& timer = Profiler::get().start(L"free");
-			//if (info->type == ResourceType::Texture)
-			info->alloc_ptr.Free();
-		}
-
-
-		for (auto info : e.create)
-		{
-
-			CommonAllocator::Handle alloc_ptr;
-			Render::HeapType heap_type = Render::HeapType::DEFAULT;
-
-			if (info->flags & ResourceFlags::GenCPU)
+			for (auto info : e.free)
 			{
-				heap_type = Render::HeapType::UPLOAD;
+				//auto& timer = Profiler::get().start(L"free");
+				//if (info->type == ResourceType::Texture)
+				info->alloc_ptr.Free();
 			}
 
-			if (info->flags & ResourceFlags::ReadCPU)
+
+			for (auto info : e.create)
 			{
-				heap_type = Render::HeapType::READBACK;
-			}
 
-			if (info->type == ResourceType::Texture)
-			{
-				//auto& timer = Profiler::get().start(L"create");
+				CommonAllocator::Handle alloc_ptr;
+				Render::HeapType heap_type = Render::HeapType::DEFAULT;
 
-				TextureDesc desc = info->desc.get<TextureDesc>();
-
-				D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
-
-				if (info->flags & ResourceFlags::RenderTarget)
+				if (info->flags & ResourceFlags::GenCPU)
 				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+					heap_type = Render::HeapType::UPLOAD;
 				}
 
-				if (info->flags & ResourceFlags::DepthStencil)
+				if (info->flags & ResourceFlags::ReadCPU)
 				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+					heap_type = Render::HeapType::READBACK;
 				}
 
-				if (info->flags & ResourceFlags::UnorderedAccess)
+				if (info->type == ResourceType::Texture)
 				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+					//auto& timer = Profiler::get().start(L"create");
+
+					TextureDesc desc = info->desc.get<TextureDesc>();
+
+					D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+
+					if (info->flags & ResourceFlags::RenderTarget)
+					{
+						flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+					}
+
+					if (info->flags & ResourceFlags::DepthStencil)
+					{
+						flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+					}
+
+					if (info->flags & ResourceFlags::UnorderedAccess)
+					{
+						flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+					}
+
+					alloc_ptr = allocator.allocate_resource(CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, 1, 1, 0, flags), heap_type);
+
 				}
 
-				alloc_ptr = allocator.allocate_resource(CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, 1, 1, 0, flags), heap_type);
+				if (info->type == ResourceType::Buffer)
+				{
+					BufferDesc desc = info->desc.get<BufferDesc>();
+					alloc_ptr = allocator.allocate_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size), heap_type);
+				}
+				if (info->alloc_ptr != alloc_ptr) {
+
+					info->need_recreate = true;
+				}
+
+				info->alloc_ptr = alloc_ptr;
 
 			}
-
-			if (info->type == ResourceType::Buffer)
-			{
-				BufferDesc desc = info->desc.get<BufferDesc>();
-				alloc_ptr = allocator.allocate_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size), heap_type);
-			}
-			if (info->alloc_ptr != alloc_ptr) {
-			
-			info->need_recreate = true;
 		}
-
-			info->alloc_ptr = alloc_ptr;
-
-		}
-	}
 	}
 
 	{
@@ -387,46 +391,62 @@ void TaskBuilder::create_resources()
 				continue;
 
 			if (info->passed) continue;
-	//		if (!info->need_recreate) 
-	//			continue;
-	if (info->type == ResourceType::Texture)
+
+
+			//		if (!info->need_recreate) 
+			//			continue;
+			if (info->type == ResourceType::Texture)
 			{
-		if (info->need_recreate) {
-				TextureDesc desc = info->desc.get<TextureDesc>();
+				if (info->need_recreate||!info->resource) {
+					TextureDesc desc = info->desc.get<TextureDesc>();
 
-				D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+					D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
 
-				if (info->flags & ResourceFlags::RenderTarget)
-				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-				}
+					if (info->flags & ResourceFlags::RenderTarget)
+					{
+						flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+					}
 
-				if (info->flags & ResourceFlags::DepthStencil)
-				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-				}
+					if (info->flags & ResourceFlags::DepthStencil)
+					{
+						flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+					}
 
-				if (info->flags & ResourceFlags::UnorderedAccess)
-				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-				}
+					if (info->flags & ResourceFlags::UnorderedAccess)
+					{
+						flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+					}
+					if ((info->flags & ResourceFlags::Static) == 0)
+					{
+						info->resource = allocator.create_resource(CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, 1, 1, 0, flags), info->alloc_ptr, Render::ResourceState::UNKNOWN, vec4());
+					}
+					else
+					{
+						info->resource = Render::DefaultAllocator::get().create_resource(CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, 1, 1, 0, flags), Render::ResourceState::UNKNOWN, vec4());
+					}
 
-			
-					info->resource = allocator.create_resource(CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, 1, 1, 0, flags), info->alloc_ptr, Render::ResourceState::UNKNOWN, vec4());
 					info->resource->set_name(std::string("Graph Texture:") + std::to_string(id));
+
 				}
 
 				info->texture = info->resource->create_view<Render::TextureView>(*current_frame);
 
-				
+
 			}
 
 			if (info->type == ResourceType::Buffer)
 			{
-		
-				if (info->need_recreate) {
+
+				if (info->need_recreate || !info->resource) {
 					BufferDesc desc = info->desc.get<BufferDesc>();
-					info->resource = allocator.create_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size, D3D12_RESOURCE_FLAG_NONE), info->alloc_ptr, Render::ResourceState::GEN_READ, vec4());
+					if ((info->flags & ResourceFlags::Static) == 0)
+					{
+						info->resource = allocator.create_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size, D3D12_RESOURCE_FLAG_NONE), info->alloc_ptr, Render::ResourceState::GEN_READ, vec4());
+					}
+					else {
+						info->resource = Render::DefaultAllocator::get().create_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size, D3D12_RESOURCE_FLAG_NONE), Render::ResourceState::GEN_READ, vec4());
+
+					}
 					info->resource->set_name(std::string("Graph Buffer:") + std::to_string(id));
 				}
 

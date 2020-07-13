@@ -91,13 +91,16 @@ public:
 
     my_unique_vector<UINT> command_ids;
 	std::set<materials::universal_material*> mats;
+	std::map<size_t, materials::Pipeline::ptr> pipelines;
 
 	Slots::SceneData::Compiled compiledScene;
 	Slots::FrameInfo::Compiled compiledFrame;
+    Slots::GatherPipelineGlobal::Compiled compiledGather;
 
     void update(FrameResources& frame)
     {
         mats.clear();
+        pipelines.clear();
 
         auto mesh_func = [&](MeshAssetInstance* l)
         {
@@ -105,8 +108,9 @@ public:
             {
                 auto mat = static_cast<materials::universal_material*>(r.material);
                 mats.insert(mat);
+		
+				pipelines[mat->get_id()] = mat->get_pipeline();
             }
-
         };
 
         for (auto m : static_objects)
@@ -130,12 +134,25 @@ public:
 				sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
 				sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
 				sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
-				sceneData.GetCommands() = srv;
+			    sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->get_srv()[0];
+				sceneData.GetMeshes() = scene->mesh_infos->buffer->get_srv()[0];
+
 				compiledScene = sceneData.compile(frame);
 
 
 			}
-            
+
+
+            {
+                //	auto timer = list.start(L"GatherMat");
+                Slots::GatherPipelineGlobal gather_global;
+                gather_global.GetMeshes_count() = command_ids.size();
+                gather_global.GetCommands() = srv;
+
+                compiledGather = gather_global.compile(frame);
+
+            }
+
 
     }
   //  PipelineHolderManager pipelines;

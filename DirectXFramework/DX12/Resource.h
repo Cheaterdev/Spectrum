@@ -290,6 +290,36 @@ namespace DX12
 	};
 	*/
 
+	class Resource;
+
+
+	struct ResourceAddress
+	{
+		ResourceAddress()
+		{
+			address = 0;
+		resource = nullptr;
+
+		}
+
+		ResourceAddress(D3D12_GPU_VIRTUAL_ADDRESS address, Resource* resource):address(address), resource(resource)
+		{
+
+		}
+
+		D3D12_GPU_VIRTUAL_ADDRESS address = 0;
+		Resource* resource = nullptr;
+
+		explicit operator bool() const
+		{
+			return address;
+		}
+
+		operator D3D12_GPU_VIRTUAL_ADDRESS() const
+		{
+			return address;
+		}
+	};
 	
 
 	// for tiles now, only
@@ -380,12 +410,14 @@ namespace DX12
 	class DefaultAllocator :public Singleton<DefaultAllocator>, public ResourceAllocator
 	{
 		virtual HeapType get_type()override;
+	public:
 		virtual Resource_ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)  override;
 	};
 
 	class ReservedAllocator :public Singleton<ReservedAllocator>, public ResourceAllocator
 	{
 		virtual HeapType get_type()override;
+	public:
 		virtual Resource_ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)  override;
 	};
 
@@ -457,6 +489,13 @@ namespace DX12
 		{
 			return gpu_adress;
 		}
+
+		ResourceAddress get_resource_address() 
+		{
+			assert(gpu_adress > 0);
+			return ResourceAddress( gpu_adress , this);
+		}
+
 		// TODO:: works only for buffer now
 		auto get_size()
 		{
@@ -892,7 +931,28 @@ public:
 		assert(*h.resource_ptr == resource.get());
 	}
 
-	virtual void place_uav(Handle& h) { assert(false); }
+	virtual void place_uav(Handle& h) {
+	
+		if (!resource) return;
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
+		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	
+		desc.Format = format;
+
+		desc.Buffer.StructureByteStride = 0;
+		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+
+		desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(T));
+		desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(T);
+		desc.Buffer.CounterOffsetInBytes = 0;
+
+		*h.resource_ptr = resource.get();
+		Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
+
+		assert(*h.resource_ptr == resource.get());
+	}
 	virtual void place_rtv(Handle& h) { assert(false); }
 	virtual void place_dsv(Handle& h) { assert(false); }
 	virtual void place_cb(Handle& h)override {

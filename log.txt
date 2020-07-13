@@ -1,0 +1,38 @@
+[INFO] : 101 info text
+[WARNING] : 101 warning text
+[DEBUG] : 101 debug text
+[ERROR] : 101 error text
+[INFO] : 101 EVENT: "start" time: 102
+[DEBUG] : 101 Singleton creating class Application
+[INFO] : 101 EVENT: "Device" time: 102
+[DEBUG] : 101 Singleton creating class DX12::Device
+[DEBUG] : 101 Singleton creating class CounterManager
+[INFO] : 124 adapter:  NVIDIA GeForce GTX 1080
+[INFO] : 124 adapter:  Microsoft Basic Render Driver
+[INFO] : 242 EVENT: "input_system" time: 243
+[DEBUG] : 242 Singleton creating class input_system
+[DEBUG] : 252 Singleton creating class FileSystem
+[INFO] : 252 EVENT: "AssetManager" time: 253
+[DEBUG] : 252 Singleton creating class AssetManager
+[DEBUG] : 252 Singleton creating class GuidGenerator
+[DEBUG] : 253  The system cannot find the path specified
+[DEBUG] : 253  The system cannot find the path specified
+[INFO] : 253 EVENT: "WindowRender" time: 253
+[DEBUG] : 253 Singleton creating class resource_manager_base<class DX12::vertex_shader,struct D3D::shader_header,class resource_manager<class DX12::vertex_shader,struct D3D::shader_header> >
+[DEBUG] : 253  creating new resource class DX12::vertex_shader with header 
+{struct D3D::shader_header = 
+ {file_name = testing.h}
+ {entry_point = VS}
+ {flags = 0}
+ {macros = 
+  {count = 0}
+  {item_version = 0}
+ }
+}
+[ERROR] : 254 file:  
+{string = wide string types not suported in log archive} msg: The system cannot find the path specified
+[DEBUG] : 254 Singleton creating struct D3D12ShaderCompilerInfo
+[ERROR] : 255 file:  
+{string = wide string types not suported in log archive} msg: The system cannot find the path specified
+[ERROR] : 255 file:  
+{string = wide string types not suported in log archive} msg: The system cannot find the file specified
