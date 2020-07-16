@@ -165,6 +165,8 @@ void CommonAllocator::Free(Handle& handle)
 	if (!handle)
 		return;
 
+	if (handle.get_reset_id() != reset_id) return;
+
 	assert(handle.get_owner() == this);
 	assert(handle.get_reset_id() == reset_id);
 

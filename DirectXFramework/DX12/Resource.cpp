@@ -133,7 +133,7 @@ namespace DX12
 		}
         if (!force_delete)
         {
-            Device::get().unused(m_Resource);
+           // Device::get().unused(m_Resource);
          
 	//std::stringstream stream;
 	//	stream << std::hex << gpu_adress;

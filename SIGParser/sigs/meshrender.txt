@@ -81,7 +81,7 @@ struct GatherPipelineGlobal
 [Bind = DefaultLayout::Instance1]
 struct GatherPipeline
 {
-	uint pip_ids[8]; # PACK TO!!!! uint4 pip_ids[2];
+	uint4 pip_ids[2]; # PACK TO!!!! uint4 pip_ids[2];
 	AppendStructuredBuffer<CommandData> commands[8];
 }
 

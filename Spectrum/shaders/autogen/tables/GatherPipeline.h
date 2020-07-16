@@ -11,7 +11,7 @@ struct GatherPipeline_uav
 struct GatherPipeline
 {
 	GatherPipeline_cb cb;
-	GatherPipeline_uav uav; 
+	GatherPipeline_uav uav;
 	uint4 GetPip_ids(int i) { return cb.pip_ids[i]; }
 	AppendStructuredBuffer<CommandData> GetCommands(int i) { return uav.commands[i]; }
 };
@@ -20,4 +20,4 @@ struct GatherPipeline
 	const GatherPipeline result = {cb,uav
 	};
 	return result;
-} 
+}

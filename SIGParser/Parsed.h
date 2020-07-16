@@ -120,6 +120,7 @@ struct have_options
 struct Value :public have_name, have_options, have_type, have_expr, have_array
 {
 	int offset = 0;
+	int size = 0;
 };
 
 struct Layout;

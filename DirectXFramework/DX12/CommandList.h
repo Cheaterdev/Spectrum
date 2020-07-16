@@ -189,7 +189,9 @@ namespace DX12
 			Uploader::reset();
 
 		}
+
 	};
+
 
 
 	class StaticCompiledGPUData:public Singleton<StaticCompiledGPUData>, public GPUCompiledManager<Lockable>

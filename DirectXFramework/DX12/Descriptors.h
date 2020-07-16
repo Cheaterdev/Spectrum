@@ -386,7 +386,13 @@ class DescriptorHeapManager : public Singleton<DescriptorHeapManager>
 
 
 	DescriptorHeapManager();
+
 public:
+
+	~DescriptorHeapManager()
+	{
+		heap_cb_sr_ua_static->reset();
+	}
 	DescriptorHeapPaged::ptr gpu_srv;
 	DescriptorHeapPaged::ptr gpu_smp;
 

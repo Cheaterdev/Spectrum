@@ -17,7 +17,7 @@ struct DefaultLayout: public FrameLayout
 	struct Instance1
 	{
 		static const unsigned int ID = 4;
-		static const unsigned int CB = 8;
+		static const unsigned int CB = 3;
 		static const unsigned int CB_ID = 12;
 		static const unsigned int SRV = 2;
 		static const unsigned int SRV_ID = 13;

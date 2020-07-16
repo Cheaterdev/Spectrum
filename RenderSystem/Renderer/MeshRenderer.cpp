@@ -286,7 +286,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		int total = 0;
 		while (total < 8)
 		{
-			gather.GetPip_ids()[total] = end->second->get_id();
+			((UINT*)gather.GetPip_ids())[total] = end->second->get_id();
 			gather.GetCommands()[total] = commands_buffer[total]->buffer->get_uav()[0];
 
 			list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
@@ -297,7 +297,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 		for (int i = total; i < 8; i++)
 		{
-			gather.GetPip_ids()[i] = std::numeric_limits<uint>::max();
+			((UINT*)gather.GetPip_ids())[i] = std::numeric_limits<uint>::max();
 			gather.GetCommands()[i] = commands_buffer[i]->buffer->get_uav()[0];
 		}
 

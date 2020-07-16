@@ -315,6 +315,8 @@ namespace DX12
 		for (auto && q : queues)
 			q = nullptr;
 
+
+		Singleton<StaticCompiledGPUData>::reset();
 		DescriptorHeapManager::reset();
 		PipelineStateCache::reset();
 		//#ifdef DEBUG

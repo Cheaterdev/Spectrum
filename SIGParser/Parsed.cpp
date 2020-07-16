@@ -68,7 +68,7 @@ std::string get_cpp_for(Value v)
 void have_type::detect_type(have_options * options)
 {
 	value_type = ValueType::STRUCT;
-	if (type.find("Texture") == 0) value_type = ValueType::SRV;
+	if (type.find("Texture") == 0)value_type = ValueType::SRV;
 	if (type.find("StructuredBuffer") == 0) value_type = ValueType::SRV;
 	if (type.find("Buffer") == 0) value_type = ValueType::SRV;
 	if (type == "SamplerState") value_type = ValueType::SMP;
@@ -228,6 +228,25 @@ void Table::setup(Parsed* all)
 
 	if (bindless_srv)
 		slot->max_counts[ValueType::SRV] = std::max(slot->max_counts[ValueType::SRV], 1);
+
+
+	//check aligning
+	if (slot)
+	{
+	for (auto& v : values)
+	{
+		int offset = 0;
+
+		if (v.value_type == ValueType::CB)
+		{
+			//assert(offset == 0);
+			offset += v.size;
+
+		}
+
+		offset = offset % 4;
+	}
+	}
 }
 
 Layout* Parsed::find_layout(std::string name)

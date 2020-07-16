@@ -3249,10 +3249,10 @@ public:
 			d->docking = GUI::dock::FILL;
 			{
 				EVENT("Start Drawer");
-				drawer.reset(new triangle_drawer());
-				drawer->docking = GUI::dock::FILL;
+		//		drawer.reset(new triangle_drawer());
+		//		drawer->docking = GUI::dock::FILL;
 		//		area->add_child(drawer);
-				d->get_tabs()->add_page("Game", drawer);
+		//		d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
 			 {
@@ -3345,7 +3345,7 @@ public:
 			 {
 					EVENT("Start Asset Explorer");
 					auto dock = d->get_dock(GUI::dock::RIGHT);
-					GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
+				    GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
 					dock->get_tabs()->add_page("Asset Explorer", cont);
 					dock->size = { 400, 400 };
 					EVENT("End Asset Explorer");
@@ -3488,6 +3488,10 @@ protected:
 		Render::BufferCache::reset();
 		TextureAssetRenderer::reset();
 		AssetManager::reset();
+
+
+
+		
 		Render::Device::reset();
 		//   Render::Device::reset();
 

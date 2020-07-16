@@ -7,7 +7,7 @@ namespace Table
 	{
 		struct CB
 		{
-			uint pip_ids[8];
+			uint4 pip_ids[2];
 		} &cb;
 		using SRV = Empty;
 		struct UAV
@@ -15,7 +15,7 @@ namespace Table
 			Render::Handle commands[8];
 		} &uav;
 		using SMP = Empty;
-		uint* GetPip_ids() { return cb.pip_ids; }
+		uint4* GetPip_ids() { return cb.pip_ids; }
 		Render::Handle* GetCommands() { return uav.commands; }
 		GatherPipeline(CB&cb,UAV&uav) :cb(cb),uav(uav){}
 	};
