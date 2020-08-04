@@ -57,12 +57,12 @@ namespace DX12
 			*/
 
 
-			void place_srv_buffer(const Handle& handle);
-			void place_structured_srv(const Handle& h, UINT stride, unsigned int offset, unsigned int count);
+			void place_srv_buffer(Handle& handle);
+			void place_structured_srv(Handle& h, UINT stride, unsigned int offset, unsigned int count);
 			D3D12_INDEX_BUFFER_VIEW get_index_buffer_view(bool is_32, unsigned int offset = 0, UINT size = 0);
 
 
-			void place_raw_uav(const Handle & h)
+			void place_raw_uav(Handle & h)
 			{
 				D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 				desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -70,11 +70,11 @@ namespace DX12
 				desc.Buffer.NumElements = static_cast<UINT>(get_desc().Width/4);
 				desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-				*h.resource_ptr = this;
-				Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), nullptr, &desc, h.cpu);
+				
+				Device::get().create_uav(h, this, desc);
 			}
 
-			void place_structured_uav(const Handle& h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
+			void place_structured_uav(Handle& h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
 	
 			const HandleTable& get_srv();
 			const HandleTable& get_uav();
@@ -269,9 +269,9 @@ namespace DX12
 				//       list->transition(this, ResourceState::COPY_DEST, ResourceState::COMMON);
 			}
 
-			void place_uav(const Handle& h);
+			void place_uav(Handle& h);
 
-			void place_uav(const Handle& h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
+			void place_uav(Handle& h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
 
 			const Handle& get_raw_uav() const
 			{
@@ -310,9 +310,9 @@ namespace DX12
 			template<class T>
 			void set_data(DX12::CommandList::ptr& list, unsigned int offset, const  std::vector<T>& v)
 			{
-				list->transition(this, ResourceState::COPY_DEST);
+//				list->transition(this, ResourceState::COPY_DEST);
 				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
-				list->transition(this, ResourceState::COMMON);
+//				list->transition(this, ResourceState::COMMON);
 			}
 
 			template<class T>
@@ -324,12 +324,12 @@ namespace DX12
 				list->execute_and_wait();
 			}
 
-			void place_uav(const Handle& h);
-			void place_srv(const Handle& h);
+			void place_uav( Handle& h);
+			void place_srv( Handle& h);
 
-			std::function<void(const Handle&)> uav()
+			std::function<void( Handle&)> uav()
 			{
-				return [this](const Handle & h)
+				return [this]( Handle & h)
 				{
 					place_uav(h);
 				};
@@ -362,9 +362,9 @@ namespace DX12
 			template<class T>
 			void set_data(DX12::CommandList::ptr& list, unsigned int offset, const  std::vector<T>& v)
 			{
-				list->transition(this,  ResourceState::COPY_DEST);
+			//	list->transition(this,  ResourceState::COPY_DEST);
 				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
-				list->transition(this,  ResourceState::COMMON);
+			//	list->transition(this,  ResourceState::COMMON);
 			}
 
 			template<class T>
@@ -702,8 +702,9 @@ namespace DX12
 		SRVDesc.Buffer.NumElements = static_cast<UINT>(count);
 		SRVDesc.Buffer.StructureByteStride = stride;
 		SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-		*srv[0].resource_ptr = this;
-		Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &SRVDesc, srv[0].cpu);
+
+		Device::get().create_srv(srv[0], this, SRVDesc);
+
 
 		if (get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 		{
@@ -757,7 +758,7 @@ namespace DX12
 	}
 
 	template<class T>
-	inline void StructuredBuffer<T>::place_uav(const Handle & h)
+	inline void StructuredBuffer<T>::place_uav(Handle & h)
 	{
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -775,11 +776,12 @@ namespace DX12
 
 		if (counted == counterType::SELF) counter_resource = this;
 		if (counted == counterType::HELP_BUFFER) counter_resource = help_buffer.get();
-		*h.resource_ptr = this;
-		Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), counter_resource ? counter_resource->get_native().Get() : nullptr, &desc, h.cpu);
-	}
+
+
+		Device::get().create_uav(h, this, desc, counter_resource);
+		}
 	template<class T>
-	inline void StructuredBuffer<T>::place_uav(const Handle & h, GPUBuffer::ptr counter_resource, unsigned int offset)
+	inline void StructuredBuffer<T>::place_uav(Handle & h, GPUBuffer::ptr counter_resource, unsigned int offset)
 	{
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -788,8 +790,8 @@ namespace DX12
 		desc.Buffer.StructureByteStride = stride;
 		desc.Buffer.CounterOffsetInBytes = offset;
 		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-		*h.resource_ptr = this;
-		Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), counter_resource ? counter_resource->get_native().Get() : nullptr, &desc, h.cpu);
+
+		Device::get().create_uav(h, this, desc, counter_resource);
 	}
 
 

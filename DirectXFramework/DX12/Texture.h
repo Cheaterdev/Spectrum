@@ -64,25 +64,25 @@ namespace DX12
 
 		Handle get_rtv(UINT mip = 0);
 
-		void place_srv(const Handle& h);
-		void place_srv(const Handle& h, UINT mip);
+		void place_srv(Handle& h);
+		void place_srv(Handle& h, UINT mip);
 
-		void place_rtv(const Handle& h, int i = 0);
-
-
-		void place_dsv(const Handle& h, UINT mip = 0);
-
-		void place_uav(const Handle& h, UINT mip = 0, UINT slice = 0);
+		void place_rtv(Handle& h, int i = 0);
 
 
-		std::function<void(const Handle&)>uav(UINT mip = 0, UINT slice = 0);
+		void place_dsv(Handle& h, UINT mip = 0);
+
+		void place_uav(Handle& h, UINT mip = 0, UINT slice = 0);
 
 
-		std::function<void(const Handle&)>srv(PixelSpace space = PixelSpace::NONE);
+		std::function<void(Handle&)>uav(UINT mip = 0, UINT slice = 0);
 
-		std::function<void(const Handle&)>srv(UINT mip, UINT levels = 1);
 
-		std::function<void(const Handle&)>rtv(UINT mip);
+		std::function<void(Handle&)>srv(PixelSpace space = PixelSpace::NONE);
+
+		std::function<void(Handle&)>srv(UINT mip, UINT levels = 1);
+
+		std::function<void(Handle&)>rtv(UINT mip);
 
 		Handle get_srv(UINT mip);
 		Handle get_srv();
@@ -122,9 +122,9 @@ namespace DX12
 		Handle get_srv(UINT mip);
 
 		Handle get_srv();
-		void place_srv(const Handle& h);
+		void place_srv(Handle& h);
 
-		void place_srv(const Handle& h, UINT mip);
+		void place_srv(Handle& h, UINT mip);
 
 		Texture2DView::ptr face(int i)
 		{
@@ -174,8 +174,8 @@ namespace DX12
 		}
 
 
-		void place_srv(const Handle& h);
-		void place_srv(const Handle& h, UINT mip);
+		void place_srv(Handle& h);
+		void place_srv(Handle& h, UINT mip);
 
 	
 
@@ -204,12 +204,12 @@ namespace DX12
 
 			Handle get_rtv(UINT index, UINT mip);
 
-			void place_srv(const Handle& h);
+			void place_srv(Handle& h);
 
 
-			void place_dsv(const Handle& h, UINT mip = 0, UINT slice = 0, UINT slice_count = 1);
+			void place_dsv(Handle& h, UINT mip = 0, UINT slice = 0, UINT slice_count = 1);
 
-			void place_uav(const Handle& h, UINT first = 0, UINT count = 0, UINT mip = 0, UINT slice = 0);
+			void place_uav(Handle& h, UINT first = 0, UINT count = 0, UINT mip = 0, UINT slice = 0);
 
 
 
@@ -218,7 +218,7 @@ namespace DX12
 				return views[i];
 			}
 
-			std::function<void(const Handle&)> uav(UINT first = 0, UINT count = 0, UINT mip = 0);
+			std::function<void(Handle&)> uav(UINT first = 0, UINT count = 0, UINT mip = 0);
 
 			Handle get_srv();
 
@@ -250,11 +250,11 @@ namespace DX12
 
 			Handle get_rtv(UINT index, UINT mip);
 
-			void place_srv(const Handle& h, int level = -1);
+			void place_srv(Handle& h, int level = -1);
 
 
 
-			void place_uav(const Handle& h, int level = 0);
+			void place_uav(Handle& h, int level = 0);
 			Handle get_srv(int i);
 			Handle get_uav(int i = 0);
 			Handle get_static_srv();
@@ -262,9 +262,9 @@ namespace DX12
 
 
 			Handle get_static_uav();
-			std::function<void(const Handle&)>srv(int level = -1, int levels = -1);
+			std::function<void(Handle&)>srv(int level = -1, int levels = -1);
 
-			std::function<void(const Handle&)>uav(int level = 0);
+			std::function<void(Handle&)>uav(int level = 0);
             /*
             const HandleTable& get_rtv(UINT index, UINT mip)
             {
@@ -325,8 +325,8 @@ namespace DX12
           //  CD3DX12_RESOURCE_DESC get_desc() const;
 
 
-            Texture(ComPtr<ID3D12Resource> native, HandleTable rtv);
-            Texture(ComPtr<ID3D12Resource> native);
+            Texture(ComPtr<ID3D12Resource> native, HandleTable rtv, ResourceState state);
+            Texture(ComPtr<ID3D12Resource> native, ResourceState state);
             Texture(CD3DX12_RESOURCE_DESC desc, ResourceState state = ResourceState::PIXEL_SHADER_RESOURCE, ResourceAllocator & heap = DefaultAllocator::get(), std::shared_ptr<texture_data> data = nullptr);
 
 

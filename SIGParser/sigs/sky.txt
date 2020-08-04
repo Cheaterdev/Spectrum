@@ -16,3 +16,21 @@ struct SkyFace
 {
 	uint face;
 }
+
+
+[Bind = DefaultLayout::Instance1]
+struct EnvFilter
+{
+	uint4 face;	
+	float4 scaler;
+	uint4 size;
+}
+
+
+[Bind = DefaultLayout::Instance2]
+struct EnvSource
+{
+	TextureCube sourceTex;
+}
+
+

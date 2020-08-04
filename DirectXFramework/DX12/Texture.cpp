@@ -96,7 +96,7 @@ namespace DX12
     {
         return resource->get_desc();
     }*/
-    Texture::Texture(ComPtr<ID3D12Resource> native, HandleTable rtv): Resource(native)
+    Texture::Texture(ComPtr<ID3D12Resource> native, HandleTable rtv, ResourceState state): Resource(native, state)
     {
       //  resource.reset(new Resource(native));
         set_name("Texture");
@@ -105,7 +105,7 @@ namespace DX12
         texture_2d_view = std::make_shared<Texture2DView>(this, rtv);
         //   init();
     }
-    Texture::Texture(ComPtr<ID3D12Resource> native) : Resource(native)
+    Texture::Texture(ComPtr<ID3D12Resource> native, ResourceState state) : Resource(native,state)
     {
     //    resource.reset(new Resource(native));
         set_name("Texture");
@@ -254,7 +254,7 @@ namespace DX12
 		}
 	}
 
-	void CubemapArrayView::place_srv(const Handle & h)
+	void CubemapArrayView::place_srv( Handle & h)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -270,11 +270,10 @@ namespace DX12
 			srvDesc.TextureCubeArray.NumCubes = count;
 			srvDesc.TextureCubeArray.ResourceMinLODClamp = 0;
 
-			*h.resource_ptr = resource;
-		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
+			Device::get().create_srv(h, resource, srvDesc);
 	}
 
-	void CubemapArrayView::place_srv(const Handle & h, UINT offset)
+	void CubemapArrayView::place_srv( Handle & h, UINT offset)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -289,8 +288,9 @@ namespace DX12
 		srvDesc.TextureCubeArray.MostDetailedMip = 0;
 		srvDesc.TextureCubeArray.NumCubes = 1;
 		srvDesc.TextureCubeArray.ResourceMinLODClamp = 0;
-		*h.resource_ptr = resource;
-		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
+
+		Device::get().create_srv(h, resource, srvDesc);
+
 	}
     CubemapView::CubemapView( Resource* _resource,int offset) : View(_resource)
     {
@@ -314,8 +314,8 @@ namespace DX12
                     desc.Texture2DArray.ArraySize = 1;
                     desc.Texture2DArray.FirstArraySlice = offset*6+ i;
 
-					*rtvs[i + 6 * m].resource_ptr = resource;
-                    Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, rtvs[i + 6 * m].cpu);
+					Device::get().create_rtv(rtvs[i + 6 * m], resource, desc);
+				
                 }
             }
         }
@@ -368,7 +368,7 @@ namespace DX12
 		return srvs[0];
 	}
 
-	void CubemapView::place_srv(const Handle & h)
+	void CubemapView::place_srv( Handle & h)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -379,11 +379,11 @@ namespace DX12
 		srvDesc.TextureCube.MipLevels = resource->get_desc().MipLevels;
 		srvDesc.TextureCube.MostDetailedMip = 0;
 		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
-		*h.resource_ptr = resource;
-		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
+		
+		Device::get().create_srv(h, resource, srvDesc);
 	}
 
-	void CubemapView::place_srv(const Handle & h, UINT mip)
+	void CubemapView::place_srv( Handle & h, UINT mip)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -397,8 +397,7 @@ namespace DX12
 		srvDesc.TextureCube.MostDetailedMip = mip;
 		srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
 
-		*h.resource_ptr = resource;
-		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
+		Device::get().create_srv(h, resource, srvDesc);
 	}
 
 	Viewport CubemapView::get_viewport(UINT mip)
@@ -503,19 +502,19 @@ namespace DX12
 	{
 		return rtvs[mip];
 	}
-	 void Texture2DView::place_srv(const Handle & h)
+	 void Texture2DView::place_srv(Handle & h)
 	{
 		srv()(h);
 	}
-	 void Texture2DView::place_srv(const Handle & h, UINT mip)
+	 void Texture2DView::place_srv( Handle & h, UINT mip)
 	{
 		srv(mip)(h);
 	}
-	 void Texture2DView::place_rtv(const Handle & h, int i)
+	 void Texture2DView::place_rtv( Handle & h, int i)
 	{
 		rtv(i)(h);
 	}
-	 void Texture2DView::place_dsv(const Handle & h, UINT mip)
+	 void Texture2DView::place_dsv( Handle & h, UINT mip)
 	{
 		D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
 		desc.Format = to_dsv(resource->get_desc().Format);
@@ -530,16 +529,19 @@ namespace DX12
 			desc.Texture2DArray.FirstArraySlice = array_index;
 			desc.Texture2DArray.ArraySize = 1;
 		}
-		*h.resource_ptr = resource;
-		Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &desc, h.cpu);
+
+
+		Device::get().create_dsv(h, resource, desc);
+
+
 	}
-	 void Texture2DView::place_uav(const Handle & h, UINT mip, UINT slice)
+	 void Texture2DView::place_uav( Handle & h, UINT mip, UINT slice)
 	{
 		uav(mip, slice)(h);
 	}
-	 std::function<void(const Handle&)> Texture2DView::uav(UINT mip, UINT slice)
+	 std::function<void( Handle&)> Texture2DView::uav(UINT mip, UINT slice)
 	{
-		return [this, mip, slice](const Handle & h)
+		return [this, mip, slice]( Handle & h)
 		{
 			if (!resource) return;
 
@@ -558,13 +560,14 @@ namespace DX12
 				desc.Texture2DArray.FirstArraySlice = array_index;
 				desc.Texture2DArray.ArraySize = 1;
 			}
-			*h.resource_ptr = resource;
-			Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
+
+			Device::get().create_uav(h, resource, desc);
+
 		};
 	}
-	 std::function<void(const Handle&)> Texture2DView::srv(PixelSpace space)
+	 std::function<void( Handle&)> Texture2DView::srv(PixelSpace space)
 	{
-		return [this, space](const Handle & h)
+		return [this, space]( Handle & h)
 		{
 			if (!resource) return;
 
@@ -591,13 +594,13 @@ namespace DX12
 				srvDesc.Texture2DArray.PlaneSlice = 0;
 				srvDesc.Texture2DArray.ArraySize = 1;
 			}
-			*h.resource_ptr = resource;
-			Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
+
+			Device::get().create_srv(h, resource, srvDesc);
 		};
 	}
-	 std::function<void(const Handle&)> Texture2DView::srv(UINT mip, UINT levels)
+	 std::function<void(Handle&)> Texture2DView::srv(UINT mip, UINT levels)
 	{
-		return [this, mip, levels](const Handle & h)
+		return [this, mip, levels]( Handle & h)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);
@@ -618,13 +621,12 @@ namespace DX12
 				srvDesc.Texture2DArray.PlaneSlice = 0;
 				srvDesc.Texture2DArray.ArraySize = 1;
 			}
-			*h.resource_ptr = resource;
-			Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
+			Device::get().create_srv(h, resource, srvDesc);
 		};
 	}
-	 std::function<void(const Handle&)> Texture2DView::rtv(UINT mip)
+	 std::function<void( Handle&)> Texture2DView::rtv(UINT mip)
 	{
-		return [this, mip](const Handle & h)
+		return [this, mip]( Handle & h)
 		{
 			D3D12_RENDER_TARGET_VIEW_DESC desc = {};
 			desc.Format = to_srv(resource->get_desc().Format);
@@ -641,8 +643,7 @@ namespace DX12
 				desc.Texture2DArray.FirstArraySlice = array_index;
 				desc.Texture2DArray.ArraySize = 1;
 			}
-			*h.resource_ptr = resource;
-			Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, h.cpu);
+			Device::get().create_rtv(h, resource, desc);
 		};
 	}
 	 Handle Texture2DView::get_srv(UINT mip)
@@ -727,11 +728,11 @@ namespace DX12
 	{
 		return rtvs[index + 6 * mip];
 	}
-	 void Texture3DView::place_srv(const Handle & h, int level)
+	 void Texture3DView::place_srv( Handle & h, int level)
 	{
 		srv(level)(h);
 	}
-	 void Texture3DView::place_uav(const Handle & h, int level)
+	 void Texture3DView::place_uav( Handle & h, int level)
 	{
 		uav(level)(h);
 	}
@@ -753,9 +754,9 @@ namespace DX12
 	{
 		return static_uav.get_base();
 	}
-	 std::function<void(const Handle&)> Texture3DView::srv(int level, int levels)
+	 std::function<void(Handle&)> Texture3DView::srv(int level, int levels)
 	{
-		return [this, level, levels](const Handle & h)
+		return [this, level, levels]( Handle & h)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -765,13 +766,13 @@ namespace DX12
 			srvDesc.Texture3D.MostDetailedMip = level == -1 ? 0 : level;
 			srvDesc.Texture3D.ResourceMinLODClamp = 0.0f;
 
-			*h.resource_ptr = resource;
-			Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
+			Device::get().create_srv(h, resource, srvDesc);
+
 		};
 	}
-	 std::function<void(const Handle&)> Texture3DView::uav(int level)
+	 std::function<void(Handle&)> Texture3DView::uav(int level)
 	{
-		return [this, level](const Handle & h)
+		return [this, level]( Handle & h)
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
 			desc.Format = resource->get_desc().Format;
@@ -780,8 +781,9 @@ namespace DX12
 			desc.Texture3D.FirstWSlice = 0;
 			desc.Texture3D.WSize = resource->get_desc().DepthOrArraySize / (1 << level);
 
-			*h.resource_ptr = resource;
-			Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
+
+			Device::get().create_uav(h, resource, desc);
+			
 		};
 	}
     Array2DView::Array2DView(Resource* _resource) : View(_resource)
@@ -825,7 +827,7 @@ namespace DX12
 		return rtvs[index + 6 * mip];
 	}
 
-	 void Array2DView::place_srv(const Handle & h)
+	 void Array2DView::place_srv(Handle & h)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -838,11 +840,11 @@ namespace DX12
 		srvDesc.Texture2DArray.FirstArraySlice = 0;
 		srvDesc.Texture2DArray.PlaneSlice = 0;
 
-		*h.resource_ptr = resource;
-		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
+		Device::get().create_srv(h, resource, srvDesc);
+	
 	}
 
-	 void Array2DView::place_dsv(const Handle & h, UINT mip, UINT slice, UINT slice_count)
+	 void Array2DView::place_dsv(Handle & h, UINT mip, UINT slice, UINT slice_count)
 	{
 		D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
 		desc.Format = to_dsv(resource->get_desc().Format);
@@ -851,11 +853,11 @@ namespace DX12
 		desc.Texture2DArray.FirstArraySlice = slice;
 		desc.Texture2DArray.ArraySize = slice_count;
 
-		*h.resource_ptr = resource;
-		Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &desc, h.cpu);
+		Device::get().create_dsv(h, resource, desc);
+	
 	}
 
-	 void Array2DView::place_uav(const Handle & h, UINT first, UINT count, UINT mip, UINT slice)
+	 void Array2DView::place_uav(Handle & h, UINT first, UINT count, UINT mip, UINT slice)
 	{
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
 		desc.Format = resource->get_desc().Format;
@@ -865,13 +867,12 @@ namespace DX12
 		desc.Texture2DArray.FirstArraySlice = first;
 		desc.Texture2DArray.ArraySize = count;
 
-		*h.resource_ptr = resource;
-		Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
-	}
+		Device::get().create_uav(h, resource, desc);
+		}
 
-	 std::function<void(const Handle&)> Array2DView::uav(UINT first, UINT count, UINT mip)
+	 std::function<void(Handle&)> Array2DView::uav(UINT first, UINT count, UINT mip)
 	{
-		return [this, first, count, mip](const Handle & h)
+		return [this, first, count, mip](Handle & h)
 		{
 			if (!resource) return;
 
@@ -883,8 +884,8 @@ namespace DX12
 			desc.Texture2DArray.FirstArraySlice = first;
 			desc.Texture2DArray.ArraySize = count > 0 ? count : resource->get_desc().ArraySize();
 
-			*h.resource_ptr = resource;
-			Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
+			Device::get().create_uav(h, resource, desc);
+
 		};
 	}
 

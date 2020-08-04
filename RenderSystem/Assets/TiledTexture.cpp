@@ -36,8 +36,7 @@ HeapPage::HeapPage()
 
 	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UINT,min(h.SizeInBytes, UINT64(16384u)),(UINT)(Math::AlignUp(h.SizeInBytes, 16384)/ 16384),1,1,1,0,D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	Render::Device::get().get_native_device()->CreatePlacedResource(tile_heap.Get(), 0, &desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
-	data.reset(new Render::Texture(m_Resource));
-	data->assume_gpu_state(Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+	data.reset(new Render::Texture(m_Resource, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE));
 
 	for (unsigned int i = 0; i<max_count; i++)
 	{
@@ -45,7 +44,7 @@ HeapPage::HeapPage()
 
 		CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UINT, 256, 256, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		Render::Device::get().get_native_device()->CreatePlacedResource(tile_heap.Get(), i * 65536, &desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
-		tiles.emplace_back(new Render::Resource(m_Resource, true));
+		tiles.emplace_back(new Render::Resource(m_Resource, ResourceState::NON_PIXEL_SHADER_RESOURCE, true));
 	}
 }
 
@@ -281,7 +280,7 @@ TiledTexture::TiledTexture(std::string file_name)
     format = tex_data->format;
     format_size = (UINT)(DirectX::BitsPerPixel(tex_data->format) / 4);
     Render::Device::get().get_native_device()->CreateReservedResource(&desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
-    tiled_tex.reset(new Render::Texture(m_Resource));
+    tiled_tex.reset(new Render::Texture(m_Resource, ResourceState::PIXEL_SHADER_RESOURCE));
     UINT num_tiles = 1;
     D3D12_PACKED_MIP_INFO mip_info;
     D3D12_TILE_SHAPE tile_shape;
@@ -338,7 +337,7 @@ void TiledTexture::init()
         ComPtr<ID3D12Resource> m_Resource;
         CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(format, sizes.x, sizes.y, sizes.z, (UINT16)mips.size(), 1, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
         Render::Device::get().get_native_device()->CreateReservedResource(&desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
-        tiled_tex.reset(new Render::Texture(m_Resource));
+        tiled_tex.reset(new Render::Texture(m_Resource, ResourceState::PIXEL_SHADER_RESOURCE));
     }
 
     clear_tilings();
@@ -574,22 +573,22 @@ void TiledTexture::update(Render::CommandList::ptr& list)
             load_tilings();
         });
     });
-    list->transition(visibility_texture.get(),  Render::ResourceState::COPY_DEST);
+//    list->transition(visibility_texture.get(),  Render::ResourceState::COPY_DEST);
     list->get_copy().update_buffer(visibility_texture.get(), 0, reinterpret_cast<char*>(clear_data.data()), UINT(clear_data.size() * 4));
-    list->transition(visibility_texture.get(),  Render::ResourceState::COMMON);
+ //   list->transition(visibility_texture.get(),  Render::ResourceState::COMMON);
 
     if (residency_changed)
     {
         memcpy(residency_data_uploaded->array[0]->mips[0]->data.data(), residency_data->array[0]->mips[0]->data.data(), residency_data->array[0]->mips[0]->data.size());
-        list->transition(residency_texture.get(),  Render::ResourceState::COPY_DEST);
+//        list->transition(residency_texture.get(),  Render::ResourceState::COPY_DEST);
         list->get_copy().update_texture(residency_texture, ivec3(0, 0, 0), ivec3(mips[0].tiles), 0, reinterpret_cast<const char*>(residency_data->array[0]->mips[0]->data.data()), residency_data->array[0]->mips[0]->width_stride);
-        list->transition(residency_texture.get(),  Render::ResourceState::PIXEL_SHADER_RESOURCE);
+ //       list->transition(residency_texture.get(),  Render::ResourceState::PIXEL_SHADER_RESOURCE);
         residency_changed = false;
     }
 
     if (upload_tiles.size())
     {
-        list->transition(tiled_tex.get(), Render::ResourceState::COPY_DEST);
+   //     list->transition(tiled_tex.get(), Render::ResourceState::COPY_DEST);
 
         for (auto& t : upload_tiles)
         {
@@ -599,7 +598,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
             t->data.clear();
         }
 
-        list->transition(tiled_tex.get(),Render::ResourceState::PIXEL_SHADER_RESOURCE);
+ //       list->transition(tiled_tex.get(),Render::ResourceState::PIXEL_SHADER_RESOURCE);
         upload_tiles.clear();
     }
 }

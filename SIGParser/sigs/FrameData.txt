@@ -11,11 +11,9 @@ struct Camera
 	float4x4 invView;
 	float4x4 invProj;
 	float4x4 invViewProj;
-	float3 position;
-	float unused;
-	float3 direction;
-	float unused2;
-	float2 jitter; float2 unused3;
+	float4 position;
+	float4 direction;
+	float4 jitter;
 	
 	Frustum frustum;
 }
@@ -23,8 +21,12 @@ struct Camera
 [Bind = FrameLayout::CameraData]
 struct FrameInfo
 {
+	float4 time;
+	
     Camera camera;
     Camera prevCamera;
 
     Texture2D bestFitNormals;
+	Texture3D<float4> brdf;
+
 }

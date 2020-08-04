@@ -276,6 +276,8 @@ DXGI_FORMAT to_dsv(DXGI_FORMAT);
 UINT get_default_mapping(DXGI_FORMAT);
 DXGI_FORMAT to_linear(DXGI_FORMAT);
 DXGI_FORMAT to_typeless(DXGI_FORMAT);
+
+bool is_shader_visible(DXGI_FORMAT);
 #define OP(x,y)\
 if (l.x == r.x)\
 {\

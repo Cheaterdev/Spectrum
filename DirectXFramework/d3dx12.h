@@ -1822,7 +1822,7 @@ struct CD3DX12_RESOURCE_DESC : public D3D12_RESOURCE_DESC
 	{
 		return MipLevels * ArraySize() * PlaneCount(pDevice);
 	}
-	inline UINT CalcSubresource(UINT MipSlice, UINT ArraySlice, UINT PlaneSlice)
+	inline UINT CalcSubresource(UINT MipSlice, UINT ArraySlice, UINT PlaneSlice) const
 	{
 		return D3D12CalcSubresource(MipSlice, ArraySlice, PlaneSlice, MipLevels, ArraySize());
 	}

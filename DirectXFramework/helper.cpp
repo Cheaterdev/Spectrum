@@ -219,6 +219,25 @@ DXGI_FORMAT to_dsv(DXGI_FORMAT fmt)
             return fmt;
     }
 }
+
+bool is_shader_visible(DXGI_FORMAT fmt)
+{
+
+	switch (fmt)
+	{
+
+	case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+    case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+    case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+	case DXGI_FORMAT_D24_UNORM_S8_UINT:
+    case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+    case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+        return false;
+	default:
+		return true;
+	}
+}
+
 bool operator<(const D3D11_SAMPLER_DESC& l, const D3D11_SAMPLER_DESC& r)
 {
     //return true;

@@ -350,7 +350,8 @@ void MeshAssetInstance::on_add(scene_object* parent)
 			meshpart[i].node_offset = info.mesh_info.GetNode_offset();
 	
 
-			render_scene->command_ids.insert(meshpart_handle.get_offset() + i);
+			render_scene->command_ids[int(type)].insert(meshpart_handle.get_offset() + i);
+			render_scene->command_ids[int(MESH_TYPE::ALL)].insert(meshpart_handle.get_offset() + i);
 
 			i++;
 		}
@@ -370,7 +371,8 @@ void MeshAssetInstance::on_remove()
 		int i = 0;
 		for (auto& info : rendering)
 		{
-			old_scene->command_ids.erase(meshpart_handle.get_offset() + i);
+			old_scene->command_ids[int(type)].erase(meshpart_handle.get_offset() + i);
+			old_scene->command_ids[int(MESH_TYPE::ALL)].erase(meshpart_handle.get_offset() + i);
 			i++;
 		}
 		meshpart_handle.Free();

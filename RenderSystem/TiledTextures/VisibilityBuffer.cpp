@@ -10,7 +10,7 @@ VisibilityBuffer::VisibilityBuffer(ivec3 sizes) :sizes(sizes)
 	buffer->set_data(0, clear_data);
 }
 
-std::function<void(const Handle&)> VisibilityBuffer::uav()
+std::function<void( Handle&)> VisibilityBuffer::uav()
 {
 	return buffer->uav();
 }
@@ -71,7 +71,7 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 	{
 
 
-		std::vector<task<std::vector<vec3>>> tasks;
+		std::vector<task<std::vector<ivec3>>> tasks;
 
 	
 		std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
@@ -82,38 +82,39 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 		UINT one_thread = UINT(size / thread_count);
 		//memcpy(resolved_data.data(), data, size);
 		//   auto int_data = reinterpret_cast<const unsigned int*>(data);
-		std::atomic_int counter = 0;
+		
 		// if (Application::get().is_alive())
 		for (int thread = 0; thread < thread_count; thread++)
-			tasks.emplace_back(create_task([this, thread, one_thread, data, &counter]()
+			tasks.emplace_back(create_task([this, thread, one_thread, data]()
 		{
 
-			std::vector<vec3> poses;
+			std::vector<ivec3> poses;
 			for (UINT i = one_thread*thread; i < one_thread*thread + one_thread; i++)
 			{
 
-
-				int x = i % sizes.x;
-				int z = i / (sizes.y*sizes.x);
-				int y = ((i - x) / sizes.x) % sizes.y;
+				ivec3 t = sizes;
+				int x = i % t.x;
+				int z = i / (t.y*t.x);
+				int y = ((i - x) / t.x) % t.y;
 				if (data[4 * i] == 0)
-					poses.emplace_back(float3(x,y,z));
-					++counter;
+					poses.emplace_back(ivec3(x,y,z));
+					
 			//	process_tile_readback({ x,y,z }, data[4 * i]);
 
 			}
 			return poses;
 		}));
-
+		int counter = 0;
 		for (auto &t : tasks)
 		{
 			auto result = t.get();
 			for(auto &p:result)
 			process_tile_readback(p,0);
 
+			counter += result.size();
 		}
 			
-		Log::get() << "counter " << counter.load() << Log::endl;
+		Log::get() << "counter " << counter << Log::endl;
 
 	});
 

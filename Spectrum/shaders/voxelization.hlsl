@@ -1,4 +1,8 @@
 
+#include "autogen/Voxelization.h"
+
+static const VoxelInfo voxel_info = GetVoxelization().GetInfo();
+
 struct vertex_output
 {
 float4 pos : SV_POSITION;
@@ -14,37 +18,9 @@ float dist : DISTANCE;
 };
 
 
-//#define voxel_min float3(-50,-50,-50)
-//#define voxel_size float3(100,100,100)
-/*cbuffer voxel_info : register(b3)
-{
-   //	float3 voxel_min:packoffset(c0);
-	//float3 voxel_size:packoffset(c3);
-	
-	float voxel_min_x;
-	float voxel_min_y;
-	float voxel_min_z;
-	float voxel_size_x;
-	float voxel_size_y;
-	float voxel_size_z;
-	
-}; 
-static const float3 voxel_min=float3(voxel_min_x,voxel_min_y,voxel_min_z);
-static const float3 voxel_size=float3(voxel_size_x,voxel_size_y,voxel_size_z);
-*/
-
- 
-
-struct voxel_info_struct 
-{
-	float4 voxel_min;
-	float4 voxel_size;
-	int4 voxel_map_size; 
-};
-ConstantBuffer<voxel_info_struct> voxel_info: register(b3);
 float4 TransformPos(float3 In)
 {
-	return float4((In.xyz-voxel_info.voxel_min.xyz)/voxel_info.voxel_size.xyz,1);
+	return float4((In.xyz-voxel_info.GetMin().xyz)/voxel_info.GetSize().xyz,1);
 }
 float4 TransformPosition(float2 In)
 {
@@ -94,6 +70,7 @@ void GS( triangle vertex_output I[3], inout TriangleStream<vertex_output> triStr
 			I[2].pos=TransformPosition(I[2].prev_pos.yz);
 		}
 	}
+
 	triStream.Append(I[0]);
 	triStream.Append(I[1]);
 	triStream.Append(I[2]);

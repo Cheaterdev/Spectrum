@@ -301,7 +301,7 @@ struct __declspec(uuid("091f7a26-1c1f-4948-904b-e6e3a8a771d5"))
 
 // D3D_SIT_RTACCELERATIONSTRUCTURE is an additional value for D3D_SHADER_INPUT_TYPE,
 // in order to fit it in to ID3D12LibraryReflection.
-static const UINT32 D3D_SIT_RTACCELERATIONSTRUCTURE = 12; // (D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER + 1)
+//static const UINT32 D3D_SIT_RTACCELERATIONSTRUCTURE = 12; // (D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER + 1)
 
 struct __declspec(uuid("d2c21b26-8350-4bdc-976a-331ce6f4c54c"))
 	IDxcContainerReflection : public IUnknown {

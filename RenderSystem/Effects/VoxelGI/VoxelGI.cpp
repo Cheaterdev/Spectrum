@@ -635,7 +635,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene, G_Buffer& buffer) :scene(scene), buffer(buff
 	//	buffer.size.register_change(this, [this](ivec2 size) {resize(size); });
 }
 
-void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer::ptr r)
+void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 {
 	auto& graphics = context->list->get_graphics();
 	auto& list = *context->list;
@@ -892,7 +892,7 @@ void VoxelGI::lighting(MeshRenderContext::ptr& context, PSSM& pssm, Render::Cube
 	struct
 	{
 		vec4 dir;
-		vec4 voxel_min;
+		vec4 voxel_mi
 		vec4 voxel_size;
 		ivec3 voxels_per_tile; int groups;
 	}voxel_info;

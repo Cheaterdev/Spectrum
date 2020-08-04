@@ -31,12 +31,20 @@ namespace GUI
 
                 combo_box();
                 Skin::ComboBox skin;
+
+                void remove_items()
+                {
+                    menu->remove_all();
+                }
                 bool is_menu_open()
                 {
                     return menu->get_parent() != nullptr;
                 }
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
                 virtual void close_menus() override;
+
+
+              //  std::function<void(combo_box*)> on_open;
 
                 combo_element::ptr add_item(std::string str)
                 {

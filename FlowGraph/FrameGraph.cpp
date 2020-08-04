@@ -85,6 +85,7 @@ void FrameContext::begin(Pass* pass, Render::FrameResources::ptr& frame) {
 
 		auto& tex = get_texture(handle);
 
+		if(tex)
 		list->transition(nullptr, tex.resource.get());
 	}
 
@@ -353,6 +354,7 @@ void TaskBuilder::create_resources()
 
 					alloc_ptr = allocator.allocate_resource(CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, 1, 1, 0, flags), heap_type);
 
+					info->placed = true;
 				}
 
 				if (info->type == ResourceType::Buffer)
@@ -419,6 +421,7 @@ void TaskBuilder::create_resources()
 					if ((info->flags & ResourceFlags::Static) == 0)
 					{
 						info->resource = allocator.create_resource(CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, 1, 1, 0, flags), info->alloc_ptr, Render::ResourceState::UNKNOWN, vec4());
+						info->placed = true;
 					}
 					else
 					{
@@ -429,7 +432,7 @@ void TaskBuilder::create_resources()
 
 				}
 
-				info->texture = info->resource->create_view<Render::TextureView>(*current_frame);
+				info->texture = info->resource->create_view<Render::TextureView>(*current_frame, info->flags & ResourceFlags::Cube);
 
 
 			}
@@ -442,6 +445,7 @@ void TaskBuilder::create_resources()
 					if ((info->flags & ResourceFlags::Static) == 0)
 					{
 						info->resource = allocator.create_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size, D3D12_RESOURCE_FLAG_NONE), info->alloc_ptr, Render::ResourceState::GEN_READ, vec4());
+						info->placed = true;
 					}
 					else {
 						info->resource = Render::DefaultAllocator::get().create_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size, D3D12_RESOURCE_FLAG_NONE), Render::ResourceState::GEN_READ, vec4());

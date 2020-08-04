@@ -89,13 +89,20 @@ public:
 	static const int MAX_COMMANDS_SIZE = 1024 * 1024 * 64;
     virtual_gpu_buffer<mesh_info_part>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
 
-    my_unique_vector<UINT> command_ids;
+	my_unique_vector<UINT> command_ids[10];
+
 	std::set<materials::universal_material*> mats;
 	std::map<size_t, materials::Pipeline::ptr> pipelines;
 
 	Slots::SceneData::Compiled compiledScene;
 	Slots::FrameInfo::Compiled compiledFrame;
-    Slots::GatherPipelineGlobal::Compiled compiledGather;
+
+    Slots::GatherPipelineGlobal::Compiled compiledGather[8];
+
+
+	Slots::VoxelInfo::Compiled voxels_compiled;
+    Slots::Voxelization::Compiled voxelization_compiled;
+	Slots::VoxelInfo voxel_info;
 
     void update(FrameResources& frame)
     {
@@ -125,9 +132,6 @@ public:
             }
 
 
-			auto info = frame.place_raw(command_ids);
-			auto srv = info.resource->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(frame, info.offset, info.size).get_srv();
-
 			{
 				auto timer = Profiler::get().start(L"SceneData");
 				Slots::SceneData sceneData;
@@ -143,18 +147,52 @@ public:
 			}
 
 
-            {
-                //	auto timer = list.start(L"GatherMat");
-                Slots::GatherPipelineGlobal gather_global;
-                gather_global.GetMeshes_count() = command_ids.size();
-                gather_global.GetCommands() = srv;
+            auto build = [&](my_unique_vector<UINT>& data, Slots::GatherPipelineGlobal::Compiled & target) {
 
-                compiledGather = gather_global.compile(frame);
+				
 
-            }
+				{
+					//	auto timer = list.start(L"GatherMat");
+					Slots::GatherPipelineGlobal gather_global;
+					gather_global.GetMeshes_count() = data.size();
+
+
+                    if (data.size()) {
+                        auto info = frame.place_raw(data);
+                        auto srv = info.resource->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(frame, info.offset, info.size).get_srv();
+                        gather_global.GetCommands() = srv;
+                    }
+
+                    target = gather_global.compile(frame);
+
+				}
+            
+            
+            };
+
+            build(command_ids[(int)MESH_TYPE::STATIC], compiledGather[(int)MESH_TYPE::STATIC]);
+			build(command_ids[(int)MESH_TYPE::DYNAMIC], compiledGather[(int)MESH_TYPE::DYNAMIC]);
+			build(command_ids[(int)MESH_TYPE::ALL], compiledGather[(int)MESH_TYPE::ALL]);
 
 
     }
+
+
+	void iterate_meshes(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)
+	{
+
+
+		if (mesh_type & MESH_TYPE::STATIC)
+			for (auto& instance : static_objects)
+				f(instance->get_ptr<scene_object>());
+
+		if (mesh_type & MESH_TYPE::DYNAMIC)
+			for (auto& instance : dynamic_objects)
+				f(instance->get_ptr<scene_object>());
+	}
+
+
+
   //  PipelineHolderManager pipelines;
 
 

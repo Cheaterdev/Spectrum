@@ -48,29 +48,6 @@ PSSM::PSSM()
 void PSSM::generate(FrameGraph& graph)
 {
 
-	struct PSSMData
-	{
-		ResourceHandler* albedo;
-		ResourceHandler* normals;
-		ResourceHandler* depth;
-		ResourceHandler* specular;
-
-
-		ResourceHandler* screen_light_mask;
-		ResourceHandler* full_scene_depth;
-		ResourceHandler* shadow_depths;
-		ResourceHandler* shadow_cameras;
-
-		ResourceHandler* target_tex;
-
-	};
-
-	graph.add_pass<PSSMData>("PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		data.shadow_depths = builder.create_texture("PSSM_Depths", size, renders_size, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::None);
-		data.shadow_cameras = builder.create_buffer("PSSM_Cameras", sizeof(camera::shader_params) * renders_size, ResourceFlags::GenCPU);
-
-		}, [](PSSMData& data, FrameContext& _context) {});
-
 
 
 	auto scene = graph.scene;
@@ -91,6 +68,121 @@ void PSSM::generate(FrameGraph& graph)
 
 	float znear = cam->z_near;
 	float zfar = 10;
+
+
+
+
+
+	struct PSSMDataGlobal
+	{
+		ResourceHandler* global_depth;
+		ResourceHandler* global_camera;
+
+	};
+
+	graph.add_pass<PSSMDataGlobal>("PSSM_Global", [this, &graph](PSSMDataGlobal& data, TaskBuilder& builder) {
+		data.global_depth = builder.create_texture("global_depth", ivec2(1024, 1024), 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
+		data.global_camera = builder.create_buffer("global_camera", sizeof(camera::shader_params) * 1, ResourceFlags::GenCPU);
+
+
+		}, [this, &graph, cam, points_all](PSSMDataGlobal& data, FrameContext& _context) {
+
+			auto& command_list = _context.get_list();
+
+
+			std::vector<sizer_long> scissor;
+			std::vector<Render::Viewport> viewport;
+			camera light_cam;
+
+			light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
+			light_cam.position = get_position();
+			light_cam.up = (float3(0.01, 1, 0.023)).normalize();
+			light_cam.update();
+
+
+			auto bounds_all = points_all.get_bounds_in(light_cam.get_view());
+
+
+
+			MeshRenderContext::ptr context(new MeshRenderContext());
+
+			context->priority = TaskPriority::HIGH;
+			context->list = command_list;
+			context->cam = &light_cam;
+
+			auto global_depth = _context.get_texture(data.global_depth);
+			auto global_camera = _context.get_buffer(data.global_camera);
+
+			auto scene = graph.scene;
+			auto renderer = graph.renderer;
+
+
+			//_context.register_subview(depth_tex);
+
+			auto table = RenderTargetTable(command_list->get_graphics(), {}, global_depth);
+
+
+			box bounds = points_all.get_bounds_in(light_cam.get_view());
+			light_cam.set_projection_params(bounds.left - 1, bounds.right + 1, bounds.top - 1, bounds.bottom + 1, std::min(bounds_all.znear - 10, bounds.znear), bounds.zfar + 5000);
+
+			light_cam.update();
+
+			//	auto ptr = reinterpret_cast<camera::shader_params*>(shadow_cameras->get_data() )+ i;// *sizeof(camera::shader_params), (i + 1) * sizeof(camera::shader_params));
+			//	*ptr = light_cam.get_const_buffer().data().current;
+
+			global_camera.write(0, &light_cam.camera_cb.current, 1);
+
+
+			viewport.resize(1);
+			viewport[0].MinDepth = 0.0f;
+			viewport[0].MaxDepth = 1.0f;
+			viewport[0].Width = static_cast<float>(size.x);
+			viewport[0].Height = static_cast<float>(size.y);
+			viewport[0].TopLeftX = 0;
+			viewport[0].TopLeftY = 0;
+
+			scissor.resize(1);
+			scissor[0] = { 0, 0, size.x, size.y };
+
+			context->overrided_pipeline = mat->get_pipeline();
+			//context->use_materials = false;
+			command_list->get_graphics().set_viewports(viewport);
+			command_list->get_graphics().set_scissors(scissor[0]);
+			context->pipeline.blend.render_target[0].enabled = false;
+			context->pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_FRONT;
+
+
+			table.set(context, false, true);
+
+			renderer->render(context, scene->get_ptr<Scene>());
+
+
+});
+
+
+
+	struct PSSMData
+	{
+		GBufferViewDesc gbuffer;
+
+		ResourceHandler* screen_light_mask;
+		ResourceHandler* full_scene_depth;
+		ResourceHandler* shadow_depths;
+		ResourceHandler* shadow_cameras;
+
+		ResourceHandler* target_tex;
+
+
+
+	};
+
+	graph.add_pass<PSSMData>("PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
+		data.shadow_depths = builder.create_texture("PSSM_Depths", size, renders_size, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::None);
+		data.shadow_cameras = builder.create_buffer("PSSM_Cameras", sizeof(camera::shader_params) * renders_size, ResourceFlags::GenCPU);
+
+
+
+		}, [](PSSMData& data, FrameContext& _context) {});
 
 
 
@@ -182,25 +274,22 @@ void PSSM::generate(FrameGraph& graph)
 	}
 
 
+
+
 	// relight pass
 	graph.add_pass<PSSMData>("PSSM_Process", [this, &graph](PSSMData& data, TaskBuilder& builder) {
 		data.shadow_depths = builder.need_texture("PSSM_Depths", ResourceFlags::PixelRead);
 
-		data.albedo = builder.need_texture("GBuffer_Albedo", ResourceFlags::PixelRead);
-		data.normals = builder.need_texture("GBuffer_Normals", ResourceFlags::PixelRead);
-		data.depth = builder.need_texture("GBuffer_Depth", ResourceFlags::PixelRead);
-		data.specular = builder.need_texture("GBuffer_Specular", ResourceFlags::PixelRead);
-
+		data.gbuffer.need(builder);
+		
 		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
 		data.screen_light_mask = builder.create_texture("LightMask", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R8_UNORM, ResourceFlags::RenderTarget);
 		data.shadow_cameras = builder.need_buffer("PSSM_Cameras", ResourceFlags::PixelRead);
 
 
 		}, [this, &graph](PSSMData& data, FrameContext& _context) {
-			auto albedo = _context.get_texture(data.albedo);
-			auto normals = _context.get_texture(data.normals);
-			auto depth = _context.get_texture(data.depth);
-			auto specular = _context.get_texture(data.specular);
+
+			GBuffer gbuffer = data.gbuffer.actualize(_context);
 
 			auto screen_light_mask = _context.get_texture(data.screen_light_mask);
 			auto depth_tex = _context.get_texture(data.shadow_depths);
@@ -220,6 +309,7 @@ void PSSM::generate(FrameGraph& graph)
 			{
 				Slots::FrameInfo frameInfo;
 
+				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->get_srv();
 				auto camera = frameInfo.MapCamera();
 			//	memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
 				camera.cb = graph.cam->camera_cb.current;
@@ -229,16 +319,9 @@ void PSSM::generate(FrameGraph& graph)
 			{
 				Slots::PSSMLighting lighting;
 
-				{
-					Table::GBuffer gbuffer = lighting.MapGbuffer();
-					gbuffer.GetAlbedo() = albedo.get_srv();
-					gbuffer.GetNormals() = normals.get_srv();
-					gbuffer.GetSpecular() = specular.get_srv();
-					gbuffer.GetDepth() = depth.get_srv();
-				}
-
-				lighting.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->get_srv();
-				lighting.GetLight_mask() = screen_light_mask.get_srv();
+				gbuffer.SetTable(lighting.MapGbuffer());
+			
+				//lighting.GetLight_mask() = screen_light_mask.get_srv();
 
 				lighting.set(graphics);
 			}
@@ -249,12 +332,8 @@ void PSSM::generate(FrameGraph& graph)
 			graphics.set_viewport(screen_light_mask.get_viewport());
 			graphics.set_scissor(screen_light_mask.get_scissor());
 
-		//	list.transition(screen_light_mask.resource, Render::ResourceState::RENDER_TARGET);
-
 			graphics.set_rtv(1, screen_light_mask.get_rtv(), Render::Handle());
 			graphics.set_pipeline(draw_mask_state);
-
-
 
 
 			auto buffer_view = shadow_cameras.resource->create_view<StructuredBufferView<camera::shader_params>>(*graph.builder.current_frame);
@@ -276,11 +355,16 @@ void PSSM::generate(FrameGraph& graph)
 				}
 				graphics.draw(4);
 			}
+			{
+				Slots::PSSMLighting lighting;
 
-			list.transition(screen_light_mask.resource, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+				gbuffer.SetTable(lighting.MapGbuffer());
 
+				lighting.GetLight_mask() = screen_light_mask.get_srv();
 
-			list.transition(target_tex.resource, Render::ResourceState::RENDER_TARGET);
+				lighting.set(graphics);
+			}
+
 			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
 			graphics.set_pipeline(draw_result_state);
 

@@ -339,7 +339,6 @@ stencil_renderer::stencil_renderer()
 
 void stencil_renderer::generate(FrameGraph& graph)
 {
-	 
 	process_tasks();
 
 	debug_scene->update_transforms();

@@ -36,7 +36,7 @@ namespace DX12
     //    list->transition(this, ResourceState::COMMON);
     }
 
-	 void GPUBuffer::place_srv_buffer(const Handle & handle)
+	 void GPUBuffer::place_srv_buffer( Handle & handle)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC  srv = {};
 		srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -46,11 +46,11 @@ namespace DX12
 		srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE;
 		srv.Buffer.StructureByteStride = 0;
 		srv.Buffer.NumElements = static_cast<UINT>(count / sizeof(vec4));
-        *handle.resource_ptr = this;
-		Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &srv, handle.cpu);
-	}
+    
+        Device::get().create_srv(handle, this, srv);
+     }
 
-	 void GPUBuffer::place_structured_uav(const Handle & h, GPUBuffer::ptr counter_resource, unsigned int offset)
+	 void GPUBuffer::place_structured_uav( Handle & h, GPUBuffer::ptr counter_resource, unsigned int offset)
 	{
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -60,11 +60,10 @@ namespace DX12
 		desc.Buffer.CounterOffsetInBytes = offset;
 		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
-        *h.resource_ptr = this;
-		Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), counter_resource ? counter_resource->get_native().Get() : nullptr, &desc, h.cpu);
+        Device::get().create_uav(h, this, desc, counter_resource.get());
 	}
 
-	 void GPUBuffer::place_structured_srv(const Handle& handle, UINT stride , unsigned int offset, unsigned int count)
+	 void GPUBuffer::place_structured_srv( Handle& handle, UINT stride , unsigned int offset, unsigned int count)
 	 {
 		 D3D12_SHADER_RESOURCE_VIEW_DESC  srv = {};
 		 srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -74,8 +73,8 @@ namespace DX12
 		 srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE;
 		 srv.Buffer.StructureByteStride = stride;
 		 srv.Buffer.NumElements = count;
-         *handle.resource_ptr = this;
-		 Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &srv, handle.cpu);
+
+         Device::get().create_srv(handle, this, srv);
 	 }
 
 	const HandleTable& GPUBuffer::get_srv()
@@ -111,7 +110,7 @@ namespace DX12
     }
 
 
-    void ByteBuffer::place_uav(const Handle& h)
+    void ByteBuffer::place_uav( Handle& h)
     {
         D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -120,11 +119,10 @@ namespace DX12
         desc.Buffer.StructureByteStride = 0;
         desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-        *h.resource_ptr = this;
-        Device::get().get_native_device()->CreateUnorderedAccessView(get_native().Get(), nullptr, &desc, h.cpu);
+        Device::get().create_uav(h, this, desc);
     }
 
-    void ByteBuffer::place_srv(const Handle& h)
+    void ByteBuffer::place_srv( Handle& h)
     {
         D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -134,8 +132,8 @@ namespace DX12
         desc.Buffer.StructureByteStride = 0;
         desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
 
-        *h.resource_ptr = this;
-        Device::get().get_native_device()->CreateShaderResourceView(get_native().Get(), &desc, h.cpu);
+     
+        Device::get().create_srv(h, this, desc);
     }
     IndexBuffer::IndexBuffer(UINT64 size) : GPUBuffer(size)
     {

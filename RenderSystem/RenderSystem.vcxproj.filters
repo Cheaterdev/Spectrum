@@ -541,5 +541,8 @@
     <ClCompile Include="Lighting\BRDF.cpp">
       <Filter>Lighting</Filter>
     </ClCompile>
+    <ClCompile Include="Effects\VoxelGI\VoxelGIGraph.cpp">
+      <Filter>Effects\VoxelGI</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

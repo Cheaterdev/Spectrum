@@ -217,12 +217,11 @@ Render::ResourceAddress cb;
 			for (int i = 0; i < table_srv.get_count(); ++i)
 			{
 				auto h = table_srv[i];
-				if (h.resource_ptr && *h.resource_ptr)
-					if ((*h.resource_ptr)->get_heap_type() == Render::HeapType::DEFAULT)
+				if (h.resource_info && h.resource_info->resource_ptr)
+					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
 					{
-						if ((*h.resource_ptr)->debug)
-							assert(false);
-						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
+						graphics.get_base().transition_srv(h.resource_info);
+					//	graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
 					}
 
 			}
@@ -230,9 +229,10 @@ Render::ResourceAddress cb;
 			for (int i = 0; i < table_uav.get_count(); ++i)
 			{
 				auto h = table_uav[i];
-				if (h.resource_ptr && *h.resource_ptr)
-					if ((*h.resource_ptr)->get_heap_type() == Render::HeapType::DEFAULT)
-						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::UNORDERED_ACCESS);
+				if (h.resource_info && h.resource_info->resource_ptr)
+					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
+						//graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::UNORDERED_ACCESS);
+						graphics.get_base().transition_uav(h.resource_info);
 			}
 
 
@@ -349,7 +349,7 @@ struct DataHolder : public Table
 		for (int i = 0; i < compiled.table_srv.get_count(); i++)
 		{
 			Render::Handle* handle = ptr + i;
-			assert(!(*handle[0].resource_ptr)->debug);
+			//assert(!(*handle[0].resource_ptr)->debug);
 			compiled.table_srv[i].place(*handle);
 		}
 	}
@@ -368,7 +368,7 @@ struct DataHolder : public Table
 			if (ptr[i].cpu.ptr != 0)
 			compiled.table_uav[i].place(*handle);
 			else
-				*compiled.table_uav[i].resource_ptr = nullptr;
+				compiled.table_uav[i].resource_info->resource_ptr = nullptr;
 
 		}
 	}
@@ -415,12 +415,9 @@ struct DataHolder : public Table
 							compiled.table_srv[_offset++].place(ptr[i]);
 						else
 						{
-							*compiled.table_srv[_offset++].resource_ptr = nullptr;
-
+							compiled.table_srv[_offset++].resource_info->resource_ptr = nullptr;
 						}
-						//else
-						if (ptr[i].resource_ptr&&*ptr[i].resource_ptr)
-							assert((*ptr[i].resource_ptr)->debug != true);
+
 					}
 				}
 
@@ -434,8 +431,7 @@ struct DataHolder : public Table
 						compiled.table_srv[_offset++].place(bindless[j]);
 						else
 						{
-							*compiled.table_srv[_offset++].resource_ptr = nullptr;
-
+							compiled.table_srv[_offset++].resource_info->resource_ptr = nullptr;
 						}
 					}
 				}

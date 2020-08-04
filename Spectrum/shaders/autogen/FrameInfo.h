@@ -7,11 +7,13 @@
 #include "tables/FrameInfo.h"
 ConstantBuffer<FrameInfo_cb> cb_0_0:register(b0,space0);
 Texture2D srv_0_0: register(t0, space0);
+Texture3D<float4> srv_0_1: register(t1, space0);
 FrameInfo CreateFrameInfo()
 {
 	FrameInfo result;
 	result.cb = cb_0_0;
 	result.srv.bestFitNormals = srv_0_0;
+	result.srv.brdf = srv_0_1;
 	return result;
 }
 static const FrameInfo frameInfo_global = CreateFrameInfo();

@@ -1,26 +1,18 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
-// This code is licensed under the MIT License (MIT).
-// THIS CODE IS PROVIDED *AS IS* WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING ANY
-// IMPLIED WARRANTIES OF FITNESS FOR A PARTICULAR
-// PURPOSE, MERCHANTABILITY, OR NON-INFRINGEMENT.
-//
-// Developed by Minigraph
-//
-// Author:  James Stanard
-//
-
-RWTexture3D<float4> OutMip1 : register(u0);
-RWTexture3D<float4> OutMip2 : register(u1);
-//#if COUNT == 3
-RWTexture3D<float4> OutMip3 : register(u2); 
-//#endif
-Texture3D<float4> SrcMip : register(t0);
-SamplerState BilinearClamp : register(s0);
-StructuredBuffer<int3> voxel_visibility: register(t1);
+#include "autogen/VoxelMipMap.h"
+#include "autogen/VoxelInfo.h"
 
 
+static const  RWTexture3D<float4> OutMip1 = GetVoxelMipMap().GetOutMips(0);
+static const RWTexture3D<float4> OutMip2 = GetVoxelMipMap().GetOutMips(1);
+static const RWTexture3D<float4> OutMip3 = GetVoxelMipMap().GetOutMips(2);
+static const Texture3D<float4> SrcMip = GetVoxelMipMap().GetSrcMip();
+//static const SamplerState BilinearClamp : register(s0);
+static const StructuredBuffer<int3> voxel_visibility = GetVoxelMipMap().GetVisibility();
+
+static const VoxelInfo voxel_info = GetVoxelInfo();
+static const uint group_count = GetVoxelMipMap().GetGroupCount();
 #define DIV
 
 void calc(inout float4 color)
@@ -53,17 +45,14 @@ void add_color(inout float4 result, float4 c)
 	result += float4(c.rgb*c.w,c.w);
 //	result += c;
 }
-cbuffer consts:register(b0)
-{
-	uint4 voxels_per_tile;
-};
+
 
 uint3 get_index(uint3 groupThreadID, uint3 groupID)
 {
 
-	uint3 tile_index = voxel_visibility[groupID.x / voxels_per_tile.w];
-	int tile_local_index = groupID.x%voxels_per_tile.w;
-	uint3 index = tile_index*voxels_per_tile.xyz + groupThreadID + 4 * int3(tile_local_index % 8, (tile_local_index / 8) % 4, tile_local_index / (4 * 8));//groupID*4+groupThreadID;
+	uint3 tile_index = voxel_visibility[groupID.x / group_count];
+	int tile_local_index = groupID.x% group_count;
+	uint3 index = tile_index* voxel_info.GetVoxels_per_tile().xyz + groupThreadID + 4 * int3(tile_local_index % 8, (tile_local_index / 8) % 4, tile_local_index / (4 * 8));//groupID*4+groupThreadID;
 	return index;
 
 }
@@ -79,9 +68,9 @@ void CS(
    float3 dims;
    SrcMip.GetDimensions(dims.x, dims.y, dims.z);
    
-	uint local_index = groupThreadID.x+groupThreadID.y*4+groupThreadID.z*16;
+ uint local_index = groupThreadID.x+groupThreadID.y*4+groupThreadID.z*16;
   uint3 index = get_index(groupThreadID, groupID);// groupID * 4 + groupThreadID;
-	float4 color = SrcMip.SampleLevel(BilinearClamp,(2*index+1)/dims,0);
+	float4 color = SrcMip.SampleLevel(linearSampler,(2*index+1)/dims,0);
 	
 	calc(color);
 		

@@ -23,7 +23,7 @@ namespace DX12 {
 		if (cpu != r.cpu)
 			Device::get().get_native_device()->CopyDescriptorsSimple(1, cpu, r.cpu, type);
 
-		*resource_ptr = *r.resource_ptr;
+		*resource_info = *r.resource_info;
 	}
 
 	void HandleTable::place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t)
@@ -210,7 +210,7 @@ namespace DX12 {
 	{
 	//	std::lock_guard<std::mutex> g(m);
 		Handle h =  heap->handle(heap_offset + (offset++));
-		*h.resource_ptr = nullptr;
+		h.resource_info->resource_ptr = nullptr;
 		return h;
 	}
 
@@ -224,7 +224,7 @@ namespace DX12 {
 
 		for (int i = 0; i < table.get_count(); i++)
 		{
-			*table[i].resource_ptr = nullptr;
+			table[i].resource_info->resource_ptr = nullptr;
 		}
 		offset += count;
 		return table;

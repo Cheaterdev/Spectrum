@@ -264,7 +264,7 @@ quad_output VS_Cube(uint index : SV_VERTEXID)
 {
     quad_output Output;
     Output.pos = float4(Pos[index], 0.99999, 1);
-    Output.tc = normalize(mul(mats[GetSkyFace().GetFace()], float3(Pos[index], 1)));
+    Output.ray = normalize(mul(mats[GetSkyFace().GetFace()], float3(Pos[index], 1)));
 
     return Output;
 }
@@ -314,5 +314,5 @@ float4 PS_Cube(quad_output i) : SV_Target0
 {
     float3 v = normalize(i.ray);
 
-    return float4(get_sky_only(camera.GetPosition(), v, 1), 1);
+    return  float4(get_sky_only(camera.GetPosition(), v, 1), 1);
 }

@@ -44,7 +44,7 @@ Camera light_cam = GetPSSMData().GetLight_cameras()[level];
 
 
 //return light_cam.GetPosition().y;
-float4 pos_l = mul(light_cam.GetViewProj(), float4(info.pos + info.normal * 0.1, 1));
+float4 pos_l = mul(light_cam.GetViewProj(), float4(info.pos + info.normal * 1.5, 1));
 float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 //uint3 pos = uint3(light_tc * shadow_dims, level);
 
@@ -187,7 +187,7 @@ float get_sss(float z, float3 pos, float2 tc, float3 n)
 
 float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 {
-	return  GetPSSMLighting().GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, NoV), 0);
+	return  GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, NoV), 0);
 }
 
 float4 PS_RESULT(quad_output i) : SV_Target0
@@ -213,7 +213,7 @@ info.view_z = camera.GetProj()._34 * raw_z / (raw_z - camera.GetProj()._33);
 info.view = normalize(camera.GetPosition() - info.pos);
 info.reflection = reflect(info.view, info.normal);
 
-float sss = get_sss(info.view_z,info.pos, i.tc, info.normal);// *saturate(dot(-light_cameras[0].direction, info.normal));
+float sss = 0;// get_sss(info.view_z, info.pos, i.tc, info.normal);// *saturate(dot(-light_cameras[0].direction, info.normal));
 float shadow =  GetPSSMLighting().GetLight_mask().SampleLevel(pointClampSampler, i.tc, 0);
 //float3 res_color = calc_color(info, -GetPSSMData().GetLight_cameras()[0].GetDirection(), shadow);
 //sss = saturate(sss * 2 - 1);
@@ -224,7 +224,7 @@ float shadow =  GetPSSMLighting().GetLight_mask().SampleLevel(pointClampSampler,
 //return float4(res_color,1);
 //return shadow;
 //return min(shadow,sss);
-float3 light_dir = normalize(-GetPSSMData().GetLight_cameras()[0].GetDirection());
+float3 light_dir = normalize(-GetPSSMData().GetLight_cameras()[0].GetDirection().xyz);
 
 //float3 direct = shadow*max(0, dot(light_dir, info.normal));
 //float3 reflection = 0;// shadow*pow(saturate(dot(info.reflection, light_dir)), 2 * info.roughness);

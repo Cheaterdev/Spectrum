@@ -178,8 +178,8 @@ Texture3DTiled::Texture3DTiled(CD3DX12_RESOURCE_DESC desc)
 {
 	ComPtr<ID3D12Resource> m_Resource;
 	Render::Device::get().get_native_device()->CreateReservedResource(&desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
-	texture.reset(new Render::Texture(m_Resource));
-	texture->assume_gpu_state(ResourceState::PIXEL_SHADER_RESOURCE);
+	texture.reset(new Render::Texture(m_Resource, ResourceState::PIXEL_SHADER_RESOURCE));
+
 	UINT num_tiles = 1;
 	D3D12_PACKED_MIP_INFO mip_info;
 	D3D12_TILE_SHAPE tile_shape;

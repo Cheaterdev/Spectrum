@@ -17,844 +17,56 @@ HRESULT device_fail()
 	return hr;
 }
 
-/*
 
-class ShadowMap
+class tick_timer
 {
-
+	std::chrono::time_point<std::chrono::system_clock> last_tick;
 
 public:
-	Render::Texture::ptr depth_tex;
-	RenderTargetTable table;
-
-
-	camera light_cam;
-
-	void resize(ivec2 size)
+	tick_timer()
 	{
-		depth_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, size.x, size.y, 0, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL), Render::ResourceState::PIXEL_SHADER_RESOURCE));
-		table = RenderTargetTable({}, depth_tex);
-		light_cam.set_projection_params(pi / 4.0f, 1.0f, 0.1f, 100.f);
-		light_cam.position = { 0, 40, 1 };
-		light_cam.target = { 0, 0, 0 };
-		light_cam.update();
+		last_tick = std::chrono::system_clock::now();
 	}
 
-	void set(MeshRenderContext::ptr& context)
+	double tick()
 	{
-		auto& list = context->list;
-		list->transition(depth_tex, Render::ResourceState::DEPTH_WRITE);
-		//depth_tex->change_state(list, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::ResourceState::DEPTH_WRITE);
-		table.clear_depth(context);
-		table.set(context);
-		list->get_graphics().set_viewport(depth_tex->texture_2d()->get_viewport());
-		list->get_graphics().set_scissor(depth_tex->texture_2d()->get_scissor());
-		context->cam = &light_cam;
-		context->override_material = nullptr;
-	}
-
-	void end(MeshRenderContext::ptr& context)
-	{
-		//	auto& list = context->list;
-			//depth_tex->change_state(list, Render::ResourceState::DEPTH_WRITE, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-	}
-
-
-
-};*/
-/*
-class DeferredShading
-{
-	Render::ComputePipelineState::ptr state;
-public:
-
-	DeferredShading()
-	{
-		Render::RootSignatureDesc root_desc;
-		root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 4);
-		root_desc[1] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, 1);
-		root_desc[2] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL);
-		root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 4, 1);
-		root_desc[4] = Render::DescriptorConstBuffer(1, Render::ShaderVisibility::ALL);
-		Render::ComputePipelineStateDesc desc;
-		desc.shader = Render::compute_shader::get_resource({ "shaders\\DeferredShading.hlsl", "CS", 0, {} });
-		desc.root_signature.reset(new Render::RootSignature(root_desc));
-		state.reset(new  Render::ComputePipelineState(desc));
-	}
-
-
-	void shade(MeshRenderContext::ptr& context, G_Buffer& buffer, ShadowMap& map)
-	{
-		context->list->get_compute().set_pipeline(state);
-		context->list->get_compute().set(0, buffer.srv_table);
-		//      context->list->get_compute().set_table(1, buffer.light_tex->texture_2d()->get_uav());
-		context->list->get_compute().set_const_buffer(2, context->cam->get_const_buffer());
-		context->list->get_compute().set_table(3, map.depth_tex->texture_2d()->get_srv());
-		context->list->get_compute().set_const_buffer(4, map.light_cam.get_const_buffer());
-		//     ivec2 sizes = { buffer.light_tex->get_desc().Width , buffer.light_tex->get_desc().Height };
-		//    context->list->get_compute().dispach(sizes);
-	}
-};
-*/
-
-
-
-/*
-class PostProcessGraph;
-class PostProcessContext;
-
-using ContextPostProcess = FlowGraph::ContextOptions<PostProcessContext>;
-
-
-template<class T>
-struct PostProcessType :public FlowGraph::parameter_type
-{
-//	T type;
-
-
-	bool can_cast(parameter_type* other) override
-	{
-		PostProcessType<T>* type = dynamic_cast<PostProcessType<T>*>(other);
-
-		if (!type) return false;
-
-
-		return true;
-
-	}
-
-private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
-	{
-	//	ar& NVP(M);
-	//	ar& NVP(N);
+		std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+		std::chrono::duration<double> elapsed_seconds = now - last_tick;
+		last_tick = now;
+		return elapsed_seconds.count();
 	}
 };
 
-
-class PostProcessContext :public FlowGraph::GraphContext
+class count_meter
 {
-	std::list<std::future<void>> tasks;
-protected:
-	virtual void add_task(FlowGraph::Node* node) override
-	{
-		node->on_start(this);
-		run(node);
+	double time = 0;
+	tick_timer t;
+	unsigned int ticks = 0;
 
-
-		node->on_done(this);
-	}
+	double average = 0;
 public:
-	G_Buffer* g_buffer;
-	MeshRenderContext::ptr mesh_context;
-	PSSM* pssm;
-	Scene::ptr& scene;
-	main_renderer::ptr renderer;
-	bool realtime_debug = false;
-	PostProcessContext(Scene::ptr& scene) :scene(scene)
+
+	bool tick()
 	{
+		time += t.tick();
+		ticks++;
 
-	}
-
-	void wait()
-	{
-		for (auto& t : tasks)
-			t.wait();
-	}
-};
-
-class Life {};
-class Sky {};
-namespace PPTypes
-{
-	static PostProcessType<Life> LIFE;
-	static PostProcessType<Render::Texture> TEXTURE;
-	static PostProcessType<Sky> SKY;
-	static PostProcessType<Render::CubemapView> CUBEMAP;
-
-
-}
-
-class EditorNode :public ContextPostProcess::NodeType, public GUI::Elements::FlowGraph::VisualGraph
-{
-
-	Render::Texture::ptr debug_texture;
-
-	std::unique_ptr<Timer> timer;
-protected:
-
-
-
-	/*
-	virtual FlowGraph::input::ptr register_input(FlowGraph::data_types type, std::string name)override
-	{
-		auto res = ContextPostProcess::NodeType::register_input(type, name);
-
-		return res;
-	}
-
-	virtual FlowGraph::output::ptr register_output(FlowGraph::data_types type, std::string name) override
-	{
-		auto res = ContextPostProcess::NodeType::register_output(type, name);
-
-		res->immediate_send_next = false;
-		return res;
-	}
-	*
-	virtual void on_start(PostProcessContext* c) override
-	{
-		timer = std::make_unique<Timer>(std::move(c->mesh_context->list->start(convert(name).c_str())));
-
-	}
-	virtual void on_done(PostProcessContext* c) override
-	{
-
-		if (c->realtime_debug && debug_texture)
+		if (time > 1)
 		{
-			MipMapGenerator::get().copy_texture_2d_slow(c->mesh_context->list->get_graphics(), img_inner->texture.texture, c->g_buffer->result_tex.first());
-			c->mesh_context->list->transition(img_inner->texture.texture, ResourceState::PIXEL_SHADER_RESOURCE);
-		}
-		timer.reset();
-		ContextPostProcess::NodeType::on_done(c);
-	}
-
-	GUI::Elements::image::ptr img_inner;
-
-	GUI::base::ptr create_editor_window() override
-	{
-
-		if (!debug_texture)
-			debug_texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
-		GUI::Elements::image::ptr img(new GUI::Elements::image);
-		img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
-		img->texture.padding = { 9, 9, 9, 9 };
-		img->padding = { 9, 9, 9, 9 };
-		img->width_size = GUI::size_type::MATCH_CHILDREN;
-		img->height_size = GUI::size_type::MATCH_CHILDREN;
-		//   img->size = { 64, 64 };
-		img_inner.reset(new GUI::Elements::image);
-
-
-		img_inner->texture.texture = debug_texture;
-		img_inner->docking = GUI::dock::TOP;
-		img_inner->size = { 128, 128 };
-		img->add_child(img_inner);
-		return img;
-	}
-
-
-};
-
-
-
-class PostProcessGraph :public FlowGraph::graph
-{
-public:
-	using ptr = std::shared_ptr<PostProcessGraph>;
-	PostProcessGraph()
-	{
-		register_input( "life", PPTypes::LIFE);
-		register_output( "life", PPTypes::LIFE);
-		name = "PostProcess";
-	}
-};
-
-
-
-class AdaptationNode :public EditorNode
-{
-	HDRAdaptation::ptr adaptation;
-
-	void operator()(PostProcessContext* context)
-	{
-		if (!adaptation) adaptation = std::make_shared<HDRAdaptation>(*context->g_buffer);
-		adaptation->process(context->mesh_context);
-		get_output(0)->put(0);
-	}
-public:
-	AdaptationNode()
-	{
-		register_input("life", PPTypes::LIFE);
-		register_output( "life", PPTypes::LIFE);
-		name = "Adaptation";
-	}
-};
-
-
-class SkyNode :public EditorNode
-{
-	SkyRender::ptr sky;
-	std::mutex m;
-	void operator()(PostProcessContext* context)
-	{
-		if (!sky)
-		{
-			m.lock();
-			if (!sky) sky = std::make_shared<SkyRender>();
-			m.unlock();
-		}
-		get_output(0)->put(sky);
-	}
-public:
-	SkyNode()
-	{
-		register_output("sky", PPTypes::SKY);
-		name = "Sky";
-	}
-};
-
-
-class SkyRenderNode :public EditorNode
-{
-	void operator()(PostProcessContext* context)
-	{
-		auto sky = get_input(1)->get<SkyRender::ptr>();
-		sky->process(context->mesh_context);
-		get_output(0)->put(0);
-	}
-
-
-
-
-
-public:
-	SkyRenderNode()
-	{
-		register_input("life", PPTypes::LIFE);
-		register_input( "sky", PPTypes::SKY);
-		register_output( "life", PPTypes::LIFE);
-		name = "SkyRender";
-	}
-};
-
-class SkyEnviromentNode :public EditorNode
-{
-	void operator()(PostProcessContext* context)
-	{
-		auto sky = get_input(0)->get<SkyRender::ptr>();
-		sky->update_cubemap(context->mesh_context);
-		get_output(0)->put(sky->enviroment);
-	}
-public:
-	SkyEnviromentNode()
-	{
-
-		register_input( "sky", PPTypes::SKY);
-		register_output("enviroment", PPTypes::CUBEMAP);
-		name = "SkyEnv";
-	}
-};
-
-class SMAANode :public EditorNode
-{
-	SMAA::ptr smaa;
-
-	void operator()(PostProcessContext* context)
-	{
-		if (!smaa) smaa = std::make_shared<SMAA>(*context->g_buffer);
-		smaa->process(context->mesh_context);
-		get_output(0)->put(0);
-	}
-public:
-	SMAANode()
-	{
-		register_input( "life", PPTypes::LIFE);
-		register_output( "life", PPTypes::LIFE);
-		name = "SMAA";
-	}
-};
-
-
-class VoxelNode :public EditorNode
-{
-	bool enabled = true;
-	//bool ssgi_enabled = true;
-
-	VoxelGI::ptr gi;
-
-	VoxelGI::VISUALIZE_TYPE viz_type = VoxelGI::VISUALIZE_TYPE::FULL;
-	FlowGraph::input::ptr enviroment;
-	void operator()(PostProcessContext* context)
-	{
-		if (!gi) gi = std::make_shared<VoxelGI>(context->scene, *context->g_buffer);
-
-		//	if (ssgi_enabled)
-		//		gi->ssgi_tex = get_input(2)->get<Render::Texture::ptr>();
-		//	else
-		//		gi->ssgi_tex = Render::Texture::null;
-
-		if (enabled) {
-			auto buf = context->mesh_context->g_buffer;
-			context->mesh_context->g_buffer = nullptr;
-			gi->render_type = viz_type;
-			gi->generate(context->mesh_context, context->renderer, *context->pssm, enviroment->get<Enviroment>());
-			context->mesh_context->g_buffer = buf;
-		}
-		get_output(0)->put(0);
-
-	}
-
-	GUI::base::ptr create_editor_window() override
-	{
-		auto res = EditorNode::create_editor_window();
-
-		{
-			auto check = std::make_shared<GUI::Elements::check_box>();
-
-			check->docking = GUI::dock::TOP;
-			check->on_check = [this](bool v) {
-				enabled = v;
-			};
-
-			check->set_checked(enabled);
-
-			res->add_child(check);
-
-		}
-	
-		auto type_selector = std::make_shared<GUI::Elements::combo_box>();
-		type_selector->add_item("Full")->on_select = [this]() {viz_type = VoxelGI::VISUALIZE_TYPE::FULL; };
-		type_selector->add_item("Reflection")->on_select = [this]() {viz_type = VoxelGI::VISUALIZE_TYPE::REFLECTION; };
-		type_selector->add_item("Indirect")->on_select = [this]() {viz_type = VoxelGI::VISUALIZE_TYPE::INDIRECT; };
-		type_selector->add_item("Voxels")->on_select = [this]() {viz_type = VoxelGI::VISUALIZE_TYPE::VOXEL; };
-		type_selector->add_item("Voxels Albedo")->on_select = [this]() {viz_type = VoxelGI::VISUALIZE_TYPE::FULL; };
-		type_selector->add_item("Voxels Normal")->on_select = [this]() {viz_type = VoxelGI::VISUALIZE_TYPE::FULL; };
-
-
-		type_selector->docking = GUI::dock::TOP;
-		res->add_child(type_selector);
-
-		return res;
-	}
-public:
-	VoxelNode()
-	{
-		register_input("life", PPTypes::LIFE);
-		register_output( "life", PPTypes::LIFE);
-
-		enviroment = register_input( "enviroment", PPTypes::CUBEMAP);
-		//	register_input(FlowGraph::data_types("ssgi"), "ssgi")->default_value = Render::Texture::null;
-
-		name = "VoxelGI";
-	}
-};
-
-
-/*
-class SSGINode :public EditorNode
-{
-	bool enabled = true;
-
-	SSGI::ptr ssgi;
-
-	void operator()(PostProcessContext* context)
-	{
-		if (!ssgi) ssgi = std::make_shared<SSGI>( *context->g_buffer);
-
-
-		ssgi->process(context->mesh_context, *context->g_buffer);
-		get_output(1)->put(ssgi->reflect_tex);
-		get_output(0)->put(0);
-	}
-
-public:
-	SSGINode()
-	{
-		register_input(FlowGraph::data_types::INT, "life");
-		register_output(FlowGraph::data_types::INT, "life");
-		register_output(FlowGraph::data_types("ssgi"), "ssgi");
-
-		name = "SSGI";
-	}
-};
-*/
-
-
-
-/*
-class SkyRender
-{
-		Render::ComputePipelineState::ptr state;
-		Render::Texture::ptr transmittance;
-		Render::Texture::ptr irradiance;
-		Render::Texture::ptr inscatter;
-		Render::HandleTable table;
-
-
-	public:
-
-		SkyRender()
-		{
-			Render::RootSignatureDesc root_desc;
-			root_desc[0] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 4);
-			root_desc[1] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, 1);
-			root_desc[2] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL);
-			root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 4, 3);
-			root_desc[4] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, 1);
-			Render::ComputePipelineStateDesc desc;
-			desc.shader = Render::compute_shader::get_resource({ "shaders\\sky.hlsl", "CS", 0, {} });
-			desc.root_signature.reset(new Render::RootSignature(root_desc));
-			state.reset(new  Render::ComputePipelineState(desc));
-			transmittance = Render::Texture::get_resource({"textures\\Transmit.dds", false, false});
-			irradiance = Render::Texture::get_resource({ "textures\\irradianceTexture.dds", false, false });
-			inscatter = Render::Texture::get_resource({ "textures\\inscatterTexture.dds", false, false });
-			table = Render::DescriptorHeapManager::get().get_csu()->create_table(3);
-			transmittance->place_srv(table[0]);
-			irradiance->place_srv(table[1]);
-			inscatter->place_srv(table[2]);
+			average = ticks / time;
+			ticks = 0;
+			time = 0;
+			return true;
 		}
 
-
-		void process(MeshRenderContext::ptr& context, G_Buffer& buffer)
-		{
-			context->list->get_compute().set_pipeline(state);
-			context->list->get_compute().set(0, buffer.srv_table);
-			context->list->get_compute().set(1, buffer.light_tex->get_uav_handle());
-			context->list->get_compute().set_const_buffer(2, context->cam->get_const_buffer());
-			context->list->get_compute().set(3, table);
-			context->list->get_compute().set(4, Render::DescriptorHeapManager::get().get_default_samplers());
-			ivec2 sizes = { buffer.light_tex->get_desc().Width , buffer.light_tex->get_desc().Height };
-			context->list->get_compute().dispach(sizes, {16, 16});
-		}
-
-
-
-};
-
-
-*/
-
-/*
-
-class GBufferDownsamplerNode :public EditorNode
-{
-	//GBufferDownsampler::ptr downsampler;
-	void operator()(PostProcessContext* context)
-	{
-		//	if (!downsampler) downsampler = std::make_shared<GBufferDownsampler>(*context->g_buffer);
-		//	downsampler->process(context->mesh_context);
-		for (auto& eye : context->mesh_context->eye_context->eyes)
-			MipMapGenerator::get().generate_quality(context->mesh_context->list->get_graphics(), eye.cam, *eye.g_buffer);
-
-		get_output(0)->put(0);
+		return false;
 	}
-public:
-	GBufferDownsamplerNode()
+
+	float get()
 	{
-		register_input("life", PPTypes::LIFE);
-		register_output( "life", PPTypes::LIFE);
-		name = "Quality";
+		return (float)average;
 	}
 };
-
-
-class LightingNode :public EditorNode
-{
-
-	G_Buffer* buff = nullptr;
-	void operator()(PostProcessContext* context)
-	{
-		if (buff != context->g_buffer)
-		{
-			context->g_buffer->size.register_change(&lighting, [this](ivec2 size) {
-				lighting.pssm.resize(size);
-				});
-			buff = context->g_buffer;
-		}
-		//if (!downsampler) downsampler = std::make_shared<GBufferDownsampler>(*context->g_buffer);
-	//	downsampler->process(context->mesh_context);
-		auto cam = context->mesh_context->cam;
-		lighting.process(context->mesh_context, *context->g_buffer, context->renderer, context->scene);
-		context->mesh_context->cam = cam;
-		context->pssm = &lighting.pssm;
-
-		get_output(0)->put(0);
-	}
-public:
-
-	LightSystem lighting;
-
-	LightingNode()
-	{
-		register_input( "life", PPTypes::LIFE);
-		register_output( "life", PPTypes::LIFE);
-		name = "Lighting";
-	}
-};*/
-
-/*
-
-class tiled_image : public GUI::base
-{
-	TiledTexture::ptr tiles;
-
-	Render::PipelineState::ptr state;
-public:
-	using ptr = s_ptr<tiled_image>;
-
-	tiled_image()
-	{
-		size = { 16384, 16384 };
-		tiles.reset(new TiledTexture("texture.jpg"));
-		Render::PipelineStateDesc state_desc;
-		Render::RootSignatureDesc root_desc;
-		root_desc[0] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::VERTEX);
-		root_desc[1] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::PIXEL);
-		root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::PIXEL, 0, 5);
-		root_desc[3] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::PIXEL, 0, 3);
-		root_desc[4] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::PIXEL, 0, 1);
-		state_desc.root_signature.reset(new Render::RootSignature(root_desc));
-		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\tiles.hlsl", "PS", 0, {} });
-		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\tiles.hlsl", "VS", 0, {} });
-		state.reset(new Render::PipelineState(state_desc));
-	}
-
-
-	virtual void draw(Render::context& t) override
-	{
-		tiles->update(t.command_list->get_ptr());
-		auto& list = t.command_list->get_graphics();
-		list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		list.set_pipeline(state);
-		auto bounds = get_render_bounds();
-		float2 p1 = (vec2(bounds.pos)) / get_user_ui()->size.get();
-		float2 p2 = (vec2(bounds.pos) + vec2(bounds.size)) / get_user_ui()->size.get();
-		list.set_const_buffer_raw(0, sizer(p1, p2));
-		list.set(2, tiles->table);
-		list.set(3, tiles->sampler_table);
-		list.set(4, tiles->visibility_texture->get_uav());
-		list.draw(4);
-	}
-};*/
-/*
-class CubeMapDrawer
-{
-
-		Render::PipelineState::ptr state;
-		Render::Texture::ptr transmittance;
-		Render::Texture::ptr irradiance;
-		Render::Texture::ptr inscatter;
-		Render::HandleTable table;
-		RenderTargetTable render_table;
-
-
-	public:
-
-		CubeMapDrawer()
-		{
-			Render::PipelineStateDesc state_desc;
-			Render::RootSignatureDesc root_desc;
-			root_desc[0] = Render::DescriptorConstants(0, 1, Render::ShaderVisibility::ALL);
-			root_desc[1] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, 3);
-			root_desc[2] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, 2);
-			state_desc.root_signature.reset(new Render::RootSignature(root_desc));
-			state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\cubemap.hlsl", "PS", 0, {} });
-			state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\cubemap.hlsl", "VS", 0, {} });
-			state_desc.rtv.rtv_formats.resize(1);
-			state_desc.rtv.rtv_formats[0] = DXGI_FORMAT_R11G11B10_FLOAT;
-			state.reset(new Render::PipelineState(state_desc));
-			transmittance = Render::Texture::get_resource({ "textures\\Transmit.dds", false, false });
-			irradiance = Render::Texture::get_resource({ "textures\\irradianceTexture.dds", false, false });
-			inscatter = Render::Texture::get_resource({ "textures\\inscatterTexture.dds", false, false });
-			table = Render::DescriptorHeapManager::get().get_csu()->create_table(3);
-			transmittance->texture_2d()->place_srv(table[0]);
-			irradiance->texture_2d()->place_srv(table[1]);
-			inscatter->texture_3d()->place_srv(table[2]);
-		}
-
-		void process(MeshRenderContext::ptr& context, Render::Texture::ptr cubemap)
-		{
-			auto& list = context->list->get_graphics();
-			list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			list.set_pipeline(state);
-			std::vector<Render::Viewport> vps;
-			std::vector<sizer_long> scissors;
-			vps.resize(1);
-			vps[0].MinDepth = 0.0f;
-			vps[0].MaxDepth = 1.0f;
-			scissors.resize(1);
-			vps[0].Width = cubemap->get_desc().Width;
-			vps[0].Height = cubemap->get_desc().Height;
-			vps[0].TopLeftX = 0;
-			vps[0].TopLeftY = 0;
-			scissors[0] = { 0, 0,  cubemap->get_desc().Width, cubemap->get_desc().Height };
-			context->list->get_graphics().set_viewports(vps);
-			context->list->get_graphics().set_scissors(scissors[0]);
-			context->list->get_graphics().set(1, table);
-			context->list->get_graphics().set(2, Render::DescriptorHeapManager::get().get_default_samplers());
-
-			for (unsigned int i = 0; i < 6; i++)
-			{
-				context->list->get_graphics().set_rtv(1, cubemap->cubemap()->get_rtv(i, 0), Render::Handle());
-				context->list->get_graphics().set_constants(0, i);
-				list.draw(4);
-			}
-		}
-};
-*/
-/*
-
-template <class T>
-struct ViewportSignatureDesc : public T
-{
-	using T::T;
-
-	typename T::template Table			<0, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 8> input_array = this;
-	typename T::template Constants		<1, Render::ShaderVisibility::PIXEL, 1, 1>								 constants = this;
-	typename T::template Table			<2, Render::ShaderVisibility::ALL, Render::DescriptorRange::UAV, 0, 1, 1>motion = this;
-
-	typename T::template Sampler<0, Render::ShaderVisibility::ALL, 0> linear{ Render::Samplers::SamplerLinearWrapDesc, this };
-	typename T::template Sampler<1, Render::ShaderVisibility::ALL, 0> point{ Render::Samplers::SamplerPointClampDesc, this };
-
-};
-
-using ViewportSignature = SignatureTypes <ViewportSignatureDesc>;
-
-
-
-class ViewPortRenderer
-{
-	//	Render::PipelineState::ptr state;
-	ViewportSignature::RootSignature::ptr root_sig;
-	Cache<DXGI_FORMAT, ViewportSignature::Pipeline::ptr > states;
-	float time = 0;
-public:
-
-
-
-
-	ViewPortRenderer()
-	{
-
-		root_sig = ViewportSignature::create_typed_root();
-
-		states.create_func = [this](const DXGI_FORMAT& format) ->ViewportSignature::Pipeline::ptr {
-
-			Render::PipelineStateDesc desc;
-			desc.root_signature = root_sig;
-			desc.rtv.rtv_formats = { format };
-			desc.blend.render_target[0].enabled = false;
-			desc.vertex = Render::vertex_shader::get_resource({ "shaders\\ViewPortRender.hlsl", "VS", 0,{} });
-			desc.pixel = Render::pixel_shader::get_resource({ "shaders\\ViewPortRender.hlsl", "PS", 0,{} });
-			return std::make_shared<ViewportSignature::Pipeline>(desc);
-		};
-
-
-
-	}
-
-	void process(MeshRenderContext::ptr& context, TemporalAA& temporal, Render::Texture::ptr target)
-	{
-		auto timer = context->list->start(L"last renderer");
-		time += context->delta_time;
-		auto& list = *context->list;
-		auto& graphics = context->list->get_graphics();
-		//	buffer->result_tex.swap(context->list, Render::ResourceState::RENDER_TARGET, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-
-		list.transition(target, Render::ResourceState::RENDER_TARGET);
-		list.transition(context->g_buffer->albedo_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		auto& shader_data = graphics.set_pipeline_typed(states[target->get_desc().Format]);
-		//ViewportSignature<Signature> shader_data(&graphics);
-
-
-
-	//	auto& tex = temporal.get_current();
-		graphics.set_viewport(target->texture_2d()->get_viewport(0));
-		graphics.set_scissor(target->texture_2d()->get_scissor(0));
-		graphics.set_rtv(1, target->texture_2d()->get_rtv(0), Render::Handle());
-		//temporal.set(context->list, 0);
-
-		shader_data.motion[0] = context->g_buffer->speed_tex->texture_2d()->get_static_srv();
-		shader_data.input_array[0] = context->g_buffer->result_tex.first()->texture_2d()->get_static_srv();
-
-
-		//	graphics.set_dynamic(0, 0,);
-			//list.set_dynamic(0, 1, context->g_buffer->albedo_tex->texture_2d()->get_static_srv());
-			//list.set_dynamic(0, 2, context->g_buffer->albedo_tex->texture_2d()->get_static_srv());
-			//	list.set_const_buffer(1, const_buffer);
-			//list.set(1, Render::DescriptorHeapManager::get().get_default_samplers());
-		shader_data.constants.set(1, time);
-		graphics.draw(4);
-	}
-
-
-	void process(MeshRenderContext::ptr& context)
-	{
-		auto timer = context->list->start(L"last renderer");
-		time += context->delta_time;
-		auto& list = *context->list;
-		auto& graphics = context->list->get_graphics();
-
-		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-		auto& shader_data = graphics.set_signature_typed<ViewportSignature>(root_sig);
-		//	ViewportSignature<Signature> shader_data(&graphics);
-
-		shader_data.constants.set(time);
-
-
-		for (auto& e : context->eye_context->eyes)
-		{
-			auto target = e.color_buffer;
-			auto g_buffer = e.g_buffer;
-
-			list.transition(target, Render::ResourceState::RENDER_TARGET); //////////////////////////////////////////////////////////////////////////////////////////////////
-			list.transition(g_buffer->albedo_tex, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-		}
-
-		for (auto& e : context->eye_context->eyes)
-		{
-			auto target = e.color_buffer;
-			auto g_buffer = e.g_buffer;
-			graphics.set_pipeline_typed(states[target->get_desc().Format]);
-			graphics.set_viewport(target->texture_2d()->get_viewport(0));
-			graphics.set_scissor(target->texture_2d()->get_scissor(0));
-			graphics.set_rtv(1, target->texture_2d()->get_rtv(0), Render::Handle());
-
-
-			shader_data.motion[0] = g_buffer->speed_tex->texture_2d()->get_static_srv();
-			shader_data.input_array[0] = g_buffer->result_tex.second()->texture_2d()->get_static_srv();
-
-			graphics.draw(4);
-		}
-
-
-	}
-
-
-
-
-
-};
-*/
-/*
-template <class T>
-struct RaytracingDesc : public T
-{
-	using T::T;
-
-	typename T::template Table			<0, Render::ShaderVisibility::ALL, Render::DescriptorRange::UAV, 0, 1> target = this;
-	typename T::template SRV			<1, Render::ShaderVisibility::ALL, 0> scene = this;
-	typename T::template ConstBuffer	<2, Render::ShaderVisibility::ALL, 0> camera = this;
-	typename T::template Table			<3, Render::ShaderVisibility::ALL, Render::DescriptorRange::SRV, 0, 4, 1> g_buffer = this;
-	typename T::template  SRV			<4, Render::ShaderVisibility::ALL, 1> instance_data = this;
-
-
-	typename T::template Table			<5, Render::ShaderVisibility::ALL, Render::DescriptorRange::SRV, 0, 4, 2> vertex_buffers = this;
-	typename T::template Table			<6, Render::ShaderVisibility::ALL, Render::DescriptorRange::SRV, 0, 4, 3> index_buffers = this;
-	
-
-
-	typename T::template Sampler<0, Render::ShaderVisibility::ALL, 0> linear{ Render::Samplers::SamplerLinearWrapDesc, this };
-	typename T::template Sampler<1, Render::ShaderVisibility::ALL, 0> point{ Render::Samplers::SamplerPointClampDesc, this };
-	typename T::template Sampler<2, Render::ShaderVisibility::ALL, 0> aniso{ Render::Samplers::SamplerAnisoWrapDesc, this };
-};
-
-using RaytracingSignature = SignatureTypes <RaytracingDesc>;
-*/
 
 
 
@@ -907,7 +119,7 @@ struct closesthit_identifier
 
 	//	RayGenConstantBuffer cb;
 };
-
+/*
 struct RayTracingShaders : public Events::prop_handler,
 	public Events::Runner
 {
@@ -1188,7 +400,7 @@ struct RayTracingShaders : public Events::prop_handler,
 		shader_data.index_buffers = buffersIndex;
 	//	shader_data.material_textures = textures;
 
-	*/
+	*
 		//shader_data.mat_const = materials[0]->get_pixel_buffer();
 		_list->get_compute().flush_binds(true);
 
@@ -1218,7 +430,7 @@ struct RayTracingShaders : public Events::prop_handler,
 	}
 };
 
-
+*/
 class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
 {
 	main_renderer::ptr scene_renderer;
@@ -1281,9 +493,9 @@ public:
 	MeshAssetInstance::ptr instance;
 
 
-	RayTracingShaders shaders;
+	//RayTracingShaders shaders;
 
-	Render::RaytracingAccelerationStructure::ptr scene_as;
+	//Render::RaytracingAccelerationStructure::ptr scene_as;
 
 
 	// Build acceleration structures needed for raytracing.
@@ -1356,6 +568,8 @@ public:
 	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
 	PSSM pssm;
 	SkyRender sky;
+	VoxelGI::ptr voxel_gi;
+	std::string debug_view;
 	triangle_drawer()
 	{
 
@@ -1400,16 +614,48 @@ public:
 		props->height_size = GUI::size_type::MATCH_CHILDREN;
 		add_child(props);
 
-		props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_parrallel));
-		props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_cpu_culling));
-		props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_gpu_culling));
-		props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->clear_depth));
-		props->add_child(std::make_shared<GUI::Elements::check_box_text>(enable_gi));
-		props->add_child(std::make_shared<GUI::Elements::check_box_text>(realtime_debug));
+		//props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_parrallel));
+		////props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_cpu_culling));
+		//props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_gpu_culling));
+	//	props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->clear_depth));
+	//	props->add_child(std::make_shared<GUI::Elements::check_box_text>(enable_gi));
+	//	props->add_child(std::make_shared<GUI::Elements::check_box_text>(realtime_debug));
 
 
 		props->add_child(std::make_shared<GUI::Elements::check_box_text>(debug_draw));
 
+		{
+			auto combo = std::make_shared<GUI::Elements::combo_box>();
+
+			combo->size = {200, 25};
+			combo->on_click = [this](GUI::Elements::button::ptr butt){
+			
+				GUI::Elements::combo_box::ptr combo = butt->get_ptr<GUI::Elements::combo_box>();
+				combo->remove_items();
+
+
+				combo->add_item("Normal")->on_click = [this](GUI::Elements::menu_list_element::ptr) {debug_view = ""; };
+
+
+				for (auto& e : last_graph->builder.resources)
+				{
+
+					if(e.second.info->type!=::ResourceType::Texture) continue;
+
+					std::string str = e.first;
+					combo->add_item(str)->on_click = [this, str](GUI::Elements::menu_list_element::ptr) {debug_view = str; };
+
+				}
+				
+			};
+
+
+			
+
+			props->add_child(combo);
+		}
+
+	
 		GUI::Elements::circle_selector::ptr circle(new  GUI::Elements::circle_selector);
 		circle->docking = GUI::dock::FILL;
 		circle->x_type = GUI::pos_x_type::RIGHT;
@@ -1495,9 +741,9 @@ public:
 
 			if (ruins_ptr)
 			{
-				MeshAssetInstance::ptr instance(new MeshAssetInstance(ruins_ptr));
+		//		MeshAssetInstance::ptr instance(new MeshAssetInstance(ruins_ptr));
 			//	instance->local_transform = mat4x4::translation({ 0,3.8,0 });
-				scene->add_child(instance);
+			//	scene->add_child(instance);
 			}
 
 		}
@@ -1603,7 +849,7 @@ public:
 
 		eyes.emplace_back(new EyeData(nullptr));
 
-
+		voxel_gi = std::make_shared<VoxelGI>(scene);
 	}
 	float scale_speed = 0;
 	vec2 wheel_pos;
@@ -1896,10 +1142,12 @@ public:
 		*/
 	}
 
-
-
+	FrameGraph* last_graph = nullptr;
+	tick_timer my_timer;
 	void generate(FrameGraph& graph)
 	{
+
+		last_graph = &graph;
 		vr_context->eyes.resize(1);
 		vr_context->eyes[0].dir = quat();
 
@@ -1917,8 +1165,8 @@ public:
 		graph.scene = scene.get();
 		graph.renderer = gpu_scene_renderer.get();
 		graph.cam = &cam;
-
-
+		graph.time = my_timer.tick();
+		graph.sunDir = pssm.get_position();
 		cam.update({ 0,0 });
 
 
@@ -1945,25 +1193,20 @@ public:
 	{
 			struct GBufferData
 			{
-				ResourceHandler* albedo;
-				ResourceHandler* normals;
-				ResourceHandler* depth;
-				ResourceHandler* specular;
-				ResourceHandler* speed;
+				GBufferViewDesc gbuffer;
 
 				ResourceHandler* hiz;
 				ResourceHandler* hiz_uav;
 
+
 			};
-
+		
 			graph.add_pass<GBufferData>("GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
-				data.albedo = builder.create_texture("GBuffer_Albedo", size, 1,DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
-				data.normals = builder.create_texture("GBuffer_Normals", size,1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
-				data.depth = builder.create_texture("GBuffer_Depth", size, 1,DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
-				data.specular = builder.create_texture("GBuffer_Specular", size,1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
-				data.speed = builder.create_texture("GBuffer_Speed", size, 1,DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT, ResourceFlags::RenderTarget);
+				data.gbuffer.create(size, builder);
+				data.gbuffer.create_mips(size, builder);
+				data.gbuffer.create_quality(size, builder);
 
-
+			
 				data.hiz = builder.create_texture("GBuffer_HiZ", size/8,1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil | ResourceFlags::Static);
 				data.hiz_uav = builder.create_texture("GBuffer_HiZ_UAV", size / 8,1, DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, ResourceFlags::UnorderedAccess);
 
@@ -1986,17 +1229,12 @@ public:
 
 					context->cam = &eyes[0]->cam;
 
-
+			
 
 	//				gpu_meshes_renderer_static->update(context);
 		//			gpu_meshes_renderer_dynamic->update(context);
 
-					GBuffer gbuffer;
-					gbuffer.albedo = _context.get_texture(data.albedo);
-					gbuffer.normals = _context.get_texture(data.normals);
-					gbuffer.depth = _context.get_texture(data.depth);
-					gbuffer.specular = _context.get_texture(data.specular);
-					gbuffer.speed = _context.get_texture(data.speed);
+					GBuffer gbuffer = data.gbuffer.actualize(_context);
 
 					gbuffer.rtv_table = RenderTargetTable(context->list->get_graphics() ,{ gbuffer.albedo, gbuffer.normals, gbuffer.specular, gbuffer.speed }, gbuffer.depth);
 
@@ -2013,12 +1251,16 @@ public:
 
 				//	stenciler->render(context, scene);
 
-				
+					command_list->get_copy().copy_texture(gbuffer.depth_prev_mips.resource, 0, gbuffer.depth_mips.resource, 0);
+					command_list->get_copy().copy_texture(gbuffer.depth_mips.resource, 0, gbuffer.depth.resource, 0);
+
+				//	
 				});
 		}
 
 		pssm.generate(graph);
 		sky.generate(graph);
+		voxel_gi->generate(graph);
 
 		stenciler->generate_after(graph);
 
@@ -2061,15 +1303,18 @@ public:
 			ResourceHandler* o_texture;
 			ResourceHandler* debug_texture;
 		};
-		if(debug_draw)
-		graph.add_pass<debug_data>("DEBUG", [](debug_data& data, TaskBuilder& builder) {
+		if (!debug_view.empty())
+		graph.add_pass<debug_data>("DEBUG", [this](debug_data& data, TaskBuilder& builder) {
 				data.o_texture = builder.need_texture("swapchain");
-				data.debug_texture = builder.need_texture("GBuffer_Albedo");
+				data.debug_texture = builder.need_texture(debug_view);
 
 			}, [this](debug_data& data, FrameContext& context) {
 
 				auto output_tex = context.get_texture(data.o_texture);
 				auto debug_tex = context.get_texture(data.debug_texture);
+
+				if (!debug_tex) return;
+		
 
 				auto& list = context.get_list();
 
@@ -2152,57 +1397,6 @@ public:
 
 
 };
-
-class tick_timer
-{
-	std::chrono::time_point<std::chrono::system_clock> last_tick;
-
-public:
-	tick_timer()
-	{
-		last_tick = std::chrono::system_clock::now();
-	}
-
-	double tick()
-	{
-		std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-		std::chrono::duration<double> elapsed_seconds = now - last_tick;
-		last_tick = now;
-		return elapsed_seconds.count();
-	}
-};
-
-class count_meter
-{
-	double time = 0;
-	tick_timer t;
-	unsigned int ticks = 0;
-
-	double average = 0;
-public:
-
-	bool tick()
-	{
-		time += t.tick();
-		ticks++;
-
-		if (time > 1)
-		{
-			average = ticks / time;
-			ticks = 0;
-			time = 0;
-			return true;
-		}
-
-		return false;
-	}
-
-	float get()
-	{
-		return (float)average;
-	}
-};
-
 
 
 
@@ -3042,10 +2236,7 @@ public:
 			data.o_texture = builder.need_texture("swapchain");
 			}, [this, ptr](pass_data& data, FrameContext& context) {
 
-
 				context.get_list()->transition(context.get_texture(data.o_texture).resource, ResourceState::PRESENT);
-				context.get_list()->flush_transitions();
-
 
 				Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
 					run_on_ui([this, ptr]() {	Profiler::get().update(); });
@@ -3249,10 +2440,10 @@ public:
 			d->docking = GUI::dock::FILL;
 			{
 				EVENT("Start Drawer");
-		//		drawer.reset(new triangle_drawer());
-		//		drawer->docking = GUI::dock::FILL;
-		//		area->add_child(drawer);
-		//		d->get_tabs()->add_page("Game", drawer);
+				drawer.reset(new triangle_drawer());
+				drawer->docking = GUI::dock::FILL;
+		
+				d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
 			 {

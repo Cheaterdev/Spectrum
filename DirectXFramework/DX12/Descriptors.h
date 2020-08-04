@@ -3,15 +3,23 @@ namespace DX12
 
 
 
+	enum class HandleType : char
+	{
+		CBV,
+		RTV,
+		DSV,
+		SRV,
+		UAV
+	};
 
-enum class DescriptorHeapType : int
+enum class DescriptorHeapType : char
 {
 	CBV_SRV_UAV = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 	SAMPLER = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 	RTV = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 	DSV = D3D12_DESCRIPTOR_HEAP_TYPE_DSV
 };
-enum class DescriptorHeapFlags : int
+enum class DescriptorHeapFlags : char
 {
 	NONE = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 	SHADER_VISIBLE = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
@@ -19,12 +27,114 @@ enum class DescriptorHeapFlags : int
 };
 class Resource;
 
+enum class ResourceType : char
+{
+
+	BUFFER,
+	TEXTURE1D,
+	//	TEXTURE1DARRAY,
+	TEXTURE2D,
+	//TEXTURE2DARRAY,
+	TEXTURE3D,
+	CUBE
+};
+
+
+
+struct ResourceViewDesc
+{
+	ResourceType type;
+	DXGI_FORMAT format;
+
+	union
+	{
+		struct
+		{
+
+			UINT PlaneSlice;
+			UINT MipSlice;
+			UINT FirstArraySlice;
+			UINT MipLevels;
+			UINT ArraySize;
+		} Texture2D;
+
+		struct
+		{
+			UINT64 Size;
+			UINT64 Offset;
+			UINT64 Stride;
+		} Buffer;
+
+	};
+};
+
+
+
+struct ResourceInfo
+{
+	Resource* resource_ptr = nullptr;
+
+	HandleType type;
+
+	union
+	{
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsv;
+
+		struct
+		{
+			Resource* counter;
+			D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
+		} uav;
+	
+		D3D12_SHADER_RESOURCE_VIEW_DESC srv;
+		D3D12_RENDER_TARGET_VIEW_DESC rtv;
+		D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
+
+	};
+
+	ResourceInfo() = default;
+
+	ResourceInfo(Resource* resource_ptr, D3D12_SHADER_RESOURCE_VIEW_DESC srv):resource_ptr(resource_ptr)
+	{
+		type = HandleType::SRV;
+		this->srv = srv;
+	}
+
+	ResourceInfo(Resource* resource_ptr, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) :resource_ptr(resource_ptr)
+	{
+		type = HandleType::DSV;
+		this->dsv = dsv;
+	}
+
+	ResourceInfo(Resource* resource_ptr, Resource* counter_ptr, D3D12_UNORDERED_ACCESS_VIEW_DESC uav) :resource_ptr(resource_ptr)
+	{
+		type = HandleType::UAV;
+		this->uav.desc = uav;
+		this->uav.counter = counter_ptr;
+	}
+
+	ResourceInfo(Resource* resource_ptr, D3D12_RENDER_TARGET_VIEW_DESC rtv) :resource_ptr(resource_ptr)
+	{
+		type = HandleType::RTV;
+		this->rtv = rtv;
+	}
+
+	ResourceInfo(Resource* resource_ptr, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) :resource_ptr(resource_ptr)
+	{
+		type = HandleType::CBV;
+		this->cbv = cbv;
+	}
+
+
+};
+
 struct Handle
 {
 	CD3DX12_CPU_DESCRIPTOR_HANDLE cpu;
 	CD3DX12_GPU_DESCRIPTOR_HANDLE gpu;
 
-	Resource** resource_ptr = nullptr;
+	ResourceInfo* resource_info = nullptr;
+
 	bool is_valid() const
 	{
 		return cpu.ptr != 0 || gpu.ptr != 0;
@@ -36,7 +146,7 @@ struct Handle
 		cpu.ptr = 0;
 	}
 
-	void operator=(const std::function<void(const Handle&)>& f)
+	void operator=(const std::function<void(Handle&)>& f)
 	{
 		f(*this);
 	}
@@ -66,7 +176,7 @@ struct HandleTable
 		Handle res = get_base();
 		res.cpu.Offset(i, info->descriptor_size);
 		res.gpu.Offset(i, info->descriptor_size);
-		res.resource_ptr += i;
+		res.resource_info += i;
 		return res;
 	}
 
@@ -109,7 +219,7 @@ struct HandleTableLight : public Handle
 		Handle res = *this;
 		res.cpu.Offset(i, descriptor_size);
 		res.gpu.Offset(i, descriptor_size);
-		res.resource_ptr = resource_ptr + i;
+		res.resource_info = resource_info + i;
 		return res;
 	}
 
@@ -138,7 +248,7 @@ class DescriptorHeap : public std::enable_shared_from_this<DescriptorHeap>
 {
 	//      std::vector<Handle> handles;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	std::vector<Resource*> resources;
+	std::vector<ResourceInfo> resources;
 
 	UINT descriptor_size;
 	UINT current_offset = 0;
@@ -160,7 +270,7 @@ class DescriptorHeap : public std::enable_shared_from_this<DescriptorHeap>
 			});
 		res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.info->base.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-		res.info->base.resource_ptr = resources.data()+ offset;
+		res.info->base.resource_info = resources.data()+ offset;
 		res.info->descriptor_size = descriptor_size;
 		res.info->count = count;
 		return res;
@@ -259,7 +369,7 @@ public:
 		Handle res;
 		res.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-		res.resource_ptr = resources.data() + offset;
+		res.resource_info = resources.data() + offset;
 		return res;
 	}
 
@@ -271,7 +381,7 @@ public:
 
 		res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.info->base.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-		res.info->base.resource_ptr = resources.data() + offset;
+		res.info->base.resource_info = resources.data() + offset;
 		res.info->descriptor_size = descriptor_size;
 		res.info->count = count;
 		return res;
@@ -285,7 +395,7 @@ public:
 		res.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
 		res.descriptor_size = descriptor_size;
-		res.resource_ptr = resources.data() + offset;
+		res.resource_info = resources.data() + offset;
 		res.count = count;
 		return res;
 	}

@@ -112,3 +112,4 @@ public:
 
 	void generate_quality(MeshRenderContext::ptr& context);
 };
+

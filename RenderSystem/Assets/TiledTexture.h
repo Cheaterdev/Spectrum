@@ -83,7 +83,7 @@ class HeapPage
 
 		void clear(Render::CommandList& list)
 		{
-			list.transition(data, Render::ResourceState::UNORDERED_ACCESS);
+		//	list.transition(data, Render::ResourceState::UNORDERED_ACCESS);
 			list.clear_uav(data, data->texture_2d()->get_static_uav());
 		}
 

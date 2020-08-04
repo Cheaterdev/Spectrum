@@ -243,7 +243,7 @@ namespace FW1FontWrapper
                     UINT startIndex = glyphCount - updatedGlyphCount;
                     UINT endIndex = glyphCount;
                     m_pCoordBuffer->set_data(pContext, startIndex * sizeof(FW1_GLYPHCOORDS), m_glyphCoords + startIndex, updatedGlyphCount);
-                    pContext->transition(m_pCoordBuffer, Render::ResourceState::COMMON);
+               //     pContext->transition(m_pCoordBuffer, Render::ResourceState::COMMON);
                     //   m_pCoordBuffer->update(pContext);
                     /*
                     D3D11_BOX dstBox;

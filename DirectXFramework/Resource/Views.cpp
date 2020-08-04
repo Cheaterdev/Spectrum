@@ -3,27 +3,33 @@
 void DX12::BufferView::place_srv(Handle& h) {
 	if (!resource) return;
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
+	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
 	desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 	desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	desc.Format = DXGI_FORMAT_R32_TYPELESS;
 	desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / 4);
 	desc.Buffer.StructureByteStride = 0;
 	desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-	/*
-	if (srv.Buffer.StructureByteStride > 0) {
-		srv.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / srv.Buffer.StructureByteStride);
-		srv.Buffer.FirstElement =  view_desc.Buffer.Offset / srv.Buffer.StructureByteStride;
 
-	}
-	else {
-		srv.Buffer.NumElements = 0;
-		srv.Buffer.FirstElement = 0;
+	Device::get().create_srv(h, resource.get(), desc);
 
-	}*/
-	*h.resource_ptr = resource.get();
-	Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
 }
+
+void DX12::BufferView::place_uav(Handle& h) {
+	if (!resource) return;
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / 4);
+	desc.Buffer.StructureByteStride = 0;
+	desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+
+	Device::get().create_uav(h, resource.get(), desc);
+
+}
+
+
  void DX12::BufferView::place_cb(Handle& h) {
 	if (!resource) return;
 
@@ -31,8 +37,8 @@ void DX12::BufferView::place_srv(Handle& h) {
 	desc.BufferLocation = resource->get_gpu_address();
 	desc.SizeInBytes = view_desc.Buffer.Size;
 	assert(desc.SizeInBytes < 65536);
-	*h.resource_ptr = resource.get();
-	Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
+
+	Device::get().create_cbv(h, resource.get(), desc);
 }
 
 
@@ -40,19 +46,37 @@ void DX12::TextureView::place_rtv(Handle& h) {
 	if (!resource) return;
 
 	D3D12_RENDER_TARGET_VIEW_DESC desc = {};
+	auto resDesc = resource->get_desc();
 
 	desc.Format = to_srv(resource->get_desc().Format);
 
 	if (view_desc.type == ResourceType::TEXTURE2D)
 	{
-		desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2D;
-		desc.Texture2D.MipSlice = view_desc.Texture2D.MipSlice;
-		desc.Texture2D.PlaneSlice = view_desc.Texture2D.FirstArraySlice;
+
+		if (resDesc.ArraySize() == 1)
+		{
+			desc.ViewDimension =D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2D ;
+
+			desc.Texture2D.MipSlice = view_desc.Texture2D.MipSlice;
+			desc.Texture2D.PlaneSlice = view_desc.Texture2D.PlaneSlice;
+		}
+		else
+		{
+			desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+
+			desc.Texture2DArray.MipSlice = view_desc.Texture2D.MipSlice;
+			desc.Texture2DArray.PlaneSlice = view_desc.Texture2D.PlaneSlice;
+
+
+			desc.Texture2DArray.FirstArraySlice = view_desc.Texture2D.FirstArraySlice;
+			desc.Texture2DArray.ArraySize = view_desc.Texture2D.ArraySize;
+		}
+	
 	}
+	else
+		return;
 
-	*h.resource_ptr = resource.get();
-	Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, h.cpu);
-
+	Device::get().create_rtv(h, resource.get(), desc);
 }
 
 
@@ -69,8 +93,8 @@ void DX12::TextureView::place_dsv(Handle& h) {
 	desc.Texture2DArray.MipSlice = view_desc.Texture2D.MipSlice;
 	desc.Texture2DArray.FirstArraySlice = view_desc.Texture2D.FirstArraySlice;
 	desc.Texture2DArray.ArraySize = 1;
-	*h.resource_ptr = resource.get();
-	Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &desc, h.cpu);
+
+	Device::get().create_dsv(h, resource.get(), desc);
 }
 
 
@@ -85,43 +109,79 @@ void DX12::TextureView::place_srv(Handle& h) {
 	//	if (space == PixelSpace::MAKE_LINERAR)
 	//		srvDesc.Format = to_linear(srvDesc.Format);
 
-	if (view_desc.type == ResourceType::TEXTURE2D)
+
+	if (view_desc.type == ResourceType::CUBE)
 	{
-		srvDesc.ViewDimension = resDesc.ArraySize()>1 ? D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2DARRAY : D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2DArray.MipLevels = view_desc.Texture2D.MipLevels;
-		srvDesc.Texture2DArray.MostDetailedMip = view_desc.Texture2D.MipSlice;
-		srvDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
+			int count = resDesc.ArraySize() / 6;
 
-		srvDesc.Texture2DArray.FirstArraySlice = view_desc.Texture2D.FirstArraySlice;
-		srvDesc.Texture2DArray.PlaneSlice = 0;
-		srvDesc.Texture2DArray.ArraySize = view_desc.Texture2D.ArraySize;
+			srvDesc.ViewDimension = count == 1 ? D3D12_SRV_DIMENSION_TEXTURECUBE : D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
+
+			srvDesc.TextureCube.MipLevels = view_desc.Texture2D.MipLevels;
+			srvDesc.TextureCube.MostDetailedMip = view_desc.Texture2D.MipSlice;
+			srvDesc.TextureCube.ResourceMinLODClamp = 0.0;
 	}
+	else if (view_desc.type == ResourceType::TEXTURE2D)
+	{
+			srvDesc.ViewDimension = resDesc.ArraySize() > 1 ? D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2DARRAY : D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2D;
+			srvDesc.Texture2DArray.MipLevels = view_desc.Texture2D.MipLevels;
+			srvDesc.Texture2DArray.MostDetailedMip = view_desc.Texture2D.MipSlice;
+			srvDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
 
+			srvDesc.Texture2DArray.FirstArraySlice = view_desc.Texture2D.FirstArraySlice;
+			srvDesc.Texture2DArray.PlaneSlice = 0;
+			srvDesc.Texture2DArray.ArraySize = view_desc.Texture2D.ArraySize;
+	
+	}else if (view_desc.type == ResourceType::TEXTURE3D)
+	{
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE3D;
+		srvDesc.Texture3D.MipLevels = view_desc.Texture2D.MipLevels;
+		srvDesc.Texture3D.MostDetailedMip = view_desc.Texture2D.MipSlice;
+		srvDesc.Texture3D.ResourceMinLODClamp = 0.0f;
+	}
+	else assert(false);
 
-	Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srvDesc, h.cpu);
-	*h.resource_ptr = resource.get();
+	Device::get().create_srv(h, resource.get(), srvDesc);
+
 }
 
 void DX12::TextureView::place_uav(Handle& h) {
 	if (!resource) return;
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
-	desc.Format = resource->get_desc().Format;
+	desc.Format = to_srv(resource->get_desc().Format);
 	auto resDesc = resource->get_desc();
 
 	if (view_desc.type == ResourceType::TEXTURE2D)
 	{
-		desc.ViewDimension = resDesc.ArraySize() > 1 ?  D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2DARRAY : D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2D;
-		desc.Texture2D.PlaneSlice = view_desc.Texture2D.PlaneSlice;
-		desc.Texture2D.MipSlice = view_desc.Texture2D.MipSlice;
+		if (resDesc.ArraySize() == 1)
+		{
+			desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2D;
+			desc.Texture2D.PlaneSlice = view_desc.Texture2D.PlaneSlice;
+			desc.Texture2D.MipSlice = view_desc.Texture2D.MipSlice;
+		}
+		
+		else
+		{
+			desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+			desc.Texture2DArray.PlaneSlice = view_desc.Texture2D.PlaneSlice;
+			desc.Texture2DArray.MipSlice = view_desc.Texture2D.MipSlice;
+			desc.Texture2DArray.FirstArraySlice = view_desc.Texture2D.FirstArraySlice;
+			desc.Texture2DArray.ArraySize = view_desc.Texture2D.ArraySize == (UINT)(-1) ? 1 : view_desc.Texture2D.ArraySize;
+		}
 
-		desc.Texture2DArray.PlaneSlice = view_desc.Texture2D.PlaneSlice;
-		desc.Texture2DArray.MipSlice = view_desc.Texture2D.MipSlice;
-		desc.Texture2DArray.FirstArraySlice = view_desc.Texture2D.FirstArraySlice;
-		desc.Texture2DArray.ArraySize = view_desc.Texture2D.ArraySize==(UINT)(-1)?1: view_desc.Texture2D.ArraySize;
+	 
+
+	}else if (view_desc.type == ResourceType::TEXTURE3D)
+	{
+
+		desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE3D;
+		desc.Texture3D.FirstWSlice = 0;
+		desc.Texture3D.MipSlice = view_desc.Texture2D.MipSlice;
+		desc.Texture3D.WSize = -1;// std::max(UINT(1), UINT(resDesc.Depth() >> desc.Texture3D.MipSlice));
 	}
+	else
+		return;
 
-	*h.resource_ptr = resource.get();
-	Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
+	Device::get().create_uav(h, resource.get(), desc);
 }
 

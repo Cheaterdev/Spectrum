@@ -31,111 +31,92 @@ namespace DX12
 		PRESENT = D3D12_RESOURCE_STATE_PRESENT,
 		PREDICATION = D3D12_RESOURCE_STATE_PREDICATION,
 		RAYTRACING_STRUCTURE = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
-		UNKNOWN = -1
+		UNKNOWN = -1,
+		DIFFERENT = -2
 	};
 
 
 	class ResourceStateManager
 	{
 
-		struct ResourceListState
+		struct ResourceListStateCPU
 		{
 			unsigned int first_state = ResourceState::UNKNOWN;
+			unsigned int state = ResourceState::UNKNOWN;
 
-			unsigned int current_state = ResourceState::UNKNOWN;
-
-			uint64_t last_list_full_id = -1;
-
-			bool subres_used = false;
+			uint64_t command_list_id = -1;
 		};
 
-		struct SubResources
+		struct SubResourcesCPU
 		{
-			std::vector<ResourceListState> subres;
-			unsigned int first_subres_state = ResourceState::UNKNOWN;
+			std::vector<ResourceListStateCPU> subres;
 
+			ResourceListStateCPU all;
+
+			uint64_t command_list_id = -1;
 		};
+
+
+		struct ResourceListStateGPU
+		{
+			unsigned int state = ResourceState::UNKNOWN;
+		};
+
+		struct SubResourcesGPU
+		{
+			std::vector<ResourceListStateGPU> subres;
+
+			ResourceListStateGPU all;
+		};
+
 
 		mutable  SpinLock states_lock;
 
-		mutable std::vector<SubResources> states;
+		mutable std::map<int,SubResourcesCPU> cpu_state;
 
-		SubResources& get_state(int id) const
+		SubResourcesCPU& get_state(int id) const
 		{
-			if (states.size() > id)
-				return states[id];
+			std::lock_guard<SpinLock> guard(states_lock);
 
-			//			std::lock_guard<boost::detail::spinlock> guard(states_lock);
+			auto it = cpu_state.find(id);
 
-					//	if (states.size() > id)
-					//		return states[id];
-
-			auto last_size = states.size();
-			states.resize(id + 1);
-
-
-			while (last_size <= id)
+			if (it == cpu_state.end())
 			{
-				states[last_size++].subres.resize(subres_count);
+				auto & state = cpu_state[id];
+				state.subres.resize(gpu_state.subres.size());
+
+				return state;
 			}
 
-
-
-			return states[id];
+			return it->second;
 
 		}
 
 
 
 	protected:
+		SubResourcesGPU gpu_state;
 
-		unsigned int gpu_state = 0;
-		unsigned int subres_count = 0;
 	public:
 
 		using ptr = std::unique_ptr<ResourceStateManager>;
 
 		ResourceStateManager()
 		{
-			//states.resize(64);
+			//cpu_state.resize(64);
 		}
 
-		void init_subres(int count)
+		void init_subres(int count, ResourceState state)
 		{
+			gpu_state.subres.resize(count);
+			gpu_state.all.state = state;
 
-			std::lock_guard<SpinLock> guard(states_lock);
-			subres_count = 1 + count;
-			for (auto& e : states)
-				e.subres.resize(1 + count);
-		}
-		void assume_gpu_state(unsigned int state)
-		{
-			gpu_state = state;
+			for (auto& e : gpu_state.subres)
+				e.state = state;
 		}
 
 
-
-		unsigned int get_start_state(int id, uint64_t full_id)
-		{
-			std::lock_guard<SpinLock> guard(states_lock);
-
-			ResourceListState& s = get_state(id).subres[0];
-			return  s.first_state;
-		}
-
-		unsigned int get_end_state(int id, uint64_t full_id)
-		{
-			std::lock_guard<SpinLock> guard(states_lock);
-
-			ResourceListState& s = get_state(id).subres[0];
-			return  s.current_state;
-		}
-
-		unsigned int get_gpu_state()
-		{
-			return gpu_state;
-		}
-
+		/*
 		unsigned int gpu_transition(unsigned int state)
 		{
 			if (gpu_state == state) return ResourceState::UNKNOWN;
@@ -144,83 +125,23 @@ namespace DX12
 			gpu_state = state;
 			return result;
 		}
-
-
+		*/
+		
 		bool is_new(int id, uint64_t full_id) const
 		{
-			std::lock_guard<SpinLock> guard(states_lock);
+			SubResourcesCPU& s = get_state(id);
 
-			//	if (id >= states.size())
-			//		return true;
+			bool result = (s.command_list_id != full_id);
 
-			const ResourceListState& s = get_state(id).subres[0];
+			s.command_list_id = full_id;
 
-			return  (s.last_list_full_id != full_id);
-
+			return  result;
 		}
 
-		/*
-				unsigned int transition(unsigned int state, unsigned int subres, int id, uint64_t full_id) const
-				{
-					return const_cast<ResourceStateManager*>(this)->transition(state, subres, id, full_id);
-				}*/
+		
+		void process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, const Resource* resource, int id, uint64_t full_id);
 
-		unsigned int transition(unsigned int state, unsigned int subres, int id, uint64_t full_id) const
-		{
-			//	assert(id < states.size());
-			std::lock_guard<SpinLock> guard(states_lock);
-
-			auto& states = get_state(id);
-			//	s.subres_used = subres != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-			ResourceListState& s_all = states.subres[0];
-
-			//	if (subres != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
-			{
-				if (s_all.last_list_full_id != full_id)
-				{
-					s_all.last_list_full_id = full_id;
-					s_all.first_state = state;
-					s_all.current_state = state;
-					states.first_subres_state = ResourceState::UNKNOWN;
-				}
-
-				//	s_all.subres_used = true;
-
-			}
-
-			ResourceListState& s = states.subres[subres + 1];
-
-
-
-			if (s.last_list_full_id != full_id)
-			{
-				s.last_list_full_id = full_id;
-				s.first_state = state;
-
-
-				if (subres != D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES && states.first_subres_state == ResourceState::UNKNOWN)
-				{
-					states.first_subres_state = s_all.current_state;
-
-
-				}
-
-				s.current_state = states.first_subres_state;
-				//		return ResourceState::UNKNOWN;
-			}
-
-
-
-			if (s.current_state == state)
-				return  ResourceState::UNKNOWN;
-
-			unsigned int prev_state = s.current_state;
-
-			s.current_state = state;
-			s_all.current_state = state;
-
-			return prev_state;
-		}
+		void transition(std::vector<D3D12_RESOURCE_BARRIER>& target,const  Resource* resource, unsigned int state, unsigned int subres, int id, uint64_t full_id) const;
 
 	};
 
@@ -450,14 +371,14 @@ namespace DX12
 			//	auto& timer = Profiler::get().start(L"set_name");
 			m_Resource->SetName(convert(name).c_str());
 		}
-		CD3DX12_RESOURCE_DESC get_desc() const
+		const CD3DX12_RESOURCE_DESC &get_desc() const
 		{
 			return desc;
 		}
 		using ptr = std::shared_ptr<Resource>;
 	//	Resource::ptr delete_me;
 		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
-		Resource(const ComPtr<ID3D12Resource>& resouce, bool own = false);
+		Resource(const ComPtr<ID3D12Resource>& resouce, ResourceState state, bool own = false);
 		Resource(const ComPtr<ID3D12Resource>& resouce, CommonAllocator::Handle, ResourceState state);
 
 		Resource():TiledResourceManager(m_Resource)
@@ -592,43 +513,6 @@ namespace DX12
 		}
 	};
 
-	enum class ResourceType : int
-	{
-
-		BUFFER,
-		TEXTURE1D,
-		//	TEXTURE1DARRAY,
-		TEXTURE2D,
-		//TEXTURE2DARRAY,
-		TEXTURE3D
-	};
-
-	struct ResourceViewDesc
-	{
-		ResourceType type;
-		DXGI_FORMAT format;
-
-		union
-		{
-			struct
-			{
-
-				UINT PlaneSlice;
-				UINT MipSlice;
-				UINT FirstArraySlice;
-				UINT MipLevels;
-				UINT ArraySize;
-			} Texture2D;
-
-			struct
-			{
-				UINT64 Size;
-				UINT64 Offset;
-				UINT64 Stride;
-			} Buffer;
-
-		};
-	};
 
 
 
@@ -682,12 +566,21 @@ namespace DX12
 
 			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
 			{
-				view_desc.type = ResourceType::TEXTURE2D;
-				view_desc.Texture2D.ArraySize = desc.ArraySize();
-				view_desc.Texture2D.MipSlice = 0;
-				view_desc.Texture2D.FirstArraySlice = 0;
-				view_desc.Texture2D.PlaneSlice = 0;
-				view_desc.Texture2D.MipLevels = desc.MipLevels;
+
+				
+			
+				{
+					view_desc.type = ResourceType::TEXTURE2D;
+					view_desc.Texture2D.ArraySize = desc.ArraySize();
+					view_desc.Texture2D.MipSlice = 0;
+					view_desc.Texture2D.FirstArraySlice = 0;
+					view_desc.Texture2D.PlaneSlice = 0;
+					view_desc.Texture2D.MipLevels = desc.MipLevels;
+				}
+				
+
+
+
 
 			}
 
@@ -695,6 +588,8 @@ namespace DX12
 			{
 				view_desc.type = ResourceType::TEXTURE3D;
 			}
+
+		
 		}
 		void init_views(FrameResources& frame);
 
@@ -723,9 +618,24 @@ namespace DX12
 
 	public:
 		TextureView() = default;
-		TextureView(Resource::ptr resource, FrameResources& frame) :ResourceView(resource)
+		TextureView(Resource::ptr resource, FrameResources& frame, bool cube = false) :ResourceView(resource)
 		{
 			init_desc();
+
+			auto& desc = resource->get_desc();
+
+			if (cube&&desc.ArraySize() % 6 == 0)
+			{
+
+				view_desc.type = ResourceType::CUBE;
+				view_desc.Texture2D.ArraySize = desc.ArraySize() / 6;
+				view_desc.Texture2D.MipSlice = 0;
+				view_desc.Texture2D.FirstArraySlice = 0;
+				view_desc.Texture2D.PlaneSlice = 0;
+				view_desc.Texture2D.MipLevels = desc.MipLevels;
+			}
+
+
 			init_views(frame);
 		}
 
@@ -807,7 +717,7 @@ namespace DX12
 
 		}
 		virtual void place_srv(Handle& h) override;
-		virtual void place_uav(Handle& h) { assert(false); }
+		virtual void place_uav(Handle& h) override;
 		virtual void place_rtv(Handle& h) { assert(false); }
 		virtual void place_dsv(Handle& h) { assert(false); }
 		virtual void place_cb(Handle& h)override;
@@ -863,11 +773,10 @@ public:
 			desc.Buffer.FirstElement = 0;
 
 		}
+		Device::get().create_srv(h, resource.get(), desc);
+	
 
-		*h.resource_ptr = resource.get();
-		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
-
-		assert(*h.resource_ptr == resource.get());
+		
 	}
 
 	virtual void place_uav(Handle & h) { assert(false); }
@@ -880,8 +789,8 @@ public:
 		desc.BufferLocation = resource->get_gpu_address();
 		desc.SizeInBytes = view_desc.Buffer.Size;
 		assert(desc.SizeInBytes < 65536);
-		*h.resource_ptr = resource.get();
-		Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
+
+		Device::get().create_cbv(h, resource.get(), desc);
 	}
 	void write(UINT64 offset, T * data, UINT64 count)
 	{
@@ -925,10 +834,9 @@ public:
 			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(T));
 			desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(T);
 
-		*h.resource_ptr = resource.get();
-		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &desc, h.cpu);
+		Device::get().create_srv(h, resource.get(), desc);
 
-		assert(*h.resource_ptr == resource.get());
+	
 	}
 
 	virtual void place_uav(Handle& h) {
@@ -948,10 +856,9 @@ public:
 		desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(T);
 		desc.Buffer.CounterOffsetInBytes = 0;
 
-		*h.resource_ptr = resource.get();
-		Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), nullptr, &desc, h.cpu);
+		Device::get().create_uav(h, resource.get(), desc);
 
-		assert(*h.resource_ptr == resource.get());
+
 	}
 	virtual void place_rtv(Handle& h) { assert(false); }
 	virtual void place_dsv(Handle& h) { assert(false); }
@@ -962,8 +869,8 @@ public:
 		desc.BufferLocation = resource->get_gpu_address();
 		desc.SizeInBytes = view_desc.Buffer.Size;
 		assert(desc.SizeInBytes < 65536);
-		*h.resource_ptr = resource.get();
-		Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
+
+		Device::get().create_cbv(h, resource.get(), desc);
 	}
 	void write(UINT64 offset, T* data, UINT64 count)
 	{

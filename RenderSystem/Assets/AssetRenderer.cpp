@@ -17,25 +17,20 @@ public:
 		auto size = graph.frame_size;
 
 		{
+
+			
 			struct GBufferData
 			{
-				ResourceHandler* albedo;
-				ResourceHandler* normals;
-				ResourceHandler* depth;
-				ResourceHandler* specular;
-				ResourceHandler* speed;
+				GBufferViewDesc gbuffer;
 
 				ResourceHandler* hiz;
 				ResourceHandler* hiz_uav;
-
 			};
 
 			graph.add_pass<GBufferData>("GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
-				data.albedo = builder.create_texture("GBuffer_Albedo", size, 1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
-				data.normals = builder.create_texture("GBuffer_Normals", size, 1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
-				data.depth = builder.create_texture("GBuffer_Depth", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
-				data.specular = builder.create_texture("GBuffer_Specular", size, 1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
-				data.speed = builder.create_texture("GBuffer_Speed", size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT, ResourceFlags::RenderTarget);
+				data.gbuffer.create(size, builder);
+			//	data.gbuffer.create_mips(size, builder);
+			//	data.gbuffer.create_quality(size, builder);
 
 
 				data.hiz = builder.create_texture("GBuffer_HiZ", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
@@ -53,12 +48,7 @@ public:
 
 					context->cam = graph.cam;
 
-					GBuffer gbuffer;
-					gbuffer.albedo = _context.get_texture(data.albedo);
-					gbuffer.normals = _context.get_texture(data.normals);
-					gbuffer.depth = _context.get_texture(data.depth);
-					gbuffer.specular = _context.get_texture(data.specular);
-					gbuffer.speed = _context.get_texture(data.speed);
+					GBuffer gbuffer = data.gbuffer.actualize(_context);
 
 					gbuffer.rtv_table = RenderTargetTable(context->list->get_graphics(), { gbuffer.albedo, gbuffer.normals, gbuffer.specular, gbuffer.speed }, gbuffer.depth);
 

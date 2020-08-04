@@ -311,6 +311,10 @@
     <None Include="shaders\gather_pipeline.hlsl">
       <Filter>Resources\shaders</Filter>
     </None>
+    <None Include="shaders\voxel_screen_debug.hlsl" />
+    <None Include="shaders\2D_screen_simple.h">
+      <Filter>Resources\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="texture.png" />

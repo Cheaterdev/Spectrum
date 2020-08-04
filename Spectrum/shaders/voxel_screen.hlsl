@@ -1,7 +1,22 @@
 #define SIZE 16
 #define FIX 8
+#include "2D_screen_simple.h"
 
 #include "Common.hlsl"
+#include "autogen/FrameInfo.h"
+#include "autogen/VoxelInfo.h"
+#include "autogen/VoxelScreen.h"
+#include "autogen/VoxelUpscale.h"
+
+static const Camera camera = GetFrameInfo().GetCamera();
+
+static const Camera prevCamera = GetFrameInfo().GetPrevCamera();
+static const VoxelInfo voxel_info = GetVoxelInfo();
+static const GBuffer gbuffer = GetVoxelScreen().GetGbuffer();
+
+
+static const float time =  GetFrameInfo().GetTime();
+
 
 //#define NONE
 //#define SCREEN
@@ -9,76 +24,21 @@
 //#define REFLECTION
 
 #define SCALER 1
-cbuffer cbCamera : register(b0)
-{
-	camera_info camera;
-	camera_info prev_camera;
-};
-  //	#define voxel_min float3(-50,-50,-50)
-	//#define voxel_size float3(100,100,100)
-cbuffer voxel_info : register(b1)
-{
-   //	float3 voxel_min:packoffset(c0);
-	//float3 voxel_size:packoffset(c3);
-	
-	float voxel_min_x;
-	float voxel_min_y;
-	float voxel_min_z;
-	float voxel_size_x;
-	float voxel_size_y;
-	float voxel_size_z;
 
-	float time;
-	
-};
-static const float3 voxel_min=float3(voxel_min_x,voxel_min_y,voxel_min_z);
-static const float3 voxel_size=float3(voxel_size_x,voxel_size_y,voxel_size_z);
+static const float3 voxel_min = voxel_info.GetMin().xyz;
+static const float3 voxel_size= voxel_info.GetSize().xyz;
 
 static const float scaler = voxel_size / 256;
+static const Texture3D<float4> voxels = GetVoxelScreen().GetVoxels();
+static const TextureCube<float4> tex_cube = GetVoxelScreen().GetTex_cube();
+static const Texture2D<float2> speed_tex = GetVoxelScreen().GetGbuffer().GetMotion();
 
-Texture2D<float4> gbuffer[3] : register(t0);
-Texture2D<float> depth_buffer : register(t3);
-Texture3D<float4> brdf : register(t4);
-Texture3D<float4> voxels : register(t0,space1);
 
-SamplerState LinearSampler: register(s0);
-SamplerState PixelSampler : register(s1);
-SamplerState LinearSamplerClamp: register(s2);
+//static const Texture2D<float4> tex_color = GetVoxelScreen().GetTex_color();
+static const Texture2D<float4> tex_gi_prev = GetVoxelUpscale().GetTex_gi_prev();
+static const Texture2D<float> tex_depth_prev = GetVoxelUpscale().GetTex_depth_prev();
+static const Texture2D<float4> tex_downsampled = GetVoxelUpscale().GetTex_downsampled();
 
-TextureCube<float4> tex_cube : register(t0,space2);
-Texture2D<float2> speed_tex : register(t2, space2);
-Texture2D<float4> tex_color : register(t3, space2);
-Texture2D<float4> tex_gi_prev : register(t4, space2);
-Texture2D<float> tex_depth_prev : register(t5, space2);
-
-struct quad_output
-{
-float4 pos : SV_POSITION;
-float2 tc : TEXCOORD0;
-};
-
-quad_output VS(uint index : SV_VERTEXID)
-{
-	static float2 Pos[] =
-	{
-		float2(-1, 1),
-		float2(1, 1),
-		float2(-1, -1),
-		float2(1, -1)
-	};
-	static float2 Tex[] =
-	{
-
-		float2(0, 0),
-		float2(1, 0),
-		float2(0, 1),
-		float2(1, 1),
-	}; 
-	quad_output Output;
-	Output.pos = float4(Pos[index], 0.3, 1);
-	Output.tc = Tex[index];
-	return Output;
-}
 
 
 //#define voxel_min float3(-150,-150,-150)
@@ -86,14 +46,14 @@ quad_output VS(uint index : SV_VERTEXID)
 
 float4 get_voxel(float3 pos, float level)
 {
-float4 color= voxels.SampleLevel(LinearSampler,pos,level);
+	float4 color =  voxels.SampleLevel(linearSampler, pos, level);
 //color.rgb *= 1 + level / 2;
 
 return color;
 }
 float get_alpha(float3 pos, float level)
 {
-return voxels.SampleLevel(LinearSampler,pos,level).a;
+return voxels.SampleLevel(linearSampler,pos,level).a;
 }
 
 float get_start_dist(float3 origin,float3 dir, float minDiameter, float angle)
@@ -135,7 +95,7 @@ float prev_dist=dist;
 
 float3 PrefilterEnvMap(float Roughness, float3 R)
 {
-	return  tex_cube.SampleLevel(LinearSampler, R, Roughness * 5).rgb;
+	return  10*tex_cube.SampleLevel(linearSampler, R, 0*Roughness * 5).rgb;
 }
 
 
@@ -143,7 +103,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R)
 
 float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 {
-	return brdf.SampleLevel(LinearSamplerClamp, float3(Roughness, Metallic, 0.5 + 0.5*NoV), 0);
+	return GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler , float3(Roughness, Metallic, 0.5 + 0.5*NoV), 0);
 }
 
 
@@ -241,7 +201,7 @@ float4 trace(float4 start_color, float3 view, float3 origin,float3 dir,float3 no
 	//accum *= 1.0 / 0.9;
 	float3 sky = get_sky(normal, angle);
 	float sampleWeight = saturate(max_accum - accum.w*SCALER) / max_accum;
-	accum.xyz+= 1*sky * pow(sampleWeight,2);
+	accum.xyz+= 1*sky * pow(sampleWeight,1);
 		
    return accum;// / saturate(accum.w);
 }
@@ -262,51 +222,28 @@ float rnd(float2 uv)
 float4 get_ssgi(float3 pos, float3 normal, float3 dir,float dist, float2 orig_tc)
 {
 
+	return 0;
+	/*
 #define MAX_DIST 0.00001
 #define COUNT 4
 
-
-
-
-	//float2 my_tc = project_tc(pos, camera.view_proj);
-//	float2 new_tc = project_tc(pos + dir, camera.view_proj);
-
-
-	//float2 rdir = normalize(new_tc - my_tc);
-	//float2 direction = MAX_DIST*rdir / COUNT;
-
-
-	//float sini = sin(float(my_tc.x));
-//	float cosi = cos( float(my_tc.y));
-	
-	//float rand2 = 0.5 + 0.5*rnd(float2(cosi, sini));
 	float2 dims;
-	gbuffer[0].GetDimensions(dims.x, dims.y);
+	gbuffer.GetAlbedo().GetDimensions(dims.x, dims.y);
 
 	float4 res = 0;
 	for (int j = 0; j < COUNT; j++)
 	{
 
-
-
-
-
-		//float2 delta_tc = poisson[16*rand*j]/16;// float2(rcos*poisson[j].x - rsin*poisson[j].y, rsin*poisson[j].x + rcos*poisson[j].y);
-
-
-
-	//	float2 tc = my_tc + j*direction;// rand*j*poisson[j] / 120.0f;
-
-		float2 tc = project_tc(pos + dist*dir*(j)/COUNT, camera.view_proj);
+		float2 tc = project_tc(pos + dist*dir*(j)/COUNT, camera.GetViewProj());
 
 		if (all(abs(tc - orig_tc) < 1.0f / dims)) continue;
 
 		float level = 0;// 2 * float(j) / COUNT;// 1 + 2 * float(j) / COUNT;// 3 * float(j) / 16;// length(poisson[j] * 2);// *float(j) / 16;
-		float4 color = tex_color.SampleLevel(PixelSampler, tc, 0);
-		float z = depth_buffer.SampleLevel(PixelSampler, tc, level).x;
-		float3 t_pos = depth_to_wpos(z, float2(tc.xy), camera.inv_view_proj);
+		float4 color = tex_color.SampleLevel(pointClampSampler , tc, 0);
+		float z = gbuffer.GetDepth().SampleLevel(pointClampSampler , tc, level).x;
+		float3 t_pos = depth_to_wpos(z, float2(tc.xy), camera.GetInvViewProj());
 
-		float3 n = normalize(gbuffer[1].SampleLevel(PixelSampler, tc, level).xyz * 2 - 1);
+		float3 n = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler , tc, level).xyz * 2 - 1);
 		float len = length(pos - t_pos);
 
 		float3 delta = (t_pos - pos) / len;
@@ -320,10 +257,7 @@ float4 get_ssgi(float3 pos, float3 normal, float3 dir,float dist, float2 orig_tc
 
 		color.xyz *= w / (len / dist + 1);
 		color.w = s;
-		//color.w = saturate(color.w *114);
-
-		//color.xyz *= color.w;
-
+	
 		float sampleWeight = saturate(1 - res.w);
 		res += color * sampleWeight;
 
@@ -331,18 +265,18 @@ float4 get_ssgi(float3 pos, float3 normal, float3 dir,float dist, float2 orig_tc
 	}
 
 //return 0;
-	return res;
+	return res;*/
 
 }
 float4 get_direction(float3 pos,float v, float3 orig_pos, float3 normal,  float3 dir, float k,float a,float dist, float2 orig_tc)
 {
 	
-	float4 ssgi =  get_ssgi(orig_pos, normal, dir, dist, orig_tc);
+	//float4 ssgi =  get_ssgi(orig_pos, normal, dir, dist, orig_tc);
 //ssgi += 1 * 1 * pow(1-ssgi.w, 2);
 
 //return ssgi;
 
-float4 gi = trace(ssgi,v, pos, dir, normal, a);
+float4 gi = trace(0,v, pos, dir, normal, a);
 	return gi;
 //	return ssgi+gi*(1 - ssgi.w);// // *pow(saturate(dot(normal, dir)), 4);
 }
@@ -373,8 +307,8 @@ float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,floa
 	float3 dir = normalize(Normal + right + tangent);
 	float2 EnvBRDF = IntegrateBRDF(roughness, metallic, dot(Normal,dir));
 
-	Color= 3*EnvBRDF.x*get_direction(Pos+ 2*Normal,V, orig_pos, Normal,normalize(Normal + right + tangent), k, a, length(Pos - camera.position)/20,tc);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
-
+	Color= 1*EnvBRDF.x*get_direction(Pos+ 2*Normal,V, orig_pos, Normal,normalize(Normal + right + tangent), k, a, length(Pos - camera.GetPosition())/20,tc);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
+	//Color = float4(15*get_sky(Normal, 0),1);
 	/*Color += get_direction(Pos, orig_pos, Normal, normalize(Normal + right), k,a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
 	Color += get_direction(Pos, orig_pos, Normal, normalize(Normal - right), k, a);//trace(Pos + k*normalize(Normal - right), normalize(Normal - right), a);
 	Color += get_direction(Pos, orig_pos, Normal, normalize(Normal + tangent), k, a);//trace(Pos + k*normalize(Normal + tangent), normalize(Normal + tangent), a);
@@ -391,14 +325,13 @@ float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,floa
 #include "PBR.hlsl"
 
 
-#define MOVE_SCALER 1
+#define MOVE_SCALER 0.001
 
 struct GI_RESULT
 {
 	float4 screen: SV_Target0;
 	float4 gi: SV_Target1;
 };
-Texture2D<float4> tex_downsampled : register(t1, space2);
 
 [earlydepthstencil]
 GI_RESULT PS(quad_output i)
@@ -412,34 +345,35 @@ GI_RESULT PS(quad_output i)
 	return result;
 #endif
    float2 dims;
-   gbuffer[0].GetDimensions(dims.x, dims.y);
+   gbuffer.GetAlbedo().GetDimensions(dims.x, dims.y);
    int2 tc = i.tc*dims;
    
-	float raw_z = depth_buffer[tc.xy];
-	if (raw_z >= 1) return result;
-	float3 pos = depth_to_wpos(raw_z, i.tc, camera.inv_view_proj);
-	float3 normal = normalize(gbuffer[1][tc].xyz*2-1);
+	float raw_z = gbuffer.GetDepth()[tc.xy];
+	if (raw_z >= 1)
+		return result;
+	float3 pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
+	float3 normal = normalize(gbuffer.GetNormals()[tc].xyz*2-1);
 
-	float4 albedo = gbuffer[0][tc];
+	float4 albedo = gbuffer.GetAlbedo()[tc];
 
 
 	//return  float4(specular.xyz, 1);
 	float3 index = ((pos - (voxel_min)) / voxel_size);
   
-  float3 v = normalize(pos-camera.position);
+  float3 v = normalize(pos-camera.GetPosition());
   float3 r = normalize(reflect(v,normal));
 #ifdef SCREEN
-  result.screen= trace_screen(camera.position, v, 0);
+  result.screen= trace_screen(camera.GetPosition(), v, 0);
 
  return result;
 #endif
-  //return voxels.SampleLevel(LinearSampler,index,0);
+  //return voxels.SampleLevel(linearSampler,index,0);
 	float m = 1*max(max(abs(normal.x),abs(normal.y)),abs(normal.z));
  
 
 	
 	float w = 0.01;
-	float4 res = tex_downsampled.SampleLevel(PixelSampler, i.tc, 0)*w;
+	float4 res =  tex_downsampled.SampleLevel(pointClampSampler, i.tc, 0)* w;
 
 #define R 1
 
@@ -448,12 +382,12 @@ GI_RESULT PS(quad_output i)
 		{
 			float2 t_tc = i.tc + float2(x, y) / dims;
 
-			float t_raw_z = depth_buffer.SampleLevel(PixelSampler, t_tc, 1);
-			float3 t_pos = depth_to_wpos(t_raw_z, t_tc, camera.inv_view_proj);
-			float3 t_normal = normalize(gbuffer[1].SampleLevel(PixelSampler, t_tc, 1).xyz * 2 - 1);
+			float t_raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler , t_tc, 1);
+			float3 t_pos = depth_to_wpos(t_raw_z, t_tc, camera.GetInvViewProj());
+			float3 t_normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler , t_tc, 1).xyz * 2 - 1);
 
 
-			float4 t_gi = tex_downsampled.SampleLevel(PixelSampler, t_tc, 0);
+			float4 t_gi =  tex_downsampled.SampleLevel(pointClampSampler, t_tc, 0);
 
 		
 			float cur_w = saturate(1 - length(t_pos - pos)/2);// 1.0 / (8 * length(t_pos - pos) + 0.1);
@@ -476,20 +410,19 @@ GI_RESULT PS(quad_output i)
 
 
 
-
-  float2 delta = speed_tex.SampleLevel(PixelSampler, i.tc, 0).xy;
+  float2 delta = speed_tex.SampleLevel(pointClampSampler , i.tc, 0).xy;
 
   float2 prev_tc = i.tc - delta;
-  float4 prev_gi = tex_gi_prev.SampleLevel(LinearSampler, prev_tc, 0);
-  float prev_z = tex_depth_prev.SampleLevel(LinearSampler, prev_tc, 0);
+  float4 prev_gi = tex_gi_prev.SampleLevel(linearClampSampler, i.tc, 0);
+  float prev_z = tex_depth_prev.SampleLevel(linearClampSampler, prev_tc, 0);
 
 
 
-  float3 prev_pos = depth_to_wpos(prev_z, prev_tc, prev_camera.inv_view_proj);
+  float3 prev_pos = depth_to_wpos(prev_z, prev_tc, prevCamera.GetInvViewProj());
 
-  float l = length(pos - prev_pos)*MOVE_SCALER;
-  gi = lerp(gi, prev_gi, saturate(0.95 - l));
-
+  float l =  length(pos - prev_pos)* MOVE_SCALER;
+  gi =  lerp(gi, prev_gi, saturate(0.95 - l));
+  
 
   result.gi = gi;
 #ifdef INDIRECT
@@ -500,7 +433,7 @@ GI_RESULT PS(quad_output i)
 // return gi;
   //specular.w = pow(specular.w, 1);
 
- float  roughness = pow(gbuffer[1][tc].w,1);
+ float  roughness = pow(gbuffer.GetNormals()[tc].w,1);
  float metallic = albedo.w;// specular.w;
   //float fresnel = calc_fresnel(1- roughness, normal, v);
 
@@ -515,41 +448,39 @@ GI_RESULT PS(quad_output i)
 #endif
 
 
- result.screen = 1 * tex_color[tc] + albedo*gi;// float4(PBR(gi, reflection, albedo, normal, v, 0.2, roughness, metallic), 1);
+ result.screen = albedo * gi;// *tex_color[tc] + albedo * gi;// float4(PBR(gi, reflection, albedo, normal, v, 0.2, roughness, metallic), 1);
+
+ result.screen.w = 1;
  return result;
 //	
 	}
 
 	float4 PS_Low(quad_output i) : SV_Target0
 	{
+	
 #ifdef NONE
 		return 0;
 #endif
-		float2 dims;
-	gbuffer[0].GetDimensions(dims.x, dims.y);
+	float2 dims;
+	gbuffer.GetAlbedo().GetDimensions(dims.x, dims.y);
+
 	int2 tc = i.tc*dims;
 
-	float raw_z = depth_buffer[tc.xy];
+	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, i.tc, 1);
 	if (raw_z >= 1) return 0;
-	float3 pos = depth_to_wpos(raw_z, i.tc, camera.inv_view_proj);
-	float3 normal = normalize(gbuffer[1][tc].xyz * 2 - 1);
 
-	float4 albedo = gbuffer[0][tc];
+	float3 pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
+	float3 normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, i.tc, 1).xyz * 2 - 1);
+	float4 albedo = gbuffer.GetAlbedo().SampleLevel(pointClampSampler, i.tc, 0);
 
-	//return  float4(specular.xyz, 1);
-	float3 index = ((pos - (voxel_min)) / voxel_size);
 
-	float3 v = normalize(pos - camera.position);
+	float3 v = normalize(pos -camera.GetPosition());
 	float3 r = normalize(reflect(v,normal));
 
-
-	//return voxels.SampleLevel(LinearSampler,index,0);
 	float m = 1 * max(max(abs(normal.x),abs(normal.y)),abs(normal.z));
-	float4 gi = max(0,getGI(i.tc, pos, pos + scaler*normal / m,normal,v,r, gbuffer[1][tc].w, albedo.w));
+	float4 gi = max(0, getGI(i.tc, pos, pos + scaler * normal / m, normal, v, r, gbuffer.GetNormals()[tc].w, albedo.w));
 
-//	return 1;
 	return  gi;
-	
 	}
 
 
@@ -557,35 +488,37 @@ GI_RESULT PS(quad_output i)
 [earlydepthstencil]
 GI_RESULT PS_Resize(quad_output i) : SV_Target0
 	{
+	
 #ifdef NONE
 		return 0;
 #endif
 
 
-		float2 dims;
-	gbuffer[0].GetDimensions(dims.x, dims.y);
+	float2 dims;
+	gbuffer.GetAlbedo().GetDimensions(dims.x, dims.y);
+
 	int2 tc = i.tc*dims;
 
-	float4 albedo = gbuffer[0][tc];
+	float4 albedo = gbuffer.GetAlbedo()[tc];
 
-	float raw_z = depth_buffer[tc.xy];
+	float raw_z = gbuffer.GetDepth()[tc.xy];
 	if (raw_z >= 1) {
 		GI_RESULT result;
 
 	result.screen =0;
-		result.gi = 0;
+		result.gi = 1;
 		return  result;
 	}
-	float3 pos = depth_to_wpos(raw_z, i.tc, camera.inv_view_proj);
-	float3 normal = normalize(gbuffer[1][tc].xyz * 2 - 1);
+	float3 pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
+	float3 normal = normalize(gbuffer.GetNormals()[tc].xyz * 2 - 1);
 
-	float  roughness = pow(gbuffer[1][tc].w, 1);
+	float  roughness = pow(gbuffer.GetNormals()[tc].w, 1);
 	float metallic = albedo.w;// specular.w;
 
 //	return roughness;
 	float m = 1 * max(max(abs(normal.x), abs(normal.y)), abs(normal.z));
 
-	float3 v = normalize(pos - camera.position);
+	float3 v = normalize(pos - camera.GetPosition());
 
 	float3 r = normalize(reflect(v, normal));
 
@@ -593,8 +526,8 @@ GI_RESULT PS_Resize(quad_output i) : SV_Target0
 
 	GI_RESULT result;
 
-	result.screen = trace_screen(camera.position, v, 0);
-	result.gi = 0;
+	result.screen = trace_screen(camera.GetPosition(), v, 0);
+	result.gi =1;
 	return  result;
 #endif
 	float angle = roughness ;
@@ -611,27 +544,18 @@ GI_RESULT PS_Resize(quad_output i) : SV_Target0
 #endif
 
 	
-	float4 gi = tex_downsampled.SampleLevel(LinearSampler, i.tc, 0);
-
-
-
-
-
-
-	float2 delta = speed_tex.SampleLevel(PixelSampler, i.tc, 0).xy;
+	float4 gi = tex_downsampled.SampleLevel(pointClampSampler, i.tc, 0);
+	float2 delta = speed_tex.SampleLevel(pointClampSampler , i.tc, 0).xy;
 
 	float2 prev_tc = i.tc - delta;
-	float4 prev_gi = tex_gi_prev.SampleLevel(LinearSampler, prev_tc, 0);
-	float prev_z = tex_depth_prev.SampleLevel(LinearSampler, prev_tc, 0);
+
+	float4 prev_gi = tex_gi_prev.SampleLevel(linearClampSampler, prev_tc, 0);
+	float prev_z =  tex_depth_prev.SampleLevel(linearClampSampler, prev_tc, 0);
+	float3 prev_pos = depth_to_wpos(prev_z, prev_tc, prevCamera.GetInvViewProj());
 
 
-
-	float3 prev_pos = depth_to_wpos(prev_z, prev_tc, prev_camera.inv_view_proj);
-
-
-
-	float dist = length(pos - camera.position) / 100;
-	float l = length(pos - prev_pos) / dist;
+	float dist = length(pos - camera.GetPosition()) * MOVE_SCALER;
+	float l =  length(pos - prev_pos) / dist;
 
 	gi =  lerp(gi, prev_gi, saturate(0.95 - l));
 
@@ -642,12 +566,13 @@ GI_RESULT PS_Resize(quad_output i) : SV_Target0
 	result.gi = gi;
 	return  result;
 #endif
-//	return gi;
 
 
 	GI_RESULT res;
-	res.screen = 1 * tex_color[tc] + albedo*gi;// float4(PBR(gi, 0, albedo, normal, v, 0.2, roughness, metallic), 1);
+	res.screen = albedo * gi;// *tex_color[tc] + albedo * gi;// float4(PBR(gi, 0, albedo, normal, v, 0.2, roughness, metallic), 1);
 	res.gi =  gi;
+
+	res.screen.w = 1;
 	return  res;
 
 	}

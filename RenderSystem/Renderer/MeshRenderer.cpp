@@ -16,7 +16,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	bool current_cpu_culling = use_cpu_culling && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
 	mesh_render_context->transformer = transformer;
 
-	Render::PipelineStateDesc default_pipeline = mesh_render_context->pipeline;
+	Render::PipelineStateDesc &default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
@@ -32,14 +32,9 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		default_pipeline.geometry = voxel_geometry_shader;
 		default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
 		default_pipeline.rtv.enable_depth = false;
-		graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+		default_pipeline.rasterizer.conservative = GetAsyncKeyState('B');
 
-
-		voxel_info.voxel_min = { mesh_render_context->voxel_min,5 };
-		voxel_info.voxel_size = { mesh_render_context->voxel_size,6 };
-		voxel_info.voxel_map_size = { mesh_render_context->voxel_target_size ,0 };// ivec3(512, 512, 512);
-		voxel_info.voxel_tiles_count = ivec4(mesh_render_context->voxel_tiles_count, 0);// ivec3(512, 512, 512);
-		voxel_info.voxels_per_tile = ivec4(mesh_render_context->voxels_per_tile, 0);// ivec3(512, 512, 512);
+		scene->voxelization_compiled.set(graphics);
 	}
 
 	mesh_render_context->pipeline = default_pipeline;
@@ -56,6 +51,10 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		auto camera = frameInfo.MapCamera();
 		camera.cb = mesh_render_context->cam->camera_cb.current;
 	
+		auto prev = frameInfo.MapPrevCamera();
+		prev.cb = mesh_render_context->cam->camera_cb.prev;
+
+
 		if (best_fit_normals)
 		{
 			frameInfo.GetBestFitNormals() = best_fit_normals->get_texture()->texture_2d()->get_static_srv();
@@ -65,7 +64,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	}
 
 
-	UINT meshes_count = scene->command_ids.size();
+	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	
@@ -96,18 +95,18 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		compiledFrame.set(graphics);
 
 
-		init_dispatch(mesh_render_context, scene->compiledGather);
+		init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 
 		if (!gbuffer)
 		{
-			render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather, compiledFrame,  true);
+			render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], compiledFrame, (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
 			return;
 		}
 
 		{
 
 			auto timer = list.start(L"first stage");
-			generate_boxes(mesh_render_context, scene, scene->compiledGather, true);
+			generate_boxes(mesh_render_context, scene, scene->compiledGather[(int)mesh_render_context->render_mesh], true);
 
 			draw_boxes(mesh_render_context, scene, compiledFrame);
 			gather_rendered_boxes(mesh_render_context, scene, compiledFrame, true);
@@ -159,7 +158,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
 	auto& list = *mesh_render_context->list;
-	UINT meshes_count = scene->command_ids.size();
+	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	if (invisibleToo)
@@ -177,7 +176,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 
 		compiledScene.set(compute);
 		compiledFrame.set(compute);
-		scene->compiledGather.set(compute);
+		scene->compiledGather[(int)mesh_render_context->render_mesh].set(compute);
 		gather_neshes_boxes_compiled.set(compute);
 
 		graphics.execute_indirect(
@@ -202,7 +201,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
 	auto& list = *mesh_render_context->list;
-	UINT meshes_count = scene->command_ids.size();
+	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	{
@@ -238,7 +237,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	auto& list = *mesh_render_context->list;
 
 	GBuffer* gbuffer = mesh_render_context->g_buffer;
-	UINT meshes_count = scene->command_ids.size();
+	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	gbuffer->HalfBuffer.hiZ_table.set(graphics);
@@ -270,7 +269,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 	auto& copy = mesh_render_context->list->get_copy();
 	auto& list = *mesh_render_context->list;
 
-	UINT meshes_count = scene->command_ids.size();
+	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
 	Slots::GatherPipeline gather;
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
@@ -358,6 +357,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 				compiledScene.set(graphics);
 				compiledFrame.set(graphics);
+				scene->voxelization_compiled.set(graphics);
 
 				{
 					auto timer = list.start(L"execute_indirect");
@@ -377,7 +377,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		}
 	}
 }
-void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(Scene::ptr&)> f)
+void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)
 {
 
 }
@@ -611,80 +611,4 @@ mesh_renderer::mesh_renderer()
 		gather_boxes_compiled = gather.compile(StaticCompiledGPUData::get());
 	}
 }
-
-
-
-
-
-DynamicSizeUAVBuffer::DynamicSizeUAVBuffer()
-{
-	clear_buffer = std::make_shared<Render::GPUBuffer>(sizeof(UINT));
-	clear_buffer->set_data(UINT(0));
-	handles = Render::DescriptorHeapManager::get().get_csu_static()->create_table(command_buffers.size());
-	//   handles[1] = Render::DescriptorHeapManager::get().get_csu_static()->create_table(command_buffers.size());
-	null_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
-
-	D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
-	desc.Format = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
-	desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2D;
-	desc.Texture2D.PlaneSlice = 0;
-	desc.Texture2D.MipSlice = 0;
-
-	Device::get().get_native_device()->CreateUnorderedAccessView(nullptr, nullptr, &desc, null_uav[0].cpu);
-
-
-	for (UINT i = 0; i < command_buffers.size(); i++)
-	{
-		handles[i].place(null_uav[0]);
-	}
-
-
-}
-
-
-void DynamicSizeUAVBuffer::start_write(Render::CommandList& list, int binded_count)
-{
-	{
-		//    auto timer = graphics.start(L"preparing buffers");
-	//	for (int i = 0; i < binded_count; i++)
-	//		list.transition(command_buffers[i]->help_buffer, Render::ResourceState::COPY_DEST);
-
-
-		for (int i = 0; i < binded_count; i++)
-			list.transition(command_buffers[i]->help_buffer, Render::ResourceState::UNORDERED_ACCESS);
-
-		for (int i = 0; i < binded_count; i++)
-			list.transition(command_buffers[i], Render::ResourceState::UNORDERED_ACCESS);
-
-
-		for (int i = 0; i < binded_count; i++)
-		{
-			list.clear_counter(command_buffers[i]);
-			//	list.copy_buffer(command_buffers[i].get(), command_buffers[i]->get_counter_offset(), clear_buffer.get(), 0, 4);
-		}
-
-	}
-}
-
-Render::HandleTable DynamicSizeUAVBuffer::get_handles()
-{
-	return handles;
-}
-void DynamicSizeUAVBuffer::start_indirect(Render::CommandList& list, int binded_count)
-{
-	{
-
-		for (int i = 0; i < binded_count; i++)
-			list.transition(command_buffers[i]->help_buffer, Render::ResourceState::INDIRECT_ARGUMENT);
-
-		for (int i = 0; i < binded_count; i++)
-			list.transition(command_buffers[i], Render::ResourceState::INDIRECT_ARGUMENT);
-
-
-		//     auto timer = graphics.start(L"preparing buffers 2");
-	}
-}
-
-
-
 

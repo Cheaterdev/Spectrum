@@ -1,16 +1,16 @@
 
+#include "autogen/EnvSource.h"
+#include "autogen/EnvFilter.h"
+
+static const uint EnvMapSize = GetEnvFilter().GetSize().x;
+static const float roughness = GetEnvFilter().GetScaler().x;
+
 struct quad_output
 {
 float4 pos : SV_POSITION;
 float3 tc: TEXCOORD0;
 };
-cbuffer p: register(b0)
-{
-    uint face_index : packoffset(c0);
-    float roughness : packoffset(c0.y);
-	uint EnvMapSize : packoffset(c0.z);
-//const	uint NumSamples : packoffset(c0.w);
-};
+
 #ifdef BUILD_FUNC_VS
 
 
@@ -40,14 +40,10 @@ quad_output VS(uint index : SV_VERTEXID)
 {
     quad_output Output;
     Output.pos = float4(Pos[index], 0.99999, 1);
-    Output.tc = normalize(mul(mats[face_index], float3(Pos[index], 1)));
+    Output.tc = normalize(mul(mats[GetEnvFilter().GetFace().x], float3(Pos[index], 1)));
     return Output;
 }
 #endif
-
-TextureCube tex_cube: register(t0);
-SamplerState LinearSampler: register(s0);
-//SamplerState PixelSampler : register(s1);
 
 #include "Common.hlsl"
 
@@ -91,7 +87,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R)
 				int fMipLevel = clamp(0.5 * log2(fOmegaS / fOmegaP)+1, 0, 9);
 
 			//	PrefilteredColor += EnvMap.SampleLevel(EnvMapSampler, L, 0).rgb * NoL;
-				PrefilteredColor += tex_cube.SampleLevel(LinearSampler, L, fMipLevel).rgb * NoL;
+				PrefilteredColor += GetEnvSource().GetSourceTex().SampleLevel(linearSampler, L, fMipLevel).rgb * NoL;
 				TotalWeight += NoL;
 			}
 		}
@@ -110,9 +106,9 @@ float4 PS(quad_output i) : SV_TARGET0
 {
 
 	float3 itc = normalize(i.tc);
-//	return float4(float(roughness).xxx ,1);
+	//return float4(itc,1);
 	
-	return float4(PrefilterEnvMap(roughness,itc),1);
+	return GetEnvSource().GetSourceTex().SampleLevel(linearSampler, itc, 1) ;// float4(PrefilterEnvMap(roughness, itc), 1);
 
 }
 
@@ -162,7 +158,7 @@ float3 PrefilterDiffuse(float Roughness, float3 R)
 			int fMipLevel = clamp(0.5 * log2(fOmegaS / fOmegaP) + 1, 0, 9);
 
 			//	PrefilteredColor += EnvMap.SampleLevel(EnvMapSampler, L, 0).rgb * NoL;
-			PrefilteredColor += tex_cube.SampleLevel(LinearSampler, L, fMipLevel).rgb * NoL;
+			PrefilteredColor += GetEnvSource().GetSourceTex().SampleLevel(linearSampler, L, fMipLevel).rgb * NoL;
 			TotalWeight += NoL;
 		}
 	}
@@ -181,63 +177,5 @@ float4 PS_Diffuse(quad_output i) : SV_TARGET0
 		return float4(PrefilterDiffuse(1,itc),1);
 
 }
-
-
-/*
-float4 PS(quad_output i) : SV_TARGET0
-{
-
-    float3 itc = normalize(i.tc);
-
-	// float4(textureAVG(itc),1);
-
-
-
-    float3x3 vecSpace = matrixFromVector(itc);
-
-    float3 result = 0;
-    static const int samples = 256;
-
-    for (int i = 0; i < samples; i++)
-    {
-        float sini = sin(float(i));
-        float cosi = cos(float(i));
-        float rand = rnd(float2(sini, cosi));
-        float3 t = hemisphereSample_cos(float2(float(i) / float(samples), rand), vecSpace, itc,(1-0.8*float(mip)/8));
-
-		//float3 t = hemisphereSample_phong(float2(float(i) / float(samples), rand), vecSpace, itc, 512);
-        result += tex_cube.SampleLevel(LinearSampler, t, 0);
-    }
-
-
-    return float4(result / samples, 1);
-
-}*/
-
-
-
-/*
-float4 PS(quad_output i) : SV_TARGET0
-{
-	float2 dims;
-tex_cube.GetDimensions(dims.x, dims.y);
-	float3 itc = normalize(i.tc);
-
-	float3 result = 0;
-	int samples = 0;
-
-	static const int R =8;
-
-
-	for(int x=-R;x<=R;x++)
-		for (int y = -R; y <= R; y++)
-			for (int z = -R; z <= R; z++)
-			{
-				result+= tex_cube.SampleLevel(LinearSampler, itc +float3(x,y,z)/ dims.x*pow(1.57,mip-1), 0);
-				samples++;
-			}
-	return float4(result / samples, 1);
-
-}*/
 
 #endif

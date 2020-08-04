@@ -25,7 +25,7 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
 
 		void downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to);
 
-	//	void generate_quality(Render::GraphicsContext& context, camera* cam, G_Buffer& buffer);
+		void generate_quality(Render::GraphicsContext& context, camera* cam, GBuffer& buffer, TextureView tempColor);
 		void write_to_depth(Render::GraphicsContext& list, Render::TextureView from, Render::TextureView to);
 
 

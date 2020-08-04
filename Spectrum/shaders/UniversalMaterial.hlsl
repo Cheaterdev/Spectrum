@@ -39,68 +39,7 @@ float4 normals : SV_TARGET1;
 float4 specular : SV_TARGET2; 
     float2 speed : SV_TARGET3;
 };
-/*
-cbuffer cbMaterials : register(b2)
-{
-    uint texture_offset;
-	uint  node_offset;
-};*/
-#define _voxel_min float3(-50,-50,-50)
-#define _voxel_size float3(100,100,100) 
-/*
-cbuffer Dims : register(b3)
-{
-    float voxel_min_x;
-    float voxel_min_y;
-    float voxel_min_z;
-    float voxel_size_x;
-    float voxel_size_y;
-    float voxel_size_z; 
 
-	
-	int voxel_mape_x; 
-	int voxel_mape_y;
-	int voxel_mape_z;*
-	int voxel_map;
-};
-static const float3 voxel_min=float3(voxel_min_x,voxel_min_y,voxel_min_z);
-static const float3 voxel_size=float3(voxel_size_x,voxel_size_y,voxel_size_z);*/
-//static const int3 voxel_map_size = float3(voxel_mape_x, voxel_mape_y, voxel_mape_z);
-
-
-struct voxel_info_struct 
-{
-	float4 voxel_min;
-	float4 voxel_size;
-	int4 voxel_map_size; 
-	int4 voxel_tiles_count;
-	int4 voxels_per_tile; 
-};/*
-cbuffer Dims : register(b3) 
-{
-	voxel_info_struct st
-};
-*/
-/*
-cbuffer cbVoxels : register(b3)
-{
-	voxel_info_struct voxel_info;
-};
-*/
-//ConstantBuffer<voxel_info_struct> voxel_info: register(b3);
-
-/*
-Texture2D textures[] : register(t0); 
-RWByteAddressBuffer visibility[] : register(u0);  
-RWTexture3D<float4> voxel_tex[2] : register(u0,space1);
-RWByteAddressBuffer voxel_visibility: register(u2, space1);
-
-SamplerState LinearSampler : register(s0);
-SamplerState PointSampler : register(s1); 
- 
-SamplerState Sampler : register(s2);
-Texture2D best_fit_normals : register(t0,space1);
-*/
 
 half3 compress_normals(inout half3 vNormal) 
 {
@@ -176,7 +115,7 @@ PS_RESULT universal(vertex_output i, float4 albedo, float metallic,float roughne
     float2 cur_p = float2(0.5, 0.5) + float2(0.5, -0.5)*(i.cur_pos.xy / i.cur_pos.w);
     float2 prev_p = float2(0.5,0.5) + float2(0.5, -0.5)*(i.prev_pos.xy / i.prev_pos.w);
 	   
-    result.speed = 0;// (cur_p - prev_p);// +float2(-1, 1) *(camera.jitter - prev_camera.jitter);
+    result.speed = (cur_p - prev_p);// +float2(-1, 1) *(camera.jitter - prev_camera.jitter);
     return result;       
 }    
 
@@ -197,25 +136,31 @@ PS_RESULT PS(vertex_output i)
    
 #ifdef BUILD_FUNC_PS_VOXEL
 
+#include "autogen/Voxelization.h"
+
+static const VoxelInfo voxel_info = GetVoxelization().GetInfo();
+
+static const RWTexture3D<float4> volume_albedo = GetVoxelization().GetAlbedo();
+static const RWTexture3D<float4> volume_normals = GetVoxelization().GetNormals();
+static const RWByteAddressBuffer visibility = GetVoxelization().GetVisibility();
 
 void universal_voxel(vertex_output i, float4 albedo, float metallic, float roughness, float4 bump)
 {   
  //   clip(albedo.w - 0.5);
   
-    uint3 index = floor(voxel_info.voxel_map_size.xyz * ((i.wpos.xyz - (voxel_info.voxel_min.xyz)) / voxel_info.voxel_size.xyz)+0.5);
-//	uint3 index = 512 * ((i.wpos.xyz - (-150)) /300); 
-	  
-    voxel_tex[0][index] = float4(albedo.xyz*(1-metallic), 1);
-    voxel_tex[1][index] = float4(i.normal*0.5+0.5, 1); 
-	
-#ifndef VOXEL_DYNAMIC 
-	index /= voxel_info.voxels_per_tile.xyz;// uint3(32, 16, 16);
-	 
+    uint3 index = floor(voxel_info.GetVoxels_per_tile().xyz * voxel_info.GetVoxel_tiles_count().xyz*((i.wpos.xyz - voxel_info.GetMin().xyz) / voxel_info.GetSize().xyz));
 
-	int3 cell_size = voxel_info.voxel_tiles_count.xyz;// voxel_info.voxel_map_size.xyz / int3(32, 16, 16);
-	int offset = 4 * (index.x+ cell_size.x*(index.y+ cell_size.y*index.z)); 
-	voxel_visibility.Store4(offset, 0);
+        volume_albedo[index] = float4(albedo.xyz * (1 - metallic), 1);
+        volume_normals[index] = float4(i.normal*0.5+0.5, 1);
+
+#ifndef VOXEL_DYNAMIC 
+        index /= voxel_info.GetVoxels_per_tile().xyz;
+
+        uint3 cell_size = voxel_info.GetVoxel_tiles_count().xyz;
+        int offset = 4 * (index.x + cell_size.x * (index.y + cell_size.y * index.z));
+        visibility.Store(offset, 0);
 #endif
+    
 }
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f);
 void PS_VOXEL(vertex_output i)

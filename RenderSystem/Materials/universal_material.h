@@ -171,7 +171,7 @@ namespace materials
 					passes[PASS_TYPE::DEFERRED].ds_shader = Render::domain_shader::create_from_memory(tess, "DS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
 
 				}
-				/*
+				
 				if (!voxel.empty()) {
 					auto macros = context->get_voxel_result().macros;
 					passes[PASS_TYPE::VOXEL_STATIC].ps_shader = Render::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
@@ -179,7 +179,7 @@ namespace materials
 					macros.emplace_back("VOXEL_DYNAMIC", "1");
 					passes[PASS_TYPE::VOXEL_DYNAMIC].ps_shader = Render::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
 				}
-				*/
+				
 				pip = std::make_shared<PipelinePasses>(pipelines.size(), passes);
 				pip->hash = hash;
 			}

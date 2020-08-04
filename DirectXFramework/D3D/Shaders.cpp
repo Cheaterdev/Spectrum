@@ -235,6 +235,7 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 	static std::mutex m;
 	std::lock_guard<std::mutex> g(m);
 	std::vector<std::wstring> vdefines;
+	std::vector<LPCWSTR> vargs;
 
 	std::vector<DxcDefine> defines;
 
@@ -268,13 +269,14 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 	IDxcOperationResult* result;
 
 
+	vargs.push_back(L"-no-warnings");
 	hr = compiler->Compile(
 		pSource,          // program text
 		convert(file_name).c_str(),   // file name, mostly for error messages
 		convert(entry_point).c_str(),          // entry point function
 		convert(target).c_str(),        // target profile
-		nullptr,           // compilation arguments
-		0, // number of compilation arguments
+		vargs.data(),           // compilation arguments
+		vargs.size(), // number of compilation arguments
 		defines.data(), (UINT)defines.size(),    // name/value defines and their count
 		&dxil_include,          // handler for #include directives
 		&result);

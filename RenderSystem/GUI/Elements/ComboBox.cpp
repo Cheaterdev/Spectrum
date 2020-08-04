@@ -2,7 +2,7 @@
 
 bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
 {
-    base::on_mouse_action(action, button, pos);
+    button::on_mouse_action(action, button, pos);
 
     if (action == mouse_action::UP)
     {

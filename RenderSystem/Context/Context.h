@@ -123,14 +123,14 @@ struct MeshRenderContext
 
         std::shared_ptr<materials::Pipeline> overrided_pipeline;
 
-        MaterialProvider* mat_provider;
+        MaterialProvider* mat_provider = nullptr;
 
         Render::PipelineStateDesc pipeline;
 		std::shared_ptr<Render::OVRContext> eye_context;
 	
         Render::CommandList::ptr list;
         std::shared_ptr<vertex_transform> transformer;
-        camera* cam;
+        camera* cam = nullptr;
         RENDER_TYPE render_type = RENDER_TYPE::PIXEL;
 		MESH_TYPE render_mesh = MESH_TYPE::ALL;
        TaskPriority priority = TaskPriority::NORMAL;
@@ -138,7 +138,7 @@ struct MeshRenderContext
         size_t current_time = 0;
        // Render::Handle set_4_table;
 		vec2 screen_subsample = {0,0};
-        GBuffer* g_buffer;
+        GBuffer* g_buffer = nullptr;
         /*    void set_materials(std::vector<std::shared_ptr<materials::material>>& m)
             {
                 if (!override_material)
@@ -146,14 +146,14 @@ struct MeshRenderContext
             }*/
 
         Render::Texture::ptr target_tex;
-        Render::HandleTable voxel_target;
-        vec3 voxel_min;
-        vec3 voxel_size;
-		ivec3 voxel_target_size;
-		ivec3 voxel_tiles_count;
-		ivec3 voxels_per_tile;
+      //  Render::HandleTable voxel_target;
+
+    
 		vec3 sky_dir;
-  
+        MeshRenderContext()
+        {
+            pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
+  }
         void begin()
         {
             list->get_graphics().set_signature(pipeline.root_signature);
@@ -281,19 +281,20 @@ class RenderTargetTable
 
         void clear_depth(MeshRenderContext::ptr& context, float value = 1)
         {
-            if (depth_texture)
-                context->list->get_native_list()->ClearDepthStencilView(dsv_table[0].cpu, D3D12_CLEAR_FLAG_DEPTH, value, 0, 0, nullptr);
+			if (depth_texture)
+                context->list->clear_depth(dsv_table[0], value);
         }
         void clear_stencil(Render::GraphicsContext& list, UINT8 stencil = 0)
         {
-            if (depth_texture)
-                list.get_native_list()->ClearDepthStencilView(dsv_table[0].cpu,  D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
+			if (depth_texture)
+                list.get_base().clear_stencil(dsv_table[0], stencil);
         }
 
         void clear_depth(Render::GraphicsContext& list, float value = 1)
         {
+
             if (depth_texture)
-                list.get_native_list()->ClearDepthStencilView(dsv_table[0].cpu, D3D12_CLEAR_FLAG_DEPTH, value, 0, 0, nullptr);
+                list.get_base().clear_depth(dsv_table[0], value);
         }
         RenderTargetTable() {}
 
@@ -346,29 +347,21 @@ class RenderTargetTable
 		{
 
             auto& list = graphics.get_base();
-      /*
-            for (auto& tex : textures)
-			{
-				list.transition(tex.resource, Render::ResourceState::RENDER_TARGET);
-			}
-
-            list.transition(depth_texture.resource, Render::ResourceState::DEPTH_WRITE);
-            */
-
-            if (clear_color)
-            {
-                for (auto& tex : textures)
-                    list.clear_rtv(tex.get_rtv());
-            }
-
-
-            if (clear_depth&& depth_texture)
-            {
-				if (depth_texture)
-                    list.get_native_list()->ClearDepthStencilView(dsv_table[0].cpu, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-            }
 
             graphics.set_rtv(rtv_table, dsv_table.valid()?dsv_table[0]:Render::Handle());
+
+			if (clear_color)
+			{
+				for (auto& tex : textures)
+					list.clear_rtv(tex.get_rtv());
+			}
+
+
+			if (clear_depth && depth_texture)
+			{
+				if (depth_texture)
+					list.clear_depth(dsv_table[0], 1);
+			}
         }
 };
 
@@ -382,12 +375,111 @@ public:
 	Render::TextureView specular;
 	Render::TextureView speed;
 
+
+	Render::TextureView quality;
+	Render::TextureView depth_mips;
+	Render::TextureView depth_prev_mips;
+
 	RenderTargetTable rtv_table;
 
 
-    struct {
+	struct {
 		Render::TextureView hiZ_depth, hiZ_depth_uav;
 		RenderTargetTable hiZ_table;
-    }HalfBuffer;
+	}HalfBuffer;
+
+
+	void SetTable(Table::GBuffer& table)
+	{
+		table.GetAlbedo() = albedo.get_srv();
+		table.GetNormals() = normals.get_srv();
+		table.GetSpecular() = specular.get_srv();
+		table.GetDepth() = depth_mips.get_srv();
+        table.GetMotion() = speed.get_srv();
+	}
+
+
 };
 
+
+
+class GBufferViewDesc
+{
+
+	ResourceHandler* albedo = nullptr;
+	ResourceHandler* normals = nullptr;
+	ResourceHandler* depth = nullptr;
+	ResourceHandler* specular = nullptr;
+	ResourceHandler* motion = nullptr;
+
+	ResourceHandler* quality = nullptr;
+	ResourceHandler* depth_mips = nullptr;
+
+	ResourceHandler* depth_prev = nullptr;
+
+public:
+
+	void create(ivec2 size, TaskBuilder& builder)
+	{
+		albedo = builder.create_texture("GBuffer_Albedo", size, 1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
+		normals = builder.create_texture("GBuffer_Normals", size, 1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
+		depth = builder.create_texture("GBuffer_Depth", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
+		specular = builder.create_texture("GBuffer_Specular", size, 1, DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM, ResourceFlags::RenderTarget);
+		motion = builder.create_texture("GBuffer_Speed", size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT, ResourceFlags::RenderTarget);
+
+
+        depth_mips = builder.create_texture("GBuffer_DepthMips", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+        depth_prev = builder.create_texture("GBuffer_DepthPrev", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::PixelRead| ResourceFlags::Static);
+	}
+	void create_quality(ivec2 size, TaskBuilder& builder)
+	{
+		quality = builder.create_texture("GBuffer_Quality", size, 1, DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT_S8X24_UINT, ResourceFlags::DepthStencil);
+	}
+   
+	void create_mips(ivec2 size, TaskBuilder& builder)
+	{
+       
+	}
+
+
+	auto create_temp_color(ivec2 size, TaskBuilder& builder)
+	{
+		return builder.create_texture("GBuffer_TempColor", size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM, ResourceFlags::RenderTarget);
+	}
+
+    void need(TaskBuilder& builder, bool need_quality = false, bool need_mips = false)
+	{
+		albedo = builder.need_texture("GBuffer_Albedo", ResourceFlags::PixelRead);
+		normals = builder.need_texture("GBuffer_Normals", ResourceFlags::PixelRead);
+		depth = builder.need_texture("GBuffer_Depth", ResourceFlags::PixelRead);
+		specular = builder.need_texture("GBuffer_Specular", ResourceFlags::PixelRead);
+		motion = builder.need_texture("GBuffer_Speed", ResourceFlags::PixelRead);
+
+        depth_prev = builder.need_texture("GBuffer_DepthPrev", ResourceFlags::PixelRead);
+        if(need_quality) quality = builder.need_texture("GBuffer_Quality", ResourceFlags::DepthStencil);
+		depth_mips = builder.need_texture("GBuffer_DepthMips", ResourceFlags::None);
+
+	}
+
+
+
+ 
+	GBuffer actualize(FrameContext& context)
+	{
+		GBuffer result;
+
+		result.albedo = context.get_texture(albedo);
+		result.normals = context.get_texture(normals);
+		result.depth = context.get_texture(depth);
+		result.specular = context.get_texture(specular);
+		result.speed = context.get_texture(motion);
+
+
+		result.depth_prev_mips = context.get_texture(depth_prev);
+
+        if(quality)	result.quality = context.get_texture(quality);
+		if (depth_mips)	result.depth_mips = context.get_texture(depth_mips);
+
+		return result;
+	}
+};

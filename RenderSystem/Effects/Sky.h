@@ -1,7 +1,7 @@
 #pragma once
 
-/*
-class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>
+
+class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraphGenerator
 {
 
 	Render::PipelineState::ptr states[5];
@@ -11,12 +11,12 @@ public:
 
 	CubeMapEnviromentProcessor();
 
-	void process(MeshRenderContext::ptr& context, Render::Texture::ptr cubemap, Render::Texture::ptr cubemap_result);
-	void process_diffuse(MeshRenderContext::ptr& context, Render::Texture::ptr cubemap, Render::Texture::ptr cubemap_result);
+	virtual void generate(FrameGraph& graph) override;
+	//void process(MeshRenderContext::ptr& context, Render::Texture::ptr cubemap, Render::Texture::ptr cubemap_result);
+	//void process_diffuse(MeshRenderContext::ptr& context, Render::Texture::ptr cubemap, Render::Texture::ptr cubemap_result);
 };
 
 
-*/
 /*
 class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>
 {
@@ -71,12 +71,6 @@ context->list->transition(cubemap.get(), Render::ResourceState::RENDER_TARGET, R
 };
 */
 
-struct Enviroment
-{
-	Render::Texture::ptr prefiltered_cubemap;
-	Render::Texture::ptr prefiltered_cubemap_diffuse;
-};
-
 class SkyRender :public Events::prop_handler, public FrameGraphGenerator
 {
 	Render::PipelineState::ptr state;
@@ -89,11 +83,6 @@ class SkyRender :public Events::prop_handler, public FrameGraphGenerator
 	bool processed = false;
 public:
 	using ptr = std::shared_ptr<SkyRender>;
-	Render::Texture::ptr cubemap;
-	Enviroment enviroment;
-
-	float3 dir = { 0,0,1 };
-
 
 	SkyRender();
 

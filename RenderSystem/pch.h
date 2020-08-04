@@ -120,11 +120,12 @@
 #include "Effects/PostProcess/SSR.h"
 #include "Effects/PostProcess/SSGI.h"
 #include "Effects/PostProcess/SMAA.h"
+*/
 
 #include "Effects/VoxelGI/VoxelGI.h"
 
 
-*/
+
 
 #include "Lighting/BRDF.h"
 namespace EngineAssets

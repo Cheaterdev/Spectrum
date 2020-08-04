@@ -32,7 +32,7 @@ namespace DX12
 	{
 		executed = false;
 		id = Device::get().id_generator.get();
-		static uint64_t _global_id = 0;
+		static atomic_uint64_t _global_id ;
 		global_id = _global_id++;
 
 		//       Log::get() << "begin" << Log::endl;
@@ -99,15 +99,12 @@ namespace DX12
 
 	void GraphicsContext::on_execute()
 	{
-		//descriptor_manager_graphics.reset();
-	//	rtv_descriptors.reset();
-		//dsv_descriptors.reset();
+
 	}
 
 	void ComputeContext::on_execute()
 	{
-		//descriptor_manager_compute.reset();
-	
+
 	}
 
 	void Sendable::on_done(std::function<void()> f)
@@ -156,7 +153,6 @@ namespace DX12
 		{
 			base.get_native_list()->SetGraphicsRootSignature(s->get_native().Get());
 			current_root_signature = s;
-			descriptor_manager_graphics.parse(current_root_signature);
 		}
 	}
 
@@ -196,14 +192,6 @@ namespace DX12
 		list->SetGraphicsRootConstantBufferView(i, table);
 	}
 
-	void  GraphicsContext::set(UINT i, std::vector<Handle>& table)
-	{
-		descriptor_manager_graphics.bind_table(i, table);
-	}
-	void  ComputeContext::set(UINT i, std::vector<Handle>& table)
-	{
-		descriptor_manager_compute.bind_table(i, table);
-	}
 	void GraphicsContext::set_rtv(const HandleTable& table, Handle h)
 	{
 		set_rtv(table.get_count(), table.get_base(), h);
@@ -218,11 +206,11 @@ namespace DX12
 
 		for (int i = 0; i < c; i++)
 		{
-			get_base().transition(rt.resource_ptr[i], ResourceState::RENDER_TARGET);
+			get_base().transition_rtv(&rt.resource_info[i]);
 		}
 
 		if(h.is_valid())
-			get_base().transition(*h.resource_ptr, ResourceState::DEPTH_WRITE);
+			get_base().transition_dsv(h.resource_info);
 
 		get_base().flush_transitions();
 		list->OMSetRenderTargets(c, &rt.cpu, true, h.is_valid() ? &h.cpu : nullptr);
@@ -231,12 +219,6 @@ namespace DX12
 
 	void GraphicsContext::flush_binds(bool force)
 	{
-		if(use_dynamic)
-		descriptor_manager_graphics.bind(&base, [this](int i, Handle t)
-		{
-			set(i, t);
-		});
-
 		base.flush_heaps(force);
 	}
 	void GraphicsContext::draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset)
@@ -338,9 +320,9 @@ namespace DX12
 
 		assert(desc.SizeInBytes < 65536);
 		Handle h = list.frame_resources->srv_uav_cbv_cpu.place();
-		*h.resource_ptr = resource.get();
 
-		Device::get().get_native_device()->CreateConstantBufferView(&desc, h.cpu);
+		Device::get().create_cbv(h, resource.get(), desc);
+
 		return h;
 	}
 	Uploader::UploadInfo Uploader::place_data(UINT64 uploadBufferSize, unsigned int alignment)
@@ -640,16 +622,10 @@ namespace DX12
 
 	void Transitions::flush_transitions()
 	{
-		if (transition_count > 0)
+		if (!transitions.empty())
 		{
-		/*	for (int i = 0; i < transition_count; i++)
-			{
-				if (transitions[i].Transition.StateBefore == 0xCDCDCDCD) 
-					assert(false);
-
-			}*/
-			m_commandList->ResourceBarrier(transition_count, transitions.data());
-			transition_count = 0;
+			m_commandList->ResourceBarrier(transitions.size(), transitions.data());
+			transitions.clear();
 		}
 	}
 	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
@@ -663,27 +639,9 @@ namespace DX12
 
 		for (auto &r : used_resources)
 		{
-			auto gpu_state = r->get_gpu_state();
-			auto cpu_state = r->get_start_state(id,global_id);
 
-			
-			if (cpu_state != gpu_state)
-			{
-				if(r->get_native().Get())
-				result.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(r->get_native().Get(),
-					static_cast<D3D12_RESOURCE_STATES>(gpu_state),
-					static_cast<D3D12_RESOURCE_STATES>(cpu_state),
-					D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES));
+			r->process_transitions(result,r, id, global_id);
 
-			//	if(r->debug)
-			//	Log::get() << "transition " << r->name << " from " << gpu_state << " to " << cpu_state << Log::endl;
-			//	assert(!(cpu_state&D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-			///	assert(!(gpu_state &D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-			//	assert(!(r->get_end_state(id, global_id)&D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER));
-
-			}
-
-			r->assume_gpu_state(r->get_end_state(id, global_id));
 		}
 
 		if (result.size())
@@ -720,44 +678,36 @@ namespace DX12
 
 		if (resource->is_new(id, global_id))
 		{
+		//	assert(std::find(used_resources.begin(), used_resources.end(), resource) == used_resources.end());
+
 			used_resources.emplace_back(const_cast<Resource*>(resource));
+			//assert(!resource->is_new(id, global_id));
+
 		}
 	
-		auto prev_state = resource->transition(to, subres, id, global_id);
-		if (prev_state == ResourceState::UNKNOWN) return;
+		 resource->transition(transitions, resource, to, subres, id, global_id);
 
-		assert(resource->get_native().Get());
-		transitions[transition_count++] = CD3DX12_RESOURCE_BARRIER::Transition(resource->get_native().Get(),
-			static_cast<D3D12_RESOURCE_STATES>(prev_state),
-			static_cast<D3D12_RESOURCE_STATES>(to),
-			subres);
-	
-
-/*		{
-			if (transitions[transition_count - 1].Type == transitions[i].Type)
-				if (transitions[transition_count - 1].Transition.pResource == transitions[i].Transition.pResource)
-					if (transitions[transition_count - 1].Transition.Subresource == transitions[i].Transition.Subresource)
-						assert(false);
-
-		}*/
-		if (transition_count == transitions.size())
-			flush_transitions();
+	//	if (transition_count == transitions.size())
+		//	flush_transitions();
 	}
 
 	void Transitions::transition(Resource* from, Resource* to)
 	{
-		transitions[transition_count++] = CD3DX12_RESOURCE_BARRIER::Aliasing(from?from->get_native().Get():nullptr, to->get_native().Get());
+		transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from?from->get_native().Get():nullptr, to->get_native().Get()));
 
-		if (transition_count == transitions.size())
-			flush_transitions();
+
+	//	get_native_list()->DiscardResource(to->get_native().Get(),nullptr);
+	//	if(to->gpu_state.subres[0].state)
+	//	if (transition_count == transitions.size())
+	//		flush_transitions();
 	}
 
 	void Transitions::transition_uav(Resource* resource)
 	{
-		transitions[transition_count++] = CD3DX12_RESOURCE_BARRIER::UAV(resource->get_native().Get());
+		transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_native().Get()));
 
-		if (transition_count == transitions.size())
-			flush_transitions();
+	//	if (transition_count == transitions.size())
+	//		flush_transitions();
 	}
 
 	void CopyContext::copy_buffer(Resource* dest, int s_dest, Resource* source, int s_source, int size)
@@ -793,8 +743,8 @@ namespace DX12
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
 	{
 		if (base.type != CommandListType::COPY) {
-		base.transition(source, Render::ResourceState::COPY_SOURCE);
-		base.transition(dest, Render::ResourceState::COPY_DEST);
+		base.transition(source, Render::ResourceState::COPY_SOURCE, source_subres);
+		base.transition(dest, Render::ResourceState::COPY_DEST, dest_subres);
 	}
 		base.flush_transitions();
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_native().Get(), dest_subres);
@@ -924,7 +874,6 @@ namespace DX12
 		{
 			current_compute_root_signature = s;
 			list->SetComputeRootSignature(s->get_native().Get());
-			descriptor_manager_compute.parse(current_compute_root_signature);
 		}
 	}
 void ComputeContext::dispach(int x,int y,int z)
@@ -959,25 +908,6 @@ void ComputeContext::dispach(int x,int y,int z)
 		set_table(i, table);
 	}
 
-	void  ComputeContext::set_dynamic(UINT i, UINT offset, const Handle& table)
-	{
-		descriptor_manager_compute.set(i, offset, table);
-	}
-
-	void  GraphicsContext::set_dynamic(UINT i, UINT offset, const Handle& table)
-	{
-		descriptor_manager_graphics.set(i, offset, table);
-	}
-
-	void  GraphicsContext::set_dynamic(UINT i, UINT offset, const HandleTable& table)
-	{
-		descriptor_manager_graphics.set(i, offset, table);
-	}
-
-	void  ComputeContext::set_dynamic(UINT i, UINT offset, const HandleTable& table)
-	{
-		descriptor_manager_compute.set(i, offset, table);
-	}
 
 	/*  void  ComputeContext::set(UINT i, const Handle& table)
 	  {
@@ -1165,12 +1095,6 @@ void ComputeContext::dispach(int x,int y,int z)
 
 	void ComputeContext::flush_binds(bool force)
 	{
-		if (use_dynamic)
-		descriptor_manager_compute.bind(&base, [this](int i, Handle t)
-		{
-			set_table(i, t);
-		});
-
 		base.flush_heaps(force);
 	}
 	void GraphicsContext::execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
@@ -1224,7 +1148,6 @@ void ComputeContext::dispach(int x,int y,int z)
 
 	void Transitions::reset()
 	{
-		transition_count = 0;
 		used_resources.clear();
 	}
 	void Uploader::reset()

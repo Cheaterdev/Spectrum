@@ -4,7 +4,7 @@
 
 class GBufferDownsampler;
 
-class VoxelGI :public Events::prop_handler
+class VoxelGI :public Events::prop_handler, public FrameGraphGenerator
 {
 public:
 
@@ -40,6 +40,7 @@ private:
 	Render::ComputePipelineState::ptr lighting_state_second_bounce;
 
 	//Render::PipelineState::ptr resize_state;
+	Render::PipelineState::ptr voxel_debug_state;
 
 
 	Render::HandleTable uav_table;
@@ -67,23 +68,22 @@ private:
 	int all_scene_regen_counter = 0;
 
 	bool need_start_new = false;
-
+	int gi_index = 0;
 	void init_states();
 	int light_counter = 0;
 
-	G_Buffer& buffer;
 
 //	PlacedAllocator allocator;
 	
 	HandleTable gi_rtv;
-	ReflectionEffectPixel reflection_effect;
+	//ReflectionEffectPixel reflection_effect;
 
 	struct EyeData:public prop_handler
 	{
 		PlacedAllocator allocator;
 
-		TextureSwapper gi_textures;
-		TextureSwapper downsampled_light;
+		//TextureSwapper gi_textures;
+		//TextureSwapper downsampled_light;
 		Render::Texture::ptr downsampled_reflection;
 		Render::Texture::ptr current_gi_texture;
 
@@ -113,13 +113,18 @@ public:
 	void resize(ivec2 size);
 	void start_new();
 
-	VoxelGI(Scene::ptr& scene, G_Buffer& buffer);
-	void voxelize(MeshRenderContext::ptr& context, main_renderer::ptr r);
-	void generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm, Enviroment enviroment);
+	VoxelGI(Scene::ptr& scene);
+	void voxelize(MeshRenderContext::ptr& context, main_renderer* r);
+	void generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm);
 
-	void lighting(MeshRenderContext::ptr& context, PSSM& pssm, Render::CubemapArrayView::ptr skymap);
-	void mipmapping(MeshRenderContext::ptr& context);
-	void screen(MeshRenderContext::ptr& context, scene_object::ptr scene, Render::CubemapArrayView::ptr skymap);
-	void screen_reflection(MeshRenderContext::ptr& context, scene_object::ptr scene, Render::CubemapArrayView::ptr skymap);
+	void lighting(FrameGraph& graph);
+	void mipmapping(FrameGraph& graph);
+	void screen(FrameGraph& graph);
+	void screen_reflection(FrameGraph& graph);
+
+
+	virtual void generate(FrameGraph& graph) override;
+	virtual void voxelize(FrameGraph& graph) ;
+	virtual void debug(FrameGraph& graph);
 
 };

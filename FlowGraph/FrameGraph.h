@@ -19,7 +19,10 @@ enum ResourceFlags{
 	ReadCPU = 64,
 
 	Temporal = 0,
-	Static = 128
+	Static = 128,
+
+
+	Cube = 256
 };
 
 inline int operator&(const ResourceFlags& a, const ResourceFlags& b)
@@ -50,7 +53,7 @@ struct ResourceAllocInfo;
 struct ResourceHandler
 {
 
-private:
+	public:
 	friend struct TaskBuilder;
 	friend struct FrameContext;
 	ResourceAllocInfo* info;
@@ -221,6 +224,8 @@ struct CreationContext
 	main_renderer* renderer;
 	Scene* scene;
 
+	float time;
+	float3 sunDir;
 };
 
 class FrameGraph: public CreationContext

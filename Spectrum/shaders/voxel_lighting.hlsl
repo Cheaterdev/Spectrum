@@ -12,46 +12,60 @@
 //
 #include "Common.hlsl"
 
-RWTexture3D<float4> output : register(u0);
-Texture3D<float4> tex_albedo : register(t0);
-Texture3D<float4> tex_normals : register(t1);
-Texture3D<float4> tex_lower : register(t2);
 
-SamplerState BilinearClamp : register(s0);
-SamplerComparisonState cmp_sampler: register(s1);
-SamplerState LinearSamplerClamp : register(s2);
+//#include "autogen/FrameInfo.h"
+#include "autogen/VoxelInfo.h"
+#include "autogen/VoxelLighting.h"
 
+static const VoxelInfo voxel_info = GetVoxelInfo();
+static const RWTexture3D<float4> output = GetVoxelLighting().GetOutput();
+static const Texture3D<float4> tex_albedo = GetVoxelLighting().GetAlbedo();
+static const Texture3D<float4> tex_normals = GetVoxelLighting().GetNormals();
+static const Texture3D<float4> tex_lower = GetVoxelLighting().GetLower();
+static const TextureCube<float4> tex_cube = GetVoxelLighting().GetTex_cube();
+
+static const StructuredBuffer<int3> voxel_visibility = GetVoxelLighting().GetVisibility();
+
+
+static const float3 voxel_min = voxel_info.GetMin().xyz;
+static const float3 voxel_size = voxel_info.GetSize().xyz;
+static const uint3  voxels_per_tile = voxel_info.GetVoxels_per_tile().xyz;
+
+static const float scaler = voxel_size / 256;
+
+
+
+static const uint group_count = GetVoxelLighting().GetGroupCount();
+//SamplerState BilinearClamp : register(s0);
+//SamplerComparisonState cmp_sampler: register(s1);
+//SamplerState linearClampSampler : register(s2);
+static const Camera light_cam = GetVoxelLighting().GetPssmGlobal().GetLight_camera()[0];
+static const float3 dir = -normalize(light_cam.GetDirection().xyz);
 #define SINGLE_SAMPLE
 
-//#include "PSSM_impl.hlsl"
-
-Texture2D<float> light_buffer: register(t4);
-StructuredBuffer<camera_info> light_cameras : register(t5);
 
 float get_shadow(float3 wpos)
 {
-	uint4 shadow_dims = uint4(512, 512, 512, 512);
-	light_buffer.GetDimensions(shadow_dims.x, shadow_dims.y);
+	//uint4 shadow_dims = uint4(512, 512, 512, 512);
+//	GetVoxelLighting().GetPssmGlobal().GetLight_buffer().GetDimensions(shadow_dims.x, shadow_dims.y);
+
+
 	int level =0 ;
-	camera_info light_cam = light_cameras[level];
-	float4 pos_l = mul(light_cam.view_proj, float4(wpos , 1));
-	pos_l.z -= 0.001 * pow(2, level);
+	float4 pos_l = mul(light_cam.GetViewProj(), float4(wpos , 1));
+	pos_l.z -= 0.0001 * pow(2, level);
 	pos_l /= pos_l.w;
 	float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
-	float shadow = light_buffer.SampleCmpLevelZero(cmp_sampler, float3(light_tc, level), pos_l.z);
+	//float shadow = GetVoxelLighting().GetLight_buffer().SampleCmpLevelZero(cmp_sampler, float3(light_tc, level), pos_l.z);
+	float shadow = GetVoxelLighting().GetPssmGlobal().GetLight_buffer().SampleLevel(linearSampler, float2(light_tc), level) >  pos_l.z;
 
-	if (pos_l.z < 0 || pos_l.x > 1 || pos_l.x < -1 || pos_l.y > 1 || pos_l.y < -1)
-		shadow = 1;
+//	if (pos_l.z < 0 || pos_l.x > 1 || pos_l.x < -1 || pos_l.y > 1 || pos_l.y < -1)
+	//	shadow = 1;
 
 	return shadow;
 }
 
 
-
-
-TextureCube<float4> tex_cube : register(t6);
-StructuredBuffer<int3> voxel_visibility: register(t7);
 
 
 
@@ -65,7 +79,7 @@ float4 get_sky(float3 dir, float level)
 	int l1 = l0 + 1;
 
 
-	return tex_cube.SampleLevel(BilinearClamp, float4(dir, l0), 0);
+	return tex_cube.SampleLevel(linearSampler, float4(dir, l0), 0);
 
 
 }
@@ -74,12 +88,12 @@ float4 get_sky(float3 dir, float level)
 
 float4 get_voxel(float3 pos, float level)
 {
-return tex_lower.SampleLevel(BilinearClamp,pos,level);
+return tex_lower.SampleLevel(linearClampSampler,pos,level);
 }
 
 float get_shadow_voxel(float3 pos)
 {
-return tex_albedo.SampleLevel(BilinearClamp,pos,0).w>0;
+return tex_albedo.SampleLevel(linearClampSampler,pos,0).w>0;
 }
 
 float trace_shadow(float3 origin,float3 dir)
@@ -132,7 +146,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
     float maxDist = 1;
     float dist = minDiameter;
 
-    while (dist <= maxDist && accum.w < 0.6 && all(samplePos <= 1) && all(samplePos >= 0))
+    while (dist <= maxDist && accum.w < 0.5 && all(samplePos <= 1) && all(samplePos >= 0))
     {
 	    float sampleDiameter = max(minDiameter, angle * dist);
     
@@ -146,9 +160,9 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 //	accum.xyz *= angle_coeff;
 
-	//float4 sky = get_sky(dir,angle);
- // float sampleWeight = saturate(1 - accum.w*2);
-   //  accum += sky * pow(sampleWeight,1);
+	float4 sky = 14*get_sky(dir,angle);
+  float sampleWeight = saturate(1 - accum.w*1.5);
+     accum += sky * pow(sampleWeight,1);
 
 		return accum;
 	
@@ -197,7 +211,7 @@ cbuffer CB : register(b0)
 
 //#define voxel_min float3(-150,-150,-150)
 //#define voxel_size float3(300,300,300)
-
+/*
 cbuffer consts:register(b0)
 {
 	float3 dir; 
@@ -210,18 +224,14 @@ cbuffer consts:register(b0)
 	
 };
 
+*/
 
-
-static const float scaler = voxel_size / 512;
-
-//static const float3 voxel_min=float3(voxel_min_x,voxel_min_y,voxel_min_z);
-//static const float3 voxel_size=float3(voxel_size_x,voxel_size_y,voxel_size_z);
 
 uint3 get_index( uint3 groupThreadID,	uint3 groupID   )
 {
-	
-	uint3 tile_index = voxel_visibility[groupID.x/voxels_per_tile.w];
-	int tile_local_index = groupID.x%voxels_per_tile.w;
+	 
+	uint3 tile_index = voxel_visibility[groupID.x/ group_count];
+	int tile_local_index = groupID.x% group_count;
 	uint3 index = tile_index*voxels_per_tile.xyz + groupThreadID + 4 * int3(tile_local_index % 8, (tile_local_index / 8) % 4, tile_local_index / (4 * 8));//groupID*4+groupThreadID;
 	return index;
 
@@ -239,7 +249,7 @@ uint3 index = get_index(groupThreadID, groupID);
    float3 dims;
    output.GetDimensions(dims.x, dims.y, dims.z);
    
-	if(any(index>dims)||any(index<0)) return;
+	//if(any(index>dims)||any(index<0)) return;
 	
 	float4 albedo = tex_albedo[index];//SrcMip.SampleLevel(BilinearClamp,2*index/dims,0);
 	
@@ -266,10 +276,10 @@ uint3 index = get_index(groupThreadID, groupID);
 	float3 pos = index*voxel_size/dims+voxel_min+ scaler*normals/m;
 	
 //	float traced_shadow = (1-trace_shadow((index+1*normals)/dims,dir));
-	float shadow = saturate(dot(normals,dir))*get_shadow(pos);
+	float shadow = saturate(dot(normals, dir)) *get_shadow(pos);
 	
 	
-	float3 lighting =albedo.xyz*gi.xyz + 1 * albedo.xyz*shadow;//saturate(dot(normals,float3(0,1,0)));
+	float3 lighting = albedo.xyz *gi.xyz + 1 * albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
 //	output[index] = float4(albedo.xyz,albedo.w);
 	//lighting = traced_shadow.xxx	;
 	output[index] = float4(lighting,1);

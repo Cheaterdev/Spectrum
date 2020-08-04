@@ -1,24 +1,12 @@
 #define SIZE 16
 #define FIX 8
+#include "2D_screen_simple.h"
 
-struct camera_info
-{
-    matrix view;
-    matrix proj;
-    matrix view_proj;
-    matrix inv_view;
-    matrix inv_proj;
-    matrix inv_view_proj;
-    float3 position;
-    float3 direction;
-};
+#include "autogen/FrameInfo.h"
+#include "autogen/GBufferDownsample.h"
 
-
-cbuffer cbCamera : register(b0)
-{
-    camera_info camera;
-};
-
+static const Camera camera = GetFrameInfo().GetCamera();
+static const GBufferDownsample gbuffer = GetGBufferDownsample();
 
 float3 depth_to_wpos(float d, float2 tc, matrix mat)
 {
@@ -32,41 +20,10 @@ float3 depth_to_wpos_center(float d, float2 tc, matrix mat)
     return P.xyz / P.w;
 }
 
-Texture2D<float> depth_tex : register(t0);
-Texture2D<float4> normal_tex: register(t1);
 
-SamplerState LinearSampler: register(s0);
-SamplerState PixelSampler : register(s1);
+static const Texture2D<float> depth_tex = gbuffer.GetDepth();
+static const Texture2D<float4> normal_tex = gbuffer.GetNormals();
 
-
-struct quad_output
-{
-float4 pos : SV_POSITION;
-float2 tc : TEXCOORD0;
-};
-
-quad_output VS(uint index : SV_VERTEXID)
-{
-    static float2 Pos[] =
-    {
-        float2(-1, 1),
-        float2(1, 1),
-        float2(-1, -1),
-        float2(1, -1)
-    };
-    static float2 Tex[] =
-    {
-
-        float2(0, 0),
-        float2(1, 0),
-        float2(0, 1),
-        float2(1, 1),
-    };
-    quad_output Output;
-    Output.pos = float4(Pos[index], 0.3, 1);
-    Output.tc = Tex[index];
-    return Output;
-}
 
 struct PS_RESULT
 {

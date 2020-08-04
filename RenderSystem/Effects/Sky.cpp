@@ -1,19 +1,6 @@
 #include "pch.h"
 
 
-template <class T>
-struct CubeEnvSignature : public T
-{
-	using T::T;
-
-	typename T::template Constants		<0, Render::ShaderVisibility::ALL, 0, 4>									constants = this;
-	typename T::template Table			<1, Render::ShaderVisibility::PIXEL, Render::DescriptorRange::SRV, 0, 1>	source_tex = this;
-
-	typename T::template Sampler<0, Render::ShaderVisibility::PIXEL, 0> linear{ Render::Samplers::SamplerLinearWrapDesc, this };
-
-
-};
-
 
 
 SkyRender::SkyRender()
@@ -50,20 +37,6 @@ SkyRender::SkyRender()
 	transmittance = Render::Texture::get_resource({ "textures\\Transmit.dds", false, false });
 	irradiance = Render::Texture::get_resource({ "textures\\irradianceTexture.dds", false, false });
 	inscatter = Render::Texture::get_resource({ "textures\\inscatterTexture.dds", false, false });
-
-	cubemap.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, 256, 256,
-		6, 0, 1, 0,
-		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET |
-		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
-
-	enviroment.prefiltered_cubemap.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(
-		DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, 256, 256, 6, 6, 1, 0,
-		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
-
-	enviroment.prefiltered_cubemap_diffuse.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(
-		DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, 64, 64, 6, 1, 1, 0,
-		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
-
 }
 
 
@@ -76,12 +49,17 @@ void SkyRender::generate(FrameGraph& graph)
 		ResourceHandler* depth;
 
 		ResourceHandler* target_tex;
+
+
+		ResourceHandler* sky_cubemap;
+	
+
 	};
 
 	graph.add_pass<SkyData>("Sky", [this, &graph](SkyData& data, TaskBuilder& builder) {
 		data.depth = builder.need_texture("GBuffer_Depth", ResourceFlags::PixelRead);
 		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
-
+		data.sky_cubemap = builder.create_texture("sky_cubemap", ivec2(256, 256),6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget| ResourceFlags::Cube);
 		}, [this, &graph](SkyData& data, FrameContext& _context) {
 			auto depth = _context.get_texture(data.depth);
 
@@ -91,7 +69,7 @@ void SkyRender::generate(FrameGraph& graph)
 
 			auto& graphics = list.get_graphics();
 
-
+			auto sky_cubemap = _context.get_texture(data.sky_cubemap);
 
 
 			graphics.set_pipeline(state);
@@ -114,7 +92,7 @@ void SkyRender::generate(FrameGraph& graph)
 
 				data.GetDepthBuffer() = depth.get_srv();
 
-				data.GetSunDir() = { 0,1,0 };
+				data.GetSunDir() = graph.sunDir;
 
 				data.set(graphics);
 
@@ -131,77 +109,53 @@ void SkyRender::generate(FrameGraph& graph)
 			graphics.use_dynamic = false;
 			graphics.draw(4);
 
+
+
+			{
+				
+				graphics.set_viewport(sky_cubemap.get_viewport());
+				graphics.set_scissor(sky_cubemap.get_scissor());
+				graphics.set_pipeline(cubemap_state);
+
+
+				for (unsigned int i = 0; i < 6; i++)
+				{
+					Render::ResourceViewDesc subres;
+					subres.type = Render::ResourceType::TEXTURE2D;
+
+					subres.Texture2D.ArraySize = 1;
+					subres.Texture2D.FirstArraySlice = i;
+					subres.Texture2D.MipLevels = 1;
+					subres.Texture2D.MipSlice = 0;
+					subres.Texture2D.PlaneSlice = 0;
+
+					auto face = sky_cubemap.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+
+
+					Slots::SkyFace skyFace;
+
+					skyFace.GetFace() = i;
+
+					skyFace.set(graphics);
+
+					graphics.set_rtv(1, face.get_rtv(), Render::Handle());
+
+					graphics.draw(4);
+				}
+			}
+
+
 		});
 
 
 
 
+	CubeMapEnviromentProcessor::get().generate(graph);
+
 }
+
 /*
 
-void SkyRender::process(MeshRenderContext::ptr& context)
-{
-	auto timer = context->list->start(L"sky");
-
-	auto& list = *context->list;
-	auto& graphics = context->list->get_graphics();
-
-	graphics.set_pipeline(state);
-
-
-
-	//SkySignature<Signature> shader_data(&graphics);
-
-	shader_data.constants.set(context->sky_dir.x, context->sky_dir.y, context->sky_dir.z);
-	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-
-	for (auto& e : context->eye_context->eyes)
-	{
-		auto g_buffer = e.g_buffer;
-		auto cam = e.cam;
-		list.transition(g_buffer->result_tex.first(), Render::ResourceState::RENDER_TARGET);
-	}
-
-	for (auto& e : context->eye_context->eyes)
-	{
-		auto g_buffer = e.g_buffer;
-		auto cam = e.cam;
-
-		auto& view = g_buffer->result_tex.first()->texture_2d();
-		graphics.set_viewport(view->get_viewport());
-		graphics.set_scissor(view->get_scissor());
-		graphics.set_rtv(1, view->get_rtv(), Render::Handle());
-
-		{
-			Slots::SkyData data;
-
-			data.GetInscatter() = inscatter->texture_3d()->get_static_srv();
-			data.GetIrradiance() = irradiance->texture_2d()->get_static_srv();
-			data.GetTransmittance() = transmittance->texture_3d()->get_static_srv();
-
-			data.GetDepthBuffer() = g_buffer->depth->get_srv();
-
-			data.GetSkyDir() = context->sky_dir;
-
-			data.set(graphics);
-
-		}
-		{
-			Slots::FrameInfo frameInfo;
-
-			auto camera = frameInfo.MapCamera();
-			memcpy(&camera.cb, &cam->get_raw_cb().current, sizeof(camera.cb));
-			frameInfo.set(graphics);
-		}
-
-
-	//	shader_data.depth_buffer[0] = g_buffer->depth_tex->texture_2d()->get_static_srv();
-	//	shader_data.camera_data =  cam->get_const_buffer();
-		graphics.draw(4);
-	}
-}*/
-/*
 void SkyRender::update_cubemap(MeshRenderContext::ptr& context)
 {
 	auto timer = context->list->start(L"cubemap");
@@ -251,12 +205,12 @@ void SkyRender::update_cubemap(MeshRenderContext::ptr& context)
 }
 */
 
-/*
+
 CubeMapEnviromentProcessor::CubeMapEnviromentProcessor()
 {
 	Render::PipelineStateDesc state_desc;
 	Render::RootSignatureDesc root_desc;
-	state_desc.root_signature= CubeEnvSignature<SignatureCreator>().create_root();
+	state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
 
 	state_desc.vertex = Render::vertex_shader::get_resource({"shaders\\cubemap_down.hlsl", "VS", 0, {}});
 	state_desc.rtv.rtv_formats.resize(1);
@@ -276,44 +230,119 @@ CubeMapEnviromentProcessor::CubeMapEnviromentProcessor()
 	state_diffuse.reset(new Render::PipelineState(state_desc));
 }
 
-void CubeMapEnviromentProcessor::process(MeshRenderContext::ptr& context, Render::Texture::ptr cubemap,
-										 Render::Texture::ptr cubemap_result)
+void CubeMapEnviromentProcessor::generate(FrameGraph &graph)
 {
-	auto& list = context->list->get_graphics();
 
-
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-	context->list->transition(cubemap.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
-	context->list->transition(cubemap_result.get(), Render::ResourceState::RENDER_TARGET);
-
-
-	//MipMapGenerator::get().generate(context->list->get_compute(), cubemap);
-	//	for (unsigned int i = 0; i < 6; i++)
-	//context->list->transition(cubemap.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE, D3D12CalcSubresource(0, i, 0, cubemap->get_desc().MipLevels, cubemap->get_desc().ArraySize()));
-	list.set_signature(states[0]->desc.root_signature);
-	CubeEnvSignature<Signature> shader_data(&context->list->get_graphics());
-
-	shader_data.source_tex[0] = cubemap->cubemap()->get_srv();
-
-	auto& view = cubemap_result->cubemap();
-
-	for (unsigned int m = 0; m < cubemap_result->get_desc().MipLevels; m++)
+	struct EnvData
 	{
-		list.set_pipeline(states[std::min(m, 4u)]);
-		list.set_viewport(view->get_viewport(m));
-		list.set_scissor(view->get_scissor(m));
 
-		for (unsigned int i = 0; i < 6; i++)
-		{
-			context->list->get_graphics().set_rtv(1, view->get_rtv(i, m), Render::Handle());
-			shader_data.constants.set(i, (float(m) + 0.5f) / cubemap->get_desc().MipLevels,
-														(unsigned int)cubemap->get_desc().Width);
-			list.draw(4);
-		}
-	}
+		ResourceHandler* sky_cubemap;
+
+		ResourceHandler* sky_cubemap_filtered;
+		ResourceHandler* sky_cubemap_filtered_diffuse;
+
+	};
+
+	graph.add_pass<EnvData>("CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
+		data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
+
+		data.sky_cubemap_filtered = builder.create_texture("sky_cubemap_filtered", ivec2(64, 64), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Cube);
+		data.sky_cubemap_filtered_diffuse = builder.create_texture("sky_cubemap_filtered_diffuse", ivec2(64, 64), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Cube);
+
+
+		}, [this, &graph](EnvData& data, FrameContext& _context) {
+			auto sky_cubemap = _context.get_texture(data.sky_cubemap);
+			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
+			auto sky_cubemap_filtered_diffuse = _context.get_texture(data.sky_cubemap_filtered_diffuse);
+
+		
+			auto& list = *_context.get_list();
+			auto& graphics = list.get_graphics();
+
+			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+
+			Slots::EnvSource downsample;
+			downsample.GetSourceTex() = sky_cubemap.get_srv();
+			downsample.set(graphics);
+
+
+
+			UINT count = sky_cubemap_filtered.resource->get_desc().MipLevels;
+			for (unsigned int m = 0; m < count; m++)
+			{
+				graphics.set_pipeline(states[std::min(m, 4u)]);
+
+				for (unsigned int i = 0; i < 6; i++)
+				{
+					Render::ResourceViewDesc subres;
+					subres.type = Render::ResourceType::TEXTURE2D;
+
+					subres.Texture2D.ArraySize = 1;
+					subres.Texture2D.FirstArraySlice = i;
+					subres.Texture2D.MipLevels = 1;
+					subres.Texture2D.MipSlice = m;
+					subres.Texture2D.PlaneSlice = 0;
+
+					auto face = sky_cubemap_filtered.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+
+					if (i == 0) {
+						graphics.set_viewport(face.get_viewport());
+						graphics.set_scissor(face.get_scissor());
+					}
+					graphics.set_rtv(1, face.get_rtv(), Render::Handle());
+
+					Slots::EnvFilter filter;
+					filter.GetFace().x = i;
+
+					filter.GetScaler().x = (float(m) + 0.5f) / count;
+					filter.GetSize().x = sky_cubemap.resource->get_desc().Width;
+					filter.set(graphics);
+					
+					graphics.draw(4);
+				}
+			}
+
+
+		
+				graphics.set_pipeline(state_diffuse);
+
+				for (unsigned int i = 0; i < 6; i++)
+				{
+					Render::ResourceViewDesc subres;
+					subres.type = Render::ResourceType::TEXTURE2D;
+
+					subres.Texture2D.ArraySize = 1;
+					subres.Texture2D.FirstArraySlice = i;
+					subres.Texture2D.MipLevels = 1;
+					subres.Texture2D.MipSlice = 0;
+					subres.Texture2D.PlaneSlice = 0;
+
+					auto face = sky_cubemap_filtered_diffuse.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+
+					if (i == 0) {
+						graphics.set_viewport(face.get_viewport());
+						graphics.set_scissor(face.get_scissor());
+					}
+					graphics.set_rtv(1, face.get_rtv(), Render::Handle());
+
+					Slots::EnvFilter filter;
+					filter.GetFace().x = i;
+
+					filter.GetScaler().x = (float(0) + 0.5f) / count;
+					filter.GetSize().x = sky_cubemap.resource->get_desc().Width;
+					filter.set(graphics);
+
+					graphics.draw(4);
+				
+			}
+		});
+
+
+
 }
 
+/*
 void CubeMapEnviromentProcessor::process_diffuse(MeshRenderContext::ptr& context, Render::Texture::ptr cubemap,
 												 Render::Texture::ptr cubemap_result)
 {

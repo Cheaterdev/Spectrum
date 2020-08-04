@@ -300,6 +300,7 @@
     <ClInclude Include="Effects\Sky.h" />
     <ClInclude Include="Effects\TemporalAA.h" />
     <ClInclude Include="Effects\VoxelGI\VoxelGI.h" />
+    <ClCompile Include="Effects\VoxelGI\VoxelGIGraph.cpp" />
     <ClInclude Include="Font\TextSystem.h" />
     <ClInclude Include="GUI\Debug\OutputWindow.h" />
     <ClInclude Include="GUI\Debug\TaskViewer.h" />

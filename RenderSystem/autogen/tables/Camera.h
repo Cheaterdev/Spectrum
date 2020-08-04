@@ -13,12 +13,9 @@ namespace Table
 			float4x4 invView;
 			float4x4 invProj;
 			float4x4 invViewProj;
-			float3 position;
-			float unused;
-			float3 direction;
-			float unused2;
-			float2 jitter;
-			float2 unused3;
+			float4 position;
+			float4 direction;
+			float4 jitter;
 			Frustum::CB frustum;
 		} &cb;
 		using SRV = Empty;
@@ -30,12 +27,9 @@ namespace Table
 		float4x4& GetInvView() { return cb.invView; }
 		float4x4& GetInvProj() { return cb.invProj; }
 		float4x4& GetInvViewProj() { return cb.invViewProj; }
-		float3& GetPosition() { return cb.position; }
-		float& GetUnused() { return cb.unused; }
-		float3& GetDirection() { return cb.direction; }
-		float& GetUnused2() { return cb.unused2; }
-		float2& GetJitter() { return cb.jitter; }
-		float2& GetUnused3() { return cb.unused3; }
+		float4& GetPosition() { return cb.position; }
+		float4& GetDirection() { return cb.direction; }
+		float4& GetJitter() { return cb.jitter; }
 		Frustum MapFrustum() { return Frustum(cb.frustum); }
 		Camera(CB&cb) :cb(cb){}
 	};
