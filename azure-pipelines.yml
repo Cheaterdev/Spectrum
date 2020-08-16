@@ -16,9 +16,10 @@ variables:
 
 steps:
 - task: NuGetToolInstaller@1
-- task: PowerShell@2
+- task: BatchScript@1
   inputs:
-    filePath: 'generate_poject.bat'
+    filename: 'generate_poject.bat'
+
 - task: NuGetCommand@2
   inputs:
     restoreSolution: '$(solution)'
