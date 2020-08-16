@@ -13,8 +13,13 @@ variables:
   solution: '**/*.sln'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
-
+  vcpkgGitRef: 5a3b46e9e2d1aa753917246c2801e50aaabbbccc
+  
 steps:
+- task: Cache@2
+  inputs:
+    key: 'Cache vcpkg''s artifacts'
+    path: '$(Build.BinariesDirectory)/vcpkg'
 - task: NuGetToolInstaller@1
 - task: BatchScript@1
   inputs:
