@@ -1,0 +1,6 @@
+[Bind = FrameLayout::MaterialData]
+struct MaterialInfo
+{
+	[dynamic] MaterialCB data;
+    uint textureOffset;	
+}
