@@ -5,6 +5,11 @@ struct Countour
 	Texture2D<float4> tex;
 }
 
+[Bind = DefaultLayout::Instance0]
+struct DrawStencil
+{
+	StructuredBuffer<float4> vertices;
+}
 
 [Bind = DefaultLayout::Instance0]
 struct PickerBuffer

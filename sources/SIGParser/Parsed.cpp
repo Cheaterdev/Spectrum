@@ -131,6 +131,8 @@ void Layout::setup()
 		for (int type = 0; type < ValueType::COUNT; type++)
 		{
 			auto count = s.max_counts[type];
+
+			if(type==ValueType::STRUCT) continue;
 			if (s.max_counts[type]) s.ids[type] = types_counts++;
 		}
 	}

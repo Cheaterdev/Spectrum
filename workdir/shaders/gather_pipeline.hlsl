@@ -36,9 +36,9 @@ int intersect(Frustum f, AABB aabb, float4x4 mat)
     p[7] = float3(min.x, min.y, min.z); 
 
 
-  //  [unroll]
-  //  for (int i = 0; i < 8; i++)
-  //      p[i] = local_to_world(p[i], mat);
+    [unroll]
+    for (int i = 0; i < 8; i++)
+        p[i] = local_to_world(p[i], mat);
 
     bool out_near = false;
 

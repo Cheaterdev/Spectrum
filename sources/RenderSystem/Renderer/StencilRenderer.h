@@ -6,7 +6,7 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
         Render::StructuredBuffer<UINT>::ptr id_buffer;
         Render::PipelineState::ptr draw_state;
         Render::PipelineState::ptr draw_selected_state;
-
+        Render::PipelineState::ptr draw_box_state;
         camera cam;
         camera axis_intersect_cam;
 
@@ -45,7 +45,8 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
         float3 get_normal(int axis);
         std::pair<MeshAssetInstance::ptr, int> mouse_on_object;
 
-
+		Render::StructuredBuffer<vec4>::ptr vertex_buffer;
+		Render::IndexBuffer::ptr index_buffer;
 
         virtual bool can_accept(GUI::drag_n_drop_package::ptr p) override;
 		virtual void on_drop_move(GUI::drag_n_drop_package::ptr p, vec2)override;

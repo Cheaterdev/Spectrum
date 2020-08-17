@@ -34,6 +34,7 @@
 #include "slots\EnvFilter.h"
 #include "slots\EnvSource.h"
 #include "slots\Countour.h"
+#include "slots\DrawStencil.h"
 #include "slots\PickerBuffer.h"
 #include "slots\Instance.h"
 #include "slots\Color.h"

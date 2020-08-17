@@ -169,9 +169,9 @@ struct CompiledData
 
 
 		//auto timer = Profiler::get().start(L"set");
-		if (table_srv.get_count() > 0) graphics.set(Slot::SRV_ID, table_srv);
-		if (table_smp.get_count() > 0) graphics.set(Slot::SMP_ID, table_smp);
-		if (table_uav.get_count() > 0) graphics.set(Slot::UAV_ID, table_uav);
+		if constexpr (TableHasSRV<Slot>)  if (table_srv.is_valid()) graphics.set(Slot::SRV_ID, table_srv);
+		if constexpr (TableHasSMP<Slot>)  if (table_smp.is_valid()) graphics.set(Slot::SMP_ID, table_smp);
+		if constexpr (TableHasUAV<Slot>)  if (table_uav.is_valid()) graphics.set(Slot::UAV_ID, table_uav);
 	//	if (table_cbv.get_count()> 0 ) graphics.set(Slot::CB_ID, table_cbv);
 
 
@@ -201,10 +201,6 @@ struct Empty
 using DefaultCB = Render::Resource*;// std::vector<std::byte>;
 using DynamicData = std::vector<std::byte>;// std::vector<std::byte>;
 
-template<typename T> concept HasSRV =
-requires (T t){
-	t.srv;
-};
 
 
 template<typename T> concept HasData =
@@ -219,23 +215,48 @@ requires (T t) {
 };
 
 
+template<typename T> concept HasSRV =
+requires (T t) {
+	t.srv;
+};
 
 template<typename T> concept HasUAV =
 requires (T t) {
 	t.uav;
 };
 
-
 template<typename T> concept HasSMP =
 requires (T t) {
 	t.smp;
 };
 
-
 template<typename T> concept HasCB =
 requires (T t) {
 	t.cb;
 };
+
+template<typename T> concept TableHasSRV =
+requires (T t) {
+	t.SRV;
+};
+
+template<typename T> concept TableHasUAV =
+requires (T t) {
+	t.UAV;
+};
+
+template<typename T> concept TableHasSMP =
+requires (T t) {
+	t.SMP;
+};
+
+template<typename T> concept TableHasCB =
+requires (T t) {
+	t.CB;
+};
+
+
+
 
 template<class Table, class Slot = Table::Slot>
 struct DataHolder : public Table
@@ -408,10 +429,9 @@ struct AutoGenSignatureDesc
 	template<class T>
 	void process_one()
 	{
-		if constexpr (T::SRV)
-			desc[T::SRV_ID] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, -1, T::ID);
-		if constexpr (T::UAV)	desc[T::UAV_ID] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, T::UAV, T::ID);
-		if constexpr (T::SMP)	desc[T::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::SMP, T::ID);
+		if constexpr (TableHasSRV<T>) desc[T::SRV_ID] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, -1, T::ID);
+		if constexpr (TableHasUAV<T>) desc[T::UAV_ID] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, T::UAV, T::ID);
+		if constexpr (TableHasSMP<T>) desc[T::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::SMP, T::ID);
 		desc[T::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::ID);
 	//	if constexpr (T::CB)	desc[T::CB_ID] = Render::DescriptorTable(Render::DescriptorRange::CBV, Render::ShaderVisibility::ALL, 0, T::CB, T::ID);
 

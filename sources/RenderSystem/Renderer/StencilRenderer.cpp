@@ -278,15 +278,17 @@ stencil_renderer::stencil_renderer()
 
 	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS", 0, {} });
+
 	state_desc.rtv.rtv_formats = {};
 	state_desc.rtv.enable_depth = true;
 	state_desc.rtv.enable_depth_write = true;
 	state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT;
-	state_desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_BACK;
+	state_desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
 	state_desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_LESS;
 	draw_state.reset(new Render::PipelineState(state_desc));
 
 	state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+
 	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS_RESULT", 0, {} });
 	state_desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8_SNORM };
 	state_desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
@@ -295,8 +297,14 @@ stencil_renderer::stencil_renderer()
 
 	draw_selected_state.reset(new Render::PipelineState(state_desc));
 
+	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle_stencil.hlsl", "VS", 0, {} });
+	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/triangle_stencil.hlsl", "PS", 0, {} });
+
+	draw_box_state.reset(new Render::PipelineState(state_desc));
+
+
 	state_desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
-	//state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
+	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS_COLOR", 0, {} });
 	axis_render_state.reset(new Render::PipelineState(state_desc));
 
@@ -332,6 +340,41 @@ stencil_renderer::stencil_renderer()
 	debug_scene = std::make_shared<Scene>();
 
 	debug_scene->add_child(axis);
+
+
+	std::vector<unsigned int> data = { 3, 1, 0,
+	2, 1, 3,
+	0, 5, 4,
+	1, 5, 0,
+	3, 4, 7,
+	0, 4, 3,
+	1, 6, 5,
+	2, 6, 1,
+	2, 7, 6,
+	3, 7, 2,
+	6, 4, 5,
+	7, 4, 6,
+	};
+
+
+
+	std::vector<vec4> verts(8);
+	vec3 v0(-0.5, -0.5, 0.5);
+	vec3 v1(0.5, 0.5, 0.5);
+	verts[0] = vec3(-1.0f, 1.0f, -1.0f);
+	verts[1] = vec3(1.0f, 1.0f, -1.0f);
+	verts[2] = vec3(1.0f, 1.0f, 1.0f);
+	verts[3] = vec3(-1.0f, 1.0f, 1.0f);
+	verts[4] = vec3(-1.0f, -1.0f, -1.0f);
+	verts[5] = vec3(1.0f, -1.0f, -1.0f);
+	verts[6] = vec3(1.0f, -1.0f, 1.0f);
+	verts[7] = vec3(-1.0f, -1.0f, 1.0f);
+	index_buffer.reset(new Render::IndexBuffer(data));
+
+	vertex_buffer.reset(new Render::StructuredBuffer<vec4>(8));
+	vertex_buffer->set_raw_data(verts);
+
+
 }
 
 
@@ -640,6 +683,11 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 							graphics.draw(m.draw_arguments);
 						}
 					}
+
+
+
+					
+
 				}
 				
 
@@ -665,8 +713,36 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					}
 				}
 
+			graphics.set_pipeline(draw_box_state);
+
+
+		/*	for (auto& sel : selected)
+			{
+
+				auto l = sel.first;
+				int i = sel.second;
+				{
+					auto& m = l->rendering[i];
+					m.mesh_info.set(graphics);
+
+					graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
+
+					Slots::DrawStencil draw;
+					draw.GetVertices() = vertex_buffer->get_srv()[0];
+					draw.set(graphics);
+
+
+					graphics.draw_indexed(36, 0, 0);
+				}
+			}
+			*/
+
+
 				// draw axis
 			{
+
+				graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
+
 					{
 						Slots::FrameInfo frameInfo;
 
@@ -693,6 +769,9 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 						graphics.draw(m.draw_arguments);
 						i++;
 					}
+
+				
+
 				}
 
 

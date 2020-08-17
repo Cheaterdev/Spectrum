@@ -38,7 +38,7 @@ namespace DX12
 		
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
-        (D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+        TEST(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
 
         if (error)
         {

@@ -72,7 +72,7 @@ public:
 				dynamic_objects.erase(render_object);
 			});
 
-        mesh_infos = std::make_shared< virtual_gpu_buffer<mesh_info_part>>(1024 * 1024 * 64);
+        mesh_infos = std::make_shared< virtual_gpu_buffer<mesh_info_part>>(1024 * 1024 );
     }
 
     Events::Event<scene_object*> on_element_add;

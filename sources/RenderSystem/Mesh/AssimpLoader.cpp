@@ -261,7 +261,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
     try
     {
-        scene = importer.ReadFile(boost::filesystem::path(file_name).filename().generic_string(), aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
+        scene = importer.ReadFile(boost::filesystem::path(file_name).filename().generic_string(), aiProcess_GenBoundingBoxes| aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
     }
 
     catch (const std::exception &e)
@@ -342,7 +342,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
 		}
 
-		auto scale = settings.scale;
+        auto scale = 1;// settings.scale;
 		{
 			std::vector<std::future<void>> tasks;
 
@@ -544,7 +544,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
             {
                 auto position_function = [native_mesh, scale](unsigned int index)->vec3
                 {
-                    return vec3(native_mesh->mVertices[index].x, native_mesh->mVertices[index].y, native_mesh->mVertices[index].z)*scale;
+                    return vec3(native_mesh->mVertices[index].x * scale, native_mesh->mVertices[index].y * scale, native_mesh->mVertices[index].z * scale);
                 };
                 auto tangent_function = [native_mesh](unsigned int index)->vec3
                 {
@@ -641,8 +641,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
         {
             if (!node) return;
 
-       //     obj.local_matrix.identity();
-		//	obj.mesh_matrix.identity();
+            //obj.local_matrix.identity();
+			//obj.mesh_matrix.identity();
 
             memcpy(&obj.local_matrix, node->mTransformation[0], sizeof(obj.local_matrix));
             obj.local_matrix.transpose();
@@ -652,6 +652,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
             else
                 obj.mesh_matrix = obj.local_matrix;
                 
+
             for (unsigned int i = 0; i < node->mNumMeshes; i++)
                 obj.meshes.push_back(node->mMeshes[i]);
 

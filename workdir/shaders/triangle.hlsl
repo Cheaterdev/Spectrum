@@ -51,7 +51,7 @@ vertex_output transform(matrix node_global_matrix, Camera camera, mesh_vertex_in
 
 vertex_output VS(uint index: SV_VertexID)
 {
-    //	matrix m = { {1,0,0,100}, { 0,1,0,0 }, { 0,0,1,0 }, {0,0,0,1 } };
+    	//matrix m = { {1,0,0,0}, { 0,1,0,0 }, { 0,0,1,0 }, {0,0,0,1 } };
 
     matrix m = sceneData.GetNodes()[meshInfo.GetNode_offset()].GetNode_global_matrix();
     return transform(m, frameInfo.GetCamera(), sceneData.GetVertexes()[meshInfo.GetVertex_offset()+ index]);

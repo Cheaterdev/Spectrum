@@ -5,6 +5,8 @@
 #include "autogen/Instance.h"
 
 static const RWStructuredBuffer<uint> viewBuffer = GetPickerBuffer().GetViewBuffer();
+
+
 [earlydepthstencil]
 void PS(vertex_output i)
 {

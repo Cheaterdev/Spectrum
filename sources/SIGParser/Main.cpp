@@ -5,8 +5,8 @@
 #include <filesystem>
 #include <functional>
 
-static const std::string cpp_path = "../RenderSystem/autogen";
-static const std::string hlsl_path = "../Spectrum/shaders/autogen";
+static const std::string cpp_path = "../../sources/RenderSystem/autogen";
+static const std::string hlsl_path = "../../workdir/shaders/autogen";
 
 Parsed parsed;
 std::string generate_array(const have_array& a)
@@ -832,7 +832,8 @@ void generate_cpp_layout(Layout& layout)
 				auto type = (ValueType)i;
 				auto count = s.max_counts[type];
 
-				if(count==0) continue;
+				if(count==0)
+					continue;
 				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
 				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
 

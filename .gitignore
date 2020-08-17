@@ -9,6 +9,7 @@
 log.txt
 cache/
 Assets/
+projects/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
