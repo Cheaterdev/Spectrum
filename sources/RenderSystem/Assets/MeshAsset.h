@@ -259,7 +259,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
             std::shared_ptr<Primitive> primitive_global;
             Slots::MeshInfo mesh_info;
 
-            D3D12_DRAW_INDEXED_ARGUMENTS draw_arguments;
+            DrawIndexedArguments draw_arguments;
             UINT material_id;
             MaterialAsset* material;
 
@@ -297,20 +297,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 	virtual void on_remove() override;
 	virtual	bool update_transforms()override;
     private:
-        void debug_draw(debug_drawer& drawer) override
-        {
-            scene_object::debug_draw(drawer);
-	//		drawer.add(primitive, global_transform);
-			mat4x4 m;
-			m.identity();
-            for (auto &r : rendering)
-            {
-				
-
-                //	r.primitive->
-                drawer.add(r.primitive_global, m);
-            }
-        }
+       
         MeshAssetInstance();
 
         friend class boost::serialization::access;

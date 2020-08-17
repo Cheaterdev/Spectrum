@@ -1,4 +1,4 @@
-#include "../Renderer/Signature.h"
+
 class camera;
 class debug_drawer;
 class vertex_transform;

@@ -396,22 +396,7 @@ mesh_renderer::mesh_renderer()
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-
-
-	{
-		D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[] = {
-			Slots::MaterialInfo::create_indirect(),
-			Slots::MeshInfo::create_indirect(),
-			Descriptors::DrawIndirect::create_indirect()
-		};
-
-		D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
-		commandSignatureDesc.pArgumentDescs = argumentDescs;
-		commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
-		commandSignatureDesc.ByteStride = sizeof(command);
-		TEST(Render::Device::get().get_native_device()->CreateCommandSignature(&commandSignatureDesc, get_Signature(Layouts::DefaultLayout)->get_native().Get(), IID_PPV_ARGS(&indirect_command_signature)));
-	}
-
+	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MaterialInfo, Slots::MeshInfo, DrawIndexedArguments>(sizeof(command), get_Signature(Layouts::DefaultLayout));
 
 
 	{
@@ -508,15 +493,9 @@ mesh_renderer::mesh_renderer()
 
 
 		{
-			D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[] = {
-				Descriptors::DrawIndirect::create_indirect()
-			};
 
-			D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
-			commandSignatureDesc.pArgumentDescs = argumentDescs;
-			commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
-			commandSignatureDesc.ByteStride = sizeof(command);
-			TEST(Render::Device::get().get_native_device()->CreateCommandSignature(&commandSignatureDesc, nullptr, IID_PPV_ARGS(&boxes_command)));
+			boxes_command = Render::IndirectCommand::create_command<DrawIndirect>(sizeof(command));
+
 		}
 	}
 
@@ -525,15 +504,7 @@ mesh_renderer::mesh_renderer()
 		dispatch_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 
-		D3D12_INDIRECT_ARGUMENT_DESC argumentDescs[] = {
-					Descriptors::Dispatch::create_indirect()
-		};
-
-		D3D12_COMMAND_SIGNATURE_DESC commandSignatureDesc = {};
-		commandSignatureDesc.pArgumentDescs = argumentDescs;
-		commandSignatureDesc.NumArgumentDescs = _countof(argumentDescs);
-		commandSignatureDesc.ByteStride = sizeof(command);
-		TEST(Render::Device::get().get_native_device()->CreateCommandSignature(&commandSignatureDesc, nullptr, IID_PPV_ARGS(&dispatch_command)));
+		dispatch_command = Render::IndirectCommand::create_command<Dispatch>(sizeof(command));
 
 	}
 

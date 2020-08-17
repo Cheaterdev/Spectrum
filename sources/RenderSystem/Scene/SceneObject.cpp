@@ -26,15 +26,6 @@ std::shared_ptr<scene_object> scene_object::find_by_name(std::wstring name)
     return nullptr;
 }
 
-void scene_object::debug_draw(debug_drawer& drawer)
-{
-    occluder::debug_draw(drawer);
-
-  //  childs_occluder.debug_draw(drawer);
-    //childs_occluder.primitive
-    for (auto& c : childs)
-        c->debug_draw(drawer);
-}
 
 bool scene_object::update_transforms()
 {

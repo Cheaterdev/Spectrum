@@ -74,6 +74,7 @@ enum class Layouts : int
 
 
 
+#include "DX12/IndirectCommand.h"
 #include "DX12/CommandList.h"
 
 #include "DX12/Swapchain12.h"
@@ -88,7 +89,6 @@ enum class Layouts : int
 #include "DX12/Buffer.h"
 #include "DX12/GPUTimer.h"
 #include "DX12/Samplers.h"
-#include "DX12/SignatureCreator.h"
 
 #include "DX12/RayTracingAS.h"
 
@@ -102,6 +102,45 @@ namespace Render
 	using Bindless = std::vector<Handle>;
 
 }
+
+struct DrawIndirect
+{
+
+	using IndirectType = D3D12_DRAW_INDEXED_ARGUMENTS;
+
+
+
+
+	static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC desc;
+
+		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+		return desc;
+	}
+
+};
+
+static DrawIndirect draw_indirect;
+
+struct Dispatch
+{
+
+
+	using IndirectType = D3D12_INDEX_BUFFER_VIEW;
+
+	static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC desc;
+
+		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+
+		return desc;
+	}
+
+};
+
 
 
 
@@ -192,8 +231,28 @@ using uint4 = ivec4;
 using float4x4 = mat4x4;
 
 using GPUAddress = D3D12_GPU_VIRTUAL_ADDRESS;
-using DrawIndexedArguments = D3D12_DRAW_INDEXED_ARGUMENTS;
-using DispatchArguments = D3D12_DISPATCH_ARGUMENTS;
+
+class DrawIndexedArguments: public D3D12_DRAW_INDEXED_ARGUMENTS
+{
+public:
+	static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC desc;
+		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+		return desc;
+	}
+};
+
+class DispatchArguments : public D3D12_DISPATCH_ARGUMENTS
+{
+public:
+	static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC desc;
+		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+		return desc;
+	}
+};
 
 struct Empty
 {};

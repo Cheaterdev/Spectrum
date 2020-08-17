@@ -478,7 +478,7 @@ public:
 	//	VoxelGI::ptr voxel_renderer;
 
 	int visible_count;
-	debug_drawer drawer;
+
 	mesh_renderer::ptr meshes_renderer;
 
 //	gpu_cached_renderer::ptr gpu_meshes_renderer_static;

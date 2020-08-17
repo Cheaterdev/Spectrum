@@ -1,30 +1,3 @@
-class occluder;
-class camera;
-class debug_drawer
-{
-        std::map<std::shared_ptr<Primitive>, mat4x4> aabbs;
-        Render::PipelineState::ptr state;
-
-
-#pragma pack(push, 4)
-        struct node
-        {
-            mat4x4 mat;
-            vec4 min;
-            vec4 max;
-            vec4 color;
-            //vec4 color;
-        };
-#pragma pack(pop)
-
-        //  DX11::Buffer<node>::ptr const_buffer;
-    public:
-        int visible_count;
-        debug_drawer();
-        void add(std::shared_ptr<Primitive>, mat4x4);
-        void draw(Render::CommandList& context, camera* cam);
-};
-
 class occluder
 {
 	vec3 min;
@@ -34,7 +7,6 @@ class occluder
 		Primitive::ptr primitive_global;
 		Primitive::ptr primitive_childs;
 
-        virtual void debug_draw(debug_drawer& drawer);
         virtual bool is_inside(const Frustum& f);
 
 		void set_primitive(Primitive::ptr primitive)

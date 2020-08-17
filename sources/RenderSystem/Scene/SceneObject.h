@@ -107,8 +107,7 @@ class scene_object : public tree<scene_object, std::set<std::shared_ptr<scene_ob
         std::shared_ptr<scene_object> find_by_name(std::wstring name);
 
         virtual bool update_transforms();
-        virtual void debug_draw(debug_drawer& drawer);
-
+       
 
       /*  virtual void calculate_size()
         {

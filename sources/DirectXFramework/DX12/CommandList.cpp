@@ -1114,7 +1114,7 @@ void ComputeContext::dispach(int x,int y,int z)
 	{
 		base.flush_heaps(force);
 	}
-	void GraphicsContext::execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
+	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
 		if(command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if(counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
@@ -1122,14 +1122,14 @@ void ComputeContext::dispach(int x,int y,int z)
 		base.flush_transitions();
 
 		list->ExecuteIndirect(
-			command_types.Get(),
+			command_types.command_signature.Get(),
 			max_commands,
 			command_buffer ? command_buffer->get_native().Get() : nullptr,
 			command_offset,
 			counter_buffer ? counter_buffer->get_native().Get() : nullptr,
 			counter_offset);
 	}
-	void ComputeContext::execute_indirect(ComPtr<ID3D12CommandSignature> command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
+	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
@@ -1137,7 +1137,7 @@ void ComputeContext::dispach(int x,int y,int z)
 		base.flush_transitions();
 	
 		list->ExecuteIndirect(
-			command_types.Get(),
+			command_types.command_signature.Get(),
 			max_commands,
 			command_buffer ? command_buffer->get_native().Get() : nullptr,
 			command_offset,

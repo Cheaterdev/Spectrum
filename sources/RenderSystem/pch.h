@@ -21,9 +21,7 @@
 #include "Helpers/MipMapGeneration.h"
 
 #include "Mesh/VertexTransform/VertexTransform.h"
-
 #include "Occlusion/Occluder.h"
-
 #include "Scene/SceneObject.h"
 #include "Camera/Camera.h"
 

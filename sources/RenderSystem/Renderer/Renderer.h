@@ -20,50 +20,8 @@ struct mat_info
 	int index;
 	int draw_count;
 };
-#include "Signature.h"
 
 
-#pragma pack(push, 1)
-struct IndirectCommand
-{
-
-	decltype(GPUMeshSignature<Indirect>::mat_const)  mat_const;
-	decltype(GPUMeshSignature<Indirect>::vertex_buffer)  vertex_buffer; 
-	decltype(GPUMeshSignature<Indirect>::mat_texture_offsets)  mat_texture_offsets;
-	decltype(Descriptors::index_buffer)::IndirectType  index_buffer;
-	decltype(Descriptors::draw_indirect)::IndirectType  draw_indirect;
-
-	static std::vector<D3D12_INDIRECT_ARGUMENT_DESC> get_desc()
-	{
-		return {
-			decltype(GPUMeshSignature<Signature>::mat_const)::create_indirect(),
-			decltype(GPUMeshSignature<Signature>::vertex_buffer)::create_indirect(),
-			decltype(GPUMeshSignature<Signature>::mat_texture_offsets)::create_indirect(),
-			decltype(Descriptors::index_buffer)::create_indirect(),
-			decltype(Descriptors::draw_indirect)::create_indirect()
-		};
-	}
-
-    private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
-        {
-        /*    ar& NVP(material_cb_pixel);
-            ar& NVP(vb_srv);
-            ar& NVP(material.texture_offset);
-			ar& NVP(material.node_offset);
-            ar& NVP(index_buffer.SizeInBytes);
-            ar& NVP(index_buffer.BufferLocation);
-            ar& NVP(index_buffer.Format);
-            ar& NVP(drawArguments.IndexCountPerInstance);
-            ar& NVP(drawArguments.BaseVertexLocation);
-            ar& NVP(drawArguments.InstanceCount);
-            ar& NVP(drawArguments.StartIndexLocation);
-            ar& NVP(drawArguments.StartInstanceLocation);*/
-        }
-};
-#pragma pack(pop)
 class main_renderer
 {
         std::set<renderer::ptr> renderers;
@@ -131,8 +89,10 @@ class mesh_renderer : public renderer, public Events::prop_handler
         Render::vertex_shader::ptr shader;
         Render::geometry_shader::ptr voxel_geometry_shader;
 
-		ComPtr<ID3D12CommandSignature> indirect_command_signature;
-		ComPtr<ID3D12CommandSignature> boxes_command;
+        IndirectCommand indirect_command_signature;
+
+        IndirectCommand boxes_command;
+	
 
 		TextureAsset::ptr best_fit_normals;
 
@@ -181,7 +141,7 @@ class mesh_renderer : public renderer, public Events::prop_handler
 
 
 		Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer;
-		ComPtr<ID3D12CommandSignature> dispatch_command;
+        IndirectCommand dispatch_command;
 
 
 		Render::ComputePipelineState::ptr gather_boxes;
