@@ -8,7 +8,7 @@
 *.sln.docstates
 log.txt
 cache/
-Assets/
+workdir/Assets/
 projects/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
