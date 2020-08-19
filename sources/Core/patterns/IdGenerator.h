@@ -23,6 +23,7 @@ public:
 
 	void put(int i)
 	{
+		assert(std::find(free.begin(), free.end(), i) == free.end());
 		free.emplace_back(i);
 	}
 };
@@ -35,10 +36,14 @@ class IdGenerator: public IdGeneratorUnsafe
 
         int get()
         {
-            std::lock_guard<std::mutex> g(m);
+			int res = -1;
 
-          
-            return IdGeneratorUnsafe::get();
+			{
+				std::lock_guard<std::mutex> g(m);
+				res = IdGeneratorUnsafe::get();
+			}
+
+		   return res;
         }
 
 

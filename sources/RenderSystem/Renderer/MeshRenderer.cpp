@@ -164,7 +164,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	if (invisibleToo)
 	{
 		list.clear_counter(meshes_invisible_ids->buffer);
-		list.clear_uav(meshes_invisible_ids->buffer, meshes_invisible_ids->buffer->get_uav()[0], ivec4{ 999,999,999,999 });
+		list.clear_uav(meshes_invisible_ids->buffer, meshes_invisible_ids->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
 
 }
 
@@ -250,7 +250,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 		compiledScene.set(graphics);
 		compiledFrame.set(graphics);
 
-	list.clear_uav(visible_boxes->buffer, visible_boxes->buffer->get_uav()[0], ivec4{ 999,999,999,999 });
+	list.clear_uav(visible_boxes->buffer, visible_boxes->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
 
 	graphics.execute_indirect(
 		boxes_command,

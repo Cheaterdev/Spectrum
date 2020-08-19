@@ -36,19 +36,19 @@ MipMapGenerator::MipMapGenerator()
 	}
 
 
-	{
+
+	copy_texture_state.create_func = [](DXGI_FORMAT format) {
 		Render::PipelineStateDesc state_desc;
 		state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
 		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\copy_texture.hlsl", "PS", 0,{} });
 		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\copy_texture.hlsl", "VS", 0,{} });
-		state_desc.rtv.rtv_formats = { DXGI_FORMAT_R8G8B8A8_UNORM };
+		state_desc.rtv.rtv_formats = { format };
 		state_desc.blend.render_target[0].enabled = false;
 		state_desc.rtv.enable_stencil = false;
 		state_desc.rtv.enable_depth = false;
-		copy_texture_state.reset(new Render::PipelineState(state_desc));
 
-	}
-
+		return std::make_shared<Render::PipelineState>(state_desc);
+	};
 
 	{
 
@@ -247,7 +247,7 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::Texture::ptr& from)
 {
-	list.set_pipeline(copy_texture_state);
+	list.set_pipeline(copy_texture_state[to->texture_2d()->get_rtv().resource_info->rtv.Format]);
 	//MipMapSignature<Signature> shader_data(&list);
 
 	auto& view = to->texture_2d();
@@ -270,7 +270,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::TextureView from)
 {
-	list.set_pipeline(copy_texture_state);
+	list.set_pipeline(copy_texture_state[to->texture_2d()->get_rtv().resource_info->rtv.Format]);
 
 	auto& view = to->texture_2d();
 
@@ -293,7 +293,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Render::TextureView to, Render::TextureView from)
 {
 
-	list.set_pipeline(copy_texture_state);
+	list.set_pipeline(copy_texture_state[to.get_rtv().resource_info->rtv.Format]);
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	Slots::CopyTexture data;

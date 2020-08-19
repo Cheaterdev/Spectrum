@@ -15,9 +15,11 @@ bool MeshData::init_default_loaders()
 	std::function<bool(MeshNode*)> f = [&first, this](MeshNode * r)->bool
 	{
 
-		for (auto m : r->meshes)
+		//for (auto m : r->meshes)
+
+		if(r->mesh_id!=-1)
 		{
-			auto p = meshes[m].primitive;
+			auto p = meshes[r->mesh_id].primitive;
 			assert(p);
 			/*	if (primitive)
 			((AABB*)childs_occluder.primitive.get())->set(primitive.get());
@@ -400,6 +402,8 @@ bool MeshAssetInstance::update_transforms()
 
 		if (!info.primitive_global)
 			info.primitive_global = std::make_shared<AABB>();
+
+
 		mat4x4 mat = nodes[index].asset_node->mesh_matrix*global_transform;
 		info.primitive_global->apply_transform(p, mat);
 
@@ -430,7 +434,7 @@ void MeshAssetInstance::update_nodes()
 	nodes_count = 0;
 	rendering_count = 0;
 
-	mesh_asset->root_node.iterate([&](MeshNode* m) {nodes_count++; rendering_count += m->meshes.size(); return true; });
+	mesh_asset->root_node.iterate([&](MeshNode* m) {nodes_count++; rendering_count += (m->mesh_id!=-1); return true; });
 
 	
 	 universal_nodes_manager::get().allocate(nodes_handle, nodes_count);
@@ -448,19 +452,18 @@ void MeshAssetInstance::update_nodes()
 	nodes_indexes.resize(mesh_asset->nodes.size());
     nodes.clear();
     rendering.clear();
-	int index = 0;
+
 	
     std::function<bool(MeshNode*)> f = [&](MeshNode * node)->bool
     {
 
-	
-		for (auto& m : node->meshes)
+		if (node->mesh_id == -1) return true;
+		int m = node->mesh_id;
+	//	for (auto& m : node->meshes)
 		{
+nodes.emplace_back(node);
 
-			node->index = index++;// node_buffer.data().size();
-//   node_buffer.emplace_back(global_transform*node->mesh_matrix);
-			nodes.emplace_back(node);
-
+			
 
 			render_info info;
 			info.draw_arguments.StartIndexLocation = mesh_asset->index_handle.get_offset() + mesh_asset->meshes[m].index_offset;
@@ -473,7 +476,7 @@ void MeshAssetInstance::update_nodes()
 
 			info.primitive_global = std::make_shared<AABB>();
 
-			mat4x4 mat = nodes[node->index].asset_node->mesh_matrix * global_transform;
+			mat4x4 mat = nodes.back().asset_node->mesh_matrix * global_transform;
 
 			info.primitive_global->apply_transform(info.primitive, mat);
 
@@ -481,7 +484,7 @@ void MeshAssetInstance::update_nodes()
 		//	node_buffer[node->index] = mat;
 			//if(nodes_ptr) 
 		
-			info.mesh_info.GetNode_offset() = nodes_handle.get_offset() + node->index;
+			info.mesh_info.GetNode_offset() = nodes_handle.get_offset() + nodes.size()-1;
 			info.mesh_info.GetVertex_offset() = mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset;
 
 			auto &my_node = gpu_nodes[info.mesh_info.GetNode_offset() - nodes_handle.get_offset()];
@@ -526,7 +529,7 @@ void MeshAssetInstance::init_asset()
 
 
 
-std::vector<RaytracingAccelerationStructure::ptr> MeshAssetInstance::create_raytracing_as(D3D12_GPU_VIRTUAL_ADDRESS address)
+std::vector<RaytracingAccelerationStructure::ptr> MeshAssetInstance::create_raytracing_as()
 {
 	//std::vector<RaytracingAccelerationStructure::ptr> result;
 	

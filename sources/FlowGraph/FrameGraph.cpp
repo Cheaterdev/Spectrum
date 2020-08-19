@@ -21,6 +21,7 @@ void TaskBuilder::pass_texture(std::string name, Render::TextureView tex)
 	info.type = ResourceType::Texture;
 	info.resource = tex.resource;
 	info.passed = true;
+	info.name = name;
 	handler.info = &info;
 
 	passed_resources.insert(&handler);
@@ -236,7 +237,7 @@ ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT 
 	info.flags = flags | ResourceFlags::Static;
 	current_pass->used.resources.push_back(&handler);
 	info.handler = &handler;
-
+	info.name = name;
 	info.valid_from = current_pass->id;
 	info.valid_to = current_pass->id;
 	info.frame_id = current_frame->get_frame();
@@ -274,7 +275,7 @@ ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, UINT 
 	info.desc = desc;
 	info.flags = flags;
 	current_pass->used.resources.push_back(&handler);
-
+	info.name = name;
 	info.handler = &handler;
 	info.valid_from = current_pass->id;
 	info.valid_to = current_pass->id;
@@ -456,7 +457,7 @@ void TaskBuilder::create_resources()
 						info->resource = Render::DefaultAllocator::get().create_resource(CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, 0, 1, 0, flags), Render::ResourceState::UNKNOWN, vec4());
 					}
 
-					info->resource->set_name(std::string("Graph Texture:") + std::to_string(id));
+					info->resource->set_name(info->name);// info->resource->set_name(std::string("Graph Texture:") + std::to_string(id));
 
 				}
 
@@ -479,7 +480,7 @@ void TaskBuilder::create_resources()
 						info->resource = Render::DefaultAllocator::get().create_resource(CD3DX12_RESOURCE_DESC::Buffer(desc.size, D3D12_RESOURCE_FLAG_NONE), Render::ResourceState::GEN_READ, vec4());
 
 					}
-					info->resource->set_name(std::string("Graph Buffer:") + std::to_string(id));
+					info->resource->set_name(info->name);// std::string("Graph Buffer:") + std::to_string(id));
 				}
 
 				info->buffer = info->resource->create_view<Render::BufferView>(*current_frame);

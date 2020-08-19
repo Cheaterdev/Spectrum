@@ -69,6 +69,7 @@ struct UsedResources
 
 struct ResourceAllocInfo
 {
+	std::string name;
 // desc
 	ResourceType type;
 	MyVariant desc;

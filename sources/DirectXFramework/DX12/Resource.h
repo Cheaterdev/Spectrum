@@ -53,7 +53,7 @@ namespace DX12
 
 			ResourceListStateCPU all;
 
-			uint64_t command_list_id = -1;
+			volatile uint64_t command_list_id = -1;
 		};
 
 
@@ -524,13 +524,13 @@ namespace DX12
 
 	class ResourceView
 	{
-
+	protected:
 		Handle srv;
 		Handle uav;
 		Handle rtv;
 		Handle dsv;
 		Handle cb;
-
+		Handle uav_clear;
 	protected:
 		ResourceViewDesc view_desc;
 
@@ -608,6 +608,7 @@ namespace DX12
 
 		Handle get_srv() { return srv; }
 		Handle get_uav() { return uav; }
+		Handle get_uav_clear() { return uav_clear; }
 		Handle get_rtv() { return rtv; }
 		Handle get_dsv() { return dsv; }
 		Handle get_cb() { return cb; }
@@ -863,6 +864,7 @@ public:
 		desc.Buffer.CounterOffsetInBytes = 0;
 
 		Device::get().create_uav(h, resource.get(), desc);
+		Device::get().create_uav(uav_clear, resource.get(), desc);
 
 
 	}

@@ -371,11 +371,17 @@ namespace DX12
 			auto& desc = info->resource_ptr->get_desc();
 			if (info->rtv.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2D)
 			{
+
 				if (desc.MipLevels == 1 && desc.Depth() == 1)
 				{
 					transition(info->resource_ptr, ResourceState::RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 				}
-				
+				else
+				{
+					auto& rtv = info->rtv.Texture2D;
+					UINT res = desc.CalcSubresource(rtv.MipSlice, 0, rtv.PlaneSlice);
+					transition(info->resource_ptr, ResourceState::RENDER_TARGET, res);
+				}
 			}
 			else 	if (info->rtv.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY)
 			{
@@ -440,11 +446,27 @@ namespace DX12
 		{
 
 			auto& desc = info->resource_ptr->get_desc();
-			auto& dsv = info->dsv.Texture2D;
 
-			UINT res = desc.CalcSubresource(dsv.MipSlice, 0, 0);
-			transition(info->resource_ptr, ResourceState::DEPTH_WRITE, res);
+			if (info->dsv.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2D)
+			{
+				auto& dsv = info->dsv.Texture2D;
 
+				UINT res = desc.CalcSubresource(dsv.MipSlice, 0, 0);
+				transition(info->resource_ptr, ResourceState::DEPTH_WRITE, res);
+
+			}
+			else if(info->dsv.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
+			{
+				auto& dsv = info->dsv.Texture2DArray;
+
+				for (int array = dsv.FirstArraySlice; array < dsv.FirstArraySlice + dsv.ArraySize; array++)
+				{
+					UINT res = desc.CalcSubresource(dsv.MipSlice, array,0);
+					transition(info->resource_ptr, ResourceState::DEPTH_WRITE, res);
+				}
+			}
+			else
+				assert(0);
 		}
 
 
@@ -513,7 +535,24 @@ namespace DX12
 					}
 				}
 			}
-			else
+			else if(info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURECUBE)
+			{
+				auto& srv = info->srv.TextureCube;
+
+				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0)
+				{
+					transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				}
+				else
+				{
+					for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
+						for (auto array = 0; array < 6; array++)
+					{
+						UINT res = desc.CalcSubresource(mip, array, 0);
+						transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, res);
+					}
+				}
+			}else
 				assert(false);
 
 

@@ -652,10 +652,17 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
             else
                 obj.mesh_matrix = obj.local_matrix;
                 
-
+       
             for (unsigned int i = 0; i < node->mNumMeshes; i++)
-                obj.meshes.push_back(node->mMeshes[i]);
+            {
 
+                obj.childs.emplace_back();
+                obj.childs.back().mesh_id=node->mMeshes[i];
+                obj.childs.back().local_matrix.identity();
+				obj.childs.back().mesh_matrix.identity();
+
+            }
+                
             for (unsigned int i = 0; i < node->mNumChildren; i++)
             {
                 obj.childs.emplace_back();

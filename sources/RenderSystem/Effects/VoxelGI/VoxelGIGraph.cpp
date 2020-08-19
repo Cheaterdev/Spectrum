@@ -1021,6 +1021,7 @@ void VoxelGI::voxelize(FrameGraph& graph)
 void VoxelGI::lighting(FrameGraph& graph)
 {
 
+
 	struct Lighting
 	{
 		ResourceHandler* global_depth;
@@ -1029,6 +1030,7 @@ void VoxelGI::lighting(FrameGraph& graph)
 		ResourceHandler* sky_cubemap_filtered;
 	};
 
+	
 	graph.add_pass<Lighting>("Lighting", [this](Lighting& data, TaskBuilder& builder) {
 
 		data.global_depth = builder.need_buffer("global_depth", ResourceFlags::ComputeRead);
@@ -1229,8 +1231,11 @@ void VoxelGI::generate(FrameGraph& graph)
 
 	if (light_scene && light_counter == 0 || all_scene_regen_counter > 0)
 	{
-		lighting(graph);
-		mipmapping(graph);
+		if (gpu_tiles_buffer[0]->size())
+		{
+			lighting(graph);
+			mipmapping(graph);
+		}
 	}
 
 

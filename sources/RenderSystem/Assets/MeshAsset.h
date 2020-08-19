@@ -76,9 +76,11 @@ struct MeshNode
         mat4x4 local_matrix;
         mat4x4 mesh_matrix;
         using ptr = s_ptr<MeshNode>;
-        std::vector<unsigned int> meshes;
+        //std::vector<unsigned int> meshes;
+
+        unsigned int mesh_id = -1;
         std::vector<MeshNode> childs;
-        unsigned int index;
+      //  unsigned int index;
 	
         virtual void iterate(std::function<bool(MeshNode*)> f)
         {
@@ -96,7 +98,7 @@ struct MeshNode
         {
             ar& NVP(local_matrix);
             ar& NVP(mesh_matrix);
-            ar& NVP(meshes);
+            ar& NVP(mesh_id);
             ar& NVP(childs);
 //           ar& NVP(index);
         }
@@ -278,7 +280,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 
 
-		std::vector<RaytracingAccelerationStructure::ptr> create_raytracing_as(D3D12_GPU_VIRTUAL_ADDRESS);
+		std::vector<RaytracingAccelerationStructure::ptr> create_raytracing_as();
 	
         void use_material(size_t i, std::shared_ptr<MeshRenderContext>& context) override;
 

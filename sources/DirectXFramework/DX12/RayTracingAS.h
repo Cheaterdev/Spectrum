@@ -46,8 +46,8 @@ namespace DX12
 				bottomLevelBuildDesc.DestAccelerationStructureData = resource->get_gpu_address();
 			}
 
-			auto list = Device::get().get_upload_list();
-
+			auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			list->begin();
 			list->get_native_list()->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
 			list->transition_uav(resource.get());
 			list->end();
@@ -79,7 +79,8 @@ namespace DX12
 			scratchInfo = std::make_shared<GPUBuffer>(topLevelPrebuildInfo.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
 		
 			
-			auto list = Device::get().get_upload_list();
+			auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			list->begin();
 
 			auto instanceDescs = list->place_raw(instances);
 

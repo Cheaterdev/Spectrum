@@ -679,10 +679,17 @@ namespace DX12
 
 		if (resource->is_new(id, global_id))
 		{
-		//	assert(std::find(used_resources.begin(), used_resources.end(), resource) == used_resources.end());
+			bool good = std::find(used_resources.begin(), used_resources.end(), resource) == used_resources.end();
+
+			if (!good)
+			{
+				Log::get() << "Baaad " << id << "  " << global_id << Log::endl;
+				Sleep(1000);
+			}
+			assert(good);
 
 			used_resources.emplace_back(const_cast<Resource*>(resource));
-			//assert(!resource->is_new(id, global_id));
+			assert(!resource->is_new(id, global_id));
 
 		}
 	

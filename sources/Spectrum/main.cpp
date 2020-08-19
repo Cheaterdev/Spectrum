@@ -119,7 +119,7 @@ struct closesthit_identifier
 
 	//	RayGenConstantBuffer cb;
 };
-/*
+
 struct RayTracingShaders : public Events::prop_handler,
 	public Events::Runner
 {
@@ -146,8 +146,8 @@ struct RayTracingShaders : public Events::prop_handler,
 	RayGenConstantBuffer m_rayGenCB;
 
 
-	ArraysHolder<Render::Handle> buffersVertex;
-	ArraysHolder<Render::Handle> buffersIndex;
+	//ArraysHolder<Render::Handle> buffersVertex;
+	//ArraysHolder<Render::Handle> buffersIndex;
 
 	//std::vector<ComPtr<IDxcBlob>> blobs;
 
@@ -159,7 +159,7 @@ struct RayTracingShaders : public Events::prop_handler,
 	};
 	using ptr = std::shared_ptr<RayTracingShaders>;
 
-	ArraysHolder<InstanceData> instanceData;
+	//ArraysHolder<InstanceData> instanceData;
 	std::vector<materials::universal_material::ptr> materials;
 	std::set<ComPtr<ID3D12StateObject>> all_objs;
 	//	Render::HandleTable gpu_textures;
@@ -400,7 +400,7 @@ struct RayTracingShaders : public Events::prop_handler,
 		shader_data.index_buffers = buffersIndex;
 	//	shader_data.material_textures = textures;
 
-	*
+	*/
 		//shader_data.mat_const = materials[0]->get_pixel_buffer();
 		_list->get_compute().flush_binds(true);
 
@@ -430,7 +430,7 @@ struct RayTracingShaders : public Events::prop_handler,
 	}
 };
 
-*/
+
 class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
 {
 	main_renderer::ptr scene_renderer;
@@ -493,22 +493,22 @@ public:
 	MeshAssetInstance::ptr instance;
 
 
-	//RayTracingShaders shaders;
+	RayTracingShaders shaders;
 
-	//Render::RaytracingAccelerationStructure::ptr scene_as;
+	Render::RaytracingAccelerationStructure::ptr scene_as;
 
 
 	// Build acceleration structures needed for raytracing.
-	/*void BuildAccelerationStructures()
+	void BuildAccelerationStructures()
 	{
 
 		std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
 
 		scene->iterate([&instances, this](scene_object* object) {
 			MeshAssetInstance::ptr mesh = object->get_ptr<MeshAssetInstance>();
-			if (mesh)
+			/*if (mesh)
 			{
-				auto structures = mesh->create_raytracing_as(gpu_meshes_renderer_static->gpu_nodes.get_gpu()->get_gpu_address());
+				auto structures = mesh->create_raytracing_as();
 
 				for (auto& e : structures)
 				{
@@ -551,19 +551,19 @@ public:
 					instances.push_back(instanceDesc);
 				}
 
-			}
+			}*/
 
 			return true;
 			});
 
 
 
-		scene_as = std::make_shared<RaytracingAccelerationStructure>(instances);
-		shaders.CreateSharedCollection();
-		shaders.CreateGlobalCollection();
-		shaders.CreateRaytracingPipelineStateObject();
+		//scene_as = std::make_shared<RaytracingAccelerationStructure>(instances);
+	//	shaders.CreateSharedCollection();
+	//	shaders.CreateGlobalCollection();
+	//	shaders.CreateRaytracingPipelineStateObject();
 		//	shaders = std::make_shared<RayTracingShaders>(blobs);
-	}*/
+	}
 
 	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
 	PSSM pssm;
@@ -845,7 +845,7 @@ public:
 		list->end();
 		list->execute_and_wait();
 
-	//	BuildAccelerationStructures();
+    	BuildAccelerationStructures();
 
 		eyes.emplace_back(new EyeData(nullptr));
 

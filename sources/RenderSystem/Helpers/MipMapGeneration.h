@@ -11,8 +11,8 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
 		Render::PipelineState::ptr quality_buffer_refl_stencil_state;
 
 
-		Render::PipelineState::ptr copy_texture_state;
-
+		 
+		 Cache<DXGI_FORMAT, Render::PipelineState::ptr> copy_texture_state;
 		Render::PipelineState::ptr render_depth_state;
 
         std::mutex m;

@@ -17,15 +17,18 @@ void DX12::BufferView::place_srv(Handle& h) {
 
 void DX12::BufferView::place_uav(Handle& h) {
 	if (!resource) return;
+	{
+		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+		desc.Format = DXGI_FORMAT_R32_TYPELESS;
+		desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / 4);
+		desc.Buffer.StructureByteStride = 0;
+		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-	D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-	desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-	desc.Format = DXGI_FORMAT_R32_TYPELESS;
-	desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / 4);
-	desc.Buffer.StructureByteStride = 0;
-	desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+		Device::get().create_uav(h, resource.get(), desc);
 
-	Device::get().create_uav(h, resource.get(), desc);
+		Device::get().create_uav(uav_clear, resource.get(), desc);
+	}
 
 }
 
