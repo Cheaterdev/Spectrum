@@ -12,6 +12,7 @@ struct VoxelScreen
 	Texture3D<float4> GetVoxels() { return srv.voxels; }
 	TextureCube<float4> GetTex_cube() { return srv.tex_cube; }
 	GBuffer GetGbuffer() { return CreateGBuffer(srv.gbuffer); }
+
 };
  const VoxelScreen CreateVoxelScreen(VoxelScreen_srv srv)
 {

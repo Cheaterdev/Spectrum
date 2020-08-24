@@ -13,6 +13,7 @@ struct VoxelInfo
 	float4 GetSize() { return cb.size; }
 	uint4 GetVoxels_per_tile() { return cb.voxels_per_tile; }
 	uint4 GetVoxel_tiles_count() { return cb.voxel_tiles_count; }
+
 };
  const VoxelInfo CreateVoxelInfo(VoxelInfo_cb cb)
 {

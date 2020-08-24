@@ -7,6 +7,7 @@ struct PickerBuffer
 {
 	PickerBuffer_uav uav;
 	RWStructuredBuffer<uint> GetViewBuffer() { return uav.viewBuffer; }
+
 };
  const PickerBuffer CreatePickerBuffer(PickerBuffer_uav uav)
 {

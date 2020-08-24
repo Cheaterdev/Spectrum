@@ -21,6 +21,7 @@ struct VoxelMipMap
 	Texture3D<float4> GetSrcMip() { return srv.SrcMip; }
 	StructuredBuffer<int3> GetVisibility() { return srv.visibility; }
 	uint GetGroupCount() { return cb.groupCount; }
+
 };
  const VoxelMipMap CreateVoxelMipMap(VoxelMipMap_cb cb,VoxelMipMap_srv srv,VoxelMipMap_uav uav)
 {

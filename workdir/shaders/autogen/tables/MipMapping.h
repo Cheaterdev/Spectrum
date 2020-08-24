@@ -23,6 +23,7 @@ struct MipMapping
 	float2 GetTexelSize() { return cb.TexelSize; }
 	RWTexture2D<float4> GetOutMip(int i) { return uav.OutMip[i]; }
 	Texture2D<float4> GetSrcMip() { return srv.SrcMip; }
+
 };
  const MipMapping CreateMipMapping(MipMapping_cb cb,MipMapping_srv srv,MipMapping_uav uav)
 {

@@ -27,6 +27,7 @@ public:
 	Table* table_ptr;
 	Slot* slot_ptr;
 	option* option_ptr;
+	have_hlsl* hlsl_ptr;
 
 	std::stack<have_name*> elems;
 
@@ -60,6 +61,8 @@ public:
 		option_ptr = dynamic_cast<option*>(e);
 		owner_ptr = dynamic_cast<have_owner*>(e);
 		array_ptr = dynamic_cast<have_array*>(e);
+		hlsl_ptr = dynamic_cast<have_hlsl*>(e);
+
 	}
 #define GENERATE(x) \
 	virtual void exit##x##(SIGParser::##x##Context * ctx) override { \
@@ -112,6 +115,30 @@ public:
 		setup_elem(layout.samplers.back());
 	}
 
+	GENERATE(Rt_definition)
+	{
+		parsed.rt.emplace_back();
+		setup_elem(parsed.rt.back());
+	}
+
+	GENERATE(Rt_color_declaration)
+	{
+		auto& rt = parsed.rt.back();
+
+		rt.rtvs.emplace_back();
+		setup_elem(rt.rtvs.back());
+	}
+
+	GENERATE(Rt_ds_declaration)
+	{
+		auto& rt = parsed.rt.back();
+
+		assert(!rt.dsv);
+		rt.dsv = DSV();
+
+		setup_elem(*rt.dsv);
+
+	}
 	virtual void enterName_id(SIGParser::Name_idContext* ctx) override {
 		name_ptr->name = ctx->children[0]->getText();
 	}
@@ -148,6 +175,15 @@ public:
 		array_ptr->array_count =std::atoi( ctx->children[0]->getText().c_str());
 		type_ptr->bindless = false;
 	}
+
+	
+	virtual void enterInsert_block(SIGParser::Insert_blockContext* ctx) override {
+
+		auto&str = ctx->children[0]->getText();
+		hlsl_ptr->hlsl = str.substr(2, str.size() - 4);
+	}
+	
+
 
 };
 

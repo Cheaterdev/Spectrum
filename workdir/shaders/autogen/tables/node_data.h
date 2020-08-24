@@ -12,6 +12,7 @@ struct node_data
 	float4x4 GetNode_global_matrix() { return cb.node_global_matrix; }
 	float4x4 GetNode_inverse_matrix() { return cb.node_inverse_matrix; }
 	AABB GetAabb() { return CreateAABB(cb.aabb); }
+
 };
  const node_data Createnode_data(node_data_cb cb)
 {

@@ -7,6 +7,7 @@ struct CopyTexture
 {
 	CopyTexture_srv srv;
 	Texture2D<float4> GetSrcTex() { return srv.srcTex; }
+
 };
  const CopyTexture CreateCopyTexture(CopyTexture_srv srv)
 {

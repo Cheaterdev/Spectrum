@@ -103,7 +103,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R)
 
 float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 {
-	return GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler , float3(Roughness, Metallic, 0.5 + 0.5*NoV), 0);
+	return GetFrameInfo().IntegrateBRDF(Roughness, Metallic, NoV);
 }
 
 

@@ -26,6 +26,7 @@ struct Camera
 	float4 GetDirection() { return cb.direction; }
 	float4 GetJitter() { return cb.jitter; }
 	Frustum GetFrustum() { return CreateFrustum(cb.frustum); }
+
 };
  const Camera CreateCamera(Camera_cb cb)
 {

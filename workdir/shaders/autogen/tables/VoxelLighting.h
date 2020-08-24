@@ -30,6 +30,7 @@ struct VoxelLighting
 	StructuredBuffer<int3> GetVisibility() { return srv.visibility; }
 	uint GetGroupCount() { return cb.groupCount; }
 	PSSMDataGlobal GetPssmGlobal() { return CreatePSSMDataGlobal(srv.pssmGlobal); }
+
 };
  const VoxelLighting CreateVoxelLighting(VoxelLighting_cb cb,VoxelLighting_srv srv,VoxelLighting_uav uav)
 {

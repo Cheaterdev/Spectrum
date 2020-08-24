@@ -10,6 +10,7 @@ struct MaterialCommandData
 	MaterialCommandData_cb cb;
 	uint GetPipeline_id() { return cb.pipeline_id; }
 	GPUAddress GetMaterial_cb() { return CreateGPUAddress(cb.material_cb); }
+
 };
  const MaterialCommandData CreateMaterialCommandData(MaterialCommandData_cb cb)
 {

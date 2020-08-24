@@ -9,6 +9,7 @@ struct NinePatch
 	NinePatch_srv srv;
 	StructuredBuffer<vertex_input> GetVb() { return srv.vb; }
 	Texture2D GetTextures(int i) { return bindless[i]; }
+
 };
  const NinePatch CreateNinePatch(NinePatch_srv srv)
 {

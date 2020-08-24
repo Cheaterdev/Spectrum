@@ -494,7 +494,7 @@ mesh_renderer::mesh_renderer()
 
 		{
 
-			boxes_command = Render::IndirectCommand::create_command<DrawIndirect>(sizeof(command));
+			boxes_command = Render::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(command));
 
 		}
 	}
@@ -504,7 +504,7 @@ mesh_renderer::mesh_renderer()
 		dispatch_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 
-		dispatch_command = Render::IndirectCommand::create_command<Dispatch>(sizeof(command));
+		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(command));
 
 	}
 

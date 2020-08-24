@@ -7,6 +7,7 @@ struct DrawIndexedArguments
 {
 	DrawIndexedArguments_cb cb;
 	uint GetData(int i) { return cb.data[i]; }
+
 };
  const DrawIndexedArguments CreateDrawIndexedArguments(DrawIndexedArguments_cb cb)
 {

@@ -16,8 +16,9 @@ public:
     GT = 9, LT = 10, GTEQ = 11, LTEQ = 12, PLUS = 13, MINUS = 14, MULT = 15, 
     DIV = 16, MOD = 17, POW = 18, NOT = 19, SCOL = 20, ASSIGN = 21, OPAR = 22, 
     CPAR = 23, OBRACE = 24, CBRACE = 25, OSBRACE = 26, CSBRACE = 27, TRUE = 28, 
-    FALSE = 29, LOG = 30, LAYOUT = 31, STRUCT = 32, SLOT = 33, ID = 34, 
-    INT_SCALAR = 35, FLOAT_SCALAR = 36, STRING = 37, COMMENT = 38, SPACE = 39
+    FALSE = 29, LOG = 30, LAYOUT = 31, STRUCT = 32, SLOT = 33, RT = 34, 
+    RTV = 35, DSV = 36, ID = 37, INT_SCALAR = 38, FLOAT_SCALAR = 39, STRING = 40, 
+    COMMENT = 41, SPACE = 42, ML_COMMENT = 43, INSERT_BLOCK = 44
   };
 
   enum {
@@ -26,9 +27,10 @@ public:
     RuleSlot_declaration = 8, RuleSampler_declaration = 9, RuleTemplated = 10, 
     RuleType_with_template = 11, RuleInherit_id = 12, RuleName_id = 13, 
     RuleType_id = 14, RuleOption_id = 15, RuleOwner_id = 16, RuleTemplate_id = 17, 
-    RuleValue_id = 18, RuleInherit = 19, RuleLayout_stat = 20, RuleLayout_block = 21, 
-    RuleLayout_definition = 22, RuleTable_stat = 23, RuleTable_block = 24, 
-    RuleTable_definition = 25
+    RuleValue_id = 18, RuleInsert_block = 19, RuleInherit = 20, RuleLayout_stat = 21, 
+    RuleLayout_block = 22, RuleLayout_definition = 23, RuleTable_stat = 24, 
+    RuleTable_block = 25, RuleTable_definition = 26, RuleRt_color_declaration = 27, 
+    RuleRt_ds_declaration = 28, RuleRt_stat = 29, RuleRt_block = 30, RuleRt_definition = 31
   };
 
   SIGParser(antlr4::TokenStream *input);
@@ -60,13 +62,19 @@ public:
   class Owner_idContext;
   class Template_idContext;
   class Value_idContext;
+  class Insert_blockContext;
   class InheritContext;
   class Layout_statContext;
   class Layout_blockContext;
   class Layout_definitionContext;
   class Table_statContext;
   class Table_blockContext;
-  class Table_definitionContext; 
+  class Table_definitionContext;
+  class Rt_color_declarationContext;
+  class Rt_ds_declarationContext;
+  class Rt_statContext;
+  class Rt_blockContext;
+  class Rt_definitionContext; 
 
   class  ParseContext : public antlr4::ParserRuleContext {
   public:
@@ -77,6 +85,8 @@ public:
     Layout_definitionContext* layout_definition(size_t i);
     std::vector<Table_definitionContext *> table_definition();
     Table_definitionContext* table_definition(size_t i);
+    std::vector<Rt_definitionContext *> rt_definition();
+    Rt_definitionContext* rt_definition(size_t i);
     std::vector<antlr4::tree::TerminalNode *> COMMENT();
     antlr4::tree::TerminalNode* COMMENT(size_t i);
 
@@ -380,6 +390,21 @@ public:
 
   Value_idContext* value_id();
 
+  class  Insert_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Insert_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *INSERT_BLOCK();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Insert_blockContext* insert_block();
+
   class  InheritContext : public antlr4::ParserRuleContext {
   public:
     InheritContext(antlr4::ParserRuleContext *parent, size_t invokingState);
@@ -454,6 +479,7 @@ public:
     Table_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     Value_declarationContext *value_declaration();
+    Insert_blockContext *insert_block();
     antlr4::tree::TerminalNode *COMMENT();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -502,6 +528,92 @@ public:
   };
 
   Table_definitionContext* table_definition();
+
+  class  Rt_color_declarationContext : public antlr4::ParserRuleContext {
+  public:
+    Rt_color_declarationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Type_idContext *type_id();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Rt_color_declarationContext* rt_color_declaration();
+
+  class  Rt_ds_declarationContext : public antlr4::ParserRuleContext {
+  public:
+    Rt_ds_declarationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *DSV();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Rt_ds_declarationContext* rt_ds_declaration();
+
+  class  Rt_statContext : public antlr4::ParserRuleContext {
+  public:
+    Rt_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Rt_color_declarationContext *rt_color_declaration();
+    Rt_ds_declarationContext *rt_ds_declaration();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Rt_statContext* rt_stat();
+
+  class  Rt_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Rt_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Rt_statContext *> rt_stat();
+    Rt_statContext* rt_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Rt_blockContext* rt_block();
+
+  class  Rt_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Rt_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *RT();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    Rt_blockContext *rt_block();
+    antlr4::tree::TerminalNode *CBRACE();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Rt_definitionContext* rt_definition();
 
 
 private:

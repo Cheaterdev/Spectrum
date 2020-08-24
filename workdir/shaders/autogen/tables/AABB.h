@@ -9,6 +9,7 @@ struct AABB
 	AABB_cb cb;
 	float4 GetMin() { return cb.min; }
 	float4 GetMax() { return cb.max; }
+
 };
  const AABB CreateAABB(AABB_cb cb)
 {

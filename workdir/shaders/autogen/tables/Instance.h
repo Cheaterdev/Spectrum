@@ -7,6 +7,7 @@ struct Instance
 {
 	Instance_cb cb;
 	uint GetInstanceId() { return cb.instanceId; }
+
 };
  const Instance CreateInstance(Instance_cb cb)
 {

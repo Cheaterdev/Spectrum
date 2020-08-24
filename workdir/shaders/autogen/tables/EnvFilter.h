@@ -11,6 +11,7 @@ struct EnvFilter
 	uint4 GetFace() { return cb.face; }
 	float4 GetScaler() { return cb.scaler; }
 	uint4 GetSize() { return cb.size; }
+
 };
  const EnvFilter CreateEnvFilter(EnvFilter_cb cb)
 {

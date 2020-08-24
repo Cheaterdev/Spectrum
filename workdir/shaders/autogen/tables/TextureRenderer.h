@@ -7,6 +7,7 @@ struct TextureRenderer
 {
 	TextureRenderer_srv srv;
 	Texture2D<float4> GetTexture() { return srv.texture; }
+
 };
  const TextureRenderer CreateTextureRenderer(TextureRenderer_srv srv)
 {

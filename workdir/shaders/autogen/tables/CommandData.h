@@ -13,6 +13,7 @@ struct CommandData
 	GPUAddress GetMaterial_cb() { return CreateGPUAddress(cb.material_cb); }
 	GPUAddress GetMesh_cb() { return CreateGPUAddress(cb.mesh_cb); }
 	DrawIndexedArguments GetDraw_commands() { return CreateDrawIndexedArguments(cb.draw_commands); }
+
 };
  const CommandData CreateCommandData(CommandData_cb cb)
 {

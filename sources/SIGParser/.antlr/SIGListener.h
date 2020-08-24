@@ -71,6 +71,9 @@ public:
   virtual void enterValue_id(SIGParser::Value_idContext *ctx) = 0;
   virtual void exitValue_id(SIGParser::Value_idContext *ctx) = 0;
 
+  virtual void enterInsert_block(SIGParser::Insert_blockContext *ctx) = 0;
+  virtual void exitInsert_block(SIGParser::Insert_blockContext *ctx) = 0;
+
   virtual void enterInherit(SIGParser::InheritContext *ctx) = 0;
   virtual void exitInherit(SIGParser::InheritContext *ctx) = 0;
 
@@ -91,6 +94,21 @@ public:
 
   virtual void enterTable_definition(SIGParser::Table_definitionContext *ctx) = 0;
   virtual void exitTable_definition(SIGParser::Table_definitionContext *ctx) = 0;
+
+  virtual void enterRt_color_declaration(SIGParser::Rt_color_declarationContext *ctx) = 0;
+  virtual void exitRt_color_declaration(SIGParser::Rt_color_declarationContext *ctx) = 0;
+
+  virtual void enterRt_ds_declaration(SIGParser::Rt_ds_declarationContext *ctx) = 0;
+  virtual void exitRt_ds_declaration(SIGParser::Rt_ds_declarationContext *ctx) = 0;
+
+  virtual void enterRt_stat(SIGParser::Rt_statContext *ctx) = 0;
+  virtual void exitRt_stat(SIGParser::Rt_statContext *ctx) = 0;
+
+  virtual void enterRt_block(SIGParser::Rt_blockContext *ctx) = 0;
+  virtual void exitRt_block(SIGParser::Rt_blockContext *ctx) = 0;
+
+  virtual void enterRt_definition(SIGParser::Rt_definitionContext *ctx) = 0;
+  virtual void exitRt_definition(SIGParser::Rt_definitionContext *ctx) = 0;
 
 
 };

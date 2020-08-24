@@ -15,6 +15,7 @@ struct MeshCommandData
 	uint GetNode_offset() { return cb.node_offset; }
 	GPUAddress GetMesh_cb() { return CreateGPUAddress(cb.mesh_cb); }
 	DrawIndexedArguments GetDraw_commands() { return CreateDrawIndexedArguments(cb.draw_commands); }
+
 };
  const MeshCommandData CreateMeshCommandData(MeshCommandData_cb cb)
 {

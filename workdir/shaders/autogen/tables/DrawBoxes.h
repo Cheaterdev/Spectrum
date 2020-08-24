@@ -16,6 +16,7 @@ struct DrawBoxes
 	StructuredBuffer<float4> GetVertices() { return srv.vertices; }
 	StructuredBuffer<BoxInfo> GetInput_meshes() { return srv.input_meshes; }
 	RWStructuredBuffer<uint> GetVisible_meshes() { return uav.visible_meshes; }
+
 };
  const DrawBoxes CreateDrawBoxes(DrawBoxes_srv srv,DrawBoxes_uav uav)
 {

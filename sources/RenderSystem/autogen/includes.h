@@ -50,5 +50,6 @@
 #include "slots\VoxelMipMap.h"
 #include "slots\VoxelLighting.h"
 #include "slots\VoxelDebug.h"
+#include "rt\GBuffer.h"
 void init_signatures();
 Render::RootLayout::ptr get_Signature(Layouts id);

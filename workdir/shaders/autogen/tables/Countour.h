@@ -13,6 +13,7 @@ struct Countour
 	Countour_srv srv;
 	float4 GetColor() { return cb.color; }
 	Texture2D<float4> GetTex() { return srv.tex; }
+
 };
  const Countour CreateCountour(Countour_cb cb,Countour_srv srv)
 {

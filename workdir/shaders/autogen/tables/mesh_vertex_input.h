@@ -13,6 +13,7 @@ struct mesh_vertex_input
 	float3 GetNormal() { return cb.normal; }
 	float2 GetTc() { return cb.tc; }
 	float4 GetTangent() { return cb.tangent; }
+
 };
  const mesh_vertex_input Createmesh_vertex_input(mesh_vertex_input_cb cb)
 {

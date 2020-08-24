@@ -139,6 +139,8 @@ struct MeshRenderContext
        // Render::Handle set_4_table;
 		vec2 screen_subsample = {0,0};
         GBuffer* g_buffer = nullptr;
+        RT::Slot::GBuffer::Compiled gbuffer_compiled;
+
         /*    void set_materials(std::vector<std::shared_ptr<materials::material>>& m)
             {
                 if (!override_material)

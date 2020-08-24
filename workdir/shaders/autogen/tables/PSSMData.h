@@ -10,6 +10,7 @@ struct PSSMData
 	PSSMData_srv srv;
 	Texture2DArray<float> GetLight_buffer() { return srv.light_buffer; }
 	StructuredBuffer<Camera> GetLight_cameras() { return srv.light_cameras; }
+
 };
  const PSSMData CreatePSSMData(PSSMData_srv srv)
 {

@@ -9,6 +9,7 @@ struct BoxInfo
 	BoxInfo_cb cb;
 	uint GetNode_offset() { return cb.node_offset; }
 	uint GetMesh_id() { return cb.mesh_id; }
+
 };
  const BoxInfo CreateBoxInfo(BoxInfo_cb cb)
 {

@@ -1247,6 +1247,17 @@ public:
 					gbuffer.rtv_table.set(context,true, true);
 					gbuffer.rtv_table.set_window(context->list->get_graphics());
 
+					RT::Slot::GBuffer rt_gbuffer;
+					rt_gbuffer.GetAlbedo() = gbuffer.albedo.get_rtv();
+					rt_gbuffer.GetNormals() = gbuffer.normals.get_rtv();
+					rt_gbuffer.GetSpecular() = gbuffer.specular.get_rtv();
+					rt_gbuffer.GetMotion() = gbuffer.speed.get_rtv();
+
+					rt_gbuffer.GetDepth() = gbuffer.depth.get_dsv();
+
+					context->gbuffer_compiled = rt_gbuffer.compile(*context->list);
+
+
 					gpu_scene_renderer->render(context, scene);
 
 				//	stenciler->render(context, scene);

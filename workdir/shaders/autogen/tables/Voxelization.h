@@ -18,6 +18,7 @@ struct Voxelization
 	RWTexture3D<float4> GetNormals() { return uav.normals; }
 	RWByteAddressBuffer GetVisibility() { return uav.visibility; }
 	VoxelInfo GetInfo() { return CreateVoxelInfo(cb.info); }
+
 };
  const Voxelization CreateVoxelization(Voxelization_cb cb,Voxelization_uav uav)
 {

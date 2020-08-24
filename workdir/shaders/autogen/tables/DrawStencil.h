@@ -7,6 +7,7 @@ struct DrawStencil
 {
 	DrawStencil_srv srv;
 	StructuredBuffer<float4> GetVertices() { return srv.vertices; }
+
 };
  const DrawStencil CreateDrawStencil(DrawStencil_srv srv)
 {

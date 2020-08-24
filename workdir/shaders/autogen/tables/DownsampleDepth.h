@@ -13,6 +13,7 @@ struct DownsampleDepth
 	DownsampleDepth_uav uav;
 	Texture2D<float> GetSrcTex() { return srv.srcTex; }
 	RWTexture2D<float> GetTargetTex() { return uav.targetTex; }
+
 };
  const DownsampleDepth CreateDownsampleDepth(DownsampleDepth_srv srv,DownsampleDepth_uav uav)
 {

@@ -9,6 +9,7 @@ struct vertex_input
 	vertex_input_cb cb;
 	float2 GetPos() { return cb.pos; }
 	float2 GetTc() { return cb.tc; }
+
 };
  const vertex_input Createvertex_input(vertex_input_cb cb)
 {

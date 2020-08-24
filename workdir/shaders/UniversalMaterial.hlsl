@@ -2,6 +2,7 @@
 #include "autogen/MaterialInfo.h"
 #include "autogen/MeshInfo.h"
 #include "autogen/SceneData.h"
+#include "autogen/rt/GBuffer.h"
 
 static const Camera camera = GetFrameInfo().GetCamera();
 
@@ -32,38 +33,8 @@ float2 tc : TEXCOORD;
     float4 prev_pos : PREV_POSITION;
     float dist : DISTANCE; 
 };
-struct PS_RESULT 
-{
-float4 albedo : SV_TARGET0; 
-float4 normals : SV_TARGET1;
-float4 specular : SV_TARGET2; 
-    float2 speed : SV_TARGET3;
-};
 
 
-half3 compress_normals(inout half3 vNormal) 
-{
-	// renormalize (needed only if any blending or interpolation happened before)
-	vNormal.rgb = normalize(vNormal.rgb);
-	// get unsigned normal for the cubemap lookup
-	half3  vNormalUns = abs(vNormal.rgb);
-	// get the main axis for cubemap lookup
-	half   maxNAbs = max(vNormalUns.z, max(vNormalUns.x, vNormalUns.y));
-	// get texture coordinates in a collapsed cubemap
-	float2 vTexCoord = vNormalUns.z<maxNAbs ? (vNormalUns.y<maxNAbs ? vNormalUns.yz : vNormalUns.xz) : vNormalUns.xy;
-	vTexCoord = vTexCoord.x < vTexCoord.y ? vTexCoord.yx : vTexCoord.xy;
-	vTexCoord.y /= vTexCoord.x;
-	// fit normal into the edge of unit cube
-	vNormal.rgb /= maxNAbs;
-	// look-up fitting length and scale the normal to get the best fit
-	half fFittingScale = GetFrameInfo().GetBestFitNormals().SampleLevel(pointClampSampler, vTexCoord,0).a;
-	// scale the normal to get the best fit
-	vNormal.rgb *= fFittingScale; 
-	// wrap to [0;1] unsigned form
-	vNormal.rgb = vNormal.rgb * .5h + .5h;
-
-	return vNormal;
-}
  
 Texture2D get_texture(uint i) 
 {
@@ -95,7 +66,7 @@ void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out 
 #ifdef BUILD_FUNC_PS
 
 
-PS_RESULT universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump)
+GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump)
 { 
  //  clip(albedo.w-0.5);
    // clip(albedo.a - 0.2);  
@@ -105,22 +76,22 @@ PS_RESULT universal(vertex_output i, float4 albedo, float metallic,float roughne
 
     float3 v = -normalize(camera.GetPosition() - i.wpos);  
     float3 r = reflect(v, normal);         
-    PS_RESULT result;   
+    GBuffer result;
 
     result.albedo = float4(albedo.xyz, metallic);
-    result.normals = float4(compress_normals(normal), (roughness));
+    result.normals = float4(GetFrameInfo().compress_normals(normal), (roughness));
 	result.specular = 0;// float4(metallic, roughness); 
       
 
     float2 cur_p = float2(0.5, 0.5) + float2(0.5, -0.5)*(i.cur_pos.xy / i.cur_pos.w);
     float2 prev_p = float2(0.5,0.5) + float2(0.5, -0.5)*(i.prev_pos.xy / i.prev_pos.w);
 	   
-    result.speed = (cur_p - prev_p);// +float2(-1, 1) *(camera.jitter - prev_camera.jitter);
+    result.motion = (cur_p - prev_p);// +float2(-1, 1) *(camera.jitter - prev_camera.jitter);
     return result;       
 }    
 
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f);
-PS_RESULT PS(vertex_output i)
+GBuffer PS(vertex_output i)
 {
 	float4 color = 1;
 	float metallic = 1;

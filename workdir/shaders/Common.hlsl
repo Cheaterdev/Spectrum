@@ -2,7 +2,7 @@
 #define COMMON_HLSL
 
 static const float PI = 3.14159265358979f;
-
+/*
 struct camera_info
 {
 	matrix view;
@@ -18,7 +18,7 @@ struct camera_info
 	float2 jitter; float2 unused3;
 };
 
-
+*/
 struct pixel_info
 {
 	float view_z;

@@ -7,6 +7,7 @@ struct GBufferQuality
 {
 	GBufferQuality_srv srv;
 	Texture2D GetRef() { return srv.ref; }
+
 };
  const GBufferQuality CreateGBufferQuality(GBufferQuality_srv srv)
 {

@@ -91,6 +91,10 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual antlrcpp::Any visitInsert_block(SIGParser::Insert_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual antlrcpp::Any visitInherit(SIGParser::InheritContext *ctx) override {
     return visitChildren(ctx);
   }
@@ -116,6 +120,26 @@ public:
   }
 
   virtual antlrcpp::Any visitTable_definition(SIGParser::Table_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRt_color_declaration(SIGParser::Rt_color_declarationContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRt_ds_declaration(SIGParser::Rt_ds_declarationContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRt_stat(SIGParser::Rt_statContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRt_block(SIGParser::Rt_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRt_definition(SIGParser::Rt_definitionContext *ctx) override {
     return visitChildren(ctx);
   }
 

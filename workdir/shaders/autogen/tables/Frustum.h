@@ -7,6 +7,7 @@ struct Frustum
 {
 	Frustum_cb cb;
 	float4 GetPlanes(int i) { return cb.planes[i]; }
+
 };
  const Frustum CreateFrustum(Frustum_cb cb)
 {

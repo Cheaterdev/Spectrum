@@ -6,6 +6,7 @@
 #include <vector>
 #include <set>
 #include <array>
+#include <optional>
 
 
 enum   ValueType 
@@ -16,7 +17,6 @@ enum   ValueType
 	SMP,
 	STRUCT,
 	COUNT
-
 };
 
 struct my_stream
@@ -52,6 +52,14 @@ struct have_name
 	std::string name;
 
 	virtual ~have_name() = default;
+};
+
+
+struct have_hlsl
+{
+
+	std::string hlsl;
+
 };
 struct inherited
 {
@@ -167,6 +175,23 @@ struct Layout : public inherited, have_options, have_name
 
 };
 
+
+struct DSV: public have_name
+{
+
+}; 
+
+struct RTV : public have_name, have_type
+{
+
+};
+
+struct RenderTarget : public inherited, have_options, have_name
+{
+	std::list<RTV> rtvs;
+	std::optional<DSV> dsv;
+};
+
 template<class T>
 void Layout::recursive_slots(T f)
 {
@@ -191,7 +216,7 @@ void Layout::recursive_samplers(T f)
 }
 
 struct Parsed;
-struct Table : public inherited, have_options, have_name
+struct Table : public inherited, have_options, have_name , have_hlsl
 {
 	Slot* slot = nullptr;
 	std::string path;
@@ -209,11 +234,20 @@ struct Table : public inherited, have_options, have_name
 	void setup(Parsed* all);
 };
 
+
+
+struct RT : public inherited, have_options, have_name
+{
+
+};
+
+
 struct Parsed
 {
 	std::list<Layout> layouts;
 	std::list<Table> tables;
 	std::list<Layout*> root_layouts;
+	std::list<RenderTarget> rt;
 
 	Layout* find_layout(std::string name);
 	Table* find_table(std::string name);
@@ -224,5 +258,7 @@ struct Parsed
 	{
 		layouts.splice(layouts.end(), r.layouts);
 		tables.splice(tables.end(), r.tables);
+		rt.splice(rt.end(), r.rt);
+
 	}
 };

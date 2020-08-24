@@ -73,6 +73,9 @@ public:
   virtual void enterValue_id(SIGParser::Value_idContext * /*ctx*/) override { }
   virtual void exitValue_id(SIGParser::Value_idContext * /*ctx*/) override { }
 
+  virtual void enterInsert_block(SIGParser::Insert_blockContext * /*ctx*/) override { }
+  virtual void exitInsert_block(SIGParser::Insert_blockContext * /*ctx*/) override { }
+
   virtual void enterInherit(SIGParser::InheritContext * /*ctx*/) override { }
   virtual void exitInherit(SIGParser::InheritContext * /*ctx*/) override { }
 
@@ -93,6 +96,21 @@ public:
 
   virtual void enterTable_definition(SIGParser::Table_definitionContext * /*ctx*/) override { }
   virtual void exitTable_definition(SIGParser::Table_definitionContext * /*ctx*/) override { }
+
+  virtual void enterRt_color_declaration(SIGParser::Rt_color_declarationContext * /*ctx*/) override { }
+  virtual void exitRt_color_declaration(SIGParser::Rt_color_declarationContext * /*ctx*/) override { }
+
+  virtual void enterRt_ds_declaration(SIGParser::Rt_ds_declarationContext * /*ctx*/) override { }
+  virtual void exitRt_ds_declaration(SIGParser::Rt_ds_declarationContext * /*ctx*/) override { }
+
+  virtual void enterRt_stat(SIGParser::Rt_statContext * /*ctx*/) override { }
+  virtual void exitRt_stat(SIGParser::Rt_statContext * /*ctx*/) override { }
+
+  virtual void enterRt_block(SIGParser::Rt_blockContext * /*ctx*/) override { }
+  virtual void exitRt_block(SIGParser::Rt_blockContext * /*ctx*/) override { }
+
+  virtual void enterRt_definition(SIGParser::Rt_definitionContext * /*ctx*/) override { }
+  virtual void exitRt_definition(SIGParser::Rt_definitionContext * /*ctx*/) override { }
 
 
   virtual void enterEveryRule(antlr4::ParserRuleContext * /*ctx*/) override { }

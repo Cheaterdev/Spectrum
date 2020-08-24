@@ -257,7 +257,7 @@ void generate_table(Table& table)
 				stream << v.type << "_" << get_name_for(type) << " " << v.name << ";" << std::endl;
 			}
 		}
-		
+
 		stream.pop();
 		stream << "};" << std::endl;
 	};
@@ -306,40 +306,42 @@ void generate_table(Table& table)
 		for (auto& v : table.values)
 		{
 			if (v.value_type != ValueType::STRUCT) continue;
-		//	stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
+			//	stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
 
 
-				std::string pass;
-				auto t = parsed.find_table(v.type);
-				auto f = [&](ValueType type) {
-					if (t->counts[type] == 0) return;
-					if (pass.size()) pass += ",";
-					pass += get_name_for(type) + "." + v.name;
-				};
+			std::string pass;
+			auto t = parsed.find_table(v.type);
+			auto f = [&](ValueType type) {
+				if (t->counts[type] == 0) return;
+				if (pass.size()) pass += ",";
+				pass += get_name_for(type) + "." + v.name;
+			};
 
-				f(ValueType::CB);
-				f(ValueType::SRV);
-				f(ValueType::UAV);
-				f(ValueType::SMP);
+			f(ValueType::CB);
+			f(ValueType::SRV);
+			f(ValueType::UAV);
+			f(ValueType::SMP);
 
 
 			std::string cameled = v.name;
 			cameled[0] = std::toupper(cameled[0]);
-/*
-			if (v.as_array)
-			{
-				stream << v.type << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
-			}
-			else
-			
-			*/
+			/*
+						if (v.as_array)
+						{
+							stream << v.type << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
+						}
+						else
 
-	stream << v.type << " Get" << cameled << "() { " << "return Create" << v.type << "(" << pass << "); }" << std::endl;
+						*/
+
+			stream << v.type << " Get" << cameled << "() { " << "return Create" << v.type << "(" << pass << "); }" << std::endl;
 		}
 
 		stream.pop();
 
 	}
+
+	stream << table.hlsl << std::endl;
 	stream << "};" << std::endl;
 
 
@@ -387,7 +389,7 @@ void generate_table(Table& table)
 						*/
 
 
-		
+
 
 			stream << "};" << std::endl;
 
@@ -468,31 +470,31 @@ void generate_cpp_table(const Table& table)
 				if (v.value_type != type) continue;
 				if (v.array_count == 0)
 					continue;
-			
+
 
 				stream << get_cpp_for(v) << " " << v.name << generate_array(v) << ';' << std::endl;
 			}
 
 			for (auto& v : table.values)
 			{
-				if (v.find_option("dynamic")) 
+				if (v.find_option("dynamic"))
 					continue;
 
 				if (v.value_type == ValueType::STRUCT)
 				{
-					
-						auto t = parsed.find_table(v.type);
 
-						if(t->find_option("shader_only"))
-							stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
-						else
-							stream << v.type << "::" << str_toupper(get_name_for(type)) << " " << v.name << generate_array(v) << ";" << std::endl;
+					auto t = parsed.find_table(v.type);
+
+					if (t->find_option("shader_only"))
+						stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
+					else
+						stream << v.type << "::" << str_toupper(get_name_for(type)) << " " << v.name << generate_array(v) << ";" << std::endl;
 				}
 
 
 			}
 
-			
+
 			stream.pop();
 		}
 		stream << "} &" << get_name_for(type) << ";" << std::endl;
@@ -555,7 +557,7 @@ void generate_cpp_table(const Table& table)
 				std::string cameled = v.name;
 				cameled[0] = std::toupper(cameled[0]);
 
-				stream << "DynamicData"<< generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
+				stream << "DynamicData" << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
 			}
 
 
@@ -570,7 +572,7 @@ void generate_cpp_table(const Table& table)
 				auto& vtable = *parsed.find_table(v.type);
 
 
-			
+
 
 				std::string cameled = v.name;
 				cameled[0] = std::toupper(cameled[0]);
@@ -686,7 +688,7 @@ void generate_cpp_table(const Table& table)
 					if (pass.size()) pass += ",";
 					pass += get_name_for(type);
 
-					copy+= get_name_for(type) + " = other." + get_name_for(type) +";";
+					copy += get_name_for(type) + " = other." + get_name_for(type) + ";";
 					stream << str_toupper(get_name_for(type)) << " " << get_name_for(type) << ";" << std::endl;
 
 
@@ -711,10 +713,10 @@ void generate_cpp_table(const Table& table)
 					"){}" << std::endl;
 
 
-				stream << table.name << "(const "<< table.name<<"&other): "\
+				stream << table.name << "(const " << table.name << "&other): "\
 					"DataHolder("
 					<< pass <<
-					"){" << copy<< "}" << std::endl;
+					"){" << copy << "}" << std::endl;
 
 
 				stream.pop();
@@ -746,25 +748,33 @@ void generate_include_list(const Parsed& parsed)
 		if (t.slot)
 			stream << "#include \"slots\\" << t.name << ".h\"" << std::endl;
 	}
-/*	stream << "enum class Layouts: int" << std::endl;
 
-	stream << "{" << std::endl;
+
+	for (auto& t : parsed.rt)
 	{
-		stream.push();
-		stream << "UNKNOWN" << std::endl;
-		for (auto& l : parsed.layouts)
-		{
-			stream << l.name << "," << std::endl;
-		}
 
-		stream << "TOTAL" << std::endl;
-		stream.pop();
+		stream << "#include \"rt\\" << t.name << ".h\"" << std::endl;
 	}
 
-	stream << "};" << std::endl;
+	/*	stream << "enum class Layouts: int" << std::endl;
 
-	*/
-	//	stream << "static std::array<Render::RootSignature::ptr, static_cast<int>(Layouts::TOTAL)> signatures;" << std::endl;
+		stream << "{" << std::endl;
+		{
+			stream.push();
+			stream << "UNKNOWN" << std::endl;
+			for (auto& l : parsed.layouts)
+			{
+				stream << l.name << "," << std::endl;
+			}
+
+			stream << "TOTAL" << std::endl;
+			stream.pop();
+		}
+
+		stream << "};" << std::endl;
+
+		*/
+		//	stream << "static std::array<Render::RootSignature::ptr, static_cast<int>(Layouts::TOTAL)> signatures;" << std::endl;
 
 	stream << "void init_signatures();" << std::endl;
 
@@ -806,6 +816,173 @@ void generate_layout(Layout& layout)
 
 }
 
+void generate_rt(RenderTarget& rt)
+{
+	my_stream stream(hlsl_path + "/rt", rt.name + ".h");
+	stream << "#pragma once" << std::endl;
+
+	stream << "struct " << rt.name << std::endl;
+	stream << "{" << std::endl;
+	{
+		stream.push();
+
+		int i = 0;
+
+		for (auto& e : rt.rtvs)
+		{
+			stream << e.type << " " << e.name << ": SV_Target" << i << ";" << std::endl;
+			i++;
+		}
+
+		stream.pop();
+	}
+	stream << "};" << std::endl;
+}
+
+
+void generate_cpp_rt(RenderTarget& rt)
+{
+	my_stream stream(cpp_path + "/rt", rt.name + ".h");
+	stream << "#pragma once" << std::endl;
+	stream << "namespace RT" << std::endl;
+	stream << "{" << std::endl;
+	{
+		stream.push();
+		stream << "namespace Table" << std::endl;
+		stream << "{" << std::endl;
+		{
+			stream.push();
+			stream << "struct " << rt.name << std::endl;
+			stream << "{" << std::endl;
+			{
+				stream.push();
+				if (rt.rtvs.size())
+				{
+					stream << "struct RTV" << std::endl;
+					stream << "{" << std::endl;
+					{
+						stream.push();
+						int i = 0;
+						for (auto& e : rt.rtvs)
+						{
+							stream << "Render::Handle" << " " << e.name << ";" << std::endl;
+							i++;
+						}
+
+						stream.pop();
+					}
+					stream << "} &rtv;" << std::endl;
+				}
+			
+				if (rt.dsv)
+				{
+					stream << "struct DSV" << std::endl;
+					stream << "{" << std::endl;
+					{
+						stream.push();
+
+						stream << "Render::Handle" << " " << rt.dsv->name << ";" << std::endl;
+
+						stream.pop();
+					}
+					stream << "}&dsv;" << std::endl;
+				}
+
+
+			
+				for (auto& e : rt.rtvs)
+				{
+					std::string cameled = e.name;
+					cameled[0] = std::toupper(cameled[0]);
+
+					
+					stream << "Render::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
+				}
+
+				if (rt.dsv)
+				{
+					std::string cameled = rt.dsv->name;
+					cameled[0] = std::toupper(cameled[0]);
+
+
+					stream << "Render::Handle&" << " Get" << cameled << "() { " << "return " << "dsv." << rt.dsv->name << "; }" << std::endl;
+
+				}
+				std::string pass;
+				std::string args;
+
+				if (rt.rtvs.size())
+				{
+					if (!args.empty()) args += ", ";
+					if (!pass.empty()) pass += ", ";
+
+					args += "RTV & rtv";
+					pass += "rtv(rtv)";
+				}
+				if (rt.dsv)
+				{
+					if (!args.empty()) args += ", ";
+					if (!pass.empty()) pass += ", ";
+
+					args += "DSV & dsv";
+					pass += "dsv(dsv)";
+				}
+				stream.pop();
+
+
+				stream << rt.name <<"(" << args<<"):"<<pass<< "{}"<< std::endl;
+
+			}
+			stream << "};" << std::endl;
+
+			stream.pop();
+		}
+		stream << "}" << std::endl;
+		
+
+		stream << "namespace Slot" << std::endl;
+		stream << "{" << std::endl;
+		{
+			stream.push();
+
+			stream << "struct " << rt.name << ": public RTHolder<Table::"<<rt.name<<">"<<  std::endl;
+			stream << "{" << std::endl;
+			{
+				stream.push();
+				std::string pass;
+
+				if (rt.rtvs.size())
+				{
+					if (!pass.empty()) pass += ", ";
+
+					stream << "RTV rtv;" << std::endl;
+					pass += "rtv";
+				}
+
+				if (rt.dsv)
+				{
+					if (!pass.empty()) pass += ", ";
+					pass += "dsv";
+					stream << "DSV dsv;" << std::endl;
+				}
+
+			
+				stream << rt.name << "():RTHolder<Table::"<<rt.name<<">(" << pass << "){}" << std::endl;
+				stream.pop();
+			}
+			stream << "};" << std::endl;
+
+			stream.pop();
+		}
+		stream << "}" << std::endl;
+
+		stream.pop();
+	
+	}
+	stream << "}" << std::endl;
+
+
+}
 
 void generate_cpp_layout(Layout& layout)
 {
@@ -832,7 +1009,7 @@ void generate_cpp_layout(Layout& layout)
 				auto type = (ValueType)i;
 				auto count = s.max_counts[type];
 
-				if(count==0)
+				if (count == 0)
 					continue;
 				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
 				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
@@ -914,28 +1091,35 @@ int main() {
 	try
 	{
 
-	iterate_files("sigs/", [](std::wstring filename) {
-		parsed.merge(parse(filename));
-		});
+		iterate_files("sigs/", [](std::wstring filename) {
+			parsed.merge(parse(filename));
+			});
 
-	parsed.setup();
+		parsed.setup();
 
-	for (auto& table : parsed.tables)
-	{
-		
-		generate_table(table);
+		for (auto& table : parsed.tables)
+		{
 
-		if (!table.find_option("shader_only"))
-		generate_cpp_table(table);
-	}
+			generate_table(table);
 
-	for (auto& layout : parsed.layouts)
-	{
-		generate_layout(layout);
-		generate_cpp_layout(layout);
-	}
+			if (!table.find_option("shader_only"))
+				generate_cpp_table(table);
+		}
 
-	generate_include_list(parsed);
+		for (auto& layout : parsed.layouts)
+		{
+			generate_layout(layout);
+			generate_cpp_layout(layout);
+		}
+
+		generate_include_list(parsed);
+
+		for (auto& rt : parsed.rt)
+		{
+			generate_rt(rt);
+			generate_cpp_rt(rt);
+		}
+
 	}
 	catch (std::exception& e)
 	{

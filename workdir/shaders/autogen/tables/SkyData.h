@@ -19,6 +19,7 @@ struct SkyData
 	Texture2D GetTransmittance() { return srv.transmittance; }
 	Texture3D GetInscatter() { return srv.inscatter; }
 	Texture2D GetIrradiance() { return srv.irradiance; }
+
 };
  const SkyData CreateSkyData(SkyData_cb cb,SkyData_srv srv)
 {

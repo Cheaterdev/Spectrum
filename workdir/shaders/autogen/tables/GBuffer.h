@@ -15,6 +15,7 @@ struct GBuffer
 	Texture2D GetSpecular() { return srv.specular; }
 	Texture2D GetDepth() { return srv.depth; }
 	Texture2D<float2> GetMotion() { return srv.motion; }
+
 };
  const GBuffer CreateGBuffer(GBuffer_srv srv)
 {

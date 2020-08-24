@@ -18,6 +18,7 @@ struct GatherMeshesBoxes
 	StructuredBuffer<uint> GetVisible_boxes() { return srv.visible_boxes; }
 	AppendStructuredBuffer<uint> GetVisibleMeshes() { return uav.visibleMeshes; }
 	AppendStructuredBuffer<uint> GetInvisibleMeshes() { return uav.invisibleMeshes; }
+
 };
  const GatherMeshesBoxes CreateGatherMeshesBoxes(GatherMeshesBoxes_srv srv,GatherMeshesBoxes_uav uav)
 {

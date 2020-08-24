@@ -7,6 +7,7 @@ struct DispatchArguments
 {
 	DispatchArguments_cb cb;
 	uint3 GetCounts() { return cb.counts; }
+
 };
  const DispatchArguments CreateDispatchArguments(DispatchArguments_cb cb)
 {

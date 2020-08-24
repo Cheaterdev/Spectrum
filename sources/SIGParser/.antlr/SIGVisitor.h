@@ -57,6 +57,8 @@ public:
 
     virtual antlrcpp::Any visitValue_id(SIGParser::Value_idContext *context) = 0;
 
+    virtual antlrcpp::Any visitInsert_block(SIGParser::Insert_blockContext *context) = 0;
+
     virtual antlrcpp::Any visitInherit(SIGParser::InheritContext *context) = 0;
 
     virtual antlrcpp::Any visitLayout_stat(SIGParser::Layout_statContext *context) = 0;
@@ -70,6 +72,16 @@ public:
     virtual antlrcpp::Any visitTable_block(SIGParser::Table_blockContext *context) = 0;
 
     virtual antlrcpp::Any visitTable_definition(SIGParser::Table_definitionContext *context) = 0;
+
+    virtual antlrcpp::Any visitRt_color_declaration(SIGParser::Rt_color_declarationContext *context) = 0;
+
+    virtual antlrcpp::Any visitRt_ds_declaration(SIGParser::Rt_ds_declarationContext *context) = 0;
+
+    virtual antlrcpp::Any visitRt_stat(SIGParser::Rt_statContext *context) = 0;
+
+    virtual antlrcpp::Any visitRt_block(SIGParser::Rt_blockContext *context) = 0;
+
+    virtual antlrcpp::Any visitRt_definition(SIGParser::Rt_definitionContext *context) = 0;
 
 
 };

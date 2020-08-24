@@ -18,6 +18,7 @@ struct SceneData
 	StructuredBuffer<MeshCommandData> GetMeshes() { return srv.meshes; }
 	StructuredBuffer<MaterialCommandData> GetMaterials() { return srv.materials; }
 	Texture2D GetMaterial_textures(int i) { return bindless[i]; }
+
 };
  const SceneData CreateSceneData(SceneData_srv srv)
 {

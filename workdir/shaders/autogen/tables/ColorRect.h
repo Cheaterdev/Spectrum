@@ -7,6 +7,7 @@ struct ColorRect
 {
 	ColorRect_cb cb;
 	float4 GetColor() { return cb.color; }
+
 };
  const ColorRect CreateColorRect(ColorRect_cb cb)
 {

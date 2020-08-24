@@ -82,7 +82,7 @@ void have_type::detect_type(have_options * options)
 	if (type.find("uint") == 0) value_type = ValueType::CB;
 	if (type.find("mat4x4") == 0) value_type = ValueType::CB;
 
-	if(options->find_option("dynamic"))
+	if(options&&options->find_option("dynamic"))
 		value_type = ValueType::CB;
 }
 

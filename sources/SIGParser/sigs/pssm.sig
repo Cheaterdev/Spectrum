@@ -8,6 +8,17 @@ struct GBuffer
 	Texture2D<float2> motion;
 }
 
+
+rt GBuffer
+{
+	float4 albedo;
+	float4 normals;
+	float4 specular;
+	float2 motion;
+
+	DSV depth;
+}
+
 [Bind = DefaultLayout::Instance2]
 struct GBufferDownsample
 {

@@ -10,6 +10,7 @@ struct PSSMLighting
 	PSSMLighting_srv srv;
 	Texture2D<float> GetLight_mask() { return srv.light_mask; }
 	GBuffer GetGbuffer() { return CreateGBuffer(srv.gbuffer); }
+
 };
  const PSSMLighting CreatePSSMLighting(PSSMLighting_srv srv)
 {

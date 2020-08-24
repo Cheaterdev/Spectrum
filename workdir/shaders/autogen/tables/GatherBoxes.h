@@ -10,6 +10,7 @@ struct GatherBoxes
 	GatherBoxes_uav uav;
 	AppendStructuredBuffer<BoxInfo> GetCulledMeshes() { return uav.culledMeshes; }
 	AppendStructuredBuffer<uint> GetVisibleMeshes() { return uav.visibleMeshes; }
+
 };
  const GatherBoxes CreateGatherBoxes(GatherBoxes_uav uav)
 {

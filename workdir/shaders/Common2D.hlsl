@@ -17,14 +17,5 @@ struct vertex_output
 };
 
 
-vertex_output transform(camera_info camera, matrix mat, vertex_input i)
-{
-	vertex_output o;
-	float4 tpos = mul(mat, float4(i.pos.xyz, 1));
-	o.pos = mul(camera.view_proj, tpos);
-
-	return o;
-}
-
 
 #endif
