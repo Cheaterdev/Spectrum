@@ -125,56 +125,58 @@ namespace DX12
 			};
             struct helper
             {
-                CD3DX12_ROOT_PARAMETER& param;
-                CD3DX12_DESCRIPTOR_RANGE& range;
-                std::map<UINT, table_info>& tables;
+                MyVariant& v;
+
 				UINT index;
 
 
                 void operator=(const DescriptorTable& table)
-                {
-                    range.Init(static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(table.range), table.count, table.offset, table.space);
+				{
+					v = table;
+                  /*  range.Init(static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(table.range), table.count, table.offset, table.space);
                     param.InitAsDescriptorTable(1, &range, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
 					if (table.range != DescriptorRange::SAMPLER)
 					{
 						tables[index].count = table.count;
 						tables[index].type = table.range;
-					}
+					}*/
                   
                 }
                 void operator=(const DescriptorConstBuffer& table)
-                {
-                    param.InitAsConstantBufferView(table.offset, table.space, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
+				{
+					v = table;
+                 //   param.InitAsConstantBufferView(table.offset, table.space, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
                 }
                 void operator=(const DescriptorSRV& table)
-                {
-                    param.InitAsShaderResourceView(table.offset, table.space, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
+				{
+					v = table;
+                //    param.InitAsShaderResourceView(table.offset, table.space, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
                 }
 
                 void operator=(const DescriptorUAV& table)
-                {
-                    param.InitAsUnorderedAccessView(table.offset, table.space, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
+				{
+					v = table;
+                //    param.InitAsUnorderedAccessView(table.offset, table.space, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
                 }
                 void operator=(const DescriptorConstants& table)
                 {
-                    param.InitAsConstants(table.count, table.buffer_offset, 0, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
+                    v = table;
+                  //  param.InitAsConstants(table.count, table.buffer_offset, 0, static_cast<D3D12_SHADER_VISIBILITY>(table.visibility));
                 }
-                helper(UINT index, CD3DX12_ROOT_PARAMETER& _param, CD3DX12_DESCRIPTOR_RANGE& _range, std::map<UINT, table_info>& tables): index(index), param(_param), range(_range), tables(tables)
+
+                helper(UINT index, MyVariant& v): index(index), v(v)
                 {
                 }
 
-                helper(const helper& h) : index(h.index), param(h.param), range(h.range), tables(h.tables)
+                helper(const helper& h) : index(h.index), v(h.v)
                 {
                 }
             };
 
             helper operator[](UINT i)
             {
-                if (i >= parameters.size())
-                    parameters.resize(i + 1);
-
-                while (i >= ranges.size())
-                    ranges.emplace_back(new CD3DX12_DESCRIPTOR_RANGE);
+            //     while (i >= ranges.size())
+            //        ranges.emplace_back(new CD3DX12_DESCRIPTOR_RANGE);
 
                 /* while (i >= helpers.size())
                   {
@@ -184,9 +186,13 @@ namespace DX12
                       helpers.emplace_back(i, parameters[i], *ranges[i], table_sizes);
                   }
                 */
-                return helper(i, parameters[i], *ranges[i], tables);
+                return helper(i, parameters[i]);
             }
 
+            void remove(UINT i)
+            {
+                parameters.erase(i);
+            }
 
             const vector<D3D12_STATIC_SAMPLER_DESC>& samplers() const
             {
@@ -233,10 +239,10 @@ namespace DX12
             }
 
 
-        private:
-            std::vector<CD3DX12_ROOT_PARAMETER> parameters;
-            std::vector<std::shared_ptr<CD3DX12_DESCRIPTOR_RANGE>> ranges;
-
+            public:
+          //  std::map<int,CD3DX12_ROOT_PARAMETER> parameters;
+          //  std::map<int,CD3DX12_DESCRIPTOR_RANGE> ranges;
+            std::map<int, MyVariant> parameters;
             // std::vector<helper> helpers;
             std::vector<D3D12_STATIC_SAMPLER_DESC> samplers_map;
     };
@@ -285,6 +291,30 @@ namespace DX12
             {
                 return desc;
             }
+
+
+            template<class T>
+            void process_one(RootSignatureDesc& desc)
+            {
+             
+                if constexpr (HasCB<T>)
+                    desc.remove(T::Slot::CB_ID);
+
+            }
+
+
+			template< class ...A>
+			ptr create_global_signature()
+			{
+			//	RootSignatureDesc desc = get_desc();
+
+				(process_one<A>(desc), ...);
+
+				return std::make_shared<Render::RootSignature>(desc, D3D12_ROOT_SIGNATURE_FLAGS::D3D12_ROOT_SIGNATURE_FLAG_NONE);
+			}
+
+
+
     };
 
 

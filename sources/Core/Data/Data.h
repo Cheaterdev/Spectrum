@@ -144,6 +144,17 @@ public:
 		throw Exceptions::Exception("wrong cast type");
 	}
 
+	template<class T>
+	T* try_get() const
+	{
+		var_typed<T>* var = dynamic_cast<var_typed<T>*>(typed.get());
+
+		if (var)
+			return &var->value;
+
+		return nullptr;
+	}
+
 	bool exists();
 	void clear();
 };

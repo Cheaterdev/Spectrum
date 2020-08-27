@@ -11,56 +11,14 @@
 
 #ifndef RAYTRACING_HLSL
 #define RAYTRACING_HLSL
-struct vertex_input
-{
-	float3 pos : POSITION;
-	float3 normal : NORMAL;
-	float2 tc : TEXCOORD;
-	float4 tangent : TANGENT;
-	//float3 binormal : BINORMAL;
-};
 
 
-struct camera_info
-{
-	matrix view;
-	matrix proj;
-	matrix view_proj;
-	matrix inv_view;
-	matrix inv_proj;
-	matrix inv_view_proj;
-	float3 position;
-	float unused;
-	float3 direction;
-	float unused2;
-	float2 jitter; float2 unused3;
-};
+#include "autogen/FrameInfo.h"
+#include "autogen/Raytracing.h"
+#include "autogen/RaytracingRays.h"
+//static const GBuffer gbuffer = GetRaytracing().GetGbuffer();
+//static const RWTexture2D<float4> output = GetRaytracing().GetOutput();
 
-struct InstanceData
-{
-	uint vertexBuffer;
-	uint indexBuffer;
-	uint materialOffset;
-};
-
-cbuffer cbCamera : register(b0)
-{
-	camera_info camera;
-};
-
-
-RaytracingAccelerationStructure Scene : register(t0, space0);
-
-
-Texture2D<float4> gbuffer[3] : register(t0, space1);
-Texture2D<float> depth_buffer : register(t3, space1);
-
-StructuredBuffer<InstanceData> instances: register(t1);
-StructuredBuffer<uint> index_buffers[]: register(t0, space3);
-StructuredBuffer<vertex_input> vertex_buffers[]: register(t0, space2);
-
-
-RWTexture2D<float4> RenderTarget : register(u0);
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct RayPayload
@@ -77,7 +35,7 @@ struct ShadowPayload
 
 
 // Generate a ray in world space for a camera pixel corresponding to an index from the dispatched 2D grid.
-inline void GenerateCameraRay(uint2 index, out float3 origin, out float3 direction)
+inline void GenerateCameraRay(uint2 index,in Camera camera, out float3 origin, out float3 direction)
 {
     float2 xy = index + 0.5f; // center in the middle of the pixel.
     float2 screenPos = xy / DispatchRaysDimensions().xy * 2.0 - 1.0;
@@ -88,10 +46,10 @@ inline void GenerateCameraRay(uint2 index, out float3 origin, out float3 directi
 
 
     // Unproject the pixel coordinate into a ray.
-   float4 world = mul(camera.inv_view_proj,float4(screenPos, 0, 1) );
+   float4 world = mul(camera.GetInvViewProj(),float4(screenPos, 0, 1) );
 
     world.xyz /= world.w;
-    origin = camera.position.xyz;
+    origin = camera.GetPosition().xyz;
     direction = normalize(world.xyz - origin);
 }
 
@@ -106,12 +64,19 @@ float3 depth_to_wpos(float d, float2 tc, matrix mat)
 [shader("raygeneration")]
 void MyRaygenShader()
 {
-   float3 rayDir;
-    float3 origin;
+   float3 rayDir = float3(0,1,0);
+    float3 origin = float3(0, 1, 0);;
     
 	float2 tc = float2(DispatchRaysIndex().xy)/DispatchRaysDimensions().xy;
+
+    const FrameInfo frame = CreateFrameInfo();
+
+    const Raytracing raytracing = CreateRaytracing();
+     const RaytracingRays rays = CreateRaytracingRays();
+
+      const RWTexture2D<float4> output = rays.GetOutput();
     // Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
-    GenerateCameraRay(DispatchRaysIndex().xy, origin, rayDir);
+    GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), origin, rayDir);
 	/*
 	float raw_z = depth_buffer[DispatchRaysIndex().xy];
 	float3 pos = depth_to_wpos(raw_z, tc, camera.inv_view_proj);
@@ -136,9 +101,9 @@ origin = pos;*/
         ray.TMax = 1000.0;
    
 		RayPayload payload = { float4(0, 1, 0, 1),0,0 };
-        TraceRay(Scene,  RAY_FLAG_NONE    , ~0, 0, 0, 0, ray, payload);
+        TraceRay(raytracing.GetScene(),  RAY_FLAG_NONE    , ~0, 0, 0, 0, ray, payload);
         // Write the raytraced color to the output texture.
-		RenderTarget[DispatchRaysIndex().xy] = float4(pow(payload.color.xyz,1.0/1.8),1);// float4(pow(gbuffer[0][DispatchRaysIndex().xy].xyz, 0.5) * (0.1 + payload.color.x * max(0, dot(ray.Direction, normal))), 1);
+        output[DispatchRaysIndex().xy] = float4(pow(payload.color.xyz, 1.0 / 1.8), 1);// float4(pow(gbuffer[0][DispatchRaysIndex().xy].xyz, 0.5) * (0.1 + payload.color.x * max(0, dot(ray.Direction, normal))), 1);
  
 		/*ShadowPayload payload = {false };
 		TraceRay(Scene, RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload);

@@ -619,7 +619,23 @@ namespace DX12
 		}
 	};
 
+	class RTXSceneView :public ResourceView
+	{
+	public:
+		RTXSceneView() = default;
+		RTXSceneView(Resource::ptr resource, FrameResources & frame) :ResourceView(resource)
+		{
+			init_desc();
+			init_views(frame);
+		}
 
+		virtual void place_srv(Handle & h) override;
+		virtual void place_uav(Handle & h) { assert(false); }
+		virtual void place_rtv(Handle & h) { assert(false); }
+		virtual void place_dsv(Handle & h) { assert(false); }
+		virtual void place_cb(Handle & h) { assert(false); }
+
+	};
 	class TextureView :public ResourceView
 	{
 

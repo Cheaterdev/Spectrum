@@ -543,7 +543,7 @@ namespace DX12
 	void  Device::create_srv(Handle& h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
 	{
 		*h.resource_info = ResourceInfo(resource, srv);
-		Device::get().get_native_device()->CreateShaderResourceView(resource->get_native().Get(), &srv, h.cpu);
+		Device::get().get_native_device()->CreateShaderResourceView(resource?resource->get_native().Get():nullptr, &srv, h.cpu);
 	}
 
 	void  Device::create_uav(Handle& h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {

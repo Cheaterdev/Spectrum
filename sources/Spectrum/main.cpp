@@ -115,7 +115,7 @@ struct closesthit_identifier
 	shader_identifier identifier;
 
 	D3D12_GPU_VIRTUAL_ADDRESS mat_buffer;
-	D3D12_GPU_DESCRIPTOR_HANDLE gpu;
+//	D3D12_GPU_DESCRIPTOR_HANDLE gpu;
 
 	//	RayGenConstantBuffer cb;
 };
@@ -150,7 +150,8 @@ struct RayTracingShaders : public Events::prop_handler,
 	//ArraysHolder<Render::Handle> buffersIndex;
 
 	//std::vector<ComPtr<IDxcBlob>> blobs;
-
+	ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
+	RootSignature::ptr global_sig;
 	struct InstanceData
 	{
 		UINT vertexBuffer;
@@ -199,7 +200,12 @@ struct RayTracingShaders : public Events::prop_handler,
 	{
 
 		auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-		globalRootSignature->SetRootSignature(get_Signature(Layouts::DefaultLayout)->get_native().Get());
+
+		 global_sig = get_Signature(Layouts::DefaultLayout)->create_global_signature<Slots::MaterialInfo>();
+
+
+
+		globalRootSignature->SetRootSignature(global_sig->get_native().Get());
 
 		auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
 		pipelineConfig->Config(8);
@@ -252,9 +258,10 @@ struct RayTracingShaders : public Events::prop_handler,
 	{
 		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_COLLECTION};
 
+		auto local_sig = create_local_signature<Slots::MaterialInfo>();
 
 	auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
-		localRootSignature->SetRootSignature(get_Signature(Layouts::DefaultLayout)->get_native().Get());
+		localRootSignature->SetRootSignature(local_sig->get_native().Get());
 
 		// Shader association
 		auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
@@ -312,7 +319,7 @@ struct RayTracingShaders : public Events::prop_handler,
 		TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)), L"Couldn't create DirectX Raytracing state object.\n");
 		all_objs.insert(m_dxrStateObject);
 
-		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
+		
 		TEST(m_dxrStateObject.As(&stateObjectProperties));
 
 		//	shader_identifier.assign()
@@ -320,37 +327,32 @@ struct RayTracingShaders : public Events::prop_handler,
 		missShaderIdentifier = identify(stateObjectProperties->GetShaderIdentifier(c_missShaderName));
 		missShadowShaderIdentifier = identify(stateObjectProperties->GetShaderIdentifier(L"ShadowMissShader"));
 
-		hitGroupShaderIdentifiers.reserve(materials.size() * 2);
-
-
-
-		for (auto& mat : materials)
-		{
-			{
-				closesthit_identifier id;
-				id.identifier = identify(stateObjectProperties->GetShaderIdentifier((mat->wshader_name + L"HIT").c_str()));
-//////////////////////				id.mat_buffer = mat->get_pixel_buffer()?mat->get_pixel_buffer()->get_gpu_address():0;
-				hitGroupShaderIdentifiers.push_back(id);
-			}
-
-			{
-				closesthit_identifier id;
-				id.identifier = identify(stateObjectProperties->GetShaderIdentifier(L"ShadowClosestHitGroup"));
-				id.mat_buffer = 0;
-				id.gpu.ptr = 0;
-				hitGroupShaderIdentifiers.push_back(id);
-			}
-		}
+		
 
 	}
 	RayTracingShaders()
 	{
-		blob = *D3D12ShaderCompilerInfo::get().Compile_Shader(FileSystem::get().get_file("raytracing.hlsl")->load_all(), {});
-		//	CreateRaytracingPipelineStateObject(blobs);
+
+		while (blob.empty()) {
+			resource_file_depender depender;
+
+
+			D3D::shader_include In("shaders\\", depender);
+
+			auto res = D3D12ShaderCompilerInfo::get().Compile_Shader_File("raytracing.hlsl", {}, "lib_6_3", "", &In);
+
+			if (res)
+			{
+				blob = *res;
+				break;
+			}
+			
+		}
+	//		CreateRaytracingPipelineStateObject(blobs);
 
 	}
 
-	void render(MeshRenderContext::ptr context, Render::Texture::ptr& texture, Render::RaytracingAccelerationStructure::ptr scene_as)
+	void render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as)
 	{
 
 		process_tasks();
@@ -379,47 +381,63 @@ struct RayTracingShaders : public Events::prop_handler,
 
 			dispatchDesc->RayGenerationShaderRecord.StartAddress = m_rayGenShaderTable.get_gpu_address();
 			dispatchDesc->RayGenerationShaderRecord.SizeInBytes = m_rayGenShaderTable.size;
-			dispatchDesc->Width = texture->get_size().x;
-			dispatchDesc->Height = texture->get_size().y;
+			dispatchDesc->Width = texture.get_size().x;
+			dispatchDesc->Height = texture.get_size().y;
 			dispatchDesc->Depth = 1;
 			commandList->SetPipelineState1(stateObject);
 			commandList->DispatchRays(dispatchDesc);
 		};
 
 
-		/*
-		auto& shader_data = _list->get_compute().set_signature_typed<RaytracingSignature>(signature);
+		{	
+			Slots::Raytracing rtx;
 
-		shader_data.target[0] = texture->texture_2d()->get_uav();
-		shader_data.scene = scene_as->get_gpu_address();
-		shader_data.camera = context->cam->get_const_buffer();
-	//	shader_data.g_buffer[0] = context->g_buffer->srv_table;
+		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*_list->frame_resources).get_srv();
+		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*_list->frame_resources).get_srv();
+		rtx.set(_list->get_compute());
+		rtx.set(_list->get_graphics());
 
-		shader_data.instance_data = instanceData;
-		shader_data.vertex_buffers = buffersVertex;
-		shader_data.index_buffers = buffersIndex;
-	//	shader_data.material_textures = textures;
+		}
 
-	*/
-		//shader_data.mat_const = materials[0]->get_pixel_buffer();
+		{
+			Slots::RaytracingRays rays;
+
+			rays.GetOutput() = texture.get_uav();
+		
+			rays.set(_list->get_compute());
+			rays.set(_list->get_graphics());
+
+		}
+		
+		hitGroupShaderIdentifiers.clear();
+
+		hitGroupShaderIdentifiers.reserve(materials.size() * 2);
+
+
+
+		for (auto& mat : materials)
+		{
+			{
+				closesthit_identifier id;
+				id.identifier = identify(stateObjectProperties->GetShaderIdentifier((mat->wshader_name + L"HIT").c_str()));
+				id.mat_buffer = mat->compiled_material_info.cb.address;
+				hitGroupShaderIdentifiers.push_back(id);
+			}
+
+			{
+				closesthit_identifier id;
+				id.identifier = identify(stateObjectProperties->GetShaderIdentifier(L"ShadowClosestHitGroup"));
+				id.mat_buffer = 0;
+				//id.gpu.ptr = 0;
+				hitGroupShaderIdentifiers.push_back(id);
+			}
+		}
+
+
 		_list->get_compute().flush_binds(true);
 
 
 
-		for (int i = 0; i < materials.size(); i++)
-		{
-
-			{
-
-	///////////////			hitGroupShaderIdentifiers[2 * i].mat_buffer = materials[i]->get_pixel_buffer()? materials[i]->get_pixel_buffer()->get_gpu_address():0;
-			}
-
-
-
-//			if (materials[i]->get_texture_handles().empty())
-		//		hitGroupShaderIdentifiers[2 * i].gpu.ptr = 0;
-		//	else hitGroupShaderIdentifiers[2 * i].gpu = _list->srv_descriptors.place(materials[i]->get_texture_srvs()).gpu;
-		}
 		// Bind the heaps, acceleration structure and dispatch rays.
 		D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
 		{
@@ -506,18 +524,19 @@ public:
 
 		scene->iterate([&instances, this](scene_object* object) {
 			MeshAssetInstance::ptr mesh = object->get_ptr<MeshAssetInstance>();
-			/*if (mesh)
+			if (mesh)
 			{
-				auto structures = mesh->create_raytracing_as();
+				mesh->init_ras();
+				auto &structures = mesh->rendering;
 
 				for (auto& e : structures)
 				{
-					MaterialAsset::ref& material  = mesh->overrided_material[e->material];
-					materials::universal_material::ptr universal = material->get_ptr<materials::universal_material>();
+				//	MaterialAsset::ref& material  = mesh->overrided_material[e->material];
+					materials::universal_material::ptr universal = e.material->get_ptr<materials::universal_material>();
 
 					int material_id = shaders.get_material_id(universal);
 
-
+/*
 					auto& instance_data = shaders.instanceData[shaders.instanceData.get_free(1)];
 
 					{
@@ -534,6 +553,7 @@ public:
 						shaders.buffersIndex[instance_data.indexBuffer = offset] = e->srvs[1];
 
 					}
+					*/
 					D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
 
 					for (int x = 0; x < 3; x++)
@@ -545,23 +565,23 @@ public:
 					
 					//instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
 					instanceDesc.InstanceMask = 1;
-					instanceDesc.AccelerationStructure = e->get_gpu_address();
-					instanceDesc.InstanceID = instances.size() + 1;
+					instanceDesc.AccelerationStructure = e.ras->get_gpu_address();
+					instanceDesc.InstanceID = e.node_id;// instances.size() + 1;// e->material;
 					instanceDesc.InstanceContributionToHitGroupIndex =  2 * material_id;
 					instances.push_back(instanceDesc);
 				}
 
-			}*/
+			}
 
 			return true;
 			});
 
 
 
-		//scene_as = std::make_shared<RaytracingAccelerationStructure>(instances);
-	//	shaders.CreateSharedCollection();
-	//	shaders.CreateGlobalCollection();
-	//	shaders.CreateRaytracingPipelineStateObject();
+		scene_as = std::make_shared<RaytracingAccelerationStructure>(instances);
+		shaders.CreateSharedCollection();
+		shaders.CreateGlobalCollection();
+		shaders.CreateRaytracingPipelineStateObject();
 		//	shaders = std::make_shared<RayTracingShaders>(blobs);
 	}
 
@@ -721,7 +741,7 @@ public:
 
 	//	auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count =-2;
+		int count =2;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
@@ -741,9 +761,9 @@ public:
 
 			if (ruins_ptr)
 			{
-		//		MeshAssetInstance::ptr instance(new MeshAssetInstance(ruins_ptr));
+				MeshAssetInstance::ptr instance(new MeshAssetInstance(ruins_ptr));
 			//	instance->local_transform = mat4x4::translation({ 0,3.8,0 });
-			//	scene->add_child(instance);
+				scene->add_child(instance);
 			}
 
 		}
@@ -832,15 +852,17 @@ public:
 
 		*/
 
-		scene->update_transforms();
-		auto list = Device::get().get_upload_list();
 
+
+		scene->update_transforms();
+		auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+		list->begin("prepare");
 		MeshRenderContext::ptr context(new MeshRenderContext());
 		context->delta_time = 1;
 		context->list = list;
 
 	//	gpu_meshes_renderer_static->update(context);
-
+		SceneFrameManager::get().prepare(list, *scene);
 
 		list->end();
 		list->execute_and_wait();
@@ -887,259 +909,13 @@ public:
 
 	void draw_eye(Render::CommandList::ptr _list, float dt, EyeData& data, Render::Texture::ptr target)
 	{
-		return;
-
-//		auto& g_buffer = data.g_buffer;
-
-		auto& cam = data.cam;
-	//	auto& temporal = data.temporal;
-		//		auto& last_renderer = data.last_renderer;
-
-
-
-
-		{
-			//	auto timer = list->start(L"calculate sizes");
-
-		}
-
-		//	cam.update(temporal.get_current_offset() / *g_buffer.size);
-
-
-
-
-
-
-		/*{
-		MeshRenderContext::ptr context_gbuffer(new MeshRenderContext(*context));
-		context_gbuffer->list = list->get_sub_list();
-		thread_pool::get().enqueue([this, context_gbuffer]() {
-		auto c = context_gbuffer;
-		auto list = c->list;
-		list->begin("stenciler");
-		stenciler->render(c, scene);
-		list->end();
-		list->execute();
-		});
-
-
-
-		}
-		*/
-		//context->cam = &cam;
-
-
-
-
-	/*	PostProcessContext render_context(scene);
-		render_context.g_buffer = &g_buffer;
-		render_context.mesh_context = context;
-
-		render_context.realtime_debug = realtime_debug;
-
-		render_context.renderer = gpu_scene_renderer;
-		render_graph->owner = render_graph.get();
-		render_graph->start(&render_context);
-		render_graph->get_input(0)->put(0);
-		render_context.wait();
-
-
-		//		reflect.process(context, g_buffer,nullptr,nullptr);
-		{
-
-			list->get_graphics().set_viewport(g_buffer.result_tex.first()->texture_2d()->get_viewport(0));
-			list->get_graphics().set_scissor(g_buffer.result_tex.first()->texture_2d()->get_scissor(0));
-			list->get_graphics().set_rtv(1, g_buffer.result_tex.first()->texture_2d()->get_rtv(0), Render::Handle());
-
-			//	if (debug_draw)  drawer.draw(*list, &cam);
-			//	stenciler->draw_after(context, g_buffer);
-		}
-
-		{
-			temporal.make_current(g_buffer.result_tex.first());
-			//dont insert here anything
-			last_renderer.process(context, temporal, target);
-		//	last_renderer.process(context, temporal, vr.eyes[1].color_buffer);
-		}
-		list->transition(g_buffer.result_tex.first(), Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-
-		visible_count = context->draw_count;*/
 
 	}
 
 	void update_texture(Render::CommandList::ptr list, float dt, const std::shared_ptr<OVRContext>& vr)
 	{
 
-		/*
-		//auto& list = frames.set_frame(_list, "game window");
-		MeshRenderContext::ptr context(new MeshRenderContext());
-		context->delta_time = dt;
-		//	context->g_buffer = &g_buffer;
-		time += static_cast<size_t>(dt * 1000.0f);
-		context->current_time = time;
-		context->sky_dir = lighting->lighting.pssm.get_position();
-		context->priority = TaskPriority::HIGH;
-		context->list = list;
 
-		context->eye_context = vr;
-
-		{
-
-			MeshRenderContext::ptr context_gbuffer(new MeshRenderContext(*context));
-			context_gbuffer->list = list->get_sub_list();
-			//	thread_pool::get().enqueue([this, &g_buffer, context_gbuffer]() {
-			auto c = context_gbuffer;
-			auto list = c->list;
-			list->begin("update");
-
-			gpu_meshes_renderer_static->update(context_gbuffer);
-			gpu_meshes_renderer_dynamic->update(context_gbuffer);
-
-			list->end();
-			list->execute();
-			//	});
-
-
-
-
-			//	if (debug_draw) scene->debug_draw(drawer);
-
-		}
-
-
-
-
-		while (eyes.size() < vr->eyes.size())
-		{
-			eyes.emplace_back(new EyeData(gpu_meshes_renderer_static->my_signature));
-			eyes.back()->g_buffer.size = get_render_bounds().size;
-		}
-		//	eyes.resize(vr.eyes.size());
-
-
-
-		for (int i = 0; i < eyes.size(); i++)
-		{
-			eyes[i]->cam = cam;
-
-			eyes[i]->cam.eye_rot = vr->eyes[i].dir;
-			eyes[i]->cam.offset = vr->eyes[i].offset;
-			context->eye_context = vr_context;
-			context->eye_context->eyes[i].g_buffer = &eyes[i]->g_buffer;
-			context->eye_context->eyes[i].cam = &eyes[i]->cam;
-
-			//	eyes[i]->g_buffer=
-
-
-
-			//TODO: VR SWITHC HEREEEEEEEEEEEEEEE
-		//	eyes[i]->cam.set_projection_params(eyeRenderDesc[i].Fov, 0.2f, 1000.0f);
-			eyes[i]->cam.update(eyes[i]->temporal.get_current_offset() / *eyes[i]->g_buffer.size);
-
-
-
-
-			//	draw_eye(_list,dt, *eyes[i], vr.eyes[i].color_buffer);
-
-			auto& g_buffer = eyes[i]->g_buffer;
-			auto& temporal = eyes[i]->temporal;
-			//	auto& last_renderer = eyes[i]->last_renderer;
-			auto& target = vr->eyes[i].color_buffer;
-
-
-			g_buffer.reset(context);
-			context->g_buffer = &g_buffer;
-			context->cam = &eyes[i]->cam;
-
-			{
-				context->cam = &eyes[i]->cam;
-
-				MeshRenderContext::ptr context_gbuffer(new MeshRenderContext(*context));
-				context_gbuffer->list = list->get_sub_list();
-				thread_pool::get().enqueue([this, &g_buffer, context_gbuffer]() {
-					auto c = context_gbuffer;
-					auto list = c->list;
-					list->begin("gbuffer creating");
-
-					g_buffer.set(c, true);
-					gpu_scene_renderer->render(c, scene);
-					g_buffer.end(c);
-					list->end();
-					list->execute();
-					});
-
-
-
-
-				//	if (debug_draw) scene->debug_draw(drawer);
-
-			}
-
-
-		}
-
-		{
-			stenciler->player_cam = &eyes[0]->cam;
-
-			MeshRenderContext::ptr context_gbuffer(new MeshRenderContext(*context));
-			context_gbuffer->list = list->get_sub_list();
-			thread_pool::get().enqueue([this, context_gbuffer]() {
-				auto c = context_gbuffer;
-				auto list = c->list;
-				list->begin("stenciler");
-				stenciler->render(c, scene);
-				list->end();
-				list->execute();
-				});
-		}
-
-		
-		PostProcessContext render_context(scene);
-		render_context.g_buffer = &eyes[0]->g_buffer;
-		render_context.mesh_context = context;
-
-		render_context.realtime_debug = realtime_debug;
-
-		render_context.renderer = gpu_scene_renderer;
-		render_graph->owner = render_graph.get();
-		render_graph->start(&render_context);
-		render_graph->get_input(0)->put(0);
-		render_context.wait();
-		
-
-		stenciler->draw_after(context, eyes[0]->g_buffer);
-
-		for (auto& eye : eyes)
-			eye->g_buffer.result_tex.swap(list);
-
-
-		/// HERE NEED TO SWAP OCULUS TO 2D
-		//if (!context->eye_context->eyes[0].color_buffer)
-		{
-
-
-
-			context->eye_context->eyes[0].color_buffer = texture.texture;// eyes[0]->g_buffer.result_tex.first();
-		}
-
-
-
-		{
-
-			//temporal.make_current(g_buffer.result_tex.first());
-			//dont insert here anything
-			last_renderer.process(context);
-			//last_renderer.process(context, temporal);
-
-
-			//	last_renderer.process(context, temporal, vr.eyes[1].color_buffer);
-		}
-
-		list->transition(texture.texture, Render::ResourceState::UNORDERED_ACCESS);
-		list->flush_transitions();
-
-		shaders.render(context, texture.texture, scene_as);
-		*/
 	}
 
 	FrameGraph* last_graph = nullptr;
@@ -1156,7 +932,7 @@ public:
 		ivec2 size = texture.texture->get_size();
 		struct pass_data
 		{
-
+			ResourceHandler* o_texture;
 		};
 
 		scene->update(*graph.builder.current_frame);
@@ -1275,11 +1051,10 @@ public:
 
 		stenciler->generate_after(graph);
 
-		/*
+		
 		graph.add_pass<pass_data>("RAYTRACE",[](pass_data& data, TaskBuilder& builder) {
-		//	data.o_texture = builder.read_texture("swapchain");
-
-			}, [this](pass_data& data, FrameContext& _context) {
+			data.o_texture = builder.need_texture("ResultTexture",ResourceFlags::UnorderedAccess);
+			}, [this, &graph](pass_data& data, FrameContext& _context) {
 
 				auto& command_list = _context.get_list();
 				MeshRenderContext::ptr context(new MeshRenderContext());
@@ -1290,7 +1065,28 @@ public:
 				context->list = command_list;
 				context->eye_context = vr_context;
 
-		
+				auto output_tex = _context.get_texture(data.o_texture);
+
+				command_list->get_compute().set_signature(shaders.global_sig);
+				command_list->get_graphics().set_signature(shaders.global_sig);
+
+				Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
+
+				Slots::FrameInfo::Compiled compiledFrame;
+
+				{
+					auto timer = Profiler::get().start(L"FrameInfo");
+					Slots::FrameInfo frameInfo;
+
+					auto camera = frameInfo.MapCamera();
+					camera.cb = graph.cam->camera_cb.current;
+
+					compiledFrame = frameInfo.compile(*command_list);
+				}
+
+
+				compiledScene.set(command_list->get_compute());
+				compiledFrame.set(command_list->get_compute());
 
 
 				for (int i = 0; i < eyes.size(); i++)
@@ -1305,9 +1101,9 @@ public:
 					context->cam = &eyes[i]->cam;
 				}
 
-				shaders.render(context, texture.texture, scene_as);
+				shaders.render(context, output_tex, scene_as);
 			});
-			*/
+			
 			
 		struct debug_data
 		{

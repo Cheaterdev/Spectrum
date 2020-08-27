@@ -69,11 +69,11 @@ struct CompiledData
 
 };
 
-template<class Table, class Slot = Table::Slot>
+template<class Table, class _Slot = Table::Slot>
 struct DataHolder : public Table
 {
 	using Table::Table;
-
+	using Slot = _Slot;
 	using Compiled = CompiledData<Slot>;
 
 	template<class Context, class SRV>

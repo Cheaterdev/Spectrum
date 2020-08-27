@@ -154,7 +154,7 @@ class MeshAsset : public Asset
         TypedHandle<UINT32> index_handle;
 
 
-
+		
         std::vector<MeshInfo> meshes;
         std::vector<MaterialAsset::ref> materials;
 
@@ -232,9 +232,10 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 
 
-		std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
+		//std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
      
         TypedHandle<mesh_info_part> meshpart_handle;
+		TypedHandle<Table::MeshInstance::CB> instance_handle;
 
         size_t nodes_count;
         size_t rendering_count;
@@ -265,11 +266,12 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
             UINT material_id;
             MaterialAsset* material;
 
+            UINT node_id;
 
             //compiled
 			Slots::MeshInfo::Compiled compiled_mesh_info;
                 
-
+            RaytracingAccelerationStructure::ptr ras;
         };
 
         std::vector<render_info> rendering;
@@ -280,10 +282,10 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 
 
-		std::vector<RaytracingAccelerationStructure::ptr> create_raytracing_as();
+		//std::vector<RaytracingAccelerationStructure::ptr> create_raytracing_as();
 	
         void use_material(size_t i, std::shared_ptr<MeshRenderContext>& context) override;
-
+        void init_ras();
         using ptr = s_ptr<MeshAssetInstance>;
         virtual ~MeshAssetInstance();
         MeshAssetInstance(MeshAsset::ptr asset);
@@ -309,6 +311,16 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 };
 
+
+class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public virtual_gpu_buffer<Table::MeshInstance::CB>
+{
+	static const int MAX_NODES_SIZE = 1_gb / sizeof(Table::MeshInstance::CB);
+public:
+    universal_mesh_instance_manager() :virtual_gpu_buffer<Table::MeshInstance::CB>(MAX_NODES_SIZE)
+	{
+
+	}
+};
 
 
 class universal_nodes_manager :public Singleton<universal_nodes_manager>, public virtual_gpu_buffer<Table::node_data::CB>

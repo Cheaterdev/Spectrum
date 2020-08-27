@@ -1,6 +1,5 @@
 #include "autogen/FrameInfo.h"
 #include "autogen/MaterialInfo.h"
-#include "autogen/MeshInfo.h"
 #include "autogen/SceneData.h"
 #include "autogen/rt/GBuffer.h"
 

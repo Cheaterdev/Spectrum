@@ -71,7 +71,8 @@ void have_type::detect_type(have_options * options)
 	if (type.find("Texture") == 0)value_type = ValueType::SRV;
 	if (type.find("StructuredBuffer") == 0) value_type = ValueType::SRV;
 	if (type.find("Buffer") == 0) value_type = ValueType::SRV;
-	if (type == "SamplerState") value_type = ValueType::SMP;
+	if (type.find("RaytracingAccelerationStructure") == 0) value_type = ValueType::SRV;
+if (type == "SamplerState") value_type = ValueType::SMP;
 
 	if (type.find("RW") == 0) value_type = ValueType::UAV;
 	if (type.find("AppendStructuredBuffer") == 0) value_type = ValueType::UAV;

@@ -59,7 +59,7 @@ void Window::InitWindow(int width, int height, LPCTSTR name)
 Window::Window(ivec2 size, std::string name)
 {
     sizing = false;
-    MinWindowSize = { 100, 100 };
+    MinWindowSize = { 200, 100 };
     InitWindow(size.x, size.y, name.c_str());
 }
 

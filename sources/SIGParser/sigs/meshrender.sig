@@ -47,11 +47,16 @@ struct GPUAddress
 }
 
 
+struct MeshInstance
+{
+	uint vertex_offset;
+	uint index_offset;
+}
 
 struct CommandData
 {
-	GPUAddress material_cb;
 	GPUAddress mesh_cb;
+	GPUAddress material_cb;
 	DrawIndexedArguments draw_commands;
 }
 

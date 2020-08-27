@@ -1,4 +1,4 @@
-[Bind = FrameLayout::MaterialData]
+[Bind = DefaultLayout::MaterialData]
 struct MaterialInfo
 {
 	[dynamic] MaterialCB data;

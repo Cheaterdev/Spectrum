@@ -24,6 +24,8 @@
 #include "slots\PSSMData.h"
 #include "slots\PSSMDataGlobal.h"
 #include "slots\PSSMLighting.h"
+#include "slots\RaytracingRays.h"
+#include "slots\Raytracing.h"
 #include "slots\SceneData.h"
 #include "slots\SkyData.h"
 #include "slots\SkyFace.h"

@@ -396,7 +396,7 @@ mesh_renderer::mesh_renderer()
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MaterialInfo, Slots::MeshInfo, DrawIndexedArguments>(sizeof(command), get_Signature(Layouts::DefaultLayout));
+	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(command), get_Signature(Layouts::DefaultLayout));
 
 
 	{

@@ -237,6 +237,15 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader_File(std::
 
 std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point, D3D::shader_include* includer, std::string file_name)
 {
+
+	if (file_name.empty())
+		file_name = "shaders/unknown";
+	resource_file_depender dep;
+	D3D::shader_include in(file_name,dep);
+
+	if (!includer)includer = &in;
+
+
 	static std::mutex m;
 	std::lock_guard<std::mutex> g(m);
 	std::vector<std::wstring> vdefines;
@@ -258,6 +267,14 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 	std::wstring build_def = L"1";
 
 	defines.push_back(DxcDefine{ build_macro.c_str(), build_def.c_str() });
+
+	std::wstring no_macro = L"NO_GLOBAL";
+	std::wstring no_def = L"1";
+
+	if (target.find("lib") == 0)
+	{
+		defines.push_back(DxcDefine{ no_macro.c_str(), no_def.c_str() });
+	}
 
 	HRESULT hr;
 	UINT32 code(0);

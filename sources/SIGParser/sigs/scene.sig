@@ -9,6 +9,9 @@ struct SceneData
 	StructuredBuffer<MeshCommandData> meshes;
 	StructuredBuffer<MaterialCommandData> materials;
 
+
+	StructuredBuffer<MeshInstance> meshInstances;
+
 	Texture2D material_textures[];
 }
 

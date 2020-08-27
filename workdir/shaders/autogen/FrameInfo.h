@@ -16,5 +16,7 @@ FrameInfo CreateFrameInfo()
 	result.srv.brdf = srv_0_1;
 	return result;
 }
+#ifndef NO_GLOBAL
 static const FrameInfo frameInfo_global = CreateFrameInfo();
 const FrameInfo GetFrameInfo(){ return frameInfo_global; }
+#endif

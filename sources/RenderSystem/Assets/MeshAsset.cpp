@@ -416,17 +416,47 @@ bool MeshAssetInstance::update_transforms()
 		my_node.aabb.min = info.primitive->get_min();
 		my_node.aabb.max = info.primitive->get_max();
 
-
+	
 	}
 
 	nodes_handle.write(0, gpu_nodes);
 	if (scene)
 		scene->on_moved(this);
+
+
 }
 return res;
 }
 
 
+void MeshAssetInstance::init_ras()
+{
+	for (auto& info : rendering)
+	{
+		if (!info.ras)
+		{
+
+			D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
+			geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+			geometryDesc.Triangles.IndexBuffer = universal_index_manager::get().buffer->get_gpu_address() + info.draw_arguments.StartIndexLocation * sizeof(UINT32);
+			geometryDesc.Triangles.IndexCount = info.draw_arguments.IndexCountPerInstance;
+			geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+			geometryDesc.Triangles.Transform3x4 = universal_nodes_manager::get().buffer->get_gpu_address() + info.mesh_info.GetNode_offset() * sizeof(Table::node_data::CB);
+			geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+			//	geometryDesc.Triangles.VertexCount = info.
+			geometryDesc.Triangles.VertexBuffer.StartAddress = universal_vertex_manager::get().buffer->get_gpu_address() + info.mesh_info.GetVertex_offset() * sizeof(Vertex);
+			geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+			geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+			std::vector<D3D12_RAYTRACING_GEOMETRY_DESC > descs;
+			descs.push_back(geometryDesc);
+
+
+			info.ras = std::make_shared<RaytracingAccelerationStructure>(descs);
+
+		}
+	}
+}
 void MeshAssetInstance::update_nodes()
 {
 //	primitive.reset(new AABB());
@@ -438,8 +468,10 @@ void MeshAssetInstance::update_nodes()
 
 	
 	 universal_nodes_manager::get().allocate(nodes_handle, nodes_count);
+	 universal_mesh_instance_manager::get().allocate(instance_handle, rendering_count);
 
 	auto gpu_nodes = nodes_handle.map();// universal_nodes_manager::get().map_elements(nodes_handle.get_offset(), nodes_count);
+	auto gpu_instances= instance_handle.map();// universal_nodes_manager::get().map_elements(nodes_handle.get_offset(), nodes_count);
 
 //	nodes_ptr = universal_nodes_manager::get().nodes_data.data() + nodes_handle.aligned_offset;
 
@@ -500,6 +532,12 @@ nodes.emplace_back(node);
 			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
 			info.compiled_mesh_info = info.mesh_info.compile(StaticCompiledGPUData::get());
 
+
+			info.node_id = instance_handle.get_offset() + nodes.size()-1;
+			auto& my_instance = gpu_instances[nodes.size()-1];
+			my_instance.index_offset = info.draw_arguments.StartIndexLocation;
+			my_instance.vertex_offset = info.mesh_info.GetVertex_offset();
+			
 			rendering.push_back(info);
 		}
 
@@ -510,6 +548,8 @@ nodes.emplace_back(node);
     mesh_asset->root_node.iterate(f);
 
 	nodes_handle.write(0, gpu_nodes);
+
+	instance_handle.write(0, gpu_instances);
 }
 
 
@@ -528,42 +568,6 @@ void MeshAssetInstance::init_asset()
 
 
 
-
-std::vector<RaytracingAccelerationStructure::ptr> MeshAssetInstance::create_raytracing_as()
-{
-	//std::vector<RaytracingAccelerationStructure::ptr> result;
-	
-	for (auto& info : rendering)
-	{
-	//	if (info.node_index == 3) continue;
-		D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
-		geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-		geometryDesc.Triangles.IndexBuffer = universal_index_manager::get().buffer->get_gpu_address() + info.draw_arguments.StartIndexLocation * sizeof(UINT32);
-		geometryDesc.Triangles.IndexCount = info.draw_arguments.IndexCountPerInstance;
-		geometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-		geometryDesc.Triangles.Transform3x4 = universal_nodes_manager::get().buffer->get_gpu_address() + info.mesh_info.GetNode_offset() * sizeof(Table::node_data::CB);
-		geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-	//	geometryDesc.Triangles.VertexCount = info.
-		geometryDesc.Triangles.VertexBuffer.StartAddress = universal_vertex_manager::get().buffer->get_gpu_address() + info.mesh_info.GetVertex_offset() * sizeof(Vertex);
-		geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
-		geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-
-		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC > descs;
-		descs.push_back(geometryDesc);
-
-
-		RaytracingAccelerationStructure::ptr structure = std::make_shared<RaytracingAccelerationStructure>(descs);
-		raytracing_as.push_back(structure);
-		structure->srvs = DescriptorHeapManager::get().get_csu_static()->create_table(2);
-	//	mesh_asset->vertex_buffer->place_structured_srv(structure->srvs[0], sizeof(Vertex), info.mesh->vertex_offset, info.mesh->vertex_count);
-	//	mesh_asset->index_buffer->place_structured_srv(structure->srvs[1], sizeof(UINT), info.mesh->index_offset, info.mesh->index_count);
-	//	structure->material = info.mesh->material;
-
-		//break;
-	}
-
-	return raytracing_as;
-}
 
 BOOST_CLASS_EXPORT_IMPLEMENT(MeshAsset);
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MeshAsset>);
@@ -588,6 +592,7 @@ void SceneFrameManager::prepare(CommandList::ptr& command_list, Scene& scene)
 	universal_index_manager::get().prepare(command_list);
 	universal_material_manager::get().prepare(command_list);
 
+	universal_mesh_instance_manager::get().prepare(command_list);
 //	universal_mesh_info_part_manager::get().prepare(command_list);
 	  universal_material_info_part_manager::get().prepare(command_list);
 

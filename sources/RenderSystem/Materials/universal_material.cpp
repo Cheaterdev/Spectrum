@@ -296,6 +296,8 @@ void materials::universal_material::generate_material()
 
 	auto raytracing_str = context->hit_shader.uniforms+ include_file_raytacing->get_data() + context->hit_shader.text;
 
+
+	raytracing_blob = *D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
 	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, context);
 
 	

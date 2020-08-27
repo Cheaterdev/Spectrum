@@ -140,6 +140,7 @@ public:
 				sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
 			    sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->get_srv()[0];
 				sceneData.GetMeshes() = scene->mesh_infos->buffer->get_srv()[0];
+				sceneData.GetMeshInstances() = universal_mesh_instance_manager::get().buffer->get_srv()[0];
 
 				compiledScene = sceneData.compile(frame);
 

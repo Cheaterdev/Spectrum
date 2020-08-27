@@ -40,3 +40,27 @@ struct AutoGenSignatureDesc
 	}
 };
 
+template<class T>
+void process_one(Render::RootSignatureDesc& desc)
+{
+	/*if constexpr (HasSRV<T>) 
+		desc[T::Slot::SRV_ID] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, -1, T::Slot::ID);
+	if constexpr (HasUAV<T>)
+		desc[T::Slot::UAV_ID] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, T::Slot::UAV, T::Slot::ID);
+	if constexpr (HasSMP<T>)
+		desc[T::Slot::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::Slot::SMP, T::Slot::ID);*/
+	if constexpr (HasCB<T>) 
+		desc[T::Slot::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::Slot::ID);
+
+}
+
+template< class ...A>
+Render::RootSignature::ptr create_local_signature()
+{
+	Render::RootSignatureDesc desc;
+
+	(process_one<A>(desc), ...);
+	
+	return std::make_shared<Render::RootSignature>(desc, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE);
+}
+

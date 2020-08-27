@@ -217,11 +217,12 @@ void generate_pass_table(Table& table)
 	lowcameled[0] = std::tolower(lowcameled[0]);
 
 
+	stream<<"#ifndef NO_GLOBAL" << std::endl;
+
 	stream << "static const " << table.name << " " << lowcameled << "_global = Create" << table.name << "();" << std::endl;
-
-
-
 	stream << "const " << table.name << " Get" << cameled << "(){ return " << lowcameled << "_global; }" << std::endl;
+	stream << "#endif" << std::endl;
+
 
 }
 void generate_table(Table& table)
