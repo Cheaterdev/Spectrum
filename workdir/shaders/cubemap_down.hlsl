@@ -91,7 +91,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R)
 				TotalWeight += NoL;
 			}
 		}
-		return  PrefilteredColor / TotalWeight;
+		return PrefilteredColor / TotalWeight;
 	
 }
 
@@ -108,7 +108,7 @@ float4 PS(quad_output i) : SV_TARGET0
 	float3 itc = normalize(i.tc);
 	//return float4(itc,1);
 	
-	return GetEnvSource().GetSourceTex().SampleLevel(linearSampler, itc, 1) ;// float4(PrefilterEnvMap(roughness, itc), 1);
+	return float4(PrefilterEnvMap(roughness, itc), 1);
 
 }
 
@@ -174,7 +174,7 @@ float4 PS_Diffuse(quad_output i) : SV_TARGET0
 	float3 itc = normalize(i.tc);
 	//	return float4(float(roughness).xxx ,1);
 
-		return float4(PrefilterDiffuse(1,itc),1);
+	return float4(PrefilterDiffuse(1, itc), 1);
 
 }
 

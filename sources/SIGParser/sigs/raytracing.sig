@@ -4,6 +4,7 @@ struct RaytracingRays
 {
 	GBuffer gbuffer;
 	RWTexture2D<float4> output;
+	
 }
 
 

@@ -231,11 +231,12 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 		void update_nodes();
 
 
-
+        bool ras_inited = false;
 		//std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
      
         TypedHandle<mesh_info_part> meshpart_handle;
 		TypedHandle<Table::MeshInstance::CB> instance_handle;
+		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
         size_t nodes_count;
         size_t rendering_count;
@@ -285,7 +286,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 		//std::vector<RaytracingAccelerationStructure::ptr> create_raytracing_as();
 	
         void use_material(size_t i, std::shared_ptr<MeshRenderContext>& context) override;
-        void init_ras();
+        bool init_ras(CommandList::ptr list);
         using ptr = s_ptr<MeshAssetInstance>;
         virtual ~MeshAssetInstance();
         MeshAssetInstance(MeshAsset::ptr asset);

@@ -82,12 +82,17 @@ void materials::universal_material::update()
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 
-	
-	auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
-	elem[0].pipeline_id = pipeline->get_id();
-	elem[0].material_cb = compiled_material_info.cb;
+	{
+		auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
+		elem[0].pipeline_id = pipeline->get_id();
+		elem[0].material_cb = compiled_material_info.cb;
 
-	info_handle.write(0, elem);
+		info_handle.write(0, elem);
+
+	}
+
+	update_rtx();
+
 	need_update_uniforms = false;
 	mark_contents_changed();
 }
@@ -243,11 +248,15 @@ void materials::universal_material::compile()
 	{
 		info_handle = universal_material_info_part_manager::get().allocate(1);
 	}
+
 	auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
 
 	elem[0].pipeline_id = pipeline->get_id();
 	elem[0].material_cb = compiled_material_info.cb;
 	info_handle.write(0,elem);
+
+
+
 	//need_update_uniforms = false;
 	end_changing_contents();
 
@@ -342,7 +351,28 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 	generate_material();
 }
 
- void materials::universal_material::test()
+void materials::universal_material::update_rtx()
+{
+	if (!info_rtx)
+	{
+		info_rtx = RTX::get().material_hits->allocate(2);
+	}
+
+
+	{
+		auto elem = info_rtx.map();
+
+		elem[0].identifier = main;
+		elem[0].mat_buffer = compiled_material_info.cb;
+
+		elem[1].identifier = shadow;
+		elem[1].mat_buffer = 0;
+		info_rtx.write(0, elem);
+
+	}
+}
+
+void materials::universal_material::test()
 {
 	graph.test();
 }

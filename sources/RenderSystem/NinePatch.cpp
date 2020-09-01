@@ -6,6 +6,8 @@ namespace GUI
 	{
 		Render::PipelineStateDesc state_desc;
 		state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
+		state_desc.blend.render_target[0].enabled = true;
+
 		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES,{} });
 		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "VS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES/* | D3DCOMPILE_SKIP_OPTIMIZATION*/,{} });
 		state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;

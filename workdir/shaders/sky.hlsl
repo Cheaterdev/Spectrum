@@ -199,6 +199,7 @@ float3 get_sky_only(float3 p, float3 v, float t)
     float3 attenuation = 0;
     float3 s = GetSkyData().GetSunDir();
     float3 inscatterColor = inscatter(x, t, v, s, r, mu, attenuation);
+    float3 sunColor_ = sunColor(x, t, v, s, r, mu);
     return inscatterColor;
 }
 
@@ -314,5 +315,5 @@ float4 PS_Cube(quad_output i) : SV_Target0
 {
     float3 v = normalize(i.ray);
 
-    return  float4(get_sky_only(camera.GetPosition(), v, 1), 1);
+    return  float4(get_sky_only(camera.GetPosition(), v, 0), 1);
 }

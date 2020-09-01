@@ -100,6 +100,8 @@ struct TaskBuilder
 {
 
 	std::map<std::string, ResourceHandler> resources;
+	std::map<std::string, std::string> resources_names;
+
 	std::map<ResourceHandler*, ResourceAllocInfo> alloc_resources;
 
 	std::set<ResourceHandler*> passed_resources;
@@ -115,6 +117,7 @@ struct TaskBuilder
 
 	ResourceHandler* create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, UINT flags = ResourceFlags::None);
 	ResourceHandler* need_texture(std::string name, UINT flags = ResourceFlags::PixelRead);
+	ResourceHandler* recreate_texture(std::string name, UINT flags = ResourceFlags::PixelRead);
 
 	ResourceHandler* create_buffer(std::string name, UINT64 size, UINT flags = ResourceFlags::None);
 	ResourceHandler* need_buffer(std::string name, UINT flags = ResourceFlags::PixelRead);

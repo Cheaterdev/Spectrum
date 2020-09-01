@@ -69,386 +69,6 @@ public:
 };
 
 
-
-
-const wchar_t* c_hitGroupName = L"MyHitGroup";
-const wchar_t* c_raygenShaderName = L"MyRaygenShader";
-const wchar_t* c_closestHitShaderName = L"MyClosestHitShader";
-const wchar_t* c_missShaderName = L"MyMissShader";
-
-
-struct RayGenConstantBuffer
-{
-	UINT texture_offset;
-	UINT node_offset;
-};
-
-/*
-
-template <class T>
-struct RaytracingLocalDesc : public T
-{
-	using T::T;
-	typename T::template ConstBuffer	<0, Render::ShaderVisibility::ALL, 1>				mat_const = this;
-	typename T::template Table			<1, Render::ShaderVisibility::ALL, Render::DescriptorRange::SRV, 0, 1, 4> material_textures = this;
-
-};
-
-using RaytracingLocalSignature = SignatureTypes <RaytracingLocalDesc>;
-*/
-
-
-using shader_identifier = std::array<std::byte, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
-shader_identifier identify(void* data)
-{
-	shader_identifier result;
-
-	memcpy(result.data(), data, result.size());
-
-	return result;
-}
-#define CACHE_ALIGN(x) __declspec(align(x))
-
-CACHE_ALIGN(64)
-struct closesthit_identifier
-{
-	shader_identifier identifier;
-
-	D3D12_GPU_VIRTUAL_ADDRESS mat_buffer;
-//	D3D12_GPU_DESCRIPTOR_HANDLE gpu;
-
-	//	RayGenConstantBuffer cb;
-};
-
-struct RayTracingShaders : public Events::prop_handler,
-	public Events::Runner
-{
-	Resource::ptr m_missShaderTable;
-	Resource::ptr m_hitGroupShaderTable;
-	Resource::ptr m_rayGenShaderTable;
-
-	shader_identifier rayGenShaderIdentifier;
-	shader_identifier missShaderIdentifier;
-	shader_identifier missShadowShaderIdentifier;
-
-	std::vector<closesthit_identifier> hitGroupShaderIdentifiers;
-
-	ComPtr<ID3D12StateObject> m_dxrStateObject;
-	ComPtr<ID3D12StateObject> m_SharedCollection;
-	ComPtr<ID3D12StateObject> m_GlobalCollection;
-
-
-	//RaytracingSignature::RootSignature::ptr signature;
-	//RaytracingLocalSignature::RootSignature::ptr signature_local;
-
-	std::string blob;
-
-	RayGenConstantBuffer m_rayGenCB;
-
-
-	//ArraysHolder<Render::Handle> buffersVertex;
-	//ArraysHolder<Render::Handle> buffersIndex;
-
-	//std::vector<ComPtr<IDxcBlob>> blobs;
-	ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
-	RootSignature::ptr global_sig;
-	struct InstanceData
-	{
-		UINT vertexBuffer;
-		UINT indexBuffer;
-		//UINT materialOffset;
-	};
-	using ptr = std::shared_ptr<RayTracingShaders>;
-
-	//ArraysHolder<InstanceData> instanceData;
-	std::vector<materials::universal_material::ptr> materials;
-	std::set<ComPtr<ID3D12StateObject>> all_objs;
-	//	Render::HandleTable gpu_textures;
-
-		//ArraysHolder<Render::Handle> textures;
-		//std::map<materials::universal_material*, size_t> material_offsets;
-	std::map<materials::universal_material*, Render::HandleTable> material_textures;
-
-	UINT get_material_id(materials::universal_material::ptr universal)
-	{
-		UINT material_id = 0;
-		for (;material_id < materials.size(); material_id++)
-		{
-			if (materials[material_id] == universal)
-			{
-				break;
-			}
-		}
-
-		if (material_id == materials.size())
-		{
-			materials.push_back(universal);
-
-			universal->on_change.register_handler(this,[this]() {
-
-				run([this]() {
-					CreateGlobalCollection();
-					CreateRaytracingPipelineStateObject();
-					});				
-				});
-		}
-
-		return material_id;
-	}
-
-	void CreateCommonProps(CD3DX12_STATE_OBJECT_DESC &raytracingPipeline)
-	{
-
-		auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
-
-		 global_sig = get_Signature(Layouts::DefaultLayout)->create_global_signature<Slots::MaterialInfo>();
-
-
-
-		globalRootSignature->SetRootSignature(global_sig->get_native().Get());
-
-		auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
-		pipelineConfig->Config(8);
-
-		auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-		UINT payloadSize = 6 * sizeof(float);   // float4 color
-		UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
-		shaderConfig->Config(payloadSize, attributeSize);
-
-
-	}
-
-	void CreateSharedCollection()
-	{
-		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_COLLECTION };
-
-
-		CreateCommonProps(raytracingPipeline);
-
-		{
-			auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)blob.data(), blob.size());
-			lib->SetDXILLibrary(&libdxil);
-			// Define which shader exports to surface from the library.
-			// If no shader exports are defined for a DXIL library subobject, all shaders will be surfaced.
-			// In this sample, this could be omitted for convenience since the sample uses all shaders in the library. 
-			{
-				lib->DefineExport(c_raygenShaderName);
-				lib->DefineExport(c_missShaderName);
-
-				lib->DefineExport(L"ShadowMissShader");
-				lib->DefineExport(L"ShadowClosestHitShader");
-
-			}
-		}
-
-		{
-			auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
-			hitGroup->SetClosestHitShaderImport(L"ShadowClosestHitShader");
-			hitGroup->SetHitGroupExport(L"ShadowClosestHitGroup");
-			hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
-
-			//	rootSignatureAssociation->AddExport(L"ShadowClosestHitGroup");
-		}
-	
-		TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_SharedCollection)), L"Couldn't create DirectX Raytracing state object.\n");
-	}
-
-	void CreateGlobalCollection()
-	{
-		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_COLLECTION};
-
-		auto local_sig = create_local_signature<Slots::MaterialInfo>();
-
-	auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
-		localRootSignature->SetRootSignature(local_sig->get_native().Get());
-
-		// Shader association
-		auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
-		rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
-
-		CreateCommonProps(raytracingPipeline);
-
-		for (auto& mat : materials)
-		{
-
-	
-
-			auto& blob = mat->raytracing_blob;
-			auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)blob.data(), blob.size());
-			lib->SetDXILLibrary(&libdxil);
-			{
-				lib->DefineExport(mat->wshader_name.c_str(),c_closestHitShaderName);
-				
-			}
-
-			{
-				auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
-				hitGroup->SetClosestHitShaderImport(mat->wshader_name.c_str());
-				hitGroup->SetHitGroupExport((mat->wshader_name+L"HIT").c_str());
-				hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
-
-				rootSignatureAssociation->AddExport((mat->wshader_name + L"HIT").c_str());
-
-			}
-
-		}
-
-		TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_GlobalCollection)), L"Couldn't create DirectX Raytracing state object.\n");
-		all_objs.insert(m_GlobalCollection);
-
-	}
-
-
-	void CreateRaytracingPipelineStateObject()
-	{
-		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
-
-		{
-			auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
-			sharedCollection->SetExistingCollection(m_SharedCollection.Get());
-		}
-
-		{
-			auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
-			sharedCollection->SetExistingCollection(m_GlobalCollection.Get());
-		}
-
-
-		TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)), L"Couldn't create DirectX Raytracing state object.\n");
-		all_objs.insert(m_dxrStateObject);
-
-		
-		TEST(m_dxrStateObject.As(&stateObjectProperties));
-
-		//	shader_identifier.assign()
-		rayGenShaderIdentifier = identify(stateObjectProperties->GetShaderIdentifier(c_raygenShaderName));
-		missShaderIdentifier = identify(stateObjectProperties->GetShaderIdentifier(c_missShaderName));
-		missShadowShaderIdentifier = identify(stateObjectProperties->GetShaderIdentifier(L"ShadowMissShader"));
-
-		
-
-	}
-	RayTracingShaders()
-	{
-
-		while (blob.empty()) {
-			resource_file_depender depender;
-
-
-			D3D::shader_include In("shaders\\", depender);
-
-			auto res = D3D12ShaderCompilerInfo::get().Compile_Shader_File("raytracing.hlsl", {}, "lib_6_3", "", &In);
-
-			if (res)
-			{
-				blob = *res;
-				break;
-			}
-			
-		}
-	//		CreateRaytracingPipelineStateObject(blobs);
-
-	}
-
-	void render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as)
-	{
-
-		process_tasks();
-		auto timer = context->list->start(L"raytracing");
-
-		auto& _list = context->list;
-		// Get shader identifiers.
-		UINT  shaderIdentifierSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-
-
-
-		auto DispatchRays = [&](auto* commandList, auto* stateObject, auto* dispatchDesc)
-		{
-			auto m_rayGenShaderTable = _list->place_raw(rayGenShaderIdentifier);
-			auto m_hitGroupShaderTable = _list->place_raw(hitGroupShaderIdentifiers);
-			auto m_missShaderTable = _list->place_raw(missShaderIdentifier, missShadowShaderIdentifier);
-
-			// Since each shader table has only one shader record, the stride is same as the size.
-			dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable.get_gpu_address();
-			dispatchDesc->HitGroupTable.SizeInBytes = m_hitGroupShaderTable.size;
-			dispatchDesc->HitGroupTable.StrideInBytes = sizeof(closesthit_identifier);
-
-			dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable.get_gpu_address();
-			dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable.size;
-			dispatchDesc->MissShaderTable.StrideInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-
-			dispatchDesc->RayGenerationShaderRecord.StartAddress = m_rayGenShaderTable.get_gpu_address();
-			dispatchDesc->RayGenerationShaderRecord.SizeInBytes = m_rayGenShaderTable.size;
-			dispatchDesc->Width = texture.get_size().x;
-			dispatchDesc->Height = texture.get_size().y;
-			dispatchDesc->Depth = 1;
-			commandList->SetPipelineState1(stateObject);
-			commandList->DispatchRays(dispatchDesc);
-		};
-
-
-		{	
-			Slots::Raytracing rtx;
-
-		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*_list->frame_resources).get_srv();
-		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*_list->frame_resources).get_srv();
-		rtx.set(_list->get_compute());
-		rtx.set(_list->get_graphics());
-
-		}
-
-		{
-			Slots::RaytracingRays rays;
-
-			rays.GetOutput() = texture.get_uav();
-		
-			rays.set(_list->get_compute());
-			rays.set(_list->get_graphics());
-
-		}
-		
-		hitGroupShaderIdentifiers.clear();
-
-		hitGroupShaderIdentifiers.reserve(materials.size() * 2);
-
-
-
-		for (auto& mat : materials)
-		{
-			{
-				closesthit_identifier id;
-				id.identifier = identify(stateObjectProperties->GetShaderIdentifier((mat->wshader_name + L"HIT").c_str()));
-				id.mat_buffer = mat->compiled_material_info.cb.address;
-				hitGroupShaderIdentifiers.push_back(id);
-			}
-
-			{
-				closesthit_identifier id;
-				id.identifier = identify(stateObjectProperties->GetShaderIdentifier(L"ShadowClosestHitGroup"));
-				id.mat_buffer = 0;
-				//id.gpu.ptr = 0;
-				hitGroupShaderIdentifiers.push_back(id);
-			}
-		}
-
-
-		_list->get_compute().flush_binds(true);
-
-
-
-		// Bind the heaps, acceleration structure and dispatch rays.
-		D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
-		{
-			//	commandList->SetComputeRootShaderResourceView(GlobalRootSignatureParams::AccelerationStructureSlot, m_topLevelAccelerationStructure->GetGPUVirtualAddress());
-			DispatchRays(_list->get_native_list().Get(), m_dxrStateObject.Get(), &dispatchDesc);
-		}
-
-	}
-};
-
-
 class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
 {
 	main_renderer::ptr scene_renderer;
@@ -511,87 +131,32 @@ public:
 	MeshAssetInstance::ptr instance;
 
 
-	RayTracingShaders shaders;
-
 	Render::RaytracingAccelerationStructure::ptr scene_as;
 
 
 	// Build acceleration structures needed for raytracing.
 	void BuildAccelerationStructures()
 	{
+		std::vector<D3D12_RAYTRACING_INSTANCE_DESC>  desc;
 
-		std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
+		scene_as = std::make_shared<RaytracingAccelerationStructure>(desc);
 
-		scene->iterate([&instances, this](scene_object* object) {
-			MeshAssetInstance::ptr mesh = object->get_ptr<MeshAssetInstance>();
-			if (mesh)
-			{
-				mesh->init_ras();
-				auto &structures = mesh->rendering;
-
-				for (auto& e : structures)
-				{
-				//	MaterialAsset::ref& material  = mesh->overrided_material[e->material];
-					materials::universal_material::ptr universal = e.material->get_ptr<materials::universal_material>();
-
-					int material_id = shaders.get_material_id(universal);
-
-/*
-					auto& instance_data = shaders.instanceData[shaders.instanceData.get_free(1)];
-
-					{
-
-						size_t offset = shaders.buffersVertex.get_free(1);
-
-						shaders.buffersVertex[instance_data.vertexBuffer = offset] = e->srvs[0];
-
-					}
-					{
-
-						size_t offset = shaders.buffersIndex.get_free(1);
-
-						shaders.buffersIndex[instance_data.indexBuffer = offset] = e->srvs[1];
-
-					}
-					*/
-					D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
-
-					for (int x = 0; x < 3; x++)
-						for (int y = 0; y < 4; y++)
-						{
-							instanceDesc.Transform[x][y] = mesh->global_transform.rows[y][x];
-						}
-
-					
-					//instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
-					instanceDesc.InstanceMask = 1;
-					instanceDesc.AccelerationStructure = e.ras->get_gpu_address();
-					instanceDesc.InstanceID = e.node_id;// instances.size() + 1;// e->material;
-					instanceDesc.InstanceContributionToHitGroupIndex =  2 * material_id;
-					instances.push_back(instanceDesc);
-				}
-
-			}
-
-			return true;
-			});
-
-
-
-		scene_as = std::make_shared<RaytracingAccelerationStructure>(instances);
-		shaders.CreateSharedCollection();
-		shaders.CreateGlobalCollection();
-		shaders.CreateRaytracingPipelineStateObject();
-		//	shaders = std::make_shared<RayTracingShaders>(blobs);
+		RTX::get().CreateSharedCollection();
+		RTX::get().CreateGlobalCollection();
+		RTX::get().CreateRaytracingPipelineStateObject();
 	}
 
 	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
 	PSSM pssm;
+	SMAA smaa;
 	SkyRender sky;
 	VoxelGI::ptr voxel_gi;
 	std::string debug_view;
 	triangle_drawer()
 	{
+		texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
+
+		BuildAccelerationStructures();
 
 		auto t = CounterManager::get().start_count<triangle_drawer>();
 		thinkable = true;
@@ -741,7 +306,7 @@ public:
 
 	//	auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count =2;
+		int count =-2;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
@@ -781,93 +346,6 @@ public:
 			}
 			
 		}
-		/*
-
-		render_graph.reset(new PostProcessGraph);
-		render_graph->start_child_nodes = true;
-		{
-			auto adaptation_node = std::make_shared<AdaptationNode>();
-			render_graph->register_node(adaptation_node);
-
-
-			auto sky_node = std::make_shared<SkyNode>();
-			render_graph->register_node(sky_node);
-
-			auto sky_render_node = std::make_shared<SkyRenderNode>();
-			render_graph->register_node(sky_render_node);
-
-
-			auto sky_env_node = std::make_shared<SkyEnviromentNode>();
-			render_graph->register_node(sky_env_node);
-
-
-			auto smaa_node = std::make_shared<SMAANode>();
-			render_graph->register_node(smaa_node);
-
-
-			//auto ssgi_node = std::make_shared<SSGINode>();
-		//	render_graph->register_node(ssgi_node);
-
-
-			auto voxel_node = std::make_shared<VoxelNode>();
-			render_graph->register_node(voxel_node);
-
-
-			auto gbuffer_downsampler = std::make_shared<GBufferDownsamplerNode>();
-			render_graph->register_node(gbuffer_downsampler);
-
-
-			render_graph->register_node(lighting);
-
-
-			sky_node->get_output(0)->link(sky_env_node->get_input(0));
-
-
-			render_graph->get_input(0)->link(gbuffer_downsampler->get_input(0));
-
-			//	gbuffer_downsampler->get_output(0)->link(sky_render_node->get_input(0));
-
-
-			gbuffer_downsampler->get_output(0)->link(lighting->get_input(0));
-			lighting->get_output(0)->link(voxel_node->get_input(0));
-			voxel_node->get_output(0)->link(sky_render_node->get_input(0));
-
-
-			//	ssgi_node->get_output(0)->link(voxel_node->get_input(0));
-
-			//	ssgi_node->get_output(1)->link(voxel_node->get_input(1));
-
-			sky_env_node->get_output(0)->link(voxel_node->get_input(1));
-			sky_node->get_output(0)->link(sky_render_node->get_input(1));
-
-			//voxel_node->get_output(0)->link(sky_render_node->get_input(0));
-			//sky_render_node->get_output(0)->link(adaptation_node->get_input(0));
-		//	adaptation_node->get_output(0)->link(smaa_node->get_input(0));
-
-			//sky_render_node->get_output(0)->link(smaa_node->get_input(0));
-		}
-
-
-
-
-		*/
-
-
-
-		scene->update_transforms();
-		auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
-		list->begin("prepare");
-		MeshRenderContext::ptr context(new MeshRenderContext());
-		context->delta_time = 1;
-		context->list = list;
-
-	//	gpu_meshes_renderer_static->update(context);
-		SceneFrameManager::get().prepare(list, *scene);
-
-		list->end();
-		list->execute_and_wait();
-
-    	BuildAccelerationStructures();
 
 		eyes.emplace_back(new EyeData(nullptr));
 
@@ -920,6 +398,8 @@ public:
 
 	FrameGraph* last_graph = nullptr;
 	tick_timer my_timer;
+	std::future<Render::Handle> result_tex;
+
 	void generate(FrameGraph& graph)
 	{
 
@@ -929,14 +409,15 @@ public:
 
 		vr_context->eyes[0].offset = vec3(0, 0, 0);
 
-		ivec2 size = texture.texture->get_size();
+		ivec2 size = get_render_bounds().size;
 		struct pass_data
 		{
 			ResourceHandler* o_texture;
+			ResourceHandler* sky_cubemap;
+
 		};
 
 		scene->update(*graph.builder.current_frame);
-		graph.builder.pass_texture("ResultTexture", texture.texture);
 		graph.frame_size = size;
 		graph.scene = scene.get();
 		graph.renderer = gpu_scene_renderer.get();
@@ -966,6 +447,33 @@ public:
 
 			});
 		*/
+		{
+
+			CommandList::ptr command_list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+
+			command_list->begin("pre");
+			{
+
+				SceneFrameManager::get().prepare(command_list, *scene);
+
+				bool need_rebuild = scene->init_ras(command_list);
+				SceneFrameManager::get().prepare(command_list, *scene);
+				command_list->transition(scene->raytrace->buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				command_list->flush_transitions();
+
+				//if (GetAsyncKeyState('O'))
+					scene_as->update(command_list, scene->raytrace->max_size(), scene->raytrace->buffer->get_gpu_address(), need_rebuild);
+
+				RTX::get().prepare(command_list);
+
+			}
+
+			command_list->end();
+
+			command_list->execute();
+		}
+
+
 	{
 			struct GBufferData
 			{
@@ -976,7 +484,7 @@ public:
 
 
 			};
-		
+			
 			graph.add_pass<GBufferData>("GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
 				data.gbuffer.create(size, builder);
 				data.gbuffer.create_mips(size, builder);
@@ -989,9 +497,7 @@ public:
 				}, [this](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
-					SceneFrameManager::get().prepare(command_list, *scene);
-
-
+				
 					//std::this_thread::sleep_for(1ms);
 				//	gpu_scene_renderer->render(context_gbuffer, scene);
 					MeshRenderContext::ptr context(new MeshRenderContext());
@@ -1045,19 +551,37 @@ public:
 				});
 		}
 
+	
+
+	struct no
+	{
+
+	};
+	graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
+		graph.builder.create_texture("ResultTexture", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT);
+		}, [](no& data, FrameContext& _context) {});
+
+
+
 		pssm.generate(graph);
 		sky.generate(graph);
 		voxel_gi->generate(graph);
 
-		stenciler->generate_after(graph);
-
+	
 		
 		graph.add_pass<pass_data>("RAYTRACE",[](pass_data& data, TaskBuilder& builder) {
 			data.o_texture = builder.need_texture("ResultTexture",ResourceFlags::UnorderedAccess);
+			data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
+
 			}, [this, &graph](pass_data& data, FrameContext& _context) {
 
+
 				auto& command_list = _context.get_list();
+				//SceneFrameManager::get().prepare(command_list, *scene);
+
 				MeshRenderContext::ptr context(new MeshRenderContext());
+				auto sky_cubemap = _context.get_texture(data.sky_cubemap);
+
 
 				context->current_time = time;
 			//	context->sky_dir = lighting->lighting.pssm.get_position();
@@ -1067,8 +591,10 @@ public:
 
 				auto output_tex = _context.get_texture(data.o_texture);
 
-				command_list->get_compute().set_signature(shaders.global_sig);
-				command_list->get_graphics().set_signature(shaders.global_sig);
+
+			
+				command_list->get_compute().set_signature(RTX::get().global_sig);
+				command_list->get_graphics().set_signature(RTX::get().global_sig);
 
 				Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
@@ -1077,6 +603,8 @@ public:
 				{
 					auto timer = Profiler::get().start(L"FrameInfo");
 					Slots::FrameInfo frameInfo;
+
+					frameInfo.GetSky() = sky_cubemap.get_srv();
 
 					auto camera = frameInfo.MapCamera();
 					camera.cb = graph.cam->camera_cb.current;
@@ -1100,35 +628,47 @@ public:
 
 					context->cam = &eyes[i]->cam;
 				}
-
-				shaders.render(context, output_tex, scene_as);
+				if(GetAsyncKeyState('B'))
+				RTX::get().render(context, output_tex, scene_as);
 			});
 			
-			
+		stenciler->generate_after(graph);
+
+		smaa.generate(graph);
+
 		struct debug_data
 		{
 			ResourceHandler* o_texture;
 			ResourceHandler* debug_texture;
 		};
-		if (!debug_view.empty())
-		graph.add_pass<debug_data>("DEBUG", [this](debug_data& data, TaskBuilder& builder) {
-				data.o_texture = builder.need_texture("swapchain");
-				data.debug_texture = builder.need_texture(debug_view);
 
-			}, [this](debug_data& data, FrameContext& context) {
+		//
+
+		std::string res_tex = "ResultTexture";
+		if (!debug_view.empty())
+			res_tex = debug_view;
+		auto promise = std::make_shared<std::promise<Render::Handle>>();
+		result_tex = promise->get_future();
+
+		graph.add_pass<debug_data>("DEBUG", [this, res_tex](debug_data& data, TaskBuilder& builder) {
+				data.o_texture = builder.need_texture("swapchain");
+				data.debug_texture = builder.need_texture(res_tex);
+
+			}, [this, promise](debug_data& data, FrameContext& context) {
 
 				auto output_tex = context.get_texture(data.o_texture);
 				auto debug_tex = context.get_texture(data.debug_texture);
 
 				if (!debug_tex) return;
-		
 
+				promise->set_value(debug_tex.get_srv());
+				/*
 				auto& list = context.get_list();
 
 				list->get_graphics().set_viewport(vec4{0,0,100,100});
 				list->get_graphics().set_scissor({ 0,0,100,100 });
 
-				MipMapGenerator::get().copy_texture_2d_slow(list->get_graphics(), texture.texture, debug_tex);
+				MipMapGenerator::get().copy_texture_2d_slow(list->get_graphics(), texture.texture, debug_tex);*/
 			});
 
 	}
@@ -1136,49 +676,8 @@ public:
 	virtual void draw(Render::context& t) override
 	{
 
-		//	auto r = get_render_bounds();
-		//	cam.set_projection_params(pi / 4, float(r.w) / r.h, 1, 1500);
-		//	for (auto& e : eyes)
-		//		e->g_buffer.size = { r.w,r.h };
-
-	//	renderer->flush(t);
-		//t.command_list->transition(texture.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-
+		texture.srv[0].place(result_tex.get());
 		image::draw(t);
-		//	renderer->flush(t);
-
-		//	texture.srv[0] = t.command_list->get_graphics().get_desc_manager().get(2, 0);
-		//	if(eyes.size())
-		//		texture = eyes[0]->g_buffer.result_tex.first();
-
-		//	Handle h = t.command_list->get_graphics().get_desc_manager().get(7, 0);
-/*		float dt = t.delta_time;
-		auto list = t.command_list->get_sub_list();
-
-		auto v = t.ovr_context;
-		thread_pool::get().enqueue([this, dt, list, v]() {
-			//	
-
-			list->begin("__draw");
-			list->transition(texture.texture, Render::ResourceState::RENDER_TARGET);
-			list->clear_rtv(texture.texture->texture_2d()->get_rtv());
-
-		//	update_texture(list, dt, v);
-			//	texture = eyes[0]->g_buffer.result_tex.first();
-
-		//	h.place(eyes[0]->g_buffer.result_tex.first()->texture_2d()->get_static_srv());  //;'///////////////////////////////////////////////////////////
-
-			list->end();
-			list->execute();
-			//		h.place(g_buffer.speed_tex->texture_2d()->get_static_srv());
-				//	h.place(g_buffer.depth_tex_downscaled->texture_2d()->get_static_srv());
-			//h.place(lighting.pssm.screen_light_mask->texture_2d()->get_static_srv());
-	//		h.place(voxel_renderer->downsampled_light->texture_2d()->get_static_srv());
-		//	h.place(hdr.tex_luma->texture_2d()->get_static_srv());
-			});
-			*/
-		//	texture = eyes[0]->g_buffer.result_tex.first();
-
 	}
 
 
@@ -1192,8 +691,7 @@ public:
 		if (r.w <= 64 || r.h <= 64) return;
 
 		ivec2 size = r.size;
-		texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
-
+	//	texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 
 		//	g_buffer.size = { r.w, r.h };
 		cam.set_projection_params(pi / 4, float(r.w) / r.h, 1, 1500);

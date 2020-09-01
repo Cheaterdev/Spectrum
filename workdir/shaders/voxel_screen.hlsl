@@ -95,7 +95,7 @@ float prev_dist=dist;
 
 float3 PrefilterEnvMap(float Roughness, float3 R)
 {
-	return  10*tex_cube.SampleLevel(linearSampler, R, 0*Roughness * 5).rgb;
+	return  tex_cube.SampleLevel(linearSampler, R, 0*Roughness * 5).rgb;
 }
 
 
@@ -173,7 +173,7 @@ float4 trace(float4 start_color, float3 view, float3 origin,float3 dir,float3 no
 	float3 samplePos = 0;
 	float4 accum = start_color;
 	// the starting sample diameter
-	float minDiameter = 1.0 / 1024;// *(1 + 4 * angle);
+	float minDiameter = 1.0 / 256;// *(1 + 4 * angle);
 	float minVoxelDiameterInv = 1.0 / minDiameter;
   
 	float maxDist = 1;
@@ -184,7 +184,7 @@ float4 trace(float4 start_color, float3 view, float3 origin,float3 dir,float3 no
 	{
 	   float sampleDiameter = minDiameter+ angle * dist;
 	
-	   float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
+	   float sampleLOD = 2*log2(sampleDiameter * minVoxelDiameterInv);
 		samplePos = origin + dir * dist;
 		float4 sampleValue = get_voxel(samplePos, sampleLOD);//* float4(1,1,1,1 + sampleLOD/4);
 	//	sampleValue.w *= 0.8;// (1 + 1 * angle);
@@ -201,7 +201,7 @@ float4 trace(float4 start_color, float3 view, float3 origin,float3 dir,float3 no
 	//accum *= 1.0 / 0.9;
 	float3 sky = get_sky(normal, angle);
 	float sampleWeight = saturate(max_accum - accum.w*SCALER) / max_accum;
-	accum.xyz+= 1*sky * pow(sampleWeight,1);
+	accum.xyz+= sky* pow(sampleWeight,1);
 		
    return accum;// / saturate(accum.w);
 }
@@ -286,7 +286,7 @@ float4 gi = trace(0,v, pos, dir, normal, a);
 
 float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,float r, float roughness, float metallic)
 {
-	float a = 0.4;
+	float a = 0.1;
 
 	float4 Color = 0;
 	float k = scaler;
@@ -299,7 +299,7 @@ float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,floa
 	float rsin = sin(6.14*rand);
 	float rand2 = rnd(float2(cosi, sini));
 
-	float t = rand2 *3;
+	float t = lerp(0.5,1, rand2);
 
 	float3 right =rsin*t*normalize(cross(Normal, float3(0, 1, 0.1)));
 	float3 tangent =rcos*t*normalize(cross(right, Normal));

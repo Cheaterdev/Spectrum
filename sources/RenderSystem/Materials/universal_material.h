@@ -288,8 +288,18 @@ namespace materials
 			Slots::MaterialInfo::Compiled compiled_material_info;
 
 			TypedHandle<material_info_part> info_handle;
-		
+			TypedHandle<closesthit_identifier> info_rtx;
+			shader_identifier main;
+			shader_identifier shadow;
+			void set_identifier(shader_identifier main, shader_identifier shadow)
+			{
+				this->main = main;
+				this->shadow = shadow;
 
+				update_rtx();
+			}
+
+			void update_rtx();
 			void test();
 
             void update();

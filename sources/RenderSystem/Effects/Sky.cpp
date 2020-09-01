@@ -59,7 +59,7 @@ void SkyRender::generate(FrameGraph& graph)
 	graph.add_pass<SkyData>("Sky", [this, &graph](SkyData& data, TaskBuilder& builder) {
 		data.depth = builder.need_texture("GBuffer_Depth", ResourceFlags::PixelRead);
 		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
-		data.sky_cubemap = builder.create_texture("sky_cubemap", ivec2(256, 256),6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget| ResourceFlags::Cube);
+		data.sky_cubemap = builder.create_texture("sky_cubemap", ivec2(256, 256),6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget| ResourceFlags::Cube);
 		}, [this, &graph](SkyData& data, FrameContext& _context) {
 			auto depth = _context.get_texture(data.depth);
 
@@ -144,6 +144,10 @@ void SkyRender::generate(FrameGraph& graph)
 				}
 			}
 
+	//		auto tex = std::dynamic_pointer_cast<Render::Texture>(sky_cubemap.resource);
+
+
+			MipMapGenerator::get().generate_cube(list.get_compute(), sky_cubemap);
 
 		});
 

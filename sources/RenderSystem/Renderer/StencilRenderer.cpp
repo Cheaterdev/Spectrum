@@ -436,7 +436,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 				auto obj = graph.scene;
 
-				SceneFrameManager::get().prepare(_context.get_list(), *debug_scene);
+				//SceneFrameManager::get().prepare(_context.get_list(), *debug_scene);
 
 				RenderTargetTable table = RenderTargetTable(graphics, {}, depth_tex);
 				{
@@ -694,7 +694,6 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 				// apply color mask
 			{
 					graphics.set_pipeline(last_render_state);
-					list.transition(color_tex.resource, ResourceState::PIXEL_SHADER_RESOURCE);
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 					{

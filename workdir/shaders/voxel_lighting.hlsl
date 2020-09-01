@@ -79,7 +79,7 @@ float4 get_sky(float3 dir, float level)
 	int l1 = l0 + 1;
 
 
-	return tex_cube.SampleLevel(linearSampler, float4(dir, l0), 0);
+	return 1*tex_cube.SampleLevel(linearSampler, dir, 0);
 
 
 }
@@ -88,7 +88,7 @@ float4 get_sky(float3 dir, float level)
 
 float4 get_voxel(float3 pos, float level)
 {
-return tex_lower.SampleLevel(linearClampSampler,pos,level);
+return float4(1,1,1,1)*tex_lower.SampleLevel(linearClampSampler,pos,level);
 }
 
 float get_shadow_voxel(float3 pos)
@@ -135,6 +135,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 	//angle = min(angle, max_angle);
  
+	origin += dir / 256;
 		 float3 samplePos = 0;
     float4 accum = 0;
     // the starting sample diameter
@@ -146,7 +147,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
     float maxDist = 1;
     float dist = minDiameter;
 
-    while (dist <= maxDist && accum.w < 0.5 && all(samplePos <= 1) && all(samplePos >= 0))
+    while (dist <= maxDist && accum.w < 1 && all(samplePos <= 1) && all(samplePos >= 0))
     {
 	    float sampleDiameter = max(minDiameter, angle * dist);
     
@@ -160,8 +161,8 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 //	accum.xyz *= angle_coeff;
 
-	float4 sky = 14*get_sky(dir,angle);
-  float sampleWeight = saturate(1 - accum.w*1.5);
+	float4 sky = get_sky(dir,angle);
+  float sampleWeight = saturate(1 - accum.w*4);
      accum += sky * pow(sampleWeight,1);
 
 		return accum;
@@ -173,14 +174,14 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 float4 get_direction(float3 pos, float3 normal, float3 dir, float k, float a)
 {
 
-	return trace(pos, dir, normal, a);//*pow(dot(normal, dir), 8);
+	return trace(pos, dir, normal, a) *pow(dot(normal, dir), 1);
 }
 float4 getGI(float3 Pos, float3 Normal)
 {
-	float a = 0.6;
+	float a = 0.3;
 
 	float4 Color = 0;
-	float t = 0.4;
+	float t = 1;
 	float k = 0;
 	float3 right = t*normalize(cross(Normal, float3(0, 1, 0.001)));
 	float3 tangent = t*normalize(cross(right, Normal));
@@ -195,36 +196,9 @@ float4 getGI(float3 Pos, float3 Normal)
 	Color += get_direction(Pos, Normal, normalize(Normal - tangent + right), k, a);//trace(Pos + k*normalize(Normal - tangent + right), normalize(Normal - tangent + right), a);
 																				   //  Color /= 3.14f;
 																				   //Color *= getAO(Pos-0*Normal, Normal);
-	return  Color /8;
+	return  Color/3;
 
 }
-
-
-/*
-cbuffer CB : register(b0)
-{
-    uint SrcMipLevel;	// Texture level of source mip
-    uint NumMipLevels;	// Number of OutMips to write: [1, 4]
-    float2 TexelSize;	// 1.0 / OutMip1.Dimensions
-}
-*/
-
-//#define voxel_min float3(-150,-150,-150)
-//#define voxel_size float3(300,300,300)
-/*
-cbuffer consts:register(b0)
-{
-	float3 dir; 
-	float3 voxel_min;
-	float3 voxel_size;
-			//ivec3 voxel_map_size; int groups;
-
-	uint4 voxels_per_tile;
-
-	
-};
-
-*/
 
 
 uint3 get_index( uint3 groupThreadID,	uint3 groupID   )
@@ -279,7 +253,7 @@ uint3 index = get_index(groupThreadID, groupID);
 	float shadow = saturate(dot(normals, dir)) *get_shadow(pos);
 	
 	
-	float3 lighting = albedo.xyz *gi.xyz + 1 * albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
+	float3 lighting = 1*albedo.xyz * gi.xyz +1 * albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
 //	output[index] = float4(albedo.xyz,albedo.w);
 	//lighting = traced_shadow.xxx	;
 	output[index] = float4(lighting,1);

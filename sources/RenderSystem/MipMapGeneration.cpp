@@ -107,9 +107,75 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 {
 	generate(compute_context, tex, tex->texture_2d());
 }
-void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, CubemapView::ptr view)
+void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, TextureView view)
 {
-	for (int i = 0; i < 6; i++) generate(compute_context, tex, view->face(i));
+
+	for (int i = 0; i <6; i++) 
+		
+		generate(compute_context,view.create_2d_slice(i, *compute_context.get_base().frame_resources));
+}
+
+void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureView  view)
+{
+
+	std::lock_guard<std::mutex> g(m);
+	auto timer = compute_context.get_base().start(L"downsampling");
+
+	compute_context.set_signature(linear[0]->desc.root_signature);
+	uint32_t maps = view.get_mip_count()-1;
+	auto size = view.get_size();
+	uint32_t prev = 0;
+
+	for (uint32_t TopMip = 0; TopMip < maps;)
+	{
+		
+		uint32_t SrcWidth = uint32_t(size.x >> TopMip);
+		uint32_t SrcHeight = uint32_t(size.y >> TopMip);
+		uint32_t DstWidth = SrcWidth >> 1;
+		uint32_t DstHeight = SrcHeight >> 1;
+		uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
+
+		if (DirectX::IsSRGB(view.get_desc().Format))
+			compute_context.set_pipeline(gamma[NonPowerOfTwo]);
+		else
+			compute_context.set_pipeline(linear[NonPowerOfTwo]);
+
+		uint32_t AdditionalMips;
+		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
+		uint32_t NumMips = 1 +(AdditionalMips > 3 ? 3 : AdditionalMips);
+
+		if (TopMip + NumMips > maps)
+			NumMips = maps - TopMip;
+
+		// These are clamped to 1 after computing additional mips because clamped
+		// dimensions should not limit us from downsampling multiple times.  (E.g.
+		// 16x1 -> 8x1 -> 4x1 -> 2x1 -> 1x1.)
+		if (DstWidth == 0)
+			DstWidth = 1;
+
+		if (DstHeight == 0)
+			DstHeight = 1;
+
+		Slots::MipMapping data;
+		data.GetSrcMipLevel() = TopMip;
+		data.GetNumMipLevels() = NumMips;
+		data.GetTexelSize() = { 1.0f / DstWidth, 1.0f / DstHeight };
+
+		for (uint32_t i = 0; i < NumMips; i++)
+		{
+			data.GetOutMip()[i] = view.create_mip(TopMip + 1 + i, *compute_context.get_base().frame_resources).get_uav();
+		}
+		data.GetSrcMip() = view.create_mip(TopMip, *compute_context.get_base().frame_resources).get_srv();
+
+		data.set(compute_context, true);
+
+		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
+
+		compute_context.get_base().transition_uav(view.resource.get());
+		prev = TopMip;
+		TopMip += NumMips;
+
+	}
 }
 
 void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Texture2DView::ptr view)
@@ -162,7 +228,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 		}
 		data.GetSrcMip() = view->get_srv(TopMip);
 
-		data.set(compute_context,false);
+		data.set(compute_context, true);
 		compute_context.use_dynamic = false;
 		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));	compute_context.use_dynamic = true;
 

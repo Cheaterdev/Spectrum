@@ -57,7 +57,7 @@ namespace DX12
 
 	struct RenderTarget
 	{
-		bool enabled = true;
+		bool enabled = false;
 		D3D12_BLEND dest = D3D12_BLEND::D3D12_BLEND_INV_SRC_ALPHA;
 		D3D12_BLEND source = D3D12_BLEND::D3D12_BLEND_SRC_ALPHA;
 		D3D12_BLEND dest_alpha = D3D12_BLEND::D3D12_BLEND_ZERO;

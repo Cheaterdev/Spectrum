@@ -94,8 +94,11 @@ namespace GUI
 			lay2.right = std::ceil(lay2.right);
 			lay2.bottom = std::ceil(lay2.bottom);
 
+			if (lay2.right == 0) lay2.right = 1;
+			if (lay2.bottom == 0) lay2.bottom = 1;
+
 			if(!isnan(lay2.right))
-			if (!cache.texture || cache.texture->get_desc().Width < lay2.right || cache.texture->get_desc().Height < lay2.bottom)
+				if (!cache.texture || cache.texture->get_desc().Width < lay2.right || cache.texture->get_desc().Height < lay2.bottom)
 				cache.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)lay2.right, (UINT)lay2.bottom, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 
 			auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
@@ -144,7 +147,7 @@ namespace GUI
 			
 			});
 			
-		//	cache.texture = new_preview;
+	
 			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().Width,cache.texture->get_desc().Height) };
 			//}
 		}

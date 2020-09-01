@@ -33,7 +33,7 @@ Texture2D<float4> SrcMip : register(t0);
 SamplerState BilinearClamp : register(s0);*/
 
 
-static const  uint SrcMipLevel = GetMipMapping().GetSrcMipLevel();	// Texture level of source mip
+static const  uint SrcMipLevel = 0;// GetMipMapping().GetSrcMipLevel();	// Texture level of source mip
 static const  uint NumMipLevels = GetMipMapping().GetNumMipLevels();	// Number of OutMips to write: [1, 4]
 static const  float2 TexelSize = GetMipMapping().GetTexelSize();	// 1.0 / OutMip1.Dimensions
 

@@ -10,6 +10,7 @@ struct FrameInfo_srv
 {
 	Texture2D bestFitNormals;
 	Texture3D<float4> brdf;
+	TextureCube<float4> sky;
 };
 struct FrameInfo
 {
@@ -18,6 +19,7 @@ struct FrameInfo
 	float4 GetTime() { return cb.time; }
 	Texture2D GetBestFitNormals() { return srv.bestFitNormals; }
 	Texture3D<float4> GetBrdf() { return srv.brdf; }
+	TextureCube<float4> GetSky() { return srv.sky; }
 	Camera GetCamera() { return CreateCamera(cb.camera); }
 	Camera GetPrevCamera() { return CreateCamera(cb.prevCamera); }
 

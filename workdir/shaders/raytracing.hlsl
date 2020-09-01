@@ -104,7 +104,7 @@ origin = pos;*/
         TraceRay(raytracing.GetScene(),  RAY_FLAG_NONE    , ~0, 0, 0, 0, ray, payload);
         // Write the raytraced color to the output texture.
         output[DispatchRaysIndex().xy] = float4(pow(payload.color.xyz, 1.0 / 1.8), 1);// float4(pow(gbuffer[0][DispatchRaysIndex().xy].xyz, 0.5) * (0.1 + payload.color.x * max(0, dot(ray.Direction, normal))), 1);
- 
+ // output[DispatchRaysIndex().xy] = float4(CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(rayDir), 0).xyz,1);
 		/*ShadowPayload payload = {false };
 		TraceRay(Scene, RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload);
 		// Write the raytraced color to the output texture.
@@ -118,7 +118,7 @@ origin = pos;*/
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {
-	payload.color = float4(0.1, 0.1, 0.1, 1);
+    payload.color = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()),5);
 	payload.dist = 10000;
 }
 

@@ -721,6 +721,7 @@ void VoxelGI::screen(FrameGraph& graph)
 			Render::TextureView gi_views[] = { _context.get_texture(data.gi_static0), _context.get_texture(data.gi_static1) };
 
 
+		
 			auto& states = screen_states[static_cast<int>(VISUALIZE_TYPE(render_type))];
 
 			context->current_time = 0;
@@ -997,7 +998,7 @@ void VoxelGI::voxelize(FrameGraph& graph)
 
 			auto& command_list = _context.get_list();
 
-			SceneFrameManager::get().prepare(command_list, *scene);
+			//SceneFrameManager::get().prepare(command_list, *scene);
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 
@@ -1248,6 +1249,6 @@ void VoxelGI::generate(FrameGraph& graph)
 
 
 
-	//debug(graph);
+	debug(graph);
 
 }

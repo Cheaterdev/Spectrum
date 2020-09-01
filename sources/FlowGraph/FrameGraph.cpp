@@ -14,6 +14,8 @@ void TaskBuilder::end(Pass* pass)
 
 void TaskBuilder::pass_texture(std::string name, Render::TextureView tex)
 {
+	resources_names[name] = name;
+
 	ResourceHandler& handler = resources[name];
 	ResourceAllocInfo& info = alloc_resources[&handler];
 	info.texture = tex;
@@ -223,6 +225,8 @@ void FrameGraph::reset()
 
 ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, UINT flags)
 {
+	resources_names[name] = name;
+
 	ResourceHandler& handler = resources[name];
 	ResourceAllocInfo& info = alloc_resources[&handler];
 	handler.info = &info;
@@ -234,7 +238,7 @@ ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT 
 	info.need_recreate = info.desc != desc;
 	info.type = ResourceType::Texture;
 	info.desc = desc;
-	info.flags = flags | ResourceFlags::Static;
+	info.flags = flags;/// | ResourceFlags::Static;
 	current_pass->used.resources.push_back(&handler);
 	info.handler = &handler;
 	info.name = name;
@@ -245,15 +249,45 @@ ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT 
 }
 
 
+ResourceHandler* TaskBuilder::recreate_texture(std::string name, UINT flags)
+{
+
+	ResourceHandler& old_handler = resources[name];
+
+	std::string new_name = resources_names[name]+ "recreated";
+	resources_names[name] = new_name;
+
+	name = new_name;
+
+	ResourceHandler& handler = resources[name];
+	ResourceAllocInfo& info = alloc_resources[&handler];
+	handler.info = &info;
+
+	auto desc = old_handler.info->desc;
+
+	info.need_recreate = info.desc != desc;
+	info.type = ResourceType::Texture;
+	info.desc = desc;
+	info.flags = flags;// | ResourceFlags::Static;
+	current_pass->used.resources.push_back(&handler);
+	info.handler = &handler;
+	info.name = name;
+	info.valid_from = current_pass->id;
+	info.valid_to = current_pass->id;
+	info.frame_id = current_frame->get_frame();
+	return &handler;
+}
 ResourceHandler* TaskBuilder::need_texture(std::string name, UINT flags)
 {
+	name = resources_names[name];
+
 	ResourceHandler& handler = resources[name];
 	current_pass->used.resources.push_back(&handler);
 
 
 	ResourceAllocInfo& info = *handler.info;
 
-	info.flags |= flags | ResourceFlags::Static;
+	info.flags |= flags;// | ResourceFlags::Static;
 	info.handler = &handler;
 
 	info.valid_to = std::max(info.valid_to, current_pass->id);
@@ -263,6 +297,7 @@ ResourceHandler* TaskBuilder::need_texture(std::string name, UINT flags)
 
 ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, UINT flags)
 {
+	resources_names[name] = name;
 
 	size = Math::AlignUp(size, 256); // TODO: make in GAPI
 	ResourceHandler& handler = resources[name];
@@ -287,6 +322,8 @@ ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, UINT 
 
 ResourceHandler* TaskBuilder::need_buffer(std::string name, UINT flags)
 {
+	name = resources_names[name];
+
 	ResourceHandler& handler = resources[name];
 	current_pass->used.resources.push_back(&handler);
 

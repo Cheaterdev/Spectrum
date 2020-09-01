@@ -25,6 +25,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+#include "2D_screen_simple.h"
+
 #define SMAA_PRESET_ULTRA 1
 #define SMAA_HLSL_4_1 1
 /**
@@ -39,15 +41,7 @@
  */
 //float blendFactor;
 static const float blendFactor = 0;
-/**
- * This can be ignored; its purpose is to support interactive custom parameter
- * tweaking.
- */
-cbuffer sizes: register(b0)
-{
-    float4 subsampleIndices;
-    float4 SMAA_RT_METRICS;
-};
+
 /*
 
 // Use a real macro here for maximum performance!
@@ -73,6 +67,11 @@ float cornerRounding;
 #define SMAA_CORNER_ROUNDING cornerRounding
 #endif
 
+
+#include "autogen/SMAA_Global.h"
+
+static const float4 subsampleIndices = GetSMAA_Global().GetSubsampleIndices();
+static const float4 SMAA_RT_METRICS = GetSMAA_Global().GetSMAA_RT_METRICS();
 // And include our header!
 #include "SMAA_impl.hlsl"
 
@@ -82,104 +81,6 @@ float cornerRounding;
 #else
 #define PS_VERSION ps_4_0
 #endif
-
-
-/**
- * DepthStencilState's and company
- */
-DepthStencilState DisableDepthStencil
-{
-    DepthEnable = FALSE;
-    StencilEnable = FALSE;
-};
-
-DepthStencilState DisableDepthReplaceStencil
-{
-    DepthEnable = FALSE;
-    StencilEnable = TRUE;
-    FrontFaceStencilPass = REPLACE;
-};
-
-DepthStencilState DisableDepthUseStencil
-{
-    DepthEnable = FALSE;
-    StencilEnable = TRUE;
-    FrontFaceStencilFunc = EQUAL;
-};
-
-BlendState Blend
-{
-    AlphaToCoverageEnable = FALSE;
-    BlendEnable[0] = TRUE;
-    SrcBlend = BLEND_FACTOR;
-    DestBlend = INV_BLEND_FACTOR;
-    BlendOp = ADD;
-};
-
-BlendState NoBlending
-{
-    AlphaToCoverageEnable = FALSE;
-    BlendEnable[0] = FALSE;
-};
-
-
-/**
-* Pre-computed area and search textures
-*/
-Texture2D areaTex: register(t0);
-Texture2D searchTex: register(t1);
-
-
-/**
-* Temporal textures
-*/
-Texture2D edgesTex: register(t2);
-Texture2D blendTex: register(t3);
-
-
-/**
- * Input textures
- */
-//Texture2D colorTexGamma;
-//Texture2D colorTexPrev;
-//Texture2DMS<float4, 2> colorTexMS;
-Texture2D depthTex: register(t4);
-
-Texture2D colorTex: register(t5);
-Texture2D colorTexPrev : register(t6);
-//Texture2D velocityTex;
-
-
-
-
-struct quad_output
-{
-float4 pos : SV_POSITION;
-float2 tc : TEXCOORD0;
-};
-
-quad_output VS(uint index : SV_VERTEXID)
-{
-    static float2 Pos[] =
-    {
-        float2(-1, 1),
-        float2(1, 1),
-        float2(-1, -1),
-        float2(1, -1)
-    };
-    static float2 Tex[] =
-    {
-
-        float2(0, 0),
-        float2(1, 0),
-        float2(0, 1),
-        float2(1, 1),
-    };
-    quad_output Output;
-    Output.pos = float4(Pos[index], 0.3, 1);
-    Output.tc = Tex[index];
-    return Output;
-}
 
 
 /**
@@ -233,16 +134,20 @@ void DX10_SMAASeparateVS(float4 position : POSITION,
     svPosition = position;
 }
 
-float2 DX10_SMAALumaEdgeDetectionPS(float4 position : SV_POSITION,
-                                    float2 texcoord : TEXCOORD0,
-                                    float4 offset[3] : TEXCOORD1) : SV_TARGET
-{
-#if SMAA_PREDICATION
-    return SMAALumaEdgeDetectionPS(texcoord, offset, colorTex, depthTex);
-#else
-    return SMAALumaEdgeDetectionPS(texcoord, offset, colorTex);
+
+#ifdef BUILD_FUNC_DX10_SMAALumaEdgeDetectionPS
+
+    float2 DX10_SMAALumaEdgeDetectionPS(float4 position : SV_POSITION,
+                                        float2 texcoord : TEXCOORD0,
+                                        float4 offset[3] : TEXCOORD1) : SV_TARGET
+    {
+    #if SMAA_PREDICATION
+        return SMAALumaEdgeDetectionPS(texcoord, offset, GetSMAA_Global().GetColorTex(), depthTex);
+    #else
+        return SMAALumaEdgeDetectionPS(texcoord, offset, GetSMAA_Global().GetColorTex());
+    #endif
+    }
 #endif
-}
 /*
 float2 DX10_SMAAColorEdgeDetectionPS(float4 position : SV_POSITION,
                                      float2 texcoord : TEXCOORD0,
@@ -264,26 +169,39 @@ float2 DX10_SMAADepthEdgeDetectionPS(float4 position : SV_POSITION,
     return SMAADepthEdgeDetectionPS(texcoord, offset, depthTex);
 }
 */
-float4 DX10_SMAABlendingWeightCalculationPS(float4 position : SV_POSITION,
-        float2 texcoord : TEXCOORD0,
-        float2 pixcoord : TEXCOORD1,
-        float4 offset[3] : TEXCOORD2) : SV_TARGET
-{
-    return SMAABlendingWeightCalculationPS(texcoord, pixcoord, offset, edgesTex, areaTex, searchTex, subsampleIndices);
-}
 
-float4 DX10_SMAANeighborhoodBlendingPS(float4 position : SV_POSITION,
-                                       float2 texcoord : TEXCOORD0,
-                                       float4 offset : TEXCOORD1) : SV_TARGET
-{
-#if SMAA_REPROJECTION
-    return SMAANeighborhoodBlendingPS(texcoord, offset, colorTex, blendTex, velocityTex);
-#else
-    return SMAANeighborhoodBlendingPS(texcoord, offset, colorTex, blendTex);
+
+#ifdef BUILD_FUNC_DX10_SMAABlendingWeightCalculationPS
+
+
+#include "autogen/SMAA_Weights.h"
+
+    float4 DX10_SMAABlendingWeightCalculationPS(float4 position : SV_POSITION,
+            float2 texcoord : TEXCOORD0,
+            float2 pixcoord : TEXCOORD1,
+            float4 offset[3] : TEXCOORD2) : SV_TARGET
+    {
+        return SMAABlendingWeightCalculationPS(texcoord, pixcoord, offset, GetSMAA_Weights().GetEdgesTex(), GetSMAA_Weights().GetAreaTex(), GetSMAA_Weights().GetSearchTex(), GetSMAA_Global().GetSubsampleIndices());
+    }
+
 #endif
-}
 
 
+#ifdef BUILD_FUNC_DX10_SMAANeighborhoodBlendingPS
+#include "autogen/SMAA_Blend.h"
+
+        float4 DX10_SMAANeighborhoodBlendingPS(float4 position : SV_POSITION,
+            float2 texcoord : TEXCOORD0,
+            float4 offset : TEXCOORD1) : SV_TARGET
+    {
+    #if SMAA_REPROJECTION
+        return SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex(), velocityTex);
+    #else
+        return SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex());
+    #endif
+    }
+#endif
+/*
 float4 DX10_SMAAResolvePS(float4 position : SV_POSITION,
                           float2 texcoord : TEXCOORD0) : SV_TARGET
 {
@@ -293,7 +211,7 @@ float4 DX10_SMAAResolvePS(float4 position : SV_POSITION,
     return SMAAResolvePS(texcoord, colorTex, colorTexPrev);
 #endif
 }
-/*
+
 void DX10_SMAASeparatePS(float4 position : SV_POSITION,
                          float2 texcoord : TEXCOORD0,
                          out float4 target0 : SV_TARGET0,

@@ -630,7 +630,7 @@ namespace DX12
 		}
 
 		virtual void place_srv(Handle & h) override;
-		virtual void place_uav(Handle & h) { assert(false); }
+		virtual void place_uav(Handle & h) { }
 		virtual void place_rtv(Handle & h) { assert(false); }
 		virtual void place_dsv(Handle & h) { assert(false); }
 		virtual void place_cb(Handle & h) { assert(false); }
@@ -676,12 +676,7 @@ namespace DX12
 		virtual void place_cb(Handle& h) { assert(false); }
 
 
-		ivec3 get_size()
-		{
-			auto desc = resource->get_desc();
-			UINT scaler = 1 << view_desc.Texture2D.MipSlice;
-			return { std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) ,std::max(1u,desc.Depth() / scaler) };
-		}
+	
 		Viewport get_viewport()
 		{
 
@@ -709,16 +704,40 @@ namespace DX12
 
 			return { 0,0, std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) };
 		}
+		UINT get_mip_count()
+		{
+			return view_desc.Texture2D.MipLevels;
+		}
+
+		ivec2 get_size()
+		{
+			auto desc = resource->get_desc();
+			UINT scaler = 1 << view_desc.Texture2D.MipSlice;
+
+
+			return {std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) };
+		}
 
 		TextureView create_2d_slice(UINT slice, FrameResources & frame)
 		{
 			ResourceViewDesc desc = view_desc;
-			
+			desc.type = ResourceType::TEXTURE2D;
 			desc.Texture2D.ArraySize = 1;
 			desc.Texture2D.FirstArraySlice = slice;
 
 			return TextureView(resource, frame, desc);
 		}
+
+		TextureView create_mip(UINT mip, FrameResources& frame)
+		{
+			ResourceViewDesc desc = view_desc;
+
+			desc.Texture2D.MipSlice += mip;
+			desc.Texture2D.MipLevels = 1;
+
+			return TextureView(resource, frame, desc);
+		}
+
 
 	};
 

@@ -70,6 +70,7 @@ bool scene_object::update_transforms()
 scene_object::scene_object()
 {
     local_transform.identity();
+	global_transform.identity();
     parent = nullptr;
 //    childs_occluder.primitive.reset(new AABB());
  //   occluder::mat = &global_transform;

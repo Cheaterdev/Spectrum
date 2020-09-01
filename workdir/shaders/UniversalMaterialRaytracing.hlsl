@@ -6,7 +6,7 @@
 #define Sampler linearSampler
 #define GetMaterialInfo CreateMaterialInfo
 
-
+#define REFRACTION
 struct vertex_input
 {
 	float3 pos : POSITION;
@@ -110,10 +110,10 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	COMPILED_FUNC(pos, vertex.tc, color, metallic, roughness, normal);
 	
 	float3 lightDir = normalize(float3(0, 1, 1));
-	RayPayload payload2 = { float4(0.1, 0.1, 0.1, 1) , payload.recursion + 1 ,0};
+	RayPayload payload2 = { float4(0.0, 0.0, 0.0, 1) , payload.recursion + 1 ,0};
 	ShadowPayload payload_shadow = { false };
 
-	if (payload2.recursion < 2)
+	if (payload2.recursion < 5)
 	{
 		
 		{
@@ -142,10 +142,10 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 #ifdef REFRACTION
 
-	if (payload2.recursion < 2)
+	if (payload2.recursion < 5)
 	{
 
-		RayPayload payload_refraction = { float4(0.1, 0.1, 0.1, 1) , payload.recursion + 1 ,0};
+		RayPayload payload_refraction = { float4(0.0, 0.0, 0.0, 0) , payload.recursion + 1 ,0};
 
 		{
 			RayDesc ray;
@@ -159,7 +159,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 		if (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE)
 		{
-			color = lerp(color, 1, exp(-payload_refraction.dist / 1)) * payload_refraction.color;
+			color = color* payload_refraction.color;// lerp(color, 1, exp(-payload_refraction.dist / 1)) * payload_refraction.color;
 		//	color= exp(-payload_refraction.dist / 1);
 		}
 		else
@@ -174,14 +174,14 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 		color = 0;
 
 
-	float3 my_color = color  + 10*pow(max(0, dot(refl, lightDir)),256);
+	float3 my_color = color;// +10 * pow(max(0, dot(refl, lightDir)), 256);
 
 #else
 	float3 my_color = color *max(0.01, (!payload_shadow.hit) * dot(vertex.normal, lightDir));
 
 #endif
 
-	float fresnel = calc_fresnel(roughness, vertex.normal, WorldRayDirection());
+	float fresnel =  calc_fresnel(roughness, vertex.normal, WorldRayDirection());
 
 	
 	float3 reflected = payload2.color.xyz;

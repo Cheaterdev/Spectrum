@@ -1,5 +1,5 @@
 #pragma once
-class SMAA :Events::prop_handler
+class SMAA :Events::prop_handler, public FrameGraphGenerator
 {
 	Render::PipelineState::ptr state_edge_detect;
 	Render::PipelineState::ptr state_blend_weight;
@@ -9,24 +9,9 @@ class SMAA :Events::prop_handler
 
 	Render::Texture::ptr area_tex;
 	Render::Texture::ptr search_tex;
-
-	//  Render::Texture::ptr edges_tex;
-
-	Render::HandleTable srvs_table;
-
-	// Render::GPUBuffer::ptr const_buffer;
-	G_Buffer* buffer;
-	float2 size;
-	//	Render::CommandList
 public:
 	using ptr = std::shared_ptr<SMAA>;
-	Render::Texture::ptr edges_tex;
-	Render::Texture::ptr blend_tex;
+	SMAA();
+	virtual void generate(FrameGraph& graph) override;
 
-
-	SMAA(G_Buffer& buffer);
-
-
-
-	void process(MeshRenderContext::ptr& context);
 };

@@ -20,7 +20,8 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
         MipMapGenerator();
 		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex/*, Render::Texture2DView::ptr view*/);
 		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::Texture2DView::ptr view);
-		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::CubemapView::ptr view);
+		void generate(Render::ComputeContext& compute_context, TextureView view);
+		void generate_cube(Render::ComputeContext& compute_context, TextureView view);
 		void downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr& tex, Render::Texture::ptr& to);
 
 		void downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to);

@@ -341,6 +341,7 @@ void MeshAssetInstance::on_add(scene_object* parent)
 		render_scene->mesh_infos->allocate(meshpart_handle, rendering_count);
 		auto meshpart = meshpart_handle.map();//  render_scene->mesh_infos->map_elements(meshpart_handle.get_offset(), rendering_count);
 
+	
 
 		int i = 0;
 		for (auto& info  : rendering)
@@ -355,10 +356,13 @@ void MeshAssetInstance::on_add(scene_object* parent)
 			render_scene->command_ids[int(type)].insert(meshpart_handle.get_offset() + i);
 			render_scene->command_ids[int(MESH_TYPE::ALL)].insert(meshpart_handle.get_offset() + i);
 
+		
 			i++;
 		}
 
 		meshpart_handle.write(0, meshpart);
+
+	
 	}
 }
 
@@ -392,9 +396,9 @@ bool MeshAssetInstance::update_transforms()
 //	node_buffer.data().reserve(mesh_asset->nodes.size());
 	//	nodes.clear();
 
-
+	
 		auto gpu_nodes = nodes_handle.map();// universal_nodes_manager::get().map_elements(nodes_handle.get_offset(), nodes_count);
-
+		int i = 0;
 	for (auto & info : rendering)
 	{
 		uint index = info.mesh_info.GetNode_offset() - nodes_handle.get_offset();
@@ -416,9 +420,45 @@ bool MeshAssetInstance::update_transforms()
 		my_node.aabb.min = info.primitive->get_min();
 		my_node.aabb.max = info.primitive->get_max();
 
+
+	
 	
 	}
 
+
+	if (ras_handle)
+	{
+		auto ras = ras_handle.map();//  render_scene->mesh_infos->map_elements(meshpart_handle.get_offset(), rendering_count);
+
+
+		int i = 0;
+		for (auto& info : rendering)
+		{
+			{
+
+				D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+
+				for (int x = 0; x < 3; x++)
+					for (int y = 0; y < 4; y++)
+					{
+						instanceDesc.Transform[x][y] = global_transform.rows[y][x];
+					}
+
+				instanceDesc.InstanceMask = 1;
+				instanceDesc.AccelerationStructure = info.ras->get_gpu_address();
+				instanceDesc.InstanceID = info.node_id;// instances.size() + 1;// e->material;
+				instanceDesc.InstanceContributionToHitGroupIndex = static_cast<materials::universal_material*>(info.material)->info_rtx.get_offset();// RTX::get().get_material_id(static_cast<materials::universal_material*>(info.material)) * 2;
+				RTX::get().get_material_id(static_cast<materials::universal_material*>(info.material));
+
+				ras[i] = instanceDesc;
+
+				i++;
+			}
+
+		}
+		ras_handle.write(0, ras);
+	}
+	
 	nodes_handle.write(0, gpu_nodes);
 	if (scene)
 		scene->on_moved(this);
@@ -429,13 +469,17 @@ return res;
 }
 
 
-void MeshAssetInstance::init_ras()
+bool MeshAssetInstance::init_ras(CommandList::ptr list)
 {
+	if (ras_inited) return false;
+	ras_inited = true;
+	scene->raytrace->allocate(ras_handle, rendering_count);
+	auto ras = ras_handle.map();//  render_scene->mesh_infos->map_elements(meshpart_handle.get_offset(), rendering_count);
+
+	int i = 0;
 	for (auto& info : rendering)
 	{
-		if (!info.ras)
-		{
-
+	
 			D3D12_RAYTRACING_GEOMETRY_DESC geometryDesc = {};
 			geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
 			geometryDesc.Triangles.IndexBuffer = universal_index_manager::get().buffer->get_gpu_address() + info.draw_arguments.StartIndexLocation * sizeof(UINT32);
@@ -451,11 +495,36 @@ void MeshAssetInstance::init_ras()
 			std::vector<D3D12_RAYTRACING_GEOMETRY_DESC > descs;
 			descs.push_back(geometryDesc);
 
+			list->transition(universal_index_manager::get().buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			list->transition(universal_nodes_manager::get().buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			list->transition(universal_vertex_manager::get().buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			list->flush_transitions();
+			info.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
 
-			info.ras = std::make_shared<RaytracingAccelerationStructure>(descs);
+			{
 
-		}
+				D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+
+				for (int x = 0; x < 3; x++)
+					for (int y = 0; y < 4; y++)
+					{
+						instanceDesc.Transform[x][y] = global_transform.rows[y][x];
+					}
+
+				instanceDesc.InstanceMask = 1;
+				instanceDesc.AccelerationStructure = info.ras->get_gpu_address();
+				instanceDesc.InstanceID = info.node_id;// instances.size() + 1;// e->material;
+				instanceDesc.InstanceContributionToHitGroupIndex = static_cast<materials::universal_material*>(info.material)->info_rtx.get_offset();// RTX::get().get_material_id(static_cast<materials::universal_material*>(info.material)) * 2;
+				RTX::get().get_material_id(static_cast<materials::universal_material*>(info.material));
+				ras[i] = instanceDesc;
+			}
+
+		i++;
 	}
+
+	ras_handle.write(0, ras);
+
+	return true;
 }
 void MeshAssetInstance::update_nodes()
 {
@@ -525,8 +594,8 @@ nodes.emplace_back(node);
 			my_node.node_inverse_matrix.inverse();
 
 
-		//	my_node.aabb.min = info.primitive->get_min();
-		//	my_node.aabb.max = info.primitive->get_max();
+			my_node.aabb.min = info.primitive->get_min();
+			my_node.aabb.max = info.primitive->get_max();
 
 			info.material_id = mesh_asset->meshes[m].material;
 			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
@@ -597,4 +666,6 @@ void SceneFrameManager::prepare(CommandList::ptr& command_list, Scene& scene)
 	  universal_material_info_part_manager::get().prepare(command_list);
 
 	scene.mesh_infos->prepare(command_list);
+	scene.raytrace->prepare(command_list);
+
 }

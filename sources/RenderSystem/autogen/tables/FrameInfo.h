@@ -15,6 +15,7 @@ namespace Table
 		{
 			Render::Handle bestFitNormals;
 			Render::Handle brdf;
+			Render::Handle sky;
 			Camera::SRV camera;
 			Camera::SRV prevCamera;
 		} &srv;
@@ -23,6 +24,7 @@ namespace Table
 		float4& GetTime() { return cb.time; }
 		Render::Handle& GetBestFitNormals() { return srv.bestFitNormals; }
 		Render::Handle& GetBrdf() { return srv.brdf; }
+		Render::Handle& GetSky() { return srv.sky; }
 		Camera MapCamera() { return Camera(cb.camera); }
 		Camera MapPrevCamera() { return Camera(cb.prevCamera); }
 		FrameInfo(CB&cb,SRV&srv) :cb(cb),srv(srv){}

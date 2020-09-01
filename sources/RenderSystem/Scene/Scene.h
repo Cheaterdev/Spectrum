@@ -73,6 +73,7 @@ public:
 			});
 
         mesh_infos = std::make_shared< virtual_gpu_buffer<mesh_info_part>>(1024 * 1024 );
+        raytrace = std::make_shared< virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(1024 * 1024);
     }
 
     Events::Event<scene_object*> on_element_add;
@@ -88,6 +89,7 @@ public:
  
 	static const int MAX_COMMANDS_SIZE = 1024 * 1024 * 64;
     virtual_gpu_buffer<mesh_info_part>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
+ virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>::ptr raytrace;// (MAX_COMMANDS_SIZE)
 
 	my_unique_vector<UINT> command_ids[10];
 
@@ -104,6 +106,23 @@ public:
     Slots::Voxelization::Compiled voxelization_compiled;
 	Slots::VoxelInfo voxel_info;
 
+
+    bool init_ras(CommandList::ptr& list)
+    {
+        bool res = false;
+		auto mesh_func = [&](MeshAssetInstance* l)
+		{
+            res|=l->init_ras(list);
+
+		};
+
+		for (auto m : static_objects)
+			mesh_func(m);
+		for (auto m : dynamic_objects)
+			mesh_func(m);
+
+        return res;
+    }
     void update(FrameResources& frame)
     {
         mats.clear();
@@ -118,6 +137,8 @@ public:
 		
 				pipelines[mat->get_id()] = mat->get_pipeline();
             }
+
+       
         };
 
         for (auto m : static_objects)

@@ -40,7 +40,8 @@ public:
 
 					auto& command_list = _context.get_list();
 					SceneFrameManager::get().prepare(command_list, *graph.scene);
-				
+					//graph.scene->init_ras();
+
 					MeshRenderContext::ptr context(new MeshRenderContext());
 					context->current_time = (size_t)time;
 					context->priority = TaskPriority::HIGH;

@@ -409,6 +409,8 @@ void GUI::Elements::FlowGraph::canvas::on_add(base* parent)
 
     Render::PipelineStateDesc state_desc;
     state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
+	state_desc.blend.render_target[0].enabled = true;
+
     state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "PS", 0, {} });
     state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "VS", 0, {} });
     state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -418,6 +420,8 @@ void GUI::Elements::FlowGraph::canvas::on_add(base* parent)
     {
         Render::PipelineStateDesc state_desc;
         state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
+		state_desc.blend.render_target[0].enabled = true;
+
         state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "PS", 0, {} });
         state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "VS", 0, {} });
         state_desc.geometry = Render::geometry_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "GS", 0, {} });

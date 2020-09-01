@@ -28,6 +28,8 @@ struct FrameInfo
 
     Texture2D bestFitNormals;
 	Texture3D<float4> brdf;
+	TextureCube<float4> sky;
+
 
 
 	%{
