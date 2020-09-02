@@ -444,7 +444,7 @@ void MaterialFunction::operator()(MaterialContext* mat_context)
 	func_call += delim;
 	auto output_struct = generate_output(output_parametres);
 	func_call += ")";
-	text += "void " + func_name + "( " + input_struct + delim + output_struct + " )\n{\n";
+	text += "void " + func_name + "( " + input_struct + delim + output_struct + ", float lod )\n{\n";
 	FlowGraph::graph::operator()(context);
 }
 
@@ -603,7 +603,7 @@ void TextureNode::operator()(MaterialContext* context)
 {
 	auto mat_graph = static_cast<MaterialFunction*>(owner);
 	//auto val = mat_graph->add_value(ShaderParams::FLOAT4, "float4(1,0,0,1)");
-	auto val = mat_graph->add_value(ShaderParams::FLOAT4, std::string("sample(") + context->get_texture(texture_info) + ",Sampler, " + i_tc->get<shader_parameter>().name + ".xy)");
+	auto val = mat_graph->add_value(ShaderParams::FLOAT4, std::string("sample(") + context->get_texture(texture_info) + ",Sampler, " + i_tc->get<shader_parameter>().name + ".xy, lod)");
 	o_vec4->put(shader_parameter("float4(" + val.name + ".xyz,1)", ShaderParams::FLOAT4));
 	o_r->put(shader_parameter(val.name + ".r", ShaderParams::FLOAT1));
 	o_g->put(shader_parameter(val.name + ".g", ShaderParams::FLOAT1));

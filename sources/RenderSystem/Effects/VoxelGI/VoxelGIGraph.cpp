@@ -1249,6 +1249,6 @@ void VoxelGI::generate(FrameGraph& graph)
 
 
 
-	debug(graph);
+	//debug(graph);
 
 }

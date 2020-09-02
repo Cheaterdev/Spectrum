@@ -26,7 +26,7 @@ static const MeshInfo meshInfo = GetMeshInfo();
 static const SceneData sceneData = GetSceneData();
 
 
-vertex_output transform(matrix node_global_matrix, Camera camera, mesh_vertex_input_cb i)
+vertex_output transform(matrix node_global_matrix, Camera camera, mesh_vertex_input i)
 {
     vertex_output o;
     float4 tpos = mul(node_global_matrix, float4(i.pos, 1));

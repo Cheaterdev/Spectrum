@@ -77,6 +77,8 @@ if (type == "SamplerState") value_type = ValueType::SMP;
 	if (type.find("RW") == 0) value_type = ValueType::UAV;
 	if (type.find("AppendStructuredBuffer") == 0) value_type = ValueType::UAV;
 	
+	if (type.find("bool") == 0) value_type = ValueType::CB;
+	if (type.find("uint") == 0) value_type = ValueType::CB;
 	if (type.find("int") == 0) value_type = ValueType::CB;
 	if (type.find("float") == 0) value_type = ValueType::CB;
 	if (type.find("matrix") == 0) value_type = ValueType::CB;

@@ -413,6 +413,71 @@ void generate_table(Table& table)
 }
 
 
+void generate_nobind_table(Table& table)
+{
+	my_stream stream(hlsl_path + "/tables", table.name + ".h");
+	stream << "#pragma once" << std::endl;
+
+	for (auto& v : table.used_tables)
+	{
+		stream << "#include \"" << v << ".h\"" << std::endl;
+	}
+
+	// declaration
+	auto declare_func = [&](ValueType type) {
+		if (table.counts[type] == 0) return;
+
+		for (auto& v : table.values)
+		{
+			if (v.value_type != type) continue;
+			if (v.bindless) continue;
+
+			stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
+		}
+
+		for (auto& v : table.values)
+		{
+			if (v.value_type == ValueType::STRUCT)
+			{
+				auto t = parsed.find_table(v.type);
+				if (t->counts[type] == 0) continue;
+
+				if(t->find_option("nobind"))
+					stream << v.type << " " << v.name << ";" << std::endl;
+				else
+
+				stream << v.type << "_" << get_name_for(type) << " " << v.name << ";" << std::endl;
+			}
+		}
+
+	};
+
+
+
+
+
+
+	// result struct
+	stream << "struct " << table.name << std::endl;
+
+	stream << "{" << std::endl;
+
+	{
+		stream.push();
+
+
+		declare_func(ValueType::CB);
+
+		stream.pop();
+
+	}
+
+	stream << table.hlsl << std::endl;
+	stream << "};" << std::endl;
+
+
+
+}
 
 std::string str_toupper(std::string s) {
 	std::transform(s.begin(), s.end(), s.begin(),
@@ -748,6 +813,8 @@ void generate_include_list(const Parsed& parsed)
 	{
 		if (t.slot)
 			stream << "#include \"slots\\" << t.name << ".h\"" << std::endl;
+		else if (!t.find_option("shader_only"))
+			stream << "#include \"tables\\" << t.name << ".h\"" << std::endl;
 	}
 
 
@@ -1101,6 +1168,10 @@ int main() {
 		for (auto& table : parsed.tables)
 		{
 
+			if(table.find_option("nobind"))
+				generate_nobind_table(table);
+
+			else
 			generate_table(table);
 
 			if (!table.find_option("shader_only"))

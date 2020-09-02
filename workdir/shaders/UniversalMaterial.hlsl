@@ -89,7 +89,7 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     return result;       
 }    
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, float lod);
 GBuffer PS(vertex_output i)
 {
 	float4 color = 1;
@@ -97,7 +97,7 @@ GBuffer PS(vertex_output i)
 	float roughness = 1;
 	float4 normal = 0;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, 0);
 
 	return universal(i, color, metallic, roughness, normal);
 }
@@ -132,7 +132,7 @@ void universal_voxel(vertex_output i, float4 albedo, float metallic, float rough
 #endif
     
 }
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, float lod);
 void PS_VOXEL(vertex_output i)
 {
 	float4 color = 1;
@@ -140,7 +140,7 @@ void PS_VOXEL(vertex_output i)
 	float roughness = 1;
 	float4 normal = 0;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, 0);
 
 	universal_voxel(i, color, metallic, roughness, normal);
 }
@@ -223,12 +223,12 @@ vertex_output2 HS(InputPatch<vertex_output2, 3> inputPatch,
 
 
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc) tex.Sample(s, tc);
+#define sample(tex, s,  tc, lod) tex.Sample(s, tc);
 
 //tex.Sample(s, tc);
 
 #else
-#define sample(tex, s,  tc) tex.SampleLevel(s, tc, 3);
+#define sample(tex, s,  tc, lod) tex.SampleLevel(s, tc, 0);
 
 #endif 
 

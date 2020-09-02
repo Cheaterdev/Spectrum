@@ -3,9 +3,10 @@
 namespace Slots {
 	struct RaytracingRays:public DataHolder<Table::RaytracingRays,DefaultLayout::Instance2>
 	{
+		CB cb;
 		SRV srv;
 		UAV uav;
-		RaytracingRays(): DataHolder(srv,uav){}
-		RaytracingRays(const RaytracingRays&other): DataHolder(srv,uav){srv = other.srv;uav = other.uav;}
+		RaytracingRays(): DataHolder(cb,srv,uav){}
+		RaytracingRays(const RaytracingRays&other): DataHolder(cb,srv,uav){cb = other.cb;srv = other.srv;uav = other.uav;}
 	};
 }

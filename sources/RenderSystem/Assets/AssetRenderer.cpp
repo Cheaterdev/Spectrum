@@ -14,6 +14,25 @@ public:
 
 	void render(FrameGraph& graph)
 	{
+
+		{
+
+			CommandList::ptr command_list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+
+			command_list->begin("pre");
+			{
+				auto scene = graph.scene->get_ptr<Scene>().get();
+
+				SceneFrameManager::get().prepare(command_list, *scene);
+			}
+
+			command_list->end();
+
+			command_list->execute();
+		}
+
+
+
 		auto size = graph.frame_size;
 
 		{
@@ -39,7 +58,7 @@ public:
 				}, [this,&graph](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
-					SceneFrameManager::get().prepare(command_list, *graph.scene);
+		
 					//graph.scene->init_ras();
 
 					MeshRenderContext::ptr context(new MeshRenderContext());

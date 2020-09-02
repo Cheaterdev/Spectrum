@@ -715,7 +715,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 			graphics.set_pipeline(draw_box_state);
 
 
-		/*	for (auto& sel : selected)
+			for (auto& sel : selected)
 			{
 
 				auto l = sel.first;
@@ -734,7 +734,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					graphics.draw_indexed(36, 0, 0);
 				}
 			}
-			*/
+			
 
 
 				// draw axis

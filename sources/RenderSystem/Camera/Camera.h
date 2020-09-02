@@ -95,6 +95,7 @@ class camera : public Frustum
             z_far = c.z_far;
             proj_mat = c.proj_mat;
             view_mat = c.view_mat;
+            vangle = c.vangle;
         }
 
 		quat eye_rot;
@@ -103,7 +104,7 @@ class camera : public Frustum
         vec3 up = vec3(0, 1, 0);
 		vec3 offset=vec3(0,0,0);
         vec3 res_up;
-        float angle, ratio, z_near, z_far;
+        float angle, ratio, z_near, z_far, vangle;
 
 #ifdef OCULUS_SUPPORT
 		ovrFovPort vr_fov;
@@ -158,6 +159,8 @@ class camera : public Frustum
             this->ratio = ratio;
             this->z_near = z_near;
             this->z_far = z_far;
+            this->vangle = angle / ratio;
+
             proj_mat.perspective(angle, ratio, z_near, z_far);
 			fov_type = NORMAL;
         }

@@ -1,3 +1,4 @@
+[nobind]
 struct mesh_vertex_input
 {
     float3 pos;
@@ -5,6 +6,7 @@ struct mesh_vertex_input
     float2 tc;
     float4 tangent;
 }
+
 
 struct AABB
 {

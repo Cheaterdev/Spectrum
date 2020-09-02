@@ -16,22 +16,11 @@
 #include "autogen/FrameInfo.h"
 #include "autogen/Raytracing.h"
 #include "autogen/RaytracingRays.h"
-//static const GBuffer gbuffer = GetRaytracing().GetGbuffer();
-//static const RWTexture2D<float4> output = GetRaytracing().GetOutput();
 
+#include "autogen/tables/RayPayload.h"
+#include "autogen/tables/ShadowPayload.h"
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
-struct RayPayload
-{
-    float4 color;
-	uint recursion;
-	float dist;
-};
-
-struct ShadowPayload
-{
-	bool hit;
-};
 
 
 // Generate a ray in world space for a camera pixel corresponding to an index from the dispatched 2D grid.
@@ -100,7 +89,13 @@ origin = pos;*/
         ray.TMin = 0.1;
         ray.TMax = 1000.0;
    
-		RayPayload payload = { float4(0, 1, 0, 1),0,0 };
+        RayPayload payload;
+        payload.color = 0;
+        payload.recursion = 0;
+        payload.dist = 0;
+        payload.cone.width = 0;
+        payload.cone.angle = rays.GetPixelAngle();
+
         TraceRay(raytracing.GetScene(),  RAY_FLAG_NONE    , ~0, 0, 0, 0, ray, payload);
         // Write the raytraced color to the output texture.
         output[DispatchRaysIndex().xy] = float4(pow(payload.color.xyz, 1.0 / 1.8), 1);// float4(pow(gbuffer[0][DispatchRaysIndex().xy].xyz, 0.5) * (0.1 + payload.color.x * max(0, dot(ray.Direction, normal))), 1);
@@ -118,7 +113,7 @@ origin = pos;*/
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {
-    payload.color = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()),5);
+    payload.color = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), payload.cone.angle*8);
 	payload.dist = 10000;
 }
 

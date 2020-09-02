@@ -5,6 +5,7 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/RaytracingRays.h"
+ConstantBuffer<RaytracingRays_cb> cb_4_0:register(b0,space4);
 RWTexture2D<float4> uav_4_0: register(u0, space4);
 Texture2D srv_4_0: register(t0, space4);
 Texture2D srv_4_1: register(t1, space4);
@@ -14,6 +15,7 @@ Texture2D<float2> srv_4_4: register(t4, space4);
 RaytracingRays CreateRaytracingRays()
 {
 	RaytracingRays result;
+	result.cb = cb_4_0;
 	result.uav.output = uav_4_0;
 	result.srv.gbuffer.albedo = srv_4_0;
 	result.srv.gbuffer.normals = srv_4_1;

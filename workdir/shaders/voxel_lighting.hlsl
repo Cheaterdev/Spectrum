@@ -178,7 +178,7 @@ float4 get_direction(float3 pos, float3 normal, float3 dir, float k, float a)
 }
 float4 getGI(float3 Pos, float3 Normal)
 {
-	float a = 0.3;
+	float a = 0.5;
 
 	float4 Color = 0;
 	float t = 1;

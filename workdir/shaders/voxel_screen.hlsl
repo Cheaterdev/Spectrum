@@ -184,7 +184,7 @@ float4 trace(float4 start_color, float3 view, float3 origin,float3 dir,float3 no
 	{
 	   float sampleDiameter = minDiameter+ angle * dist;
 	
-	   float sampleLOD = 2*log2(sampleDiameter * minVoxelDiameterInv);
+	   float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
 		samplePos = origin + dir * dist;
 		float4 sampleValue = get_voxel(samplePos, sampleLOD);//* float4(1,1,1,1 + sampleLOD/4);
 	//	sampleValue.w *= 0.8;// (1 + 1 * angle);
@@ -286,7 +286,7 @@ float4 gi = trace(0,v, pos, dir, normal, a);
 
 float4 getGI(float2 tc,float3 orig_pos, float3 Pos, float3 Normal, float3 V,float r, float roughness, float metallic)
 {
-	float a = 0.1;
+	float a = 0.4;
 
 	float4 Color = 0;
 	float k = scaler;

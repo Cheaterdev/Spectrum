@@ -37,4 +37,3 @@ namespace EngineAssets
 		 return  brdf;
 	 });
 }
-

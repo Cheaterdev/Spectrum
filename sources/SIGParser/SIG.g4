@@ -171,11 +171,8 @@ SPACE
  : [ \t\r\n] -> skip
  ;
  
- ML_COMMENT
-    :   '/2' (.)* '2/'
-    ;
-
-
-INSERT_BLOCK
-    :   '%{' (.)* '}%'
+INSERT_START: '%{';
+INSERT_END: '}%';
+INSERT_BLOCK 
+    :   INSERT_START (.)*? INSERT_END
     ;
