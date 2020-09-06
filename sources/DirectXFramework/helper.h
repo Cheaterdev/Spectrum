@@ -78,3 +78,20 @@ else \
 #define OP_LAST(x,y)\
 	return l.x < r.x;
 
+namespace boost
+{
+	namespace serialization
+	{
+
+		template<class Archive>
+		void serialize(Archive& ar, D3D12_DEPTH_STENCILOP_DESC& g, const unsigned int)
+		{
+			//	ar & g.DefaultValue;
+			ar& g.StencilDepthFailOp;
+			ar& g.StencilFailOp;
+			ar& g.StencilFunc;
+			ar& g.StencilPassOp;
+		}
+
+	}
+}

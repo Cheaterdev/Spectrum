@@ -276,7 +276,8 @@ void materials::universal_material::generate_texture_handles()
 {
 
 }
-
+static IdGenerator ids;
+	
 void materials::universal_material::generate_material()
 {
 //   std::lock_guard<std::mutex> g(m);
@@ -298,7 +299,6 @@ void materials::universal_material::generate_material()
 	auto tess_str = tess_orig_shader.empty()?std::string():(context->get_tess_result().uniforms + include_file->get_data() + tess_orig_shader);
 	auto voxel_str = context->get_voxel_result().uniforms + include_file->get_data() + context->get_voxel_result().text;
 
-	static IdGenerator ids;
 	
 
 	wshader_name = std::wstring(L"HitShader_") + std::to_wstring(ids.get());
@@ -463,6 +463,10 @@ void materials::universal_material::serialize(Archive& ar, const unsigned int fi
 	ar& NVP(tess_uniforms);
 	ar& NVP(pipeline);
 
+
+	ar& NVP(raytracing_blob);
+
+
 	if constexpr (Archive::is_loading::value)
 	{
 		pipeline = PipelineManager::get().get_pipeline(pipeline);
@@ -473,6 +477,9 @@ void materials::universal_material::serialize(Archive& ar, const unsigned int fi
 	{
 		//   if (include_file->is_changed())
 		compile();
-		generate_material(); //TODO: REMOVE, FOR RT NOW ONLY
+		//generate_material(); //TODO: REMOVE, FOR RT NOW ONLY
+		wshader_name = std::wstring(L"HitShader_") + std::to_wstring(ids.get());
+
+		update_rtx();
 	}
 }

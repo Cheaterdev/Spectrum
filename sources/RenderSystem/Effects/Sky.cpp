@@ -19,7 +19,7 @@ SkyRender::SkyRender()
 
 		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\sky.hlsl", "PS", 0, {} });
 		desc.vertex = Render::vertex_shader::get_resource({ "shaders\\sky.hlsl", "VS", 0, {} });
-		state.reset(new Render::PipelineState(desc));
+		state = Render::PipelineState::create(desc, "sky_state");
 	}
 
 	{
@@ -31,7 +31,7 @@ SkyRender::SkyRender()
 		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\sky.hlsl", "VS_Cube", 0, {} });
 		state_desc.rtv.rtv_formats.resize(1);
 		state_desc.rtv.rtv_formats[0] = DXGI_FORMAT_R11G11B10_FLOAT;
-		cubemap_state.reset(new Render::PipelineState(state_desc));
+		cubemap_state = Render::PipelineState::create(state_desc, "sky_cubemap_state");
 	}
 
 	transmittance = Render::Texture::get_resource({ "textures\\Transmit.dds", false, false });
@@ -226,12 +226,12 @@ CubeMapEnviromentProcessor::CubeMapEnviromentProcessor()
 		state_desc.pixel = Render::pixel_shader::get_resource({
 			"shaders\\cubemap_down.hlsl", "PS", 0, {D3D::shader_macro("NumSamples", counts[i])}
 		});
-		states[i].reset(new Render::PipelineState(state_desc));
+		states[i] =Render::PipelineState::create(state_desc,std::string("cubeenv_desc_")+std::to_string(i));
 	}
 
 
 	state_desc.pixel = Render::pixel_shader::get_resource({"shaders\\cubemap_down.hlsl", "PS_Diffuse", 0, {}});
-	state_diffuse.reset(new Render::PipelineState(state_desc));
+	state_diffuse =Render::PipelineState::create(state_desc,"cubeenv_diffuse");
 }
 
 void CubeMapEnviromentProcessor::generate(FrameGraph &graph)

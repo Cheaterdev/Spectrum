@@ -16,15 +16,15 @@ SMAA::SMAA()
 	desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAAEdgeDetectionVS", 0,{} });
 	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM };
 	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAALumaEdgeDetectionPS", 0,{} });
-	state_edge_detect.reset(new  Render::PipelineState(desc));
+	state_edge_detect = Render::PipelineState::create(desc, "state_edge_detect");
 	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM };
 	desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAABlendingWeightCalculationVS", 0,{} });
 	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAABlendingWeightCalculationPS", 0,{} });
-	state_blend_weight.reset(new  Render::PipelineState(desc));
+	state_blend_weight = Render::PipelineState::create(desc, "state_blend_weight");
 	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
 	desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAANeighborhoodBlendingVS", 0,{} });
 	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAANeighborhoodBlendingPS", 0,{} });
-	state_neighborhood_blending.reset(new  Render::PipelineState(desc));
+	state_neighborhood_blending = Render::PipelineState::create(desc, "state_neighborhood_blending");
 	/*      desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_ResolveVS", 0, {} });
 	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_ResolvePS", 0, {} });
 	state_resolve.reset(new  Render::PipelineState(desc));*/

@@ -272,3 +272,4 @@ __pycache__/
 /Spectrum/assets2
 /Spectrum/cache3
 *.dll
+/workdir/pso

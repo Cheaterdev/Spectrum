@@ -12,7 +12,7 @@ namespace GUI
 		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "VS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES/* | D3DCOMPILE_SKIP_OPTIMIZATION*/,{} });
 		state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
-		state.reset(new Render::PipelineState(state_desc));
+		state= Render::PipelineState::create(state_desc, "NinePatch");
 		std::vector<unsigned int> index_data(9 * 2 * 3);
 		auto data = index_data.data();
 

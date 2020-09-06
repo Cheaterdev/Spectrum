@@ -35,6 +35,23 @@ namespace DX12
 		}
 		bool operator==(const input_layout_row&) const = default;
 		auto   operator<=>(const  input_layout_row& r)  const = default;
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			ar& NVP(SemanticName);
+			ar& NVP(SemanticIndex);
+			ar& NVP(Format);
+			ar& NVP(InputSlot);
+			ar& NVP(AlignedByteOffset);
+			ar& NVP(InputSlotClass);
+			ar& NVP(InstanceDataStepRate);
+
+		}
+
+
 	};
 	struct input_layout_header
 	{
@@ -42,6 +59,14 @@ namespace DX12
 
 		bool operator==(const input_layout_header&) const = default;
 		auto   operator<=>(const  input_layout_header& r)  const = default;
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			ar& NVP(inputs);
+
+		}
 
 	};
 
@@ -53,6 +78,17 @@ namespace DX12
 		bool conservative = false;
 		bool operator==(const RasterizerState&) const = default;
 		auto   operator<=>(const  RasterizerState& r)  const = default;
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			ar& NVP(cull_mode);
+			ar& NVP(fill_mode);
+			ar& NVP(conservative);
+		}
+
 	};
 
 	struct RenderTarget
@@ -64,6 +100,22 @@ namespace DX12
 		D3D12_BLEND source_alpha = D3D12_BLEND::D3D12_BLEND_ONE;
 			bool operator==(const RenderTarget&) const = default;
 			auto  operator<=>(const  RenderTarget & r)  const = default;
+
+
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			ar& NVP(enabled);
+			ar& NVP(source);
+			ar& NVP(dest);
+			ar& NVP(dest_alpha);
+			ar& NVP(source_alpha);
+		}
+
+
 	};
 
 	struct BlendState
@@ -73,6 +125,21 @@ namespace DX12
 		std::array<RenderTarget, 8> render_target;
 		bool operator==(const BlendState&) const = default;
 		auto operator<=>(const  BlendState& r)  const = default;
+
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+
+			ar& NVP(independ_blend);
+			for (auto& r : render_target)
+				ar& NVP(r);
+
+		}
+
+
 	};
 
 
@@ -100,11 +167,27 @@ namespace DX12
 		}
 	bool operator==(const RTVState& r) const = default;
 	auto  operator<=>(const  RTVState& r)  const = default;
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			ar& NVP(enable_depth);
+			ar& NVP(enable_depth_write);
+			ar& NVP(ds_format);
+			ar& NVP(rtv_formats);
+			ar& NVP(func);
+			ar& NVP(enable_stencil);
+			ar& NVP(stencil_read_mask);
+			ar& NVP(stencil_write_mask);
+			ar& NVP(stencil_desc);
+		}
 
 	};
 
 	struct PipelineStateDesc
 	{
+		std::string name;
 		input_layout_header layout;
 		RootSignature::ptr root_signature;
 		vertex_shader::ptr vertex;
@@ -124,9 +207,84 @@ namespace DX12
 			rasterizer.fill_mode = D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID;
 		}
 
+		bool is_memory()
+		{
+
+			if (vertex && vertex->get_header().file_name.empty()) return true;
+			if (pixel && pixel->get_header().file_name.empty()) return true;
+			if (geometry && geometry->get_header().file_name.empty()) return true;
+			if (hull && hull->get_header().file_name.empty()) return true;
+			if (domain && domain->get_header().file_name.empty()) return true;
+			return false;
+		}
+
 		bool operator==(const PipelineStateDesc& r) const;
 		std::strong_ordering  operator<=>(const  PipelineStateDesc& r)  const ;
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+		
 
+			ar& NVP(topology);
+			ar& NVP(blend);
+			ar& NVP(rasterizer);
+			ar& NVP(rtv);
+
+			
+			if constexpr (Archive::is_saving::value)
+			{
+
+				auto sig = dynamic_cast<RootLayout*>(root_signature.get());
+				ar& NVP(sig->layout);
+				auto save_header = [&](auto &shader) {
+				
+					bool has_header = !!shader;
+					ar& NVP(has_header);
+
+					if (has_header)
+						ar& NVP(shader->get_header());
+				};
+			
+				save_header(pixel);
+				save_header(vertex);
+				save_header(geometry);
+				save_header(hull);
+				save_header(domain);
+
+			}
+			else
+			{
+				Layouts l;
+
+				ar& NVP(l);
+
+				root_signature = get_Signature(l);
+				auto load_header = [&]<class T>(std::shared_ptr<T>& shader) {
+
+					bool has_header;
+					ar& NVP(has_header);
+
+					if (has_header)
+					{
+						D3D::shader_header header;
+						ar& NVP(header);
+
+						shader = T::get_resource(header);
+					}
+						
+				};
+
+
+
+				load_header(pixel);
+				load_header(vertex);
+				load_header(geometry);
+				load_header(hull);
+				load_header(domain);
+			}
+		}
 	};
 	
 
@@ -155,6 +313,7 @@ namespace DX12
 
 	protected:
 		ComPtr<ID3D12PipelineState> m_pipelineState;
+		std::string cache;
 		virtual ~PipelineStateBase() {};
 
 		template<class T>
@@ -170,25 +329,62 @@ namespace DX12
 			if (shader)
 				shader->pipelines.erase(this);
 		}
+
+
 	public:
 		virtual	void on_change() = 0;
 		ComPtr<ID3D12PipelineState> get_native();
 
+		std::string get_cache()
+		{
+			ComPtr<ID3DBlob> blob;
+			m_pipelineState->GetCachedBlob(&blob);
+			std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
 
+			return str;
+		}
 	};
 
 	class PipelineState : public PipelineStateBase
 	{
+		friend class PipelineStateCache;
 
+		PipelineState(PipelineStateDesc _desc, std::string cache);
+	
 	public:
+		PipelineState() = default;
 		using ptr = s_ptr<PipelineState>;
 		const  PipelineStateDesc desc;
 		void on_change() override;
 
-		PipelineState(PipelineStateDesc _desc);
+	
+		static ptr create(PipelineStateDesc & desc, std::string name);
 
 		virtual ~PipelineState();
 
+
+	
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			if constexpr (Archive::is_saving::value)
+			{
+				ComPtr<ID3DBlob> blob;
+				m_pipelineState->GetCachedBlob(&blob);
+				std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
+
+
+				ar& NVP(str);
+			}
+
+			else
+			{
+				std::string str;
+				ar& NVP(str);
+			}
+		}
 	};
 
 	template<class T>
@@ -200,27 +396,6 @@ namespace DX12
 
 	};
 
-	class PipelineStateCache : public Singleton<PipelineStateCache>
-	{
-		//my_map<RootSignature::ptr, vertex_shader::ptr, pixel_shader::ptr, geometry_shader::ptr, hull_shader::ptr, domain_shader::ptr, DXGI_FORMAT, PipelineState::ptr>::type cache;
-		Cache<PipelineStateDesc, PipelineState::ptr> cache;
-		friend class Singleton<PipelineStateCache>;
-
-		virtual ~PipelineStateCache()
-		{
-			//    cache.clear();
-		}
-		PipelineStateCache() : cache([](const PipelineStateDesc& desc)
-			{
-				return std::make_shared<PipelineState>(desc);
-			})
-		{
-		}
-	public:
-
-		static PipelineState::ptr get_cache(PipelineStateDesc& desc);
-
-	};
 
 
 	class ComputePipelineState;
@@ -232,10 +407,9 @@ namespace DX12
 
 		compute_shader::ptr shader;
 
-		//   ComputePipelineStateDesc() = default;
-
-		std::shared_ptr<ComputePipelineState> create();
-
+		std::string name;
+		bool operator==(const ComputePipelineStateDesc& r) const = default;
+		std::strong_ordering  operator<=>(const  ComputePipelineStateDesc& r)  const = default;
 	};
 
 
@@ -243,20 +417,92 @@ namespace DX12
 	class ComputePipelineState : public PipelineStateBase
 	{
 		void on_change() override;
+
+		friend class PipelineStateCache;
+		explicit ComputePipelineState(const ComputePipelineStateDesc& _desc, std::string cache) : desc(_desc)
+		{
+
+			this->cache = cache;
+			on_change();
+			register_shader(desc.shader);
+		}
+
 	public:
 		using ptr = s_ptr<ComputePipelineState>;
 		const ComputePipelineStateDesc desc;
 
 
-		explicit ComputePipelineState(const ComputePipelineStateDesc& _desc) : desc(_desc)
-		{
-			on_change();
-			register_shader(desc.shader);
-		}
+	
 
-
+		static ptr create(ComputePipelineStateDesc& desc, std::string name);
 		virtual ~ComputePipelineState();
 	};
+
+
+
+	class PipelineStateCache : public Singleton<PipelineStateCache>
+	{
+		//my_map<RootSignature::ptr, vertex_shader::ptr, pixel_shader::ptr, geometry_shader::ptr, hull_shader::ptr, domain_shader::ptr, DXGI_FORMAT, PipelineState::ptr>::type cache;
+		Cache<PipelineStateDesc, PipelineState::ptr> cache;
+		Cache<ComputePipelineStateDesc, ComputePipelineState::ptr> compute_cache;
+
+		std::map<std::string, std::string> binary_cache;
+
+		friend class Singleton<PipelineStateCache>;
+
+		virtual ~PipelineStateCache()
+		{
+			FileSystem::get().save_data("pso",Serializer::serialize(binary_cache));
+		}
+		PipelineStateCache() : cache([this](const PipelineStateDesc& desc)
+			{
+				std::string binary = desc.name.empty()?"": binary_cache[desc.name];
+
+
+				//Log::get() << desc << Log::endl;
+				auto state=  PipelineState::ptr(new PipelineState(desc, binary));
+
+				if (!desc.name.empty() & binary.empty())
+				{
+					binary_cache[desc.name] = state->get_cache();
+				}
+
+				return state;
+
+			}), compute_cache([this](const ComputePipelineStateDesc& desc)
+				{
+					std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
+
+
+					//Log::get() << desc << Log::endl;
+					auto state = ComputePipelineState::ptr(new ComputePipelineState(desc,binary));
+
+					if (!desc.name.empty() &&binary.empty())
+					{
+						binary_cache[desc.name] = state->get_cache();
+					}
+
+					return state;
+
+				})
+		{
+
+			auto file = FileSystem::get().get_file("pso");
+			if(file)
+			Serializer::deserialize(file->load_all(), binary_cache);
+
+		}
+	public:
+
+		static PipelineState::ptr get_cache(PipelineStateDesc& desc, std::string name ="");
+		static ComputePipelineState::ptr get_cache(ComputePipelineStateDesc& desc, std::string name = "");
+
+	};
+
 }
 
 
+
+
+BOOST_CLASS_EXPORT_KEY(DX12::PipelineStateBase);
+BOOST_CLASS_EXPORT_KEY(DX12::PipelineState);

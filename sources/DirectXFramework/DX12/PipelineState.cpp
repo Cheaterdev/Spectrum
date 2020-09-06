@@ -153,17 +153,48 @@ namespace DX12
 
 		psoDesc.DSVFormat = desc.rtv.ds_format;
 		psoDesc.SampleDesc.Count = 1;
+
+		if (!cache.empty())
+		{
+			psoDesc.CachedPSO.pCachedBlob = cache.c_str();
+			psoDesc.CachedPSO.CachedBlobSizeInBytes = cache.size();
+		}
+		else
+		{
+		//	assert(false);
+		}
 		if(m_pipelineState)
 		Device::get().unused(m_pipelineState);
 
- 		TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		 HRESULT hr = (Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+
+		if (E_INVALIDARG == hr)
+		{
+			psoDesc.CachedPSO = {};
+			hr = (Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		}
+
+		TEST(hr);
+
+		cache.clear();
 	}
+
+	 PipelineState::ptr PipelineState::create(PipelineStateDesc& desc, std::string name)
+	 {
+		 return PipelineStateCache::get_cache(desc, name);
+	 }
+	ComputePipelineState::ptr ComputePipelineState::create(ComputePipelineStateDesc& desc, std::string name)
+	 {
+		 return PipelineStateCache::get_cache(desc, name);
+	 }
+
 	 ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
 	{
 		return m_pipelineState;
 	}
-	 PipelineState::PipelineState(PipelineStateDesc _desc) : desc(_desc)
+	 PipelineState::PipelineState(PipelineStateDesc _desc, std::string cache) : desc(_desc)
 	{
+		 this->cache = cache;
 		on_change();
 		register_shader(desc.pixel);
 		register_shader(desc.vertex);
@@ -182,10 +213,26 @@ namespace DX12
 		if (m_pipelineState)
 			Device::get().unused(m_pipelineState);
 	}
-	 PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc & desc)
+	 PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc & desc, std::string name )
 	{
+		 if (desc.is_memory())
+		 {
+			std::string hash =  Hasher::hash(desc);
+			desc.name = hash;
+		 }
+		 else
+		 desc.name = name;
+	
+		//	 return  PipelineState::ptr(new PipelineState(desc));
 		return Singleton<PipelineStateCache>::get().cache[desc];
 	}
+
+	 ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
+	 {
+		 desc.name = name;
+		 return Singleton<PipelineStateCache>::get().compute_cache[desc];
+	 }
+
 	 void ComputePipelineState::on_change()
 	{
 		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
@@ -196,7 +243,31 @@ namespace DX12
 		if (desc.shader)
 			psoDesc.CS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.shader->get_blob().data())), static_cast<UINT>(desc.shader->get_blob().size()) };
 
-		TEST(Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+
+		if (!cache.empty())
+		{
+			psoDesc.CachedPSO.pCachedBlob = cache.c_str();
+			psoDesc.CachedPSO.CachedBlobSizeInBytes = cache.size();
+		}
+		else
+		{
+		//	assert(false);
+		}
+		if (m_pipelineState)
+			Device::get().unused(m_pipelineState);
+
+		HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+
+		if (hr!=S_OK)
+		{
+			psoDesc.CachedPSO = {};
+			hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		}
+
+	//	TEST(hr);
+
+		cache.clear();
+
 	}
 
 	 ComputePipelineState::~ComputePipelineState()
@@ -207,10 +278,8 @@ namespace DX12
 			Device::get().unused(m_pipelineState);
 	}
 
-
-
-	 std::shared_ptr<ComputePipelineState> ComputePipelineStateDesc::create()
-	 {
-		 return std::make_shared<Render::ComputePipelineState>(*this);
-	 }
 }
+
+
+BOOST_CLASS_EXPORT_IMPLEMENT(DX12::PipelineStateBase);
+BOOST_CLASS_EXPORT_IMPLEMENT(DX12::PipelineState);

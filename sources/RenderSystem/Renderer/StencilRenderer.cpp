@@ -285,7 +285,7 @@ stencil_renderer::stencil_renderer()
 	state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT;
 	state_desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
 	state_desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_LESS;
-	draw_state.reset(new Render::PipelineState(state_desc));
+	draw_state = Render::PipelineState::create(state_desc, "stencil_draw_state");
 
 	state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
 
@@ -295,18 +295,18 @@ stencil_renderer::stencil_renderer()
 	state_desc.rtv.enable_depth_write = false;
 	state_desc.rtv.enable_depth = false;
 
-	draw_selected_state.reset(new Render::PipelineState(state_desc));
+	draw_selected_state = Render::PipelineState::create(state_desc,"stencil_draw_selected_state");
 
 	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle_stencil.hlsl", "VS", 0, {} });
 	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/triangle_stencil.hlsl", "PS", 0, {} });
 
-	draw_box_state.reset(new Render::PipelineState(state_desc));
+	draw_box_state = Render::PipelineState::create(state_desc, "stencil_draw_box_state");
 
 
 	state_desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
 	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS_COLOR", 0, {} });
-	axis_render_state.reset(new Render::PipelineState(state_desc));
+	axis_render_state = Render::PipelineState::create(state_desc, "stencil_axis_render_state");
 
 	id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 	axis_id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
@@ -332,7 +332,7 @@ stencil_renderer::stencil_renderer()
 		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\contour.hlsl", "PS", 0, {} });
 		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\contour.hlsl", "VS", 0, {} });
 		state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		last_render_state.reset(new Render::PipelineState(state_desc));
+		last_render_state = Render::PipelineState::create(state_desc, "stencil_last_render_state");
 	}
 
 	axis = EngineAssets::axis.get_asset()->create_instance();

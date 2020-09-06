@@ -271,7 +271,8 @@ namespace DX12
             using ptr = std::shared_ptr<RootSignature>;
 
 		
-            
+            virtual~RootSignature() = default;
+
             template <class ...Args>
             RootSignature(Args...args)
             {
@@ -320,11 +321,11 @@ namespace DX12
 
     class RootLayout:public RootSignature
     {
-		const Layouts layout;
+		
       
 	public:
 		using ptr = std::shared_ptr<RootLayout>;
-       
+        const Layouts layout;
         RootLayout(const RootSignatureDesc& desc, Layouts layout):RootSignature(desc), layout(layout)
         {
 

@@ -416,7 +416,7 @@ void GUI::Elements::FlowGraph::canvas::on_add(base* parent)
     state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
     state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
     state_desc.layout.inputs.push_back({ "TEXCOORD", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-    state.reset(new Render::PipelineState(state_desc));
+    state=  Render::PipelineState::create(state_desc, "canvas");
     {
         Render::PipelineStateDesc state_desc;
         state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
@@ -430,7 +430,7 @@ void GUI::Elements::FlowGraph::canvas::on_add(base* parent)
         state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
         state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
         state_desc.layout.inputs.push_back({ "COLOR", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        line_state.reset(new Render::PipelineState(state_desc));
+        line_state = Render::PipelineState::create(state_desc,"canvas_line");
     }
 }
 GUI::Elements::FlowGraph::canvas::canvas(manager* main_manager)

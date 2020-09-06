@@ -77,6 +77,8 @@ namespace DX12
                     res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader(data, macros, compile_code_dxil, func_name, &In);
                 }
                 auto result = std::make_shared<_shader_type>();
+
+           
 				result->blob = std::move(*res_blob);
 				result->own_id();
                 result->compile();

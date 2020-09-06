@@ -60,10 +60,10 @@ namespace FW1FontWrapper
         desc.vertex = Render::vertex_shader::get_resource({ "shaders/font/vsEmpty.hlsl", "VS", 0, {} });
         desc.geometry = Render::geometry_shader::get_resource({ "shaders/font/gsSimple.hlsl", "GS", 0, {} });
         desc.pixel = Render::pixel_shader::get_resource({ "shaders/font/psSimple.hlsl", "PS", 0, {} });
-        geometry_state.reset(new Render::PipelineState(desc));
+        geometry_state =  Render::PipelineState::create(desc,"geometry_state");
         ///////////////////////////////////////////////////
         desc.geometry = Render::geometry_shader::get_resource({ "shaders/font/gsClip.hlsl", "GS", 0, {} });
-        geometry_state_clip.reset(new Render::PipelineState(desc));
+        geometry_state_clip = Render::PipelineState::create(desc, "geometry_state_clip");
 
         // Create all needed resources
         if (SUCCEEDED(hResult))

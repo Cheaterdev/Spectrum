@@ -403,10 +403,10 @@ mesh_renderer::mesh_renderer()
 		Render::ComputePipelineStateDesc compute_desc;
 		compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
 		compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS", D3DCOMPILE_OPTIMIZATION_LEVEL3, {} });
-		gather_pipeline = std::make_shared<Render::ComputePipelineState>(compute_desc);
+		gather_pipeline = ComputePipelineState::create(compute_desc,"mesh_renderer_gather_pipeline");
 
 		compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS", D3DCOMPILE_OPTIMIZATION_LEVEL3, {{"CHECK_FRUSTUM",""}} });
-		gather_pipeline_frustum = std::make_shared<Render::ComputePipelineState>(compute_desc);
+		gather_pipeline_frustum = ComputePipelineState::create(compute_desc, "mesh_renderer_gather_pipeline_frustum");
 
 	}
 
@@ -414,7 +414,7 @@ mesh_renderer::mesh_renderer()
 		Render::ComputePipelineStateDesc compute_desc;
 		compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
 		compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS_boxes", D3DCOMPILE_OPTIMIZATION_LEVEL3, {{"CHECK_FRUSTUM",""}} });
-		gather_boxes = std::make_shared<Render::ComputePipelineState>(compute_desc);
+		gather_boxes = ComputePipelineState::create(compute_desc, "mesh_renderer_gather_boxes");
 	}
 
 	
@@ -441,7 +441,7 @@ mesh_renderer::mesh_renderer()
 		desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_LESS_EQUAL;
 		desc.rasterizer.conservative = true;
 		//	desc.blend.render_target[0].enabled = true;
-		pipeline_boxes = Render::PipelineStateCache::get().get_cache(desc);
+		pipeline_boxes = Render::PipelineStateCache::get().get_cache(desc,"pipeline_boxes");
 	}
 
 
@@ -516,7 +516,7 @@ mesh_renderer::mesh_renderer()
 			Render::ComputePipelineStateDesc compute_desc;
 			compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
 			compute_desc.shader = Render::compute_shader::get_resource({ "shaders/occluder_cs_dispatch_init.hlsl", "CS", D3DCOMPILE_OPTIMIZATION_LEVEL3, {} });
-			init_dispatch_pipeline = std::make_shared<Render::ComputePipelineState>(compute_desc);
+			init_dispatch_pipeline = ComputePipelineState::create(compute_desc,"init_dispatch_pipeline");
 		}
 	} 
 	{
@@ -525,10 +525,10 @@ mesh_renderer::mesh_renderer()
 			Render::ComputePipelineStateDesc compute_desc;
 			compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
 			compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS_meshes_from_boxes", D3DCOMPILE_OPTIMIZATION_LEVEL3, {} });
-			gather_meshes_from_boxes_pipeline = std::make_shared<Render::ComputePipelineState>(compute_desc);
+			gather_meshes_from_boxes_pipeline = ComputePipelineState::create(compute_desc,"gather_meshes_from_boxes_pipeline");
 
 			compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS_meshes_from_boxes", D3DCOMPILE_OPTIMIZATION_LEVEL3, {{"INVISIBLE",""}} });
-			gather_meshes_from_boxes_pipeline_invisible = std::make_shared<Render::ComputePipelineState>(compute_desc);
+			gather_meshes_from_boxes_pipeline_invisible = ComputePipelineState::create(compute_desc,"gather_meshes_from_boxes_pipeline_invisible");
 
 			
 		}

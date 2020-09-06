@@ -7,7 +7,7 @@ void BRDF::create_new()
 	Render::ComputePipelineStateDesc desc;
 	desc.root_signature = get_Signature(Layouts::DefaultLayout);
 	desc.shader = Render::compute_shader::get_resource({ "shaders\\BRDF.hlsl", "CS", 0,{} });
-	state = desc.create();
+	state = Render::ComputePipelineState::create(desc,"brdf");
 
 
 

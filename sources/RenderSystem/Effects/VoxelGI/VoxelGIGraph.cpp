@@ -19,7 +19,7 @@ public:
 			desc.rtv.rtv_formats = { DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_R8G8B8A8_UNORM };
 			desc.pixel = Render::pixel_shader::get_resource({ "shaders\\Downsample.hlsl", "PS", 0,{} });
 			desc.vertex = Render::vertex_shader::get_resource({ "shaders\\Downsample.hlsl", "VS", 0,{} });
-			downsample_state.reset(new  Render::PipelineState(desc));
+			downsample_state = Render::PipelineState::create(desc, "GBufferDownsampler");
 		}
 	}
 
@@ -249,6 +249,9 @@ void VoxelGI::init_states()
 	for (int i = 0; i < screen_states.size(); i++)
 	{
 
+		std::string base = "voxelgi_";
+		base += std::to_string(i);
+		base += "_";
 		std::vector<D3D::shader_macro> macros;
 
 		if (i == static_cast<int>(VISUALIZE_TYPE::REFLECTION))
@@ -271,7 +274,7 @@ void VoxelGI::init_states()
 		desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen.hlsl", "PS", 0,macros });
 		desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
-		screen_states[i][1] = std::make_shared<Render::PipelineState>(desc);
+		screen_states[i][1] = Render::PipelineState::create(desc, base+"screen_states_1");
 
 
 		desc.rtv.enable_stencil = false;
@@ -279,7 +282,7 @@ void VoxelGI::init_states()
 		desc.rtv.ds_format = DXGI_FORMAT_UNKNOWN;
 		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen.hlsl", "PS_Low", 0,macros });
 		desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
-		screen_states[i][0] = std::make_shared<Render::PipelineState>(desc);
+		screen_states[i][0] = Render::PipelineState::create(desc, base + "screen_states_0");
 
 
 		desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
@@ -289,7 +292,7 @@ void VoxelGI::init_states()
 		desc.blend.render_target[0].enabled = true;
 		desc.blend.render_target[1].enabled = false;
 		desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
-		screen_states[i][2] = std::make_shared<Render::PipelineState>(desc);
+		screen_states[i][2] = Render::PipelineState::create(desc, base + "screen_states_2");
 
 
 
@@ -299,7 +302,7 @@ void VoxelGI::init_states()
 		desc.blend.render_target[0].enabled = false;
 		desc.blend.render_target[1].enabled = false;
 		desc.rtv.rtv_formats = {/*DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,*/ DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
-		screen_states[i][3] = std::make_shared<Render::PipelineState>(desc);
+		screen_states[i][3] = Render::PipelineState::create(desc, base + "screen_states_3");
 
 
 		desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
@@ -310,12 +313,12 @@ void VoxelGI::init_states()
 		desc.blend.render_target[0].enabled = true;
 		//desc.rtv.enable_stencil = false;
 
-		reflection_states[i].reflection_state = std::make_shared<Render::PipelineState>(desc);
+		reflection_states[i].reflection_state = Render::PipelineState::create(desc, base + "screen_reflection_states_reflection_state");
 
 
 		desc.rtv.ds_format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen_reflection.hlsl", "PS_resize", 0,macros });
-		reflection_states[i].reflection_resize_state = std::make_shared<Render::PipelineState>(desc);
+		reflection_states[i].reflection_resize_state = Render::PipelineState::create(desc, base + "screen_reflection_resize_state");
 	}
 
 
@@ -326,7 +329,7 @@ void VoxelGI::init_states()
 	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
 
 
-	downsampled_reflection_state.reset(new  Render::PipelineState(desc));
+	downsampled_reflection_state = Render::PipelineState::create(desc,"voxelgi_downsampled_reflection_state");
 
 
 	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
@@ -336,7 +339,7 @@ void VoxelGI::init_states()
 	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\voxel_screen_debug.hlsl", "Debug", 0,{} });
 
 
-	voxel_debug_state.reset(new  Render::PipelineState(desc));
+	voxel_debug_state = Render::PipelineState::create(desc, "voxel_debug_state");
 
 
 	{
@@ -344,13 +347,13 @@ void VoxelGI::init_states()
 		desc.root_signature = get_Signature(Layouts::DefaultLayout);// VoxelMipMapSignature< SignatureCreator>().create_root();
 
 		desc.shader = Render::compute_shader::get_resource({ "shaders\\voxel_mipmap.hlsl", "CS", 0,{ D3D::shader_macro("COUNT","3") } });
-		downsample_state[2] = std::make_shared<Render::ComputePipelineState>(desc);
+		downsample_state[2] = ComputePipelineState::create(desc, "downsample_state2");
 
 		desc.shader = Render::compute_shader::get_resource({ "shaders\\voxel_mipmap.hlsl", "CS", 0,{ D3D::shader_macro("COUNT","2") } });
-		downsample_state[1] = std::make_shared<Render::ComputePipelineState>(desc);
+		downsample_state[1] = ComputePipelineState::create(desc, "downsample_state1");
 
 		desc.shader = Render::compute_shader::get_resource({ "shaders\\voxel_mipmap.hlsl", "CS", 0,{ D3D::shader_macro("COUNT","1") } });
-		downsample_state[0] = std::make_shared<Render::ComputePipelineState>(desc);
+		downsample_state[0] = ComputePipelineState::create(desc, "downsample_state0");
 
 	}
 
@@ -359,11 +362,11 @@ void VoxelGI::init_states()
 		desc.root_signature = get_Signature(Layouts::DefaultLayout);//VoxelLightingSignature<SignatureCreator>().create_root();
 
 		desc.shader = Render::compute_shader::get_resource({ "shaders\\voxel_lighting.hlsl", "CS", 0,{} });
-		lighting_state.reset(new Render::ComputePipelineState(desc));
+		lighting_state = Render::ComputePipelineState::create(desc,"lighting_state");
 
 
 		desc.shader = Render::compute_shader::get_resource({ "shaders\\voxel_lighting.hlsl", "CS", 0,{ D3D::shader_macro("SECOND_BOUNCE","1") } });
-		lighting_state_second_bounce.reset(new Render::ComputePipelineState(desc));
+		lighting_state_second_bounce = Render::ComputePipelineState::create(desc, "lighting_state_second_bounce");
 	}
 
 	second_bunce_table = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);

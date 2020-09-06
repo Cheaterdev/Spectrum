@@ -35,11 +35,11 @@ PSSM::PSSM()
 		desc.blend.render_target[0].dest = D3D12_BLEND::D3D12_BLEND_ONE;
 		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\PSSM.hlsl", "PS", 0,{} });
 		desc.vertex = Render::vertex_shader::get_resource({ "shaders\\PSSM.hlsl", "VS", 0,{} });
-		draw_mask_state.reset(new  Render::PipelineState(desc));
+		draw_mask_state = Render::PipelineState::create(desc, "pssm_draw_mask_state");
 
 		desc.rtv.rtv_formats = { DXGI_FORMAT_R16G16B16A16_FLOAT };
 		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\PSSM.hlsl", "PS_RESULT", 0,{} });
-		draw_result_state.reset(new  Render::PipelineState(desc));
+		draw_result_state = Render::PipelineState::create(desc,"pssm_draw_result_state");
 	}
 }
 

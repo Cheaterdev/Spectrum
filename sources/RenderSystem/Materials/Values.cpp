@@ -496,6 +496,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(TextureSRVParams);
 
 
 BOOST_CLASS_EXPORT(ShaderParamType);
+BOOST_CLASS_EXPORT(VectorType);
 
 
 MaterialGraph::MaterialGraph()

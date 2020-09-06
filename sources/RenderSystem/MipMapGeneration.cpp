@@ -16,7 +16,7 @@ MipMapGenerator::MipMapGenerator()
 	for (int i = 0; i < 4; i++)
 	{
 		dcdesc.shader = Render::compute_shader::get_resource({ "shaders\\GenerateMips.hlsl", "CS", 0, { D3D::shader_macro({ std::string("NON_POWER_OF_TWO"), std::to_string(i) }) } });
-		linear[i].reset(new Render::ComputePipelineState(dcdesc));
+		linear[i]= Render::ComputePipelineState::create(dcdesc, std::string("linear") + std::to_string(i));
 	}
 
 	for (int i = 0; i < 4; i++)
@@ -26,13 +26,13 @@ MipMapGenerator::MipMapGenerator()
 				D3D::shader_macro({ std::string("CONVERT_TO_SRGB"), "1" })
 			}
 			});
-		gamma[i].reset(new Render::ComputePipelineState(dcdesc));
+		gamma[i]= Render::ComputePipelineState::create(dcdesc, std::string("gamme") + std::to_string(i));
 	}
 
 	
 	{
 		dcdesc.shader = Render::compute_shader::get_resource({ "shaders\\downsample_depth.hlsl", "CS", 0 });
-		state_downsample_depth.reset(new Render::ComputePipelineState(dcdesc));
+		state_downsample_depth = Render::ComputePipelineState::create(dcdesc,"state_downsample_depth");
 	}
 
 
@@ -47,7 +47,7 @@ MipMapGenerator::MipMapGenerator()
 		state_desc.rtv.enable_stencil = false;
 		state_desc.rtv.enable_depth = false;
 
-		return std::make_shared<Render::PipelineState>(state_desc);
+		return Render::PipelineState::create(state_desc, std::string("copy_")+std::to_string((int)format));
 	};
 
 	{
@@ -62,7 +62,7 @@ MipMapGenerator::MipMapGenerator()
 		desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT;
 		desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
 		desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
-		render_depth_state = Render::PipelineStateCache::get().get_cache(desc);
+		render_depth_state = Render::PipelineState::create(desc, "render_depth_state");
 	}
 
 
@@ -76,7 +76,7 @@ MipMapGenerator::MipMapGenerator()
 		state_desc.blend.render_target[0].enabled = false;
 		state_desc.rtv.enable_stencil = false;
 		state_desc.rtv.enable_depth = false;
-		quality_buffer_state.reset(new Render::PipelineState(state_desc));
+		quality_buffer_state = Render::PipelineState::create(state_desc, "quality_buffer_state");
 
 
 
@@ -88,14 +88,14 @@ MipMapGenerator::MipMapGenerator()
 		state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 		state_desc.rtv.stencil_read_mask = 1;
 		state_desc.rtv.stencil_write_mask = 1;
-		quality_buffer_stencil_state.reset(new Render::PipelineState(state_desc));
+		quality_buffer_stencil_state = Render::PipelineState::create(state_desc, "quality_buffer_stencil_state");
 
 
 
 		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "PS_STENCIL_REFL", 0,{} });
 		state_desc.rtv.stencil_read_mask = 2;
 		state_desc.rtv.stencil_write_mask = 2;
-		quality_buffer_refl_stencil_state.reset(new Render::PipelineState(state_desc));
+		quality_buffer_refl_stencil_state = Render::PipelineState::create(state_desc, "quality_buffer_refl_stencil_state");
 	}
 
 

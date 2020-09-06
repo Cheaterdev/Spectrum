@@ -920,12 +920,14 @@ namespace FlowGraph
 BOOST_CLASS_EXPORT(FlowGraph::window);
 
 BOOST_CLASS_EXPORT(FlowGraph::Node);
+BOOST_CLASS_EXPORT(FlowGraph::input);
+BOOST_CLASS_EXPORT(FlowGraph::output);
 
 BOOST_CLASS_EXPORT(FlowGraph::graph);
 
 BOOST_CLASS_EXPORT(FlowGraph::graph_input);
-
 BOOST_CLASS_EXPORT(FlowGraph::graph_output);
+
 BOOST_CLASS_EXPORT(FlowGraph::parameter_type);
 
 

@@ -164,11 +164,12 @@ public:
 template<class I, class V>
 class Cache
 {
-	std::map<I, V> table;
-
+	
 	std::mutex m;
 
 public:
+	std::map<I, V> table;
+
 	std::function<V(const I&)> create_func;
 
 	size_t size()
@@ -199,6 +200,15 @@ public:
 
 		return elem;
 	}
+
+private:
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int)
+	{
+		ar& NVP(table);
+	}
+
 };
 
 

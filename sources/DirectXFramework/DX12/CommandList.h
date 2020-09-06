@@ -437,7 +437,25 @@ namespace DX12
 				}
 			}
 
-			else assert(false);
+			else if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_TEXTURE2DARRAY)
+			{
+				auto& uav = info->uav.desc.Texture2DArray;
+
+				if (desc.MipLevels == 1 && desc.Depth() == 1 &&desc.ArraySize() == 1)
+				{
+					transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				}
+				else
+				{
+
+					for (int array = uav.FirstArraySlice; array < uav.FirstArraySlice + uav.ArraySize; array++)
+					{
+						UINT res = desc.CalcSubresource(uav.MipSlice, array, uav.PlaneSlice);
+						transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, res);
+					}
+
+				}
+			}else assert(false);
 
 		}
 

@@ -120,7 +120,7 @@ namespace GUI
         state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\rect.hlsl", "VS", 0, {} });
         state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        state.reset(new Render::PipelineState(state_desc));
+        state = Render::PipelineState::create(state_desc, "SimpleRect");
         vertexes.resize(6);
         vblist.resize(1);
     }
