@@ -92,6 +92,7 @@ enum FW1_TEXT_FLAG
 
 /// <summary>Coordinates for a single glyph in the atlas.</summary>
 /// <remarks>Each glyph image inserted in a glyph sheet texture gets a unique index in that sheet, and a corresponding FW1_GLYPHCOORDS entry in the sheet's coord buffer, describing its location in the sheet as well as its dimensions.</remarks>
+#pragma pack(push, 1)
 struct FW1_GLYPHCOORDS
 {
     /// <summary>The left texture coordinate.</summary>
@@ -118,6 +119,7 @@ struct FW1_GLYPHCOORDS
     /// <summary>The offset of the bottom edge of the glyph image, relative its offset in the text.</summary>
     FLOAT PositionBottom;
 };
+#pragma pack(pop)
 
 /// <summary>Description of a glyph sheet.</summary>
 /// <remarks></remarks>
@@ -175,16 +177,13 @@ struct FW1_GLYPHIMAGEDATA
 struct FW1_GLYPHVERTEX
 {
     /// <summary>The base X position of the glyph.</summary>
-    FLOAT PositionX;
-
-    /// <summary>The base Y position of the glyph.</summary>
-    FLOAT PositionY;
+    float2 pos;
 
     /// <summary>The index of the glyph.</summary>
     UINT32 GlyphIndex;
 
     /// <summary>The color of the glyph, as 0xAaBbGgRr.</summary>
-    UINT32 GlyphColor;
+    float4 color;
 };
 
 /// <summary>An array of vertices, sorted by glyph-sheet.</summary>
@@ -567,43 +566,13 @@ MIDL_INTERFACE("A0EA03A0-441D-49BE-9D2C-4AE27BB7A327") IFW1ColorRGBA : public IF
     /// <returns>No return value.</returns>
     /// <param name="Color">The color to set, as 0xAaBbGgRr.</param>
     virtual void STDMETHODCALLTYPE SetColor(
-        __in UINT32 Color
-    ) = 0;
-
-    /// <summary>Set the color.</summary>
-    /// <remarks></remarks>
-    /// <returns>No return value.</returns>
-    /// <param name="Red">The red component, in [0, 1].</param>
-    /// <param name="Green">The green component, in [0, 1].</param>
-    /// <param name="Blue">The blue component, in [0, 1].</param>
-    /// <param name="Alpha">The alpha component, in [0, 1].</param>
-    virtual void STDMETHODCALLTYPE SetColor(
-        __in FLOAT Red,
-        __in FLOAT Green,
-        __in FLOAT Blue,
-        __in FLOAT Alpha
-    ) = 0;
-
-    /// <summary>Set the color.</summary>
-    /// <remarks></remarks>
-    /// <returns>No return value.</returns>
-    /// <param name="pColor">Pointer to an array of four floats in [0, 1], specifying the red, green, blue and alpha components at indices 0 to 3.</param>
-    virtual void STDMETHODCALLTYPE SetColor(
-        __in const FLOAT* pColor
-    ) = 0;
-
-    /// <summary>Set the color.</summary>
-    /// <remarks></remarks>
-    /// <returns>No return value.</returns>
-    /// <param name="pColor">Pointer to an array of four bytes in [0, 255], specifying the red, green, blue and alpha components at indices 0 to 3.</param>
-    virtual void STDMETHODCALLTYPE SetColor(
-        __in const BYTE* pColor
+        __in float4 Color
     ) = 0;
 
     /// <summary>Get the color.</summary>
     /// <remarks></remarks>
     /// <returns>Returns the color, as 0xAaBbGgRr.</returns>
-    virtual UINT32 STDMETHODCALLTYPE GetColor32(
+    virtual float4 STDMETHODCALLTYPE GetColor(
     ) = 0;
 };
 
@@ -671,7 +640,7 @@ MIDL_INTERFACE("51E05736-6AFF-44A8-9745-77605C99E8F2") IFW1TextRenderer : public
         __in IDWriteTextLayout * pTextLayout,
         __in FLOAT OriginX,
         __in FLOAT OriginY,
-        __in UINT32 Color,
+        __in float4 Color,
         __in UINT Flags,
         __in IFW1TextGeometry* pTextGeometry
     ) = 0;
@@ -806,7 +775,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
         __in IDWriteTextLayout * pTextLayout,
         __in FLOAT OriginX,
         __in FLOAT OriginY,
-        __in UINT32 Color,
+        __in float4 Color,
         __in UINT Flags
     ) = 0;
 
@@ -827,7 +796,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
         __in IDWriteTextLayout * pTextLayout,
         __in FLOAT OriginX,
         __in FLOAT OriginY,
-        __in UINT32 Color,
+        __in float4 Color,
         __in const FW1_RECTF * pClipRect,
         __in const FLOAT * pTransformMatrix,
         __in UINT Flags
@@ -849,7 +818,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
         __in FLOAT FontSize,
         __in FLOAT X,
         __in FLOAT Y,
-        __in UINT32 Color,
+        __in float4 Color,
         __in UINT Flags
     ) = 0;
 
@@ -871,7 +840,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
         __in FLOAT FontSize,
         __in FLOAT X,
         __in FLOAT Y,
-        __in UINT32 Color,
+        __in float4 Color,
         __in UINT Flags
     ) = 0;
 
@@ -893,7 +862,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
         __in const WCHAR * pszFontFamily,
         __in FLOAT FontSize,
         __in const FW1_RECTF * pLayoutRect,
-        __in UINT32 Color,
+        __in float4 Color,
         __in const FW1_RECTF * pClipRect,
         __in const FLOAT * pTransformMatrix,
         __in UINT Flags
@@ -933,7 +902,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
         __in const WCHAR * pszFontFamily,
         __in FLOAT FontSize,
         __in const FW1_RECTF * pLayoutRect,
-        __in UINT32 Color,
+        __in float4 Color,
         __in UINT Flags,
         __in IFW1TextGeometry* pTextGeometry
     ) = 0;
@@ -955,7 +924,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
         __in IDWriteTextLayout * pTextLayout,
         __in FLOAT OriginX,
         __in FLOAT OriginY,
-        __in UINT32 Color,
+        __in float4 Color,
         __in UINT Flags,
         __in IFW1TextGeometry* pTextGeometry
     ) = 0;
@@ -1169,7 +1138,7 @@ public:
     /// <param name="Color">The initial color, as 0xAaBbGgRr.</param>
     /// <param name="ppColor">Address of a pointer to an IFW1ColorRGBA.</param>
     virtual HRESULT STDMETHODCALLTYPE CreateColor(
-        __in UINT32 Color,
+        __in float4 Color,
         __out IFW1ColorRGBA** ppColor
     ) = 0;
 };

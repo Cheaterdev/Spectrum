@@ -328,9 +328,9 @@ namespace DX12
 	Uploader::UploadInfo Uploader::place_data(UINT64 uploadBufferSize, unsigned int alignment)
 	{
 		//auto timer = Profiler::get().start(L"place_data");
-		const auto AlignedSize = static_cast<UINT>(Math::AlignUp(uploadBufferSize, alignment));
-		resource_offset = Math::AlignUp(resource_offset, alignment);
-
+		const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
+		resource_offset = Math::roundUp(resource_offset, alignment);
+		
 		if (upload_resources.empty() || (resource_offset + uploadBufferSize > upload_resources.back()->get_size()))
 		{
 			upload_resources.push_back(BufferCache::get().get_upload(std::max(heap_size, AlignedSize)));
@@ -681,11 +681,7 @@ namespace DX12
 		{
 			bool good = std::find(used_resources.begin(), used_resources.end(), resource) == used_resources.end();
 
-			if (!good)
-			{
-				Log::get() << "Baaad " << id << "  " << global_id << Log::endl;
-				Sleep(1000);
-			}
+		
 			assert(good);
 
 			used_resources.emplace_back(const_cast<Resource*>(resource));
@@ -1036,17 +1032,17 @@ void ComputeContext::dispach(int x,int y,int z)
 
 	void Eventer::start_event(std::wstring str)
 	{
-		//	::PIXBeginEvent(m_commandList.Get(), 0, str.c_str());
+			::PIXBeginEvent(m_commandList.Get(), 0, str.c_str());
 	}
 
 	void Eventer::end_event()
 	{
-		//	::PIXEndEvent(m_commandList.Get());
+			::PIXEndEvent(m_commandList.Get());
 	}
 
 	void Eventer::set_marker(const wchar_t* label)
 	{
-		// ::PIXSetMarker(m_commandList.Get(), 0, label);
+		 ::PIXSetMarker(m_commandList.Get(), 0, label);
 	}
 
 

@@ -20,27 +20,7 @@ void PSSM::set_position(float3 p)
 PSSM::PSSM()
 {
 	mat.reset(new ShaderMaterial("",""));
-
-	//	srv_buffer.resize(renders.size());
-
 	position = float3(200, 400, 200);
-
-	{
-		Render::PipelineStateDesc desc;
-		desc.root_signature = get_Signature(Layouts::DefaultLayout);// PSSMCompute<SignatureCreator>().create_root();
-
-		desc.rtv.rtv_formats = { DXGI_FORMAT_R8_UNORM };
-		desc.blend.render_target[0].enabled = false;
-		desc.blend.render_target[0].source = D3D12_BLEND::D3D12_BLEND_ONE;
-		desc.blend.render_target[0].dest = D3D12_BLEND::D3D12_BLEND_ONE;
-		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\PSSM.hlsl", "PS", 0,{} });
-		desc.vertex = Render::vertex_shader::get_resource({ "shaders\\PSSM.hlsl", "VS", 0,{} });
-		draw_mask_state = Render::PipelineState::create(desc, "pssm_draw_mask_state");
-
-		desc.rtv.rtv_formats = { DXGI_FORMAT_R16G16B16A16_FLOAT };
-		desc.pixel = Render::pixel_shader::get_resource({ "shaders\\PSSM.hlsl", "PS_RESULT", 0,{} });
-		draw_result_state = Render::PipelineState::create(desc,"pssm_draw_result_state");
-	}
 }
 
 
@@ -299,7 +279,6 @@ void PSSM::generate(FrameGraph& graph)
 
 			auto& graphics = list.get_graphics();
 
-			graphics.use_dynamic = false;
 			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
 			graphics.set_layout(Layouts::DefaultLayout);
 
@@ -331,7 +310,7 @@ void PSSM::generate(FrameGraph& graph)
 			graphics.set_scissor(screen_light_mask.get_scissor());
 
 			graphics.set_rtv(1, screen_light_mask.get_rtv(), Render::Handle());
-			graphics.set_pipeline(draw_mask_state);
+			graphics.set_pipeline(GetPSO<PSOS::PSSMMask>());
 
 
 			auto buffer_view = shadow_cameras.resource->create_view<StructuredBufferView<camera::shader_params>>(*graph.builder.current_frame);
@@ -364,11 +343,10 @@ void PSSM::generate(FrameGraph& graph)
 			}
 
 			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
-			graphics.set_pipeline(draw_result_state);
+			graphics.set_pipeline(GetPSO<PSOS::PSSMApply>());
 
 			graphics.draw(4);
 
-			graphics.use_dynamic = true;
 		});
 
 }

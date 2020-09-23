@@ -45,13 +45,13 @@ namespace DX12
 						static_cast<D3D12_RESOURCE_STATES>(cpu.first_state),
 						i));
 
-					for (int j = 0; j < target.size() - 1; j++)
+			/*		for (int j = 0; j < target.size() - 1; j++)
 					{
 						if (target.back().Type == target[j].Type)
 							if (target.back().Transition.pResource == target[j].Transition.pResource)
 								if (target.back().Transition.Subresource == target[j].Transition.Subresource)
 									assert(false);
-					}
+					}*/
 			
 				} 
 
@@ -104,14 +104,14 @@ namespace DX12
 						static_cast<D3D12_RESOURCE_STATES>(state),
 						subres));
 
-					for (int i = 0; i < target.size() - 1; i++)
+			/*		for (int i = 0; i < target.size() - 1; i++)
 					{
 						if (target.back().Type == target[i].Type)
 							if (target.back().Transition.pResource == target[i].Transition.pResource)
 								if (target.back().Transition.Subresource == target[i].Transition.Subresource)
 									assert(false);
 					}
-					
+					*/
 				}
 				else if (state == ResourceState::UNORDERED_ACCESS)
 				{

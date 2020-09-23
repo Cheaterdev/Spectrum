@@ -105,7 +105,7 @@ namespace FW1FontWrapper
         IDWriteTextLayout* pTextLayout,
         FLOAT OriginX,
         FLOAT OriginY,
-        UINT32 Color,
+        float4 Color,
         UINT Flags
     )
     {
@@ -119,7 +119,7 @@ namespace FW1FontWrapper
         IDWriteTextLayout* pTextLayout,
         FLOAT OriginX,
         FLOAT OriginY,
-        UINT32 Color,
+        float4 Color,
         const FW1_RECTF* pClipRect,
         const FLOAT* pTransformMatrix,
         UINT Flags
@@ -179,7 +179,7 @@ namespace FW1FontWrapper
         FLOAT FontSize,
         FLOAT X,
         FLOAT Y,
-        UINT32 Color,
+        float4 Color,
         UINT Flags
     )
     {
@@ -198,7 +198,7 @@ namespace FW1FontWrapper
         FLOAT FontSize,
         FLOAT X,
         FLOAT Y,
-        UINT32 Color,
+        float4 Color,
         UINT Flags
     )
     {
@@ -216,7 +216,7 @@ namespace FW1FontWrapper
         const WCHAR* pszFontFamily,
         FLOAT FontSize,
         const FW1_RECTF* pLayoutRect,
-        UINT32 Color,
+        float4 Color,
         const FW1_RECTF* pClipRect,
         const FLOAT* pTransformMatrix,
         UINT Flags
@@ -282,7 +282,7 @@ namespace FW1FontWrapper
         const WCHAR* pszFontFamily,
         FLOAT FontSize,
         const FW1_RECTF* pLayoutRect,
-        UINT32 Color,
+        float4 Color,
         UINT Flags,
         IFW1TextGeometry* pTextGeometry
     )
@@ -311,7 +311,7 @@ namespace FW1FontWrapper
         IDWriteTextLayout* pTextLayout,
         FLOAT OriginX,
         FLOAT OriginY,
-        UINT32 Color,
+        float4 Color,
         UINT Flags,
         IFW1TextGeometry* pTextGeometry
     )
@@ -374,9 +374,7 @@ namespace FW1FontWrapper
 
         if (vertexData.TotalVertexCount > 0 || (Flags & FW1_RESTORESTATE) == 0)
         {
-            if (m_featureLevel < D3D_FEATURE_LEVEL_10_0 || m_pGlyphRenderStates->HasGeometryShader() == FALSE)
-                Flags |= FW1_NOGEOMETRYSHADER;
-
+   
             // Save state
 
             // Set shaders etc.

@@ -6,36 +6,7 @@ MipMapGenerator::MipMapGenerator()
 {
 	std::lock_guard<std::mutex> g(m);
 
-
-	Render::ComputePipelineStateDesc dcdesc;
 	Render::RootSignatureDesc root_desc;
-
-	dcdesc.root_signature = get_Signature(Layouts::DefaultLayout);
-	dcdesc.shader = Render::compute_shader::get_resource({ "shaders\\GenerateMips.hlsl", "CS", 0, { } });
-
-	for (int i = 0; i < 4; i++)
-	{
-		dcdesc.shader = Render::compute_shader::get_resource({ "shaders\\GenerateMips.hlsl", "CS", 0, { D3D::shader_macro({ std::string("NON_POWER_OF_TWO"), std::to_string(i) }) } });
-		linear[i]= Render::ComputePipelineState::create(dcdesc, std::string("linear") + std::to_string(i));
-	}
-
-	for (int i = 0; i < 4; i++)
-	{
-		dcdesc.shader = Render::compute_shader::get_resource({ "shaders\\GenerateMips.hlsl", "CS", 0, {
-				D3D::shader_macro({ std::string("NON_POWER_OF_TWO"), std::to_string(i) }),
-				D3D::shader_macro({ std::string("CONVERT_TO_SRGB"), "1" })
-			}
-			});
-		gamma[i]= Render::ComputePipelineState::create(dcdesc, std::string("gamme") + std::to_string(i));
-	}
-
-	
-	{
-		dcdesc.shader = Render::compute_shader::get_resource({ "shaders\\downsample_depth.hlsl", "CS", 0 });
-		state_downsample_depth = Render::ComputePipelineState::create(dcdesc,"state_downsample_depth");
-	}
-
-
 
 	copy_texture_state.create_func = [](DXGI_FORMAT format) {
 		Render::PipelineStateDesc state_desc;
@@ -49,55 +20,6 @@ MipMapGenerator::MipMapGenerator()
 
 		return Render::PipelineState::create(state_desc, std::string("copy_")+std::to_string((int)format));
 	};
-
-	{
-
-		Render::PipelineStateDesc desc;
-		desc.root_signature = get_Signature(Layouts::DefaultLayout);
-		desc.vertex = Render::vertex_shader::get_resource({ "shaders/depth_render.hlsl", "VS", 0,{} });
-		desc.pixel = Render::pixel_shader::get_resource({ "shaders/depth_render.hlsl", "PS", 0,{} });
-		desc.rtv.rtv_formats = {};
-		desc.rtv.enable_depth = true;
-		desc.rtv.enable_depth_write = true;
-		desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT;
-		desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
-		desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
-		render_depth_state = Render::PipelineState::create(desc, "render_depth_state");
-	}
-
-
-	{
-		Render::PipelineStateDesc state_desc;
-		state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-
-		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "PS", 0,{} });
-		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "VS", 0,{} });
-		state_desc.rtv.rtv_formats = { DXGI_FORMAT_R8G8_UNORM };
-		state_desc.blend.render_target[0].enabled = false;
-		state_desc.rtv.enable_stencil = false;
-		state_desc.rtv.enable_depth = false;
-		quality_buffer_state = Render::PipelineState::create(state_desc, "quality_buffer_state");
-
-
-
-		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "PS_STENCIL", 0,{} });
-		state_desc.rtv.enable_stencil = true;
-		state_desc.rtv.enable_depth = false;
-		state_desc.rtv.stencil_desc.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		state_desc.rtv.stencil_desc.StencilPassOp = D3D12_STENCIL_OP::D3D12_STENCIL_OP_REPLACE;
-		state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-		state_desc.rtv.stencil_read_mask = 1;
-		state_desc.rtv.stencil_write_mask = 1;
-		quality_buffer_stencil_state = Render::PipelineState::create(state_desc, "quality_buffer_stencil_state");
-
-
-
-		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gbuffer_quality.hlsl", "PS_STENCIL_REFL", 0,{} });
-		state_desc.rtv.stencil_read_mask = 2;
-		state_desc.rtv.stencil_write_mask = 2;
-		quality_buffer_refl_stencil_state = Render::PipelineState::create(state_desc, "quality_buffer_refl_stencil_state");
-	}
-
 
 }
 
@@ -121,7 +43,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureV
 	std::lock_guard<std::mutex> g(m);
 	auto timer = compute_context.get_base().start(L"downsampling");
 
-	compute_context.set_signature(linear[0]->desc.root_signature);
+	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
 	uint32_t maps = view.get_mip_count()-1;
 	auto size = view.get_size();
 	uint32_t prev = 0;
@@ -135,10 +57,11 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureV
 		uint32_t DstHeight = SrcHeight >> 1;
 		uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
 
-		if (DirectX::IsSRGB(view.get_desc().Format))
-			compute_context.set_pipeline(gamma[NonPowerOfTwo]);
-		else
-			compute_context.set_pipeline(linear[NonPowerOfTwo]);
+
+		compute_context.set_pipeline(GetPSO<PSOS::MipMapping>(
+			PSOS::MipMapping::NonPowerOfTwo(NonPowerOfTwo)
+			| PSOS::MipMapping::Gamma.Use(DirectX::IsSRGB(view.get_desc().Format))
+		));
 
 		uint32_t AdditionalMips;
 		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
@@ -182,9 +105,8 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 {
 
 	std::lock_guard<std::mutex> g(m);
-	auto timer = compute_context.get_base().start(L"downsampling");
+	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
 
-	compute_context.set_signature(linear[0]->desc.root_signature);
 	uint32_t maps = tex->get_desc().MipLevels - 1;
 	uint32_t prev = 0;
 
@@ -196,10 +118,13 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 		uint32_t DstHeight = SrcHeight >> 1;
 		uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
 
-		if (DirectX::IsSRGB(tex->get_desc().Format))
-			compute_context.set_pipeline(gamma[NonPowerOfTwo]);
-		else
-			compute_context.set_pipeline(linear[NonPowerOfTwo]);
+
+
+		compute_context.set_pipeline(GetPSO<PSOS::MipMapping>(
+			PSOS::MipMapping::NonPowerOfTwo(NonPowerOfTwo)
+			| PSOS::MipMapping::Gamma.Use(DirectX::IsSRGB(tex->get_desc().Format))
+			));
+
 
 		uint32_t AdditionalMips;
 		_BitScanForward((unsigned long*)& AdditionalMips, DstWidth | DstHeight);
@@ -214,7 +139,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 		if (DstWidth == 0)
 			DstWidth = 1;
 
-		if (DstHeight == 0)
+		if (DstHeight == 0) 
 			DstHeight = 1;
 
 		Slots::MipMapping data;
@@ -229,8 +154,8 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 		data.GetSrcMip() = view->get_srv(TopMip);
 
 		data.set(compute_context, true);
-		compute_context.use_dynamic = false;
-		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));	compute_context.use_dynamic = true;
+
+		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
 
 		prev = TopMip;
 		TopMip += NumMips;
@@ -239,29 +164,25 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 
 void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr& tex, Render::Texture::ptr& to)
 {
-	compute_context.set_pipeline(state_downsample_depth);
+	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
 	Slots::DownsampleDepth data;
 	data.GetSrcTex() = tex->texture_2d()->get_static_srv();
 	data.GetTargetTex() = to->texture_2d()->get_static_uav();
 	data.set(compute_context);
-	compute_context.use_dynamic = false;
 	compute_context.dispach(ivec2(tex->get_desc().Width, tex->get_desc().Height), ivec2(8, 8));
-	compute_context.use_dynamic = true;
 
 }
 
 void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to){
-	compute_context.set_pipeline(state_downsample_depth);
+	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
 
 	Slots::DownsampleDepth data;
 	data.GetSrcTex() = tex.get_srv();
 	data.GetTargetTex() = to.get_uav();
 	data.set(compute_context);
-	compute_context.use_dynamic = false;
 	compute_context.dispach(ivec2(tex.get_size()), ivec2(8, 8));
-	compute_context.use_dynamic = true;
 
 }
 
@@ -282,7 +203,7 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 		buffer.SetTable(gbuffer);
 		gbuffer.set(list);
 		}
-		list.set_pipeline(quality_buffer_state);
+		list.set_pipeline(GetPSO<PSOS::QualityColor>());
 		list.set_rtv(1, tempColor.get_rtv(),Handle());
 		list.draw(4);
 	}
@@ -296,15 +217,14 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 		quality.set(list);
 
 		list.get_base().clear_stencil(buffer.quality.get_dsv());
-		list.set_pipeline(quality_buffer_stencil_state);
-
+		list.set_pipeline(GetPSO<PSOS::QualityToStencil>());
 
 		list.set_rtv(0, Handle(), buffer.quality.get_dsv());
 
 		list.get_native_list()->OMSetStencilRef(1);
 		list.draw(4);
 
-		list.set_pipeline(quality_buffer_refl_stencil_state);
+		list.set_pipeline(GetPSO<PSOS::QualityToStencilREfl>());
 		list.get_native_list()->OMSetStencilRef(2);
 		list.draw(4);
 	}
@@ -328,9 +248,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	data.set(list);
 
 	list.set_rtv(1, view->get_rtv(), Handle());	
-	list.use_dynamic = false;
 	list.draw(4);
-	list.use_dynamic = true;
 }
 
 
@@ -349,9 +267,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	data.set(list);
 
 	list.set_rtv(1, view->get_rtv(), Handle());	
-	list.use_dynamic = false;
 	list.draw(4);
-	list.use_dynamic = true;
 }
 
 
@@ -367,16 +283,14 @@ void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Rend
 	data.set(list);
 
 	list.set_rtv(1,to.get_rtv(), Handle());
-	list.use_dynamic = false;
 	list.draw(4);
-	list.use_dynamic = true;
 }
 
 
 
 void MipMapGenerator::write_to_depth(Render::GraphicsContext& list, Render::TextureView from, Render::TextureView to)
 {
-	list.set_pipeline(render_depth_state);
+	list.set_pipeline(GetPSO<PSOS::RenderToDS>());
 	Slots::CopyTexture data;
 	data.GetSrcTex() = from.get_srv();
 	data.set(list);

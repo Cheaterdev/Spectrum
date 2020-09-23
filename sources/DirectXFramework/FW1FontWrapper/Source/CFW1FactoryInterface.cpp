@@ -485,23 +485,13 @@ HRESULT STDMETHODCALLTYPE CFW1Factory::CreateGlyphSheet(
 
 
 // Create color
-HRESULT STDMETHODCALLTYPE CFW1Factory::CreateColor(UINT32 Color, IFW1ColorRGBA **ppColor) {
+HRESULT STDMETHODCALLTYPE CFW1Factory::CreateColor(float4 Color, IFW1ColorRGBA **ppColor) {
 	if(ppColor == NULL)
 		return E_INVALIDARG;
 	
 	CFW1ColorRGBA *pColor = new CFW1ColorRGBA;
-	HRESULT hResult = pColor->initColor(this, Color);
-	if(FAILED(hResult)) {
-		pColor->Release();
-		setErrorString(L"initColor failed");
-	}
-	else {
-		*ppColor = pColor;
-		
-		hResult = S_OK;
-	}
-	
-	return hResult;
+	pColor->SetColor(Color);
+		return S_OK;;
 }
 
 

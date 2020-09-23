@@ -1,5 +1,4 @@
 #include "pch.h"
-#include "SSAO.h"
 #include <filesystem>
 
 #ifdef OCULUS_SUPPORT
@@ -72,10 +71,10 @@ public:
 class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
 {
 	main_renderer::ptr scene_renderer;
-main_renderer::ptr gpu_scene_renderer;
+	main_renderer::ptr gpu_scene_renderer;
 	stencil_renderer::ptr stenciler;
 
-	
+
 
 
 
@@ -87,20 +86,20 @@ main_renderer::ptr gpu_scene_renderer;
 	{
 
 		using ptr = std::shared_ptr<EyeData>;
-	//	G_Buffer g_buffer;
+		//	G_Buffer g_buffer;
 		first_person_camera cam;
 
-	//	TemporalAA temporal;
+		//	TemporalAA temporal;
 
 		EyeData(Render::RootSignature::ptr sig)
 		{
-		//	g_buffer.init(sig);// gpu_meshes_renderer_static->my_signature);
+			//	g_buffer.init(sig);// gpu_meshes_renderer_static->my_signature);
 
-		/*	g_buffer.size.register_change(this, [this](const ivec2& size) {
-				if(size.x>0)
-				temporal.resize(size);
+			/*	g_buffer.size.register_change(this, [this](const ivec2& size) {
+					if(size.x>0)
+					temporal.resize(size);
 
-				});*/
+					});*/
 		}
 	};
 
@@ -108,7 +107,7 @@ main_renderer::ptr gpu_scene_renderer;
 	first_person_camera cam;
 public:
 	using ptr = std::shared_ptr<triangle_drawer>;
-//	PostProcessGraph::ptr render_graph;
+	//	PostProcessGraph::ptr render_graph;
 
 
 	Variable<bool> enable_gi = Variable<bool>(true, "enable_gi");
@@ -119,13 +118,13 @@ public:
 
 	mesh_renderer::ptr meshes_renderer;
 
-//	gpu_cached_renderer::ptr gpu_meshes_renderer_static;
-//	gpu_cached_renderer::ptr gpu_meshes_renderer_dynamic;
+	//	gpu_cached_renderer::ptr gpu_meshes_renderer_static;
+	//	gpu_cached_renderer::ptr gpu_meshes_renderer_dynamic;
 
 	Scene::ptr scene;
 	Render::QueryHeap::ptr query_heap;
 	float draw_time;
-//	std::shared_ptr<LightingNode> lighting;
+	//	std::shared_ptr<LightingNode> lighting;
 
 	Variable<bool> realtime_debug = Variable<bool>(false, "realtime_debug");
 	MeshAssetInstance::ptr instance;
@@ -172,8 +171,8 @@ public:
 
 		gpu_scene_renderer = std::make_shared<main_renderer>();
 
-		gpu_scene_renderer->register_renderer( std::make_shared<mesh_renderer>());
-	
+		gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
+
 
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_dynamic = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::DYNAMIC));
@@ -212,9 +211,9 @@ public:
 		{
 			auto combo = std::make_shared<GUI::Elements::combo_box>();
 
-			combo->size = {200, 25};
-			combo->on_click = [this](GUI::Elements::button::ptr butt){
-			
+			combo->size = { 200, 25 };
+			combo->on_click = [this](GUI::Elements::button::ptr butt) {
+
 				GUI::Elements::combo_box::ptr combo = butt->get_ptr<GUI::Elements::combo_box>();
 				combo->remove_items();
 
@@ -225,22 +224,22 @@ public:
 				for (auto& e : last_graph->builder.resources)
 				{
 
-					if(e.second.info->type!=::ResourceType::Texture) continue;
+					if (e.second.info->type != ::ResourceType::Texture) continue;
 
 					std::string str = e.first;
 					combo->add_item(str)->on_click = [this, str](GUI::Elements::menu_list_element::ptr) {debug_view = str; };
 
 				}
-				
+
 			};
 
 
-			
+
 
 			props->add_child(combo);
 		}
 
-	
+
 		GUI::Elements::circle_selector::ptr circle(new  GUI::Elements::circle_selector);
 		circle->docking = GUI::dock::FILL;
 		circle->x_type = GUI::pos_x_type::RIGHT;
@@ -248,7 +247,7 @@ public:
 
 
 		add_child(circle);
-	//	lighting = std::make_shared<LightingNode>();
+		//	lighting = std::make_shared<LightingNode>();
 
 		circle->on_change.register_handler(this, [this](const float2& value)
 			{
@@ -268,7 +267,7 @@ public:
 
 		MeshAsset::ptr asset_ptr = EngineAssets::material_tester.get_asset();
 
-	
+
 
 		auto make_material = [](float3 color, float roughness, float metallic) {
 			MaterialGraph::ptr graph(new MaterialGraph);
@@ -304,18 +303,18 @@ public:
 
 
 
-	//	auto base_mat = make_material({ 1,1,1 }, 1, 0);
+		//	auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count =-2;
+		int count = -2;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
 			{
 				MeshAssetInstance::ptr instance(new MeshAssetInstance(asset_ptr));
-			//	instance->override_material(0, base_mat);
-			//	instance->override_material(1, make_material({ 1,0,0 }, float(i) / count, float(j) / count));
+				//	instance->override_material(0, base_mat);
+				//	instance->override_material(1, make_material({ 1,0,0 }, float(i) / count, float(j) / count));
 
-				instance->local_transform[3] = { i * distance - count* distance/2,0,j * distance- count * distance / 2,1 };
+				instance->local_transform[3] = { i * distance - count * distance / 2,0,j * distance - count * distance / 2,1 };
 
 				scene->add_child(instance);
 			}
@@ -327,7 +326,7 @@ public:
 			if (ruins_ptr)
 			{
 				MeshAssetInstance::ptr instance(new MeshAssetInstance(ruins_ptr));
-			//	instance->local_transform = mat4x4::translation({ 0,3.8,0 });
+				//	instance->local_transform = mat4x4::translation({ 0,3.8,0 });
 				scene->add_child(instance);
 			}
 
@@ -341,10 +340,10 @@ public:
 			if (ruins_ptr)
 			{
 				MeshAssetInstance::ptr instance(new MeshAssetInstance(ruins_ptr));
-			//	instance->local_transform=mat4x4::translation({ 0,3.8,0 });
+				//	instance->local_transform=mat4x4::translation({ 0,3.8,0 });
 				scene->add_child(instance);
 			}
-			
+
 		}
 
 		eyes.emplace_back(new EyeData(nullptr));
@@ -462,7 +461,7 @@ public:
 				command_list->flush_transitions();
 
 				//if (GetAsyncKeyState('O'))
-					scene_as->update(command_list, scene->raytrace->max_size(), scene->raytrace->buffer->get_gpu_address(), need_rebuild);
+				scene_as->update(command_list, scene->raytrace->max_size(), scene->raytrace->buffer->get_gpu_address(), need_rebuild);
 
 				RTX::get().prepare(command_list);
 
@@ -474,7 +473,7 @@ public:
 		}
 
 
-	{
+		{
 			struct GBufferData
 			{
 				GBufferViewDesc gbuffer;
@@ -484,49 +483,49 @@ public:
 
 
 			};
-			
+
 			graph.add_pass<GBufferData>("GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
 				data.gbuffer.create(size, builder);
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
 
-			
-				data.hiz = builder.create_texture("GBuffer_HiZ", size/8,1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil | ResourceFlags::Static);
-				data.hiz_uav = builder.create_texture("GBuffer_HiZ_UAV", size / 8,1, DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, ResourceFlags::UnorderedAccess);
+
+				data.hiz = builder.create_texture("GBuffer_HiZ", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil | ResourceFlags::Static);
+				data.hiz_uav = builder.create_texture("GBuffer_HiZ_UAV", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, ResourceFlags::UnorderedAccess);
 
 				}, [this](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
-				
+
 					//std::this_thread::sleep_for(1ms);
 				//	gpu_scene_renderer->render(context_gbuffer, scene);
 					MeshRenderContext::ptr context(new MeshRenderContext());
 
 
 					context->current_time = time;
-			//		context->sky_dir = lighting->lighting.pssm.get_position();
+					//		context->sky_dir = lighting->lighting.pssm.get_position();
 					context->priority = TaskPriority::HIGH;
 					context->list = command_list;
 					context->eye_context = vr_context;
 
 					context->cam = &eyes[0]->cam;
 
-			
 
-	//				gpu_meshes_renderer_static->update(context);
-		//			gpu_meshes_renderer_dynamic->update(context);
+
+					//				gpu_meshes_renderer_static->update(context);
+						//			gpu_meshes_renderer_dynamic->update(context);
 
 					GBuffer gbuffer = data.gbuffer.actualize(_context);
 
-					gbuffer.rtv_table = RenderTargetTable(context->list->get_graphics() ,{ gbuffer.albedo, gbuffer.normals, gbuffer.specular, gbuffer.speed }, gbuffer.depth);
+					gbuffer.rtv_table = RenderTargetTable(context->list->get_graphics(), { gbuffer.albedo, gbuffer.normals, gbuffer.specular, gbuffer.speed }, gbuffer.depth);
 
 					gbuffer.HalfBuffer.hiZ_depth = _context.get_texture(data.hiz);
-					gbuffer.HalfBuffer.hiZ_table = RenderTargetTable(context->list->get_graphics() ,{  }, gbuffer.HalfBuffer.hiZ_depth);
+					gbuffer.HalfBuffer.hiZ_table = RenderTargetTable(context->list->get_graphics(), {  }, gbuffer.HalfBuffer.hiZ_depth);
 					gbuffer.HalfBuffer.hiZ_depth_uav = _context.get_texture(data.hiz_uav);
 
 					context->g_buffer = &gbuffer;
 
-					gbuffer.rtv_table.set(context,true, true);
+					gbuffer.rtv_table.set(context, true, true);
 					gbuffer.rtv_table.set_window(context->list->get_graphics());
 
 					RT::Slot::GBuffer rt_gbuffer;
@@ -542,24 +541,24 @@ public:
 
 					gpu_scene_renderer->render(context, scene);
 
-				//	stenciler->render(context, scene);
+					//	stenciler->render(context, scene);
 
 					command_list->get_copy().copy_texture(gbuffer.depth_prev_mips.resource, 0, gbuffer.depth_mips.resource, 0);
 					command_list->get_copy().copy_texture(gbuffer.depth_mips.resource, 0, gbuffer.depth.resource, 0);
 
-				//	
+					//	
 				});
 		}
 
-	
 
-	struct no
-	{
 
-	};
-	graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
-		graph.builder.create_texture("ResultTexture", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT);
-		}, [](no& data, FrameContext& _context) {});
+		struct no
+		{
+
+		};
+		graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
+			graph.builder.create_texture("ResultTexture", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT);
+			}, [](no& data, FrameContext& _context) {});
 
 
 
@@ -567,10 +566,10 @@ public:
 		sky.generate(graph);
 		voxel_gi->generate(graph);
 
-	
-		
-		graph.add_pass<pass_data>("RAYTRACE",[](pass_data& data, TaskBuilder& builder) {
-			data.o_texture = builder.need_texture("ResultTexture",ResourceFlags::UnorderedAccess);
+
+
+		graph.add_pass<pass_data>("RAYTRACE", [](pass_data& data, TaskBuilder& builder) {
+			data.o_texture = builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
 			data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
 
 			}, [this, &graph](pass_data& data, FrameContext& _context) {
@@ -584,7 +583,7 @@ public:
 
 
 				context->current_time = time;
-			//	context->sky_dir = lighting->lighting.pssm.get_position();
+				//	context->sky_dir = lighting->lighting.pssm.get_position();
 				context->priority = TaskPriority::HIGH;
 				context->list = command_list;
 				context->eye_context = vr_context;
@@ -592,7 +591,7 @@ public:
 				auto output_tex = _context.get_texture(data.o_texture);
 
 
-			
+
 				command_list->get_compute().set_signature(RTX::get().global_sig);
 				command_list->get_graphics().set_signature(RTX::get().global_sig);
 
@@ -621,17 +620,17 @@ public:
 				{
 					eyes[i]->cam = cam;
 
-				//	eyes[i]->cam.eye_rot = vr->eyes[i].dir;
-				//	eyes[i]->cam.offset = vr->eyes[i].offset;
+					//	eyes[i]->cam.eye_rot = vr->eyes[i].dir;
+					//	eyes[i]->cam.offset = vr->eyes[i].offset;
 					context->eye_context->eyes[i].cam = &eyes[i]->cam;
-					eyes[i]->cam.update({0,0});
+					eyes[i]->cam.update({ 0,0 });
 
 					context->cam = &eyes[i]->cam;
 				}
-				if(GetAsyncKeyState('B'))
-				RTX::get().render(context, output_tex, scene_as);
+				if (GetAsyncKeyState('B'))
+					RTX::get().render(context, output_tex, scene_as);
 			});
-			
+
 		stenciler->generate_after(graph);
 
 		smaa.generate(graph);
@@ -651,8 +650,8 @@ public:
 		result_tex = promise->get_future();
 
 		graph.add_pass<debug_data>("DEBUG", [this, res_tex](debug_data& data, TaskBuilder& builder) {
-				data.o_texture = builder.need_texture("swapchain");
-				data.debug_texture = builder.need_texture(res_tex);
+			data.o_texture = builder.need_texture("swapchain");
+			data.debug_texture = builder.need_texture(res_tex);
 
 			}, [this, promise](debug_data& data, FrameContext& context) {
 
@@ -691,12 +690,12 @@ public:
 		if (r.w <= 64 || r.h <= 64) return;
 
 		ivec2 size = r.size;
-	//	texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+		//	texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 
-		//	g_buffer.size = { r.w, r.h };
+			//	g_buffer.size = { r.w, r.h };
 		cam.set_projection_params(pi / 4, float(r.w) / r.h, 1, 1500);
-	//	for (auto& e : eyes)
-//			e->g_buffer.size = { r.w,r.h };
+		//	for (auto& e : eyes)
+	//			e->g_buffer.size = { r.w,r.h };
 	}
 
 
@@ -733,7 +732,7 @@ protected:
 		{
 			command_list->begin("main window", &timer);
 
-		//	command_list->transition(swap_chain->get_current_frame(), Render::ResourceState::RENDER_TARGET);
+			//	command_list->transition(swap_chain->get_current_frame(), Render::ResourceState::RENDER_TARGET);
 			command_list->get_graphics().set_rtv(1, swap_chain->get_current_frame()->texture_2d()->get_rtv(), Render::Handle());
 			command_list->get_graphics().set_viewports({ swap_chain->get_current_frame()->texture_2d()->get_viewport() });
 
@@ -1213,7 +1212,7 @@ public:
 		Profiler::create();
 		EVENT("Start WindowRender");
 
-	//	EngineAssets::brdf.get_asset();
+		//	EngineAssets::brdf.get_asset();
 
 		GUI::Elements::image::ptr back(new GUI::Elements::image);
 		back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));
@@ -1342,19 +1341,19 @@ public:
 					add_child(wnd);
 					GUI::Elements::dock_base::ptr dock(new GUI::Elements::dock_base);
 					wnd->add_child(dock);
-//					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(drawer->render_graph));
+					//					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(drawer->render_graph));
 					wnd->pos = { 200, 200 };
 					wnd->size = { 300, 300 };
 				}
 
 			}
 		}
-	
+
 	}
 
 	UINT64 frame_counter = 0;
 
-	 void draw_ui(Render::context& c) 
+	void draw_ui(Render::context& c)
 	{
 		{
 			auto timer = c.command_list->start(L"read timings");
@@ -1365,7 +1364,7 @@ public:
 				});
 		}
 
-	//	user_interface::draw_ui(c);
+		//	user_interface::draw_ui(c);
 
 	}
 	virtual void render() override
@@ -1391,7 +1390,7 @@ public:
 
 		if (fps.tick())
 		{
-			label_fps->text = std::to_string(fps.get()) + " "  + std::to_string(Device::get().get_vram());
+			label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram());
 
 		}
 
@@ -1457,27 +1456,27 @@ public:
 		Profiler::get().on_frame(frame_counter++);
 
 		GUI::user_interface::size = new_size;
-	if (fps.tick())
+		if (fps.tick())
 		{
-		size_t total = 0;
+			size_t total = 0;
 
-		total += DescriptorHeapManager::get().cpu_dsv->used_size();
-		total += DescriptorHeapManager::get().cpu_srv->used_size();
-		total += DescriptorHeapManager::get().cpu_rtv->used_size();
-		total += DescriptorHeapManager::get().cpu_smp->used_size();
+			total += DescriptorHeapManager::get().cpu_dsv->used_size();
+			total += DescriptorHeapManager::get().cpu_srv->used_size();
+			total += DescriptorHeapManager::get().cpu_rtv->used_size();
+			total += DescriptorHeapManager::get().cpu_smp->used_size();
 
 
-		size_t total_gpu = 0;
+			size_t total_gpu = 0;
 
-		total_gpu += DescriptorHeapManager::get().gpu_srv->used_size();
+			total_gpu += DescriptorHeapManager::get().gpu_srv->used_size();
 
-		total_gpu += DescriptorHeapManager::get().gpu_smp->used_size();
+			total_gpu += DescriptorHeapManager::get().gpu_smp->used_size();
 
 
 			label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 		}
 
-		
+
 		process_ui(main_timer.tick());
 		{
 			auto& timer = Profiler::get().start(L"Wait next");
@@ -1495,14 +1494,14 @@ public:
 		swap_chain->present(Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal());
 
 
-	
+
 
 
 		if (Application::get().is_alive())
 		{
 			auto ptr = get_ptr();
 			task_future = scheduler::get().enqueue([ptr, this]() {
-		
+
 				render();
 				}, std::chrono::steady_clock::now());
 		}
@@ -1513,7 +1512,7 @@ public:
 	void setup_graph()
 	{
 
-	
+
 		struct pass_data
 		{
 			ResourceHandler* o_texture;
@@ -1529,13 +1528,13 @@ public:
 
 		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame());
 
-	
+
 		create_graph(graph);
-	
+
 
 		auto ptr = get_ptr();
 
-		graph.add_pass<pass_data>("PROFILER",[](pass_data& data, TaskBuilder& builder) {
+		graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder) {
 			data.o_texture = builder.need_texture("swapchain");
 			}, [this, ptr](pass_data& data, FrameContext& context) {
 
@@ -1545,10 +1544,10 @@ public:
 					run_on_ui([this, ptr]() {	Profiler::get().update(); });
 
 					});
-			
+
 			});
-		
-		
+
+
 		graph.setup();
 		graph.compile(swap_chain->m_frameIndex);
 
@@ -1604,7 +1603,7 @@ public:
 			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
 			auto heap_view = heap->get_table_view(0, 32768);
 
-		
+
 
 			for (int i = 0; i < 32768; i++)
 			{
@@ -1695,16 +1694,16 @@ public:
 
 
 		}*/
-	/*	auto shader = Render::pixel_shader::get_resource({ "shaders\\autogen_test.hlsl", "PS", 0, {} });
-		Slots::Bobo bobo;
-		Slots::Bobo2 bobo2;
-		Slots::Bobo3 bobo3;
+		/*	auto shader = Render::pixel_shader::get_resource({ "shaders\\autogen_test.hlsl", "PS", 0, {} });
+			Slots::Bobo bobo;
+			Slots::Bobo2 bobo2;
+			Slots::Bobo3 bobo3;
 
-		bobo.GetB() = 5;
-		bobo.GetRw();
+			bobo.GetB() = 5;
+			bobo.GetRw();
 
-		get_Signature(Layouts::FrameLayout);
-	*/
+			get_Signature(Layouts::FrameLayout);
+		*/
 		set_capture = [this](bool v)
 		{
 			if (v)
@@ -1715,15 +1714,15 @@ public:
 
 
 
-	//	EngineAssets::brdf.get_asset();
+		//	EngineAssets::brdf.get_asset();
 
-	
-		//  GUI::Elements::check_box::ptr butt(new GUI::Elements::check_box());
-		//   butt->docking = GUI::dock::FILL;
-		//   ui->add_child(butt);
+
+			//  GUI::Elements::check_box::ptr butt(new GUI::Elements::check_box());
+			//   butt->docking = GUI::dock::FILL;
+			//   ui->add_child(butt);
 
 		on_resize(get_size());
-	
+
 		{
 			GUI::Elements::image::ptr back(new GUI::Elements::image);
 			back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));
@@ -1732,9 +1731,9 @@ public:
 			back->height_size = GUI::size_type::MATCH_PARENT;
 			add_child(back);
 		}
-		
+
 		EVENT("Start UI");
-// 		if (false)
+		// 		if (false)
 		{
 			area.reset(new GUI::base());
 			area->docking = GUI::dock::FILL;
@@ -1745,11 +1744,11 @@ public:
 				EVENT("Start Drawer");
 				drawer.reset(new triangle_drawer());
 				drawer->docking = GUI::dock::FILL;
-		
+
 				d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
-			 {
+			{
 				GUI::Elements::list_box::ptr l(new GUI::Elements::list_box());
 				auto& dock = d->get_dock(GUI::dock::BOTTOM);
 				dock->size = { 100, 100 };
@@ -1771,9 +1770,9 @@ public:
 
 				}
 			}
-	
-		 {
-				 {
+
+			{
+				{
 					GUI::Elements::menu_strip::ptr menu(new GUI::Elements::menu_strip());
 					auto file = menu->add_item("File")->get_menu();
 					auto edit = menu->add_item("Edit")->get_menu();
@@ -1816,7 +1815,7 @@ public:
 					//->get_menu()->add_item("12454");
 					add_child(menu);
 				}
-				 {
+				{
 					GUI::Elements::status_bar::ptr bar(new GUI::Elements::status_bar());
 					label_fps = GUI::Elements::label::ptr(new GUI::Elements::label());
 					instance_info = GUI::Elements::label::ptr(new GUI::Elements::label());
@@ -1836,17 +1835,17 @@ public:
 				//dock->get_tabs()->add_button(m->create_parameter_view());
 			//	add_child(m);
 				dock->size = { 400, 400 };
-			 {
+				{
 					EVENT("Start Asset Explorer");
 					auto dock = d->get_dock(GUI::dock::RIGHT);
-				    GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
+					GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
 					dock->get_tabs()->add_page("Asset Explorer", cont);
 					dock->size = { 400, 400 };
 					EVENT("End Asset Explorer");
 				}
 
 
-				 {
+				{
 					GUI::Elements::window::ptr wnd(new GUI::Elements::window);
 					add_child(wnd);
 					GUI::Elements::dock_base::ptr dock(new GUI::Elements::dock_base);
@@ -1856,7 +1855,7 @@ public:
 
 					{
 
-						auto value_node = std::make_shared<VectorNode>(vec4(1,0,0, 1));
+						auto value_node = std::make_shared<VectorNode>(vec4(1, 0, 0, 1));
 						graph->register_node(value_node);
 						value_node->get_output(0)->link(graph->get_base_color());
 					}
@@ -1901,6 +1900,7 @@ public:
 		if (swap_chain)	swap_chain->resize(r);
 	}
 };
+
 class RenderApplication : public Application
 {
 
@@ -1919,6 +1919,9 @@ class RenderApplication : public Application
 protected:
 	RenderApplication()
 	{
+	
+	//	assert(ppp.inited);
+
 		EVENT("Device");
 		Render::Device::create();
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
@@ -1930,7 +1933,16 @@ protected:
 		//ovr = std::make_shared<OVRRender>();
 #endif
 		init_signatures();
-	//	main_window = std::make_shared<WindowRender>();
+//		init_pso();
+
+
+
+	//	get_PSO(PSO::Lighting);
+		
+	//	auto ppp = GetPSO<Lighting>(Lighting::SecondBounce | Lighting::Count(3) | Lighting::Smth(222));
+
+
+		//	main_window = std::make_shared<WindowRender>();
 		main_window = std::make_shared<FrameGraphRender>();
 
 
@@ -1980,12 +1992,12 @@ protected:
 
 
 
-		
+
 		Render::Device::reset();
 		//   Render::Device::reset();
 
 
-	
+
 	}
 
 

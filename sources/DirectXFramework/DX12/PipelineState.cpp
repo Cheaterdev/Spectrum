@@ -1,4 +1,4 @@
-
+DXGI_FORMAT_R16G16B16A16_FLOAT
 #include "pch.h"
 #include "PipelineState.h"
 
@@ -215,7 +215,7 @@ namespace DX12
 	}
 	 PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc & desc, std::string name )
 	{
-		 if (desc.is_memory())
+		 if (desc.name.empty())
 		 {
 			std::string hash =  Hasher::hash(desc);
 			desc.name = hash;

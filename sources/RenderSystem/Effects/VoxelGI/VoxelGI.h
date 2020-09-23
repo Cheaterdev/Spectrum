@@ -19,35 +19,6 @@ public:
 private:
 	std::shared_ptr<GBufferDownsampler> downsampler;
 
-	std::array<Render::PipelineState::ptr[4], 4> screen_states;
-
-
-	struct reflection
-	{
-		Render::PipelineState::ptr reflection_state;
-		Render::PipelineState::ptr reflection_resize_state;
-
-	};
-
-	std::array<reflection, 4> reflection_states;
-
-	Render::PipelineState::ptr downsampled_reflection_state;
-
-//	Render::PipelineState::ptr draw_on_screen_state[2];
-
-	Render::ComputePipelineState::ptr downsample_state[3];
-	Render::ComputePipelineState::ptr lighting_state;
-	Render::ComputePipelineState::ptr lighting_state_second_bounce;
-
-	//Render::PipelineState::ptr resize_state;
-	Render::PipelineState::ptr voxel_debug_state;
-
-
-	Render::HandleTable uav_table;
-	Render::HandleTable srv_table;
-
-	Render::HandleTable second_bunce_table;
-
 	VisibilityBufferUniversal::ptr visibility;
 
 	Texture3DTiledDynamic::ptr tiled_volume_normal;

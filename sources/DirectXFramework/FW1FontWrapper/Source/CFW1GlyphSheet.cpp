@@ -136,8 +136,6 @@ namespace FW1FontWrapper
         CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, m_sheetWidth, m_sheetHeight, 1, m_mipLevelCount);
         m_pTexture.reset(new Render::Texture(desc));
         m_pCoordBuffer.reset(new Render::GPUBuffer(sizeof(vec4)*m_maxGlyphCount * 4));
-        geometry_buffer_table = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
-        m_pCoordBuffer->place_srv_buffer(geometry_buffer_table[0]);
         return S_OK;
     }
 

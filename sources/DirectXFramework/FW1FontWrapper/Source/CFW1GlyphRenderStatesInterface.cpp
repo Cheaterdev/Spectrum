@@ -30,8 +30,8 @@ namespace FW1FontWrapper
 // Set render states for glyph drawing
     void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(Render::CommandList::ptr& list, UINT Flags)
     {
-		auto current_state = ((Flags & FW1_CLIPRECT) != 0) ? geometry_state_clip : geometry_state;
-        list->get_graphics().set_pipeline(current_state);// .pixel_sampler = pixel_sampler_table;
+		auto& current_state = GetPSO<PSOS::FontRender>();
+        list->get_graphics().set_pipeline(current_state);
         list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_POINTLIST);	
     }
 

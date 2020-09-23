@@ -11,7 +11,6 @@ namespace GUI
 			Render::HandleTable sampler_table;
 
            Render::IndexBuffer::ptr index_buffer;
-           Render::PipelineState::ptr state;
 		   std::vector<Vertex> vertexes;
 
 		   std::vector<Render::Handle> textures_handles;
@@ -36,10 +35,6 @@ namespace GUI
 
             };
 
-
-            Render::PipelineState::ptr state;
-            std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
-            std::vector<Vertex> vertexes;
 
         public:
             using ptr = s_ptr<SimpleRect>;

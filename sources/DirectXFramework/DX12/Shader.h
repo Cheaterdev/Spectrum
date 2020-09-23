@@ -90,12 +90,23 @@ namespace DX12
 			{
 
 				std::unique_ptr<std::string> res_blob ;
-				D3D::shader_include In(header.file_name, depender);
+	
 			
 				while (!res_blob)
 				{
 					depender.clear();
-					res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
+
+
+                    if (header.contains_text)
+                    {
+                        D3D::shader_include In("shaders/", depender);
+                        res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
+                    }                    
+                    else
+					{
+						D3D::shader_include In(header.file_name, depender);
+                        res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
+                    }
 				}
 
                 auto result = std::make_shared<_shader_type>();

@@ -122,8 +122,8 @@ HRESULT CFW1TextRenderer::DrawGlyphRun(
 	else {
 		// Glyph vertex
 		FW1_GLYPHVERTEX glyphVertex;
-		glyphVertex.PositionY = floor(baselineOriginY + 0.5f);
-		glyphVertex.GlyphColor = m_currentColor;
+		glyphVertex.pos.y = floor(baselineOriginY + 0.5f);
+		glyphVertex.color =  m_currentColor;
 		
 		float positionX = floor(baselineOriginX + 0.5f);
 		
@@ -132,7 +132,7 @@ HRESULT CFW1TextRenderer::DrawGlyphRun(
 			IFW1ColorRGBA *pColor;
 			HRESULT hResult = clientDrawingEffect->QueryInterface(&pColor);
 			if(SUCCEEDED(hResult)) {
-				glyphVertex.GlyphColor = pColor->GetColor32();
+				glyphVertex.color = pColor->GetColor();
 				pColor->Release();
 			}
 		}
@@ -151,7 +151,7 @@ HRESULT CFW1TextRenderer::DrawGlyphRun(
 				if((glyphRun->bidiLevel & 0x1) != 0)
 					positionX -= glyphRun->glyphAdvances[i];
 				
-				glyphVertex.PositionX = floor(positionX + 0.5f);
+				glyphVertex.pos.x = floor(positionX + 0.5f);
 				pTextGeometry->AddGlyphVertex(&glyphVertex);
 				
 				if((glyphRun->bidiLevel & 0x1) == 0)
@@ -239,7 +239,7 @@ HRESULT STDMETHODCALLTYPE CFW1TextRenderer::DrawTextLayout(
 	IDWriteTextLayout *pTextLayout,
 	FLOAT OriginX,
 	FLOAT OriginY,
-	UINT32 Color,
+	float4 Color,
 	UINT Flags,
 	IFW1TextGeometry *pTextGeometry
 ) {

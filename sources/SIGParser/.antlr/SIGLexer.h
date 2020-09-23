@@ -12,13 +12,18 @@
 class  SIGLexer : public antlr4::Lexer {
 public:
   enum {
-    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, OR = 5, AND = 6, EQ = 7, NEQ = 8, 
-    GT = 9, LT = 10, GTEQ = 11, LTEQ = 12, PLUS = 13, MINUS = 14, MULT = 15, 
-    DIV = 16, MOD = 17, POW = 18, NOT = 19, SCOL = 20, ASSIGN = 21, OPAR = 22, 
-    CPAR = 23, OBRACE = 24, CBRACE = 25, OSBRACE = 26, CSBRACE = 27, TRUE = 28, 
-    FALSE = 29, LOG = 30, LAYOUT = 31, STRUCT = 32, SLOT = 33, RT = 34, 
-    RTV = 35, DSV = 36, ID = 37, INT_SCALAR = 38, FLOAT_SCALAR = 39, STRING = 40, 
-    COMMENT = 41, SPACE = 42, INSERT_START = 43, INSERT_END = 44, INSERT_BLOCK = 45
+    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
+    T__7 = 8, T__8 = 9, T__9 = 10, T__10 = 11, T__11 = 12, T__12 = 13, T__13 = 14, 
+    T__14 = 15, T__15 = 16, T__16 = 17, T__17 = 18, T__18 = 19, T__19 = 20, 
+    T__20 = 21, T__21 = 22, T__22 = 23, T__23 = 24, T__24 = 25, OR = 26, 
+    AND = 27, EQ = 28, NEQ = 29, GT = 30, LT = 31, GTEQ = 32, LTEQ = 33, 
+    PLUS = 34, MINUS = 35, MULT = 36, DIV = 37, MOD = 38, POW = 39, NOT = 40, 
+    SCOL = 41, ASSIGN = 42, OPAR = 43, CPAR = 44, OBRACE = 45, CBRACE = 46, 
+    OSBRACE = 47, CSBRACE = 48, TRUE = 49, FALSE = 50, LOG = 51, LAYOUT = 52, 
+    STRUCT = 53, COMPUTE_PSO = 54, GRAPHICS_PSO = 55, SLOT = 56, RT = 57, 
+    RTV = 58, DSV = 59, ROOTSIG = 60, ID = 61, INT_SCALAR = 62, FLOAT_SCALAR = 63, 
+    STRING = 64, COMMENT = 65, SPACE = 66, INSERT_START = 67, INSERT_END = 68, 
+    INSERT_BLOCK = 69
   };
 
   SIGLexer(antlr4::CharStream *input);

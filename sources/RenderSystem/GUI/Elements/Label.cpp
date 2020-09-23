@@ -43,7 +43,7 @@ namespace GUI
 			clickable = false;
 			magnet_text = FW1_CENTER | FW1_VCENTER;
 			font = Fonts::FontSystem::get().get_font("Segoe UI Light");
-			color = rgba8(255, 255, 255, 255);
+			color = float4(1,1,1, 1);
 			geomerty.reset(new Fonts::FontGeometry());
 			geomerty_shadow.reset(new Fonts::FontGeometry());
 			font_size = 15;
@@ -69,8 +69,8 @@ namespace GUI
 		{
 			if (!need_recalculate && ((w == ivec2(render_bounds->size / scaled) || (magnet_text & FW1_NOWORDWRAP))))
 			{
-				w = ivec2(render_bounds->size / scaled);
-				return;
+		//		w = ivec2(render_bounds->size / scaled);
+			//	return;
 			}
 			//if (!cache.texture) {
 		
@@ -137,9 +137,7 @@ namespace GUI
 				//	command_list->get_graphics().set(1, sampler_table);
 				//	command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 				//	command_list->get_graphics().draw(4, 0);
-				command_list->get_graphics().use_dynamic = false;
 				geomerty->draw(command_list, lay2, 0, { 0,0 });
-				command_list->get_graphics().use_dynamic = true;
 				MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
 
 			//	command_list->transition(cache.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);

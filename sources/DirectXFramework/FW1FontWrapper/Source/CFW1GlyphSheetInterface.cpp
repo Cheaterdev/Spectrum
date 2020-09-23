@@ -73,21 +73,11 @@ namespace FW1FontWrapper
 
         Slots::FontRendering rendering;
 
-        rendering.GetPositions() = geometry_buffer_table[0];
+        rendering.GetPositions() = m_pCoordBuffer->create_view<FormattedBufferView<float4, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT>>(*list->frame_resources).get_srv();
 		rendering.GetTex0() = m_pTexture->texture_2d()->get_static_srv();
 
         rendering.set(list->get_graphics());
 
-     //   list->get_graphics().get_shader_data<FontSig>().geometry_data = geometry_buffer_table;
-	//	list->get_graphics().get_shader_data<FontSig>().pixel_data = m_pTexture->texture_2d()->get_static_srv();
-
-
-      //  list->get_graphics().get_desc_manager().set(1, 0,  geometry_buffer_table);
-     //   list->get_graphics().get_desc_manager().set(2,0, m_pTexture->texture_2d()->get_static_srv());
-//        pContext.get_shader_state<DX11::pixel_shader>().shader_resource_state[0] = m_pTexture->get_shader_view();
-        //    if ((Flags & FW1_NOGEOMETRYSHADER) == 0 && m_hardwareCoordBuffer)
-        //      pContext.get_shader_state<DX11::geometry_shader>().shader_resource_state[0] = m_pCoordBuffer->get_shader_view();
-//	pContext.get_native()->GSSetShaderResources(0, 1, &m_pCoordBufferSRV);
         return S_OK;
     }
 
@@ -242,28 +232,7 @@ namespace FW1FontWrapper
                 {
                     UINT startIndex = glyphCount - updatedGlyphCount;
                     UINT endIndex = glyphCount;
-                    m_pCoordBuffer->set_data(pContext, startIndex * sizeof(FW1_GLYPHCOORDS), m_glyphCoords + startIndex, updatedGlyphCount);
-               //     pContext->transition(m_pCoordBuffer, Render::ResourceState::COMMON);
-                    //   m_pCoordBuffer->update(pContext);
-                    /*
-                    D3D11_BOX dstBox;
-                    ZeroMemory(&dstBox, sizeof(dstBox));
-                    dstBox.left = startIndex * sizeof(FW1_GLYPHCOORDS);
-                    dstBox.right = endIndex * sizeof(FW1_GLYPHCOORDS);
-                    dstBox.top = 0;
-                    dstBox.bottom = 1;
-                    dstBox.front = 0;
-                    dstBox.back = 1;
-
-                    */
-                    /*     get_native_context(pContext)->UpdateSubresource(
-                             m_pCoordBuffer->get_native(),
-                             0,
-                             &dstBox,
-                             m_glyphCoords + startIndex,
-                             0,
-                             0
-                         );*/
+                    m_pCoordBuffer->set_data(pContext, startIndex * sizeof(FW1_GLYPHCOORDS), m_glyphCoords + startIndex, updatedGlyphCount); 
                 }
 
                 // Update texture

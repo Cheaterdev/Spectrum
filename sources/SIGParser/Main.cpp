@@ -217,7 +217,7 @@ void generate_pass_table(Table& table)
 	lowcameled[0] = std::tolower(lowcameled[0]);
 
 
-	stream<<"#ifndef NO_GLOBAL" << std::endl;
+	stream << "#ifndef NO_GLOBAL" << std::endl;
 
 	stream << "static const " << table.name << " " << lowcameled << "_global = Create" << table.name << "();" << std::endl;
 	stream << "const " << table.name << " Get" << cameled << "(){ return " << lowcameled << "_global; }" << std::endl;
@@ -442,11 +442,11 @@ void generate_nobind_table(Table& table)
 				auto t = parsed.find_table(v.type);
 				if (t->counts[type] == 0) continue;
 
-				if(t->find_option("nobind"))
+				if (t->find_option("nobind"))
 					stream << v.type << " " << v.name << ";" << std::endl;
 				else
 
-				stream << v.type << "_" << get_name_for(type) << " " << v.name << ";" << std::endl;
+					stream << v.type << "_" << get_name_for(type) << " " << v.name << ";" << std::endl;
 			}
 		}
 
@@ -824,12 +824,36 @@ void generate_include_list(const Parsed& parsed)
 		stream << "#include \"rt\\" << t.name << ".h\"" << std::endl;
 	}
 
-	/*	stream << "enum class Layouts: int" << std::endl;
+
+	for (auto& t : parsed.compute_pso)
+	{
+
+		stream << "#include \"pso\\" << t.name << ".h\"" << std::endl;
+	}
+
+	for (auto& t : parsed.graphics_pso)
+	{
+
+		stream << "#include \"pso\\" << t.name << ".h\"" << std::endl;
+	}
+
+	stream << "void init_signatures();" << std::endl;
+	stream << "Render::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
+
+
+
+
+	stream << "void init_pso(std::array<PSOBase::ptr, int(PSO::TOTAL)>&);" << std::endl;
+
+	{
+		my_stream stream(cpp_path, "enums.h");
+
+		stream << "enum class Layouts: int" << std::endl;
 
 		stream << "{" << std::endl;
 		{
 			stream.push();
-			stream << "UNKNOWN" << std::endl;
+			stream << "UNKNOWN," << std::endl;
 			for (auto& l : parsed.layouts)
 			{
 				stream << l.name << "," << std::endl;
@@ -841,31 +865,96 @@ void generate_include_list(const Parsed& parsed)
 
 		stream << "};" << std::endl;
 
-		*/
-		//	stream << "static std::array<Render::RootSignature::ptr, static_cast<int>(Layouts::TOTAL)> signatures;" << std::endl;
+		stream << "enum class PSO: int" << std::endl;
 
-	stream << "void init_signatures();" << std::endl;
+		stream << "{" << std::endl;
+		{
+			stream.push();
+			stream << "UNKNOWN," << std::endl;
+			for (auto& l : parsed.compute_pso)
+			{
+				stream << l.name << "," << std::endl;
+			}
+			for (auto& l : parsed.graphics_pso)
+			{
+				stream << l.name << "," << std::endl;
+			}
+			stream << "TOTAL" << std::endl;
+			stream.pop();
+		}
 
-	/*	stream << "{" << std::endl;
+		stream << "};" << std::endl;
+
+	}
+
+
+	{
+		my_stream stream(cpp_path, "layouts.cpp");
+		stream << "#include \"pch.h\"" << std::endl;
+
+		stream << "static std::array<DX12::RootLayout::ptr, static_cast<int>(Layouts::TOTAL)> signatures;" << std::endl;
+		stream << "void init_signatures()" << std::endl;
+
+		stream << "{" << std::endl;
 		{
 			stream.push();
 
 			for (auto& l : parsed.layouts)
 			{
-				stream << "signatures[static_cast<int>(Layouts::"<<l.name << ")] = std::make_shared<AutoGenSignature<"<< l.name << ">>();" << std::endl;
+				stream << "signatures[static_cast<int>(Layouts::" << l.name << ")] = AutoGenSignatureDesc<" << l.name << ">().create_signature(Layouts::" << l.name << ");" << std::endl;
 			}
 
 			stream.pop();
 		}
 
 		stream << "}" << std::endl;
+
+
+		stream << "Render::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
+		stream << "{" << std::endl;
+		stream << "\treturn signatures[static_cast<int>(id)];" << std::endl;
+		stream << "}" << std::endl;
+
+
+	}
+
+	
+	{
+		my_stream stream(cpp_path, "pso.cpp");
+		stream << "#include \"pch.h\"" << std::endl;
+
+		//stream << "static std::array<DX12::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
+		stream << "void init_pso(std::array<PSOBase::ptr, int(PSO::TOTAL)>& pso)" << std::endl;
+
+		stream << "{" << std::endl;
+		{
+			stream.push();
+
+			for (auto& l : parsed.compute_pso)
+			{
+			//	stream << "pso[static_cast<int>(PSO::" << l.name << ")] = AutoGenPSO<Autogen::" << l.name << ">().create_pso(PSO::" << l.name << ", \"" << l.name << "\");" << std::endl;
+				stream << "pso[static_cast<int>(PSO::" << l.name << ")] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
+			}
+			for (auto& l : parsed.graphics_pso)
+			{
+				//	stream << "pso[static_cast<int>(PSO::" << l.name << ")] = AutoGenPSO<Autogen::" << l.name << ">().create_pso(PSO::" << l.name << ", \"" << l.name << "\");" << std::endl;
+				stream << "pso[static_cast<int>(PSO::" << l.name << ")] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
+			}
+
+			stream.pop();
+		}
+
+		stream << "}" << std::endl;
+
+/*
+		stream << "Render::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
+		stream << "{" << std::endl;
+		stream << "\treturn pso[static_cast<int>(id)];" << std::endl;
+		stream << "}" << std::endl;
 		*/
 
-	stream << "Render::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
-	/*stream << "{" << std::endl;
-	stream << "\treturn signatures[static_cast<int>(id)];" << std::endl;
-	stream << "}" << std::endl;
-	*/
+	}
+	
 }
 
 
@@ -906,6 +995,286 @@ void generate_rt(RenderTarget& rt)
 	}
 	stream << "};" << std::endl;
 }
+/*
+void generate_pso(PSO& pso)
+{
+
+	my_stream stream(cpp_path + "/pso", pso.name + ".h");
+	stream << "#pragma once" << std::endl;
+
+	stream << "namespace Autogen" << std::endl;
+	stream << "{" << std::endl;
+	{
+		stream.push();
+
+		if (pso.parent.size())
+		{
+			stream << "struct " << pso.name << ": public "<< pso.parent[0]<< std::endl;
+		}
+		else
+		{
+			stream << "struct " << pso.name << std::endl;
+		}
+
+		stream << "{" << std::endl;
+		{
+			stream.push();
+
+			if(!pso.root_sig.name.empty())
+			stream << "static inline const Layouts layout = Layouts::" << pso.root_sig.name << ";" << std::endl;
+
+
+			if (!pso.compute.name.empty())
+			{
+				stream << "static inline const D3D::shader_header compute = { \"shaders/" << pso.compute.name << ".hlsl\", \"" << pso.compute.find_option("EntryPoint")->value_atom.expr << "\", 0,{";
+
+				bool first = true;
+				for (auto option : pso.compute.options)
+				{
+					if (!first) stream << ",";
+					stream << "{";
+					stream << "\"" << option.name << "\", \"" << option.value_atom.expr << "\"";
+					stream << "}";
+
+					first = false;
+				}
+
+				stream << "} }; " << std::endl;
+
+
+			}
+
+
+			stream.pop();
+		}
+		stream << "};" << std::endl;
+
+		stream.pop();
+	}
+	stream << "}" << std::endl;
+}
+*/
+void generate_pso(PSO& pso)
+{
+
+	my_stream stream(cpp_path + "/pso", pso.name + ".h");
+	stream << "#pragma once" << std::endl;
+
+	std::string keys;
+	std::string keyslist;
+	std::string keysgenerators;
+
+	std::string defines;
+	std::string definesapply;
+
+	for (auto d : pso.defines)
+	{
+
+		bool hasvalue = d.values.size();
+		
+		keys += "KeyValue<";
+
+
+		if (hasvalue) keys += "int";
+		else
+			keys += "NoValue";
+
+		if (hasvalue)
+		{
+			keys += ",NonNullable";
+			for (auto v : d.values)
+			{
+				keys += ",";
+				keys += v.expr;
+			}
+				
+		}else
+			keys += ",Nullable";
+
+		keys += "> ";
+		keys += d.name;
+		keys += ";\n";
+
+		if (!keyslist.empty())
+			keyslist += ",";
+
+		keyslist += d.name;
+
+
+		keysgenerators += "GEN_KEY(";
+		keysgenerators += d.name;
+
+		if (d.find_option("indirect"))
+			keysgenerators += ",false";
+		
+		else
+			keysgenerators += ",true";
+
+		keysgenerators += ");\n";
+
+
+		defines += "static const ShaderDefine<&Keys::";
+		defines += d.name;
+
+		if(d.find_option("CS"))
+		defines += ", &SimpleComputePSO::compute";
+
+		if (d.find_option("PS"))
+			defines += ", &SimpleGraphicsPSO::pixel";
+
+		if (d.find_option("VS"))
+			defines += ", &SimpleGraphicsPSO::vertex";
+
+		if (d.find_option("GS"))
+			defines += ", &SimpleGraphicsPSO::geometry";
+
+
+		if (d.find_option("DS"))
+			defines += ", &SimpleGraphicsPSO::domain";
+
+		if (d.find_option("HS"))
+			defines += ", &SimpleGraphicsPSO::hull";
+
+		defines += "> ";
+		defines += d.name;
+		defines += " = \"";
+			
+		auto op = d.find_option("rename");
+		if (op)
+		{	
+			defines += op->value_atom.expr;
+		}
+		else
+		{
+			defines += d.name;
+		}
+
+		defines += "\";\n";
+	
+
+		definesapply += d.name;
+		definesapply += ".Apply(mpso, key);\n";
+
+	}
+	stream << "namespace PSOS" << std::endl;
+	stream << "{" << std::endl;
+	{
+		stream.push();
+
+		stream << "struct " << pso.name << ": public PSOBase" << std::endl;
+
+
+		stream << "{" << std::endl;
+		{
+			stream.push();
+
+			stream << "struct Keys{" << std::endl << keys << std::endl <<" 		GEN_DEF_COMP(Keys) };" << std::endl;
+
+			std::string GEN_PSO;
+			if (dynamic_cast<ComputePSO*>(&pso))
+			{
+				GEN_PSO = "GEN_COMPUTE_PSO";
+			}
+			else
+			{
+				GEN_PSO = "GEN_GRAPHICS_PSO";
+			}
+			if(keyslist.empty())
+			stream << GEN_PSO<<"(" << pso.name << ")"<< std::endl;
+			else
+				stream << GEN_PSO<< "(" << pso.name <<","<< keyslist << ")" << std::endl;
+			stream << keysgenerators << std::endl;
+			stream << "SimplePSO init_pso(Keys & key)"<< std::endl;
+			stream << "{" << std::endl;
+			{
+				stream.push();
+				stream << defines;
+
+
+				stream << "SimplePSO mpso(\"" << pso.name << "\");" << std::endl;
+
+				stream << "mpso.root_signature = Layouts::" << pso.root_sig.name << ";" << std::endl;
+				for (auto& shader : pso.shader_list)
+				{
+
+				
+					stream << "mpso."<< shader.type<<".file_name = \"shaders/" << shader.name << ".hlsl\";" << std::endl;
+					stream << "mpso." << shader.type << ".entry_point = \"" << shader.find_option("EntryPoint")->value_atom.expr << "\";" << std::endl;
+					stream << "mpso." << shader.type << ".flags = 0;" << std::endl;
+
+				}
+			
+				stream << definesapply << std::endl;
+
+
+				auto graphics = dynamic_cast<GraphicsPSO*>(&pso);
+				if (graphics)
+				{
+
+					{
+						std::string elems;
+
+						for (auto e : graphics->rtv.values)
+						{
+							if (!elems.empty())
+								elems += ", ";
+							elems += "DXGI_FORMAT::";
+							elems += e.expr;
+						}
+
+						stream << "mpso.rtv_formats = { " << elems << " };" << std::endl;
+					}
+
+					{
+						std::string elems;
+
+						for (auto e : graphics->blend.values)
+						{
+							if (!elems.empty())
+								elems += ", ";
+							elems += "Render::Blend::";
+							elems += e.expr;
+						}
+
+						stream << "mpso.blend = { " << elems << " };" << std::endl;
+					}
+				//	graphics->rtvs[0].
+
+
+					for (auto& e : graphics->params)
+					{
+
+						std::string add;
+
+						if (e.type == "cull")
+							add = "D3D12_CULL_MODE::D3D12_CULL_MODE_";
+						else if (e.type == "depth_func")
+							add = "D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_";
+						else if (e.type == "topology")
+							add = "D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_";
+						else if (e.type == "stencil_func")
+							add = "D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_";
+						else if (e.type == "stencil_pass_op")
+							add = "D3D12_STENCIL_OP::D3D12_STENCIL_OP_";
+
+						stream << "mpso."<<e.type << "  = "<<add << e.expr << ";" << std::endl;
+					}
+				}
+				stream << "return mpso;" << std::endl;
+				stream.pop();
+			}
+			stream << "}" << std::endl;
+
+
+			stream.pop();
+		}
+		stream << "};" << std::endl;
+
+		stream.pop();
+	}
+	stream << "}" << std::endl;
+}
+
 
 
 void generate_cpp_rt(RenderTarget& rt)
@@ -941,7 +1310,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					}
 					stream << "} &rtv;" << std::endl;
 				}
-			
+
 				if (rt.dsv)
 				{
 					stream << "struct DSV" << std::endl;
@@ -957,13 +1326,13 @@ void generate_cpp_rt(RenderTarget& rt)
 				}
 
 
-			
+
 				for (auto& e : rt.rtvs)
 				{
 					std::string cameled = e.name;
 					cameled[0] = std::toupper(cameled[0]);
 
-					
+
 					stream << "Render::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
 				}
 
@@ -998,7 +1367,7 @@ void generate_cpp_rt(RenderTarget& rt)
 				stream.pop();
 
 
-				stream << rt.name <<"(" << args<<"):"<<pass<< "{}"<< std::endl;
+				stream << rt.name << "(" << args << "):" << pass << "{}" << std::endl;
 
 			}
 			stream << "};" << std::endl;
@@ -1006,14 +1375,14 @@ void generate_cpp_rt(RenderTarget& rt)
 			stream.pop();
 		}
 		stream << "}" << std::endl;
-		
+
 
 		stream << "namespace Slot" << std::endl;
 		stream << "{" << std::endl;
 		{
 			stream.push();
 
-			stream << "struct " << rt.name << ": public RTHolder<Table::"<<rt.name<<">"<<  std::endl;
+			stream << "struct " << rt.name << ": public RTHolder<Table::" << rt.name << ">" << std::endl;
 			stream << "{" << std::endl;
 			{
 				stream.push();
@@ -1034,8 +1403,8 @@ void generate_cpp_rt(RenderTarget& rt)
 					stream << "DSV dsv;" << std::endl;
 				}
 
-			
-				stream << rt.name << "():RTHolder<Table::"<<rt.name<<">(" << pass << "){}" << std::endl;
+
+				stream << rt.name << "():RTHolder<Table::" << rt.name << ">(" << pass << "){}" << std::endl;
 				stream.pop();
 			}
 			stream << "};" << std::endl;
@@ -1045,7 +1414,7 @@ void generate_cpp_rt(RenderTarget& rt)
 		stream << "}" << std::endl;
 
 		stream.pop();
-	
+
 	}
 	stream << "}" << std::endl;
 
@@ -1168,11 +1537,11 @@ int main() {
 		for (auto& table : parsed.tables)
 		{
 
-			if(table.find_option("nobind"))
+			if (table.find_option("nobind"))
 				generate_nobind_table(table);
 
 			else
-			generate_table(table);
+				generate_table(table);
 
 			if (!table.find_option("shader_only"))
 				generate_cpp_table(table);
@@ -1192,6 +1561,14 @@ int main() {
 			generate_cpp_rt(rt);
 		}
 
+		for (auto& pso : parsed.compute_pso)
+		{
+			generate_pso(pso);
+		}
+		for (auto& pso : parsed.graphics_pso)
+		{
+			generate_pso(pso);
+		}
 	}
 	catch (std::exception& e)
 	{

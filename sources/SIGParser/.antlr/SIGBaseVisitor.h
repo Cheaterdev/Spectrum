@@ -27,7 +27,7 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitOptions(SIGParser::OptionsContext *ctx) override {
+  virtual antlrcpp::Any visitOption(SIGParser::OptionContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -52,6 +52,22 @@ public:
   }
 
   virtual antlrcpp::Any visitSampler_declaration(SIGParser::Sampler_declarationContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitDefine_declaration(SIGParser::Define_declarationContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtv_formats_declaration(SIGParser::Rtv_formats_declarationContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitBlends_declaration(SIGParser::Blends_declarationContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitPso_param(SIGParser::Pso_paramContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -92,6 +108,10 @@ public:
   }
 
   virtual antlrcpp::Any visitInsert_block(SIGParser::Insert_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitPath_id(SIGParser::Path_idContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -140,6 +160,58 @@ public:
   }
 
   virtual antlrcpp::Any visitRt_definition(SIGParser::Rt_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitArray_value_holder(SIGParser::Array_value_holderContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitArray_value_ids(SIGParser::Array_value_idsContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRoot_sig(SIGParser::Root_sigContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitShader(SIGParser::ShaderContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitCompute_pso_stat(SIGParser::Compute_pso_statContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitCompute_pso_block(SIGParser::Compute_pso_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitCompute_pso_definition(SIGParser::Compute_pso_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitGraphics_pso_stat(SIGParser::Graphics_pso_statContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitGraphics_pso_block(SIGParser::Graphics_pso_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitShader_type(SIGParser::Shader_typeContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitPso_param_id(SIGParser::Pso_param_idContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitBool_type(SIGParser::Bool_typeContext *ctx) override {
     return visitChildren(ctx);
   }
 

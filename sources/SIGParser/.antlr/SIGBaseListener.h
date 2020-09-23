@@ -25,8 +25,8 @@ public:
   virtual void enterOptions_assign(SIGParser::Options_assignContext * /*ctx*/) override { }
   virtual void exitOptions_assign(SIGParser::Options_assignContext * /*ctx*/) override { }
 
-  virtual void enterOptions(SIGParser::OptionsContext * /*ctx*/) override { }
-  virtual void exitOptions(SIGParser::OptionsContext * /*ctx*/) override { }
+  virtual void enterOption(SIGParser::OptionContext * /*ctx*/) override { }
+  virtual void exitOption(SIGParser::OptionContext * /*ctx*/) override { }
 
   virtual void enterOption_block(SIGParser::Option_blockContext * /*ctx*/) override { }
   virtual void exitOption_block(SIGParser::Option_blockContext * /*ctx*/) override { }
@@ -45,6 +45,18 @@ public:
 
   virtual void enterSampler_declaration(SIGParser::Sampler_declarationContext * /*ctx*/) override { }
   virtual void exitSampler_declaration(SIGParser::Sampler_declarationContext * /*ctx*/) override { }
+
+  virtual void enterDefine_declaration(SIGParser::Define_declarationContext * /*ctx*/) override { }
+  virtual void exitDefine_declaration(SIGParser::Define_declarationContext * /*ctx*/) override { }
+
+  virtual void enterRtv_formats_declaration(SIGParser::Rtv_formats_declarationContext * /*ctx*/) override { }
+  virtual void exitRtv_formats_declaration(SIGParser::Rtv_formats_declarationContext * /*ctx*/) override { }
+
+  virtual void enterBlends_declaration(SIGParser::Blends_declarationContext * /*ctx*/) override { }
+  virtual void exitBlends_declaration(SIGParser::Blends_declarationContext * /*ctx*/) override { }
+
+  virtual void enterPso_param(SIGParser::Pso_paramContext * /*ctx*/) override { }
+  virtual void exitPso_param(SIGParser::Pso_paramContext * /*ctx*/) override { }
 
   virtual void enterTemplated(SIGParser::TemplatedContext * /*ctx*/) override { }
   virtual void exitTemplated(SIGParser::TemplatedContext * /*ctx*/) override { }
@@ -75,6 +87,9 @@ public:
 
   virtual void enterInsert_block(SIGParser::Insert_blockContext * /*ctx*/) override { }
   virtual void exitInsert_block(SIGParser::Insert_blockContext * /*ctx*/) override { }
+
+  virtual void enterPath_id(SIGParser::Path_idContext * /*ctx*/) override { }
+  virtual void exitPath_id(SIGParser::Path_idContext * /*ctx*/) override { }
 
   virtual void enterInherit(SIGParser::InheritContext * /*ctx*/) override { }
   virtual void exitInherit(SIGParser::InheritContext * /*ctx*/) override { }
@@ -111,6 +126,45 @@ public:
 
   virtual void enterRt_definition(SIGParser::Rt_definitionContext * /*ctx*/) override { }
   virtual void exitRt_definition(SIGParser::Rt_definitionContext * /*ctx*/) override { }
+
+  virtual void enterArray_value_holder(SIGParser::Array_value_holderContext * /*ctx*/) override { }
+  virtual void exitArray_value_holder(SIGParser::Array_value_holderContext * /*ctx*/) override { }
+
+  virtual void enterArray_value_ids(SIGParser::Array_value_idsContext * /*ctx*/) override { }
+  virtual void exitArray_value_ids(SIGParser::Array_value_idsContext * /*ctx*/) override { }
+
+  virtual void enterRoot_sig(SIGParser::Root_sigContext * /*ctx*/) override { }
+  virtual void exitRoot_sig(SIGParser::Root_sigContext * /*ctx*/) override { }
+
+  virtual void enterShader(SIGParser::ShaderContext * /*ctx*/) override { }
+  virtual void exitShader(SIGParser::ShaderContext * /*ctx*/) override { }
+
+  virtual void enterCompute_pso_stat(SIGParser::Compute_pso_statContext * /*ctx*/) override { }
+  virtual void exitCompute_pso_stat(SIGParser::Compute_pso_statContext * /*ctx*/) override { }
+
+  virtual void enterCompute_pso_block(SIGParser::Compute_pso_blockContext * /*ctx*/) override { }
+  virtual void exitCompute_pso_block(SIGParser::Compute_pso_blockContext * /*ctx*/) override { }
+
+  virtual void enterCompute_pso_definition(SIGParser::Compute_pso_definitionContext * /*ctx*/) override { }
+  virtual void exitCompute_pso_definition(SIGParser::Compute_pso_definitionContext * /*ctx*/) override { }
+
+  virtual void enterGraphics_pso_stat(SIGParser::Graphics_pso_statContext * /*ctx*/) override { }
+  virtual void exitGraphics_pso_stat(SIGParser::Graphics_pso_statContext * /*ctx*/) override { }
+
+  virtual void enterGraphics_pso_block(SIGParser::Graphics_pso_blockContext * /*ctx*/) override { }
+  virtual void exitGraphics_pso_block(SIGParser::Graphics_pso_blockContext * /*ctx*/) override { }
+
+  virtual void enterGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext * /*ctx*/) override { }
+  virtual void exitGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext * /*ctx*/) override { }
+
+  virtual void enterShader_type(SIGParser::Shader_typeContext * /*ctx*/) override { }
+  virtual void exitShader_type(SIGParser::Shader_typeContext * /*ctx*/) override { }
+
+  virtual void enterPso_param_id(SIGParser::Pso_param_idContext * /*ctx*/) override { }
+  virtual void exitPso_param_id(SIGParser::Pso_param_idContext * /*ctx*/) override { }
+
+  virtual void enterBool_type(SIGParser::Bool_typeContext * /*ctx*/) override { }
+  virtual void exitBool_type(SIGParser::Bool_typeContext * /*ctx*/) override { }
 
 
   virtual void enterEveryRule(antlr4::ParserRuleContext * /*ctx*/) override { }

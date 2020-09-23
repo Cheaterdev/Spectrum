@@ -23,8 +23,8 @@ public:
   virtual void enterOptions_assign(SIGParser::Options_assignContext *ctx) = 0;
   virtual void exitOptions_assign(SIGParser::Options_assignContext *ctx) = 0;
 
-  virtual void enterOptions(SIGParser::OptionsContext *ctx) = 0;
-  virtual void exitOptions(SIGParser::OptionsContext *ctx) = 0;
+  virtual void enterOption(SIGParser::OptionContext *ctx) = 0;
+  virtual void exitOption(SIGParser::OptionContext *ctx) = 0;
 
   virtual void enterOption_block(SIGParser::Option_blockContext *ctx) = 0;
   virtual void exitOption_block(SIGParser::Option_blockContext *ctx) = 0;
@@ -43,6 +43,18 @@ public:
 
   virtual void enterSampler_declaration(SIGParser::Sampler_declarationContext *ctx) = 0;
   virtual void exitSampler_declaration(SIGParser::Sampler_declarationContext *ctx) = 0;
+
+  virtual void enterDefine_declaration(SIGParser::Define_declarationContext *ctx) = 0;
+  virtual void exitDefine_declaration(SIGParser::Define_declarationContext *ctx) = 0;
+
+  virtual void enterRtv_formats_declaration(SIGParser::Rtv_formats_declarationContext *ctx) = 0;
+  virtual void exitRtv_formats_declaration(SIGParser::Rtv_formats_declarationContext *ctx) = 0;
+
+  virtual void enterBlends_declaration(SIGParser::Blends_declarationContext *ctx) = 0;
+  virtual void exitBlends_declaration(SIGParser::Blends_declarationContext *ctx) = 0;
+
+  virtual void enterPso_param(SIGParser::Pso_paramContext *ctx) = 0;
+  virtual void exitPso_param(SIGParser::Pso_paramContext *ctx) = 0;
 
   virtual void enterTemplated(SIGParser::TemplatedContext *ctx) = 0;
   virtual void exitTemplated(SIGParser::TemplatedContext *ctx) = 0;
@@ -73,6 +85,9 @@ public:
 
   virtual void enterInsert_block(SIGParser::Insert_blockContext *ctx) = 0;
   virtual void exitInsert_block(SIGParser::Insert_blockContext *ctx) = 0;
+
+  virtual void enterPath_id(SIGParser::Path_idContext *ctx) = 0;
+  virtual void exitPath_id(SIGParser::Path_idContext *ctx) = 0;
 
   virtual void enterInherit(SIGParser::InheritContext *ctx) = 0;
   virtual void exitInherit(SIGParser::InheritContext *ctx) = 0;
@@ -109,6 +124,45 @@ public:
 
   virtual void enterRt_definition(SIGParser::Rt_definitionContext *ctx) = 0;
   virtual void exitRt_definition(SIGParser::Rt_definitionContext *ctx) = 0;
+
+  virtual void enterArray_value_holder(SIGParser::Array_value_holderContext *ctx) = 0;
+  virtual void exitArray_value_holder(SIGParser::Array_value_holderContext *ctx) = 0;
+
+  virtual void enterArray_value_ids(SIGParser::Array_value_idsContext *ctx) = 0;
+  virtual void exitArray_value_ids(SIGParser::Array_value_idsContext *ctx) = 0;
+
+  virtual void enterRoot_sig(SIGParser::Root_sigContext *ctx) = 0;
+  virtual void exitRoot_sig(SIGParser::Root_sigContext *ctx) = 0;
+
+  virtual void enterShader(SIGParser::ShaderContext *ctx) = 0;
+  virtual void exitShader(SIGParser::ShaderContext *ctx) = 0;
+
+  virtual void enterCompute_pso_stat(SIGParser::Compute_pso_statContext *ctx) = 0;
+  virtual void exitCompute_pso_stat(SIGParser::Compute_pso_statContext *ctx) = 0;
+
+  virtual void enterCompute_pso_block(SIGParser::Compute_pso_blockContext *ctx) = 0;
+  virtual void exitCompute_pso_block(SIGParser::Compute_pso_blockContext *ctx) = 0;
+
+  virtual void enterCompute_pso_definition(SIGParser::Compute_pso_definitionContext *ctx) = 0;
+  virtual void exitCompute_pso_definition(SIGParser::Compute_pso_definitionContext *ctx) = 0;
+
+  virtual void enterGraphics_pso_stat(SIGParser::Graphics_pso_statContext *ctx) = 0;
+  virtual void exitGraphics_pso_stat(SIGParser::Graphics_pso_statContext *ctx) = 0;
+
+  virtual void enterGraphics_pso_block(SIGParser::Graphics_pso_blockContext *ctx) = 0;
+  virtual void exitGraphics_pso_block(SIGParser::Graphics_pso_blockContext *ctx) = 0;
+
+  virtual void enterGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext *ctx) = 0;
+  virtual void exitGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext *ctx) = 0;
+
+  virtual void enterShader_type(SIGParser::Shader_typeContext *ctx) = 0;
+  virtual void exitShader_type(SIGParser::Shader_typeContext *ctx) = 0;
+
+  virtual void enterPso_param_id(SIGParser::Pso_param_idContext *ctx) = 0;
+  virtual void exitPso_param_id(SIGParser::Pso_param_idContext *ctx) = 0;
+
+  virtual void enterBool_type(SIGParser::Bool_typeContext *ctx) = 0;
+  virtual void exitBool_type(SIGParser::Bool_typeContext *ctx) = 0;
 
 
 };

@@ -3,46 +3,9 @@
 
 SMAA::SMAA()
 {
-
 	area_tex = Render::Texture::get_resource({ "textures\\AreaTex.dds", false, false });
 	search_tex = Render::Texture::get_resource({ "textures\\SearchTex.dds", false, false });
 
-
-	Render::PipelineStateDesc desc;
-
-	desc.root_signature = get_Signature(Layouts::DefaultLayout);
-
-	desc.blend.render_target[0].enabled = false;
-	desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAAEdgeDetectionVS", 0,{} });
-	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM };
-	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAALumaEdgeDetectionPS", 0,{} });
-	state_edge_detect = Render::PipelineState::create(desc, "state_edge_detect");
-	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM };
-	desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAABlendingWeightCalculationVS", 0,{} });
-	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAABlendingWeightCalculationPS", 0,{} });
-	state_blend_weight = Render::PipelineState::create(desc, "state_blend_weight");
-	desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
-	desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAANeighborhoodBlendingVS", 0,{} });
-	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_SMAANeighborhoodBlendingPS", 0,{} });
-	state_neighborhood_blending = Render::PipelineState::create(desc, "state_neighborhood_blending");
-	/*      desc.vertex = Render::vertex_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_ResolveVS", 0, {} });
-	desc.pixel = Render::pixel_shader::get_resource({ "shaders\\SMAA.hlsl", "DX10_ResolvePS", 0, {} });
-	state_resolve.reset(new  Render::PipelineState(desc));*/
-	/*srvs_table = Render::DescriptorHeapManager::get().get_csu_static()->create_table(5);
-	srvs_table[0] = area_tex->texture_2d()->srv();
-	srvs_table[1] = search_tex->texture_2d()->srv();
-	//  const_buffer = Render::GPUBuffer::create_const_buffer<float4>();
-
-	buffer.size.register_change(this, [this](const ivec2& size) {
-		this->size = size;
-	//	edges_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
-	//	blend_tex.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
-		srvs_table[2] = edges_tex->texture_2d()->srv();
-		srvs_table[3] = blend_tex->texture_2d()->srv();
-
-		srvs_table[4] = this->buffer->depth_tex_mips->texture_2d()->srv(0);
-		//      const_buffer->set_data(float4(1.0f / size.x, 1.0f / size.y, size));
-	});*/
 }
 
 void SMAA::generate(FrameGraph& graph)
@@ -83,7 +46,7 @@ void SMAA::generate(FrameGraph& graph)
 
 			ivec2 size = graph.frame_size;
 
-			graphics.set_pipeline(state_edge_detect);
+			graphics.set_pipeline(GetPSO<PSOS::EdgeDetect>());
 
 			graphics.set_viewport(edges.get_viewport());
 			graphics.set_scissor(edges.get_scissor());
@@ -113,7 +76,7 @@ void SMAA::generate(FrameGraph& graph)
 
 				slot_edges.set(graphics);
 			}
-			graphics.set_pipeline(state_blend_weight);
+			graphics.set_pipeline(GetPSO<PSOS::BlendWeight>());
 			graphics.set_rtv(1, blend.get_rtv(), Render::Handle());
 			graphics.draw(4);
 
@@ -128,7 +91,7 @@ void SMAA::generate(FrameGraph& graph)
 				slot_blend.set(graphics);
 			}
 
-			graphics.set_pipeline(state_neighborhood_blending);
+			graphics.set_pipeline(GetPSO<PSOS::Blending>());
 			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
 			graphics.draw(4);
 

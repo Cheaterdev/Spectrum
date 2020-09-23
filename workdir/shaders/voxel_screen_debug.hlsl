@@ -92,7 +92,7 @@ float4 Debug(quad_output i) :SV_Target0
 	float3 pos = depth_to_wpos(0.5, i.tc, camera.GetInvViewProj());
 	float3 v = normalize(pos - camera.GetPosition());
 
-	float4 result = trace_screen(camera.GetPosition(), v, 0.001);
+	float4 result = trace_screen(camera.GetPosition(), v, 0.01);
 	result *= result.w;
 	result.w = 1;
 	return result;

@@ -157,9 +157,6 @@ namespace GUI
                     base::ptr comments;
                     vec2 select_pos;
 
-                    Render::PipelineState::ptr state;
-                    Render::PipelineState::ptr line_state;
-
                 public:
                     manager* main_manager;
                     ::FlowGraph::graph* g;
@@ -217,60 +214,6 @@ namespace GUI
 
                     virtual bool on_drop(drag_n_drop_package::ptr, vec2) override;
             };
-
-            /*
-                        struct CanvasData : public RenderData
-                        {
-                            struct v_c_b
-                            {
-                                vec2 p1;
-                                vec2 p2;
-                            };
-
-                            struct p_c_b
-                            {
-                                vec4 size;
-                                vec4 clipping;
-                                vec3 offset_scale;
-
-                            };
-
-                            BUILD_BUFFERS(CanvasData);
-                        };
-
-
-                        class canvas::renderer : public GUI::renderer_base<canvas::renderer, canvas, CanvasData>
-                        {
-
-                                Render::PipelineState::ptr state;
-
-
-                                Render::RootSignature::ptr line_signature;
-
-                                struct line_vertexes
-                                {
-                                    vec2 p; vec4 color;
-
-                                };
-                                Render::Buffer<line_vertexes>::ptr line_vertex;
-                                //      DX11::vertex_buffer_stage vb;
-
-
-                                Render::PipelineState::ptr line_state;
-
-                                Render::ConstBuffer<vec2>::ptr inv_pixel;
-                                Render::HandleTable gs_table;
-                            public:
-                                using ptr = s_ptr<canvas::renderer>;
-                                using wptr = w_ptr<canvas::renderer>;
-
-                                renderer(GUI::Renderer*);
-
-                                void render(canvas* obj, Data* data, Render::context& c);
-
-                        };
-            			*/
-
 
         }
 

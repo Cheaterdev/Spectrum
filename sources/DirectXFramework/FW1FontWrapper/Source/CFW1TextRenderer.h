@@ -22,7 +22,7 @@ class CFW1TextRenderer : public CFW1Object<IFW1TextRenderer> {
 			IDWriteTextLayout *pTextLayout,
 			FLOAT OriginX,
 			FLOAT OriginY,
-			UINT32 Color,
+			float4 Color,
 			UINT Flags,
 			IFW1TextGeometry *pTextGeometry
 		);
@@ -84,7 +84,7 @@ class CFW1TextRenderer : public CFW1Object<IFW1TextRenderer> {
 		IFW1GlyphProvider			*m_pGlyphProvider;
 		
 		UINT						m_currentFlags;
-		UINT32						m_currentColor;
+		float4						m_currentColor;
 		
 		const void					*m_cachedGlyphMap;
 		IDWriteFontFace				*m_pCachedGlyphMapFontFace;

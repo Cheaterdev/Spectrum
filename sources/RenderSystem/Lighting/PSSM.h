@@ -1,7 +1,5 @@
 class PSSM:public FrameGraphGenerator
 {
-	Render::PipelineState::ptr draw_mask_state;
-	Render::PipelineState::ptr draw_result_state;
 
 	ShaderMaterial::ptr mat;
 

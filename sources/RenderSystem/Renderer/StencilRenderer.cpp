@@ -269,44 +269,6 @@ stencil_renderer::stencil_renderer()
 
 	docking = GUI::dock::PARENT;
 	clickable = true;
-	//catch_clicks = true;
-//   draw_helper = true;
-	Render::PipelineStateDesc state_desc;
-
-	auto root_signature = get_Signature(Layouts::DefaultLayout);// <SignatureCreator>().create_root();
-	state_desc.root_signature = root_signature;
-
-	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
-	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS", 0, {} });
-
-	state_desc.rtv.rtv_formats = {};
-	state_desc.rtv.enable_depth = true;
-	state_desc.rtv.enable_depth_write = true;
-	state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT;
-	state_desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
-	state_desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_LESS;
-	draw_state = Render::PipelineState::create(state_desc, "stencil_draw_state");
-
-	state_desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
-
-	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS_RESULT", 0, {} });
-	state_desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8_SNORM };
-	state_desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
-	state_desc.rtv.enable_depth_write = false;
-	state_desc.rtv.enable_depth = false;
-
-	draw_selected_state = Render::PipelineState::create(state_desc,"stencil_draw_selected_state");
-
-	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle_stencil.hlsl", "VS", 0, {} });
-	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/triangle_stencil.hlsl", "PS", 0, {} });
-
-	draw_box_state = Render::PipelineState::create(state_desc, "stencil_draw_box_state");
-
-
-	state_desc.rtv.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
-	state_desc.vertex = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
-	state_desc.pixel = Render::pixel_shader::get_resource({ "shaders/stencil.hlsl", "PS_COLOR", 0, {} });
-	axis_render_state = Render::PipelineState::create(state_desc, "stencil_axis_render_state");
 
 	id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 	axis_id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
@@ -318,22 +280,7 @@ stencil_renderer::stencil_renderer()
 
 
 	cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
-	axis_intersect_cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
-
-	{
-		Render::PipelineStateDesc state_desc;
-
-		state_desc.root_signature = root_signature;
-
-		state_desc.blend.render_target[0].enabled = true;
-		state_desc.blend.render_target[0].source = D3D12_BLEND_ONE;
-		state_desc.blend.render_target[0].dest = D3D12_BLEND_ONE;
-		state_desc.rtv.rtv_formats = { DXGI_FORMAT_R16G16B16A16_FLOAT };
-		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\contour.hlsl", "PS", 0, {} });
-		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\contour.hlsl", "VS", 0, {} });
-		state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		last_render_state = Render::PipelineState::create(state_desc, "stencil_last_render_state");
-	}
+	axis_intersect_cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);	
 
 	axis = EngineAssets::axis.get_asset()->create_instance();
 
@@ -432,7 +379,6 @@ void stencil_renderer::generate(FrameGraph& graph)
 				auto& graphics = list.get_graphics();
 				auto& copy = list.get_copy();
 
-				graphics.use_dynamic = false;
 
 				auto obj = graph.scene;
 
@@ -466,7 +412,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 						}
 					};
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-					graphics.set_pipeline(draw_state);
+					graphics.set_pipeline(GetPSO<PSOS::DrawStencil>());
 
 					list.clear_uav(id_buffer, id_buffer->get_raw_uav());
 					list.clear_uav(axis_id_buffer, axis_id_buffer->get_raw_uav());
@@ -635,9 +581,8 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 
 				auto& list = *_context.get_list();
 				auto& graphics = list.get_graphics();
-				graphics.use_dynamic = false;
 
-				graphics.set_signature(draw_selected_state->desc.root_signature);
+				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 				{
 					Slots::SceneData sceneData;
 					sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
@@ -654,7 +599,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					graphics.set_rtv(1, color_tex.get_rtv(), Handle());
 					color_tex.get_rtv().clear(list);
 
-					graphics.set_pipeline(draw_selected_state);
+					graphics.set_pipeline(GetPSO<PSOS::DrawSelected>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_viewports({ color_tex.get_viewport() });
 					graphics.set_scissors(color_tex.get_scissor());
@@ -693,7 +638,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 
 				// apply color mask
 			{
-					graphics.set_pipeline(last_render_state);
+					graphics.set_pipeline(GetPSO<PSOS::StencilerLast>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 					{
@@ -712,8 +657,8 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					}
 				}
 
-			graphics.set_pipeline(draw_box_state);
-
+	/*		graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
+			graphics.set_rtv(0, Handle(), Handle());
 
 			for (auto& sel : selected)
 			{
@@ -735,6 +680,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 				}
 			}
 			
+			graphics.set_rtv(1, target_tex.get_rtv(), Handle());*/
 
 
 				// draw axis
@@ -750,8 +696,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 						//memcpy(&camera.cb, &axis_cam.camera_cb.current, sizeof(camera.cb));
 						frameInfo.set(graphics);
 					}
-			
-					graphics.set_pipeline(axis_render_state);
+					graphics.set_pipeline(GetPSO<PSOS::DrawAxis>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					int i = 0;
 

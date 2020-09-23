@@ -15,68 +15,38 @@ namespace Fonts
            return res_manager::get().get_resource(h);
        }
     */
-    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, vec2 pos, rgba8 color,  unsigned int flags /*= 0*/)
+    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, vec2 pos, float4 color,  unsigned int flags /*= 0*/)
     {
-        unsigned int hex;
-        memcpy(&hex, color.data(), sizeof(hex));
+
         native_font->DrawString(
             command_list,
             str.c_str(),
             size,
             pos.x,
             pos.y,
-            hex,
+            color,
             flags
         );
     }
 
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, sizer area, sizer clip_rect, rgba8 color, unsigned int flags /*= 0*/)
+    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*= 0*/)
     {
-        /*unsigned int hex;
-        memcpy(&hex, color.values, sizeof(hex));
 
-        geometry->Clear();
-              native_font->AnalyzeString(command_list, str.c_str(),
-                                         nullptr, size, reinterpret_cast<FW1_RECTF*>(&area),
-                                         hex, flags | FW1_CLIPRECT,geometry);
-
-        	  native_font->DrawGeometry(
-        		  command_list,
-        		  geometry,
-        		  reinterpret_cast<FW1_RECTF*>(&clip_rect),
-        		  nullptr,
-        		  flags | FW1_CLIPRECT
-        		  );*/
-        /*   FW1_RECTF r;
-        r.Left = area.x;
-        r.Right = area.x + area.w;
-        r.Top = area.y;
-        r.Bottom = area.y + area.h;
-
-        FW1_RECTF r2;
-        r2.Left = clip_rect.x;
-        r2.Right = clip_rect.x + clip_rect.w;
-        r2.Top = clip_rect.y;
-        r2.Bottom = clip_rect.y + clip_rect.h;
-
-        */
-        unsigned int hex;
-        memcpy(&hex, color.data(), sizeof(hex));
         native_font->DrawString(
             command_list,
             str.c_str(),
             nullptr,
             size,
             reinterpret_cast<FW1_RECTF*>(&area),
-            hex,
+            color,
             reinterpret_cast<FW1_RECTF*>(&clip_rect),
             nullptr,
             flags | FW1_CLIPRECT
         );
     }
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, sizer area, rgba8 color, unsigned int flags /*= 0*/)
+    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
     {
         draw(command_list, str, size, area, area, color, flags);
     }
@@ -84,18 +54,18 @@ namespace Fonts
 
 
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, vec2 pos, rgba8 color, unsigned int flags /*=0*/)
+    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, vec2 pos, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, pos, color, flags);
     }
 
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, sizer area, rgba8 color, unsigned int flags /*=0*/)
+    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, sizer area, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, area, color, flags);
     }
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, sizer area, sizer clip_rect, rgba8 color, unsigned int flags /*=0*/)
+    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, area, clip_rect, color, flags);
     }
@@ -135,11 +105,11 @@ namespace Fonts
         if (index >= data.TotalVertexCount)
         {
             const FW1_GLYPHVERTEX v = data.pVertices[data.TotalVertexCount - 1];
-            return{ v.PositionX + size / 2, v.PositionY - size / 2 };
+            return{ v.pos.x + size / 2, v.pos.y - size / 2 };
         }
 
         const FW1_GLYPHVERTEX v = data.pVertices[index];
-        return{ v.PositionX, v.PositionY - size / 2 };
+        return{ v.pos.x, v.pos.y - size / 2 };
     }
 
     float FontGeometry::get_size()
@@ -158,7 +128,7 @@ namespace Fonts
         for (unsigned int i = 0; i < data.TotalVertexCount; i++)
         {
             const FW1_GLYPHVERTEX v = data.pVertices[i];
-            vec2 pos = { v.PositionX, v.PositionY - size / 2 };
+            vec2 pos = { v.pos.x, v.pos.y - size / 2 };
             float l = (at - pos).length_squared();
 
             if (i == 0 || (l < len))
@@ -170,7 +140,7 @@ namespace Fonts
 
         if (index == data.TotalVertexCount - 1)
         {
-            if (data.pVertices[index].PositionX + size / 2 < at.x)
+            if (data.pVertices[index].pos.x + size / 2 < at.x)
                 return index + 1;
         }
 
@@ -215,17 +185,16 @@ namespace Fonts
         );
     }
 
-    void FontGeometry::set(Render::CommandList::ptr& command_list, std::wstring str, Font::ptr font, float size, sizer area, rgba8 color, unsigned int flags /*= 0*/)
+    void FontGeometry::set(Render::CommandList::ptr& command_list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
     {
         std::lock_guard<std::mutex> guard(m);
         this->size = size;
         this->font = font;
-        unsigned int hex;
-        memcpy(&hex, color.data(), sizeof(hex));
+
         geometry->Clear();
         font->native_font->AnalyzeString(command_list, str.c_str(),
                                          nullptr, size, reinterpret_cast<FW1_RECTF*>(&area),
-                                         hex, flags | FW1_CLIPRECT/*| FW1_NOFLUSH*/, geometry);
+            color, flags | FW1_CLIPRECT/*| FW1_NOFLUSH*/, geometry);
     }
 
     FontGeometry::FontGeometry()

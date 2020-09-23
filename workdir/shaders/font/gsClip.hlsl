@@ -8,8 +8,9 @@ static const float4  ClipRect = GetFontRenderingConstants().GetClipRect();
 
 struct GSIn
 {
-    float3 PositionIndex : POSITIONINDEX;
-    float4 GlyphColor : GLYPHCOLOR;
+    float4 Position : SV_Position;
+    float4 GlyphColor : COLOR;
+    float index : TEXCOORD;
 };
 
 struct GSOut
@@ -23,10 +24,10 @@ struct GSOut
 [maxvertexcount(4)]
 void GS(point GSIn Input[1], inout TriangleStream<GSOut> TriStream)
 {
-    const float2 basePosition = Input[0].PositionIndex.xy;
-    const uint glyphIndex = asuint(Input[0].PositionIndex.z);
-    float4 texCoords = tex0.Load(glyphIndex * 2);
-    float4 offsets = tex0.Load(glyphIndex * 2 + 1);
+    const float2 basePosition = Input[0].Position.xy;
+    const uint glyphIndex = uint(Input[0].index);
+    float4 texCoords = tex0.Load(uint2(glyphIndex * 2, 0));
+    float4 offsets = tex0.Load(uint2(glyphIndex * 2 + 1, 0));
     GSOut Output;
     Output.GlyphColor = Input[0].GlyphColor;
     float4 positions = basePosition.xyxy + offsets;

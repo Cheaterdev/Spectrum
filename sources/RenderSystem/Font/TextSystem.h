@@ -21,14 +21,14 @@ namespace Fonts
 
             //      static Font::ptr get_resource(const std::string& h);
 
-            void draw(Render::CommandList::ptr& list, std::string str, float size, vec2 pos, rgba8 color, unsigned int flags = 0);
-            void draw(Render::CommandList::ptr& list, std::wstring str, float size, vec2 pos, rgba8 color, unsigned int flags = 0);
+            void draw(Render::CommandList::ptr& list, std::string str, float size, vec2 pos, float4 color, unsigned int flags = 0);
+            void draw(Render::CommandList::ptr& list, std::wstring str, float size, vec2 pos, float4 color, unsigned int flags = 0);
 
-            void draw(Render::CommandList::ptr& list, std::string str, float size, sizer area, rgba8 color, unsigned int flags = 0);
-            void draw(Render::CommandList::ptr& list, std::wstring str, float size, sizer area, rgba8 color, unsigned int flags = 0);
+            void draw(Render::CommandList::ptr& list, std::string str, float size, sizer area, float4 color, unsigned int flags = 0);
+            void draw(Render::CommandList::ptr& list, std::wstring str, float size, sizer area, float4 color, unsigned int flags = 0);
 
-            void draw(Render::CommandList::ptr&, std::string str, float size, sizer area, sizer clip_rect, rgba8 color, unsigned int flags = 0);
-            void draw(Render::CommandList::ptr&, std::wstring str, float size, sizer area, sizer clip_rect, rgba8 color, unsigned int flags = 0);
+            void draw(Render::CommandList::ptr&, std::string str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags = 0);
+            void draw(Render::CommandList::ptr&, std::wstring str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags = 0);
 
             vec2 measure(std::string str, float size, unsigned int flags = 0);
 
@@ -79,7 +79,7 @@ namespace Fonts
 
             FontGeometry();
 
-            void set(Render::CommandList::ptr& list, std::wstring str, Font::ptr font, float size, sizer area, rgba8 color, unsigned int flags = 0);
+            void set(Render::CommandList::ptr& list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags = 0);
             void draw(Render::CommandList::ptr& list, sizer clip_rect, unsigned int flags = 0, vec2 offset = {0, 0}, float scale = 1);
 
             unsigned int get_index(vec2 at);

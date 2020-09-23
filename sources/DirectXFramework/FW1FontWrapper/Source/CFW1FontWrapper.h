@@ -31,7 +31,7 @@ namespace FW1FontWrapper
                 IDWriteTextLayout* pTextLayout,
                 FLOAT OriginX,
                 FLOAT OriginY,
-                UINT32 Color,
+                float4 Color,
                 UINT Flags
             );
             virtual void STDMETHODCALLTYPE DrawTextLayout(
@@ -39,7 +39,7 @@ namespace FW1FontWrapper
                 IDWriteTextLayout* pTextLayout,
                 FLOAT OriginX,
                 FLOAT OriginY,
-                UINT32 Color,
+                float4 Color,
                 const FW1_RECTF* pClipRect,
                 const FLOAT* pTransformMatrix,
                 UINT Flags
@@ -51,7 +51,7 @@ namespace FW1FontWrapper
                 FLOAT FontSize,
                 FLOAT X,
                 FLOAT Y,
-                UINT32 Color,
+                float4 Color,
                 UINT Flags
             );
             virtual void STDMETHODCALLTYPE DrawString(
@@ -61,7 +61,7 @@ namespace FW1FontWrapper
                 FLOAT FontSize,
                 FLOAT X,
                 FLOAT Y,
-                UINT32 Color,
+                float4 Color,
                 UINT Flags
             );
             virtual void STDMETHODCALLTYPE DrawString(
@@ -70,7 +70,7 @@ namespace FW1FontWrapper
                 const WCHAR* pszFontFamily,
                 FLOAT FontSize,
                 const FW1_RECTF* pLayoutRect,
-                UINT32 Color,
+                float4 Color,
                 const FW1_RECTF* pClipRect,
                 const FLOAT* pTransformMatrix,
                 UINT Flags
@@ -90,7 +90,7 @@ namespace FW1FontWrapper
                 const WCHAR* pszFontFamily,
                 FLOAT FontSize,
                 const FW1_RECTF* pLayoutRect,
-                UINT32 Color,
+                float4 Color,
                 UINT Flags,
                 IFW1TextGeometry* pTextGeometry
             );
@@ -100,7 +100,7 @@ namespace FW1FontWrapper
                 IDWriteTextLayout* pTextLayout,
                 FLOAT OriginX,
                 FLOAT OriginY,
-                UINT32 Color,
+                float4 Color,
                 UINT Flags,
                 IFW1TextGeometry* pTextGeometry
             );

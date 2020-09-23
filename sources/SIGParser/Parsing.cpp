@@ -28,8 +28,13 @@ public:
 	Slot* slot_ptr;
 	option* option_ptr;
 	have_hlsl* hlsl_ptr;
+	have_values* value_array;
 
-	std::stack<have_name*> elems;
+
+	PSO* current_pso;
+	Shader* shader;
+
+	std::stack<parsed_type*> elems;
 
 
 	template<class T>
@@ -37,10 +42,26 @@ public:
 	{
 		elems.push(&e);
 		propagate_elem();
+
+		{
+			parsed_type* e = elems.top();
+			auto shader = dynamic_cast<Shader*>(e);
+			auto current_pso = dynamic_cast<PSO*>(e);
+
+			if (current_pso) this->current_pso = current_pso;
+			if (shader) this->shader = shader;
+		}
+
 	}
 
 	void end_elem()
 	{
+		{parsed_type* e = elems.top();
+		auto shader = dynamic_cast<Shader*>(e);
+		auto current_pso = dynamic_cast<PSO*>(e);
+		if (current_pso == this->current_pso) this->current_pso = nullptr;
+		if (shader == this->shader) this->shader = nullptr;
+	}
 		elems.pop();
 		propagate_elem();
 	}
@@ -49,7 +70,7 @@ public:
 	{
 		if (elems.empty()) return;
 
-		have_name* e = elems.top();
+		parsed_type* e = elems.top();
 		inherited_ptr = dynamic_cast<inherited*>(e);
 		name_ptr = dynamic_cast<have_name*>(e);
 		options_ptr = dynamic_cast<have_options*>(e);
@@ -62,6 +83,8 @@ public:
 		owner_ptr = dynamic_cast<have_owner*>(e);
 		array_ptr = dynamic_cast<have_array*>(e);
 		hlsl_ptr = dynamic_cast<have_hlsl*>(e);
+		value_array = dynamic_cast<have_values*>(e);
+
 
 	}
 #define GENERATE(x) \
@@ -97,7 +120,7 @@ public:
 		setup_elem(table.values.back());
 	}
 
-	GENERATE(Options)
+	GENERATE(Option)
 	{
 		options_ptr->options.emplace_back();
 		setup_elem(options_ptr->options.back());
@@ -139,8 +162,84 @@ public:
 		setup_elem(*rt.dsv);
 
 	}
+
+
+
+	GENERATE(Compute_pso_definition)
+	{
+		parsed.compute_pso.emplace_back();
+		setup_elem(parsed.compute_pso.back());
+	}
+
+	GENERATE(Graphics_pso_definition)
+	{
+		parsed.graphics_pso.emplace_back();
+		setup_elem(parsed.graphics_pso.back());
+	}
+
+	GENERATE(Root_sig)
+	{
+		
+		setup_elem(current_pso->root_sig);
+	}
+
+
+	GENERATE(Shader)
+	{
+		
+
+		current_pso->shader_list.emplace_back();
+		setup_elem(current_pso->shader_list.back());
+	}
+
+
+	GENERATE(Define_declaration)
+	{
+		current_pso->defines.emplace_back();
+		setup_elem(current_pso->defines.back());
+	}
+
+	GENERATE(Rtv_formats_declaration)
+	{
+		auto& pso = parsed.graphics_pso.back();
+		//pso.rtvs.emplace_back();
+		setup_elem(pso.rtv);
+	}
+
+	GENERATE(Blends_declaration)
+	{
+		auto& pso = parsed.graphics_pso.back();
+		//pso.rtvs.emplace_back();
+		setup_elem(pso.blend);
+	}
+GENERATE(Pso_param)
+	{
+		auto& pso = parsed.graphics_pso.back();
+		pso.params.emplace_back();
+		setup_elem(pso.params.back());
+	}
+
+	/*
+	GENERATE(Array_value_ids)
+	{
+		auto& def = have_values.back();	
+		setup_elem(def.value);
+	}
+
+	*/
+	GENERATE(Array_value_holder)
+	{
+		value_array->values.emplace_back();
+
+		setup_elem(value_array->values.back());
+	}
+
 	virtual void enterName_id(SIGParser::Name_idContext* ctx) override {
 		name_ptr->name = ctx->children[0]->getText();
+	}
+	virtual void enterPath_id(SIGParser::Path_idContext* ctx) override {
+		for(auto c: ctx->children)
+		name_ptr->name += c->getText();
 	}
 
 	virtual void enterInherit_id(SIGParser::Inherit_idContext* ctx) override {
@@ -163,6 +262,11 @@ public:
 	virtual void enterValue_id(SIGParser::Value_idContext* ctx) override {
 		expr_ptr->expr = ctx->children[0]->getText();
 	}
+
+	virtual void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override {
+		type_ptr->type = ctx->children[0]->getText();
+	}
+
 	virtual void enterArray(SIGParser::ArrayContext* ctx) override {
 		array_ptr->as_array = true;
 		array_ptr->array_count = 0;
@@ -185,10 +289,18 @@ public:
 	
 
 
+	virtual void enterShader_type(SIGParser::Shader_typeContext* ctx) override {
+
+		auto& str = ctx->children[0]->getText();
+		shader->type = str;
+		current_pso->shaders[str] = shader;
+	}
+
 };
 
 Parsed parse(std::wstring filename)
 {
+	std::wcout << ((filename + L"\n")) << std::endl;
 	Parsed parsed;
 	{
 		std::ifstream stream;

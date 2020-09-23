@@ -53,6 +53,7 @@ namespace D3D
             std::string entry_point;
             DWORD flags;
             std::vector<shader_macro> macros;
+            bool contains_text = false;
         private:
             friend class boost::serialization::access;
 
@@ -63,6 +64,7 @@ namespace D3D
                 ar& NVP(entry_point);
                 ar& NVP(flags);
                 ar& NVP(macros);
+                ar& NVP(contains_text);
             }
 
     };

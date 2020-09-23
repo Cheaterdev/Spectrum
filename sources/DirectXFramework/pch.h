@@ -55,13 +55,7 @@ namespace DX12
 	class CommandList;
 }
 
-enum class Layouts : int
-{
-	UNKNOWN = -1,
-	FrameLayout = 0,
-	DefaultLayout = 1,
-	TOTAL = 2
-};
+#include "../RenderSystem/autogen/enums.h"
 
 
 #include "InputLayouts.h"
@@ -115,5 +109,6 @@ typedef CComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 #include "SIG/RT.h"
 #include "SIG/Layout.h"
 #include "SIG/Slots.h"
+#include "SIG/PSO.h"
 
 #include "../RenderSystem/autogen/includes.h"

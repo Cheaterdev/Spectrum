@@ -4,15 +4,7 @@ namespace GUI
 {
 	NinePatch::NinePatch()
 	{
-		Render::PipelineStateDesc state_desc;
-		state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-		state_desc.blend.render_target[0].enabled = true;
 
-		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES,{} });
-		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "VS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES/* | D3DCOMPILE_SKIP_OPTIMIZATION*/,{} });
-		state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-		state= Render::PipelineState::create(state_desc, "NinePatch");
 		std::vector<unsigned int> index_data(9 * 2 * 3);
 		auto data = index_data.data();
 
@@ -28,38 +20,6 @@ namespace GUI
 			}
 
 		index_buffer.reset(new Render::IndexBuffer(index_data));
-		//vertexes.resize(16);
-		//vblist.resize(1);
-
-
-		/*
-
-		sampler_table = Render::DescriptorHeapManager::get().get_samplers()->create_table(3);
-
-		D3D12_SAMPLER_DESC wrapSamplerDesc = {};
-		wrapSamplerDesc.Filter = D3D12_FILTER_ANISOTROPIC;
-		wrapSamplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		wrapSamplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		wrapSamplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		wrapSamplerDesc.MinLOD = 0;
-		wrapSamplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
-		wrapSamplerDesc.MipLODBias = 0.0f;
-		wrapSamplerDesc.MaxAnisotropy = 8;
-		wrapSamplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-		wrapSamplerDesc.BorderColor[0] = wrapSamplerDesc.BorderColor[1] = wrapSamplerDesc.BorderColor[2] = wrapSamplerDesc.BorderColor[3] = 0;
-		Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[0].cpu);
-		wrapSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[1].cpu);
-		wrapSamplerDesc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
-		wrapSamplerDesc.MaxLOD = 1;
-		Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[2].cpu);
-
-
-		samplers_handles.push_back(sampler_table[0]);
-
-		samplers_handles.push_back(sampler_table[1]);
-		samplers_handles.push_back(sampler_table[2]);
-		*/
 	}
 
 	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr& pipeline_state)
@@ -83,7 +43,7 @@ namespace GUI
 				textures_handles.emplace_back(item.texture->texture_2d()->get_static_srv());
 			}
 
-		if (!added&&current_state== state)
+		if (!added&&current_state== GetPSO<PSOS::NinePatch>())
 		{
 			return;
 		}
@@ -307,48 +267,33 @@ namespace GUI
 		
 		auto& graphics = c.command_list->get_graphics();
 		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		graphics.set_vertex_buffers(0, vblist);
+	//	graphics.set_vertex_buffers(0, vblist);
 		graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
 		graphics.set_pipeline(current_state);
 
 
-		graphics.use_dynamic = false;
-
-	//	UISignature<Signature> sig(&c.command_list->get_graphics());
 
 		Slots::NinePatch patch_data;
-		
-
 		auto data =  c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
-
-		 c.command_list->write(data, vertexes);
-
-
+		c.command_list->write(data, vertexes);
 		auto view = data.resource->create_view<StructuredBufferView<Vertex>>(*c.command_list->frame_resources, data.offset, data.size);
 		//data.resource->create_view<StructuredBufferView<Vertex>>()
 
 		patch_data.GetVb() = view.get_srv();
 
 		patch_data.GetTextures() = textures_handles;
-
-		//sig.pixel_samples = samplers_handles;
-		//sig.vertex_buffer = vertexes;
-		//sig.pixel_textures = textures_handles;
-//
-	//	c.command_list->get_graphics().set_srv(5, vertexes);
-	//	c.command_list->get_graphics().set(7, textures_handles);
 		patch_data.set(graphics);
+
 		graphics.draw_indexed(9 * 2 * 3, 0, 0, UINT(vertexes.size()/16));
 
 		current_state = nullptr;
 		vertexes.clear();
 		textures_handles.clear();
-		graphics.use_dynamic = true;
 
 	}
 	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r)
 	{
-		draw(c, item, r, state);
+		draw(c, item, r, GetPSO<PSOS::NinePatch>());
 	}
 
 	void NinePatch::draw(Render::context& c, Render::PipelineState::ptr& pipeline_state, rect r)

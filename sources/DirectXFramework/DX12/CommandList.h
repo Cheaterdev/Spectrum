@@ -65,6 +65,11 @@ namespace DX12
 		void reset();
 
 		template<class T>
+		size_t size_of(std::span<T>& elem)
+		{
+			return sizeof(T) * elem.size();
+		}
+		template<class T>
 		size_t size_of(std::vector<T>& elem)
 		{
 			return sizeof(T) * elem.size();
@@ -120,6 +125,11 @@ namespace DX12
 			return info;
 		}
 
+		template<class T>
+		void write(UploadInfo& info, std::span<T>& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
+		}
 		template<class T>
 		void write(UploadInfo& info, std::vector<T>& arg)
 		{
@@ -965,7 +975,7 @@ namespace DX12
 		CommandList& base;
 		SignatureDataSetter(CommandList& base) :base(base) {	}
 	public:
-		bool use_dynamic = true;
+
 		CommandList& get_base() {
 			return base;
 		}

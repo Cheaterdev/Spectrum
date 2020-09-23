@@ -34,3 +34,61 @@ struct EnvSource
 }
 
 
+GraphicsPSO Sky
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = sky;
+
+	[EntryPoint = PS]
+	pixel = sky;
+
+	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+	blend = { Additive };
+}
+
+
+GraphicsPSO SkyCube
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS_Cube]
+	vertex = sky;
+
+	[EntryPoint = PS_Cube]
+	pixel = sky;
+
+	rtv = { DXGI_FORMAT_R11G11B10_FLOAT };
+}
+
+GraphicsPSO CubemapENV
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = cubemap_down;
+
+	[EntryPoint = PS]
+	pixel = cubemap_down;
+
+	[rename = NumSamples, indirect]
+	[PS]
+	define Level = {1,8,32,64,128};
+
+
+	rtv = { DXGI_FORMAT_R11G11B10_FLOAT };
+}
+
+GraphicsPSO CubemapENVDiffuse
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = cubemap_down;
+
+	[EntryPoint = PS_Diffuse]
+	pixel = cubemap_down;
+
+	rtv = { DXGI_FORMAT_R11G11B10_FLOAT };
+}

@@ -6,19 +6,21 @@ options
   }
 
 parse
- : (layout_definition|table_definition|rt_definition|COMMENT)* EOF
+ : (layout_definition|table_definition|rt_definition|compute_pso_definition|graphics_pso_definition|COMMENT)* EOF
  ;
 
-bind_option: (owner_id '::')? name_id;
+
+bind_option: (owner_id '::')? value_id;
 
 options_assign: ASSIGN bind_option;
 
-options: name_id options_assign?;
+option: name_id options_assign?;
 
  
 option_block: 
 OSBRACE 
-options*
+option
+(',' option)*
 CSBRACE ;
 
  array_count_id: INT_SCALAR;
@@ -37,6 +39,21 @@ CSBRACE ;
  : 'Sampler' name_id ASSIGN value_id SCOL
  ;
  
+ 
+  define_declaration
+ : option_block*? 'define' name_id (ASSIGN array_value_ids)? SCOL
+ ;
+
+  rtv_formats_declaration
+ : option_block*? 'rtv' ASSIGN array_value_ids SCOL
+ ;
+
+blends_declaration
+ : option_block*? 'blend' ASSIGN array_value_ids SCOL
+ ;
+
+pso_param: pso_param_id ASSIGN value_id SCOL;
+
 templated: LT template_id GT;
 type_with_template:ID templated?;
 inherit_id: ID;
@@ -45,8 +62,12 @@ type_id: type_with_template;
 option_id: ID;
 owner_id: ID;
 template_id: ID;
-value_id: ID;
+value_id: ID |INT_SCALAR|FLOAT_SCALAR | bool_type;
+
 insert_block: INSERT_BLOCK;
+
+
+path_id: (ID '/' )*? ID; 
 
 inherit
  : ':' inherit_id (',' inherit_id)*?
@@ -107,6 +128,35 @@ rt_definition
  : RT name_id OBRACE rt_block CBRACE
  ;
 
+array_value_holder: value_id;
+
+array_value_ids: '{' array_value_holder (',' array_value_holder)* '}';
+
+root_sig: ROOTSIG ASSIGN name_id SCOL;
+shader: option_block*? shader_type ASSIGN path_id SCOL;
+
+compute_pso_stat
+ : root_sig
+ | shader
+ | define_declaration
+ | COMMENT
+ ;
+compute_pso_block: compute_pso_stat*;
+compute_pso_definition: COMPUTE_PSO name_id inherit? OBRACE compute_pso_block CBRACE;
+
+
+graphics_pso_stat
+ : root_sig
+ | shader
+ | define_declaration
+ | rtv_formats_declaration
+ | blends_declaration
+ | pso_param
+ | COMMENT
+ ;
+graphics_pso_block: graphics_pso_stat*;
+graphics_pso_definition: GRAPHICS_PSO name_id inherit? OBRACE graphics_pso_block CBRACE;
+
 
 
 OR : '||';
@@ -141,14 +191,45 @@ LOG : 'log';
 
 LAYOUT: 'layout';
 STRUCT: 'struct';
+COMPUTE_PSO: 'ComputePSO';
+GRAPHICS_PSO: 'GraphicsPSO';
 SLOT: 'slot';
 RT: 'rt';
 RTV: 'RTV';
 DSV: 'DSV';
+ROOTSIG: 'root';
+shader_type: 
+'compute'
+|'vertex'
+|'pixel'
+|'domain'
+|'hull'
+|'geometry'
+;
+pso_param_id: 
+'ds' 
+| 'cull' 
+| 'depth_func' 
+| 'depth_write'
+| 'conservative' 
+| 'enable_depth' 
+| 'topology'
+| 'enable_stencil'
+| 'stencil_func'
+| 'stencil_pass_op'
+| 'stencil_read_mask'
+| 'stencil_write_mask'
+
+ ;
 
 ID
  : [a-zA-Z_] [a-zA-Z_0-9]*
  ;
+
+bool_type
+ : TRUE | FALSE
+ ;
+
 
 INT_SCALAR
  : [0-9]+

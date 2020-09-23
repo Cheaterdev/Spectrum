@@ -58,26 +58,7 @@ namespace FW1FontWrapper
             std::wstring				m_lastError;
 
             D3D_FEATURE_LEVEL			m_featureLevel;
-
-
-            //     Render::HandleTable const_buffer_table;
-
-         //   Render::HandleTable pixel_sampler_table;
-
-
-			PipelineState::ptr geometry_state;
-            PipelineState::ptr geometry_state_clip;
-
-			//FontSig::RootSignature::ptr root_signature;
-
             bool							m_hasGeometryShader;
-
-
-            //  DX11::sampler_state::ptr		m_pSamplerState;
-            /* DX11::blend_state::ptr			m_pBlendState;
-
-             DX11::rasterizer_state::ptr		m_pRasterizerState;
-             DX11::depth_stencil_state::ptr	m_pDepthStencilState;*/
     };
 
 

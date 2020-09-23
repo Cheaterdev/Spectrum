@@ -46,8 +46,11 @@ std::ofstream& my_stream::operator<<(const T& data)
 
 using table_offsets = std::array<int, ValueType::COUNT>;
 
-
-struct have_name
+struct parsed_type
+{
+	virtual ~parsed_type() = default;
+};
+struct have_name:public parsed_type
 {
 	std::string name;
 
@@ -97,7 +100,7 @@ struct have_expr
 	std::string expr;
 };
 
-struct ValueAtom :public have_name, have_owner
+struct ValueAtom :public have_expr, have_owner , have_name
 {
 
 };
@@ -192,6 +195,67 @@ struct RenderTarget : public inherited, have_options, have_name
 	std::optional<DSV> dsv;
 };
 
+struct RootSig : public have_name
+{
+
+};
+
+struct Shader : public have_name, have_options
+{
+	std::string type;
+};
+
+struct have_values
+{
+	std::vector<Value> values;
+};
+
+struct Define : public have_options, have_name, have_values
+{
+};
+
+
+struct PSO_RTV : public have_options, have_name , have_values
+{
+};
+
+struct PSO_Blend : public have_options, have_name, have_values
+{
+};
+
+struct PSO_Param : public have_options, have_values, have_type, have_expr, parsed_type
+{
+};
+
+struct PSO : public inherited, have_options, have_name
+{
+	RootSig root_sig;
+	std::vector<Define> defines;
+
+	std::list<Shader> shader_list;
+	std::map<std::string, Shader*> shaders;
+
+
+};
+
+struct ComputePSO : public PSO
+{
+
+	Shader* get_compute()
+	{
+		return shaders["compute"];
+	}
+};
+
+struct GraphicsPSO : public PSO
+{
+
+	PSO_RTV rtv;
+	PSO_Blend blend;
+	std::vector<PSO_Param> params;
+
+};
+
 template<class T>
 void Layout::recursive_slots(T f)
 {
@@ -249,6 +313,10 @@ struct Parsed
 	std::list<Layout*> root_layouts;
 	std::list<RenderTarget> rt;
 
+
+	std::list<ComputePSO> compute_pso;
+	std::list<GraphicsPSO> graphics_pso;
+
 	Layout* find_layout(std::string name);
 	Table* find_table(std::string name);
 
@@ -259,6 +327,8 @@ struct Parsed
 		layouts.splice(layouts.end(), r.layouts);
 		tables.splice(tables.end(), r.tables);
 		rt.splice(rt.end(), r.rt);
+		compute_pso.splice(compute_pso.end(), r.compute_pso);
+		graphics_pso.splice(graphics_pso.end(), r.graphics_pso);
 
 	}
 };

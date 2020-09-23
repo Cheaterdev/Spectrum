@@ -40,7 +40,7 @@ namespace FW1FontWrapper
                 FLOAT						positionY;
                 FLOAT						texCoordX;
                 FLOAT						texCoordY;
-                UINT32						color;
+                float4						color;
             };
 
             // Internal functions

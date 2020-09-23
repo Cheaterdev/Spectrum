@@ -220,12 +220,12 @@ namespace DX12
 
 		bool operator==(const PipelineStateDesc& r) const;
 		std::strong_ordering  operator<=>(const  PipelineStateDesc& r)  const ;
-	private:
+	private: 
 		friend class boost::serialization::access;
 		template<class Archive>
 		void serialize(Archive& ar, const unsigned int)
 		{
-		
+			ar& NVP(name);
 
 			ar& NVP(topology);
 			ar& NVP(blend);

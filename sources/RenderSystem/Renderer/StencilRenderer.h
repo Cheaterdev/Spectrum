@@ -4,16 +4,10 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
 {
      //   RenderTargetTable table;
         Render::StructuredBuffer<UINT>::ptr id_buffer;
-        Render::PipelineState::ptr draw_state;
-        Render::PipelineState::ptr draw_selected_state;
-        Render::PipelineState::ptr draw_box_state;
         camera cam;
         camera axis_intersect_cam;
 
 
-        /////////////////////////////
-        Render::PipelineState::ptr  last_render_state;
-        Render::PipelineState::ptr  axis_render_state;
         Render::StructuredBuffer<UINT>::ptr axis_id_buffer;
 
         MeshAssetInstance::ptr axis;

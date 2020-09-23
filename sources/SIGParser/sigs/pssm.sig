@@ -63,3 +63,43 @@ struct PSSMLighting
 	Texture2D<float> light_mask;
 }
 
+
+GraphicsPSO PSSMMask
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = PSSM;
+
+	[EntryPoint = PS]
+	pixel = PSSM;
+
+	rtv = { DXGI_FORMAT_R8_UNORM };
+}
+
+GraphicsPSO PSSMApply
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = PSSM;
+
+	[EntryPoint = PS_RESULT]
+	pixel = PSSM;
+
+	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+}
+
+
+GraphicsPSO GBufferDownsample
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = Downsample;
+
+	[EntryPoint = PS]
+	pixel = Downsample;
+
+	rtv = { DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_R8G8B8A8_UNORM };
+}

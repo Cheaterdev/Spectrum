@@ -35,11 +35,15 @@ float4 color : COLOR;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef BUILD_FUNC_VS
-VS_OUTPUT VS(float2 Pos: SV_POSITION0, float4 c: COLOR)
+#include "../autogen/LineRender.h"
+
+VS_OUTPUT VS(uint id: SV_VertexID)
 {
+    VSLine input =  GetLineRender().GetVb()[id];
+   
     VS_OUTPUT o;
-    o.cpoint = float4(Pos.x * 2 - 1, -(Pos.y * 2 - 1), 0, 1);
-    o.color = c;
+    o.cpoint = float4(input.GetPos().x * 2 - 1, -(input.GetPos().y * 2 - 1), 0, 1);
+    o.color = input.GetColor();
     return o;
 }
 #endif

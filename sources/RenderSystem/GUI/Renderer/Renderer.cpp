@@ -113,64 +113,46 @@ namespace GUI
 
     SimpleRect::SimpleRect()
     {
-        Render::PipelineStateDesc state_desc;
-        state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-        state_desc.blend.render_target[0].enabled = true;
-        state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\rect.hlsl", "PS_COLOR", 0, {} });
-        state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\rect.hlsl", "VS", 0, {} });
-        state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        state = Render::PipelineState::create(state_desc, "SimpleRect");
-        vertexes.resize(6);
-        vblist.resize(1);
     }
 
     void SimpleRect::draw(Render::context& c, float4 color, rect r)
-    {
-        Render::PipelineState::ptr& pipeline_state = state;
-        vertexes[5].pos = float2(0, 0);
-        vertexes[4].pos = float2(0, r.size.y);
-        vertexes[3].pos = float2(r.size.x, r.size.y);
-        vertexes[2].pos = float2(0, 0);
-        vertexes[1].pos = float2(r.size.x, r.size.y);
-        vertexes[0].pos = float2(r.size.x, 0);
+	{
+		Slots::ColorRect color_data;
+
+
+        auto vertexes = (vec2*)color_data.GetPos();
+
+        vertexes[0] = float2(0, 0);
+        vertexes[1] = float2(0, r.size.y);
+        vertexes[2] = float2(r.size.x, 0);
+        vertexes[3] = float2(r.size.x, r.size.y);
 
 		auto &clip = c.ui_clipping;
 
 
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < 4; i++)
 		{
-			vertexes[i].pos += float2(r.pos) + c.offset;
-			vertexes[i].pos = float2::max(vertexes[i].pos, float2(clip.left_top));
-			vertexes[i].pos = float2::min(vertexes[i].pos, float2(clip.right_bottom));
+			vertexes[i] += float2(r.pos) + c.offset;
+			vertexes[i] = float2::max(vertexes[i], float2(clip.left_top));
+			vertexes[i] = float2::min(vertexes[i], float2(clip.right_bottom));
 
 		}
            
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 4; i++)
         {
-            float2 t = 2 * vertexes[i].pos / c.window_size - float2(1, 1);
-            vertexes[i].pos = { t.x, -t.y };
+            float2 t = 2 * vertexes[i] / c.window_size - float2(1, 1);
+            vertexes[i] = { t.x, -t.y };
         }
 
-        //    vertexes.update(c.command_list);
-        vblist[0] = c.command_list->get_graphics().place_vertex_buffer(vertexes);
-	//	UISignature<Signature> sig(&c.command_list->get_graphics());
-
-
-        c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        c.command_list->get_graphics().set_vertex_buffers(0, vblist);
-
-        Slots::ColorRect color_data;
-
+      
         color_data.GetColor() = color;
 
         color_data.set(c.command_list->get_graphics());
 
-//		sig.pixel_const_buffer.set_raw(color);
-        c.command_list->get_graphics().set_pipeline(pipeline_state);
-        c.command_list->get_graphics().use_dynamic = false;
-        c.command_list->get_graphics().draw(6);
-        c.command_list->get_graphics().use_dynamic = true;
+        c.command_list->get_graphics().set_topology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        c.command_list->get_graphics().set_pipeline(GetPSO<PSOS::SimpleRect>());
+        c.command_list->get_graphics().draw(4);
+
     }
 
 }

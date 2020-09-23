@@ -84,7 +84,7 @@ class CFW1Factory : public IFW1Factory {
 			IFW1GlyphSheet **ppGlyphSheet
 		);
 		virtual HRESULT STDMETHODCALLTYPE CreateColor(
-			UINT32 Color,
+			float4 Color,
 			IFW1ColorRGBA **ppColor
 		);
 	

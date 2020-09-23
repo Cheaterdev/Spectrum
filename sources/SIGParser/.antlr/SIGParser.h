@@ -12,25 +12,36 @@
 class  SIGParser : public antlr4::Parser {
 public:
   enum {
-    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, OR = 5, AND = 6, EQ = 7, NEQ = 8, 
-    GT = 9, LT = 10, GTEQ = 11, LTEQ = 12, PLUS = 13, MINUS = 14, MULT = 15, 
-    DIV = 16, MOD = 17, POW = 18, NOT = 19, SCOL = 20, ASSIGN = 21, OPAR = 22, 
-    CPAR = 23, OBRACE = 24, CBRACE = 25, OSBRACE = 26, CSBRACE = 27, TRUE = 28, 
-    FALSE = 29, LOG = 30, LAYOUT = 31, STRUCT = 32, SLOT = 33, RT = 34, 
-    RTV = 35, DSV = 36, ID = 37, INT_SCALAR = 38, FLOAT_SCALAR = 39, STRING = 40, 
-    COMMENT = 41, SPACE = 42, INSERT_START = 43, INSERT_END = 44, INSERT_BLOCK = 45
+    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
+    T__7 = 8, T__8 = 9, T__9 = 10, T__10 = 11, T__11 = 12, T__12 = 13, T__13 = 14, 
+    T__14 = 15, T__15 = 16, T__16 = 17, T__17 = 18, T__18 = 19, T__19 = 20, 
+    T__20 = 21, T__21 = 22, T__22 = 23, T__23 = 24, T__24 = 25, OR = 26, 
+    AND = 27, EQ = 28, NEQ = 29, GT = 30, LT = 31, GTEQ = 32, LTEQ = 33, 
+    PLUS = 34, MINUS = 35, MULT = 36, DIV = 37, MOD = 38, POW = 39, NOT = 40, 
+    SCOL = 41, ASSIGN = 42, OPAR = 43, CPAR = 44, OBRACE = 45, CBRACE = 46, 
+    OSBRACE = 47, CSBRACE = 48, TRUE = 49, FALSE = 50, LOG = 51, LAYOUT = 52, 
+    STRUCT = 53, COMPUTE_PSO = 54, GRAPHICS_PSO = 55, SLOT = 56, RT = 57, 
+    RTV = 58, DSV = 59, ROOTSIG = 60, ID = 61, INT_SCALAR = 62, FLOAT_SCALAR = 63, 
+    STRING = 64, COMMENT = 65, SPACE = 66, INSERT_START = 67, INSERT_END = 68, 
+    INSERT_BLOCK = 69
   };
 
   enum {
-    RuleParse = 0, RuleBind_option = 1, RuleOptions_assign = 2, RuleOptions = 3, 
+    RuleParse = 0, RuleBind_option = 1, RuleOptions_assign = 2, RuleOption = 3, 
     RuleOption_block = 4, RuleArray_count_id = 5, RuleArray = 6, RuleValue_declaration = 7, 
-    RuleSlot_declaration = 8, RuleSampler_declaration = 9, RuleTemplated = 10, 
-    RuleType_with_template = 11, RuleInherit_id = 12, RuleName_id = 13, 
-    RuleType_id = 14, RuleOption_id = 15, RuleOwner_id = 16, RuleTemplate_id = 17, 
-    RuleValue_id = 18, RuleInsert_block = 19, RuleInherit = 20, RuleLayout_stat = 21, 
-    RuleLayout_block = 22, RuleLayout_definition = 23, RuleTable_stat = 24, 
-    RuleTable_block = 25, RuleTable_definition = 26, RuleRt_color_declaration = 27, 
-    RuleRt_ds_declaration = 28, RuleRt_stat = 29, RuleRt_block = 30, RuleRt_definition = 31
+    RuleSlot_declaration = 8, RuleSampler_declaration = 9, RuleDefine_declaration = 10, 
+    RuleRtv_formats_declaration = 11, RuleBlends_declaration = 12, RulePso_param = 13, 
+    RuleTemplated = 14, RuleType_with_template = 15, RuleInherit_id = 16, 
+    RuleName_id = 17, RuleType_id = 18, RuleOption_id = 19, RuleOwner_id = 20, 
+    RuleTemplate_id = 21, RuleValue_id = 22, RuleInsert_block = 23, RulePath_id = 24, 
+    RuleInherit = 25, RuleLayout_stat = 26, RuleLayout_block = 27, RuleLayout_definition = 28, 
+    RuleTable_stat = 29, RuleTable_block = 30, RuleTable_definition = 31, 
+    RuleRt_color_declaration = 32, RuleRt_ds_declaration = 33, RuleRt_stat = 34, 
+    RuleRt_block = 35, RuleRt_definition = 36, RuleArray_value_holder = 37, 
+    RuleArray_value_ids = 38, RuleRoot_sig = 39, RuleShader = 40, RuleCompute_pso_stat = 41, 
+    RuleCompute_pso_block = 42, RuleCompute_pso_definition = 43, RuleGraphics_pso_stat = 44, 
+    RuleGraphics_pso_block = 45, RuleGraphics_pso_definition = 46, RuleShader_type = 47, 
+    RulePso_param_id = 48, RuleBool_type = 49
   };
 
   SIGParser(antlr4::TokenStream *input);
@@ -46,13 +57,17 @@ public:
   class ParseContext;
   class Bind_optionContext;
   class Options_assignContext;
-  class OptionsContext;
+  class OptionContext;
   class Option_blockContext;
   class Array_count_idContext;
   class ArrayContext;
   class Value_declarationContext;
   class Slot_declarationContext;
   class Sampler_declarationContext;
+  class Define_declarationContext;
+  class Rtv_formats_declarationContext;
+  class Blends_declarationContext;
+  class Pso_paramContext;
   class TemplatedContext;
   class Type_with_templateContext;
   class Inherit_idContext;
@@ -63,6 +78,7 @@ public:
   class Template_idContext;
   class Value_idContext;
   class Insert_blockContext;
+  class Path_idContext;
   class InheritContext;
   class Layout_statContext;
   class Layout_blockContext;
@@ -74,7 +90,20 @@ public:
   class Rt_ds_declarationContext;
   class Rt_statContext;
   class Rt_blockContext;
-  class Rt_definitionContext; 
+  class Rt_definitionContext;
+  class Array_value_holderContext;
+  class Array_value_idsContext;
+  class Root_sigContext;
+  class ShaderContext;
+  class Compute_pso_statContext;
+  class Compute_pso_blockContext;
+  class Compute_pso_definitionContext;
+  class Graphics_pso_statContext;
+  class Graphics_pso_blockContext;
+  class Graphics_pso_definitionContext;
+  class Shader_typeContext;
+  class Pso_param_idContext;
+  class Bool_typeContext; 
 
   class  ParseContext : public antlr4::ParserRuleContext {
   public:
@@ -87,6 +116,10 @@ public:
     Table_definitionContext* table_definition(size_t i);
     std::vector<Rt_definitionContext *> rt_definition();
     Rt_definitionContext* rt_definition(size_t i);
+    std::vector<Compute_pso_definitionContext *> compute_pso_definition();
+    Compute_pso_definitionContext* compute_pso_definition(size_t i);
+    std::vector<Graphics_pso_definitionContext *> graphics_pso_definition();
+    Graphics_pso_definitionContext* graphics_pso_definition(size_t i);
     std::vector<antlr4::tree::TerminalNode *> COMMENT();
     antlr4::tree::TerminalNode* COMMENT(size_t i);
 
@@ -103,7 +136,7 @@ public:
   public:
     Bind_optionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
-    Name_idContext *name_id();
+    Value_idContext *value_id();
     Owner_idContext *owner_id();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -131,9 +164,9 @@ public:
 
   Options_assignContext* options_assign();
 
-  class  OptionsContext : public antlr4::ParserRuleContext {
+  class  OptionContext : public antlr4::ParserRuleContext {
   public:
-    OptionsContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    OptionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     Name_idContext *name_id();
     Options_assignContext *options_assign();
@@ -145,16 +178,16 @@ public:
    
   };
 
-  OptionsContext* options();
+  OptionContext* option();
 
   class  Option_blockContext : public antlr4::ParserRuleContext {
   public:
     Option_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *OSBRACE();
+    std::vector<OptionContext *> option();
+    OptionContext* option(size_t i);
     antlr4::tree::TerminalNode *CSBRACE();
-    std::vector<OptionsContext *> options();
-    OptionsContext* options(size_t i);
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -251,6 +284,82 @@ public:
   };
 
   Sampler_declarationContext* sampler_declaration();
+
+  class  Define_declarationContext : public antlr4::ParserRuleContext {
+  public:
+    Define_declarationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
+    antlr4::tree::TerminalNode *ASSIGN();
+    Array_value_idsContext *array_value_ids();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Define_declarationContext* define_declaration();
+
+  class  Rtv_formats_declarationContext : public antlr4::ParserRuleContext {
+  public:
+    Rtv_formats_declarationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *ASSIGN();
+    Array_value_idsContext *array_value_ids();
+    antlr4::tree::TerminalNode *SCOL();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Rtv_formats_declarationContext* rtv_formats_declaration();
+
+  class  Blends_declarationContext : public antlr4::ParserRuleContext {
+  public:
+    Blends_declarationContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *ASSIGN();
+    Array_value_idsContext *array_value_ids();
+    antlr4::tree::TerminalNode *SCOL();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Blends_declarationContext* blends_declaration();
+
+  class  Pso_paramContext : public antlr4::ParserRuleContext {
+  public:
+    Pso_paramContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Pso_param_idContext *pso_param_id();
+    antlr4::tree::TerminalNode *ASSIGN();
+    Value_idContext *value_id();
+    antlr4::tree::TerminalNode *SCOL();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Pso_paramContext* pso_param();
 
   class  TemplatedContext : public antlr4::ParserRuleContext {
   public:
@@ -380,6 +489,9 @@ public:
     Value_idContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *ID();
+    antlr4::tree::TerminalNode *INT_SCALAR();
+    antlr4::tree::TerminalNode *FLOAT_SCALAR();
+    Bool_typeContext *bool_type();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -404,6 +516,22 @@ public:
   };
 
   Insert_blockContext* insert_block();
+
+  class  Path_idContext : public antlr4::ParserRuleContext {
+  public:
+    Path_idContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<antlr4::tree::TerminalNode *> ID();
+    antlr4::tree::TerminalNode* ID(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Path_idContext* path_id();
 
   class  InheritContext : public antlr4::ParserRuleContext {
   public:
@@ -614,6 +742,230 @@ public:
   };
 
   Rt_definitionContext* rt_definition();
+
+  class  Array_value_holderContext : public antlr4::ParserRuleContext {
+  public:
+    Array_value_holderContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Value_idContext *value_id();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Array_value_holderContext* array_value_holder();
+
+  class  Array_value_idsContext : public antlr4::ParserRuleContext {
+  public:
+    Array_value_idsContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Array_value_holderContext *> array_value_holder();
+    Array_value_holderContext* array_value_holder(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Array_value_idsContext* array_value_ids();
+
+  class  Root_sigContext : public antlr4::ParserRuleContext {
+  public:
+    Root_sigContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *ROOTSIG();
+    antlr4::tree::TerminalNode *ASSIGN();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *SCOL();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Root_sigContext* root_sig();
+
+  class  ShaderContext : public antlr4::ParserRuleContext {
+  public:
+    ShaderContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Shader_typeContext *shader_type();
+    antlr4::tree::TerminalNode *ASSIGN();
+    Path_idContext *path_id();
+    antlr4::tree::TerminalNode *SCOL();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  ShaderContext* shader();
+
+  class  Compute_pso_statContext : public antlr4::ParserRuleContext {
+  public:
+    Compute_pso_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Root_sigContext *root_sig();
+    ShaderContext *shader();
+    Define_declarationContext *define_declaration();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Compute_pso_statContext* compute_pso_stat();
+
+  class  Compute_pso_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Compute_pso_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Compute_pso_statContext *> compute_pso_stat();
+    Compute_pso_statContext* compute_pso_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Compute_pso_blockContext* compute_pso_block();
+
+  class  Compute_pso_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Compute_pso_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *COMPUTE_PSO();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    Compute_pso_blockContext *compute_pso_block();
+    antlr4::tree::TerminalNode *CBRACE();
+    InheritContext *inherit();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Compute_pso_definitionContext* compute_pso_definition();
+
+  class  Graphics_pso_statContext : public antlr4::ParserRuleContext {
+  public:
+    Graphics_pso_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Root_sigContext *root_sig();
+    ShaderContext *shader();
+    Define_declarationContext *define_declaration();
+    Rtv_formats_declarationContext *rtv_formats_declaration();
+    Blends_declarationContext *blends_declaration();
+    Pso_paramContext *pso_param();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Graphics_pso_statContext* graphics_pso_stat();
+
+  class  Graphics_pso_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Graphics_pso_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Graphics_pso_statContext *> graphics_pso_stat();
+    Graphics_pso_statContext* graphics_pso_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Graphics_pso_blockContext* graphics_pso_block();
+
+  class  Graphics_pso_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Graphics_pso_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *GRAPHICS_PSO();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    Graphics_pso_blockContext *graphics_pso_block();
+    antlr4::tree::TerminalNode *CBRACE();
+    InheritContext *inherit();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Graphics_pso_definitionContext* graphics_pso_definition();
+
+  class  Shader_typeContext : public antlr4::ParserRuleContext {
+  public:
+    Shader_typeContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Shader_typeContext* shader_type();
+
+  class  Pso_param_idContext : public antlr4::ParserRuleContext {
+  public:
+    Pso_param_idContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Pso_param_idContext* pso_param_id();
+
+  class  Bool_typeContext : public antlr4::ParserRuleContext {
+  public:
+    Bool_typeContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *TRUE();
+    antlr4::tree::TerminalNode *FALSE();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+
+    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  Bool_typeContext* bool_type();
 
 
 private:

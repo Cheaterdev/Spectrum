@@ -104,12 +104,24 @@ namespace FW1FontWrapper
         {
             // Fill the vertex buffer
             UINT vertexCount = std::min(vertexData->TotalVertexCount - currentVertex, maxVertexCount);
-            //   m_pVertexBuffer->set_data(pContext, 0, vertexData->pVertices + currentVertex, vertexCount);
-            //   pContext->set_vertex_buffers(0, m_pVertexBuffer);
-            std::vector<D3D12_VERTEX_BUFFER_VIEW> vbs;
-            vbs.emplace_back(pContext->get_graphics().place_vertex_buffer(vertexData->pVertices + currentVertex, vertexCount));
-            pContext->get_graphics().set_vertex_buffers(0, vbs);
-            //     pContext->update_buffer(m_pVertexBuffer->get_resource(), 0, reinterpret_cast<const char*>(vertexData->pVertices + currentVertex), vertexCount);
+     
+
+			auto data = pContext->place_data(sizeof(FW1_GLYPHVERTEX) * vertexCount, sizeof(FW1_GLYPHVERTEX));
+			
+            pContext->write(data, std::span{ vertexData->pVertices + currentVertex, vertexCount });
+
+			auto view = data.resource->create_view<Render::StructuredBufferView<FW1_GLYPHVERTEX>>(*pContext->frame_resources, data.offset, data.size);
+
+
+            {
+                Slots::FontRenderingGlyphs glyphs;
+
+                glyphs.GetData() = view.get_srv();
+                glyphs.set(pContext->get_graphics());
+
+            }
+
+            
             // Draw all glyphs in the buffer
             UINT drawnVertices = 0;
 
@@ -148,115 +160,7 @@ namespace FW1FontWrapper
         UINT preboundSheet
     )
     {
-        if (vertexData->SheetCount == 0 || vertexData->TotalVertexCount == 0)
-            return preboundSheet;
-
-        UINT maxVertexCount = m_vertexBufferSize / sizeof(QuadVertex);
-
-        if (maxVertexCount > 4 * (m_maxIndexCount / 6))
-            maxVertexCount = 4 * (m_maxIndexCount / 6);
-
-        if (maxVertexCount % 4 != 0)
-            maxVertexCount -= (maxVertexCount % 4);
-
-        UINT currentSheet = 0;
-        UINT activeSheet = preboundSheet;
-        const FW1_GLYPHCOORDS* sheetGlyphCoords = 0;
-
-        if (activeSheet < vertexData->SheetCount)
-            sheetGlyphCoords = pGlyphAtlas->GetGlyphCoords(activeSheet);
-
-        UINT currentVertex = 0;
-        UINT nextSheetStart = vertexData->pVertexCounts[0];
-
-        while (currentVertex < vertexData->TotalVertexCount)
-        {
-            // Fill the vertex buffer
-            UINT vertexCount = std::min((vertexData->TotalVertexCount - currentVertex) * 4, maxVertexCount);
-            QuadVertex* bufferVertices = 0;//reinterpret_cast<QuadVertex*>(m_pVertexBuffer->data());
-            // Convert to quads when filling the buffer
-            UINT savedCurrentSheet = currentSheet;
-            UINT savedActiveSheet = activeSheet;
-            UINT savedNextSheetStart = nextSheetStart;
-            UINT savedCurrentVertex = currentVertex;
-            UINT drawnVertices = 0;
-
-            while (drawnVertices < vertexCount)
-            {
-                while (currentVertex >= nextSheetStart)
-                {
-                    ++currentSheet;
-                    nextSheetStart += vertexData->pVertexCounts[currentSheet];
-                }
-
-                if (currentSheet != activeSheet)
-                {
-                    sheetGlyphCoords = pGlyphAtlas->GetGlyphCoords(currentSheet);
-                    activeSheet = currentSheet;
-                }
-
-                UINT drawCount = std::min(vertexCount - drawnVertices, (nextSheetStart - currentVertex) * 4);
-
-                for (UINT i = 0; i < drawCount / 4; ++i)
-                {
-                    FW1_GLYPHVERTEX glyphVertex = vertexData->pVertices[currentVertex + i];
-                    glyphVertex.PositionX = glyphVertex.PositionX;
-                    glyphVertex.PositionY = glyphVertex.PositionY;
-                    const FW1_GLYPHCOORDS& glyphCoords = sheetGlyphCoords[glyphVertex.GlyphIndex];
-                    QuadVertex quadVertex;
-                    quadVertex.color = glyphVertex.GlyphColor;
-                    quadVertex.positionX = glyphVertex.PositionX + glyphCoords.PositionLeft;
-                    quadVertex.positionY = glyphVertex.PositionY + glyphCoords.PositionTop;
-                    quadVertex.texCoordX = glyphCoords.TexCoordLeft;
-                    quadVertex.texCoordY = glyphCoords.TexCoordTop;
-                    bufferVertices[drawnVertices + i * 4 + 0] = quadVertex;
-                    quadVertex.positionX = glyphVertex.PositionX + glyphCoords.PositionRight;
-                    quadVertex.texCoordX = glyphCoords.TexCoordRight;
-                    bufferVertices[drawnVertices + i * 4 + 1] = quadVertex;
-                    quadVertex.positionY = glyphVertex.PositionY + glyphCoords.PositionBottom;
-                    quadVertex.texCoordY = glyphCoords.TexCoordBottom;
-                    bufferVertices[drawnVertices + i * 4 + 3] = quadVertex;
-                    quadVertex.positionX = glyphVertex.PositionX + glyphCoords.PositionLeft;
-                    quadVertex.texCoordX = glyphCoords.TexCoordLeft;
-                    bufferVertices[drawnVertices + i * 4 + 2] = quadVertex;
-                }
-
-                drawnVertices += drawCount;
-                currentVertex += drawCount / 4;
-            }
-
-            // m_pVertexBuffer->update(pContext);
-            // Draw all glyphs in the buffer
-            currentSheet = savedCurrentSheet;
-            activeSheet = savedActiveSheet;
-            nextSheetStart = savedNextSheetStart;
-            currentVertex = savedCurrentVertex;
-            drawnVertices = 0;
-
-            while (drawnVertices < vertexCount)
-            {
-                while (currentVertex >= nextSheetStart)
-                {
-                    ++currentSheet;
-                    nextSheetStart += vertexData->pVertexCounts[currentSheet];
-                }
-
-                if (currentSheet != activeSheet)
-                {
-                    // Bind sheet shader resources
-                    pGlyphAtlas->BindSheet(pContext, currentSheet, FW1_NOGEOMETRYSHADER);
-                    activeSheet = currentSheet;
-                }
-
-                UINT drawCount = std::min(vertexCount - drawnVertices, (nextSheetStart - currentVertex) * 4);
-                //     pContext.draw_indexed((drawCount / 2) * 3, 0, drawnVertices);
-                //  pContext.get_native()->DrawIndexed((drawCount / 2) * 3, 0, drawnVertices);
-                drawnVertices += drawCount;
-                currentVertex += drawCount / 4;
-            }
-        }
-
-        return activeSheet;
+        return preboundSheet;
     }
 
 

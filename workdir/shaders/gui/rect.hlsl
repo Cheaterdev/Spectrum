@@ -3,23 +3,19 @@ struct quad_output
 {
 float4 pos : SV_POSITION;
 };
+#include "../autogen/ColorRect.h"
+static const float2 pos[4] = (float2[4])GetColorRect().cb.pos;
 
 #ifdef BUILD_FUNC_VS
-cbuffer cbParams : register(b0)
-{
-    float4 pos;
-};
-
-quad_output VS(float2 pos: SV_POSITION, uint index : SV_VERTEXID)
+quad_output VS(uint index : SV_VERTEXID)
 {
     quad_output Output;
-    Output.pos = float4(pos, 0.99999, 1); //float4(Input.Pos.xy,0.3,1);
+    Output.pos = float4(pos[index], 0.99999, 1); //float4(Input.Pos.xy,0.3,1);
     return Output;
 }
 #endif
 
 #ifdef BUILD_FUNC_PS_COLOR
-#include "../autogen/ColorRect.h"
 
 float4 PS_COLOR(quad_output i) : SV_TARGET0
 {

@@ -15,6 +15,7 @@ float4 ClipDistance : CLIPDISTANCE;
 float4 PS(PSIn Input) : SV_Target
 {
 
+  //  return 1;
     clip(Input.ClipDistance);
 
     float a = tex0.Sample(pointClampSampler, Input.TexCoord);

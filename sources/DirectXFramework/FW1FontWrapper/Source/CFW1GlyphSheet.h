@@ -123,11 +123,8 @@ namespace FW1FontWrapper
 
 
             Render::Texture::ptr		m_pTexture;
-            //	ID3D11ShaderResourceView	m_pTextureSRV;
-            Render::GPUBuffer::ptr	m_pCoordBuffer;
-            //	ID3D11ShaderResourceView	m_pCoordBufferSRV;
-            Render::HandleTable geometry_buffer_table;
-            //   Render::HandleTable pixel_texture_table;
+            Render::GPUBuffer::ptr	  m_pCoordBuffer;
+
             bool						m_closed;
             bool						m_static;
 

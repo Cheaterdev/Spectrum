@@ -20,10 +20,6 @@ class AssetRenderer : public Singleton<AssetRenderer>
         mesh_renderer::ptr meshes_renderer;
         std::shared_ptr<SceneRenderWorkflow> rendering;
 
-    //    std::shared_ptr<G_Buffer> gbuffer;
-   //     std::shared_ptr<LightSystem> lighting;
-        Render::PipelineState::ptr mesh_render_state;
-
         MeshAssetInstance::ptr material_tester;
 		MeshAssetInstance::ptr mesh_plane;
 

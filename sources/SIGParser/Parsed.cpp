@@ -311,7 +311,7 @@ void Parsed::setup()
 		{
 			if (o.name == "Bind")
 			{
-				t.slot = find_layout(o.value_atom.owner_name)->find_slot(o.value_atom.name);
+				t.slot = find_layout(o.value_atom.owner_name)->find_slot(o.value_atom.expr);
 			}
 		}
 		t.setup(this);

@@ -1,27 +1,19 @@
-#include "../autogen/FontRendering.h"
-#include "../autogen/FontRenderingConstants.h"
+#include "../autogen/FontRenderingGlyphs.h"
 
-
-static const Buffer<float4> tex0 = GetFontRendering().GetPositions();
-static const float4x4  TransformMatrix = GetFontRenderingConstants().GetTransformMatrix();
-
-	struct VSIn {
-		float4 Position : POSITION;
-		float4 GlyphColor : GLYPHCOLOR;
-	};
-	
 	struct VSOut {
-		float4 Position : SV_Position;
+		float3 Position : POSITION;
 		float4 GlyphColor : COLOR;
-		float2 TexCoord : TEXCOORD;
+		
 	};
 	
-	VSOut VS(VSIn Input) {
+	VSOut VS(uint index: SV_VERTEXID) {
 		VSOut Output;
 		
-		Output.Position = mul(TransformMatrix, float4(Input.Position.xy, 0.0f, 1.0f));
-		Output.GlyphColor = Input.GlyphColor;
-		Output.TexCoord = Input.Position.zw;
+		Glyph glyph = GetFontRenderingGlyphs().GetData()[index];
+
+		Output.Position.xy = glyph.GetPos();
+		Output.Position.z = glyph.GetIndex();
+		Output.GlyphColor =  glyph.GetColor();
 		
 		return Output;
 	}

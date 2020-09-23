@@ -11,57 +11,56 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
 	auto clip = c.scissors;
 	c.command_list->get_graphics().set_scissors(c.ui_clipping);
 
-    c.command_list->get_graphics().set_pipeline(state);
-
     Slots::FlowGraph graph_data;
     graph_data.GetSize() = vec4(render_bounds->size, user_ui->size.get());
 	graph_data.GetOffset_size() = vec4(contents->pos.get(), 1.0f / contents->scale, 0);
     graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
     graph_data.set(c.command_list->get_graphics());
 
+    renderer->draw(c, GetPSO<PSOS::CanvasBack>(), get_render_bounds());
 
-   // c.command_list->get_graphics().set_const_buffer_raw(1, cb);
-    renderer->draw(c, state, get_render_bounds());
-
-	renderer->flush(c);
-  
-    c.command_list->get_graphics().use_dynamic = false;
+	
+    if(linking.size())
     {
+        
+        renderer->flush(c);
         //	auto& b = *line_vertex;
         int count = 0;
-        struct line_vertexes
-        {
-            vec2 p; vec4 color;
 
-        };
-        std::vector<line_vertexes> vertexes;
+        std::vector<Table::VSLine::CB> vertexes;
         vertexes.resize(4 * linking.size());
 
         for (auto& l : linking)
         {
             auto& p = *l;
             p.update(c.delta_time);
-            vertexes[4 * count + 0].p = p.p1 / user_ui->size.get();
+            vertexes[4 * count + 0].pos = p.p1 / user_ui->size.get();
             vertexes[4 * count + 0].color = p.color;
-            vertexes[4 * count + 1].p = p.p2 / user_ui->size.get();
+            vertexes[4 * count + 1].pos = p.p2 / user_ui->size.get();
             vertexes[4 * count + 1].color = p.color;
-            vertexes[4 * count + 2].p = p.p3 / user_ui->size.get();
+            vertexes[4 * count + 2].pos = p.p3 / user_ui->size.get();
             vertexes[4 * count + 2].color = p.color;
-            vertexes[4 * count + 3].p = p.p4 / user_ui->size.get();
+            vertexes[4 * count + 3].pos = p.p4 / user_ui->size.get();
             vertexes[4 * count + 3].color = p.color;
             count++;
         }
 
-        //    line_vertex->update(c.command_list);
-        c.command_list->get_graphics().set_pipeline(line_state);
+        c.command_list->get_graphics().set_pipeline(GetPSO<PSOS::CanvasLines>());
         c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
-        auto res = c.command_list->get_graphics().place_vertex_buffer(vertexes);
-        c.command_list->get_graphics().set_vertex_buffer(0, res);
+
+		auto data = c.command_list->place_data(sizeof(Table::VSLine::CB) * vertexes.size(), sizeof(Table::VSLine::CB));
+		c.command_list->write(data, vertexes);
+
+		auto view = data.resource->create_view<StructuredBufferView<Table::VSLine::CB>>(*c.command_list->frame_resources, data.offset, data.size);
+        {
+            Slots::LineRender linedata;
+            linedata.GetVb() = view.get_srv();
+            linedata.set(c.command_list->get_graphics());
+        }
         c.command_list->get_graphics().draw(count * 4, 0);
     }
 
 	c.command_list->get_graphics().set_scissors(clip);
-    c.command_list->get_graphics().use_dynamic = true;
     //  this->renderer->draw(this, c);
 }
 
@@ -403,36 +402,8 @@ void GUI::Elements::FlowGraph::canvas::think(float dt)
 void GUI::Elements::FlowGraph::canvas::on_add(base* parent)
 {
     scroll_container::on_add(parent);
-
-    if (state)
-        return;
-
-    Render::PipelineStateDesc state_desc;
-    state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-	state_desc.blend.render_target[0].enabled = true;
-
-    state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "PS", 0, {} });
-    state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\ninepatch.hlsl", "VS", 0, {} });
-    state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-    state_desc.layout.inputs.push_back({ "TEXCOORD", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-    state=  Render::PipelineState::create(state_desc, "canvas");
-    {
-        Render::PipelineStateDesc state_desc;
-        state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-		state_desc.blend.render_target[0].enabled = true;
-
-        state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "PS", 0, {} });
-        state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "VS", 0, {} });
-        state_desc.geometry = Render::geometry_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "GS", 0, {} });
-        state_desc.domain = Render::domain_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "DS", 0, {} });
-        state_desc.hull = Render::hull_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "HS", 0, {} });
-        state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-        state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        state_desc.layout.inputs.push_back({ "COLOR", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        line_state = Render::PipelineState::create(state_desc,"canvas_line");
-    }
 }
+
 GUI::Elements::FlowGraph::canvas::canvas(manager* main_manager)
 {
     this->main_manager = main_manager;

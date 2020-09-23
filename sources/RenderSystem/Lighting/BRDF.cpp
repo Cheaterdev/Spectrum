@@ -4,12 +4,6 @@
 
 void BRDF::create_new()
 {
-	Render::ComputePipelineStateDesc desc;
-	desc.root_signature = get_Signature(Layouts::DefaultLayout);
-	desc.shader = Render::compute_shader::get_resource({ "shaders\\BRDF.hlsl", "CS", 0,{} });
-	state = Render::ComputePipelineState::create(desc,"brdf");
-
-
 
 	texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 	Render::CommandList::ptr list(new Render::CommandList(Render::CommandListType::DIRECT));
@@ -17,20 +11,18 @@ void BRDF::create_new()
 
 
 	Render::ComputeContext& compute_context = list->get_compute();
-	compute_context.set_pipeline(state);
 
-	Slots::BRDF data;
-	data.GetOutput() = texture->texture_3d()->get_static_uav();
-	data.set(compute_context);
+	compute_context.set_pipeline(GetPSO<PSOS::BRDF>());
 
-//	list->transition(texture, Render::ResourceState::UNORDERED_ACCESS);
-	compute_context.use_dynamic = false;
+	{
+		Slots::BRDF data;
+		data.GetOutput() = texture->texture_3d()->get_static_uav();
+		data.set(compute_context);
+	}
+
 	compute_context.dispach(texture->get_size(), ivec3(4,4,4));
-//	list->transition(texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 	list->end();
 	list->execute_and_wait();
-
-
 }
 
 

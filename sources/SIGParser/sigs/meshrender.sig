@@ -134,3 +134,79 @@ struct GatherMeshesBoxes
 	AppendStructuredBuffer<uint> invisibleMeshes;
 }
 
+
+
+
+
+ComputePSO GatherPipeline
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = gather_pipeline;
+
+	[rename = CHECK_FRUSTUM]
+	[CS, nullable]
+	define CheckFrustum;
+}
+
+
+
+ComputePSO GatherBoxes
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_boxes]
+	compute = gather_pipeline;
+
+	[rename = CHECK_FRUSTUM]
+	[CS, nullable]
+	define CheckFrustum;
+}
+
+ComputePSO InitDispatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = occluder_cs_dispatch_init;
+
+	[rename = CHECK_FRUSTUM]
+	[CS, nullable]
+	define CheckFrustum;
+}
+
+
+ComputePSO GatherMeshes
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS_meshes_from_boxes]
+	compute = gather_pipeline;
+
+	[rename = INVISIBLE]
+	[CS, nullable]
+	define Invisible;
+}
+
+
+
+GraphicsPSO RenderBoxes
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = occluder;
+
+	[EntryPoint = PS]
+	pixel = occluder;
+
+	conservative = true;
+	depth_write = false;
+
+	ds = DXGI_FORMAT_D32_FLOAT;
+
+	cull = NONE;
+
+	depth_func = LESS_EQUAL;
+}

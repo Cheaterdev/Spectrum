@@ -57,6 +57,7 @@ float get_shadow(float3 wpos)
 	float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
 	//float shadow = GetVoxelLighting().GetLight_buffer().SampleCmpLevelZero(cmp_sampler, float3(light_tc, level), pos_l.z);
+
 	float shadow = GetVoxelLighting().GetPssmGlobal().GetLight_buffer().SampleLevel(linearSampler, float2(light_tc), level) >  pos_l.z;
 
 //	if (pos_l.z < 0 || pos_l.x > 1 || pos_l.x < -1 || pos_l.y > 1 || pos_l.y < -1)
@@ -253,7 +254,7 @@ uint3 index = get_index(groupThreadID, groupID);
 	float shadow = saturate(dot(normals, dir)) *get_shadow(pos);
 	
 	
-	float3 lighting = 1*albedo.xyz * gi.xyz +1 * albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
+	float3 lighting = 1*albedo.xyz * gi.xyz + albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
 //	output[index] = float4(albedo.xyz,albedo.w);
 	//lighting = traced_shadow.xxx	;
 	output[index] = float4(lighting,1);

@@ -10,7 +10,6 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	auto& list = *mesh_render_context->list;
 	GBuffer* gbuffer = mesh_render_context->g_buffer;
 	auto timer = list.start(L"mesh_renderer");
-	graphics.use_dynamic = false;
 
 	instances_count = 0;
 	bool current_cpu_culling = use_cpu_culling && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
@@ -133,7 +132,6 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 
 	}
-	graphics.use_dynamic = true;
 }
 
 void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Slots::GatherPipelineGlobal::Compiled & from)
@@ -144,7 +142,8 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 	auto& list = *mesh_render_context->list;
 
 	{
-		compute.set_pipeline(init_dispatch_pipeline);
+		compute.set_pipeline(GetPSO<PSOS::InitDispatch>());
+
 		init_dispatch_compiled.set(compute);
 		from.set(compute);
 		compute.dispach(1, 1, 1);
@@ -169,11 +168,8 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 }
 
 	{
-		if (invisibleToo)
-			compute.set_pipeline(gather_meshes_from_boxes_pipeline_invisible);
-		else
-			compute.set_pipeline(gather_meshes_from_boxes_pipeline);
 
+		compute.set_pipeline(GetPSO<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo)));
 		compiledScene.set(compute);
 		compiledFrame.set(compute);
 		scene->compiledGather[(int)mesh_render_context->render_mesh].set(compute);
@@ -208,8 +204,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 		list.clear_counter(commands_boxes->buffer);
 		list.clear_counter(meshes_ids->buffer);
 	
-		compute.set_pipeline(gather_boxes);
-	
+		compute.set_pipeline(GetPSO<PSOS::GatherBoxes>());
 		gather_boxes_compiled.set(compute);
 		gatherData.set(compute);
 
@@ -243,7 +238,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	gbuffer->HalfBuffer.hiZ_table.set(graphics);
 	gbuffer->HalfBuffer.hiZ_table.set_window(graphics);
 
-	graphics.set_pipeline(pipeline_boxes);
+	graphics.set_pipeline(GetPSO<PSOS::RenderBoxes>());
 	graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
 
 	draw_boxes_compiled.set(graphics);
@@ -307,16 +302,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		{
 			auto timer = list.start(L"GatherMats");
 
-
-			if (!needCulling)
-			{
-				compute.set_pipeline(gather_pipeline);
-			}
-			else
-			{
-				compute.set_pipeline(gather_pipeline_frustum);
-			}
-
+			compute.set_pipeline(GetPSO<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling)));
 			gatherData.set(compute);
 			gather.set(compute);
 			compiledScene.set(compute);
@@ -397,26 +383,6 @@ mesh_renderer::mesh_renderer()
 
 
 	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(command), get_Signature(Layouts::DefaultLayout));
-
-
-	{
-		Render::ComputePipelineStateDesc compute_desc;
-		compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-		compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS", D3DCOMPILE_OPTIMIZATION_LEVEL3, {} });
-		gather_pipeline = ComputePipelineState::create(compute_desc,"mesh_renderer_gather_pipeline");
-
-		compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS", D3DCOMPILE_OPTIMIZATION_LEVEL3, {{"CHECK_FRUSTUM",""}} });
-		gather_pipeline_frustum = ComputePipelineState::create(compute_desc, "mesh_renderer_gather_pipeline_frustum");
-
-	}
-
-	{
-		Render::ComputePipelineStateDesc compute_desc;
-		compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-		compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS_boxes", D3DCOMPILE_OPTIMIZATION_LEVEL3, {{"CHECK_FRUSTUM",""}} });
-		gather_boxes = ComputePipelineState::create(compute_desc, "mesh_renderer_gather_boxes");
-	}
-
 	
 	UINT max_meshes = 1024 * 1024;
 
@@ -427,22 +393,6 @@ mesh_renderer::mesh_renderer()
 	for (int i = 0; i < 8; i++)
 		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<command>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
-
-	{
-		Render::PipelineStateDesc desc;
-		desc.root_signature = get_Signature(Layouts::DefaultLayout);
-		desc.vertex = Render::vertex_shader::get_resource({ "shaders/occluder.hlsl", "VS", 0,{} });
-		desc.pixel = Render::pixel_shader::get_resource({ "shaders/occluder.hlsl", "PS", 0,{} });
-		desc.rtv.rtv_formats = {};
-		desc.rtv.enable_depth = true;
-		desc.rtv.enable_depth_write = false;
-		desc.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT;
-		desc.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
-		desc.rtv.func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		desc.rasterizer.conservative = true;
-		//	desc.blend.render_target[0].enabled = true;
-		pipeline_boxes = Render::PipelineStateCache::get().get_cache(desc,"pipeline_boxes");
-	}
 
 
 	{
@@ -502,37 +452,11 @@ mesh_renderer::mesh_renderer()
 
 	{
 		dispatch_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
-
 		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(command));
-
 	}
 
 
 	dispatch_info = std::make_shared<Render::StructuredBuffer<Table::GatherPipelineGlobal::CB>>(1);
-	{
-
-		{
-			Render::ComputePipelineStateDesc compute_desc;
-			compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-			compute_desc.shader = Render::compute_shader::get_resource({ "shaders/occluder_cs_dispatch_init.hlsl", "CS", D3DCOMPILE_OPTIMIZATION_LEVEL3, {} });
-			init_dispatch_pipeline = ComputePipelineState::create(compute_desc,"init_dispatch_pipeline");
-		}
-	} 
-	{
-
-		{
-			Render::ComputePipelineStateDesc compute_desc;
-			compute_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-			compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS_meshes_from_boxes", D3DCOMPILE_OPTIMIZATION_LEVEL3, {} });
-			gather_meshes_from_boxes_pipeline = ComputePipelineState::create(compute_desc,"gather_meshes_from_boxes_pipeline");
-
-			compute_desc.shader = Render::compute_shader::get_resource({ "shaders/gather_pipeline.hlsl", "CS_meshes_from_boxes", D3DCOMPILE_OPTIMIZATION_LEVEL3, {{"INVISIBLE",""}} });
-			gather_meshes_from_boxes_pipeline_invisible = ComputePipelineState::create(compute_desc,"gather_meshes_from_boxes_pipeline_invisible");
-
-			
-		}
-	}
 
 	{
 		Slots::GatherPipelineGlobal gather;
