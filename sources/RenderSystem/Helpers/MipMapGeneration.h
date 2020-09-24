@@ -2,10 +2,7 @@
 
 class MipMapGenerator: public Singleton<MipMapGenerator>
 {
-		Cache<DXGI_FORMAT, Render::PipelineState::ptr> copy_texture_state;
 
-
-        std::mutex m;
     public:
         MipMapGenerator();
 		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex/*, Render::Texture2DView::ptr view*/);

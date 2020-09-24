@@ -24,6 +24,7 @@ enum class PSO: int
 	QualityColor,
 	QualityToStencil,
 	QualityToStencilREfl,
+	CopyTexture,
 	PSSMMask,
 	PSSMApply,
 	GBufferDownsample,

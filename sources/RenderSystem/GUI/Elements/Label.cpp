@@ -69,8 +69,8 @@ namespace GUI
 		{
 			if (!need_recalculate && ((w == ivec2(render_bounds->size / scaled) || (magnet_text & FW1_NOWORDWRAP))))
 			{
-		//		w = ivec2(render_bounds->size / scaled);
-			//	return;
+				w = ivec2(render_bounds->size / scaled);
+				return;
 			}
 			//if (!cache.texture) {
 		

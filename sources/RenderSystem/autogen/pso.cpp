@@ -17,6 +17,7 @@ void init_pso(std::array<PSOBase::ptr, int(PSO::TOTAL)>& pso)
 	pso[static_cast<int>(PSO::QualityColor)] =  std::make_shared<PSOS::QualityColor>();
 	pso[static_cast<int>(PSO::QualityToStencil)] =  std::make_shared<PSOS::QualityToStencil>();
 	pso[static_cast<int>(PSO::QualityToStencilREfl)] =  std::make_shared<PSOS::QualityToStencilREfl>();
+	pso[static_cast<int>(PSO::CopyTexture)] =  std::make_shared<PSOS::CopyTexture>();
 	pso[static_cast<int>(PSO::PSSMMask)] =  std::make_shared<PSOS::PSSMMask>();
 	pso[static_cast<int>(PSO::PSSMApply)] =  std::make_shared<PSOS::PSSMApply>();
 	pso[static_cast<int>(PSO::GBufferDownsample)] =  std::make_shared<PSOS::GBufferDownsample>();

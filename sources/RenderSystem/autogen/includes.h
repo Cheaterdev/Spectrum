@@ -91,6 +91,7 @@
 #include "pso\QualityColor.h"
 #include "pso\QualityToStencil.h"
 #include "pso\QualityToStencilREfl.h"
+#include "pso\CopyTexture.h"
 #include "pso\PSSMMask.h"
 #include "pso\PSSMApply.h"
 #include "pso\GBufferDownsample.h"

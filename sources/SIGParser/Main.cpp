@@ -1075,7 +1075,17 @@ void generate_pso(PSO& pso)
 		keys += "KeyValue<";
 
 
-		if (hasvalue) keys += "int";
+		if (hasvalue)
+		{
+			auto opt = d.find_option("type");
+			if (opt)
+			{
+				keys += opt->value_atom.expr;
+			}else
+
+			keys += "int";
+		}
+		
 		else
 			keys += "NoValue";
 
@@ -1218,8 +1228,19 @@ void generate_pso(PSO& pso)
 						{
 							if (!elems.empty())
 								elems += ", ";
-							elems += "DXGI_FORMAT::";
-							elems += e.expr;
+							auto def = graphics->find_define(e.expr);
+
+							if (def)
+							{
+								elems += e.expr;
+								elems += ".get_value(mpso, key)";
+							}
+							else
+							{
+								elems += "DXGI_FORMAT::";
+								elems += e.expr;
+							}
+
 						}
 
 						stream << "mpso.rtv_formats = { " << elems << " };" << std::endl;
@@ -1246,6 +1267,7 @@ void generate_pso(PSO& pso)
 
 						std::string add;
 
+	
 						if (e.type == "cull")
 							add = "D3D12_CULL_MODE::D3D12_CULL_MODE_";
 						else if (e.type == "depth_func")

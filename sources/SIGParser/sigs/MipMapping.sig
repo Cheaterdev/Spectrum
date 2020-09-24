@@ -139,3 +139,23 @@ GraphicsPSO QualityToStencilREfl
 	stencil_write_mask = 2;
 
 }
+
+
+
+GraphicsPSO CopyTexture
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = copy_texture;
+
+	[EntryPoint = PS]
+	pixel = copy_texture;
+
+	enable_depth = false;
+
+	[type = DXGI_FORMAT]
+	define Format = { ALL_RT_FORMATS };
+
+	rtv = { Format };
+}

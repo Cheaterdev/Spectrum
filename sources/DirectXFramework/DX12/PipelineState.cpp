@@ -215,12 +215,7 @@ namespace DX12
 	}
 	 PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc & desc, std::string name )
 	{
-		 if (desc.name.empty())
-		 {
-			std::string hash =  Hasher::hash(desc);
-			desc.name = hash;
-		 }
-		 else
+
 		 desc.name = name;
 	
 		//	 return  PipelineState::ptr(new PipelineState(desc));

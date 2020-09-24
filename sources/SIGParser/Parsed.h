@@ -235,7 +235,16 @@ struct PSO : public inherited, have_options, have_name
 	std::list<Shader> shader_list;
 	std::map<std::string, Shader*> shaders;
 
+	Define* find_define(std::string name)
+	{
 
+		for (auto& d : defines)
+		{
+			if (d.name == name)
+				return &d;
+		}
+		return nullptr;
+	}
 };
 
 struct ComputePSO : public PSO

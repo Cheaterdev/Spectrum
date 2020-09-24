@@ -4,22 +4,7 @@
 
 MipMapGenerator::MipMapGenerator()
 {
-	std::lock_guard<std::mutex> g(m);
 
-	Render::RootSignatureDesc root_desc;
-
-	copy_texture_state.create_func = [](DXGI_FORMAT format) {
-		Render::PipelineStateDesc state_desc;
-		state_desc.root_signature = get_Signature(Layouts::DefaultLayout);
-		state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\copy_texture.hlsl", "PS", 0,{} });
-		state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\copy_texture.hlsl", "VS", 0,{} });
-		state_desc.rtv.rtv_formats = { format };
-		state_desc.blend.render_target[0].enabled = false;
-		state_desc.rtv.enable_stencil = false;
-		state_desc.rtv.enable_depth = false;
-
-		return Render::PipelineState::create(state_desc, std::string("copy_")+std::to_string((int)format));
-	};
 
 }
 
@@ -40,7 +25,6 @@ void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, Tex
 void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureView  view)
 {
 
-	std::lock_guard<std::mutex> g(m);
 	auto timer = compute_context.get_base().start(L"downsampling");
 
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
@@ -104,7 +88,6 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureV
 void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Texture2DView::ptr view)
 {
 
-	std::lock_guard<std::mutex> g(m);
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
 
 	uint32_t maps = tex->get_desc().MipLevels - 1;
@@ -233,8 +216,7 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::Texture::ptr& from)
 {
-	list.set_pipeline(copy_texture_state[to->texture_2d()->get_rtv().resource_info->rtv.Format]);
-	//MipMapSignature<Signature> shader_data(&list);
+	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(to->texture_2d()->get_rtv().resource_info->rtv.Format)));
 
 	auto& view = to->texture_2d();
 
@@ -254,7 +236,8 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr& to, Render::TextureView from)
 {
-	list.set_pipeline(copy_texture_state[to->texture_2d()->get_rtv().resource_info->rtv.Format]);
+	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(to->texture_2d()->get_rtv().resource_info->rtv.Format)));
+
 
 	auto& view = to->texture_2d();
 
@@ -274,8 +257,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 
 void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Render::TextureView to, Render::TextureView from)
 {
-
-	list.set_pipeline(copy_texture_state[to.get_rtv().resource_info->rtv.Format]);
+	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(to.get_rtv().resource_info->rtv.Format)));
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	Slots::CopyTexture data;
