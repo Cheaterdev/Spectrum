@@ -91,6 +91,20 @@ public:
 		sky.generate(graph);
 
 
+		struct no
+		{
+			ResourceHandler* result;
+		};
+		graph.add_pass<no>("mip", [this, &graph](no& data, TaskBuilder& builder) {
+			data.result = graph.builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
+			}, [](no& data, FrameContext& _context) {
+			
+			
+				auto result = _context.get_texture(data.result);
+
+
+				MipMapGenerator::get().generate(_context.get_list()->get_compute(), result);
+			});
 
 //		graph.add_pass([])
 	}
@@ -136,7 +150,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 
 
 
-	graph.builder.pass_texture("ResultTexture", result);
+	graph.builder.pass_texture("ResultTexture", result, ResourceFlags::Required);
 	graph.frame_size = result->get_size();
 	graph.scene = scene.get();
 	graph.renderer = scene_renderer.get();

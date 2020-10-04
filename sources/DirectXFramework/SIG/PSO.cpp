@@ -44,5 +44,6 @@ Render::PipelineState::ptr SimpleGraphicsPSO::create()
 
 PSOHolder::PSOHolder()
 {
+	ScopedCounter counter("pso init");
 	init_pso(psos);
 }

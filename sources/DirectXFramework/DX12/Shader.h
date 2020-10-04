@@ -228,6 +228,16 @@ namespace DX12
             static const ptr null;
     };
 
+
+    class library_shader : public Shader<library_shader>
+	{
+		friend class Shader<library_shader>;
+	public:
+
+		using ptr = s_ptr<library_shader>;
+
+		static const ptr null;
+	};
 }
 
 

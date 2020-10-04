@@ -5,10 +5,18 @@
 
 void GUI::Elements::FlowGraph::component_window::draw(Render::context& c)
 {
+
+    if (visual_graph)
+    {
+        c.color = visual_graph->color;// float4(31, 63, 85, 1);
+ }else   c.color = float4(31, 63, 85, 255) / 255.0f;
+    
     if (selected)
         this->renderer->draw(c, skin.Active, get_render_bounds());
     else
         this->renderer->draw(c, skin.Inactive, get_render_bounds());
+
+    c.color = float4(1,1,1,1);
 }
 
 GUI::Elements::FlowGraph::component_window::component_window(canvas* canva, ::FlowGraph::Node* node, window_type type)
@@ -101,11 +109,11 @@ GUI::Elements::FlowGraph::component_window::component_window(canvas* canva, ::Fl
     contents_preview->x_type = pos_x_type::CENTER;
     contents_preview->width_size = size_type::MATCH_CHILDREN;
     contents_preview->height_size = size_type::MATCH_CHILDREN;
-
-    if (dynamic_cast<VisualGraph*>(node))
+    visual_graph = dynamic_cast<VisualGraph*>(node);
+    if (visual_graph)
     {
-        auto p = dynamic_cast<VisualGraph*>(node)->create_editor_window();
-
+        auto p = visual_graph->create_editor_window();
+    
         if (p)
         {
             contents_preview->add_child(p);

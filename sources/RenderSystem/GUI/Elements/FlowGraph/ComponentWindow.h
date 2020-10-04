@@ -7,6 +7,8 @@ namespace GUI
 			class component_window;
 			class VisualGraph
 			{
+            public:
+                float4 color = float4(31, 63, 85, 255) / 255.0f;;
 				friend class component_window;
 			protected:
 				virtual GUI::base::ptr create_editor_window() { return nullptr; }
@@ -50,6 +52,8 @@ namespace GUI
 
                     button::ptr close_button;
                     ::FlowGraph::Node* node = nullptr;
+
+                    VisualGraph* visual_graph = nullptr;
 
                     friend class canvas;
                     window_type type;

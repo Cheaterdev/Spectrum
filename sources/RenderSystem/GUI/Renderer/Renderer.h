@@ -3,11 +3,8 @@ namespace GUI
 
     class NinePatch
     {
-            struct Vertex
-            {
-                vec2 pos;
-                vec2 tc;
-            };
+        using Vertex = Table::vertex_input::CB;
+
 			Render::HandleTable sampler_table;
 
            Render::IndexBuffer::ptr index_buffer;

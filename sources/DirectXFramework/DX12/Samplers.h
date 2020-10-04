@@ -14,7 +14,8 @@ namespace DX12
 
         extern SamplerDesc SamplerLinearWrapDesc;
         extern SamplerDesc SamplerAnisoWrapDesc;
-        extern SamplerDesc SamplerShadowDesc;
+		extern SamplerDesc SamplerAnisoBorderDesc;
+		extern SamplerDesc SamplerShadowDesc;
         extern SamplerDesc SamplerLinearClampDesc;
         extern SamplerDesc SamplerVolumeWrapDesc;
         extern SamplerDesc SamplerPointClampDesc;

@@ -306,7 +306,7 @@ void materials::universal_material::generate_material()
 	auto raytracing_str = context->hit_shader.uniforms+ include_file_raytacing->get_data() + context->hit_shader.text;
 
 
-	raytracing_blob = *D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
+	raytracing_lib = Render::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true }); //*D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
 	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, context);
 
 	
@@ -464,7 +464,7 @@ void materials::universal_material::serialize(Archive& ar, const unsigned int fi
 	ar& NVP(pipeline);
 
 
-	ar& NVP(raytracing_blob);
+	ar& NVP(raytracing_lib);
 
 
 	if constexpr (Archive::is_loading::value)

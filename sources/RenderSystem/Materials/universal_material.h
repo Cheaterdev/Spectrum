@@ -283,7 +283,7 @@ namespace materials
 			Events::Event<void> on_change;
 			std::wstring wshader_name;
 		
-			std::string raytracing_blob;
+			Render::library_shader::ptr raytracing_lib;
             universal_material(MaterialGraph::ptr graph);
 			Slots::MaterialInfo::Compiled compiled_material_info;
 

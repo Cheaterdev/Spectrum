@@ -23,19 +23,11 @@ namespace DX12
     };
 
 
-    struct DescriptorParam
-    {
-        virtual ~DescriptorParam()
-        {
-        }
-
-        virtual CD3DX12_ROOT_PARAMETER generate_native_param() = 0;
-    };
-
+  
     struct RootSignatureDesc;
 	struct HandleTable;
 
-    struct DescriptorTable//:public DescriptorParam
+    struct DescriptorTable
     {
 
 
@@ -61,7 +53,7 @@ namespace DX12
            CD3DX12_DESCRIPTOR_RANGE native_range;*/
     };
 
-    struct DescriptorConstBuffer//:public DescriptorParam
+    struct DescriptorConstBuffer
     {
         DescriptorRange range;
         ShaderVisibility visibility;
@@ -73,8 +65,8 @@ namespace DX12
                              ) :  visibility(_visibility), offset(_offset), space(space)
         {
         }
-    };
-    struct DescriptorSRV//:public DescriptorParam
+	};
+	struct DescriptorSRV
     {
         ShaderVisibility visibility;
         UINT offset;
@@ -86,7 +78,7 @@ namespace DX12
         {
         }
     };
-    struct DescriptorUAV//:public DescriptorParam
+    struct DescriptorUAV
     {
         ShaderVisibility visibility;
         UINT offset;
@@ -98,7 +90,7 @@ namespace DX12
         {
         }
     };
-    struct DescriptorConstants//:public DescriptorParam
+    struct DescriptorConstants
     {
         ShaderVisibility visibility;
         UINT count;
@@ -334,32 +326,5 @@ namespace DX12
     };
 
 
-    /*
-    class RootLayoutManager
-    {
-        std::vector<Layouts> slots; 
-    public:
-
-        void set_layout(RootLayout::ptr &layout)
-        {
-            for (auto& e : layout->get_desc().tables)
-            {
-                slots[]
-            }
-        }
-    };*/
-	template<class T>
-	class RootSignatureTyped: public RootSignature
-	{
-	public:
-
-		using ptr = std::shared_ptr<RootSignatureTyped<T>>;
-
-
-		RootSignatureTyped(const RootSignatureDesc& desc, D3D12_ROOT_SIGNATURE_FLAGS flags= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT):RootSignature(desc, flags)
-		{
-
-		}
-	};
 
 }

@@ -28,10 +28,6 @@ void RTX::CreateCommonProps(CD3DX12_STATE_OBJECT_DESC& raytracingPipeline)
 {
 	auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
 
-	global_sig = get_Signature(Layouts::DefaultLayout)->create_global_signature<Slots::MaterialInfo>();
-
-
-
 	globalRootSignature->SetRootSignature(global_sig->get_native().Get());
 
 	auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
@@ -52,7 +48,7 @@ void RTX::CreateSharedCollection()
 
 	{
 		auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-		D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)blob.data(), blob.size());
+		D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)library->get_blob().data(), library->get_blob().size());
 		lib->SetDXILLibrary(&libdxil);
 		// Define which shader exports to surface from the library.
 		// If no shader exports are defined for a DXIL library subobject, all shaders will be surfaced.
@@ -83,8 +79,7 @@ void RTX::CreateGlobalCollection()
 {
 	CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ D3D12_STATE_OBJECT_TYPE_COLLECTION };
 
-	auto local_sig = create_local_signature<Slots::MaterialInfo>();
-
+	
 	auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
 	localRootSignature->SetRootSignature(local_sig->get_native().Get());
 
@@ -99,7 +94,7 @@ void RTX::CreateGlobalCollection()
 		auto mat = pair.first;
 
 
-		auto& blob = mat->raytracing_blob;
+		auto& blob = mat->raytracing_lib->get_blob();
 		auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
 		D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)blob.data(), blob.size());
 		lib->SetDXILLibrary(&libdxil);
@@ -118,11 +113,10 @@ void RTX::CreateGlobalCollection()
 
 		}
 
-
 	}
+	
 
 	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_GlobalCollection)), L"Couldn't create DirectX Raytracing state object.\n");
-	all_objs.insert(m_GlobalCollection);
 }
 
 void RTX::CreateRaytracingPipelineStateObject()
@@ -141,12 +135,8 @@ void RTX::CreateRaytracingPipelineStateObject()
 
 
 	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)), L"Couldn't create DirectX Raytracing state object.\n");
-	all_objs.insert(m_dxrStateObject);
-
-
 	TEST(m_dxrStateObject.As(&stateObjectProperties));
 
-	//	shader_identifier.assign()
 	rayGenShaderIdentifier = ::identify(stateObjectProperties->GetShaderIdentifier(c_raygenShaderName));
 	missShaderIdentifier = ::identify(stateObjectProperties->GetShaderIdentifier(c_missShaderName));
 	missShadowShaderIdentifier = ::identify(stateObjectProperties->GetShaderIdentifier(L"ShadowMissShader"));
@@ -168,22 +158,12 @@ void RTX::CreateRaytracingPipelineStateObject()
 RTX::RTX()
 {
 	material_hits = std::make_shared< virtual_gpu_buffer<closesthit_identifier>>(1024 * 1024);
-	while (blob.empty()) {
-		resource_file_depender depender;
 
+	library = Render::library_shader::get_resource({ "shaders\\raytracing.hlsl", "" , 0, {} });
 
-		D3D::shader_include In("shaders\\", depender);
+	global_sig = get_Signature(Layouts::DefaultLayout)->create_global_signature<Slots::MaterialInfo>();
+	local_sig = create_local_signature<Slots::MaterialInfo>();
 
-		auto res = D3D12ShaderCompilerInfo::get().Compile_Shader_File("raytracing.hlsl", {}, "lib_6_3", "", &In);
-
-		if (res)
-		{
-			blob = *res;
-			break;
-		}
-
-	}
-	//		CreateRaytracingPipelineStateObject(blobs);
 }
 
 void RTX::prepare(CommandList::ptr& list)
@@ -201,7 +181,7 @@ void RTX::prepare(CommandList::ptr& list)
 	material_hits->prepare(list);
 }
 
-void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as)
+void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer)
 {
 	auto timer = context->list->start(L"raytracing");
 
@@ -237,36 +217,26 @@ void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, R
 
 	{
 		Slots::Raytracing rtx;
-
 		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*_list->frame_resources).get_srv();
 		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*_list->frame_resources).get_srv();
-
 		rtx.set(_list->get_compute());
-		rtx.set(_list->get_graphics());
-
 	}
 
 	{
 		Slots::RaytracingRays rays;
-
 		rays.GetOutput() = texture.get_uav();
-
-		float view = context->cam->angle;
-		
+		gbuffer.SetTable(rays.MapGbuffer());
+		float view = context->cam->angle;		
 		rays.GetPixelAngle() = atan(2*tan(view/2)/texture.get_size().y);
-
 		rays.set(_list->get_compute());
-		rays.set(_list->get_graphics());
-
 	}
 
 	_list->transition(material_hits->buffer.get(), ResourceState::NON_PIXEL_SHADER_RESOURCE);
 	_list->flush_transitions();
 
-	// Bind the heaps, acceleration structure and dispatch rays.
+
 	D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
 	{
-		//	commandList->SetComputeRootShaderResourceView(GlobalRootSignatureParams::AccelerationStructureSlot, m_topLevelAccelerationStructure->GetGPUVirtualAddress());
 		DispatchRays(_list->get_native_list().Get(), m_dxrStateObject.Get(), &dispatchDesc);
 	}
 }

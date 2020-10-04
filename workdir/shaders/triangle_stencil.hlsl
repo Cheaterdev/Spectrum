@@ -40,5 +40,5 @@ vertex_output VS(uint index: SV_VertexID)
 
 float4 PS(vertex_output i) :SV_TARGET0
 {
-return 1;
+return 0.05;
 }

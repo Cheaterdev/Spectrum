@@ -125,7 +125,6 @@ struct ResourceInfo
 		this->cbv = cbv;
 	}
 
-
 };
 
 struct Handle
@@ -165,6 +164,11 @@ struct Handle
 	void clear(CommandList& list, float4 = { 0, 0, 0, 0 }) const;
 };
 
+using RTVHandle = Handle;
+using DSVHandle = Handle;
+using SRVHandle = Handle;
+using SMPHandle = Handle;
+using UAVHandle = Handle;
 
 class DescriptorHeap;
 class CommandList;
@@ -234,8 +238,6 @@ struct HandleTableLight : public Handle
 		return descriptor_size > 0;
 	}
 	 
-	//void place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	//void place(const HandleTableLight& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 private:
 	friend class DescriptorHeap;
@@ -422,7 +424,6 @@ public:
 
 	~DescriptorPage()
 	{
-	//	Log::get() << "Lolo" << Log::endl;
 	}
 	bool has_free_size(UINT need_count = 1)
 	{
@@ -439,11 +440,6 @@ class DescriptorHeapPaged :public DescriptorHeap
 {
 	CommonAllocator allocator;
 
-
-	//std::list<DescriptorPage*> free_pages;
-	//std::list<DescriptorPage> all_pages;
-
-
 	UINT offset = 0;
 
 public:
@@ -456,7 +452,6 @@ public:
 
 	~DescriptorHeapPaged()
 	{
-		Log::get() << "Lolo" << Log::endl;
 	}
 	std::mutex m;
 
@@ -662,7 +657,7 @@ public:
 	}
 };
 
-
+/*
 class CBPage
 {
 
@@ -704,69 +699,6 @@ class DynamicCB
 
 
 };
-//template<DescriptorHeapType type, DescriptorHeapFlags flags >  std::queue<DescriptorHeap::ptr> DynamicDescriptor<type, flags>::free_tables;
-//template<DescriptorHeapType type, DescriptorHeapFlags flags >  std::mutex DynamicDescriptor<type, flags>::tables_mutex;
+*/
 
-
-//deprecated
-class DynamicDescriptorManager
-{
-
-public:
-	using Creator = DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV,Free, DescriptorHeapFlags::SHADER_VISIBLE>;
-private:
-
-	struct row
-	{
-		std::vector<Handle> handles;
-		bool changed;
-		bool fixed;
-		UINT count;
-	};
-
-	std::map<UINT, row> root_tables;
-
-	std::list<HandleTable> additional_handles;
-
-
-	HandleTable null_srv;
-	HandleTable null_uav;
-	Creator& creator;
-public:
-
-	DynamicDescriptorManager(Creator& creator);
-
-
-	void set(UINT i, UINT offset, Handle h);
-	void set(UINT i, UINT offset, HandleTable h);
-	void set(UINT i, UINT offset, std::vector<Handle>& h);
-	Handle& get(UINT i, UINT offset)
-	{
-		return root_tables[i].handles[offset];
-	}
-
-	//	Handle place(const Handle &h);
-	bool has_free_size(UINT count);
-
-	//	Handle place_additional(HandleTable table)
-	//	{
-//
-	//		return creator.place(table)[0];
-	//	}
-	UINT calculate_needed_size();
-
-	void unbind_all();
-	void bind(CommandList* list, std::function<void(UINT, Handle)> f);
-	void bind(CommandList* list);
-	void bind_table(UINT i, std::vector<Handle>& h);
-	/*void set(int i, int offset, HandleTable h)
-	{
-		handles[i][offset] = h;
-	}*/
-
-	void parse(RootSignature::ptr root);
-
-
-
-};
 }

@@ -942,7 +942,7 @@ namespace GUI
 		 graph.add_pass<pass_data>("UI RENDER",[](pass_data& data, TaskBuilder& builder) {
 			 data.o_texture = builder.need_texture("swapchain", ResourceFlags::RenderTarget);
 
-			 }, [this](pass_data& data, FrameContext& context) {
+			 }, [this,&graph](pass_data& data, FrameContext& context) {
 			//	 std::lock_guard<std::mutex> g(m);
 
 				 auto command_list = context.get_list();
@@ -963,7 +963,7 @@ namespace GUI
 				 c.offset = { 0, 0 };
 				 c.window_size = scaled_size.get();
 				 c.scale = 1;
-
+                 c.delta_time = graph.time;
 				 {
 					 auto timer = c.command_list->start(L"draw");
 					 RecursiveContext context(c);

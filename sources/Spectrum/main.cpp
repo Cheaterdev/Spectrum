@@ -68,6 +68,17 @@ public:
 };
 
 
+class GraphDebugRender : public GUI::Elements::FlowGraph::canvas
+{
+public:
+
+	void generate(FrameGraph& graph)
+	{
+
+	}
+
+};
+
 class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
 {
 	main_renderer::ptr scene_renderer;
@@ -197,13 +208,6 @@ public:
 		props->width_size = GUI::size_type::MATCH_CHILDREN;
 		props->height_size = GUI::size_type::MATCH_CHILDREN;
 		add_child(props);
-
-		//props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_parrallel));
-		////props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_cpu_culling));
-		//props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->use_gpu_culling));
-	//	props->add_child(std::make_shared<GUI::Elements::check_box_text>(meshes_renderer->clear_depth));
-	//	props->add_child(std::make_shared<GUI::Elements::check_box_text>(enable_gi));
-	//	props->add_child(std::make_shared<GUI::Elements::check_box_text>(realtime_debug));
 
 
 		props->add_child(std::make_shared<GUI::Elements::check_box_text>(debug_draw));
@@ -408,11 +412,12 @@ public:
 
 		vr_context->eyes[0].offset = vec3(0, 0, 0);
 
-		ivec2 size = get_render_bounds().size;
+		ivec2 size = ivec2::max(ivec2(get_render_bounds().size),ivec2(64,64));
 		struct pass_data
 		{
 			ResourceHandler* o_texture;
 			ResourceHandler* sky_cubemap;
+			GBufferViewDesc gbuffer;
 
 		};
 
@@ -422,6 +427,7 @@ public:
 		graph.renderer = gpu_scene_renderer.get();
 		graph.cam = &cam;
 		graph.time = my_timer.tick();
+		graph.totalTime += graph.time;
 		graph.sunDir = pssm.get_position();
 		cam.update({ 0,0 });
 
@@ -568,12 +574,14 @@ public:
 
 
 
-		graph.add_pass<pass_data>("RAYTRACE", [](pass_data& data, TaskBuilder& builder) {
-			data.o_texture = builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
+		graph.add_pass<pass_data>("RAYTRACE", [&](pass_data& data, TaskBuilder& builder) {
+			data.o_texture = builder.create_texture("RTX", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,ResourceFlags::UnorderedAccess| ResourceFlags::Static);
 			data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
+			data.gbuffer.need(builder);
 
 			}, [this, &graph](pass_data& data, FrameContext& _context) {
 
+				GBuffer gbuffer = data.gbuffer.actualize(_context);
 
 				auto& command_list = _context.get_list();
 				//SceneFrameManager::get().prepare(command_list, *scene);
@@ -604,7 +612,8 @@ public:
 					Slots::FrameInfo frameInfo;
 
 					frameInfo.GetSky() = sky_cubemap.get_srv();
-
+					frameInfo.GetSunDir() = graph.sunDir;
+					frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0};
 					auto camera = frameInfo.MapCamera();
 					camera.cb = graph.cam->camera_cb.current;
 
@@ -627,8 +636,8 @@ public:
 
 					context->cam = &eyes[i]->cam;
 				}
-				if (GetAsyncKeyState('B'))
-					RTX::get().render(context, output_tex, scene_as);
+				//if (GetAsyncKeyState('B'))
+					RTX::get().render(context, output_tex, scene_as,gbuffer);
 			});
 
 		stenciler->generate_after(graph);
@@ -650,7 +659,7 @@ public:
 		result_tex = promise->get_future();
 
 		graph.add_pass<debug_data>("DEBUG", [this, res_tex](debug_data& data, TaskBuilder& builder) {
-			data.o_texture = builder.need_texture("swapchain");
+			data.o_texture = builder.need_texture("swapchain", ResourceFlags::RenderTarget);
 			data.debug_texture = builder.need_texture(res_tex);
 
 			}, [this, promise](debug_data& data, FrameContext& context) {
@@ -668,7 +677,7 @@ public:
 				list->get_graphics().set_scissor({ 0,0,100,100 });
 
 				MipMapGenerator::get().copy_texture_2d_slow(list->get_graphics(), texture.texture, debug_tex);*/
-			});
+			}, PassFlags::Required);
 
 	}
 
@@ -1189,222 +1198,38 @@ public:
 #endif
 
 
-
-class WindowRender : public UIWindow
+class FrameFlowGraph : public  ::FlowGraph::graph
 {
-	count_meter fps;
-
-	GUI::Elements::label::ptr label_fps;
-	GUI::Elements::label::ptr label_tiles;
-	GUI::Elements::label::ptr instance_info;
-
-	std::shared_ptr<triangle_drawer> drawer;
-
-	GUI::base::ptr area;
-
-public:
-
-
-
-
-	WindowRender()
-	{
-		Profiler::create();
-		EVENT("Start WindowRender");
-
-		//	EngineAssets::brdf.get_asset();
-
-		GUI::Elements::image::ptr back(new GUI::Elements::image);
-		back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));
-		back->texture.tiled = true;
-		back->width_size = GUI::size_type::MATCH_PARENT;
-		back->height_size = GUI::size_type::MATCH_PARENT;
-		add_child(back);
-		//  GUI::Elements::check_box::ptr butt(new GUI::Elements::check_box());
-		//   butt->docking = GUI::dock::FILL;
-		//   ui->add_child(butt);
-
-		on_resize(get_size());
-		EVENT("Start UI");
-		{
-			area.reset(new GUI::base());
-			area->docking = GUI::dock::FILL;
-			add_child(area);
-			GUI::Elements::dock_base::ptr  d = std::make_shared<GUI::Elements::dock_base>();
-			d->docking = GUI::dock::FILL;
-			{
-				EVENT("Start Drawer");
-				drawer.reset(new triangle_drawer());
-				drawer->docking = GUI::dock::FILL;
-				//	area->add_child(drawer);
-				d->get_tabs()->add_page("Game", drawer);
-				EVENT("End Drawer");
-			}
-			{
-				GUI::Elements::list_box::ptr l(new GUI::Elements::list_box());
-				auto& dock = d->get_dock(GUI::dock::BOTTOM);
-				dock->size = { 100, 100 };
-				area->add_child(d);
-				dock->get_tabs()->add_page("TaskViewer", std::make_shared<GUI::Elements::Debug::TaskViewer>());
-				//			dock->get_tabs()->add_page("output", std::make_shared<GUI::Elements::Debug::OutputWindow>());
-							//       GUI::Elements::tree::ptr t(new GUI::Elements::tree());
-			//                    t->init(drawer->scene.get());
-			//                    dock->get_tabs()->add_page("Scene", t);
-				{
-					//	GUI::Elements::Debug::TimerWatcher::ptr t(new GUI::Elements::Debug::TimerWatcher());
-					//	t->init(&Profiler::get());
-					//	dock->get_tabs()->add_page("Profiler", t);
-
-					GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
-
-					dock->get_tabs()->add_page("Graph", t2);
-
-
-				}
-			}
-			{
-				{
-					GUI::Elements::menu_strip::ptr menu(new GUI::Elements::menu_strip());
-					auto file = menu->add_item("File")->get_menu();
-					auto edit = menu->add_item("Edit")->get_menu();
-					auto help = menu->add_item("Help");// ->get_menu();
-					file->add_item("New");
-					file->add_item("Open")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-					{
-						add_task([this]()
-							{
-								try
-								{
-									auto f = FileSystem::get().get_file("scene.dat")->load_all();
-
-									Scene::ptr scene(new Scene());
-
-									Serializer::deserialize(f, *scene);
-									//	drawer->scene = scene;
-								}
-								catch (std::exception e)
-								{
-									message_box("error", "cant open", [](bool) {});
-								}
-
-
-							});
-					};
-					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-					{
-						//	auto data = Serializer::serialize(*drawer->scene);
-						//	FileSystem::get().save_data(L"scene.dat", data);
-					};
-					file->add_item("Quit")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
-					{
-						on_destroy();
-					};
-					auto add = edit->add_item("Add smth")->get_menu();
-					add->add_item("Mesh");
-					add->add_item("Material");
-					add->add_item("Sound");
-					//->get_menu()->add_item("12454");
-					add_child(menu);
-				}
-				{
-					GUI::Elements::status_bar::ptr bar(new GUI::Elements::status_bar());
-					label_fps = GUI::Elements::label::ptr(new GUI::Elements::label());
-					instance_info = GUI::Elements::label::ptr(new GUI::Elements::label());
-					label_tiles = GUI::Elements::label::ptr(new GUI::Elements::label());
-
-					bar->add_child(label_fps);
-					bar->add_child(label_tiles);
-
-					bar->add_child(instance_info);
-					instance_info->docking = GUI::dock::RIGHT;
-					label_tiles->margin = { 20,0,0,0 };
-					add_child(bar);
-				}
-
-				auto dock = d->get_dock(GUI::dock::LEFT);
-				auto m = GUI::Elements::FlowGraph::manager::get().get_ptr<GUI::Elements::FlowGraph::manager>();
-				dock->get_tabs()->add_button(m->create_parameter_view());
-				add_child(m);
-				dock->size = { 400, 400 };
-				{
-					EVENT("Start Asset Explorer");
-					auto dock = d->get_dock(GUI::dock::RIGHT);
-					GUI::Elements::asset_explorer::ptr cont(new GUI::Elements::asset_explorer());
-					dock->get_tabs()->add_page("Asset Explorer", cont);
-					dock->size = { 400, 400 };
-					EVENT("End Asset Explorer");
-				}
-
-
-				{
-					GUI::Elements::window::ptr wnd(new GUI::Elements::window);
-					add_child(wnd);
-					GUI::Elements::dock_base::ptr dock(new GUI::Elements::dock_base);
-					wnd->add_child(dock);
-					//					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(drawer->render_graph));
-					wnd->pos = { 200, 200 };
-					wnd->size = { 300, 300 };
-				}
-
-			}
-		}
-
-	}
-
-	UINT64 frame_counter = 0;
-
-	void draw_ui(Render::context& c)
-	{
-		{
-			auto timer = c.command_list->start(L"read timings");
-			auto ptr = get_ptr();
-			Render::GPUTimeManager::get().read_buffer(c.command_list, [ptr, this]() {
-				run_on_ui([]() {	Profiler::get().update(); });
-
-				});
-		}
-
-		//	user_interface::draw_ui(c);
-
-	}
-	virtual void render() override
-	{
-		Profiler::get().on_frame(frame_counter++);
-
-		if (GetAsyncKeyState('R'))
-		{
-			//   AssetManager::get().reload_resources();
-			Render::pixel_shader::reload_all();
-			Render::vertex_shader::reload_all();
-			Render::geometry_shader::reload_all();
-			Render::hull_shader::reload_all();
-			Render::domain_shader::reload_all();
-			Render::compute_shader::reload_all();
-			Render::Texture::reload_all();
-		}
-		{
-			auto& timer = Profiler::get().start(L"AssetManager");
-			AssetManager::get().tact();
-		}
-
-
-		if (fps.tick())
-		{
-			label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram());
-
-		}
-
-		UIWindow::render();
-
-	}
-	void on_destroy() override
-	{
-		Application::get().shutdown();
-	}
 
 };
 
+class PassNode : public::FlowGraph::Node , public  GUI::Elements::FlowGraph::VisualGraph
+{
 
+	virtual  void operator()(::FlowGraph::GraphContext*)
+	{}
+	GUI::base::ptr create_editor_window() override
+	{
+
+		//if (!debug_texture)
+	//		debug_texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+		GUI::Elements::image::ptr img(new GUI::Elements::image);
+		img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+		img->texture.padding = { 9, 9, 9, 9 };
+		img->padding = { 9, 9, 9, 9 };
+		img->width_size = GUI::size_type::MATCH_CHILDREN;
+		img->height_size = GUI::size_type::MATCH_CHILDREN;
+		//   img->size = { 64, 64 };
+//		img_inner.reset(new GUI::Elements::image);
+
+
+		//img_inner->texture.texture = debug_texture;
+	//	img_inner->docking = GUI::dock::TOP;
+	//	img_inner->size = { 128, 128 };
+	//	img->add_child(img_inner);
+		return img;
+	}
+};
 
 class FrameGraphRender : public Window, public GUI::user_interface
 {
@@ -1425,7 +1250,7 @@ class FrameGraphRender : public Window, public GUI::user_interface
 	GUI::Elements::label::ptr instance_info;
 
 	std::shared_ptr<triangle_drawer> drawer;
-
+	std::shared_ptr<FrameFlowGraph> frameFlowGraph;
 	GUI::base::ptr area;
 
 
@@ -1439,63 +1264,65 @@ public:
 
 	virtual	void render()
 	{
-		std::lock_guard<std::mutex> g(m);
-
-		if (GetAsyncKeyState('R'))
-		{
-			//   AssetManager::get().reload_resources();
-			Render::pixel_shader::reload_all();
-			Render::vertex_shader::reload_all();
-			Render::geometry_shader::reload_all();
-			Render::hull_shader::reload_all();
-			Render::domain_shader::reload_all();
-			Render::compute_shader::reload_all();
-			Render::Texture::reload_all();
-		}
-
-		Profiler::get().on_frame(frame_counter++);
-
-		GUI::user_interface::size = new_size;
-		if (fps.tick())
-		{
-			size_t total = 0;
-
-			total += DescriptorHeapManager::get().cpu_dsv->used_size();
-			total += DescriptorHeapManager::get().cpu_srv->used_size();
-			total += DescriptorHeapManager::get().cpu_rtv->used_size();
-			total += DescriptorHeapManager::get().cpu_smp->used_size();
-
-
-			size_t total_gpu = 0;
-
-			total_gpu += DescriptorHeapManager::get().gpu_srv->used_size();
-
-			total_gpu += DescriptorHeapManager::get().gpu_smp->used_size();
-
-
-			label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
-		}
-
-
-		process_ui(main_timer.tick());
-		{
-			auto& timer = Profiler::get().start(L"Wait next");
-			swap_chain->start_next();
-		}
-		setup_graph();
-		graph.render();
 
 		{
+			std::lock_guard<std::mutex> g(m);
 
-			auto& timer = Profiler::get().start(L"reset");
+			if (GetAsyncKeyState('R'))
+			{
+				//   AssetManager::get().reload_resources();
+				Render::pixel_shader::reload_all();
+				Render::vertex_shader::reload_all();
+				Render::geometry_shader::reload_all();
+				Render::hull_shader::reload_all();
+				Render::domain_shader::reload_all();
+				Render::compute_shader::reload_all();
+				Render::Texture::reload_all();
+			}
 
-			graph.reset();
+			Profiler::get().on_frame(frame_counter++);
+
+			GUI::user_interface::size = new_size;
+			if (fps.tick())
+			{
+				size_t total = 0;
+
+				total += DescriptorHeapManager::get().cpu_dsv->used_size();
+				total += DescriptorHeapManager::get().cpu_srv->used_size();
+				total += DescriptorHeapManager::get().cpu_rtv->used_size();
+				total += DescriptorHeapManager::get().cpu_smp->used_size();
+
+
+				size_t total_gpu = 0;
+
+				total_gpu += DescriptorHeapManager::get().gpu_srv->used_size();
+
+				total_gpu += DescriptorHeapManager::get().gpu_smp->used_size();
+
+
+				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
+			}
+
+
+			process_ui(main_timer.tick());
+			{
+				auto& timer = Profiler::get().start(L"Wait next");
+				swap_chain->start_next();
+			}
+			setup_graph();
+			graph.render();
+	
+
+			{
+
+				auto& timer = Profiler::get().start(L"reset");
+
+				graph.reset();
+			}
+			swap_chain->present(Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal());
 		}
-		swap_chain->present(Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal());
 
-
-
-
+	
 
 		if (Application::get().is_alive())
 		{
@@ -1503,6 +1330,7 @@ public:
 			task_future = scheduler::get().enqueue([ptr, this]() {
 
 				render();
+				std::this_thread::yield();
 				}, std::chrono::steady_clock::now());
 		}
 	}
@@ -1535,7 +1363,7 @@ public:
 		auto ptr = get_ptr();
 
 		graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder) {
-			data.o_texture = builder.need_texture("swapchain");
+			data.o_texture = builder.need_texture("swapchain", ResourceFlags::Required);
 			}, [this, ptr](pass_data& data, FrameContext& context) {
 
 				context.get_list()->transition(context.get_texture(data.o_texture).resource, ResourceState::PRESENT);
@@ -1545,12 +1373,108 @@ public:
 
 					});
 
-			});
+			}, PassFlags::Required);
 
 
 		graph.setup();
 		graph.compile(swap_chain->m_frameIndex);
 
+
+		static bool gen = false;
+
+		if (!gen&&GetAsyncKeyState('N'))
+		{
+			gen = true;
+			frameFlowGraph->clear();
+
+			struct res_stage
+			{
+
+			};
+			std::map<ResourceHandler*, ::FlowGraph::parameter::ptr> resource_stages;
+
+
+			for (auto &res : graph.builder.resources)
+			{
+
+				if (res.second.info->passed)
+				{
+auto input = 				 	frameFlowGraph->register_input(res.second.info->name);
+resource_stages[&res.second] = input;
+				}
+			}
+			for (auto pass : graph.passes)
+			{
+				auto node = std::make_shared<PassNode>();
+				node->name = pass->name + " " + std::to_string(pass->id);
+
+				
+				if (!pass->enabled)
+				{
+					node->color = float4(1, 0, 0, 1);
+				}
+
+				if (check(pass->flags&PassFlags::Required))
+				{
+					node->color = float4(1, 1, 0, 1);
+				}
+
+				frameFlowGraph->register_node(node);
+
+				for (auto res : pass->used.resources)
+				{
+					if (pass->used.resource_creations.count(res) == 0) {
+						auto input = node->register_input(res->info->name);
+						auto prev = resource_stages[res];
+
+						if (prev)
+						{
+
+
+							prev->link(input);
+						}
+					auto output = 	node->register_output(res->info->name);
+
+					resource_stages[res] = output;
+					}
+				}
+
+
+				for (auto& res : pass->used.resources)
+				{
+
+					if (pass->used.resource_creations.count(res))
+					{
+						auto output = node->register_output(res->info->name);
+						resource_stages[res] = output;
+					}
+				}
+			}
+
+
+			for (auto& res : graph.builder.resources)
+			{
+
+				if (res.second.info->passed && check(res.second.info->flags & ResourceFlags::Required))
+				{
+					auto input = frameFlowGraph->register_output(res.second.info->name);
+					auto prev = resource_stages[&res.second];
+
+					if (prev)
+					{
+
+
+						prev->link(input);
+					}
+				}
+			}
+
+
+
+		}
+
+
+	
 		graph_usage = 0;
 		graph_usage += graph.builder.allocator.heap_rtv.get_max_usage();
 		graph_usage += graph.builder.allocator.heap_uav.get_max_usage();
@@ -1575,135 +1499,7 @@ public:
 		desc.stereo = false;
 		desc.window = this;
 		swap_chain = Render::Device::get().create_swap_chain(desc);
-		/*
-		auto texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));;
 
-
-		DescriptorHeap::ptr heap = std::make_shared<DescriptorHeap>(32768,DescriptorHeapType::CBV_SRV_UAV);
-		DescriptorHeap::ptr gpu_heap = std::make_shared<DescriptorHeap>(32768, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
-		DescriptorHeap::ptr cpu_heap = std::make_shared<DescriptorHeap>(32768, DescriptorHeapType::CBV_SRV_UAV);
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		srvDesc.Shader4ComponentMapping = get_default_mapping(texture->get_desc().Format);
-		srvDesc.Format = to_srv(texture->get_desc().Format);
-
-
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = texture->get_desc().MipLevels;
-		srvDesc.Texture2D.MostDetailedMip = 0;
-		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-
-
-		auto res = texture->get_native().Get();
-
-
-
-		auto device = Device::get().get_native_device();
-		{
-			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
-			auto heap_view = heap->get_table_view(0, 32768);
-
-
-
-			for (int i = 0; i < 32768; i++)
-			{
-				//texture->texture_2d()->place_srv(heap_view[i]);
-
-		//		auto h = heap_view[i];
-				device->CreateShaderResourceView(res, &srvDesc, heap->get_handle(i));
-
-
-			}
-			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
-
-			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
-
-			Log::get() << "CreateShaderResourceView CPU: " <<  elapsed_seconds.count() / 32768 << "ns"<<Log::endl;
-		}
-
-		{
-			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
-			auto heap_view = gpu_heap->get_table_view(0, 32768);
-			for (int i = 0; i < 32768; i++)
-			{
-			//	texture->texture_2d()->place_srv(heap_view[i]);
-
-			//	auto h = heap_view[i];
-				device->CreateShaderResourceView(res, &srvDesc, gpu_heap->get_handle(i));
-
-			}
-			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
-
-			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
-			Log::get() << "CreateShaderResourceView GPU: "  << elapsed_seconds.count() / 32768 << "ns" << Log::endl;
-		}
-
-
-		{
-			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
-			auto heap_view1 = heap->get_table_view(0, 32768);
-
-			auto heap_view2 = gpu_heap->get_table_view(0, 32768);
-			for (int i = 0; i < 32768; i++)
-			{
-				device->CopyDescriptorsSimple(1, heap_view2[i].cpu, heap_view1[i].cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			}
-			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
-
-			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
-			Log::get() << "CopyDescriptorsSimple from CPU to GPU 1 by 1: "  << elapsed_seconds.count() / 32768 << "ns" << Log::endl;
-		}
-
-		{
-			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
-			auto heap_view1 = heap->get_table_view(0, 32768);
-
-			auto heap_view2 = cpu_heap->get_table_view(0, 32768);
-			for (int i = 0; i < 32768; i++)
-			{
-				device->CopyDescriptorsSimple(1, heap_view2[i].cpu, heap_view1[i].cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			}
-			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
-
-			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
-			Log::get() << "CopyDescriptorsSimple from CPU to CPU 1 by 1: " << elapsed_seconds.count() / 32768 << "ns" << Log::endl;
-		}
-
-
-
-		{
-			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
-			auto heap_view1 = heap->get_table_view(0, 32768);
-
-			auto heap_view2 = gpu_heap->get_table_view(0, 32768);
-			device->CopyDescriptorsSimple(32768, heap_view2[0].cpu, heap_view1[0].cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
-			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
-			Log::get() << "CopyDescriptorsSimple from all CPU to GPU: " << elapsed_seconds.count() /32768<< "ns" << Log::endl;
-		}
-
-		{
-			std::chrono::steady_clock::time_point start_tick = std::chrono::steady_clock::now();
-			auto heap_view1 = heap->get_table_view(0, 32768);
-
-			auto heap_view2 = cpu_heap->get_table_view(0, 32768);
-			device->CopyDescriptorsSimple(32768, heap_view2[0].cpu, heap_view1[0].cpu, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-			std::chrono::steady_clock::time_point last_tick = std::chrono::steady_clock::now();
-			auto elapsed_seconds = duration_cast<std::chrono::nanoseconds>(last_tick - start_tick);
-			Log::get() << "CopyDescriptorsSimple from all CPU to CPU: " << elapsed_seconds.count() / 32768 << "ns" << Log::endl;
-
-
-		}*/
-		/*	auto shader = Render::pixel_shader::get_resource({ "shaders\\autogen_test.hlsl", "PS", 0, {} });
-			Slots::Bobo bobo;
-			Slots::Bobo2 bobo2;
-			Slots::Bobo3 bobo3;
-
-			bobo.GetB() = 5;
-			bobo.GetRw();
-
-			get_Signature(Layouts::FrameLayout);
-		*/
 		set_capture = [this](bool v)
 		{
 			if (v)
@@ -1711,15 +1507,6 @@ public:
 			else
 				ReleaseCapture();
 		};
-
-
-
-		//	EngineAssets::brdf.get_asset();
-
-
-			//  GUI::Elements::check_box::ptr butt(new GUI::Elements::check_box());
-			//   butt->docking = GUI::dock::FILL;
-			//   ui->add_child(butt);
 
 		on_resize(get_size());
 
@@ -1850,32 +1637,20 @@ public:
 					add_child(wnd);
 					GUI::Elements::dock_base::ptr dock(new GUI::Elements::dock_base);
 					wnd->add_child(dock);
-					MaterialGraph::ptr graph(new MaterialGraph);
-
-
-					{
-
-						auto value_node = std::make_shared<VectorNode>(vec4(1, 0, 0, 1));
-						graph->register_node(value_node);
-						value_node->get_output(0)->link(graph->get_base_color());
-					}
-
-
-					{
-						auto value_node = std::make_shared<ScalarNode>(0.4f);
-						graph->register_node(value_node);
-						value_node->get_output(0)->link(graph->get_roughness());
-					}
-
-					{
-						auto value_node = std::make_shared<ScalarNode>(1.0f);
-						graph->register_node(value_node);
-						value_node->get_output(0)->link(graph->get_mettalic());
-
-					}
-					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(graph));
+					
 					wnd->pos = { 200, 200 };
 					wnd->size = { 300, 300 };
+
+					frameFlowGraph = std::make_shared< FrameFlowGraph>();
+
+					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
+
+
+				//	graphDebugger.reset(new GraphDebugRender());
+				//	graphDebugger->docking = GUI::dock::FILL;
+
+					//dock->get_tabs()->add_page("Graph", graphDebugger);
+					
 				}
 
 			}
@@ -1890,7 +1665,7 @@ public:
 	}
 	void on_resize(vec2 size) override
 	{
-		new_size = size;
+		new_size = vec2::max(size, vec2{64,64});
 	}
 
 
@@ -1991,7 +1766,7 @@ protected:
 		AssetManager::reset();
 
 
-
+		Render::PipelineLibrary::reset();
 
 		Render::Device::reset();
 		//   Render::Device::reset();
@@ -2019,10 +1794,10 @@ void SetupDebug()
 	//  ConsoleLogger::create();
 	Log::get().set_logging_level(Log::LEVEL_ALL);
 	// Here we can disable some of notification types
-	ClassLogger<resource_system>::get().set_logging_level(Log::LEVEL_ALL);
-	ClassLogger<Resource>::get().set_logging_level(Log::LEVEL_ALL);
+	ClassLogger<resource_system>::get().set_logging_level(Log::LEVEL_ERROR);
+	ClassLogger<Resource>::get().set_logging_level(Log::LEVEL_ERROR);
 	ClassLogger<singleton_system>::get().set_logging_level(Log::LEVEL_ALL);
-	ClassLogger<Render::Resource>::get().set_logging_level(Log::LEVEL_ALL);
+	ClassLogger<Render::Resource>::get().set_logging_level(Log::LEVEL_ERROR);
 	Log::get() << Log::LEVEL_INFO << "info text" << Log::endl;
 	Log::get() << Log::LEVEL_WARNING << "warning text" << Log::endl;
 	Log::get() << Log::LEVEL_DEBUG << "debug text" << Log::endl;

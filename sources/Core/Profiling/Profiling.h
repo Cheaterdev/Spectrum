@@ -173,3 +173,24 @@ private:
 	virtual void on_end(Timer* timer) override;
 
 };
+
+
+class ScopedCounter
+{
+	std::string name;
+	std::chrono::time_point<std::chrono::high_resolution_clock> start;
+public:
+	ScopedCounter(std::string name):name(name)
+	{
+		start = std::chrono::high_resolution_clock::now();
+	}
+
+	~ScopedCounter()
+	{
+		auto end = std::chrono::high_resolution_clock::now();
+
+		double time = std::chrono::duration<double>(end- start).count();
+
+		Log::get() << name << ":" << std::to_string(int(time * 1000)) << Log::endl;
+	}
+};

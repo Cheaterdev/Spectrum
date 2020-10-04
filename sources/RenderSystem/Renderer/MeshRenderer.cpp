@@ -13,7 +13,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	instances_count = 0;
 	bool current_cpu_culling = use_cpu_culling && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
-	mesh_render_context->transformer = transformer;
+
 
 	Render::PipelineStateDesc &default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -240,6 +240,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set_pipeline(GetPSO<PSOS::RenderBoxes>());
 	graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
+	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	draw_boxes_compiled.set(graphics);
 		compiledScene.set(graphics);
@@ -499,7 +500,7 @@ mesh_renderer::mesh_renderer()
 		Slots::DrawBoxes draw_boxes;
 		draw_boxes.GetInput_meshes() = commands_boxes->buffer->get_srv()[0];
 		draw_boxes.GetVisible_meshes() = visible_boxes->buffer->get_uav()[0];
-		draw_boxes.GetVertices() = vertex_buffer->get_srv()[0];\
+		draw_boxes.GetVertices() = vertex_buffer->get_srv()[0];
 
 		draw_boxes_compiled = draw_boxes.compile(StaticCompiledGPUData::get());
 	}

@@ -10,7 +10,7 @@ namespace DX12
 		PRESENT = 5
 	};
 
-	enum ResourceState
+	enum class ResourceState: int
 	{
 		COMMON = D3D12_RESOURCE_STATE_COMMON,
 		VERTEX_AND_CONSTANT_BUFFER = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
@@ -33,6 +33,8 @@ namespace DX12
 		RAYTRACING_STRUCTURE = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
 		UNKNOWN = -1,
 		DIFFERENT = -2
+
+		, GENERATE_OPS
 	};
 
 
@@ -41,8 +43,8 @@ namespace DX12
 
 		struct ResourceListStateCPU
 		{
-			unsigned int first_state = ResourceState::UNKNOWN;
-			unsigned int state = ResourceState::UNKNOWN;
+			ResourceState first_state = ResourceState::UNKNOWN;
+			ResourceState state = ResourceState::UNKNOWN;
 
 			uint64_t command_list_id = -1;
 		};
@@ -59,7 +61,7 @@ namespace DX12
 
 		struct ResourceListStateGPU
 		{
-			unsigned int state = ResourceState::UNKNOWN;
+			ResourceState state = ResourceState::UNKNOWN;
 		};
 
 		struct SubResourcesGPU
@@ -115,7 +117,7 @@ namespace DX12
 				e.state = state;
 		}
 
-		int get_cpu_state(int id, uint64_t full_id)
+		ResourceState get_cpu_state(int id, uint64_t full_id)
 		{
 			auto& state = get_state(id);
 
@@ -146,7 +148,7 @@ namespace DX12
 		
 		void process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, const Resource* resource, int id, uint64_t full_id);
 
-		void transition(std::vector<D3D12_RESOURCE_BARRIER>& target,const  Resource* resource, unsigned int state, unsigned int subres, int id, uint64_t full_id) const;
+		void transition(std::vector<D3D12_RESOURCE_BARRIER>& target,const  Resource* resource, ResourceState state, unsigned int subres, int id, uint64_t full_id) const;
 
 	};
 
@@ -459,7 +461,7 @@ namespace DX12
 	class PlacedAllocator
 	{
 	public:
-		ResourceHeapAllocator<CommonAllocator> heap_srv;
+		ResourceHeapAllocator<CommonAllocator> heap_srv, heap_srv_buffer;
 		ResourceHeapAllocator<CommonAllocator> heap_rtv;
 		ResourceHeapAllocator<CommonAllocator> heap_uav;
 
@@ -502,6 +504,7 @@ namespace DX12
 			heap_srv.allocate_for_allocator();
 			heap_rtv.allocate_for_allocator();
 			heap_uav.allocate_for_allocator();
+			heap_srv_buffer.allocate_for_allocator();
 			current_frame->heap_upload_buffer.allocate_for_allocator();
 			current_frame->heap_upload_texture.allocate_for_allocator();
 			current_frame->heap_readback.allocate_for_allocator();
@@ -512,6 +515,7 @@ namespace DX12
 			heap_srv.Reset();
 			heap_rtv.Reset();
 			heap_uav.Reset();
+			heap_srv_buffer.Reset();
 
 			current_frame->heap_upload_buffer.Reset();
 			current_frame->heap_upload_texture.Reset();
@@ -525,12 +529,12 @@ namespace DX12
 	class ResourceView
 	{
 	protected:
-		Handle srv;
-		Handle uav;
-		Handle rtv;
-		Handle dsv;
+		SRVHandle srv;
+		UAVHandle uav;
+		RTVHandle rtv;
+		DSVHandle dsv;
 		Handle cb;
-		Handle uav_clear;
+		UAVHandle uav_clear;
 	protected:
 		ResourceViewDesc view_desc;
 
@@ -593,6 +597,12 @@ namespace DX12
 			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
 			{
 				view_desc.type = ResourceType::TEXTURE3D;
+
+				view_desc.Texture2D.ArraySize = 1;
+				view_desc.Texture2D.MipSlice = 0;
+				view_desc.Texture2D.FirstArraySlice = 0;
+				view_desc.Texture2D.PlaneSlice = 0;
+				view_desc.Texture2D.MipLevels = desc.MipLevels;
 			}
 
 		
@@ -821,7 +831,48 @@ public:
 		
 	}
 
-	virtual void place_uav(Handle & h) { assert(false); }
+	virtual void place_uav(Handle& h) {
+
+		if (!resource) return;
+		{
+			D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
+			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+
+			desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+
+			desc.Buffer.StructureByteStride = sizeof(T);
+			desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+
+			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(T));
+			desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(T);
+			desc.Buffer.CounterOffsetInBytes = 0;
+
+			Device::get().create_uav(h, resource.get(), desc);
+		}
+
+		{
+
+			D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
+			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+
+			desc.Format = DXGI_FORMAT::DXGI_FORMAT_R8_UINT;
+
+			desc.Buffer.StructureByteStride = 0;
+			desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+
+			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(char));
+			desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(char);
+			desc.Buffer.CounterOffsetInBytes = 0;
+			Device::get().create_uav(uav_clear, resource.get(), desc);
+
+		}
+
+		
+
+
+	}
 	virtual void place_rtv(Handle & h) { assert(false); }
 	virtual void place_dsv(Handle & h) { assert(false); }
 	virtual void place_cb(Handle& h)override {

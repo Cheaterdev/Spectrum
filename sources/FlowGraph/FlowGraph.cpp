@@ -14,6 +14,24 @@ namespace FlowGraph
 			windows.erase(node);
 	}
 
+	void graph::clear()
+	{
+
+
+		for (auto window : windows)
+		{
+			window->on_remove();
+		}
+
+		for (auto node:nodes)
+		{
+			node->on_remove();
+		}
+
+		nodes.clear();
+		windows.clear();
+	}
+
 	/*input::ptr graph::register_input( std::string name)
 	{
 
@@ -719,13 +737,15 @@ namespace FlowGraph
 				Node* to;
 			};*/
 
-		std::map<Node*, vec3> forces;
+		std::map<Node*, vec2> forces;
 	//	for (int i = 0; i < 100; i++)
 		{
 			forces.clear();
 
-			const float speed = 10;
-			const float scale = 2;
+			const float speed = 1;
+			float scale = 5;
+
+
 			vec2 in_force;
 			vec2 out_force;
 			for (auto&c : connections)
@@ -757,33 +777,36 @@ namespace FlowGraph
 
 				}
 		*/
-
-				if (from_pos.x >to_pos.x - scale*180)
+				scale = Math::clamp(to->input_parametres.size() + from->output_parametres.size(),1_t,5_t);
+			
+				if (from_pos.x >to_pos.x - scale*150)
 				{
-					float d = from_pos.x - (to_pos.x - scale * 180);
-					force += {std::max(-d/100.0f,  -1.0f),0};
-				}
+					float d = from_pos.x - (to_pos.x - scale * 150);
 
+					
+					force += Math::clamp(-d/10, -5.0f,5.0f);
+
+
+				}
+				
 
 				if(l <  scale * 100)
 				{
-					force +=  delta.normalize(1)*(scale * 100-l)/ (scale*100.0f);
+					force += delta.normalize(1);// *(scale * 100 - l) / (scale * 100.0f);
 
-				}else if (l >  scale * 200)
+				}else if (l >  scale * 150)
 				{
-
-					force += -delta.normalize(1)*(l- scale * 200)/( scale*1000.0f);
+					force += -delta.normalize(1);// *(l - scale * 200) / (scale * 1000.0f);
 				}
-
+				
 				if (from == this) in_force += force;
 				else	forces[from] += force;
 
 
 				if (to == this) out_force-= force;
 				else forces[to] -= force;
-				
-				
 			}
+			/*
 			for (auto &a : forces)
 				for (auto &b : forces)
 				{
@@ -797,6 +820,7 @@ namespace FlowGraph
 
 					float l = delta.length();
 
+
 					if (l <  scale * 150)
 					{
 						delta=	delta.normalize(1)*(scale * 150-l)/(scale*150.0f);
@@ -805,11 +829,11 @@ namespace FlowGraph
 					}
 
 				}
-
+			*/
 			for (auto &d : forces)
 			{
 				
-				d.first->pos += speed*d.second;
+				d.first->pos += speed /(d.first->input_parametres.size() + d.first->output_parametres.size()) * d.second;
 			}
 
 			pos_in += speed*in_force;

@@ -269,7 +269,7 @@ stencil_renderer::stencil_renderer()
 
 	docking = GUI::dock::PARENT;
 	clickable = true;
-
+	/*
 	id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 	axis_id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 
@@ -277,7 +277,7 @@ stencil_renderer::stencil_renderer()
 	id_buffer->set_name("stencil_renderer::id_buffer");
 	axis_id_buffer->set_name("stencil_renderer::axis_id_buffer");
 
-
+	*/
 
 	cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
 	axis_intersect_cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);	
@@ -362,20 +362,25 @@ void stencil_renderer::generate(FrameGraph& graph)
 		{
 			//		ResourceHandler* target_tex;
 			ResourceHandler* depth_tex;
+			ResourceHandler* id_buffer;
+			ResourceHandler* axis_id_buffer;
 
 		};
 
 		graph.add_pass<Data>("stencil_renderer::before", [this, &graph](Data& data, TaskBuilder& builder) {
 			//			data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
 			data.depth_tex = builder.create_texture("Stencil::depth_tex", { 1,1 }, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
-
+			data.id_buffer = builder.create_buffer("id_buffer", 4, ResourceFlags::UnorderedAccess);
+			data.axis_id_buffer = builder.create_buffer("axis_id_buffer", 4, ResourceFlags::UnorderedAccess);
 			}, [this, &graph](Data& data, FrameContext& _context) {
 
 				auto depth_tex = _context.get_texture(data.depth_tex);
-
-
-
 				auto& list = *_context.get_list();
+
+				auto id_buffer = _context.get_buffer(data.id_buffer).resource->create_view<StructuredBufferView<UINT>>(*list.frame_resources);
+				auto axis_id_buffer = _context.get_buffer(data.axis_id_buffer).resource->create_view<StructuredBufferView<UINT>>(*list.frame_resources);
+
+
 				auto& graphics = list.get_graphics();
 				auto& copy = list.get_copy();
 
@@ -414,8 +419,8 @@ void stencil_renderer::generate(FrameGraph& graph)
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_pipeline(GetPSO<PSOS::DrawStencil>());
 
-					list.clear_uav(id_buffer, id_buffer->get_raw_uav());
-					list.clear_uav(axis_id_buffer, axis_id_buffer->get_raw_uav());
+					list.clear_uav(id_buffer.resource, id_buffer.get_uav_clear());
+					list.clear_uav(axis_id_buffer.resource , axis_id_buffer.get_uav_clear());
 
 
 					{
@@ -429,7 +434,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 					{
 						Slots::PickerBuffer buffer;
-						buffer.GetViewBuffer() = id_buffer->get_raw_uav();
+						buffer.GetViewBuffer() = id_buffer.get_uav();
 						buffer.set(graphics);
 					}
 
@@ -474,7 +479,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 					}
 					{
 						Slots::PickerBuffer buffer;
-						buffer.GetViewBuffer() = axis_id_buffer->get_raw_uav();
+						buffer.GetViewBuffer() = axis_id_buffer.get_uav();
 						buffer.set(graphics);
 					}
 		
@@ -518,7 +523,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 							return true;
 						});
 
-					copy.read_buffer(id_buffer.get(), 0, 4, [current, this](const char* data, UINT64 size)
+					copy.read_buffer(id_buffer.resource.get(), 0, 4, [current, this](const char* data, UINT64 size)
 						{
 
 							if (!data) device_fail();
@@ -539,7 +544,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 						});
 
-					copy.read_buffer(axis_id_buffer.get(), 0, 4, [ this](const char* data, UINT64 size)
+					copy.read_buffer(axis_id_buffer.resource.get(), 0, 4, [ this](const char* data, UINT64 size)
 						{
 
 							auto result = *reinterpret_cast<const UINT*>(data) - 1;
@@ -549,7 +554,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 						});
 				}
 
-			});
+			}, PassFlags::Required);
 
 	}
 
@@ -657,31 +662,32 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					}
 				}
 
-	/*		graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
-			graphics.set_rtv(0, Handle(), Handle());
+			graphics.set_rtv(1, target_tex.get_rtv(), Handle());
 
-			for (auto& sel : selected)
 			{
-
-				auto l = sel.first;
-				int i = sel.second;
+				graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
+				graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
 				{
-					auto& m = l->rendering[i];
-					m.mesh_info.set(graphics);
-
-					graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
-
 					Slots::DrawStencil draw;
 					draw.GetVertices() = vertex_buffer->get_srv()[0];
 					draw.set(graphics);
+				}
 
+				for (auto& sel : selected)
+				{
 
-					graphics.draw_indexed(36, 0, 0);
+					auto l = sel.first;
+					int i = sel.second;
+					{
+						auto& m = l->rendering[i];
+						m.mesh_info.set(graphics);
+
+						graphics.draw_indexed(36, 0, 0);
+					}
 				}
 			}
-			
-			graphics.set_rtv(1, target_tex.get_rtv(), Handle());*/
-
+		
 
 				// draw axis
 			{

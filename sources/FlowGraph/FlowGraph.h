@@ -469,6 +469,8 @@ namespace FlowGraph
             std::string name;
             vec2 pos = vec2(10, 10);
             vec2 size = vec2(10, 10);
+
+        
             graph* get_graph()
             {
                 return owner;
@@ -770,7 +772,7 @@ namespace FlowGraph
             void register_node(std::shared_ptr<window> node);
             void remove_node(std::shared_ptr<window> node);
 
-            
+            void clear();
 		//	input::ptr register_input(std::string name = "unnamed parameter");
 		//	output::ptr register_output(std::string name = "unnamed parameter");
 

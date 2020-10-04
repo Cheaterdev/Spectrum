@@ -306,7 +306,71 @@ namespace DX12
 
 
 
+	class PipelineLibrary :public Singleton<PipelineLibrary>
+	{
+		ComPtr<ID3D12PipelineLibrary> m_pipelineLibrary;
+	public:
+		PipelineLibrary()
+		{
+			auto file = FileSystem::get().get_file("pso");
 
+			if (file)
+			{
+				auto data = file->load_all();
+				TEST(Device::get().get_native_device()->CreatePipelineLibrary(data.data(), data.size(), IID_PPV_ARGS(&m_pipelineLibrary)));
+			}
+		
+			if(!m_pipelineLibrary)
+				TEST(Device::get().get_native_device()->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&m_pipelineLibrary)));
+
+		}
+
+
+		virtual ~PipelineLibrary()
+		{
+
+			std::string data;
+
+			data.resize(m_pipelineLibrary->GetSerializedSize());
+
+			if (data.size())
+			{
+
+				TEST(m_pipelineLibrary->Serialize(data.data(), data.size()));
+
+				FileSystem::get().save_data("pso", data);
+			}
+
+		}
+
+
+		ComPtr<ID3D12PipelineState> create(std::string name,const D3D12_GRAPHICS_PIPELINE_STATE_DESC &desc)
+		{
+			ComPtr<ID3D12PipelineState> res;
+
+
+			if (name.empty())
+			{
+				TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&res)));
+			}
+			else
+			{
+				std::wstring wname = convert(name);
+				HRESULT hr = m_pipelineLibrary->LoadGraphicsPipeline(wname.c_str(), &desc, IID_PPV_ARGS(&res));
+
+				if (E_INVALIDARG == hr)
+				{
+					TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&res)));
+					TEST(m_pipelineLibrary->StorePipeline(wname.c_str(), res.Get()));
+				}
+
+			}
+			
+			return res;;
+		}
+
+
+	};
 
 	class PipelineStateBase
 	{
@@ -462,7 +526,7 @@ namespace DX12
 				//Log::get() << desc << Log::endl;
 				auto state=  PipelineState::ptr(new PipelineState(desc, binary));
 
-				if (!desc.name.empty() & binary.empty())
+				if (!desc.name.empty() && binary.empty())
 				{
 					binary_cache[desc.name] = state->get_cache();
 				}
@@ -490,7 +554,7 @@ namespace DX12
 			auto file = FileSystem::get().get_file("pso");
 			if(file)
 			Serializer::deserialize(file->load_all(), binary_cache);
-
+			
 		}
 	public:
 

@@ -166,9 +166,12 @@ namespace DX12
 		if(m_pipelineState)
 		Device::get().unused(m_pipelineState);
 
-		 HRESULT hr = (Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 
-		if (E_INVALIDARG == hr)
+		//m_pipelineState = PipelineLibrary::get().create(desc.name, psoDesc);
+
+		HRESULT hr = (Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+
+		if (hr != S_OK)
 		{
 			psoDesc.CachedPSO = {};
 			hr = (Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));

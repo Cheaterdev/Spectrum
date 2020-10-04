@@ -8,6 +8,7 @@ namespace Table
 		struct CB
 		{
 			float4 time;
+			float4 sunDir;
 			Camera::CB camera;
 			Camera::CB prevCamera;
 		} &cb;
@@ -25,6 +26,7 @@ namespace Table
 		Render::Handle& GetBestFitNormals() { return srv.bestFitNormals; }
 		Render::Handle& GetBrdf() { return srv.brdf; }
 		Render::Handle& GetSky() { return srv.sky; }
+		float4& GetSunDir() { return cb.sunDir; }
 		Camera MapCamera() { return Camera(cb.camera); }
 		Camera MapPrevCamera() { return Camera(cb.prevCamera); }
 		FrameInfo(CB&cb,SRV&srv) :cb(cb),srv(srv){}

@@ -76,7 +76,6 @@ class main_renderer
 class mesh_renderer : public renderer, public Events::prop_handler
 {
       
-        vertex_transform::ptr transformer;
         Render::vertex_shader::ptr shader;
         Render::geometry_shader::ptr voxel_geometry_shader;
 

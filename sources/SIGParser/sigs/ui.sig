@@ -3,6 +3,7 @@ struct vertex_input
 {
 	float2 pos;
 	float2 tc;
+	float4 color;
 }
 
 [Bind = DefaultLayout::Instance0]

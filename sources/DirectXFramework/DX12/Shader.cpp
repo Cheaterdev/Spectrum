@@ -10,6 +10,7 @@ namespace DX12
     const char* Shader<domain_shader>::compile_code = "ds_5_1";
     const char* Shader<hull_shader>::compile_code = "hs_5_1";
     const char* Shader<compute_shader>::compile_code = "cs_5_1";
+	const char* Shader<library_shader>::compile_code = "";
 
 
 	const char* Shader<pixel_shader>::compile_code_dxil = "ps_6_0";
@@ -19,6 +20,7 @@ namespace DX12
 	const char* Shader<hull_shader>::compile_code_dxil = "hs_6_0";
 	const char* Shader<compute_shader>::compile_code_dxil = "cs_6_0";
 
+	const char* Shader<library_shader>::compile_code_dxil = "lib_6_3";
 
 
     const vertex_shader::ptr vertex_shader::null(new vertex_shader());
@@ -27,6 +29,7 @@ namespace DX12
     const domain_shader::ptr domain_shader::null(new domain_shader());
     const hull_shader::ptr hull_shader::null(new hull_shader());
     const compute_shader::ptr compute_shader::null(new compute_shader());
+	const library_shader::ptr library_shader::null(new library_shader());
 
 
 

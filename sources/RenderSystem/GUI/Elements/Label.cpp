@@ -163,7 +163,7 @@ namespace GUI
 		void label::on_bounds_changed(const rect& r)
 		{
 			base::on_bounds_changed(r);
-			need_recalculate = true;
+		//	need_recalculate = true;
 		}
 
 		sizer label::update_layout(sizer r, float scale)

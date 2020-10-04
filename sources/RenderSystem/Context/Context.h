@@ -48,6 +48,7 @@ namespace Render
             float delta_time;
             vec2 window_size;
             float scale = 1;
+            float4 color = float4(1, 1, 1, 1);
 			
 			std::function<void(Render::context &c)> commit_scissor()
 			{
@@ -129,7 +130,7 @@ struct MeshRenderContext
 		std::shared_ptr<Render::OVRContext> eye_context;
 	
         Render::CommandList::ptr list;
-        std::shared_ptr<vertex_transform> transformer;
+     
         camera* cam = nullptr;
         RENDER_TYPE render_type = RENDER_TYPE::PIXEL;
 		MESH_TYPE render_mesh = MESH_TYPE::ALL;
@@ -140,12 +141,6 @@ struct MeshRenderContext
 		vec2 screen_subsample = {0,0};
         GBuffer* g_buffer = nullptr;
         RT::Slot::GBuffer::Compiled gbuffer_compiled;
-
-        /*    void set_materials(std::vector<std::shared_ptr<materials::material>>& m)
-            {
-                if (!override_material)
-                    materials = m;
-            }*/
 
         Render::Texture::ptr target_tex;
       //  Render::HandleTable voxel_target;
@@ -161,18 +156,12 @@ struct MeshRenderContext
             list->get_graphics().set_signature(pipeline.root_signature);
             list->get_compute().set_signature(pipeline.root_signature);
             draw_count = 0;
-    //        set_4_table.cpu.ptr = 0;
-    //        set_4_table.gpu.ptr = 0;
-
-         //   if (voxel_target.valid())
-          //      set_uav(voxel_target);
         }
-	
         void flush_pipeline()
         {
             if (!current_state || !(current_state->desc == pipeline))
             {
-                current_state = Render::PipelineStateCache::get_cache(pipeline);//new Render::PipelineState(pipeline));
+                current_state = Render::PipelineStateCache::get_cache(pipeline);
 
               
                 assert(pipeline == current_state->desc);
@@ -200,65 +189,6 @@ struct MeshRenderContext
 
             draw_count++;
         }
-        /*
- 
-        void set_nodes_buffer(Render::FrameResource& resource)
-        {
-			GPUMeshSignature<Signature> signature(&list->get_graphics());
-
-          //  list->get_graphics().set_srv(8, resource);
-        }
-  
-        void set_mesh_const_data(unsigned int node_index)
-        {
-         //   list->get_graphics().set_constants(2, node_index);
-			GPUMeshSignature<Signature> signature(&list->get_graphics());
-
-        }
-
-
-        void set_material_const_buffer(Render::GPUBuffer::ptr buffer)
-        {
-  //          list->get_graphics().set_const_buffer(0, buffer);
-
-			GPUMeshSignature<Signature> signature(&list->get_graphics());
-			signature.mat_const = buffer;
-        }
-
-        void set_material_tess_buffer(Render::GPUBuffer::ptr buffer)
-        {
-       //     list->get_graphics().set_const_buffer(1, buffer);
-			GPUMeshSignature<Signature> signature(&list->get_graphics());
-			signature.mat_const_tess = buffer;
-        }
-        void set_material_textures(std::vector<Render::Handle> table)
-        {
-			GPUMeshSignature<Signature> signature(&list->get_graphics());
-       //     list->get_graphics().get_desc_manager().set(2,0, table);
-			signature.mat_textures = table;
-		}
-
-        void set_material_unordered(Render::HandleTable& table)
-        {
-			GPUMeshSignature<Signature> signature(&list->get_graphics());
-			//    list->get_graphics().set_dynamic(6,0, table);
-	
-
-        }
-        void set_frame_data(Render::FrameResource& resource)
-        {
-			GPUMeshSignature<Signature> signature(&list->get_graphics());
-			// list->get_graphics().set_const_buffer(6, resource);
-			signature.camera_info = resource;
-        }
-
-        void set_uav(const Render::HandleTable& table)
-		{
-			GPUMeshSignature<Signature> signature(&list->get_graphics());
-			//             list->get_graphics().set_dynamic(9,0, table);
-			signature.voxel_output[0] = table;
-        }
-        */
  
 };
 
@@ -419,7 +349,7 @@ public:
 
 class GBufferViewDesc
 {
-
+public:
 	ResourceHandler* albedo = nullptr;
 	ResourceHandler* normals = nullptr;
 	ResourceHandler* depth = nullptr;
@@ -470,7 +400,7 @@ public:
 		motion = builder.need_texture("GBuffer_Speed", ResourceFlags::PixelRead);
 
         depth_prev = builder.need_texture("GBuffer_DepthPrev", ResourceFlags::PixelRead);
-        if(need_quality) quality = builder.need_texture("GBuffer_Quality", ResourceFlags::DepthStencil);
+        if(need_quality) quality = builder.need_texture("GBuffer_Quality", ResourceFlags::DSRead);
 		depth_mips = builder.need_texture("GBuffer_DepthMips", ResourceFlags::None);
 
 	}

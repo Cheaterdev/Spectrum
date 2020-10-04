@@ -16,6 +16,7 @@ struct RayGenConstantBuffer
 class RTX :public Singleton<RTX>, Events::prop_handler,
 	public Events::Runner
 {
+	
 public:
 	Resource::ptr m_missShaderTable;
 	Resource::ptr m_hitGroupShaderTable;
@@ -30,12 +31,12 @@ public:
 	ComPtr<ID3D12StateObject> m_SharedCollection;
 	ComPtr<ID3D12StateObject> m_GlobalCollection;
 
-	std::string blob;
+	library_shader::ptr library;
 
 	RayGenConstantBuffer m_rayGenCB;
 	ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
 	RootSignature::ptr global_sig;
-
+	Render::RootSignature::ptr local_sig;
 	using ptr = std::shared_ptr<RTX>;
 
 	//ArraysHolder<InstanceData> instanceData;
@@ -65,5 +66,5 @@ public:
 
 	void prepare(CommandList::ptr& list);
 
-	void render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as);
+	void render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer);
 };

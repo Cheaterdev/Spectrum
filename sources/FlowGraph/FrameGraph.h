@@ -4,32 +4,34 @@ enum class ResourceType :int {
 	Buffer,
 	Texture,
 	Heap
+
+	, GENERATE_OPS
 };
 
-enum ResourceFlags{
+enum class ResourceFlags :int {
 	None = 0,
 	PixelRead = 1,
 	ComputeRead = 2,
+	DSRead = 1024,
 
 	UnorderedAccess = 4,
 	RenderTarget = 8,
 	DepthStencil = 16,
+
 
 	GenCPU = 32,
 	ReadCPU = 64,
 
 	Temporal = 0,
 	Static = 128,
+	Required = 256,
 
+	Cube = 512
 
-	Cube = 256
+	, GENERATE_OPS
 };
 
-inline int operator&(const ResourceFlags& a, const ResourceFlags& b)
-{
-	return  static_cast<int>(a)& static_cast<int>(b);
-}
-
+static const ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil;
 
 struct BufferDesc
 {
@@ -64,7 +66,10 @@ struct Pass;
 
 struct UsedResources
 {
-	std::list<ResourceHandler*> resources;
+	std::set<ResourceHandler*> resources;
+
+	std::map<ResourceHandler*, ResourceFlags> resource_flags;
+	std::set<ResourceHandler*> resource_creations;
 };
 
 struct ResourceAllocInfo
@@ -73,13 +78,18 @@ struct ResourceAllocInfo
 // desc
 	ResourceType type;
 	MyVariant desc;
-	UINT flags;
+	ResourceFlags flags;
 	bool placed;
 
 	CommonAllocator::Handle alloc_ptr;
+	ResourceAllocInfo* orig = nullptr;
 // setup
 	int valid_from;
 	int valid_to;
+
+
+	bool enabled = true;
+	std::list<Pass*> writers;
 
 //compile
 
@@ -115,17 +125,17 @@ struct TaskBuilder
 
 	void end(Pass* pass);
 
-	ResourceHandler* create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, UINT flags = ResourceFlags::None);
-	ResourceHandler* need_texture(std::string name, UINT flags = ResourceFlags::PixelRead);
-	ResourceHandler* recreate_texture(std::string name, UINT flags = ResourceFlags::PixelRead);
+	ResourceHandler* create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, ResourceFlags flags = ResourceFlags::None);
+	ResourceHandler* need_texture(std::string name, ResourceFlags flags = ResourceFlags::PixelRead);
+	ResourceHandler* recreate_texture(std::string name, ResourceFlags flags = ResourceFlags::PixelRead);
 
-	ResourceHandler* create_buffer(std::string name, UINT64 size, UINT flags = ResourceFlags::None);
-	ResourceHandler* need_buffer(std::string name, UINT flags = ResourceFlags::PixelRead);
+	ResourceHandler* create_buffer(std::string name, UINT64 size, ResourceFlags flags = ResourceFlags::None);
+	ResourceHandler* need_buffer(std::string name, ResourceFlags flags = ResourceFlags::PixelRead);
 
 
 	//void free_texture(ResourceHandler* handler);
-	void pass_texture(std::string name, Render::TextureView tex);
-	void pass_texture(std::string name, Render::Texture::ptr tex);
+	void pass_texture(std::string name, Render::TextureView tex, ResourceFlags flags = ResourceFlags::None);
+	void pass_texture(std::string name, Render::Texture::ptr tex, ResourceFlags flags = ResourceFlags::None);
 
 	Render::TextureView request_texture(ResourceHandler* handler);
 	void create_resources();
@@ -162,9 +172,20 @@ struct FrameContext
 };
 
 
+enum class PassFlags
+{
+	General,
+	Required,
+
+	GENERATE_OPS
+};
+
+
 struct Pass
 {
 	int id = 0;
+	bool enabled = true;
+	PassFlags flags;
 	std::string name;
 	UsedResources used;
 	FrameContext context;
@@ -180,6 +201,7 @@ struct Pass
 	void execute();
 };
 
+
 template <class T>
 struct TypedPass : public Pass
 {
@@ -187,7 +209,7 @@ struct TypedPass : public Pass
 	using render_func_type = std::function<void(T&, FrameContext&)>;
 	using setup_func_type = std::function<void(T&, TaskBuilder&)>;
 
-
+	
 	T data;
 	setup_func_type setup_func;
 	render_func_type render_func;
@@ -210,6 +232,7 @@ struct TypedPass : public Pass
 
 	virtual void render(Render::FrameResources::ptr& frame) override
 	{
+		if (!enabled)  return;
 		render_task = scheduler::get().enqueue([this, &frame]() {
 			context.begin(this, frame);
 			render_func(data, context);
@@ -229,26 +252,35 @@ struct CreationContext
 	Scene* scene;
 
 	float time;
+	float totalTime = 0;
 	float3 sunDir;
 };
 
+//ENABLE_ENUM(wtf);
+
 class FrameGraph: public CreationContext
 {
-
+public:
 	std::list<std::shared_ptr<Pass>> passes;
 
+	std::list<std::shared_ptr<Pass>> required_passes;
 
 public:
 	TaskBuilder builder;
 
 	template<class T>
-	void add_pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r)
+	void add_pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 	{
 		passes.push_back(std::make_shared<TypedPass<T>>((UINT)passes.size(), name, s, r));
+		passes.back()->flags = flags;
+	//	enabled = flags == PassFlags::Required;
+		if (check(flags & PassFlags::Required))
+		{
+			required_passes.push_back(passes.back());
+		}
 	}
 
 	void start_new_frame();
-
 
 	void setup();
 	void compile(int frame);

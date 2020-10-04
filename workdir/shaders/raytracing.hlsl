@@ -48,6 +48,10 @@ float3 depth_to_wpos(float d, float2 tc, matrix mat)
 	float4 P = mul(mat, float4(tc * float2(2, -2) + float2(-1, 1), d, 1));
 	return P.xyz / P.w;
 }
+float rnd(float2 uv)
+{
+	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
+}
 
 
 [shader("raygeneration")]
@@ -65,47 +69,70 @@ void MyRaygenShader()
 
       const RWTexture2D<float4> output = rays.GetOutput();
     // Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
-    GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), origin, rayDir);
-	/*
-	float raw_z = depth_buffer[DispatchRaysIndex().xy];
-	float3 pos = depth_to_wpos(raw_z, tc, camera.inv_view_proj);
+  //  GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), origin, rayDir);
+	
+	float raw_z = rays.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
+	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 
 
-	float3 normal = normalize(gbuffer[1][DispatchRaysIndex().xy].xyz * 2 - 1);
+	float3 normal = normalize(rays.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
+
+	float3 lightDir = frame.GetSunDir();
+
+float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
+
+//rayDir =  normalize(float3(2,1,1.3));//reflect(view, normal);
+
+origin = pos;
+
+       
+
+		float shadow = 1;
+		float hit_rate = 0;
+		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
+
+		int real_samples = 0;
+		for (int i = 0; i < samples; i++)
+		{
+			float time = frame.GetTime().y + i;
+			float sini = sin(time * 220 + float(tc.x));
+			float cosi = cos(time * 220 + float(tc.y));
+			float rand = rnd(float2(sini, cosi));
 
 
-float3 view = -normalize(camera.position - pos);
+			float rcos = cos(6.14 * rand);
+			float rsin = sin(6.14 * rand);
+			float rand2 = rnd(float2(cosi, sini));
 
-rayDir =  normalize(float3(2,1,1.3));//reflect(view, normal);
+			float tt = 0.1 * pow(rand2, 1.0 / 3.0);
 
-origin = pos;*/
-        // Trace the ray.
-        // Set the ray's extents.
-        RayDesc ray;
-        ray.Origin = origin;
-        ray.Direction = rayDir;
-        // Set TMin to a non-zero small value to avoid aliasing issues due to floating - point errors.
-        // TMin should be kept small to prevent missing geometry at close contact areas.
-        ray.TMin = 0.1;
-        ray.TMax = 1000.0;
-   
-        RayPayload payload;
-        payload.color = 0;
-        payload.recursion = 0;
-        payload.dist = 0;
-        payload.cone.width = 0;
-        payload.cone.angle = rays.GetPixelAngle();
+			float3 right = rsin * tt * normalize(cross(lightDir, float3(0, 1, 0.1)));
+			float3 tangent = rcos * tt * normalize(cross(right, lightDir));
 
-        TraceRay(raytracing.GetScene(),  RAY_FLAG_NONE    , ~0, 0, 0, 0, ray, payload);
-        // Write the raytraced color to the output texture.
-        output[DispatchRaysIndex().xy] = float4(pow(payload.color.xyz, 1.0 / 1.8), 1);// float4(pow(gbuffer[0][DispatchRaysIndex().xy].xyz, 0.5) * (0.1 + payload.color.x * max(0, dot(ray.Direction, normal))), 1);
- // output[DispatchRaysIndex().xy] = float4(CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(rayDir), 0).xyz,1);
-		/*ShadowPayload payload = {false };
-		TraceRay(Scene, RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload);
-		// Write the raytraced color to the output texture.
-		RenderTarget[DispatchRaysIndex().xy] = float4(0,payload.hit,0,1);// float4(payload.color.xyz, 1);// float4(pow(gbuffer[0][DispatchRaysIndex().xy].xyz, 0.5) * (0.1 + payload.color.x * max(0, dot(ray.Direction, normal))), 1);
-		*/
-		
+			float3 dir = normalize(lightDir + right + tangent);
+
+			if (dot(dir, normal) < 0.1) continue;
+			ShadowPayload payload_shadow = { false };
+
+			RayDesc ray;
+			ray.Origin = pos;
+			ray.Direction = dir;
+			ray.TMin = 0.03;
+			ray.TMax = 1000.0;
+			TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 1, 0, 1, ray, payload_shadow);
+
+			if (payload_shadow.hit)
+				hit_rate += 1.0f;
+
+			real_samples++;
+
+		}
+		if(real_samples>0)
+		shadow = 1.0 - hit_rate / real_samples;
+		shadow *= saturate(dot(lightDir, normal));
+
+		shadow = pow(shadow, 1.0 / 2.2);
+        output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy], shadow,0.01);
 
 }
 

@@ -22,7 +22,8 @@ public:
 
 		graph.add_pass<DownsampleData>("GBufferDownsampler", [this, size](DownsampleData& data, TaskBuilder& builder) {
 
-			data.gbuffer.need(builder, true, true);
+			data.gbuffer.need(builder, false, true);
+			data.gbuffer.quality = builder.need_texture("GBuffer_Quality", ResourceFlags::DepthStencil);
 		//	data.gbuffer.create_quality(size, builder);
 			data.temp = data.gbuffer.create_temp_color(size, builder);
 
@@ -456,6 +457,8 @@ void VoxelGI::debug(FrameGraph& graph)
 	{
 		GBufferViewDesc gbuffer;
 		ResourceHandler* target_tex;
+		ResourceHandler* voxel_lighted;
+
 	};
 
 	auto size = graph.frame_size;
@@ -463,6 +466,7 @@ void VoxelGI::debug(FrameGraph& graph)
 	graph.add_pass<VoxelDebug>("VoxelDebug", [this, size](VoxelDebug& data, TaskBuilder& builder) {
 
 		data.target_tex = builder.create_texture("VoxelDebug", size, 1, DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::RenderTarget);
+		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::ComputeRead);
 
 		data.gbuffer.need(builder,true);
 
@@ -470,6 +474,7 @@ void VoxelGI::debug(FrameGraph& graph)
 
 			auto& command_list = _context.get_list();
 
+			auto voxel_lighted = _context.get_texture(data.voxel_lighted);
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 			auto target_tex = _context.get_texture(data.target_tex);
@@ -511,7 +516,7 @@ void VoxelGI::debug(FrameGraph& graph)
 
 			{
 				Slots::VoxelDebug debug;
-				debug.GetVolume() = volume_lighted->texture_3d()->get_static_srv();
+				debug.GetVolume() = voxel_lighted.get_srv();
 				gbuffer.SetTable(debug.MapGbuffer());
 				debug.set(graphics);
 
@@ -539,11 +544,13 @@ void VoxelGI::screen(FrameGraph& graph)
 		ResourceHandler* gi_static1;
 
 		ResourceHandler* sky_cubemap_filtered;
+		
+		ResourceHandler* voxel_lighted;
 
 	};
 	auto size = graph.frame_size;
 
-	graph.add_pass<Screen>("Screen", [this, size](Screen& data, TaskBuilder& builder) {
+	graph.add_pass<Screen>("VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
 
 		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
 
@@ -554,6 +561,9 @@ void VoxelGI::screen(FrameGraph& graph)
 		data.gi_static0 = builder.create_texture("gi_static0", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Static);
 		data.gi_static1 = builder.create_texture("gi_static1", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Static);
 		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered_diffuse", ResourceFlags::PixelRead);
+
+		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::ComputeRead);
+
 		}, [this, &graph](Screen& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -831,11 +841,14 @@ void VoxelGI::voxelize(FrameGraph& graph)
 {
 	struct Voxelize
 	{
-
+		ResourceHandler* voxel_albedo;
+		ResourceHandler* voxel_normal;
 	};
 
 	graph.add_pass<Voxelize>("voxelize", [this](Voxelize& data, TaskBuilder& builder) {
 
+		data.voxel_albedo = builder.need_texture("voxel_albedo", ResourceFlags::UnorderedAccess);
+		data.voxel_normal = builder.need_texture("voxel_normal", ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](Voxelize& data, FrameContext& _context) {
 
@@ -872,6 +885,9 @@ void VoxelGI::lighting(FrameGraph& graph)
 		ResourceHandler* global_camera;
 	
 		ResourceHandler* sky_cubemap_filtered;
+		ResourceHandler* voxel_lighted;
+		ResourceHandler* voxel_albedo;
+		ResourceHandler* voxel_normal;
 	};
 
 	
@@ -880,6 +896,11 @@ void VoxelGI::lighting(FrameGraph& graph)
 		data.global_depth = builder.need_buffer("global_depth", ResourceFlags::ComputeRead);
 		data.global_camera = builder.need_texture("global_camera", ResourceFlags::ComputeRead);
 		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
+
+		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::UnorderedAccess);
+		data.voxel_albedo = builder.need_texture("voxel_albedo", ResourceFlags::ComputeRead);
+		data.voxel_normal = builder.need_texture("voxel_normal", ResourceFlags::ComputeRead);
+
 
 		}, [this, &graph](Lighting& data, FrameContext& _context) {
 
@@ -960,16 +981,19 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 {
 	struct Mipmapping
 	{
+		ResourceHandler* voxel_lighted;
 
 	};
 
 	graph.add_pass<Mipmapping>("Mipmapping", [this](Mipmapping& data, TaskBuilder& builder) {
 
+		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](Mipmapping& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
 
+			auto voxel_lighted = _context.get_texture(data.voxel_lighted);
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 
@@ -1031,7 +1055,9 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 void VoxelGI::generate(FrameGraph& graph)
 {
 
-
+	graph.builder.pass_texture("voxel_albedo", volume_albedo);
+	graph.builder.pass_texture("voxel_normal", volume_normal);
+	graph.builder.pass_texture("voxel_lighted", volume_lighted);
 
 	if (need_start_new)
 	{
@@ -1075,7 +1101,7 @@ void VoxelGI::generate(FrameGraph& graph)
 
 	if (light_scene && light_counter == 0 || all_scene_regen_counter > 0)
 	{
-		if (gpu_tiles_buffer[0]->size())
+		//if (gpu_tiles_buffer[0]->size())
 		{
 			lighting(graph);
 			mipmapping(graph);
@@ -1092,6 +1118,6 @@ void VoxelGI::generate(FrameGraph& graph)
 
 
 
-//debug(graph);
+debug(graph);
 
 }

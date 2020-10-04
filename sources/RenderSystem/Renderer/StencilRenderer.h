@@ -3,12 +3,12 @@
 class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Events::Runner
 {
      //   RenderTargetTable table;
-        Render::StructuredBuffer<UINT>::ptr id_buffer;
+    //    Render::StructuredBuffer<UINT>::ptr id_buffer;
         camera cam;
         camera axis_intersect_cam;
 
 
-        Render::StructuredBuffer<UINT>::ptr axis_id_buffer;
+     //   Render::StructuredBuffer<UINT>::ptr axis_id_buffer;
 
         MeshAssetInstance::ptr axis;
         PlacedAllocator allocator;

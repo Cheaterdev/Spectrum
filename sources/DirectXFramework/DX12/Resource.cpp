@@ -71,7 +71,7 @@ namespace DX12
 
 	}
 
-	void ResourceStateManager::transition(std::vector<D3D12_RESOURCE_BARRIER>& target, const Resource* resource, unsigned int state, unsigned int s, int id, uint64_t full_id) const
+	void ResourceStateManager::transition(std::vector<D3D12_RESOURCE_BARRIER>& target, const Resource* resource, ResourceState state, unsigned int s, int id, uint64_t full_id) const
 	{
 		auto& cpu_state = get_state(id);
 
@@ -80,7 +80,7 @@ namespace DX12
 
 			auto& subres_cpu = cpu_state.subres[subres];
 
-			unsigned int prev_state = subres_cpu.state;
+			ResourceState prev_state = subres_cpu.state;
 		
 
 			if (subres_cpu.command_list_id != full_id)
@@ -335,7 +335,8 @@ namespace DX12
 	PlacedAllocator::PlacedAllocator() :
 		heap_srv(HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES),
 		heap_rtv(HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES),
-		heap_uav(HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES)
+		heap_uav(HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES),
+		heap_srv_buffer(HeapType::DEFAULT, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS)
 		
 	{
 	
@@ -371,7 +372,11 @@ namespace DX12
 
 		if (heap_type == HeapType::DEFAULT)
 		{
-			if (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+			{
+				heap = &heap_srv_buffer;
+			}
+			else if (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
 			{
 				heap = &heap_rtv;
 			}

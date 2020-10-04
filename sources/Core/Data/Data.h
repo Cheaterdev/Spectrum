@@ -41,6 +41,10 @@ template <typename T> inline size_t HashState(const T* StateDesc, size_t Initial
 	return HashRange((UINT*)StateDesc, (UINT*)(StateDesc + 1), InitialVal);
 }
 
+template<typename T> concept HaveEqual =
+requires (T a, T b) {
+	a == b;
+};
 
 class MyVariant
 {
@@ -53,10 +57,16 @@ class MyVariant
 		var_base(std::reference_wrapper<const std::type_info> r);
 		
 		virtual   std::unique_ptr<var_base> clone() = 0;
+
+		virtual bool Equals(var_base* other) = 0;
 	public:
 		std::reference_wrapper<const std::type_info> type;
 		virtual ~var_base() = default;
 	};
+
+
+
+
 
 	template<class T>
 	class var_typed : public var_base
@@ -78,6 +88,22 @@ class MyVariant
 		{
 
 		}
+
+		virtual bool Equals(var_base* other)
+		{
+			auto otyped = dynamic_cast<var_typed<T>*>(other);
+
+			if (otyped)
+			{
+				if constexpr (HaveEqual<T>)
+					return value == otyped->value;
+				else
+					return false;
+			}
+
+			return false;
+		}
+
 
 		virtual std::unique_ptr<var_base> clone() override
 		{
@@ -121,16 +147,28 @@ public:
 	void operator = (MyVariant value);
 
 
+	//template<class T>
+	bool operator!=(const MyVariant& other) const
+	{
+		//var_typed<T>* var = dynamic_cast<var_typed<T>*>(typed.get());
+		if (!typed) return true;
+	
+		return !typed->Equals(other.typed.get());
+
+	//	return true;
+	}
 	template<class T>
 	bool operator!=(const T& other) const
 	{
 		var_typed<T>* var = dynamic_cast<var_typed<T>*>(typed.get());
 
 		if (var)
-			return var->value!=other;
+			return var->value != other;
 
-		return true;
+			return true;
 	}
+
+
 
 	template<class T>
 	T& get() const
@@ -337,3 +375,69 @@ bool operator==(const std::shared_ptr<type>& l, const std::shared_ptr<type>& r)
 	return  *l == *r;
 }
 */
+
+#define GENERATE_OPS __GENERATE_OPS__
+
+template<typename T> concept EnumType =
+requires (T t) {
+	{T::__GENERATE_OPS__ } ;
+};
+
+
+
+template<EnumType Enum>
+Enum operator |(Enum lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum> (
+		static_cast<underlying>(lhs) |
+		static_cast<underlying>(rhs)
+		);
+}
+
+
+
+template<EnumType Enum>
+Enum operator &(Enum lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum> (
+		static_cast<underlying>(lhs) &
+		static_cast<underlying>(rhs)
+		);
+}
+
+
+template<EnumType Enum>
+bool operator &&(Enum lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum> (
+		static_cast<underlying>(lhs) &&
+		static_cast<underlying>(rhs)
+		);
+}
+
+
+
+template<EnumType Enum>
+bool operator ==(Enum lhs, Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum> (
+		static_cast<underlying>(lhs) ==
+		static_cast<underlying>(rhs)
+		);
+}
+
+
+template<EnumType Enum>
+ bool check(Enum lhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return  (
+		static_cast<underlying>(lhs)
+		) != 0;
+}
+
+

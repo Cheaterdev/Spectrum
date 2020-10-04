@@ -664,15 +664,15 @@ namespace DX12
 		resource->assume_state(id, state);
 	}*/
 
-	void Transitions::transition(const std::shared_ptr<Texture>& resource, unsigned int to, UINT subres )
+	void Transitions::transition(const std::shared_ptr<Texture>& resource, ResourceState to, UINT subres )
 	{
 		transition(resource.get(), to, subres);
 	}
-	void Transitions::transition(const Resource::ptr& resource, unsigned int to, UINT subres )
+	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres )
 	{
 		transition(resource.get(), to, subres);
 	}
-	void Transitions::transition(const Resource* resource, unsigned int to, UINT subres )
+	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres )
 	{
 		assert(resource->get_heap_type() != HeapType::UPLOAD && resource->get_heap_type() != HeapType::READBACK);
 		assert(resource->get_native().Get());

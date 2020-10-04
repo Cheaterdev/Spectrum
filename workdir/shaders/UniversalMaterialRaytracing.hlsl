@@ -25,7 +25,7 @@ Texture2D get_texture(uint i)
 {
 	return CreateSceneData().GetMaterial_textures(i + CreateMaterialInfo().GetTextureOffset());
 
-//	return textures[i /*+ texture_offset*/];
+	//	return textures[i /*+ texture_offset*/];
 }
 
 #ifdef BUILD_FUNC_PS
@@ -35,7 +35,7 @@ float4 sample(Texture2D tex, SamplerState s, float2 tc, float lod)
 {
 	uint2 size;
 	tex.GetDimensions(size.x, size.y);
-	lod += 0.5 * log2(size.x*size.y);
+	lod += 0.5 * log2(size.x * size.y);
 
 	return tex.SampleLevel(s, tc, lod);
 }
@@ -51,10 +51,18 @@ float calc_fresnel(float k0, float3 n, float3 v)
 	return k0 + (1 - k0) * (1 - pow(dot(n, -v), 1));
 }
 
+float rnd(float2 uv)
+{
+	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
+}
+
+
 [shader("closesthit")]
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 {
 
+
+	FrameInfo frame = CreateFrameInfo();
 	SceneData sceneData = CreateSceneData();
 	Raytracing raytracing = CreateRaytracing();
 
@@ -85,7 +93,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 	float kR = 0.9;
 	float3 refl = reflect(WorldRayDirection(), t.v.normal);
-	float3 refr = refract(WorldRayDirection(), t.v.normal, HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE? kR :(1.0/ kR));
+	float3 refr = refract(WorldRayDirection(), t.v.normal, HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE ? kR : (1.0 / kR));
 	float4 color = 1;
 	float metallic = 1;
 	float roughness = 1;
@@ -100,30 +108,59 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 
 
-	float3 lightDir = normalize(float3(0, 1, 1));
+	float3 lightDir = frame.GetSunDir();
 	RayPayload payload2 = payload.propagate();
-	ShadowPayload payload_shadow = { false };
 
+	float shadow = 1;
 	if (payload2.recursion < 5)
 	{
-		
-		{
-			RayDesc ray;
-		ray.Origin = t.v.pos;
-		ray.Direction = normalize(refl);
-		ray.TMin = 0.01;
-		ray.TMax = 1000.0;
-		TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload2);
-		}
 
-		{
+	/*	{
 			RayDesc ray;
 			ray.Origin = t.v.pos;
-			ray.Direction = normalize(float3(0, 1, 1));
-			ray.TMin = 0.001;
+			ray.Direction = normalize(refl);
+			ray.TMin = 0.01;
+			ray.TMax = 1000.0;
+			TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload2);
+		}
+		*/
+		float hit_rate = 0;
+		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
+		for (int i = 0; i < samples; i++)
+		{
+			float time = frame.GetTime().y + i;
+			float sini = sin(time * 220 + float(t.v.tc.x));
+			float cosi = cos(time * 220 + float(t.v.tc.y));
+			float rand = rnd(float2(sini, cosi));
+
+
+			float rcos = cos(6.14 * rand);
+			float rsin = sin(6.14 * rand);
+			float rand2 = rnd(float2(cosi, sini));
+
+			float tt = 0.1*pow(rand2,1.0/3.0);
+
+			float3 right = rsin * tt * normalize(cross(lightDir, float3(0, 1, 0.1)));
+			float3 tangent = rcos * tt * normalize(cross(right, lightDir));
+
+			float3 dir = normalize(lightDir + right + tangent);
+
+
+
+			ShadowPayload payload_shadow = { false };
+
+			RayDesc ray;
+			ray.Origin = t.v.pos;
+			ray.Direction = dir;
+			ray.TMin = 0.003;
 			ray.TMax = 1000.0;
 			TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 1, 0, 1, ray, payload_shadow);
+
+			if (payload_shadow.hit)
+				hit_rate += 1.0f;
+
 		}
+		shadow = 1.0 - hit_rate / samples;
 	}
 
 #ifdef REFRACTION
@@ -145,12 +182,12 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 		if (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE)
 		{
-			color = color* payload_refraction.color;// lerp(color, 1, exp(-payload_refraction.dist / 1)) * payload_refraction.color;
+			color = color * payload_refraction.color;// lerp(color, 1, exp(-payload_refraction.dist / 1)) * payload_refraction.color;
 		//	color= exp(-payload_refraction.dist / 1);
 		}
 		else
 		{
-			color =  payload_refraction.color;
+			color = payload_refraction.color;
 		}
 
 		//
@@ -163,15 +200,15 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	float3 my_color = color;// +10 * pow(max(0, dot(refl, lightDir)), 256);
 
 #else
-	float3 my_color = color *max(0.01, (!payload_shadow.hit) * dot(t.v.normal, lightDir));
+	float3 my_color = color * max(0.01, (shadow)*saturate(dot(t.v.normal, lightDir)));
 
 #endif
 
-	float fresnel =  calc_fresnel(roughness, t.v.normal, WorldRayDirection());
+	float fresnel = calc_fresnel(roughness, t.v.normal, WorldRayDirection());
 
-	
+
 	float3 reflected = payload2.color.xyz;
-	payload.color = float4(lerp(my_color, reflected, fresnel), 1);
+	payload.color = shadow;// float4(lerp(my_color, reflected, fresnel), 1);
 
 	payload.dist = RayTCurrent();
 }

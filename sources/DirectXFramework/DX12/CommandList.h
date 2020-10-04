@@ -257,73 +257,7 @@ namespace DX12
 	public:
 		FrameResources::ptr begin_frame();
 	};
-	/*
-	class FrameResource
-	{
-	protected:
-		std::mutex m;
-	public:
-		virtual FrameResources::UploadInfo get_for(FrameResources& manager) = 0;
-	};
 
-
-	template<class T>
-	class FrameStorageConstBuffer : public FrameResource
-	{
-		FrameResources::UploadInfo info;
-		T _data;
-	public:
-
-		using ptr = std::shared_ptr<FrameStorageConstBuffer>;
-
-		T& data()
-		{
-			return _data;
-		}
-		const T& data() const
-		{
-			return _data;
-		}
-		FrameResources::UploadInfo get_for(FrameResources& manager) override
-		{
-			m.lock();
-	//		if (info.frame != manager.get_frame())
-				info = manager.set_const_buffer(_data);
-
-			assert(info.resource);
-			m.unlock();
-			return info;
-		}
-	};
-
-	template<class T>
-	class FrameStorage : public FrameResource
-	{
-		FrameResources::UploadInfo info;
-		std::vector<T> _data;
-	public:
-
-		using ptr = std::shared_ptr<FrameStorage<T>>;
-
-		std::vector<T>& data()
-		{
-			return _data;
-		}
-
-		FrameResources::UploadInfo get_for(FrameResources& manager) override
-		{
-			m.lock();
-		//	if (info.frame != manager.get_frame())
-				info = manager.set_data(_data.data(), _data.size());
-
-			assert(info.resource);
-			m.unlock();
-			return info;
-		}
-
-		using type = T;
-	};
-	*/
 	class CommandListBase
 	{
 
@@ -357,13 +291,13 @@ namespace DX12
 	protected:
 		void reset();
 
-		
+
 	public:
 		void flush_transitions();
 
-		void transition(const Resource* resource, unsigned int state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-		void transition(const Resource::ptr& resource, unsigned int state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-		void transition(const std::shared_ptr<Texture>& resource, unsigned int state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		void transition(const Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		void transition(const std::shared_ptr<Texture>& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
 
 
@@ -404,7 +338,7 @@ namespace DX12
 					transition(info->resource_ptr, ResourceState::RENDER_TARGET, res);
 				}
 			}
-		
+
 		}
 
 		void transition_uav(const ResourceInfo* info)
@@ -451,7 +385,7 @@ namespace DX12
 			{
 				auto& uav = info->uav.desc.Texture2DArray;
 
-				if (desc.MipLevels == 1 && desc.Depth() == 1 &&desc.ArraySize() == 1)
+				if (desc.MipLevels == 1 && desc.Depth() == 1 && desc.ArraySize() == 1)
 				{
 					transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 				}
@@ -465,7 +399,8 @@ namespace DX12
 					}
 
 				}
-			}else assert(false);
+			}
+			else assert(false);
 
 		}
 
@@ -483,13 +418,13 @@ namespace DX12
 				transition(info->resource_ptr, ResourceState::DEPTH_WRITE, res);
 
 			}
-			else if(info->dsv.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
+			else if (info->dsv.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
 			{
 				auto& dsv = info->dsv.Texture2DArray;
 
 				for (int array = dsv.FirstArraySlice; array < dsv.FirstArraySlice + dsv.ArraySize; array++)
 				{
-					UINT res = desc.CalcSubresource(dsv.MipSlice, array,0);
+					UINT res = desc.CalcSubresource(dsv.MipSlice, array, 0);
 					transition(info->resource_ptr, ResourceState::DEPTH_WRITE, res);
 				}
 			}
@@ -563,7 +498,7 @@ namespace DX12
 					}
 				}
 			}
-			else if(info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURECUBE)
+			else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURECUBE)
 			{
 				auto& srv = info->srv.TextureCube;
 
@@ -575,12 +510,13 @@ namespace DX12
 				{
 					for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
 						for (auto array = 0; array < 6; array++)
-					{
-						UINT res = desc.CalcSubresource(mip, array, 0);
-						transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, res);
-					}
+						{
+							UINT res = desc.CalcSubresource(mip, array, 0);
+							transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, res);
+						}
 				}
-			}else
+			}
+			else
 				assert(false);
 
 
@@ -1006,38 +942,6 @@ namespace DX12
 		virtual void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
 
 
-		template<class T>
-		void set_const_buffer_raw(UINT i, const T* data, UINT64 size)
-		{
-			//       assert(Math::IsAligned(data.data(), 16));
-			//  size_t BufferSize = Math::AlignUp(sizeof(T), 16);
-			auto info = base.place_data(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			memcpy(info.resource->get_data() + info.offset, data, size);
-			set_const_buffer(i, info.resource->get_gpu_address() + info.offset);
-		}
-
-
-		template<class T>
-		void set_const_buffer_raw(UINT i, const T& data)
-		{
-			//       assert(Math::IsAligned(data.data(), 16));
-			//  size_t BufferSize = Math::AlignUp(sizeof(T), 16);
-			auto info = base.place_data(sizeof(T), D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-			memcpy(info.resource->get_data() + info.offset, &data, sizeof(T));
-			set_const_buffer(i, info.resource->get_gpu_address() + info.offset);
-		}
-
-
-		template<class T>
-		void set_srv(UINT i, const std::vector<T>& data)
-		{
-			size_t BufferSize = Math::AlignUp(data.size() * sizeof(T), 16);
-			auto info = base.place_data(BufferSize);
-			memcpy(info.resource->get_data() + info.offset, data.data(), data.size() * sizeof(T));
-			set_srv(i, info.resource->get_gpu_address() + info.offset);
-		}
-
-
 
 		template<class T>
 		std::unique_ptr<T> wrap()
@@ -1085,10 +989,6 @@ namespace DX12
 		//	std::shared_ptr<PipelineState> current_pipeline;
 		std::shared_ptr<RootSignature> current_root_signature;
 
-		//	DynamicDescriptor<DescriptorHeapType::RTV> rtv_descriptors;
-		//	DynamicDescriptor<DescriptorHeapType::DSV> dsv_descriptors;
-
-		MyVariant current_shader_data;
 
 		void begin();
 		void end();
@@ -1138,54 +1038,6 @@ namespace DX12
 				list->IASetPrimitiveTopology(topology);
 
 			this->topology = topology;
-		}
-
-
-
-
-		template<class T>
-		typename T::Signature& set_signature_typed(typename RootSignatureTyped<T>::ptr& s)
-		{
-
-			if (current_root_signature != s)
-			{
-				base.get_native_list()->SetGraphicsRootSignature(s->get_native().Get());
-				current_root_signature = s;
-				current_shader_data.create<typename T::Signature>(this);// = std::any(std::in_place_type, this);// std::make_any<typename T::Signature>(this);// .emplace<typename T::Signature>(this);
-			}
-
-			return get_shader_data<T>();
-		}
-
-		template<class T>
-		typename T::Signature& set_signature_typed(const RootSignature::ptr& s)
-		{
-
-			if (current_root_signature != s)
-			{
-				base.get_native_list()->SetGraphicsRootSignature(s->get_native().Get());
-				current_root_signature = s;
-				current_shader_data.create<typename T::Signature>(this);// = std::any(std::in_place_type, this);// std::make_any<typename T::Signature>(this);// .emplace<typename T::Signature>(this);
-			}
-
-			return get_shader_data<T>();
-		}
-
-
-		template<class T>
-		typename T::Signature& get_shader_data()
-		{
-			return  current_shader_data.get< T::Signature>();
-		}
-
-
-		template<class T>
-		typename T::Signature& set_pipeline_typed(std::shared_ptr<PipelineStateTyped<T>>& state)
-		{
-			set_signature_typed<T>(state->desc.root_signature);
-			base.set_pipeline_internal(state.get());
-
-			return get_shader_data<T>();
 		}
 
 
@@ -1271,59 +1123,10 @@ namespace DX12
 			return viewports;
 		}
 
-
-
-		template<class ...Args>
-		void set_vertex_buffers(UINT offset, Args... args)
-		{
-			int count = sizeof...(Args);
-			D3D12_VERTEX_BUFFER_VIEW views[sizeof...(Args)];
-			set(views, args...);
-			list->IASetVertexBuffers(offset, count, views);
-		}
-
-		void set_vertex_buffers(UINT offset, std::vector<D3D12_VERTEX_BUFFER_VIEW>& data)
-		{
-			list->IASetVertexBuffers(offset, static_cast<UINT>(data.size()), data.data());
-		}
-
-		void set_vertex_buffer(UINT offset, D3D12_VERTEX_BUFFER_VIEW& data)
-		{
-			list->IASetVertexBuffers(offset, 1, &data);
-		}
-
 		void set_index_buffer(D3D12_INDEX_BUFFER_VIEW view)
 		{
 			list->IASetIndexBuffer(&view);
 		}
-
-		template<class T>
-		D3D12_VERTEX_BUFFER_VIEW place_vertex_buffer(const std::vector<T>& data)
-		{
-			//       assert(Math::IsAligned(data.data(), 16));
-			size_t BufferSize = Math::AlignUp(data.size() * sizeof(T), 16);
-			auto info = base.place_data(BufferSize);
-			memcpy(info.resource->get_data() + info.offset, data.data(), data.size() * sizeof(T));
-			D3D12_VERTEX_BUFFER_VIEW res;
-			res.SizeInBytes = static_cast<UINT>(BufferSize);
-			res.StrideInBytes = sizeof(T);
-			res.BufferLocation = info.resource->get_gpu_address() + info.offset;
-			return res;
-		}
-		template<class T>
-		D3D12_VERTEX_BUFFER_VIEW place_vertex_buffer(const T* data, size_t size)
-		{
-			//       assert(Math::IsAligned(data.data(), 16));
-			auto info = base.place_data(size * sizeof(T));
-			memcpy(info.resource->get_data() + info.offset, data, size * sizeof(T));
-			D3D12_VERTEX_BUFFER_VIEW res;
-			res.SizeInBytes = static_cast<UINT>(size * sizeof(T));
-			res.StrideInBytes = sizeof(T);
-			res.BufferLocation = info.resource->get_gpu_address() + info.offset;
-			return res;
-		}
-
-
 
 		void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
 		void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
@@ -1378,7 +1181,6 @@ namespace DX12
 		virtual void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
 		//		virtual void set_srv(UINT i, FrameResource& info) override;
 
-		MyVariant current_shader_data;
 
 	public:
 
@@ -1396,28 +1198,6 @@ namespace DX12
 		void set_signature(const RootSignature::ptr&);
 		void set_pipeline(std::shared_ptr<ComputePipelineState>&);
 
-
-
-
-		template<class T>
-		typename T::Signature& set_signature_typed(typename RootSignatureTyped<T>::ptr& s)
-		{
-
-			if (current_compute_root_signature != s)
-			{
-				list->SetComputeRootSignature(s->get_native().Get());
-				current_compute_root_signature = s;
-				current_shader_data.create<typename T::Signature>(this);// = std::any(std::in_place_type, this);// std::make_any<typename T::Signature>(this);// .emplace<typename T::Signature>(this);
-			}
-
-			return get_shader_data<T>();
-		}
-
-		template<class T>
-		typename T::Signature& get_shader_data()
-		{
-			return  current_shader_data.get< T::Signature>();
-		}
 
 		void dispach(int = 1, int = 1, int = 1);
 		void dispach(ivec2, ivec2 = ivec2(8, 8));

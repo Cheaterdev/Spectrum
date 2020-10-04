@@ -444,7 +444,7 @@ namespace DX12
 			{
 
 
-			//	debugController->EnableDebugLayer();
+				debugController->EnableDebugLayer();
 
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
 				//spDebugController1->SetEnableGPUBasedValidation(true);
@@ -500,7 +500,9 @@ namespace DX12
 		}
 		
 
-		
+		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
+		TEST(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
+			&options5, sizeof(options5)));
 
 //#ifdef DEBUG
 		ComPtr<ID3D12InfoQueue> d3dInfoQueue;
@@ -511,7 +513,10 @@ namespace DX12
 		//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 			D3D12_MESSAGE_ID hide[] =
 			{
-				D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS
+				D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
+				D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT,
+				D3D12_MESSAGE_ID_NON_RETAIL_SHADER_MODEL_WONT_VALIDATE,
+				D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH
 			};
 			D3D12_INFO_QUEUE_FILTER filter = {};
 			filter.DenyList.NumIDs = _countof(hide);

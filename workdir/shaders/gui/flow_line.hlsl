@@ -80,21 +80,18 @@ DS_OUTPUT DS(HS_CONSTANT_OUTPUT input, OutputPatch<HS_OUTPUT, 4> op, float2 uv :
     float t = uv.x;
     float2 pos = pow(1.0f - t, 3.0f) * op[0].cpoint + 3.0f * pow(1.0f - t, 2.0f) * t * op[1].cpoint + 3.0f * (1.0f - t) * pow(t, 2.0f) * op[2].cpoint + pow(t, 3.0f) * op[3].cpoint;
     output.position = float4(pos, 1, 1.0f);
-    float t2 = uv.x - 1.0 / 40;
-    float t3 = uv.x - 1.0 / 40;
+    float t2 = uv.x;
+    
+    
+    if(t>0.5) t2-=1.0 / 4000;
+    if (t <=0.5) t2 += 1.0 / 4000;
+
     float2 delta1, delta2, pos2, pos3;
-
-    if (t2 <= 1)
-        pos2 = pow(1.0f - t2, 3.0f) * op[0].cpoint + 3.0f * pow(1.0f - t2, 2.0f) * t2 * op[1].cpoint + 3.0f * (1.0f - t2) * pow(t2, 2.0f) * op[2].cpoint + pow(t2, 3.0f) * op[3].cpoint;
-    else
-        pos2 = pos + float3(1, 0, 0);
-
-    /*if(t3>=0)
-    	pos3 = pow(1.0f - t3, 3.0f) * op[0].cpoint + 3.0f * pow(1.0f - t3, 2.0f) * t3 * op[1].cpoint + 3.0f * (1.0f - t3) * pow(t3, 2.0f) * op[2].cpoint + pow(t3, 3.0f) * op[3].cpoint;
-    else
-    	pos3=pos-float3(1,0,0);
-    */
+    pos2 = pow(1.0f - t2, 3.0f) * op[0].cpoint + 3.0f * pow(1.0f - t2, 2.0f) * t2 * op[1].cpoint + 3.0f * (1.0f - t2) * pow(t2, 2.0f) * op[2].cpoint + pow(t2, 3.0f) * op[3].cpoint;
+ 
     delta1 = normalize(pos - pos2);
+    if (t <= 0.5)delta1 = -delta1;
+
     //	delta2=-normalize(pos-pos3);
     float2 delta = delta1;//normalize(delta1+delta2);
     output.normal = float3(delta.y, -delta.x, 0);

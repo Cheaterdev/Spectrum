@@ -9,7 +9,7 @@ namespace Render
         // context.set(layout ? layout : input_layout::null);
         //     for (auto && b : base_buffers)
         //       b->update(context->list);
-        context->list->get_graphics().set_vertex_buffers(0, native_handles);
+    //    context->list->get_graphics().set_vertex_buffers(0, native_handles);
     }
 
     void vertex_buffer_stage::add(GPUBuffer::ptr buffer, std::vector<vertex_buffer_layout>& layouts)
