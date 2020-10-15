@@ -86,6 +86,11 @@ constexpr std::size_t operator "" _kb(unsigned long long int x) {
 	return x * 1024;
 }
 
+#define GEN_DEF_COMP(x) \
+	bool operator==(const x& r) const = default;\
+	std::strong_ordering  operator<=>(const  x& r) const = default;
+
+
 
 
 #include <boost/serialization/vector.hpp>

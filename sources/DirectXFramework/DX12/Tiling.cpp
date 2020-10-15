@@ -24,7 +24,7 @@ namespace DX12 {
 
 		auto& tile = tiles[0][x];
 
-		tile.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS);
+		tile.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS,HeapType::DEFAULT);
 
 		std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
 		std::vector<D3D12_TILE_REGION_SIZE> regionSizes;

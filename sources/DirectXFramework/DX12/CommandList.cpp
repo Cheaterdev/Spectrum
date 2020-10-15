@@ -64,7 +64,7 @@ namespace DX12
 
 	void CommandList::end()
 	{
-		Device::get().id_generator.put(id);
+		
 	//	id = -1;
 		flush_transitions();
 	
@@ -616,8 +616,11 @@ namespace DX12
 		BufferCache::get().on_execute_list(this);
 
 		GPUCompiledManager::reset();
-
+		Transitions::reset();
 		frame_resources = nullptr;
+
+		Device::get().id_generator.put(id);
+		id = -1;
 	}
 
 	void Transitions::flush_transitions()
@@ -633,6 +636,7 @@ namespace DX12
 		auto& timer = Profiler::get().start(L"fix_pretransitions");
 
 		std::vector<D3D12_RESOURCE_BARRIER> result;
+		std::vector<Resource*> discards;
 
 		result.reserve(used_resources.size());
 
@@ -640,7 +644,7 @@ namespace DX12
 		for (auto &r : used_resources)
 		{
 
-			r->process_transitions(result,r, id, global_id);
+			r->process_transitions(result, discards, r, id, global_id);
 
 
 		}
@@ -650,7 +654,7 @@ namespace DX12
 			if (!transition_list)
 				transition_list.reset(new TransitionCommandList(type));
 
-			transition_list->create_transition_list(result);
+			transition_list->create_transition_list(result, discards);
 			return transition_list;
 		}
 		return nullptr;
@@ -672,6 +676,12 @@ namespace DX12
 	{
 		transition(resource.get(), to, subres);
 	}
+
+	void Transitions::use_resource(const Resource* resource)
+	{
+		tracked_resources.emplace_back(const_cast<Resource*>(resource)->tracked_info);
+	}
+
 	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres )
 	{
 		assert(resource->get_heap_type() != HeapType::UPLOAD && resource->get_heap_type() != HeapType::READBACK);
@@ -685,6 +695,7 @@ namespace DX12
 			assert(good);
 
 			used_resources.emplace_back(const_cast<Resource*>(resource));
+			tracked_resources.emplace_back(const_cast<Resource*>(resource)->tracked_info);
 			assert(!resource->is_new(id, global_id));
 
 		}
@@ -699,23 +710,32 @@ namespace DX12
 	{
 		transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from?from->get_native().Get():nullptr, to->get_native().Get()));
 
-		/*
+
 
 		if (to->is_new(id, global_id))
 		{
 
-			to->check_aliasing();
+			to->aliasing(id, global_id);
+
+			bool good = std::find(used_resources.begin(), used_resources.end(), to) == used_resources.end();
+
+
+			assert(good);
+
+			used_resources.emplace_back(const_cast<Resource*>(to));
+			tracked_resources.emplace_back(const_cast<Resource*>(to)->tracked_info);
+			assert(!to->is_new(id, global_id));
 		}
 		else
 		{
-			int state = to->get_cpu_state();
-
-			if (state & ResourceState::RENDER_TARGET > 0 || state & ResourceState::DEPTH_WRITE > 0)
+			auto state = to->get_cpu_state(id, global_id);
+			
+			if (check(state & ResourceState::RENDER_TARGET) || check(state & ResourceState::DEPTH_WRITE))
 			{
-				get_native_list()->DiscardResource(to->get_native().Get());
+		//		get_native_list()->DiscardResource(to->get_native().Get(), nullptr);
 			}
 		}
-		*/
+		
 	//	get_native_list()->DiscardResource(to->get_native().Get(),nullptr);
 	//	if(to->gpu_state.subres[0].state)
 	//	if (transition_count == transitions.size())
@@ -1169,6 +1189,7 @@ void ComputeContext::dispach(int x,int y,int z)
 	void Transitions::reset()
 	{
 		used_resources.clear();
+		tracked_resources.clear();
 	}
 	void Uploader::reset()
 	{
@@ -1198,11 +1219,16 @@ void ComputeContext::dispach(int x,int y,int z)
 		m_commandList->SetName(L"TransitionCommandList");
 	}
 
-	void TransitionCommandList::create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER> &transitions)
+	void TransitionCommandList::create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER> &transitions, std::vector<Resource*> &discards)
 	{
 		m_commandAllocator->Reset();
 		m_commandList->Reset(m_commandAllocator.Get(), nullptr);
 		m_commandList->ResourceBarrier(static_cast<UINT>(transitions.size()), transitions.data());
+
+		for (auto e : discards)
+		{
+		//	m_commandList->DiscardResource(e->get_native().Get(), nullptr);
+		}
 		m_commandList->Close();
 	}
 

@@ -576,7 +576,11 @@ void VoxelGI::screen(FrameGraph& graph)
 			Render::TextureView views[] = { _context.get_texture(data.downsampled_light0), _context.get_texture(data.downsampled_light1) };
 			Render::TextureView gi_views[] = { _context.get_texture(data.gi_static0), _context.get_texture(data.gi_static1) };
 
-
+			if (data.gi_static0->is_new())
+			{
+				command_list->clear_rtv(gi_views[0].get_rtv(), vec4(0, 0, 0, 0));
+				command_list->clear_rtv( gi_views[1].get_rtv(), vec4(0, 0, 0, 0));
+			}
 		
 			context->current_time = 0;
 			context->priority = TaskPriority::HIGH;

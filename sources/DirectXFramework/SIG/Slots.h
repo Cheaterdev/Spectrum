@@ -23,6 +23,10 @@ struct CompiledData
 						graphics.get_base().transition_srv(h.resource_info);
 						//	graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
 					}
+					else
+					{
+						graphics.get_base().use_resource(h.resource_info->resource_ptr);
+					}
 
 			}
 
@@ -31,8 +35,14 @@ struct CompiledData
 				auto h = table_uav[i];
 				if (h.resource_info && h.resource_info->resource_ptr)
 					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
+					{
 						//graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::UNORDERED_ACCESS);
 						graphics.get_base().transition_uav(h.resource_info);
+					}
+					else
+					{
+						graphics.get_base().use_resource(h.resource_info->resource_ptr);
+					}
 			}
 
 
@@ -48,7 +58,14 @@ struct CompiledData
 			if (cb)
 			{
 				if ((cb.resource)->get_heap_type() == Render::HeapType::DEFAULT)
+				{
 					graphics.get_base().transition(cb.resource, Render::ResourceState::VERTEX_AND_CONSTANT_BUFFER);
+				}
+				else
+				{
+					graphics.get_base().use_resource(cb.resource);
+				}
+
 			}
 		}
 

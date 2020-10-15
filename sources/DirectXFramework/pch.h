@@ -64,6 +64,8 @@ namespace DX12
 #include "DX12/RootSignature.h"
 #include "DX12/Descriptors.h"
 #include "DX12/Tiling.h"
+
+#include "DX12/Memory.h"
 #include "DX12/Resource.h"
 
 

@@ -85,32 +85,20 @@ class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
 	main_renderer::ptr gpu_scene_renderer;
 	stencil_renderer::ptr stenciler;
 
-
-
-
-
 	GUI::Elements::label::ptr info;
 
 	size_t time = 0;
-	//ViewPortRenderer last_renderer;
 	struct EyeData : public Events::prop_handler
 	{
 
 		using ptr = std::shared_ptr<EyeData>;
-		//	G_Buffer g_buffer;
 		first_person_camera cam;
 
-		//	TemporalAA temporal;
+
 
 		EyeData(Render::RootSignature::ptr sig)
 		{
-			//	g_buffer.init(sig);// gpu_meshes_renderer_static->my_signature);
-
-			/*	g_buffer.size.register_change(this, [this](const ivec2& size) {
-					if(size.x>0)
-					temporal.resize(size);
-
-					});*/
+		
 		}
 	};
 
@@ -598,7 +586,10 @@ public:
 
 				auto output_tex = _context.get_texture(data.o_texture);
 
-
+				if (data.o_texture->is_new())
+				{
+					command_list->clear_uav(output_tex.resource, output_tex.get_uav(), vec4(0, 0, 0, 0));
+				}
 
 				command_list->get_compute().set_signature(RTX::get().global_sig);
 				command_list->get_graphics().set_signature(RTX::get().global_sig);
@@ -711,121 +702,6 @@ public:
 
 };
 
-
-
-class UIWindow : public Window, public GUI::user_interface
-{
-	Render::SwapChain::ptr swap_chain;
-
-	tick_timer main_timer;
-	ivec2 new_size;
-
-	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
-	std::future<void> task_future;
-protected:
-	virtual	void render()
-	{
-
-		{
-			auto& timer = Profiler::get().start(L"start new frame");
-			swap_chain->start_next();
-
-		}
-
-
-		GUI::user_interface::size = new_size;
-		auto& timer = Profiler::get().start(L"draw");
-
-		auto command_list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
-
-		{
-			command_list->begin("main window", &timer);
-
-			//	command_list->transition(swap_chain->get_current_frame(), Render::ResourceState::RENDER_TARGET);
-			command_list->get_graphics().set_rtv(1, swap_chain->get_current_frame()->texture_2d()->get_rtv(), Render::Handle());
-			command_list->get_graphics().set_viewports({ swap_chain->get_current_frame()->texture_2d()->get_viewport() });
-
-
-			Render::context render_context(command_list, vr_context);
-			render_context.delta_time = static_cast<float>(main_timer.tick());
-
-			render_context.ovr_context->eyes.resize(1);
-			render_context.ovr_context->eyes[0].dir = quat();
-
-			render_context.ovr_context->eyes[0].offset = vec3(0, 0, 0);
-			//		render_context.ovr_context.eyes[0].color_buffer = swap_chain->get_current_frame();
-
-
-			{
-				auto timer = command_list->start(L"draw ui");
-				//draw_ui(render_context);
-			}
-			command_list->transition(swap_chain->get_current_frame(), Render::ResourceState::PRESENT);
-			command_list->end();
-		}
-
-		{
-			auto& timer = Profiler::get().start(L"execute");
-
-
-			command_list->when_send([this](UINT64 res) {
-				auto& timer = Profiler::get().start(L"present");
-
-				swap_chain->present(res);
-				if (Application::get().is_alive())
-				{
-					auto ptr = get_ptr();
-					task_future = scheduler::get().enqueue([ptr, this]() {
-						render();
-						}, std::chrono::steady_clock::now());
-				}
-
-				});
-			command_list->execute();
-		}
-	}
-
-	UIWindow()
-	{
-		Window::input_handler = this;
-		DX12::swap_chain_desc desc;
-		desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		desc.fullscreen = false;
-		desc.stereo = false;
-		desc.window = this;
-		swap_chain = Render::Device::get().create_swap_chain(desc);
-
-
-
-		set_capture = [this](bool v)
-		{
-			if (v)
-				SetCapture(get_hwnd());
-			else
-				ReleaseCapture();
-		};
-
-		//	GUI::user_interface::size.register_handler(this, [this](ivec2 size) {	if (swap_chain)	swap_chain->resize(size); });
-	}
-
-	virtual ~UIWindow()
-	{
-
-		if (task_future.valid())
-			task_future.wait();
-	}
-	void on_resize(vec2 size) override
-	{
-		new_size = size;
-	}
-
-
-	virtual void on_size_changed(const vec2& r) override
-	{
-		user_interface::on_size_changed(r);
-		if (swap_chain)	swap_chain->resize(r);
-	}
-};
 #ifdef OCULUS_SUPPORT
 
 //------------------------------------------------------------
@@ -1357,25 +1233,29 @@ public:
 		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame());
 
 
-		create_graph(graph);
+		{
+
+			auto& timer = Profiler::get().start(L"create_graph");
+			create_graph(graph);
 
 
-		auto ptr = get_ptr();
+			auto ptr = get_ptr();
 
-		graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder) {
-			data.o_texture = builder.need_texture("swapchain", ResourceFlags::Required);
-			}, [this, ptr](pass_data& data, FrameContext& context) {
+			graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder) {
+				data.o_texture = builder.need_texture("swapchain", ResourceFlags::Required);
+				}, [this, ptr](pass_data& data, FrameContext& context) {
 
-				context.get_list()->transition(context.get_texture(data.o_texture).resource, ResourceState::PRESENT);
+					context.get_list()->transition(context.get_texture(data.o_texture).resource, ResourceState::PRESENT);
 
-				Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
-					run_on_ui([this, ptr]() {	Profiler::get().update(); });
+					Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
+						run_on_ui([this, ptr]() {	Profiler::get().update(); });
 
-					});
+						});
 
-			}, PassFlags::Required);
+				}, PassFlags::Required);
 
-
+		}
+	
 		graph.setup();
 		graph.compile(swap_chain->m_frameIndex);
 
@@ -1473,7 +1353,7 @@ resource_stages[&res.second] = input;
 
 		}
 
-
+		/*
 	
 		graph_usage = 0;
 		graph_usage += graph.builder.allocator.heap_rtv.get_max_usage();
@@ -1487,7 +1367,7 @@ resource_stages[&res.second] = input;
 			graph_usage += e.heap_upload_texture.get_max_usage();
 
 		}
-		graph_usage /= (1024 * 1024);
+		graph_usage /= (1024 * 1024);*/
 	}
 
 	FrameGraphRender()

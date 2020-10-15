@@ -16,6 +16,7 @@ namespace GUI
 		   std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
 		   Render::PipelineState::ptr current_state;
         public:
+            int counter = 0;
             using ptr = s_ptr<NinePatch>;
             NinePatch();
             void draw(Render::context& c, Render::PipelineState::ptr& pipeline_state, rect r);
@@ -73,7 +74,10 @@ namespace GUI
             void draw(Render::context& c, Render::PipelineState::ptr& state, rect r);
             Renderer();
 
-
+            void start()
+            {
+                nine_patch->counter = 0;
+            }
             void set(Render::context& c);
     };
 }

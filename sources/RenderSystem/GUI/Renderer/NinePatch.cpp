@@ -266,6 +266,9 @@ namespace GUI
 	{
 		if (vertexes.empty()) return;
 		
+		auto timer = c.command_list->start((std::wstring(L"flush") + std::to_wstring(counter++)).c_str());
+
+
 		auto& graphics = c.command_list->get_graphics();
 		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	//	graphics.set_vertex_buffers(0, vblist);

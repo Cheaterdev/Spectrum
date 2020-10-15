@@ -208,11 +208,6 @@ DXGI_FORMAT_P208,\
 DXGI_FORMAT_V208,\
 DXGI_FORMAT_V408
 
-#define GEN_DEF_COMP(x) \
-	bool operator==(const x& r) const = default;\
-	std::strong_ordering  operator<=>(const  x& r) const = default;
-
-
 struct Nullable {
 	static const bool Value = true;
 };

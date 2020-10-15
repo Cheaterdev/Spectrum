@@ -292,6 +292,8 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 
 
 	vargs.push_back(L"-no-warnings");
+	vargs.push_back(L"-O3");
+
 	hr = compiler->Compile(
 		pSource,          // program text
 		convert(file_name).c_str(),   // file name, mostly for error messages

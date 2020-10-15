@@ -287,6 +287,8 @@ namespace DX12
 		//unsigned int transition_count = 0;
 
 		std::list<Resource*> used_resources;
+		std::list<TrackedResource::ptr> tracked_resources;
+
 		std::shared_ptr<TransitionCommandList> transition_list;
 	protected:
 		void reset();
@@ -300,7 +302,7 @@ namespace DX12
 		void transition(const std::shared_ptr<Texture>& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
 
-
+		void use_resource(const Resource* resource);
 
 
 	public:
@@ -1221,7 +1223,7 @@ namespace DX12
 		using ptr = std::shared_ptr<TransitionCommandList>;
 
 		TransitionCommandList(CommandListType type);
-		void create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER>& transitions);
+		void create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER>& transitions, std::vector<Resource*> &duscards);
 		ComPtr<ID3D12GraphicsCommandList> get_native();
 	};
 }

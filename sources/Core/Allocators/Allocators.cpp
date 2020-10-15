@@ -13,6 +13,7 @@ size_t CommonAllocator::get_max_usage()
 
 std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size, size_t align)
 {
+	ASSERT_SINGLETHREAD
 	//std::lock_guard<std::mutex> g(m);
 	if (size == 0)
 	{
@@ -29,9 +30,10 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 	for (auto it = free_blocks.begin(); it != free_blocks.end(); ++it)
 	{
 		auto& free_block = *it;
-
+		auto orig_block = free_block;
 		auto aligned_offset = Math::AlignUp(free_block.begin, align);
 
+		if(free_block.end> aligned_offset)
 		if ((free_block.end + 1 - aligned_offset) >= size)
 		{
 
@@ -161,6 +163,7 @@ size_t CommonAllocator::merge_next(size_t end)
 
 void CommonAllocator::Free(Handle& handle)
 {
+	ASSERT_SINGLETHREAD
 	//std::lock_guard<std::mutex> g(m);
 	if (!handle)
 		return;
@@ -229,6 +232,7 @@ void  CommonAllocator::check()
 }
 void CommonAllocator::Reset()
 {
+	ASSERT_SINGLETHREAD
 	free_blocks.clear();
 	fences.clear();
 	auto& [elem, inserted] = free_blocks.insert(block{ 0,size - 1 });
@@ -258,12 +262,12 @@ AllocatorHanle::AllocatorHanle(std::shared_ptr<MemoryInfoProvider> provider, All
 
 AllocatorHanle::AllocatorHanle() = default;
 
-size_t AllocatorHanle::get_offset()
+size_t AllocatorHanle::get_offset() const
 {
 	return provider->get_info().aligned_offset;
 }
 
-size_t AllocatorHanle::get_size()
+size_t AllocatorHanle::get_size() 
 {
 	return provider->get_info().size;
 }
@@ -278,7 +282,7 @@ size_t AllocatorHanle::get_reset_id()
 	return provider->get_info().reset_id;
 }
 
-Allocator* AllocatorHanle::get_owner()
+Allocator* AllocatorHanle::get_owner() const
 {
 	return owner;
 }
@@ -286,4 +290,9 @@ Allocator* AllocatorHanle::get_owner()
 void AllocatorHanle::Free()
 {
 	if (owner) owner->Free(*this);
+}
+void AllocatorHanle::FreeAndClear()
+{
+	if (owner) owner->Free(*this);
+	owner = nullptr;
 }

@@ -18,7 +18,7 @@
  void SingleThreadExecutorBatched::add(std::function<void()>&& f)
 {
 
-	datas[index].emplace_back(std::forward<std::function<void()>>(f));
+	datas[index].emplace_back(std::move(f));
 
 	if (datas[index].capacity() == datas[index].size())
 	{
@@ -31,7 +31,7 @@
 {
 	bool alive = true;
 	while (alive)
-		while (alive && spsc_queue.consume_one([&](int id)
+		while (alive && spsc_queue.consume_all([&](int id)
 			{
 				for (auto& f : datas[id])
 					if (f)

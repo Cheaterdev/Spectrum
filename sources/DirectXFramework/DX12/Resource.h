@@ -1,14 +1,6 @@
 #pragma once
 namespace DX12
 {
-	enum class HeapType : int
-	{
-		DEFAULT = D3D12_HEAP_TYPE_DEFAULT,
-		UPLOAD = D3D12_HEAP_TYPE_UPLOAD,
-		READBACK = D3D12_HEAP_TYPE_READBACK,
-		CUSTOM = D3D12_HEAP_TYPE_CUSTOM,
-		PRESENT = 5
-	};
 
 	enum class ResourceState: int
 	{
@@ -55,6 +47,7 @@ namespace DX12
 
 			ResourceListStateCPU all;
 
+			bool need_discard = false;
 			volatile uint64_t command_list_id = -1;
 		};
 
@@ -141,67 +134,25 @@ namespace DX12
 			bool result = (s.command_list_id != full_id);
 
 			s.command_list_id = full_id;
-
+			if(result)
+			s.need_discard = false;
 			return  result;
 		}
 
+		void aliasing(int id, uint64_t full_id) 
+		{
+			SubResourcesCPU& s = get_state(id);
+
+			if (check(s.subres[0].state & ResourceState::RENDER_TARGET) || check(s.subres[0].state & ResourceState::DEPTH_WRITE))
+
+
+			s.need_discard = true;
+		}
 		
-		void process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, const Resource* resource, int id, uint64_t full_id);
+		void process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*> &discards, const Resource* resource, int id, uint64_t full_id);
 
 		void transition(std::vector<D3D12_RESOURCE_BARRIER>& target,const  Resource* resource, ResourceState state, unsigned int subres, int id, uint64_t full_id) const;
 
-	};
-
-	class ResourceHeap
-	{
-	public:
-		ComPtr<ID3D12Heap > heap;
-		HeapType type;
-		D3D12_HEAP_FLAGS flags;
-
-		size_t heap_size = 0;
-		using ptr = std::shared_ptr<ResourceHeap>;
-
-		ResourceHeap(ResourceHeap& other) = default;
-
-		ResourceHeap(HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
-		{
-
-		}
-
-		ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
-		{
-			init(size);
-		}
-		virtual ~ResourceHeap() = default;
-	protected:
-		void init(size_t size);
-	};
-	
-	template<class AllocatorType>
-	struct ResourceHeapPage: AllocatorType, ResourceHeap
-	{
-		using ptr = std::shared_ptr<ResourceHeapPage>;
-		ResourceHeapPage(size_t size, HeapType type, D3D12_HEAP_FLAGS flags) :ResourceHeap(size,type,flags), AllocatorType(size)
-		{
-
-		}
-		ResourceHeapPage(ResourceHeapPage& heap) :ResourceHeap(heap), AllocatorType(size)
-		{
-
-		}
-		/*ResourceHeap::ptr m_heap;
-	
-		ResourceHeapPage(ResourceHeap::ptr heap): m_heap(heap), AllocatorType(m_heap->heap_size)
-		{
-		
-		}*/
-
-		/*
-		Allocator::Handle Allocate(size_t size, size_t alignment)
-		{
-			return allocator.Allocate(size, alignment);
-		}*/
 	};
 
 	/*
@@ -251,78 +202,6 @@ namespace DX12
 	};
 	
 
-	// for tiles now, only
-	class ResourceHeapPageManager : public Singleton<ResourceHeapPageManager>
-	{
-		using heap_list = std::queue<ResourceHeapPage<CommonAllocator>::ptr>;
-		using flags_map = std::map<D3D12_HEAP_FLAGS, heap_list>;
-		flags_map all_heaps;
-		std::mutex m;
-
-		ResourceHeapPage<CommonAllocator>::ptr current_heap;
-
-		std::set<ResourceHeapPage<CommonAllocator>::ptr> total_heaps;
-
-		ResourceHeapPage<CommonAllocator>::ptr AllocateHeap(/*size_t size, HeapType type,*/ D3D12_HEAP_FLAGS flags)
-		{
-		
-			auto heaps = all_heaps[flags];
-
-			if (heaps.size())
-			{
-				auto top = heaps.front();
-				heaps.pop();
-				return top;
-			}
-
-
-			auto res = std::make_shared<ResourceHeapPage<CommonAllocator>>(64 * 1024, HeapType::DEFAULT, flags);
-			total_heaps.insert(res);
-			return res;
-		}
-	public:
-		
-		TileHeapPosition create_tile(D3D12_HEAP_FLAGS flags)
-		{
-			std::lock_guard<std::mutex> g(m);
-
-
-			if (!current_heap )
-			{
-				current_heap = AllocateHeap(flags);
-			}
-
-			auto handle = current_heap->TryAllocate(64 * 1024);
-
-			if (!handle)
-			{
-				current_heap = AllocateHeap(flags);
-				handle = current_heap->TryAllocate(64 * 1024);
-			}
-
-			TileHeapPosition result;
-
-			result.offset = handle->get_offset()/ (64 * 1024);
-			result.heap = current_heap.get();
-
-			return result;
-		}
-	};
-
-	template<class AllocatorType>
-	struct ResourceHeapAllocator : public ResourceHeap, public AllocatorType
-	{
-		using ResourceHeap::ResourceHeap;
-
-		void allocate_for_allocator(bool reset = false)
-		{
-			auto max_usage = AllocatorType::get_max_usage();
-			if (max_usage > heap_size)
-			{
-				ResourceHeap::init(max_usage);
-			}
-		}
-	};
 
 
 	class Resource;
@@ -353,7 +232,37 @@ namespace DX12
 
 	class FrameResources;
 
-	class Resource :public std::enable_shared_from_this<Resource>, public ResourceStateManager, public TiledResourceManager
+
+	class TrackedResource
+	{	public:
+		ComPtr<ID3D12Resource> m_Resource;
+		ResourceHandle alloc_handle;
+		bool debug = false;
+
+
+		using ptr = std::shared_ptr<TrackedResource>;
+		TrackedResource()
+		{
+
+		}
+
+		~TrackedResource()
+		{
+			alloc_handle.Free();
+		}
+	};
+
+	class Trackable
+	{
+		public:
+		TrackedResource::ptr tracked_info;
+		Trackable()
+		{
+			tracked_info = std::make_shared<TrackedResource>();
+		}
+	};
+	
+	class Resource :public std::enable_shared_from_this<Resource>, public Trackable,public ResourceStateManager, public TiledResourceManager
 	{
 		LEAK_TEST(Resource)
 
@@ -364,12 +273,13 @@ namespace DX12
 		//  std::vector< unsigned int> states;
 		size_t id = 0;
 
-		CommonAllocator::Handle alloc_handle;
-
+	
+	
 	protected:
-		ComPtr<ID3D12Resource> m_Resource;
+		ComPtr<ID3D12Resource>& m_Resource;
 		void init(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 	public:
+		ResourceHandle tmp_handle;
 		std::byte* buffer_data = nullptr;
 		bool debug = false;
 		std::string name;
@@ -378,6 +288,10 @@ namespace DX12
 			this->name = name;
 			//	auto& timer = Profiler::get().start(L"set_name");
 			m_Resource->SetName(convert(name).c_str());
+
+			debug = name=="PSSM_Cameras";
+
+			tracked_info->debug = debug;
 		}
 		const CD3DX12_RESOURCE_DESC &get_desc() const
 		{
@@ -387,9 +301,9 @@ namespace DX12
 	//	Resource::ptr delete_me;
 		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 		Resource(const ComPtr<ID3D12Resource>& resouce, ResourceState state, bool own = false);
-		Resource(const ComPtr<ID3D12Resource>& resouce, CommonAllocator::Handle, ResourceState state);
-
-		Resource():TiledResourceManager(m_Resource)
+		
+		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle);
+		Resource() :m_Resource(tracked_info->m_Resource), TiledResourceManager(tracked_info->m_Resource)
 		{
 			//  states.resize(50);
 		}
@@ -398,15 +312,6 @@ namespace DX12
 		HeapType get_heap_type() const
 		{
 			return heap_type;
-		}
-
-		bool is_placed()
-		{
-			return alloc_handle;
-		}
-		void release_memory()
-		{
-//			alloc_handle.Free();
 		}
 
 		ComPtr<ID3D12Resource> get_native() const
@@ -457,7 +362,7 @@ namespace DX12
 	public:	virtual Resource::ptr create_resource(const CD3DX12_RESOURCE_DESC& desc, ResourceState state, vec4 clear_value)  override;
 	};
 
-
+	/*
 	class PlacedAllocator
 	{
 	public:
@@ -521,7 +426,7 @@ namespace DX12
 			current_frame->heap_upload_texture.Reset();
 			current_frame->heap_readback.Reset();
 		}
-	};
+	};*/
 
 
 

@@ -11,7 +11,7 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
      //   Render::StructuredBuffer<UINT>::ptr axis_id_buffer;
 
         MeshAssetInstance::ptr axis;
-        PlacedAllocator allocator;
+     //   PlacedAllocator allocator;
         camera axis_cam;
 
 

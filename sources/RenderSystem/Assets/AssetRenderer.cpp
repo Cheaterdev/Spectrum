@@ -75,7 +75,7 @@ public:
 					gbuffer.HalfBuffer.hiZ_depth = _context.get_texture(data.hiz);
 					gbuffer.HalfBuffer.hiZ_table = RenderTargetTable(context->list->get_graphics(), {  }, gbuffer.HalfBuffer.hiZ_depth);
 					gbuffer.HalfBuffer.hiZ_depth_uav = _context.get_texture(data.hiz_uav);
-
+				
 					context->g_buffer = &gbuffer;
 
 					gbuffer.rtv_table.set(context, true, true);

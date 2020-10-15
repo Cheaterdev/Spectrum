@@ -180,19 +180,7 @@ namespace DX12
 
 	class UploadBuffer : public Resource
 	{
-			char* data;
-
-			template<class T = char>
-			T* map(SIZE_T  from, SIZE_T  to)
-			{
-				T* result = nullptr;
-				D3D12_RANGE Range;
-				Range.Begin = from;
-				Range.End = to;
-				m_Resource->Map(0, &Range, reinterpret_cast<void**>(&result));
-				return result;
-			}
-			void unmap();
+		
 		public:
 
 			using ptr = std::shared_ptr<UploadBuffer>;

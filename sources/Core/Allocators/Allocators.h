@@ -16,7 +16,7 @@ struct MemoryInfo
 class MemoryInfoProvider
 {
 public:
-	virtual MemoryInfo& get_info() = 0;
+	virtual const MemoryInfo& get_info() const  = 0;
 };
 
 
@@ -28,7 +28,7 @@ public:
 	{
 
 	}
-	MemoryInfo& get_info() override final
+	const MemoryInfo& get_info() const override final
 	{
 		return info;
 	}
@@ -45,9 +45,9 @@ public:
 	AllocatorHanle();
 	AllocatorHanle(std::shared_ptr<MemoryInfoProvider> provider, Allocator* owner);
 
-	size_t get_offset();
+	size_t get_offset() const;
 
-	MemoryInfo& get_info()
+	const MemoryInfo& get_info() const
 	{
 		return provider->get_info();
 	}
@@ -57,13 +57,14 @@ public:
 
 	size_t get_reset_id();
 
-	Allocator* get_owner();
+	Allocator* get_owner() const;
 
 	bool operator==(const AllocatorHanle& h) const;
 
 	bool operator!=(const AllocatorHanle& h) const;
 
 	void Free();
+	void FreeAndClear();
 };
 
 
@@ -71,7 +72,7 @@ public:
 class Allocator
 {
 public:
-
+	THREAD_CHECKER
 	AllocatorHanle Allocate(size_t size, size_t align = 1)
 	{
 		auto res = TryAllocate(size, align);
@@ -120,8 +121,17 @@ public:
 		return handles[res];
 	}
 
-	T& get_allocation(Handle id)
+	const T& get_allocation(Handle id) const
 	{
+
+		assert(id >= 0 && id < handles.size());
+		return handles[id];
+	}
+
+	T& get_allocation(Handle id) 
+	{
+
+		assert(id >= 0 && id < handles.size());
 		return handles[id];
 	}
 
@@ -143,7 +153,7 @@ public:
 
 	}
 
-	MemoryInfo& get_info() override final
+	const MemoryInfo& get_info() const override final
 	{
 		return tracker.get_allocation(id);
 	}
@@ -179,6 +189,8 @@ class CommonAllocator :public Allocator
 	size_t merge_prev(size_t start);
 	size_t merge_next(size_t end);
 	AllocationTracker<MemoryInfo> tracker;
+
+
 public:
 	using Handle = AllocatorHanle;
 	using MemoryHandle = AllocationTracker<MemoryInfo>::Handle;
@@ -191,6 +203,22 @@ public:
 	void Free(Handle& handle);
 
 	void Reset();
+
+
+	bool is_empty()
+	{
+		ASSERT_SINGLETHREAD
+
+
+			if (free_blocks.size() == 1)
+			{
+				auto& b = *free_blocks.begin();
+				return (b.begin == 0)&&(b.end == size - 1);
+
+			}
+	
+		return false;
+	}
 };
 
 class LinearAllocator : public Allocator
@@ -311,8 +339,8 @@ public:
 		if (offset > 1)
 		{
 			assert(&handle.get_info() == &tracker.get_allocation(alloc_ids[handle.get_offset()]));
-			MemoryInfo &last_mem = tracker.get_allocation(alloc_ids[offset - 1]);
-			MemoryInfo& removing_mem = handle.get_info();
+			 MemoryInfo &last_mem = tracker.get_allocation(alloc_ids[offset - 1]);
+			const MemoryInfo& removing_mem = handle.get_info();
 
 			moveBlock(last_mem.offset, removing_mem.offset);
 

@@ -35,7 +35,13 @@ namespace DX12
 		std::condition_variable condition_ended;
 		CommandListType type;
 
-		using resource_set = std::set<ComPtr<ID3D12Pageable >>;
+		struct res_deleter
+		{
+			ComPtr<ID3D12Pageable > resource;
+			ResourceHandle handle;
+		};
+
+		using resource_set = std::list<res_deleter>;
 		std::list<std::pair<UINT64, resource_set>> resources_to_destroy;
 
 		bool is_workload = false;
@@ -46,7 +52,7 @@ namespace DX12
 	public:
 		UINT64 signal();
 
-		void unused(ComPtr<ID3D12Pageable> resource);
+		void unused(ComPtr<ID3D12Pageable> resource, ResourceHandle handle);
 
 		std::shared_ptr<CommandList> get_free_list();
 
@@ -87,6 +93,13 @@ namespace DX12
 
 	};
 	class CommandList;
+
+	struct ResourceAllocationInfo
+	{
+		size_t size;
+		size_t alignment;
+		D3D12_HEAP_FLAGS flags;
+	};
 	class Device : public Singleton<Device>
 	{
 		ComPtr<ID3D12Device5> m_device;
@@ -102,7 +115,7 @@ namespace DX12
 		void stop_all();
 		virtual ~Device();
 
-		void unused(ComPtr<ID3D12Pageable> resource);
+		void unused(ComPtr<ID3D12Pageable> resource, ResourceHandle handle);
 
 		std::shared_ptr<CommandList> get_upload_list();
 		ComPtr<ID3D12Device5> get_native_device();
@@ -113,6 +126,7 @@ namespace DX12
 
 		Device();
 
+		ResourceAllocationInfo get_alloc_info(CD3DX12_RESOURCE_DESC& desc);
 		std::shared_ptr<SwapChain> create_swap_chain(const DX12::swap_chain_desc& desc);
 
 		void create_sampler(D3D12_SAMPLER_DESC desc, CD3DX12_CPU_DESCRIPTOR_HANDLE handle);

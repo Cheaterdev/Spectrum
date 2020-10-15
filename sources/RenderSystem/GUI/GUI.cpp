@@ -922,7 +922,8 @@ namespace GUI
 		 }
 		 is_updating_layout = true;
 		 {
-			// auto timer = c.command_list->start(L"layout");
+			 auto timer = Profiler::get().start(L"layout");
+
 			 update_layout({ pos.get(), pos.get() + size.get() }, scale);
 			 is_updating_layout = false;
 		 }
@@ -955,7 +956,7 @@ namespace GUI
 
 			
                  std::shared_ptr<OVRContext> ovr_context;
-
+                 renderer->start();
 
                  Render::context c(command_list, ovr_context);
                  c.command_list = command_list;

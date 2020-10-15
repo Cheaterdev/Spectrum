@@ -51,7 +51,7 @@ private:
 
 	struct EyeData:public prop_handler
 	{
-		PlacedAllocator allocator;
+	//	PlacedAllocator allocator;
 
 		//TextureSwapper gi_textures;
 		//TextureSwapper downsampled_light;

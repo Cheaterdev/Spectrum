@@ -54,7 +54,7 @@ struct ResourceAllocInfo;
 
 struct ResourceHandler
 {
-
+	bool is_new();
 	public:
 	friend struct TaskBuilder;
 	friend struct FrameContext;
@@ -81,18 +81,23 @@ struct ResourceAllocInfo
 	ResourceFlags flags;
 	bool placed;
 
-	CommonAllocator::Handle alloc_ptr;
+	Render::ResourceHandle alloc_ptr;
 	ResourceAllocInfo* orig = nullptr;
+
+	CD3DX12_RESOURCE_DESC d3ddesc;
+	Render::HeapType heap_type;
 // setup
 	int valid_from;
 	int valid_to;
 
 
 	bool enabled = true;
+
+	bool is_new = false;
 	std::list<Pass*> writers;
 
 //compile
-
+	std::map<Render::ResourceHandle, Render::Resource::ptr> resource_places;
 	Render::Resource::ptr resource;
 
 	Render::TextureView texture;
@@ -115,11 +120,19 @@ struct TaskBuilder
 	std::map<ResourceHandler*, ResourceAllocInfo> alloc_resources;
 
 	std::set<ResourceHandler*> passed_resources;
-	Render::PlacedAllocator allocator;
-	Render::PlacedAllocator static_allocator;
+
+	Render::ResourceHeapAllocator allocator;
+	Render::ResourceHeapAllocator static_allocator;
+
+//	Render::PlacedAllocator allocator;
+//	Render::PlacedAllocator static_allocator;
 
 	Render::FrameResourceManager frames;
 	Render::FrameResources::ptr current_frame;
+
+	std::map<int, Render::ResourceHeapAllocator> frame_allocs;
+
+	Render::ResourceHeapAllocator* current_alloc;
 	Pass* current_pass;
 	void begin(Pass* pass);
 

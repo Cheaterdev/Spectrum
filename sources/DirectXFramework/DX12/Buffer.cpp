@@ -154,24 +154,19 @@ namespace DX12
 
 
 
-	 void DX12::UploadBuffer::unmap()
-	{
-		m_Resource->Unmap(0, nullptr);
-	}
-
 	 DX12::UploadBuffer::UploadBuffer(UINT64 count) : Resource(CD3DX12_RESOURCE_DESC::Buffer(count, D3D12_RESOURCE_FLAG_NONE), UploadAllocator::get(), ResourceState::GEN_READ)
 	{
-		data = map(0, count);
+
 	}
 
 	 DX12::UploadBuffer::~UploadBuffer()
 	{
-		unmap();
+
 	}
 
 	 char * DX12::UploadBuffer::get_data()
 	{
-		return data;
+		return (char*)buffer_data;
 	}
 
 	 DX12::CPUBuffer::CPUBuffer(UINT64 count, int stride) : stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(count * stride), ReadbackAllocator::get(), ResourceState::COPY_DEST)

@@ -101,6 +101,13 @@ namespace DX12
 
 				if (resources_copy.size())
 				{
+					for (auto l : resources_copy)
+					{
+						for (auto e : l)
+						{
+							e.handle.Free();
+						}
+					}
 				//	         Log::get() << 3 << Log::endl;
 					resources_copy.clear();
 				//	      Log::get() << 4 << Log::endl;
@@ -144,7 +151,7 @@ namespace DX12
 		return fence;
 	}
 
-	void Queue::unused(ComPtr<ID3D12Pageable > resource)
+	void Queue::unused(ComPtr<ID3D12Pageable > resource, ResourceHandle handler)
 	{
 		std::lock_guard<std::mutex> g(queue_mutex);
 		/*     if (this->stop || (this->tasks.empty() && !is_workload))
@@ -157,7 +164,7 @@ namespace DX12
 		{
 			resources_to_destroy.emplace_back(destroy_fence, resource_set());
 		}
-		resources_to_destroy.back().second.insert(resource);
+		resources_to_destroy.back().second.emplace_back(res_deleter{ resource, handler });
 	}
 
 	std::shared_ptr<CommandList> Queue::get_free_list()
@@ -337,11 +344,11 @@ namespace DX12
 		}
 	}
 
-	void Device::unused(ComPtr<ID3D12Pageable> resource)
+	void Device::unused(ComPtr<ID3D12Pageable> resource, ResourceHandle handle)
 	{
 		auto&& q = queues[static_cast<int>(CommandListType::DIRECT)];
 
-		if (q)q->unused(resource);
+		if (q)q->unused(resource, handle);
 	}
 
 	std::shared_ptr<CommandList> Device::get_upload_list()
@@ -442,12 +449,11 @@ namespace DX12
 
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 			{
-
-
-				debugController->EnableDebugLayer();
-
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
-				//spDebugController1->SetEnableGPUBasedValidation(true);
+
+
+			//	debugController->EnableDebugLayer();
+			//	spDebugController1->SetEnableGPUBasedValidation(true);
 			}
 			
 
@@ -538,6 +544,55 @@ namespace DX12
 
 	}
 
+
+	DX12::ResourceAllocationInfo Device::get_alloc_info( CD3DX12_RESOURCE_DESC& desc)
+	{
+
+		if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+		{
+			if ((desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
+			{
+				desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+			}
+		}
+
+		D3D12_RESOURCE_ALLOCATION_INFO info = m_device->GetResourceAllocationInfo(0, 1, &desc);
+		desc.Alignment = info.Alignment;
+
+		if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+		{
+			desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+			info = m_device->GetResourceAllocationInfo(0, 1, &desc);
+
+
+			if (info.Alignment != D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
+			{
+				desc.Alignment = 0;
+				info = m_device->GetResourceAllocationInfo(0, 1, &desc);
+			}
+
+		}	
+
+		ResourceAllocationInfo result;
+
+		result.size = info.SizeInBytes;
+		result.alignment = info.Alignment;
+		result.flags = D3D12_HEAP_FLAG_NONE;
+
+
+		if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+		{
+			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
+		}
+		else if (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+		{
+			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
+		}
+		else
+			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+
+		return result;
+	}
 
 	void  Device::create_rtv(Handle& h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv)
 	{

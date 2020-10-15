@@ -65,8 +65,9 @@ namespace DX12
 	
 			Device::get().get_queue(CommandListType::DIRECT)->wait(frames[m_frameIndex].fence_event);
 
-	//	for (auto &f : frames)
-	//		Device::get().get_queue(CommandListType::DIRECT)->wait(f.fence_event);
+
+			if (GetAsyncKeyState(VK_F8))
+		for (auto &f : frames)						Device::get().get_queue(CommandListType::DIRECT)->wait(f.fence_event);
 				
 
 	}

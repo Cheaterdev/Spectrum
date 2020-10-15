@@ -169,3 +169,26 @@ public:
 
 template<class T>
 std::atomic_int32_t Counter<T>::time = 0;
+
+
+class Checker
+{
+	std::atomic<std::thread::id>& v;
+public:
+	Checker(std::atomic<std::thread::id>& c) :v(c)
+	{
+		auto id = std::this_thread::get_id();
+		auto prev = v.exchange(id);
+		assert(prev== std::thread::id());
+	}
+
+	~Checker()
+	{
+		auto id = std::this_thread::get_id();
+		auto prev = v.exchange(std::thread::id());
+		assert(prev == id);
+	}
+};
+#define THREAD_CHECKER std::atomic<std::thread::id> __checker_;
+
+#define ASSERT_SINGLETHREAD Checker __g__(__checker_);
