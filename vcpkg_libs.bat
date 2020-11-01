@@ -2,7 +2,7 @@ vcpkg install zlib:x64-windows-static
 vcpkg install bzip2:x64-windows-static
 vcpkg install zstd:x64-windows-static
 vcpkg install liblzma:x64-windows-static
-vcpkg install directxtex:x64-windows-static
+vcpkg install directxtex:x64-windows
 vcpkg install assimp:x64-windows-static
 vcpkg install boost-serialization:x64-windows-static
 vcpkg install boost-program-options:x64-windows-static
