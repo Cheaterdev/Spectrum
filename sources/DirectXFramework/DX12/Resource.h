@@ -234,27 +234,32 @@ namespace DX12
 
 
 	class TrackedResource
-	{	public:
+	{
+	public:
 		ComPtr<ID3D12Resource> m_Resource;
 		ResourceHandle alloc_handle;
 		bool debug = false;
 
+		static thread_local  bool allow_resource_delete;
 
 		using ptr = std::shared_ptr<TrackedResource>;
-		TrackedResource()
-		{
+		TrackedResource() = default;
 
+		void set_resource(ComPtr<ID3D12Resource> resource)
+		{
+			m_Resource = resource;
 		}
 
-		~TrackedResource()
+		TrackedResource(ComPtr<ID3D12Resource> resource) :m_Resource(resource)
 		{
-			alloc_handle.Free();
 		}
+
+		~TrackedResource();
 	};
 
 	class Trackable
 	{
-		public:
+	public:
 		TrackedResource::ptr tracked_info;
 		Trackable()
 		{
@@ -262,7 +267,7 @@ namespace DX12
 		}
 	};
 	
-	class Resource :public std::enable_shared_from_this<Resource>, public Trackable,public ResourceStateManager, public TiledResourceManager
+	class Resource :public std::enable_shared_from_this<Resource>, public Trackable, public ResourceStateManager, public TiledResourceManager
 	{
 		LEAK_TEST(Resource)
 
@@ -276,7 +281,11 @@ namespace DX12
 	
 	
 	protected:
-		ComPtr<ID3D12Resource>& m_Resource;
+		virtual	ComPtr<ID3D12Resource>& get_d3d_resource() override
+		{
+			return tracked_info->m_Resource;
+		}
+
 		void init(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 	public:
 		ResourceHandle tmp_handle;
@@ -287,7 +296,7 @@ namespace DX12
 		{
 			this->name = name;
 			//	auto& timer = Profiler::get().start(L"set_name");
-			m_Resource->SetName(convert(name).c_str());
+			tracked_info->m_Resource->SetName(convert(name).c_str());
 
 			debug = name=="PSSM_Cameras";
 
@@ -298,15 +307,13 @@ namespace DX12
 			return desc;
 		}
 		using ptr = std::shared_ptr<Resource>;
-	//	Resource::ptr delete_me;
+
 		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap = DefaultAllocator::get(), ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 		Resource(const ComPtr<ID3D12Resource>& resouce, ResourceState state, bool own = false);
 		
 		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle);
-		Resource() :m_Resource(tracked_info->m_Resource), TiledResourceManager(tracked_info->m_Resource)
-		{
-			//  states.resize(50);
-		}
+		Resource() = default;
+
 		virtual ~Resource();
 
 		HeapType get_heap_type() const
@@ -316,7 +323,7 @@ namespace DX12
 
 		ComPtr<ID3D12Resource> get_native() const
 		{
-			return m_Resource;
+			return tracked_info->m_Resource;
 		}
 
 		D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address() const

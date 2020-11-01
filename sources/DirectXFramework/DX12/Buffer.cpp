@@ -176,7 +176,7 @@ namespace DX12
 	 void DX12::CPUBuffer::unmap()
 	{
 		 mapped = false;
-		m_Resource->Unmap(0, nullptr);
+         tracked_info->m_Resource->Unmap(0, nullptr);
 	}
 
 	 DX12::QueryHeap::QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type)

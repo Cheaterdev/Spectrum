@@ -1047,7 +1047,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 					mipmapping.GetOutMips()[i] = volume_lighted->texture_3d()->get_uav(mip_count + i);
 			
 				mipmapping.GetVisibility() = gpu_tiles_buffer[mip_count]->get_srv()[0];
-				mipmapping.set(compute, false);
+				mipmapping.set(compute);
 
 				compute.dispach(ivec3(gpu_tiles_buffer[mip_count]->size() * mipmapping.GetGroupCount(), 1, 1), ivec3(1, 1, 1));
 

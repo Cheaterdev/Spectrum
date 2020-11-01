@@ -35,12 +35,15 @@ namespace GUI
 		{
 				added = true;
 			textures_handles.emplace_back(item.srv[0]);
+			 
+		//	c.command_list->use_resource(item.srv[0]->resource_info->resource_ptr);
 		}
 		else
 			if (item.texture)
 			{
 				added = true;
 				textures_handles.emplace_back(item.texture->texture_2d()->get_static_srv());
+			//	c.command_list->use_resource(item.texture.get());
 			}
 
 		if (!added&&current_state== GetPSO<PSOS::NinePatch>())

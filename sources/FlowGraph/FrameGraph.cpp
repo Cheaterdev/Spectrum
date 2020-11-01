@@ -168,14 +168,19 @@ void Pass::wait()
 void Pass::execute()
 
 {
+
 	if (!enabled) {
+		return;
+
+	}
+/*	if (!enabled) {
 		return;
 
 	}
 	auto& timer = Profiler::get().start(L"wait"); {
 		render_task.wait();
 	}
-
+	*/
 	{	auto& timer = Profiler::get().start(L"execute");
 	context.execute();
 	}
@@ -280,6 +285,31 @@ void FrameGraph::render()
 			pass->render(builder.current_frame);
 
 	}
+	{
+		auto& timer = Profiler::get().start(L"wait");
+
+		for (auto& pass : passes)
+		{
+			pass->wait();
+		}
+
+
+	}
+
+
+	for (auto& pair : builder.alloc_resources)
+	{
+		auto info = &pair.second;
+
+		if (info->heap_type == Render::HeapType::UPLOAD)
+		{
+			info->resource = nullptr;
+
+			info->texture = Render::TextureView();
+
+			info->buffer = Render::BufferView();
+		}
+	}
 
 	{
 		auto& timer = Profiler::get().start(L"execute");
@@ -306,20 +336,7 @@ void FrameGraph::reset()
 	required_passes.clear();
 	builder.reset();
 
-	for (auto& pair : builder.alloc_resources)
-	{
-		auto info = &pair.second;
-
-		if (info->heap_type == Render::HeapType::UPLOAD)
-		{
-			info->resource = nullptr;
-
-			info->texture = Render::TextureView();
-
-			info->buffer = Render::BufferView();
-		}
-	}
-
+	
 }
 
 ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, ResourceFlags flags)
@@ -557,7 +574,15 @@ void TaskBuilder::create_resources()
 
 			info->d3ddesc = CD3DX12_RESOURCE_DESC::Buffer(desc.size, flags);
 		}
+/*
+		if (info->heap_type == Render::HeapType::UPLOAD)
+		{
+			auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
+			auto alloc_ptr = current_alloc->alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
+			info->need_recreate = info->alloc_ptr != alloc_ptr;
+			info->alloc_ptr = alloc_ptr;
+		}*/
 		if (info->heap_type != Render::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
 
 
@@ -605,6 +630,7 @@ void TaskBuilder::create_resources()
 			if (!info->enabled)
 				continue;
 
+			Render::TrackedResource::allow_resource_delete = true;
 
 			if (info->alloc_ptr.handle)
 			{
@@ -645,6 +671,7 @@ void TaskBuilder::create_resources()
 				info->resource->set_name(info->name);
 
 			}
+			Render::TrackedResource::allow_resource_delete = false;
 
 			//		if (!info->need_recreate) 
 			//			continue;

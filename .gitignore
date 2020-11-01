@@ -1,11 +1,12 @@
 #Project-specific
 log.txt
-cache/
-workdir/Assets/
+
 projects/
-autogen/
 sharpmake/
-pso
+
+workdir/cache/
+workdir/Assets/
+workdir/pso
 
 #VS-specific
 *.user

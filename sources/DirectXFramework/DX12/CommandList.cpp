@@ -693,9 +693,8 @@ namespace DX12
 
 		
 			assert(good);
-
+			use_resource(resource);
 			used_resources.emplace_back(const_cast<Resource*>(resource));
-			tracked_resources.emplace_back(const_cast<Resource*>(resource)->tracked_info);
 			assert(!resource->is_new(id, global_id));
 
 		}
@@ -744,6 +743,8 @@ namespace DX12
 
 	void Transitions::transition_uav(Resource* resource)
 	{
+
+
 		transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_native().Get()));
 
 	//	if (transition_count == transitions.size())
@@ -1189,7 +1190,10 @@ void ComputeContext::dispach(int x,int y,int z)
 	void Transitions::reset()
 	{
 		used_resources.clear();
+		TrackedResource::allow_resource_delete = true;
+
 		tracked_resources.clear();
+		TrackedResource::allow_resource_delete = false;
 	}
 	void Uploader::reset()
 	{

@@ -96,7 +96,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 		init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 
-		if (!gbuffer)
+		if (!gbuffer || GetAsyncKeyState(VK_F6))
 		{
 			render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], compiledFrame, (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
 			return;
@@ -115,7 +115,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 			MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
 			MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 		}
-	
+
+	if(!GetAsyncKeyState(VK_F7))
 	{
 		init_dispatch(mesh_render_context, gather_invisible);
 
@@ -148,6 +149,15 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 		from.set(compute);
 		compute.dispach(1, 1, 1);
 	}
+	/*if(&from== &gather_visible)
+	copy.read_buffer(dispatch_buffer.get(), 0, sizeof(DispatchArguments), [this](const char* data, UINT64 size)
+		{
+
+			auto result = *reinterpret_cast<const DispatchArguments*>(data);
+	
+			Log::get() << "dispatch " << result.ThreadGroupCountX << Log::endl;
+		});
+		*/
 }
 
 void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::FrameInfo::Compiled& compiledFrame, bool invisibleToo)

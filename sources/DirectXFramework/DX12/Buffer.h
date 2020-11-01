@@ -210,7 +210,7 @@ namespace DX12
 				D3D12_RANGE Range;
 				Range.Begin = from * stride;
 				Range.End = to * stride;
-				m_Resource->Map(0, &Range, reinterpret_cast<void**>(&result));
+				tracked_info->m_Resource->Map(0, &Range, reinterpret_cast<void**>(&result));
 				return result;
 			}
 

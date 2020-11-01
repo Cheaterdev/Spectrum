@@ -22,17 +22,11 @@ namespace DX12
 
 	class TiledResourceManager
 	{
-		ComPtr<ID3D12Resource>& m_Resource;
-
 
 		std::vector<std::vector<ResourceTile>> tiles;
 	protected:
 
-		TiledResourceManager(ComPtr<ID3D12Resource>& m_Resource) :m_Resource(m_Resource)
-		{
-
-		}
-
+		virtual	ComPtr<ID3D12Resource>& get_d3d_resource() = 0;
 		void init_tilings();
 
 	

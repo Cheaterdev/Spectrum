@@ -39,8 +39,6 @@ namespace DX12
 			desc.Texture2D.PlaneSlice = 0;
 	
 
-
-
 			Device::get().create_rtv(handle[0], frames[n].m_renderTarget.get(), desc);
 
 
@@ -87,8 +85,12 @@ namespace DX12
 		q->wait(q->signal());
 
 		//	frames[0].m_renderTarget.
+
+		TrackedResource::allow_resource_delete = true;
+
 		for (auto && f : frames)
 			f.m_renderTarget = nullptr;
+		TrackedResource::allow_resource_delete = false;
 
 		desc.BufferDesc.Width = size.x;
 		desc.BufferDesc.Height = size.y;

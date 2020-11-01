@@ -136,7 +136,7 @@ namespace DX12
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
 			Device::get().get_native_device()->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
 
-
+			TrackedResource::allow_resource_delete = true;
 			if (!cur || cur->get_count() < topLevelPrebuildInfo.ResultDataMaxSizeInBytes)
 			cur = std::make_shared<GPUBuffer>(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
 
@@ -145,9 +145,11 @@ namespace DX12
 			
 			if(!need_rebuild) max =topLevelPrebuildInfo.UpdateScratchDataSizeInBytes;
 
+
 			if (!scratchInfo || (scratchInfo->get_count() < max))
 			scratchInfo = std::make_shared<GPUBuffer>(max, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
 
+			TrackedResource::allow_resource_delete = false;
 
 			//auto instanceDescs = list->place_raw(instances);
 
@@ -173,6 +175,7 @@ namespace DX12
 
 			list->get_native_list()->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
 			list->transition_uav(cur.get());
+			list->use_resource(scratchInfo.get());
 
 			resource = resources[current];
 		}

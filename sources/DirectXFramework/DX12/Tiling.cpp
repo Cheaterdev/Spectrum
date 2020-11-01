@@ -21,7 +21,7 @@ namespace DX12 {
 	{
 		assert(tiles.size() == 1);
 
-
+		auto resource = get_d3d_resource();
 		auto& tile = tiles[0][x];
 
 		tile.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS,HeapType::DEFAULT);
@@ -56,7 +56,7 @@ namespace DX12 {
 		rangeTileCounts.push_back(TRS.NumTiles);
 
 		Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
-			m_Resource.Get(),
+			resource.Get(),
 			UINT(startCoordinates.size()),
 			&startCoordinates[0],
 			&regionSizes[0],
@@ -79,8 +79,8 @@ namespace DX12 {
 		//  UINT first_sub_res;
 		D3D12_SUBRESOURCE_TILING tilings[20];
 
-
-		Device::get().get_native_device()->GetResourceTiling(m_Resource.Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
+		auto resource = get_d3d_resource();
+		Device::get().get_native_device()->GetResourceTiling(resource.Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 
 		if (num_tiles > 0 && num_sub_res > 0)
 		{

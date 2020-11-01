@@ -132,7 +132,7 @@ origin = pos;
 		shadow *= saturate(dot(lightDir, normal));
 
 		shadow = pow(shadow, 1.0 / 2.2);
-        output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy], shadow,0.01);
+        output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy], shadow,0.11);
 
 }
 

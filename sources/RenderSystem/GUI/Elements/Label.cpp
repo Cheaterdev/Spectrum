@@ -111,15 +111,8 @@ namespace GUI
 				auto command_list = const_cast<CommandList*>(_command_list.get())->get_ptr(); //wtf is this
 
 				geomerty->set(command_list, convert(text.get()), font, font_size.get() , lay2, color, magnet_text);
-
-
-
-			//	command_list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().get_samplers());
-			//	command_list->transition(cache.texture, Render::ResourceState::RENDER_TARGET);
 				command_list->clear_rtv(cache.texture->texture_2d()->get_rtv());
-
-				//  target->change_state(c, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::ResourceState::RENDER_TARGET);
-				command_list->get_native_list()->OMSetRenderTargets(1, &cache.texture->texture_2d()->get_rtv().cpu, FALSE, nullptr);
+         		command_list->get_native_list()->OMSetRenderTargets(1, &cache.texture->texture_2d()->get_rtv().cpu, FALSE, nullptr);
 
 				//	c->get_graphics().set_pipeline(state);
 				Render::Viewport vps;

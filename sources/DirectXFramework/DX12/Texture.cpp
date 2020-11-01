@@ -7,7 +7,7 @@ namespace DX12
     {
 	//	auto& timer = Profiler::get().start(L"views");
 
-        if (m_Resource)
+        if (tracked_info->m_Resource)
         {
             if (get_desc().ArraySize() == 6)
                 cubemap_view = std::make_shared<CubemapView>(this);

@@ -2,8 +2,23 @@
 
 namespace DX12
 {
+	 thread_local  bool TrackedResource::allow_resource_delete = false;
 
-	void ResourceStateManager::process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*>& discards, const Resource* resource, int id, uint64_t full_id)
+	 TrackedResource::~TrackedResource()
+	 {
+
+			/* scheduler::get().enqueue([r = m_Resource, h = alloc_handle]() {
+				 
+				 const_cast<ResourceHandle&>(h).Free();
+				 
+				 }, std::chrono::steady_clock::now() + 10ms);
+			 */
+	//	 if(m_Resource) 
+		 //assert(allow_resource_delete);
+		 alloc_handle.Free();
+	 }
+
+	 void ResourceStateManager::process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*>& discards, const Resource* resource, int id, uint64_t full_id)
 	{
 		if (!resource) return;
 
@@ -180,6 +195,7 @@ namespace DX12
 	void Resource::init(const CD3DX12_RESOURCE_DESC& _desc, ResourceAllocator& heap, ResourceState state, vec4 clear_value)
 	{
 		CD3DX12_RESOURCE_DESC desc = _desc;
+		ComPtr<ID3D12Resource> resource;
 
 		//	auto& timer = Profiler::get().start(L"Resource");
 		auto t = CounterManager::get().start_count<Resource>();
@@ -212,8 +228,45 @@ namespace DX12
 
 		if (&heap == &ReservedAllocator::get())
 		{
-			auto delete_me = heap.create_resource(desc, state, clear_value);
-			m_Resource = delete_me->m_Resource;
+		//	auto delete_me = heap.create_resource(desc, state, clear_value);
+		//	m_Resource = delete_me->m_Resource;
+
+			CD3DX12_RESOURCE_DESC desc = _desc;
+
+			D3D12_CLEAR_VALUE value;
+			value.Format = to_srv(desc.Format);
+			value.Color[0] = clear_value.x;
+			value.Color[1] = clear_value.y;
+			value.Color[2] = clear_value.z;
+			value.Color[3] = clear_value.w;
+
+			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+			{
+				value.Format = to_dsv(desc.Format);
+				value.DepthStencil.Depth = 1.0f;
+				value.DepthStencil.Stencil = 0;
+			}
+
+
+			if (state == ResourceState::UNKNOWN)
+			{
+				if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+					state = ResourceState::DEPTH_WRITE;
+				else if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+					state = ResourceState::RENDER_TARGET;
+				else
+					state = ResourceState::COMMON;
+			}
+			if (!is_shader_visible(desc.Format))
+				desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+
+
+			TEST(Device::get().get_native_device()->CreateReservedResource(
+				&desc,
+				static_cast<D3D12_RESOURCE_STATES>(state),
+				(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
+				IID_PPV_ARGS(&resource)));
+
 
 		}
 		else
@@ -237,18 +290,20 @@ namespace DX12
 			&desc,
 			static_cast<D3D12_RESOURCE_STATES>(state),
 			(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
-			IID_PPV_ARGS(&m_Resource)));
-		}
+			IID_PPV_ARGS(&resource)));
 
+	
+		}
+		tracked_info->set_resource(resource);
 
 		id = counter_id.fetch_add(1);
 
-		m_Resource->SetName(std::to_wstring(id).c_str());
+		resource->SetName(std::to_wstring(id).c_str());
 		//	Log::get() << "resource creation: " << id << " at:\n" << get_stack_trace().to_string() << Log::endl;
-		this->desc = CD3DX12_RESOURCE_DESC(m_Resource->GetDesc());
+		this->desc = CD3DX12_RESOURCE_DESC(resource->GetDesc());
 
 		if (heap_type != HeapType::READBACK && desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
-			gpu_adress = m_Resource->GetGPUVirtualAddress();
+			gpu_adress = resource->GetGPUVirtualAddress();
 
 		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()), state);
 
@@ -257,18 +312,22 @@ namespace DX12
 
 		if (heap_type == HeapType::UPLOAD)
 		{
-			m_Resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
+			resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
 	}
-	Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap, ResourceState state, vec4 clear_value) :m_Resource(tracked_info->m_Resource), TiledResourceManager(tracked_info->m_Resource)
+	Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceAllocator& heap, ResourceState state, vec4 clear_value) 
 	{
 		init(desc, heap, state, clear_value);
 	}
 
-	Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle) : m_Resource(tracked_info->m_Resource), TiledResourceManager(tracked_info->m_Resource)
+	Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle)
 	{
 		//	auto& timer = Profiler::get().start(L"Resource");
 		auto t = CounterManager::get().start_count<Resource>();
+
+		ComPtr<ID3D12Resource> resource;
+
+
 		tmp_handle = handle;
 		D3D12_CLEAR_VALUE value;
 
@@ -311,41 +370,41 @@ namespace DX12
 				&desc,
 				static_cast<D3D12_RESOURCE_STATES>(state),
 				(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
-				IID_PPV_ARGS(&m_Resource)));
+				IID_PPV_ARGS(&resource)));
 
-
+			tracked_info->set_resource(resource);
 		id = counter_id.fetch_add(1);
 
-		m_Resource->SetName(std::to_wstring(id).c_str());
-		this->desc = CD3DX12_RESOURCE_DESC(m_Resource->GetDesc());
+		resource->SetName(std::to_wstring(id).c_str());
+		this->desc = CD3DX12_RESOURCE_DESC(resource->GetDesc());
 
 		if (heap_type != HeapType::READBACK && desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
-			gpu_adress = m_Resource->GetGPUVirtualAddress();
+			gpu_adress = resource->GetGPUVirtualAddress();
 
 		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()), state);
 
 		if (heap_type == HeapType::UPLOAD)
 		{
-			m_Resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
+			resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
 	}
 
 
-    Resource::Resource(const ComPtr<ID3D12Resource>& resouce, ResourceState state, bool own) :m_Resource(tracked_info->m_Resource), TiledResourceManager(tracked_info->m_Resource)
+    Resource::Resource(const ComPtr<ID3D12Resource>& resource, ResourceState state, bool own)
     {
 		D3D12_HEAP_PROPERTIES HeapProperties;
 		D3D12_HEAP_FLAGS  HeapFlags;
-		resouce->GetHeapProperties(&HeapProperties, &HeapFlags);
+		resource->GetHeapProperties(&HeapProperties, &HeapFlags);
 
 
 		heap_type = (HeapType)HeapProperties.Type;
-        m_Resource = resouce;
-        desc = CD3DX12_RESOURCE_DESC(m_Resource->GetDesc());
+		tracked_info->set_resource(resource);
+        desc = CD3DX12_RESOURCE_DESC(resource->GetDesc());
         force_delete = !own;
 		 id = counter_id.fetch_add(1);
 
         if (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
-            gpu_adress = m_Resource->GetGPUVirtualAddress();
+            gpu_adress = resource->GetGPUVirtualAddress();
 
 		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()), state);
        // states.resize(20);
@@ -354,7 +413,7 @@ namespace DX12
 
 		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD)
 		{
-			m_Resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
+			resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
 	}
 	
@@ -363,7 +422,7 @@ namespace DX12
     {
 		if (buffer_data)
 		{
-			m_Resource->Unmap(0, nullptr);
+			tracked_info->m_Resource->Unmap(0, nullptr);
 		}
         if (!force_delete)
         {

@@ -558,6 +558,7 @@ public:
 
 		pssm.generate(graph);
 		sky.generate(graph);
+//	if(!GetAsyncKeyState('P'))	
 		voxel_gi->generate(graph);
 
 
