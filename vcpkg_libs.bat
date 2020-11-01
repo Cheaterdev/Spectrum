@@ -1,4 +1,4 @@
-vcpkg install zlib:x64-windows-debug
+vcpkg install zlib:x64-windows-static
 vcpkg install bzip2:x64-windows-static
 vcpkg install zstd:x64-windows-static
 vcpkg install liblzma:x64-windows-static
