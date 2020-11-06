@@ -1,15 +1,15 @@
-#ifndef SLOT_4
-	#define SLOT_4
+#ifndef SLOT_5
+	#define SLOT_5
 #else
-	#error Slot 4 is already used
+	#error Slot 5 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/EnvSource.h"
-TextureCube srv_4_0: register(t0, space4);
+TextureCube srv_5_0: register(t0, space5);
 EnvSource CreateEnvSource()
 {
 	EnvSource result;
-	result.srv.sourceTex = srv_4_0;
+	result.srv.sourceTex = srv_5_0;
 	return result;
 }
 #ifndef NO_GLOBAL

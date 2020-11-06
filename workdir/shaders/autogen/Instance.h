@@ -1,15 +1,15 @@
-#ifndef SLOT_4
-	#define SLOT_4
+#ifndef SLOT_5
+	#define SLOT_5
 #else
-	#error Slot 4 is already used
+	#error Slot 5 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Instance.h"
-ConstantBuffer<Instance_cb> cb_4_0:register(b0,space4);
+ConstantBuffer<Instance_cb> cb_5_0:register(b0,space5);
 Instance CreateInstance()
 {
 	Instance result;
-	result.cb = cb_4_0;
+	result.cb = cb_5_0;
 	return result;
 }
 #ifndef NO_GLOBAL

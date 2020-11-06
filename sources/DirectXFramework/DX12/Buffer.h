@@ -272,6 +272,7 @@ namespace DX12
 			}
 			GPUBuffer::ptr help_buffer;
 			HandleTable counted_uav;
+			HandleTable counted_srv;
 		private:
 	
 			friend class boost::serialization::access;
@@ -711,6 +712,10 @@ namespace DX12
 			counted_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
 			help_buffer->place_raw_uav(counted_uav[0]);
+
+			counted_srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+
+			help_buffer->place_structured_srv(counted_srv[0], 4,0,1);
 		}
 	
 	}

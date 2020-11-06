@@ -1,15 +1,15 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/FlowGraph.h"
-ConstantBuffer<FlowGraph_cb> cb_3_0:register(b0,space3);
+ConstantBuffer<FlowGraph_cb> cb_4_0:register(b0,space4);
 FlowGraph CreateFlowGraph()
 {
 	FlowGraph result;
-	result.cb = cb_3_0;
+	result.cb = cb_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

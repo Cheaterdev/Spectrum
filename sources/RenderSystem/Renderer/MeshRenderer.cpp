@@ -95,7 +95,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 
 		init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
-
+	
 		if (!gbuffer || GetAsyncKeyState(VK_F6))
 		{
 			render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], compiledFrame, (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
@@ -106,15 +106,25 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 			auto timer = list.start(L"first stage");
 			generate_boxes(mesh_render_context, scene, scene->compiledGather[(int)mesh_render_context->render_mesh], true);
-
+		
 			draw_boxes(mesh_render_context, scene, compiledFrame);
 			gather_rendered_boxes(mesh_render_context, scene, compiledFrame, true);
 
 			init_dispatch(mesh_render_context, gather_visible);
+		
 			render_meshes(mesh_render_context, scene, pipelines, gather_visible, compiledFrame, false);
 			MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
 			MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 		}
+
+	/*
+		copy.read_buffer(meshes_ids->buffer.get(), 0, 4, [this](const char* data, UINT64 size)
+			{
+
+				auto result = *reinterpret_cast<const UINT*>(data);
+				Log::get() << result << Log::endl;
+			});
+		*/
 
 	if(!GetAsyncKeyState(VK_F7))
 	{
@@ -122,6 +132,11 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 		auto timer = list.start(L"second stage");
 		generate_boxes(mesh_render_context, scene, gather_invisible, false);
+
+
+	//	list.clear_counter(commands_boxes->buffer);
+	//	list.clear_counter(meshes_ids->buffer);
+		
 
 		draw_boxes(mesh_render_context, scene, compiledFrame);
 		gather_rendered_boxes(mesh_render_context, scene, compiledFrame, false);
@@ -133,6 +148,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 
 	}
+
+
 }
 
 void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Slots::GatherPipelineGlobal::Compiled & from)
@@ -148,16 +165,11 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 		init_dispatch_compiled.set(compute);
 		from.set(compute);
 		compute.dispach(1, 1, 1);
-	}
-	/*if(&from== &gather_visible)
-	copy.read_buffer(dispatch_buffer.get(), 0, sizeof(DispatchArguments), [this](const char* data, UINT64 size)
-		{
 
-			auto result = *reinterpret_cast<const DispatchArguments*>(data);
-	
-			Log::get() << "dispatch " << result.ThreadGroupCountX << Log::endl;
-		});
-		*/
+//		list.print_debug();
+	}
+		
+//	list.transition_uav(dispatch_buffer.get());
 }
 
 void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::FrameInfo::Compiled& compiledFrame, bool invisibleToo)
@@ -210,9 +222,12 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
+	
 	{
+
 		list.clear_counter(commands_boxes->buffer);
 		list.clear_counter(meshes_ids->buffer);
+
 	
 		compute.set_pipeline(GetPSO<PSOS::GatherBoxes>());
 		gather_boxes_compiled.set(compute);
@@ -225,11 +240,14 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 				1,
 				dispatch_buffer.get());
 		}
+
+
+	
 	}
 
 	copy.copy_buffer(draw_boxes_first.get(), sizeof(UINT), commands_boxes->buffer->help_buffer.get(), 0, 4);
 
-	init_dispatch(mesh_render_context, gather_boxes_commands);
+ if (!GetAsyncKeyState('4'))	init_dispatch(mesh_render_context, gather_boxes_commands);
 
 
 }
@@ -252,11 +270,13 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+
+	list.clear_uav(visible_boxes->buffer, visible_boxes->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
+
 	draw_boxes_compiled.set(graphics);
 		compiledScene.set(graphics);
 		compiledFrame.set(graphics);
 
-	list.clear_uav(visible_boxes->buffer, visible_boxes->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
 
 	graphics.execute_indirect(
 		boxes_command,
@@ -283,7 +303,10 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 	auto begin = pipelines.begin();
 	auto end = begin;
 	//	auto view = meshes_ids->buffer->help_buffer->create_view<Render::FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*list.frame_resources);
+	
 
+
+	
 	graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
 	while (end != pipelines.end())
 	{
@@ -314,16 +337,26 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			auto timer = list.start(L"GatherMats");
 
 			compute.set_pipeline(GetPSO<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling)));
+
+
 			gatherData.set(compute);
-			gather.set(compute);
+			
 			compiledScene.set(compute);
 			compiledFrame.set(compute);
+gather.set(compute);
 
+	/*		if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
+				copy.read_buffer(gatherData.cb.resource, 0, 4 * 4, [this](const char* data, UINT64 size)
+					{
+
+						auto result = reinterpret_cast<const UINT*>(data);
+						Log::get() << result[0] << " " << result[1] << " " << result[2] << " " << result[3] << Log::endl;
+					});*/
 
 			{
 				auto timer = list.start(L"dispach");
 
-				graphics.execute_indirect(
+				compute.execute_indirect(
 					dispatch_command,
 					1,
 					dispatch_buffer.get());
@@ -338,6 +371,16 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			}
 
 		}
+	//	if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
+	//	list.print_debug();
+
+// 		if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
+// 			copy.read_buffer(gatherData.cb.resource, 0, 4, [this](const char* data, UINT64 size)
+// 				{
+// 
+// 					auto result = *reinterpret_cast<const UINT*>(data);
+// 					Log::get() << "_"<<result << Log::endl;
+// 				});
 
 		{
 			auto timer = list.start(L"YO");
@@ -357,11 +400,19 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					mesh_render_context->flush_pipeline();
 				}
 
+				{
+					auto timer = list.start(L"compile");
+
+			
 				compiledScene.set(graphics);
 				compiledFrame.set(graphics);
 				scene->voxelization_compiled.set(graphics);
-
+				}
 				{
+
+				
+
+
 					auto timer = list.start(L"execute_indirect");
 
 					graphics.execute_indirect(
@@ -372,6 +423,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 						commands_buffer[current]->buffer->help_buffer.get(),
 						0
 					);
+				
 				}
 				current++;
 
@@ -405,7 +457,7 @@ mesh_renderer::mesh_renderer()
 		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<command>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 
-
+	meshes_ids->buffer->get_native()->SetName(L"meshes_ids");
 	{
 
 		std::vector<unsigned int> data = { 3, 1, 0,
@@ -472,22 +524,28 @@ mesh_renderer::mesh_renderer()
 	{
 		Slots::GatherPipelineGlobal gather;
 		gather.GetCommands() = meshes_ids->buffer->get_srv()[0];
+
+		gather.GetMeshes_count() = meshes_ids->buffer->counted_srv[0];
+
 		gather_visible = gather.compile(StaticCompiledGPUData::get());
-		gather_visible.cb = meshes_ids->buffer->help_buffer->get_resource_address();
+	//	gather_visible.cb = meshes_ids->buffer->help_buffer->get_resource_address();
 	}
 
 	{
 		Slots::GatherPipelineGlobal gather;
 		gather.GetCommands() = meshes_invisible_ids->buffer->get_srv()[0];
+		gather.GetMeshes_count() = meshes_invisible_ids->buffer->counted_srv[0];
 		gather_invisible = gather.compile(StaticCompiledGPUData::get());
-		gather_invisible.cb = meshes_invisible_ids->buffer->help_buffer->get_resource_address();
+	//	gather_invisible.cb = meshes_invisible_ids->buffer->help_buffer->get_resource_address();
 	}
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		//gather.GetCommands() = meshes_invisible_ids->buffer->get_srv()[0];
+		gather.GetMeshes_count() = commands_boxes->buffer->counted_srv[0];
+
+		//gather.GetCommands() = // supposed to be null
 		gather_boxes_commands = gather.compile(StaticCompiledGPUData::get());
-		gather_boxes_commands.cb = commands_boxes->buffer->help_buffer->get_resource_address();
+		//gather_boxes_commands.cb = commands_boxes->buffer->help_buffer->get_resource_address();
 	}
 
 	{

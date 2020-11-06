@@ -437,12 +437,13 @@ namespace DX12
 			ComPtr<ID3D12Debug> debugController;
 			CComPtr<ID3D12Debug1> spDebugController1;
 
+			if(false)
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 			{
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
 
 
-		//		debugController->EnableDebugLayer();
+				debugController->EnableDebugLayer();
 			//	spDebugController1->SetEnableGPUBasedValidation(true);
 			}
 			

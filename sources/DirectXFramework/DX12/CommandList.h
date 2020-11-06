@@ -118,7 +118,7 @@ namespace DX12
 			//	memcpy(info.resource->get_data() + info.offset, data, size);
 			size_t start = 0;
 			{
-				auto timer = Profiler::get().start(L"write");
+		//		auto timer = Profiler::get().start(L"write");
 				(write(info, start, std::forward<Args>(args)), ...);
 
 			}
@@ -126,24 +126,24 @@ namespace DX12
 		}
 
 		template<class T>
-		void write(UploadInfo& info, std::span<T>& arg)
+		void write(UploadInfo& info, const std::span<T>& arg)
 		{
 			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
 		}
 		template<class T>
-		void write(UploadInfo& info, std::vector<T>& arg)
-		{
-			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
-		}
-
-		template<class T>
-		void write(UploadInfo& info, my_unique_vector<T>& arg)
+		void write(UploadInfo& info, const std::vector<T>& arg)
 		{
 			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
 		}
 
 		template<class T>
-		void write(UploadInfo& info, size_t& offset, std::vector<T>& arg)
+		void write(UploadInfo& info, const my_unique_vector<T>& arg)
+		{
+			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
+		}
+
+		template<class T>
+		void write(UploadInfo& info, size_t& offset, const std::vector<T>& arg)
 		{
 			memcpy(info.resource->get_data() + info.offset + offset, arg.data(), arg.size() * sizeof(T));
 			offset += arg.size() * sizeof(T);
@@ -151,17 +151,19 @@ namespace DX12
 
 
 		template<class T>
-		void write(UploadInfo& info, size_t& offset, my_unique_vector<T>& arg)
+		void write(UploadInfo& info, size_t& offset, const my_unique_vector<T>& arg)
 		{
 			memcpy(info.resource->get_data() + info.offset + offset, arg.data(), arg.size() * sizeof(T));
 			offset += arg.size() * sizeof(T);
 
 		}
 		template<class T>
-		void write(UploadInfo& info, size_t& offset, T& arg)
+		void write(UploadInfo& info, size_t& offset, const T& arg)
 		{
 			memcpy(info.resource->get_data() + info.offset + offset, &arg, sizeof(T));
 			offset += sizeof(T);
+
+			//Log::get() << "write " <<  Log::endl;
 		}
 	};
 
@@ -740,6 +742,9 @@ namespace DX12
 	public:
 		ptr get_sub_list();
 		FrameResources::ptr frame_resources;
+
+		void print_debug();
+		std::shared_ptr<GPUBuffer> debug_buffer;
 
 		//	DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, Free, DescriptorHeapFlags::SHADER_VISIBLE> srv_descriptors;
 		//	DynamicDescriptor<DescriptorHeapType::SAMPLER, Free, DescriptorHeapFlags::SHADER_VISIBLE> smp_descriptors;

@@ -19,9 +19,9 @@ void CS(
 )
 {
 
-	if (groupThreadID.x != 0) return;
+	//if (groupThreadID.x != 0) return;
 
-	uint max_count = pip.GetMeshes_count(); 
+	uint max_count = pip.GetMeshes_count()[0];
 
 
 		DispatchArguments dinfo;

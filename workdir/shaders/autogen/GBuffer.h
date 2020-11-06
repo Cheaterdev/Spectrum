@@ -1,23 +1,23 @@
-#ifndef SLOT_4
-	#define SLOT_4
+#ifndef SLOT_5
+	#define SLOT_5
 #else
-	#error Slot 4 is already used
+	#error Slot 5 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GBuffer.h"
-Texture2D srv_4_0: register(t0, space4);
-Texture2D srv_4_1: register(t1, space4);
-Texture2D srv_4_2: register(t2, space4);
-Texture2D srv_4_3: register(t3, space4);
-Texture2D<float2> srv_4_4: register(t4, space4);
+Texture2D srv_5_0: register(t0, space5);
+Texture2D srv_5_1: register(t1, space5);
+Texture2D srv_5_2: register(t2, space5);
+Texture2D srv_5_3: register(t3, space5);
+Texture2D<float2> srv_5_4: register(t4, space5);
 GBuffer CreateGBuffer()
 {
 	GBuffer result;
-	result.srv.albedo = srv_4_0;
-	result.srv.normals = srv_4_1;
-	result.srv.specular = srv_4_2;
-	result.srv.depth = srv_4_3;
-	result.srv.motion = srv_4_4;
+	result.srv.albedo = srv_5_0;
+	result.srv.normals = srv_5_1;
+	result.srv.specular = srv_5_2;
+	result.srv.depth = srv_5_3;
+	result.srv.motion = srv_5_4;
 	return result;
 }
 #ifndef NO_GLOBAL

@@ -1,17 +1,17 @@
-#ifndef SLOT_5
-	#define SLOT_5
+#ifndef SLOT_6
+	#define SLOT_6
 #else
-	#error Slot 5 is already used
+	#error Slot 6 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Raytracing.h"
-RaytracingAccelerationStructure srv_5_0: register(t0, space5);
-StructuredBuffer<uint> srv_5_1: register(t1, space5);
+RaytracingAccelerationStructure srv_6_0: register(t0, space6);
+StructuredBuffer<uint> srv_6_1: register(t1, space6);
 Raytracing CreateRaytracing()
 {
 	Raytracing result;
-	result.srv.scene = srv_5_0;
-	result.srv.index_buffer = srv_5_1;
+	result.srv.scene = srv_6_0;
+	result.srv.index_buffer = srv_6_1;
 	return result;
 }
 #ifndef NO_GLOBAL

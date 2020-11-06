@@ -176,8 +176,15 @@ public:
 				{
 					//	auto timer = list.start(L"GatherMat");
 					Slots::GatherPipelineGlobal gather_global;
-					gather_global.GetMeshes_count() = data.size();
+                    {
+					//	gather_global.GetMeshes_count() = data.size();
 
+
+						auto info = frame.place_raw(UINT(data.size()));
+						auto srv = info.resource->create_view<StructuredBufferView<UINT>>(frame, info.offset, info.size).get_srv();
+						gather_global.GetMeshes_count() = srv;
+                    }
+				
 
                     if (data.size()) {
                         auto info = frame.place_raw(data);

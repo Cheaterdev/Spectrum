@@ -1,17 +1,17 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GatherPipeline.h"
-ConstantBuffer<GatherPipeline_cb> cb_3_0:register(b0,space3);
-AppendStructuredBuffer<CommandData> uav_3_0[8]: register(u0, space3);
+ConstantBuffer<GatherPipeline_cb> cb_4_0:register(b0,space4);
+AppendStructuredBuffer<CommandData> uav_4_0[8]: register(u0, space4);
 GatherPipeline CreateGatherPipeline()
 {
 	GatherPipeline result;
-	result.cb = cb_3_0;
-	result.uav.commands = uav_3_0;
+	result.cb = cb_4_0;
+	result.uav.commands = uav_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

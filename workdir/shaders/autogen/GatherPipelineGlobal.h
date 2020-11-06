@@ -1,17 +1,17 @@
-#ifndef SLOT_2
-	#define SLOT_2
+#ifndef SLOT_3
+	#define SLOT_3
 #else
-	#error Slot 2 is already used
+	#error Slot 3 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GatherPipelineGlobal.h"
-ConstantBuffer<GatherPipelineGlobal_cb> cb_2_0:register(b0,space2);
-Buffer<uint> srv_2_0: register(t0, space2);
+StructuredBuffer<uint> srv_3_0: register(t0, space3);
+Buffer<uint> srv_3_1: register(t1, space3);
 GatherPipelineGlobal CreateGatherPipelineGlobal()
 {
 	GatherPipelineGlobal result;
-	result.cb = cb_2_0;
-	result.srv.commands = srv_2_0;
+	result.srv.meshes_count = srv_3_0;
+	result.srv.commands = srv_3_1;
 	return result;
 }
 #ifndef NO_GLOBAL

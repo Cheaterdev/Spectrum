@@ -1,17 +1,17 @@
-#ifndef SLOT_2
-	#define SLOT_2
+#ifndef SLOT_3
+	#define SLOT_3
 #else
-	#error Slot 2 is already used
+	#error Slot 3 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/SMAA_Global.h"
-ConstantBuffer<SMAA_Global_cb> cb_2_0:register(b0,space2);
-Texture2D srv_2_0: register(t0, space2);
+ConstantBuffer<SMAA_Global_cb> cb_3_0:register(b0,space3);
+Texture2D srv_3_0: register(t0, space3);
 SMAA_Global CreateSMAA_Global()
 {
 	SMAA_Global result;
-	result.cb = cb_2_0;
-	result.srv.colorTex = srv_2_0;
+	result.cb = cb_3_0;
+	result.srv.colorTex = srv_3_0;
 	return result;
 }
 #ifndef NO_GLOBAL

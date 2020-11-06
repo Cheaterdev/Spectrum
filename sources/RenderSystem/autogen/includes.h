@@ -3,6 +3,8 @@
 #include "layout\DefaultLayout.h"
 #include "slots\TextureRenderer.h"
 #include "slots\BRDF.h"
+#include "tables\DebugStruct.h"
+#include "slots\DebugInfo.h"
 #include "slots\FontRendering.h"
 #include "slots\FontRenderingConstants.h"
 #include "tables\Glyph.h"

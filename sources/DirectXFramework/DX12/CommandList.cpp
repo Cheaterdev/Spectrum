@@ -24,8 +24,24 @@ namespace DX12
 			graphics.reset(new GraphicsContext(*this));
 
 		m_commandList->SetName(L"SpectrumCommandList");
+
+
+		debug_buffer = std::make_shared<StructuredBuffer<Table::DebugStruct>>(1, counterType::NONE, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	}
 
+	void CommandList::print_debug()
+	{
+		get_copy().read_buffer(debug_buffer.get(), 0, sizeof(Table::DebugStruct::CB), [this](const char* data, UINT64 size)
+			{
+
+				auto result = *reinterpret_cast<const Table::DebugStruct::CB*>(data);
+			
+				Log::get() << "debug: " << result.meshes_count << Log::endl;
+			});
+
+		StructuredBuffer<Table::DebugStruct>* structured = static_cast<StructuredBuffer<Table::DebugStruct>*>(debug_buffer.get());
+		clear_uav(structured, structured->get_raw_uav());
+	}
 
 
 	void CommandList::begin(std::string name, Timer*t)
@@ -223,6 +239,11 @@ namespace DX12
 	}
 	void GraphicsContext::draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
+
+		Slots::DebugInfo info;
+		info.GetDebug() = get_base().debug_buffer->get_uav()[0];
+
+		info.set(*this);
 		base.flush_transitions();
 		flush_binds();
 		list->DrawInstanced(vertex_count, instance_count, vertex_offset, instance_offset);
@@ -231,6 +252,10 @@ namespace DX12
 	{
 		if (instance_count == 0) return;
 
+		Slots::DebugInfo info;
+		info.GetDebug() = get_base().debug_buffer->get_uav()[0];
+
+		info.set(*this);
 		base.flush_transitions();
 		flush_binds();
 		list->DrawIndexedInstanced(index_count, instance_count, index_offset, vertex_offset, instance_offset);
@@ -919,8 +944,15 @@ namespace DX12
 	}
 void ComputeContext::dispach(int x,int y,int z)
 	{
+
+	Slots::DebugInfo info;
+	info.GetDebug() = get_base().debug_buffer->get_uav()[0];
+
+	info.set(*this);
+
 		base.flush_transitions();
 		flush_binds();
+
 		list->Dispatch(x, y, z);
 	}
 
@@ -1140,6 +1172,13 @@ void ComputeContext::dispach(int x,int y,int z)
 	}
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
+
+		Slots::DebugInfo info;
+		info.GetDebug() = get_base().debug_buffer->get_uav()[0];
+
+		info.set(*this);
+
+
 		if(command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if(counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
@@ -1155,6 +1194,12 @@ void ComputeContext::dispach(int x,int y,int z)
 	}
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
+
+
+		Slots::DebugInfo info;
+		info.GetDebug() = get_base().debug_buffer->get_uav()[0];
+
+		info.set(*this);
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 

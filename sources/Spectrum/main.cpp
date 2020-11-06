@@ -297,7 +297,7 @@ public:
 
 		//	auto base_mat = make_material({ 1,1,1 }, 1, 0);
 
-		int count = -2;
+		int count = -1;
 		float distance = 5;
 		for (int i = 0; i <= count; i++)
 			for (int j = 0; j <= count; j++)
@@ -562,7 +562,7 @@ public:
 		voxel_gi->generate(graph);
 
 
-
+	//	if(false)
 		graph.add_pass<pass_data>("RAYTRACE", [&](pass_data& data, TaskBuilder& builder) {
 			data.o_texture = builder.create_texture("RTX", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,ResourceFlags::UnorderedAccess| ResourceFlags::Static);
 			data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);

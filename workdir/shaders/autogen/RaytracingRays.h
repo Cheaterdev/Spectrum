@@ -1,27 +1,27 @@
-#ifndef SLOT_4
-	#define SLOT_4
+#ifndef SLOT_5
+	#define SLOT_5
 #else
-	#error Slot 4 is already used
+	#error Slot 5 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/RaytracingRays.h"
-ConstantBuffer<RaytracingRays_cb> cb_4_0:register(b0,space4);
-RWTexture2D<float4> uav_4_0: register(u0, space4);
-Texture2D srv_4_0: register(t0, space4);
-Texture2D srv_4_1: register(t1, space4);
-Texture2D srv_4_2: register(t2, space4);
-Texture2D srv_4_3: register(t3, space4);
-Texture2D<float2> srv_4_4: register(t4, space4);
+ConstantBuffer<RaytracingRays_cb> cb_5_0:register(b0,space5);
+RWTexture2D<float4> uav_5_0: register(u0, space5);
+Texture2D srv_5_0: register(t0, space5);
+Texture2D srv_5_1: register(t1, space5);
+Texture2D srv_5_2: register(t2, space5);
+Texture2D srv_5_3: register(t3, space5);
+Texture2D<float2> srv_5_4: register(t4, space5);
 RaytracingRays CreateRaytracingRays()
 {
 	RaytracingRays result;
-	result.cb = cb_4_0;
-	result.uav.output = uav_4_0;
-	result.srv.gbuffer.albedo = srv_4_0;
-	result.srv.gbuffer.normals = srv_4_1;
-	result.srv.gbuffer.specular = srv_4_2;
-	result.srv.gbuffer.depth = srv_4_3;
-	result.srv.gbuffer.motion = srv_4_4;
+	result.cb = cb_5_0;
+	result.uav.output = uav_5_0;
+	result.srv.gbuffer.albedo = srv_5_0;
+	result.srv.gbuffer.normals = srv_5_1;
+	result.srv.gbuffer.specular = srv_5_2;
+	result.srv.gbuffer.depth = srv_5_3;
+	result.srv.gbuffer.motion = srv_5_4;
 	return result;
 }
 #ifndef NO_GLOBAL

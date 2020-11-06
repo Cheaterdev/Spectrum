@@ -30,7 +30,7 @@ void SkyRender::generate(FrameGraph& graph)
 	graph.add_pass<SkyData>("Sky", [this, &graph](SkyData& data, TaskBuilder& builder) {
 		data.depth = builder.need_texture("GBuffer_Depth", ResourceFlags::PixelRead);
 		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
-		data.sky_cubemap = builder.create_texture("sky_cubemap", ivec2(256, 256), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube);
+		data.sky_cubemap = builder.create_texture("sky_cubemap", ivec2(256, 256), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
 		}, [this, &graph](SkyData& data, FrameContext& _context) {
 			auto depth = _context.get_texture(data.depth);
 
@@ -149,8 +149,8 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 	graph.add_pass<EnvData>("CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
 		data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
 
-		data.sky_cubemap_filtered = builder.create_texture("sky_cubemap_filtered", ivec2(64, 64), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Cube);
-		data.sky_cubemap_filtered_diffuse = builder.create_texture("sky_cubemap_filtered_diffuse", ivec2(64, 64), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Cube);
+		data.sky_cubemap_filtered = builder.create_texture("sky_cubemap_filtered", ivec2(64, 64), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		data.sky_cubemap_filtered_diffuse = builder.create_texture("sky_cubemap_filtered_diffuse", ivec2(64, 64), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
 
 
 		}, [this, &graph](EnvData& data, FrameContext& _context) {

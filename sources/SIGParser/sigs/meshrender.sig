@@ -79,7 +79,7 @@ struct MaterialCommandData
 [Bind = DefaultLayout::Instance0]
 struct GatherPipelineGlobal
 {
-	uint meshes_count;
+	StructuredBuffer<uint> meshes_count;
 	Buffer<uint> commands;
 
 }
@@ -208,5 +208,5 @@ GraphicsPSO RenderBoxes
 
 	cull = NONE;
 
-	depth_func = LESS_EQUAL;
+	depth_func = ALWAYS;
 }

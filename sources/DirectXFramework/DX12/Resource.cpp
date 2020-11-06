@@ -214,12 +214,18 @@ namespace DX12
 			value.DepthStencil.Stencil = 0;
 		}
 
+		if (!is_shader_visible(desc.Format))
+			desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+
 		if (state == ResourceState::UNKNOWN)
 		{
 			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
 				state = ResourceState::DEPTH_WRITE;
 			else if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
 				state = ResourceState::RENDER_TARGET;
+			else if (!(desc.Flags & D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
+				state = ResourceState::PIXEL_SHADER_RESOURCE;
+
 			else
 				state = ResourceState::COMMON;
 		}
@@ -228,39 +234,6 @@ namespace DX12
 
 		if (&heap == &ReservedAllocator::get())
 		{
-		//	auto delete_me = heap.create_resource(desc, state, clear_value);
-		//	m_Resource = delete_me->m_Resource;
-
-			CD3DX12_RESOURCE_DESC desc = _desc;
-
-			D3D12_CLEAR_VALUE value;
-			value.Format = to_srv(desc.Format);
-			value.Color[0] = clear_value.x;
-			value.Color[1] = clear_value.y;
-			value.Color[2] = clear_value.z;
-			value.Color[3] = clear_value.w;
-
-			if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
-			{
-				value.Format = to_dsv(desc.Format);
-				value.DepthStencil.Depth = 1.0f;
-				value.DepthStencil.Stencil = 0;
-			}
-
-
-			if (state == ResourceState::UNKNOWN)
-			{
-				if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
-					state = ResourceState::DEPTH_WRITE;
-				else if (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
-					state = ResourceState::RENDER_TARGET;
-				else
-					state = ResourceState::COMMON;
-			}
-			if (!is_shader_visible(desc.Format))
-				desc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
-
-
 			TEST(Device::get().get_native_device()->CreateReservedResource(
 				&desc,
 				static_cast<D3D12_RESOURCE_STATES>(state),

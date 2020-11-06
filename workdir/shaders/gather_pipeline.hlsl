@@ -3,6 +3,9 @@
 #include "autogen/SceneData.h"
 #include "autogen/FrameInfo.h"
 
+#include "autogen/DebugInfo.h"
+//static const RWStructuredBuffer<DebugStruct> debugger = GetDebugInfo().GetDebug();
+
 static const GatherPipelineGlobal pip = GetGatherPipelineGlobal();
 
 static const Buffer<uint> commands = pip.GetCommands();
@@ -91,7 +94,18 @@ void CS(
     uint  groupIndex    : SV_GroupIndex
 )
 {
-        if (dispatchID.x >= pip.GetMeshes_count()) return;
+   if (dispatchID.x == 0)
+    {
+        DebugStruct debug;
+
+        debug.cb.meshes_count =pip.GetMeshes_count()[0];
+        uav_2_0[0] = debug;
+
+    }
+
+
+
+        if (dispatchID.x >= pip.GetMeshes_count()[0]) return;
 
         uint id = commands.Load(dispatchID.x);
 
@@ -112,6 +126,8 @@ void CS(
         command.cb.draw_commands = mesh.cb.draw_commands;
        
         get_index(material.cb.pipeline_id, command);
+
+     //   pipi.GetCommands(0).Append(command);
 }
 #endif
 
@@ -129,7 +145,7 @@ void CS_boxes(
     uint  groupIndex : SV_GroupIndex
 )
 {
-    if (dispatchID.x >= pip.GetMeshes_count()) return;
+    if (dispatchID.x >= pip.GetMeshes_count()[0]) return;
 
     uint id = commands.Load(dispatchID.x);
 
@@ -140,7 +156,6 @@ void CS_boxes(
     int intersection = intersect(GetFrameInfo().GetCamera().GetFrustum(), aabb, node.GetNode_global_matrix());
 
     if (!intersection) return;
-
     if (intersection == 1)
     {
 
@@ -167,7 +182,6 @@ static const AppendStructuredBuffer<uint> visible = pipi.GetVisibleMeshes();
 #ifdef INVISIBLE
 static const AppendStructuredBuffer<uint> invisible = pipi.GetInvisibleMeshes();
 #endif
-
 [numthreads(64, 1, 1)]
 void CS_meshes_from_boxes(
     uint3 groupID       : SV_GroupID,
@@ -176,7 +190,7 @@ void CS_meshes_from_boxes(
     uint  groupIndex : SV_GroupIndex
 )
 {
-    if (dispatchID.x >= pip.GetMeshes_count()) return;
+    if (dispatchID.x >= pip.GetMeshes_count()[0]) return;
 
     uint id = pipi.GetVisible_boxes().Load(dispatchID.x);
 
