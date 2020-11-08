@@ -272,6 +272,8 @@ namespace DX12
 		LEAK_TEST(CommandListBase)
 
 			std::vector<std::function<void()>> on_execute_funcs;
+
+		std::list<FenceWaiter> waits;
 		ComPtr<ID3D12GraphicsCommandList4> m_commandList;
 	public:
 		ComPtr<ID3D12GraphicsCommandList4>& get_native_list()
@@ -290,13 +292,17 @@ namespace DX12
 
 		std::list<Resource*> used_resources;
 		std::list<TrackedResource::ptr> tracked_resources;
-
+	
 		std::shared_ptr<TransitionCommandList> transition_list;
+
+		
 	protected:
 		void reset();
 
+		std::list<ComPtr<ID3D12PipelineState>> tracked_psos;
 
 	public:
+	//	UINT64 wait_for = -1;
 		void flush_transitions();
 
 		void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
@@ -636,7 +642,9 @@ namespace DX12
 		std::shared_future<UINT64> execute_fence_result;
 
 		std::mutex execution_mutex;
+		std::list<FenceWaiter> waits;
 
+	
 		bool child_executed()
 		{
 			execution_mutex.lock();

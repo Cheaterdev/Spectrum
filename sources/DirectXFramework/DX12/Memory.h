@@ -7,6 +7,7 @@ namespace DX12
 		UPLOAD = D3D12_HEAP_TYPE_UPLOAD,
 		READBACK = D3D12_HEAP_TYPE_READBACK,
 		CUSTOM = D3D12_HEAP_TYPE_CUSTOM,
+		RESERVED = 10,
 		PRESENT = 5
 	};
 
@@ -46,22 +47,7 @@ namespace DX12
 		{
 
 		}
-	/*	ResourceHeapPage(ResourceHeapPage& heap) :ResourceHeap(heap), CommonAllocator(size)
-		{
 
-		}*/
-		/*ResourceHeap::ptr m_heap;
-
-		ResourceHeapPage(ResourceHeap::ptr heap): m_heap(heap), AllocatorType(m_heap->heap_size)
-		{
-
-		}*/
-
-		/*
-		Allocator::Handle Allocate(size_t size, size_t alignment)
-		{
-			return allocator.Allocate(size, alignment);
-		}*/
 	};
 	class HeapAllocator;
 

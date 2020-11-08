@@ -163,9 +163,6 @@ namespace DX12
 		{
 		//	assert(false);
 		}
-		if(m_pipelineState)
-		Device::get().unused(m_pipelineState, ResourceHandle());
-
 
 		//m_pipelineState = PipelineLibrary::get().create(desc.name, psoDesc);
 
@@ -213,8 +210,6 @@ namespace DX12
 		unregister_shader(desc.domain);
 		unregister_shader(desc.geometry);
 
-		if (m_pipelineState)
-			Device::get().unused(m_pipelineState, ResourceHandle());
 	}
 	 PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc & desc, std::string name )
 	{
@@ -251,8 +246,6 @@ namespace DX12
 		{
 		//	assert(false);
 		}
-		if (m_pipelineState)
-			Device::get().unused(m_pipelineState, ResourceHandle());
 
 		HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 
@@ -272,8 +265,6 @@ namespace DX12
 	{
 		unregister_shader(desc.shader);
 
-		if (m_pipelineState)
-			Device::get().unused(m_pipelineState, ResourceHandle());
 	}
 
 }

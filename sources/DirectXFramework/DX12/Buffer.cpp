@@ -4,9 +4,9 @@
 namespace DX12
 {
 
-    GPUBuffer::GPUBuffer(UINT64 _size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/ , ResourceState state, ResourceAllocator& heap) : size(Math::AlignUp(_size,D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
+    GPUBuffer::GPUBuffer(UINT64 _size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/ , ResourceState state, HeapType heap_type) : size(Math::AlignUp(_size,D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
         count(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
-        stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), flags), heap, state)
+        stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), flags), heap_type, state)
     {
     }
 
@@ -16,7 +16,7 @@ namespace DX12
 	}
 
     GPUBuffer::GPUBuffer(UINT64 count, UINT stride) : count(count),
-        stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(std::max(static_cast<UINT64>(4),count * stride)), DefaultAllocator::get(), ResourceState::COMMON)
+        stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(std::max(static_cast<UINT64>(4),count * stride)), HeapType::DEFAULT, ResourceState::COMMON)
     {
         size = count * stride;
     }
@@ -154,7 +154,7 @@ namespace DX12
 
 
 
-	 DX12::UploadBuffer::UploadBuffer(UINT64 count) : Resource(CD3DX12_RESOURCE_DESC::Buffer(count, D3D12_RESOURCE_FLAG_NONE), UploadAllocator::get(), ResourceState::GEN_READ)
+	 DX12::UploadBuffer::UploadBuffer(UINT64 count) : Resource(CD3DX12_RESOURCE_DESC::Buffer(count, D3D12_RESOURCE_FLAG_NONE), HeapType::UPLOAD, ResourceState::GEN_READ)
 	{
 
 	}
@@ -169,7 +169,7 @@ namespace DX12
 		return (char*)buffer_data;
 	}
 
-	 DX12::CPUBuffer::CPUBuffer(UINT64 count, int stride) : stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(count * stride), ReadbackAllocator::get(), ResourceState::COPY_DEST)
+	 DX12::CPUBuffer::CPUBuffer(UINT64 count, int stride) : stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(count * stride), HeapType::READBACK, ResourceState::COPY_DEST)
 	{
 	}
 

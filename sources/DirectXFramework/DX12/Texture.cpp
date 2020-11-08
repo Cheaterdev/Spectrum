@@ -112,12 +112,8 @@ namespace DX12
 	//	resource->debug = true;
         init();
     }
-	Texture::Texture(CD3DX12_RESOURCE_DESC desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, ResourceAllocator& heap, std::shared_ptr<texture_data> data /*= nullptr*/) :Resource(desc, heap, data ? ResourceState::COPY_DEST : state)
+	Texture::Texture(CD3DX12_RESOURCE_DESC desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, HeapType heap_type, std::shared_ptr<texture_data> data /*= nullptr*/) :Resource(desc, heap_type, data ? ResourceState::COPY_DEST : state)
     {
-
-	//	auto& timer = Profiler::get().start(L"Texture");
-
-       // resource.reset(new Resource(desc, HeapType::DEFAULT, data ? ResourceState::COPY_DEST : state));
         set_name(std::string("Texture_")+std::to_string(desc.Width)+"_"+std::to_string(desc.Height) + "_" + std::to_string(desc.DepthOrArraySize));
         desc = get_desc();
 
@@ -137,9 +133,9 @@ namespace DX12
                 }
             }
 
-          //  list->transition(resource.get(), state);
             list->end();
-            list->execute_and_wait();
+			 list->execute_and_wait();
+
         }
 
         init();
@@ -197,7 +193,7 @@ namespace DX12
 		desc.MipLevels = data->mip_maps;
 		desc.Width = data->width;
 		desc.Height = data->height;
-		return std::make_shared<Texture>(desc, ResourceState::COMMON, DefaultAllocator::get(),data);
+		return std::make_shared<Texture>(desc, ResourceState::COMMON,HeapType::DEFAULT,data);
 	}
 	 Array2DView::ptr & Texture::array2d()
 	{
@@ -228,7 +224,7 @@ namespace DX12
             else
                 desc = CD3DX12_RESOURCE_DESC::Tex2D(tex_data->format, tex_data->width, tex_data->height, tex_data->array_size, tex_data->mip_maps);
 
-            return std::make_shared<Texture>(desc, ResourceState::PIXEL_SHADER_RESOURCE,DefaultAllocator::get() ,tex_data);
+            return std::make_shared<Texture>(desc, ResourceState::PIXEL_SHADER_RESOURCE, HeapType::DEFAULT,tex_data);
         }
 
         return nullptr;

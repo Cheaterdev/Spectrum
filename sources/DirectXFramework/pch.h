@@ -66,14 +66,19 @@ namespace DX12
 #include "DX12/Tiling.h"
 
 #include "DX12/Memory.h"
-#include "DX12/Resource.h"
 
+#include "DX12/Fence.h"
+#include "DX12/States.h"
+#include "DX12/Resource.h"
+#include "DX12/ResourceViews.h"
 
 
 #include "DX12/IndirectCommand.h"
 #include "DX12/CommandList.h"
 
 #include "DX12/Swapchain12.h"
+
+#include "DX12/Queue.h"
 #include "DX12/Device12.h"
 
 

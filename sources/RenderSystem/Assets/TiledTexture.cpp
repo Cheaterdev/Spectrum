@@ -359,7 +359,7 @@ void TiledTexture::init()
         residency_data_uploaded.reset(new texture_data(1, 1, mips[0].tiles.x, mips[0].tiles.y, 1, DXGI_FORMAT_R8G8B8A8_UNORM));
         memset(residency_data_uploaded->array[0]->mips[0]->data.data(), 255, residency_data_uploaded->array[0]->mips[0]->data.size());
         CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, mips[0].tiles.x, mips[0].tiles.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_UNKNOWN);
-        residency_texture.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, DefaultAllocator::get(), residency_data));
+        residency_texture.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, HeapType::DEFAULT, residency_data));
     }
     {
         //  CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, tiles.x, tiles.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_UNKNOWN);

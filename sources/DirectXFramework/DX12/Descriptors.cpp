@@ -18,6 +18,33 @@ namespace DX12 {
 	}
 
 
+	DescriptorHeap::DescriptorHeap(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags)
+	{
+		max_count = num;
+		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+		rtvHeapDesc.NumDescriptors = num;
+		rtvHeapDesc.Type = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type);
+		rtvHeapDesc.Flags = static_cast<D3D12_DESCRIPTOR_HEAP_FLAGS>(flags);
+		rtvHeapDesc.NodeMask = 1;
+		TEST(Device::get().get_native_device()->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+		descriptor_size = Device::get().get_native_device()->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type));
+		assert(m_rtvHeap);
+
+		resources.resize(max_count);
+	}
+
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeap::get_handle(UINT i)
+	{
+		return  CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), i, descriptor_size);
+	}
+
+	CD3DX12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::get_gpu_handle(UINT i)
+	{
+		return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), i, descriptor_size);
+	}
+
+
 	void Handle::place(const Handle& r, D3D12_DESCRIPTOR_HEAP_TYPE type) const
 	{
 		if (cpu != r.cpu)
@@ -40,7 +67,6 @@ namespace DX12 {
 
 	Handle DescriptorPage::place()
 	{
-	//	std::lock_guard<std::mutex> g(m);
 		Handle h =  heap->handle(heap_offset + (offset++));
 		h.resource_info->resource_ptr = nullptr;
 		return h;
@@ -50,7 +76,6 @@ namespace DX12 {
 
 	HandleTableLight DescriptorPage::place(UINT count)
 	{
-		//std::lock_guard<std::mutex> g(m);
 		assert(offset+count<=this->count);
 		auto table = heap->get_light_table_view(heap_offset + offset, count);
 
@@ -66,7 +91,6 @@ namespace DX12 {
 
 	void DescriptorPage::free()
 	{
-	//	std::lock_guard<std::mutex> g(m);
 		offset = 0;
 		heap->free_page(this);
 	}

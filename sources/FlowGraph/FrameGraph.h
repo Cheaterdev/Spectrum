@@ -26,7 +26,8 @@ enum class ResourceFlags :int {
 	Static = 128,
 	Required = 256,
 
-	Cube = 512
+	Cube = 512,
+	Changed = 1024
 
 	, GENERATE_OPS
 };
@@ -55,6 +56,9 @@ struct ResourceAllocInfo;
 struct ResourceHandler
 {
 	bool is_new();
+	void changed();
+
+	bool is_changed();
 	public:
 	friend struct TaskBuilder;
 	friend struct FrameContext;
@@ -198,13 +202,14 @@ struct Pass
 {
 	int id = 0;
 	bool enabled = true;
+	bool renderable = true;
 	PassFlags flags;
 	std::string name;
 	UsedResources used;
 	FrameContext context;
 	std::future<void> render_task;
 
-	virtual void setup(TaskBuilder& builder) = 0;
+	virtual bool setup(TaskBuilder& builder) = 0;
 
 
 	void compile(TaskBuilder& builder);
@@ -220,7 +225,8 @@ struct TypedPass : public Pass
 {
 
 	using render_func_type = std::function<void(T&, FrameContext&)>;
-	using setup_func_type = std::function<void(T&, TaskBuilder&)>;
+	using setup_func_type = std::function<bool(T&, TaskBuilder&)>;
+	using setup_func_type_void = std::function<void(T&, TaskBuilder&)>;
 
 	
 	T data;
@@ -236,16 +242,18 @@ struct TypedPass : public Pass
 		render_func = r;
 	}
 
-	virtual void setup(TaskBuilder& builder) override
+	virtual bool setup(TaskBuilder& builder) override
 	{
 		builder.begin(this);
-		setup_func(data, builder);
+		bool res = setup_func(data, builder);
 		builder.end(this);
+
+		return res;
 	}
 
 	virtual void render(Render::FrameResources::ptr& frame) override
 	{
-		if (!enabled)  return;
+		if (!enabled || !renderable)  return;
 		render_task = scheduler::get().enqueue([this, &frame]() {
 			context.begin(this, frame);
 			render_func(data, context);
@@ -282,15 +290,23 @@ public:
 	TaskBuilder builder;
 
 	template<class T>
-	void add_pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+	void pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 	{
 		passes.push_back(std::make_shared<TypedPass<T>>((UINT)passes.size(), name, s, r));
 		passes.back()->flags = flags;
-	//	enabled = flags == PassFlags::Required;
+
 		if (check(flags & PassFlags::Required))
 		{
 			required_passes.push_back(passes.back());
 		}
+	}
+
+	template<class T>
+	void add_pass(std::string name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+	{
+		TypedPass<T>::setup_func_type f = [s](T& t, TaskBuilder& b) {s(t, b); return true; };
+		
+		pass<T>(name, f, r, flags);
 	}
 
 	void start_new_frame();

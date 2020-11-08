@@ -161,7 +161,7 @@ void Pass::compile(TaskBuilder& builder)
 
 void Pass::wait()
 {
-	if (!enabled)  return;
+	if (!enabled || !renderable)  return;
 
 	render_task.wait();
 }
@@ -169,7 +169,7 @@ void Pass::execute()
 
 {
 
-	if (!enabled) {
+	if (!enabled || !renderable) {
 		return;
 
 	}
@@ -202,7 +202,7 @@ void FrameGraph::setup()
 	{
 		pass->enabled = false;
 
-		pass->setup(builder);
+		pass->renderable = pass->setup(builder);
 	}
 
 	for (auto& pair : builder.alloc_resources)
@@ -655,15 +655,15 @@ void TaskBuilder::create_resources()
 			{
 				if (info->heap_type == Render::HeapType::UPLOAD)
 				{
-					info->resource = std::make_shared<Render::Resource>(info->d3ddesc, Render::UploadAllocator::get());
+					info->resource = std::make_shared<Render::Resource>(info->d3ddesc, info->heap_type);
 				}
 				else if (info->heap_type == Render::HeapType::READBACK)
 				{
-					info->resource = std::make_shared<Render::Resource>(info->d3ddesc, Render::ReadbackAllocator::get());
+					info->resource = std::make_shared<Render::Resource>(info->d3ddesc, info->heap_type);
 				}
-				else 	if (!info->resource || info->resource->get_desc() != info->d3ddesc)
+				else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 				{
-					info->resource = std::make_shared<Render::Resource>(info->d3ddesc, Render::DefaultAllocator::get());
+					info->resource = std::make_shared<Render::Resource>(info->d3ddesc, info->heap_type);
 					info->is_new = true;
 				}
 
@@ -701,4 +701,14 @@ Render::TextureView TaskBuilder::request_texture(ResourceHandler* handler)
 bool ResourceHandler::is_new()
 {
 	return info->is_new;
+}
+
+void ResourceHandler::changed()
+{
+	info->flags = info->flags | ResourceFlags::Changed;
+}
+
+bool ResourceHandler::is_changed()
+{
+	return check(info->flags & ResourceFlags::Changed);
 }

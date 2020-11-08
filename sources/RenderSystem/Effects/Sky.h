@@ -19,6 +19,8 @@ class SkyRender :public Events::prop_handler, public FrameGraphGenerator
 	Render::Texture::ptr inscatter;
 	
 	bool processed = false;
+
+	float3 dir = float3(0, 0, -1);
 public:
 	using ptr = std::shared_ptr<SkyRender>;
 

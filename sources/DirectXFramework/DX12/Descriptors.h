@@ -657,48 +657,4 @@ public:
 	}
 };
 
-/*
-class CBPage
-{
-
-};
-
-template<class LockPolicy = Free>
-class DynamicCB
-{
-	std::list<CBPage*> pages;
-	typename LockPolicy::mutex m;
-	void create_heap(UINT count)
-	{
-		pages.push_back(CBPageManager::get()->create_page(count));
-	}
-
-	void reset()
-	{
-		LockPolicy::guard g(m);
-
-		for (auto& p : pages)
-			p->free();
-
-		pages.clear();
-	}
-
-
-	HandleTableLight prepare(size_t size)
-	{
-		LockPolicy::guard g(m);
-
-		if (pages.empty() || !pages.back()->has_free_size(size))
-		{
-			create_heap(size);
-		}
-
-		return pages.back()->place(size);
-	}
-
-
-
-};
-*/
-
 }

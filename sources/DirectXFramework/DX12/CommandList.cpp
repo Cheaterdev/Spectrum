@@ -704,7 +704,16 @@ namespace DX12
 
 	void Transitions::use_resource(const Resource* resource)
 	{
-		tracked_resources.emplace_back(const_cast<Resource*>(resource)->tracked_info);
+
+		Resource* res = const_cast<Resource*>(resource);
+
+		tracked_resources.emplace_back(res->tracked_info);
+
+		//if (res->load_fence.valid())
+		{
+
+		//	waits.emplace_back(res->load_fence.get);
+		}
 	}
 
 	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres )
@@ -1008,6 +1017,8 @@ void ComputeContext::dispach(int x,int y,int z)
 		{
 			get_native_list()->SetPipelineState(pipeline->get_native().Get());
 			current_pipeline = pipeline;
+
+			tracked_psos.emplace_back(pipeline->get_native());
 		}
 	}
 	void Eventer::on_start(Timer* timer)
@@ -1238,6 +1249,7 @@ void ComputeContext::dispach(int x,int y,int z)
 		TrackedResource::allow_resource_delete = true;
 
 		tracked_resources.clear();
+		tracked_psos.clear();
 		TrackedResource::allow_resource_delete = false;
 	}
 	void Uploader::reset()

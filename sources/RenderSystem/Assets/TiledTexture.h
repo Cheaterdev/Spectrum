@@ -57,7 +57,7 @@ class HeapPage
         HeapPage();
 		~HeapPage()
 		{
-			Render::Device::get().unused(tile_heap, ResourceHandle());
+			//Render::Device::get().unused(tile_heap, ResourceHandle());
 		}
 		Render::Texture::ptr get_data()
 		{
