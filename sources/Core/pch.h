@@ -151,6 +151,7 @@ using portable_iarchive = boost::archive::binary_iarchive;
 using serialization_oarchive = boost::archive::binary_oarchive;
 using serialization_iarchive = boost::archive::binary_iarchive;
 
+
 //#include <boost/system/error_code.hpp>
 //#include <boost/uuid/uuid.hpp>            // uuid class
 //#include <boost/uuid/uuid_generators.hpp> // generators
@@ -184,9 +185,9 @@ public:
 	}
 	void erase(const T& elem)
 	{
-		auto it = std::find(begin(), end(), elem);
+		auto it = std::find(std::vector<T>::begin(), std::vector<T>::end(), elem);
 
-		if (it != end())
+		if (it != std::vector<T>::end())
 			std::vector<T>::erase(it);
 	}
 };

@@ -21,7 +21,7 @@ namespace DX12
 
 		std::queue<std::shared_ptr<CommandList>> lists;
 		std::mutex list_mutex;
-		std::queue<std::shared_ptr<CommandList>> tasks;
+		std::queue<std::function<void()>> tasks;
 
 		std::mutex queue_mutex;
 		std::condition_variable condition;
@@ -31,15 +31,14 @@ namespace DX12
 		CommandListType type;
 
 		UINT64 last_known_fence = 0;
-		UINT64 execute_internal(CommandList* list);
+		FenceWaiter execute_internal(CommandList* list);
 	
 
 	public:
-		UINT64 signal();
+		Queue(CommandListType type, Device* device);
+		~Queue();
 
 		std::shared_ptr<CommandList> get_free_list();
-
-
 		using ptr = std::shared_ptr<Queue>;
 
 		ComPtr<ID3D12CommandQueue> get_native();
@@ -53,27 +52,16 @@ namespace DX12
 			const D3D12_TILE_RANGE_FLAGS*          pRangeFlags,
 			const UINT*                            pHeapRangeStartOffsets,
 			const UINT*                            pRangeTileCounts,
-			D3D12_TILE_MAPPING_FLAGS        Flags)
-		{
-			//    std::unique_lock<std::mutex> lock(queue_mutex);
-			native->UpdateTileMappings(pResource, NumResourceRegions, pResourceRegionStartCoordinates, pResourceRegionSizes, pHeap, NumRanges, pRangeFlags, pHeapRangeStartOffsets, pRangeTileCounts, Flags);
-			//   signal();
-		//	wait(signal());
-		}
+			D3D12_TILE_MAPPING_FLAGS        Flags);
 
-		Queue(CommandListType type, Device * device);
 
 		void stop_all();
-		~Queue();
-		void wait(UINT64);
-		void wait();
-
+		FenceWaiter signal();
+		void signal_and_wait();
 		bool is_complete(UINT64 fence);
-		UINT64 get_last_step();
 
-		std::shared_future<UINT64> execute(std::shared_ptr<CommandList> list);
-		std::shared_future<UINT64> execute(CommandList* list);
-
+		std::shared_future<FenceWaiter> execute(std::shared_ptr<CommandList> list);
+		std::shared_future<FenceWaiter> execute(CommandList* list);
 
 		FenceWaiter signal(Fence& fence, UINT64 value);
 	};

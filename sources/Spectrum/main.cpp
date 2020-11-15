@@ -1141,6 +1141,7 @@ public:
 
 	virtual	void render()
 	{
+		if (swap_chain)	swap_chain->resize(get_render_bounds().size);
 
 		{
 			std::lock_guard<std::mutex> g(m);
@@ -1553,7 +1554,7 @@ resource_stages[&res.second] = input;
 	virtual void on_size_changed(const vec2& r) override
 	{
 		user_interface::on_size_changed(r);
-		if (swap_chain)	swap_chain->resize(r);
+		
 	}
 };
 

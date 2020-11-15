@@ -165,6 +165,9 @@ struct TaskBuilder
 
 struct FrameContext
 {
+	Pass* pass;
+	Render::FrameResources::ptr frame;
+
 	std::list<Render::ResourceView> textureViews;
 
 	Render::TextureView get_texture(ResourceHandler* holder);
@@ -191,8 +194,11 @@ struct FrameContext
 
 enum class PassFlags
 {
-	General,
-	Required,
+	General = 0,
+	Required =  1,
+
+	Graphics = 0,
+	Compute = 2,
 
 	GENERATE_OPS
 };
@@ -217,6 +223,11 @@ struct Pass
 	virtual void render(Render::FrameResources::ptr& frame) = 0;
 	void wait();
 	void execute();
+
+	bool active()
+	{
+		return enabled && renderable;
+	}
 };
 
 

@@ -129,11 +129,11 @@ namespace DX12
 
 	}
 
-	std::shared_future<UINT64> Sendable::execute(std::function<void()> f)
+	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
 	{
 		execution_mutex.lock();
 
-		execute_fence = std::promise<UINT64>();
+		execute_fence = std::promise<FenceWaiter>();
 		execute_fence_result = execute_fence.get_future();
 		executed = true;
 		if (f)
@@ -144,10 +144,10 @@ namespace DX12
 	
 		return execute_fence_result;
 	}
+
 	void Sendable::execute_and_wait(std::function<void()> f)
 	{
-
-		Device::get().get_queue(type)->wait(execute(f).get());
+		execute(f).get().wait();
 	}
 
 
@@ -1136,9 +1136,9 @@ void ComputeContext::dispach(int x,int y,int z)
 		return result;
 	}
 
-	Render::CommandList::ptr FrameResources::start_list(std::string name)
+	Render::CommandList::ptr FrameResources::start_list(std::string name, CommandListType type)
 	{
-		auto list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
+		auto list = Render::Device::get().get_queue(type)->get_free_list();
 		list->begin(name);
 		list->frame_resources = shared_from_this();
 		return list;

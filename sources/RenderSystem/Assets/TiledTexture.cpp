@@ -342,17 +342,7 @@ void TiledTexture::init()
 
     clear_tilings();
     clear_data.resize(mips[0].tiles.x * mips[0].tiles.y * mips[0].tiles.z, 255);
-    /*  {
-    ComPtr<ID3D12Resource> m_Resource;
-    CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
-    Render::Device::get().get_native_device()->CreatePlacedResource(tile_heap.Get(), 0, &desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_Resource));
-    null_tile.reset(new Render::Texture(m_Resource));
-    auto list = Render::Device::get().get_upload_list();
-    std::vector<byte> data(128 * 128 * 4, 255);
-    list->update_texture(null_tile, ivec3(0, 0, 0), ivec3(128, 128, 1), 0, reinterpret_cast<const char*>(data.data()), 128 * 4);
-    list->end();
-    list->execute();
-    }*/
+   
     {
         residency_data.reset(new texture_data(1, 1, mips[0].tiles.x, mips[0].tiles.y, 1, DXGI_FORMAT_R8G8B8A8_UNORM));
         memset(residency_data->array[0]->mips[0]->data.data(), 255, residency_data->array[0]->mips[0]->data.size());
@@ -666,23 +656,6 @@ void TileHeapManager::remove(Tile::ptr& tile, bool zero)
 TileHeapManager::TileHeapManager(Render::Resource* res):res(res)
 {
 	remove_all();
-   /* pages.emplace_back();
-	zero_tile.reset(new Tile);
-	zero_tile->mip_level = 0;
-	zero_tile->position = { 0,0,0 };
-	zero_tile->subresource = 0;
-	pages.front().place(zero_tile);
-
-	ComPtr<ID3D12Resource> m_Resource;
-	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
-	Render::Device::get().get_native_device()->CreatePlacedResource(pages.front().get_native().Get(), 0, &desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&m_Resource));
-	Render::Texture::ptr null_tile(new Render::Texture(m_Resource));
-	auto list = Render::Device::get().get_upload_list();
-	std::vector<byte> data(128 * 128 * 4, 0);
-	list->update_texture(null_tile, ivec3(0, 0, 0), ivec3(128, 128, 1), 0, reinterpret_cast<const char*>(data.data()), 128 * 4);
-	list->end();
-	list->execute();*/
-
 
 }
 

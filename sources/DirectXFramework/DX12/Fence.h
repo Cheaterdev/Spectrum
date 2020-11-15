@@ -27,15 +27,25 @@ namespace DX12
 		Fence(Device & device);
 
 		void signal(UINT64 value);
-		UINT64 get_completed_value();
-		void wait_for(Event & e, UINT64 value);
+		UINT64 get_completed_value() const;
+
+
+		void wait(UINT64 value) const;
 
 	};
 
 
 	struct FenceWaiter
 	{
-		const Fence& fence;
-		const UINT64 value;
+		Fence* fence;
+		UINT64 value;
+
+		void wait() const
+		{
+			if (fence)
+			{
+				fence->wait(value);
+			}
+		}
 	};
 }

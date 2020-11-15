@@ -974,9 +974,8 @@ void VoxelGI::lighting(FrameGraph& graph)
 
 			compute.dispach(ivec3(gpu_tiles_buffer[0]->size() * ligthing.GetGroupCount(), 1, 1), ivec3(1, 1, 1));
 
-			//	compute.get_base().clear_uav(volume_lighted, volume_lighted->texture_3d()->get_static_uav(), vec4(1, 0, 0, 0.1));
 
-		});
+		}, PassFlags::Compute);
 
 }
 
@@ -1053,7 +1052,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 
 				mip_count += current_mips;
 			}
-		});
+		}, PassFlags::Compute);
 
 }
 void VoxelGI::generate(FrameGraph& graph)

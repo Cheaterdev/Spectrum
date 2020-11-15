@@ -29,9 +29,9 @@ namespace DX12
 		struct Frame
 		{
 			std::shared_ptr<Texture> m_renderTarget;
-			UINT64 fence_event;
-		
+			FenceWaiter fence_event;
 		};
+
 		std::vector<Frame> frames;
 		DescriptorHeap::ptr heap;
 		DXGI_SWAP_CHAIN_DESC desc;
@@ -41,8 +41,7 @@ namespace DX12
 
 		UINT m_frameIndex;
 		SwapChain(ComPtr<IDXGISwapChain3> sc, swap_chain_desc  c_desc);
-	//	void present(UINT64 event_time);
-		void present(UINT64 event_time);
+		void present(FenceWaiter event_time);
 
 		void start_next();
 		std::shared_ptr<Texture> get_current_frame();

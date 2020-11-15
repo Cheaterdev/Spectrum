@@ -235,7 +235,7 @@ namespace DX12
 			return frame_number;
 		}
 
-		std::shared_ptr<CommandList> start_list(std::string name = "");
+		std::shared_ptr<CommandList> start_list(std::string name = "", CommandListType type = CommandListType::DIRECT);
 
 	};
 
@@ -635,11 +635,11 @@ namespace DX12
 
 		friend class Queue;
 		std::vector<std::function<void()>> on_send_funcs;
-		std::vector<std::function<void(UINT64)>> on_fence;
+		std::vector<std::function<void(FenceWaiter)>> on_fence;
 
 
-		std::promise<UINT64> execute_fence;
-		std::shared_future<UINT64> execute_fence_result;
+		std::promise<FenceWaiter> execute_fence;
+		std::shared_future<FenceWaiter> execute_fence_result;
 
 		std::mutex execution_mutex;
 		std::list<FenceWaiter> waits;
@@ -683,17 +683,17 @@ namespace DX12
 	public:
 
 
-		void when_send(std::function<void(UINT64)> e)
+		void when_send(std::function<void(FenceWaiter)> e)
 		{
 			on_fence.emplace_back(e);
 		}
 
-		std::shared_future<UINT64> get_execution_fence()
+		std::shared_future<FenceWaiter> get_execution_fence()
 		{
 			return execute_fence_result;
 		}
 
-		std::shared_future<UINT64> execute(std::function<void()> f = nullptr);
+		std::shared_future<FenceWaiter> execute(std::function<void()> f = nullptr);
 		void execute_and_wait(std::function<void()> f = nullptr);
 
 		void on_done(std::function<void()> f);

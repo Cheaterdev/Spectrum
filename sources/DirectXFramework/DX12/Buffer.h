@@ -89,7 +89,7 @@ namespace DX12
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 		//		list->transition(this,  ResourceState::COMMON);
 				list->end();
-				list->execute();
+				list->execute_and_wait();
 			}
 
 			template<class T>
@@ -100,7 +100,7 @@ namespace DX12
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 	//			list->transition(this, ResourceState::COMMON);
 				list->end();
-				list->execute();
+				list->execute_and_wait();
 			}
 
 			template<class T>

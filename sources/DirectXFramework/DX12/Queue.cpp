@@ -35,8 +35,7 @@ namespace DX12
 
 				for (;;)
 				{
-					CommandList::ptr list;
-					UINT64 fence;
+					std::function<void()> task;
 					{
 						std::unique_lock<std::mutex> lock(this->queue_mutex);
 						this->condition.wait(lock,
@@ -48,17 +47,13 @@ namespace DX12
 						if (this->stop && this->tasks.empty())
 							return;
 
-						// TODO:: get all tasks, not only 1!!!!
-						list = std::move(this->tasks.front());
-						fence = list->get_execution_fence().get();
+
+						task = std::move(this->tasks.front());
+					
 						this->tasks.pop();
-					}
-					commandListCounter.wait_for(commandListEvent, fence);
-
-					SPECTRUM_TRY
-						list->on_execute();
-					SPECTRUM_CATCH
-
+					}	
+					
+					task();
 				}
 			});
 
@@ -76,7 +71,7 @@ namespace DX12
 
 	void Queue::stop_all()
 	{
-		wait();
+		signal_and_wait();
 		stop = true;
 		condition.notify_all();
 
@@ -89,18 +84,18 @@ namespace DX12
 		stop_all();
 	}
 
-	UINT64 Queue::signal()
+	FenceWaiter Queue::signal()
 	{
 		const UINT64 fence = ++m_fenceValue;
 		native->Signal(commandListCounter.m_fence.Get(), fence);
-		return fence;
+		return { &commandListCounter,fence };
 	}
 
 	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
 	{
 		native->Signal(fence.m_fence.Get(), value);
 
-		return { fence, value };
+		return { &fence, value };
 	}
 	std::shared_ptr<CommandList> Queue::get_free_list()
 	{
@@ -118,25 +113,28 @@ namespace DX12
 		return res_ptr;
 	}
 
-	void Queue::wait(UINT64 value)
+	void Queue::signal_and_wait()
 	{
-		static thread_local Event e;
-		commandListCounter.wait_for(e, value);
-	}
+		std::promise<int> promise;
+		auto result = promise.get_future();
 
-	void Queue::wait()
-	{
-		wait(m_fenceValue);
+		{
+			std::unique_lock<std::mutex> lock(queue_mutex);
+			FenceWaiter waiter = signal();
+
+			tasks.emplace([&promise, &waiter]() {
+				waiter.wait();
+				promise.set_value(0);
+				});
+			condition.notify_one();
+		}
+
+		result.wait();
 	}
 
 	bool Queue::is_complete(UINT64 fence)
 	{
 		return commandListCounter.get_completed_value() >= fence;
-	}
-
-	UINT64 Queue::get_last_step()
-	{
-		return m_fenceValue;
 	}
 
 	ComPtr<ID3D12CommandQueue> Queue::get_native()
@@ -145,8 +143,13 @@ namespace DX12
 	}
 
 
+	void Queue::update_tile_mappings(ID3D12Resource* pResource, UINT NumResourceRegions, const D3D12_TILED_RESOURCE_COORDINATE* pResourceRegionStartCoordinates, const D3D12_TILE_REGION_SIZE* pResourceRegionSizes, ID3D12Heap* pHeap, UINT NumRanges, const D3D12_TILE_RANGE_FLAGS* pRangeFlags, const UINT* pHeapRangeStartOffsets, const UINT* pRangeTileCounts, D3D12_TILE_MAPPING_FLAGS Flags)
+	{
+		native->UpdateTileMappings(pResource, NumResourceRegions, pResourceRegionStartCoordinates, pResourceRegionSizes, pHeap, NumRanges, pRangeFlags, pHeapRangeStartOffsets, pRangeTileCounts, Flags);
+	}
+
 	// synchronized
-	UINT64 Queue::execute_internal(CommandList* list)
+	FenceWaiter Queue::execute_internal(CommandList* list)
 	{
 
 		bool need_wait = has_tasks();
@@ -156,7 +159,7 @@ namespace DX12
 
 
 			if (stop)
-				return m_fenceValue;
+				return { &commandListCounter,m_fenceValue };
 
 		for(auto &w:list->waits)
 		{
@@ -193,10 +196,23 @@ namespace DX12
 			}
 		}
 
-		last_known_fence = signal();
-		list->execute_fence.set_value(last_known_fence);
+		last_known_fence = signal().value;
+		list->execute_fence.set_value({&commandListCounter, last_known_fence});
 
-		tasks.emplace(list->get_ptr());
+		auto cl = list->get_ptr();
+
+		tasks.emplace([cl]() {
+			auto list = cl;
+
+			FenceWaiter fence = list->get_execution_fence().get();
+			assert(&commandListCounter == &fence.fence);
+
+			fence.wait();
+
+			SPECTRUM_TRY
+				list->on_execute();
+			SPECTRUM_CATCH
+			});
 
 
 		list->on_send();
@@ -217,22 +233,22 @@ namespace DX12
 
 		if (need_wait)
 		{
-			wait(last_known_fence);
+			commandListCounter.wait(last_known_fence);
 			process_tasks();
 		}
 
-		return last_known_fence;
+		return { &commandListCounter,last_known_fence };
 	}
 
 
-	std::shared_future<UINT64> Queue::execute(std::shared_ptr<CommandList> list)
+	std::shared_future<FenceWaiter> Queue::execute(std::shared_ptr<CommandList> list)
 	{
 		assert(this->type == list->type);
 		std::unique_lock<std::mutex> lock(queue_mutex);
 
 		if (!list->wait_for_execution_count)
 		{
-			std::promise<UINT64> res;
+			std::promise<FenceWaiter> res;
 			res.set_value(execute_internal(list.get()));
 			return res.get_future();
 		}
@@ -241,7 +257,7 @@ namespace DX12
 	}
 
 
-	std::shared_future<UINT64> Queue::execute(CommandList* list)
+	std::shared_future<FenceWaiter> Queue::execute(CommandList* list)
 	{
 		return execute(list->get_ptr());
 	}

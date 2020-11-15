@@ -627,13 +627,6 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
         for (auto && e : tasks)
             e.wait();
 
-   //     result->index_buffer.reset(new Render::IndexBuffer(indices));
-     //   auto list = Render::Device::get().get_upload_list();
-    //    result->vertex_buffer.reset(new Render::StructuredBuffer<Vertex>(vertices.size()));
-    //    result->vertex_buffer->set_data(list, 0, vertices);
-     //   list->end();
-    //    list->execute();
-
         result->vertex_buffer = std::move(vertices);
 		result->index_buffer = std::move(indices);
 

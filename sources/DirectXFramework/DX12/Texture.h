@@ -366,7 +366,7 @@ namespace DX12
                         }
 
                     list->end();
-                    list->execute();
+                    list->execute_and_wait();
                 }
 
                 init();

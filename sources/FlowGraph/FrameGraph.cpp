@@ -78,76 +78,56 @@ Render::BufferView FrameContext::get_buffer(ResourceHandler* handler)
 
 Render::CommandList::ptr& FrameContext::get_list()
 {
+	
+	if (!list)
+	{
+		Render::CommandListType type = Render::CommandListType::DIRECT;
+
+		if(check(pass->flags&PassFlags::Compute))
+			type = Render::CommandListType::COMPUTE;
+		list = frame->start_list(pass->name);
+
+		for (auto handle : pass->used.resource_creations)
+		{
+			if (!handle->info->alloc_ptr.handle) continue;
+
+			if (!handle->info->enabled)
+				continue;
+			//if (!handle->info->texture) continue;
+			{
+				auto& tex = get_texture(handle);
+
+				if (tex)
+					list->transition(nullptr, tex.resource.get());
+
+			}
+			{
+				auto& tex = get_buffer(handle);
+
+				if (tex)
+					list->transition(nullptr, tex.resource.get());
+			}
+
+		}
+	}
 	return list;
 }
 
 void FrameContext::begin(Pass* pass, Render::FrameResources::ptr& frame) {
-	list = frame->start_list(pass->name);
-	//		list->set_heap(Render::DescriptorHeapType::SAMPLER, Render::DescriptorHeapManager::get().gpu_smp);
-
-	if(!GetAsyncKeyState(VK_F7))
-	for (auto handle : pass->used.resource_creations)
-	{
-		if (!handle->info->alloc_ptr.handle) continue;
-
-		if (!handle->info->enabled)
-			continue;
-		//if (!handle->info->texture) continue;
-		{
-			auto& tex = get_texture(handle);
-
-			if (tex)
-				list->transition(nullptr, tex.resource.get());
-
-		}
-		{
-		auto& tex = get_buffer(handle);
-
-		if (tex)
-			list->transition(nullptr, tex.resource.get());
-		}
-
-	}
-	/*
-	list->flush_transitions();
-
-
-	for (auto handle : pass->used.resources)
-	{
-		if (!handle->info->placed) continue;
-		//if (!handle->info->texture) continue;
-
-		auto& tex = get_texture(handle);
-
-		if (tex)
-		{
-			if (handle->info->flags & ResourceFlags::DepthStencil > 0)
-			{
-
-				list->transition(tex.resource, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-			}
-
-			if (handle->info->flags & ResourceFlags::RenderTarget > 0)
-			{
-
-				list->transition(tex.resource, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-			}
-
-		}
-	}
-	*/
-
+	
+	this->pass = pass;
+	this->frame = frame;
 }
 
 void FrameContext::end()
 {
-	list->end();
+	if (list)list->end();
 }
 
 
 void FrameContext::execute()
 {
-		list->execute();
+	if(list)list->execute();
 	list = nullptr;
 }
 
@@ -300,26 +280,46 @@ void FrameGraph::render()
 	for (auto& pair : builder.alloc_resources)
 	{
 		auto info = &pair.second;
-
-		if (info->heap_type == Render::HeapType::UPLOAD)
+		if (!check(info->flags & ResourceFlags::Static))
 		{
 			info->resource = nullptr;
 
 			info->texture = Render::TextureView();
-
 			info->buffer = Render::BufferView();
 		}
 	}
+
+
+
+	struct ExecutionList
+	{
+
+		std::list<Render::CommandList::ptr> list;
+
+
+	} list;
 
 	{
 		auto& timer = Profiler::get().start(L"execute");
 
 		for (auto& pass : passes)
 		{
-			pass->execute();
+			if (!pass->active()) continue;
+
+			auto commandList = pass->context.list;
+			if(commandList)
+			list.list.emplace_back(commandList);
+		//	pass->execute();
 		}
 
 
+	}
+
+
+
+	for (auto& e : list.list)
+	{
+		e->execute();
 	}
 	builder.current_frame = nullptr;
 }

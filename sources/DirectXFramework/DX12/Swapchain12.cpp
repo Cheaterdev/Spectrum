@@ -27,9 +27,9 @@ namespace DX12
 
 			frames[n].m_renderTarget.reset(new Texture(render_target, handle, Render::ResourceState::PRESENT));
 			frames[n].m_renderTarget->set_name(std::string("swap_chain_") + std::to_string(n));
-		//	frames[n].m_renderTarget->assume_gpu_state(Render::ResourceState::PRESENT);
+			//	frames[n].m_renderTarget->assume_gpu_state(Render::ResourceState::PRESENT);
 
-		//	frames[n].m_renderTarget->debug = true;
+			//	frames[n].m_renderTarget->debug = true;
 
 
 			D3D12_RENDER_TARGET_VIEW_DESC desc = {};
@@ -37,7 +37,7 @@ namespace DX12
 			desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2D;
 			desc.Texture2D.MipSlice = 0;
 			desc.Texture2D.PlaneSlice = 0;
-	
+
 
 			Device::get().create_rtv(handle[0], frames[n].m_renderTarget.get(), desc);
 
@@ -46,28 +46,21 @@ namespace DX12
 		}
 	}
 
-		void SwapChain::present(UINT64 event_time)
-		{
-		//	Log::get() << "present" << Log::endl;
-			//assert(frames[m_frameIndex].m_renderTarget->get_gpu_state() == 0);
+	void SwapChain::present(FenceWaiter event_time)
+	{
+		frames[m_frameIndex].fence_event = event_time;
+		m_swapChain->Present(0, 0);
+	}
 
-			frames[m_frameIndex].fence_event = event_time;
-			last_time = event_time;
-			m_swapChain->Present(0, 0);
-		}
-		
 
 	void SwapChain::start_next()
 	{
 		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-	
-			Device::get().get_queue(CommandListType::DIRECT)->wait(frames[m_frameIndex].fence_event);
 
+		frames[m_frameIndex].fence_event.wait();
 
-			if (GetAsyncKeyState(VK_F8))
-		for (auto &f : frames)						Device::get().get_queue(CommandListType::DIRECT)->wait(f.fence_event);
-				
-
+		if (GetAsyncKeyState(VK_F8))
+			for (auto& f : frames)	f.fence_event.wait();
 	}
 
 
@@ -80,15 +73,18 @@ namespace DX12
 
 	void SwapChain::resize(ivec2 size)
 	{
-		auto & q = Device::get().get_queue(CommandListType::DIRECT);
 
-		q->wait(q->signal());
+		if (size.x == desc.BufferDesc.Width)
+			if (size.y == desc.BufferDesc.Height)
+				return;
 
-		//	frames[0].m_renderTarget.
+		auto& q = Device::get().get_queue(CommandListType::DIRECT);
+
+		q->signal_and_wait();
 
 		TrackedResource::allow_resource_delete = true;
 
-		for (auto && f : frames)
+		for (auto&& f : frames)
 			f.m_renderTarget = nullptr;
 		TrackedResource::allow_resource_delete = false;
 

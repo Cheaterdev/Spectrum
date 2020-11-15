@@ -28,13 +28,14 @@ namespace DX12
 		m_fence->Signal(value);
 	}
 
-	UINT64 Fence::get_completed_value()
+	UINT64 Fence::get_completed_value() const
 	{
 		return m_fence->GetCompletedValue();
 	}
 
-	void Fence::wait_for(Event& e, UINT64 value)
+	void Fence::wait(UINT64 value) const
 	{
+		static thread_local Event e;
 		auto compl = m_fence->GetCompletedValue();
 
 		if (compl < value)
@@ -43,5 +44,4 @@ namespace DX12
 			e.wait();
 		}
 	}
-
 }
