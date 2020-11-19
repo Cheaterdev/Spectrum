@@ -1272,7 +1272,7 @@ void ComputeContext::dispach(int x,int y,int z)
 
 	TransitionCommandList::TransitionCommandList(CommandListType type)
 	{
-		D3D12_COMMAND_LIST_TYPE t =static_cast<D3D12_COMMAND_LIST_TYPE>(type);
+		D3D12_COMMAND_LIST_TYPE t = D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT;//  static_cast<D3D12_COMMAND_LIST_TYPE>(type);
 
 		TEST(Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
 		TEST(Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));

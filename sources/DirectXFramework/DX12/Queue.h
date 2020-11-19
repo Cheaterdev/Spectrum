@@ -64,6 +64,8 @@ namespace DX12
 		std::shared_future<FenceWaiter> execute(CommandList* list);
 
 		FenceWaiter signal(Fence& fence, UINT64 value);
+
+		void gpu_wait(FenceWaiter waiter);
 	};
 	
 }

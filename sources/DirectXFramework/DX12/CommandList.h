@@ -281,6 +281,11 @@ namespace DX12
 			return m_commandList;
 		}
 		virtual ~CommandListBase() = default;
+
+		CommandListType get_type()
+		{
+			return type;
+		}
 	};
 
 	class TransitionCommandList;
@@ -449,10 +454,27 @@ namespace DX12
 			auto& desc = info->resource_ptr->get_desc();
 			UINT total = desc.CalcSubresource(desc.MipLevels - 1, desc.ArraySize() - 1, desc.Depth() - 1);
 
+			
+			ResourceState target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
+
+			if (type == CommandListType::DIRECT)
+			{
+				target_state = ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE;
+			}
+
+			if (type == CommandListType::COMPUTE)
+			{
+				target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
+			}
+
+			if (type == CommandListType::COPY)
+			{
+				assert(false);
+			}
 
 			if (info->srv.ViewDimension == D3D12_UAV_DIMENSION_BUFFER)
 			{
-				transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, 0);// D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				transition(info->resource_ptr, target_state, 0);// D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
 			}
 			else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURE2D)
@@ -461,14 +483,14 @@ namespace DX12
 
 				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0 && desc.Depth() == 1)
 				{
-					transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+					transition(info->resource_ptr, target_state, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 				}
 				else
 				{
 					for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
 					{
 						UINT res = desc.CalcSubresource(mip, 0, srv.PlaneSlice);
-						transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, res);
+						transition(info->resource_ptr, target_state, res);
 					}
 				}
 
@@ -479,7 +501,7 @@ namespace DX12
 
 				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0 && srv.FirstArraySlice == 0 && srv.ArraySize == desc.ArraySize() && desc.Depth() == 1)
 				{
-					transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+					transition(info->resource_ptr, target_state, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 				}
 				else
 				{
@@ -487,7 +509,7 @@ namespace DX12
 						for (auto array = srv.FirstArraySlice; array < srv.FirstArraySlice + srv.ArraySize; array++)
 						{
 							UINT res = desc.CalcSubresource(mip, array, srv.PlaneSlice);
-							transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, res);
+							transition(info->resource_ptr, target_state, res);
 						}
 				}
 			}
@@ -497,14 +519,14 @@ namespace DX12
 
 				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0)
 				{
-					transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+					transition(info->resource_ptr, target_state, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 				}
 				else
 				{
 					for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
 					{
 						UINT res = desc.CalcSubresource(mip, 0, 0);
-						transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, res);
+						transition(info->resource_ptr, target_state, res);
 					}
 				}
 			}
@@ -514,7 +536,7 @@ namespace DX12
 
 				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0)
 				{
-					transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+					transition(info->resource_ptr, target_state, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 				}
 				else
 				{
@@ -522,7 +544,7 @@ namespace DX12
 						for (auto array = 0; array < 6; array++)
 						{
 							UINT res = desc.CalcSubresource(mip, array, 0);
-							transition(info->resource_ptr, ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE, res);
+							transition(info->resource_ptr, target_state, res);
 						}
 				}
 			}
@@ -562,7 +584,10 @@ namespace DX12
 		friend class GPUTimeManager;
 
 		int id;
+
+		
 	public:
+		CommandListType queue_type;
 		GPUTimer();
 
 		virtual ~GPUTimer();

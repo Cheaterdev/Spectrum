@@ -211,14 +211,18 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 		return false;
 
 	run_on_ui([this, item]()
-		{
+		{	
+			EVENT("start");
 			auto asset = item->asset->get_asset();
-
+			EVENT("end");
 			if (!asset) return;
 
 			if (asset->get_type() == Asset_Type::MESH)
 			{
+
+			
 				auto mesh = std::static_pointer_cast<MeshAsset>(item->asset->get_asset());
+			
 
 				user_ui->message_box("static?", "static?", [this, mesh](bool v) {
 					MeshAssetInstance::ptr m(new MeshAssetInstance(mesh));

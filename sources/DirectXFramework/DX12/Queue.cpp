@@ -35,8 +35,11 @@ namespace DX12
 
 				for (;;)
 				{
+					auto timer = Profiler::get().start(L"Wait");
+
 					std::function<void()> task;
 					{
+					
 						std::unique_lock<std::mutex> lock(this->queue_mutex);
 						this->condition.wait(lock,
 							[this]
@@ -53,6 +56,8 @@ namespace DX12
 						this->tasks.pop();
 					}	
 					
+					auto timer2 = Profiler::get().start(L"Task");
+
 					task();
 				}
 			});
@@ -89,6 +94,11 @@ namespace DX12
 		const UINT64 fence = ++m_fenceValue;
 		native->Signal(commandListCounter.m_fence.Get(), fence);
 		return { &commandListCounter,fence };
+	}
+
+	void  Queue::gpu_wait(FenceWaiter waiter)
+	{
+		native->Wait(waiter.fence->m_fence.Get(), waiter.value);
 	}
 
 	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
@@ -182,11 +192,21 @@ namespace DX12
 			{
 				ID3D12CommandList* s[2] = { transition_list->get_native().Get(), list->get_native_list().Get() };
 
+				if (type == CommandListType::COMPUTE)
+				{
+					auto direct_queue = Device::get().get_queue(CommandListType::DIRECT)->get_native();
 
-				//native->ExecuteCommandLists(2, s);
+					direct_queue->ExecuteCommandLists(1, &s[0]);
+					auto waiter = Device::get().get_queue(CommandListType::DIRECT)->signal();
+					gpu_wait(waiter);
+				//	native->Wait(waiter.fence->m_fence.Get(), waiter.value);
+				}
+				else
+				{
 
+					native->ExecuteCommandLists(1, &s[0]);
+				}
 
-				native->ExecuteCommandLists(1, &s[0]);
 				native->ExecuteCommandLists(1, &s[1]);
 			}
 			else
@@ -201,11 +221,11 @@ namespace DX12
 
 		auto cl = list->get_ptr();
 
-		tasks.emplace([cl]() {
+		tasks.emplace([cl, this]() {
 			auto list = cl;
 
 			FenceWaiter fence = list->get_execution_fence().get();
-			assert(&commandListCounter == &fence.fence);
+			assert(&commandListCounter == fence.fence);
 
 			fence.wait();
 

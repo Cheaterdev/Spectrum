@@ -91,14 +91,15 @@ struct ResourceAllocInfo
 	CD3DX12_RESOURCE_DESC d3ddesc;
 	Render::HeapType heap_type;
 // setup
-	int valid_from;
-	int valid_to;
+	Pass* valid_from = nullptr;
+	Pass* valid_to = nullptr;
 
 
 	bool enabled = true;
 
 	bool is_new = false;
 	std::list<Pass*> writers;
+	std::list<Pass*> readers;
 
 //compile
 	std::map<Render::ResourceHandle, Render::Resource::ptr> resource_places;
@@ -112,6 +113,13 @@ struct ResourceAllocInfo
 	bool need_recreate = false;
 	bool passed = false;
 	size_t frame_id;
+
+	Pass* get_last_writer()
+	{
+		if (writers.empty()) return nullptr;
+
+		return writers.back();
+	}
 };
 
 
@@ -207,14 +215,16 @@ enum class PassFlags
 struct Pass
 {
 	int id = 0;
+	int call_id;
 	bool enabled = true;
 	bool renderable = true;
 	PassFlags flags;
 	std::string name;
 	UsedResources used;
 	FrameContext context;
+	std::set<Pass*> related;
 	std::future<void> render_task;
-
+	Render::FenceWaiter fence_end;
 	virtual bool setup(TaskBuilder& builder) = 0;
 
 
@@ -296,6 +306,7 @@ public:
 	std::list<std::shared_ptr<Pass>> passes;
 
 	std::list<std::shared_ptr<Pass>> required_passes;
+	std::list<Pass*> enabled_passes;
 
 public:
 	TaskBuilder builder;

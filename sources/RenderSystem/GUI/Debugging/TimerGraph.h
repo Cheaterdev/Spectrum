@@ -23,7 +23,7 @@ namespace GUI
 
 				double start_time;
 				double end_time;
-
+				Render::CommandListType queue_type;
 
 			};
 			struct collected_data
@@ -53,6 +53,7 @@ namespace GUI
 				base::ptr info;
 				double start_time;
 				double end_time;
+			
 			public:
 
 

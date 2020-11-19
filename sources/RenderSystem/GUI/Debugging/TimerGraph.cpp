@@ -187,17 +187,17 @@ namespace GUI
 						auto& block = data.blocks[i];
 
 						GraphElement::ptr obj(new GraphElement(&block));
-						obj->pos = { 80000 * std::chrono::duration<double>(block.start_time - start).count(), 50 * (block.block->calculate_depth() - 1) };
-						obj->size = { 80000 * std::chrono::duration<double>(block.end_time - block.start_time).count() ,50 };
+						obj->pos = { 80000 * std::chrono::duration<double>(block.start_time - start).count(), 25 * (block.block->calculate_depth() - 1) };
+						obj->size = { 80000 * std::chrono::duration<double>(block.end_time - block.start_time).count() ,25 };
 
 						thread_backs[block.thread_id - 1]->add_child(obj);
 
 					}
 
-
-					base::ptr gpu_block(new base);
-
-
+				
+					base::ptr gpu_blocks[3];// (new base);
+				
+					for(int i=0;i<3;i++)
 					{
 
 						image::ptr back(new image());
@@ -210,7 +210,7 @@ namespace GUI
 					//	back->padding = { 4,4,4,4 };
 						back->size = { 80000 * std::chrono::duration<double>(end - start).count() ,0 };
 						front->add_child(back);
-						gpu_block = back;
+						gpu_blocks[i] = back;
 					}
 
 
@@ -219,10 +219,11 @@ namespace GUI
 					{
 						auto& block = data.gpu_blocks[i];
 						GraphElement::ptr obj(new GraphElement(&block));
-						obj->pos = { 80000 * std::chrono::duration<double>(block.start_time - gpu_start).count(),  50 * (block.block->calculate_depth() - 1) };
-						obj->size = { 80000 * std::chrono::duration<double>(block.end_time - block.start_time).count() ,50 };
+						obj->pos = { 80000 * std::chrono::duration<double>(block.start_time - gpu_start).count(),  25 * (block.block->calculate_depth() - 1) };
+						obj->size = { 80000 * std::chrono::duration<double>(block.end_time - block.start_time).count() ,25 };
 
-						gpu_block->add_child(obj);
+						int id = int(block.queue_type);
+						gpu_blocks[id]->add_child(obj);
 
 					}
 					
@@ -309,7 +310,7 @@ namespace GUI
 
 					data.start_time = b->gpu_counter.timer.get_start();
 					data.end_time = b->gpu_counter.timer.get_end();
-
+					data.queue_type = b->gpu_counter.timer.queue_type;
 
 				/*
 

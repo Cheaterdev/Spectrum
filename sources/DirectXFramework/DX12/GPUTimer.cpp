@@ -5,6 +5,7 @@ namespace DX12
 {
 	void GPUTimeManager::start(GPUTimer& timer, DX12::Eventer*  list)
 	{
+		timer.queue_type = list->get_type();
 		list->insert_time(heap, timer.id * 2);
 	}
 

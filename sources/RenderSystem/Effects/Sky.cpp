@@ -135,7 +135,7 @@ void SkyRender::generate(FrameGraph& graph)
 
 		return changed;
 		}, [this, &graph](SkyData& data, FrameContext& _context) {
-	
+
 
 
 			auto& list = *_context.get_list();
@@ -175,7 +175,7 @@ void SkyRender::generate(FrameGraph& graph)
 
 				graphics.set_viewport(sky_cubemap.get_viewport());
 				graphics.set_scissor(sky_cubemap.get_scissor());
-			
+
 
 				for (unsigned int i = 0; i < 6; i++)
 				{
@@ -231,6 +231,22 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 
 	};
 
+	graph.pass<EnvData>("CubeMapDownsample", [this, &graph](EnvData& data, TaskBuilder& builder) {
+		data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::UnorderedAccess);
+		if (data.sky_cubemap->is_changed())
+		{
+			return true;
+		}
+		return false;
+		}, [this, &graph](EnvData& data, FrameContext& _context) {
+			auto sky_cubemap = _context.get_texture(data.sky_cubemap);
+			auto& list = *_context.get_list();
+
+			MipMapGenerator::get().generate_cube(list.get_compute(), sky_cubemap);
+		}, PassFlags::Compute
+			);
+
+
 	graph.pass<EnvData>("CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
 		data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
 
@@ -255,7 +271,7 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 			auto& list = *_context.get_list();
 			auto& graphics = list.get_graphics();
 
-				MipMapGenerator::get().generate_cube(list.get_compute(), sky_cubemap);
+			MipMapGenerator::get().generate_cube(list.get_compute(), sky_cubemap);
 			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 
