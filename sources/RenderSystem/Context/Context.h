@@ -333,7 +333,7 @@ public:
 	}HalfBuffer;
 
 
-	void SetTable(Table::GBuffer& table)
+	void SetTable(Table::GBuffer table)
 	{
 		table.GetAlbedo() = albedo.get_srv();
 		table.GetNormals() = normals.get_srv();

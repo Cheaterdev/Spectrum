@@ -53,7 +53,7 @@ namespace GUI
 
         class tree_element : public base, public tree_item_listener
         {
-                friend class tree;
+                friend class GUI::Elements::tree;
                 friend class toogle_icon;
                 friend class line;
 

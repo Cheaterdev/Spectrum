@@ -179,7 +179,7 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
 
         MaterialTNode()
         {
-            start_if_output = true;
+            T::start_if_output = true;
         }
 
 

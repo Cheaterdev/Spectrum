@@ -324,6 +324,14 @@ namespace DX12
 		base.get_native_list()->CopyBufferRegion(
 			resource->get_native().Get(), offset, info.resource->get_native().Get(), info.offset, size);
 	}
+
+	void Uploader::write(UploadInfo& info, size_t offset, void* data, size_t size)
+	{
+		memcpy(info.resource->get_data() + info.offset + offset, data, size);
+	}
+
+
+
 	D3D12_GPU_VIRTUAL_ADDRESS Uploader::UploadInfo::get_gpu_address()
 	{
 		return resource->get_gpu_address() + offset;
@@ -341,7 +349,7 @@ namespace DX12
 
 		D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
 		desc.BufferLocation = resource->get_gpu_address()+offset;
-		desc.SizeInBytes = Math::AlignUp(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
+		desc.SizeInBytes = (UINT)Math::AlignUp(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 		assert(desc.SizeInBytes < 65536);
 		Handle h = list.frame_resources->srv_uav_cbv_cpu.place();
@@ -499,7 +507,7 @@ namespace DX12
 		list->SetGraphicsRootConstantBufferView(i, buff->get_gpu_address());
 	}
 
-	void  GraphicsContext::set_pipeline(PipelineState::ptr& state)
+	void  GraphicsContext::set_pipeline(PipelineState::ptr state)
 	{
 		set_signature(state->desc.root_signature);
 		base.set_pipeline_internal(state.get());
@@ -652,13 +660,13 @@ namespace DX12
 	{
 		if (!transitions.empty())
 		{
-			m_commandList->ResourceBarrier(transitions.size(), transitions.data());
+			m_commandList->ResourceBarrier((UINT)transitions.size(), transitions.data());
 			transitions.clear();
 		}
 	}
 	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
 	{
-		auto& timer = Profiler::get().start(L"fix_pretransitions");
+		auto timer = Profiler::get().start(L"fix_pretransitions");
 
 		std::vector<D3D12_RESOURCE_BARRIER> result;
 		std::vector<Resource*> discards;
@@ -1000,7 +1008,7 @@ void ComputeContext::dispach(int x,int y,int z)
 		list->SetComputeRootDescriptorTable(i, table.gpu);
 	}
 
-	void ComputeContext::set_pipeline(ComputePipelineState::ptr& state)
+	void ComputeContext::set_pipeline(ComputePipelineState::ptr state)
 	{
 		if(state->desc.root_signature)
 		set_signature(state->desc.root_signature);

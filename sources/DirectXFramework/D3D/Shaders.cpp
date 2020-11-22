@@ -283,7 +283,7 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 	//	auto file = FileSystem::get().get_file("raytracing.hlsl");
 
 	//	auto data = file->load_all();
-	library->CreateBlobWithEncodingFromPinned((LPBYTE)shaderText.data(), shaderText.size(), CP_UTF8, &pSource);
+	library->CreateBlobWithEncodingFromPinned((LPBYTE)shaderText.data(), (UINT)shaderText.size(), CP_UTF8, &pSource);
 
 
 	shader_include_dxil dxil_include(includer);
@@ -300,7 +300,7 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 		convert(entry_point).c_str(),          // entry point function
 		convert(target).c_str(),        // target profile
 		vargs.data(),           // compilation arguments
-		vargs.size(), // number of compilation arguments
+		(UINT)vargs.size(), // number of compilation arguments
 		defines.data(), (UINT)defines.size(),    // name/value defines and their count
 		&dxil_include,          // handler for #include directives
 		&result);

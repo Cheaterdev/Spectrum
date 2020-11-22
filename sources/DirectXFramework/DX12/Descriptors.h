@@ -455,15 +455,15 @@ public:
 	}
 	std::mutex m;
 
-	DescriptorPage* create_page(int count = 1)
+	DescriptorPage* create_page(UINT count = 1)
 	{
 
-		int pages_count = (count + 32 - 1) / 32;
+		UINT pages_count = (count + 32 - 1) / 32;
 
 		std::lock_guard<std::mutex> g(m);
 		auto handle = allocator.Allocate(pages_count, 1);
 
-		return new DescriptorPage(this, handle, handle.get_offset()*32, pages_count*32);
+		return new DescriptorPage(this, handle, (UINT)(handle.get_offset()*32), pages_count*32);
 	}
 
 	void free_page(DescriptorPage* page)
@@ -474,7 +474,7 @@ public:
 		delete page;
 	}
 
-	UINT used_size()
+	size_t used_size()
 	{
 		return allocator.get_max_usage();
 	}
@@ -600,7 +600,7 @@ class DynamicDescriptor
 
 	void reset()
 	{
-		LockPolicy::guard g(m);
+		typename LockPolicy::guard g(m);
 
 		for (auto& p : pages)
 			p->free();
@@ -611,7 +611,7 @@ class DynamicDescriptor
 
 	HandleTableLight prepare(UINT count)
 	{
-		LockPolicy::guard g(m);
+		typename LockPolicy::guard g(m);
 
 		if (pages.empty() || !pages.back()->has_free_size(count))
 		{
@@ -636,7 +636,7 @@ public:
 
 	HandleTableLight place(std::initializer_list<Handle> list)
 	{
-		auto table = prepare(list.size());
+		auto table = prepare((UINT)list.size());
 
 		int i = 0;
 		for (auto& e : list)

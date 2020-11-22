@@ -125,27 +125,30 @@ namespace DX12
 			return info;
 		}
 
+
+		void write(UploadInfo& info, size_t offset, void* data, size_t size);
+
 		template<class T>
 		void write(UploadInfo& info, const std::span<T>& arg)
 		{
-			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
+			write(info,0, (void*)arg.data(), arg.size() * sizeof(T));
 		}
 		template<class T>
 		void write(UploadInfo& info, const std::vector<T>& arg)
 		{
-			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
+			write(info,0, (void*)arg.data(), arg.size() * sizeof(T));
 		}
 
 		template<class T>
 		void write(UploadInfo& info, const my_unique_vector<T>& arg)
 		{
-			memcpy(info.resource->get_data() + info.offset, arg.data(), arg.size() * sizeof(T));
+			write(info,0, (void*)arg.data(), arg.size() * sizeof(T));
 		}
 
 		template<class T>
 		void write(UploadInfo& info, size_t& offset, const std::vector<T>& arg)
 		{
-			memcpy(info.resource->get_data() + info.offset + offset, arg.data(), arg.size() * sizeof(T));
+			write(info, offset, (void*)arg.data(), arg.size() * sizeof(T));
 			offset += arg.size() * sizeof(T);
 		}
 
@@ -153,14 +156,14 @@ namespace DX12
 		template<class T>
 		void write(UploadInfo& info, size_t& offset, const my_unique_vector<T>& arg)
 		{
-			memcpy(info.resource->get_data() + info.offset + offset, arg.data(), arg.size() * sizeof(T));
+			write(info, offset, (void*)arg.data(), arg.size() * sizeof(T));
 			offset += arg.size() * sizeof(T);
 
 		}
 		template<class T>
 		void write(UploadInfo& info, size_t& offset, const T& arg)
 		{
-			memcpy(info.resource->get_data() + info.offset + offset, &arg, sizeof(T));
+			write(info, offset, (void*)&arg, sizeof(T));
 			offset += sizeof(T);
 
 			//Log::get() << "write " <<  Log::endl;
@@ -187,8 +190,6 @@ namespace DX12
 
 		//	std::shared_ptr<cb_buffer> cb;
 
-		using Uploader::place_raw;
-
 		void reset()
 		{
 			srv.reset();
@@ -208,7 +209,8 @@ namespace DX12
 
 	class StaticCompiledGPUData :public Singleton<StaticCompiledGPUData>, public GPUCompiledManager<Lockable>
 	{
-
+	public:
+		using Uploader::place_raw;
 	};
 	class FrameResources :public std::enable_shared_from_this<FrameResources>, public GPUCompiledManager<Lockable>
 	{
@@ -347,7 +349,7 @@ namespace DX12
 
 				auto& rtv = info->rtv.Texture2DArray;
 
-				for (int array = rtv.FirstArraySlice; array < rtv.FirstArraySlice + rtv.ArraySize; array++)
+				for (UINT array = rtv.FirstArraySlice; array < rtv.FirstArraySlice + rtv.ArraySize; array++)
 				{
 					UINT res = desc.CalcSubresource(rtv.MipSlice, array, rtv.PlaneSlice);
 					transition(info->resource_ptr, ResourceState::RENDER_TARGET, res);
@@ -407,7 +409,7 @@ namespace DX12
 				else
 				{
 
-					for (int array = uav.FirstArraySlice; array < uav.FirstArraySlice + uav.ArraySize; array++)
+					for (UINT array = uav.FirstArraySlice; array < uav.FirstArraySlice + uav.ArraySize; array++)
 					{
 						UINT res = desc.CalcSubresource(uav.MipSlice, array, uav.PlaneSlice);
 						transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, res);
@@ -437,7 +439,7 @@ namespace DX12
 			{
 				auto& dsv = info->dsv.Texture2DArray;
 
-				for (int array = dsv.FirstArraySlice; array < dsv.FirstArraySlice + dsv.ArraySize; array++)
+				for (UINT array = dsv.FirstArraySlice; array < dsv.FirstArraySlice + dsv.ArraySize; array++)
 				{
 					UINT res = desc.CalcSubresource(dsv.MipSlice, array, 0);
 					transition(info->resource_ptr, ResourceState::DEPTH_WRITE, res);
@@ -828,7 +830,8 @@ namespace DX12
 		{
 			return id;
 		}
-		int get_global_id()
+
+		UINT64 get_global_id()
 		{
 			return global_id;
 		}
@@ -1082,7 +1085,7 @@ namespace DX12
 
 
 		void set_signature(const RootSignature::ptr&) override;
-		void set_pipeline(std::shared_ptr<PipelineState>&);
+		void set_pipeline(std::shared_ptr<PipelineState>);
 
 
 
@@ -1154,7 +1157,7 @@ namespace DX12
 		{
 			D3D12_CPU_DESCRIPTOR_HANDLE handles[sizeof...(Handles)];
 			set_rtvs_internal(handles, list...);
-			m_commandList->OMSetRenderTargets(sizeof...(Handles), handles, false, h.is_valid() ? &h.cpu : nullptr);
+			list->OMSetRenderTargets(sizeof...(Handles), handles, false, h.is_valid() ? &h.cpu : nullptr);
 		}
 
 
@@ -1236,7 +1239,7 @@ namespace DX12
 
 		void flush_binds(bool force = false);
 		void set_signature(const RootSignature::ptr&);
-		void set_pipeline(std::shared_ptr<ComputePipelineState>&);
+		void set_pipeline(std::shared_ptr<ComputePipelineState>);
 
 
 		void dispach(int = 1, int = 1, int = 1);

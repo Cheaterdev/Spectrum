@@ -157,7 +157,7 @@ namespace Fonts
         mat4x4 m;
         m.identity();
         float w = 1, h = 1;
-        auto& vps = command_list->get_graphics().get_viewports();
+        auto vps = command_list->get_graphics().get_viewports();
 
         if (vps.size())
         {

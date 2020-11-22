@@ -271,7 +271,6 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 			auto& list = *_context.get_list();
 			auto& graphics = list.get_graphics();
 
-			MipMapGenerator::get().generate_cube(list.get_compute(), sky_cubemap);
 			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 

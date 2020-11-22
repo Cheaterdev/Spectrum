@@ -19,9 +19,9 @@ namespace GUI
             int counter = 0;
             using ptr = s_ptr<NinePatch>;
             NinePatch();
-            void draw(Render::context& c, Render::PipelineState::ptr& pipeline_state, rect r);
+            void draw(Render::context& c, Render::PipelineState::ptr pipeline_state, rect r);
             void draw(Render::context& c, GUI::Texture& item, rect r);
-            void draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr& pipeline_state);
+            void draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr pipeline_state);
 			void flush(Render::context& c);
     };
 
@@ -71,7 +71,7 @@ namespace GUI
 			void flush(Render::context& c);
 
             void draw(Render::context& c, GUI::Texture& item, rect r);
-            void draw(Render::context& c, Render::PipelineState::ptr& state, rect r);
+            void draw(Render::context& c, Render::PipelineState::ptr state, rect r);
             Renderer();
 
             void start()

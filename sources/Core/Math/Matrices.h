@@ -30,6 +30,9 @@ class matrix_data_t
 template<typename matrix_type>
 class matrix : public matrix_type
 {
+    using matrix_type::rows;
+    using matrix_type::N;
+	using matrix_type::M;   using matrix_type::Format;
 
 /*	template<class T2>
 	int set_internal(int i, T2 d,
@@ -45,7 +48,7 @@ class matrix : public matrix_type
 	int set_internal(int i, T2 d,
 		typename std::enable_if < !std::is_compound<T2>::value >::type* = 0)
 	{
-		matrix_type::elems[i++] = static_cast<matrix_type::Format>(d);
+		matrix_type::elems[i++] = static_cast<typename matrix_type::Format>(d);
 		return i;
 	}
 
@@ -92,7 +95,7 @@ class matrix : public matrix_type
         typename matrix_type::RowFormat GetRow(unsigned int i) const { return rows[i]; }
         typename matrix_type::ColumnFormat GetColumn(unsigned int j) const
         {
-            matrix_type::ColumnFormat v;
+           typename matrix_type::ColumnFormat v;
 
             for (int i = 0; i < N; ++i)
                 v[i] = rows[i][j];
@@ -319,6 +322,7 @@ class matrix_data_4x4_t
             d -= a14 * (a21 * a32 * a43 + a31 * a42 * a23 + a22 * a33 * a41 - (a23 * a32 * a41 + a31 * a22 * a43 + a42 * a33 * a21));
             return d;
         }
+
         bool inverse(/*float threshold = eps4*/)
         {
             Format d = det();
@@ -326,8 +330,8 @@ class matrix_data_4x4_t
             //    return false;
             d = 1 / d;
             // Cached values
-            Format a22_a33 = a22 * a33;
-            mat4x4 m;
+            auto a22_a33 = a22 * a33;
+            matrix_data_4x4_t<data_type> m;
             m.a11 = a22_a33 * a44 + a32 * a43 * a24 + a23 * a34 * a42 - a24 * a33 * a42 - a32 * a23 * a44 - a43 * a34 * a22;
             m.a21 = a24 * a33 * a41 + a31 * a23 * a44 + a43 * a34 * a21 - a21 * a33 * a44 - a31 * a43 * a24 - a23 * a34 * a41;
             m.a31 = a21 * a32 * a44 + a31 * a42 * a24 + a22 * a34 * a41 - a24 * a32 * a41 - a31 * a22 * a44 - a42 * a34 * a21;
@@ -370,7 +374,7 @@ class matrix_data_4x4_t
         matrix_data_4x4_t& rotationAxis(vec3 dir, float angle)
         {
             quat q(dir, angle);
-            q.toMatrix(*this);
+          //  q.toMatrix(*this);
             return *this;
         }
 
@@ -473,6 +477,7 @@ class matrix_data_4x4_t
             a41 = 0;	a42 = 0;	a43 = 0;	a44 = 1;
             return *this;
         }
+
         matrix_data_4x4_t& skew(quat& q)
         {
             a11 = -q.x;	a12 = -q.y;	a13 = -q.z;	a14 = 0;
@@ -506,8 +511,8 @@ class matrix_data_4x4_t
         	*/
 };
 
-typedef matrix<matrix_data_4x4_t<float>> mat4x4;
-typedef matrix<matrix_data_t<3,4, float>> mat4x3;
+using mat4x4 = matrix<matrix_data_4x4_t<float>>;
+using mat4x3 = matrix<matrix_data_t<3,4, float>>;
 
 
 template<typename VectorFormatIn, typename MatrixFormat>

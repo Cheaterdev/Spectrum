@@ -61,7 +61,7 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 
 			new_block.begin = used_block.end + 1;
 			if (new_block.begin <= new_block.end) {
-				auto& [new_free, inserted] = free_blocks.insert(new_block);
+				auto [new_free, inserted] = free_blocks.insert(new_block);
 				fences[new_block.begin] = &*new_free;
 				fences[new_block.end] = &*new_free;
 			}
@@ -186,7 +186,7 @@ void CommonAllocator::Free(Handle& handle)
 
 	assert(my_block.end >= my_block.begin);
 	{
-		auto& [elem, inserted] = free_blocks.insert(my_block);
+		auto [elem, inserted] = free_blocks.insert(my_block);
 		auto* block_ptr = &*elem;
 
 
@@ -235,7 +235,7 @@ void CommonAllocator::Reset()
 	ASSERT_SINGLETHREAD
 	free_blocks.clear();
 	fences.clear();
-	auto& [elem, inserted] = free_blocks.insert(block{ 0,size - 1 });
+	auto [elem, inserted] = free_blocks.insert(block{ 0,size - 1 });
 	fences[0] = &*elem;
 	fences[size - 1] = &*elem;
 

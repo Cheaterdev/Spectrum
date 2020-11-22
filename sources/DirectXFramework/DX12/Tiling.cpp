@@ -17,7 +17,7 @@ namespace DX12 {
 
 	}
 
-	void  TiledResourceManager::map_buffer_tile(int x)
+	void  TiledResourceManager::map_buffer_tile(size_t x)
 	{
 		assert(tiles.size() == 1);
 
@@ -33,7 +33,7 @@ namespace DX12 {
 		std::vector<UINT> rangeTileCounts;
 
 		D3D12_TILED_RESOURCE_COORDINATE TRC;
-		TRC.X = x;
+		TRC.X = (UINT)x;
 		TRC.Y = 0;
 		TRC.Z = 0;
 		TRC.Subresource = 0;
@@ -52,8 +52,8 @@ namespace DX12 {
 
 
 		rangeFlags.push_back(D3D12_TILE_RANGE_FLAG_NONE);
-		heapRangeStartOffsets.push_back(tile.heap_position.offset);
-		rangeTileCounts.push_back(TRS.NumTiles);
+		heapRangeStartOffsets.push_back((UINT)tile.heap_position.offset);
+		rangeTileCounts.push_back((UINT)TRS.NumTiles);
 
 		Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
 			resource.Get(),
@@ -85,7 +85,7 @@ namespace DX12 {
 		if (num_tiles > 0 && num_sub_res > 0)
 		{
 			tiles.resize(num_sub_res);
-			for (int i = 0; i < num_sub_res; i++)
+			for (UINT  i = 0; i < num_sub_res; i++)
 				tiles[i].resize(tilings[i].DepthInTiles * tilings[i].WidthInTiles * tilings[i].HeightInTiles);
 
 

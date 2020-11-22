@@ -172,9 +172,9 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 			if (mip == 0)
 			{
 
-				auto& tile1 = tiled_volume_albedo->create_static_tile(pos / lighed_to_albedo_coeff, mip);
-				auto& tile2 = tiled_volume_normal->create_static_tile(pos / lighed_to_albedo_coeff, mip);
-				auto& tile3 = tiled_volume_lighted->create_static_tile(pos, mip);
+				auto tile1 = tiled_volume_albedo->create_static_tile(pos / lighed_to_albedo_coeff, mip);
+				auto tile2 = tiled_volume_normal->create_static_tile(pos / lighed_to_albedo_coeff, mip);
+				auto tile3 = tiled_volume_lighted->create_static_tile(pos, mip);
 				//	tile->last_visible = std::chrono::system_clock::now().time_since_epoch().count();
 			}
 			else
@@ -279,7 +279,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 		dynamic_generator.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
 		dynamic_generator_voxelizing.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
 
-		scene->iterate_meshes(MESH_TYPE::DYNAMIC, [this](scene_object::ptr& obj) {
+		scene->iterate_meshes(MESH_TYPE::DYNAMIC, [this](scene_object::ptr obj) {
 
 			MeshAssetInstance* mesh = dynamic_cast<MeshAssetInstance*>(obj.get());
 
@@ -310,7 +310,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 
 		if (!tile || !tile->has_static)
 		{
-			auto& tile2 = tiled_volume_lighted->create_tile(pos, 0);
+			auto tile2 = tiled_volume_lighted->create_tile(pos, 0);
 			tile2->has_dynamic = true;
 		}
 
@@ -319,8 +319,8 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 	for (auto& e : dynamic_generator_voxelizing.tiles_to_load)
 	{
 		auto pos = dynamic_generator_voxelizing.get_pos(e);
-		auto& tile1 = tiled_volume_albedo->create_dynamic_tile(pos, 0);
-		auto& tile2 = tiled_volume_normal->create_dynamic_tile(pos, 0);
+		auto tile1 = tiled_volume_albedo->create_dynamic_tile(pos, 0);
+		auto tile2 = tiled_volume_normal->create_dynamic_tile(pos, 0);
 	}
 
 

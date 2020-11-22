@@ -36,9 +36,9 @@ namespace DX12
 	void Fence::wait(UINT64 value) const
 	{
 		static thread_local Event e;
-		auto compl = m_fence->GetCompletedValue();
+	//	UINT64 compl = m_fence->GetCompletedValue();
 
-		if (compl < value)
+		if (m_fence->GetCompletedValue() < value)
 		{
 			m_fence->SetEventOnCompletion(value, e.m_fenceEvent);
 			e.wait();

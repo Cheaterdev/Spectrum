@@ -53,19 +53,19 @@ namespace GUI
                     item->x_type = pos_x_type::LEFT;
                     item->magnet_text = FW1_LEFT | FW1_VCENTER;
 
-                    if (block.get_level_internal() == static_cast<int>(log_level_internal::level_error))
+                    if (block.get_level_internal() == log_level_internal::level_error)
                         item->color = rgba8(200, 0, 0, 255);
 
-                    if (block.get_level_internal() == static_cast<int>(log_level_internal::level_debug))
+                    if (block.get_level_internal() == log_level_internal::level_debug)
                         item->color = rgba8(0, 100, 0, 255);
 
-                    if (block.get_level_internal() == static_cast<int>(log_level_internal::level_warning))
+                    if (block.get_level_internal() == log_level_internal::level_warning)
                         item->color = rgba8(150, 150, 0, 255);
 
-                    if (block.get_level_internal() == static_cast<int>(log_level_internal::level_none))
+                    if (block.get_level_internal() == log_level_internal::level_none)
                         item->color = rgba8(200, 200, 200, 255);
 
-                    if (block.get_level_internal() == static_cast<int>(log_level_internal::level_info))
+                    if (block.get_level_internal() == log_level_internal::level_info)
                         item->color = rgba8(0, 0, 200, 255);
 
                     std::lock_guard<std::mutex> g(m);

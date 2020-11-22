@@ -223,70 +223,10 @@ namespace DX12
 	private: 
 		friend class boost::serialization::access;
 		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
-		{
-			ar& NVP(name);
-
-			ar& NVP(topology);
-			ar& NVP(blend);
-			ar& NVP(rasterizer);
-			ar& NVP(rtv);
-
-			
-			if constexpr (Archive::is_saving::value)
-			{
-
-				auto sig = dynamic_cast<RootLayout*>(root_signature.get());
-				ar& NVP(sig->layout);
-				auto save_header = [&](auto &shader) {
-				
-					bool has_header = !!shader;
-					ar& NVP(has_header);
-
-					if (has_header)
-						ar& NVP(shader->get_header());
-				};
-			
-				save_header(pixel);
-				save_header(vertex);
-				save_header(geometry);
-				save_header(hull);
-				save_header(domain);
-
-			}
-			else
-			{
-				Layouts l;
-
-				ar& NVP(l);
-
-				root_signature = get_Signature(l);
-				auto load_header = [&]<class T>(std::shared_ptr<T>& shader) {
-
-					bool has_header;
-					ar& NVP(has_header);
-
-					if (has_header)
-					{
-						D3D::shader_header header;
-						ar& NVP(header);
-
-						shader = T::get_resource(header);
-					}
-						
-				};
-
-
-
-				load_header(pixel);
-				load_header(vertex);
-				load_header(geometry);
-				load_header(hull);
-				load_header(domain);
-			}
-		}
+		void serialize(Archive& ar, const unsigned int);
 	};
-	
+
+
 
 	template<class K0, class K1, class...Ks>
 	struct my_map;

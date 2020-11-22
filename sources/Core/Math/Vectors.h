@@ -28,8 +28,12 @@ class Vector : public T
 	{
 	}
 
-public:
+	
 
+public:
+	using T::values;
+	using T::Format;
+	using T::N;
 	using raw = typename T;
 	template<typename = typename std::enable_if_t<T::GENERATE_CONSTRUCTOR>>
 	Vector()
@@ -51,10 +55,10 @@ public:
 
 	typename T::Format* data()
 	{
-		return values.data();
+		return this->values.data();
 	}
-	typename T::Format& operator[](unsigned int i) { return values[i]; }
-	typename const T::Format& operator[](unsigned int i) const { return values[i]; }
+	typename T::Format& operator[](unsigned int i) { return this->values[i]; }
+	typename const T::Format& operator[](unsigned int i) const { return this->values[i]; }
 
 	template<class T2, typename = typename std::enable_if_t<N == T2::N>>
 	Vector& operator=(const Vector<T2>& v)
@@ -194,7 +198,7 @@ public:
 	template<typename T>
 	static typename T::Format dot(const Vector<T>& a, const Vector<T>& b)
 	{
-		T::Format r = 0.0;
+		typename T::Format r = 0.0;
 
 		for (int i = 0; i < T::N; i++)
 			r += a[i] * b[i];

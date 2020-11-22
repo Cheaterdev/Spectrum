@@ -521,7 +521,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
                 if (mip > 7) continue;
 
                 // tile_mutex.lock();
-                auto current_mip = unsigned int(residency_data_uploaded->array[0]->mips[0]->data[t * 4]);
+                auto current_mip = (unsigned int)(residency_data_uploaded->array[0]->mips[0]->data[t * 4]);
                 //  tile_mutex.unlock();
                 //  auto tile = 	get_tile(mip, pos);
 

@@ -44,6 +44,7 @@
 #include <compare>
 #include <span>
 #include <stack>
+#include <ranges>
 #include <comdef.h>
 // BOOST includes
 //#define BOOST_DECL_EXPORTS
@@ -181,7 +182,7 @@ public:
 
 	void insert(const T& elem)
 	{
-		push_back(elem);
+		std::vector<T>::push_back(elem);
 	}
 	void erase(const T& elem)
 	{
@@ -214,7 +215,7 @@ void unreferenced_parameter(const T&)
 
 #include "../3rdparty/ZipLib/ZipFile.h"
 #include "../3rdparty/ZipLib/streams/memstream.h"
-
+#include "DebugInfo/Exceptions.h"
 #include "Data/Data.h"
 #include "patterns/Singleton.h"
 #include "patterns/SharedObject.h"
@@ -222,12 +223,15 @@ void unreferenced_parameter(const T&)
 #include "Patterns/IdGenerator.h"
 #include "Patterns/Holdable.h"
 
-#include "Data/md5.h"
-#include "Serialization/Serializer.h"
-
 #include "Log/Events.h"
-
 #include "Log/Log.h"
+
+#include "Serialization/Serializer.h"
+#include "Data/md5.h"
+
+
+
+
 #include "Log/Tasks.h"
 #include "DebugInfo/Debug.h"
 #include "Tree/Tree.h"
@@ -248,3 +252,6 @@ void unreferenced_parameter(const T&)
 #define GUID_WINDOWS
 #include "guid/guid.h"
 #include "Allocators/Allocators.h"
+
+
+#include "patterns/Singleton.hpp"

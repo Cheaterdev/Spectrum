@@ -250,7 +250,7 @@ namespace DX12
 		}
 	}
 
-	void CubemapArrayView::place_srv( Handle & h)
+	void CubemapArrayView::place_srv( Handle  h)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -269,7 +269,7 @@ namespace DX12
 			Device::get().create_srv(h, resource, srvDesc);
 	}
 
-	void CubemapArrayView::place_srv( Handle & h, UINT offset)
+	void CubemapArrayView::place_srv( Handle h, UINT offset)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -364,7 +364,7 @@ namespace DX12
 		return srvs[0];
 	}
 
-	void CubemapView::place_srv( Handle & h)
+	void CubemapView::place_srv( Handle  h)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -379,7 +379,7 @@ namespace DX12
 		Device::get().create_srv(h, resource, srvDesc);
 	}
 
-	void CubemapView::place_srv( Handle & h, UINT mip)
+	void CubemapView::place_srv( Handle  h, UINT mip)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -498,19 +498,19 @@ namespace DX12
 	{
 		return rtvs[mip];
 	}
-	 void Texture2DView::place_srv(Handle & h)
+	 void Texture2DView::place_srv(Handle  h)
 	{
 		srv()(h);
 	}
-	 void Texture2DView::place_srv( Handle & h, UINT mip)
+	 void Texture2DView::place_srv( Handle  h, UINT mip)
 	{
 		srv(mip)(h);
 	}
-	 void Texture2DView::place_rtv( Handle & h, int i)
+	 void Texture2DView::place_rtv( Handle  h, int i)
 	{
 		rtv(i)(h);
 	}
-	 void Texture2DView::place_dsv( Handle & h, UINT mip)
+	 void Texture2DView::place_dsv( Handle  h, UINT mip)
 	{
 		D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
 		desc.Format = to_dsv(resource->get_desc().Format);
@@ -531,13 +531,13 @@ namespace DX12
 
 
 	}
-	 void Texture2DView::place_uav( Handle & h, UINT mip, UINT slice)
+	 void Texture2DView::place_uav( Handle  h, UINT mip, UINT slice)
 	{
 		uav(mip, slice)(h);
 	}
-	 std::function<void( Handle&)> Texture2DView::uav(UINT mip, UINT slice)
+	 std::function<void( Handle)> Texture2DView::uav(UINT mip, UINT slice)
 	{
-		return [this, mip, slice]( Handle & h)
+		return [this, mip, slice]( Handle  h)
 		{
 			if (!resource) return;
 
@@ -561,9 +561,9 @@ namespace DX12
 
 		};
 	}
-	 std::function<void( Handle&)> Texture2DView::srv(PixelSpace space)
+	 std::function<void( Handle)> Texture2DView::srv(PixelSpace space)
 	{
-		return [this, space]( Handle & h)
+		return [this, space]( Handle h)
 		{
 			if (!resource) return;
 
@@ -594,9 +594,9 @@ namespace DX12
 			Device::get().create_srv(h, resource, srvDesc);
 		};
 	}
-	 std::function<void(Handle&)> Texture2DView::srv(UINT mip, UINT levels)
+	 std::function<void(Handle)> Texture2DView::srv(UINT mip, UINT levels)
 	{
-		return [this, mip, levels]( Handle & h)
+		return [this, mip, levels]( Handle  h)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);
@@ -620,9 +620,9 @@ namespace DX12
 			Device::get().create_srv(h, resource, srvDesc);
 		};
 	}
-	 std::function<void( Handle&)> Texture2DView::rtv(UINT mip)
+	 std::function<void( Handle)> Texture2DView::rtv(UINT mip)
 	{
-		return [this, mip]( Handle & h)
+		return [this, mip]( Handle  h)
 		{
 			D3D12_RENDER_TARGET_VIEW_DESC desc = {};
 			desc.Format = to_srv(resource->get_desc().Format);
@@ -724,11 +724,11 @@ namespace DX12
 	{
 		return rtvs[index + 6 * mip];
 	}
-	 void Texture3DView::place_srv( Handle & h, int level)
+	 void Texture3DView::place_srv( Handle  h, int level)
 	{
 		srv(level)(h);
 	}
-	 void Texture3DView::place_uav( Handle & h, int level)
+	 void Texture3DView::place_uav( Handle  h, int level)
 	{
 		uav(level)(h);
 	}
@@ -750,9 +750,9 @@ namespace DX12
 	{
 		return static_uav.get_base();
 	}
-	 std::function<void(Handle&)> Texture3DView::srv(int level, int levels)
+	 std::function<void(Handle)> Texture3DView::srv(int level, int levels)
 	{
-		return [this, level, levels]( Handle & h)
+		return [this, level, levels]( Handle  h)
 		{
 			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 			srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -766,9 +766,9 @@ namespace DX12
 
 		};
 	}
-	 std::function<void(Handle&)> Texture3DView::uav(int level)
+	 std::function<void(Handle)> Texture3DView::uav(int level)
 	{
-		return [this, level]( Handle & h)
+		return [this, level]( Handle  h)
 		{
 			D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
 			desc.Format = resource->get_desc().Format;
@@ -823,7 +823,7 @@ namespace DX12
 		return rtvs[index + 6 * mip];
 	}
 
-	 void Array2DView::place_srv(Handle & h)
+	 void Array2DView::place_srv(Handle  h)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);// D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -840,7 +840,7 @@ namespace DX12
 	
 	}
 
-	 void Array2DView::place_dsv(Handle & h, UINT mip, UINT slice, UINT slice_count)
+	 void Array2DView::place_dsv(Handle  h, UINT mip, UINT slice, UINT slice_count)
 	{
 		D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
 		desc.Format = to_dsv(resource->get_desc().Format);
@@ -853,7 +853,7 @@ namespace DX12
 	
 	}
 
-	 void Array2DView::place_uav(Handle & h, UINT first, UINT count, UINT mip, UINT slice)
+	 void Array2DView::place_uav(Handle  h, UINT first, UINT count, UINT mip, UINT slice)
 	{
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
 		desc.Format = resource->get_desc().Format;
@@ -866,9 +866,9 @@ namespace DX12
 		Device::get().create_uav(h, resource, desc);
 		}
 
-	 std::function<void(Handle&)> Array2DView::uav(UINT first, UINT count, UINT mip)
+	 std::function<void(Handle)> Array2DView::uav(UINT first, UINT count, UINT mip)
 	{
-		return [this, first, count, mip](Handle & h)
+		return [this, first, count, mip](Handle h)
 		{
 			if (!resource) return;
 

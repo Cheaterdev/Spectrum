@@ -112,7 +112,7 @@ namespace DX12
 			ComPtr<ID3D12Debug> debugController;
 			CComPtr<ID3D12Debug1> spDebugController1;
 
-			if(false)
+	if(false)
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 			{
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
@@ -260,29 +260,29 @@ namespace DX12
 		return result;
 	}
 
-	void  Device::create_rtv(Handle& h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv)
+	void  Device::create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv)
 	{
 		*h.resource_info = ResourceInfo(resource, rtv);
 		Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.cpu);
 	}
 	
-	void  Device::create_srv(Handle& h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
+	void  Device::create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
 	{
 		*h.resource_info = ResourceInfo(resource, srv);
 		Device::get().get_native_device()->CreateShaderResourceView(resource?resource->get_native().Get():nullptr, &srv, h.cpu);
 	}
 
-	void  Device::create_uav(Handle& h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {
+	void  Device::create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {
 		*h.resource_info = ResourceInfo(resource, counter, uav);
 		Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), counter? counter->get_native().Get() :nullptr, &uav, h.cpu);
 	}
 
-	void  Device::create_cbv(Handle& h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) {
+	void  Device::create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) {
 		*h.resource_info = ResourceInfo(resource, cbv);
 		Device::get().get_native_device()->CreateConstantBufferView(&cbv, h.cpu);
 	}
 
-	void  Device::create_dsv(Handle& h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) {
+	void  Device::create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) {
 		*h.resource_info = ResourceInfo(resource, dsv);
 		Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.cpu);
 	}

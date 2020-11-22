@@ -101,7 +101,7 @@ namespace GUI
 		container_tex.padding = {2,2,2,2};
     }
 
-    void Renderer::draw(Render::context& c, Render::PipelineState::ptr& state, rect r)
+    void Renderer::draw(Render::context& c, Render::PipelineState::ptr state, rect r)
     {
         nine_patch->draw(c, state, r);
     }

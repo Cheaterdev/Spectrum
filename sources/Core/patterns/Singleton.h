@@ -32,24 +32,9 @@ class Singleton
 			(Args::get(), ...);
 		}
 		*/
-        Singleton()
-        {
-            if (!std::is_same<T, Log>::value)
-                if (!std::is_same<T, ClassLogger<singleton_system>>::value)
-                    ClassLogger<singleton_system>::get() << Log::LEVEL_DEBUG << "Singleton creating " << typeid(T).name() << Log::endl;
-                else
-                    OutputDebugStringA((string("Singleton creating  ") + typeid(T).name() + "\n").c_str());
+        Singleton();
 
-        }
-
-        virtual  ~Singleton()
-        {
-            if (!std::is_same<T, Log>::value)
-                if (!std::is_same<T, ClassLogger<singleton_system>>::value)
-                    ClassLogger<singleton_system>::get() << Log::LEVEL_DEBUG << "Singleton deleting " << typeid(T).name() << Log::endl;
-                else
-                    OutputDebugStringA((string("Singleton deleting ") + typeid(T).name() + "\n").c_str());
-        }
+        virtual  ~Singleton();
     public:
         template<typename G = T>
         static T * create(typename std::enable_if<std::is_abstract<G>::value >::type* = 0)
@@ -106,6 +91,7 @@ class Singleton
             return instance.get();
         }
 };
+
 template <typename T>
 std::shared_ptr<T>  Singleton<T>::instance;
 template <typename T>

@@ -14,7 +14,7 @@ struct CompiledData
 		if (use_transitions) {
 			//	auto timer = Profiler::get().start(L"transitions");
 
-			for (size_t i = 0; i < table_srv.get_count(); ++i)
+			for (UINT i = 0; i < (UINT)table_srv.get_count(); ++i)
 			{
 				auto h = table_srv[i];
 				if (h.resource_info && h.resource_info->resource_ptr)
@@ -30,7 +30,7 @@ struct CompiledData
 
 			}
 
-			for (size_t i = 0; i < table_uav.get_count(); ++i)
+			for (UINT i = 0; i < (UINT)table_uav.get_count(); ++i)
 			{
 				auto h = table_uav[i];
 				if (h.resource_info && h.resource_info->resource_ptr)
@@ -143,7 +143,7 @@ struct DataHolder : public Table
 		//auto timer = Profiler::get().start(L"SMP");
 
 		compiled.table_smp = context.smp.place(sizeof(smp) / sizeof(Render::Handle));
-		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
+		auto ptr = reinterpret_cast<Render::Handle*>(&smp);
 		for (int i = 0; i < compiled.table_smp.get_count(); i++)
 		{
 			Render::Handle* handle = ptr + i;
@@ -164,16 +164,17 @@ struct DataHolder : public Table
 		{
 			//		auto timer = Profiler::get().start(L"SRV");
 
-			size_t srv_count = 0;
-			if constexpr (HasSRV<Table>) srv_count += sizeof(srv) / sizeof(Render::Handle);
-			if constexpr (HasBindless<Table>) srv_count += bindless.size();
+			UINT srv_count = 0;
+			if constexpr (HasSRV<Table>) srv_count += sizeof(Table::srv) / sizeof(Render::Handle);
+			if constexpr (HasBindless<Table>) srv_count += Table::bindless.size();
 
 			if (srv_count > 0) {
 				compiled.table_srv = context.srv.place(srv_count);
 				int _offset = 0;
 				if constexpr (HasSRV<Table>) {
-					auto ptr = reinterpret_cast<Render::Handle*>(&srv);
-					for (int i = 0; i < sizeof(srv) / sizeof(Render::Handle); i++)
+
+					Render::Handle* ptr = reinterpret_cast<Render::Handle*>(std::addressof(Table::srv));
+					for (int i = 0; i < sizeof(Table::srv) / sizeof(Render::Handle); i++)
 					{
 						if (ptr[i].cpu.ptr != 0)
 							compiled.table_srv[_offset++].place(ptr[i]);
@@ -189,10 +190,10 @@ struct DataHolder : public Table
 				if constexpr (HasBindless<Table>) {
 					//	auto timer = Profiler::get().start(L"Bindless");
 
-					for (int j = 0; j < bindless.size(); j++)
+					for (int j = 0; j < Table::bindless.size(); j++)
 					{
-						if (bindless[j].cpu.ptr != 0)
-							compiled.table_srv[_offset++].place(bindless[j]);
+						if (Table::bindless[j].cpu.ptr != 0)
+							compiled.table_srv[_offset++].place(Table::bindless[j]);
 						else
 						{
 							compiled.table_srv[_offset++].resource_info->resource_ptr = nullptr;
@@ -215,9 +216,9 @@ struct DataHolder : public Table
 		 //   auto timer = Profiler::get().start(L"CB");
 
 			if constexpr (HasData<Table>)
-				compiled.cb = context.place_raw(data, cb).get_resource_address();
+				compiled.cb = context.place_raw(Table::data, Table::cb).get_resource_address();
 			else
-				compiled.cb = context.place_raw(cb).get_resource_address();
+				compiled.cb = context.place_raw(Table::cb).get_resource_address();
 		}
 
 

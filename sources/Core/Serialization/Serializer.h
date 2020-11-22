@@ -192,7 +192,7 @@ public:
 			get_stream(data) >> obj;
 		}
 
-		catch (boost::archive::archive_exceptione)
+		catch (boost::archive::archive_exception e)
 		{
 			Log::get().crash_error(E_FAIL, e.what());
 		}

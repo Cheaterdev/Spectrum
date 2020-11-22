@@ -383,10 +383,17 @@ requires (T t) {
 	{T::__GENERATE_OPS__ } ;
 };
 
-
+template<EnumType Enum>
+Enum operator ~(const Enum l)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum> (
+		~static_cast<underlying>(l)
+		);
+}
 
 template<EnumType Enum>
-Enum operator |(Enum lhs, Enum rhs)
+Enum operator |(const Enum lhs, const Enum rhs)
 {
 	using underlying = typename std::underlying_type<Enum>::type;
 	return static_cast<Enum> (
@@ -398,7 +405,7 @@ Enum operator |(Enum lhs, Enum rhs)
 
 
 template<EnumType Enum>
-Enum operator &(Enum lhs, Enum rhs)
+Enum operator &(const Enum lhs, const Enum rhs)
 {
 	using underlying = typename std::underlying_type<Enum>::type;
 	return static_cast<Enum> (
@@ -409,7 +416,7 @@ Enum operator &(Enum lhs, Enum rhs)
 
 
 template<EnumType Enum>
-bool operator &&(Enum lhs, Enum rhs)
+bool operator &&(const Enum lhs, const Enum rhs)
 {
 	using underlying = typename std::underlying_type<Enum>::type;
 	return static_cast<Enum> (
@@ -421,7 +428,7 @@ bool operator &&(Enum lhs, Enum rhs)
 
 
 template<EnumType Enum>
-bool operator ==(Enum lhs, Enum rhs)
+bool operator ==(const Enum lhs, const Enum rhs)
 {
 	using underlying = typename std::underlying_type<Enum>::type;
 	return static_cast<Enum> (
@@ -430,6 +437,25 @@ bool operator ==(Enum lhs, Enum rhs)
 		);
 }
 
+template<EnumType Enum>
+bool operator !=(const Enum lhs, const Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum> (
+		static_cast<underlying>(lhs) !=
+		static_cast<underlying>(rhs)
+		);
+}
+
+template<EnumType Enum>
+bool operator <=(const Enum lhs, const Enum rhs)
+{
+	using underlying = typename std::underlying_type<Enum>::type;
+	return static_cast<Enum> (
+		static_cast<underlying>(lhs) <=
+		static_cast<underlying>(rhs)
+		);
+}
 
 template<EnumType Enum>
  bool check(Enum lhs)

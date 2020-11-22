@@ -225,6 +225,10 @@ struct Pass
 	std::set<Pass*> related;
 	std::future<void> render_task;
 	Render::FenceWaiter fence_end;
+
+	int graphic_count = 0;
+	int compute_count = 0;
+
 	virtual bool setup(TaskBuilder& builder) = 0;
 
 
@@ -310,7 +314,7 @@ public:
 
 public:
 	TaskBuilder builder;
-
+	bool optimize = true;
 	template<class T>
 	void pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 	{
@@ -326,7 +330,7 @@ public:
 	template<class T>
 	void add_pass(std::string name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 	{
-		TypedPass<T>::setup_func_type f = [s](T& t, TaskBuilder& b) {s(t, b); return true; };
+		typename TypedPass<T>::setup_func_type f = [s](T& t, TaskBuilder& b) {s(t, b); return true; };
 		
 		pass<T>(name, f, r, flags);
 	}

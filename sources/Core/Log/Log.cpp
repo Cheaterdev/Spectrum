@@ -5,26 +5,26 @@
 #include <boost/archive/impl/basic_xml_oarchive.ipp>
 #include <boost/archive/impl/xml_oarchive_impl.ipp>
 
-const std::string LogLevel<static_cast<int>(log_level_internal::level_none)>::NAME = "NONE";
-const std::string LogLevel<static_cast<int>(log_level_internal::level_error)>::NAME = "ERROR";
-const std::string LogLevel<static_cast<int>(log_level_internal::level_warning)>::NAME = "WARNING";
-const std::string LogLevel<static_cast<int>(log_level_internal::level_info)>::NAME = "INFO";
-const std::string LogLevel<static_cast<int>(log_level_internal::level_debug)>::NAME = "DEBUG";
-const std::string LogLevel<static_cast<int>(log_level_internal::level_all)>::NAME = "ALL";
+const std::string LogLevel<log_level_internal::level_none>::NAME = "NONE";
+const std::string LogLevel<log_level_internal::level_error>::NAME = "ERROR";
+const std::string LogLevel<log_level_internal::level_warning>::NAME = "WARNING";
+const std::string LogLevel<log_level_internal::level_info>::NAME = "INFO";
+const std::string LogLevel<log_level_internal::level_debug>::NAME = "DEBUG";
+const std::string LogLevel<log_level_internal::level_all>::NAME = "ALL";
 
 
-const LogLevel<static_cast<int>(log_level_internal::level_none)>		Log::LEVEL_NONE;
-const LogLevel<static_cast<int>(log_level_internal::level_error)>		Log::LEVEL_ERROR;
-const LogLevel<static_cast<int>(log_level_internal::level_warning)>	Log::LEVEL_WARNING;
-const LogLevel<static_cast<int>(log_level_internal::level_info)>		Log::LEVEL_INFO;
-const LogLevel<static_cast<int>(log_level_internal::level_debug)>		Log::LEVEL_DEBUG;
-const LogLevel<static_cast<int>(log_level_internal::level_all)>		Log::LEVEL_ALL;
+const LogLevel<log_level_internal::level_none>		Log::LEVEL_NONE;
+const LogLevel<log_level_internal::level_error>		Log::LEVEL_ERROR;
+const LogLevel<log_level_internal::level_warning>	Log::LEVEL_WARNING;
+const LogLevel<log_level_internal::level_info>		Log::LEVEL_INFO;
+const LogLevel<log_level_internal::level_debug>		Log::LEVEL_DEBUG;
+const LogLevel<log_level_internal::level_all>		Log::LEVEL_ALL;
 
 Log::endline Log::endl;
 
 Log::Log()
 {
-    logging_level = static_cast<int>(log_level_internal::level_none);
+    logging_level = log_level_internal::level_none;
 }
 
 Log::~Log()
@@ -123,11 +123,11 @@ LogBlock& LogBlock::operator<<(const wchar_t* smth)
     return *this;
 }
 
-LogBlock::LogBlock(Log& output, int level) : log(output)
+LogBlock::LogBlock(Log& output, log_level_internal level) : log(output)
 {
     log_level = level;
-    current_level = static_cast<int>(log_level_internal::level_info);
-    current_level_name = LogLevel<static_cast<int>(log_level_internal::level_info)>::NAME;
+    current_level =log_level_internal::level_info;
+    current_level_name = LogLevel<log_level_internal::level_info>::NAME;
     s.reset(new std::ostringstream());
     auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
     //  auto now_c = std::chrono::system_clock::to_time_t(now);

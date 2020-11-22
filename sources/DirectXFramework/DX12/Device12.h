@@ -38,11 +38,11 @@ namespace DX12
 		void create_sampler(D3D12_SAMPLER_DESC desc, CD3DX12_CPU_DESCRIPTOR_HANDLE handle);
 
 
-		void create_rtv(Handle&h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv);
-		void create_srv(Handle& h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv);
-		void create_uav(Handle& h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter = nullptr);
-		void create_cbv(Handle& h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv);
-		void create_dsv(Handle& h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv);
+		void create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv);
+		void create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv);
+		void create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter = nullptr);
+		void create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv);
+		void create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv);
 
 	};
 

@@ -36,7 +36,7 @@ namespace DX12
     //    list->transition(this, ResourceState::COMMON);
     }
 
-	 void GPUBuffer::place_srv_buffer( Handle & handle)
+	 void GPUBuffer::place_srv_buffer( Handle  handle)
 	{
 		D3D12_SHADER_RESOURCE_VIEW_DESC  srv = {};
 		srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -50,7 +50,7 @@ namespace DX12
         Device::get().create_srv(handle, this, srv);
      }
 
-	 void GPUBuffer::place_structured_uav( Handle & h, GPUBuffer::ptr counter_resource, unsigned int offset)
+	 void GPUBuffer::place_structured_uav( Handle  h, GPUBuffer::ptr counter_resource, unsigned int offset)
 	{
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -63,7 +63,7 @@ namespace DX12
         Device::get().create_uav(h, this, desc, counter_resource.get());
 	}
 
-	 void GPUBuffer::place_structured_srv( Handle& handle, UINT stride , unsigned int offset, unsigned int count)
+	 void GPUBuffer::place_structured_srv( Handle handle, UINT stride , unsigned int offset, unsigned int count)
 	 {
 		 D3D12_SHADER_RESOURCE_VIEW_DESC  srv = {};
 		 srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -110,7 +110,7 @@ namespace DX12
     }
 
 
-    void ByteBuffer::place_uav( Handle& h)
+    void ByteBuffer::place_uav( Handle h)
     {
         D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -122,7 +122,7 @@ namespace DX12
         Device::get().create_uav(h, this, desc);
     }
 
-    void ByteBuffer::place_srv( Handle& h)
+    void ByteBuffer::place_srv( Handle h)
     {
         D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
         desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;

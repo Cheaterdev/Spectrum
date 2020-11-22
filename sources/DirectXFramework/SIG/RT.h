@@ -12,9 +12,9 @@ struct CompiledRT
 		if (use_transitions) {
 			//	auto timer = Profiler::get().start(L"transitions");
 
-			for (size_t i = 0; i < table_rtv.get_count(); ++i)
+			for (UINT i = 0; i < (UINT)table_rtv.get_count(); ++i)
 			{
-				auto& h = table_rtv[i];
+				auto h = table_rtv[i];
 				if (h.resource_info && h.resource_info->resource_ptr)
 					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
 					{
@@ -23,9 +23,9 @@ struct CompiledRT
 					}
 
 			}
-			for (size_t i = 0; i < table_dsv.get_count(); ++i)
+			for (UINT i = 0; i < (UINT)table_dsv.get_count(); ++i)
 			{
-				auto& h = table_dsv[i];
+				auto h = table_dsv[i];
 				if (h.resource_info && h.resource_info->resource_ptr)
 					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
 					{

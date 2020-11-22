@@ -978,7 +978,7 @@ public:
 			Render::Texture::reload_all();
 		}
 		{
-			auto& timer = Profiler::get().start(L"AssetManager");
+			auto timer = Profiler::get().start(L"AssetManager");
 			AssetManager::get().tact();
 		}
 		//		DIRECTX.Run(MainLoop);
@@ -1184,7 +1184,7 @@ public:
 
 			process_ui(main_timer.tick());
 			{
-				auto& timer = Profiler::get().start(L"Wait next");
+				auto timer = Profiler::get().start(L"Wait next");
 				swap_chain->start_next();
 			}
 			setup_graph();
@@ -1193,7 +1193,7 @@ public:
 
 			{
 
-				auto& timer = Profiler::get().start(L"reset");
+				auto timer = Profiler::get().start(L"reset");
 
 				graph.reset();
 			}
@@ -1231,13 +1231,13 @@ public:
 		};
 
 		graph.start_new_frame();
-
+		graph.optimize = !GetAsyncKeyState(VK_F7);
 		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame());
 
 
 		{
 
-			auto& timer = Profiler::get().start(L"create_graph");
+			auto timer = Profiler::get().start(L"create_graph");
 			create_graph(graph);
 
 
@@ -1377,7 +1377,7 @@ resource_stages[&res.second] = input;
 		Window::input_handler = this;
 		DX12::swap_chain_desc desc;
 		desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		desc.fullscreen = false;
+		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;
 		swap_chain = Render::Device::get().create_swap_chain(desc);
@@ -1419,7 +1419,7 @@ resource_stages[&res.second] = input;
 			}
 			{
 				GUI::Elements::list_box::ptr l(new GUI::Elements::list_box());
-				auto& dock = d->get_dock(GUI::dock::BOTTOM);
+				auto dock = d->get_dock(GUI::dock::BOTTOM);
 				dock->size = { 100, 100 };
 				area->add_child(d);
 				dock->get_tabs()->add_page("TaskViewer", std::make_shared<GUI::Elements::Debug::TaskViewer>());

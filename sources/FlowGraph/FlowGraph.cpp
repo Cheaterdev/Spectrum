@@ -401,7 +401,9 @@ namespace FlowGraph
 			return false;
 
 		connection::ptr c(new connection());
-		c->registrate(owner->get_graph(), get_ptr(), i);
+
+		auto ptr = get_ptr<parameter>();
+		c->registrate(owner->get_graph(), ptr, i);
 
 		for (auto listener : owner->listeners)
 			c->add_listener(listener);
@@ -516,7 +518,9 @@ namespace FlowGraph
 			return false;
 
 		connection::ptr c(new connection());
-		c->registrate(dynamic_cast<graph*>(owner), get_ptr(), i);
+
+		auto ptr = get_ptr<parameter>();
+		c->registrate(dynamic_cast<graph*>(owner), ptr, i);
 
 		for (auto listener : owner->get_listeners())
 			c->add_listener(listener);

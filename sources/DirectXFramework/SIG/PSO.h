@@ -366,7 +366,7 @@ struct KeyGenerator
 
 	auto Aval() const
 	{
-		return  typename KeyType::Aval<Key<Member>>();
+		return KeyType::template  Aval<Key<Member>>();
 	}
 
 	Key<Member> operator()(Type v = Type(), bool use = true) const { 
@@ -506,7 +506,7 @@ using SimplePSO = SimpleComputePSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
 PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {return psos[key.GetKey()];}; \
-name::name() \
+name() \
 {\
 	PSOBase::shuffle_pairs<name>([&](Keys& key)\
 		{\
@@ -521,7 +521,7 @@ using SimplePSO = SimpleGraphicsPSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
 PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {return psos[key.GetKey()];}; \
-name::name() \
+name() \
 {\
 	PSOBase::shuffle_pairs<name>([&](Keys& key)\
 		{\
@@ -535,7 +535,7 @@ public:
 	using ptr = std::shared_ptr<PSOBase>;
 protected:
 	template<class F, class K, class T>
-	static void gen_pairs(F& f, K& k, const T& t)
+	static void gen_pairs(const F& f, K& k, const T& t)
 	{
 		for (auto e : t.Aval())
 		{
@@ -545,7 +545,7 @@ protected:
 	}
 
 	template<class F, class K, class T, class ...Args>
-	static void gen_pairs(F& f, K& k, const T& t, const Args&...args)
+	static void gen_pairs(const F& f, K& k, const T& t, const Args&...args)
 	{
 		gen_pairs([&](K k) {
 			gen_pairs(f, k, args...);
@@ -553,17 +553,23 @@ protected:
 	}
 
 	template<class P, class F, class T, class ...Args>
-	static void shuffle_pairs(F& f, const T& t, const Args&...args)
+	static void shuffle_pairs(const F& f, const T& t, const Args&...args)
 	{
 		typename T::KeyPairType keys;
-		gen_pairs([f](auto k) {f(k.GetKey()); }, keys, t, args...);
+		gen_pairs([f](auto k) {
+
+			auto key = k.GetKey();
+			f(key);
+			}, keys, t, args...);
 	}
 
 
 	template<class P,class F>
-	static void shuffle_pairs(F& f)
+	static void shuffle_pairs(const F& f)
 	{
-		f(P::Keys());
+		typename P::Keys keys;
+
+		f(keys);
 	}
 
 };
@@ -604,6 +610,6 @@ struct AutoGenPSO
 
 	Render::ComputePipelineState::ptr create_pso(PSO pso, std::string name)
 	{
-		return ComputePipelineState::create(desc, name);
+		return Render::ComputePipelineState::create(desc, name);
 	}
 };

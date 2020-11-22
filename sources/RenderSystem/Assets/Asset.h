@@ -195,12 +195,12 @@ class AssetReference : public AssetReferenceBase
 
 			if (Archive::is_loading::value)
 			{
-				Guid id;
-				ar& NVP(id);
+				Guid guid;
+				ar& NVP(guid);
 
-				if (id.is_good())
+				if (guid.is_good())
 				{
-					auto storage = AssetManager::get().get_storage(id);
+					auto storage = AssetManager::get().get_storage(guid);
 
 					if (!storage)
 						throw exception("cant load reference, no asset storage");
@@ -220,15 +220,12 @@ class AssetReference : public AssetReferenceBase
 
 			else
 			{
-				if (asset)
-				{
-					//   if (asset->is_changed())
-					//      AssetManager::get().save(asset.get());
-					ar& NVP(asset->get_id());
-				}
 
-				else
-					ar& NVP(Guid());
+				Guid guid;
+				
+				if (asset) guid = asset->get_id();
+
+				ar& NVP(guid);
 			}
 
 			//        ar &NVP(data);
@@ -603,7 +600,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 			{
 				if (storage.second->get_type() == T::TYPE)
 				{
-					auto asset = storage.second->get_asset()->get_ptr<MeshAsset>();
+					auto asset = storage.second->get_asset()->get_ptr<T>();
 					if (asset && f(asset))return asset;
 				}
 		
@@ -619,7 +616,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 			{
 				if (storage.second->get_type() == T::TYPE)
 				{
-					auto asset = storage.second->get_asset()->get_ptr<MeshAsset>();
+					auto asset = storage.second->get_asset()->get_ptr<T>();
 					if (asset&&asset->get_name()== name)return asset;
 				}
 

@@ -6,9 +6,9 @@
 //class LogListener;
 class LogBlock;
 
-enum class log_level_internal : int { level_none = 0, level_error = 1, level_warning = 2, level_info = 3, level_debug = 4, level_all = 65536 };
+enum class log_level_internal : int { level_none = 0, level_error = 1, level_warning = 2, level_info = 3, level_debug = 4, level_all = 65536, GENERATE_OPS };
 
-template <int L>
+template <log_level_internal L>
 struct LogLevel
 {
     static const std::string NAME;
@@ -33,12 +33,13 @@ class Log : public Singleton<Log>
         //   std::set<LogListener*> listeners;
         //  std::vector< std::function<void(const LogBlock&)>> listener_functions;
 
-        int logging_level;
+        log_level_internal logging_level;
     protected:
         Log();
         virtual ~Log();
     public:
-        template<int L>
+
+        template<log_level_internal L>
         void set_logging_level(const LogLevel<L>&)
         {
             logging_level = L;
@@ -48,12 +49,12 @@ class Log : public Singleton<Log>
 
 
         static endline endl;
-        static const LogLevel<static_cast<int>(log_level_internal::level_none)>		LEVEL_NONE;
-        static const LogLevel<static_cast<int>(log_level_internal::level_error)>	LEVEL_ERROR;
-        static const LogLevel<static_cast<int>(log_level_internal::level_warning)>	LEVEL_WARNING;
-        static const LogLevel<static_cast<int>(log_level_internal::level_info)>		LEVEL_INFO;
-        static const LogLevel<static_cast<int>(log_level_internal::level_debug)>	LEVEL_DEBUG;
-        static const LogLevel<static_cast<int>(log_level_internal::level_all)>		LEVEL_ALL;
+        static const LogLevel<log_level_internal::level_none>		LEVEL_NONE;
+        static const LogLevel<log_level_internal::level_error>	    LEVEL_ERROR;
+        static const LogLevel<log_level_internal::level_warning>	LEVEL_WARNING;
+        static const LogLevel<log_level_internal::level_info>		LEVEL_INFO;
+        static const LogLevel<log_level_internal::level_debug>	    LEVEL_DEBUG;
+        static const LogLevel<log_level_internal::level_all>		LEVEL_ALL;
 
         template<class T>
         LogBlock operator<<(const  T& smth);
@@ -75,8 +76,8 @@ class LogBlock
 
         Log& log;
         std::shared_ptr<std::ostringstream> s;
-        int current_level;
-        int log_level;
+        log_level_internal current_level;
+        log_level_internal log_level;
         std::string current_level_name;
         bool need_logging() const
         {
@@ -84,16 +85,16 @@ class LogBlock
         }
     public:
 
-        LogBlock(Log& output, int level);
+        LogBlock(Log& output, log_level_internal level);
         std::string get_level() const
         {
             return current_level_name;
         }
-        int get_level_internal() const
+        log_level_internal get_level_internal() const
         {
             return current_level;
         }
-        template<int L>
+        template<log_level_internal L>
         LogBlock& operator<<(const LogLevel<L>&)
         {
             current_level = L;
@@ -204,7 +205,7 @@ class ConsoleLogger : public Singleton<ConsoleLogger>, public LogListener
 {
         friend class Singleton<ConsoleLogger>;
         bool even;
-        int prev_log_level;
+        log_level_internal prev_log_level;
         ConsoleLogger();
         virtual ~ConsoleLogger();
         void on_log(const LogBlock& log);
@@ -214,19 +215,19 @@ class ConsoleLogger : public Singleton<ConsoleLogger>, public LogListener
 template <class T>
 class ClassLogger: public Singleton<ClassLogger<T>>
 {
-        int logging_level;
+    log_level_internal logging_level;
         friend class Singleton<ClassLogger<T>>;
     protected:
         ClassLogger()
         {
-            logging_level = static_cast<int>(log_level_internal::level_none);
+            logging_level = log_level_internal::level_none;
         }
         virtual ~ClassLogger()
         {
         }
     public:
 
-        template<int L>
+        template<log_level_internal L>
         void set_logging_level(const LogLevel<L>&)
         {
             logging_level = L;

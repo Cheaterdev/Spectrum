@@ -274,7 +274,7 @@ virtual 	int calculate_depth() override
 	template <class M = T>
 	std::shared_ptr<M> get_ptr()
 	{
-		return std::dynamic_pointer_cast<M>(shared_from_this());
+		return std::dynamic_pointer_cast<M>(this->shared_from_this());
 	}
 
 	virtual void iterate2(std::function<bool(T*)>& f)

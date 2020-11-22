@@ -221,7 +221,7 @@ namespace DX12
 
             void add_sampler( int space, ShaderVisibility visibility, D3D12_SAMPLER_DESC desc)
             {
-                set_sampler(samplers_map.size(), space, visibility, desc);
+                set_sampler((int)samplers_map.size(), space, visibility, desc);
             }
             std::map<UINT, table_info> tables;
 
@@ -303,7 +303,7 @@ namespace DX12
 
 				(process_one<A>(desc), ...);
 
-				return std::make_shared<Render::RootSignature>(desc, D3D12_ROOT_SIGNATURE_FLAGS::D3D12_ROOT_SIGNATURE_FLAG_NONE);
+				return std::make_shared<RootSignature>(desc, D3D12_ROOT_SIGNATURE_FLAGS::D3D12_ROOT_SIGNATURE_FLAG_NONE);
 			}
 
 

@@ -28,7 +28,7 @@ public:
 	template<class T>
 	T* get_or_null()
 	{
-		std::any obj&& = objects[std::type_index(typeid(T))];
+		std::any&& obj = objects[std::type_index(typeid(T))];
 
 		if (!obj.exists())
 		{

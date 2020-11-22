@@ -107,9 +107,11 @@ namespace Assimp
 				auto mat = pScene->mMaterials[it.first] = new aiMaterial();
 				auto rw4_mat = it.second;
 				//set the name of the material:
-				mat->AddProperty(&aiString(rw4_mat.albedo.c_str()), AI_MATKEY_NAME);//MaterialName is a std::string
-																						  //set the first diffuse texture
-				mat->AddProperty(&aiString(rw4_mat.albedo.c_str()), AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));//again, Texturename is a std::string
+
+				aiString str = aiString(rw4_mat.albedo.c_str());
+
+				mat->AddProperty(&str, AI_MATKEY_NAME);//MaterialName is a std::string																						  //set the first diffuse texture
+				mat->AddProperty(&str, AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));//again, Texturename is a std::string
 			}
 
 

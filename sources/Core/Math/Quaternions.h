@@ -1,5 +1,5 @@
 #pragma once
-
+//class mat4x4;
 class quat : public vec4
 {
 public:
@@ -22,7 +22,7 @@ public:
 	void identity() { x = y = z = 0; w = 1; }
 	quat operator*(const quat& q) const;
 	quat& operator*=(const quat& q);
-	void toMatrix(mat4x4& m) const;
+//	void toMatrix(mat4x4& m) const;
 
 	void to_axis_angle(vec3 &axis, float &angle) const
 	{

@@ -97,14 +97,14 @@ Render::CommandList::ptr& FrameContext::get_list()
 				continue;
 			//if (!handle->info->texture) continue;
 			{
-				auto& tex = get_texture(handle);
+				auto tex = get_texture(handle);
 
 				if (tex)
 					list->transition(nullptr, tex.resource.get());
 
 			}
 			{
-				auto& tex = get_buffer(handle);
+				auto tex = get_buffer(handle);
 
 				if (tex)
 					list->transition(nullptr, tex.resource.get());
@@ -159,18 +159,18 @@ void Pass::execute()
 		return;
 
 	}
-	auto& timer = Profiler::get().start(L"wait"); {
+	auto timer = Profiler::get().start(L"wait"); {
 		render_task.wait();
 	}
 	*/
-	{	auto& timer = Profiler::get().start(L"execute");
+	{	auto timer = Profiler::get().start(L"execute");
 	context.execute();
 	}
 }
 void FrameGraph::start_new_frame()
 {
 	{
-		auto& timer = Profiler::get().start(L"begin_frame");
+		auto timer = Profiler::get().start(L"begin_frame");
 
 		builder.current_frame = builder.frames.begin_frame();
 	}
@@ -178,7 +178,7 @@ void FrameGraph::start_new_frame()
 
 void FrameGraph::setup()
 {
-	auto& timer = Profiler::get().start(L"FrameGraph::setup");
+	auto timer = Profiler::get().start(L"FrameGraph::setup");
 
 	for (auto& pass : passes)
 	{
@@ -246,6 +246,11 @@ void FrameGraph::setup()
 		pass->call_id = 0;
 		enabled_passes.emplace_back(pass_ptr);
 
+		if (!optimize)
+		{
+			pass->flags = pass->flags & ~(PassFlags::Compute);
+		}
+
 		for (auto [handler, flags] : pass->used.resource_flags)
 		{
 			auto info = handler->info;
@@ -261,72 +266,66 @@ void FrameGraph::setup()
 		}
 	}
 
-	bool sorted = false;
-
-	while (!sorted)
+	
+	if (optimize)
 	{
+		bool sorted = false;
 
-		sorted = true;
-		for (auto pass : enabled_passes)
+		while (!sorted)
 		{
 
-			for (auto related : pass->related)
+			sorted = true;
+			for (auto pass : enabled_passes)
 			{
-				if (pass->call_id <= related->call_id)
+
+				for (auto related : pass->related)
 				{
-					pass->call_id = related->call_id+1;
-					sorted = false;
+					if (pass->call_id <= related->call_id)
+					{
+						pass->call_id = related->call_id + 1;
+						sorted = false;
+					}
 				}
 			}
 		}
-	}
 
-
-
-	enabled_passes.sort(
-		[](const Pass* a, const Pass* b) 
+		for (auto pass : enabled_passes | std::ranges::views::reverse)
 		{
 
-			if (a->call_id == b->call_id)
+		}
+
+		enabled_passes.sort(
+			[](const Pass* a, const Pass* b)
 			{
 
-				return check(a->flags & PassFlags::Compute) > check(b->flags & PassFlags::Compute);
-			}
-			return (a->call_id < b->call_id);
-		});
+				if (a->call_id == b->call_id)
+				{
+
+					return check(a->flags & PassFlags::Compute) > check(b->flags & PassFlags::Compute);
+				}
+				return (a->call_id < b->call_id);
+			});
+	}
 
 	int i = 0;
-	for (auto pass : enabled_passes)
-		pass->call_id = i++;
-
-	for (auto pass : enabled_passes)
-	{
-		for (auto [handler, flags] : pass->used.resource_flags)
+		for (auto pass : enabled_passes)
 		{
-			auto info = handler->info;
+			pass->call_id = i++;
+			for (auto [handler, flags] : pass->used.resource_flags)
+			{
+				auto info = handler->info;
 
-			/*	Pass* depend_pass = info->get_last_writer();
-				if (depend_pass) pass->related.insert(depend_pass);
-
-				if (check(flags & WRITEABLE_FLAGS))
-				{
-					info->writers.push_back(pass_ptr);
-				}
-				else
-					info->readers.push_back(pass_ptr);
-					*/
-
-			if (!info->valid_from)
-				info->valid_from = pass;
-			info->valid_to = pass;
+				if (!info->valid_from)	info->valid_from = pass;
+				info->valid_to = pass;
+			}
 		}
-	}
+
 
 }
 
 void FrameGraph::compile(int frame)
 {
-	auto& timer = Profiler::get().start(L"FrameGraph::compile");
+	auto timer = Profiler::get().start(L"FrameGraph::compile");
 	//builder.allocator.begin_frame(frame);
 
 	builder.current_alloc = &builder.frame_allocs[frame];
@@ -340,18 +339,18 @@ void FrameGraph::compile(int frame)
 
 void FrameGraph::render()
 {
-	auto& timer = Profiler::get().start(L"FrameGraph::render");
+	auto timer = Profiler::get().start(L"FrameGraph::render");
 
 
 	{
-		auto& timer = Profiler::get().start(L"passes");
+		auto timer = Profiler::get().start(L"passes");
 
 		for (auto& pass : enabled_passes)
 			pass->render(builder.current_frame);
 
 	}
 	{
-		auto& timer = Profiler::get().start(L"wait");
+		auto timer = Profiler::get().start(L"wait");
 
 		for (auto& pass : enabled_passes)
 		{
@@ -378,7 +377,7 @@ void FrameGraph::render()
 
 
 	{
-		auto& timer = Profiler::get().start(L"execute");
+		auto timer = Profiler::get().start(L"execute");
 
 
 
@@ -630,7 +629,7 @@ void TaskBuilder::create_resources()
 
 		if (info->type == ResourceType::Texture)
 		{
-			//auto& timer = Profiler::get().start(L"create");
+			//auto timer = Profiler::get().start(L"create");
 
 			TextureDesc desc = info->desc.get<TextureDesc>();
 
@@ -699,7 +698,7 @@ void TaskBuilder::create_resources()
 	}
 
 	{
-		auto& timer = Profiler::get().start(L"allocate memory");
+		auto timer = Profiler::get().start(L"allocate memory");
 
 		for (auto [id, e] : events)
 		{
@@ -723,7 +722,7 @@ void TaskBuilder::create_resources()
 	}
 
 	{
-		auto& timer = Profiler::get().start(L"create resources");
+		auto timer = Profiler::get().start(L"create resources");
 		int id = 0;
 
 		for (auto& pair : alloc_resources)

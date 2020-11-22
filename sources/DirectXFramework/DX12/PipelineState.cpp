@@ -171,10 +171,10 @@ namespace DX12
 		if (hr != S_OK)
 		{
 			psoDesc.CachedPSO = {};
-			hr = (Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+			TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 		}
 
-		TEST(hr);
+	
 
 		cache.clear();
 	}

@@ -146,7 +146,7 @@ namespace DX12
 				}
 			}
 
-			auto& heap = AllocateHeap(size);
+			auto heap = AllocateHeap(size);
 			auto handle = heap->TryAllocate(size, alignment);
 			return { *handle,this };
 

@@ -79,7 +79,7 @@ namespace DX12 {
 		assert(offset+count<=this->count);
 		auto table = heap->get_light_table_view(heap_offset + offset, count);
 
-		for (int i = 0; i < table.get_count(); i++)
+		for (UINT i = 0; i < (UINT)table.get_count(); i++)
 		{
 			table[i].resource_info->resource_ptr = nullptr;
 		}

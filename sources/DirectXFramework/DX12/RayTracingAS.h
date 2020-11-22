@@ -33,7 +33,7 @@ namespace DX12
 			bottomLevelInputs.Flags = buildFlags;
 			bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
 			bottomLevelInputs.pGeometryDescs = desc.data();
-			bottomLevelInputs.NumDescs = desc.size();
+			bottomLevelInputs.NumDescs = (UINT)desc.size();
 
 
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = {};
@@ -73,7 +73,7 @@ namespace DX12
 			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
 			topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 			topLevelInputs.Flags = buildFlags;
-			topLevelInputs.NumDescs = instances.size();
+			topLevelInputs.NumDescs = (UINT)instances.size();
 			topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
 

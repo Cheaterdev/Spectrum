@@ -1,6 +1,6 @@
 #include "pch.h"
 
-void DX12::RTXSceneView::place_srv(Handle& h) {
+void DX12::RTXSceneView::place_srv(Handle h) {
 	if (!resource) return;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
@@ -14,7 +14,7 @@ void DX12::RTXSceneView::place_srv(Handle& h) {
 }
 
 
-void DX12::BufferView::place_srv(Handle& h) {
+void DX12::BufferView::place_srv(Handle h) {
 	if (!resource) return;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
@@ -29,7 +29,7 @@ void DX12::BufferView::place_srv(Handle& h) {
 
 }
 
-void DX12::BufferView::place_uav(Handle& h) {
+void DX12::BufferView::place_uav(Handle h) {
 	if (!resource) return;
 	{
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
@@ -47,19 +47,19 @@ void DX12::BufferView::place_uav(Handle& h) {
 }
 
 
- void DX12::BufferView::place_cb(Handle& h) {
+ void DX12::BufferView::place_cb(Handle h) {
 	if (!resource) return;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
 	desc.BufferLocation = resource->get_gpu_address();
-	desc.SizeInBytes = view_desc.Buffer.Size;
+	desc.SizeInBytes = (UINT)view_desc.Buffer.Size;
 	assert(desc.SizeInBytes < 65536);
 
 	Device::get().create_cbv(h, resource.get(), desc);
 }
 
 
-void DX12::TextureView::place_rtv(Handle& h) {
+void DX12::TextureView::place_rtv(Handle h) {
 	if (!resource) return;
 
 	D3D12_RENDER_TARGET_VIEW_DESC desc = {};
@@ -97,7 +97,7 @@ void DX12::TextureView::place_rtv(Handle& h) {
 }
 
 
-void DX12::TextureView::place_dsv(Handle& h) {
+void DX12::TextureView::place_dsv(Handle h) {
 	if (!resource) return;
 	auto resDesc = resource->get_desc();
 
@@ -115,7 +115,7 @@ void DX12::TextureView::place_dsv(Handle& h) {
 }
 
 
-void DX12::TextureView::place_srv(Handle& h) {
+void DX12::TextureView::place_srv(Handle h) {
 	if (!resource) return;
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
@@ -161,7 +161,7 @@ void DX12::TextureView::place_srv(Handle& h) {
 
 }
 
-void DX12::TextureView::place_uav(Handle& h) {
+void DX12::TextureView::place_uav(Handle h) {
 	if (!resource) return;
 
 	D3D12_UNORDERED_ACCESS_VIEW_DESC desc;

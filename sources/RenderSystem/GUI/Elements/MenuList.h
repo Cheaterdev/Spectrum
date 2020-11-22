@@ -74,7 +74,7 @@ namespace GUI
                     e->text = elem;
                     e->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
                     e->docking = dock::FILL;
-                    T::ptr l_e(new T(!vertical));
+                    typename T::ptr l_e(new T(!vertical));
                     l_e->docking = vertical ? dock::TOP : dock::LEFT;
                     l_e->text = elem;
 

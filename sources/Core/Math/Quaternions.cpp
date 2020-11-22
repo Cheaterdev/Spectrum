@@ -42,6 +42,8 @@ quat& quat::operator*=(const quat& q)
 	w = w*q.w - dot(v1, v2);
 	return *this;
 }
+
+/*
 void quat::toMatrix(mat4x4& m) const
 {
 	float wx, wy, wz, xx, yy, yz, xy, xz, zz, x2, y2, z2;
@@ -70,4 +72,4 @@ void quat::toMatrix(mat4x4& m) const
 	m.a42 = 0;
 	m.a43 = 0;
 	m.a44 = 1;
-}
+}*/

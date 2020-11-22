@@ -22,7 +22,7 @@ namespace GUI
 		index_buffer.reset(new Render::IndexBuffer(index_data));
 	}
 
-	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr& pipeline_state)
+	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr pipeline_state)
 	{
 		if (current_state&&current_state != pipeline_state)
 		{
@@ -303,7 +303,7 @@ namespace GUI
 		draw(c, item, r, GetPSO<PSOS::NinePatch>());
 	}
 
-	void NinePatch::draw(Render::context& c, Render::PipelineState::ptr& pipeline_state, rect r)
+	void NinePatch::draw(Render::context& c, Render::PipelineState::ptr pipeline_state, rect r)
 	{
 		GUI::Texture item;
 		draw(c, item, r, pipeline_state);

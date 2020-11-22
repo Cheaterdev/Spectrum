@@ -207,7 +207,7 @@ public:
     }
 
 
-	void iterate_meshes(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)
+	void iterate_meshes(MESH_TYPE mesh_type, std::function<void(scene_object::ptr)> f)
 	{
 
 

@@ -9,7 +9,7 @@ AssetManager::AssetManager()
     GuidGenerator::create();
     tree_folders.reset(new folder_item(L"All assets"));
     std::function<void(boost::filesystem::path, folder_item::ptr)> iter;
-    iter = [this, &iter](boost::filesystem::path name, folder_item::ptr & w)
+    iter = [this, &iter](boost::filesystem::path name, folder_item::ptr  w)
     {
         auto new_path = name/"";
 		auto  folder_name = name.filename();
