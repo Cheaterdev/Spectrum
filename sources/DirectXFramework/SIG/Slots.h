@@ -166,7 +166,7 @@ struct DataHolder : public Table
 
 			UINT srv_count = 0;
 			if constexpr (HasSRV<Table>) srv_count += sizeof(Table::srv) / sizeof(Render::Handle);
-			if constexpr (HasBindless<Table>) srv_count += Table::bindless.size();
+			if constexpr (HasBindless<Table>) srv_count += (UINT)Table::bindless.size();
 
 			if (srv_count > 0) {
 				compiled.table_srv = context.srv.place(srv_count);

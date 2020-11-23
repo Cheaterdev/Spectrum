@@ -17,9 +17,7 @@ using System;
 
 namespace Spectrum
 {
-
-
-     [Sharpmake.Generate]
+    [Sharpmake.Generate]
     public class Common : Project
     {
         public Common()
@@ -55,6 +53,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreadedDLL);		
             conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);		
             conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);		
+            conf.Options.Add(Options.Vc.General.Vcpkg.True);		
           
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
@@ -65,13 +64,10 @@ namespace Spectrum
             conf.Defines.Add("_CRT_SECURE_NO_WARNINGS");
             conf.Defines.Add("BOOST_NO_USER_CONFIG");
             conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
-              conf.Defines.Add("BOOST_ENDIAN_DEPRECATED_NAMES");
+            conf.Defines.Add("BOOST_ENDIAN_DEPRECATED_NAMES");
           
             conf.Defines.Add("BOOST_ALL_NO_LIB");
-
-            conf.Defines.Add("NOMINMAX");
-
-            
+            conf.Defines.Add("NOMINMAX");     
         }
         
         [Configure(BuildSystem.FastBuild)]
@@ -105,8 +101,6 @@ namespace Spectrum
     {
         public Application()
         {
-
-
             RootPath = @"[project.SharpmakeCsPath]\projects\[project.Name]";
         }
     }
@@ -118,7 +112,6 @@ namespace Spectrum
     {
         public ZipLib()
         { 
-            // This Path will be used to get all SourceFiles in this Folder and all subFolders
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\3rdparty\ZipLib";
             AssemblyName = "ZipLib";
         }
@@ -130,7 +123,6 @@ namespace Spectrum
     {
         public Core()
         { 
-            // This Path will be used to get all SourceFiles in this Folder and all subFolders
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Core";
             AssemblyName = "Core";
         }
@@ -154,7 +146,6 @@ namespace Spectrum
     {
         public FileSystem()
         { 
-            // This Path will be used to get all SourceFiles in this Folder and all subFolders
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\FileSystem";
             AssemblyName = "FileSystem";
         }
@@ -175,7 +166,6 @@ namespace Spectrum
     {
         public DirectXFramework()
         { 
-            // This Path will be used to get all SourceFiles in this Folder and all subFolders
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\DirectXFramework";
             AssemblyName = "DirectXFramework";
         }
@@ -204,7 +194,6 @@ namespace Spectrum
     {
         public FlowGraph()
         { 
-            // This Path will be used to get all SourceFiles in this Folder and all subFolders
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\FlowGraph";
             AssemblyName = "FlowGraph";
         }
@@ -225,7 +214,6 @@ namespace Spectrum
     {
         public RenderSystem()
         { 
-            // This Path will be used to get all SourceFiles in this Folder and all subFolders
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\RenderSystem";
             AssemblyName = "RenderSystem";
         }
@@ -247,11 +235,8 @@ namespace Spectrum
     {
         public SIGParser()
         { 
-          
-                        // This Path will be used to get all SourceFiles in this Folder and all subFolders
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\SIGParser";
             AssemblyName = "SIGParser";
-
         }
 
   public override void ConfigureAll(Configuration conf, Target target) 
@@ -265,10 +250,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.CharacterSet.Unicode);	  
 
                 
-            conf.Options.Remove(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
-
-
-    
+            conf.Options.Remove(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors    
             conf.Options.Add(Options.Vc.General.WarningLevel.Level0);		 // hate warnings, love errors
 
 
@@ -284,11 +266,8 @@ namespace Spectrum
     {
         public Spectrum()
         { 
-          
-                        // This Path will be used to get all SourceFiles in this Folder and all subFolders
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Spectrum";
             AssemblyName = "Spectrum";
-           
         }
 
   public override void ConfigureAll(Configuration conf, Target target) 
@@ -298,7 +277,7 @@ namespace Spectrum
             conf.PrecompHeader = "pch.h";
             conf.PrecompSource = "pch.cpp";    
             
- conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings ();
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings ();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
             
             conf.AddPrivateDependency<DirectXFramework>(target);    
@@ -312,11 +291,8 @@ namespace Spectrum
     {
         public Resources()
         { 
-          
-                        // This Path will be used to get all SourceFiles in this Folder and all subFolders
-            SourceRootPath = @"[project.SharpmakeCsPath]\workdir";
+             SourceRootPath = @"[project.SharpmakeCsPath]\workdir";
             AssemblyName = "Resources";
-           
         }
 
     }
@@ -347,16 +323,13 @@ namespace Spectrum
             conf.AddProject<Spectrum>(target);
             conf.AddProject<SIGParser>(target);
             conf.AddProject<Resources>(target);
-         
         }
 
         [Sharpmake.Main]
         public static void SharpmakeMain(Sharpmake.Arguments arguments)
         {
-
             FastBuildSettings.FastBuildMakeCommand = @"[project.SharpmakeCsPath]\tools\FastBuild\FBuild.exe";
             arguments.Generate<SpectrumSolution>();
-            
         }
     }
 }

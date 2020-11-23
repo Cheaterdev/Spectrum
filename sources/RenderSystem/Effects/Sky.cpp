@@ -307,7 +307,7 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 					filter.GetFace().x = i;
 
 					filter.GetScaler().x = (float(m) + 0.5f) / count;
-					filter.GetSize().x = sky_cubemap.resource->get_desc().Width;
+					filter.GetSize().x = (UINT)sky_cubemap.resource->get_desc().Width;
 					filter.set(graphics);
 
 					graphics.draw(4);
@@ -341,7 +341,7 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 				filter.GetFace().x = i;
 
 				filter.GetScaler().x = (float(0) + 0.5f) / count;
-				filter.GetSize().x = sky_cubemap.resource->get_desc().Width;
+				filter.GetSize().x = (UINT)sky_cubemap.resource->get_desc().Width;
 				filter.set(graphics);
 
 				graphics.draw(4);

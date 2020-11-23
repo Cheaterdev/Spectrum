@@ -781,7 +781,7 @@ namespace FlowGraph
 
 				}
 		*/
-				scale = Math::clamp(to->input_parametres.size() + from->output_parametres.size(),1_t,5_t);
+				scale = (float)Math::clamp(to->input_parametres.size() + from->output_parametres.size(),1_t,5_t);
 			
 				if (from_pos.x >to_pos.x - scale*150)
 				{

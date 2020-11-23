@@ -414,7 +414,7 @@ public:
 		graph.scene = scene.get();
 		graph.renderer = gpu_scene_renderer.get();
 		graph.cam = &cam;
-		graph.time = my_timer.tick();
+		graph.time = (float)my_timer.tick();
 		graph.totalTime += graph.time;
 		graph.sunDir = pssm.get_position();
 		cam.update({ 0,0 });
@@ -455,7 +455,7 @@ public:
 				command_list->flush_transitions();
 
 				//if (GetAsyncKeyState('O'))
-				scene_as->update(command_list, scene->raytrace->max_size(), scene->raytrace->buffer->get_gpu_address(), need_rebuild);
+				scene_as->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_gpu_address(), need_rebuild);
 
 				RTX::get().prepare(command_list);
 
@@ -1182,7 +1182,7 @@ public:
 			}
 
 
-			process_ui(main_timer.tick());
+			process_ui((float)main_timer.tick());
 			{
 				auto timer = Profiler::get().start(L"Wait next");
 				swap_chain->start_next();

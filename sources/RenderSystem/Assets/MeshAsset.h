@@ -315,7 +315,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public virtual_gpu_buffer<Table::MeshInstance::CB>
 {
-	static const int MAX_NODES_SIZE = 1_gb / sizeof(Table::MeshInstance::CB);
+	static const size_t MAX_NODES_SIZE = 1_gb / sizeof(Table::MeshInstance::CB);
 public:
     universal_mesh_instance_manager() :virtual_gpu_buffer<Table::MeshInstance::CB>(MAX_NODES_SIZE)
 	{
@@ -326,7 +326,7 @@ public:
 
 class universal_nodes_manager :public Singleton<universal_nodes_manager>, public virtual_gpu_buffer<Table::node_data::CB>
 {
-    static const int MAX_NODES_SIZE = 1_gb / sizeof(Table::node_data::CB);
+    static const size_t MAX_NODES_SIZE = 1_gb / sizeof(Table::node_data::CB);
 public:
     universal_nodes_manager():virtual_gpu_buffer<Table::node_data::CB>(MAX_NODES_SIZE)
 	{
@@ -336,7 +336,7 @@ public:
 
 class universal_vertex_manager :public Singleton<universal_vertex_manager>, public virtual_gpu_buffer<Vertex>
 {
-	static const int MAX_VERTEXES_SIZE = 1_gb / sizeof(Vertex);
+	static const size_t MAX_VERTEXES_SIZE = 1_gb / sizeof(Vertex);
 public:
     universal_vertex_manager() :virtual_gpu_buffer<Vertex>(MAX_VERTEXES_SIZE)
 	{
@@ -346,7 +346,7 @@ public:
 
 class universal_index_manager :public Singleton<universal_index_manager>, public virtual_gpu_buffer<UINT32>
 {
-	static const int MAX_INDEX_SIZE = 1_gb / sizeof(UINT32);
+	static const size_t MAX_INDEX_SIZE = 1_gb / sizeof(UINT32);
 public:
     universal_index_manager() :virtual_gpu_buffer<UINT32>(MAX_INDEX_SIZE)
 	{
@@ -356,7 +356,7 @@ public:
 
 class universal_material_manager :public Singleton<universal_material_manager>, public virtual_gpu_buffer<std::byte>
 {
-    static const int MAX_bytes_SIZE = 1_gb;
+    static const size_t MAX_bytes_SIZE = 1_gb;
 public:
     universal_material_manager() :virtual_gpu_buffer<std::byte>(MAX_bytes_SIZE)
 	{
@@ -368,7 +368,7 @@ public:
 
 class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public virtual_gpu_buffer<material_info_part>
 {
-	static const int MAX_COMMANDS_SIZE = 1_gb/sizeof(material_info_part);
+	static const size_t MAX_COMMANDS_SIZE = 1_gb/sizeof(material_info_part);
 public:
     universal_material_info_part_manager() :virtual_gpu_buffer<material_info_part>(MAX_COMMANDS_SIZE)
 	{

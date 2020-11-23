@@ -1,7 +1,16 @@
 {
-    "name": "Spectrum",
-    "version-string": "1.0.0",
-    "dependencies": [
-        "zlib"
-    ]
+	"name": "spectrum",
+	"version-string": "1.0.0",
+	"dependencies": [
+		"zlib",
+		"bzip2",
+		"zstd",
+		"liblzma",
+		"directxtex",
+		"assimp",
+		"boost-serialization",
+		"boost-stacktrace",
+		"boost-lockfree",	
+		"antlr4"
+	]
 }

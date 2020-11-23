@@ -283,7 +283,7 @@ namespace GUI
 		Slots::NinePatch patch_data;
 		auto data =  c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
 		c.command_list->write(data, vertexes);
-		auto view = data.resource->create_view<StructuredBufferView<Vertex>>(*c.command_list->frame_resources, data.offset, data.size);
+		auto view = data.resource->create_view<StructuredBufferView<Vertex>>(*c.command_list->frame_resources, (UINT)data.offset, (UINT)data.size);
 		//data.resource->create_view<StructuredBufferView<Vertex>>()
 
 		patch_data.GetVb() = view.get_srv();

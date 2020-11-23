@@ -251,7 +251,7 @@ class RenderTargetTable
 
         RenderTargetTable(Render::GraphicsContext& graphics, std::initializer_list<Render::TextureView> list, Render::TextureView depth)
         {
-           rtv_table = graphics.place_rtv(list.size());
+           rtv_table = graphics.place_rtv((UINT)list.size());
             UINT i = 0;
 
             for (auto e : list)

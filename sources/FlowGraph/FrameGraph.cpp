@@ -225,7 +225,7 @@ void FrameGraph::setup()
 	for (auto res : builder.resources)
 	{
 		if (check(res.second.info->flags & ResourceFlags::Required))
-			process_resource(&res.second, passes.size());
+			process_resource(&res.second, (int)passes.size());
 	}
 
 

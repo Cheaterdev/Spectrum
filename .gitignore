@@ -13,3 +13,4 @@ workdir/pso
 obj/
 bin/
 .vs/
+vcpkg_installed/

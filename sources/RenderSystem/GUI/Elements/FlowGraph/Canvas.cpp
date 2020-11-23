@@ -51,7 +51,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
 		auto data = c.command_list->place_data(sizeof(Table::VSLine::CB) * vertexes.size(), sizeof(Table::VSLine::CB));
 		c.command_list->write(data, vertexes);
 
-		auto view = data.resource->create_view<StructuredBufferView<Table::VSLine::CB>>(*c.command_list->frame_resources, data.offset, data.size);
+		auto view = data.resource->create_view<StructuredBufferView<Table::VSLine::CB>>(*c.command_list->frame_resources, (UINT)data.offset, (UINT)data.size);
         {
             Slots::LineRender linedata;
             linedata.GetVb() = view.get_srv();

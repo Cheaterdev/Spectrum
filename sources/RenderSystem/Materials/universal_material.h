@@ -306,7 +306,7 @@ namespace materials
         
 			UINT get_material_id()
 			{
-				return info_handle.get_offset();
+				return (UINT)info_handle.get_offset();
 			}
 
 			Pipeline::ptr get_pipeline() {

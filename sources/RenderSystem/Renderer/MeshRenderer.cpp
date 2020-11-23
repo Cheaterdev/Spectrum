@@ -63,7 +63,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	}
 
 
-	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
+	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	
@@ -179,7 +179,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
 	auto& list = *mesh_render_context->list;
-	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
+	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	if (invisibleToo)
@@ -219,7 +219,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
 	auto& list = *mesh_render_context->list;
-	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
+	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	
@@ -260,7 +260,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	auto& list = *mesh_render_context->list;
 
 	GBuffer* gbuffer = mesh_render_context->g_buffer;
-	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
+	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	gbuffer->HalfBuffer.hiZ_table.set(graphics);
@@ -295,7 +295,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 	auto& copy = mesh_render_context->list->get_copy();
 	auto& list = *mesh_render_context->list;
 
-	UINT meshes_count = scene->command_ids[(int)mesh_render_context->render_mesh].size();
+	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
 	Slots::GatherPipeline gather;
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
@@ -497,7 +497,7 @@ mesh_renderer::mesh_renderer()
 		DrawIndexedArguments args;
 
 		args.BaseVertexLocation = 0;
-		args.IndexCountPerInstance = data.size();
+		args.IndexCountPerInstance = (UINT)data.size();
 		args.InstanceCount = 0;
 		args.StartIndexLocation = 0;
 		args.StartInstanceLocation = 0;

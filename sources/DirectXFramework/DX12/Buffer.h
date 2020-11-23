@@ -593,7 +593,7 @@ namespace DX12
 
 			for (auto& elems : update_list)
 			{
-				buffer->set_data(list, elems.offset * sizeof(T), elems.data.data(), elems.size);
+				buffer->set_data(list, (UINT)elems.offset * sizeof(T), elems.data.data(), (UINT)elems.size);
 			}
 
 			update_list.clear();

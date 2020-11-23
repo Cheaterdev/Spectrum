@@ -45,7 +45,7 @@ public:
 
 	virtual_gpu_buffer<closesthit_identifier>::ptr material_hits;// (MAX_COMMANDS_SIZE)
 
-	std::map< materials::universal_material*, int> materials;
+	std::map< materials::universal_material*, UINT> materials;
 
 	bool need_recreate = false;
 

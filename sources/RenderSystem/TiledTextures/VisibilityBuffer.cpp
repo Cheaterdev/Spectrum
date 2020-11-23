@@ -111,7 +111,7 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 			for(auto &p:result)
 			process_tile_readback(p,0);
 
-			counter += result.size();
+			counter += (UINT)result.size();
 		}
 			
 		Log::get() << "counter " << counter << Log::endl;

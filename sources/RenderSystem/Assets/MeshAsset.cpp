@@ -353,8 +353,8 @@ void MeshAssetInstance::on_add(scene_object* parent)
 			meshpart[i].node_offset = info.mesh_info.GetNode_offset();
 	
 
-			render_scene->command_ids[int(type)].insert(meshpart_handle.get_offset() + i);
-			render_scene->command_ids[int(MESH_TYPE::ALL)].insert(meshpart_handle.get_offset() + i);
+			render_scene->command_ids[int(type)].insert((UINT)meshpart_handle.get_offset() + i);
+			render_scene->command_ids[int(MESH_TYPE::ALL)].insert((UINT)meshpart_handle.get_offset() + i);
 
 		
 			i++;
@@ -377,8 +377,8 @@ void MeshAssetInstance::on_remove()
 		int i = 0;
 		for (auto& info : rendering)
 		{
-			old_scene->command_ids[int(type)].erase(meshpart_handle.get_offset() + i);
-			old_scene->command_ids[int(MESH_TYPE::ALL)].erase(meshpart_handle.get_offset() + i);
+			old_scene->command_ids[int(type)].erase((UINT)meshpart_handle.get_offset() + i);
+			old_scene->command_ids[int(MESH_TYPE::ALL)].erase((UINT)meshpart_handle.get_offset() + i);
 			i++;
 		}
 		meshpart_handle.Free();
@@ -401,7 +401,7 @@ bool MeshAssetInstance::update_transforms()
 		int i = 0;
 	for (auto & info : rendering)
 	{
-		uint index = info.mesh_info.GetNode_offset() - nodes_handle.get_offset();
+		uint index = (UINT)info.mesh_info.GetNode_offset() - (UINT)nodes_handle.get_offset();
 		auto& p = info.primitive;
 
 		if (!info.primitive_global)
@@ -567,7 +567,7 @@ nodes.emplace_back(node);
 			
 
 			render_info info;
-			info.draw_arguments.StartIndexLocation = mesh_asset->index_handle.get_offset() + mesh_asset->meshes[m].index_offset;
+			info.draw_arguments.StartIndexLocation = UINT(mesh_asset->index_handle.get_offset() + mesh_asset->meshes[m].index_offset);
 			info.draw_arguments.IndexCountPerInstance = mesh_asset->meshes[m].index_count;
 			info.draw_arguments.BaseVertexLocation = 0;
 			info.draw_arguments.InstanceCount = 1;
@@ -585,10 +585,10 @@ nodes.emplace_back(node);
 		//	node_buffer[node->index] = mat;
 			//if(nodes_ptr) 
 		
-			info.mesh_info.GetNode_offset() = nodes_handle.get_offset() + nodes.size()-1;
-			info.mesh_info.GetVertex_offset() = mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset;
+			info.mesh_info.GetNode_offset() = UINT(nodes_handle.get_offset() + nodes.size()-1);
+			info.mesh_info.GetVertex_offset() = UINT(mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset) ;
 
-			auto &my_node = gpu_nodes[info.mesh_info.GetNode_offset() - nodes_handle.get_offset()];
+			auto &my_node = gpu_nodes[UINT(info.mesh_info.GetNode_offset() - nodes_handle.get_offset())];
 			my_node.node_global_matrix = mat;
 			my_node.node_inverse_matrix = mat;
 			my_node.node_inverse_matrix.inverse();
@@ -597,13 +597,13 @@ nodes.emplace_back(node);
 			my_node.aabb.min = info.primitive->get_min();
 			my_node.aabb.max = info.primitive->get_max();
 
-			info.material_id = mesh_asset->meshes[m].material;
+			info.material_id = UINT(mesh_asset->meshes[m].material);
 			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
 			info.compiled_mesh_info = info.mesh_info.compile(StaticCompiledGPUData::get());
 
 
-			info.node_id = instance_handle.get_offset() + nodes.size()-1;
-			auto& my_instance = gpu_instances[nodes.size()-1];
+			info.node_id = (UINT)(instance_handle.get_offset() + nodes.size()-1);
+			auto& my_instance = gpu_instances[(UINT)nodes.size()-1];
 			my_instance.index_offset = info.draw_arguments.StartIndexLocation;
 			my_instance.vertex_offset = info.mesh_info.GetVertex_offset();
 			

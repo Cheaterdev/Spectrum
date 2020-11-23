@@ -78,7 +78,7 @@ void materials::universal_material::update()
 	};
 
 	generate(ps_uniforms);
-	material_info.GetTextureOffset() = textures_handle.get_offset();
+	material_info.GetTextureOffset() = (UINT)textures_handle.get_offset();
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 
@@ -240,7 +240,7 @@ void materials::universal_material::compile()
 
   
 	generate(ps_uniforms);
-	material_info.GetTextureOffset() = textures_handle.get_offset();
+	material_info.GetTextureOffset() = (UINT)textures_handle.get_offset();
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 

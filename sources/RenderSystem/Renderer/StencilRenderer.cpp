@@ -414,7 +414,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 							{
 								Slots::Instance instance;
-								instance.GetInstanceId() = current.size();
+								instance.GetInstanceId() = (UINT)current.size();
 								instance.set(graphics);
 							}
 							graphics.draw(m.draw_arguments);
@@ -508,7 +508,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 						
 					
-								for (unsigned int i = 0; i < l->rendering.size(); i++)
+								for (unsigned int i = 0; i < (UINT)l->rendering.size(); i++)
 								{
 									auto& m = l->rendering[i];
 					
@@ -532,7 +532,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 							if (!data) device_fail();
 
-							UINT result = *reinterpret_cast<const UINT*>(data) - 1;
+							auto result = *reinterpret_cast<const int*>(data) - 1;
 
 							run([result,this,current]() {
 								mouse_on_object.first = nullptr;
@@ -551,7 +551,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 					copy.read_buffer(axis_id_buffer.resource.get(), 0, 4, [ this](const char* data, UINT64 size)
 						{
 
-							auto result = *reinterpret_cast<const UINT*>(data) - 1;
+							auto result = *reinterpret_cast<const int*>(data) - 1;
 							run([this, result]() {
 								mouse_on_axis = result;
 								});

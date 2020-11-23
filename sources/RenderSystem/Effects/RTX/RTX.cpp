@@ -7,7 +7,7 @@ UINT RTX::get_material_id(materials::universal_material* universal)
 
 	if (it == materials.end())
 	{
-		materials[universal] = materials.size();
+		materials[universal] = (UINT)materials.size();
 
 		need_recreate = true;
 		universal->on_change.register_handler(this, [this]() {
@@ -72,7 +72,7 @@ void RTX::CreateSharedCollection()
 		//	rootSignatureAssociation->AddExport(L"ShadowClosestHitGroup");
 	}
 
-	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_SharedCollection)), L"Couldn't create DirectX Raytracing state object.\n");
+	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_SharedCollection)));
 }
 
 void RTX::CreateGlobalCollection()
@@ -116,7 +116,7 @@ void RTX::CreateGlobalCollection()
 	}
 	
 
-	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_GlobalCollection)), L"Couldn't create DirectX Raytracing state object.\n");
+	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_GlobalCollection)));
 }
 
 void RTX::CreateRaytracingPipelineStateObject()
@@ -134,7 +134,7 @@ void RTX::CreateRaytracingPipelineStateObject()
 	}
 
 
-	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)), L"Couldn't create DirectX Raytracing state object.\n");
+	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
 	TEST(m_dxrStateObject.As(&stateObjectProperties));
 
 	rayGenShaderIdentifier = ::identify(stateObjectProperties->GetShaderIdentifier(c_raygenShaderName));
