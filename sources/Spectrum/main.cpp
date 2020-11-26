@@ -154,7 +154,7 @@ public:
 	{
 		texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
-		BuildAccelerationStructures();
+		if(Device::get().is_rtx_supported()) BuildAccelerationStructures();
 
 		auto t = CounterManager::get().start_count<triangle_drawer>();
 		thinkable = true;
@@ -455,9 +455,12 @@ public:
 				command_list->flush_transitions();
 
 				//if (GetAsyncKeyState('O'))
-				scene_as->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_gpu_address(), need_rebuild);
-
-				RTX::get().prepare(command_list);
+				
+				if (Device::get().is_rtx_supported())
+				{
+					scene_as->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_gpu_address(), need_rebuild);
+					RTX::get().prepare(command_list);
+				}
 
 			}
 
@@ -562,7 +565,7 @@ public:
 		voxel_gi->generate(graph);
 
 
-	//	if(false)
+		if (Device::get().is_rtx_supported())
 		graph.add_pass<pass_data>("RAYTRACE", [&](pass_data& data, TaskBuilder& builder) {
 			data.o_texture = builder.create_texture("RTX", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,ResourceFlags::UnorderedAccess| ResourceFlags::Static);
 			data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
@@ -1590,6 +1593,8 @@ protected:
 		//ovr = std::make_shared<OVRRender>();
 #endif
 		init_signatures();
+
+		PSOHolder::create();
 //		init_pso();
 
 

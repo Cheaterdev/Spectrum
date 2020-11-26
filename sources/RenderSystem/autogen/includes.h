@@ -123,4 +123,4 @@
 #include "pso\VoxelDebug.h"
 void init_signatures();
 Render::RootLayout::ptr get_Signature(Layouts id);
-void init_pso(std::array<PSOBase::ptr, int(PSO::TOTAL)>&);
+void init_pso(enum_array<PSO, PSOBase::ptr>&);

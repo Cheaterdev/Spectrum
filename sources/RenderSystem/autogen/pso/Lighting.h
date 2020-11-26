@@ -3,7 +3,7 @@ namespace PSOS
 {
 	struct Lighting: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 KeyValue<NoValue,Nullable> SecondBounce;
 
  		GEN_DEF_COMP(Keys) };
@@ -13,6 +13,7 @@ KeyValue<NoValue,Nullable> SecondBounce;
 		SimplePSO init_pso(Keys & key)
 		{
 			static const ShaderDefine<&Keys::SecondBounce, &SimpleComputePSO::compute> SecondBounce = "SECOND_BOUNCE";
+
 			SimplePSO mpso("Lighting");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/voxel_lighting.hlsl";

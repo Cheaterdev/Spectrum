@@ -4,6 +4,7 @@ enum class Layouts: int
 	FrameLayout,
 	DefaultLayout,
 	TOTAL
+	, GENERATE_OPS
 };
 enum class PSO: int
 {
@@ -53,4 +54,5 @@ enum class PSO: int
 	VoxelIndirectUpsample,
 	VoxelDebug,
 	TOTAL
+	, GENERATE_OPS
 };

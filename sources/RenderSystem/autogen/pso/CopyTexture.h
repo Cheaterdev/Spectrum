@@ -3,7 +3,7 @@ namespace PSOS
 {
 	struct CopyTexture: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 KeyValue<DXGI_FORMAT,NonNullable,ALL_RT_FORMATS> Format;
 
  		GEN_DEF_COMP(Keys) };
@@ -13,6 +13,7 @@ KeyValue<DXGI_FORMAT,NonNullable,ALL_RT_FORMATS> Format;
 		SimplePSO init_pso(Keys & key)
 		{
 			static const ShaderDefine<&Keys::Format> Format = "Format";
+
 			SimplePSO mpso("CopyTexture");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/copy_texture.hlsl";

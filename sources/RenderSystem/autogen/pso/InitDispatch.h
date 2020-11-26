@@ -3,7 +3,7 @@ namespace PSOS
 {
 	struct InitDispatch: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 KeyValue<NoValue,Nullable> CheckFrustum;
 
  		GEN_DEF_COMP(Keys) };
@@ -13,6 +13,7 @@ KeyValue<NoValue,Nullable> CheckFrustum;
 		SimplePSO init_pso(Keys & key)
 		{
 			static const ShaderDefine<&Keys::CheckFrustum, &SimpleComputePSO::compute> CheckFrustum = "CHECK_FRUSTUM";
+
 			SimplePSO mpso("InitDispatch");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/occluder_cs_dispatch_init.hlsl";

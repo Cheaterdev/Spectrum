@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct DrawSelected: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(DrawSelected)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("DrawSelected");
+			
+			SimplePSO mpso("DrawSelected");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/triangle.hlsl";
 			mpso.vertex.entry_point = "VS";

@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct VoxelDebug: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(VoxelDebug)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("VoxelDebug");
+			
+			SimplePSO mpso("VoxelDebug");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/voxel_screen.hlsl";
 			mpso.vertex.entry_point = "VS";

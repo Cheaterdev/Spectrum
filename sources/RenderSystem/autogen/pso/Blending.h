@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct Blending: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(Blending)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("Blending");
+			
+			SimplePSO mpso("Blending");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/SMAA.hlsl";
 			mpso.vertex.entry_point = "DX10_SMAANeighborhoodBlendingVS";

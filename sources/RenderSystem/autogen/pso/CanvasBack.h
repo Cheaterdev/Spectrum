@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct CanvasBack: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(CanvasBack)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("CanvasBack");
+			
+			SimplePSO mpso("CanvasBack");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/gui/ninepatch.hlsl";
 			mpso.vertex.entry_point = "VS";

@@ -16,9 +16,10 @@ namespace DX12
 		std::vector <ComPtr<IDXGIAdapter3> > vAdapters;
 
 		//   std::shared_ptr<CommandList> upload_list;
-		std::array<Queue::ptr, 4> queues;
+		enum_array<CommandListType, Queue::ptr> queues;
 		IdGenerator id_generator;
 		friend class CommandList;
+		bool rtx = false;
 	public:
 		void stop_all();
 		virtual ~Device();
@@ -37,7 +38,7 @@ namespace DX12
 
 		void create_sampler(D3D12_SAMPLER_DESC desc, CD3DX12_CPU_DESCRIPTOR_HANDLE handle);
 
-
+		bool is_rtx_supported() { return rtx; }
 		void create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv);
 		void create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv);
 		void create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter = nullptr);

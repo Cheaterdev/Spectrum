@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct BRDF: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_COMPUTE_PSO(BRDF)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("BRDF");
+			
+			SimplePSO mpso("BRDF");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/BRDF.hlsl";
 			mpso.compute.entry_point = "CS";

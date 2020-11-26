@@ -406,6 +406,7 @@ struct SimpleComputePSO {
 
 	SimpleComputePSO(std::string name) :name(name)
 	{
+		Log::get() << "PSO: " << name << Log::endl;
 
 	}
 
@@ -442,6 +443,7 @@ struct  SimpleGraphicsPSO {
 
 	SimpleGraphicsPSO(std::string name) :name(name)
 	{
+		Log::get() << "PSO: " << name << Log::endl;
 		ds = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
 		conservative = false;
 		depth_write = true;
@@ -577,7 +579,7 @@ protected:
 class PSOHolder : public Singleton<PSOHolder>
 {
 	using ptr = std::shared_ptr<PSOBase>;
-	std::array<ptr, int(PSO::TOTAL)> psos;
+	enum_array<PSO, ptr> psos;
 
 public:
 	PSOHolder();
@@ -585,7 +587,7 @@ public:
 	template<class T>
 	typename T::PSOState::ptr GetPSO(KeyPair<typename T::Keys> k = KeyPair<typename T::Keys>())
 	{
-		auto pso = static_cast<T*>(psos[int(T::ID)].get());
+		auto pso = static_cast<T*>(psos[T::ID].get());
 		return pso->GetPSO(k);
 	}
 };

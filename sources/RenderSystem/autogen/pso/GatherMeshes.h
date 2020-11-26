@@ -3,7 +3,7 @@ namespace PSOS
 {
 	struct GatherMeshes: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 KeyValue<NoValue,Nullable> Invisible;
 
  		GEN_DEF_COMP(Keys) };
@@ -13,6 +13,7 @@ KeyValue<NoValue,Nullable> Invisible;
 		SimplePSO init_pso(Keys & key)
 		{
 			static const ShaderDefine<&Keys::Invisible, &SimpleComputePSO::compute> Invisible = "INVISIBLE";
+
 			SimplePSO mpso("GatherMeshes");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/gather_pipeline.hlsl";

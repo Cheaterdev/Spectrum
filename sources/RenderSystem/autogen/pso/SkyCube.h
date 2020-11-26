@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct SkyCube: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(SkyCube)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("SkyCube");
+			
+			SimplePSO mpso("SkyCube");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/sky.hlsl";
 			mpso.vertex.entry_point = "VS_Cube";

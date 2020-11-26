@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct QualityColor: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(QualityColor)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("QualityColor");
+			
+			SimplePSO mpso("QualityColor");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/gbuffer_quality.hlsl";
 			mpso.vertex.entry_point = "VS";

@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct DrawAxis: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(DrawAxis)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("DrawAxis");
+			
+			SimplePSO mpso("DrawAxis");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/triangle.hlsl";
 			mpso.vertex.entry_point = "VS";

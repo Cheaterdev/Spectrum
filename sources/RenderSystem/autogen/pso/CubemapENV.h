@@ -3,7 +3,7 @@ namespace PSOS
 {
 	struct CubemapENV: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 KeyValue<int,NonNullable,1,8,32,64,128> Level;
 
  		GEN_DEF_COMP(Keys) };
@@ -13,6 +13,7 @@ KeyValue<int,NonNullable,1,8,32,64,128> Level;
 		SimplePSO init_pso(Keys & key)
 		{
 			static const ShaderDefine<&Keys::Level, &SimpleGraphicsPSO::pixel> Level = "NumSamples";
+
 			SimplePSO mpso("CubemapENV");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/cubemap_down.hlsl";

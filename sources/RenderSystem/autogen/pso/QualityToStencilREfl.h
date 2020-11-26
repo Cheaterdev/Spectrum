@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct QualityToStencilREfl: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(QualityToStencilREfl)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("QualityToStencilREfl");
+			
+			SimplePSO mpso("QualityToStencilREfl");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/gbuffer_quality.hlsl";
 			mpso.vertex.entry_point = "VS";

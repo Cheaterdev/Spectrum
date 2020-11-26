@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct CubemapENVDiffuse: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(CubemapENVDiffuse)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("CubemapENVDiffuse");
+			
+			SimplePSO mpso("CubemapENVDiffuse");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/cubemap_down.hlsl";
 			mpso.vertex.entry_point = "VS";

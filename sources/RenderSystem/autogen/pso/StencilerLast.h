@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct StencilerLast: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(StencilerLast)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("StencilerLast");
+			
+			SimplePSO mpso("StencilerLast");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/contour.hlsl";
 			mpso.vertex.entry_point = "VS";

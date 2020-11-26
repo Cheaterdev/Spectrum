@@ -467,3 +467,14 @@ template<EnumType Enum>
 }
 
 
+ template<EnumType E, class T, std::size_t N = std::size_t(E::__GENERATE_OPS__)>
+class enum_array : public std::array<T, N> {
+public:
+    T & operator[] (E e) {
+        return std::array<T, N>::operator[]((std::size_t)e);
+    }
+
+    const T & operator[] (E e) const {
+        return std::array<T, N>::operator[]((std::size_t)e);
+    }
+};

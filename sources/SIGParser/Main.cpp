@@ -843,7 +843,7 @@ void generate_include_list(const Parsed& parsed)
 
 
 
-	stream << "void init_pso(std::array<PSOBase::ptr, int(PSO::TOTAL)>&);" << std::endl;
+	stream << "void init_pso(enum_array<PSO, PSOBase::ptr>&);" << std::endl;
 
 	{
 		my_stream stream(cpp_path, "enums.h");
@@ -860,6 +860,7 @@ void generate_include_list(const Parsed& parsed)
 			}
 
 			stream << "TOTAL" << std::endl;
+			stream << ", GENERATE_OPS" << std::endl;
 			stream.pop();
 		}
 
@@ -880,6 +881,7 @@ void generate_include_list(const Parsed& parsed)
 				stream << l.name << "," << std::endl;
 			}
 			stream << "TOTAL" << std::endl;
+			stream << ", GENERATE_OPS" << std::endl;
 			stream.pop();
 		}
 
@@ -892,7 +894,7 @@ void generate_include_list(const Parsed& parsed)
 		my_stream stream(cpp_path, "layouts.cpp");
 		stream << "#include \"pch.h\"" << std::endl;
 
-		stream << "static std::array<DX12::RootLayout::ptr, static_cast<int>(Layouts::TOTAL)> signatures;" << std::endl;
+		stream << "static enum_array<Layouts, DX12::RootLayout::ptr> signatures;" << std::endl;
 		stream << "void init_signatures()" << std::endl;
 
 		stream << "{" << std::endl;
@@ -901,7 +903,7 @@ void generate_include_list(const Parsed& parsed)
 
 			for (auto& l : parsed.layouts)
 			{
-				stream << "signatures[static_cast<int>(Layouts::" << l.name << ")] = AutoGenSignatureDesc<" << l.name << ">().create_signature(Layouts::" << l.name << ");" << std::endl;
+				stream << "signatures[Layouts::" << l.name << "] = AutoGenSignatureDesc<" << l.name << ">().create_signature(Layouts::" << l.name << ");" << std::endl;
 			}
 
 			stream.pop();
@@ -912,7 +914,7 @@ void generate_include_list(const Parsed& parsed)
 
 		stream << "Render::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
 		stream << "{" << std::endl;
-		stream << "\treturn signatures[static_cast<int>(id)];" << std::endl;
+		stream << "\treturn signatures[id];" << std::endl;
 		stream << "}" << std::endl;
 
 
@@ -924,7 +926,7 @@ void generate_include_list(const Parsed& parsed)
 		stream << "#include \"pch.h\"" << std::endl;
 
 		//stream << "static std::array<DX12::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
-		stream << "void init_pso(std::array<PSOBase::ptr, int(PSO::TOTAL)>& pso)" << std::endl;
+		stream << "void init_pso(enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
 
 		stream << "{" << std::endl;
 		{
@@ -933,12 +935,12 @@ void generate_include_list(const Parsed& parsed)
 			for (auto& l : parsed.compute_pso)
 			{
 			//	stream << "pso[static_cast<int>(PSO::" << l.name << ")] = AutoGenPSO<Autogen::" << l.name << ">().create_pso(PSO::" << l.name << ", \"" << l.name << "\");" << std::endl;
-				stream << "pso[static_cast<int>(PSO::" << l.name << ")] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
+				stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
 			}
 			for (auto& l : parsed.graphics_pso)
 			{
 				//	stream << "pso[static_cast<int>(PSO::" << l.name << ")] = AutoGenPSO<Autogen::" << l.name << ">().create_pso(PSO::" << l.name << ", \"" << l.name << "\");" << std::endl;
-				stream << "pso[static_cast<int>(PSO::" << l.name << ")] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
+				stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
 			}
 
 			stream.pop();
@@ -1178,7 +1180,7 @@ void generate_pso(PSO& pso)
 		{
 			stream.push();
 
-			stream << "struct Keys{" << std::endl << keys << std::endl <<" 		GEN_DEF_COMP(Keys) };" << std::endl;
+			stream << "struct Keys {" << std::endl << keys << std::endl <<" 		GEN_DEF_COMP(Keys) };" << std::endl;
 
 			std::string GEN_PSO;
 			if (dynamic_cast<ComputePSO*>(&pso))
@@ -1198,7 +1200,7 @@ void generate_pso(PSO& pso)
 			stream << "{" << std::endl;
 			{
 				stream.push();
-				stream << defines;
+				stream << defines << std::endl;
 
 
 				stream << "SimplePSO mpso(\"" << pso.name << "\");" << std::endl;

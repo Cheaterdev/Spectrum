@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct DrawBox: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(DrawBox)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("DrawBox");
+			
+			SimplePSO mpso("DrawBox");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/triangle_stencil.hlsl";
 			mpso.vertex.entry_point = "VS";

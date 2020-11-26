@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct DownsampleDepth: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_COMPUTE_PSO(DownsampleDepth)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("DownsampleDepth");
+			
+			SimplePSO mpso("DownsampleDepth");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/downsample_depth.hlsl";
 			mpso.compute.entry_point = "CS";

@@ -425,7 +425,7 @@ bool MeshAssetInstance::update_transforms()
 	
 	}
 
-
+	if (Device::get().is_rtx_supported())
 	if (ras_handle)
 	{
 		auto ras = ras_handle.map();//  render_scene->mesh_infos->map_elements(meshpart_handle.get_offset(), rendering_count);
@@ -471,6 +471,8 @@ return res;
 
 bool MeshAssetInstance::init_ras(CommandList::ptr list)
 {
+	if (!Device::get().is_rtx_supported()) return false;
+
 	if (ras_inited) return false;
 	ras_inited = true;
 	scene->raytrace->allocate(ras_handle, rendering_count);
@@ -500,7 +502,7 @@ bool MeshAssetInstance::init_ras(CommandList::ptr list)
 			list->transition(universal_vertex_manager::get().buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 			list->flush_transitions();
 			info.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
-
+			if (Device::get().is_rtx_supported())
 			{
 
 				D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};

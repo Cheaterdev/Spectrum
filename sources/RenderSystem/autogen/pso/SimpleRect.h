@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct SimpleRect: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(SimpleRect)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("SimpleRect");
+			
+			SimplePSO mpso("SimpleRect");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/gui/rect.hlsl";
 			mpso.vertex.entry_point = "VS";

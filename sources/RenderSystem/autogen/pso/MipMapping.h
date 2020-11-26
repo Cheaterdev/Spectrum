@@ -3,7 +3,7 @@ namespace PSOS
 {
 	struct MipMapping: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 KeyValue<int,NonNullable,0,1,2,3> NonPowerOfTwo;
 KeyValue<NoValue,Nullable> Gamma;
 
@@ -16,6 +16,7 @@ GEN_KEY(Gamma,true);
 		{
 			static const ShaderDefine<&Keys::NonPowerOfTwo, &SimpleComputePSO::compute> NonPowerOfTwo = "NON_POWER_OF_TWO";
 static const ShaderDefine<&Keys::Gamma, &SimpleComputePSO::compute> Gamma = "CONVERT_TO_SRGB";
+
 			SimplePSO mpso("MipMapping");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/GenerateMips.hlsl";

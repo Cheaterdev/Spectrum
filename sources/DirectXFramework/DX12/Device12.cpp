@@ -35,7 +35,7 @@ namespace DX12
 
 	std::shared_ptr<CommandList> Device::get_upload_list()
 	{
-		auto list = queues[static_cast<int>(CommandListType::COPY)]->get_free_list();
+		auto list = queues[CommandListType::COPY]->get_free_list();
 		list->begin("");
 		return list;
 	}
@@ -47,7 +47,7 @@ namespace DX12
 
 	Queue::ptr & Device::get_queue(CommandListType type)
 	{
-		return queues[static_cast<int>(type)];
+		return queues[type];
 	}
 
 
@@ -68,7 +68,7 @@ namespace DX12
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		ComPtr<IDXGISwapChain1> swapChain;
 		HRESULT res = factory->CreateSwapChainForHwnd(
-			queues[static_cast<int>(CommandListType::DIRECT)]->get_native().Get(),
+			queues[CommandListType::DIRECT]->get_native().Get(),
 			desc.window->get_hwnd(),
 			&swapChainDesc, nullptr, nullptr, &swapChain);
 		ComPtr<IDXGISwapChain3> m_swapChain;
@@ -112,7 +112,7 @@ namespace DX12
 			ComPtr<ID3D12Debug> debugController;
 			CComPtr<ID3D12Debug1> spDebugController1;
 
-	if(false)
+if(false)
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 			{
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
@@ -198,16 +198,16 @@ namespace DX12
 		}
 //#endif
 		// Describe and create the command queue.
-		queues[static_cast<int>(CommandListType::DIRECT)].reset(new Queue(CommandListType::DIRECT, this));
-		 queues[static_cast<int>(CommandListType::COMPUTE)].reset(new Queue(CommandListType::COMPUTE, this));
-		queues[static_cast<int>(CommandListType::COPY)].reset(new Queue(CommandListType::COPY, this));
+		queues[CommandListType::DIRECT].reset(new Queue(CommandListType::DIRECT, this));
+		queues[CommandListType::COMPUTE].reset(new Queue(CommandListType::COMPUTE, this));
+		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
+
 		auto res = m_device->GetNodeCount();
 		D3D12_FEATURE_DATA_D3D12_OPTIONS featureData;
 		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));
 		auto m_tiledResourcesTier = featureData.TiledResourcesTier;
 	
-
-
+		rtx =  options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
 	}
 
 

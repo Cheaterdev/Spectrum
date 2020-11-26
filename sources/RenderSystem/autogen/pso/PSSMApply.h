@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct PSSMApply: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(PSSMApply)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("PSSMApply");
+			
+			SimplePSO mpso("PSSMApply");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/PSSM.hlsl";
 			mpso.vertex.entry_point = "VS";

@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct BlendWeight: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(BlendWeight)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("BlendWeight");
+			
+			SimplePSO mpso("BlendWeight");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/SMAA.hlsl";
 			mpso.vertex.entry_point = "DX10_SMAABlendingWeightCalculationVS";

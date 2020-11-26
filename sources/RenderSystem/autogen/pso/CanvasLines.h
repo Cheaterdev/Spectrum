@@ -3,14 +3,15 @@ namespace PSOS
 {
 	struct CanvasLines: public PSOBase
 	{
-		struct Keys{
+		struct Keys {
 
  		GEN_DEF_COMP(Keys) };
 		GEN_GRAPHICS_PSO(CanvasLines)
 		
 		SimplePSO init_pso(Keys & key)
 		{
-						SimplePSO mpso("CanvasLines");
+			
+			SimplePSO mpso("CanvasLines");
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/gui/flow_line.hlsl";
 			mpso.vertex.entry_point = "VS";

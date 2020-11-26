@@ -17,7 +17,7 @@ cbuffer cbCamera : register(b0)
 struct vertex_output
 {
 float4 pos : SV_POSITION;
-float3 wpos : POSITION;
+float3 wpos : WPOSITION;
 float3 normal : NORMAL;
 float3 binormal : BINORMAL;
 float3 tangent : TANGENT;
