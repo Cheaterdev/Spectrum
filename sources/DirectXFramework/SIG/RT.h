@@ -10,7 +10,7 @@ struct CompiledRT
 	const CompiledRT& set(Render::GraphicsContext& graphics, bool use_transitions = true) const
 	{
 		if (use_transitions) {
-			//	auto timer = Profiler::get().start(L"transitions");
+			//	PROFILE(L"transitions");
 
 			for (UINT i = 0; i < (UINT)table_rtv.get_count(); ++i)
 			{
@@ -89,7 +89,7 @@ public:
 	CompiledRT compile(Context& context) const
 	{
 
-		// auto timer = Profiler::get().start(L"compile");
+		// PROFILE(L"compile");
 		CompiledRT compiled;
 
 

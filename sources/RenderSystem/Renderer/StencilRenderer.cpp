@@ -661,7 +661,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					graphics.set_scissor(target_tex.get_scissor());
 					graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
 					{
-						auto timer = list.start(L"blend");
+						PROFILE_GPU(L"blend");
 						graphics.draw(4);
 					}
 				}

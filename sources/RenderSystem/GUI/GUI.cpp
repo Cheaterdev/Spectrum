@@ -922,7 +922,7 @@ namespace GUI
 		 }
 		 is_updating_layout = true;
 		 {
-			 auto timer = Profiler::get().start(L"layout");
+             PROFILE(L"layout");
 
 			 update_layout({ pos.get(), pos.get() + size.get() }, scale);
 			 is_updating_layout = false;
@@ -966,7 +966,7 @@ namespace GUI
 				 c.scale = 1;
                  c.delta_time = graph.time;
 				 {
-					 auto timer = c.command_list->start(L"draw");
+                     PROFILE_GPU(L"draw");
 					 RecursiveContext context(c);
 
 					 //if (!c.command_list_label)

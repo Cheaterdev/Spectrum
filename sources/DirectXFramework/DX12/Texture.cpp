@@ -5,8 +5,6 @@ namespace DX12
 
     void Texture::init()
     {
-	//	auto& timer = Profiler::get().start(L"views");
-
         if (tracked_info->m_Resource)
         {
             if (get_desc().ArraySize() == 6)

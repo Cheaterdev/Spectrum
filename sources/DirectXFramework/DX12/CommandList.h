@@ -120,9 +120,7 @@ namespace DX12
 			//	memcpy(info.resource->get_data() + info.offset, data, size);
 			size_t start = 0;
 			{
-		//		auto timer = Profiler::get().start(L"write");
 				(write(info, start, std::forward<Args>(args)), ...);
-
 			}
 			return info;
 		}
@@ -242,19 +240,6 @@ namespace DX12
 		std::shared_ptr<CommandList> start_list(std::string name = "", CommandListType type = CommandListType::DIRECT);
 
 	};
-
-	class Finalizer
-	{
-		std::function<void()> f;
-	public:
-		Finalizer(std::function<void()> f) :f(f) {};
-
-		~Finalizer()
-		{
-			f();
-		}
-	};
-
 
 	class FrameResourceManager :public Singleton<FrameResourceManager>
 	{
@@ -624,8 +609,7 @@ namespace DX12
 	class GPUBlock :public TimedBlock
 	{
 	public:
-		GPUBlock(std::wstring name) :TimedBlock(name) {};
-
+		using TimedBlock::TimedBlock;
 
 		GPUCounter gpu_counter;
 	};
@@ -633,8 +617,8 @@ namespace DX12
 
 	class Eventer : public virtual CommandListBase, public TimedRoot
 	{
-		std::shared_ptr<Timer> timer;
-		std::list<std::wstring> names;
+		
+ 		std::list<std::wstring> names;
 		TimedBlock* current;
 
 		virtual  void on_start(Timer* timer) override;
@@ -643,9 +627,11 @@ namespace DX12
 		void reset();
 		void begin(std::string name, Timer* t = nullptr);
 	public:
-		virtual Timer start(const wchar_t* name)override;
+		static thread_local Eventer* thread_current;
 
+		virtual Timer start(std::wstring_view name)override;
 
+		std::shared_ptr<Timer> timer;
 		// events
 		void start_event(std::wstring str);
 		void end_event();
@@ -658,6 +644,12 @@ namespace DX12
 		void resolve_times(Resource* resource, QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void()>);
 
 	};
+
+#ifdef PROFILING
+#define PROFILE_GPU(x) auto UNIQUE_NAME = Eventer::thread_current->start(x);
+#else
+#define PROFILE_GPU(x) ;
+#endif
 
 	class Sendable : public virtual CommandListBase
 	{

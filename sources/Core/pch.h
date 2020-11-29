@@ -55,7 +55,7 @@ using namespace std;
 #pragma warning(disable:4512)
 #pragma warning(disable:4100)
 #pragma warning(disable:4310)
-
+#include <magic_enum.hpp>
 
 #include <boost/predef/other/endian.h>
 #define BOOST_PREDEF_DETAIL_ENDIAN_COMPAT_H

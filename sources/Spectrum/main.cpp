@@ -603,7 +603,7 @@ public:
 				Slots::FrameInfo::Compiled compiledFrame;
 
 				{
-					auto timer = Profiler::get().start(L"FrameInfo");
+					PROFILE(L"FrameInfo");
 					Slots::FrameInfo frameInfo;
 
 					frameInfo.GetSky() = sky_cubemap.get_srv();
@@ -981,7 +981,7 @@ public:
 			Render::Texture::reload_all();
 		}
 		{
-			auto timer = Profiler::get().start(L"AssetManager");
+			PROFILE(L"AssetManager");
 			AssetManager::get().tact();
 		}
 		//		DIRECTX.Run(MainLoop);
@@ -1187,7 +1187,7 @@ public:
 
 			process_ui((float)main_timer.tick());
 			{
-				auto timer = Profiler::get().start(L"Wait next");
+				PROFILE(L"Wait next");
 				swap_chain->start_next();
 			}
 			setup_graph();
@@ -1196,7 +1196,7 @@ public:
 
 			{
 
-				auto timer = Profiler::get().start(L"reset");
+				PROFILE(L"reset");
 
 				graph.reset();
 			}
@@ -1240,7 +1240,7 @@ public:
 
 		{
 
-			auto timer = Profiler::get().start(L"create_graph");
+			PROFILE(L"create_graph");
 			create_graph(graph);
 
 

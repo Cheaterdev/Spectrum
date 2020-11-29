@@ -360,7 +360,6 @@ namespace DX12
 	}
 	Uploader::UploadInfo Uploader::place_data(UINT64 uploadBufferSize, unsigned int alignment)
 	{
-		//auto timer = Profiler::get().start(L"place_data");
 		const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
 		resource_offset = Math::roundUp(resource_offset, alignment);
 		
@@ -666,7 +665,7 @@ namespace DX12
 	}
 	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
 	{
-		auto timer = Profiler::get().start(L"fix_pretransitions");
+		PROFILE(L"fix_pretransitions");
 
 		std::vector<D3D12_RESOURCE_BARRIER> result;
 		std::vector<Resource*> discards;
@@ -900,7 +899,7 @@ namespace DX12
 				}
 			}
 		}
-		auto timer = Profiler::get().start(L"UploadBuffer");
+		PROFILE(L"UploadBuffer");
 		return std::make_shared<UploadBuffer>(size);
 		//     upload_resources.emplace_back(new BufferBase(size, HeapType::UPLOAD, ResourceState::GEN_READ));
 	}
@@ -921,7 +920,7 @@ namespace DX12
 			}
 		}
 
-	auto timer = 	Profiler::get().start(L"readback_buffer");
+		PROFILE(L"readback_buffer");
 	auto buffer = std::make_shared<CPUBuffer>(size, 1);
 	buffer->set_name("readback_buffer");
 	return buffer;
@@ -1069,14 +1068,16 @@ void ComputeContext::dispach(int x,int y,int z)
 		current = timer->get_block().get_parent().get();
 		end_event();
 	}
-
+	thread_local Eventer* Eventer::thread_current = nullptr;
 	void Eventer::reset()
 	{
+		thread_current = nullptr;
 		timer.reset();
 	}
 
 	void Eventer::begin(std::string name, Timer*t )
 	{
+		thread_current = this;
 
 		current = t ? &t->get_block() : &Profiler::get();
 		TimedRoot::parent = t ? t->get_root(): &Profiler::get();
@@ -1092,10 +1093,10 @@ void ComputeContext::dispach(int x,int y,int z)
 		names.clear();
 	}
 
-	Timer  Eventer::start(const wchar_t* name)
+	Timer  Eventer::start(std::wstring_view name)
 	{
 		if (Profiler::get().enabled)
-			return std::move(Timer(&current->get_child<GPUBlock>(std::wstring(name)), this));
+			return std::move(Timer(&current->get_child<GPUBlock>(name), this));
 		else return Timer(nullptr, nullptr);
 		//return std::move(Timer(nullptr,nullptr));
 		

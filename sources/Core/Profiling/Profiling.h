@@ -30,7 +30,7 @@ protected:
 
 public:
 
-	virtual Timer start(const wchar_t* name) = 0;
+	virtual Timer start(std::wstring_view name) = 0;
 };
 
 
@@ -69,7 +69,7 @@ public:
 	int id;
 
 	template<class T = TimedBlock>
-	 TimedBlock& get_child(std::wstring name)
+	 TimedBlock& get_child(std::wstring_view name)
 	{
 		std::lock_guard<std::mutex> g(m);
 		auto it = std::find_if(childs.begin(), childs.end(), [name](const TimedBlock::ptr & p)->bool
@@ -96,7 +96,7 @@ public:
 
 protected:
 	
-	TimedBlock(std::wstring name);
+	TimedBlock(std::wstring_view name);
 
 	bool test = false;
 	void update();
@@ -164,7 +164,7 @@ public:
 
 
 
-	virtual Timer start(const wchar_t* name) override;
+	virtual Timer start(std::wstring_view name) override;
 
 private:
 	virtual void on_start(Timer* timer) override;
@@ -194,3 +194,16 @@ public:
 		Log::get() << name << ":" << std::to_string(int(time * 1000)) << Log::endl;
 	}
 };
+
+#define MERGE_(a,b)  a##b
+#define LABEL_(a) MERGE_(__timer__, a)
+
+
+#define UNIQUE_NAME LABEL_(__LINE__)
+
+
+#ifdef PROFILING
+#define PROFILE(x) auto UNIQUE_NAME = Profiler::get().start(x);
+#else
+#define PROFILE(x) ;
+#endif

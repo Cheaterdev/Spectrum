@@ -183,7 +183,7 @@ void RTX::prepare(CommandList::ptr& list)
 
 void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer)
 {
-	auto timer = context->list->start(L"raytracing");
+	PROFILE_GPU(L"raytracing");
 
 	auto& _list = context->list;
 	// Get shader identifiers.

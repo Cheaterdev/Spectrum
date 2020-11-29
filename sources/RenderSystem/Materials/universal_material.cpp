@@ -61,7 +61,7 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 void materials::universal_material::update()
 {
 	//std::lock_guard<std::mutex> g(m);
-	auto timer = Profiler::get().start(L"universal_material");
+	PROFILE(L"universal_material");
 	if (need_regenerate_material)
 	{
 		generate_material();

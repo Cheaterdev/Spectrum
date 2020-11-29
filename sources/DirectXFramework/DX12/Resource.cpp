@@ -18,7 +18,6 @@ namespace DX12
 		CD3DX12_RESOURCE_DESC desc = _desc;
 		ComPtr<ID3D12Resource> resource;
 
-		//	auto& timer = Profiler::get().start(L"Resource");
 		auto t = CounterManager::get().start_count<Resource>();
 		heap_type = _heap_type;
 		D3D12_CLEAR_VALUE value;
@@ -115,7 +114,6 @@ namespace DX12
 
 	Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle)
 	{
-		//	auto& timer = Profiler::get().start(L"Resource");
 		auto t = CounterManager::get().start_count<Resource>();
 
 		ComPtr<ID3D12Resource> resource;

@@ -30,7 +30,7 @@ namespace Spectrum
             AddTargets(new Target(
                 Platform.win64,
                 DevEnv.vs2019,
-                Optimization.Debug | Optimization.Release,
+                Optimization.Release,
                 OutputType.Lib,
                 Blob.NoBlob,
                 BuildSystem.MSBuild
@@ -51,7 +51,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.WindowsTargetPlatformVersion.Latest);		
             conf.Options.Add(Options.Vc.Compiler.FunctionLevelLinking.Disable);		
             conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreadedDLL);		
-            conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);		
+            //conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);		
             conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);		
             conf.Options.Add(Options.Vc.General.Vcpkg.True);		
           
@@ -307,7 +307,7 @@ namespace Spectrum
             AddTargets(new Target(
                 Platform.win64,
                 DevEnv.vs2019,
-                Optimization.Debug | Optimization.Release,
+                Optimization.Release,
                 OutputType.Lib,
                 Blob.NoBlob,
                 BuildSystem.MSBuild

@@ -18,24 +18,18 @@ namespace DX12
 
 		m_fenceValue = 0;
 
-		static int counter = 0;
-		name = std::wstring(L"Queue_") + std::to_wstring(++counter);
-		native->SetName(name.c_str());
-		queue_thread = std::thread([this]
-			{
-				std::string name;
 
-				if (this->type == CommandListType::DIRECT)
-					name = "DIRECT";
-				else if (this->type == CommandListType::COPY)
-					name = "COPY";
-				else if (this->type == CommandListType::COMPUTE)
-					name = "COMPUTE";
-				SetThreadName(std::string("DXQueue: ") + name);
+		auto name = std::string("DXQueue: ") + std::string(magic_enum::enum_name(type));
+
+		native->SetName(convert(name).c_str());
+
+		queue_thread = std::thread([this, name]
+			{
+				SetThreadName(name);
 
 				for (;;)
 				{
-					auto timer = Profiler::get().start(L"Wait");
+					PROFILE(L"Wait");
 
 					std::function<void()> task;
 					{
@@ -56,7 +50,7 @@ namespace DX12
 						this->tasks.pop();
 					}	
 					
-					auto timer2 = Profiler::get().start(L"Task");
+					PROFILE(L"Task");
 
 					task();
 				}

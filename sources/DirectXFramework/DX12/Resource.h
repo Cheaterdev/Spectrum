@@ -103,7 +103,6 @@ namespace DX12
 		void set_name(std::string name)
 		{
 			this->name = name;
-			//	auto& timer = Profiler::get().start(L"set_name");
 			tracked_info->m_Resource->SetName(convert(name).c_str());
 
 			debug = name == "PSSM_Cameras";

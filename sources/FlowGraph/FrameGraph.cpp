@@ -155,22 +155,16 @@ void Pass::execute()
 		return;
 
 	}
-/*	if (!enabled) {
-		return;
 
-	}
-	auto timer = Profiler::get().start(L"wait"); {
-		render_task.wait();
-	}
-	*/
-	{	auto timer = Profiler::get().start(L"execute");
+	{	
+	PROFILE(L"execute");
 	context.execute();
 	}
 }
 void FrameGraph::start_new_frame()
 {
 	{
-		auto timer = Profiler::get().start(L"begin_frame");
+		PROFILE(L"begin_frame");
 
 		builder.current_frame = builder.frames.begin_frame();
 	}
@@ -178,7 +172,7 @@ void FrameGraph::start_new_frame()
 
 void FrameGraph::setup()
 {
-	auto timer = Profiler::get().start(L"FrameGraph::setup");
+	PROFILE(L"FrameGraph::setup");
 
 	for (auto& pass : passes)
 	{
@@ -291,7 +285,18 @@ void FrameGraph::setup()
 
 		for (auto pass : enabled_passes | std::ranges::views::reverse)
 		{
+			
+				for (auto dep : pass->related)
+				{
+				
+						dep->graphic_count += pass->graphic_count;
+					dep->compute_count += pass->compute_count;
 
+					if (check(pass->flags & PassFlags::Compute))
+						dep->compute_count++;
+					else
+						dep->graphic_count++;
+				}
 		}
 
 		enabled_passes.sort(
@@ -300,6 +305,10 @@ void FrameGraph::setup()
 
 				if (a->call_id == b->call_id)
 				{
+					if (!check(a->flags & PassFlags::Compute) && !check(b->flags & PassFlags::Compute))
+					{
+						return a->compute_count > b->compute_count;
+					}
 
 					return check(a->flags & PassFlags::Compute) > check(b->flags & PassFlags::Compute);
 				}
@@ -325,7 +334,7 @@ void FrameGraph::setup()
 
 void FrameGraph::compile(int frame)
 {
-	auto timer = Profiler::get().start(L"FrameGraph::compile");
+	PROFILE(L"FrameGraph::compile");
 	//builder.allocator.begin_frame(frame);
 
 	builder.current_alloc = &builder.frame_allocs[frame];
@@ -339,18 +348,18 @@ void FrameGraph::compile(int frame)
 
 void FrameGraph::render()
 {
-	auto timer = Profiler::get().start(L"FrameGraph::render");
+	PROFILE(L"FrameGraph::render");
 
 
 	{
-		auto timer = Profiler::get().start(L"passes");
+		PROFILE(L"passes");
 
 		for (auto& pass : enabled_passes)
 			pass->render(builder.current_frame);
 
 	}
 	{
-		auto timer = Profiler::get().start(L"wait");
+		PROFILE(L"wait");
 
 		for (auto& pass : enabled_passes)
 		{
@@ -374,10 +383,11 @@ void FrameGraph::render()
 	}
 
 
+	Profiler::get().enabled = true;
 
 
 	{
-		auto timer = Profiler::get().start(L"execute");
+		PROFILE(L"execute");
 
 
 
@@ -412,6 +422,10 @@ void FrameGraph::render()
 				Render::Device::get().get_queue(list_type)->gpu_wait(wait_pass->fence_end);
 			}
 
+			if (commandList->timer) {
+		//		Render::GPUBlock* block = static_cast<Render::GPUBlock*>(&commandList->timer->get_block());
+		//		Log::get() << block->gpu_counter.timer.get_time() << Log::endl;
+			}
 			pass->fence_end = commandList->execute().get();
 		}
 
@@ -629,8 +643,6 @@ void TaskBuilder::create_resources()
 
 		if (info->type == ResourceType::Texture)
 		{
-			//auto timer = Profiler::get().start(L"create");
-
 			TextureDesc desc = info->desc.get<TextureDesc>();
 
 			D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
@@ -698,7 +710,7 @@ void TaskBuilder::create_resources()
 	}
 
 	{
-		auto timer = Profiler::get().start(L"allocate memory");
+		PROFILE(L"allocate memory");
 
 		for (auto [id, e] : events)
 		{
@@ -722,7 +734,7 @@ void TaskBuilder::create_resources()
 	}
 
 	{
-		auto timer = Profiler::get().start(L"create resources");
+		PROFILE(L"create resources");
 		int id = 0;
 
 		for (auto& pair : alloc_resources)

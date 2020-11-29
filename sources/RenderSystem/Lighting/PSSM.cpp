@@ -323,7 +323,7 @@ void PSSM::generate(FrameGraph& graph)
 
 			for (int i = renders_size - 1; i >= 0; i--) //rangeees
 			{
-				auto timer = list.start((std::wstring(L"renders") + std::to_wstring(i)).c_str());
+				PROFILE_GPU((std::wstring(L"renders") + std::to_wstring(i)).c_str());
 				{
 					Slots::PSSMConstants constants;
 					constants.GetLevel() = i;

@@ -24,7 +24,7 @@ public:
 
 			data.gbuffer.need(builder, false, true);
 			data.gbuffer.quality = builder.need_texture("GBuffer_Quality", ResourceFlags::DepthStencil);
-		//	data.gbuffer.create_quality(size, builder);
+			//	data.gbuffer.create_quality(size, builder);
 			data.temp = data.gbuffer.create_temp_color(size, builder);
 
 
@@ -39,7 +39,7 @@ public:
 
 				Slots::FrameInfo::Compiled compiledFrame;
 				{
-					auto timer = Profiler::get().start(L"FrameInfo");
+					PROFILE(L"FrameInfo");
 					Slots::FrameInfo frameInfo;
 					auto camera = frameInfo.MapCamera();
 					camera.cb = graph.cam->camera_cb.current;
@@ -50,11 +50,11 @@ public:
 
 
 				graphics.set_pipeline(GetPSO<PSOS::GBufferDownsample>());
-			
+
 				for (int i = 1; i < gbuffer.depth_mips.resource->get_desc().MipLevels; i++)
 				{
 
-				
+
 					auto table = graphics.get_base().rtv_cpu.place(2);
 
 					{
@@ -80,7 +80,7 @@ public:
 
 
 					}
-				
+
 					graphics.set_rtv(table, Render::Handle());
 
 					Slots::GBufferDownsample downsample;
@@ -88,17 +88,17 @@ public:
 
 
 					{
-					ResourceViewDesc subres;
-					subres.type = Render::ResourceType::TEXTURE2D;
+						ResourceViewDesc subres;
+						subres.type = Render::ResourceType::TEXTURE2D;
 
-					subres.Texture2D.ArraySize = 1;
-					subres.Texture2D.FirstArraySlice = 0;
-					subres.Texture2D.MipLevels = 1;
-					subres.Texture2D.MipSlice = i - 1;
-					subres.Texture2D.PlaneSlice = 0;
-					downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).get_srv();
-					downsample.GetNormals() = gbuffer.normals.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).get_srv();
-				}
+						subres.Texture2D.ArraySize = 1;
+						subres.Texture2D.FirstArraySlice = 0;
+						subres.Texture2D.MipLevels = 1;
+						subres.Texture2D.MipSlice = i - 1;
+						subres.Texture2D.PlaneSlice = 0;
+						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).get_srv();
+						downsample.GetNormals() = gbuffer.normals.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).get_srv();
+					}
 					downsample.set(graphics);
 					graphics.draw(4);
 				}
@@ -201,11 +201,11 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 		gpu_tiles_buffer[0].reset(new GPUTilesBuffer);
 		gpu_tiles_buffer[1].reset(new GPUTilesBuffer);
 		gpu_tiles_buffer[4].reset(new GPUTilesBuffer);
-	
+
 		gpu_tiles_buffer[0]->set_size(tiled_volume_lighted->get_max_tiles_count());
 		gpu_tiles_buffer[1]->set_size(tiled_volume_lighted->get_max_tiles_count(1));
 		gpu_tiles_buffer[4]->set_size(tiled_volume_lighted->get_max_tiles_count(4));
-	
+
 	}
 
 	init_states();
@@ -217,7 +217,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 
 void VoxelGI::init_states()
 {
-	
+
 
 	gi_rtv = Render::DescriptorHeapManager::get().get_rt()->create_table(2);
 
@@ -358,7 +358,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 	}
 
 
-	auto timer = context->list->start(L"voxelizing");
+	PROFILE_GPU(L"voxelizing");
 
 
 
@@ -366,7 +366,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 	tiled_volume_albedo->clear_dynamic(graphics.get_base());
 	if (clear_scene && all_scene_regen_counter)
 	{
-		auto timer = context->list->start(L"clear");
+		PROFILE_GPU(L"clear");
 		//if(all_scene_regen_counter)
 		//tiled_volume_albedo->clear_static(graphics);
 	//	dynamic_generator_voxelizing.remove_all();
@@ -420,7 +420,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 	graphics.set_rtv(0, Render::Handle(), Render::Handle());
 
 	{
-		auto timer = context->list->start(L"tiled_update");
+		PROFILE_GPU(L"tiled_update");
 		tiled_volume_albedo->update();
 		tiled_volume_normal->update();
 		tiled_volume_lighted->update();
@@ -429,14 +429,14 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 
 
 	{
-		auto timer = context->list->start(L"render");
+		PROFILE_GPU(L"render");
 		r->render(context, scene);
 	}
 
 
 	if (all_scene_regen_counter)
 	{
-		auto timer = context->list->start(L"visibility update");
+		PROFILE_GPU(L"visibility update");
 		visibility->update(context->list);
 
 	}
@@ -468,7 +468,7 @@ void VoxelGI::debug(FrameGraph& graph)
 		data.target_tex = builder.create_texture("VoxelDebug", size, 1, DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::RenderTarget);
 		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::ComputeRead);
 
-		data.gbuffer.need(builder,true);
+		data.gbuffer.need(builder, true);
 
 		}, [this, &graph](VoxelDebug& data, FrameContext& _context) {
 
@@ -499,7 +499,7 @@ void VoxelGI::debug(FrameGraph& graph)
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
 
-			graphics.set_rtv(1, target_tex.get_rtv(),Render::Handle());
+			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::VoxelDebug>());
 
 
@@ -544,7 +544,7 @@ void VoxelGI::screen(FrameGraph& graph)
 		ResourceHandler* gi_static1;
 
 		ResourceHandler* sky_cubemap_filtered;
-		
+
 		ResourceHandler* voxel_lighted;
 
 	};
@@ -579,9 +579,9 @@ void VoxelGI::screen(FrameGraph& graph)
 			if (data.gi_static0->is_new())
 			{
 				command_list->clear_rtv(gi_views[0].get_rtv(), vec4(0, 0, 0, 0));
-				command_list->clear_rtv( gi_views[1].get_rtv(), vec4(0, 0, 0, 0));
+				command_list->clear_rtv(gi_views[1].get_rtv(), vec4(0, 0, 0, 0));
 			}
-		
+
 			context->current_time = 0;
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
@@ -597,13 +597,13 @@ void VoxelGI::screen(FrameGraph& graph)
 
 			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
-		
 
-		
+
+
 			{
 				Slots::FrameInfo frameInfo;
 
-			
+
 				frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
 				frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
 
@@ -623,9 +623,9 @@ void VoxelGI::screen(FrameGraph& graph)
 
 
 
-			{	
+			{
 				graphics.set_pipeline(GetPSO<PSOS::VoxelIndirectLow>());
-				auto timer = context->list->start(L"downsampled");
+				PROFILE_GPU(L"downsampled");
 				graphics.set_viewport(views[0].get_viewport());
 				graphics.set_scissor(views[0].get_scissor());
 				graphics.set_rtv(1, views[0].get_rtv(), Render::Handle());
@@ -635,13 +635,13 @@ void VoxelGI::screen(FrameGraph& graph)
 
 
 			{
-				auto timer = context->list->start(L"filter");
+				PROFILE_GPU(L"filter");
 
 				graphics.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>());
 
 				for (int i = 0; i < 1; i++)
 				{
-					Render::TextureView& cur = views[(i+1) % 2];
+					Render::TextureView& cur = views[(i + 1) % 2];
 					Render::TextureView& prev = views[i % 2];
 
 					{
@@ -661,12 +661,12 @@ void VoxelGI::screen(FrameGraph& graph)
 
 
 			{
-				auto timer = context->list->start(L"main");
+				PROFILE_GPU(L"main");
 
 				{
 					Slots::VoxelUpscale  voxelUpscale;
 					voxelUpscale.GetTex_downsampled() = views[1].get_srv();
-					voxelUpscale.GetTex_gi_prev() = gi_views[1- gi_index].get_srv();
+					voxelUpscale.GetTex_gi_prev() = gi_views[1 - gi_index].get_srv();
 					voxelUpscale.GetTex_depth_prev() = gbuffer.depth_prev_mips.get_srv();
 
 					voxelUpscale.set(graphics);
@@ -684,7 +684,7 @@ void VoxelGI::screen(FrameGraph& graph)
 				gi_index = 1 - gi_index;
 
 				{
-					auto timer = context->list->start(L"full");
+					PROFILE_GPU(L"full");
 					context->list->get_native_list()->OMSetStencilRef(1);
 					graphics.set_pipeline(GetPSO<PSOS::VoxelIndirectHi>());
 					graphics.draw(4);
@@ -692,14 +692,14 @@ void VoxelGI::screen(FrameGraph& graph)
 
 
 				{
-					auto timer = context->list->start(L"resize");
+					PROFILE_GPU(L"resize");
 
 					context->list->get_native_list()->OMSetStencilRef(0);
 					graphics.set_pipeline(GetPSO<PSOS::VoxelIndirectUpsample>());
 					graphics.draw(4);
 				}
 
-		
+
 			}
 
 
@@ -740,8 +740,8 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 			Render::TextureView downsampled_reflection = _context.get_texture(data.downsampled_reflection);
 
-	
-	
+
+
 			context->current_time = 0;
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
@@ -785,7 +785,7 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 			{
 				graphics.set_pipeline(GetPSO<PSOS::VoxelReflectionLow>());
-				auto timer = context->list->start(L"downsampled");
+				PROFILE_GPU(L"downsampled");
 				graphics.set_viewport(downsampled_reflection.get_viewport());
 				graphics.set_scissor(downsampled_reflection.get_scissor());
 				graphics.set_rtv(1, downsampled_reflection.get_rtv(), Render::Handle());
@@ -794,11 +794,11 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 			}
 
 
-			
+
 
 
 			{
-				auto timer = context->list->start(L"main");
+				PROFILE_GPU(L"main");
 
 				{
 					Slots::VoxelUpscale  voxelUpscale;
@@ -812,12 +812,12 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 				graphics.set_viewport(target_tex.get_viewport());
 				graphics.set_scissor(target_tex.get_scissor());
 
- 	   		graphics.set_rtv(1, target_tex.get_rtv(), gbuffer.quality.get_dsv());
+				graphics.set_rtv(1, target_tex.get_rtv(), gbuffer.quality.get_dsv());
 
-	
+
 
 				{
-					auto timer = context->list->start(L"full");
+					PROFILE_GPU(L"full");
 					context->list->get_native_list()->OMSetStencilRef(2);
 					graphics.set_pipeline(GetPSO<PSOS::VoxelReflectionHi>());
 					graphics.draw(4);
@@ -825,7 +825,7 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 
 				{
-					auto timer = context->list->start(L"resize");
+					PROFILE_GPU(L"resize");
 
 					context->list->get_native_list()->OMSetStencilRef(0);
 					graphics.set_pipeline(GetPSO<PSOS::VoxelReflectionUpsample>());
@@ -887,14 +887,14 @@ void VoxelGI::lighting(FrameGraph& graph)
 	{
 		ResourceHandler* global_depth;
 		ResourceHandler* global_camera;
-	
+
 		ResourceHandler* sky_cubemap_filtered;
 		ResourceHandler* voxel_lighted;
 		ResourceHandler* voxel_albedo;
 		ResourceHandler* voxel_normal;
 	};
 
-	
+
 	graph.add_pass<Lighting>("Lighting", [this](Lighting& data, TaskBuilder& builder) {
 
 		data.global_depth = builder.need_buffer("global_depth", ResourceFlags::ComputeRead);
@@ -930,10 +930,10 @@ void VoxelGI::lighting(FrameGraph& graph)
 			auto& compute = context->list->get_compute();
 
 
-		//	if (GetAsyncKeyState('G'))
-				compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(!GetAsyncKeyState('G'))));
-		//	else
-			//	compute.set_pipeline(get_PSO(PSO::LightingSecondBounce));
+			//	if (GetAsyncKeyState('G'))
+			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(!GetAsyncKeyState('G'))));
+			//	else
+				//	compute.set_pipeline(get_PSO(PSO::LightingSecondBounce));
 
 			Slots::VoxelLighting ligthing;
 			{
@@ -1036,7 +1036,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 			while (mip_count < volume_lighted->get_desc().MipLevels)
 			{
 
-				if(!gpu_tiles_buffer[mip_count]) break;
+				if (!gpu_tiles_buffer[mip_count]) break;
 				unsigned int current_mips = std::min(3u, volume_lighted->get_desc().MipLevels - mip_count);
 				compute.set_pipeline(GetPSO<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(current_mips)));
 
@@ -1044,7 +1044,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 
 				for (unsigned int i = 0; i < current_mips; i++)
 					mipmapping.GetOutMips()[i] = volume_lighted->texture_3d()->get_uav(mip_count + i);
-			
+
 				mipmapping.GetVisibility() = gpu_tiles_buffer[mip_count]->get_srv()[0];
 				mipmapping.set(compute);
 
@@ -1121,6 +1121,6 @@ void VoxelGI::generate(FrameGraph& graph)
 
 
 
-debug(graph);
+	debug(graph);
 
 }

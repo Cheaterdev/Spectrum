@@ -11,6 +11,7 @@
 		"boost-serialization",
 		"boost-stacktrace",
 		"boost-lockfree",	
-		"antlr4"
+		"antlr4",
+		"magic-enum"
 	]
 }

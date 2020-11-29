@@ -12,7 +12,7 @@ struct CompiledData
 	const CompiledData<Slot>& set(Render::SignatureDataSetter& graphics, bool use_transitions = true) const
 	{
 		if (use_transitions) {
-			//	auto timer = Profiler::get().start(L"transitions");
+			//	PROFILE(L"transitions");
 
 			for (UINT i = 0; i < (UINT)table_srv.get_count(); ++i)
 			{
@@ -70,7 +70,7 @@ struct CompiledData
 		}
 
 
-		//auto timer = Profiler::get().start(L"set");
+		//PROFILE(L"set");
 		if constexpr (TableHasSRV<Slot>)  if (table_srv.is_valid()) graphics.set(Slot::SRV_ID, table_srv);
 		if constexpr (TableHasSMP<Slot>)  if (table_smp.is_valid()) graphics.set(Slot::SMP_ID, table_smp);
 		if constexpr (TableHasUAV<Slot>)  if (table_uav.is_valid()) graphics.set(Slot::UAV_ID, table_uav);
@@ -121,8 +121,7 @@ struct DataHolder : public Table
 	template<class Context, class UAV>
 	void place_uav(CompiledData<Slot>& compiled, Context& context, UAV& uav) const
 	{
-		//auto timer = Profiler::get().start(L"UAV");
-
+	
 		compiled.table_uav = context.srv.place(sizeof(uav) / sizeof(Render::Handle));
 
 		auto ptr = reinterpret_cast<Render::Handle*>(&uav);
@@ -140,7 +139,6 @@ struct DataHolder : public Table
 	template<class Context, class SMP>
 	void place_smp(CompiledData<Slot>& compiled, Context& context, SMP& smp) const
 	{
-		//auto timer = Profiler::get().start(L"SMP");
 
 		compiled.table_smp = context.smp.place(sizeof(smp) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&smp);
@@ -156,13 +154,11 @@ struct DataHolder : public Table
 	CompiledData<Slot> compile(Context& context) const
 	{
 
-		// auto timer = Profiler::get().start(L"compile");
 		CompiledData<Slot> compiled;
 
 
 		if constexpr (HasSRV<Table> || HasBindless<Table>)
 		{
-			//		auto timer = Profiler::get().start(L"SRV");
 
 			UINT srv_count = 0;
 			if constexpr (HasSRV<Table>) srv_count += sizeof(Table::srv) / sizeof(Render::Handle);
@@ -188,7 +184,6 @@ struct DataHolder : public Table
 
 
 				if constexpr (HasBindless<Table>) {
-					//	auto timer = Profiler::get().start(L"Bindless");
 
 					for (int j = 0; j < Table::bindless.size(); j++)
 					{
@@ -211,9 +206,7 @@ struct DataHolder : public Table
 
 		if constexpr (HasCB<Table>)
 		{
-			//compiled.table_cbv = context.get_base().srv_descriptors.place(1);
 
-		 //   auto timer = Profiler::get().start(L"CB");
 
 			if constexpr (HasData<Table>)
 				compiled.cb = context.place_raw(Table::data, Table::cb).get_resource_address();

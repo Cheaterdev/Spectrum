@@ -25,7 +25,7 @@ void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, Tex
 void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureView  view)
 {
 
-	auto timer = compute_context.get_base().start(L"downsampling");
+	PROFILE_GPU(L"downsampling");
 
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
 	uint32_t maps = view.get_mip_count()-1;
@@ -172,7 +172,7 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* cam, GBuffer& buffer, TextureView tempColor)
 {
 
-	auto timer = list.get_base().start(L"generate_quality");
+	PROFILE_GPU(L"generate_quality");
 	list.set_signature(get_Signature(Layouts::DefaultLayout));
 
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

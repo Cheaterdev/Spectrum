@@ -10,7 +10,7 @@ static const Camera camera = GetFrameInfo().GetCamera();
 struct vertex_output   
 { 
 float4 pos : SV_POSITION;  
-float3 wpos : WPOSITION;
+float3 wpos : POSITION;
 float3 normal : NORMAL; 
 float3 binormal : BINORMAL;
 float3 tangent : TANGENT;
@@ -22,7 +22,7 @@ float2 tc : TEXCOORD;
 struct vertex_output2
 { 
 float4 pos : SV_POSITION;
-float3 wpos : WPOSITION;   
+float3 wpos : POSITION;   
 float3 normal : NORMAL; 
 float3 binormal : BINORMAL;
 float3 tangent : TANGENT;

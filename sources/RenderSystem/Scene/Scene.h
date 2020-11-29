@@ -154,7 +154,7 @@ public:
 
 
 			{
-				auto timer = Profiler::get().start(L"SceneData");
+                PROFILE(L"SceneData");
 				Slots::SceneData sceneData;
 				sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
 				sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();

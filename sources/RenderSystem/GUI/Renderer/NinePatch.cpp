@@ -24,29 +24,29 @@ namespace GUI
 
 	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr pipeline_state)
 	{
-		if (current_state&&current_state != pipeline_state)
+		if (current_state && current_state != pipeline_state)
 		{
 			flush(c);
-			
-	}
+
+		}
 
 		bool added = false;
 		if (item.srv.valid())
 		{
-				added = true;
+			added = true;
 			textures_handles.emplace_back(item.srv[0]);
-			 
-		//	c.command_list->use_resource(item.srv[0]->resource_info->resource_ptr);
+
+			//	c.command_list->use_resource(item.srv[0]->resource_info->resource_ptr);
 		}
 		else
 			if (item.texture)
 			{
 				added = true;
 				textures_handles.emplace_back(item.texture->texture_2d()->get_static_srv());
-			//	c.command_list->use_resource(item.texture.get());
+				//	c.command_list->use_resource(item.texture.get());
 			}
 
-		if (!added&&current_state== GetPSO<PSOS::NinePatch>())
+		if (!added && current_state == GetPSO<PSOS::NinePatch>())
 		{
 			return;
 		}
@@ -54,12 +54,12 @@ namespace GUI
 
 		vertexes.resize(vertexes.size() + 16);
 
-		auto _vertexes = vertexes.data()+ vertexes.size() - 16;
+		auto _vertexes = vertexes.data() + vertexes.size() - 16;
 
 		auto margin = c.scale * item.margins;
 		auto padding = c.scale * item.padding;
 		r += { -margin.left, -margin.top, margin.left + margin.right, margin.top + margin.bottom};
-	
+
 		float tl = 0, tt = 0, tr = 0, tb = 0;
 
 		if (item.texture)
@@ -93,8 +93,8 @@ namespace GUI
 		float4 x_pos = { 0, padding.left * scale, r.size.x - padding.right * scale, r.size.x };
 		float4 y_pos = { 0, padding.top * scale, r.size.y - padding.bottom * scale, r.size.y };
 
-		x_pos += float4(r.pos.x, r.pos.x, r.pos.x, r.pos.x) + float4(c.offset.x, c.offset.x, c.offset.x, c.offset.x );
-		y_pos += float4(r.pos.y, r.pos.y, r.pos.y, r.pos.y) + float4(c.offset.y, c.offset.y, c.offset.y, c.offset.y );
+		x_pos += float4(r.pos.x, r.pos.x, r.pos.x, r.pos.x) + float4(c.offset.x, c.offset.x, c.offset.x, c.offset.x);
+		y_pos += float4(r.pos.y, r.pos.y, r.pos.y, r.pos.y) + float4(c.offset.y, c.offset.y, c.offset.y, c.offset.y);
 
 		float4 x_tc = { new_tc.left, new_tc.left + tl, new_tc.right - tr, new_tc.right };
 		float4 y_tc = { new_tc.top, new_tc.top + tt, new_tc.bottom - tb, new_tc.bottom };
@@ -204,7 +204,7 @@ namespace GUI
 		}
 
 		if (x_pos.x >= x_pos.w || y_pos.x >= y_pos.w) {
-		//	LOGE("```` ARE Y RESIOUS?");
+			//	LOGE("```` ARE Y RESIOUS?");
 		}
 
 		if (y_pos.y > y_pos.z) {
@@ -260,44 +260,38 @@ namespace GUI
 			_vertexes[i].pos = { t.x, -t.y };
 			_vertexes[i].color = c.color;
 		}
-	
-		if(textures_handles.size()==512)
-		flush(c);
+
+		if (textures_handles.size() == 512)
+			flush(c);
 	}
 
 	void NinePatch::flush(Render::context& c)
 	{
 		if (vertexes.empty()) return;
-		
-		auto timer = c.command_list->start((std::wstring(L"flush") + std::to_wstring(counter++)).c_str());
-
 
 		auto& graphics = c.command_list->get_graphics();
 		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//	graphics.set_vertex_buffers(0, vblist);
 		graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
 		graphics.set_pipeline(current_state);
 
-
-
-		Slots::NinePatch patch_data;
-		auto data =  c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
+		auto data = c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
 		c.command_list->write(data, vertexes);
 		auto view = data.resource->create_view<StructuredBufferView<Vertex>>(*c.command_list->frame_resources, (UINT)data.offset, (UINT)data.size);
-		//data.resource->create_view<StructuredBufferView<Vertex>>()
 
-		patch_data.GetVb() = view.get_srv();
+		{
+			Slots::NinePatch patch_data;
+			patch_data.GetVb() = view.get_srv();
+			patch_data.GetTextures() = textures_handles;
+			patch_data.set(graphics);
+		}
 
-		patch_data.GetTextures() = textures_handles;
-		patch_data.set(graphics);
-
-		graphics.draw_indexed(9 * 2 * 3, 0, 0, UINT(vertexes.size()/16));
+		graphics.draw_indexed(9 * 2 * 3, 0, 0, UINT(vertexes.size() / 16));
 
 		current_state = nullptr;
 		vertexes.clear();
 		textures_handles.clear();
-
 	}
+
 	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r)
 	{
 		draw(c, item, r, GetPSO<PSOS::NinePatch>());
@@ -308,6 +302,5 @@ namespace GUI
 		GUI::Texture item;
 		draw(c, item, r, pipeline_state);
 	}
-
 
 }
