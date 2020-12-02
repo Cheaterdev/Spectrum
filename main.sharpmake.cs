@@ -53,7 +53,6 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreadedDLL);		
             //conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);		
             conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);		
-            conf.Options.Add(Options.Vc.General.Vcpkg.True);		
           
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
