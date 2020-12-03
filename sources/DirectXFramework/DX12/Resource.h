@@ -155,8 +155,8 @@ namespace DX12
 			return shared_from_this();
 		}
 
-		template<class T, class ...Args>
-		typename T create_view(FrameResources& frame, Args ...args)
+		template<class T, class F, class ...Args>
+		typename T create_view(F& frame, Args ...args)
 		{
 			return T(shared_from_this(), frame, args...);
 		}

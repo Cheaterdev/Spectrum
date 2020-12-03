@@ -6,12 +6,12 @@ namespace Table
 	{
 		struct CB
 		{
-			uint meshes_count;
+			uint4 v;
 		} &cb;
 		using SRV = Empty;
 		using UAV = Empty;
 		using SMP = Empty;
-		uint& GetMeshes_count() { return cb.meshes_count; }
+		uint4& GetV() { return cb.v; }
 		DebugStruct(CB&cb) :cb(cb){}
 	};
 	#pragma pack(pop)

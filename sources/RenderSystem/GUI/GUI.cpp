@@ -934,6 +934,7 @@ namespace GUI
 
      void user_interface::create_graph(FrameGraph& graph)
      {
+      //   return;
          process_graph(graph);
          struct pass_data
          {

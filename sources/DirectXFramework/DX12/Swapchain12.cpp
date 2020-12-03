@@ -73,6 +73,8 @@ namespace DX12
 
 	void SwapChain::resize(ivec2 size)
 	{
+		if (size.x < 64) size.x = 64;
+		if (size.y < 64) size.y = 64;
 
 		if (size.x == desc.BufferDesc.Width)
 			if (size.y == desc.BufferDesc.Height)

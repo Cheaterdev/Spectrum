@@ -587,6 +587,19 @@ namespace DX12
 			return Base::get_max_usage();
 		}
 
+		void debug_print(CommandList & list)
+		{
+			
+			list.get_copy().read_buffer(buffer.get(), 0, sizeof(T)*16, [this](const char* data, UINT64 size)
+				{
+					Log::get() << "debug_print" << Log::endl;
+					auto result = reinterpret_cast<const T*>(data);
+
+					for(int i=0;i<16;i++)
+					Log::get() << result[i] << Log::endl;
+				}); 
+		}
+
 		void prepare(CommandList::ptr& list)
 		{
 			std::lock_guard<std::mutex> g(m);

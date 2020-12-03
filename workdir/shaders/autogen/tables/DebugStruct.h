@@ -1,12 +1,12 @@
 #pragma once
 struct DebugStruct_cb
 {
-	uint meshes_count;
+	uint4 v;
 };
 struct DebugStruct
 {
 	DebugStruct_cb cb;
-	uint GetMeshes_count() { return cb.meshes_count; }
+	uint4 GetV() { return cb.v; }
 
 };
  const DebugStruct CreateDebugStruct(DebugStruct_cb cb)

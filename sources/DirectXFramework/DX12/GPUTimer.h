@@ -12,7 +12,7 @@ namespace DX12
 		std::queue<std::shared_ptr<CPUBuffer>> buffers;
 	
 
-		static const int MAX_TIMERS = 4096;
+		static const int MAX_TIMERS = 1024;
 		IdGenerator ids;
 		std::array<UINT64, MAX_TIMERS*2> read_back_data;
 

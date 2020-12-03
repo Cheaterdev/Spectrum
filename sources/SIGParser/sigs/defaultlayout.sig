@@ -25,12 +25,23 @@ layout DefaultLayout: FrameLayout
 
 struct DebugStruct
 {
-	uint meshes_count;
-
+	uint4 v;
 }
 
 [Bind = FrameLayout::DebugInfo]
 struct DebugInfo
 {
 	RWStructuredBuffer<DebugStruct> debug;
+
+	%{
+		void Log(uint id, uint4 v)
+		{
+			DebugStruct debug;
+
+            debug.cb.v = v;
+
+            uav.debug[id] = debug;
+		}
+		
+	}%
 }

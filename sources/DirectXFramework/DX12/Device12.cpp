@@ -170,8 +170,7 @@ if(false)
 			Log::get() <<"*** Unhandled Exception ***" << Log::endl;
 		//	TRACE("*** Unhandled Exception ***");
 		}
-		
-
+	
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
 		TEST(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
 			&options5, sizeof(options5)));
@@ -186,9 +185,11 @@ if(false)
 			D3D12_MESSAGE_ID hide[] =
 			{
 				D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
+				D3D12_MESSAGE_ID_GETHEAPPROPERTIES_INVALIDRESOURCE,
 				D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT,
 				D3D12_MESSAGE_ID_NON_RETAIL_SHADER_MODEL_WONT_VALIDATE,
-				D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH
+				D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH,
+				D3D12_MESSAGE_ID_EMPTY_DISPATCH
 			};
 			D3D12_INFO_QUEUE_FILTER filter = {};
 			filter.DenyList.NumIDs = _countof(hide);
@@ -208,6 +209,7 @@ if(false)
 		auto m_tiledResourcesTier = featureData.TiledResourcesTier;
 	
 		rtx =  options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+
 	}
 
 

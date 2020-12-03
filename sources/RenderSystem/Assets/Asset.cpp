@@ -8,8 +8,8 @@ AssetManager::AssetManager()
     has_worker = false;
     GuidGenerator::create();
     tree_folders.reset(new folder_item(L"All assets"));
-    std::function<void(boost::filesystem::path, folder_item::ptr)> iter;
-    iter = [this, &iter](boost::filesystem::path name, folder_item::ptr  w)
+    std::function<void(std::filesystem::path, folder_item::ptr)> iter;
+    iter = [this, &iter](std::filesystem::path name, folder_item::ptr  w)
     {
         auto new_path = name/"";
 		auto  folder_name = name.filename();
@@ -484,7 +484,7 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
     if (header->type == Asset_Type::TILED_TEXTURE)
         s_type = L"TiledTextures";
 
-    file_path = boost::filesystem::path(L"assets") / s_type / (header->name + L"_" + convert(to_string(header->id)) + L".asset");
+    file_path = std::filesystem::path(L"assets") / s_type / (header->name + L"_" + convert(to_string(header->id)) + L".asset");
     folder = AssetManager::get().get_folders()->get_folder(file_path).get();
     folder->add_asset(ptr(this));
     update_preview();
@@ -535,6 +535,7 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
 void AssetStorage::update_preview()
 {
     AssetManager::get().add_preview(get_asset());
+
     //.add_func([this]() { get_asset()->update_preview(preview);});
     //	AssetManager::get(). get_asset()->update_preview(preview);
 //	thread_pool::get().enqueue();
@@ -783,19 +784,19 @@ void folder_item::iterate_assets(std::function<void(AssetStorage::ptr)> f)
 	m.unlock();
 }
 
-folder_item::ptr folder_item::get_folder(boost::filesystem::path name)
+folder_item::ptr folder_item::get_folder(std::filesystem::path name)
 {
 	std::lock_guard<std::mutex> g(m);
 //	name = name.substr(0, name.find_last_of(L"\\") + 1);
 //	int delim = name.find_first_of(L"\\");
 
-	if(boost::filesystem::is_regular_file(name))
+	if(std::filesystem::is_regular_file(name))
 		return get_ptr();
 
 	auto folder_name = *name.begin();// name.substr(0, delim);
 	if(folder_name==name)
 		return get_ptr();
-	auto other_name = boost::filesystem::relative(name, folder_name);
+	auto other_name = std::filesystem::relative(name, folder_name);
 
 	//if (folder_name.empty())
 	//	return get_ptr();

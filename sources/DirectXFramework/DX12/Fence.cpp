@@ -40,6 +40,7 @@ namespace DX12
 
 		if (m_fence->GetCompletedValue() < value)
 		{
+			PROFILE(L"FenceWait");
 			m_fence->SetEventOnCompletion(value, e.m_fenceEvent);
 			e.wait();
 		}

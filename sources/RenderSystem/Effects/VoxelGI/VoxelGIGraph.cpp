@@ -246,7 +246,7 @@ void VoxelGI::start_new()
 
 	for (auto&& b : gpu_tiles_buffer)
 		if (b)b->clear();
-	tiled_volume_lighted->load_all();
+//	tiled_volume_lighted->load_all();
 	//	Log::get() << 6 << Log::endl;
 
 	//tiled_volume_albedo->load_all();

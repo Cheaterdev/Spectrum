@@ -617,13 +617,15 @@ namespace DX12
 
 	class Eventer : public virtual CommandListBase, public TimedRoot
 	{
-		
+	
  		std::list<std::wstring> names;
 		TimedBlock* current;
 
 		virtual  void on_start(Timer* timer) override;
 		virtual  void on_end(Timer* timer)override;
 	protected:
+
+		std::string name;
 		void reset();
 		void begin(std::string name, Timer* t = nullptr);
 	public:
@@ -645,11 +647,7 @@ namespace DX12
 
 	};
 
-#ifdef PROFILING
-#define PROFILE_GPU(x) auto UNIQUE_NAME = Eventer::thread_current->start(x);
-#else
-#define PROFILE_GPU(x) ;
-#endif
+
 
 	class Sendable : public virtual CommandListBase
 	{
@@ -773,6 +771,8 @@ namespace DX12
 		FrameResources::ptr frame_resources;
 
 		void print_debug();
+
+		bool first_debug_log = true;
 		std::shared_ptr<GPUBuffer> debug_buffer;
 
 		//	DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, Free, DescriptorHeapFlags::SHADER_VISIBLE> srv_descriptors;

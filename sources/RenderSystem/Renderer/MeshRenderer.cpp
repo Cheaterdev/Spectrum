@@ -117,16 +117,10 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 	}
 
-	/*
-		copy.read_buffer(meshes_ids->buffer.get(), 0, 4, [this](const char* data, UINT64 size)
-			{
+	
 
-				auto result = *reinterpret_cast<const UINT*>(data);
-				Log::get() << result << Log::endl;
-			});
-		*/
 
-	if (!GetAsyncKeyState(VK_F7))
+	//if (false)// !GetAsyncKeyState(VK_F7))
 	{
 		init_dispatch(mesh_render_context, gather_invisible);
 
@@ -174,6 +168,7 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 
 void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::FrameInfo::Compiled& compiledFrame, bool invisibleToo)
 {
+	PROFILE_GPU(L"gather_rendered_boxes");
 
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
@@ -203,6 +198,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 			dispatch_buffer.get());
 	}
 
+	
 	list.transition_uav(meshes_ids->buffer.get());
 	list.transition_uav(meshes_ids->buffer->help_buffer.get());
 	if (invisibleToo)
@@ -210,11 +206,16 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 		list.transition_uav(meshes_invisible_ids->buffer.get());
 		list.transition_uav(meshes_invisible_ids->buffer->help_buffer.get());
 	}
+
+//	meshes_ids->debug_print(list);
+
 }
 
 
 void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling)
 {
+	PROFILE_GPU(L"generate_boxes");
+
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
@@ -247,13 +248,15 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 
 	copy.copy_buffer(draw_boxes_first.get(), sizeof(UINT), commands_boxes->buffer->help_buffer.get(), 0, 4);
 
-	if (!GetAsyncKeyState('4'))	init_dispatch(mesh_render_context, gather_boxes_commands);
+	init_dispatch(mesh_render_context, gather_boxes_commands);
 
 
 }
 
 void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::FrameInfo::Compiled& compiledFrame)
 {
+	PROFILE_GPU(L"draw_boxes");
+
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
@@ -289,6 +292,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 }
 void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, Slots::FrameInfo::Compiled& compiledFrame, bool needCulling)
 {
+	PROFILE_GPU(L"render_meshes");
 
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
@@ -371,8 +375,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			}
 
 		}
-		//	if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
-		//	list.print_debug();
+
 
 	// 		if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
 	// 			copy.read_buffer(gatherData.cb.resource, 0, 4, [this](const char* data, UINT64 size)
@@ -519,7 +522,7 @@ mesh_renderer::mesh_renderer()
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_ids->buffer->get_srv()[0];
+		gather.GetCommands() = meshes_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).get_srv();
 
 		gather.GetMeshes_count() = meshes_ids->buffer->counted_srv[0];
 
@@ -529,7 +532,7 @@ mesh_renderer::mesh_renderer()
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_invisible_ids->buffer->get_srv()[0];
+		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).get_srv();
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer->counted_srv[0];
 		gather_invisible = gather.compile(StaticCompiledGPUData::get());
 		//	gather_invisible.cb = meshes_invisible_ids->buffer->help_buffer->get_resource_address();

@@ -318,6 +318,7 @@ namespace DX12
 	protected:
 		ComPtr<ID3D12PipelineState> m_pipelineState;
 		std::string cache;
+
 		virtual ~PipelineStateBase() {};
 
 		template<class T>
@@ -336,6 +337,9 @@ namespace DX12
 
 
 	public:
+		bool debuggable = false;
+		std::string name;
+
 		virtual	void on_change() = 0;
 		ComPtr<ID3D12PipelineState> get_native();
 

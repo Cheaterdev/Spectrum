@@ -561,7 +561,8 @@ public:
 
 		pssm.generate(graph);
 		sky.generate(graph);
-//	if(!GetAsyncKeyState('P'))	
+
+		// remove on intel
 		voxel_gi->generate(graph);
 
 
@@ -1144,8 +1145,9 @@ public:
 
 	virtual	void render()
 	{
-		if (swap_chain)	swap_chain->resize(get_render_bounds().size);
+		if (swap_chain)	swap_chain->resize(new_size);
 
+	
 		{
 			std::lock_guard<std::mutex> g(m);
 
@@ -1245,7 +1247,7 @@ public:
 
 
 			auto ptr = get_ptr();
-
+		//	if(false)
 			graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder) {
 				data.o_texture = builder.need_texture("swapchain", ResourceFlags::Required);
 				}, [this, ptr](pass_data& data, FrameContext& context) {

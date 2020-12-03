@@ -177,6 +177,15 @@ namespace DX12
 	
 
 		cache.clear();
+
+		debuggable = false;
+		debuggable |= desc.vertex && desc.vertex->depends_on("DebugInfo");
+		debuggable |= desc.pixel && desc.pixel->depends_on("DebugInfo");
+		debuggable |= desc.geometry && desc.geometry->depends_on("DebugInfo");
+		debuggable |= desc.domain && desc.domain->depends_on("DebugInfo");
+		debuggable |= desc.hull && desc.hull->depends_on("DebugInfo");
+
+		name = desc.name;
 	}
 
 	 PipelineState::ptr PipelineState::create(PipelineStateDesc& desc, std::string name)
@@ -254,6 +263,11 @@ namespace DX12
 			psoDesc.CachedPSO = {};
 			hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 		}
+
+
+		debuggable = desc.shader && desc.shader->depends_on("DebugInfo");
+		
+		name = desc.name;
 
 	//	TEST(hr);
 

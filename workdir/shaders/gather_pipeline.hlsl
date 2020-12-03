@@ -3,12 +3,12 @@
 #include "autogen/SceneData.h"
 #include "autogen/FrameInfo.h"
 
-#include "autogen/DebugInfo.h"
+//#include "autogen/DebugInfo.h"
 //static const RWStructuredBuffer<DebugStruct> debugger = GetDebugInfo().GetDebug();
 
 static const GatherPipelineGlobal pip = GetGatherPipelineGlobal();
 
-static const Buffer<uint> commands = pip.GetCommands();
+//static const Buffer<uint> commands = pip.GetCommands();
 
 float dist(float4 plane, float3 pt)
 {
@@ -94,21 +94,12 @@ void CS(
     uint  groupIndex    : SV_GroupIndex
 )
 {
-   if (dispatchID.x == 0)
-    {
-        DebugStruct debug;
-
-        debug.cb.meshes_count =pip.GetMeshes_count()[0];
-        uav_2_0[0] = debug;
-
-    }
-
-
-
+   
         if (dispatchID.x >= pip.GetMeshes_count()[0]) return;
+   
+        uint id = GetGatherPipelineGlobal().GetCommands().Load(dispatchID.x);
 
-        uint id = commands.Load(dispatchID.x);
-
+       
         MeshCommandData mesh = GetSceneData().GetMeshes()[id];
 
 #ifdef CHECK_FRUSTUM
@@ -116,16 +107,17 @@ void CS(
         AABB aabb = node.GetAabb();
         if (!intersect(GetFrameInfo().GetCamera().GetFrustum(), aabb, node.GetNode_global_matrix())) return;
 #endif
-
+      
         MaterialCommandData material = GetSceneData().GetMaterials()[mesh.cb.material_id];
 
-
+ 
         CommandData command;
         command.cb.material_cb = material.cb.material_cb;
         command.cb.mesh_cb = mesh.cb.mesh_cb;
         command.cb.draw_commands = mesh.cb.draw_commands;
        
         get_index(material.cb.pipeline_id, command);
+    //    GetDebugInfo().Log(dispatchID.x, uint4(dispatchID.x, id, 5, 5));
 
      //   pipi.GetCommands(0).Append(command);
 }
@@ -147,7 +139,7 @@ void CS_boxes(
 {
     if (dispatchID.x >= pip.GetMeshes_count()[0]) return;
 
-    uint id = commands.Load(dispatchID.x);
+    uint id = GetGatherPipelineGlobal().GetCommands().Load(dispatchID.x);
 
     MeshCommandData mesh = GetSceneData().GetMeshes()[id];
     node_data node = GetSceneData().GetNodes()[mesh.GetNode_offset()];
@@ -162,6 +154,11 @@ void CS_boxes(
         visible.Append(id);
             return;
     }
+
+ //   GetDebugInfo().Log(dispatchID.x, uint4(pip.GetMeshes_count()[0], id, 0, 0));
+
+
+
     BoxInfo info;
     info.cb.node_offset = mesh.GetNode_offset();
     info.cb.mesh_id = id;
@@ -190,6 +187,7 @@ void CS_meshes_from_boxes(
     uint  groupIndex : SV_GroupIndex
 )
 {
+
     if (dispatchID.x >= pip.GetMeshes_count()[0]) return;
 
     uint id = pipi.GetVisible_boxes().Load(dispatchID.x);
@@ -198,11 +196,18 @@ void CS_meshes_from_boxes(
 
     if (id == 999)
     {
+     //   GetDebugInfo().Log(dispatchID.x, uint4(pip.GetMeshes_count()[0], id, 0, 3));
+
 #ifdef INVISIBLE
         invisible.Append(mesh_id);
 #endif
-    }else
+    }
+    else
+    {
+    //    GetDebugInfo().Log(dispatchID.x, uint4(pip.GetMeshes_count()[0], id, 0, 6));
         visible.Append(mesh_id);
+    }
+        
 }
 #endif
 

@@ -2,7 +2,7 @@
 
 namespace DX12
 {
-	void ResourceView::init_views(FrameResources& frame) {
+/*	void ResourceView::init_views(FrameResources& frame) {
 
 		auto& desc = resource->get_desc();
 
@@ -30,6 +30,6 @@ namespace DX12
 			srv = frame.srv_uav_cbv_cpu.place();
 			place_srv(srv);
 		}
-	}
+	}*/
 
 }

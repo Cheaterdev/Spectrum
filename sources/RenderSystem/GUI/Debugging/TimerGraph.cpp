@@ -374,6 +374,8 @@ namespace GUI
 
 				Profiler::get().on_cpu_timer_end.register_handler(this, [this](TimedBlock* block) {
 					if (ended) return;
+					if (block->id < 0 || block->id >= this->data.blocks.size())
+						return;
 		   		auto& data = this->data.blocks[block->id];
 					data.end_time = block->cpu_counter.end_time;
 
