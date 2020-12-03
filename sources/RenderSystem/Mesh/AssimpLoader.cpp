@@ -15,7 +15,7 @@ struct MeshLoadingSettings
 {
 	float scale = 1;
 	bool materials_remove = true;
-	std::map<boost::filesystem::path, AssetStorage::ptr> load_textures;
+	std::map<std::filesystem::path, AssetStorage::ptr> load_textures;
 
 };
 class LoadingWindow : public GUI::Elements::window
@@ -192,7 +192,7 @@ class MyIOSystem : public Assimp::IOSystem
 {
         resource_file_depender& files;
 
-		boost::filesystem::path path;
+		std::filesystem::path path;
         // Check whether a specific file exists
         bool Exists(const char* pFile) const
         {
@@ -207,7 +207,7 @@ class MyIOSystem : public Assimp::IOSystem
         virtual Assimp::IOStream* Open(const char* pFile, const char* pMode = "rb") override
         {
 			auto new_path = path / pFile;
-			new_path = boost::filesystem::canonical(new_path);
+			new_path = std::filesystem::canonical(new_path);
             auto file = FileSystem::get().get_file(new_path);
             files.add_depend(file);
             return new MyIOStream(new_path.generic_string());
@@ -219,7 +219,7 @@ class MyIOSystem : public Assimp::IOSystem
         }
 
     public:
-        MyIOSystem(boost::filesystem::path path, resource_file_depender& _files) : files(_files)
+        MyIOSystem(std::filesystem::path path, resource_file_depender& _files) : files(_files)
         {
             this->path = path;
         }
@@ -248,7 +248,7 @@ public:
 std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, resource_file_depender& files, AssetLoadingContext::ptr & context)
 {
     Assimp::Importer importer;
-	boost::filesystem::path directory = boost::filesystem::path(file_name).parent_path();
+	std::filesystem::path directory = std::filesystem::path(file_name).parent_path();
 
  //   if (directory.size())
    //     directory += std::string("\\");
@@ -261,7 +261,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
     try
     {
-        scene = importer.ReadFile(boost::filesystem::path(file_name).filename().generic_string(), aiProcess_GenBoundingBoxes| aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
+        scene = importer.ReadFile(std::filesystem::path(file_name).filename().generic_string(), aiProcess_GenBoundingBoxes| aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
     }
 
     catch (const std::exception &e)
@@ -282,10 +282,10 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			return nullptr;
 		MeshLoadingSettings settings;
 
-		std::map<boost::filesystem::path, AssetStorage::ptr>& load_textures =settings.load_textures;
+		std::map<std::filesystem::path, AssetStorage::ptr>& load_textures =settings.load_textures;
 
 
-		auto check_texture = [&load_textures](boost::filesystem::path name)
+		auto check_texture = [&load_textures](std::filesystem::path name)
 		{
 			auto it = load_textures.find(name);
 
@@ -391,7 +391,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
         std::vector<UINT32> indices(index_count);
         vertex_count = 0;
         index_count = 0;
-        auto get_texture = [&load_textures, &m](boost::filesystem::path name)->TextureAsset::ptr
+        auto get_texture = [&load_textures, &m](std::filesystem::path name)->TextureAsset::ptr
         {
             return load_textures[name]->get_asset()->get_ptr<TextureAsset>();
         };

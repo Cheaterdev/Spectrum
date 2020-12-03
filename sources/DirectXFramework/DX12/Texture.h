@@ -4,12 +4,12 @@ namespace DX12
 
     struct texure_header
     {
-            boost::filesystem::path name;
+            std::filesystem::path name;
             bool force_srgb;
             bool mips = true;
             texure_header() = default;
 
-            texure_header(boost::filesystem::path name, bool force_srgb = false, bool mips = true);
+            texure_header(std::filesystem::path name, bool force_srgb = false, bool mips = true);
         private:
             friend class boost::serialization::access;
 

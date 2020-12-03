@@ -23,7 +23,7 @@ public:
 	using ptr = s_ptr<TextureAsset>;
 	using ref = AssetReference<TextureAsset>;
 
-	TextureAsset(boost::filesystem::path file_name);
+	TextureAsset(std::filesystem::path file_name);
 	TextureAsset();
 
 	Render::Texture::ptr get_texture();

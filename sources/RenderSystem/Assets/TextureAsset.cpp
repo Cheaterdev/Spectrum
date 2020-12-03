@@ -32,7 +32,7 @@ Render::Texture::ptr TextureAsset::get_texture()
     return texture;
 }
 
-TextureAsset::TextureAsset(boost::filesystem::path file_name)
+TextureAsset::TextureAsset(std::filesystem::path file_name)
 {
     auto task = TaskInfoManager::get().create_task(file_name.generic_wstring());
     texture = Render::Texture::get_resource(Render::texure_header(file_name, true));

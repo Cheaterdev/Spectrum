@@ -5,8 +5,8 @@ std::string native_file_provider::load_all(file* info)
 {
     std::string result;
 
-	boost::filesystem::path file_path(info->file_name);
-	boost::filesystem::path abs_path = boost::filesystem::absolute(file_path);
+	std::filesystem::path file_path(info->file_name);
+	std::filesystem::path abs_path = std::filesystem::absolute(file_path);
 
 	std::ifstream file(abs_path.c_str(), std::ios::in | std::ios::binary);
 
@@ -38,7 +38,7 @@ std::string native_file_provider::load_all(file* info)
     return result;
 }
 
-void native_file_provider::on_change(const boost::filesystem::path& path, std::function<void()> f)
+void native_file_provider::on_change(const std::filesystem::path& path, std::function<void()> f)
 {
 	auto s2 = path.parent_path().generic_wstring();
     thread_pool::get().enqueue([s2, f]()
@@ -70,16 +70,16 @@ void native_file_provider::on_change(const boost::filesystem::path& path, std::f
 }
 
 
-std::shared_ptr<file> native_file_provider::get_file(boost::filesystem::path file_name)
+std::shared_ptr<file> native_file_provider::get_file(std::filesystem::path file_name)
 {
     std::shared_ptr<file> result;
-    boost::system::error_code ec;
+    std::error_code ec;
 
-    if (boost::filesystem::exists(file_name, ec))
+    if (std::filesystem::exists(file_name, ec))
         //  if (_access(file_name.c_str(), 0) == 0)
     {
         result.reset(new file(this, file_name));
-        result->edit_time = boost::filesystem::last_write_time(file_name);
+        result->edit_time = std::filesystem::last_write_time(file_name);
     }
 
     //  else
@@ -90,7 +90,7 @@ std::shared_ptr<file> native_file_provider::get_file(boost::filesystem::path fil
 
     return result;
 }
-std::shared_ptr<istream> native_file_provider::create_stream(boost::filesystem::path file_name)
+std::shared_ptr<istream> native_file_provider::create_stream(std::filesystem::path file_name)
 {
 	return  std::shared_ptr<istream>(new ifstream(file_name.generic_wstring(), ios::binary), [](istream* str) {
 	//	Log::get() << "istream deleter" << Log::endl;
@@ -100,13 +100,13 @@ std::shared_ptr<istream> native_file_provider::create_stream(boost::filesystem::
 }
 
 
-bool native_file_provider::save_data(boost::filesystem::path file_name, std::string data)
+bool native_file_provider::save_data(std::filesystem::path file_name, std::string data)
 {
-    boost::filesystem::path dir(file_name);
-    boost::filesystem::path parent_dir = dir.parent_path();
+    std::filesystem::path dir(file_name);
+    std::filesystem::path parent_dir = dir.parent_path();
 
     if (!parent_dir.empty())
-        if (boost::filesystem::create_directories(parent_dir))
+        if (std::filesystem::create_directories(parent_dir))
             std::cout << "Success" << "\n";
 
     std::ofstream file;
@@ -123,12 +123,12 @@ bool native_file_provider::save_data(boost::filesystem::path file_name, std::str
     return true;
 }
 
-void native_file_provider::iterate(boost::filesystem::path path, std::function<void(file::ptr)> f, bool recursive)
+void native_file_provider::iterate(std::filesystem::path path, std::function<void(file::ptr)> f, bool recursive)
 {
     if (recursive)
     {
-        using namespace boost::filesystem;
-        boost::system::error_code  ec;
+        using namespace std::filesystem;
+        std::error_code  ec;
         recursive_directory_iterator dir(path, ec), end;
 
         if (!ec)
@@ -147,8 +147,8 @@ void native_file_provider::iterate(boost::filesystem::path path, std::function<v
 
     else
     {
-        using namespace boost::filesystem;
-        boost::system::error_code  ec;
+        using namespace std::filesystem;
+        std::error_code  ec;
         directory_iterator dir(path, ec), end;
 
         if (!ec)
@@ -167,15 +167,15 @@ void native_file_provider::iterate(boost::filesystem::path path, std::function<v
 }
 
 
-void native_file_provider::iterate_dirs(boost::filesystem::path path, std::function<void(boost::filesystem::path)> f, bool recursive)
+void native_file_provider::iterate_dirs(std::filesystem::path path, std::function<void(std::filesystem::path)> f, bool recursive)
 {
     //////////////////////////////////////////////////////////////////////////
     /////////////////////////////////OPTIMIZE/////////////////////////////////
     //////////////////////////////////////////////////////////////////////////
     if (recursive)
     {
-        using namespace boost::filesystem;
-        boost::system::error_code  ec;
+        using namespace std::filesystem;
+        std::error_code  ec;
         recursive_directory_iterator dir(path, ec), end;
 
         if (!ec)
@@ -194,8 +194,8 @@ void native_file_provider::iterate_dirs(boost::filesystem::path path, std::funct
 
     else
     {
-        using namespace boost::filesystem;
-        boost::system::error_code  ec;
+        using namespace std::filesystem;
+        std::error_code  ec;
         directory_iterator dir(path, ec), end;
 
         if (!ec)
@@ -214,7 +214,7 @@ void native_file_provider::iterate_dirs(boost::filesystem::path path, std::funct
 }
 
 
-std::shared_ptr<file> FileSystem::get_file(boost::filesystem::path name)
+std::shared_ptr<file> FileSystem::get_file(std::filesystem::path name)
 {
     std::shared_ptr<file> result;
 
@@ -229,7 +229,7 @@ std::shared_ptr<file> FileSystem::get_file(boost::filesystem::path name)
     return result;
 }
 
-bool FileSystem::save_data(boost::filesystem::path file_name, std::string data)
+bool FileSystem::save_data(std::filesystem::path file_name, std::string data)
 {
     for (auto& p : providers)
     {
@@ -240,13 +240,13 @@ bool FileSystem::save_data(boost::filesystem::path file_name, std::string data)
     return false;
 }
 
-void FileSystem::iterate(boost::filesystem::path path, std::function<void(file::ptr)> f, bool recursive)
+void FileSystem::iterate(std::filesystem::path path, std::function<void(file::ptr)> f, bool recursive)
 {
     for (auto& p : providers)
         p->iterate(path, f, recursive);
 };
 
-void FileSystem::iterate_dirs(boost::filesystem::path path, std::function<void(boost::filesystem::path)> f, bool recursive)
+void FileSystem::iterate_dirs(std::filesystem::path path, std::function<void(std::filesystem::path)> f, bool recursive)
 {
     for (auto& p : providers)
         p->iterate_dirs(path, f, recursive);
@@ -282,7 +282,20 @@ void resource_file_depender::clear()
 {
     files.clear();
 }
+bool resource_file_depender::depends_on(std::string v)
+{
 
+    auto wstr = convert(v);
+    for (auto f : files)
+    {
+        if (f.file_name.find(wstr) != std::string::npos)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 bool resource_file_depender::need_update()
 {
     for (auto& d : files)

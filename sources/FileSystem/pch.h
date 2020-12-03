@@ -2,19 +2,19 @@
 
 // PROJECT includes
 #include "../Core/pch.h"
-#include <boost/filesystem/operations.hpp>
+//#include <boost/filesystem/operations.hpp>
 
 // CURRENT includes
+#include <filesystem>
 #include "FileSystem/FileSystem.h"
 
-#include <filesystem>
 
 
 
 namespace boost {
 	namespace serialization {
 		template<class Archive>
-		void serialize(Archive& ar, boost::filesystem::path& p,
+		void serialize(Archive& ar, std::filesystem::path& p,
 			const unsigned int version)
 		{
 			std::wstring s;

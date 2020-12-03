@@ -75,7 +75,7 @@ namespace DX12
         return false;
     }
 
-    texure_header::texure_header(boost::filesystem::path name, bool force_srgb /*= false*/, bool mips /*= true*/)
+    texure_header::texure_header(std::filesystem::path name, bool force_srgb /*= false*/, bool mips /*= true*/)
     {
         this->name = name;
         this->force_srgb = force_srgb;

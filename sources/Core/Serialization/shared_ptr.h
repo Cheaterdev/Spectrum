@@ -74,5 +74,32 @@ namespace boost
 		}
 
 
+
+
+		namespace chrn = std::chrono;
+
+		template<class Archive, typename clock>
+		void load(Archive& ar, chrn::time_point<clock>& tp, unsigned)
+		{
+			chrn::milliseconds::rep millis;
+			ar& NVP(millis);
+			tp = chrn::time_point<clock>(chrn::milliseconds(millis));
+		}
+
+		template<class Archive, typename clock>
+		void save(Archive& ar, chrn::time_point<clock> const& tp, unsigned)
+		{
+			chrn::milliseconds::rep millis = chrn::duration_cast<chrn::milliseconds>(tp.time_since_epoch()).count();
+			ar& NVP(millis);
+		}
+
+		template<class Archive, typename clock>
+		inline void serialize(Archive& ar, std::chrono::time_point<clock>& tp, unsigned version)
+		{
+			boost::serialization::split_free(ar, tp, version);
+		}
+
+
+
 	}
 }
