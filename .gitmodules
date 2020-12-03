@@ -1,0 +1,3 @@
+[submodule "Sharpmake"]
+	path = Sharpmake
+	url = https://github.com/Cheaterdev/Sharpmake
