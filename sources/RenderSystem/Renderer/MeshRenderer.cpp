@@ -56,7 +56,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 		if (best_fit_normals)
 		{
-			frameInfo.GetBestFitNormals() = best_fit_normals->get_texture()->texture_2d()->get_static_srv();
+			frameInfo.GetBestFitNormals() = best_fit_normals->get_texture()->texture_2d()->texture2D;
 		}
 
 		compiledFrame = frameInfo.compile(list);
@@ -319,7 +319,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		while (total < 8)
 		{
 			((UINT*)gather.GetPip_ids())[total] = end->second->get_id();
-			gather.GetCommands()[total] = commands_buffer[total]->buffer->get_uav()[0];
+			gather.GetCommands()[total] = commands_buffer[total]->buffer->appendStructuredBuffer;
 
 			list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
 			list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);
@@ -330,7 +330,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		for (int i = total; i < 8; i++)
 		{
 			((UINT*)gather.GetPip_ids())[i] = std::numeric_limits<uint>::max();
-			gather.GetCommands()[i] = commands_buffer[i]->buffer->get_uav()[0];
+			gather.GetCommands()[i] = commands_buffer[i]->buffer->appendStructuredBuffer;
 		}
 
 		for (int i = 0; i < total; i++)
@@ -444,16 +444,16 @@ mesh_renderer::mesh_renderer()
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(command), get_Signature(Layouts::DefaultLayout));
+	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(Underlying<command>), get_Signature(Layouts::DefaultLayout));
 
 	UINT max_meshes = 1024 * 1024;
 
-	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo::CB>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	visible_boxes = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	for (int i = 0; i < 8; i++)
-		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<command>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 
 	meshes_ids->buffer->get_native()->SetName(L"meshes_ids");
@@ -506,7 +506,7 @@ mesh_renderer::mesh_renderer()
 
 		{
 
-			boxes_command = Render::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(command));
+			boxes_command = Render::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(Underlying<command>));
 
 		}
 	}
@@ -514,17 +514,14 @@ mesh_renderer::mesh_renderer()
 
 	{
 		dispatch_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(command));
+		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<command>));
 	}
-
-
-	dispatch_info = std::make_shared<Render::StructuredBuffer<Table::GatherPipelineGlobal::CB>>(1);
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).get_srv();
+		gather.GetCommands() = meshes_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
 
-		gather.GetMeshes_count() = meshes_ids->buffer->counted_srv[0];
+		gather.GetMeshes_count() = meshes_ids->buffer->structuredBufferCount;
 
 		gather_visible = gather.compile(StaticCompiledGPUData::get());
 		//	gather_visible.cb = meshes_ids->buffer->help_buffer->get_resource_address();
@@ -532,15 +529,15 @@ mesh_renderer::mesh_renderer()
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).get_srv();
-		gather.GetMeshes_count() = meshes_invisible_ids->buffer->counted_srv[0];
+		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
+		gather.GetMeshes_count() = meshes_invisible_ids->buffer->structuredBufferCount;
 		gather_invisible = gather.compile(StaticCompiledGPUData::get());
 		//	gather_invisible.cb = meshes_invisible_ids->buffer->help_buffer->get_resource_address();
 	}
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetMeshes_count() = commands_boxes->buffer->counted_srv[0];
+		gather.GetMeshes_count() = commands_boxes->buffer->structuredBufferCount;
 
 		//gather.GetCommands() = // supposed to be null
 		gather_boxes_commands = gather.compile(StaticCompiledGPUData::get());
@@ -549,32 +546,32 @@ mesh_renderer::mesh_renderer()
 
 	{
 		Slots::InitDispatch init_dispatch;
-		init_dispatch.GetDispatch_data() = dispatch_buffer->get_uav()[0];
+		init_dispatch.GetDispatch_data() = dispatch_buffer->rwStructuredBuffer;
 		init_dispatch_compiled = init_dispatch.compile(StaticCompiledGPUData::get());
 	}
 
 	{
 		Slots::GatherMeshesBoxes gather_neshes_boxes;
-		gather_neshes_boxes.GetInput_meshes() = commands_boxes->buffer->get_srv()[0];
-		gather_neshes_boxes.GetVisible_boxes() = visible_boxes->buffer->get_srv()[0];
-		gather_neshes_boxes.GetVisibleMeshes() = meshes_ids->buffer->get_uav()[0];
-		gather_neshes_boxes.GetInvisibleMeshes() = meshes_invisible_ids->buffer->get_uav()[0];
+		gather_neshes_boxes.GetInput_meshes() = commands_boxes->buffer->structuredBuffer;
+		gather_neshes_boxes.GetVisible_boxes() = visible_boxes->buffer->structuredBuffer;
+		gather_neshes_boxes.GetVisibleMeshes() = meshes_ids->buffer->appendStructuredBuffer;
+		gather_neshes_boxes.GetInvisibleMeshes() = meshes_invisible_ids->buffer->appendStructuredBuffer;
 
 		gather_neshes_boxes_compiled = gather_neshes_boxes.compile(StaticCompiledGPUData::get());
 	}
 
 	{
 		Slots::DrawBoxes draw_boxes;
-		draw_boxes.GetInput_meshes() = commands_boxes->buffer->get_srv()[0];
-		draw_boxes.GetVisible_meshes() = visible_boxes->buffer->get_uav()[0];
-		draw_boxes.GetVertices() = vertex_buffer->get_srv()[0];
+		draw_boxes.GetInput_meshes() = commands_boxes->buffer->structuredBuffer;
+		draw_boxes.GetVisible_meshes() = visible_boxes->buffer->rwStructuredBuffer;
+		draw_boxes.GetVertices() = vertex_buffer->structuredBuffer;
 
 		draw_boxes_compiled = draw_boxes.compile(StaticCompiledGPUData::get());
 	}
 	{
 		Slots::GatherBoxes gather;
-		gather.GetCulledMeshes() = commands_boxes->buffer->get_uav()[0];
-		gather.GetVisibleMeshes() = meshes_ids->buffer->get_uav()[0];
+		gather.GetCulledMeshes() = commands_boxes->buffer->appendStructuredBuffer;
+		gather.GetVisibleMeshes() = meshes_ids->buffer->appendStructuredBuffer;
 
 		gather_boxes_compiled = gather.compile(StaticCompiledGPUData::get());
 	}

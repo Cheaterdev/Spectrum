@@ -58,9 +58,6 @@ public:
   virtual void enterPso_param(SIGParser::Pso_paramContext * /*ctx*/) override { }
   virtual void exitPso_param(SIGParser::Pso_paramContext * /*ctx*/) override { }
 
-  virtual void enterTemplated(SIGParser::TemplatedContext * /*ctx*/) override { }
-  virtual void exitTemplated(SIGParser::TemplatedContext * /*ctx*/) override { }
-
   virtual void enterType_with_template(SIGParser::Type_with_templateContext * /*ctx*/) override { }
   virtual void exitType_with_template(SIGParser::Type_with_templateContext * /*ctx*/) override { }
 

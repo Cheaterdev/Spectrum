@@ -54,8 +54,7 @@ blends_declaration
 
 pso_param: pso_param_id ASSIGN value_id SCOL;
 
-templated: LT template_id GT;
-type_with_template:ID templated?;
+type_with_template:ID (LT template_id GT)?;
 inherit_id: ID;
 name_id: ID;
 type_id: type_with_template;

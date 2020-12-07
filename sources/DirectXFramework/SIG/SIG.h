@@ -1,4 +1,4 @@
-namespace Render
+namespace DX12
 {
 	using Bindless = std::vector<Handle>;
 
@@ -24,6 +24,20 @@ public:
 		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 		return desc;
 	}
+
+private:
+	friend class boost::serialization::access;
+
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int)
+	{
+		ar& NVP(IndexCountPerInstance);
+		ar& NVP(InstanceCount);
+		ar& NVP(StartIndexLocation);
+		ar& NVP(BaseVertexLocation);
+		ar& NVP(StartInstanceLocation);
+	}
+
 };
 
 class DispatchArguments : public D3D12_DISPATCH_ARGUMENTS
@@ -37,76 +51,5 @@ public:
 	}
 };
 
-struct Empty
-{};
-
 using DefaultCB = Render::Resource*;// std::vector<std::byte>;
 using DynamicData = std::vector<std::byte>;// std::vector<std::byte>;
-
-
-
-template<typename T> concept HasData =
-requires (T t) {
-	t.data;
-};
-
-
-template<typename T> concept HasBindless =
-requires (T t) {
-	t.bindless;
-};
-
-
-template<typename T> concept HasSRV =
-requires (T t) {
-	t.srv;
-};
-
-template<typename T> concept HasUAV =
-requires (T t) {
-	t.uav;
-};
-
-template<typename T> concept HasSMP =
-requires (T t) {
-	t.smp;
-};
-
-template<typename T> concept HasCB =
-requires (T t) {
-	t.cb;
-};
-
-template<typename T> concept HasRTV =
-requires (T t) {
-	t.rtv;
-};
-
-template<typename T> concept HasDSV =
-requires (T t) {
-	t.dsv;
-};
-
-
-template<typename T> concept TableHasSRV =
-requires (T t) {
-	t.SRV;
-};
-
-template<typename T> concept TableHasUAV =
-requires (T t) {
-	t.UAV;
-};
-
-template<typename T> concept TableHasSMP =
-requires (T t) {
-	t.SMP;
-};
-
-template<typename T> concept TableHasCB =
-requires (T t) {
-	t.CB;
-};
-
-
-

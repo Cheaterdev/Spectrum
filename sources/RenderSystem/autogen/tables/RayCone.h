@@ -9,9 +9,6 @@ namespace Table
 			float width;
 			float angle;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		float& GetWidth() { return cb.width; }
 		float& GetAngle() { return cb.angle; }
 		RayCone(CB&cb) :cb(cb){}

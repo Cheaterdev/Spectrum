@@ -14,18 +14,14 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::Handle bestFitNormals;
-			Render::Handle brdf;
-			Render::Handle sky;
-			Camera::SRV camera;
-			Camera::SRV prevCamera;
+			Render::HLSL::Texture2D<float4> bestFitNormals;
+			Render::HLSL::Texture3D<float4> brdf;
+			Render::HLSL::TextureCube<float4> sky;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
 		float4& GetTime() { return cb.time; }
-		Render::Handle& GetBestFitNormals() { return srv.bestFitNormals; }
-		Render::Handle& GetBrdf() { return srv.brdf; }
-		Render::Handle& GetSky() { return srv.sky; }
+		Render::HLSL::Texture2D<float4>& GetBestFitNormals() { return srv.bestFitNormals; }
+		Render::HLSL::Texture3D<float4>& GetBrdf() { return srv.brdf; }
+		Render::HLSL::TextureCube<float4>& GetSky() { return srv.sky; }
 		float4& GetSunDir() { return cb.sunDir; }
 		Camera MapCamera() { return Camera(cb.camera); }
 		Camera MapPrevCamera() { return Camera(cb.prevCamera); }

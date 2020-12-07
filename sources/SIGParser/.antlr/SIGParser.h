@@ -31,17 +31,17 @@ public:
     RuleOption_block = 4, RuleArray_count_id = 5, RuleArray = 6, RuleValue_declaration = 7, 
     RuleSlot_declaration = 8, RuleSampler_declaration = 9, RuleDefine_declaration = 10, 
     RuleRtv_formats_declaration = 11, RuleBlends_declaration = 12, RulePso_param = 13, 
-    RuleTemplated = 14, RuleType_with_template = 15, RuleInherit_id = 16, 
-    RuleName_id = 17, RuleType_id = 18, RuleOption_id = 19, RuleOwner_id = 20, 
-    RuleTemplate_id = 21, RuleValue_id = 22, RuleInsert_block = 23, RulePath_id = 24, 
-    RuleInherit = 25, RuleLayout_stat = 26, RuleLayout_block = 27, RuleLayout_definition = 28, 
-    RuleTable_stat = 29, RuleTable_block = 30, RuleTable_definition = 31, 
-    RuleRt_color_declaration = 32, RuleRt_ds_declaration = 33, RuleRt_stat = 34, 
-    RuleRt_block = 35, RuleRt_definition = 36, RuleArray_value_holder = 37, 
-    RuleArray_value_ids = 38, RuleRoot_sig = 39, RuleShader = 40, RuleCompute_pso_stat = 41, 
-    RuleCompute_pso_block = 42, RuleCompute_pso_definition = 43, RuleGraphics_pso_stat = 44, 
-    RuleGraphics_pso_block = 45, RuleGraphics_pso_definition = 46, RuleShader_type = 47, 
-    RulePso_param_id = 48, RuleBool_type = 49
+    RuleType_with_template = 14, RuleInherit_id = 15, RuleName_id = 16, 
+    RuleType_id = 17, RuleOption_id = 18, RuleOwner_id = 19, RuleTemplate_id = 20, 
+    RuleValue_id = 21, RuleInsert_block = 22, RulePath_id = 23, RuleInherit = 24, 
+    RuleLayout_stat = 25, RuleLayout_block = 26, RuleLayout_definition = 27, 
+    RuleTable_stat = 28, RuleTable_block = 29, RuleTable_definition = 30, 
+    RuleRt_color_declaration = 31, RuleRt_ds_declaration = 32, RuleRt_stat = 33, 
+    RuleRt_block = 34, RuleRt_definition = 35, RuleArray_value_holder = 36, 
+    RuleArray_value_ids = 37, RuleRoot_sig = 38, RuleShader = 39, RuleCompute_pso_stat = 40, 
+    RuleCompute_pso_block = 41, RuleCompute_pso_definition = 42, RuleGraphics_pso_stat = 43, 
+    RuleGraphics_pso_block = 44, RuleGraphics_pso_definition = 45, RuleShader_type = 46, 
+    RulePso_param_id = 47, RuleBool_type = 48
   };
 
   SIGParser(antlr4::TokenStream *input);
@@ -68,7 +68,6 @@ public:
   class Rtv_formats_declarationContext;
   class Blends_declarationContext;
   class Pso_paramContext;
-  class TemplatedContext;
   class Type_with_templateContext;
   class Inherit_idContext;
   class Name_idContext;
@@ -361,29 +360,14 @@ public:
 
   Pso_paramContext* pso_param();
 
-  class  TemplatedContext : public antlr4::ParserRuleContext {
-  public:
-    TemplatedContext(antlr4::ParserRuleContext *parent, size_t invokingState);
-    virtual size_t getRuleIndex() const override;
-    antlr4::tree::TerminalNode *LT();
-    Template_idContext *template_id();
-    antlr4::tree::TerminalNode *GT();
-
-    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
-    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
-
-    virtual antlrcpp::Any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
-   
-  };
-
-  TemplatedContext* templated();
-
   class  Type_with_templateContext : public antlr4::ParserRuleContext {
   public:
     Type_with_templateContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *ID();
-    TemplatedContext *templated();
+    antlr4::tree::TerminalNode *LT();
+    Template_idContext *template_id();
+    antlr4::tree::TerminalNode *GT();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;

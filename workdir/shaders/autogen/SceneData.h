@@ -4,7 +4,7 @@
 	#error Slot 1 is already used
 #endif
 #include "layout/FrameLayout.h"
-Texture2D bindless[]: register(t5, space1);
+Texture2D<float4> bindless[]: register(t5, space1);
 #include "tables/SceneData.h"
 StructuredBuffer<node_data> srv_1_0: register(t0, space1);
 StructuredBuffer<mesh_vertex_input> srv_1_1: register(t1, space1);

@@ -8,9 +8,6 @@ namespace Table
 		{
 			bool hit;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		bool& GetHit() { return cb.hit; }
 		ShadowPayload(CB&cb) :cb(cb){}
 	};

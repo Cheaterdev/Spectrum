@@ -5,14 +5,11 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DebugInfo
 	{
-		using CB = Empty;
-		using SRV = Empty;
 		struct UAV
 		{
-			Render::Handle debug;
+			Render::HLSL::RWStructuredBuffer<DebugStruct> debug;
 		} &uav;
-		using SMP = Empty;
-		Render::Handle& GetDebug() { return uav.debug; }
+		Render::HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return uav.debug; }
 		DebugInfo(UAV&uav) :uav(uav){}
 	};
 	#pragma pack(pop)

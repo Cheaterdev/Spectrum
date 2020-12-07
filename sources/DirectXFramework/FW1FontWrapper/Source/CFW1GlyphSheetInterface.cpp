@@ -73,8 +73,8 @@ namespace FW1FontWrapper
 
         Slots::FontRendering rendering;
 
-        rendering.GetPositions() = m_pCoordBuffer->create_view<FormattedBufferView<float4, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT>>(*list->frame_resources).get_srv();
-		rendering.GetTex0() = m_pTexture->texture_2d()->get_static_srv();
+        rendering.GetPositions() = m_pCoordBuffer->create_view<FormattedBufferView<float4, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT>>(*list->frame_resources).srv_handle;
+		rendering.GetTex0() = m_pTexture->texture_2d()->texture2D;
 
         rendering.set(list->get_graphics());
 

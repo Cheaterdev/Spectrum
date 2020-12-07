@@ -156,12 +156,12 @@ public:
 			{
                 PROFILE(L"SceneData");
 				Slots::SceneData sceneData;
-				sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
+				sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
 				sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
-				sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
-			    sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->get_srv()[0];
-				sceneData.GetMeshes() = scene->mesh_infos->buffer->get_srv()[0];
-				sceneData.GetMeshInstances() = universal_mesh_instance_manager::get().buffer->get_srv()[0];
+				sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
+			    sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->structuredBuffer;
+				sceneData.GetMeshes() = scene->mesh_infos->buffer->structuredBuffer;
+				sceneData.GetMeshInstances() = universal_mesh_instance_manager::get().buffer->structuredBuffer;
 
 				compiledScene = sceneData.compile(frame);
 
@@ -181,14 +181,14 @@ public:
 
 
 						auto info = frame.place_raw(UINT(data.size()));
-						auto srv = info.resource->create_view<StructuredBufferView<UINT>>(frame, (UINT)info.offset, (UINT)info.size).get_srv();
+						auto srv = info.resource->create_view<StructuredBufferView<UINT>>(frame, (UINT)info.offset, (UINT)info.size).structuredBuffer;
 						gather_global.GetMeshes_count() = srv;
                     }
 				
 
                     if (data.size()) {
                         auto info = frame.place_raw(data);
-                        auto srv = info.resource->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(frame, (UINT)info.offset, (UINT)info.size).get_srv();
+                        auto srv = info.resource->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(frame, (UINT)info.offset, (UINT)info.size).srv_handle;
                         gather_global.GetCommands() = srv;
                     }
 

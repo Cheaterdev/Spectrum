@@ -110,13 +110,13 @@ namespace FW1FontWrapper
 			
             pContext->write(data, std::span{ vertexData->pVertices + currentVertex, vertexCount });
 
-			auto view = data.resource->create_view<Render::StructuredBufferView<FW1_GLYPHVERTEX>>(*pContext->frame_resources, (UINT)data.offset, data.size);
+			auto view = data.resource->create_view<Render::StructuredBufferView<Table::Glyph>>(*pContext->frame_resources, (UINT)data.offset, data.size);
 
 
             {
                 Slots::FontRenderingGlyphs glyphs;
 
-                glyphs.GetData() = view.get_srv();
+                glyphs.GetData() = view.structuredBuffer;
                 glyphs.set(pContext->get_graphics());
 
             }

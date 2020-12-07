@@ -96,8 +96,8 @@ public:
 						subres.Texture2D.MipLevels = 1;
 						subres.Texture2D.MipSlice = i - 1;
 						subres.Texture2D.PlaneSlice = 0;
-						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).get_srv();
-						downsample.GetNormals() = gbuffer.normals.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).get_srv();
+						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
+						downsample.GetNormals() = gbuffer.normals.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
 					}
 					downsample.set(graphics);
 					graphics.draw(4);
@@ -516,7 +516,7 @@ void VoxelGI::debug(FrameGraph& graph)
 
 			{
 				Slots::VoxelDebug debug;
-				debug.GetVolume() = voxel_lighted.get_srv();
+				debug.GetVolume() = voxel_lighted.texture3D;
 				gbuffer.SetTable(debug.MapGbuffer());
 				debug.set(graphics);
 
@@ -607,7 +607,7 @@ void VoxelGI::screen(FrameGraph& graph)
 				frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
 				frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
 
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->get_srv();
+				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
 				frameInfo.GetTime() = graph.time;
 				frameInfo.set(graphics);
 			}
@@ -615,8 +615,8 @@ void VoxelGI::screen(FrameGraph& graph)
 			{
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.MapGbuffer());
-				voxelScreen.GetVoxels() = volume_lighted->texture_3d()->get_static_srv();
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.get_srv();
+				voxelScreen.GetVoxels() = volume_lighted->texture_3d()->texture3D;
+				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureÑube;
 				voxelScreen.set(graphics);
 			}
 			scene->voxels_compiled.set(graphics);
@@ -646,7 +646,7 @@ void VoxelGI::screen(FrameGraph& graph)
 
 					{
 						Slots::VoxelBlur voxelBlur;
-						voxelBlur.GetTex_color() = prev.get_srv();
+						voxelBlur.GetTex_color() = prev.texture2D;
 						voxelBlur.set(graphics);
 					}
 
@@ -665,9 +665,9 @@ void VoxelGI::screen(FrameGraph& graph)
 
 				{
 					Slots::VoxelUpscale  voxelUpscale;
-					voxelUpscale.GetTex_downsampled() = views[1].get_srv();
-					voxelUpscale.GetTex_gi_prev() = gi_views[1 - gi_index].get_srv();
-					voxelUpscale.GetTex_depth_prev() = gbuffer.depth_prev_mips.get_srv();
+					voxelUpscale.GetTex_downsampled() = views[1].texture2D;
+					voxelUpscale.GetTex_gi_prev() = gi_views[1 - gi_index].texture2D;
+					voxelUpscale.GetTex_depth_prev() = gbuffer.depth_prev_mips.texture2D;
 
 					voxelUpscale.set(graphics);
 				}
@@ -767,7 +767,7 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 				frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
 				frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
 
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->get_srv();
+				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
 				frameInfo.GetTime() = graph.time;
 				frameInfo.set(graphics);
 			}
@@ -775,8 +775,8 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 			{
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.MapGbuffer());
-				voxelScreen.GetVoxels() = volume_lighted->texture_3d()->get_static_srv();
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.get_srv();
+				voxelScreen.GetVoxels() = volume_lighted->texture_3d()->texture3D;
+				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureÑube;
 				voxelScreen.set(graphics);
 			}
 			scene->voxels_compiled.set(graphics);
@@ -802,8 +802,8 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 				{
 					Slots::VoxelUpscale  voxelUpscale;
-					voxelUpscale.GetTex_downsampled() = downsampled_reflection.get_srv();
-					voxelUpscale.GetTex_depth_prev() = gbuffer.depth_prev_mips.get_srv();
+					voxelUpscale.GetTex_downsampled() = downsampled_reflection.texture2D;
+					voxelUpscale.GetTex_depth_prev() = gbuffer.depth_prev_mips.texture2D;
 
 					voxelUpscale.set(graphics);
 				}
@@ -897,8 +897,8 @@ void VoxelGI::lighting(FrameGraph& graph)
 
 	graph.add_pass<Lighting>("Lighting", [this](Lighting& data, TaskBuilder& builder) {
 
-		data.global_depth = builder.need_buffer("global_depth", ResourceFlags::ComputeRead);
-		data.global_camera = builder.need_texture("global_camera", ResourceFlags::ComputeRead);
+		data.global_depth = builder.need_texture("global_depth", ResourceFlags::ComputeRead);
+		data.global_camera = builder.need_buffer("global_camera", ResourceFlags::ComputeRead);
 		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
 
 		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::UnorderedAccess);
@@ -938,10 +938,10 @@ void VoxelGI::lighting(FrameGraph& graph)
 			Slots::VoxelLighting ligthing;
 			{
 
-				ligthing.GetAlbedo() = volume_albedo->texture_3d()->get_static_srv();
-				ligthing.GetNormals() = volume_normal->texture_3d()->get_static_srv();
-				ligthing.GetOutput() = volume_lighted->texture_3d()->get_static_uav();
-				ligthing.GetTex_cube() = sky_cubemap_filtered.get_srv();
+				ligthing.GetAlbedo() = volume_albedo->texture_3d()->texture3D;
+				ligthing.GetNormals() = volume_normal->texture_3d()->texture3D;
+				ligthing.GetOutput() = volume_lighted->texture_3d()->rwTexture3D[0];
+				ligthing.GetTex_cube() = sky_cubemap_filtered.textureÑube;
 				Render::ResourceViewDesc subres;
 				subres.type = Render::ResourceType::TEXTURE3D;
 
@@ -951,19 +951,19 @@ void VoxelGI::lighting(FrameGraph& graph)
 				subres.Texture2D.MipSlice = 1;
 				subres.Texture2D.PlaneSlice = 0;
 
-				ligthing.GetLower() = volume_lighted->create_view<TextureView>(*graph.builder.current_frame, subres).get_srv();
+				ligthing.GetLower() = volume_lighted->create_view<TextureView>(*graph.builder.current_frame, subres).texture3D;
 
-				ligthing.GetVisibility() = gpu_tiles_buffer[0]->get_srv()[0];
+				ligthing.GetVisibility() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
 				ligthing.GetGroupCount() = tiled_volume_lighted->get_voxels_per_tile().x * tiled_volume_lighted->get_voxels_per_tile().y * tiled_volume_lighted->get_voxels_per_tile().z / (4 * 4 * 4);
 
 
 				auto pssm = ligthing.MapPssmGlobal();
 
-				pssm.GetLight_buffer() = global_depth.get_srv();
+				pssm.GetLight_buffer() = global_depth.texture2D;
 
-				auto buffer_view = global_camera.resource->create_view<StructuredBufferView<camera::shader_params>>(*graph.builder.current_frame);
+				auto buffer_view = global_camera.resource->create_view<StructuredBufferView<Table::Camera>>(*graph.builder.current_frame);
 
-				pssm.GetLight_camera() = buffer_view.get_srv();
+				pssm.GetLight_camera() = buffer_view.structuredBuffer;
 
 
 				ligthing.set(compute);
@@ -1040,12 +1040,12 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 				unsigned int current_mips = std::min(3u, volume_lighted->get_desc().MipLevels - mip_count);
 				compute.set_pipeline(GetPSO<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(current_mips)));
 
-				mipmapping.GetSrcMip() = volume_lighted->texture_3d()->get_srv(mip_count - 1);
+				mipmapping.GetSrcMip() = volume_lighted->texture_3d()->texture3DMips[mip_count - 1];
 
 				for (unsigned int i = 0; i < current_mips; i++)
-					mipmapping.GetOutMips()[i] = volume_lighted->texture_3d()->get_uav(mip_count + i);
+					mipmapping.GetOutMips()[i] = volume_lighted->texture_3d()->rwTexture3D[mip_count + i];
 
-				mipmapping.GetVisibility() = gpu_tiles_buffer[mip_count]->get_srv()[0];
+				mipmapping.GetVisibility() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
 				mipmapping.set(compute);
 
 				compute.dispach(ivec3(gpu_tiles_buffer[mip_count]->size() * mipmapping.GetGroupCount(), 1, 1), ivec3(1, 1, 1));
@@ -1088,9 +1088,9 @@ void VoxelGI::generate(FrameGraph& graph)
 		voxelization.MapInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
 		voxelization.MapInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
 
-		voxelization.GetAlbedo() = volume_albedo->texture_3d()->get_static_uav();
-		voxelization.GetNormals() = volume_normal->texture_3d()->get_static_uav();
-		voxelization.GetVisibility() = visibility->buffer->create_view<Render::BufferView>(*graph.builder.current_frame).get_uav();
+		voxelization.GetAlbedo() = volume_albedo->texture_3d()->rwTexture3D[0];
+		voxelization.GetNormals() = volume_normal->texture_3d()->rwTexture3D[0];
+		voxelization.GetVisibility() = visibility->buffer->create_view<Render::BufferView>(*graph.builder.current_frame).uav_handle;
 
 		scene->voxelization_compiled = voxelization.compile(*graph.builder.current_frame);
 	}
@@ -1102,7 +1102,7 @@ void VoxelGI::generate(FrameGraph& graph)
 
 	light_counter = (light_counter + 1) % 5;
 
-	if (light_scene && light_counter == 0 || all_scene_regen_counter > 0)
+	if (light_scene/* && light_counter == 0 || all_scene_regen_counter > 0*/)
 	{
 		//if (gpu_tiles_buffer[0]->size())
 		{

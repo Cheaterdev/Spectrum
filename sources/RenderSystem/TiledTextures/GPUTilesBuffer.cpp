@@ -42,10 +42,6 @@ void GPUTilesBuffer::erase(ivec3 pos)
 	tile_mutex.unlock();
 }
 
-const HandleTable&  GPUTilesBuffer::get_srv()
-{
-	return buffer->get_srv();
-}
 
 void GPUTilesBuffer::update(Render::CommandList::ptr list)
 {

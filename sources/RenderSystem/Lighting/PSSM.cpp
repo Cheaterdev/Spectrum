@@ -286,7 +286,7 @@ void PSSM::generate(FrameGraph& graph)
 			{
 				Slots::FrameInfo frameInfo;
 
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->get_srv();
+				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
 				auto camera = frameInfo.MapCamera();
 			//	memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
 				camera.cb = graph.cam->camera_cb.current;
@@ -313,11 +313,11 @@ void PSSM::generate(FrameGraph& graph)
 			graphics.set_pipeline(GetPSO<PSOS::PSSMMask>());
 
 
-			auto buffer_view = shadow_cameras.resource->create_view<StructuredBufferView<camera::shader_params>>(*graph.builder.current_frame);
+			auto buffer_view = shadow_cameras.resource->create_view<StructuredBufferView<Table::Camera>>(*graph.builder.current_frame);
 			{
 				Slots::PSSMData pssmdata;
-				pssmdata.GetLight_buffer() = depth_tex.get_srv();
-				pssmdata.GetLight_cameras() = buffer_view.get_srv();
+				pssmdata.GetLight_buffer() = depth_tex.texture2DArray;
+				pssmdata.GetLight_cameras() = buffer_view.structuredBuffer;
 				pssmdata.set(graphics);
 			}
 
@@ -337,7 +337,7 @@ void PSSM::generate(FrameGraph& graph)
 
 				gbuffer.SetTable(lighting.MapGbuffer());
 
-				lighting.GetLight_mask() = screen_light_mask.get_srv();
+				lighting.GetLight_mask() = screen_light_mask.texture2D;
 
 				lighting.set(graphics);
 			}

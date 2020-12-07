@@ -287,7 +287,7 @@ namespace materials
             universal_material(MaterialGraph::ptr graph);
 			Slots::MaterialInfo::Compiled compiled_material_info;
 
-			TypedHandle<material_info_part> info_handle;
+			TypedHandle<material_info_part::CB> info_handle;
 			TypedHandle<closesthit_identifier> info_rtx;
 			shader_identifier main;
 			shader_identifier shadow;

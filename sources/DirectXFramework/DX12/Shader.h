@@ -24,8 +24,22 @@ namespace DX12
             //   std::vector<ID3D11ClassInstance*>    class_instances;
             virtual void compile() {};
             friend class PipelineStateBase;
+         
+            std::mutex pipelines_mutex;
             std::set<PipelineStateBase*> pipelines;
 
+
+            void on_register(PipelineStateBase* pip)
+            {
+                std::lock_guard<std::mutex> g(pipelines_mutex);
+                pipelines.insert(pip);
+            }
+
+			void on_unregister(PipelineStateBase* pip)
+			{
+				std::lock_guard<std::mutex> g(pipelines_mutex);
+				pipelines.erase(pip);
+			}
             void operator=(const Shader& r)
             {
                 resource_manager<_shader_type, D3D::shader_header>::operator=(r);
@@ -33,6 +47,7 @@ namespace DX12
                 blob = r.blob;
                 hash = r.hash;
 
+				std::lock_guard<std::mutex> g(pipelines_mutex);
                 for (auto& p : pipelines)
                     p->on_change();
             }

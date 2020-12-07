@@ -21,7 +21,7 @@ float3 depth_to_wpos_center(float d, float2 tc, matrix mat)
 }
 
 
-static const Texture2D depth_tex = gbuffer.GetDepth();
+static const Texture2D<float> depth_tex = gbuffer.GetDepth();
 static const Texture2D<float4> normal_tex = gbuffer.GetNormals();
 
 

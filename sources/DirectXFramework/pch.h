@@ -60,6 +60,7 @@ namespace DX12
 
 #include "InputLayouts.h"
 
+#include "SIG/Concepts.h"
 
 #include "DX12/RootSignature.h"
 #include "DX12/Descriptors.h"

@@ -5,7 +5,7 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GBufferQuality.h"
-Texture2D srv_5_0: register(t0, space5);
+Texture2D<float4> srv_5_0: register(t0, space5);
 GBufferQuality CreateGBufferQuality()
 {
 	GBufferQuality result;

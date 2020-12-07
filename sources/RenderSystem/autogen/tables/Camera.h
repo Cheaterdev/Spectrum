@@ -18,9 +18,6 @@ namespace Table
 			float4 jitter;
 			Frustum::CB frustum;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		float4x4& GetView() { return cb.view; }
 		float4x4& GetProj() { return cb.proj; }
 		float4x4& GetViewProj() { return cb.viewProj; }

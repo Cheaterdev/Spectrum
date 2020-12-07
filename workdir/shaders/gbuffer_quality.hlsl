@@ -102,7 +102,6 @@ void PS_STENCIL(quad_output i)
 
 void PS_STENCIL_REFL(quad_output i)
 {
-	//discard;
 	clip(0.05 - GetGBufferQuality().GetRef().SampleLevel(pointClampSampler, i.tc, 0).y);
 }
 

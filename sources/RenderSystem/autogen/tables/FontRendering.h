@@ -4,16 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FontRendering
 	{
-		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle tex0;
-			Render::Handle positions;
+			Render::HLSL::Texture2D<float> tex0;
+			Render::HLSL::Buffer<float4> positions;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
-		Render::Handle& GetTex0() { return srv.tex0; }
-		Render::Handle& GetPositions() { return srv.positions; }
+		Render::HLSL::Texture2D<float>& GetTex0() { return srv.tex0; }
+		Render::HLSL::Buffer<float4>& GetPositions() { return srv.positions; }
 		FontRendering(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

@@ -6,10 +6,10 @@
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelDebug.h"
 Texture3D<float4> srv_4_0: register(t0, space4);
-Texture2D srv_4_1: register(t1, space4);
-Texture2D srv_4_2: register(t2, space4);
-Texture2D srv_4_3: register(t3, space4);
-Texture2D srv_4_4: register(t4, space4);
+Texture2D<float4> srv_4_1: register(t1, space4);
+Texture2D<float4> srv_4_2: register(t2, space4);
+Texture2D<float4> srv_4_3: register(t3, space4);
+Texture2D<float> srv_4_4: register(t4, space4);
 Texture2D<float2> srv_4_5: register(t5, space4);
 VoxelDebug CreateVoxelDebug()
 {

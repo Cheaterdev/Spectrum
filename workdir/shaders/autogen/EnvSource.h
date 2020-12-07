@@ -5,7 +5,7 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/EnvSource.h"
-TextureCube srv_5_0: register(t0, space5);
+TextureCube<float4> srv_5_0: register(t0, space5);
 EnvSource CreateEnvSource()
 {
 	EnvSource result;

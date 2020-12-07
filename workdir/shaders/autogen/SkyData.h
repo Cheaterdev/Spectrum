@@ -6,10 +6,10 @@
 #include "layout/DefaultLayout.h"
 #include "tables/SkyData.h"
 ConstantBuffer<SkyData_cb> cb_3_0:register(b0,space3);
-Texture2D srv_3_0: register(t0, space3);
-Texture2D srv_3_1: register(t1, space3);
-Texture3D srv_3_2: register(t2, space3);
-Texture2D srv_3_3: register(t3, space3);
+Texture2D<float> srv_3_0: register(t0, space3);
+Texture2D<float4> srv_3_1: register(t1, space3);
+Texture3D<float4> srv_3_2: register(t2, space3);
+Texture2D<float4> srv_3_3: register(t3, space3);
 SkyData CreateSkyData()
 {
 	SkyData result;

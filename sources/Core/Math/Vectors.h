@@ -592,6 +592,10 @@ typedef Vector<vec4_t<int>> ivec4;
 typedef Vector<vec3_t<int>> ivec3;
 typedef Vector<vec2_t<int>> ivec2;
 
+typedef ivec2 int2;
+typedef ivec3 int3;
+typedef ivec4 int4;
+
 
 typedef Vector<box_t<float>> box;
 typedef Vector<rect_t<float>> rect;

@@ -1,12 +1,12 @@
 #pragma once
 struct EnvSource_srv
 {
-	TextureCube sourceTex;
+	TextureCube<float4> sourceTex;
 };
 struct EnvSource
 {
 	EnvSource_srv srv;
-	TextureCube GetSourceTex() { return srv.sourceTex; }
+	TextureCube<float4> GetSourceTex() { return srv.sourceTex; }
 
 };
  const EnvSource CreateEnvSource(EnvSource_srv srv)

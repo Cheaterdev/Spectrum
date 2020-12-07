@@ -719,7 +719,7 @@ namespace DX12
 
 	};
 
-
+	class SignatureDataSetter;
 
 
 	class CommandList : public std::enable_shared_from_this<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Free>
@@ -769,6 +769,7 @@ namespace DX12
 	public:
 		ptr get_sub_list();
 		FrameResources::ptr frame_resources;
+		void setup_debug(SignatureDataSetter*);
 
 		void print_debug();
 

@@ -11,9 +11,6 @@ namespace Table
 			float2 tc;
 			float4 tangent;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		float3& GetPos() { return cb.pos; }
 		float3& GetNormal() { return cb.normal; }
 		float2& GetTc() { return cb.tc; }

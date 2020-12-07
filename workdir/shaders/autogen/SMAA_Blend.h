@@ -5,7 +5,7 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/SMAA_Blend.h"
-Texture2D srv_4_0: register(t0, space4);
+Texture2D<float4> srv_4_0: register(t0, space4);
 SMAA_Blend CreateSMAA_Blend()
 {
 	SMAA_Blend result;

@@ -32,4 +32,24 @@ namespace DX12
 		}
 	}*/
 
+	RTXSceneView::RTXSceneView(Resource::ptr resource, FrameResources& frame) :ResourceView(resource)
+	{
+		init_desc();
+		//	init_views(frame);
+		srv_handle = frame.srv_uav_cbv_cpu.place<HLSL::RaytracingAccelerationStructure>();
+		place_srv(srv_handle);
+	}
+
+	BufferView::BufferView(Resource::ptr resource, FrameResources& frame) :ResourceView(resource)
+	{
+		init_desc();
+		init_views(frame);
+
+		auto& desc = resource->get_desc();
+		if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+			uav_handle = HLSL::RWByteAddressBuffer(frame.srv_uav_cbv_cpu.place());
+			place_uav(uav_handle);
+		}
+	}
+
 }

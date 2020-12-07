@@ -335,11 +335,11 @@ public:
 
 	void SetTable(Table::GBuffer table)
 	{
-		table.GetAlbedo() = albedo.get_srv();
-		table.GetNormals() = normals.get_srv();
-		table.GetSpecular() = specular.get_srv();
-		table.GetDepth() = depth_mips.get_srv();
-        table.GetMotion() = speed.get_srv();
+		table.GetAlbedo() = albedo.texture2D;
+		table.GetNormals() = normals.texture2D;
+		table.GetSpecular() = specular.texture2D;
+		table.GetDepth() = depth_mips.texture2D;
+        table.GetMotion() = speed.texture2D;
 	}
 
 
@@ -377,7 +377,7 @@ public:
 	}
 	void create_quality(ivec2 size, TaskBuilder& builder)
 	{
-		quality = builder.create_texture("GBuffer_Quality", size, 1, DXGI_FORMAT::DXGI_FORMAT_D32_FLOAT_S8X24_UINT, ResourceFlags::DepthStencil);
+		quality = builder.create_texture("GBuffer_Quality", size, 1, DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT, ResourceFlags::DepthStencil);
 	}
    
 	void create_mips(ivec2 size, TaskBuilder& builder)

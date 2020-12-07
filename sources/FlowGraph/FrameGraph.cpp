@@ -260,7 +260,6 @@ void FrameGraph::setup()
 		}
 	}
 
-	
 	if (optimize)
 	{
 		bool sorted = false;

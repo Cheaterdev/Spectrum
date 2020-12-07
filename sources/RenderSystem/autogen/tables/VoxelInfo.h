@@ -11,9 +11,6 @@ namespace Table
 			uint4 voxels_per_tile;
 			uint4 voxel_tiles_count;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		float4& GetMin() { return cb.min; }
 		float4& GetSize() { return cb.size; }
 		uint4& GetVoxels_per_tile() { return cb.voxels_per_tile; }

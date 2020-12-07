@@ -3,11 +3,11 @@ struct SkyData
 {
 
 	float3 sunDir;
-	Texture2D depthBuffer;
+	Texture2D<float> depthBuffer;
  
-	Texture2D transmittance;
-	Texture3D inscatter;
-	Texture2D irradiance;
+	Texture2D<float4> transmittance;
+	Texture3D<float4> inscatter;
+	Texture2D<float4> irradiance;
 }
 
 
@@ -30,7 +30,7 @@ struct EnvFilter
 [Bind = DefaultLayout::Instance2]
 struct EnvSource
 {
-	TextureCube sourceTex;
+	TextureCube<float4> sourceTex;
 }
 
 

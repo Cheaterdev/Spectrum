@@ -57,7 +57,7 @@ void SMAA::generate(FrameGraph& graph)
 			{
 
 				Slots::SMAA_Global slot_global;
-				slot_global.GetColorTex() = source_tex.get_srv();
+				slot_global.GetColorTex() = source_tex.texture2D;
 				slot_global.GetSubsampleIndices() = float4(0,0,0,0);
 				slot_global.GetSMAA_RT_METRICS() = float4(1.0f / size.x, 1.0f / size.y, size);
 
@@ -70,9 +70,9 @@ void SMAA::generate(FrameGraph& graph)
 			{
 
 				Slots::SMAA_Weights slot_edges;
-				slot_edges.GetSearchTex() = search_tex->texture_2d()->get_srv();
-				slot_edges.GetAreaTex() = area_tex->texture_2d()->get_srv();
-				slot_edges.GetEdgesTex() = edges.get_srv();
+				slot_edges.GetSearchTex() = search_tex->texture_2d()->texture2D;
+				slot_edges.GetAreaTex() = area_tex->texture_2d()->texture2D;
+				slot_edges.GetEdgesTex() = edges.texture2D;
 
 				slot_edges.set(graphics);
 			}
@@ -86,7 +86,7 @@ void SMAA::generate(FrameGraph& graph)
 
 				Slots::SMAA_Blend slot_blend;
 
-				slot_blend.GetBlendTex() = blend.get_srv();
+				slot_blend.GetBlendTex() = blend.texture2D;
 
 				slot_blend.set(graphics);
 			}

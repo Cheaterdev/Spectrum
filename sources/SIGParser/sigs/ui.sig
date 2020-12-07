@@ -10,7 +10,7 @@ struct vertex_input
 struct NinePatch
 {
 	StructuredBuffer<vertex_input> vb;
-	Texture2D textures[];
+	Texture2D<float4> textures[];
 }
 
 [Bind = DefaultLayout::Instance0]

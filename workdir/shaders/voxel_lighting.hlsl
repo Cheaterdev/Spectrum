@@ -46,23 +46,11 @@ static const float3 dir = -normalize(light_cam.GetDirection().xyz);
 
 float get_shadow(float3 wpos)
 {
-	//uint4 shadow_dims = uint4(512, 512, 512, 512);
-//	GetVoxelLighting().GetPssmGlobal().GetLight_buffer().GetDimensions(shadow_dims.x, shadow_dims.y);
-
-
-	int level =0 ;
 	float4 pos_l = mul(light_cam.GetViewProj(), float4(wpos , 1));
-	pos_l.z -= 0.0001 * pow(2, level);
 	pos_l /= pos_l.w;
 	float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
-	//float shadow = GetVoxelLighting().GetLight_buffer().SampleCmpLevelZero(cmp_sampler, float3(light_tc, level), pos_l.z);
-
-	float shadow = GetVoxelLighting().GetPssmGlobal().GetLight_buffer().SampleLevel(linearSampler, float2(light_tc), level) >  pos_l.z;
-
-//	if (pos_l.z < 0 || pos_l.x > 1 || pos_l.x < -1 || pos_l.y > 1 || pos_l.y < -1)
-	//	shadow = 1;
-
+	float shadow = GetVoxelLighting().GetPssmGlobal().GetLight_buffer().SampleLevel(linearSampler, float2(wpos.xz/100), 0);// > pos_l.z;
 	return shadow;
 }
 
@@ -251,10 +239,10 @@ uint3 index = get_index(groupThreadID, groupID);
 	float3 pos = index*voxel_size/dims+voxel_min+ scaler*normals/m;
 	
 //	float traced_shadow = (1-trace_shadow((index+1*normals)/dims,dir));
-	float shadow = saturate(dot(normals, dir)) *get_shadow(pos);
+	float shadow = /*saturate(dot(normals, dir)) */get_shadow(pos);
 	
 	
-	float3 lighting = 1*albedo.xyz * gi.xyz + albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
+	float3 lighting = shadow;// 1 * albedo.xyz * gi.xyz + albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
 //	output[index] = float4(albedo.xyz,albedo.w);
 	//lighting = traced_shadow.xxx	;
 	output[index] = float4(lighting,1);

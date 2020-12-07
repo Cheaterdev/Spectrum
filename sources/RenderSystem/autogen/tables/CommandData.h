@@ -10,9 +10,6 @@ namespace Table
 			GPUAddress material_cb;
 			DrawIndexedArguments draw_commands;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		GPUAddress& GetMesh_cb() { return cb.mesh_cb; }
 		GPUAddress& GetMaterial_cb() { return cb.material_cb; }
 		DrawIndexedArguments& GetDraw_commands() { return cb.draw_commands; }

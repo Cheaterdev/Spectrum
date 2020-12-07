@@ -217,14 +217,14 @@ void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, R
 
 	{
 		Slots::Raytracing rtx;
-		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*_list->frame_resources).get_srv();
-		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*_list->frame_resources).get_srv();
+		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<StructuredBufferView<UINT>>(*_list->frame_resources).structuredBuffer;
+		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*_list->frame_resources).srv_handle;
 		rtx.set(_list->get_compute());
 	}
 
 	{
 		Slots::RaytracingRays rays;
-		rays.GetOutput() = texture.get_uav();
+		rays.GetOutput() = texture.rwTexture2D;
 		gbuffer.SetTable(rays.MapGbuffer());
 		float view = context->cam->angle;		
 		rays.GetPixelAngle() = atan(2*tan(view/2)/texture.get_size().y);

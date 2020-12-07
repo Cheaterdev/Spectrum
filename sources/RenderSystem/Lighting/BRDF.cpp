@@ -16,7 +16,7 @@ void BRDF::create_new()
 
 	{
 		Slots::BRDF data;
-		data.GetOutput() = texture->texture_3d()->get_static_uav();
+		data.GetOutput() = texture->texture_3d()->rwTexture3D[0];
 		data.set(compute_context);
 	}
 

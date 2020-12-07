@@ -5,8 +5,8 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GBufferDownsample.h"
-Texture2D srv_5_0: register(t0, space5);
-Texture2D srv_5_1: register(t1, space5);
+Texture2D<float4> srv_5_0: register(t0, space5);
+Texture2D<float> srv_5_1: register(t1, space5);
 GBufferDownsample CreateGBufferDownsample()
 {
 	GBufferDownsample result;

@@ -56,9 +56,6 @@ public:
   virtual void enterPso_param(SIGParser::Pso_paramContext *ctx) = 0;
   virtual void exitPso_param(SIGParser::Pso_paramContext *ctx) = 0;
 
-  virtual void enterTemplated(SIGParser::TemplatedContext *ctx) = 0;
-  virtual void exitTemplated(SIGParser::TemplatedContext *ctx) = 0;
-
   virtual void enterType_with_template(SIGParser::Type_with_templateContext *ctx) = 0;
   virtual void exitType_with_template(SIGParser::Type_with_templateContext *ctx) = 0;
 

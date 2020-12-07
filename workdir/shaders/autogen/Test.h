@@ -4,7 +4,7 @@
 	#error Slot 3 is already used
 #endif
 #include "layout/DefaultLayout.h"
-Texture2D bindless[]: register(t0, space3);
+Texture2D<float4> bindless[]: register(t0, space3);
 #include "tables/Test.h"
 ConstantBuffer<Test_cb> cb_3_0:register(b0,space3);
 Test CreateTest()

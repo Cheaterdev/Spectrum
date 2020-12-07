@@ -4,14 +4,11 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PickerBuffer
 	{
-		using CB = Empty;
-		using SRV = Empty;
 		struct UAV
 		{
-			Render::Handle viewBuffer;
+			Render::HLSL::RWStructuredBuffer<uint> viewBuffer;
 		} &uav;
-		using SMP = Empty;
-		Render::Handle& GetViewBuffer() { return uav.viewBuffer; }
+		Render::HLSL::RWStructuredBuffer<uint>& GetViewBuffer() { return uav.viewBuffer; }
 		PickerBuffer(UAV&uav) :uav(uav){}
 	};
 	#pragma pack(pop)

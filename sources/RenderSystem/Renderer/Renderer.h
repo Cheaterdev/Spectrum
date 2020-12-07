@@ -112,11 +112,10 @@ class mesh_renderer : public renderer, public Events::prop_handler
 		void  init_dispatch(MeshRenderContext::ptr mesh_render_context, Slots::GatherPipelineGlobal::Compiled & from);
 
 
-		virtual_gpu_buffer<Table::BoxInfo::CB>::ptr commands_boxes;
-		virtual_gpu_buffer<command>::ptr commands_buffer[8];
+		virtual_gpu_buffer<Table::BoxInfo>::ptr commands_boxes;
+		virtual_gpu_buffer<Table::CommandData>::ptr commands_buffer[8];
 
 
-		Render::StructuredBuffer<Table::GatherPipelineGlobal::CB>::ptr dispatch_info;
 		Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer;
         IndirectCommand dispatch_command;
 

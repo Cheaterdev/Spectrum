@@ -11,9 +11,6 @@ namespace Table
 			float4x4 node_inverse_matrix;
 			AABB::CB aabb;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		float4x4& GetNode_global_matrix() { return cb.node_global_matrix; }
 		float4x4& GetNode_inverse_matrix() { return cb.node_inverse_matrix; }
 		AABB MapAabb() { return AABB(cb.aabb); }

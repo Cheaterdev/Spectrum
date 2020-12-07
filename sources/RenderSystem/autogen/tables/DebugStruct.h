@@ -8,9 +8,6 @@ namespace Table
 		{
 			uint4 v;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		uint4& GetV() { return cb.v; }
 		DebugStruct(CB&cb) :cb(cb){}
 	};

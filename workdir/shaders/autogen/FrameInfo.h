@@ -6,7 +6,7 @@
 #include "layout/FrameLayout.h"
 #include "tables/FrameInfo.h"
 ConstantBuffer<FrameInfo_cb> cb_0_0:register(b0,space0);
-Texture2D srv_0_0: register(t0, space0);
+Texture2D<float4> srv_0_0: register(t0, space0);
 Texture3D<float4> srv_0_1: register(t1, space0);
 TextureCube<float4> srv_0_2: register(t2, space0);
 FrameInfo CreateFrameInfo()

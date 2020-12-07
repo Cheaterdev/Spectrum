@@ -6,7 +6,7 @@
 #include "layout/DefaultLayout.h"
 #include "tables/SMAA_Global.h"
 ConstantBuffer<SMAA_Global_cb> cb_3_0:register(b0,space3);
-Texture2D srv_3_0: register(t0, space3);
+Texture2D<float4> srv_3_0: register(t0, space3);
 SMAA_Global CreateSMAA_Global()
 {
 	SMAA_Global result;

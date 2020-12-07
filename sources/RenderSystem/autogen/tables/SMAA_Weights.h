@@ -4,18 +4,15 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SMAA_Weights
 	{
-		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle areaTex;
-			Render::Handle searchTex;
-			Render::Handle edgesTex;
+			Render::HLSL::Texture2D<float4> areaTex;
+			Render::HLSL::Texture2D<float4> searchTex;
+			Render::HLSL::Texture2D<float4> edgesTex;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
-		Render::Handle& GetAreaTex() { return srv.areaTex; }
-		Render::Handle& GetSearchTex() { return srv.searchTex; }
-		Render::Handle& GetEdgesTex() { return srv.edgesTex; }
+		Render::HLSL::Texture2D<float4>& GetAreaTex() { return srv.areaTex; }
+		Render::HLSL::Texture2D<float4>& GetSearchTex() { return srv.searchTex; }
+		Render::HLSL::Texture2D<float4>& GetEdgesTex() { return srv.edgesTex; }
 		SMAA_Weights(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

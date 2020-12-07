@@ -48,7 +48,12 @@ namespace DX12
 
 	class Texture2DView:public View
 	{
-		
+		HandleTable hlsl;
+	public:
+		HLSL::Texture2D<> texture2D;
+		std::vector<HLSL::RWTexture2D<>> rwTexture2D;
+		std::vector<HLSL::Texture2D<>> texture2DMips;
+	private:
 		int single_count;
 		std::vector<Viewport> p;
 		std::vector<sizer_long> scissor;
@@ -193,7 +198,8 @@ namespace DX12
 
     class Array2DView :public View
     {
-         
+		
+	private:
             int single_count;
 
 			std::vector<Texture2DView::ptr> views;
@@ -242,9 +248,18 @@ namespace DX12
     class Texture3DView :public View
     {
 
+		HandleTable hlsl;
+	public:
+		HLSL::Texture3D<float4> texture3D;
+		std::vector<HLSL::RWTexture3D<>> rwTexture3D;
+		std::vector<HLSL::Texture3D<>> texture3DMips;
+	private:
             int single_count;
             //     std::vector<HandleTable> array_rtv;
         public:
+
+	
+
             using ptr = std::shared_ptr<Texture3DView>;
             Texture3DView(Resource* _resource);
 

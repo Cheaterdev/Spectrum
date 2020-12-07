@@ -17,31 +17,49 @@ using System;
 
 namespace Spectrum
 {
+	
+[Fragment, Flags]
+public enum Mode
+{
+    Dev = 1,
+    Retail = 2
+}
+
+public class CustomTarget : ITarget
+{
+	  // DevEnv and Platform are mandatory on all targets so we define them.
+    public Platform Platform;    public DevEnv DevEnv;
+
+
+    // Also put debug/release configurations since this is common.
+    public Optimization Optimization;
+    public Mode Mode;
+}
+
+
     [Sharpmake.Generate]
     public class Common : Project
     {
-        public Common()
+        public Common(): base(typeof(CustomTarget))
         {
             SourceFilesExtensions.Add(".sig");
             SourceFilesExtensions.Add(".hlsl");
 
             RootPath = @"[project.SharpmakeCsPath]\projects\[project.Name]";
 
-            AddTargets(new Target(
-                Platform.win64,
-                DevEnv.vs2019,
-                Optimization.Release,
-                OutputType.Lib,
-                Blob.NoBlob,
-                BuildSystem.MSBuild
-            ));
+            AddTargets(new CustomTarget{
+                Platform = Platform.win64,
+               DevEnv =  DevEnv.vs2019,
+              Optimization =   Optimization.Release,
+				Mode = Mode.Dev | Mode.Retail
+            });
 
         }
 
-        [Configure()]
-        public virtual void ConfigureAll(Configuration conf, Target target)
+        [Configure]
+        public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
-            conf.ProjectFileName = "[project.Name].[target.DevEnv].[target.Framework]";
+            conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 
             conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);		
@@ -51,9 +69,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.WindowsTargetPlatformVersion.Latest);		
             conf.Options.Add(Options.Vc.Compiler.FunctionLevelLinking.Disable);		
             conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreadedDLL);		
-            //conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);		
-            conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);		
-          
+            conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);		     
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
             conf.AdditionalCompilerOptions.Add("/bigobj");
@@ -66,15 +82,24 @@ namespace Spectrum
             conf.Defines.Add("BOOST_ENDIAN_DEPRECATED_NAMES");
           
             conf.Defines.Add("BOOST_ALL_NO_LIB");
-            conf.Defines.Add("NOMINMAX");     
+            conf.Defines.Add("NOMINMAX");    
+
+
+			if (target.Mode == Mode.Dev)
+			{
+				conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);		
+				conf.Options.Add(Options.Vc.Compiler.Inline.Disable);	
+                conf.Defines.Remove("NDEBUG");	
+                  conf.Defines.Add("DEV");
+			}else{
+				conf.Options.Add(Options.Vc.Linker.LinkTimeCodeGeneration.UseLinkTimeCodeGeneration);				
+				conf.Options.Add(Options.Vc.Compiler.Optimization.FullOptimization);		
+			   conf.Defines.Add("RETAIL");	
+			}
+       			
         }
         
-        [Configure(BuildSystem.FastBuild)]
-        public void ConfigureFastBuild(Configuration conf, Target target)
-        {
-            conf.IsFastBuild = true;
-            conf.FastBuildBlobbed = target.Blob == Blob.FastBuildUnitys;
-        }
+     
     }
 
      [Sharpmake.Generate]
@@ -85,7 +110,7 @@ namespace Spectrum
    
         }
 
-        public override void  ConfigureAll(Configuration conf, Target target)
+        public override void  ConfigureAll(Configuration conf, CustomTarget target)
         {           
             base.ConfigureAll(conf, target);
 
@@ -126,7 +151,7 @@ namespace Spectrum
             AssemblyName = "Core";
         }
 
-        public override void ConfigureAll(Configuration conf, Target target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target) 
         {
             base.ConfigureAll(conf, target);
 
@@ -149,7 +174,7 @@ namespace Spectrum
             AssemblyName = "FileSystem";
         }
 
-        public override void ConfigureAll(Configuration conf, Target target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target) 
         {
             base.ConfigureAll(conf, target);
 
@@ -169,7 +194,7 @@ namespace Spectrum
             AssemblyName = "DirectXFramework";
         }
 
-        public override void ConfigureAll(Configuration conf, Target target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target) 
         {
             base.ConfigureAll(conf, target);
 
@@ -197,7 +222,7 @@ namespace Spectrum
             AssemblyName = "FlowGraph";
         }
 
-        public override void ConfigureAll(Configuration conf, Target target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target) 
         {
             base.ConfigureAll(conf, target);
 
@@ -217,7 +242,7 @@ namespace Spectrum
             AssemblyName = "RenderSystem";
         }
 
-        public override void ConfigureAll(Configuration conf, Target target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target) 
         {
             base.ConfigureAll(conf, target);
 
@@ -238,7 +263,7 @@ namespace Spectrum
             AssemblyName = "SIGParser";
         }
 
-  public override void ConfigureAll(Configuration conf, Target target) 
+  public override void ConfigureAll(Configuration conf, CustomTarget target) 
         {
             base.ConfigureAll(conf, target);
             conf.Options.Remove(Options.Vc.Compiler.CppLanguageStandard.Latest);	
@@ -269,7 +294,7 @@ namespace Spectrum
             AssemblyName = "Spectrum";
         }
 
-  public override void ConfigureAll(Configuration conf, Target target) 
+  public override void ConfigureAll(Configuration conf, CustomTarget target) 
         {
             base.ConfigureAll(conf, target);
 
@@ -302,23 +327,32 @@ namespace Spectrum
     public class SpectrumSolution : Solution
     {
         public SpectrumSolution()
+        : base(typeof(CustomTarget))
         {
-            AddTargets(new Target(
-                Platform.win64,
-                DevEnv.vs2019,
-                Optimization.Release,
-                OutputType.Lib,
-                Blob.NoBlob,
-                BuildSystem.MSBuild
-            ));
+            AddTargets(new CustomTarget{
+               Platform =  Platform.win64,
+               DevEnv =  DevEnv.vs2019,
+              Optimization =   Optimization.Release,       
+			Mode = 	Mode.Dev | Mode.Retail
+            });
         }
 
         [Configure()]
-        public void ConfigureAll(Configuration conf, Target target)
+        public void ConfigureAll(Configuration conf, CustomTarget target)
         {
             conf.SolutionFileName = "Spectrum";
             conf.SolutionPath = @"[solution.SharpmakeCsPath]\projects\";
-
+    string platformName = string.Empty;
+    
+		switch (target.Mode)
+        {
+            case Mode.Dev: platformName += "Dev"; break;
+            case Mode.Retail: platformName += "Retail"; break;
+            default:
+                throw new NotImplementedException();
+        }
+		conf.Name = platformName; 
+		
             conf.AddProject<Spectrum>(target);
             conf.AddProject<SIGParser>(target);
             conf.AddProject<Resources>(target);

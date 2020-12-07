@@ -9,9 +9,6 @@ namespace Table
 			float2 pos;
 			float4 color;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		float2& GetPos() { return cb.pos; }
 		float4& GetColor() { return cb.color; }
 		VSLine(CB&cb) :cb(cb){}

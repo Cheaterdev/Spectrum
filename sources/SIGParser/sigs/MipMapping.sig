@@ -106,7 +106,7 @@ GraphicsPSO QualityToStencil
 	stencil_func = ALWAYS;
 	stencil_pass_op = REPLACE;
 
-	ds = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 
 	#make as define block
@@ -131,7 +131,7 @@ GraphicsPSO QualityToStencilREfl
 	stencil_func = ALWAYS;
 	stencil_pass_op = REPLACE;
 
-	ds = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 
 	# make as define block

@@ -5,16 +5,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PSSMData
 	{
-		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle light_buffer;
-			Render::Handle light_cameras;
+			Render::HLSL::Texture2DArray<float> light_buffer;
+			Render::HLSL::StructuredBuffer<Camera> light_cameras;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
-		Render::Handle& GetLight_buffer() { return srv.light_buffer; }
-		Render::Handle& GetLight_cameras() { return srv.light_cameras; }
+		Render::HLSL::Texture2DArray<float>& GetLight_buffer() { return srv.light_buffer; }
+		Render::HLSL::StructuredBuffer<Camera>& GetLight_cameras() { return srv.light_cameras; }
 		PSSMData(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

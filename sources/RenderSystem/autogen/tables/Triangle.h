@@ -10,9 +10,6 @@ namespace Table
 			float lod;
 			mesh_vertex_input::CB v;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		float& GetLod() { return cb.lod; }
 		mesh_vertex_input MapV() { return mesh_vertex_input(cb.v); }
 		Triangle(CB&cb) :cb(cb){}

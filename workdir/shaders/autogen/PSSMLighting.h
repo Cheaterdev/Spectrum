@@ -6,10 +6,10 @@
 #include "layout/DefaultLayout.h"
 #include "tables/PSSMLighting.h"
 Texture2D<float> srv_5_0: register(t0, space5);
-Texture2D srv_5_1: register(t1, space5);
-Texture2D srv_5_2: register(t2, space5);
-Texture2D srv_5_3: register(t3, space5);
-Texture2D srv_5_4: register(t4, space5);
+Texture2D<float4> srv_5_1: register(t1, space5);
+Texture2D<float4> srv_5_2: register(t2, space5);
+Texture2D<float4> srv_5_3: register(t3, space5);
+Texture2D<float> srv_5_4: register(t4, space5);
 Texture2D<float2> srv_5_5: register(t5, space5);
 PSSMLighting CreatePSSMLighting()
 {

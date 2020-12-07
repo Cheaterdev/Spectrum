@@ -47,8 +47,6 @@ public:
 
     virtual antlrcpp::Any visitPso_param(SIGParser::Pso_paramContext *context) = 0;
 
-    virtual antlrcpp::Any visitTemplated(SIGParser::TemplatedContext *context) = 0;
-
     virtual antlrcpp::Any visitType_with_template(SIGParser::Type_with_templateContext *context) = 0;
 
     virtual antlrcpp::Any visitInherit_id(SIGParser::Inherit_idContext *context) = 0;

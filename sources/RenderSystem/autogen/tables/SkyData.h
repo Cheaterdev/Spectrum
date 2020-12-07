@@ -10,18 +10,16 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::Handle depthBuffer;
-			Render::Handle transmittance;
-			Render::Handle inscatter;
-			Render::Handle irradiance;
+			Render::HLSL::Texture2D<float> depthBuffer;
+			Render::HLSL::Texture2D<float4> transmittance;
+			Render::HLSL::Texture3D<float4> inscatter;
+			Render::HLSL::Texture2D<float4> irradiance;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
 		float3& GetSunDir() { return cb.sunDir; }
-		Render::Handle& GetDepthBuffer() { return srv.depthBuffer; }
-		Render::Handle& GetTransmittance() { return srv.transmittance; }
-		Render::Handle& GetInscatter() { return srv.inscatter; }
-		Render::Handle& GetIrradiance() { return srv.irradiance; }
+		Render::HLSL::Texture2D<float>& GetDepthBuffer() { return srv.depthBuffer; }
+		Render::HLSL::Texture2D<float4>& GetTransmittance() { return srv.transmittance; }
+		Render::HLSL::Texture3D<float4>& GetInscatter() { return srv.inscatter; }
+		Render::HLSL::Texture2D<float4>& GetIrradiance() { return srv.irradiance; }
 		SkyData(CB&cb,SRV&srv) :cb(cb),srv(srv){}
 	};
 	#pragma pack(pop)

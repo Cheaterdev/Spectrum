@@ -24,7 +24,7 @@ void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, Tex
 
 void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureView  view)
 {
-
+	//return;
 	PROFILE_GPU(L"downsampling");
 
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
@@ -70,9 +70,9 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureV
 
 		for (uint32_t i = 0; i < NumMips; i++)
 		{
-			data.GetOutMip()[i] = view.create_mip(TopMip + 1 + i, *compute_context.get_base().frame_resources).get_uav();
+			data.GetOutMip()[i] = Render::HLSL::RWTexture2D<float4>(view.create_mip(TopMip + 1 + i, *compute_context.get_base().frame_resources).get_uav());
 		}
-		data.GetSrcMip() = view.create_mip(TopMip, *compute_context.get_base().frame_resources).get_srv();
+		data.GetSrcMip() = view.create_mip(TopMip, *compute_context.get_base().frame_resources).texture2D;
 
 		data.set(compute_context, true);
 
@@ -132,9 +132,9 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 
 		for (uint32_t i = 0; i < NumMips; i++)
 		{
-			data.GetOutMip()[i] = view->get_uav(TopMip + 1 + i);
+			data.GetOutMip()[i] = view->rwTexture2D[TopMip + 1 + i];
 		}
-		data.GetSrcMip() = view->get_srv(TopMip);
+		data.GetSrcMip() = view->texture2DMips[TopMip];
 
 		data.set(compute_context, true);
 
@@ -150,8 +150,8 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
 	Slots::DownsampleDepth data;
-	data.GetSrcTex() = tex->texture_2d()->get_static_srv();
-	data.GetTargetTex() = to->texture_2d()->get_static_uav();
+	data.GetSrcTex() = tex->texture_2d()->texture2D;
+	data.GetTargetTex() = to->texture_2d()->rwTexture2D[0];
 	data.set(compute_context);
 	compute_context.dispach(ivec2(tex->get_desc().Width, tex->get_desc().Height), ivec2(8, 8));
 
@@ -162,8 +162,8 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 
 
 	Slots::DownsampleDepth data;
-	data.GetSrcTex() = tex.get_srv();
-	data.GetTargetTex() = to.get_uav();
+	data.GetSrcTex() = tex.texture2D;
+	data.GetTargetTex() = to.rwTexture2D;
 	data.set(compute_context);
 	compute_context.dispach(ivec2(tex.get_size()), ivec2(8, 8));
 
@@ -196,7 +196,7 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 	{
 
 		Slots::GBufferQuality quality;
-		quality.GetRef() = tempColor.get_srv();
+		quality.GetRef() = tempColor.texture2D;
 		quality.set(list);
 
 		list.get_base().clear_stencil(buffer.quality.get_dsv());
@@ -226,7 +226,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 
 
 	Slots::CopyTexture data;
-	data.GetSrcTex()  = from->texture_2d()->get_srv();
+	data.GetSrcTex()  = from->texture_2d()->texture2D;
 	data.set(list);
 
 	list.set_rtv(1, view->get_rtv(), Handle());	
@@ -246,7 +246,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	list.set_scissor(view->get_scissor());
 
 	Slots::CopyTexture data;
-	data.GetSrcTex() = from.get_srv();
+	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
 	list.set_rtv(1, view->get_rtv(), Handle());	
@@ -261,7 +261,7 @@ void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Rend
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	Slots::CopyTexture data;
-	data.GetSrcTex() = from.get_srv();
+	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
 	list.set_rtv(1,to.get_rtv(), Handle());
@@ -274,7 +274,7 @@ void MipMapGenerator::write_to_depth(Render::GraphicsContext& list, Render::Text
 {
 	list.set_pipeline(GetPSO<PSOS::RenderToDS>());
 	Slots::CopyTexture data;
-	data.GetSrcTex() = from.get_srv();
+	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
 	list.set_viewport(to.get_viewport());

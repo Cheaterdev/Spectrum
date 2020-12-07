@@ -12,18 +12,17 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::Handle SrcMip;
+			Render::HLSL::Texture2D<float4> SrcMip;
 		} &srv;
 		struct UAV
 		{
-			Render::Handle OutMip[4];
+			Render::HLSL::RWTexture2D<float4> OutMip[4];
 		} &uav;
-		using SMP = Empty;
 		uint& GetSrcMipLevel() { return cb.SrcMipLevel; }
 		uint& GetNumMipLevels() { return cb.NumMipLevels; }
 		float2& GetTexelSize() { return cb.TexelSize; }
-		Render::Handle* GetOutMip() { return uav.OutMip; }
-		Render::Handle& GetSrcMip() { return srv.SrcMip; }
+		Render::HLSL::RWTexture2D<float4>* GetOutMip() { return uav.OutMip; }
+		Render::HLSL::Texture2D<float4>& GetSrcMip() { return srv.SrcMip; }
 		MipMapping(CB&cb,SRV&srv,UAV&uav) :cb(cb),srv(srv),uav(uav){}
 	};
 	#pragma pack(pop)

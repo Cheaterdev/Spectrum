@@ -11,11 +11,9 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::Handle colorTex;
+			Render::HLSL::Texture2D<float4> colorTex;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
-		Render::Handle& GetColorTex() { return srv.colorTex; }
+		Render::HLSL::Texture2D<float4>& GetColorTex() { return srv.colorTex; }
 		float4& GetSubsampleIndices() { return cb.subsampleIndices; }
 		float4& GetSMAA_RT_METRICS() { return cb.SMAA_RT_METRICS; }
 		SMAA_Global(CB&cb,SRV&srv) :cb(cb),srv(srv){}

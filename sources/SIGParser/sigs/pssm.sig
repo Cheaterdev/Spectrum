@@ -1,10 +1,10 @@
 [Bind = DefaultLayout::Instance2]
 struct GBuffer
 {
-	Texture2D albedo;
-	Texture2D normals;
-	Texture2D specular;
-	Texture2D depth;
+	Texture2D<float4> albedo;
+	Texture2D<float4> normals;
+	Texture2D<float4> specular;
+	Texture2D<float> depth;
 	Texture2D<float2> motion;
 }
 
@@ -22,8 +22,8 @@ rt GBuffer
 [Bind = DefaultLayout::Instance2]
 struct GBufferDownsample
 {
-	Texture2D normals;
-	Texture2D depth;
+	Texture2D<float4> normals;
+	Texture2D<float> depth;
 }
 
 
@@ -31,7 +31,7 @@ struct GBufferDownsample
 [Bind = DefaultLayout::Instance2]
 struct GBufferQuality
 {
-	Texture2D ref;
+	Texture2D<float4> ref;
 }
 
 [Bind = DefaultLayout::Instance0]

@@ -1,12 +1,12 @@
 #pragma once
 struct GBufferQuality_srv
 {
-	Texture2D ref;
+	Texture2D<float4> ref;
 };
 struct GBufferQuality
 {
 	GBufferQuality_srv srv;
-	Texture2D GetRef() { return srv.ref; }
+	Texture2D<float4> GetRef() { return srv.ref; }
 
 };
  const GBufferQuality CreateGBufferQuality(GBufferQuality_srv srv)

@@ -438,15 +438,15 @@ void stencil_renderer::generate(FrameGraph& graph)
 
 					{
 						Slots::PickerBuffer buffer;
-						buffer.GetViewBuffer() = id_buffer.get_uav();
+						buffer.GetViewBuffer() = id_buffer.rwStructuredBuffer;
 						buffer.set(graphics);
 					}
 
 					{
 						Slots::SceneData sceneData;
-						sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
+						sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
 						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
-						sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
+						sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
 
 
 						sceneData.set(graphics);
@@ -483,15 +483,15 @@ void stencil_renderer::generate(FrameGraph& graph)
 					}
 					{
 						Slots::PickerBuffer buffer;
-						buffer.GetViewBuffer() = axis_id_buffer.get_uav();
+						buffer.GetViewBuffer() = axis_id_buffer.rwStructuredBuffer;
 						buffer.set(graphics);
 					}
 		
 					{
 						Slots::SceneData sceneData;
-						sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
+						sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
 						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
-						sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
+						sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
 
 						sceneData.set(graphics);
 					}
@@ -594,9 +594,9 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 				{
 					Slots::SceneData sceneData;
-					sceneData.GetNodes() = universal_nodes_manager::get().buffer->get_srv()[0];
+					sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
 					sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
-					sceneData.GetVertexes() = universal_vertex_manager::get().buffer->get_srv()[0];
+					sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
 
 					sceneData.set(graphics);
 				}
@@ -653,7 +653,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					{
 						Slots::Countour contour;
 						contour.GetColor() = { 1,0.5,0,1 };
-						contour.GetTex() = color_tex.get_srv();
+						contour.GetTex() = color_tex.texture2D;
 						contour.set(graphics);
 					}
 
@@ -674,7 +674,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 				graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
 				{
 					Slots::DrawStencil draw;
-					draw.GetVertices() = vertex_buffer->get_srv()[0];
+					draw.GetVertices() = vertex_buffer->structuredBuffer;
 					draw.set(graphics);
 				}
 

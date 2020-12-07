@@ -71,10 +71,6 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual antlrcpp::Any visitTemplated(SIGParser::TemplatedContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
   virtual antlrcpp::Any visitType_with_template(SIGParser::Type_with_templateContext *ctx) override {
     return visitChildren(ctx);
   }

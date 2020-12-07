@@ -3,7 +3,7 @@
 [Bind = DefaultLayout::Instance0]
 struct SMAA_Global
 {
-	Texture2D colorTex;
+	Texture2D<float4> colorTex;
 	
 	float4 subsampleIndices;
     float4 SMAA_RT_METRICS;
@@ -12,16 +12,16 @@ struct SMAA_Global
 [Bind = DefaultLayout::Instance1]
 struct SMAA_Weights
 {
-	Texture2D areaTex;
-	Texture2D searchTex;
-	Texture2D edgesTex;
+	Texture2D<float4> areaTex;
+	Texture2D<float4> searchTex;
+	Texture2D<float4> edgesTex;
 }
 
 
 [Bind = DefaultLayout::Instance1]
 struct SMAA_Blend
 {
-	Texture2D blendTex;
+	Texture2D<float4> blendTex;
 }
 
 

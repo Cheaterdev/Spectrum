@@ -4,14 +4,11 @@ namespace Table
 	#pragma pack(push, 1)
 	struct CopyTexture
 	{
-		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle srcTex;
+			Render::HLSL::Texture2D<float4> srcTex;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
-		Render::Handle& GetSrcTex() { return srv.srcTex; }
+		Render::HLSL::Texture2D<float4>& GetSrcTex() { return srv.srcTex; }
 		CopyTexture(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

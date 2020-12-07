@@ -10,9 +10,6 @@ namespace Table
 			uint index;
 			float4 color;
 		} &cb;
-		using SRV = Empty;
-		using UAV = Empty;
-		using SMP = Empty;
 		float2& GetPos() { return cb.pos; }
 		uint& GetIndex() { return cb.index; }
 		float4& GetColor() { return cb.color; }

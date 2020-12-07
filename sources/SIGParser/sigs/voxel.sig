@@ -154,7 +154,7 @@ GraphicsPSO VoxelReflectionHi
 	stencil_pass_op = KEEP;
 
 	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
-	ds = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	stencil_read_mask = 2;
 	stencil_write_mask = 2;
@@ -177,7 +177,7 @@ GraphicsPSO VoxelReflectionUpsample
 	stencil_pass_op = KEEP;
 
 	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
-	ds = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	stencil_read_mask = 2;
 	stencil_write_mask = 2;
@@ -201,7 +201,7 @@ GraphicsPSO VoxelIndirectHi
 
 	blend = { Additive , None};
 	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R11G11B10_FLOAT};
-	ds = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	stencil_read_mask = 1;
 	stencil_write_mask = 1;
@@ -242,7 +242,7 @@ GraphicsPSO VoxelIndirectUpsample
 
 	blend = { Additive , None};
 	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R11G11B10_FLOAT};
-	ds = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
 
 	stencil_read_mask = 1;
 	stencil_write_mask = 1;

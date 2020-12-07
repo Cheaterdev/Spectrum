@@ -57,11 +57,11 @@ void SkyRender::generate(FrameGraph& graph)
 			{
 				Slots::SkyData data;
 
-				data.GetInscatter() = inscatter->texture_3d()->get_static_srv();
-				data.GetIrradiance() = irradiance->texture_2d()->get_static_srv();
-				data.GetTransmittance() = transmittance->texture_2d()->get_static_srv();
+				data.GetInscatter() = inscatter->texture_3d()->texture3D;
+				data.GetIrradiance() = irradiance->texture_2d()->texture2D;
+				data.GetTransmittance() = transmittance->texture_2d()->texture2D;
 
-				data.GetDepthBuffer() = depth.get_srv();
+				data.GetDepthBuffer() = depth.texture2D;
 
 				data.GetSunDir() = graph.sunDir;
 
@@ -153,9 +153,9 @@ void SkyRender::generate(FrameGraph& graph)
 			{
 				Slots::SkyData data;
 
-				data.GetInscatter() = inscatter->texture_3d()->get_static_srv();
-				data.GetIrradiance() = irradiance->texture_2d()->get_static_srv();
-				data.GetTransmittance() = transmittance->texture_2d()->get_static_srv();
+				data.GetInscatter() = inscatter->texture_3d()->texture3D;
+				data.GetIrradiance() = irradiance->texture_2d()->texture2D;
+				data.GetTransmittance() = transmittance->texture_2d()->texture2D;
 				data.GetSunDir() = graph.sunDir;
 				data.set(graphics);
 
@@ -275,7 +275,7 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 
 			Slots::EnvSource downsample;
-			downsample.GetSourceTex() = sky_cubemap.get_srv();
+			downsample.GetSourceTex() = sky_cubemap.texture—ube;
 			downsample.set(graphics);
 
 

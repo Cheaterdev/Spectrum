@@ -7,7 +7,7 @@
 #include <set>
 #include <array>
 #include <optional>
-
+#include <Windows.h>
 
 enum   ValueType 
 {

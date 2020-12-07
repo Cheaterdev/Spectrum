@@ -235,9 +235,20 @@ namespace DX12
 			StructuredBuffer() = default;
 			counterType counted = counterType::NONE;
 			void init_views();
+
+			HandleTable hlsl;
+
 		public:
+	
+			HLSL::StructuredBuffer<T> structuredBuffer;
+			HLSL::RWStructuredBuffer<T> rwStructuredBuffer;
+			HLSL::AppendStructuredBuffer<T> appendStructuredBuffer;
+
+			
+			HLSL::StructuredBuffer<UINT> structuredBufferCount;
+
 			using ptr = std::shared_ptr<StructuredBuffer<T>>;
-			using type = T;
+			using type = Underlying<T>;
 			StructuredBuffer(UINT64 count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, HeapType heap_type = HeapType::DEFAULT);
 
 			UINT get_counter_offset();
@@ -268,7 +279,7 @@ namespace DX12
 
 			UINT get_stride()
 			{
-				return sizeof(T);
+				return sizeof(type);
 			}
 			GPUBuffer::ptr help_buffer;
 			HandleTable counted_uav;
@@ -404,6 +415,15 @@ namespace DX12
 		Device::get().create_srv(srv[0], this, SRVDesc);
 
 
+		hlsl = DescriptorHeapManager::get().get_csu_static()->create_table(4);
+
+		structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
+		rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
+		appendStructuredBuffer = HLSL::AppendStructuredBuffer<T>(hlsl[2]);
+
+		structuredBufferCount = HLSL::StructuredBuffer<UINT>(hlsl[3]);
+		Device::get().create_srv(structuredBuffer, this, SRVDesc);
+
 		if (get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 		{
 			uavs = DescriptorHeapManager::get().get_csu_static()->create_table(1);
@@ -413,6 +433,9 @@ namespace DX12
 			static_raw_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
 			place_raw_uav(static_raw_uav[0]);
+
+			place_uav(rwStructuredBuffer);
+			place_uav(appendStructuredBuffer);
 
 		}
 
@@ -425,13 +448,18 @@ namespace DX12
 			counted_srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
 			help_buffer->place_structured_srv(counted_srv[0], 4,0,1);
+
+			help_buffer->place_structured_srv(structuredBufferCount, 4, 0, 1);
+
 		}
+
+
 	
 	}
 	template<class T>
-	inline StructuredBuffer<T>::StructuredBuffer(UINT64 count, counterType counted, D3D12_RESOURCE_FLAGS flags, HeapType heap_type) : GPUBuffer(counted== counterType::SELF ? (Math::AlignUp(count * sizeof(T), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(T)), flags, ResourceState::COMMON, heap_type)
+	inline StructuredBuffer<T>::StructuredBuffer(UINT64 count, counterType counted, D3D12_RESOURCE_FLAGS flags, HeapType heap_type) : GPUBuffer(counted== counterType::SELF ? (Math::AlignUp(count * sizeof(type), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(type)), flags, ResourceState::COMMON, heap_type)
 	{
-		stride = sizeof(T);
+		stride = sizeof(type);
 		this->count = count;
 		this->counted = counted;
 	
@@ -455,7 +483,7 @@ namespace DX12
 	inline void StructuredBuffer<T>::set_data(DX12::CommandList::ptr & list, unsigned int offset, std::vector<T>& v)
 	{
 	//	list->transition(this,ResourceState::COPY_DEST);
-		list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
+		list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(type)));
 	//	list->transition(this,  ResourceState::COMMON);
 	}
 
@@ -498,7 +526,7 @@ namespace DX12
 
 
 
-	template<class T, class AllocatorType = CommonAllocator>
+	template<class Type, class AllocatorType = CommonAllocator,class T = Underlying<Type>>
 	class virtual_gpu_buffer: protected DataAllocator<T, AllocatorType>
 	{
 
@@ -526,8 +554,8 @@ namespace DX12
 		std::list<update_data> update_list;
 	public:
 
-		typename StructuredBuffer<T>::ptr buffer;
-		using ptr = std::shared_ptr<virtual_gpu_buffer<T, AllocatorType>>;
+		typename StructuredBuffer<Type>::ptr buffer;
+		using ptr = std::shared_ptr<virtual_gpu_buffer<Type, AllocatorType>>;
 
 
 
@@ -613,7 +641,7 @@ namespace DX12
 		}
 		virtual_gpu_buffer(size_t max_size, counterType countType= counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE) :Base(max_size)
 		{
-			buffer = std::make_shared<StructuredBuffer<T>>(max_size, countType, flags, HeapType::RESERVED);
+			buffer = std::make_shared<StructuredBuffer<Type>>(max_size, countType, flags, HeapType::RESERVED);
 
 			// buffer = std::make_shared<Render::StructuredBuffer<T>>(max_size, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, DefaultAllocator::get());
 		}

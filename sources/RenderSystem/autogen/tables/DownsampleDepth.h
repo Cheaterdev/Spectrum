@@ -4,18 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DownsampleDepth
 	{
-		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle srcTex;
+			Render::HLSL::Texture2D<float> srcTex;
 		} &srv;
 		struct UAV
 		{
-			Render::Handle targetTex;
+			Render::HLSL::RWTexture2D<float> targetTex;
 		} &uav;
-		using SMP = Empty;
-		Render::Handle& GetSrcTex() { return srv.srcTex; }
-		Render::Handle& GetTargetTex() { return uav.targetTex; }
+		Render::HLSL::Texture2D<float>& GetSrcTex() { return srv.srcTex; }
+		Render::HLSL::RWTexture2D<float>& GetTargetTex() { return uav.targetTex; }
 		DownsampleDepth(SRV&srv,UAV&uav) :srv(srv),uav(uav){}
 	};
 	#pragma pack(pop)

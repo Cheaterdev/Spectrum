@@ -607,7 +607,7 @@ public:
 					PROFILE(L"FrameInfo");
 					Slots::FrameInfo frameInfo;
 
-					frameInfo.GetSky() = sky_cubemap.get_srv();
+					frameInfo.GetSky() = sky_cubemap.texture—ube;
 					frameInfo.GetSunDir() = graph.sunDir;
 					frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0};
 					auto camera = frameInfo.MapCamera();

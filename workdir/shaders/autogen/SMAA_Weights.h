@@ -5,9 +5,9 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/SMAA_Weights.h"
-Texture2D srv_4_0: register(t0, space4);
-Texture2D srv_4_1: register(t1, space4);
-Texture2D srv_4_2: register(t2, space4);
+Texture2D<float4> srv_4_0: register(t0, space4);
+Texture2D<float4> srv_4_1: register(t1, space4);
+Texture2D<float4> srv_4_2: register(t2, space4);
 SMAA_Weights CreateSMAA_Weights()
 {
 	SMAA_Weights result;

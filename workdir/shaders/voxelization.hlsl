@@ -5,16 +5,16 @@ static const VoxelInfo voxel_info = GetVoxelization().GetInfo();
 
 struct vertex_output
 {
-float4 pos : SV_POSITION;
-float3 wpos : POSITION;
-float3 normal : NORMAL;
-float3 binormal : BINORMAL;
-float3 tangent : TANGENT;
-float2 tc : TEXCOORD;
-float4 cur_pos : CUR_POSITION;
-float4 prev_pos : PREV_POSITION;
-float dist : DISTANCE;
+	float4 pos : SV_POSITION;
+	float3 wpos : POSITION;
+	float3 normal : NORMAL;
+	float3 binormal : BINORMAL;
+	float3 tangent : TANGENT;
+	float2 tc : TEXCOORD;
+	float4 cur_pos : CUR_POSITION;
 
+	float4 prev_pos : PREV_POSITION;
+	float dist : DISTANCE;
 };
 
 

@@ -32,7 +32,7 @@ enum class ResourceFlags :int {
 	, GENERATE_OPS
 };
 
-static const ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil;
+static const ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
 
 struct BufferDesc
 {

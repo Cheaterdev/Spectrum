@@ -5,15 +5,12 @@ namespace Table
 	#pragma pack(push, 1)
 	struct NinePatch
 	{
-		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle vb;
+			Render::HLSL::StructuredBuffer<vertex_input> vb;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
 		Render::Bindless& bindless;
-		Render::Handle& GetVb() { return srv.vb; }
+		Render::HLSL::StructuredBuffer<vertex_input>& GetVb() { return srv.vb; }
 		Render::Bindless& GetTextures() { return bindless; }
 		NinePatch(SRV&srv,Render::Bindless &bindless) :srv(srv),bindless(bindless){}
 	};

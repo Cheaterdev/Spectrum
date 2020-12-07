@@ -518,7 +518,7 @@ void generate_cpp_table(const Table& table)
 
 		if (table.counts[type] == 0)
 		{
-			stream << "using " << str_toupper(get_name_for(type)) << " = Empty;" << std::endl;
+		//	stream << "using " << str_toupper(get_name_for(type)) << " = Empty;" << std::endl;
 
 			return;
 		}
@@ -553,7 +553,7 @@ void generate_cpp_table(const Table& table)
 
 					if (t->find_option("shader_only"))
 						stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
-					else
+					else if (t->counts[type] > 0) 
 						stream << v.type << "::" << str_toupper(get_name_for(type)) << " " << v.name << generate_array(v) << ";" << std::endl;
 				}
 

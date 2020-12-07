@@ -139,13 +139,12 @@ namespace DX12
 
 	class RTXSceneView :public ResourceView
 	{
+	
 	public:
+		HLSL::RaytracingAccelerationStructure srv_handle;
+
 		RTXSceneView() = default;
-		RTXSceneView(Resource::ptr resource, FrameResources& frame) :ResourceView(resource)
-		{
-			init_desc();
-			init_views(frame);
-		}
+		RTXSceneView(Resource::ptr resource, FrameResources& frame);
 
 		virtual void place_srv(Handle h) override;
 		virtual void place_uav(Handle h) { }
@@ -156,10 +155,53 @@ namespace DX12
 	};
 	class TextureView :public ResourceView
 	{
+		HandleTableLight hlsl;
+	public:
+		HLSL::Texture2D<> texture2D;
+		HLSL::RWTexture2D<> rwTexture2D;
+
+		HLSL::Texture3D<> texture3D;
+		HLSL::RWTexture3D<> rwTexture3D;
+
+		HLSL::TextureCube<> texture—ube;
+		HLSL::Texture2DArray<> texture2DArray;
 
 	public:
+		template<class F>
+		void init(F& frame)
+		{
+			hlsl = frame.srv_uav_cbv_cpu.place(2);
+
+			auto& desc = resource->get_desc();
+			if (view_desc.type == ResourceType::TEXTURE2D) {
+				texture2D = HLSL::Texture2D<>(hlsl[0]);
+				rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
+
+			}
+			if (view_desc.type == ResourceType::TEXTURE3D)
+			{
+				texture3D = HLSL::Texture3D<>(hlsl[0]);
+				rwTexture3D = HLSL::RWTexture3D<>(hlsl[1]);
+			}
+			if (view_desc.type == ResourceType::CUBE)
+			texture—ube = HLSL::TextureCube<>(hlsl[0]);
+			if (view_desc.type == ResourceType::TEXTURE2D)
+			texture2DArray = HLSL::Texture2DArray<>(hlsl[0]);
+			if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
+
+				place_srv(hlsl[0]);
+
+			}
+
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+
+				place_uav(hlsl[1]);
+			}
+		}
 		TextureView() = default;
-		TextureView(Resource::ptr resource, FrameResources& frame, bool cube = false) :ResourceView(resource)
+
+		template<class F>
+		TextureView(Resource::ptr resource, F& frame, bool cube = false) :ResourceView(resource)
 		{
 			init_desc();
 
@@ -178,13 +220,18 @@ namespace DX12
 
 
 			init_views(frame);
+			init(frame);
+			
 		}
-
-		TextureView(Resource::ptr resource, FrameResources& frame, ResourceViewDesc desc) :ResourceView(resource)
+		template<class F>
+		TextureView(Resource::ptr resource, F& frame, ResourceViewDesc vdesc) :ResourceView(resource)
 		{
 
-			view_desc = desc;
+			view_desc = vdesc;
 			init_views(frame);
+			init(frame);
+
+
 		}
 
 		virtual void place_srv(Handle h) override;
@@ -264,13 +311,12 @@ namespace DX12
 	{
 
 	public:
+
+		HLSL::RWByteAddressBuffer uav_handle;
+
 		BufferView() = default;
 
-		BufferView(Resource::ptr resource, FrameResources& frame) :ResourceView(resource)
-		{
-			init_desc();
-			init_views(frame);
-		}
+		BufferView(Resource::ptr resource, FrameResources& frame);
 
 		~BufferView()
 		{
@@ -284,7 +330,7 @@ namespace DX12
 		template<class T>
 		void write(UINT64 offset, T* data, UINT64 count)
 		{
-			memcpy(resource->buffer_data + offset, data, sizeof(T) * count);
+			memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 		}
 
 
@@ -295,17 +341,47 @@ namespace DX12
 	template<class T>
 	class StructuredBufferView :public ResourceView
 	{
+		HandleTableLight hlsl;
+
+	public:
+
+		HLSL::StructuredBuffer<T> structuredBuffer;
+		HLSL::RWStructuredBuffer<T> rwStructuredBuffer;
+		HLSL::AppendStructuredBuffer<T> appendStructuredBuffer;
 
 	public:
 		StructuredBufferView() = default;
 
-		StructuredBufferView(Resource::ptr resource, FrameResources& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+		template<class F>
+		StructuredBufferView(Resource::ptr resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
 		{
 			init_desc();
 			view_desc.Buffer.Offset = offset;
 			if (size) view_desc.Buffer.Size = size;
 
 			init_views(frame);
+
+
+
+			hlsl = frame.srv_uav_cbv_cpu.place(3);
+
+			structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
+			rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
+			appendStructuredBuffer = HLSL::AppendStructuredBuffer<T>(hlsl[2]);
+
+	auto& desc = resource->get_desc();
+		
+			if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
+				place_srv(structuredBuffer);
+			}
+
+		
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+
+				place_uav(rwStructuredBuffer);
+				place_uav(appendStructuredBuffer);
+
+			}
 		}
 
 		~StructuredBufferView()
@@ -320,7 +396,7 @@ namespace DX12
 			desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 			desc.Format = DXGI_FORMAT_UNKNOWN;
 
-			desc.Buffer.StructureByteStride = sizeof(T);
+			desc.Buffer.StructureByteStride = sizeof(Underlying<T>);
 			desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
 			if (desc.Buffer.StructureByteStride > 0) {
@@ -348,12 +424,12 @@ namespace DX12
 
 				desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
 
-				desc.Buffer.StructureByteStride = sizeof(T);
+				desc.Buffer.StructureByteStride = sizeof(Underlying<T>);
 				desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
 
-				desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(T));
-				desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(T);
+				desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>));
+				desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(Underlying<T>);
 				desc.Buffer.CounterOffsetInBytes = 0;
 
 				Device::get().create_uav(h, resource.get(), desc);
@@ -395,7 +471,7 @@ namespace DX12
 		}
 		void write(UINT64 offset, T* data, UINT64 count)
 		{
-			memcpy(resource->buffer_data + offset, data, sizeof(T) * count);
+			memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 		}
 	};
 
@@ -406,15 +482,29 @@ namespace DX12
 
 	public:
 		FormattedBufferView() = default;
+		HLSL::Buffer<T> srv_handle;
+		HLSL::RWBuffer<T> uav_handle;
 
 		template<class F>
 		FormattedBufferView(Resource::ptr resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
 		{
 			init_desc();
+
+		
 			view_desc.Buffer.Offset = offset;
 			if (size) view_desc.Buffer.Size = size;
 
 			init_views(frame);
+
+			srv_handle = HLSL::Buffer<T>(frame.srv_uav_cbv_cpu.place());
+			place_srv(srv_handle);
+
+
+			auto& desc = resource->get_desc();
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+				uav_handle = HLSL::RWBuffer<T>(frame.srv_uav_cbv_cpu.place());
+				place_uav(uav_handle);
+			}
 		}
 
 		~FormattedBufferView()
@@ -433,8 +523,8 @@ namespace DX12
 			desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
 
 
-			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(T));
-			desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(T);
+			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>));
+			desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(Underlying<T>);
 
 			Device::get().create_srv(h, resource.get(), desc);
 
@@ -454,8 +544,8 @@ namespace DX12
 			desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
 
 
-			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(T));
-			desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(T);
+			desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>));
+			desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(Underlying<T>);
 			desc.Buffer.CounterOffsetInBytes = 0;
 
 			Device::get().create_uav(h, resource.get(), desc);
@@ -477,7 +567,7 @@ namespace DX12
 		}
 		void write(UINT64 offset, T* data, UINT64 count)
 		{
-			memcpy(resource->buffer_data + offset, data, sizeof(T) * count);
+			memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 		}
 	};
 

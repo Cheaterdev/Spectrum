@@ -5,15 +5,12 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PSSMLighting
 	{
-		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle light_mask;
+			Render::HLSL::Texture2D<float> light_mask;
 			GBuffer::SRV gbuffer;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
-		Render::Handle& GetLight_mask() { return srv.light_mask; }
+		Render::HLSL::Texture2D<float>& GetLight_mask() { return srv.light_mask; }
 		GBuffer MapGbuffer() { return GBuffer(srv.gbuffer); }
 		PSSMLighting(SRV&srv) :srv(srv){}
 	};

@@ -276,11 +276,11 @@ namespace GUI
 
 		auto data = c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
 		c.command_list->write(data, vertexes);
-		auto view = data.resource->create_view<StructuredBufferView<Vertex>>(*c.command_list->frame_resources, (UINT)data.offset, (UINT)data.size);
+		auto view = data.resource->create_view<StructuredBufferView<Table::vertex_input>>(*c.command_list->frame_resources, (UINT)data.offset, (UINT)data.size);
 
 		{
 			Slots::NinePatch patch_data;
-			patch_data.GetVb() = view.get_srv();
+			patch_data.GetVb() = view.structuredBuffer;
 			patch_data.GetTextures() = textures_handles;
 			patch_data.set(graphics);
 		}

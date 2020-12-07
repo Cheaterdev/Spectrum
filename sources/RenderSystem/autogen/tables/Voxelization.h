@@ -9,18 +9,15 @@ namespace Table
 		{
 			VoxelInfo::CB info;
 		} &cb;
-		using SRV = Empty;
 		struct UAV
 		{
-			Render::Handle albedo;
-			Render::Handle normals;
-			Render::Handle visibility;
-			VoxelInfo::UAV info;
+			Render::HLSL::RWTexture3D<float4> albedo;
+			Render::HLSL::RWTexture3D<float4> normals;
+			Render::HLSL::RWByteAddressBuffer visibility;
 		} &uav;
-		using SMP = Empty;
-		Render::Handle& GetAlbedo() { return uav.albedo; }
-		Render::Handle& GetNormals() { return uav.normals; }
-		Render::Handle& GetVisibility() { return uav.visibility; }
+		Render::HLSL::RWTexture3D<float4>& GetAlbedo() { return uav.albedo; }
+		Render::HLSL::RWTexture3D<float4>& GetNormals() { return uav.normals; }
+		Render::HLSL::RWByteAddressBuffer& GetVisibility() { return uav.visibility; }
 		VoxelInfo MapInfo() { return VoxelInfo(cb.info); }
 		Voxelization(CB&cb,UAV&uav) :cb(cb),uav(uav){}
 	};

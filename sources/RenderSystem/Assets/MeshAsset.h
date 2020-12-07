@@ -1,5 +1,5 @@
 class MeshAssetInstance;
-
+/*
 struct Vertex
 {
     float3 pos;
@@ -17,7 +17,26 @@ private:
 		ar& NVP(tangent);
 	}
 
-};
+};*/
+
+
+namespace boost
+{
+    namespace serialization
+    {
+
+        template<class Archive>
+        void serialize(Archive& archive, Table::mesh_vertex_input::CB& e, const unsigned int /*version*/)
+        {
+            archive& NVP(e.normal);
+			archive& NVP(e.pos);
+			archive& NVP(e.tangent);
+			archive& NVP(e.tc);
+
+        }
+
+    }
+}
 
 struct MeshInfo
 {
@@ -46,9 +65,9 @@ struct MeshInfo
         }
 };
 
-using command = Table::CommandData::CB;
-using mesh_info_part = Table::MeshCommandData::CB;
-using material_info_part = Table::MaterialCommandData::CB;
+using command = Table::CommandData;
+using mesh_info_part = Table::MeshCommandData;
+using material_info_part = Table::MaterialCommandData;
 
 
 
@@ -61,9 +80,9 @@ namespace boost
         void serialize(Archive& ar, command& g, const unsigned int)
         {
             //	ar & g.DefaultValue;
-            ar& g.material_cb;
-            ar& g.mesh_cb;
-            ar& g.draw_commands;
+            ar& g.cb.material_cb;
+            ar& g.cb.mesh_cb;
+            ar& g.cb.draw_commands;
         }
 
     }
@@ -119,7 +138,7 @@ class MeshData: public loader<MeshData, std::string, AssetLoadingContext::ptr>//
 {
     public:
         using ptr = std::shared_ptr<MeshData>;
-        std::vector<Vertex> vertex_buffer;
+        std::vector<Table::mesh_vertex_input::CB> vertex_buffer;
         std::vector<UINT32> index_buffer;
 
         std::vector<MeshInfo> meshes;
@@ -147,10 +166,10 @@ class MeshAsset : public Asset
         using ptr = s_ptr<MeshAsset>;
         using ref = AssetReference<MeshAsset>;
 	
-        std::vector<Vertex> vertex_buffer;
+        std::vector<Table::mesh_vertex_input::CB> vertex_buffer;
         std::vector<UINT32> index_buffer;
 
-        TypedHandle<Vertex> vertex_handle;
+        TypedHandle<Table::mesh_vertex_input::CB> vertex_handle;
         TypedHandle<UINT32> index_handle;
 
 
@@ -234,7 +253,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
         bool ras_inited = false;
 		//std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
      
-        TypedHandle<mesh_info_part> meshpart_handle;
+        TypedHandle<mesh_info_part::CB> meshpart_handle;
 		TypedHandle<Table::MeshInstance::CB> instance_handle;
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
@@ -313,32 +332,32 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 };
 
 
-class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public virtual_gpu_buffer<Table::MeshInstance::CB>
+class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public virtual_gpu_buffer<Table::MeshInstance>
 {
 	static const size_t MAX_NODES_SIZE = 1_gb / sizeof(Table::MeshInstance::CB);
 public:
-    universal_mesh_instance_manager() :virtual_gpu_buffer<Table::MeshInstance::CB>(MAX_NODES_SIZE)
+    universal_mesh_instance_manager() :virtual_gpu_buffer<Table::MeshInstance>(MAX_NODES_SIZE)
 	{
 
 	}
 };
 
 
-class universal_nodes_manager :public Singleton<universal_nodes_manager>, public virtual_gpu_buffer<Table::node_data::CB>
+class universal_nodes_manager :public Singleton<universal_nodes_manager>, public virtual_gpu_buffer<Table::node_data>
 {
     static const size_t MAX_NODES_SIZE = 1_gb / sizeof(Table::node_data::CB);
 public:
-    universal_nodes_manager():virtual_gpu_buffer<Table::node_data::CB>(MAX_NODES_SIZE)
+    universal_nodes_manager():virtual_gpu_buffer<Table::node_data>(MAX_NODES_SIZE)
 	{
       
     }
 };
 
-class universal_vertex_manager :public Singleton<universal_vertex_manager>, public virtual_gpu_buffer<Vertex>
+class universal_vertex_manager :public Singleton<universal_vertex_manager>, public virtual_gpu_buffer<Table::mesh_vertex_input>
 {
-	static const size_t MAX_VERTEXES_SIZE = 1_gb / sizeof(Vertex);
+	static const size_t MAX_VERTEXES_SIZE = 1_gb / sizeof(Table::mesh_vertex_input::CB);
 public:
-    universal_vertex_manager() :virtual_gpu_buffer<Vertex>(MAX_VERTEXES_SIZE)
+    universal_vertex_manager() :virtual_gpu_buffer<Table::mesh_vertex_input>(MAX_VERTEXES_SIZE)
 	{
 
 	}

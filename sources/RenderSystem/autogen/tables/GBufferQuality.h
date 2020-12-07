@@ -4,14 +4,11 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GBufferQuality
 	{
-		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle ref;
+			Render::HLSL::Texture2D<float4> ref;
 		} &srv;
-		using UAV = Empty;
-		using SMP = Empty;
-		Render::Handle& GetRef() { return srv.ref; }
+		Render::HLSL::Texture2D<float4>& GetRef() { return srv.ref; }
 		GBufferQuality(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

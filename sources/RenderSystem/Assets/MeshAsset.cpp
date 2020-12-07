@@ -382,7 +382,7 @@ void MeshAssetInstance::on_remove()
 			i++;
 		}
 		meshpart_handle.Free();
-		meshpart_handle = TypedHandle<mesh_info_part>();
+		meshpart_handle = TypedHandle<mesh_info_part::CB>();
 	}
 }
 bool MeshAssetInstance::update_transforms()
@@ -490,8 +490,8 @@ bool MeshAssetInstance::init_ras(CommandList::ptr list)
 			geometryDesc.Triangles.Transform3x4 = universal_nodes_manager::get().buffer->get_gpu_address() + info.mesh_info.GetNode_offset() * sizeof(Table::node_data::CB);
 			geometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
 			//	geometryDesc.Triangles.VertexCount = info.
-			geometryDesc.Triangles.VertexBuffer.StartAddress = universal_vertex_manager::get().buffer->get_gpu_address() + info.mesh_info.GetVertex_offset() * sizeof(Vertex);
-			geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+			geometryDesc.Triangles.VertexBuffer.StartAddress = universal_vertex_manager::get().buffer->get_gpu_address() + info.mesh_info.GetVertex_offset() * sizeof(Table::mesh_vertex_input::CB);
+			geometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Table::mesh_vertex_input::CB);
 			geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
 			std::vector<D3D12_RAYTRACING_GEOMETRY_DESC > descs;

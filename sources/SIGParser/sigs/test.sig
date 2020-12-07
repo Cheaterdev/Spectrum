@@ -4,5 +4,5 @@
 struct Test
 {
 	float data[16];
-	Texture2D tex[];
+	Texture2D<float4> tex[];
 }

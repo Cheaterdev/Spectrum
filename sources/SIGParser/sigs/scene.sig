@@ -12,6 +12,6 @@ struct SceneData
 
 	StructuredBuffer<MeshInstance> meshInstances;
 
-	Texture2D material_textures[];
+	Texture2D<float4> material_textures[];
 }
 
