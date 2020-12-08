@@ -23,7 +23,7 @@ static const float time =  GetFrameInfo().GetTime();
 //#define INDIRECT
 //#define REFLECTION
 
-#define SCALER 1
+#define SCALER 3
 
 static const float3 voxel_min = voxel_info.GetMin().xyz;
 static const float3 voxel_size= voxel_info.GetSize().xyz;
@@ -49,6 +49,7 @@ float4 get_voxel(float3 pos, float level)
 	float4 color =  voxels.SampleLevel(linearSampler, pos, level);
 //color.rgb *= 1 + level / 2;
 
+	color.w = saturate(color.w* level);
 return color;
 }
 float get_alpha(float3 pos, float level)

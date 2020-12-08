@@ -3,12 +3,15 @@
 namespace DX12
 {
 
-	void ResourceStateManager::process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*>& discards, const Resource* resource, int id, uint64_t full_id)
+	ResourceState ResourceStateManager::process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*>& discards, const Resource* resource, int id, uint64_t full_id)
 	{
-		if (!resource) return;
+	ResourceState states = ResourceState::COMMON;
+
+		if (!resource) return states;
 
 		auto cpu_state = get_state(id);
 
+		
 		for (int i = 0; i < gpu_state.subres.size(); i++)
 		{
 			auto& gpu = gpu_state.subres[i];
@@ -29,6 +32,9 @@ namespace DX12
 					static_cast<D3D12_RESOURCE_STATES>(cpu.first_state),
 					i));
 
+
+				states = states | gpu.state | cpu.first_state;
+
 				for (int j = 0; j < target.size() - 1; j++)
 				{
 					if (target.back().Type == target[j].Type)
@@ -41,8 +47,6 @@ namespace DX12
 
 			gpu_state.subres[i].state = cpu.state;
 
-
-
 		}
 
 
@@ -51,7 +55,7 @@ namespace DX12
 			discards.emplace_back(const_cast<Resource*>(resource));
 		}
 
-
+		return states;
 	}
 
 

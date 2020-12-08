@@ -16,7 +16,8 @@ namespace DX12
 		UINT64 m_fenceValue;
 		std::thread  queue_thread;;
 		std::function<void(CommandList*)> del_func;
-	
+		std::function<void(TransitionCommandList*)> del_transition;
+
 		std::queue<std::shared_ptr<TransitionCommandList>> transition_lists;
 
 		std::queue<std::shared_ptr<CommandList>> lists;
@@ -39,6 +40,7 @@ namespace DX12
 		~Queue();
 
 		std::shared_ptr<CommandList> get_free_list();
+		std::shared_ptr<TransitionCommandList> get_transition_list();
 		using ptr = std::shared_ptr<Queue>;
 
 		ComPtr<ID3D12CommandQueue> get_native();

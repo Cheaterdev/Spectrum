@@ -77,6 +77,17 @@ namespace DX12
 				lists.emplace(list, del_func);
 			}
 		};
+
+		del_transition = [this](TransitionCommandList* list)
+		{
+			if (stop)
+				delete list;
+			else
+			{
+				std::lock_guard<std::mutex> g(list_mutex);
+				transition_lists.emplace(list, del_transition);
+			}
+		};
 	}
 
 	void Queue::stop_all()
@@ -125,6 +136,21 @@ namespace DX12
 
 		std::shared_ptr<CommandList> res_ptr;
 		res_ptr.reset(new CommandList(type), del_func);
+		return res_ptr;
+	}
+	std::shared_ptr<TransitionCommandList> Queue::get_transition_list()
+	{
+		std::lock_guard<std::mutex> g(list_mutex);
+
+		if (!transition_lists.empty())
+		{
+			auto e = transition_lists.front();
+			transition_lists.pop();
+			return e;
+		}
+
+		std::shared_ptr<TransitionCommandList> res_ptr;
+		res_ptr.reset(new TransitionCommandList(type), del_transition);
 		return res_ptr;
 	}
 
@@ -195,29 +221,33 @@ namespace DX12
 
 			if (transition_list)
 			{
-				ID3D12CommandList* s[2] = { transition_list->get_native().Get(), list->get_native_list().Get() };
-
-				if (type == CommandListType::COMPUTE)
+				if (transition_list->get_type() == list->get_type())
 				{
-					auto direct_queue = Device::get().get_queue(CommandListType::DIRECT)->get_native();
-
-					direct_queue->ExecuteCommandLists(1, &s[0]);
-					auto waiter = Device::get().get_queue(CommandListType::DIRECT)->signal();
-					gpu_wait(waiter);
-				//	native->Wait(waiter.fence->m_fence.Get(), waiter.value);
+					ID3D12CommandList* s[] = { transition_list->get_native().Get(), list->get_native_list().Get() };
+					native->ExecuteCommandLists(_countof(s), s);
 				}
 				else
 				{
+					auto queue = Device::get().get_queue(transition_list->get_type());
 
-					native->ExecuteCommandLists(1, &s[0]);
+					{
+						ID3D12CommandList* s[] = { transition_list->get_native().Get() };
+						queue->get_native()->ExecuteCommandLists(_countof(s), s);
+					}
+					auto waiter = queue->signal();
+					gpu_wait(waiter);
+
+					{
+						ID3D12CommandList* s[] = { list->get_native_list().Get() };
+						native->ExecuteCommandLists(_countof(s), s);
+					}
 				}
 
-				native->ExecuteCommandLists(1, &s[1]);
 			}
 			else
 			{
-				ID3D12CommandList* s = list->get_native_list().Get();
-				native->ExecuteCommandLists(1, &s);
+				ID3D12CommandList* s[] = { list->get_native_list().Get() };
+				native->ExecuteCommandLists(_countof(s), s);
 			}
 		}
 

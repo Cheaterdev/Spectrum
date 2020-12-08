@@ -195,9 +195,9 @@ float2 DX10_SMAADepthEdgeDetectionPS(float4 position : SV_POSITION,
             float4 offset : TEXCOORD1) : SV_TARGET
     {
     #if SMAA_REPROJECTION
-        return SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex(), velocityTex);
+        return 1;// SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex(), velocityTex);
     #else
-        return SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex());
+        return pow(SMAANeighborhoodBlendingPS(texcoord, offset, GetSMAA_Global().GetColorTex(), GetSMAA_Blend().GetBlendTex()),1.0/2.2);
     #endif
     }
 #endif

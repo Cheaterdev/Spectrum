@@ -51,7 +51,7 @@ void TaskBuilder::reset()
 		p->info->passed = false;
 		p->info->valid_from = nullptr;
 		p->info->valid_to = nullptr;
-
+		p->info->valid_to_start = nullptr;
 	}
 	passed_resources.clear();
 	//resources.clear();
@@ -237,7 +237,7 @@ void FrameGraph::setup()
 		if(!pass->active()) continue;
 		auto pass_ptr = pass.get();
 
-		pass->call_id = 0;
+		pass->dependency_level = 0;
 		enabled_passes.emplace_back(pass_ptr);
 
 		if (!optimize)
@@ -273,9 +273,9 @@ void FrameGraph::setup()
 
 				for (auto related : pass->related)
 				{
-					if (pass->call_id <= related->call_id)
+					if (pass->dependency_level <= related->dependency_level)
 					{
-						pass->call_id = related->call_id + 1;
+						pass->dependency_level = related->dependency_level + 1;
 						sorted = false;
 					}
 				}
@@ -288,7 +288,7 @@ void FrameGraph::setup()
 				for (auto dep : pass->related)
 				{
 				
-						dep->graphic_count += pass->graphic_count;
+					dep->graphic_count += pass->graphic_count;
 					dep->compute_count += pass->compute_count;
 
 					if (check(pass->flags & PassFlags::Compute))
@@ -302,7 +302,7 @@ void FrameGraph::setup()
 			[](const Pass* a, const Pass* b)
 			{
 
-				if (a->call_id == b->call_id)
+				if (a->dependency_level == b->dependency_level)
 				{
 					if (!check(a->flags & PassFlags::Compute) && !check(b->flags & PassFlags::Compute))
 					{
@@ -311,11 +311,12 @@ void FrameGraph::setup()
 
 					return check(a->flags & PassFlags::Compute) > check(b->flags & PassFlags::Compute);
 				}
-				return (a->call_id < b->call_id);
+				return (a->dependency_level < b->dependency_level);
 			});
 	}
 
 	int i = 0;
+
 		for (auto pass : enabled_passes)
 		{
 			pass->call_id = i++;
@@ -327,8 +328,98 @@ void FrameGraph::setup()
 				info->valid_to = pass;
 			}
 		}
+		Pass* last_graphics = nullptr;
+		Pass* last_compute = nullptr;
+
+		for (auto pass : enabled_passes)
+		{
+
+			Render::CommandListType type = pass->get_type();
+		
+
+			bool sync_to_graphics = last_graphics && type == Render::CommandListType::DIRECT;
+			bool sync_to_compute = last_compute && type == Render::CommandListType::COMPUTE;
+
+			Pass* wait_pass = nullptr;
+			for (auto depends : pass->related)
+			{
+
+				Render::CommandListType depends_type = depends->get_type();
+
+				if (depends_type != type)
+				{
+					if (wait_pass == nullptr || wait_pass->call_id < depends->call_id)
+					{
+						wait_pass = depends;
+					}
+				}
 
 
+			}
+
+			/*
+			if (wait_pass->get_type()!=type)
+			{
+				if (wait_pass->get_type() == Render::CommandListType::DIRECT)
+					sync_to_graphics = true;
+
+				if (wait_pass->get_type() == Render::CommandListType::COMPUTE)
+					sync_to_compute = true;
+			}
+			*/
+
+			if (sync_to_compute)
+			{
+				for (auto [handler, flags] : last_compute->used.resource_flags)
+				{
+					auto info = handler->info;
+			
+					if (info->valid_to == last_compute)
+					{
+						info->valid_to = pass;
+					}
+				}
+			}
+
+
+			if (sync_to_graphics)
+			{
+				for (auto [handler, flags] : last_graphics->used.resource_flags)
+				{
+					auto info = handler->info;
+
+					if (info->valid_to == last_graphics)
+					{
+						info->valid_to = pass;
+					}
+				}
+			}
+
+
+			if (type == Render::CommandListType::COMPUTE)
+				last_compute = pass;
+			else
+				last_graphics = pass;
+
+		}
+		/*
+
+		Pass* wait_pass = nullptr;
+		for (auto depends : pass->related)
+		{
+
+			Render::CommandListType depends_type = depends->get_type();
+
+			if (depends_type != list_type)
+			{
+				if (wait_pass == nullptr || wait_pass->call_id < depends->call_id)
+				{
+					wait_pass = depends;
+				}
+			}
+
+
+		}*/
 }
 
 void FrameGraph::compile(int frame)
@@ -487,7 +578,7 @@ ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT 
 	info.name = name;
 
 	info.frame_id = current_frame->get_frame();
-	info.valid_from = info.valid_to = nullptr;
+	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 
 	info.writers.clear();
 	info.writers.push_back(current_pass);
@@ -523,7 +614,7 @@ ResourceHandler* TaskBuilder::recreate_texture(std::string name, ResourceFlags f
 	info.name = name;
 
 	info.frame_id = current_frame->get_frame();
-	info.valid_from = info.valid_to = nullptr;
+	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 	info.orig = old_handler.info;
 
 	info.writers = old_handler.info->writers;
@@ -573,7 +664,7 @@ ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, Resou
 	info.handler = &handler;
 	info.frame_id = current_frame->get_frame();
 	info.is_new = false;
-	info.valid_from = info.valid_to = nullptr;
+	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 	info.writers.clear();
 	info.writers.push_back(current_pass);
 
@@ -705,7 +796,7 @@ void TaskBuilder::create_resources()
 		assert(pair.second.valid_from->active());
 		assert(pair.second.valid_to->active());
 		events[pair.second.valid_from->call_id].create.insert(info);
-		events[pair.second.valid_to->call_id + 1].free.insert(info);
+		events[pair.second.valid_to->call_id].free.insert(info);
 	}
 
 	{

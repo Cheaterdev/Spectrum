@@ -93,6 +93,8 @@ struct ResourceAllocInfo
 // setup
 	Pass* valid_from = nullptr;
 	Pass* valid_to = nullptr;
+	Pass* valid_to_start = nullptr;
+
 
 
 	bool enabled = true;
@@ -216,6 +218,7 @@ struct Pass
 {
 	int id = 0;
 	int call_id;
+	int dependency_level;
 	bool enabled = true;
 	bool renderable = true;
 	PassFlags flags;
@@ -231,7 +234,15 @@ struct Pass
 
 	virtual bool setup(TaskBuilder& builder) = 0;
 
+	Render::CommandListType get_type()
+	{
+		Render::CommandListType type = Render::CommandListType::DIRECT;
 
+		if (check(flags & PassFlags::Compute))
+			type = Render::CommandListType::COMPUTE;
+
+		return type;
+	}
 	void compile(TaskBuilder& builder);
 
 	virtual void render(Render::FrameResources::ptr& frame) = 0;

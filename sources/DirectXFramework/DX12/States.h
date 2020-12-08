@@ -2,7 +2,15 @@
 namespace DX12
 {
 	class Resource;
+	enum class CommandListType : int
+	{
+		DIRECT = D3D12_COMMAND_LIST_TYPE_DIRECT,
+		BUNDLE = D3D12_COMMAND_LIST_TYPE_BUNDLE,
+		COMPUTE = D3D12_COMMAND_LIST_TYPE_COMPUTE,
+		COPY = D3D12_COMMAND_LIST_TYPE_COPY,
 
+		GENERATE_OPS
+	};
 	enum class ResourceState: int
 	{
 		COMMON = D3D12_RESOURCE_STATE_COMMON,
@@ -30,6 +38,47 @@ namespace DX12
 		, GENERATE_OPS
 	};
 
+
+	static const ResourceState COPY_STATES = ResourceState::COPY_DEST
+		| ResourceState::COPY_SOURCE;
+
+	static const ResourceState COMPUTE_STATES = COPY_STATES
+		| ResourceState::UNORDERED_ACCESS
+		| ResourceState::NON_PIXEL_SHADER_RESOURCE;
+
+	static const ResourceState GRAPHIC_STATES = COMPUTE_STATES
+		| ResourceState::VERTEX_AND_CONSTANT_BUFFER
+		| ResourceState::INDEX_BUFFER
+		| ResourceState::RENDER_TARGET
+		| ResourceState::DEPTH_WRITE
+		| ResourceState::DEPTH_READ
+		| ResourceState::PIXEL_SHADER_RESOURCE
+		| ResourceState::STREAM_OUT
+		| ResourceState::INDIRECT_ARGUMENT
+		| ResourceState::RESOLVE_DEST
+		| ResourceState::RESOLVE_SOURCE;
+
+	static inline const ResourceState& GetSupportedStates(CommandListType type)
+	{
+		if (type == CommandListType::COPY) return COPY_STATES;
+		if (type == CommandListType::COMPUTE) return COMPUTE_STATES;
+		return GRAPHIC_STATES;
+	}
+
+	static inline CommandListType GetBestType(const ResourceState &states, CommandListType preferred_type)
+	{
+		if ((states & COPY_STATES) == states && preferred_type == CommandListType::COPY)
+		{
+			return CommandListType::COPY;
+		}
+
+		if ((states & COMPUTE_STATES) == states && (preferred_type == CommandListType::COMPUTE || preferred_type == CommandListType::COPY))
+		{
+			return CommandListType::COMPUTE;
+		}
+
+		return CommandListType::DIRECT;
+	}
 
 	class ResourceStateManager
 	{
@@ -139,7 +188,7 @@ namespace DX12
 			s.need_discard = true;
 		}
 		
-		void process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*> &discards, const Resource* resource, int id, uint64_t full_id);
+		ResourceState process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*> &discards, const Resource* resource, int id, uint64_t full_id);
 
 		void transition(std::vector<D3D12_RESOURCE_BARRIER>& target,const  Resource* resource, ResourceState state, unsigned int subres, int id, uint64_t full_id) const;
 

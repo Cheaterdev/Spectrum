@@ -26,7 +26,7 @@ float v = color.w;
 #define ADD 0.4
 
 //color.w = pow(color.w,0.5);
-//color.w /= color.w + ADD;
+color.w /= color.w + ADD;
 //color.w=saturate(color.w*(1.2));
 //color= saturate(color*(2));
 //

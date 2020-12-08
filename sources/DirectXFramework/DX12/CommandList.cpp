@@ -699,20 +699,21 @@ namespace DX12
 
 		result.reserve(used_resources.size());
 
-
+		
+		ResourceState states = ResourceState::COMMON;
 		for (auto& r : used_resources)
 		{
 
-			r->process_transitions(result, discards, r, id, global_id);
+			states= states|r->process_transitions(result, discards, r, id, global_id);
 
 
 		}
 
+		auto transition_type = GetBestType(states, type);
+
 		if (result.size())
 		{
-			if (!transition_list)
-				transition_list.reset(new TransitionCommandList(type));
-
+			transition_list = Device::get().get_queue(transition_type)->get_transition_list();
 			transition_list->create_transition_list(result, discards);
 			return transition_list;
 		}
@@ -1286,6 +1287,8 @@ namespace DX12
 		tracked_resources.clear();
 		tracked_psos.clear();
 		TrackedResource::allow_resource_delete = false;
+
+		transition_list = nullptr;
 	}
 	void Uploader::reset()
 	{
@@ -1305,9 +1308,9 @@ namespace DX12
 
 
 
-	TransitionCommandList::TransitionCommandList(CommandListType type)
+	TransitionCommandList::TransitionCommandList(CommandListType type):type(type)
 	{
-		D3D12_COMMAND_LIST_TYPE t = D3D12_COMMAND_LIST_TYPE::D3D12_COMMAND_LIST_TYPE_DIRECT;//  static_cast<D3D12_COMMAND_LIST_TYPE>(type);
+		D3D12_COMMAND_LIST_TYPE t = static_cast<D3D12_COMMAND_LIST_TYPE>(type);
 
 		TEST(Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
 		TEST(Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
@@ -1328,7 +1331,7 @@ namespace DX12
 		m_commandList->Close();
 	}
 
-	ComPtr<ID3D12GraphicsCommandList> TransitionCommandList::get_native()
+	ComPtr<ID3D12GraphicsCommandList4> TransitionCommandList::get_native()
 	{
 		return m_commandList;
 	}

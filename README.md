@@ -7,12 +7,13 @@ Features:
 - DX12
 - FrameGraph
 - Easy resource binding
+- Automatic resource transitions
 - Async Compute
 - Asset System
 - GUI
 - Material Graphs
 - DXR
-- Sparse Voxel GI
+- Sparse Voxel GI with "infinite" bounces
 
 
 https://cheater.dev

@@ -23,15 +23,7 @@ namespace DX12
 	class CommandList;
 
 #define DEFAULT_ALIGN 256
-	enum class CommandListType : int
-	{
-		DIRECT = D3D12_COMMAND_LIST_TYPE_DIRECT,
-		BUNDLE = D3D12_COMMAND_LIST_TYPE_BUNDLE,
-		COMPUTE = D3D12_COMMAND_LIST_TYPE_COMPUTE,
-		COPY = D3D12_COMMAND_LIST_TYPE_COPY,
-		
-		GENERATE_OPS
-	};
+
 
 	class BufferCache : public Singleton<BufferCache>
 	{
@@ -1252,14 +1244,14 @@ namespace DX12
 
 	class TransitionCommandList
 	{
-		ComPtr<ID3D12GraphicsCommandList> m_commandList;
+		ComPtr<ID3D12GraphicsCommandList4> m_commandList;
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-
+		CommandListType type;
 	public:
 		using ptr = std::shared_ptr<TransitionCommandList>;
-
+		inline CommandListType get_type() { return type; }
 		TransitionCommandList(CommandListType type);
 		void create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER>& transitions, std::vector<Resource*> &duscards);
-		ComPtr<ID3D12GraphicsCommandList> get_native();
+		ComPtr<ID3D12GraphicsCommandList4> get_native();
 	};
 }

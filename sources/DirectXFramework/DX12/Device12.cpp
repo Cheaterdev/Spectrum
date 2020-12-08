@@ -113,7 +113,7 @@ namespace DX12
 			CComPtr<ID3D12Debug1> spDebugController1;
 
 #ifdef NDEBUG
-//if(false)
+if(false)
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 			{
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
