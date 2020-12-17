@@ -340,7 +340,7 @@ void FrameGraph::setup()
 			bool sync_to_graphics = last_graphics && type == Render::CommandListType::DIRECT;
 			bool sync_to_compute = last_compute && type == Render::CommandListType::COMPUTE;
 
-			Pass* wait_pass = nullptr;
+			
 			for (auto depends : pass->related)
 			{
 
@@ -348,25 +348,22 @@ void FrameGraph::setup()
 
 				if (depends_type != type)
 				{
-					if (wait_pass == nullptr || wait_pass->call_id < depends->call_id)
+					if (pass->wait_pass == nullptr || pass->wait_pass->call_id < depends->call_id)
 					{
-						wait_pass = depends;
+						pass->wait_pass = depends;
 					}
+				}
+				else
+				{
+					if (type == Render::CommandListType::COMPUTE)
+						pass->prev_pass = last_compute;
+					else
+						pass->prev_pass = last_graphics;
 				}
 
 
 			}
 
-			/*
-			if (wait_pass->get_type()!=type)
-			{
-				if (wait_pass->get_type() == Render::CommandListType::DIRECT)
-					sync_to_graphics = true;
-
-				if (wait_pass->get_type() == Render::CommandListType::COMPUTE)
-					sync_to_compute = true;
-			}
-			*/
 
 			if (sync_to_compute)
 			{
@@ -473,11 +470,36 @@ void FrameGraph::render()
 	}
 
 
-	Profiler::get().enabled = true;
+	//Profiler::get().enabled = true;
 
 
 	{
 		PROFILE(L"execute");
+
+		for (auto& pass : enabled_passes | std::ranges::views::reverse)
+		{
+			auto commandList = pass->context.list;
+			if (!commandList) continue;
+
+			Render::CommandListType list_type = commandList->get_type();
+
+			if (pass->wait_pass)
+			{
+				auto waitCommandList = pass->wait_pass->context.list;
+
+				//if(list_type == Render::CommandListType::COMPUTE) 
+					waitCommandList->prepare_transitions(commandList.get());
+			}
+			else if (pass->prev_pass)
+			{
+				auto waitCommandList = pass->prev_pass->context.list;
+
+			//	if (list_type == Render::CommandListType::DIRECT) 
+				if(waitCommandList) waitCommandList->prepare_transitions(commandList.get());
+			}
+
+		
+		}
 
 
 
@@ -485,56 +507,19 @@ void FrameGraph::render()
 		{
 			auto commandList = pass->context.list;
 			if (!commandList) continue;
+
 			Render::CommandListType list_type = commandList->get_type();
 
-
-		//	std::map<Render::CommandListType, >
-
-			
-			Pass* wait_pass = nullptr;
-			for (auto depends : pass->related)
+			if (pass->wait_pass)
 			{
-				if (!depends->context.list) continue;
-
-				Render::CommandListType depends_type = depends->context.list->get_type();
-
-				if (depends_type != list_type)
-				{
-					if (wait_pass == nullptr || wait_pass->call_id < depends->call_id)
-					{
-						wait_pass = depends;
-					}
-				}
+				Render::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
 			}
 
-			if (wait_pass)
-			{
-				Render::Device::get().get_queue(list_type)->gpu_wait(wait_pass->fence_end);
-			}
-
-			if (commandList->timer) {
-		//		Render::GPUBlock* block = static_cast<Render::GPUBlock*>(&commandList->timer->get_block());
-		//		Log::get() << block->gpu_counter.timer.get_time() << Log::endl;
-			}
 			pass->fence_end = commandList->execute().get();
 		}
 
 
 	}
-	/*
-	Render::CommandListType current_type = (*list.list.begin())->get_type();
-	Render::FenceWaiter waiter;
-	for (auto& e : list.list)
-	{
-		Render::CommandListType list_type = e->get_type();
-
-		if (list_type != current_type)
-		{
-			Render::Device::get().get_queue(list_type)->gpu_wait(waiter);
-			current_type = list_type;
-		}
-		waiter = e->execute().get();
-	}*/
 	builder.current_frame = nullptr;
 }
 

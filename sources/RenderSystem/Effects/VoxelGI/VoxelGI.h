@@ -82,7 +82,7 @@ public:
 	Variable<VISUALIZE_TYPE> render_type = Variable<VISUALIZE_TYPE>(VISUALIZE_TYPE::FULL, "render_type");
 
 	void resize(ivec2 size);
-	void start_new();
+	void start_new(Render::CommandList& list);
 
 	VoxelGI(Scene::ptr& scene);
 	void voxelize(MeshRenderContext::ptr& context, main_renderer* r);

@@ -575,6 +575,8 @@ namespace DX12
 		{
 			std::lock_guard<std::mutex> g(m);
 			TypedHandle<T> result = Base::Allocate(n);
+
+
 			buffer->map_buffer_part(result.get_offset() * sizeof(T), n * sizeof(T));
 			return result;
 		}
@@ -585,7 +587,7 @@ namespace DX12
 
 			result.Free();
 			result = Base::Allocate(n);
-			buffer->map_buffer_part(result.get_offset() * sizeof(T), n * sizeof(T));
+			buffer->map_buffer_part( result.get_offset() * sizeof(T), n * sizeof(T));
 		}
 	/*
 		T* map_elements(size_t offset, size_t size = 1)
@@ -596,10 +598,10 @@ namespace DX12
 		}
 		*/
 
-		void reserve(size_t offset)
+		void reserve(CommandList& list, size_t offset)
 		{
 			std::lock_guard<std::mutex> g(m);
-			buffer->map_buffer_part(0, offset * sizeof(T));
+			buffer->map_buffer_part( 0, offset * sizeof(T));
 		}
 
 

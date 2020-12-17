@@ -191,6 +191,7 @@ namespace DX12
 		ResourceState process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*> &discards, const Resource* resource, int id, uint64_t full_id);
 
 		void transition(std::vector<D3D12_RESOURCE_BARRIER>& target,const  Resource* resource, ResourceState state, unsigned int subres, int id, uint64_t full_id) const;
+		bool transition(CommandListType type, std::vector<D3D12_RESOURCE_BARRIER>& target, const  Resource* resource, int id, uint64_t full_id, int id2, uint64_t full_id2) const;
 
 	};
 

@@ -164,9 +164,9 @@ void Texture3DTiled::place_tile(Tile::ptr &tile)
 	tile->state = TileState::LOADED;
 }
 
-void Texture3DTiled::remove_all()
+void Texture3DTiled::remove_all(Render::CommandList& list)
 {
-	heap_manager_static.remove_all();
+	heap_manager_static.remove_all(list);
 	for (auto&m : mips)
 	{
 		for (auto&e : m.tile_positions)
@@ -232,9 +232,9 @@ void Texture3DTiled::load_all()
 	heap_manager_static.place(tile);
 }
 
-void Texture3DTiled::update()
+void Texture3DTiled::update(Render::CommandList& list)
 {
-	heap_manager_static.flush_tilings(texture.get());
+	heap_manager_static.flush_tilings(list, texture.get());
 }
 
 Texture3DTiledDynamic::Texture3DTiledDynamic(CD3DX12_RESOURCE_DESC desc) :Texture3DTiled(desc)
@@ -247,10 +247,10 @@ size_t Texture3DTiledDynamic::get_used_tiles()
 	return	heap_manager_static.get_used_tiles() + heap_manager_dynamic.get_used_tiles();
 }
 
-void Texture3DTiledDynamic::remove_all()
+void Texture3DTiledDynamic::remove_all(Render::CommandList& list)
 {
-	Texture3DTiled::remove_all();
-	heap_manager_dynamic.remove_all();
+	Texture3DTiled::remove_all(list);
+	heap_manager_dynamic.remove_all(list);
 }
 
 void Texture3DTiledDynamic::place_tile(Tile::ptr &tile)
@@ -275,10 +275,10 @@ void Texture3DTiledDynamic::clear_dynamic(Render::CommandList& list)
 	heap_manager_dynamic.clear(list);
 }
 
-void Texture3DTiledDynamic::update()
+void Texture3DTiledDynamic::update(Render::CommandList& list)
 {
-	Texture3DTiled::update();
-	heap_manager_dynamic.flush_tilings(texture.get());
+	Texture3DTiled::update(list);
+	heap_manager_dynamic.flush_tilings(list, texture.get());
 }
 
 Tile::ptr Texture3DTiledDynamic::create_dynamic_tile(ivec3 position, int mip_level)

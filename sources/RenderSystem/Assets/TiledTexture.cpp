@@ -125,22 +125,25 @@ void HeapPage::zero_tile(Tile::ptr& tile)
 	heapRangeStartOffsets.push_back(0);
 	rangeTileCounts.push_back(TRS.NumTiles);
 }
-void HeapPage::flush_tilings(Render::Resource* res)
+void HeapPage::flush_tilings(Render::CommandList& list, Render::Resource* res)
 {
     if (startCoordinates.size())
-        Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
-            res->get_native().Get(),
-            UINT(startCoordinates.size()),
-            &startCoordinates[0],
-            &regionSizes[0],
-            tile_heap.Get(),
-			UINT(startCoordinates.size()),
-            &rangeFlags[0],
-            &heapRangeStartOffsets[0],
-            &rangeTileCounts[0],
-            D3D12_TILE_MAPPING_FLAG_NONE
-        );
+    {
 
+        update_tiling_info info;
+
+        info.heap = tile_heap.Get();
+        info.resource = res->get_native().Get();
+
+        info.startCoordinates = std::move(startCoordinates);
+		info.regionSizes = std::move(regionSizes);
+		info.rangeFlags = std::move(rangeFlags);
+		info.heapRangeStartOffsets = std::move(heapRangeStartOffsets);
+		info.rangeTileCounts = std::move(rangeTileCounts);
+
+        list.update_tilings(std::move(info));
+    }
+     
     startCoordinates.clear();
     regionSizes.clear();
     rangeFlags.clear();
@@ -381,7 +384,12 @@ void TiledTexture::init()
     //	FileSystem::get().
     stream.reset(new std::ifstream(tiles_file_name, ios::binary));
     archive = ZipArchive::Create(*stream);
-    heap_manager.flush_tilings(tiled_tex.get());
+
+    auto list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+    list->begin("ololo");
+    heap_manager.flush_tilings(*list, tiled_tex.get());
+    list->end();
+    list->execute();
 }
 
 void TiledTexture::try_register()
@@ -493,7 +501,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
     step++;
     //if (step % 100) return;
     std::lock_guard<std::mutex> g(tile_mutex);
-    heap_manager.flush_tilings(tiled_tex.get());
+    heap_manager.flush_tilings(*list, tiled_tex.get());
  //   list->transition(visibility_texture.get(),  Render::ResourceState::COPY_SOURCE);
     list->get_copy().read_buffer(visibility_texture.get(), 0, visibility_texture->get_size(), [this](const char* data, UINT64 size)
     {
@@ -655,16 +663,22 @@ void TileHeapManager::remove(Tile::ptr& tile, bool zero)
 
 TileHeapManager::TileHeapManager(Render::Resource* res):res(res)
 {
-	remove_all();
+	auto list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+	list->begin("ololo");
+    remove_all(*list);
+	list->end();
+	list->execute();
+
+	
 
 }
 
-void TileHeapManager::flush_tilings(Render::Resource* res)
+void TileHeapManager::flush_tilings(Render::CommandList& list,Render::Resource* res)
 {
     std::lock_guard<std::mutex> g(m);
 
     for (auto && p : pages)
-        p.flush_tilings(res);
+        p.flush_tilings(list, res);
 }
 
 void TileHeapManager::clear_all(ivec3 tiles, int mip_count)

@@ -216,7 +216,25 @@ namespace DX12
 
 		//	fix_transitions
 		{
+			auto &updates = list->tile_updates;
 
+			for (auto& u:updates)
+			{
+				update_tile_mappings(
+					u.resource,
+					UINT(u.startCoordinates.size()),
+					&u.startCoordinates[0],
+					&u.regionSizes[0],
+					u.heap,
+					UINT(u.startCoordinates.size()),
+					&u.rangeFlags[0],
+					&u.heapRangeStartOffsets[0],
+					&u.rangeTileCounts[0],
+					D3D12_TILE_MAPPING_FLAG_NONE
+				);
+			}
+
+			updates.clear();
 			auto transition_list = list->fix_pretransitions();
 
 			if (transition_list)

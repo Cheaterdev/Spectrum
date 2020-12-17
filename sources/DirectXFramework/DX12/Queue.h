@@ -34,6 +34,17 @@ namespace DX12
 		UINT64 last_known_fence = 0;
 		FenceWaiter execute_internal(CommandList* list);
 	
+	public:
+		void update_tile_mappings(ID3D12Resource* pResource,
+			UINT                            NumResourceRegions,
+			const D3D12_TILED_RESOURCE_COORDINATE* pResourceRegionStartCoordinates,
+			const D3D12_TILE_REGION_SIZE* pResourceRegionSizes,
+			ID3D12Heap* pHeap,
+			UINT                            NumRanges,
+			const D3D12_TILE_RANGE_FLAGS* pRangeFlags,
+			const UINT* pHeapRangeStartOffsets,
+			const UINT* pRangeTileCounts,
+			D3D12_TILE_MAPPING_FLAGS        Flags);
 
 	public:
 		Queue(CommandListType type, Device* device);
@@ -45,16 +56,6 @@ namespace DX12
 
 		ComPtr<ID3D12CommandQueue> get_native();
 
-		void update_tile_mappings(ID3D12Resource*                  pResource,
-			UINT                            NumResourceRegions,
-			const D3D12_TILED_RESOURCE_COORDINATE* pResourceRegionStartCoordinates,
-			const D3D12_TILE_REGION_SIZE*          pResourceRegionSizes,
-			ID3D12Heap*                      pHeap,
-			UINT                            NumRanges,
-			const D3D12_TILE_RANGE_FLAGS*          pRangeFlags,
-			const UINT*                            pHeapRangeStartOffsets,
-			const UINT*                            pRangeTileCounts,
-			D3D12_TILE_MAPPING_FLAGS        Flags);
 
 
 		void stop_all();

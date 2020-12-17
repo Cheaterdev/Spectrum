@@ -2,7 +2,7 @@
 
 namespace DX12 {
 
-	void TiledResourceManager::map_buffer_part(size_t offset, size_t size)
+	void TiledResourceManager::map_buffer_part( size_t offset, size_t size)
 	{
 		size_t begin =  Math::AlignDown(offset, 64 * 1024) / (64 * 1024);
 		size_t end =  Math::AlignUp(offset + size, 64 * 1024) / (64 * 1024);
@@ -24,7 +24,7 @@ namespace DX12 {
 		auto resource = get_d3d_resource();
 		auto& tile = tiles[0][x];
 
-		tile.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS,HeapType::DEFAULT);
+		tile.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, HeapType::DEFAULT);
 
 		std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
 		std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
@@ -55,6 +55,24 @@ namespace DX12 {
 		heapRangeStartOffsets.push_back((UINT)tile.heap_position.offset);
 		rangeTileCounts.push_back((UINT)TRS.NumTiles);
 
+
+		/*update_tiling_info info;
+
+		info.heap = tile.heap_position.heap->heap.Get();
+		info.resource = resource.Get();
+
+		info.startCoordinates = std::move(startCoordinates);
+		info.regionSizes = std::move(regionSizes);
+		info.rangeFlags = std::move(rangeFlags);
+		info.heapRangeStartOffsets = std::move(heapRangeStartOffsets);
+		info.rangeTileCounts = std::move(rangeTileCounts);
+
+
+
+
+		list.update_tilings(std::move(info));
+		*/
+
 		Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
 			resource.Get(),
 			UINT(startCoordinates.size()),
@@ -67,7 +85,7 @@ namespace DX12 {
 			&rangeTileCounts[0],
 			D3D12_TILE_MAPPING_FLAG_NONE
 		);
-
+		
 	}
 
 	void TiledResourceManager::init_tilings()

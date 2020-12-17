@@ -48,14 +48,14 @@ public:
 	Render::Texture::ptr texture;
 
 
-	virtual void remove_all();
+	virtual void remove_all(Render::CommandList& list);
 	Texture3DTiled(CD3DX12_RESOURCE_DESC desc);
 
 	void clear(Render::CommandList& list);
 
 	VisibilityBufferUniversal::ptr create_visibility();
 	void load_all();
-	virtual void update();
+	virtual void update(Render::CommandList& list);
 
 };
 
@@ -70,7 +70,7 @@ public:
 	virtual size_t get_used_tiles();
 
 
-	virtual void remove_all() override;
+	virtual void remove_all(Render::CommandList& list) override;
 
 	virtual void place_tile(Tile::ptr &tile) override;
 
@@ -78,7 +78,7 @@ public:
 
 	void clear_dynamic(Render::CommandList& list);
 
-	virtual void update();
+	virtual void update(Render::CommandList& list);
 
 	Tile::ptr create_dynamic_tile(ivec3 position, int mip_level);
 

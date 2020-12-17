@@ -106,7 +106,6 @@ namespace DX12
 	{
 
 		//	id = -1;
-		flush_transitions();
 
 		current_pipeline = nullptr;
 
@@ -115,7 +114,6 @@ namespace DX12
 
 		Eventer::reset();
 
-		TEST(m_commandList->Close());
 	}
 
 	void GraphicsContext::begin()
@@ -155,6 +153,11 @@ namespace DX12
 
 	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
 	{
+		CommandList* list = static_cast<CommandList*>(this); // :(
+
+		list->flush_transitions();
+		TEST(m_commandList->Close());
+
 		execution_mutex.lock();
 
 		execute_fence = std::promise<FenceWaiter>();
@@ -718,6 +721,25 @@ namespace DX12
 			return transition_list;
 		}
 		return nullptr;
+	}
+
+	void Transitions::prepare_transitions(Transitions* to)
+	{
+		for (auto& resource : to->used_resources)
+		{
+			
+			bool is_new = resource->is_new(id, global_id);
+
+			if (resource->transition(type, transitions, resource, id, global_id, to->id, to->global_id))
+			{
+				if (is_new)
+				{
+					use_resource(resource);
+					used_resources.emplace_back(const_cast<Resource*>(resource));
+					assert(!resource->is_new(id, global_id));
+				}
+			}
+		}
 	}
 	/*	void Transitions::assume_state(Resource* resource, ResourceState state)
 		{

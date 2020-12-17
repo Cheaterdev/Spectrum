@@ -33,18 +33,20 @@ struct Tile
 	HeapPage* page_backup = nullptr;
 	UINT tile_offset_backup = 0;
 };
+
+
 class HeapPage
 {
         ComPtr<ID3D12Heap>tile_heap;
         unsigned int heap_count = 0;
         std::list<unsigned int> free_tiles;
         unsigned int max_count;
-
-        std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
-        std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
-        std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
-        std::vector<UINT> heapRangeStartOffsets;
-        std::vector<UINT> rangeTileCounts;
+   
+		std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
+		std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
+		std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
+		std::vector<UINT> heapRangeStartOffsets;
+		std::vector<UINT> rangeTileCounts;
 
         unsigned int allocate();
 
@@ -79,7 +81,7 @@ class HeapPage
         void place_at(Tile::ptr& tile, unsigned int offset);
 		void zero_tile(Tile::ptr& tile);
 
-        void flush_tilings(Render::Resource* res);
+        void flush_tilings(Render::CommandList& list, Render::Resource* res);
 
 		void clear(Render::CommandList& list)
 		{
@@ -111,7 +113,7 @@ class TileHeapManager
         TileHeapManager(Render::Resource* res= nullptr);
 		Render::Resource* res = nullptr;
 
-		void remove_all()
+		void remove_all(Render::CommandList& list)
 		{
 			std::lock_guard<std::mutex> g(m);
 
@@ -157,7 +159,23 @@ class TileHeapManager
 			heapRangeStartOffsets.push_back(0);
 			rangeTileCounts.push_back(TRS.NumTiles);
 			}
-			Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
+
+			update_tiling_info info;
+
+			info.heap = nullptr;
+			info.resource = res->get_native().Get();
+
+			info.startCoordinates = std::move(startCoordinates);
+			info.regionSizes = std::move(regionSizes);
+			info.rangeFlags = std::move(rangeFlags);
+			info.heapRangeStartOffsets = std::move(heapRangeStartOffsets);
+			info.rangeTileCounts = std::move(rangeTileCounts);
+
+
+
+
+			list.update_tilings(std::move(info));
+			/*Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
 				res->get_native().Get(),
 				static_cast<UINT>(startCoordinates.size()),
 				&startCoordinates[0],
@@ -168,12 +186,12 @@ class TileHeapManager
 				nullptr,
 				&rangeTileCounts[0],
 				D3D12_TILE_MAPPING_FLAG_NONE
-			);
+			);*/
 			pages.clear();
 
 
 		}
-        void flush_tilings(Render::Resource* res);
+        void flush_tilings(Render::CommandList& list, Render::Resource* res);
 
         void clear_all(ivec3 tiles, int mip_count);
 

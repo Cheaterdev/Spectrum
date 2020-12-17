@@ -80,12 +80,12 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	if (meshes_count == 0) return;
 
-	commands_boxes->reserve(meshes_count);
-	visible_boxes->reserve(meshes_count);
-	meshes_ids->reserve(meshes_count);
-	meshes_invisible_ids->reserve(meshes_count);
+	commands_boxes->reserve(list, meshes_count);
+	visible_boxes->reserve(list, meshes_count);
+	meshes_ids->reserve(list, meshes_count);
+	meshes_invisible_ids->reserve(list, meshes_count);
 	for (int i = 0; i < 8; i++)
-		commands_buffer[i]->reserve(meshes_count);
+		commands_buffer[i]->reserve(list, meshes_count);
 
 	compiledScene.set(compute);
 	compiledFrame.set(compute);

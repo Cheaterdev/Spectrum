@@ -7,6 +7,9 @@ workdir/cache/
 workdir/Assets/
 workdir/pso
 
+#aftermath dumps
+*.nv-gpudmp*
+
 #VS-specific
 *.user
 obj/

@@ -31,7 +31,7 @@ namespace DX12
 
 	
 	public:
-		void map_buffer_tile(size_t x);
-		void map_buffer_part(size_t offset, size_t size);
+		void map_buffer_tile( size_t x);
+		void map_buffer_part( size_t offset, size_t size);
 	};
 }

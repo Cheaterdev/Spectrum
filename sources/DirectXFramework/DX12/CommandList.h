@@ -3,6 +3,18 @@
 enum class Layouts;
 namespace DX12
 {
+	struct update_tiling_info
+	{
+		std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
+		std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
+		std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
+		std::vector<UINT> heapRangeStartOffsets;
+		std::vector<UINT> rangeTileCounts;
+
+		ID3D12Heap* heap;
+		ID3D12Resource* resource;
+	};
+
 
 	class PipelineState;
 	template<class T> class  PipelineStateTyped;
@@ -300,6 +312,7 @@ namespace DX12
 
 
 	public:
+		void prepare_transitions(Transitions* to);
 
 		void transition_uav(Resource* resource);
 		void transition(Resource* from, Resource* to);
@@ -744,6 +757,10 @@ namespace DX12
 		std::unique_ptr<CopyContext> copy;
 		PipelineStateBase* current_pipeline;
 
+		std::list<update_tiling_info> tile_updates;
+
+
+	
 		void set_pipeline_internal(PipelineStateBase* pipeline);
 
 		void set_heap(DescriptorHeapType type, DescriptorHeap::ptr heap)
@@ -758,7 +775,10 @@ namespace DX12
 
 		}
 
-	public:
+	public:	void update_tilings(update_tiling_info&& info)
+	{
+		tile_updates.emplace_back(std::move(info));
+	}
 		ptr get_sub_list();
 		FrameResources::ptr frame_resources;
 		void setup_debug(SignatureDataSetter*);

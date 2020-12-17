@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Samplers.h"
 #include "Device12.h"
+#include "../../3rdparty/Aftermath/include/GFSDK_Aftermath.h"
 
 namespace DX12
 {
@@ -100,6 +101,8 @@ namespace DX12
 	
 	Device::Device()
 	{
+	
+
 		D3D12EnableExperimentalFeatures(1,&D3D12ExperimentalShaderModels,nullptr,nullptr);
 
 
@@ -112,8 +115,8 @@ namespace DX12
 			ComPtr<ID3D12Debug> debugController;
 			CComPtr<ID3D12Debug1> spDebugController1;
 
-#ifdef NDEBUG
-if(false)
+#ifdef DEV
+//if(false)
 			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 			{
 				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
@@ -150,7 +153,7 @@ if(false)
 				++i;
 			}
 		}
-		
+		crasher.Initialize();
 		try
 		{
 			HRESULT hr = D3D12CreateDevice(
@@ -170,6 +173,18 @@ if(false)
 		//	TRACE("*** Unhandled Exception ***");
 		}
 	
+		const uint32_t aftermathFlags =
+			GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
+			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.
+			GFSDK_Aftermath_FeatureFlags_CallStackCapturing;    // Generate debug information for shaders.
+
+		auto afterres = GFSDK_Aftermath_DX12_Initialize(
+			GFSDK_Aftermath_Version_API,
+			aftermathFlags,
+			m_device.Get());
+
+		
+
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
 		TEST(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
 			&options5, sizeof(options5)));

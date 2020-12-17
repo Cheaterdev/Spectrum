@@ -153,6 +153,7 @@ namespace DX12
 
 		psoDesc.DSVFormat = desc.rtv.ds_format;
 		psoDesc.SampleDesc.Count = 1;
+		psoDesc.SampleDesc.Quality = 0;
 
 		if (!cache.empty())
 		{

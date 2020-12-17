@@ -124,4 +124,68 @@ namespace DX12
 
 	}
 
+	bool ResourceStateManager::transition(CommandListType type, std::vector<D3D12_RESOURCE_BARRIER>& target, const Resource* resource, int id, uint64_t full_id, int id2, uint64_t full_id2) const
+	{
+		auto& from_state = get_state(id);
+		auto& to_state = get_state(id2);
+
+
+		for (int i = 0; i < gpu_state.subres.size(); i++)
+		{
+			auto& subres_to = to_state.subres[i];
+
+			if ((GetSupportedStates(type) & subres_to.first_state) != subres_to.first_state)
+				return false;
+		}
+
+		
+		auto transition_one = [&](int subres) {
+
+			auto& subres_from = from_state.subres[subres];
+			auto& subres_to = to_state.subres[subres];
+
+			ResourceState prev_state = subres_from.state;
+
+
+			
+			if (subres_from.command_list_id != full_id)
+			{
+				subres_from.command_list_id = full_id;
+				subres_from.first_state = subres_to.first_state;
+			}
+			else
+			{
+
+				assert(subres_to.first_state != ResourceState::DIFFERENT);
+				assert(subres_to.first_state != ResourceState::UNKNOWN);
+
+				assert(subres_from.state != ResourceState::DIFFERENT);
+				assert(subres_from.state != ResourceState::UNKNOWN);
+
+
+				if (subres_from.state != subres_to.first_state)
+				{
+					target.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(resource->get_native().Get(),
+						static_cast<D3D12_RESOURCE_STATES>(subres_from.state),
+						static_cast<D3D12_RESOURCE_STATES>(subres_to.first_state),
+						subres));
+				}
+			/*	else if (state == ResourceState::UNORDERED_ACCESS)
+				{
+					target.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_native().Get()));
+				}
+				*/
+			}
+
+
+			subres_from.state = subres_to.first_state;
+		};
+
+	
+		for (int i = 0; i < gpu_state.subres.size(); i++)
+			transition_one(i);
+
+		return true;
+	}
+
 }

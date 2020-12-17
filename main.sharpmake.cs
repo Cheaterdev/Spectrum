@@ -141,6 +141,24 @@ public class CustomTarget : ITarget
         }
     }
 
+  [Sharpmake.Generate]
+    public class Aftermath : Library
+    {
+        public Aftermath()
+        { 
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\3rdparty\Aftermath";
+            AssemblyName = "Aftermath";
+        }
+
+        
+        public override void ConfigureAll(Configuration conf, CustomTarget target) 
+        {
+            base.ConfigureAll(conf, target);
+            conf.LibraryFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.lib");
+            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.dll");
+            conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
+        }
+    }
 
     [Sharpmake.Generate]
     public class Core : Library
@@ -208,8 +226,12 @@ public class CustomTarget : ITarget
             conf.LibraryFiles.Add("dxcompiler.lib");    
 
             conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxcompiler.dll");
-
+            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxil.dll");
+            
+         
             conf.AddPrivateDependency<FileSystem>(target);     
+            conf.AddPublicDependency<Aftermath>(target);     
+         
         }
     }
 

@@ -231,7 +231,8 @@ struct Pass
 
 	int graphic_count = 0;
 	int compute_count = 0;
-
+	Pass* wait_pass = nullptr;
+	Pass* prev_pass = nullptr;
 	virtual bool setup(TaskBuilder& builder) = 0;
 
 	Render::CommandListType get_type()
@@ -295,6 +296,8 @@ struct TypedPass : public Pass
 			render_func(data, context);
 			context.end();
 			}, std::chrono::steady_clock::now());
+
+	//	render_task.wait();
 	}
 };
 class camera;

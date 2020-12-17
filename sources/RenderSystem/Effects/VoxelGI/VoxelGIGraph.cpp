@@ -223,21 +223,21 @@ void VoxelGI::init_states()
 
 }
 
-void VoxelGI::start_new()
+void VoxelGI::start_new(Render::CommandList& list)
 {
 	//Log::get() << 1 << Log::endl;
 
 	all_scene_regen_counter = 2;
-	tiled_volume_lighted->remove_all();
+	tiled_volume_lighted->remove_all(list);
 
 	//	Log::get() << 2 << Log::endl;
 
-	tiled_volume_normal_static->remove_all();
-	tiled_volume_albedo_static->remove_all();
+	tiled_volume_normal_static->remove_all(list);
+	tiled_volume_albedo_static->remove_all(list);
 	//Log::get() <<3 << Log::endl;
 
-	tiled_volume_normal->remove_all();
-	tiled_volume_albedo->remove_all();
+	tiled_volume_normal->remove_all(list);
+	tiled_volume_albedo->remove_all(list);
 	//	Log::get() << 4 << Log::endl;
 
 	dynamic_generator.remove_all();
@@ -266,7 +266,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 
 	if (!cur && prev)
 	{
-		start_new();
+		start_new(list);
 		//all_scene_regen_counter++;
 	}
 
@@ -421,9 +421,9 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 
 	{
 		PROFILE_GPU(L"tiled_update");
-		tiled_volume_albedo->update();
-		tiled_volume_normal->update();
-		tiled_volume_lighted->update();
+		tiled_volume_albedo->update(list);
+		tiled_volume_normal->update(list);
+		tiled_volume_lighted->update(list);
 	}
 
 
@@ -860,6 +860,12 @@ void VoxelGI::voxelize(FrameGraph& graph)
 
 			//SceneFrameManager::get().prepare(command_list, *scene);
 
+			if (need_start_new)
+			{
+				start_new(*command_list);
+				need_start_new = false;
+			}
+
 			MeshRenderContext::ptr context(new MeshRenderContext());
 
 
@@ -1061,12 +1067,6 @@ void VoxelGI::generate(FrameGraph& graph)
 	graph.builder.pass_texture("voxel_albedo", volume_albedo);
 	graph.builder.pass_texture("voxel_normal", volume_normal);
 	graph.builder.pass_texture("voxel_lighted", volume_lighted);
-
-	if (need_start_new)
-	{
-		start_new();
-		need_start_new = false;
-	}
 
 	Slots::VoxelInfo& voxel_info = scene->voxel_info;
 
