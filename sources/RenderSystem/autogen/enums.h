@@ -19,7 +19,6 @@ enum class PSO: int
 	Lighting,
 	VoxelDownsample,
 	FontRender,
-	FontRenderClip,
 	RenderBoxes,
 	RenderToDS,
 	QualityColor,

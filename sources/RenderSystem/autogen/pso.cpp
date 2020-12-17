@@ -11,7 +11,6 @@ void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 	pso[PSO::Lighting] =  std::make_shared<PSOS::Lighting>();
 	pso[PSO::VoxelDownsample] =  std::make_shared<PSOS::VoxelDownsample>();
 	pso[PSO::FontRender] =  std::make_shared<PSOS::FontRender>();
-	pso[PSO::FontRenderClip] =  std::make_shared<PSOS::FontRenderClip>();
 	pso[PSO::RenderBoxes] =  std::make_shared<PSOS::RenderBoxes>();
 	pso[PSO::RenderToDS] =  std::make_shared<PSOS::RenderToDS>();
 	pso[PSO::QualityColor] =  std::make_shared<PSOS::QualityColor>();

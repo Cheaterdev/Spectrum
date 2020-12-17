@@ -83,7 +83,6 @@
 #include "pso\Lighting.h"
 #include "pso\VoxelDownsample.h"
 #include "pso\FontRender.h"
-#include "pso\FontRenderClip.h"
 #include "pso\RenderBoxes.h"
 #include "pso\RenderToDS.h"
 #include "pso\QualityColor.h"

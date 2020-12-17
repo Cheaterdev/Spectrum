@@ -26,7 +26,6 @@ struct FontRenderingGlyphs
 	StructuredBuffer<Glyph> data;
 }
 
-
 GraphicsPSO FontRender
 {
 	root = DefaultLayout;
@@ -43,24 +42,5 @@ GraphicsPSO FontRender
 	topology = POINT;
 
 	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
-
-}
-
-GraphicsPSO FontRenderClip
-{
-	root = DefaultLayout;
-
-	[EntryPoint = VS]
-	vertex = font/vsSimple;
-
-	[EntryPoint = PS]
-	pixel = font/psSimple;
-
-	[EntryPoint = GS]
-	geometry = font/gsClip;
-
-	topology = POINT;
-
-	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
-
+	enable_depth = false;
 }
