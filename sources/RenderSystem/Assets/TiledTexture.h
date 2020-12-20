@@ -187,6 +187,12 @@ class TileHeapManager
 				&rangeTileCounts[0],
 				D3D12_TILE_MAPPING_FLAG_NONE
 			);*/
+
+
+			for (auto& p : pages)
+			{
+				list.tracked_heaps.push_back(p.get_native());
+			}
 			pages.clear();
 
 

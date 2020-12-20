@@ -137,7 +137,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 		tiled_volume_albedo_static.reset(new Texture3DTiledDynamic(desc));
 		tiled_volume_normal_static.reset(new Texture3DTiledDynamic(desc));
 
-		desc.MipLevels = 9;
+		desc.MipLevels = 6;
 		desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		tiled_volume_lighted.reset(new Texture3DTiledDynamic(desc));
 

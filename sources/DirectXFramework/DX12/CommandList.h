@@ -298,8 +298,11 @@ namespace DX12
 		void reset();
 
 		std::list<ComPtr<ID3D12PipelineState>> tracked_psos;
-
+		
 	public:
+
+		std::list<ComPtr<ID3D12Heap>> tracked_heaps;
+
 	//	UINT64 wait_for = -1;
 		void flush_transitions();
 

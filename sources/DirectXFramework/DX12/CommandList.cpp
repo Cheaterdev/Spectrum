@@ -1308,6 +1308,7 @@ namespace DX12
 
 		tracked_resources.clear();
 		tracked_psos.clear();
+		tracked_heaps.clear();
 		TrackedResource::allow_resource_delete = false;
 
 		transition_list = nullptr;

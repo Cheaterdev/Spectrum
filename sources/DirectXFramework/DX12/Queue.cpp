@@ -246,6 +246,9 @@ namespace DX12
 				}
 				else
 				{
+
+					// Need to request other queue to make a proper transition.
+					// It's OK, but better to avoid this
 					auto queue = Device::get().get_queue(transition_list->get_type());
 
 					{

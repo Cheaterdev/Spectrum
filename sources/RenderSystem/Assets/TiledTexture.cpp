@@ -571,23 +571,17 @@ void TiledTexture::update(Render::CommandList::ptr& list)
             load_tilings();
         });
     });
-//    list->transition(visibility_texture.get(),  Render::ResourceState::COPY_DEST);
     list->get_copy().update_buffer(visibility_texture.get(), 0, reinterpret_cast<char*>(clear_data.data()), UINT(clear_data.size() * 4));
- //   list->transition(visibility_texture.get(),  Render::ResourceState::COMMON);
 
     if (residency_changed)
     {
         memcpy(residency_data_uploaded->array[0]->mips[0]->data.data(), residency_data->array[0]->mips[0]->data.data(), residency_data->array[0]->mips[0]->data.size());
-//        list->transition(residency_texture.get(),  Render::ResourceState::COPY_DEST);
         list->get_copy().update_texture(residency_texture, ivec3(0, 0, 0), ivec3(mips[0].tiles), 0, reinterpret_cast<const char*>(residency_data->array[0]->mips[0]->data.data()), residency_data->array[0]->mips[0]->width_stride);
- //       list->transition(residency_texture.get(),  Render::ResourceState::PIXEL_SHADER_RESOURCE);
         residency_changed = false;
     }
 
     if (upload_tiles.size())
     {
-   //     list->transition(tiled_tex.get(), Render::ResourceState::COPY_DEST);
-
         for (auto& t : upload_tiles)
         {
             ivec3 gpu_size = one_tile_size;
@@ -596,8 +590,7 @@ void TiledTexture::update(Render::CommandList::ptr& list)
             t->data.clear();
         }
 
- //       list->transition(tiled_tex.get(),Render::ResourceState::PIXEL_SHADER_RESOURCE);
-        upload_tiles.clear();
+       upload_tiles.clear();
     }
 }
 
