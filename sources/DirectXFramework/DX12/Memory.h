@@ -168,7 +168,38 @@ namespace DX12
 		}
 
 	};
-	
+
+	struct TileHeapPosition
+	{
+		ResourceHeap* heap = nullptr;
+		UINT offset;
+	};
+	enum class TileState : int
+	{
+		LOADED,
+		FREED,
+		NONE
+	};
+
+	struct ResourceTile
+	{
+		ivec3 pos = ivec3(0, 0, 0);
+		UINT subresource;
+
+		ivec3 size = ivec3(1, 1, 1);
+		TileHeapPosition heap_position;
+	};
+
+	struct update_tiling_info
+	{
+		std::map<ResourceHeap*, std::vector<ResourceTile>> tiles;
+		Resource* resource;
+
+		void add_tile(ResourceTile tile)
+		{
+			tiles[tile.heap_position.heap].push_back(tile);
+		}
+	};
 
 	// for tiles now, only
 	class ResourceHeapAllocator

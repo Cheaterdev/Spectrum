@@ -10,6 +10,7 @@ void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 	pso[PSO::MipMapping] =  std::make_shared<PSOS::MipMapping>();
 	pso[PSO::Lighting] =  std::make_shared<PSOS::Lighting>();
 	pso[PSO::VoxelDownsample] =  std::make_shared<PSOS::VoxelDownsample>();
+	pso[PSO::VoxelVisibility] =  std::make_shared<PSOS::VoxelVisibility>();
 	pso[PSO::FontRender] =  std::make_shared<PSOS::FontRender>();
 	pso[PSO::RenderBoxes] =  std::make_shared<PSOS::RenderBoxes>();
 	pso[PSO::RenderToDS] =  std::make_shared<PSOS::RenderToDS>();

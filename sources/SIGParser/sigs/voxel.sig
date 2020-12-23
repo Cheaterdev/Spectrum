@@ -15,7 +15,7 @@ struct Voxelization
 	
 	RWTexture3D<float4> albedo;
 	RWTexture3D<float4> normals;
-	RWByteAddressBuffer visibility;
+	RWTexture3D<uint> visibility;
 	
 }
 
@@ -46,6 +46,14 @@ struct VoxelUpscale
 
 }
 
+
+
+[Bind = DefaultLayout::Instance1]
+struct VoxelVisibility
+{	
+	Texture3D<uint> visibility;
+	AppendStructuredBuffer<uint4> visible_tiles;	
+}
 
 
 [Bind = DefaultLayout::Instance1]
@@ -108,6 +116,14 @@ ComputePSO VoxelDownsample
 	[rename = COUNT]
 	[CS]
 	define Count = {1, 2, 3};
+}
+
+ComputePSO VoxelVisibility
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = voxel_visibility;
 }
 
 GraphicsPSO VoxelReflectionLow

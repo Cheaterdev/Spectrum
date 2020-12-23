@@ -3,18 +3,6 @@
 enum class Layouts;
 namespace DX12
 {
-	struct update_tiling_info
-	{
-		std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
-		std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
-		std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
-		std::vector<UINT> heapRangeStartOffsets;
-		std::vector<UINT> rangeTileCounts;
-
-		ID3D12Heap* heap;
-		ID3D12Resource* resource;
-	};
-
 
 	class PipelineState;
 	template<class T> class  PipelineStateTyped;

@@ -13,11 +13,11 @@ namespace Table
 		{
 			Render::HLSL::RWTexture3D<float4> albedo;
 			Render::HLSL::RWTexture3D<float4> normals;
-			Render::HLSL::RWByteAddressBuffer visibility;
+			Render::HLSL::RWTexture3D<uint> visibility;
 		} &uav;
 		Render::HLSL::RWTexture3D<float4>& GetAlbedo() { return uav.albedo; }
 		Render::HLSL::RWTexture3D<float4>& GetNormals() { return uav.normals; }
-		Render::HLSL::RWByteAddressBuffer& GetVisibility() { return uav.visibility; }
+		Render::HLSL::RWTexture3D<uint>& GetVisibility() { return uav.visibility; }
 		VoxelInfo MapInfo() { return VoxelInfo(cb.info); }
 		Voxelization(CB&cb,UAV&uav) :cb(cb),uav(uav){}
 	};

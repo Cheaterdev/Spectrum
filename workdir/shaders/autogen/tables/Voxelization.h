@@ -8,7 +8,7 @@ struct Voxelization_uav
 {
 	RWTexture3D<float4> albedo;
 	RWTexture3D<float4> normals;
-	RWByteAddressBuffer visibility;
+	RWTexture3D<uint> visibility;
 };
 struct Voxelization
 {
@@ -16,7 +16,7 @@ struct Voxelization
 	Voxelization_uav uav;
 	RWTexture3D<float4> GetAlbedo() { return uav.albedo; }
 	RWTexture3D<float4> GetNormals() { return uav.normals; }
-	RWByteAddressBuffer GetVisibility() { return uav.visibility; }
+	RWTexture3D<uint> GetVisibility() { return uav.visibility; }
 	VoxelInfo GetInfo() { return CreateVoxelInfo(cb.info); }
 
 };

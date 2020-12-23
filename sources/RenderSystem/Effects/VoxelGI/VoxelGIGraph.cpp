@@ -202,9 +202,9 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 		gpu_tiles_buffer[1].reset(new GPUTilesBuffer);
 		gpu_tiles_buffer[4].reset(new GPUTilesBuffer);
 
-		gpu_tiles_buffer[0]->set_size(tiled_volume_lighted->get_max_tiles_count());
-		gpu_tiles_buffer[1]->set_size(tiled_volume_lighted->get_max_tiles_count(1));
-		gpu_tiles_buffer[4]->set_size(tiled_volume_lighted->get_max_tiles_count(4));
+		gpu_tiles_buffer[0]->set_size(tiled_volume_lighted->get_tiles_count());
+		gpu_tiles_buffer[1]->set_size(tiled_volume_lighted->get_tiles_count(1));
+		gpu_tiles_buffer[4]->set_size(tiled_volume_lighted->get_tiles_count(4));
 
 	}
 
@@ -374,6 +374,8 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 	}
 	else
 	{
+
+		PROFILE_GPU(L"copy");
 		for (auto& e : dynamic_generator_voxelizing.dynamic_tiles)
 		{
 			auto pos = dynamic_generator_voxelizing.get_pos(e);
@@ -855,10 +857,7 @@ void VoxelGI::voxelize(FrameGraph& graph)
 		data.voxel_normal = builder.need_texture("voxel_normal", ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](Voxelize& data, FrameContext& _context) {
-
 			auto& command_list = _context.get_list();
-
-			//SceneFrameManager::get().prepare(command_list, *scene);
 
 			if (need_start_new)
 			{
@@ -866,22 +865,17 @@ void VoxelGI::voxelize(FrameGraph& graph)
 				need_start_new = false;
 			}
 
+
 			MeshRenderContext::ptr context(new MeshRenderContext());
-
-
 			context->current_time = 0;
-			//		context->sky_dir = lighting->lighting.pssm.get_position();
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
-			//	context->eye_context = vr_context;
-
 			context->cam = graph.cam;
 
 			auto scene = graph.scene;
 			auto renderer = graph.renderer;
 			context->begin();
 			voxelize(context, renderer);
-
 		});
 }
 
@@ -921,13 +915,9 @@ void VoxelGI::lighting(FrameGraph& graph)
 			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
-
 			context->current_time = 0;
-			//		context->sky_dir = lighting->lighting.pssm.get_position();
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
-			//	context->eye_context = vr_context;
-
 			context->cam = graph.cam;
 
 
@@ -935,11 +925,7 @@ void VoxelGI::lighting(FrameGraph& graph)
 			auto& list = *context->list;
 			auto& compute = context->list->get_compute();
 
-
-			//	if (GetAsyncKeyState('G'))
 			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(!GetAsyncKeyState('G'))));
-			//	else
-				//	compute.set_pipeline(get_PSO(PSO::LightingSecondBounce));
 
 			Slots::VoxelLighting ligthing;
 			{
@@ -1090,7 +1076,7 @@ void VoxelGI::generate(FrameGraph& graph)
 
 		voxelization.GetAlbedo() = volume_albedo->texture_3d()->rwTexture3D[0];
 		voxelization.GetNormals() = volume_normal->texture_3d()->rwTexture3D[0];
-		voxelization.GetVisibility() = visibility->buffer->create_view<Render::BufferView>(*graph.builder.current_frame).uav_handle;
+		voxelization.GetVisibility() = visibility->buffer->create_view<Render::TextureView>(*graph.builder.current_frame).rwTexture3D;
 
 		scene->voxelization_compiled = voxelization.compile(*graph.builder.current_frame);
 	}

@@ -1,12 +1,6 @@
 #pragma once
 
 class HeapPage;
-enum class TileState : int
-{
-    LOADED,
-    FREED,
-    NONE
-};
 
 struct Tile
 {
@@ -50,7 +44,6 @@ class HeapPage
 
         unsigned int allocate();
 
-		Render::Texture::ptr data;
 		std::vector<Render::Resource::ptr> tiles;
 
     public:
@@ -60,10 +53,6 @@ class HeapPage
 		~HeapPage()
 		{
 			//Render::Device::get().unused(tile_heap, ResourceHandle());
-		}
-		Render::Texture::ptr get_data()
-		{
-			return data;
 		}
 
 		Render::Resource::ptr get_tile_texture(int offset)
@@ -85,8 +74,9 @@ class HeapPage
 
 		void clear(Render::CommandList& list)
 		{
-		//	list.transition(data, Render::ResourceState::UNORDERED_ACCESS);
-			list.clear_uav(data, data->texture_2d()->get_static_uav());
+
+            for(auto &t:tiles)
+			list.clear_uav(t, t->create_view<Render::TextureView>(*list.frame_resources).rwTexture2D);
 		}
 
         void place_region(ivec3 pos, ivec3 size, unsigned int subresource, unsigned int offset);
@@ -103,7 +93,7 @@ class TileHeapManager
         std::list<HeapPage> pages;
         std::mutex m;
 		int counter = 0;
-		Tile::ptr zero_tile;
+	
 	
     public:
         void place(Tile::ptr& tile);
@@ -128,65 +118,19 @@ class TileHeapManager
 			//UINT first_sub_res;
 			D3D12_SUBRESOURCE_TILING tilings[20];
 			Render::Device::get().get_native_device()->GetResourceTiling(res->get_native().Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
-
-
-
-			std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
-			std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
-			std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
-			std::vector<UINT> heapRangeStartOffsets;
-			std::vector<UINT> rangeTileCounts;
+			update_tiling_info info;
 
 			for (int i = 0; i < mip_info.NumStandardMips; i++)
 			{
-
-
-		
-			D3D12_TILED_RESOURCE_COORDINATE TRC;
-			TRC.X = 0;
-			TRC.Y = 0;
-			TRC.Z = 0;
-			TRC.Subresource = i;// tilings[i].StartTileIndexInOverallResource;
-			D3D12_TILE_REGION_SIZE TRS;
-			TRS.UseBox = TRUE;
-			TRS.Width = tilings[i].WidthInTiles;
-			TRS.Height = tilings[i].HeightInTiles;
-			TRS.Depth = tilings[i].DepthInTiles;
-			TRS.NumTiles = TRS.Width * TRS.Height * TRS.Depth;
-			startCoordinates.push_back(TRC);
-			regionSizes.push_back(TRS);
-			rangeFlags.push_back(D3D12_TILE_RANGE_FLAG_NULL);
-			heapRangeStartOffsets.push_back(0);
-			rangeTileCounts.push_back(TRS.NumTiles);
+                ResourceTile tile;
+                tile.size = { tilings[i].WidthInTiles,tilings[i].HeightInTiles,tilings[i].DepthInTiles };
+                tile.subresource = i;
+                info.add_tile(tile);
 			}
 
-			update_tiling_info info;
-
-			info.heap = nullptr;
-			info.resource = res->get_native().Get();
-
-			info.startCoordinates = std::move(startCoordinates);
-			info.regionSizes = std::move(regionSizes);
-			info.rangeFlags = std::move(rangeFlags);
-			info.heapRangeStartOffsets = std::move(heapRangeStartOffsets);
-			info.rangeTileCounts = std::move(rangeTileCounts);
-
-
-
-
-			list.update_tilings(std::move(info));
-			/*Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(
-				res->get_native().Get(),
-				static_cast<UINT>(startCoordinates.size()),
-				&startCoordinates[0],
-				&regionSizes[0],
-				nullptr,
-				static_cast<UINT>(startCoordinates.size()),
-				&rangeFlags[0],
-				nullptr,
-				&rangeTileCounts[0],
-				D3D12_TILE_MAPPING_FLAG_NONE
-			);*/
+			
+			info.resource = res;
+            list.update_tilings(std::move(info));
 
 
 			for (auto& p : pages)

@@ -515,6 +515,8 @@ using mat4x4 = matrix<matrix_data_4x4_t<float>>;
 using mat4x3 = matrix<matrix_data_t<3,4, float>>;
 
 
+using float4x4 = mat4x4;
+
 template<typename VectorFormatIn, typename MatrixFormat>
 Vector<vector_data_t<typename MatrixFormat::Format, MatrixFormat::M>>operator*(const Vector<VectorFormatIn>& v, const  matrix<MatrixFormat>& m)
 {

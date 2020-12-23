@@ -35,16 +35,7 @@ namespace DX12
 		FenceWaiter execute_internal(CommandList* list);
 	
 	public:
-		void update_tile_mappings(ID3D12Resource* pResource,
-			UINT                            NumResourceRegions,
-			const D3D12_TILED_RESOURCE_COORDINATE* pResourceRegionStartCoordinates,
-			const D3D12_TILE_REGION_SIZE* pResourceRegionSizes,
-			ID3D12Heap* pHeap,
-			UINT                            NumRanges,
-			const D3D12_TILE_RANGE_FLAGS* pRangeFlags,
-			const UINT* pHeapRangeStartOffsets,
-			const UINT* pRangeTileCounts,
-			D3D12_TILE_MAPPING_FLAGS        Flags);
+		void update_tile_mappings(const update_tiling_info &infos);
 
 	public:
 		Queue(CommandListType type, Device* device);

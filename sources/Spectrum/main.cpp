@@ -98,7 +98,7 @@ class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
 
 		EyeData(Render::RootSignature::ptr sig)
 		{
-		
+
 		}
 	};
 

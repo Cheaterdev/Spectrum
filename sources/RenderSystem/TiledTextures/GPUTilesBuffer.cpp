@@ -1,16 +1,16 @@
 #include "pch.h"
 
-
-
-void GPUTilesBuffer::set_size(uint32_t max_count)
+void GPUTilesBuffer::set_size(ivec3 size)
 {
-	buffer.reset(new Render::StructuredBuffer<ivec3>(max_count));
+	tile_positions.resize(size, -1);
+	buffer.reset(new Render::StructuredBuffer<ivec3>(size.x * size.y * size.z));
 }
 
 void GPUTilesBuffer::clear()
 {
 	tiles_updated = true;
 	used_tiles.clear();
+	tile_positions.fill(-1);
 }
 
 uint32_t GPUTilesBuffer::size()
@@ -20,28 +20,27 @@ uint32_t GPUTilesBuffer::size()
 
 void GPUTilesBuffer::insert(ivec3 pos)
 {
-	tiles_updated = true;
-	tile_mutex.lock(); //fix this
-	auto it = std::find(used_tiles.begin(), used_tiles.end(), pos);
-	if (it == used_tiles.end())
+	int tile_pos = tile_positions[pos];
+	if (tile_pos == -1)
+	{
 		used_tiles.emplace_back(pos);
-	else
-		Log::get() << "wtf" << Log::endl;
-	tile_mutex.unlock();
+		tiles_updated = true;
+		tile_positions[pos] = used_tiles.size() - 1;
+	}
 }
 
 void GPUTilesBuffer::erase(ivec3 pos)
 {
-	tiles_updated = true;
-	tile_mutex.lock(); //fix this
-	auto it = std::find(used_tiles.begin(), used_tiles.end(), pos);
-	if (it != used_tiles.end())
-		used_tiles.erase(it);
-	else
-		Log::get() << "----------" << Log::endl;
-	tile_mutex.unlock();
+	int tile_pos = tile_positions[pos];
+	if (tile_pos!=-1)
+	{
+		used_tiles[tile_pos] = used_tiles.back();
+		tile_positions[used_tiles[tile_pos]] = tile_pos;
+		used_tiles.resize(used_tiles.size() - 1);
+		tile_positions[pos] = -1;
+		tiles_updated = true;
+	}
 }
-
 
 void GPUTilesBuffer::update(Render::CommandList::ptr list)
 {

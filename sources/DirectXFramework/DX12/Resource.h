@@ -88,10 +88,7 @@ namespace DX12
 		size_t id = 0;
 
 	protected:
-		virtual	ComPtr<ID3D12Resource>& get_d3d_resource() override
-		{
-			return tracked_info->m_Resource;
-		}
+
 
 		void init(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 	public:

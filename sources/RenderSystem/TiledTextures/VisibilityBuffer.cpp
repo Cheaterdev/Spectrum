@@ -4,15 +4,12 @@
 
 VisibilityBuffer::VisibilityBuffer(ivec3 sizes) :sizes(sizes)
 {
-	buffer.reset(new Render::ByteBuffer(sizes.x*sizes.y*sizes.z * 4));
-	buffer->set_name("VisibilityBuffer::buffer");
-	clear_data.resize(sizes.x*sizes.y*sizes.z*4, 255);
-	buffer->set_data(0, clear_data);
-}
+	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8_UINT, sizes.x, sizes.y, sizes.z, 1, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
 
-std::function<void( Handle&)> VisibilityBuffer::uav()
-{
-	return buffer->uav();
+	buffer = std::make_shared<Render::Texture>(desc);
+	buffer->set_name("VisibilityBuffer::buffer");
+
+	load_tiles_buffer = std::make_shared<Render::StructuredBuffer<uint4>>(sizes.x * sizes.y * sizes.z, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
 
 void VisibilityBuffer::wait_for_results()
@@ -23,55 +20,50 @@ void VisibilityBuffer::wait_for_results()
 
 void VisibilityBuffer::update(CommandList::ptr& list)
 {
-//TODO: GPU!!
-	waiter = list->get_copy().read_buffer(buffer.get(), 0, buffer->get_size(), [this](const char* data, UINT64 size)
+
+	auto& compute = list->get_compute();
+	auto& copy = list->get_copy();
+
+	struct _info
 	{
-		std::vector<task<std::vector<ivec3>>> tasks;	
-		std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
-		size /= sizeof(int);
+		UINT size;
+	};
 
-		int thread_count = std::min(sizes.y, 8);
-		UINT one_thread = UINT(size / thread_count);
+	list->clear_counter(load_tiles_buffer);
 
-		for (int thread = 0; thread < thread_count; thread++)
-			tasks.emplace_back(create_task([this, thread, one_thread, data]()
+	{
+		Slots::VoxelVisibility data;
+
+		data.GetVisibility()= buffer->create_view<Render::TextureView>(*list->frame_resources).texture3D;
+		data.GetVisible_tiles() = load_tiles_buffer->appendStructuredBuffer;
+		data.set(compute);
+	}
+
+	compute.set_pipeline(GetPSO<PSOS::VoxelVisibility>());
+	compute.dispach(sizes);
+
+
+	auto info = std::make_shared<_info>();
+	copy.read_buffer(load_tiles_buffer->help_buffer.get(), 0, 4, [this, info](const char* data, UINT64 size)
+		{
+			info->size = *reinterpret_cast<const UINT*>(data);
+		});
+
+
+	waiter = copy.read_buffer(load_tiles_buffer.get(), 0, load_tiles_buffer->get_size(), [this, info](const char* data, UINT64 size)
 		{
 
-			std::vector<ivec3> poses;
-			for (UINT i = one_thread*thread; i < one_thread*thread + one_thread; i++)
-			{
+			PROFILE(L"Read Tiles");
+			const uint4* tiles = reinterpret_cast<const uint4*>(data);
+			for (int i = 0; i < info->size; i++)
+				process_tile_readback(tiles[i], 0);
+		});
 
-				ivec3 t = sizes;
-				int x = i % t.x;
-				int z = i / (t.y*t.x);
-				int y = ((i - x) / t.x) % t.y;
-				if (data[4 * i] == 0)
-					poses.emplace_back(ivec3(x,y,z));
-					
-			//	process_tile_readback({ x,y,z }, data[4 * i]);
-
-			}
-			return poses;
-		}));
-
-		int counter = 0;
-		for (auto &t : tasks)
-		{
-			auto result = t.get();
-			for(auto &p:result)
-			process_tile_readback(p,0);
-
-			counter += (UINT)result.size();
-		}
-			
-		Log::get() << "counter " << counter << Log::endl;
-
-	});
-
-	list->get_copy().update_buffer(buffer.get(), 0, reinterpret_cast<char*>(clear_data.data()), (UINT)clear_data.size());
+	list->clear_uav(buffer, buffer->texture_3d()->get_static_uav());
 }
 
 void VisibilityBufferUniversal::process_tile_readback(ivec3 pos, char level)
 {
+	PROFILE(L"process_tile_readback");
 	on_process(pos, level);
 }

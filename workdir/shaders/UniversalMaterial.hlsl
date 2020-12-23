@@ -112,7 +112,7 @@ static const VoxelInfo voxel_info = GetVoxelization().GetInfo();
 
 static const RWTexture3D<float4> volume_albedo = GetVoxelization().GetAlbedo();
 static const RWTexture3D<float4> volume_normals = GetVoxelization().GetNormals();
-static const RWByteAddressBuffer visibility = GetVoxelization().GetVisibility();
+static const RWTexture3D<uint> visibility = GetVoxelization().GetVisibility();
 
 void universal_voxel(vertex_output i, float4 albedo, float metallic, float roughness, float4 bump)
 {   
@@ -125,10 +125,7 @@ void universal_voxel(vertex_output i, float4 albedo, float metallic, float rough
 
 #ifndef VOXEL_DYNAMIC 
         index /= voxel_info.GetVoxels_per_tile().xyz;
-
-        uint3 cell_size = voxel_info.GetVoxel_tiles_count().xyz;
-        int offset = 4 * (index.x + cell_size.x * (index.y + cell_size.y * index.z));
-        visibility.Store(offset, 0);
+        visibility[index] = 1;
 #endif
     
 }

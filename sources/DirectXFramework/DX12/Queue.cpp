@@ -44,7 +44,7 @@ namespace DX12
 
 					std::function<void()> task;
 					{
-					
+
 						std::unique_lock<std::mutex> lock(this->queue_mutex);
 						this->condition.wait(lock,
 							[this]
@@ -57,10 +57,10 @@ namespace DX12
 
 
 						task = std::move(this->tasks.front());
-					
+
 						this->tasks.pop();
-					}	
-					
+					}
+
 					PROFILE(L"Task");
 
 					task();
@@ -184,9 +184,56 @@ namespace DX12
 	}
 
 
-	void Queue::update_tile_mappings(ID3D12Resource* pResource, UINT NumResourceRegions, const D3D12_TILED_RESOURCE_COORDINATE* pResourceRegionStartCoordinates, const D3D12_TILE_REGION_SIZE* pResourceRegionSizes, ID3D12Heap* pHeap, UINT NumRanges, const D3D12_TILE_RANGE_FLAGS* pRangeFlags, const UINT* pHeapRangeStartOffsets, const UINT* pRangeTileCounts, D3D12_TILE_MAPPING_FLAGS Flags)
+	void Queue::update_tile_mappings(const update_tiling_info& infos)
 	{
-		native->UpdateTileMappings(pResource, NumResourceRegions, pResourceRegionStartCoordinates, pResourceRegionSizes, pHeap, NumRanges, pRangeFlags, pHeapRangeStartOffsets, pRangeTileCounts, Flags);
+		for (auto& [heap, tiles] : infos.tiles)
+		{
+			std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
+			std::vector<D3D12_TILE_REGION_SIZE> regionSizes;
+			std::vector<D3D12_TILE_RANGE_FLAGS> rangeFlags;
+			std::vector<UINT> heapRangeStartOffsets;
+			std::vector<UINT> rangeTileCounts;
+
+			for (const ResourceTile& tile : tiles)
+			{
+				D3D12_TILED_RESOURCE_COORDINATE TRC;
+				TRC.X = tile.pos.x;
+				TRC.Y = tile.pos.y;
+				TRC.Z = tile.pos.z;
+				TRC.Subresource = tile.subresource;
+
+				D3D12_TILE_REGION_SIZE TRS;
+				TRS.UseBox = false;
+				TRS.Width = 1;
+				TRS.Height = 1;
+				TRS.Depth = 1;
+				TRS.NumTiles = TRS.Width * TRS.Height * TRS.Depth;
+
+				startCoordinates.push_back(TRC);
+				regionSizes.push_back(TRS);
+
+				if (tile.heap_position.heap)
+					rangeFlags.push_back(D3D12_TILE_RANGE_FLAG_NONE);
+				else
+					rangeFlags.push_back(D3D12_TILE_RANGE_FLAG_NULL);
+
+				heapRangeStartOffsets.push_back((UINT)tile.heap_position.offset);
+				rangeTileCounts.push_back((UINT)TRS.NumTiles);
+			}
+
+			native->UpdateTileMappings(
+				infos.resource->get_native().Get(),
+				UINT(startCoordinates.size()),
+				&startCoordinates[0],
+				&regionSizes[0],
+				heap ? heap->heap.Get() : nullptr,
+				UINT(rangeFlags.size()),
+				&rangeFlags[0],
+				&heapRangeStartOffsets[0],
+				&rangeTileCounts[0],
+				D3D12_TILE_MAPPING_FLAG_NONE
+			);
+		}
 	}
 
 	// synchronized
@@ -202,9 +249,9 @@ namespace DX12
 			if (stop)
 				return { &commandListCounter,m_fenceValue };
 
-		for(auto &w:list->waits)
+		for (auto& w : list->waits)
 		{
-//			native->Wait(w.fence.Get(), w.value);
+			//			native->Wait(w.fence.Get(), w.value);
 		}
 
 
@@ -216,22 +263,11 @@ namespace DX12
 
 		//	fix_transitions
 		{
-			auto &updates = list->tile_updates;
+			auto& updates = list->tile_updates;
 
-			for (auto& u:updates)
+			for (auto& u : updates)
 			{
-				update_tile_mappings(
-					u.resource,
-					UINT(u.startCoordinates.size()),
-					&u.startCoordinates[0],
-					&u.regionSizes[0],
-					u.heap,
-					UINT(u.startCoordinates.size()),
-					&u.rangeFlags[0],
-					&u.heapRangeStartOffsets[0],
-					&u.rangeTileCounts[0],
-					D3D12_TILE_MAPPING_FLAG_NONE
-				);
+				update_tile_mappings(u);
 			}
 
 			updates.clear();
@@ -273,7 +309,7 @@ namespace DX12
 		}
 
 		last_known_fence = signal().value;
-		list->execute_fence.set_value({&commandListCounter, last_known_fence});
+		list->execute_fence.set_value({ &commandListCounter, last_known_fence });
 
 		auto cl = list->get_ptr();
 
@@ -287,7 +323,7 @@ namespace DX12
 
 			SPECTRUM_TRY
 				PROFILE(L"on_execute");
-				list->on_execute();
+			list->on_execute();
 			SPECTRUM_CATCH
 			});
 

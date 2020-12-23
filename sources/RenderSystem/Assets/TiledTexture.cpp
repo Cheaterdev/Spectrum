@@ -20,7 +20,10 @@ unsigned HeapPage::allocate()
 
 HeapPage::HeapPage()
 {
+
+    PROFILE(L"HeapPage");
     max_count = 32;
+
     D3D12_HEAP_DESC h;
     h.Alignment = 0;
 	h.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;// D3D12_HEAP_FLAG_NONE;
@@ -30,13 +33,9 @@ HeapPage::HeapPage()
     h.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
     h.Properties.VisibleNodeMask = 0;
     h.SizeInBytes = (64 * 1024) * max_count;
+
     Render::Device::get().get_native_device()->CreateHeap(&h, IID_PPV_ARGS(&tile_heap));
 
-	ComPtr<ID3D12Resource> m_Resource;
-
-	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UINT,min(h.SizeInBytes, UINT64(16384u)),(UINT)(Math::AlignUp(h.SizeInBytes, 16384)/ 16384),1,1,1,0,D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	Render::Device::get().get_native_device()->CreatePlacedResource(tile_heap.Get(), 0, &desc, D3D12_RESOURCE_STATES::D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE, nullptr, IID_PPV_ARGS(&m_Resource));
-	data.reset(new Render::Texture(m_Resource, Render::ResourceState::NON_PIXEL_SHADER_RESOURCE));
 
 	for (unsigned int i = 0; i<max_count; i++)
 	{
@@ -127,13 +126,13 @@ void HeapPage::zero_tile(Tile::ptr& tile)
 }
 void HeapPage::flush_tilings(Render::CommandList& list, Render::Resource* res)
 {
-    if (startCoordinates.size())
+  /*  if (startCoordinates.size())
     {
 
         update_tiling_info info;
 
         info.heap = tile_heap.Get();
-        info.resource = res->get_native().Get();
+        info.resource = res.get();
 
         info.startCoordinates = std::move(startCoordinates);
 		info.regionSizes = std::move(regionSizes);
@@ -142,7 +141,7 @@ void HeapPage::flush_tilings(Render::CommandList& list, Render::Resource* res)
 		info.rangeTileCounts = std::move(rangeTileCounts);
 
         list.update_tilings(std::move(info));
-    }
+    }*/
      
     startCoordinates.clear();
     regionSizes.clear();

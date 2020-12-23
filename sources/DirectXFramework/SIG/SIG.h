@@ -6,13 +6,6 @@ namespace DX12
 }
 
 
-using uint = UINT;
-using uint2 = ivec2;
-using uint3 = ivec3;
-using uint4 = ivec4;
-
-using float4x4 = mat4x4;
-
 using GPUAddress = D3D12_GPU_VIRTUAL_ADDRESS;
 
 class DrawIndexedArguments : public D3D12_DRAW_INDEXED_ARGUMENTS

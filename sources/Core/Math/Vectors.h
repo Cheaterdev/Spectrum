@@ -151,6 +151,7 @@ public:
 		return *this;
 	}
 
+
 	Vector<T> normalized(float eps = eps12)
 	{
 		Vector res(*this);
@@ -160,6 +161,11 @@ public:
 	typename	T::Format max_element()
 	{
 		return *std::max_element(values.begin(), values.end());
+	}
+
+	typename	T::Format sum()
+	{
+		return std::accumulate(values.begin(), values.end(), 0);
 	}
 
 	template<typename T>
@@ -606,6 +612,13 @@ typedef Vector<vec4_t<unsigned char>> rgba8;
 typedef Vector<vec3_t<unsigned char>> rgb8;
 
 
+using uint = UINT;
+using uint2 = ivec2;
+using uint3 = ivec3;
+using uint4 = ivec4;
+
+
+
 sizer intersect(const sizer& a, const sizer& b);
 rect intersect(const rect& a, const rect& b);
 
@@ -618,3 +631,44 @@ namespace math
 	rect convert(const sizer& b);
 
 }
+
+
+/*
+template <class T>
+concept VectorType =
+requires (T a) {
+	T::VECTOR;
+};
+*/
+template<class V, class T>
+class grid
+{
+	V size;
+	V scalers;
+	std::vector<T> data;
+
+public:
+	void resize(V size, T v = T())
+	{
+		this->size = size;
+
+		size_t sum = 1;
+		for (int i = 0; i < V::N; ++i)
+		{
+			scalers[i] = sum;
+			sum *= size[i];
+		}
+
+		data.resize(sum, v);
+	}
+		
+	void fill(T v)
+	{
+		std::fill(data.begin(), data.end(), v);
+	}
+
+	T& operator[](const V& i)
+	{
+		return data[V::dot(i, scalers)];
+	}
+};

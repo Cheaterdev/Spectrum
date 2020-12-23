@@ -18,6 +18,7 @@ enum class PSO: int
 	MipMapping,
 	Lighting,
 	VoxelDownsample,
+	VoxelVisibility,
 	FontRender,
 	RenderBoxes,
 	RenderToDS,

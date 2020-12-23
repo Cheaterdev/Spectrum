@@ -45,6 +45,7 @@
 #include <span>
 #include <stack>
 #include <ranges>
+#include <numeric>
 #include <comdef.h>
 // BOOST includes
 //#define BOOST_DECL_EXPORTS

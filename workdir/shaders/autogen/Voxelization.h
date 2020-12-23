@@ -8,7 +8,7 @@
 ConstantBuffer<Voxelization_cb> cb_5_0:register(b0,space5);
 RWTexture3D<float4> uav_5_0: register(u0, space5);
 RWTexture3D<float4> uav_5_1: register(u1, space5);
-RWByteAddressBuffer uav_5_2: register(u2, space5);
+RWTexture3D<uint> uav_5_2: register(u2, space5);
 Voxelization CreateVoxelization()
 {
 	Voxelization result;
