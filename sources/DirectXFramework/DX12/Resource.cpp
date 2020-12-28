@@ -86,6 +86,8 @@ namespace DX12
 
 
 		}
+
+		alloc_info = Device::get().get_alloc_info(desc);
 		tracked_info->set_resource(resource);
 
 		id = counter_id.fetch_add(1);

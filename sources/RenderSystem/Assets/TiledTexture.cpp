@@ -1,5 +1,5 @@
 #include "pch.h"
-
+/*
 unsigned HeapPage::allocate()
 {
     if (free_tiles.size())
@@ -141,7 +141,7 @@ void HeapPage::flush_tilings(Render::CommandList& list, Render::Resource* res)
 		info.rangeTileCounts = std::move(rangeTileCounts);
 
         list.update_tilings(std::move(info));
-    }*/
+    }*
      
     startCoordinates.clear();
     regionSizes.clear();
@@ -169,7 +169,7 @@ void HeapPage::place_region(ivec3 pos, ivec3 size, unsigned int subresource, uns
     heapRangeStartOffsets.push_back(offset);
     rangeTileCounts.push_back(TRS.NumTiles);
 }
-
+/*
 Tile::ptr& TiledTexture::get_tile(int mip_level, ivec3 pos)
 {
     return mips[mip_level].tile_positions[pos.x + pos.y * mips[mip_level].tiles.x + pos.z * mips[mip_level].tiles.x * mips[mip_level].tiles.y];
@@ -379,7 +379,7 @@ void TiledTexture::init()
     wrapSamplerDesc.BorderColor[0] = wrapSamplerDesc.BorderColor[1] = wrapSamplerDesc.BorderColor[2] = wrapSamplerDesc.BorderColor[3] = 0;
     Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[0].cpu);
     wrapSamplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-    Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[1].cpu);*/
+    Render::Device::get().create_sampler(wrapSamplerDesc, sampler_table[1].cpu);*
     //	FileSystem::get().
     stream.reset(new std::ifstream(tiles_file_name, ios::binary));
     archive = ZipArchive::Create(*stream);
@@ -622,7 +622,9 @@ template void TiledTexture::serialize(serialization_iarchive& arch, const unsign
 
 BOOST_CLASS_EXPORT_IMPLEMENT(TiledTexture);
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<TiledTexture>);
+*/
 
+/*
 void TileHeapManager::place(Tile::ptr& tile)
 {
     std::lock_guard<std::mutex> g(m);
@@ -684,10 +686,11 @@ void TileHeapManager::clear_all(ivec3 tiles, int mip_count)
         mip *= 2;
     }
 }
-
+/*
 mip_info::mip_info(ivec3 tiles, unsigned int tile_offset)
 {
     this->tiles = tiles;
     this->tile_offset = tile_offset;
     tile_positions.resize(tiles.x * tiles.y * tiles.z);
 }
+*/

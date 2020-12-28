@@ -682,6 +682,16 @@ namespace DX12
 
 		Device::get().id_generator.put(id);
 		id = -1;
+
+
+		// todo: move to queue tasks to save some heaps
+		for (auto& e : tile_updates)
+		{
+			e.resource->on_tile_update(e);
+		}
+
+
+			tile_updates.clear();
 	}
 
 	void Transitions::flush_transitions()

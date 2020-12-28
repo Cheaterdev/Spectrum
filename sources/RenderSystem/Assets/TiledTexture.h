@@ -2,6 +2,22 @@
 
 class HeapPage;
 
+
+struct VoxelTile
+{
+	ResourceTile tile;
+    Resource::ptr resource;
+
+	void clear(Render::CommandList& list)
+	{
+		list.clear_uav(resource, resource->create_view<Render::TextureView>(*list.frame_resources).rwTexture2D);
+	}
+
+    operator bool() const
+    {
+        return !!tile.heap_position.heap;
+    }
+};
 struct Tile
 {
     using ptr = std::shared_ptr<Tile>;
@@ -10,25 +26,21 @@ struct Tile
     ivec3 position;
     UINT subresource;
     int mip_level;
-    int last_visible = 0;
+
     TileState state = TileState::NONE;
     std::vector<unsigned char> data;
 	int childs_count = 0;
 
-    HeapPage* page = nullptr;
-    UINT tile_offset = 0;
 
 
 	bool has_static = false;
 	bool has_dynamic = false;
 
-
-
-	HeapPage* page_backup = nullptr;
-	UINT tile_offset_backup = 0;
+    VoxelTile work_tile_mapping;
+    VoxelTile static_tile_mapping;
 };
 
-
+/*
 class HeapPage
 {
         ComPtr<ID3D12Heap>tile_heap;
@@ -160,9 +172,8 @@ class TileHeapManager
 		}
 
 
-};
-
-struct mip_info
+};*/
+/*struct mip_info
 {
         ivec3 tiles;
         unsigned int tile_offset;
@@ -283,3 +294,5 @@ class TiledTexture : public Asset
 BOOST_CLASS_EXPORT_KEY2(TiledTexture, "TiledTexture");
 
 BOOST_CLASS_EXPORT_KEY(AssetReference<TiledTexture>);
+
+*/

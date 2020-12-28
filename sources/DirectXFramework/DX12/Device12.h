@@ -3,12 +3,6 @@
 
 namespace DX12
 {
-	struct ResourceAllocationInfo
-	{
-		size_t size;
-		size_t alignment;
-		D3D12_HEAP_FLAGS flags;
-	};
 	class Device : public Singleton<Device>
 	{
 		ComPtr<ID3D12Device5> m_device;

@@ -145,7 +145,7 @@ struct MeshRenderContext
         Render::Texture::ptr target_tex;
       //  Render::HandleTable voxel_target;
 
-    
+        Slots::Voxelization::Compiled voxelization_compiled;
 		vec3 sky_dir;
         MeshRenderContext()
         {

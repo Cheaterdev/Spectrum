@@ -304,9 +304,9 @@ std::list<FlowGraph::Node::ptr>  MaterialFunction::on_drop(MyVariant value)
 
 	if (item->asset->get_type() == Asset_Type::TILED_TEXTURE)
 	{
-		TiledTextureNode::ptr node(new TiledTextureNode(item->asset->get_asset()->get_ptr<TiledTexture>()));
-		register_node(node);
-		result.push_back(node);
+	//	TiledTextureNode::ptr node(new TiledTextureNode(item->asset->get_asset()->get_ptr<TiledTexture>()));
+	//	register_node(node);
+	//	result.push_back(node);
 	}
 
 
@@ -727,20 +727,21 @@ void MulNode::operator()(MaterialContext* c)
 	 auto res = c->create_value(v);*/
 	o_value->put(res);
 }
-
+/*
 TiledTextureNode::TiledTextureNode(TiledTexture::ptr _Asset) : asset(this)
 {
 	asset = register_asset(_Asset);
-	i_tc = register_input(/*ShaderParams::FLOAT2,*/ "tc", ShaderParams::FLOAT2);
-	o_vec4 = register_output(/*ShaderParams::FLOAT4, */"vec4", ShaderParams::FLOAT4);
-	o_r = register_output(/*ShaderParams::FLOAT1,*/ "r", ShaderParams::FLOAT1);
-	o_g = register_output(/*ShaderParams::FLOAT1, */"g", ShaderParams::FLOAT1);
-	o_b = register_output(/*ShaderParams::FLOAT1,*/ "b"), ShaderParams::FLOAT1;
-	o_a = register_output(/*ShaderParams::FLOAT1, */"a", ShaderParams::FLOAT1);
+	i_tc = register_input("tc", ShaderParams::FLOAT2);
+	o_vec4 = register_output("vec4", ShaderParams::FLOAT4);
+	o_r = register_output( "r", ShaderParams::FLOAT1);
+	o_g = register_output("g", ShaderParams::FLOAT1);
+	o_b = register_output( "b"), ShaderParams::FLOAT1;
+	o_a = register_output("a", ShaderParams::FLOAT1);
 	++::FlowGraph::counter;
 }
+*/
 
-TiledTextureNode::TiledTextureNode() : asset(this)
+TiledTextureNode::TiledTextureNode()/* : asset(this)*/
 {
 }
 

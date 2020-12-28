@@ -33,7 +33,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		default_pipeline.rtv.enable_depth = false;
 		default_pipeline.rasterizer.conservative = GetAsyncKeyState('B');
 
-		scene->voxelization_compiled.set(graphics);
+		mesh_render_context->voxelization_compiled.set(graphics);
 	}
 
 	mesh_render_context->pipeline = default_pipeline;
@@ -409,7 +409,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 					compiledScene.set(graphics);
 					compiledFrame.set(graphics);
-					scene->voxelization_compiled.set(graphics);
+					mesh_render_context->voxelization_compiled.set(graphics);
 				}
 				{
 					PROFILE_GPU(L"execute_indirect");

@@ -234,6 +234,34 @@ namespace DX12
 				D3D12_TILE_MAPPING_FLAG_NONE
 			);
 		}
+
+		if (infos.source)
+		{
+
+			D3D12_TILED_RESOURCE_COORDINATE target;
+			target.X = infos.pos.x;
+			target.Y = infos.pos.y;
+			target.Z = infos.pos.z;
+			target.Subresource = infos.target_subres;
+
+
+			D3D12_TILED_RESOURCE_COORDINATE source;
+			source.X = infos.source_pos.x;
+			source.Y = infos.source_pos.y;
+			source.Z = infos.source_pos.z;
+			source.Subresource = infos.source_subres;
+
+			D3D12_TILE_REGION_SIZE TRS;
+			TRS.UseBox = false;
+			TRS.Width = infos.size.x;
+			TRS.Height = infos.size.y;
+			TRS.Depth = infos.size.z;
+			TRS.NumTiles = TRS.Width * TRS.Height * TRS.Depth;
+
+			native->CopyTileMappings(infos.resource->get_native().Get(), &target, infos.source->get_native().Get(), &source, &TRS, D3D12_TILE_MAPPING_FLAG_NONE);
+		}
+
+
 	}
 
 	// synchronized
@@ -270,7 +298,7 @@ namespace DX12
 				update_tile_mappings(u);
 			}
 
-			updates.clear();
+		
 			auto transition_list = list->fix_pretransitions();
 
 			if (transition_list)

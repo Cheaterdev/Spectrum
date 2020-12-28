@@ -92,6 +92,7 @@ namespace DX12
 
 		void init(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 	public:
+		ResourceAllocationInfo alloc_info;
 		std::optional<FenceWaiter> load_fence;
 		ResourceHandle tmp_handle;
 		std::byte* buffer_data = nullptr;

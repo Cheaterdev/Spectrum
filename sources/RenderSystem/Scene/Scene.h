@@ -103,7 +103,7 @@ public:
 
 
 	Slots::VoxelInfo::Compiled voxels_compiled;
-    Slots::Voxelization::Compiled voxelization_compiled;
+   
 	Slots::VoxelInfo voxel_info;
 
 

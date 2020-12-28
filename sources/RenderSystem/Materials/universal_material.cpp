@@ -171,14 +171,14 @@ void materials::universal_material::compile()
 			if (tex)
 				texture_count++;
 
-			TiledTexture::ptr tiled = std::dynamic_pointer_cast<TiledTexture>(*textures[i]->asset);
+			/*TiledTexture::ptr tiled = std::dynamic_pointer_cast<TiledTexture>(*textures[i]->asset);
 
 			if (tiled)
 			{
 				texture_count++;
 				texture_count++;
 				uav_count++;
-			}
+			}*/
 		}
 	}
 
@@ -209,14 +209,14 @@ void materials::universal_material::compile()
 
 				texture_table[i].place(texture_handles[i]);
 			}*/
-			TiledTexture::ptr tiled = std::dynamic_pointer_cast<TiledTexture>(*textures[i]->asset);
+			/*TiledTexture::ptr tiled = std::dynamic_pointer_cast<TiledTexture>(*textures[i]->asset);
 
 			if (tiled)
 			{
 				//  tiled->tiled_tex->texture_2d()->place_srv(texture_handles[texture_count++]);
 				//   tiled->residency_texture->texture_2d()->place_srv(texture_handles[texture_count++]);
 				//  tiled->visibility_texture->place_uav(uav_handles[uav_count++]);
-			}
+			}*/
 		}
 	}
 

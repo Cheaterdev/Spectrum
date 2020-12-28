@@ -11,16 +11,21 @@ VisibilityBuffer::VisibilityBuffer(ivec3 sizes) :sizes(sizes)
 
 	load_tiles_buffer = std::make_shared<Render::StructuredBuffer<uint4>>(sizes.x * sizes.y * sizes.z, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
-
+/*
 void VisibilityBuffer::wait_for_results()
 {
 	if (waiter.valid())
 		waiter.get();
 }
+*/
 
-void VisibilityBuffer::update(CommandList::ptr& list)
+
+std::future<visibility_update> VisibilityBuffer::update(CommandList::ptr& list)
 {
 
+
+	auto promise = std::make_shared<std::promise<visibility_update>>();
+	auto future = promise->get_future();
 	auto& compute = list->get_compute();
 	auto& copy = list->get_copy();
 
@@ -50,16 +55,23 @@ void VisibilityBuffer::update(CommandList::ptr& list)
 		});
 
 
-	waiter = copy.read_buffer(load_tiles_buffer.get(), 0, load_tiles_buffer->get_size(), [this, info](const char* data, UINT64 size)
+	  copy.read_buffer(load_tiles_buffer.get(), 0, load_tiles_buffer->get_size(), [this, info, promise](const char* data, UINT64 size)
 		{
-
 			PROFILE(L"Read Tiles");
 			const uint4* tiles = reinterpret_cast<const uint4*>(data);
+
+			visibility_update update;
+
 			for (int i = 0; i < info->size; i++)
-				process_tile_readback(tiles[i], 0);
+				update.tiles_to_load.emplace_back(tiles[i]);
+
+			promise->set_value(update);
 		});
 
+
 	list->clear_uav(buffer, buffer->texture_3d()->get_static_uav());
+
+	return future;
 }
 
 void VisibilityBufferUniversal::process_tile_readback(ivec3 pos, char level)

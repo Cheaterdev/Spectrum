@@ -158,12 +158,12 @@ public:
 		return res.normalize();
 	}
 
-	typename	T::Format max_element()
+	typename T::Format max_element()
 	{
 		return *std::max_element(values.begin(), values.end());
 	}
 
-	typename	T::Format sum()
+	typename T::Format sum()
 	{
 		return std::accumulate(values.begin(), values.end(), 0);
 	}
@@ -189,6 +189,50 @@ public:
 
 		return result;
 	}
+
+	template<typename T>
+	auto operator>(const Vector<T>& v2) const
+	{
+		Vector<typename T::CONSTUCTIBLE_TYPE> result;
+
+		for (int i = 0; i < N; ++i)
+			result[i] = values[i]>v2[i];
+
+		return result;
+	}
+
+	template<typename T>
+	auto operator<(const Vector<T>& v2) const {
+		Vector<typename T::CONSTUCTIBLE_TYPE> result;
+
+		for (int i = 0; i < N; ++i)
+			result[i] = values[i] < v2[i];
+
+		return result;
+	}
+
+
+	template<typename T>
+	auto operator>=(const Vector<T>& v2) const
+	{
+		Vector<typename T::CONSTUCTIBLE_TYPE> result;
+
+		for (int i = 0; i < N; ++i)
+			result[i] = values[i] >= v2[i];
+
+		return result;
+	}
+
+	template<typename T>
+	auto operator<=(const Vector<T>& v2) const {
+		Vector<typename T::CONSTUCTIBLE_TYPE> result;
+
+		for (int i = 0; i < N; ++i)
+			result[i] = values[i] <= v2[i];
+
+		return result;
+	}
+
 
 	template<typename T>
 	static	auto abs(const Vector<T>& v1)
@@ -312,6 +356,7 @@ T lerp(T& p0, T& p1, float t)
 	return T((1 - t) * p0 + t * p1);
 }
 
+
 // Spherical Linear intERPolation
 template <typename T>
 T slerp(T& p0, T& p1, float t)
@@ -336,7 +381,6 @@ T slerp(T& p0, T& p1, float t)
 		return r;
 	}
 }
-
 
 
 
@@ -630,6 +674,28 @@ namespace math
 	sizer convert(const rect& b);
 	rect convert(const sizer& b);
 
+
+	template <typename T>
+	bool any(const Vector<T>& v)
+	{
+		for (auto& e : v.values)
+			if (e > 0)
+				return true;
+
+		return false;
+	}
+
+
+	template <typename T>
+	bool all(const Vector<T>& v)
+	{
+		for (auto& e : v.values)
+			if (e == 0)
+				return false;
+
+		return true;
+	}
+
 }
 
 
@@ -643,14 +709,19 @@ requires (T a) {
 template<class V, class T>
 class grid
 {
-	V size;
+	V grid_size;
 	V scalers;
 	std::vector<T> data;
 
 public:
+
+	const V& size() const
+	{
+		return grid_size;
+	}
 	void resize(V size, T v = T())
 	{
-		this->size = size;
+		grid_size = size;
 
 		size_t sum = 1;
 		for (int i = 0; i < V::N; ++i)
@@ -667,8 +738,18 @@ public:
 		std::fill(data.begin(), data.end(), v);
 	}
 
-	T& operator[](const V& i)
+	decltype(auto) operator[](const V& i)
 	{
 		return data[V::dot(i, scalers)];
+	}
+
+	auto begin()
+	{
+		return data.begin();
+	}
+
+	auto end()
+	{
+		return data.end();
 	}
 };

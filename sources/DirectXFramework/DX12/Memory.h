@@ -22,13 +22,6 @@ namespace DX12
 		size_t heap_size = 0;
 		using ptr = std::shared_ptr<ResourceHeap>;
 
-		ResourceHeap(ResourceHeap& other) = default;
-
-		ResourceHeap(HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
-		{
-
-		}
-
 		ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
 		{
 			init(size);
@@ -54,13 +47,12 @@ namespace DX12
 	struct ResourceHandle
 	{
 		ResourceHandle() = default;
-		ResourceHandle(const CommonAllocator::Handle& handle, HeapAllocator* owner):handle(handle), owner(owner)
+		ResourceHandle(const CommonAllocator::Handle& handle, HeapAllocator* owner, ResourceHeap::ptr heap):handle(handle), owner(owner), heap(heap)
 		{
-			heap = static_cast<ResourceHeap*>(static_cast<ResourceHeapPage*>(handle.get_owner()));
 			offset = handle.get_offset();
 		}
 
-		ResourceHeap* get_heap() const
+		ResourceHeap::ptr get_heap() const
 		{
 			return heap;
 		}
@@ -97,7 +89,7 @@ namespace DX12
 	
 		HeapAllocator* owner;
 
-		ResourceHeap* heap;
+		ResourceHeap::ptr heap;
 		size_t offset;
 
 	};
@@ -142,13 +134,13 @@ namespace DX12
 
 				if (handle)
 				{
-					return { *handle, this };
+					return { *handle, this, heap };
 				}
 			}
 
 			auto heap = AllocateHeap(size);
 			auto handle = heap->TryAllocate(size, alignment);
-			return { *handle,this };
+			return { *handle,this, heap };
 
 		}
 
@@ -169,9 +161,18 @@ namespace DX12
 
 	};
 
+	struct ResourceAllocationInfo
+	{
+		size_t size;
+		size_t alignment;
+		D3D12_HEAP_FLAGS flags;
+	};
+
 	struct TileHeapPosition
 	{
-		ResourceHeap* heap = nullptr;
+
+		ResourceHandle handle;
+		ResourceHeap::ptr heap;
 		UINT offset;
 	};
 	enum class TileState : int
@@ -193,11 +194,18 @@ namespace DX12
 	struct update_tiling_info
 	{
 		std::map<ResourceHeap*, std::vector<ResourceTile>> tiles;
-		Resource* resource;
+		Resource* resource = nullptr;
+
+		Resource* source = nullptr;
+		ivec3 pos;
+		ivec3 source_pos;
+		ivec3 size;
+		uint source_subres;
+		uint target_subres;
 
 		void add_tile(ResourceTile tile)
 		{
-			tiles[tile.heap_position.heap].push_back(tile);
+			tiles[tile.heap_position.heap.get()].push_back(tile);
 		}
 	};
 
@@ -245,6 +253,7 @@ namespace DX12
 			result.offset = handle.get_offset() / (64 * 1024);
 			result.heap = handle.get_heap();
 
+			result.handle = handle;
 			return result;
 		}
 

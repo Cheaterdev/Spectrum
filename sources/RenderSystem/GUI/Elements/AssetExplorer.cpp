@@ -296,8 +296,8 @@ namespace GUI
                     {
 							auto files = file_open("Choose your destiny", "", "png|*.png|" "jpg|*.jpg|" "all|*.*|"   "|");
 
-							if (!files.empty())
-                            (new TiledTexture(files[0]))->try_register();
+							//if (!files.empty())
+                            //(new TiledTexture(files[0]))->try_register();
                     });
                 };
                 menu->add_item("Import asset")->on_click = [this](menu_list_element::ptr e)

@@ -6,30 +6,211 @@ namespace DX12 {
 	{
 		size_t begin = Math::AlignDown(offset, 64 * 1024) / (64 * 1024);
 		size_t end = Math::AlignUp(offset + size, 64 * 1024) / (64 * 1024);
-		map_buffer_range(begin, end);
+		load_tiles(nullptr, { begin,0,0 }, { end,0,0 });
 	}
 
-	void  TiledResourceManager::map_buffer_range(size_t from, size_t to)
+	void TiledResourceManager::load_tile(update_tiling_info& target, ivec3 pos, uint subres, bool recursive)
 	{
-		assert(tiles.size() == 1);
+		auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
+		auto& tile = tiles[subres][pos];
+
+		if (!tile.heap_position.heap)
+		{
+			tile.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, HeapType::DEFAULT);
+			target.add_tile(tile);
+			on_load(ivec4(pos,subres));
+			if (recursive && subres != tiles.size() - 1)
+			{
+				load_tile(target, pos / 2, subres + 1, recursive);
+			}
+		}
+	}
+
+	void  TiledResourceManager::zero_tile(update_tiling_info& target, ivec3 pos, uint subres)
+	{
+		auto& tile = tiles[subres][pos];
+
+		if (tile.heap_position.heap)
+		{
+			tile.heap_position.handle.Free();
+		
+			tile.heap_position.heap = nullptr;
+			target.add_tile(tile);
+		
+			on_zero(ivec4(pos, subres));
+
+
+			if (/*recursive && */subres != tiles.size() - 1)
+			{
+				uint3 parent_pos = pos / 2;
+
+				uint3 my_pos = parent_pos * 2;
+
+				auto is_mapped = [&](ivec3 pos) {
+				
+					if (math::all(pos > ivec3(0,0,0)) && math::all(pos < tiles[subres].size()))
+					{
+						return !!tiles[subres][pos].heap_position.heap;
+					}
+
+					return false;
+				};
+
+				bool can_unmap = true;
+
+				for (int x = 0; x < 2; x++)
+					for (int y = 0; y < 2; y++)
+						for (int z = 0; z < 2; z++)
+							can_unmap = can_unmap && !is_mapped(my_pos + ivec3(x,y,z));
+
+				if (can_unmap)
+				{
+					zero_tile(target, parent_pos, subres + 1);
+				}
+
+			}
+		}
+	}
+
+	void TiledResourceManager::load_tiles_internal(update_tiling_info& target, ivec3 from, ivec3 to, uint subres, bool recursive)
+	{
+		for (uint x = from.x; x <= to.x; x++)
+			for (uint y = from.y; y <= to.y; y++)
+				for (uint z = from.z; z <= to.z; z++)
+				{
+					load_tile(target, { x,y,z }, subres, recursive);
+				}
+	}
+
+	void TiledResourceManager::load_tiles(CommandList* list, ivec3 from, ivec3 to, uint subres)
+	{
+
+		update_tiling_info info;
+		info.resource = static_cast<Resource*>(this);
+		load_tiles_internal(info, from, to, subres, true);
+		// TODO: make list
+		if (list)
+		{
+			list->update_tilings(std::move(info));
+		}
+		else
+			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+	}
+
+	void TiledResourceManager::zero_tiles(CommandList* list, ivec3 from, ivec3 to)
+	{
+
 		update_tiling_info info;
 		info.resource = static_cast<Resource*>(this);
 
-		for (size_t i = from; i < to; i++)
-		{
-			auto& tile = tiles[0][{i, 0, 0}];
 
-			if (!tile.heap_position.heap)
-			{
-				tile.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, HeapType::DEFAULT);
-				info.add_tile(tile);
-			}
-		}
+		for (uint x = from.x; x <= to.x; x++)
+			for (uint y = from.y; y <= to.y; y++)
+				for (uint z = from.z; z <= to.z; z++)
+				{
+					zero_tile(info, {x,y,z}, 0);
+				}
 
 		// TODO: make list
-		Render::Device::get().get_queue(Render::CommandListType::DIRECT)->update_tile_mappings(info);
+		if (list)
+		{
+			list->update_tilings(std::move(info));
+		}
+		else
+			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
+
+	void TiledResourceManager::load_tiles(CommandList* list, std::list<ivec3> &tiles, uint subres, bool recursive)
+	{
+		update_tiling_info info;
+		info.resource = static_cast<Resource*>(this);
+
+		for (auto t : tiles)
+			load_tile(info, t, subres, recursive);
+
+
+		// TODO: make list
+		if (list)
+		{
+			list->update_tilings(std::move(info));
+		}
+		else
+			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+	}
+	void TiledResourceManager::zero_tiles(CommandList* list, std::list<ivec3> &tiles_to_remove)
+	{
+		update_tiling_info info;
+		info.resource = static_cast<Resource*>(this);
+
+
+			for(auto t: tiles_to_remove)
+				{
+					zero_tile(info, t, 0);
+				}
+
+		// TODO: make list
+		if (list)
+		{
+			list->update_tilings(std::move(info));
+		}
+		else
+			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+
+	}
+
+
+
+	void TiledResourceManager::zero_tiles(CommandList& list)
+	{
+		update_tiling_info info;
+		info.resource = static_cast<Resource*>(this);
+		for (int i = 0; i < tiles.size(); i++)
+		{
+			ivec3 size = tiles[i].size();
+
+			for (uint x = 0; x < tiles[i].size().x; x++)
+				for (uint y = 0; y < tiles[i].size().y; y++)
+					for (uint z = 0; z < tiles[i].size().z; z++)
+					{
+						zero_tile(info, { x, y, z }, 0);
+					}
+		}
+
+		list.update_tilings(std::move(info));
+	}
+
+
+	void TiledResourceManager::copy_mappings(CommandList& list, ivec3 target_pos, TiledResourceManager* source, ivec3 source_pos, ivec3 size)
+	{
+		update_tiling_info info;
+
+		info.resource = static_cast<Resource*>(this);
+
+		info.source = static_cast<Resource*>(source);
+		info.source_pos = source_pos;
+		info.pos = target_pos;
+		info.size = size;
+		list.update_tilings(std::move(info));
+	}
+
+	void TiledResourceManager::map_tile(update_tiling_info& info, ivec3 pos, TileHeapPosition heap_pos)
+	{
+		auto& tile = tiles[0][pos];
+
+		tile.heap_position = heap_pos;
+
+		info.add_tile(tile);
+	}
+
+	ivec3 TiledResourceManager::get_tiles_count(int mip_level)
+	{
+		return tiles[mip_level].size();
+	}
+	ivec3 TiledResourceManager::get_tile_shape()
+	{
+		return tile_shape;
+	}
 	void TiledResourceManager::init_tilings()
 	{
 		UINT num_tiles = 1;
@@ -39,20 +220,50 @@ namespace DX12 {
 		//  UINT first_sub_res;
 		D3D12_SUBRESOURCE_TILING tilings[20];
 
+		auto desc = static_cast<Resource*>(this)->get_desc();
+
 		Device::get().get_native_device()->GetResourceTiling(static_cast<Resource*>(this)->get_native().Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 
-		if (num_tiles > 0 && num_sub_res > 0)
+		if (num_tiles > 0)
 		{
-			tiles.resize(num_sub_res);
-			for (UINT i = 0; i < num_sub_res; i++)
-			{
-				tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
+			this->tile_shape = { tile_shape.WidthInTexels,tile_shape.HeightInTexels,tile_shape.DepthInTexels };
 
-				for (int x = 0; x < tilings[i].WidthInTiles; x++)
-					for (int y = 0; y < tilings[i].HeightInTiles; y++)
-						for (int z = 0; z < tilings[i].DepthInTiles; z++)
-							tiles[i][{x, y, z}].pos = { x,y,z };
+			if (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
+			{
+				tiles.resize(1);
+				tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
+				for (uint x = 0; x < tiles[0].size().x; x++)
+							tiles[0][{x, 0, 0}].pos = { x,0,0 };
+
+				gpu_tiles.resize(1);
+				gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
+				for (uint x = 0; x < gpu_tiles[0].size().x; x++)
+					gpu_tiles[0][{x, 0, 0}].pos = { x,0,0 };
+
 			}
+			else
+			{
+				tiles.resize(mip_info.NumStandardMips);
+				gpu_tiles.resize(mip_info.NumStandardMips);
+				for (UINT i = 0; i < mip_info.NumStandardMips; i++)
+				{
+					tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
+					gpu_tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
+
+					for (uint x = 0; x < tiles[i].size().x; x++)
+						for (uint y = 0; y < tiles[i].size().y; y++)
+							for (uint z = 0; z < tiles[i].size().z; z++)
+
+							{
+								tiles[i][{x, y, z}].pos = { x,y,z };
+								tiles[i][{x, y, z}].subresource = i;
+
+								gpu_tiles[i][{x, y, z}].pos = { x,y,z };
+								gpu_tiles[i][{x, y, z}].subresource = i;;
+							}
+				}
+			}
+			
 		}
 	}
 }

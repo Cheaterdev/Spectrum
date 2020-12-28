@@ -1776,8 +1776,3 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	SymCleanup(process);
 	return result_code;
 }
-
-inline void Texture3DTiled::remove_tile(ivec3 pos, int level)
-{
-	remove_tile(get_tile(level, pos));
-}

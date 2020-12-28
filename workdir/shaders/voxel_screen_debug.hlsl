@@ -23,7 +23,7 @@ static const float3 voxel_size = voxel_info.GetSize().xyz;
 
 float4 get_voxel(float3 pos, float level)
 {
-	float4 color =  volume.SampleLevel(linearSampler, pos,level);
+	float4 color =  volume.SampleLevel(linearSampler, pos,0);
 //color.rgb *= 1 + level / 2;
 //color.w *= 2;
 if (color.w > 0) color /= color.w;
@@ -92,7 +92,7 @@ float4 Debug(quad_output i) :SV_Target0
 	float3 pos = depth_to_wpos(0.5, i.tc, camera.GetInvViewProj());
 	float3 v = normalize(pos - camera.GetPosition());
 
-	float4 result = trace_screen(camera.GetPosition(), v, 0.005);
+	float4 result = trace_screen(camera.GetPosition(), v, 0.0005);
 	result *= result.w;
 	result.w = 1;
 	return result;

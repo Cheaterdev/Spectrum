@@ -128,73 +128,39 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 		});
 
 
+
 	{
 		CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8G8B8A8_UNORM, 512, 512, 512, 1, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
 
-		tiled_volume_albedo.reset(new Texture3DTiledDynamic(desc));
-		tiled_volume_normal.reset(new Texture3DTiledDynamic(desc));
-
-		tiled_volume_albedo_static.reset(new Texture3DTiledDynamic(desc));
-		tiled_volume_normal_static.reset(new Texture3DTiledDynamic(desc));
+		albedo.set(desc);
+		normal.set(desc);
 
 		desc.MipLevels = 6;
 		desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
-		tiled_volume_lighted.reset(new Texture3DTiledDynamic(desc));
+		tex_lighting.set(desc);
 
-		lighed_to_albedo_coeff = tiled_volume_lighted->get_tiles_count() / tiled_volume_albedo->get_tiles_count();
-		dynamic_generator = TileDynamicGenerator(tiled_volume_lighted->get_tiles_count());
-		dynamic_generator_voxelizing = TileDynamicGenerator(tiled_volume_albedo->get_tiles_count());
-		visibility = tiled_volume_lighted->create_visibility();
+		lighed_to_albedo_coeff = tex_lighting.tex_result->get_tiles_count() / albedo.tex_result->get_tiles_count();
+		dynamic_generator_lighted = TileDynamicGenerator(tex_lighting.tex_result->get_tiles_count());
+		dynamic_generator_voxelizing = TileDynamicGenerator(albedo.tex_result->get_tiles_count());
+		visibility = std::make_shared<VisibilityBufferUniversal>(tex_lighting.tex_result->get_tiles_count());
 
-		tiled_volume_lighted->on_tile_load = [this](Tile::ptr& tile)
+		tex_lighting.tex_result->on_load = [this](ivec4 pos)
 		{
-
-			if (gpu_tiles_buffer[tile->mip_level])
+			if (gpu_tiles_buffer[pos.w])
 			{
-				gpu_tiles_buffer[tile->mip_level]->insert(tile->position);
+				gpu_tiles_buffer[pos.w]->insert(pos);
 			}
 
-			tiled_volume_lighted->create_tile(tile->position / 2, tile->mip_level + 1);
 		};
-		tiled_volume_lighted->on_tile_remove = [this](Tile::ptr& tile)
+
+		tex_lighting.tex_result->on_zero = [this](ivec4 pos)
 		{
-
-			if (gpu_tiles_buffer[tile->mip_level])
+			if (gpu_tiles_buffer[pos.w])
 			{
-				gpu_tiles_buffer[tile->mip_level]->erase(tile->position);
-			}
-
-			//	tiled_volume_lighted->create_tile(tile->position / 2, tile->mip_level + 1);
-		};
-
-		visibility->on_process = [this](ivec3 pos, int mip) {
-
-			if (mip == 0)
-			{
-
-				auto tile1 = tiled_volume_albedo->create_static_tile(pos / lighed_to_albedo_coeff, mip);
-				auto tile2 = tiled_volume_normal->create_static_tile(pos / lighed_to_albedo_coeff, mip);
-				auto tile3 = tiled_volume_lighted->create_static_tile(pos, mip);
-				//	tile->last_visible = std::chrono::system_clock::now().time_since_epoch().count();
-			}
-			else
-			{
-				/*	auto &tile = tiled_volume_lighted->get_tile(0,pos);
-				if (tile&&	tile->last_visible <std::chrono::system_clock::now().time_since_epoch().count()-5000)
-				{
-				remove_static_tiles(tile->position);
-				}
-				*/
+				gpu_tiles_buffer[pos.w]->erase(pos);
 			}
 		};
-
-
-		//	tiled_volume_lighted->load_all();
-
-
-		volume_albedo = tiled_volume_albedo->texture;
-		volume_normal = tiled_volume_normal->texture;
-		volume_lighted = tiled_volume_lighted->texture;
+	
 
 		gpu_tiles_buffer.resize(desc.MipLevels);
 
@@ -202,9 +168,9 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 		gpu_tiles_buffer[1].reset(new GPUTilesBuffer);
 		gpu_tiles_buffer[4].reset(new GPUTilesBuffer);
 
-		gpu_tiles_buffer[0]->set_size(tiled_volume_lighted->get_tiles_count());
-		gpu_tiles_buffer[1]->set_size(tiled_volume_lighted->get_tiles_count(1));
-		gpu_tiles_buffer[4]->set_size(tiled_volume_lighted->get_tiles_count(4));
+		gpu_tiles_buffer[0]->set_size(tex_lighting.tex_result->get_tiles_count());
+		gpu_tiles_buffer[1]->set_size(tex_lighting.tex_result->get_tiles_count(1));
+		gpu_tiles_buffer[4]->set_size(tex_lighting.tex_result->get_tiles_count(4));
 
 	}
 
@@ -225,33 +191,19 @@ void VoxelGI::init_states()
 
 void VoxelGI::start_new(Render::CommandList& list)
 {
-	//Log::get() << 1 << Log::endl;
 
 	all_scene_regen_counter = 2;
-	tiled_volume_lighted->remove_all(list);
+	tex_lighting.zero_tiles(list);
 
-	//	Log::get() << 2 << Log::endl;
+	albedo.zero_tiles(list);
+	normal.zero_tiles(list);
 
-	tiled_volume_normal_static->remove_all(list);
-	tiled_volume_albedo_static->remove_all(list);
-	//Log::get() <<3 << Log::endl;
 
-	tiled_volume_normal->remove_all(list);
-	tiled_volume_albedo->remove_all(list);
-	//	Log::get() << 4 << Log::endl;
-
-	dynamic_generator.remove_all();
+	dynamic_generator_lighted.remove_all();
 	dynamic_generator_voxelizing.remove_all();
-	//	Log::get() << 5 << Log::endl;
 
-	for (auto&& b : gpu_tiles_buffer)
-		if (b)b->clear();
-//	tiled_volume_lighted->load_all();
-	//	Log::get() << 6 << Log::endl;
-
-	//tiled_volume_albedo->load_all();
-
-	//	tiled_volume_albedo->test();
+	//for (auto&& b : gpu_tiles_buffer)
+	//	if (b)b->clear();
 }
 
 
@@ -272,11 +224,26 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 
 	if (all_scene_regen_counter > 0)
 	{
-		visibility->wait_for_results();
+		if (vis_update.valid())
+		{
+			auto updates = vis_update.get();
+
+
+			for (auto& pos : updates.tiles_to_load)
+			{
+				ivec3 mesh_pos = pos / lighed_to_albedo_coeff;
+				albedo.tex_static->load_tiles(&list, mesh_pos, mesh_pos);
+				normal.tex_static->load_tiles(&list, mesh_pos, mesh_pos);
+		
+			}
+
+			tex_lighting.load_static(updates.tiles_to_load);
+		}
 	}
+
 	prev = cur;
 	if (!all_scene_regen_counter) {
-		dynamic_generator.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
+		dynamic_generator_lighted.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
 		dynamic_generator_voxelizing.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
 
 		scene->iterate_meshes(MESH_TYPE::DYNAMIC, [this](scene_object::ptr obj) {
@@ -290,144 +257,87 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 					auto min = elem.primitive_global->get_min();
 					auto max = elem.primitive_global->get_max();
 
-					dynamic_generator.add(min, max);
+					dynamic_generator_lighted.add(min, max);
 					dynamic_generator_voxelizing.add(min, max);
 				}
 			}
 
 			}
 		);
-		dynamic_generator.end();
+		dynamic_generator_lighted.end();
 		dynamic_generator_voxelizing.end();
 	}
 
-	for (auto& e : dynamic_generator.tiles_to_load)
-	{
 
-		auto pos = dynamic_generator.get_pos(e);
+	albedo.tex_dynamic->load_tiles(&list, dynamic_generator_voxelizing.tiles_to_load);
+	normal.tex_dynamic->load_tiles(&list, dynamic_generator_voxelizing.tiles_to_load);
 
-		auto& tile = tiled_volume_lighted->get_tile(0, pos);
+	albedo.tex_dynamic->zero_tiles(&list, dynamic_generator_voxelizing.tiles_to_remove);
+	normal.tex_dynamic->zero_tiles(&list, dynamic_generator_voxelizing.tiles_to_remove);
 
-		if (!tile || !tile->has_static)
-		{
-			auto tile2 = tiled_volume_lighted->create_tile(pos, 0);
-			tile2->has_dynamic = true;
-		}
-
-	}
-
-	for (auto& e : dynamic_generator_voxelizing.tiles_to_load)
-	{
-		auto pos = dynamic_generator_voxelizing.get_pos(e);
-		auto tile1 = tiled_volume_albedo->create_dynamic_tile(pos, 0);
-		auto tile2 = tiled_volume_normal->create_dynamic_tile(pos, 0);
-	}
-
-
-	for (auto& e : dynamic_generator.tiles_to_remove)
-	{
-		auto pos = dynamic_generator.get_pos(e);
-
-		auto& tile = tiled_volume_lighted->get_tile(0, pos);
-
-		if (!tile)
-			continue;
-		if (!tile->has_static)
-		{
-			tile->has_static = false;
-			tile->has_dynamic = false;
-			tiled_volume_lighted->remove_tile(tile);
-
-
-
-		}
-		else
-		{
-			tile->has_dynamic = false;
-		}
-
-		//	remove_dynamic_tiles(pos);
-
-	}
-
-	for (auto& e : dynamic_generator_voxelizing.tiles_to_remove)
-	{
-		auto pos = dynamic_generator_voxelizing.get_pos(e);
-		tiled_volume_albedo->remove_dynamic_tile(pos, 0);
-		tiled_volume_normal->remove_dynamic_tile(pos, 0);
-	}
+	tex_lighting.load_dynamic(dynamic_generator_lighted.tiles_to_load);
+	tex_lighting.zero_dynamic(dynamic_generator_lighted.tiles_to_remove);
 
 
 	PROFILE_GPU(L"voxelizing");
 
+	//list.clear_uav(tiled_volume_albedo_dynamic, tiled_volume_albedo_dynamic->texture_3d()->get_static_uav());
 
-
-
-	tiled_volume_albedo->clear_dynamic(graphics.get_base());
 	if (clear_scene && all_scene_regen_counter)
 	{
 		PROFILE_GPU(L"clear");
-		//if(all_scene_regen_counter)
-		//tiled_volume_albedo->clear_static(graphics);
-	//	dynamic_generator_voxelizing.remove_all();
-
+		list.clear_uav(albedo.tex_static, albedo.tex_static->texture_3d()->get_static_uav());
 	}
 	else
 	{
-
 		PROFILE_GPU(L"copy");
-		for (auto& e : dynamic_generator_voxelizing.dynamic_tiles)
-		{
-			auto pos = dynamic_generator_voxelizing.get_pos(e);
 
-			auto albedo_tile = tiled_volume_albedo->get_tile(0, pos);
-			auto normal_tile = tiled_volume_normal->get_tile(0, pos);
-			if (albedo_tile->page_backup)
-			{
-				auto from = albedo_tile->page_backup->get_tile_texture(albedo_tile->tile_offset_backup);
-				auto to = albedo_tile->page->get_tile_texture(albedo_tile->tile_offset);
+		//list.clear_uav(albedo.tex_dynamic, albedo.tex_dynamic->texture_3d()->get_static_uav()); //omg this too slow
 
-				context->list->get_copy().copy_texture(to, 0, from, 0);
-			}
-
-
-			if (normal_tile->page_backup)
-			{
-				auto from = normal_tile->page_backup->get_tile_texture(normal_tile->tile_offset_backup);
-				auto to = normal_tile->page->get_tile_texture(normal_tile->tile_offset);
-
-				context->list->get_copy().copy_texture(to, 0, from, 0);
-			}
-		}
-
+		context->list->get_copy().copy_texture(albedo.tex_dynamic, 0, albedo.tex_static, 0); // aaaa my fps!
+		context->list->get_copy().copy_texture(normal.tex_dynamic, 0, normal.tex_static, 0);	// optimize this! 
 
 	}
 
 
 	context->render_type = RENDER_TYPE::VOXEL;
-	context->render_mesh = MESH_TYPE::DYNAMIC;
+	
+	Slots::Voxelization voxelization;
+	voxelization.MapInfo().GetMin() = scene->voxel_info.GetMin();
+	voxelization.MapInfo().GetSize() = scene->voxel_info.GetSize();
+	voxelization.MapInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
+	voxelization.MapInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
+
+	voxelization.GetVisibility() = visibility->buffer->create_view<Render::TextureView>(*list.frame_resources).rwTexture3D;
+
+
 	if (all_scene_regen_counter)
 	{
 		context->render_mesh = MESH_TYPE::STATIC;
+		voxelization.GetAlbedo() = albedo.tex_static->texture_3d()->rwTexture3D[0];
+		voxelization.GetNormals() = normal.tex_static->texture_3d()->rwTexture3D[0];
+	}
+	else
+	{
+		context->render_mesh = MESH_TYPE::DYNAMIC;
+
+		voxelization.GetAlbedo() = albedo.tex_dynamic->texture_3d()->rwTexture3D[0];
+		voxelization.GetNormals() = normal.tex_dynamic->texture_3d()->rwTexture3D[0];
 	}
 
+	albedo.flush(list);
+	normal.flush(list);
+	tex_lighting.flush(list);
 
+	context->voxelization_compiled = voxelization.compile(*list.frame_resources);
 	context->pipeline.rtv.rtv_formats.clear();
 	context->pipeline.rtv.enable_depth = false;
 	context->pipeline.rtv.enable_depth_write = false;
 	context->pipeline.rtv.ds_format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
 
-	graphics.set_viewport({ 0, 0, volume_albedo->get_size().xy });
-	graphics.set_scissor({ 0, 0, volume_albedo->get_size().xy });
+	graphics.set_viewport({ 0, 0,  albedo.tex_dynamic->get_size().xy });
+	graphics.set_scissor({ 0, 0,  albedo.tex_dynamic->get_size().xy });
 	graphics.set_rtv(0, Render::Handle(), Render::Handle());
-
-	{
-		PROFILE_GPU(L"tiled_update");
-		tiled_volume_albedo->update(list);
-		tiled_volume_normal->update(list);
-		tiled_volume_lighted->update(list);
-	}
-
 
 
 	{
@@ -439,8 +349,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 	if (all_scene_regen_counter)
 	{
 		PROFILE_GPU(L"visibility update");
-		visibility->update(context->list);
-
+		vis_update = visibility->update(context->list);
 	}
 
 	for (auto&& b : gpu_tiles_buffer)
@@ -483,7 +392,7 @@ void VoxelGI::debug(FrameGraph& graph)
 			auto gbuffer = data.gbuffer.actualize(_context);
 
 			context->current_time = 0;
-			//		context->sky_dir = lighting->lighting.pssm.get_position();
+			//		context->sky_dir = lighting->tex_lighting.pssm.get_position();
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
 			//	context->eye_context = vr_context;
@@ -617,7 +526,7 @@ void VoxelGI::screen(FrameGraph& graph)
 			{
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.MapGbuffer());
-				voxelScreen.GetVoxels() = volume_lighted->texture_3d()->texture3D;
+				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureÑube;
 				voxelScreen.set(graphics);
 			}
@@ -777,7 +686,7 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 			{
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.MapGbuffer());
-				voxelScreen.GetVoxels() = volume_lighted->texture_3d()->texture3D;
+				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureÑube;
 				voxelScreen.set(graphics);
 			}
@@ -875,6 +784,10 @@ void VoxelGI::voxelize(FrameGraph& graph)
 			auto scene = graph.scene;
 			auto renderer = graph.renderer;
 			context->begin();
+
+
+
+
 			voxelize(context, renderer);
 		});
 }
@@ -927,26 +840,29 @@ void VoxelGI::lighting(FrameGraph& graph)
 
 			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(!GetAsyncKeyState('G'))));
 
+			//todo: remove after size is indirect
+			list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d()->get_static_uav());
+
 			Slots::VoxelLighting ligthing;
 			{
 
-				ligthing.GetAlbedo() = volume_albedo->texture_3d()->texture3D;
-				ligthing.GetNormals() = volume_normal->texture_3d()->texture3D;
-				ligthing.GetOutput() = volume_lighted->texture_3d()->rwTexture3D[0];
+				ligthing.GetAlbedo() = albedo.tex_result->texture_3d()->texture3D;
+				ligthing.GetNormals() = normal.tex_result->texture_3d()->texture3D;
+				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d()->rwTexture3D[0];
 				ligthing.GetTex_cube() = sky_cubemap_filtered.textureÑube;
 				Render::ResourceViewDesc subres;
 				subres.type = Render::ResourceType::TEXTURE3D;
 
 				subres.Texture2D.ArraySize = 1;
 				subres.Texture2D.FirstArraySlice = 0;
-				subres.Texture2D.MipLevels = volume_lighted->get_desc().MipLevels - 1;
+				subres.Texture2D.MipLevels = tex_lighting.tex_result->get_desc().MipLevels - 1;
 				subres.Texture2D.MipSlice = 1;
 				subres.Texture2D.PlaneSlice = 0;
 
-				ligthing.GetLower() = volume_lighted->create_view<TextureView>(*graph.builder.current_frame, subres).texture3D;
+				ligthing.GetLower() = tex_lighting.tex_result->create_view<TextureView>(*graph.builder.current_frame, subres).texture3D;
 
 				ligthing.GetVisibility() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
-				ligthing.GetGroupCount() = tiled_volume_lighted->get_voxels_per_tile().x * tiled_volume_lighted->get_voxels_per_tile().y * tiled_volume_lighted->get_voxels_per_tile().z / (4 * 4 * 4);
+				ligthing.GetGroupCount() = tex_lighting.tex_result->get_tile_shape().x * tex_lighting.tex_result->get_tile_shape().y * tex_lighting.tex_result->get_tile_shape().z / (4 * 4 * 4);
 
 
 				auto pssm = ligthing.MapPssmGlobal();
@@ -963,7 +879,7 @@ void VoxelGI::lighting(FrameGraph& graph)
 			}
 			graph.scene->voxels_compiled.set(compute);
 
-
+			// make indirect as gpu_tiles_buffer->size is CPU multithread
 			compute.dispach(ivec3(gpu_tiles_buffer[0]->size() * ligthing.GetGroupCount(), 1, 1), ivec3(1, 1, 1));
 
 
@@ -993,7 +909,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 			MeshRenderContext::ptr context(new MeshRenderContext());
 
 			context->current_time = 0;
-			//		context->sky_dir = lighting->lighting.pssm.get_position();
+			//		context->sky_dir = lighting->tex_lighting.pssm.get_position();
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
 			//	context->eye_context = vr_context;
@@ -1020,22 +936,22 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 			graph.scene->voxels_compiled.set(compute);
 
 			Slots::VoxelMipMap mipmapping;
-			mipmapping.GetGroupCount() = tiled_volume_lighted->get_voxels_per_tile().x * tiled_volume_lighted->get_voxels_per_tile().y * tiled_volume_lighted->get_voxels_per_tile().z / (4 * 4 * 4);
+			mipmapping.GetGroupCount() = tex_lighting.tex_result->get_tile_shape().x * tex_lighting.tex_result->get_tile_shape().y * tex_lighting.tex_result->get_tile_shape().z / (4 * 4 * 4);
 
 
 
 
-			while (mip_count < volume_lighted->get_desc().MipLevels)
+			while (mip_count < tex_lighting.tex_result->get_desc().MipLevels)
 			{
 
 				if (!gpu_tiles_buffer[mip_count]) break;
-				unsigned int current_mips = std::min(3u, volume_lighted->get_desc().MipLevels - mip_count);
+				unsigned int current_mips = std::min(3u, tex_lighting.tex_result->get_desc().MipLevels - mip_count);
 				compute.set_pipeline(GetPSO<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(current_mips)));
 
-				mipmapping.GetSrcMip() = volume_lighted->texture_3d()->texture3DMips[mip_count - 1];
+				mipmapping.GetSrcMip() = tex_lighting.tex_result->texture_3d()->texture3DMips[mip_count - 1];
 
 				for (unsigned int i = 0; i < current_mips; i++)
-					mipmapping.GetOutMips()[i] = volume_lighted->texture_3d()->rwTexture3D[mip_count + i];
+					mipmapping.GetOutMips()[i] = tex_lighting.tex_result->texture_3d()->rwTexture3D[mip_count + i];
 
 				mipmapping.GetVisibility() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
 				mipmapping.set(compute);
@@ -1050,41 +966,28 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 void VoxelGI::generate(FrameGraph& graph)
 {
 
-	graph.builder.pass_texture("voxel_albedo", volume_albedo);
-	graph.builder.pass_texture("voxel_normal", volume_normal);
-	graph.builder.pass_texture("voxel_lighted", volume_lighted);
+	graph.builder.pass_texture("voxel_albedo", albedo.tex_result);
+	graph.builder.pass_texture("voxel_normal", normal.tex_result);
+	graph.builder.pass_texture("voxel_lighted", tex_lighting.tex_result);
 
 	Slots::VoxelInfo& voxel_info = scene->voxel_info;
 
-	voxel_info.GetMin() = scene->get_min() - float3(1, 1, 1);
-	voxel_info.GetSize() = scene->get_max() + float3(1, 1, 1) - scene->get_min();
+	//if (all_scene_regen_counter)
+	{
+		min = scene->get_min() - float3(1, 1, 1);
+		size = scene->get_max() + float3(1, 1, 1) - scene->get_min();
+	}
+
+	voxel_info.GetMin() = min;
+	voxel_info.GetSize() = size;
 	voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z = max(200.0f, voxel_info.GetSize().max_element());
 
-	voxel_info.GetVoxel_tiles_count() = tiled_volume_lighted->get_tiles_count(0);
-	voxel_info.GetVoxels_per_tile() = tiled_volume_lighted->get_voxels_per_tile();
+	voxel_info.GetVoxel_tiles_count() = tex_lighting.tex_result->get_tiles_count(0);
+	voxel_info.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
 
 	scene->voxels_compiled = scene->voxel_info.compile(*graph.builder.current_frame);
 
-
-
-	{
-		Slots::Voxelization voxelization;
-		voxelization.MapInfo().GetMin() = scene->voxel_info.GetMin();
-		voxelization.MapInfo().GetSize() = scene->voxel_info.GetSize();
-		voxelization.MapInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
-		voxelization.MapInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
-
-		voxelization.GetAlbedo() = volume_albedo->texture_3d()->rwTexture3D[0];
-		voxelization.GetNormals() = volume_normal->texture_3d()->rwTexture3D[0];
-		voxelization.GetVisibility() = visibility->buffer->create_view<Render::TextureView>(*graph.builder.current_frame).rwTexture3D;
-
-		scene->voxelization_compiled = voxelization.compile(*graph.builder.current_frame);
-	}
-
-
 	if (voxelize_scene) voxelize(graph);
-
-
 
 	light_counter = (light_counter + 1) % 5;
 

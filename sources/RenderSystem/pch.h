@@ -122,7 +122,7 @@ struct closesthit_identifier
 
 #include "TiledTextures/VisibilityBuffer.h"
 #include "TiledTextures/GPUTilesBuffer.h"
-#include "TiledTextures/Texture3DTiled.h"
+// #include "TiledTextures/Texture3DTiled.h"
 #include "TiledTextures/DynamicTileGenerator.h"
 
 

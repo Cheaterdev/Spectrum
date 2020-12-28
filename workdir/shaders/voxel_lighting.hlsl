@@ -242,7 +242,7 @@ uint3 index = get_index(groupThreadID, groupID);
 	float shadow = saturate(dot(normals, dir))* get_shadow(pos);
 	
 	
-	float3 lighting =   1*albedo.xyz * gi.xyz + albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
+	float3 lighting =   0*albedo.xyz * gi.xyz + albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
 //	output[index] = float4(albedo.xyz,albedo.w);
 	//lighting = traced_shadow.xxx	;
 	output[index] = float4(lighting,1);

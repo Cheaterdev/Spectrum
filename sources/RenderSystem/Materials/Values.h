@@ -727,12 +727,12 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
 
         FlowGraph::input::ptr i_tc;
         FlowGraph::output::ptr o_vec4, o_r, o_g, o_b, o_a;
-        TiledTexture::ref asset;
+     //   TiledTexture::ref asset;
         TiledTextureNode();
     public:
         using ptr = s_ptr<TiledTextureNode>;
 
-        TiledTextureNode(TiledTexture::ptr _Asset);
+    //    TiledTextureNode(TiledTexture::ptr _Asset);
         virtual ~TiledTextureNode();
         void operator()(MaterialContext* context) override;
         /* virtual bool test_start()
@@ -756,7 +756,7 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
         {
             ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
             ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
-            ar& NVP(asset);
+       //     ar& NVP(asset);
             ar& NVP(i_tc);
             ar& NVP(o_vec4);
             ar& NVP(o_r);
