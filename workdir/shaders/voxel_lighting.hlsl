@@ -24,21 +24,11 @@ static const Texture3D<float4> tex_normals = GetVoxelLighting().GetNormals();
 static const Texture3D<float4> tex_lower = GetVoxelLighting().GetLower();
 static const TextureCube<float4> tex_cube = GetVoxelLighting().GetTex_cube();
 
-static const StructuredBuffer<int3> voxel_visibility = GetVoxelLighting().GetVisibility();
-
-
 static const float3 voxel_min = voxel_info.GetMin().xyz;
 static const float3 voxel_size = voxel_info.GetSize().xyz;
-static const uint3  voxels_per_tile = voxel_info.GetVoxels_per_tile().xyz;
 
 static const float scaler = voxel_size / 256;
 
-
-
-static const uint group_count = GetVoxelLighting().GetGroupCount();
-//SamplerState BilinearClamp : register(s0);
-//SamplerComparisonState cmp_sampler: register(s1);
-//SamplerState linearClampSampler : register(s2);
 static const Camera light_cam = GetVoxelLighting().GetPssmGlobal().GetLight_camera()[0];
 static const float3 dir = -normalize(light_cam.GetDirection().xyz);
 #define SINGLE_SAMPLE
@@ -46,7 +36,7 @@ static const float3 dir = -normalize(light_cam.GetDirection().xyz);
 
 float get_shadow(float3 wpos)
 {
-	float4 pos_l = mul(light_cam.GetViewProj(), float4(wpos , 1));
+	float4 pos_l = mul(light_cam.GetViewProj(), float4(wpos, 1));
 	pos_l /= pos_l.w;
 	float2 light_tc = pos_l.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
 
@@ -54,64 +44,20 @@ float get_shadow(float3 wpos)
 	return shadow;
 }
 
-
-
-
-
 float4 get_sky(float3 dir, float level)
 {
-
-	//return 0;
 	level *= 256;
-	//return tex_cube.Sample(LinearSampler, float4(dir,6));
-	int l0 = level;
-	int l1 = l0 + 1;
-
-
-	return 1*tex_cube.SampleLevel(linearSampler, dir, 0);
-
-
+	return tex_cube.SampleLevel(linearSampler, dir, level);
 }
-//#define voxel_min float3(-150,-150,-150)
-//#define voxel_size float3(300,300,300)
 
 float4 get_voxel(float3 pos, float level)
 {
-return float4(1,1,1,1)*tex_lower.SampleLevel(linearClampSampler,pos,level);
+	return float4(1, 1, 1, 1) * tex_lower.SampleLevel(linearClampSampler, pos, level);
 }
 
 float get_shadow_voxel(float3 pos)
 {
-return tex_albedo.SampleLevel(linearClampSampler,pos,0).w>0;
-}
-
-float trace_shadow(float3 origin,float3 dir)
-{
- 
-	dir=normalize(dir);
-	 float3 samplePos = 0;
-    float accum = 0;
-    // the starting sample diameter
-    float minDiameter = 1.0 / 512;
-    float minVoxelDiameterInv = 1.0 / minDiameter;
-    // push out the starting point to avoid self-intersection
-    float startDist = (1) * minDiameter;
-   
-    float maxDist = 1;
-    float dist = startDist;
-
-    while (dist <= maxDist && accum < 1.0 && all(samplePos <= 1) && all(samplePos >= 0))
-    {
-
-        samplePos = origin + dir * dist;
-        float sampleValue = get_shadow_voxel(samplePos);
-	
-        float sampleWeight = (1 - accum);
-        accum += sampleValue * sampleWeight;
-        dist += minDiameter;
-    }
-
-		return accum;
+	return tex_albedo.SampleLevel(linearClampSampler, pos, 0).w > 0;
 }
 
 
@@ -123,39 +69,39 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 	float angle_coeff = saturate(max_angle / (angle + 0.01));
 
 	//angle = min(angle, max_angle);
- 
+
 	origin += dir / 128;
-		 float3 samplePos = 0;
-    float4 accum = 0;
-    // the starting sample diameter
-    float minDiameter = 1.0 / 128;
-    float minVoxelDiameterInv = 1.0 / minDiameter;
-    // push out the starting point to avoid self-intersection
+	float3 samplePos = 0;
+	float4 accum = 0;
+	// the starting sample diameter
+	float minDiameter = 1.0 / 128;
+	float minVoxelDiameterInv = 1.0 / minDiameter;
+	// push out the starting point to avoid self-intersection
   //  float startDist = (1) * minDiameter;
-   
-    float maxDist = 1;
-    float dist = minDiameter;
 
-    while (dist <= maxDist && accum.w < 1 && all(samplePos <= 1) && all(samplePos >= 0))
-    {
-	    float sampleDiameter = max(minDiameter, angle * dist);
-    
-       float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
-        samplePos = origin + dir * dist;
-        float4 sampleValue = get_voxel(samplePos, sampleLOD);
-	   float sampleWeight = (1 - accum.w);
-        accum += sampleValue * sampleWeight;
-        dist += sampleDiameter;
-    }
+	float maxDist = 1;
+	float dist = minDiameter;
 
-//	accum.xyz *= angle_coeff;
+	while (dist <= maxDist && accum.w < 1 && all(samplePos <= 1) && all(samplePos >= 0))
+	{
+		float sampleDiameter = max(minDiameter, angle * dist);
 
-	float4 sky = get_sky(dir,angle);
-  float sampleWeight = saturate(1 - accum.w);
-     accum += sky * pow(sampleWeight,1);
+		float sampleLOD = log2(sampleDiameter * minVoxelDiameterInv);
+		samplePos = origin + dir * dist;
+		float4 sampleValue = get_voxel(samplePos, sampleLOD);
+		float sampleWeight = (1 - accum.w);
+		accum += sampleValue * sampleWeight;
+		dist += sampleDiameter;
+	}
 
-		return accum;
-	
+	//	accum.xyz *= angle_coeff;
+
+	float4 sky = get_sky(dir, angle);
+	float sampleWeight = saturate(1 - accum.w);
+	accum += sky * pow(sampleWeight, 1);
+
+	return accum;
+
 
 
 }
@@ -172,8 +118,8 @@ float4 getGI(float3 Pos, float3 Normal)
 	float4 Color = 0;
 	float t = 1;
 	float k = 0;
-	float3 right = t*normalize(cross(Normal, float3(0, 1, 0.001)));
-	float3 tangent = t*normalize(cross(right, Normal));
+	float3 right = t * normalize(cross(Normal, float3(0, 1, 0.001)));
+	float3 tangent = t * normalize(cross(right, Normal));
 
 	Color += get_direction(Pos, Normal, normalize(Normal + right), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
 	Color += get_direction(Pos, Normal, normalize(Normal - right), k, a);//trace(Pos + k*normalize(Normal - right), normalize(Normal - right), a);
@@ -185,65 +131,44 @@ float4 getGI(float3 Pos, float3 Normal)
 	Color += get_direction(Pos, Normal, normalize(Normal - tangent + right), k, a);//trace(Pos + k*normalize(Normal - tangent + right), normalize(Normal - tangent + right), a);
 																				   //  Color /= 3.14f;
 																				   //Color *= getAO(Pos-0*Normal, Normal);
-	return  Color/8;
+	return  Color / 8;
 
 }
 
-uint3 get_index(uint3 dispatchID)
-{
-	uint tile_index = dispatchID.x / GetVoxelInfo().GetVoxels_per_tile().x;
-	uint3 tile_pos = voxel_visibility[tile_index] * GetVoxelInfo().GetVoxels_per_tile().xyz;
-
-	uint3 tile_local_pos = dispatchID - int3(tile_index * GetVoxelInfo().GetVoxels_per_tile().x,0,0);
-	uint3 index = tile_pos + tile_local_pos;
-	return index;
-}
 
 [numthreads(4, 4, 4)]
-void CS(    
+void CS(
 	uint3 groupID       : SV_GroupID,
-    uint3 dispatchID    : SV_DispatchThreadID,
-    uint3 groupThreadID : SV_GroupThreadID,
-    uint  groupIndex    : SV_GroupIndex)
+	uint3 dispatchID : SV_DispatchThreadID,
+	uint3 groupThreadID : SV_GroupThreadID,
+	uint  groupIndex : SV_GroupIndex)
 {
 
-uint3 index = get_index(dispatchID);
-	
-   float3 dims;
-   output.GetDimensions(dims.x, dims.y, dims.z);
-   
-	//if(any(index>dims)||any(index<0)) return;
-	
-	float4 albedo = tex_albedo[index];//SrcMip.SampleLevel(BilinearClamp,2*index/dims,0);
-	
-//	output[index] = albedo;
-	//return;
-	//output[index] = 1;
+	uint3 index = GetVoxelLighting().GetParams().get_voxel_pos(dispatchID);
 
-	//return;
-	if(albedo.w==0)
+	float3 dims;
+	output.GetDimensions(dims.x, dims.y, dims.z);
+
+	float4 albedo = tex_albedo[index];
+
+	if (albedo.w == 0)
 	{
 		output[index] = 0;
 		return;
 	}
-	
 
-	float3 normals = normalize(tex_normals[index].xyz*2-1);
-	
-	float m = max(max(abs(normals.x),abs(normals.y)),abs(normals.z));
+	float3 normals = normalize(tex_normals[index].xyz * 2 - 1);
+
+	float m = max(max(abs(normals.x), abs(normals.y)), abs(normals.z));
 #ifdef SECOND_BOUNCE
 	float4 gi = getGI((index + normals / m) / dims, normals);
 #else
 	float4 gi = 0;
 #endif
-	float3 pos = index*voxel_size/dims+voxel_min+ scaler*normals/m;
-	
-//	float traced_shadow = (1-trace_shadow((index+1*normals)/dims,dir));
-	float shadow = saturate(dot(normals, dir))* get_shadow(pos);
-	
-	
-	float3 lighting =   1*albedo.xyz * gi.xyz + albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
-//	output[index] = float4(albedo.xyz,albedo.w);
-	//lighting = traced_shadow.xxx	;
-	output[index] = float4(lighting,1);
+	float3 pos = index * voxel_size / dims + voxel_min + scaler * normals / m;
+
+	float shadow = saturate(dot(normals, dir)) * get_shadow(pos);
+	float3 lighting = 1 * albedo.xyz * gi.xyz + albedo.xyz * shadow;
+
+	output[index] = float4(lighting, 1);
 }

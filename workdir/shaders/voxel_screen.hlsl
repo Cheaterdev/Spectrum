@@ -58,7 +58,7 @@ return voxels.SampleLevel(linearSampler,pos,level).a;
 
 float3 PrefilterEnvMap(float Roughness, float3 R)
 {
-	return  tex_cube.SampleLevel(linearSampler, R, 0*Roughness * 5).rgb;
+	return  tex_cube.SampleLevel(linearSampler, R, Roughness * 3).rgb;
 }
 
 

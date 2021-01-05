@@ -1,4 +1,5 @@
 #pragma once
+#include "VoxelTilingParams.h"
 namespace Table 
 {
 	#pragma pack(push, 1)
@@ -6,21 +7,18 @@ namespace Table
 	{
 		struct CB
 		{
-			uint4 voxels_per_tile;
-			uint groupCount;
+			VoxelTilingParams::CB params;
 		} &cb;
 		struct SRV
 		{
-			Render::HLSL::StructuredBuffer<int3> visibility;
+			VoxelTilingParams::SRV params;
 		} &srv;
 		struct UAV
 		{
 			Render::HLSL::RWTexture3D<float4> Target;
 		} &uav;
-		uint4& GetVoxels_per_tile() { return cb.voxels_per_tile; }
 		Render::HLSL::RWTexture3D<float4>& GetTarget() { return uav.Target; }
-		Render::HLSL::StructuredBuffer<int3>& GetVisibility() { return srv.visibility; }
-		uint& GetGroupCount() { return cb.groupCount; }
+		VoxelTilingParams MapParams() { return VoxelTilingParams(cb.params,srv.params); }
 		VoxelZero(CB&cb,SRV&srv,UAV&uav) :cb(cb),srv(srv),uav(uav){}
 	};
 	#pragma pack(pop)

@@ -1,12 +1,13 @@
 #pragma once
+#include "VoxelTilingParams.h"
 struct VoxelMipMap_cb
 {
-	uint groupCount;
+	VoxelTilingParams_cb params;
 };
 struct VoxelMipMap_srv
 {
 	Texture3D<float4> SrcMip;
-	StructuredBuffer<int3> visibility;
+	VoxelTilingParams_srv params;
 };
 struct VoxelMipMap_uav
 {
@@ -19,8 +20,7 @@ struct VoxelMipMap
 	VoxelMipMap_uav uav;
 	RWTexture3D<float4> GetOutMips(int i) { return uav.OutMips[i]; }
 	Texture3D<float4> GetSrcMip() { return srv.SrcMip; }
-	StructuredBuffer<int3> GetVisibility() { return srv.visibility; }
-	uint GetGroupCount() { return cb.groupCount; }
+	VoxelTilingParams GetParams() { return CreateVoxelTilingParams(cb.params,srv.params); }
 
 };
  const VoxelMipMap CreateVoxelMipMap(VoxelMipMap_cb cb,VoxelMipMap_srv srv,VoxelMipMap_uav uav)

@@ -1,5 +1,6 @@
 #pragma once
 #include "PSSMDataGlobal.h"
+#include "VoxelTilingParams.h"
 namespace Table 
 {
 	#pragma pack(push, 1)
@@ -7,7 +8,7 @@ namespace Table
 	{
 		struct CB
 		{
-			uint groupCount;
+			VoxelTilingParams::CB params;
 		} &cb;
 		struct SRV
 		{
@@ -15,8 +16,8 @@ namespace Table
 			Render::HLSL::Texture3D<float4> normals;
 			Render::HLSL::Texture3D<float4> lower;
 			Render::HLSL::TextureCube<float4> tex_cube;
-			Render::HLSL::StructuredBuffer<int3> visibility;
 			PSSMDataGlobal::SRV pssmGlobal;
+			VoxelTilingParams::SRV params;
 		} &srv;
 		struct UAV
 		{
@@ -27,9 +28,8 @@ namespace Table
 		Render::HLSL::Texture3D<float4>& GetNormals() { return srv.normals; }
 		Render::HLSL::Texture3D<float4>& GetLower() { return srv.lower; }
 		Render::HLSL::TextureCube<float4>& GetTex_cube() { return srv.tex_cube; }
-		Render::HLSL::StructuredBuffer<int3>& GetVisibility() { return srv.visibility; }
-		uint& GetGroupCount() { return cb.groupCount; }
 		PSSMDataGlobal MapPssmGlobal() { return PSSMDataGlobal(srv.pssmGlobal); }
+		VoxelTilingParams MapParams() { return VoxelTilingParams(cb.params,srv.params); }
 		VoxelLighting(CB&cb,SRV&srv,UAV&uav) :cb(cb),srv(srv),uav(uav){}
 	};
 	#pragma pack(pop)

@@ -320,7 +320,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 			context->list->get_copy().copy_texture(albedo.tex_dynamic, pos, albedo.tex_static, pos, albedo.tex_result->get_tile_shape()); // aaaa my fps!
 			context->list->get_copy().copy_texture(normal.tex_dynamic, pos, normal.tex_static, pos, normal.tex_result->get_tile_shape());	// optimize this! 
 		}
-		else
+		else  // that's what i'm talking about
 		{
 			albedo_tiles->update(context->list);
 			compute.set_pipeline(GetPSO<PSOS::VoxelCopy>());
@@ -330,15 +330,15 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 
 				{
 					Slots::VoxelCopy utils;
-					utils.GetGroupCount() = albedo.tex_result->get_tile_shape().x * albedo.tex_result->get_tile_shape().y * albedo.tex_result->get_tile_shape().z / (4 * 4 * 4);
 					utils.GetTarget()[0] = albedo.tex_dynamic->texture_3d()->rwTexture3D[0];
 					utils.GetSource()[0] = albedo.tex_static->texture_3d()->texture3D;
 
 					utils.GetTarget()[1] = normal.tex_dynamic->texture_3d()->rwTexture3D[0];
 					utils.GetSource()[1] = normal.tex_static->texture_3d()->texture3D;
 
-					utils.GetVisibility() = albedo_tiles->buffer->structuredBuffer;
-					utils.GetVoxels_per_tile() = normal.tex_result->get_tile_shape();
+					auto params = utils.MapParams();
+					params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
+					params.GetVoxels_per_tile() = normal.tex_result->get_tile_shape();
 					utils.set(compute);
 				}
 
@@ -524,7 +524,7 @@ void VoxelGI::screen(FrameGraph& graph)
 
 		data.gi_static0 = builder.create_texture("gi_static0", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Static);
 		data.gi_static1 = builder.create_texture("gi_static1", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget | ResourceFlags::Static);
-		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered_diffuse", ResourceFlags::PixelRead);
+		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
 
 		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::ComputeRead);
 
@@ -914,9 +914,10 @@ void VoxelGI::lighting(FrameGraph& graph)
 
 				ligthing.GetLower() = tex_lighting.tex_result->create_view<TextureView>(*graph.builder.current_frame, subres).texture3D;
 
-				ligthing.GetVisibility() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
-				ligthing.GetGroupCount() = tex_lighting.tex_result->get_tile_shape().x * tex_lighting.tex_result->get_tile_shape().y * tex_lighting.tex_result->get_tile_shape().z / (4 * 4 * 4);
 
+				auto params = ligthing.MapParams();
+				params.GetTiles() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
+				params.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
 
 				auto pssm = ligthing.MapPssmGlobal();
 
@@ -1002,10 +1003,12 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 
 					{
 						Slots::VoxelZero utils;
-						utils.GetGroupCount() = tex_lighting.tex_result->get_tile_shape().x * tex_lighting.tex_result->get_tile_shape().y * tex_lighting.tex_result->get_tile_shape().z / (4 * 4 * 4);
 						utils.GetTarget() = tex_lighting.tex_result->texture_3d()->rwTexture3D[i];
-						utils.GetVisibility() = gpu_tiles_buffer[i]->buffer->structuredBuffer;
-						utils.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
+
+						auto params = utils.MapParams();
+						params.GetTiles() = gpu_tiles_buffer[i]->buffer->structuredBuffer;
+						params.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
+
 						utils.set(compute);
 					}
 
@@ -1032,7 +1035,6 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 					
 
 						Slots::VoxelMipMap mipmapping;
-						mipmapping.GetGroupCount() = tex_lighting.tex_result->get_tile_shape().x * tex_lighting.tex_result->get_tile_shape().y * tex_lighting.tex_result->get_tile_shape().z / (4 * 4 * 4);
 						mipmapping.GetSrcMip() = tex_lighting.tex_result->texture_3d()->texture3DMips[mip_count - 1];
 
 						for (unsigned int i = 0; i < current_mips; i++)
@@ -1040,7 +1042,11 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 							mipmapping.GetOutMips()[i] = tex_lighting.tex_result->texture_3d()->rwTexture3D[mip_count + i];
 							//	list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d()->rwTexture3D[mip_count + i], vec4(0, 0, 0, 0));
 						}
-						mipmapping.GetVisibility() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
+
+						auto params = mipmapping.MapParams();
+						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
+						params.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
+
 						mipmapping.set(compute);
 					}
 					PROFILE_GPU(L"exec");

@@ -1,8 +1,9 @@
 #pragma once
 #include "PSSMDataGlobal.h"
+#include "VoxelTilingParams.h"
 struct VoxelLighting_cb
 {
-	uint groupCount;
+	VoxelTilingParams_cb params;
 };
 struct VoxelLighting_srv
 {
@@ -10,8 +11,8 @@ struct VoxelLighting_srv
 	Texture3D<float4> normals;
 	Texture3D<float4> lower;
 	TextureCube<float4> tex_cube;
-	StructuredBuffer<int3> visibility;
 	PSSMDataGlobal_srv pssmGlobal;
+	VoxelTilingParams_srv params;
 };
 struct VoxelLighting_uav
 {
@@ -27,9 +28,8 @@ struct VoxelLighting
 	Texture3D<float4> GetNormals() { return srv.normals; }
 	Texture3D<float4> GetLower() { return srv.lower; }
 	TextureCube<float4> GetTex_cube() { return srv.tex_cube; }
-	StructuredBuffer<int3> GetVisibility() { return srv.visibility; }
-	uint GetGroupCount() { return cb.groupCount; }
 	PSSMDataGlobal GetPssmGlobal() { return CreatePSSMDataGlobal(srv.pssmGlobal); }
+	VoxelTilingParams GetParams() { return CreateVoxelTilingParams(cb.params,srv.params); }
 
 };
  const VoxelLighting CreateVoxelLighting(VoxelLighting_cb cb,VoxelLighting_srv srv,VoxelLighting_uav uav)

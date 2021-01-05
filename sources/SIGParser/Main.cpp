@@ -85,7 +85,7 @@ void generate_pass(my_stream& stream, Table& table, table_offsets& offsets, Slot
 	}
 }
 
-void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot, table_offsets offsets = table_offsets())
+void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot, table_offsets& offsets = table_offsets())
 {
 	std::string write_to = "result";
 

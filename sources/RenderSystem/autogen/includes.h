@@ -64,6 +64,7 @@
 #include "slots\FlowGraph.h"
 #include "tables\VSLine.h"
 #include "slots\LineRender.h"
+#include "tables\VoxelTilingParams.h"
 #include "slots\VoxelInfo.h"
 #include "slots\Voxelization.h"
 #include "slots\VoxelScreen.h"
