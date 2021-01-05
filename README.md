@@ -15,5 +15,5 @@ Features:
 - DXR
 - Sparse Voxel GI with "infinite" bounces
 
-
+![img](https://cheater.dev/Spectrum.png)
 https://cheater.dev
