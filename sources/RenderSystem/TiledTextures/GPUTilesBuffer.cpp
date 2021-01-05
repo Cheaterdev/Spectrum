@@ -1,9 +1,12 @@
 #include "pch.h"
 
-void GPUTilesBuffer::set_size(ivec3 size)
+void GPUTilesBuffer::set_size(ivec3 size, ivec3 shape)
 {
+	this->shape = shape;
+
 	tile_positions.resize(size, -1);
 	buffer.reset(new Render::StructuredBuffer<ivec3>(size.x * size.y * size.z));
+	dispatch_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
 
 void GPUTilesBuffer::clear()
@@ -46,6 +49,13 @@ void GPUTilesBuffer::update(Render::CommandList::ptr list)
 {
 	if (tiles_updated) {
 		buffer->set_data(list, 0, used_tiles);
+		DispatchArguments args;
+
+		args.ThreadGroupCountX = used_tiles.size() * shape.x/4;
+		args.ThreadGroupCountY = shape.y/4;
+		args.ThreadGroupCountZ = shape.z/4;
+
+		dispatch_buffer->set_data(list, args);
 	}
 	tiles_updated = false;
 }

@@ -19,9 +19,16 @@ namespace DX12 {
 			tile.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, HeapType::DEFAULT);
 			target.add_tile(tile);
 			on_load(ivec4(pos,subres));
-			if (recursive && subres != tiles.size() - 1)
+			if (recursive )
 			{
-				load_tile(target, pos / 2, subres + 1, recursive);
+				if (subres != tiles.size() - 1)
+				{
+					load_tile(target, pos / 2, subres + 1, recursive);
+				}
+				else
+				{
+					load_packed(target);
+				}
 			}
 		}
 	}
@@ -48,7 +55,7 @@ namespace DX12 {
 
 				auto is_mapped = [&](ivec3 pos) {
 				
-					if (math::all(pos > ivec3(0,0,0)) && math::all(pos < tiles[subres].size()))
+					if (math::all(pos >= ivec3(0,0,0)) && math::all(pos < tiles[subres].size()))
 					{
 						return !!tiles[subres][pos].heap_position.heap;
 					}
@@ -206,6 +213,7 @@ namespace DX12 {
 	ivec3 TiledResourceManager::get_tiles_count(int mip_level)
 	{
 		return tiles[mip_level].size();
+		
 	}
 	ivec3 TiledResourceManager::get_tile_shape()
 	{
@@ -223,9 +231,12 @@ namespace DX12 {
 		auto desc = static_cast<Resource*>(this)->get_desc();
 
 		Device::get().get_native_device()->GetResourceTiling(static_cast<Resource*>(this)->get_native().Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
-
+		packed_mip_count = mip_info.NumTilesForPackedMips;
+		packed_subresource_offset = mip_info.NumStandardMips;
+		unpacked_mip_count = mip_info.NumStandardMips;
 		if (num_tiles > 0)
 		{
+
 			this->tile_shape = { tile_shape.WidthInTexels,tile_shape.HeightInTexels,tile_shape.DepthInTexels };
 
 			if (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
@@ -245,6 +256,11 @@ namespace DX12 {
 			{
 				tiles.resize(mip_info.NumStandardMips);
 				gpu_tiles.resize(mip_info.NumStandardMips);
+
+				packed_tiles.pos = { 0,0,0 };
+				packed_tiles.subresource = mip_info.NumStandardMips;
+		
+
 				for (UINT i = 0; i < mip_info.NumStandardMips; i++)
 				{
 					tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
@@ -266,4 +282,38 @@ namespace DX12 {
 			
 		}
 	}
+
+
+	void TiledResourceManager::load_packed(CommandList& list)
+	{
+		if (packed_mip_count)
+		{
+			update_tiling_info info;
+			info.resource = static_cast<Resource*>(this);
+			auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
+
+			if (!packed_tiles.heap_position.heap)
+				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, HeapType::DEFAULT, packed_mip_count);
+
+			info.add_tile(packed_tiles);
+
+			list.update_tilings(std::move(info));
+		}
+	}
+
+	void TiledResourceManager::load_packed(update_tiling_info& info)
+	{
+
+		if (packed_mip_count)
+		{
+			auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
+
+			if (!packed_tiles.heap_position.heap)
+				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, HeapType::DEFAULT, packed_mip_count);
+
+			info.add_tile(packed_tiles);
+		}
+	}
 }
+
+

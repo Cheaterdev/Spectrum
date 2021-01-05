@@ -25,8 +25,8 @@ float4 get_voxel(float3 pos, float level)
 {
 	float4 color =  volume.SampleLevel(linearSampler, pos,0);
 //color.rgb *= 1 + level / 2;
-//color.w *= 2;
-if (color.w > 0) color /= color.w;
+//	color.w /= 10;
+//if (color.w > 0) color /= color.w;
 
 
 	color*= all(pos > 0) * all(pos < 1);

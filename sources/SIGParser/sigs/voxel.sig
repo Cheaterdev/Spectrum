@@ -68,6 +68,30 @@ struct VoxelMipMap
 }
 
 [Bind = DefaultLayout::Instance1]
+struct VoxelCopy
+{
+	uint4 voxels_per_tile;
+	RWTexture3D<float4> Target[2];
+	Texture3D<float4> Source[2];
+
+	StructuredBuffer<int3> visibility;
+	
+	uint groupCount;
+	
+}
+
+[Bind = DefaultLayout::Instance1]
+struct VoxelZero
+{
+	uint4 voxels_per_tile;
+	RWTexture3D<float4> Target;
+
+	StructuredBuffer<int3> visibility;
+	uint groupCount;
+
+}
+
+[Bind = DefaultLayout::Instance1]
 struct VoxelLighting
 {
 	
@@ -116,6 +140,25 @@ ComputePSO VoxelDownsample
 	[rename = COUNT]
 	[CS]
 	define Count = {1, 2, 3};
+}
+
+
+
+ComputePSO VoxelCopy
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = voxel_copy;
+}
+
+
+ComputePSO VoxelZero
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = voxel_zero;
 }
 
 ComputePSO VoxelVisibility

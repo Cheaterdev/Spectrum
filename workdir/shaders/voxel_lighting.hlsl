@@ -124,11 +124,11 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 	//angle = min(angle, max_angle);
  
-	origin += dir / 256;
+	origin += dir / 128;
 		 float3 samplePos = 0;
     float4 accum = 0;
     // the starting sample diameter
-    float minDiameter = 1.0 / 256;
+    float minDiameter = 1.0 / 128;
     float minVoxelDiameterInv = 1.0 / minDiameter;
     // push out the starting point to avoid self-intersection
   //  float startDist = (1) * minDiameter;
@@ -151,7 +151,7 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 //	accum.xyz *= angle_coeff;
 
 	float4 sky = get_sky(dir,angle);
-  float sampleWeight = saturate(1 - accum.w*4);
+  float sampleWeight = saturate(1 - accum.w);
      accum += sky * pow(sampleWeight,1);
 
 		return accum;
@@ -163,11 +163,11 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 float4 get_direction(float3 pos, float3 normal, float3 dir, float k, float a)
 {
 
-	return trace(pos, dir, normal, a) *pow(dot(normal, dir), 1);
+	return trace(pos, dir, normal, a);// *pow(dot(normal, dir), 1);
 }
 float4 getGI(float3 Pos, float3 Normal)
 {
-	float a = 0.5;
+	float a = 0.8;
 
 	float4 Color = 0;
 	float t = 1;
@@ -185,20 +185,20 @@ float4 getGI(float3 Pos, float3 Normal)
 	Color += get_direction(Pos, Normal, normalize(Normal - tangent + right), k, a);//trace(Pos + k*normalize(Normal - tangent + right), normalize(Normal - tangent + right), a);
 																				   //  Color /= 3.14f;
 																				   //Color *= getAO(Pos-0*Normal, Normal);
-	return  Color/3;
+	return  Color/8;
 
 }
 
-
-uint3 get_index( uint3 groupThreadID,	uint3 groupID   )
+uint3 get_index(uint3 dispatchID)
 {
-	 
-	uint3 tile_index = voxel_visibility[groupID.x/ group_count];
-	int tile_local_index = groupID.x% group_count;
-	uint3 index = tile_index*voxels_per_tile.xyz + groupThreadID + 4 * int3(tile_local_index % 8, (tile_local_index / 8) % 4, tile_local_index / (4 * 8));//groupID*4+groupThreadID;
-	return index;
+	uint tile_index = dispatchID.x / GetVoxelInfo().GetVoxels_per_tile().x;
+	uint3 tile_pos = voxel_visibility[tile_index] * GetVoxelInfo().GetVoxels_per_tile().xyz;
 
+	uint3 tile_local_pos = dispatchID - int3(tile_index * GetVoxelInfo().GetVoxels_per_tile().x,0,0);
+	uint3 index = tile_pos + tile_local_pos;
+	return index;
 }
+
 [numthreads(4, 4, 4)]
 void CS(    
 	uint3 groupID       : SV_GroupID,
@@ -207,7 +207,7 @@ void CS(
     uint  groupIndex    : SV_GroupIndex)
 {
 
-uint3 index = get_index(groupThreadID, groupID);
+uint3 index = get_index(dispatchID);
 	
    float3 dims;
    output.GetDimensions(dims.x, dims.y, dims.z);
@@ -242,7 +242,7 @@ uint3 index = get_index(groupThreadID, groupID);
 	float shadow = saturate(dot(normals, dir))* get_shadow(pos);
 	
 	
-	float3 lighting =   0*albedo.xyz * gi.xyz + albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
+	float3 lighting =   1*albedo.xyz * gi.xyz + albedo.xyz * shadow;//saturate(dot(normals,float3(0,1,0)));
 //	output[index] = float4(albedo.xyz,albedo.w);
 	//lighting = traced_shadow.xxx	;
 	output[index] = float4(lighting,1);

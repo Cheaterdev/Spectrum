@@ -199,7 +199,8 @@ private:
 	std::shared_ptr<GBufferDownsampler> downsampler;
 
 	VisibilityBufferUniversal::ptr visibility;
-
+	
+	IndirectCommand dispatch_command;
 
 	TileDynamicGenerator dynamic_generator_voxelizing;
 	TileDynamicGenerator dynamic_generator_lighted;
@@ -237,6 +238,7 @@ public:
 	ivec3 lighed_to_albedo_coeff;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;
 
+	GPUTilesBuffer::ptr albedo_tiles;
 
 	Texture3DMultiTiles albedo;
 	Texture3DMultiTiles normal;

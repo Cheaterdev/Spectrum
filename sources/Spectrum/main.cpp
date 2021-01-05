@@ -245,7 +245,7 @@ public:
 			{
 				float2 v = value;
 				run_on_ui([this, v]() {
-					float3 dir = { v.x,sqrt(1.001 - v.length_squared()),-v.y };
+					float3 dir = { 0.001 + v.x,sqrt(1.001 - v.length_squared()),-v.y };
 
 					pssm.set_position(dir);
 					//lighting->lighting.pssm.set_position(dir);

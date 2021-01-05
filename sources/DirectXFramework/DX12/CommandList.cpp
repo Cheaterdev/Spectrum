@@ -895,7 +895,7 @@ namespace DX12
 		base.get_native_list()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
 	}
 
-	void CopyContext::copy_texture(const Resource::ptr& from, ivec3 from_pos, const Resource::ptr& to, ivec3 to_pos, ivec3 size)
+	void CopyContext::copy_texture( const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size)
 	{
 		if (base.type != CommandListType::COPY) {
 			base.transition(from, Render::ResourceState::COPY_SOURCE);

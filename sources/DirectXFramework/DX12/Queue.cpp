@@ -207,7 +207,7 @@ namespace DX12
 				TRS.Width = 1;
 				TRS.Height = 1;
 				TRS.Depth = 1;
-				TRS.NumTiles = TRS.Width * TRS.Height * TRS.Depth;
+				TRS.NumTiles = tile.heap_position.count;
 
 				startCoordinates.push_back(TRC);
 				regionSizes.push_back(TRS);
@@ -252,7 +252,7 @@ namespace DX12
 			source.Subresource = infos.source_subres;
 
 			D3D12_TILE_REGION_SIZE TRS;
-			TRS.UseBox = false;
+			TRS.UseBox = true;
 			TRS.Width = infos.size.x;
 			TRS.Height = infos.size.y;
 			TRS.Depth = infos.size.z;

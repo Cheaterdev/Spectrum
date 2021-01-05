@@ -8,6 +8,7 @@ namespace DX12
 	class TiledResourceManager
 	{
 		std::vector<grid<uint3, ResourceTile>> gpu_tiles;
+		ResourceTile gpu_packed_tile;
 	public://for now
 		void on_tile_update(const update_tiling_info& info)
 		{
@@ -15,12 +16,21 @@ namespace DX12
 			{
 				for (auto tile : tiles)
 				{
-					gpu_tiles[tile.subresource][tile.pos] = tile;
+					if (tile.subresource == packed_subresource_offset)
+						gpu_packed_tile = tile; 
+					else
+					 gpu_tiles[tile.subresource][tile.pos] = tile;
 				}
 			}
 		}
 	public://for now
 		std::vector<grid<uint3, ResourceTile>> tiles;
+
+		ResourceTile packed_tiles;
+		UINT packed_mip_count;
+		UINT unpacked_mip_count;
+
+		UINT packed_subresource_offset = 0;
 	protected:
 		ivec3 tile_shape;
 		//virtual	ComPtr<ID3D12Resource>& get_d3d_resource() = 0;
@@ -33,6 +43,9 @@ namespace DX12
 		void load_tile(update_tiling_info& target, ivec3 pos, uint subres, bool recursive);
 		void zero_tile(update_tiling_info& target, ivec3 pos, uint subres);
 		void copy_mappings(update_tiling_info& target, ivec3 target_pos, TiledResourceManager* source, ivec3 source_pos, ivec3 size);
+
+		void load_packed(update_tiling_info& target);
+
 
 		ivec3 get_tiles_count(int mip_level = 0);
 		ivec3 get_tile_shape();
@@ -53,7 +66,12 @@ namespace DX12
 		void copy_mappings(CommandList& list, ivec3 target_pos, TiledResourceManager* source, ivec3 source_pos, ivec3 size);
 
 		void map_tile(update_tiling_info&, ivec3 target_pos, TileHeapPosition pos);
+
+
+		void load_packed(CommandList& list);
+
 		Events::Event<uint4> on_load;
 		Events::Event<uint4> on_zero;
+
 	};
 }

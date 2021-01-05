@@ -174,6 +174,7 @@ namespace DX12
 		ResourceHandle handle;
 		ResourceHeap::ptr heap;
 		UINT offset;
+		UINT count = 1;
 	};
 	enum class TileState : int
 	{
@@ -242,11 +243,11 @@ namespace DX12
 			return creator->alloc(size, alignment);
 		}
 
-		TileHeapPosition create_tile(D3D12_HEAP_FLAGS flags, HeapType type)
+		TileHeapPosition create_tile(D3D12_HEAP_FLAGS flags, HeapType type, UINT count = 1)
 		{
 			static const size_t TileSize = 64 * 1024_t;
 
-			auto handle = alloc(TileSize, TileSize, flags, type);
+			auto handle = alloc(count*TileSize, TileSize, flags, type);
 
 			TileHeapPosition result;
 
@@ -254,6 +255,7 @@ namespace DX12
 			result.heap = handle.get_heap();
 
 			result.handle = handle;
+			result.count = count;
 			return result;
 		}
 

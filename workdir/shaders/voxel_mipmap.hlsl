@@ -18,20 +18,41 @@ static const uint group_count = GetVoxelMipMap().GetGroupCount();
 void calc(inout float4 color)
 {
 
-//	color.rgb /= color.w;
-	//color /= color.w;
+//	color.rgb /= color.w+0.01;
+//	color.w /= color.w+0.01;
 
 
 float v = color.w;
-#define ADD 0.4
-
+#define ADD 0.2
+//color = float4(0, 1, 0, 1);
 //color.w = pow(color.w,0.5);
-color.w /= color.w + ADD;
+//color.w /= color.w + ADD;
 //color.w=saturate(color.w*(1.2));
 //color= saturate(color*(2));
 //
 
 }
+
+
+void calc2(inout float4 color)
+{
+	//if (color.w > 0)
+	//color.xyz /= color.w+0.01;
+	color.rgb/= color.w + 0.5;
+	
+
+	color.w /= 4;
+
+		//color.xyz /= color.w + 0.1;
+	//	color/= 8;
+//	color = saturate(color/ (color.w+0.1));
+//	else
+	//	color = 0;
+
+	calc(color);
+}
+
+
 /*
 cbuffer CB : register(b0)
 {
@@ -42,19 +63,20 @@ cbuffer CB : register(b0)
 */
 void add_color(inout float4 result, float4 c)
 {
-	result += float4(c.rgb*c.w,c.w);
+	result += float4(c.rgb* c.w,c.w);
 //	result += c;
 }
 
 
-uint3 get_index(uint3 groupThreadID, uint3 groupID)
+
+uint3 get_index(uint3 dispatchID)
 {
+	uint tile_index = dispatchID.x / GetVoxelInfo().GetVoxels_per_tile().x;
+	uint3 tile_pos = voxel_visibility[tile_index] * GetVoxelInfo().GetVoxels_per_tile().xyz;
 
-	uint3 tile_index = voxel_visibility[groupID.x / group_count];
-	int tile_local_index = groupID.x% group_count;
-	uint3 index = tile_index* voxel_info.GetVoxels_per_tile().xyz + groupThreadID + 4 * int3(tile_local_index % 8, (tile_local_index / 8) % 4, tile_local_index / (4 * 8));//groupID*4+groupThreadID;
+	uint3 tile_local_pos = dispatchID - int3(tile_index * GetVoxelInfo().GetVoxels_per_tile().x, 0, 0);
+	uint3 index = tile_pos + tile_local_pos;
 	return index;
-
 }
 groupshared float4 data[4*4*4];
 [numthreads(4, 4, 4)]
@@ -65,17 +87,41 @@ void CS(
     uint  groupIndex    : SV_GroupIndex)
 {
 
-   float3 dims;
-   SrcMip.GetDimensions(dims.x, dims.y, dims.z);
+ //  float3 dims;
+  // SrcMip.GetDimensions(dims.x, dims.y, dims.z);
    
  uint local_index = groupThreadID.x+groupThreadID.y*4+groupThreadID.z*16;
-  uint3 index = get_index(groupThreadID, groupID);// groupID * 4 + groupThreadID;
-	float4 color = SrcMip.SampleLevel(linearSampler,(2*index+1)/dims,0);
-	
-	calc(color);
+  uint3 index = get_index(dispatchID);// groupID * 4 + groupThreadID;
+
+
+
+//	float4 color = SrcMip.SampleLevel(linearSampler,(2*index+1)/dims,0);
+	float4 c = 0;
+
+	int4 tc = int4(2 * index , 0);
+
+	add_color(c, SrcMip.Load(tc, int3(0, 0, 0)));
+	add_color(c, SrcMip.Load(tc, int3(0, 0, 1)));
+	add_color(c, SrcMip.Load(tc, int3(0, 1, 0)));
+	add_color(c, SrcMip.Load(tc, int3(0, 1, 1)));
+
+	add_color(c, SrcMip.Load(tc, int3(1, 0, 0)));
+	add_color(c, SrcMip.Load(tc, int3(1, 0, 1)));
+	add_color(c, SrcMip.Load(tc, int3(1, 1, 0)));
+	add_color(c, SrcMip.Load(tc, int3(1, 1, 1)));
+	/*add_color(c, SrcMip.Load(2 * index + uint3(0, 0, 0));
+	add_color(c, SrcMip.Load(2 * index + uint3(0, 0, 0));
+	add_color(c, SrcMip.Load(2 * index + uint3(0, 0, 0));
+	add_color(c, SrcMip.Load(2 * index + uint3(0, 0, 0));
+	add_color(c, SrcMip.Load(2 * index + uint3(0, 0, 0));
+	add_color(c, SrcMip.Load(2 * index + uint3(0, 0, 0));
+	add_color(c, SrcMip.Load(2 * index + uint3(0, 0, 0));
+	*/
+
+	calc2(c);
 		
-	OutMip1[index] = color;
-	data[local_index] = color;
+	OutMip1[index] = c;
+	data[local_index] = c;
 	
 	#if COUNT >=2
 	GroupMemoryBarrierWithGroupSync();
@@ -95,12 +141,8 @@ void CS(
 		add_color(c, data[local_index+1*1+0*4+1*16]);
 		add_color(c, data[local_index+1*1+1*4+0*16]);
 		add_color(c, data[local_index+1*1+1*4+1*16]);
-		//color.rgb /= 8;// color.w;
-		c.rgb /= c.w+0.01;
 
-		c.w = saturate(c.w / 4);
-		//c.w /= 8;
-	calc(c);
+	calc2(c);
 		
 		OutMip2[index/2] = c;
 		
@@ -110,13 +152,13 @@ void CS(
 	}
 	#endif
 	
-	
+	/*
 		#if COUNT == 2
 		OutMip1[index] = 0;
 	 
 		OutMip2[index/2] =0;
 		
-		#endif
+		#endif*/
 	#if COUNT == 3
 	GroupMemoryBarrierWithGroupSync();
 	
@@ -132,10 +174,8 @@ void CS(
 		add_color(c, data[local_index+1*2+0*8+1*32]);
 		add_color(c, data[local_index+1*2+1*8+0*32]);
 		add_color(c, data[local_index+1*2+1*8+1*32]);
-		c.rgb /= c.w + 0.01;
-		c.w = saturate(c.w / 4);
-		//c.w /= 8;
-	calc(c);
+
+	calc2(c);
 		OutMip3[index/4] = c;
 	}
 	#endif
