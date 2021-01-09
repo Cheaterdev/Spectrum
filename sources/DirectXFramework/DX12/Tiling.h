@@ -7,22 +7,7 @@ namespace DX12
 
 	class TiledResourceManager
 	{
-		std::vector<grid<uint3, ResourceTile>> gpu_tiles;
-		ResourceTile gpu_packed_tile;
-	public://for now
-		void on_tile_update(const update_tiling_info& info)
-		{
-			for (auto& [heap, tiles] : info.tiles)
-			{
-				for (auto tile : tiles)
-				{
-					if (tile.subresource == packed_subresource_offset)
-						gpu_packed_tile = tile; 
-					else
-					 gpu_tiles[tile.subresource][tile.pos] = tile;
-				}
-			}
-		}
+		
 	public://for now
 		std::vector<grid<uint3, ResourceTile>> tiles;
 
@@ -53,6 +38,10 @@ namespace DX12
 
 		void load_tiles(CommandList* list, ivec3 from, ivec3 to, uint subres = 0);
 		void zero_tiles(CommandList* list, ivec3 from, ivec3 to);
+
+
+		template<std::ranges::view R>
+		void load_tiles2(CommandList* list, R tiles, uint subres = 0, bool recursive=false);
 
 		void load_tiles(CommandList* list, std::list<ivec3>& tiles, uint subres = 0, bool recursive = false);
 		void zero_tiles(CommandList* list, std::list<ivec3>& tiles);

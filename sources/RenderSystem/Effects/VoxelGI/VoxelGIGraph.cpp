@@ -70,8 +70,8 @@ public:
 						auto depth_view = gbuffer.depth_mips.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
 						auto normal_view = gbuffer.normals.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
 
-						table[0].place(depth_view.get_rtv(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-						table[1].place(normal_view.get_rtv(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+						table[0].place(depth_view.get_rtv());
+						table[1].place(normal_view.get_rtv());
 
 
 						graphics.set_viewport(depth_view.get_viewport());
@@ -137,7 +137,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 		albedo.set(desc);
 		normal.set(desc);
 
-		desc.MipLevels = 6;
+		desc.MipLevels = 3;
 		desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
 		tex_lighting.set(desc);
 
@@ -162,7 +162,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 				gpu_tiles_buffer[pos.w]->erase(pos);
 			}
 		};
-	
+
 
 		albedo.tex_dynamic->on_load = [this](ivec4 pos)
 		{
@@ -184,7 +184,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
 			gpu_tiles_buffer[i].reset(new GPUTilesBuffer);
 			gpu_tiles_buffer[i]->set_size(tex_lighting.tex_result->get_tiles_count(i), tex_lighting.tex_result->get_tile_shape());
 		}
-	
+
 
 	}
 
@@ -242,13 +242,10 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 			auto updates = vis_update.get();
 
 
-			for (auto& pos : updates.tiles_to_load)
-			{
-				ivec3 mesh_pos = pos / lighed_to_albedo_coeff;
-				albedo.tex_static->load_tiles(&list, mesh_pos, mesh_pos);
-				normal.tex_static->load_tiles(&list, mesh_pos, mesh_pos);
-		
-			}
+			auto albedo_tiles = updates.tiles_to_load | std::views::transform([this](ivec3 pos) {return pos / lighed_to_albedo_coeff; });
+
+			albedo.tex_static->load_tiles2(&list, albedo_tiles);
+			normal.tex_static->load_tiles2(&list, albedo_tiles);
 
 			tex_lighting.load_static(updates.tiles_to_load);
 		}
@@ -306,55 +303,37 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 	{
 		PROFILE_GPU(L"copy");
 
-		if (GetAsyncKeyState('4'))
-		{
-			context->list->get_copy().copy_texture(albedo.tex_dynamic, 0, albedo.tex_static, 0); // aaaa my fps!
-			context->list->get_copy().copy_texture(normal.tex_dynamic, 0, normal.tex_static, 0);	// optimize this! 
+		albedo_tiles->update(context->list);
+		compute.set_pipeline(GetPSO<PSOS::VoxelCopy>());
+		scene->voxels_compiled.set(compute);
 
-		}else if (GetAsyncKeyState('5'))
-	
-		for (auto p : albedo_tiles->used_tiles)
 		{
-			ivec3 pos = p * normal.tex_result->get_tile_shape();
-
-			context->list->get_copy().copy_texture(albedo.tex_dynamic, pos, albedo.tex_static, pos, albedo.tex_result->get_tile_shape()); // aaaa my fps!
-			context->list->get_copy().copy_texture(normal.tex_dynamic, pos, normal.tex_static, pos, normal.tex_result->get_tile_shape());	// optimize this! 
-		}
-		else  // that's what i'm talking about
-		{
-			albedo_tiles->update(context->list);
-			compute.set_pipeline(GetPSO<PSOS::VoxelCopy>());
-			scene->voxels_compiled.set(compute);
 
 			{
+				Slots::VoxelCopy utils;
+				utils.GetTarget()[0] = albedo.tex_dynamic->texture_3d()->rwTexture3D[0];
+				utils.GetSource()[0] = albedo.tex_static->texture_3d()->texture3D;
 
-				{
-					Slots::VoxelCopy utils;
-					utils.GetTarget()[0] = albedo.tex_dynamic->texture_3d()->rwTexture3D[0];
-					utils.GetSource()[0] = albedo.tex_static->texture_3d()->texture3D;
+				utils.GetTarget()[1] = normal.tex_dynamic->texture_3d()->rwTexture3D[0];
+				utils.GetSource()[1] = normal.tex_static->texture_3d()->texture3D;
 
-					utils.GetTarget()[1] = normal.tex_dynamic->texture_3d()->rwTexture3D[0];
-					utils.GetSource()[1] = normal.tex_static->texture_3d()->texture3D;
-
-					auto params = utils.MapParams();
-					params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
-					params.GetVoxels_per_tile() = normal.tex_result->get_tile_shape();
-					utils.set(compute);
-				}
-
-				compute.execute_indirect(
-					dispatch_command,
-					1,
-					albedo_tiles->dispatch_buffer.get());
-
+				auto params = utils.MapParams();
+				params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
+				params.GetVoxels_per_tile() = normal.tex_result->get_tile_shape();
+				utils.set(compute);
 			}
+
+			compute.execute_indirect(
+				dispatch_command,
+				1,
+				albedo_tiles->dispatch_buffer.get());
 
 		}
 	}
 
 
 	context->render_type = RENDER_TYPE::VOXEL;
-	
+
 	Slots::Voxelization voxelization;
 	voxelization.MapInfo().GetMin() = scene->voxel_info.GetMin();
 	voxelization.MapInfo().GetSize() = scene->voxel_info.GetSize();
@@ -640,8 +619,8 @@ void VoxelGI::screen(FrameGraph& graph)
 				graphics.set_viewport(target_tex.get_viewport());
 				graphics.set_scissor(target_tex.get_scissor());
 
-				gi_rtv[0].place(target_tex.get_rtv(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-				gi_rtv[1].place(gi_views[gi_index].get_rtv(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+				gi_rtv[0].place(target_tex.get_rtv());
+				gi_rtv[1].place(gi_views[gi_index].get_rtv());
 
 				graphics.set_rtv(gi_rtv, gbuffer.quality.get_dsv());
 
@@ -891,10 +870,7 @@ void VoxelGI::lighting(FrameGraph& graph)
 			auto& list = *context->list;
 			auto& compute = context->list->get_compute();
 
-			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(!GetAsyncKeyState('G'))));
-
-			//todo: remove after size is indirect
-	//		list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d()->get_static_uav());
+			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(all_scene_regen_counter==0&&(!GetAsyncKeyState('G')))));
 
 			Slots::VoxelLighting ligthing;
 			{
@@ -981,7 +957,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 
 
 
-		
+
 
 
 			compute.set_signature(get_Signature(Layouts::DefaultLayout));
@@ -995,7 +971,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 				PROFILE_GPU(L"ZERO");
 				for (int i = 1; i < tex_lighting.tex_result->get_desc().MipLevels; i++)
 				{
-					if (i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
+					if (GetAsyncKeyState('8')|| i>= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
 					{
 						list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d()->rwTexture3D[i], vec4(0, 0, 0, 0));
 						continue;
@@ -1032,7 +1008,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 					compute.set_pipeline(GetPSO<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(current_mips)));
 
 					{
-					
+
 
 						Slots::VoxelMipMap mipmapping;
 						mipmapping.GetSrcMip() = tex_lighting.tex_result->texture_3d()->texture3DMips[mip_count - 1];

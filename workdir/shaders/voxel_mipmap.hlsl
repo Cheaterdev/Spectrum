@@ -15,7 +15,9 @@ static const VoxelInfo voxel_info = GetVoxelInfo();
 void calc(inout float4 color)
 {
 	color.rgb/= color.w + 0.5;
-	color.w /= 4;
+	color.w = (color.w/4);
+
+	color = max(0, color);
 }
 
 void add_color(inout float4 result, float4 c)

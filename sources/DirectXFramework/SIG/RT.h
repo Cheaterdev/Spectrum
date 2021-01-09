@@ -59,7 +59,7 @@ class RTHolder :public Table
 		for (UINT i = 0; i < (UINT)compiled.table_rtv.get_count(); i++)
 		{
 			Render::Handle* handle = ptr + i;
-			compiled.table_rtv[i].place(*handle, D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			compiled.table_rtv[i].place(*handle);
 
 			//Render::Device::get().create_rtv(compiled.table_rtv[i], handle->resource_info->resource_ptr, handle->resource_info->rtv);
 
@@ -75,7 +75,7 @@ class RTHolder :public Table
 		for (UINT i = 0; i < (UINT)compiled.table_dsv.get_count(); i++)
 		{
 			Render::Handle* handle = ptr + i;
-			compiled.table_dsv[i].place(*handle, D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+			compiled.table_dsv[i].place(*handle);
 		}
 	}
 

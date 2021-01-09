@@ -1169,19 +1169,23 @@ public:
 			if (fps.tick())
 			{
 				size_t total = 0;
+				for (auto& h : DescriptorHeapManager::get().cpu_heaps)
+				{
+					if (h)
+					{
+						total += h->used_size();
+					}
+				}
+		
 
-				total += DescriptorHeapManager::get().cpu_dsv->used_size();
-				total += DescriptorHeapManager::get().cpu_srv->used_size();
-				total += DescriptorHeapManager::get().cpu_rtv->used_size();
-				total += DescriptorHeapManager::get().cpu_smp->used_size();
-
-
-				size_t total_gpu = 0;
-
-				total_gpu += DescriptorHeapManager::get().gpu_srv->used_size();
-
-				total_gpu += DescriptorHeapManager::get().gpu_smp->used_size();
-
+				size_t total_gpu = 0;		
+				for (auto& h : DescriptorHeapManager::get().gpu_heaps)
+				{
+					if (h)
+					{
+						total_gpu += h->used_size();
+					}
+				}
 
 				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}
@@ -1475,8 +1479,8 @@ resource_stages[&res.second] = input;
 					};
 					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 					{
-						//	auto data = Serializer::serialize(*drawer->scene);
-						//	FileSystem::get().save_data(L"scene.dat", data);
+							auto data = Serializer::serialize(*drawer->scene);
+							FileSystem::get().save_data(L"scene.dat", data);
 					};
 					file->add_item("Quit")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 					{

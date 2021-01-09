@@ -123,3 +123,4 @@ typedef CComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 
 
 #include "DX12/PipelineState.hpp"
+#include "DX12/Tiling.hpp"

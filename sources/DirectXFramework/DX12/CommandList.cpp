@@ -95,8 +95,8 @@ namespace DX12
 		Sendable::reset();
 
 		if (type != CommandListType::COPY) {
-			set_heap(DescriptorHeapType::SAMPLER, DescriptorHeapManager::get().gpu_smp);
-			set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().gpu_srv);
+			set_heap(DescriptorHeapType::SAMPLER, DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::SAMPLER));
+			set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV));
 		}
 		//set_heap(DescriptorHeapType::SAMPLER, smp_descriptors.get_heap());
 	}
@@ -687,7 +687,7 @@ namespace DX12
 		// todo: move to queue tasks to save some heaps
 		for (auto& e : tile_updates)
 		{
-			e.resource->on_tile_update(e);
+			e.resource->tracked_info->on_tile_update(e);
 		}
 
 

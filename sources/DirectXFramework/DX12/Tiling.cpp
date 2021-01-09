@@ -228,9 +228,11 @@ namespace DX12 {
 		//  UINT first_sub_res;
 		D3D12_SUBRESOURCE_TILING tilings[20];
 
-		auto desc = static_cast<Resource*>(this)->get_desc();
+		auto resource = static_cast<Resource*>(this);
 
-		Device::get().get_native_device()->GetResourceTiling(static_cast<Resource*>(this)->get_native().Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
+		auto desc = resource->get_desc();
+
+		Device::get().get_native_device()->GetResourceTiling(resource->get_native().Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 		packed_mip_count = mip_info.NumTilesForPackedMips;
 		packed_subresource_offset = mip_info.NumStandardMips;
 		unpacked_mip_count = mip_info.NumStandardMips;
@@ -246,16 +248,16 @@ namespace DX12 {
 				for (uint x = 0; x < tiles[0].size().x; x++)
 							tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
-				gpu_tiles.resize(1);
-				gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
-				for (uint x = 0; x < gpu_tiles[0].size().x; x++)
-					gpu_tiles[0][{x, 0, 0}].pos = { x,0,0 };
+				resource->tracked_info->gpu_tiles.resize(1);
+				resource->tracked_info->gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
+				for (uint x = 0; x < resource->tracked_info->gpu_tiles[0].size().x; x++)
+					resource->tracked_info->gpu_tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
 			}
 			else
 			{
 				tiles.resize(mip_info.NumStandardMips);
-				gpu_tiles.resize(mip_info.NumStandardMips);
+				resource->tracked_info->gpu_tiles.resize(mip_info.NumStandardMips);
 
 				packed_tiles.pos = { 0,0,0 };
 				packed_tiles.subresource = mip_info.NumStandardMips;
@@ -264,7 +266,7 @@ namespace DX12 {
 				for (UINT i = 0; i < mip_info.NumStandardMips; i++)
 				{
 					tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
-					gpu_tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
+					resource->tracked_info->gpu_tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
 
 					for (uint x = 0; x < tiles[i].size().x; x++)
 						for (uint y = 0; y < tiles[i].size().y; y++)
@@ -274,8 +276,8 @@ namespace DX12 {
 								tiles[i][{x, y, z}].pos = { x,y,z };
 								tiles[i][{x, y, z}].subresource = i;
 
-								gpu_tiles[i][{x, y, z}].pos = { x,y,z };
-								gpu_tiles[i][{x, y, z}].subresource = i;;
+								resource->tracked_info->gpu_tiles[i][{x, y, z}].pos = { x,y,z };
+								resource->tracked_info->gpu_tiles[i][{x, y, z}].subresource = i;;
 							}
 				}
 			}

@@ -12,13 +12,13 @@ struct CompiledData
 	const CompiledData<Slot>& set(Render::SignatureDataSetter& graphics, bool use_transitions = true) const
 	{
 		if (use_transitions) {
-			//	PROFILE(L"transitions");
+		
 
 			for (UINT i = 0; i < (UINT)table_srv.get_count(); ++i)
 			{
 				auto h = table_srv[i];
 				if (h.resource_info && h.resource_info->resource_ptr)
-					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
+					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT|| h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::RESERVED)
 					{
 						graphics.get_base().transition_srv(h.resource_info);
 						//	graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
@@ -34,7 +34,7 @@ struct CompiledData
 			{
 				auto h = table_uav[i];
 				if (h.resource_info && h.resource_info->resource_ptr)
-					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
+					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT || h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::RESERVED)
 					{
 						//graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::UNORDERED_ACCESS);
 						graphics.get_base().transition_uav(h.resource_info);
@@ -45,19 +45,9 @@ struct CompiledData
 					}
 			}
 
-
-			/*for (int i = 0; i < table_cbv.get_count(); ++i)
-			{
-				auto h = table_cbv[i];
-				if (h.resource_ptr && *h.resource_ptr)
-					if ((*h.resource_ptr)->get_heap_type() == Render::HeapType::DEFAULT)
-						graphics.get_base().transition(*h.resource_ptr, Render::ResourceState::VERTEX_AND_CONSTANT_BUFFER);
-			}*/
-
-
 			if (cb)
 			{
-				if ((cb.resource)->get_heap_type() == Render::HeapType::DEFAULT)
+				if ((cb.resource)->get_heap_type() == Render::HeapType::DEFAULT|| (cb.resource)->get_heap_type() == Render::HeapType::RESERVED)
 				{
 					graphics.get_base().transition(cb.resource, Render::ResourceState::VERTEX_AND_CONSTANT_BUFFER);
 				}

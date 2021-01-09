@@ -44,6 +44,25 @@ namespace DX12
 
 	class TrackedResource
 	{
+		friend class TiledResourceManager;
+
+		std::vector<grid<uint3, ResourceTile>> gpu_tiles;
+		ResourceTile gpu_packed_tile;
+	public:
+		void on_tile_update(const update_tiling_info& info)
+		{
+			for (auto& [heap, tiles] : info.tiles)
+			{
+				for (auto tile : tiles)
+				{
+					if (tile.subresource == gpu_tiles.size())
+						gpu_packed_tile = tile;
+					else
+						gpu_tiles[tile.subresource][tile.pos] = tile;
+				}
+			}
+		}
+
 	public:
 		ComPtr<ID3D12Resource> m_Resource;
 		ResourceHandle alloc_handle;
@@ -58,6 +77,7 @@ namespace DX12
 		{
 			m_Resource = resource;
 		}
+
 
 		TrackedResource(ComPtr<ID3D12Resource> resource) :m_Resource(resource)
 		{

@@ -1,15 +1,13 @@
 namespace DX12
 {
-
-
-
 	enum class HandleType : char
 	{
 		CBV,
 		RTV,
 		DSV,
 		SRV,
-		UAV
+		UAV,
+		SMP
 	};
 
 	enum class DescriptorHeapType : char
@@ -18,6 +16,7 @@ namespace DX12
 		SAMPLER = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 		RTV = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 		DSV = D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+		, GENERATE_OPS
 	};
 	enum class DescriptorHeapFlags : char
 	{
@@ -25,6 +24,28 @@ namespace DX12
 		SHADER_VISIBLE = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
 
 	};
+
+	static inline DescriptorHeapType get_heap_type(HandleType type)
+	{
+		switch (type)
+		{
+		case HandleType::CBV:
+		case HandleType::SRV:
+		case HandleType::UAV:
+			return DescriptorHeapType::CBV_SRV_UAV;
+
+		case HandleType::RTV:
+			return DescriptorHeapType::RTV;
+
+		case HandleType::DSV:
+			return DescriptorHeapType::DSV;
+
+		case HandleType::SMP:
+			return DescriptorHeapType::SAMPLER;
+		}
+
+		return DescriptorHeapType();
+	}
 	class Resource;
 
 	enum class ResourceType : char
@@ -161,7 +182,7 @@ namespace DX12
 			return false;
 		}
 
-		void place(const Handle& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV) const;
+		void place(const Handle& r) const;
 
 		void clear(CommandList& list, float4 = { 0, 0, 0, 0 }) const;
 	};
@@ -394,8 +415,7 @@ namespace DX12
 			return !!info;
 		}
 
-		void place(const HandleTable& r, D3D12_DESCRIPTOR_HEAP_TYPE t = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
+	
 	private:
 		friend class DescriptorHeap;
 
@@ -684,23 +704,23 @@ namespace DX12
 		DescriptorHeap::ptr heap_ds;
 
 
-
 		DescriptorHeapManager();
 
 	public:
 
-		~DescriptorHeapManager()
+		enum_array<DescriptorHeapType, DescriptorHeapPaged::ptr> cpu_heaps;
+		enum_array<DescriptorHeapType, DescriptorHeapPaged::ptr> gpu_heaps;
+
+	
+		DescriptorHeapPaged::ptr get_cpu_heap(DescriptorHeapType type)
 		{
-			heap_cb_sr_ua_static->reset();
+			return cpu_heaps[type];
 		}
-		DescriptorHeapPaged::ptr gpu_srv;
-		DescriptorHeapPaged::ptr gpu_smp;
 
-
-		DescriptorHeapPaged::ptr cpu_srv;
-		DescriptorHeapPaged::ptr cpu_rtv;
-		DescriptorHeapPaged::ptr cpu_dsv;
-		DescriptorHeapPaged::ptr cpu_smp;
+		DescriptorHeapPaged::ptr get_gpu_heap(DescriptorHeapType type)
+		{
+			return gpu_heaps[type];
+		}
 
 		DescriptorHeap::ptr& get_csu_static()
 		{
@@ -713,7 +733,7 @@ namespace DX12
 
 		DescriptorHeapPaged::ptr& get_samplers()
 		{
-			return cpu_smp;
+			return cpu_heaps[DescriptorHeapType::SAMPLER];
 		}
 	};
 
@@ -759,36 +779,14 @@ namespace DX12
 		typename LockPolicy::mutex m;
 		void create_heap(UINT count)
 		{
-
-
 			if constexpr (flags == DescriptorHeapFlags::SHADER_VISIBLE)
 			{
-
-				if constexpr (type == DescriptorHeapType::CBV_SRV_UAV)
-					pages.push_back(DescriptorHeapManager::get().gpu_srv->create_page(count));
-
-				if constexpr (type == DescriptorHeapType::SAMPLER)
-					pages.push_back(DescriptorHeapManager::get().gpu_smp->create_page(count));
-
+				pages.push_back(DescriptorHeapManager::get().get_gpu_heap(type)->create_page(count));
 			}
 			else
 			{
-				if constexpr (type == DescriptorHeapType::CBV_SRV_UAV)
-					pages.push_back(DescriptorHeapManager::get().cpu_srv->create_page(count));
-
-
-				if constexpr (type == DescriptorHeapType::RTV)
-					pages.push_back(DescriptorHeapManager::get().cpu_rtv->create_page(count));
-
-				if constexpr (type == DescriptorHeapType::SAMPLER)
-					pages.push_back(DescriptorHeapManager::get().cpu_smp->create_page(count));
-
-				if constexpr (type == DescriptorHeapType::DSV)
-					pages.push_back(DescriptorHeapManager::get().cpu_dsv->create_page(count));
-
+				pages.push_back(DescriptorHeapManager::get().get_cpu_heap(type)->create_page(count));
 			}
-
-			//	assert(pages.size() < 100);
 		}
 
 
