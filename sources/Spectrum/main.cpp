@@ -1464,10 +1464,10 @@ resource_stages[&res.second] = input;
 								{
 									auto f = FileSystem::get().get_file("scene.dat")->load_all();
 
-									Scene::ptr scene(new Scene());
+									//Scene::ptr scene(new Scene());
 
-									Serializer::deserialize(f, *scene);
-									//	drawer->scene = scene;
+									Serializer::deserialize(f, *drawer->scene);
+									//drawer->scene = scene;
 								}
 								catch (std::exception e)
 								{

@@ -69,6 +69,10 @@ namespace DX12
 
 	void CommandList::begin(std::string name, Timer* t)
 	{
+#ifdef DEV
+		begin_stack = Exceptions::get_stack_trace();
+#endif
+
 		first_debug_log = true;
 		executed = false;
 		id = Device::get().id_generator.get();

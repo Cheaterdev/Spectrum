@@ -34,7 +34,7 @@ namespace DX12
 
 		ivec3 get_tiles_count(int mip_level = 0);
 		ivec3 get_tile_shape();
-		void map_buffer_part( size_t offset, size_t size);
+		void map_buffer_part(update_tiling_info& target, size_t offset, size_t size);
 
 		void load_tiles(CommandList* list, ivec3 from, ivec3 to, uint subres = 0);
 		void zero_tiles(CommandList* list, ivec3 from, ivec3 to);

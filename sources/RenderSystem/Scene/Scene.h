@@ -41,7 +41,10 @@ public:
     using ptr = s_ptr<Scene>;
     using wptr = w_ptr<Scene>;
 
-    //		std::set<MaterialAsset*> materials;
+    virtual ~Scene()
+    {
+        remove_all();
+    }
     Scene() 
     {
         scene = this;

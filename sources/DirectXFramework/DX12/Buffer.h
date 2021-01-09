@@ -552,6 +552,9 @@ namespace DX12
 			size_t size;
 		};
 		std::list<update_data> update_list;
+
+		update_tiling_info updates;
+
 	public:
 
 		typename StructuredBuffer<Type>::ptr buffer;
@@ -577,7 +580,7 @@ namespace DX12
 			TypedHandle<T> result = Base::Allocate(n);
 
 
-			buffer->map_buffer_part(result.get_offset() * sizeof(T), n * sizeof(T));
+			buffer->map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
 			return result;
 		}
 
@@ -587,7 +590,7 @@ namespace DX12
 
 			result.Free();
 			result = Base::Allocate(n);
-			buffer->map_buffer_part( result.get_offset() * sizeof(T), n * sizeof(T));
+			buffer->map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
 		}
 	/*
 		T* map_elements(size_t offset, size_t size = 1)
@@ -601,7 +604,10 @@ namespace DX12
 		void reserve(CommandList& list, size_t offset)
 		{
 			std::lock_guard<std::mutex> g(m);
-			buffer->map_buffer_part( 0, offset * sizeof(T));
+			buffer->map_buffer_part(updates, 0, offset * sizeof(T));
+
+			updates.resource = buffer.get();
+			list.update_tilings(std::move(updates));
 		}
 
 
@@ -634,6 +640,8 @@ namespace DX12
 		{
 			std::lock_guard<std::mutex> g(m);
 
+			updates.resource = buffer.get();
+			list->update_tilings(std::move(updates));
 			for (auto& elems : update_list)
 			{
 				buffer->set_data(list, (UINT)elems.offset * sizeof(T), elems.data.data(), (UINT)elems.size);

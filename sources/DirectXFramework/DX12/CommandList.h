@@ -620,7 +620,9 @@ namespace DX12
 		virtual  void on_start(Timer* timer) override;
 		virtual  void on_end(Timer* timer)override;
 	protected:
-
+#ifdef DEV
+		Exceptions::stack_trace begin_stack;
+#endif
 		std::string name;
 		void reset();
 		void begin(std::string name, Timer* t = nullptr);
@@ -769,6 +771,8 @@ namespace DX12
 	public:	void update_tilings(update_tiling_info&& info)
 	{
 		tile_updates.emplace_back(std::move(info));
+
+		use_resource(info.resource);
 	}
 		ptr get_sub_list();
 		FrameResources::ptr frame_resources;

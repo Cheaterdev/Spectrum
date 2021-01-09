@@ -17,6 +17,7 @@ void calc(inout float4 color)
 	color.rgb/= color.w + 0.5;
 	color.w = (color.w/4);
 
+	//todo: investigate negative values
 	color = max(0, color);
 }
 

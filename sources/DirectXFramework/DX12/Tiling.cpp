@@ -2,11 +2,13 @@
 
 namespace DX12 {
 
-	void TiledResourceManager::map_buffer_part(size_t offset, size_t size)
+	void TiledResourceManager::map_buffer_part(update_tiling_info& target, size_t offset, size_t size)
 	{
 		size_t begin = Math::AlignDown(offset, 64 * 1024) / (64 * 1024);
 		size_t end = Math::AlignUp(offset + size, 64 * 1024) / (64 * 1024);
-		load_tiles(nullptr, { begin,0,0 }, { end,0,0 });
+
+		load_tiles_internal(target, { begin,0,0 }, { end,0,0 }, 0, false);
+		//load_tiles(target, { begin,0,0 }, { end,0,0 });
 	}
 
 	void TiledResourceManager::load_tile(update_tiling_info& target, ivec3 pos, uint subres, bool recursive)
