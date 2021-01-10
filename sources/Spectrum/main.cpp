@@ -593,7 +593,7 @@ public:
 
 				if (data.o_texture->is_new())
 				{
-					command_list->clear_uav(output_tex.resource, output_tex.get_uav(), vec4(0, 0, 0, 0));
+					command_list->clear_uav(output_tex.resource, output_tex.rwTexture2D, vec4(0, 0, 0, 0));
 				}
 
 				command_list->get_compute().set_signature(RTX::get().global_sig);
@@ -665,7 +665,7 @@ public:
 
 				if (!debug_tex) return;
 
-				promise->set_value(debug_tex.get_srv());
+				promise->set_value(debug_tex.texture2D);
 				/*
 				auto& list = context.get_list();
 
@@ -1455,7 +1455,13 @@ resource_stages[&res.second] = input;
 					auto file = menu->add_item("File")->get_menu();
 					auto edit = menu->add_item("Edit")->get_menu();
 					auto help = menu->add_item("Help");// ->get_menu();
-					file->add_item("New");
+					file->add_item("New")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
+					{
+						add_task([this]()
+							{
+								drawer->scene->remove_all();
+							});
+					};
 					file->add_item("Open")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 					{
 						add_task([this]()
@@ -1463,11 +1469,7 @@ resource_stages[&res.second] = input;
 								try
 								{
 									auto f = FileSystem::get().get_file("scene.dat")->load_all();
-
-									//Scene::ptr scene(new Scene());
-
 									Serializer::deserialize(f, *drawer->scene);
-									//drawer->scene = scene;
 								}
 								catch (std::exception e)
 								{

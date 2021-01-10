@@ -22,7 +22,8 @@ namespace Spectrum
 public enum Mode
 {
     Dev = 1,
-    Retail = 2
+	Profile = 2,
+    Retail = 4
 }
 
 public class CustomTarget : ITarget
@@ -51,7 +52,7 @@ public class CustomTarget : ITarget
                 Platform = Platform.win64,
                DevEnv =  DevEnv.vs2019,
               Optimization =   Optimization.Release,
-				Mode = Mode.Dev | Mode.Retail
+				Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
 
         }
@@ -90,13 +91,18 @@ public class CustomTarget : ITarget
 				conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);		
 				conf.Options.Add(Options.Vc.Compiler.Inline.Disable);	
                 conf.Defines.Remove("NDEBUG");	
-                  conf.Defines.Add("DEV");
+                conf.Defines.Add("DEV");
+				conf.Defines.Add("PROFILING");
 			}else{
 				conf.Options.Add(Options.Vc.Linker.LinkTimeCodeGeneration.UseLinkTimeCodeGeneration);				
 				conf.Options.Add(Options.Vc.Compiler.Optimization.FullOptimization);		
-			   conf.Defines.Add("RETAIL");	
+				conf.Defines.Add("RETAIL");	
 			}
-       			
+    
+			if (target.Mode == Mode.Profile)
+			{
+				conf.Defines.Add("PROFILING");	
+			}
         }
         
      
@@ -355,7 +361,7 @@ public class CustomTarget : ITarget
                Platform =  Platform.win64,
                DevEnv =  DevEnv.vs2019,
               Optimization =   Optimization.Release,       
-			Mode = 	Mode.Dev | Mode.Retail
+			Mode = 	Mode.Dev | Mode.Profile | Mode.Retail
             });
         }
 
@@ -370,6 +376,7 @@ public class CustomTarget : ITarget
         {
             case Mode.Dev: platformName += "Dev"; break;
             case Mode.Retail: platformName += "Retail"; break;
+			  case Mode.Profile: platformName += "Profile"; break;
             default:
                 throw new NotImplementedException();
         }

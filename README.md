@@ -14,6 +14,7 @@ Features:
 - Material Graphs
 - DXR
 - Sparse Voxel GI with "infinite" bounces
+- GPU Occlusion Culling
 
 ![img](https://cheater.dev/Spectrum.png)
 https://cheater.dev

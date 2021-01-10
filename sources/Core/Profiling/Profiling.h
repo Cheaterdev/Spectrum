@@ -1,6 +1,6 @@
 #pragma once
 
-#define PROFILING
+//#define PROFILING
 
 class Timer;
 class TimedRoot

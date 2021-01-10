@@ -40,8 +40,6 @@ void DX12::BufferView::place_uav(Handle h) {
 		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
 		Device::get().create_uav(h, resource.get(), desc);
-
-		Device::get().create_uav(uav_clear, resource.get(), desc);
 	}
 
 }

@@ -5,12 +5,9 @@ namespace DX12
 	class ResourceView
 	{
 	protected:
-		SRVHandle srv;
-		UAVHandle uav;
 		RTVHandle rtv;
 		DSVHandle dsv;
-		Handle cb;
-		UAVHandle uav_clear;
+	
 	protected:
 		ResourceViewDesc view_desc;
 
@@ -52,9 +49,6 @@ namespace DX12
 
 			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
 			{
-
-
-
 				{
 					view_desc.type = ResourceType::TEXTURE2D;
 					view_desc.Texture2D.ArraySize = desc.ArraySize();
@@ -63,11 +57,6 @@ namespace DX12
 					view_desc.Texture2D.PlaneSlice = 0;
 					view_desc.Texture2D.MipLevels = desc.MipLevels;
 				}
-
-
-
-
-
 			}
 
 			if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
@@ -86,67 +75,48 @@ namespace DX12
 		template<class F>
 		void init_views(F& frame)
 		{
+
+			auto& desc = resource->get_desc();
+
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
 			{
+				rtv = frame.rtv_cpu.place();
+				place_rtv(rtv);
+			}
 
-				auto& desc = resource->get_desc();
-
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
-				{
-					rtv = frame.rtv_cpu.place();
-					place_rtv(rtv);
-				}
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) {
-					dsv = frame.dsv_cpu.place();
-					place_dsv(dsv);
-				}
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
-					uav = frame.srv_uav_cbv_cpu.place();
-					uav_clear = frame.srv_uav_cbv_cpu.place();
-					place_uav(uav);
-				}
-
-				if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER && desc.Flags == D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE && desc.Width < 65536) {
-					cb = frame.srv_uav_cbv_cpu.place();
-					place_cb(cb);
-				}
-
-				if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
-					srv = frame.srv_uav_cbv_cpu.place();
-					place_srv(srv);
-				}
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) {
+				dsv = frame.dsv_cpu.place();
+				place_dsv(dsv);
 			}
 		}
 
-		virtual void place_srv(Handle h) { assert(false); }
-		virtual void place_uav(Handle h) { assert(false); }
 		virtual void place_rtv(Handle h) { assert(false); }
 		virtual void place_dsv(Handle h) { assert(false); }
-		virtual void place_cb(Handle h) { assert(false); }
-
-
-		Handle get_srv() { return srv; }
-		Handle get_uav() { return uav; }
-		Handle get_uav_clear() { return uav_clear; }
-		Handle get_rtv() { return rtv; }
-		Handle get_dsv() { return dsv; }
-		Handle get_cb() { return cb; }
-
+	
 		operator bool() const
 		{
 			return !!resource;
 		}
+
+		Handle get_rtv() { return rtv; }
+		Handle get_dsv() { return dsv; }
+		
+
+	private:
+
+
 	};
 
 	class RTXSceneView :public ResourceView
 	{
-	
+
 	public:
 		HLSL::RaytracingAccelerationStructure srv_handle;
 
 		RTXSceneView() = default;
 		RTXSceneView(Resource::ptr resource, FrameResources& frame);
 
-		virtual void place_srv(Handle h) override;
+		virtual void place_srv(Handle h) ;
 		virtual void place_uav(Handle h) { }
 		virtual void place_rtv(Handle h) { assert(false); }
 		virtual void place_dsv(Handle h) { assert(false); }
@@ -156,7 +126,10 @@ namespace DX12
 	class TextureView :public ResourceView
 	{
 		HandleTableLight hlsl;
+		//HandleTableLight rtv;
 	public:
+
+
 		HLSL::Texture2D<> texture2D;
 		HLSL::RWTexture2D<> rwTexture2D;
 
@@ -184,9 +157,9 @@ namespace DX12
 				rwTexture3D = HLSL::RWTexture3D<>(hlsl[1]);
 			}
 			if (view_desc.type == ResourceType::CUBE)
-			texture—ube = HLSL::TextureCube<>(hlsl[0]);
+				texture—ube = HLSL::TextureCube<>(hlsl[0]);
 			if (view_desc.type == ResourceType::TEXTURE2D)
-			texture2DArray = HLSL::Texture2DArray<>(hlsl[0]);
+				texture2DArray = HLSL::Texture2DArray<>(hlsl[0]);
 			if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
 
 				place_srv(hlsl[0]);
@@ -197,6 +170,15 @@ namespace DX12
 
 				place_uav(hlsl[1]);
 			}
+			/*
+			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) {
+
+				rtv = frame.rtv_cpu.place(1);
+
+				renderTarget = rtv[0];
+				place_uav(renderTarget);
+			}
+			*/
 		}
 		TextureView() = default;
 
@@ -221,7 +203,7 @@ namespace DX12
 
 			init_views(frame);
 			init(frame);
-			
+
 		}
 		template<class F>
 		TextureView(Resource::ptr resource, F& frame, ResourceViewDesc vdesc) :ResourceView(resource)
@@ -234,10 +216,10 @@ namespace DX12
 
 		}
 
-		virtual void place_srv(Handle h) override;
-		virtual void place_uav(Handle h)  override;
-		virtual void place_rtv(Handle h)  override;
-		virtual void place_dsv(Handle h)  override;
+		virtual void place_srv(Handle h);
+		virtual void place_uav(Handle h);
+		virtual void place_rtv(Handle h);
+		virtual void place_dsv(Handle h);
 		virtual void place_cb(Handle h) { assert(false); }
 
 
@@ -322,11 +304,11 @@ namespace DX12
 		{
 
 		}
-		virtual void place_srv(Handle h) override;
-		virtual void place_uav(Handle h) override;
+		virtual void place_srv(Handle h) ;
+		virtual void place_uav(Handle h) ;
 		virtual void place_rtv(Handle h) { assert(false); }
 		virtual void place_dsv(Handle h) { assert(false); }
-		virtual void place_cb(Handle h)override;
+		virtual void place_cb(Handle h);
 		template<class T>
 		void write(UINT64 offset, T* data, UINT64 count)
 		{
@@ -344,7 +326,7 @@ namespace DX12
 		HandleTableLight hlsl;
 
 	public:
-
+		UAVHandle uav_clear;
 		HLSL::StructuredBuffer<T> structuredBuffer;
 		HLSL::RWStructuredBuffer<T> rwStructuredBuffer;
 		HLSL::AppendStructuredBuffer<T> appendStructuredBuffer;
@@ -361,34 +343,54 @@ namespace DX12
 
 			init_views(frame);
 
-
-
-			hlsl = frame.srv_uav_cbv_cpu.place(3);
+			hlsl = frame.srv_uav_cbv_cpu.place(4);
 
 			structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 			rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
 			appendStructuredBuffer = HLSL::AppendStructuredBuffer<T>(hlsl[2]);
 
-	auto& desc = resource->get_desc();
-		
+
+			uav_clear = hlsl[3];
+
+			auto& desc = resource->get_desc();
+
 			if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
 				place_srv(structuredBuffer);
 			}
 
-		
+
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
 
 				place_uav(rwStructuredBuffer);
 				place_uav(appendStructuredBuffer);
 
+
+
+				{
+					D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
+					desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+
+					desc.Format = DXGI_FORMAT::DXGI_FORMAT_R8_UINT;
+
+					desc.Buffer.StructureByteStride = 0;
+					desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+
+
+					desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(char));
+					desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(char);
+					desc.Buffer.CounterOffsetInBytes = 0;
+					Device::get().create_uav(uav_clear, resource.get(), desc);
+				}
+
+
 			}
 		}
-
+		Handle get_uav_clear() { return uav_clear; }
 		~StructuredBufferView()
 		{
 
 		}
-		virtual void place_srv(Handle h) override {
+		virtual void place_srv(Handle h)  {
 			if (!resource) return;
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
@@ -435,31 +437,13 @@ namespace DX12
 				Device::get().create_uav(h, resource.get(), desc);
 			}
 
-			{
-
-				D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
-				desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-
-				desc.Format = DXGI_FORMAT::DXGI_FORMAT_R8_UINT;
-
-				desc.Buffer.StructureByteStride = 0;
-				desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-
-
-				desc.Buffer.NumElements = static_cast<UINT>(view_desc.Buffer.Size / sizeof(char));
-				desc.Buffer.FirstElement = view_desc.Buffer.Offset / sizeof(char);
-				desc.Buffer.CounterOffsetInBytes = 0;
-				Device::get().create_uav(uav_clear, resource.get(), desc);
-
-			}
-
 
 
 
 		}
 		virtual void place_rtv(Handle h) { assert(false); }
 		virtual void place_dsv(Handle h) { assert(false); }
-		virtual void place_cb(Handle h)override {
+		virtual void place_cb(Handle h) {
 			if (!resource) return;
 
 			D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
@@ -490,7 +474,7 @@ namespace DX12
 		{
 			init_desc();
 
-		
+
 			view_desc.Buffer.Offset = offset;
 			if (size) view_desc.Buffer.Size = size;
 
@@ -511,7 +495,7 @@ namespace DX12
 		{
 
 		}
-		virtual void place_srv(Handle h) override {
+		virtual void place_srv(Handle h){
 			if (!resource) return;
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
@@ -549,13 +533,11 @@ namespace DX12
 			desc.Buffer.CounterOffsetInBytes = 0;
 
 			Device::get().create_uav(h, resource.get(), desc);
-			Device::get().create_uav(uav_clear, resource.get(), desc);
-
-
 		}
+
 		virtual void place_rtv(Handle h) { assert(false); }
 		virtual void place_dsv(Handle h) { assert(false); }
-		virtual void place_cb(Handle h)override {
+		virtual void place_cb(Handle h) {
 			if (!resource) return;
 
 			D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};

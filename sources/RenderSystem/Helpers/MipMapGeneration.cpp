@@ -70,7 +70,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureV
 
 		for (uint32_t i = 0; i < NumMips; i++)
 		{
-			data.GetOutMip()[i] = Render::HLSL::RWTexture2D<float4>(view.create_mip(TopMip + 1 + i, *compute_context.get_base().frame_resources).get_uav());
+			data.GetOutMip()[i] = view.create_mip(TopMip + 1 + i, *compute_context.get_base().frame_resources).rwTexture2D;
 		}
 		data.GetSrcMip() = view.create_mip(TopMip, *compute_context.get_base().frame_resources).texture2D;
 

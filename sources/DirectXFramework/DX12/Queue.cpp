@@ -268,6 +268,8 @@ namespace DX12
 	FenceWaiter Queue::execute_internal(CommandList* list)
 	{
 
+		PROFILE(L"execute_internal");
+
 		bool need_wait = has_tasks();
 
 
@@ -282,10 +284,12 @@ namespace DX12
 			//			native->Wait(w.fence.Get(), w.value);
 		}
 
-
-		for (auto& fun : list->on_send_funcs)
 		{
-			fun();
+			PROFILE(L"on_send_funcs");
+			for (auto& fun : list->on_send_funcs)
+			{
+				fun();
+			}
 		}
 		list->on_send_funcs.clear();
 
@@ -293,11 +297,16 @@ namespace DX12
 		{
 			auto& updates = list->tile_updates;
 
-			for (auto& u : updates)
 			{
-				update_tile_mappings(u);
-			}
+				PROFILE(L"update_tile_mappings");
 
+
+				for (auto& u : updates)
+				{
+					update_tile_mappings(u);
+				}
+
+			}
 		
 			auto transition_list = list->fix_pretransitions();
 
@@ -355,9 +364,12 @@ namespace DX12
 			SPECTRUM_CATCH
 			});
 
+		{
+			PROFILE(L"on_send");
 
-		list->on_send();
+			list->on_send();
 
+		}
 		SPECTRUM_CATCH
 
 			condition.notify_one();
@@ -374,6 +386,8 @@ namespace DX12
 
 		if (need_wait)
 		{
+			PROFILE(L"wait");
+
 			commandListCounter.wait(last_known_fence);
 			process_tasks();
 		}

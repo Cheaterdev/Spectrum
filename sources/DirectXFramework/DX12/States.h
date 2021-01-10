@@ -99,6 +99,8 @@ namespace DX12
 
 			bool need_discard = false;
 			volatile uint64_t command_list_id = -1;
+
+			volatile uint64_t used_by_command_list_id = -1;
 		};
 
 
@@ -177,6 +179,16 @@ namespace DX12
 			s.need_discard = false;
 			return  result;
 		}
+
+		bool use_by(int id, uint64_t full_id) const
+		{
+			SubResourcesCPU& s = get_state(id);
+
+			bool result = (s.used_by_command_list_id != full_id);
+			s.used_by_command_list_id = full_id;
+			return  result;
+		}
+
 
 		void aliasing(int id, uint64_t full_id) 
 		{

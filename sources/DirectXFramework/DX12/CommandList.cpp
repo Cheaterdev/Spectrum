@@ -775,16 +775,12 @@ namespace DX12
 
 	void Transitions::use_resource(const Resource* resource)
 	{
-
 		Resource* res = const_cast<Resource*>(resource);
-
-		tracked_resources.emplace_back(res->tracked_info);
-
-		//if (res->load_fence.valid())
+		if (res->use_by(id, global_id))
 		{
-
-			//	waits.emplace_back(res->load_fence.get);
+			tracked_resources.emplace_back(res->tracked_info);
 		}
+	
 	}
 
 	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres)
