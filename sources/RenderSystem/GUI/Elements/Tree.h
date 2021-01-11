@@ -1,3 +1,7 @@
+#pragma once
+#include "Image.h"
+#include "ScrollContainer.h"
+
 namespace GUI
 {
 
@@ -8,7 +12,7 @@ namespace GUI
         class toogle_icon : public GUI::Elements::image
         {
                 GUI::Elements::tree_element* owner;
-				Render::Texture::ptr tex_closed, tex_opened;
+				DX12::Texture::ptr tex_closed, tex_opened;
 
             public:
 
@@ -42,7 +46,7 @@ namespace GUI
 
                 bool can_accept(GUI::drag_n_drop_package::ptr p);
 
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
 
                 virtual void on_drop_enter(GUI::drag_n_drop_package::ptr) override;
 
@@ -101,8 +105,8 @@ namespace GUI
 
                 virtual void on_empty()
                 {
-                    //      open_icon->texture = Render::Texture::null;
-                    //      icon->texture = Render::Texture::null;
+                    //      open_icon->texture = DX12::Texture::null;
+                    //      icon->texture = DX12::Texture::null;
                 }
         };
 
@@ -132,7 +136,7 @@ namespace GUI
                 }
                 tree_creator::ptr creator;
 
-				void draw(Render::context& c) override;
+				void draw(DX12::context& c) override;
 
             public:
 

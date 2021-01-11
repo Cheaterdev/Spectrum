@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "MeshAsset.h"
+#include "AssetRenderer.h"
+#include "Effects/RTX/RTX.h"
 
 
 
@@ -213,10 +216,10 @@ void MeshAsset::try_register()
 }
 
 
-void MeshAsset::update_preview(Render::Texture::ptr preview)
+void MeshAsset::update_preview(DX12::Texture::ptr preview)
 {
     if (!preview || !preview->is_rt())
-        preview.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 256, 256, 1, 6, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+        preview.reset(new DX12::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 256, 256, 1, 6, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 
     if (!preview_mesh)
         preview_mesh.reset(new MeshAssetInstance(get_ptr<MeshAsset>()));

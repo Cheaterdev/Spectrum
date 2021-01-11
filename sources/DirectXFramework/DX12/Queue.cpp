@@ -1,6 +1,9 @@
 #include "pch.h"
 #include "Samplers.h"
 #include "Device12.h"
+#include "Queue.h"
+#include "CommandList.h"
+#include "Threads/Threading.h"
 
 namespace DX12
 {

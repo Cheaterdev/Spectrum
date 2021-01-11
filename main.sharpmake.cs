@@ -62,7 +62,8 @@ public class CustomTarget : ITarget
         {
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
-
+			conf.IncludePaths.Add(@"[project.SourceRootPath]");
+			
             conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);		
             conf.Options.Add(Options.Vc.Compiler.Exceptions.Enable);		
             conf.Options.Add(Options.Vc.Compiler.RTTI.Enable);		
@@ -205,7 +206,7 @@ public class CustomTarget : ITarget
             conf.PrecompHeader = "pch.h";
             conf.PrecompSource = "pch.cpp";    
 
-            conf.AddPrivateDependency<Core>(target);     
+            conf.AddPublicDependency<Core>(target);     
         }
     }
 
@@ -235,7 +236,7 @@ public class CustomTarget : ITarget
             conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxil.dll");
             
          
-            conf.AddPrivateDependency<FileSystem>(target);     
+            conf.AddPublicDependency<FileSystem>(target);     
             conf.AddPublicDependency<Aftermath>(target);     
          
         }
@@ -257,7 +258,7 @@ public class CustomTarget : ITarget
             conf.PrecompHeader = "pch.h";
             conf.PrecompSource = "pch.cpp";    
 
-            conf.AddPrivateDependency<DirectXFramework>(target);     
+            conf.AddPublicDependency<DirectXFramework>(target);     
         }
     }
 
@@ -277,8 +278,8 @@ public class CustomTarget : ITarget
             conf.PrecompHeader = "pch.h";
             conf.PrecompSource = "pch.cpp";    
 
-            conf.AddPrivateDependency<DirectXFramework>(target);    
-            conf.AddPrivateDependency<FlowGraph>(target);               
+            conf.AddPublicDependency<DirectXFramework>(target);    
+            conf.AddPublicDependency<FlowGraph>(target);               
         }
     }
 
@@ -332,8 +333,8 @@ public class CustomTarget : ITarget
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings ();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
             
-            conf.AddPrivateDependency<DirectXFramework>(target);    
-            conf.AddPrivateDependency<RenderSystem>(target);             
+            conf.AddPublicDependency<DirectXFramework>(target);    
+            conf.AddPublicDependency<RenderSystem>(target);             
         }
     }
 

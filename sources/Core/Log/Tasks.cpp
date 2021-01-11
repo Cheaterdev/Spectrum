@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Tasks.h"
 std::shared_ptr<Task> TaskInfoManager::create_task(std::wstring name)
 {
 	auto task = std::make_shared<Task>(name);

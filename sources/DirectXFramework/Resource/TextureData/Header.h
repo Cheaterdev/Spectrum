@@ -1,3 +1,6 @@
+#include "DebugInfo/Debug.h"
+#include <memory>
+#include "FileSystem/FileSystem.h"
 
 static void GetSurfaceInfo2(_In_ size_t width,
                             _In_ size_t height,

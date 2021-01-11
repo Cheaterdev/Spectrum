@@ -1,3 +1,6 @@
+#pragma once
+#include "../GUI.h"
+#include "Label.h"
 namespace GUI
 {
 
@@ -21,7 +24,7 @@ namespace GUI
                 bool selected = false;
 
 
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
                 std::shared_ptr<menu_list> get_menu();
@@ -113,7 +116,7 @@ namespace GUI
                     return l_e;
                 }
 
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
                 virtual bool is_menu_component()
                 {
                     return true;

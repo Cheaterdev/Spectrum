@@ -7,10 +7,10 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float> light_mask;
+			DX12::HLSL::Texture2D<float> light_mask;
 			GBuffer::SRV gbuffer;
 		} &srv;
-		Render::HLSL::Texture2D<float>& GetLight_mask() { return srv.light_mask; }
+		DX12::HLSL::Texture2D<float>& GetLight_mask() { return srv.light_mask; }
 		GBuffer MapGbuffer() { return GBuffer(srv.gbuffer); }
 		PSSMLighting(SRV&srv) :srv(srv){}
 	};

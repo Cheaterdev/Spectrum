@@ -7,12 +7,12 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::StructuredBuffer<vertex_input> vb;
+			DX12::HLSL::StructuredBuffer<vertex_input> vb;
 		} &srv;
-		Render::Bindless& bindless;
-		Render::HLSL::StructuredBuffer<vertex_input>& GetVb() { return srv.vb; }
-		Render::Bindless& GetTextures() { return bindless; }
-		NinePatch(SRV&srv,Render::Bindless &bindless) :srv(srv),bindless(bindless){}
+		DX12::Bindless& bindless;
+		DX12::HLSL::StructuredBuffer<vertex_input>& GetVb() { return srv.vb; }
+		DX12::Bindless& GetTextures() { return bindless; }
+		NinePatch(SRV&srv,DX12::Bindless &bindless) :srv(srv),bindless(bindless){}
 	};
 	#pragma pack(pop)
 }

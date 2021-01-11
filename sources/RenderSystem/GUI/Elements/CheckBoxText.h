@@ -1,3 +1,8 @@
+#pragma once
+#include "HorizontalLayout.h"
+#include "Label.h"
+#include "CheckBox.h"
+#include "Log/Events.h"
 namespace GUI
 {
 	namespace Elements

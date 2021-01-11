@@ -7,6 +7,11 @@ namespace ShaderParams
     static const FlowGraph::data_types FLOAT3("float3");
     static const FlowGraph::data_types FLOAT4("float4");
 };*/
+#pragma once
+#include "FlowGraph.h"
+#include "GUI/Elements/FlowGraph/ComponentWindow.h"
+#include "Assets/Asset.h"
+#include "Assets/TextureAsset.h"
 
 
 class VectorType;

@@ -15,9 +15,9 @@ namespace Table
 		} &srv;
 		struct UAV
 		{
-			Render::HLSL::RWTexture3D<float4> Target;
+			DX12::HLSL::RWTexture3D<float4> Target;
 		} &uav;
-		Render::HLSL::RWTexture3D<float4>& GetTarget() { return uav.Target; }
+		DX12::HLSL::RWTexture3D<float4>& GetTarget() { return uav.Target; }
 		VoxelTilingParams MapParams() { return VoxelTilingParams(cb.params,srv.params); }
 		VoxelZero(CB&cb,SRV&srv,UAV&uav) :cb(cb),srv(srv),uav(uav){}
 	};

@@ -1,4 +1,9 @@
 #include "pch.h"
+#include "Assets/MeshAsset.h"
+#include "Assets/TextureAsset.h"
+#include "Assets/BinaryAsset.h"
+#include "Assets/Asset.h"
+#include "Lighting/BRDF.h"
 
 namespace EngineAssets
 {

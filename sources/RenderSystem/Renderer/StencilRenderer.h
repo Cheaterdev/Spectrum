@@ -1,14 +1,19 @@
 #pragma once
+#include "GUI/GUI.h"
+#include "Camera/Camera.h"
+#include "Assets/MeshAsset.h"
+#include "DX12/Buffer.h"
+#include "Scene/Scene.h"
 
 class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Events::Runner
 {
      //   RenderTargetTable table;
-    //    Render::StructuredBuffer<UINT>::ptr id_buffer;
+    //    DX12::StructuredBuffer<UINT>::ptr id_buffer;
         camera cam;
         camera axis_intersect_cam;
 
 
-     //   Render::StructuredBuffer<UINT>::ptr axis_id_buffer;
+     //   DX12::StructuredBuffer<UINT>::ptr axis_id_buffer;
 
         MeshAssetInstance::ptr axis;
      //   PlacedAllocator allocator;
@@ -39,8 +44,8 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
         float3 get_normal(int axis);
         std::pair<MeshAssetInstance::ptr, int> mouse_on_object;
 
-		Render::StructuredBuffer<vec4>::ptr vertex_buffer;
-		Render::IndexBuffer::ptr index_buffer;
+		DX12::StructuredBuffer<vec4>::ptr vertex_buffer;
+		DX12::IndexBuffer::ptr index_buffer;
 
         virtual bool can_accept(GUI::drag_n_drop_package::ptr p) override;
 		virtual void on_drop_move(GUI::drag_n_drop_package::ptr p, vec2)override;

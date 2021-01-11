@@ -12,6 +12,7 @@
 #include "raw4/Raw4Loader.h"
 
 #include "BaseImporter.h"
+#include "Math\ScalarMath.h"
 
 namespace Assimp
 {

@@ -1,10 +1,11 @@
 #include "pch.h"
+#include "SMAA.h"
 
-
+#include <slots.h>
 SMAA::SMAA()
 {
-	area_tex = Render::Texture::get_resource({ "textures\\AreaTex.dds", false, false });
-	search_tex = Render::Texture::get_resource({ "textures\\SearchTex.dds", false, false });
+	area_tex = DX12::Texture::get_resource({ "textures\\AreaTex.dds", false, false });
+	search_tex = DX12::Texture::get_resource({ "textures\\SearchTex.dds", false, false });
 
 }
 
@@ -50,7 +51,7 @@ void SMAA::generate(FrameGraph& graph)
 
 			graphics.set_viewport(edges.get_viewport());
 			graphics.set_scissor(edges.get_scissor());
-			graphics.set_rtv(1, edges.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, edges.get_rtv(), DX12::Handle());
 			graphics.get_base().clear_rtv(edges.get_rtv());
 			graphics.get_base().clear_rtv(blend.get_rtv());
 
@@ -77,7 +78,7 @@ void SMAA::generate(FrameGraph& graph)
 				slot_edges.set(graphics);
 			}
 			graphics.set_pipeline(GetPSO<PSOS::BlendWeight>());
-			graphics.set_rtv(1, blend.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, blend.get_rtv(), DX12::Handle());
 			graphics.draw(4);
 
 
@@ -92,7 +93,7 @@ void SMAA::generate(FrameGraph& graph)
 			}
 
 			graphics.set_pipeline(GetPSO<PSOS::Blending>());
-			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, target_tex.get_rtv(), DX12::Handle());
 			graphics.draw(4);
 
 		});
@@ -100,12 +101,12 @@ void SMAA::generate(FrameGraph& graph)
 	//resolving
 	/*    {
 	list.set_pipeline(state_resolve);
-	buffer->result_tex.swap(context->list, Render::ResourceState::RENDER_TARGET, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+	buffer->result_tex.swap(context->list, DX12::ResourceState::RENDER_TARGET, DX12::ResourceState::PIXEL_SHADER_RESOURCE);
 	list.set(2, buffer->result_tex.second()->texture_2d()->get_srv());
 	temporal.set(context->list, 3);
-	list.set_rtv(1, buffer->result_tex.first()->texture_2d()->get_rtv(0), Render::Handle());
+	list.set_rtv(1, buffer->result_tex.first()->texture_2d()->get_rtv(0), DX12::Handle());
 	list.draw(4);
 	}*/
-	//	list.transition(buffer->light_tex.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
+	//	list.transition(buffer->light_tex.get(), DX12::ResourceState::PIXEL_SHADER_RESOURCE);
 }
 

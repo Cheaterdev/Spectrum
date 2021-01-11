@@ -1,4 +1,8 @@
 #pragma once
+#include "Math/Vectors.h"
+#include "DX12/Texture.h"
+#include "DX12/Buffer.h"
+#include "DX12/CommandList.h"
 
 
 struct visibility_update
@@ -17,9 +21,9 @@ protected:
 	virtual void process_tile_readback(ivec3 pos, char level) = 0;
 
 public:
-	Render::Texture::ptr buffer;
+	DX12::Texture::ptr buffer;
 
-	Render::StructuredBuffer<uint4>::ptr load_tiles_buffer;
+	DX12::StructuredBuffer<uint4>::ptr load_tiles_buffer;
 	using ptr = std::shared_ptr<VisibilityBuffer>;
 
 	VisibilityBuffer(ivec3 sizes);
@@ -28,7 +32,7 @@ public:
 
 	//void wait_for_results();
 
-	std::future<visibility_update> update(Render::CommandList::ptr& list);
+	std::future<visibility_update> update(DX12::CommandList::ptr& list);
 
 
 };

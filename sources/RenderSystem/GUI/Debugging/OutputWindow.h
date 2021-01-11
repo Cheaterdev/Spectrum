@@ -1,4 +1,5 @@
 #pragma once
+#include "../Elements/ScrollContainer.h"
 
 
 namespace GUI
@@ -13,7 +14,7 @@ namespace GUI
 
                     base::ptr current_block;
 
-                    virtual void draw(Render::context& c) override;
+                    virtual void draw(DX12::context& c) override;
                     std::list< base::ptr> add;
                     std::mutex m;
                     virtual void think(float) override;

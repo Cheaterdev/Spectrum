@@ -1,4 +1,9 @@
 #include "pch.h"
+#include "Values.h"
+#include "GUI/Elements/AssetExplorer.h"
+#include "GUI/Elements/ColoredRect.h"
+#include "GUI/Elements/ValueBox.h"
+#include "GUI/Elements/CheckBoxText.h"
 
 /*
 int get_size(FlowGraph::data_types v)
@@ -778,7 +783,7 @@ using namespace Elements;
 GUI::base::ptr TextureNode::create_editor_window()
 {
 	GUI::Elements::image::ptr img(new GUI::Elements::image);
-	img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+	img->texture.texture = DX12::Texture::get_resource({ "textures/gui/shadow.png", false, false });
 	img->texture.padding = { 9, 9, 9, 9 };
 	img->padding = { 9, 9, 9, 9 };
 	img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -788,7 +793,7 @@ GUI::base::ptr TextureNode::create_editor_window()
 	GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
 	//img_inner->texture.texture = asset->get_texture();
 
-	img_inner->texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
+	img_inner->texture.srv = DX12::DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();

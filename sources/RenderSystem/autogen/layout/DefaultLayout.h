@@ -47,6 +47,6 @@ struct DefaultLayout: public FrameLayout
 		static const unsigned int CB_ID = 17;
 	};
 	template<class Processor> static void for_each(Processor& processor) {
-		processor.process<CameraData,SceneData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({Render::Samplers::SamplerLinearWrapDesc,Render::Samplers::SamplerPointClampDesc,Render::Samplers::SamplerLinearClampDesc,Render::Samplers::SamplerAnisoBorderDesc});
+		processor.process<CameraData,SceneData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({DX12::Samplers::SamplerLinearWrapDesc,DX12::Samplers::SamplerPointClampDesc,DX12::Samplers::SamplerLinearClampDesc,DX12::Samplers::SamplerAnisoBorderDesc});
 	}
 };

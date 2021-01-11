@@ -1,4 +1,9 @@
 #pragma once
+#include "Log/Events.h"
+#include "Math/Vectors.h"
+#include "Tree/Tree.h"
+#include "patterns/Singleton.h"
+#include "Log/Log.h"
 
 //#define PROFILING
 

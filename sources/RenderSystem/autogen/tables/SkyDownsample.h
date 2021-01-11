@@ -11,11 +11,11 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::Handle sourceTex;
+			DX12::Handle sourceTex;
 		} &srv;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Handle& GetSourceTex() { return srv.sourceTex; }
+		DX12::Handle& GetSourceTex() { return srv.sourceTex; }
 		float4& GetScaler() { return cb.scaler; }
 		uint4& GetSize() { return cb.size; }
 		SkyDownsample(CB&cb,SRV&srv) :cb(cb),srv(srv){}

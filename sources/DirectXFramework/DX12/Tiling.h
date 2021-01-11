@@ -1,4 +1,6 @@
 #pragma once
+#include "Math/Vectors.h"
+#include "Memory.h"
 namespace DX12
 {
 	class ResourceHeap;

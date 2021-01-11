@@ -1,4 +1,10 @@
 #pragma once
+#include "Resizable.h"
+#pragma once
+#include "Dragger.h"
+#include "Label.h"
+#include "../Skin.h"
+#include "Button.h"
 namespace GUI
 {
     namespace Elements
@@ -29,7 +35,7 @@ namespace GUI
                 {
                     label_text->text = title;
                 }
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 

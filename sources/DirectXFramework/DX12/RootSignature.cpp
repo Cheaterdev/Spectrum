@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "RootSignature.h"
+#include "Device12.h"
 
 namespace DX12
 {

@@ -1,11 +1,13 @@
 #include "pch.h"
+#include "ScrollBar.h"
+#include "../Renderer/Renderer.h"
 
 namespace GUI
 {
 
 
 
-    void Elements::scroll_bar::draw(Render::context& c)
+    void Elements::scroll_bar::draw(DX12::context& c)
     {
         renderer->draw_color(c, float4(0, 0, 0, 0.5), get_render_bounds());
         renderer->draw_color(c, float4(1, 1, 1, 0.5), drag->get_render_bounds());

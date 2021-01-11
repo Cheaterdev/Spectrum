@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Mesh.h"
 //boost exports
 
 BOOST_CLASS_EXPORT_IMPLEMENT(node_object);
@@ -96,7 +97,7 @@ mesh_node::mesh_node(std::shared_ptr<node_object> node, material_holder* mesh)
         primitive = node->primitive->clone();
 	*/
     //  if *(meshes.size())
-    //      const_buffer.reset(new Render::ConstBuffer<mat4x4>());
+    //      const_buffer.reset(new DX12::ConstBuffer<mat4x4>());
 
     for (auto c : node->childs)
         add_child(ptr(new mesh_node(c, mesh)));

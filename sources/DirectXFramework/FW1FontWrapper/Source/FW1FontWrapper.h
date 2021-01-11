@@ -8,6 +8,8 @@
 
 #include <D3D11.h>
 #include <DWrite.h>
+#include "Math/Vectors.h"
+#include "DX12/CommandList.h"
 
 
 /// <summary>The current FW1 version.</summary>
@@ -813,7 +815,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Color">The color of the text, as 0xAaBbGgRr.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawString(
-        __in  Render::CommandList::ptr & pContext,
+        __in  DX12::CommandList::ptr & pContext,
         __in const WCHAR * pszString,
         __in FLOAT FontSize,
         __in FLOAT X,

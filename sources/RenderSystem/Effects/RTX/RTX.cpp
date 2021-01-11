@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "RTX.h"
+#include "Materials/universal_material.h"
+#include "Camera/Camera.h"
 
 UINT RTX::get_material_id(materials::universal_material* universal)
 {
@@ -159,7 +162,7 @@ RTX::RTX()
 {
 	material_hits = std::make_shared< virtual_gpu_buffer<closesthit_identifier>>(1024 * 1024);
 
-	library = Render::library_shader::get_resource({ "shaders\\raytracing.hlsl", "" , 0, {} });
+	library = DX12::library_shader::get_resource({ "shaders\\raytracing.hlsl", "" , 0, {} });
 
 	global_sig = get_Signature(Layouts::DefaultLayout)->create_global_signature<Slots::MaterialInfo>();
 	local_sig = create_local_signature<Slots::MaterialInfo>();
@@ -181,7 +184,7 @@ void RTX::prepare(CommandList::ptr& list)
 	material_hits->prepare(list);
 }
 
-void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer)
+void RTX::render(MeshRenderContext::ptr context, DX12::TextureView& texture, DX12::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer)
 {
 	PROFILE_GPU(L"raytracing");
 

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "BinaryAsset.h"
 
 
 BOOST_CLASS_EXPORT(BinaryAsset);
@@ -70,9 +71,9 @@ BinaryAsset::BinaryAsset()
 
 }
 
-void BinaryAsset::update_preview(Render::Texture::ptr preview)
+void BinaryAsset::update_preview(DX12::Texture::ptr preview)
 {
-    /* Render::CommandList::ptr list(new Render::CommandList(Render::CommandListType::DIRECT));
+    /* DX12::CommandList::ptr list(new DX12::CommandList(DX12::CommandListType::DIRECT));
      list->begin();
      TextureAssetRenderer::get().render(this, preview, list);
      list->end();

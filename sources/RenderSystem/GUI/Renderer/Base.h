@@ -4,20 +4,20 @@ namespace GUI
 
 
 #define BUILD_BUFFERS(x)\
-        Render::Buffer<v_c_b>::ptr cb_vertex;\
-        Render::Buffer<p_c_b>::ptr cb_pixel;\
-        Render::HandleTable vertex_table;\
-        Render::HandleTable pixel_table;\
+        DX12::Buffer<v_c_b>::ptr cb_vertex;\
+        DX12::Buffer<p_c_b>::ptr cb_pixel;\
+        DX12::HandleTable vertex_table;\
+        DX12::HandleTable pixel_table;\
         x()\
         {\
-            cb_vertex.reset(new Render::Buffer<v_c_b>());\
-            cb_pixel.reset(new Render::Buffer<p_c_b>());\
-            vertex_table = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);\
-            pixel_table = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);\
+            cb_vertex.reset(new DX12::Buffer<v_c_b>());\
+            cb_pixel.reset(new DX12::Buffer<p_c_b>());\
+            vertex_table = DX12::DescriptorHeapManager::get().get_csu_static()->create_table(1);\
+            pixel_table = DX12::DescriptorHeapManager::get().get_csu_static()->create_table(1);\
             cb_vertex->place_const_buffer(vertex_table[0]);\
             cb_pixel->place_const_buffer(pixel_table[0]);\
         }\
-void update(Render::CommandList::ptr& list)\
+void update(DX12::CommandList::ptr& list)\
 {\
 cb_pixel->update(list);\
 cb_vertex->update(list);\
@@ -65,13 +65,13 @@ cb_vertex->update(list);\
                       sampler = DX11::sampler_state::get_resource(sampDesc);*/
             }
 
-            void set_sampler(Render::context& c)
+            void set_sampler(DX12::context& c)
             {
                 //c.dx_context.get_shader_state<DX11::pixel_shader>().sampler_state[0] = sampler;
             }
 
         public:
-            void draw(OBJECT* obj, Render::context& c)
+            void draw(OBJECT* obj, DX12::context& c)
             {
                 if (!obj->render_data)
                     obj->render_data.reset(new DATA());
@@ -83,7 +83,7 @@ cb_vertex->update(list);\
         protected:
 
 
-            virtual void render(OBJECT* obj, DATA* data, Render::context& c) = 0;
+            virtual void render(OBJECT* obj, DATA* data, DX12::context& c) = 0;
 
     };
 }

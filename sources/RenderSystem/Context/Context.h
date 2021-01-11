@@ -1,3 +1,11 @@
+#pragma once
+#include "patterns/Holdable.h"
+#include "Threads/Scheduler.h"
+#include "DX12/ResourceViews.h"
+#include "FrameGraph.h"
+#include "Math/Quaternions.h"
+#include "DX12/PipelineState.h"
+#include <slots.h>
 
 class camera;
 class debug_drawer;
@@ -10,13 +18,13 @@ namespace materials
     class Pipeline;
 }
 
-namespace Render
+namespace DX12
 {
 	
 
 	struct EyeInfo:public Holder
 	{
-		Render::Texture::ptr color_buffer;
+		DX12::Texture::ptr color_buffer;
 		quat dir;
 		vec3 offset;
 		float fov = -1;
@@ -35,8 +43,8 @@ namespace Render
     {
         public:
 
-            Render::CommandList::ptr& command_list;
-			Render::CommandList::ptr command_list_label;
+            DX12::CommandList::ptr& command_list;
+			DX12::CommandList::ptr command_list_label;
 			std::shared_ptr<OVRContext>& ovr_context;
 
 			SingleThreadExecutorBatched* labeled;
@@ -50,15 +58,15 @@ namespace Render
             float scale = 1;
             float4 color = float4(1, 1, 1, 1);
 			
-			std::function<void(Render::context &c)> commit_scissor()
+			std::function<void(DX12::context &c)> commit_scissor()
 			{
 				scissors = ui_clipping;
 				auto list = command_list;
 				auto clip = ui_clipping;
-				return [list, clip](Render::context &c) {list->get_graphics().set_scissors(clip); };
+				return [list, clip](DX12::context &c) {list->get_graphics().set_scissors(clip); };
 			}
 			
-            context(Render::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context): command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
+            context(DX12::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context): command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
             {
                 drawer = nullptr;
 //                cam = nullptr;
@@ -80,7 +88,7 @@ namespace Render
 
 
 }
-using namespace Render;
+using namespace DX12;
 struct MeshRenderContext;
 class MaterialProvider
 {
@@ -115,8 +123,8 @@ struct MeshRenderContext
 {
     private:
         //  std::vector<std::shared_ptr<materials::material>> materials;
-        Render::PipelineState::ptr current_state;
-        //  Render::PipelineStateDesc current_state_desc;
+        DX12::PipelineState::ptr current_state;
+        //  DX12::PipelineStateDesc current_state_desc;
     public:
         using ptr = s_ptr<MeshRenderContext>;
         int draw_count = 0;
@@ -125,10 +133,10 @@ struct MeshRenderContext
 
         MaterialProvider* mat_provider = nullptr;
 
-        Render::PipelineStateDesc pipeline;
-		std::shared_ptr<Render::OVRContext> eye_context;
+        DX12::PipelineStateDesc pipeline;
+		std::shared_ptr<DX12::OVRContext> eye_context;
 	
-        Render::CommandList::ptr list;
+        DX12::CommandList::ptr list;
      
         camera* cam = nullptr;
         RENDER_TYPE render_type = RENDER_TYPE::PIXEL;
@@ -136,13 +144,13 @@ struct MeshRenderContext
        TaskPriority priority = TaskPriority::NORMAL;
         float delta_time = 0;
         size_t current_time = 0;
-       // Render::Handle set_4_table;
+       // DX12::Handle set_4_table;
 		vec2 screen_subsample = {0,0};
         GBuffer* g_buffer = nullptr;
         RT::Slot::GBuffer::Compiled gbuffer_compiled;
 
-        Render::Texture::ptr target_tex;
-      //  Render::HandleTable voxel_target;
+        DX12::Texture::ptr target_tex;
+      //  DX12::HandleTable voxel_target;
 
         Slots::Voxelization::Compiled voxelization_compiled;
 		vec3 sky_dir;
@@ -160,7 +168,7 @@ struct MeshRenderContext
         {
             if (!current_state || !(current_state->desc == pipeline))
             {
-                current_state = Render::PipelineStateCache::get_cache(pipeline);
+                current_state = DX12::PipelineStateCache::get_cache(pipeline);
 
               
                 assert(pipeline == current_state->desc);
@@ -195,16 +203,16 @@ struct MeshRenderContext
 
 class RenderTargetTable
 {
-        Render::HandleTableLight rtv_table;
+        DX12::HandleTableLight rtv_table;
     
         std::vector<DXGI_FORMAT>formats;
         DXGI_FORMAT depth_format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
-        //  Render::Handle depth_handle;
+        //  DX12::Handle depth_handle;
 
-        std::vector<Render::TextureView> textures;
-        Render::TextureView depth_texture;
+        std::vector<DX12::TextureView> textures;
+        DX12::TextureView depth_texture;
 
-        std::vector<Render::Viewport> vps;
+        std::vector<DX12::Viewport> vps;
         std::vector<sizer_long> scissors;
 
         void on_init(ivec2 size)
@@ -220,20 +228,20 @@ class RenderTargetTable
             scissors[0] = { 0, 0, size.x, size.y };
         }
     public:
-		Render::HandleTableLight dsv_table;
+		DX12::HandleTableLight dsv_table;
 
         void clear_depth(MeshRenderContext::ptr& context, float value = 1)
         {
 			if (depth_texture)
                 context->list->clear_depth(dsv_table[0], value);
         }
-        void clear_stencil(Render::GraphicsContext& list, UINT8 stencil = 0)
+        void clear_stencil(DX12::GraphicsContext& list, UINT8 stencil = 0)
         {
 			if (depth_texture)
                 list.get_base().clear_stencil(dsv_table[0], stencil);
         }
 
-        void clear_depth(Render::GraphicsContext& list, float value = 1)
+        void clear_depth(DX12::GraphicsContext& list, float value = 1)
         {
 
             if (depth_texture)
@@ -242,13 +250,13 @@ class RenderTargetTable
         RenderTargetTable() {}
 
 
-        void set_window(Render::GraphicsContext& context)
+        void set_window(DX12::GraphicsContext& context)
         {
             context.set_viewports(vps);
             context.set_scissors(scissors[0]);
         }
 
-        RenderTargetTable(Render::GraphicsContext& graphics, std::initializer_list<Render::TextureView> list, Render::TextureView depth)
+        RenderTargetTable(DX12::GraphicsContext& graphics, std::initializer_list<DX12::TextureView> list, DX12::TextureView depth)
         {
            rtv_table = graphics.place_rtv((UINT)list.size());
             UINT i = 0;
@@ -286,12 +294,12 @@ class RenderTargetTable
             set(context->list->get_graphics(), clear_color, clear_depth);
         }
 
-        void set(Render::GraphicsContext& graphics,bool clear_color = false, bool clear_depth = false)
+        void set(DX12::GraphicsContext& graphics,bool clear_color = false, bool clear_depth = false)
 		{
 
             auto& list = graphics.get_base();
 
-            graphics.set_rtv(rtv_table, dsv_table.valid()?dsv_table[0]:Render::Handle());
+            graphics.set_rtv(rtv_table, dsv_table.valid()?dsv_table[0]:DX12::Handle());
 
 			if (clear_color)
 			{
@@ -312,22 +320,22 @@ class RenderTargetTable
 class GBuffer
 {
 public:
-	Render::TextureView albedo;
-	Render::TextureView normals;
-	Render::TextureView depth;
-	Render::TextureView specular;
-	Render::TextureView speed;
+	DX12::TextureView albedo;
+	DX12::TextureView normals;
+	DX12::TextureView depth;
+	DX12::TextureView specular;
+	DX12::TextureView speed;
 
 
-	Render::TextureView quality;
-	Render::TextureView depth_mips;
-	Render::TextureView depth_prev_mips;
+	DX12::TextureView quality;
+	DX12::TextureView depth_mips;
+	DX12::TextureView depth_prev_mips;
 
 	RenderTargetTable rtv_table;
 
 
 	struct {
-		Render::TextureView hiZ_depth, hiZ_depth_uav;
+		DX12::TextureView hiZ_depth, hiZ_depth_uav;
 		RenderTargetTable hiZ_table;
 	}HalfBuffer;
 

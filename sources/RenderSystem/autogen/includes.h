@@ -124,5 +124,5 @@
 #include "pso\VoxelIndirectUpsample.h"
 #include "pso\VoxelDebug.h"
 void init_signatures();
-Render::RootLayout::ptr get_Signature(Layouts id);
+DX12::RootLayout::ptr get_Signature(Layouts id);
 void init_pso(enum_array<PSO, PSOBase::ptr>&);

@@ -15,9 +15,9 @@ namespace Table
 		} &srv;
 		struct UAV
 		{
-			Render::HLSL::RWTexture2D<float4> output;
+			DX12::HLSL::RWTexture2D<float4> output;
 		} &uav;
-		Render::HLSL::RWTexture2D<float4>& GetOutput() { return uav.output; }
+		DX12::HLSL::RWTexture2D<float4>& GetOutput() { return uav.output; }
 		float& GetPixelAngle() { return cb.pixelAngle; }
 		GBuffer MapGbuffer() { return GBuffer(srv.gbuffer); }
 		RaytracingRays(CB&cb,SRV&srv,UAV&uav) :cb(cb),srv(srv),uav(uav){}

@@ -1,5 +1,8 @@
 #pragma once
 #include <compare>
+#include "RootSignature.h"
+#include "Shader.h"
+#include "Device12.h"
 
 
 bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);

@@ -1,3 +1,9 @@
+#pragma once
+#include "../CheckBox.h"
+#include "FlowGraph.h"
+#include "ComponentWindow.h"
+#include "../ScrollContainer.h"
+#include "Comment.h"
 namespace GUI
 {
     namespace Elements
@@ -17,7 +23,7 @@ namespace GUI
                     using wptr = w_ptr<link_item>;
 
                     /*
-                                        virtual void draw(Render::context& c) override;
+                                        virtual void draw(DX12::context& c) override;
                     					*/
                     bool inserted = false;
                     float beam_time = 0;
@@ -31,7 +37,7 @@ namespace GUI
                         drag_listener = true;
                         set_package("link_item");
                         skin = Skin::get().DefaultOptionBox;
-                        //	texture= Render::Texture::get_resource(Render::texure_header("textures/gui/option_normal.png"));
+                        //	texture= DX12::Texture::get_resource(DX12::texure_header("textures/gui/option_normal.png"));
                     }
 
                     virtual bool need_drag_drop() override;
@@ -162,7 +168,7 @@ namespace GUI
                     ::FlowGraph::graph* g;
 
 
-                    virtual void draw(Render::context& c) override;
+                    virtual void draw(DX12::context& c) override;
 
                     using ptr = s_ptr<canvas>;
                     using wptr = w_ptr<canvas>;

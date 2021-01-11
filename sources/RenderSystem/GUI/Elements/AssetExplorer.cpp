@@ -1,4 +1,17 @@
 #include "pch.h"
+#include "AssetExplorer.h"
+#include "FlowGraph.h"
+#include "MenuList.h"
+#include "FlowGraph/ComponentWindow.h"
+#include "Assets/MaterialAsset.h"
+#include "Assets/TextureAsset.h"
+#include "Materials/universal_material.h"
+#include "FlowGraph/FlowManager.h"
+#include "Window.h"
+#include "DockBase.h"
+#include "Platform.h"
+#include "Assets/AssetRenderer.h"
+#include "Tree.h"
 
 
 namespace GUI
@@ -32,9 +45,9 @@ namespace GUI
 			{
 
 			//	if (!debug_texture)
-			//		debug_texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+			//		debug_texture.reset(new DX12::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), DX12::ResourceState::PIXEL_SHADER_RESOURCE));
 				GUI::Elements::image::ptr img(new GUI::Elements::image);
-				img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+				img->texture.texture = DX12::Texture::get_resource({ "textures/gui/shadow.png", false, false });
 				img->texture.padding = { 9, 9, 9, 9 };
 				img->padding = { 9, 9, 9, 9 };
 				img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -218,7 +231,7 @@ namespace GUI
         }
 
 
-        void GUI::Elements::asset_item::draw(Render::context& c)
+        void GUI::Elements::asset_item::draw(DX12::context& c)
         {
 			if (is_hovered())
 				back_im->texture = hover;
@@ -260,7 +273,7 @@ namespace GUI
 			img->add_child(name);
             set_package("asset");
             auto i = im;
-            asset->on_preview.register_handler(this, [i](Render::Texture::ptr preview)
+            asset->on_preview.register_handler(this, [i](DX12::Texture::ptr preview)
             {
                 i->texture = preview;
             });
@@ -533,7 +546,7 @@ namespace GUI
         }
 
 
-		void GUI::Elements::asset_explorer::draw(Render::context& c)
+		void GUI::Elements::asset_explorer::draw(DX12::context& c)
 		{
 		//	renderer->draw_container(get_ptr(), c);
 		}

@@ -1,7 +1,11 @@
 #pragma once
+#include "Resizer.h"
+#include "../GUI.h"
 namespace GUI
 {
-	namespace Elements
+#pragma once
+	
+namespace Elements
 	{
 		class resizable : public base
 		{

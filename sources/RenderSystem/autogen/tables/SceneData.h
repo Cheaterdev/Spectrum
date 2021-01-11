@@ -11,20 +11,20 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::StructuredBuffer<node_data> nodes;
-			Render::HLSL::StructuredBuffer<mesh_vertex_input> vertexes;
-			Render::HLSL::StructuredBuffer<MeshCommandData> meshes;
-			Render::HLSL::StructuredBuffer<MaterialCommandData> materials;
-			Render::HLSL::StructuredBuffer<MeshInstance> meshInstances;
+			DX12::HLSL::StructuredBuffer<node_data> nodes;
+			DX12::HLSL::StructuredBuffer<mesh_vertex_input> vertexes;
+			DX12::HLSL::StructuredBuffer<MeshCommandData> meshes;
+			DX12::HLSL::StructuredBuffer<MaterialCommandData> materials;
+			DX12::HLSL::StructuredBuffer<MeshInstance> meshInstances;
 		} &srv;
-		Render::Bindless& bindless;
-		Render::HLSL::StructuredBuffer<node_data>& GetNodes() { return srv.nodes; }
-		Render::HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return srv.vertexes; }
-		Render::HLSL::StructuredBuffer<MeshCommandData>& GetMeshes() { return srv.meshes; }
-		Render::HLSL::StructuredBuffer<MaterialCommandData>& GetMaterials() { return srv.materials; }
-		Render::HLSL::StructuredBuffer<MeshInstance>& GetMeshInstances() { return srv.meshInstances; }
-		Render::Bindless& GetMaterial_textures() { return bindless; }
-		SceneData(SRV&srv,Render::Bindless &bindless) :srv(srv),bindless(bindless){}
+		DX12::Bindless& bindless;
+		DX12::HLSL::StructuredBuffer<node_data>& GetNodes() { return srv.nodes; }
+		DX12::HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return srv.vertexes; }
+		DX12::HLSL::StructuredBuffer<MeshCommandData>& GetMeshes() { return srv.meshes; }
+		DX12::HLSL::StructuredBuffer<MaterialCommandData>& GetMaterials() { return srv.materials; }
+		DX12::HLSL::StructuredBuffer<MeshInstance>& GetMeshInstances() { return srv.meshInstances; }
+		DX12::Bindless& GetMaterial_textures() { return bindless; }
+		SceneData(SRV&srv,DX12::Bindless &bindless) :srv(srv),bindless(bindless){}
 	};
 	#pragma pack(pop)
 }

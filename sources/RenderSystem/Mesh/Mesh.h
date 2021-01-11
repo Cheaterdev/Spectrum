@@ -1,8 +1,12 @@
+#include "Vertexes.h"
+#include "Occlusion/Occluder.h"
+#include "patterns/SharedObject.h"
+#include "Scene/SceneObject.h"
 
 struct mesh_data
 {
-        Render::vertex_mesh_data vertex_data;
-        Render::indices_data index_data;
+        DX12::vertex_mesh_data vertex_data;
+        DX12::indices_data index_data;
     private:
         friend class boost::serialization::access;
 
@@ -65,8 +69,8 @@ class SimpleMesh : public shared_object<SimpleMesh>
         friend class node_object;
         friend class mesh_renderer;
 
-        Render::vertex_mesh vertexs;
-        Render::index_mesh indices;
+        DX12::vertex_mesh vertexs;
+        DX12::index_mesh indices;
         mesh_data mesh_desc;
 
         std::vector<node_object::ptr> nodes;
@@ -91,8 +95,8 @@ class SimpleMesh : public shared_object<SimpleMesh>
         void load(Archive& ar, const unsigned int)
         {
             ar& NVP(mesh_desc)&NVP(nodes)&NVP(primitive)&NVP(material_index);
-            vertexs = Render::vertex_mesh(mesh_desc.vertex_data);
-            indices = Render::index_mesh(mesh_desc.index_data);
+            vertexs = DX12::vertex_mesh(mesh_desc.vertex_data);
+            indices = DX12::index_mesh(mesh_desc.index_data);
 
             for (auto node : nodes)
                 node->meshes.push_back(this);
@@ -120,7 +124,7 @@ class material_holder
 
 
 class mesh_renderer;
-class mesh_node : public scene_object, public Render::renderable
+class mesh_node : public scene_object, public DX12::renderable
 {
         friend class mesh_object;
         friend class mesh_renderer;

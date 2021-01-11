@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "Allocators.h"
+#include "Math/ScalarMath.h"
 
 CommonAllocator::CommonAllocator(size_t size /*= std::numeric_limits<size_t>::max()*/) :size(size)
 {

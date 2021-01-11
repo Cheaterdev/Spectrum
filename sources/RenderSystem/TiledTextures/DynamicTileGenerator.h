@@ -1,4 +1,5 @@
 #pragma once
+#include "Math/Vectors.h"
 
 class TileDynamicGenerator
 {

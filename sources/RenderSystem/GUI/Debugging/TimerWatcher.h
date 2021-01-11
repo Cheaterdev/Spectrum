@@ -52,7 +52,7 @@ namespace GUI
                         auto timer = dynamic_cast<TimedBlock*>(elem);
                         base::ptr l(new line(tree));
                         toogle_icon::ptr	open_icon(new toogle_icon(tree));
-                        open_icon->texture = Render::Texture::null;
+                        open_icon->texture = DX12::Texture::null;
                         open_icon->size = { 16, 16 }; // size_type::MATCH_PARENT;
                         open_icon->docking = dock::LEFT;
                         //open_icon->visible = false;

@@ -8,13 +8,13 @@ namespace Table
 		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle vb;
-			Render::Handle nodes;
+			DX12::Handle vb;
+			DX12::Handle nodes;
 		} &srv;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Handle& GetVb() { return srv.vb; }
-		Render::Handle& GetNodes() { return srv.nodes; }
+		DX12::Handle& GetVb() { return srv.vb; }
+		DX12::Handle& GetNodes() { return srv.nodes; }
 		MeshNodes(SRV&srv) :srv(srv){}
 	};
 }

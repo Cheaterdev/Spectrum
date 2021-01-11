@@ -1,3 +1,6 @@
+#pragma once
+#include "DX12/Descriptors.h"
+
 namespace DX12
 {
 	using Bindless = std::vector<Handle>;

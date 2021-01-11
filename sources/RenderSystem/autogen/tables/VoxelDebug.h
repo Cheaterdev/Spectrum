@@ -7,10 +7,10 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture3D<float4> volume;
+			DX12::HLSL::Texture3D<float4> volume;
 			GBuffer::SRV gbuffer;
 		} &srv;
-		Render::HLSL::Texture3D<float4>& GetVolume() { return srv.volume; }
+		DX12::HLSL::Texture3D<float4>& GetVolume() { return srv.volume; }
 		GBuffer MapGbuffer() { return GBuffer(srv.gbuffer); }
 		VoxelDebug(SRV&srv) :srv(srv){}
 	};

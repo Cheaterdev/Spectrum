@@ -1,6 +1,8 @@
 // FlowGraph.cpp : Defines the entry point for the console application.
 //
 #include "pch.h"
+#include "FlowGraph.h"
+#include "Math/ScalarMath.h"
 
 namespace FlowGraph
 {

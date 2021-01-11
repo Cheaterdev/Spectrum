@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "CheckBoxText.h"
 namespace GUI
 {
 	namespace Elements

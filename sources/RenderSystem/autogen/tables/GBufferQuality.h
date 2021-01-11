@@ -6,9 +6,9 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float4> ref;
+			DX12::HLSL::Texture2D<float4> ref;
 		} &srv;
-		Render::HLSL::Texture2D<float4>& GetRef() { return srv.ref; }
+		DX12::HLSL::Texture2D<float4>& GetRef() { return srv.ref; }
 		GBufferQuality(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

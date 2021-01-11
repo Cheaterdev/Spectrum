@@ -1,3 +1,4 @@
+#include "Log/simple_archive.h"
 
 namespace boost
 {

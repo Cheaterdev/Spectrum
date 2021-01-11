@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Renderer.h"
 
 namespace GUI
 {
@@ -19,10 +20,10 @@ namespace GUI
 				(*data++) = i * 4 + j + 5;
 			}
 
-		index_buffer.reset(new Render::IndexBuffer(index_data));
+		index_buffer.reset(new DX12::IndexBuffer(index_data));
 	}
 
-	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr pipeline_state)
+	void NinePatch::draw(DX12::context& c, GUI::Texture& item, rect r, DX12::PipelineState::ptr pipeline_state)
 	{
 		if (current_state && current_state != pipeline_state)
 		{
@@ -265,7 +266,7 @@ namespace GUI
 			flush(c);
 	}
 
-	void NinePatch::flush(Render::context& c)
+	void NinePatch::flush(DX12::context& c)
 	{
 		if (vertexes.empty()) return;
 
@@ -292,12 +293,12 @@ namespace GUI
 		textures_handles.clear();
 	}
 
-	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r)
+	void NinePatch::draw(DX12::context& c, GUI::Texture& item, rect r)
 	{
 		draw(c, item, r, GetPSO<PSOS::NinePatch>());
 	}
 
-	void NinePatch::draw(Render::context& c, Render::PipelineState::ptr pipeline_state, rect r)
+	void NinePatch::draw(DX12::context& c, DX12::PipelineState::ptr pipeline_state, rect r)
 	{
 		GUI::Texture item;
 		draw(c, item, r, pipeline_state);

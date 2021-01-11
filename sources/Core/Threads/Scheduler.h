@@ -5,6 +5,7 @@
 #include <agents.h>
 #include "../Profiling/Profiling.h"
 #include <boost/lockfree/spsc_queue.hpp>
+#include "Threading.h"
 using namespace concurrency;
 
 #define GSysInfo SystemInfo::get()

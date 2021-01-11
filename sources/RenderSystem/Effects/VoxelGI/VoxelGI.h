@@ -1,4 +1,14 @@
 #pragma once
+#include "DX12/Memory.h"
+#include "DX12/Texture.h"
+#include "DX12/CommandList.h"
+#include "FrameGraph.h"
+#include "Scene/Scene.h"
+#include "TiledTextures/DynamicTileGenerator.h"
+#include "TiledTextures/VisibilityBuffer.h"
+#include "TiledTextures/GPUTilesBuffer.h"
+#include "Renderer/Renderer.h"
+#include "Lighting/PSSM.h"
 
 
 
@@ -6,17 +16,17 @@ class GBufferDownsampler;
 
 class Texture3DMultiTiles
 {
-	update_tiling_info tilings_info;
+	DX12::update_tiling_info tilings_info;
 public:
 
-	Render::Texture::ptr tex_dynamic;
-	Render::Texture::ptr tex_static;
+	DX12::Texture::ptr tex_dynamic;
+	DX12::Texture::ptr tex_static;
 
 
-	Render::Texture::ptr tex_result;
+	DX12::Texture::ptr tex_result;
 
 
-	void flush(CommandList& list)
+	void flush(DX12::CommandList& list)
 	{
 		tilings_info.resource = tex_result.get();
 		list.update_tilings(std::move(tilings_info));
@@ -25,15 +35,15 @@ public:
 
 	void set(CD3DX12_RESOURCE_DESC desc)
 	{
-		tex_dynamic.reset(new Render::Texture(desc, ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
-		tex_static.reset(new Render::Texture(desc, ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_dynamic.reset(new DX12::Texture(desc, DX12::ResourceState::PIXEL_SHADER_RESOURCE, DX12::HeapType::RESERVED));
+		tex_static.reset(new DX12::Texture(desc, DX12::ResourceState::PIXEL_SHADER_RESOURCE, DX12::HeapType::RESERVED));
 
-		tex_result.reset(new Render::Texture(desc, ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_result.reset(new DX12::Texture(desc, DX12::ResourceState::PIXEL_SHADER_RESOURCE, DX12::HeapType::RESERVED));
 
 
 		tex_dynamic->on_load = [this](ivec4 pos) {
 			auto heap_pos = tex_dynamic->tiles[0][pos].heap_position;
-			heap_pos.handle = ResourceHandle();
+			heap_pos.handle = DX12::ResourceHandle();
 			tex_result->map_tile(tilings_info, pos, heap_pos);
 		};
 
@@ -42,7 +52,7 @@ public:
 			if (tex_static->is_mapped(pos.xyz, pos.w))
 			{
 				auto heap_pos = tex_static->tiles[0][pos].heap_position;
-				heap_pos.handle = ResourceHandle();
+				heap_pos.handle = DX12::ResourceHandle();
 				tex_result->map_tile(tilings_info, pos, heap_pos);
 			}
 			else
@@ -57,7 +67,7 @@ public:
 			if (!tex_dynamic->is_mapped(pos.xyz, pos.w))
 			{
 				auto heap_pos = tex_static->tiles[0][pos].heap_position;
-				heap_pos.handle = ResourceHandle();
+				heap_pos.handle = DX12::ResourceHandle();
 				tex_result->map_tile(tilings_info, pos, heap_pos);
 			}
 			
@@ -75,7 +85,7 @@ public:
 	}
 
 
-	void zero_tiles(CommandList& list)
+	void zero_tiles(DX12::CommandList& list)
 	{
 		tex_dynamic->zero_tiles(list);
 		tex_static->zero_tiles(list);
@@ -89,16 +99,16 @@ public:
 
 class Texture3DRefTiles
 {
-	update_tiling_info tilings_info;
+	DX12::update_tiling_info tilings_info;
 
 	grid<ivec3, bool> static_tiles;
 	grid<ivec3, bool> dynamic_tiles;
 
 public:
-	Render::Texture::ptr tex_result;
+	DX12::Texture::ptr tex_result;
 
 
-	void flush(CommandList& list)
+	void flush(DX12::CommandList& list)
 	{
 		tilings_info.resource = tex_result.get();
 		list.update_tilings(std::move(tilings_info));
@@ -107,7 +117,7 @@ public:
 
 	void set(CD3DX12_RESOURCE_DESC desc)
 	{
-		tex_result.reset(new Render::Texture(desc, ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_result.reset(new DX12::Texture(desc, DX12::ResourceState::PIXEL_SHADER_RESOURCE, DX12::HeapType::RESERVED));
 
 		static_tiles.resize(tex_result->get_tiles_count(), 0);
 		dynamic_tiles.resize(tex_result->get_tiles_count(), 0);
@@ -167,7 +177,7 @@ public:
 
 
 
-	void zero_tiles(CommandList& list)
+	void zero_tiles(DX12::CommandList& list)
 	{
 		tilings_info.tiles.clear();
 
@@ -200,7 +210,7 @@ private:
 
 	VisibilityBufferUniversal::ptr visibility;
 	
-	IndirectCommand dispatch_command;
+	DX12::IndirectCommand dispatch_command;
 
 	TileDynamicGenerator dynamic_generator_voxelizing;
 	TileDynamicGenerator dynamic_generator_lighted;
@@ -226,8 +236,8 @@ private:
 
 		//TextureSwapper gi_textures;
 		//TextureSwapper downsampled_light;
-		Render::Texture::ptr downsampled_reflection;
-		Render::Texture::ptr current_gi_texture;
+		DX12::Texture::ptr downsampled_reflection;
+		DX12::Texture::ptr current_gi_texture;
 
 		Events::prop<ivec2> size;
 		EyeData();
@@ -244,7 +254,7 @@ public:
 	Texture3DMultiTiles normal;
 	Texture3DRefTiles tex_lighting;
 
-	Render::Texture::ptr  ssgi_tex;
+	DX12::Texture::ptr  ssgi_tex;
 
 	Variable<bool> voxelize_scene = Variable<bool>(true, "voxelize_scene");
 	Variable<bool> light_scene = Variable<bool>(true, "light_scene");
@@ -253,7 +263,7 @@ public:
 	Variable<VISUALIZE_TYPE> render_type = Variable<VISUALIZE_TYPE>(VISUALIZE_TYPE::FULL, "render_type");
 
 	void resize(ivec2 size);
-	void start_new(Render::CommandList& list);
+	void start_new(DX12::CommandList& list);
 
 	VoxelGI(Scene::ptr& scene);
 	void voxelize(MeshRenderContext::ptr& context, main_renderer* r);

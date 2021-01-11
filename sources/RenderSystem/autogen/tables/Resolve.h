@@ -11,13 +11,13 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::Handle areaTex;
-			Render::Handle searchTex;
+			DX12::Handle areaTex;
+			DX12::Handle searchTex;
 		} &srv;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Handle& GetAreaTex() { return srv.areaTex; }
-		Render::Handle& GetSearchTex() { return srv.searchTex; }
+		DX12::Handle& GetAreaTex() { return srv.areaTex; }
+		DX12::Handle& GetSearchTex() { return srv.searchTex; }
 		float4& GetSubsampleIndices() { return cb.subsampleIndices; }
 		float4& GetSMAA_RT_METRICS() { return cb.SMAA_RT_METRICS; }
 		Resolve(CB&cb,SRV&srv) :cb(cb),srv(srv){}

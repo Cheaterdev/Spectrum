@@ -9,6 +9,15 @@
 #include <assimp\ProgressHandler.hpp>
 #include <assimp\IOStream.hpp>
 #include <assimp\IOSystem.hpp>
+#include "Assets/MeshAsset.h"
+#include "GUI/Elements/Window.h"
+#include "GUI/Elements/CheckBoxText.h"
+#include "GUI/Elements/ValueBox.h"
+#include "GUI/Elements/ScrollContainer.h"
+#include "Assets/TextureAsset.h"
+#include "Materials/Values.h"
+#include "Assets/MaterialAsset.h"
+#include "Materials/universal_material.h"
 
 
 struct MeshLoadingSettings
@@ -515,8 +524,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     }
                 }
 
-                //  m->shader = Render::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });
-                //  m->shader_color = Render::pixel_shader::get_resource({ "material.hlsl", "PS_Color", 0, {} });
+                //  m->shader = DX12::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });
+                //  m->shader_color = DX12::pixel_shader::get_resource({ "material.hlsl", "PS_Color", 0, {} });
                 //   m->compile();
                 aiString mat_name;
                 //if (aiGetMaterialString(native_material, AI_MATKEY_NAME, &mat_name) == aiReturn_SUCCESS)

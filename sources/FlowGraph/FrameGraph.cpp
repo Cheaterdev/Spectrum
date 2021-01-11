@@ -1,5 +1,7 @@
 
 #include "pch.h"
+#include "FrameGraph.h"
+#include "DX12/Device12.h"
 
 void TaskBuilder::begin(Pass* pass)
 {
@@ -480,7 +482,7 @@ void FrameGraph::render()
 		{
 			auto commandList = pass->context.list;
 			if (!commandList) continue;
-
+			
 			Render::CommandListType list_type = commandList->get_type();
 
 			if (pass->wait_pass)

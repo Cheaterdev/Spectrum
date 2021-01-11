@@ -1,4 +1,8 @@
-namespace Render
+#include "DX12/Buffer.h"
+#include "DX12/PipelineState.h"
+#include "InputLayouts.h"
+#include "Context/Context.h"
+namespace DX12
 {
     class vertex_buffer_stage
     {

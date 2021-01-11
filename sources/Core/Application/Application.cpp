@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Application.h"
 Application::Application()
 {
     alive = true;

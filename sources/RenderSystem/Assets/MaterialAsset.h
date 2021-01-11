@@ -1,3 +1,6 @@
+#pragma once
+#include "Asset.h"
+#include "Context/Context.h"
 
 class MaterialAsset;
 namespace materials
@@ -14,7 +17,7 @@ namespace materials
 
 		}
         Pipeline() = default;
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc& pipeline) = 0;
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, DX12::PipelineStateDesc& pipeline) = 0;
 
 		UINT get_id() { return id; }
 	private:
@@ -38,7 +41,7 @@ namespace materials
         public:
             using ptr = s_ptr<material>;
             virtual void set(MESH_TYPE type,MeshRenderContext::ptr&) = 0;
-			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) = 0;
+			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, DX12::PipelineStateDesc &pipeline) = 0;
             virtual ~material() = default;
             virtual void compile() {};
             friend class boost::serialization::access;
@@ -68,7 +71,7 @@ class MaterialAsset : public Asset, public materials::material
         MaterialAsset(materials::material::ptr);
 
         virtual Asset_Type get_type() override;
-        virtual void update_preview(Render::Texture::ptr preview);
+        virtual void update_preview(DX12::Texture::ptr preview);
         virtual ~MaterialAsset() = default;
     protected:
         MaterialAsset() = default;

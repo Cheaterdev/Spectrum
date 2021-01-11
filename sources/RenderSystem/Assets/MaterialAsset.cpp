@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "MaterialAsset.h"
+#include "AssetRenderer.h"
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MaterialAsset>);
 
 
@@ -22,7 +24,7 @@ MaterialAsset::MaterialAsset(materials::material::ptr m)
     mark_changed();
 }
 
-void MaterialAsset::update_preview(Render::Texture::ptr preview)
+void MaterialAsset::update_preview(DX12::Texture::ptr preview)
 {
     AssetRenderer::get().draw(get_ptr<MaterialAsset>(), preview);
     mark_changed();

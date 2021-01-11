@@ -1,4 +1,5 @@
 #include "pch.h"
+#include <slots.h>
 void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 {
 	pso[PSO::BRDF] =  std::make_shared<PSOS::BRDF>();

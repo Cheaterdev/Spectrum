@@ -1,3 +1,6 @@
+#pragma once
+#include "DX12/Texture.h"
+#include "Context/Context.h"
 enum class mouse_button : int
 {
     LEFT,
@@ -229,13 +232,13 @@ namespace GUI
     };
     struct Texture
     {
-        Render::Texture::ptr texture;
+        DX12::Texture::ptr texture;
         sizer margins;
         sizer padding;
         sizer tc;
 		bool tiled = false;
 
-		Render::HandleTable srv;
+		DX12::HandleTable srv;
         Texture()
         {
             margins = { 0, 0, 0, 0 };
@@ -243,17 +246,17 @@ namespace GUI
             tc = { 0, 0, 1, 1 };
         }
 
-        void operator=(const       Render::Texture::ptr& texture)
+        void operator=(const       DX12::Texture::ptr& texture)
         {
             this->texture = texture;
         }
     };
 	struct RecursiveContext
 	{
-		Render::context& render_context;
+		DX12::context& render_context;
 		SingleThreadExecutorBatched executor;
 		SingleThreadExecutorBatched pre_executor;
-		RecursiveContext(Render::context& c):render_context(c)
+		RecursiveContext(DX12::context& c):render_context(c)
 		{
 	
 		}
@@ -263,11 +266,11 @@ namespace GUI
 			executor.flush();
 		}
 
-		void execute(std::function<void(Render::context&)> f)
+		void execute(std::function<void(DX12::context&)> f)
 		{
-			//auto new_c = std::make_shared<Render::context>(render_context);
+			//auto new_c = std::make_shared<DX12::context>(render_context);
 			executor.add(std::move([f, new_c = render_context]() {
-				f(const_cast<Render::context&>(new_c));
+				f(const_cast<DX12::context&>(new_c));
 			}));
 
 		}
@@ -280,7 +283,7 @@ namespace GUI
 		}
 	};
     class drag_n_drop;
-    class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public ParameterHolder, public Events::prop_handler //, public Render::renderable
+    class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public ParameterHolder, public Events::prop_handler //, public DX12::renderable
     {
             friend class tree_base;
             friend class user_interface;
@@ -318,8 +321,8 @@ namespace GUI
 
             virtual void draw_recursive(RecursiveContext&, base* = nullptr);
 
-            virtual void draw(Render::context&); // override;;
-            virtual void draw_after(Render::context&);;
+            virtual void draw(DX12::context&); // override;;
+            virtual void draw_after(DX12::context&);;
 
 
            virtual void init_properties(Elements::ParameterWindow* wnd) override;
@@ -586,7 +589,7 @@ namespace GUI
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
             virtual void key_action_event(long key);
 
-         //   virtual void draw_ui(Render::context&);
+         //   virtual void draw_ui(DX12::context&);
 
 			virtual void process_ui(float dt);
 			virtual void create_graph(FrameGraph& graph);

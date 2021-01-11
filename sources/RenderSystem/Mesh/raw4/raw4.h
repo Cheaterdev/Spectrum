@@ -10,6 +10,8 @@
 
 // Required uint32_t, uint16_t, uint8_t types.
 #include <stdint.h>
+#include "Math/Vectors.h"
+#include "Math/Matrices.h"
 
 #pragma warning(disable:4200)
 /*******************************************************************************

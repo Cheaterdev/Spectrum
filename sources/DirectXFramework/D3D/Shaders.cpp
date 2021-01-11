@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Shaders.h"
 
 #define DXIL_FOURCC(ch0, ch1, ch2, ch3) (                            \
   (uint32_t)(uint8_t)(ch0)        | (uint32_t)(uint8_t)(ch1) << 8  | \
@@ -112,7 +113,7 @@ public:
 		return S_OK;
 	}
 
-	STDMETHODIMP shader_include_d3d::Open(D3D10_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID /*pParentData*/, LPCVOID* ppData, UINT* pBytes)
+	STDMETHODIMP shader_include_d3d::Open(D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID /*pParentData*/, LPCVOID* ppData, UINT* pBytes)
 	{
 
 		if (!includer)

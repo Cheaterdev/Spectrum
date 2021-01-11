@@ -1,3 +1,8 @@
+#pragma once
+#include "GUID/guid.h"
+#include "patterns/EditObject.h"
+#include "DebugInfo/Debug.h"
+#include "DX12/Texture.h"
 enum class Asset_Type : int
 {
 	UNKNOWN,
@@ -358,7 +363,7 @@ public:
 
 		//  void set_name(std::string name);
 
-		virtual void update_preview(Render::Texture::ptr);
+		virtual void update_preview(DX12::Texture::ptr);
 
 
 		using ptr = s_ptr<Asset>;
@@ -442,7 +447,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 
 		struct Editor
 		{
-				Render::Texture::ptr preview;
+				DX12::Texture::ptr preview;
 			private:
 				friend class boost::serialization::access;
 
@@ -493,7 +498,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 
 		bool contents_changed = false;
 	public:
-		Events::Event<const Render::Texture::ptr&> on_preview;
+		Events::Event<const DX12::Texture::ptr&> on_preview;
 		using ptr = s_ptr<AssetStorage>;
 		AssetStorage(Asset::ptr _asset);
 
@@ -506,7 +511,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 	{
 		return header->references;
 	}
-		const Render::Texture::ptr& get_preview();
+		const DX12::Texture::ptr& get_preview();
 
 		virtual void update_preview();
 

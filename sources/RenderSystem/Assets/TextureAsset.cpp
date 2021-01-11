@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "TextureAsset.h"
+#include "Log/Tasks.h"
+#include "Helpers/MipMapGeneration.h"
 
 BOOST_CLASS_EXPORT(TextureAsset);
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<TextureAsset>);
@@ -13,7 +16,7 @@ TextureAssetRenderer::TextureAssetRenderer()
 }
 TextureAssetRenderer::~TextureAssetRenderer() {}
 
-void TextureAssetRenderer::render(TextureAsset* asset, Render::Texture::ptr target, Render::CommandList::ptr c)
+void TextureAssetRenderer::render(TextureAsset* asset, DX12::Texture::ptr target, DX12::CommandList::ptr c)
 {
     if (!asset->get_texture()->texture_2d()) return;
     MipMapGenerator::get().copy_texture_2d_slow(c->get_graphics(), target, asset->get_texture());
@@ -27,7 +30,7 @@ Asset_Type TextureAsset::get_type()
     return Asset_Type::TEXTURE;
 }
 
-Render::Texture::ptr TextureAsset::get_texture()
+DX12::Texture::ptr TextureAsset::get_texture()
 {
     return texture;
 }
@@ -35,17 +38,17 @@ Render::Texture::ptr TextureAsset::get_texture()
 TextureAsset::TextureAsset(std::filesystem::path file_name)
 {
     auto task = TaskInfoManager::get().create_task(file_name.generic_wstring());
-    texture = Render::Texture::get_resource(Render::texure_header(file_name, true));
+    texture = DX12::Texture::get_resource(DX12::texure_header(file_name, true));
 
     if (!texture)
-        texture = Render::Texture::null;
+        texture = DX12::Texture::null;
 
     name = file_name.filename().wstring();
     mark_changed();
 }
 void TextureAsset::try_register()
 {
-    if ((texture && texture != Render::Texture::null))
+    if ((texture && texture != DX12::Texture::null))
         Asset::try_register();
 }
 
@@ -58,10 +61,10 @@ TextureAsset::TextureAsset()
 {
 }
 
-void TextureAsset::update_preview(Render::Texture::ptr preview)
+void TextureAsset::update_preview(DX12::Texture::ptr preview)
 {
     if (!preview || !preview->is_rt())
-        preview.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 256, 256, 1, 6, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+        preview.reset(new DX12::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 256, 256, 1, 6, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 
     auto list =  FrameResourceManager::get().begin_frame()->start_list("TextureAsset");
 

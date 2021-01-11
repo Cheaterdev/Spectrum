@@ -1,13 +1,16 @@
 #include "pch.h"
+#include "Sky.h"
 
+#include  <slots.h>
+#include "Helpers/MipMapGeneration.h"
 
 
 
 SkyRender::SkyRender()
 {
-	transmittance = Render::Texture::get_resource({ "textures\\Transmit.dds", false, false });
-	irradiance = Render::Texture::get_resource({ "textures\\irradianceTexture.dds", false, false });
-	inscatter = Render::Texture::get_resource({ "textures\\inscatterTexture.dds", false, false });
+	transmittance = DX12::Texture::get_resource({ "textures\\Transmit.dds", false, false });
+	irradiance = DX12::Texture::get_resource({ "textures\\irradianceTexture.dds", false, false });
+	inscatter = DX12::Texture::get_resource({ "textures\\inscatterTexture.dds", false, false });
 }
 
 
@@ -52,7 +55,7 @@ void SkyRender::generate(FrameGraph& graph)
 
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
-			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, target_tex.get_rtv(), DX12::Handle());
 
 			{
 				Slots::SkyData data;
@@ -89,8 +92,8 @@ void SkyRender::generate(FrameGraph& graph)
 
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Render::ResourceViewDesc subres;
-					subres.type = Render::ResourceType::TEXTURE2D;
+					DX12::ResourceViewDesc subres;
+					subres.type = DX12::ResourceType::TEXTURE2D;
 
 					subres.Texture2D.ArraySize = 1;
 					subres.Texture2D.FirstArraySlice = i;
@@ -98,7 +101,7 @@ void SkyRender::generate(FrameGraph& graph)
 					subres.Texture2D.MipSlice = 0;
 					subres.Texture2D.PlaneSlice = 0;
 
-					auto face = sky_cubemap.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+					auto face = sky_cubemap.resource->create_view<DX12::TextureView>(*graphics.get_base().frame_resources, subres);
 
 
 					Slots::SkyFace skyFace;
@@ -107,13 +110,13 @@ void SkyRender::generate(FrameGraph& graph)
 
 					skyFace.set(graphics);
 
-					graphics.set_rtv(1, face.get_rtv(), Render::Handle());
+					graphics.set_rtv(1, face.get_rtv(), DX12::Handle());
 
 					graphics.draw(4);
 				}
 			}
 
-			//		auto tex = std::dynamic_pointer_cast<Render::Texture>(sky_cubemap.resource);
+			//		auto tex = std::dynamic_pointer_cast<DX12::Texture>(sky_cubemap.resource);
 
 		});
 
@@ -179,8 +182,8 @@ void SkyRender::generate(FrameGraph& graph)
 
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Render::ResourceViewDesc subres;
-					subres.type = Render::ResourceType::TEXTURE2D;
+					DX12::ResourceViewDesc subres;
+					subres.type = DX12::ResourceType::TEXTURE2D;
 
 					subres.Texture2D.ArraySize = 1;
 					subres.Texture2D.FirstArraySlice = i;
@@ -188,7 +191,7 @@ void SkyRender::generate(FrameGraph& graph)
 					subres.Texture2D.MipSlice = 0;
 					subres.Texture2D.PlaneSlice = 0;
 
-					auto face = sky_cubemap.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+					auto face = sky_cubemap.resource->create_view<DX12::TextureView>(*graphics.get_base().frame_resources, subres);
 
 
 					Slots::SkyFace skyFace;
@@ -197,7 +200,7 @@ void SkyRender::generate(FrameGraph& graph)
 
 					skyFace.set(graphics);
 
-					graphics.set_rtv(1, face.get_rtv(), Render::Handle());
+					graphics.set_rtv(1, face.get_rtv(), DX12::Handle());
 
 					graphics.draw(4);
 				}
@@ -267,7 +270,7 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
 			auto sky_cubemap_filtered_diffuse = _context.get_texture(data.sky_cubemap_filtered_diffuse);
 
-
+			
 			auto& list = *_context.get_list();
 			auto& graphics = list.get_graphics();
 
@@ -286,8 +289,8 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 				graphics.set_pipeline(GetPSO<PSOS::CubemapENV>(PSOS::CubemapENV::Level(std::min(m, 4u))));
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Render::ResourceViewDesc subres;
-					subres.type = Render::ResourceType::TEXTURE2D;
+					DX12::ResourceViewDesc subres;
+					subres.type = DX12::ResourceType::TEXTURE2D;
 
 					subres.Texture2D.ArraySize = 1;
 					subres.Texture2D.FirstArraySlice = i;
@@ -295,13 +298,13 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 					subres.Texture2D.MipSlice = m;
 					subres.Texture2D.PlaneSlice = 0;
 
-					auto face = sky_cubemap_filtered.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+					auto face = sky_cubemap_filtered.resource->create_view<DX12::TextureView>(*graphics.get_base().frame_resources, subres);
 
 					if (i == 0) {
 						graphics.set_viewport(face.get_viewport());
 						graphics.set_scissor(face.get_scissor());
 					}
-					graphics.set_rtv(1, face.get_rtv(), Render::Handle());
+					graphics.set_rtv(1, face.get_rtv(), DX12::Handle());
 
 					Slots::EnvFilter filter;
 					filter.GetFace().x = i;
@@ -320,8 +323,8 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 
 			for (unsigned int i = 0; i < 6; i++)
 			{
-				Render::ResourceViewDesc subres;
-				subres.type = Render::ResourceType::TEXTURE2D;
+				DX12::ResourceViewDesc subres;
+				subres.type = DX12::ResourceType::TEXTURE2D;
 
 				subres.Texture2D.ArraySize = 1;
 				subres.Texture2D.FirstArraySlice = i;
@@ -329,13 +332,13 @@ void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
 				subres.Texture2D.MipSlice = 0;
 				subres.Texture2D.PlaneSlice = 0;
 
-				auto face = sky_cubemap_filtered_diffuse.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+				auto face = sky_cubemap_filtered_diffuse.resource->create_view<DX12::TextureView>(*graphics.get_base().frame_resources, subres);
 
 				if (i == 0) {
 					graphics.set_viewport(face.get_viewport());
 					graphics.set_scissor(face.get_scissor());
 				}
-				graphics.set_rtv(1, face.get_rtv(), Render::Handle());
+				graphics.set_rtv(1, face.get_rtv(), DX12::Handle());
 
 				Slots::EnvFilter filter;
 				filter.GetFace().x = i;

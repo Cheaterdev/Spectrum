@@ -33,6 +33,7 @@ THE SOFTWARE.
 #ifdef GUID_ANDROID
 #include <jni.h>
 #endif
+#include "Log/Log.h"
 namespace Spectrum
 {
 

@@ -1,4 +1,5 @@
 #pragma once
+#include "Data/Data.h"
 namespace DX12
 {
 	class Resource;

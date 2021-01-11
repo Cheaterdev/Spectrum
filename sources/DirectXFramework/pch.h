@@ -39,7 +39,7 @@ if (FAILED(hr)) \
 
 #define shader_struct __declspec(align(16)) struct
 
-
+/*
 #include "D3D\Shaders.h"
 #include "D3D\ShaderReflection.h"
 
@@ -95,15 +95,6 @@ namespace DX12
 #include "DX12/RayTracingAS.h"
 
 
-
-namespace Render
-{
-	using namespace DX12;
-
-	typedef CommandList::ptr Context;
-}
-
-
 #include "FW1FontWrapper/Source/FW1CompileSettings.h"
 #include "FW1FontWrapper/Source/FW1FontWrapper.h"
 
@@ -123,4 +114,19 @@ typedef CComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 
 
 #include "DX12/PipelineState.hpp"
-#include "DX12/Tiling.hpp"
+#include "DX12/Tiling.hpp"*/
+
+namespace DX12 {
+	typedef D3D12_VIEWPORT Viewport;
+	class CommandList;
+	class Resource;
+	class Queue;
+	class Device;
+}
+/*
+namespace Render
+{
+	using namespace DX12;
+}
+*/
+#define Render DX12

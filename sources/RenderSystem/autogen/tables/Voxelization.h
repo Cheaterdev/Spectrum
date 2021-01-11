@@ -11,13 +11,13 @@ namespace Table
 		} &cb;
 		struct UAV
 		{
-			Render::HLSL::RWTexture3D<float4> albedo;
-			Render::HLSL::RWTexture3D<float4> normals;
-			Render::HLSL::RWTexture3D<uint> visibility;
+			DX12::HLSL::RWTexture3D<float4> albedo;
+			DX12::HLSL::RWTexture3D<float4> normals;
+			DX12::HLSL::RWTexture3D<uint> visibility;
 		} &uav;
-		Render::HLSL::RWTexture3D<float4>& GetAlbedo() { return uav.albedo; }
-		Render::HLSL::RWTexture3D<float4>& GetNormals() { return uav.normals; }
-		Render::HLSL::RWTexture3D<uint>& GetVisibility() { return uav.visibility; }
+		DX12::HLSL::RWTexture3D<float4>& GetAlbedo() { return uav.albedo; }
+		DX12::HLSL::RWTexture3D<float4>& GetNormals() { return uav.normals; }
+		DX12::HLSL::RWTexture3D<uint>& GetVisibility() { return uav.visibility; }
 		VoxelInfo MapInfo() { return VoxelInfo(cb.info); }
 		Voxelization(CB&cb,UAV&uav) :cb(cb),uav(uav){}
 	};

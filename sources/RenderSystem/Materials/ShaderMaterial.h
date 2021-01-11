@@ -1,3 +1,7 @@
+#pragma once
+#include "Assets/MaterialAsset.h"
+#include "Assets/Asset.h"
+
 class ShaderMaterial: public materials::material, public AssetHolder
 {
   
@@ -11,7 +15,7 @@ class ShaderMaterial: public materials::material, public AssetHolder
 		materials::Pipeline::ptr get_pipeline() { return pipeline; }
 
         virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override;
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) override;
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, DX12::PipelineStateDesc &pipeline) override;
     private:
         friend class boost::serialization::access;
 

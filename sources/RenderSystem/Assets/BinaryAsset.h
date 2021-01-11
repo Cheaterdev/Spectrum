@@ -1,4 +1,5 @@
 #pragma once
+#include "Asset.h"
 
 class BinaryAsset : public Asset
 {
@@ -23,7 +24,7 @@ class BinaryAsset : public Asset
         std::string get_data();
 
         virtual Asset_Type get_type();
-        virtual void update_preview(Render::Texture::ptr preview);
+        virtual void update_preview(DX12::Texture::ptr preview);
         virtual void try_register();
 		virtual void reload_resource() override;
     private:

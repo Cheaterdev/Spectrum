@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "DX12/ResourceViews.h"
+#include "DX12/Device12.h"
 
 void DX12::RTXSceneView::place_srv(Handle h) {
 	if (!resource) return;

@@ -1,7 +1,10 @@
 #include "pch.h"
+#include "Comment.h"
+#include "GUI/Renderer/Renderer.h"
+#include "Canvas.h"
 
 
-void GUI::Elements::FlowGraph::comment::draw(Render::context& c)
+void GUI::Elements::FlowGraph::comment::draw(DX12::context& c)
 {
     this->renderer->draw(c, Skin::get().FlowComment.Active, get_render_bounds());
 }
@@ -50,7 +53,7 @@ GUI::Elements::FlowGraph::comment::comment(canvas* canva, ::FlowGraph::window* w
     close_button->background_style = button::view_style::NO_BACKGROUND;
     close_button->get_label()->visible = false;
     close_button->get_image()->visible = true;
-    close_button->get_image()->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/window_close.png"));
+    close_button->get_image()->texture = DX12::Texture::get_resource(DX12::texure_header("textures/gui/window_close.png"));
     close_button->get_image()->docking = dock::FILL;
     close_button->padding = { 5, 5, 5, 5 };
     close_button->docking = dock::RIGHT;

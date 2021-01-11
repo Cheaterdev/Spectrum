@@ -11,15 +11,15 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::Handle areaTex;
-			Render::Handle searchTex;
-			Render::Handle colorTex;
+			DX12::Handle areaTex;
+			DX12::Handle searchTex;
+			DX12::Handle colorTex;
 		} &srv;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Handle& GetAreaTex() { return srv.areaTex; }
-		Render::Handle& GetSearchTex() { return srv.searchTex; }
-		Render::Handle& GetColorTex() { return srv.colorTex; }
+		DX12::Handle& GetAreaTex() { return srv.areaTex; }
+		DX12::Handle& GetSearchTex() { return srv.searchTex; }
+		DX12::Handle& GetColorTex() { return srv.colorTex; }
 		float4& GetSubsampleIndices() { return cb.subsampleIndices; }
 		float4& GetSMAA_RT_METRICS() { return cb.SMAA_RT_METRICS; }
 		SMAA_Edges(CB&cb,SRV&srv) :cb(cb),srv(srv){}

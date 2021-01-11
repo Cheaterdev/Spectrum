@@ -1,3 +1,5 @@
+#pragma once;
+#include "Asset.h"
 class TextureAsset;
 class TextureAssetRenderer : public Singleton<TextureAssetRenderer>
 {
@@ -6,14 +8,14 @@ class TextureAssetRenderer : public Singleton<TextureAssetRenderer>
 	TextureAssetRenderer();
 	virtual ~TextureAssetRenderer();
 public:
-	void render(TextureAsset* asset, Render::Texture::ptr target, Render::CommandList::ptr c);
+	void render(TextureAsset* asset, DX12::Texture::ptr target, DX12::CommandList::ptr c);
 };
 
 
 class TextureAsset : public Asset
 {
 protected:
-	Render::Texture::ptr texture;
+	DX12::Texture::ptr texture;
 
 	//  LEAK_TEST(TextureAsset)
 
@@ -26,11 +28,11 @@ public:
 	TextureAsset(std::filesystem::path file_name);
 	TextureAsset();
 
-	Render::Texture::ptr get_texture();
+	DX12::Texture::ptr get_texture();
 	bool compress();
 
 	virtual Asset_Type get_type();
-	virtual void update_preview(Render::Texture::ptr preview);
+	virtual void update_preview(DX12::Texture::ptr preview);
 	virtual void try_register();
 	virtual void reload_resource() override;
 
@@ -42,13 +44,13 @@ private:
 	{
 		ar& NVP(boost::serialization::base_object<Asset>(*this));
 
-		if (texture == Render::Texture::null)
+		if (texture == DX12::Texture::null)
 			texture = nullptr;
 
 		ar& NVP(texture);
 
 		if (!texture)
-			texture = Render::Texture::null;
+			texture = DX12::Texture::null;
 	}
 
 };

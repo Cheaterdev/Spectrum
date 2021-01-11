@@ -1,16 +1,20 @@
 
 #include <pch.h>
+#include "BRDF.h"
 
+#include "DX12/CommandList.h"
+
+#include <slots.h>
 
 void BRDF::create_new()
 {
 
-	texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
-	Render::CommandList::ptr list(new Render::CommandList(Render::CommandListType::DIRECT));
+	texture.reset(new DX12::Texture(CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+	DX12::CommandList::ptr list(new DX12::CommandList(DX12::CommandListType::DIRECT));
 	list->begin("BRDF");
 
 
-	Render::ComputeContext& compute_context = list->get_compute();
+	DX12::ComputeContext& compute_context = list->get_compute();
 
 	compute_context.set_pipeline(GetPSO<PSOS::BRDF>());
 

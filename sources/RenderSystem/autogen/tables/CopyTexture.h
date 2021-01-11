@@ -6,9 +6,9 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float4> srcTex;
+			DX12::HLSL::Texture2D<float4> srcTex;
 		} &srv;
-		Render::HLSL::Texture2D<float4>& GetSrcTex() { return srv.srcTex; }
+		DX12::HLSL::Texture2D<float4>& GetSrcTex() { return srv.srcTex; }
 		CopyTexture(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

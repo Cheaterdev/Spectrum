@@ -1,4 +1,9 @@
 #include "pch.h"
+#include "AssetRenderer.h"
+#include "Lighting/PSSM.h"
+#include "Effects/Sky.h"
+#include "Helpers/MipMapGeneration.h"
+#include "EngineAssets.h"
 
 class SceneRenderWorkflow
 {
@@ -113,7 +118,7 @@ public:
 
 
 
-void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
+void AssetRenderer::draw(Scene::ptr scene, DX12::Texture::ptr result)
 {
 
 	//return;
@@ -122,7 +127,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	graph.start_new_frame();
 	if (!vr_context)
 	{
-		vr_context = std::make_shared<Render::OVRContext>();
+		vr_context = std::make_shared<DX12::OVRContext>();
 	}
 	
 
@@ -164,7 +169,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	mesh_plane->remove_from_parent();
 }
 
-void AssetRenderer::draw(MaterialAsset::ptr mat, Render::Texture::ptr result)
+void AssetRenderer::draw(MaterialAsset::ptr mat, DX12::Texture::ptr result)
 {
 	std::lock_guard<std::mutex> g(lock);
 
@@ -175,7 +180,7 @@ void AssetRenderer::draw(MaterialAsset::ptr mat, Render::Texture::ptr result)
 	material_tester->remove_from_parent();
 }
 
-void AssetRenderer::draw(scene_object::ptr obj, Render::Texture::ptr result)
+void AssetRenderer::draw(scene_object::ptr obj, DX12::Texture::ptr result)
 {
 	std::lock_guard<std::mutex> g(lock);
 

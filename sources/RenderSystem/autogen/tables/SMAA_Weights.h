@@ -6,13 +6,13 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float4> areaTex;
-			Render::HLSL::Texture2D<float4> searchTex;
-			Render::HLSL::Texture2D<float4> edgesTex;
+			DX12::HLSL::Texture2D<float4> areaTex;
+			DX12::HLSL::Texture2D<float4> searchTex;
+			DX12::HLSL::Texture2D<float4> edgesTex;
 		} &srv;
-		Render::HLSL::Texture2D<float4>& GetAreaTex() { return srv.areaTex; }
-		Render::HLSL::Texture2D<float4>& GetSearchTex() { return srv.searchTex; }
-		Render::HLSL::Texture2D<float4>& GetEdgesTex() { return srv.edgesTex; }
+		DX12::HLSL::Texture2D<float4>& GetAreaTex() { return srv.areaTex; }
+		DX12::HLSL::Texture2D<float4>& GetSearchTex() { return srv.searchTex; }
+		DX12::HLSL::Texture2D<float4>& GetEdgesTex() { return srv.edgesTex; }
 		SMAA_Weights(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

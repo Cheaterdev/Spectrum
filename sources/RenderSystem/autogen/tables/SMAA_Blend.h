@@ -6,9 +6,9 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float4> blendTex;
+			DX12::HLSL::Texture2D<float4> blendTex;
 		} &srv;
-		Render::HLSL::Texture2D<float4>& GetBlendTex() { return srv.blendTex; }
+		DX12::HLSL::Texture2D<float4>& GetBlendTex() { return srv.blendTex; }
 		SMAA_Blend(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

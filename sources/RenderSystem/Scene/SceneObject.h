@@ -1,3 +1,7 @@
+#pragma once
+#include "Occlusion/Occluder.h"
+#include "Tree/Tree.h"
+#include "Math/Matrices.h"
 enum class object_type : int {SCENE, OBJECT, MESH, MESH_NODE, CAMERA};
 
 

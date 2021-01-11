@@ -1,3 +1,9 @@
+#pragma once
+#include <Data/Data.h>
+#include "Math/Vectors.h"
+#include "DX12/ResourceViews.h"
+#include "DX12/Texture.h"
+#include "Threads/Scheduler.h"
 
 enum class ResourceType :int {
 	UNSPECIFIED,

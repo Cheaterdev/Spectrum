@@ -1,4 +1,8 @@
 #pragma once
+#include "Buffer.h"
+#include "patterns/Singleton.h"
+#include "patterns/IdGenerator.h"
+#include "CommandList.h"
 
 namespace DX12
 {

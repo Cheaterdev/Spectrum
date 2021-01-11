@@ -1,3 +1,5 @@
+#pragma once
+#include "Scene/Scene.h"
 
 
 class renderer
@@ -10,7 +12,7 @@ class renderer
 
         using ptr = s_ptr<renderer>;
 
-        virtual  bool add_object(Render::renderable* obj) = 0;
+        virtual  bool add_object(DX12::renderable* obj) = 0;
         virtual void render(MeshRenderContext::ptr c, Scene::ptr obj) = 0;;
 
 		virtual void iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)=0;
@@ -47,7 +49,7 @@ class main_renderer
                   //  bool node_inside = node->is_node_inside(*c->cam);
                   //    if (!node_inside)
                   //        return false;
-                  Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+                  DX12::renderable* render_object = dynamic_cast<DX12::renderable*>(node);
 
                   if (render_object && node->is_inside(*c->cam))
                   {
@@ -76,8 +78,8 @@ class main_renderer
 class mesh_renderer : public renderer, public Events::prop_handler
 {
       
-        Render::vertex_shader::ptr shader;
-        Render::geometry_shader::ptr voxel_geometry_shader;
+        DX12::vertex_shader::ptr shader;
+        DX12::geometry_shader::ptr voxel_geometry_shader;
 
         IndirectCommand indirect_command_signature;
 
@@ -87,7 +89,7 @@ class mesh_renderer : public renderer, public Events::prop_handler
 		TextureAsset::ptr best_fit_normals;
 
         //    MeshRenderContext::ptr mesh_render_context;
-        virtual bool add_object(Render::renderable* obj) override
+        virtual bool add_object(DX12::renderable* obj) override
         {
             auto instance = dynamic_cast<MeshAssetInstance*>(obj);
             //   if (instance)
@@ -116,13 +118,13 @@ class mesh_renderer : public renderer, public Events::prop_handler
 		virtual_gpu_buffer<Table::CommandData>::ptr commands_buffer[8];
 
 
-		Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer;
+		DX12::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer;
         IndirectCommand dispatch_command;
 
 	
-		Render::StructuredBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
-		Render::StructuredBuffer<vec4>::ptr vertex_buffer;
-		Render::IndexBuffer::ptr index_buffer;
+		DX12::StructuredBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
+		DX12::StructuredBuffer<vec4>::ptr vertex_buffer;
+		DX12::IndexBuffer::ptr index_buffer;
 		virtual_gpu_buffer<UINT>::ptr visible_boxes;
 		virtual_gpu_buffer<UINT>::ptr meshes_ids;
 		virtual_gpu_buffer<UINT>::ptr meshes_invisible_ids;
@@ -146,7 +148,7 @@ class mesh_renderer : public renderer, public Events::prop_handler
 		Variable<bool> use_gpu_culling = Variable<bool>(false, "use_gpu_culling");
 		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth");
 	
-       // Render::RootSignature::ptr my_signature;
+       // DX12::RootSignature::ptr my_signature;
 
         using ptr = s_ptr<mesh_renderer>;
         mesh_renderer();

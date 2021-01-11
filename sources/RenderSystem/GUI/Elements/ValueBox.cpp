@@ -1,5 +1,6 @@
 
 #include "pch.h"
+#include "ValueBox.h"
 namespace GUI
 {
     namespace Elements

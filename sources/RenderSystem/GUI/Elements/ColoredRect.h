@@ -1,4 +1,5 @@
 #pragma once
+#include "../GUI.h"
 
 namespace GUI
 {
@@ -14,7 +15,7 @@ namespace GUI
                 using wptr = w_ptr<colored_rect>;
 
 
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
                 float4 color;
 
         };

@@ -1,4 +1,6 @@
 #pragma once
+#include "../Elements/ScrollContainer.h"
+#include "Log/Tasks.h"
 
 
 namespace GUI

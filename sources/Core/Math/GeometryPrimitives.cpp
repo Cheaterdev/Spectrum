@@ -1,6 +1,7 @@
 #include "pch.h"
 
 
+#include "GeometryPrimitives.h"
 
 // Sphere block
 Sphere::Sphere(vec3 pos, float radius)

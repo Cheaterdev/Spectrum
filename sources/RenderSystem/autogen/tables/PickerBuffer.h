@@ -6,9 +6,9 @@ namespace Table
 	{
 		struct UAV
 		{
-			Render::HLSL::RWStructuredBuffer<uint> viewBuffer;
+			DX12::HLSL::RWStructuredBuffer<uint> viewBuffer;
 		} &uav;
-		Render::HLSL::RWStructuredBuffer<uint>& GetViewBuffer() { return uav.viewBuffer; }
+		DX12::HLSL::RWStructuredBuffer<uint>& GetViewBuffer() { return uav.viewBuffer; }
 		PickerBuffer(UAV&uav) :uav(uav){}
 	};
 	#pragma pack(pop)

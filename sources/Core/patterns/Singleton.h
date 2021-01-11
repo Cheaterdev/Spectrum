@@ -1,5 +1,5 @@
 #pragma warning (disable : 4127 )
-
+#pragma once
 // Use this class only if you really need shared_ptr of singleton's instance.
 // "With Great Power Comes Great Responsibility" (c)
 template <class T>
@@ -107,3 +107,6 @@ std::shared_ptr<T> SingletonAccessor<T>::get_native()
 {
     return Singleton<T>::instance;
 }
+
+
+#include "Singleton.hpp"

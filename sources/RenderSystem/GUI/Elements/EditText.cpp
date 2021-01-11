@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "EditText.h"
+#include "../Renderer/Renderer.h"
+#include "../Skin.h"
 
 
 
@@ -35,7 +38,7 @@ GUI::Elements::edit_text::edit_text()
 	add_child(label_cursor);
 	padding = { 5, 5, 5, 5 };
 }
-void GUI::Elements::edit_text::draw(Render::context& c)
+void GUI::Elements::edit_text::draw(DX12::context& c)
 {
 	process_keys();
 	label_text->recalculate(c);
@@ -105,7 +108,7 @@ void GUI::Elements::edit_text::process_keys()
 	label_text->text = text;
 	keys.clear();
 }
-void GUI::Elements::edit_cursor::draw(Render::context& c)
+void GUI::Elements::edit_cursor::draw(DX12::context& c)
 {
 	if (!test_local_visible())
 		return;

@@ -53,6 +53,9 @@
 //#define BOOST_ARCHIVE_DECL
 using namespace std;
 
+#include <ppltasks.h>
+using namespace Concurrency;
+
 #pragma warning(disable:4512)
 #pragma warning(disable:4100)
 #pragma warning(disable:4310)
@@ -216,7 +219,10 @@ void unreferenced_parameter(const T&)
 
 #include "../3rdparty/ZipLib/ZipFile.h"
 #include "../3rdparty/ZipLib/streams/memstream.h"
-#include "DebugInfo/Exceptions.h"
+#define GUID_WINDOWS
+
+/*/
+//#include "DebugInfo/Exceptions.h"
 #include "Data/Data.h"
 #include "patterns/Singleton.h"
 #include "patterns/SharedObject.h"
@@ -229,9 +235,6 @@ void unreferenced_parameter(const T&)
 
 #include "Serialization/Serializer.h"
 #include "Data/md5.h"
-
-
-
 
 #include "Log/Tasks.h"
 #include "DebugInfo/Debug.h"
@@ -252,7 +255,6 @@ void unreferenced_parameter(const T&)
 
 #define GUID_WINDOWS
 #include "guid/guid.h"
-#include "Allocators/Allocators.h"
+//#include "Allocators/Allocators.h"
 
-
-#include "patterns/Singleton.hpp"
+#include "patterns/Singleton.hpp"*/

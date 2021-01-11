@@ -1,8 +1,14 @@
 #include "pch.h"
 #include "CommandList.h"
+#include "Device12.h"
+#include "Buffer.h"
+#include "PipelineState.h"
 
+#include "Texture.h"
+#include "slots.h"
 namespace DX12
 {
+
 
 
 	CommandList::CommandList(CommandListType type)

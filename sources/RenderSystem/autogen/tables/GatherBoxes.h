@@ -7,11 +7,11 @@ namespace Table
 	{
 		struct UAV
 		{
-			Render::HLSL::AppendStructuredBuffer<BoxInfo> culledMeshes;
-			Render::HLSL::AppendStructuredBuffer<uint> visibleMeshes;
+			DX12::HLSL::AppendStructuredBuffer<BoxInfo> culledMeshes;
+			DX12::HLSL::AppendStructuredBuffer<uint> visibleMeshes;
 		} &uav;
-		Render::HLSL::AppendStructuredBuffer<BoxInfo>& GetCulledMeshes() { return uav.culledMeshes; }
-		Render::HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return uav.visibleMeshes; }
+		DX12::HLSL::AppendStructuredBuffer<BoxInfo>& GetCulledMeshes() { return uav.culledMeshes; }
+		DX12::HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return uav.visibleMeshes; }
 		GatherBoxes(UAV&uav) :uav(uav){}
 	};
 	#pragma pack(pop)

@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "ScrollContainer.h"
 
 class c_contents : public GUI::base
 {

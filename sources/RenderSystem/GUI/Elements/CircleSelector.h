@@ -1,4 +1,6 @@
 #pragma once
+#include "Image.h"
+#include "Log/Events.h"
 
 
 namespace GUI
@@ -17,7 +19,7 @@ namespace GUI
 			using wptr = w_ptr<circle_selector>;
 
 		
-			//virtual void draw(Render::context& c) override;
+			//virtual void draw(DX12::context& c) override;
 			circle_selector();
 			Events::Event<float2> on_change;
 

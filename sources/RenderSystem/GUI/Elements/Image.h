@@ -1,3 +1,5 @@
+#pragma once
+#include "../GUI.h"
 namespace GUI
 {
     namespace Elements
@@ -9,17 +11,11 @@ namespace GUI
                 using wptr = w_ptr<image>;
 
                 Texture texture;
-                //  Render::Texture::ptr texture;
-
-                virtual void draw(Render::context& c);
+                virtual void draw(DX12::context& c);
                 image()
                 {
                     clickable = false;
-                    //  texture = Render::Texture::null;
                 }
-        };
-
-
-
+		};
     }
 }

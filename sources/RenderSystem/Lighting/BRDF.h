@@ -1,9 +1,10 @@
 #pragma once
-
+#include "DX12/Texture.h"
+#include "Assets/TextureAsset.h"
 
 class BRDF: public TextureAsset
 {
-	Render::Texture::ptr brdf_texture;
+	DX12::Texture::ptr brdf_texture;
 
 public:
 

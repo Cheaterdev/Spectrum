@@ -11,15 +11,15 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::HLSL::Texture3D<float4> Source[2];
+			DX12::HLSL::Texture3D<float4> Source[2];
 			VoxelTilingParams::SRV params;
 		} &srv;
 		struct UAV
 		{
-			Render::HLSL::RWTexture3D<float4> Target[2];
+			DX12::HLSL::RWTexture3D<float4> Target[2];
 		} &uav;
-		Render::HLSL::RWTexture3D<float4>* GetTarget() { return uav.Target; }
-		Render::HLSL::Texture3D<float4>* GetSource() { return srv.Source; }
+		DX12::HLSL::RWTexture3D<float4>* GetTarget() { return uav.Target; }
+		DX12::HLSL::Texture3D<float4>* GetSource() { return srv.Source; }
 		VoxelTilingParams MapParams() { return VoxelTilingParams(cb.params,srv.params); }
 		VoxelCopy(CB&cb,SRV&srv,UAV&uav) :cb(cb),srv(srv),uav(uav){}
 	};

@@ -35,6 +35,7 @@
 
 #include <string>
 #include <iostream>
+#include "Serialization/Serializer.h"
 
 
 // a small class for calculating MD5 hashes of strings or byte arrays

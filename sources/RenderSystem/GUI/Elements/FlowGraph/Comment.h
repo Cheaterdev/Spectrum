@@ -1,3 +1,8 @@
+#pragma once
+#include "../Resizable.h"
+#include "../Button.h"
+#include "ComponentWindow.h"
+
 namespace GUI
 {
     namespace Elements
@@ -26,7 +31,7 @@ namespace GUI
                     using ptr = s_ptr<comment>;
                     using wptr = w_ptr<comment>;
 
-                    virtual void draw(Render::context& c) override;
+                    virtual void draw(DX12::context& c) override;
                     comment(canvas* canva, ::FlowGraph::window* wnd);
 
                     virtual void on_pos_changed(const vec2& r) override;

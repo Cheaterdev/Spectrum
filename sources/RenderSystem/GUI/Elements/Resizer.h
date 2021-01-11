@@ -1,4 +1,5 @@
 #pragma once
+#include "Dragger.h"
 namespace GUI
 {
     namespace Elements

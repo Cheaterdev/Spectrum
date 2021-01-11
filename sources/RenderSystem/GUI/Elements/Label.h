@@ -1,4 +1,6 @@
 #pragma once
+#include "Font/TextSystem.h"
+#include "../GUI.h"
 namespace GUI
 {
     namespace Elements
@@ -12,7 +14,7 @@ namespace GUI
 
 			GUI::Texture cache;
 
-			virtual void draw(Render::context& c) override;
+			virtual void draw(DX12::context& c) override;
 
 		};*/
 
@@ -51,11 +53,11 @@ namespace GUI
                 {
                     font = nullptr;
                 }
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
 
                 unsigned int get_index(vec3 at);
                 Fonts::FontGeometry::ptr get_geometry();
-                virtual void recalculate(Render::context& c);
+                virtual void recalculate(DX12::context& c);
 
                 virtual sizer update_layout(sizer r, float scale) override;
 

@@ -1,23 +1,6 @@
-/*struct stack_trace_element
-{
-	DWORD64 address;
-	stack_trace_element(DWORD64 address) :address(address)
-	{
-
-	}
-	std::string get_name();
-};
-*/
-/*
-struct stack_trace :public std::vector<stack_trace_element>
-{
-
-	std::string to_string();
-};
-
-*/
-
+#pragma once
 #include <boost/stacktrace.hpp>
+#include "Log/Log.h"
 
 
 // #define LEAK_TEST_ENABLE

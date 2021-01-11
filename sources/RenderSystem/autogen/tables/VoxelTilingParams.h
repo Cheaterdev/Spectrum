@@ -10,10 +10,10 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::HLSL::StructuredBuffer<int3> tiles;
+			DX12::HLSL::StructuredBuffer<int3> tiles;
 		} &srv;
 		uint4& GetVoxels_per_tile() { return cb.voxels_per_tile; }
-		Render::HLSL::StructuredBuffer<int3>& GetTiles() { return srv.tiles; }
+		DX12::HLSL::StructuredBuffer<int3>& GetTiles() { return srv.tiles; }
 		VoxelTilingParams(CB&cb,SRV&srv) :cb(cb),srv(srv){}
 	};
 	#pragma pack(pop)

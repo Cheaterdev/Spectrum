@@ -1,3 +1,9 @@
+#pragma once
+#include "patterns/Singleton.h"
+#include "ParameterWindow.h"
+#include "../TabControl.h"
+#include "FlowGraph.h"
+#include "Canvas.h"
 namespace GUI
 {
     namespace Elements

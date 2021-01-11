@@ -14,14 +14,14 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float4> bestFitNormals;
-			Render::HLSL::Texture3D<float4> brdf;
-			Render::HLSL::TextureCube<float4> sky;
+			DX12::HLSL::Texture2D<float4> bestFitNormals;
+			DX12::HLSL::Texture3D<float4> brdf;
+			DX12::HLSL::TextureCube<float4> sky;
 		} &srv;
 		float4& GetTime() { return cb.time; }
-		Render::HLSL::Texture2D<float4>& GetBestFitNormals() { return srv.bestFitNormals; }
-		Render::HLSL::Texture3D<float4>& GetBrdf() { return srv.brdf; }
-		Render::HLSL::TextureCube<float4>& GetSky() { return srv.sky; }
+		DX12::HLSL::Texture2D<float4>& GetBestFitNormals() { return srv.bestFitNormals; }
+		DX12::HLSL::Texture3D<float4>& GetBrdf() { return srv.brdf; }
+		DX12::HLSL::TextureCube<float4>& GetSky() { return srv.sky; }
 		float4& GetSunDir() { return cb.sunDir; }
 		Camera MapCamera() { return Camera(cb.camera); }
 		Camera MapPrevCamera() { return Camera(cb.prevCamera); }

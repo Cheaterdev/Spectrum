@@ -1,3 +1,7 @@
+#pragma once
+#include "Log/Log.h"
+#include "Serialization/Serializer.h"
+#include "Data/md5.h"
 struct file;
 
 class file_provider

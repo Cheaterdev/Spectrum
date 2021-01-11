@@ -33,6 +33,7 @@
 /* interface header */
 #include "pch.h"
 
+#include "md5.h"
 
 /* system implementation headers */
 #include <stdio.h>

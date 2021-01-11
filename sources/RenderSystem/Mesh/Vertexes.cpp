@@ -1,6 +1,7 @@
 #include "pch.h"
+#include "Vertexes.h"
 
-namespace Render
+namespace DX12
 {
 
     void vertex_buffer_stage::set(MeshRenderContext::ptr& context)

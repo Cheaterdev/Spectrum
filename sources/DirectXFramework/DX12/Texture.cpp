@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Texture.h"
+#include "Device12.h"
 namespace DX12
 {
 

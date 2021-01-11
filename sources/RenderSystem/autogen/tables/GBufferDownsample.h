@@ -6,11 +6,11 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float4> normals;
-			Render::HLSL::Texture2D<float> depth;
+			DX12::HLSL::Texture2D<float4> normals;
+			DX12::HLSL::Texture2D<float> depth;
 		} &srv;
-		Render::HLSL::Texture2D<float4>& GetNormals() { return srv.normals; }
-		Render::HLSL::Texture2D<float>& GetDepth() { return srv.depth; }
+		DX12::HLSL::Texture2D<float4>& GetNormals() { return srv.normals; }
+		DX12::HLSL::Texture2D<float>& GetDepth() { return srv.depth; }
 		GBufferDownsample(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

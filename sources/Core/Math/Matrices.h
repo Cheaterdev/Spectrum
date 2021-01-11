@@ -1,4 +1,6 @@
 #pragma once
+#include "Vectors.h"
+#include "Quaternions.h"
 
 // General row major matrix data
 template<typename int _N, typename int _M, typename data_type>

@@ -1,4 +1,10 @@
 #pragma once
+#include "Descriptors.h"
+#include "States.h"
+#include "Resource.h"
+#include "Profiling/Profiling.h"
+#include "RootSignature.h"
+#include "IndirectCommand.h"
 
 enum class Layouts;
 namespace DX12
@@ -34,7 +40,7 @@ namespace DX12
 		std::mutex read_back;
 
 
-		ResourceHeapAllocator allocator;
+	//	ResourceHeapAllocator allocator;
 	public:
 
 		std::shared_ptr<UploadBuffer> get_upload(UINT64 size);
@@ -1288,3 +1294,6 @@ namespace DX12
 		ComPtr<ID3D12GraphicsCommandList4> get_native();
 	};
 }
+
+
+#include "Tiling.hpp"

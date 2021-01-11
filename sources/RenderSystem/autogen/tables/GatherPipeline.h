@@ -11,10 +11,10 @@ namespace Table
 		} &cb;
 		struct UAV
 		{
-			Render::HLSL::AppendStructuredBuffer<CommandData> commands[8];
+			DX12::HLSL::AppendStructuredBuffer<CommandData> commands[8];
 		} &uav;
 		uint4* GetPip_ids() { return cb.pip_ids; }
-		Render::HLSL::AppendStructuredBuffer<CommandData>* GetCommands() { return uav.commands; }
+		DX12::HLSL::AppendStructuredBuffer<CommandData>* GetCommands() { return uav.commands; }
 		GatherPipeline(CB&cb,UAV&uav) :cb(cb),uav(uav){}
 	};
 	#pragma pack(pop)

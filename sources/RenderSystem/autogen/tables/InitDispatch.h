@@ -6,11 +6,11 @@ namespace Table
 	{
 		struct UAV
 		{
-			Render::HLSL::RWStructuredBuffer<uint> counter;
-			Render::HLSL::RWStructuredBuffer<DispatchArguments> dispatch_data;
+			DX12::HLSL::RWStructuredBuffer<uint> counter;
+			DX12::HLSL::RWStructuredBuffer<DispatchArguments> dispatch_data;
 		} &uav;
-		Render::HLSL::RWStructuredBuffer<uint>& GetCounter() { return uav.counter; }
-		Render::HLSL::RWStructuredBuffer<DispatchArguments>& GetDispatch_data() { return uav.dispatch_data; }
+		DX12::HLSL::RWStructuredBuffer<uint>& GetCounter() { return uav.counter; }
+		DX12::HLSL::RWStructuredBuffer<DispatchArguments>& GetDispatch_data() { return uav.dispatch_data; }
 		InitDispatch(UAV&uav) :uav(uav){}
 	};
 	#pragma pack(pop)

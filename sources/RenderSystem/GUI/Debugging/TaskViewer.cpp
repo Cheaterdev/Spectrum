@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "TaskViewer.h"
+#include "../Elements/Button.h"
+#include "../Elements/Label.h"
 namespace GUI
 {
     namespace Elements

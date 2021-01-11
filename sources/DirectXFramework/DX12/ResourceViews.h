@@ -1,4 +1,7 @@
 #pragma once
+#include "Descriptors.h"
+#include "Resource.h"
+#include "CommandList.h"
 namespace DX12
 {
 

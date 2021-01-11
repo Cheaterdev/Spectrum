@@ -11,15 +11,15 @@ namespace Table
 		} &cb;
 		struct SRV
 		{
-			Render::HLSL::Texture3D<float4> SrcMip;
+			DX12::HLSL::Texture3D<float4> SrcMip;
 			VoxelTilingParams::SRV params;
 		} &srv;
 		struct UAV
 		{
-			Render::HLSL::RWTexture3D<float4> OutMips[3];
+			DX12::HLSL::RWTexture3D<float4> OutMips[3];
 		} &uav;
-		Render::HLSL::RWTexture3D<float4>* GetOutMips() { return uav.OutMips; }
-		Render::HLSL::Texture3D<float4>& GetSrcMip() { return srv.SrcMip; }
+		DX12::HLSL::RWTexture3D<float4>* GetOutMips() { return uav.OutMips; }
+		DX12::HLSL::Texture3D<float4>& GetSrcMip() { return srv.SrcMip; }
 		VoxelTilingParams MapParams() { return VoxelTilingParams(cb.params,srv.params); }
 		VoxelMipMap(CB&cb,SRV&srv,UAV&uav) :cb(cb),srv(srv),uav(uav){}
 	};

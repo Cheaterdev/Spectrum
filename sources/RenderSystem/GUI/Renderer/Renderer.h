@@ -1,3 +1,8 @@
+#pragma once
+#include <slots.h>
+#include "DX12/Buffer.h"
+#include "DX12/PipelineState.h"
+#include "../GUI.h"
 namespace GUI
 {
 
@@ -5,24 +10,24 @@ namespace GUI
     {
         using Vertex = Table::vertex_input::CB;
 
-			Render::HandleTable sampler_table;
+			DX12::HandleTable sampler_table;
 
-           Render::IndexBuffer::ptr index_buffer;
+           DX12::IndexBuffer::ptr index_buffer;
 		   std::vector<Vertex> vertexes;
 
-		   std::vector<Render::Handle> textures_handles;
-		   std::vector<Render::Handle> samplers_handles;
+		   std::vector<DX12::Handle> textures_handles;
+		   std::vector<DX12::Handle> samplers_handles;
 
 		   std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
-		   Render::PipelineState::ptr current_state;
+		   DX12::PipelineState::ptr current_state;
         public:
             int counter = 0;
             using ptr = s_ptr<NinePatch>;
             NinePatch();
-            void draw(Render::context& c, Render::PipelineState::ptr pipeline_state, rect r);
-            void draw(Render::context& c, GUI::Texture& item, rect r);
-            void draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr pipeline_state);
-			void flush(Render::context& c);
+            void draw(DX12::context& c, DX12::PipelineState::ptr pipeline_state, rect r);
+            void draw(DX12::context& c, GUI::Texture& item, rect r);
+            void draw(DX12::context& c, GUI::Texture& item, rect r, DX12::PipelineState::ptr pipeline_state);
+			void flush(DX12::context& c);
     };
 
     class SimpleRect
@@ -40,13 +45,13 @@ namespace GUI
 
 
 
-            void draw(Render::context& c, float4 color, rect r);
+            void draw(DX12::context& c, float4 color, rect r);
     };
 
     class Renderer 
     {
        
-          //  Render::HandleTable sampler_table;
+          //  DX12::HandleTable sampler_table;
 
             NinePatch::ptr nine_patch;
             SimpleRect::ptr simple_rect;
@@ -58,27 +63,27 @@ namespace GUI
 
         public:
 
-       //     Render::RootSignature::ptr root_signature;
+       //     DX12::RootSignature::ptr root_signature;
 
             using ptr = s_ptr<Renderer>;
             using wptr = w_ptr<Renderer>;
 
 
-            void draw_area(base::ptr obj, Render::context& c);
-            void draw_container(base::ptr obj, Render::context& c);
-            void draw_virtual(base::ptr obj, Render::context& c);
-            void draw_color(Render::context& c, float4 color, rect r);
-			void flush(Render::context& c);
+            void draw_area(base::ptr obj, DX12::context& c);
+            void draw_container(base::ptr obj, DX12::context& c);
+            void draw_virtual(base::ptr obj, DX12::context& c);
+            void draw_color(DX12::context& c, float4 color, rect r);
+			void flush(DX12::context& c);
 
-            void draw(Render::context& c, GUI::Texture& item, rect r);
-            void draw(Render::context& c, Render::PipelineState::ptr state, rect r);
+            void draw(DX12::context& c, GUI::Texture& item, rect r);
+            void draw(DX12::context& c, DX12::PipelineState::ptr state, rect r);
             Renderer();
 
             void start()
             {
                 nine_patch->counter = 0;
             }
-            void set(Render::context& c);
+            void set(DX12::context& c);
     };
 }
 

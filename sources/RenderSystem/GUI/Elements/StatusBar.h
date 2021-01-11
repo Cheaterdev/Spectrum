@@ -1,3 +1,7 @@
+#pragma once
+#include "../Skin.h"
+#include "../GUI.h"
+
 namespace GUI
 {
     namespace Elements
@@ -15,7 +19,7 @@ namespace GUI
                     skin = Skin::get().DefaultStatusBar;
                 }
                 Skin::StatusBar skin;
-                virtual void draw(Render::context&) override;
+                virtual void draw(DX12::context&) override;
 
                 virtual void add_child(base::ptr obj) override;
 

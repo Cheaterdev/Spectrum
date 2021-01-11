@@ -4,6 +4,7 @@
 #define IncludeGuard__FW1_CFW1GlyphRenderStates
 
 #include "CFW1Object.h"
+#include "DX12/CommandList.h"
 
 
 namespace FW1FontWrapper
@@ -17,7 +18,7 @@ namespace FW1FontWrapper
             // IUnknown
             virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
 
-            virtual void STDMETHODCALLTYPE SetStates(Render::CommandList::ptr& list, UINT Flags);
+            virtual void STDMETHODCALLTYPE SetStates(DX12::CommandList::ptr& list, UINT Flags);
             virtual void STDMETHODCALLTYPE UpdateShaderConstants(
                 Render::CommandList::ptr& list,
                 const FW1_RECTF* pClipRect,

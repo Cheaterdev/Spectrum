@@ -1,4 +1,8 @@
 #include "pch.h"
+#include "Tiling.h"
+#include "Resource.h"
+#include "CommandList.h"
+#include "Device12.h"
 
 namespace DX12 {
 

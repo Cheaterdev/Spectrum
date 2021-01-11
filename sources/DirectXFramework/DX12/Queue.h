@@ -1,4 +1,6 @@
 #pragma once
+#include "Fence.h"
+#include "States.h"
 
 namespace DX12
 {

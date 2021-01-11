@@ -7,11 +7,11 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float> light_buffer;
-			Render::HLSL::StructuredBuffer<Camera> light_camera;
+			DX12::HLSL::Texture2D<float> light_buffer;
+			DX12::HLSL::StructuredBuffer<Camera> light_camera;
 		} &srv;
-		Render::HLSL::Texture2D<float>& GetLight_buffer() { return srv.light_buffer; }
-		Render::HLSL::StructuredBuffer<Camera>& GetLight_camera() { return srv.light_camera; }
+		DX12::HLSL::Texture2D<float>& GetLight_buffer() { return srv.light_buffer; }
+		DX12::HLSL::StructuredBuffer<Camera>& GetLight_camera() { return srv.light_camera; }
 		PSSMDataGlobal(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

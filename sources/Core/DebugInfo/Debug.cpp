@@ -1,6 +1,8 @@
 #include "pch.h"
 
+#include "Debug.h"
 #include <DbgHelp.h>
+#include "Exceptions.h"
 
 namespace Exceptions
 {

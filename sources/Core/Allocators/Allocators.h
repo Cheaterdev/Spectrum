@@ -1,4 +1,6 @@
 #pragma once
+#include "DebugInfo/Debug.h"
+#include "Math/ScalarMath.h"
 
 struct AllocationHandle;
 struct MemoryInfo

@@ -7,6 +7,29 @@
 ovrEyeRenderDesc eyeRenderDesc[2];
 
 #endif
+#include "Effects/VoxelGI/VoxelGI.h"
+#include "Effects/Sky.h"
+#include "Effects/PostProcess/SMAA.h"
+#include "Lighting/PSSM.h"
+#include "GUI/Elements/FlowGraph/Canvas.h"
+#include "Camera/Camera.h"
+#include "Renderer/StencilRenderer.h"
+#include "Effects/RTX/RTX.h"
+#include "GUI/Elements/CheckBoxText.h"
+#include "GUI/Elements/ComboBox.h"
+#include "GUI/Elements/CircleSelector.h"
+#include "Assets/EngineAssets.h"
+#include "DX12/GPUTimer.h"
+#include "GUI/Elements/DockBase.h"
+#include "GUI/Elements/ListBox.h"
+#include "GUI/Debugging/TaskViewer.h"
+#include "GUI/Debugging/TimerGraph.h"
+#include "GUI/Elements/StatusBar.h"
+#include "GUI/Elements/AssetExplorer.h"
+#include "GUI/Elements/Window.h"
+#include "GUI/Elements/FlowGraph/FlowManager.h"
+#include "Assets/AssetRenderer.h"
+#include "FlowSystem.h"
 
 
 HRESULT device_fail()
@@ -1258,7 +1281,7 @@ public:
 
 					context.get_list()->transition(context.get_texture(data.o_texture).resource, ResourceState::PRESENT);
 
-					Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
+					DX12::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
 						run_on_ui([this, ptr]() {	Profiler::get().update(); });
 
 						});

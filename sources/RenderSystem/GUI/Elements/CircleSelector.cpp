@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "CircleSelector.h"
+#include "../Skin.h"
 
 
 

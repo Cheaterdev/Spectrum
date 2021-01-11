@@ -3,7 +3,9 @@
 #include "pch.h"
 
 #include "CFW1GlyphVertexDrawer.h"
+#include "DX12/ResourceViews.h"
 
+#include <slots.h>
 #define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
 
 
@@ -110,7 +112,7 @@ namespace FW1FontWrapper
 			
             pContext->write(data, std::span{ vertexData->pVertices + currentVertex, vertexCount });
 
-			auto view = data.resource->create_view<Render::StructuredBufferView<Table::Glyph>>(*pContext->frame_resources, (UINT)data.offset, data.size);
+			auto view = data.resource->create_view<DX12::StructuredBufferView<Table::Glyph>>(*pContext->frame_resources, (UINT)data.offset, data.size);
 
 
             {

@@ -1,4 +1,8 @@
-﻿
+﻿#pragma once 
+#include "MenuList.h"
+#include "../Skin.h"
+#include "Button.h"
+
 
 namespace GUI
 {
@@ -53,7 +57,7 @@ namespace GUI
                     return elem;
                 }
 
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
 
         };
 

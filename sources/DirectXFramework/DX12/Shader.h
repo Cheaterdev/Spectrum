@@ -1,4 +1,11 @@
 #pragma once
+#include "D3D/Shaders.h"
+#include "FileSystem/FileSystem.h"
+#include "Data/Data.h"
+#include "Data/md5.h"
+#include "D3D/ShaderReflection.h"
+#include "DebugInfo/Debug.h"
+#include "InputLayouts.h"
 
 
 namespace DX12

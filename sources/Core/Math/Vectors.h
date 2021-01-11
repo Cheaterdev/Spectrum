@@ -1,4 +1,5 @@
 #pragma once
+#include "Constants.h"
 
 #pragma warning(disable:4201)
 #pragma warning(disable:4520)
@@ -753,3 +754,35 @@ public:
 		return data.end();
 	}
 };
+
+#include "LOg/simple_archive.h"
+
+template<class T>
+void serialize(simple_log_archive& ar, Vector<vec2_t<T>>& a, const unsigned int)
+{
+	ar& NP("x", a.x)
+		& NP("y", a.y);
+}
+
+template<class T>
+void serialize(simple_log_archive& ar, Vector<vec3_t<T>>& a, const unsigned int)
+{
+	ar& NP("x", a.x)
+		& NP("y", a.y)
+		& NP("z", a.z);
+}
+
+template<class T>
+void serialize(simple_log_archive& ar, Vector<vec4_t<T>>& a, const unsigned int)
+{
+	ar& NP("x", a.x)
+		& NP("y", a.y)
+		& NP("z", a.z)
+		& NP("w", a.w);
+}
+
+template<class Archive, class T>
+void serialize(Archive& ar, Vector<T>& a, const unsigned int)
+{
+	ar& boost::serialization::make_array(a.values.data(), T::N);
+}

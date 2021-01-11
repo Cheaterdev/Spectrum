@@ -1,4 +1,10 @@
 #include "pch.h"
+#include "PSSM.h"
+#include "Scene/Scene.h"
+#include "camera/Camera.h"
+#include <slots.h>
+#include "Assets/EngineAssets.h"
+#include "Renderer/Renderer.h"
 
 float jit = 0;
 
@@ -30,10 +36,10 @@ void PSSM::generate(FrameGraph& graph)
 
 
 
-	auto scene = graph.scene;
+	Scene* scene = graph.scene;
 	auto min = scene->get_min();
 	auto max = scene->get_max();
-	auto cam = graph.cam;
+	camera* cam = graph.cam;
 
 
 	auto points_all = cam->get_points(min, max);
@@ -71,7 +77,7 @@ void PSSM::generate(FrameGraph& graph)
 
 
 			std::vector<sizer_long> scissor;
-			std::vector<Render::Viewport> viewport;
+			std::vector<DX12::Viewport> viewport;
 			camera light_cam;
 
 			light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
@@ -180,7 +186,7 @@ void PSSM::generate(FrameGraph& graph)
 
 
 				std::vector<sizer_long> scissor;
-				std::vector<Render::Viewport> viewport;
+				std::vector<DX12::Viewport> viewport;
 				camera light_cam;
 
 				light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
@@ -309,7 +315,7 @@ void PSSM::generate(FrameGraph& graph)
 			graphics.set_viewport(screen_light_mask.get_viewport());
 			graphics.set_scissor(screen_light_mask.get_scissor());
 
-			graphics.set_rtv(1, screen_light_mask.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, screen_light_mask.get_rtv(), DX12::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::PSSMMask>());
 
 
@@ -342,7 +348,7 @@ void PSSM::generate(FrameGraph& graph)
 				lighting.set(graphics);
 			}
 
-			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, target_tex.get_rtv(), DX12::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::PSSMApply>());
 
 			graphics.draw(4);

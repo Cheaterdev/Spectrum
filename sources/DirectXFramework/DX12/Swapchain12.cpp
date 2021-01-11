@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "Swapchain12.h"
+#include "Device12.h"
+#include "Texture.h"
 
 
 namespace DX12

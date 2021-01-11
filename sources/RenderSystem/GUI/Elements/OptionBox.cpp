@@ -1,7 +1,5 @@
 #include "pch.h"
-
-
-
+#include "OptionBox.h"
 
 GUI::Elements::check_box_text::ptr GUI::Elements::option_group::create_option(bool value /*= false*/)
 {

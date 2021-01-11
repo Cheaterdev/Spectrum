@@ -1,4 +1,13 @@
-
+#pragma once
+#include "Log/Events.h"
+#include "patterns/Singleton.h"
+#include "DX12/Resource.h"
+#include "DX12/Shader.h"
+#include "DX12/RootSignature.h"
+#include "DX12/Buffer.h"
+#include "DX12/ResourceViews.h"
+#include "DX12/RayTracingAS.h"
+#include "Context/Context.h"
 
 static const wchar_t* c_hitGroupName = L"MyHitGroup";
 static const wchar_t* c_raygenShaderName = L"MyRaygenShader";
@@ -18,9 +27,9 @@ class RTX :public Singleton<RTX>, Events::prop_handler,
 {
 	
 public:
-	Resource::ptr m_missShaderTable;
-	Resource::ptr m_hitGroupShaderTable;
-	Resource::ptr m_rayGenShaderTable;
+	DX12::Resource::ptr m_missShaderTable;
+	DX12::Resource::ptr m_hitGroupShaderTable;
+	DX12::Resource::ptr m_rayGenShaderTable;
 
 	shader_identifier rayGenShaderIdentifier;
 	shader_identifier missShaderIdentifier;
@@ -31,19 +40,19 @@ public:
 	ComPtr<ID3D12StateObject> m_SharedCollection;
 	ComPtr<ID3D12StateObject> m_GlobalCollection;
 
-	library_shader::ptr library;
+	DX12::library_shader::ptr library;
 
 	RayGenConstantBuffer m_rayGenCB;
 	ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
-	RootSignature::ptr global_sig;
-	Render::RootSignature::ptr local_sig;
+	DX12::RootSignature::ptr global_sig;
+	DX12::RootSignature::ptr local_sig;
 	using ptr = std::shared_ptr<RTX>;
 
 	//ArraysHolder<InstanceData> instanceData;
 
 	std::set<ComPtr<ID3D12StateObject>> all_objs;
 
-	virtual_gpu_buffer<closesthit_identifier>::ptr material_hits;// (MAX_COMMANDS_SIZE)
+	DX12::virtual_gpu_buffer<closesthit_identifier>::ptr material_hits;// (MAX_COMMANDS_SIZE)
 
 	std::map< materials::universal_material*, UINT> materials;
 
@@ -64,7 +73,7 @@ public:
 	void CreateRaytracingPipelineStateObject();
 
 
-	void prepare(CommandList::ptr& list);
+	void prepare(DX12::CommandList::ptr& list);
 
-	void render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer);
+	void render(MeshRenderContext::ptr context, DX12::TextureView& texture, DX12::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer);
 };

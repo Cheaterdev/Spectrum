@@ -1,4 +1,4 @@
-
+#pragma once
 #define BOOST_DECL_EXPORTS
 #define BOOST_WARCHIVE_SOURCE
 #define BOOST_ARCHIVE_DECL

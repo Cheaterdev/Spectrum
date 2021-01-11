@@ -8,10 +8,10 @@ namespace Table
 		{
 			float data[16];
 		} &cb;
-		Render::Bindless& bindless;
+		DX12::Bindless& bindless;
 		float* GetData() { return cb.data; }
-		Render::Bindless& GetTex() { return bindless; }
-		Test(CB&cb,Render::Bindless &bindless) :cb(cb),bindless(bindless){}
+		DX12::Bindless& GetTex() { return bindless; }
+		Test(CB&cb,DX12::Bindless &bindless) :cb(cb),bindless(bindless){}
 	};
 	#pragma pack(pop)
 }

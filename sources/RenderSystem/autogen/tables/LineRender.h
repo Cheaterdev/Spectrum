@@ -7,9 +7,9 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::StructuredBuffer<VSLine> vb;
+			DX12::HLSL::StructuredBuffer<VSLine> vb;
 		} &srv;
-		Render::HLSL::StructuredBuffer<VSLine>& GetVb() { return srv.vb; }
+		DX12::HLSL::StructuredBuffer<VSLine>& GetVb() { return srv.vb; }
 		LineRender(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

@@ -1,4 +1,8 @@
 ﻿#include "pch.h"
+#include "SIG/SIG.h"
+#include "universal_material.h"
+#include "Assets/EngineAssets.h"
+#include "Effects/RTX/RTX.h"
 
 
 
@@ -183,14 +187,14 @@ void materials::universal_material::compile()
 	}
 
 	/*  if (texture_count)
-		  texture_handles = Render::DescriptorHeapManager::get().get_csu()->create_table(texture_count);
+		  texture_handles = DX12::DescriptorHeapManager::get().get_csu()->create_table(texture_count);
 	  else
-		  texture_handles = Render::HandleTable();
+		  texture_handles = DX12::HandleTable();
 		*/
 	/*if (uav_count)
-		uav_handles = Render::DescriptorHeapManager::get().get_csu_static()->create_table(uav_count);
+		uav_handles = DX12::DescriptorHeapManager::get().get_csu_static()->create_table(uav_count);
 	else
-		uav_handles = Render::HandleTable();
+		uav_handles = DX12::HandleTable();
 		*/
 	texture_count = 0;
 	uav_count = 0;
@@ -306,7 +310,7 @@ void materials::universal_material::generate_material()
 	auto raytracing_str = context->hit_shader.uniforms+ include_file_raytacing->get_data() + context->hit_shader.text;
 
 
-	raytracing_lib = Render::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true }); //*D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
+	raytracing_lib = DX12::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true }); //*D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
 	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, context);
 
 	

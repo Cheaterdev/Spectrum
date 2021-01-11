@@ -1,7 +1,7 @@
 #pragma once
 
 
-    using namespace Render;
+    using namespace DX12;
 
     class TemporalAA
     {
@@ -16,12 +16,12 @@
 			UINT all_count = 1;
         public:
 
-            void set(Render::CommandList::ptr& list, int slot)
+            void set(DX12::CommandList::ptr& list, int slot)
             {
 
 				for (UINT i = 0; i < textures.size(); i++)
 				{
-					list->transition(textures[i], Render::ResourceState::PIXEL_SHADER_RESOURCE);
+					list->transition(textures[i], DX12::ResourceState::PIXEL_SHADER_RESOURCE);
 
 					((SignatureDataSetter*)&list->get_graphics())->set_dynamic(slot, i, textures[std::min(all_count-1,i)]->texture_2d()->get_static_srv());
 				}
@@ -65,7 +65,7 @@
 
                 for (UINT i = 0; i < offsets.size(); i++)
                 {
-                    textures.emplace_back(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+                    textures.emplace_back(new DX12::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), DX12::ResourceState::PIXEL_SHADER_RESOURCE));
                   
 					textures[i]->set_name(std::string("TemporalAA_") + std::to_string(i));
 					//      srv_table[i] = textures.back()->texture_2d()->srv();

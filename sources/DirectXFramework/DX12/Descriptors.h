@@ -1,3 +1,8 @@
+#pragma once
+#include <Allocators/Allocators.h>
+#include "Math/Vectors.h"
+#include "Data/Data.h"
+
 namespace DX12
 {
 	enum class HandleType : char

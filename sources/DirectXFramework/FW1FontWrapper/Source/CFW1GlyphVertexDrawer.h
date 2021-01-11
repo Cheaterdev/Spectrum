@@ -4,6 +4,7 @@
 #define IncludeGuard__FW1_CFW1GlyphVertexDrawer
 
 #include "CFW1Object.h"
+#include "DX12/Buffer.h"
 
 
 namespace FW1FontWrapper
@@ -67,7 +68,7 @@ namespace FW1FontWrapper
             std::wstring					m_lastError;
 
             //  Render::Buffer<FW1_GLYPHVERTEX>::ptr m_pVertexBuffer;
-            Render::IndexBuffer::ptr m_pIndexBuffer;
+            DX12::IndexBuffer::ptr m_pIndexBuffer;
 
             UINT							m_vertexBufferSize;
             UINT							m_maxIndexCount;

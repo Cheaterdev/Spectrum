@@ -1,3 +1,7 @@
+#include "DX12/CommandList.h"
+#include "D3D/Shaders.h"
+#include "DX12/PipelineState.h"
+#include "../RenderSystem/autogen/enums.h"
 
 #define ALL_FORMATS \
 DXGI_FORMAT_UNKNOWN	,\
@@ -410,7 +414,7 @@ struct SimpleComputePSO {
 
 	}
 
-	Render::ComputePipelineState::ptr create();
+	DX12::ComputePipelineState::ptr create();
 };
 
 

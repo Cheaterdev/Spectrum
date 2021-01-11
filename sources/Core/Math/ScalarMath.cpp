@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "ScalarMath.h"
 
 float Math::sin(const float angle)
 {

@@ -1,5 +1,6 @@
 #include "pch.h"
-
+#include "MipMapGeneration.h"
+#include <slots.h>
 
 
 MipMapGenerator::MipMapGenerator()
@@ -10,11 +11,11 @@ MipMapGenerator::MipMapGenerator()
 
 
 
-void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex)
+void MipMapGenerator::generate(DX12::ComputeContext& compute_context, DX12::Texture::ptr tex)
 {
 	generate(compute_context, tex, tex->texture_2d());
 }
-void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, TextureView view)
+void MipMapGenerator::generate_cube(DX12::ComputeContext& compute_context, TextureView view)
 {
 
 	for (int i = 0; i <6; i++) 
@@ -22,7 +23,7 @@ void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, Tex
 		generate(compute_context,view.create_2d_slice(i, *compute_context.get_base().frame_resources));
 }
 
-void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureView  view)
+void MipMapGenerator::generate(DX12::ComputeContext& compute_context, TextureView  view)
 {
 	//return;
 	PROFILE_GPU(L"downsampling");
@@ -85,7 +86,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureV
 	}
 }
 
-void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Texture2DView::ptr view)
+void MipMapGenerator::generate(DX12::ComputeContext& compute_context, DX12::Texture::ptr tex, Texture2DView::ptr view)
 {
 
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
@@ -145,7 +146,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 	}
 }
 
-void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::Texture::ptr& to)
+void MipMapGenerator::downsample_depth(DX12::ComputeContext& compute_context, DX12::Texture::ptr tex, DX12::Texture::ptr& to)
 {
 	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
@@ -157,7 +158,7 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 
 }
 
-void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to){
+void MipMapGenerator::downsample_depth(DX12::ComputeContext& compute_context, DX12::TextureView& tex, DX12::TextureView& to){
 	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
 
@@ -169,7 +170,7 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 
 }
 
-void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* cam, GBuffer& buffer, TextureView tempColor)
+void MipMapGenerator::generate_quality(DX12::GraphicsContext& list, camera* cam, GBuffer& buffer, TextureView tempColor)
 {
 
 	PROFILE_GPU(L"generate_quality");
@@ -214,7 +215,7 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 }
 
 
-void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr to, Render::Texture::ptr from)
+void MipMapGenerator::copy_texture_2d_slow(DX12::GraphicsContext& list, DX12::Texture::ptr to, DX12::Texture::ptr from)
 {
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(to->texture_2d()->get_rtv().resource_info->rtv.Format)));
 
@@ -234,7 +235,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 }
 
 
-void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr to, Render::TextureView from)
+void MipMapGenerator::copy_texture_2d_slow(DX12::GraphicsContext& list, DX12::Texture::ptr to, DX12::TextureView from)
 {
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(to->texture_2d()->get_rtv().resource_info->rtv.Format)));
 
@@ -255,7 +256,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 
 
 
-void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Render::TextureView to, Render::TextureView from)
+void MipMapGenerator::render_texture_2d_slow(DX12::GraphicsContext& list, DX12::TextureView to, DX12::TextureView from)
 {
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(to.get_rtv().resource_info->rtv.Format)));
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
@@ -270,7 +271,7 @@ void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Rend
 
 
 
-void MipMapGenerator::write_to_depth(Render::GraphicsContext& list, Render::TextureView from, Render::TextureView to)
+void MipMapGenerator::write_to_depth(DX12::GraphicsContext& list, DX12::TextureView from, DX12::TextureView to)
 {
 	list.set_pipeline(GetPSO<PSOS::RenderToDS>());
 	Slots::CopyTexture data;

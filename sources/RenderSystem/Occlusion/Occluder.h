@@ -1,3 +1,6 @@
+#pragma once
+#include "Math/Vectors.h"
+#include "Math/GeometryPrimitives.h"
 class occluder
 {
 	vec3 min;

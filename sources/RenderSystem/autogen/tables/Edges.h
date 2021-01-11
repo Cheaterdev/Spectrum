@@ -7,15 +7,15 @@ namespace Table
 		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle areaTex;
-			Render::Handle searchTex;
-			Render::Handle colorTex;
+			DX12::Handle areaTex;
+			DX12::Handle searchTex;
+			DX12::Handle colorTex;
 		} &srv;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Handle& GetAreaTex() { return srv.areaTex; }
-		Render::Handle& GetSearchTex() { return srv.searchTex; }
-		Render::Handle& GetColorTex() { return srv.colorTex; }
+		DX12::Handle& GetAreaTex() { return srv.areaTex; }
+		DX12::Handle& GetSearchTex() { return srv.searchTex; }
+		DX12::Handle& GetColorTex() { return srv.colorTex; }
 		Edges(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

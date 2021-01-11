@@ -12,7 +12,7 @@
 #include "../DirectXFramework/pch.h"
 #include "../FlowGraph/pch.h"
 
-
+/*
 
 #include "autogen/includes.h"
 
@@ -75,7 +75,7 @@
 #include "Mesh/vertexes.h"
 #include "Mesh/Mesh.h"
 #include "Assets/MeshAsset.h"
-
+*/
 
 using shader_identifier = std::array<std::byte, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
 static shader_identifier identify(void* data)
@@ -95,7 +95,7 @@ struct closesthit_identifier
 	D3D12_GPU_VIRTUAL_ADDRESS mat_buffer;
 };
 
-
+/*
 #include "Materials/Values.h"
 #include "Materials/universal_material.h"
 #include "Materials/ShaderMaterial.h" 
@@ -110,11 +110,7 @@ struct closesthit_identifier
 
 #include "GUI/Elements/AssetExplorer.h"
 #include "Lighting/PSSM.h"
-/*
-#include "Lighting/GBuffer.h"
 
-#include "Lighting/Light.h"
-*/
 
 
 #include "Renderer/StencilRenderer.h"
@@ -127,14 +123,7 @@ struct closesthit_identifier
 
 #include "Effects/Sky.h"
 
-/*
-#include "Effects/TemporalAA.h"
 
-#include "Effects/PostProcess/Adaptation.h"
-#include "Effects/PostProcess/SSR.h"
-#include "Effects/PostProcess/SSGI.h"
-#include "Effects/PostProcess/SMAA.h"
-*/
 #include "Effects/PostProcess/SMAA.h"
 #include "Effects/VoxelGI/VoxelGI.h"
 #include "Effects/RTX/RTX.h"
@@ -143,18 +132,4 @@ struct closesthit_identifier
 
 
 #include "Lighting/BRDF.h"
-namespace EngineAssets
-{
-	extern EngineAsset<MeshAsset> material_tester;
-	extern EngineAsset<MeshAsset> axis;
-	extern EngineAsset<MeshAsset> plane;
-	extern EngineAsset<BinaryAsset> material_header;
-	extern EngineAsset<BinaryAsset> material_raytracing_header;
-
-
-	extern EngineAsset<TextureAsset> best_fit_normals;
-	extern EngineAsset<TextureAsset> missing_texture;
-
-	extern EngineAsset<BRDF> brdf;
-
-}
+*/

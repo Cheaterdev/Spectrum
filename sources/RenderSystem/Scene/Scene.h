@@ -1,4 +1,8 @@
 #pragma once
+#include "SceneObject.h"
+#include "DX12/Buffer.h"
+#include "Assets/MeshAsset.h"
+#include "Materials/universal_material.h"
 
 /*
 class PipelineHolder
@@ -75,8 +79,8 @@ public:
 				dynamic_objects.erase(render_object);
 			});
 
-        mesh_infos = std::make_shared< virtual_gpu_buffer<mesh_info_part>>(1024 * 1024 );
-        raytrace = std::make_shared< virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(1024 * 1024);
+        mesh_infos = std::make_shared< DX12::virtual_gpu_buffer<mesh_info_part>>(1024 * 1024 );
+        raytrace = std::make_shared< DX12::virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(1024 * 1024);
     }
 
     Events::Event<scene_object*> on_element_add;
@@ -91,8 +95,8 @@ public:
 
  
 	static const int MAX_COMMANDS_SIZE = 1024 * 1024 * 64;
-    virtual_gpu_buffer<mesh_info_part>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
- virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>::ptr raytrace;// (MAX_COMMANDS_SIZE)
+    DX12::virtual_gpu_buffer<mesh_info_part>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
+    DX12::virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>::ptr raytrace;// (MAX_COMMANDS_SIZE)
 
 	my_unique_vector<UINT> command_ids[10];
 

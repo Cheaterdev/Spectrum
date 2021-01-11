@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include <Log/Log.h>
 void com_deleter(IUnknown* pComResource)
 {
     if (pComResource)

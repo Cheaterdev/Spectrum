@@ -3,6 +3,10 @@
 #pragma warning( disable : 4512 )
 
 #include "simple_archive.h"
+
+#include <patterns/Singleton.h>
+#include <Log/Events.h>
+
 //class LogListener;
 class LogBlock;
 

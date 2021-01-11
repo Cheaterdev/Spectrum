@@ -6,9 +6,9 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::TextureCube<float4> sourceTex;
+			DX12::HLSL::TextureCube<float4> sourceTex;
 		} &srv;
-		Render::HLSL::TextureCube<float4>& GetSourceTex() { return srv.sourceTex; }
+		DX12::HLSL::TextureCube<float4>& GetSourceTex() { return srv.sourceTex; }
 		EnvSource(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

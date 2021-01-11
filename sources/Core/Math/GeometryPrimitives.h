@@ -1,4 +1,5 @@
 #pragma once
+#include "Matrices.h"
 enum class primitive_types
 {
     sphere,
@@ -349,3 +350,40 @@ EXTERN_EXPORT(AABB)
 //BOOST_CLASS_EXPORT(Frustum)
 EXTERN_EXPORT(Primitive)
 */
+
+
+namespace boost
+{
+	namespace serialization
+	{
+
+
+
+		template<class Archive, class T>
+		void serialize(Archive& ar, matrix<T>& a, const unsigned int)
+		{
+			ar& boost::serialization::make_array(a.rows[0].values.data(), T::N * T::M);
+		}
+
+		template<class Archive>
+		void serialize(Archive& ar, Sphere& s, const unsigned int)
+		{
+			ar& NVP(s.pos)& NVP(s.radius)& NVP(boost::serialization::base_object<Primitive>(s));
+		}
+		template<class Archive>
+		void serialize(Archive& ar, AABB& s, const unsigned int)
+		{
+			ar& NVP(s.min)& NVP(s.max)& NVP(boost::serialization::base_object<Primitive>(s));
+		}
+		template<class Archive>
+		void serialize(Archive&, Primitive&, const unsigned int)
+		{
+		}
+
+		template<class Archive>
+		void serialize(Archive& ar, std::_Big_uint128& a, const unsigned int)
+		{
+			ar& boost::serialization::make_array((char*)(void*)(&a), sizeof(a));
+		}
+	} // namespace serialization
+} // namespace boost

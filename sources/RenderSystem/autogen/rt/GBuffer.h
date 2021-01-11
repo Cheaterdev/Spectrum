@@ -7,20 +7,20 @@ namespace RT
 		{
 			struct RTV
 			{
-				Render::Handle albedo;
-				Render::Handle normals;
-				Render::Handle specular;
-				Render::Handle motion;
+				DX12::Handle albedo;
+				DX12::Handle normals;
+				DX12::Handle specular;
+				DX12::Handle motion;
 			} &rtv;
 			struct DSV
 			{
-				Render::Handle depth;
+				DX12::Handle depth;
 			}&dsv;
-			Render::Handle& GetAlbedo() { return rtv.albedo; }
-			Render::Handle& GetNormals() { return rtv.normals; }
-			Render::Handle& GetSpecular() { return rtv.specular; }
-			Render::Handle& GetMotion() { return rtv.motion; }
-			Render::Handle& GetDepth() { return dsv.depth; }
+			DX12::Handle& GetAlbedo() { return rtv.albedo; }
+			DX12::Handle& GetNormals() { return rtv.normals; }
+			DX12::Handle& GetSpecular() { return rtv.specular; }
+			DX12::Handle& GetMotion() { return rtv.motion; }
+			DX12::Handle& GetDepth() { return dsv.depth; }
 		GBuffer(RTV & rtv, DSV & dsv):rtv(rtv), dsv(dsv){}
 		};
 	}

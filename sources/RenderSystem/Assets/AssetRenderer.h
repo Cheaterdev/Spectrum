@@ -1,9 +1,13 @@
+#pragma once 
+#include "Renderer/Renderer.h"
+#include "Scene/Scene.h"
+#include "Camera/Camera.h"
 class G_Buffer;
 class LightSystem;
 class SSGI;
 class SkyRender;
 class SceneRenderWorkflow;
-namespace Render
+namespace DX12
 {
 	struct OVRContext;
 }
@@ -14,7 +18,7 @@ class AssetRenderer : public Singleton<AssetRenderer>
 
         friend class Singleton<AssetRenderer>;
         main_renderer::ptr scene_renderer;
-        Render::FrameResourceManager frames;
+        DX12::FrameResourceManager frames;
 
         camera cam;
         mesh_renderer::ptr meshes_renderer;
@@ -30,11 +34,11 @@ class AssetRenderer : public Singleton<AssetRenderer>
         mutex lock;
 		std::shared_ptr<SSGI> ssgi;
 		std::shared_ptr<SkyRender> sky;
-		std::shared_ptr<Render::OVRContext> vr_context ;
+		std::shared_ptr<DX12::OVRContext> vr_context ;
     public:
 
-        virtual void draw(Scene::ptr scene, Render::Texture::ptr result);
-        virtual void draw(MaterialAsset::ptr m, Render::Texture::ptr result);
-		virtual void draw(scene_object::ptr scene, Render::Texture::ptr result);
+        virtual void draw(Scene::ptr scene, DX12::Texture::ptr result);
+        virtual void draw(MaterialAsset::ptr m, DX12::Texture::ptr result);
+		virtual void draw(scene_object::ptr scene, DX12::Texture::ptr result);
 
 };

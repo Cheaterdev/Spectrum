@@ -1,6 +1,9 @@
+#pragma once
 #ifdef OCULUS_SUPPORT
 #include "OVR_CAPI_D3D.h"
 #endif
+#include "Math/GeometryPrimitives.h"
+#include <slots.h>
 class camera : public Frustum
 {
     public:
@@ -245,7 +248,7 @@ class camera : public Frustum
 		}
         camera()
         {
-            //  const_buffer.reset(new Render::Buffer<shader_params>());
+            //  const_buffer.reset(new DX12::Buffer<shader_params>());
         }
 
     private:

@@ -1,4 +1,9 @@
 #pragma once
+#include "Math/Vectors.h"
+#include "Memory.h"
+#include "States.h"
+#include "Tiling.h"
+#include "Fence.h"
 namespace DX12
 {
 
@@ -40,7 +45,7 @@ namespace DX12
 	class Resource;
 	using Resource_ptr = std::shared_ptr<Resource>;
 
-	class FrameResources;
+	
 
 	class TrackedResource
 	{

@@ -7,9 +7,9 @@ namespace Table
 	{
 		struct UAV
 		{
-			Render::HLSL::RWStructuredBuffer<DebugStruct> debug;
+			DX12::HLSL::RWStructuredBuffer<DebugStruct> debug;
 		} &uav;
-		Render::HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return uav.debug; }
+		DX12::HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return uav.debug; }
 		DebugInfo(UAV&uav) :uav(uav){}
 	};
 	#pragma pack(pop)

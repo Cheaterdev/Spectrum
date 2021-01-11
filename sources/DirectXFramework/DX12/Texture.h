@@ -1,4 +1,10 @@
 #pragma once
+#include "FileSystem/FileSystem.h"
+#include "Resource/TextureData/Header.h"
+#include <memory>
+
+#include "CommandList.h"
+#include "Device12.h"
 namespace DX12
 {
 

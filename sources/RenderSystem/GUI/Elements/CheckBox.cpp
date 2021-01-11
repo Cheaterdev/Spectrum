@@ -1,11 +1,13 @@
 #include "pch.h"
+#include "CheckBox.h"
+#include "../Renderer/Renderer.h"
 
 namespace GUI
 {
 	namespace Elements
 	{
 
-		void check_box::draw(Render::context& c)
+		void check_box::draw(DX12::context& c)
 		{
 			if (is_checked())
 				renderer->draw(c, skin.Checked, get_render_bounds());

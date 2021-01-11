@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Dragger.h"
 
 namespace GUI
 {

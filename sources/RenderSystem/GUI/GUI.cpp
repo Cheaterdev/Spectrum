@@ -1,4 +1,8 @@
 #include "pch.h"
+#include "GUI.h"
+#include "Renderer/Renderer.h"
+#include "Elements/FlowGraph/ParameterWindow.h"
+#include "Elements/Window.h"
 
 
 namespace GUI
@@ -6,7 +10,7 @@ namespace GUI
     class dark : public base
     {
         public:
-            virtual void draw(Render::context&) override;
+            virtual void draw(DX12::context&) override;
     };
 
     void base::on_add(base* base_parent)
@@ -696,7 +700,7 @@ namespace GUI
         if (visibility)
 		{
 
-			rec_c.execute([this](Render::context &c) {
+			rec_c.execute([this](DX12::context &c) {
 				draw(c);
 			});
 		}
@@ -736,7 +740,7 @@ namespace GUI
     //    if (visibility)
     //        draw_after(c);
 
-		rec_c.execute([this](Render::context &c) {
+		rec_c.execute([this](DX12::context &c) {
 			draw_after(c);
 		});
     }
@@ -869,13 +873,13 @@ namespace GUI
             c->close_menus();
     }
 
-    void base::draw(Render::context& c) //
+    void base::draw(DX12::context& c) //
     {
         if (draw_helper)
             renderer->draw_virtual(get_ptr(), c);
     }
 
-    void base::draw_after(Render::context&)
+    void base::draw_after(DX12::context&)
     {
     }
 
@@ -951,15 +955,15 @@ namespace GUI
 				
 				 auto texture = context.get_texture(data.o_texture);
 
-			//	 command_list->transition(texture.resource, Render::ResourceState::RENDER_TARGET);
-				 command_list->get_graphics().set_rtv(1, texture.get_rtv(), Render::Handle());
+			//	 command_list->transition(texture.resource, DX12::ResourceState::RENDER_TARGET);
+				 command_list->get_graphics().set_rtv(1, texture.get_rtv(), DX12::Handle());
 				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
 
 			
                  std::shared_ptr<OVRContext> ovr_context;
                  renderer->start();
 
-                 Render::context c(command_list, ovr_context);
+                 DX12::context c(command_list, ovr_context);
                  c.command_list = command_list;
                
 				 c.offset = { 0, 0 };
@@ -994,7 +998,7 @@ namespace GUI
 
 				 renderer->flush(c);
 
-				 //command_list->transition(texture.resource, Render::ResourceState::PRESENT);
+				 //command_list->transition(texture.resource, DX12::ResourceState::PRESENT);
 
 
 			 });
@@ -1003,7 +1007,7 @@ namespace GUI
      }
 
      /*
-    void user_interface::draw_ui(Render::context& c)
+    void user_interface::draw_ui(DX12::context& c)
     {
         std::lock_guard<std::mutex> g(m);
 
@@ -1418,7 +1422,7 @@ namespace GUI
     }
 
 
-    void dark::draw(Render::context& c)
+    void dark::draw(DX12::context& c)
     {
         renderer->draw_color(c, vec4(0.0, 0.0, 0.0, 0.5f), get_render_bounds());
     }

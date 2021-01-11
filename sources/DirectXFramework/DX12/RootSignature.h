@@ -1,4 +1,7 @@
 #pragma once
+#include "Data/Data.h"
+
+enum class Layouts;
 namespace DX12
 {
 

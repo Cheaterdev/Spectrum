@@ -1,3 +1,5 @@
+#include "../Label.h"
+#include "../ComboBox.h"
 namespace GUI
 {
     namespace Elements

@@ -7,11 +7,11 @@ namespace Table
 		using CB = Empty;
 		struct SRV
 		{
-			Render::Handle blendTex;
+			DX12::Handle blendTex;
 		} &srv;
 		using UAV = Empty;
 		using SMP = Empty;
-		Render::Handle& GetBlendTex() { return srv.blendTex; }
+		DX12::Handle& GetBlendTex() { return srv.blendTex; }
 		SMAA_Resolve(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

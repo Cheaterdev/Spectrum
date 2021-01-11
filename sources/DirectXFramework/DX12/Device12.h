@@ -1,5 +1,12 @@
 #pragma once
 #include "../../3rdparty/Aftermath/NsightAftermathGpuCrashTracker.h"
+#include "Memory.h"
+#include "Queue.h"
+#include "patterns/Singleton.h"
+#include "patterns/IdGenerator.h"
+#include "Swapchain12.h"
+#include "Descriptors.h"
+#include "Resource.h"
 
 namespace DX12
 {

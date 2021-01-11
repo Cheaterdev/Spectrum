@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "Label.h"
+#include "../Renderer/Renderer.h"
+#include "Helpers/MipMapGeneration.h"
 
 namespace GUI
 {
@@ -6,7 +9,7 @@ namespace GUI
 	{
 
 
-		void label::draw(Render::context& c)
+		void label::draw(DX12::context& c)
 		{
 		//	return;
 			recalculate(c);		
@@ -65,7 +68,7 @@ namespace GUI
 		{
 			on_text_changed(text.get());
 		}
-		void label::recalculate(Render::context& c)
+		void label::recalculate(DX12::context& c)
 		{
 			if (!need_recalculate && ((w == ivec2(render_bounds->size / scaled) || (magnet_text & FW1_NOWORDWRAP))))
 			{
@@ -90,7 +93,7 @@ namespace GUI
 			w = vec2(render_bounds->size);
 			wptr _THIS = get_ptr<label>();
 
-			Render::Texture::ptr new_preview = cache.texture;
+			DX12::Texture::ptr new_preview = cache.texture;
 			lay2.right = std::ceil(lay2.right);
 			lay2.bottom = std::ceil(lay2.bottom);
 
@@ -99,7 +102,7 @@ namespace GUI
 
 			if(!isnan(lay2.right))
 				if (!cache.texture || cache.texture->get_desc().Width < lay2.right || cache.texture->get_desc().Height < lay2.bottom)
-				cache.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)lay2.right, (UINT)lay2.bottom, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+				cache.texture.reset(new DX12::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)lay2.right, (UINT)lay2.bottom, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 
 			auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
 
@@ -117,7 +120,7 @@ namespace GUI
          		command_list->get_native_list()->OMSetRenderTargets(1, &rtv.cpu, FALSE, nullptr);
 
 				//	c->get_graphics().set_pipeline(state);
-				Render::Viewport vps;
+				DX12::Viewport vps;
 
 				vps.Width = static_cast<float>(cache.texture->get_desc().Width);
 				vps.Height = static_cast<float>(cache.texture->get_desc().Height);
@@ -135,7 +138,7 @@ namespace GUI
 				geomerty->draw(command_list, lay2, 0, { 0,0 });
 				MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
 
-			//	command_list->transition(cache.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+			//	command_list->transition(cache.texture, DX12::ResourceState::PIXEL_SHADER_RESOURCE);
 
 			
 			});

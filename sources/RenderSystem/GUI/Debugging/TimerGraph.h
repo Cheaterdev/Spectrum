@@ -1,4 +1,7 @@
 #pragma once
+#include "Profiling/Profiling.h"
+#include "../Elements/ScrollContainer.h"
+#include "../Elements/Image.h"
 
 namespace GUI
 {
@@ -23,7 +26,7 @@ namespace GUI
 
 				double start_time;
 				double end_time;
-				Render::CommandListType queue_type;
+				DX12::CommandListType queue_type;
 
 			};
 			struct collected_data

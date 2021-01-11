@@ -1,4 +1,5 @@
 #include <atlbase.h>
+#include "patterns/Singleton.h"
 
 typedef ComPtr<IDXGISwapChain1>		DXGI_SwapChain;
 typedef ComPtr<IDXGISurface2>			DXGI_Surface;

@@ -1,4 +1,9 @@
 #pragma once
+#include "Resource.h"
+#include "Descriptors.h"
+#include "CommandList.h"
+#include "Device12.h"
+#include "SIG/Concepts.h"
 
 namespace DX12
 {

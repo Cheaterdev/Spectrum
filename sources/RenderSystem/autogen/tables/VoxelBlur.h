@@ -6,9 +6,9 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::Texture2D<float4> tex_color;
+			DX12::HLSL::Texture2D<float4> tex_color;
 		} &srv;
-		Render::HLSL::Texture2D<float4>& GetTex_color() { return srv.tex_color; }
+		DX12::HLSL::Texture2D<float4>& GetTex_color() { return srv.tex_color; }
 		VoxelBlur(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

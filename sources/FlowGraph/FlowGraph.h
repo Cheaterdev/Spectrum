@@ -1,5 +1,9 @@
 #pragma once
 #include "thread_pool.h"
+#include "Data/Data.h"
+#include "Data/md5.h"
+#include "DebugInfo/Debug.h"
+#include "Math/Vectors.h"
 
 namespace FlowGraph
 {

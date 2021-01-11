@@ -1,4 +1,8 @@
 #include "pch.h"
+#include "Descriptors.h"
+#include "Device12.h"
+#include "CommandList.h"
+
 namespace DX12 {
 
 	DescriptorHeapManager::DescriptorHeapManager()

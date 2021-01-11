@@ -7,9 +7,9 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::StructuredBuffer<Glyph> data;
+			DX12::HLSL::StructuredBuffer<Glyph> data;
 		} &srv;
-		Render::HLSL::StructuredBuffer<Glyph>& GetData() { return srv.data; }
+		DX12::HLSL::StructuredBuffer<Glyph>& GetData() { return srv.data; }
 		FontRenderingGlyphs(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)

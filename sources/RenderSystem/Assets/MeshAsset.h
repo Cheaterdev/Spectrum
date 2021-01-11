@@ -1,3 +1,13 @@
+#pragma once
+
+#include "slots.h"
+#include "Math/GeometryPrimitives.h"
+#include "GUI/GUI.h"
+#include "Log/Tasks.h"
+#include "Mesh/Mesh.h"
+#include "MaterialAsset.h"
+#include "Scene/SceneObject.h"
+#include "DX12/RayTracingAS.h"
 class MeshAssetInstance;
 /*
 struct Vertex
@@ -195,7 +205,7 @@ class MeshAsset : public Asset
         virtual void try_register();
 
         virtual Asset_Type get_type();
-        virtual void update_preview(Render::Texture::ptr preview);
+        virtual void update_preview(DX12::Texture::ptr preview);
         virtual AssetStorage::ptr  register_new(std::wstring name = L"", Guid g = Guid());
         virtual void reload_resource() override
         {
@@ -231,7 +241,7 @@ class MeshAsset : public Asset
 
 };
 
-class MeshAssetInstance : public scene_object, public material_holder, public AssetHolder, public MaterialProvider, public Render::renderable
+class MeshAssetInstance : public scene_object, public material_holder, public AssetHolder, public MaterialProvider, public DX12::renderable
 {
         friend class mesh_renderer;
 		friend class gpu_mesh_renderer;

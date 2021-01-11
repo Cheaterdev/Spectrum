@@ -1,5 +1,6 @@
 #pragma once
 
+#include <FileSystem/FileSystem.h>
 #ifndef D3DCOMPILE_DEBUG
 #define D3DCOMPILE_DEBUG                          (1 << 0)
 #define D3DCOMPILE_SKIP_VALIDATION                (1 << 1)

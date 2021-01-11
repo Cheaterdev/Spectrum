@@ -1,4 +1,5 @@
 #pragma once
+#include "Vectors.h"
 //class mat4x4;
 class quat : public vec4
 {

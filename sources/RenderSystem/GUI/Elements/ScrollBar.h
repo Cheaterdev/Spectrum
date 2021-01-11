@@ -1,3 +1,6 @@
+#pragma once
+#include "Dragger.h"
+#include "../Skin.h"
 namespace GUI
 {
     namespace Elements
@@ -20,7 +23,7 @@ namespace GUI
 
                 scroll_bar(scroll_type type);
                 Skin::Button drag_skin;
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
                 void set_sizes(float filled_size, float container_size, float container_pos)
                 {
                     float f = container_size;

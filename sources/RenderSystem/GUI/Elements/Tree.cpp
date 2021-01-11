@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "Tree.h"
+#include "../Renderer/Renderer.h"
 
 class other_all: public GUI::base
 {
@@ -29,7 +31,7 @@ GUI::Elements::tree_element::ptr GUI::Elements::tree_element::add_tree(tree_crea
 //	res->padding = {25,0,0,0};
 //	open_icon->visible = true;
   // open_icon->texture = tex_opened;
-    // icon->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/tree_folder.png"));
+    // icon->texture = DX12::Texture::get_resource(DX12::texure_header("textures/gui/tree_folder.png"));
     // icon->size = { icon->texture.texture->get_desc().Width, icon->texture.texture->get_desc().Height };
     res->main_tree = main_tree;
     return res;
@@ -127,8 +129,8 @@ GUI::Elements::toogle_icon::toogle_icon(GUI::Elements::tree_element* owner)
 
     clickable = true;
 
-	tex_closed = Render::Texture::get_resource(Render::texure_header("textures/gui/tree_closed.png"));
-	tex_opened = Render::Texture::get_resource(Render::texure_header("textures/gui/tree_opened.png"));
+	tex_closed = DX12::Texture::get_resource(DX12::texure_header("textures/gui/tree_closed.png"));
+	tex_opened = DX12::Texture::get_resource(DX12::texure_header("textures/gui/tree_opened.png"));
 	texture = tex_opened;
 	owner->on_toogle.register_handler(this, [this](bool v) {
 		if (v) texture = tex_opened;
@@ -147,7 +149,7 @@ void GUI::Elements::line::on_drop_enter(GUI::drag_n_drop_package::ptr)
     dropping = true;
 }
 
-void GUI::Elements::line::draw(Render::context& c)
+void GUI::Elements::line::draw(DX12::context& c)
 {
     if (dropping)
 		renderer->draw_color(c, float4(153, 114, 202, 255) / 255.0f, get_render_bounds());
@@ -209,7 +211,7 @@ void GUI::Elements::tree_creator::init_element(tree_element* tree, base_tree* el
 	l->add_child(space);
 
     toogle_icon::ptr	open_icon(new toogle_icon(tree));
-  //  open_icon->texture = Render::Texture::null;
+  //  open_icon->texture = DX12::Texture::null;
 //    open_icon->size = { 16, 16 }; // size_type::MATCH_PARENT;
     open_icon->docking = dock::LEFT;
 
@@ -232,7 +234,7 @@ void GUI::Elements::tree_creator::init_element(tree_element* tree, base_tree* el
 }
 
 
-void  GUI::Elements::tree::draw(Render::context& c)
+void  GUI::Elements::tree::draw(DX12::context& c)
 {
 	renderer->draw_container(get_ptr(), c);
 	//    if (is_hovered())

@@ -1,3 +1,4 @@
+#include "Math/Vectors.h"
 class mesh_simplifyer
 {
         //std::function<vec3(unsigned int)> positions;

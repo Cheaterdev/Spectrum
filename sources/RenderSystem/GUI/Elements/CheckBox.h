@@ -1,3 +1,6 @@
+#pragma once
+#include "../GUI.h"
+#include "../Skin.h"
 namespace GUI
 {
     namespace Elements
@@ -8,7 +11,7 @@ namespace GUI
         {
                 property<bool> checked;
 
-                virtual void draw(Render::context& c) override;
+                virtual void draw(DX12::context& c) override;
 
             protected:
                 virtual void on_check_changed(const bool& r);

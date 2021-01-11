@@ -1,4 +1,11 @@
 #include "pch.h"
+#include "PSO.h"
+
+//////////////////////
+void init_signatures();
+Render::RootLayout::ptr get_Signature(Layouts id);
+void init_pso(enum_array<PSO, PSOBase::ptr>&);
+//////////////////////
 
 Render::ComputePipelineState::ptr SimpleComputePSO::create()
 {

@@ -2,6 +2,7 @@
 #include "Samplers.h"
 #include "Device12.h"
 #include "../../3rdparty/Aftermath/include/GFSDK_Aftermath.h"
+#include "CommandList.h"
 
 namespace DX12
 {

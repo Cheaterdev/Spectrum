@@ -3,6 +3,7 @@
 #include "pch.h"
 
 #include "CFW1GlyphRenderStates.h"
+#include <slots.h>
 
 
 

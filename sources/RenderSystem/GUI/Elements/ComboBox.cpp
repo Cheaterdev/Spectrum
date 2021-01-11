@@ -1,4 +1,6 @@
 ﻿#include "pch.h"
+#include "ComboBox.h"
+#include "../Renderer/Renderer.h"
 
 bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
 {
@@ -18,7 +20,7 @@ bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button
 
     return true;
 }
-void GUI::Elements::combo_box::draw(Render::context& c)
+void GUI::Elements::combo_box::draw(DX12::context& c)
 {
     if (is_pressed())
         renderer->draw(c, skin.Pressed, get_render_bounds());

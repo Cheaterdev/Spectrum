@@ -1,3 +1,7 @@
+#pragma once
+
+#include "Log/Log.h"
+#include "Data/Data.h"
 
 class Serializer
 {

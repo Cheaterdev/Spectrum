@@ -1,4 +1,5 @@
 #pragma once
+#include "Shaders.h"
 namespace D3D
 {
     struct D3D_SHADER_DESC

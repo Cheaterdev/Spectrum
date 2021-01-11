@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "OutputWindow.h"
+#include "../Renderer/Renderer.h"
 namespace GUI
 {
     namespace Elements
@@ -34,7 +36,7 @@ namespace GUI
                 scroll_container::think(dt);
                 //});
             }
-            void OutputWindow::draw(Render::context& c)
+            void OutputWindow::draw(DX12::context& c)
             {
                 renderer->draw_area(get_ptr(), c);
             }

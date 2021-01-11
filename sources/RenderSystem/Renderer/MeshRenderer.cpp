@@ -1,5 +1,10 @@
 #include "pch.h"
+#include "Renderer.h"
+#include "Camera/Camera.h"
+#include "Helpers/MipMapGeneration.h"
 
+#include <slots.h>
+#include "Assets/EngineAssets.h"
 void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
 
@@ -15,7 +20,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	bool current_cpu_culling = use_cpu_culling && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
 
 
-	Render::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
+	DX12::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
@@ -306,7 +311,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	auto begin = pipelines.begin();
 	auto end = begin;
-	//	auto view = meshes_ids->buffer->help_buffer->create_view<Render::FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*list.frame_resources);
+	//	auto view = meshes_ids->buffer->help_buffer->create_view<DX12::FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*list.frame_resources);
 
 
 
@@ -349,7 +354,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			compiledFrame.set(compute);
 			gather.set(compute);
 
-			/*		if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
+			/*		if (gatherData.cb.resource->get_heap_type() == DX12::HeapType::DEFAULT)
 						copy.read_buffer(gatherData.cb.resource, 0, 4 * 4, [this](const char* data, UINT64 size)
 							{
 
@@ -377,7 +382,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		}
 
 
-	// 		if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
+	// 		if (gatherData.cb.resource->get_heap_type() == DX12::HeapType::DEFAULT)
 	// 			copy.read_buffer(gatherData.cb.resource, 0, 4, [this](const char* data, UINT64 size)
 	// 				{
 	// 
@@ -438,13 +443,13 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 
 mesh_renderer::mesh_renderer()
 {
-	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
-	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
+	shader = DX12::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
+	voxel_geometry_shader = DX12::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(Underlying<command>), get_Signature(Layouts::DefaultLayout));
+	indirect_command_signature = DX12::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(Underlying<command>), get_Signature(Layouts::DefaultLayout));
 
 	UINT max_meshes = 1024 * 1024;
 
@@ -486,12 +491,12 @@ mesh_renderer::mesh_renderer()
 		verts[5] = vec3(1.0f, -1.0f, -1.0f);
 		verts[6] = vec3(1.0f, -1.0f, 1.0f);
 		verts[7] = vec3(-1.0f, -1.0f, 1.0f);
-		index_buffer.reset(new Render::IndexBuffer(data));
+		index_buffer.reset(new DX12::IndexBuffer(data));
 
-		vertex_buffer.reset(new Render::StructuredBuffer<vec4>(8));
+		vertex_buffer.reset(new DX12::StructuredBuffer<vec4>(8));
 		vertex_buffer->set_raw_data(verts);
 
-		draw_boxes_first = std::make_shared<Render::StructuredBuffer<DrawIndexedArguments>>(1);
+		draw_boxes_first = std::make_shared<DX12::StructuredBuffer<DrawIndexedArguments>>(1);
 
 		DrawIndexedArguments args;
 
@@ -506,15 +511,15 @@ mesh_renderer::mesh_renderer()
 
 		{
 
-			boxes_command = Render::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(Underlying<command>));
+			boxes_command = DX12::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(Underlying<command>));
 
 		}
 	}
 
 
 	{
-		dispatch_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<command>));
+		dispatch_buffer = std::make_shared<DX12::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		dispatch_command = DX12::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<command>));
 	}
 
 	{

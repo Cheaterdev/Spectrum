@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "Fence.h"
+#include "Device12.h"
+#include "Profiling/Profiling.h"
 
 namespace DX12
 {

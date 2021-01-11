@@ -24,6 +24,8 @@ THE SOFTWARE.
 
 #include "pch.h"
 
+#include "guid.h"
+
 #ifdef GUID_LIBUUID
 #include <uuid/uuid.h>
 #endif

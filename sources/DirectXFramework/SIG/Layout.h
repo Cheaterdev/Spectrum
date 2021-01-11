@@ -1,3 +1,4 @@
+#include "DX12/Samplers.h"
 
 template<class T>
 struct AutoGenSignatureDesc

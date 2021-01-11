@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "ShaderMaterial.h"
+#include "universal_material.h"
 
 
 
@@ -41,11 +43,11 @@ ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file
 	asset_ptr = asset->get_ptr<BinaryAsset>();
 	}
 	//   file = register_asset(asset_ptr);
-	//    shader = Render::pixel_shader::create_from_memory(file->get_data(), "PC", 0);*/
+	//    shader = DX12::pixel_shader::create_from_memory(file->get_data(), "PC", 0);*/
 
 	if (!file_name.empty())
 	{
-		auto shader = Render::pixel_shader::get_resource({ file_name, entry,{} });
+		auto shader = DX12::pixel_shader::get_resource({ file_name, entry,{} });
 
 		pipeline = std::make_shared<materials::PipelineSimple>(0, shader);
 
@@ -60,9 +62,9 @@ ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file
 void ShaderMaterial::on_asset_change(std::shared_ptr<Asset> asset)
 {
 	// if (asset == *file)
-	//      shader = Render::pixel_shader::create_from_memory(file->get_data(), "PC", 0);
+	//      shader = DX12::pixel_shader::create_from_memory(file->get_data(), "PC", 0);
 }
-void ShaderMaterial::set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline)
+void ShaderMaterial::set(RENDER_TYPE render_type, MESH_TYPE type, DX12::PipelineStateDesc &pipeline)
 {
 	//pipeline.pixel = shader;
 }

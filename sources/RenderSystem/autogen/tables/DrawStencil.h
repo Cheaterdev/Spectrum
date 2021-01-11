@@ -6,9 +6,9 @@ namespace Table
 	{
 		struct SRV
 		{
-			Render::HLSL::StructuredBuffer<float4> vertices;
+			DX12::HLSL::StructuredBuffer<float4> vertices;
 		} &srv;
-		Render::HLSL::StructuredBuffer<float4>& GetVertices() { return srv.vertices; }
+		DX12::HLSL::StructuredBuffer<float4>& GetVertices() { return srv.vertices; }
 		DrawStencil(SRV&srv) :srv(srv){}
 	};
 	#pragma pack(pop)
