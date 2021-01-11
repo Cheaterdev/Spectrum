@@ -14,6 +14,8 @@ namespace DX12
 
 	class ResourceHeap
 	{
+		std::shared_ptr<Resource> cpu_buffer;
+
 	public:
 		ComPtr<ID3D12Heap > heap;
 		HeapType type;
@@ -175,12 +177,6 @@ namespace DX12
 		ResourceHeap::ptr heap;
 		UINT offset;
 		UINT count = 1;
-	};
-	enum class TileState : int
-	{
-		LOADED,
-		FREED,
-		NONE
 	};
 
 	struct ResourceTile

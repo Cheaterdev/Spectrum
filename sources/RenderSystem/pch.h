@@ -71,7 +71,6 @@
 #include "Assets/TextureAsset.h"
 #include "Assets/MaterialAsset.h"
 #include "Assets/BinaryAsset.h"
-#include "Assets/TiledTexture.h"
 
 #include "Mesh/vertexes.h"
 #include "Mesh/Mesh.h"

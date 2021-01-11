@@ -86,7 +86,7 @@ struct DataHolder : public Table
 	template<class Context, class SRV>
 	void place_srv(CompiledData<Slot>& compiled, Context& context, SRV& srv) const
 	{
-		compiled.table_srv = context.srv.place(sizeof(srv) / sizeof(Render::Handle));
+		compiled.table_srv = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(sizeof(srv) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
 		for (int i = 0; i < compiled.table_srv.get_count(); i++)
 		{
@@ -98,7 +98,7 @@ struct DataHolder : public Table
 	template<class Context, class SRV>
 	void place_srv(CompiledData<Slot>& compiled, Context& context, SRV& srv, Render::Bindless& bindless) const
 	{
-		compiled.table_srv = context.srv.place(sizeof(srv) / sizeof(Render::Handle));
+		compiled.table_srv = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(sizeof(srv) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
 		for (int i = 0; i < compiled.table_srv.get_count(); i++)
 		{
@@ -112,7 +112,7 @@ struct DataHolder : public Table
 	void place_uav(CompiledData<Slot>& compiled, Context& context, UAV& uav) const
 	{
 	
-		compiled.table_uav = context.srv.place(sizeof(uav) / sizeof(Render::Handle));
+		compiled.table_uav = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(sizeof(uav) / sizeof(Render::Handle));
 
 		auto ptr = reinterpret_cast<Render::Handle*>(&uav);
 		for (int i = 0; i < sizeof(uav) / sizeof(Render::Handle); i++)
@@ -130,7 +130,7 @@ struct DataHolder : public Table
 	void place_smp(CompiledData<Slot>& compiled, Context& context, SMP& smp) const
 	{
 
-		compiled.table_smp = context.smp.place(sizeof(smp) / sizeof(Render::Handle));
+		compiled.table_smp = context.get_gpu_heap(Render::DescriptorHeapType::SAMPLER).place(sizeof(smp) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&smp);
 		for (int i = 0; i < compiled.table_smp.get_count(); i++)
 		{
@@ -155,7 +155,7 @@ struct DataHolder : public Table
 			if constexpr (HasBindless<Table>) srv_count += (UINT)Table::bindless.size();
 
 			if (srv_count > 0) {
-				compiled.table_srv = context.srv.place(srv_count);
+				compiled.table_srv = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(srv_count);
 				int _offset = 0;
 				if constexpr (HasSRV<Table>) {
 

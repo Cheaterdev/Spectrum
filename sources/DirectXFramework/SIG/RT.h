@@ -54,7 +54,7 @@ class RTHolder :public Table
 	template<class Context, class RTV>
 	void place_rtv(CompiledRT& compiled, Context& context, RTV& rtv) const
 	{
-		compiled.table_rtv = context.rtv_cpu.place(sizeof(rtv) / sizeof(Render::Handle));
+		compiled.table_rtv = context.get_cpu_heap(Render::DescriptorHeapType::RTV).place(sizeof(rtv) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&rtv);
 		for (UINT i = 0; i < (UINT)compiled.table_rtv.get_count(); i++)
 		{
@@ -70,7 +70,7 @@ class RTHolder :public Table
 	template<class Context, class DSV>
 	void place_dsv(CompiledRT& compiled, Context& context, DSV& dsv) const
 	{
-		compiled.table_dsv = context.dsv_cpu.place(sizeof(dsv) / sizeof(Render::Handle));
+		compiled.table_dsv = context.get_cpu_heap(Render::DescriptorHeapType::DSV).place(sizeof(dsv) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&dsv);
 		for (UINT i = 0; i < (UINT)compiled.table_dsv.get_count(); i++)
 		{

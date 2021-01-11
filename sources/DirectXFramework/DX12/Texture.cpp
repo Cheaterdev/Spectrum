@@ -143,8 +143,8 @@ namespace DX12
 		auto desc = get_desc();
 		//auto list = Device::get().get_upload_list();
 	
-		auto list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
-		list->begin("readback");
+		auto list = Render::Device::get().get_queue(Render::CommandListType::COPY)->get_free_list();
+		list->begin("");
 
 		desc.Format = to_typeless(desc.Format);
 

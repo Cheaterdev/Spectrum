@@ -766,9 +766,12 @@ namespace DX12
 		using mutex = std::atomic<std::thread::id>;
 	};
 
-	template<DescriptorHeapType type, class LockPolicy = Free, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE>
+	template<class LockPolicy = Free>
 	class DynamicDescriptor
 	{
+		DescriptorHeapType type;
+		DescriptorHeapFlags flags = DescriptorHeapFlags::NONE;
+
 		friend class CommandList;
 		friend class GraphicsContext;
 		friend class ComputeContext;
@@ -779,7 +782,7 @@ namespace DX12
 		typename LockPolicy::mutex m;
 		void create_heap(UINT count)
 		{
-			if constexpr (flags == DescriptorHeapFlags::SHADER_VISIBLE)
+			if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
 			{
 				pages.push_back(DescriptorHeapManager::get().get_gpu_heap(type)->create_page(count));
 			}
@@ -815,6 +818,13 @@ namespace DX12
 		}
 
 	public:
+
+		using ptr = std::shared_ptr<DynamicDescriptor<LockPolicy>>;
+		DynamicDescriptor(DescriptorHeapType type, DescriptorHeapFlags flags):type(type),flags(flags)
+		{
+
+		}
+
 		~DynamicDescriptor()
 		{
 			reset();

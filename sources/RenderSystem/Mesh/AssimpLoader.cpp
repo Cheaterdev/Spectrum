@@ -342,7 +342,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
 		}
 
-        auto scale = 1;// settings.scale;
+        auto scale = settings.scale;
 		{
 			std::vector<std::future<void>> tasks;
 

@@ -55,7 +55,7 @@ public:
 				{
 
 
-					auto table = graphics.get_base().rtv_cpu.place(2);
+					auto table = graphics.get_base().get_cpu_heap(Render::DescriptorHeapType::RTV).place(2);
 
 					{
 						Render::ResourceViewDesc subres;

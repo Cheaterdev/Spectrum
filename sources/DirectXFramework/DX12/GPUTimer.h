@@ -9,9 +9,6 @@ namespace DX12
 
 		QueryHeap heap;
 		std::mutex buffer_lock;
-		std::queue<std::shared_ptr<CPUBuffer>> buffers;
-	
-
 		static const int MAX_TIMERS = 1024;
 		IdGenerator ids;
 		std::array<UINT64, MAX_TIMERS*2> read_back_data;
@@ -47,70 +44,14 @@ namespace DX12
 			return static_cast<double>(gpu_start) / frequency;
 		}
 
-
-		/*	void start_read()
-			{
-				if (fence != -1)
-					DX12::Device::get().get_queue(CommandListType::DIRECT)->wait(fence);
-
-				read_back_data = buffer.map<UINT64>(0, MAX_TIMERS * 2);
-			}
-
-			void end_read()
-			{
-				buffer.unmap();
-				auto list = DX12::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
-				list->begin();
-				list->resolve_times(&buffer, heap, MAX_TIMERS * 2);
-				list->end();
-				fence = list->execute();
-			}
-			*/
 		void read_buffer(CommandList::ptr &list, std::function<void()> f)
 		{
-			std::shared_ptr<CPUBuffer> current_buffer;
-			{
-				std::lock_guard<std::mutex> g(buffer_lock);
-
-				if(buffers.empty())
-				{
-					current_buffer.reset(new CPUBuffer(MAX_TIMERS * 2, sizeof(UINT64)));
-				}
-				else {
-					current_buffer = buffers.front();
-					buffers.pop();
-				}
-			}
-
-			list->resolve_times(current_buffer.get(), heap, MAX_TIMERS * 2, [this, f, current_buffer]() {
-				memcpy(read_back_data.data(), current_buffer->map<UINT64>(0, MAX_TIMERS * 2), sizeof(UINT64)*MAX_TIMERS*2);
-				current_buffer->unmap();
-				{
-					std::lock_guard<std::mutex> g(buffer_lock);
-					buffers.push(current_buffer);
-				}
+			list->resolve_times( heap, MAX_TIMERS * 2, [this, f](std::span<UINT64> data) {
+				std::copy(data.begin(), data.end(), read_back_data.begin());
 				f();
-			
 			});
 		}
 
-		/*
-		void read_buffer(std::function<void()> f)
-		{
-			auto list = DX12::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
-			list->begin();
-			list->resolve_times(&buffer, heap, MAX_TIMERS * 2, [this, f]() {
-				read_back_data = buffer.map<UINT64>(0, MAX_TIMERS * 2);
-				f();
-				buffer.unmap();
-			});
-
-			list->end();
-			list->execute();
-
-
-
-		}*/
 	};
 
 

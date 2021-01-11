@@ -107,11 +107,11 @@ sizer GUI::Elements::scroll_container::update_layout(sizer r, float scale)
 
 void GUI::Elements::scroll_container::resized()
 {
-    hor->set_sizes(filled->get_render_bounds().w, contents->size->x, contents->pos->x);
-    vert->set_sizes(filled->get_render_bounds().h, contents->size->y, contents->pos->y);
+    hor->set_sizes(filled->get_render_bounds().w, contents->scaled_size->x, contents->pos->x);
+    vert->set_sizes(filled->get_render_bounds().h, contents->scaled_size->y, contents->pos->y);
 
     if (!allow_overflow)
-        contents->pos = vec2::min(vec2(0, 0), vec2::max(contents->pos.get(), -contents->size.get() + vec2(filled->get_render_bounds().size)));
+        contents->pos = vec2::min(vec2(0, 0), vec2::max(contents->pos.get(), -contents->scaled_size.get() + vec2(filled->get_render_bounds().size)));
 }
 
 void GUI::Elements::scroll_container::remove_child(base::ptr obj)
@@ -162,7 +162,7 @@ void GUI::Elements::scroll_container::moving(vec2 pos)
     vec2 p = contents->pos.get() + pos;
 
     if (!allow_overflow)
-        contents->pos = vec2::min(vec2(0, 0), vec2::max(p, -contents->size.get() + vec2(filled->get_render_bounds().size)));
+        contents->pos = vec2::min(vec2(0, 0), vec2::max(p, -contents->scaled_size.get() + vec2(filled->get_render_bounds().size)));
     else
         contents->pos = p;
 }

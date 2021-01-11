@@ -36,7 +36,7 @@ namespace DX12
 	{
 		init_desc();
 		//	init_views(frame);
-		srv_handle = frame.srv_uav_cbv_cpu.place<HLSL::RaytracingAccelerationStructure>();
+		srv_handle = frame.get_cpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place<HLSL::RaytracingAccelerationStructure>();
 		place_srv(srv_handle);
 	}
 
@@ -47,7 +47,7 @@ namespace DX12
 
 		auto& desc = resource->get_desc();
 		if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
-			uav_handle = HLSL::RWByteAddressBuffer(frame.srv_uav_cbv_cpu.place());
+			uav_handle = HLSL::RWByteAddressBuffer(frame.get_cpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place());
 			place_uav(uav_handle);
 		}
 	}

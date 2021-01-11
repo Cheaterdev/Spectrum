@@ -80,12 +80,12 @@ namespace DX12
 
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
 			{
-				rtv = frame.rtv_cpu.place();
+				rtv = frame.get_cpu_heap(DescriptorHeapType::RTV).place();
 				place_rtv(rtv);
 			}
 
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) {
-				dsv = frame.dsv_cpu.place();
+				dsv = frame.get_cpu_heap(DescriptorHeapType::DSV).place();
 				place_dsv(dsv);
 			}
 		}
@@ -143,7 +143,7 @@ namespace DX12
 		template<class F>
 		void init(F& frame)
 		{
-			hlsl = frame.srv_uav_cbv_cpu.place(2);
+			hlsl = frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(2);
 
 			auto& desc = resource->get_desc();
 			if (view_desc.type == ResourceType::TEXTURE2D) {
@@ -324,13 +324,13 @@ namespace DX12
 	class StructuredBufferView :public ResourceView
 	{
 		HandleTableLight hlsl;
+		HLSL::AppendStructuredBuffer<T> appendStructuredBuffer;
 
 	public:
 		UAVHandle uav_clear;
 		HLSL::StructuredBuffer<T> structuredBuffer;
 		HLSL::RWStructuredBuffer<T> rwStructuredBuffer;
-		HLSL::AppendStructuredBuffer<T> appendStructuredBuffer;
-
+	
 	public:
 		StructuredBufferView() = default;
 
@@ -343,7 +343,7 @@ namespace DX12
 
 			init_views(frame);
 
-			hlsl = frame.srv_uav_cbv_cpu.place(4);
+			hlsl = frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(4);
 
 			structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 			rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
@@ -480,13 +480,13 @@ namespace DX12
 
 			init_views(frame);
 
-			srv_handle = HLSL::Buffer<T>(frame.srv_uav_cbv_cpu.place());
+			srv_handle = HLSL::Buffer<T>(frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
 			place_srv(srv_handle);
 
 
 			auto& desc = resource->get_desc();
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
-				uav_handle = HLSL::RWBuffer<T>(frame.srv_uav_cbv_cpu.place());
+				uav_handle = HLSL::RWBuffer<T>(frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
 				place_uav(uav_handle);
 			}
 		}

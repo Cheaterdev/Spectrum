@@ -57,7 +57,6 @@ namespace Render
 				auto clip = ui_clipping;
 				return [list, clip](Render::context &c) {list->get_graphics().set_scissors(clip); };
 			}
-
 			
             context(Render::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context): command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
             {

@@ -67,6 +67,9 @@ namespace DX12
 
 	static inline CommandListType GetBestType(const ResourceState &states, CommandListType preferred_type)
 	{
+		if (states == ResourceState::COMMON) 
+			return CommandListType::DIRECT;
+
 		if ((states & COPY_STATES) == states && preferred_type == CommandListType::COPY)
 		{
 			return CommandListType::COPY;

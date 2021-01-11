@@ -187,14 +187,28 @@ namespace DX12
 		m_commandList->EndQuery(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, QueryIdx);
 	}
 
-	void Eventer::resolve_times(Resource* resource, QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void()> f)
-	{
-
+	void Eventer::resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)> f)
+	{	
 		CommandList* list = static_cast<CommandList*>(this); // :(
-		list->transition(resource, ResourceState::COPY_DEST);
+		auto info = list->read_data(NumQueries* sizeof(UINT64));
+
 		list->flush_transitions();
-		m_commandList->ResolveQueryData(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, resource->get_native().Get(), 0);
-		on_execute_funcs.emplace_back(f);
+		m_commandList->ResolveQueryData(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_native().Get(), info.offset);
+
+
+		on_execute_funcs.emplace_back([info, f, NumQueries]() {
+
+			UINT64* data;
+			D3D12_RANGE range;
+			range.Begin = info.offset;
+			range.End = info.offset + info.size;
+			info.resource->get_native()->Map(0, &range, reinterpret_cast<void**>(&data));
+
+
+			f(std::span(data, NumQueries));
+			info.resource->get_native()->Unmap(0, nullptr);
+
+			});
 	}
 
 	void GraphicsContext::set_signature(const RootSignature::ptr& s)
@@ -385,7 +399,7 @@ namespace DX12
 		desc.SizeInBytes = (UINT)Math::AlignUp(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 		assert(desc.SizeInBytes < 65536);
-		Handle h = list.frame_resources->srv_uav_cbv_cpu.place();
+		Handle h = list.frame_resources->get_cpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place();
 
 		Device::get().create_cbv(h, resource.get(), desc);
 
@@ -405,32 +419,12 @@ namespace DX12
 		UploadInfo info;
 		info.resource = upload_resources.back();
 		info.offset = resource_offset;
-		resource_offset += AlignedSize;
-		//	UINT64 uploadBufferSize = GetRequiredIntermediateSize(resource->get_native().Get(), first_subresource, sub_count);
-		/*   while (resource_index < upload_resources.size() && resource_offset + uploadBufferSize > upload_resources[resource_index]->get_size())
-		   {
-			   resource_index++; resource_offset = 0;
-		   }
-
-		   if (upload_resources.empty() || upload_resources.size() == resource_index)
-		   {
-			   upload_resources.push_back(BufferCache::get().get_upload(std::max(heap_size, uploadBufferSize)));
-			   resource_offset = 0;
-			   resource_index = upload_resources.size() - 1;
-		   }
-
-		   assert(!upload_resources.empty());
-		   UploadInfo info;
-		   info.resource = upload_resources[resource_index];
-		   info.offset = resource_offset;
-		   resource_offset += uploadBufferSize;
-
-		   if (resource_offset >= upload_resources.back()->get_size())
-			   resource_index++;
-			*/
 		info.size = AlignedSize;
+
+		resource_offset += AlignedSize;
 		return info;
 	}
+
 	Readbacker::ReadBackInfo Readbacker::read_data(UINT64 uploadBufferSize)
 	{
 		auto buff = BufferCache::get().get_readback(uploadBufferSize);//std::make_shared<BufferBase>(uploadBufferSize, HeapType::READBACK, ResourceState::COPY_DEST);
@@ -438,6 +432,7 @@ namespace DX12
 		ReadBackInfo info;
 		info.resource = buff;//read_back_resources.back();
 		info.offset = 0;
+		info.size = uploadBufferSize;
 		return info;
 	}
 	void  CopyContext::update_resource(Resource::ptr resource, UINT first_subresource, UINT sub_count, D3D12_SUBRESOURCE_DATA* data)
@@ -555,7 +550,11 @@ namespace DX12
 	}
 	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
 	{
-		base.transition(resource, Render::ResourceState::COPY_SOURCE);
+		if (base.type != CommandListType::COPY)
+			base.transition(resource, Render::ResourceState::COPY_SOURCE);
+		else
+			base.transition(resource, Render::ResourceState::COMMON);
+
 		base.flush_transitions();
 		UINT64 RequiredSize = 0;
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;

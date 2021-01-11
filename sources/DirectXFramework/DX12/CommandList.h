@@ -33,6 +33,8 @@ namespace DX12
 		std::mutex upload;
 		std::mutex read_back;
 
+
+		ResourceHeapAllocator allocator;
 	public:
 
 		std::shared_ptr<UploadBuffer> get_upload(UINT64 size);
@@ -168,31 +170,46 @@ namespace DX12
 	template<class LockPolicy = Free>
 	class GPUCompiledManager : public Uploader
 	{
-		//	using cb_buffer = virtual_gpu_buffer<std::byte>;
+		enum_array<DescriptorHeapType, typename DynamicDescriptor<LockPolicy>::ptr> cpu_heaps;
+		enum_array<DescriptorHeapType, typename DynamicDescriptor<LockPolicy>::ptr> gpu_heaps;
 
-		//	static Cache<std::shared_ptr<cb_buffer>> cbv_cache;
 	public:
-		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, LockPolicy, DescriptorHeapFlags::SHADER_VISIBLE> srv;
-		DynamicDescriptor<DescriptorHeapType::SAMPLER, LockPolicy, DescriptorHeapFlags::SHADER_VISIBLE> smp;
 
-		DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, LockPolicy> srv_uav_cbv_cpu;
-		DynamicDescriptor<DescriptorHeapType::RTV, LockPolicy> rtv_cpu;
-		DynamicDescriptor<DescriptorHeapType::DSV, LockPolicy> dsv_cpu;
-		DynamicDescriptor<DescriptorHeapType::SAMPLER, LockPolicy> smp_cpu;
+		DynamicDescriptor<LockPolicy>& get_cpu_heap(DescriptorHeapType type)
+		{
+			assert(cpu_heaps[type]);
+			return *cpu_heaps[type];
+		}
 
-		//	std::shared_ptr<cb_buffer> cb;
+		DynamicDescriptor<LockPolicy>& get_gpu_heap(DescriptorHeapType type)
+		{
+			assert(cpu_heaps[type]);
+			return *gpu_heaps[type];
+		}
+
+		GPUCompiledManager()
+		{
+			gpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<DynamicDescriptor<LockPolicy>>(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
+			gpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<DynamicDescriptor<LockPolicy>>(DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE);
+
+			cpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<DynamicDescriptor<LockPolicy>>(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE);
+			cpu_heaps[DescriptorHeapType::RTV] = std::make_shared<DynamicDescriptor<LockPolicy>>(DescriptorHeapType::RTV, DescriptorHeapFlags::NONE);
+			cpu_heaps[DescriptorHeapType::DSV] = std::make_shared<DynamicDescriptor<LockPolicy>>(DescriptorHeapType::DSV, DescriptorHeapFlags::NONE);
+			cpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<DynamicDescriptor<LockPolicy>>(DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE);
+		}
 
 		void reset()
 		{
-			srv.reset();
-			smp.reset();
 
-			srv_uav_cbv_cpu.reset();
-			rtv_cpu.reset();
-			dsv_cpu.reset();
-			smp_cpu.reset();
+			for (auto& h : gpu_heaps)
+				if (h)
+					h->reset();
+
+			for (auto& h : cpu_heaps)
+				if (h)
+					h->reset();
+
 			Uploader::reset();
-
 		}
 
 	};
@@ -556,6 +573,7 @@ namespace DX12
 		{
 			std::shared_ptr<CPUBuffer> resource;
 			UINT64 offset;
+			UINT64 size;
 		};
 
 		ReadBackInfo read_data(UINT64 uploadBufferSize);
@@ -641,7 +659,7 @@ namespace DX12
 
 		// timers
 		void insert_time(QueryHeap& pQueryHeap, uint32_t QueryIdx);
-		void resolve_times(Resource* resource, QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void()>);
+		void resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
 
 	};
 
@@ -856,7 +874,7 @@ namespace DX12
 			transition_uav(h.resource_info);
 
 			flush_transitions();
-			auto handle = srv.place(h);
+			auto handle = get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
 			get_native_list()->ClearUnorderedAccessViewUint(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<UINT*>(ClearColor.data()), 0, nullptr);
 		}
 
@@ -866,7 +884,7 @@ namespace DX12
 			transition_uav(h.resource_info);
 
 			flush_transitions();
-			auto handle = srv.place(h);
+			auto handle = get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
 			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 		}
 
@@ -1124,22 +1142,22 @@ namespace DX12
 
 		HandleTableLight place_rtv(UINT count)
 		{
-			return get_base().rtv_cpu.place(count);
+			return get_base().get_cpu_heap(DescriptorHeapType::RTV).place(count);
 		}
 
 		HandleTableLight place_dsv(UINT count)
 		{
-			return get_base().dsv_cpu.place(count);
+			return get_base().get_cpu_heap(DescriptorHeapType::DSV).place(count);
 		}
 
 		HandleTableLight place_rtv(std::initializer_list<Handle> list)
 		{
-			return get_base().rtv_cpu.place(list);
+			return get_base().get_cpu_heap(DescriptorHeapType::RTV).place(list);
 		}
 
 		HandleTableLight place_dsv(std::initializer_list<Handle> list)
 		{
-			return get_base().dsv_cpu.place(list);
+			return get_base().get_cpu_heap(DescriptorHeapType::DSV).place(list);
 		}
 
 		void set_rtvs_internal(D3D12_CPU_DESCRIPTOR_HANDLE* t, Handle h)

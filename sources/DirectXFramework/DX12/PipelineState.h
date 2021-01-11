@@ -470,7 +470,7 @@ namespace DX12
 				//Log::get() << desc << Log::endl;
 				auto state=  PipelineState::ptr(new PipelineState(desc, binary));
 
-				if (!desc.name.empty() && binary.empty())
+				if (!desc.name.empty())
 				{
 					binary_cache[desc.name] = state->get_cache();
 				}
@@ -485,7 +485,7 @@ namespace DX12
 					//Log::get() << desc << Log::endl;
 					auto state = ComputePipelineState::ptr(new ComputePipelineState(desc,binary));
 
-					if (!desc.name.empty() &&binary.empty())
+					if (!desc.name.empty())
 					{
 						binary_cache[desc.name] = state->get_cache();
 					}
