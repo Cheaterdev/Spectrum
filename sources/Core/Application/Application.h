@@ -1,5 +1,7 @@
 #pragma once
-#include "patterns/Singleton.h"
+
+import app;
+/*#include "patterns/Singleton.h"
 
 class Application : public Singleton<Application>
 {
@@ -9,7 +11,7 @@ class Application : public Singleton<Application>
         Application();
         virtual ~Application();
 
-        /** Application events */
+
         virtual void on_tick();
 
         std::chrono::steady_clock::duration tick_interval;
@@ -18,4 +20,4 @@ class Application : public Singleton<Application>
         void shutdown();
         bool is_alive() const { return alive; }
 
-};
+};*/

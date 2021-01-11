@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Application.h"
+#include "Application.h"/*
 Application::Application()
 {
     alive = true;
@@ -31,4 +31,4 @@ void Application::run()
 void Application::shutdown()
 {
     alive = false;
-}
+}*/
