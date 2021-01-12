@@ -45,6 +45,7 @@ public class CustomTarget : ITarget
         {
             SourceFilesExtensions.Add(".sig");
             SourceFilesExtensions.Add(".hlsl");
+			SourceFilesExtensions.Add(".ixx");
 
             RootPath = @"[project.SharpmakeCsPath]\projects\[project.Name]";
 

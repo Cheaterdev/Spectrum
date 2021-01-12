@@ -4,8 +4,8 @@
 
 #include "simple_archive.h"
 
-#include <patterns/Singleton.h>
-#include <Log/Events.h>
+import Singletons;
+import EventsProps;
 
 //class LogListener;
 class LogBlock;

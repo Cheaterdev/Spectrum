@@ -7,5 +7,3 @@
 
 #include "../RenderSystem/pch.h"
 #include "../FlowGraph/pch.h"
-
-#include "Platform/Window.h"

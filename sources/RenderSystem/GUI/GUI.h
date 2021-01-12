@@ -1,6 +1,9 @@
 #pragma once
 #include "DX12/Texture.h"
 #include "Context/Context.h"
+
+using namespace Events;
+
 enum class mouse_button : int
 {
     LEFT,

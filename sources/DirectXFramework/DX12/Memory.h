@@ -223,41 +223,9 @@ namespace DX12
 		
 	public:
 
-		ResourceHandle alloc(size_t size, size_t alignment, D3D12_HEAP_FLAGS flags, HeapType type)
-		{
-			std::lock_guard<std::mutex> g(m);
+		ResourceHandle alloc(size_t size, size_t alignment, D3D12_HEAP_FLAGS flags, HeapType type);
 
-			HeapIndex index;
-
-			index.flags = flags;
-			index.type = type;
-
-			auto& creator = creators[index];
-
-			if (!creator)
-			{
-				creator = std::make_shared<HeapAllocator>(index);
-			}
-		//	auto& creator = *it;
-
-			return creator->alloc(size, alignment);
-		}
-
-		TileHeapPosition create_tile(D3D12_HEAP_FLAGS flags, HeapType type, UINT count = 1)
-		{
-			static const size_t TileSize = 64 * 1024_t;
-
-			auto handle = alloc(count*TileSize, TileSize, flags, type);
-
-			TileHeapPosition result;
-
-			result.offset = handle.get_offset() / (64 * 1024);
-			result.heap = handle.get_heap();
-
-			result.handle = handle;
-			result.count = count;
-			return result;
-		}
+		TileHeapPosition create_tile(D3D12_HEAP_FLAGS flags, HeapType type, UINT count = 1);
 
 
 	};

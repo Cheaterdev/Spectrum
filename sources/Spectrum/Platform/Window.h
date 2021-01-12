@@ -1,7 +1,7 @@
 #include "DX12/Swapchain12.h"
-#include "Application/Application.h"
 #include "GUI/GUI.h"
 
+import app;
 class Window : public DX12::hwnd_provider
 {
     HWND hwnd;

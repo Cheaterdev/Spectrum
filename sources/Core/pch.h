@@ -258,3 +258,4 @@ void unreferenced_parameter(const T&)
 //#include "Allocators/Allocators.h"
 
 #include "patterns/Singleton.hpp"*/
+

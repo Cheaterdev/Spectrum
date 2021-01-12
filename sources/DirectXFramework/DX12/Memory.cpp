@@ -29,4 +29,40 @@ namespace DX12
 		heap_size = size;
 	}
 
+	DX12::ResourceHandle ResourceHeapAllocator::alloc(size_t size, size_t alignment, D3D12_HEAP_FLAGS flags, HeapType type)
+	{
+		std::lock_guard<std::mutex> g(m);
+
+		HeapIndex index;
+
+		index.flags = flags;
+		index.type = type;
+
+		auto& creator = creators[index];
+
+		if (!creator)
+		{
+			creator = std::make_shared<HeapAllocator>(index);
+		}
+		//	auto& creator = *it;
+
+		return creator->alloc(size, alignment);
+	}
+
+	DX12::TileHeapPosition ResourceHeapAllocator::create_tile(D3D12_HEAP_FLAGS flags, HeapType type, UINT count /*= 1*/)
+	{
+		static const size_t TileSize = 64 * 1024_t;
+
+		auto handle = alloc(count * TileSize, TileSize, flags, type);
+
+		TileHeapPosition result;
+
+		result.offset = UINT(handle.get_offset() / (64 * 1024));
+		result.heap = handle.get_heap();
+
+		result.handle = handle;
+		result.count = count;
+		return result;
+	}
+
 }

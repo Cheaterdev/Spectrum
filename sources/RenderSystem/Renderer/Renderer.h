@@ -74,7 +74,7 @@ class main_renderer
 				r->iterate(mesh_type, f);
 		}
 };
-
+using namespace Events;
 class mesh_renderer : public renderer, public Events::prop_handler
 {
       

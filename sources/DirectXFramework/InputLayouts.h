@@ -1,4 +1,7 @@
 #pragma once
+
+import Singletons;
+
 namespace Render
 {
 

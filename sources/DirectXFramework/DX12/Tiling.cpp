@@ -87,9 +87,9 @@ namespace DX12 {
 
 	void TiledResourceManager::load_tiles_internal(update_tiling_info& target, ivec3 from, ivec3 to, uint subres, bool recursive)
 	{
-		for (uint x = from.x; x <= to.x; x++)
-			for (uint y = from.y; y <= to.y; y++)
-				for (uint z = from.z; z <= to.z; z++)
+		for (int x = from.x; x <= to.x; x++)
+			for (int y = from.y; y <= to.y; y++)
+				for (int z = from.z; z <= to.z; z++)
 				{
 					load_tile(target, { x,y,z }, subres, recursive);
 				}
@@ -117,9 +117,9 @@ namespace DX12 {
 		info.resource = static_cast<Resource*>(this);
 
 
-		for (uint x = from.x; x <= to.x; x++)
-			for (uint y = from.y; y <= to.y; y++)
-				for (uint z = from.z; z <= to.z; z++)
+		for (int x = from.x; x <= to.x; x++)
+			for (int y = from.y; y <= to.y; y++)
+				for (int z = from.z; z <= to.z; z++)
 				{
 					zero_tile(info, {x,y,z}, 0);
 				}
@@ -182,9 +182,9 @@ namespace DX12 {
 		{
 			ivec3 size = tiles[i].size();
 
-			for (uint x = 0; x < tiles[i].size().x; x++)
-				for (uint y = 0; y < tiles[i].size().y; y++)
-					for (uint z = 0; z < tiles[i].size().z; z++)
+			for (int x = 0; x < tiles[i].size().x; x++)
+				for (int y = 0; y < tiles[i].size().y; y++)
+					for (int z = 0; z < tiles[i].size().z; z++)
 					{
 						zero_tile(info, { x, y, z }, 0);
 					}
@@ -251,12 +251,12 @@ namespace DX12 {
 			{
 				tiles.resize(1);
 				tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
-				for (uint x = 0; x < tiles[0].size().x; x++)
+				for (int x = 0; x < tiles[0].size().x; x++)
 							tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
 				resource->tracked_info->gpu_tiles.resize(1);
 				resource->tracked_info->gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
-				for (uint x = 0; x < resource->tracked_info->gpu_tiles[0].size().x; x++)
+				for (int x = 0; x < resource->tracked_info->gpu_tiles[0].size().x; x++)
 					resource->tracked_info->gpu_tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
 			}
@@ -274,9 +274,9 @@ namespace DX12 {
 					tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
 					resource->tracked_info->gpu_tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
 
-					for (uint x = 0; x < tiles[i].size().x; x++)
-						for (uint y = 0; y < tiles[i].size().y; y++)
-							for (uint z = 0; z < tiles[i].size().z; z++)
+					for (int x = 0; x < tiles[i].size().x; x++)
+						for (int y = 0; y < tiles[i].size().y; y++)
+							for (int z = 0; z < tiles[i].size().z; z++)
 
 							{
 								tiles[i][{x, y, z}].pos = { x,y,z };

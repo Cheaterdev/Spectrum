@@ -1,6 +1,8 @@
 #include "pch.h"
 #include <filesystem>
 
+#include "Platform/Window.h"
+
 #ifdef OCULUS_SUPPORT
 // Include the Oculus SDK
 #include "OVR_CAPI_D3D.h"
