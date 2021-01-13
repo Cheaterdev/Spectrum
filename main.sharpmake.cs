@@ -47,6 +47,9 @@ public class CustomTarget : ITarget
             SourceFilesExtensions.Add(".hlsl");
 			SourceFilesExtensions.Add(".ixx");
 
+			SourceFilesCompileExtension.Add(".ixx");
+
+
             RootPath = @"[project.SharpmakeCsPath]\projects\[project.Name]";
 
             AddTargets(new CustomTarget{
@@ -64,6 +67,8 @@ public class CustomTarget : ITarget
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 			conf.IncludePaths.Add(@"[project.SourceRootPath]");
+			
+			conf.PrecompSourceExcludeExtension.Add(".ixx");
 			
             conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);		
             conf.Options.Add(Options.Vc.Compiler.Exceptions.Enable);		

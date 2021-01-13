@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <fstream>
 #include <map>
+#include <any>
 #include <unordered_map>
 #include <set>
 #include <assert.h>
@@ -46,6 +47,7 @@
 #include <stack>
 #include <ranges>
 #include <numeric>
+#include <typeindex>
 #include <comdef.h>
 // BOOST includes
 //#define BOOST_DECL_EXPORTS

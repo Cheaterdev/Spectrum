@@ -33,7 +33,9 @@ THE SOFTWARE.
 #ifdef GUID_ANDROID
 #include <jni.h>
 #endif
-#include "Log/Log.h"
+import Singletons;
+import Logs;
+
 namespace Spectrum
 {
 

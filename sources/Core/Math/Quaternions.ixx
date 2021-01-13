@@ -8,7 +8,7 @@ import Constants;
 
 
 //class mat4x4;
- class quat : public vec4
+export class quat : public vec4
 {
 public:
 	quat() {}
