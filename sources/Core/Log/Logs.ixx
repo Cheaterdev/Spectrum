@@ -5,7 +5,7 @@
 export module Logs;
 
 
-import Singletons;
+export import Singletons;
 import EventsProps;
 
 
