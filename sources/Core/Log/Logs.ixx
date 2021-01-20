@@ -7,6 +7,7 @@ export module Logs;
 
 export import Singletons;
 import EventsProps;
+import Utils;
 
 
 static auto start_time = std::chrono::high_resolution_clock::now();

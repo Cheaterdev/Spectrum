@@ -2,7 +2,7 @@
 //
 #include "pch.h"
 #include "FlowGraph.h"
-#include "Math/ScalarMath.h"
+import Constants;
 
 namespace FlowGraph
 {

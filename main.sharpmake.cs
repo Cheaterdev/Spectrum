@@ -186,8 +186,8 @@ public class CustomTarget : ITarget
         {
             base.ConfigureAll(conf, target);
 
-            conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp"; 
+           // conf.PrecompHeader = "pch.h";
+           // conf.PrecompSource = "pch.cpp"; 
 
             conf.LibraryFiles.Add("Dbghelp.lib");
             conf.LibraryFiles.Add("version.lib");

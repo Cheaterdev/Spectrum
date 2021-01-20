@@ -19,7 +19,7 @@ export namespace Exceptions
 
 	};
 
-	stack_trace get_stack_trace();
+	export stack_trace get_stack_trace();
 }
 
 

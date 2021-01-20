@@ -1,7 +1,7 @@
 #include "pch.h"
 
 export module EventsProps;
-
+import Utils;
 
 export namespace Events
 {

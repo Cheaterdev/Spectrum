@@ -5,7 +5,7 @@ export module Debug;
 import Singletons;
 import Logs;
 import EventsProps;
-
+import Utils;
 
 class LeakDetectorInstance;
 export class LeakDetector : public Singleton<LeakDetector>

@@ -1,0 +1,359 @@
+#include "pch.h"
+#include <ppltasks.h>
+#include <ppl.h>
+#include <agents.h>
+
+export module Scheduler;
+using namespace concurrency;
+
+import Logs;
+import Singletons;
+import Profiling;
+import Threading;
+
+export{
+
+	enum class TaskPriority : int
+	{
+		LOW,
+		NORMAL,
+		HIGH
+	};
+
+	class thread_pool : public Singleton<thread_pool>
+	{
+
+		friend class  Singleton<thread_pool>;
+
+	public:
+
+		template<class F/*, class... Args*/>
+		auto enqueue(F&& f)
+			->std::future<typename std::invoke_result<F>::type>;
+
+	private:
+
+		explicit thread_pool();
+		virtual    ~thread_pool();
+
+		bool stop;
+	};
+
+	// the constructor just launches some amount of workers
+	inline thread_pool::thread_pool()
+		: stop(false)
+	{
+
+	}
+
+	// add new work item to the pool
+	template<class F/*, class... Args*/>
+	auto thread_pool::enqueue(F&& f)
+		-> std::future<typename std::invoke_result<F>::type>
+	{
+		if (stop) throw std::exception("wtf");
+		using return_type = typename std::invoke_result<F>::type;
+
+		auto task = std::make_shared< std::packaged_task<return_type()> >(
+			std::bind(std::forward<F>(f)/*, std::forward<Args>(args)...*/)
+			);
+
+		std::future<return_type> res = task->get_future();
+
+
+		create_task([task]() {(*task)(); });
+		return res;
+	}
+
+	// the destructor joins all threads
+	inline thread_pool::~thread_pool()
+	{
+		stop = true;
+	}
+
+
+	class scheduler : public Singleton<scheduler>
+	{
+
+		friend class Singleton<scheduler>;
+
+		struct scheduled_task
+		{
+			std::function<void()> function;
+			std::chrono::steady_clock::time_point start_time;
+
+			bool operator<(const scheduled_task& other) const
+			{
+				return start_time < other.start_time;
+			}
+		};
+		std::mutex queue_mutex;
+		std::list<scheduled_task> tasks;
+		std::thread main_thread;
+		// thread_pool& pool;
+		std::condition_variable condition;
+		bool alive;
+		scheduler()
+		{
+			main_thread = std::thread([this]()
+				{
+					SetThreadName(std::string("Main Scheduler"));
+					alive = true;
+					auto need_wait = true;
+					auto local_alive = true;
+					std::chrono::steady_clock::time_point start_time_local;
+
+					while (local_alive)
+					{
+						if (need_wait)
+						{
+							std::unique_lock<std::mutex>locker(queue_mutex);
+							condition.wait(locker, [&]
+								{
+									if (!alive)
+									{
+										local_alive = false;
+										return true;
+									}
+
+									// yeah! we have a task!
+									if (!tasks.empty())
+									{
+										start_time_local = tasks.front().start_time;
+										return true;
+									}
+
+									return false;
+								});
+
+							if (!local_alive)
+								break;
+						}
+
+						//wait for timed task
+						std::unique_lock<std::mutex>locker(queue_mutex);
+						condition.wait_until(locker, start_time_local, [&]
+							{
+								if (!alive)
+								{
+									local_alive = false;
+									return true;
+								}
+
+								// if new task was inserted and we need to reinitialize wait_until
+								if (tasks.size() && tasks.front().start_time < start_time_local)
+								{
+									start_time_local = tasks.front().start_time;
+									need_wait = false;
+									return true;
+								}
+
+								// if it's time to do our task(s)
+								while (tasks.size())
+									if (tasks.front().start_time <= std::chrono::steady_clock::now())
+									{
+										thread_pool::get().enqueue(tasks.front().function);
+										tasks.pop_front();
+										need_wait = tasks.empty();
+
+										if (!need_wait)
+											start_time_local = tasks.front().start_time;
+									}
+
+									else
+										break;
+
+								return false;
+							});
+					}
+				});
+		}
+
+
+		virtual ~scheduler()
+		{
+			{
+				queue_mutex.lock();
+				alive = false;
+				queue_mutex.unlock();
+			}
+			condition.notify_one();
+			main_thread.join();
+			tasks.clear();
+			thread_pool::reset();
+		}
+	public:
+
+		template<class F, class... Args>
+		auto enqueue(F&& f, std::chrono::steady_clock::time_point time, Args&& ... args)
+			->std::future<typename std::invoke_result<F>::type>
+		{
+
+			if (time <= std::chrono::steady_clock::now())
+				return  thread_pool::get().enqueue(f);
+
+			using return_type = typename std::invoke_result<F>::type;
+
+			auto task = std::make_shared< std::packaged_task<return_type()> >(
+				std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+				);
+
+			std::future<return_type> res = task->get_future();
+			{
+				std::unique_lock<std::mutex> lock(queue_mutex);
+
+				auto need_notify = tasks.empty() || time < tasks.front().start_time;
+
+				scheduled_task t;
+				t.start_time = time;
+				t.function = [task]() { (*task)(); };
+
+				auto it = tasks.begin();
+
+				while (it != tasks.end() && it->start_time > time) ++it;
+
+				tasks.insert(it, t);
+
+				if (need_notify)
+					condition.notify_one();
+			}
+
+			return res;
+		}
+
+
+	};
+
+
+	class SingleThreadExecutor : public concurrency::agent, public concurrency::unbounded_buffer<std::function<void()>>
+
+	{
+	public:
+		explicit SingleThreadExecutor(bool start = true)
+		{
+			if (start)
+				concurrency::agent::start();
+		}
+
+		void stop_and_wait();
+
+	protected:
+		void run();
+
+	private:
+
+	};
+
+
+
+	//TODO: IMPROVE!!!!!!!!! A lot of fps!
+	using Batch = std::vector<std::function<void()>>;
+	class SingleThreadExecutorBatched
+
+	{
+		concurrency::task<void> task;
+
+		SpinLock lock;
+
+		std::list<Batch>tasks;
+	public:
+		explicit SingleThreadExecutorBatched(int count = 16)
+		{
+			data.reserve(count);
+
+			task = create_task([this]
+				{
+					run();
+				});
+		}
+
+		void flush();
+
+		void stop_and_wait();
+
+		void add(std::function<void()>&& f);
+
+	protected:
+		Batch data;
+
+		void run();
+
+
+	};
+
+}
+
+
+module :private;
+
+void SingleThreadExecutorBatched::flush()
+{
+
+	lock.lock();
+	tasks.emplace_back(std::move(data));
+	lock.unlock();
+	//	while (!spsc_queue.push(index));
+
+}
+
+void SingleThreadExecutorBatched::stop_and_wait()
+{
+	add(nullptr);
+	flush();
+	task.wait();
+}
+
+void SingleThreadExecutorBatched::add(std::function<void()>&& f)
+{
+
+	data.emplace_back(std::move(f));
+
+	if (data.capacity() == data.size())
+	{
+		flush();
+	}
+
+}
+
+void SingleThreadExecutorBatched::run()
+{
+	
+	bool alive = true;
+	while (alive)
+	{
+		std::list<Batch> tasks;
+
+		lock.lock();
+		std::swap(tasks, this->tasks);
+
+		lock.unlock();
+
+		for (Batch& b : tasks)
+		{
+			for (auto& f : b)
+				if (f)
+					f();
+				else
+					alive = false;
+		}
+	}
+	
+}
+
+void SingleThreadExecutor::stop_and_wait()
+{
+	enqueue(nullptr);
+
+	concurrency::agent::wait(this);
+}
+
+void SingleThreadExecutor::run()
+{
+	std::function<void()> n;
+	while ((n = receive(*this)) != nullptr)
+	{
+		n();
+	}
+
+	done();
+}

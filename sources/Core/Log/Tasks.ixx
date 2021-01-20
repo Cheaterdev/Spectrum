@@ -3,7 +3,7 @@ export module Tasks;
 
 import EventsProps;
 import Singletons;
-
+import Utils;
 
 export class Task
 {

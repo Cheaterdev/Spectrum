@@ -1,5 +1,8 @@
 #pragma once
 #include "Data/Data.h"
+#include "Threads/Threading.h"
+import Utils;
+
 namespace DX12
 {
 	class Resource;

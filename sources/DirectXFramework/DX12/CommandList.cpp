@@ -6,6 +6,9 @@
 
 #include "Texture.h"
 #include "slots.h"
+
+import Exceptions;
+import Debug;
 namespace DX12
 {
 

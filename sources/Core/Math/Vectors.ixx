@@ -148,7 +148,7 @@ export {
 			return std::sqrt((double)length_squared());
 		}
 
-		Vector<T>& normalize(float eps = eps12)
+		Vector<T>& normalize(float eps = Math::eps12)
 		{
 			auto d = length_squared();
 
@@ -374,7 +374,7 @@ export {
 	{
 		float cosom = dot(p0, p1);
 
-		if (1 - fabs(cosom) >= eps2)
+		if (1 - fabs(cosom) >= Math::eps2)
 		{
 			// slerp
 			float omega = acos(cosom);
