@@ -31,7 +31,7 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 	{
 		auto& free_block = *it;
 		auto orig_block = free_block;
-		auto aligned_offset = Math::AlignUp(free_block.begin, align);
+		auto aligned_offset = Math::roundUp(free_block.begin, align);
 
 		if(free_block.end> aligned_offset)
 		if ((free_block.end + 1 - aligned_offset) >= size)

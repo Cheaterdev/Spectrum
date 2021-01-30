@@ -38,7 +38,6 @@ namespace GUI
 
 
 		label::label() : text(std::bind(&label::on_text_changed, this, std::placeholders::_1)), font_size(std::bind(&label::on_size_changed, this, std::placeholders::_1))
-
 		{
 			clickable = false;
 			magnet_text = FW1_CENTER | FW1_VCENTER;
@@ -48,11 +47,6 @@ namespace GUI
 			geomerty_shadow.reset(new Fonts::FontGeometry());
 			font_size = 15;
 			text_size = font->measure("", font_size.get() /** scaled*/, magnet_text);
-
-/*
-			internal_label = std::make_shared<label_internal>();
-			internal_label->docking = dock::FILL;
-			add_child(internal_label);*/
 		}
 
 		void label::on_text_changed(const std::string& str)
@@ -84,7 +78,6 @@ namespace GUI
 			p.x += 1;
 			p.y += 1;
 			lay1 = math::convert(p);
-			//  geomerty_shadow->set(command_list, convert(text.get()), font, font_size.get() * scaled, lay1, rgba8(0, 0, 0, 100), magnet_text);
 			need_recalculate = false;
 			calculated = true;
 			w = vec2(render_bounds->size);
@@ -109,16 +102,12 @@ namespace GUI
 				ptr my_ptr = _THIS.lock();
 				if (!my_ptr) return;
 				auto command_list = const_cast<CommandList*>(_command_list.get())->get_ptr(); //wtf is this
-
 				geomerty->set(command_list, convert(text.get()), font, font_size.get() , lay2, color, magnet_text);
 				command_list->clear_rtv(cache.texture->texture_2d()->get_rtv());
-
 				auto rtv = cache.texture->texture_2d()->get_rtv();
          		command_list->get_native_list()->OMSetRenderTargets(1, &rtv.cpu, FALSE, nullptr);
-
 				//	c->get_graphics().set_pipeline(state);
 				Render::Viewport vps;
-
 				vps.Width = static_cast<float>(cache.texture->get_desc().Width);
 				vps.Height = static_cast<float>(cache.texture->get_desc().Height);
 				vps.TopLeftX = 0;
@@ -128,21 +117,10 @@ namespace GUI
 				command_list->get_graphics().set_viewports({ vps });
 				sizer_long s = { 0, 0, vps.Width , vps.Height };
 				command_list->get_graphics().set_scissors({ s });
-				//	ccommand_list->get_graphics().set_dynamic(0, 0, asset->get_texture()->texture_2d()->get_srv());
-				//	command_list->get_graphics().set(1, sampler_table);
-				//	command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-				//	command_list->get_graphics().draw(4, 0);
 				geomerty->draw(command_list, lay2, 0, { 0,0 });
-				MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
-
-			//	command_list->transition(cache.texture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
-
-			
-			});
-			
-	
+				MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);			
+			});			
 			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().Width,cache.texture->get_desc().Height) };
-			//}
 		}
 
 		Fonts::FontGeometry::ptr label::get_geometry()
@@ -158,25 +136,14 @@ namespace GUI
 		void label::on_bounds_changed(const rect& r)
 		{
 			base::on_bounds_changed(r);
-		//	need_recalculate = true;
+		
 		}
 
 		sizer label::update_layout(sizer r, float scale)
 		{
-			/* if (scale != scaled)
-			 {
-				 calculated = false;
-				 scaled = scale;
-				 on_text_changed(text.get());
-			 }
-			 */
 			scaled = scale;
-
 			return	base::update_layout(r, scale);
 		}
-
-
-
 
 	}
 }

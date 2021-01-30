@@ -12,7 +12,7 @@ namespace DX12
 	{
 		heap = nullptr;
 
-		D3D12_HEAP_DESC desc;
+		
 		desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 		desc.Flags = flags;
 		desc.SizeInBytes = size;
@@ -25,6 +25,28 @@ namespace DX12
 		TEST(Device::get().get_native_device()->CreateHeap(&desc, IID_PPV_ARGS(&heap)));
 
 		heap_size = size;
+
+	}
+	
+	void ResourceHeap::init_cpu(ptr res)
+	{
+
+		if(desc.Flags&D3D12_HEAP_FLAG_DENY_BUFFERS)
+		{
+			return;
+		}
+		
+		CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(heap_size);
+
+		ResourceHandle handle(0, res);
+
+	
+		cpu_buffer = std::make_shared<Resource>(desc, handle);
 	}
 
+
+	std::span<std::byte> ResourceHeap::get_data()
+	{
+		return std::span(cpu_buffer->buffer_data, desc.SizeInBytes);
+	}
 }

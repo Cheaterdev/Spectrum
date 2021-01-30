@@ -11,7 +11,7 @@ Sphere::Sphere(vec3 pos, float radius)
 
 float Sphere::GetSurfaceArea() const
 {
-    const float cfArea = 4.0f * pi;
+    const float cfArea = 4.0f * Math::pi;
     return cfArea * radius * radius;
 }
 
@@ -227,7 +227,7 @@ void calcOrthogonalVectors(vec3& n, vec3& x, vec3& y)
 {
     vec3 temp(1, 0, 0);
 
-    if (1 - fabs(vec3::dot(n, temp)) < eps6) temp = vec3(0, 1, 0);
+    if (1 - fabs(vec3::dot(n, temp)) < Math::eps6) temp = vec3(0, 1, 0);
 
     x = vec3::cross(n, temp).normalize();
     y = vec3::cross(n, x).normalize();
@@ -239,7 +239,7 @@ float getVEdistance(const vec3& v, const vec3& t, const vec3& h)
     vec3 n = h - t;
     float dn = n.length_squared();
 
-    if (dn < eps2) return (v - t).length();
+    if (dn < Math::eps2) return (v - t).length();
 
     n /= dn;
     float l = vec3::dot(n, v - t);
@@ -257,11 +257,11 @@ float getVEpoint(const vec3& v, const vec3& t, const vec3& h)
     vec3 n = h - t;
     float dn = n.length_squared();
 
-    if (dn < eps2) return 0;
+    if (dn < Math::eps2) return 0;
 
     n /= dn;
     float l = vec3::dot(n, v - t);
-    return saturate(l);
+    return Math::saturate(l);
 }
 
 void getEEdistance(const vec3& t0, const vec3& h0, const vec3& t1, const vec3& h1, float& l0, float& l1)
@@ -280,7 +280,7 @@ void getEEdistance(const vec3& t0, const vec3& h0, const vec3& t1, const vec3& h
     l1 = (a * e - b * d) * invD;
 
     // check regions
-    if (l0 < 0 || l0 > 1 || l1 < 0 || l1 > 1 || fabs(D) < eps2)
+    if (l0 < 0 || l0 > 1 || l1 < 0 || l1 > 1 || fabs(D) < Math::eps2)
     {
         vec3 p;
         float minDist, tl0, tl1, tDist;

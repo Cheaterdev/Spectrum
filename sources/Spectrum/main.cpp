@@ -698,7 +698,7 @@ public:
 		//	texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 
 			//	g_buffer.size = { r.w, r.h };
-		cam.set_projection_params(pi / 4, float(r.w) / r.h, 1, 1500);
+		cam.set_projection_params(Math::pi / 4, float(r.w) / r.h, 1, 1500);
 		//	for (auto& e : eyes)
 	//			e->g_buffer.size = { r.w,r.h };
 	}
@@ -1656,7 +1656,7 @@ protected:
 		///    main_window2 = nullptr;
 		Fonts::FontSystem::reset();
 		AssetRenderer::reset();
-		Render::BufferCache::reset();
+		//Render::BufferCache::reset();
 		TextureAssetRenderer::reset();
 		AssetManager::reset();
 

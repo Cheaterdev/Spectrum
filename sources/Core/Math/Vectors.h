@@ -141,7 +141,7 @@ public:
 		return sqrt(length_squared());
 	}
 
-	Vector<T>& normalize(float eps = eps12)
+	Vector<T>& normalize(float eps = Math::eps12)
 	{
 		auto d = length_squared();
 
@@ -152,7 +152,7 @@ public:
 	}
 
 
-	Vector<T> normalized(float eps = eps12)
+	Vector<T> normalized(float eps = Math::eps12)
 	{
 		Vector res(*this);
 		return res.normalize();
@@ -363,7 +363,7 @@ T slerp(T& p0, T& p1, float t)
 {
 	float cosom = dot(p0, p1);
 
-	if (1 - fabs(cosom) >= eps2)
+	if (1 - fabs(cosom) >= Math::eps2)
 	{
 		// slerp
 		float omega = acos(cosom);

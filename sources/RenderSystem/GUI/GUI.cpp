@@ -962,7 +962,7 @@ namespace GUI
                  Render::context c(command_list, ovr_context);
                  c.command_list = command_list;
                
-				 c.offset = { 0, 0 };
+				// c.offset = { 0, 0 };
 				 c.window_size = scaled_size.get();
 				 c.scale = 1;
                  c.delta_time = graph.time;
@@ -973,9 +973,13 @@ namespace GUI
 					 //if (!c.command_list_label)
 					 {
 						 c.labeled = &context.pre_executor;
-
-						 c.command_list_label = c.command_list->get_sub_list();
+                     	
+						 c.command_list_label = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
+                     	
 						 c.command_list_label->begin("Label");
+
+                         c.command_list_label->frame_resources = c.command_list->frame_resources;
+
 					 }
 
 

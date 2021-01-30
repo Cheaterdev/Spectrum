@@ -1,4 +1,5 @@
 #pragma once
+
 namespace DX12
 {
 	enum class HeapType : int
@@ -12,11 +13,12 @@ namespace DX12
 	};
 
 
-	class ResourceHeap
+	class ResourceHeap :std::enable_shared_from_this<ResourceHeap>
 	{
-		std::shared_ptr<Resource> cpu_buffer;
 
+		D3D12_HEAP_DESC desc;
 	public:
+		std::shared_ptr<Resource> cpu_buffer;
 		ComPtr<ID3D12Heap > heap;
 		HeapType type;
 		D3D12_HEAP_FLAGS flags;
@@ -30,28 +32,44 @@ namespace DX12
 		}
 		HeapType get_type() { return type; }
 		virtual ~ResourceHeap() = default;
+
+		void init_cpu(ptr);
+
+		std::span<std::byte> get_data();
 	protected:
 		void init(size_t size);
 	};
 
-//	template<class AllocatorType>
-	struct ResourceHeapPage : CommonAllocator, ResourceHeap
+	//	template<class AllocatorType>
+	struct ResourceHeapPage : public CommonAllocator, public ResourceHeap
 	{
+
 		using ptr = std::shared_ptr<ResourceHeapPage>;
 		ResourceHeapPage(size_t size, HeapType type, D3D12_HEAP_FLAGS flags) :ResourceHeap(size, type, flags), CommonAllocator(size)
 		{
 
+
+
 		}
 
 	};
-	class HeapAllocator;
+
+	class HeapAllocatorInterface
+	{
+	public:
+		virtual ~HeapAllocatorInterface() = default;
+		virtual void free(CommonAllocator::Handle& handle) = 0;
+	};
 
 	struct ResourceHandle
 	{
 		ResourceHandle() = default;
-		ResourceHandle(const CommonAllocator::Handle& handle, HeapAllocator* owner, ResourceHeap::ptr heap):handle(handle), owner(owner), heap(heap)
+		ResourceHandle(const CommonAllocator::Handle& handle, HeapAllocatorInterface* owner, ResourceHeap::ptr heap) :handle(handle), owner(owner), heap(heap)
 		{
 			offset = handle.get_offset();
+		}
+		ResourceHandle(size_t offset, ResourceHeap::ptr heap) : heap(heap), offset(offset)
+		{
 		}
 
 		ResourceHeap::ptr get_heap() const
@@ -88,8 +106,8 @@ namespace DX12
 		}
 		CommonAllocator::Handle handle;
 	private:
-	
-		HeapAllocator* owner;
+
+		HeapAllocatorInterface* owner = nullptr;
 
 		ResourceHeap::ptr heap;
 		size_t offset;
@@ -103,32 +121,77 @@ namespace DX12
 
 		GEN_DEF_COMP(HeapIndex);
 	};
+	class HeapFactory: public Singleton<HeapFactory>
+	{
+		
+		using heap_list = std::list<ResourceHeapPage::ptr>;
+		std::map<HeapIndex, heap_list> free_heaps;
+		std::mutex m;
+	public:
+		ResourceHeapPage::ptr AllocateHeap(HeapIndex index, size_t size = 0)
+		{
+			std::lock_guard<std::mutex> g(m);
 
-	class HeapAllocator
+			auto &list = free_heaps[index];
+			if (!list.empty())
+			{
+				for (auto it = list.begin(); it != list.end(); ++it)
+				{
+					if ((*it)->get_size() >= size)
+					{
+						auto first = *it;
+						list.erase(it);
+						return first;
+					}
+				}
+
+			}
+			auto res = std::make_shared<ResourceHeapPage>(size, index.type, index.flags);
+
+			res->init_cpu(res);
+
+			return res;
+			
+		}
+
+		void Free(HeapIndex index, ResourceHeapPage::ptr page)
+		{
+			std::lock_guard<std::mutex> g(m);
+			free_heaps[index].push_back(page);
+		}
+		
+	};
+
+	template<class LockPolicy = Thread::Free>
+	class HeapAllocator: public HeapAllocatorInterface
 	{
 		const HeapIndex creation_info;
 		using heap_list = std::list<ResourceHeapPage::ptr>;
 		heap_list all_heaps;
-		static const size_t Alignment = 16 * 1024 * 1024;
-		std::mutex m;
+	
+
+		static const size_t Alignment = 4 * 1024 * 1024;
+		typename LockPolicy::mutex m;
+		bool del_heaps;
 	public:
-		HeapAllocator(HeapIndex index) :creation_info(index)
+		HeapAllocator(HeapIndex index, bool del_heaps = true) :creation_info(index), del_heaps(del_heaps)
 		{
 
 		}
 		ResourceHeapPage::ptr AllocateHeap(size_t size = 0)
 		{
-
+			
 			size = std::max(Math::AlignUp(size, Alignment), Alignment);
 
-			auto res = std::make_shared<ResourceHeapPage>(size, creation_info.type, creation_info.flags);
+			auto res = HeapFactory::get().AllocateHeap(creation_info,size);
 			all_heaps.emplace_back(res);
 			return res;
 		}
 
 		ResourceHandle alloc(size_t size, size_t alignment)
 		{
-			std::lock_guard<std::mutex> g(m);
+			typename LockPolicy::guard g(m);
+
 
 			for (auto& heap : all_heaps)
 			{
@@ -146,18 +209,22 @@ namespace DX12
 
 		}
 
-		void free(CommonAllocator::Handle& handle)
+		void free(CommonAllocator::Handle& handle) override
 		{
-			std::lock_guard<std::mutex> g(m);
+			typename LockPolicy::guard g(m);
 
 			auto heap = static_cast<ResourceHeapPage*>(handle.get_owner());
 			handle.FreeAndClear();
 
-		
-			if (heap->is_empty())
+			//uint t = heap.use_count();
+			if (del_heaps && heap->is_empty())
 			{
 				auto h = std::find_if(all_heaps.begin(), all_heaps.end(), [&](const ResourceHeapPage::ptr& p) {return p.get() == heap; });
+				auto ptr = *h;
+			
 				all_heaps.erase(h);
+
+				HeapFactory::get().Free(creation_info, ptr);
 			}
 		}
 
@@ -207,22 +274,27 @@ namespace DX12
 	};
 
 	// for tiles now, only
+
+	template<class LockPolicy = Thread::Free>
 	class ResourceHeapAllocator
 	{
 
-	
 
-	using flags_map = std::map<HeapIndex, std::shared_ptr<HeapAllocator>>;
 
-		std::mutex m;
+		using flags_map = std::map<HeapIndex, std::shared_ptr<HeapAllocator<LockPolicy>>>;
+
+		typename LockPolicy::mutex m;
 		flags_map creators;
-		
+		bool del_heaps;
 	public:
+		ResourceHeapAllocator(bool del_heaps = true) :del_heaps(del_heaps)
+		{
 
+		}
 		ResourceHandle alloc(size_t size, size_t alignment, D3D12_HEAP_FLAGS flags, HeapType type)
 		{
-			std::lock_guard<std::mutex> g(m);
-
+			typename LockPolicy::guard g(m);
+			
 			HeapIndex index;
 
 			index.flags = flags;
@@ -232,9 +304,9 @@ namespace DX12
 
 			if (!creator)
 			{
-				creator = std::make_shared<HeapAllocator>(index);
+				creator = std::make_shared<HeapAllocator<LockPolicy>>(index, del_heaps);
 			}
-		//	auto& creator = *it;
+			//	auto& creator = *it;
 
 			return creator->alloc(size, alignment);
 		}
@@ -243,7 +315,7 @@ namespace DX12
 		{
 			static const size_t TileSize = 64 * 1024_t;
 
-			auto handle = alloc(count*TileSize, TileSize, flags, type);
+			auto handle = alloc(count * TileSize, TileSize, flags, type);
 
 			TileHeapPosition result;
 
@@ -258,7 +330,7 @@ namespace DX12
 
 	};
 
-	class ResourceHeapPageManager :public ResourceHeapAllocator, public  Singleton<ResourceHeapPageManager>
+	class ResourceHeapPageManager :public ResourceHeapAllocator<Thread::Lockable>, public  Singleton<ResourceHeapPageManager>
 	{
 	public:
 		ResourceHeapPageManager() = default;

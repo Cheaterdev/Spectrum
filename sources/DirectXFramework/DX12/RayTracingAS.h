@@ -88,12 +88,19 @@ namespace DX12
 			auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 			list->begin();
 
-			auto instanceDescs = list->place_raw(instances);
-
+		
 			// Top Level Acceleration Structure desc
 			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
 			{
-				topLevelInputs.InstanceDescs = instanceDescs.get_gpu_address();
+				if(instances.size())
+				{
+					auto instanceDescs = list->place_raw(instances);
+					topLevelInputs.InstanceDescs = instanceDescs.get_gpu_address();
+
+				}else
+				{
+					topLevelInputs.InstanceDescs = 0;
+				}
 				topLevelBuildDesc.Inputs = topLevelInputs;
 				topLevelBuildDesc.DestAccelerationStructureData = resource->get_gpu_address();
 				topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_gpu_address();

@@ -104,7 +104,7 @@ namespace DX12
 		init_tilings();
 
 
-		if (heap_type == HeapType::UPLOAD)
+		if (heap_type == HeapType::UPLOAD|| heap_type == HeapType::READBACK)
 		{
 			resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
@@ -114,14 +114,14 @@ namespace DX12
 		init(desc, heap_type, state, clear_value);
 	}
 
-	Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle)
+	Resource::Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle, bool own)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
 
 		ComPtr<ID3D12Resource> resource;
 
 
-		tmp_handle = handle;
+		//tmp_handle = handle;
 		D3D12_CLEAR_VALUE value;
 
 		value.Format = to_srv(desc.Format);
@@ -155,7 +155,7 @@ namespace DX12
 			state = ResourceState::GEN_READ;
 		}if (heap_type == HeapType::READBACK)
 		{
-			state = ResourceState::COMMON;
+			state = ResourceState::COPY_DEST;
 		}
 		TEST(Device::get().get_native_device()->CreatePlacedResource(
 			handle.get_heap()->heap.Get(),
@@ -176,9 +176,14 @@ namespace DX12
 
 		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()), state);
 
-		if (heap_type == HeapType::UPLOAD)
+		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
 		{
 			resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
+		}
+
+		if(own)
+		{
+			tracked_info->alloc_handle = handle;
 		}
 	}
 
@@ -200,7 +205,7 @@ namespace DX12
 
 		init_subres(this->desc.Subresources(Device::get().get_native_device().Get()), state);
 
-		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD)
+		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD || HeapProperties.Type == D3D12_HEAP_TYPE_READBACK)
 		{
 			resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}

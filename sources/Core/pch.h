@@ -237,7 +237,14 @@ void unreferenced_parameter(const T&)
 #include "DebugInfo/Debug.h"
 #include "Tree/Tree.h"
 
-#include "Math/MathX.h"
+#include "Math/Constants.h"
+#include "Math/Vectors.h"
+#include "Math/Quaternions.h"
+#include "Math/Matrices.h"
+
+#include "Math/GeometryPrimitives.h"
+
+
 #include "Math/math_serialization.h"
 
 #include "BinaryObjects.h"

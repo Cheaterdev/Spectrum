@@ -259,7 +259,7 @@ std::vector<std::string> file_open(const std::string& Name, const std::string& S
 				FilterBuffer[i] = 0;
 		}
 	}
-	OPENFILENAMEA opf;
+    OPENFILENAMEA opf = { 0 };
 	opf.hwndOwner = 0;
 	opf.lpstrFilter = FilterBuffer;
 	opf.lpstrCustomFilter = 0;

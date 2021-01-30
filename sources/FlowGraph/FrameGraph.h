@@ -135,8 +135,8 @@ struct TaskBuilder
 
 	std::set<ResourceHandler*> passed_resources;
 
-	Render::ResourceHeapAllocator allocator;
-	Render::ResourceHeapAllocator static_allocator;
+	Render::ResourceHeapAllocator<Thread::Free> allocator;
+	Render::ResourceHeapAllocator<Thread::Free> static_allocator;
 
 //	Render::PlacedAllocator allocator;
 //	Render::PlacedAllocator static_allocator;
@@ -144,9 +144,9 @@ struct TaskBuilder
 	Render::FrameResourceManager frames;
 	Render::FrameResources::ptr current_frame;
 
-	std::map<int, Render::ResourceHeapAllocator> frame_allocs;
+	std::map<int, Render::ResourceHeapAllocator<Thread::Free>> frame_allocs;
 
-	Render::ResourceHeapAllocator* current_alloc;
+	Render::ResourceHeapAllocator<Thread::Free>* current_alloc;
 	Pass* current_pass;
 	void begin(Pass* pass);
 
@@ -168,6 +168,7 @@ struct TaskBuilder
 	void create_resources();
 	void reset();
 
+	TaskBuilder();
 
 };
 

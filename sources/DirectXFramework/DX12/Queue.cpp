@@ -34,38 +34,6 @@ namespace DX12
 
 		native->SetName(convert(name).c_str());
 
-		queue_thread = std::thread([this, name]
-			{
-				SetThreadName(name);
-
-				for (;;)
-				{
-					PROFILE(L"Wait");
-
-					std::function<void()> task;
-					{
-
-						std::unique_lock<std::mutex> lock(this->queue_mutex);
-						this->condition.wait(lock,
-							[this]
-							{
-								return this->stop || !this->tasks.empty();
-							});
-
-						if (this->stop && this->tasks.empty())
-							return;
-
-
-						task = std::move(this->tasks.front());
-
-						this->tasks.pop();
-					}
-
-					PROFILE(L"Task");
-
-					task();
-				}
-			});
 
 		del_func = [this](CommandList* list)
 		{
@@ -88,16 +56,16 @@ namespace DX12
 				transition_lists.emplace(list, del_transition);
 			}
 		};
+
+
 	}
 
 	void Queue::stop_all()
 	{
 		signal_and_wait();
 		stop = true;
-		condition.notify_all();
 
-		if (queue_thread.joinable())
-			queue_thread.join();
+
 	}
 
 	Queue::~Queue()
@@ -105,20 +73,34 @@ namespace DX12
 		stop_all();
 	}
 
-	FenceWaiter Queue::signal()
+	FenceWaiter Queue::signal_internal()
 	{
+
 		const UINT64 fence = ++m_fenceValue;
 		native->Signal(commandListCounter.m_fence.Get(), fence);
 		return { &commandListCounter,fence };
 	}
 
+	FenceWaiter Queue::signal()
+	{
+		std::unique_lock<std::mutex> lock(queue_mutex);
+		return signal_internal();
+	}
+
 	void  Queue::gpu_wait(FenceWaiter waiter)
 	{
+		std::unique_lock<std::mutex> lock(queue_mutex);
+		gpu_wait_internal(waiter);
+	}
+	void  Queue::gpu_wait_internal(FenceWaiter waiter)
+	{
+
 		native->Wait(waiter.fence->m_fence.Get(), waiter.value);
 	}
 
 	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
 	{
+		std::unique_lock<std::mutex> lock(queue_mutex);
 		native->Signal(fence.m_fence.Get(), value);
 
 		return { &fence, value };
@@ -159,15 +141,15 @@ namespace DX12
 		std::promise<int> promise;
 		auto result = promise.get_future();
 
+
 		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
+
 			FenceWaiter waiter = signal();
 
-			tasks.emplace([&promise, &waiter]() {
+			executor.enqueue([&promise, &waiter]() {
 				waiter.wait();
 				promise.set_value(0);
 				});
-			condition.notify_one();
 		}
 
 		result.wait();
@@ -263,156 +245,119 @@ namespace DX12
 
 
 	}
+	FenceWaiter Queue::run_transition_list(std::shared_ptr<TransitionCommandList>& list)
+	{
+		std::unique_lock<std::mutex> lock(queue_mutex);
 
-	// synchronized
+
+		ID3D12CommandList* s[] = { list->get_native().Get() };
+		get_native()->ExecuteCommandLists(_countof(s), s);
+
+		return signal_internal();
+	}
 	FenceWaiter Queue::execute_internal(CommandList* list)
 	{
-
 		PROFILE(L"execute_internal");
 
-		bool need_wait = has_tasks();
-
-
-		SPECTRUM_TRY
-
-
-			if (stop)
-				return { &commandListCounter,m_fenceValue };
-
-		for (auto& w : list->waits)
-		{
-			//			native->Wait(w.fence.Get(), w.value);
-		}
-
-		{
-			PROFILE(L"on_send_funcs");
-			for (auto& fun : list->on_send_funcs)
-			{
-				fun();
-			}
-		}
-		list->on_send_funcs.clear();
-
-		//	fix_transitions
-		{
-			auto& updates = list->tile_updates;
-
-			{
-				PROFILE(L"update_tile_mappings");
-
-
-				for (auto& u : updates)
-				{
-					update_tile_mappings(u);
-				}
-
-			}
-		
-			auto transition_list = list->fix_pretransitions();
-
-			if (transition_list)
-			{
-				if (transition_list->get_type() == list->get_type())
-				{
-					ID3D12CommandList* s[] = { transition_list->get_native().Get(), list->get_native_list().Get() };
-					native->ExecuteCommandLists(_countof(s), s);
-				}
-				else
-				{
-
-					// Need to request other queue to make a proper transition.
-					// It's OK, but better to avoid this
-					auto queue = Device::get().get_queue(transition_list->get_type());
-
-					{
-						ID3D12CommandList* s[] = { transition_list->get_native().Get() };
-						queue->get_native()->ExecuteCommandLists(_countof(s), s);
-					}
-					auto waiter = queue->signal();
-					gpu_wait(waiter);
-
-					{
-						ID3D12CommandList* s[] = { list->get_native_list().Get() };
-						native->ExecuteCommandLists(_countof(s), s);
-					}
-				}
-
-			}
-			else
-			{
-				ID3D12CommandList* s[] = { list->get_native_list().Get() };
-				native->ExecuteCommandLists(_countof(s), s);
-			}
-		}
-
-		last_known_fence = signal().value;
-		list->execute_fence.set_value({ &commandListCounter, last_known_fence });
+		if (stop)
+			return { &commandListCounter,m_fenceValue };
+		std::unique_lock<std::mutex> lock(queue_mutex);
 
 		auto cl = list->get_ptr();
 
-		tasks.emplace([cl, this]() {
-			auto list = cl;
-
-			FenceWaiter fence = list->get_execution_fence().get();
-			assert(&commandListCounter == fence.fence);
-
-			fence.wait();
-
-			SPECTRUM_TRY
-				PROFILE(L"on_execute");
-			list->on_execute();
-			SPECTRUM_CATCH
-			});
-
 		{
-			PROFILE(L"on_send");
+			PROFILE(L"update_tile_mappings");
 
-			list->on_send();
+			bool has_updates = false;
 
-		}
-		SPECTRUM_CATCH
-
-			condition.notify_one();
-
-
-		if (list->parent_list)
-		{
-			if (list->parent_list->child_executed())
+			auto& updates = list->tile_updates;
 			{
-				execute_internal(static_cast<CommandList*>(list->parent_list.get()));
+				for (auto& u : updates)
+				{
+					has_updates = true;
+					update_tile_mappings(u);
+				}
+			}
+
+			if (has_updates)
+			{
+
+				FenceWaiter execution_fence = signal_internal();
+
+				executor.enqueue([cl, this, execution_fence]()
+					{
+						execution_fence.wait();
+						auto list = cl;
+						auto& updates = list->tile_updates;
+						for (auto& u : updates)
+							u.resource->tracked_info->on_tile_update(u);
+						updates.clear();
+					});
+			}
+		}
+
+
+		auto transition_list = list->fix_pretransitions();
+
+		if (transition_list)
+		{
+			if (transition_list->get_type() == list->get_type())
+			{
+				ID3D12CommandList* s[] = { transition_list->get_native().Get(), list->get_native_list().Get() };
+				native->ExecuteCommandLists(_countof(s), s);
+			}
+			else
+			{
+
+				// Need to request other queue to make a proper transition.
+				// It's OK, but better to avoid this
+				auto queue = Device::get().get_queue(transition_list->get_type());
+				auto waiter = queue->run_transition_list(transition_list);
+
+				gpu_wait_internal(waiter);
+
+				{
+					ID3D12CommandList* s[] = { list->get_native_list().Get() };
+					native->ExecuteCommandLists(_countof(s), s);
+				}
 			}
 
 		}
-
-		if (need_wait)
+		else
 		{
-			PROFILE(L"wait");
-
-			commandListCounter.wait(last_known_fence);
-			process_tasks();
+			ID3D12CommandList* s[] = { list->get_native_list().Get() };
+			native->ExecuteCommandLists(_countof(s), s);
 		}
 
-		return { &commandListCounter,last_known_fence };
+		const FenceWaiter execution_fence = signal_internal();
+
+		{
+			PROFILE(L"on_send");
+			list->on_send(execution_fence);
+		}
+
+
+		executor.enqueue([cl, this]()
+			{
+				auto list = cl;
+				list->get_execution_fence().get().wait();
+				PROFILE(L"on_execute");
+				list->on_execute();
+			});
+
+
+		return execution_fence;
 	}
 
 
-	std::shared_future<FenceWaiter> Queue::execute(std::shared_ptr<CommandList> list)
+	FenceWaiter Queue::execute(std::shared_ptr<CommandList> list)
 	{
 		assert(this->type == list->type);
-		std::unique_lock<std::mutex> lock(queue_mutex);
-
-		if (!list->wait_for_execution_count)
-		{
-			std::promise<FenceWaiter> res;
-			res.set_value(execute_internal(list.get()));
-			return res.get_future();
-		}
-
-		return list->get_execution_fence();
+		return execute_internal(list.get());
 	}
 
 
-	std::shared_future<FenceWaiter> Queue::execute(CommandList* list)
+	FenceWaiter Queue::execute(CommandList* list)
 	{
 		return execute(list->get_ptr());
 	}

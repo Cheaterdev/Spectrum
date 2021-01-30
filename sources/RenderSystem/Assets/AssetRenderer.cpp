@@ -144,7 +144,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 
     cam.target = (mn + mx) / 2;
     cam.position = cam.target + (vec3(30, 10, 30).normalize()) * ((mx - mn).length());
-    cam.set_projection_params(pi / 4, 1, 1, 100 + (mn - mx).length());
+    cam.set_projection_params(Math::pi / 4, 1, 1, 100 + (mn - mx).length());
     cam.update();
 
 

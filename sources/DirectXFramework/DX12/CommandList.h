@@ -1,5 +1,4 @@
 #pragma once
-
 enum class Layouts;
 namespace DX12
 {
@@ -24,41 +23,35 @@ namespace DX12
 
 #define DEFAULT_ALIGN 256
 
-
-	class BufferCache : public Singleton<BufferCache>
-	{
-		std::multimap<UINT64, std::shared_ptr<CPUBuffer>> read_back_resources;
-		std::multimap<UINT64, std::shared_ptr<UploadBuffer>> upload_resources;
-
-		std::mutex upload;
-		std::mutex read_back;
-
-
-		ResourceHeapAllocator allocator;
-	public:
-
-		std::shared_ptr<UploadBuffer> get_upload(UINT64 size);
-		std::shared_ptr<CPUBuffer> get_readback(UINT64 size);
-
-		void on_execute_list(CommandList* list);
-		void unused_upload(std::vector<std::shared_ptr<UploadBuffer>>& upload_resources);
-	};
+	
 	class GraphicsContext;
 	class ComputeContext;
 	class CopyContext;
 	class FrameResourceManager;
 
+	struct UploadInfo
+	{
+		std::shared_ptr<Resource> resource;
+		UINT64 offset;
+		UINT64 size;
+		D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address();
+		ResourceAddress get_resource_address();
+		Handle create_cbv(CommandList& list);
 
-
+		std::byte* get_cpu_data() const;
+	};
+	
+	template<class LockPolicy>
 	class Uploader
 	{
+		ResourceHeapAllocator<LockPolicy> allocator;
 		friend class BufferCache;
-
-		std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
-		UINT64 resource_offset;
+		std::vector<ResourceHandle> handles;
+	//	std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
+//		UINT64 resource_offset;
 		UINT heap_size = 0x200000;
 	protected:
-		void reset();
+		//void reset();
 
 		template<class T>
 		size_t size_of(std::span<T>& elem)
@@ -83,24 +76,46 @@ namespace DX12
 			return sizeof(T);
 		}
 
+		typename LockPolicy::mutex m;
 
 	public:
-		struct UploadInfo
+		
+
+	//	UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
+
+
+		void reset()
 		{
-			std::shared_ptr<UploadBuffer> resource;
-			UINT64 offset;
-			UINT64 size;
+			typename LockPolicy::guard g(m);
 
-			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address();
-			ResourceAddress get_resource_address();
-
-			Handle create_cbv(CommandList& list);
-		};
-
-		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
+			for (auto& h : handles)
+				h.Free();
+			handles.clear();
 
 
+		}
 
+
+		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN)
+		{
+			const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
+
+
+			auto handle = allocator.alloc(AlignedSize, alignment, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, HeapType::UPLOAD);
+
+			//	auto handle = BufferCache::get().get_upload(AlignedSize, alignment);
+			typename LockPolicy::guard g(m);
+
+			handles.emplace_back(handle);
+			UploadInfo info;
+			info.resource = handle.get_heap()->cpu_buffer;
+			info.offset = handle.get_offset();
+			info.size = uploadBufferSize;
+			return info;
+		}
+
+
+		
 		template<class ...Args>
 		UploadInfo place_raw(Args... args)
 		{
@@ -119,8 +134,16 @@ namespace DX12
 			return info;
 		}
 
+		void write(UploadInfo& info, size_t offset, void* data, size_t size)
+		{
+			memcpy(info.resource->buffer_data + info.offset + offset, data, size);
+		}
 
-		void write(UploadInfo& info, size_t offset, void* data, size_t size);
+
+
+	
+		
+		//void write(UploadInfo& info, size_t offset, void* data, size_t size);
 
 		template<class T>
 		void write(UploadInfo& info, const std::span<T>& arg)
@@ -165,10 +188,31 @@ namespace DX12
 	};
 
 
+	class Readbacker
+	{
+		ResourceHeapAllocator<Thread::Free> allocator;
+		friend class BufferCache;
+		std::vector<ResourceHandle> handles;
+	protected:
+		void reset();
+	public:
+
+		struct ReadBackInfo
+		{
+			std::shared_ptr<Resource> resource;
+			UINT64 offset;
+			UINT64 size;
+
+			std::byte* get_cpu_data() const;
+		};
+
+		ReadBackInfo read_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
+
+	};
 
 
-	template<class LockPolicy = Free>
-	class GPUCompiledManager : public Uploader
+	template<class LockPolicy = Thread::Free>
+	class GPUCompiledManager : public Uploader<LockPolicy>
 	{
 		enum_array<DescriptorHeapType, typename DynamicDescriptor<LockPolicy>::ptr> cpu_heaps;
 		enum_array<DescriptorHeapType, typename DynamicDescriptor<LockPolicy>::ptr> gpu_heaps;
@@ -209,19 +253,19 @@ namespace DX12
 				if (h)
 					h->reset();
 
-			Uploader::reset();
+			Uploader<LockPolicy>::reset();
 		}
 
 	};
 
 
 
-	class StaticCompiledGPUData :public Singleton<StaticCompiledGPUData>, public GPUCompiledManager<Lockable>
+	class StaticCompiledGPUData :public Singleton<StaticCompiledGPUData>, public GPUCompiledManager<Thread::Lockable>
 	{
 	public:
-		using Uploader::place_raw;
+		using Uploader<Thread::Lockable>::place_raw;
 	};
-	class FrameResources :public std::enable_shared_from_this<FrameResources>, public GPUCompiledManager<Lockable>
+	class FrameResources :public std::enable_shared_from_this<FrameResources>, public GPUCompiledManager<Thread::Lockable>
 	{
 
 		friend class FrameResourceManager;
@@ -264,7 +308,6 @@ namespace DX12
 	protected:
 		int id = -1;
 		std::uint64_t global_id;
-		bool executed = false;
 		CommandListType type;
 
 		LEAK_TEST(CommandListBase)
@@ -560,25 +603,6 @@ namespace DX12
 
 	};
 
-	class Readbacker : public virtual CommandListBase
-	{
-		friend class BufferCache;
-
-		std::vector<std::shared_ptr<CPUBuffer>> read_back_resources;
-	protected:
-		void reset();
-	public:
-
-		struct ReadBackInfo
-		{
-			std::shared_ptr<CPUBuffer> resource;
-			UINT64 offset;
-			UINT64 size;
-		};
-
-		ReadBackInfo read_data(UINT64 uploadBufferSize);
-
-	};
 	class GPUTimeManager;
 	class Eventer;
 
@@ -669,52 +693,31 @@ namespace DX12
 	{
 
 		friend class Queue;
-		std::vector<std::function<void()>> on_send_funcs;
 		std::vector<std::function<void(FenceWaiter)>> on_fence;
 
 
 		std::promise<FenceWaiter> execute_fence;
 		std::shared_future<FenceWaiter> execute_fence_result;
 
-		std::mutex execution_mutex;
+
 		std::list<FenceWaiter> waits;
 
 	
-		bool child_executed()
+		void on_send(FenceWaiter fence)
 		{
-			execution_mutex.lock();
-			--wait_for_execution_count;
-			bool res = executed && (wait_for_execution_count == 0);
-			execution_mutex.unlock();
-			return res;
-		}
-
-		void on_send()
-		{
-			auto fence = execute_fence_result.get();
+			execute_fence.set_value(fence);
+			
 			for (auto&& e : on_fence)
 				e(fence);
+			
 			on_fence.clear();
 		}
 
-		std::shared_ptr<Sendable> parent_list = nullptr;
-		std::atomic_int wait_for_execution_count;
+	
+	
 	protected:
 
-		virtual void on_execute()
-		{
-			parent_list = nullptr;
-		}
-		void set_parent(std::shared_ptr<Sendable> parent)
-		{
-			parent_list = parent;
-			parent->wait_for_execution_count++;
-		}
-
-		void reset()
-		{
-			wait_for_execution_count = 0;
-		}
+		
 	public:
 
 
@@ -738,7 +741,7 @@ namespace DX12
 	class SignatureDataSetter;
 
 
-	class CommandList : public std::enable_shared_from_this<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Free>
+	class CommandList : public std::enable_shared_from_this<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>
 	{
 
 
@@ -757,7 +760,7 @@ namespace DX12
 
 		// TODO: make references?
 
-		virtual void on_execute() override;
+		virtual void on_execute();
 
 		bool heaps_changed = false;
 
@@ -989,7 +992,7 @@ namespace DX12
 
 		virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
 		virtual	void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) = 0;
-		virtual void set_const_buffer(UINT i, const FrameResources::UploadInfo& info) = 0;
+		virtual void set_const_buffer(UINT i, const UploadInfo& info) = 0;
 		//virtual void set_const_buffer(UINT i, FrameResource& info) = 0;
 
 		virtual void set_constant(UINT i, UINT offset, UINT data) = 0;
@@ -1066,7 +1069,7 @@ namespace DX12
 
 
 		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
-		void set_const_buffer(UINT i, const FrameResources::UploadInfo& info) override;
+		void set_const_buffer(UINT i, const UploadInfo& info) override;
 		//	void set_const_buffer(UINT i, FrameResource& info);
 		using SignatureDataSetter::set_const_buffer;
 		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
@@ -1230,7 +1233,7 @@ namespace DX12
 		void set_table(UINT, const Handle&);
 
 		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer> buff);
-		void set_const_buffer(UINT i, const FrameResources::UploadInfo& info);
+		void set_const_buffer(UINT i, const UploadInfo& info);
 		//	void set_const_buffer(UINT i, FrameResource& info);
 
 		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);

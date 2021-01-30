@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.7.1
+// Generated from SIG.g4 by ANTLR 4.8
 
 
 #include "SIGListener.h"
@@ -1831,6 +1831,14 @@ tree::TerminalNode* SIGParser::Path_idContext::ID(size_t i) {
   return getToken(SIGParser::ID, i);
 }
 
+std::vector<tree::TerminalNode *> SIGParser::Path_idContext::DIV() {
+  return getTokens(SIGParser::DIV);
+}
+
+tree::TerminalNode* SIGParser::Path_idContext::DIV(size_t i) {
+  return getToken(SIGParser::DIV, i);
+}
+
 
 size_t SIGParser::Path_idContext::getRuleIndex() const {
   return SIGParser::RulePath_id;
@@ -2950,12 +2958,20 @@ SIGParser::Array_value_idsContext::Array_value_idsContext(ParserRuleContext *par
   : ParserRuleContext(parent, invokingState) {
 }
 
+tree::TerminalNode* SIGParser::Array_value_idsContext::OBRACE() {
+  return getToken(SIGParser::OBRACE, 0);
+}
+
 std::vector<SIGParser::Array_value_holderContext *> SIGParser::Array_value_idsContext::array_value_holder() {
   return getRuleContexts<SIGParser::Array_value_holderContext>();
 }
 
 SIGParser::Array_value_holderContext* SIGParser::Array_value_idsContext::array_value_holder(size_t i) {
   return getRuleContext<SIGParser::Array_value_holderContext>(i);
+}
+
+tree::TerminalNode* SIGParser::Array_value_idsContext::CBRACE() {
+  return getToken(SIGParser::CBRACE, 0);
 }
 
 

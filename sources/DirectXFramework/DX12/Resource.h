@@ -114,7 +114,7 @@ namespace DX12
 	public:
 		ResourceAllocationInfo alloc_info;
 		std::optional<FenceWaiter> load_fence;
-		ResourceHandle tmp_handle;
+		//ResourceHandle tmp_handle;
 		std::byte* buffer_data = nullptr;
 		bool debug = false;
 		std::string name;
@@ -136,7 +136,7 @@ namespace DX12
 		Resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 		Resource(const ComPtr<ID3D12Resource>& resouce, ResourceState state, bool own = false);
 
-		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle);
+		Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle, bool own = false);
 		Resource() = default;
 
 		virtual ~Resource();

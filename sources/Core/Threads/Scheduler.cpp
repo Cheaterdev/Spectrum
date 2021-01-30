@@ -13,6 +13,15 @@
 	add(nullptr);
 	flush();
 	task.wait();
+
+	spsc_queue.consume_all([&](int id)
+		{
+			for (auto& f : datas[id])
+				if (f)
+					f();
+
+			datas[id].clear();
+		});
 }
 
  void SingleThreadExecutorBatched::add(std::function<void()>&& f)
@@ -31,7 +40,7 @@
 {
 	bool alive = true;
 	while (alive)
-		while (alive && spsc_queue.consume_all([&](int id)
+		while (alive && spsc_queue.consume_one([&](int id)
 			{
 				for (auto& f : datas[id])
 					if (f)
@@ -48,6 +57,9 @@
 	enqueue(nullptr);
 
 	concurrency::agent::wait(this);
+
+
+		
 }
 
  void SingleThreadExecutor::run()

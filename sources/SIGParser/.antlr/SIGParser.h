@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.7.1
+// Generated from SIG.g4 by ANTLR 4.8
 
 #pragma once
 
@@ -507,6 +507,8 @@ public:
     virtual size_t getRuleIndex() const override;
     std::vector<antlr4::tree::TerminalNode *> ID();
     antlr4::tree::TerminalNode* ID(size_t i);
+    std::vector<antlr4::tree::TerminalNode *> DIV();
+    antlr4::tree::TerminalNode* DIV(size_t i);
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -746,8 +748,10 @@ public:
   public:
     Array_value_idsContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *OBRACE();
     std::vector<Array_value_holderContext *> array_value_holder();
     Array_value_holderContext* array_value_holder(size_t i);
+    antlr4::tree::TerminalNode *CBRACE();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;

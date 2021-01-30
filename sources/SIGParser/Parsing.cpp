@@ -1,5 +1,5 @@
 
-#include "antlr4-runtime.h"
+#include ".antlr/antlr4-runtime.h"
 #include ".antlr/SIGLexer.h"
 #include ".antlr/SIGParser.h"
 #include ".antlr/SIGBaseListener.h"

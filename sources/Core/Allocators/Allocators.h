@@ -204,6 +204,10 @@ public:
 
 	void Reset();
 
+	size_t get_size()
+	{
+		return size;
+	}
 
 	bool is_empty()
 	{

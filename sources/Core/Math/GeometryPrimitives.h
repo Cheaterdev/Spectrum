@@ -167,7 +167,7 @@ class Sphere : public Primitive
 
         virtual float get_volume() const
         {
-            const float cfVolume = 4.0f / 3.0f * pi;
+            const float cfVolume = 4.0f / 3.0f * Math::pi;
             return cfVolume * radius * radius * radius;
         }
 

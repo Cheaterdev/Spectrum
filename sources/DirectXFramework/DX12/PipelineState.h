@@ -331,6 +331,7 @@ namespace DX12
 		template<class T>
 		void unregister_shader(T shader)
 		{
+			// TODO: sometimes HANG here
 			if (shader)
 				shader->pipelines.erase(this);
 		}

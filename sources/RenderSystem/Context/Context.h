@@ -44,7 +44,7 @@ namespace Render
 			debug_drawer* drawer;
             sizer_long ui_clipping;
 			sizer_long scissors;
-            vec2 offset;
+            vec2 offset = {0,0};
             float delta_time;
             vec2 window_size;
             float scale = 1;

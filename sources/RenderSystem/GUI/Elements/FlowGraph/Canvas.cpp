@@ -49,7 +49,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
         c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 
 		auto data = c.command_list->place_data(sizeof(Table::VSLine::CB) * vertexes.size(), sizeof(Table::VSLine::CB));
-		c.command_list->write(data, vertexes);
+		c.command_list->write<Table::VSLine::CB>(data, vertexes);
 
 		auto view = data.resource->create_view<StructuredBufferView<Table::VSLine>>(*c.command_list->frame_resources, (UINT)data.offset, (UINT)data.size);
         {

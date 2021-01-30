@@ -1,6 +1,11 @@
 
 #include "pch.h"
 
+TaskBuilder::TaskBuilder() : allocator(false), static_allocator(false)
+{
+	
+}
+
 void TaskBuilder::begin(Pass* pass)
 {
 	current_pass = pass;
@@ -38,8 +43,6 @@ void TaskBuilder::pass_texture(std::string name, Render::Texture::ptr tex, Resou
 
 void TaskBuilder::reset()
 {
-
-
 	current_pass = nullptr;
 	//	allocator.reset();
 
@@ -467,6 +470,12 @@ void FrameGraph::render()
 			info->texture = Render::TextureView();
 			info->buffer = Render::BufferView();
 		}
+
+		if (info->heap_type != Render::HeapType::DEFAULT)
+		{
+			info->alloc_ptr.Free();
+		}
+		
 	}
 
 
@@ -776,17 +785,32 @@ void TaskBuilder::create_resources()
 			info->need_recreate = info->alloc_ptr != alloc_ptr;
 			info->alloc_ptr = alloc_ptr;
 		}*/
-		if (info->heap_type != Render::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
+		if (check(info->flags & ResourceFlags::Static)) continue;
+		if (info->heap_type != Render::HeapType::DEFAULT)
+		{
+		//	auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
+		//	auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
-		assert(pair.second.valid_from->active());
-		assert(pair.second.valid_to->active());
-		events[pair.second.valid_from->call_id].create.insert(info);
-		events[pair.second.valid_to->call_id].free.insert(info);
+		//	info->need_recreate = info->alloc_ptr != alloc_ptr;
+		//	info->alloc_ptr = alloc_ptr;
+		}
+		else
+		{
+			assert(pair.second.valid_from->active());
+			assert(pair.second.valid_to->active());
+			events[pair.second.valid_from->call_id].create.insert(info);
+			events[pair.second.valid_to->call_id].free.insert(info);
+		}
+
+	//	if (info->heap_type != Render::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
+
+		
 	}
 
 	{
 		PROFILE(L"allocate memory");
 
+		
 		for (auto [id, e] : events)
 		{
 			for (auto info : e.free)
@@ -828,9 +852,11 @@ void TaskBuilder::create_resources()
 
 			if (info->alloc_ptr.handle)
 			{
-				auto& res = info->resource_places[info->alloc_ptr];
+			auto& res = info->resource_places[info->alloc_ptr];
 
 
+		//	res = nullptr;
+				//Render::Resource::ptr res;
 				if (!res || res->get_desc() != info->d3ddesc)
 				{
 					res = std::make_shared<Render::Resource>(info->d3ddesc, info->alloc_ptr);
@@ -843,7 +869,7 @@ void TaskBuilder::create_resources()
 				}
 				info->resource = res;// std::make_shared<Render::Resource>(info->d3ddesc, info->alloc_ptr);
 
-				assert(res->tmp_handle == info->alloc_ptr);
+	//			assert(res->tmp_handle == info->alloc_ptr);
 			}
 			else
 			{

@@ -32,3 +32,39 @@ void SetThreadName(std::string threadName)
 }
 
 #endif
+
+
+
+struct thread_tester
+{
+	std::atomic<std::thread::id>& id;
+	thread_tester(std::atomic<std::thread::id>& id) :id(id)
+	{
+		auto prev = id.exchange(std::this_thread::get_id());
+
+		assert(prev == std::thread::id());
+	}
+
+	~thread_tester()
+	{
+		auto prev = id.exchange(std::thread::id());
+		assert(prev == std::this_thread::get_id());
+	}
+};
+
+namespace Thread
+{
+
+
+	struct Lockable
+	{
+		using guard = std::lock_guard<std::mutex>;
+		using mutex = std::mutex;
+	};
+
+	struct  Free
+	{
+		using guard = thread_tester;
+		using mutex = std::atomic<std::thread::id>;
+	};
+}

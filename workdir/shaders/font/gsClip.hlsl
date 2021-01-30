@@ -13,7 +13,7 @@ struct GSIn
     float index : TEXCOORD;
 };
 
-struct GSOut
+struct GSOutsdsdf
 {
     float4 Position : SV_Position;
     float4 GlyphColor : COLOR;

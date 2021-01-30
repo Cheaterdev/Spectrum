@@ -1,3 +1,4 @@
+
 namespace DX12
 {
 	enum class HandleType : char
@@ -738,35 +739,9 @@ namespace DX12
 	};
 
 
-	struct Lockable
-	{
-		using guard = std::lock_guard<std::mutex>;
-		using mutex = std::mutex;
-	};
 
-	struct thread_tester
-	{
-		std::atomic<std::thread::id>& id;
-		thread_tester(std::atomic<std::thread::id>& id) :id(id)
-		{
-			auto prev = id.exchange(std::this_thread::get_id());
 
-			assert(prev == std::thread::id());
-		}
-
-		~thread_tester()
-		{
-			auto prev = id.exchange(std::thread::id());
-			assert(prev == std::this_thread::get_id());
-		}
-	};
-	struct  Free
-	{
-		using guard = thread_tester;
-		using mutex = std::atomic<std::thread::id>;
-	};
-
-	template<class LockPolicy = Free>
+	template<class LockPolicy = Thread::Free>
 	class DynamicDescriptor
 	{
 		DescriptorHeapType type;
