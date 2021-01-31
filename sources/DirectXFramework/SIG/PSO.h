@@ -406,7 +406,7 @@ struct SimpleComputePSO {
 
 	SimpleComputePSO(std::string name) :name(name)
 	{
-		Log::get() << "PSO: " << name << Log::endl;
+	//	Log::get() << "PSO: " << name << Log::endl;
 
 	}
 
@@ -443,7 +443,7 @@ struct  SimpleGraphicsPSO {
 
 	SimpleGraphicsPSO(std::string name) :name(name)
 	{
-		Log::get() << "PSO: " << name << Log::endl;
+		//Log::get() << "PSO: " << name << Log::endl;
 		ds = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
 		conservative = false;
 		depth_write = true;
@@ -512,7 +512,8 @@ name() \
 {\
 	PSOBase::shuffle_pairs<name>([&](Keys& key)\
 		{\
-			psos[key] = init_pso(key).create();\
+			auto pso = init_pso(key);\
+			psos[key] = pso.create(); \
 		}, __VA_ARGS__);\
 }
 
@@ -524,10 +525,11 @@ static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
 PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {return psos[key.GetKey()];}; \
 name() \
-{\
+{ \
 	PSOBase::shuffle_pairs<name>([&](Keys& key)\
 		{\
-			psos[key] = init_pso(key).create();\
+			auto pso = init_pso(key);\
+			psos[key] = pso.create();\
 		}, __VA_ARGS__);\
 }
 
@@ -559,7 +561,6 @@ protected:
 	{
 		typename T::KeyPairType keys;
 		gen_pairs([f](auto k) {
-
 			auto key = k.GetKey();
 			f(key);
 			}, keys, t, args...);
@@ -570,10 +571,19 @@ protected:
 	static void shuffle_pairs(const F& f)
 	{
 		typename P::Keys keys;
-
 		f(keys);
 	}
 
+public:
+	template <class T>
+	static auto create(ptr& target)
+	{
+		return create_task([&]()
+		{
+				PROFILE(convert(typeid(T).name()));
+				target = std::make_shared<T>();
+		});
+	}
 };
 
 class PSOHolder : public Singleton<PSOHolder>

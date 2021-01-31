@@ -325,15 +325,14 @@ namespace DX12
 		void register_shader(T shader)
 		{
 			if (shader)
-				shader->pipelines.insert(this);
+				shader->on_register(this);
 		}
 
 		template<class T>
 		void unregister_shader(T shader)
 		{
-			// TODO: sometimes HANG here
 			if (shader)
-				shader->pipelines.erase(this);
+				shader->on_unregister(this);
 		}
 
 

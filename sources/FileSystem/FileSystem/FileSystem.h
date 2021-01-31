@@ -35,7 +35,7 @@ struct file
 	std::shared_ptr<istream> get_new_stream()
 	{
 		std::filesystem::path full_path(std::filesystem::current_path());
-	Log::get()<< "Current path is : " << full_path.generic_string() << Log::endl;
+		Log::get() << "Current path is : " << full_path.generic_string() << Log::endl;
 
 		return provider->create_stream(file_name);
 	}
@@ -62,7 +62,7 @@ public:
 	}
 
 
-//	virtual file::ptr get_file(std::wstring);
+	//	virtual file::ptr get_file(std::wstring);
 	virtual file::ptr get_file(std::filesystem::path);
 	virtual bool save_data(std::filesystem::path file_name, std::string data);
 
@@ -130,7 +130,7 @@ class resource_manager_base : public Singleton<resource_manager_base<_resource, 
 	std::shared_ptr<_resource> get_resource(const _header& h, Args... args)
 	{
 		m.lock();
-	//	bool first = resources.find(h) == resources.end();
+		//	bool first = resources.find(h) == resources.end();
 		auto& resource = resources[h];
 		// std::shared_ptr<_resource> resource = resource_weak.lock();
 
@@ -140,7 +140,7 @@ class resource_manager_base : public Singleton<resource_manager_base<_resource, 
 		{
 			std::promise<std::shared_ptr<_resource>> p;
 			resource = p.get_future().share();
-
+			m.unlock();
 
 			Logger::get() << Log::LEVEL_DEBUG << " creating new resource " << typeid(_resource).name() << " with header " << NP(typeid(_header).name(), h) << Log::endl;
 
@@ -148,8 +148,8 @@ class resource_manager_base : public Singleton<resource_manager_base<_resource, 
 			Logger::get() << Log::LEVEL_DEBUG << typeid(_resource).name() << " created" << Log::endl;
 			//   resource_weak = resource;     
 		}
-
-		m.unlock();
+		else
+			m.unlock();
 
 
 		return resource.get();
@@ -243,9 +243,9 @@ public:
 			load_succeded(result, header, file_depends);
 
 			if constexpr (CanReload<_resource>)
-		   *((_resource*)this) = *result;
+				*((_resource*)this) = *result;
 
-		//	swap(*static_cast<_resource*>(this), *result);
+			//	swap(*static_cast<_resource*>(this), *result);
 			Logger::get() << Log::LEVEL_DEBUG << "reload is good with header " << NP(typeid(_header).name(), header) << Log::endl;
 		}
 
@@ -268,7 +268,9 @@ protected:
 		std::shared_ptr<file> file = FileSystem::get().get_file(L"cache\\" + header_hash + L".bin");
 
 		if (!file)
+		{
 			result = load_from_native(header);
+		}
 		else
 		{
 			auto stream = Serializer::get_stream(file->load_all());
@@ -278,7 +280,9 @@ protected:
 			stream >> file_depends;
 
 			if (file_depends.need_update())
+			{
 				result = load_from_native(h);
+			}
 			else
 			{
 				result.reset(new _resource());

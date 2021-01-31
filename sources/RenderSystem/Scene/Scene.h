@@ -126,6 +126,7 @@ public:
 
         return res;
     }
+	
     void update(FrameResources& frame)
     {
         mats.clear();

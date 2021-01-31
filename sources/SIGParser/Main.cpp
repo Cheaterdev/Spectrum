@@ -931,18 +931,24 @@ void generate_include_list(const Parsed& parsed)
 		stream << "{" << std::endl;
 		{
 			stream.push();
-
+			stream << " std::vector<task<void>> tasks;" << std::endl;
 			for (auto& l : parsed.compute_pso)
 			{
-			//	stream << "pso[static_cast<int>(PSO::" << l.name << ")] = AutoGenPSO<Autogen::" << l.name << ">().create_pso(PSO::" << l.name << ", \"" << l.name << "\");" << std::endl;
-				stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
+
+				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
+
+				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(pso[PSO::" << l.name << "]));" << std::endl;
+
 			}
 			for (auto& l : parsed.graphics_pso)
 			{
-				//	stream << "pso[static_cast<int>(PSO::" << l.name << ")] = AutoGenPSO<Autogen::" << l.name << ">().create_pso(PSO::" << l.name << ", \"" << l.name << "\");" << std::endl;
-				stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
+				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
+
+				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(pso[PSO::" << l.name << "]));" << std::endl;
 			}
 
+
+			stream << " when_all(begin(tasks), end(tasks)).wait();" << std::endl;
 			stream.pop();
 		}
 

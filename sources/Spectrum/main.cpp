@@ -1602,7 +1602,8 @@ protected:
 #endif
 		init_signatures();
 
-		PSOHolder::create();
+	
+	
 //		init_pso();
 
 
@@ -1611,10 +1612,10 @@ protected:
 		
 	//	auto ppp = GetPSO<Lighting>(Lighting::SecondBounce | Lighting::Count(3) | Lighting::Smth(222));
 
-
+		PSOHolder::create();
 		//	main_window = std::make_shared<WindowRender>();
 		main_window = std::make_shared<FrameGraphRender>();
-
+	
 
 		create_task([this]() {
 
