@@ -21,6 +21,11 @@ enum class PSO: int
 	VoxelCopy,
 	VoxelZero,
 	VoxelVisibility,
+	VoxelIndirectFilter,
+	VoxelIndirectLow,
+	DenoiserHistoryFix,
+	FrameClassification,
+	FrameClassificationInitDispatch,
 	FontRender,
 	RenderBoxes,
 	RenderToDS,
@@ -48,13 +53,12 @@ enum class PSO: int
 	CanvasBack,
 	CanvasLines,
 	VoxelReflectionLow,
-	VoxelIndirectFilter,
 	VoxelReflectionHi,
 	VoxelReflectionUpsample,
 	VoxelIndirectHi,
-	VoxelIndirectLow,
 	VoxelIndirectUpsample,
 	VoxelDebug,
+	DenoiserDownsample,
 	TOTAL
 	, GENERATE_OPS
 };

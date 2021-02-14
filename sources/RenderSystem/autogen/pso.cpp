@@ -14,6 +14,11 @@ void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelCopy>(pso[PSO::VoxelCopy]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelZero>(pso[PSO::VoxelZero]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelVisibility>(pso[PSO::VoxelVisibility]));
+	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectFilter>(pso[PSO::VoxelIndirectFilter]));
+	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectLow>(pso[PSO::VoxelIndirectLow]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserHistoryFix>(pso[PSO::DenoiserHistoryFix]));
+	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(pso[PSO::FrameClassification]));
+	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(pso[PSO::FrameClassificationInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::FontRender>(pso[PSO::FontRender]));
 	tasks.emplace_back(PSOBase::create<PSOS::RenderBoxes>(pso[PSO::RenderBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::RenderToDS>(pso[PSO::RenderToDS]));
@@ -41,12 +46,11 @@ void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasBack>(pso[PSO::CanvasBack]));
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasLines>(pso[PSO::CanvasLines]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionLow>(pso[PSO::VoxelReflectionLow]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectFilter>(pso[PSO::VoxelIndirectFilter]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionHi>(pso[PSO::VoxelReflectionHi]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionUpsample>(pso[PSO::VoxelReflectionUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectHi>(pso[PSO::VoxelIndirectHi]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectLow>(pso[PSO::VoxelIndirectLow]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectUpsample>(pso[PSO::VoxelIndirectUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDebug>(pso[PSO::VoxelDebug]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(pso[PSO::DenoiserDownsample]));
 	 when_all(begin(tasks), end(tasks)).wait();
 }

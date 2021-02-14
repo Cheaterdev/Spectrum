@@ -4,7 +4,8 @@ namespace Slots {
 	struct VoxelBlur:public DataHolder<Table::VoxelBlur,DefaultLayout::Instance2>
 	{
 		SRV srv;
-		VoxelBlur(): DataHolder(srv){}
-		VoxelBlur(const VoxelBlur&other): DataHolder(srv){srv = other.srv;}
+		UAV uav;
+		VoxelBlur(): DataHolder(srv,uav){}
+		VoxelBlur(const VoxelBlur&other): DataHolder(srv,uav){srv = other.srv;uav = other.uav;}
 	};
 }

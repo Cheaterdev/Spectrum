@@ -1,8 +1,11 @@
 #define M_PI 3.141592653589793238462643383279f
 struct quad_output
 {
-float4 pos : SV_POSITION;
-float2 tc: TEXCOORD0;
+    float4 pos : SV_POSITION;
+    float4 mulColor:TEXCOORD0;
+    float4 addColor:TEXCOORD1;
+    float2 tc: TEXCOORD2;
+    float texture_offset : TEXCOORD3;
 };
 
 #ifdef BUILD_FUNC_PS

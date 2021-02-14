@@ -17,7 +17,7 @@ struct DefaultLayout: public FrameLayout
 		static const unsigned int ID = 4;
 		static const unsigned int CB = 3;
 		static const unsigned int CB_ID = 9;
-		static const unsigned int SRV = 7;
+		static const unsigned int SRV = 10;
 		static const unsigned int SRV_ID = 10;
 		static const unsigned int UAV = 8;
 		static const unsigned int UAV_ID = 11;
@@ -47,6 +47,6 @@ struct DefaultLayout: public FrameLayout
 		static const unsigned int CB_ID = 17;
 	};
 	template<class Processor> static void for_each(Processor& processor) {
-		processor.process<CameraData,SceneData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({Render::Samplers::SamplerLinearWrapDesc,Render::Samplers::SamplerPointClampDesc,Render::Samplers::SamplerLinearClampDesc,Render::Samplers::SamplerAnisoBorderDesc});
+		processor.process<CameraData,SceneData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({Render::Samplers::SamplerLinearWrapDesc,Render::Samplers::SamplerPointClampDesc,Render::Samplers::SamplerLinearClampDesc,Render::Samplers::SamplerAnisoBorderDesc,Render::Samplers::SamplerPointBorderDesc});
 	}
 };

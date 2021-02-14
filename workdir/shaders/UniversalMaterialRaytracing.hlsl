@@ -107,28 +107,20 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, t.lod);
 
 
-
+	
 	float3 lightDir = frame.GetSunDir();
 	RayPayload payload2 = payload.propagate();
 
 	float shadow = 1;
-	if (payload2.recursion < 5)
+	if (payload2.recursion <= 1)
 	{
 
-	/*	{
-			RayDesc ray;
-			ray.Origin = t.v.pos;
-			ray.Direction = normalize(refl);
-			ray.TMin = 0.01;
-			ray.TMax = 1000.0;
-			TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload2);
-		}
-		*/
+
 		float hit_rate = 0;
 		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
 		for (int i = 0; i < samples; i++)
 		{
-			float time = frame.GetTime().y + i;
+			float time = 0;// frame.GetTime().y + i;
 			float sini = sin(time * 220 + float(t.v.tc.x));
 			float cosi = cos(time * 220 + float(t.v.tc.y));
 			float rand = rnd(float2(sini, cosi));
@@ -138,7 +130,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 			float rsin = sin(6.14 * rand);
 			float rand2 = rnd(float2(cosi, sini));
 
-			float tt = 0.1*pow(rand2,1.0/3.0);
+			float tt = 0;// 0.1 * pow(rand2, 1.0 / 3.0);
 
 			float3 right = rsin * tt * normalize(cross(lightDir, float3(0, 1, 0.1)));
 			float3 tangent = rcos * tt * normalize(cross(right, lightDir));
@@ -162,7 +154,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 		}
 		shadow = 1.0 - hit_rate / samples;
 	}
-
+	/*
 #ifdef REFRACTION
 
 	if (payload2.recursion < 5)
@@ -207,8 +199,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	float fresnel = calc_fresnel(roughness, t.v.normal, WorldRayDirection());
 
 
-	float3 reflected = payload2.color.xyz;
-	payload.color = shadow;// float4(lerp(my_color, reflected, fresnel), 1);
+	float3 reflected = payload2.color.xyz;*/
+	payload.color = float4(shadow* color.xyz,1);// float4(lerp(my_color, reflected, fresnel), 1);
 
 	payload.dist = RayTCurrent();
 }

@@ -389,7 +389,7 @@ bool MeshAssetInstance::update_transforms()
 {
 	bool res = scene_object::update_transforms();
 
-	if (res)
+	if (res|| need_update_mats)
 	{
 
 //		node_buffer.data().clear();
@@ -407,13 +407,15 @@ bool MeshAssetInstance::update_transforms()
 		if (!info.primitive_global)
 			info.primitive_global = std::make_shared<AABB>();
 
-
-		mat4x4 mat = nodes[index].asset_node->mesh_matrix*global_transform;
-		info.primitive_global->apply_transform(p, mat);
+		mat4x4 prev_mat = info.global_mat;
+		info.global_mat = nodes[index].asset_node->mesh_matrix*global_transform;
+		info.primitive_global->apply_transform(p, info.global_mat);
 
 		auto &my_node = gpu_nodes[info.mesh_info.GetNode_offset() - nodes_handle.get_offset()];
-		my_node.node_global_matrix = mat;
-		my_node.node_inverse_matrix = mat;
+		my_node.node_global_matrix = info.global_mat;
+		my_node.node_global_matrix_prev = prev_mat;
+
+		my_node.node_inverse_matrix = info.global_mat;
 		my_node.node_inverse_matrix.inverse();
 
 
@@ -421,7 +423,7 @@ bool MeshAssetInstance::update_transforms()
 		my_node.aabb.max = info.primitive->get_max();
 
 
-	
+		need_update_mats = prev_mat != info.global_mat;
 	
 	}
 
@@ -579,9 +581,11 @@ nodes.emplace_back(node);
 
 			info.primitive_global = std::make_shared<AABB>();
 
-			mat4x4 mat = nodes.back().asset_node->mesh_matrix * global_transform;
 
-			info.primitive_global->apply_transform(info.primitive, mat);
+		
+			info.global_mat = nodes.back().asset_node->mesh_matrix * global_transform;
+
+			info.primitive_global->apply_transform(info.primitive, info.global_mat);
 
 
 		//	node_buffer[node->index] = mat;
@@ -591,11 +595,12 @@ nodes.emplace_back(node);
 			info.mesh_info.GetVertex_offset() = UINT(mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset) ;
 
 			auto &my_node = gpu_nodes[UINT(info.mesh_info.GetNode_offset() - nodes_handle.get_offset())];
-			my_node.node_global_matrix = mat;
-			my_node.node_inverse_matrix = mat;
+			my_node.node_global_matrix = info.global_mat;
+			my_node.node_inverse_matrix = info.global_mat;
 			my_node.node_inverse_matrix.inverse();
 
-
+			my_node.node_global_matrix_prev = info.global_mat;
+			
 			my_node.aabb.min = info.primitive->get_min();
 			my_node.aabb.max = info.primitive->get_max();
 

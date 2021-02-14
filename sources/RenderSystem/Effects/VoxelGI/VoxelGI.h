@@ -200,7 +200,6 @@ private:
 
 	VisibilityBufferUniversal::ptr visibility;
 	
-	IndirectCommand dispatch_command;
 
 	TileDynamicGenerator dynamic_generator_voxelizing;
 	TileDynamicGenerator dynamic_generator_lighted;
@@ -232,8 +231,16 @@ private:
 		Events::prop<ivec2> size;
 		EyeData();
 	};
+
+	Render::StructuredBuffer<DispatchArguments>::ptr dispatch_hi_buffer;
+	Render::StructuredBuffer<DispatchArguments>::ptr dispatch_low_buffer;
+
+	IndirectCommand dispatch_command;
+
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
+	Render::StructuredBuffer<uint2>::ptr hi;
+	Render::StructuredBuffer<uint2>::ptr low;
 
 	ivec3 lighed_to_albedo_coeff;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;

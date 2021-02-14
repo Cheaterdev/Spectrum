@@ -57,8 +57,8 @@ float rnd(float2 uv)
 [shader("raygeneration")]
 void MyRaygenShader()
 {
-   float3 rayDir = float3(0,1,0);
-    float3 origin = float3(0, 1, 0);;
+ //  float3 rayDir = float3(0,1,0);
+ //   float3 origin = float3(0, 1, 0);;
     
 	float2 tc = float2(DispatchRaysIndex().xy)/DispatchRaysDimensions().xy;
 
@@ -66,8 +66,9 @@ void MyRaygenShader()
 
     const Raytracing raytracing = CreateRaytracing();
      const RaytracingRays rays = CreateRaytracingRays();
-
-      const RWTexture2D<float4> output = rays.GetOutput();
+	 const RWTexture2D<float4> output = rays.GetOutput();
+	 
+  
     // Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
   //  GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), origin, rayDir);
 	
@@ -77,70 +78,97 @@ void MyRaygenShader()
 
 	float3 normal = normalize(rays.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
 
-	float3 lightDir = frame.GetSunDir();
+	//float3 lightDir = frame.GetSunDir();
 
-float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
+//float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
 
-//rayDir =  normalize(float3(2,1,1.3));//reflect(view, normal);
-
-origin = pos;
-
-       
-
-		float shadow = 1;
-		float hit_rate = 0;
-		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
-
-		int real_samples = 0;
-		for (int i = 0; i < samples; i++)
-		{
-			float time = frame.GetTime().y + i;
-			float sini = sin(time * 220 + float(tc.x));
-			float cosi = cos(time * 220 + float(tc.y));
-			float rand = rnd(float2(sini, cosi));
+//float3 rayDir = reflect(view, normal);
 
 
-			float rcos = cos(6.14 * rand);
-			float rsin = sin(6.14 * rand);
-			float rand2 = rnd(float2(cosi, sini));
+float time = frame.GetTime().y;// +i;
+float sini = sin(time * 220 + float(tc.x));
+float cosi = cos(time * 220 + float(tc.y));
+float rand = rnd(float2(sini, cosi));
 
-			float tt = 0.1 * pow(rand2, 1.0 / 3.0);
 
-			float3 right = rsin * tt * normalize(cross(lightDir, float3(0, 1, 0.1)));
-			float3 tangent = rcos * tt * normalize(cross(right, lightDir));
+float rcos = cos(6.14 * rand);
+float rsin = sin(6.14 * rand);
+float rand2 = rnd(float2(cosi, sini));
 
-			float3 dir = normalize(lightDir + right + tangent);
+float tt = 4;// 0.1 * pow(rand2, 1.0 / 3.0);
 
-			if (dot(dir, normal) < 0.1) continue;
-			ShadowPayload payload_shadow = { false };
+float3 right = rsin * tt * normalize(cross(normal, float3(0, 1, 0.1)));
+float3 tangent = rcos * tt * normalize(cross(right, normal));
+
+float3 dir = normalize(normal + right + tangent);
+
+	
+
+RayPayload payload_shadow;
+payload_shadow.color = 0;
+payload_shadow.recursion = 0;
+payload_shadow.dist = 0;
+payload_shadow.cone.angle = 0;
+payload_shadow.cone.width = 0;
 
 			RayDesc ray;
 			ray.Origin = pos;
 			ray.Direction = dir;
-			ray.TMin = 0.03;
+			ray.TMin = 0.25;
 			ray.TMax = 1000.0;
-			TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 1, 0, 1, ray, payload_shadow);
-
-			if (payload_shadow.hit)
-				hit_rate += 1.0f;
-
-			real_samples++;
-
-		}
-		if(real_samples>0)
-		shadow = 1.0 - hit_rate / real_samples;
-		shadow *= saturate(dot(lightDir, normal));
-
-		shadow = pow(shadow, 1.0 / 2.2);
-        output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy], shadow,0.11);
+			TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0,  0, 0, 0, ray, payload_shadow);
+			
+			output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy],payload_shadow.color,0.05);
 
 }
 
 
+
+/*
+[shader("raygeneration")]
+void MyRaygenShader()
+{
+	  float3 rayDir = float3(0,1,0);
+	   float3 origin = float3(0, 1, 0);;
+
+	float2 tc = float2(DispatchRaysIndex().xy) / DispatchRaysDimensions().xy;
+
+	const FrameInfo frame = CreateFrameInfo();
+
+	const Raytracing raytracing = CreateRaytracing();
+	const RaytracingRays rays = CreateRaytracingRays();
+	const RWTexture2D<float4> output = rays.GetOutput();
+
+
+	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
+    GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), origin, rayDir);
+
+	
+
+
+	RayPayload payload_shadow;
+	payload_shadow.color = 0;
+	payload_shadow.recursion = 0;
+	payload_shadow.dist = 0;
+	payload_shadow.cone.angle = 0;
+	payload_shadow.cone.width = 0;
+
+	RayDesc ray;
+	ray.Origin = origin;
+	ray.Direction = rayDir;
+	ray.TMin = 0.03;
+	ray.TMax = 1000.0;
+	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_shadow);
+
+	output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy], payload_shadow.color, 0.1);
+
+}
+*/
+
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {
-    payload.color = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), payload.cone.angle*8);
+	payload.color = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 3);
 	payload.dist = 10000;
 }
 

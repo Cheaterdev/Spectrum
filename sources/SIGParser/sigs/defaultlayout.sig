@@ -8,6 +8,7 @@ layout FrameLayout {
 	Sampler pointClampSampler = SamplerPointClampDesc;
 	Sampler linearClampSampler = SamplerLinearClampDesc;
 	Sampler anisoBordeSampler = SamplerAnisoBorderDesc;
+	Sampler pointBorderSampler = SamplerPointBorderDesc;
 
 }
 

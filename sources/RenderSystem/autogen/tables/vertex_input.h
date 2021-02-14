@@ -8,11 +8,13 @@ namespace Table
 		{
 			float2 pos;
 			float2 tc;
-			float4 color;
+			float4 mulColor;
+			float4 addColor;
 		} &cb;
 		float2& GetPos() { return cb.pos; }
 		float2& GetTc() { return cb.tc; }
-		float4& GetColor() { return cb.color; }
+		float4& GetMulColor() { return cb.mulColor; }
+		float4& GetAddColor() { return cb.addColor; }
 		vertex_input(CB&cb) :cb(cb){}
 	};
 	#pragma pack(pop)

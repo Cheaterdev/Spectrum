@@ -44,15 +44,34 @@ struct Voxelization
 struct VoxelScreen
 {
 	GBuffer gbuffer;
-	
+
 	Texture3D<float4> voxels;
 	TextureCube<float4> tex_cube;
+
+	Texture2D<float4> prev_gi;
+
+	Texture2D<float> prev_frames;
+	Texture2D<float> prev_depth;
+}
+
+[Bind = DefaultLayout::Instance2]
+struct VoxelOutput
+{
+	RWTexture2D<float4> noise;
+	RWTexture2D<float> frames;
 }
 
 [Bind = DefaultLayout::Instance2]
 struct VoxelBlur
 {
-	Texture2D<float4> tex_color;
+	Texture2D<float4> noisy_output;
+	Texture2D<float4> prev_result;
+
+	RWTexture2D<float4> screen_result;
+	RWTexture2D<float4> gi_result;
+
+
+	TilingParams tiling;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -188,23 +207,22 @@ GraphicsPSO VoxelReflectionLow
 	pixel = voxel_screen_reflection;
 
 	enable_depth = false;
+
 }
 
-GraphicsPSO VoxelIndirectFilter
+ComputePSO VoxelIndirectFilter
 {
 	root = DefaultLayout;
 
-	[EntryPoint = VS]
-	vertex = voxel_screen;
-
 	[EntryPoint = PS]
-	pixel = voxel_screen_blur;
+	compute = voxel_screen_blur;
 
-	enable_depth = false;
+	[rename = ENABLE_BLUR]
+	[CS, nullable]
+	define Blur;
 
-	
-	rtv = { DXGI_FORMAT_R11G11B10_FLOAT};
 }
+
 GraphicsPSO VoxelReflectionHi
 {
 	root = DefaultLayout;
@@ -275,19 +293,12 @@ GraphicsPSO VoxelIndirectHi
 }
 
 
-GraphicsPSO VoxelIndirectLow
+ComputePSO VoxelIndirectLow
 {
 	root = DefaultLayout;
 
-	[EntryPoint = VS]
-	vertex = voxel_screen;
-
-	[EntryPoint = PS_Low]
-	pixel = voxel_screen;
-
-	enable_depth = false;
-	
-	rtv = { DXGI_FORMAT_R11G11B10_FLOAT};
+	[EntryPoint = CS]
+	compute = voxel_screen;
 }
 
 
@@ -328,4 +339,106 @@ GraphicsPSO VoxelDebug
 
 	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
 	enable_depth = false;
+}
+
+
+
+[Bind = DefaultLayout::Instance2]
+struct DenoiserDownsample
+{
+	Texture2D<float4> color;
+	Texture2D<float> depth;
+}
+
+
+GraphicsPSO DenoiserDownsample
+{
+	root = DefaultLayout;
+
+	[EntryPoint = VS]
+	vertex = DenoiserDownsample;
+
+	[EntryPoint = PS]
+	pixel = DenoiserDownsample;
+
+	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16_FLOAT };
+}
+
+
+struct TilingParams
+{
+	StructuredBuffer<uint2> tiles;
+
+	%{
+		
+uint2 get_pixel_pos(uint3 dispatchID)
+{
+	uint tile_index = dispatchID.x / 32;
+	uint2 tile_pos = srv.tiles[tile_index] * 32;
+
+	uint2 tile_local_pos = dispatchID.xy - int3(tile_index * 32, 0, 0);
+	uint2 index = tile_pos + tile_local_pos;
+	return index;
+}
+		
+	}%
+}
+
+[Bind = DefaultLayout::Instance2]
+struct DenoiserHistoryFix
+{
+	Texture2D<float4> color;
+	Texture2D<float> frames;
+
+	RWTexture2D<float4> target;
+
+	TilingParams tiling;
+}
+
+
+ComputePSO DenoiserHistoryFix
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = DenoiserHistoryFix;
+}
+
+
+[Bind = DefaultLayout::Instance2]
+struct FrameClassification
+{
+
+	Texture2D<float> frames;
+
+	AppendStructuredBuffer<uint2> hi;
+	AppendStructuredBuffer<uint2> low;
+}
+
+ComputePSO FrameClassification
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = FrameClassification;
+}
+
+[Bind = DefaultLayout::Instance2]
+struct FrameClassificationInitDispatch
+{
+	StructuredBuffer<uint> hi_counter;	
+	StructuredBuffer<uint> low_counter;	
+
+	RWStructuredBuffer<DispatchArguments> hi_dispatch_data;
+	RWStructuredBuffer<DispatchArguments> low_dispatch_data;
+
+}
+
+
+ComputePSO FrameClassificationInitDispatch
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = FrameClassificationInitDispatch;
 }

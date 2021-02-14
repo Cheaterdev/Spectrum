@@ -152,6 +152,9 @@ public:
 	std::string debug_view;
 	triangle_drawer()
 	{
+		texture.mul_color = { 1,1,1,0 };
+		texture.add_color = { 0,0,0,1 };
+
 		texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
 		if(Device::get().is_rtx_supported()) BuildAccelerationStructures();

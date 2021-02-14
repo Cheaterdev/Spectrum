@@ -267,7 +267,10 @@ namespace DX12
 		list->OMSetRenderTargets(c, &rt.cpu, true, h.is_valid() ? &h.cpu : nullptr);
 	}
 
-
+void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
+	{
+		set_rtv(place_rtv(rt), h);	
+	}
 	void GraphicsContext::flush_binds(bool force)
 	{
 		base.flush_heaps(force);

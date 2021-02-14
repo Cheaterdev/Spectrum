@@ -1126,10 +1126,11 @@ namespace DX12
 		void set_viewports(std::vector<Viewport> viewports);
 
 
+		void set_rtv(std::initializer_list<Handle> rt, Handle h);
 
 		void set_rtv(const HandleTable&, Handle);
 		void set_rtv(int c, Handle rt, Handle h);
-
+	
 		void set_rtv(const HandleTableLight&, Handle);
 
 		void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
@@ -1174,13 +1175,29 @@ namespace DX12
 			set_rtvs_internal(t, h);
 			set_rtvs_internal(t + 1, list...);
 		}
-
+		template<class T, size_t N>
+		constexpr size_t size(T(&)[N]) { return N; }
+		
 		template<class ...Handles>
-		void set_rtvs(const Handle& h, Handles... list)
+		void set_rtvs(const Handle& h, Handles... rtvlist)
 		{
-			D3D12_CPU_DESCRIPTOR_HANDLE handles[sizeof...(Handles)];
-			set_rtvs_internal(handles, list...);
-			list->OMSetRenderTargets(sizeof...(Handles), handles, false, h.is_valid() ? &h.cpu : nullptr);
+
+			auto f = [&](Handle h) {
+				get_base().transition_rtv(h.resource_info);
+			};
+		
+			(f(std::forward<Handles>(rtvlist)), ...);
+
+			
+			if (h.is_valid())
+				get_base().transition_dsv(h.resource_info);
+
+			get_base().flush_transitions();
+
+			
+			
+			CD3DX12_CPU_DESCRIPTOR_HANDLE ar[] = { (rtvlist.cpu)... };
+			list->OMSetRenderTargets(size(ar), ar, false, h.is_valid() ? &h.cpu : nullptr);
 		}
 
 

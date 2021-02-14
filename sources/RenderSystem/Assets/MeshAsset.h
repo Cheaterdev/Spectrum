@@ -259,6 +259,8 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
         size_t nodes_count;
         size_t rendering_count;
+
+        bool need_update_mats = false;
     public:
 		MESH_TYPE type= MESH_TYPE::STATIC;
 		MeshAsset::ref mesh_asset;
@@ -287,7 +289,8 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
             MaterialAsset* material;
 
             UINT node_id;
-
+            mat4x4 global_mat;
+            
             //compiled
 			Slots::MeshInfo::Compiled compiled_mesh_info;
                 

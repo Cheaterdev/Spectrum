@@ -258,7 +258,8 @@ namespace GUI
 		{
 			float2 t = 2 * _vertexes[i].pos / c.window_size - float2(1, 1);
 			_vertexes[i].pos = { t.x, -t.y };
-			_vertexes[i].color = c.color;
+			_vertexes[i].mulColor = item.mul_color;
+			_vertexes[i].addColor = item.add_color;
 		}
 
 		if (textures_handles.size() == 512)

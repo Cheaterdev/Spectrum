@@ -48,8 +48,8 @@ namespace Render
             float delta_time;
             vec2 window_size;
             float scale = 1;
-            float4 color = float4(1, 1, 1, 1);
-			
+
+
 			std::function<void(Render::context &c)> commit_scissor()
 			{
 				scissors = ui_clipping;

@@ -35,7 +35,7 @@ struct file
 	std::shared_ptr<istream> get_new_stream()
 	{
 		std::filesystem::path full_path(std::filesystem::current_path());
-		Log::get() << "Current path is : " << full_path.generic_string() << Log::endl;
+	//	Log::get() << "Current path is : " << full_path.generic_string() << Log::endl;
 
 		return provider->create_stream(file_name);
 	}

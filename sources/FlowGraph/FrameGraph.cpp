@@ -774,6 +774,11 @@ void TaskBuilder::create_resources()
 				flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 			}
 
+			if (check(info->flags & ResourceFlags::Counted))
+			{
+				//info->heap_type = Render::HeapType::READBACK;
+			}
+			
 			info->d3ddesc = CD3DX12_RESOURCE_DESC::Buffer(desc.size, flags);
 		}
 /*

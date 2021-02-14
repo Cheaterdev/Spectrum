@@ -2,9 +2,10 @@
 struct quad_output
 {
 float4 pos : SV_POSITION;
-float2 tc: TEXCOORD0;
-float4 color:COLOR;
-float texture_offset : TEXCOORD1;
+float4 mulColor:TEXCOORD0;
+float4 addColor:TEXCOORD1;
+float2 tc: TEXCOORD2;
+float texture_offset : TEXCOORD3;
 };
 
 
@@ -17,10 +18,12 @@ quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 
 	vertex_input input = vb[16 * instance + index];
     quad_output Output;
-    Output.pos = float4(input.GetPos(), 0.99999, 1);
+    Output.pos = float4(input.GetPos(), 0.999, 1);
     Output.tc = input.GetTc();
 	Output.texture_offset = instance;// texture_offset[instance];
-    Output.color = input.GetColor();
+    Output.mulColor = input.GetMulColor();
+    Output.addColor = input.GetAddColor();
+
     return Output;
 }
 #endif
@@ -28,7 +31,7 @@ quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 #ifdef BUILD_FUNC_PS
 float4 PS(quad_output i) : SV_TARGET0
 {
-    return  i.color*GetNinePatch().GetTextures(i.texture_offset).Sample(anisoBordeSampler , i.tc);
+    return  i.addColor + i.mulColor*GetNinePatch().GetTextures(i.texture_offset).Sample(anisoBordeSampler , i.tc);
 }
 #endif
 

@@ -17,6 +17,7 @@ struct AABB
 struct node_data
 {
     float4x4 node_global_matrix;
+	float4x4 node_global_matrix_prev;
     float4x4 node_inverse_matrix;
     AABB aabb;
 }

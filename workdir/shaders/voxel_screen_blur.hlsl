@@ -11,7 +11,11 @@ static const Camera prevCamera = GetFrameInfo().GetPrevCamera();
 static const VoxelInfo voxel_info = GetVoxelInfo();
 static const GBuffer gbuffer = GetVoxelScreen().GetGbuffer();
 
-static const Texture2D<float4> tex_color = GetVoxelBlur().GetTex_color();
+static const Texture2D<float4> tex_color = GetVoxelBlur().GetNoisy_output();
+static const Texture2D<float4> tex_frames = GetVoxelBlur().GetPrev_result();
+
+static const RWTexture2D<float4> tex_result = GetVoxelBlur().GetScreen_result();
+static const RWTexture2D<float4> tex_gi_result = GetVoxelBlur().GetGi_result();
 
 struct quad_output
 {
@@ -20,51 +24,58 @@ struct quad_output
 };
 
 
-struct GI_RESULT
-{
-	//float4 screen: SV_Target0;
-	float4 gi: SV_Target0;
-};
-
-
-GI_RESULT PS(quad_output i) 
+[numthreads(8, 8, 1)]
+void  PS(uint3 groupID       : SV_GroupID,
+	uint3 dispatchID : SV_DispatchThreadID,
+	uint3 groupThreadID : SV_GroupThreadID,
+	uint  groupIndex : SV_GroupIndex)
 {
 
+	uint2 index = GetVoxelBlur().GetTiling().get_pixel_pos(dispatchID);
 
-	GI_RESULT result;
+
+	
 
 	float2 dims;
-	gbuffer.GetAlbedo().GetDimensions(dims.x, dims.y);
+	tex_color.GetDimensions(dims.x, dims.y);
 
-
+	float2 itc = float2(index + 0.5) / dims  ;
 //dims /= 2;
-int2 tc = i.tc*dims;
+int2 tc = index;
+float4 albedo = gbuffer.GetAlbedo()[tc];
+float4 res = tex_color.SampleLevel(pointClampSampler, itc, 0);
+float w = 1;
+float framesNorm = tex_frames.SampleLevel(pointClampSampler, itc, 0).x;
+
+#ifdef ENABLE_BLUR
+float3 normal = normalize(gbuffer.GetNormals()[tc].xyz * 2 - 1);
 
 float raw_z = gbuffer.GetDepth()[tc.xy];
 //if (raw_z >= 1) return ;
-float3 pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
-float3 normal = normalize(gbuffer.GetNormals()[tc].xyz * 2 - 1);
+float3 pos = depth_to_wpos(raw_z, itc, camera.GetInvViewProj());
 
-float dist = length(pos-camera.GetPosition())/100;
+float dist = length(pos - camera.GetPosition()) / 100;
 
-float4 res = tex_color.SampleLevel(pointClampSampler, i.tc, 0);
+	
+	int frames = 8* framesNorm;
 
-float w = 1;
-
+	
+	float blurRadiusScale = 1.0 / (1.0 + frames);// -1.0 / 8;
 #define R 1
-
-
+	
 [unroll] for(int x=-R;x<=R;x++)
 [unroll] for (int y = -R; y <= R; y++)
 {
-	float2 t_tc = i.tc + 1*float2(x, y) / dims;
+	float2 offset = 3*float2(x, y) * (blurRadiusScale);
+	
+	float2 t_tc = itc + offset / dims;
 
-	float t_raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, i.tc, 1, int2(x, y));
+	float t_raw_z = gbuffer.GetDepth().SampleLevel(pointBorderSampler, t_tc , 0);
 	float3 t_pos = depth_to_wpos(t_raw_z, t_tc, camera.GetInvViewProj());
-	float3 t_normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, i.tc, 1, int2(x, y)).xyz * 2 - 1);
+	float3 t_normal = normalize(gbuffer.GetNormals().SampleLevel(pointBorderSampler,t_tc, 0).xyz * 2 - 1);
 
 
-	float4 t_gi = tex_color.SampleLevel(pointClampSampler, i.tc, 0, int2(x,y));
+	float4 t_gi = tex_color.SampleLevel(pointClampSampler, t_tc, 0 );
 
 
 	float cur_w = saturate(1 - length(t_pos - pos) / dist);
@@ -77,9 +88,14 @@ float w = 1;
 
 }
 
+	
+#endif
 
-float4 cur_gi = res / w;
-result.gi = float4(cur_gi.xyz,1);
+float4 cur_gi = res/w;
 
-return result;
+//tex_gi_result[index] = float4(cur_gi.xyz, framesNorm);
+//tex_result[index] += float4(albedo.xyz * cur_gi.xyz, 1);
+tex_gi_result[index] =  float4(cur_gi.xyz, framesNorm);
+tex_result[index] += float4(albedo.xyz * cur_gi.xyz, 1);
+
 }

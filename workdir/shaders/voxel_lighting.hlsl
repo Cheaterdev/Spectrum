@@ -168,7 +168,7 @@ void CS(
 	float3 pos = index * voxel_size / dims + voxel_min + scaler * normals / m;
 
 	float shadow = saturate(dot(normals, dir)) * get_shadow(pos);
-	float3 lighting = 1 * albedo.xyz * gi.xyz + albedo.xyz * shadow;
+	float3 lighting = 1 * albedo.xyz * gi.xyz + 2*albedo.xyz * shadow;
 
 	output[index] = float4(lighting, 1);
 }

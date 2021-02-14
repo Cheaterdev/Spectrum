@@ -235,12 +235,16 @@ namespace GUI
         sizer tc;
 		bool tiled = false;
 
+        float4 mul_color;
+        float4 add_color;
 		Render::HandleTable srv;
         Texture()
         {
             margins = { 0, 0, 0, 0 };
             padding = { 0, 0, 0, 0 };
             tc = { 0, 0, 1, 1 };
+            mul_color = { 1,1,1,1 };
+            add_color = { 0,0,0,0 };
         }
 
         void operator=(const       Render::Texture::ptr& texture)

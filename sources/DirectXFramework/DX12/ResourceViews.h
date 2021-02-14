@@ -126,7 +126,7 @@ namespace DX12
 	class TextureView :public ResourceView
 	{
 		HandleTableLight hlsl;
-		//HandleTableLight rtv;
+		HandleTableLight rtv;
 	public:
 
 
@@ -139,6 +139,7 @@ namespace DX12
 		HLSL::TextureCube<> texture—ube;
 		HLSL::Texture2DArray<> texture2DArray;
 
+		Handle renderTarget;
 	public:
 		template<class F>
 		void init(F& frame)
@@ -170,15 +171,15 @@ namespace DX12
 
 				place_uav(hlsl[1]);
 			}
-			/*
+			
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) {
 
-				rtv = frame.rtv_cpu.place(1);
+				rtv = frame.get_cpu_heap(DescriptorHeapType::RTV).place(1);
 
 				renderTarget = rtv[0];
-				place_uav(renderTarget);
+				place_rtv(renderTarget);
 			}
-			*/
+			
 		}
 		TextureView() = default;
 

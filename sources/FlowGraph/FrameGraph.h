@@ -10,24 +10,25 @@ enum class ResourceType :int {
 
 enum class ResourceFlags :int {
 	None = 0,
-	PixelRead = 1,
-	ComputeRead = 2,
-	DSRead = 1024,
+	PixelRead = (1<<1),
+	ComputeRead = (1 << 2),
+	DSRead = (1 << 3),
 
-	UnorderedAccess = 4,
-	RenderTarget = 8,
-	DepthStencil = 16,
+	UnorderedAccess = (1 << 4),
+	RenderTarget = (1 << 5),
+	DepthStencil = (1 << 6),
 
 
-	GenCPU = 32,
-	ReadCPU = 64,
+	GenCPU = (1 << 7),
+	ReadCPU = (1 << 8),
 
 	Temporal = 0,
-	Static = 128,
-	Required = 256,
+	Static = (1 << 9),
+	Required = (1 << 10),
 
-	Cube = 512,
-	Changed = 1024
+	Cube = (1 << 11),
+	Counted = (1 << 12),
+	Changed = (1 << 13)
 
 	, GENERATE_OPS
 };

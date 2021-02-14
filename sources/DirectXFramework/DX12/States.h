@@ -120,28 +120,32 @@ namespace DX12
 		};
 
 
-		//mutable  SpinLock states_lock;
-
+	
 		mutable std::array<SubResourcesCPU, 128> cpu_state;
+
+		mutable  SpinLock states_lock;
+		mutable std::map<int, SubResourcesCPU> cpu_state_map;
 
 		SubResourcesCPU& get_state(int id) const
 		{
+			if(id<128)
 			return cpu_state[id];
-			/*
+			
+			
 			std::lock_guard<SpinLock> guard(states_lock);
 
-			auto it = cpu_state[id];
+			auto it = cpu_state_map.find(id);
 
-			if (it == cpu_state.end())
+			if (it == cpu_state_map.end())
 			{
-				auto & state = cpu_state[id];
+				auto & state = cpu_state_map[id];
 				state.subres.resize(gpu_state.subres.size());
 
 				return state;
 			}
 
 			return it->second;
-			*/
+			
 		}
 
 
