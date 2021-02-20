@@ -423,8 +423,8 @@ void stencil_renderer::generate(FrameGraph& graph)
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_pipeline(GetPSO<PSOS::DrawStencil>());
 
-					list.clear_uav(id_buffer.resource, id_buffer.get_uav_clear());
-					list.clear_uav(axis_id_buffer.resource , axis_id_buffer.get_uav_clear());
+					list.clear_uav(id_buffer.get_uav_clear());
+					list.clear_uav(axis_id_buffer.get_uav_clear());
 
 
 					{

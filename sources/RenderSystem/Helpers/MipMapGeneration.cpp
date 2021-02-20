@@ -204,11 +204,11 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 
 		list.set_rtv(0, Handle(), buffer.quality.get_dsv());
 
-		list.get_native_list()->OMSetStencilRef(1);
+		list.set_stencil_ref(1);
 		list.draw(4);
 
 		list.set_pipeline(GetPSO<PSOS::QualityToStencilREfl>());
-		list.get_native_list()->OMSetStencilRef(2);
+		list.set_stencil_ref(2);
 		list.draw(4);
 	}
 }

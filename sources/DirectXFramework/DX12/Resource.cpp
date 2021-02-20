@@ -218,6 +218,12 @@ namespace DX12
 		{
 			tracked_info->m_Resource->Unmap(0, nullptr);
 		}
+#ifdef DEV
+		std::lock_guard<std::mutex> g(m);
+
+		assert(lists.empty());
+#endif 
+
 	}
 
 }

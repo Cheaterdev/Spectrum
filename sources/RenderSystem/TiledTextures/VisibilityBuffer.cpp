@@ -69,7 +69,7 @@ std::future<visibility_update> VisibilityBuffer::update(CommandList::ptr& list)
 		});
 
 
-	list->clear_uav(buffer, buffer->texture_3d()->get_static_uav());
+	list->clear_uav(buffer->texture_3d()->get_static_uav());
 
 	return future;
 }

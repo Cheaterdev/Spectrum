@@ -53,9 +53,10 @@ namespace DX12
 			}
 
 		
-			list->get_native_list()->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
+			list->get_compute().build_ras(bottomLevelBuildDesc);
 			list->transition_uav(resource.get());
-
+			list->use_resource(resource.get());
+			list->use_resource(scratchInfo.get());
 			resources[0] = resource;
 
 		}
@@ -107,8 +108,10 @@ namespace DX12
 			}
 
 
+			list->use_resource(resource.get());
+			list->use_resource(scratchInfo.get());
 
-			list->get_native_list()->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
+			list->get_compute().build_ras(topLevelBuildDesc);
 			list->end();
 			list->execute_and_wait();
 			resources[0] = resource;
@@ -175,12 +178,9 @@ namespace DX12
 					topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_gpu_address();
 			}
 
+			
 
-
-
-		//	list->transition(cur.get(), ResourceState::UNORDERED_ACCESS);
-
-			list->get_native_list()->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
+			list->get_compute().build_ras(topLevelBuildDesc);
 			list->transition_uav(cur.get());
 			list->use_resource(scratchInfo.get());
 

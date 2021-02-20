@@ -304,7 +304,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 	if (clear_scene && all_scene_regen_counter)
 	{
 		PROFILE_GPU(L"clear");
-		list.clear_uav(albedo.tex_static, albedo.tex_static->texture_3d()->get_static_uav());
+		list.clear_uav(albedo.tex_static->texture_3d()->get_static_uav());
 	}
 	else
 	{
@@ -500,7 +500,15 @@ void VoxelGI::screen(FrameGraph& graph)
 	};
 
 	auto size = graph.frame_size;
+	int count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
 
+	if (!hi || hi->get_count() < count)
+	{
+		hi = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		low = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+
+	}
+	
 	graph.add_pass<Screen>("VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
 
 	
@@ -523,18 +531,11 @@ void VoxelGI::screen(FrameGraph& graph)
 
 			auto size = noisy_output.get_size();
 		
-			int count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
-
-			if (!hi || hi->get_count() < count)
-			{
-				hi = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-				low = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
-			}
+		
 			if (data.gi_filtered->is_new())
 			{
-				command_list->clear_uav(gi_filtered.resource, gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
-				command_list->clear_uav(noisy_output.resource, noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
+				command_list->clear_uav(gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
+				command_list->clear_uav(noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
 			}
 
 		
@@ -699,17 +700,6 @@ void VoxelGI::screen(FrameGraph& graph)
 				auto gi_filtered = _context.get_texture(data.gi_filtered);
 	
 				auto size = target_tex.get_size();
-
-				int count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
-
-				if (!hi || hi->get_count() < count)
-				{
-					hi = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-					low = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
-				}
-	
-
 
 				auto scene = graph.scene;
 				auto renderer = graph.renderer;
@@ -910,7 +900,7 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 				{
 					PROFILE_GPU(L"full");
-					context->list->get_native_list()->OMSetStencilRef(2);
+					graphics.set_stencil_ref(2);
 					graphics.set_pipeline(GetPSO<PSOS::VoxelReflectionHi>());
 					graphics.draw(4);
 				}
@@ -919,7 +909,7 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 				{
 					PROFILE_GPU(L"resize");
 
-					context->list->get_native_list()->OMSetStencilRef(0);
+					graphics.set_stencil_ref(0);
 					graphics.set_pipeline(GetPSO<PSOS::VoxelReflectionUpsample>());
 					graphics.draw(4);
 				}
@@ -1122,7 +1112,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 				{
 					if (GetAsyncKeyState('8') || i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
 					{
-						list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d()->rwTexture3D[i], vec4(0, 0, 0, 0));
+						list.clear_uav(tex_lighting.tex_result->texture_3d()->rwTexture3D[i], vec4(0, 0, 0, 0));
 						continue;
 					}
 

@@ -317,6 +317,8 @@ namespace DX12
 
 	protected:
 		ComPtr<ID3D12PipelineState> m_pipelineState;
+		ComPtr<ID3D12StateObject> m_StateObject;
+		
 		std::string cache;
 
 		virtual ~PipelineStateBase() {};

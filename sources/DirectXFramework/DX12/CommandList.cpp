@@ -63,7 +63,7 @@ namespace DX12
 			});
 
 		StructuredBuffer<Table::DebugStruct>* structured = static_cast<StructuredBuffer<Table::DebugStruct>*>(debug_buffer.get());
-		clear_uav(structured, structured->get_raw_uav());
+		clear_uav(structured->get_raw_uav());
 	}
 
 
@@ -89,8 +89,6 @@ namespace DX12
 
 		for (auto& e : heaps)
 			e = nullptr;
-		resource_update_counter.clear();
-
 	
 		Transitions::reset();
 		Eventer::begin(name, t);
@@ -220,24 +218,13 @@ namespace DX12
 		base.get_native_list()->SetDescriptorHeaps(b ? 2 : 1, heaps);
 	}
 
-	void  GraphicsContext::set(UINT i, const HandleTable& table)
-	{
-		base.get_native_list()->SetGraphicsRootDescriptorTable(i, table.get_base().gpu);
-	}
+
 	void  GraphicsContext::set(UINT i, const HandleTableLight& table)
 	{
 		base.get_native_list()->SetGraphicsRootDescriptorTable(i, table.gpu);
 	}
 
-	void  GraphicsContext::set(UINT i, const Handle& table)
-	{
-		list->SetGraphicsRootDescriptorTable(i, table.gpu);
-	}
 
-	void  GraphicsContext::set_uav(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
-	{
-		list->SetGraphicsRootUnorderedAccessView(i, table);
-	}
 	void  GraphicsContext::set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
 	{
 		list->SetGraphicsRootConstantBufferView(i, table);
@@ -349,12 +336,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		if (base.type != CommandListType::COPY)
 			base.transition(resource, Render::ResourceState::COPY_DEST);
 
-		/*	auto & count = resource_update_counter[resource];
-			count++;
-			if (count > 1)
-				Log::get() << "count " << count << Log::endl;*/
 		base.flush_transitions();
-		//     return;
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
 		base.get_native_list()->CopyBufferRegion(
@@ -492,12 +474,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		Src.PlacedFootprint.Footprint.RowPitch = res_stride;
 		Src.PlacedFootprint.Footprint.Format = Layouts.Footprint.Format;
 		base.get_native_list()->CopyTextureRegion(&Dst, offset.x, offset.y, offset.z, &Src, nullptr);
-	}
-
-
-	void GraphicsContext::set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff)
-	{
-		list->SetGraphicsRootConstantBufferView(i, buff->get_gpu_address());
 	}
 
 	void  GraphicsContext::set_pipeline(PipelineState::ptr state)
@@ -676,13 +652,13 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		return nullptr;
 	}
 
-	void Transitions::prepare_transitions(Transitions* to)
+	void Transitions::prepare_transitions(Transitions* to, bool all)
 	{
 		for (auto& resource : to->used_resources)
 		{
 			
 			bool is_new = resource->is_new(id, global_id);
-
+			if((all&&is_new)||(!all&&!is_new))
 			if (resource->transition(type, transitions, resource, id, global_id, to->id, to->global_id))
 			{
 				if (is_new)
@@ -703,10 +679,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			resource->assume_state(id, state);
 		}*/
 
-	void Transitions::transition(const std::shared_ptr<Texture>& resource, ResourceState to, UINT subres)
-	{
-		transition(resource.get(), to, subres);
-	}
+
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
 	{
 		transition(resource.get(), to, subres);
@@ -722,10 +695,23 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	
 	}
 
+	void Transitions::free_resources()
+	{
+#ifdef DEV
+		CommandList* list = static_cast<CommandList*>(this); // :(
+
+		for (auto r : used_resources)
+		{
+			r->not_used(list);
+		}
+#endif
+	}
+
 	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres)
 	{
 		assert(resource->get_heap_type() != HeapType::UPLOAD && resource->get_heap_type() != HeapType::READBACK);
 		assert(resource->get_native().Get());
+		CommandList* list = static_cast<CommandList*>(this); // :(
 
 		if (resource->is_new(id, global_id))
 		{
@@ -735,6 +721,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			assert(good);
 			use_resource(resource);
 			used_resources.emplace_back(const_cast<Resource*>(resource));
+#ifdef DEV
+			const_cast<Resource*>(resource)->used(list);
+#endif
 			assert(!resource->is_new(id, global_id));
 
 		}
@@ -749,6 +738,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from ? from->get_native().Get() : nullptr, to->get_native().Get()));
 
+		CommandList* list = static_cast<CommandList*>(this); // :(
 
 
 		if (to->is_new(id, global_id))
@@ -762,6 +752,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			assert(good);
 
 			used_resources.emplace_back(const_cast<Resource*>(to));
+#ifdef DEV
+			const_cast<Resource*>(to)->used(list);
+#endif
 			tracked_resources.emplace_back(const_cast<Resource*>(to)->tracked_info);
 			assert(!to->is_new(id, global_id));
 		}
@@ -915,44 +908,31 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		dispach(res.x, res.y, res.z);
 	}
 
-	void  ComputeContext::set(UINT i, const HandleTable& table)
-	{
-		set_table(i, table.get_base());
-	}
+
 	void  ComputeContext::set(UINT i, const HandleTableLight& table)
-	{
-		set_table(i, table);
-	}
-
-
-	/*  void  ComputeContext::set(UINT i, const Handle& table)
-	  {
-		  m_commandList->SetComputeRootDescriptorTable(i, table.gpu);
-	  }*/
-	void  ComputeContext::set_table(UINT i, const Handle& table)
 	{
 		list->SetComputeRootDescriptorTable(i, table.gpu);
 	}
-
+	
 	void ComputeContext::set_pipeline(ComputePipelineState::ptr state)
 	{
 		if (state->desc.root_signature)
 			set_signature(state->desc.root_signature);
 		base.set_pipeline_internal(state.get());
 	}
-
-	void  ComputeContext::set_const_buffer(UINT i, std::shared_ptr<GPUBuffer> buff)
-	{
-		list->SetComputeRootConstantBufferView(i, buff->get_gpu_address());
-	}
+	
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
 	{
 		if (current_pipeline != pipeline)
 		{
-			get_native_list()->SetPipelineState(pipeline->get_native().Get());
+			if (pipeline)
+			{
+				get_native_list()->SetPipelineState(pipeline->get_native().Get());
+				tracked_psos.emplace_back(pipeline->get_native());
+			}
 			current_pipeline = pipeline;
 
-			tracked_psos.emplace_back(pipeline->get_native());
+	
 		}
 	}
 	void Eventer::on_start(Timer* timer)
@@ -1046,11 +1026,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		::PIXSetMarker(m_commandList.Get(), 0, label);
 	}
 	
-	void GraphicsContext::set_const_buffer(UINT i, const UploadInfo& info)
-	{
-		list->SetGraphicsRootConstantBufferView(i, info.resource->get_gpu_address() + info.offset);
-	}
-
 	FrameResources::ptr FrameResourceManager::begin_frame()
 	{
 
@@ -1070,40 +1045,11 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		return list;
 	}
 
-
-	void  ComputeContext::set_const_buffer(UINT i, const UploadInfo& info)
-	{
-		list->SetComputeRootConstantBufferView(i, info.resource->get_gpu_address() + info.offset);
-	}
-
-
-	CommandList::ptr CommandList::get_sub_list()
-	{
-		auto list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
-		list->frame_resources = frame_resources;
-		return list;
-	}
-
-
-	void  ComputeContext::set_srv(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
-	{
-		list->SetComputeRootShaderResourceView(i, table);
-	}
-
-	void  ComputeContext::set_uav(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
-	{
-		list->SetComputeRootUnorderedAccessView(i, table);
-	}
-
-	void  GraphicsContext::set_srv(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
-	{
-		list->SetGraphicsRootShaderResourceView(i, table);
-	}
-
 	void ComputeContext::flush_binds(bool force)
 	{
 		base.flush_heaps(force);
 	}
+	
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
 
@@ -1147,26 +1093,15 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		get_base().print_debug();
 	}
 
-	void ComputeContext::set(UINT i, const Handle& table)
-	{
-		list->SetComputeRootDescriptorTable(i, table.gpu);
-	}
-
-
 
 	void ComputeContext::set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
 	{
 		list->SetComputeRootConstantBufferView(i, table);
 	}
-
-	void ComputeContext::set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff)
-	{
-		list->SetComputeRootConstantBufferView(i, buff->get_gpu_address());
-	}
-
-
+	
 	void Transitions::reset()
 	{
+		
 		used_resources.clear();
 		TrackedResource::allow_resource_delete = true;
 

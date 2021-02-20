@@ -480,10 +480,14 @@ namespace DX12
 			res.info = std::shared_ptr<HandleTable::helper>(new HandleTable::helper, [ptr, count, offset](HandleTable::helper* e)
 				{
 					auto t = ptr.lock();
-
 					if (t)
-						t->frees[count].push_back(offset);
+					{
+						std::lock_guard<std::mutex> g(t->m);
 
+						
+							t->frees[count].push_back(offset);
+					}
+				
 					delete e;
 				});
 			res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);

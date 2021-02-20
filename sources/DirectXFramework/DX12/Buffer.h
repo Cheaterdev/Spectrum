@@ -59,7 +59,7 @@ namespace DX12
 
 			void place_srv_buffer(Handle handle);
 			void place_structured_srv(Handle h, UINT stride, unsigned int offset, unsigned int count);
-			D3D12_INDEX_BUFFER_VIEW get_index_buffer_view(bool is_32, unsigned int offset = 0, UINT size = 0);
+			IndexBufferView get_index_buffer_view(bool is_32, unsigned int offset = 0, UINT size = 0);
 
 
 			void place_raw_uav(Handle  h)

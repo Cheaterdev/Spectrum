@@ -37,9 +37,13 @@ namespace DX12
 
 	struct FenceWaiter
 	{
-		Fence* fence;
+		Fence* fence = nullptr;
 		UINT64 value;
 
+		operator bool()
+		{
+			return !!fence;
+		}
 		void wait() const
 		{
 			if (fence)

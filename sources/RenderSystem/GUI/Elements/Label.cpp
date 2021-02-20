@@ -105,8 +105,8 @@ namespace GUI
 				geomerty->set(command_list, convert(text.get()), font, font_size.get() , lay2, color, magnet_text);
 				command_list->clear_rtv(cache.texture->texture_2d()->get_rtv());
 				auto rtv = cache.texture->texture_2d()->get_rtv();
-         		command_list->get_native_list()->OMSetRenderTargets(1, &rtv.cpu, FALSE, nullptr);
-				//	c->get_graphics().set_pipeline(state);
+				command_list->get_graphics().set_rtv(1, rtv, Handle());
+
 				Render::Viewport vps;
 				vps.Width = static_cast<float>(cache.texture->get_desc().Width);
 				vps.Height = static_cast<float>(cache.texture->get_desc().Height);

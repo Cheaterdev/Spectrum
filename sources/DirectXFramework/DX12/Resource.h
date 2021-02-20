@@ -178,6 +178,28 @@ namespace DX12
 		{
 			return T(shared_from_this(), frame, args...);
 		}
+
+
+
+#ifdef DEV
+		std::mutex m;
+		std::set<CommandList*> lists;
+		void used(CommandList* list)
+		{
+			std::lock_guard<std::mutex> g(m);
+
+			lists.emplace(list);
+		}
+
+		void not_used(CommandList* list)
+		{
+			std::lock_guard<std::mutex> g(m);
+
+			lists.erase(list);
+		}
+#endif
+
+		
 	};
 
 

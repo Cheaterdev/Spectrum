@@ -191,7 +191,7 @@ void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, R
 
 
 
-	auto DispatchRays = [&](auto* commandList, auto* stateObject, auto* dispatchDesc)
+	auto DispatchRays = [&](auto &commandList, auto stateObject, auto* dispatchDesc)
 	{
 		auto m_rayGenShaderTable = _list->place_raw(rayGenShaderIdentifier);
 		auto m_missShaderTable = _list->place_raw(missShaderIdentifier, missShadowShaderIdentifier);
@@ -210,8 +210,10 @@ void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, R
 		dispatchDesc->Width = texture.get_size().x;
 		dispatchDesc->Height = texture.get_size().y;
 		dispatchDesc->Depth = 1;
-		commandList->SetPipelineState1(stateObject);
-		commandList->DispatchRays(dispatchDesc);
+
+		
+		commandList.set_pso(stateObject);
+		commandList.dispatch_rays(*dispatchDesc);
 	};
 
 
@@ -231,12 +233,14 @@ void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, R
 		rays.set(_list->get_compute());
 	}
 
+
+	
 	_list->transition(material_hits->buffer.get(), ResourceState::NON_PIXEL_SHADER_RESOURCE);
 	_list->flush_transitions();
 
 
 	D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
 	{
-		DispatchRays(_list->get_native_list().Get(), m_dxrStateObject.Get(), &dispatchDesc);
+		DispatchRays(_list->get_compute(), m_dxrStateObject, &dispatchDesc);
 	}
 }

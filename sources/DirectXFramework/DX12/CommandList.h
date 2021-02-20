@@ -304,7 +304,6 @@ namespace DX12
 
 	class CommandListBase
 	{
-
 	protected:
 		int id = -1;
 		std::uint64_t global_id;
@@ -316,11 +315,14 @@ namespace DX12
 
 		std::list<FenceWaiter> waits;
 		ComPtr<ID3D12GraphicsCommandList4> m_commandList;
-	public:
+
+
 		ComPtr<ID3D12GraphicsCommandList4>& get_native_list()
 		{
 			return m_commandList;
 		}
+	public:
+	
 		virtual ~CommandListBase() = default;
 
 		CommandListType get_type()
@@ -349,6 +351,7 @@ namespace DX12
 		
 	public:
 
+		void free_resources();
 		std::list<ComPtr<ID3D12Heap>> tracked_heaps;
 
 	//	UINT64 wait_for = -1;
@@ -356,14 +359,14 @@ namespace DX12
 
 		void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 		void transition(const Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-		void transition(const std::shared_ptr<Texture>& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		//void transition(const std::shared_ptr<Texture>& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
 
 		void use_resource(const Resource* resource);
 
 
 	public:
-		void prepare_transitions(Transitions* to);
+		void prepare_transitions(Transitions* to, bool all);
 
 		void transition_uav(Resource* resource);
 		void transition(Resource* from, Resource* to);
@@ -705,6 +708,9 @@ namespace DX12
 	
 		void on_send(FenceWaiter fence)
 		{
+		
+		
+			
 			execute_fence.set_value(fence);
 			
 			for (auto&& e : on_fence)
@@ -747,7 +753,6 @@ namespace DX12
 
 	public:
 		using ptr = shared_ptr<CommandList>;
-		std::map<Resource*, int> resource_update_counter;
 	protected:
 		CommandList() = default;
 		friend class Queue;
@@ -795,7 +800,7 @@ namespace DX12
 
 		use_resource(info.resource);
 	}
-		ptr get_sub_list();
+
 		FrameResources::ptr frame_resources;
 		void setup_debug(SignatureDataSetter*);
 
@@ -858,37 +863,14 @@ namespace DX12
 		{
 			return global_id;
 		}
-		/*
-		void set_my_heap()
-		{
-			set_heap(DescriptorHeapType::CBV_SRV_UAV, srv_descriptors.get_heap());
-			set_heap(DescriptorHeapType::SAMPLER, smp_descriptors.get_heap());
 
-		}*/
-		/*
-		HandleTable place_srv(UINT count)
-		{
-			return srv_descriptors.place(count);
-		}
-		*/
-		template<class T>
-		void clear_uav(T& resource, const Handle& h, ivec4 ClearColor = ivec4(0, 0, 0, 0))
+		void clear_uav(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 		{
 			transition_uav(h.resource_info);
 
 			flush_transitions();
 			auto handle = get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
-			get_native_list()->ClearUnorderedAccessViewUint(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<UINT*>(ClearColor.data()), 0, nullptr);
-		}
-
-		template<class T>
-		void clear_uav(T& resource, const Handle& h, vec4 ClearColor)
-		{
-			transition_uav(h.resource_info);
-
-			flush_transitions();
-			auto handle = get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
-			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, resource->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
+			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, h.resource_info->resource_ptr->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 		}
 
 
@@ -902,7 +884,7 @@ namespace DX12
 		template<class T>
 		void clear_counter(std::shared_ptr<StructuredBuffer<T>>& buffer)
 		{
-			clear_uav(buffer->help_buffer, buffer->counted_uav[0]);
+			clear_uav(buffer->counted_uav[0]);
 		}
 
 
@@ -983,31 +965,10 @@ namespace DX12
 		}
 		virtual void set_signature(const RootSignature::ptr&) = 0;
 
-		virtual void set(UINT, const HandleTable&) = 0;
 		virtual void set(UINT, const HandleTableLight&) = 0;
-		virtual void set(UINT, const Handle&) = 0;
-
-		virtual void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
 
 
 		virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
-		virtual	void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) = 0;
-		virtual void set_const_buffer(UINT i, const UploadInfo& info) = 0;
-		//virtual void set_const_buffer(UINT i, FrameResource& info) = 0;
-
-		virtual void set_constant(UINT i, UINT offset, UINT data) = 0;
-		template<class... Args>
-		void set_constants(UINT i, Args...args)
-		{
-			set_constants_internal(i, 0, args...);
-		}
-
-
-
-		//	virtual void set_srv(UINT i, FrameResource& info) = 0;
-		virtual void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
-
-
 
 		template<class T>
 		std::unique_ptr<T> wrap()
@@ -1061,17 +1022,6 @@ namespace DX12
 		void on_execute();
 	public:
 
-		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
-		using SignatureDataSetter::set_srv;
-
-
-		void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
-
-
-		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
-		void set_const_buffer(UINT i, const UploadInfo& info) override;
-		//	void set_const_buffer(UINT i, FrameResource& info);
-		using SignatureDataSetter::set_const_buffer;
 		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
 
 
@@ -1081,8 +1031,7 @@ namespace DX12
 		}
 
 
-		void set(UINT, const HandleTable&)override;
-		void set(UINT, const Handle&)override;
+
 		void set(UINT, const HandleTableLight&)override;
 
 
@@ -1164,16 +1113,10 @@ namespace DX12
 			return get_base().get_cpu_heap(DescriptorHeapType::DSV).place(list);
 		}
 
-		void set_rtvs_internal(D3D12_CPU_DESCRIPTOR_HANDLE* t, Handle h)
-		{
-			*t = h.cpu;
-		}
 
-		template<class ...Handles>
-		void set_rtvs_internal(D3D12_CPU_DESCRIPTOR_HANDLE* t, Handle h, Handles... list)
+		void set_stencil_ref(UINT ref)
 		{
-			set_rtvs_internal(t, h);
-			set_rtvs_internal(t + 1, list...);
+			list->OMSetStencilRef(ref);
 		}
 		template<class T, size_t N>
 		constexpr size_t size(T(&)[N]) { return N; }
@@ -1206,9 +1149,10 @@ namespace DX12
 			return viewports;
 		}
 
-		void set_index_buffer(D3D12_INDEX_BUFFER_VIEW view)
+		void set_index_buffer(IndexBufferView view)
 		{
-			list->IASetIndexBuffer(&view);
+			get_base().transition(view.resource, ResourceState::INDEX_BUFFER);
+			list->IASetIndexBuffer(&view.view);
 		}
 
 		void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
@@ -1243,34 +1187,18 @@ namespace DX12
 
 
 
-		void set(UINT, const HandleTable&);
+
 		void set(UINT, const HandleTableLight&)override;
 
 
-		void set_table(UINT, const Handle&);
-
-		void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer> buff);
-		void set_const_buffer(UINT i, const UploadInfo& info);
-		//	void set_const_buffer(UINT i, FrameResource& info);
-
-		void set_srv(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
-		void set_uav(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&);
-		using SignatureDataSetter::set_srv;
-		using SignatureDataSetter::set_const_buffer;
 
 
-		virtual void set(UINT, const Handle&) override;
+	
+		
 		virtual void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) override;
-		virtual void set_const_buffer(UINT i, std::shared_ptr<GPUBuffer>& buff) override;
-		//		virtual void set_srv(UINT i, FrameResource& info) override;
 
 
 	public:
-
-		void set_constant(UINT i, UINT offset, UINT data)
-		{
-			list->SetComputeRoot32BitConstant(i, data, offset);
-		}
 
 		CommandList& get_base()
 		{
@@ -1292,6 +1220,23 @@ namespace DX12
 		void execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset = 0, Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
 
+
+		void build_ras(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC &desc)
+		{
+			get_base().flush_transitions();
+			list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+		}
+	
+		void dispatch_rays(const D3D12_DISPATCH_RAYS_DESC &desc)
+		{
+			list->DispatchRays(&desc);
+		}
+
+		void set_pso(ComPtr<ID3D12StateObject> pso)
+		{
+			base.set_pipeline_internal(nullptr);
+			list->SetPipelineState1(pso.Get());
+		}
 	};
 
 

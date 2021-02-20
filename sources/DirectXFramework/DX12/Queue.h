@@ -34,6 +34,8 @@ namespace DX12
 	
 		CommandListType type;
 
+		FenceWaiter last_executed_fence;
+
 		FenceWaiter execute_internal(CommandList* list);
 	//	std::mutex tasks_mutex;
 
@@ -45,7 +47,7 @@ namespace DX12
 		FenceWaiter signal_internal();
 		void gpu_wait_internal(FenceWaiter waiter);
 
-		FenceWaiter run_transition_list(std::shared_ptr<TransitionCommandList>& list);
+		FenceWaiter run_transition_list(FenceWaiter after, std::shared_ptr<TransitionCommandList>& list);
 	public:
 		void update_tile_mappings(const update_tiling_info &infos);
 

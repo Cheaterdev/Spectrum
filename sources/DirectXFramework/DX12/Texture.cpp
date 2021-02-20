@@ -495,8 +495,8 @@ namespace DX12
 
 
 		hlsl = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1 + 2*res_desc.MipLevels);
-
-		texture2D = HLSL::Texture2D<>(hlsl[0]);
+		int offset = 0;
+		texture2D = HLSL::Texture2D<>(hlsl[offset++]);
 
 		place_srv(texture2D);
 
@@ -505,7 +505,7 @@ namespace DX12
 			rwTexture2D.resize(res_desc.MipLevels);
 			for (int i = 0; i < res_desc.MipLevels; i++)
 			{
-				rwTexture2D[i] = HLSL::RWTexture2D<>(hlsl[1 + i]);
+				rwTexture2D[i] = HLSL::RWTexture2D<>(hlsl[offset++]);
 				place_uav(rwTexture2D[i], i, 0);
 			}
 
@@ -515,7 +515,7 @@ namespace DX12
 		texture2DMips.resize(res_desc.MipLevels);
 		for (int i = 0; i < res_desc.MipLevels; i++)
 		{
-			texture2DMips[i] = HLSL::Texture2D<>(hlsl[1 + i]);
+			texture2DMips[i] = HLSL::Texture2D<>(hlsl[offset++]);
 			place_srv(texture2DMips[i], i);
 		}
     }
@@ -730,7 +730,8 @@ namespace DX12
 
 		hlsl = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1 + 2*resource->get_desc().MipLevels);
 
-		texture3D = HLSL::Texture3D<float4>(hlsl[0]);
+		int offset = 0;
+		texture3D = HLSL::Texture3D<float4>(hlsl[offset++]);
 	
 		place_srv(texture3D);
 
@@ -738,8 +739,8 @@ namespace DX12
 		texture3DMips.resize(resource->get_desc().MipLevels);
 		for (int i = 0; i < resource->get_desc().MipLevels; i++)
 		{
-			texture3DMips[i] = HLSL::Texture3D<>(hlsl[1 + i]);
-			place_srv(texture3DMips[i], i);
+			texture3DMips[i] = HLSL::Texture3D<>(hlsl[offset++]);
+			srv(i, 1)(texture3DMips[i]);
 		}
 
 		if (resource->get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
@@ -747,7 +748,7 @@ namespace DX12
 			rwTexture3D.resize(resource->get_desc().MipLevels);
 			for (int i = 0; i < resource->get_desc().MipLevels; i++)
 			{
-				rwTexture3D[i] = HLSL::RWTexture3D<>(hlsl[1 + i]);
+				rwTexture3D[i] = HLSL::RWTexture3D<>(hlsl[offset++]);
 				place_uav(rwTexture3D[i], i);
 			}
 

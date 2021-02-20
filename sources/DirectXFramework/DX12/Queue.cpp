@@ -89,12 +89,14 @@ namespace DX12
 
 	void  Queue::gpu_wait(FenceWaiter waiter)
 	{
+		if (!waiter) return;
+		
 		std::unique_lock<std::mutex> lock(queue_mutex);
 		gpu_wait_internal(waiter);
 	}
 	void  Queue::gpu_wait_internal(FenceWaiter waiter)
 	{
-
+		if (!waiter) return;
 		native->Wait(waiter.fence->m_fence.Get(), waiter.value);
 	}
 
@@ -245,10 +247,11 @@ namespace DX12
 
 
 	}
-	FenceWaiter Queue::run_transition_list(std::shared_ptr<TransitionCommandList>& list)
+	FenceWaiter Queue::run_transition_list(FenceWaiter after, std::shared_ptr<TransitionCommandList>& list)
 	{
 		std::unique_lock<std::mutex> lock(queue_mutex);
 
+		gpu_wait_internal(after);
 
 		ID3D12CommandList* s[] = { list->get_native().Get() };
 		get_native()->ExecuteCommandLists(_countof(s), s);
@@ -312,7 +315,7 @@ namespace DX12
 				// Need to request other queue to make a proper transition.
 				// It's OK, but better to avoid this
 				auto queue = Device::get().get_queue(transition_list->get_type());
-				auto waiter = queue->run_transition_list(transition_list);
+				auto waiter = queue->run_transition_list(last_executed_fence, transition_list);
 
 				gpu_wait_internal(waiter);
 
@@ -334,6 +337,7 @@ namespace DX12
 		{
 			PROFILE(L"on_send");
 			list->on_send(execution_fence);
+			list->free_resources();
 		}
 
 
@@ -345,7 +349,7 @@ namespace DX12
 				list->on_execute();
 			});
 
-
+		last_executed_fence = execution_fence;
 		return execution_fence;
 	}
 

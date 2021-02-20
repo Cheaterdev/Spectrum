@@ -460,31 +460,12 @@ void FrameGraph::render()
 	}
 
 
-	for (auto& pair : builder.alloc_resources)
-	{
-		auto info = &pair.second;
-		if (!check(info->flags & ResourceFlags::Static))
-		{
-			info->resource = nullptr;
-
-			info->texture = Render::TextureView();
-			info->buffer = Render::BufferView();
-		}
-
-		if (info->heap_type != Render::HeapType::DEFAULT)
-		{
-			info->alloc_ptr.Free();
-		}
-		
-	}
-
-
 	//Profiler::get().enabled = true;
 
 
 	{
 		PROFILE(L"execute");
-
+		
 		for (auto& pass : enabled_passes | std::ranges::views::reverse)
 		{
 			auto commandList = pass->context.list;
@@ -497,14 +478,16 @@ void FrameGraph::render()
 				auto waitCommandList = pass->wait_pass->context.list;
 
 				//if(list_type == Render::CommandListType::COMPUTE) 
-					waitCommandList->prepare_transitions(commandList.get());
+					waitCommandList->prepare_transitions(commandList.get(), false);
 			}
-			else if (pass->prev_pass)
+			else 
+				
+				if (pass->prev_pass)
 			{
 				auto waitCommandList = pass->prev_pass->context.list;
 
 			//	if (list_type == Render::CommandListType::DIRECT) 
-				if(waitCommandList) waitCommandList->prepare_transitions(commandList.get());
+				if(waitCommandList) waitCommandList->prepare_transitions(commandList.get(), true);
 			}
 
 		
@@ -530,6 +513,28 @@ void FrameGraph::render()
 
 	}
 	builder.current_frame = nullptr;
+
+
+
+	for (auto& pair : builder.alloc_resources)
+	{
+		auto info = &pair.second;
+		if (!check(info->flags & ResourceFlags::Static))
+		{
+			info->resource = nullptr;
+
+			info->texture = Render::TextureView();
+			info->buffer = Render::BufferView();
+		}
+
+		if (info->heap_type != Render::HeapType::DEFAULT)
+		{
+			info->alloc_ptr.Free();
+		}
+
+	}
+
+	
 }
 
 void FrameGraph::reset()

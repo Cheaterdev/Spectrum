@@ -143,12 +143,13 @@ namespace DX12
     {
     }
 
-    D3D12_INDEX_BUFFER_VIEW GPUBuffer::get_index_buffer_view(bool is_32, unsigned int offset /*= 0*/, UINT size /*= 0*/)
+    IndexBufferView GPUBuffer::get_index_buffer_view(bool is_32, unsigned int offset /*= 0*/, UINT size /*= 0*/)
     {
-        D3D12_INDEX_BUFFER_VIEW view;
-        view.BufferLocation = get_gpu_address() + offset;
-        view.Format = is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
-        view.SizeInBytes = static_cast<UINT>(size ? size : this->size);
+        IndexBufferView view;
+        view.view.BufferLocation = get_gpu_address() + offset;
+        view.view.Format = is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+        view.view.SizeInBytes = static_cast<UINT>(size ? size : this->size);
+        view.resource = this;
         return view;
     }
 

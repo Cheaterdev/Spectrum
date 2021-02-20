@@ -554,5 +554,9 @@ namespace DX12
 		}
 	};
 
-
+	struct IndexBufferView
+	{
+		D3D12_INDEX_BUFFER_VIEW view;
+		Resource* resource;
+	};
 }

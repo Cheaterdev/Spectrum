@@ -596,7 +596,7 @@ public:
 
 				if (data.o_texture->is_new())
 				{
-					command_list->clear_uav(output_tex.resource, output_tex.rwTexture2D, vec4(0, 0, 0, 0));
+					command_list->clear_uav(output_tex.rwTexture2D, vec4(0, 0, 0, 0));
 				}
 
 				command_list->get_compute().set_signature(RTX::get().global_sig);
@@ -624,6 +624,18 @@ public:
 				compiledFrame.set(command_list->get_compute());
 
 
+
+				{
+					Slots::VoxelScreen voxelScreen;
+					gbuffer.SetTable(voxelScreen.MapGbuffer());
+					voxelScreen.GetVoxels() = voxel_gi->tex_lighting.tex_result->texture_3d()->texture3D;
+					voxelScreen.set(command_list->get_compute());
+				}
+
+				scene->voxels_compiled.set(command_list->get_compute());
+
+
+				
 				for (int i = 0; i < eyes.size(); i++)
 				{
 					eyes[i]->cam = cam;
