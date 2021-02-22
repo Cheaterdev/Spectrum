@@ -9,10 +9,8 @@ namespace DX12
 
 	{
 		this->type = type;
-		D3D12_COMMAND_LIST_TYPE t = static_cast<D3D12_COMMAND_LIST_TYPE>(type);
-		Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator));
-		Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList));
-		m_commandList->Close();
+
+		compiler.create(type);
 
 		if (type == CommandListType::DIRECT || type == CommandListType::COMPUTE)
 			compute.reset(new ComputeContext(*this));
@@ -23,7 +21,7 @@ namespace DX12
 		if (type == CommandListType::DIRECT)
 			graphics.reset(new GraphicsContext(*this));
 
-		m_commandList->SetName(L"SpectrumCommandList");
+		compiler.SetName(L"SpectrumCommandList");
 
 
 		debug_buffer = std::make_shared<StructuredBuffer<Table::DebugStruct>>(64, counterType::NONE, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
@@ -69,6 +67,7 @@ namespace DX12
 
 	void CommandList::begin(std::string name, Timer* t)
 	{
+		compiled = CommandListCompiled();
 #ifdef DEV
 		begin_stack = Exceptions::get_stack_trace();
 #endif
@@ -79,8 +78,7 @@ namespace DX12
 		global_id = _global_id++;
 
 		//       Log::get() << "begin" << Log::endl;
-		m_commandAllocator->Reset();
-		TEST(m_commandList->Reset(m_commandAllocator.Get(), nullptr));
+		compiler.reset();
 		//resource_index = 0;
 
 		if (graphics) graphics->begin();
@@ -149,14 +147,21 @@ namespace DX12
 		on_execute_funcs.emplace_back(f);
 
 	}
-
-	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
+	void Sendable::compile()
 	{
 		CommandList* list = static_cast<CommandList*>(this); // :(
 
 		list->flush_transitions();
-		TEST(m_commandList->Close());
 
+		compiled = compiler.compile();
+	}
+	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
+	{
+	
+		//TEST(compiler.Close());
+		if (!compiled)
+			compile();
+	
 		execute_fence = std::promise<FenceWaiter>();
 		execute_fence_result = execute_fence.get_future();
 		if (f)
@@ -175,7 +180,7 @@ namespace DX12
 
 	void Eventer::insert_time(QueryHeap& pQueryHeap, uint32_t QueryIdx)
 	{
-		m_commandList->EndQuery(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, QueryIdx);
+		compiler.EndQuery(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, QueryIdx);
 	}
 
 	void Eventer::resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)> f)
@@ -184,7 +189,7 @@ namespace DX12
 		auto info = list->read_data(NumQueries* sizeof(UINT64));
 
 		list->flush_transitions();
-		m_commandList->ResolveQueryData(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_native().Get(), info.offset);
+		compiler.ResolveQueryData(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_native().Get(), info.offset);
 
 
 		on_execute_funcs.emplace_back([info, f, NumQueries]() {
@@ -200,7 +205,7 @@ namespace DX12
 		assert(s);
 		if (current_root_signature != s)
 		{
-			base.get_native_list()->SetGraphicsRootSignature(s->get_native().Get());
+			list->SetGraphicsRootSignature(s->get_native().Get());
 			current_root_signature = s;
 		}
 	}
@@ -215,13 +220,13 @@ namespace DX12
 		if (b)
 			heaps[1] = b->get_native().Get();
 
-		base.get_native_list()->SetDescriptorHeaps(b ? 2 : 1, heaps);
+		list->SetDescriptorHeaps(b ? 2 : 1, heaps);
 	}
 
 
 	void  GraphicsContext::set(UINT i, const HandleTableLight& table)
 	{
-		base.get_native_list()->SetGraphicsRootDescriptorTable(i, table.gpu);
+		list->SetGraphicsRootDescriptorTable(i, table.gpu);
 	}
 
 
@@ -339,7 +344,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.flush_transitions();
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
-		base.get_native_list()->CopyBufferRegion(
+		list->CopyBufferRegion(
 			resource->get_native().Get(), offset, info.resource->get_native().Get(), info.offset, size);
 	}
 
@@ -398,7 +403,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.flush_transitions();
 		UINT64 uploadBufferSize = GetRequiredIntermediateSize(resource->get_native().Get(), first_subresource, sub_count);
 		auto info = base.place_data(uploadBufferSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-		UpdateSubresources(base.get_native_list().Get(), resource->get_native().Get(), info.resource->get_native().Get(), info.offset, first_subresource, sub_count, data);
+		//UpdateSubresources(list.Get(), resource->get_native().Get(), info.resource->get_native().Get(), info.offset, first_subresource, sub_count, data);
 	}
 	void CopyContext::update_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
@@ -473,7 +478,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		Src.PlacedFootprint.Footprint.Depth = box.z;
 		Src.PlacedFootprint.Footprint.RowPitch = res_stride;
 		Src.PlacedFootprint.Footprint.Format = Layouts.Footprint.Format;
-		base.get_native_list()->CopyTextureRegion(&Dst, offset.x, offset.y, offset.z, &Src, nullptr);
+		list->CopyTextureRegion(&Dst, offset.x, offset.y, offset.z, &Src, nullptr);
 	}
 
 	void  GraphicsContext::set_pipeline(PipelineState::ptr state)
@@ -525,7 +530,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		dest.PlacedFootprint.Footprint.Depth = box.z;
 		dest.PlacedFootprint.Footprint.RowPitch = res_stride;
 		dest.PlacedFootprint.Footprint.Format = to_srv(Layouts.Footprint.Format);
-		base.get_native_list()->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
+		list->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, res_stride, NumRows]()
 			{			
@@ -550,8 +555,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.flush_transitions();
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
-		//  m_commandList->CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
-		base.get_native_list()->CopyBufferRegion(info.resource->get_native().Get(), info.offset, resource->get_native().Get(), offset, size);
+		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
+		list->CopyBufferRegion(info.resource->get_native().Get(), info.offset, resource->get_native().Get(), offset, size);
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
 				f(reinterpret_cast<char*>(info.get_cpu_data()), size);
@@ -573,8 +578,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.flush_transitions();
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
-		//  m_commandList->CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
-		base.get_native_list()->ResolveQueryData(query_heap->get_native(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_native().Get(), info.offset);
+		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
+		list->ResolveQueryData(query_heap->get_native(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_native().Get(), info.offset);
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
@@ -618,7 +623,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		if (!transitions.empty())
 		{
 			PROFILE_GPU(L"flush_transitions");
-			m_commandList->ResourceBarrier((UINT)transitions.size(), transitions.data());
+			compiler.ResourceBarrier((UINT)transitions.size(), transitions.data());
 			transitions.clear();
 		}
 	}
@@ -793,7 +798,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			base.transition(dest, Render::ResourceState::COPY_DEST);
 		}
 		base.flush_transitions();
-		base.get_native_list()->CopyBufferRegion(dest->get_native().Get(), s_dest, source->get_native().Get(), s_source, size);
+		list->CopyBufferRegion(dest->get_native().Get(), s_dest, source->get_native().Get(), s_source, size);
 	}
 	void CopyContext::copy_resource(Resource* dest, Resource* source)
 	{
@@ -803,7 +808,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			base.transition(dest, Render::ResourceState::COPY_DEST);
 		}
 		base.flush_transitions();
-		base.get_native_list()->CopyResource(dest->get_native().Get(), source->get_native().Get());
+		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
 	}
 	void CopyContext::copy_resource(const Resource::ptr& dest, const Resource::ptr& source)
 	{
@@ -815,7 +820,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			base.transition(dest, Render::ResourceState::COPY_DEST);
 		}
 		base.flush_transitions();
-		base.get_native_list()->CopyResource(dest->get_native().Get(), source->get_native().Get());
+		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
 	}
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
 	{
@@ -827,7 +832,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.flush_transitions();
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_native().Get(), dest_subres);
 		CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_native().Get(), source_subres);
-		base.get_native_list()->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+		list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
 	}
 
 	void CopyContext::copy_texture( const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size)
@@ -851,7 +856,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		box.right = from_pos.x + size.x;
 		box.bottom = from_pos.y + size.y;
 		box.back = from_pos.z + size.z;
-		base.get_native_list()->CopyTextureRegion(&Dst, to_pos.x, to_pos.y, to_pos.z, &Src, &box);
+		list->CopyTextureRegion(&Dst, to_pos.x, to_pos.y, to_pos.z, &Src, &box);
 	}
 
 
@@ -927,7 +932,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		{
 			if (pipeline)
 			{
-				get_native_list()->SetPipelineState(pipeline->get_native().Get());
+				compiler.SetPipelineState(pipeline->get_native().Get());
 				tracked_psos.emplace_back(pipeline->get_native());
 			}
 			current_pipeline = pipeline;
@@ -1013,17 +1018,17 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	void Eventer::start_event(std::wstring str)
 	{
-		::PIXBeginEvent(m_commandList.Get(), 0, str.c_str());
+		//::PIXBeginEvent(m_commandList.Get(), 0, str.c_str());
 	}
 
 	void Eventer::end_event()
 	{
-		::PIXEndEvent(m_commandList.Get());
+		//::PIXEndEvent(m_commandList.Get());
 	}
 
 	void Eventer::set_marker(const wchar_t* label)
 	{
-		::PIXSetMarker(m_commandList.Get(), 0, label);
+		//::PIXSetMarker(m_commandList.Get(), 0, label);
 	}
 	
 	FrameResources::ptr FrameResourceManager::begin_frame()
@@ -1141,7 +1146,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 		for (auto e : discards)
 		{
-			//	m_commandList->DiscardResource(e->get_native().Get(), nullptr);
+			//	compiler.DiscardResource(e->get_native().Get(), nullptr);
 		}
 		m_commandList->Close();
 	}

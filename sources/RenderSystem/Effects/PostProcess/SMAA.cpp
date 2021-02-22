@@ -11,7 +11,7 @@ SMAA::SMAA()
 void SMAA::generate(FrameGraph& graph)
 {
 
-	struct SkyData
+	struct SMAAData
 	{
 		ResourceHandler* source_tex;
 
@@ -24,14 +24,14 @@ void SMAA::generate(FrameGraph& graph)
 
 	};
 
-	graph.add_pass<SkyData>("Sky", [this, &graph](SkyData& data, TaskBuilder& builder) {
+	graph.add_pass<SMAAData>("SMAA", [this, &graph](SMAAData& data, TaskBuilder& builder) {
 		data.source_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
 		data.edges = builder.create_texture("SMAA_edges", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM, ResourceFlags::RenderTarget);
 		data.blend = builder.create_texture("SMAA_blend", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, ResourceFlags::RenderTarget);
 
 		data.target_tex = builder.recreate_texture("ResultTexture", ResourceFlags::RenderTarget);
 
-		}, [this, &graph](SkyData& data, FrameContext& _context) {
+		}, [this, &graph](SMAAData& data, FrameContext& _context) {
 			auto edges = _context.get_texture(data.edges);
 			auto blend = _context.get_texture(data.blend);
 			auto target_tex = _context.get_texture(data.target_tex);

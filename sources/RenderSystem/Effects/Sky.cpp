@@ -12,7 +12,7 @@ SkyRender::SkyRender()
 
 
 
-void SkyRender::generate(FrameGraph& graph)
+void SkyRender::generate_sky(FrameGraph& graph)
 {
 
 	struct SkyData
@@ -20,17 +20,12 @@ void SkyRender::generate(FrameGraph& graph)
 		ResourceHandler* depth;
 
 		ResourceHandler* target_tex;
-
-
 		ResourceHandler* sky_cubemap;
-
-
 	};
 
 	graph.add_pass<SkyData>("Sky", [this, &graph](SkyData& data, TaskBuilder& builder) {
 		data.depth = builder.need_texture("GBuffer_Depth", ResourceFlags::PixelRead);
 		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
-		data.sky_cubemap = builder.create_texture("sky_cubemap", ivec2(256, 256), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
 		}, [this, &graph](SkyData& data, FrameContext& _context) {
 			auto depth = _context.get_texture(data.depth);
 
@@ -40,16 +35,10 @@ void SkyRender::generate(FrameGraph& graph)
 
 			auto& graphics = list.get_graphics();
 
-			auto sky_cubemap = _context.get_texture(data.sky_cubemap);
-
+		
 
 			graphics.set_pipeline(GetPSO<PSOS::Sky>());
-
-
 			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-
-
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
 			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
@@ -79,48 +68,21 @@ void SkyRender::generate(FrameGraph& graph)
 			graphics.draw(4);
 
 
-
-			{
-
-				graphics.set_viewport(sky_cubemap.get_viewport());
-				graphics.set_scissor(sky_cubemap.get_scissor());
-				graphics.set_pipeline(GetPSO<PSOS::SkyCube>());
-
-
-				for (unsigned int i = 0; i < 6; i++)
-				{
-					Render::ResourceViewDesc subres;
-					subres.type = Render::ResourceType::TEXTURE2D;
-
-					subres.Texture2D.ArraySize = 1;
-					subres.Texture2D.FirstArraySlice = i;
-					subres.Texture2D.MipLevels = 1;
-					subres.Texture2D.MipSlice = 0;
-					subres.Texture2D.PlaneSlice = 0;
-
-					auto face = sky_cubemap.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
-
-
-					Slots::SkyFace skyFace;
-
-					skyFace.GetFace() = i;
-
-					skyFace.set(graphics);
-
-					graphics.set_rtv(1, face.get_rtv(), Render::Handle());
-
-					graphics.draw(4);
-				}
-			}
-
-			//		auto tex = std::dynamic_pointer_cast<Render::Texture>(sky_cubemap.resource);
-
 		});
+}
 
+void SkyRender::generate(FrameGraph& graph)
+{
 
+	struct SkyData
+	{
+		ResourceHandler* depth;
 
+		ResourceHandler* target_tex;
+		ResourceHandler* sky_cubemap;
+	};
 
-
+	
 
 	graph.pass<SkyData>("CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
 		data.sky_cubemap = builder.create_texture("sky_cubemap", ivec2(256, 256), 6, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);

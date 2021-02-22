@@ -27,5 +27,6 @@ public:
 	SkyRender();
 
 	virtual void generate(FrameGraph& graph) override;
+	 void generate_sky(FrameGraph& graph) ;
 
 };

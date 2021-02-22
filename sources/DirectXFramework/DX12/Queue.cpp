@@ -306,7 +306,7 @@ namespace DX12
 		{
 			if (transition_list->get_type() == list->get_type())
 			{
-				ID3D12CommandList* s[] = { transition_list->get_native().Get(), list->get_native_list().Get() };
+				ID3D12CommandList* s[] = { transition_list->get_native().Get(), list->compiled.m_commandList.Get() };
 				native->ExecuteCommandLists(_countof(s), s);
 			}
 			else
@@ -320,7 +320,7 @@ namespace DX12
 				gpu_wait_internal(waiter);
 
 				{
-					ID3D12CommandList* s[] = { list->get_native_list().Get() };
+					ID3D12CommandList* s[] = { list->compiled.m_commandList.Get() };
 					native->ExecuteCommandLists(_countof(s), s);
 				}
 			}
@@ -328,7 +328,7 @@ namespace DX12
 		}
 		else
 		{
-			ID3D12CommandList* s[] = { list->get_native_list().Get() };
+			ID3D12CommandList* s[] = { list->compiled.m_commandList.Get() };
 			native->ExecuteCommandLists(_countof(s), s);
 		}
 

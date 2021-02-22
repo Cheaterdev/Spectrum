@@ -77,6 +77,12 @@ struct UsedResources
 	std::set<ResourceHandler*> resource_creations;
 };
 
+
+struct ResourceRWState
+{
+	bool write = false;
+	std::list<Pass*> passes;
+};
 struct ResourceAllocInfo
 {
 	std::string name;
@@ -97,13 +103,12 @@ struct ResourceAllocInfo
 	Pass* valid_to_start = nullptr;
 
 
-
 	bool enabled = true;
 
 	bool is_new = false;
-	std::list<Pass*> writers;
-	std::list<Pass*> readers;
-
+	
+	std::vector<ResourceRWState> states;
+	int last_writer;
 //compile
 	std::map<Render::ResourceHandle, Render::Resource::ptr> resource_places;
 	Render::Resource::ptr resource;
@@ -117,12 +122,11 @@ struct ResourceAllocInfo
 	bool passed = false;
 	size_t frame_id;
 
-	Pass* get_last_writer()
-	{
-		if (writers.empty()) return nullptr;
+	std::set<Pass*> related;
+	std::set<Pass*> related_read;
 
-		return writers.back();
-	}
+	void add_pass(Pass* pass, ResourceFlags flags);
+	void reset();
 };
 
 

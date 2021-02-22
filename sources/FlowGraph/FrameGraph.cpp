@@ -1,6 +1,60 @@
 
 #include "pch.h"
 
+void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
+{
+	assert(pass);
+	bool is_writer = check(flags & WRITEABLE_FLAGS);
+
+	bool was_swap = false;
+	
+	if (is_writer || states.empty())
+	{
+
+		ResourceRWState state;
+		state.write = is_writer;
+		state.passes.emplace_back(pass);
+		states.emplace_back(state);
+
+		was_swap = true;
+		last_writer = states.size() - 1;
+	}
+	else
+	{
+		if(states.back().write)
+		{
+			ResourceRWState state;
+			state.write = false;
+			states.emplace_back(state);
+			was_swap = true;
+		}
+
+		ResourceRWState& state = states.back();
+		state.passes.emplace_back(pass);
+	}
+
+
+	
+
+	if (was_swap)
+	{
+		related.merge(related_read);	
+		related_read.clear();
+	}
+	
+	pass->related.merge(related);
+	related_read.insert(pass);
+}
+
+
+void ResourceAllocInfo::reset()
+{
+	last_writer = 0;
+	states.clear();
+	related.clear();
+	related_read.clear();
+}
+
 TaskBuilder::TaskBuilder() : allocator(false), static_allocator(false)
 {
 	
@@ -33,7 +87,7 @@ void TaskBuilder::pass_texture(std::string name, Render::TextureView tex, Resour
 	info.flags = flags;
 	handler.info = &info;
 
-	info.writers.clear();
+	info.reset();
 	passed_resources.insert(&handler);
 }
 void TaskBuilder::pass_texture(std::string name, Render::Texture::ptr tex, ResourceFlags flags)
@@ -204,19 +258,26 @@ void FrameGraph::setup()
 
 		handler->info->enabled = true;
 		ResourceAllocInfo& info = *handler->info;
-		for (auto writer : info.writers)
-		{
-			if (writer->id > pass_id)
-				continue;
-			if (writer->enabled) continue;
-			writer->enabled = true;
 
-			for (auto res : writer->used.resources)
+		for(auto &s: info.states)
+		{
+			if(s.write)
 			{
-				process_resource(res, writer->id);
+
+				auto& pass = s.passes.front();
+				
+				if (pass->enabled) continue;
+
+				if(pass->id> pass_id) continue;
+				pass->enabled = true;
+
+				for (auto res : pass->used.resources)
+				{
+					process_resource(res, pass->id);
+				}
 			}
 		}
-
+		
 	};
 
 	for (auto res : builder.resources)
@@ -234,10 +295,10 @@ void FrameGraph::setup()
 			process_resource(res, pass->id);
 		}
 	}
-
+	
 	for (auto pass : passes)
 	{
-		if(!pass->active()) continue;
+		if (!pass->active()) continue;
 		auto pass_ptr = pass.get();
 
 		pass->dependency_level = 0;
@@ -248,19 +309,6 @@ void FrameGraph::setup()
 			pass->flags = pass->flags & ~(PassFlags::Compute);
 		}
 
-		for (auto [handler, flags] : pass->used.resource_flags)
-		{
-			auto info = handler->info;
-
-			for (auto writer : info->writers)
-			{
-
-				if (!writer->active()) continue;
-				if (writer->id>=pass->id) continue;
-
-				pass->related.insert(writer);
-			}
-		}
 	}
 
 	if (optimize)
@@ -276,6 +324,8 @@ void FrameGraph::setup()
 
 				for (auto related : pass->related)
 				{
+					if (!related->active()) continue;
+					
 					if (pass->dependency_level <= related->dependency_level)
 					{
 						pass->dependency_level = related->dependency_level + 1;
@@ -290,7 +340,8 @@ void FrameGraph::setup()
 			
 				for (auto dep : pass->related)
 				{
-				
+					if (!dep->active()) continue;
+
 					dep->graphic_count += pass->graphic_count;
 					dep->compute_count += pass->compute_count;
 
@@ -323,6 +374,7 @@ void FrameGraph::setup()
 		for (auto pass : enabled_passes)
 		{
 			pass->call_id = i++;
+			pass->wait_pass = nullptr;
 			for (auto [handler, flags] : pass->used.resource_flags)
 			{
 				auto info = handler->info;
@@ -346,7 +398,8 @@ void FrameGraph::setup()
 			
 			for (auto depends : pass->related)
 			{
-
+				if (!depends->active()) continue;
+				
 				Render::CommandListType depends_type = depends->get_type();
 
 				if (depends_type != type)
@@ -492,24 +545,71 @@ void FrameGraph::render()
 
 		
 		}
-
-
-
-		for (auto& pass : enabled_passes)
 		{
-			auto commandList = pass->context.list;
-			if (!commandList) continue;
+			PROFILE(L"compile");
 
-			Render::CommandListType list_type = commandList->get_type();
-
-			if (pass->wait_pass)
+			std::list<std::future<void>> tasks;
+			for (auto& pass : enabled_passes)
 			{
-				Render::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
+				auto commandList = pass->context.list;
+				if (!commandList) continue;
+
+				tasks.emplace_back(scheduler::get().enqueue([commandList]() {
+					commandList->compile();
+					}, std::chrono::steady_clock::now()));
+
+
 			}
 
-			pass->fence_end = commandList->execute().get();
+
+			for (auto& t : tasks)
+			{
+				t.wait();
+			}
+
 		}
 
+		{
+			std::list<Pass*> graphics;
+			std::list<Pass*> compute;
+
+			auto flush = [&]()
+			{	for (auto pass : compute)
+				{
+					auto commandList = pass->context.list;
+					pass->fence_end = commandList->execute().get();
+				}
+				for(auto pass: graphics)
+				{
+					auto commandList = pass->context.list;
+					pass->fence_end = commandList->execute().get();
+				}
+
+			
+				graphics.clear();
+				compute.clear();
+			};
+			for (auto& pass : enabled_passes)
+			{
+				auto commandList = pass->context.list;
+				if (!commandList) continue;
+
+				Render::CommandListType list_type = commandList->get_type();
+
+				if (pass->wait_pass)
+				{
+					flush();
+					Render::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
+				}
+
+				if (list_type == Render::CommandListType::DIRECT)
+					graphics.emplace_back(pass);
+				else
+					compute.emplace_back(pass);
+				//pass->fence_end = commandList->execute();
+			}
+			flush();
+		}
 
 	}
 	builder.current_frame = nullptr;
@@ -561,7 +661,7 @@ ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT 
 	ResourceAllocInfo& info = alloc_resources[&handler];
 	handler.info = &info;
 
-
+	info.reset();
 
 	auto desc = TextureDesc{ ivec3(size, 1), format, array_count };
 	info.is_new = false;
@@ -579,9 +679,7 @@ ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT 
 	info.frame_id = current_frame->get_frame();
 	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 
-	info.writers.clear();
-	info.writers.push_back(current_pass);
-	
+	info.add_pass(current_pass, flags);
 	return &handler;
 }
 
@@ -600,6 +698,8 @@ ResourceHandler* TaskBuilder::recreate_texture(std::string name, ResourceFlags f
 	ResourceAllocInfo& info = alloc_resources[&handler];
 	handler.info = &info;
 
+	info.reset();
+	
 	auto desc = old_handler.info->desc;
 	info.is_new = false;
 	info.need_recreate = info.desc != desc;
@@ -616,8 +716,7 @@ ResourceHandler* TaskBuilder::recreate_texture(std::string name, ResourceFlags f
 	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 	info.orig = old_handler.info;
 
-	info.writers = old_handler.info->writers;
-	info.writers.push_back(current_pass);
+	info.add_pass(current_pass, flags);
 	return &handler;
 }
 ResourceHandler* TaskBuilder::need_texture(std::string name, ResourceFlags flags)
@@ -634,10 +733,7 @@ ResourceHandler* TaskBuilder::need_texture(std::string name, ResourceFlags flags
 	info.handler = &handler;
 
 
-	if (check(flags & WRITEABLE_FLAGS))
-	{
-		info.writers.push_back(current_pass);
-	}
+	info.add_pass(current_pass, flags);
 	return &handler;
 }
 
@@ -650,6 +746,8 @@ ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, Resou
 	ResourceHandler& handler = resources[name];
 	ResourceAllocInfo& info = alloc_resources[&handler];
 	handler.info = &info;
+	info.reset();
+	
 	auto desc = BufferDesc{ size };
 
 	info.need_recreate = info.desc != desc;
@@ -664,8 +762,8 @@ ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, Resou
 	info.frame_id = current_frame->get_frame();
 	info.is_new = false;
 	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
-	info.writers.clear();
-	info.writers.push_back(current_pass);
+	
+	info.add_pass(current_pass, flags);
 
 	return &handler;
 }
@@ -685,11 +783,7 @@ ResourceHandler* TaskBuilder::need_buffer(std::string name, ResourceFlags flags)
 	info.handler = &handler;
 	info.is_new = false;
 
-	if (check(flags & WRITEABLE_FLAGS))
-	{
-		info.writers.push_back(current_pass);
-	}
-
+	info.add_pass(current_pass, flags);
 
 	return &handler;
 }

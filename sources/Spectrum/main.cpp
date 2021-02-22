@@ -568,6 +568,8 @@ public:
 		// remove on intel
 		voxel_gi->generate(graph);
 
+		
+		sky.generate_sky(graph);
 
 		if (Device::get().is_rtx_supported())
 		graph.add_pass<pass_data>("RAYTRACE", [&](pass_data& data, TaskBuilder& builder) {

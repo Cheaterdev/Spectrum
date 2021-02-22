@@ -1,4 +1,6 @@
 #pragma once
+
+#include "CommandListCompiler.h"
 enum class Layouts;
 namespace DX12
 {
@@ -46,7 +48,7 @@ namespace DX12
 	{
 		ResourceHeapAllocator<LockPolicy> allocator;
 		friend class BufferCache;
-		std::vector<ResourceHandle> handles;
+		std::list<ResourceHandle> handles;
 	//	std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
 //		UINT64 resource_offset;
 		UINT heap_size = 0x200000;
@@ -311,15 +313,16 @@ namespace DX12
 
 		LEAK_TEST(CommandListBase)
 
-			std::vector<std::function<void()>> on_execute_funcs;
+		std::vector<std::function<void()>> on_execute_funcs;
 
 		std::list<FenceWaiter> waits;
-		ComPtr<ID3D12GraphicsCommandList4> m_commandList;
+		
+		CommandListCompilerDelayed compiler;
 
 
-		ComPtr<ID3D12GraphicsCommandList4>& get_native_list()
+		CommandListCompilerDelayed* get_native_list()
 		{
-			return m_commandList;
+			return &compiler;
 		}
 	public:
 	
@@ -346,25 +349,16 @@ namespace DX12
 		
 	protected:
 		void reset();
-
 		std::list<ComPtr<ID3D12PipelineState>> tracked_psos;
 		
 	public:
-
 		void free_resources();
 		std::list<ComPtr<ID3D12Heap>> tracked_heaps;
-
-	//	UINT64 wait_for = -1;
 		void flush_transitions();
 
 		void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 		void transition(const Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-		//void transition(const std::shared_ptr<Texture>& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-
-
 		void use_resource(const Resource* resource);
-
-
 	public:
 		void prepare_transitions(Transitions* to, bool all);
 
@@ -374,6 +368,7 @@ namespace DX12
 
 		void transition_rtv(const ResourceInfo* info)
 		{
+			assert(info->type == HandleType::RTV);
 
 			auto& desc = info->resource_ptr->get_desc();
 			if (info->rtv.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2D)
@@ -406,6 +401,7 @@ namespace DX12
 
 		void transition_uav(const ResourceInfo* info)
 		{
+			assert(info->type == HandleType::UAV);
 
 
 			auto& desc = info->resource_ptr->get_desc();
@@ -470,6 +466,7 @@ namespace DX12
 
 		void transition_dsv(const ResourceInfo* info)
 		{
+			assert(info->type == HandleType::DSV);
 
 			auto& desc = info->resource_ptr->get_desc();
 
@@ -498,6 +495,7 @@ namespace DX12
 
 		void transition_srv(const ResourceInfo* info)
 		{
+			assert(info->type == HandleType::SRV);
 
 			auto& desc = info->resource_ptr->get_desc();
 			UINT total = desc.CalcSubresource(desc.MipLevels - 1, desc.ArraySize() - 1, desc.Depth() - 1);
@@ -718,15 +716,14 @@ namespace DX12
 			
 			on_fence.clear();
 		}
-
-	
-	
 	protected:
+		CommandListCompiled compiled;
+	
+
 
 		
 	public:
-
-
+		void compile();
 		void when_send(std::function<void(FenceWaiter)> e)
 		{
 			on_fence.emplace_back(e);
@@ -761,8 +758,7 @@ namespace DX12
 		friend class GraphicsContext;
 		friend class ComputeContext;
 
-		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-
+		
 		// TODO: make references?
 
 		virtual void on_execute();
@@ -836,7 +832,7 @@ namespace DX12
 			{
 				if (count == 2 && native_heaps[1] == native_heaps[0])
 					return;
-				m_commandList->SetDescriptorHeaps(count, native_heaps.data());
+				compiler.SetDescriptorHeaps(count, native_heaps.data());
 			}
 
 		}
@@ -910,8 +906,9 @@ namespace DX12
 		friend class CommandList;
 
 		CommandList& base;
+		CommandListCompilerDelayed* list;
 
-		CopyContext(CommandList& base) :base(base) {}
+		CopyContext(CommandList& base) :base(base), list(base.get_native_list()) {}
 		CopyContext(const CopyContext&) = delete;
 		CopyContext(CopyContext&&) = delete;
 	public:
@@ -941,20 +938,6 @@ namespace DX12
 
 	class SignatureDataSetter
 	{
-
-
-		template<class T>
-		void set_constants_internal(UINT i, UINT offset, T args)
-		{
-			set_constant(i, offset, *reinterpret_cast<UINT*>(&args));
-		}
-
-		template<class T, class... Args>
-		void set_constants_internal(UINT i, UINT offset, T v, Args...args)
-		{
-			set_constants_internal(i, offset, v);
-			set_constants_internal(i, offset + 1, args...);
-		}
 	protected:
 		CommandList& base;
 		SignatureDataSetter(CommandList& base) :base(base) {	}
@@ -964,10 +947,7 @@ namespace DX12
 			return base;
 		}
 		virtual void set_signature(const RootSignature::ptr&) = 0;
-
 		virtual void set(UINT, const HandleTableLight&) = 0;
-
-
 		virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
 
 		template<class T>
@@ -979,14 +959,10 @@ namespace DX12
 		}
 	};
 
-
-
-
-
 	class GraphicsContext : public SignatureDataSetter
 	{
 		friend class CommandList;
-		ComPtr<ID3D12GraphicsCommandList4>& list;
+		CommandListCompilerDelayed* list;
 
 		GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {
 		}
@@ -1023,15 +999,7 @@ namespace DX12
 	public:
 
 		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
-
-
-		void set_constant(UINT i, UINT offset, UINT data)
-		{
-			list->SetGraphicsRoot32BitConstant(i, data, offset);
-		}
-
-
-
+		
 		void set(UINT, const HandleTableLight&)override;
 
 
@@ -1041,11 +1009,11 @@ namespace DX12
 		{
 			return base;
 		}
-
-		ComPtr<ID3D12GraphicsCommandList4>& get_native_list()
+		/*
+		CommandListCompiler* get_native_list()
 		{
-			return list;
-		}
+			return &list;
+		}*/
 		void flush_binds(bool force = false);
 		void set_topology(D3D_PRIMITIVE_TOPOLOGY topology)
 		{
@@ -1171,7 +1139,7 @@ namespace DX12
 		friend class CommandList;
 
 
-		ComPtr<ID3D12GraphicsCommandList4>& list;
+		CommandListCompilerDelayed* list;
 
 		ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {}
 		ComputeContext(const ComputeContext&) = delete;
