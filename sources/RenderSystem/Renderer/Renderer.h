@@ -117,6 +117,8 @@ class mesh_renderer : public renderer, public Events::prop_handler
 
 
 		Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer;
+        Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer111;
+
         IndirectCommand dispatch_command;
 
 	

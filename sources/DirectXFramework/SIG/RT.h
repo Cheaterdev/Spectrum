@@ -9,34 +9,6 @@ struct CompiledRT
 
 	const CompiledRT& set(Render::GraphicsContext& graphics, bool use_transitions = true) const
 	{
-		if (use_transitions) {
-			//	PROFILE(L"transitions");
-
-			for (UINT i = 0; i < (UINT)table_rtv.get_count(); ++i)
-			{
-				auto h = table_rtv[i];
-				if (h.resource_info && h.resource_info->resource_ptr)
-					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
-					{
-						graphics.get_base().transition_rtv(h.resource_info);
-						//	graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-					}
-
-			}
-			for (UINT i = 0; i < (UINT)table_dsv.get_count(); ++i)
-			{
-				auto h = table_dsv[i];
-				if (h.resource_info && h.resource_info->resource_ptr)
-					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT)
-					{
-						graphics.get_base().transition_dsv(h.resource_info);
-						//	graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-					}
-
-			}
-
-		}
-
 		graphics.set_rtv(table_rtv, table_dsv[0]);
 
 		return *this;

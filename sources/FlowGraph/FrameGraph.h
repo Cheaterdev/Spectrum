@@ -82,6 +82,10 @@ struct ResourceRWState
 {
 	bool write = false;
 	std::list<Pass*> passes;
+
+	std::list<Pass*> compute;
+	std::list<Pass*> graphics;
+	
 };
 struct ResourceAllocInfo
 {
@@ -127,6 +131,8 @@ struct ResourceAllocInfo
 
 	void add_pass(Pass* pass, ResourceFlags flags);
 	void reset();
+
+	void remove_inactive();
 };
 
 
@@ -239,6 +245,7 @@ struct Pass
 	int compute_count = 0;
 	Pass* wait_pass = nullptr;
 	Pass* prev_pass = nullptr;
+
 	virtual bool setup(TaskBuilder& builder) = 0;
 
 	Render::CommandListType get_type()

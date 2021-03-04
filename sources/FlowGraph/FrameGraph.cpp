@@ -13,11 +13,9 @@ void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
 
 		ResourceRWState state;
 		state.write = is_writer;
-		state.passes.emplace_back(pass);
 		states.emplace_back(state);
-
 		was_swap = true;
-		last_writer = states.size() - 1;
+		last_writer = states.size() - 1;		
 	}
 	else
 	{
@@ -28,21 +26,24 @@ void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
 			states.emplace_back(state);
 			was_swap = true;
 		}
-
-		ResourceRWState& state = states.back();
-		state.passes.emplace_back(pass);
 	}
 
+	ResourceRWState& state = states.back();
+		state.passes.emplace_back(pass);
 
+		if(check(pass->flags&PassFlags::Compute))
+			state.compute.emplace_back(pass);
+		else
+			state.graphics.emplace_back(pass);
 	
 
 	if (was_swap)
 	{
-		related.merge(related_read);	
+		related.insert(related_read.begin(), related_read.end());
 		related_read.clear();
 	}
 	
-	pass->related.merge(related);
+	pass->related.insert(related.begin(), related.end());
 	related_read.insert(pass);
 }
 
@@ -55,6 +56,35 @@ void ResourceAllocInfo::reset()
 	related_read.clear();
 }
 
+void ResourceAllocInfo::remove_inactive()
+{
+
+	auto fn = [](Pass* pass) {return !pass->active(); };
+
+	for(auto& state:states)
+	{
+
+		{
+			const auto ret2 = std::ranges::remove_if(state.graphics, fn);
+			state.graphics.erase(ret2.begin(), ret2.end());
+		}
+		
+		{
+			const auto ret2 = std::ranges::remove_if(state.compute, fn);
+			state.compute.erase(ret2.begin(), ret2.end());
+		}
+
+
+		{
+			const auto ret2 = std::ranges::remove_if(state.passes, fn);
+			state.passes.erase(ret2.begin(), ret2.end());
+		}
+
+	}
+
+
+	
+}
 TaskBuilder::TaskBuilder() : allocator(false), static_allocator(false)
 {
 	
@@ -140,10 +170,8 @@ Render::CommandList::ptr& FrameContext::get_list()
 	
 	if (!list)
 	{
-		Render::CommandListType type = Render::CommandListType::DIRECT;
+		Render::CommandListType type = pass->get_type();
 
-		if(check(pass->flags&PassFlags::Compute))
-			type = Render::CommandListType::COMPUTE;
 		list = frame->start_list(pass->name, type);
 
 		for (auto handle : pass->used.resource_creations)
@@ -229,6 +257,7 @@ void FrameGraph::start_new_frame()
 
 void FrameGraph::setup()
 {
+
 	PROFILE(L"FrameGraph::setup");
 
 	for (auto& pass : passes)
@@ -268,7 +297,7 @@ void FrameGraph::setup()
 				
 				if (pass->enabled) continue;
 
-				if(pass->id> pass_id) continue;
+				if(!check(info.flags&ResourceFlags::Static) && pass->id> pass_id) continue;
 				pass->enabled = true;
 
 				for (auto res : pass->used.resources)
@@ -371,55 +400,99 @@ void FrameGraph::setup()
 
 	int i = 0;
 
+
+
 		for (auto pass : enabled_passes)
 		{
 			pass->call_id = i++;
 			pass->wait_pass = nullptr;
-			for (auto [handler, flags] : pass->used.resource_flags)
-			{
-				auto info = handler->info;
-
-				if (!info->valid_from)	info->valid_from = pass;
-				info->valid_to = pass;
-			}
+			pass->prev_pass = nullptr;
 		}
+
+
+		for (auto& pair : builder.alloc_resources)
+		{
+			auto& info = pair.second;
+			if (!info.enabled) continue;
+
+			info.remove_inactive();
+			info.valid_from = nullptr;// info.states.front().passes.front();
+			info.valid_to = nullptr;//info.states.back().passes.back();
+
+				for(auto state: info.states)
+				{
+					for (auto pass : state.passes)
+					{
+						if (!pass->active()) continue;
+
+						if (!info.valid_from || info.valid_from->call_id > pass->id)
+						{
+							info.valid_from = pass;		
+						}
+					}
+					if (info.valid_from) break;
+				}
+			
+				for (auto state : info.states | std::ranges::views::reverse)
+				{
+					for (auto pass : state.passes | std::ranges::views::reverse)
+					{
+						if (!pass->active()) continue;
+
+						if (!info.valid_to || info.valid_to->call_id < pass->id)
+						{
+							info.valid_to = pass;
+						}
+					}
+					if (info.valid_to) break;
+				}
+
+
+
+				for (int i = 1; i < info.states.size(); i++)
+				{
+					auto state = info.states[i];
+					auto prev_state = info.states[i - 1];
+
+					Pass* prev_pass_graphics = prev_state.graphics.empty() ? nullptr : prev_state.graphics.back();
+					Pass* prev_pass_compute = prev_state.compute.empty() ? nullptr : prev_state.compute.back();
+
+					Pass* pass_graphics = state.graphics.empty() ? nullptr : state.graphics.front();
+					Pass* pass_compute = state.compute.empty() ? nullptr : state.compute.front();
+
+					if (pass_graphics && prev_pass_compute)
+					{
+						if (!pass_graphics->wait_pass || pass_graphics->wait_pass->call_id < prev_pass_compute->call_id)
+							pass_graphics->wait_pass = prev_pass_compute;
+					}
+
+
+					if (pass_compute && prev_pass_graphics)
+					{
+						if (!pass_compute->wait_pass || pass_compute->wait_pass->call_id < prev_pass_graphics->call_id)
+							pass_compute->wait_pass = prev_pass_graphics;
+					}				
+				}
+
+		}
+
+	
 		Pass* last_graphics = nullptr;
 		Pass* last_compute = nullptr;
 
 		for (auto pass : enabled_passes)
 		{
-
-			Render::CommandListType type = pass->get_type();
-		
+			Render::CommandListType type = pass->get_type();	
 
 			bool sync_to_graphics = last_graphics && type == Render::CommandListType::DIRECT;
 			bool sync_to_compute = last_compute && type == Render::CommandListType::COMPUTE;
 
 			
-			for (auto depends : pass->related)
-			{
-				if (!depends->active()) continue;
-				
-				Render::CommandListType depends_type = depends->get_type();
-
-				if (depends_type != type)
-				{
-					if (pass->wait_pass == nullptr || pass->wait_pass->call_id < depends->call_id)
-					{
-						pass->wait_pass = depends;
-					}
-				}
-				else
-				{
-					if (type == Render::CommandListType::COMPUTE)
-						pass->prev_pass = last_compute;
-					else
-						pass->prev_pass = last_graphics;
-				}
-
-
-			}
-
+			
+			if (type == Render::CommandListType::COMPUTE)
+				pass->prev_pass = last_compute;
+			else
+				pass->prev_pass = last_graphics;
 
 			if (sync_to_compute)
 			{
@@ -448,31 +521,24 @@ void FrameGraph::setup()
 				}
 			}
 
+			if(pass->wait_pass)
+			{
+				for (auto [handler, flags] : pass->wait_pass->used.resource_flags)
+				{
+					auto info = handler->info;
 
+					if (info->valid_to == pass->wait_pass)
+					{
+						info->valid_to = pass;
+					}
+				}
+			}
 			if (type == Render::CommandListType::COMPUTE)
 				last_compute = pass;
 			else
 				last_graphics = pass;
 
 		}
-		/*
-
-		Pass* wait_pass = nullptr;
-		for (auto depends : pass->related)
-		{
-
-			Render::CommandListType depends_type = depends->get_type();
-
-			if (depends_type != list_type)
-			{
-				if (wait_pass == nullptr || wait_pass->call_id < depends->call_id)
-				{
-					wait_pass = depends;
-				}
-			}
-
-
-		}*/
 }
 
 void FrameGraph::compile(int frame)
@@ -519,7 +585,7 @@ void FrameGraph::render()
 	{
 		PROFILE(L"execute");
 		
-		for (auto& pass : enabled_passes | std::ranges::views::reverse)
+	/*	for (auto& pass : enabled_passes | std::ranges::views::reverse)
 		{
 			auto commandList = pass->context.list;
 			if (!commandList) continue;
@@ -544,7 +610,128 @@ void FrameGraph::render()
 			}
 
 		
+		}*/
+		if(!GetAsyncKeyState(VK_F2))
+		for (auto& pair : builder.alloc_resources)
+		{
+			auto &info = pair.second;
+			if (!info.enabled) continue;
+
+			auto& resource = info.resource;
+
+			if (!resource) continue;
+			
+			for(auto state:info.states)
+			{
+				
+				std::vector<Render::ResourceState> merged_state;
+
+				
+				for(auto pass:state.passes)
+				{
+					auto commandList = pass->context.list;
+					if (!commandList) continue;
+					
+					auto &cpu_state = resource->get_cpu_state(commandList.get());
+
+					if (merged_state.empty())
+					{
+						merged_state.resize(cpu_state.subres.size(), Render::ResourceState::COMMON);
+					}
+
+
+					for (int i = 0; i < merged_state.size();i++)
+					{
+						if (!cpu_state.subres[i].is_used(commandList.get()))
+							continue;
+						merged_state[i] = merge_state(merged_state[i], cpu_state.subres[i].get_first_state());
+					}
+				}
+
+				for (auto pass : state.passes)
+				{
+					auto commandList = pass->context.list;
+					if (!commandList) continue;
+
+					auto& cpu_state = resource->get_cpu_state(commandList.get());
+
+					for (int i = 0; i < merged_state.size(); i++)
+					{
+						if (!cpu_state.subres[i].is_used(commandList.get()))
+							continue;
+						cpu_state.subres[i].first_transition->wanted_state = merge_state(merged_state[i], cpu_state.subres[i].first_transition->wanted_state);
+						assert(cpu_state.subres[i].first_transition->wanted_state == merged_state[i]);
+					}
+				}
+
+				// TODO: propagate first state to next writer
+			}
+
+						
+			for (int i = 1; i < info.states.size(); i++)
+			{
+				auto state = info.states[i];
+				auto prev_state = info.states[i - 1];
+
+				Pass* prev_pass_graphics = prev_state.graphics.empty() ? nullptr : prev_state.graphics.back();
+				Pass* prev_pass_compute = prev_state.compute.empty() ? nullptr : prev_state.compute.back();
+
+				Pass* pass_graphics = state.graphics.empty() ? nullptr : state.graphics.front();
+				Pass* pass_compute = state.compute.empty() ? nullptr : state.compute.front();
+
+				if (pass_graphics && prev_pass_compute)
+				{
+					if (!pass_graphics->wait_pass || pass_graphics->wait_pass->call_id < prev_pass_compute->call_id)
+						pass_graphics->wait_pass = prev_pass_compute;
+				}
+
+				if (pass_compute && prev_pass_graphics)
+				{
+					if (!pass_compute->wait_pass || pass_compute->wait_pass->call_id < prev_pass_graphics->call_id)
+						pass_compute->wait_pass = prev_pass_graphics;
+
+					auto prevCL = prev_pass_graphics->context.list;
+					auto curCL = pass_compute->context.list;
+
+
+					if (prevCL && curCL)prevCL->merge_transition(curCL.get(), info.resource.get());
+				}
+
+				if (pass_compute && prev_pass_compute)
+				{
+					auto prevCL = prev_pass_compute->context.list;
+					auto curCL = pass_compute->context.list;
+
+
+					if (prevCL && curCL)prevCL->merge_transition(curCL.get(), info.resource.get());
+				}
+				if (pass_graphics && prev_pass_graphics)
+				{
+					auto prevCL = prev_pass_graphics->context.list;
+				
+						auto curCL = pass_graphics->context.list;
+						if (prevCL&& curCL)
+						prevCL->merge_transition(curCL.get(), info.resource.get());
+					
+				}
+				
+			}
+
+			auto gpu_state = info.resource->copy_gpu();
+
+			for (int i = 0; i < info.states.size(); i++)
+			{
+				auto state = info.states[i];
+				for (auto pass : state.passes)
+				{
+					auto commandList = pass->context.list;
+					if (!commandList) continue;
+
+					info.resource->prepare_state(commandList.get(), info.resource.get(), gpu_state);
+				}
+			}
 		}
+		
 		{
 			PROFILE(L"compile");
 
@@ -569,50 +756,83 @@ void FrameGraph::render()
 
 		}
 
+
 		{
 			std::list<Pass*> graphics;
 			std::list<Pass*> compute;
 
+			UINT transitions = 0;
+
+			enum_array<Render::CommandListType, enum_array<Render::CommandListType, UINT>> call_ids = {};
+
+			
 			auto flush = [&]()
-			{	for (auto pass : compute)
+			{
+				for (auto pass : compute)
 				{
 					auto commandList = pass->context.list;
+					if(commandList)
+					{
+						
+					
+					transitions += commandList->transition_count;
 					pass->fence_end = commandList->execute().get();
+					}
+					else
+					{
+						pass->fence_end = Render::Device::get().get_queue(pass->get_type())->get_last_fence();
+					}
 				}
+				
 				for(auto pass: graphics)
 				{
 					auto commandList = pass->context.list;
-					pass->fence_end = commandList->execute().get();
-				}
-
-			
+					if (commandList)
+					{
+						transitions += commandList->transition_count;
+						pass->fence_end = commandList->execute().get();
+					}else
+					{
+						pass->fence_end = Render::Device::get().get_queue(pass->get_type())->get_last_fence();
+					}
+					
+				}	
 				graphics.clear();
 				compute.clear();
 			};
+
+			
 			for (auto& pass : enabled_passes)
 			{
-				auto commandList = pass->context.list;
-				if (!commandList) continue;
 
-				Render::CommandListType list_type = commandList->get_type();
+				Render::CommandListType list_type = pass->get_type();
 
 				if (pass->wait_pass)
 				{
-					flush();
-					Render::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
+					auto type = pass->wait_pass->get_type();
+
+					if (call_ids[list_type][type] < pass->wait_pass->call_id+1)
+					{
+						flush();
+						Render::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
+
+						call_ids[list_type][type] = pass->wait_pass->call_id + 1;
+					}
+		
 				}
 
 				if (list_type == Render::CommandListType::DIRECT)
 					graphics.emplace_back(pass);
 				else
 					compute.emplace_back(pass);
-				//pass->fence_end = commandList->execute();
+
+				call_ids[list_type][list_type] = pass->call_id +1;
 			}
 			flush();
+			
 		}
 
 	}
-	builder.current_frame = nullptr;
 
 
 
@@ -812,6 +1032,7 @@ void TaskBuilder::create_resources()
 		if (!info->enabled)
 			continue;
 
+
 		info->heap_type = Render::HeapType::DEFAULT;
 
 		if (check(info->flags & ResourceFlags::GenCPU))
@@ -900,6 +1121,7 @@ void TaskBuilder::create_resources()
 		}
 		else
 		{
+			assert(info->valid_from != info->valid_to);
 			assert(pair.second.valid_from->active());
 			assert(pair.second.valid_to->active());
 			events[pair.second.valid_from->call_id].create.insert(info);

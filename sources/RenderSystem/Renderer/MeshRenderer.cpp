@@ -148,6 +148,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Slots::GatherPipelineGlobal::Compiled& from)
 {
+
+	PROFILE_GPU(L"init_dispatch");
 	auto& graphics = mesh_render_context->list->get_graphics();
 	auto& compute = mesh_render_context->list->get_compute();
 	auto& copy = mesh_render_context->list->get_copy();
@@ -158,8 +160,16 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 
 		init_dispatch_compiled.set(compute);
 		from.set(compute);
+
+		
 		compute.dispach(1, 1, 1);
 
+		/*graphics.execute_indirect(
+			dispatch_command,
+			1,
+			dispatch_buffer111.get());
+		
+		*/
 		//		list.print_debug();
 	}
 
@@ -321,8 +331,8 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			((UINT*)gather.GetPip_ids())[total] = end->second->get_id();
 			gather.GetCommands()[total] = commands_buffer[total]->buffer->appendStructuredBuffer;
 
-			list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
-			list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);
+	/*		list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
+			list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);*/
 			end++; total++;
 			if (end == pipelines.end()) break;
 		}
@@ -367,12 +377,12 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			}
 
 
-			for (int i = 0; i < total; i++)
+		/*	for (int i = 0; i < total; i++)
 			{
 				list.transition(commands_buffer[i]->buffer, ResourceState::INDIRECT_ARGUMENT);
 				list.transition(commands_buffer[i]->buffer->help_buffer, ResourceState::INDIRECT_ARGUMENT);
 
-			}
+			}*/
 
 		}
 
@@ -517,6 +527,14 @@ mesh_renderer::mesh_renderer()
 		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<command>));
 	}
 
+	{
+		dispatch_buffer111 = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		DispatchArguments args;
+		args.ThreadGroupCountX = 1;
+		args.ThreadGroupCountY = 1;
+		args.ThreadGroupCountZ = 1;
+		dispatch_buffer111->set_data(args);
+	}
 	{
 		Slots::GatherPipelineGlobal gather;
 		gather.GetCommands() = meshes_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;

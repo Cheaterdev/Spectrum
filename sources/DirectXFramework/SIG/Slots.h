@@ -2,74 +2,19 @@
 template<class Slot>
 struct CompiledData
 {
-	//Render::HandleTableLight table_cbv;
-
 	Render::ResourceAddress cb;
 	Render::HandleTableLight table_srv;
 	Render::HandleTableLight table_uav;
 	Render::HandleTableLight table_smp;
 
-	const CompiledData<Slot>& set(Render::SignatureDataSetter& graphics, bool use_transitions = true) const
+	const CompiledData<Slot>& set(Render::SignatureDataSetter& graphics) const
 	{
-		if (use_transitions) {
-		
-
-			for (UINT i = 0; i < (UINT)table_srv.get_count(); ++i)
-			{
-				auto h = table_srv[i];
-				if (h.resource_info && h.resource_info->resource_ptr)
-					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT|| h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::RESERVED)
-					{
-						graphics.get_base().transition_srv(h.resource_info);
-						//	graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::PIXEL_SHADER_RESOURCE | Render::ResourceState::NON_PIXEL_SHADER_RESOURCE);
-					}
-					else
-					{
-						graphics.get_base().use_resource(h.resource_info->resource_ptr);
-					}
-
-			}
-
-			for (UINT i = 0; i < (UINT)table_uav.get_count(); ++i)
-			{
-				auto h = table_uav[i];
-				if (h.resource_info && h.resource_info->resource_ptr)
-					if (h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::DEFAULT || h.resource_info->resource_ptr->get_heap_type() == Render::HeapType::RESERVED)
-					{
-						//graphics.get_base().transition(h.resource_info->resource_ptr, Render::ResourceState::UNORDERED_ACCESS);
-						graphics.get_base().transition_uav(h.resource_info);
-					}
-					else
-					{
-						graphics.get_base().use_resource(h.resource_info->resource_ptr);
-					}
-			}
-
-			if (cb)
-			{
-				if ((cb.resource)->get_heap_type() == Render::HeapType::DEFAULT|| (cb.resource)->get_heap_type() == Render::HeapType::RESERVED)
-				{
-					graphics.get_base().transition(cb.resource, Render::ResourceState::VERTEX_AND_CONSTANT_BUFFER);
-				}
-				else
-				{
-					graphics.get_base().use_resource(cb.resource);
-				}
-
-			}
-		}
-
-
-		//PROFILE(L"set");
-		if constexpr (TableHasSRV<Slot>)  if (table_srv.is_valid()) graphics.set(Slot::SRV_ID, table_srv);
-		if constexpr (TableHasSMP<Slot>)  if (table_smp.is_valid()) graphics.set(Slot::SMP_ID, table_smp);
-		if constexpr (TableHasUAV<Slot>)  if (table_uav.is_valid()) graphics.set(Slot::UAV_ID, table_uav);
-		//	if (table_cbv.get_count()> 0 ) graphics.set(Slot::CB_ID, table_cbv);
-
-
+		if constexpr (TableHasSRV<Slot>)  if (table_srv.is_valid()) graphics.set_table<Render::HandleType::SRV>(Slot::SRV_ID, table_srv);
+		if constexpr (TableHasSMP<Slot>)  if (table_smp.is_valid()) graphics.set_table<Render::HandleType::SMP>(Slot::SMP_ID, table_smp);
+		if constexpr (TableHasUAV<Slot>)  if (table_uav.is_valid()) graphics.set_table<Render::HandleType::UAV>(Slot::UAV_ID, table_uav);
 
 		if (cb)
-			graphics.set_const_buffer(Slot::CB_ID, cb.address);
+			graphics.set_cb(Slot::CB_ID, cb);
 
 		return *this;
 	}
@@ -209,9 +154,9 @@ struct DataHolder : public Table
 	}
 
 
-	void set(Render::SignatureDataSetter& context, bool use_transitions = true) const
+	void set(Render::SignatureDataSetter& context) const
 	{
-		compile(context.get_base()).set(context, use_transitions);
+		compile(context.get_base()).set(context);
 	}
 
 

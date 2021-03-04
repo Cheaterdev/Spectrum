@@ -222,7 +222,7 @@ namespace DX12
 		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));
 		auto m_tiledResourcesTier = featureData.TiledResourcesTier;
 	
-		rtx =  options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+		rtx = false;// options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
 
 	}
 

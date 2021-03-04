@@ -336,32 +336,132 @@ namespace DX12
 
 	class TransitionCommandList;
 
+
+	struct TransitionPoint
+	{
+		std::list<Transition> transitions;
+		std::list<Resource*> uav_transitions;
+		std::list<Resource*> aliasing;
+
+	};
+
+	enum class TransitionType:int
+	{
+		ZERO,
+		FIRST,
+		LAST
+	};
 	class Transitions : public virtual CommandListBase
 	{
-		std::vector<D3D12_RESOURCE_BARRIER> transitions;
-		//unsigned int transition_count = 0;
+
 
 		std::list<Resource*> used_resources;
 		std::list<TrackedResource::ptr> tracked_resources;
 	
 		std::shared_ptr<TransitionCommandList> transition_list;
 
-		
+		friend class SignatureDataSetter;
+		friend class Sendable;
+		friend class Eventer;
+		friend class ResourceStateManager;
 	protected:
-		void reset();
+		void begin();
+		void on_execute();
 		std::list<ComPtr<ID3D12PipelineState>> tracked_psos;
 		
+		std::list<TransitionPoint> transition_points;
+		TransitionPoint zero_tranzition;
+
+		void create_transition_point()
+		{
+			auto point = &transition_points.emplace_back();
+			bool first = transition_points.size() == 1;
+		//	auto &point = transition_points.back();
+			compiler.func([point, first](ID3D12GraphicsCommandList4* list)
+			{
+
+					std::vector<D3D12_RESOURCE_BARRIER> transitions;
+					for(auto uav:point->uav_transitions)
+				{
+						transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(uav->get_native().Get()));
+				}
+
+					for (auto& uav : point->aliasing)
+					{
+						transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(nullptr, uav->get_native().Get()));
+					}
+
+					for (auto& transition : point->transitions)
+					{
+						auto prev_transition = transition.prev_transition;
+
+						if (!prev_transition) 
+							continue;
+						
+						if(prev_transition->wanted_state == transition.wanted_state)
+							continue;
+
+						
+						transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(transition.resource->get_native().Get(),
+							static_cast<D3D12_RESOURCE_STATES>(prev_transition->wanted_state),
+							static_cast<D3D12_RESOURCE_STATES>(transition.wanted_state),
+							transition.subres));
+					}
+				
+					if (!transitions.empty())
+					{
+						list->ResourceBarrier((UINT)transitions.size(), transitions.data());
+						transitions.clear();
+					}
+			});
+		}
+
+	public:
+		void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		void transition(const Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+	
 	public:
 		void free_resources();
 		std::list<ComPtr<ID3D12Heap>> tracked_heaps;
-		void flush_transitions();
+		UINT transition_count = 0;
 
-		void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-		void transition(const Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		Transition* create_transition(const Resource* resource, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, TransitionType type = TransitionType::LAST)
+		{
+			TransitionPoint* point = nullptr;
+
+			if (type == TransitionType::FIRST) point = &transition_points.front();
+			if (type == TransitionType::LAST) point = &transition_points.back();
+			if (type == TransitionType::ZERO) point = &zero_tranzition;
+
+
+		
+			Transition&  transition = point->transitions.emplace_back();
+			
+		//	transition.index = 0æ..first?0:transition_points.size() - 1;
+			transition.resource = const_cast<Resource*>(resource);
+			transition.subres = subres;
+
+			return &transition;
+		}
+
+		void create_uav_transition(const Resource* resource)
+		{
+			auto& point = transition_points.back();
+			point.uav_transitions.emplace_back(const_cast<Resource*>(resource));
+		}
+
+		void create_aliasing_transition(const Resource* resource)
+		{
+			auto& point = transition_points.back();
+			point.aliasing.emplace_back(const_cast<Resource*>(resource));
+		}
+
 		void use_resource(const Resource* resource);
 	public:
 		void prepare_transitions(Transitions* to, bool all);
 
+
+		void merge_transition(Transitions* to, Resource* res);
 		void transition_uav(Resource* resource);
 		void transition(Resource* from, Resource* to);
 		std::shared_ptr<TransitionCommandList> fix_pretransitions();
@@ -654,7 +754,7 @@ namespace DX12
 	};
 
 
-	class Eventer : public virtual CommandListBase, public TimedRoot
+	class Eventer : public virtual CommandListBase,  public TimedRoot
 	{
 	
  		std::list<std::wstring> names;
@@ -862,9 +962,9 @@ namespace DX12
 
 		void clear_uav(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 		{
+			create_transition_point();
 			transition_uav(h.resource_info);
-
-			flush_transitions();
+			
 			auto handle = get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
 			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, h.resource_info->resource_ptr->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 		}
@@ -872,8 +972,8 @@ namespace DX12
 
 		void clear_rtv(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 		{
+			create_transition_point();
 			transition_rtv(h.resource_info);
-			flush_transitions();
 			get_native_list()->ClearRenderTargetView(h.cpu, ClearColor.data(), 0, nullptr);
 		}
 
@@ -886,15 +986,17 @@ namespace DX12
 
 		void clear_stencil(Handle dsv, UINT8 stencil = 0)
 		{
+			create_transition_point();
 			transition_dsv(dsv.resource_info);
-			flush_transitions();
+
 			get_native_list()->ClearDepthStencilView(dsv.cpu, D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
 		}
 
 		void clear_depth(Handle dsv, float depth = 0)
 		{
+			create_transition_point();
 			transition_dsv(dsv.resource_info);
-			flush_transitions();
+
 			get_native_list()->ClearDepthStencilView(dsv.cpu, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
 		}
 
@@ -920,7 +1022,6 @@ namespace DX12
 
 
 		//TODO: remove
-		void update_resource(Resource::ptr resource, UINT first_subresource, UINT sub_count, D3D12_SUBRESOURCE_DATA* data);
 		void update_buffer(Resource::ptr resource, UINT offset, const char* data, UINT size);
 		void update_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 		void update_buffer(Resource* resource, UINT offset, const char* data, UINT size);
@@ -938,17 +1039,106 @@ namespace DX12
 
 	class SignatureDataSetter
 	{
+		struct RowInfo
+		{
+			HandleType type;
+			bool dirty = false;
+			HandleTableLight table;
+		};
+		std::vector<RowInfo> tables;
+
+		friend class CommandList;
+
+	
 	protected:
 		CommandList& base;
-		SignatureDataSetter(CommandList& base) :base(base) {	}
+		SignatureDataSetter(CommandList& base) :base(base) {
+			tables.resize(32); // !!!!!!!!!!!
+			}
+
+		virtual void set(UINT, const HandleTableLight&) = 0;
+		virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
+
+
+		void reset_tables()
+		{
+			for (auto& row : tables)
+			{
+				row.dirty = false;
+			}
+			
+		}
+
+
+		void commit_tables()
+		{
+			for(auto &row:tables)
+			{
+				if (!row.dirty) continue;
+
+				auto &table = row.table;
+				auto type = row.type;
+				for (UINT i = 0; i < (UINT)table.get_count(); ++i)
+				{
+					const auto& h = table[i];
+					if (h.resource_info && h.resource_info->resource_ptr)
+					{
+						if (h.resource_info->resource_ptr->get_heap_type() == HeapType::DEFAULT || h.resource_info->resource_ptr->get_heap_type() == HeapType::RESERVED)
+						{
+							if (type == HandleType::SRV)	get_base().transition_srv(h.resource_info);
+							else if (type == HandleType::UAV)	get_base().transition_uav(h.resource_info);
+							else assert(false);
+						}
+						else
+						{
+							get_base().use_resource(h.resource_info->resource_ptr);
+						}
+					}
+				}
+
+				row.dirty = false;
+			}
+
+		}
 	public:
 
 		CommandList& get_base() {
 			return base;
 		}
 		virtual void set_signature(const RootSignature::ptr&) = 0;
-		virtual void set(UINT, const HandleTableLight&) = 0;
-		virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
+
+		template<HandleType type>
+		void set_table(UINT index, const HandleTableLight& table)
+		{
+		
+			
+			auto &row = tables[index];
+
+			row.type = type;
+			row.table = table;
+			row.dirty = true;
+			set(index, table);
+		}
+
+		
+		void set_cb(UINT index, const ResourceAddress& address)
+		{
+		
+			if (address.resource)
+			{
+				if (address.resource->get_heap_type() == HeapType::DEFAULT || address.resource->get_heap_type() == HeapType::RESERVED)
+				{
+					get_base().transition(address.resource, ResourceState::VERTEX_AND_CONSTANT_BUFFER);
+				}
+				else
+				{
+					get_base().use_resource(address.resource);
+				}
+
+			}
+			set_const_buffer(index, address.address);
+		}
+
 
 		template<class T>
 		std::unique_ptr<T> wrap()
@@ -996,12 +1186,9 @@ namespace DX12
 		void begin();
 		void end();
 		void on_execute();
-	public:
 
-		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
-		
+		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;		
 		void set(UINT, const HandleTableLight&)override;
-
 
 	public:
 
@@ -1031,23 +1218,18 @@ namespace DX12
 
 
 		void set_layout(Layouts layout);
-
 		void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
 
 		void set_scissor(sizer_long rect);
 		void set_viewport(Viewport viewport);
-
 		void set_viewport(vec4 viewport);
-
 		void set_scissors(sizer_long rect);
 		void set_viewports(std::vector<Viewport> viewports);
 
 
 		void set_rtv(std::initializer_list<Handle> rt, Handle h);
-
 		void set_rtv(const HandleTable&, Handle);
-		void set_rtv(int c, Handle rt, Handle h);
-	
+		void set_rtv(int c, Handle rt, Handle h);	
 		void set_rtv(const HandleTableLight&, Handle);
 
 		void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
@@ -1103,10 +1285,7 @@ namespace DX12
 			if (h.is_valid())
 				get_base().transition_dsv(h.resource_info);
 
-			get_base().flush_transitions();
-
-			
-			
+		
 			CD3DX12_CPU_DESCRIPTOR_HANDLE ar[] = { (rtvlist.cpu)... };
 			list->OMSetRenderTargets(size(ar), ar, false, h.is_valid() ? &h.cpu : nullptr);
 		}
@@ -1123,11 +1302,10 @@ namespace DX12
 			list->IASetIndexBuffer(&view.view);
 		}
 
+
+		
 		void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
 		void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
-
-
-
 		void execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset = 0, Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
 	};
@@ -1191,12 +1369,14 @@ namespace DX12
 
 		void build_ras(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC &desc)
 		{
-			get_base().flush_transitions();
+
 			list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
 		}
 	
 		void dispatch_rays(const D3D12_DISPATCH_RAYS_DESC &desc)
 		{
+			base.create_transition_point();
+			commit_tables();
 			list->DispatchRays(&desc);
 		}
 

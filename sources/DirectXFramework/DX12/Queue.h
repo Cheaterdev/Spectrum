@@ -62,7 +62,10 @@ namespace DX12
 		ComPtr<ID3D12CommandQueue> get_native();
 
 
-
+		FenceWaiter get_last_fence()
+		{
+			return last_executed_fence;
+		}
 		void stop_all();
 		FenceWaiter signal();
 		void signal_and_wait();

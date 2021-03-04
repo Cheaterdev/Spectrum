@@ -499,10 +499,10 @@ bool MeshAssetInstance::init_ras(CommandList::ptr list)
 			std::vector<D3D12_RAYTRACING_GEOMETRY_DESC > descs;
 			descs.push_back(geometryDesc);
 
-			list->transition(universal_index_manager::get().buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+		/*	list->transition(universal_index_manager::get().buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 			list->transition(universal_nodes_manager::get().buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 			list->transition(universal_vertex_manager::get().buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-			list->flush_transitions();
+		*/
 			info.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
 			if (Device::get().is_rtx_supported())
 			{

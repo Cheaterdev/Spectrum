@@ -235,8 +235,7 @@ void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, R
 
 
 	
-	_list->transition(material_hits->buffer.get(), ResourceState::NON_PIXEL_SHADER_RESOURCE);
-	_list->flush_transitions();
+	//_list->transition(material_hits->buffer.get(), ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
 
 	D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};

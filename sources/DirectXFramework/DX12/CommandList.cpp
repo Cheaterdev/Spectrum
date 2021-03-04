@@ -87,8 +87,8 @@ namespace DX12
 
 		for (auto& e : heaps)
 			e = nullptr;
-	
-		Transitions::reset();
+
+		Transitions::begin();
 		Eventer::begin(name, t);
 	
 		if (type != CommandListType::COPY) {
@@ -101,7 +101,7 @@ namespace DX12
 
 	void CommandList::end()
 	{
-
+		create_transition_point();
 		//	id = -1;
 
 		current_pipeline = nullptr;
@@ -116,7 +116,7 @@ namespace DX12
 	void GraphicsContext::begin()
 	{
 		topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-
+		reset_tables();
 	}
 	void GraphicsContext::end()
 	{
@@ -125,7 +125,7 @@ namespace DX12
 
 	void ComputeContext::begin()
 	{
-
+		reset_tables();
 	}
 	void ComputeContext::end()
 	{
@@ -149,10 +149,6 @@ namespace DX12
 	}
 	void Sendable::compile()
 	{
-		CommandList* list = static_cast<CommandList*>(this); // :(
-
-		list->flush_transitions();
-
 		compiled = compiler.compile();
 	}
 	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
@@ -187,11 +183,8 @@ namespace DX12
 	{	
 		CommandList* list = static_cast<CommandList*>(this); // :(
 		auto info = list->read_data(NumQueries* sizeof(UINT64));
-
-		list->flush_transitions();
+		
 		compiler.ResolveQueryData(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_native().Get(), info.offset);
-
-
 		on_execute_funcs.emplace_back([info, f, NumQueries]() {
 
 			UINT64* data = reinterpret_cast<UINT64*>(info.get_cpu_data());
@@ -246,7 +239,7 @@ namespace DX12
 
 	void GraphicsContext::set_rtv(int c, Handle rt, Handle h)
 	{
-
+		base.create_transition_point();
 		for (int i = 0; i < c; i++)
 		{
 			get_base().transition_rtv(&rt.resource_info[i]);
@@ -255,7 +248,6 @@ namespace DX12
 		if (h.is_valid())
 			get_base().transition_dsv(h.resource_info);
 
-		get_base().flush_transitions();
 		list->OMSetRenderTargets(c, &rt.cpu, true, h.is_valid() ? &h.cpu : nullptr);
 	}
 
@@ -269,10 +261,11 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	}
 	void GraphicsContext::draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
-
+		PROFILE_GPU(L"draw");
+		base.create_transition_point();
 		base.setup_debug(this);
 
-		base.flush_transitions();
+		commit_tables();
 		flush_binds();
 		list->DrawInstanced(vertex_count, instance_count, vertex_offset, instance_offset);
 		get_base().print_debug();
@@ -280,10 +273,12 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	void GraphicsContext::draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
 		if (instance_count == 0) return;
-
+		PROFILE_GPU(L"draw_indexed");
+		base.create_transition_point();
 		base.setup_debug(this);
 
-		base.flush_transitions();
+		commit_tables();
+		
 		flush_binds();
 		list->DrawIndexedInstanced(index_count, instance_count, index_offset, vertex_offset, instance_offset);
 		get_base().print_debug();
@@ -338,10 +333,10 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	}
 	void  CopyContext::update_buffer(Resource* resource, UINT offset, const  char* data, UINT size)
 	{
-		if (base.type != CommandListType::COPY)
+		base.create_transition_point();
+	//	if (base.type != CommandListType::COPY)
 			base.transition(resource, Render::ResourceState::COPY_DEST);
-
-		base.flush_transitions();
+		
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
 		list->CopyBufferRegion(
@@ -395,16 +390,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		info.size = uploadBufferSize;
 		return info;
 	}
-	void  CopyContext::update_resource(Resource::ptr resource, UINT first_subresource, UINT sub_count, D3D12_SUBRESOURCE_DATA* data)
-	{
-	//	if (base.type != CommandListType::COPY)
-			base.transition(resource, Render::ResourceState::COPY_DEST);
 
-		base.flush_transitions();
-		UINT64 uploadBufferSize = GetRequiredIntermediateSize(resource->get_native().Get(), first_subresource, sub_count);
-		auto info = base.place_data(uploadBufferSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-		//UpdateSubresources(list.Get(), resource->get_native().Get(), info.resource->get_native().Get(), info.offset, first_subresource, sub_count, data);
-	}
 	void CopyContext::update_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
 		update_texture(resource.get(), offset, box, sub_resource, data, row_stride, slice_stride);
@@ -412,9 +398,10 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	void CopyContext::update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
-	//	if (base.type != CommandListType::COPY)
-			base.transition(resource, Render::ResourceState::COPY_DEST);
-		base.flush_transitions();
+		base.create_transition_point();
+
+		base.transition(resource, Render::ResourceState::COPY_DEST);
+	
 		D3D12_RESOURCE_DESC Desc = resource->get_desc();
 		UINT rows_count = box.y;
 
@@ -497,12 +484,12 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	}
 	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
 	{
-		if (base.type != CommandListType::COPY)
+		base.create_transition_point();
+	//	if (base.type != CommandListType::COPY)
 			base.transition(resource, Render::ResourceState::COPY_SOURCE);
-		else
-			base.transition(resource, Render::ResourceState::COMMON);
+		//else
+	//		base.transition(resource, Render::ResourceState::COMMON);
 
-		base.flush_transitions();
 		UINT64 RequiredSize = 0;
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 		UINT NumRows;
@@ -542,6 +529,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	std::future<bool> CopyContext::read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)> f)
 	{
+		base.create_transition_point();
+		
 		auto result = std::make_shared<std::promise<bool>>();
 
 		if (size == 0)
@@ -552,7 +541,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		}
 
 		base.transition(resource, Render::ResourceState::COPY_SOURCE);
-		base.flush_transitions();
+
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
@@ -574,8 +563,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			result->set_value(true);
 			return result->get_future();
 		}
-
-		base.flush_transitions();
+		
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
@@ -609,7 +597,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		Readbacker::reset();
 		
 		GPUCompiledManager::reset();
-		Transitions::reset();
+		Transitions::on_execute();
 		frame_resources = nullptr;
 
 		Device::get().id_generator.put(id);
@@ -617,16 +605,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 
 	}
-
-	void Transitions::flush_transitions()
-	{
-		if (!transitions.empty())
-		{
-			PROFILE_GPU(L"flush_transitions");
-			compiler.ResourceBarrier((UINT)transitions.size(), transitions.data());
-			transitions.clear();
-		}
-	}
+	
 	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
 	{
 		PROFILE(L"fix_pretransitions");
@@ -656,7 +635,19 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		}
 		return nullptr;
 	}
-
+	void Transitions::merge_transition(Transitions* to, Resource* resource)
+	{
+		bool is_new = resource->is_new(id, global_id);
+		if (resource->transition(this, to, resource))
+		{
+			if (is_new)
+			{
+				use_resource(resource);
+				used_resources.emplace_back(const_cast<Resource*>(resource));
+				assert(!resource->is_new(id, global_id));
+			}
+		}
+	}
 	void Transitions::prepare_transitions(Transitions* to, bool all)
 	{
 		for (auto& resource : to->used_resources)
@@ -664,7 +655,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			
 			bool is_new = resource->is_new(id, global_id);
 			if((all&&is_new)||(!all&&!is_new))
-			if (resource->transition(type, transitions, resource, id, global_id, to->id, to->global_id))
+			if (resource->transition( this, to , resource))
 			{
 				if (is_new)
 				{
@@ -675,14 +666,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			}
 		}
 	}
-	/*	void Transitions::assume_state(Resource* resource, ResourceState state)
-		{
-			resource->assume_state(id, state);
-		}
-		void Transitions::assume_state(const Resource::ptr& resource, ResourceState state)
-		{
-			resource->assume_state(id, state);
-		}*/
 
 
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
@@ -733,15 +716,15 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 		}
 
-		resource->transition(transitions, resource, to, subres, id, global_id);
+		resource->transition(this, resource, to, subres, id, global_id);
 
-		//	if (transition_count == transitions.size())
-			//	flush_transitions();
 	}
 
 	void Transitions::transition(Resource* from, Resource* to)
 	{
-		transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from ? from->get_native().Get() : nullptr, to->get_native().Get()));
+
+		create_aliasing_transition(to);
+	/*	transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from ? from->get_native().Get() : nullptr, to->get_native().Get()));
 
 		CommandList* list = static_cast<CommandList*>(this); // :(
 
@@ -777,14 +760,14 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		//	get_native_list()->DiscardResource(to->get_native().Get(),nullptr);
 		//	if(to->gpu_state.subres[0].state)
 		//	if (transition_count == transitions.size())
-		//		flush_transitions();
+		//		flush_transitions();*/
 	}
 
 	void Transitions::transition_uav(Resource* resource)
 	{
 
-
-		transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_native().Get()));
+		create_uav_transition(resource);
+	//	transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_native().Get()));
 
 		//	if (transition_count == transitions.size())
 		//		flush_transitions();
@@ -792,26 +775,28 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	void CopyContext::copy_buffer(Resource* dest, int s_dest, Resource* source, int s_source, int size)
 	{
+		base.create_transition_point();
 		//if (base.type != CommandListType::COPY)
 		{
 			base.transition(source, Render::ResourceState::COPY_SOURCE);
 			base.transition(dest, Render::ResourceState::COPY_DEST);
 		}
-		base.flush_transitions();
+
 		list->CopyBufferRegion(dest->get_native().Get(), s_dest, source->get_native().Get(), s_source, size);
 	}
 	void CopyContext::copy_resource(Resource* dest, Resource* source)
 	{
+		base.create_transition_point();
 	//	if (base.type != CommandListType::COPY)
 		{
 			base.transition(source, Render::ResourceState::COPY_SOURCE);
 			base.transition(dest, Render::ResourceState::COPY_DEST);
 		}
-		base.flush_transitions();
 		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
 	}
 	void CopyContext::copy_resource(const Resource::ptr& dest, const Resource::ptr& source)
 	{
+		base.create_transition_point();
 		//if (base.type != CommandListType::COPY)
 		{
 
@@ -819,17 +804,18 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			base.transition(source, Render::ResourceState::COPY_SOURCE);
 			base.transition(dest, Render::ResourceState::COPY_DEST);
 		}
-		base.flush_transitions();
+
 		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
 	}
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
 	{
+		base.create_transition_point();
 		//if (base.type != CommandListType::COPY) 
 		{
 			base.transition(source, Render::ResourceState::COPY_SOURCE, source_subres);
 			base.transition(dest, Render::ResourceState::COPY_DEST, dest_subres);
 		}
-		base.flush_transitions();
+
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_native().Get(), dest_subres);
 		CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_native().Get(), source_subres);
 		list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
@@ -837,12 +823,13 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	void CopyContext::copy_texture( const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size)
 	{
+		base.create_transition_point();
 		//if (base.type != CommandListType::COPY) 
 		{
 			base.transition(from, Render::ResourceState::COPY_SOURCE);
 			base.transition(to, Render::ResourceState::COPY_DEST);
 		}
-		base.flush_transitions();
+
 		
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(to->get_native().Get(), 0);
 		CD3DX12_TEXTURE_COPY_LOCATION Src(from->get_native().Get(), 0);
@@ -887,10 +874,11 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	}
 	void ComputeContext::dispach(int x, int y, int z)
 	{
-
+		PROFILE_GPU(L"Dispatch");
 		base.setup_debug(this);
-
-		base.flush_transitions();
+		
+		base.create_transition_point();
+		commit_tables();
 		flush_binds();
 
 		list->Dispatch(x, y, z);
@@ -1018,16 +1006,25 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	void Eventer::start_event(std::wstring str)
 	{
-		//::PIXBeginEvent(m_commandList.Get(), 0, str.c_str());
+		compiler.func([str](ID3D12GraphicsCommandList4* list)
+		{
+				::PIXBeginEvent(list, 0, str.c_str());
+		});
+		//
 	}
 
 	void Eventer::end_event()
 	{
+		compiler.func([](ID3D12GraphicsCommandList4* list)
+			{
+				::PIXEndEvent(list);
+			});
 		//::PIXEndEvent(m_commandList.Get());
 	}
 
 	void Eventer::set_marker(const wchar_t* label)
 	{
+		
 		//::PIXSetMarker(m_commandList.Get(), 0, label);
 	}
 	
@@ -1057,15 +1054,15 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
-
+		PROFILE_GPU(L"execute_indirect");
 		base.setup_debug(this);
-
+		base.create_transition_point();
 
 
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
-		base.flush_transitions();
+		commit_tables();
 
 		list->ExecuteIndirect(
 			command_types.command_signature.Get(),
@@ -1079,13 +1076,14 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	}
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
-
+		PROFILE_GPU(L"execute_indirect");
+		base.create_transition_point();
 		base.setup_debug(this);
 
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
-		base.flush_transitions();
+		commit_tables();
 
 		list->ExecuteIndirect(
 			command_types.command_signature.Get(),
@@ -1103,10 +1101,17 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		list->SetComputeRootConstantBufferView(i, table);
 	}
-	
-	void Transitions::reset()
+	void  Transitions::begin()
 	{
-		
+		transition_count = 0;
+	//	create_zero_transition();
+		create_transition_point();
+	}
+
+	void Transitions::on_execute()
+	{
+	
+		transition_points.clear();
 		used_resources.clear();
 		TrackedResource::allow_resource_delete = true;
 
@@ -1116,6 +1121,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		TrackedResource::allow_resource_delete = false;
 
 		transition_list = nullptr;
+
+	
 	}
 	void Readbacker::reset()
 	{

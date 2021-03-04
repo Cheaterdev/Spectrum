@@ -372,8 +372,9 @@ public:
 
 
         depth_mips = builder.create_texture("GBuffer_DepthMips", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::RenderTarget | ResourceFlags::Static);
-        depth_prev = builder.create_texture("GBuffer_DepthPrev", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::PixelRead| ResourceFlags::Static);
+        depth_prev = builder.create_texture("GBuffer_DepthPrev", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::RenderTarget | ResourceFlags::Static);
 	}
+	
 	void create_quality(ivec2 size, TaskBuilder& builder)
 	{
 		quality = builder.create_texture("GBuffer_Quality", size, 1, DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT, ResourceFlags::DepthStencil);

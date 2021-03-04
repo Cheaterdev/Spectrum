@@ -123,7 +123,7 @@ namespace DX12
 			this->name = name;
 			tracked_info->m_Resource->SetName(convert(name).c_str());
 
-			debug = name == "PSSM_Cameras";
+			debug = name == "SMAA_edges";
 
 			tracked_info->debug = debug;
 		}

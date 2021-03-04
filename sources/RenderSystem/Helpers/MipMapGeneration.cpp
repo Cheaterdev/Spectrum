@@ -74,11 +74,11 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureV
 		}
 		data.GetSrcMip() = view.create_mip(TopMip, *compute_context.get_base().frame_resources).texture2D;
 
-		data.set(compute_context, true);
+		data.set(compute_context);
 
 		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
 
-		compute_context.get_base().transition_uav(view.resource.get());
+		//compute_context.get_base().transition_uav(view.resource.get());
 		prev = TopMip;
 		TopMip += NumMips;
 
@@ -136,7 +136,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 		}
 		data.GetSrcMip() = view->texture2DMips[TopMip];
 
-		data.set(compute_context, true);
+		data.set(compute_context);
 
 		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
 

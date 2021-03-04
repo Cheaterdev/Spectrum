@@ -3,8 +3,6 @@
 #include "autogen/SceneData.h"
 #include "autogen/FrameInfo.h"
 
-//#include "autogen/DebugInfo.h"
-//static const RWStructuredBuffer<DebugStruct> debugger = GetDebugInfo().GetDebug();
 
 static const GatherPipelineGlobal pip = GetGatherPipelineGlobal();
 
@@ -124,6 +122,7 @@ void CS(
 #endif
 
 #ifdef  BUILD_FUNC_CS_boxes
+
 #include "autogen/GatherBoxes.h"
 static const GatherBoxes pipi = GetGatherBoxes();
 

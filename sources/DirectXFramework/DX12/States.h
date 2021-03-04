@@ -1,6 +1,7 @@
 #pragma once
 namespace DX12
 {
+	class Transitions;
 	class Resource;
 	enum class CommandListType : int
 	{
@@ -44,7 +45,8 @@ namespace DX12
 
 	static const ResourceState COMPUTE_STATES = COPY_STATES
 		| ResourceState::UNORDERED_ACCESS
-		| ResourceState::NON_PIXEL_SHADER_RESOURCE;
+		| ResourceState::NON_PIXEL_SHADER_RESOURCE
+		| ResourceState::INDIRECT_ARGUMENT;
 
 	static const ResourceState GRAPHIC_STATES = COMPUTE_STATES
 		| ResourceState::VERTEX_AND_CONSTANT_BUFFER
@@ -54,7 +56,7 @@ namespace DX12
 		| ResourceState::DEPTH_READ
 		| ResourceState::PIXEL_SHADER_RESOURCE
 		| ResourceState::STREAM_OUT
-		| ResourceState::INDIRECT_ARGUMENT
+
 		| ResourceState::RESOLVE_DEST
 		| ResourceState::RESOLVE_SOURCE;
 
@@ -83,15 +85,69 @@ namespace DX12
 		return CommandListType::DIRECT;
 	}
 
+	static inline bool can_merge_state(const ResourceState& source, const ResourceState& need)
+	{
+		if (source == need) return true;
+
+		ResourceState merged = source | need;
+		if (check(merged & (~ResourceState::GEN_READ)))
+		{
+			return false;
+		}
+
+		return true;
+	}
+	
+
+	static inline ResourceState merge_state(const ResourceState& source, const ResourceState& need)
+	{
+		if (source == need) return source;
+		
+		ResourceState merged = source | need;
+		if(check(merged & (~ResourceState::GEN_READ)))
+		{
+			return need;
+		}
+
+		return merged;
+	}
+
+
+	struct Transition
+	{
+	//	UINT index;
+		Resource* resource;
+	//	ResourceState from;
+		ResourceState wanted_state;
+		UINT subres;
+
+		Transition* prev_transition = nullptr;
+	};
+
+	
 	class ResourceStateManager
 	{
 
 		struct ResourceListStateCPU
 		{
-			ResourceState first_state = ResourceState::UNKNOWN;
-			ResourceState state = ResourceState::UNKNOWN;
+			//ResourceState first_state = ResourceState::UNKNOWN;
+			//ResourceState state = ResourceState::UNKNOWN;
+			//ResourceState merged_state = ResourceState::UNKNOWN;
 
+			Transition* first_transition = nullptr;
+			Transition* last_transition = nullptr;
 			uint64_t command_list_id = -1;
+
+			ResourceState get_first_state()
+			{
+				return first_transition->wanted_state;
+			}
+			ResourceState get_state()
+			{
+				return last_transition->wanted_state;
+			}
+
+			bool is_used(Transitions* list);
 		};
 
 		struct SubResourcesCPU
@@ -160,7 +216,10 @@ namespace DX12
 		ResourceStateManager()
 		{
 		}
-
+		SubResourcesGPU copy_gpu()
+		{
+			return gpu_state;
+		}
 		void init_subres(int count, ResourceState state)
 		{
 			gpu_state.subres.resize(count);
@@ -179,9 +238,9 @@ namespace DX12
 		{
 			auto& state = get_state(id);
 
-			return state.subres[0].state;
+			return state.subres[0].get_state();
 		}
-		
+		SubResourcesCPU& get_cpu_state(Transitions* list);
 		bool is_new(int id, uint64_t full_id) const
 		{
 			SubResourcesCPU& s = get_state(id);
@@ -203,22 +262,25 @@ namespace DX12
 			return  result;
 		}
 
-
+		bool is_used(Transitions* list);
 		void aliasing(int id, uint64_t full_id) 
 		{
 			SubResourcesCPU& s = get_state(id);
 
-			if (check(s.subres[0].state & ResourceState::RENDER_TARGET) || check(s.subres[0].state & ResourceState::DEPTH_WRITE))
+		//	if (check(s.subres[0].state & ResourceState::RENDER_TARGET) || check(s.subres[0].state & ResourceState::DEPTH_WRITE))
 
 
-			s.need_discard = true;
+		//	s.need_discard = true;
 		}
 		
 		ResourceState process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*> &discards, const Resource* resource, int id, uint64_t full_id);
 
-		void transition(std::vector<D3D12_RESOURCE_BARRIER>& target,const  Resource* resource, ResourceState state, unsigned int subres, int id, uint64_t full_id) const;
-		bool transition(CommandListType type, std::vector<D3D12_RESOURCE_BARRIER>& target, const  Resource* resource, int id, uint64_t full_id, int id2, uint64_t full_id2) const;
+		void transition(Transitions* list,const  Resource* resource, ResourceState state, unsigned int subres, int id, uint64_t full_id) const;
+		bool transition(Transitions* from, Transitions* to , const  Resource* resource) const;
 
+
+
+		void prepare_state(Transitions* from, const Resource* resource, SubResourcesGPU& subres);
 	};
 
 

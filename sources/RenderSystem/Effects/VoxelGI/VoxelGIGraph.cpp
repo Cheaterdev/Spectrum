@@ -681,10 +681,10 @@ void VoxelGI::screen(FrameGraph& graph)
 			data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
 
 			data.gbuffer.need(builder, false);
-			data.gi_filtered = builder.need_texture("gi_filtered");
+			data.gi_filtered = builder.need_texture("gi_filtered", ResourceFlags::UnorderedAccess);
 			data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
 			data.frames_count = builder.need_texture("frames_count",  ResourceFlags::UnorderedAccess);
-			data.noisy_output = builder.need_texture("noise",  ResourceFlags::UnorderedAccess);
+			data.noisy_output = builder.need_texture("noise",  ResourceFlags::ComputeRead);
 			data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::ComputeRead);
 			}, [this, &graph](Screen& data, FrameContext& _context) {
 
@@ -956,9 +956,6 @@ void VoxelGI::voxelize(FrameGraph& graph)
 			auto renderer = graph.renderer;
 			context->begin();
 
-
-
-
 			voxelize(context, renderer);
 		});
 }
@@ -1048,8 +1045,6 @@ void VoxelGI::lighting(FrameGraph& graph)
 			}
 			graph.scene->voxels_compiled.set(compute);
 
-			// make indirect as gpu_tiles_buffer->size is CPU multithread
-		//	compute.dispach(ivec3(gpu_tiles_buffer[0]->size() * ligthing.GetGroupCount(), 1, 1), ivec3(1, 1, 1));
 			compute.execute_indirect(
 				dispatch_command,
 				1,
@@ -1164,7 +1159,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 
 						mipmapping.set(compute);
 					}
-					PROFILE_GPU(L"exec");
+					PROFILE_GPU(std::wstring(L"mip_") + std::to_wstring(mip_count));
 					compute.execute_indirect(
 						dispatch_command,
 						1,
