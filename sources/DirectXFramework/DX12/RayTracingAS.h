@@ -5,10 +5,11 @@ class MaterialAsset;
 namespace DX12
 {
 
+
 	class RaytracingAccelerationStructure
 	{
-		
-	
+
+
 		GPUBuffer::ptr scratchInfo;
 
 		GPUBuffer::ptr resources[2];
@@ -19,99 +20,62 @@ namespace DX12
 		using ptr = std::shared_ptr<RaytracingAccelerationStructure>;
 		HandleTable srvs;
 		MaterialAsset* material;
-		RaytracingAccelerationStructure(std::vector<D3D12_RAYTRACING_GEOMETRY_DESC>  desc, CommandList::ptr list)
+		RaytracingAccelerationStructure(std::vector<GeometryDesc>  desc, CommandList::ptr list)
 		{
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+			RaytracingBuildDescBottomInputs inputs;
+			inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+			inputs.geometry = desc;
 
 
-		//	std::vector<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS> inputs;
-		//	std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
-
-
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS bottomLevelInputs = {};
-			bottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-			bottomLevelInputs.Flags = buildFlags;
-			bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-			bottomLevelInputs.pGeometryDescs = desc.data();
-			bottomLevelInputs.NumDescs = (UINT)desc.size();
-
-
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = {};
-			Device::get().get_native_device()->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &bottomLevelPrebuildInfo);
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
 
 			resource = std::make_shared<GPUBuffer>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
 			scratchInfo = std::make_shared<GPUBuffer>(bottomLevelPrebuildInfo.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
-		
 
-
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottomLevelBuildDesc = {};
+			RaytracingBuildDescStructure bottomLevelBuildDesc;
 			{
-				bottomLevelBuildDesc.Inputs = bottomLevelInputs;
-				bottomLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_gpu_address();
-				bottomLevelBuildDesc.DestAccelerationStructureData = resource->get_gpu_address();
+				bottomLevelBuildDesc.DestAccelerationStructureData = resource->get_resource_address();
+				bottomLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_resource_address();
 			}
 
-		
-			list->get_compute().build_ras(bottomLevelBuildDesc);
-			list->transition_uav(resource.get());
-			list->use_resource(resource.get());
-			list->use_resource(scratchInfo.get());
+			list->get_compute().build_ras(bottomLevelBuildDesc, inputs);
 			resources[0] = resource;
-
 		}
 
 
-		RaytracingAccelerationStructure(std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances)
+		RaytracingAccelerationStructure(std::vector<InstanceDesc> instances)
 		{
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags =  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
 
-
-			//	std::vector<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS> inputs;
-			//	std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
-
-
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
-			topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-			topLevelInputs.Flags = buildFlags;
-			topLevelInputs.NumDescs = (UINT)instances.size();
-			topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-
-
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
-			Device::get().get_native_device()->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
-
-
-			resource = std::make_shared<GPUBuffer>(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
-			scratchInfo = std::make_shared<GPUBuffer>(topLevelPrebuildInfo.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
-		
-			
 			auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 			list->begin();
 
-		
-			// Top Level Acceleration Structure desc
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
+			
+			RaytracingBuildDescTopInputs inputs;
+			inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+			inputs.NumDescs = instances.size();
+
+			if (instances.size())
 			{
-				if(instances.size())
-				{
-					auto instanceDescs = list->place_raw(instances);
-					topLevelInputs.InstanceDescs = instanceDescs.get_gpu_address();
-
-				}else
-				{
-					topLevelInputs.InstanceDescs = 0;
-				}
-				topLevelBuildDesc.Inputs = topLevelInputs;
-				topLevelBuildDesc.DestAccelerationStructureData = resource->get_gpu_address();
-				topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_gpu_address();
+				auto instanceDescs = list->place_raw(instances);
+				inputs.instances = instanceDescs.get_resource_address();
 			}
+			
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
+			
+
+			resource = std::make_shared<GPUBuffer>(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
+			scratchInfo = std::make_shared<GPUBuffer>(topLevelPrebuildInfo.ScratchDataSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
 
 
-			list->use_resource(resource.get());
-			list->use_resource(scratchInfo.get());
 
-			list->get_compute().build_ras(topLevelBuildDesc);
+			RaytracingBuildDescStructure topLevelBuildDesc;
+			{
+				topLevelBuildDesc.DestAccelerationStructureData = resource->get_resource_address();
+				topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_resource_address();
+			}
+			
+			list->get_compute().build_ras(topLevelBuildDesc, inputs);
 			list->end();
 			list->execute_and_wait();
 			resources[0] = resource;
@@ -119,77 +83,60 @@ namespace DX12
 		}
 
 
-		void update(CommandList::ptr list, UINT size, D3D12_GPU_VIRTUAL_ADDRESS address, bool need_rebuild)
+		void update(CommandList::ptr list, UINT size, ResourceAddress address, bool need_rebuild)
 		{
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags =  D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
 			need_rebuild = true;
-	if(!need_rebuild)	
-		
-		buildFlags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+			if (!need_rebuild)
+
+				buildFlags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
 
 			current = 1 - current;
 
 			auto& prev = resources[current];
 			auto& cur = resources[current];
 
-			//	std::vector<D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS> inputs;
-			//	std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instances;
 
+			RaytracingBuildDescTopInputs inputs;
+			inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+			inputs.NumDescs = size;
+			inputs.instances = address;
 
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
-			topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-			topLevelInputs.Flags = buildFlags;
-			topLevelInputs.NumDescs = size;// instances.size();
-			topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
-
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
-			Device::get().get_native_device()->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
-
-			TrackedResource::allow_resource_delete = true;
 			if (!cur || cur->get_count() < topLevelPrebuildInfo.ResultDataMaxSizeInBytes)
-			cur = std::make_shared<GPUBuffer>(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
+				cur = std::make_shared<GPUBuffer>(topLevelPrebuildInfo.ResultDataMaxSizeInBytes, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
 
-		
+
 			UINT64 max = topLevelPrebuildInfo.ScratchDataSizeInBytes;
-			
-			if(!need_rebuild) max =topLevelPrebuildInfo.UpdateScratchDataSizeInBytes;
+
+			if (!need_rebuild) max = topLevelPrebuildInfo.UpdateScratchDataSizeInBytes;
 
 
 			if (!scratchInfo || (scratchInfo->get_count() < max))
-			scratchInfo = std::make_shared<GPUBuffer>(max, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
-
-			TrackedResource::allow_resource_delete = false;
+				scratchInfo = std::make_shared<GPUBuffer>(max, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::UNORDERED_ACCESS);
 
 			//auto instanceDescs = list->place_raw(instances);
 
-			// Top Level Acceleration Structure desc
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
+			RaytracingBuildDescStructure topLevelBuildDesc;
 			{
-				topLevelInputs.InstanceDescs = address;// instanceDescs.get_gpu_address();
-				topLevelBuildDesc.Inputs = topLevelInputs;
-				topLevelBuildDesc.DestAccelerationStructureData = cur->get_gpu_address();
-				
+				topLevelBuildDesc.DestAccelerationStructureData = resource->get_resource_address();
+				topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_resource_address();
 
 				if (!need_rebuild)
-				topLevelBuildDesc.SourceAccelerationStructureData =
-					prev ? prev->get_gpu_address() : 0;
+					topLevelBuildDesc.SourceAccelerationStructureData =	prev ? prev->get_resource_address() : ResourceAddress();
 				else
-					topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_gpu_address();
+					topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->get_resource_address();
+				
 			}
-
-			
-
-			list->get_compute().build_ras(topLevelBuildDesc);
-			list->transition_uav(cur.get());
-			list->use_resource(scratchInfo.get());
+			list->get_compute().build_ras(topLevelBuildDesc, inputs);
 
 			resource = resources[current];
 		}
 
-		D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address() const
+		ResourceAddress get_gpu_address() const
 		{
-			return resource->get_gpu_address();
+			return resource->get_resource_address();
 		}
 
 

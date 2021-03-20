@@ -697,7 +697,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres)
 	{
-		assert(resource->get_heap_type() != HeapType::UPLOAD && resource->get_heap_type() != HeapType::READBACK);
+		if (!resource) return;
+		
+	//	assert(resource->get_heap_type() != HeapType::UPLOAD && resource->get_heap_type() != HeapType::READBACK);
 		assert(resource->get_native().Get());
 		CommandList* list = static_cast<CommandList*>(this); // :(
 
@@ -716,6 +718,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 		}
 
+		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		resource->transition(this, resource, to, subres, id, global_id);
 
 	}
@@ -1096,7 +1099,56 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		get_base().print_debug();
 	}
 
+	void ComputeContext::build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescBottomInputs& bottom)
+	{
+		base.create_transition_point();
 
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
+
+		desc.DestAccelerationStructureData = build_desc.DestAccelerationStructureData.address;
+		desc.SourceAccelerationStructureData = build_desc.SourceAccelerationStructureData.address;
+		desc.ScratchAccelerationStructureData = build_desc.ScratchAccelerationStructureData.address;
+
+		desc.Inputs = Device::get().to_native(bottom);
+
+		for(auto g:bottom.geometry)
+		{
+			base.transition(g.IndexBuffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			base.transition(g.VertexBuffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			base.transition(g.Transform3x4.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+
+		}
+		
+		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
+		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
+		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
+		commit_tables();
+		list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+	}
+
+
+	void ComputeContext::build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescTopInputs& top)
+	{
+		base.create_transition_point();
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
+
+		desc.DestAccelerationStructureData = build_desc.DestAccelerationStructureData.address;
+		desc.SourceAccelerationStructureData = build_desc.SourceAccelerationStructureData.address;
+		desc.ScratchAccelerationStructureData = build_desc.ScratchAccelerationStructureData.address;
+
+		desc.Inputs = Device::get().to_native(top);
+		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
+		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
+		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
+
+
+		base.transition(top.instances.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+
+		
+		commit_tables();
+		list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+	}
 	void ComputeContext::set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
 	{
 		list->SetComputeRootConstantBufferView(i, table);
@@ -1113,12 +1165,10 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	
 		transition_points.clear();
 		used_resources.clear();
-		TrackedResource::allow_resource_delete = true;
 
 		tracked_resources.clear();
 		tracked_psos.clear();
 		tracked_heaps.clear();
-		TrackedResource::allow_resource_delete = false;
 
 		transition_list = nullptr;
 

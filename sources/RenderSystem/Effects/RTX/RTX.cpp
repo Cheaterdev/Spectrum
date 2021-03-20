@@ -1,5 +1,8 @@
 #include "pch.h"
 
+
+static const wchar_t* c_raygenShaderName = L"MyRaygenShader";
+
 UINT RTX::get_material_id(materials::universal_material* universal)
 {
 	std::lock_guard<std::mutex> g(m);
@@ -55,21 +58,27 @@ void RTX::CreateSharedCollection()
 		// In this sample, this could be omitted for convenience since the sample uses all shaders in the library. 
 		{
 			lib->DefineExport(c_raygenShaderName);
-			lib->DefineExport(c_missShaderName);
 
-			lib->DefineExport(L"ShadowMissShader");
-			lib->DefineExport(L"ShadowClosestHitShader");
+			for (auto& type : ray_types)
+			{
+				if (!type.per_hit_id)
+				{
+					lib->DefineExport(convert(type.hit_name).c_str());
+				}
 
+				lib->DefineExport(convert(type.miss_name).c_str());
+			}
 		}
 	}
 
+	for (auto& type : ray_types)
 	{
-		auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
-		hitGroup->SetClosestHitShaderImport(L"ShadowClosestHitShader");
-		hitGroup->SetHitGroupExport(L"ShadowClosestHitGroup");
-		hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
+		if (type.per_hit_id) continue;
 
-		//	rootSignatureAssociation->AddExport(L"ShadowClosestHitGroup");
+		auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
+		hitGroup->SetClosestHitShaderImport(convert(type.hit_name).c_str());
+		hitGroup->SetHitGroupExport(convert(type.group_name).c_str());
+		hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
 	}
 
 	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_SharedCollection)));
@@ -98,21 +107,26 @@ void RTX::CreateGlobalCollection()
 		auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
 		D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)blob.data(), blob.size());
 		lib->SetDXILLibrary(&libdxil);
+		for (auto& type : ray_types)
 		{
-			lib->DefineExport(mat->wshader_name.c_str(), c_closestHitShaderName);
+			if (!type.per_hit_id) continue;
 
+			lib->DefineExport(mat->wshader_name.c_str(), convert(type.hit_name).c_str());
 		}
 
+		
+		for (auto& type : ray_types)
 		{
+			if (!type.per_hit_id) continue;
+
 			auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
 			hitGroup->SetClosestHitShaderImport(mat->wshader_name.c_str());
-			hitGroup->SetHitGroupExport((mat->wshader_name + L"HIT").c_str());
+			hitGroup->SetHitGroupExport((mat->wshader_name + convert(type.group_name)).c_str());
 			hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
 
-			rootSignatureAssociation->AddExport((mat->wshader_name + L"HIT").c_str());
+			rootSignatureAssociation->AddExport((mat->wshader_name + convert(type.group_name)).c_str());
 
 		}
-
 	}
 	
 
@@ -137,21 +151,41 @@ void RTX::CreateRaytracingPipelineStateObject()
 	TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_dxrStateObject)));
 	TEST(m_dxrStateObject.As(&stateObjectProperties));
 
+
+	for(auto &type:ray_types)
+	{
+		if(!type.per_hit_id)
+			type.hit = ::identify(stateObjectProperties->GetShaderIdentifier(convert(type.group_name).c_str()));
+
+		
+		type.miss = ::identify(stateObjectProperties->GetShaderIdentifier(convert(type.miss_name).c_str()));
+	}
+	
 	rayGenShaderIdentifier = ::identify(stateObjectProperties->GetShaderIdentifier(c_raygenShaderName));
-	missShaderIdentifier = ::identify(stateObjectProperties->GetShaderIdentifier(c_missShaderName));
-	missShadowShaderIdentifier = ::identify(stateObjectProperties->GetShaderIdentifier(L"ShadowMissShader"));
 
 	for (auto& pair : materials)
 	{
 		auto mat = pair.first;
 
+		std::vector<shader_identifier>hit_table;
 
-		auto id = ::identify(stateObjectProperties->GetShaderIdentifier((mat->wshader_name + L"HIT").c_str()));
-		auto shadow = ::identify(stateObjectProperties->GetShaderIdentifier(L"ShadowClosestHitGroup"));
+		for (auto& type : ray_types)
+		{
+			shader_identifier id;
 
-		mat->set_identifier(
-			id, shadow
-		);
+			if(type.per_hit_id)
+			{
+				id = ::identify(stateObjectProperties->GetShaderIdentifier((mat->wshader_name + convert(type.group_name)).c_str()));;
+
+			}else
+			{
+				id = *type.hit;
+			}
+			
+			hit_table.emplace_back(id);
+		}
+		
+		mat->set_identifier(hit_table);
 	}
 }
 
@@ -163,6 +197,29 @@ RTX::RTX()
 
 	global_sig = get_Signature(Layouts::DefaultLayout)->create_global_signature<Slots::MaterialInfo>();
 	local_sig = create_local_signature<Slots::MaterialInfo>();
+
+	{
+		RayType type;
+
+		type.group_name = "MyHitGroup";
+		type.per_hit_id = true;
+		type.miss_name = "MyMissShader";
+		type.hit_name = "MyClosestHitShader";
+		ray_types.emplace_back(type);
+	}
+
+
+	{
+		RayType type;
+		
+		type.group_name = "ShadowClosestHitGroup";
+		type.per_hit_id = false;
+		type.hit_name = "ShadowClosestHitShader";
+		type.miss_name = "ShadowMissShader";
+//		type.raygen_name = "ShadowRaygenShader";
+
+		ray_types.emplace_back(type);
+	}
 
 }
 
@@ -184,44 +241,15 @@ void RTX::prepare(CommandList::ptr& list)
 void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer)
 {
 	PROFILE_GPU(L"raytracing");
+	auto& list = *context->list;
 
-	auto& _list = context->list;
-	// Get shader identifiers.
-	UINT  shaderIdentifierSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-
-
-
-	auto DispatchRays = [&](auto &commandList, auto stateObject, auto* dispatchDesc)
-	{
-		auto m_rayGenShaderTable = _list->place_raw(rayGenShaderIdentifier);
-		auto m_missShaderTable = _list->place_raw(missShaderIdentifier, missShadowShaderIdentifier);
-
-		// Since each shader table has only one shader record, the stride is same as the size.
-		dispatchDesc->HitGroupTable.StartAddress = material_hits->buffer->get_gpu_address();
-		dispatchDesc->HitGroupTable.SizeInBytes = sizeof(closesthit_identifier) * material_hits->max_size();
-		dispatchDesc->HitGroupTable.StrideInBytes = sizeof(closesthit_identifier);
-
-		dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable.get_gpu_address();
-		dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable.size;
-		dispatchDesc->MissShaderTable.StrideInBytes = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-
-		dispatchDesc->RayGenerationShaderRecord.StartAddress = m_rayGenShaderTable.get_gpu_address();
-		dispatchDesc->RayGenerationShaderRecord.SizeInBytes = m_rayGenShaderTable.size;
-		dispatchDesc->Width = texture.get_size().x;
-		dispatchDesc->Height = texture.get_size().y;
-		dispatchDesc->Depth = 1;
-
-		
-		commandList.set_pso(stateObject);
-		commandList.dispatch_rays(*dispatchDesc);
-	};
-
+	auto& compute = list.get_compute();
 
 	{
 		Slots::Raytracing rtx;
-		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<StructuredBufferView<UINT>>(*_list->frame_resources).structuredBuffer;
-		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*_list->frame_resources).srv_handle;
-		rtx.set(_list->get_compute());
+		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<StructuredBufferView<UINT>>(*list.frame_resources).structuredBuffer;
+		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*list.frame_resources).srv_handle;
+		rtx.set(compute);
 	}
 
 	{
@@ -230,16 +258,22 @@ void RTX::render(MeshRenderContext::ptr context, Render::TextureView& texture, R
 		gbuffer.SetTable(rays.MapGbuffer());
 		float view = context->cam->angle;		
 		rays.GetPixelAngle() = atan(2*tan(view/2)/texture.get_size().y);
-		rays.set(_list->get_compute());
+		rays.set(compute);
 	}
 
 
-	
-	//_list->transition(material_hits->buffer.get(), ResourceState::NON_PIXEL_SHADER_RESOURCE);
+	auto m_rayGenShaderTable = list.place_raw(rayGenShaderIdentifier);
 
+	std::vector<shader_identifier> miss_table;
 
-	D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
+	for (auto& type : ray_types)
 	{
-		DispatchRays(_list->get_compute(), m_dxrStateObject, &dispatchDesc);
+		miss_table.emplace_back(type.miss);
 	}
+	
+	auto m_missShaderTable = list.place_raw(miss_table);
+
+	compute.set_pso(m_dxrStateObject);
+	compute.dispatch_rays<closesthit_identifier, shader_identifier, shader_identifier>(texture.get_size(), material_hits->buffer->get_resource_address(), material_hits->max_size(), m_missShaderTable.get_resource_address(), miss_table.size(), m_rayGenShaderTable.get_resource_address());
+
 }

@@ -1311,6 +1311,61 @@ namespace DX12
 	};
 
 
+	struct GeometryDesc
+	{
+		D3D12_RAYTRACING_GEOMETRY_TYPE Type;
+		D3D12_RAYTRACING_GEOMETRY_FLAGS Flags;
+
+		ResourceAddress Transform3x4;
+		DXGI_FORMAT IndexFormat;
+		DXGI_FORMAT VertexFormat;
+		UINT IndexCount;
+		UINT VertexCount;
+		ResourceAddress IndexBuffer;
+
+		ResourceAddress VertexBuffer;
+		UINT64 VertexStrideInBytes;
+	};
+	struct InstanceDesc
+	{
+		FLOAT Transform[3][4];
+		UINT InstanceID : 24;
+		UINT InstanceMask : 8;
+		UINT InstanceContributionToHitGroupIndex : 24;
+		UINT Flags : 8;
+		ResourceAddress AccelerationStructure;
+	};
+
+
+
+	struct RaytracingDesc
+	{
+		ResourceAddress DestAccelerationStructureData;
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs;
+		ResourceAddress SourceAccelerationStructureData;
+		ResourceAddress ScratchAccelerationStructureData;
+	};
+	
+	struct RaytracingBuildDescBottomInputs
+	{
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
+		std::vector<GeometryDesc> geometry;
+	};
+
+	struct RaytracingBuildDescTopInputs
+	{
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
+		UINT NumDescs;
+		ResourceAddress instances;
+	};
+	
+	struct RaytracingBuildDescStructure
+	{
+		ResourceAddress DestAccelerationStructureData;
+		ResourceAddress SourceAccelerationStructureData;
+		ResourceAddress ScratchAccelerationStructureData;
+	};
+	
 
 	class ComputeContext : public SignatureDataSetter
 	{
@@ -1367,17 +1422,36 @@ namespace DX12
 
 
 
-		void build_ras(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC &desc)
-		{
+		void build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescBottomInputs& bottom);
+		void build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescTopInputs& top);
 
-			list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
-		}
-	
-		void dispatch_rays(const D3D12_DISPATCH_RAYS_DESC &desc)
+		template<class Hit, class Miss, class Raygen>
+		void dispatch_rays(ivec2 size, ResourceAddress hit_buffer, UINT hit_count, ResourceAddress miss_buffer, UINT miss_count, ResourceAddress raygen_buffer)
 		{
+			D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
+			// Since each shader table has only one shader record, the stride is same as the size.
+			dispatchDesc.HitGroupTable.StartAddress = hit_buffer.address;
+			dispatchDesc.HitGroupTable.SizeInBytes = sizeof(Hit) * hit_count;
+			dispatchDesc.HitGroupTable.StrideInBytes = sizeof(Hit);
+
+			dispatchDesc.MissShaderTable.StartAddress = miss_buffer.address;
+			dispatchDesc.MissShaderTable.SizeInBytes = sizeof(Miss)* miss_count;
+			dispatchDesc.MissShaderTable.StrideInBytes = sizeof(Miss);
+
+			dispatchDesc.RayGenerationShaderRecord.StartAddress = raygen_buffer.address;
+			dispatchDesc.RayGenerationShaderRecord.SizeInBytes = sizeof(Raygen);
+			dispatchDesc.Width = size.x;
+			dispatchDesc.Height = size.y;
+			dispatchDesc.Depth = 1;
+		
 			base.create_transition_point();
+
+			base.transition(hit_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			base.transition(miss_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			base.transition(raygen_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+
 			commit_tables();
-			list->DispatchRays(&desc);
+			list->DispatchRays(&dispatchDesc);
 		}
 
 		void set_pso(ComPtr<ID3D12StateObject> pso)

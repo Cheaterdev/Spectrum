@@ -355,20 +355,23 @@ void materials::universal_material::update_rtx()
 {
 	if (!Device::get().is_rtx_supported()) return;
 
+//	if (hit_table.empty()) return;
+	
 	if (!info_rtx)
 	{
-		info_rtx = RTX::get().material_hits->allocate(2);
+		info_rtx = RTX::get().material_hits->allocate(RTX::get().ray_types.size());
 	}
 
 
 	{
 		auto elem = info_rtx.map();
 
-		elem[0].identifier = main;
-		elem[0].mat_buffer = compiled_material_info.cb;
-
-		elem[1].identifier = shadow;
-		elem[1].mat_buffer = 0;
+		for(int i=0;i< hit_table.size();i++)
+		{
+			elem[i].identifier = hit_table[i];
+			elem[i].mat_buffer = compiled_material_info.cb;
+		}
+		
 		info_rtx.write(0, elem);
 
 	}

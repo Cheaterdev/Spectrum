@@ -135,7 +135,7 @@ public:
 	// Build acceleration structures needed for raytracing.
 	void BuildAccelerationStructures()
 	{
-		std::vector<D3D12_RAYTRACING_INSTANCE_DESC>  desc;
+		std::vector<InstanceDesc>  desc;
 
 		scene_as = std::make_shared<RaytracingAccelerationStructure>(desc);
 
@@ -462,7 +462,7 @@ public:
 				//	command_list->create_transition_point();
 			//		command_list->transition(scene->raytrace->buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
-					scene_as->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_gpu_address(), need_rebuild);
+					scene_as->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), need_rebuild);
 					RTX::get().prepare(command_list);
 				}
 

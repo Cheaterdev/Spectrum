@@ -2,8 +2,6 @@
 
 namespace DX12
 {
-	thread_local  bool TrackedResource::allow_resource_delete = false;
-
 	TrackedResource::~TrackedResource()
 	{
 		alloc_handle.Free();

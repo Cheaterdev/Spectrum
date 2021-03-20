@@ -289,13 +289,10 @@ namespace materials
 
 			TypedHandle<material_info_part::CB> info_handle;
 			TypedHandle<closesthit_identifier> info_rtx;
-			shader_identifier main;
-			shader_identifier shadow;
-			void set_identifier(shader_identifier main, shader_identifier shadow)
+			std::vector<shader_identifier>hit_table;
+			void set_identifier(std::vector<shader_identifier>hit_table)
 			{
-				this->main = main;
-				this->shadow = shadow;
-
+				this->hit_table = hit_table;
 				update_rtx();
 			}
 

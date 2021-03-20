@@ -84,11 +84,9 @@ namespace DX12
 
 		q->signal_and_wait();
 
-		TrackedResource::allow_resource_delete = true;
 
 		for (auto&& f : frames)
 			f.m_renderTarget = nullptr;
-		TrackedResource::allow_resource_delete = false;
 
 		desc.BufferDesc.Width = size.x;
 		desc.BufferDesc.Height = size.y;

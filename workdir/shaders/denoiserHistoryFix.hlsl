@@ -74,7 +74,7 @@ float get_occlusion(float prev_z, float2 tc, float3 pos)
 {
 	float3 prev_pos = depth_to_wpos(prev_z, tc, camera.GetInvViewProj());
 
-	float l = 5*length(pos - prev_pos) * MOVE_SCALER;
+	float l = 15*length(pos - prev_pos) * MOVE_SCALER;
 
 	return 0.0005+ all(tc > 0 && tc < 1)*saturate(1 - l);
 	//return all(tc > 0 && tc < 1) && l < 0.1 ? 1 : 0.005;
@@ -97,9 +97,9 @@ void  CS(uint3 groupID       : SV_GroupID,
     float2 dims;
 	color_tex.GetDimensions(dims.x, dims.y);
 	
-	float2 tc = index / targetDims;
-	float normAccumulatedFrameNum = tex_frames.SampleLevel(pointBorderSampler, tc, 0);
-	float4 result = color_tex.SampleLevel(pointBorderSampler, tc, 0);
+	float2 tc = index / targetDims + 0.5 / dims;
+	float normAccumulatedFrameNum = tex_frames.SampleLevel(pointBorderSampler, tc , 0);
+	float4 result = color_tex.SampleLevel(pointBorderSampler, tc , 0);
 
 	float3 pos = depth_to_wpos(result.w, tc, camera.GetInvViewProj());
 
@@ -109,11 +109,13 @@ void  CS(uint3 groupID       : SV_GroupID,
 	uint mipLevel =  4.0 * (1.0 - normAccumulatedFrameNum) * roughness;
 
 	if (mipLevel == 0)
+	{
 		return;
-	
+
+	}
 	float2 mipSize = dims / (1 << mipLevel);
 	Bilinear filter = GetBilinearFilter(tc, mipSize);
-	float2 gatherUv = (float2(filter.origin) + 0.5) / mipSize;
+	float2 gatherUv = (float2(filter.origin) ) / mipSize;
 	
 	float4 s00, s10, s01, s11;
 	
@@ -136,9 +138,9 @@ void  CS(uint3 groupID       : SV_GroupID,
 
 	float4 w = bilateralWeights;
 	
-	float4 blurry = ApplyBilinearCustomWeights(s00, s10, s01, s11, w, true);
+	float4 blurry = ApplyBilinearCustomWeights(s00, s10, s01, s11, w, false);
 
-
-	target[index] = blurry;
+	float total = dot(w,float4(1,1,1,1));
+	target[index] = blurry + result *saturate(1 - total);
 }
 

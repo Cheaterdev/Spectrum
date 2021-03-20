@@ -5,11 +5,14 @@
 
 namespace DX12
 {
+
+	class RaytracingBuildDescBottomInputs;
+	class RaytracingBuildDescTopInputs;
 	void  Device::stop_all()
 	{
 		swap_chains.clear();
 
-		for (auto && q : queues)
+		for (auto&& q : queues)
 			q = nullptr;
 
 
@@ -29,8 +32,8 @@ namespace DX12
 			//    debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
 			m_device.Get()->QueryInterface(IID_PPV_ARGS(&debugController));
 
-		//	if (debugController)
-		//		debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
+			//	if (debugController)
+			//		debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
 		}
 	}
 
@@ -46,12 +49,76 @@ namespace DX12
 		return m_device;
 	}
 
-	Queue::ptr & Device::get_queue(CommandListType type)
+	Queue::ptr& Device::get_queue(CommandListType type)
 	{
 		return queues[type];
 	}
 
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Device::to_native(const RaytracingBuildDescBottomInputs& desc)
+	{
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
 
+		inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+		inputs.Flags = desc.Flags;
+		inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
+		inputs.NumDescs = desc.geometry.size();
+
+		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
+
+
+		for (auto& i : desc.geometry)
+		{
+			D3D12_RAYTRACING_GEOMETRY_DESC geom;
+			geom.Flags = i.Flags;
+			geom.Type = i.Type;
+			geom.Triangles.IndexBuffer = i.IndexBuffer.address;
+			geom.Triangles.IndexCount = i.IndexCount;
+			geom.Triangles.IndexFormat = i.IndexFormat;
+
+			geom.Triangles.VertexBuffer.StartAddress = i.VertexBuffer.address;
+			geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
+			geom.Triangles.VertexFormat = i.VertexFormat;
+
+			geom.Triangles.Transform3x4 = i.Transform3x4.address;
+			descs.emplace_back(geom);
+		}
+
+		inputs.pGeometryDescs = descs.data();
+
+		return inputs;
+	}
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Device::to_native(const RaytracingBuildDescTopInputs& desc)
+	{
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
+
+		inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+		inputs.Flags = desc.Flags;
+		inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
+		inputs.NumDescs = desc.NumDescs;
+		inputs.InstanceDescs = desc.instances.address;
+
+
+		return inputs;
+	}
+	
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO Device::calculateBuffers(const RaytracingBuildDescBottomInputs& desc)
+	{
+		auto inputs = to_native(desc);
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
+
+		m_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+
+		return info;
+	}
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO Device::calculateBuffers(const RaytracingBuildDescTopInputs& desc)
+	{
+		auto inputs = to_native(desc);
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
+
+		m_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+		return info;
+	}
 
 	std::shared_ptr<SwapChain> Device::create_swap_chain(const swap_chain_desc& desc)
 	{
@@ -98,33 +165,33 @@ namespace DX12
 
 		return usedVRAM;
 	}
-	
+
 	Device::Device()
 	{
-	
-
-		D3D12EnableExperimentalFeatures(1,&D3D12ExperimentalShaderModels,nullptr,nullptr);
 
 
+		D3D12EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, nullptr);
 
-	//	Singleton::depends_on<Application>();
+
+
+		//	Singleton::depends_on<Application>();
 		auto t = CounterManager::get().start_count<Device>();
-//#ifdef DEBUG
-		// Enable the D3D12 debug layer.
-		
-			ComPtr<ID3D12Debug> debugController;
-			CComPtr<ID3D12Debug1> spDebugController1;
+		//#ifdef DEBUG
+				// Enable the D3D12 debug layer.
+
+		ComPtr<ID3D12Debug> debugController;
+		CComPtr<ID3D12Debug1> spDebugController1;
 
 #ifdef DEV
-//if(false)
-			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-			{
-				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
+		//if(false)
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+		{
+			debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
 
 
-				debugController->EnableDebugLayer();
+			debugController->EnableDebugLayer();
 			//	spDebugController1->SetEnableGPUBasedValidation(true);
-			}
+		}
 #endif
 
 
@@ -134,7 +201,7 @@ namespace DX12
 		}
 		UINT i = 0;
 		//ComPtr<IDXGIAdapter3> pAdapter;
-	
+
 		{
 			auto t = CounterManager::get().start_count<IDXGIAdapter>();
 
@@ -142,7 +209,7 @@ namespace DX12
 
 			while (factory->EnumAdapters(i, reinterpret_cast<IDXGIAdapter**>(&adapter)) != DXGI_ERROR_NOT_FOUND)
 			{
-		
+
 				ComPtr<IDXGIAdapter3> pAdapter;
 				pAdapter.Attach(adapter);
 
@@ -169,10 +236,10 @@ namespace DX12
 		}
 		catch (...)
 		{
-			Log::get() <<"*** Unhandled Exception ***" << Log::endl;
-		//	TRACE("*** Unhandled Exception ***");
+			Log::get() << "*** Unhandled Exception ***" << Log::endl;
+			//	TRACE("*** Unhandled Exception ***");
 		}
-	
+
 		const uint32_t aftermathFlags =
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
 			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.
@@ -183,19 +250,19 @@ namespace DX12
 			aftermathFlags,
 			m_device.Get());
 
-		
+
 
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
 		TEST(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
 			&options5, sizeof(options5)));
 
-//#ifdef DEBUG
+		//#ifdef DEBUG
 		ComPtr<ID3D12InfoQueue> d3dInfoQueue;
 		if (SUCCEEDED(m_device.As(&d3dInfoQueue)))
 		{
 
-		//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-		//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
+			//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+			//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 			D3D12_MESSAGE_ID hide[] =
 			{
 				D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
@@ -211,8 +278,8 @@ namespace DX12
 			d3dInfoQueue->AddStorageFilterEntries(&filter);
 
 		}
-//#endif
-		// Describe and create the command queue.
+		//#endif
+				// Describe and create the command queue.
 		queues[CommandListType::DIRECT].reset(new Queue(CommandListType::DIRECT, this));
 		queues[CommandListType::COMPUTE].reset(new Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
@@ -221,13 +288,13 @@ namespace DX12
 		D3D12_FEATURE_DATA_D3D12_OPTIONS featureData;
 		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));
 		auto m_tiledResourcesTier = featureData.TiledResourcesTier;
-	
-		rtx = false;// options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+
+		rtx = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
 
 	}
 
 
-	DX12::ResourceAllocationInfo Device::get_alloc_info( CD3DX12_RESOURCE_DESC& desc)
+	DX12::ResourceAllocationInfo Device::get_alloc_info(CD3DX12_RESOURCE_DESC& desc)
 	{
 
 		if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
@@ -253,7 +320,7 @@ namespace DX12
 				info = m_device->GetResourceAllocationInfo(0, 1, &desc);
 			}
 
-		}	
+		}
 
 		ResourceAllocationInfo result;
 
@@ -281,16 +348,16 @@ namespace DX12
 		*h.resource_info = ResourceInfo(resource, rtv);
 		Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.cpu);
 	}
-	
+
 	void  Device::create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
 	{
 		*h.resource_info = ResourceInfo(resource, srv);
-		Device::get().get_native_device()->CreateShaderResourceView(resource?resource->get_native().Get():nullptr, &srv, h.cpu);
+		Device::get().get_native_device()->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.cpu);
 	}
 
 	void  Device::create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {
 		*h.resource_info = ResourceInfo(resource, counter, uav);
-		Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), counter? counter->get_native().Get() :nullptr, &uav, h.cpu);
+		Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.cpu);
 	}
 
 	void  Device::create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) {

@@ -1,10 +1,20 @@
 
 
-static const wchar_t* c_hitGroupName = L"MyHitGroup";
-static const wchar_t* c_raygenShaderName = L"MyRaygenShader";
-static const wchar_t* c_closestHitShaderName = L"MyClosestHitShader";
-static const wchar_t* c_missShaderName = L"MyMissShader";
+struct RayType
+{
+	bool per_hit_id;
 
+	std::string group_name;
+//	shader_identifier raygen;
+	shader_identifier miss;
+	
+	std::optional<shader_identifier> hit;
+
+
+//	std::string raygen_name;
+	std::string miss_name;
+	std::string hit_name;
+};
 
 struct RayGenConstantBuffer
 {
@@ -23,8 +33,6 @@ public:
 	Resource::ptr m_rayGenShaderTable;
 
 	shader_identifier rayGenShaderIdentifier;
-	shader_identifier missShaderIdentifier;
-	shader_identifier missShadowShaderIdentifier;
 
 
 	ComPtr<ID3D12StateObject> m_dxrStateObject;
@@ -39,6 +47,9 @@ public:
 	Render::RootSignature::ptr local_sig;
 	using ptr = std::shared_ptr<RTX>;
 
+
+	std::vector<RayType> ray_types;
+	
 	//ArraysHolder<InstanceData> instanceData;
 
 	std::set<ComPtr<ID3D12StateObject>> all_objs;

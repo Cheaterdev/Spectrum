@@ -139,8 +139,7 @@ void MyRaygenShader()
 	 
   
     // Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
-  //  GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), origin, rayDir);
-	
+   
 	float raw_z = rays.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 
@@ -181,18 +180,38 @@ payload_shadow.dist = 0;
 payload_shadow.cone.angle = 0;
 payload_shadow.cone.width = 0;
 
-			RayDesc ray;
-			ray.Origin = pos;
-			ray.Direction = dir;
-			ray.TMin = 0.1;
-			ray.TMax = 3.0;
-			TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0,  0, 0, 0, ray, payload_shadow);
 
-	if(payload_shadow.dist>100)
+//GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), pos, dir);
+
+{
+	RayDesc ray;
+	ray.Origin = pos;
+	ray.Direction = dir;
+	ray.TMin = 0.1;
+	ray.TMax = 3.0;
+	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_shadow);
+
+	if (payload_shadow.dist > 100)
 	{
-		payload_shadow.color = trace(0, 0.0, pos + dirVoxel * 3, dirVoxel, 0.4);
+			payload_shadow.color = trace(0, 0.0, pos + dirVoxel * 3, dirVoxel, 0.4);
 	}
-			output[DispatchRaysIndex().xy] =  lerp(output[DispatchRaysIndex().xy], payload_shadow.color, 0.05);
+	output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy], payload_shadow.color, 0.01);
+}
+
+
+	/*{
+
+	ShadowPayload payload_shadow = { false };
+
+	RayDesc ray;
+	ray.Origin = pos;
+	ray.Direction = float3(0,1,0);
+	ray.TMin = 0.003;
+	ray.TMax = 1000.0;
+	TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 1, 0, 1, ray, payload_shadow);
+
+	output[DispatchRaysIndex().xy] = payload_shadow.hit;
+	}*/
 			//trace(0, pos+dir, dir, 0.2); //
 }
 

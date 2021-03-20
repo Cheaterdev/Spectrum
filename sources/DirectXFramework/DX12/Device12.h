@@ -32,6 +32,13 @@ namespace DX12
 		ResourceAllocationInfo get_alloc_info(CD3DX12_RESOURCE_DESC& desc);
 		std::shared_ptr<SwapChain> create_swap_chain(const DX12::swap_chain_desc& desc);
 
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescBottomInputs& desc);
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescTopInputs& desc);
+		
+			
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO calculateBuffers(const RaytracingBuildDescBottomInputs& desc);
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO calculateBuffers(const RaytracingBuildDescTopInputs& desc);
+
 		/*
 		TrackedResource::ptr create_resource(CD3DX12_RESOURCE_DESC desc, ResourceHandle handle, ResourceState state = ResourceState::UNKNOWN, float4 clear_value = {0,0,0,0})
 		{

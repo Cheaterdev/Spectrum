@@ -28,6 +28,12 @@ namespace DX12
 			return address;
 		}
 
+		ResourceAddress offset(UINT v) const
+		{
+			return ResourceAddress(address+v,resource);
+		}
+		
+
 		operator D3D12_GPU_VIRTUAL_ADDRESS() const
 		{
 			return address;
@@ -67,8 +73,6 @@ namespace DX12
 		ComPtr<ID3D12Resource> m_Resource;
 		ResourceHandle alloc_handle;
 		bool debug = false;
-
-		static thread_local  bool allow_resource_delete;
 
 		using ptr = std::shared_ptr<TrackedResource>;
 		TrackedResource() = default;

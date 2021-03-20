@@ -1174,7 +1174,6 @@ void TaskBuilder::create_resources()
 			if (!info->enabled)
 				continue;
 
-			Render::TrackedResource::allow_resource_delete = true;
 
 			if (info->alloc_ptr.handle)
 			{
@@ -1217,7 +1216,6 @@ void TaskBuilder::create_resources()
 				info->resource->set_name(info->name);
 
 			}
-			Render::TrackedResource::allow_resource_delete = false;
 
 			//		if (!info->need_recreate) 
 			//			continue;
