@@ -86,8 +86,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	Triangle t;
 	t.init(vertex0, vertex1, vertex2, barycentrics);
 
-	if (HitKind() != HIT_KIND_TRIANGLE_FRONT_FACE)
-		t.v.normal = -t.v.normal;
+	//if (HitKind() != HIT_KIND_TRIANGLE_FRONT_FACE)
+	//	t.v.normal = -t.v.normal;
 
 	t.v.pos = WorldRayOrigin() + WorldRayDirection() * RayTCurrent();
 
@@ -144,8 +144,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 			RayDesc ray;
 			ray.Origin = t.v.pos;
 			ray.Direction = dir;
-			ray.TMin = 0.003;
-			ray.TMax = 1000.0;
+			ray.TMin = 0.1;
+			ray.TMax = 10000.0;
 			TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 1, 0, 1, ray, payload_shadow);
 
 			if (payload_shadow.hit)

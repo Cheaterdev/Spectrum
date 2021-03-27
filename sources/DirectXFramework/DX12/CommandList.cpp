@@ -916,6 +916,12 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			set_signature(state->desc.root_signature);
 		base.set_pipeline_internal(state.get());
 	}
+
+	void ComputeContext::set_pso(std::shared_ptr<StateObject>& pso)
+	{
+		base.set_pipeline_internal(nullptr);
+		list->SetPipelineState1(pso->get_native().Get());
+	}
 	
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
 	{

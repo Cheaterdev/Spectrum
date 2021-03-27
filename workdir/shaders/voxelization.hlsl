@@ -60,7 +60,7 @@ void GS(in triangle vertex_output I[3], inout TriangleStream<vertex_output> triS
 	{
 		I[0].pos = TransformPosition(p0.yz);
 		I[1].pos = TransformPosition(p1.yz);
-		I[2].pos = TransformPosition(p1.yz);
+		I[2].pos = TransformPosition(p2.yz);
 	}
 
 

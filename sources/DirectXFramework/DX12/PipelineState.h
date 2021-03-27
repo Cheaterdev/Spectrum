@@ -509,6 +509,183 @@ namespace DX12
 
 	};
 
+
+
+	using shader_identifier = std::array<std::byte, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
+
+	class StateObject;
+
+
+	struct HitGroup
+	{
+		std::wstring name;
+		RootSignature::ptr local_root;
+
+		D3D12_HIT_GROUP_TYPE type;
+		std::wstring any_hit_shader;
+		std::wstring intersection_shader;
+		std::wstring closest_hit_shader;
+
+	};
+
+	
+	struct LibraryObject
+	{
+		library_shader::ptr library;
+		std::map<std::wstring, std::wstring> exports;
+
+		void export_shader(std::wstring name, std::wstring as = L"")
+		{
+			exports[name] = as;
+		}
+
+
+		void include(CD3DX12_STATE_OBJECT_DESC& target)
+		{
+			auto lib = target.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+
+
+			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)library->get_blob().data(), library->get_blob().size());
+			lib->SetDXILLibrary(&libdxil);
+
+			for (auto& e : exports)
+			{
+
+				lib->DefineExport(e.first.c_str(), e.second.empty() ? nullptr : e.second.c_str());
+			}
+		}
+		
+	};
+	struct StateObjectDesc
+	{
+
+		bool collection = false;
+		
+		RootSignature::ptr global_root;
+	
+		std::list<LibraryObject> libraries;
+		std::list<HitGroup> hit_groups;
+		
+		std::list<std::shared_ptr<StateObject>> collections;
+		
+		UINT MaxTraceRecursionDepth = 0;
+		UINT MaxPayloadSizeInBytes=0;
+		UINT MaxAttributeSizeInBytes=0;
+		
+	};
+
+	static std::mutex global_mutex;
+	class StateObject:public PipelineStateBase
+	{
+		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
+
+		void on_change() override
+		{
+			std::lock_guard<std::mutex> g(global_mutex);
+			
+			CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ desc.collection ? D3D12_STATE_OBJECT_TYPE_COLLECTION : D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
+
+			for (auto& l : desc.libraries)
+			{
+				l.include(raytracingPipeline);
+
+				register_shader(l.library);
+			}
+
+			if (desc.global_root)
+			{
+				auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+
+				globalRootSignature->SetRootSignature(desc.global_root->get_native().Get());
+			}
+
+			if (desc.MaxTraceRecursionDepth)
+			{
+				auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+				pipelineConfig->Config(desc.MaxTraceRecursionDepth);
+			}
+
+			if (desc.MaxPayloadSizeInBytes)
+			{
+				auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+				shaderConfig->Config(desc.MaxPayloadSizeInBytes, desc.MaxAttributeSizeInBytes);
+			}
+
+
+			std::map<RootSignature::ptr, CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT*> roots;
+
+
+			for (auto& e : desc.hit_groups)
+			{
+				if (e.local_root)
+					roots[e.local_root] = nullptr;
+			}
+
+
+			for (auto& e : roots)
+			{
+				auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
+				localRootSignature->SetRootSignature(e.first->get_native().Get());
+
+				auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+				rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
+
+				e.second = rootSignatureAssociation;
+			}
+
+
+			for (auto& e : desc.hit_groups)
+			{
+				auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
+
+				hitGroup->SetHitGroupExport(e.name.c_str());
+				//TODO: more shaders
+				hitGroup->SetClosestHitShaderImport(e.closest_hit_shader.c_str());
+				hitGroup->SetHitGroupType(e.type);
+
+				if (e.local_root)
+					roots[e.local_root]->AddExport(e.name.c_str());
+			}
+
+			for (auto& c : desc.collections)
+			{
+				auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
+				sharedCollection->SetExistingCollection(c->get_native().Get());
+			}
+
+
+			TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_StateObject)));
+			TEST(m_StateObject.As(&stateObjectProperties));
+
+		}
+
+		static shader_identifier identify(void* data)
+		{
+			shader_identifier result;
+
+			memcpy(result.data(), data, result.size());
+
+			return result;
+		}
+		StateObjectDesc desc;
+	public:
+		using ptr = s_ptr<StateObject>;
+		ComPtr<ID3D12StateObject> get_native()
+		{
+			return m_StateObject;
+		}
+
+		StateObject(StateObjectDesc&desc):desc(desc)
+		{
+			on_change();	
+		}
+
+		shader_identifier get_shader_id(std::wstring_view name)
+		{
+			return identify(stateObjectProperties->GetShaderIdentifier(name.data()));
+		}
+	};
+
 }
 
 

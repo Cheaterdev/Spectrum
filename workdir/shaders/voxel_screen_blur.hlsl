@@ -57,7 +57,7 @@ float3 pos = depth_to_wpos(raw_z, itc, camera.GetInvViewProj());
 float dist = length(pos - camera.GetPosition()) / 100;
 
 	
-	int frames = 8* framesNorm;
+	int frames = 32* framesNorm;
 
 	
 	float blurRadiusScale = 1.0 / (1.0 + frames);// -1.0 / 8;

@@ -77,15 +77,7 @@
 #include "Assets/MeshAsset.h"
 
 
-using shader_identifier = std::array<std::byte, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
-static shader_identifier identify(void* data)
-{
-	shader_identifier result;
 
-	memcpy(result.data(), data, result.size());
-
-	return result;
-}
 #define CACHE_ALIGN(x) __declspec(align(x))
 
 CACHE_ALIGN(64)

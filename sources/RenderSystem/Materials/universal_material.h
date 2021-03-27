@@ -81,8 +81,7 @@ namespace materials
 	{
 
 		std::vector<render_pass> passes;
-
-
+		
 		render_pass& get_pass(RENDER_TYPE render_type, MESH_TYPE type)
 		{
 
@@ -106,6 +105,7 @@ namespace materials
 		{
 
 		}
+		Render::library_shader::ptr  raytrace_lib;
 
 		void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc& pipeline) override
 		{
@@ -152,7 +152,7 @@ namespace materials
 
 			return pip;
 		}
-		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel, MaterialContext::ptr context)
+		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel,std::string raytracing, MaterialContext::ptr context)
 		{
 			std::lock_guard<std::mutex> g(m);
 			auto hash = MD5(pixel+tess).hex();
@@ -184,11 +184,14 @@ namespace materials
 					passes[PASS_TYPE::VOXEL_DYNAMIC].ds_shader = passes[PASS_TYPE::VOXEL_STATIC].ds_shader = passes[PASS_TYPE::DEFERRED].ds_shader;
 				}
 
-
-
 				
-				pip = std::make_shared<PipelinePasses>((UINT)pipelines.size(), passes);
-				pip->hash = hash;
+				auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), passes);
+				pipeline->raytrace_lib = Render::library_shader::get_resource({ raytracing, "" , 0, context->hit_shader.macros, true });
+
+				pipeline->hash = hash;
+
+
+				pip = pipeline;
 			}
 
 			return pip;
@@ -277,11 +280,12 @@ namespace materials
 			TypedHandle<Render::Handle> textures_handle;
 			Render::HandleTable textures_handles;
 			Pipeline::ptr pipeline;
+    
         public:
             using ptr = s_ptr<universal_material>;
 			std::vector<Uniform::ptr> ps_uniforms;
 			Events::Event<void> on_change;
-			std::wstring wshader_name;
+			const std::wstring wshader_name;
 		
 			Render::library_shader::ptr raytracing_lib;
             universal_material(MaterialGraph::ptr graph);
@@ -290,6 +294,9 @@ namespace materials
 			TypedHandle<material_info_part::CB> info_handle;
 			TypedHandle<closesthit_identifier> info_rtx;
 			std::vector<shader_identifier>hit_table;
+
+			StateObject::ptr m_RTXCollection;
+    	
 			void set_identifier(std::vector<shader_identifier>hit_table)
 			{
 				this->hit_table = hit_table;

@@ -195,6 +195,9 @@ public:
 	};
 	float3 min;
 	float3 size;
+
+
+	
 private:
 	std::shared_ptr<GBufferDownsampler> downsampler;
 

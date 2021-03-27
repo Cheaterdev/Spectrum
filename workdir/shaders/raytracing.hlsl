@@ -15,12 +15,16 @@
 
 #include "autogen/FrameInfo.h"
 #include "autogen/Raytracing.h"
-#include "autogen/RaytracingRays.h"
+//#include "autogen/RaytracingRays.h"
 
 #include "autogen/tables/RayPayload.h"
 #include "autogen/tables/ShadowPayload.h"
 #include "autogen/VoxelScreen.h"
 #include "autogen/VoxelInfo.h"
+
+
+#include "autogen/VoxelOutput.h"
+
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 
@@ -85,7 +89,7 @@ float4 trace(float4 start_color, float start_dist,  float3 origin, float3 dir, f
 
 	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle);
 	float sampleWeight = saturate(max_accum - accum.w ) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 1);
+	accum.xyz += sky *pow(sampleWeight, 1);
 
 	return accum;// / saturate(accum.w);
 }
@@ -123,28 +127,134 @@ float rnd(float2 uv)
 }
 
 
+
+
+struct Bilinear { float2 origin; float2 weights; };
+Bilinear GetBilinearFilter(float2 uv, float2 texSize)
+{
+	Bilinear result;
+	result.origin = floor(uv * texSize - 0.5);
+	result.weights = frac(uv * texSize - 0.5);
+	return result;
+}
+float4 GetBilinearCustomWeights(Bilinear f, float4 customWeights)
+{
+	float4 weights;
+	weights.x = (1.0 - f.weights.x) * (1.0 - f.weights.y);
+	weights.y = f.weights.x * (1.0 - f.weights.y);
+	weights.z = (1.0 - f.weights.x) * f.weights.y;
+	weights.w = f.weights.x * f.weights.y;
+	return weights * customWeights;
+}
+float4 ApplyBilinearCustomWeights(float4 s00, float4 s10, float4 s01, float4 s11, float4 w, bool normalize = true)
+{
+	float4 r = s00 * w.x + s10 * w.y + s01 * w.z + s11 * w.w;
+	return r * (normalize ? rcp(dot(w, 1.0)) : 1.0);
+}
+
+
+float get_occlusion(Camera prev_camera, float prev_z, float2 tc, float3 pos, float vl)
+{
+	float3 prev_pos = depth_to_wpos(prev_z, tc, prev_camera.GetInvViewProj());
+
+	float l = 10 * length(pos - prev_pos) / vl;
+
+	return  0.00005 + (all(tc > 0 && tc < 1) * saturate(1 - l));
+	//return all(tc > 0 && tc < 1) && l < 0.1 ? 1 : 0.005;
+}
+
+static const int2 offset[4] =
+{
+	int2(0, 0),
+	int2(0, 1),
+	int2(1, 0),
+	int2(1, 1)
+};
+#define FRAMES 32
+
+struct upscale_result
+{
+	float4 history;
+	float frames;
+};
+
+upscale_result get_history(VoxelScreen voxel_screen, Camera prev_camera, float3 pos, float2 prev_tc, float2 dims, float l)
+{
+	Bilinear bilinearFilterAtPrevPos = GetBilinearFilter((prev_tc), dims);
+	float2 gatherUv = (float2(bilinearFilterAtPrevPos.origin) + 0.5) / dims;
+
+	float4 viewZprev = voxel_screen.GetPrev_depth().GatherRed(pointBorderSampler, gatherUv).wzxy;
+	// Compute disocclusion basing on plane distance
+
+	float4 occlusion;
+
+
+	occlusion.x = get_occlusion(prev_camera, viewZprev.x, gatherUv + float2(offset[0]) / dims, pos, l);
+	occlusion.y = get_occlusion(prev_camera, viewZprev.y, gatherUv + float2(offset[1]) / dims, pos, l);
+	occlusion.z = get_occlusion(prev_camera, viewZprev.z, gatherUv + float2(offset[2]) / dims, pos, l);
+	occlusion.w = get_occlusion(prev_camera, viewZprev.w, gatherUv + float2(offset[3]) / dims, pos, l);
+
+	// Sample history
+	float4 weights = GetBilinearCustomWeights(bilinearFilterAtPrevPos, occlusion);
+
+	float4 s00 = voxel_screen.GetPrev_gi().SampleLevel(pointBorderSampler, gatherUv + float2(offset[0]) / dims, 0);
+	float4 s01 = voxel_screen.GetPrev_gi().SampleLevel(pointBorderSampler, gatherUv + float2(offset[1]) / dims, 0);
+	float4 s10 = voxel_screen.GetPrev_gi().SampleLevel(pointBorderSampler, gatherUv + float2(offset[2]) / dims, 0);
+	float4 s11 = voxel_screen.GetPrev_gi().SampleLevel(pointBorderSampler, gatherUv + float2(offset[3]) / dims, 0);
+
+	float4 accumSpeedPrev = float4(s00.w, s01.w, s10.w, s11.w);
+
+	// ... read s00, s10, s01, s11 using point filtering
+	float4 history = ApplyBilinearCustomWeights(s00, s10, s01, s11, weights, true);
+
+	accumSpeedPrev = min(FRAMES * accumSpeedPrev + 1.0, FRAMES);
+	//	int newFrames = occlusion ? 0 : clamp(prevFrames + 1, 0, 8);
+
+	float accumSpeed = ApplyBilinearCustomWeights(accumSpeedPrev.x, accumSpeedPrev.y, accumSpeedPrev.z, accumSpeedPrev.w, weights, false);
+
+	upscale_result result;
+
+	result.history = float4(history.xyz, accumSpeed);
+	result.frames = accumSpeed;
+	return result;
+}
+
+
+
+
 [shader("raygeneration")]
 void MyRaygenShader()
 {
  //  float3 rayDir = float3(0,1,0);
  //   float3 origin = float3(0, 1, 0);;
-    
-	float2 tc = float2(DispatchRaysIndex().xy)/DispatchRaysDimensions().xy;
+
+	uint2 itc = DispatchRaysIndex().xy;
+	uint2 dims = DispatchRaysDimensions().xy;
+	
+	float2 tc = float2(itc + 0.5f)/ dims;
 
     const FrameInfo frame = CreateFrameInfo();
 
-    const Raytracing raytracing = CreateRaytracing();
-     const RaytracingRays rays = CreateRaytracingRays();
-	 const RWTexture2D<float4> output = rays.GetOutput();
-	 
+   const Raytracing raytracing = CreateRaytracing();
+
+	 const VoxelOutput voxel_output = CreateVoxelOutput();
+	 const VoxelScreen voxel_screen = CreateVoxelScreen();
+
+
+Texture2D<float2> speed_tex = voxel_screen.GetGbuffer().GetMotion();
+
+	
+	// const RWTexture2D<float4> output = rays.GetOutput();
+	 const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+	 const RWTexture2D<float> tex_frames = voxel_output.GetFrames();
   
     // Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
    
-	float raw_z = rays.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
+	float raw_z = voxel_screen.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 
 
-	float3 normal = normalize(rays.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
+	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
 
 	//float3 lightDir = frame.GetSunDir();
 
@@ -153,7 +263,7 @@ void MyRaygenShader()
 //float3 rayDir = reflect(view, normal);
 
 
-float time = frame.GetTime().y;// +i;
+float time = frac(frame.GetTime().y);// +i;
 float sini = sin(time * 220 + float(tc.x));
 float cosi = cos(time * 220 + float(tc.y));
 float rand = rnd(float2(sini, cosi));
@@ -163,7 +273,7 @@ float rcos = cos(6.14 * rand);
 float rsin = sin(6.14 * rand);
 float rand2 = rnd(float2(cosi, sini));
 
-float tt =  2 * pow(rand2, 1.0 / 3.0);
+float tt =  4 * pow(rand2, 1.0 / 3.0);
 
 float3 right = rsin *  normalize(cross(normal, float3(0, 1, 0.1)));
 float3 tangent = rcos * normalize(cross(right, normal));
@@ -173,97 +283,77 @@ float3 dir = normalize(normal + tt * (right + tangent));
 float3 dirVoxel = normalize(normal + rand2*(right + tangent));
 
 
-RayPayload payload_shadow;
-payload_shadow.color = float4(dirVoxel,0);
-payload_shadow.recursion = 0;
-payload_shadow.dist = 0;
-payload_shadow.cone.angle = 0;
-payload_shadow.cone.width = 0;
+RayPayload payload_gi;
+payload_gi.color = float4(dirVoxel,0);
+payload_gi.recursion = 0;
+payload_gi.dist = 0;
+payload_gi.cone.angle = 0;
+payload_gi.cone.width = 0;
 
 
-//GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), pos, dir);
+//dir = normalize(pos - frame.GetCamera().GetPosition());
+//pos = frame.GetCamera().GetPosition();
 
-{
 	RayDesc ray;
 	ray.Origin = pos;
 	ray.Direction = dir;
-	ray.TMin = 0.1;
-	ray.TMax = 3.0;
-	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_shadow);
+	ray.TMin = 0.05;
+	ray.TMax = 10.0;
+	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
 
-	if (payload_shadow.dist > 100)
+	if (payload_gi.dist > 100000-5)
 	{
-			payload_shadow.color = trace(0, 0.0, pos + dirVoxel * 3, dirVoxel, 0.4);
+		payload_gi.color = trace(0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.4);
 	}
-	output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy], payload_shadow.color, 0.01);
-}
+		
+	//tex_noise[DispatchRaysIndex().xy] = 1;// lerp(tex_noise[DispatchRaysIndex().xy], payload_shadow.color, 0.01);
 
+/*	{
 
-	/*{
+		ShadowPayload payload_shadow;
+		payload_shadow.hit = false;
+	
+		
+		RayDesc ray;
+		ray.Origin = pos;
+		ray.Direction = frame.GetSunDir();
+		ray.TMin = 0.1;
+		ray.TMax = 30000.0;
+		TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload_shadow);
 
-	ShadowPayload payload_shadow = { false };
-
-	RayDesc ray;
-	ray.Origin = pos;
-	ray.Direction = float3(0,1,0);
-	ray.TMin = 0.003;
-	ray.TMax = 1000.0;
-	TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 1, 0, 1, ray, payload_shadow);
-
-	output[DispatchRaysIndex().xy] = payload_shadow.hit;
-	}*/
-			//trace(0, pos+dir, dir, 0.2); //
-}
-
-
-
-/*
-[shader("raygeneration")]
-void MyRaygenShader()
-{
-	  float3 rayDir = float3(0,1,0);
-	   float3 origin = float3(0, 1, 0);;
-
-	float2 tc = float2(DispatchRaysIndex().xy) / DispatchRaysDimensions().xy;
-
-	const FrameInfo frame = CreateFrameInfo();
-
-	const Raytracing raytracing = CreateRaytracing();
-	const RaytracingRays rays = CreateRaytracingRays();
-	const RWTexture2D<float4> output = rays.GetOutput();
-
-
-	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
-    GenerateCameraRay(DispatchRaysIndex().xy, frame.GetCamera(), origin, rayDir);
-
+		payload_gi.color = payload_shadow.hit;
+	}
+	*/
 	
 
+	float2 delta =  voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
+	float2 prev_tc = tc - delta;
 
-	RayPayload payload_shadow;
-	payload_shadow.color = 0;
-	payload_shadow.recursion = 0;
-	payload_shadow.dist = 0;
-	payload_shadow.cone.angle = 0;
-	payload_shadow.cone.width = 0;
+	float l = length(pos - frame.GetCamera().GetPosition());
 
-	RayDesc ray;
-	ray.Origin = origin;
-	ray.Direction = rayDir;
-	ray.TMin = 0.03;
-	ray.TMax = 1000.0;
-	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_shadow);
+	upscale_result reprojected = get_history(voxel_screen, frame.GetPrevCamera(), pos, prev_tc, dims, l);
 
-	output[DispatchRaysIndex().xy] = lerp(output[DispatchRaysIndex().xy], payload_shadow.color, 0.1);
+	float speed = 1.0 / (1.0 + reprojected.frames);
+
+	float4 gi = payload_gi.color;// max(0, getGI(itc, pos, pos + scaler * normal / m, normal, v, r, gbuffer.GetNormals()[tc].w, albedo.w));
+
+	gi =  lerp(reprojected.history, gi, speed);
+
+	tex_noise[itc] = float4(gi.xyz, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
+	tex_frames[itc] = float(reprojected.frames) / FRAMES;
+	
+		
 
 }
-*/
+
+
 
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {
 	
 	// CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 3);
-	payload.dist = 10000;
+	payload.dist = 100000;
 }
 
 

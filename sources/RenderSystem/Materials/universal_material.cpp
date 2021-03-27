@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 
 
-
+static IdGenerator ids;
 
 BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
 BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);
@@ -107,6 +107,7 @@ void materials::universal_material::update()
 void materials::universal_material::compile()
 {
 	start_changing_contents();
+	m_RTXCollection = RTX::get().CreateGlobalCollection(this);
 	handlers.clear();
 //	material_info.GetTextures().resize(textures.size());
 
@@ -276,8 +277,7 @@ void materials::universal_material::generate_texture_handles()
 {
 
 }
-static IdGenerator ids;
-	
+
 void materials::universal_material::generate_material()
 {
 //   std::lock_guard<std::mutex> g(m);
@@ -301,16 +301,14 @@ void materials::universal_material::generate_material()
 
 	
 
-	wshader_name = std::wstring(L"HitShader_") + std::to_wstring(ids.get());
-
 	auto raytracing_str = context->hit_shader.uniforms+ include_file_raytacing->get_data() + context->hit_shader.text;
 
 
-	raytracing_lib = Render::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true }); //*D3D12ShaderCompilerInfo::get().Compile_Shader(raytracing_str, context->hit_shader.macros);
-	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, context);
-
-	
+	raytracing_lib = Render::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true });
+	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context);
 	ps_uniforms = context->uniforms_ps;
+
+
 //	tess_uniforms = context->uniforms_tess;
 
 
@@ -340,8 +338,10 @@ MaterialGraph::ptr materials::universal_material::get_graph()
 }
 
 
-materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this)
+materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this), wshader_name(std::wstring(L"material_") + std::to_wstring(ids.get()))
 {
+	
+	
 	include_file = register_asset(EngineAssets::material_header.get_asset());
 	include_file_raytacing = register_asset(EngineAssets::material_raytracing_header.get_asset());
 	this->graph = BinaryData<MaterialGraph>(graph);
@@ -359,7 +359,7 @@ void materials::universal_material::update_rtx()
 	
 	if (!info_rtx)
 	{
-		info_rtx = RTX::get().material_hits->allocate(RTX::get().ray_types.size());
+		info_rtx = RTX::get().allocate_hit();
 	}
 
 
@@ -382,7 +382,8 @@ void materials::universal_material::test()
 	graph.test();
 }
 
-materials::universal_material::universal_material() : include_file(this), include_file_raytacing(this)
+
+materials::universal_material::universal_material() : include_file(this), include_file_raytacing(this), wshader_name(std::wstring(L"material_") + std::to_wstring(ids.get()))
 {
 	graph.on_create = [this](MaterialGraph::ptr g)
 	{
@@ -482,8 +483,8 @@ void materials::universal_material::serialize(Archive& ar, const unsigned int fi
 	{
 		//   if (include_file->is_changed())
 		compile();
-		//generate_material(); //TODO: REMOVE, FOR RT NOW ONLY
-		wshader_name = std::wstring(L"HitShader_") + std::to_wstring(ids.get());
+		
+	//	generate_material(); //TODO: REMOVE, FOR RT NOW ONLY
 
 		update_rtx();
 	}

@@ -23,7 +23,7 @@ static const float3 voxel_size = voxel_info.GetSize().xyz;
 
 float4 get_voxel(float3 pos, float level)
 {
-	float4 color =  volume.SampleLevel(linearSampler, pos,4);
+	float4 color =  volume.SampleLevel(linearSampler, pos,1);
 //color.rgb *= 1 + level / 2;
 //	color.w /= 10;
 //if (color.w > 0) color /= color.w;

@@ -16,13 +16,24 @@ struct RayType
 	std::string hit_name;
 };
 
+
+struct RayGenShader
+{
+	std::string name;
+
+	shader_identifier raygen;
+
+};
 struct RayGenConstantBuffer
 {
 	UINT texture_offset;
 	UINT node_offset;
 };
 
-
+struct HitObject
+{
+	
+};
 class RTX :public Singleton<RTX>, Events::prop_handler,
 	public Events::Runner
 {
@@ -32,23 +43,19 @@ public:
 	Resource::ptr m_hitGroupShaderTable;
 	Resource::ptr m_rayGenShaderTable;
 
-	shader_identifier rayGenShaderIdentifier;
-
-
-	ComPtr<ID3D12StateObject> m_dxrStateObject;
-	ComPtr<ID3D12StateObject> m_SharedCollection;
-	ComPtr<ID3D12StateObject> m_GlobalCollection;
+	StateObject::ptr m_dxrStateObject;
+	StateObject::ptr m_SharedCollection;
 
 	library_shader::ptr library;
 
 	RayGenConstantBuffer m_rayGenCB;
-	ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
 	RootSignature::ptr global_sig;
 	Render::RootSignature::ptr local_sig;
 	using ptr = std::shared_ptr<RTX>;
 
 
 	std::vector<RayType> ray_types;
+	std::vector<RayGenShader> raygen_types;
 	
 	//ArraysHolder<InstanceData> instanceData;
 
@@ -62,14 +69,17 @@ public:
 
 	std::mutex m;
 	RTX();
-
+	TypedHandle<closesthit_identifier> allocate_hit()
+	{
+		return material_hits->allocate(ray_types.size());
+	}
 	UINT get_material_id(materials::universal_material* universal);
 
-	void CreateCommonProps(CD3DX12_STATE_OBJECT_DESC& raytracingPipeline);
+	void CreateCommonProps(StateObjectDesc& desc);
 
 	void CreateSharedCollection();
 
-	void CreateGlobalCollection();
+	StateObject::ptr CreateGlobalCollection(materials::universal_material* mat);
 
 
 	void CreateRaytracingPipelineStateObject();
@@ -77,5 +87,5 @@ public:
 
 	void prepare(CommandList::ptr& list);
 
-	void render(MeshRenderContext::ptr context, Render::TextureView& texture, Render::RaytracingAccelerationStructure::ptr scene_as, GBuffer& gbuffer);
+	void render(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size);
 };

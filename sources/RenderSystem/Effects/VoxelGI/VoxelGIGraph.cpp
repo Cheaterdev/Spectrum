@@ -522,7 +522,7 @@ void VoxelGI::screen(FrameGraph& graph)
 
 			auto& command_list = _context.get_list();
 
-
+			bool use_rtx = Device::get().is_rtx_supported() && GetAsyncKeyState('O');
 			auto gbuffer = data.gbuffer.actualize(_context);
 			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
 			auto noisy_output = _context.get_texture(data.noisy_output);
@@ -545,18 +545,39 @@ void VoxelGI::screen(FrameGraph& graph)
 			auto& compute = command_list->get_compute();
 
 			//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			if (use_rtx)
+
+				command_list->get_compute().set_signature(RTX::get().global_sig);
+			else
 			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+		
 
 
+			Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
+
+			Slots::FrameInfo::Compiled compiledFrame;
 
 			{
+				PROFILE(L"FrameInfo");
 				Slots::FrameInfo frameInfo;
+
+				frameInfo.GetSky() = sky_cubemap_filtered.textureÑube;
+				frameInfo.GetSunDir() = graph.sunDir;
+				frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
+
+
 				frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
 				frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
 				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-				frameInfo.GetTime() = graph.time;
-				frameInfo.set(compute);
+				
+				compiledFrame = frameInfo.compile(*command_list);
 			}
+
+
+			compiledScene.set(command_list->get_compute());
+			compiledFrame.set(command_list->get_compute());
+
+		
 
 			{
 				Slots::VoxelScreen voxelScreen;
@@ -574,24 +595,28 @@ void VoxelGI::screen(FrameGraph& graph)
 			//	scene->voxels_compiled.set(compute);
 
 
-			//	command_list->clear_rtv(frames_count.get_rtv(), vec4(1, 1, 1, 1));
+			{
+				Slots::VoxelOutput output;
+
+				output.GetFrames() = frames_count.rwTexture2D;
+				output.GetNoise() = noisy_output.rwTexture2D;
+
+				output.set(compute);
+			}
+
+			
+			if(use_rtx)
+			{				
+				RTX::get().render(compute, scene->raytrace_scene, noisy_output.get_size());
+			}else
 			{
 				PROFILE_GPU(L"noise");
 				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectLow>());
-				//		graphics.set_rtvs(Render::Handle(), noisy_output.get_rtv(), frames_count.get_rtv());
-
-				{
-					Slots::VoxelOutput output;
-
-					output.GetFrames() = frames_count.rwTexture2D;
-					output.GetNoise() = noisy_output.rwTexture2D;
-
-					output.set(compute);
-				}
-
 				compute.dispach(size);
 			}
 
+
+			compute.set_signature(get_Signature(Layouts::DefaultLayout));
 			{
 				PROFILE_GPU(L"classification");
 

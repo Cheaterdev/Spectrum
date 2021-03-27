@@ -244,15 +244,28 @@ namespace DX12
     };
 
 
+    class library_shader;
+    class exported_shader
+    {
+    public:
+        std::shared_ptr<library_shader> library;
+        std::wstring shader_name;
+    };
+	
     class library_shader : public Shader<library_shader>
 	{
 		friend class Shader<library_shader>;
+
+     
 	public:
 
 		using ptr = s_ptr<library_shader>;
 
 		static const ptr null;
+
+       
 	};
+
 }
 
 

@@ -9,7 +9,7 @@ namespace DX12
 	template<class T> class  PipelineStateTyped;
 	class ComputePipelineState;
 	class PipelineStateBase;
-
+	class StateObject;
 	class IndexBufferBase;
 	class UploadBuffer;
 	class CPUBuffer;
@@ -1454,11 +1454,7 @@ namespace DX12
 			list->DispatchRays(&dispatchDesc);
 		}
 
-		void set_pso(ComPtr<ID3D12StateObject> pso)
-		{
-			base.set_pipeline_internal(nullptr);
-			list->SetPipelineState1(pso.Get());
-		}
+		void set_pso(std::shared_ptr<StateObject>& pso);
 	};
 
 

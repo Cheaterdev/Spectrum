@@ -129,7 +129,6 @@ public:
 	MeshAssetInstance::ptr instance;
 
 
-	Render::RaytracingAccelerationStructure::ptr scene_as;
 
 
 	// Build acceleration structures needed for raytracing.
@@ -137,11 +136,7 @@ public:
 	{
 		std::vector<InstanceDesc>  desc;
 
-		scene_as = std::make_shared<RaytracingAccelerationStructure>(desc);
-
-		RTX::get().CreateSharedCollection();
-		RTX::get().CreateGlobalCollection();
-		RTX::get().CreateRaytracingPipelineStateObject();
+		scene->raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(desc);
 	}
 
 	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
@@ -157,7 +152,7 @@ public:
 
 		texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
-		if(Device::get().is_rtx_supported()) BuildAccelerationStructures();
+	
 
 		auto t = CounterManager::get().start_count<triangle_drawer>();
 		thinkable = true;
@@ -175,7 +170,7 @@ public:
 
 		gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
 
-
+		if (Device::get().is_rtx_supported()) BuildAccelerationStructures();
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_dynamic = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::DYNAMIC));
 		//cam.position = vec3(0, 5, -30);
@@ -462,7 +457,7 @@ public:
 				//	command_list->create_transition_point();
 			//		command_list->transition(scene->raytrace->buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
-					scene_as->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), need_rebuild);
+					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), need_rebuild);
 					RTX::get().prepare(command_list);
 				}
 
@@ -572,7 +567,7 @@ public:
 		
 		sky.generate_sky(graph);
 
-		if (Device::get().is_rtx_supported())
+	/*	if (Device::get().is_rtx_supported())
 		graph.add_pass<pass_data>("RAYTRACE", [&](pass_data& data, TaskBuilder& builder) {
 			data.o_texture = builder.create_texture("RTX", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,ResourceFlags::UnorderedAccess| ResourceFlags::Static);
 			data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
@@ -651,9 +646,9 @@ public:
 					context->cam = &eyes[i]->cam;
 				}
 				//if (GetAsyncKeyState('B'))
-					RTX::get().render(context, output_tex, scene_as,gbuffer);
+					RTX::get().render(context,  scene->raytrace_scene);
 			});
-
+			*/
 		stenciler->generate_after(graph);
 
 		smaa.generate(graph);
@@ -1607,10 +1602,16 @@ protected:
 	{
 	
 	//	assert(ppp.inited);
+		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 
 		EVENT("Device");
 		Render::Device::create();
-		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
+
+		EVENT("PSO");
+		init_signatures();
+		PSOHolder::create();
+		RTX::create();
+		
 		EVENT("AssetManager");
 		AssetManager::create();
 		EVENT("WindowRender");
@@ -1618,19 +1619,8 @@ protected:
 #ifdef OCULUS_SUPPORT
 		//ovr = std::make_shared<OVRRender>();
 #endif
-		init_signatures();
 
-	
-	
-//		init_pso();
-
-
-
-	//	get_PSO(PSO::Lighting);
 		
-	//	auto ppp = GetPSO<Lighting>(Lighting::SecondBounce | Lighting::Count(3) | Lighting::Smth(222));
-
-		PSOHolder::create();
 		//	main_window = std::make_shared<WindowRender>();
 		main_window = std::make_shared<FrameGraphRender>();
 	

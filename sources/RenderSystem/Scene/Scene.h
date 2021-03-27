@@ -45,6 +45,7 @@ public:
     {
         remove_all();
     }
+    Render::RaytracingAccelerationStructure::ptr raytrace_scene;
     Scene() 
     {
         scene = this;

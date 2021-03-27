@@ -97,7 +97,7 @@ void  CS(uint3 groupID       : SV_GroupID,
     float2 dims;
 	color_tex.GetDimensions(dims.x, dims.y);
 	
-	float2 tc = index / targetDims + 0.5 / dims;
+	float2 tc = (index + 0.5 )/ targetDims ;
 	float normAccumulatedFrameNum = tex_frames.SampleLevel(pointBorderSampler, tc , 0);
 	float4 result = color_tex.SampleLevel(pointBorderSampler, tc , 0);
 
@@ -108,7 +108,7 @@ void  CS(uint3 groupID       : SV_GroupID,
 	float roughness = 1;
 	uint mipLevel =  4.0 * (1.0 - normAccumulatedFrameNum) * roughness;
 
-	if (mipLevel == 0)
+if (mipLevel == 0)
 	{
 		return;
 
@@ -119,10 +119,10 @@ void  CS(uint3 groupID       : SV_GroupID,
 	
 	float4 s00, s10, s01, s11;
 	
-	s00 = color_tex.SampleLevel(pointBorderSampler, gatherUv + float2(offset[0]) / mipSize, mipLevel );
-	s01 = color_tex.SampleLevel(pointBorderSampler, gatherUv + float2(offset[1]) / mipSize, mipLevel );
-	s10 = color_tex.SampleLevel(pointBorderSampler, gatherUv + float2(offset[2]) / mipSize, mipLevel );
-	s11 = color_tex.SampleLevel(pointBorderSampler, gatherUv + float2(offset[3]) / mipSize, mipLevel );
+	s00 = color_tex.SampleLevel(pointClampSampler, gatherUv + float2(offset[0]) / mipSize, mipLevel );
+	s01 = color_tex.SampleLevel(pointClampSampler, gatherUv + float2(offset[1]) / mipSize, mipLevel );
+	s10 = color_tex.SampleLevel(pointClampSampler, gatherUv + float2(offset[2]) / mipSize, mipLevel );
+	s11 = color_tex.SampleLevel(pointClampSampler, gatherUv + float2(offset[3]) / mipSize, mipLevel );
 
 	float4 occlusion = 0;
 
