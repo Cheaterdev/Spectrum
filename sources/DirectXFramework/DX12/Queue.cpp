@@ -210,7 +210,7 @@ namespace DX12
 				UINT(startCoordinates.size()),
 				&startCoordinates[0],
 				&regionSizes[0],
-				heap ? heap->heap.Get() : nullptr,
+				heap ? heap->get_native().Get() : nullptr,
 				UINT(rangeFlags.size()),
 				&rangeFlags[0],
 				&heapRangeStartOffsets[0],

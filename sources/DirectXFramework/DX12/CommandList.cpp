@@ -914,6 +914,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		if (state->desc.root_signature)
 			set_signature(state->desc.root_signature);
+
 		base.set_pipeline_internal(state.get());
 	}
 
@@ -930,7 +931,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			if (pipeline)
 			{
 				compiler.SetPipelineState(pipeline->get_native().Get());
-				tracked_psos.emplace_back(pipeline->get_native());
+				tracked_resources.emplace_back(pipeline->tracked_info);
 			}
 			current_pipeline = pipeline;
 
@@ -1173,9 +1174,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		used_resources.clear();
 
 		tracked_resources.clear();
-		tracked_psos.clear();
-		tracked_heaps.clear();
-
+	
 		transition_list = nullptr;
 
 	

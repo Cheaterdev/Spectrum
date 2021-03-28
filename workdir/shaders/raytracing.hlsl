@@ -170,7 +170,7 @@ static const int2 offset[4] =
 	int2(1, 0),
 	int2(1, 1)
 };
-#define FRAMES 32
+#define FRAMES 8
 
 struct upscale_result
 {
@@ -297,7 +297,7 @@ payload_gi.cone.width = 0;
 	RayDesc ray;
 	ray.Origin = pos;
 	ray.Direction = dir;
-	ray.TMin = 0.05;
+	ray.TMin = 0.01;
 	ray.TMax = 10.0;
 	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
 

@@ -325,7 +325,8 @@ namespace DX12
 			return &compiler;
 		}
 	public:
-	
+		std::list<TrackedObject::ptr> tracked_resources;
+
 		virtual ~CommandListBase() = default;
 
 		CommandListType get_type()
@@ -356,7 +357,6 @@ namespace DX12
 
 
 		std::list<Resource*> used_resources;
-		std::list<TrackedResource::ptr> tracked_resources;
 	
 		std::shared_ptr<TransitionCommandList> transition_list;
 
@@ -367,8 +367,6 @@ namespace DX12
 	protected:
 		void begin();
 		void on_execute();
-		std::list<ComPtr<ID3D12PipelineState>> tracked_psos;
-		
 		std::list<TransitionPoint> transition_points;
 		TransitionPoint zero_tranzition;
 
@@ -422,7 +420,7 @@ namespace DX12
 	
 	public:
 		void free_resources();
-		std::list<ComPtr<ID3D12Heap>> tracked_heaps;
+
 		UINT transition_count = 0;
 
 		Transition* create_transition(const Resource* resource, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, TransitionType type = TransitionType::LAST)

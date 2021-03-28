@@ -48,7 +48,8 @@ namespace DX12
 
 	class FrameResources;
 
-	class TrackedResource
+
+	class TrackedResource : public TrackedObject
 	{
 		friend class TiledResourceManager;
 
@@ -90,17 +91,7 @@ namespace DX12
 		~TrackedResource();
 	};
 
-	class Trackable
-	{
-	public:
-		TrackedResource::ptr tracked_info;
-		Trackable()
-		{
-			tracked_info = std::make_shared<TrackedResource>();
-		}
-	};
-
-	class Resource :public std::enable_shared_from_this<Resource>, public Trackable, public ResourceStateManager, public TiledResourceManager
+	class Resource :public std::enable_shared_from_this<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
 	{
 		LEAK_TEST(Resource)
 

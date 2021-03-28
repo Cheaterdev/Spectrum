@@ -47,6 +47,8 @@ namespace DX12
                 blob = r.blob;
                 hash = r.hash;
 
+                on_change();
+            	
 				std::lock_guard<std::mutex> g(pipelines_mutex);
                 for (auto& p : pipelines)
                     p->on_change();
@@ -61,6 +63,8 @@ namespace DX12
         public:
             static Cache<std::string, size_t> shader_ids;
 
+    	
+            Events::Event<void> on_change;
             const MD5& get_hash() const
             {
                 return hash;

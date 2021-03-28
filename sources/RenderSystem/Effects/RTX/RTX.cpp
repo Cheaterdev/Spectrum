@@ -115,43 +115,51 @@ void RTX::CreateRaytracingPipelineStateObject()
 	
 	m_dxrStateObject = std::make_shared<StateObject>(raytracingPipeline);
 
-	for(auto &type:ray_types)
+
+	auto change_func = [this]()
 	{
-		if (!type.per_hit_id)
-			type.hit = m_dxrStateObject->get_shader_id(convert(type.group_name));
-
-		type.miss = m_dxrStateObject->get_shader_id(convert(type.miss_name));
-	}
-
-	for (auto& type : raygen_types)
-	{
-		type.raygen  = m_dxrStateObject->get_shader_id(convert(type.name));
-	}
-	
-	for (auto& pair : materials)
-	{
-		auto mat = pair.first;
-
-		std::vector<shader_identifier>hit_table;
-
 		for (auto& type : ray_types)
 		{
-			shader_identifier id;
+			if (!type.per_hit_id)
+				type.hit = m_dxrStateObject->get_shader_id(convert(type.group_name));
 
-			if(type.per_hit_id)
-			{
-				id = m_dxrStateObject->get_shader_id(mat->wshader_name + convert(type.group_name));
-
-			}else
-			{
-				id = *type.hit;
-			}
-			
-			hit_table.emplace_back(id);
+			type.miss = m_dxrStateObject->get_shader_id(convert(type.miss_name));
 		}
-		
-		mat->set_identifier(hit_table);
-	}
+
+		for (auto& type : raygen_types)
+		{
+			type.raygen = m_dxrStateObject->get_shader_id(convert(type.name));
+		}
+
+		for (auto& pair : materials)
+		{
+			auto mat = pair.first;
+
+			std::vector<shader_identifier>hit_table;
+
+			for (auto& type : ray_types)
+			{
+				shader_identifier id;
+
+				if (type.per_hit_id)
+				{
+					id = m_dxrStateObject->get_shader_id(mat->wshader_name + convert(type.group_name));
+
+				}
+				else
+				{
+					id = *type.hit;
+				}
+
+				hit_table.emplace_back(id);
+			}
+
+			mat->set_identifier(hit_table);
+		}
+	};
+	
+	m_dxrStateObject->event_change.register_handler(this, change_func);
+	change_func();
 }
 
 RTX::RTX()

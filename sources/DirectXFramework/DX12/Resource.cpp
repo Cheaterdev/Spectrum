@@ -75,7 +75,7 @@ namespace DX12
 
 
 			TEST(Device::get().get_native_device()->CreatePlacedResource(
-				tracked_info->alloc_handle.get_heap()->heap.Get(),
+				tracked_info->alloc_handle.get_heap()->get_native().Get(),
 				tracked_info->alloc_handle.get_offset(),
 				&desc,
 				static_cast<D3D12_RESOURCE_STATES>(state),
@@ -156,7 +156,7 @@ namespace DX12
 			state = ResourceState::COPY_DEST;
 		}
 		TEST(Device::get().get_native_device()->CreatePlacedResource(
-			handle.get_heap()->heap.Get(),
+			handle.get_heap()->get_native().Get(),
 			handle.get_offset(),
 			&desc,
 			static_cast<D3D12_RESOURCE_STATES>(state),

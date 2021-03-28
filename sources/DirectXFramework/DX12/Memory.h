@@ -12,20 +12,48 @@ namespace DX12
 		PRESENT = 5
 	};
 
+	template<class T>
+	class Trackable
+	{
+	public:
+		std::shared_ptr<T> tracked_info;
+		Trackable()
+		{
+			tracked_info = std::make_shared<T>();
+		}
+	};
+	class TrackedObject
+	{
+	public:
+		using ptr = std::shared_ptr<TrackedObject>;
+		virtual ~TrackedObject() = default;
+	};
+	
+	
+	class TrackedHeap : public TrackedObject
+	{
+	public:
+		ComPtr<ID3D12Heap > heap;
+	};
 
-	class ResourceHeap :std::enable_shared_from_this<ResourceHeap>
+	class ResourceHeap :std::enable_shared_from_this<ResourceHeap>, public Trackable<TrackedHeap>
 	{
 
 		D3D12_HEAP_DESC desc;
 	public:
 		std::shared_ptr<Resource> cpu_buffer;
-		ComPtr<ID3D12Heap > heap;
+
 		HeapType type;
 		D3D12_HEAP_FLAGS flags;
 
 		size_t heap_size = 0;
 		using ptr = std::shared_ptr<ResourceHeap>;
-
+		ComPtr<ID3D12Heap > get_native()
+		{
+			return tracked_info->heap;
+		}
+		
+		
 		ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
 		{
 			init(size);

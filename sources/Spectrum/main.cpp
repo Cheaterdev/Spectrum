@@ -1173,6 +1173,7 @@ public:
 				Render::hull_shader::reload_all();
 				Render::domain_shader::reload_all();
 				Render::compute_shader::reload_all();
+				Render::library_shader::reload_all();
 				Render::Texture::reload_all();
 			}
 

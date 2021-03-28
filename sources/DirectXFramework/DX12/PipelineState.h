@@ -312,12 +312,17 @@ namespace DX12
 
 	};
 
-	class PipelineStateBase
+	class TrackedPipeline : public TrackedObject
+	{
+	public:
+		ComPtr<ID3D12PipelineState> m_pipelineState;
+		ComPtr<ID3D12StateObject> m_StateObject;
+	};
+	class PipelineStateBase: public Trackable<TrackedPipeline>
 	{
 
 	protected:
-		ComPtr<ID3D12PipelineState> m_pipelineState;
-		ComPtr<ID3D12StateObject> m_StateObject;
+	
 		
 		std::string cache;
 
@@ -348,7 +353,7 @@ namespace DX12
 		std::string get_cache()
 		{
 			ComPtr<ID3DBlob> blob;
-			m_pipelineState->GetCachedBlob(&blob);
+			tracked_info->m_pipelineState->GetCachedBlob(&blob);
 			std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
 
 			return str;
@@ -382,7 +387,7 @@ namespace DX12
 			if constexpr (Archive::is_saving::value)
 			{
 				ComPtr<ID3DBlob> blob;
-				m_pipelineState->GetCachedBlob(&blob);
+				tracked_info->m_pipelineState->GetCachedBlob(&blob);
 				std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
 
 
@@ -574,22 +579,17 @@ namespace DX12
 		
 	};
 
-	static std::mutex global_mutex;
-	class StateObject:public PipelineStateBase
+	class StateObject:public PipelineStateBase, Events::prop_handler
 	{
 		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
 
 		void on_change() override
-		{
-			std::lock_guard<std::mutex> g(global_mutex);
-			
+		{			
 			CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ desc.collection ? D3D12_STATE_OBJECT_TYPE_COLLECTION : D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
 
 			for (auto& l : desc.libraries)
 			{
 				l.include(raytracingPipeline);
-
-				register_shader(l.library);
 			}
 
 			if (desc.global_root)
@@ -654,8 +654,10 @@ namespace DX12
 			}
 
 
-			TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&m_StateObject)));
-			TEST(m_StateObject.As(&stateObjectProperties));
+			TEST(Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&tracked_info->m_StateObject)));
+			TEST(tracked_info->m_StateObject.As(&stateObjectProperties));
+
+			event_change();
 
 		}
 
@@ -668,16 +670,31 @@ namespace DX12
 			return result;
 		}
 		StateObjectDesc desc;
+		
 	public:
 		using ptr = s_ptr<StateObject>;
 		ComPtr<ID3D12StateObject> get_native()
 		{
-			return m_StateObject;
-		}
-
+			return tracked_info->m_StateObject;
+		}Events::Event<void> event_change;
 		StateObject(StateObjectDesc&desc):desc(desc)
 		{
-			on_change();	
+
+			for (auto& l : desc.libraries)
+			{
+				register_shader(l.library);
+			}
+
+			for (auto& c : desc.collections)
+			{
+				c->event_change.register_handler(this,[this]()
+				{
+						on_change();		
+				});
+			}
+			
+			on_change();
+			
 		}
 
 		shader_identifier get_shader_id(std::wstring_view name)

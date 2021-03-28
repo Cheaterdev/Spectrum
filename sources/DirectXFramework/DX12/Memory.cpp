@@ -10,7 +10,7 @@ namespace DX12
 
 	void ResourceHeap::init(size_t size)
 	{
-		heap = nullptr;
+		tracked_info->heap = nullptr;
 
 		
 		desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
@@ -22,7 +22,7 @@ namespace DX12
 		desc.Properties.Type = (D3D12_HEAP_TYPE)type;
 		desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-		TEST(Device::get().get_native_device()->CreateHeap(&desc, IID_PPV_ARGS(&heap)));
+		TEST(Device::get().get_native_device()->CreateHeap(&desc, IID_PPV_ARGS(&tracked_info->heap)));
 
 		heap_size = size;
 

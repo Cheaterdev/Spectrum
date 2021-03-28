@@ -167,12 +167,12 @@ namespace DX12
 
 		//m_pipelineState = PipelineLibrary::get().create(desc.name, psoDesc);
 
-		HRESULT hr = (Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		HRESULT hr = (Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 
 		if (hr != S_OK)
 		{
 			psoDesc.CachedPSO = {};
-			TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+			TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 		}
 
 	
@@ -200,7 +200,7 @@ namespace DX12
 
 	 ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
 	{
-		return m_pipelineState;
+		return tracked_info->m_pipelineState;
 	}
 	 PipelineState::PipelineState(PipelineStateDesc _desc, std::string cache) : desc(_desc)
 	{
@@ -257,12 +257,12 @@ namespace DX12
 		//	assert(false);
 		}
 
-		HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+		HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 
 		if (hr!=S_OK)
 		{
 			psoDesc.CachedPSO = {};
-			hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
+			hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 		}
 
 
