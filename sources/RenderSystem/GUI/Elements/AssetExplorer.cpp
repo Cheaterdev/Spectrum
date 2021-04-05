@@ -83,9 +83,7 @@ namespace GUI
                         auto universal = std::dynamic_pointer_cast<materials::universal_material>(material);
 
                         if (universal)
-                        {
-                            run_on_ui([this, universal]()
-                            {
+                        {                     
                                 window::ptr wnd(new window);
                                 user_ui->add_child(wnd);
                                 dock_base::ptr dock(new dock_base);
@@ -93,7 +91,6 @@ namespace GUI
                                 dock->get_tabs()->add_button(FlowGraph::manager::get().add_graph(universal->get_graph()));
                                 wnd->pos = { 200, 200 };
                                 wnd->size = { 300, 300 };
-                            });
                         }
                     }
 
@@ -204,14 +201,13 @@ namespace GUI
 
                 menu->pos = vec2(pos);
 
-                run_on_ui([this, menu]()
-                {
+ 
                     menu->self_open(user_ui);
                     menu->add_item("Reload")->on_click = [this](menu_list_element::ptr e)
                     {
-                        run_on_ui([this]() { asset->get_asset()->reload_resource();});
+                         asset->get_asset()->reload_resource();
                     };
-                });
+  
             }
 
             return true;
@@ -251,6 +247,7 @@ namespace GUI
             im.reset(new image());
             im->docking = GUI::dock::FILL;
             im->width_size = GUI::size_type::SQUARE;
+			im->margin = {5,5,5,5};
             img->add_child(im);
             name.reset(new label());
             name->text = convert(asset->get_name());
@@ -291,18 +288,12 @@ namespace GUI
             {
                 menu_list::ptr menu(new menu_list());
                 menu->add_item("TILE")->on_click = [this](menu_list_element::ptr e)
-                {
-                    run_on_ui([this]()
-                    {
-							auto files = file_open("Choose your destiny", "", "png|*.png|" "jpg|*.jpg|" "all|*.*|"   "|");
-
-							//if (!files.empty())
-                            //(new TiledTexture(files[0]))->try_register();
-                    });
+                {                
+					auto files = file_open("Choose your destiny", "", "png|*.png|" "jpg|*.jpg|" "all|*.*|"   "|");
                 };
                 menu->add_item("Import asset")->on_click = [this](menu_list_element::ptr e)
                 {
-					run_on_ui([this] {
+				
                        auto files = file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|"  "blend|*.blend|"  "all|*.*|"   "|");
 
 					   struct material_info
@@ -433,7 +424,7 @@ namespace GUI
 						  });
 					  });
 				
-			});
+	
                 };
                 menu->add_item("Compress All")->on_click = [this](menu_list_element::ptr e)
                 {
@@ -453,11 +444,10 @@ namespace GUI
                         }
                     }
                 };
-                run_on_ui([this, menu, but]()
-                {
+
                     menu->pos = vec2(but->get_render_bounds().pos);
                     menu->self_open(user_ui);
-                });
+
             };
             AssetManager::get().add_listener(this);
             AssetRenderer::create();
@@ -470,6 +460,7 @@ namespace GUI
             {
                 AssetManager::get().save_all(false);
             };
+        	
             GUI::Elements::combo_box::ptr filter_combo(new GUI::Elements::combo_box());
             filter_combo->add_item("all");
             filter_combo->add_item("textures");
@@ -477,7 +468,8 @@ namespace GUI
             filter_combo->add_item("meshes");
             filter_combo->size = { 100, 20 };
             stat_bar->add_child(filter_combo);
-            GUI::Elements::tree::ptr folders(new GUI::Elements::tree());
+
+            auto folders = std::make_shared<GUI::Elements::tree<folder_item>>();
             folders->size = { 200, 150 };
             folders->docking = GUI::dock::LEFT;
             add_child(folders);
@@ -489,36 +481,32 @@ namespace GUI
 			add_child(divider);
 
 
-            folders->on_select = [this](tree_element::ptr elem)
-            {
-                run_on_ui([this, elem]()
-                {
-                    table->remove_elements();
-                    current_folder = static_cast<folder_item*>(elem->node);
-                    current_folder->iterate_assets([this](AssetStorage::ptr e)
-                    {
-                        asset_item::ptr elem(new asset_item(e));
-                        table->add_child(elem);
-                    });
-                });
-            };
+            folders->on_select = [this](folder_item * item)
+			{
+				table->remove_elements();
+				current_folder = item;
+				current_folder->iterate_assets([this](AssetStorage::ptr e)
+					{
+						asset_item::ptr elem(new asset_item(e));
+						table->add_child(elem);
+					});
+			};
             folders->init(AssetManager::get().get_folders().get());
-            //	add_but->docking = GUI::dock::RIGHT;
         }
 
 
-        void asset_explorer::on_add_asset(AssetStorage* a)
-        {
-            if (current_folder == a->get_folder())
-            {
-                asset_item::ptr elem(new asset_item(a->get_ptr()));
-                run_on_ui([this, elem]()
-                {
-                    table->add_child(elem);
-                }
-                         );
-            }
-        }
+		void asset_explorer::on_add_asset(AssetStorage* a)
+		{
+			if (current_folder == a->get_folder())
+			{
+				asset_item::ptr elem(new asset_item(a->get_ptr()));
+				run_on_ui([this, elem]()
+					{
+						table->add_child(elem);
+					}
+				);
+			}
+		}
 
         void asset_explorer::on_remove_asset(AssetStorage*)
         {

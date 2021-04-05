@@ -116,7 +116,7 @@ public:
 
 
 
-VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene)
+VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 {
 	scene->on_element_add.register_handler(this, [this](scene_object* object) {
 		auto render_object = dynamic_cast<MeshAssetInstance*>(object);
@@ -522,7 +522,7 @@ void VoxelGI::screen(FrameGraph& graph)
 
 			auto& command_list = _context.get_list();
 
-			bool use_rtx = Device::get().is_rtx_supported() && GetAsyncKeyState('O');
+			bool use_rtx = Device::get().is_rtx_supported() && this->use_rtx;
 			auto gbuffer = data.gbuffer.actualize(_context);
 			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
 			auto noisy_output = _context.get_texture(data.noisy_output);
@@ -1031,7 +1031,7 @@ void VoxelGI::lighting(FrameGraph& graph)
 			auto& list = *context->list;
 			auto& compute = context->list->get_compute();
 
-			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(all_scene_regen_counter == 0 && (!GetAsyncKeyState('G')))));
+			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(all_scene_regen_counter == 0 && multiple_bounces)));
 
 			Slots::VoxelLighting ligthing;
 			{
@@ -1130,7 +1130,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 				PROFILE_GPU(L"ZERO");
 				for (int i = 1; i < tex_lighting.tex_result->get_desc().MipLevels; i++)
 				{
-					if (GetAsyncKeyState('8') || i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
+					if ( i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
 					{
 						list.clear_uav(tex_lighting.tex_result->texture_3d()->rwTexture3D[i], vec4(0, 0, 0, 0));
 						continue;

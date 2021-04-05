@@ -116,16 +116,11 @@ namespace Events
 					std::shared_ptr<prop_t_helper<T>> helper(new prop_t_helper<T>());
 					helper->func = func;
 					helper->runner = dynamic_cast<Runner*>(owner);
-
-				//	auto f = std::make_shared<std::function<void(T)>>(func);
-				//	handlers.push_back(f);
 					auto h = helper.get();
 					helper->remove_func = [this, h]()
 					{
 						std::lock_guard<std::mutex> g(m);
-
 						i_helpers.erase(std::find(i_helpers.begin(), i_helpers.end(), h));
-					//	handlers.erase(std::find(handlers.begin(), handlers.end(), f));
 					};
 					i_helpers.emplace_back(h);
 					owner->helpers.push_back(helper);
@@ -330,30 +325,3 @@ namespace Events
 
 }
 
-template<class T>
-class Variable
-{
-	T value;
-	std::string name;
-public:
-
-	Variable(const T &def, std::string name) :value(def), name(name)
-	{
-
-	}
-
-	operator T() const
-	{
-		return value;
-	}
-	const T operator=(const T& r)
-	{
-
-		return value = r;
-	}
-
-	std::string get_name()
-	{
-		return name;
-	}
-};

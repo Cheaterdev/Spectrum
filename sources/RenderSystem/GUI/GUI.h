@@ -284,7 +284,7 @@ namespace GUI
 		}
 	};
     class drag_n_drop;
-    class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public ParameterHolder, public Events::prop_handler //, public Render::renderable
+    class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public Events::prop_handler //, public Render::renderable
     {
             friend class tree_base;
             friend class user_interface;
@@ -326,8 +326,7 @@ namespace GUI
             virtual void draw_after(Render::context&);;
 
 
-           virtual void init_properties(Elements::ParameterWindow* wnd) override;
-
+     
 
             /*	virtual std::vector<property_base*> get_properties() override
             	{
@@ -370,7 +369,7 @@ namespace GUI
             virtual void add_child(ptr obj) override;
             virtual void remove_child(ptr obj) override;
 
-            void update_cursor() const;
+            cursor_style update_cursor() const;
 
             void focus();
 
@@ -540,7 +539,7 @@ namespace GUI
     };
 
 
-    class user_interface : public base, public InputHandler
+    class user_interface : public base, public InputHandler, public Events::Runner
     {
             friend class base;
 
@@ -559,8 +558,7 @@ namespace GUI
             std::vector<base::ptr> hovered_controls;
             base::wptr focused;
 
-            std::mutex tasks_mutex;
-            std::vector<std::function<void()>> tasks;
+    
             drag_n_drop drag;
 
           
@@ -571,7 +569,7 @@ namespace GUI
             bool is_updating_layout = false;
 
 			std::list<FrameGraphGenerator*> frame_generators;
-
+            cursor_style cursor = cursor_style::ARROW;
         public:
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
@@ -583,10 +581,15 @@ namespace GUI
             {
                 remove_all();
             }
+
+            void mouse_move_event_internal(vec2 pos);
+            void mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos);
+            void mouse_wheel_event_internal(mouse_wheel type, float value, vec2 pos);
+            void key_action_event_internal(long key);
+
+         
             virtual void mouse_move_event(vec2 pos);
-
             virtual void mouse_action_event(mouse_action action, mouse_button button, vec2 pos);
-
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
             virtual void key_action_event(long key);
 
@@ -597,9 +600,7 @@ namespace GUI
 
             void add_task(std::function<void()> f)
             {
-                tasks_mutex.lock();
-                tasks.push_back(f);
-                tasks_mutex.unlock();
+                Events::Runner::run(f);
             }
 
             void process_graph(FrameGraph & graph)

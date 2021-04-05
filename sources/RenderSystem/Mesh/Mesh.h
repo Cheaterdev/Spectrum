@@ -103,34 +103,19 @@ class SimpleMesh : public shared_object<SimpleMesh>
 };
 
 
-class material_holder
-{
-
-        friend class boost::serialization::access;
-
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
-        {
-        }
-
-    public:
-        virtual void set(MeshRenderContext::ptr context) = 0;
-        virtual ~material_holder() {}
-};
-
 
 class mesh_renderer;
 class mesh_node : public scene_object, public Render::renderable
 {
         friend class mesh_object;
         friend class mesh_renderer;
-        material_holder* mesh;
+
         std::vector<SimpleMesh*> meshes;
 
     public:
         using ptr = s_ptr<mesh_node>;
 
-        mesh_node(std::shared_ptr<node_object> node, material_holder* mesh);
+        mesh_node(std::shared_ptr<node_object> node);
 
     private:
         mesh_node() = default;
@@ -146,4 +131,3 @@ class mesh_node : public scene_object, public Render::renderable
 BOOST_CLASS_EXPORT_KEY(node_object);
 BOOST_CLASS_EXPORT_KEY(mesh_node);
 BOOST_CLASS_EXPORT_KEY(Mesh);
-BOOST_CLASS_EXPORT_KEY(material_holder);

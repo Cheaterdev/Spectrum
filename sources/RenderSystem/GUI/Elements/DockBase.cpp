@@ -21,8 +21,7 @@ void GUI::Elements::dock_base::on_drop_move(drag_n_drop_package::ptr e, vec2 p)
 
 bool GUI::Elements::dock_base::on_drop(drag_n_drop_package::ptr e, vec2 p)
 {
-    run_on_ui([e, p, this]()
-    {
+ 
         dock d = get_docking(p);
 
         if (d == dock::FILL)
@@ -54,28 +53,21 @@ bool GUI::Elements::dock_base::on_drop(drag_n_drop_package::ptr e, vec2 p)
             get_dock(d)->get_tabs()->add_button(tab->get_ptr<tab_button>());
             //		get_dock(d)->get_tabs()->;
         }
-    });
+
     return true;
 }
 
 void GUI::Elements::dock_base::on_drop_leave(drag_n_drop_package::ptr p)
 {
-    run_on_ui([this]()
-    {
+
         virt_base->remove_from_parent();
-    });
+
 }
 
 void GUI::Elements::dock_base::on_drop_enter(drag_n_drop_package::ptr p)
 {
-    //virt_base->visible = true;
     virt->size = vec2(render_bounds->size) / 4;
-    run_on_ui([this, p]()
-    {
-        add_child(virt_base);
-        //  auto e = p->element.lock()->get_ptr<tab_button>();
-//add_child(e);
-    });
+    add_child(virt_base);
 }
 
 bool GUI::Elements::dock_base::can_accept(drag_n_drop_package::ptr package)

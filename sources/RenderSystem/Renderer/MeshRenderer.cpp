@@ -12,8 +12,6 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	PROFILE_GPU(L"mesh_renderer");
 
 	instances_count = 0;
-	bool current_cpu_culling = use_cpu_culling && mesh_render_context->render_type == RENDER_TYPE::PIXEL;
-
 
 	Render::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
@@ -96,7 +94,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 
-	if (!gbuffer || GetAsyncKeyState(VK_F6))
+	if (!gbuffer || !use_gpu_occlusion)
 	{
 		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], compiledFrame, (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
 		return;
@@ -446,7 +444,7 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 }
 
 
-mesh_renderer::mesh_renderer()
+mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 {
 	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });

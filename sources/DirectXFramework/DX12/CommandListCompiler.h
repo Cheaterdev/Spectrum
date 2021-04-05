@@ -379,13 +379,19 @@ namespace DX12
 			data.resize(1024 * 1024 * 4);
 		}
 
+		void request(UINT size)
+		{
+			assert(data.size() > (write_offset + size));
+
+		}
 
 		template <class T>
 		void push_one(const T& elem)
 		{
-
+			request(sizeof(T));
 			memcpy(data.data() + write_offset, &elem, sizeof(T));
 			write_offset += sizeof(T);
+			
 		}
 
 		template <class ...Args>

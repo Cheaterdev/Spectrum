@@ -182,7 +182,7 @@ public:
 
 
 
-class VoxelGI :public Events::prop_handler, public FrameGraphGenerator
+class VoxelGI :public Events::prop_handler, public FrameGraphGenerator, VariableContext
 {
 public:
 
@@ -256,11 +256,12 @@ public:
 
 	Render::Texture::ptr  ssgi_tex;
 
-	Variable<bool> voxelize_scene = Variable<bool>(true, "voxelize_scene");
-	Variable<bool> light_scene = Variable<bool>(true, "light_scene");
-	Variable<bool> clear_scene = Variable<bool>(true, "clear_scene");
+	Variable<bool> voxelize_scene = Variable<bool>(true, "voxelize_scene", this);
+	Variable<bool> light_scene = Variable<bool>(true, "light_scene", this);
+	Variable<bool> clear_scene = Variable<bool>(true, "clear_scene",this);
 
-	Variable<VISUALIZE_TYPE> render_type = Variable<VISUALIZE_TYPE>(VISUALIZE_TYPE::FULL, "render_type");
+	Variable<bool> use_rtx = Variable<bool>(true, "use_rtx", this);
+	Variable<bool> multiple_bounces = Variable<bool>(true, "multiple_bounces", this);
 
 	void resize(ivec2 size);
 	void start_new(Render::CommandList& list);

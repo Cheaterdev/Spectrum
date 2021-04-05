@@ -79,7 +79,7 @@ public:
 
 };
 
-class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator
+class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator, VariableContext
 {
 	main_renderer::ptr scene_renderer;
 	main_renderer::ptr gpu_scene_renderer;
@@ -109,8 +109,8 @@ public:
 	//	PostProcessGraph::ptr render_graph;
 
 
-	Variable<bool> enable_gi = Variable<bool>(true, "enable_gi");
-	Variable<bool> debug_draw = Variable<bool>(false, "debug_draw");
+	Variable<bool> enable_gi = Variable<bool>(true, "enable_gi", this);
+	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
 
 	int visible_count;
@@ -123,21 +123,10 @@ public:
 	Scene::ptr scene;
 	Render::QueryHeap::ptr query_heap;
 	float draw_time;
-	//	std::shared_ptr<LightingNode> lighting;
-
-	Variable<bool> realtime_debug = Variable<bool>(false, "realtime_debug");
 	MeshAssetInstance::ptr instance;
 
 
 
-
-	// Build acceleration structures needed for raytracing.
-	void BuildAccelerationStructures()
-	{
-		std::vector<InstanceDesc>  desc;
-
-		scene->raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(desc);
-	}
 
 	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
 	PSSM pssm;
@@ -145,7 +134,7 @@ public:
 	SkyRender sky;
 	VoxelGI::ptr voxel_gi;
 	std::string debug_view;
-	triangle_drawer()
+	triangle_drawer() :VariableContext(L"triangle_drawer")
 	{
 		texture.mul_color = { 1,1,1,0 };
 		texture.add_color = { 0,0,0,1 };
@@ -170,7 +159,7 @@ public:
 
 		gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
 
-		if (Device::get().is_rtx_supported()) BuildAccelerationStructures();
+		
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_dynamic = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::DYNAMIC));
 		//cam.position = vec3(0, 5, -30);
@@ -180,23 +169,20 @@ public:
 		stenciler.reset(new stencil_renderer());
 		stenciler->player_cam = &cam;
 		stenciler->scene = scene;
-		add_child(stenciler);
+		base::add_child(stenciler);
 
 		info.reset(new GUI::Elements::label);
 		info->docking = GUI::dock::TOP;
 		info->x_type = GUI::pos_x_type::LEFT;
 		info->magnet_text = FW1_LEFT;
-		add_child(info);
+		base::add_child(info);
 		base::ptr props(new base);
 		props->docking = GUI::dock::FILL;
 		props->x_type = GUI::pos_x_type::LEFT;
 		props->y_type = GUI::pos_y_type::TOP;
 		props->width_size = GUI::size_type::MATCH_CHILDREN;
 		props->height_size = GUI::size_type::MATCH_CHILDREN;
-		add_child(props);
-
-
-		props->add_child(std::make_shared<GUI::Elements::check_box_text>(debug_draw));
+		base::add_child(props);
 
 		{
 			auto combo = std::make_shared<GUI::Elements::combo_box>();
@@ -236,19 +222,14 @@ public:
 		circle->y_type = GUI::pos_y_type::TOP;
 
 
-		add_child(circle);
+		base::add_child(circle);
 		//	lighting = std::make_shared<LightingNode>();
 
 		circle->on_change.register_handler(this, [this](const float2& value)
 			{
 				float2 v = value;
-				run_on_ui([this, v]() {
 					float3 dir = { 0.001 + v.x,sqrt(1.001 - v.length_squared()),-v.y };
-
 					pssm.set_position(dir);
-					//lighting->lighting.pssm.set_position(dir);
-					});
-
 			});
 
 		circle->set_value({ 1,0 });
@@ -447,7 +428,7 @@ public:
 
 				SceneFrameManager::get().prepare(command_list, *scene);
 
-				bool need_rebuild = scene->init_ras(command_list);
+				bool need_rebuild = false;// scene->init_ras(command_list);
 				SceneFrameManager::get().prepare(command_list, *scene);
 		
 				//if (GetAsyncKeyState('O'))
@@ -562,7 +543,7 @@ public:
 		sky.generate(graph);
 
 		// remove on intel
-		voxel_gi->generate(graph);
+		if(enable_gi) voxel_gi->generate(graph);
 
 		
 		sky.generate_sky(graph);
@@ -1446,6 +1427,39 @@ resource_stages[&res.second] = input;
 				dock->size = { 100, 100 };
 				area->add_child(d);
 				dock->get_tabs()->add_page("TaskViewer", std::make_shared<GUI::Elements::Debug::TaskViewer>());
+
+				{
+
+					auto b = std::make_shared<GUI::base>();
+
+					
+					auto folders = std::make_shared<GUI::Elements::tree<VariableContext>>();
+					folders->size = { 200, 150 };
+					folders->docking = GUI::dock::LEFT;
+
+					auto table = std::make_shared<GUI::base>();
+					table->docking = GUI::dock::FILL;
+
+					b->add_child(folders);
+					b->add_child(table);
+					
+					folders->on_select = [this, table](VariableContext* elem)
+					{
+				
+							table->remove_all();
+
+							for(auto v:elem->variables)
+							{
+								auto property = GUI::Elements::create_property(*v);
+								table->add_child(property);
+							}
+					};
+					
+					folders->init(&VariableContext::get());
+
+					dock->get_tabs()->add_page("Properties", b);
+
+				}
 				//			dock->get_tabs()->add_page("output", std::make_shared<GUI::Elements::Debug::OutputWindow>());
 							//       GUI::Elements::tree::ptr t(new GUI::Elements::tree());
 			//                    t->init(drawer->scene.get());
@@ -1459,6 +1473,11 @@ resource_stages[&res.second] = input;
 
 					dock->get_tabs()->add_page("Graph", t2);
 
+
+
+					frameFlowGraph = std::make_shared< FrameFlowGraph>();
+
+					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
 
 				}
 			}
@@ -1539,26 +1558,7 @@ resource_stages[&res.second] = input;
 				}
 
 
-				{
-					GUI::Elements::window::ptr wnd(new GUI::Elements::window);
-					add_child(wnd);
-					GUI::Elements::dock_base::ptr dock(new GUI::Elements::dock_base);
-					wnd->add_child(dock);
-					
-					wnd->pos = { 200, 200 };
-					wnd->size = { 300, 300 };
-
-					frameFlowGraph = std::make_shared< FrameFlowGraph>();
-
-					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
-
-
-				//	graphDebugger.reset(new GraphDebugRender());
-				//	graphDebugger->docking = GUI::dock::FILL;
-
-					//dock->get_tabs()->add_page("Graph", graphDebugger);
-					
-				}
+			
 
 			}
 		}
@@ -1601,7 +1601,8 @@ class RenderApplication : public Application
 protected:
 	RenderApplication()
 	{
-	
+		THREAD_SCOPE(GUI);
+
 	//	assert(ppp.inited);
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 

@@ -94,5 +94,23 @@ namespace DX12 {
 		offset = 0;
 		heap->free_page(this);
 	}
+	
+	DescriptorPage* DescriptorHeapPaged::create_page(UINT count)
+	{
 
+		UINT pages_count = (count + 32 - 1) / 32;
+
+		std::lock_guard<std::mutex> g(m);
+		auto handle = allocator.Allocate(pages_count, 1);
+
+		return new DescriptorPage(std::dynamic_pointer_cast<DescriptorHeapPaged>(shared_from_this()), handle, (UINT)(handle.get_offset() * 32), pages_count * 32);
+	}
+
+	void DescriptorHeapPaged::free_page(DescriptorPage* page)
+	{
+
+		std::lock_guard<std::mutex> g(m);
+		allocator.Free(page->alloc_handle);
+		delete page;
+	}
 }

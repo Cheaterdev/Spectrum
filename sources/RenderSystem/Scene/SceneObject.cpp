@@ -138,6 +138,5 @@ int Scene::get_child_count(scene_object*node)
 
 tree_item_listener::~tree_item_listener()
 {
-    if (tree)
-        tree->unregister_listener(this);
+
 }

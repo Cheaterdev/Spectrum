@@ -7,13 +7,12 @@ namespace GUI
             class manager : public base, public Singleton<manager>
             {
                     std::map<::FlowGraph::graph::ptr, tab_button::ptr> canvases;
-                    ParameterWindow::ptr param_viewer;
                     link_item::ptr edit;
                     friend class Singleton<manager>;
                     manager()
                     {
                         visible = false;
-                        param_viewer.reset(new ParameterWindow());
+
                     }
 
                 public:
@@ -24,13 +23,7 @@ namespace GUI
                     }
 
 
-                    tab_button::ptr create_parameter_view()
-                    {
-                        tab_button::ptr but(new tab_button());
-                        but->get_label()->text = "Parameter";
-                        but->page = param_viewer;
-                        return but;
-                    }
+                
 
                     void on_edit(link_item::ptr item)
                     {
@@ -39,7 +32,7 @@ namespace GUI
 
                         item->line->draw_helper = true;
                         edit = item;
-                        param_viewer->show(item.get());
+                  
                     }
 
                     template <class T = ::FlowGraph::graph>

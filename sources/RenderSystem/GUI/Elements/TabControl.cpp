@@ -35,7 +35,7 @@ namespace GUI
             visible = true;
             // clickable = false;
             clip_child = false;
-            run_on_ui([this, ui]
+       
             {
 
                 page->docking = dock::NONE;
@@ -44,7 +44,7 @@ namespace GUI
 
                 page->pos = { 0, size->y };
 
-            });
+            }
         }
 
         void tab_button::on_drag_end()
@@ -74,7 +74,7 @@ namespace GUI
             close_button->docking = dock::LEFT;
             close_button->on_click = [this](button::ptr)
             {
-                run_on_ui([this] {owner.lock()->remove_button(get_ptr<tab_button>()); });
+         owner.lock()->remove_button(get_ptr<tab_button>()); 
             };
             add_child(close_button);
             padding = { 2, 2, 2, 2 };
@@ -115,7 +115,7 @@ namespace GUI
 			all->padding = { 5, 5, 5, 5 };
 			all->on_click = [this](button::ptr)
 			{
-				run_on_ui([this]() {    menu->self_open(user_ui); });
+				   menu->self_open(user_ui);
 				menu->pos = vec2(all->get_render_bounds().pos) + vec2(0, all->get_render_bounds().h);
 			};
 			add_child(all);
@@ -170,8 +170,7 @@ namespace GUI
 
         bool tab_strip::on_drop(drag_n_drop_package::ptr e, vec2 p)
         {
-            run_on_ui([this, e, p]()
-            {
+           
                 auto elem = e->element.lock();
                 tab_button::ptr but = elem->get_ptr<tab_button>();
                 owner->add_button(but);
@@ -199,7 +198,7 @@ namespace GUI
                 buttons.insert(buttons.begin() + (best + 1), elem->get_ptr<tab_button>());
                 recalculate_tabs();
                 strip->set_update_layout();
-            });
+   
             //elem->on_add(strip.get());
             return true;
         }
@@ -239,10 +238,9 @@ namespace GUI
             but->page->visible = false;
             //    if (!cur_page)
             show_page(but);
-            run_on_ui([this, but]()
-            {
+          
                 contents->add_child(but->page);
-            });
+ 
             strip->recalculate_tabs();
             return but;
         }
@@ -266,8 +264,7 @@ namespace GUI
             if (strip->current == tab_but)
                 return;
 
-            run_on_ui([this, tab_but]()
-            {
+        
                 if (cur_page)
                     cur_page->visible = false;
 
@@ -285,7 +282,7 @@ namespace GUI
                 }
 
                 strip->recalculate_tabs();
-            });
+     
         }
 
         tab_control::tab_control()

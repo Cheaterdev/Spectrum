@@ -224,18 +224,23 @@ namespace GUI
 
     void base::remove_child(ptr obj)
     {
+        if (user_ui) CHECK_THREAD(GUI);
+
         auto&& g = lock();
         tree_base::remove_child(obj);
         set_update_layout();
     }
 
-    void base::update_cursor() const
+    cursor_style base::update_cursor() const
     {
-        ::SetCursor(LoadCursor(nullptr, cursors[static_cast<int>(cursor)]));
+        return cursor;
+      
     }
 
     void base::add_child(ptr obj)
     {
+    	if(user_ui)  CHECK_THREAD(GUI);
+    	
         auto&& g = lock();
         tree_base::add_child(obj);
         set_update_layout();
@@ -879,38 +884,20 @@ namespace GUI
     {
     }
 
-    void base::init_properties(Elements::ParameterWindow* wnd)
-    {
-        wnd->add_param(std::make_shared<Elements::property_base>("base"));
-        wnd->add_param(std::make_shared<Elements::property_base>("size"));
-        wnd->add_param(std::make_shared<Elements::property_enum>(docking, "docker", GUI::dock::NONE, "NONE"));
-        wnd->add_param(std::make_shared<Elements::property_base>("visible"));
-    }
+    
 
      void user_interface::process_ui(float delta_time)
     {
-
+         THREAD_SCOPE(GUI);
 		 for (int i = 0; i < 3; i++)
 		 {
 			 press_interpret[i] = false;
 			 release_interpret[i] = false;
 		 }
-		 {
-			 while (true)
-			 {
-				 tasks_mutex.lock();
-				 std::vector<std::function<void()> > copy;
-				 std::swap(copy, tasks);
-				 tasks_mutex.unlock();
 
-				 if (copy.empty())break;
+    	while (Events::Runner::has_tasks()) Events::Runner::process_tasks();
 
-				 for (auto t : copy)
-					 t();
-			 }
-		 }
-
-	
+        
 
 
 		 auto&& g2 = lock();
@@ -1043,10 +1030,11 @@ namespace GUI
 		renderer->flush(c);	
     }
     */
-    void user_interface::mouse_action_event(mouse_action action, mouse_button button, vec2 pos)
+    void user_interface::mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos)
     {
+     //   cursor = cursor_style::ARROW;
         {
-            std::lock_guard<std::mutex> g(m);
+       //     std::lock_guard<std::mutex> g(m);
             auto&& g2 = lock();
             auto i_button = static_cast<int>(button);
 
@@ -1088,9 +1076,9 @@ namespace GUI
                         continue;
 
                     if (!control->is_menu_component())
-                        run_on_ui([this]() { close_menus();});
+                         close_menus();
                     control->on_touch();
-                    control->update_cursor();
+                    cursor = control->update_cursor();
                     drag.mouse_action_event(control, action, button, pos);
                     break;
                 }
@@ -1125,70 +1113,12 @@ namespace GUI
             }
         }
         mouse_move_event(pos);
-        /*
-        if (action == mouse_action::DOWN)
-        {
-
-            if (control)
-            {
-                if (!control->is_menu_component())
-                {
-                    close_menus();
-                }
-
-                pressed[static_cast<int>(button)] = control;
-                control->on_touch();
-                control->on_mouse_action(mouse_action::DOWN, button, pos);
-                control->update_cursor();
-            }
-
-            drag.mouse_action_event(control, action, button, pos);
-        }
-        else    if (action == mouse_action::UP)
-        {
-            auto p_control = pressed[static_cast<int>(button)].lock();
-
-            if (p_control)
-            {
-                if (control == p_control)
-                {
-                    p_control->on_mouse_action(mouse_action::UP, button, pos);
-                    p_control->update_cursor();
-                }
-                else
-                {
-                    if (p_control)
-                    {
-                        p_control->on_mouse_action(mouse_action::CANCEL, button, pos);
-                        p_control->update_cursor();
-                    }
-                }
-            }
-
-            pressed[static_cast<int>(button)].reset();
-            drag.mouse_action_event(p_control, action, button, pos);
-        }
-        else
-        {
-            auto p_control = pressed[static_cast<int>(button)].lock();
-
-            if (p_control)
-            {
-                p_control->on_mouse_action(mouse_action::CANCEL, button, pos);
-                p_control->update_cursor();
-            }
-
-            pressed[static_cast<int>(button)].reset();
-            drag.mouse_action_event(p_control, action, button, pos);
-        }
-        */
-        //	if (movable)
-        //		movable->update_cursor();
+     
     }
 
-    void user_interface::mouse_move_event(vec2 pos)
+    void user_interface::mouse_move_event_internal(vec2 pos)
     {
-        std::lock_guard<std::mutex> g(m);
+    //    std::lock_guard<std::mutex> g(m);
         auto&& g2 = lock();
         /*	if (movable)
         	{
@@ -1203,7 +1133,7 @@ namespace GUI
         {
             hovered = t;
             t->on_mouse_move(pos);
-            t->update_cursor();
+           cursor =  t->update_cursor();
             drag.mouse_move_event(t, pos);
             return;
         }
@@ -1232,7 +1162,7 @@ namespace GUI
                 continue;
             }
 
-            control->update_cursor();
+            cursor = control->update_cursor();
             drag.mouse_move_event(control, pos);
             remove_index = i + 1;
             break;
@@ -1259,42 +1189,11 @@ namespace GUI
         if (remove_index != hovered_controls.size())
             hovered_controls.erase(hovered_controls.begin() + remove_index, hovered_controls.end());
 
-        /*base::ptr control = nullptr;
-
-        if (controls.size() > 0)
-            control = controls[0];
-
-        auto hover = hovered.lock();
-
-        if (hover != control)
-        {
-            if (hover)
-                hover->on_mouse_leave(pos);
-
-            if (control)
-                control->on_mouse_enter(pos);
-        }
-
-        hovered = control;
-        auto t = mouse_focus.lock();
-
-        if (t)
-        {
-            hovered = t;
-            control = t;
-        }
-
-        if (control)
-        {
-            control->on_mouse_move(pos);
-            control->update_cursor();
-        }
-
-        drag.mouse_move_event(control, pos);*/
     }
 
     user_interface::user_interface(): drag(this)
     {
+        THREAD_SCOPE(GUI);
         docking = dock::FILL;
         renderer.reset(new Renderer());
         user_ui = this;
@@ -1319,13 +1218,48 @@ namespace GUI
      //   if (frame_gen)
       //      frame_generators.emplace_back(frame_gen);
     }
+	void user_interface::key_action_event_internal(long key)
+	{
+		auto really_focused = focused.lock();
+
+		if (really_focused)
+			really_focused->on_key_action(key);
+	}
+	
+	void user_interface::mouse_move_event(vec2 pos)
+	{
+		run_on_ui([this, pos]()
+			{
+				mouse_move_event_internal(pos);
+			});
+
+		::SetCursor(LoadCursor(nullptr, cursors[static_cast<int>(cursor)]));
+	}
+	
+	void user_interface::mouse_action_event(mouse_action action, mouse_button button, vec2 pos)
+	{
+		run_on_ui([this, action, button, pos]()
+			{
+				mouse_action_event_internal(action, button, pos);
+			});
+		::SetCursor(LoadCursor(nullptr, cursors[static_cast<int>(cursor)]));
+	}
+	
+	void user_interface::mouse_wheel_event(mouse_wheel type, float value, vec2 pos)
+	{
+		run_on_ui([this, type, value, pos]()
+			{
+				mouse_wheel_event_internal(type, value, pos);
+			});
+		::SetCursor(LoadCursor(nullptr, cursors[static_cast<int>(cursor)]));
+	}
 
     void user_interface::key_action_event(long key)
     {
-        auto really_focused = focused.lock();
-
-        if (really_focused)
-            really_focused->on_key_action(key);
+        run_on_ui([this, key]()
+        {
+                key_action_event_internal(key);
+        });
     }
 
     std::shared_future<bool> user_interface::message_box(std::string title, std::string text, std::function<void(bool)> fun)
@@ -1410,7 +1344,7 @@ namespace GUI
         back->size = r;
     }
 
-    void user_interface::mouse_wheel_event(mouse_wheel type, float value, vec2 pos)
+    void user_interface::mouse_wheel_event_internal(mouse_wheel type, float value, vec2 pos)
     {
         for (int i = (int)hovered_controls.size() - 1; i >= 0; i--)
         {

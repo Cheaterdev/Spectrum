@@ -56,7 +56,7 @@ GUI::Elements::FlowGraph::comment::comment(canvas* canva, ::FlowGraph::window* w
     close_button->docking = dock::RIGHT;
     close_button->on_click = [this, wnd](button::ptr)
     {
-        run_on_ui([wnd]() {wnd->remove(); });
+       wnd->remove();
     };
     title_bar->add_child(close_button);
     title_bar->add_child(label_text);
@@ -84,7 +84,7 @@ void GUI::Elements::FlowGraph::comment::on_touch()
     if (!selected)
         canva->on_select(nullptr);
 
-    run_on_ui([this] {to_front(); });
+   to_front(); 
 }
 
 void GUI::Elements::FlowGraph::comment::think(float dt)

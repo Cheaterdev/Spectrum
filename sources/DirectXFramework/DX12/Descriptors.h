@@ -624,37 +624,8 @@ namespace DX12
 
 	};
 
-	class DescriptorHeapPaged;
-	class DescriptorPage
-	{
+	class DescriptorPage;
 
-		//	std::mutex m;
-		friend class DescriptorHeapPaged;
-		UINT heap_offset;
-		UINT count;
-		UINT offset;
-		DescriptorHeapPaged* heap;
-
-		CommonAllocator::Handle alloc_handle;
-	public:
-		DescriptorPage(DescriptorHeapPaged* heap, CommonAllocator::Handle alloc_handle, UINT heap_offset, UINT count) :heap(heap), heap_offset(heap_offset), count(count), alloc_handle(alloc_handle)
-		{
-			offset = 0;
-		}
-
-		~DescriptorPage()
-		{
-		}
-		bool has_free_size(UINT need_count = 1)
-		{
-			return offset + need_count < count;
-		}
-
-
-		Handle place();
-		HandleTableLight place(UINT count);
-		void free();
-	};
 
 	class DescriptorHeapPaged :public DescriptorHeap
 	{
@@ -675,24 +646,9 @@ namespace DX12
 		}
 		std::mutex m;
 
-		DescriptorPage* create_page(UINT count = 1)
-		{
+		DescriptorPage* create_page(UINT count = 1);
 
-			UINT pages_count = (count + 32 - 1) / 32;
-
-			std::lock_guard<std::mutex> g(m);
-			auto handle = allocator.Allocate(pages_count, 1);
-
-			return new DescriptorPage(this, handle, (UINT)(handle.get_offset() * 32), pages_count * 32);
-		}
-
-		void free_page(DescriptorPage* page)
-		{
-
-			std::lock_guard<std::mutex> g(m);
-			allocator.Free(page->alloc_handle);
-			delete page;
-		}
+		void free_page(DescriptorPage* page);
 
 		size_t used_size()
 		{
@@ -700,7 +656,36 @@ namespace DX12
 		}
 
 	};
+	class DescriptorPage
+	{
 
+		//	std::mutex m;
+		friend class DescriptorHeapPaged;
+		UINT heap_offset;
+		UINT count;
+		UINT offset;
+		DescriptorHeapPaged::ptr heap;
+
+		CommonAllocator::Handle alloc_handle;
+	public:
+		DescriptorPage(DescriptorHeapPaged::ptr heap, CommonAllocator::Handle alloc_handle, UINT heap_offset, UINT count) :heap(heap), heap_offset(heap_offset), count(count), alloc_handle(alloc_handle)
+		{
+			offset = 0;
+		}
+
+		~DescriptorPage()
+		{
+		}
+		bool has_free_size(UINT need_count = 1)
+		{
+			return offset + need_count < count;
+		}
+
+
+		Handle place();
+		HandleTableLight place(UINT count);
+		void free();
+	};
 	class DescriptorHeapManager : public Singleton<DescriptorHeapManager>
 	{
 		friend class Singleton<DescriptorHeapManager>;

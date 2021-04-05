@@ -56,7 +56,6 @@ namespace GUI
                     virtual void on_dragdrop_end() override;
 
                     virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
-                    virtual void init_properties(Elements::ParameterWindow* wnd) override;
 
             };
 

@@ -78,6 +78,14 @@ public:
 
         mesh_infos = std::make_shared< virtual_gpu_buffer<mesh_info_part>>(1024 * 1024 );
         raytrace = std::make_shared< virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(1024 * 1024);
+
+
+
+    	if(Device::get().is_rtx_supported())
+    	{
+            std::vector<InstanceDesc>  desc;
+            raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(desc);
+    	}
     }
 
     Events::Event<scene_object*> on_element_add;
@@ -226,33 +234,6 @@ public:
 	}
 
 
-
-  //  PipelineHolderManager pipelines;
-
-
-    /*	virtual void on_element_add(scene_object* node)
-        {
-            if(node->)
-        }
-
-        virtual void on_element_remove(scene_object* node) {
-
-        }*/
-        /*
-          virtual base_tree* get_root() override
-          {
-              return this;
-          }
-
-          virtual scene_object* get_child(scene_object* node, int i) override;
-
-          virtual int get_child_count(scene_object* node) override;
-          virtual void add_element(scene_object* parent, scene_object* node)
-          {
-              auto p = node->get_ptr();
-              parent->add_child(p);
-          }
-
-          virtual std::string get_name(scene_object*node){ return node->name; }*/
+   
 
 };

@@ -30,3 +30,5 @@ void SetThreadName(std::thread* thread, const char* threadName)
     DWORD threadId = ::GetThreadId(static_cast<HANDLE>(thread->native_handle()));
     SetThreadName(threadId, threadName);
 }
+
+thread_local ThreadType ThreadScope::thread_type = ThreadType::NONE;

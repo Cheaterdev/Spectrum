@@ -5,15 +5,12 @@ bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button
     button::on_mouse_action(action, button, pos);
 
     if (action == mouse_action::UP)
-    {
-        run_on_ui([this]()
-        {
+    { 
             menu->pos = vec2(render_bounds->pos) + vec2(0, render_bounds->h);
             menu->width_size = size_type::NONE;
             menu->size = { render_bounds->size.x, menu->size->y };
             user_ui->add_child(menu);
             menu->width_size = size_type::FIXED;
-        });
     }
 
     return true;
@@ -32,10 +29,8 @@ void GUI::Elements::combo_box::draw(Render::context& c)
 void GUI::Elements::combo_box::close_menus()
 {
     base::close_menus();
-    run_on_ui([this]()
-    {
-        menu->remove_from_parent();
-    });
+
+    menu->remove_from_parent();
 }
 
 GUI::Elements::combo_box::combo_box()

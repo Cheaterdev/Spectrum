@@ -110,10 +110,8 @@ namespace GUI
 
             else
             {
-                run_on_ui([this]()
-                {
+
                     user_ui->close_menus();
-                });
 
                 if (on_click)
                     on_click(get_ptr<menu_list_element>());
@@ -148,7 +146,7 @@ namespace GUI
     void Elements::menu_list_element::open_menu()
     {
         if (menu)
-            run_on_ui([this]
+      
         {
 
             user_ui->add_child(menu);
@@ -161,22 +159,23 @@ namespace GUI
                 menu->pos = vec2(p.x, p.y + p.h);
 
 
-        });
+        }
     }
 
     void Elements::menu_list_element::close_menu()
     {
         if (menu)
-            run_on_ui([this]
+
         {
             menu->close_menus();
 
             menu->remove_from_parent();
 
 
-        });
-    }
+        }
 
+    }
+	
     void Elements::menu_list_element::on_mouse_enter(vec2 pos)
     {
         if (on_hover)

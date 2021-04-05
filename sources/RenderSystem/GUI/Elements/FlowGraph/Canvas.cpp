@@ -141,36 +141,46 @@ void GUI::Elements::FlowGraph::canvas::on_remove(::FlowGraph::window* w)
 
 void GUI::Elements::FlowGraph::canvas::on_add_input(::FlowGraph::parameter* p)
 {
-    auto node = p->owner;
 
-    if (node == g)
+    run_on_ui([this, p ]()
     {
-        links[p] = graph_in->add_output(p);
-        link_node[p] = graph_in;
-        return;
-    }
+            auto node = p->owner;
 
-    if (!(node->get_graph() == g || node == g))
-        return;
+            if (node == g)
+            {
+                links[p] = graph_in->add_output(p);
+                link_node[p] = graph_in;
+                return;
+            }
 
-    auto elem = nodes[node];
-    links[p] = elem->add_input(p);
-    link_node[p] = elem;
+            if (!(node->get_graph() == g || node == g))
+                return;
+
+            auto elem = nodes[node];
+            links[p] = elem->add_input(p);
+            link_node[p] = elem;
+    	
+    });
+   
 }
 
 void GUI::Elements::FlowGraph::canvas::on_remove_input(::FlowGraph::parameter* p)
 {
-    auto node = p->owner;
+    run_on_ui([this, p]()
+        {
+            auto node = p->owner;
 
-    if (!(node->get_graph() == g || node == g))
-        return;
+            if (!(node->get_graph() == g || node == g))
+                return;
 
-    links[p]->line->remove_from_parent(); links[p] = nullptr;
+            links[p]->line->remove_from_parent(); links[p] = nullptr;
+        });
 }
 
 void GUI::Elements::FlowGraph::canvas::on_add_output(::FlowGraph::parameter* p)
 {
-    auto node = p->owner;
+    run_on_ui([this, p]()
+        {  auto node = p->owner;
 
     if (node == g)
     {
@@ -185,38 +195,48 @@ void GUI::Elements::FlowGraph::canvas::on_add_output(::FlowGraph::parameter* p)
     auto elem = nodes[node];
     links[p] = elem->add_output(p);
     link_node[p] = elem;
+
+        });
 }
 
 void GUI::Elements::FlowGraph::canvas::on_remove_output(::FlowGraph::parameter* p)
 {
-    auto node = p->owner;
+    run_on_ui([this, p]()
+        {
+            auto node = p->owner;
 
-    if (!(node->get_graph() == g || node == g))
-        return;
+            if (!(node->get_graph() == g || node == g))
+                return;
 
-    links[p]->line->remove_from_parent(); links[p] = nullptr;
+            links[p]->line->remove_from_parent(); links[p] = nullptr;
+        });
 }
 
 void GUI::Elements::FlowGraph::canvas::on_link(::FlowGraph::parameter* p1, ::FlowGraph::parameter* p2)
 {
-    link_item::ptr pp1, pp2;
-    pp1 = links[p1];
-    pp2 = links[p2];
+    run_on_ui([this, p1, p2]()
+        {
+            link_item::ptr pp1, pp2;
+            pp1 = links[p1];
+            pp2 = links[p2];
 
-    if (!pp1 || !pp2)
-        return;
+            if (!pp1 || !pp2)
+                return;
 
-    //	pp1->inserted = true;
-    link_spline::ptr s(new link_spline());
-    s->from = pp1;
-    s->to = pp2;
-    linking.push_back(s);
-    pp2->update();
-    pp1->update();
+            //	pp1->inserted = true;
+            link_spline::ptr s(new link_spline());
+            s->from = pp1;
+            s->to = pp2;
+            linking.push_back(s);
+            pp2->update();
+            pp1->update();
+        });
 }
 
 void GUI::Elements::FlowGraph::canvas::on_unlink(::FlowGraph::parameter* p1, ::FlowGraph::parameter* p2)
 {
+    run_on_ui([this, p1, p2]()
+        {
     link_item::ptr pp1, pp2;
     pp1 = links[p1];
     pp2 = links[p2];
@@ -234,6 +254,7 @@ void GUI::Elements::FlowGraph::canvas::on_unlink(::FlowGraph::parameter* p1, ::F
 
     pp2->update();
     pp1->update();
+        });
 }
 
 bool GUI::Elements::FlowGraph::canvas::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)
@@ -341,7 +362,7 @@ bool GUI::Elements::FlowGraph::canvas::on_mouse_action(mouse_action action, mous
         menu->add_item("ololo2");
         menu->add_item("ololo3");*/
         menu->pos = pos;// -vec2(render_bounds->pos);
-        run_on_ui([menu, this]() {  menu->self_open(user_ui);});
+          menu->self_open(user_ui);
     }
 
     focus();
@@ -719,12 +740,4 @@ bool GUI::Elements::FlowGraph::link_item::on_mouse_action(mouse_action action, m
     return true;
 }
 
-void GUI::Elements::FlowGraph::link_item::init_properties(Elements::ParameterWindow* wnd)
-{
-/*    wnd->add_param(Elements::property_base::ptr(new Elements::property_enum(p->type, "base",
-                   ::FlowGraph::data_types("float"), "float" ,
-                   ::FlowGraph::data_types("float2"), "float2" ,
-                   ::FlowGraph::data_types("float3"), "float3" ,
-                   ::FlowGraph::data_types("float4"), "float4"
-                                                                           )));*/
-}
+

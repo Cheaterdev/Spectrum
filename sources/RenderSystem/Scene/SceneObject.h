@@ -1,62 +1,6 @@
 enum class object_type : int {SCENE, OBJECT, MESH, MESH_NODE, CAMERA};
 
 
-/*
-class tree_contoller_base
-{
-	std::vector<tree_listener*> listeners;
-
-public:
-    virtual void on_element_add(base_tree* node, base_tree* add_node) = 0;
-    virtual void on_element_remove(base_tree* node, base_tree* remove_node) = 0;
-    virtual base_tree* get_root() = 0;
-    virtual base_tree* get_child(base_tree*, int i) = 0;
-    virtual int get_child_count(base_tree*) = 0;
-
-    virtual void add_element(base_tree* parent, base_tree* node) = 0;
-	virtual std::string get_name(base_tree*){ return "some node"; }
-
-};
-
-template<class T>
-class tree_contoller : public tree_contoller_base
-{
-    virtual void on_element_add(base_tree* node, base_tree* add_node)
-    {
-        on_element_add(static_cast<T*>(node), static_cast<T*>(add_node));
-    }
-
-    virtual void on_element_remove(base_tree* node, base_tree* remove_node)
-    {
-        on_element_remove(static_cast<T*>(node), static_cast<T*>(remove_node));
-    }
-
-    virtual base_tree* get_child(base_tree* node, int i) { return get_child(static_cast<T*>(node), i); };
-    virtual int get_child_count(base_tree* node) { return get_child_count(static_cast<T*>(node)); }
-    virtual void add_element(base_tree* parent, base_tree* node)
-    {
-        add_element(static_cast<T*>(parent), static_cast<T*>(node));
-    }
-	virtual std::string get_name(base_tree* node){ return     get_name(static_cast<T*>(node)); }
-
-public:
-    virtual void on_element_add(T* node, T* add_node) = 0;
-    virtual void on_element_remove(T* node, T* remove_node) = 0;
-
-    virtual T* get_child(T*, int) = 0;
-    virtual int get_child_count(T*) = 0;
-
-	virtual std::string get_name(T*){ return "some node"; }
-
-    virtual void add_element(T* parent, T* node) = 0;
-};*/
-/*
-class SceneTree : public tree<scene_object, std::set<std::shared_ptr<scene_object>>>, public occluder
-{
-
-
-};
-*/
 class Scene;
 class scene_object : public tree<scene_object, std::set<std::shared_ptr<scene_object>>, occluder>
 {

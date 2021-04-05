@@ -272,8 +272,8 @@ void FrameGraph::setup()
 		if (pair.second.passed) continue;
 
 		// here need to delete unused info
-		if (pair.second.frame_id != builder.current_frame->get_frame())
-			continue;
+	//	if (pair.second.frame_id != builder.current_frame->get_frame())
+		//	continue;
 
 		auto info = &pair.second;
 

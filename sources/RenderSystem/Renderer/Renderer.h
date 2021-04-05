@@ -73,7 +73,7 @@ class main_renderer
 		}
 };
 
-class mesh_renderer : public renderer, public Events::prop_handler
+class mesh_renderer : public renderer, public Events::prop_handler, VariableContext
 {
       
         Render::vertex_shader::ptr shader;
@@ -143,10 +143,10 @@ class mesh_renderer : public renderer, public Events::prop_handler
         unsigned int rendered_instanced;
         unsigned int instances_count;
 
-		Variable<bool> use_parrallel = Variable<bool>(false,"use_parrallel");
-		Variable<bool> use_cpu_culling = Variable<bool>(false, "use_cpu_culling");
-		Variable<bool> use_gpu_culling = Variable<bool>(false, "use_gpu_culling");
-		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth");
+		Variable<bool> use_gpu_occlusion = Variable<bool>(true,"GPU culling", this);
+	/*	Variable<bool> use_cpu_culling = Variable<bool>(false, "use_cpu_culling", this);
+		Variable<bool> use_gpu_culling = Variable<bool>(false, "use_gpu_culling", this);
+		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth", this);*/
 	
        // Render::RootSignature::ptr my_signature;
 

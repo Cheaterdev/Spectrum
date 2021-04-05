@@ -68,3 +68,44 @@ namespace Thread
 		using mutex = std::atomic<std::thread::id>;
 	};
 }
+
+
+enum class ThreadType: int
+{
+	NONE,
+	GRAPHICS,
+	GUI
+};
+
+
+struct ThreadScope
+{
+	thread_local static ThreadType thread_type;
+
+	ThreadType prev_type;
+	ThreadScope(ThreadType type)
+	{
+		prev_type = thread_type;
+		thread_type = type;
+		
+	}
+
+virtual ~ThreadScope()
+	{
+	thread_type = prev_type;
+	}
+
+	static void check_type(ThreadType type)
+	{
+		assert(thread_type == type);
+	}
+};
+
+#ifdef DEV
+	#define THREAD_SCOPE(x) volatile ThreadScope UNIQUE_NAME(ThreadType::x);
+	#define CHECK_THREAD(x) {ThreadScope::check_type(ThreadType::x);};
+#else
+	#define THREAD_SCOPE(x) ;
+	#define CHECK_THREAD(x) ;
+#endif
+

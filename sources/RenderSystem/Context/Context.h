@@ -82,14 +82,7 @@ namespace Render
 }
 using namespace Render;
 struct MeshRenderContext;
-class MaterialProvider
-{
-    public:
-        virtual ~MaterialProvider() {};
 
-
-        virtual void use_material(size_t i, std::shared_ptr<MeshRenderContext>& context) = 0;
-};
 enum class RENDER_TYPE
 {
     PIXEL, VOXEL
@@ -122,8 +115,6 @@ struct MeshRenderContext
         int draw_count = 0;
 
         std::shared_ptr<materials::Pipeline> overrided_pipeline;
-
-        MaterialProvider* mat_provider = nullptr;
 
         Render::PipelineStateDesc pipeline;
 		std::shared_ptr<Render::OVRContext> eye_context;

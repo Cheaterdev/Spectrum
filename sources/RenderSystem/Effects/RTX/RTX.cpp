@@ -9,7 +9,7 @@ UINT RTX::get_material_id(materials::universal_material* universal)
 
 	if (it == materials.end())
 	{
-		materials[universal] = (UINT)materials.size();
+		new_materials[universal] = (UINT)materials.size();
 
 		need_recreate = true;
 		universal->on_change.register_handler(this, [this]() {
@@ -67,7 +67,6 @@ void RTX::CreateSharedCollection()
 
 StateObject::ptr RTX::CreateGlobalCollection(materials::universal_material* mat)
 {
-	
 
 		StateObjectDesc raytracingPipeline;
 		raytracingPipeline.collection = true;
@@ -75,9 +74,6 @@ StateObject::ptr RTX::CreateGlobalCollection(materials::universal_material* mat)
 
 		LibraryObject lib;
 		lib.library = mat->raytracing_lib;
-	
-	
-
 		
 		for (auto& type : ray_types)
 		{
@@ -97,7 +93,11 @@ StateObject::ptr RTX::CreateGlobalCollection(materials::universal_material* mat)
 	
 		raytracingPipeline.libraries.emplace_back(lib);
 
-		return std::make_shared<StateObject>(raytracingPipeline);
+		mat->m_RTXCollection = std::make_shared<StateObject>(raytracingPipeline);
+
+		get_material_id(mat);
+
+		return mat->m_RTXCollection;
 
 }
 
@@ -158,7 +158,7 @@ void RTX::CreateRaytracingPipelineStateObject()
 		}
 	};
 	
-	m_dxrStateObject->event_change.register_handler(this, change_func);
+	//m_dxrStateObject->event_change.register_handler(this, change_func);
 	change_func();
 }
 
@@ -205,10 +205,14 @@ RTX::RTX()
 
 void RTX::prepare(CommandList::ptr& list)
 {
+	std::lock_guard<std::mutex> g(m);
 	process_tasks();
 
 	if (need_recreate)
 	{
+
+		materials.merge(new_materials);
+		
 		CreateRaytracingPipelineStateObject();
 
 		need_recreate = false;

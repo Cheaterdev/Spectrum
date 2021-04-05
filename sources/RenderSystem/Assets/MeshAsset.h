@@ -49,6 +49,8 @@ struct MeshInfo
         std::shared_ptr<Primitive> primitive;
 		
         unsigned int node_index;
+
+        RaytracingAccelerationStructure::ptr ras;
     private:
         friend class boost::serialization::access;
         template<class Archive>
@@ -143,6 +145,7 @@ class MeshData: public loader<MeshData, std::string, AssetLoadingContext::ptr>//
 
         std::vector<MeshInfo> meshes;
         std::vector<MaterialAsset::ptr> materials;
+
         //std::vector<MeshNode*> nodes;
         MeshNode root_node;
         std::shared_ptr<Primitive> primitive;
@@ -172,8 +175,9 @@ class MeshAsset : public Asset
         TypedHandle<Table::mesh_vertex_input::CB> vertex_handle;
         TypedHandle<UINT32> index_handle;
 
+        TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
-		
+      
         std::vector<MeshInfo> meshes;
         std::vector<MaterialAsset::ref> materials;
 
@@ -231,7 +235,7 @@ class MeshAsset : public Asset
 
 };
 
-class MeshAssetInstance : public scene_object, public material_holder, public AssetHolder, public MaterialProvider, public Render::renderable
+class MeshAssetInstance : public scene_object, public AssetHolder, public Render::renderable
 {
         friend class mesh_renderer;
 		friend class gpu_mesh_renderer;
@@ -243,7 +247,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
      
         LEAK_TEST(MeshAssetInstance)
 
-        virtual void set(MeshRenderContext::ptr context) override;
+       
         std::vector<mesh_node::ptr> my_meshes;
         std::mutex m;
         void init_asset();
@@ -307,7 +311,7 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 		//std::vector<RaytracingAccelerationStructure::ptr> create_raytracing_as();
 	
-        void use_material(size_t i, std::shared_ptr<MeshRenderContext>& context) override;
+     
         bool init_ras(CommandList::ptr list);
         using ptr = s_ptr<MeshAssetInstance>;
         virtual ~MeshAssetInstance();
@@ -323,6 +327,8 @@ class MeshAssetInstance : public scene_object, public material_holder, public As
 
 	virtual void on_remove() override;
 	virtual	bool update_transforms()override;
+
+    void update_rtx_instance();
     private:
        
         MeshAssetInstance();
@@ -358,7 +364,7 @@ public:
 
 class universal_vertex_manager :public Singleton<universal_vertex_manager>, public virtual_gpu_buffer<Table::mesh_vertex_input>
 {
-	static const size_t MAX_VERTEXES_SIZE = 1_gb / sizeof(Table::mesh_vertex_input::CB);
+	static const size_t MAX_VERTEXES_SIZE = 2_gb / sizeof(Table::mesh_vertex_input::CB);
 public:
     universal_vertex_manager() :virtual_gpu_buffer<Table::mesh_vertex_input>(MAX_VERTEXES_SIZE)
 	{
@@ -368,7 +374,7 @@ public:
 
 class universal_index_manager :public Singleton<universal_index_manager>, public virtual_gpu_buffer<UINT32>
 {
-	static const size_t MAX_INDEX_SIZE = 1_gb / sizeof(UINT32);
+	static const size_t MAX_INDEX_SIZE = 2_gb / sizeof(UINT32);
 public:
     universal_index_manager() :virtual_gpu_buffer<UINT32>(MAX_INDEX_SIZE)
 	{

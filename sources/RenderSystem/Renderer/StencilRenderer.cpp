@@ -48,83 +48,82 @@ bool stencil_renderer::on_mouse_action(mouse_action action, mouse_button button,
 			menu->add_item("edit material")->on_click = [this](menu_list_element::ptr e)
 			{
 				if (mouse_on_object.first)
-					run_on_ui([this]()
-						{
-							window::ptr wnd(new window);
-							user_ui->add_child(wnd);
-							dock_base::ptr dock(new dock_base);
-							wnd->add_child(dock);
-							auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
-							auto& mat = draw.material;
-							dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(static_cast<materials::universal_material*>(mat->get_ptr().get())->get_graph()));
-							wnd->pos = { 200, 200 };
-							wnd->size = { 300, 300 };
-						});
+				{
+					window::ptr wnd(new window);
+					user_ui->add_child(wnd);
+					dock_base::ptr dock(new dock_base);
+					wnd->add_child(dock);
+					auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
+					auto& mat = draw.material;
+					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(static_cast<materials::universal_material*>(mat->get_ptr().get())->get_graph()));
+					wnd->pos = { 200, 200 };
+					wnd->size = { 300, 300 };
+				}
+			
 			};
 
 			menu->add_item("create material")->on_click = [this](menu_list_element::ptr e)
 			{
 				if (mouse_on_object.first)
-					run_on_ui([this]()
+				{
+
+					auto make_material = [](float3 color, float roughness, float metallic) {
+						MaterialGraph::ptr graph(new MaterialGraph);
+
+
 						{
 
-							auto make_material = [](float3 color, float roughness, float metallic) {
-								MaterialGraph::ptr graph(new MaterialGraph);
+							auto value_node = std::make_shared<VectorNode>(vec4(color, 1));
+							graph->register_node(value_node);
+							value_node->get_output(0)->link(graph->get_base_color());
+						}
 
 
-								{
+						{
+							auto value_node = std::make_shared<ScalarNode>(roughness);
+							graph->register_node(value_node);
+							value_node->get_output(0)->link(graph->get_roughness());
+						}
 
-									auto value_node = std::make_shared<VectorNode>(vec4(color, 1));
-									graph->register_node(value_node);
-									value_node->get_output(0)->link(graph->get_base_color());
-								}
+						{
+							auto value_node = std::make_shared<ScalarNode>(metallic);
+							graph->register_node(value_node);
+							value_node->get_output(0)->link(graph->get_mettalic());
 
-
-								{
-									auto value_node = std::make_shared<ScalarNode>(roughness);
-									graph->register_node(value_node);
-									value_node->get_output(0)->link(graph->get_roughness());
-								}
-
-								{
-									auto value_node = std::make_shared<ScalarNode>(metallic);
-									graph->register_node(value_node);
-									value_node->get_output(0)->link(graph->get_mettalic());
-
-								}
+						}
 
 
-								materials::universal_material* m = (new materials::universal_material(graph));
-								//m->generate_material();
-								m->register_new();
-								return m->get_ptr<MaterialAsset>();
-							};
+						materials::universal_material* m = (new materials::universal_material(graph));
+						//m->generate_material();
+						m->register_new();
+						return m->get_ptr<MaterialAsset>();
+					};
 
 
 
-							MaterialAsset::ptr base_mat = make_material({ 1,1,1 }, 1, 0);
+					MaterialAsset::ptr base_mat = make_material({ 1,1,1 }, 1, 0);
 
 
 
-							window::ptr wnd(new window);
-							user_ui->add_child(wnd);
-							dock_base::ptr dock(new dock_base);
-							wnd->add_child(dock);
+					window::ptr wnd(new window);
+					user_ui->add_child(wnd);
+					dock_base::ptr dock(new dock_base);
+					wnd->add_child(dock);
 
-					
-							auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
-							//mouse_on_object.first->overrided_material.emplace_back();// [draw.mesh->material];
 
-							//draw.mesh->material = mouse_on_object.first->overrided_material.size() - 1;
+					auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
+					//mouse_on_object.first->overrided_material.emplace_back();// [draw.mesh->material];
 
-							// fix me
-						//	draw.mesh->material = mouse_on_object.first->register_material(base_mat);
+					//draw.mesh->material = mouse_on_object.first->overrided_material.size() - 1;
 
-							mouse_on_object.first->override_material(mouse_on_object.second, base_mat);
-							dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(static_cast<materials::universal_material*>(base_mat->get_ptr().get())->get_graph()));
-							wnd->pos = { 200, 200 };
-							wnd->size = { 300, 300 };
-						});
+					// fix me
+				//	draw.mesh->material = mouse_on_object.first->register_material(base_mat);
+
+					mouse_on_object.first->override_material(mouse_on_object.second, base_mat);
+					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(static_cast<materials::universal_material*>(base_mat->get_ptr().get())->get_graph()));
+					wnd->pos = { 200, 200 };
+					wnd->size = { 300, 300 };
+				}
 			};
 
 			menu->pos = vec2(pos);
@@ -209,13 +208,11 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 
 	if (!item)
 		return false;
-
-	run_on_ui([this, item]()
-		{	
+	
 			EVENT("start");
 			auto asset = item->asset->get_asset();
 			EVENT("end");
-			if (!asset) return;
+			if (!asset) return false;
 
 			if (asset->get_type() == Asset_Type::MESH)
 			{
@@ -234,11 +231,9 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 
 						});*/
 					m->type = v ? MESH_TYPE::STATIC : MESH_TYPE::DYNAMIC;
-					run_on_ui([this, mesh, m]()
-						{
+				
 							scene->add_child(m);
-						});
-
+	
 
 					});
 
@@ -248,8 +243,7 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 			if (asset->get_type() == Asset_Type::MATERIAL)
 			{
 				auto material = item->asset->get_asset()->get_ptr<MaterialAsset>();
-				run_on_ui([this, material]()
-					{
+			
 						//	MeshAssetInstance::ptr m(new MeshAssetInstance(mesh));
 
 						//scene->add_child(m);
@@ -260,9 +254,9 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 						//.	auto& draw = mouse_on_object.first->rendering[mouse_on_object.second];
 						//	mouse_on_object.first->override_material(draw.mesh->material, material);
 						}
-					});
+			
 			}
-		});
+		
 	return true;
 	//throw std::exception("The method or operation is not implemented.");
 }

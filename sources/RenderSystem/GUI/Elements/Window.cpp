@@ -43,7 +43,7 @@ GUI::Elements::window::window() : GUI::Elements::resizable()
     close_button->docking = dock::RIGHT;
     close_button->on_click = [this](button::ptr)
     {
-        run_on_ui([this] {remove_from_parent(); });
+        remove_from_parent();
     };
     title_bar->add_child(close_button);
     title_bar->add_child(label_text);
@@ -80,7 +80,7 @@ void GUI::Elements::window::remove_child(base::ptr obj)
 void GUI::Elements::window::on_touch()
 {
     resizable::on_touch();
-    run_on_ui([this] {to_front(); });
+   to_front(); 
 }
 
 

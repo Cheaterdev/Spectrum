@@ -91,6 +91,10 @@ float4 trace(float4 start_color, float start_dist,  float3 origin, float3 dir, f
 	float sampleWeight = saturate(max_accum - accum.w ) / max_accum;
 	accum.xyz += sky *pow(sampleWeight, 1);
 
+	
+	
+//	accum.xyz = sky;
+
 	return accum;// / saturate(accum.w);
 }
 
@@ -263,7 +267,7 @@ Texture2D<float2> speed_tex = voxel_screen.GetGbuffer().GetMotion();
 //float3 rayDir = reflect(view, normal);
 
 
-float time = frac(frame.GetTime().y);// +i;
+float time = frac(frame.GetTime().y)*5;// +i;
 float sini = sin(time * 220 + float(tc.x));
 float cosi = cos(time * 220 + float(tc.y));
 float rand = rnd(float2(sini, cosi));
@@ -275,12 +279,15 @@ float rand2 = rnd(float2(cosi, sini));
 
 float tt =  4 * pow(rand2, 1.0 / 3.0);
 
+//float tt = rand2;
+
+	
 float3 right = rsin *  normalize(cross(normal, float3(0, 1, 0.1)));
 float3 tangent = rcos * normalize(cross(right, normal));
 
 float3 dir = normalize(normal + tt * (right + tangent));
 
-float3 dirVoxel = normalize(normal + rand2*(right + tangent));
+float3 dirVoxel = normalize(normal + rand2 *(right + tangent));
 
 
 RayPayload payload_gi;
@@ -297,13 +304,13 @@ payload_gi.cone.width = 0;
 	RayDesc ray;
 	ray.Origin = pos;
 	ray.Direction = dir;
-	ray.TMin = 0.01;
+	ray.TMin = 0.1;
 	ray.TMax = 10.0;
 	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
 
 	if (payload_gi.dist > 100000-5)
 	{
-		payload_gi.color = trace(0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.4);
+		payload_gi.color = trace(0, 0.0, pos + dirVoxel * 1, dirVoxel, 0.4);
 	}
 		
 	//tex_noise[DispatchRaysIndex().xy] = 1;// lerp(tex_noise[DispatchRaysIndex().xy], payload_shadow.color, 0.01);

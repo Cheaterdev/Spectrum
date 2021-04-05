@@ -230,7 +230,7 @@ void GUI::Elements::FlowGraph::component_window::on_touch()
 	if (!selected)
 		canva->on_select(this);
 
-	run_on_ui([this] {to_front(); });
+	to_front();
 }
 
 void GUI::Elements::FlowGraph::component_window::on_pos_changed(const vec2& r)
@@ -279,7 +279,7 @@ bool GUI::Elements::FlowGraph::component_window::on_mouse_action(mouse_action ac
 			menu->add_item("ololo3");*/
 			menu->pos = pos;// -vec2(render_bounds->pos);
 
-			run_on_ui([this, menu]() {    menu->self_open(user_ui); });
+			  menu->self_open(user_ui); 
 		}
 
 		return true;

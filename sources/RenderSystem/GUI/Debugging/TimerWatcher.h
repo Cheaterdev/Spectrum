@@ -44,14 +44,14 @@ namespace GUI
 					return this;
 				}
 			};
-            class TimeCreator: public tree_creator
+            class TimeCreator: public tree_creator<TimedBlock>
             {
                 public:
-                    virtual void init_element(tree_element* tree, base_tree* elem) override
+                    virtual void init_element(tree_element<TimedBlock>* tree, TimedBlock* elem) override
                     {
                         auto timer = dynamic_cast<TimedBlock*>(elem);
                         base::ptr l(new line(tree));
-                        toogle_icon::ptr	open_icon(new toogle_icon(tree));
+                        toogle_icon::ptr	open_icon(new toogle_icon());
                         open_icon->texture = Render::Texture::null;
                         open_icon->size = { 16, 16 }; // size_type::MATCH_PARENT;
                         open_icon->docking = dock::LEFT;
@@ -84,7 +84,7 @@ namespace GUI
 
 
             };
-            class TimerWatcher : public  GUI::Elements::tree
+            class TimerWatcher : public  GUI::Elements::tree<TimedBlock>
             {
 
 
@@ -92,7 +92,7 @@ namespace GUI
                     using ptr = s_ptr<TimerWatcher>;
 
 
-                    TimerWatcher() : GUI::Elements::tree(tree_creator::ptr(new TimeCreator))
+                    TimerWatcher() : GUI::Elements::tree<TimedBlock>(tree_creator<TimedBlock>::ptr(new TimeCreator))
                     {
                     }
             };
