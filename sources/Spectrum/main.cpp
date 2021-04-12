@@ -1251,7 +1251,7 @@ public:
 				data.o_texture = builder.need_texture("swapchain", ResourceFlags::Required);
 				}, [this, ptr](pass_data& data, FrameContext& context) {
 
-					context.get_list()->transition(context.get_texture(data.o_texture).resource, ResourceState::PRESENT);
+					context.get_list()->transition_present(context.get_texture(data.o_texture).resource.get());
 
 					Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
 						run_on_ui([this, ptr]() {	Profiler::get().update(); });
@@ -1543,11 +1543,7 @@ resource_stages[&res.second] = input;
 					add_child(bar);
 				}
 
-				auto dock = d->get_dock(GUI::dock::LEFT);
-				//auto m = GUI::Elements::FlowGraph::manager::get().get_ptr<GUI::Elements::FlowGraph::manager>();
-				//dock->get_tabs()->add_button(m->create_parameter_view());
-			//	add_child(m);
-				dock->size = { 400, 400 };
+			
 				{
 					EVENT("Start Asset Explorer");
 					auto dock = d->get_dock(GUI::dock::RIGHT);

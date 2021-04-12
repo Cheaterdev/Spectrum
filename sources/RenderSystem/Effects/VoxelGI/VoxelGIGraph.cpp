@@ -418,7 +418,7 @@ void VoxelGI::debug(FrameGraph& graph)
 		data.target_tex = builder.create_texture("VoxelDebug", size, 1, DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::RenderTarget);
 		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::ComputeRead);
 
-		data.gbuffer.need(builder, true);
+		data.gbuffer.need(builder);
 
 		}, [this, &graph](VoxelDebug& data, FrameContext& _context) {
 

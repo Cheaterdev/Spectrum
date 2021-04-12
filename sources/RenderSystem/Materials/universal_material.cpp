@@ -68,33 +68,45 @@ void materials::universal_material::update()
 		need_regenerate_material = false;
 	}
 
-	if (!need_update_uniforms) return;
-
-	auto generate = [this](std::vector<Uniform::ptr>& un)
+	if (need_update_uniforms)
 	{
-		pixel_data = generate_data(un);
-		if (pixel_data.empty())
-			return;
-	};
+		auto generate = [this](std::vector<Uniform::ptr>& un)
+		{
+			pixel_data = generate_data(un);
+			if (pixel_data.empty())
+				return;
+		};
 
-	generate(ps_uniforms);
-	material_info.GetTextureOffset() = (UINT)textures_handle.get_offset();
-	material_info.GetData() = pixel_data;
-	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
+		generate(ps_uniforms);
 
-	{
-		auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
-		elem[0].pipeline_id = pipeline->get_id();
-		elem[0].material_cb = compiled_material_info.cb;
-
-		info_handle.write(0, elem);
-
+		need_update_compiled = true;
 	}
 
-	update_rtx();
+	if (need_update_compiled)
+	{
+		material_info.GetTextureOffset() = textures_handle ? (UINT)textures_handle.get_offset() : 0;
+		material_info.GetData() = pixel_data;
+		compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 
-	need_update_uniforms = false;
+		{
+			auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
+			elem[0].pipeline_id = pipeline->get_id();
+			elem[0].material_cb = compiled_material_info.cb;
+
+			info_handle.write(0, elem);
+
+		}
+
+		update_rtx();
+	}
+
+	if(need_update_uniforms|| need_update_compiled)
 	mark_contents_changed();
+	
+	need_update_uniforms = false;
+	need_update_compiled = false;
+	
+
 }
 
  size_t  materials::universal_material::get_id()
@@ -113,43 +125,53 @@ void materials::universal_material::compile()
 	
 	handlers.clear();
 
-	textures_handle.Free();
-
-	textures_handle = universal_material_manager::get().allocate(textures.size());
-	auto textures_srvs = textures_handle.map();
-	
-	textures_handles = DescriptorHeapManager::get().get_csu_static()->create_table(textures.size());
-	for (unsigned int i = 0; i < textures.size(); i++)
+	if (textures.size())
 	{
-		handlers.emplace_back();
-		auto &t = textures[i];
-		TextureAsset::ptr tex =t->asset->get_ptr<TextureAsset>();
+		textures_handle.Free();
 
-		if (tex && tex->get_texture()->texture_2d())
-
-			t->to_linear.register_change(&handlers.back(), [this, i, tex, &textures_srvs](bool to_linear)
+		textures_handle = universal_material_manager::get().allocate(textures.size());
+	
+		textures_handles = DescriptorHeapManager::get().get_csu_static()->create_table(textures.size());
+		for (unsigned int i = 0; i < textures.size(); i++)
 		{
-			auto func = tex->get_texture()->texture_2d()->srv(to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB);
-			func(textures_handles[i]);
-			textures_srvs[i] = textures_handles[i];
-		});
+			handlers.emplace_back();
+			auto& t = textures[i];
+			TextureAsset::ptr tex = t->asset->get_ptr<TextureAsset>();
 
-		else
-		{
+			if (tex && tex->get_texture()->texture_2d())
 
-			auto asset = EngineAssets::missing_texture.get_asset();
-			auto func = asset->get_texture()->texture_2d()->srv();
-			func(textures_handles[i]);
-			textures_srvs[i] = textures_handles[i];
+				t->to_linear.register_change(&handlers.back(), [this, i, tex ](bool to_linear)
+					{
+						auto func = tex->get_texture()->texture_2d()->srv(to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB);
+						func(textures_handles[i]);
+
+						auto textures_srvs = textures_handle.map(i);
+						textures_srvs[i] = textures_handles[i];
+						textures_handle.write(i, textures_srvs);
+						need_update_compiled = true;
+					});
+
+			else
+			{
+
+				auto asset = EngineAssets::missing_texture.get_asset();
+				auto func = asset->get_texture()->texture_2d()->srv();
+				func(textures_handles[i]);
+
+				
+				auto textures_srvs = textures_handle.map(i);
+				textures_srvs[i] = textures_handles[i];
+				textures_handle.write(i, textures_srvs);
+			}
+
+			t->asset = register_asset(*t->asset);
+
+			mark_contents_changed();
 		}
 
-		t->asset = register_asset(*t->asset);
+//		textures_handle.write(0, textures_srvs);
 
-		mark_contents_changed();
 	}
-	
-	textures_handle.write(0, textures_srvs);
-
 	auto generate = [this](std::vector<Uniform::ptr>& un)
 	{
 		pixel_data = generate_data(un);
@@ -166,7 +188,7 @@ void materials::universal_material::compile()
 
 	  
 	generate(ps_uniforms);
-	material_info.GetTextureOffset() = (UINT)textures_handle.get_offset();
+	material_info.GetTextureOffset() = textures_handle?(UINT)textures_handle.get_offset():0;
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 
@@ -179,7 +201,10 @@ void materials::universal_material::compile()
 	elem[0].pipeline_id = pipeline->get_id();
 	elem[0].material_cb = compiled_material_info.cb;
 	info_handle.write(0,elem);
-	
+
+	need_update_compiled = false;
+	need_update_uniforms = false;
+	update_rtx();
 	end_changing_contents();
 }
 

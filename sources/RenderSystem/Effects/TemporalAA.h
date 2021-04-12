@@ -21,7 +21,7 @@
 
 				for (UINT i = 0; i < textures.size(); i++)
 				{
-					list->transition(textures[i], Render::ResourceState::PIXEL_SHADER_RESOURCE);
+	////				list->transition(textures[i], Render::ResourceState::PIXEL_SHADER_RESOURCE);
 
 					((SignatureDataSetter*)&list->get_graphics())->set_dynamic(slot, i, textures[std::min(all_count-1,i)]->texture_2d()->get_static_srv());
 				}

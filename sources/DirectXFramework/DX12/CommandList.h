@@ -304,11 +304,10 @@ namespace DX12
 		FrameResources::ptr begin_frame();
 	};
 
-	class CommandListBase
+	class CommandListBase: public StateContext
 	{
 	protected:
-		int id = -1;
-		std::uint64_t global_id;
+
 		CommandListType type;
 
 		LEAK_TEST(CommandListBase)
@@ -319,14 +318,29 @@ namespace DX12
 		
 		CommandListCompilerDelayed compiler;
 
+		std::list<TrackedObject::ptr> tracked_resources;
 
 		CommandListCompilerDelayed* get_native_list()
 		{
 			return &compiler;
 		}
 	public:
-		std::list<TrackedObject::ptr> tracked_resources;
 
+		template<class T>
+		void track_object(const Trackable<T>& obj)
+		{
+			auto& state = obj.get_state(this);
+	//		if (!state.used)
+			{
+				state.used = true;
+				tracked_resources.emplace_back(obj.tracked_info);
+			}
+		}
+
+		void free_tracked_objects()
+		{
+			tracked_resources.clear();
+		}
 		virtual ~CommandListBase() = default;
 
 		CommandListType get_type()
@@ -399,7 +413,8 @@ namespace DX12
 						if(prev_transition->wanted_state == transition.wanted_state)
 							continue;
 
-						
+						if (transition.resource->debug)
+							continue;
 						transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(transition.resource->get_native().Get(),
 							static_cast<D3D12_RESOURCE_STATES>(prev_transition->wanted_state),
 							static_cast<D3D12_RESOURCE_STATES>(transition.wanted_state),
@@ -414,7 +429,6 @@ namespace DX12
 			});
 		}
 
-	public:
 		void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 		void transition(const Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 	
@@ -464,6 +478,11 @@ namespace DX12
 		void transition(Resource* from, Resource* to);
 		std::shared_ptr<TransitionCommandList> fix_pretransitions();
 
+		void transition_present(const Resource* resource_ptr)
+		{
+			transition(resource_ptr, ResourceState::PRESENT, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		}
+		
 		void transition_rtv(const ResourceInfo* info)
 		{
 			assert(info->type == HandleType::RTV);
@@ -892,7 +911,7 @@ namespace DX12
 	{
 		tile_updates.emplace_back(std::move(info));
 
-		use_resource(info.resource);
+		track_object(*info.resource);
 	}
 
 		FrameResources::ptr frame_resources;
@@ -948,15 +967,6 @@ namespace DX12
 		void begin(std::string name = "", Timer* t = nullptr);
 		void end();
 
-		int get_id()
-		{
-			return id;
-		}
-
-		UINT64 get_global_id()
-		{
-			return global_id;
-		}
 
 		void clear_uav(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 		{
@@ -1081,16 +1091,11 @@ namespace DX12
 					const auto& h = table[i];
 					if (h.resource_info && h.resource_info->resource_ptr)
 					{
-						if (h.resource_info->resource_ptr->get_heap_type() == HeapType::DEFAULT || h.resource_info->resource_ptr->get_heap_type() == HeapType::RESERVED)
-						{
+
 							if (type == HandleType::SRV)	get_base().transition_srv(h.resource_info);
 							else if (type == HandleType::UAV)	get_base().transition_uav(h.resource_info);
 							else assert(false);
-						}
-						else
-						{
-							get_base().use_resource(h.resource_info->resource_ptr);
-						}
+					
 					}
 				}
 
@@ -1120,19 +1125,11 @@ namespace DX12
 
 		
 		void set_cb(UINT index, const ResourceAddress& address)
-		{
-		
+		{	
 			if (address.resource)
 			{
-				if (address.resource->get_heap_type() == HeapType::DEFAULT || address.resource->get_heap_type() == HeapType::RESERVED)
-				{
-					get_base().transition(address.resource, ResourceState::VERTEX_AND_CONSTANT_BUFFER);
-				}
-				else
-				{
-					get_base().use_resource(address.resource);
-				}
-
+				get_base().track_object(*address.resource);
+				get_base().transition(address.resource, ResourceState::VERTEX_AND_CONSTANT_BUFFER);
 			}
 			set_const_buffer(index, address.address);
 		}

@@ -18,7 +18,7 @@ namespace DX12 {
 
 		if (!tile.heap_position.heap)
 		{
-			tile.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, HeapType::DEFAULT);
+			tile.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, tile_heap_type);
 			target.add_tile(tile);
 			on_load(ivec4(pos,subres));
 			if (recursive )

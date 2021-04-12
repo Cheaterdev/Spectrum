@@ -2,34 +2,34 @@
 
 namespace DX12
 {
-	bool ResourceStateManager::ResourceListStateCPU::is_used(Transitions* list)
-	{
-		return list->global_id == command_list_id;
-	}
-	
-	bool  ResourceStateManager::is_used(Transitions* list)
-	{
-		SubResourcesCPU& s = get_state(list->id);
-		return s.command_list_id == list->global_id;
-	}
-	
-	ResourceStateManager::SubResourcesCPU& ResourceStateManager::get_cpu_state(Transitions* list)
-	{
-		auto& state = get_state(list->id);
 
+	ResourceStateManager::ResourceStateManager() : resource(static_cast<Resource*>(this))
+	{
+	}
+	
+	bool  ResourceStateManager::is_used(Transitions* list) const
+	{
+		SubResourcesCPU& s = get_state(list);
+		return s.used;
+	}
+	
+	SubResourcesCPU& ResourceStateManager::get_cpu_state(Transitions* list) const
+	{
+		auto& state = get_state(list);
 		return state;
 	}
 
-	void ResourceStateManager::prepare_state(Transitions* from, const Resource* resource, SubResourcesGPU& subres)
+	void ResourceStateManager::prepare_state(Transitions* from, SubResourcesGPU& subres) const
 	{
-		auto cpu_state = get_state(from->id);
+		auto cpu_state = get_state(from);
 
+		bool updated = false;
 		for (int i = 0; i < subres.subres.size(); i++)
 		{
 			auto& gpu = subres.subres[i];
 			auto& cpu = cpu_state.subres[i];
 
-			if (cpu.command_list_id != from->global_id) continue;
+			if (!cpu.used) continue;
 
 			auto merged_state = merge_state(gpu.state, cpu.get_first_state());
 			auto last_state = merged_state;
@@ -43,24 +43,32 @@ namespace DX12
 			if (gpu.state != merged_state)
 			{
 				auto prev = cpu.first_transition;
-			auto point = from->create_transition(resource, i, TransitionType::ZERO);
+				auto point = from->create_transition(resource, i, TransitionType::ZERO);
 				point->wanted_state = merged_state;
 				cpu.first_transition->prev_transition = point;
+				updated = true;
 			}
 
 			subres.subres[i].state = last_state;
+		}
+
+		if(updated)
+		{
+			from->track_object(*resource);
+			from->use_resource(resource);
+
 		}
 		
 	}
 
 	
-	ResourceState ResourceStateManager::process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*>& discards, const Resource* resource, int id, uint64_t full_id)
+	ResourceState ResourceStateManager::process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*>& discards, Transitions* list) const
 	{
 	ResourceState states = ResourceState::COMMON;
 
 		if (!resource) return states;
 
-		auto cpu_state = get_state(id);
+		auto& cpu_state = get_state(list);
 
 		
 		for (int i = 0; i < gpu_state.subres.size(); i++)
@@ -68,7 +76,7 @@ namespace DX12
 			auto& gpu = gpu_state.subres[i];
 			auto& cpu = cpu_state.subres[i];
 
-			if (cpu.command_list_id != full_id) continue;
+			if (!cpu.used) continue;
 
 			auto merged_state = merge_state(gpu.state, cpu.get_first_state());
 			auto last_state = merged_state;
@@ -122,9 +130,9 @@ namespace DX12
 	}
 
 
-	void ResourceStateManager::transition(Transitions* list, const Resource* resource, ResourceState state, unsigned int s, int id, uint64_t full_id) const
+	void ResourceStateManager::transition(Transitions* list, ResourceState state, unsigned int s) const
 	{
-		auto& cpu_state = get_state(id);
+		auto& cpu_state = get_state(list);
 
 
 		auto transition_one = [&](int subres) {
@@ -133,9 +141,9 @@ namespace DX12
 
 	
 
-			if (subres_cpu.command_list_id != full_id)
+			if (!subres_cpu.used)
 			{
-				subres_cpu.command_list_id = full_id;
+				subres_cpu.used = true;
 				subres_cpu.first_transition =	subres_cpu.last_transition = list->create_transition(resource, subres, TransitionType::FIRST);
 				subres_cpu.last_transition->wanted_state = state;
 				subres_cpu.first_transition->prev_transition = nullptr;
@@ -189,19 +197,19 @@ namespace DX12
 
 	}
 
-	bool ResourceStateManager::transition(Transitions* from, Transitions* to, const  Resource* resource) const
+	bool ResourceStateManager::transition(Transitions* from, Transitions* to) const
 	{
 
 		
-		auto& from_state = get_state(from->id);
-		auto& to_state = get_state(to->id);
+		auto& from_state = get_state(from);
+		auto& to_state = get_state(to);
 
 
 		for (int i = 0; i < gpu_state.subres.size(); i++)
 		{
 			auto& subres_to = to_state.subres[i];
 
-			if (subres_to.is_used(to))
+			if (subres_to.used)
 			if ((GetSupportedStates(from->get_type()) & subres_to.get_first_state()) != subres_to.get_first_state())
 				return false;
 		}
@@ -210,8 +218,8 @@ namespace DX12
 		{
 			auto& subres_to = to_state.subres[i];
 
-			if(subres_to.is_used(to))
-				transition(from,resource, subres_to.get_first_state(), i,  from->id,from->global_id);
+			if (subres_to.used)
+				transition(from, subres_to.get_first_state(), i);
 	
 		}
 		

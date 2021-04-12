@@ -124,103 +124,75 @@ namespace DX12
 		Transition* prev_transition = nullptr;
 	};
 
-	
-	class ResourceStateManager
+
+	struct ResourceListStateCPU
 	{
-
-		struct ResourceListStateCPU
+		Transition* first_transition = nullptr;
+		Transition* last_transition = nullptr;
+		
+		ResourceState get_first_state()
 		{
-			//ResourceState first_state = ResourceState::UNKNOWN;
-			//ResourceState state = ResourceState::UNKNOWN;
-			//ResourceState merged_state = ResourceState::UNKNOWN;
-
-			Transition* first_transition = nullptr;
-			Transition* last_transition = nullptr;
-			uint64_t command_list_id = -1;
-
-			ResourceState get_first_state()
-			{
-				return first_transition->wanted_state;
-			}
-			ResourceState get_state()
-			{
-				return last_transition->wanted_state;
-			}
-
-			bool is_used(Transitions* list);
-		};
-
-		struct SubResourcesCPU
+			return first_transition->wanted_state;
+		}
+		ResourceState get_state()
 		{
-			std::vector<ResourceListStateCPU> subres;
-
-			ResourceListStateCPU all;
-
-			bool need_discard = false;
-			volatile uint64_t command_list_id = -1;
-
-			volatile uint64_t used_by_command_list_id = -1;
-		};
-
-
-		struct ResourceListStateGPU
-		{
-			ResourceState state = ResourceState::UNKNOWN;
-		};
-
-		struct SubResourcesGPU
-		{
-			std::vector<ResourceListStateGPU> subres;
-
-			ResourceListStateGPU all;
-		};
-
-
-	
-		mutable std::array<SubResourcesCPU, 128> cpu_state;
-
-		mutable  SpinLock states_lock;
-		mutable std::map<int, SubResourcesCPU> cpu_state_map;
-
-		SubResourcesCPU& get_state(int id) const
-		{
-			if(id<128)
-			return cpu_state[id];
-			
-			
-			std::lock_guard<SpinLock> guard(states_lock);
-
-			auto it = cpu_state_map.find(id);
-
-			if (it == cpu_state_map.end())
-			{
-				auto & state = cpu_state_map[id];
-				state.subres.resize(gpu_state.subres.size());
-
-				return state;
-			}
-
-			return it->second;
-			
+			return last_transition->wanted_state;
 		}
 
+		bool used = false;
+	};
 
+	struct SubResourcesCPU
+	{
+		std::vector<ResourceListStateCPU> subres;
+		ResourceListStateCPU all;
+		bool need_discard = false;
+		bool used = false;
+
+		void reset()
+		{
+			used = false;
+
+			for(auto & s:subres)
+			{
+				s.used = false;
+			}
+		}
+	};
+
+
+	struct ResourceListStateGPU
+	{
+		ResourceState state = ResourceState::UNKNOWN;
+	};
+
+	struct SubResourcesGPU
+	{
+		std::vector<ResourceListStateGPU> subres;
+
+		ResourceListStateGPU all;
+	};
+
+
+	
+	class ResourceStateManager: public ObjectState<SubResourcesCPU>
+	{
+		const Resource* resource;
 
 	protected:
-		SubResourcesGPU gpu_state;
-
+		mutable SubResourcesGPU gpu_state;
+		virtual ~ResourceStateManager() = default;
 	public:
 
 		using ptr = std::unique_ptr<ResourceStateManager>;
 
-		ResourceStateManager()
-		{
-		}
-		SubResourcesGPU copy_gpu()
+		ResourceStateManager();
+		SubResourcesGPU copy_gpu() const
 		{
 			return gpu_state;
 		}
-		void init_subres(int count, ResourceState state)
+		
+		void init_subres(int count, ResourceState state) const
 		{
 			gpu_state.subres.resize(count);
 			gpu_state.all.state = state;
@@ -228,59 +200,29 @@ namespace DX12
 			for (auto& e : gpu_state.subres)
 				e.state = state;
 
-
-			for (auto& e : cpu_state)
-				e.subres.resize(gpu_state.subres.size());
-
+			states.set_init_func([count](SubResourcesCPU& state)
+			{
+					state.subres.resize(count);
+			});
 		}
 
-		ResourceState get_cpu_state(int id, uint64_t full_id)
+
+		SubResourcesCPU& get_cpu_state(Transitions* list) const;
+		
+	
+		bool is_used(Transitions* list) const;
+		void aliasing(int id, uint64_t full_id) const
 		{
-			auto& state = get_state(id);
-
-			return state.subres[0].get_state();
-		}
-		SubResourcesCPU& get_cpu_state(Transitions* list);
-		bool is_new(int id, uint64_t full_id) const
-		{
-			SubResourcesCPU& s = get_state(id);
-
-			bool result = (s.command_list_id != full_id);
-
-			s.command_list_id = full_id;
-			if(result)
-			s.need_discard = false;
-			return  result;
-		}
-
-		bool use_by(int id, uint64_t full_id) const
-		{
-			SubResourcesCPU& s = get_state(id);
-
-			bool result = (s.used_by_command_list_id != full_id);
-			s.used_by_command_list_id = full_id;
-			return  result;
-		}
-
-		bool is_used(Transitions* list);
-		void aliasing(int id, uint64_t full_id) 
-		{
-			SubResourcesCPU& s = get_state(id);
-
+			//SubResourcesCPU& s = get_state(id);
 		//	if (check(s.subres[0].state & ResourceState::RENDER_TARGET) || check(s.subres[0].state & ResourceState::DEPTH_WRITE))
-
-
 		//	s.need_discard = true;
 		}
 		
-		ResourceState process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*> &discards, const Resource* resource, int id, uint64_t full_id);
+		ResourceState process_transitions(std::vector<D3D12_RESOURCE_BARRIER>& target, std::vector<Resource*> &discards,  Transitions* list) const;
 
-		void transition(Transitions* list,const  Resource* resource, ResourceState state, unsigned int subres, int id, uint64_t full_id) const;
-		bool transition(Transitions* from, Transitions* to , const  Resource* resource) const;
-
-
-
-		void prepare_state(Transitions* from, const Resource* resource, SubResourcesGPU& subres);
+		void transition(Transitions* list, ResourceState state, unsigned int subres) const;
+		bool transition(Transitions* from, Transitions* to) const;
+		void prepare_state(Transitions* from, SubResourcesGPU& subres) const;
 	};
 
 

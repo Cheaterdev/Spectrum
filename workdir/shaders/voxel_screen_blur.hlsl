@@ -61,7 +61,7 @@ float dist = length(pos - camera.GetPosition()) / 100;
 
 	
 	float blurRadiusScale = 1.0 / (1.0 + frames);// -1.0 / 8;
-#define R 1
+#define R 3
 	
 [unroll] for(int x=-R;x<=R;x++)
 [unroll] for (int y = -R; y <= R; y++)

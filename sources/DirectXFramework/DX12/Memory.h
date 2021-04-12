@@ -11,17 +11,31 @@ namespace DX12
 		RESERVED = 10,
 		PRESENT = 5
 	};
+	
+	struct TrackedObjectState
+	{
+		bool used = false;
+		void reset()
+		{
+			used = false;
+		}
+	};
 
 	template<class T>
-	class Trackable
+	class Trackable: public ObjectState<TrackedObjectState>
 	{
 	public:
-		std::shared_ptr<T> tracked_info;
+		mutable std::shared_ptr<T> tracked_info;
 		Trackable()
 		{
 			tracked_info = std::make_shared<T>();
 		}
+		
 	};
+
+	template <class T>
+	concept TrackableClass = std::is_base_of<ObjectState<TrackedObjectState>, T>::value;
+	
 	class TrackedObject
 	{
 	public:

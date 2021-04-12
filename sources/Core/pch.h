@@ -221,7 +221,7 @@ void unreferenced_parameter(const T&)
 #include "patterns/Singleton.h"
 #include "patterns/SharedObject.h"
 #include "patterns/EditObject.h"
-#include "Patterns/IdGenerator.h"
+
 #include "Patterns/Holdable.h"
 
 #include "Log/Events.h"
@@ -253,10 +253,10 @@ void unreferenced_parameter(const T&)
 #include "Threads/Threading.h"
 
 #include "Threads/Scheduler.h"
-
+#include "Patterns/IdGenerator.h"
 #include "Application/Application.h"
 #include "Profiling/Profiling.h"
-
+#include "Patterns/StateContext.h"
 #define GUID_WINDOWS
 #include "guid/guid.h"
 #include "Allocators/Allocators.h"

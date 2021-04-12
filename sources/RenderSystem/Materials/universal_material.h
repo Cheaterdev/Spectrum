@@ -266,6 +266,7 @@ namespace materials
 			BinaryAsset::ref include_file_raytacing;
 
             bool need_update_uniforms = false;
+			bool need_update_compiled = false;
 
             std::mutex m;
             virtual void on_asset_change(std::shared_ptr<Asset> asset) override;

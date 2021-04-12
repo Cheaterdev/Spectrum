@@ -10,7 +10,7 @@ namespace DX12
 		QueryHeap heap;
 		std::mutex buffer_lock;
 		static const int MAX_TIMERS = 1024;
-		IdGenerator ids;
+		IdGenerator<Thread::Lockable> ids;
 		std::array<UINT64, MAX_TIMERS*2> read_back_data;
 
 		UINT64 fence = -1;

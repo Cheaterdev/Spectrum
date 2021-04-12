@@ -242,9 +242,10 @@ void MyRaygenShader()
    const Raytracing raytracing = CreateRaytracing();
 
 	 const VoxelOutput voxel_output = CreateVoxelOutput();
+	 const VoxelInfo voxel_info = CreateVoxelInfo();
 	 const VoxelScreen voxel_screen = CreateVoxelScreen();
 
-
+	
 Texture2D<float2> speed_tex = voxel_screen.GetGbuffer().GetMotion();
 
 	
@@ -277,7 +278,7 @@ float rcos = cos(6.14 * rand);
 float rsin = sin(6.14 * rand);
 float rand2 = rnd(float2(cosi, sini));
 
-float tt =  4 * pow(rand2, 1.0 / 3.0);
+float tt =  4 * pow(rand2, 1.0);
 
 //float tt = rand2;
 
@@ -289,7 +290,7 @@ float3 dir = normalize(normal + tt * (right + tangent));
 
 float3 dirVoxel = normalize(normal + rand2 *(right + tangent));
 
-
+float3 oneVoxelSize = voxel_info.GetSize()/ (voxel_info.GetVoxel_tiles_count()* voxel_info.GetVoxels_per_tile());
 RayPayload payload_gi;
 payload_gi.color = float4(dirVoxel,0);
 payload_gi.recursion = 0;
@@ -304,13 +305,13 @@ payload_gi.cone.width = 0;
 	RayDesc ray;
 	ray.Origin = pos;
 	ray.Direction = dir;
-	ray.TMin = 0.1;
-	ray.TMax = 10.0;
+	ray.TMin = 0.05;
+	ray.TMax = length(oneVoxelSize)*5;
 	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
 
 	if (payload_gi.dist > 100000-5)
 	{
-		payload_gi.color = trace(0, 0.0, pos + dirVoxel * 1, dirVoxel, 0.4);
+		payload_gi.color = trace(0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.4);
 	}
 		
 	//tex_noise[DispatchRaysIndex().xy] = 1;// lerp(tex_noise[DispatchRaysIndex().xy], payload_shadow.color, 0.01);

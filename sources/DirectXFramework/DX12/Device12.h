@@ -12,14 +12,14 @@ namespace DX12
 
 		//   std::shared_ptr<CommandList> upload_list;
 		enum_array<CommandListType, Queue::ptr> queues;
-		IdGenerator id_generator;
+		IdGenerator<Thread::Lockable> id_generator;
 		friend class CommandList;
 		bool rtx = false;
 		GpuCrashTracker crasher;
 	public:
 		void stop_all();
 		virtual ~Device();
-
+		ContextGenerator context_generator;
 		std::shared_ptr<CommandList> get_upload_list();
 		ComPtr<ID3D12Device5> get_native_device();
 

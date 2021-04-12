@@ -622,10 +622,8 @@ void FrameGraph::render()
 			if (!resource) continue;
 			
 			for(auto state:info.states)
-			{
-				
+			{				
 				std::vector<Render::ResourceState> merged_state;
-
 				
 				for(auto pass:state.passes)
 				{
@@ -642,8 +640,7 @@ void FrameGraph::render()
 
 					for (int i = 0; i < merged_state.size();i++)
 					{
-						if (!cpu_state.subres[i].is_used(commandList.get()))
-							continue;
+						if (!cpu_state.subres[i].used) continue;
 						merged_state[i] = merge_state(merged_state[i], cpu_state.subres[i].get_first_state());
 					}
 				}
@@ -657,8 +654,7 @@ void FrameGraph::render()
 
 					for (int i = 0; i < merged_state.size(); i++)
 					{
-						if (!cpu_state.subres[i].is_used(commandList.get()))
-							continue;
+						if (!cpu_state.subres[i].used)	continue;
 						cpu_state.subres[i].first_transition->wanted_state = merge_state(merged_state[i], cpu_state.subres[i].first_transition->wanted_state);
 						assert(cpu_state.subres[i].first_transition->wanted_state == merged_state[i]);
 					}
@@ -727,7 +723,7 @@ void FrameGraph::render()
 					auto commandList = pass->context.list;
 					if (!commandList) continue;
 
-					info.resource->prepare_state(commandList.get(), info.resource.get(), gpu_state);
+					info.resource->prepare_state(commandList.get(), gpu_state);
 				}
 			}
 		}

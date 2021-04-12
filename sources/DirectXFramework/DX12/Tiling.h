@@ -25,6 +25,7 @@ namespace DX12
 	
 
 	public:
+		HeapType tile_heap_type = HeapType::DEFAULT;
 		void load_tile(update_tiling_info& target, ivec3 pos, uint subres, bool recursive);
 		void zero_tile(update_tiling_info& target, ivec3 pos, uint subres);
 		void copy_mappings(update_tiling_info& target, ivec3 target_pos, TiledResourceManager* source, ivec3 source_pos, ivec3 size);

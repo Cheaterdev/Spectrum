@@ -357,14 +357,6 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			compiledFrame.set(compute);
 			gather.set(compute);
 
-			/*		if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
-						copy.read_buffer(gatherData.cb.resource, 0, 4 * 4, [this](const char* data, UINT64 size)
-							{
-
-								auto result = reinterpret_cast<const UINT*>(data);
-								Log::get() << result[0] << " " << result[1] << " " << result[2] << " " << result[3] << Log::endl;
-							});*/
-
 			{
 				PROFILE_GPU(L"dispach");
 
@@ -374,24 +366,8 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					dispatch_buffer.get());
 			}
 
-
-		/*	for (int i = 0; i < total; i++)
-			{
-				list.transition(commands_buffer[i]->buffer, ResourceState::INDIRECT_ARGUMENT);
-				list.transition(commands_buffer[i]->buffer->help_buffer, ResourceState::INDIRECT_ARGUMENT);
-
-			}*/
-
 		}
 
-
-	// 		if (gatherData.cb.resource->get_heap_type() == Render::HeapType::DEFAULT)
-	// 			copy.read_buffer(gatherData.cb.resource, 0, 4, [this](const char* data, UINT64 size)
-	// 				{
-	// 
-	// 					auto result = *reinterpret_cast<const UINT*>(data);
-	// 					Log::get() << "_"<<result << Log::endl;
-	// 				});
 
 		{
 			PROFILE_GPU(L"YO");

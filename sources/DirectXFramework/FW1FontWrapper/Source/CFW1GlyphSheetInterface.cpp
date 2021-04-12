@@ -247,7 +247,6 @@ namespace FW1FontWrapper
                     dstBox.bottom = dirtyRect.bottom;
                     dstBox.front = 0;
                     dstBox.back = 1;
-			//		pContext->transition(m_pTexture, Render::ResourceState::COPY_DEST);
 
                     // Update each mip-level
                     for (UINT i = 0; i < m_mipLevelCount; ++i)
@@ -284,7 +283,6 @@ namespace FW1FontWrapper
                             srcMem = nextMip;
                         }
                     }
-				//	pContext->transition(m_pTexture, Render::ResourceState::PIXEL_SHADER_RESOURCE);
 
                 }
 

@@ -91,6 +91,14 @@ namespace DX12
 		~TrackedResource();
 	};
 
+	struct ResourceContextState
+	{
+		bool used = false;
+		void reset()
+		{
+			used = false;
+		}
+	};
 	class Resource :public std::enable_shared_from_this<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
 	{
 		LEAK_TEST(Resource)
@@ -118,7 +126,7 @@ namespace DX12
 			this->name = name;
 			tracked_info->m_Resource->SetName(convert(name).c_str());
 
-			debug = name == "SMAA_edges";
+			debug = name == "GBuffer_Quality";
 
 			tracked_info->debug = debug;
 		}

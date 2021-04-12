@@ -72,10 +72,9 @@ namespace DX12
 		begin_stack = Exceptions::get_stack_trace();
 #endif
 
+		Device::get().context_generator.generate(this);
 		first_debug_log = true;
-		id = Device::get().id_generator.get();
-		static atomic_uint64_t _global_id;
-		global_id = _global_id++;
+
 
 		//       Log::get() << "begin" << Log::endl;
 		compiler.reset();
@@ -600,9 +599,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		Transitions::on_execute();
 		frame_resources = nullptr;
 
-		Device::get().id_generator.put(id);
-		id = -1;
-
+		free_tracked_objects();
+		
+		Device::get().context_generator.free(this);
 
 	}
 	
@@ -619,10 +618,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		ResourceState states = ResourceState::COMMON;
 		for (auto& r : used_resources)
 		{
-
-			states= states|r->process_transitions(result, discards, r, id, global_id);
-
-
+			states= states|r->process_transitions(result, discards, this);
 		}
 
 		auto transition_type = GetBestType(states, type);
@@ -637,14 +633,18 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	}
 	void Transitions::merge_transition(Transitions* to, Resource* resource)
 	{
-		bool is_new = resource->is_new(id, global_id);
-		if (resource->transition(this, to, resource))
+
+		
+		bool is_new = !resource->is_used(this);
+		if (resource->transition(this, to))
 		{
+			track_object(*resource);
+			
 			if (is_new)
 			{
-				use_resource(resource);
+			
 				used_resources.emplace_back(const_cast<Resource*>(resource));
-				assert(!resource->is_new(id, global_id));
+				assert(resource->is_used(this));
 			}
 		}
 	}
@@ -653,15 +653,16 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		for (auto& resource : to->used_resources)
 		{
 			
-			bool is_new = resource->is_new(id, global_id);
+			bool is_new = !resource->is_used(this);
 			if((all&&is_new)||(!all&&!is_new))
-			if (resource->transition( this, to , resource))
+			if (resource->transition( this, to))
 			{
+				track_object(*resource);
 				if (is_new)
 				{
-					use_resource(resource);
+				
 					used_resources.emplace_back(const_cast<Resource*>(resource));
-					assert(!resource->is_new(id, global_id));
+					assert(resource->is_used(this));
 				}
 			}
 		}
@@ -671,16 +672,17 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
 	{
 		transition(resource.get(), to, subres);
-	}
+	} 
 
 	void Transitions::use_resource(const Resource* resource)
 	{
-		Resource* res = const_cast<Resource*>(resource);
-		if (res->use_by(id, global_id))
+
+		auto& state = resource->get_cpu_state(this);
+		if (!state.used)
 		{
-			tracked_resources.emplace_back(res->tracked_info);
+			state.used = true;
+			used_resources.emplace_back(const_cast<Resource*>(resource));
 		}
-	
 	}
 
 	void Transitions::free_resources()
@@ -698,29 +700,16 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres)
 	{
 		if (!resource) return;
-		
-	//	assert(resource->get_heap_type() != HeapType::UPLOAD && resource->get_heap_type() != HeapType::READBACK);
-		assert(resource->get_native().Get());
+
+		use_resource(resource);
+		track_object(*resource);
+
 		CommandList* list = static_cast<CommandList*>(this); // :(
 
-		if (resource->is_new(id, global_id))
-		{
-			bool good = std::find(used_resources.begin(), used_resources.end(), resource) == used_resources.end();
-
-
-			assert(good);
-			use_resource(resource);
-			used_resources.emplace_back(const_cast<Resource*>(resource));
-#ifdef DEV
-			const_cast<Resource*>(resource)->used(list);
-#endif
-			assert(!resource->is_new(id, global_id));
-
-		}
-
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
-		resource->transition(this, resource, to, subres, id, global_id);
-
+		{
+			resource->transition(this, to, subres);
+		}
 	}
 
 	void Transitions::transition(Resource* from, Resource* to)
@@ -768,12 +757,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	void Transitions::transition_uav(Resource* resource)
 	{
-
+		track_object(*resource);
 		create_uav_transition(resource);
-	//	transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_native().Get()));
-
-		//	if (transition_count == transitions.size())
-		//		flush_transitions();
 	}
 
 	void CopyContext::copy_buffer(Resource* dest, int s_dest, Resource* source, int s_source, int size)
@@ -916,12 +901,16 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			set_signature(state->desc.root_signature);
 
 		base.set_pipeline_internal(state.get());
+
+		base.track_object(*state);
 	}
 
 	void ComputeContext::set_pso(std::shared_ptr<StateObject>& pso)
 	{
 		base.set_pipeline_internal(nullptr);
 		list->SetPipelineState1(pso->get_native().Get());
+
+		base.track_object(*pso);
 	}
 	
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
@@ -931,7 +920,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			if (pipeline)
 			{
 				compiler.SetPipelineState(pipeline->get_native().Get());
-				tracked_resources.emplace_back(pipeline->tracked_info);
+
+				track_object(*pipeline);
 			}
 			current_pipeline = pipeline;
 
@@ -1018,7 +1008,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		compiler.func([str](ID3D12GraphicsCommandList4* list)
 		{
-				::PIXBeginEvent(list, 0, str.c_str());
+			//	::PIXBeginEvent(list, 0, str.c_str());
 		});
 		//
 	}
@@ -1027,7 +1017,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		compiler.func([](ID3D12GraphicsCommandList4* list)
 			{
-				::PIXEndEvent(list);
+			//	::PIXEndEvent(list);
 			});
 		//::PIXEndEvent(m_commandList.Get());
 	}
@@ -1173,8 +1163,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		transition_points.clear();
 		used_resources.clear();
 
-		tracked_resources.clear();
-	
+
 		transition_list = nullptr;
 
 	

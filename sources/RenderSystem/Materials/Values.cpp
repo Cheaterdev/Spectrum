@@ -136,18 +136,13 @@ shader_parameter MaterialContext::get_texture(TextureSRVParams::ptr& p, shader_p
 
 std::string MaterialContext::generate_uniform_struct()
 {
-	if (uniform_struct.empty())
-		return "\n";
+
+	
 	std::string result = "struct MaterialCB\n{\n";
 	result += uniform_struct;
-
-	for (auto u : uniforms)
-	{
-		/*  result += u->type.to_string();
-		  result += " ";
-		  result += u->shader_name;
-		  result += ";\n";*/
-	}
+	
+	if (uniform_struct.empty())
+		result += "int dummy;\n";
 
 	result += "};\n";
 	

@@ -478,3 +478,21 @@ public:
         return std::array<T, N>::operator[]((std::size_t)e);
     }
 };
+///////////////////////////////////////////////
+///
+///
+/*
+
+class A
+{
+	bool used_by(helper*)
+	{
+		
+	}
+};
+
+
+class B: public helper
+{
+	std::set<A*> inserts;
+};*/
