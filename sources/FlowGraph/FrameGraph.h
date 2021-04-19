@@ -338,7 +338,7 @@ public:
 
 	std::list<std::shared_ptr<Pass>> required_passes;
 	std::list<Pass*> enabled_passes;
-	Variable<bool> optimize = Variable<bool>(false, "optimize", this);
+	Variable<bool> optimize = Variable<bool>(true, "optimize", this);
 public:
 	FrameGraph() :VariableContext(L"FrameGraph"){}
 	TaskBuilder builder;

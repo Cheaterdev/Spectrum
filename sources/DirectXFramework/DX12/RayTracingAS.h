@@ -24,8 +24,9 @@ namespace DX12
 		{
 			RaytracingBuildDescBottomInputs inputs;
 			inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-			inputs.geometry = desc;
 
+			for (auto& e : desc)
+				inputs.add_geometry(e);
 
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 

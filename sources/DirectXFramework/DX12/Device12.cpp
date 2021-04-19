@@ -56,36 +56,7 @@ namespace DX12
 
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Device::to_native(const RaytracingBuildDescBottomInputs& desc)
 	{
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
-
-		inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-		inputs.Flags = desc.Flags;
-		inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
-		inputs.NumDescs = desc.geometry.size();
-
-		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
-
-
-		for (auto& i : desc.geometry)
-		{
-			D3D12_RAYTRACING_GEOMETRY_DESC geom;
-			geom.Flags = i.Flags;
-			geom.Type = i.Type;
-			geom.Triangles.IndexBuffer = i.IndexBuffer.address;
-			geom.Triangles.IndexCount = i.IndexCount;
-			geom.Triangles.IndexFormat = i.IndexFormat;
-
-			geom.Triangles.VertexBuffer.StartAddress = i.VertexBuffer.address;
-			geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
-			geom.Triangles.VertexFormat = i.VertexFormat;
-
-			geom.Triangles.Transform3x4 = i.Transform3x4.address;
-			descs.emplace_back(geom);
-		}
-
-		inputs.pGeometryDescs = descs.data();
-
-		return inputs;
+		return desc.to_native();
 	}
 
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Device::to_native(const RaytracingBuildDescTopInputs& desc)

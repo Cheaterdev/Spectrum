@@ -100,9 +100,9 @@ namespace DX12
 
 	void CommandList::end()
 	{
-		create_transition_point();
+	//	create_transition_point(false);
 		//	id = -1;
-
+		Transitions::make_split_barriers();
 		current_pipeline = nullptr;
 
 		if (graphics) graphics->end();
@@ -116,6 +116,7 @@ namespace DX12
 	{
 		topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 		reset_tables();
+		index = IndexBufferView();
 	}
 	void GraphicsContext::end()
 	{
@@ -248,6 +249,8 @@ namespace DX12
 			get_base().transition_dsv(h.resource_info);
 
 		list->OMSetRenderTargets(c, &rt.cpu, true, h.is_valid() ? &h.cpu : nullptr);
+
+		base.create_transition_point(false);
 	}
 
 void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
@@ -267,7 +270,10 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		commit_tables();
 		flush_binds();
 		list->DrawInstanced(vertex_count, instance_count, vertex_offset, instance_offset);
+		base.create_transition_point(false);
+		
 		get_base().print_debug();
+
 	}
 	void GraphicsContext::draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
@@ -277,9 +283,12 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.setup_debug(this);
 
 		commit_tables();
+		get_base().transition(index.resource, ResourceState::INDEX_BUFFER);
+		list->IASetIndexBuffer(&index.view);
 		
 		flush_binds();
 		list->DrawIndexedInstanced(index_count, instance_count, index_offset, vertex_offset, instance_offset);
+		base.create_transition_point(false);
 		get_base().print_debug();
 	}
 
@@ -340,6 +349,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		memcpy(info.get_cpu_data(), data, size);
 		list->CopyBufferRegion(
 			resource->get_native().Get(), offset, info.resource->get_native().Get(), info.offset, size);
+		base.create_transition_point(false);
 	}
 
 	D3D12_GPU_VIRTUAL_ADDRESS UploadInfo::get_gpu_address()
@@ -465,6 +475,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		Src.PlacedFootprint.Footprint.RowPitch = res_stride;
 		Src.PlacedFootprint.Footprint.Format = Layouts.Footprint.Format;
 		list->CopyTextureRegion(&Dst, offset.x, offset.y, offset.z, &Src, nullptr);
+
+		base.create_transition_point(false);
 	}
 
 	void  GraphicsContext::set_pipeline(PipelineState::ptr state)
@@ -483,11 +495,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	}
 	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
 	{
-		base.create_transition_point();
-	//	if (base.type != CommandListType::COPY)
-			base.transition(resource, Render::ResourceState::COPY_SOURCE);
-		//else
-	//		base.transition(resource, Render::ResourceState::COMMON);
+	
 
 		UINT64 RequiredSize = 0;
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
@@ -503,6 +511,12 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			return str.get_future();
 		}
 
+		
+	base.create_transition_point();
+	//	if (base.type != CommandListType::COPY)
+			base.transition(resource, Render::ResourceState::COPY_SOURCE);
+		//else
+	//		base.transition(resource, Render::ResourceState::COMMON);
 		int res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 		UINT size = res_stride * box.y * box.z;
 		auto info = base.read_data(size, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
@@ -523,12 +537,13 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 				f(reinterpret_cast<char*>(info.get_cpu_data()), res_stride, res_stride * NumRows, info.resource->get_size());
 				result->set_value(true);
 			});
+
+		base.create_transition_point(false);
 		return result->get_future();
 	}
 
 	std::future<bool> CopyContext::read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)> f)
 	{
-		base.create_transition_point();
 		
 		auto result = std::make_shared<std::promise<bool>>();
 
@@ -538,7 +553,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			result->set_value(true);
 			return result->get_future();
 		}
-
+		
+	base.create_transition_point();
+	
 		base.transition(resource, Render::ResourceState::COPY_SOURCE);
 
 		//  auto size = resource->get_size();
@@ -550,6 +567,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 				f(reinterpret_cast<char*>(info.get_cpu_data()), size);
 				result->set_value(true);
 			});
+
+		base.create_transition_point(false);
 		return result->get_future();
 	}
 
@@ -603,6 +622,99 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		
 		Device::get().context_generator.free(this);
 
+	}
+	void Transitions::create_transition_point(bool end)
+	{
+		auto prev_point = transition_points.empty()?nullptr: &transition_points.back();
+		auto point = &transition_points.emplace_back();
+
+		if(prev_point) prev_point->next_point = point;
+		point->prev_point = prev_point;
+
+		point->start = !end;
+
+		if(end)
+		{
+			assert(point->prev_point->start);
+		}
+		compiler.func([point](ID3D12GraphicsCommandList4* list)
+			{
+				Barriers  transitions;
+
+				for (auto uav : point->uav_transitions)
+				{
+					transitions.uav(uav);
+				}
+
+				for (auto& uav : point->aliasing)
+				{
+					transitions.alias(nullptr, uav);
+				}
+
+				for (auto& transition : point->transitions)
+				{
+					auto prev_transition = transition.prev_transition;
+
+					if (!prev_transition) continue;
+
+					if (prev_transition->wanted_state == transition.wanted_state) continue;
+
+					assert(!point->start);
+					transitions.transition(transition.resource,
+						prev_transition->wanted_state,
+						transition.wanted_state,
+						transition.subres, transition.flags);
+				}
+
+				auto& native_transitions = transitions.get_native();
+				if (!native_transitions.empty())
+				{
+					list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
+				}
+
+				{
+				
+					auto& native_transitions = point->compiled_transitions.get_native();
+					if (!native_transitions.empty())
+					{
+						list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
+					}
+				}
+			
+			});
+	}
+
+
+	void Transitions::make_split_barriers()
+	{
+		return;
+		for(auto &point: transition_points)
+		{
+			for (auto& transition : point.transitions)
+			{
+				auto prev_transition = transition.prev_transition;
+
+				if (!prev_transition) continue;
+
+				if (prev_transition->wanted_state == transition.wanted_state) continue;
+
+				auto prev_point = prev_transition->point->next_point;
+
+				assert(prev_point->start);
+				prev_point->compiled_transitions.transition(transition.resource,
+					prev_transition->wanted_state,
+					transition.wanted_state,
+					transition.subres, BarrierFlags::BEGIN);
+
+				transition.flags = BarrierFlags::END;
+				/*
+				transitions.transition(transition.resource,
+					prev_transition->wanted_state,
+					transition.wanted_state,
+					transition.subres);*/
+			}
+			
+		}
 	}
 	
 	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
@@ -757,6 +869,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		}
 
 		list->CopyBufferRegion(dest->get_native().Get(), s_dest, source->get_native().Get(), s_source, size);
+		base.create_transition_point(false);
 	}
 	void CopyContext::copy_resource(Resource* dest, Resource* source)
 	{
@@ -767,6 +880,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			base.transition(dest, Render::ResourceState::COPY_DEST);
 		}
 		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
+		base.create_transition_point(false);
 	}
 	void CopyContext::copy_resource(const Resource::ptr& dest, const Resource::ptr& source)
 	{
@@ -780,6 +894,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		}
 
 		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
+		base.create_transition_point(false);
 	}
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
 	{
@@ -793,6 +908,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_native().Get(), dest_subres);
 		CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_native().Get(), source_subres);
 		list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+		base.create_transition_point(false);
 	}
 
 	void CopyContext::copy_texture( const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size)
@@ -818,6 +934,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		box.bottom = from_pos.y + size.y;
 		box.back = from_pos.z + size.z;
 		list->CopyTextureRegion(&Dst, to_pos.x, to_pos.y, to_pos.z, &Src, &box);
+		base.create_transition_point(false);
 	}
 
 
@@ -856,7 +973,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		flush_binds();
 
 		list->Dispatch(x, y, z);
+		base.create_transition_point(false);
 		get_base().print_debug();
+		
 	}
 
 
@@ -1048,6 +1167,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
+		get_base().transition(index.resource, ResourceState::INDEX_BUFFER);
+		list->IASetIndexBuffer(&index.view);
+		
 		commit_tables();
 
 		list->ExecuteIndirect(
@@ -1057,7 +1179,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			command_offset,
 			counter_buffer ? counter_buffer->get_native().Get() : nullptr,
 			counter_offset);
-
+		base.create_transition_point(false);
 		get_base().print_debug();
 	}
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
@@ -1078,7 +1200,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			command_offset,
 			counter_buffer ? counter_buffer->get_native().Get() : nullptr,
 			counter_offset);
-
+		base.create_transition_point(false);
 		get_base().print_debug();
 	}
 
@@ -1107,6 +1229,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
 		commit_tables();
 		list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+
+		base.create_transition_point(false);
 	}
 
 
@@ -1131,6 +1255,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		
 		commit_tables();
 		list->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+
+		base.create_transition_point(false);
 	}
 	void ComputeContext::set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS& table)
 	{
@@ -1140,7 +1266,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		transition_count = 0;
 	//	create_zero_transition();
-		create_transition_point();
+		create_transition_point(false);
 	}
 
 	void Transitions::on_execute()

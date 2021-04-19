@@ -25,7 +25,7 @@ namespace DX12
 
 #define DEFAULT_ALIGN 256
 
-	
+
 	class GraphicsContext;
 	class ComputeContext;
 	class CopyContext;
@@ -42,15 +42,15 @@ namespace DX12
 
 		std::byte* get_cpu_data() const;
 	};
-	
+
 	template<class LockPolicy>
 	class Uploader
 	{
 		ResourceHeapAllocator<LockPolicy> allocator;
 		friend class BufferCache;
 		std::list<ResourceHandle> handles;
-	//	std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
-//		UINT64 resource_offset;
+		//	std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
+	//		UINT64 resource_offset;
 		UINT heap_size = 0x200000;
 	protected:
 		//void reset();
@@ -81,9 +81,9 @@ namespace DX12
 		typename LockPolicy::mutex m;
 
 	public:
-		
 
-	//	UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
+
+		//	UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
 
 
 		void reset()
@@ -117,7 +117,7 @@ namespace DX12
 		}
 
 
-		
+
 		template<class ...Args>
 		UploadInfo place_raw(Args... args)
 		{
@@ -143,25 +143,25 @@ namespace DX12
 
 
 
-	
-		
+
+
 		//void write(UploadInfo& info, size_t offset, void* data, size_t size);
 
 		template<class T>
 		void write(UploadInfo& info, const std::span<T>& arg)
 		{
-			write(info,0, (void*)arg.data(), arg.size() * sizeof(T));
+			write(info, 0, (void*)arg.data(), arg.size() * sizeof(T));
 		}
 		template<class T>
 		void write(UploadInfo& info, const std::vector<T>& arg)
 		{
-			write(info,0, (void*)arg.data(), arg.size() * sizeof(T));
+			write(info, 0, (void*)arg.data(), arg.size() * sizeof(T));
 		}
 
 		template<class T>
 		void write(UploadInfo& info, const my_unique_vector<T>& arg)
 		{
-			write(info,0, (void*)arg.data(), arg.size() * sizeof(T));
+			write(info, 0, (void*)arg.data(), arg.size() * sizeof(T));
 		}
 
 		template<class T>
@@ -303,7 +303,7 @@ namespace DX12
 		FrameResources::ptr begin_frame();
 	};
 
-	class CommandListBase: public StateContext
+	class CommandListBase : public StateContext
 	{
 	protected:
 
@@ -311,10 +311,10 @@ namespace DX12
 
 		LEAK_TEST(CommandListBase)
 
-		std::vector<std::function<void()>> on_execute_funcs;
+			std::vector<std::function<void()>> on_execute_funcs;
 
 		std::list<FenceWaiter> waits;
-		
+
 		CommandListCompilerDelayed compiler;
 
 		std::list<TrackedObject::ptr> tracked_resources;
@@ -357,12 +357,16 @@ namespace DX12
 		std::list<Resource*> uav_transitions;
 		std::list<Resource*> aliasing;
 
+		Barriers  compiled_transitions;
+
+		bool start = false;
+		TransitionPoint* prev_point = nullptr;
+		TransitionPoint* next_point = nullptr;
 	};
 
-	enum class TransitionType:int
+	enum class TransitionType :int
 	{
 		ZERO,
-		FIRST,
 		LAST
 	};
 	class Transitions : public virtual CommandListBase
@@ -370,7 +374,7 @@ namespace DX12
 
 
 		std::list<Resource*> used_resources;
-	
+
 		std::shared_ptr<TransitionCommandList> transition_list;
 
 		friend class SignatureDataSetter;
@@ -381,76 +385,35 @@ namespace DX12
 		void begin();
 		void on_execute();
 		std::list<TransitionPoint> transition_points;
-		TransitionPoint zero_tranzition;
 
-		void create_transition_point()
-		{
-			auto point = &transition_points.emplace_back();
-			bool first = transition_points.size() == 1;
-		//	auto &point = transition_points.back();
-			compiler.func([point, first](ID3D12GraphicsCommandList4* list)
-			{
-					Barriers  transitions;
-				
-					for(auto uav:point->uav_transitions)
-				{
-						transitions.uav(uav);
-				}
+		void create_transition_point(bool end = true);
 
-					for (auto& uav : point->aliasing)
-					{
-						transitions.alias(nullptr, uav);
-					}
-
-					for (auto& transition : point->transitions)
-					{
-						auto prev_transition = transition.prev_transition;
-
-						if (!prev_transition) 
-							continue;
-						
-						if(prev_transition->wanted_state == transition.wanted_state)
-							continue;
-
-						assert((((UINT)prev_transition->wanted_state) >= 0) && (((UINT)prev_transition->wanted_state) <= (UINT)ResourceState::RAYTRACING_STRUCTURE));
-						assert((((UINT)transition.wanted_state) >= 0) && (((UINT)transition.wanted_state) <= (UINT)ResourceState::RAYTRACING_STRUCTURE));
-
-						transitions.transition(transition.resource,
-							prev_transition->wanted_state,
-							transition.wanted_state,
-							transition.subres);
-					}
-
-					auto& native_transitions = transitions.get_native();
-					if (!native_transitions.empty())
-					{
-						list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
-					}
-			});
-		}
+		void make_split_barriers();
 
 		void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 		void transition(const Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-	
+
 	public:
 		void free_resources();
 
 		UINT transition_count = 0;
-
+		TransitionPoint* start_transition;
 		Transition* create_transition(const Resource* resource, UINT subres, ResourceState state, TransitionType type = TransitionType::LAST)
 		{
 			TransitionPoint* point = nullptr;
 
-			if (type == TransitionType::FIRST) point = &transition_points.front();
 			if (type == TransitionType::LAST) point = &transition_points.back();
-			if (type == TransitionType::ZERO) point = &zero_tranzition;
-	
-			Transition&  transition = point->transitions.emplace_back();
-			
+			if (type == TransitionType::ZERO) point = &transition_points.front();
+
+
+			if (type == TransitionType::LAST) 			assert(!point->start);
+			Transition& transition = point->transitions.emplace_back();
+
 			transition.resource = const_cast<Resource*>(resource);
 			transition.subres = subres;
 			transition.wanted_state = state;
-			
+
+			transition.point = point;
 			return &transition;
 		}
 
@@ -478,9 +441,14 @@ namespace DX12
 
 		void transition_present(const Resource* resource_ptr)
 		{
+
+			create_transition_point();
+			
 			transition(resource_ptr, ResourceState::PRESENT, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+
+			create_transition_point(false);
 		}
-		
+
 		void transition_rtv(const ResourceInfo* info)
 		{
 			assert(info->type == HandleType::RTV);
@@ -615,7 +583,7 @@ namespace DX12
 			auto& desc = info->resource_ptr->get_desc();
 			UINT total = desc.CalcSubresource(desc.MipLevels - 1, desc.ArraySize() - 1, desc.Depth() - 1);
 
-			
+
 			ResourceState target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
 
 			if (type == CommandListType::DIRECT)
@@ -728,7 +696,7 @@ namespace DX12
 
 		int id;
 
-		
+
 	public:
 		CommandListType queue_type;
 		GPUTimer();
@@ -769,10 +737,10 @@ namespace DX12
 	};
 
 
-	class Eventer : public virtual CommandListBase,  public TimedRoot
+	class Eventer : public virtual CommandListBase, public TimedRoot
 	{
-	
- 		std::list<std::wstring> names;
+
+		std::list<std::wstring> names;
 		TimedBlock* current;
 
 		virtual  void on_start(Timer* timer) override;
@@ -818,25 +786,25 @@ namespace DX12
 
 		std::list<FenceWaiter> waits;
 
-	
+
 		void on_send(FenceWaiter fence)
 		{
-		
-		
-			
+
+
+
 			execute_fence.set_value(fence);
-			
+
 			for (auto&& e : on_fence)
 				e(fence);
-			
+
 			on_fence.clear();
 		}
 	protected:
 		CommandListCompiled compiled;
-	
 
 
-		
+
+
 	public:
 		void compile();
 		void when_send(std::function<void(FenceWaiter)> e)
@@ -873,7 +841,7 @@ namespace DX12
 		friend class GraphicsContext;
 		friend class ComputeContext;
 
-		
+
 		// TODO: make references?
 
 		virtual void on_execute();
@@ -890,7 +858,7 @@ namespace DX12
 		std::list<update_tiling_info> tile_updates;
 
 
-	
+
 		void set_pipeline_internal(PipelineStateBase* pipeline);
 
 		void set_heap(DescriptorHeapType type, DescriptorHeap::ptr heap)
@@ -908,11 +876,11 @@ namespace DX12
 	public:
 
 		void update_tilings(update_tiling_info&& info)
-	{
-		tile_updates.emplace_back(std::move(info));
+		{
+			tile_updates.emplace_back(std::move(info));
 
-		track_object(*info.resource);
-	}
+			track_object(*info.resource);
+		}
 
 		FrameResources::ptr frame_resources;
 		void setup_debug(SignatureDataSetter*);
@@ -967,9 +935,10 @@ namespace DX12
 		{
 			create_transition_point();
 			transition_uav(h.resource_info);
-			
+
 			auto handle = get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
 			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, h.resource_info->resource_ptr->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
+			create_transition_point(false);
 		}
 
 
@@ -978,6 +947,7 @@ namespace DX12
 			create_transition_point();
 			transition_rtv(h.resource_info);
 			get_native_list()->ClearRenderTargetView(h.cpu, ClearColor.data(), 0, nullptr);
+			create_transition_point(false);
 		}
 
 		template<class T>
@@ -993,6 +963,7 @@ namespace DX12
 			transition_dsv(dsv.resource_info);
 
 			get_native_list()->ClearDepthStencilView(dsv.cpu, D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
+			create_transition_point(false);
 		}
 
 		void clear_depth(Handle dsv, float depth = 0)
@@ -1001,6 +972,7 @@ namespace DX12
 			transition_dsv(dsv.resource_info);
 
 			get_native_list()->ClearDepthStencilView(dsv.cpu, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
+			create_transition_point(false);
 		}
 
 
@@ -1052,12 +1024,12 @@ namespace DX12
 
 		friend class CommandList;
 
-	
+
 	protected:
 		CommandList& base;
 		SignatureDataSetter(CommandList& base) :base(base) {
 			tables.resize(32); // !!!!!!!!!!!
-			}
+		}
 
 		virtual void set(UINT, const HandleTableLight&) = 0;
 		virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
@@ -1069,17 +1041,17 @@ namespace DX12
 			{
 				row.dirty = false;
 			}
-			
+
 		}
 
 
 		void commit_tables()
 		{
-			for(auto &row:tables)
+			for (auto& row : tables)
 			{
 				if (!row.dirty) continue;
 
-				auto &table = row.table;
+				auto& table = row.table;
 				auto type = row.type;
 				for (UINT i = 0; i < (UINT)table.get_count(); ++i)
 				{
@@ -1087,10 +1059,10 @@ namespace DX12
 					if (h.resource_info && h.resource_info->resource_ptr)
 					{
 
-							if (type == HandleType::SRV)	get_base().transition_srv(h.resource_info);
-							else if (type == HandleType::UAV)	get_base().transition_uav(h.resource_info);
-							else assert(false);
-					
+						if (type == HandleType::SRV)	get_base().transition_srv(h.resource_info);
+						else if (type == HandleType::UAV)	get_base().transition_uav(h.resource_info);
+						else assert(false);
+
 					}
 				}
 
@@ -1108,9 +1080,9 @@ namespace DX12
 		template<HandleType type>
 		void set_table(UINT index, const HandleTableLight& table)
 		{
-		
-			
-			auto &row = tables[index];
+
+
+			auto& row = tables[index];
 
 			row.type = type;
 			row.table = table;
@@ -1118,9 +1090,9 @@ namespace DX12
 			set(index, table);
 		}
 
-		
+
 		void set_cb(UINT index, const ResourceAddress& address)
-		{	
+		{
 			if (address.resource)
 			{
 				get_base().track_object(*address.resource);
@@ -1177,9 +1149,9 @@ namespace DX12
 		void end();
 		void on_execute();
 
-		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;		
+		void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
 		void set(UINT, const HandleTableLight&)override;
-
+		IndexBufferView index;
 	public:
 
 		CommandList& get_base()
@@ -1219,7 +1191,7 @@ namespace DX12
 
 		void set_rtv(std::initializer_list<Handle> rt, Handle h);
 		void set_rtv(const HandleTable&, Handle);
-		void set_rtv(int c, Handle rt, Handle h);	
+		void set_rtv(int c, Handle rt, Handle h);
 		void set_rtv(const HandleTableLight&, Handle);
 
 		void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
@@ -1260,7 +1232,7 @@ namespace DX12
 		}
 		template<class T, size_t N>
 		constexpr size_t size(T(&)[N]) { return N; }
-		
+
 		template<class ...Handles>
 		void set_rtvs(const Handle& h, Handles... rtvlist)
 		{
@@ -1268,14 +1240,14 @@ namespace DX12
 			auto f = [&](Handle h) {
 				get_base().transition_rtv(h.resource_info);
 			};
-		
+
 			(f(std::forward<Handles>(rtvlist)), ...);
 
-			
+
 			if (h.is_valid())
 				get_base().transition_dsv(h.resource_info);
 
-		
+
 			CD3DX12_CPU_DESCRIPTOR_HANDLE ar[] = { (rtvlist.cpu)... };
 			list->OMSetRenderTargets(size(ar), ar, false, h.is_valid() ? &h.cpu : nullptr);
 		}
@@ -1288,12 +1260,12 @@ namespace DX12
 
 		void set_index_buffer(IndexBufferView view)
 		{
-			get_base().transition(view.resource, ResourceState::INDEX_BUFFER);
-			list->IASetIndexBuffer(&view.view);
+			index = view;
+	
 		}
 
 
-		
+
 		void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
 		void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
 		void execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset = 0, Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
@@ -1335,11 +1307,47 @@ namespace DX12
 		ResourceAddress SourceAccelerationStructureData;
 		ResourceAddress ScratchAccelerationStructureData;
 	};
-	
+
 	struct RaytracingBuildDescBottomInputs
 	{
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
+
+
+
+		void add_geometry(GeometryDesc i)
+		{
+			D3D12_RAYTRACING_GEOMETRY_DESC geom;
+			geom.Flags = i.Flags;
+			geom.Type = i.Type;
+			geom.Triangles.IndexBuffer = i.IndexBuffer.address;
+			geom.Triangles.IndexCount = i.IndexCount;
+			geom.Triangles.IndexFormat = i.IndexFormat;
+
+			geom.Triangles.VertexBuffer.StartAddress = i.VertexBuffer.address;
+			geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
+			geom.Triangles.VertexFormat = i.VertexFormat;
+
+			geom.Triangles.Transform3x4 = i.Transform3x4.address;
+			descs.emplace_back(geom);
+
+			geometry.emplace_back(i);
+		}
+		
+		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
 		std::vector<GeometryDesc> geometry;
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native() const
+		{
+			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
+
+			inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+			inputs.Flags = Flags;
+			inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
+			inputs.NumDescs = descs.size();
+			inputs.pGeometryDescs = descs.data();
+
+			return inputs;
+		}
 	};
 
 	struct RaytracingBuildDescTopInputs
@@ -1348,14 +1356,14 @@ namespace DX12
 		UINT NumDescs;
 		ResourceAddress instances;
 	};
-	
+
 	struct RaytracingBuildDescStructure
 	{
 		ResourceAddress DestAccelerationStructureData;
 		ResourceAddress SourceAccelerationStructureData;
 		ResourceAddress ScratchAccelerationStructureData;
 	};
-	
+
 
 	class ComputeContext : public SignatureDataSetter
 	{
@@ -1384,8 +1392,8 @@ namespace DX12
 
 
 
-	
-		
+
+
 		virtual void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) override;
 
 
@@ -1425,7 +1433,7 @@ namespace DX12
 			dispatchDesc.HitGroupTable.StrideInBytes = sizeof(Hit);
 
 			dispatchDesc.MissShaderTable.StartAddress = miss_buffer.address;
-			dispatchDesc.MissShaderTable.SizeInBytes = sizeof(Miss)* miss_count;
+			dispatchDesc.MissShaderTable.SizeInBytes = sizeof(Miss) * miss_count;
 			dispatchDesc.MissShaderTable.StrideInBytes = sizeof(Miss);
 
 			dispatchDesc.RayGenerationShaderRecord.StartAddress = raygen_buffer.address;
@@ -1433,7 +1441,7 @@ namespace DX12
 			dispatchDesc.Width = size.x;
 			dispatchDesc.Height = size.y;
 			dispatchDesc.Depth = 1;
-		
+
 			base.create_transition_point();
 
 			base.transition(hit_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
@@ -1442,6 +1450,8 @@ namespace DX12
 
 			commit_tables();
 			list->DispatchRays(&dispatchDesc);
+
+			base.create_transition_point(false);
 		}
 
 		void set_pso(std::shared_ptr<StateObject>& pso);
@@ -1457,7 +1467,7 @@ namespace DX12
 		using ptr = std::shared_ptr<TransitionCommandList>;
 		inline CommandListType get_type() { return type; }
 		TransitionCommandList(CommandListType type);
-		void create_transition_list(const Barriers & transitions, std::vector<Resource*> &duscards);
+		void create_transition_list(const Barriers& transitions, std::vector<Resource*>& duscards);
 		ComPtr<ID3D12GraphicsCommandList4> get_native();
 	};
 }

@@ -127,6 +127,12 @@ namespace DX12
 		return merged;
 	}
 
+	enum class BarrierFlags: UINT
+	{
+		BEGIN = 1,
+		END = 2,
+		SINGLE = BEGIN| END
+	};
 	class Barriers
 	{
 		std::vector<D3D12_RESOURCE_BARRIER> native;
@@ -143,11 +149,12 @@ namespace DX12
 		void uav(Resource* resource);
 		void alias(Resource* from, Resource* to);
 
-		void transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres);
+		void transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags = BarrierFlags::SINGLE);
 
 	};
 
-
+	class TransitionPoint;
+	
 	struct Transition
 	{
 		Resource* resource = nullptr;
@@ -155,6 +162,10 @@ namespace DX12
 		UINT subres = -1;
 
 		Transition* prev_transition = nullptr;
+
+		TransitionPoint* point = nullptr;
+
+		BarrierFlags flags = BarrierFlags::SINGLE;
 	};
 
 

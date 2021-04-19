@@ -40,15 +40,21 @@ namespace DX12
 		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(native_from, native_to));
 	}
 
-	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres)
+	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags)
 	{
 		assert(before != ResourceState::UNKNOWN);
 		assert(after != ResourceState::UNKNOWN);
 
+		D3D12_RESOURCE_BARRIER_FLAGS native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
+
+		if(flags==BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
+		if (flags == BarrierFlags::END) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
+
 		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(resource->get_native().Get(),
 			static_cast<D3D12_RESOURCE_STATES>(before),
 			static_cast<D3D12_RESOURCE_STATES>(after),
-			subres));
+			subres,
+			native_flags));
 
 		validate();
 	}
@@ -172,7 +178,7 @@ namespace DX12
 			if (!subres_cpu.used)
 			{
 				subres_cpu.used = true;
-				last_transition = subres_cpu.first_transition = subres_cpu.last_transition = list->create_transition(resource, subres, state, TransitionType::FIRST);
+				last_transition = subres_cpu.first_transition = subres_cpu.last_transition = list->create_transition(resource, subres, state);
 			}
 			else
 			{
