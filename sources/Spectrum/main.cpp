@@ -1235,7 +1235,6 @@ public:
 		};
 
 		graph.start_new_frame();
-		graph.optimize = !GetAsyncKeyState(VK_F7);
 		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame());
 
 

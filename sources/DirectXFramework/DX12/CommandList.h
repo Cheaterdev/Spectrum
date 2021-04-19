@@ -261,7 +261,6 @@ namespace DX12
 	};
 
 
-
 	class StaticCompiledGPUData :public Singleton<StaticCompiledGPUData>, public GPUCompiledManager<Thread::Lockable>
 	{
 	public:
@@ -330,7 +329,7 @@ namespace DX12
 		void track_object(const Trackable<T>& obj)
 		{
 			auto& state = obj.get_state(this);
-	//		if (!state.used)
+			if (!state.used)
 			{
 				state.used = true;
 				tracked_resources.emplace_back(obj.tracked_info);
@@ -391,16 +390,16 @@ namespace DX12
 		//	auto &point = transition_points.back();
 			compiler.func([point, first](ID3D12GraphicsCommandList4* list)
 			{
-
-					std::vector<D3D12_RESOURCE_BARRIER> transitions;
+					Barriers  transitions;
+				
 					for(auto uav:point->uav_transitions)
 				{
-						transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(uav->get_native().Get()));
+						transitions.uav(uav);
 				}
 
 					for (auto& uav : point->aliasing)
 					{
-						transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(nullptr, uav->get_native().Get()));
+						transitions.alias(nullptr, uav);
 					}
 
 					for (auto& transition : point->transitions)
@@ -413,18 +412,19 @@ namespace DX12
 						if(prev_transition->wanted_state == transition.wanted_state)
 							continue;
 
-						if (transition.resource->debug)
-							continue;
-						transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(transition.resource->get_native().Get(),
-							static_cast<D3D12_RESOURCE_STATES>(prev_transition->wanted_state),
-							static_cast<D3D12_RESOURCE_STATES>(transition.wanted_state),
-							transition.subres));
+						assert((((UINT)prev_transition->wanted_state) >= 0) && (((UINT)prev_transition->wanted_state) <= (UINT)ResourceState::RAYTRACING_STRUCTURE));
+						assert((((UINT)transition.wanted_state) >= 0) && (((UINT)transition.wanted_state) <= (UINT)ResourceState::RAYTRACING_STRUCTURE));
+
+						transitions.transition(transition.resource,
+							prev_transition->wanted_state,
+							transition.wanted_state,
+							transition.subres);
 					}
-				
-					if (!transitions.empty())
+
+					auto& native_transitions = transitions.get_native();
+					if (!native_transitions.empty())
 					{
-						list->ResourceBarrier((UINT)transitions.size(), transitions.data());
-						transitions.clear();
+						list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
 					}
 			});
 		}
@@ -437,22 +437,20 @@ namespace DX12
 
 		UINT transition_count = 0;
 
-		Transition* create_transition(const Resource* resource, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, TransitionType type = TransitionType::LAST)
+		Transition* create_transition(const Resource* resource, UINT subres, ResourceState state, TransitionType type = TransitionType::LAST)
 		{
 			TransitionPoint* point = nullptr;
 
 			if (type == TransitionType::FIRST) point = &transition_points.front();
 			if (type == TransitionType::LAST) point = &transition_points.back();
 			if (type == TransitionType::ZERO) point = &zero_tranzition;
-
-
-		
+	
 			Transition&  transition = point->transitions.emplace_back();
 			
-		//	transition.index = 0æ..first?0:transition_points.size() - 1;
 			transition.resource = const_cast<Resource*>(resource);
 			transition.subres = subres;
-
+			transition.wanted_state = state;
+			
 			return &transition;
 		}
 
@@ -907,7 +905,9 @@ namespace DX12
 
 		}
 
-	public:	void update_tilings(update_tiling_info&& info)
+	public:
+
+		void update_tilings(update_tiling_info&& info)
 	{
 		tile_updates.emplace_back(std::move(info));
 
@@ -916,14 +916,9 @@ namespace DX12
 
 		FrameResources::ptr frame_resources;
 		void setup_debug(SignatureDataSetter*);
-
 		void print_debug();
-
 		bool first_debug_log = true;
 		std::shared_ptr<GPUBuffer> debug_buffer;
-
-		//	DynamicDescriptor<DescriptorHeapType::CBV_SRV_UAV, Free, DescriptorHeapFlags::SHADER_VISIBLE> srv_descriptors;
-		//	DynamicDescriptor<DescriptorHeapType::SAMPLER, Free, DescriptorHeapFlags::SHADER_VISIBLE> smp_descriptors;
 
 		GraphicsContext& get_graphics();
 		ComputeContext& get_compute();
@@ -1462,7 +1457,7 @@ namespace DX12
 		using ptr = std::shared_ptr<TransitionCommandList>;
 		inline CommandListType get_type() { return type; }
 		TransitionCommandList(CommandListType type);
-		void create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER>& transitions, std::vector<Resource*> &duscards);
+		void create_transition_list(const Barriers & transitions, std::vector<Resource*> &duscards);
 		ComPtr<ID3D12GraphicsCommandList4> get_native();
 	};
 }

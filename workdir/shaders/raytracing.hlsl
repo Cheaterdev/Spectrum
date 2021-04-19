@@ -258,7 +258,12 @@ Texture2D<float2> speed_tex = voxel_screen.GetGbuffer().GetMotion();
 	float raw_z = voxel_screen.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 
-
+	if (raw_z == 1)
+	{
+		tex_noise[itc] = 0;
+		tex_frames[itc] = 0;
+		return;
+	}
 	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
 
 	//float3 lightDir = frame.GetSunDir();

@@ -609,10 +609,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		PROFILE(L"fix_pretransitions");
 
-		std::vector<D3D12_RESOURCE_BARRIER> result;
+		Barriers result;
 		std::vector<Resource*> discards;
-
-		result.reserve(used_resources.size());
 
 		
 		ResourceState states = ResourceState::COMMON;
@@ -623,7 +621,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 		auto transition_type = GetBestType(states, type);
 
-		if (result.size())
+		if (result)
 		{
 			transition_list = Device::get().get_queue(transition_type)->get_transition_list();
 			transition_list->create_transition_list(result, discards);
@@ -634,36 +632,23 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	void Transitions::merge_transition(Transitions* to, Resource* resource)
 	{
 
-		
-		bool is_new = !resource->is_used(this);
+	
 		if (resource->transition(this, to))
 		{
 			track_object(*resource);
-			
-			if (is_new)
-			{
-			
-				used_resources.emplace_back(const_cast<Resource*>(resource));
-				assert(resource->is_used(this));
-			}
+			use_resource(resource);
 		}
 	}
 	void Transitions::prepare_transitions(Transitions* to, bool all)
 	{
 		for (auto& resource : to->used_resources)
 		{
-			
 			bool is_new = !resource->is_used(this);
 			if((all&&is_new)||(!all&&!is_new))
-			if (resource->transition( this, to))
+			if (resource->transition(this, to))
 			{
 				track_object(*resource);
-				if (is_new)
-				{
-				
-					used_resources.emplace_back(const_cast<Resource*>(resource));
-					assert(resource->is_used(this));
-				}
+				use_resource(resource);
 			}
 		}
 	}
@@ -701,13 +686,13 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		if (!resource) return;
 
-		use_resource(resource);
 		track_object(*resource);
 
 		CommandList* list = static_cast<CommandList*>(this); // :(
 
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
+			use_resource(resource);
 			resource->transition(this, to, subres);
 		}
 	}
@@ -715,6 +700,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	void Transitions::transition(Resource* from, Resource* to)
 	{
 
+		track_object(*to);
 		create_aliasing_transition(to);
 	/*	transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from ? from->get_native().Get() : nullptr, to->get_native().Get()));
 
@@ -1189,11 +1175,13 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		m_commandList->SetName(L"TransitionCommandList");
 	}
 
-	void TransitionCommandList::create_transition_list(const std::vector<D3D12_RESOURCE_BARRIER>& transitions, std::vector<Resource*>& discards)
+	void TransitionCommandList::create_transition_list(const Barriers& transitions, std::vector<Resource*>& discards)
 	{
 		m_commandAllocator->Reset();
 		m_commandList->Reset(m_commandAllocator.Get(), nullptr);
-		m_commandList->ResourceBarrier(static_cast<UINT>(transitions.size()), transitions.data());
+
+		auto &native_transitions = transitions.get_native();
+		m_commandList->ResourceBarrier(static_cast<UINT>(native_transitions.size()), native_transitions.data());
 
 		for (auto e : discards)
 		{

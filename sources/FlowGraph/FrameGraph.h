@@ -331,17 +331,18 @@ struct CreationContext
 
 //ENABLE_ENUM(wtf);
 
-class FrameGraph: public CreationContext
+class FrameGraph: public CreationContext, VariableContext
 {
 public:
 	std::list<std::shared_ptr<Pass>> passes;
 
 	std::list<std::shared_ptr<Pass>> required_passes;
 	std::list<Pass*> enabled_passes;
-
+	Variable<bool> optimize = Variable<bool>(false, "optimize", this);
 public:
+	FrameGraph() :VariableContext(L"FrameGraph"){}
 	TaskBuilder builder;
-	bool optimize = true;
+	
 	template<class T>
 	void pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 	{

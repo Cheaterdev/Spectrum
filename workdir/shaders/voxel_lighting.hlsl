@@ -131,7 +131,7 @@ float4 getGI(float3 Pos, float3 Normal)
 	Color += get_direction(Pos, Normal, normalize(Normal - tangent + right), k, a);//trace(Pos + k*normalize(Normal - tangent + right), normalize(Normal - tangent + right), a);
 																				   //  Color /= 3.14f;
 																				   //Color *= getAO(Pos-0*Normal, Normal);
-	return  Color / 8;
+	return  Color / 4;
 
 }
 

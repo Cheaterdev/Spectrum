@@ -611,7 +611,7 @@ void FrameGraph::render()
 
 		
 		}*/
-		if(!GetAsyncKeyState(VK_F2))
+		if(optimize)
 		for (auto& pair : builder.alloc_resources)
 		{
 			auto &info = pair.second;
@@ -620,10 +620,16 @@ void FrameGraph::render()
 			auto& resource = info.resource;
 
 			if (!resource) continue;
-			
+
+	//		if(false)
 			for(auto state:info.states)
-			{				
-				std::vector<Render::ResourceState> merged_state;
+			{
+
+			
+					Render::SubResourcesGPU merged_state;
+
+					merged_state.subres.resize(resource->get_subres_count());
+			
 				
 				for(auto pass:state.passes)
 				{
@@ -632,17 +638,14 @@ void FrameGraph::render()
 					
 					auto &cpu_state = resource->get_cpu_state(commandList.get());
 
-					if (merged_state.empty())
-					{
-						merged_state.resize(cpu_state.subres.size(), Render::ResourceState::COMMON);
-					}
 
-
+					merged_state.merge(cpu_state);
+					/*
 					for (int i = 0; i < merged_state.size();i++)
 					{
 						if (!cpu_state.subres[i].used) continue;
 						merged_state[i] = merge_state(merged_state[i], cpu_state.subres[i].get_first_state());
-					}
+					}*/
 				}
 
 				for (auto pass : state.passes)
@@ -652,12 +655,13 @@ void FrameGraph::render()
 
 					auto& cpu_state = resource->get_cpu_state(commandList.get());
 
-					for (int i = 0; i < merged_state.size(); i++)
+					cpu_state.prepare_for(merged_state);
+					/*for (int i = 0; i < merged_state.size(); i++)
 					{
 						if (!cpu_state.subres[i].used)	continue;
 						cpu_state.subres[i].first_transition->wanted_state = merge_state(merged_state[i], cpu_state.subres[i].first_transition->wanted_state);
 						assert(cpu_state.subres[i].first_transition->wanted_state == merged_state[i]);
-					}
+					}*/
 				}
 
 				// TODO: propagate first state to next writer

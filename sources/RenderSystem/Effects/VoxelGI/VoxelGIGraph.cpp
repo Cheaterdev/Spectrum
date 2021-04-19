@@ -661,7 +661,7 @@ void VoxelGI::screen(FrameGraph& graph)
 				MipMapGenerator::get().generate(compute, noisy_output);
 			}
 
-
+				if(denoiser)
 			{
 				PROFILE_GPU(L"history");
 				compute.set_pipeline(GetPSO<PSOS::DenoiserHistoryFix>());

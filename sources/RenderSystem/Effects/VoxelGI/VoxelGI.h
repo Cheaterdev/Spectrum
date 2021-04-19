@@ -263,6 +263,10 @@ public:
 	Variable<bool> use_rtx = Variable<bool>(true, "use_rtx", this);
 	Variable<bool> multiple_bounces = Variable<bool>(true, "multiple_bounces", this);
 
+
+	Variable<bool> denoiser = Variable<bool>(true, "denoiser", this);
+
+	
 	void resize(ivec2 size);
 	void start_new(Render::CommandList& list);
 
