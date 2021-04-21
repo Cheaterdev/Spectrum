@@ -1081,7 +1081,8 @@ namespace DX12
 		void set_table(UINT index, const HandleTableLight& table)
 		{
 
-
+			assert(table.valid());
+			
 			auto& row = tables[index];
 
 			row.type = type;

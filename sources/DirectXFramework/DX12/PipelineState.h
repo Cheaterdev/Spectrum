@@ -320,9 +320,9 @@ namespace DX12
 	};
 	class PipelineStateBase: public Trackable<TrackedPipeline>
 	{
-
-	protected:
 	
+	protected:
+		UsedSlots slots;
 		
 		std::string cache;
 

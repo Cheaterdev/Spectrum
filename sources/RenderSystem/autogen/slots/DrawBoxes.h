@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\DrawBoxes.h"
 namespace Slots {
-	struct DrawBoxes:public DataHolder<Table::DrawBoxes,DefaultLayout::Instance1>
+	struct DrawBoxes:public DataHolder<SlotID::DrawBoxes,Table::DrawBoxes,DefaultLayout::Instance1>
 	{
 		SRV srv;
 		UAV uav;

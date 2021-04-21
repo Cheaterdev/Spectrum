@@ -79,15 +79,3 @@ struct Raytracing
 
 
 }
-
-RaytracingGroup shadow_group
-{
-
-
-}
-
-RaytracingPSO shadows
-{
-
-
-}

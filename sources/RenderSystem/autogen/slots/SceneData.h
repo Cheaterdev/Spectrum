@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\SceneData.h"
 namespace Slots {
-	struct SceneData:public DataHolder<Table::SceneData,FrameLayout::SceneData>
+	struct SceneData:public DataHolder<SlotID::SceneData,Table::SceneData,FrameLayout::SceneData>
 	{
 		SRV srv;
 		Render::Bindless bindless;

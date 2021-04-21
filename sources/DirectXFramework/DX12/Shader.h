@@ -1,11 +1,55 @@
 #pragma once
 
+std::map<UINT, UINT> get_used_slots(std::string slot_name);
 
 namespace DX12
 {
     class PipelineStateBase;
 
+class UsedSlots
+{
+    std::map<UINT, UINT> slots_usage;
+public:
 
+	void merge(resource_file_depender & depender)
+	{
+        for (auto& d : depender.get_files())
+        {
+            auto autogen_start = d.file_name.find(L"autogen");
+            if (autogen_start != std::wstring::npos)
+            {
+                auto autogen_end = autogen_start + 6;
+
+                auto last_slash = d.file_name.find_first_of(L"\\/", autogen_end);
+
+                if (last_slash == autogen_end + 1)
+                {
+                    auto point = d.file_name.find(L".", last_slash);
+
+                    auto name = d.file_name.substr(last_slash + 1, point - last_slash - 1);
+
+                    slots_usage.merge(get_used_slots(convert(name)));
+                }
+            }
+        }
+	}
+    void merge(UsedSlots& other)
+	{
+
+        slots_usage.merge(other.slots_usage);
+	}
+void clear()
+	{
+    slots_usage.clear();
+	}
+private:
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int)
+    {
+        ar& NVP(slots_usage);
+    }
+};
 
     template<class _shader_type>
     class Shader : public resource_manager<_shader_type, D3D::shader_header>
@@ -63,7 +107,7 @@ namespace DX12
         public:
             static Cache<std::string, size_t> shader_ids;
 
-    	
+            UsedSlots slots_usage;
             Events::Event<void> on_change;
             const MD5& get_hash() const
             {
@@ -102,6 +146,7 @@ namespace DX12
 				result->own_id();
                 result->compile();
 				result->hash = MD5(result->blob);
+                result->slots_usage.merge(depender);
 				return result;
             }
 
@@ -134,6 +179,9 @@ namespace DX12
                 result->compile();
                 result->own_id();
                 result->hash = MD5(result->blob);
+                result->slots_usage.merge(depender);
+           
+            
                 return result;
             }
         private:
@@ -144,7 +192,8 @@ namespace DX12
                 ar& NVP(blob);
                 ar& NVP(reflection);
                 ar& NVP(hash);
-
+                ar& NVP(slots_usage);
+            	
                 if (Archive::is_loading::value)
                 {
                     own_id();

@@ -179,6 +179,8 @@ class resource_file_depender
 
 		bool need_update();
 	private:
+
+		inline const std::wstring& get_name() const { return file_name; }
 		friend class boost::serialization::access;
 		template<class Archive>
 		void serialize(Archive& ar, const unsigned int)
@@ -188,6 +190,9 @@ class resource_file_depender
 	};
 	std::vector<depender> files;
 public:
+
+	inline const std::vector<depender>& get_files() const { return files; }
+
 	void add_depend(std::shared_ptr<file> _file);
 	bool need_update();
 	void clear();

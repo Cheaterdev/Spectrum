@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\LineRender.h"
 namespace Slots {
-	struct LineRender:public DataHolder<Table::LineRender,DefaultLayout::Instance0>
+	struct LineRender:public DataHolder<SlotID::LineRender,Table::LineRender,DefaultLayout::Instance0>
 	{
 		SRV srv;
 		LineRender(): DataHolder(srv){}

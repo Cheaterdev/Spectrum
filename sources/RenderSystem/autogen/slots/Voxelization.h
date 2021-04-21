@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\Voxelization.h"
 namespace Slots {
-	struct Voxelization:public DataHolder<Table::Voxelization,DefaultLayout::Instance2>
+	struct Voxelization:public DataHolder<SlotID::Voxelization,Table::Voxelization,DefaultLayout::Instance2>
 	{
 		CB cb;
 		UAV uav;

@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\SMAA_Blend.h"
 namespace Slots {
-	struct SMAA_Blend:public DataHolder<Table::SMAA_Blend,DefaultLayout::Instance1>
+	struct SMAA_Blend:public DataHolder<SlotID::SMAA_Blend,Table::SMAA_Blend,DefaultLayout::Instance1>
 	{
 		SRV srv;
 		SMAA_Blend(): DataHolder(srv){}

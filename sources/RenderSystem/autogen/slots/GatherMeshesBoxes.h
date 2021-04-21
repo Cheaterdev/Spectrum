@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\GatherMeshesBoxes.h"
 namespace Slots {
-	struct GatherMeshesBoxes:public DataHolder<Table::GatherMeshesBoxes,DefaultLayout::Instance1>
+	struct GatherMeshesBoxes:public DataHolder<SlotID::GatherMeshesBoxes,Table::GatherMeshesBoxes,DefaultLayout::Instance1>
 	{
 		SRV srv;
 		UAV uav;

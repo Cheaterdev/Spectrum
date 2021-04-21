@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\Raytracing.h"
 namespace Slots {
-	struct Raytracing:public DataHolder<Table::Raytracing,DefaultLayout::Raytracing>
+	struct Raytracing:public DataHolder<SlotID::Raytracing,Table::Raytracing,DefaultLayout::Raytracing>
 	{
 		SRV srv;
 		Raytracing(): DataHolder(srv){}

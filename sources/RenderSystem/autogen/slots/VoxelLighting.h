@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\VoxelLighting.h"
 namespace Slots {
-	struct VoxelLighting:public DataHolder<Table::VoxelLighting,DefaultLayout::Instance1>
+	struct VoxelLighting:public DataHolder<SlotID::VoxelLighting,Table::VoxelLighting,DefaultLayout::Instance1>
 	{
 		CB cb;
 		SRV srv;

@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\FrameClassification.h"
 namespace Slots {
-	struct FrameClassification:public DataHolder<Table::FrameClassification,DefaultLayout::Instance2>
+	struct FrameClassification:public DataHolder<SlotID::FrameClassification,Table::FrameClassification,DefaultLayout::Instance2>
 	{
 		SRV srv;
 		UAV uav;

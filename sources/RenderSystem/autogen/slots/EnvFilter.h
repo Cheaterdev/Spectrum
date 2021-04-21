@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\EnvFilter.h"
 namespace Slots {
-	struct EnvFilter:public DataHolder<Table::EnvFilter,DefaultLayout::Instance1>
+	struct EnvFilter:public DataHolder<SlotID::EnvFilter,Table::EnvFilter,DefaultLayout::Instance1>
 	{
 		CB cb;
 		EnvFilter(): DataHolder(cb){}

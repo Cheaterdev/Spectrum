@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\SMAA_Global.h"
 namespace Slots {
-	struct SMAA_Global:public DataHolder<Table::SMAA_Global,DefaultLayout::Instance0>
+	struct SMAA_Global:public DataHolder<SlotID::SMAA_Global,Table::SMAA_Global,DefaultLayout::Instance0>
 	{
 		CB cb;
 		SRV srv;

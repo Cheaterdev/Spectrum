@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\GatherPipeline.h"
 namespace Slots {
-	struct GatherPipeline:public DataHolder<Table::GatherPipeline,DefaultLayout::Instance1>
+	struct GatherPipeline:public DataHolder<SlotID::GatherPipeline,Table::GatherPipeline,DefaultLayout::Instance1>
 	{
 		CB cb;
 		UAV uav;

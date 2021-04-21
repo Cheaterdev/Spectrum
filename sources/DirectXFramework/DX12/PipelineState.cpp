@@ -94,21 +94,32 @@ namespace DX12
 		if (desc.root_signature)
 			psoDesc.pRootSignature = desc.root_signature->get_native().Get();
 
+		slots.clear();
 		if (desc.vertex)
+		{
 			psoDesc.VS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.vertex->get_blob().data())), static_cast<UINT>(desc.vertex->get_blob().size()) };
-
+			slots.merge(desc.vertex->slots_usage);
+		}
 		if (desc.pixel)
+		{
 			psoDesc.PS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.pixel->get_blob().data())), static_cast<UINT>(desc.pixel->get_blob().size()) };
-
+		slots.merge(desc.pixel->slots_usage);
+	 }
 		if (desc.geometry)
+		{
 			psoDesc.GS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.geometry->get_blob().data())), static_cast<UINT>(desc.geometry->get_blob().size()) };
-
+		slots.merge(desc.geometry->slots_usage);
+}
 		if (desc.domain)
+		{
 			psoDesc.DS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.domain->get_blob().data())), static_cast<UINT>(desc.domain->get_blob().size()) };
-
+		slots.merge(desc.domain->slots_usage);
+		}
 		if (desc.hull)
+		{
 			psoDesc.HS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.hull->get_blob().data())), static_cast<UINT>(desc.hull->get_blob().size()) };
-
+		slots.merge(desc.hull->slots_usage);
+		}
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 
 		psoDesc.RasterizerState.CullMode = desc.rasterizer.cull_mode;

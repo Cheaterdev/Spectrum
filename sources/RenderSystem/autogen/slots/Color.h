@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\Color.h"
 namespace Slots {
-	struct Color:public DataHolder<Table::Color,DefaultLayout::Instance0>
+	struct Color:public DataHolder<SlotID::Color,Table::Color,DefaultLayout::Instance0>
 	{
 		CB cb;
 		Color(): DataHolder(cb){}

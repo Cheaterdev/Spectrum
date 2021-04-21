@@ -67,11 +67,21 @@ namespace D3D
 	std::unique_ptr<std::string> shader_include::load_file(std::string pFileName)
 	{
 
-		auto sig = pFileName.find("sig:");
+		/*auto sig = pFileName.find("sig:");
 		if (sig!=std::string::npos)
 		{
 			pFileName = "autogen/" + pFileName.substr(sig+4) +".h";
 		}
+
+		*/
+
+		auto sig = pFileName.find("autogen");
+		if (sig != std::string::npos)
+		{
+			autogen.emplace_back(pFileName);
+		}
+
+		
 		std::string file_name = dir + pFileName;
 		auto file = FileSystem::get().get_file(convert(file_name));
 

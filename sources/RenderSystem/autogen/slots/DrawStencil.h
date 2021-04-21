@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\DrawStencil.h"
 namespace Slots {
-	struct DrawStencil:public DataHolder<Table::DrawStencil,DefaultLayout::Instance0>
+	struct DrawStencil:public DataHolder<SlotID::DrawStencil,Table::DrawStencil,DefaultLayout::Instance0>
 	{
 		SRV srv;
 		DrawStencil(): DataHolder(srv){}

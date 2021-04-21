@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\GBuffer.h"
 namespace Slots {
-	struct GBuffer:public DataHolder<Table::GBuffer,DefaultLayout::Instance2>
+	struct GBuffer:public DataHolder<SlotID::GBuffer,Table::GBuffer,DefaultLayout::Instance2>
 	{
 		SRV srv;
 		GBuffer(): DataHolder(srv){}

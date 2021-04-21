@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\VoxelCopy.h"
 namespace Slots {
-	struct VoxelCopy:public DataHolder<Table::VoxelCopy,DefaultLayout::Instance1>
+	struct VoxelCopy:public DataHolder<SlotID::VoxelCopy,Table::VoxelCopy,DefaultLayout::Instance1>
 	{
 		CB cb;
 		SRV srv;

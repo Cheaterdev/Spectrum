@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\DebugInfo.h"
 namespace Slots {
-	struct DebugInfo:public DataHolder<Table::DebugInfo,FrameLayout::DebugInfo>
+	struct DebugInfo:public DataHolder<SlotID::DebugInfo,Table::DebugInfo,FrameLayout::DebugInfo>
 	{
 		UAV uav;
 		DebugInfo(): DataHolder(uav){}

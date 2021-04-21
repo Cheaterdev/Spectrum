@@ -393,6 +393,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 					compiledScene.set(graphics);
 					compiledFrame.set(graphics);
+					if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 					mesh_render_context->voxelization_compiled.set(graphics);
 				}
 				{

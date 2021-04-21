@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\RaytracingRays.h"
 namespace Slots {
-	struct RaytracingRays:public DataHolder<Table::RaytracingRays,DefaultLayout::Instance2>
+	struct RaytracingRays:public DataHolder<SlotID::RaytracingRays,Table::RaytracingRays,DefaultLayout::Instance2>
 	{
 		CB cb;
 		SRV srv;

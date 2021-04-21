@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\Countour.h"
 namespace Slots {
-	struct Countour:public DataHolder<Table::Countour,DefaultLayout::Instance0>
+	struct Countour:public DataHolder<SlotID::Countour,Table::Countour,DefaultLayout::Instance0>
 	{
 		CB cb;
 		SRV srv;

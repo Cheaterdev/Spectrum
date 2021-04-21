@@ -1,5 +1,5 @@
 
-template<class Slot>
+template<SlotID ID, class Table, class Slot>
 struct CompiledData
 {
 	Render::ResourceAddress cb;
@@ -7,29 +7,28 @@ struct CompiledData
 	Render::HandleTableLight table_uav;
 	Render::HandleTableLight table_smp;
 
-	const CompiledData<Slot>& set(Render::SignatureDataSetter& graphics) const
+	const CompiledData<ID, Table, Slot>& set(Render::SignatureDataSetter& graphics) const
 	{
-		if constexpr (TableHasSRV<Slot>)  if (table_srv.is_valid()) graphics.set_table<Render::HandleType::SRV>(Slot::SRV_ID, table_srv);
-		if constexpr (TableHasSMP<Slot>)  if (table_smp.is_valid()) graphics.set_table<Render::HandleType::SMP>(Slot::SMP_ID, table_smp);
-		if constexpr (TableHasUAV<Slot>)  if (table_uav.is_valid()) graphics.set_table<Render::HandleType::UAV>(Slot::UAV_ID, table_uav);
+		if constexpr (HasSRV<Table>) graphics.set_table<Render::HandleType::SRV>(Slot::SRV_ID, table_srv);
+		if constexpr (HasSMP<Table>) graphics.set_table<Render::HandleType::SMP>(Slot::SMP_ID, table_smp);
+		if constexpr (HasUAV<Table>) graphics.set_table<Render::HandleType::UAV>(Slot::UAV_ID, table_uav);
 
-		if (cb)
-			graphics.set_cb(Slot::CB_ID, cb);
+		if constexpr (HasCB<Table>) graphics.set_cb(Slot::CB_ID, cb);
 
 		return *this;
 	}
 
 };
 
-template<class Table, class _Slot = Table::Slot>
+template<SlotID ID, class Table, class _Slot = Table::Slot>
 struct DataHolder : public Table
 {
 	using Table::Table;
 	using Slot = _Slot;
-	using Compiled = CompiledData<Slot>;
-
+	using Compiled = CompiledData<ID, Table, Slot>;
+	/*
 	template<class Context, class SRV>
-	void place_srv(CompiledData<Slot>& compiled, Context& context, SRV& srv) const
+	void place_srv(Compiled& compiled, Context& context, SRV& srv) const
 	{
 		compiled.table_srv = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(sizeof(srv) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
@@ -41,7 +40,7 @@ struct DataHolder : public Table
 	}
 
 	template<class Context, class SRV>
-	void place_srv(CompiledData<Slot>& compiled, Context& context, SRV& srv, Render::Bindless& bindless) const
+	void place_srv(Compiled& compiled, Context& context, SRV& srv, Render::Bindless& bindless) const
 	{
 		compiled.table_srv = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(sizeof(srv) / sizeof(Render::Handle));
 		auto ptr = reinterpret_cast<Render::Handle*>(&srv);
@@ -52,9 +51,10 @@ struct DataHolder : public Table
 			compiled.table_srv[i].place(*handle);
 		}
 	}
-
+	*/
+	
 	template<class Context, class UAV>
-	void place_uav(CompiledData<Slot>& compiled, Context& context, UAV& uav) const
+	void place_uav(Compiled& compiled, Context& context, UAV& uav) const
 	{
 	
 		compiled.table_uav = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(sizeof(uav) / sizeof(Render::Handle));
@@ -72,7 +72,7 @@ struct DataHolder : public Table
 	}
 
 	template<class Context, class SMP>
-	void place_smp(CompiledData<Slot>& compiled, Context& context, SMP& smp) const
+	void place_smp(Compiled& compiled, Context& context, SMP& smp) const
 	{
 
 		compiled.table_smp = context.get_gpu_heap(Render::DescriptorHeapType::SAMPLER).place(sizeof(smp) / sizeof(Render::Handle));
@@ -86,10 +86,10 @@ struct DataHolder : public Table
 
 
 	template<class Context>
-	CompiledData<Slot> compile(Context& context) const
+	Compiled compile(Context& context) const
 	{
 
-		CompiledData<Slot> compiled;
+		Compiled compiled;
 
 
 		if constexpr (HasSRV<Table> || HasBindless<Table>)

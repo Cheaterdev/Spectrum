@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\PSSMLighting.h"
 namespace Slots {
-	struct PSSMLighting:public DataHolder<Table::PSSMLighting,DefaultLayout::Instance2>
+	struct PSSMLighting:public DataHolder<SlotID::PSSMLighting,Table::PSSMLighting,DefaultLayout::Instance2>
 	{
 		SRV srv;
 		PSSMLighting(): DataHolder(srv){}

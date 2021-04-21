@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\DenoiserHistoryFix.h"
 namespace Slots {
-	struct DenoiserHistoryFix:public DataHolder<Table::DenoiserHistoryFix,DefaultLayout::Instance2>
+	struct DenoiserHistoryFix:public DataHolder<SlotID::DenoiserHistoryFix,Table::DenoiserHistoryFix,DefaultLayout::Instance2>
 	{
 		SRV srv;
 		UAV uav;

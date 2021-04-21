@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\EnvSource.h"
 namespace Slots {
-	struct EnvSource:public DataHolder<Table::EnvSource,DefaultLayout::Instance2>
+	struct EnvSource:public DataHolder<SlotID::EnvSource,Table::EnvSource,DefaultLayout::Instance2>
 	{
 		SRV srv;
 		EnvSource(): DataHolder(srv){}

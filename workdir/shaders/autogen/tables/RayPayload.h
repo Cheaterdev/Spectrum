@@ -3,6 +3,7 @@
 struct RayPayload
 {
 	float4 color;
+	float3 dir;
 	uint recursion;
 	float dist;
 	RayCone cone;
@@ -18,7 +19,7 @@ struct RayPayload
 
 		result.cone.width = cone.width + cone.angle* hitT;
 		result.cone.angle = cone.angle + surfaceSpreadAngle;
-
+		
 		return result;
 	}
 

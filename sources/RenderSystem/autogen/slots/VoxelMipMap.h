@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\VoxelMipMap.h"
 namespace Slots {
-	struct VoxelMipMap:public DataHolder<Table::VoxelMipMap,DefaultLayout::Instance1>
+	struct VoxelMipMap:public DataHolder<SlotID::VoxelMipMap,Table::VoxelMipMap,DefaultLayout::Instance1>
 	{
 		CB cb;
 		SRV srv;

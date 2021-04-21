@@ -738,7 +738,7 @@ void generate_cpp_table(const Table& table)
 			//	stream << "using " << table.name << " = DataHolder<Table::" << table.name << ", "<<table.slot->layout->name << "::" << table.slot->name <<">;"<< std::endl;
 
 
-			stream << "struct " << table.name << ":public DataHolder<Table::" << table.name << "," << table.slot->layout->name << "::" << table.slot->name << ">" << std::endl;//,Table::" << table.name << std::endl;
+			stream << "struct " << table.name << ":public DataHolder<SlotID::" << table.name <<",Table::" << table.name << "," << table.slot->layout->name << "::" << table.slot->name << ">" << std::endl;//,Table::" << table.name << std::endl;
 			stream << "{" << std::endl;
 			{
 				stream.push();
@@ -839,11 +839,9 @@ void generate_include_list(const Parsed& parsed)
 
 	stream << "void init_signatures();" << std::endl;
 	stream << "Render::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
-
-
-
-
 	stream << "void init_pso(enum_array<PSO, PSOBase::ptr>&);" << std::endl;
+
+	stream << "std::map<UINT, UINT> get_used_slots(std::string slot_name);" << std::endl;
 
 	{
 		my_stream stream(cpp_path, "enums.h");
@@ -887,6 +885,24 @@ void generate_include_list(const Parsed& parsed)
 
 		stream << "};" << std::endl;
 
+
+		stream << "enum class SlotID: unsigned int" << std::endl;
+
+		stream << "{" << std::endl;
+		{
+			stream.push();
+			
+			for (auto& t : parsed.tables)
+			{
+				stream << t.name << " = \""<< t.name<<"\"_crc32 ," << std::endl;
+			}
+		
+			stream << "GENERATE_OPS" << std::endl;
+			stream.pop();
+		}
+
+		stream << "};" << std::endl;
+
 	}
 
 
@@ -917,7 +933,43 @@ void generate_include_list(const Parsed& parsed)
 		stream << "\treturn signatures[id];" << std::endl;
 		stream << "}" << std::endl;
 
+		{
+			stream << "std::map<UINT, UINT> get_used_slots(std::string slot_name)" << std::endl;
+			stream << "{" << std::endl;
 
+			stream.push();
+			{
+				stream << "std::map<UINT, UINT> result;" << std::endl;
+
+				for(auto &t:parsed.tables)
+				{
+					if (!t.slot) continue;
+
+					stream << "if(slot_name == \"" << t.name<<"\")" << std::endl;
+					stream << "{" << std::endl;
+					stream.push();
+					for (int i = 0; i < ValueType::STRUCT; i++)
+					{
+						auto type = (ValueType)i;
+						auto count = t.counts[i];
+
+						if (count == 0)	continue;
+						stream << "result[" <<i <<"] = " << count<<";"<<std::endl;
+
+					}
+					stream << "return result;" << std::endl;
+					stream.pop();
+					stream << "}" << std::endl;
+					
+				}
+				stream << "return result;" << std::endl;
+
+			}
+			stream.pop();
+			stream << "}" << std::endl;
+
+
+		}
 	}
 
 	

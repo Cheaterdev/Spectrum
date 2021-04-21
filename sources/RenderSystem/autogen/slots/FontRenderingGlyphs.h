@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\FontRenderingGlyphs.h"
 namespace Slots {
-	struct FontRenderingGlyphs:public DataHolder<Table::FontRenderingGlyphs,DefaultLayout::Instance2>
+	struct FontRenderingGlyphs:public DataHolder<SlotID::FontRenderingGlyphs,Table::FontRenderingGlyphs,DefaultLayout::Instance2>
 	{
 		SRV srv;
 		FontRenderingGlyphs(): DataHolder(srv){}

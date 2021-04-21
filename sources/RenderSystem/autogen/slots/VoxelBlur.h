@@ -1,7 +1,7 @@
 #pragma once
 #include "..\Tables\VoxelBlur.h"
 namespace Slots {
-	struct VoxelBlur:public DataHolder<Table::VoxelBlur,DefaultLayout::Instance2>
+	struct VoxelBlur:public DataHolder<SlotID::VoxelBlur,Table::VoxelBlur,DefaultLayout::Instance2>
 	{
 		SRV srv;
 		UAV uav;
