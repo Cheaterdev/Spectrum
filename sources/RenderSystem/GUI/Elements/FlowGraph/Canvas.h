@@ -24,7 +24,7 @@ namespace GUI
                     bool beaming = false;
                     link_type type;
                     ::FlowGraph::parameter* p;
-                    base* line = nullptr;
+                    base::wptr line;
                     bool can_delete = false;
                     link_item()
                     {

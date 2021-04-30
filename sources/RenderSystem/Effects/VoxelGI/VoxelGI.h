@@ -265,6 +265,7 @@ public:
 
 
 	Variable<bool> denoiser = Variable<bool>(true, "denoiser", this);
+	Variable<bool> reflecton = Variable<bool>(true, "reflecton", this);
 
 	
 	void resize(ivec2 size);

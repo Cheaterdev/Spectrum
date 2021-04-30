@@ -138,8 +138,10 @@ namespace DX12
 		std::vector<D3D12_RESOURCE_BARRIER> native;
 
 		void validate();
+		CommandListType type;
 	public:
 
+		Barriers(CommandListType type);
 		inline operator bool() const
 		{
 			return !native.empty();
@@ -164,6 +166,7 @@ namespace DX12
 		Transition* prev_transition = nullptr;
 
 		TransitionPoint* point = nullptr;
+		TransitionPoint* last_used_point = nullptr;
 
 		BarrierFlags flags = BarrierFlags::SINGLE;
 	};
@@ -314,7 +317,7 @@ namespace DX12
 		}
 
 
-		void prepare_for(SubResourcesGPU& state);
+		void prepare_for(CommandListType type, SubResourcesGPU& state);
 	};
 
 
@@ -469,7 +472,9 @@ namespace DX12
 
 		SubResourcesCPU& get_cpu_state(Transitions* list) const;
 
+		void stop_using(Transitions* list, UINT subres) const;
 
+		
 		bool is_used(Transitions* list) const;
 		void aliasing(int id, uint64_t full_id) const
 		{

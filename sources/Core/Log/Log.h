@@ -236,7 +236,11 @@ class ClassLogger: public Singleton<ClassLogger<T>>
         template<class T>
         LogBlock operator<<(const  T& smth)
         {
-            return LogBlock(Log::get(), logging_level) << smth;
+
+            auto block = LogBlock(Log::get(), logging_level);
+            block << smth;
+        	
+            return block;
         }
 };
 

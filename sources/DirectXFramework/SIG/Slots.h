@@ -1,31 +1,43 @@
 
-template<SlotID ID, class Table, class Slot>
+template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
 struct CompiledData
 {
+
+	static constexpr SlotID ID = _ID;
+	using Table = _Table;
+	using Slot = _Slot;
+	using SlotTable = _SlotTable;
 	Render::ResourceAddress cb;
 	Render::HandleTableLight table_srv;
 	Render::HandleTableLight table_uav;
 	Render::HandleTableLight table_smp;
 
-	const CompiledData<ID, Table, Slot>& set(Render::SignatureDataSetter& graphics) const
+	const CompiledData<SlotTable, ID, Table, Slot>& set(Render::SignatureDataSetter& graphics) const
+	{
+		graphics.set_slot(*this);
+		return *this;
+	}
+
+	const void set_tables(Render::SignatureDataSetter& graphics) const
 	{
 		if constexpr (HasSRV<Table>) graphics.set_table<Render::HandleType::SRV>(Slot::SRV_ID, table_srv);
 		if constexpr (HasSMP<Table>) graphics.set_table<Render::HandleType::SMP>(Slot::SMP_ID, table_smp);
 		if constexpr (HasUAV<Table>) graphics.set_table<Render::HandleType::UAV>(Slot::UAV_ID, table_uav);
-
 		if constexpr (HasCB<Table>) graphics.set_cb(Slot::CB_ID, cb);
 
-		return *this;
 	}
 
 };
 
-template<SlotID ID, class Table, class _Slot = Table::Slot>
+template<class _SlotTable, SlotID ID, class Table, class _Slot = Table::Slot>
 struct DataHolder : public Table
 {
 	using Table::Table;
 	using Slot = _Slot;
-	using Compiled = CompiledData<ID, Table, Slot>;
+	using SlotTable = _SlotTable;
+
+	using Compiled = CompiledData<SlotTable, ID, Table, Slot>;
+
 	/*
 	template<class Context, class SRV>
 	void place_srv(Compiled& compiled, Context& context, SRV& srv) const

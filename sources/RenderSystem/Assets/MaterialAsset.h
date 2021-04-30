@@ -14,6 +14,8 @@ namespace materials
 
 		}
         Pipeline() = default;
+        virtual ~Pipeline() = default;
+		
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc& pipeline) = 0;
 
 		UINT get_id() { return id; }

@@ -223,6 +223,16 @@ namespace materials
 			memcpy(textures_data.data() + offset, v.data(), sizeof(Render::Handle) * v.size());
 		}
 
+		virtual void on_free(size_t from, size_t to) override {
+
+			for(auto i= from;i<to;i++)
+			{
+				textures_data[i] = Render::Handle();			
+			}
+		}
+
+		
+
 		universal_material_manager(): DataAllocator<Render::Handle, ::CommonAllocator>(4096)
 		{
 		}
@@ -254,7 +264,7 @@ namespace materials
 
             std::vector<TextureSRVParams::ptr> textures;	
             std::vector<Uniform::ptr> tess_uniforms;
-            std::vector<Events::prop_handler> handlers;
+            std::list<Events::prop_handler> handlers;
 
 			DynamicData pixel_data;
 

@@ -73,7 +73,7 @@ namespace DX12
 #include "DX12/Resource.h"
 #include "DX12/ResourceViews.h"
 
-
+#include "DX12/Shader.h"
 #include "DX12/IndirectCommand.h"
 #include "DX12/CommandList.h"
 
@@ -84,7 +84,7 @@ namespace DX12
 
 
 #include "D3D/ShaderReflection.h"
-#include "DX12/Shader.h"
+
 
 #include "DX12/Texture.h"
 #include "DX12/PipelineState.h"

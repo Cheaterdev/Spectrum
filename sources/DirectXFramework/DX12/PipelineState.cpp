@@ -81,6 +81,8 @@ namespace DX12
 
 	 void PipelineState::on_change()
 	{
+		 root_signature = desc.root_signature;
+
 		auto t = CounterManager::get().start_count<PipelineState>();
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
@@ -249,6 +251,9 @@ namespace DX12
 
 	 void ComputePipelineState::on_change()
 	{
+
+	  root_signature = desc.root_signature;
+		
 		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 
 		if (desc.root_signature)

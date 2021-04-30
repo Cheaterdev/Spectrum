@@ -250,11 +250,11 @@ GI_RESULT PS(quad_output i)
  float dist = 0;
 
 
- float4 reflection = trace_refl(0, v, pos + scaler * normal / m, normalize(r), normal, angle);
+ float4 reflection =  trace_refl(0, v, pos + scaler * normal / m, normalize(r), normal, angle);
 
  float3 screen = get_PBR(metallic * albedo, reflection, normal, v, roughness, metallic);
 #ifdef REFLECTION
- result.screen.xyz = reflection;
+ result.screen.xyz = 0;
 
 #else
  result.screen.xyz = screen;
@@ -319,10 +319,10 @@ GI_RESULT PS_resize(quad_output i)
 	result.screen.xyz = reflection;// screen;//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
 
 #else
-	result.screen.xyz =  screen;//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
+	result.screen.xyz =  0;//;// tex_color[tc] + float4(PBR(0, reflection, albedo, normal, v, 0.2, 0, metallic), 0);
 
 #endif
-	result.screen.w = 1;
+	result.screen.w = 0;
 	return result;
 
 }
@@ -372,7 +372,7 @@ GI_RESULT PS_low(quad_output i)
 	
 	float3 reflection = trace_refl(0, v, pos + scaler * normal / m, normalize(r), normal, angle);
 
-	result.screen.xyz = reflection;
+	result.screen.xyz = 1;
 	return result;
 	
 }

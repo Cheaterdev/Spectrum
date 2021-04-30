@@ -114,17 +114,19 @@ namespace DX12
 
 	void GraphicsContext::begin()
 	{
+		reset();
 		topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 		reset_tables();
 		index = IndexBufferView();
 	}
 	void GraphicsContext::end()
 	{
-		current_root_signature = nullptr;
+		//current_root_signature = nullptr;
 	}
 
 	void ComputeContext::begin()
 	{
+		reset();
 		reset_tables();
 	}
 	void ComputeContext::end()
@@ -193,14 +195,9 @@ namespace DX12
 			});
 	}
 
-	void GraphicsContext::set_signature(const RootSignature::ptr& s)
+	void GraphicsContext::on_set_signature(const RootSignature::ptr& s)
 	{
-		assert(s);
-		if (current_root_signature != s)
-		{
-			list->SetGraphicsRootSignature(s->get_native().Get());
-			current_root_signature = s;
-		}
+		list->SetGraphicsRootSignature(s->get_native().Get());
 	}
 
 	void GraphicsContext::set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b)
@@ -478,13 +475,13 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 		base.create_transition_point(false);
 	}
-
+	/*
 	void  GraphicsContext::set_pipeline(PipelineState::ptr state)
 	{
 		set_signature(state->desc.root_signature);
 		base.set_pipeline_internal(state.get());
 	}
-
+	*/
 	void GraphicsContext::set_layout(Layouts layout)
 	{
 		set_signature(get_Signature(layout));
@@ -626,7 +623,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	void Transitions::create_transition_point(bool end)
 	{
 		auto prev_point = transition_points.empty()?nullptr: &transition_points.back();
-		auto point = &transition_points.emplace_back();
+		auto point = &transition_points.emplace_back(type);
 
 		if(prev_point) prev_point->next_point = point;
 		point->prev_point = prev_point;
@@ -637,9 +634,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		{
 			assert(point->prev_point->start);
 		}
-		compiler.func([point](ID3D12GraphicsCommandList4* list)
+		compiler.func([point,this](ID3D12GraphicsCommandList4* list)
 			{
-				Barriers  transitions;
+				Barriers  transitions(type);
 
 				for (auto uav : point->uav_transitions)
 				{
@@ -721,7 +718,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		PROFILE(L"fix_pretransitions");
 
-		Barriers result;
+		Barriers result(CommandListType::DIRECT);
 		std::vector<Resource*> discards;
 
 		
@@ -955,20 +952,16 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	}
 	
 
-	void ComputeContext::set_signature(const RootSignature::ptr& s)
+	void ComputeContext::on_set_signature(const RootSignature::ptr& s)
 	{
-		if (s != current_compute_root_signature)
-		{
-			current_compute_root_signature = s;
-			list->SetComputeRootSignature(s->get_native().Get());
-		}
+		list->SetComputeRootSignature(s->get_native().Get());
 	}
+	
 	void ComputeContext::dispach(int x, int y, int z)
 	{
-		PROFILE_GPU(L"Dispatch");
-		base.setup_debug(this);
-		
+		PROFILE_GPU(L"Dispatch");	
 		base.create_transition_point();
+		base.setup_debug(this);
 		commit_tables();
 		flush_binds();
 
@@ -999,7 +992,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		list->SetComputeRootDescriptorTable(i, table.gpu);
 	}
-	
+
+	/*
 	void ComputeContext::set_pipeline(ComputePipelineState::ptr state)
 	{
 		if (state->desc.root_signature)
@@ -1009,7 +1003,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 		base.track_object(*state);
 	}
-
+	*/
 	void ComputeContext::set_pso(std::shared_ptr<StateObject>& pso)
 	{
 		base.set_pipeline_internal(nullptr);
@@ -1160,10 +1154,10 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
 		PROFILE_GPU(L"execute_indirect");
-		base.setup_debug(this);
 		base.create_transition_point();
 
-
+		base.setup_debug(this);
+	
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
@@ -1319,5 +1313,41 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	ComPtr<ID3D12GraphicsCommandList4> TransitionCommandList::get_native()
 	{
 		return m_commandList;
+	}
+
+
+	void SignatureDataSetter::set_pipeline(std::shared_ptr<PipelineStateBase> pipeline)
+	{
+/*
+		{
+			for (auto& s : used_slots.slots_usage)
+			{
+				auto slot_id = get_slot_id(s);
+				auto& slot = slots[slot_id];
+
+				auto& used_tables = *slot.tables;
+
+				for (auto& id : used_tables)
+				{
+					auto& table = tables[id].table;
+
+					for (UINT i = 0; i < (UINT)table.get_count(); ++i)
+					{
+						const auto& h = table[i];
+
+						base.stop_using(h.resource_info);
+
+					}
+				}
+			}
+		}
+		*/
+		if (pipeline->root_signature)
+			set_signature(pipeline->root_signature);
+
+		base.set_pipeline_internal(pipeline.get());
+		
+		
+		used_slots = pipeline->slots;
 	}
 }

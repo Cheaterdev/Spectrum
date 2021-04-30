@@ -136,4 +136,5 @@
 void init_signatures();
 Render::RootLayout::ptr get_Signature(Layouts id);
 void init_pso(enum_array<PSO, PSOBase::ptr>&);
-std::map<UINT, UINT> get_used_slots(std::string slot_name);
+std::optional<SlotID> get_slot(std::string_view slot_name);
+UINT get_slot_id(SlotID id);

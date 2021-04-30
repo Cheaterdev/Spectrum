@@ -89,4 +89,5 @@ public:
 	void prepare(CommandList::ptr& list);
 
 	void render(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size);
+	void render2(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size);
 };

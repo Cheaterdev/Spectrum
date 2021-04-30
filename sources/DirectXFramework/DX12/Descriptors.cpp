@@ -113,4 +113,249 @@ namespace DX12 {
 		allocator.Free(page->alloc_handle);
 		delete page;
 	}
+
+	void for_each_rtv(const ResourceInfo* info, std::function<void(Resource*, UINT)> f)
+	{
+		assert(info->type == HandleType::RTV);
+
+		auto& desc = info->resource_ptr->get_desc();
+		if (info->rtv.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2D)
+		{
+
+			if (desc.MipLevels == 1 && desc.Depth() == 1)
+			{
+				f(info->resource_ptr,  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			}
+			else
+			{
+				auto& rtv = info->rtv.Texture2D;
+				UINT res = desc.CalcSubresource(rtv.MipSlice, 0, rtv.PlaneSlice);
+				f(info->resource_ptr,  res);
+			}
+		}
+		else 	if (info->rtv.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY)
+		{
+
+			auto& rtv = info->rtv.Texture2DArray;
+
+			for (UINT array = rtv.FirstArraySlice; array < rtv.FirstArraySlice + rtv.ArraySize; array++)
+			{
+				UINT res = desc.CalcSubresource(rtv.MipSlice, array, rtv.PlaneSlice);
+				f(info->resource_ptr, res);
+			}
+		}
+
+	}
+
+	void for_each_uav(const ResourceInfo* info, std::function<void(Resource*, UINT)> f)
+	{
+		assert(info->type == HandleType::UAV);
+
+
+		auto& desc = info->resource_ptr->get_desc();
+
+		if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_BUFFER)
+		{
+			f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			if (info->uav.counter) f(info->uav.counter,  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+
+		}
+		else if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_TEXTURE2D)
+		{
+			auto& uav = info->uav.desc.Texture2D;
+
+			if (desc.MipLevels == 1 && desc.Depth() == 1)
+			{
+				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			}
+			else
+			{
+				UINT res = desc.CalcSubresource(uav.MipSlice, 0, uav.PlaneSlice);
+				f(info->resource_ptr,  res);
+			}
+		}
+		else if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_TEXTURE3D)
+		{
+			auto& uav = info->uav.desc.Texture3D;
+			if (uav.FirstWSlice == 0 && uav.WSize == desc.Depth() && desc.MipLevels == 1)
+			{
+				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			}
+			else
+			{
+				UINT res = desc.CalcSubresource(uav.MipSlice, 0, 0);
+				f(info->resource_ptr,  res);
+			}
+		}
+
+		else if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_TEXTURE2DARRAY)
+		{
+			auto& uav = info->uav.desc.Texture2DArray;
+
+			if (desc.MipLevels == 1 && desc.Depth() == 1 && desc.ArraySize() == 1)
+			{
+				f(info->resource_ptr,  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			}
+			else
+			{
+
+				for (UINT array = uav.FirstArraySlice; array < uav.FirstArraySlice + uav.ArraySize; array++)
+				{
+					UINT res = desc.CalcSubresource(uav.MipSlice, array, uav.PlaneSlice);
+					f(info->resource_ptr, res);
+				}
+
+			}
+		}
+		else assert(false);
+
+	}
+
+
+	void for_each_dsv(const ResourceInfo* info, std::function<void(Resource*, UINT)> f)
+	{
+		assert(info->type == HandleType::DSV);
+
+		auto& desc = info->resource_ptr->get_desc();
+
+		if (info->dsv.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2D)
+		{
+			auto& dsv = info->dsv.Texture2D;
+
+			UINT res = desc.CalcSubresource(dsv.MipSlice, 0, 0);
+			f(info->resource_ptr, res);
+
+		}
+		else if (info->dsv.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
+		{
+			auto& dsv = info->dsv.Texture2DArray;
+
+			for (UINT array = dsv.FirstArraySlice; array < dsv.FirstArraySlice + dsv.ArraySize; array++)
+			{
+				UINT res = desc.CalcSubresource(dsv.MipSlice, array, 0);
+				f(info->resource_ptr, res);
+			}
+		}
+		else
+			assert(0);
+	}
+
+
+	void for_each_srv(const ResourceInfo* info, std::function<void(Resource*, UINT)> f)
+	{
+		assert(info->type == HandleType::SRV);
+
+		auto& desc = info->resource_ptr->get_desc();
+		UINT total = desc.CalcSubresource(desc.MipLevels - 1, desc.ArraySize() - 1, desc.Depth() - 1);
+
+
+		ResourceState target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
+
+
+		if (info->srv.ViewDimension == D3D12_UAV_DIMENSION_BUFFER)
+		{
+			f(info->resource_ptr, 0);// D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+
+		}
+		else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURE2D)
+		{
+			auto& srv = info->srv.Texture2D;
+
+			if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0 && desc.Depth() == 1)
+			{
+				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			}
+			else
+			{
+				for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
+				{
+					UINT res = desc.CalcSubresource(mip, 0, srv.PlaneSlice);
+					f(info->resource_ptr, res);
+				}
+			}
+
+		}
+		else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURE2DARRAY)
+		{
+			auto& srv = info->srv.Texture2DArray;
+
+			if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0 && srv.FirstArraySlice == 0 && srv.ArraySize == desc.ArraySize() && desc.Depth() == 1)
+			{
+				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			}
+			else
+			{
+				for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
+					for (auto array = srv.FirstArraySlice; array < srv.FirstArraySlice + srv.ArraySize; array++)
+					{
+						UINT res = desc.CalcSubresource(mip, array, srv.PlaneSlice);
+						f(info->resource_ptr, res);
+					}
+			}
+		}
+		else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURE3D)
+		{
+			auto& srv = info->srv.Texture3D;
+
+			if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0)
+			{
+				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			}
+			else
+			{
+				for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
+				{
+					UINT res = desc.CalcSubresource(mip, 0, 0);
+					f(info->resource_ptr, res);
+				}
+			}
+		}
+		else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURECUBE)
+		{
+			auto& srv = info->srv.TextureCube;
+
+			if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0)
+			{
+				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			}
+			else
+			{
+				for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
+					for (auto array = 0; array < 6; array++)
+					{
+						UINT res = desc.CalcSubresource(mip, array, 0);
+						f(info->resource_ptr, res);
+					}
+			}
+		}
+		else
+			assert(false);
+
+
+
+
+	}
+	
+	
+	void ResourceInfo::for_each_subres(std::function<void(Resource*, UINT)> f) const
+	{
+		if (type == HandleType::RTV)
+		{
+			for_each_rtv(this, f);
+		}
+		else if (type == HandleType::DSV)
+		{
+			for_each_dsv(this, f);
+		}
+		else if (type == HandleType::SRV)
+		{
+			for_each_srv(this, f);
+		}
+		else if (type == HandleType::UAV)
+		{
+			for_each_uav(this, f);
+		}
+		else
+			assert(false);
+	}
 }

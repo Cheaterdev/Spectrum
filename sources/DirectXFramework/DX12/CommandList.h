@@ -362,6 +362,10 @@ namespace DX12
 		bool start = false;
 		TransitionPoint* prev_point = nullptr;
 		TransitionPoint* next_point = nullptr;
+
+		TransitionPoint(CommandListType type):compiled_transitions(type)
+		{
+		}
 	};
 
 	enum class TransitionType :int
@@ -397,7 +401,7 @@ namespace DX12
 		void free_resources();
 
 		UINT transition_count = 0;
-		TransitionPoint* start_transition;
+	//	TransitionPoint* start_transition;
 		Transition* create_transition(const Resource* resource, UINT subres, ResourceState state, TransitionType type = TransitionType::LAST)
 		{
 			TransitionPoint* point = nullptr;
@@ -429,6 +433,11 @@ namespace DX12
 			point.aliasing.emplace_back(const_cast<Resource*>(resource));
 		}
 
+		TransitionPoint* get_last_transition_point()
+		{
+			return &transition_points.back();
+		}
+
 		void use_resource(const Resource* resource);
 	public:
 		void prepare_transitions(Transitions* to, bool all);
@@ -449,101 +458,80 @@ namespace DX12
 			create_transition_point(false);
 		}
 
+
+		void transition(const ResourceInfo* info)
+		{
+			if (!info || !info->resource_ptr) return;
+
+			auto& handle_type = info->type;
+			
+			auto target_state = ResourceState::COMMON;
+
+
+			if (handle_type == HandleType::SRV)
+			{
+				if (type == CommandListType::DIRECT)
+				{
+					target_state = ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE;
+				}
+
+				if (type == CommandListType::COMPUTE)
+				{
+					target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
+				}
+
+			}
+			else if (handle_type == HandleType::UAV)
+			{
+				target_state = ResourceState::UNORDERED_ACCESS;
+			}
+			else if (handle_type == HandleType::RTV)
+			{
+				target_state = ResourceState::RENDER_TARGET;
+			}
+			else if (handle_type == HandleType::DSV)
+			{
+				target_state = ResourceState::DEPTH_WRITE;
+
+			}
+			else assert(false);
+			
+			info->for_each_subres([&](const Resource* resource, UINT subres)
+			{
+					transition(resource, target_state, subres);
+			});		
+		}
+
+		void stop_using(const ResourceInfo* info)
+		{
+			if (!info || !info->resource_ptr) return;
+
+
+			info->for_each_subres([&](const Resource* resource, UINT subres)
+				{
+					resource->stop_using(this, subres);
+				});
+		}
+
+		//remove this all
 		void transition_rtv(const ResourceInfo* info)
 		{
 			assert(info->type == HandleType::RTV);
 
-			auto& desc = info->resource_ptr->get_desc();
-			if (info->rtv.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2D)
-			{
-
-				if (desc.MipLevels == 1 && desc.Depth() == 1)
+			info->for_each_subres([&](const Resource* resource, UINT subres)
 				{
-					transition(info->resource_ptr, ResourceState::RENDER_TARGET, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				}
-				else
-				{
-					auto& rtv = info->rtv.Texture2D;
-					UINT res = desc.CalcSubresource(rtv.MipSlice, 0, rtv.PlaneSlice);
-					transition(info->resource_ptr, ResourceState::RENDER_TARGET, res);
-				}
-			}
-			else 	if (info->rtv.ViewDimension == D3D12_RTV_DIMENSION_TEXTURE2DARRAY)
-			{
-
-				auto& rtv = info->rtv.Texture2DArray;
-
-				for (UINT array = rtv.FirstArraySlice; array < rtv.FirstArraySlice + rtv.ArraySize; array++)
-				{
-					UINT res = desc.CalcSubresource(rtv.MipSlice, array, rtv.PlaneSlice);
-					transition(info->resource_ptr, ResourceState::RENDER_TARGET, res);
-				}
-			}
-
+					transition(resource, ResourceState::RENDER_TARGET, subres);
+				});
 		}
 
 		void transition_uav(const ResourceInfo* info)
 		{
 			assert(info->type == HandleType::UAV);
 
-
-			auto& desc = info->resource_ptr->get_desc();
-
-			if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_BUFFER)
-			{
-				transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				if (info->uav.counter) transition(info->uav.counter, ResourceState::UNORDERED_ACCESS, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-
-			}
-			else if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_TEXTURE2D)
-			{
-				auto& uav = info->uav.desc.Texture2D;
-
-				if (desc.MipLevels == 1 && desc.Depth() == 1)
+			info->for_each_subres([&](const Resource* resource, UINT subres)
 				{
-					transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				}
-				else
-				{
-					UINT res = desc.CalcSubresource(uav.MipSlice, 0, uav.PlaneSlice);
-					transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, res);
-				}
-			}
-			else if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_TEXTURE3D)
-			{
-				auto& uav = info->uav.desc.Texture3D;
-				if (uav.FirstWSlice == 0 && uav.WSize == desc.Depth() && desc.MipLevels == 1)
-				{
-					transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				}
-				else
-				{
-					UINT res = desc.CalcSubresource(uav.MipSlice, 0, 0);
-					transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, res);
-				}
-			}
-
-			else if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_TEXTURE2DARRAY)
-			{
-				auto& uav = info->uav.desc.Texture2DArray;
-
-				if (desc.MipLevels == 1 && desc.Depth() == 1 && desc.ArraySize() == 1)
-				{
-					transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				}
-				else
-				{
-
-					for (UINT array = uav.FirstArraySlice; array < uav.FirstArraySlice + uav.ArraySize; array++)
-					{
-						UINT res = desc.CalcSubresource(uav.MipSlice, array, uav.PlaneSlice);
-						transition(info->resource_ptr, ResourceState::UNORDERED_ACCESS, res);
-					}
-
-				}
-			}
-			else assert(false);
-
+					transition(resource, ResourceState::UNORDERED_ACCESS, subres);
+				});
 		}
 
 
@@ -551,28 +539,10 @@ namespace DX12
 		{
 			assert(info->type == HandleType::DSV);
 
-			auto& desc = info->resource_ptr->get_desc();
-
-			if (info->dsv.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2D)
-			{
-				auto& dsv = info->dsv.Texture2D;
-
-				UINT res = desc.CalcSubresource(dsv.MipSlice, 0, 0);
-				transition(info->resource_ptr, ResourceState::DEPTH_WRITE, res);
-
-			}
-			else if (info->dsv.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
-			{
-				auto& dsv = info->dsv.Texture2DArray;
-
-				for (UINT array = dsv.FirstArraySlice; array < dsv.FirstArraySlice + dsv.ArraySize; array++)
+			info->for_each_subres([&](const Resource* resource, UINT subres)
 				{
-					UINT res = desc.CalcSubresource(dsv.MipSlice, array, 0);
-					transition(info->resource_ptr, ResourceState::DEPTH_WRITE, res);
-				}
-			}
-			else
-				assert(0);
+					transition(resource, ResourceState::DEPTH_WRITE, subres);
+				});
 		}
 
 
@@ -580,104 +550,6 @@ namespace DX12
 		{
 			assert(info->type == HandleType::SRV);
 
-			auto& desc = info->resource_ptr->get_desc();
-			UINT total = desc.CalcSubresource(desc.MipLevels - 1, desc.ArraySize() - 1, desc.Depth() - 1);
-
-
-			ResourceState target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
-
-			if (type == CommandListType::DIRECT)
-			{
-				target_state = ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE;
-			}
-
-			if (type == CommandListType::COMPUTE)
-			{
-				target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
-			}
-
-			if (type == CommandListType::COPY)
-			{
-				assert(false);
-			}
-
-			if (info->srv.ViewDimension == D3D12_UAV_DIMENSION_BUFFER)
-			{
-				transition(info->resource_ptr, target_state, 0);// D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-
-			}
-			else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURE2D)
-			{
-				auto& srv = info->srv.Texture2D;
-
-				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0 && desc.Depth() == 1)
-				{
-					transition(info->resource_ptr, target_state, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				}
-				else
-				{
-					for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
-					{
-						UINT res = desc.CalcSubresource(mip, 0, srv.PlaneSlice);
-						transition(info->resource_ptr, target_state, res);
-					}
-				}
-
-			}
-			else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURE2DARRAY)
-			{
-				auto& srv = info->srv.Texture2DArray;
-
-				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0 && srv.FirstArraySlice == 0 && srv.ArraySize == desc.ArraySize() && desc.Depth() == 1)
-				{
-					transition(info->resource_ptr, target_state, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				}
-				else
-				{
-					for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
-						for (auto array = srv.FirstArraySlice; array < srv.FirstArraySlice + srv.ArraySize; array++)
-						{
-							UINT res = desc.CalcSubresource(mip, array, srv.PlaneSlice);
-							transition(info->resource_ptr, target_state, res);
-						}
-				}
-			}
-			else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURE3D)
-			{
-				auto& srv = info->srv.Texture3D;
-
-				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0)
-				{
-					transition(info->resource_ptr, target_state, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				}
-				else
-				{
-					for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
-					{
-						UINT res = desc.CalcSubresource(mip, 0, 0);
-						transition(info->resource_ptr, target_state, res);
-					}
-				}
-			}
-			else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURECUBE)
-			{
-				auto& srv = info->srv.TextureCube;
-
-				if (srv.MipLevels == desc.MipLevels && srv.MostDetailedMip == 0)
-				{
-					transition(info->resource_ptr, target_state, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-				}
-				else
-				{
-					for (auto mip = srv.MostDetailedMip; mip < srv.MostDetailedMip + srv.MipLevels; mip++)
-						for (auto array = 0; array < 6; array++)
-						{
-							UINT res = desc.CalcSubresource(mip, array, 0);
-							transition(info->resource_ptr, target_state, res);
-						}
-				}
-			}
-			else
 				assert(false);
 
 
@@ -840,7 +712,7 @@ namespace DX12
 		friend class CopyContext;
 		friend class GraphicsContext;
 		friend class ComputeContext;
-
+		friend class SignatureDataSetter;
 
 		// TODO: make references?
 
@@ -1009,9 +881,27 @@ namespace DX12
 		std::future<bool> read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)>);
 		std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(const char*, UINT64)>);
 	};
+	/*
+	class StateManager
+	{
+		std::vector<Handle> rtvs;
+		Handle dsv;
 
+		std::vector<Handle> tables;
 
+	public:
+		void set_signature(const RootSignature::ptr&);
 
+		template<class Compiled>
+		void set_slot(Compiled& compiled)
+		{
+			
+		}
+
+	};
+	*/
+
+	
 	class SignatureDataSetter
 	{
 		struct RowInfo
@@ -1025,10 +915,23 @@ namespace DX12
 		friend class CommandList;
 
 
+		struct SlotInfo
+		{
+			SlotID id;
+			bool dirty = false;
+
+			const std::vector<UINT>* tables;
+		};
+		std::vector<SlotInfo> slots;
+
+
+		RootSignature::ptr root_sig;
+		UsedSlots used_slots;
 	protected:
 		CommandList& base;
 		SignatureDataSetter(CommandList& base) :base(base) {
 			tables.resize(32); // !!!!!!!!!!!
+			slots.resize(32); // !!!!!!!!!!!
 		}
 
 		virtual void set(UINT, const HandleTableLight&) = 0;
@@ -1047,6 +950,7 @@ namespace DX12
 
 		void commit_tables()
 		{
+
 			for (auto& row : tables)
 			{
 				if (!row.dirty) continue;
@@ -1056,31 +960,66 @@ namespace DX12
 				for (UINT i = 0; i < (UINT)table.get_count(); ++i)
 				{
 					const auto& h = table[i];
-					if (h.resource_info && h.resource_info->resource_ptr)
-					{
-
-						if (type == HandleType::SRV)	get_base().transition_srv(h.resource_info);
-						else if (type == HandleType::UAV)	get_base().transition_uav(h.resource_info);
-						else assert(false);
-
-					}
+					get_base().transition(h.resource_info);
 				}
 
 				row.dirty = false;
 			}
 
+			/*
+			for (auto& row : slots)
+			{
+				if (!row.dirty) continue;
+
+				auto& used_tables = *row.tables;
+
+				for (auto &id : used_tables)
+				{
+					auto& table = tables[id].table;
+
+					for (UINT i = 0; i < (UINT)table.get_count(); ++i)
+					{
+						const auto& h = table[i];
+						if (h.resource_info && h.resource_info->resource_ptr)
+						{
+							get_base().transition(h.resource_info);
+						}
+					}
+				}
+				
+				row.dirty = false;
+			}*/
 		}
+
 	public:
 
+		void reset()
+		{
+			root_sig = nullptr;
+		}
 		CommandList& get_base() {
 			return base;
 		}
-		virtual void set_signature(const RootSignature::ptr&) = 0;
+		
+		void set_signature(const RootSignature::ptr& signature)
+		{
+			if (root_sig == signature) return;
+			
+			root_sig = signature;
+			
+			auto &desc = signature->get_desc();
+
+			on_set_signature(signature);
+		//	tables.resize(desc.tables.size());
+		}
+
+		virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
+		
+		void set_pipeline(std::shared_ptr<PipelineStateBase> pipeline);
 
 		template<HandleType type>
 		void set_table(UINT index, const HandleTableLight& table)
 		{
-
 			assert(table.valid());
 			
 			auto& row = tables[index];
@@ -1102,6 +1041,17 @@ namespace DX12
 			set_const_buffer(index, address.address);
 		}
 
+		template<class Compiled>
+		void set_slot(Compiled& compiled)
+		{
+			auto& slot = slots[Compiled::Slot::ID];
+			slot.id = Compiled::ID;
+			slot.dirty = true;
+
+			slot.tables = &Compiled::SlotTable::tables;
+
+			compiled.set_tables(*this);
+		}
 
 		template<class T>
 		std::unique_ptr<T> wrap()
@@ -1142,8 +1092,6 @@ namespace DX12
 		std::vector<Viewport> viewports;
 		D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
-		//	std::shared_ptr<PipelineState> current_pipeline;
-		std::shared_ptr<RootSignature> current_root_signature;
 
 
 		void begin();
@@ -1174,8 +1122,8 @@ namespace DX12
 		}
 
 
-		void set_signature(const RootSignature::ptr&) override;
-		void set_pipeline(std::shared_ptr<PipelineState>);
+		void on_set_signature(const RootSignature::ptr&) override;
+	//	void set_pipeline(std::shared_ptr<PipelineState>);
 
 
 
@@ -1406,8 +1354,8 @@ namespace DX12
 		}
 
 		void flush_binds(bool force = false);
-		void set_signature(const RootSignature::ptr&);
-		void set_pipeline(std::shared_ptr<ComputePipelineState>);
+		void on_set_signature(const RootSignature::ptr&) override;
+	//	void set_pipeline(std::shared_ptr<ComputePipelineState>);
 
 
 		void dispach(int = 1, int = 1, int = 1);

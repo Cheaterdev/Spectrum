@@ -147,6 +147,8 @@ namespace DX12
 			this->cbv = cbv;
 		}
 
+
+		void for_each_subres(std::function<void(Resource*, UINT)> f) const;
 	};
 
 	struct Handle

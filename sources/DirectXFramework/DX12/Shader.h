@@ -1,16 +1,14 @@
 #pragma once
-
-std::map<UINT, UINT> get_used_slots(std::string slot_name);
-
+std::optional<SlotID> get_slot(std::string_view slot_name);
 namespace DX12
 {
     class PipelineStateBase;
 
 class UsedSlots
 {
-    std::map<UINT, UINT> slots_usage;
+   
 public:
-
+    std::set<SlotID> slots_usage;
 	void merge(resource_file_depender & depender)
 	{
         for (auto& d : depender.get_files())
@@ -24,11 +22,18 @@ public:
 
                 if (last_slash == autogen_end + 1)
                 {
-                    auto point = d.file_name.find(L".", last_slash);
+                  
+                    if (d.file_name.find_first_of(L"\\/", last_slash+1) == std::wstring::npos)
+                    {
+                        auto point = d.file_name.find(L".", last_slash);
 
-                    auto name = d.file_name.substr(last_slash + 1, point - last_slash - 1);
+                        auto name = d.file_name.substr(last_slash + 1, point - last_slash - 1);
 
-                    slots_usage.merge(get_used_slots(convert(name)));
+                        auto slot_id = get_slot(convert(name));
+
+                        assert(slot_id);
+                        slots_usage.insert(slot_id.value());
+                    }
                 }
             }
         }

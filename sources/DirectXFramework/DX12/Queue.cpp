@@ -148,7 +148,7 @@ namespace DX12
 
 			FenceWaiter waiter = signal();
 
-			executor.enqueue([&promise, &waiter]() {
+			executor.enqueue([&promise, waiter]() {
 				waiter.wait();
 				promise.set_value(0);
 				});

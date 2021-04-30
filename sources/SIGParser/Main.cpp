@@ -738,7 +738,7 @@ void generate_cpp_table(const Table& table)
 			//	stream << "using " << table.name << " = DataHolder<Table::" << table.name << ", "<<table.slot->layout->name << "::" << table.slot->name <<">;"<< std::endl;
 
 
-			stream << "struct " << table.name << ":public DataHolder<SlotID::" << table.name <<",Table::" << table.name << "," << table.slot->layout->name << "::" << table.slot->name << ">" << std::endl;//,Table::" << table.name << std::endl;
+			stream << "struct " << table.name << ":public DataHolder<"<< table.name<<", SlotID::" << table.name <<",Table::" << table.name << "," << table.slot->layout->name << "::" << table.slot->name << ">" << std::endl;//,Table::" << table.name << std::endl;
 			stream << "{" << std::endl;
 			{
 				stream.push();
@@ -748,6 +748,7 @@ void generate_cpp_table(const Table& table)
 
 				std::string pass;
 				std::string copy;
+				std::string tables;
 
 				auto f = [&](ValueType type) {
 					if (table.counts[type] == 0) return;
@@ -757,6 +758,11 @@ void generate_cpp_table(const Table& table)
 					copy += get_name_for(type) + " = other." + get_name_for(type) + ";";
 					stream << str_toupper(get_name_for(type)) << " " << get_name_for(type) << ";" << std::endl;
 
+
+					if (!tables.empty())
+						tables += ", ";
+					tables += table.slot->layout->name+ "::" +table.slot->name+"::"+ str_toupper(get_name_for(type)) +"_ID";
+					
 
 				};
 
@@ -773,6 +779,11 @@ void generate_cpp_table(const Table& table)
 				}
 
 
+
+			
+			
+				stream << "static inline const std::vector<UINT> tables = {" << tables << "};" << std::endl;
+				
 				stream << table.name << "(): "\
 					"DataHolder("
 					<< pass <<
@@ -841,7 +852,8 @@ void generate_include_list(const Parsed& parsed)
 	stream << "Render::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
 	stream << "void init_pso(enum_array<PSO, PSOBase::ptr>&);" << std::endl;
 
-	stream << "std::map<UINT, UINT> get_used_slots(std::string slot_name);" << std::endl;
+	stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
+	stream << "UINT get_slot_id(SlotID id);" << std::endl;
 
 	{
 		my_stream stream(cpp_path, "enums.h");
@@ -934,12 +946,11 @@ void generate_include_list(const Parsed& parsed)
 		stream << "}" << std::endl;
 
 		{
-			stream << "std::map<UINT, UINT> get_used_slots(std::string slot_name)" << std::endl;
+			stream << "std::optional<SlotID> get_slot(std::string_view slot_name)" << std::endl;
 			stream << "{" << std::endl;
 
 			stream.push();
 			{
-				stream << "std::map<UINT, UINT> result;" << std::endl;
 
 				for(auto &t:parsed.tables)
 				{
@@ -948,21 +959,12 @@ void generate_include_list(const Parsed& parsed)
 					stream << "if(slot_name == \"" << t.name<<"\")" << std::endl;
 					stream << "{" << std::endl;
 					stream.push();
-					for (int i = 0; i < ValueType::STRUCT; i++)
-					{
-						auto type = (ValueType)i;
-						auto count = t.counts[i];
-
-						if (count == 0)	continue;
-						stream << "result[" <<i <<"] = " << count<<";"<<std::endl;
-
-					}
-					stream << "return result;" << std::endl;
+					stream << "return SlotID::"<<t.name<<";" << std::endl;
 					stream.pop();
 					stream << "}" << std::endl;
 					
 				}
-				stream << "return result;" << std::endl;
+				stream << "return std::nullopt;" << std::endl;
 
 			}
 			stream.pop();
@@ -970,6 +972,37 @@ void generate_include_list(const Parsed& parsed)
 
 
 		}
+
+
+		{
+			stream << "UINT get_slot_id(SlotID id)" << std::endl;
+
+			stream << "{" << std::endl;
+
+			stream.push();
+			{
+
+				for(auto &t:parsed.tables)
+				{
+					if (!t.slot) continue;
+
+					stream << "if(id == SlotID::" << t.name<<")" << std::endl;
+					stream << "{" << std::endl;
+					stream.push();
+					stream << "return Slots::"<<t.name<<"::Slot::ID;" << std::endl;
+					stream.pop();
+					stream << "}" << std::endl;
+					
+				}
+				stream << "return -1;" << std::endl;
+
+			}
+			stream.pop();
+			stream << "}" << std::endl;
+
+
+		}
+		
 	}
 
 	
@@ -1469,13 +1502,15 @@ void generate_cpp_rt(RenderTarget& rt)
 			{
 				stream.push();
 				std::string pass;
-
+			
 				if (rt.rtvs.size())
 				{
 					if (!pass.empty()) pass += ", ";
 
 					stream << "RTV rtv;" << std::endl;
 					pass += "rtv";
+
+			
 				}
 
 				if (rt.dsv)
@@ -1485,7 +1520,8 @@ void generate_cpp_rt(RenderTarget& rt)
 					stream << "DSV dsv;" << std::endl;
 				}
 
-
+		
+		
 				stream << rt.name << "():RTHolder<Table::" << rt.name << ">(" << pass << "){}" << std::endl;
 				stream.pop();
 			}
@@ -1523,6 +1559,8 @@ void generate_cpp_layout(Layout& layout)
 
 			stream << "static const unsigned int ID = " << s.id << ";" << std::endl;
 
+			std::string tables;
+			
 			for (int i = 0; i < ValueType::STRUCT; i++)
 			{
 				auto type = (ValueType)i;
@@ -1533,8 +1571,17 @@ void generate_cpp_layout(Layout& layout)
 				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
 				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
 
+				if (!tables.empty())
+					tables += ", ";
+
+				tables += std::to_string(s.ids[type]);
+
 			}
 
+
+			stream << "static inline const std::vector<UINT> tables = {" << tables << "};" << std::endl;
+
+			
 			stream.pop();
 		}
 		stream << "};" << std::endl;

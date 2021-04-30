@@ -146,21 +146,18 @@ void materials::universal_material::compile()
 						func(textures_handles[i]);
 
 						auto textures_srvs = textures_handle.map(i);
-						textures_srvs[i] = textures_handles[i];
+						textures_srvs[0] = textures_handles[i];
 						textures_handle.write(i, textures_srvs);
 						need_update_compiled = true;
 					});
 
 			else
-			{
-
-				auto asset = EngineAssets::missing_texture.get_asset();
-				auto func = asset->get_texture()->texture_2d()->srv();
+			{				
+				auto func = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d()->srv();
 				func(textures_handles[i]);
-
 				
 				auto textures_srvs = textures_handle.map(i);
-				textures_srvs[i] = textures_handles[i];
+				textures_srvs[0] = textures_handles[i];
 				textures_handle.write(i, textures_srvs);
 			}
 
@@ -416,7 +413,10 @@ void materials::universal_material::serialize(Archive& ar, const unsigned int fi
 
 	if constexpr (Archive::is_loading::value)
 	{
-		pipeline = PipelineManager::get().get_pipeline(pipeline);
+		auto new_pip = PipelineManager::get().get_pipeline(pipeline);
+
+		pipeline = nullptr;
+		pipeline = new_pip;
 	}
 
 

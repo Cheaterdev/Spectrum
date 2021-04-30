@@ -320,9 +320,8 @@ namespace DX12
 	};
 	class PipelineStateBase: public Trackable<TrackedPipeline>
 	{
-	
+		
 	protected:
-		UsedSlots slots;
 		
 		std::string cache;
 
@@ -346,6 +345,8 @@ namespace DX12
 	public:
 		bool debuggable = false;
 		std::string name;
+		RootSignature::ptr root_signature;
+		UsedSlots slots;
 
 		virtual	void on_change() = 0;
 		ComPtr<ID3D12PipelineState> get_native();

@@ -173,7 +173,10 @@ void GUI::Elements::FlowGraph::canvas::on_remove_input(::FlowGraph::parameter* p
             if (!(node->get_graph() == g || node == g))
                 return;
 
-            links[p]->line->remove_from_parent(); links[p] = nullptr;
+            auto l = links[p]->line.lock();
+    	
+           if(l)l->remove_from_parent();
+    	links[p] = nullptr;
         });
 }
 
@@ -208,7 +211,11 @@ void GUI::Elements::FlowGraph::canvas::on_remove_output(::FlowGraph::parameter* 
             if (!(node->get_graph() == g || node == g))
                 return;
 
-            links[p]->line->remove_from_parent(); links[p] = nullptr;
+            auto l = links[p]->line.lock();
+
+            if (l)
+               l->remove_from_parent();
+    	links[p] = nullptr;
         });
 }
 
@@ -733,7 +740,9 @@ bool GUI::Elements::FlowGraph::link_item::on_mouse_action(mouse_action action, m
 
     if (button == mouse_button::LEFT || action == mouse_action::UP)
     {
-        line->draw_helper = true;
+        auto l = line.lock();
+
+        if (l)      l->draw_helper = true;
         FlowGraph::manager::get().on_edit(get_ptr<link_item>());
     }
 

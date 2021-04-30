@@ -359,7 +359,7 @@ namespace DX12
 				auto list = Device::get().get_upload_list();
 				set_data(list, offset, v);
 				list->end();
-				list->execute();
+				list->execute_and_wait();
 			}
 		
 		
@@ -527,7 +527,7 @@ namespace DX12
 				data.resize(size);
 			}
 
-			update_data(size_t offset, std::vector<T>&& v) :offset(offset), data(std::move(v))
+			update_data(size_t offset, std::vector<T>& v) :offset(offset), data(v)
 			{
 				size = data.size();
 			}
@@ -554,7 +554,7 @@ namespace DX12
 
 		virtual	void write(size_t offset, std::vector<T>& v)  override {
 			std::lock_guard<std::mutex> g(m);
-			update_list.emplace_back(offset, std::move(v));
+			update_list.emplace_back(offset, v);
 		}
 
 

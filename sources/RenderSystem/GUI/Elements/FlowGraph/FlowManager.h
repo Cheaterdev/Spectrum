@@ -28,9 +28,17 @@ namespace GUI
                     void on_edit(link_item::ptr item)
                     {
                         if (edit)
-                            edit->line->draw_helper = false;
+                        {
+                            auto l = edit->line.lock();
+                          if(l)l->draw_helper = false;
 
-                        item->line->draw_helper = true;
+                        }
+
+                        {
+                            auto l = item->line.lock();
+                            if (l)l->draw_helper = true;
+                        }
+   
                         edit = item;
                   
                     }

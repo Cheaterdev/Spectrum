@@ -173,7 +173,7 @@ GUI::Elements::FlowGraph::link_item::ptr GUI::Elements::FlowGraph::component_win
 	link->p = p;
 	link->type = link_type::LINK_IN;
 	link->update();
-	link->line = l.get();
+	link->line = l;
 	link->can_delete = type != window_type::NODE;
 	return link;
 }
@@ -207,7 +207,7 @@ GUI::Elements::FlowGraph::link_item::ptr GUI::Elements::FlowGraph::component_win
 	link->type = link_type::LINK_OUT;
 	link->update();
 	link->can_delete = type != window_type::NODE;
-	link->line = l.get();
+	link->line = l;
 	return link;
 }
 /*

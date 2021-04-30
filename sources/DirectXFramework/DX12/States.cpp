@@ -18,7 +18,10 @@ namespace DX12
 
 #endif
 	}
-
+	Barriers::Barriers(CommandListType type):type(type)
+	{
+		
+	}
 	void Barriers::clear()
 	{
 		native.clear();
@@ -42,9 +45,15 @@ namespace DX12
 
 	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags)
 	{
+		assert(resource);
+
 		assert(before != ResourceState::UNKNOWN);
 		assert(after != ResourceState::UNKNOWN);
 
+		assert(IsFullySupport(type, before));
+		assert(IsFullySupport(type, after));
+
+		
 		D3D12_RESOURCE_BARRIER_FLAGS native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
 		if(flags==BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
@@ -62,11 +71,15 @@ namespace DX12
 
 
 
-	void SubResourcesCPU::prepare_for(SubResourcesGPU& state)
+	void SubResourcesCPU::prepare_for(CommandListType type, SubResourcesGPU& state)
 	{
 		if (state.all_states_same && all_state.first_transition)
 		{
-			all_state.first_transition->wanted_state = merge_state(state.get_subres_state(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES).state, all_state.first_transition->wanted_state);
+
+			auto states = state.get_subres_state(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES).state;
+
+			states = GetSupportedStates(type) & states;
+			all_state.first_transition->wanted_state = merge_state(states, all_state.first_transition->wanted_state);
 		}
 	}
 
@@ -321,6 +334,31 @@ namespace DX12
 			from->use_resource(resource);
 		}
 
+	}
+
+
+	void ResourceStateManager::stop_using(Transitions* list, UINT subres) const
+	{
+		auto& state = get_state(list);
+
+		
+		auto transit = [&](UINT i)
+		{
+			auto last_transition = state.get_last_transition(i);
+
+			last_transition->last_used_point = list->get_last_transition_point();
+		};
+
+
+		if (state.all_states_same)
+		{
+			transit(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+		}
+		else
+		{
+			for (int i = 0; i < gpu_state.subres.size(); i++) transit(i);
+		}
+		
 	}
 	bool ResourceStateManager::transition(Transitions* from, Transitions* to) const
 	{

@@ -200,6 +200,12 @@ RTX::RTX()
 		raygen_types.emplace_back(type);
 	}
 
+	{
+		RayGenShader type;
+		type.name = "MyRaygenShaderReflection";
+		raygen_types.emplace_back(type);
+	}
+
 	CreateSharedCollection();
 }
 
@@ -248,3 +254,33 @@ void RTX::render(ComputeContext & compute, Render::RaytracingAccelerationStructu
 	compute.dispatch_rays<closesthit_identifier, shader_identifier, shader_identifier>(size, material_hits->buffer->get_resource_address(), material_hits->max_size(), m_missShaderTable.get_resource_address(), miss_table.size(), m_rayGenShaderTable.get_resource_address());
 
 }
+
+
+void RTX::render2(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
+{
+	PROFILE_GPU(L"raytracing");
+
+	{
+		Slots::Raytracing rtx;
+		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<StructuredBufferView<UINT>>(*compute.get_base().frame_resources).structuredBuffer;
+		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*compute.get_base().frame_resources).srv_handle;
+		rtx.set(compute);
+	}
+
+
+	auto m_rayGenShaderTable = compute.get_base().place_raw(raygen_types[1].raygen);
+
+	std::vector<shader_identifier> miss_table;
+
+	for (auto& type : ray_types)
+	{
+		miss_table.emplace_back(type.miss);
+	}
+
+	auto m_missShaderTable = compute.get_base().place_raw(miss_table);
+
+	compute.set_pso(m_dxrStateObject);
+	compute.dispatch_rays<closesthit_identifier, shader_identifier, shader_identifier>(size, material_hits->buffer->get_resource_address(), material_hits->max_size(), m_missShaderTable.get_resource_address(), miss_table.size(), m_rayGenShaderTable.get_resource_address());
+
+}
+

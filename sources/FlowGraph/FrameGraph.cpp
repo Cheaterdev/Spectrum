@@ -655,7 +655,7 @@ void FrameGraph::render()
 
 					auto& cpu_state = resource->get_cpu_state(commandList.get());
 
-					cpu_state.prepare_for(merged_state);
+					cpu_state.prepare_for(commandList->get_type(), merged_state);
 					/*for (int i = 0; i < merged_state.size(); i++)
 					{
 						if (!cpu_state.subres[i].used)	continue;
@@ -741,7 +741,7 @@ void FrameGraph::render()
 				auto commandList = pass->context.list;
 				if (!commandList) continue;
 
-				tasks.emplace_back(scheduler::get().enqueue([commandList]() {
+				tasks.emplace_back(scheduler::get().enqueue([commandList,pass]() {
 					commandList->compile();
 					}, std::chrono::steady_clock::now()));
 

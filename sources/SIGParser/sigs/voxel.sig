@@ -240,6 +240,7 @@ GraphicsPSO VoxelReflectionHi
 
 	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
 	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
+		blend = { Additive };
 
 	stencil_read_mask = 2;
 	stencil_write_mask = 2;
@@ -263,6 +264,7 @@ GraphicsPSO VoxelReflectionUpsample
 
 	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
 	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	blend = { Additive };
 
 	stencil_read_mask = 2;
 	stencil_write_mask = 2;

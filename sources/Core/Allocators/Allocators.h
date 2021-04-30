@@ -385,15 +385,13 @@ public:
 template<class T>
 class TypedHandle
 {
-	//: public AllocatorHanle
-
 	DataProvider<T>* provider = nullptr;
 public:
 
 	AllocatorHanle handle;
 
 	TypedHandle() = default;
-	TypedHandle(AllocatorHanle& handle, DataProvider<T>* provider) :handle(handle), provider(provider)
+	TypedHandle(AllocatorHanle& handle, DataProvider<T>* provider) : handle(handle), provider(provider)
 	{
 		//assert(handle.get_size());
 	}
@@ -406,6 +404,12 @@ public:
 	{
 		return handle.get_offset();
 	}
+
+	size_t get_size()
+	{
+		return handle.get_size();
+	}
+	
 	std::span<T> aquire()
 	{
 		return provider->aquire(handle.get_offset(), handle.get_size());
@@ -464,9 +468,11 @@ public:
 		return Handle(handle, this);
 	}
 
-	void Free(TypedHandle<T>& handle)
+	void Free(Handle& handle)
 	{
 		std::lock_guard<std::mutex> g(m);
+
+		on_free(handle.get_offset(), handle.get_offset()+ handle.get_size());
 		handle.handle.Free();
 	}
 
@@ -479,6 +485,8 @@ public:
 
 	}
 
+	virtual void on_free(size_t from, size_t to) {
 
+	}
 
 };

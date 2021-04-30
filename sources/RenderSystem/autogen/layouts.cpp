@@ -9,339 +9,499 @@ Render::RootLayout::ptr get_Signature(Layouts id)
 {
 	return signatures[id];
 }
-std::map<UINT, UINT> get_used_slots(std::string slot_name)
+std::optional<SlotID> get_slot(std::string_view slot_name)
 {
-	std::map<UINT, UINT> result;
 	if(slot_name == "TextureRenderer")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::TextureRenderer;
 	}
 	if(slot_name == "BRDF")
 	{
-		result[2] = 1;
-		return result;
+		return SlotID::BRDF;
 	}
 	if(slot_name == "DebugInfo")
 	{
-		result[2] = 1;
-		return result;
+		return SlotID::DebugInfo;
 	}
 	if(slot_name == "FontRendering")
 	{
-		result[1] = 2;
-		return result;
+		return SlotID::FontRendering;
 	}
 	if(slot_name == "FontRenderingConstants")
 	{
-		result[0] = 2;
-		return result;
+		return SlotID::FontRenderingConstants;
 	}
 	if(slot_name == "FontRenderingGlyphs")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::FontRenderingGlyphs;
 	}
 	if(slot_name == "FrameInfo")
 	{
-		result[0] = 32;
-		result[1] = 3;
-		return result;
+		return SlotID::FrameInfo;
 	}
 	if(slot_name == "MaterialInfo")
 	{
-		result[0] = 2;
-		return result;
+		return SlotID::MaterialInfo;
 	}
 	if(slot_name == "MeshInfo")
 	{
-		result[0] = 2;
-		return result;
+		return SlotID::MeshInfo;
 	}
 	if(slot_name == "GatherPipelineGlobal")
 	{
-		result[1] = 2;
-		return result;
+		return SlotID::GatherPipelineGlobal;
 	}
 	if(slot_name == "GatherPipeline")
 	{
-		result[0] = 2;
-		result[2] = 8;
-		return result;
+		return SlotID::GatherPipeline;
 	}
 	if(slot_name == "GatherBoxes")
 	{
-		result[2] = 2;
-		return result;
+		return SlotID::GatherBoxes;
 	}
 	if(slot_name == "DrawBoxes")
 	{
-		result[1] = 2;
-		result[2] = 1;
-		return result;
+		return SlotID::DrawBoxes;
 	}
 	if(slot_name == "InitDispatch")
 	{
-		result[2] = 2;
-		return result;
+		return SlotID::InitDispatch;
 	}
 	if(slot_name == "GatherMeshesBoxes")
 	{
-		result[1] = 2;
-		result[2] = 2;
-		return result;
+		return SlotID::GatherMeshesBoxes;
 	}
 	if(slot_name == "MipMapping")
 	{
-		result[0] = 3;
-		result[1] = 1;
-		result[2] = 4;
-		return result;
+		return SlotID::MipMapping;
 	}
 	if(slot_name == "CopyTexture")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::CopyTexture;
 	}
 	if(slot_name == "DownsampleDepth")
 	{
-		result[1] = 1;
-		result[2] = 1;
-		return result;
+		return SlotID::DownsampleDepth;
 	}
 	if(slot_name == "GBuffer")
 	{
-		result[1] = 5;
-		return result;
+		return SlotID::GBuffer;
 	}
 	if(slot_name == "GBufferDownsample")
 	{
-		result[1] = 2;
-		return result;
+		return SlotID::GBufferDownsample;
 	}
 	if(slot_name == "GBufferQuality")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::GBufferQuality;
 	}
 	if(slot_name == "PSSMConstants")
 	{
-		result[0] = 2;
-		return result;
+		return SlotID::PSSMConstants;
 	}
 	if(slot_name == "PSSMData")
 	{
-		result[1] = 2;
-		return result;
+		return SlotID::PSSMData;
 	}
 	if(slot_name == "PSSMDataGlobal")
 	{
-		result[1] = 2;
-		return result;
+		return SlotID::PSSMDataGlobal;
 	}
 	if(slot_name == "PSSMLighting")
 	{
-		result[1] = 6;
-		return result;
+		return SlotID::PSSMLighting;
 	}
 	if(slot_name == "RaytracingRays")
 	{
-		result[0] = 1;
-		result[1] = 5;
-		result[2] = 1;
-		return result;
+		return SlotID::RaytracingRays;
 	}
 	if(slot_name == "Raytracing")
 	{
-		result[1] = 2;
-		return result;
+		return SlotID::Raytracing;
 	}
 	if(slot_name == "SceneData")
 	{
-		result[1] = 5;
-		return result;
+		return SlotID::SceneData;
 	}
 	if(slot_name == "SkyData")
 	{
-		result[0] = 1;
-		result[1] = 4;
-		return result;
+		return SlotID::SkyData;
 	}
 	if(slot_name == "SkyFace")
 	{
-		result[0] = 1;
-		return result;
+		return SlotID::SkyFace;
 	}
 	if(slot_name == "EnvFilter")
 	{
-		result[0] = 3;
-		return result;
+		return SlotID::EnvFilter;
 	}
 	if(slot_name == "EnvSource")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::EnvSource;
 	}
 	if(slot_name == "SMAA_Global")
 	{
-		result[0] = 2;
-		result[1] = 1;
-		return result;
+		return SlotID::SMAA_Global;
 	}
 	if(slot_name == "SMAA_Weights")
 	{
-		result[1] = 3;
-		return result;
+		return SlotID::SMAA_Weights;
 	}
 	if(slot_name == "SMAA_Blend")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::SMAA_Blend;
 	}
 	if(slot_name == "Countour")
 	{
-		result[0] = 1;
-		result[1] = 1;
-		return result;
+		return SlotID::Countour;
 	}
 	if(slot_name == "DrawStencil")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::DrawStencil;
 	}
 	if(slot_name == "PickerBuffer")
 	{
-		result[2] = 1;
-		return result;
+		return SlotID::PickerBuffer;
 	}
 	if(slot_name == "Instance")
 	{
-		result[0] = 1;
-		return result;
+		return SlotID::Instance;
 	}
 	if(slot_name == "Color")
 	{
-		result[0] = 1;
-		return result;
+		return SlotID::Color;
 	}
 	if(slot_name == "Test")
 	{
-		result[0] = 16;
-		return result;
+		return SlotID::Test;
 	}
 	if(slot_name == "NinePatch")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::NinePatch;
 	}
 	if(slot_name == "ColorRect")
 	{
-		result[0] = 3;
-		return result;
+		return SlotID::ColorRect;
 	}
 	if(slot_name == "FlowGraph")
 	{
-		result[0] = 3;
-		return result;
+		return SlotID::FlowGraph;
 	}
 	if(slot_name == "LineRender")
 	{
-		result[1] = 1;
-		return result;
+		return SlotID::LineRender;
 	}
 	if(slot_name == "VoxelInfo")
 	{
-		result[0] = 4;
-		return result;
+		return SlotID::VoxelInfo;
 	}
 	if(slot_name == "Voxelization")
 	{
-		result[0] = 4;
-		result[2] = 3;
-		return result;
+		return SlotID::Voxelization;
 	}
 	if(slot_name == "VoxelScreen")
 	{
-		result[1] = 10;
-		return result;
+		return SlotID::VoxelScreen;
 	}
 	if(slot_name == "VoxelOutput")
 	{
-		result[2] = 2;
-		return result;
+		return SlotID::VoxelOutput;
 	}
 	if(slot_name == "VoxelBlur")
 	{
-		result[1] = 3;
-		result[2] = 2;
-		return result;
+		return SlotID::VoxelBlur;
 	}
 	if(slot_name == "VoxelUpscale")
 	{
-		result[1] = 3;
-		return result;
+		return SlotID::VoxelUpscale;
 	}
 	if(slot_name == "VoxelVisibility")
 	{
-		result[1] = 1;
-		result[2] = 1;
-		return result;
+		return SlotID::VoxelVisibility;
 	}
 	if(slot_name == "VoxelMipMap")
 	{
-		result[0] = 1;
-		result[1] = 2;
-		result[2] = 3;
-		return result;
+		return SlotID::VoxelMipMap;
 	}
 	if(slot_name == "VoxelCopy")
 	{
-		result[0] = 1;
-		result[1] = 3;
-		result[2] = 2;
-		return result;
+		return SlotID::VoxelCopy;
 	}
 	if(slot_name == "VoxelZero")
 	{
-		result[0] = 1;
-		result[1] = 1;
-		result[2] = 1;
-		return result;
+		return SlotID::VoxelZero;
 	}
 	if(slot_name == "VoxelLighting")
 	{
-		result[0] = 1;
-		result[1] = 7;
-		result[2] = 1;
-		return result;
+		return SlotID::VoxelLighting;
 	}
 	if(slot_name == "VoxelDebug")
 	{
-		result[1] = 6;
-		return result;
+		return SlotID::VoxelDebug;
 	}
 	if(slot_name == "DenoiserDownsample")
 	{
-		result[1] = 2;
-		return result;
+		return SlotID::DenoiserDownsample;
 	}
 	if(slot_name == "DenoiserHistoryFix")
 	{
-		result[1] = 3;
-		result[2] = 1;
-		return result;
+		return SlotID::DenoiserHistoryFix;
 	}
 	if(slot_name == "FrameClassification")
 	{
-		result[1] = 1;
-		result[2] = 2;
-		return result;
+		return SlotID::FrameClassification;
 	}
 	if(slot_name == "FrameClassificationInitDispatch")
 	{
-		result[1] = 2;
-		result[2] = 2;
-		return result;
+		return SlotID::FrameClassificationInitDispatch;
 	}
-	return result;
+	return std::nullopt;
+}
+UINT get_slot_id(SlotID id)
+{
+	if(id == SlotID::TextureRenderer)
+	{
+		return Slots::TextureRenderer::Slot::ID;
+	}
+	if(id == SlotID::BRDF)
+	{
+		return Slots::BRDF::Slot::ID;
+	}
+	if(id == SlotID::DebugInfo)
+	{
+		return Slots::DebugInfo::Slot::ID;
+	}
+	if(id == SlotID::FontRendering)
+	{
+		return Slots::FontRendering::Slot::ID;
+	}
+	if(id == SlotID::FontRenderingConstants)
+	{
+		return Slots::FontRenderingConstants::Slot::ID;
+	}
+	if(id == SlotID::FontRenderingGlyphs)
+	{
+		return Slots::FontRenderingGlyphs::Slot::ID;
+	}
+	if(id == SlotID::FrameInfo)
+	{
+		return Slots::FrameInfo::Slot::ID;
+	}
+	if(id == SlotID::MaterialInfo)
+	{
+		return Slots::MaterialInfo::Slot::ID;
+	}
+	if(id == SlotID::MeshInfo)
+	{
+		return Slots::MeshInfo::Slot::ID;
+	}
+	if(id == SlotID::GatherPipelineGlobal)
+	{
+		return Slots::GatherPipelineGlobal::Slot::ID;
+	}
+	if(id == SlotID::GatherPipeline)
+	{
+		return Slots::GatherPipeline::Slot::ID;
+	}
+	if(id == SlotID::GatherBoxes)
+	{
+		return Slots::GatherBoxes::Slot::ID;
+	}
+	if(id == SlotID::DrawBoxes)
+	{
+		return Slots::DrawBoxes::Slot::ID;
+	}
+	if(id == SlotID::InitDispatch)
+	{
+		return Slots::InitDispatch::Slot::ID;
+	}
+	if(id == SlotID::GatherMeshesBoxes)
+	{
+		return Slots::GatherMeshesBoxes::Slot::ID;
+	}
+	if(id == SlotID::MipMapping)
+	{
+		return Slots::MipMapping::Slot::ID;
+	}
+	if(id == SlotID::CopyTexture)
+	{
+		return Slots::CopyTexture::Slot::ID;
+	}
+	if(id == SlotID::DownsampleDepth)
+	{
+		return Slots::DownsampleDepth::Slot::ID;
+	}
+	if(id == SlotID::GBuffer)
+	{
+		return Slots::GBuffer::Slot::ID;
+	}
+	if(id == SlotID::GBufferDownsample)
+	{
+		return Slots::GBufferDownsample::Slot::ID;
+	}
+	if(id == SlotID::GBufferQuality)
+	{
+		return Slots::GBufferQuality::Slot::ID;
+	}
+	if(id == SlotID::PSSMConstants)
+	{
+		return Slots::PSSMConstants::Slot::ID;
+	}
+	if(id == SlotID::PSSMData)
+	{
+		return Slots::PSSMData::Slot::ID;
+	}
+	if(id == SlotID::PSSMDataGlobal)
+	{
+		return Slots::PSSMDataGlobal::Slot::ID;
+	}
+	if(id == SlotID::PSSMLighting)
+	{
+		return Slots::PSSMLighting::Slot::ID;
+	}
+	if(id == SlotID::RaytracingRays)
+	{
+		return Slots::RaytracingRays::Slot::ID;
+	}
+	if(id == SlotID::Raytracing)
+	{
+		return Slots::Raytracing::Slot::ID;
+	}
+	if(id == SlotID::SceneData)
+	{
+		return Slots::SceneData::Slot::ID;
+	}
+	if(id == SlotID::SkyData)
+	{
+		return Slots::SkyData::Slot::ID;
+	}
+	if(id == SlotID::SkyFace)
+	{
+		return Slots::SkyFace::Slot::ID;
+	}
+	if(id == SlotID::EnvFilter)
+	{
+		return Slots::EnvFilter::Slot::ID;
+	}
+	if(id == SlotID::EnvSource)
+	{
+		return Slots::EnvSource::Slot::ID;
+	}
+	if(id == SlotID::SMAA_Global)
+	{
+		return Slots::SMAA_Global::Slot::ID;
+	}
+	if(id == SlotID::SMAA_Weights)
+	{
+		return Slots::SMAA_Weights::Slot::ID;
+	}
+	if(id == SlotID::SMAA_Blend)
+	{
+		return Slots::SMAA_Blend::Slot::ID;
+	}
+	if(id == SlotID::Countour)
+	{
+		return Slots::Countour::Slot::ID;
+	}
+	if(id == SlotID::DrawStencil)
+	{
+		return Slots::DrawStencil::Slot::ID;
+	}
+	if(id == SlotID::PickerBuffer)
+	{
+		return Slots::PickerBuffer::Slot::ID;
+	}
+	if(id == SlotID::Instance)
+	{
+		return Slots::Instance::Slot::ID;
+	}
+	if(id == SlotID::Color)
+	{
+		return Slots::Color::Slot::ID;
+	}
+	if(id == SlotID::Test)
+	{
+		return Slots::Test::Slot::ID;
+	}
+	if(id == SlotID::NinePatch)
+	{
+		return Slots::NinePatch::Slot::ID;
+	}
+	if(id == SlotID::ColorRect)
+	{
+		return Slots::ColorRect::Slot::ID;
+	}
+	if(id == SlotID::FlowGraph)
+	{
+		return Slots::FlowGraph::Slot::ID;
+	}
+	if(id == SlotID::LineRender)
+	{
+		return Slots::LineRender::Slot::ID;
+	}
+	if(id == SlotID::VoxelInfo)
+	{
+		return Slots::VoxelInfo::Slot::ID;
+	}
+	if(id == SlotID::Voxelization)
+	{
+		return Slots::Voxelization::Slot::ID;
+	}
+	if(id == SlotID::VoxelScreen)
+	{
+		return Slots::VoxelScreen::Slot::ID;
+	}
+	if(id == SlotID::VoxelOutput)
+	{
+		return Slots::VoxelOutput::Slot::ID;
+	}
+	if(id == SlotID::VoxelBlur)
+	{
+		return Slots::VoxelBlur::Slot::ID;
+	}
+	if(id == SlotID::VoxelUpscale)
+	{
+		return Slots::VoxelUpscale::Slot::ID;
+	}
+	if(id == SlotID::VoxelVisibility)
+	{
+		return Slots::VoxelVisibility::Slot::ID;
+	}
+	if(id == SlotID::VoxelMipMap)
+	{
+		return Slots::VoxelMipMap::Slot::ID;
+	}
+	if(id == SlotID::VoxelCopy)
+	{
+		return Slots::VoxelCopy::Slot::ID;
+	}
+	if(id == SlotID::VoxelZero)
+	{
+		return Slots::VoxelZero::Slot::ID;
+	}
+	if(id == SlotID::VoxelLighting)
+	{
+		return Slots::VoxelLighting::Slot::ID;
+	}
+	if(id == SlotID::VoxelDebug)
+	{
+		return Slots::VoxelDebug::Slot::ID;
+	}
+	if(id == SlotID::DenoiserDownsample)
+	{
+		return Slots::DenoiserDownsample::Slot::ID;
+	}
+	if(id == SlotID::DenoiserHistoryFix)
+	{
+		return Slots::DenoiserHistoryFix::Slot::ID;
+	}
+	if(id == SlotID::FrameClassification)
+	{
+		return Slots::FrameClassification::Slot::ID;
+	}
+	if(id == SlotID::FrameClassificationInitDispatch)
+	{
+		return Slots::FrameClassificationInitDispatch::Slot::ID;
+	}
+	return -1;
 }

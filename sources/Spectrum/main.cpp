@@ -1395,6 +1395,9 @@ resource_stages[&res.second] = input;
 
 		on_resize(get_size());
 
+
+
+		
 		{
 			GUI::Elements::image::ptr back(new GUI::Elements::image);
 			back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));

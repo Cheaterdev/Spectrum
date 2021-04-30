@@ -51,19 +51,19 @@ Asset_Type MeshAsset::get_type()
 void MeshAsset::init_gpu()
 {
 
+	
 	{
 		universal_vertex_manager::get().allocate(vertex_handle, vertex_buffer.size());
-		auto vert = vertex_buffer;
-		vertex_handle.write(0, vert);
+			vertex_handle.write(0, vertex_buffer);
 	}
 
 	{
 		universal_index_manager::get().allocate(index_handle, index_buffer.size());
-		auto vert = index_buffer;
-		index_handle.write(0, vert);
+			index_handle.write(0, index_buffer);
 	}
 
 
+//	if (GetAsyncKeyState('8')) return;
 
 	
 	for (auto& mesh : meshes)

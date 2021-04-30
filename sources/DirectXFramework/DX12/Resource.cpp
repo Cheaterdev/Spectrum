@@ -51,6 +51,11 @@ namespace DX12
 
 		if (heap_type == HeapType::RESERVED)
 		{
+			if (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D)
+			{
+				desc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
+				desc.Alignment = 4*1024;
+			}
 			TEST(Device::get().get_native_device()->CreateReservedResource(
 				&desc,
 				static_cast<D3D12_RESOURCE_STATES>(state),
