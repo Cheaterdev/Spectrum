@@ -11,9 +11,19 @@ StructuredBuffer<mesh_vertex_input> srv_1_1: register(t1, space1);
 StructuredBuffer<MeshCommandData> srv_1_2: register(t2, space1);
 StructuredBuffer<MaterialCommandData> srv_1_3: register(t3, space1);
 StructuredBuffer<MeshInstance> srv_1_4: register(t4, space1);
-SceneData CreateSceneData()
+struct Pass_SceneData
+{
+uint srv_0;
+uint srv_1;
+uint srv_2;
+uint srv_3;
+uint srv_4;
+};
+ConstantBuffer<Pass_SceneData> pass_SceneData: register( b2, space1);
+const SceneData CreateSceneData()
 {
 	SceneData result;
+	Pass_SceneData pass;
 	result.srv.nodes = srv_1_0;
 	result.srv.vertexes = srv_1_1;
 	result.srv.meshes = srv_1_2;

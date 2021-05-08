@@ -9,9 +9,18 @@ StructuredBuffer<BoxInfo> srv_4_0: register(t0, space4);
 StructuredBuffer<uint> srv_4_1: register(t1, space4);
 AppendStructuredBuffer<uint> uav_4_0: register(u0, space4);
 AppendStructuredBuffer<uint> uav_4_1: register(u1, space4);
-GatherMeshesBoxes CreateGatherMeshesBoxes()
+struct Pass_GatherMeshesBoxes
+{
+uint srv_0;
+uint srv_1;
+uint uav_0;
+uint uav_1;
+};
+ConstantBuffer<Pass_GatherMeshesBoxes> pass_GatherMeshesBoxes: register( b2, space4);
+const GatherMeshesBoxes CreateGatherMeshesBoxes()
 {
 	GatherMeshesBoxes result;
+	Pass_GatherMeshesBoxes pass;
 	result.srv.input_meshes = srv_4_0;
 	result.srv.visible_boxes = srv_4_1;
 	result.uav.visibleMeshes = uav_4_0;

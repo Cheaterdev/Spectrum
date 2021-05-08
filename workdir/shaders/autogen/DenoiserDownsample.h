@@ -7,9 +7,16 @@
 #include "tables/DenoiserDownsample.h"
 Texture2D<float4> srv_5_0: register(t0, space5);
 Texture2D<float> srv_5_1: register(t1, space5);
-DenoiserDownsample CreateDenoiserDownsample()
+struct Pass_DenoiserDownsample
+{
+uint srv_0;
+uint srv_1;
+};
+ConstantBuffer<Pass_DenoiserDownsample> pass_DenoiserDownsample: register( b2, space5);
+const DenoiserDownsample CreateDenoiserDownsample()
 {
 	DenoiserDownsample result;
+	Pass_DenoiserDownsample pass;
 	result.srv.color = srv_5_0;
 	result.srv.depth = srv_5_1;
 	return result;

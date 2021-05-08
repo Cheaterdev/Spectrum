@@ -221,6 +221,7 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 	meshpart[0].material_id = static_cast<materials::universal_material*>(rendering[i].material)->get_material_id();
 	meshpart[0].mesh_cb = info.compiled_mesh_info.cb;
 	meshpart[0].draw_commands = info.draw_arguments;
+	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
 
 	meshpart_handle.write(i, meshpart);
 

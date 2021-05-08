@@ -7,9 +7,16 @@
 #include "tables/GatherBoxes.h"
 AppendStructuredBuffer<BoxInfo> uav_4_0: register(u0, space4);
 AppendStructuredBuffer<uint> uav_4_1: register(u1, space4);
-GatherBoxes CreateGatherBoxes()
+struct Pass_GatherBoxes
+{
+uint uav_0;
+uint uav_1;
+};
+ConstantBuffer<Pass_GatherBoxes> pass_GatherBoxes: register( b2, space4);
+const GatherBoxes CreateGatherBoxes()
 {
 	GatherBoxes result;
+	Pass_GatherBoxes pass;
 	result.uav.culledMeshes = uav_4_0;
 	result.uav.visibleMeshes = uav_4_1;
 	return result;

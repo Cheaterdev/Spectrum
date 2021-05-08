@@ -15,9 +15,24 @@ Texture2D<float4> srv_4_6: register(t6, space4);
 Texture2D<float4> srv_4_7: register(t7, space4);
 Texture2D<float> srv_4_8: register(t8, space4);
 Texture2D<float2> srv_4_9: register(t9, space4);
-VoxelScreen CreateVoxelScreen()
+struct Pass_VoxelScreen
+{
+uint srv_0;
+uint srv_1;
+uint srv_2;
+uint srv_3;
+uint srv_4;
+uint srv_5;
+uint srv_6;
+uint srv_7;
+uint srv_8;
+uint srv_9;
+};
+ConstantBuffer<Pass_VoxelScreen> pass_VoxelScreen: register( b2, space4);
+const VoxelScreen CreateVoxelScreen()
 {
 	VoxelScreen result;
+	Pass_VoxelScreen pass;
 	result.srv.voxels = srv_4_0;
 	result.srv.tex_cube = srv_4_1;
 	result.srv.prev_gi = srv_4_2;

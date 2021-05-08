@@ -6,9 +6,15 @@
 #include "layout/DefaultLayout.h"
 #include "tables/DrawStencil.h"
 StructuredBuffer<float4> srv_3_0: register(t0, space3);
-DrawStencil CreateDrawStencil()
+struct Pass_DrawStencil
+{
+uint srv_0;
+};
+ConstantBuffer<Pass_DrawStencil> pass_DrawStencil: register( b2, space3);
+const DrawStencil CreateDrawStencil()
 {
 	DrawStencil result;
+	Pass_DrawStencil pass;
 	result.srv.vertices = srv_3_0;
 	return result;
 }

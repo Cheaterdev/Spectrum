@@ -3,15 +3,42 @@
 
 my_stream::my_stream(std::string dir, std::string filename)
 {
+
+	path = dir + "/" + filename;
 	std::filesystem::create_directories(dir);
 
 
-	stream.open(dir+"/"+filename);
+	//stream.open(dir+"/"+filename);
 }
 
 my_stream::~my_stream()
 {
-	stream.close();
+	auto result = stream.str();
+	bool same = false;
+	{
+		std::ifstream f;
+		f.open(path);
+
+	
+		if (f.is_open())
+		{
+			std::string v(std::istreambuf_iterator<char>{f}, {});
+
+			same = (v == result);
+
+			f.close();
+		}
+	}
+
+	if (!same)
+	{
+		std::ofstream f;
+
+		f.open(path);
+		f << result;
+		f.close();
+	}
+	//stream.close();
 }
 
 void my_stream::push()
@@ -101,7 +128,7 @@ Slot::Slot()
 	max_counts[ValueType::SMP] = 0;
 	max_counts[ValueType::UAV] = 0;
 	max_counts[ValueType::SRV] = 0;
-	max_counts[ValueType::CB] = 1;
+	max_counts[ValueType::CB] = 2;
 
 
 	ids[ValueType::SMP] = -1;
@@ -142,9 +169,18 @@ void Layout::setup()
 		{
 			auto count = s.max_counts[type];
 
-			if(type==ValueType::STRUCT) continue;
-			if (s.max_counts[type]) s.ids[type] = types_counts++;
+			if (type == ValueType::STRUCT) continue;
+			if (s.max_counts[type])
+			{
+				s.ids[type] = types_counts++;
+
+				// for offset, remove later, use cb
+				if (type == ValueType::CB) types_counts++;
+			}
 		}
+
+
+
 	}
 
 	for (auto& l : child_layouts)

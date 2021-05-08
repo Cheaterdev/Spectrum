@@ -10,9 +10,19 @@ Texture2D<float4> srv_5_1: register(t1, space5);
 RWTexture2D<float4> uav_5_0: register(u0, space5);
 RWTexture2D<float4> uav_5_1: register(u1, space5);
 StructuredBuffer<uint2> srv_5_2: register(t2, space5);
-VoxelBlur CreateVoxelBlur()
+struct Pass_VoxelBlur
+{
+uint srv_0;
+uint srv_1;
+uint srv_2;
+uint uav_0;
+uint uav_1;
+};
+ConstantBuffer<Pass_VoxelBlur> pass_VoxelBlur: register( b2, space5);
+const VoxelBlur CreateVoxelBlur()
 {
 	VoxelBlur result;
+	Pass_VoxelBlur pass;
 	result.srv.noisy_output = srv_5_0;
 	result.srv.prev_result = srv_5_1;
 	result.uav.screen_result = uav_5_0;

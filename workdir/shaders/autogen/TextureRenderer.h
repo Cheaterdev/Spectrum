@@ -6,9 +6,15 @@
 #include "layout/DefaultLayout.h"
 #include "tables/TextureRenderer.h"
 Texture2D<float4> srv_3_0: register(t0, space3);
-TextureRenderer CreateTextureRenderer()
+struct Pass_TextureRenderer
+{
+uint srv_0;
+};
+ConstantBuffer<Pass_TextureRenderer> pass_TextureRenderer: register( b2, space3);
+const TextureRenderer CreateTextureRenderer()
 {
 	TextureRenderer result;
+	Pass_TextureRenderer pass;
 	result.srv.texture = srv_3_0;
 	return result;
 }

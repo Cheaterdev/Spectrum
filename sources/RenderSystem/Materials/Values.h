@@ -421,6 +421,7 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr i_emissive;
         FlowGraph::output::ptr i_normal;
         FlowGraph::output::ptr i_tess_displacement;
+        FlowGraph::output::ptr i_glow;
 
     public:
         using ptr = s_ptr<MaterialGraph>;
@@ -434,6 +435,8 @@ class MaterialGraph : public MaterialFunction
         FlowGraph::output::ptr get_mettalic();
     //    FlowGraph::output::ptr get_specular();
         FlowGraph::output::ptr get_normals();
+
+        FlowGraph::output::ptr get_glow();
            FlowGraph::output::ptr get_roughness();
     FlowGraph::output::ptr get_tess_displacement();
         virtual void start(MaterialContext* context);
@@ -447,6 +450,7 @@ class MaterialGraph : public MaterialFunction
             ar& NVP(texcoord);
             ar& NVP(i_base_color);
             ar& NVP(i_metallic);
+            ar& NVP(i_glow);
          //   ar& NVP(i_specular);
             ar& NVP(i_roughness);
             ar& NVP(i_emissive);
@@ -457,6 +461,7 @@ class MaterialGraph : public MaterialFunction
 			i_roughness->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
        //     i_specular->default_value = shader_parameter("float4(0,0,0,0)", ShaderParams::FLOAT4);
             i_normal->default_value = shader_parameter("float4(0.5,0.5,1,0)", ShaderParams::FLOAT4);
+            i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::FLOAT4);
             i_tess_displacement->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
         }
 

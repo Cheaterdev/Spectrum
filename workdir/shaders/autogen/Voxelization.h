@@ -9,9 +9,17 @@ ConstantBuffer<Voxelization_cb> cb_5_0:register(b0,space5);
 RWTexture3D<float4> uav_5_0: register(u0, space5);
 RWTexture3D<float4> uav_5_1: register(u1, space5);
 RWTexture3D<uint> uav_5_2: register(u2, space5);
-Voxelization CreateVoxelization()
+struct Pass_Voxelization
+{
+uint uav_0;
+uint uav_1;
+uint uav_2;
+};
+ConstantBuffer<Pass_Voxelization> pass_Voxelization: register( b2, space5);
+const Voxelization CreateVoxelization()
 {
 	Voxelization result;
+	Pass_Voxelization pass;
 	result.cb = cb_5_0;
 	result.uav.albedo = uav_5_0;
 	result.uav.normals = uav_5_1;

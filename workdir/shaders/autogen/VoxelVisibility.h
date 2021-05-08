@@ -7,9 +7,16 @@
 #include "tables/VoxelVisibility.h"
 Texture3D<uint> srv_4_0: register(t0, space4);
 AppendStructuredBuffer<uint4> uav_4_0: register(u0, space4);
-VoxelVisibility CreateVoxelVisibility()
+struct Pass_VoxelVisibility
+{
+uint srv_0;
+uint uav_0;
+};
+ConstantBuffer<Pass_VoxelVisibility> pass_VoxelVisibility: register( b2, space4);
+const VoxelVisibility CreateVoxelVisibility()
 {
 	VoxelVisibility result;
+	Pass_VoxelVisibility pass;
 	result.srv.visibility = srv_4_0;
 	result.uav.visible_tiles = uav_4_0;
 	return result;

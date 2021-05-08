@@ -3,10 +3,13 @@
 
 namespace DX12
 {
-	void GPUTimeManager::start(GPUTimer& timer, DX12::Eventer*  list)
+	void GPUTimeManager::start(GPUTimer& timer, DX12::Eventer* list)
 	{
 		timer.queue_type = list->get_type();
 		list->insert_time(heap, timer.id * 2);
+
+		max_used_timers = std::max(max_used_timers, timer.id * 2);
+
 	}
 
 	void GPUTimeManager::end(GPUTimer& timer, DX12::Eventer*  list)

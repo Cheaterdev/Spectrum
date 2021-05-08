@@ -11,9 +11,20 @@ Texture2D<float4> srv_4_2: register(t2, space4);
 Texture2D<float4> srv_4_3: register(t3, space4);
 Texture2D<float> srv_4_4: register(t4, space4);
 Texture2D<float2> srv_4_5: register(t5, space4);
-VoxelDebug CreateVoxelDebug()
+struct Pass_VoxelDebug
+{
+uint srv_0;
+uint srv_1;
+uint srv_2;
+uint srv_3;
+uint srv_4;
+uint srv_5;
+};
+ConstantBuffer<Pass_VoxelDebug> pass_VoxelDebug: register( b2, space4);
+const VoxelDebug CreateVoxelDebug()
 {
 	VoxelDebug result;
+	Pass_VoxelDebug pass;
 	result.srv.volume = srv_4_0;
 	result.srv.gbuffer.albedo = srv_4_1;
 	result.srv.gbuffer.normals = srv_4_2;

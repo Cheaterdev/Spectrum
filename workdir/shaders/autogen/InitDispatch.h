@@ -7,9 +7,16 @@
 #include "tables/InitDispatch.h"
 RWStructuredBuffer<uint> uav_4_0: register(u0, space4);
 RWStructuredBuffer<DispatchArguments> uav_4_1: register(u1, space4);
-InitDispatch CreateInitDispatch()
+struct Pass_InitDispatch
+{
+uint uav_0;
+uint uav_1;
+};
+ConstantBuffer<Pass_InitDispatch> pass_InitDispatch: register( b2, space4);
+const InitDispatch CreateInitDispatch()
 {
 	InitDispatch result;
+	Pass_InitDispatch pass;
 	result.uav.counter = uav_4_0;
 	result.uav.dispatch_data = uav_4_1;
 	return result;

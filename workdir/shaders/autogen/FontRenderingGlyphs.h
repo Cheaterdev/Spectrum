@@ -6,9 +6,15 @@
 #include "layout/DefaultLayout.h"
 #include "tables/FontRenderingGlyphs.h"
 StructuredBuffer<Glyph> srv_5_0: register(t0, space5);
-FontRenderingGlyphs CreateFontRenderingGlyphs()
+struct Pass_FontRenderingGlyphs
+{
+uint srv_0;
+};
+ConstantBuffer<Pass_FontRenderingGlyphs> pass_FontRenderingGlyphs: register( b2, space5);
+const FontRenderingGlyphs CreateFontRenderingGlyphs()
 {
 	FontRenderingGlyphs result;
+	Pass_FontRenderingGlyphs pass;
 	result.srv.data = srv_5_0;
 	return result;
 }

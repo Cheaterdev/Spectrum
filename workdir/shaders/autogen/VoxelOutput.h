@@ -7,9 +7,16 @@
 #include "tables/VoxelOutput.h"
 RWTexture2D<float4> uav_5_0: register(u0, space5);
 RWTexture2D<float> uav_5_1: register(u1, space5);
-VoxelOutput CreateVoxelOutput()
+struct Pass_VoxelOutput
+{
+uint uav_0;
+uint uav_1;
+};
+ConstantBuffer<Pass_VoxelOutput> pass_VoxelOutput: register( b2, space5);
+const VoxelOutput CreateVoxelOutput()
 {
 	VoxelOutput result;
+	Pass_VoxelOutput pass;
 	result.uav.noise = uav_5_0;
 	result.uav.frames = uav_5_1;
 	return result;

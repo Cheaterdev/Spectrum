@@ -12,9 +12,20 @@ Texture2D<float4> srv_5_1: register(t1, space5);
 Texture2D<float4> srv_5_2: register(t2, space5);
 Texture2D<float> srv_5_3: register(t3, space5);
 Texture2D<float2> srv_5_4: register(t4, space5);
-RaytracingRays CreateRaytracingRays()
+struct Pass_RaytracingRays
+{
+uint srv_0;
+uint srv_1;
+uint srv_2;
+uint srv_3;
+uint srv_4;
+uint uav_0;
+};
+ConstantBuffer<Pass_RaytracingRays> pass_RaytracingRays: register( b2, space5);
+const RaytracingRays CreateRaytracingRays()
 {
 	RaytracingRays result;
+	Pass_RaytracingRays pass;
 	result.cb = cb_5_0;
 	result.uav.output = uav_5_0;
 	result.srv.gbuffer.albedo = srv_5_0;

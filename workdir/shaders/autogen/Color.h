@@ -6,9 +6,14 @@
 #include "layout/DefaultLayout.h"
 #include "tables/Color.h"
 ConstantBuffer<Color_cb> cb_3_0:register(b0,space3);
-Color CreateColor()
+struct Pass_Color
+{
+};
+ConstantBuffer<Pass_Color> pass_Color: register( b2, space3);
+const Color CreateColor()
 {
 	Color result;
+	Pass_Color pass;
 	result.cb = cb_3_0;
 	return result;
 }

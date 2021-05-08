@@ -8,9 +8,17 @@
 Texture2D<float4> srv_4_0: register(t0, space4);
 Texture2D<float4> srv_4_1: register(t1, space4);
 Texture2D<float4> srv_4_2: register(t2, space4);
-SMAA_Weights CreateSMAA_Weights()
+struct Pass_SMAA_Weights
+{
+uint srv_0;
+uint srv_1;
+uint srv_2;
+};
+ConstantBuffer<Pass_SMAA_Weights> pass_SMAA_Weights: register( b2, space4);
+const SMAA_Weights CreateSMAA_Weights()
 {
 	SMAA_Weights result;
+	Pass_SMAA_Weights pass;
 	result.srv.areaTex = srv_4_0;
 	result.srv.searchTex = srv_4_1;
 	result.srv.edgesTex = srv_4_2;

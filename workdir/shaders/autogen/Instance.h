@@ -6,9 +6,14 @@
 #include "layout/DefaultLayout.h"
 #include "tables/Instance.h"
 ConstantBuffer<Instance_cb> cb_5_0:register(b0,space5);
-Instance CreateInstance()
+struct Pass_Instance
+{
+};
+ConstantBuffer<Pass_Instance> pass_Instance: register( b2, space5);
+const Instance CreateInstance()
 {
 	Instance result;
+	Pass_Instance pass;
 	result.cb = cb_5_0;
 	return result;
 }

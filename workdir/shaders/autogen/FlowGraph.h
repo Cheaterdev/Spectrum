@@ -6,9 +6,14 @@
 #include "layout/DefaultLayout.h"
 #include "tables/FlowGraph.h"
 ConstantBuffer<FlowGraph_cb> cb_4_0:register(b0,space4);
-FlowGraph CreateFlowGraph()
+struct Pass_FlowGraph
+{
+};
+ConstantBuffer<Pass_FlowGraph> pass_FlowGraph: register( b2, space4);
+const FlowGraph CreateFlowGraph()
 {
 	FlowGraph result;
+	Pass_FlowGraph pass;
 	result.cb = cb_4_0;
 	return result;
 }

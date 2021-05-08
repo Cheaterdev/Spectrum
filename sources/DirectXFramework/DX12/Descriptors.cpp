@@ -18,7 +18,7 @@ namespace DX12 {
 	}
 
 
-	DescriptorHeap::DescriptorHeap(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags)
+	DescriptorHeap::DescriptorHeap(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags):flags(flags)
 	{
 		max_count = num;
 		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
@@ -41,15 +41,18 @@ namespace DX12 {
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::get_gpu_handle(UINT i)
 	{
-		return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), i, descriptor_size);
+		if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
+			return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), i, descriptor_size);
+		
+		
+			return CD3DX12_GPU_DESCRIPTOR_HANDLE();
 	}
 
 
 	void Handle::place(const Handle& r) const
 	{
-
+		assert(offset != UINT_MAX);
 		D3D12_DESCRIPTOR_HEAP_TYPE type = (D3D12_DESCRIPTOR_HEAP_TYPE)get_heap_type(r.resource_info->type);
-
 
 		if (cpu != r.cpu)
 			Device::get().get_native_device()->CopyDescriptorsSimple(1, cpu, r.cpu, type);

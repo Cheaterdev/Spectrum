@@ -65,7 +65,7 @@ void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out 
 #ifdef BUILD_FUNC_PS
 
 
-GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump)
+GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness, float4 bump, float4 glow)
 { 
  //  clip(albedo.w-0.5);
    // clip(albedo.a - 0.2);  
@@ -89,17 +89,19 @@ GBuffer universal(vertex_output i, float4 albedo, float metallic,float roughness
     return result;       
 }    
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, float lod);
 GBuffer PS(vertex_output i)
 {
 	float4 color = 1;
 	float metallic = 1;
 	float roughness = 1;
 	float4 normal = 0;
+    float4 glow = 0;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, 0);
+    COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, 0);
 
-	return universal(i, color, metallic, roughness, normal);
+
+	return universal(i, color, metallic, roughness, normal, glow);
 }
 
 #endif
@@ -114,7 +116,7 @@ static const RWTexture3D<float4> volume_albedo = GetVoxelization().GetAlbedo();
 static const RWTexture3D<float4> volume_normals = GetVoxelization().GetNormals();
 static const RWTexture3D<uint> visibility = GetVoxelization().GetVisibility();
 
-void universal_voxel(vertex_output i, float4 albedo, float metallic, float roughness, float4 bump)
+void universal_voxel(vertex_output i, float4 albedo, float metallic, float roughness, float4 bump, float4 glow)
 {   
  //   clip(albedo.w - 0.5);
   
@@ -129,17 +131,18 @@ void universal_voxel(vertex_output i, float4 albedo, float metallic, float rough
 #endif
     
 }
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, float lod);
 void PS_VOXEL(vertex_output i)
 {
 	float4 color = 1;
 	float metallic = 1;
 	float roughness = 1;
 	float4 normal = 0;
+    float4 glow = 0;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, 0);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, 0);
 
-	universal_voxel(i, color, metallic, roughness, normal);
+	universal_voxel(i, color, metallic, roughness, normal, glow);
 }
 #endif
 
@@ -297,13 +300,13 @@ vertex_output2 DS(HS_CONSTANT_DATA_OUTPUT input, float3 BarycentricCoordinates :
 }   
  
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float c);
+void COMPILED_FUNC(in float3 a, in float2 b, out float c, float lod);
 
 
 float TESS(vertex_output2 i)
 {
 	float displacement = 0;
-	COMPILED_FUNC(i.wpos, i.tc, displacement);
+	COMPILED_FUNC(i.wpos, i.tc, displacement, 0);
 
 	return displacement;
 }

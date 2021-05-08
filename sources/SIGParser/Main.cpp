@@ -59,7 +59,7 @@ int calculate_max_size(Table& table)
 
 	return res;
 }
-void generate_pass(my_stream& stream, Table& table, table_offsets& offsets, Slot& slot)
+void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::COUNT > &struct_str, Table& table, table_offsets& offsets, Slot& slot)
 {
 	auto generate = [&](ValueType type, std::string subname) {
 		for (auto& v : table.values)
@@ -69,9 +69,15 @@ void generate_pass(my_stream& stream, Table& table, table_offsets& offsets, Slot
 
 			auto& e = offsets[type];
 			stream << v.type << " " << get_name_for(type) << "_" << slot.id << "_" << e << generate_array(v) << ": register(" << subname << e << ", space" << slot.id << ");" << std::endl;
+
+
+			struct_str[type] << "uint "<< get_name_for(type) <<"_"<< e << ";" << std::endl;
+
 			e += v.array_count;
 		}
 	};
+
+
 
 	generate(ValueType::SRV, "t");
 	generate(ValueType::UAV, "u");
@@ -81,8 +87,11 @@ void generate_pass(my_stream& stream, Table& table, table_offsets& offsets, Slot
 	{
 		if (v.value_type != ValueType::STRUCT) continue;
 
-		generate_pass(stream, *parsed.find_table(v.type), offsets, slot);
+		generate_pass(stream, struct_str , *parsed.find_table(v.type), offsets, slot);
 	}
+
+
+
 }
 
 void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot, table_offsets& offsets = table_offsets())
@@ -103,6 +112,7 @@ void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& sl
 			if (v.bindless) continue;
 
 			stream << "result." << get_name_for(type) << "." << parent << v.name << " = " << get_name_for(type) << "_" << slot.id << "_" << i << ";" << std::endl;
+		//	stream << "result." << get_name_for(type) << "." << parent << v.name << " = ResourceDescriptorHeap[NonUniformResourceIndex(pass." << get_name_for(type) << "_" << i << ")];" << std::endl;
 
 			i += v.array_count;
 		}
@@ -184,17 +194,38 @@ void generate_pass_table(Table& table)
 	offsets[ValueType::SRV] = 0;
 	offsets[ValueType::CB] = 0;
 
-	generate_pass(stream, table, offsets, *table.slot);
 
+	std::stringstream struct_str;
+
+	struct_str << "struct Pass_" << table.name << "" << std::endl;
+	struct_str << "{" << std::endl;
+
+
+	std::array<std::stringstream, ValueType::COUNT > types;
+
+	generate_pass(stream, types, table, offsets, *table.slot);
+	struct_str << types[ValueType::SRV].str();
+	struct_str << types[ValueType::UAV].str();
+	struct_str << types[ValueType::SMP].str();
+
+
+	struct_str << "};" << std::endl;
+
+	struct_str << "ConstantBuffer<Pass_" << table.name << "> pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
+
+	stream << struct_str.str();
 
 	//creation func
 
 	{
-		stream << table.name << " Create" << table.name << "()" << std::endl;
+		stream << "const "<<table.name << " Create" << table.name << "()" << std::endl;
 		stream << "{" << std::endl;
 		{
 			stream.push();
 			stream << table.name << " result;" << std::endl;
+
+			stream << "Pass_"<<table.name << " pass;" << std::endl;
+
 
 			table_offsets offsets;
 			offsets[ValueType::SMP] = 0;
@@ -234,7 +265,7 @@ void generate_table(Table& table)
 	{
 		stream << "#include \"" << v << ".h\"" << std::endl;
 	}
-
+	
 	// declaration
 	auto declare_func = [&](ValueType type) {
 		if (table.counts[type] == 0) return;
@@ -246,7 +277,10 @@ void generate_table(Table& table)
 			if (v.value_type != type) continue;
 			if (v.bindless) continue;
 
-			stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
+		//	if(v.value_type==ValueType::CB)
+			stream << v.type << " " << v.name <<generate_array(v) << ';' << std::endl;
+		//	else
+		//		stream << v.type<<" " << v.name << ';' << std::endl;
 		}
 
 		for (auto& v : table.values)
@@ -262,13 +296,13 @@ void generate_table(Table& table)
 		stream.pop();
 		stream << "};" << std::endl;
 	};
-
+	
 	if (!table.cb_provided) declare_func(ValueType::CB);
 	declare_func(ValueType::SRV);
 	declare_func(ValueType::UAV);
 	declare_func(ValueType::SMP);
 
-
+	
 
 
 	// result struct
@@ -282,8 +316,7 @@ void generate_table(Table& table)
 		if (table.counts[ValueType::SRV] != 0) stream << table.name << "_srv srv;" << std::endl;
 		if (table.counts[ValueType::UAV] != 0) stream << table.name << "_uav uav;" << std::endl;
 		if (table.counts[ValueType::SMP] != 0)  stream << table.name << "_smp smp;" << std::endl;
-
-
+		
 
 		for (auto& v : table.values)
 		{
@@ -291,16 +324,19 @@ void generate_table(Table& table)
 			std::string cameled = v.name;
 			cameled[0] = std::toupper(cameled[0]);
 
+
 			if (v.as_array)
 			{
 				if (v.bindless)
 					stream << v.type << " Get" << cameled << "(int i) { " << "return bindless[i]; }" << std::endl;
 				else
-					stream << v.type << " Get" << cameled << "(int i) { " << "return " << get_name_for(v.value_type) << "." << v.name << "[i]; }" << std::endl;
+					stream << v.type << " Get" << cameled << "(int i) { " << "return " <<  get_name_for(v.value_type) << "." << v.name <<   "[i]; }" << std::endl;
 			}
 			else
-				stream << v.type << " Get" << cameled << "() { " << "return " << get_name_for(v.value_type) << "." << v.name << "; }" << std::endl;
+			{
+				stream << v.type << " Get" << cameled << "() { " << "return " <<  get_name_for(v.value_type) << "." << v.name <<  "; }" << std::endl;
 
+			}
 		}
 
 
@@ -348,7 +384,7 @@ void generate_table(Table& table)
 
 
 	//creation func bindless
-
+	
 	{
 
 		std::string types;
@@ -382,13 +418,7 @@ void generate_table(Table& table)
 
 
 			stream << "const " << table.name << " result = {" << types << std::endl;
-			/*
-						stream << "result.cb = cb;" << std::endl;
-						stream << "result.srv = srv;" << std::endl;
-						stream << "result.uav = uav;" << std::endl;
-						stream << "result.smp = smp;" << std::endl;
-						*/
-
+		
 
 
 
@@ -432,7 +462,7 @@ void generate_nobind_table(Table& table)
 			if (v.value_type != type) continue;
 			if (v.bindless) continue;
 
-			stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
+			stream << v.type << " " << v.name << ';' << std::endl;
 		}
 
 		for (auto& v : table.values)
@@ -1568,6 +1598,7 @@ void generate_cpp_layout(Layout& layout)
 
 				if (count == 0)
 					continue;
+
 				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
 				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
 

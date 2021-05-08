@@ -6,9 +6,14 @@
 #include "layout/DefaultLayout.h"
 #include "tables/PSSMConstants.h"
 ConstantBuffer<PSSMConstants_cb> cb_3_0:register(b0,space3);
-PSSMConstants CreatePSSMConstants()
+struct Pass_PSSMConstants
+{
+};
+ConstantBuffer<Pass_PSSMConstants> pass_PSSMConstants: register( b2, space3);
+const PSSMConstants CreatePSSMConstants()
 {
 	PSSMConstants result;
+	Pass_PSSMConstants pass;
 	result.cb = cb_3_0;
 	return result;
 }

@@ -18,7 +18,7 @@ struct VoxelTilingParams
 uint3 get_voxel_pos(uint3 dispatchID)
 {
 	uint tile_index = dispatchID.x / cb.voxels_per_tile.x;
-	uint3 tile_pos = srv.tiles[tile_index] * cb.voxels_per_tile.xyz;
+	uint3 tile_pos = GetTiles()[tile_index] * cb.voxels_per_tile.xyz;
 
 	uint3 tile_local_pos = dispatchID - int3(tile_index * cb.voxels_per_tile.x, 0, 0);
 	uint3 index = tile_pos + tile_local_pos;

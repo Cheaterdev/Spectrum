@@ -12,6 +12,9 @@ struct AutoGenSignatureDesc
 		if constexpr (TableHasUAV<T>) desc[T::UAV_ID] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, T::UAV, T::ID);
 		if constexpr (TableHasSMP<T>) desc[T::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::SMP, T::ID);
 		desc[T::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::ID);
+		desc[T::CB_ID+1] = Render::DescriptorConstBuffer(2, Render::ShaderVisibility::ALL, T::ID);
+
+
 		//	if constexpr (T::CB)	desc[T::CB_ID] = Render::DescriptorTable(Render::DescriptorRange::CBV, Render::ShaderVisibility::ALL, 0, T::CB, T::ID);
 
 	}
@@ -51,6 +54,11 @@ void process_one(Render::RootSignatureDesc& desc)
 		desc[T::Slot::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::Slot::SMP, T::Slot::ID);*/
 	if constexpr (HasCB<T>) 
 		desc[T::Slot::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::Slot::ID);
+
+
+
+	// no changes here for now as its done through CB
+	//desc[T::Slot::CB_ID + 1] = Render::DescriptorConstBuffer(2, Render::ShaderVisibility::ALL, T::Slot::ID);
 
 }
 

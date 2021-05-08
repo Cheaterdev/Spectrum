@@ -8,6 +8,7 @@
 #include <array>
 #include <optional>
 #include <Windows.h>
+#include <sstream>
 
 enum   ValueType 
 {
@@ -21,9 +22,12 @@ enum   ValueType
 
 struct my_stream
 {
-	std::ofstream stream;
+	std::stringstream stream;
 	char levels[256] = { 0 };
 	int level = 0;
+
+	std::string path;
+
 	my_stream(std::string dir, std::string filename);
 	~my_stream();
 	void push();
@@ -33,12 +37,12 @@ struct my_stream
 
 
 	template<class T>
-	std::ofstream& operator<<(const T& data);
+	std::stringstream& operator<<(const T& data);
 
 };
 
 template<class T>
-std::ofstream& my_stream::operator<<(const T& data)
+std::stringstream& my_stream::operator<<(const T& data)
 {
 	stream << levels << data;
 	return stream;

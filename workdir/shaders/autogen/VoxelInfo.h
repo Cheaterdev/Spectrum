@@ -6,9 +6,14 @@
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelInfo.h"
 ConstantBuffer<VoxelInfo_cb> cb_3_0:register(b0,space3);
-VoxelInfo CreateVoxelInfo()
+struct Pass_VoxelInfo
+{
+};
+ConstantBuffer<Pass_VoxelInfo> pass_VoxelInfo: register( b2, space3);
+const VoxelInfo CreateVoxelInfo()
 {
 	VoxelInfo result;
+	Pass_VoxelInfo pass;
 	result.cb = cb_3_0;
 	return result;
 }

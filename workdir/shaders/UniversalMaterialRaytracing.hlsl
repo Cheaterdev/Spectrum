@@ -7,12 +7,26 @@
 #include "autogen/tables/ShadowPayload.h"
 
 #include "autogen/tables/Triangle.h"
+#include "autogen/VoxelScreen.h"
+#include "autogen/VoxelInfo.h"
+
 
 //#define REFRACTION
 #define Sampler linearSampler
 #define GetMaterialInfo CreateMaterialInfo
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
+
+
+
+float4 get_voxel(float3 pos, float level)
+{
+	float4 color = CreateVoxelScreen().GetVoxels().SampleLevel(linearClampSampler, pos, level);
+	return color;
+}
+
+
+
 
 float3 depth_to_wpos(float d, float2 tc, matrix mat)
 {
@@ -41,7 +55,7 @@ float4 sample(Texture2D tex, SamplerState s, float2 tc, float lod)
 }
 #endif 
 
-void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, float lod);
+void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, float lod);
 
 
 float calc_fresnel(float k0, float3 n, float3 v)
@@ -98,13 +112,14 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	float metallic = 1;
 	float roughness = 1;
 	float4 normal = 0;
+	float4 glow = 0;
 
 
 	t.lod += log2(abs(payload.cone.width + payload.cone.angle * RayTCurrent()));
 	t.lod -= log2(abs(dot(normalize(WorldRayDirection()), t.v.normal)));
 
 
-	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, t.lod);
+	COMPILED_FUNC(t.v.pos, t.v.tc, color, metallic, roughness, normal, glow, t.lod);
 
 
 	
@@ -200,7 +215,21 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 
 	float3 reflected = payload2.color.xyz;*/
-	payload.color = float4(shadow* color.xyz,1);// float4(lerp(my_color, reflected, fresnel), 1);
+//	payload.color = float4(shadow* color.xyz,1);// float4(lerp(my_color, reflected, fresnel), 1);
+
+
+	float3 voxel_min = CreateVoxelInfo().GetMin().xyz;
+	float3 voxel_size = CreateVoxelInfo().GetSize().xyz;
+
+	//float max_angle = saturate((3.14 / 2 - acos(dot(normal, dir))) / 3.14);
+
+//	float angle_coeff = saturate(max_angle / (angle + 0.01));
+	//angle = min(angle, max_angle);
+	float3 origin = saturate(((t.v.pos - (voxel_min)) / voxel_size));
+
+	float4 voxel = get_voxel(origin,0);
+	payload.color = float4(voxel.xyz/ (voxel.w+0.001) + glow, 1);
+
 
 	payload.dist = RayTCurrent();
 }

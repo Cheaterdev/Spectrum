@@ -7,9 +7,16 @@
 #include "tables/Raytracing.h"
 RaytracingAccelerationStructure srv_6_0: register(t0, space6);
 StructuredBuffer<uint> srv_6_1: register(t1, space6);
-Raytracing CreateRaytracing()
+struct Pass_Raytracing
+{
+uint srv_0;
+uint srv_1;
+};
+ConstantBuffer<Pass_Raytracing> pass_Raytracing: register( b2, space6);
+const Raytracing CreateRaytracing()
 {
 	Raytracing result;
+	Pass_Raytracing pass;
 	result.srv.scene = srv_6_0;
 	result.srv.index_buffer = srv_6_1;
 	return result;

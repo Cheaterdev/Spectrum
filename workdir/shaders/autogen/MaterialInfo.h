@@ -6,9 +6,14 @@
 #include "layout/DefaultLayout.h"
 #include "tables/MaterialInfo.h"
 ConstantBuffer<MaterialInfo_cb> cb_7_0:register(b0,space7);
-MaterialInfo CreateMaterialInfo()
+struct Pass_MaterialInfo
+{
+};
+ConstantBuffer<Pass_MaterialInfo> pass_MaterialInfo: register( b2, space7);
+const MaterialInfo CreateMaterialInfo()
 {
 	MaterialInfo result;
+	Pass_MaterialInfo pass;
 	result.cb = cb_7_0;
 	return result;
 }

@@ -718,10 +718,6 @@ namespace DX12
 
 		virtual void on_execute();
 
-		bool heaps_changed = false;
-
-		std::array<DescriptorHeap::ptr, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> heaps;
-
 		std::unique_ptr<GraphicsContext> graphics;
 		std::unique_ptr<ComputeContext> compute;
 		std::unique_ptr<CopyContext> copy;
@@ -732,18 +728,6 @@ namespace DX12
 
 
 		void set_pipeline_internal(PipelineStateBase* pipeline);
-
-		void set_heap(DescriptorHeapType type, DescriptorHeap::ptr heap)
-		{
-			assert(this->type != CommandListType::COPY);
-			auto i_type = static_cast<int>(type);
-			if (heaps[i_type] == heap) return;
-
-			heaps_changed = true;
-			heaps[i_type] = heap;
-			flush_heaps();
-
-		}
 
 	public:
 
@@ -765,29 +749,6 @@ namespace DX12
 		CopyContext& get_copy();
 
 
-
-		void flush_heaps(bool force = false)
-		{
-			assert(type != CommandListType::COPY);
-			if (!heaps_changed && !force) return;
-			heaps_changed = false;
-			std::array<ID3D12DescriptorHeap*, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES - 1> native_heaps;
-
-			int count = 0;
-			for (auto& e : heaps)
-			{
-				if (!e) continue;
-				native_heaps[count] = e->get_native().Get();
-				count++;
-			}
-			if (count)
-			{
-				if (count == 2 && native_heaps[1] == native_heaps[0])
-					return;
-				compiler.SetDescriptorHeaps(count, native_heaps.data());
-			}
-
-		}
 		FrameResources* get_manager()
 		{
 			return frame_resources.get();
@@ -808,7 +769,7 @@ namespace DX12
 			create_transition_point();
 			transition_uav(h.resource_info);
 
-			auto handle = get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
+			auto handle = get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
 			get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, h.resource_info->resource_ptr->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 			create_transition_point(false);
 		}
@@ -1107,12 +1068,7 @@ namespace DX12
 		{
 			return base;
 		}
-		/*
-		CommandListCompiler* get_native_list()
-		{
-			return &list;
-		}*/
-		void flush_binds(bool force = false);
+
 		void set_topology(D3D_PRIMITIVE_TOPOLOGY topology)
 		{
 			if (this->topology != topology)
@@ -1353,7 +1309,7 @@ namespace DX12
 			return base;
 		}
 
-		void flush_binds(bool force = false);
+
 		void on_set_signature(const RootSignature::ptr&) override;
 	//	void set_pipeline(std::shared_ptr<ComputePipelineState>);
 

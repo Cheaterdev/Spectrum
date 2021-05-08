@@ -7,9 +7,16 @@
 #include "tables/PSSMData.h"
 Texture2DArray<float> srv_4_0: register(t0, space4);
 StructuredBuffer<Camera> srv_4_1: register(t1, space4);
-PSSMData CreatePSSMData()
+struct Pass_PSSMData
+{
+uint srv_0;
+uint srv_1;
+};
+ConstantBuffer<Pass_PSSMData> pass_PSSMData: register( b2, space4);
+const PSSMData CreatePSSMData()
 {
 	PSSMData result;
+	Pass_PSSMData pass;
 	result.srv.light_buffer = srv_4_0;
 	result.srv.light_cameras = srv_4_1;
 	return result;

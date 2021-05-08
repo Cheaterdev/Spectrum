@@ -7,9 +7,16 @@
 #include "tables/DownsampleDepth.h"
 Texture2D<float> srv_3_0: register(t0, space3);
 RWTexture2D<float> uav_3_0: register(u0, space3);
-DownsampleDepth CreateDownsampleDepth()
+struct Pass_DownsampleDepth
+{
+uint srv_0;
+uint uav_0;
+};
+ConstantBuffer<Pass_DownsampleDepth> pass_DownsampleDepth: register( b2, space3);
+const DownsampleDepth CreateDownsampleDepth()
 {
 	DownsampleDepth result;
+	Pass_DownsampleDepth pass;
 	result.srv.srcTex = srv_3_0;
 	result.uav.targetTex = uav_3_0;
 	return result;

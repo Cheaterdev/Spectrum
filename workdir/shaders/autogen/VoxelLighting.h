@@ -14,9 +14,22 @@ RWTexture3D<float4> uav_4_0: register(u0, space4);
 Texture2D<float> srv_4_4: register(t4, space4);
 StructuredBuffer<Camera> srv_4_5: register(t5, space4);
 StructuredBuffer<int3> srv_4_6: register(t6, space4);
-VoxelLighting CreateVoxelLighting()
+struct Pass_VoxelLighting
+{
+uint srv_0;
+uint srv_1;
+uint srv_2;
+uint srv_3;
+uint srv_4;
+uint srv_5;
+uint srv_6;
+uint uav_0;
+};
+ConstantBuffer<Pass_VoxelLighting> pass_VoxelLighting: register( b2, space4);
+const VoxelLighting CreateVoxelLighting()
 {
 	VoxelLighting result;
+	Pass_VoxelLighting pass;
 	result.cb = cb_4_0;
 	result.srv.albedo = srv_4_0;
 	result.srv.normals = srv_4_1;

@@ -6,9 +6,15 @@
 #include "layout/DefaultLayout.h"
 #include "tables/CopyTexture.h"
 Texture2D<float4> srv_3_0: register(t0, space3);
-CopyTexture CreateCopyTexture()
+struct Pass_CopyTexture
+{
+uint srv_0;
+};
+ConstantBuffer<Pass_CopyTexture> pass_CopyTexture: register( b2, space3);
+const CopyTexture CreateCopyTexture()
 {
 	CopyTexture result;
+	Pass_CopyTexture pass;
 	result.srv.srcTex = srv_3_0;
 	return result;
 }

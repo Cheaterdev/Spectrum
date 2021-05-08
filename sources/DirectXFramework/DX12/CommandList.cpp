@@ -84,17 +84,16 @@ namespace DX12
 		if (compute) compute->begin();
 
 
-		for (auto& e : heaps)
-			e = nullptr;
-
 		Transitions::begin();
 		Eventer::begin(name, t);
 	
 		if (type != CommandListType::COPY) {
-			set_heap(DescriptorHeapType::SAMPLER, DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::SAMPLER));
-			set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV));
+			std::array<ID3D12DescriptorHeap*,2> heaps;
+
+			heaps[0] = DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::SAMPLER)->get_native().Get();
+			heaps[1] = DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV)->get_native().Get();
+			compiler.SetDescriptorHeaps(2, heaps.data());
 		}
-		//set_heap(DescriptorHeapType::SAMPLER, smp_descriptors.get_heap());
 	}
 
 
@@ -254,10 +253,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		set_rtv(place_rtv(rt), h);	
 	}
-	void GraphicsContext::flush_binds(bool force)
-	{
-		base.flush_heaps(force);
-	}
+
 	void GraphicsContext::draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
 		PROFILE_GPU(L"draw");
@@ -265,7 +261,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.setup_debug(this);
 
 		commit_tables();
-		flush_binds();
 		list->DrawInstanced(vertex_count, instance_count, vertex_offset, instance_offset);
 		base.create_transition_point(false);
 		
@@ -283,7 +278,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		get_base().transition(index.resource, ResourceState::INDEX_BUFFER);
 		list->IASetIndexBuffer(&index.view);
 		
-		flush_binds();
 		list->DrawIndexedInstanced(index_count, instance_count, index_offset, vertex_offset, instance_offset);
 		base.create_transition_point(false);
 		get_base().print_debug();
@@ -963,7 +957,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.create_transition_point();
 		base.setup_debug(this);
 		commit_tables();
-		flush_binds();
 
 		list->Dispatch(x, y, z);
 		base.create_transition_point(false);
@@ -1146,10 +1139,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		return list;
 	}
 
-	void ComputeContext::flush_binds(bool force)
-	{
-		base.flush_heaps(force);
-	}
 	
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{

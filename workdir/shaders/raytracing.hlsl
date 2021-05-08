@@ -47,7 +47,7 @@ float3 get_PBR(FrameInfo  info, float3 SpecularColor, float3 ReflectionColor, fl
 
 
 
-typedef BuiltInTriangleIntersectionAttributes MyAttributes;
+typedef BuiltInTriangleIntersectionAttributes MyAttributes; 
 
 
 //static const Texture3D<float4> voxels = GetVoxelScreen().GetVoxels();

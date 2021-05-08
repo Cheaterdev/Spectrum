@@ -15,6 +15,8 @@ namespace DX12
 
 		UINT64 fence = -1;
 		UINT64 frequency;
+
+		int max_used_timers = 0;
 		GPUTimeManager() : heap(MAX_TIMERS * 2)
 		{
 			DX12::Device::get().get_queue(CommandListType::DIRECT)->get_native()->GetTimestampFrequency(&frequency);
@@ -46,7 +48,7 @@ namespace DX12
 
 		void read_buffer(CommandList::ptr &list, std::function<void()> f)
 		{
-			list->resolve_times( heap, MAX_TIMERS * 2, [this, f](std::span<UINT64> data) {
+			list->resolve_times( heap, max_used_timers, [this, f](std::span<UINT64> data) {
 				std::copy(data.begin(), data.end(), read_back_data.begin());
 				f();
 			});

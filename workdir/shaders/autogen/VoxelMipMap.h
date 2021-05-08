@@ -9,9 +9,17 @@ ConstantBuffer<VoxelMipMap_cb> cb_4_0:register(b0,space4);
 Texture3D<float4> srv_4_0: register(t0, space4);
 RWTexture3D<float4> uav_4_0[3]: register(u0, space4);
 StructuredBuffer<int3> srv_4_1: register(t1, space4);
-VoxelMipMap CreateVoxelMipMap()
+struct Pass_VoxelMipMap
+{
+uint srv_0;
+uint srv_1;
+uint uav_0;
+};
+ConstantBuffer<Pass_VoxelMipMap> pass_VoxelMipMap: register( b2, space4);
+const VoxelMipMap CreateVoxelMipMap()
 {
 	VoxelMipMap result;
+	Pass_VoxelMipMap pass;
 	result.cb = cb_4_0;
 	result.srv.SrcMip = srv_4_0;
 	result.uav.OutMips = uav_4_0;

@@ -6,9 +6,14 @@
 #include "layout/DefaultLayout.h"
 #include "tables/EnvFilter.h"
 ConstantBuffer<EnvFilter_cb> cb_4_0:register(b0,space4);
-EnvFilter CreateEnvFilter()
+struct Pass_EnvFilter
+{
+};
+ConstantBuffer<Pass_EnvFilter> pass_EnvFilter: register( b2, space4);
+const EnvFilter CreateEnvFilter()
 {
 	EnvFilter result;
+	Pass_EnvFilter pass;
 	result.cb = cb_4_0;
 	return result;
 }

@@ -6,9 +6,14 @@
 #include "layout/DefaultLayout.h"
 #include "tables/SkyFace.h"
 ConstantBuffer<SkyFace_cb> cb_4_0:register(b0,space4);
-SkyFace CreateSkyFace()
+struct Pass_SkyFace
+{
+};
+ConstantBuffer<Pass_SkyFace> pass_SkyFace: register( b2, space4);
+const SkyFace CreateSkyFace()
 {
 	SkyFace result;
+	Pass_SkyFace pass;
 	result.cb = cb_4_0;
 	return result;
 }

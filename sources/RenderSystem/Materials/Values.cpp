@@ -166,6 +166,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 
 	params = 0;
 	graph->get_normals()->set_enabled(true);
+	graph->get_glow()->set_enabled(true);
 	graph->get_texcoord()->set_enabled(true);
 	graph->get_mettalic()->set_enabled(true);
 	graph->get_base_color()->set_enabled(true);
@@ -210,6 +211,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		functions.clear();
 
 		graph->get_normals()->set_enabled(false);
+		graph->get_glow()->set_enabled(false);
 		graph->get_texcoord()->set_enabled(false);
 		graph->get_mettalic()->set_enabled(false);
 		graph->get_roughness()->set_enabled(false);
@@ -503,12 +505,17 @@ MaterialGraph::MaterialGraph()
 	i_roughness = register_output(/*ShaderParams::FLOAT1, */"roughness", ShaderParams::FLOAT1);
 	i_normal = register_output(/*ShaderParams::FLOAT4, */"normal", ShaderParams::FLOAT4);
 	i_tess_displacement = register_output(/*ShaderParams::FLOAT1,*/ "displacement", ShaderParams::FLOAT1);
+	i_glow = register_output(/*ShaderParams::FLOAT4, */"glow", ShaderParams::FLOAT4);
+
 	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::FLOAT4);
 	i_metallic->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
 	i_roughness->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
 
 	i_normal->default_value = shader_parameter("float4(0.5,0.5,1,0)", ShaderParams::FLOAT4);
 	i_tess_displacement->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
+
+	i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::FLOAT4);
+
 }
 
 MaterialGraph::~MaterialGraph()
@@ -540,6 +547,14 @@ FlowGraph::output::ptr MaterialGraph::get_normals()
 {
 	return i_normal;
 }
+
+
+FlowGraph::output::ptr MaterialGraph::get_glow()
+{
+	return i_glow;
+}
+
+
 
 FlowGraph::output::ptr MaterialGraph::get_tess_displacement()
 {

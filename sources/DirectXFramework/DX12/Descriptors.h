@@ -174,6 +174,8 @@ namespace DX12
 			f(*this);
 		}
 
+		UINT offset = UINT_MAX;
+
 		//const Handle& operator=(const Handle& h) = default;
 
 		bool operator!=(const Handle& r)
@@ -400,6 +402,7 @@ namespace DX12
 			res.cpu.Offset(i, info->descriptor_size);
 			res.gpu.Offset(i, info->descriptor_size);
 			res.resource_info += i;
+			res.offset += i;
 			return res;
 		}
 
@@ -442,6 +445,7 @@ namespace DX12
 			res.cpu.Offset(i, descriptor_size);
 			res.gpu.Offset(i, descriptor_size);
 			res.resource_info = resource_info + i;
+			res.offset += i;
 			return res;
 		}
 
@@ -469,6 +473,7 @@ namespace DX12
 		//      std::vector<Handle> handles;
 		ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 		std::vector<ResourceInfo> resources;
+		DescriptorHeapFlags flags;
 
 		UINT descriptor_size;
 		UINT current_offset = 0;
@@ -492,11 +497,12 @@ namespace DX12
 				
 					delete e;
 				});
-			res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-			res.info->base.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
+			res.info->base.cpu = get_handle(offset);
+			res.info->base.gpu = get_gpu_handle(offset);
 			res.info->base.resource_info = resources.data() + offset;
 			res.info->descriptor_size = descriptor_size;
 			res.info->count = count;
+			res.info->base.offset = offset;
 			return res;
 		}
 		template<class T>
@@ -591,8 +597,8 @@ namespace DX12
 		Handle handle(UINT offset)
 		{
 			Handle res;
-			res.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-			res.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
+			res.cpu = get_handle(offset);
+			res.gpu = get_gpu_handle(offset);
 			res.resource_info = resources.data() + offset;
 			return res;
 		}
@@ -603,11 +609,14 @@ namespace DX12
 			HandleTable res;
 			res.info = std::shared_ptr<HandleTable::helper>(new HandleTable::helper);
 
-			res.info->base.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-			res.info->base.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
+			res.info->base.cpu = get_handle(offset);
+			res.info->base.gpu = get_gpu_handle(offset);
 			res.info->base.resource_info = resources.data() + offset;
 			res.info->descriptor_size = descriptor_size;
 			res.info->count = count;
+			res.info->base.offset = offset;
+
+
 			return res;
 		}
 
@@ -616,11 +625,13 @@ namespace DX12
 			assert((offset + count) <= max_count && "Not enought handles");
 			HandleTableLight res;
 
-			res.cpu = CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), offset, descriptor_size);
-			res.gpu = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), offset, descriptor_size);
+			res.cpu = get_handle(offset);
+			res.gpu = get_gpu_handle(offset);
 			res.descriptor_size = descriptor_size;
 			res.resource_info = resources.data() + offset;
 			res.count = count;
+			res.offset = offset;
+
 			return res;
 		}
 

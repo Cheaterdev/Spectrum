@@ -1147,6 +1147,10 @@ public:
 
 			if (GetAsyncKeyState('R'))
 			{
+				Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal_and_wait();
+				Render::Device::get().get_queue(Render::CommandListType::COMPUTE)->signal_and_wait();
+				Render::Device::get().get_queue(Render::CommandListType::COPY)->signal_and_wait();
+
 				//   AssetManager::get().reload_resources();
 				Render::pixel_shader::reload_all();
 				Render::vertex_shader::reload_all();
