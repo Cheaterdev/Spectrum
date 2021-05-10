@@ -128,12 +128,7 @@ float4 trace(float4 start_color, float3 view, float3 origin, float3 dir, float3 
 
 
 
-float3 project_tc(float3 pos, matrix mat)
-{
-	float4 res = mul(mat, float4(pos, 1));
-	res.xyz /= res.w;
-	return float3(res.xy * float2(0.5, -0.5) + float2(0.5, 0.5), res.z);
-}
+
 float rnd(float2 uv)
 {
 	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);

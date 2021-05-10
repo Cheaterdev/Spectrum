@@ -145,7 +145,7 @@ return result / 1;// light_raw_z > pos_l.z;
 
 
 
-float3 project_tc(float3 pos, matrix mat)
+float3 project_tc3(float3 pos, matrix mat)
 {
 	float4 res = mul(mat, float4(pos, 1));
 	res.xyz /= res.w;
@@ -170,7 +170,7 @@ float get_sss(float z, float3 pos, float2 tc, float3 n)
 	{
 		dist += step;
 
-		float3	reflect_tc = project_tc(pos + dist * r, camera.GetViewProj());
+		float3	reflect_tc = project_tc3(pos + dist * r, camera.GetViewProj());
 
 		if (any(reflect_tc.xy < 0 || reflect_tc.xy>1)) return res;
 

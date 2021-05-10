@@ -283,7 +283,7 @@ GENERATE(Pso_param)
 	
 	virtual void enterInsert_block(SIGParser::Insert_blockContext* ctx) override {
 
-		auto&str = ctx->children[0]->getText();
+		auto str = ctx->children[0]->getText();
 		hlsl_ptr->hlsl = str.substr(2, str.size() - 4);
 	}
 	
@@ -291,7 +291,7 @@ GENERATE(Pso_param)
 
 	virtual void enterShader_type(SIGParser::Shader_typeContext* ctx) override {
 
-		auto& str = ctx->children[0]->getText();
+		auto str = ctx->children[0]->getText();
 		shader->type = str;
 		current_pso->shaders[str] = shader;
 	}

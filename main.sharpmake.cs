@@ -302,14 +302,8 @@ public class CustomTarget : ITarget
   public override void ConfigureAll(Configuration conf, CustomTarget target) 
         {
             base.ConfigureAll(conf, target);
-            conf.Options.Remove(Options.Vc.Compiler.CppLanguageStandard.Latest);	
-            conf.Options.Remove(Options.Vc.Compiler.CppLanguageStandard.Latest);	
             conf.Options.Remove(Options.Vc.Linker.SubSystem.Application);		
-
-            conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.CPP17);	
-            conf.Options.Add(Options.Vc.General.CharacterSet.Unicode);	  
-
-                
+            conf.Options.Add(Options.Vc.General.CharacterSet.Unicode);	                  
             conf.Options.Remove(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors    
             conf.Options.Add(Options.Vc.General.WarningLevel.Level0);		 // hate warnings, love errors
 

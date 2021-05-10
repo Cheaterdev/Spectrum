@@ -1,72 +1,59 @@
-#define M_PI 3.141592653589793238462643383279f
 struct quad_output
 {
-float4 pos : SV_POSITION;
-float2 tc: TEXCOORD0;
+	float4 pos : SV_POSITION;
+	float2 tc: TEXCOORD0;
 };
 
-#if BUILD_FUNC == VS
-cbuffer cbParams : register(b0)
+struct CB
 {
-    float4 pos;
+uint id;
+uint rw_id;
 };
 
-quad_output VS( uint index : SV_VERTEXID )
-{
-    static float2 Pos[] =
-    {
-        float2(pos.x, pos.w),
-        float2(pos.x, pos.y),
-        float2(pos.z, pos.w),
-        float2(pos.z, pos.y)
-        /*
-        float2(-1, 1),
-        float2(1, 1),
-        float2(-1, -1),
-        float2(1, -1),*/
-    };
-    static float2 Tex[] =
-    {
-
-
-        float2(0, 1),
-        float2(0, 0),
-        float2(1, 1),
-        float2(1, 0),
-    };
-    quad_output Output;
-    Output.pos = float4(Pos[index].x * 2 - 1, -(Pos[index].y * 2 - 1), 0.99999, 1); //float4(Input.Pos.xy,0.3,1);
-    Output.tc = Tex[index];
-    return Output;
-}
-#endif
-
-#if BUILD_FUNC == PS
-cbuffer cbParams : register(b0)
-{
-    float4 color1;
-    float4 color2;
-    float4 size;
-};
-
-Texture2D<float4> tex : register(t0);
-
+ConstantBuffer<CB> cb: register (b0);
 SamplerState PointSampler : register (s0);
+
+struct A
+{
+	Texture2D<float4> getTexture() { return ResourceDescriptorHeap[cb.id]; }
+	RWTexture2D<float4> getRWTexture() { return ResourceDescriptorHeap[cb.rw_id]; }
+
+};
+
+
+A createA()
+{
+
+A a;
+
+return a;
+}
+
+static const A a = createA();
+
+
+A getA()
+{
+return a;
+}
+
+
 
 float4 PS(quad_output i) : SV_TARGET0
 {
-
-    float corners = 15;
-
-    float2 best_point = clamp(i.tc * size.xy, corners, size.xy - corners);
-    float len = clamp(length(best_point - i.tc * size.xy) / (corners), 0, 1); // size.z;
-
-    float alpha = 1 - smoothstep(0.60, 0.77, len);
-    float shadow =  1 - smoothstep(0, 1, len);
-
-    float3 result = lerp(color1.xyz, color2.xyz, i.tc.y);
-    result = lerp(0, result, alpha);
-    return float4(result, alpha + shadow);
-
+    return a.getTexture().Sample(PointSampler, i.tc);
 }
-#endif
+
+
+
+
+[numthreads(64, 1, 1)]
+void CS(
+    uint3 groupID       : SV_GroupID,
+    uint3 dispatchID : SV_DispatchThreadID,
+    uint3 groupThreadID : SV_GroupThreadID,
+    uint  groupIndex : SV_GroupIndex
+)
+{
+   getA().getRWTexture()[groupThreadID.xy] =   getA().getTexture().Sample(PointSampler, groupThreadID.xy);
+}

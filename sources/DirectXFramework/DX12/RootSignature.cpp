@@ -3,7 +3,7 @@
 namespace DX12
 {
 
-    void init_parameters(std::vector<CD3DX12_ROOT_PARAMETER>& parameters, std::list<CD3DX12_DESCRIPTOR_RANGE>& ranges,const  RootSignatureDesc& desc)
+    void init_parameters(std::vector<CD3DX12_ROOT_PARAMETER1>& parameters, std::list<CD3DX12_DESCRIPTOR_RANGE1>& ranges,const  RootSignatureDesc& desc)
     {
 		for (auto e : desc.parameters)
 		{
@@ -26,17 +26,17 @@ namespace DX12
 
 			if (cbv)
 			{
-				param.InitAsConstantBufferView(cbv->offset, cbv->space, static_cast<D3D12_SHADER_VISIBILITY>(cbv->visibility));
+				param.InitAsConstantBufferView(cbv->offset, cbv->space, D3D12_ROOT_DESCRIPTOR_FLAGS::D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, static_cast<D3D12_SHADER_VISIBILITY>(cbv->visibility));
 			}
 
 			if (srv)
 			{
-				param.InitAsShaderResourceView(srv->offset, srv->space, static_cast<D3D12_SHADER_VISIBILITY>(srv->visibility));
+				param.InitAsShaderResourceView(srv->offset, srv->space, D3D12_ROOT_DESCRIPTOR_FLAGS::D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, static_cast<D3D12_SHADER_VISIBILITY>(srv->visibility));
 			}
 
 			if (uav)
 			{
-				param.InitAsUnorderedAccessView(uav->offset, uav->space, static_cast<D3D12_SHADER_VISIBILITY>(uav->visibility));
+				param.InitAsUnorderedAccessView(uav->offset, uav->space, D3D12_ROOT_DESCRIPTOR_FLAGS::D3D12_ROOT_DESCRIPTOR_FLAG_DATA_VOLATILE, static_cast<D3D12_SHADER_VISIBILITY>(uav->visibility));
 			}
 
 			if (table)
@@ -44,7 +44,7 @@ namespace DX12
 				ranges.emplace_back();
 				auto& range = ranges.back();
 
-				range.Init(static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(table->range), table->count, table->offset, table->space);
+				range.Init(static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(table->range), table->count, table->offset, table->space, D3D12_DESCRIPTOR_RANGE_FLAGS::D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE);
 				param.InitAsDescriptorTable(1, &range, static_cast<D3D12_SHADER_VISIBILITY>(table->visibility));
 			}
 
@@ -66,45 +66,30 @@ namespace DX12
 
     void  RootSignature::finalize()
     {
-
-
-      //  desc.parameters[]
-        CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-
-        std::vector<CD3DX12_ROOT_PARAMETER> parameters;
-		std::list<CD3DX12_DESCRIPTOR_RANGE> ranges;
-
-        init_parameters(parameters, ranges, desc);
-        rootSignatureDesc.Init(static_cast<UINT>(parameters.size()), parameters.data(), 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-	
-        ComPtr<ID3DBlob> signature;
-        ComPtr<ID3DBlob> error;
-        TEST(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-        TEST(Device::get().get_native_device()->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+		assert(false);
     }
 
     RootSignature::RootSignature(const RootSignatureDesc& desc, D3D12_ROOT_SIGNATURE_FLAGS flags)
     {
 
        if(flags!= D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE) flags |= D3D12_ROOT_SIGNATURE_FLAGS::D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
-		std::vector<CD3DX12_ROOT_PARAMETER> parameters;
-		std::list<CD3DX12_DESCRIPTOR_RANGE> ranges;
+		std::vector<CD3DX12_ROOT_PARAMETER1> parameters;
+		std::list<CD3DX12_DESCRIPTOR_RANGE1> ranges;
 
 		init_parameters(parameters, ranges, desc);
 
 
-        CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-        rootSignatureDesc.Init(static_cast<UINT>(parameters.size()), parameters.data(), 0, nullptr, flags);
-        rootSignatureDesc.pStaticSamplers = desc.samplers().data();
-        rootSignatureDesc.NumStaticSamplers = static_cast<UINT>(desc.samplers().size());
+        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        rootSignatureDesc.Init_1_1(static_cast<UINT>(parameters.size()), parameters.data(),  static_cast<UINT>(desc.samplers().size()), desc.samplers().data(), flags);
+      //  rootSignatureDesc.pStaticSamplers = desc.samplers().data();
+      //  rootSignatureDesc.NumStaticSamplers = static_cast<UINT>(desc.samplers().size());
         this->desc = desc;
 
 
 		
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
-        TEST(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+        TEST(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &signature, &error));
 
         if (error)
         {

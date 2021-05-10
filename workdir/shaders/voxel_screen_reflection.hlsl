@@ -187,12 +187,6 @@ float rnd(float2 uv)
 	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
 }
 
-float2 project_tc(float3 pos, matrix mat)
-{
-	float4 res = mul(mat, float4(pos, 1));
-	res /= res.w;
-	return res.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
-}
 
 float calc_vignette(float2 inTex)
 {

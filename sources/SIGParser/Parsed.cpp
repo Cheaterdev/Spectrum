@@ -102,22 +102,23 @@ std::string get_cpp_for(Value v)
 void have_type::detect_type(have_options * options)
 {
 	value_type = ValueType::STRUCT;
-	if (type.find("Texture") == 0)value_type = ValueType::SRV;
-	if (type.find("StructuredBuffer") == 0) value_type = ValueType::SRV;
-	if (type.find("Buffer") == 0) value_type = ValueType::SRV;
-	if (type.find("RaytracingAccelerationStructure") == 0) value_type = ValueType::SRV;
-if (type == "SamplerState") value_type = ValueType::SMP;
-
-	if (type.find("RW") == 0) value_type = ValueType::UAV;
-	if (type.find("AppendStructuredBuffer") == 0) value_type = ValueType::UAV;
+	if (type.starts_with("Texture"))value_type = ValueType::SRV;
+	if (type.starts_with("StructuredBuffer")) value_type = ValueType::SRV;
+	if (type.starts_with("Buffer")) value_type = ValueType::SRV;
+	if (type.starts_with("RaytracingAccelerationStructure")) value_type = ValueType::SRV;
 	
-	if (type.find("bool") == 0) value_type = ValueType::CB;
-	if (type.find("uint") == 0) value_type = ValueType::CB;
-	if (type.find("int") == 0) value_type = ValueType::CB;
-	if (type.find("float") == 0) value_type = ValueType::CB;
-	if (type.find("matrix") == 0) value_type = ValueType::CB;
-	if (type.find("uint") == 0) value_type = ValueType::CB;
-	if (type.find("mat4x4") == 0) value_type = ValueType::CB;
+	if (type.starts_with("RW")) value_type = ValueType::UAV;
+	if (type.starts_with("AppendStructuredBuffer")) value_type = ValueType::UAV;
+	
+	if (type.starts_with("bool")) value_type = ValueType::CB;
+	if (type.starts_with("uint")) value_type = ValueType::CB;
+	if (type.starts_with("int")) value_type = ValueType::CB;
+	if (type.starts_with("float")) value_type = ValueType::CB;
+	if (type.starts_with("matrix")) value_type = ValueType::CB;
+	if (type.starts_with("uint")) value_type = ValueType::CB;
+	if (type.starts_with("mat4x4")) value_type = ValueType::CB;
+
+	if (type == "SamplerState") value_type = ValueType::SMP;
 
 	if(options&&options->find_option("dynamic"))
 		value_type = ValueType::CB;

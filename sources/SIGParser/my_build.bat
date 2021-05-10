@@ -1,1 +1,0 @@
-antlr SIG.g4 -o .antlr/ -listener -visitor

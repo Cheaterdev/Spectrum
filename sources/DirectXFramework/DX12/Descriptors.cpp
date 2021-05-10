@@ -165,14 +165,13 @@ namespace DX12 {
 		}
 		else if (info->uav.desc.ViewDimension == D3D12_UAV_DIMENSION_TEXTURE2D)
 		{
-			auto& uav = info->uav.desc.Texture2D;
-
 			if (desc.MipLevels == 1 && desc.Depth() == 1)
 			{
 				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 			}
 			else
 			{
+				auto& uav = info->uav.desc.Texture2D;
 				UINT res = desc.CalcSubresource(uav.MipSlice, 0, uav.PlaneSlice);
 				f(info->resource_ptr,  res);
 			}
@@ -249,16 +248,10 @@ namespace DX12 {
 		assert(info->type == HandleType::SRV);
 
 		auto& desc = info->resource_ptr->get_desc();
-		UINT total = desc.CalcSubresource(desc.MipLevels - 1, desc.ArraySize() - 1, desc.Depth() - 1);
-
-
-		ResourceState target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
-
 
 		if (info->srv.ViewDimension == D3D12_UAV_DIMENSION_BUFFER)
 		{
-			f(info->resource_ptr, 0);// D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-
+			f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 		}
 		else if (info->srv.ViewDimension == D3D12_SRV_DIMENSION_TEXTURE2D)
 		{

@@ -32,6 +32,15 @@ struct pixel_info
 	float3 reflection;
 };
 
+
+float2 project_tc(float3 pos, matrix mat)
+{
+	float4 res = mul(mat, float4(pos, 1));
+	res /= res.w;
+	return res.xy * float2(0.5, -0.5) + float2(0.5, 0.5);
+}
+
+
 float3 depth_to_wpos(float d, float2 tc, matrix mat)
 {
 	float4 P = mul(mat, float4(tc * float2(2, -2) + float2(-1, 1), d, 1));

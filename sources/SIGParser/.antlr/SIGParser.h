@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.8
+// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
 
 #pragma once
 
@@ -44,7 +44,7 @@ public:
     RulePso_param_id = 47, RuleBool_type = 48
   };
 
-  SIGParser(antlr4::TokenStream *input);
+  explicit SIGParser(antlr4::TokenStream *input);
   ~SIGParser();
 
   virtual std::string getGrammarFileName() const override;

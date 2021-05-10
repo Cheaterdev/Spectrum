@@ -26,6 +26,7 @@
 #include "autogen/VoxelOutput.h"
 
 #include "PBR.hlsl"
+#include "Common.hlsl"
 
 
 float2 IntegrateBRDF(FrameInfo  info,float Roughness, float Metallic, float NoV)
@@ -104,6 +105,8 @@ float4 trace(float4 start_color, float start_dist,  float3 origin, float3 dir, f
 		//	accum /= accum.w;
 
 	}
+
+	if (accum.w < 0.1) dist = 1;
 	//accum.xyz *= pow(dist,0.7);
 	//accum.xyz *= angle_coeff;
 	//accum *= 1.0 / 0.9;
@@ -113,7 +116,7 @@ float4 trace(float4 start_color, float start_dist,  float3 origin, float3 dir, f
 	accum.xyz += sky *pow(sampleWeight, 1);
 
 	
-	
+	dist *= length(voxel_size);
 //	accum.xyz = sky;
 
 	return accum;// / saturate(accum.w);
@@ -140,12 +143,6 @@ inline void GenerateCameraRay(uint2 index,in Camera camera, out float3 origin, o
     direction = normalize(world.xyz - origin);
 }
 
-
-float3 depth_to_wpos(float d, float2 tc, matrix mat)
-{
-	float4 P = mul(mat, float4(tc * float2(2, -2) + float2(-1, 1), d, 1));
-	return P.xyz / P.w;
-}
 float rnd(float2 uv)
 {
 	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
@@ -438,7 +435,7 @@ float3 rayDir = reflect(view, normal);
 	float rsin = sin(6.14 * rand);
 	float rand2 = rnd(float2(cosi, sini));
 
-	float tt = roughness *pow(rand2, 1.0);
+	float tt = roughness*pow(rand2, 0.5);
 
 	//float tt = rand2;
 
@@ -463,7 +460,7 @@ float3 rayDir = reflect(view, normal);
 	ray.Origin = pos;
 	ray.Direction = dir;
 	ray.TMin = 0.05;
-	ray.TMax = length(oneVoxelSize) / (tan(roughness)+0.0001);
+	ray.TMax = length(oneVoxelSize) / (tan(roughness) + 0.001);
 	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
 
 
@@ -474,18 +471,23 @@ float3 rayDir = reflect(view, normal);
 	}
 
 
+	float3 refl_pos = pos +view * clamp(payload_gi.dist,0,1000);
+	float2 prev_tc = project_tc(refl_pos, frame.GetPrevCamera().GetViewProj());
 
-	float2 delta = voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
-	float2 prev_tc = tc - delta;
 
-	float4 prev_gi= voxel_screen.GetPrev_gi().SampleLevel(pointBorderSampler,  prev_tc, 0);
+	//float2 delta = voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
+	//float2 prev_tc = tc - 0*delta;
 
+	float4 prev_gi= voxel_screen.GetPrev_gi().SampleLevel(linearClampSampler,  prev_tc, 0);
+
+
+	float lerper = saturate(0.05+length(prev_gi.w - payload_gi.dist)/(10000* roughness));
 	 //float fresnel = calc_fresnel(1- roughness, normal, v);
 	
-	float3 screen = get_PBR(frame, albedo, payload_gi.color, normal, rayDir, roughness, metallic);
+	float3 screen = payload_gi.color;// get_PBR(frame, albedo, payload_gi.color, normal, rayDir, roughness, metallic);
 
 	
-	tex_noise[itc] = lerp(prev_gi, float4(screen, payload_gi.dist), 0.05);//float4(payload_gi.color, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
+	tex_noise[itc] = lerp(prev_gi, float4(screen, payload_gi.dist), lerper);//float4(payload_gi.color, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
 }
 
 

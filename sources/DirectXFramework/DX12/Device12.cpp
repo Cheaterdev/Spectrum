@@ -267,7 +267,7 @@ namespace DX12
 		D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_7 };
 		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
 
-		assert(supportedShaderModel.HighestShaderModel > D3D_SHADER_MODEL_6_6);
+		assert(supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6);
 	}
 
 

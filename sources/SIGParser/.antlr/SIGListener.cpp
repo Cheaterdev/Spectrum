@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.8
+// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
 
 
 #include "SIGListener.h"

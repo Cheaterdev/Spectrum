@@ -1,5 +1,5 @@
 
-// Generated from SIG.g4 by ANTLR 4.7.1
+// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
 
 #pragma once
 
@@ -26,7 +26,7 @@ public:
     INSERT_BLOCK = 69
   };
 
-  SIGLexer(antlr4::CharStream *input);
+  explicit SIGLexer(antlr4::CharStream *input);
   ~SIGLexer();
 
   virtual std::string getGrammarFileName() const override;

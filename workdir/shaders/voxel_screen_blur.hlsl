@@ -1,6 +1,7 @@
 #pragma once
 #include "Common.hlsl"
 
+
 #include "autogen/FrameInfo.h"
 #include "autogen/VoxelInfo.h"
 #include "autogen/VoxelScreen.h"
@@ -24,6 +25,25 @@ struct quad_output
 };
 
 
+float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
+{
+	return GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, 0.5 + 0.5 * NoV), 0);
+}
+
+
+float3 get_PBR(float3 SpecularColor, float3 ReflectionColor, float3 N, float3 V, float Roughness, float Metallic)
+{
+	V *= -1;
+	float NoV = dot(N, V);
+	//return NoV<0;
+//	float3 R = 2 * dot(V, N) * N - V;
+//	float3 PrefilteredColor = PrefilterEnvMap(Roughness, R);
+	float2 EnvBRDF = IntegrateBRDF(Roughness, Metallic, NoV);
+	return     ReflectionColor * (Metallic * SpecularColor * EnvBRDF.x + EnvBRDF.y);
+}
+
+
+
 [numthreads(8, 8, 1)]
 void  PS(uint3 groupID       : SV_GroupID,
 	uint3 dispatchID : SV_DispatchThreadID,
@@ -43,19 +63,22 @@ void  PS(uint3 groupID       : SV_GroupID,
 	//dims /= 2;
 	int2 tc = index;
 	float4 albedo = gbuffer.GetAlbedo()[tc];
+
+	float  roughness = pow(gbuffer.GetNormals()[tc].w, 1);
+	float metallic = albedo.w;// specular.w;
+
+	float raw_z = gbuffer.GetDepth()[tc.xy];
+	float3 pos = depth_to_wpos(raw_z, itc, camera.GetInvViewProj());
+	float3 v = normalize(pos - camera.GetPosition());
+
 	float4 res = 0;
 	float w = 0;
 	float framesNorm = tex_frames.SampleLevel(pointClampSampler, itc, 0).x;
-
-#ifdef ENABLE_BLUR
 	float3 normal = normalize(gbuffer.GetNormals()[tc].xyz * 2 - 1);
 
-	float raw_z = gbuffer.GetDepth()[tc.xy];
-	//if (raw_z >= 1) return ;
-	float3 pos = depth_to_wpos(raw_z, itc, camera.GetInvViewProj());
+#ifdef ENABLE_BLUR
 
 	float dist = length(pos - camera.GetPosition()) / 100;
-
 
 	int frames = 8 * framesNorm;
 
@@ -103,6 +126,17 @@ float4 cur_gi = res/w;
 //tex_gi_result[index] = float4(cur_gi.xyz, framesNorm);
 //tex_result[index] += float4(albedo.xyz * cur_gi.xyz, 1);
 tex_gi_result[index] =  float4(cur_gi.xyz, framesNorm);
-tex_result[index] += float4(albedo.xyz * cur_gi.xyz, 1);
+
+
+
+#ifdef REFLECTION
+float3 color = get_PBR(albedo, cur_gi.xyz, normal, v, roughness, metallic);
+#else
+float NoV = dot(normal, v);
+float3 color = albedo*IntegrateBRDF(roughness, metallic, -NoV).x* cur_gi.xyz;
+#endif
+
+
+tex_result[index] += float4(color, 1);
 
 }

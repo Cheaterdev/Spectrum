@@ -94,7 +94,8 @@ void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::C
 
 }
 
-void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot, table_offsets& offsets = table_offsets())
+
+void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot, table_offsets& offsets)
 {
 	std::string write_to = "result";
 
@@ -161,6 +162,11 @@ void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& sl
 		}
 		*/
 
+}
+
+void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot)
+{
+	table_offsets offsets; generate_bind(stream, parent, table, slot, offsets);
 }
 
 void generate_pass_table(Table& table)
@@ -1689,7 +1695,9 @@ int main() {
 	{
 
 		iterate_files("sigs/", [](std::wstring filename) {
-			parsed.merge(parse(filename));
+			auto p = parse(filename);
+
+			parsed.merge(p);
 			});
 
 		parsed.setup();

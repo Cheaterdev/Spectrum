@@ -221,6 +221,11 @@ ComputePSO VoxelIndirectFilter
 	[CS, nullable]
 	define Blur;
 
+	[rename = REFLECTION]
+	[CS, nullable]
+	define Reflection;
+
+
 }
 
 GraphicsPSO VoxelReflectionHi

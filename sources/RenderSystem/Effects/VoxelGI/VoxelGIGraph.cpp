@@ -1012,7 +1012,7 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 				{
 					PROFILE_GPU(L"blur");
-					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Blur()));
+					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Blur() | PSOS::VoxelIndirectFilter::Reflection()));
 					{
 						Slots::VoxelBlur voxelBlur;
 
@@ -1034,7 +1034,7 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 				{
 					PROFILE_GPU(L"blur2");
-					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>());
+					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Reflection()));
 					{
 						Slots::VoxelBlur voxelBlur;
 

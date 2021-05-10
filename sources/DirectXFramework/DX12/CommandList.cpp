@@ -789,6 +789,10 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		if (!resource) return;
 
+		if (type== CommandListType::COPY && (to == ResourceState::COPY_DEST|| to == ResourceState::COPY_SOURCE))
+			to = ResourceState::COMMON;
+
+
 		track_object(*resource);
 
 		CommandList* list = static_cast<CommandList*>(this); // :(
