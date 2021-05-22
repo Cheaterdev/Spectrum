@@ -22,18 +22,19 @@ float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 	float B = 0;
 	const uint NumSamples = 4096;
 
+	float a = Roughness * Roughness;
 	//[loop]
 	for (uint i = 0; i < NumSamples; i++)
 	{
 		float2 Xi = hammersley2d(i, NumSamples);
-		float3 H = ImportanceSampleGGX(Xi, Roughness, N);
+		float3 H = ImportanceSampleGGX(Xi, a, N);
 		float3 L = 2 * dot(V, H) * H - V;
 		float NoL = (L.z);
 		float NoH = saturate(H.z);
 		float VoH = saturate(dot(V, H));
 		if (NoL > 0)
 		{
-			float G = G_Smith(Roughness, NoV, NoL);
+			float G = G_Smith(a, NoV, NoL);
 			float G_Vis = G * VoH / (NoH * NoV);
 			float Fc = pow(1 - VoH, 5);
 			A += (1 - Fc) * G_Vis;

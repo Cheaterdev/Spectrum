@@ -406,6 +406,8 @@ public:
 		}
 
 
+		
+
 		/*
 		graph.add_pass<pass_data>("UPDATE",[](pass_data& data, TaskBuilder& builder) {
 			//	data.o_texture = builder.read_texture("swapchain");
@@ -470,7 +472,7 @@ public:
 				data.hiz = builder.create_texture("GBuffer_HiZ", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil | ResourceFlags::Static);
 				data.hiz_uav = builder.create_texture("GBuffer_HiZ_UAV", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, ResourceFlags::UnorderedAccess);
 
-				}, [this](GBufferData& data, FrameContext& _context) {
+				}, [this,&graph](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
 
@@ -487,6 +489,8 @@ public:
 
 					context->cam = &eyes[0]->cam;
 
+					command_list->get_graphics().set_layout(Layouts::DefaultLayout);
+					command_list->get_compute().set_layout(Layouts::DefaultLayout);
 
 
 					//				gpu_meshes_renderer_static->update(context);
@@ -515,6 +519,8 @@ public:
 
 					context->gbuffer_compiled = rt_gbuffer.compile(*context->list);
 
+					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
+					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
 
 					gpu_scene_renderer->render(context, scene);
 
@@ -548,88 +554,6 @@ public:
 		
 		sky.generate_sky(graph);
 
-	/*	if (Device::get().is_rtx_supported())
-		graph.add_pass<pass_data>("RAYTRACE", [&](pass_data& data, TaskBuilder& builder) {
-			data.o_texture = builder.create_texture("RTX", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,ResourceFlags::UnorderedAccess| ResourceFlags::Static);
-			data.sky_cubemap = builder.need_texture("sky_cubemap", ResourceFlags::PixelRead);
-			data.gbuffer.need(builder);
-
-			}, [this, &graph](pass_data& data, FrameContext& _context) {
-
-				GBuffer gbuffer = data.gbuffer.actualize(_context);
-
-				auto& command_list = _context.get_list();
-				//SceneFrameManager::get().prepare(command_list, *scene);
-
-				MeshRenderContext::ptr context(new MeshRenderContext());
-				auto sky_cubemap = _context.get_texture(data.sky_cubemap);
-
-
-				context->current_time = time;
-				//	context->sky_dir = lighting->lighting.pssm.get_position();
-				context->priority = TaskPriority::HIGH;
-				context->list = command_list;
-				context->eye_context = vr_context;
-
-				auto output_tex = _context.get_texture(data.o_texture);
-
-				if (data.o_texture->is_new())
-				{
-					command_list->clear_uav(output_tex.rwTexture2D, vec4(0, 0, 0, 0));
-				}
-
-				command_list->get_compute().set_signature(RTX::get().global_sig);
-				command_list->get_graphics().set_signature(RTX::get().global_sig);
-
-				Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
-
-				Slots::FrameInfo::Compiled compiledFrame;
-
-				{
-					PROFILE(L"FrameInfo");
-					Slots::FrameInfo frameInfo;
-
-					frameInfo.GetSky() = sky_cubemap.textureÑube;
-					frameInfo.GetSunDir() = graph.sunDir;
-					frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0};
-					auto camera = frameInfo.MapCamera();
-					camera.cb = graph.cam->camera_cb.current;
-
-					compiledFrame = frameInfo.compile(*command_list);
-				}
-
-
-				compiledScene.set(command_list->get_compute());
-				compiledFrame.set(command_list->get_compute());
-
-
-
-				{
-					Slots::VoxelScreen voxelScreen;
-					gbuffer.SetTable(voxelScreen.MapGbuffer());
-					voxelScreen.GetVoxels() = voxel_gi->tex_lighting.tex_result->texture_3d()->texture3D;
-					voxelScreen.set(command_list->get_compute());
-				}
-
-				scene->voxels_compiled.set(command_list->get_compute());
-
-
-				
-				for (int i = 0; i < eyes.size(); i++)
-				{
-					eyes[i]->cam = cam;
-
-					//	eyes[i]->cam.eye_rot = vr->eyes[i].dir;
-					//	eyes[i]->cam.offset = vr->eyes[i].offset;
-					context->eye_context->eyes[i].cam = &eyes[i]->cam;
-					eyes[i]->cam.update({ 0,0 });
-
-					context->cam = &eyes[i]->cam;
-				}
-				//if (GetAsyncKeyState('B'))
-					RTX::get().render(context,  scene->raytrace_scene);
-			});
-			*/
 		stenciler->generate_after(graph);
 
 		smaa.generate(graph);
@@ -668,6 +592,32 @@ public:
 
 				MipMapGenerator::get().copy_texture_2d_slow(list->get_graphics(), texture.texture, debug_tex);*/
 			}, PassFlags::Required);
+
+		graph.add_slot_generator([this](FrameGraph& graph) {
+
+				PROFILE(L"FrameInfo");
+				Slots::FrameInfo frameInfo;
+				//// hack zone
+				auto sky = graph.builder.resources["sky_cubemap_filtered"];
+				if (sky.info && sky.info->resource)
+					frameInfo.GetSky() = sky.info->texture.textureÑube;
+				/////////
+				frameInfo.GetSunDir() = graph.sunDir;
+				frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
+
+
+				frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
+				frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
+
+				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
+				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
+
+				auto compiled = frameInfo.compile(*graph.builder.current_frame);
+				graph.register_slot_setter(compiled);
+			});
+
+
+
 
 	}
 

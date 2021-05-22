@@ -59,19 +59,20 @@ struct VoxelOutput
 {
 	RWTexture2D<float4> noise;
 	RWTexture2D<float> frames;
+
+	RWTexture2D<float4> DirAndPdf;
 }
 
 [Bind = DefaultLayout::Instance2]
 struct VoxelBlur
 {
 	Texture2D<float4> noisy_output;
+	Texture2D<float4> hit_and_pdf;
+
 	Texture2D<float4> prev_result;
 
 	RWTexture2D<float4> screen_result;
 	RWTexture2D<float4> gi_result;
-
-
-	TilingParams tiling;
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -398,9 +399,15 @@ struct DenoiserHistoryFix
 	Texture2D<float> frames;
 
 	RWTexture2D<float4> target;
+}
 
+
+[Bind = FrameLayout::PassData]
+struct TilingPostprocess
+{
 	TilingParams tiling;
 }
+
 
 
 ComputePSO DenoiserHistoryFix

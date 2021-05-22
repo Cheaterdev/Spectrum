@@ -551,6 +551,9 @@ void FrameGraph::compile(int frame)
 
 	builder.create_resources();
 
+	for (auto& f : pre_run)
+		f(*this);
+
 	for (auto& pass : enabled_passes)
 		pass->compile(builder);
 }
@@ -622,7 +625,7 @@ void FrameGraph::render()
 			if (!resource) continue;
 
 	//		if(false)
-			for(auto state:info.states)
+			for(auto &state:info.states)
 			{
 
 			
@@ -631,7 +634,7 @@ void FrameGraph::render()
 					merged_state.subres.resize(resource->get_subres_count());
 			
 				
-				for(auto pass:state.passes)
+				for(auto& pass:state.passes)
 				{
 					auto commandList = pass->context.list;
 					if (!commandList) continue;
@@ -648,7 +651,7 @@ void FrameGraph::render()
 					}*/
 				}
 
-				for (auto pass : state.passes)
+				for (auto &pass : state.passes)
 				{
 					auto commandList = pass->context.list;
 					if (!commandList) continue;
@@ -870,7 +873,7 @@ void FrameGraph::reset()
 	enabled_passes.clear();
 	builder.reset();
 
-	
+	pre_run.clear();
 }
 
 ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, ResourceFlags flags)

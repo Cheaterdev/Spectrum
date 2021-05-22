@@ -3,6 +3,7 @@
 
 #include "autogen/FrameInfo.h"
 #include "autogen/DenoiserHistoryFix.h"
+#include "autogen/TilingPostprocess.h"
 
 static const Camera camera = GetFrameInfo().GetCamera();
 
@@ -86,8 +87,8 @@ void  CS(uint3 groupID       : SV_GroupID,
 	uint3 groupThreadID : SV_GroupThreadID,
 	uint  groupIndex : SV_GroupIndex)
 {
-
-	uint2 index = denoiser_history.GetTiling().get_pixel_pos(dispatchID);
+//return;
+	uint2 index = GetTilingPostprocess().GetTiling().get_pixel_pos(dispatchID);
 
 
 	
@@ -141,6 +142,8 @@ if (mipLevel == 0)
 	float4 blurry = ApplyBilinearCustomWeights(s00, s10, s01, s11, w, false);
 
 	float total = dot(w,float4(1,1,1,1));
-	target[index] = blurry + result *saturate(1 - total);
+	target[index] =  blurry + result * saturate(1 - total);
+
+	//target[index] = float4(1, 0, 0, 1);
 }
 

@@ -61,6 +61,9 @@ public:
 		
 					//graph.scene->init_ras();
 
+					command_list->get_graphics().set_layout(Layouts::DefaultLayout);
+					command_list->get_compute().set_layout(Layouts::DefaultLayout);
+
 					MeshRenderContext::ptr context(new MeshRenderContext());
 					context->current_time = (size_t)time;
 					context->priority = TaskPriority::HIGH;
@@ -81,6 +84,10 @@ public:
 					gbuffer.rtv_table.set(context, true, true);
 					gbuffer.rtv_table.set_window(context->list->get_graphics());
 
+					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
+					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
+
+
 					scene_renderer->render(context, graph.scene->get_ptr<Scene>());
 
 
@@ -89,7 +96,7 @@ public:
 		}
 		pssm.generate(graph);
 		sky.generate(graph);
-
+		sky.generate_sky(graph);
 
 		struct no
 		{
@@ -106,6 +113,29 @@ public:
 				MipMapGenerator::get().generate(_context.get_list()->get_compute(), result);
 			});
 
+
+		graph.add_slot_generator([this](FrameGraph& graph) {
+
+			PROFILE(L"FrameInfo");
+			Slots::FrameInfo frameInfo;
+			//// hack zone
+			auto sky = graph.builder.resources["sky_cubemap_filtered"];
+			if (sky.info && sky.info->resource)
+				frameInfo.GetSky() = sky.info->texture.textureÑube;
+			/////////
+			frameInfo.GetSunDir() = graph.sunDir;
+			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
+
+
+			frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
+			frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
+
+			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
+
+			auto compiled = frameInfo.compile(*graph.builder.current_frame);
+			graph.register_slot_setter(compiled);
+		});
 //		graph.add_pass([])
 	}
 
@@ -148,7 +178,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
     cam.update();
 
 
-
+	graph.sunDir = float3(1,1,1).normalize();
 
 	graph.builder.pass_texture("ResultTexture", result, ResourceFlags::Required);
 	graph.frame_size = result->get_size();

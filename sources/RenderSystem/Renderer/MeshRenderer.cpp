@@ -39,28 +39,6 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
-	Slots::FrameInfo::Compiled compiledFrame;
-
-	{
-		PROFILE(L"FrameInfo");
-		Slots::FrameInfo frameInfo;
-
-		auto camera = frameInfo.MapCamera();
-		camera.cb = mesh_render_context->cam->camera_cb.current;
-
-		auto prev = frameInfo.MapPrevCamera();
-		prev.cb = mesh_render_context->cam->camera_cb.prev;
-
-
-		if (best_fit_normals)
-		{
-			frameInfo.GetBestFitNormals() = best_fit_normals->get_texture()->texture_2d()->texture2D;
-		}
-
-		compiledFrame = frameInfo.compile(list);
-	}
-
-
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -86,17 +64,13 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		commands_buffer[i]->reserve(list, meshes_count);
 
 	compiledScene.set(compute);
-	compiledFrame.set(compute);
-
 	compiledScene.set(graphics);
-	compiledFrame.set(graphics);
-
 
 	init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 
 	if (!gbuffer || !use_gpu_occlusion)
 	{
-		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], compiledFrame, (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
+		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
 		return;
 	}
 
@@ -105,12 +79,12 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		PROFILE_GPU(L"first stage");
 		generate_boxes(mesh_render_context, scene, scene->compiledGather[(int)mesh_render_context->render_mesh], true);
 
-		draw_boxes(mesh_render_context, scene, compiledFrame);
-		gather_rendered_boxes(mesh_render_context, scene, compiledFrame, true);
+		draw_boxes(mesh_render_context, scene);
+		gather_rendered_boxes(mesh_render_context, scene, true);
 
 		init_dispatch(mesh_render_context, gather_visible);
 
-		render_meshes(mesh_render_context, scene, pipelines, gather_visible, compiledFrame, false);
+		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false);
 		MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 	}
@@ -130,11 +104,11 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 		//	list.clear_counter(meshes_ids->buffer);
 
 
-		draw_boxes(mesh_render_context, scene, compiledFrame);
-		gather_rendered_boxes(mesh_render_context, scene, compiledFrame, false);
+		draw_boxes(mesh_render_context, scene);
+		gather_rendered_boxes(mesh_render_context, scene, false);
 
 		init_dispatch(mesh_render_context, gather_visible);
-		render_meshes(mesh_render_context, scene, pipelines, gather_visible, compiledFrame, false);
+		render_meshes(mesh_render_context, scene, pipelines, gather_visible, false);
 
 		MipMapGenerator::get().downsample_depth(compute, gbuffer->depth, gbuffer->HalfBuffer.hiZ_depth_uav);
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
@@ -174,7 +148,7 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 	//	list.transition_uav(dispatch_buffer.get());
 }
 
-void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::FrameInfo::Compiled& compiledFrame, bool invisibleToo)
+void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo)
 {
 	PROFILE_GPU(L"gather_rendered_boxes");
 
@@ -195,8 +169,6 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	{
 
 		compute.set_pipeline(GetPSO<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo)));
-		compiledScene.set(compute);
-		compiledFrame.set(compute);
 		scene->compiledGather[(int)mesh_render_context->render_mesh].set(compute);
 		gather_neshes_boxes_compiled.set(compute);
 
@@ -261,7 +233,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 
 }
 
-void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, Slots::FrameInfo::Compiled& compiledFrame)
+void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
 	PROFILE_GPU(L"draw_boxes");
 
@@ -272,7 +244,6 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	GBuffer* gbuffer = mesh_render_context->g_buffer;
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
-	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	gbuffer->HalfBuffer.hiZ_table.set(graphics);
 	gbuffer->HalfBuffer.hiZ_table.set_window(graphics);
@@ -285,9 +256,6 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	list.clear_uav(visible_boxes->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
 
 	draw_boxes_compiled.set(graphics);
-	compiledScene.set(graphics);
-	compiledFrame.set(graphics);
-
 
 	graphics.execute_indirect(
 		boxes_command,
@@ -298,7 +266,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	gbuffer->rtv_table.set(graphics);
 	gbuffer->rtv_table.set_window(graphics);
 }
-void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, Slots::FrameInfo::Compiled& compiledFrame, bool needCulling)
+void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling)
 {
 	PROFILE_GPU(L"render_meshes");
 
@@ -310,7 +278,6 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
 	Slots::GatherPipeline gather;
-	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	auto begin = pipelines.begin();
 	auto end = begin;
@@ -349,12 +316,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			PROFILE_GPU(L"GatherMats");
 
 			compute.set_pipeline(GetPSO<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling)));
-
-
 			gatherData.set(compute);
-
-			compiledScene.set(compute);
-			compiledFrame.set(compute);
 			gather.set(compute);
 
 			{
@@ -390,9 +352,6 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				{
 					PROFILE_GPU(L"compile");
 
-
-					compiledScene.set(graphics);
-					compiledFrame.set(graphics);
 					if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 					mesh_render_context->voxelization_compiled.set(graphics);
 				}

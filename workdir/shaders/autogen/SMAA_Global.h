@@ -1,23 +1,23 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/SMAA_Global.h"
-ConstantBuffer<SMAA_Global_cb> cb_3_0:register(b0,space3);
-Texture2D<float4> srv_3_0: register(t0, space3);
+ConstantBuffer<SMAA_Global_cb> cb_4_0:register(b0,space4);
+Texture2D<float4> srv_4_0: register(t0, space4);
 struct Pass_SMAA_Global
 {
 uint srv_0;
 };
-ConstantBuffer<Pass_SMAA_Global> pass_SMAA_Global: register( b2, space3);
+ConstantBuffer<Pass_SMAA_Global> pass_SMAA_Global: register( b2, space4);
 const SMAA_Global CreateSMAA_Global()
 {
 	SMAA_Global result;
 	Pass_SMAA_Global pass;
-	result.cb = cb_3_0;
-	result.srv.colorTex = srv_3_0;
+	result.cb = cb_4_0;
+	result.srv.colorTex = srv_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

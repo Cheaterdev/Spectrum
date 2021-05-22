@@ -130,12 +130,15 @@ Slot::Slot()
 	max_counts[ValueType::UAV] = 0;
 	max_counts[ValueType::SRV] = 0;
 	max_counts[ValueType::CB] = 2;
+	max_counts[ValueType::STRUCT] = 0;
 
 
 	ids[ValueType::SMP] = -1;
 	ids[ValueType::UAV] = -1;
 	ids[ValueType::SRV] = -1;
 	ids[ValueType::CB] = -1;
+	ids[ValueType::STRUCT] = -1;
+
 }
 
 Slot* Layout::find_slot(std::string name)
@@ -266,6 +269,15 @@ void Table::setup(Parsed* all)
 
 		if (slot)
 		{
+			if (v.value_type == ValueType::STRUCT)
+			{
+				for (int i = 0; i < ValueType::STRUCT; i++)
+				{
+					slot->max_counts[i] = std::max(slot->max_counts[i], counts[i]);
+
+				}
+			}
+			else
 
 			slot->max_counts[v.value_type] = std::max(slot->max_counts[v.value_type], counts[v.value_type]);
 

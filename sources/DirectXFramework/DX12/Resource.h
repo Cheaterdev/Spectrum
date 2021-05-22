@@ -123,15 +123,7 @@ namespace DX12
 		std::byte* buffer_data = nullptr;
 		mutable bool debug = false;
 		std::string name;
-		void set_name(std::string name)
-		{
-			this->name = name;
-			tracked_info->m_Resource->SetName(convert(name).c_str());
-
-			debug = name == "axis_id_buffer";
-
-			tracked_info->debug = debug;
-		}
+		void set_name(std::string name);
 		const CD3DX12_RESOURCE_DESC& get_desc() const
 		{
 			return desc;

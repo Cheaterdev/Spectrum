@@ -247,6 +247,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	{
 		return SlotID::DenoiserHistoryFix;
 	}
+	if(slot_name == "TilingPostprocess")
+	{
+		return SlotID::TilingPostprocess;
+	}
 	if(slot_name == "FrameClassification")
 	{
 		return SlotID::FrameClassification;
@@ -494,6 +498,10 @@ UINT get_slot_id(SlotID id)
 	if(id == SlotID::DenoiserHistoryFix)
 	{
 		return Slots::DenoiserHistoryFix::Slot::ID;
+	}
+	if(id == SlotID::TilingPostprocess)
+	{
+		return Slots::TilingPostprocess::Slot::ID;
 	}
 	if(id == SlotID::FrameClassification)
 	{

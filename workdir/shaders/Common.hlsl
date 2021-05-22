@@ -2,6 +2,8 @@
 #define COMMON_HLSL
 
 static const float PI = 3.14159265358979f;
+
+static const float MIN_ROUGHNESS = 0.03f;
 /*
 struct camera_info
 {
@@ -87,37 +89,12 @@ float2 hammersley2d(uint i, uint N) {
 	return float2(float(i) / float(N), radicalInverse_VdC(i));
 }
 
-/*
-float3 ImportanceSampleGGX(float2 vXi, float fRoughness, float3 vNormal)
+
+float D_GGX(float roughness, float NoH)
 {
-	// Compute the local half vector
-	float fA = fRoughness * fRoughness;
-	float fPhi = 2.0f * PI * vXi.x;
-	float fCosTheta = sqrt((1.0f - vXi.y) / (1.0f + (fA*fA - 1.0f) * vXi.y));
-	float fSinTheta = sqrt(1.0f - fCosTheta * fCosTheta);
-	float3 vHalf;
-	vHalf.x = fSinTheta * cos(fPhi);
-	vHalf.y = fSinTheta * sin(fPhi);
-	vHalf.z = fCosTheta;
-
-	// Compute a tangent frame and rotate the half vector to world space
-	float3 vUp = abs(vNormal.z) < 0.999f ? float3(0.0f, 0.0f, 1.0f) : float3(1.0f, 0.0f, 0.0f);
-	float3 vTangentX = normalize(cross(vUp, vNormal));
-	float3 vTangentY = cross(vNormal, vTangentX);
-	// Tangent to world space
-	return vTangentX * vHalf.x + vTangentY * vHalf.y + vNormal * vHalf.z;
-}
-
-*/
-
-
-float D_GGX(float roughness, float NdotH)
-{
-	float a = roughness * roughness;
-	float a2 = a * a;
-	float NdotH2 = NdotH * NdotH;
-	float f = 1.0f + (NdotH2 * (a2 - 1.0f));
-	return a2 / (f * f);
+	float a = NoH * roughness;
+	float k = roughness / (1.0 - NoH * NoH + a * a);
+	return k * k;
 }
 
 float D_GGX_Divide_Pi(float roughness, float NdotH)
@@ -125,88 +102,19 @@ float D_GGX_Divide_Pi(float roughness, float NdotH)
 	return D_GGX(roughness, NdotH) / PI;
 }
 
-
-
-float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
+float3x3 CalculateTangent(float3 normal)
 {
-	float a = Roughness * Roughness;
-	float Phi = 2 * PI * Xi.x;
-	float CosTheta = sqrt((1 - Xi.y) / (1 + (a*a - 1) * Xi.y));
-	float SinTheta = sqrt(1 - min(1.0f, CosTheta * CosTheta));
-	float3 H;
-	H.x = SinTheta * cos(Phi);
-	H.y = SinTheta * sin(Phi);
-	H.z = CosTheta;
-	float3 UpVector = abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
-	float3 TangentX = normalize(cross(UpVector, N));
-	float3 TangentY = cross(N, TangentX);
-
-	// Tangent to world space
-	return TangentX * H.x + TangentY * H.y + N * H.z;
+	float3 UpVector = abs(normal.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
+	float3 TangentX = normalize(cross(UpVector, normal));
+	float3 TangentY = cross(normal, TangentX);
+	return float3x3(TangentX, TangentY, normal);
 }
 
-
-float3 ImportanceSampleGGXPdf(float2 Xi, float Roughness, float3 N, out float PDF)
+float3 TangentToWorld(float3 v, float3 normal)
 {
-	float a = Roughness * Roughness;
-	float Phi = 2 * PI * Xi.x;
-	float CosTheta = sqrt((1 - Xi.y) / (1 + (a*a - 1) * Xi.y));
-	float SinTheta = sqrt(1 - min(1.0f, CosTheta * CosTheta));
-	float3 H;
-	H.x = SinTheta * cos(Phi);
-	H.y = SinTheta * sin(Phi);
-	H.z = CosTheta;
-	float3 UpVector = abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
-	float3 TangentX = normalize(cross(UpVector, N));
-	float3 TangentY = cross(N, TangentX);
-
-	float m2 = a * a;
-	float d = (CosTheta * m2 - CosTheta) * CosTheta + 1;
-	float D = m2 / (PI*d*d);
-	 PDF = D * CosTheta;
-
-	// Tangent to world space
-	return TangentX * H.x + TangentY * H.y + N * H.z;
+	return mul(v, CalculateTangent(normal));
 }
 
-
-
-float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N, float3 TangentX, float3 TangentY)
-{
-	float a = Roughness * Roughness;
-	float Phi = 2 * PI * Xi.x;
-	float CosTheta = sqrt((1 - Xi.y) / (1 + (a*a - 1) * Xi.y));
-	float SinTheta = sqrt(1 - min(1.0f, CosTheta * CosTheta));
-	float3 H;
-	H.x = SinTheta * cos(Phi);
-	H.y = SinTheta * sin(Phi);
-	H.z = CosTheta;
-
-
-	// Tangent to world space
-	return TangentX * H.x + TangentY * H.y + N * H.z;
-}
- 
-float G1V_Epic(float Roughness, float NoV)
-{
-	// no hotness remapping for env BRDF as suggested by Brian Karis
-	float k = Roughness * Roughness;
-	return NoV / (NoV * (1.0f - k) + k);
-}
-
-float G_Smith(float Roughness, float NoV, float NoL)
-{
-	return G1V_Epic(Roughness, NoV) * G1V_Epic(Roughness, NoL);
-}
-
-
-
-float GGX_PartialGeometry(float cosThetaN, float alpha) {
-	float cosTheta_sqr = saturate(cosThetaN*cosThetaN);
-	float tan2 = (1 - cosTheta_sqr) / cosTheta_sqr;
-	float GP = 2 / (1 + sqrt(1 + alpha * alpha * tan2));
-	return GP;
-}
 
 float GGX_Distribution(float cosThetaNH, float alpha) {
 	float alpha2 = alpha * alpha;
@@ -215,45 +123,50 @@ float GGX_Distribution(float cosThetaNH, float alpha) {
 	return alpha2 / (PI * den * den);
 }
 
-float3 CookTorrance_GGX_sample( float3 l, pixel_info info, out float3 FK) {
-	FK = 0.0;
+float4 ImportanceSampleGGX(float2 E, float a) {
+	float m2 = a * a;
 
+	float Phi = 2 * PI * E.x;
+	float CosTheta = sqrt((1 - E.y) / (1 + (m2 - 1) * E.y));
+	float SinTheta = sqrt(1 - CosTheta * CosTheta);
 
-	float3 n = normalize(info.normal);
-	float3 v = normalize(info.view);
-	 l = normalize(l);
-	float3 h = normalize(v + l);
-	//precompute dots
-	float NL = dot(n, l);
-	if (NL <= 0.0) return 0.0;
-	float NV = dot(n, v);
-	if (NV <= 0.0) return 0.0;
-	float NH = dot(n, h);
-	float HV = dot(h, v);
+	float3 H;
+	H.x = SinTheta * cos(Phi);
+	H.y = SinTheta * sin(Phi);
+	H.z = CosTheta;
 
-	//precompute roughness square
-	float roug_sqr = info.roughness*info.roughness;
+	float d = (CosTheta * m2 - CosTheta) * CosTheta + 1;
+	float D = m2 / (PI * d * d);
 
-	//calc coefficients
-	float G = GGX_PartialGeometry(NV, roug_sqr) * GGX_PartialGeometry(NL, roug_sqr);
-	float D = GGX_Distribution(NH, roug_sqr);
+	float PDF = D * CosTheta;
 
-	float3 F = FresnelSchlick(info.metallic, NV);
-	FK = F;
-
-	float pdf = D * NH / (4.0*HV); //и вычисление самой pdf
-
-	float3 specK =  G * F*HV / (NV*NH);
-	return max(0.0, specK);
+	return float4(H, PDF);
 }
 
 
-float4 CookTorrance_GGX(float3 l, pixel_info info) {
+float4 ImportanceSampleGGX(float2 Xi, float a, float3x3 TangentMatrix)
+{
+	float4 s = ImportanceSampleGGX(Xi, a);
+	return float4(mul(s.xyz, TangentMatrix), s.w);
+}
+ 
+float4 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
+{
+	float3x3 space = CalculateTangent(N);
+	return ImportanceSampleGGX(Xi, Roughness, space);
+}
 
+float GGX_PartialGeometry(float cosThetaN, float alpha) {
+	float cosTheta_sqr = saturate(cosThetaN * cosThetaN);
+	float tan2 = (1 - cosTheta_sqr) / cosTheta_sqr;
+	float GP = 2 / (1 + sqrt(1 + alpha * alpha * tan2));
+	return GP;
+}
 
+float4 CookTorrance_GGX_sample(float roug_sqr, float metalness, float3 n, float3 l, float3 v) {
 
-	float3 n = normalize(info.normal);
-	float3 v = normalize(info.view);
+	n = normalize(n);
+	v = normalize(v);
 	l = normalize(l);
 	float3 h = normalize(v + l);
 	//precompute dots
@@ -264,54 +177,133 @@ float4 CookTorrance_GGX(float3 l, pixel_info info) {
 	float NH = dot(n, h);
 	float HV = dot(h, v);
 
-	//precompute roughness square
-	float roug_sqr = info.roughness*info.roughness;
 
 	//calc coefficients
 	float G = GGX_PartialGeometry(NV, roug_sqr) * GGX_PartialGeometry(NL, roug_sqr);
-	float D = GGX_Distribution(NH, roug_sqr);
+	float3 F = FresnelSchlick(metalness, HV);
 
-//	float3 F = FresnelSchlick(info.metallic, NV);
+	float D = GGX_Distribution(NH, roug_sqr); //вот тут собственно мы добавили вычисление D
+	float pdf = D * NH / (4.0 * HV); //и вычисление самой pdf
 
-	float pdf = D * NH / (4.0*HV); //и вычисление самой pdf
-
-	float3 specK = G *HV / (NV*NH);
-	return  float4(specK, pdf);
+	float3 specK = max(0.0, G * F * HV / (NV * NH));
+	return float4(specK, pdf);
 }
 
-/*
-float D_GGX(float Roughness, float NdotH) {
-	float m = Roughness * Roughness;
-	float m2 = m * m;
 
-	float D = m2 / (PI * sqr(sqr(NdotH) * (m2 - 1) + 1));
-
-	return D;
-}*/
-
-
-float G_GGX(float Roughness, float NdotL, float NdotV) {
-	float m = Roughness * Roughness;
-	float m2 = m * m;
-
-	float G_L = 1 / (NdotL + sqrt(0.01+m2 + (1 - m2) * NdotL * NdotL));
-	float G_V = 1 / (NdotV + sqrt(0.01+m2 + (1 - m2) * NdotV * NdotV));
-	float G = G_L * G_V;
-
-	return G;
+float V_SmithGGXCorrelated(float NoV, float NoL, float a) {
+	float a2 = a * a;
+	float GGXL = NoV * sqrt((-NoL * a2 + NoL) * NoL + a2);
+	float GGXV = NoL * sqrt((-NoV * a2 + NoV) * NoV + a2);
+	return 0.5 / (GGXV + GGXL);
 }
 
-float BRDF_UE4(float3 V, float3 L, float3 N, float Roughness) {
-	float3 H = normalize(L + V);
 
-	float NdotH = saturate(dot(N, H));
-	float NdotL = saturate(dot(N, L));
-	float NdotV = saturate(dot(N, V));
+float GetReflCoeff(float Roughness, float Metallic, float3 l, float3 v, float3 n)
+{
+	float3 h = normalize(v + l);
 
-	float D = D_GGX(Roughness, NdotH);
-	float G = G_GGX(Roughness, NdotL, NdotV);
+	float NoV = abs(dot(n, v)) + 1e-5;
+	float NoL = saturate(dot(n, l));
+	float NoH = saturate(dot(n, h));
+	float LoH = saturate(dot(l, h));
 
-	return D * G;
+
+	float D = D_GGX_Divide_Pi(Roughness, NoH);
+	float3  F = FresnelSchlick(Metallic, LoH);
+	float V = V_SmithGGXCorrelated(NoV, NoL, Roughness);
+
+
+	float3 Fr = max(0, D * V * F * 0.25 / NoV);
+
+	return Fr;
+}
+
+float rnd(float2 uv)
+{
+	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
+}
+
+float GetRandom(float2 tc, float globaltime)
+{
+	float time = frac(globaltime) * 5;// +i;
+	float sini = sin(time * 220 + float(tc.x));
+	float cosi = cos(time * 220 + float(tc.y));
+	float rand = rnd(float2(sini, cosi));
+
+	return rand;
+}
+
+float2 GetRandom2(float2 tc, float globaltime)
+{
+	float rand = GetRandom(tc, globaltime);
+
+
+	float rcos = cos(16.14 * rand);
+	float rsin = sin(16.14 * rand);
+	float rand2 = rnd(float2(rcos, rsin));
+
+	return float2(rand, rand2);
+}
+
+
+float3 GetRandomDir(float2 tc, float3 normal, float roughness, float globaltime)
+{
+	float2 Xi = GetRandom2(tc, globaltime);
+	float3 H = ImportanceSampleGGX(Xi, roughness, normal);
+	return H;
+}
+
+
+float G1V_Epic(float a, float NoV)
+{
+	return NoV / (NoV * (1.0f - a) + a);
+}
+
+float G_Smith(float a, float NoV, float NoL)
+{
+	return G1V_Epic(a, NoV) * G1V_Epic(a, NoL);
+}
+
+//-------------------------------------------------------------------------------------------------
+// Helper for computing the GGX visibility term
+//-------------------------------------------------------------------------------------------------
+float GGX_V1(in float m2, in float nDotX)
+{
+	return 1.0f / (nDotX + sqrt(m2 + (1 - m2) * nDotX * nDotX));
+}
+
+//-------------------------------------------------------------------------------------------------
+// Computes the GGX visibility term
+//-------------------------------------------------------------------------------------------------
+float GGXVisibility(in float m2, in float nDotL, in float nDotV)
+{
+	return GGX_V1(m2, nDotL) * GGX_V1(m2, nDotV);
+}
+
+//-------------------------------------------------------------------------------------------------
+// Computes the specular term using a GGX microfacet distribution, with a matching
+// geometry factor and visibility term. Based on "Microfacet Models for Refraction Through
+// Rough Surfaces" [Walter 07]. m is roughness, n is the surface normal, h is the half vector,
+// l is the direction to the light source, and specAlbedo is the RGB specular albedo
+//-------------------------------------------------------------------------------------------------
+float GGX_Specular(in float m, in float3 n, in float3 h, in float3 v, in float3 l)
+{
+	float nDotH = saturate(dot(n, h));
+	float nDotL = saturate(dot(n, l));
+	float nDotV = saturate(dot(n, v));
+
+	float nDotH2 = nDotH * nDotH;
+	float m2 = m;// *m;
+
+	// Calculate the distribution term
+	float d = m2 / (PI * pow(nDotH * nDotH * (m2 - 1) + 1, 2.0f));
+
+	// Calculate the matching visibility term
+	float v1i = GGX_V1(m2, nDotL);
+	float v1o = GGX_V1(m2, nDotV);
+	float vis = v1i * v1o;
+
+	return d * GGXVisibility(m2, nDotL, nDotV);
 }
 
 

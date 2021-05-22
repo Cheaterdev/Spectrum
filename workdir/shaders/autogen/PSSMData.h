@@ -1,24 +1,24 @@
-#ifndef SLOT_4
-	#define SLOT_4
+#ifndef SLOT_5
+	#define SLOT_5
 #else
-	#error Slot 4 is already used
+	#error Slot 5 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/PSSMData.h"
-Texture2DArray<float> srv_4_0: register(t0, space4);
-StructuredBuffer<Camera> srv_4_1: register(t1, space4);
+Texture2DArray<float> srv_5_0: register(t0, space5);
+StructuredBuffer<Camera> srv_5_1: register(t1, space5);
 struct Pass_PSSMData
 {
 uint srv_0;
 uint srv_1;
 };
-ConstantBuffer<Pass_PSSMData> pass_PSSMData: register( b2, space4);
+ConstantBuffer<Pass_PSSMData> pass_PSSMData: register( b2, space5);
 const PSSMData CreatePSSMData()
 {
 	PSSMData result;
 	Pass_PSSMData pass;
-	result.srv.light_buffer = srv_4_0;
-	result.srv.light_cameras = srv_4_1;
+	result.srv.light_buffer = srv_5_0;
+	result.srv.light_cameras = srv_5_1;
 	return result;
 }
 #ifndef NO_GLOBAL

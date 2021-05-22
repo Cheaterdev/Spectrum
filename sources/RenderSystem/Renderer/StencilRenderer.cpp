@@ -607,14 +607,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 					graphics.set_viewports({ color_tex.get_viewport() });
 					graphics.set_scissors(color_tex.get_scissor());
 
-					{
-						Slots::FrameInfo frameInfo;
-
-						auto camera = frameInfo.MapCamera();
-						camera.cb = graph.cam->camera_cb.current;
-						//memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
-						frameInfo.set(graphics);
-					}
+					graph.set_slot(SlotID::FrameInfo, graphics);
 
 
 

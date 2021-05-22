@@ -250,7 +250,7 @@ void RTX::render(ComputeContext & compute, Render::RaytracingAccelerationStructu
 	
 	auto m_missShaderTable = compute.get_base().place_raw(miss_table);
 
-	compute.set_pso(m_dxrStateObject);
+	compute.set_pipeline(m_dxrStateObject);
 	compute.dispatch_rays<closesthit_identifier, shader_identifier, shader_identifier>(size, material_hits->buffer->get_resource_address(), material_hits->max_size(), m_missShaderTable.get_resource_address(), miss_table.size(), m_rayGenShaderTable.get_resource_address());
 
 }
@@ -279,7 +279,7 @@ void RTX::render2(ComputeContext& compute, Render::RaytracingAccelerationStructu
 
 	auto m_missShaderTable = compute.get_base().place_raw(miss_table);
 
-	compute.set_pso(m_dxrStateObject);
+	compute.set_pipeline(m_dxrStateObject);
 	compute.dispatch_rays<closesthit_identifier, shader_identifier, shader_identifier>(size, material_hits->buffer->get_resource_address(), material_hits->max_size(), m_missShaderTable.get_resource_address(), miss_table.size(), m_rayGenShaderTable.get_resource_address());
 
 }

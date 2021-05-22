@@ -1,21 +1,21 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/DrawStencil.h"
-StructuredBuffer<float4> srv_3_0: register(t0, space3);
+StructuredBuffer<float4> srv_4_0: register(t0, space4);
 struct Pass_DrawStencil
 {
 uint srv_0;
 };
-ConstantBuffer<Pass_DrawStencil> pass_DrawStencil: register( b2, space3);
+ConstantBuffer<Pass_DrawStencil> pass_DrawStencil: register( b2, space4);
 const DrawStencil CreateDrawStencil()
 {
 	DrawStencil result;
 	Pass_DrawStencil pass;
-	result.srv.vertices = srv_3_0;
+	result.srv.vertices = srv_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

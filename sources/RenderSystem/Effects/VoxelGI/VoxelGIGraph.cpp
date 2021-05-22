@@ -37,14 +37,7 @@ public:
 
 				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 
-				Slots::FrameInfo::Compiled compiledFrame;
-				{
-					PROFILE(L"FrameInfo");
-					Slots::FrameInfo frameInfo;
-					auto camera = frameInfo.MapCamera();
-					camera.cb = graph.cam->camera_cb.current;
-					frameInfo.set(graphics);
-				}
+				graph.set_slot(SlotID::FrameInfo, graphics);
 
 				graphics.set_topology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
@@ -213,7 +206,7 @@ void VoxelGI::init_states()
 void VoxelGI::start_new(Render::CommandList& list)
 {
 
-	all_scene_regen_counter = 2;
+
 	tex_lighting.zero_tiles(list);
 
 	albedo.zero_tiles(list);
@@ -226,21 +219,13 @@ void VoxelGI::start_new(Render::CommandList& list)
 }
 
 
-void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
+void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, FrameGraph& graph)
 {
 	auto& graphics = context->list->get_graphics();
 	auto& compute = context->list->get_compute();
 	auto& list = *context->list;
 
 
-	static bool prev = 0;
-	bool cur = !!GetAsyncKeyState('P');
-
-	if (!cur && prev)
-	{
-		start_new(list);
-		//all_scene_regen_counter++;
-	}
 
 	if (all_scene_regen_counter > 0)
 	{
@@ -258,7 +243,6 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 		}
 	}
 
-	prev = cur;
 	if (!all_scene_regen_counter) {
 		dynamic_generator_lighted.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
 		dynamic_generator_voxelizing.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
@@ -312,8 +296,8 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 
 		albedo_tiles->update(context->list);
 		compute.set_pipeline(GetPSO<PSOS::VoxelCopy>());
-		scene->voxels_compiled.set(compute);
-
+		//scene->voxels_compiled.set(compute);
+		graph.set_slot(SlotID::VoxelInfo, compute);
 		{
 
 			{
@@ -395,8 +379,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r)
 		if (b)
 			b->update(context->list);
 
-	if (all_scene_regen_counter > 0)
-		all_scene_regen_counter--;
+
 }
 
 
@@ -452,17 +435,10 @@ void VoxelGI::debug(FrameGraph& graph)
 			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::VoxelDebug>());
 
+			graph.set_slot(SlotID::VoxelInfo, graphics);
+			graph.set_slot(SlotID::FrameInfo, graphics);
 
-			{
-				Slots::FrameInfo frameInfo;
-
-				auto camera = frameInfo.MapCamera();
-				camera.cb = graph.cam->camera_cb.current;
-				frameInfo.set(graphics);
-			}
-
-
-			scene->voxels_compiled.set(graphics);
+			//scene->voxels_compiled.set(graphics);
 
 			{
 				Slots::VoxelDebug debug;
@@ -555,27 +531,9 @@ void VoxelGI::screen(FrameGraph& graph)
 
 			Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
-			Slots::FrameInfo::Compiled compiledFrame;
-
-			{
-				PROFILE(L"FrameInfo");
-				Slots::FrameInfo frameInfo;
-
-				frameInfo.GetSky() = sky_cubemap_filtered.textureÑube;
-				frameInfo.GetSunDir() = graph.sunDir;
-				frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
-
-
-				frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
-				frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-
-				compiledFrame = frameInfo.compile(*command_list);
-			}
-
 
 			compiledScene.set(command_list->get_compute());
-			compiledFrame.set(command_list->get_compute());
+			graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
 
 
 
@@ -591,9 +549,9 @@ void VoxelGI::screen(FrameGraph& graph)
 				voxelScreen.set(compute);
 			}
 
-			scene->voxels_compiled.set(compute);
+			//scene->voxels_compiled.set(compute);
 			//	scene->voxels_compiled.set(compute);
-
+			graph.set_slot(SlotID::VoxelInfo, compute);
 
 			{
 				Slots::VoxelOutput output;
@@ -682,11 +640,14 @@ void VoxelGI::screen(FrameGraph& graph)
 					subres.Texture2D.MipLevels = 1;
 					denoiser_history.GetFrames() = frames_count.texture2D;
 					denoiser_history.GetTarget() = noisy_output.rwTexture2D;
-
-
-					auto tiling = denoiser_history.MapTiling();
-					tiling.GetTiles() = hi->structuredBuffer;
 					denoiser_history.set(compute);
+				}
+
+				{
+					Slots::TilingPostprocess tilingPostprocess;
+					auto tiling = tilingPostprocess.MapTiling();
+					tiling.GetTiles() = hi->structuredBuffer;
+					tilingPostprocess.set(compute);
 				}
 
 				//	compute.dispach(frames_count.get_size());
@@ -734,16 +695,8 @@ void VoxelGI::screen(FrameGraph& graph)
 			//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
+			graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
 
-
-			{
-				Slots::FrameInfo frameInfo;
-				frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
-				frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-				frameInfo.GetTime() = graph.time;
-				frameInfo.set(compute);
-			}
 
 			{
 				Slots::VoxelScreen voxelScreen;
@@ -757,28 +710,35 @@ void VoxelGI::screen(FrameGraph& graph)
 				voxelScreen.set(compute);
 			}
 
-			scene->voxels_compiled.set(compute);
 			//	scene->voxels_compiled.set(compute);
+				//	scene->voxels_compiled.set(compute);
+			graph.set_slot(SlotID::VoxelInfo, compute);
 
 
 			{
+				Slots::VoxelBlur voxelBlur;
+
+				voxelBlur.GetNoisy_output() = noisy_output.texture2D;
+				voxelBlur.GetPrev_result() = frames_count.texture2D;
+
+				voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
+				voxelBlur.GetGi_result() = gi_filtered.rwTexture2D;
+
+
+
+				voxelBlur.set(compute);
+			}
+
+			{
 				PROFILE_GPU(L"blur");
-				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>());
+				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Blur()));
+
 				{
-					Slots::VoxelBlur voxelBlur;
-
-					voxelBlur.GetNoisy_output() = noisy_output.texture2D;
-					voxelBlur.GetPrev_result() = frames_count.texture2D;
-
-					voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
-					voxelBlur.GetGi_result() = gi_filtered.rwTexture2D;
-
-					auto tiling = voxelBlur.MapTiling();
+					Slots::TilingPostprocess tilingPostprocess;
+					auto tiling = tilingPostprocess.MapTiling();
 					tiling.GetTiles() = hi->structuredBuffer;
-
-					voxelBlur.set(compute);
+					tilingPostprocess.set(compute);
 				}
-
 
 				compute.execute_indirect(dispatch_command, 1, dispatch_hi_buffer.get());
 			}
@@ -786,19 +746,12 @@ void VoxelGI::screen(FrameGraph& graph)
 			{
 				PROFILE_GPU(L"blur2");
 				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>());
+
 				{
-					Slots::VoxelBlur voxelBlur;
-
-					voxelBlur.GetNoisy_output() = noisy_output.texture2D;
-					voxelBlur.GetPrev_result() = frames_count.texture2D;
-
-					voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
-					voxelBlur.GetGi_result() = gi_filtered.rwTexture2D;
-
-					auto tiling = voxelBlur.MapTiling();
+					Slots::TilingPostprocess tilingPostprocess;
+					auto tiling = tilingPostprocess.MapTiling();
 					tiling.GetTiles() = low->structuredBuffer;
-
-					voxelBlur.set(compute);
+					tilingPostprocess.set(compute);
 				}
 
 
@@ -824,11 +777,15 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 		ResourceHandler* target_tex;
 		ResourceHandler* noisy_output;
 		ResourceHandler* gi_filtered;
+		ResourceHandler* prev_gi;
 
 		ResourceHandler* downsampled_reflection;
 		ResourceHandler* sky_cubemap_filtered;
 
 		ResourceHandler* frames_count;
+
+		ResourceHandler* dir_and_pdf;
+
 	};
 	auto size = graph.frame_size;
 
@@ -836,10 +793,10 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
 		data.noisy_output = builder.create_texture("noise_reflection", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess);
-		data.gi_filtered = builder.create_texture("gi_filtered_reflection", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		data.dir_and_pdf = builder.create_texture("noise_dir_pdf", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
-		data.downsampled_reflection = builder.create_texture("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget);
+		//	data.downsampled_reflection = builder.create_texture("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget);
 		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
 		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
@@ -851,10 +808,10 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 			auto gbuffer = data.gbuffer.actualize(_context);
 			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
 			auto noisy_output = _context.get_texture(data.noisy_output);
+			auto dir_and_pdf = _context.get_texture(data.dir_and_pdf);
+			//	auto gi_filtered = _context.get_texture(data.gi_filtered);
 
-			auto gi_filtered = _context.get_texture(data.gi_filtered);
-
-			Render::TextureView downsampled_reflection = _context.get_texture(data.downsampled_reflection);
+			//	Render::TextureView downsampled_reflection = _context.get_texture(data.downsampled_reflection);
 
 
 
@@ -879,30 +836,11 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 				Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
-				Slots::FrameInfo::Compiled compiledFrame;
-
-				{
-					PROFILE(L"FrameInfo");
-					Slots::FrameInfo frameInfo;
-
-					frameInfo.GetSky() = sky_cubemap_filtered.textureÑube;
-					frameInfo.GetSunDir() = graph.sunDir;
-					frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
-
-
-					frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
-					frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
-					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-
-					compiledFrame = frameInfo.compile(*command_list);
-				}
-
+				graph.set_slot(SlotID::FrameInfo, compute);
+				graph.set_slot(SlotID::FrameInfo, graphics);
 
 				compiledScene.set(compute);
-				compiledFrame.set(compute);
-
 				compiledScene.set(graphics);
-				compiledFrame.set(graphics);
 			}
 
 
@@ -911,13 +849,18 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 				gbuffer.SetTable(voxelScreen.MapGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureÑube;
-				voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
+				//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
 				voxelScreen.set(graphics);
 				voxelScreen.set(compute);
 			}
 
-			scene->voxels_compiled.set(graphics);
-			scene->voxels_compiled.set(compute);
+			//	scene->voxels_compiled.set(graphics);
+			//	scene->voxels_compiled.set(compute);
+
+			graph.set_slot(SlotID::VoxelInfo, compute);
+			graph.set_slot(SlotID::VoxelInfo, graphics);
+
+
 
 			if (use_rtx)
 			{
@@ -926,14 +869,14 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 					//	output.GetFrames() = gi_filtered.rwTexture2D;
 					output.GetNoise() = noisy_output.rwTexture2D;
-
+					output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
 					output.set(compute);
 				}
 
 
 				RTX::get().render2(compute, scene->raytrace_scene, noisy_output.get_size());
 
-				command_list->get_copy().copy_resource(gi_filtered.resource, noisy_output.resource);
+				//		command_list->get_copy().copy_resource(gi_filtered.resource, noisy_output.resource);
 			}
 			else
 			{
@@ -950,113 +893,119 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 
 		});
 
-		
-		graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
+		if(Device::get().is_rtx_supported() && this->use_rtx)
+	graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
-			data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
+		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
 
-			data.gbuffer.need(builder, false);
-			data.gi_filtered = builder.need_texture("gi_filtered_reflection", ResourceFlags::UnorderedAccess);
-			data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
-			data.frames_count = builder.need_texture("frames_count", ResourceFlags::UnorderedAccess);
-			data.noisy_output = builder.need_texture("noise_reflection", ResourceFlags::ComputeRead);
-			}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
+		data.gbuffer.need(builder, false);
+		data.gi_filtered = builder.create_texture("gi_filtered_reflection", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		data.prev_gi = builder.create_texture("prev_gi_temp", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::RenderTarget);
 
-				auto& command_list = _context.get_list();
+		//data.gi_filtered = builder.need_texture("gi_filtered_reflection", ResourceFlags::UnorderedAccess);
+		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
+		//data.frames_count = builder.need_texture("frames_count", ResourceFlags::UnorderedAccess);
+		data.noisy_output = builder.need_texture("noise_reflection", ResourceFlags::ComputeRead);
 
+		data.dir_and_pdf = builder.need_texture("noise_dir_pdf", ResourceFlags::ComputeRead); //builder.create_texture("noise_dir_pdf", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess);
 
-				auto target_tex = _context.get_texture(data.target_tex);
-				auto gbuffer = data.gbuffer.actualize(_context);
-				auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
-				auto noisy_output = _context.get_texture(data.noisy_output);
-				auto frames_count = _context.get_texture(data.frames_count);
+		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
-				auto gi_filtered = _context.get_texture(data.gi_filtered);
-
-				auto size = target_tex.get_size();
-
-				auto scene = graph.scene;
-				auto renderer = graph.renderer;
-
-				auto& compute = command_list->get_compute();
-
-				//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-				compute.set_signature(get_Signature(Layouts::DefaultLayout));
+			auto& command_list = _context.get_list();
 
 
+			auto target_tex = _context.get_texture(data.target_tex);
+			auto gbuffer = data.gbuffer.actualize(_context);
+			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
+			auto noisy_output = _context.get_texture(data.noisy_output);
+			//	auto frames_count = _context.get_texture(data.frames_count);
+			auto dir_and_pdf = _context.get_texture(data.dir_and_pdf);
 
-				{
-					Slots::FrameInfo frameInfo;
-					frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
-					frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
-					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-					frameInfo.GetTime() = graph.time;
-					frameInfo.set(compute);
-				}
+			auto cur_gi = _context.get_texture(data.gi_filtered);
 
-				{
-					Slots::VoxelScreen voxelScreen;
-					gbuffer.SetTable(voxelScreen.MapGbuffer());
-					voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
-					voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureÑube;
-					//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
-					voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-					voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
-					//	voxelScreen.set(graphics);
-					voxelScreen.set(compute);
-				}
+			auto prev_gi = _context.get_texture(data.prev_gi);
 
-				scene->voxels_compiled.set(compute);
+			if (data.gi_filtered->is_new())
+			{
+				command_list->clear_uav(cur_gi.rwTexture2D, vec4(0, 0, 0, 0));
+			}
+
+			command_list->get_copy().copy_resource(prev_gi.resource, cur_gi.resource);
+
+			auto size = target_tex.get_size();
+
+			auto scene = graph.scene;
+			auto renderer = graph.renderer;
+
+			auto& compute = command_list->get_compute();
+
+			//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+
+
+			{
+				Slots::VoxelScreen voxelScreen;
+				gbuffer.SetTable(voxelScreen.MapGbuffer());
+				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
+				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureÑube;
+				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
+				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
+				voxelScreen.GetPrev_gi() = prev_gi.texture2D;
+				//	voxelScreen.set(graphics);
+				voxelScreen.set(compute);
+			}
+
+			//	scene->voxels_compiled.set(compute);
 				//	scene->voxels_compiled.set(compute);
+			graph.set_slot(SlotID::VoxelInfo, compute);
+			graph.set_slot(SlotID::FrameInfo, compute);
 
+{
+					Slots::VoxelBlur voxelBlur;
 
-				{
-					PROFILE_GPU(L"blur");
-					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Blur() | PSOS::VoxelIndirectFilter::Reflection()));
-					{
-						Slots::VoxelBlur voxelBlur;
+					voxelBlur.GetNoisy_output() = noisy_output.texture2D;
+					voxelBlur.GetPrev_result() = prev_gi.texture2D;
 
-						voxelBlur.GetNoisy_output() = noisy_output.texture2D;
-						voxelBlur.GetPrev_result() = frames_count.texture2D;
+					voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
+					voxelBlur.GetGi_result() = cur_gi.rwTexture2D;
+					voxelBlur.GetHit_and_pdf() = dir_and_pdf.texture2D;
 
-						voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
-						voxelBlur.GetGi_result() = gi_filtered.rwTexture2D;
-
-						auto tiling = voxelBlur.MapTiling();
-						tiling.GetTiles() = hi->structuredBuffer;
-
-						voxelBlur.set(compute);
-					}
-
-
-					compute.execute_indirect(dispatch_command, 1, dispatch_hi_buffer.get());
+					voxelBlur.set(compute);
 				}
+			{
+				PROFILE_GPU(L"blur");
+				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(/*PSOS::VoxelIndirectFilter::Blur() |*/ PSOS::VoxelIndirectFilter::Reflection()));
+				
 
 				{
-					PROFILE_GPU(L"blur2");
-					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Reflection()));
-					{
-						Slots::VoxelBlur voxelBlur;
-
-						voxelBlur.GetNoisy_output() = noisy_output.texture2D;
-						voxelBlur.GetPrev_result() = frames_count.texture2D;
-
-						voxelBlur.GetScreen_result() = target_tex.rwTexture2D;
-						voxelBlur.GetGi_result() = gi_filtered.rwTexture2D;
-
-						auto tiling = voxelBlur.MapTiling();
-						tiling.GetTiles() = low->structuredBuffer;
-
-						voxelBlur.set(compute);
-					}
-
-
-					compute.execute_indirect(dispatch_command, 1, dispatch_low_buffer.get());
+					Slots::TilingPostprocess tilingPostprocess;
+					auto tiling = tilingPostprocess.MapTiling();
+					tiling.GetTiles() = hi->structuredBuffer;
+					tilingPostprocess.set(compute);
 				}
 
 
-			}, PassFlags::Compute);
+				compute.execute_indirect(dispatch_command, 1, dispatch_hi_buffer.get());
+			}
 
+			{
+				PROFILE_GPU(L"blur2");
+				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Reflection()));
+
+				{
+					Slots::TilingPostprocess tilingPostprocess;
+					auto tiling = tilingPostprocess.MapTiling();
+					tiling.GetTiles() = low->structuredBuffer;
+					tilingPostprocess.set(compute);
+				}
+
+				compute.execute_indirect(dispatch_command, 1, dispatch_low_buffer.get());
+			}
+
+
+		}, PassFlags::Compute);
+
+	refl_index = 1 - refl_index;
 }
 
 
@@ -1093,7 +1042,7 @@ void VoxelGI::voxelize(FrameGraph& graph)
 			auto renderer = graph.renderer;
 			context->begin();
 
-			voxelize(context, renderer);
+			voxelize(context, renderer, graph);
 		});
 }
 
@@ -1143,7 +1092,7 @@ void VoxelGI::lighting(FrameGraph& graph)
 			auto& list = *context->list;
 			auto& compute = context->list->get_compute();
 
-			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use(all_scene_regen_counter == 0 && multiple_bounces)));
+			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use((all_scene_regen_counter == 0) && multiple_bounces)));
 
 			Slots::VoxelLighting ligthing;
 			{
@@ -1180,7 +1129,8 @@ void VoxelGI::lighting(FrameGraph& graph)
 				ligthing.set(compute);
 
 			}
-			graph.scene->voxels_compiled.set(compute);
+			//graph.scene->voxels_compiled.set(compute);
+			graph.set_slot(SlotID::VoxelInfo, compute);
 
 			compute.execute_indirect(
 				dispatch_command,
@@ -1234,7 +1184,8 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 			compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
 
-			graph.scene->voxels_compiled.set(compute);
+			//graph.scene->voxels_compiled.set(compute);
+			graph.set_slot(SlotID::VoxelInfo, compute);
 
 
 			compute.set_pipeline(GetPSO<PSOS::VoxelZero>());
@@ -1323,6 +1274,23 @@ void VoxelGI::generate(FrameGraph& graph)
 		size = scene->get_max() + float3(1, 1, 1) - scene->get_min();
 	}
 
+	if (all_scene_regen_counter > 0)
+		all_scene_regen_counter--;
+
+
+	static bool prev = 0;
+	bool cur = !!GetAsyncKeyState('P');
+
+	if (!cur && prev)
+	{
+		need_start_new = true;
+	}
+
+	prev = cur;
+
+	if(need_start_new)
+		all_scene_regen_counter = 3;
+
 	voxel_info.GetMin() = min;
 	voxel_info.GetSize() = size;
 	voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z = max(200.0f, voxel_info.GetSize().max_element());
@@ -1331,6 +1299,8 @@ void VoxelGI::generate(FrameGraph& graph)
 	voxel_info.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
 
 	scene->voxels_compiled = scene->voxel_info.compile(*graph.builder.current_frame);
+
+	graph.register_slot_setter(scene->voxels_compiled);
 
 	if (voxelize_scene) voxelize(graph);
 

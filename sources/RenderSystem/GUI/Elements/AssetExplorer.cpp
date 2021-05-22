@@ -376,6 +376,8 @@ namespace GUI
 					   tasks.reserve(files.size());
                       for(auto s:files)
                         {
+
+						  s = to_lower(s);
                             std::string ext = to_lower(s.substr(s.find_last_of(".") + 1));
 
                             if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "dds" || ext == "tga")
@@ -383,7 +385,7 @@ namespace GUI
 								auto asset = (new TextureAsset(convert(s)));
 								asset->try_register();
 
-								if (s.find("albedo") != std::string::npos || s.find("diffuse") != std::string::npos || s.find("alb") != std::string::npos || s.find("base") != std::string::npos || s.find("color") != std::string::npos)
+								if (s.find("albedo") != std::string::npos || s.find("diff") != std::string::npos || s.find("alb") != std::string::npos || s.find("base") != std::string::npos || s.find("color") != std::string::npos)
 									mat_info->albedo = asset->get_ptr<TextureAsset>();
 
 								if (s.find("metal") != std::string::npos)

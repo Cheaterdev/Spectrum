@@ -299,7 +299,7 @@ namespace DX12
 			if (gpu.state != first_state)
 			{
 				auto point = from->create_transition(resource, i, gpu.state, TransitionType::ZERO);
-				cpu.set_zero_transition(point);
+		//		cpu.set_zero_transition(point);
 				updated = true;
 			}
 		};

@@ -1,20 +1,20 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/PSSMConstants.h"
-ConstantBuffer<PSSMConstants_cb> cb_3_0:register(b0,space3);
+ConstantBuffer<PSSMConstants_cb> cb_4_0:register(b0,space4);
 struct Pass_PSSMConstants
 {
 };
-ConstantBuffer<Pass_PSSMConstants> pass_PSSMConstants: register( b2, space3);
+ConstantBuffer<Pass_PSSMConstants> pass_PSSMConstants: register( b2, space4);
 const PSSMConstants CreatePSSMConstants()
 {
 	PSSMConstants result;
 	Pass_PSSMConstants pass;
-	result.cb = cb_3_0;
+	result.cb = cb_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

@@ -109,7 +109,6 @@ public:
 	std::map<size_t, materials::Pipeline::ptr> pipelines;
 
 	Slots::SceneData::Compiled compiledScene;
-	Slots::FrameInfo::Compiled compiledFrame;
 
     Slots::GatherPipelineGlobal::Compiled compiledGather[8];
 

@@ -95,7 +95,7 @@ void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::C
 }
 
 
-void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot, table_offsets& offsets)
+void generate_bind(my_stream& stream, const std::string &parent, Table& table, Slot& slot, table_offsets& offsets)
 {
 	std::string write_to = "result";
 
@@ -797,6 +797,7 @@ void generate_cpp_table(const Table& table)
 
 					if (!tables.empty())
 						tables += ", ";
+					if(table.slot->max_counts[type]>0)
 					tables += table.slot->layout->name+ "::" +table.slot->name+"::"+ str_toupper(get_name_for(type)) +"_ID";
 					
 

@@ -213,6 +213,7 @@ private:
 
 	bool need_start_new = false;
 	int gi_index = 0;
+	int refl_index = 0;
 	void init_states();
 	int light_counter = 0;
 
@@ -240,6 +241,7 @@ private:
 
 	IndirectCommand dispatch_command;
 
+	bool recreate_static = false;
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
 	Render::StructuredBuffer<uint2>::ptr hi;
@@ -272,7 +274,7 @@ public:
 	void start_new(Render::CommandList& list);
 
 	VoxelGI(Scene::ptr& scene);
-	void voxelize(MeshRenderContext::ptr& context, main_renderer* r);
+	void voxelize(MeshRenderContext::ptr& context, main_renderer* r, FrameGraph& graph);
 	void generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm);
 
 	void lighting(FrameGraph& graph);

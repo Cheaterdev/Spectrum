@@ -62,10 +62,6 @@ float calc_vignette(float2 inTex)
     float vignette = 16 * (T.x * T.y * ((1 - T.x) * (1 - T.y)));
     return vignette;
 }
-float rnd(float2 uv)
-{
-    return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
-}
 
 //groupshared float3 positions[SIZE][SIZE];
 //groupshared float3 reflects[SIZE][SIZE];

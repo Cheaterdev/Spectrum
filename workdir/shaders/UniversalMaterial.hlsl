@@ -140,7 +140,7 @@ void PS_VOXEL(vertex_output i)
 	float4 normal = 0;
     float4 glow = 0;
 
-	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, 0);
+	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, 2);
 
 	universal_voxel(i, color, metallic, roughness, normal, glow);
 }
@@ -228,7 +228,7 @@ vertex_output2 HS(InputPatch<vertex_output2, 3> inputPatch,
 //tex.Sample(s, tc);
 
 #else
-#define sample(tex, s,  tc, lod) tex.SampleLevel(s, tc, 0);
+#define sample(tex, s,  tc, lod) tex.SampleLevel(s, tc, lod);
 
 #endif 
 

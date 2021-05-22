@@ -350,6 +350,7 @@ namespace DX12
 
 		virtual	void on_change() = 0;
 		ComPtr<ID3D12PipelineState> get_native();
+		ComPtr<ID3D12StateObject> get_native_state();
 
 		std::string get_cache()
 		{

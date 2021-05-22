@@ -80,6 +80,7 @@
 #include "slots\DenoiserDownsample.h"
 #include "tables\TilingParams.h"
 #include "slots\DenoiserHistoryFix.h"
+#include "slots\TilingPostprocess.h"
 #include "slots\FrameClassification.h"
 #include "slots\FrameClassificationInitDispatch.h"
 #include "rt\GBuffer.h"

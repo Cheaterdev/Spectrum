@@ -213,7 +213,15 @@ namespace DX12
 			resource->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
 	}
+	void Resource::set_name(std::string name)
+	{
+		this->name = name;
+		tracked_info->m_Resource->SetName(convert(name).c_str());
 
+		debug = name == "gi_filtered_reflection";
+
+		tracked_info->debug = debug;
+	}
 
 	Resource::~Resource()
 	{

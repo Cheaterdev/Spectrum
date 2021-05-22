@@ -962,6 +962,8 @@ namespace DX12
 			return base;
 		}
 		
+		void set_layout(Layouts layout);
+
 		void set_signature(const RootSignature::ptr& signature)
 		{
 			if (root_sig == signature) return;
@@ -1084,7 +1086,6 @@ namespace DX12
 
 
 
-		void set_layout(Layouts layout);
 		void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
 
 		void set_scissor(sizer_long rect);
@@ -1359,7 +1360,6 @@ namespace DX12
 			base.create_transition_point(false);
 		}
 
-		void set_pso(std::shared_ptr<StateObject>& pso);
 	};
 
 

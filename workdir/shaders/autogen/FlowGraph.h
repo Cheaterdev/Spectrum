@@ -1,20 +1,20 @@
-#ifndef SLOT_4
-	#define SLOT_4
+#ifndef SLOT_5
+	#define SLOT_5
 #else
-	#error Slot 4 is already used
+	#error Slot 5 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/FlowGraph.h"
-ConstantBuffer<FlowGraph_cb> cb_4_0:register(b0,space4);
+ConstantBuffer<FlowGraph_cb> cb_5_0:register(b0,space5);
 struct Pass_FlowGraph
 {
 };
-ConstantBuffer<Pass_FlowGraph> pass_FlowGraph: register( b2, space4);
+ConstantBuffer<Pass_FlowGraph> pass_FlowGraph: register( b2, space5);
 const FlowGraph CreateFlowGraph()
 {
 	FlowGraph result;
 	Pass_FlowGraph pass;
-	result.cb = cb_4_0;
+	result.cb = cb_5_0;
 	return result;
 }
 #ifndef NO_GLOBAL

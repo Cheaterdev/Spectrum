@@ -1,21 +1,21 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
-Texture2D<float4> bindless[]: register(t0, space3);
+Texture2D<float4> bindless[]: register(t0, space4);
 #include "tables/Test.h"
-ConstantBuffer<Test_cb> cb_3_0:register(b0,space3);
+ConstantBuffer<Test_cb> cb_4_0:register(b0,space4);
 struct Pass_Test
 {
 };
-ConstantBuffer<Pass_Test> pass_Test: register( b2, space3);
+ConstantBuffer<Pass_Test> pass_Test: register( b2, space4);
 const Test CreateTest()
 {
 	Test result;
 	Pass_Test pass;
-	result.cb = cb_3_0;
+	result.cb = cb_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

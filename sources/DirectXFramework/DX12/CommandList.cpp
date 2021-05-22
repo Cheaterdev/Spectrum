@@ -15,7 +15,7 @@ namespace DX12
 		if (type == CommandListType::DIRECT || type == CommandListType::COMPUTE)
 			compute.reset(new ComputeContext(*this));
 
-		if (type == CommandListType::DIRECT || type == CommandListType::COPY)
+	//	if (type == CommandListType::DIRECT || type == CommandListType::COPY)
 			copy.reset(new CopyContext(*this));
 
 		if (type == CommandListType::DIRECT)
@@ -476,7 +476,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.set_pipeline_internal(state.get());
 	}
 	*/
-	void GraphicsContext::set_layout(Layouts layout)
+	void SignatureDataSetter::set_layout(Layouts layout)
 	{
 		set_signature(get_Signature(layout));
 	}
@@ -1001,13 +1001,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.track_object(*state);
 	}
 	*/
-	void ComputeContext::set_pso(std::shared_ptr<StateObject>& pso)
-	{
-		base.set_pipeline_internal(nullptr);
-		list->SetPipelineState1(pso->get_native().Get());
-
-		base.track_object(*pso);
-	}
 	
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
 	{
@@ -1015,7 +1008,13 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		{
 			if (pipeline)
 			{
-				compiler.SetPipelineState(pipeline->get_native().Get());
+				auto pso = pipeline->get_native();
+				if(pso)	compiler.SetPipelineState(pso.Get());
+				else
+				{
+					auto state = pipeline->get_native_state();
+					compiler.SetPipelineState1(state.Get());
+				}
 
 				track_object(*pipeline);
 			}

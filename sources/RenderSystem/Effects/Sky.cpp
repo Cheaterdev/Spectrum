@@ -57,14 +57,9 @@ void SkyRender::generate_sky(FrameGraph& graph)
 				data.set(graphics);
 
 			}
-			{
-				Slots::FrameInfo frameInfo;
+	
+			graph.set_slot(SlotID::FrameInfo, graphics);
 
-				auto camera = frameInfo.MapCamera();
-				camera.cb = graph.cam->camera_cb.current;
-				//memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
-				frameInfo.set(graphics);
-			}
 			graphics.draw(4);
 
 
@@ -123,14 +118,7 @@ void SkyRender::generate(FrameGraph& graph)
 
 			}
 
-			{
-				Slots::FrameInfo frameInfo;
-
-				auto camera = frameInfo.MapCamera();
-				camera.cb = graph.cam->camera_cb.current;
-				//memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
-				frameInfo.set(graphics);
-			}
+			graph.set_slot(SlotID::FrameInfo, graphics);
 
 
 			{

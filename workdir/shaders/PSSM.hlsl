@@ -15,11 +15,6 @@ static const GBuffer gbuffer = GetPSSMLighting().GetGbuffer();
 #define SCALE 1
 #include "Rect.hlsl"
 
-float rnd(float2 uv)
-{
-	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
-}
-
 float4 PS(quad_output i) : SV_Target0
 {
 	
@@ -191,7 +186,7 @@ float get_sss(float z, float3 pos, float2 tc, float3 n)
 	return res;
 }
 
-float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
+float2 GetBRDF(float Roughness, float Metallic, float NoV)
 {
 	return  GetFrameInfo().GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, NoV), 0);
 }
@@ -250,7 +245,7 @@ float2 EnvBRDF = 1;
 
 //return float4(light_dir,1);
 
-EnvBRDF = IntegrateBRDF(info.roughness, 0, 0.5 + 0.5 * NL) *IntegrateBRDF(info.roughness, 0, 0.5 + 0.5 * NV);
+EnvBRDF = GetBRDF(info.roughness, 0, 0.5 + 0.5 * NL) * GetBRDF(info.roughness, 0, 0.5 + 0.5 * NV);
 /*
 if(NL>0)
 EnvBRDF *= IntegrateBRDF(info.roughness, NL).x;
@@ -263,7 +258,7 @@ EnvBRDF = 0;*/
 //float3 refl = CookTorrance_GGX_sample(light_dir, info,Fk);
 
 //return float4(info.pos, 1);
-return  float4(shadow * (saturate(EnvBRDF.x) * info.albedo * (1 - info.metallic)), 1);
+return  float4(4*shadow * (saturate(EnvBRDF.x) * info.albedo * (1 - info.metallic)), 1);
 
 //return  float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, packed_0.w), 1);
 }

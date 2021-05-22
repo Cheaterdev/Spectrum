@@ -27,8 +27,6 @@ static const TextureCube<float4> tex_cube = GetVoxelLighting().GetTex_cube();
 static const float3 voxel_min = voxel_info.GetMin().xyz;
 static const float3 voxel_size = voxel_info.GetSize().xyz;
 
-static const float scaler = voxel_size / 256;
-
 static const Camera light_cam = GetVoxelLighting().GetPssmGlobal().GetLight_camera()[0];
 static const float3 dir = -normalize(light_cam.GetDirection().xyz);
 #define SINGLE_SAMPLE
@@ -70,11 +68,11 @@ float4 trace(float3 origin, float3 dir, float3 normal, float angle)
 
 	//angle = min(angle, max_angle);
 
-	origin += dir / 128;
+	//origin += dir / 128;
 	float3 samplePos = 0;
 	float4 accum = 0;
 	// the starting sample diameter
-	float minDiameter = 1.0 / 128;
+	float minDiameter = 1.0 / 256;
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 	// push out the starting point to avoid self-intersection
   //  float startDist = (1) * minDiameter;
@@ -121,7 +119,11 @@ float4 getGI(float3 Pos, float3 Normal)
 	float3 right = t * normalize(cross(Normal, float3(0, 1, 0.001)));
 	float3 tangent = t * normalize(cross(right, Normal));
 
-	Color += get_direction(Pos, Normal, normalize(Normal + right), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
+	Color += get_direction(Pos, Normal, normalize(Normal), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
+	return Color;
+
+
+/*	Color += get_direction(Pos, Normal, normalize(Normal + right), k, a);// trace(Pos + k*normalize(Normal + right), normalize(Normal + right), a);
 	Color += get_direction(Pos, Normal, normalize(Normal - right), k, a);//trace(Pos + k*normalize(Normal - right), normalize(Normal - right), a);
 	Color += get_direction(Pos, Normal, normalize(Normal + tangent), k, a);//trace(Pos + k*normalize(Normal + tangent), normalize(Normal + tangent), a);
 	Color += get_direction(Pos, Normal, normalize(Normal - tangent), k, a);//trace(Pos + k*normalize(Normal - tangent), normalize(Normal - tangent), a);
@@ -131,8 +133,8 @@ float4 getGI(float3 Pos, float3 Normal)
 	Color += get_direction(Pos, Normal, normalize(Normal - tangent + right), k, a);//trace(Pos + k*normalize(Normal - tangent + right), normalize(Normal - tangent + right), a);
 																				   //  Color /= 3.14f;
 																				   //Color *= getAO(Pos-0*Normal, Normal);
-	return  Color / 4;
-
+	return  Color / 8;
+	*/
 }
 
 
@@ -159,16 +161,21 @@ void CS(
 
 	float3 normals = normalize(tex_normals[index].xyz * 2 - 1);
 
+	float3 oneVoxelSize = voxel_info.GetSize() / (voxel_info.GetVoxel_tiles_count() * voxel_info.GetVoxels_per_tile());
+
+
 	float m = max(max(abs(normals.x), abs(normals.y)), abs(normals.z));
 #ifdef SECOND_BOUNCE
 	float4 gi = getGI((index + normals / m) / dims, normals);
 #else
 	float4 gi = 0;
 #endif
-	float3 pos = index * voxel_size / dims + voxel_min + scaler * normals / m;
+
+
+	float3 pos = index * voxel_size / dims + voxel_min + oneVoxelSize * normals ;
 
 	float shadow = saturate(dot(normals, dir)) * get_shadow(pos);
-	float3 lighting = 1 * albedo.xyz * gi.xyz + 2*albedo.xyz * shadow;
+	float3 lighting = 1 * albedo.xyz * gi.xyz + 6*albedo.xyz * shadow;
 
 	output[index] = float4(lighting, 1);
 }

@@ -236,6 +236,8 @@ GENERATE(Pso_param)
 
 	virtual void enterName_id(SIGParser::Name_idContext* ctx) override {
 		name_ptr->name = ctx->children[0]->getText();
+
+		name_ptr->debug = name_ptr->name == "PassData";
 	}
 	virtual void enterPath_id(SIGParser::Path_idContext* ctx) override {
 		for(auto c: ctx->children)

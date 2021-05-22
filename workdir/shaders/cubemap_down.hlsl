@@ -55,17 +55,16 @@ float3 PrefilterEnvMap(float Roughness, float3 R)
 		float3 PrefilteredColor = 0;
 		float TotalWeight = 0.0;
 
-		float3 UpVector = abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
-		float3 TangentX = normalize(cross(UpVector, N));
-		float3 TangentY = cross(N, TangentX);
-
 		// Solid angle covered by 1 pixel with 6 faces that are EnvMapSize X EnvMapSize
 		float fOmegaP = 4.0 * PI / (6.0 * EnvMapSize * EnvMapSize);
+
+		float3x3 space = CalculateTangent(N);
+		float a = Roughness * Roughness;
 	//	[unroll(128)]
 		for (uint i = 0; i < NumSamples; i++)
 		{
 			float2 Xi = hammersley2d(i, NumSamples);
-			float3 H = ImportanceSampleGGX(Xi, Roughness, N, TangentX, TangentY);
+			float3 H = ImportanceSampleGGX(Xi, a, space);
 			float3 L = 2 * dot(V, H) * H - V;
 			float NoL = dot(N, L);
 
@@ -77,7 +76,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R)
 				float LdotH = saturate(dot(L, H));
 
 				// Probability Distribution Function
-				float fPdf = D_GGX_Divide_Pi(Roughness, NdotH)*NdotH / (4.0f * LdotH);
+				float fPdf = D_GGX_Divide_Pi(a, NdotH)*NdotH / (4.0f * LdotH);
 
 				// Solid angle represented by this sample
 				float fOmegaS = 1.0 / (NumSamples * fPdf);
@@ -125,9 +124,7 @@ float3 PrefilterDiffuse(float Roughness, float3 R)
 	float3 PrefilteredColor = 0;
 	float TotalWeight = 0.0;
 
-	float3 UpVector = abs(N.z) < 0.999 ? float3(0, 0, 1) : float3(1, 0, 0);
-	float3 TangentX = normalize(cross(UpVector, N));
-	float3 TangentY = cross(N, TangentX);
+	float3x3 space = CalculateTangent(N);
 
 	const uint NumSamples = 32;
 	// Solid angle covered by 1 pixel with 6 faces that are EnvMapSize X EnvMapSize
@@ -136,7 +133,7 @@ float3 PrefilterDiffuse(float Roughness, float3 R)
 	for (uint i = 0; i < NumSamples; i++)
 	{
 		float2 Xi = hammersley2d(i, NumSamples);
-		float3 H = ImportanceSampleGGX(Xi, Roughness, N, TangentX, TangentY);
+		float3 H = ImportanceSampleGGX(Xi, Roughness, space);
 		float3 L = 2 * dot(V, H) * H - V;
 		float NoL = dot(N, L);
 

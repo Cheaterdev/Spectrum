@@ -65,10 +65,6 @@ float calc_fresnel(float k0, float3 n, float3 v)
 	return k0 + (1 - k0) * (1 - pow(dot(n, -v), 1));
 }
 
-float rnd(float2 uv)
-{
-	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
-}
 
 
 [shader("closesthit")]
@@ -127,7 +123,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	RayPayload payload2 = payload.propagate();
 
 	float shadow = 1;
-	if (payload2.recursion <= 1)
+/*	if (payload2.recursion <= 1)
 	{
 
 
@@ -168,7 +164,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 		}
 		shadow = 1.0 - hit_rate / samples;
-	}
+	}*/
 	/*
 #ifdef REFRACTION
 

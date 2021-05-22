@@ -127,13 +127,6 @@ float4 trace(float4 start_color, float3 view, float3 origin, float3 dir, float3 
 }
 
 
-
-
-float rnd(float2 uv)
-{
-	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
-}
-
 float4 get_direction(float3 pos, float v, float3 orig_pos, float3 normal, float3 dir, float k, float a, float dist, float2 orig_tc)
 {
 	float4 gi = trace(0, v, pos, dir, normal, a);

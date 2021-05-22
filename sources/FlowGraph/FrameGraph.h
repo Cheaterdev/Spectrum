@@ -331,7 +331,30 @@ struct CreationContext
 
 //ENABLE_ENUM(wtf);
 
-class FrameGraph: public CreationContext, VariableContext
+class SlotContext
+{
+	std::map<SlotID, std::function<void(Render::SignatureDataSetter&)>> slot_setters;
+
+public:
+
+
+	template<class Compiled>
+	void register_slot_setter(Compiled compiled)
+	{
+		SlotID id = Compiled::ID;
+		slot_setters[id] = [compiled](Render::SignatureDataSetter& setter) {
+			compiled.set(setter);
+		};
+	}
+
+	void set_slot(SlotID id, Render::SignatureDataSetter& setter)
+	{
+		assert(slot_setters.contains(id));
+		slot_setters[id](setter);
+	}
+
+};
+class FrameGraph: public CreationContext, VariableContext, public SlotContext
 {
 public:
 	std::list<std::shared_ptr<Pass>> passes;
@@ -339,6 +362,8 @@ public:
 	std::list<std::shared_ptr<Pass>> required_passes;
 	std::list<Pass*> enabled_passes;
 	Variable<bool> optimize = Variable<bool>(true, "optimize", this);
+
+	std::list<std::function<void(FrameGraph& g)>> pre_run;
 public:
 	FrameGraph() :VariableContext(L"FrameGraph"){}
 	TaskBuilder builder;
@@ -363,6 +388,11 @@ public:
 		pass<T>(name, f, r, flags);
 	}
 
+
+	void add_slot_generator(std::function<void(FrameGraph &)> f)
+	{
+		pre_run.push_back(f);
+	}
 	void start_new_frame();
 
 	void setup();

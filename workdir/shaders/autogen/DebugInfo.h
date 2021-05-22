@@ -1,21 +1,21 @@
-#ifndef SLOT_2
-	#define SLOT_2
+#ifndef SLOT_3
+	#define SLOT_3
 #else
-	#error Slot 2 is already used
+	#error Slot 3 is already used
 #endif
 #include "layout/FrameLayout.h"
 #include "tables/DebugInfo.h"
-RWStructuredBuffer<DebugStruct> uav_2_0: register(u0, space2);
+RWStructuredBuffer<DebugStruct> uav_3_0: register(u0, space3);
 struct Pass_DebugInfo
 {
 uint uav_0;
 };
-ConstantBuffer<Pass_DebugInfo> pass_DebugInfo: register( b2, space2);
+ConstantBuffer<Pass_DebugInfo> pass_DebugInfo: register( b2, space3);
 const DebugInfo CreateDebugInfo()
 {
 	DebugInfo result;
 	Pass_DebugInfo pass;
-	result.uav.debug = uav_2_0;
+	result.uav.debug = uav_3_0;
 	return result;
 }
 #ifndef NO_GLOBAL

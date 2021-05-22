@@ -215,6 +215,11 @@ namespace DX12
 	{
 		return tracked_info->m_pipelineState;
 	}
+
+	 ComPtr<ID3D12StateObject> PipelineStateBase::get_native_state()
+	 {
+		 return tracked_info->m_StateObject;
+	 }
 	 PipelineState::PipelineState(PipelineStateDesc _desc, std::string cache) : desc(_desc)
 	{
 		 this->cache = cache;

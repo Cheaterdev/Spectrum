@@ -69,6 +69,12 @@ void PSSM::generate(FrameGraph& graph)
 
 			auto& command_list = _context.get_list();
 
+			auto& graphics = command_list->get_graphics();
+			auto& compute = command_list->get_compute();
+
+			graphics.set_layout(Layouts::DefaultLayout);
+			compute.set_layout(Layouts::DefaultLayout);
+
 
 			std::vector<sizer_long> scissor;
 			std::vector<Render::Viewport> viewport;
@@ -135,6 +141,19 @@ void PSSM::generate(FrameGraph& graph)
 
 			table.set(context, false, true);
 
+
+
+			{
+				Slots::FrameInfo frameInfo;
+
+				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
+				auto camera = frameInfo.MapCamera();
+				//	memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
+				camera.cb = light_cam.camera_cb.current;
+				frameInfo.set(graphics);
+				frameInfo.set(compute);
+			}
+
 			renderer->render(context, scene->get_ptr<Scene>());
 
 
@@ -177,6 +196,11 @@ void PSSM::generate(FrameGraph& graph)
 			}, [this, &graph, i, znear, zfar, cam, points_all, position](PSSMData& data, FrameContext& _context) {
 
 				auto& command_list = _context.get_list();
+				auto& graphics = command_list->get_graphics();
+				auto& compute = command_list->get_compute();
+
+				graphics.set_layout(Layouts::DefaultLayout);
+				compute.set_layout(Layouts::DefaultLayout);
 
 
 				std::vector<sizer_long> scissor;
@@ -245,6 +269,17 @@ void PSSM::generate(FrameGraph& graph)
 
 				table.set(context, false, true);
 
+				{
+					Slots::FrameInfo frameInfo;
+
+					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
+					auto camera = frameInfo.MapCamera();
+					//	memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
+					camera.cb = light_cam.camera_cb.current;
+					frameInfo.set(graphics);
+					frameInfo.set(compute);
+				}
+
 				renderer->render(context, scene->get_ptr<Scene>());
 			}
 			);
@@ -278,20 +313,14 @@ void PSSM::generate(FrameGraph& graph)
 			auto& list = *_context.get_list();
 
 			auto& graphics = list.get_graphics();
+			auto& compute = list.get_compute();
 
 			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
 			graphics.set_layout(Layouts::DefaultLayout);
+			compute.set_layout(Layouts::DefaultLayout);
 
-
-			{
-				Slots::FrameInfo frameInfo;
-
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-				auto camera = frameInfo.MapCamera();
-			//	memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
-				camera.cb = graph.cam->camera_cb.current;
-				frameInfo.set(graphics);
-			}
+			graph.set_slot(SlotID::FrameInfo, graphics);
+			graph.set_slot(SlotID::FrameInfo, compute);
 
 			{
 				Slots::PSSMLighting lighting;

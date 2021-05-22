@@ -1,20 +1,20 @@
-#ifndef SLOT_4
-	#define SLOT_4
+#ifndef SLOT_5
+	#define SLOT_5
 #else
-	#error Slot 4 is already used
+	#error Slot 5 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/EnvFilter.h"
-ConstantBuffer<EnvFilter_cb> cb_4_0:register(b0,space4);
+ConstantBuffer<EnvFilter_cb> cb_5_0:register(b0,space5);
 struct Pass_EnvFilter
 {
 };
-ConstantBuffer<Pass_EnvFilter> pass_EnvFilter: register( b2, space4);
+ConstantBuffer<Pass_EnvFilter> pass_EnvFilter: register( b2, space5);
 const EnvFilter CreateEnvFilter()
 {
 	EnvFilter result;
 	Pass_EnvFilter pass;
-	result.cb = cb_4_0;
+	result.cb = cb_5_0;
 	return result;
 }
 #ifndef NO_GLOBAL

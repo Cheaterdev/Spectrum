@@ -111,7 +111,7 @@ float4 trace(float4 start_color, float start_dist,  float3 origin, float3 dir, f
 	//accum.xyz *= angle_coeff;
 	//accum *= 1.0 / 0.9;
 
-	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle);
+	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle*8);
 	float sampleWeight = saturate(max_accum - accum.w ) / max_accum;
 	accum.xyz += sky *pow(sampleWeight, 1);
 
@@ -143,10 +143,6 @@ inline void GenerateCameraRay(uint2 index,in Camera camera, out float3 origin, o
     direction = normalize(world.xyz - origin);
 }
 
-float rnd(float2 uv)
-{
-	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
-}
 
 
 
@@ -284,34 +280,10 @@ Texture2D<float2> speed_tex = voxel_screen.GetGbuffer().GetMotion();
 	}
 	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
 
-	//float3 lightDir = frame.GetSunDir();
 
-//float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
+float3 dir = GetRandomDir(tc, normal, 1, frame.GetTime().y);
 
-//float3 rayDir = reflect(view, normal);
-
-
-float time = frac(frame.GetTime().y)*5;// +i;
-float sini = sin(time * 220 + float(tc.x));
-float cosi = cos(time * 220 + float(tc.y));
-float rand = rnd(float2(sini, cosi));
-
-
-float rcos = cos(6.14 * rand);
-float rsin = sin(6.14 * rand);
-float rand2 = rnd(float2(cosi, sini));
-
-float tt =  4 * pow(rand2, 1.0);
-
-//float tt = rand2;
-
-	
-float3 right = rsin *  normalize(cross(normal, float3(0, 1, 0.1)));
-float3 tangent = rcos * normalize(cross(right, normal));
-
-float3 dir = normalize(normal + tt * (right + tangent));
-
-float3 dirVoxel = normalize(normal + rand2 *(right + tangent));
+float3 dirVoxel = dir;// normalize(normal + rand2 * (right + tangent));
 
 float3 oneVoxelSize = voxel_info.GetSize()/ (voxel_info.GetVoxel_tiles_count()* voxel_info.GetVoxels_per_tile());
 RayPayload payload_gi;
@@ -398,6 +370,8 @@ void MyRaygenShaderReflection()
 	//Texture2D<float2> speed_tex = voxel_screen.GetGbuffer().GetMotion();
 
 	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+
+	const RWTexture2D<float4> tex_dir_pdf = voxel_output.GetDirAndPdf();
 	// Generate a ray for a camera pixel corresponding to an index from the dispatched 2D grid.
 
 	
@@ -407,6 +381,7 @@ void MyRaygenShaderReflection()
 	if (raw_z == 1)
 	{
 		tex_noise[itc] = 0;
+		tex_dir_pdf[itc] = 0;
 		return;
 	}
 
@@ -416,34 +391,20 @@ void MyRaygenShaderReflection()
 	float3 normal = normalize(gbufer_normals.xyz * 2 - 1);
 	float3 albedo = gbufer_albedo.rgb;
 
-	float  roughness = pow(gbufer_normals.w, 1);
+	float roughness = pow(max(MIN_ROUGHNESS,gbufer_normals.w), 2);
 	float metallic = gbufer_albedo.w;// specular.w;
 	//float3 lightDir = frame.GetSunDir();
 
-float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
+	float3 view = -normalize(frame.GetCamera().GetPosition() - pos);
 
-float3 rayDir = reflect(view, normal); 
+	float3 rayDir = reflect(view, normal); 
 
+	float2 seed = GetRandom2(tc, frame.GetTime().y);
+	float3x3 space = CalculateTangent(rayDir);
 
-	float time = frac(frame.GetTime().y) * 5;// +i;
-	float sini = sin(time * 220 + float(tc.x));
-	float cosi = cos(time * 220 + float(tc.y));
-	float rand = rnd(float2(sini, cosi));
-
-
-	float rcos = cos(6.14 * rand);
-	float rsin = sin(6.14 * rand);
-	float rand2 = rnd(float2(cosi, sini));
-
-	float tt = roughness*pow(rand2, 0.5);
-
-	//float tt = rand2;
-
-
-	float3 right = rsin * normalize(cross(rayDir, float3(0, 1, 0.1)));
-	float3 tangent = rcos * normalize(cross(right, rayDir));
-
-	float3 dir = normalize(rayDir + tt * (right + tangent));
+	
+	float4 s = ImportanceSampleGGX(seed, roughness, rayDir);
+	float3 dir = s.xyz;
 
 	float3 dirVoxel = rayDir;// normalize(normal + rand2 * (right + tangent));
 
@@ -460,34 +421,38 @@ float3 rayDir = reflect(view, normal);
 	ray.Origin = pos;
 	ray.Direction = dir;
 	ray.TMin = 0.05;
-	ray.TMax = length(oneVoxelSize) / (tan(roughness) + 0.001);
+	ray.TMax =  0.5*length(oneVoxelSize) / (tan(roughness) + 0.001);
 	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
 
 
 	
 	if (payload_gi.dist > 100000 - 5)
 	{
-		payload_gi.color = trace(0, 0.0, pos + oneVoxelSize*normal + dirVoxel * ray.TMax, dirVoxel, roughness, payload_gi.dist);
+		payload_gi.color =  trace(0, 0.1*GetRandom2(tc/2, frame.GetTime().y)*length(oneVoxelSize), pos + oneVoxelSize * normal + 1*dirVoxel * ray.TMax, dirVoxel, 1*roughness, payload_gi.dist);
 	}
 
 
-	float3 refl_pos = pos +view * clamp(payload_gi.dist,0,1000);
-	float2 prev_tc = project_tc(refl_pos, frame.GetPrevCamera().GetViewProj());
+	float3 refl_pos = pos + view * clamp(payload_gi.dist,0,1000);
+//	float2 prev_tc = project_tc(refl_pos, frame.GetPrevCamera().GetViewProj());
 
 
 	//float2 delta = voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
 	//float2 prev_tc = tc - 0*delta;
 
-	float4 prev_gi= voxel_screen.GetPrev_gi().SampleLevel(linearClampSampler,  prev_tc, 0);
+//	float4 prev_gi= voxel_screen.GetPrev_gi().SampleLevel(linearClampSampler,  prev_tc, 0);
 
 
-	float lerper = saturate(0.05+length(prev_gi.w - payload_gi.dist)/(10000* roughness));
+//	float lerper = saturate(0.05+length(prev_gi.w - payload_gi.dist)/(10000* roughness));
 	 //float fresnel = calc_fresnel(1- roughness, normal, v);
 	
 	float3 screen = payload_gi.color;// get_PBR(frame, albedo, payload_gi.color, normal, rayDir, roughness, metallic);
 
-	
-	tex_noise[itc] = lerp(prev_gi, float4(screen, payload_gi.dist), lerper);//float4(payload_gi.color, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
+	float3 l = -dir;
+
+	//screen = screen * GGX_Specular(0.01, normal, normalize(l + view), view, l);
+
+	tex_dir_pdf[itc] = float4(refl_pos, s.w);
+	tex_noise[itc] =  float4(screen, payload_gi.dist);// lerp(prev_gi, float4(screen, payload_gi.dist), lerper);//float4(payload_gi.color, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
 }
 
 

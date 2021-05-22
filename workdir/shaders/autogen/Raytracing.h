@@ -1,24 +1,24 @@
-#ifndef SLOT_6
-	#define SLOT_6
+#ifndef SLOT_7
+	#define SLOT_7
 #else
-	#error Slot 6 is already used
+	#error Slot 7 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Raytracing.h"
-RaytracingAccelerationStructure srv_6_0: register(t0, space6);
-StructuredBuffer<uint> srv_6_1: register(t1, space6);
+RaytracingAccelerationStructure srv_7_0: register(t0, space7);
+StructuredBuffer<uint> srv_7_1: register(t1, space7);
 struct Pass_Raytracing
 {
 uint srv_0;
 uint srv_1;
 };
-ConstantBuffer<Pass_Raytracing> pass_Raytracing: register( b2, space6);
+ConstantBuffer<Pass_Raytracing> pass_Raytracing: register( b2, space7);
 const Raytracing CreateRaytracing()
 {
 	Raytracing result;
 	Pass_Raytracing pass;
-	result.srv.scene = srv_6_0;
-	result.srv.index_buffer = srv_6_1;
+	result.srv.scene = srv_7_0;
+	result.srv.index_buffer = srv_7_1;
 	return result;
 }
 #ifndef NO_GLOBAL

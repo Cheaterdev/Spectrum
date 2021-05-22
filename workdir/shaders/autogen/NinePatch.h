@@ -1,22 +1,22 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
-Texture2D<float4> bindless[]: register(t1, space3);
+Texture2D<float4> bindless[]: register(t1, space4);
 #include "tables/NinePatch.h"
-StructuredBuffer<vertex_input> srv_3_0: register(t0, space3);
+StructuredBuffer<vertex_input> srv_4_0: register(t0, space4);
 struct Pass_NinePatch
 {
 uint srv_0;
 };
-ConstantBuffer<Pass_NinePatch> pass_NinePatch: register( b2, space3);
+ConstantBuffer<Pass_NinePatch> pass_NinePatch: register( b2, space4);
 const NinePatch CreateNinePatch()
 {
 	NinePatch result;
 	Pass_NinePatch pass;
-	result.srv.vb = srv_3_0;
+	result.srv.vb = srv_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

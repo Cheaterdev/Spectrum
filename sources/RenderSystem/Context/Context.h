@@ -135,6 +135,8 @@ struct MeshRenderContext
         Render::Texture::ptr target_tex;
       //  Render::HandleTable voxel_target;
 
+
+        SlotContext* slot_context = nullptr;
         Slots::Voxelization::Compiled voxelization_compiled;
 		vec3 sky_dir;
         MeshRenderContext()

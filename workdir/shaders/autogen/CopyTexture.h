@@ -1,21 +1,21 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/CopyTexture.h"
-Texture2D<float4> srv_3_0: register(t0, space3);
+Texture2D<float4> srv_4_0: register(t0, space4);
 struct Pass_CopyTexture
 {
 uint srv_0;
 };
-ConstantBuffer<Pass_CopyTexture> pass_CopyTexture: register( b2, space3);
+ConstantBuffer<Pass_CopyTexture> pass_CopyTexture: register( b2, space4);
 const CopyTexture CreateCopyTexture()
 {
 	CopyTexture result;
 	Pass_CopyTexture pass;
-	result.srv.srcTex = srv_3_0;
+	result.srv.srcTex = srv_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

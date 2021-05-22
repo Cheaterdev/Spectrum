@@ -68,10 +68,6 @@ float calc_vignette(float2 inTex)
 	float vignette = 4 * (T.y * ((1 - T.y)));
 	return vignette;
 }
-float rnd(float2 uv)
-{
-	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
-}
 
 float2 cell(float2 ray, float2 cell_count, uint camera) {
 	return floor(ray.xy * cell_count);

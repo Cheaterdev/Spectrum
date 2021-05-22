@@ -1,24 +1,24 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/DownsampleDepth.h"
-Texture2D<float> srv_3_0: register(t0, space3);
-RWTexture2D<float> uav_3_0: register(u0, space3);
+Texture2D<float> srv_4_0: register(t0, space4);
+RWTexture2D<float> uav_4_0: register(u0, space4);
 struct Pass_DownsampleDepth
 {
 uint srv_0;
 uint uav_0;
 };
-ConstantBuffer<Pass_DownsampleDepth> pass_DownsampleDepth: register( b2, space3);
+ConstantBuffer<Pass_DownsampleDepth> pass_DownsampleDepth: register( b2, space4);
 const DownsampleDepth CreateDownsampleDepth()
 {
 	DownsampleDepth result;
 	Pass_DownsampleDepth pass;
-	result.srv.srcTex = srv_3_0;
-	result.uav.targetTex = uav_3_0;
+	result.srv.srcTex = srv_4_0;
+	result.uav.targetTex = uav_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

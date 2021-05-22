@@ -138,7 +138,7 @@ float4 trace_refl(float4 start_color, float3 view,  float3 origin,float3 dir, fl
 	float3 samplePos = 0;
     float4 accum = start_color;
     // the starting sample diameter
-	float minDiameter = lerp(1.0 / 2048, 1.0 / 512, pow(angle,1/4));// *(1 + 4 * angle);
+	float minDiameter = 1.0 / 1024;// lerp(1.0 / 2048, 1.0 / 512, pow(angle, 1 / 4));// *(1 + 4 * angle);
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 	float maxDist = 1;
 	float dist = minDiameter;// +angle_error * minDiameter;// +angle*minDiameter / 2;// +16 * angle_bad*minDiameter;
@@ -181,11 +181,6 @@ struct GI_RESULT
 	float4 screen: SV_Target0;
 	//float4 gi: SV_Target1;
 };
-
-float rnd(float2 uv)
-{
-	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
-}
 
 
 float calc_vignette(float2 inTex)

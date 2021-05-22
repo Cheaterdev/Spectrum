@@ -19,16 +19,25 @@ struct FrameLayout
 		static const unsigned int SRV_ID = 5;
 		static inline const std::vector<UINT> tables = {3, 5};
 	};
-	struct DebugInfo
+	struct PassData
 	{
 		static const unsigned int ID = 2;
 		static const unsigned int CB = 2;
 		static const unsigned int CB_ID = 6;
-		static const unsigned int UAV = 1;
-		static const unsigned int UAV_ID = 8;
+		static const unsigned int SRV = 1;
+		static const unsigned int SRV_ID = 8;
 		static inline const std::vector<UINT> tables = {6, 8};
 	};
+	struct DebugInfo
+	{
+		static const unsigned int ID = 3;
+		static const unsigned int CB = 2;
+		static const unsigned int CB_ID = 9;
+		static const unsigned int UAV = 1;
+		static const unsigned int UAV_ID = 11;
+		static inline const std::vector<UINT> tables = {9, 11};
+	};
 	template<class Processor> static void for_each(Processor& processor) {
-		processor.process<CameraData,SceneData,DebugInfo>({Render::Samplers::SamplerLinearWrapDesc,Render::Samplers::SamplerPointClampDesc,Render::Samplers::SamplerLinearClampDesc,Render::Samplers::SamplerAnisoBorderDesc,Render::Samplers::SamplerPointBorderDesc});
+		processor.process<CameraData,SceneData,PassData,DebugInfo>({Render::Samplers::SamplerLinearWrapDesc,Render::Samplers::SamplerPointClampDesc,Render::Samplers::SamplerLinearClampDesc,Render::Samplers::SamplerAnisoBorderDesc,Render::Samplers::SamplerPointBorderDesc});
 	}
 };

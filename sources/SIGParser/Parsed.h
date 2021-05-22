@@ -52,6 +52,7 @@ using table_offsets = std::array<int, ValueType::COUNT>;
 
 struct parsed_type
 {
+	bool debug = false;
 	virtual ~parsed_type() = default;
 };
 struct have_name:public parsed_type

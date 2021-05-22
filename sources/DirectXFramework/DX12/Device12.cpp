@@ -255,6 +255,8 @@ namespace DX12
 		queues[CommandListType::COMPUTE].reset(new Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
 
+		m_device->SetStablePowerState(true);
+
 		auto res = m_device->GetNodeCount();
 		D3D12_FEATURE_DATA_D3D12_OPTIONS featureData;
 		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));

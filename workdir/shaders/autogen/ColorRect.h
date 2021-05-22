@@ -1,20 +1,20 @@
-#ifndef SLOT_3
-	#define SLOT_3
+#ifndef SLOT_4
+	#define SLOT_4
 #else
-	#error Slot 3 is already used
+	#error Slot 4 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/ColorRect.h"
-ConstantBuffer<ColorRect_cb> cb_3_0:register(b0,space3);
+ConstantBuffer<ColorRect_cb> cb_4_0:register(b0,space4);
 struct Pass_ColorRect
 {
 };
-ConstantBuffer<Pass_ColorRect> pass_ColorRect: register( b2, space3);
+ConstantBuffer<Pass_ColorRect> pass_ColorRect: register( b2, space4);
 const ColorRect CreateColorRect()
 {
 	ColorRect result;
 	Pass_ColorRect pass;
-	result.cb = cb_3_0;
+	result.cb = cb_4_0;
 	return result;
 }
 #ifndef NO_GLOBAL

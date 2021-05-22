@@ -123,10 +123,6 @@ float calc_vignette(float2 inTex)
 	float vignette = 4 * (T.y * ((1 - T.y)));
 	return vignette;
 }
-float rnd(float2 uv)
-{
-	return frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453);
-}
 
 static const float2 poisson[16] = {
 	float2(-0.94201624, -0.39906216),
