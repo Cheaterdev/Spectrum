@@ -17,7 +17,6 @@ ConstantBuffer<Pass_VoxelZero> pass_VoxelZero: register( b2, space5);
 const VoxelZero CreateVoxelZero()
 {
 	VoxelZero result;
-	Pass_VoxelZero pass;
 	result.cb = cb_5_0;
 	result.uav.Target = uav_5_0;
 	result.srv.params.tiles = srv_5_0;

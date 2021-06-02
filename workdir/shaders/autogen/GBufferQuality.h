@@ -14,7 +14,6 @@ ConstantBuffer<Pass_GBufferQuality> pass_GBufferQuality: register( b2, space6);
 const GBufferQuality CreateGBufferQuality()
 {
 	GBufferQuality result;
-	Pass_GBufferQuality pass;
 	result.srv.ref = srv_6_0;
 	return result;
 }

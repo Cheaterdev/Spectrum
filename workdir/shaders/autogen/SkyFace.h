@@ -13,7 +13,6 @@ ConstantBuffer<Pass_SkyFace> pass_SkyFace: register( b2, space5);
 const SkyFace CreateSkyFace()
 {
 	SkyFace result;
-	Pass_SkyFace pass;
 	result.cb = cb_5_0;
 	return result;
 }

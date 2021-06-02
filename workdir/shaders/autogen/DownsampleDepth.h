@@ -16,7 +16,6 @@ ConstantBuffer<Pass_DownsampleDepth> pass_DownsampleDepth: register( b2, space4)
 const DownsampleDepth CreateDownsampleDepth()
 {
 	DownsampleDepth result;
-	Pass_DownsampleDepth pass;
 	result.srv.srcTex = srv_4_0;
 	result.uav.targetTex = uav_4_0;
 	return result;

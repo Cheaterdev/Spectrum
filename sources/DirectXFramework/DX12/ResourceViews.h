@@ -458,6 +458,7 @@ namespace DX12
 		{
 			memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 		}
+
 	};
 
 

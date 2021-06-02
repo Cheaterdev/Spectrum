@@ -16,7 +16,6 @@ ConstantBuffer<Pass_VoxelVisibility> pass_VoxelVisibility: register( b2, space5)
 const VoxelVisibility CreateVoxelVisibility()
 {
 	VoxelVisibility result;
-	Pass_VoxelVisibility pass;
 	result.srv.visibility = srv_5_0;
 	result.uav.visible_tiles = uav_5_0;
 	return result;

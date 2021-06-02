@@ -24,7 +24,6 @@ ConstantBuffer<Pass_VoxelDebug> pass_VoxelDebug: register( b2, space5);
 const VoxelDebug CreateVoxelDebug()
 {
 	VoxelDebug result;
-	Pass_VoxelDebug pass;
 	result.srv.volume = srv_5_0;
 	result.srv.gbuffer.albedo = srv_5_1;
 	result.srv.gbuffer.normals = srv_5_2;

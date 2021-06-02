@@ -307,7 +307,7 @@ public:
 };
 
 
-
+/*
 std::strong_ordering operator<=>(const std::string& l, const std::string& r);
 
 
@@ -351,7 +351,7 @@ bool operator==(const std::vector<type>& l, const std::vector<type>& r)
 
 	return  true;
 }
-
+*/
 
 
 

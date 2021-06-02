@@ -13,7 +13,6 @@ ConstantBuffer<Pass_FontRenderingConstants> pass_FontRenderingConstants: registe
 const FontRenderingConstants CreateFontRenderingConstants()
 {
 	FontRenderingConstants result;
-	Pass_FontRenderingConstants pass;
 	result.cb = cb_5_0;
 	return result;
 }

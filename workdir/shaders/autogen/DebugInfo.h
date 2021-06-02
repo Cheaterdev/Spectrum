@@ -14,7 +14,6 @@ ConstantBuffer<Pass_DebugInfo> pass_DebugInfo: register( b2, space3);
 const DebugInfo CreateDebugInfo()
 {
 	DebugInfo result;
-	Pass_DebugInfo pass;
 	result.uav.debug = uav_3_0;
 	return result;
 }

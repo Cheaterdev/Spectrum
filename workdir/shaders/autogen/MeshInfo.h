@@ -13,7 +13,6 @@ ConstantBuffer<Pass_MeshInfo> pass_MeshInfo: register( b2, space5);
 const MeshInfo CreateMeshInfo()
 {
 	MeshInfo result;
-	Pass_MeshInfo pass;
 	result.cb = cb_5_0;
 	return result;
 }

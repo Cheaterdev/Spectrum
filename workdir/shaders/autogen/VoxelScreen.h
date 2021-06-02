@@ -32,7 +32,6 @@ ConstantBuffer<Pass_VoxelScreen> pass_VoxelScreen: register( b2, space5);
 const VoxelScreen CreateVoxelScreen()
 {
 	VoxelScreen result;
-	Pass_VoxelScreen pass;
 	result.srv.voxels = srv_5_0;
 	result.srv.tex_cube = srv_5_1;
 	result.srv.prev_gi = srv_5_2;

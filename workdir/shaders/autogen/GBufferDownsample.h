@@ -16,7 +16,6 @@ ConstantBuffer<Pass_GBufferDownsample> pass_GBufferDownsample: register( b2, spa
 const GBufferDownsample CreateGBufferDownsample()
 {
 	GBufferDownsample result;
-	Pass_GBufferDownsample pass;
 	result.srv.normals = srv_6_0;
 	result.srv.depth = srv_6_1;
 	return result;

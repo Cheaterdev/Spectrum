@@ -99,7 +99,7 @@ namespace DX12
 		D3D12_BLEND dest_alpha = D3D12_BLEND::D3D12_BLEND_ZERO;
 		D3D12_BLEND source_alpha = D3D12_BLEND::D3D12_BLEND_ONE;
 			bool operator==(const RenderTarget&) const = default;
-			auto  operator<=>(const  RenderTarget & r)  const = default;
+			std::strong_ordering  operator<=>(const  RenderTarget& r)  const = default;
 
 
 
@@ -124,7 +124,10 @@ namespace DX12
 
 		std::array<RenderTarget, 8> render_target;
 		bool operator==(const BlendState&) const = default;
-		auto operator<=>(const  BlendState& r)  const = default;
+		std::strong_ordering operator<=>(const  BlendState& r)  const
+		{
+			return render_target<=> r.render_target;
+		}
 
 
 	private:

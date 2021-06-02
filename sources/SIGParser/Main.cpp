@@ -95,7 +95,7 @@ void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::C
 }
 
 
-void generate_bind(my_stream& stream, const std::string &parent, Table& table, Slot& slot, table_offsets& offsets)
+void generate_bind(my_stream& stream, const std::string& pass_cb, const std::string &parent, Table& table, Slot& slot, table_offsets& offsets)
 {
 	std::string write_to = "result";
 
@@ -112,8 +112,21 @@ void generate_bind(my_stream& stream, const std::string &parent, Table& table, S
 			if (v.value_type != type) continue;
 			if (v.bindless) continue;
 
-			stream << "result." << get_name_for(type) << "." << parent << v.name << " = " << get_name_for(type) << "_" << slot.id << "_" << i << ";" << std::endl;
-		//	stream << "result." << get_name_for(type) << "." << parent << v.name << " = ResourceDescriptorHeap[NonUniformResourceIndex(pass." << get_name_for(type) << "_" << i << ")];" << std::endl;
+			if ( true || type == ValueType::UAV || v.as_array)
+			{
+				stream << "result." << get_name_for(type) << "." << parent << v.name << " = " << get_name_for(type) << "_" << slot.id << "_" << i << ";" << std::endl;
+
+			}
+			else
+			if (v.as_array)
+			{
+				for (int a = 0; a < v.array_count; a++)
+				{
+					stream << "result." << get_name_for(type) << "." << parent << v.name << "["<<a<<"] = ResourceDescriptorHeap[(pass_" << pass_cb << "." << get_name_for(type) << "_" << i << " << 1) >> 1  + "<<a << "]; " << std::endl;
+
+				}
+			}else
+			stream << "result." << get_name_for(type) << "." << parent << v.name << " = ResourceDescriptorHeap[(pass_"<< pass_cb <<"." << get_name_for(type) << "_" << i << " << 1) >> 1];" << std::endl;
 
 			i += v.array_count;
 		}
@@ -135,7 +148,7 @@ void generate_bind(my_stream& stream, const std::string &parent, Table& table, S
 			parent_to = v.name + ".";
 		else
 			parent_to = parent + "." + v.name + ".";
-		generate_bind(stream, parent_to, *t, slot, offsets);
+		generate_bind(stream, pass_cb, parent_to, *t, slot, offsets);
 	}
 
 	/*if (parent.empty())
@@ -166,7 +179,7 @@ void generate_bind(my_stream& stream, const std::string &parent, Table& table, S
 
 void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot)
 {
-	table_offsets offsets; generate_bind(stream, parent, table, slot, offsets);
+	table_offsets offsets; generate_bind(stream, table.name, parent, table, slot, offsets);
 }
 
 void generate_pass_table(Table& table)
@@ -230,7 +243,7 @@ void generate_pass_table(Table& table)
 			stream.push();
 			stream << table.name << " result;" << std::endl;
 
-			stream << "Pass_"<<table.name << " pass;" << std::endl;
+		//	stream << "Pass_"<<table.name << " pass;" << std::endl;
 
 
 			table_offsets offsets;
@@ -240,7 +253,7 @@ void generate_pass_table(Table& table)
 			offsets[ValueType::CB] = 0;
 
 			offsets[ValueType::SMP] = table.slot->layout->samplers.size();
-			generate_bind(stream, "", table, *table.slot, offsets);
+			generate_bind(stream, table.name, "",table,  *table.slot, offsets);
 			stream << "return result;" << std::endl;
 			stream.pop();
 		}

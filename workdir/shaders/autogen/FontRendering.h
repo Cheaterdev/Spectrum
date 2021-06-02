@@ -16,7 +16,6 @@ ConstantBuffer<Pass_FontRendering> pass_FontRendering: register( b2, space4);
 const FontRendering CreateFontRendering()
 {
 	FontRendering result;
-	Pass_FontRendering pass;
 	result.srv.tex0 = srv_4_0;
 	result.srv.positions = srv_4_1;
 	return result;

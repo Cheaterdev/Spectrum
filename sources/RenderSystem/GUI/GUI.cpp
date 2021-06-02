@@ -925,18 +925,18 @@ namespace GUI
          process_graph(graph);
          struct pass_data
          {
-             ResourceHandler* o_texture;
+             Handlers::Texture o_texture = "swapchain";
          };
 
 		 graph.add_pass<pass_data>("UI RENDER",[](pass_data& data, TaskBuilder& builder) {
-			 data.o_texture = builder.need_texture("swapchain", ResourceFlags::RenderTarget);
+			builder.need(data.o_texture, ResourceFlags::RenderTarget);
 
 			 }, [this,&graph](pass_data& data, FrameContext& context) {
 			//	 std::lock_guard<std::mutex> g(m);
 
 				 auto command_list = context.get_list();
 				
-				 auto texture = context.get_texture(data.o_texture);
+				 auto texture = (*data.o_texture);
 
 			//	 command_list->transition(texture.resource, Render::ResourceState::RENDER_TARGET);
 				 command_list->get_graphics().set_rtv(1, texture.get_rtv(), Render::Handle());

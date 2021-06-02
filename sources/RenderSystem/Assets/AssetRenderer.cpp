@@ -42,18 +42,18 @@ public:
 			{
 				GBufferViewDesc gbuffer;
 
-				ResourceHandler* hiz;
-				ResourceHandler* hiz_uav;
+				Handlers::Texture H(GBuffer_HiZ);
+				Handlers::Texture H(GBuffer_HiZ_UAV);
 			};
 
 			graph.add_pass<GBufferData>("GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
 				data.gbuffer.create(size, builder);
-			//	data.gbuffer.create_mips(size, builder);
-			//	data.gbuffer.create_quality(size, builder);
+				//	data.gbuffer.create_mips(size, builder);
+				//	data.gbuffer.create_quality(size, builder);
 
 
-				data.hiz = builder.create_texture("GBuffer_HiZ", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
-				data.hiz_uav = builder.create_texture("GBuffer_HiZ_UAV", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, ResourceFlags::UnorderedAccess);
+				 builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1 ), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1},ResourceFlags::DepthStencil);
+				 builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 				}, [this,&graph](GBufferData& data, FrameContext& _context) {
 
@@ -75,9 +75,9 @@ public:
 
 					gbuffer.rtv_table = RenderTargetTable(context->list->get_graphics(), { gbuffer.albedo, gbuffer.normals, gbuffer.specular, gbuffer.speed }, gbuffer.depth);
 
-					gbuffer.HalfBuffer.hiZ_depth = _context.get_texture(data.hiz);
+					gbuffer.HalfBuffer.hiZ_depth = *data.GBuffer_HiZ;
 					gbuffer.HalfBuffer.hiZ_table = RenderTargetTable(context->list->get_graphics(), {  }, gbuffer.HalfBuffer.hiZ_depth);
-					gbuffer.HalfBuffer.hiZ_depth_uav = _context.get_texture(data.hiz_uav);
+					gbuffer.HalfBuffer.hiZ_depth_uav = *data.GBuffer_HiZ_UAV;
 				
 					context->g_buffer = &gbuffer;
 
@@ -100,17 +100,14 @@ public:
 
 		struct no
 		{
-			ResourceHandler* result;
+			Handlers::Texture H(ResultTexture);
 		};
 		graph.add_pass<no>("mip", [this, &graph](no& data, TaskBuilder& builder) {
-			data.result = graph.builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
+			builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 			}, [](no& data, FrameContext& _context) {
 			
 			
-				auto result = _context.get_texture(data.result);
-
-
-				MipMapGenerator::get().generate(_context.get_list()->get_compute(), result);
+				MipMapGenerator::get().generate(_context.get_list()->get_compute(), *data.ResultTexture);
 			});
 
 
@@ -119,9 +116,9 @@ public:
 			PROFILE(L"FrameInfo");
 			Slots::FrameInfo frameInfo;
 			//// hack zone
-			auto sky = graph.builder.resources["sky_cubemap_filtered"];
-			if (sky.info && sky.info->resource)
-				frameInfo.GetSky() = sky.info->texture.texture—ube;
+			auto &sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
+			if (sky.resource)
+				frameInfo.GetSky() = sky.texture.texture—ube;
 			/////////
 			frameInfo.GetSunDir() = graph.sunDir;
 			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };

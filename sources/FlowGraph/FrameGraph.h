@@ -60,22 +60,37 @@ struct ResourceHandler
 	void changed();
 
 	bool is_changed();
+
+
 	public:
+
+		ResourceHandler()
+		{}
 	friend struct TaskBuilder;
 	friend struct FrameContext;
-	ResourceAllocInfo* info;
+	ResourceAllocInfo* info = nullptr;
+
+	virtual void init(ResourceAllocInfo& info)
+	{}
+
+	virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame)
+	{}
 };
+
+
+
 
 
 struct Pass;
 
 struct UsedResources
 {
-	std::set<ResourceHandler*> resources;
+	std::set<ResourceAllocInfo*> resources;
 
-	std::map<ResourceHandler*, ResourceFlags> resource_flags;
-	std::set<ResourceHandler*> resource_creations;
+	std::map<ResourceAllocInfo*, ResourceFlags> resource_flags;
+	std::set<ResourceAllocInfo*> resource_creations;
 };
+
 
 
 struct ResourceRWState
@@ -120,7 +135,8 @@ struct ResourceAllocInfo
 	Render::TextureView texture;
 	Render::BufferView buffer;
 
-	ResourceHandler* handler;
+	std::shared_ptr<ResourceHandler> handler;
+	std::shared_ptr<Render::ResourceView> view;
 
 	bool need_recreate = false;
 	bool passed = false;
@@ -133,18 +149,180 @@ struct ResourceAllocInfo
 	void reset();
 
 	void remove_inactive();
+
+	template<class T = ResourceHandler, class ...Args>
+	T& create_handler(Args...args)
+	{
+	//	if (!handler)
+			handler = std::make_shared<T>(args...);
+	//	else
+	//		*handler = T(args...);
+
+		handler->info = this;
+		return get_handler<T>();
+	}
+
+	template<class T = ResourceHandler>
+	T& clone_handler(std::shared_ptr<ResourceHandler>& h)
+	{
+		//	if (!handler)
+		handler = std::make_shared<T>(static_cast<T*>(h.get())->m_desc);
+		//	else
+		//		*handler = T(args...);
+
+		handler->info = this;
+		return get_handler<T>();
+	}
+
+
+	template<class T = ResourceHandler>
+	T& get_handler()
+	{
+		return *static_cast<T*>(handler.get());
+	}
 };
+#define H(x) x = #x
+
+struct Handlers
+{
+	template<class T>
+	class StructuredBuffer : public ResourceHandler
+	{
+		
+	public:
+		std::string name;
+		struct Desc
+		{
+			UINT count;
+		}m_desc;
+
+		auto& operator*()
+		{
+			return *static_cast<Render::StructuredBufferView<T>*>(info->view.get());
+		}
+
+		auto operator->()
+		{
+			return static_cast<Render::StructuredBufferView<T>*>(info->view.get());
+		}
+		operator bool() const
+		{
+			return !!info;
+		}
+		StructuredBuffer() = default;
+
+		StructuredBuffer(const Desc& desc) :m_desc(desc)
+		{
+
+			//info->buffer = Render::BufferView();
+		}
+		StructuredBuffer(std::string_view name) :name(name)
+		{
+
+		}
+		virtual void init(ResourceAllocInfo& info) override
+		{
+			auto desc = BufferDesc{ m_desc.count* sizeof(Underlying<T>) };
+			info.need_recreate = info.desc != desc;
+			info.type = ResourceType::Buffer;
+			info.desc = desc;
+
+		}
+
+		virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) override
+		{
+			info.view = std::make_shared<Render::StructuredBufferView<T>>(info.resource->create_view<Render::StructuredBufferView<T>>(frame));
+		}
+	};
+
+	class Texture : public ResourceHandler
+	{
+	//	Render::TextureView view;
+	
+	public:
+		struct Desc
+		{
+			ivec3 size;
+			DXGI_FORMAT format;
+			UINT array_count;
+		}m_desc;
+
+		std::string name;
+		auto& operator*()
+		{
+			return *static_cast<Render::TextureView*>(info->view.get());
+		}
+		auto operator->()
+		{
+			return static_cast<Render::TextureView*>(info->view.get());
+		}
+		operator bool() const
+		{
+			return !!info;
+		}
+		Texture() = default;
+
+		Texture(std::string_view name) :name(name)
+		{
+
+		}
+
+		Texture(const Desc &desc) :m_desc(desc)
+		{
+
+			//info->buffer = Render::BufferView();
+		}
+
+		virtual void init(ResourceAllocInfo& info)override
+		{
+			auto desc = TextureDesc{ m_desc.size, m_desc.format, m_desc.array_count };
+			info.need_recreate = info.desc != desc;
+			info.type = ResourceType::Texture;
+			info.desc = desc;
+
+
+		}
+
+		virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) override
+		{
+			//view = info->resource->create_view<Render::BufferView>(*frame);
+			info.view = std::make_shared<Render::TextureView>(info.resource->create_view<Render::TextureView>(frame, check(info.flags & ResourceFlags::Cube)));
+		}
+	};
+};
+
+
+struct Runtime
+{
+	using Texture = Render::TextureView;
+
+	template<class T>
+	using StructuredBuffer = Render::StructuredBufferView<T>;
+};
+
 
 
 struct TaskBuilder
 {
 
-	std::map<std::string, ResourceHandler> resources;
+private:
+/*	ResourceHandler& get_handler(std::string & s);
+
+	template<class T>
+	T& get_handler_typed(std::string& name)
+	{
+		auto& ptr = resources[name];
+		if (!ptr) ptr = std::make_shared<T>();
+
+		return *std::static_pointer_cast<T>(ptr);
+	}*/
+public:
+//	std::map<std::string, std::shared_ptr<ResourceHandler>> resources;
 	std::map<std::string, std::string> resources_names;
 
-	std::map<ResourceHandler*, ResourceAllocInfo> alloc_resources;
+	std::map<std::string, ResourceAllocInfo> alloc_resources;
 
-	std::set<ResourceHandler*> passed_resources;
+	std::set<ResourceAllocInfo*> passed_resources;
 
 	Render::ResourceHeapAllocator<Thread::Free> allocator;
 	Render::ResourceHeapAllocator<Thread::Free> static_allocator;
@@ -163,13 +341,54 @@ struct TaskBuilder
 
 	void end(Pass* pass);
 
-	ResourceHandler* create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, ResourceFlags flags = ResourceFlags::None);
-	ResourceHandler* need_texture(std::string name, ResourceFlags flags = ResourceFlags::PixelRead);
-	ResourceHandler* recreate_texture(std::string name, ResourceFlags flags = ResourceFlags::PixelRead);
 
-	ResourceHandler* create_buffer(std::string name, UINT64 size, ResourceFlags flags = ResourceFlags::None);
-	ResourceHandler* need_buffer(std::string name, ResourceFlags flags = ResourceFlags::PixelRead);
+	void init(ResourceAllocInfo& info, std::string name, ResourceFlags flags);
+	void init_pass(ResourceAllocInfo& info, ResourceFlags flags);
 
+	
+	template<class T>
+	void create(T& result, const typename T::Desc& desc, ResourceFlags flags = ResourceFlags::None)
+	{
+		std::string& name = result.name;
+		resources_names[name] = name;
+		ResourceAllocInfo& info = alloc_resources[name];		
+		T& handler = info.create_handler<T>(desc);
+		init(info, name, flags);
+		handler.init(info);
+		result = handler;
+
+	}
+	template<class T>
+	void recreate(T& result, ResourceFlags flags = ResourceFlags::None)
+	{
+		std::string name = result.name;
+		ResourceAllocInfo& old_info = alloc_resources[name];
+		std::string new_name = resources_names[name] + "recreated";
+		resources_names[name] = new_name;
+		name = new_name;
+
+
+		ResourceAllocInfo& info = alloc_resources[name];
+		T& handler = info.clone_handler<T>(old_info.handler);
+		init(info, name, flags);
+		handler.init(info);
+		info.orig = &old_info;
+
+
+		result = handler;
+	}
+
+	template<class T>
+	void need(T& result, ResourceFlags flags = ResourceFlags::None)
+	{
+		std::string& name = resources_names[result.name];
+		ResourceAllocInfo& info = alloc_resources[name];
+		T& handler = info.get_handler<T>();
+
+		init_pass(info, flags);
+	
+		result = handler;
+	}
 
 	//void free_texture(ResourceHandler* handler);
 	void pass_texture(std::string name, Render::TextureView tex, ResourceFlags flags = ResourceFlags::None);
@@ -270,16 +489,17 @@ struct Pass
 };
 
 
-template <class T>
+template <class Handler>
 struct TypedPass : public Pass
 {
 
-	using render_func_type = std::function<void(T&, FrameContext&)>;
-	using setup_func_type = std::function<bool(T&, TaskBuilder&)>;
-	using setup_func_type_void = std::function<void(T&, TaskBuilder&)>;
+	using render_func_type = std::function<void(Handler&, FrameContext&)>;
+	using setup_func_type = std::function<bool(Handler&, TaskBuilder&)>;
+	using setup_func_type_void = std::function<void(Handler&, TaskBuilder&)>;
 
 	
-	T data;
+	Handler data;
+
 	setup_func_type setup_func;
 	render_func_type render_func;
 
@@ -304,7 +524,11 @@ struct TypedPass : public Pass
 	virtual void render(Render::FrameResources::ptr& frame) override
 	{
 		if (!enabled || !renderable)  return;
+
+
+
 		render_task = scheduler::get().enqueue([this, &frame]() {
+
 			context.begin(this, frame);
 			render_func(data, context);
 			context.end();
@@ -313,6 +537,7 @@ struct TypedPass : public Pass
 	//	render_task.wait();
 	}
 };
+
 class camera;
 class main_renderer;
 class Scene;
@@ -364,14 +589,10 @@ public:
 	Variable<bool> optimize = Variable<bool>(true, "optimize", this);
 
 	std::list<std::function<void(FrameGraph& g)>> pre_run;
-public:
-	FrameGraph() :VariableContext(L"FrameGraph"){}
-	TaskBuilder builder;
-	
-	template<class T>
-	void pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+	template<class Pass>
+	void internal_pass(std::string name, typename Pass::setup_func_type s, typename Pass::render_func_type r, PassFlags flags = PassFlags::General)
 	{
-		passes.push_back(std::make_shared<TypedPass<T>>((UINT)passes.size(), name, s, r));
+		passes.push_back(std::make_shared<Pass>((UINT)passes.size(), name, s, r));
 		passes.back()->flags = flags;
 
 		if (check(flags & PassFlags::Required))
@@ -380,12 +601,32 @@ public:
 		}
 	}
 
+public:
+
+	FrameGraph() :VariableContext(L"FrameGraph"){}
+	TaskBuilder builder;
+	
+	template<class T>
+	void pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+	{
+		internal_pass<TypedPass<T>>(name, s, r, flags);
+	}
+
 	template<class T>
 	void add_pass(std::string name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 	{
-		typename TypedPass<T>::setup_func_type f = [s](T& t, TaskBuilder& b) {s(t, b); return true; };
+		typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
 		
-		pass<T>(name, f, r, flags);
+		internal_pass<TypedPass<T>>(name, f, r, flags);
+	}
+
+
+	template<class T>
+	void add_pass2(std::string name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+	{
+		typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
+
+		internal_pass<TypedPass<T>>(name, f, r, flags);
 	}
 
 

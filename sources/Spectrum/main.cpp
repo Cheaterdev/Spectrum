@@ -197,10 +197,10 @@ public:
 				combo->add_item("Normal")->on_click = [this](GUI::Elements::menu_list_element::ptr) {debug_view = ""; };
 
 
-				for (auto& e : last_graph->builder.resources)
+				for (auto& e : last_graph->builder.alloc_resources)
 				{
 
-					if (e.second.info->type != ::ResourceType::Texture) continue;
+					if (e.second.type != ::ResourceType::Texture) continue;
 
 					std::string str = e.first;
 					combo->add_item(str)->on_click = [this, str](GUI::Elements::menu_list_element::ptr) {debug_view = str; };
@@ -457,8 +457,8 @@ public:
 			{
 				GBufferViewDesc gbuffer;
 
-				ResourceHandler* hiz;
-				ResourceHandler* hiz_uav;
+				Handlers::Texture H(GBuffer_HiZ);
+				Handlers::Texture H(GBuffer_HiZ_UAV);
 
 
 			};
@@ -468,9 +468,8 @@ public:
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
 
-
-				data.hiz = builder.create_texture("GBuffer_HiZ", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil | ResourceFlags::Static);
-				data.hiz_uav = builder.create_texture("GBuffer_HiZ_UAV", size / 8, 1, DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT, ResourceFlags::UnorderedAccess);
+				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 				}, [this,&graph](GBufferData& data, FrameContext& _context) {
 
@@ -500,9 +499,9 @@ public:
 
 					gbuffer.rtv_table = RenderTargetTable(context->list->get_graphics(), { gbuffer.albedo, gbuffer.normals, gbuffer.specular, gbuffer.speed }, gbuffer.depth);
 
-					gbuffer.HalfBuffer.hiZ_depth = _context.get_texture(data.hiz);
+					gbuffer.HalfBuffer.hiZ_depth = *(data.GBuffer_HiZ);
 					gbuffer.HalfBuffer.hiZ_table = RenderTargetTable(context->list->get_graphics(), {  }, gbuffer.HalfBuffer.hiZ_depth);
-					gbuffer.HalfBuffer.hiZ_depth_uav = _context.get_texture(data.hiz_uav);
+					gbuffer.HalfBuffer.hiZ_depth_uav = *(data.GBuffer_HiZ_UAV);
 
 					context->g_buffer = &gbuffer;
 
@@ -537,10 +536,11 @@ public:
 
 		struct no
 		{
+			Handlers::Texture H(ResultTexture);
 
 		};
 		graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
-			graph.builder.create_texture("ResultTexture", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT);
+			builder.create(data.ResultTexture, { graph.frame_size, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 });
 			}, [](no& data, FrameContext& _context) {});
 
 
@@ -560,8 +560,9 @@ public:
 
 		struct debug_data
 		{
-			ResourceHandler* o_texture;
-			ResourceHandler* debug_texture;
+			Handlers::Texture H(swapchain);
+			
+			Handlers::Texture debug_tex;
 		};
 
 		//
@@ -573,13 +574,15 @@ public:
 		result_tex = promise->get_future();
 
 		graph.add_pass<debug_data>("DEBUG", [this, res_tex](debug_data& data, TaskBuilder& builder) {
-			data.o_texture = builder.need_texture("swapchain", ResourceFlags::RenderTarget);
-			data.debug_texture = builder.need_texture(res_tex);
+
+			data.debug_tex = Handlers::Texture(res_tex);
+			 builder.need(data.swapchain, ResourceFlags::RenderTarget);
+			builder.need(data.debug_tex, ResourceFlags::PixelRead);
 
 			}, [this, promise](debug_data& data, FrameContext& context) {
 
-				auto output_tex = context.get_texture(data.o_texture);
-				auto debug_tex = context.get_texture(data.debug_texture);
+				auto output_tex =(*data.swapchain);
+				auto debug_tex =(*data.debug_tex);
 
 				if (!debug_tex) return;
 
@@ -598,9 +601,9 @@ public:
 				PROFILE(L"FrameInfo");
 				Slots::FrameInfo frameInfo;
 				//// hack zone
-				auto sky = graph.builder.resources["sky_cubemap_filtered"];
-				if (sky.info && sky.info->resource)
-					frameInfo.GetSky() = sky.info->texture.texture—ube;
+				auto &sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
+				if (sky.resource)
+					frameInfo.GetSky() = sky.texture.texture—ube;
 				/////////
 				frameInfo.GetSunDir() = graph.sunDir;
 				frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
@@ -1179,7 +1182,8 @@ public:
 
 		struct pass_data
 		{
-			ResourceHandler* o_texture;
+			Handlers::Texture H(swapchain);
+
 		};
 
 
@@ -1201,10 +1205,10 @@ public:
 			auto ptr = get_ptr();
 		//	if(false)
 			graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder) {
-				data.o_texture = builder.need_texture("swapchain", ResourceFlags::Required);
+				builder.need(data.swapchain, ResourceFlags::Required);
 				}, [this, ptr](pass_data& data, FrameContext& context) {
 
-					context.get_list()->transition_present(context.get_texture(data.o_texture).resource.get());
+					context.get_list()->transition_present(data.swapchain->resource.get());
 
 					Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
 						run_on_ui([this, ptr]() {	Profiler::get().update(); });
@@ -1230,15 +1234,15 @@ public:
 			{
 
 			};
-			std::map<ResourceHandler*, ::FlowGraph::parameter::ptr> resource_stages;
+			std::map<ResourceAllocInfo*, ::FlowGraph::parameter::ptr> resource_stages;
 
 
-			for (auto &res : graph.builder.resources)
+			for (auto &res : graph.builder.alloc_resources)
 			{
 
-				if (res.second.info->passed)
+				if (res.second.passed)
 				{
-auto input = 				 	frameFlowGraph->register_input(res.second.info->name);
+auto input = 				 	frameFlowGraph->register_input(res.second.name);
 resource_stages[&res.second] = input;
 				}
 			}
@@ -1260,11 +1264,11 @@ resource_stages[&res.second] = input;
 
 				frameFlowGraph->register_node(node);
 
-				for (auto res : pass->used.resources)
+				for (auto& info : pass->used.resources)
 				{
-					if (pass->used.resource_creations.count(res) == 0) {
-						auto input = node->register_input(res->info->name);
-						auto prev = resource_stages[res];
+					if (pass->used.resource_creations.count(info) == 0) {
+						auto input = node->register_input(info->name);
+						auto prev = resource_stages[info];
 
 						if (prev)
 						{
@@ -1272,31 +1276,31 @@ resource_stages[&res.second] = input;
 
 							prev->link(input);
 						}
-					auto output = 	node->register_output(res->info->name);
+					auto output = 	node->register_output(info->name);
 
-					resource_stages[res] = output;
+					resource_stages[info] = output;
 					}
 				}
 
 
-				for (auto& res : pass->used.resources)
+				for (auto& info : pass->used.resources)
 				{
 
-					if (pass->used.resource_creations.count(res))
+					if (pass->used.resource_creations.count(info))
 					{
-						auto output = node->register_output(res->info->name);
-						resource_stages[res] = output;
+						auto output = node->register_output(info->name);
+						resource_stages[info] = output;
 					}
 				}
 			}
 
 
-			for (auto& res : graph.builder.resources)
+			for (auto& res : graph.builder.alloc_resources)
 			{
 
-				if (res.second.info->passed && check(res.second.info->flags & ResourceFlags::Required))
+				if (res.second.passed && check(res.second.flags & ResourceFlags::Required))
 				{
-					auto input = frameFlowGraph->register_output(res.second.info->name);
+					auto input = frameFlowGraph->register_output(res.second.name);
 					auto prev = resource_stages[&res.second];
 
 					if (prev)

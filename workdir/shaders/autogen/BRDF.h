@@ -14,7 +14,6 @@ ConstantBuffer<Pass_BRDF> pass_BRDF: register( b2, space4);
 const BRDF CreateBRDF()
 {
 	BRDF result;
-	Pass_BRDF pass;
 	result.uav.output = uav_4_0;
 	return result;
 }

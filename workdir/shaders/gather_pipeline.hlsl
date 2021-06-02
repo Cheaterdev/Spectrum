@@ -204,7 +204,7 @@ void CS_meshes_from_boxes(
     else
     {
     //    GetDebugInfo().Log(dispatchID.x, uint4(pip.GetMeshes_count()[0], id, 0, 6));
-        visible.Append(mesh_id);
+        pipi.GetVisibleMeshes().Append(mesh_id);
     }
         
 }

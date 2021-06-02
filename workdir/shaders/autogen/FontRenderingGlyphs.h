@@ -14,7 +14,6 @@ ConstantBuffer<Pass_FontRenderingGlyphs> pass_FontRenderingGlyphs: register( b2,
 const FontRenderingGlyphs CreateFontRenderingGlyphs()
 {
 	FontRenderingGlyphs result;
-	Pass_FontRenderingGlyphs pass;
 	result.srv.data = srv_6_0;
 	return result;
 }

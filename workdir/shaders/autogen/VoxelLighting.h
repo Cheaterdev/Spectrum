@@ -29,7 +29,6 @@ ConstantBuffer<Pass_VoxelLighting> pass_VoxelLighting: register( b2, space5);
 const VoxelLighting CreateVoxelLighting()
 {
 	VoxelLighting result;
-	Pass_VoxelLighting pass;
 	result.cb = cb_5_0;
 	result.srv.albedo = srv_5_0;
 	result.srv.normals = srv_5_1;

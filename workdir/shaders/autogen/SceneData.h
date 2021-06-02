@@ -23,7 +23,6 @@ ConstantBuffer<Pass_SceneData> pass_SceneData: register( b2, space1);
 const SceneData CreateSceneData()
 {
 	SceneData result;
-	Pass_SceneData pass;
 	result.srv.nodes = srv_1_0;
 	result.srv.vertexes = srv_1_1;
 	result.srv.meshes = srv_1_2;

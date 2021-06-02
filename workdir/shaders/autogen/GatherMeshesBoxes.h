@@ -20,7 +20,6 @@ ConstantBuffer<Pass_GatherMeshesBoxes> pass_GatherMeshesBoxes: register( b2, spa
 const GatherMeshesBoxes CreateGatherMeshesBoxes()
 {
 	GatherMeshesBoxes result;
-	Pass_GatherMeshesBoxes pass;
 	result.srv.input_meshes = srv_5_0;
 	result.srv.visible_boxes = srv_5_1;
 	result.uav.visibleMeshes = uav_5_0;

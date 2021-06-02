@@ -22,7 +22,6 @@ ConstantBuffer<Pass_VoxelBlur> pass_VoxelBlur: register( b2, space6);
 const VoxelBlur CreateVoxelBlur()
 {
 	VoxelBlur result;
-	Pass_VoxelBlur pass;
 	result.srv.noisy_output = srv_6_0;
 	result.srv.hit_and_pdf = srv_6_1;
 	result.srv.prev_result = srv_6_2;

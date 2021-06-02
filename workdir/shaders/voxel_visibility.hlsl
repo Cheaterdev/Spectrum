@@ -7,8 +7,8 @@ void CS(
     uint3 groupThreadID : SV_GroupThreadID,
     uint  groupIndex    : SV_GroupIndex)
 {
-    uint v = GetVoxelVisibility().GetVisibility()[dispatchID];
+    uint v = voxelVisibility_global.GetVisibility()[dispatchID];
 
     if(v>0)
-        GetVoxelVisibility().GetVisible_tiles().Append(uint4(dispatchID, 0));
+        voxelVisibility_global.GetVisible_tiles().Append(uint4(dispatchID, 0));
 }

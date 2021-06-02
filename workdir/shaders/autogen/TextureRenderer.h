@@ -14,7 +14,6 @@ ConstantBuffer<Pass_TextureRenderer> pass_TextureRenderer: register( b2, space4)
 const TextureRenderer CreateTextureRenderer()
 {
 	TextureRenderer result;
-	Pass_TextureRenderer pass;
 	result.srv.texture = srv_4_0;
 	return result;
 }

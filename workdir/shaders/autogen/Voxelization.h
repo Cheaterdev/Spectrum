@@ -19,7 +19,6 @@ ConstantBuffer<Pass_Voxelization> pass_Voxelization: register( b2, space6);
 const Voxelization CreateVoxelization()
 {
 	Voxelization result;
-	Pass_Voxelization pass;
 	result.cb = cb_6_0;
 	result.uav.albedo = uav_6_0;
 	result.uav.normals = uav_6_1;

@@ -105,8 +105,12 @@ void TaskBuilder::pass_texture(std::string name, Render::TextureView tex, Resour
 {
 	resources_names[name] = name;
 
-	ResourceHandler& handler = resources[name];
-	ResourceAllocInfo& info = alloc_resources[&handler];
+
+	ResourceAllocInfo& info = alloc_resources[name];
+	info.create_handler();
+
+	ResourceHandler& handler = info.get_handler();
+
 	info.texture = tex;
 	info.placed = false;
 	info.type = ResourceType::Texture;
@@ -118,11 +122,21 @@ void TaskBuilder::pass_texture(std::string name, Render::TextureView tex, Resour
 	handler.info = &info;
 
 	info.reset();
-	passed_resources.insert(&handler);
+	passed_resources.insert(&info);
 }
 void TaskBuilder::pass_texture(std::string name, Render::Texture::ptr tex, ResourceFlags flags)
 {
-	pass_texture(name, tex->create_view<Render::TextureView>(*current_frame), flags);
+	Handlers::Texture h(name);
+	//pass_texture(name, tex->create_view<Render::TextureView>(*current_frame), flags);
+ create(h, {ivec3(0,0,0), DXGI_FORMAT::DXGI_FORMAT_UNKNOWN, 0}, flags);
+ auto& info = *h.info;
+	info.passed = true;
+	info.placed = false;
+	info.type = ResourceType::Texture;
+	info.resource = tex;
+	passed_resources.insert(&info);
+
+	h.init_view(info, *current_frame);
 }
 
 void TaskBuilder::reset()
@@ -130,15 +144,16 @@ void TaskBuilder::reset()
 	current_pass = nullptr;
 	//	allocator.reset();
 
-	for (auto p : passed_resources)
+	for (auto& info : passed_resources)
 	{
-		p->info->resource = nullptr;
-		p->info->buffer = Render::BufferView();
-		p->info->texture = Render::TextureView();
-		p->info->passed = false;
-		p->info->valid_from = nullptr;
-		p->info->valid_to = nullptr;
-		p->info->valid_to_start = nullptr;
+		info->resource = nullptr;
+		info->buffer = Render::BufferView();
+		info->texture = Render::TextureView();
+		info->view.reset();
+		info->passed = false;
+		info->valid_from = nullptr;
+		info->valid_to = nullptr;
+		info->valid_to_start = nullptr;
 	}
 	passed_resources.clear();
 	//resources.clear();
@@ -174,22 +189,22 @@ Render::CommandList::ptr& FrameContext::get_list()
 
 		list = frame->start_list(pass->name, type);
 
-		for (auto handle : pass->used.resource_creations)
+		for (auto info : pass->used.resource_creations)
 		{
-			if (!handle->info->alloc_ptr.handle) continue;
+			if (!info->alloc_ptr.handle) continue;
 
-			if (!handle->info->enabled)
+			if (!info->enabled)
 				continue;
 			//if (!handle->info->texture) continue;
 			{
-				auto tex = get_texture(handle);
+				auto &tex = info->texture;
 
 				if (tex)
 					list->transition(nullptr, tex.resource.get());
 
 			}
 			{
-				auto tex = get_buffer(handle);
+				auto& tex = info->buffer;
 
 				if (tex)
 					list->transition(nullptr, tex.resource.get());
@@ -281,12 +296,10 @@ void FrameGraph::setup()
 
 	}
 
-	std::function<void(ResourceHandler*, int)> process_resource;
+	std::function<void(ResourceAllocInfo&, int)> process_resource;
 
-	process_resource = [&, this](ResourceHandler* handler, int pass_id) {
-
-		handler->info->enabled = true;
-		ResourceAllocInfo& info = *handler->info;
+	process_resource = [&, this](ResourceAllocInfo& info, int pass_id) {
+		info.enabled = true;
 
 		for(auto &s: info.states)
 		{
@@ -300,28 +313,28 @@ void FrameGraph::setup()
 				if(!check(info.flags&ResourceFlags::Static) && pass->id> pass_id) continue;
 				pass->enabled = true;
 
-				for (auto res : pass->used.resources)
+				for (auto &info : pass->used.resources)
 				{
-					process_resource(res, pass->id);
+					process_resource(*info, pass->id);
 				}
 			}
 		}
 		
 	};
 
-	for (auto res : builder.resources)
+	for (auto res : builder.alloc_resources)
 	{
-		if (check(res.second.info->flags & ResourceFlags::Required))
-			process_resource(&res.second, (int)passes.size());
+		if (check(res.second.flags & ResourceFlags::Required))
+			process_resource(res.second, (int)passes.size());
 	}
 
 
 	for (auto pass : required_passes)
 	{
 		pass->enabled = true;
-		for (auto res : pass->used.resources)
+		for (auto &info : pass->used.resources)
 		{
-			process_resource(res, pass->id);
+			process_resource(*info, pass->id);
 		}
 	}
 	
@@ -496,10 +509,8 @@ void FrameGraph::setup()
 
 			if (sync_to_compute)
 			{
-				for (auto [handler, flags] : last_compute->used.resource_flags)
-				{
-					auto info = handler->info;
-			
+				for (auto &info : last_compute->used.resources)
+				{			
 					if (info->valid_to == last_compute)
 					{
 						info->valid_to = pass;
@@ -510,9 +521,8 @@ void FrameGraph::setup()
 
 			if (sync_to_graphics)
 			{
-				for (auto [handler, flags] : last_graphics->used.resource_flags)
+				for (auto& info : last_graphics->used.resources)
 				{
-					auto info = handler->info;
 
 					if (info->valid_to == last_graphics)
 					{
@@ -521,12 +531,10 @@ void FrameGraph::setup()
 				}
 			}
 
-			if(pass->wait_pass)
+			if(pass->wait_pass&& last_compute)
 			{
-				for (auto [handler, flags] : pass->wait_pass->used.resource_flags)
+				for (auto& info : last_compute->used.resources)
 				{
-					auto info = handler->info;
-
 					if (info->valid_to == pass->wait_pass)
 					{
 						info->valid_to = pass;
@@ -876,141 +884,34 @@ void FrameGraph::reset()
 	pre_run.clear();
 }
 
-ResourceHandler* TaskBuilder::create_texture(std::string name, ivec2 size, UINT array_count, DXGI_FORMAT format, ResourceFlags flags)
+
+
+void TaskBuilder::init(ResourceAllocInfo& info, std::string name, ResourceFlags flags)
 {
-	resources_names[name] = name;
-
-	ResourceHandler& handler = resources[name];
-	ResourceAllocInfo& info = alloc_resources[&handler];
-	handler.info = &info;
-
 	info.reset();
-
-	auto desc = TextureDesc{ ivec3(size, 1), format, array_count };
-	info.is_new = false;
-	info.need_recreate = info.desc != desc;
-	info.type = ResourceType::Texture;
-	info.desc = desc;
-	info.flags = flags;/// | ResourceFlags::Static;
-	current_pass->used.resources.insert(&handler);
-	current_pass->used.resource_creations.insert(&handler);
-	current_pass->used.resource_flags[&handler] = flags;
-
-	info.handler = &handler;
-	info.name = name;
-
-	info.frame_id = current_frame->get_frame();
-	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
-
-	info.add_pass(current_pass, flags);
-	return &handler;
-}
-
-
-ResourceHandler* TaskBuilder::recreate_texture(std::string name, ResourceFlags flags)
-{
-
-	ResourceHandler& old_handler = resources[name];
-
-	std::string new_name = resources_names[name] + "recreated";
-	resources_names[name] = new_name;
-
-	name = new_name;
-
-	ResourceHandler& handler = resources[name];
-	ResourceAllocInfo& info = alloc_resources[&handler];
-	handler.info = &info;
-
-	info.reset();
-	
-	auto desc = old_handler.info->desc;
-	info.is_new = false;
-	info.need_recreate = info.desc != desc;
-	info.type = ResourceType::Texture;
-	info.desc = desc;
-	info.flags = flags;// | ResourceFlags::Static;
-	current_pass->used.resources.insert(&handler);
-	current_pass->used.resource_creations.insert(&handler);
-	current_pass->used.resource_flags[&handler] = flags;
-	info.handler = &handler;
-	info.name = name;
-
-	info.frame_id = current_frame->get_frame();
-	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
-	info.orig = old_handler.info;
-
-	info.add_pass(current_pass, flags);
-	return &handler;
-}
-ResourceHandler* TaskBuilder::need_texture(std::string name, ResourceFlags flags)
-{
-	name = resources_names[name];
-
-	ResourceHandler& handler = resources[name];
-	current_pass->used.resources.insert(&handler);
-	current_pass->used.resource_flags[&handler] = flags;
-
-	ResourceAllocInfo& info = *handler.info;
-	info.is_new = false;
-	info.flags = info.flags | flags;
-	info.handler = &handler;
-
-
-	info.add_pass(current_pass, flags);
-	return &handler;
-}
-
-
-ResourceHandler* TaskBuilder::create_buffer(std::string name, UINT64 size, ResourceFlags flags)
-{
-	resources_names[name] = name;
-
-	size = Math::AlignUp(size, 256); // TODO: make in GAPI
-	ResourceHandler& handler = resources[name];
-	ResourceAllocInfo& info = alloc_resources[&handler];
-	handler.info = &info;
-	info.reset();
-	
-	auto desc = BufferDesc{ size };
-
-	info.need_recreate = info.desc != desc;
-	info.type = ResourceType::Buffer;
-	info.desc = desc;
 	info.flags = flags;
-	current_pass->used.resources.insert(&handler);
-	current_pass->used.resource_creations.insert(&handler);
-	current_pass->used.resource_flags[&handler] = flags;
 	info.name = name;
-	info.handler = &handler;
 	info.frame_id = current_frame->get_frame();
 	info.is_new = false;
 	info.valid_from = info.valid_to = info.valid_to_start = nullptr;
-	
-	info.add_pass(current_pass, flags);
 
-	return &handler;
+	if (current_pass) {
+		current_pass->used.resources.insert(&info);
+		current_pass->used.resource_creations.insert(&info);
+		current_pass->used.resource_flags[&info] = flags;
+		info.add_pass(current_pass, flags);
+	}
 }
 
-
-ResourceHandler* TaskBuilder::need_buffer(std::string name, ResourceFlags flags)
+void TaskBuilder::init_pass(ResourceAllocInfo& info, ResourceFlags flags)
 {
-	name = resources_names[name];
-
-	ResourceHandler& handler = resources[name];
-	current_pass->used.resources.insert(&handler);
-	current_pass->used.resource_flags[&handler] = flags;
-
-	ResourceAllocInfo& info = *handler.info;
-
-	info.flags = info.flags | flags;
-	info.handler = &handler;
+	current_pass->used.resources.insert(&info);
+	current_pass->used.resource_flags[&info] = flags;
 	info.is_new = false;
-
+	info.flags = info.flags | flags;
 	info.add_pass(current_pass, flags);
 
-	return &handler;
 }
-
 
 
 void TaskBuilder::create_resources()
@@ -1232,6 +1133,7 @@ void TaskBuilder::create_resources()
 				info->buffer = info->resource->create_view<Render::BufferView>(*current_frame);
 			}
 
+			info->handler->init_view(*info, *current_frame);
 			id++;
 		}
 	}

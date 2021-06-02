@@ -13,7 +13,6 @@ ConstantBuffer<Pass_FlowGraph> pass_FlowGraph: register( b2, space5);
 const FlowGraph CreateFlowGraph()
 {
 	FlowGraph result;
-	Pass_FlowGraph pass;
 	result.cb = cb_5_0;
 	return result;
 }

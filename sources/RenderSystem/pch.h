@@ -85,6 +85,7 @@ struct closesthit_identifier
 {
 	shader_identifier identifier;
 	D3D12_GPU_VIRTUAL_ADDRESS mat_buffer;
+	//D3D12_GPU_VIRTUAL_ADDRESS mat_buffer_offsets;
 };
 
 

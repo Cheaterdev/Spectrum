@@ -13,7 +13,6 @@ ConstantBuffer<Pass_PSSMConstants> pass_PSSMConstants: register( b2, space4);
 const PSSMConstants CreatePSSMConstants()
 {
 	PSSMConstants result;
-	Pass_PSSMConstants pass;
 	result.cb = cb_4_0;
 	return result;
 }

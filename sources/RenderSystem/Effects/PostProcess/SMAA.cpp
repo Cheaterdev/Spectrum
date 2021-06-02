@@ -13,31 +13,23 @@ void SMAA::generate(FrameGraph& graph)
 
 	struct SMAAData
 	{
-		ResourceHandler* source_tex;
+		Handlers::Texture H(ResultTexture);
+		Handlers::Texture H(SMAA_edges);
+		Handlers::Texture H(SMAA_blend);
 
-		ResourceHandler* target_tex;
-
-
-		ResourceHandler* edges;
-		ResourceHandler* blend;
-
-
+		Handlers::Texture ResultTextureNew = ResultTexture;
 	};
 
 	graph.add_pass<SMAAData>("SMAA", [this, &graph](SMAAData& data, TaskBuilder& builder) {
-		data.source_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
-		data.edges = builder.create_texture("SMAA_edges", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM, ResourceFlags::RenderTarget);
-		data.blend = builder.create_texture("SMAA_blend", graph.frame_size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, ResourceFlags::RenderTarget);
+		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 
-		data.target_tex = builder.recreate_texture("ResultTexture", ResourceFlags::RenderTarget);
+		builder.create(data.SMAA_edges, { ivec3(graph.frame_size, 1), DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.SMAA_blend, { ivec3(graph.frame_size, 1),  DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,1 } ,ResourceFlags::RenderTarget);
+
+		 builder.recreate(data.ResultTextureNew, ResourceFlags::RenderTarget);
 
 		}, [this, &graph](SMAAData& data, FrameContext& _context) {
-			auto edges = _context.get_texture(data.edges);
-			auto blend = _context.get_texture(data.blend);
-			auto target_tex = _context.get_texture(data.target_tex);
-			auto source_tex = _context.get_texture(data.source_tex);
-
-			auto& list = *_context.get_list();
+					auto& list = *_context.get_list();
 
 			auto& graphics = list.get_graphics();
 
@@ -48,16 +40,16 @@ void SMAA::generate(FrameGraph& graph)
 
 			graphics.set_pipeline(GetPSO<PSOS::EdgeDetect>());
 
-			graphics.set_viewport(edges.get_viewport());
-			graphics.set_scissor(edges.get_scissor());
-			graphics.set_rtv(1, edges.get_rtv(), Render::Handle());
-			graphics.get_base().clear_rtv(edges.get_rtv());
-			graphics.get_base().clear_rtv(blend.get_rtv());
+			graphics.set_viewport(data.SMAA_edges->get_viewport());
+			graphics.set_scissor(data.SMAA_edges->get_scissor());
+			graphics.set_rtv(1, data.SMAA_edges->get_rtv(), Render::Handle());
+			graphics.get_base().clear_rtv(data.SMAA_edges->get_rtv());
+			graphics.get_base().clear_rtv(data.SMAA_blend->get_rtv());
 
 			{
 
 				Slots::SMAA_Global slot_global;
-				slot_global.GetColorTex() = source_tex.texture2D;
+				slot_global.GetColorTex() = data.ResultTexture->texture2D;
 				slot_global.GetSubsampleIndices() = float4(0,0,0,0);
 				slot_global.GetSMAA_RT_METRICS() = float4(1.0f / size.x, 1.0f / size.y, size);
 
@@ -72,12 +64,12 @@ void SMAA::generate(FrameGraph& graph)
 				Slots::SMAA_Weights slot_edges;
 				slot_edges.GetSearchTex() = search_tex->texture_2d()->texture2D;
 				slot_edges.GetAreaTex() = area_tex->texture_2d()->texture2D;
-				slot_edges.GetEdgesTex() = edges.texture2D;
+				slot_edges.GetEdgesTex() = data.SMAA_edges->texture2D;
 
 				slot_edges.set(graphics);
 			}
 			graphics.set_pipeline(GetPSO<PSOS::BlendWeight>());
-			graphics.set_rtv(1, blend.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, data.SMAA_blend->get_rtv(), Render::Handle());
 			graphics.draw(4);
 
 
@@ -86,13 +78,13 @@ void SMAA::generate(FrameGraph& graph)
 
 				Slots::SMAA_Blend slot_blend;
 
-				slot_blend.GetBlendTex() = blend.texture2D;
+				slot_blend.GetBlendTex() = data.SMAA_blend->texture2D;
 
 				slot_blend.set(graphics);
 			}
 
 			graphics.set_pipeline(GetPSO<PSOS::Blending>());
-			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, data.ResultTextureNew->get_rtv(), Render::Handle());
 			graphics.draw(4);
 
 		});

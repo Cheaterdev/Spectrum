@@ -293,6 +293,9 @@ namespace DX12
                 if constexpr (HasCB<T>)
                     desc.remove(T::Slot::CB_ID);
 
+    //            if constexpr (HasSRV<T> || HasSMP<T> || HasUAV<T>)
+    //                desc.remove(T::Slot::CB_ID + 1);
+
             }
 
 

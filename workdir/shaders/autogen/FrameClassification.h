@@ -18,7 +18,6 @@ ConstantBuffer<Pass_FrameClassification> pass_FrameClassification: register( b2,
 const FrameClassification CreateFrameClassification()
 {
 	FrameClassification result;
-	Pass_FrameClassification pass;
 	result.srv.frames = srv_6_0;
 	result.uav.hi = uav_6_0;
 	result.uav.low = uav_6_1;

@@ -19,7 +19,6 @@ ConstantBuffer<Pass_VoxelCopy> pass_VoxelCopy: register( b2, space5);
 const VoxelCopy CreateVoxelCopy()
 {
 	VoxelCopy result;
-	Pass_VoxelCopy pass;
 	result.cb = cb_5_0;
 	result.srv.Source = srv_5_0;
 	result.uav.Target = uav_5_0;

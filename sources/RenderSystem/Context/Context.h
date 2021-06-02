@@ -342,35 +342,36 @@ public:
 class GBufferViewDesc
 {
 public:
-	ResourceHandler* albedo = nullptr;
-	ResourceHandler* normals = nullptr;
-	ResourceHandler* depth = nullptr;
-	ResourceHandler* specular = nullptr;
-	ResourceHandler* motion = nullptr;
+    Handlers::Texture H(GBuffer_Albedo);
+    Handlers::Texture H(GBuffer_Normals);
+    Handlers::Texture H(GBuffer_Depth);
+    Handlers::Texture H(GBuffer_Specular);
+    Handlers::Texture H(GBuffer_Speed);
+    Handlers::Texture H(GBuffer_DepthMips);
+    Handlers::Texture H(GBuffer_DepthPrev);
 
-	ResourceHandler* quality = nullptr;
-	ResourceHandler* depth_mips = nullptr;
+    Handlers::Texture H(GBuffer_Quality);
+    Handlers::Texture H(GBuffer_TempColor);
 
-	ResourceHandler* depth_prev = nullptr;
 
 public:
 
 	void create(ivec2 size, TaskBuilder& builder)
 	{
-		albedo = builder.create_texture("GBuffer_Albedo", size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, ResourceFlags::RenderTarget);
-		normals = builder.create_texture("GBuffer_Normals", size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, ResourceFlags::RenderTarget);
-		depth = builder.create_texture("GBuffer_Depth", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::DepthStencil);
-		specular = builder.create_texture("GBuffer_Specular", size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, ResourceFlags::RenderTarget);
-		motion = builder.create_texture("GBuffer_Speed", size, 1, DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Albedo, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,1}, ResourceFlags::RenderTarget);
+	 builder.create(GBuffer_Normals, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,1}, ResourceFlags::RenderTarget);
+		 builder.create(GBuffer_Depth, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS,1}, ResourceFlags::DepthStencil);
+		builder.create(GBuffer_Specular, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,1}, ResourceFlags::RenderTarget);
+		 builder.create(GBuffer_Speed, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT,1}, ResourceFlags::RenderTarget);
 
 
-        depth_mips = builder.create_texture("GBuffer_DepthMips", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::RenderTarget | ResourceFlags::Static);
-        depth_prev = builder.create_texture("GBuffer_DepthPrev", size, 1, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, ResourceFlags::RenderTarget | ResourceFlags::Static);
+       builder.create(GBuffer_DepthMips, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS,1}, ResourceFlags::RenderTarget | ResourceFlags::Static);
+        builder.create(GBuffer_DepthPrev, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS,1}, ResourceFlags::RenderTarget | ResourceFlags::Static);
 	}
 	
 	void create_quality(ivec2 size, TaskBuilder& builder)
 	{
-		quality = builder.create_texture("GBuffer_Quality", size, 1, DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT, ResourceFlags::DepthStencil);
+		 builder.create(GBuffer_Quality, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT,1}, ResourceFlags::DepthStencil);
 	}
    
 	void create_mips(ivec2 size, TaskBuilder& builder)
@@ -381,20 +382,20 @@ public:
 
 	auto create_temp_color(ivec2 size, TaskBuilder& builder)
 	{
-		return builder.create_texture("GBuffer_TempColor", size, 1, DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM, ResourceFlags::RenderTarget);
+		return builder.create(GBuffer_TempColor, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM,1}, ResourceFlags::RenderTarget);
 	}
 
     void need(TaskBuilder& builder, bool need_quality = false, bool need_mips = false)
 	{
-		albedo = builder.need_texture("GBuffer_Albedo", ResourceFlags::PixelRead);
-		normals = builder.need_texture("GBuffer_Normals", ResourceFlags::PixelRead);
-		depth = builder.need_texture("GBuffer_Depth", ResourceFlags::PixelRead);
-		specular = builder.need_texture("GBuffer_Specular", ResourceFlags::PixelRead);
-		motion = builder.need_texture("GBuffer_Speed", ResourceFlags::PixelRead);
+		builder.need(GBuffer_Albedo, ResourceFlags::PixelRead);
+		 builder.need(GBuffer_Normals,ResourceFlags::PixelRead);
+		builder.need(GBuffer_Depth, ResourceFlags::PixelRead);
+		 builder.need(GBuffer_Specular, ResourceFlags::PixelRead);
+		 builder.need(GBuffer_Speed, ResourceFlags::PixelRead);
 
-        depth_prev = builder.need_texture("GBuffer_DepthPrev", ResourceFlags::PixelRead);
-        if(need_quality) quality = builder.need_texture("GBuffer_Quality", ResourceFlags::DSRead);
-		depth_mips = builder.need_texture("GBuffer_DepthMips", ResourceFlags::None);
+      builder.need(GBuffer_DepthPrev, ResourceFlags::PixelRead);
+        if(need_quality) builder.need(GBuffer_Quality, ResourceFlags::DSRead);
+		 builder.need(GBuffer_DepthMips, ResourceFlags::None);
 
 	}
 
@@ -405,17 +406,17 @@ public:
 	{
 		GBuffer result;
 
-		result.albedo = context.get_texture(albedo);
-		result.normals = context.get_texture(normals);
-		result.depth = context.get_texture(depth);
-		result.specular = context.get_texture(specular);
-		result.speed = context.get_texture(motion);
+        result.albedo = *GBuffer_Albedo;
+		result.normals = *GBuffer_Normals;
+		result.depth = *GBuffer_Depth;
+		result.specular = *GBuffer_Specular;
+		result.speed =  *GBuffer_Speed;
 
 
-		result.depth_prev_mips = context.get_texture(depth_prev);
+		result.depth_prev_mips = *GBuffer_DepthPrev;
 
-        if(quality)	result.quality = context.get_texture(quality);
-		if (depth_mips)	result.depth_mips = context.get_texture(depth_mips);
+        if(GBuffer_Quality)	result.quality = *GBuffer_Quality;
+		if (GBuffer_DepthMips)	result.depth_mips = *GBuffer_DepthMips;
 
 		return result;
 	}

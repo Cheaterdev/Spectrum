@@ -13,7 +13,6 @@ ConstantBuffer<Pass_Instance> pass_Instance: register( b2, space6);
 const Instance CreateInstance()
 {
 	Instance result;
-	Pass_Instance pass;
 	result.cb = cb_6_0;
 	return result;
 }

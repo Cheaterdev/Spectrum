@@ -14,7 +14,6 @@ ConstantBuffer<Pass_SMAA_Blend> pass_SMAA_Blend: register( b2, space5);
 const SMAA_Blend CreateSMAA_Blend()
 {
 	SMAA_Blend result;
-	Pass_SMAA_Blend pass;
 	result.srv.blendTex = srv_5_0;
 	return result;
 }

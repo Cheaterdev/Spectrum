@@ -20,7 +20,6 @@ ConstantBuffer<Pass_FrameClassificationInitDispatch> pass_FrameClassificationIni
 const FrameClassificationInitDispatch CreateFrameClassificationInitDispatch()
 {
 	FrameClassificationInitDispatch result;
-	Pass_FrameClassificationInitDispatch pass;
 	result.srv.hi_counter = srv_6_0;
 	result.srv.low_counter = srv_6_1;
 	result.uav.hi_dispatch_data = uav_6_0;

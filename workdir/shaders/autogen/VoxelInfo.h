@@ -13,7 +13,6 @@ ConstantBuffer<Pass_VoxelInfo> pass_VoxelInfo: register( b2, space4);
 const VoxelInfo CreateVoxelInfo()
 {
 	VoxelInfo result;
-	Pass_VoxelInfo pass;
 	result.cb = cb_4_0;
 	return result;
 }

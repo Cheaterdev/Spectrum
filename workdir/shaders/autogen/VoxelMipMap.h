@@ -19,7 +19,6 @@ ConstantBuffer<Pass_VoxelMipMap> pass_VoxelMipMap: register( b2, space5);
 const VoxelMipMap CreateVoxelMipMap()
 {
 	VoxelMipMap result;
-	Pass_VoxelMipMap pass;
 	result.cb = cb_5_0;
 	result.srv.SrcMip = srv_5_0;
 	result.uav.OutMips = uav_5_0;

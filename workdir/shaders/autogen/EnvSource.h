@@ -14,7 +14,6 @@ ConstantBuffer<Pass_EnvSource> pass_EnvSource: register( b2, space6);
 const EnvSource CreateEnvSource()
 {
 	EnvSource result;
-	Pass_EnvSource pass;
 	result.srv.sourceTex = srv_6_0;
 	return result;
 }

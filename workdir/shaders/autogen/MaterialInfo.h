@@ -13,7 +13,6 @@ ConstantBuffer<Pass_MaterialInfo> pass_MaterialInfo: register( b2, space8);
 const MaterialInfo CreateMaterialInfo()
 {
 	MaterialInfo result;
-	Pass_MaterialInfo pass;
 	result.cb = cb_8_0;
 	return result;
 }

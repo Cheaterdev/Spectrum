@@ -13,7 +13,6 @@ ConstantBuffer<Pass_Color> pass_Color: register( b2, space4);
 const Color CreateColor()
 {
 	Color result;
-	Pass_Color pass;
 	result.cb = cb_4_0;
 	return result;
 }

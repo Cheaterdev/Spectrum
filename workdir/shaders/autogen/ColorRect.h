@@ -13,7 +13,6 @@ ConstantBuffer<Pass_ColorRect> pass_ColorRect: register( b2, space4);
 const ColorRect CreateColorRect()
 {
 	ColorRect result;
-	Pass_ColorRect pass;
 	result.cb = cb_4_0;
 	return result;
 }

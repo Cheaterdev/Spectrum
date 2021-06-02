@@ -22,7 +22,6 @@ ConstantBuffer<Pass_GBuffer> pass_GBuffer: register( b2, space6);
 const GBuffer CreateGBuffer()
 {
 	GBuffer result;
-	Pass_GBuffer pass;
 	result.srv.albedo = srv_6_0;
 	result.srv.normals = srv_6_1;
 	result.srv.specular = srv_6_2;

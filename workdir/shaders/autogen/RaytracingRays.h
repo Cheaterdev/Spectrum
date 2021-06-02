@@ -25,7 +25,6 @@ ConstantBuffer<Pass_RaytracingRays> pass_RaytracingRays: register( b2, space6);
 const RaytracingRays CreateRaytracingRays()
 {
 	RaytracingRays result;
-	Pass_RaytracingRays pass;
 	result.cb = cb_6_0;
 	result.uav.output = uav_6_0;
 	result.srv.gbuffer.albedo = srv_6_0;

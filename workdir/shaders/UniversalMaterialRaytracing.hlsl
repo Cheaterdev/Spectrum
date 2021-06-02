@@ -10,7 +10,7 @@
 #include "autogen/VoxelScreen.h"
 #include "autogen/VoxelInfo.h"
 
-
+#include "Common.hlsl"
 //#define REFRACTION
 #define Sampler linearSampler
 #define GetMaterialInfo CreateMaterialInfo
@@ -26,13 +26,6 @@ float4 get_voxel(float3 pos, float level)
 }
 
 
-
-
-float3 depth_to_wpos(float d, float2 tc, matrix mat)
-{
-	float4 P = mul(mat, float4(tc * float2(2, -2) + float2(-1, 1), d, 1));
-	return P.xyz / P.w;
-}
 
 
 Texture2D get_texture(uint i)
@@ -56,14 +49,6 @@ float4 sample(Texture2D tex, SamplerState s, float2 tc, float lod)
 #endif 
 
 void COMPILED_FUNC(in float3 a, in float2 b, out float4 c, out float d, out float e, out float4 f, out float4 g, float lod);
-
-
-float calc_fresnel(float k0, float3 n, float3 v)
-{
-	float ndv = saturate(dot(n, -v));
-	return k0 + (1 - k0) * pow(1 - ndv, 5);
-	return k0 + (1 - k0) * (1 - pow(dot(n, -v), 1));
-}
 
 
 
@@ -123,7 +108,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	RayPayload payload2 = payload.propagate();
 
 	float shadow = 1;
-/*	if (payload2.recursion <= 1)
+	if (payload2.recursion <= 1)
 	{
 
 
@@ -131,24 +116,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
 		for (int i = 0; i < samples; i++)
 		{
-			float time = 0;// frame.GetTime().y + i;
-			float sini = sin(time * 220 + float(t.v.tc.x));
-			float cosi = cos(time * 220 + float(t.v.tc.y));
-			float rand = rnd(float2(sini, cosi));
-
-
-			float rcos = cos(6.14 * rand);
-			float rsin = sin(6.14 * rand);
-			float rand2 = rnd(float2(cosi, sini));
-
-			float tt = 0;// 0.1 * pow(rand2, 1.0 / 3.0);
-
-			float3 right = rsin * tt * normalize(cross(lightDir, float3(0, 1, 0.1)));
-			float3 tangent = rcos * tt * normalize(cross(right, lightDir));
-
-			float3 dir = normalize(lightDir + right + tangent);
-
-
+			float3 dir = GetRandomDir(t.v.tc, lightDir, 0, i);
 
 			ShadowPayload payload_shadow = { false };
 
@@ -164,7 +132,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 		}
 		shadow = 1.0 - hit_rate / samples;
-	}*/
+	}
 	/*
 #ifdef REFRACTION
 
@@ -211,7 +179,12 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 
 	float3 reflected = payload2.color.xyz;*/
-//	payload.color = float4(shadow* color.xyz,1);// float4(lerp(my_color, reflected, fresnel), 1);
+
+	float3 my_color = color * max(0.01, (shadow)*saturate(dot(t.v.normal, lightDir)));
+
+
+
+	payload.color = float4(my_color,1);// float4(lerp(my_color, reflected, fresnel), 1);
 
 
 	float3 voxel_min = CreateVoxelInfo().GetMin().xyz;
@@ -223,8 +196,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	//angle = min(angle, max_angle);
 	float3 origin = saturate(((t.v.pos - (voxel_min)) / voxel_size));
 
-	float4 voxel = get_voxel(origin,0);
-	payload.color = float4(voxel.xyz/ (voxel.w+0.001) + glow, 1);
+//	float4 voxel = get_voxel(origin,0);
+//	payload.color = float4(voxel.xyz/ (voxel.w+0.001) + glow, 1);
 
 
 	payload.dist = RayTCurrent();

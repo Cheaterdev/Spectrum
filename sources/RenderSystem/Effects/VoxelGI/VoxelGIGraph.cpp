@@ -14,24 +14,20 @@ public:
 		struct DownsampleData
 		{
 			GBufferViewDesc gbuffer;
-
-			ResourceHandler* temp;
 		};
 
 		auto size = graph.frame_size;
 
 		graph.add_pass<DownsampleData>("GBufferDownsampler", [this, size](DownsampleData& data, TaskBuilder& builder) {
 
-			data.gbuffer.need(builder, false, true);
-			data.gbuffer.quality = builder.need_texture("GBuffer_Quality", ResourceFlags::DepthStencil);
-			//	data.gbuffer.create_quality(size, builder);
-			data.temp = data.gbuffer.create_temp_color(size, builder);
+			data.gbuffer.need(builder, true, true);
+			data.gbuffer.create_temp_color(size, builder);
 
 
 			}, [this, &graph](DownsampleData& data, FrameContext& _context) {
 
 				auto& command_list = _context.get_list();
-				auto tempColor = _context.get_texture(data.temp);
+				auto tempColor = *data.gbuffer.GBuffer_TempColor;
 				auto gbuffer = data.gbuffer.actualize(_context);
 				auto& graphics = command_list->get_graphics();
 
@@ -386,31 +382,31 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, FrameG
 
 void VoxelGI::debug(FrameGraph& graph)
 {
-	struct VoxelDebug
+	struct VoxelDebugData
 	{
 		GBufferViewDesc gbuffer;
-		ResourceHandler* target_tex;
-		ResourceHandler* voxel_lighted;
+		Handlers::Texture H(VoxelDebug);
+		Handlers::Texture H(VoxelLighted);
 
 	};
 
 	auto size = graph.frame_size;
 
-	graph.add_pass<VoxelDebug>("VoxelDebug", [this, size](VoxelDebug& data, TaskBuilder& builder) {
+	graph.add_pass<VoxelDebugData>("VoxelDebug", [this, size](VoxelDebugData& data, TaskBuilder& builder) {
 
-		data.target_tex = builder.create_texture("VoxelDebug", size, 1, DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::RenderTarget);
-		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::ComputeRead);
+		 builder.create(data.VoxelDebug, { ivec3(size,1),  DXGI_FORMAT_R16G16B16A16_FLOAT,1 }, ResourceFlags::RenderTarget);
+		 builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 
 		data.gbuffer.need(builder);
 
-		}, [this, &graph](VoxelDebug& data, FrameContext& _context) {
+		}, [this, &graph](VoxelDebugData& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
 
-			auto voxel_lighted = _context.get_texture(data.voxel_lighted);
+			auto voxel_lighted = *data.VoxelLighted;
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
-			auto target_tex = _context.get_texture(data.target_tex);
+			auto target_tex = *data.VoxelDebug;
 			auto gbuffer = data.gbuffer.actualize(_context);
 
 			context->current_time = 0;
@@ -460,19 +456,14 @@ void VoxelGI::screen(FrameGraph& graph)
 	struct Screen
 	{
 		GBufferViewDesc gbuffer;
-		ResourceHandler* target_tex;
+		Handlers::Texture H(ResultTexture);
 
-		ResourceHandler* frames_count;
-		//ResourceHandler* frames_count1;
+		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture H(VoxelFramesCount);
+		Handlers::Texture H(VoxelIndirectNoise);
+		Handlers::Texture H(VoxelIndirectFiltered);
 
-
-		ResourceHandler* gi_filtered;
-
-		ResourceHandler* sky_cubemap_filtered;
-
-		ResourceHandler* voxel_lighted;
-
-		ResourceHandler* noisy_output;
+		Handlers::Texture H(sky_cubemap_filtered);
 	};
 
 	auto size = graph.frame_size;
@@ -489,26 +480,26 @@ void VoxelGI::screen(FrameGraph& graph)
 
 
 		data.gbuffer.need(builder, false);
-		data.frames_count = builder.create_texture("frames_count", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16_FLOAT, ResourceFlags::UnorderedAccess);
-		data.noisy_output = builder.create_texture("noise", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess);
-		data.gi_filtered = builder.create_texture("gi_filtered", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
-		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::ComputeRead);
+		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,1),  DXGI_FORMAT::DXGI_FORMAT_R16_FLOAT, 1 }, ResourceFlags::UnorderedAccess);
+		 builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT , 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
+		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 		}, [this, &graph](Screen& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
 
 			bool use_rtx = Device::get().is_rtx_supported() && this->use_rtx;
 			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
-			auto noisy_output = _context.get_texture(data.noisy_output);
-			auto gi_filtered = _context.get_texture(data.gi_filtered);
-			auto frames_count = _context.get_texture(data.frames_count);
+			auto sky_cubemap_filtered =*data.sky_cubemap_filtered;
+			auto noisy_output = *data.VoxelIndirectNoise;
+			auto gi_filtered = *data.VoxelIndirectFiltered;
+			auto frames_count = *data.VoxelFramesCount;
 
 			auto size = noisy_output.get_size();
 
 
-			if (data.gi_filtered->is_new())
+			if (data.VoxelIndirectFiltered.is_new())
 			{
 				command_list->clear_uav(gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
 				command_list->clear_uav(noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
@@ -665,25 +656,25 @@ void VoxelGI::screen(FrameGraph& graph)
 
 	graph.add_pass<Screen>("VoxelCombine", [this, size](Screen& data, TaskBuilder& builder) {
 
-		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
+		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
-		data.gi_filtered = builder.need_texture("gi_filtered", ResourceFlags::UnorderedAccess);
-		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
-		data.frames_count = builder.need_texture("frames_count", ResourceFlags::UnorderedAccess);
-		data.noisy_output = builder.need_texture("noise", ResourceFlags::ComputeRead);
+	 builder.need(data.VoxelIndirectFiltered, ResourceFlags::UnorderedAccess);
+	 builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
+		builder.need(data.VoxelFramesCount, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelIndirectNoise, ResourceFlags::ComputeRead);
 		}, [this, &graph](Screen& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
 
 
-			auto target_tex = _context.get_texture(data.target_tex);
+			auto target_tex = *(data.ResultTexture);
 			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
-			auto noisy_output = _context.get_texture(data.noisy_output);
-			auto frames_count = _context.get_texture(data.frames_count);
+			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
+			auto noisy_output = *(data.VoxelIndirectNoise);
+			auto frames_count = *(data.VoxelFramesCount);
 
-			auto gi_filtered = _context.get_texture(data.gi_filtered);
+			auto gi_filtered = *(data.VoxelIndirectFiltered);
 
 			auto size = target_tex.get_size();
 
@@ -774,44 +765,43 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 	struct ScreenReflection
 	{
 		GBufferViewDesc gbuffer;
-		ResourceHandler* target_tex;
-		ResourceHandler* noisy_output;
-		ResourceHandler* gi_filtered;
-		ResourceHandler* prev_gi;
 
-		ResourceHandler* downsampled_reflection;
-		ResourceHandler* sky_cubemap_filtered;
+		Handlers::Texture H(VoxelReflectionNoise);
+		Handlers::Texture H(VoxelReflectionFiltered);
 
-		ResourceHandler* frames_count;
+		Handlers::Texture H(sky_cubemap_filtered);
 
-		ResourceHandler* dir_and_pdf;
+		Handlers::Texture H(noise_dir_pdf);
+Handlers::Texture H(prev_gi_temp);
+
+Handlers::Texture H(ResultTexture);
 
 	};
 	auto size = graph.frame_size;
 
 	graph.add_pass<ScreenReflection>("ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
-		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::RenderTarget);
-		data.noisy_output = builder.create_texture("noise_reflection", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess);
-		data.dir_and_pdf = builder.create_texture("noise_dir_pdf", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess);
+		 builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
+		 builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,1),  DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+		 builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,1),  DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
-		//	data.downsampled_reflection = builder.create_texture("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget);
-		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
+		//	data.downsampled_reflection = builder.create("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT, ResourceFlags::RenderTarget);
+		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
 
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
-			auto target_tex = _context.get_texture(data.target_tex);
+			auto target_tex = *(data.ResultTexture);
 			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
-			auto noisy_output = _context.get_texture(data.noisy_output);
-			auto dir_and_pdf = _context.get_texture(data.dir_and_pdf);
-			//	auto gi_filtered = _context.get_texture(data.gi_filtered);
+			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
+			auto noisy_output = *(data.VoxelReflectionNoise);
+			auto dir_and_pdf = *(data.noise_dir_pdf);
+			//	auto gi_filtered = *(data.gi_filtered);
 
-			//	Render::TextureView downsampled_reflection = _context.get_texture(data.downsampled_reflection);
+			//	Render::TextureView downsampled_reflection = *(data.downsampled_reflection);
 
 
 
@@ -896,36 +886,36 @@ void VoxelGI::screen_reflection(FrameGraph& graph)
 		if(Device::get().is_rtx_supported() && this->use_rtx)
 	graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
-		data.target_tex = builder.need_texture("ResultTexture", ResourceFlags::UnorderedAccess);
+		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
-		data.gi_filtered = builder.create_texture("gi_filtered_reflection", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-		data.prev_gi = builder.create_texture("prev_gi_temp", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::RenderTarget);
+		builder.create(data.VoxelReflectionFiltered, { ivec3(size.x, size.y,1),  DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		 builder.create(data.prev_gi_temp, { ivec3(size.x, size.y,1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT,1 },ResourceFlags::RenderTarget);
 
-		//data.gi_filtered = builder.need_texture("gi_filtered_reflection", ResourceFlags::UnorderedAccess);
-		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
-		//data.frames_count = builder.need_texture("frames_count", ResourceFlags::UnorderedAccess);
-		data.noisy_output = builder.need_texture("noise_reflection", ResourceFlags::ComputeRead);
+	
+		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 
-		data.dir_and_pdf = builder.need_texture("noise_dir_pdf", ResourceFlags::ComputeRead); //builder.create_texture("noise_dir_pdf", ivec2(size.x, size.y), 1, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, ResourceFlags::UnorderedAccess);
+	 builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
+
+		 builder.need(data.noise_dir_pdf, ResourceFlags::ComputeRead); 
 
 		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
 
 
-			auto target_tex = _context.get_texture(data.target_tex);
+			auto target_tex = *(data.ResultTexture);
 			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
-			auto noisy_output = _context.get_texture(data.noisy_output);
-			//	auto frames_count = _context.get_texture(data.frames_count);
-			auto dir_and_pdf = _context.get_texture(data.dir_and_pdf);
+			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
+			auto noisy_output = *(data.VoxelReflectionNoise);
+			//	auto frames_count = *(data.frames_count);
+			auto dir_and_pdf = *(data.noise_dir_pdf);
 
-			auto cur_gi = _context.get_texture(data.gi_filtered);
+			auto cur_gi = *(data.VoxelReflectionFiltered);
 
-			auto prev_gi = _context.get_texture(data.prev_gi);
+			auto prev_gi = *(data.prev_gi_temp);
 
-			if (data.gi_filtered->is_new())
+			if (data.VoxelReflectionFiltered.is_new())
 			{
 				command_list->clear_uav(cur_gi.rwTexture2D, vec4(0, 0, 0, 0));
 			}
@@ -1013,14 +1003,16 @@ void VoxelGI::voxelize(FrameGraph& graph)
 {
 	struct Voxelize
 	{
-		ResourceHandler* voxel_albedo;
-		ResourceHandler* voxel_normal;
+		Handlers::Texture H(VoxelAlbedo);
+		Handlers::Texture H(VoxelNormal);
+
 	};
 
 	graph.add_pass<Voxelize>("voxelize", [this](Voxelize& data, TaskBuilder& builder) {
 
-		data.voxel_albedo = builder.need_texture("voxel_albedo", ResourceFlags::UnorderedAccess);
-		data.voxel_normal = builder.need_texture("voxel_normal", ResourceFlags::UnorderedAccess);
+
+	builder.need(data.VoxelAlbedo, ResourceFlags::UnorderedAccess);
+		 builder.need(data.VoxelNormal, ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](Voxelize& data, FrameContext& _context) {
 			auto& command_list = _context.get_list();
@@ -1052,34 +1044,32 @@ void VoxelGI::lighting(FrameGraph& graph)
 
 	struct Lighting
 	{
-		ResourceHandler* global_depth;
-		ResourceHandler* global_camera;
-
-		ResourceHandler* sky_cubemap_filtered;
-		ResourceHandler* voxel_lighted;
-		ResourceHandler* voxel_albedo;
-		ResourceHandler* voxel_normal;
+		Handlers::Texture H(global_depth);
+		Handlers::StructuredBuffer<Table::Camera::CB> H(global_camera);
+		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture H(VoxelAlbedo);
+		Handlers::Texture H(VoxelNormal);
+		Handlers::Texture H(sky_cubemap_filtered);
 	};
 
 
 	graph.add_pass<Lighting>("Lighting", [this](Lighting& data, TaskBuilder& builder) {
 
-		data.global_depth = builder.need_texture("global_depth", ResourceFlags::ComputeRead);
-		data.global_camera = builder.need_buffer("global_camera", ResourceFlags::ComputeRead);
-		data.sky_cubemap_filtered = builder.need_texture("sky_cubemap_filtered", ResourceFlags::PixelRead);
-
-		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::UnorderedAccess);
-		data.voxel_albedo = builder.need_texture("voxel_albedo", ResourceFlags::ComputeRead);
-		data.voxel_normal = builder.need_texture("voxel_normal", ResourceFlags::ComputeRead);
+		builder.need(data.global_depth, ResourceFlags::ComputeRead);
+		builder.need(data.global_camera, ResourceFlags::ComputeRead);
+		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 
 
-		}, [this, &graph](Lighting& data, FrameContext& _context) {
+		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelAlbedo, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelNormal, ResourceFlags::ComputeRead);
+
+
+		}, [this, &graph](auto& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
 
-			auto global_depth = _context.get_texture(data.global_depth);
-			auto global_camera = _context.get_buffer(data.global_camera);
-			auto sky_cubemap_filtered = _context.get_texture(data.sky_cubemap_filtered);
+			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 			context->current_time = 0;
@@ -1119,9 +1109,9 @@ void VoxelGI::lighting(FrameGraph& graph)
 
 				auto pssm = ligthing.MapPssmGlobal();
 
-				pssm.GetLight_buffer() = global_depth.texture2D;
+				pssm.GetLight_buffer() = data.global_depth->texture2D;
 
-				auto buffer_view = global_camera.resource->create_view<StructuredBufferView<Table::Camera>>(*graph.builder.current_frame);
+				auto buffer_view = data.global_camera->resource->create_view<StructuredBufferView<Table::Camera>>(*graph.builder.current_frame);
 
 				pssm.GetLight_camera() = buffer_view.structuredBuffer;
 
@@ -1146,19 +1136,18 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 {
 	struct Mipmapping
 	{
-		ResourceHandler* voxel_lighted;
-
+		Handlers::Texture H(VoxelLighted);
 	};
 
 	graph.add_pass<Mipmapping>("Mipmapping", [this](Mipmapping& data, TaskBuilder& builder) {
 
-		data.voxel_lighted = builder.need_texture("voxel_lighted", ResourceFlags::UnorderedAccess);
+		 builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](Mipmapping& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
 
-			auto voxel_lighted = _context.get_texture(data.voxel_lighted);
+			auto voxel_lighted = *(data.VoxelLighted);
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 
@@ -1262,9 +1251,9 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 void VoxelGI::generate(FrameGraph& graph)
 {
 
-	graph.builder.pass_texture("voxel_albedo", albedo.tex_result);
-	graph.builder.pass_texture("voxel_normal", normal.tex_result);
-	graph.builder.pass_texture("voxel_lighted", tex_lighting.tex_result);
+	graph.builder.pass_texture("VoxelAlbedo", albedo.tex_result);
+	graph.builder.pass_texture("VoxelNormal", normal.tex_result);
+	graph.builder.pass_texture("VoxelLighted", tex_lighting.tex_result);
 
 	Slots::VoxelInfo& voxel_info = scene->voxel_info;
 

@@ -16,7 +16,6 @@ ConstantBuffer<Pass_DenoiserDownsample> pass_DenoiserDownsample: register( b2, s
 const DenoiserDownsample CreateDenoiserDownsample()
 {
 	DenoiserDownsample result;
-	Pass_DenoiserDownsample pass;
 	result.srv.color = srv_6_0;
 	result.srv.depth = srv_6_1;
 	return result;

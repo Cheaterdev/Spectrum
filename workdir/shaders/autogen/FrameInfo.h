@@ -19,7 +19,6 @@ ConstantBuffer<Pass_FrameInfo> pass_FrameInfo: register( b2, space0);
 const FrameInfo CreateFrameInfo()
 {
 	FrameInfo result;
-	Pass_FrameInfo pass;
 	result.cb = cb_0_0;
 	result.srv.bestFitNormals = srv_0_0;
 	result.srv.brdf = srv_0_1;

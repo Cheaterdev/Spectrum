@@ -17,7 +17,6 @@ ConstantBuffer<Pass_MipMapping> pass_MipMapping: register( b2, space4);
 const MipMapping CreateMipMapping()
 {
 	MipMapping result;
-	Pass_MipMapping pass;
 	result.cb = cb_4_0;
 	result.srv.SrcMip = srv_4_0;
 	result.uav.OutMip = uav_4_0;

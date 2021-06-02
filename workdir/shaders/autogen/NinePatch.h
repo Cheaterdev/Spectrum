@@ -15,7 +15,6 @@ ConstantBuffer<Pass_NinePatch> pass_NinePatch: register( b2, space4);
 const NinePatch CreateNinePatch()
 {
 	NinePatch result;
-	Pass_NinePatch pass;
 	result.srv.vb = srv_4_0;
 	return result;
 }

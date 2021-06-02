@@ -56,6 +56,11 @@ void process_one(Render::RootSignatureDesc& desc)
 		desc[T::Slot::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::Slot::ID);
 
 
+	//RTX!!!
+
+	//if constexpr (HasSRV<T> || HasSMP<T> || HasUAV<T>)
+	//desc[T::Slot::CB_ID + 1] = Render::DescriptorConstBuffer(2, Render::ShaderVisibility::ALL, T::Slot::ID);
+
 
 	// no changes here for now as its done through CB
 	//desc[T::Slot::CB_ID + 1] = Render::DescriptorConstBuffer(2, Render::ShaderVisibility::ALL, T::Slot::ID);

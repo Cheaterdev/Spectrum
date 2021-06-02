@@ -13,7 +13,6 @@ ConstantBuffer<Pass_EnvFilter> pass_EnvFilter: register( b2, space5);
 const EnvFilter CreateEnvFilter()
 {
 	EnvFilter result;
-	Pass_EnvFilter pass;
 	result.cb = cb_5_0;
 	return result;
 }

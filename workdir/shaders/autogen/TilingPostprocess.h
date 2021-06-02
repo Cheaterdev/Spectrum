@@ -14,7 +14,6 @@ ConstantBuffer<Pass_TilingPostprocess> pass_TilingPostprocess: register( b2, spa
 const TilingPostprocess CreateTilingPostprocess()
 {
 	TilingPostprocess result;
-	Pass_TilingPostprocess pass;
 	result.srv.tiling.tiles = srv_2_0;
 	return result;
 }

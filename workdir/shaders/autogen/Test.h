@@ -14,7 +14,6 @@ ConstantBuffer<Pass_Test> pass_Test: register( b2, space4);
 const Test CreateTest()
 {
 	Test result;
-	Pass_Test pass;
 	result.cb = cb_4_0;
 	return result;
 }

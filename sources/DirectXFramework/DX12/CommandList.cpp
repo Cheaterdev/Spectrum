@@ -80,6 +80,8 @@ namespace DX12
 		compiler.reset();
 		//resource_index = 0;
 
+		first_pipeline = nullptr;
+
 		if (graphics) graphics->begin();
 		if (compute) compute->begin();
 
@@ -990,17 +992,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		list->SetComputeRootDescriptorTable(i, table.gpu);
 	}
 
-	/*
-	void ComputeContext::set_pipeline(ComputePipelineState::ptr state)
-	{
-		if (state->desc.root_signature)
-			set_signature(state->desc.root_signature);
-
-		base.set_pipeline_internal(state.get());
-
-		base.track_object(*state);
-	}
-	*/
 	
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
 	{
@@ -1017,10 +1008,10 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 				}
 
 				track_object(*pipeline);
+
+				if (!first_pipeline) first_pipeline = pipeline;
 			}
 			current_pipeline = pipeline;
-
-	
 		}
 	}
 	void Eventer::on_start(Timer* timer)

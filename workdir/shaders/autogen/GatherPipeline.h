@@ -15,7 +15,6 @@ ConstantBuffer<Pass_GatherPipeline> pass_GatherPipeline: register( b2, space5);
 const GatherPipeline CreateGatherPipeline()
 {
 	GatherPipeline result;
-	Pass_GatherPipeline pass;
 	result.cb = cb_5_0;
 	result.uav.commands = uav_5_0;
 	return result;

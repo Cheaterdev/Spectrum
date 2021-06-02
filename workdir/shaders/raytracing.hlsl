@@ -65,10 +65,11 @@ float4 get_voxel(float3 pos, float level)
 
 
 
-float4 trace(float4 start_color, float start_dist,  float3 origin, float3 dir, float angle, out float dist)
+float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist,  float3 origin, float3 dir, float angle, out float dist)
 {
-	float3 voxel_min = CreateVoxelInfo().GetMin().xyz;
-	float3 voxel_size = CreateVoxelInfo().GetSize().xyz;
+	float3 voxel_min = voxel_info.GetMin().xyz;
+	float3 voxel_size = voxel_info.GetSize().xyz;
+	float3 oneVoxelSize = 0.5 / (voxel_info.GetVoxel_tiles_count() * voxel_info.GetVoxels_per_tile());
 
 	//float max_angle = saturate((3.14 / 2 - acos(dot(normal, dir))) / 3.14);
 
@@ -79,14 +80,14 @@ float4 trace(float4 start_color, float start_dist,  float3 origin, float3 dir, f
 	
 	float3 samplePos = 0;
 	float4 accum = start_color;
-	// the starting sample diameter
-	float minDiameter = 1.0 / 512;// *(1 + 4 * angle);
+
+	float minDiameter = oneVoxelSize.z;// *(1 + 4 * angle);
 	float minVoxelDiameterInv = 1.0 / minDiameter;
 
 	float maxDist = 1;
 	dist = length(startOrigin - origin);
 
-	float max_accum = 0.9;
+	float max_accum = 1.0;
 	while (dist <= maxDist && accum.w < max_accum && all(samplePos <= 1) && all(samplePos >= 0))
 	{
 		float sampleDiameter = minDiameter + angle * dist;
@@ -306,7 +307,7 @@ payload_gi.cone.width = 0;
 
 	if (payload_gi.dist > 100000-5)
 	{
-		payload_gi.color = trace(0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.4, payload_gi.dist);
+		payload_gi.color = trace(voxel_info,0, 0.0, pos + dirVoxel * ray.TMax, dirVoxel, 0.4, payload_gi.dist);
 	}
 		
 	//tex_noise[DispatchRaysIndex().xy] = 1;// lerp(tex_noise[DispatchRaysIndex().xy], payload_shadow.color, 0.01);
@@ -428,7 +429,7 @@ void MyRaygenShaderReflection()
 	
 	if (payload_gi.dist > 100000 - 5)
 	{
-		payload_gi.color =  trace(0, 0.1*GetRandom2(tc/2, frame.GetTime().y)*length(oneVoxelSize), pos + oneVoxelSize * normal + 1*dirVoxel * ray.TMax, dirVoxel, 1*roughness, payload_gi.dist);
+		payload_gi.color =  trace(voxel_info,0, 0.1*GetRandom2(tc/2, frame.GetTime().y)*length(oneVoxelSize), pos + oneVoxelSize * normal + 1*dirVoxel * ray.TMax, dirVoxel, 1*roughness, payload_gi.dist);
 	}
 
 

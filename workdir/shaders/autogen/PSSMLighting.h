@@ -24,7 +24,6 @@ ConstantBuffer<Pass_PSSMLighting> pass_PSSMLighting: register( b2, space6);
 const PSSMLighting CreatePSSMLighting()
 {
 	PSSMLighting result;
-	Pass_PSSMLighting pass;
 	result.srv.light_mask = srv_6_0;
 	result.srv.gbuffer.albedo = srv_6_1;
 	result.srv.gbuffer.normals = srv_6_2;

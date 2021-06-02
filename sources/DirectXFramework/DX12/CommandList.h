@@ -722,6 +722,7 @@ namespace DX12
 		std::unique_ptr<ComputeContext> compute;
 		std::unique_ptr<CopyContext> copy;
 		PipelineStateBase* current_pipeline;
+		PipelineStateBase* first_pipeline;
 
 		std::list<update_tiling_info> tile_updates;
 

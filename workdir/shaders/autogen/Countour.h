@@ -15,7 +15,6 @@ ConstantBuffer<Pass_Countour> pass_Countour: register( b2, space4);
 const Countour CreateCountour()
 {
 	Countour result;
-	Pass_Countour pass;
 	result.cb = cb_4_0;
 	result.srv.tex = srv_4_0;
 	return result;

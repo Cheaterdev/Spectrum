@@ -308,6 +308,7 @@ void materials::universal_material::update_rtx()
 		{
 			elem[i].identifier = hit_table[i];
 			elem[i].mat_buffer = compiled_material_info.cb;
+	//		elem[i].mat_buffer_offsets = compiled_material_info.offsets_cb;
 		}
 		
 		info_rtx.write(0, elem);

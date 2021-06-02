@@ -15,7 +15,6 @@ ConstantBuffer<Pass_SMAA_Global> pass_SMAA_Global: register( b2, space4);
 const SMAA_Global CreateSMAA_Global()
 {
 	SMAA_Global result;
-	Pass_SMAA_Global pass;
 	result.cb = cb_4_0;
 	result.srv.colorTex = srv_4_0;
 	return result;

@@ -23,8 +23,8 @@ namespace DX12
 
 	void CommandListCompiler::reset()
 		{
-		compiled.m_commandAllocator->Reset();
-		TEST(compiled.m_commandList->Reset(compiled.m_commandAllocator.Get(), nullptr));
+			compiled.m_commandAllocator->Reset();
+			TEST(compiled.m_commandList->Reset(compiled.m_commandAllocator.Get(), nullptr));
 		}
 
 

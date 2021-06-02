@@ -21,7 +21,6 @@ ConstantBuffer<Pass_SkyData> pass_SkyData: register( b2, space4);
 const SkyData CreateSkyData()
 {
 	SkyData result;
-	Pass_SkyData pass;
 	result.cb = cb_4_0;
 	result.srv.depthBuffer = srv_4_0;
 	result.srv.transmittance = srv_4_1;
