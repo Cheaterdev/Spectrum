@@ -143,7 +143,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
         unsigned int rendered_instanced;
         unsigned int instances_count;
 
-		Variable<bool> use_gpu_occlusion = Variable<bool>(true,"GPU culling", this);
+        Variable<bool> use_gpu_occlusion = { true,"GPU culling", this };
 	/*	Variable<bool> use_cpu_culling = Variable<bool>(false, "use_cpu_culling", this);
 		Variable<bool> use_gpu_culling = Variable<bool>(false, "use_gpu_culling", this);
 		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth", this);*/

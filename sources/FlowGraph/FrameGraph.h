@@ -47,6 +47,7 @@ struct TextureDesc
 	ivec3 size;
 	DXGI_FORMAT format;
 	UINT array_count;
+	UINT mip_count;
 
 	auto   operator<=>(const  TextureDesc& r)  const = default;
 };
@@ -63,18 +64,13 @@ struct ResourceHandler
 
 
 	public:
-
-		ResourceHandler()
-		{}
 	friend struct TaskBuilder;
 	friend struct FrameContext;
 	ResourceAllocInfo* info = nullptr;
 
-	virtual void init(ResourceAllocInfo& info)
-	{}
+	virtual void init(ResourceAllocInfo& info) = 0;
 
-	virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame)
-	{}
+	virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) = 0;
 };
 
 
@@ -86,7 +82,6 @@ struct Pass;
 struct UsedResources
 {
 	std::set<ResourceAllocInfo*> resources;
-
 	std::map<ResourceAllocInfo*, ResourceFlags> resource_flags;
 	std::set<ResourceAllocInfo*> resource_creations;
 };
@@ -132,9 +127,6 @@ struct ResourceAllocInfo
 	std::map<Render::ResourceHandle, Render::Resource::ptr> resource_places;
 	Render::Resource::ptr resource;
 
-	Render::TextureView texture;
-	Render::BufferView buffer;
-
 	std::shared_ptr<ResourceHandler> handler;
 	std::shared_ptr<Render::ResourceView> view;
 
@@ -179,6 +171,13 @@ struct ResourceAllocInfo
 	T& get_handler()
 	{
 		return *static_cast<T*>(handler.get());
+	}
+
+
+	template<class T, class ...Args>
+	void init_view(Args&&...args)
+	{
+		view = std::make_shared<T>(resource->create_view<T>(std::forward<Args>(args)...));
 	}
 };
 #define H(x) x = #x
@@ -231,20 +230,19 @@ struct Handlers
 
 		virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) override
 		{
-			info.view = std::make_shared<Render::StructuredBufferView<T>>(info.resource->create_view<Render::StructuredBufferView<T>>(frame));
+			info.init_view<Render::StructuredBufferView<T>>(frame);
 		}
 	};
 
 	class Texture : public ResourceHandler
 	{
-	//	Render::TextureView view;
-	
 	public:
 		struct Desc
 		{
 			ivec3 size;
 			DXGI_FORMAT format;
 			UINT array_count;
+			UINT mip_count;
 		}m_desc;
 
 		std::string name;
@@ -270,23 +268,19 @@ struct Handlers
 		Texture(const Desc &desc) :m_desc(desc)
 		{
 
-			//info->buffer = Render::BufferView();
 		}
 
 		virtual void init(ResourceAllocInfo& info)override
 		{
-			auto desc = TextureDesc{ m_desc.size, m_desc.format, m_desc.array_count };
+			auto desc = TextureDesc{ m_desc.size, m_desc.format, m_desc.array_count,m_desc.mip_count};
 			info.need_recreate = info.desc != desc;
 			info.type = ResourceType::Texture;
 			info.desc = desc;
-
-
 		}
 
 		virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) override
 		{
-			//view = info->resource->create_view<Render::BufferView>(*frame);
-			info.view = std::make_shared<Render::TextureView>(info.resource->create_view<Render::TextureView>(frame, check(info.flags & ResourceFlags::Cube)));
+			info.init_view<Render::TextureView>(frame, check(info.flags & ResourceFlags::Cube));
 		}
 	};
 };
@@ -306,18 +300,8 @@ struct TaskBuilder
 {
 
 private:
-/*	ResourceHandler& get_handler(std::string & s);
 
-	template<class T>
-	T& get_handler_typed(std::string& name)
-	{
-		auto& ptr = resources[name];
-		if (!ptr) ptr = std::make_shared<T>();
-
-		return *std::static_pointer_cast<T>(ptr);
-	}*/
 public:
-//	std::map<std::string, std::shared_ptr<ResourceHandler>> resources;
 	std::map<std::string, std::string> resources_names;
 
 	std::map<std::string, ResourceAllocInfo> alloc_resources;
@@ -327,8 +311,6 @@ public:
 	Render::ResourceHeapAllocator<Thread::Free> allocator;
 	Render::ResourceHeapAllocator<Thread::Free> static_allocator;
 
-//	Render::PlacedAllocator allocator;
-//	Render::PlacedAllocator static_allocator;
 
 	Render::FrameResourceManager frames;
 	Render::FrameResources::ptr current_frame;
@@ -391,10 +373,9 @@ public:
 	}
 
 	//void free_texture(ResourceHandler* handler);
-	void pass_texture(std::string name, Render::TextureView tex, ResourceFlags flags = ResourceFlags::None);
 	void pass_texture(std::string name, Render::Texture::ptr tex, ResourceFlags flags = ResourceFlags::None);
 
-	Render::TextureView request_texture(ResourceHandler* handler);
+
 	void create_resources();
 	void reset();
 
@@ -411,16 +392,10 @@ struct FrameContext
 
 	std::list<Render::ResourceView> textureViews;
 
-	Render::TextureView get_texture(ResourceHandler* holder);
-	Render::BufferView get_buffer(ResourceHandler* holder);
-
-//	void request_resources(UsedResources& resources, TaskBuilder& builder);
-
 	Render::CommandList::ptr list;
 
 	Render::CommandList::ptr& get_list();
 	void begin(Pass* pass, Render::FrameResources::ptr& frame);
-
 	void end();
 
 
@@ -586,7 +561,7 @@ public:
 
 	std::list<std::shared_ptr<Pass>> required_passes;
 	std::list<Pass*> enabled_passes;
-	Variable<bool> optimize = Variable<bool>(true, "optimize", this);
+	Variable<bool> optimize = { true, "optimize", this };
 
 	std::list<std::function<void(FrameGraph& g)>> pre_run;
 	template<class Pass>

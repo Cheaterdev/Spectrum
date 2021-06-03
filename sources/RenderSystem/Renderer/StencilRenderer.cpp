@@ -569,7 +569,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 
 		graph.add_pass<Data>("stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R8_SNORM,1 } ,ResourceFlags::RenderTarget);
+			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R8_SNORM,1 ,1} ,ResourceFlags::RenderTarget);
 
 			}, [this, &graph](Data& data, FrameContext& _context) {
 

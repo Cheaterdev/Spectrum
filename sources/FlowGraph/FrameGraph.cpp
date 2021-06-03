@@ -7,7 +7,7 @@ void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
 	bool is_writer = check(flags & WRITEABLE_FLAGS);
 
 	bool was_swap = false;
-	
+
 	if (is_writer || states.empty())
 	{
 
@@ -15,11 +15,11 @@ void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
 		state.write = is_writer;
 		states.emplace_back(state);
 		was_swap = true;
-		last_writer = states.size() - 1;		
+		last_writer = states.size() - 1;
 	}
 	else
 	{
-		if(states.back().write)
+		if (states.back().write)
 		{
 			ResourceRWState state;
 			state.write = false;
@@ -29,20 +29,20 @@ void ResourceAllocInfo::add_pass(Pass* pass, ResourceFlags flags)
 	}
 
 	ResourceRWState& state = states.back();
-		state.passes.emplace_back(pass);
+	state.passes.emplace_back(pass);
 
-		if(check(pass->flags&PassFlags::Compute))
-			state.compute.emplace_back(pass);
-		else
-			state.graphics.emplace_back(pass);
-	
+	if (check(pass->flags & PassFlags::Compute))
+		state.compute.emplace_back(pass);
+	else
+		state.graphics.emplace_back(pass);
+
 
 	if (was_swap)
 	{
 		related.insert(related_read.begin(), related_read.end());
 		related_read.clear();
 	}
-	
+
 	pass->related.insert(related.begin(), related.end());
 	related_read.insert(pass);
 }
@@ -61,14 +61,14 @@ void ResourceAllocInfo::remove_inactive()
 
 	auto fn = [](Pass* pass) {return !pass->active(); };
 
-	for(auto& state:states)
+	for (auto& state : states)
 	{
 
 		{
 			const auto ret2 = std::ranges::remove_if(state.graphics, fn);
 			state.graphics.erase(ret2.begin(), ret2.end());
 		}
-		
+
 		{
 			const auto ret2 = std::ranges::remove_if(state.compute, fn);
 			state.compute.erase(ret2.begin(), ret2.end());
@@ -83,11 +83,11 @@ void ResourceAllocInfo::remove_inactive()
 	}
 
 
-	
+
 }
 TaskBuilder::TaskBuilder() : allocator(false), static_allocator(false)
 {
-	
+
 }
 
 void TaskBuilder::begin(Pass* pass)
@@ -100,36 +100,12 @@ void TaskBuilder::end(Pass* pass)
 	current_pass = nullptr;
 }
 
-
-void TaskBuilder::pass_texture(std::string name, Render::TextureView tex, ResourceFlags flags)
-{
-	resources_names[name] = name;
-
-
-	ResourceAllocInfo& info = alloc_resources[name];
-	info.create_handler();
-
-	ResourceHandler& handler = info.get_handler();
-
-	info.texture = tex;
-	info.placed = false;
-	info.type = ResourceType::Texture;
-	info.resource = tex.resource;
-	info.passed = true;
-	info.name = name;
-	info.is_new = false;
-	info.flags = flags;
-	handler.info = &info;
-
-	info.reset();
-	passed_resources.insert(&info);
-}
 void TaskBuilder::pass_texture(std::string name, Render::Texture::ptr tex, ResourceFlags flags)
 {
 	Handlers::Texture h(name);
 	//pass_texture(name, tex->create_view<Render::TextureView>(*current_frame), flags);
- create(h, {ivec3(0,0,0), DXGI_FORMAT::DXGI_FORMAT_UNKNOWN, 0}, flags);
- auto& info = *h.info;
+	create(h, { ivec3(0,0,0), DXGI_FORMAT::DXGI_FORMAT_UNKNOWN, 0 }, flags);
+	auto& info = *h.info;
 	info.passed = true;
 	info.placed = false;
 	info.type = ResourceType::Texture;
@@ -147,8 +123,6 @@ void TaskBuilder::reset()
 	for (auto& info : passed_resources)
 	{
 		info->resource = nullptr;
-		info->buffer = Render::BufferView();
-		info->texture = Render::TextureView();
 		info->view.reset();
 		info->passed = false;
 		info->valid_from = nullptr;
@@ -161,16 +135,6 @@ void TaskBuilder::reset()
 
 
 
-Render::TextureView FrameContext::get_texture(ResourceHandler* handler)
-{
-	return handler->info->texture;// textures[holder];
-}
-
-Render::BufferView FrameContext::get_buffer(ResourceHandler* handler)
-{
-	return handler->info->buffer;// textures[holder];
-}
-
 /*void FrameContext::request_resources(UsedResources& resources, TaskBuilder& builder)
 {
 	for (auto& uses : resources.textures)
@@ -182,7 +146,7 @@ Render::BufferView FrameContext::get_buffer(ResourceHandler* handler)
 
 Render::CommandList::ptr& FrameContext::get_list()
 {
-	
+
 	if (!list)
 	{
 		Render::CommandListType type = pass->get_type();
@@ -195,8 +159,11 @@ Render::CommandList::ptr& FrameContext::get_list()
 
 			if (!info->enabled)
 				continue;
+
+			list->transition(nullptr, info->resource.get());
+
 			//if (!handle->info->texture) continue;
-			{
+		/* {
 				auto &tex = info->texture;
 
 				if (tex)
@@ -209,14 +176,14 @@ Render::CommandList::ptr& FrameContext::get_list()
 				if (tex)
 					list->transition(nullptr, tex.resource.get());
 			}
-
+			*/
 		}
 	}
 	return list;
 }
 
 void FrameContext::begin(Pass* pass, Render::FrameResources::ptr& frame) {
-	
+
 	this->pass = pass;
 	this->frame = frame;
 }
@@ -229,7 +196,7 @@ void FrameContext::end()
 
 void FrameContext::execute()
 {
-	if(list)list->execute();
+	if (list)list->execute();
 	list = nullptr;
 }
 
@@ -256,9 +223,9 @@ void Pass::execute()
 
 	}
 
-	{	
-	PROFILE(L"execute");
-	context.execute();
+	{
+		PROFILE(L"execute");
+		context.execute();
 	}
 }
 void FrameGraph::start_new_frame()
@@ -301,25 +268,25 @@ void FrameGraph::setup()
 	process_resource = [&, this](ResourceAllocInfo& info, int pass_id) {
 		info.enabled = true;
 
-		for(auto &s: info.states)
+		for (auto& s : info.states)
 		{
-			if(s.write)
+			if (s.write)
 			{
 
 				auto& pass = s.passes.front();
-				
+
 				if (pass->enabled) continue;
 
-				if(!check(info.flags&ResourceFlags::Static) && pass->id> pass_id) continue;
+				if (!check(info.flags & ResourceFlags::Static) && pass->id > pass_id) continue;
 				pass->enabled = true;
 
-				for (auto &info : pass->used.resources)
+				for (auto& info : pass->used.resources)
 				{
 					process_resource(*info, pass->id);
 				}
 			}
 		}
-		
+
 	};
 
 	for (auto res : builder.alloc_resources)
@@ -332,12 +299,12 @@ void FrameGraph::setup()
 	for (auto pass : required_passes)
 	{
 		pass->enabled = true;
-		for (auto &info : pass->used.resources)
+		for (auto& info : pass->used.resources)
 		{
 			process_resource(*info, pass->id);
 		}
 	}
-	
+
 	for (auto pass : passes)
 	{
 		if (!pass->active()) continue;
@@ -367,7 +334,7 @@ void FrameGraph::setup()
 				for (auto related : pass->related)
 				{
 					if (!related->active()) continue;
-					
+
 					if (pass->dependency_level <= related->dependency_level)
 					{
 						pass->dependency_level = related->dependency_level + 1;
@@ -379,19 +346,19 @@ void FrameGraph::setup()
 
 		for (auto pass : enabled_passes | std::ranges::views::reverse)
 		{
-			
-				for (auto dep : pass->related)
-				{
-					if (!dep->active()) continue;
 
-					dep->graphic_count += pass->graphic_count;
-					dep->compute_count += pass->compute_count;
+			for (auto dep : pass->related)
+			{
+				if (!dep->active()) continue;
 
-					if (check(pass->flags & PassFlags::Compute))
-						dep->compute_count++;
-					else
-						dep->graphic_count++;
-				}
+				dep->graphic_count += pass->graphic_count;
+				dep->compute_count += pass->compute_count;
+
+				if (check(pass->flags & PassFlags::Compute))
+					dep->compute_count++;
+				else
+					dep->graphic_count++;
+			}
 		}
 
 		enabled_passes.sort(
@@ -415,138 +382,138 @@ void FrameGraph::setup()
 
 
 
-		for (auto pass : enabled_passes)
+	for (auto pass : enabled_passes)
+	{
+		pass->call_id = i++;
+		pass->wait_pass = nullptr;
+		pass->prev_pass = nullptr;
+	}
+
+
+	for (auto& pair : builder.alloc_resources)
+	{
+		auto& info = pair.second;
+		if (!info.enabled) continue;
+
+		info.remove_inactive();
+		info.valid_from = nullptr;// info.states.front().passes.front();
+		info.valid_to = nullptr;//info.states.back().passes.back();
+
+		for (auto state : info.states)
 		{
-			pass->call_id = i++;
-			pass->wait_pass = nullptr;
-			pass->prev_pass = nullptr;
+			for (auto pass : state.passes)
+			{
+				if (!pass->active()) continue;
+
+				if (!info.valid_from || info.valid_from->call_id > pass->id)
+				{
+					info.valid_from = pass;
+				}
+			}
+			if (info.valid_from) break;
+		}
+
+		for (auto state : info.states | std::ranges::views::reverse)
+		{
+			for (auto pass : state.passes | std::ranges::views::reverse)
+			{
+				if (!pass->active()) continue;
+
+				if (!info.valid_to || info.valid_to->call_id < pass->id)
+				{
+					info.valid_to = pass;
+				}
+			}
+			if (info.valid_to) break;
 		}
 
 
-		for (auto& pair : builder.alloc_resources)
+
+		for (int i = 1; i < info.states.size(); i++)
 		{
-			auto& info = pair.second;
-			if (!info.enabled) continue;
+			auto state = info.states[i];
+			auto prev_state = info.states[i - 1];
 
-			info.remove_inactive();
-			info.valid_from = nullptr;// info.states.front().passes.front();
-			info.valid_to = nullptr;//info.states.back().passes.back();
+			Pass* prev_pass_graphics = prev_state.graphics.empty() ? nullptr : prev_state.graphics.back();
+			Pass* prev_pass_compute = prev_state.compute.empty() ? nullptr : prev_state.compute.back();
 
-				for(auto state: info.states)
-				{
-					for (auto pass : state.passes)
-					{
-						if (!pass->active()) continue;
+			Pass* pass_graphics = state.graphics.empty() ? nullptr : state.graphics.front();
+			Pass* pass_compute = state.compute.empty() ? nullptr : state.compute.front();
 
-						if (!info.valid_from || info.valid_from->call_id > pass->id)
-						{
-							info.valid_from = pass;		
-						}
-					}
-					if (info.valid_from) break;
-				}
-			
-				for (auto state : info.states | std::ranges::views::reverse)
-				{
-					for (auto pass : state.passes | std::ranges::views::reverse)
-					{
-						if (!pass->active()) continue;
-
-						if (!info.valid_to || info.valid_to->call_id < pass->id)
-						{
-							info.valid_to = pass;
-						}
-					}
-					if (info.valid_to) break;
-				}
+			if (pass_graphics && prev_pass_compute)
+			{
+				if (!pass_graphics->wait_pass || pass_graphics->wait_pass->call_id < prev_pass_compute->call_id)
+					pass_graphics->wait_pass = prev_pass_compute;
+			}
 
 
-
-				for (int i = 1; i < info.states.size(); i++)
-				{
-					auto state = info.states[i];
-					auto prev_state = info.states[i - 1];
-
-					Pass* prev_pass_graphics = prev_state.graphics.empty() ? nullptr : prev_state.graphics.back();
-					Pass* prev_pass_compute = prev_state.compute.empty() ? nullptr : prev_state.compute.back();
-
-					Pass* pass_graphics = state.graphics.empty() ? nullptr : state.graphics.front();
-					Pass* pass_compute = state.compute.empty() ? nullptr : state.compute.front();
-
-					if (pass_graphics && prev_pass_compute)
-					{
-						if (!pass_graphics->wait_pass || pass_graphics->wait_pass->call_id < prev_pass_compute->call_id)
-							pass_graphics->wait_pass = prev_pass_compute;
-					}
-
-
-					if (pass_compute && prev_pass_graphics)
-					{
-						if (!pass_compute->wait_pass || pass_compute->wait_pass->call_id < prev_pass_graphics->call_id)
-							pass_compute->wait_pass = prev_pass_graphics;
-					}				
-				}
-
+			if (pass_compute && prev_pass_graphics)
+			{
+				if (!pass_compute->wait_pass || pass_compute->wait_pass->call_id < prev_pass_graphics->call_id)
+					pass_compute->wait_pass = prev_pass_graphics;
+			}
 		}
 
-	
-		Pass* last_graphics = nullptr;
-		Pass* last_compute = nullptr;
+	}
 
-		for (auto pass : enabled_passes)
+
+	Pass* last_graphics = nullptr;
+	Pass* last_compute = nullptr;
+
+	for (auto pass : enabled_passes)
+	{
+		Render::CommandListType type = pass->get_type();
+
+		bool sync_to_graphics = last_graphics && type == Render::CommandListType::DIRECT;
+		bool sync_to_compute = last_compute && type == Render::CommandListType::COMPUTE;
+
+
+
+		if (type == Render::CommandListType::COMPUTE)
+			pass->prev_pass = last_compute;
+		else
+			pass->prev_pass = last_graphics;
+
+		if (sync_to_compute)
 		{
-			Render::CommandListType type = pass->get_type();	
-
-			bool sync_to_graphics = last_graphics && type == Render::CommandListType::DIRECT;
-			bool sync_to_compute = last_compute && type == Render::CommandListType::COMPUTE;
-
-			
-			
-			if (type == Render::CommandListType::COMPUTE)
-				pass->prev_pass = last_compute;
-			else
-				pass->prev_pass = last_graphics;
-
-			if (sync_to_compute)
+			for (auto& info : last_compute->used.resources)
 			{
-				for (auto &info : last_compute->used.resources)
-				{			
-					if (info->valid_to == last_compute)
-					{
-						info->valid_to = pass;
-					}
-				}
-			}
-
-
-			if (sync_to_graphics)
-			{
-				for (auto& info : last_graphics->used.resources)
+				if (info->valid_to == last_compute)
 				{
-
-					if (info->valid_to == last_graphics)
-					{
-						info->valid_to = pass;
-					}
+					info->valid_to = pass;
 				}
 			}
-
-			if(pass->wait_pass&& last_compute)
-			{
-				for (auto& info : last_compute->used.resources)
-				{
-					if (info->valid_to == pass->wait_pass)
-					{
-						info->valid_to = pass;
-					}
-				}
-			}
-			if (type == Render::CommandListType::COMPUTE)
-				last_compute = pass;
-			else
-				last_graphics = pass;
-
 		}
+
+
+		if (sync_to_graphics)
+		{
+			for (auto& info : last_graphics->used.resources)
+			{
+
+				if (info->valid_to == last_graphics)
+				{
+					info->valid_to = pass;
+				}
+			}
+		}
+
+		if (pass->wait_pass && last_compute)
+		{
+			for (auto& info : last_compute->used.resources)
+			{
+				if (info->valid_to == pass->wait_pass)
+				{
+					info->valid_to = pass;
+				}
+			}
+		}
+		if (type == Render::CommandListType::COMPUTE)
+			last_compute = pass;
+		else
+			last_graphics = pass;
+
+	}
 }
 
 void FrameGraph::compile(int frame)
@@ -595,253 +562,254 @@ void FrameGraph::render()
 
 	{
 		PROFILE(L"execute");
-		
-	/*	for (auto& pass : enabled_passes | std::ranges::views::reverse)
-		{
-			auto commandList = pass->context.list;
-			if (!commandList) continue;
 
-			Render::CommandListType list_type = commandList->get_type();
-
-			if (pass->wait_pass)
-			{
-				auto waitCommandList = pass->wait_pass->context.list;
-
-				//if(list_type == Render::CommandListType::COMPUTE) 
-					waitCommandList->prepare_transitions(commandList.get(), false);
-			}
-			else 
-				
-				if (pass->prev_pass)
-			{
-				auto waitCommandList = pass->prev_pass->context.list;
-
-			//	if (list_type == Render::CommandListType::DIRECT) 
-				if(waitCommandList) waitCommandList->prepare_transitions(commandList.get(), true);
-			}
-
-		
-		}*/
-		if(optimize)
-		for (auto& pair : builder.alloc_resources)
-		{
-			auto &info = pair.second;
-			if (!info.enabled) continue;
-
-			auto& resource = info.resource;
-
-			if (!resource) continue;
-
-	//		if(false)
-			for(auto &state:info.states)
-			{
-
-			
-					Render::SubResourcesGPU merged_state;
-
-					merged_state.subres.resize(resource->get_subres_count());
-			
-				
-				for(auto& pass:state.passes)
-				{
-					auto commandList = pass->context.list;
-					if (!commandList) continue;
-					
-					auto &cpu_state = resource->get_cpu_state(commandList.get());
-
-
-					merged_state.merge(cpu_state);
-					/*
-					for (int i = 0; i < merged_state.size();i++)
-					{
-						if (!cpu_state.subres[i].used) continue;
-						merged_state[i] = merge_state(merged_state[i], cpu_state.subres[i].get_first_state());
-					}*/
-				}
-
-				for (auto &pass : state.passes)
-				{
-					auto commandList = pass->context.list;
-					if (!commandList) continue;
-
-					auto& cpu_state = resource->get_cpu_state(commandList.get());
-
-					cpu_state.prepare_for(commandList->get_type(), merged_state);
-					/*for (int i = 0; i < merged_state.size(); i++)
-					{
-						if (!cpu_state.subres[i].used)	continue;
-						cpu_state.subres[i].first_transition->wanted_state = merge_state(merged_state[i], cpu_state.subres[i].first_transition->wanted_state);
-						assert(cpu_state.subres[i].first_transition->wanted_state == merged_state[i]);
-					}*/
-				}
-
-				// TODO: propagate first state to next writer
-			}
-
-						
-			for (int i = 1; i < info.states.size(); i++)
-			{
-				auto state = info.states[i];
-				auto prev_state = info.states[i - 1];
-
-				Pass* prev_pass_graphics = prev_state.graphics.empty() ? nullptr : prev_state.graphics.back();
-				Pass* prev_pass_compute = prev_state.compute.empty() ? nullptr : prev_state.compute.back();
-
-				Pass* pass_graphics = state.graphics.empty() ? nullptr : state.graphics.front();
-				Pass* pass_compute = state.compute.empty() ? nullptr : state.compute.front();
-
-				if (pass_graphics && prev_pass_compute)
-				{
-					if (!pass_graphics->wait_pass || pass_graphics->wait_pass->call_id < prev_pass_compute->call_id)
-						pass_graphics->wait_pass = prev_pass_compute;
-				}
-
-				if (pass_compute && prev_pass_graphics)
-				{
-					if (!pass_compute->wait_pass || pass_compute->wait_pass->call_id < prev_pass_graphics->call_id)
-						pass_compute->wait_pass = prev_pass_graphics;
-
-					auto prevCL = prev_pass_graphics->context.list;
-					auto curCL = pass_compute->context.list;
-
-
-					if (prevCL && curCL)prevCL->merge_transition(curCL.get(), info.resource.get());
-				}
-
-				if (pass_compute && prev_pass_compute)
-				{
-					auto prevCL = prev_pass_compute->context.list;
-					auto curCL = pass_compute->context.list;
-
-
-					if (prevCL && curCL)prevCL->merge_transition(curCL.get(), info.resource.get());
-				}
-				if (pass_graphics && prev_pass_graphics)
-				{
-					auto prevCL = prev_pass_graphics->context.list;
-				
-						auto curCL = pass_graphics->context.list;
-						if (prevCL&& curCL)
-						prevCL->merge_transition(curCL.get(), info.resource.get());
-					
-				}
-				
-			}
-
-			auto gpu_state = info.resource->copy_gpu();
-
-			for (int i = 0; i < info.states.size(); i++)
-			{
-				auto state = info.states[i];
-				for (auto pass : state.passes)
-				{
-					auto commandList = pass->context.list;
-					if (!commandList) continue;
-
-					info.resource->prepare_state(commandList.get(), gpu_state);
-				}
-			}
-		}
-		
-		{
-			PROFILE(L"compile");
-
-			std::list<std::future<void>> tasks;
-			for (auto& pass : enabled_passes)
+		/*	for (auto& pass : enabled_passes | std::ranges::views::reverse)
 			{
 				auto commandList = pass->context.list;
 				if (!commandList) continue;
 
-				tasks.emplace_back(scheduler::get().enqueue([commandList,pass]() {
-					commandList->compile();
-					}, std::chrono::steady_clock::now()));
-
-
-			}
-
-
-			for (auto& t : tasks)
-			{
-				t.wait();
-			}
-
-		}
-
-
-		{
-			std::list<Pass*> graphics;
-			std::list<Pass*> compute;
-
-			UINT transitions = 0;
-
-			enum_array<Render::CommandListType, enum_array<Render::CommandListType, UINT>> call_ids = {};
-
-			
-			auto flush = [&]()
-			{
-				for (auto pass : compute)
-				{
-					auto commandList = pass->context.list;
-					if(commandList)
-					{
-						
-					
-					transitions += commandList->transition_count;
-					pass->fence_end = commandList->execute().get();
-					}
-					else
-					{
-						pass->fence_end = Render::Device::get().get_queue(pass->get_type())->get_last_fence();
-					}
-				}
-				
-				for(auto pass: graphics)
-				{
-					auto commandList = pass->context.list;
-					if (commandList)
-					{
-						transitions += commandList->transition_count;
-						pass->fence_end = commandList->execute().get();
-					}else
-					{
-						pass->fence_end = Render::Device::get().get_queue(pass->get_type())->get_last_fence();
-					}
-					
-				}	
-				graphics.clear();
-				compute.clear();
-			};
-
-			
-			for (auto& pass : enabled_passes)
-			{
-
-				Render::CommandListType list_type = pass->get_type();
+				Render::CommandListType list_type = commandList->get_type();
 
 				if (pass->wait_pass)
 				{
-					auto type = pass->wait_pass->get_type();
+					auto waitCommandList = pass->wait_pass->context.list;
 
-					if (call_ids[list_type][type] < pass->wait_pass->call_id+1)
-					{
-						flush();
-						Render::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
+					//if(list_type == Render::CommandListType::COMPUTE)
+						waitCommandList->prepare_transitions(commandList.get(), false);
+				}
+				else
 
-						call_ids[list_type][type] = pass->wait_pass->call_id + 1;
-					}
-		
+					if (pass->prev_pass)
+				{
+					auto waitCommandList = pass->prev_pass->context.list;
+
+				//	if (list_type == Render::CommandListType::DIRECT)
+					if(waitCommandList) waitCommandList->prepare_transitions(commandList.get(), true);
 				}
 
-				if (list_type == Render::CommandListType::DIRECT)
-					graphics.emplace_back(pass);
-				else
-					compute.emplace_back(pass);
 
-				call_ids[list_type][list_type] = pass->call_id +1;
+			}*/
+		if (optimize)
+			for (auto& pair : builder.alloc_resources)
+			{
+				auto& info = pair.second;
+				if (!info.enabled) continue;
+
+				auto& resource = info.resource;
+
+				if (!resource) continue;
+
+				//		if(false)
+				for (auto& state : info.states)
+				{
+
+
+					Render::SubResourcesGPU merged_state;
+
+					merged_state.subres.resize(resource->get_subres_count());
+
+
+					for (auto& pass : state.passes)
+					{
+						auto commandList = pass->context.list;
+						if (!commandList) continue;
+
+						auto& cpu_state = resource->get_cpu_state(commandList.get());
+
+
+						merged_state.merge(cpu_state);
+						/*
+						for (int i = 0; i < merged_state.size();i++)
+						{
+							if (!cpu_state.subres[i].used) continue;
+							merged_state[i] = merge_state(merged_state[i], cpu_state.subres[i].get_first_state());
+						}*/
+					}
+
+					for (auto& pass : state.passes)
+					{
+						auto commandList = pass->context.list;
+						if (!commandList) continue;
+
+						auto& cpu_state = resource->get_cpu_state(commandList.get());
+
+						cpu_state.prepare_for(commandList->get_type(), merged_state);
+						/*for (int i = 0; i < merged_state.size(); i++)
+						{
+							if (!cpu_state.subres[i].used)	continue;
+							cpu_state.subres[i].first_transition->wanted_state = merge_state(merged_state[i], cpu_state.subres[i].first_transition->wanted_state);
+							assert(cpu_state.subres[i].first_transition->wanted_state == merged_state[i]);
+						}*/
+					}
+
+					// TODO: propagate first state to next writer
+				}
+
+
+				for (int i = 1; i < info.states.size(); i++)
+				{
+					auto state = info.states[i];
+					auto prev_state = info.states[i - 1];
+
+					Pass* prev_pass_graphics = prev_state.graphics.empty() ? nullptr : prev_state.graphics.back();
+					Pass* prev_pass_compute = prev_state.compute.empty() ? nullptr : prev_state.compute.back();
+
+					Pass* pass_graphics = state.graphics.empty() ? nullptr : state.graphics.front();
+					Pass* pass_compute = state.compute.empty() ? nullptr : state.compute.front();
+
+					if (pass_graphics && prev_pass_compute)
+					{
+						if (!pass_graphics->wait_pass || pass_graphics->wait_pass->call_id < prev_pass_compute->call_id)
+							pass_graphics->wait_pass = prev_pass_compute;
+					}
+
+					if (pass_compute && prev_pass_graphics)
+					{
+						if (!pass_compute->wait_pass || pass_compute->wait_pass->call_id < prev_pass_graphics->call_id)
+							pass_compute->wait_pass = prev_pass_graphics;
+
+						auto prevCL = prev_pass_graphics->context.list;
+						auto curCL = pass_compute->context.list;
+
+
+						if (prevCL && curCL)prevCL->merge_transition(curCL.get(), info.resource.get());
+					}
+
+					if (pass_compute && prev_pass_compute)
+					{
+						auto prevCL = prev_pass_compute->context.list;
+						auto curCL = pass_compute->context.list;
+
+
+						if (prevCL && curCL)prevCL->merge_transition(curCL.get(), info.resource.get());
+					}
+					if (pass_graphics && prev_pass_graphics)
+					{
+						auto prevCL = prev_pass_graphics->context.list;
+
+						auto curCL = pass_graphics->context.list;
+						if (prevCL && curCL)
+							prevCL->merge_transition(curCL.get(), info.resource.get());
+
+					}
+
+				}
+
+				auto gpu_state = info.resource->copy_gpu();
+
+				for (int i = 0; i < info.states.size(); i++)
+				{
+					auto state = info.states[i];
+					for (auto pass : state.passes)
+					{
+						auto commandList = pass->context.list;
+						if (!commandList) continue;
+
+						info.resource->prepare_state(commandList.get(), gpu_state);
+					}
+				}
 			}
-			flush();
-			
-		}
+
+			{
+				PROFILE(L"compile");
+
+				std::list<std::future<void>> tasks;
+				for (auto& pass : enabled_passes)
+				{
+					auto commandList = pass->context.list;
+					if (!commandList) continue;
+
+					tasks.emplace_back(scheduler::get().enqueue([commandList, pass]() {
+						commandList->compile();
+						}, std::chrono::steady_clock::now()));
+
+
+				}
+
+
+				for (auto& t : tasks)
+				{
+					t.wait();
+				}
+
+			}
+
+
+			{
+				std::list<Pass*> graphics;
+				std::list<Pass*> compute;
+
+				UINT transitions = 0;
+
+				enum_array<Render::CommandListType, enum_array<Render::CommandListType, UINT>> call_ids = {};
+
+
+				auto flush = [&]()
+				{
+					for (auto pass : compute)
+					{
+						auto commandList = pass->context.list;
+						if (commandList)
+						{
+
+
+							transitions += commandList->transition_count;
+							pass->fence_end = commandList->execute().get();
+						}
+						else
+						{
+							pass->fence_end = Render::Device::get().get_queue(pass->get_type())->get_last_fence();
+						}
+					}
+
+					for (auto pass : graphics)
+					{
+						auto commandList = pass->context.list;
+						if (commandList)
+						{
+							transitions += commandList->transition_count;
+							pass->fence_end = commandList->execute().get();
+						}
+						else
+						{
+							pass->fence_end = Render::Device::get().get_queue(pass->get_type())->get_last_fence();
+						}
+
+					}
+					graphics.clear();
+					compute.clear();
+				};
+
+
+				for (auto& pass : enabled_passes)
+				{
+
+					Render::CommandListType list_type = pass->get_type();
+
+					if (pass->wait_pass)
+					{
+						auto type = pass->wait_pass->get_type();
+
+						if (call_ids[list_type][type] < pass->wait_pass->call_id + 1)
+						{
+							flush();
+							Render::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
+
+							call_ids[list_type][type] = pass->wait_pass->call_id + 1;
+						}
+
+					}
+
+					if (list_type == Render::CommandListType::DIRECT)
+						graphics.emplace_back(pass);
+					else
+						compute.emplace_back(pass);
+
+					call_ids[list_type][list_type] = pass->call_id + 1;
+				}
+				flush();
+
+			}
 
 	}
 
@@ -853,9 +821,7 @@ void FrameGraph::render()
 		if (!check(info->flags & ResourceFlags::Static))
 		{
 			info->resource = nullptr;
-
-			info->texture = Render::TextureView();
-			info->buffer = Render::BufferView();
+			info->view = nullptr;
 		}
 
 		if (info->heap_type != Render::HeapType::DEFAULT)
@@ -865,7 +831,7 @@ void FrameGraph::render()
 
 	}
 
-	
+
 }
 
 void FrameGraph::reset()
@@ -973,14 +939,20 @@ void TaskBuilder::create_resources()
 			if (!is_shader_visible(desc.format))
 				flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
-			int mip_count = 1;
-			auto tsize = desc.size;
+			int mip_count = desc.mip_count;
 
-			while (tsize.x != 1 && tsize.y != 1)
-			{
-				tsize /= 2;
-				mip_count++;
+			if (mip_count == 0) {
+				mip_count = 1;
+				auto tsize = desc.size;
+
+				while (tsize.x != 1 && tsize.y != 1)
+				{
+					tsize /= 2;
+					mip_count++;
+				}
+
 			}
+
 			info->d3ddesc = CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, mip_count, 1, 0, flags);
 			info->placed = true;
 
@@ -1002,26 +974,26 @@ void TaskBuilder::create_resources()
 			{
 				//info->heap_type = Render::HeapType::READBACK;
 			}
-			
+
 			info->d3ddesc = CD3DX12_RESOURCE_DESC::Buffer(desc.size, flags);
 		}
-/*
-		if (info->heap_type == Render::HeapType::UPLOAD)
-		{
-			auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
-			auto alloc_ptr = current_alloc->alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
+		/*
+				if (info->heap_type == Render::HeapType::UPLOAD)
+				{
+					auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
+					auto alloc_ptr = current_alloc->alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
-			info->need_recreate = info->alloc_ptr != alloc_ptr;
-			info->alloc_ptr = alloc_ptr;
-		}*/
+					info->need_recreate = info->alloc_ptr != alloc_ptr;
+					info->alloc_ptr = alloc_ptr;
+				}*/
 		if (check(info->flags & ResourceFlags::Static)) continue;
 		if (info->heap_type != Render::HeapType::DEFAULT)
 		{
-		//	auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
-		//	auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
+			//	auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
+			//	auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
-		//	info->need_recreate = info->alloc_ptr != alloc_ptr;
-		//	info->alloc_ptr = alloc_ptr;
+			//	info->need_recreate = info->alloc_ptr != alloc_ptr;
+			//	info->alloc_ptr = alloc_ptr;
 		}
 		else
 		{
@@ -1032,15 +1004,15 @@ void TaskBuilder::create_resources()
 			events[pair.second.valid_to->call_id].free.insert(info);
 		}
 
-	//	if (info->heap_type != Render::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
+		//	if (info->heap_type != Render::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
 
-		
+
 	}
 
 	{
 		PROFILE(L"allocate memory");
 
-		
+
 		for (auto [id, e] : events)
 		{
 			for (auto info : e.free)
@@ -1051,7 +1023,7 @@ void TaskBuilder::create_resources()
 
 			for (auto info : e.create)
 			{
-	
+
 				auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
 				auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
@@ -1081,11 +1053,11 @@ void TaskBuilder::create_resources()
 
 			if (info->alloc_ptr.handle)
 			{
-			auto& res = info->resource_places[info->alloc_ptr];
+				auto& res = info->resource_places[info->alloc_ptr];
 
 
-		//	res = nullptr;
-				//Render::Resource::ptr res;
+				//	res = nullptr;
+						//Render::Resource::ptr res;
 				if (!res || res->get_desc() != info->d3ddesc)
 				{
 					res = std::make_shared<Render::Resource>(info->d3ddesc, info->alloc_ptr);
@@ -1116,48 +1088,29 @@ void TaskBuilder::create_resources()
 					info->is_new = true;
 				}
 
-
+			}
 				info->resource->set_name(info->name);
 
+				info->handler->init_view(*info, *current_frame);
+				id++;
 			}
-
-			//		if (!info->need_recreate) 
-			//			continue;
-			if (info->type == ResourceType::Texture)
-			{
-				info->texture = info->resource->create_view<Render::TextureView>(*current_frame, check(info->flags & ResourceFlags::Cube));
-			}
-
-			if (info->type == ResourceType::Buffer)
-			{
-				info->buffer = info->resource->create_view<Render::BufferView>(*current_frame);
-			}
-
-			info->handler->init_view(*info, *current_frame);
-			id++;
 		}
+
+
 	}
 
 
-}
+	bool ResourceHandler::is_new()
+	{
+		return info->is_new;
+	}
 
+	void ResourceHandler::changed()
+	{
+		info->flags = info->flags | ResourceFlags::Changed;
+	}
 
-Render::TextureView TaskBuilder::request_texture(ResourceHandler* handler)
-{
-	return handler->info->texture;
-}
-
-bool ResourceHandler::is_new()
-{
-	return info->is_new;
-}
-
-void ResourceHandler::changed()
-{
-	info->flags = info->flags | ResourceFlags::Changed;
-}
-
-bool ResourceHandler::is_changed()
-{
-	return check(info->flags & ResourceFlags::Changed);
-}
+	bool ResourceHandler::is_changed()
+	{
+		return check(info->flags & ResourceFlags::Changed);
+	}

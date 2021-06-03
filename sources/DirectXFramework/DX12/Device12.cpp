@@ -331,6 +331,24 @@ namespace DX12
 	void  Device::create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
 	{
 		*h.resource_info = ResourceInfo(resource, srv);
+		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2D)
+		{
+			assert(srv.Texture2D.MipLevels>0);
+			assert(srv.Texture2D.MostDetailedMip + srv.Texture2D.MipLevels<= resource->get_desc().MipLevels);
+		}
+
+		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2DARRAY)
+		{
+			assert(srv.Texture2DArray.MipLevels > 0);
+			assert(srv.Texture2DArray.MostDetailedMip + srv.Texture2DArray.MipLevels <= resource->get_desc().MipLevels);
+		}
+
+	if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURECUBE)
+		{
+		assert(srv.TextureCube.MipLevels > 0);
+			assert(srv.TextureCube.MostDetailedMip + srv.TextureCube.MipLevels <= resource->get_desc().MipLevels);
+		}
+
 		Device::get().get_native_device()->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.cpu);
 	}
 

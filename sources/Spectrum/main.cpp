@@ -109,7 +109,7 @@ public:
 	//	PostProcessGraph::ptr render_graph;
 
 
-	Variable<bool> enable_gi = Variable<bool>(true, "enable_gi", this);
+	Variable<bool> enable_gi = { true, "enable_gi", this };
 	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
 
@@ -603,7 +603,7 @@ public:
 				//// hack zone
 				auto &sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
 				if (sky.resource)
-					frameInfo.GetSky() = sky.texture.texture—ube;
+					frameInfo.GetSky() = sky.get_handler<Handlers::Texture>()->texture—ube;
 				/////////
 				frameInfo.GetSunDir() = graph.sunDir;
 				frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };

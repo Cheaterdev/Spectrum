@@ -59,7 +59,7 @@ void PSSM::generate(FrameGraph& graph)
 	};
 
 	graph.add_pass<PSSMDataGlobal>("PSSM_Global", [this, &graph](PSSMDataGlobal& data, TaskBuilder& builder) {
-		builder.create(data.global_depth, { ivec3(1024, 1024,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+		builder.create(data.global_depth, { ivec3(1024, 1024,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 ,1}, ResourceFlags::DepthStencil);
 		builder.create(data.global_camera, { 1 }, ResourceFlags::GenCPU);
 		}, [this, &graph, cam, points_all](PSSMDataGlobal& data, FrameContext& _context) {
 
@@ -162,7 +162,7 @@ void PSSM::generate(FrameGraph& graph)
 	};
 
 	graph.add_pass<PSSMData>("PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		builder.create(data.PSSM_Depths, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS,renders_size }, ResourceFlags::None);
+		builder.create(data.PSSM_Depths, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS,renders_size ,1}, ResourceFlags::None);
 		builder.create(data.PSSM_Cameras, { renders_size }, ResourceFlags::GenCPU);
 		}, [](PSSMData& data, FrameContext& _context) {});
 
@@ -277,7 +277,7 @@ void PSSM::generate(FrameGraph& graph)
 	// relight pass
 	graph.add_pass<PSSMData>("PSSM_Process", [this, &graph](PSSMData& data, TaskBuilder& builder) {
 		
-		builder.create(data.LightMask, { ivec3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R8_UNORM,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.LightMask, { ivec3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 		data.gbuffer.need(builder);
 
 	    builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);

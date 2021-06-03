@@ -258,16 +258,16 @@ public:
 
 	Render::Texture::ptr  ssgi_tex;
 
-	Variable<bool> voxelize_scene = Variable<bool>(true, "voxelize_scene", this);
-	Variable<bool> light_scene = Variable<bool>(true, "light_scene", this);
-	Variable<bool> clear_scene = Variable<bool>(true, "clear_scene",this);
+	Variable<bool> voxelize_scene = { true, "voxelize_scene", this };
+	Variable<bool> light_scene = { true, "light_scene", this };
+	Variable<bool> clear_scene = { true, "clear_scene",this };
 
-	Variable<bool> use_rtx = Variable<bool>(true, "use_rtx", this);
-	Variable<bool> multiple_bounces = Variable<bool>(true, "multiple_bounces", this);
+	Variable<bool> use_rtx = { true, "use_rtx", this };
+	Variable<bool> multiple_bounces = { true, "multiple_bounces", this };
 
 
-	Variable<bool> denoiser = Variable<bool>(true, "denoiser", this);
-	Variable<bool> reflecton = Variable<bool>(true, "reflecton", this);
+	Variable<bool> denoiser = { true, "denoiser", this };
+	Variable<bool> reflecton = { true, "reflecton", this };
 
 	
 	void resize(ivec2 size);
