@@ -509,12 +509,12 @@ public:
 					gbuffer.rtv_table.set_window(context->list->get_graphics());
 
 					RT::Slot::GBuffer rt_gbuffer;
-					rt_gbuffer.GetAlbedo() = gbuffer.albedo.get_rtv();
-					rt_gbuffer.GetNormals() = gbuffer.normals.get_rtv();
-					rt_gbuffer.GetSpecular() = gbuffer.specular.get_rtv();
-					rt_gbuffer.GetMotion() = gbuffer.speed.get_rtv();
+					rt_gbuffer.GetAlbedo() = gbuffer.albedo.renderTarget;
+					rt_gbuffer.GetNormals() = gbuffer.normals.renderTarget;
+					rt_gbuffer.GetSpecular() = gbuffer.specular.renderTarget;
+					rt_gbuffer.GetMotion() = gbuffer.speed.renderTarget;
 
-					rt_gbuffer.GetDepth() = gbuffer.depth.get_dsv();
+					rt_gbuffer.GetDepth() = gbuffer.depth.depthStencil;
 
 					context->gbuffer_compiled = rt_gbuffer.compile(*context->list);
 
@@ -820,9 +820,9 @@ public:
 				auto tex = pEyeRenderTexture[eye]->GetD3DColorResource();
 
 				command_list->transition(tex, Render::ResourceState::RENDER_TARGET);
-				//command_list->get_graphics().set_rtv(1, tex->texture_2d()->get_rtv(), Render::Handle());
+				//command_list->get_graphics().set_rtv(1, tex->texture_2d()->renderTarget, Render::Handle());
 				//command_list->get_graphics().set_viewports({ tex->texture_2d()->get_viewport() });
-				command_list->clear_rtv(tex->texture_2d()->get_rtv(), { eye,0,0,1 });
+				command_list->clear_rtv(tex->texture_2d()->renderTarget, { eye,0,0,1 });
 
 
 

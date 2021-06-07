@@ -218,17 +218,9 @@ private:
 	int light_counter = 0;
 
 	std::future<visibility_update> vis_update;
-//	PlacedAllocator allocator;
 	
-	HandleTable gi_rtv;
-	//ReflectionEffectPixel reflection_effect;
-
 	struct EyeData:public prop_handler
 	{
-	//	PlacedAllocator allocator;
-
-		//TextureSwapper gi_textures;
-		//TextureSwapper downsampled_light;
 		Render::Texture::ptr downsampled_reflection;
 		Render::Texture::ptr current_gi_texture;
 
@@ -236,16 +228,13 @@ private:
 		EyeData();
 	};
 
-	Render::StructuredBuffer<DispatchArguments>::ptr dispatch_hi_buffer;
-	Render::StructuredBuffer<DispatchArguments>::ptr dispatch_low_buffer;
-
 	IndirectCommand dispatch_command;
 
 	bool recreate_static = false;
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
-	Render::StructuredBuffer<uint2>::ptr hi;
-	Render::StructuredBuffer<uint2>::ptr low;
+//	Render::StructuredBuffer<uint2>::ptr hi;
+//	Render::StructuredBuffer<uint2>::ptr low;
 
 	ivec3 lighed_to_albedo_coeff;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;
@@ -255,8 +244,6 @@ public:
 	Texture3DMultiTiles albedo;
 	Texture3DMultiTiles normal;
 	Texture3DRefTiles tex_lighting;
-
-	Render::Texture::ptr  ssgi_tex;
 
 	Variable<bool> voxelize_scene = { true, "voxelize_scene", this };
 	Variable<bool> light_scene = { true, "light_scene", this };

@@ -187,7 +187,7 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 		gbuffer.set(list);
 		}
 		list.set_pipeline(GetPSO<PSOS::QualityColor>());
-		list.set_rtv(1, tempColor.get_rtv(),Handle());
+		list.set_rtv(1, tempColor.renderTarget,Handle());
 		list.draw(4);
 	}
 
@@ -199,10 +199,10 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 		quality.GetRef() = tempColor.texture2D;
 		quality.set(list);
 
-		list.get_base().clear_stencil(buffer.quality.get_dsv());
+		list.get_base().clear_stencil(buffer.quality.depthStencil);
 		list.set_pipeline(GetPSO<PSOS::QualityToStencil>());
 
-		list.set_rtv(0, Handle(), buffer.quality.get_dsv());
+		list.set_rtv(0, Handle(), buffer.quality.depthStencil);
 
 		list.set_stencil_ref(1);
 		list.draw(4);
@@ -249,7 +249,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
-	list.set_rtv(1, view->get_rtv(), Handle());	
+	list.set_rtv(1, view->get_rtv(), Handle());
 	list.draw(4);
 }
 
@@ -257,14 +257,14 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 
 void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Render::TextureView to, Render::TextureView from)
 {
-	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(to.get_rtv().resource_info->rtv.Format)));
+	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(to.renderTarget.resource_info->rtv.Format)));
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	Slots::CopyTexture data;
 	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
-	list.set_rtv(1,to.get_rtv(), Handle());
+	list.set_rtv(1,to.renderTarget, Handle());
 	list.draw(4);
 }
 
@@ -280,7 +280,7 @@ void MipMapGenerator::write_to_depth(Render::GraphicsContext& list, Render::Text
 	list.set_viewport(to.get_viewport());
 	list.set_scissor(to.get_scissor());
 
-	list.set_rtv(0, Handle(), to.get_dsv());
+	list.set_rtv(0, Handle(), to.depthStencil);
 
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	list.draw(4);

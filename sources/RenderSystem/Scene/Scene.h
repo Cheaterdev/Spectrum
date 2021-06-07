@@ -193,14 +193,14 @@ public:
 
 
 						auto info = frame.place_raw(UINT(data.size()));
-						auto srv = info.resource->create_view<StructuredBufferView<UINT>>(frame, (UINT)info.offset, (UINT)info.size).structuredBuffer;
+						auto srv = info.resource->create_view<StructuredBufferView<UINT>>(frame, BufferType::NONE, (UINT)info.offset, (UINT)info.size).structuredBuffer;
 						gather_global.GetMeshes_count() = srv;
                     }
 				
 
                     if (data.size()) {
                         auto info = frame.place_raw(data);
-                        auto srv = info.resource->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(frame, (UINT)info.offset, (UINT)info.size).srv_handle;
+                        auto srv = info.resource->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(frame,  (UINT)info.offset, (UINT)info.size).srv_handle;
                         gather_global.GetCommands() = srv;
                     }
 

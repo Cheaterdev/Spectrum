@@ -110,7 +110,7 @@ namespace FW1FontWrapper
 			
             pContext->write(data, std::span{ vertexData->pVertices + currentVertex, vertexCount });
 
-			auto view = data.resource->create_view<Render::StructuredBufferView<Table::Glyph>>(*pContext->frame_resources, (UINT)data.offset, data.size);
+			auto view = data.resource->create_view<Render::StructuredBufferView<Table::Glyph>>(*pContext->frame_resources, Render::BufferType::NONE, (UINT)data.offset, data.size);
 
 
             {

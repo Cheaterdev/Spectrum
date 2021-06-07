@@ -94,6 +94,7 @@ namespace DX12
 
 #include "DX12/RayTracingAS.h"
 
+#include "DX12/HLSLDescriptors.hpp"
 
 
 namespace Render

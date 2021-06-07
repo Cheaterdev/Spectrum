@@ -354,4 +354,50 @@ namespace DX12 {
 		else
 			assert(false);
 	}
+
+	namespace HLSL
+	{
+		void RaytracingAccelerationStructure::create(Resource* resource)
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+			desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+			desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			desc.Format = DXGI_FORMAT_UNKNOWN;
+			desc.RaytracingAccelerationStructure.Location = resource->get_gpu_address();
+
+			Device::get().create_srv(*this, nullptr, desc);
+		}
+
+		void ByteAddressBuffer::create(Resource* resource, UINT offset , UINT size )
+		{
+			if (size == 0) size = resource->get_desc().Width / 4;
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+			desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			desc.Buffer.NumElements = size;
+			desc.Buffer.StructureByteStride = 0;
+			desc.Buffer.FirstElement = offset;
+
+			desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+
+			Device::get().create_srv(*this, resource, desc);
+		}
+
+		void RWByteAddressBuffer::create(Resource* resource, UINT offset , UINT size )
+		{
+			if (size == 0) size = resource->get_desc().Width / 4;
+			D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			desc.Buffer.NumElements = size;
+			desc.Buffer.StructureByteStride = 0;
+			desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+			desc.Buffer.FirstElement = offset;
+
+			Device::get().create_uav(*this, resource, desc);
+		}
+	}
+	
 }

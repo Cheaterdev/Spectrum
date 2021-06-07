@@ -234,7 +234,7 @@ void RTX::render(ComputeContext & compute, Render::RaytracingAccelerationStructu
 	{
 		Slots::Raytracing rtx;
 		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<StructuredBufferView<UINT>>(*compute.get_base().frame_resources).structuredBuffer;
-		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*compute.get_base().frame_resources).srv_handle;
+		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*compute.get_base().frame_resources).scene;
 		rtx.set(compute);
 	}
 
@@ -263,7 +263,7 @@ void RTX::render2(ComputeContext& compute, Render::RaytracingAccelerationStructu
 	{
 		Slots::Raytracing rtx;
 		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<StructuredBufferView<UINT>>(*compute.get_base().frame_resources).structuredBuffer;
-		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*compute.get_base().frame_resources).srv_handle;
+		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*compute.get_base().frame_resources).scene;
 		rtx.set(compute);
 	}
 

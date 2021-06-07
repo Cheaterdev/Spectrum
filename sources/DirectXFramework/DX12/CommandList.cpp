@@ -1165,6 +1165,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.create_transition_point();
 		base.setup_debug(this);
 
+		assert(command_buffer);
+
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 

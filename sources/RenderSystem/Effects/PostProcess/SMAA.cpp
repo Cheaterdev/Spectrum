@@ -42,9 +42,9 @@ void SMAA::generate(FrameGraph& graph)
 
 			graphics.set_viewport(data.SMAA_edges->get_viewport());
 			graphics.set_scissor(data.SMAA_edges->get_scissor());
-			graphics.set_rtv(1, data.SMAA_edges->get_rtv(), Render::Handle());
-			graphics.get_base().clear_rtv(data.SMAA_edges->get_rtv());
-			graphics.get_base().clear_rtv(data.SMAA_blend->get_rtv());
+			graphics.set_rtv(1, data.SMAA_edges->renderTarget, Render::Handle());
+			graphics.get_base().clear_rtv(data.SMAA_edges->renderTarget);
+			graphics.get_base().clear_rtv(data.SMAA_blend->renderTarget);
 
 			{
 
@@ -69,7 +69,7 @@ void SMAA::generate(FrameGraph& graph)
 				slot_edges.set(graphics);
 			}
 			graphics.set_pipeline(GetPSO<PSOS::BlendWeight>());
-			graphics.set_rtv(1, data.SMAA_blend->get_rtv(), Render::Handle());
+			graphics.set_rtv(1, data.SMAA_blend->renderTarget, Render::Handle());
 			graphics.draw(4);
 
 
@@ -84,7 +84,7 @@ void SMAA::generate(FrameGraph& graph)
 			}
 
 			graphics.set_pipeline(GetPSO<PSOS::Blending>());
-			graphics.set_rtv(1, data.ResultTextureNew->get_rtv(), Render::Handle());
+			graphics.set_rtv(1, data.ResultTextureNew->renderTarget, Render::Handle());
 			graphics.draw(4);
 
 		});

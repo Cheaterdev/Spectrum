@@ -289,7 +289,7 @@ class RenderTargetTable
 			if (clear_color)
 			{
 				for (auto& tex : textures)
-					list.clear_rtv(tex.get_rtv());
+					list.clear_rtv(tex.renderTarget);
 			}
 
 

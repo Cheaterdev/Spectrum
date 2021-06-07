@@ -316,7 +316,7 @@ void PSSM::generate(FrameGraph& graph)
 			graphics.set_viewport(data.LightMask->get_viewport());
 			graphics.set_scissor(data.LightMask->get_scissor());
 
-			graphics.set_rtv(1, data.LightMask->get_rtv(), Render::Handle());
+			graphics.set_rtv(1, data.LightMask->renderTarget, Render::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::PSSMMask>());
 
 
@@ -348,7 +348,7 @@ void PSSM::generate(FrameGraph& graph)
 				lighting.set(graphics);
 			}
 
-			graphics.set_rtv(1, data.ResultTexture->get_rtv(), Render::Handle());
+			graphics.set_rtv(1, data.ResultTexture->renderTarget, Render::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::PSSMApply>());
 
 			graphics.draw(4);

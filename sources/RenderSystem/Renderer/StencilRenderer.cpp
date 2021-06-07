@@ -591,8 +591,8 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 
 
 				{
-					graphics.set_rtv(1, data.Stencil_color_tex->get_rtv(), Handle());
-					data.Stencil_color_tex->get_rtv().clear(list);
+					graphics.set_rtv(1, data.Stencil_color_tex->renderTarget, Handle());
+					data.Stencil_color_tex->renderTarget.clear(list);
 
 					graphics.set_pipeline(GetPSO<PSOS::DrawSelected>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -638,14 +638,14 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 
 					graphics.set_viewport(data.ResultTexture->get_viewport());
 					graphics.set_scissor(data.ResultTexture->get_scissor());
-					graphics.set_rtv(1, data.ResultTexture->get_rtv(), Render::Handle());
+					graphics.set_rtv(1, data.ResultTexture->renderTarget, Render::Handle());
 					{
 						PROFILE_GPU(L"blend");
 						graphics.draw(4);
 					}
 				}
 
-				graphics.set_rtv(1, data.ResultTexture->get_rtv(), Handle());
+				graphics.set_rtv(1, data.ResultTexture->renderTarget, Handle());
 
 				{
 					graphics.set_pipeline(GetPSO<PSOS::DrawBox>());

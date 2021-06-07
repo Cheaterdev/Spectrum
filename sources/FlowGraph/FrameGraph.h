@@ -38,6 +38,7 @@ static const ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | Re
 struct BufferDesc
 {
 	size_t size;
+	bool counted;
 
 	auto   operator<=>(const  BufferDesc& r)  const = default;
 };
@@ -193,6 +194,7 @@ struct Handlers
 		struct Desc
 		{
 			UINT count;
+			bool counted;
 		}m_desc;
 
 		auto& operator*()
@@ -221,7 +223,12 @@ struct Handlers
 		}
 		virtual void init(ResourceAllocInfo& info) override
 		{
-			auto desc = BufferDesc{ m_desc.count* sizeof(Underlying<T>) };
+			auto s = m_desc.count * sizeof(Underlying<T>);
+			if (m_desc.counted)
+			{
+				s += std::max(4ull, sizeof(Underlying<T>));
+			}
+			auto desc = BufferDesc{ s , m_desc.counted };
 			info.need_recreate = info.desc != desc;
 			info.type = ResourceType::Buffer;
 			info.desc = desc;
@@ -230,7 +237,7 @@ struct Handlers
 
 		virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) override
 		{
-			info.init_view<Render::StructuredBufferView<T>>(frame);
+			info.init_view<Render::StructuredBufferView<T>>(frame, m_desc.counted? Render::BufferType::COUNTED: Render::BufferType::NONE);
 		}
 	};
 
@@ -318,7 +325,7 @@ public:
 	std::map<int, Render::ResourceHeapAllocator<Thread::Free>> frame_allocs;
 
 	Render::ResourceHeapAllocator<Thread::Free>* current_alloc;
-	Pass* current_pass;
+	Pass* current_pass = nullptr;
 	void begin(Pass* pass);
 
 	void end(Pass* pass);

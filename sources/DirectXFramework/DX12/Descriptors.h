@@ -85,6 +85,7 @@ namespace DX12
 				UINT64 Size;
 				UINT64 Offset;
 				UINT64 Stride;
+				bool counted;
 			} Buffer;
 
 		};
@@ -209,6 +210,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource);
 		};
 
 		template<class T>
@@ -221,6 +224,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource, UINT first_elem = 0, UINT count = 0);
 		};
 
 		template<class T>
@@ -233,6 +238,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource, UINT first_elem = 0, UINT count = 0);
 		};
 
 		template<class T>
@@ -245,7 +252,23 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* counter_resource, UINT counter_offset,  Resource* resource, UINT first_elem = 0, UINT count = 0);
 		};
+
+		struct ByteAddressBuffer : public Handle
+		{
+			static const HandleType TYPE = HandleType::SRV;
+
+			ByteAddressBuffer() = default;
+			explicit ByteAddressBuffer(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT offset = 0, UINT size = 0);
+		};
+
 
 		struct RWByteAddressBuffer : public Handle
 		{
@@ -256,6 +279,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource, UINT offset = 0, UINT size = 0);
 		};
 
 		template<class T>
@@ -268,6 +293,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource, DXGI_FORMAT format, UINT offset = 0, UINT size = 0);
 		};
 
 		template<class T>
@@ -280,6 +307,7 @@ namespace DX12
 			{
 
 			}
+			void create(Resource* resource, DXGI_FORMAT format, UINT offset = 0, UINT size = 0);
 		};
 
 		template<class T = float4>
@@ -299,6 +327,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
 		};
 
 		template<class T = float4>
@@ -317,6 +347,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0, UINT array_count = 1);
 		};
 
 		template<class T = float4>
@@ -335,6 +367,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
 		};
 		template<class T = float4>
 		struct TextureCube : public Handle
@@ -352,6 +386,8 @@ namespace DX12
 			{
 
 			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
 		};
 
 		template<class T = float4>
@@ -369,7 +405,7 @@ namespace DX12
 			{
 
 			}
-
+			void create(Resource* resource, UINT first_mip = 1, UINT array_offset = 0);
 		};
 
 		template<class T = float4>
@@ -388,6 +424,51 @@ namespace DX12
 
 			}
 
+			void create(Resource* resource, UINT first_mip = 1, UINT array_offset = 0);
+
+		};
+
+		template<class T = float4>
+		struct RenderTarget : public Handle
+		{
+			static const HandleType TYPE = HandleType::RTV;
+
+			RenderTarget() = default;
+			explicit RenderTarget(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			RenderTarget(const RenderTarget<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void createFrom2D(Resource* resource, UINT mip_offset = 0);
+			void createFrom2DArray(Resource* resource, UINT mip_offset = 0, UINT array_offset = 0);
+
+		};
+
+		template<class T = float4>
+		struct DepthStencil : public Handle
+		{
+			static const HandleType TYPE = HandleType::DSV;
+
+			DepthStencil() = default;
+			explicit DepthStencil(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			DepthStencil(const RenderTarget<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void createFrom2D(Resource* resource, UINT mip_offset = 0);
+			void createFrom2DArray(Resource* resource, UINT mip_offset = 0, UINT array_offset = 0);
 
 		};
 	}

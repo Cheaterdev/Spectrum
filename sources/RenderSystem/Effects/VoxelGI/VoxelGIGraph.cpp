@@ -59,8 +59,8 @@ public:
 						auto depth_view = gbuffer.depth_mips.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
 						auto normal_view = gbuffer.normals.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
 
-						table[0].place(depth_view.get_rtv());
-						table[1].place(normal_view.get_rtv());
+						table[0].place(depth_view.renderTarget);
+						table[1].place(normal_view.renderTarget);
 
 
 						graphics.set_viewport(depth_view.get_viewport());
@@ -118,14 +118,8 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 
 	{
-		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<command>));
+		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<DispatchArguments>));
 	}
-
-	{
-		dispatch_hi_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		dispatch_low_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	}
-
 
 	{
 		CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8G8B8A8_UNORM, 512, 512, 512, 1, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
@@ -195,7 +189,6 @@ void VoxelGI::init_states()
 {
 
 
-	gi_rtv = Render::DescriptorHeapManager::get().get_rt()->create_table(2);
 
 }
 
@@ -428,7 +421,7 @@ void VoxelGI::debug(FrameGraph& graph)
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
 
-			graphics.set_rtv(1, target_tex.get_rtv(), Render::Handle());
+			graphics.set_rtv(1, target_tex.renderTarget, Render::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::VoxelDebug>());
 
 			graph.set_slot(SlotID::VoxelInfo, graphics);
@@ -464,17 +457,26 @@ void VoxelGI::screen(FrameGraph& graph)
 		Handlers::Texture H(VoxelIndirectFiltered);
 
 		Handlers::Texture H(sky_cubemap_filtered);
+
+
+		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
+		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
+
+
+		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
+		Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
+
 	};
 
 	auto size = graph.frame_size;
 	int count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
-
+	/*
 	if (!hi || hi->get_count() < count)
 	{
 		hi = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		low = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
-	}
+	}*/
 
 	graph.add_pass<Screen>("VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
 
@@ -485,6 +487,18 @@ void VoxelGI::screen(FrameGraph& graph)
 		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT , 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
+
+		builder.create(data.VoxelScreen_hi, { 1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelScreen_low, { 1 }, ResourceFlags::UnorderedAccess);
+
+
+		UINT count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
+
+
+		builder.create(data.VoxelScreen_low_data, { count, true }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelScreen_hi_data, { count, true }, ResourceFlags::UnorderedAccess);
+
+
 		}, [this, &graph](Screen& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -570,15 +584,15 @@ void VoxelGI::screen(FrameGraph& graph)
 			{
 				PROFILE_GPU(L"classification");
 
-				command_list->clear_counter(hi);
-				command_list->clear_counter(low);
+				command_list->clear_uav(data.VoxelScreen_hi_data->counter_view.rwRAW);
+				command_list->clear_uav(data.VoxelScreen_low_data->counter_view.rwRAW);
 
 				{
 					Slots::FrameClassification frame_classification;
 
 					frame_classification.GetFrames() = frames_count.texture2D;
-					frame_classification.GetHi() = hi->appendStructuredBuffer;
-					frame_classification.GetLow() = low->appendStructuredBuffer;
+					frame_classification.GetHi() = data.VoxelScreen_hi_data->appendStructuredBuffer;
+					frame_classification.GetLow() = data.VoxelScreen_low_data->appendStructuredBuffer;
 
 					frame_classification.set(compute);
 				}
@@ -594,11 +608,11 @@ void VoxelGI::screen(FrameGraph& graph)
 
 				{
 					Slots::FrameClassificationInitDispatch frame_classification_init;
-					frame_classification_init.GetHi_counter() = hi->structuredBufferCount;
-					frame_classification_init.GetLow_counter() = low->structuredBufferCount;
+					frame_classification_init.GetHi_counter() = data.VoxelScreen_hi_data->counter_view.structuredBuffer;
+					frame_classification_init.GetLow_counter() = data.VoxelScreen_low_data->counter_view.structuredBuffer;
 
-					frame_classification_init.GetHi_dispatch_data() = dispatch_hi_buffer->rwStructuredBuffer;
-					frame_classification_init.GetLow_dispatch_data() = dispatch_low_buffer->rwStructuredBuffer;
+					frame_classification_init.GetHi_dispatch_data() = data.VoxelScreen_hi->rwStructuredBuffer;
+					frame_classification_init.GetLow_dispatch_data() = data.VoxelScreen_low->rwStructuredBuffer;
 
 					frame_classification_init.set(compute);
 				}
@@ -637,13 +651,13 @@ void VoxelGI::screen(FrameGraph& graph)
 				{
 					Slots::TilingPostprocess tilingPostprocess;
 					auto tiling = tilingPostprocess.MapTiling();
-					tiling.GetTiles() = hi->structuredBuffer;
+					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
 
 				//	compute.dispach(frames_count.get_size());
 
-				compute.execute_indirect(dispatch_command, 1, dispatch_hi_buffer.get());
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
 			}
 
 
@@ -663,6 +677,14 @@ void VoxelGI::screen(FrameGraph& graph)
 	 builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		builder.need(data.VoxelFramesCount, ResourceFlags::UnorderedAccess);
 		builder.need(data.VoxelIndirectNoise, ResourceFlags::ComputeRead);
+
+		builder.need(data.VoxelScreen_hi,ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_low, ResourceFlags::ComputeRead);
+
+
+		builder.need(data.VoxelScreen_low_data);
+		builder.need(data.VoxelScreen_hi_data);
+
 		}, [this, &graph](Screen& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -727,11 +749,11 @@ void VoxelGI::screen(FrameGraph& graph)
 				{
 					Slots::TilingPostprocess tilingPostprocess;
 					auto tiling = tilingPostprocess.MapTiling();
-					tiling.GetTiles() = hi->structuredBuffer;
+					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
 
-				compute.execute_indirect(dispatch_command, 1, dispatch_hi_buffer.get());
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
 			}
 
 			{
@@ -741,12 +763,12 @@ void VoxelGI::screen(FrameGraph& graph)
 				{
 					Slots::TilingPostprocess tilingPostprocess;
 					auto tiling = tilingPostprocess.MapTiling();
-					tiling.GetTiles() = low->structuredBuffer;
+					tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
 
 
-				compute.execute_indirect(dispatch_command, 1, dispatch_low_buffer.get());
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
 			}
 
 
@@ -776,6 +798,12 @@ Handlers::Texture H(prev_gi_temp);
 
 Handlers::Texture H(ResultTexture);
 
+
+Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
+Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
+
+Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
+Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 	};
 	auto size = graph.frame_size;
 
@@ -872,7 +900,7 @@ Handlers::Texture H(ResultTexture);
 			{
 				graphics.set_viewport(target_tex.get_viewport());
 				graphics.set_scissor(target_tex.get_scissor());
-				graphics.set_rtv(1, target_tex.get_rtv(), gbuffer.quality.get_dsv());
+				graphics.set_rtv(1, target_tex.renderTarget, gbuffer.quality.depthStencil);
 
 
 				PROFILE_GPU(L"full");
@@ -898,6 +926,12 @@ Handlers::Texture H(ResultTexture);
 	 builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
 
 		 builder.need(data.noise_dir_pdf, ResourceFlags::ComputeRead); 
+
+
+		 builder.need(data.VoxelScreen_hi, ResourceFlags::ComputeRead);
+		 builder.need(data.VoxelScreen_low, ResourceFlags::ComputeRead);
+		 builder.need(data.VoxelScreen_low_data, ResourceFlags::ComputeRead);
+		 builder.need(data.VoxelScreen_hi_data, ResourceFlags::ComputeRead);
 
 		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
@@ -970,12 +1004,12 @@ Handlers::Texture H(ResultTexture);
 				{
 					Slots::TilingPostprocess tilingPostprocess;
 					auto tiling = tilingPostprocess.MapTiling();
-					tiling.GetTiles() = hi->structuredBuffer;
+					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
 
 
-				compute.execute_indirect(dispatch_command, 1, dispatch_hi_buffer.get());
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
 			}
 
 			{
@@ -985,11 +1019,11 @@ Handlers::Texture H(ResultTexture);
 				{
 					Slots::TilingPostprocess tilingPostprocess;
 					auto tiling = tilingPostprocess.MapTiling();
-					tiling.GetTiles() = low->structuredBuffer;
+					tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
 
-				compute.execute_indirect(dispatch_command, 1, dispatch_low_buffer.get());
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
 			}
 
 
