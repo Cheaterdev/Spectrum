@@ -79,7 +79,7 @@ public:
 
 };
 
-class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator, VariableContext
+class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator, VariableContext, public FrameGraphUsage
 {
 	main_renderer::ptr scene_renderer;
 	main_renderer::ptr gpu_scene_renderer;
@@ -139,7 +139,7 @@ public:
 		texture.mul_color = { 1,1,1,0 };
 		texture.add_color = { 0,0,0,1 };
 
-		texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
+	//	texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
 	
 
@@ -368,7 +368,7 @@ public:
 
 	FrameGraph* last_graph = nullptr;
 	tick_timer my_timer;
-	std::future<Render::Handle> result_tex;
+	ResourceAllocInfo* debug_tex_handle = nullptr;
 
 	void generate(FrameGraph& graph)
 	{
@@ -560,42 +560,28 @@ public:
 
 		struct debug_data
 		{
-			Handlers::Texture H(swapchain);
-			
 			Handlers::Texture debug_tex;
 		};
 
 		//
 
-		std::string res_tex = "ResultTexture";
-		if (!debug_view.empty())
-			res_tex = debug_view;
-		auto promise = std::make_shared<std::promise<Render::Handle>>();
-		result_tex = promise->get_future();
+		
 
+
+		/*
 		graph.add_pass<debug_data>("DEBUG", [this, res_tex](debug_data& data, TaskBuilder& builder) {
 
 			data.debug_tex = Handlers::Texture(res_tex);
-			 builder.need(data.swapchain, ResourceFlags::RenderTarget);
 			builder.need(data.debug_tex, ResourceFlags::PixelRead);
 
-			}, [this, promise](debug_data& data, FrameContext& context) {
-
-				auto output_tex =(*data.swapchain);
+			}, [this](debug_data& data, FrameContext& context) {			
 				auto debug_tex =(*data.debug_tex);
+			
 
-				if (!debug_tex) return;
+				assert(texture.srv.resource_info->resource_ptr == debug_tex.resource.get());
 
-				promise->set_value(debug_tex.texture2D);
-				/*
-				auto& list = context.get_list();
-
-				list->get_graphics().set_viewport(vec4{0,0,100,100});
-				list->get_graphics().set_scissor({ 0,0,100,100 });
-
-				MipMapGenerator::get().copy_texture_2d_slow(list->get_graphics(), texture.texture, debug_tex);*/
 			}, PassFlags::Required);
-
+		*/
 		graph.add_slot_generator([this](FrameGraph& graph) {
 
 				PROFILE(L"FrameInfo");
@@ -617,17 +603,49 @@ public:
 
 				auto compiled = frameInfo.compile(*graph.builder.current_frame);
 				graph.register_slot_setter(compiled);
+
+			/*	debug_tex_handle = graph.builder.get(res_tex);
+
+				if (debug_tex_handle)
+				{
+					texture.srv = (debug_tex_handle->get_handler<Handlers::Texture>()->texture2D);
+
+					assert(texture.srv.resource_info->resource_ptr->get_desc().Width == graph.frame_size.x);
+				}
+				*/
+
 			});
 
-
-
+		/*
+		graph.add_slot_generator([this](FrameGraph& graph) {
+			ResourceAllocInfo*  info = graph.builder.get(res_tex);
+			if(info)
+			debug_tex_handle->get_handler<Handlers::Texture>()->texture2D;
+			});
+		*/
 
 	}
 
+	Handlers::Texture debug_tex;
+
+	void use(TaskBuilder& builder) override
+	{
+		std::string res_tex = "ResultTexture";
+		if (!debug_view.empty())
+			res_tex = debug_view;
+
+		debug_tex = Handlers::Texture(res_tex);
+
+		builder.need(debug_tex, ResourceFlags::PixelRead);
+	}
 	virtual void draw(Render::context& t) override
 	{
+if(debug_tex)
+		texture.srv = debug_tex->texture2D;
 
-		texture.srv[0].place(result_tex.get());
+
+	//	if(debug_tex_handle)
+		
 		image::draw(t);
 	}
 
@@ -1194,6 +1212,7 @@ public:
 
 		graph.start_new_frame();
 		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame());
+		graph.builder.pass_texture("swapchain_prev", swap_chain->get_prev_frame());
 
 
 		{

@@ -517,6 +517,8 @@ void VoxelGI::screen(FrameGraph& graph)
 			{
 				command_list->clear_uav(gi_filtered.rwTexture2D, vec4(0, 0, 0, 0));
 				command_list->clear_uav(noisy_output.rwTexture2D, vec4(0, 0, 0, 0));
+				command_list->clear_uav(frames_count.rwTexture2D, vec4(0, 0, 0, 0));
+
 			}
 
 

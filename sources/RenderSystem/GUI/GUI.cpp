@@ -928,9 +928,9 @@ namespace GUI
              Handlers::Texture o_texture = "swapchain";
          };
 
-		 graph.add_pass<pass_data>("UI RENDER",[](pass_data& data, TaskBuilder& builder) {
+		 graph.add_pass<pass_data>("UI RENDER",[this](pass_data& data, TaskBuilder& builder) {
 			builder.need(data.o_texture, ResourceFlags::RenderTarget);
-
+            use_graph(builder);
 			 }, [this,&graph](pass_data& data, FrameContext& context) {
 			//	 std::lock_guard<std::mutex> g(m);
 

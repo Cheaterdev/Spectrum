@@ -110,8 +110,6 @@ namespace DX12
 
 		}
 
-		virtual void place_rtv(Handle h) { assert(false); }
-		virtual void place_dsv(Handle h) { assert(false); }
 		virtual void place_cb(Handle h) {
 			if (!resource) return;
 
@@ -213,7 +211,7 @@ namespace DX12
 
 				renderTarget = HLSL::RenderTarget<>(rtv[0]);
 			//	place_rtv(renderTarget);
-				if (view_desc.type == ResourceType::TEXTURE2D && view_desc.Texture2D.ArraySize == 1)
+				if (view_desc.type == ResourceType::TEXTURE2D && view_desc.Texture2D.ArraySize == 1 && view_desc.Texture2D.FirstArraySlice == 0)
 				{
 					renderTarget.createFrom2D(resource.get(), view_desc.Texture2D.MipSlice);
 				}
@@ -227,7 +225,7 @@ namespace DX12
 				HandleTableLight dsv = frame.get_cpu_heap(DescriptorHeapType::DSV).place(1);
 				depthStencil = HLSL::DepthStencil<>(dsv[0]);
 
-				if (view_desc.type == ResourceType::TEXTURE2D && view_desc.Texture2D.ArraySize == 1)
+				if (view_desc.type == ResourceType::TEXTURE2D && view_desc.Texture2D.ArraySize == 1 && view_desc.Texture2D.FirstArraySlice == 0)
 				{
 					depthStencil.createFrom2D(resource.get(), view_desc.Texture2D.MipSlice);
 				}
@@ -272,8 +270,6 @@ namespace DX12
 
 		}
 
-		virtual void place_rtv(Handle h);
-		virtual void place_dsv(Handle h);
 	
 		Viewport get_viewport()
 		{

@@ -250,7 +250,9 @@ class RenderTargetTable
             {
                 formats.emplace_back(e.get_desc().Format);
                 textures.emplace_back(e);
-                e.place_rtv(rtv_table[i++]);
+
+                rtv_table[i++].place(e.renderTarget);
+             //   e.place_rtv(rtv_table[i++]);
             }
 
             if (depth)
@@ -260,7 +262,8 @@ class RenderTargetTable
 
                 depth_texture = depth;
                 depth_format = to_dsv(depth.get_desc().Format);
-                depth.place_dsv(dsv_table[0]);
+              //  depth.place_dsv(dsv_table[0]);
+                dsv_table[0].place(depth.depthStencil);
                 on_init(depth.get_size());
                 //      depth_handle = depth->get_ds();
             }

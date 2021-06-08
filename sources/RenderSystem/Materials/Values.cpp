@@ -798,12 +798,12 @@ GUI::base::ptr TextureNode::create_editor_window()
 	GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
 	//img_inner->texture.texture = asset->get_texture();
 
-	img_inner->texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
+	//img_inner->texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
 
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();
-	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
-
+//	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
+	img_inner->texture.srv = asset->get_texture()->texture_2d()->get_static_srv();
 	//img_inner->docking = GUI::dock::FILL;
 	img_inner->size = { 64, 64 };
 	img->add_child(img_inner);
@@ -831,7 +831,7 @@ GUI::base::ptr TextureNode::create_editor_window()
 	chk_srgb->on_check = [this, img_inner, asset](bool v) {
 
 		texture_info->to_linear = v;
-		asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
+	//	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
 		//	owner->co
 	};
 	back->add_child(chk_srgb);

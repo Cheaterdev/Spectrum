@@ -324,6 +324,7 @@ void FrameGraph::setup()
 	{
 		bool sorted = false;
 
+		bool cyclic = false;
 		while (!sorted)
 		{
 
@@ -334,6 +335,12 @@ void FrameGraph::setup()
 				for (auto related : pass->related)
 				{
 					if (!related->active()) continue;
+
+					if (related == pass)
+					{
+						cyclic = true;
+						continue;
+					}
 
 					if (pass->dependency_level <= related->dependency_level)
 					{
@@ -508,6 +515,19 @@ void FrameGraph::setup()
 				}
 			}
 		}
+
+		if (pass->wait_pass && last_graphics)
+		{
+			for (auto& info : last_graphics->used.resources)
+			{
+				if (info->valid_to == pass->wait_pass)
+				{
+					info->valid_to = pass;
+				}
+			}
+		}
+
+
 		if (type == Render::CommandListType::COMPUTE)
 			last_compute = pass;
 		else

@@ -45,6 +45,7 @@ namespace DX12
 
 		void start_next();
 		std::shared_ptr<Texture> get_current_frame();
+		std::shared_ptr<Texture> get_prev_frame();
 		void resize(ivec2 size);
 
 	};

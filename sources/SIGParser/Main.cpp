@@ -112,7 +112,8 @@ void generate_bind(my_stream& stream, const std::string& pass_cb, const std::str
 			if (v.value_type != type) continue;
 			if (v.bindless) continue;
 
-			if ( true || type == ValueType::UAV || v.as_array)
+		
+			if ( true || v.type.starts_with("Append") || v.as_array)
 			{
 				stream << "result." << get_name_for(type) << "." << parent << v.name << " = " << get_name_for(type) << "_" << slot.id << "_" << i << ";" << std::endl;
 

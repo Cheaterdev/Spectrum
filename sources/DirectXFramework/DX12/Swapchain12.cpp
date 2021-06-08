@@ -69,7 +69,12 @@ namespace DX12
 		return frames[m_frameIndex].m_renderTarget;
 	}
 
-
+	Texture::ptr SwapChain::get_prev_frame()
+	{
+		int id = m_frameIndex - 1;
+		if (id == -1)id = frames.size() - 1;
+		return frames[id].m_renderTarget;
+	}
 
 	void SwapChain::resize(ivec2 size)
 	{

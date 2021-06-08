@@ -237,7 +237,7 @@ namespace GUI
 
         float4 mul_color;
         float4 add_color;
-		Render::HandleTable srv;
+		Render::Handle srv;
         Texture()
         {
             margins = { 0, 0, 0, 0 };
@@ -620,6 +620,27 @@ namespace GUI
                 {
                     gen->generate(graph);
                 }*/
+            }
+
+
+
+            void use_graph(TaskBuilder& builder)
+            {
+                //				std::lock_guard<std::mutex> g(m);
+
+                auto f = [&](base* elem) {
+                    auto frame_gen = dynamic_cast<FrameGraphUsage*>(elem);
+                    if (frame_gen)
+                        frame_gen->use(builder);
+
+                    return true;
+                };
+
+                iterate(f);
+                /*    for (auto& gen : frame_generators)
+                    {
+                        gen->generate(graph);
+                    }*/
             }
             std::shared_future<bool> message_box(std::string title, std::string text, std::function<void(bool)> f);
 

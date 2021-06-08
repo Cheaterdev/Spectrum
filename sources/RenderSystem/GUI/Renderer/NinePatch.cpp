@@ -31,10 +31,10 @@ namespace GUI
 		}
 
 		bool added = false;
-		if (item.srv.valid())
+		if (item.srv)
 		{
 			added = true;
-			textures_handles.emplace_back(item.srv[0]);
+			textures_handles.emplace_back(item.srv);
 
 			//	c.command_list->use_resource(item.srv[0]->resource_info->resource_ptr);
 		}

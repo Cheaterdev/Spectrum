@@ -388,6 +388,15 @@ public:
 
 	TaskBuilder();
 
+
+
+	ResourceAllocInfo* get(std::string name)
+	{
+		if (resources_names.count(name) == 0) return nullptr;
+		name = resources_names[name];
+		ResourceAllocInfo& info = alloc_resources[name];
+		return &info;
+	}
 };
 
 
@@ -629,4 +638,12 @@ class FrameGraphGenerator
 {
 public:
 	virtual void generate(FrameGraph& graph) = 0;
+};
+
+
+
+class FrameGraphUsage
+{
+public:
+	virtual void use(TaskBuilder& builder) = 0;
 };

@@ -164,6 +164,10 @@ namespace DX12
 			return cpu.ptr != 0 || gpu.ptr != 0;
 		}
 
+		operator bool()
+		{
+			return !!resource_info;
+		}
 		Handle()
 		{
 			gpu.ptr = 0;
@@ -192,12 +196,6 @@ namespace DX12
 
 		void clear(CommandList& list, float4 = { 0, 0, 0, 0 }) const;
 	};
-
-	using RTVHandle = Handle;
-	using DSVHandle = Handle;
-	using SRVHandle = Handle;
-	using SMPHandle = Handle;
-	using UAVHandle = Handle;
 
 	namespace HLSL
 	{
