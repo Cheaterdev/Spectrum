@@ -1,5 +1,5 @@
 
-// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
+// Generated from SIG.g4 by ANTLR 4.9.2
 
 #pragma once
 
@@ -15,15 +15,16 @@ public:
     T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, 
     T__7 = 8, T__8 = 9, T__9 = 10, T__10 = 11, T__11 = 12, T__12 = 13, T__13 = 14, 
     T__14 = 15, T__15 = 16, T__16 = 17, T__17 = 18, T__18 = 19, T__19 = 20, 
-    T__20 = 21, T__21 = 22, T__22 = 23, T__23 = 24, T__24 = 25, OR = 26, 
-    AND = 27, EQ = 28, NEQ = 29, GT = 30, LT = 31, GTEQ = 32, LTEQ = 33, 
-    PLUS = 34, MINUS = 35, MULT = 36, DIV = 37, MOD = 38, POW = 39, NOT = 40, 
-    SCOL = 41, ASSIGN = 42, OPAR = 43, CPAR = 44, OBRACE = 45, CBRACE = 46, 
-    OSBRACE = 47, CSBRACE = 48, TRUE = 49, FALSE = 50, LOG = 51, LAYOUT = 52, 
-    STRUCT = 53, COMPUTE_PSO = 54, GRAPHICS_PSO = 55, SLOT = 56, RT = 57, 
-    RTV = 58, DSV = 59, ROOTSIG = 60, ID = 61, INT_SCALAR = 62, FLOAT_SCALAR = 63, 
-    STRING = 64, COMMENT = 65, SPACE = 66, INSERT_START = 67, INSERT_END = 68, 
-    INSERT_BLOCK = 69
+    T__20 = 21, T__21 = 22, T__22 = 23, T__23 = 24, T__24 = 25, T__25 = 26, 
+    T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, OR = 31, AND = 32, EQ = 33, 
+    NEQ = 34, GT = 35, LT = 36, GTEQ = 37, LTEQ = 38, PLUS = 39, MINUS = 40, 
+    MULT = 41, DIV = 42, MOD = 43, POW = 44, NOT = 45, SCOL = 46, ASSIGN = 47, 
+    OPAR = 48, CPAR = 49, OBRACE = 50, CBRACE = 51, OSBRACE = 52, CSBRACE = 53, 
+    TRUE = 54, FALSE = 55, LOG = 56, LAYOUT = 57, STRUCT = 58, COMPUTE_PSO = 59, 
+    GRAPHICS_PSO = 60, RAYTRACE_PSO = 61, RAYTRACE_RAYGEN = 62, RAYTRACE_PASS = 63, 
+    SLOT = 64, RT = 65, RTV = 66, DSV = 67, ROOTSIG = 68, ROOTSIG_LOCAL = 69, 
+    ID = 70, INT_SCALAR = 71, FLOAT_SCALAR = 72, STRING = 73, COMMENT = 74, 
+    SPACE = 75, INSERT_START = 76, INSERT_END = 77, INSERT_BLOCK = 78
   };
 
   explicit SIGLexer(antlr4::CharStream *input);

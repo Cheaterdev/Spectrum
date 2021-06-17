@@ -79,3 +79,58 @@ struct Raytracing
 
 
 }
+
+
+RaytracePSO MainRTX
+{
+	root = DefaultLayout;
+
+	local = MaterialInfo;
+}
+
+[Bind = MainRTX]
+RaytraceRaygen Indirect
+{
+	[EntryPoint = MyRaygenShader]
+	raygen = rayracing;
+}
+
+[Bind = MainRTX]
+RaytraceRaygen Reflection
+{
+	[EntryPoint = MyRaygenShaderReflection]
+	raygen = rayracing;
+}
+
+[Bind = MainRTX]
+RaytraceRaygen Shadow
+{
+	[EntryPoint = ShadowRaygenShader]
+	raygen = rayracing;
+}
+
+[Bind = MainRTX]
+RaytracePass MaterialPass
+{
+	[EntryPoint = MyMissShader]
+	miss = rayracing;
+
+	[EntryPoint = MyClosestHitShader]
+	closest_hit = none;
+
+	payload = RayPayload;
+
+	per_material = true;
+}
+
+[Bind = MainRTX]
+RaytracePass ShadowPass
+{
+	[EntryPoint = ShadowMissShader]
+	miss = rayracing;
+
+	[EntryPoint = ShadowClosestHitShader]
+	closest_hit = rayracing;
+
+	payload = ShadowPayload;
+}

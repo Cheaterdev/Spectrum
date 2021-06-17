@@ -1,5 +1,5 @@
 
-// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
+// Generated from SIG.g4 by ANTLR 4.9.2
 
 #pragma once
 
@@ -133,6 +133,9 @@ public:
   virtual void enterRoot_sig(SIGParser::Root_sigContext * /*ctx*/) override { }
   virtual void exitRoot_sig(SIGParser::Root_sigContext * /*ctx*/) override { }
 
+  virtual void enterRoot_sig_local(SIGParser::Root_sig_localContext * /*ctx*/) override { }
+  virtual void exitRoot_sig_local(SIGParser::Root_sig_localContext * /*ctx*/) override { }
+
   virtual void enterShader(SIGParser::ShaderContext * /*ctx*/) override { }
   virtual void exitShader(SIGParser::ShaderContext * /*ctx*/) override { }
 
@@ -153,6 +156,33 @@ public:
 
   virtual void enterGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext * /*ctx*/) override { }
   virtual void exitGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext * /*ctx*/) override { }
+
+  virtual void enterRtx_pso_stat(SIGParser::Rtx_pso_statContext * /*ctx*/) override { }
+  virtual void exitRtx_pso_stat(SIGParser::Rtx_pso_statContext * /*ctx*/) override { }
+
+  virtual void enterRtx_pso_block(SIGParser::Rtx_pso_blockContext * /*ctx*/) override { }
+  virtual void exitRtx_pso_block(SIGParser::Rtx_pso_blockContext * /*ctx*/) override { }
+
+  virtual void enterRtx_pso_definition(SIGParser::Rtx_pso_definitionContext * /*ctx*/) override { }
+  virtual void exitRtx_pso_definition(SIGParser::Rtx_pso_definitionContext * /*ctx*/) override { }
+
+  virtual void enterRtx_pass_stat(SIGParser::Rtx_pass_statContext * /*ctx*/) override { }
+  virtual void exitRtx_pass_stat(SIGParser::Rtx_pass_statContext * /*ctx*/) override { }
+
+  virtual void enterRtx_pass_block(SIGParser::Rtx_pass_blockContext * /*ctx*/) override { }
+  virtual void exitRtx_pass_block(SIGParser::Rtx_pass_blockContext * /*ctx*/) override { }
+
+  virtual void enterRtx_pass_definition(SIGParser::Rtx_pass_definitionContext * /*ctx*/) override { }
+  virtual void exitRtx_pass_definition(SIGParser::Rtx_pass_definitionContext * /*ctx*/) override { }
+
+  virtual void enterRtx_raygen_stat(SIGParser::Rtx_raygen_statContext * /*ctx*/) override { }
+  virtual void exitRtx_raygen_stat(SIGParser::Rtx_raygen_statContext * /*ctx*/) override { }
+
+  virtual void enterRtx_raygen_block(SIGParser::Rtx_raygen_blockContext * /*ctx*/) override { }
+  virtual void exitRtx_raygen_block(SIGParser::Rtx_raygen_blockContext * /*ctx*/) override { }
+
+  virtual void enterRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext * /*ctx*/) override { }
+  virtual void exitRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext * /*ctx*/) override { }
 
   virtual void enterShader_type(SIGParser::Shader_typeContext * /*ctx*/) override { }
   virtual void exitShader_type(SIGParser::Shader_typeContext * /*ctx*/) override { }

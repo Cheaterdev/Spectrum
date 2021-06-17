@@ -306,76 +306,6 @@ public:
 	}
 };
 
-
-/*
-std::strong_ordering operator<=>(const std::string& l, const std::string& r);
-
-
-template<class type, size_t size>
-std::strong_ordering operator<=>(const std::array<type, size>& l, const std::array<type, size>& r)
-{
-	for (size_t i = 0; i < l.size(); i++)
-		if (auto cmp = (l[i] <=> r[i]); cmp != 0) return cmp;
-
-	return  std::strong_ordering::equal;
-}
-
-
-
-
-template<class type>
-std::strong_ordering operator<=>(const std::vector<type>& l, const std::vector<type>& r)
-{
-
-	if (auto cmp = l.size() <=> r.size(); cmp != 0) return cmp;
-
-
-	for (size_t i = 0; i < l.size(); i++)
-		if (auto cmp = (l[i] <=> r[i]); cmp != 0) return cmp;
-
-	return  std::strong_ordering::equal;
-}
-
-
-
-
-template<class type>
-bool operator==(const std::vector<type>& l, const std::vector<type>& r)
-{
-
-	if (l.size() != r.size()) return false;
-
-
-	for (size_t i = 0; i < l.size(); i++)
-		if (l[i] != r[i])  return false;
-
-	return  true;
-}
-*/
-
-
-
-/*
-
-
-template<class type>
-std::strong_ordering operator<=>(const std::shared_ptr<type>& l, const std::shared_ptr<type>& r)
-{
-	//if (auto cmp = l.get() <=> r.get(); cmp != 0) return cmp;
-	return  *l <=> *r;
-}
-
-
-
-
-template<class type>
-bool operator==(const std::shared_ptr<type>& l, const std::shared_ptr<type>& r)
-{
-
-	return  *l == *r;
-}
-*/
-
 #define GENERATE_OPS __GENERATE_OPS__
 
 template<typename T> concept EnumType =
@@ -496,3 +426,73 @@ class B: public helper
 {
 	std::set<A*> inserts;
 };*/
+
+template <class T>
+class Member
+{
+	T member;
+protected:
+	T& get()
+	{
+		return member;
+	}
+
+};
+template< class ...Args>
+class GenerateMembersImpl
+{
+
+};
+
+template<class T, class ...Args>
+class GenerateMembersImpl<T,Args...> : public Member<T>, public GenerateMembersImpl<Args...>
+{
+
+};
+
+
+template< class ...Args>
+class GenerateMembers:public GenerateMembersImpl<Args...>
+{
+protected:
+	template<class T>
+	T& get_member()
+	{
+		return Member<T>::get();
+	}
+};
+
+namespace Templates
+{
+
+
+template <typename Head0, typename Head1, typename... Tail>
+constexpr auto min(Head0&& head0, Head1&& head1, Tail &&... tail)
+{
+	if constexpr (sizeof...(tail) == 0) {
+		return head0 < head1 ? head0 : head1;
+	}
+	else {
+		return min(min(head0, head1), tail...);
+	}
+}
+
+
+
+template <typename Head0>
+constexpr auto max(Head0 head0)
+{
+	return head0;
+}
+
+template <typename Head0, typename Head1, typename... Tail>
+constexpr auto max(Head0 head0, Head1 head1, Tail ... tail)
+{
+	if constexpr (sizeof...(tail) == 0) {
+		return head0 >head1 ? head0 : head1;
+	}
+	else {
+		return max(max(head0, head1), tail...);
+	}
+}
+}

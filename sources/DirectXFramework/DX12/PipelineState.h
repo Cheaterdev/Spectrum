@@ -124,10 +124,7 @@ namespace DX12
 
 		std::array<RenderTarget, 8> render_target;
 		bool operator==(const BlendState&) const = default;
-		std::strong_ordering operator<=>(const  BlendState& r)  const
-		{
-			return render_target<=> r.render_target;
-		}
+		std::strong_ordering operator<=>(const  BlendState& r)  const = default;
 
 
 	private:
@@ -674,9 +671,11 @@ namespace DX12
 
 			return result;
 		}
-		StateObjectDesc desc;
+		
 		
 	public:
+
+		StateObjectDesc desc;
 		using ptr = s_ptr<StateObject>;
 		ComPtr<ID3D12StateObject> get_native()
 		{

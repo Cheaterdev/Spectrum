@@ -143,7 +143,8 @@ public:
 void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 {
 
-	//return;
+	
+	return;
  //  return;
  
 	graph.start_new_frame();

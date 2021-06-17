@@ -1,5 +1,5 @@
 
-// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
+// Generated from SIG.g4 by ANTLR 4.9.2
 
 #pragma once
 
@@ -131,6 +131,9 @@ public:
   virtual void enterRoot_sig(SIGParser::Root_sigContext *ctx) = 0;
   virtual void exitRoot_sig(SIGParser::Root_sigContext *ctx) = 0;
 
+  virtual void enterRoot_sig_local(SIGParser::Root_sig_localContext *ctx) = 0;
+  virtual void exitRoot_sig_local(SIGParser::Root_sig_localContext *ctx) = 0;
+
   virtual void enterShader(SIGParser::ShaderContext *ctx) = 0;
   virtual void exitShader(SIGParser::ShaderContext *ctx) = 0;
 
@@ -151,6 +154,33 @@ public:
 
   virtual void enterGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext *ctx) = 0;
   virtual void exitGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext *ctx) = 0;
+
+  virtual void enterRtx_pso_stat(SIGParser::Rtx_pso_statContext *ctx) = 0;
+  virtual void exitRtx_pso_stat(SIGParser::Rtx_pso_statContext *ctx) = 0;
+
+  virtual void enterRtx_pso_block(SIGParser::Rtx_pso_blockContext *ctx) = 0;
+  virtual void exitRtx_pso_block(SIGParser::Rtx_pso_blockContext *ctx) = 0;
+
+  virtual void enterRtx_pso_definition(SIGParser::Rtx_pso_definitionContext *ctx) = 0;
+  virtual void exitRtx_pso_definition(SIGParser::Rtx_pso_definitionContext *ctx) = 0;
+
+  virtual void enterRtx_pass_stat(SIGParser::Rtx_pass_statContext *ctx) = 0;
+  virtual void exitRtx_pass_stat(SIGParser::Rtx_pass_statContext *ctx) = 0;
+
+  virtual void enterRtx_pass_block(SIGParser::Rtx_pass_blockContext *ctx) = 0;
+  virtual void exitRtx_pass_block(SIGParser::Rtx_pass_blockContext *ctx) = 0;
+
+  virtual void enterRtx_pass_definition(SIGParser::Rtx_pass_definitionContext *ctx) = 0;
+  virtual void exitRtx_pass_definition(SIGParser::Rtx_pass_definitionContext *ctx) = 0;
+
+  virtual void enterRtx_raygen_stat(SIGParser::Rtx_raygen_statContext *ctx) = 0;
+  virtual void exitRtx_raygen_stat(SIGParser::Rtx_raygen_statContext *ctx) = 0;
+
+  virtual void enterRtx_raygen_block(SIGParser::Rtx_raygen_blockContext *ctx) = 0;
+  virtual void exitRtx_raygen_block(SIGParser::Rtx_raygen_blockContext *ctx) = 0;
+
+  virtual void enterRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext *ctx) = 0;
+  virtual void exitRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext *ctx) = 0;
 
   virtual void enterShader_type(SIGParser::Shader_typeContext *ctx) = 0;
   virtual void exitShader_type(SIGParser::Shader_typeContext *ctx) = 0;

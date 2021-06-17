@@ -257,16 +257,16 @@ void  PS(uint3 groupID       : SV_GroupID,
 	float w = 0;
 	float3 normal = normalize(gbuffer.GetNormals()[tc].xyz * 2 - 1);
 	float framesNorm = tex_frames.SampleLevel(pointClampSampler, itc, 0).x;
-#ifdef ENABLE_BLUR
+#ifndef ENABLE_BLUR
 
 	float dist = length(pos - camera.GetPosition()) / 100;
 
-	int frames = 8 * framesNorm;
+	int frames = 16 * framesNorm;
 	
-	float blurRadiusScale = 1.0 / (1.0 + frames) - 1.0 / (1 + 8);
+	float blurRadiusScale =  1.0 / (1.0 + frames) - 1.0 / (1 + 8);
 	
 
-#define R 2
+#define R 1
 	if (blurRadiusScale > 0)
 	{
 		[unroll] for (int x = -R; x <= R; x++)

@@ -26,6 +26,9 @@ namespace GUI
         if (user_ui && drag_listener)
             user_ui->drag.dragdrop.insert(this);
 
+        if (user_ui)
+            user_ui->add_base(this);
+
         for (auto c : childs)
             c->on_add(this);
     }
@@ -34,8 +37,8 @@ namespace GUI
     {
         tree_base::on_remove();
 
-        //  if (user_ui)
-        //      user_ui->remove_base(this);
+          if (user_ui)
+              user_ui->remove_base(this);
         if (user_ui)
             user_ui->thinking.erase(this);
 
@@ -1206,17 +1209,17 @@ namespace GUI
 
     void user_interface::remove_base(base* object)
     {
-	/*	auto frame_gen = dynamic_cast<FrameGraphGenerator*>(object);
+		auto frame_gen = dynamic_cast<FrameGraphGenerator*>(object);
 		if (frame_gen)
-			frame_generators.emplace_back(frame_gen);*/
+			frame_generators.erase(frame_gen);
     }
 
     void user_interface::add_base(base* object)
     {
         //   components.insert(object);
-      //  auto frame_gen = dynamic_cast<FrameGraphGenerator*>(object);
-     //   if (frame_gen)
-      //      frame_generators.emplace_back(frame_gen);
+        auto frame_gen = dynamic_cast<FrameGraphGenerator*>(object);
+        if (frame_gen)
+            frame_generators.insert(frame_gen);
     }
 	void user_interface::key_action_event_internal(long key)
 	{

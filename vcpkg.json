@@ -12,6 +12,7 @@
 		"boost-stacktrace",
 		"boost-lockfree",	
 		"antlr4",
-		"magic-enum"
+		"magic-enum",
+		"entt"
 	]
 }

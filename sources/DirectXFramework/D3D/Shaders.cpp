@@ -8,7 +8,7 @@
 
 
 namespace D3D
-{
+{/*
 	bool operator<(const shader_header& l, const shader_header& r)
 	{
 		if (l.file_name != r.file_name)
@@ -43,7 +43,7 @@ namespace D3D
 		}
 		return l.macros.size() < r.macros.size();
 	}
-
+	*/
 
 	shader_macro::shader_macro(std::string name, std::string value /*= "1"*/)
 	{

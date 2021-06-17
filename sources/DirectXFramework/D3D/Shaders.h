@@ -38,6 +38,8 @@ namespace D3D
             shader_macro() = default;
             shader_macro(std::string name, std::string value = "1");
 
+            bool operator==(const shader_macro&) const = default;
+            auto operator<=>(const  shader_macro& r)  const = default;
         private:
             friend class boost::serialization::access;
             template<class Archive>
@@ -54,6 +56,11 @@ namespace D3D
             DWORD flags;
             std::vector<shader_macro> macros;
             bool contains_text = false;
+
+            bool operator==(const shader_header&) const = default;
+            auto operator<=>(const  shader_header & r)  const = default;
+
+
         private:
             friend class boost::serialization::access;
 
@@ -68,7 +75,8 @@ namespace D3D
             }
 
     };
-    bool operator<(const shader_header& l, const shader_header& r);
+
+   // bool operator<(const shader_header& l, const shader_header& r);
 
 	class shader_include
 	{

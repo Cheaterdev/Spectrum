@@ -29,7 +29,7 @@ float3 tangent : TANGENT;
 float2 tc : TEXCOORD;  
     float4 cur_pos : CUR_POSITION; 
  
-    float4 prev_pos : PREV_POSITION;
+    float4 prev_pos : PREV_POSITION; 
     float dist : DISTANCE; 
 };
 
@@ -100,7 +100,7 @@ GBuffer PS(vertex_output i)
 
     COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, 0);
 
-
+    
 	return universal(i, color, metallic, roughness, normal, glow);
 }
 
@@ -143,7 +143,7 @@ void PS_VOXEL(vertex_output i)
 	COMPILED_FUNC(i.wpos, i.tc, color, metallic, roughness, normal, glow, 2);
 
 	universal_voxel(i, color, metallic, roughness, normal, glow);
-}
+} 
 #endif
 
 float4 tile_sample(Texture2D<float4> tex, SamplerState s, float2 tc, Texture2D<float4> residency, RWByteAddressBuffer visibility)

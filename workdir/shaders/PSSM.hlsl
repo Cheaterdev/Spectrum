@@ -258,7 +258,7 @@ EnvBRDF = 0;*/
 //float3 refl = CookTorrance_GGX_sample(light_dir, info,Fk);
 
 //return float4(info.pos, 1);
-return  float4(4*shadow * (saturate(EnvBRDF.x) * info.albedo * (1 - info.metallic)), 1);
+return  float4(shadow * (saturate(EnvBRDF.x) * info.albedo * (1 - info.metallic)), 1);
 
 //return  float4(PBR(direct, reflection, info.albedo, info.normal, info.view, 0.2, info.roughness, packed_0.w), 1);
 }

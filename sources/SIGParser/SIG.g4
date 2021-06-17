@@ -6,7 +6,7 @@ options
   }
 
 parse
- : (layout_definition|table_definition|rt_definition|compute_pso_definition|graphics_pso_definition|COMMENT)* EOF
+ : (layout_definition|table_definition|rt_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|COMMENT)* EOF
  ;
 
 
@@ -132,6 +132,7 @@ array_value_holder: value_id;
 array_value_ids: '{' array_value_holder (',' array_value_holder)* '}';
 
 root_sig: ROOTSIG ASSIGN name_id SCOL;
+root_sig_local: ROOTSIG_LOCAL ASSIGN name_id SCOL;
 shader: option_block*? shader_type ASSIGN path_id SCOL;
 
 compute_pso_stat
@@ -155,6 +156,34 @@ graphics_pso_stat
  ;
 graphics_pso_block: graphics_pso_stat*;
 graphics_pso_definition: GRAPHICS_PSO name_id inherit? OBRACE graphics_pso_block CBRACE;
+
+
+
+rtx_pso_stat
+ : root_sig
+ | root_sig_local
+ | COMMENT
+ ;
+rtx_pso_block: rtx_pso_stat*;
+rtx_pso_definition: RAYTRACE_PSO name_id inherit? OBRACE rtx_pso_block CBRACE;
+
+
+
+rtx_pass_stat
+ : shader
+ | COMMENT
+ | pso_param
+ ;
+rtx_pass_block: rtx_pass_stat*;
+rtx_pass_definition: option_block*? RAYTRACE_PASS name_id inherit? OBRACE rtx_pass_block CBRACE;
+
+
+rtx_raygen_stat
+ : shader
+ | COMMENT
+ ;
+rtx_raygen_block: rtx_raygen_stat*;
+rtx_raygen_definition: option_block*? RAYTRACE_RAYGEN name_id inherit? OBRACE rtx_raygen_block CBRACE;
 
 
 
@@ -192,11 +221,17 @@ LAYOUT: 'layout';
 STRUCT: 'struct';
 COMPUTE_PSO: 'ComputePSO';
 GRAPHICS_PSO: 'GraphicsPSO';
+RAYTRACE_PSO: 'RaytracePSO';
+RAYTRACE_RAYGEN: 'RaytraceRaygen';
+RAYTRACE_PASS: 'RaytracePass';
+
+
 SLOT: 'slot';
 RT: 'rt';
 RTV: 'RTV';
 DSV: 'DSV';
 ROOTSIG: 'root';
+ROOTSIG_LOCAL: 'local';
 shader_type: 
 'compute'
 |'vertex'
@@ -204,6 +239,9 @@ shader_type:
 |'domain'
 |'hull'
 |'geometry'
+|'miss'
+|'closest_hit'
+|'raygen'
 ;
 pso_param_id: 
 'ds' 
@@ -218,7 +256,8 @@ pso_param_id:
 | 'stencil_pass_op'
 | 'stencil_read_mask'
 | 'stencil_write_mask'
-
+| 'recursion_depth'
+| 'payload'
  ;
 
 ID

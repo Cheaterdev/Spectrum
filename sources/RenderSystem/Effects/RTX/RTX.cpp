@@ -4,6 +4,8 @@
 
 UINT RTX::get_material_id(materials::universal_material* universal)
 {
+	rtx.init_material(universal);
+
 	std::lock_guard<std::mutex> g(m);
 	auto it = materials.find(universal);
 
@@ -28,7 +30,7 @@ UINT RTX::get_material_id(materials::universal_material* universal)
 void RTX::CreateCommonProps(StateObjectDesc& desc)
 {
 	desc.global_root = global_sig;
-	desc.MaxTraceRecursionDepth = 8;
+	desc.MaxTraceRecursionDepth = 2;
 	desc.MaxAttributeSizeInBytes = 2 * sizeof(float);
 	desc.MaxPayloadSizeInBytes = sizeof(Table::RayPayload::CB);
 }
@@ -40,18 +42,20 @@ void RTX::CreateSharedCollection()
 	CreateCommonProps(raytracingPipeline);
 
 	LibraryObject lib;
-	lib.library = library;
+	lib.library = Render::library_shader::get_resource({ "shaders\\raytracing.hlsl", "" , 0, {} });;
 
 	lib.export_shader(L"MyMissShader");
 	lib.export_shader(L"ShadowClosestHitShader");
 	lib.export_shader(L"ShadowMissShader");
 	lib.export_shader(L"MyRaygenShader");
-	
-	raytracingPipeline.libraries.emplace_back(library);
+	lib.export_shader(L"MyRaygenShaderReflection");
+	lib.export_shader(L"ShadowPass");
+
+	raytracingPipeline.libraries.emplace_back(lib);
 
 
 	
-	for (auto& type : ray_types)
+	for (auto& type : ray_passes)
 	{
 		if (type.per_hit_id) continue;
 		
@@ -75,7 +79,7 @@ StateObject::ptr RTX::CreateGlobalCollection(materials::universal_material* mat)
 		LibraryObject lib;
 		lib.library = mat->raytracing_lib;
 		
-		for (auto& type : ray_types)
+		for (auto& type : ray_passes)
 		{
 			if (type.per_hit_id)
 			{
@@ -112,13 +116,12 @@ void RTX::CreateRaytracingPipelineStateObject()
 		auto mat = pair.first;
 		raytracingPipeline.collections.emplace_back(mat->m_RTXCollection);
 	}
-	
-	m_dxrStateObject = std::make_shared<StateObject>(raytracingPipeline);
 
+	m_dxrStateObject = std::make_shared<StateObject>(raytracingPipeline);
 
 	auto change_func = [this]()
 	{
-		for (auto& type : ray_types)
+		for (auto& type : ray_passes)
 		{
 			if (!type.per_hit_id)
 				type.hit = m_dxrStateObject->get_shader_id(convert(type.group_name));
@@ -137,7 +140,7 @@ void RTX::CreateRaytracingPipelineStateObject()
 
 			std::vector<shader_identifier>hit_table;
 
-			for (auto& type : ray_types)
+			for (auto& type : ray_passes)
 			{
 				shader_identifier id;
 
@@ -158,7 +161,7 @@ void RTX::CreateRaytracingPipelineStateObject()
 		}
 	};
 	
-	//m_dxrStateObject->event_change.register_handler(this, change_func);
+	m_dxrStateObject->event_change.register_handler(this, change_func);
 	change_func();
 }
 
@@ -166,32 +169,28 @@ RTX::RTX()
 {
 	material_hits = std::make_shared< virtual_gpu_buffer<closesthit_identifier>>(1024 * 1024);
 
-	library = Render::library_shader::get_resource({ "shaders\\raytracing.hlsl", "" , 0, {} });
-	
 
-
-	
 	global_sig = get_Signature(Layouts::DefaultLayout)->create_global_signature<Slots::MaterialInfo>();
 	local_sig = create_local_signature<Slots::MaterialInfo>();
 
 	{
-		RayType type;
+		RayPass type;
 
 		type.group_name = "MyHitGroup";
 		type.per_hit_id = true;
 		type.miss_name = "MyMissShader";
 		type.hit_name = "MyClosestHitShader";
-		ray_types.emplace_back(type);
+		ray_passes.emplace_back(type);
 	}
 
 	{
-		RayType type;
+		RayPass type;
 		
 		type.group_name = "ShadowClosestHitGroup";
 		type.per_hit_id = false;
 		type.hit_name = "ShadowClosestHitShader";
 		type.miss_name = "ShadowMissShader";
-		ray_types.emplace_back(type);
+		ray_passes.emplace_back(type);
 	}
 
 	{
@@ -205,7 +204,11 @@ RTX::RTX()
 		type.name = "MyRaygenShaderReflection";
 		raygen_types.emplace_back(type);
 	}
-
+{
+		RayGenShader type;
+		type.name = "ShadowPass";
+		raygen_types.emplace_back(type);
+	}
 	CreateSharedCollection();
 }
 
@@ -218,32 +221,34 @@ void RTX::prepare(CommandList::ptr& list)
 	{
 
 		materials.merge(new_materials);
-		
+		new_materials.clear();
 		CreateRaytracingPipelineStateObject();
 
 		need_recreate = false;
 	}
 
 	material_hits->prepare(list);
+
+	rtx.prepare(list);
 }
 
-void RTX::render(ComputeContext & compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
+void RTX::render(ComputeContext & compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size, UINT generator)
 {
 	PROFILE_GPU(L"raytracing");
 
 	{
 		Slots::Raytracing rtx;
-		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<StructuredBufferView<UINT>>(*compute.get_base().frame_resources).structuredBuffer;
-		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*compute.get_base().frame_resources).scene;
+		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->structuredBuffer;
+		rtx.GetScene() = scene_as->raytracing_handle;
 		rtx.set(compute);
 	}
 
 
-	auto m_rayGenShaderTable = compute.get_base().place_raw(raygen_types[0].raygen);
+	auto m_rayGenShaderTable = compute.get_base().place_raw(raygen_types[generator].raygen);
 
 	std::vector<shader_identifier> miss_table;
 
-	for (auto& type : ray_types)
+	for (auto& type : ray_passes)
 	{
 		miss_table.emplace_back(type.miss);
 	}
@@ -255,32 +260,22 @@ void RTX::render(ComputeContext & compute, Render::RaytracingAccelerationStructu
 
 }
 
-
-void RTX::render2(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
+void RTX::render_new(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
 {
 	PROFILE_GPU(L"raytracing");
 
 	{
 		Slots::Raytracing rtx;
-		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->create_view<StructuredBufferView<UINT>>(*compute.get_base().frame_resources).structuredBuffer;
-		rtx.GetScene() = scene_as->resource->create_view<RTXSceneView>(*compute.get_base().frame_resources).scene;
+		rtx.GetIndex_buffer() = universal_index_manager::get().buffer->structuredBuffer;
+		rtx.GetScene() = scene_as->raytracing_handle;
 		rtx.set(compute);
 	}
-
-
-	auto m_rayGenShaderTable = compute.get_base().place_raw(raygen_types[1].raygen);
-
-	std::vector<shader_identifier> miss_table;
-
-	for (auto& type : ray_types)
-	{
-		miss_table.emplace_back(type.miss);
-	}
-
-	auto m_missShaderTable = compute.get_base().place_raw(miss_table);
-
-	compute.set_pipeline(m_dxrStateObject);
-	compute.dispatch_rays<closesthit_identifier, shader_identifier, shader_identifier>(size, material_hits->buffer->get_resource_address(), material_hits->max_size(), m_missShaderTable.get_resource_address(), miss_table.size(), m_rayGenShaderTable.get_resource_address());
+	
+	compute.set_pipeline(rtx.m_dxrStateObject);
+	compute.dispatch_rays<MainRTX::hit_type, shader_identifier, shader_identifier>(size,
+		rtx.hitgroup_ids->buffer->get_resource_address(), rtx.hitgroup_ids->max_size(),
+		rtx.miss_ids->get_resource_address(), rtx.miss_ids->get_count() ,
+		rtx.raygen_ids->get_resource_address().offset(0*sizeof(raygen_type)));
+	
 
 }
-

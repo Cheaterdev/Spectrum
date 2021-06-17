@@ -15,10 +15,13 @@ namespace DX12
 		GPUBuffer::ptr resources[2];
 
 		int current = 0;
+
+		HandleTable handle_table;
 	public:
 		GPUBuffer::ptr resource;
 		using ptr = std::shared_ptr<RaytracingAccelerationStructure>;
-		HandleTable srvs;
+		HLSL::RaytracingAccelerationStructure raytracing_handle;
+
 		MaterialAsset* material;
 		RaytracingAccelerationStructure(std::vector<GeometryDesc>  desc, CommandList::ptr list)
 		{
@@ -81,6 +84,10 @@ namespace DX12
 			list->execute_and_wait();
 			resources[0] = resource;
 
+			handle_table = DescriptorHeapManager::get().get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV)->create_table(1);
+
+			raytracing_handle = HLSL::RaytracingAccelerationStructure(handle_table[0]);
+			raytracing_handle.create(resource.get());
 		}
 
 
@@ -133,6 +140,8 @@ namespace DX12
 			list->get_compute().build_ras(topLevelBuildDesc, inputs);
 
 			resource = resources[current];
+
+			raytracing_handle.create(resource.get());
 		}
 
 		ResourceAddress get_gpu_address() const

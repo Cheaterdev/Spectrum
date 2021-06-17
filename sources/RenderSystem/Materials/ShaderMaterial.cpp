@@ -29,19 +29,6 @@ void ShaderMaterial::serialize(Archive& ar, const unsigned int file_version)
 
 ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file(this)
 {
-	/*    std::vector<unsigned char> ids(16);
-	ids[0] = 2;
-	Guid material_tester_id(ids);
-	BinaryAsset::ptr asset_ptr;// = AssetManager::get().get<BinaryAsset>(material_tester_id);
-	//  if (!asset_ptr)
-	{
-	BinaryAsset* asset = new BinaryAsset(file_name);
-	asset->register_new("material shader", material_tester_id);
-	asset->save();
-	asset_ptr = asset->get_ptr<BinaryAsset>();
-	}
-	//   file = register_asset(asset_ptr);
-	//    shader = Render::pixel_shader::create_from_memory(file->get_data(), "PC", 0);*/
 
 	if (!file_name.empty())
 	{

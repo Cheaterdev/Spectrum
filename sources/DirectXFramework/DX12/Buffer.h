@@ -249,11 +249,11 @@ namespace DX12
 			}
 			using GPUBuffer::set_data;
 
-			void set_data(DX12::CommandList::ptr& list, unsigned int offset, std::vector<T>& v);
+			void set_data(DX12::CommandList::ptr& list, unsigned int offset, std::vector<type>& v);
 
-			void set_data(DX12::CommandList::ptr& list, const T&v)
+			void set_data(DX12::CommandList::ptr& list, const type&v)
 			{
-				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
+				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(type));
 			}
 
 			void place_uav(Handle h);
@@ -466,7 +466,7 @@ namespace DX12
 	}
 
 	template<class T>
-	inline void StructuredBuffer<T>::set_data(DX12::CommandList::ptr & list, unsigned int offset, std::vector<T>& v)
+	inline void StructuredBuffer<T>::set_data(DX12::CommandList::ptr & list, unsigned int offset, std::vector<type>& v)
 	{
 		list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(type)));
 	}
@@ -628,7 +628,8 @@ namespace DX12
 			list->update_tilings(std::move(updates));
 			for (auto& elems : update_list)
 			{
-				buffer->set_data(list, (UINT)elems.offset * sizeof(T), elems.data.data(), (UINT)elems.size);
+				buffer->set_data(list ,elems.offset * sizeof(T), elems.data);
+				//buffer->set_data(list, (UINT)elems.offset * sizeof(T), elems.data.data(), (UINT)elems.size);
 			}
 
 			update_list.clear();

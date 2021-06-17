@@ -532,6 +532,69 @@ public:
 				});
 		}
 
+		{
+			struct RTXDebugData
+			{
+				GBufferViewDesc gbuffer;
+
+				Handlers::Texture H(RTXDebug);
+			};
+
+			graph.add_pass<RTXDebugData>("RTXDebug", [this, size](RTXDebugData& data, TaskBuilder& builder) {
+				data.gbuffer.need(builder, false);
+				builder.create(data.RTXDebug, { ivec3(size, 1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+
+				}, [this, &graph](RTXDebugData& data, FrameContext& context) {
+					auto& compute = context.get_list()->get_compute();
+
+					if (data.RTXDebug.is_new())
+					{
+						context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
+					}
+
+
+
+					//compute.set_signature(get_Signature(Layouts::DefaultLayout));
+					compute.set_signature(RTX::get().rtx.m_root_sig);
+					auto gbuffer = data.gbuffer.actualize(context);
+
+					{
+						scene->compiledScene.set(compute);
+					}
+
+
+					{
+						Slots::VoxelScreen voxelScreen;
+						gbuffer.SetTable(voxelScreen.MapGbuffer());
+						//		voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
+						//		voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureÑube;
+								//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
+						voxelScreen.set(compute);
+					}
+
+					//	scene->voxels_compiled.set(graphics);
+					//	scene->voxels_compiled.set(compute);
+
+					graph.set_slot(SlotID::VoxelInfo, compute);
+					graph.set_slot(SlotID::FrameInfo, compute);
+
+
+
+
+					{
+						Slots::VoxelOutput output;
+
+						//	output.GetFrames() = gi_filtered.rwTexture2D;
+						output.GetNoise() = data.RTXDebug->rwTexture2D;
+						//output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
+						output.set(compute);
+					}
+
+
+					RTX::get().render_new(compute, scene->raytrace_scene, data.RTXDebug->get_size());
+
+				});
+		}
 
 
 		struct no
@@ -566,6 +629,8 @@ public:
 		//
 
 		
+		
+
 
 
 		/*

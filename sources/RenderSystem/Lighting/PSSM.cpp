@@ -159,6 +159,8 @@ void PSSM::generate(FrameGraph& graph)
 		Handlers::Texture H(PSSM_Depths);
 		Handlers::Texture H(ResultTexture);
 		Handlers::StructuredBuffer<Table::Camera> H(PSSM_Cameras);
+
+		Handlers::Texture H(RTXDebug);
 	};
 
 	graph.add_pass<PSSMData>("PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
@@ -283,6 +285,8 @@ void PSSM::generate(FrameGraph& graph)
 	    builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 		builder.need(data.PSSM_Cameras, ResourceFlags::None);
+		builder.need(data.RTXDebug, ResourceFlags::PixelRead);
+
 
 		}, [this, &graph](PSSMData& data, FrameContext& _context) {
 
@@ -343,7 +347,7 @@ void PSSM::generate(FrameGraph& graph)
 
 				gbuffer.SetTable(lighting.MapGbuffer());
 
-				lighting.GetLight_mask() = data.LightMask->texture2D;
+				lighting.GetLight_mask() = data.RTXDebug->texture2D;//data.LightMask->texture2D;
 
 				lighting.set(graphics);
 			}

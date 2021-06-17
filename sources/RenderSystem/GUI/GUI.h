@@ -568,8 +568,9 @@ namespace GUI
 
             bool is_updating_layout = false;
 
-			std::list<FrameGraphGenerator*> frame_generators;
+            my_unique_vector<FrameGraphGenerator*> frame_generators;
             cursor_style cursor = cursor_style::ARROW;
+
         public:
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
@@ -606,7 +607,7 @@ namespace GUI
             void process_graph(FrameGraph & graph)
             {
 //				std::lock_guard<std::mutex> g(m);
-
+                /*
                 auto f = [&](base* elem) {
 					  auto frame_gen = dynamic_cast<FrameGraphGenerator*>(elem);
 	                    if (frame_gen)
@@ -615,11 +616,11 @@ namespace GUI
                         return true;
                 };
 
-                iterate(f);
-            /*    for (auto& gen : frame_generators)
+                iterate(f);*/
+              for (auto& gen : frame_generators)
                 {
                     gen->generate(graph);
-                }*/
+                }
             }
 
 

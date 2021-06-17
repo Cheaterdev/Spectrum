@@ -69,7 +69,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	float3 barycentrics = float3(1 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
 
 
-	uint id0 = raytracing.GetIndex_buffer()[index_offset + PrimitiveIndex() * 3];
+	uint id0 = raytracing.GetIndex_buffer()[index_offset + PrimitiveIndex() * 3]; 
 	uint id1 = raytracing.GetIndex_buffer()[index_offset + PrimitiveIndex() * 3 + 1];
 	uint id2 = raytracing.GetIndex_buffer()[index_offset + PrimitiveIndex() * 3 + 2];
 
@@ -123,13 +123,13 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 			RayDesc ray;
 			ray.Origin = t.v.pos;
 			ray.Direction = dir;
-			ray.TMin = 0.1;
+			ray.TMin = 0.00001;
 			ray.TMax = 10000.0;
 			TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 1, 0, 1, ray, payload_shadow);
-
+			 
 			if (payload_shadow.hit)
 				hit_rate += 1.0f;
-
+ 
 		}
 		shadow = 1.0 - hit_rate / samples;
 	}

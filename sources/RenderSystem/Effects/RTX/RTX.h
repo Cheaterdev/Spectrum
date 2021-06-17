@@ -1,17 +1,443 @@
 
 
-struct RayType
+
+template<typename T> concept HasLocalData =
+requires () {
+	typename T::LocalData;
+};
+
+
+template<class T>
+struct SelectLocal
+{
+	using type = int;
+	static const UINT size = 0;
+
+};
+
+
+template<HasLocalData T>
+struct SelectLocal<T>
+{
+	using type = typename T::LocalData;
+	static const UINT size = sizeof(typename type::CB); //probably table, wtf to do with resources, cb only
+};
+
+CACHE_ALIGN(64)
+struct raygen_type
+{
+	shader_identifier id;
+};
+
+template < typename... >
+struct Typelist {};
+
+template< class T, typename TypeListOne, typename TypeListTwo> struct RTXPSO;
+
+template<class T, typename... Passes, typename... Raygens>
+struct RTXPSO<T, Typelist<Passes...>, Typelist<Raygens...>> : public Events::prop_handler
+{
+	using this_type = RTXPSO<T, Typelist<Passes...>, Typelist<Raygens...>>;
+
+	std::tuple<Passes...> passes;
+	std::tuple<Raygens...> raygen;
+
+	static const UINT MaxPayloadSizeInBytes = Templates::max(sizeof(Underlying<typename Passes::Payload>)...);
+	static const UINT MaxAttributeSizeInBytes = sizeof(float2);
+
+	StateObject::ptr m_dxrStateObject;
+	RootSignature::ptr m_root_sig = get_Signature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
+	RootSignature::ptr m_local_sig = create_local_signature<SelectLocal<Passes>::type...>();
+
+
+	CACHE_ALIGN(32)
+	struct hit_type
+	{
+		shader_identifier id;
+		D3D12_GPU_VIRTUAL_ADDRESS local_addr;
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+		//	std::byte data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
+			
+			
+		//	for (int i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; i++)
+		//		data[i] = id[i];;
+			ar& NP("data", boost::serialization::make_array(
+				(std::byte*)this,
+				D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES
+			));
+			;
+		//	ar& NVP(local_addr);
+		}
+
+
+		//std::array<std::byte, Templates::max(SelectLocal<Passes>::size...)> local_sig_data_could_be_anything;
+	};
+
+//	using hit_type = shader_identifier;
+	Render::StructuredBuffer<shader_identifier>::ptr miss_ids;
+	Render::StructuredBuffer<raygen_type>::ptr raygen_ids;
+
+	virtual_gpu_buffer<hit_type>::ptr hitgroup_ids;
+
+
+	struct material_info
+	{
+		TypedHandle<hit_type> handle;
+		std::vector<StateObject::ptr> collections;
+	};
+
+
+	std::map< materials::universal_material*, material_info> materials;
+	std::map< materials::universal_material*, material_info> new_materials;
+
+	bool need_recreate = false;
+	std::mutex m;
+
+	void init_collection(StateObjectDesc& desc)
+	{
+		desc.global_root = m_root_sig;
+		desc.MaxTraceRecursionDepth = T::MaxTraceRecursionDepth;
+		desc.MaxAttributeSizeInBytes = MaxAttributeSizeInBytes;
+		desc.MaxPayloadSizeInBytes = MaxPayloadSizeInBytes;
+	}
+
+	void init_material(materials::universal_material* mat)
+	{
+		std::lock_guard<std::mutex> g(m);
+		auto it = materials.find(mat);
+
+		if (it == materials.end())
+		{
+			auto& e = new_materials[mat];
+			e.handle  = hitgroup_ids->allocate(sizeof...(Passes));
+
+			auto init_part = [&](auto& pass) {
+				auto collection = pass.init_for_material(*this, mat);
+
+				if (collection)
+				{
+					e.collections.push_back(collection);
+				}
+			};
+
+			(init_part(std::get<Passes>(passes)), ...);
+
+
+		//	new_materials[mat] = (UINT)(materials.size() + new_materials.size());
+
+			need_recreate = true;
+
+			mat->on_change.register_handler(this, [this]() {
+				need_recreate = true;
+			});
+		}
+
+	}
+
+	void init()
+	{
+
+		{
+			auto init_part = [&](auto& e) {
+				e.init(*this);
+			};
+
+			(init_part(std::get<Passes>(passes)), ...);
+			(init_part(std::get<Raygens>(raygen)), ...);
+		}
+		
+/*
+		
+		*/
+
+		compile();
+	}
+
+	void compile()
+	{
+		std::lock_guard<std::mutex> g(m);
+		StateObjectDesc raytracingPipeline;
+		{
+			auto init_part = [&](auto& e) {
+				raytracingPipeline.collections.emplace_back(e.m_Collection);
+			};
+
+			(init_part(std::get<Passes>(passes)), ...);
+			(init_part(std::get<Raygens>(raygen)), ...);
+		}
+
+		for (auto& [mat, info] : materials)
+		{
+			for(auto&c:info.collections)
+			raytracingPipeline.collections.emplace_back(c);
+		}
+		m_dxrStateObject = std::make_shared<StateObject>(raytracingPipeline);
+		m_dxrStateObject->event_change.register_handler(this, [this]() {
+			std::lock_guard<std::mutex> g(m);
+			init_ids();
+			});
+
+		init_ids();
+	}
+
+	void init_ids()
+	{
+		std::vector<shader_identifier> miss_ids;
+		std::vector<raygen_type> raygen_ids;
+
+		(std::get<Passes>(passes).init_ids(m_dxrStateObject, miss_ids), ...);
+		(std::get<Raygens>(raygen).init_ids(m_dxrStateObject, raygen_ids), ...);
+
+		this->miss_ids = std::make_shared<Render::StructuredBuffer<shader_identifier>>(miss_ids.size());
+		this->raygen_ids = std::make_shared<Render::StructuredBuffer<raygen_type>>(raygen_ids.size());
+
+		this->miss_ids->set_raw_data(miss_ids);
+		this->raygen_ids->set_raw_data(raygen_ids);
+
+
+		for (auto& [mat, info] : materials)
+		{
+			auto elem = info.handle.map();
+			int i = 0;
+			auto init_part = [&](auto& e) {
+
+				e.init_material_ids(m_dxrStateObject, mat, elem[i]);
+			//	elem[i].id = e.get_group_id(m_dxrStateObject, mat);
+				i++;;
+			};
+
+			(init_part(std::get<Passes>(passes)), ...);
+
+			info.handle.write(0, elem);
+		}
+	}
+
+
+	void prepare(CommandList::ptr& list)
+	{
+		if (need_recreate)
+		{
+			materials.merge(new_materials);
+			new_materials.clear();
+			need_recreate = false;
+
+			init();
+		}
+
+		hitgroup_ids->prepare(list);
+	//	hitgroup_ids->debug_print(*list);
+		
+	}
+
+	RTXPSO()
+	{
+		hitgroup_ids = std::make_shared< virtual_gpu_buffer<hit_type>>(1024 * 1024);
+		init();
+	}
+};
+
+template <class Desc>
+struct RaytraceRaygen
+{
+	StateObject::ptr m_Collection;
+	shader_identifier raygen_id;
+
+	template<class RTX>
+	void init(RTX& rtx)
+	{
+		StateObjectDesc raytracingPipeline;
+		raytracingPipeline.collection = true;
+
+		rtx.init_collection(raytracingPipeline);
+
+		LibraryObject lib;
+		lib.library = Render::library_shader::get_resource({ std::string(Desc::shader), "" , 0, {} });
+		lib.export_shader(std::wstring(Desc::raygen));
+		raytracingPipeline.libraries.emplace_back(lib);
+
+		m_Collection = std::make_shared<StateObject>(raytracingPipeline);
+	}
+
+	void init_ids(StateObject::ptr& state, std::vector<raygen_type>& raygen_ids)
+	{
+		raygen_id = state->get_shader_id(std::wstring(Desc::raygen));
+
+		raygen_type gen;
+
+		gen.id = raygen_id;
+		raygen_ids.push_back(gen);
+	}
+
+};
+
+template <class Desc>
+struct RaytracePass
+{
+	StateObject::ptr m_Collection;
+
+	shader_identifier group_id;
+	shader_identifier miss_id;
+
+	Render::RootSignature::ptr local_sig;
+	template<class RTX>
+	void init(RTX& rtx)
+	{
+		StateObjectDesc raytracingPipeline;
+		raytracingPipeline.collection = true;
+		rtx.init_collection(raytracingPipeline);
+
+		LibraryObject lib;
+		lib.library = Render::library_shader::get_resource({ std::string(Desc::shader), "" , 0, {} });
+
+		if constexpr (!Desc::per_material)
+		{
+			HitGroup group;
+			group.local_root = rtx.m_local_sig;
+			group.name = std::wstring(Desc::name);
+			group.closest_hit_shader = std::wstring(Desc::hit_name);
+			group.type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+			raytracingPipeline.hit_groups.emplace_back(group);
+			lib.export_shader(std::wstring(Desc::hit_name));
+		}
+		else
+		{
+			local_sig = create_local_signature<typename Desc::LocalData>();
+		}
+
+		lib.export_shader(std::wstring(Desc::miss_name));
+		raytracingPipeline.libraries.emplace_back(lib);
+
+		m_Collection = std::make_shared<StateObject>(raytracingPipeline);
+	}
+
+	template<class RTX>
+	StateObject::ptr init_for_material(RTX& rtx, materials::universal_material* mat)
+	{
+		if constexpr (Desc::per_material)
+		{
+			StateObjectDesc raytracingPipeline;
+			raytracingPipeline.collection = true;
+			rtx.init_collection(raytracingPipeline);
+
+			LibraryObject lib;
+			lib.library = mat->raytracing_lib;
+			lib.export_shader(/*new*/ mat->wshader_name, /*was*/ std::wstring(Desc::hit_name));
+
+			HitGroup group;
+
+			group.local_root = rtx.m_local_sig;
+			group.name = mat->wshader_name + std::wstring(Desc::name);
+			group.closest_hit_shader = mat->wshader_name;
+			group.type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+			raytracingPipeline.hit_groups.emplace_back(group);
+
+			raytracingPipeline.libraries.emplace_back(lib);
+
+			return std::make_shared<StateObject>(raytracingPipeline);
+
+			//	get_material_id(mat);
+		}
+		else
+			return nullptr;
+	}
+
+	template<class T>
+	void init_material_ids(StateObject::ptr& state, materials::universal_material* mat, T& hit)
+	{
+		if constexpr (!Desc::per_material)
+		{
+			hit.id = state->get_shader_id(std::wstring(Desc::name));
+			hit.local_addr = 0;
+		}
+		else
+		{
+			hit.id = state->get_shader_id(mat->wshader_name + std::wstring(Desc::name));
+			hit.local_addr = mat->compiled_material_info.cb;
+		}
+
+	}
+
+	void init_ids(StateObject::ptr& state, std::vector<shader_identifier>& miss_ids)
+	{
+		if constexpr (!Desc::per_material) group_id = state->get_shader_id(std::wstring(Desc::name));
+		miss_id = state->get_shader_id(std::wstring(Desc::miss_name));
+
+		miss_ids.push_back(miss_id);
+	}
+};
+
+/// //////////////////////////////////////////////
+
+
+struct ShadowPass :public RaytracePass<ShadowPass>
+{
+	using Payload = Table::RayPayload;
+//	using LocalData = Slots::MaterialInfo;
+
+	static const constexpr std::string_view shader{ "shaders\\raytracing.hlsl" };
+	static const constexpr std::wstring_view name{ L"ShadowPassGroup" };
+	static const constexpr std::wstring_view hit_name{ L"ShadowClosestHitShader" };
+	static const constexpr std::wstring_view miss_name{ L"ShadowMissShader" };
+	static const constexpr bool per_material = false;
+};
+
+
+
+struct ColorPass :public RaytracePass<ColorPass>
+{
+	using Payload = Table::RayPayload;
+	using LocalData = Slots::MaterialInfo;
+
+	static const constexpr std::string_view shader{ "shaders\\raytracing.hlsl" };
+	static const constexpr std::wstring_view name{ L"ColorPassGroup" };
+	static const constexpr std::wstring_view hit_name{ L"MyClosestHitShader" };
+	static const constexpr std::wstring_view miss_name{ L"MyMissShader" };
+	static const constexpr bool per_material = true;
+};
+
+
+struct Shadow :public RaytraceRaygen<Shadow>
+{
+	static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
+	static const constexpr std::wstring_view raygen = L"ShadowPass";
+};
+
+
+
+struct ColorGen :public RaytraceRaygen<ColorGen>
+{
+	static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
+	static const constexpr std::wstring_view raygen = L"ColorPass";
+};
+
+
+
+struct MainRTX : RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass>, Typelist<Shadow, ColorGen>>
+{
+	static const const Layouts global_sig = Layouts::DefaultLayout;
+	static const const UINT MaxTraceRecursionDepth = 2;
+
+};
+
+
+
+struct RayPass
 {
 	bool per_hit_id;
 
 	std::string group_name;
-//	shader_identifier raygen;
+	//	shader_identifier raygen;
 	shader_identifier miss;
-	
+
 	std::optional<shader_identifier> hit;
 
 
-//	std::string raygen_name;
+	//	std::string raygen_name;
 	std::string miss_name;
 	std::string hit_name;
 };
@@ -24,20 +450,12 @@ struct RayGenShader
 	shader_identifier raygen;
 
 };
-struct RayGenConstantBuffer
-{
-	UINT texture_offset;
-	UINT node_offset;
-};
 
-struct HitObject
-{
-	
-};
+
 class RTX :public Singleton<RTX>, Events::prop_handler,
 	public Events::Runner
 {
-	
+
 public:
 	Resource::ptr m_missShaderTable;
 	Resource::ptr m_hitGroupShaderTable;
@@ -46,22 +464,15 @@ public:
 	StateObject::ptr m_dxrStateObject;
 	StateObject::ptr m_SharedCollection;
 
-	library_shader::ptr library;
-
-	RayGenConstantBuffer m_rayGenCB;
 	RootSignature::ptr global_sig;
 	Render::RootSignature::ptr local_sig;
 	using ptr = std::shared_ptr<RTX>;
 
 
-	std::vector<RayType> ray_types;
+	std::vector<RayPass> ray_passes;
 	std::vector<RayGenShader> raygen_types;
-	
-	//ArraysHolder<InstanceData> instanceData;
 
-	std::set<ComPtr<ID3D12StateObject>> all_objs;
-
-	virtual_gpu_buffer<closesthit_identifier>::ptr material_hits;// (MAX_COMMANDS_SIZE)
+	virtual_gpu_buffer<closesthit_identifier>::ptr material_hits;
 
 	std::map< materials::universal_material*, UINT> materials;
 	std::map< materials::universal_material*, UINT> new_materials;
@@ -69,10 +480,12 @@ public:
 	bool need_recreate = false;
 
 	std::mutex m;
+	MainRTX rtx;
+	//Slots::Raytracing::Compiled compiled_raytracing;
 	RTX();
 	TypedHandle<closesthit_identifier> allocate_hit()
 	{
-		return material_hits->allocate(ray_types.size());
+		return material_hits->allocate(ray_passes.size());
 	}
 	UINT get_material_id(materials::universal_material* universal);
 
@@ -88,6 +501,7 @@ public:
 
 	void prepare(CommandList::ptr& list);
 
-	void render(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size);
-	void render2(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size);
+	void render(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size, UINT generator);
+
+	void render_new(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size);
 };

@@ -231,14 +231,24 @@ struct PSO_Blend : public have_options, have_name, have_values
 struct PSO_Param : public have_options, have_values, have_type, have_expr, parsed_type
 {
 };
-
-struct PSO : public inherited, have_options, have_name
+struct root_holder
 {
 	RootSig root_sig;
-	std::vector<Define> defines;
-
+};
+struct shader_holder
+{
 	std::list<Shader> shader_list;
 	std::map<std::string, Shader*> shaders;
+};
+
+struct param_holder
+{
+	std::vector<PSO_Param> params;
+};
+struct PSO : public inherited, have_options, have_name, shader_holder, root_holder
+{
+
+	std::vector<Define> defines;
 
 	Define* find_define(std::string name)
 	{
@@ -261,15 +271,33 @@ struct ComputePSO : public PSO
 	}
 };
 
-struct GraphicsPSO : public PSO
+struct GraphicsPSO : public PSO, public param_holder
 {
 
 	PSO_RTV rtv;
 	PSO_Blend blend;
-	std::vector<PSO_Param> params;
+
 
 };
 
+struct RaytracePSO : public PSO
+{
+
+
+};
+
+struct RaytracePass : public PSO, public param_holder
+{
+
+
+
+};
+
+struct RaytraceGen : public PSO
+{
+
+
+};
 template<class T>
 void Layout::recursive_slots(T f)
 {
@@ -320,7 +348,7 @@ struct RT : public inherited, have_options, have_name
 };
 
 
-struct Parsed
+struct Parsed : public parsed_type
 {
 	std::list<Layout> layouts;
 	std::list<Table> tables;
@@ -330,6 +358,10 @@ struct Parsed
 
 	std::list<ComputePSO> compute_pso;
 	std::list<GraphicsPSO> graphics_pso;
+
+	std::list<RaytracePSO> raytrace_pso;
+	std::list<RaytracePass> raytrace_pass;
+	std::list<RaytraceGen> raytrace_gen;
 
 	Layout* find_layout(std::string name);
 	Table* find_table(std::string name);
@@ -343,6 +375,9 @@ struct Parsed
 		rt.splice(rt.end(), r.rt);
 		compute_pso.splice(compute_pso.end(), r.compute_pso);
 		graphics_pso.splice(graphics_pso.end(), r.graphics_pso);
+		raytrace_pso.splice(raytrace_pso.end(), r.raytrace_pso);
+		raytrace_pass.splice(raytrace_pass.end(), r.raytrace_pass);
+		raytrace_gen.splice(raytrace_gen.end(), r.raytrace_gen);
 
 	}
 };

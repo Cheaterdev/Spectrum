@@ -4,7 +4,9 @@
 #include "Parsing.h"
 #include <filesystem>
 #include <functional>
-
+#include <format>
+#include <string>
+#include <iostream>
 static const std::string cpp_path = "../../sources/RenderSystem/autogen";
 static const std::string hlsl_path = "../../workdir/shaders/autogen";
 
@@ -14,7 +16,7 @@ std::string generate_array(const have_array& a)
 
 	if (a.as_array) {
 		if (a.array_count) {
-			return  std::string("[") + std::to_string(a.array_count) + "]";
+			return std::format("[{}]", a.array_count);
 		}
 		else {
 			return "[]";
@@ -68,10 +70,9 @@ void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::C
 			if (v.bindless)  continue;
 
 			auto& e = offsets[type];
-			stream << v.type << " " << get_name_for(type) << "_" << slot.id << "_" << e << generate_array(v) << ": register(" << subname << e << ", space" << slot.id << ");" << std::endl;
 
-
-			struct_str[type] << "uint "<< get_name_for(type) <<"_"<< e << ";" << std::endl;
+			stream<<std::format("{} {}_{}_{}{}: register({}{}, space{});", v.type, get_name_for(type), slot.id,e, generate_array(v), subname, e, slot.id) << std::endl;
+			struct_str[type] << std::format("uint {}_{};", get_name_for(type), e) << std::endl;
 
 			e += v.array_count;
 		}
@@ -101,7 +102,7 @@ void generate_bind(my_stream& stream, const std::string& pass_cb, const std::str
 
 	if (parent.empty()) {
 		if (table.counts[ValueType::CB] > 0)
-			stream << "result.cb = " << std::string("cb_") << slot.id << "_0;" << std::endl;
+			stream << std::format("result.cb = cb_{}_0;", slot.id) << std::endl;
 	}
 
 	auto process_type = [&](ValueType type) {
@@ -115,8 +116,7 @@ void generate_bind(my_stream& stream, const std::string& pass_cb, const std::str
 		
 			if ( true || v.type.starts_with("Append") || v.as_array)
 			{
-				stream << "result." << get_name_for(type) << "." << parent << v.name << " = " << get_name_for(type) << "_" << slot.id << "_" << i << ";" << std::endl;
-
+				stream << std::format("result.{}.{}{} = {}_{}_{};", get_name_for(type), parent, v.name, get_name_for(type), slot.id, i) << std::endl;
 			}
 			else
 			if (v.as_array)
@@ -186,25 +186,24 @@ void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& sl
 void generate_pass_table(Table& table)
 {
 	my_stream stream(hlsl_path, table.name + ".h");
+	stream << std::format(
+R"(#ifndef SLOT_{0}
+	#define SLOT_{0}
+#else
+	#error Slot {0} is already used
+#endif)", table.slot->id) << std::endl;
 
 
-	stream << "#ifndef SLOT_" << table.slot->id << std::endl;
-	stream << "\t#define SLOT_" << table.slot->id << std::endl;
-	stream << "#else" << std::endl;
-	stream << "\t#error Slot " << table.slot->id << " is already used" << std::endl;
-	stream << "#endif" << std::endl;
-
-
-	stream << "#include \"layout/" << table.slot->layout->name << ".h\"" << std::endl;
-
-
+	stream << std::format(R"(#include "layout/{}.h")" ,table.slot->layout->name)<< std::endl;
 
 	if (table.bindless_srv)
-		stream << table.bindless_srv->type << " bindless[]" << ": register(t" << calculate_max_size(table) << ", space" << table.slot->id << ");" << std::endl;
+		stream << std::format(R"({} bindless[]: register(t{}, space{});)", table.bindless_srv->type , calculate_max_size(table) , table.slot->id) << std::endl;
 
-	stream << "#include \"tables/" << table.name << ".h\"" << std::endl;
+	stream << std::format(R"(#include "tables/{}.h")", table.name) << std::endl;
+
+
 	// cb
-	if (table.counts[ValueType::CB] > 0) stream << "ConstantBuffer<" << table.name << "_cb> cb_" << table.slot->id << "_0:register(b0,space" << table.slot->id << ");" << std::endl;
+	if (table.counts[ValueType::CB] > 0) stream << std::format(R"(ConstantBuffer<{}_cb> cb_{}_0:register(b0,space{});)", table.name , table.slot->id ,table.slot->id ) << std::endl; // "ConstantBuffer<" << table.name << "_cb> cb_" << table.slot->id << "_0:register(b0,space" << table.slot->id << ");" << std::endl;
 
 
 
@@ -217,7 +216,7 @@ void generate_pass_table(Table& table)
 
 	std::stringstream struct_str;
 
-	struct_str << "struct Pass_" << table.name << "" << std::endl;
+	struct_str << std::format(R"(struct Pass_{})", table.name) << std::endl;
 	struct_str << "{" << std::endl;
 
 
@@ -1703,6 +1702,10 @@ void iterate_files(std::filesystem::path path, std::function<void(std::wstring)>
 	}
 }
 
+void generate_rtx(Parsed& parsed)
+{
+
+}
 int main() {
 	//std::filesystem::remove_all(L"output");
 
@@ -1752,6 +1755,9 @@ int main() {
 		{
 			generate_pso(pso);
 		}
+
+		generate_rtx(parsed);
+
 	}
 	catch (std::exception& e)
 	{

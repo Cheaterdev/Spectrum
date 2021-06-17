@@ -572,7 +572,7 @@ void VoxelGI::screen(FrameGraph& graph)
 
 			if (use_rtx)
 			{
-				RTX::get().render(compute, scene->raytrace_scene, noisy_output.get_size());
+				RTX::get().render(compute, scene->raytrace_scene, noisy_output.get_size(), 0);
 			}
 			else
 			{
@@ -894,7 +894,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 				}
 
 
-				RTX::get().render2(compute, scene->raytrace_scene, noisy_output.get_size());
+				RTX::get().render(compute, scene->raytrace_scene, noisy_output.get_size(), 1);
 
 				//		command_list->get_copy().copy_resource(gi_filtered.resource, noisy_output.resource);
 			}

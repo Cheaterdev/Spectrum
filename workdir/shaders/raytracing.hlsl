@@ -50,13 +50,6 @@ float3 get_PBR(FrameInfo  info, float3 SpecularColor, float3 ReflectionColor, fl
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes; 
 
-
-//static const Texture3D<float4> voxels = GetVoxelScreen().GetVoxels();
-//static const TextureCube<float4> tex_cube = GetVoxelScreen().GetTex_cube();
-//static const Texture2D<float2> speed_tex = GetVoxelScreen().GetGbuffer().GetMotion();
-
-
-
 float4 get_voxel(float3 pos, float level)
 {
 	float4 color = CreateVoxelScreen().GetVoxels().SampleLevel(linearClampSampler, pos, level);
@@ -189,7 +182,7 @@ static const int2 offset[4] =
 	int2(1, 0),
 	int2(1, 1)
 };
-#define FRAMES 8
+#define FRAMES 16
 
 struct upscale_result
 {
@@ -239,6 +232,108 @@ upscale_result get_history(VoxelScreen voxel_screen, Camera prev_camera, float3 
 }
 
 
+
+[shader("raygeneration")]
+void ShadowPass()
+{
+	
+	uint2 itc = DispatchRaysIndex().xy;
+	uint2 dims = DispatchRaysDimensions().xy;
+
+	float2 tc = float2(itc + 0.5f) / dims;
+
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const Raytracing raytracing = CreateRaytracing();
+	const FrameInfo frame = CreateFrameInfo();
+	
+
+	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+
+
+	float raw_z = voxel_screen.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
+	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
+	//float4 gbufer_normals = voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy];
+
+	//float3 normal = normalize(gbufer_normals.xyz * 2 - 1);
+	//pos += normal / 10000000;
+
+	float shadow = true;
+	{
+
+		float hit_rate = 0;
+		int samples = 3;// payload2.recursion < 2 ? 3 : 1;
+		for (int i = 0; i < samples; i++)
+		{
+			float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime() + float(i)/10);
+
+			ShadowPayload payload_shadow = { false };
+
+			RayDesc ray;
+			ray.Origin = pos;
+			ray.Direction = dir;
+			ray.TMin = 0.1;
+			ray.TMax = 10000.0;
+			TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 0, 0, 0, ray, payload_shadow);
+
+			if (payload_shadow.hit)
+				hit_rate += 1.0f;
+
+		}
+		shadow = 1.0 - hit_rate / samples;
+	}
+
+
+	tex_noise[itc] = lerp(tex_noise[itc], shadow, 0.1);// !payload_shadow.hit;
+}
+
+
+[shader("raygeneration")]
+void ColorPass()
+{
+
+	uint2 itc = DispatchRaysIndex().xy;
+	uint2 dims = DispatchRaysDimensions().xy;
+
+	float2 tc = float2(itc + 0.5f) / dims;
+
+	const VoxelScreen voxel_screen = CreateVoxelScreen();
+	const VoxelOutput voxel_output = CreateVoxelOutput();
+	const Raytracing raytracing = CreateRaytracing();
+	const FrameInfo frame = CreateFrameInfo();
+
+
+	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
+
+
+	float3 pos = depth_to_wpos(0.1, tc, frame.GetCamera().GetInvViewProj());
+
+
+	RayDesc ray;
+	ray.Origin = frame.GetCamera().GetPosition();
+	ray.Direction = normalize(pos - frame.GetCamera().GetPosition());
+	ray.TMin = 0.1;
+	ray.TMax = 10000.0;
+
+
+	
+	RayPayload payload_gi;
+	payload_gi.color = 0;
+	payload_gi.recursion = 0;
+	payload_gi.dist = 0;
+	payload_gi.cone.angle = 0;
+	payload_gi.cone.width = 0;
+
+			TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload_gi);
+
+	
+
+	//ShadowPayload payload_shadow = { false };
+
+	//TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 0, 0, 0, ray, payload_shadow);
+
+			tex_noise[itc] = payload_gi.color;// erp(tex_noise[itc], shadow, 0.1);// !payload_shadow.hit;
+}
 
 
 [shader("raygeneration")]
@@ -292,7 +387,7 @@ payload_gi.color = float4(dirVoxel,0);
 payload_gi.recursion = 0;
 payload_gi.dist = 0;
 payload_gi.cone.angle = 0;
-payload_gi.cone.width = 0;
+payload_gi.cone.width = 0; 
 
 
 //dir = normalize(pos - frame.GetCamera().GetPosition());
@@ -301,8 +396,8 @@ payload_gi.cone.width = 0;
 	RayDesc ray;
 	ray.Origin = pos;
 	ray.Direction = dir;
-	ray.TMin = 0.05;
-	ray.TMax = length(oneVoxelSize)*5;
+	ray.TMin = 0.1;
+	ray.TMax = length(oneVoxelSize) * 5;
 	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
 
 	if (payload_gi.dist > 100000-5)
@@ -460,7 +555,7 @@ void MyRaygenShaderReflection()
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {
-	
+	payload.color = 1;
 	// CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 3);
 	payload.dist = 100000;
 }
