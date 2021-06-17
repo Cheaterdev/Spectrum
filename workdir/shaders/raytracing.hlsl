@@ -398,7 +398,7 @@ payload_gi.cone.width = 0;
 	ray.Direction = dir;
 	ray.TMin = 0.1;
 	ray.TMax = length(oneVoxelSize) * 5;
-	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
+	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload_gi);
 
 	if (payload_gi.dist > 100000-5)
 	{
@@ -406,24 +406,8 @@ payload_gi.cone.width = 0;
 	}
 		
 	//tex_noise[DispatchRaysIndex().xy] = 1;// lerp(tex_noise[DispatchRaysIndex().xy], payload_shadow.color, 0.01);
-
-/*	{
-
-		ShadowPayload payload_shadow;
-		payload_shadow.hit = false;
-	
-		
-		RayDesc ray;
-		ray.Origin = pos;
-		ray.Direction = frame.GetSunDir();
-		ray.TMin = 0.1;
-		ray.TMax = 30000.0;
-		TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload_shadow);
-
-		payload_gi.color = payload_shadow.hit;
+	{
 	}
-	*/
-	
 
 	float2 delta =  voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
 	float2 prev_tc = tc - delta;
@@ -518,7 +502,7 @@ void MyRaygenShaderReflection()
 	ray.Direction = dir;
 	ray.TMin = 0.05;
 	ray.TMax =  0.5*length(oneVoxelSize) / (tan(roughness) + 0.001);
-	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 0, 0, 0, ray, payload_gi);
+	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload_gi);
 
 
 	

@@ -340,7 +340,7 @@ void MeshAssetInstance::update_rtx_instance()
 			instanceDesc.InstanceMask = 1;
 			instanceDesc.AccelerationStructure = info.ras->get_gpu_address();
 			instanceDesc.InstanceID = info.node_id;
-			instanceDesc.InstanceContributionToHitGroupIndex = static_cast<materials::universal_material*>(info.material)->info_rtx.get_offset();
+			instanceDesc.InstanceContributionToHitGroupIndex = RTX::get().rtx.get_index(static_cast<materials::universal_material*>(info.material));// ->info_rtx.get_offset();
 
 			ras[i] = instanceDesc;
 

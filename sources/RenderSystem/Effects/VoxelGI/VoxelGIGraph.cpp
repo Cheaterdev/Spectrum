@@ -530,7 +530,7 @@ void VoxelGI::screen(FrameGraph& graph)
 			//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			if (use_rtx)
 
-				command_list->get_compute().set_signature(RTX::get().global_sig);
+				command_list->get_compute().set_signature(RTX::get().rtx.m_root_sig);
 			else
 				compute.set_signature(get_Signature(Layouts::DefaultLayout));
 

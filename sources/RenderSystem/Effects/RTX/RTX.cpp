@@ -2,233 +2,8 @@
 
 
 
-UINT RTX::get_material_id(materials::universal_material* universal)
-{
-	rtx.init_material(universal);
-
-	std::lock_guard<std::mutex> g(m);
-	auto it = materials.find(universal);
-
-	if (it == materials.end())
-	{
-		new_materials[universal] = (UINT)materials.size();
-
-		need_recreate = true;
-		universal->on_change.register_handler(this, [this]() {
-
-			run([this]() {
-				need_recreate = true;
-
-				});
-			});
-
-	}
-
-	return materials[universal];
-}
-
-void RTX::CreateCommonProps(StateObjectDesc& desc)
-{
-	desc.global_root = global_sig;
-	desc.MaxTraceRecursionDepth = 2;
-	desc.MaxAttributeSizeInBytes = 2 * sizeof(float);
-	desc.MaxPayloadSizeInBytes = sizeof(Table::RayPayload::CB);
-}
-
-void RTX::CreateSharedCollection()
-{
-	StateObjectDesc raytracingPipeline;
-	raytracingPipeline.collection = true;
-	CreateCommonProps(raytracingPipeline);
-
-	LibraryObject lib;
-	lib.library = Render::library_shader::get_resource({ "shaders\\raytracing.hlsl", "" , 0, {} });;
-
-	lib.export_shader(L"MyMissShader");
-	lib.export_shader(L"ShadowClosestHitShader");
-	lib.export_shader(L"ShadowMissShader");
-	lib.export_shader(L"MyRaygenShader");
-	lib.export_shader(L"MyRaygenShaderReflection");
-	lib.export_shader(L"ShadowPass");
-
-	raytracingPipeline.libraries.emplace_back(lib);
-
-
-	
-	for (auto& type : ray_passes)
-	{
-		if (type.per_hit_id) continue;
-		
-		HitGroup group;
-		group.name = convert(type.group_name);
-		group.closest_hit_shader = convert(type.hit_name);
-		group.type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-		raytracingPipeline.hit_groups.emplace_back(group);
-	}
-
-	m_SharedCollection = std::make_shared<StateObject>(raytracingPipeline);
-}
-
-StateObject::ptr RTX::CreateGlobalCollection(materials::universal_material* mat)
-{
-
-		StateObjectDesc raytracingPipeline;
-		raytracingPipeline.collection = true;
-		CreateCommonProps(raytracingPipeline);
-
-		LibraryObject lib;
-		lib.library = mat->raytracing_lib;
-		
-		for (auto& type : ray_passes)
-		{
-			if (type.per_hit_id)
-			{
-				lib.export_shader(mat->wshader_name,convert(type.hit_name));
-
-				HitGroup group;
-
-				group.local_root = local_sig;
-				group.name = mat->wshader_name+convert(type.group_name);
-				group.closest_hit_shader = mat->wshader_name;
-				group.type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-				raytracingPipeline.hit_groups.emplace_back(group);
-			}
-		}
-	
-		raytracingPipeline.libraries.emplace_back(lib);
-
-		mat->m_RTXCollection = std::make_shared<StateObject>(raytracingPipeline);
-
-		get_material_id(mat);
-
-		return mat->m_RTXCollection;
-
-}
-
-void RTX::CreateRaytracingPipelineStateObject()
-{
-
-	StateObjectDesc raytracingPipeline;
-	raytracingPipeline.collections.emplace_back(m_SharedCollection);
-	
-	for (auto& pair : materials)
-	{
-		auto mat = pair.first;
-		raytracingPipeline.collections.emplace_back(mat->m_RTXCollection);
-	}
-
-	m_dxrStateObject = std::make_shared<StateObject>(raytracingPipeline);
-
-	auto change_func = [this]()
-	{
-		for (auto& type : ray_passes)
-		{
-			if (!type.per_hit_id)
-				type.hit = m_dxrStateObject->get_shader_id(convert(type.group_name));
-
-			type.miss = m_dxrStateObject->get_shader_id(convert(type.miss_name));
-		}
-
-		for (auto& type : raygen_types)
-		{
-			type.raygen = m_dxrStateObject->get_shader_id(convert(type.name));
-		}
-
-		for (auto& pair : materials)
-		{
-			auto mat = pair.first;
-
-			std::vector<shader_identifier>hit_table;
-
-			for (auto& type : ray_passes)
-			{
-				shader_identifier id;
-
-				if (type.per_hit_id)
-				{
-					id = m_dxrStateObject->get_shader_id(mat->wshader_name + convert(type.group_name));
-
-				}
-				else
-				{
-					id = *type.hit;
-				}
-
-				hit_table.emplace_back(id);
-			}
-
-			mat->set_identifier(hit_table);
-		}
-	};
-	
-	m_dxrStateObject->event_change.register_handler(this, change_func);
-	change_func();
-}
-
-RTX::RTX()
-{
-	material_hits = std::make_shared< virtual_gpu_buffer<closesthit_identifier>>(1024 * 1024);
-
-
-	global_sig = get_Signature(Layouts::DefaultLayout)->create_global_signature<Slots::MaterialInfo>();
-	local_sig = create_local_signature<Slots::MaterialInfo>();
-
-	{
-		RayPass type;
-
-		type.group_name = "MyHitGroup";
-		type.per_hit_id = true;
-		type.miss_name = "MyMissShader";
-		type.hit_name = "MyClosestHitShader";
-		ray_passes.emplace_back(type);
-	}
-
-	{
-		RayPass type;
-		
-		type.group_name = "ShadowClosestHitGroup";
-		type.per_hit_id = false;
-		type.hit_name = "ShadowClosestHitShader";
-		type.miss_name = "ShadowMissShader";
-		ray_passes.emplace_back(type);
-	}
-
-	{
-		RayGenShader type;
-		type.name = "MyRaygenShader";
-		raygen_types.emplace_back(type);
-	}
-
-	{
-		RayGenShader type;
-		type.name = "MyRaygenShaderReflection";
-		raygen_types.emplace_back(type);
-	}
-{
-		RayGenShader type;
-		type.name = "ShadowPass";
-		raygen_types.emplace_back(type);
-	}
-	CreateSharedCollection();
-}
-
 void RTX::prepare(CommandList::ptr& list)
 {
-	std::lock_guard<std::mutex> g(m);
-	process_tasks();
-
-	if (need_recreate)
-	{
-
-		materials.merge(new_materials);
-		new_materials.clear();
-		CreateRaytracingPipelineStateObject();
-
-		need_recreate = false;
-	}
-
-	material_hits->prepare(list);
-
 	rtx.prepare(list);
 }
 
@@ -243,20 +18,14 @@ void RTX::render(ComputeContext & compute, Render::RaytracingAccelerationStructu
 		rtx.set(compute);
 	}
 
+	if (generator == 0) generator = 2;
+	else if(generator == 1) generator = 3;
 
-	auto m_rayGenShaderTable = compute.get_base().place_raw(raygen_types[generator].raygen);
-
-	std::vector<shader_identifier> miss_table;
-
-	for (auto& type : ray_passes)
-	{
-		miss_table.emplace_back(type.miss);
-	}
-	
-	auto m_missShaderTable = compute.get_base().place_raw(miss_table);
-
-	compute.set_pipeline(m_dxrStateObject);
-	compute.dispatch_rays<closesthit_identifier, shader_identifier, shader_identifier>(size, material_hits->buffer->get_resource_address(), material_hits->max_size(), m_missShaderTable.get_resource_address(), miss_table.size(), m_rayGenShaderTable.get_resource_address());
+	compute.set_pipeline(rtx.m_dxrStateObject);
+	compute.dispatch_rays<MainRTX::hit_type, shader_identifier, shader_identifier>(size,
+		rtx.hitgroup_ids->buffer->get_resource_address(), rtx.hitgroup_ids->max_size(),
+		rtx.miss_ids->get_resource_address(), rtx.miss_ids->get_count(),
+		rtx.raygen_ids->get_resource_address().offset(generator * sizeof(raygen_type)));
 
 }
 
@@ -277,5 +46,5 @@ void RTX::render_new(ComputeContext& compute, Render::RaytracingAccelerationStru
 		rtx.miss_ids->get_resource_address(), rtx.miss_ids->get_count() ,
 		rtx.raygen_ids->get_resource_address().offset(0*sizeof(raygen_type)));
 	
-
+	
 }

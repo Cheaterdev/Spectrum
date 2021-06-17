@@ -119,9 +119,7 @@ void materials::universal_material::update()
 void materials::universal_material::compile()
 {
 	start_changing_contents();
-	m_RTXCollection = RTX::get().CreateGlobalCollection(this);
-	assert(m_RTXCollection);
-
+	RTX::get().rtx.init_material(this);
 	
 	handlers.clear();
 
@@ -201,7 +199,6 @@ void materials::universal_material::compile()
 
 	need_update_compiled = false;
 	need_update_uniforms = false;
-	update_rtx();
 	end_changing_contents();
 }
 
@@ -293,27 +290,6 @@ void materials::universal_material::update_rtx()
 {
 	if (!Device::get().is_rtx_supported()) return;
 
-
-//	if (hit_table.empty()) return;
-	
-	if (!info_rtx)
-	{
-		info_rtx = RTX::get().allocate_hit();
-	}
-
-	{
-		auto elem = info_rtx.map();
-
-		for(int i=0;i< hit_table.size();i++)
-		{
-			elem[i].identifier = hit_table[i];
-			elem[i].mat_buffer = compiled_material_info.cb;
-	//		elem[i].mat_buffer_offsets = compiled_material_info.offsets_cb;
-		}
-		
-		info_rtx.write(0, elem);
-
-	}
 }
 
 void materials::universal_material::test()

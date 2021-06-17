@@ -303,17 +303,7 @@ namespace materials
 			Slots::MaterialInfo::Compiled compiled_material_info;
 
 			TypedHandle<material_info_part::CB> info_handle;
-			TypedHandle<closesthit_identifier> info_rtx;
-			std::vector<shader_identifier>hit_table;
-
-			StateObject::ptr m_RTXCollection;
     	
-			void set_identifier(std::vector<shader_identifier>hit_table)
-			{
-				this->hit_table = hit_table;
-				update_rtx();
-			}
-
 			void update_rtx();
 			void test();
 

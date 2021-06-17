@@ -87,6 +87,7 @@ struct RTXPSO<T, Typelist<Passes...>, Typelist<Raygens...>> : public Events::pro
 
 	struct material_info
 	{
+		UINT index;
 		TypedHandle<hit_type> handle;
 		std::vector<StateObject::ptr> collections;
 	};
@@ -106,6 +107,22 @@ struct RTXPSO<T, Typelist<Passes...>, Typelist<Raygens...>> : public Events::pro
 		desc.MaxPayloadSizeInBytes = MaxPayloadSizeInBytes;
 	}
 
+	UINT get_index(materials::universal_material* mat)
+	{
+
+		material_info* info = nullptr;
+		//init_material(mat);
+		auto it = materials.find(mat);
+
+		if (it == materials.end())
+
+		{
+			info = &new_materials[mat];
+		}else
+			info = &materials[mat];
+
+		return info->handle.get_offset();;
+	}
 	void init_material(materials::universal_material* mat)
 	{
 		std::lock_guard<std::mutex> g(m);
@@ -283,7 +300,6 @@ struct RaytracePass
 	shader_identifier group_id;
 	shader_identifier miss_id;
 
-	Render::RootSignature::ptr local_sig;
 	template<class RTX>
 	void init(RTX& rtx)
 	{
@@ -304,10 +320,7 @@ struct RaytracePass
 			raytracingPipeline.hit_groups.emplace_back(group);
 			lib.export_shader(std::wstring(Desc::hit_name));
 		}
-		else
-		{
-			local_sig = create_local_signature<typename Desc::LocalData>();
-		}
+	
 
 		lib.export_shader(std::wstring(Desc::miss_name));
 		raytracingPipeline.libraries.emplace_back(lib);
@@ -415,9 +428,19 @@ struct ColorGen :public RaytraceRaygen<ColorGen>
 	static const constexpr std::wstring_view raygen = L"ColorPass";
 };
 
+struct GIIndirect :public RaytraceRaygen<GIIndirect>
+{
+	static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
+	static const constexpr std::wstring_view raygen = L"MyRaygenShader";
+};
 
+struct GIReflection :public RaytraceRaygen<GIReflection>
+{
+	static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
+	static const constexpr std::wstring_view raygen = L"MyRaygenShaderReflection";
+};
 
-struct MainRTX : RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass>, Typelist<Shadow, ColorGen>>
+struct MainRTX : RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass>, Typelist<Shadow, ColorGen, GIIndirect, GIReflection>>
 {
 	static const const Layouts global_sig = Layouts::DefaultLayout;
 	static const const UINT MaxTraceRecursionDepth = 2;
@@ -426,78 +449,16 @@ struct MainRTX : RTXPSO<MainRTX, Typelist<ShadowPass, ColorPass>, Typelist<Shado
 
 
 
-struct RayPass
-{
-	bool per_hit_id;
-
-	std::string group_name;
-	//	shader_identifier raygen;
-	shader_identifier miss;
-
-	std::optional<shader_identifier> hit;
-
-
-	//	std::string raygen_name;
-	std::string miss_name;
-	std::string hit_name;
-};
-
-
-struct RayGenShader
-{
-	std::string name;
-
-	shader_identifier raygen;
-
-};
-
-
 class RTX :public Singleton<RTX>, Events::prop_handler,
 	public Events::Runner
 {
 
 public:
-	Resource::ptr m_missShaderTable;
-	Resource::ptr m_hitGroupShaderTable;
-	Resource::ptr m_rayGenShaderTable;
-
-	StateObject::ptr m_dxrStateObject;
-	StateObject::ptr m_SharedCollection;
-
-	RootSignature::ptr global_sig;
-	Render::RootSignature::ptr local_sig;
+	
 	using ptr = std::shared_ptr<RTX>;
 
 
-	std::vector<RayPass> ray_passes;
-	std::vector<RayGenShader> raygen_types;
-
-	virtual_gpu_buffer<closesthit_identifier>::ptr material_hits;
-
-	std::map< materials::universal_material*, UINT> materials;
-	std::map< materials::universal_material*, UINT> new_materials;
-
-	bool need_recreate = false;
-
-	std::mutex m;
 	MainRTX rtx;
-	//Slots::Raytracing::Compiled compiled_raytracing;
-	RTX();
-	TypedHandle<closesthit_identifier> allocate_hit()
-	{
-		return material_hits->allocate(ray_passes.size());
-	}
-	UINT get_material_id(materials::universal_material* universal);
-
-	void CreateCommonProps(StateObjectDesc& desc);
-
-	void CreateSharedCollection();
-
-	StateObject::ptr CreateGlobalCollection(materials::universal_material* mat);
-
-
-	void CreateRaytracingPipelineStateObject();
-
 
 	void prepare(CommandList::ptr& list);
 
