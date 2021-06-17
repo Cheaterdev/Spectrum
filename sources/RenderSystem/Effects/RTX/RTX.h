@@ -202,6 +202,25 @@ struct RTXPSO<T, Typelist<Passes...>, Typelist<Raygens...>> : public Events::pro
 		init_ids();
 	}
 
+
+	void update_material(materials::universal_material* mat)
+	{
+		auto& info = materials[mat];
+
+		auto elem = info.handle.map();
+		int i = 0;
+		auto init_part = [&](auto& e) {
+
+			e.init_material_ids(m_dxrStateObject, mat, elem[i]);
+			i++;;
+		};
+
+		(init_part(std::get<Passes>(passes)), ...);
+
+		info.handle.write(0, elem);
+
+	}
+
 	void init_ids()
 	{
 		std::vector<shader_identifier> miss_ids;

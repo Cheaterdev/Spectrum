@@ -289,6 +289,7 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 void materials::universal_material::update_rtx()
 {
 	if (!Device::get().is_rtx_supported()) return;
+	RTX::get().rtx.update_material(this);
 
 }
 
