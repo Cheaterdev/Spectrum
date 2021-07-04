@@ -120,7 +120,10 @@ typedef CComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 #include "SIG/Slots.h"
 #include "SIG/PSO.h"
 
+#include "SIG/RTX.h"
+
 #include "../RenderSystem/autogen/includes.h"
+
 
 
 #include "DX12/PipelineState.hpp"

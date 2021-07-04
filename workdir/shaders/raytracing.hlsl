@@ -24,7 +24,8 @@
 
 
 #include "autogen/VoxelOutput.h"
-
+#include "autogen/rtx/ShadowPass.h"
+#include "autogen/rtx/ColorPass.h"
 #include "PBR.hlsl"
 #include "Common.hlsl"
 
@@ -234,7 +235,7 @@ upscale_result get_history(VoxelScreen voxel_screen, Camera prev_camera, float3 
 
 
 [shader("raygeneration")]
-void ShadowPass()
+void ShadowRaygenShader()
 {
 	
 	uint2 itc = DispatchRaysIndex().xy;
@@ -262,7 +263,7 @@ void ShadowPass()
 	{
 
 		float hit_rate = 0;
-		int samples = 3;// payload2.recursion < 2 ? 3 : 1;
+		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
 		for (int i = 0; i < samples; i++)
 		{
 			float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime() + float(i)/10);
@@ -274,7 +275,7 @@ void ShadowPass()
 			ray.Direction = dir;
 			ray.TMin = 0.1;
 			ray.TMax = 10000.0;
-			TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 0, 0, 0, ray, payload_shadow);
+			ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
 
 			if (payload_shadow.hit)
 				hit_rate += 1.0f;
@@ -284,7 +285,7 @@ void ShadowPass()
 	}
 
 
-	tex_noise[itc] = lerp(tex_noise[itc], shadow, 0.1);// !payload_shadow.hit;
+	tex_noise[itc] = lerp(tex_noise[itc], shadow, 0.8);// !payload_shadow.hit;
 }
 
 
@@ -383,11 +384,7 @@ float3 dirVoxel = dir;// normalize(normal + rand2 * (right + tangent));
 
 float3 oneVoxelSize = voxel_info.GetSize()/ (voxel_info.GetVoxel_tiles_count()* voxel_info.GetVoxels_per_tile());
 RayPayload payload_gi;
-payload_gi.color = float4(dirVoxel,0);
-payload_gi.recursion = 0;
-payload_gi.dist = 0;
-payload_gi.cone.angle = 0;
-payload_gi.cone.width = 0; 
+payload_gi.init();
 
 
 //dir = normalize(pos - frame.GetCamera().GetPosition());
@@ -398,7 +395,7 @@ payload_gi.cone.width = 0;
 	ray.Direction = dir;
 	ray.TMin = 0.1;
 	ray.TMax = length(oneVoxelSize) * 5;
-	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload_gi);
+	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 
 	if (payload_gi.dist > 100000-5)
 	{
@@ -502,9 +499,7 @@ void MyRaygenShaderReflection()
 	ray.Direction = dir;
 	ray.TMin = 0.05;
 	ray.TMax =  0.5*length(oneVoxelSize) / (tan(roughness) + 0.001);
-	TraceRay(raytracing.GetScene(), RAY_FLAG_NONE, ~0, 1, 0, 1, ray, payload_gi);
-
-
+	ColorPass(raytracing.GetScene(), ray, RAY_FLAG_NONE, payload_gi);
 	
 	if (payload_gi.dist > 100000 - 5)
 	{

@@ -132,7 +132,7 @@ array_value_holder: value_id;
 array_value_ids: '{' array_value_holder (',' array_value_holder)* '}';
 
 root_sig: ROOTSIG ASSIGN name_id SCOL;
-root_sig_local: ROOTSIG_LOCAL ASSIGN name_id SCOL;
+
 shader: option_block*? shader_type ASSIGN path_id SCOL;
 
 compute_pso_stat
@@ -161,7 +161,6 @@ graphics_pso_definition: GRAPHICS_PSO name_id inherit? OBRACE graphics_pso_block
 
 rtx_pso_stat
  : root_sig
- | root_sig_local
  | COMMENT
  ;
 rtx_pso_block: rtx_pso_stat*;
@@ -231,7 +230,6 @@ RT: 'rt';
 RTV: 'RTV';
 DSV: 'DSV';
 ROOTSIG: 'root';
-ROOTSIG_LOCAL: 'local';
 shader_type: 
 'compute'
 |'vertex'
@@ -258,6 +256,8 @@ pso_param_id:
 | 'stencil_write_mask'
 | 'recursion_depth'
 | 'payload'
+| 'per_material'
+| 'local'
  ;
 
 ID

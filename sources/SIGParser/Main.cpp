@@ -898,6 +898,13 @@ void generate_include_list(const Parsed& parsed)
 		stream << "#include \"pso\\" << t.name << ".h\"" << std::endl;
 	}
 
+	for (auto& t : parsed.raytrace_pso)
+	{
+
+		stream << "#include \"rtx\\" << t.name << ".h\"" << std::endl;
+	}
+
+
 	stream << "void init_signatures();" << std::endl;
 	stream << "Render::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
 	stream << "void init_pso(enum_array<PSO, PSOBase::ptr>&);" << std::endl;
@@ -1702,9 +1709,147 @@ void iterate_files(std::filesystem::path path, std::function<void(std::wstring)>
 	}
 }
 
+
+void generate_raygen(RaytraceGen & pso)
+{
+	my_stream stream(cpp_path + "/rtx", pso.name + ".h");
+	stream << "#pragma once" << std::endl;
+
+	stream << std::format(R"(struct {0}: public RaytraceRaygen<{0}>)", pso.name) << std::endl;
+	stream << "{" << std::endl;
+	stream.push();
+	{
+		stream << std::format(R"(static const constexpr UINT ID = {};)", pso.index) << std::endl;
+
+		stream << std::format(R"(static const constexpr std::string_view shader = "shaders\\{}.hlsl";)", pso.shaders["raygen"]->name) << std::endl;
+		stream << std::format(R"(static const constexpr std::wstring_view raygen = L"{}";)", pso.shaders["raygen"]->find_option("EntryPoint")->value_atom.expr) << std::endl;
+
+	}
+	stream.pop();
+	stream << "};" << std::endl;
+	/*
+	struct Shadow :public RaytraceRaygen<Shadow>
+	{
+		static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
+		static const constexpr std::wstring_view raygen = L"ShadowPass";
+	};*/
+
+
+
+}
+void generate_pass(RaytracePass& pso)
+{
+	my_stream stream(cpp_path + "/rtx", pso.name + ".h");
+	stream << "#pragma once" << std::endl;
+
+
+	stream << std::format(R"(struct {0}: public RaytracePass<{0}>)", pso.name) << std::endl;
+	stream << "{" << std::endl;
+	stream.push();
+	{
+		stream << std::format(R"(using Payload = Table::{};)", pso.find_param("payload")->expr) << std::endl;
+
+		if(pso.find_param("local"))
+		stream << std::format(R"(using LocalData =  Slots::{};)", pso.find_param("local")->expr) << std::endl;
+
+		stream << std::format(R"(static const constexpr UINT ID = {};)", pso.index) << std::endl;
+
+		stream << std::format(R"(static const constexpr std::string_view shader = "shaders\\{}.hlsl";)", pso.shaders["miss"]->name) << std::endl;
+		stream << std::format(R"(static const constexpr std::wstring_view name = L"{}_GROUP";)", pso.name) << std::endl;
+
+		stream << std::format(R"(static const constexpr std::wstring_view hit_name = L"{}";)", pso.shaders["closest_hit"]->find_option("EntryPoint")->value_atom.expr) << std::endl;
+		stream << std::format(R"(static const constexpr std::wstring_view miss_name = L"{}";)", pso.shaders["miss"]->find_option("EntryPoint")->value_atom.expr) << std::endl;
+
+
+		auto param = pso.find_param("per_material");
+		stream << std::format(R"(static const constexpr bool per_material = {};)", param&& param->expr=="true"?"true":"false") << std::endl;
+
+	}
+	stream.pop();
+	stream << "};" << std::endl;
+}
+
+
+
+void generate_hlsl_pass(RaytracePass& pso)
+{
+	my_stream stream(hlsl_path + "/rtx", pso.name + ".h");
+	auto payload = pso.find_param("payload")->expr;
+
+	stream << std::format(R"(void {}(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, inout {} payload) )", pso.name, payload) << std::endl;
+	stream << "{" << std::endl;
+	stream.push();
+	{
+		stream << std::format(R"(TraceRay(scene, flag, ~0, {0}, 0, {0}, ray, payload); )", pso.index) << std::endl;
+	}
+	stream.pop();
+	stream << "};" << std::endl;
+
+}
+
+
+void generate_rtx_pso(RaytracePSO& pso)
+{
+	my_stream stream(cpp_path + "/rtx", pso.name + ".h");
+	stream << "#pragma once" << std::endl;
+
+	std::string gens, passes;
+
+	for (auto e : pso.gens)
+	{
+		if (!gens.empty())gens += ", ";
+		gens += e.name;
+
+		stream << std::format(R"(#include "{}.h")", e.name) << std::endl;
+
+	}
+
+	for (auto e : pso.passes)
+	{
+		if (!passes.empty())passes += ", ";
+		passes += e.name;
+
+		stream << std::format(R"(#include "{}.h")", e.name) << std::endl;
+	}
+
+	stream << std::format(R"(struct {0}: public RTXPSO<{0}, Typelist<{1}>, Typelist<{2}>>)", pso.name, passes, gens) << std::endl;
+	stream << "{" << std::endl;
+	stream.push();
+	{
+		stream << std::format(R"(static const constexpr Layouts global_sig  = Layouts::{};)", pso.root_sig.name) << std::endl;
+		stream << std::format(R"(static const constexpr UINT MaxTraceRecursionDepth = 2;)") << std::endl;
+
+	}
+	stream.pop();
+	stream << "};" << std::endl;
+}
+
+
 void generate_rtx(Parsed& parsed)
 {
 
+	for (auto& v : parsed.raytrace_gen)
+	{
+		auto bind = v.find_option("Bind");
+		parsed.find_rtx(bind->value_atom.expr)->gens.emplace_back(v);
+		
+		generate_raygen(v);
+	}
+
+	for (auto& v : parsed.raytrace_pass)
+	{
+		auto bind = v.find_option("Bind");
+		parsed.find_rtx(bind->value_atom.expr)->passes.emplace_back(v);
+
+
+		generate_pass(v);
+		generate_hlsl_pass(v);
+	}
+
+	for (auto& v : parsed.raytrace_pso)
+	{
+		generate_rtx_pso(v);
+	}
 }
 int main() {
 	//std::filesystem::remove_all(L"output");
@@ -1751,6 +1896,7 @@ int main() {
 		{
 			generate_pso(pso);
 		}
+
 		for (auto& pso : parsed.graphics_pso)
 		{
 			generate_pso(pso);

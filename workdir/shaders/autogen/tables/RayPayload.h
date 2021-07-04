@@ -17,10 +17,19 @@ struct RayPayload
 		result.dist = 0;
 		result.recursion = recursion + 1;
 
-		result.cone.width = cone.width + cone.angle* hitT;
-		result.cone.angle = cone.angle + surfaceSpreadAngle;
+		result.cone = cone.propagate(surfaceSpreadAngle, hitT);
 		
 		return result;
+	}
+
+
+	void init()
+	{
+		color = 0;
+		recursion = 0;
+		dist = 0;
+		cone.angle = 0;
+		cone.width = 0; 
 	}
 
 	

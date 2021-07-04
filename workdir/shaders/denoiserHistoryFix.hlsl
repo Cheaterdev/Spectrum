@@ -107,7 +107,7 @@ void  CS(uint3 groupID       : SV_GroupID,
 	//if (normAccumulatedFrameNum >= 1 - 0.5/8)
 	//	discard;
 	float roughness = 1;
-	uint mipLevel =  4.0 * (1.0 - normAccumulatedFrameNum) * roughness;
+	uint mipLevel = 2.0 *(1.0 - normAccumulatedFrameNum)* roughness;
 
 if (mipLevel == 0)
 	{
@@ -116,7 +116,7 @@ if (mipLevel == 0)
 	}
 	float2 mipSize = dims / (1 << mipLevel);
 	Bilinear filter = GetBilinearFilter(tc, mipSize);
-	float2 gatherUv = (float2(filter.origin) ) / mipSize;
+	float2 gatherUv = (float2(filter.origin) +0.5) / mipSize;
 	
 	float4 s00, s10, s01, s11;
 	
@@ -139,10 +139,10 @@ if (mipLevel == 0)
 
 	float4 w = bilateralWeights;
 	
-	float4 blurry = ApplyBilinearCustomWeights(s00, s10, s01, s11, w, false);
+	float4 blurry = ApplyBilinearCustomWeights(s00, s10, s01, s11, w, true);
 
 	float total = dot(w,float4(1,1,1,1));
-	target[index] =  blurry + result * saturate(1 - total);
+	target[index] = blurry;// +result * saturate(1 - total);
 
 	//target[index] = float4(1, 0, 0, 1);
 }

@@ -134,6 +134,7 @@
 #include "pso\VoxelIndirectUpsample.h"
 #include "pso\VoxelDebug.h"
 #include "pso\DenoiserDownsample.h"
+#include "rtx\MainRTX.h"
 void init_signatures();
 Render::RootLayout::ptr get_Signature(Layouts id);
 void init_pso(enum_array<PSO, PSOBase::ptr>&);

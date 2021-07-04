@@ -87,14 +87,14 @@ void materials::universal_material::update()
 		material_info.GetTextureOffset() = textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
 		compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
-
+		local_addr = compiled_material_info.cb;
 		{
 			auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
 			elem[0].pipeline_id = pipeline->get_id();
 			elem[0].material_cb = compiled_material_info.cb;
 
 			info_handle.write(0, elem);
-
+		
 		}
 
 		update_rtx();
@@ -187,6 +187,7 @@ void materials::universal_material::compile()
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 
+	local_addr = compiled_material_info.cb;
 	if (!info_handle)
 	{
 		info_handle = universal_material_info_part_manager::get().allocate(1);
@@ -264,6 +265,7 @@ void materials::universal_material::generate_material()
 		mark_contents_changed();
 
 	need_regenerate_material = false;
+
 	on_change();
 }
 
@@ -273,9 +275,10 @@ MaterialGraph::ptr materials::universal_material::get_graph()
 }
 
 
-materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this), wshader_name(std::wstring(L"material_") + std::to_wstring(ids.get()))
+materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this)
 {
-	
+	wshader_name = std::wstring(L"material_") + std::to_wstring(ids.get());
+
 	
 	include_file = register_asset(EngineAssets::material_header.get_asset());
 	include_file_raytacing = register_asset(EngineAssets::material_raytracing_header.get_asset());
@@ -291,6 +294,8 @@ void materials::universal_material::update_rtx()
 	if (!Device::get().is_rtx_supported()) return;
 	RTX::get().rtx.update_material(this);
 
+
+
 }
 
 void materials::universal_material::test()
@@ -299,8 +304,10 @@ void materials::universal_material::test()
 }
 
 
-materials::universal_material::universal_material() : include_file(this), include_file_raytacing(this), wshader_name(std::wstring(L"material_") + std::to_wstring(ids.get()))
+materials::universal_material::universal_material() : include_file(this), include_file_raytacing(this)
 {
+
+	wshader_name = std::wstring(L"material_") + std::to_wstring(ids.get());
 	graph.on_create = [this](MaterialGraph::ptr g)
 	{
 		g->add_listener(this, false);

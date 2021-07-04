@@ -151,6 +151,8 @@ public:
 	{
 		auto& owner = get_elem<Parsed>().raytrace_pass;
 		owner.emplace_back();
+
+		owner.back().index = owner.size() - 1;
 		setup_elem(owner.back());
 	}
 
@@ -158,6 +160,7 @@ public:
 	{
 		auto& owner = get_elem<Parsed>().raytrace_gen;
 		owner.emplace_back();
+		owner.back().index = owner.size() - 1;
 		setup_elem(owner.back());
 	}
 

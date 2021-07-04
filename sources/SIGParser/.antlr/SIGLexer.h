@@ -16,15 +16,16 @@ public:
     T__7 = 8, T__8 = 9, T__9 = 10, T__10 = 11, T__11 = 12, T__12 = 13, T__13 = 14, 
     T__14 = 15, T__15 = 16, T__16 = 17, T__17 = 18, T__18 = 19, T__19 = 20, 
     T__20 = 21, T__21 = 22, T__22 = 23, T__23 = 24, T__24 = 25, T__25 = 26, 
-    T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, OR = 31, AND = 32, EQ = 33, 
-    NEQ = 34, GT = 35, LT = 36, GTEQ = 37, LTEQ = 38, PLUS = 39, MINUS = 40, 
-    MULT = 41, DIV = 42, MOD = 43, POW = 44, NOT = 45, SCOL = 46, ASSIGN = 47, 
-    OPAR = 48, CPAR = 49, OBRACE = 50, CBRACE = 51, OSBRACE = 52, CSBRACE = 53, 
-    TRUE = 54, FALSE = 55, LOG = 56, LAYOUT = 57, STRUCT = 58, COMPUTE_PSO = 59, 
-    GRAPHICS_PSO = 60, RAYTRACE_PSO = 61, RAYTRACE_RAYGEN = 62, RAYTRACE_PASS = 63, 
-    SLOT = 64, RT = 65, RTV = 66, DSV = 67, ROOTSIG = 68, ROOTSIG_LOCAL = 69, 
-    ID = 70, INT_SCALAR = 71, FLOAT_SCALAR = 72, STRING = 73, COMMENT = 74, 
-    SPACE = 75, INSERT_START = 76, INSERT_END = 77, INSERT_BLOCK = 78
+    T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, T__30 = 31, T__31 = 32, 
+    OR = 33, AND = 34, EQ = 35, NEQ = 36, GT = 37, LT = 38, GTEQ = 39, LTEQ = 40, 
+    PLUS = 41, MINUS = 42, MULT = 43, DIV = 44, MOD = 45, POW = 46, NOT = 47, 
+    SCOL = 48, ASSIGN = 49, OPAR = 50, CPAR = 51, OBRACE = 52, CBRACE = 53, 
+    OSBRACE = 54, CSBRACE = 55, TRUE = 56, FALSE = 57, LOG = 58, LAYOUT = 59, 
+    STRUCT = 60, COMPUTE_PSO = 61, GRAPHICS_PSO = 62, RAYTRACE_PSO = 63, 
+    RAYTRACE_RAYGEN = 64, RAYTRACE_PASS = 65, SLOT = 66, RT = 67, RTV = 68, 
+    DSV = 69, ROOTSIG = 70, ID = 71, INT_SCALAR = 72, FLOAT_SCALAR = 73, 
+    STRING = 74, COMMENT = 75, SPACE = 76, INSERT_START = 77, INSERT_END = 78, 
+    INSERT_BLOCK = 79
   };
 
   explicit SIGLexer(antlr4::CharStream *input);

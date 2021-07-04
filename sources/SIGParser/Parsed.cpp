@@ -309,6 +309,14 @@ void Table::setup(Parsed* all)
 	}
 	}
 }
+RaytracePSO* Parsed::find_rtx(std::string name)
+{
+	for (auto& t : raytrace_pso)
+		if (t.name == name)
+			return &t;
+
+	return nullptr;
+}
 
 Layout* Parsed::find_layout(std::string name)
 {

@@ -244,6 +244,17 @@ struct shader_holder
 struct param_holder
 {
 	std::vector<PSO_Param> params;
+
+	PSO_Param* find_param(std::string_view v)
+	{
+		for (auto& e:params)
+		{
+			if (e.type == v)
+				return &e;
+		}
+
+		return nullptr;
+	}
 };
 struct PSO : public inherited, have_options, have_name, shader_holder, root_holder
 {
@@ -280,24 +291,29 @@ struct GraphicsPSO : public PSO, public param_holder
 
 };
 
-struct RaytracePSO : public PSO
-{
-
-
-};
 
 struct RaytracePass : public PSO, public param_holder
 {
 
-
+	int index = 0;
 
 };
 
 struct RaytraceGen : public PSO
 {
+	int index = 0;
+
+};
+
+
+struct RaytracePSO : public PSO
+{
+	std::vector<RaytraceGen> gens;
+	std::vector<RaytracePass> passes;
 
 
 };
+
 template<class T>
 void Layout::recursive_slots(T f)
 {
@@ -365,6 +381,7 @@ struct Parsed : public parsed_type
 
 	Layout* find_layout(std::string name);
 	Table* find_table(std::string name);
+	RaytracePSO* find_rtx(std::string name);
 
 	void setup();
 

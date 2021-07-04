@@ -244,7 +244,7 @@ namespace materials
 		
 	};
 
-    class universal_material : public MaterialAsset, ::FlowGraph::graph_listener
+    class universal_material : public MaterialAsset, ::FlowGraph::graph_listener, public MainRTX::material
     {
             LEAK_TEST(universal_material)
             /*----------------------------------------------------------*/
@@ -295,10 +295,10 @@ namespace materials
         public:
             using ptr = s_ptr<universal_material>;
 			std::vector<Uniform::ptr> ps_uniforms;
-			Events::Event<void> on_change;
-			const std::wstring wshader_name;
+		//	Events::Event<void> on_change;
+	//		const std::wstring wshader_name;
 		
-			Render::library_shader::ptr raytracing_lib;
+	//		Render::library_shader::ptr raytracing_lib;
             universal_material(MaterialGraph::ptr graph);
 			Slots::MaterialInfo::Compiled compiled_material_info;
 

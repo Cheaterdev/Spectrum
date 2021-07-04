@@ -78,7 +78,6 @@
 
 
 
-#define CACHE_ALIGN(x) __declspec(align(x))
 
 CACHE_ALIGN(64)
 struct closesthit_identifier

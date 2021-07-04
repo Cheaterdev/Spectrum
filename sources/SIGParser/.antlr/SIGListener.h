@@ -131,9 +131,6 @@ public:
   virtual void enterRoot_sig(SIGParser::Root_sigContext *ctx) = 0;
   virtual void exitRoot_sig(SIGParser::Root_sigContext *ctx) = 0;
 
-  virtual void enterRoot_sig_local(SIGParser::Root_sig_localContext *ctx) = 0;
-  virtual void exitRoot_sig_local(SIGParser::Root_sig_localContext *ctx) = 0;
-
   virtual void enterShader(SIGParser::ShaderContext *ctx) = 0;
   virtual void exitShader(SIGParser::ShaderContext *ctx) = 0;
 

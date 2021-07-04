@@ -591,7 +591,7 @@ public:
 					}
 
 
-					RTX::get().render_new(compute, scene->raytrace_scene, data.RTXDebug->get_size());
+					RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
 
 				});
 		}
@@ -1309,7 +1309,7 @@ public:
 
 		static bool gen = false;
 
-		if (!gen&&GetAsyncKeyState('N'))
+		if (!gen/* && GetAsyncKeyState('N')*/)
 		{
 			gen = true;
 			frameFlowGraph->clear();
@@ -1709,6 +1709,7 @@ protected:
 		Render::GPUTimeManager::reset();
 		///    main_window2 = nullptr;
 		Fonts::FontSystem::reset();
+		RTX::reset();
 		AssetRenderer::reset();
 		//Render::BufferCache::reset();
 		TextureAssetRenderer::reset();

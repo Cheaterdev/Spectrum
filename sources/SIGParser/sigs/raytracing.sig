@@ -12,6 +12,18 @@ struct RayCone
 {
     float width;
     float angle;
+
+	%{
+	RayCone propagate(float surfaceSpreadAngle = 0, float hitT = 0)
+	{
+		RayCone result;
+		result.width = width + angle* hitT;
+		result.angle = angle + surfaceSpreadAngle;
+		
+		return result;
+	}
+
+	}%
 }
 
 [nobind]
@@ -33,10 +45,19 @@ struct RayPayload
 		result.dist = 0;
 		result.recursion = recursion + 1;
 
-		result.cone.width = cone.width + cone.angle* hitT;
-		result.cone.angle = cone.angle + surfaceSpreadAngle;
+		result.cone = cone.propagate(surfaceSpreadAngle, hitT);
 		
 		return result;
+	}
+
+
+	void init()
+	{
+		color = 0;
+		recursion = 0;
+		dist = 0;
+		cone.angle = 0;
+		cone.width = 0; 
 	}
 
 	}%
@@ -76,8 +97,6 @@ struct Raytracing
 {
 	RaytracingAccelerationStructure scene;
 	StructuredBuffer<uint> index_buffer;
-
-
 }
 
 
@@ -85,52 +104,55 @@ RaytracePSO MainRTX
 {
 	root = DefaultLayout;
 
-	local = MaterialInfo;
-}
 
-[Bind = MainRTX]
-RaytraceRaygen Indirect
-{
-	[EntryPoint = MyRaygenShader]
-	raygen = rayracing;
-}
-
-[Bind = MainRTX]
-RaytraceRaygen Reflection
-{
-	[EntryPoint = MyRaygenShaderReflection]
-	raygen = rayracing;
 }
 
 [Bind = MainRTX]
 RaytraceRaygen Shadow
 {
 	[EntryPoint = ShadowRaygenShader]
-	raygen = rayracing;
+	raygen = raytracing;
 }
 
+
 [Bind = MainRTX]
-RaytracePass MaterialPass
+RaytraceRaygen Reflection
 {
-	[EntryPoint = MyMissShader]
-	miss = rayracing;
+	[EntryPoint = MyRaygenShaderReflection]
+	raygen = raytracing;
+}
 
-	[EntryPoint = MyClosestHitShader]
-	closest_hit = none;
 
-	payload = RayPayload;
-
-	per_material = true;
+[Bind = MainRTX]
+RaytraceRaygen Indirect
+{
+	[EntryPoint = MyRaygenShader]
+	raygen = raytracing;
 }
 
 [Bind = MainRTX]
 RaytracePass ShadowPass
 {
 	[EntryPoint = ShadowMissShader]
-	miss = rayracing;
+	miss = raytracing;
 
 	[EntryPoint = ShadowClosestHitShader]
-	closest_hit = rayracing;
+	closest_hit = raytracing;
 
 	payload = ShadowPayload;
+}
+
+[Bind = MainRTX]
+RaytracePass ColorPass
+{
+	[EntryPoint = MyMissShader]
+	miss = raytracing;
+
+	[EntryPoint = MyClosestHitShader]
+	closest_hit = none;
+
+	payload = RayPayload;
+
+	local = MaterialInfo;
+	per_material = true;
 }

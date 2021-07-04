@@ -10,6 +10,8 @@
 #include "autogen/VoxelScreen.h"
 #include "autogen/VoxelInfo.h"
 
+#include "autogen/rtx/ShadowPass.h"
+
 #include "Common.hlsl"
 //#define REFRACTION
 #define Sampler linearSampler
@@ -125,8 +127,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 			ray.Direction = dir;
 			ray.TMin = 0.00001;
 			ray.TMax = 10000.0;
-			TraceRay(raytracing.GetScene(), RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, ~0, 0, 0, 0, ray, payload_shadow);
-			 
+			ShadowPass(raytracing.GetScene(), ray, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, payload_shadow);
+
 			if (payload_shadow.hit)
 				hit_rate += 1.0f;
  

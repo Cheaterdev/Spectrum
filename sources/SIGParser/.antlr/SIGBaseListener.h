@@ -133,9 +133,6 @@ public:
   virtual void enterRoot_sig(SIGParser::Root_sigContext * /*ctx*/) override { }
   virtual void exitRoot_sig(SIGParser::Root_sigContext * /*ctx*/) override { }
 
-  virtual void enterRoot_sig_local(SIGParser::Root_sig_localContext * /*ctx*/) override { }
-  virtual void exitRoot_sig_local(SIGParser::Root_sig_localContext * /*ctx*/) override { }
-
   virtual void enterShader(SIGParser::ShaderContext * /*ctx*/) override { }
   virtual void exitShader(SIGParser::ShaderContext * /*ctx*/) override { }
 
