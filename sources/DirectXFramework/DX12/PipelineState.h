@@ -547,7 +547,7 @@ namespace DX12
 		}
 
 
-		void include(CD3DX12_STATE_OBJECT_DESC& target)
+		void include(CD3DX12_STATE_OBJECT_DESC& target) const
 		{
 			auto lib = target.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
 
@@ -675,7 +675,7 @@ namespace DX12
 		
 	public:
 
-		StateObjectDesc desc;
+		const StateObjectDesc desc;
 		using ptr = s_ptr<StateObject>;
 		ComPtr<ID3D12StateObject> get_native()
 		{
@@ -701,6 +701,14 @@ namespace DX12
 			
 		}
 
+		virtual ~StateObject()
+		{
+
+			for (auto& l : desc.libraries)
+			{
+				unregister_shader(l.library);
+			}
+		}
 		shader_identifier get_shader_id(std::wstring_view name)
 		{
 			return identify(stateObjectProperties->GetShaderIdentifier(name.data()));
