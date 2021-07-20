@@ -112,6 +112,10 @@ void GUI::Elements::scroll_container::resized()
 
     if (!allow_overflow)
         contents->pos = vec2::min(vec2(0, 0), vec2::max(contents->pos.get(), -contents->scaled_size.get() + vec2(filled->get_render_bounds().size)));
+
+    if (auto_size)
+        size = float2{ size->x, contents->size->y + contents->margin->top + contents->margin->bottom + padding->top + padding->bottom };
+
 }
 
 void GUI::Elements::scroll_container::remove_child(base::ptr obj)
@@ -142,7 +146,7 @@ GUI::Elements::scroll_container::scroll_container()
     contents.reset(new c_contents(this));
     contents->docking = GUI::dock::NONE;
     contents->size = { 00, 00 };
-    contents->clip_to_parent = false;
+    contents->clip_to_parent = ParentClip::NONE;
     contents->width_size = size_type::MATCH_CHILDREN;
     contents->height_size = size_type::MATCH_CHILDREN;
     filled->add_child(contents);

@@ -94,6 +94,9 @@ public:
 					//	MipMapGenerator::get().copy_texture_2d_slow(command_list->get_graphics(), texture.texture, gbuffer.albedo);
 				});
 		}
+
+	
+
 		pssm.generate(graph);
 		sky.generate(graph);
 		sky.generate_sky(graph);
@@ -144,7 +147,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 {
 
 	
-	return;
+
  //  return;
  
 	graph.start_new_frame();

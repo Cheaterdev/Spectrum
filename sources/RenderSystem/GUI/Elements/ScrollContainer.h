@@ -19,6 +19,7 @@ namespace GUI
 			using ptr = s_ptr<scroll_container>;
 			using wptr = w_ptr<scroll_container>;
 			bool draw_background;
+			bool auto_size = false;
 			scroll_container();
 
 			void add_child(base::ptr obj) override;

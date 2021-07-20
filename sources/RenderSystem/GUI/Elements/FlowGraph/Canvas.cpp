@@ -452,7 +452,7 @@ GUI::Elements::FlowGraph::canvas::canvas(manager* main_manager)
     selection->clickable = false;
     contents->add_child(selection);
     comments.reset(new base());
-    comments->clip_to_parent = false;
+    comments->clip_to_parent = ParentClip::NONE;
     comments->clickable = false;
     comments->clip_child = false;
     comments->docking = dock::FILL;

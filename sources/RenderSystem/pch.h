@@ -131,7 +131,7 @@ struct closesthit_identifier
 #include "Effects/VoxelGI/VoxelGI.h"
 #include "Effects/RTX/RTX.h"
 
-
+#include "Effects/FSR/FSR.h"
 
 
 #include "Lighting/BRDF.h"

@@ -114,6 +114,18 @@ namespace GUI
         CENTER,
         BOTTOM
     };
+
+
+    enum class ParentClip
+        :int
+    {
+        NONE = 0, WIDTH = 1, HEIGHT = 2, ALL = 3
+
+    	,GENERATE_OPS
+    };
+
+	
+
     class base;
     class drag_n_drop_package
     {
@@ -446,7 +458,7 @@ namespace GUI
             pos_y_type y_type = pos_y_type::CENTER;
             vec2 childs_size;
 
-            bool clip_to_parent = false;
+            ParentClip clip_to_parent = ParentClip::NONE;
             /*	protected:
             	int get_max_z*/
 

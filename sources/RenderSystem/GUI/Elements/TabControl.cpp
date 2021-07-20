@@ -57,7 +57,7 @@ namespace GUI
         {
             drag_n_drop_copy = false;
             click_style = click_styles::IMMEDIATELY;
-            clip_to_parent = true;
+            clip_to_parent = ParentClip::ALL;
             size = { 50, 50 };
             width_size = size_type::MATCH_CHILDREN;
             get_label()->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;

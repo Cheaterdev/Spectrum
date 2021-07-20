@@ -44,7 +44,7 @@ namespace GUI
 
 
 
-        class menu_list : public base
+        class menu_list : public scroll_container
         {
 
                 std::vector<menu_list_element::ptr > elements;
@@ -67,6 +67,23 @@ namespace GUI
                 //		bool draw_background;
                 bool draw_icon = false;
 
+
+        	void make_fixed_width()
+        	{
+                width_size = size_type::MATCH_CHILDREN;
+                height_size = size_type::MATCH_CHILDREN;
+                contents->width_size = size_type::MATCH_PARENT_CHILDREN;
+                contents->height_size = size_type::MATCH_CHILDREN;
+
+                filled->width_size = size_type::MATCH_PARENT_CHILDREN;
+                filled->height_size = size_type::MATCH_CHILDREN;
+
+                auto_size = true;
+                filled->clip_to_parent = ParentClip::HEIGHT;
+
+                filled->x_type = pos_x_type::LEFT;
+                if (hor) base::remove_child(hor);
+        	}
                 template<class T = menu_list_element>
                 typename T::ptr add_item(std::string elem)
                 {
@@ -105,7 +122,7 @@ namespace GUI
                         //
                         });*/
                     };
-                    add_child(l_e);
+                    contents->add_child(l_e);
                     elements.push_back(l_e);
                     //    if (vertical)
                     //    size = { std::max(size->x, padding->left + padding->right + l_e->size->x + l_e->margin->left + l_e->margin->right), size->y + l_e->size->y + l_e->margin->top + l_e->margin->bottom };
@@ -146,7 +163,7 @@ namespace GUI
                 }
                 virtual void remove_all()
                 {
-                    base::remove_all();
+                    contents->remove_all();
                     elements.clear();
 
                     if (!vertical)

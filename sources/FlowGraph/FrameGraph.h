@@ -367,6 +367,34 @@ public:
 		result = handler;
 	}
 
+
+	template<class T>
+	void recreate(T& result, const typename T::Desc& desc, ResourceFlags flags = ResourceFlags::None)
+	{
+		std::string name = result.name;
+		ResourceAllocInfo& old_info = alloc_resources[name];
+		std::string new_name = resources_names[name] + "recreated";
+		resources_names[name] = new_name;
+		name = new_name;
+
+
+		ResourceAllocInfo& info = alloc_resources[name];
+		T& handler = info.create_handler<T>(desc);
+		init(info, name, flags);
+		handler.init(info);
+		info.orig = &old_info;
+
+
+		result = handler;
+	}
+	
+	template<class T>
+	bool exists(T& result)
+	{
+		std::string& name = resources_names[result.name];
+		return !name.empty();
+	}
+	
 	template<class T>
 	void need(T& result, ResourceFlags flags = ResourceFlags::None)
 	{
@@ -536,6 +564,7 @@ class Scene;
 struct CreationContext
 {
 	ivec2 frame_size;
+	ivec2 upscale_size;
 	camera* cam;
 	main_renderer* renderer;
 	Scene* scene;

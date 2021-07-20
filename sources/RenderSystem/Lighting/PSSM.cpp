@@ -274,20 +274,14 @@ void PSSM::generate(FrameGraph& graph)
 	}
 
 
-
-
 	// relight pass
-	graph.add_pass<PSSMData>("PSSM_Process", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		
+	graph.add_pass<PSSMData>("PSSM_GenerateMask", [this, &graph](PSSMData& data, TaskBuilder& builder) {
+
 		builder.create(data.LightMask, { ivec3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 		data.gbuffer.need(builder);
-
-	    builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
-		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
+		builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
 		builder.need(data.PSSM_Cameras, ResourceFlags::None);
-		builder.need(data.RTXDebug, ResourceFlags::PixelRead);
-
-
+		
 		}, [this, &graph](PSSMData& data, FrameContext& _context) {
 
 			GBuffer gbuffer = data.gbuffer.actualize(_context);
@@ -308,7 +302,7 @@ void PSSM::generate(FrameGraph& graph)
 				Slots::PSSMLighting lighting;
 
 				gbuffer.SetTable(lighting.MapGbuffer());
-			
+
 				//lighting.GetLight_mask() = screen_light_mask.get_srv();
 
 				lighting.set(graphics);
@@ -333,7 +327,7 @@ void PSSM::generate(FrameGraph& graph)
 
 			for (int i = renders_size - 1; i >= 0; i--) //rangeees
 			{
-		//		PROFILE_GPU((std::wstring(L"renders") + std::to_wstring(i)).c_str());
+				//		PROFILE_GPU((std::wstring(L"renders") + std::to_wstring(i)).c_str());
 				{
 					Slots::PSSMConstants constants;
 					constants.GetLevel() = i;
@@ -342,12 +336,72 @@ void PSSM::generate(FrameGraph& graph)
 				}
 				graphics.draw(4);
 			}
+
+		});
+
+
+	// relight pass
+	graph.add_pass<PSSMData>("PSSM_Combine", [this, &graph](PSSMData& data, TaskBuilder& builder) {
+		
+		data.gbuffer.need(builder);
+
+	  //  builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
+		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
+		builder.need(data.PSSM_Cameras, ResourceFlags::None);
+		
+		if (builder.exists(data.RTXDebug))
+		{
+			
+			builder.need(data.RTXDebug, ResourceFlags::PixelRead);
+		}else
+		{
+			builder.need(data.LightMask, ResourceFlags::PixelRead);
+
+		}
+		}, [this, &graph](PSSMData& data, FrameContext& _context) {
+
+			GBuffer gbuffer = data.gbuffer.actualize(_context);
+
+			auto& list = *_context.get_list();
+
+			auto& graphics = list.get_graphics();
+			auto& compute = list.get_compute();
+
+			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
+			graphics.set_layout(Layouts::DefaultLayout);
+			compute.set_layout(Layouts::DefaultLayout);
+
+			graph.set_slot(SlotID::FrameInfo, graphics);
+			graph.set_slot(SlotID::FrameInfo, compute);
+
+			{
+				Slots::PSSMLighting lighting;
+
+				gbuffer.SetTable(lighting.MapGbuffer());
+				lighting.set(graphics);
+			}
+
+			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			
+			graphics.set_viewport(data.ResultTexture->get_viewport());
+			graphics.set_scissor(data.ResultTexture->get_scissor());
+
+			{
+				Slots::PSSMData pssmdata;
+			//	pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
+				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
+				pssmdata.set(graphics);
+			}
+
 			{
 				Slots::PSSMLighting lighting;
 
 				gbuffer.SetTable(lighting.MapGbuffer());
 
+				if(data.RTXDebug)
 				lighting.GetLight_mask() = data.RTXDebug->texture2D;//data.LightMask->texture2D;
+				else
+					lighting.GetLight_mask() = data.LightMask->texture2D;
 
 				lighting.set(graphics);
 			}

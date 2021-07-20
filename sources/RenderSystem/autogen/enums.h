@@ -10,6 +10,8 @@ enum class PSO: int
 {
 	UNKNOWN,
 	BRDF,
+	FSR,
+	RCAS,
 	GatherPipeline,
 	GatherBoxes,
 	InitDispatch,
@@ -75,6 +77,8 @@ enum class SlotID: unsigned int
 	Frustum = "Frustum"_crc32 ,
 	Camera = "Camera"_crc32 ,
 	FrameInfo = "FrameInfo"_crc32 ,
+	FSRConstants = "FSRConstants"_crc32 ,
+	FSR = "FSR"_crc32 ,
 	MaterialInfo = "MaterialInfo"_crc32 ,
 	mesh_vertex_input = "mesh_vertex_input"_crc32 ,
 	AABB = "AABB"_crc32 ,

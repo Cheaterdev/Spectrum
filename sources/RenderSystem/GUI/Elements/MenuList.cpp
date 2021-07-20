@@ -5,72 +5,39 @@ void GUI::Elements::menu_list::draw(Render::context& c)
 {
     renderer->draw_container(get_ptr(), c);
 }
-/*
-GUI::Elements::menu_list_element::ptr GUI::Elements::menu_list::add_item(std::string elem)
-{
 
-    label::ptr e(new label());
-    e->text = elem;
-    e->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
-    e->docking = dock::FILL;
-    menu_list_element::ptr l_e(new menu_list_element(!vertical));
-    l_e->docking = vertical ? dock::TOP : dock::LEFT;
-	l_e->text = elem;
-    if (draw_icon)
-    {
-        l_e->padding = { 30, 3, 30, 3 };
-        l_e->size = e->size.get() + vec2(60, 6);
-    }
-    else
-    {
-        l_e->padding = { 3, 3, 3, 3 };
-        l_e->size = e->size.get() + vec2(6, 6);
-    }
-
-    l_e->add_child(e);
-    l_e->on_hover = [this](menu_list_element::ptr elem)
-    {
-        if (!need_open_on_hover()) return;
-
-        if (elem->is_menu_open()) return;
-
-        base::close_menus();
-        elem->open_menu();
-        /* run_on_ui([this, elem]
-         {
-             close_menus();
-           //
-         });*
-    };
-    add_child(l_e);
-    elements.push_back(l_e);
-
-//    if (vertical)
-    //    size = { std::max(size->x, padding->left + padding->right + l_e->size->x + l_e->margin->left + l_e->margin->right), size->y + l_e->size->y + l_e->margin->top + l_e->margin->bottom };
-
-    l_e->selected = elements.size() == 1;
-
-    return l_e;
-}
-*/
 GUI::Elements::menu_list::menu_list(bool vertical)
 {
     this->vertical = vertical;
     padding = { 1, 1, 1, 1 };
-
+    docking = GUI::dock::NONE;
     if (!vertical)
     {
         docking = dock::TOP;
-        size = {25, 25};
+        size = { 25, 25 };
     }
-
     else
     {
+
+     //   size = { 100, 300 };
         width_size = size_type::MATCH_CHILDREN;
         height_size = size_type::MATCH_CHILDREN;
-    }
+        contents->width_size = size_type::MATCH_CHILDREN;
+        contents->height_size = size_type::MATCH_CHILDREN;
 
-	clip_to_parent = true;
+        filled->width_size = size_type::MATCH_CHILDREN;
+        filled->height_size = size_type::MATCH_CHILDREN;
+
+        auto_size = true;
+        filled->clip_to_parent = ParentClip::HEIGHT;
+
+        filled->x_type = pos_x_type::LEFT;
+        if (hor) base::remove_child(hor);
+       // filled->docking = GUI::dock::TOP;
+      //  contents->docking = GUI::dock::NONE;
+    }
+	
+    clip_to_parent = ParentClip::ALL;
     // size = { padding->left + padding->right, padding->top + padding->bottom };
 }
 

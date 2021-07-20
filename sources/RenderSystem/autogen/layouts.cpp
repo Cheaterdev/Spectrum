@@ -39,6 +39,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	{
 		return SlotID::FrameInfo;
 	}
+	if(slot_name == "FSR")
+	{
+		return SlotID::FSR;
+	}
 	if(slot_name == "MaterialInfo")
 	{
 		return SlotID::MaterialInfo;
@@ -290,6 +294,10 @@ UINT get_slot_id(SlotID id)
 	if(id == SlotID::FrameInfo)
 	{
 		return Slots::FrameInfo::Slot::ID;
+	}
+	if(id == SlotID::FSR)
+	{
+		return Slots::FSR::Slot::ID;
 	}
 	if(id == SlotID::MaterialInfo)
 	{

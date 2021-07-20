@@ -78,18 +78,7 @@ namespace GUI
         {
             vec2 res = vec2::max(vec2((r)), minimal_size);
 
-            if (clip_to_parent && parent)
-            {
-                //		res = vec2::min(res, vec2(parent->render_bounds->size) - vec2(parent->padding->left + parent->padding->right, parent->padding->right + parent->padding->bottom));
-            }
-
-            /*
-                        if (width_size == size_type::FIXED)
-                            res.x = size->x;
-
-                        if (height_size == size_type::FIXED)
-                            res.y = size->y;*/
-            //	Log::get() << "size " << res << " " << r << Log::endl;
+       
             return res;
         };
 
@@ -98,18 +87,7 @@ namespace GUI
         {
             vec2 res = vec2::max(vec2((r)), minimal_size);
 
-            if (clip_to_parent && parent)
-            {
-                //		res = vec2::min(res, vec2(parent->render_bounds->size) - vec2(parent->padding->left + parent->padding->right, parent->padding->right + parent->padding->bottom));
-            }
-
-            /*
-                        if (width_size == size_type::FIXED)
-                            res.x = size->x;
-
-                        if (height_size == size_type::FIXED)
-                            res.y = size->y;*/
-                            //	Log::get() << "size " << res << " " << r << Log::endl;
+        
             return res;
         };
 
@@ -118,11 +96,7 @@ namespace GUI
         {
             vec2 res = (r);
 
-            if (clip_to_parent && parent)
-            {
-                //	res = vec2::max(vec2(0, 0), res);
-                //	res = vec2::min(res, vec2(parent->render_bounds->size) - size.get() - vec2(parent->padding->left + parent->padding->right, parent->padding->right + parent->padding->bottom));
-            }
+    
 
             /*
             if (width_size == size_type::FIXED)
@@ -140,7 +114,7 @@ namespace GUI
             if (width_size == size_type::FIXED || width_size == size_type::MATCH_CHILDREN || width_size == size_type::MATCH_PARENT || width_size == size_type::MATCH_PARENT_CHILDREN)
                 res.size.x = scaled_size->x * result_scale;
 
-            if (height_size == size_type::FIXED || height_size == size_type::MATCH_CHILDREN || height_size == size_type::MATCH_PARENT || width_size == size_type::MATCH_PARENT_CHILDREN)
+            if (height_size == size_type::FIXED || height_size == size_type::MATCH_CHILDREN || height_size == size_type::MATCH_PARENT || height_size == size_type::MATCH_PARENT_CHILDREN)
                 res.size.y = scaled_size->y * result_scale;
 
             if (x_type == pos_x_type::LEFT)
@@ -159,14 +133,24 @@ namespace GUI
             if (y_type == pos_y_type::CENTER)
                 res.pos.y = r.pos.y + ((r.size.y - res.size.y) / 2);
 
-            if (clip_to_parent && parent)
+            if (clip_to_parent != ParentClip::NONE && parent)
             {
                 //float2 size = float2(res.size);
                 //float2 pos = float2(res.pos);
                 float2 size = float2::min(float2(res.size), float2(parent->get_render_bounds().size) - float2(parent->padding->left + parent->padding->right, parent->padding->top + parent->padding->bottom) * result_scale);
                 float2 pos = float2::max(float2(parent->get_render_bounds().pos) + float2(parent->padding->left, parent->padding->top) * result_scale, float2(res.pos));
-                pos = float2::min(pos, float2(parent->get_render_bounds().pos) + float2(parent->get_render_bounds().size) - size - float2(parent->padding->right, parent->padding->bottom) * result_scale);
-                res = rect(pos, size);
+            	pos = float2::min(pos, float2(parent->get_render_bounds().pos) + float2(parent->get_render_bounds().size) - size - float2(parent->padding->right, parent->padding->bottom) * result_scale);
+            	
+                if (check(clip_to_parent & ParentClip::WIDTH)) {
+                    res.pos.x = pos.x;
+                    res.size.x = size.x;
+                }
+
+                if (check(clip_to_parent & ParentClip::HEIGHT)) {
+                    res.pos.y = pos.y;
+                    res.size.y = size.y;
+                }
+
             }
 
             if (map_to_pixels || result_scale == 1)

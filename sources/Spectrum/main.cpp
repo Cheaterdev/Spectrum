@@ -109,7 +109,10 @@ public:
 	//	PostProcessGraph::ptr render_graph;
 
 
-	Variable<bool> enable_gi = { true, "enable_gi", this };
+	Variable<bool> enable_gi = { true, "GI", this };
+	Variable<bool> enable_fsr = { true, "FSR", this };
+	Variable<bool> downsampled = { true, "downsampled", this };
+
 	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
 
@@ -132,6 +135,7 @@ public:
 	PSSM pssm;
 	SMAA smaa;
 	SkyRender sky;
+	FSR fsr;
 	VoxelGI::ptr voxel_gi;
 	std::string debug_view;
 	triangle_drawer() :VariableContext(L"triangle_drawer")
@@ -389,7 +393,14 @@ public:
 		};
 
 		scene->update(*graph.builder.current_frame);
-		graph.frame_size = size;
+
+		if(downsampled)
+		graph.frame_size = size/1.5;
+		else
+			graph.frame_size = size;
+
+		graph.upscale_size = size;
+
 		graph.scene = scene.get();
 		graph.renderer = gpu_scene_renderer.get();
 		graph.cam = &cam;
@@ -405,45 +416,18 @@ public:
 			eyes[i]->cam.update({ 0,0 });
 		}
 
-
-		
-
-		/*
-		graph.add_pass<pass_data>("UPDATE",[](pass_data& data, TaskBuilder& builder) {
-			//	data.o_texture = builder.read_texture("swapchain");
-
-			}, [this](pass_data& data, FrameContext& _context) {
-
-				auto& command_list = _context.get_list();
-
-					MeshRenderContext::ptr context_gbuffer(new MeshRenderContext());
-					context_gbuffer->list = command_list;
-
-			});
-		*/
 		{
 
 			CommandList::ptr command_list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 
 			command_list->begin("pre");
 			{
-
 				SceneFrameManager::get().prepare(command_list, *scene);
-
-				bool need_rebuild = false;// scene->init_ras(command_list);
-				SceneFrameManager::get().prepare(command_list, *scene);
-		
-				//if (GetAsyncKeyState('O'))
-				
 				if (Device::get().is_rtx_supported())
 				{
-				//	command_list->create_transition_point();
-			//		command_list->transition(scene->raytrace->buffer, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-
-					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), need_rebuild);
+					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), false);
 					RTX::get().prepare(command_list);
 				}
-
 			}
 
 			command_list->end();
@@ -463,7 +447,9 @@ public:
 
 			};
 
-			graph.add_pass<GBufferData>("GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
+			graph.add_pass<GBufferData>("GBUFFER", [this, &graph](GBufferData& data, TaskBuilder& builder) {
+
+				auto size = graph.frame_size;
 				data.gbuffer.create(size, builder);
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
@@ -509,6 +495,8 @@ public:
 					gbuffer.rtv_table.set_window(context->list->get_graphics());
 
 					RT::Slot::GBuffer rt_gbuffer;
+
+					
 					rt_gbuffer.GetAlbedo() = gbuffer.albedo.renderTarget;
 					rt_gbuffer.GetNormals() = gbuffer.normals.renderTarget;
 					rt_gbuffer.GetSpecular() = gbuffer.specular.renderTarget;
@@ -540,7 +528,8 @@ public:
 				Handlers::Texture H(RTXDebug);
 			};
 
-			graph.add_pass<RTXDebugData>("RTXDebug", [this, size](RTXDebugData& data, TaskBuilder& builder) {
+			graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
+				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
 				builder.create(data.RTXDebug, { ivec3(size, 1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 
@@ -620,33 +609,15 @@ public:
 		stenciler->generate_after(graph);
 
 		smaa.generate(graph);
+		if(downsampled&&enable_fsr)
+		fsr.generate(graph);
 
+		
 		struct debug_data
 		{
 			Handlers::Texture debug_tex;
 		};
 
-		//
-
-		
-		
-
-
-
-		/*
-		graph.add_pass<debug_data>("DEBUG", [this, res_tex](debug_data& data, TaskBuilder& builder) {
-
-			data.debug_tex = Handlers::Texture(res_tex);
-			builder.need(data.debug_tex, ResourceFlags::PixelRead);
-
-			}, [this](debug_data& data, FrameContext& context) {			
-				auto debug_tex =(*data.debug_tex);
-			
-
-				assert(texture.srv.resource_info->resource_ptr == debug_tex.resource.get());
-
-			}, PassFlags::Required);
-		*/
 		graph.add_slot_generator([this](FrameGraph& graph) {
 
 				PROFILE(L"FrameInfo");
@@ -668,26 +639,7 @@ public:
 
 				auto compiled = frameInfo.compile(*graph.builder.current_frame);
 				graph.register_slot_setter(compiled);
-
-			/*	debug_tex_handle = graph.builder.get(res_tex);
-
-				if (debug_tex_handle)
-				{
-					texture.srv = (debug_tex_handle->get_handler<Handlers::Texture>()->texture2D);
-
-					assert(texture.srv.resource_info->resource_ptr->get_desc().Width == graph.frame_size.x);
-				}
-				*/
-
 			});
-
-		/*
-		graph.add_slot_generator([this](FrameGraph& graph) {
-			ResourceAllocInfo*  info = graph.builder.get(res_tex);
-			if(info)
-			debug_tex_handle->get_handler<Handlers::Texture>()->texture2D;
-			});
-		*/
 
 	}
 
@@ -700,17 +652,12 @@ public:
 			res_tex = debug_view;
 
 		debug_tex = Handlers::Texture(res_tex);
-
+		if(builder.exists(debug_tex))
 		builder.need(debug_tex, ResourceFlags::PixelRead);
 	}
 	virtual void draw(Render::context& t) override
 	{
-if(debug_tex)
-		texture.srv = debug_tex->texture2D;
-
-
-	//	if(debug_tex_handle)
-		
+		if(debug_tex) texture.srv = debug_tex->texture2D;
 		image::draw(t);
 	}
 
@@ -721,393 +668,16 @@ if(debug_tex)
 	virtual void on_bounds_changed(const rect& r) override
 	{
 		base::on_bounds_changed(r);
-		//	std::this_thread::sleep_for(1s);
 		if (r.w <= 64 || r.h <= 64) return;
-
 		ivec2 size = r.size;
-		//	texture.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, size.x, size.y, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS), Render::ResourceState::PIXEL_SHADER_RESOURCE));
-
-			//	g_buffer.size = { r.w, r.h };
 		cam.set_projection_params(Math::pi / 4, float(r.w) / r.h, 1, 1500);
-		//	for (auto& e : eyes)
-	//			e->g_buffer.size = { r.w,r.h };
 	}
 
 
 
 };
 
-#ifdef OCULUS_SUPPORT
-
-//------------------------------------------------------------
-// ovrSwapTextureSet wrapper class that also maintains the render target views
-// needed for D3D12 rendering.
-struct OculusEyeTexture
-{
-	ovrSession               Session;
-	ovrTextureSwapChain      TextureChain;
-	ovrTextureSwapChain      DepthTextureChain;
-
-	//	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> TexRtv;
-	std::vector<Render::Texture::ptr> TexResource;
-
-	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DepthTexDsv;
-	//std::vector<ID3D12Resource*>             DepthTex;
-
-	OculusEyeTexture() :
-		Session(nullptr),
-		TextureChain(nullptr),
-		DepthTextureChain(nullptr)
-	{
-	}
-
-	bool Init(ovrSession session, int sizeW, int sizeH)
-	{
-		Session = session;
-
-		ovrTextureSwapChainDesc desc = {};
-		desc.Type = ovrTexture_2D;
-		desc.ArraySize = 1;
-		desc.Format = OVR_FORMAT_R8G8B8A8_UNORM_SRGB;
-		desc.Width = sizeW;
-		desc.Height = sizeH;
-		desc.MipLevels = 1;
-		desc.SampleCount = 1;
-		desc.MiscFlags = ovrTextureMisc_DX_Typeless | ovrTextureMisc_AutoGenerateMips;
-		desc.StaticImage = ovrFalse;
-		desc.BindFlags = ovrTextureBind_DX_RenderTarget;
-
-		ovrResult result = ovr_CreateTextureSwapChainDX(session, Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_native().Get(), &desc, &TextureChain);
-		if (!OVR_SUCCESS(result))
-			return false;
-
-		int textureCount = 0;
-		ovr_GetTextureSwapChainLength(Session, TextureChain, &textureCount);
-		//TexRtv.resize(textureCount);
-		TexResource.resize(textureCount);
-		for (int i = 0; i < textureCount; ++i)
-		{
-
-			ComPtr<ID3D12Resource> res;
-			result = ovr_GetTextureSwapChainBufferDX(Session, TextureChain, i, IID_PPV_ARGS(&res));
-			if (!OVR_SUCCESS(result))
-				return false;
-			TexResource[i] = std::make_shared<Texture>(res);
-
-			//	TexResource[i]->SetName(L"EyeColorRes");
-
-
-
-
-
-
-			D3D12_RENDER_TARGET_VIEW_DESC rtvd = {};
-			rtvd.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-			rtvd.ViewDimension = (1 > 1) ? D3D12_RTV_DIMENSION_TEXTURE2DMS
-				: D3D12_RTV_DIMENSION_TEXTURE2D;
-			//	TexRtv[i] = DIRECTX.RtvHandleProvider.AllocCpuHandle();
-			//	DIRECTX.Device->CreateRenderTargetView(TexResource[i], &rtvd, TexRtv[i]);
-		}
-
-		return true;
-	}
-	Render::Texture::ptr GetD3DColorResource()
-	{
-		int index = 0;
-		ovr_GetTextureSwapChainCurrentIndex(Session, TextureChain, &index);
-		return TexResource[index];
-	}
-	~OculusEyeTexture()
-	{
-		if (TextureChain)
-		{
-
-			ovr_DestroyTextureSwapChain(Session, TextureChain);
-		}
-
-
-	}
-
-
-
-	// Commit changes
-	void Commit()
-	{
-		ovr_CommitTextureSwapChain(Session, TextureChain);
-
-
-	}
-};
-#endif
 UINT64 frame_counter = 0;
-#ifdef OCULUS_SUPPORT
-class OVRRender
-{
-public:
-
-	tick_timer main_timer;
-
-	using ptr = std::shared_ptr<OVRRender>;
-	triangle_drawer::ptr drawer;
-
-	long long frameIndex = 0;
-
-
-
-	Render::SwapChain::ptr swap_chain;
-
-	ovrSession session;
-	OculusEyeTexture* pEyeRenderTexture[2] = { nullptr, nullptr };
-	// Setup VR components, filling out description
-	ovrRecti eyeRenderViewport[2];
-
-	ovrHmdDesc hmdDesc;
-
-	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
-	virtual	void render()
-	{
-
-
-		ovrSessionStatus sessionStatus;
-		ovr_GetSessionStatus(session, &sessionStatus);
-		if (sessionStatus.ShouldQuit)
-		{
-			// Because the application is requested to quit, should not request retry
-	//		retryCreate = false;
-			return;
-		}
-		if (sessionStatus.ShouldRecenter)
-			ovr_RecenterTrackingOrigin(session);
-
-		if (sessionStatus.IsVisible)
-		{
-
-			// Get both eye poses simultaneously, with IPD offset already included. 
-			ovrPosef EyeRenderPose[2];
-			ovrPosef HmdToEyePose[2] = { eyeRenderDesc[0].HmdToEyePose, eyeRenderDesc[1].HmdToEyePose };
-
-			double sensorSampleTime;    // sensorSampleTime is fed into the layer later;lkjiwwwwjlwjdjjjjjjjj
-			ovr_GetEyePoses(session, frameIndex, ovrTrue, HmdToEyePose, EyeRenderPose, &sensorSampleTime);
-			auto command_list = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
-
-
-			command_list->begin("main window");
-			std::shared_ptr<Render::CommandList> label_list;
-
-			Render::context render_context(command_list, label_list, vr_context);
-
-			// Render Scene to Eye Buffers
-			for (int eye = 0; eye < 2; ++eye)
-			{
-
-				auto tex = pEyeRenderTexture[eye]->GetD3DColorResource();
-
-				command_list->transition(tex, Render::ResourceState::RENDER_TARGET);
-				//command_list->get_graphics().set_rtv(1, tex->texture_2d()->renderTarget, Render::Handle());
-				//command_list->get_graphics().set_viewports({ tex->texture_2d()->get_viewport() });
-				command_list->clear_rtv(tex->texture_2d()->renderTarget, { eye,0,0,1 });
-
-
-
-
-			}
-			vr_context->eyes.resize(2);
-
-			vr_context->eyes[0].dir = { EyeRenderPose[0].Orientation.x, EyeRenderPose[0].Orientation.y,
-				-EyeRenderPose[0].Orientation.z, EyeRenderPose[0].Orientation.w };
-			vr_context->eyes[0].offset = { EyeRenderPose[0].Position.x, EyeRenderPose[0].Position.y,
-				-EyeRenderPose[0].Position.z };
-
-
-			vr_context->eyes[1].dir = { EyeRenderPose[1].Orientation.x, EyeRenderPose[1].Orientation.y,
-				-EyeRenderPose[1].Orientation.z, EyeRenderPose[1].Orientation.w };
-
-			vr_context->eyes[1].offset = { EyeRenderPose[1].Position.x, EyeRenderPose[1].Position.y,
-				-EyeRenderPose[1].Position.z };
-
-			//	render_context.ovr_context.eyes[0].fov = eyeRenderDesc[0].Fov.;
-			//render_context.ovr_context.eyes[1].fov = eyeRenderDesc[1].Fov;
-
-
-
-
-			vr_context->eyes[0].color_buffer = pEyeRenderTexture[0]->GetD3DColorResource();
-			vr_context->eyes[1].color_buffer = pEyeRenderTexture[1]->GetD3DColorResource();
-
-			render_context.delta_time = static_cast<float>(main_timer.tick());
-
-
-			{
-				//	auto timer = command_list->start(L"draw ui");
-			//		drawer->draw(render_context);
-				drawer->think(render_context.delta_time);
-				drawer->update_texture(command_list, render_context.delta_time, vr_context);
-			}
-
-
-			for (int eye = 0; eye < 2; ++eye)
-			{
-
-				auto tex = pEyeRenderTexture[eye]->GetD3DColorResource();
-
-				command_list->transition(tex, Render::ResourceState::PRESENT);
-
-
-			}
-			//		command_list->execute_and_wait();
-
-
-
-			command_list->end();
-
-			// Initialize our single full screen Fov layer.
-			ovrLayerEyeFov ld = {};
-			ld.Header.Type = ovrLayerType_EyeFov;
-			ld.Header.Flags = 0;
-
-			for (int eye = 0; eye < 2; ++eye)
-			{
-				ld.ColorTexture[eye] = pEyeRenderTexture[eye]->TextureChain;
-				ld.Viewport[eye] = eyeRenderViewport[eye];
-				ld.Fov[eye] = hmdDesc.DefaultEyeFov[eye];
-				ld.RenderPose[eye] = EyeRenderPose[eye];
-				ld.SensorSampleTime = sensorSampleTime;
-			}
-
-			command_list->when_send([this, ld](UINT64 res) {
-
-				pEyeRenderTexture[0]->Commit();
-				pEyeRenderTexture[1]->Commit();
-
-
-
-				const	ovrLayerHeader* layers = &ld.Header;
-
-				ovr_SubmitFrame(session, frameIndex, nullptr, &layers, 1);
-
-
-
-				frameIndex++;
-
-				scheduler::get().enqueue(std::bind(&OVRRender::render, this), std::chrono::steady_clock::now());
-				});
-			command_list->execute();
-
-		}
-		else
-			scheduler::get().enqueue(std::bind(&OVRRender::render, this), std::chrono::steady_clock::now());
-
-
-		Profiler::get().on_frame(frame_counter++);
-
-		if (GetAsyncKeyState('R'))
-		{
-			//   AssetManager::get().reload_resources();
-			Render::pixel_shader::reload_all();
-			Render::vertex_shader::reload_all();
-			Render::geometry_shader::reload_all();
-			Render::hull_shader::reload_all();
-			Render::domain_shader::reload_all();
-			Render::compute_shader::reload_all();
-			Render::Texture::reload_all();
-		}
-		{
-			PROFILE(L"AssetManager");
-			AssetManager::get().tact();
-		}
-		//		DIRECTX.Run(MainLoop);
-
-	}
-
-
-
-	OVRRender()
-	{
-
-
-		drawer = std::make_shared<triangle_drawer>();
-
-		GUI::Elements::image::ptr back(new GUI::Elements::image);
-		back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/background2.jpg", false, false));
-		back->texture.tiled = true;
-		back->width_size = GUI::size_type::MATCH_PARENT;
-		back->height_size = GUI::size_type::MATCH_PARENT;
-		//	iface->add_child(back);
-		ovrMirrorTextureDesc        mirrorDesc = {};
-
-		// Initializes LibOVR, and the Rift
-		ovrInitParams initParams = { ovrInit_RequestVersion | ovrInit_FocusAware, OVR_MINOR_VERSION, NULL, 0, 0 };
-		ovrResult result = ovr_Initialize(&initParams);
-		if (!OVR_SUCCESS(result))
-			return;
-
-		ovrGraphicsLuid luid;
-		result = ovr_Create(&session, &luid);
-		if (!OVR_SUCCESS(result))
-			return;
-
-		hmdDesc = ovr_GetHmdDesc(session);
-
-
-
-
-
-
-
-		for (int eye = 0; eye < 2; ++eye)
-		{
-			ovrSizei idealSize = ovr_GetFovTextureSize(session, (ovrEyeType)eye, hmdDesc.DefaultEyeFov[eye], 1.0f);
-			pEyeRenderTexture[eye] = new OculusEyeTexture();
-			if (!pEyeRenderTexture[eye]->Init(session, idealSize.w, idealSize.h))
-			{
-				//	if (retryCreate) goto Done;
-				//	FATALERROR("Failed to create eye texture.");
-			}
-
-			eyeRenderViewport[eye].Pos.x = 0;
-			eyeRenderViewport[eye].Pos.y = 0;
-			eyeRenderViewport[eye].Size = idealSize;
-			if (!pEyeRenderTexture[eye]->TextureChain)
-			{
-				//	if (retryCreate) goto Done;
-				//	FATALERROR("Failed to create texture.");
-			}
-
-			drawer->size = { idealSize.w, idealSize.h };
-
-		}
-
-		drawer->update_layout({ 0,0,drawer->size.get() }, 1);
-
-		eyeRenderDesc[0] = ovr_GetRenderDesc(session, ovrEye_Left, hmdDesc.DefaultEyeFov[0]);
-		eyeRenderDesc[1] = ovr_GetRenderDesc(session, ovrEye_Right, hmdDesc.DefaultEyeFov[1]);
-		/*	// Create a mirror to see on the monitor.
-			mirrorDesc.Format = OVR_FORMAT_R8G8B8A8_UNORM_SRGB;
-			mirrorDesc.Width = 256;
-			mirrorDesc.Height = 256;
-			mirrorDesc.MiscFlags = ovrTextureMisc_None;
-			result = ovr_CreateMirrorTextureDX(session, DIRECTX.CommandQueue, &mirrorDesc, &mirrorTexture);
-			if (!OVR_SUCCESS(result))
-			{
-				if (retryCreate) goto Done;
-				FATALERROR("Failed to create mirror texture.");
-			}
-
-			*/
-
-
-
-
-
-	}
-	~OVRRender()
-	{
-
-		ovr_Shutdown();
-	}
-};
-#endif
-
 
 class FrameFlowGraph : public  ::FlowGraph::graph
 {
@@ -1121,23 +691,12 @@ class PassNode : public::FlowGraph::Node , public  GUI::Elements::FlowGraph::Vis
 	{}
 	GUI::base::ptr create_editor_window() override
 	{
-
-		//if (!debug_texture)
-	//		debug_texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
 		GUI::Elements::image::ptr img(new GUI::Elements::image);
 		img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
 		img->texture.padding = { 9, 9, 9, 9 };
 		img->padding = { 9, 9, 9, 9 };
 		img->width_size = GUI::size_type::MATCH_CHILDREN;
 		img->height_size = GUI::size_type::MATCH_CHILDREN;
-		//   img->size = { 64, 64 };
-//		img_inner.reset(new GUI::Elements::image);
-
-
-		//img_inner->texture.texture = debug_texture;
-	//	img_inner->docking = GUI::dock::TOP;
-	//	img_inner->size = { 128, 128 };
-	//	img->add_child(img_inner);
 		return img;
 	}
 };
@@ -1309,7 +868,7 @@ public:
 
 		static bool gen = false;
 
-		if (!gen/* && GetAsyncKeyState('N')*/)
+		if (!gen && GetAsyncKeyState('N'))
 		{
 			gen = true;
 			frameFlowGraph->clear();
@@ -1400,21 +959,6 @@ resource_stages[&res.second] = input;
 
 		}
 
-		/*
-	
-		graph_usage = 0;
-		graph_usage += graph.builder.allocator.heap_rtv.get_max_usage();
-		graph_usage += graph.builder.allocator.heap_uav.get_max_usage();
-		graph_usage += graph.builder.allocator.heap_srv.get_max_usage();
-
-		for (auto& e : graph.builder.allocator.frames)
-		{
-			graph_usage += e.heap_readback.get_max_usage();
-			graph_usage += e.heap_upload_buffer.get_max_usage();
-			graph_usage += e.heap_upload_texture.get_max_usage();
-
-		}
-		graph_usage /= (1024 * 1024);*/
 	}
 
 	FrameGraphRender()

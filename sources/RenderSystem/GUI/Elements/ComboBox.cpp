@@ -7,10 +7,13 @@ bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button
     if (action == mouse_action::UP)
     { 
             menu->pos = vec2(render_bounds->pos) + vec2(0, render_bounds->h);
-            menu->width_size = size_type::NONE;
             menu->size = { render_bounds->size.x, menu->size->y };
-            user_ui->add_child(menu);
+            menu->make_fixed_width();
+            menu->docking = dock::NONE;
             menu->width_size = size_type::FIXED;
+
+            user_ui->add_child(menu);
+
     }
 
     return true;
@@ -41,6 +44,8 @@ GUI::Elements::combo_box::combo_box()
     menu->draw_icon = false;
     padding = { 5, 2, 30, 2  };
     skin = Skin::get().DefaultComboBox;
+
+  //  menu->clip_to_parent = true;
     /*add_item("item 1");
     add_item("item 2");
     add_item("item 3");*/

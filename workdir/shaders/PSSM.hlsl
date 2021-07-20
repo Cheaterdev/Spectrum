@@ -225,7 +225,7 @@ float shadow =  GetPSSMLighting().GetLight_mask().SampleLevel(pointClampSampler,
 //return float4(res_color,1);
 //return shadow;
 //return min(shadow,sss);
-float3 light_dir = normalize(-GetPSSMData().GetLight_cameras()[0].GetDirection().xyz);
+float3 light_dir = normalize(GetFrameInfo().GetSunDir().xyz);
 
 //float3 direct = shadow*max(0, dot(light_dir, info.normal));
 //float3 reflection = 0;// shadow*pow(saturate(dot(info.reflection, light_dir)), 2 * info.roughness);

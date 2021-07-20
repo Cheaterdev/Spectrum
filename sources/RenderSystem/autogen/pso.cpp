@@ -3,6 +3,8 @@ void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 {
 	 std::vector<task<void>> tasks;
 	tasks.emplace_back(PSOBase::create<PSOS::BRDF>(pso[PSO::BRDF]));
+	tasks.emplace_back(PSOBase::create<PSOS::FSR>(pso[PSO::FSR]));
+	tasks.emplace_back(PSOBase::create<PSOS::RCAS>(pso[PSO::RCAS]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherPipeline>(pso[PSO::GatherPipeline]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherBoxes>(pso[PSO::GatherBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::InitDispatch>(pso[PSO::InitDispatch]));

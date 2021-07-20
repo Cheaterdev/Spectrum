@@ -30,7 +30,8 @@ namespace DX12
 		{
 			tracked_info = std::make_shared<T>();
 		}
-		
+		virtual ~Trackable() {};
+
 	};
 
 	template <class T>
