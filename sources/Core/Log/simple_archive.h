@@ -63,9 +63,9 @@ class simple_log_archive
         typex::invoke(*this, t);
     }
 #ifndef BOOST_NO_STD_WSTRING
-    void save(const std::wstring &)
+    void save(const std::wstring & s)
     {
-        m_os << "wide string types not suported in log archive";
+        m_os << convert(s);
     }
 #endif
 

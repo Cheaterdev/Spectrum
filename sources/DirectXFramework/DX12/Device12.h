@@ -48,6 +48,8 @@ namespace DX12
 		void create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv);
 		void create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv);
 
+		mutable bool alive = true;
+		void DumpDRED();
 	};
 
 

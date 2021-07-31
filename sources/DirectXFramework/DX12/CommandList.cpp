@@ -67,6 +67,11 @@ namespace DX12
 
 	void CommandList::begin(std::string name, Timer* t)
 	{
+		if(name.empty())
+		{
+			compiler.SetName(L"EmptyName");
+		}else
+		compiler.SetName(convert(name).c_str());
 		compiled = CommandListCompiled();
 #ifdef DEV
 		begin_stack = Exceptions::get_stack_trace();
@@ -1068,7 +1073,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 		current = t ? &t->get_block() : &Profiler::get();
 		TimedRoot::parent = t ? t->get_root() : &Profiler::get();
-		if (name.size())
+		if (type!= CommandListType::COPY&& name.size())
 		{
 			timer.reset(new Timer(start(convert(name).c_str())));
 		}

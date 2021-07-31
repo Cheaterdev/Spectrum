@@ -538,6 +538,8 @@ namespace DX12
 		virtual HRESULT  SetName(
 			LPCWSTR Name)
 		{
+			compiled.m_commandList->SetName(Name);
+			
 			return 0;
 		};
 

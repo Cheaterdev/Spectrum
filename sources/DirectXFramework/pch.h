@@ -27,17 +27,15 @@ HRESULT device_fail();
 #else
 #define TEST(x)\
 	([&](){\
-	HRESULT hr = test(x, __FUNCSIG__); \
-	if(hr==0x887a0005) \
-	hr=device_fail(); \
+	HRESULT hr = x; \
+	if(hr==0x887a0005) device_fail(); \
+	 test(hr, STRINGIZE(x)); \
 if (FAILED(hr)) \
 	assert(false); \
 	return hr; \
 	})()
 
 #endif //  DEBUG
-
-#define shader_struct __declspec(align(16)) struct
 
 
 #include "D3D\Shaders.h"

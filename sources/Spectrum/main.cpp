@@ -12,6 +12,8 @@ ovrEyeRenderDesc eyeRenderDesc[2];
 HRESULT device_fail()
 {
 	auto hr = DX12::Device::get().get_native_device()->GetDeviceRemovedReason();
+
+	DX12::Device::get().DumpDRED();
 	Log::get().crash_error(hr);
 	return hr;
 }

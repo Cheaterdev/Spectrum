@@ -6,6 +6,19 @@
 namespace DX12
 {
 
+
+	struct DREDNode
+	{
+		std::wstring name;
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			ar& NVP(name);
+		}
+	};
+	
 	class RaytracingBuildDescBottomInputs;
 	class RaytracingBuildDescTopInputs;
 	void  Device::stop_all()
@@ -40,7 +53,7 @@ namespace DX12
 	std::shared_ptr<CommandList> Device::get_upload_list()
 	{
 		auto list = queues[CommandListType::COPY]->get_free_list();
-		list->begin("");
+		list->begin("UploadList");
 		return list;
 	}
 
@@ -150,6 +163,17 @@ namespace DX12
 		//#ifdef DEBUG
 				// Enable the D3D12 debug layer.
 
+
+		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> pDredSettings;
+		TEST(D3D12GetDebugInterface(IID_PPV_ARGS(&pDredSettings)));
+
+		// Turn on AutoBreadcrumbs and Page Fault reporting
+		pDredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		pDredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+
+
+		
+
 		ComPtr<ID3D12Debug> debugController;
 		CComPtr<ID3D12Debug1> spDebugController1;
 
@@ -222,7 +246,7 @@ namespace DX12
 			m_device.Get());
 
 
-
+		
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
 		TEST(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
 			&options5, sizeof(options5)));
@@ -325,7 +349,7 @@ namespace DX12
 	void  Device::create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv)
 	{
 		*h.resource_info = ResourceInfo(resource, rtv);
-		Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.cpu);
+		m_device->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.cpu);
 	}
 
 	void  Device::create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
@@ -349,22 +373,55 @@ namespace DX12
 			assert(srv.TextureCube.MostDetailedMip + srv.TextureCube.MipLevels <= resource->get_desc().MipLevels);
 		}
 
-		Device::get().get_native_device()->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.cpu);
+	m_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.cpu);
 	}
 
 	void  Device::create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {
 		*h.resource_info = ResourceInfo(resource, counter, uav);
-		Device::get().get_native_device()->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.cpu);
+		m_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.cpu);
 	}
 
 	void  Device::create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) {
 		*h.resource_info = ResourceInfo(resource, cbv);
-		Device::get().get_native_device()->CreateConstantBufferView(&cbv, h.cpu);
+		m_device->CreateConstantBufferView(&cbv, h.cpu);
 	}
 
 	void  Device::create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) {
 		*h.resource_info = ResourceInfo(resource, dsv);
-		Device::get().get_native_device()->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.cpu);
+		m_device->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.cpu);
+	}
+
+
+	void Device::DumpDRED()
+	{
+		alive = false;
+		ComPtr<ID3D12DeviceRemovedExtendedData>  pDred;
+		TEST(m_device->QueryInterface(IID_PPV_ARGS(&pDred)));
+
+		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT DredAutoBreadcrumbsOutput = {};
+		D3D12_DRED_PAGE_FAULT_OUTPUT DredPageFaultOutput = {};
+		TEST(pDred->GetAutoBreadcrumbsOutput(&DredAutoBreadcrumbsOutput));
+		TEST(pDred->GetPageFaultAllocationOutput(&DredPageFaultOutput));
+
+		auto parse_node = [](const D3D12_AUTO_BREADCRUMB_NODE& node)
+		{
+		//	DREDNode parsed;
+
+		//	parsed.name = node.pCommandListDebugNameW;
+
+
+			Log::get() << node << Log::endl;
+		};
+
+
+		auto node = DredAutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
+
+		while(node)
+		{
+			parse_node(*node);
+			node = node->pNext;
+		}
+		
 	}
 
 }

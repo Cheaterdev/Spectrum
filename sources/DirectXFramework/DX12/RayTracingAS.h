@@ -52,7 +52,7 @@ namespace DX12
 		{
 
 			auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
-			list->begin();
+			list->begin("RaytracingAccelerationStructure");
 
 			
 			RaytracingBuildDescTopInputs inputs;

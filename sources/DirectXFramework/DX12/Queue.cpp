@@ -138,14 +138,28 @@ namespace DX12
 		return res_ptr;
 	}
 
+	void Queue::signal_and_wait_internal()
+	{
+		std::promise<int> promise;
+		auto result = promise.get_future();
+		{
+			FenceWaiter waiter = signal_internal();
+
+			executor.enqueue([&promise, waiter]() {
+				waiter.wait();
+				promise.set_value(0);
+				});
+		}
+
+		result.wait();
+	}
+	
 	void Queue::signal_and_wait()
 	{
 		std::promise<int> promise;
 		auto result = promise.get_future();
 
-
 		{
-
 			FenceWaiter waiter = signal();
 
 			executor.enqueue([&promise, waiter]() {
@@ -262,10 +276,12 @@ namespace DX12
 	{
 		PROFILE(L"execute_internal");
 
-		if (stop)
+		if (stop|| !Device::get().alive)
 			return { &commandListCounter,m_fenceValue };
+		
 		std::unique_lock<std::mutex> lock(queue_mutex);
 
+		
 		auto cl = list->get_ptr();
 
 		{
@@ -343,6 +359,8 @@ namespace DX12
 
 		executor.enqueue([cl, this]()
 			{
+				if (!Device::get().alive) return;
+
 				auto list = cl;
 				list->get_execution_fence().get().wait();
 				PROFILE(L"on_execute");

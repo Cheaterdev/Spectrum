@@ -93,6 +93,24 @@ namespace boost
 			ar& g.StencilPassOp;
 		}
 
+		
+		template<class Archive>
+		void serialize(Archive& ar, D3D12_AUTO_BREADCRUMB_NODE& g, const unsigned int)
+		{
+			std::wstring CommandListDebugName = g.pCommandListDebugNameW?g.pCommandListDebugNameW:L"";
+			std::wstring CommandQueueDebugName = g.pCommandQueueDebugNameW ? g.pCommandQueueDebugNameW : L"";
+			ar& NVP(CommandListDebugName);
+			ar& NVP(CommandQueueDebugName);
+			ar& NP("OPS",make_array<const D3D12_AUTO_BREADCRUMB_OP>(g.pCommandHistory, g.BreadcrumbCount));
+
+			if(g.pLastBreadcrumbValue)
+			{
+				UINT offset = *g.pLastBreadcrumbValue;// (reinterpret_cast<UINT>(g.pLastBreadcrumbValue) - reinterpret_cast<UINT>(g.pCommandHistory)) / sizeof(D3D12_AUTO_BREADCRUMB_OP);
+
+				if(offset+1 < g.BreadcrumbCount)
+				ar& NVP(offset);
+			}
+		}
 	}
 }
 

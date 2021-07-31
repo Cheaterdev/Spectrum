@@ -144,7 +144,7 @@ namespace DX12
 		//auto list = Device::get().get_upload_list();
 	
 		auto list = Render::Device::get().get_queue(Render::CommandListType::COPY)->get_free_list();
-		list->begin("");
+		list->begin("Texture Readback");
 
 		desc.Format = to_typeless(desc.Format);
 
