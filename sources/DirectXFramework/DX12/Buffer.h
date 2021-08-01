@@ -239,7 +239,7 @@ namespace DX12
 
 			using ptr = std::shared_ptr<StructuredBuffer<T>>;
 			using type = Underlying<T>;
-			StructuredBuffer(UINT64 count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, HeapType heap_type = HeapType::DEFAULT);
+			StructuredBuffer(UINT64 count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, HeapType heap_type = HeapType::DEFAULT, ResourceState defaultState = ResourceState::COMMON);
 
 			UINT get_counter_offset();
 
@@ -443,7 +443,7 @@ namespace DX12
 	
 	}
 	template<class T>
-	inline StructuredBuffer<T>::StructuredBuffer(UINT64 count, counterType counted, D3D12_RESOURCE_FLAGS flags, HeapType heap_type) : GPUBuffer(counted== counterType::SELF ? (Math::AlignUp(count * sizeof(type), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(type)), flags, ResourceState::COMMON, heap_type)
+	inline StructuredBuffer<T>::StructuredBuffer(UINT64 count, counterType counted, D3D12_RESOURCE_FLAGS flags, HeapType heap_type, ResourceState defaultState) : GPUBuffer(counted== counterType::SELF ? (Math::AlignUp(count * sizeof(type), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(type)), flags, defaultState, heap_type)
 	{
 		stride = sizeof(type);
 		this->count = count;
@@ -634,9 +634,9 @@ namespace DX12
 
 			update_list.clear();
 		}
-		virtual_gpu_buffer(size_t max_size, counterType countType= counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE) :Base(max_size)
+		virtual_gpu_buffer(size_t max_size, counterType countType= counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, ResourceState state = ResourceState::COMMON) :Base(max_size)
 		{
-			buffer = std::make_shared<StructuredBuffer<Type>>(max_size, countType, flags, HeapType::RESERVED);
+			buffer = std::make_shared<StructuredBuffer<Type>>(max_size, countType, flags, HeapType::RESERVED, state);
 
 			// buffer = std::make_shared<Render::StructuredBuffer<T>>(max_size, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, DefaultAllocator::get());
 		}

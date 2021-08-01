@@ -152,6 +152,8 @@ namespace DX12
 		}
 
 		result.wait();
+
+//		Device::get().check_errors();
 	}
 	
 	void Queue::signal_and_wait()
@@ -258,7 +260,7 @@ namespace DX12
 
 			native->CopyTileMappings(infos.resource->get_native().Get(), &target, infos.source->get_native().Get(), &source, &TRS, D3D12_TILE_MAPPING_FLAG_NONE);
 		}
-
+	//	signal_and_wait_internal();
 
 	}
 	FenceWaiter Queue::run_transition_list(FenceWaiter after, std::shared_ptr<TransitionCommandList>& list)
@@ -269,7 +271,7 @@ namespace DX12
 
 		ID3D12CommandList* s[] = { list->get_native().Get() };
 		get_native()->ExecuteCommandLists(_countof(s), s);
-
+	//	signal_and_wait_internal();
 		return signal_internal();
 	}
 	FenceWaiter Queue::execute_internal(CommandList* list)
@@ -347,7 +349,7 @@ namespace DX12
 			ID3D12CommandList* s[] = { list->compiled.m_commandList.Get() };
 			native->ExecuteCommandLists(_countof(s), s);
 		}
-
+	//	signal_and_wait_internal();
 		const FenceWaiter execution_fence = signal_internal();
 
 		{

@@ -65,17 +65,24 @@ void MeshAsset::init_gpu()
 
 //	if (GetAsyncKeyState('8')) return;
 
-	
-	for (auto& mesh : meshes)
+	/*if (meshes.size())
 	{
 		auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
-		list->begin("RTX");
+		list->begin("pre_RTX");
 
+	
+		list->execute_and_wait();	
+	}*/
+
+	int i = 0;
+	for (auto& mesh : meshes)
+	{
+	
+		auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+		list->begin("RTX");
 		universal_vertex_manager::get().prepare(list);
 		universal_index_manager::get().prepare(list);
-
 		auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
-
 
 		GeometryDesc geometryDesc = {};
 		geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
@@ -94,6 +101,9 @@ void MeshAsset::init_gpu()
 
 		mesh.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
 		list->execute_and_wait();
+
+	//	Render::Device::get().check_errors();
+		i++;
 	}
 
 	
@@ -317,7 +327,6 @@ void MeshAssetInstance::update_rtx_instance()
 {
 	if (!Device::get().is_rtx_supported()) return;
 
-
 	if (!ras_handle) scene->raytrace->allocate(ras_handle, rendering_count);
 
 	if (ras_handle)
@@ -329,19 +338,25 @@ void MeshAssetInstance::update_rtx_instance()
 		{
 
 
-			D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+			static D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+			static bool inited = false;
 
-			for (int x = 0; x < 3; x++)
-				for (int y = 0; y < 4; y++)
-				{
-					instanceDesc.Transform[x][y] = global_transform.rows[y][x];
-				}
 
-			instanceDesc.InstanceMask = 1;
-			instanceDesc.AccelerationStructure = info.ras->get_gpu_address();
-			instanceDesc.InstanceID = info.node_id;
-			instanceDesc.InstanceContributionToHitGroupIndex = RTX::get().rtx.get_index(static_cast<materials::universal_material*>(info.material));// ->info_rtx.get_offset();
+			if (!inited)
+			{
+				for (int x = 0; x < 3; x++)
+					for (int y = 0; y < 4; y++)
+					{
+						instanceDesc.Transform[x][y] = global_transform.rows[y][x];
+					}
 
+				instanceDesc.InstanceMask = 1;
+				instanceDesc.AccelerationStructure = info.ras->get_gpu_address();
+				instanceDesc.InstanceID = info.node_id;
+				instanceDesc.InstanceContributionToHitGroupIndex = RTX::get().rtx.get_index(static_cast<materials::universal_material*>(info.material));// ->info_rtx.get_offset();
+
+		//		inited = true;
+			}
 			ras[i] = instanceDesc;
 
 			i++;

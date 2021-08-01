@@ -52,13 +52,14 @@ struct SelectLocal<T>
 		Render::RootSignature::ptr m_root_sig = get_Signature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
 		Render::RootSignature::ptr m_local_sig = create_local_signature<SelectLocal<Passes>::type...>();
 
-
+		IdGenerator<Thread::Free> ids;
+		
 		struct material
 		{
 			std::wstring wshader_name;
 			Events::Event<void> on_change;
 			D3D12_GPU_VIRTUAL_ADDRESS local_addr;
-			Render::library_shader::ptr raytracing_lib;
+			Render::library_shader::ptr raytracing_lib;		
 		};
 
 		CACHE_ALIGN(32)
@@ -126,8 +127,8 @@ struct SelectLocal<T>
 			auto it = materials.find(mat);
 
 			if (it == materials.end())
-
 			{
+				
 				info = &new_materials[mat];
 			}
 			else
@@ -142,6 +143,8 @@ struct SelectLocal<T>
 
 			if (it == materials.end())
 			{
+				mat->wshader_name	=std::wstring(L"material_") + std::to_wstring(ids.get());
+
 				auto& e = new_materials[mat];
 				e.handle = hitgroup_ids->allocate(sizeof...(Passes));
 
@@ -291,10 +294,10 @@ struct SelectLocal<T>
 		template<class T>
 		void dispatch(ivec3 size, Render::ComputeContext& compute)
 		{
-			auto generator = tuple_element_index<T, std::tuple<Raygens...> >();
+			constexpr int generator = tuple_element_index<T, std::tuple<Raygens...> >();
 
 
-			assert(generator == T::ID);
+			static_assert(generator == T::ID);
 			compute.set_pipeline(m_dxrStateObject);
 			compute.dispatch_rays<hit_type, Render::shader_identifier, Render::shader_identifier>(size,
 				hitgroup_ids->buffer->get_resource_address(), hitgroup_ids->max_size(),

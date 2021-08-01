@@ -23,6 +23,9 @@ public:
 	template<class T>
 	void render(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
 	{
+
+		if (!Render::Device::get().is_rtx_supported()) return;
+		
 		{
 			Slots::Raytracing rtx;
 			rtx.GetIndex_buffer() = universal_index_manager::get().buffer->structuredBuffer;
@@ -30,6 +33,7 @@ public:
 			rtx.set(compute);
 		}
 
+		if(!GetAsyncKeyState('8'))
 		rtx.dispatch<T>(size, compute);
 	}
 

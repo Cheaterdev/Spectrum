@@ -31,7 +31,8 @@ HRESULT device_fail();
 	if(hr==0x887a0005) device_fail(); \
 	 test(hr, STRINGIZE(x)); \
 if (FAILED(hr)) \
-	assert(false); \
+	{__debugbreak(); \
+	assert(false); }\
 	return hr; \
 	})()
 

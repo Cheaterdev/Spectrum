@@ -19,6 +19,7 @@ namespace DX12
 	public:
 		void stop_all();
 		virtual ~Device();
+		void  check_errors();
 		ContextGenerator context_generator;
 		std::shared_ptr<CommandList> get_upload_list();
 		ComPtr<ID3D12Device5> get_native_device();

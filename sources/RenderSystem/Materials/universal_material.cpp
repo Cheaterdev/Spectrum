@@ -119,7 +119,6 @@ void materials::universal_material::update()
 void materials::universal_material::compile()
 {
 	start_changing_contents();
-	RTX::get().rtx.init_material(this);
 	
 	handlers.clear();
 
@@ -200,6 +199,8 @@ void materials::universal_material::compile()
 
 	need_update_compiled = false;
 	need_update_uniforms = false;
+
+	RTX::get().rtx.init_material(this);
 	end_changing_contents();
 }
 
@@ -277,7 +278,6 @@ MaterialGraph::ptr materials::universal_material::get_graph()
 
 materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this)
 {
-	wshader_name = std::wstring(L"material_") + std::to_wstring(ids.get());
 
 	
 	include_file = register_asset(EngineAssets::material_header.get_asset());
@@ -407,11 +407,6 @@ void materials::universal_material::serialize(Archive& ar, const unsigned int fi
 
 	if constexpr(Archive::is_loading::value)
 	{
-		//   if (include_file->is_changed())
 		compile();
-		
-	//	generate_material(); //TODO: REMOVE, FOR RT NOW ONLY
-
-		update_rtx();
 	}
 }

@@ -57,6 +57,13 @@ namespace DX12
 		return list;
 	}
 
+
+	void  Device::check_errors()
+	{
+		auto hr = get_native_device()->GetDeviceRemovedReason();
+		if(FAILED(hr))DumpDRED();
+		
+	}
 	ComPtr<ID3D12Device5> Device::get_native_device()
 	{
 		return m_device;
@@ -279,6 +286,8 @@ namespace DX12
 		queues[CommandListType::COMPUTE].reset(new Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
 
+
+	//	queues[CommandListType::COPY] = queues[CommandListType::COMPUTE] = queues[CommandListType::DIRECT];
 	//	m_device->SetStablePowerState(true);
 
 		auto res = m_device->GetNodeCount();
