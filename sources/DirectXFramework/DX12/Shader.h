@@ -322,18 +322,10 @@ private:
     class vertex_shader : public Shader<vertex_shader>
     {
             friend class Shader<vertex_shader>;
-
-            std::shared_ptr<Render::shader_inputs> input_desc;
-            void compile() override;
-
+      
         public:
 
-
             using ptr = shader_with_id<vertex_shader>;
-            std::shared_ptr<Render::shader_inputs>& get_input_desc()
-            {
-                return input_desc;
-            }
 
             static const ptr null;
 

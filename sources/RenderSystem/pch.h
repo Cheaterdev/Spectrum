@@ -72,8 +72,6 @@
 #include "Assets/MaterialAsset.h"
 #include "Assets/BinaryAsset.h"
 
-#include "Mesh/vertexes.h"
-#include "Mesh/Mesh.h"
 #include "Assets/MeshAsset.h"
 
 

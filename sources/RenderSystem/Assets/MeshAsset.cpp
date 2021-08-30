@@ -194,7 +194,6 @@ void MeshAssetInstance::serialize(Archive& ar, const unsigned int)
 	ar& NVP(overrided_material);
 	ar& NVP(mesh_asset);
 	ar& NVP(boost::serialization::base_object<scene_object>(*this));
-	ar& NVP(my_meshes);
 	ar& NVP(type);
 
 	if (Archive::is_loading::value)

@@ -159,8 +159,6 @@ class MeshAsset : public Asset
 {
         LEAK_TEST(MeshAsset)
 
-        typedef std::vector<SimpleMesh::ptr> meshes_type;
-
         MeshAsset();
         std::shared_ptr<MeshAssetInstance> preview_mesh;
     public:
@@ -247,8 +245,7 @@ class MeshAssetInstance : public scene_object, public AssetHolder, public Render
      
         LEAK_TEST(MeshAssetInstance)
 
-       
-        std::vector<mesh_node::ptr> my_meshes;
+      
         std::mutex m;
         void init_asset();
 		void update_nodes();

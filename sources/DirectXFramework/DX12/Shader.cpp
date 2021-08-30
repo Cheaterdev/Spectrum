@@ -41,19 +41,4 @@ namespace DX12
     const mesh_shader::ptr mesh_shader::null(new mesh_shader());
     const amplification_shader::ptr amplification_shader::null(new amplification_shader());
 
-
-
-
-    void vertex_shader::compile()
-    {
-        Render::shader_inputs input_desc;
-
-        for (auto& r : reflection.get_inputs())
-        {
-            input_desc.inputs.push_back({ r.SemanticName, r.SemanticIndex });
-        }
-
-        this->input_desc = Render::layout_id_generator::get().get_unique(input_desc);
-    }
-
 }

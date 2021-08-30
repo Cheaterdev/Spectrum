@@ -56,9 +56,6 @@ namespace DX12
 
 #include "../RenderSystem/autogen/enums.h"
 
-
-#include "InputLayouts.h"
-
 #include "SIG/Concepts.h"
 
 #include "DX12/RootSignature.h"
