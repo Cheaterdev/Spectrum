@@ -54,6 +54,10 @@ public class CustomTarget : ITarget
               Optimization =   Optimization.Release,
 				Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
+			
+			CustomProperties.Add("VcpkgEnabled", "true");
+			CustomProperties.Add("VcpkgEnableManifest", "true");
+			
 
         }
 
@@ -105,10 +109,9 @@ public class CustomTarget : ITarget
 			}
 			
 			
-			
-			 conf.ReferencesByNuGetPackage.Add(
-                "Microsoft.Direct3D.D3D12", "1.4.9"
-            );
+		//	 conf.ReferencesByNuGetPackage.Add(
+        //        "Microsoft.Direct3D.D3D12", "1.4.9"
+        //    );
 			
 			
         }

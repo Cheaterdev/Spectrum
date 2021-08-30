@@ -1204,8 +1204,8 @@ protected:
 		AssetManager::create();
 		EVENT("WindowRender");
 
-		auto ps = Render::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
-		auto cs = Render::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
+	//	auto ps = Render::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
+	//	auto cs = Render::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
 
 #ifdef OCULUS_SUPPORT
 		//ovr = std::make_shared<OVRRender>();

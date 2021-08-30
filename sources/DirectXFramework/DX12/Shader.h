@@ -1,5 +1,77 @@
 #pragma once
 std::optional<SlotID> get_slot(std::string_view slot_name);
+
+template<class T>
+class shader_with_id
+{
+    std::shared_ptr<T> shader;
+public:
+
+    shader_with_id() = default;
+    shader_with_id(const std::shared_ptr<T> & o):shader(o)
+    {
+	    
+    }
+
+    shader_with_id(T* o) :shader(o)
+    {
+
+    }
+
+    shader_with_id(std::nullptr_t) :shader(nullptr)
+    {
+
+    }
+	
+	T* operator->()
+    {
+        return shader.get();
+    }
+
+    T& operator*()
+    {
+        return *shader;
+    }
+
+
+    T* operator->() const
+    {
+        return shader.get();
+    }
+
+    T& operator*() const
+    {
+        return *shader;
+    }
+
+    operator bool() const
+    {
+        return !!shader;
+    }
+	
+    bool operator==(const shader_with_id<T>& r) const
+    {
+        int my = shader? shader->id : -5;
+        int other = r.shader ? r.shader->id : -5;
+
+        return my == other;
+    }
+    std::strong_ordering  operator<=>(const  shader_with_id<T>& r)  const
+    {
+        int my = shader ? shader->id : -5;
+        int other = r.shader ? r.shader->id : -5;
+
+        return my <=> other;
+    }
+private:
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int)
+    {
+        ar& NVP(shader);
+    }
+	
+};
 namespace DX12
 {
     class PipelineStateBase;
@@ -131,7 +203,7 @@ private:
                 return resource_manager<_shader_type, D3D::shader_header>::header;
             }
 
-			static std::shared_ptr<_shader_type> create_from_memory(std::string data, std::string func_name, UINT flags, std::vector<D3D::shader_macro> macros = {})
+			static shader_with_id<_shader_type> create_from_memory(std::string data, std::string func_name, UINT flags, std::vector<D3D::shader_macro> macros = {})
             {
                 auto t = CounterManager::get().start_count<_shader_type>();
                 resource_file_depender depender;
@@ -224,7 +296,7 @@ private:
             friend class Shader<pixel_shader>;
         public:
 
-            using ptr = s_ptr<pixel_shader>;
+            using ptr = shader_with_id<pixel_shader>;
 
             static const ptr null;
     };
@@ -236,7 +308,7 @@ private:
 
         public:
 
-            using ptr = s_ptr<geometry_shader>;
+            using ptr = shader_with_id<geometry_shader>;
 
             static const ptr null;
         protected:
@@ -257,7 +329,7 @@ private:
         public:
 
 
-            using ptr = s_ptr<vertex_shader>;
+            using ptr = shader_with_id<vertex_shader>;
             std::shared_ptr<Render::shader_inputs>& get_input_desc()
             {
                 return input_desc;
@@ -274,7 +346,7 @@ private:
     {
             friend class Shader<hull_shader>;
         public:
-            using ptr = s_ptr<hull_shader>;
+            using ptr = shader_with_id<hull_shader>;
             static const ptr null;
     };
 
@@ -286,7 +358,7 @@ private:
             friend class Shader<domain_shader>;
         public:
 
-            using ptr = s_ptr<domain_shader>;
+            using ptr = shader_with_id<domain_shader>;
 
             static const ptr null;
     };
@@ -296,19 +368,32 @@ private:
             friend class Shader<compute_shader>;
         public:
 
-            using ptr = s_ptr<compute_shader>;
+            using ptr = shader_with_id<compute_shader>;
 
             static const ptr null;
     };
 
 
-    class library_shader;
-    class exported_shader
+    class mesh_shader : public Shader<mesh_shader>
     {
+        friend class Shader<mesh_shader>;
     public:
-        std::shared_ptr<library_shader> library;
-        std::wstring shader_name;
+
+        using ptr = shader_with_id<mesh_shader>;
+
+        static const ptr null;
     };
+	
+    class amplification_shader : public Shader<amplification_shader>
+    {
+        friend class Shader<amplification_shader>;
+    public:
+
+        using ptr = shader_with_id<amplification_shader>;
+
+        static const ptr null;
+    };
+
 	
     class library_shader : public Shader<library_shader>
 	{
@@ -317,7 +402,7 @@ private:
      
 	public:
 
-		using ptr = s_ptr<library_shader>;
+		using ptr = shader_with_id<library_shader>;
 
 		static const ptr null;
 

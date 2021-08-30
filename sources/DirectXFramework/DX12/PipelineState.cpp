@@ -9,81 +9,37 @@ DXGI_FORMAT_R16G16B16A16_FLOAT
 bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
 {
 	E(StencilDepthFailOp)
-	E(StencilFailOp)
-	E(StencilFunc)
-	E(StencilPassOp)
+		E(StencilFailOp)
+		E(StencilFunc)
+		E(StencilPassOp)
 
 
-	return true;
+		return true;
 }
 
 
-std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC & l, const D3D12_DEPTH_STENCILOP_DESC & r)
+std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
 {
 	C(StencilDepthFailOp)
-	C(StencilFailOp)
-	C(StencilFunc)
-	C(StencilPassOp)
+		C(StencilFailOp)
+		C(StencilFunc)
+		C(StencilPassOp)
 
 
-	return std::strong_ordering::equal;
+		return std::strong_ordering::equal;
 }
 
 
 namespace DX12
 {
 
-
-
-#define EQ_ID(x)  if((x?x->id:-5)!=(r.x?r.x->id:-5)) return false;
-#define CMP_ID(x)  if (auto cmp =((x?x->id:-5)<=> (r.x?r.x->id:-5)); cmp != 0) return cmp;
-#define _E(x) 	if ( x != r.x) return false;
-#define _C(x) 	if (auto cmp = x <=> r.x; cmp != 0) return cmp;
-
-
-	
-
-	bool PipelineStateDesc::operator==(const  PipelineStateDesc& r)  const
+	void PipelineState::on_change()
 	{
-			_E(root_signature)
-			_E(blend)
-			_E(rasterizer)
-			_E(rtv)
-			EQ_ID(vertex)
-			EQ_ID(pixel)
-			EQ_ID(geometry)
-			EQ_ID(hull)
-			EQ_ID(domain)
-			_E(topology)
-
-			return true;
-		
-	}
-
-	std::strong_ordering  PipelineStateDesc::operator<=>(const  PipelineStateDesc& r)  const
-	{
-			_C(root_signature.get())
-			_C(blend)
-			_C(rasterizer)
-			_C(rtv)
-			_C(topology)
-			_C(layout)
-			CMP_ID(vertex)
-			CMP_ID(pixel)
-			CMP_ID(geometry)
-			CMP_ID(hull)
-			CMP_ID(domain)
-
-			return std::strong_ordering::equal;
-	}
-
-
-
-	 void PipelineState::on_change()
-	{
-		 root_signature = desc.root_signature;
+		root_signature = desc.root_signature;
 
 		auto t = CounterManager::get().start_count<PipelineState>();
+
+
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		std::vector<D3D12_INPUT_ELEMENT_DESC> elements;
 
@@ -92,7 +48,7 @@ namespace DX12
 
 		psoDesc.InputLayout.NumElements = static_cast<UINT>(elements.size());
 		psoDesc.InputLayout.pInputElementDescs = elements.data();
-	
+
 		if (desc.root_signature)
 			psoDesc.pRootSignature = desc.root_signature->get_native().Get();
 
@@ -105,22 +61,22 @@ namespace DX12
 		if (desc.pixel)
 		{
 			psoDesc.PS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.pixel->get_blob().data())), static_cast<UINT>(desc.pixel->get_blob().size()) };
-		slots.merge(desc.pixel->slots_usage);
-	 }
+			slots.merge(desc.pixel->slots_usage);
+		}
 		if (desc.geometry)
 		{
 			psoDesc.GS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.geometry->get_blob().data())), static_cast<UINT>(desc.geometry->get_blob().size()) };
-		slots.merge(desc.geometry->slots_usage);
-}
+			slots.merge(desc.geometry->slots_usage);
+		}
 		if (desc.domain)
 		{
 			psoDesc.DS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.domain->get_blob().data())), static_cast<UINT>(desc.domain->get_blob().size()) };
-		slots.merge(desc.domain->slots_usage);
+			slots.merge(desc.domain->slots_usage);
 		}
 		if (desc.hull)
 		{
 			psoDesc.HS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.hull->get_blob().data())), static_cast<UINT>(desc.hull->get_blob().size()) };
-		slots.merge(desc.hull->slots_usage);
+			slots.merge(desc.hull->slots_usage);
 		}
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 
@@ -175,7 +131,7 @@ namespace DX12
 		}
 		else
 		{
-		//	assert(false);
+			//	assert(false);
 		}
 
 		//m_pipelineState = PipelineLibrary::get().create(desc.name, psoDesc);
@@ -188,7 +144,7 @@ namespace DX12
 			TEST(Device::get().get_native_device()->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 		}
 
-	
+
 
 		cache.clear();
 
@@ -198,39 +154,41 @@ namespace DX12
 		debuggable |= desc.geometry && desc.geometry->depends_on("DebugInfo");
 		debuggable |= desc.domain && desc.domain->depends_on("DebugInfo");
 		debuggable |= desc.hull && desc.hull->depends_on("DebugInfo");
+	
 
 		name = desc.name;
 	}
 
-	 PipelineState::ptr PipelineState::create(PipelineStateDesc& desc, std::string name)
-	 {
-		 return PipelineStateCache::get_cache(desc, name);
-	 }
+	PipelineState::ptr PipelineState::create(PipelineStateDesc& desc, std::string name)
+	{
+		return PipelineStateCache::get_cache(desc, name);
+	}
 	ComputePipelineState::ptr ComputePipelineState::create(ComputePipelineStateDesc& desc, std::string name)
-	 {
-		 return PipelineStateCache::get_cache(desc, name);
-	 }
+	{
+		return PipelineStateCache::get_cache(desc, name);
+	}
 
-	 ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
+	ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
 	{
 		return tracked_info->m_pipelineState;
 	}
 
-	 ComPtr<ID3D12StateObject> PipelineStateBase::get_native_state()
-	 {
-		 return tracked_info->m_StateObject;
-	 }
-	 PipelineState::PipelineState(PipelineStateDesc _desc, std::string cache) : desc(_desc)
+	ComPtr<ID3D12StateObject> PipelineStateBase::get_native_state()
 	{
-		 this->cache = cache;
+		return tracked_info->m_StateObject;
+	}
+	PipelineState::PipelineState(PipelineStateDesc _desc, std::string cache) : desc(_desc)
+	{
+		this->cache = cache;
 		on_change();
 		register_shader(desc.pixel);
 		register_shader(desc.vertex);
 		register_shader(desc.hull);
 		register_shader(desc.domain);
 		register_shader(desc.geometry);
+
 	}
-	 PipelineState::~PipelineState()
+	PipelineState::~PipelineState()
 	{
 		unregister_shader(desc.pixel);
 		unregister_shader(desc.vertex);
@@ -238,27 +196,29 @@ namespace DX12
 		unregister_shader(desc.domain);
 		unregister_shader(desc.geometry);
 
+	
+
 	}
-	 PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc & desc, std::string name )
+	PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)
 	{
 
-		 desc.name = name;
-	
+		desc.name = name;
+
 		//	 return  PipelineState::ptr(new PipelineState(desc));
 		return Singleton<PipelineStateCache>::get().cache[desc];
 	}
 
-	 ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
-	 {
-		 desc.name = name;
-		 return Singleton<PipelineStateCache>::get().compute_cache[desc];
-	 }
+	ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
+	{
+		desc.name = name;
+		return Singleton<PipelineStateCache>::get().compute_cache[desc];
+	}
 
-	 void ComputePipelineState::on_change()
+	void ComputePipelineState::on_change()
 	{
 
-	  root_signature = desc.root_signature;
-		
+		root_signature = desc.root_signature;
+
 		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 
 		if (desc.root_signature)
@@ -275,12 +235,12 @@ namespace DX12
 		}
 		else
 		{
-		//	assert(false);
+			//	assert(false);
 		}
 
 		HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 
-		if (hr!=S_OK)
+		if (hr != S_OK)
 		{
 			psoDesc.CachedPSO = {};
 			hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
@@ -288,16 +248,16 @@ namespace DX12
 
 
 		debuggable = desc.shader && desc.shader->depends_on("DebugInfo");
-		
+
 		name = desc.name;
 
-	//	TEST(hr);
+		//	TEST(hr);
 
 		cache.clear();
 
 	}
 
-	 ComputePipelineState::~ComputePipelineState()
+	ComputePipelineState::~ComputePipelineState()
 	{
 		unregister_shader(desc.shader);
 

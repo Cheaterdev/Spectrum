@@ -195,6 +195,7 @@ namespace DX12
 		geometry_shader::ptr geometry;
 		hull_shader::ptr hull;
 		domain_shader::ptr domain;
+
 		D3D12_PRIMITIVE_TOPOLOGY_TYPE topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
 		BlendState blend;
@@ -215,11 +216,12 @@ namespace DX12
 			if (geometry && geometry->get_header().file_name.empty()) return true;
 			if (hull && hull->get_header().file_name.empty()) return true;
 			if (domain && domain->get_header().file_name.empty()) return true;
+
 			return false;
 		}
 
-		bool operator==(const PipelineStateDesc& r) const;
-		std::strong_ordering  operator<=>(const  PipelineStateDesc& r)  const ;
+		bool operator==(const PipelineStateDesc& r) const = default;
+		std::strong_ordering  operator<=>(const  PipelineStateDesc& r)  const = default;
 	private: 
 		friend class boost::serialization::access;
 		template<class Archive>
@@ -228,24 +230,42 @@ namespace DX12
 
 
 
-	template<class K0, class K1, class...Ks>
-	struct my_map;
-	template<class K0, class K1, class...Ks>
-	using my_map_t = typename my_map<K0, K1, Ks...>::type;
-
-
-	template<class K0, class K1>
-	struct my_map<K0, K1> { using type = std::map<K0, K1>; };
-
-	template<class K0, class K1, class K2, class...Ks>
-	struct my_map<K0, K1, K2, Ks...>
+	struct GraphicsPipelineStateDesc
 	{
-		using type2 = my_map_t<K1, K2, Ks...>;
-		using type = std::map<K0, type2>;
+		std::string name;
+		RootSignature::ptr root_signature;
+		mesh_shader::ptr mesh;
+		amplification_shader::ptr amplification;
+
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+		BlendState blend;
+		RasterizerState rasterizer;
+		RTVState rtv;
+		GraphicsPipelineStateDesc()
+		{
+			rtv.rtv_formats.emplace_back(DXGI_FORMAT_R8G8B8A8_UNORM);
+			rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_BACK;
+			rasterizer.fill_mode = D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID;
+		}
+
+		bool is_memory()
+		{
+
+			if (mesh && mesh->get_header().file_name.empty()) return true;
+			if (amplification && amplification->get_header().file_name.empty()) return true;
+
+			return false;
+		}
+
+		bool operator==(const GraphicsPipelineStateDesc& r) const = default;
+		std::strong_ordering  operator<=>(const  GraphicsPipelineStateDesc& r)  const = default;
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int);
 	};
-
-
-
+	
 	class PipelineLibrary :public Singleton<PipelineLibrary>
 	{
 		ComPtr<ID3D12PipelineLibrary> m_pipelineLibrary;
@@ -379,8 +399,6 @@ namespace DX12
 
 		virtual ~PipelineState();
 
-
-	
 	private:
 		friend class boost::serialization::access;
 		template<class Archive>
@@ -404,16 +422,49 @@ namespace DX12
 		}
 	};
 
-	template<class T>
-	class PipelineStateTyped :public PipelineState
+
+
+	/*
+	class GraphicsPipelineState : public PipelineStateBase
 	{
+		friend class PipelineStateCache;
+
+		GraphicsPipelineState(PipelineStateDesc _desc, std::string cache);
+
 	public:
-		using PipelineState::PipelineState;
-		using ptr = s_ptr<PipelineStateTyped<T>>;
+		GraphicsPipelineState() = default;
+		using ptr = s_ptr<GraphicsPipelineState>;
+		const  PipelineStateDesc desc;
+		void on_change() override;
 
+
+		static ptr create(PipelineStateDesc& desc, std::string name);
+
+		virtual ~PipelineState();
+
+	private:
+		friend class boost::serialization::access;
+		template<class Archive>
+		void serialize(Archive& ar, const unsigned int)
+		{
+			if constexpr (Archive::is_saving::value)
+			{
+				ComPtr<ID3DBlob> blob;
+				tracked_info->m_pipelineState->GetCachedBlob(&blob);
+				std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
+
+
+				ar& NVP(str);
+			}
+
+			else
+			{
+				std::string str;
+				ar& NVP(str);
+			}
+		}
 	};
-
-
+	*/
 
 	class ComputePipelineState;
 
@@ -459,7 +510,6 @@ namespace DX12
 
 	class PipelineStateCache : public Singleton<PipelineStateCache>
 	{
-		//my_map<RootSignature::ptr, vertex_shader::ptr, pixel_shader::ptr, geometry_shader::ptr, hull_shader::ptr, domain_shader::ptr, DXGI_FORMAT, PipelineState::ptr>::type cache;
 		Cache<PipelineStateDesc, PipelineState::ptr> cache;
 		Cache<ComputePipelineStateDesc, ComputePipelineState::ptr> compute_cache;
 

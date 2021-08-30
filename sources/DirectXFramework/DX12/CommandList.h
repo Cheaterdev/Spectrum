@@ -6,7 +6,6 @@ namespace DX12
 {
 
 	class PipelineState;
-	template<class T> class  PipelineStateTyped;
 	class ComputePipelineState;
 	class PipelineStateBase;
 	class StateObject;

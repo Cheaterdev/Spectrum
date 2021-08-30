@@ -1,1 +1,1 @@
-Sharpmake\tmp\bin\debug\sharpmake.application\Sharpmake.Application.exe /sources(@"main.sharpmake.cs")
+Sharpmake\tmp\bin\debug\Sharpmake.Application.exe /sources(@"main.sharpmake.cs")

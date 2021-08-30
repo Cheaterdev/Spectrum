@@ -16,7 +16,6 @@ namespace DX12
 		UINT64 m_fenceValue;
 
 		SingleThreadExecutor executor;
-	//	std::thread  queue_thread;;
 		std::function<void(CommandList*)> del_func;
 		std::function<void(TransitionCommandList*)> del_transition;
 
@@ -24,11 +23,10 @@ namespace DX12
 
 		std::queue<std::shared_ptr<CommandList>> lists;
 		std::mutex list_mutex;
-	//	std::queue<std::function<void()>> tasks;
 
 		std::mutex queue_mutex;
 		std::mutex states_mutex;
-		//std::condition_variable condition;
+
 
 		bool stop = false;
 	
@@ -37,17 +35,8 @@ namespace DX12
 		FenceWaiter last_executed_fence;
 
 		FenceWaiter execute_internal(CommandList* list);
-	//	std::mutex tasks_mutex;
-
-
-	//	std::thread  send_queue_thread;
-	//	std::condition_variable send_condition;
-	//	std::queue<std::function<void()>> send_tasks;
-	///	std::mutex send_queue_mutex;
 		FenceWaiter signal_internal();
 		void gpu_wait_internal(FenceWaiter waiter);
-
-
 		void signal_and_wait_internal();
 		FenceWaiter run_transition_list(FenceWaiter after, std::shared_ptr<TransitionCommandList>& list);
 	public:
