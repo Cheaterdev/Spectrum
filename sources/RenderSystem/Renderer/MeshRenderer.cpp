@@ -388,7 +388,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(Underlying<command>), get_Signature(Layouts::DefaultLayout));
+	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout));
 
 	UINT max_meshes = 1024 * 1024;
 
@@ -450,7 +450,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 
 		{
 
-			boxes_command = Render::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(Underlying<command>));
+			boxes_command = Render::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(Underlying<Table::CommandData>));
 
 		}
 	}
@@ -458,7 +458,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 
 	{
 		dispatch_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<command>));
+		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<Table::CommandData>));
 	}
 
 	{

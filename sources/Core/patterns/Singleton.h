@@ -36,14 +36,15 @@ class Singleton
 
         virtual  ~Singleton();
     public:
+
         template<typename G = T>
-        static T * create(typename std::enable_if<std::is_abstract<G>::value >::type* = 0)
+        static T * create() requires(std::is_abstract_v<G>)
         {
             return instance.get();
         }
 
         template<typename G = T>
-        static T * create(typename std::enable_if < !std::is_abstract<G>::value >::type* = 0)
+        static T * create() requires(!std::is_abstract_v<G>)
         {
             if (ptr) return ptr;
 

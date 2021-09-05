@@ -40,7 +40,6 @@ if (FAILED(hr)) \
 
 
 #include "D3D\Shaders.h"
-#include "D3D\ShaderReflection.h"
 
 
 #include "Resource\TextureData\Header.h"
@@ -79,7 +78,6 @@ namespace DX12
 #include "DX12/Device12.h"
 
 
-#include "D3D/ShaderReflection.h"
 
 
 #include "DX12/Texture.h"

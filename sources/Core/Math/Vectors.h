@@ -7,44 +7,48 @@
 template<typename T>
 class Vector : public T
 {
-
-	template<int i, class D,  class ...Args>
-	void set_internal(D d, Args ...args)
+public:
+	using T::values;
+	using Format = typename T::Format;
+	using T::N;
+	using raw = typename T;
+private:
+	template<int i, class D, class ...Args>
+	void set_internal(D d, Args ...args) requires (std::is_compound_v<D>)
 	{
-		if constexpr (std::is_compound_v<D>) {
-			constexpr int size = std::min(T::N, D::N);
-			for (int t = 0; t < size; t++)
-				T::values[i + t] = static_cast<typename T::Format>(d.values[t]);
-			set_internal<i + size>( args...);
-		}
-		else {
-			T::values[i] = static_cast<typename T::Format>(d);
-			set_internal<i + 1>( args...);
-		}
+		constexpr int size = std::min(N, D::N);
+		for (int t = 0; t < size; t++)
+			values[i + t] = static_cast<Format>(d.values[t]);
 
+		set_internal<i + size>(args...);
 	}
+
+	template<int i, class D, class ...Args>
+	void set_internal(D d, Args ...args)requires (!std::is_compound_v<D>)
+	{
+		values[i] = static_cast<Format>(d);
+		set_internal<i + 1>(args...);
+	}
+
+
 	template<int i>
 	void set_internal()
 	{
+		//static_assert(i == T::N);
 	}
-
-	
 
 public:
-	using T::values;
-	using T::Format;
-	using T::N;
-	using raw = typename T;
-	template<typename = typename std::enable_if_t<T::GENERATE_CONSTRUCTOR>>
-	Vector()
+
+	Vector() requires(T::GENERATE_CONSTRUCTOR)
 	{
-		memset(T::values.data(), 0, sizeof(T::Format)*T::N);
+		memset(T::values.data(), 0, sizeof(Format) * T::N);
 	}
 
-	template< typename = typename std::enable_if_t<T::GENERATE_CONSTRUCTOR>, class ...Args>
-	Vector(Args ...args)
+
+	template<class ...Args>
+	Vector(Args ...args) requires(T::GENERATE_CONSTRUCTOR)
 	{
-		set( args...);
+		set(args...);
 	}
 
 	template<class ...Args>
@@ -53,22 +57,30 @@ public:
 		set_internal<0>(args...);
 	}
 
-	typename T::Format* data()
+	template<class V>
+	void set(V v) requires (!std::is_compound_v<V>)
+	{
+		for (int t = 0; t < N; t++)
+			T::values[t] = static_cast<Format>(v);
+	}
+
+	Format* data()
 	{
 		return this->values.data();
 	}
-	typename T::Format& operator[](unsigned int i) { return this->values[i]; }
-	typename const T::Format& operator[](unsigned int i) const { return this->values[i]; }
 
-	template<class T2, typename = typename std::enable_if_t<N == T2::N>>
-	Vector& operator=(const Vector<T2>& v)
+	Format& operator[](unsigned int i) { return this->values[i]; }
+	const Format& operator[](unsigned int i) const { return this->values[i]; }
+
+	template<class T2>
+	Vector& operator=(const Vector<T2>& v) requires(N == T2::N)
 	{
 		for (int i = 0; i < T::N; ++i)
-			values[i] = static_cast<typename T::Format>(v[i]);
+			values[i] = static_cast<Format>(v[i]);
 		return *this;
 	}
 
-	FORCEINLINE Vector operator+(const Vector& v) const
+	inline Vector operator+(const Vector& v) const
 	{
 		Vector result;
 
@@ -79,7 +91,7 @@ public:
 	}
 
 	template<class T2>
-	FORCEINLINE Vector operator-(const Vector<T2>& v) const
+	inline Vector operator-(const Vector<T2>& v) const
 	{
 		Vector result(*this);
 
@@ -89,7 +101,7 @@ public:
 		return result;
 	}
 
-	FORCEINLINE Vector operator-() const
+	inline Vector operator-() const
 	{
 		Vector<T> result;
 
@@ -99,7 +111,7 @@ public:
 		return result;
 	}
 
-	FORCEINLINE Vector& operator+=(const Vector& v)
+	inline Vector& operator+=(const Vector& v)
 	{
 		for (int i = 0; i < T::N; ++i)
 			values[i] += v[i];
@@ -107,7 +119,7 @@ public:
 		return *this;
 	}
 
-	FORCEINLINE Vector& operator-=(const Vector& v)
+	inline Vector& operator-=(const Vector& v)
 	{
 		for (int i = 0; i < T::N; ++i)
 			values[i] -= v[i];
@@ -115,7 +127,7 @@ public:
 		return *this;
 	}
 
-	FORCEINLINE Vector& operator*=(typename const T::Format& n)
+	inline Vector& operator*=(const Format& n)
 	{
 		for (int i = 0; i < T::N; ++i)
 			values[i] *= n;
@@ -123,7 +135,7 @@ public:
 		return *this;
 	}
 
-	FORCEINLINE Vector& operator/=(typename const T::Format& n)
+	inline Vector& operator/=(const Format& n)
 	{
 		for (int i = 0; i < T::N; ++i)
 			values[i] /= n;
@@ -131,12 +143,12 @@ public:
 		return *this;
 	}
 
-	FORCEINLINE typename T::Format length_squared() const
+	inline Format length_squared() const
 	{
 		return dot(*this, *this);
 	}
 
-	FORCEINLINE decltype(sqrt(typename T::Format())) length() const
+	inline auto length() const
 	{
 		return sqrt(length_squared());
 	}
@@ -158,12 +170,12 @@ public:
 		return res.normalize();
 	}
 
-	typename T::Format max_element()
+	Format max_element()
 	{
 		return *std::max_element(values.begin(), values.end());
 	}
 
-	typename T::Format sum()
+	Format sum()
 	{
 		return std::accumulate(values.begin(), values.end(), 0);
 	}
@@ -196,7 +208,7 @@ public:
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
 		for (int i = 0; i < N; ++i)
-			result[i] = values[i]>v2[i];
+			result[i] = values[i] > v2[i];
 
 		return result;
 	}
@@ -246,9 +258,9 @@ public:
 	}
 
 	template<typename T>
-	static typename T::Format dot(const Vector<T>& a, const Vector<T>& b)
+	static Format dot(const Vector<T>& a, const Vector<T>& b)
 	{
-		typename T::Format r = 0.0;
+		Format r = 0.0;
 
 		for (int i = 0; i < T::N; i++)
 			r += a[i] * b[i];
@@ -257,15 +269,8 @@ public:
 	}
 
 
-	static	Vector<T> cross(Vector<T> v1, Vector<T> v2)
+	static	Vector<T> cross(Vector<T> v1, Vector<T> v2) requires(T::N == 3)
 	{
-		static_assert(T::N == 3 || T::N == 4, "cross function cant be used here");
-		// x  y  z
-		// ax ay az
-		// bx by bz
-		// x = ay*bz - by*az
-		// y = -(ax*bz - az*bx) = az*bx - ax*bz
-		// z = ax*by - bx*ay
 		return Vector<T>(v1.y * v2.z - v2.y * v1.z, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v2.x * v1.y);
 	}
 
@@ -292,17 +297,17 @@ bool operator!=(const Vector<T>& a, const Vector<T>& b)
 	return false;
 }
 
-template<typename T, typename T2, typename std::enable_if < std::is_scalar <T2>::value >::type * = nullptr >
-Vector<T> operator*(T2 n, Vector<T> v)
+template<typename T, typename T2>
+Vector<T> operator*(T2 n, Vector<T> v) requires(std::is_scalar_v<T2>)
 {
 	for (int i = 0; i < T::N; ++i)
-		v[i] = static_cast<typename T::Format>(n * v[i]);
+		v[i] = static_cast<Vector<T>::Format>(n * v[i]);
 
 	return v;
 }
 
 template<typename T, typename T2>
-auto operator*(const Vector<T> &a, const Vector<T2> &b)
+auto operator*(const Vector<T>& a, const Vector<T2>& b)
 {
 	Vector<typename T::CONSTUCTIBLE_TYPE> v;
 
@@ -313,7 +318,7 @@ auto operator*(const Vector<T> &a, const Vector<T2> &b)
 }
 
 template<typename T, typename T2>
-auto operator/(const Vector<T> &a,const Vector<T2> &b)
+auto operator/(const Vector<T>& a, const Vector<T2>& b)
 {
 	Vector<typename T::CONSTUCTIBLE_TYPE> v;
 
@@ -323,16 +328,16 @@ auto operator/(const Vector<T> &a,const Vector<T2> &b)
 	return v;
 }
 
-template<typename T, typename T2, typename std::enable_if < std::is_scalar <T2>::value >::type * = nullptr >
-Vector<T> operator*(Vector<T> v, T2 n)
+template<typename T, typename T2>
+Vector<T> operator*(Vector<T> v, T2 n) requires(std::is_scalar_v<T2>)
 {
 	for (int i = 0; i < T::N; ++i)
-		v[i] = static_cast<typename T::Format>(n *v[i]);
+		v[i] = static_cast<Vector<T>::Format>(n * v[i]);
 	return v;
 }
 
-template<typename T, typename T2, typename std::enable_if < std::is_scalar <T2>::value >::type * = nullptr >
-Vector<T> operator/(T2 n, Vector<T> v)
+template<typename T, typename T2>
+Vector<T> operator/(T2 n, Vector<T> v)  requires(std::is_scalar_v<T2>)
 {
 	for (int i = 0; i < T::N; ++i)
 		v[i] = n / v[i];
@@ -340,11 +345,11 @@ Vector<T> operator/(T2 n, Vector<T> v)
 	return v;
 }
 
-template<typename T, typename T2, typename std::enable_if < std::is_scalar <T2>::value >::type * = nullptr >
-Vector<T> operator/(Vector<T> v, T2 n)
+template<typename T, typename T2>
+Vector<T> operator/(Vector<T> v, T2 n) requires(std::is_scalar_v<T2>)
 {
 	for (int i = 0; i < T::N; ++i)
-		v[i] = static_cast<typename T::Format>(static_cast<T2>(v[i])/n);
+		v[i] = static_cast<T::Format>(static_cast<T2>(v[i]) / n);
 
 	return v;
 }
@@ -390,7 +395,7 @@ struct vec2_t
 	typedef T Format;
 	static const int N = 2;
 	static const bool GENERATE_CONSTRUCTOR = CONSTRUCTIBLE;
-	using CONSTUCTIBLE_TYPE  = vec2_t<T>;
+	using CONSTUCTIBLE_TYPE = vec2_t<T>;
 
 	union
 	{
@@ -403,8 +408,8 @@ struct vec2_t
 			T x, y;
 		};
 	};
-	template<typename = typename std::enable_if_t<GENERATE_CONSTRUCTOR>>
-	vec2_t() {};
+
+	vec2_t() requires(GENERATE_CONSTRUCTOR) {};
 };
 
 template<typename T, bool CONSTRUCTIBLE = true >
@@ -426,7 +431,7 @@ struct vec3_t
 			T x;
 			union
 			{
-				Vector<vec2_t<T,false>> yz;
+				Vector<vec2_t<T, false>> yz;
 				struct
 				{
 					T y, z;
@@ -438,8 +443,9 @@ struct vec3_t
 			Vector<vec2_t<T, false>> xy;
 		};
 	};
-	template<typename = typename std::enable_if_t<GENERATE_CONSTRUCTOR>>
-	vec3_t() {};
+
+
+	vec3_t() requires(GENERATE_CONSTRUCTOR) {}
 };
 
 template<typename T, bool CONSTRUCTIBLE = true >
@@ -482,30 +488,8 @@ struct vec4_t
 			Vector<vec2_t<T, false>> zw;
 		};
 	};
-	template<typename = typename std::enable_if_t<GENERATE_CONSTRUCTOR>>
-	vec4_t() {};
 
-};
-
-
-template<typename T, int _N, bool CONSTRUCTIBLE = true >
-struct vecN_t
-{
-	typedef T Format;
-	static const int N = _N;
-	static const bool GENERATE_CONSTRUCTOR = CONSTRUCTIBLE;
-	using CONSTUCTIBLE_TYPE = vecN_t<T, _N>;
-
-	union
-	{
-		struct
-		{
-			std::array<T, _N>  values;
-		};
-
-	};
-	template<typename = typename std::enable_if_t<GENERATE_CONSTRUCTOR>>
-	vecN_t() {};
+	vec4_t() requires(GENERATE_CONSTRUCTOR) {}
 };
 
 template<typename T, bool CONSTRUCTIBLE = true >
@@ -544,8 +528,7 @@ struct box_t
 		};
 	};
 
-	template<typename = typename std::enable_if_t<GENERATE_CONSTRUCTOR>>
-	box_t() {};
+	box_t() requires(GENERATE_CONSTRUCTOR) {}
 };
 
 template<typename T, bool CONSTRUCTIBLE = true >
@@ -577,8 +560,7 @@ struct rect_t
 		};
 	};
 
-	template<typename = typename std::enable_if_t<GENERATE_CONSTRUCTOR>>
-	rect_t() {};
+	rect_t() requires(GENERATE_CONSTRUCTOR) {}
 };
 
 template<typename T, bool CONSTRUCTIBLE = true >
@@ -608,8 +590,8 @@ struct margin_t
 			Vector<vec2_t<T, false>> right_bottom;
 		};
 	};
-	template<typename = typename std::enable_if_t<GENERATE_CONSTRUCTOR>>
-	margin_t() {};
+
+	margin_t() requires(GENERATE_CONSTRUCTOR) {}
 };
 
 template<typename T, int Count, bool CONSTRUCTIBLE = true >
@@ -621,10 +603,9 @@ struct vector_data_t
 	static const bool GENERATE_CONSTRUCTOR = CONSTRUCTIBLE;
 	using CONSTUCTIBLE_TYPE = vector_data_t<T, Count >;
 
-
 	std::array<T, Count> values;
 
-	vector_data_t() {};
+	vector_data_t() requires(GENERATE_CONSTRUCTOR) {}
 };
 
 
@@ -732,7 +713,7 @@ public:
 
 		data.resize(sum, v);
 	}
-		
+
 	void fill(T v)
 	{
 		std::fill(data.begin(), data.end(), v);

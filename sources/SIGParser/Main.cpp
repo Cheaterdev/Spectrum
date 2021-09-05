@@ -522,6 +522,8 @@ void generate_nobind_table(Table& table)
 	}
 
 	stream << table.hlsl << std::endl;
+
+
 	stream << "};" << std::endl;
 
 
@@ -609,6 +611,28 @@ void generate_cpp_table(const Table& table)
 
 			}
 
+			if (type == ValueType::CB)
+			if (table.find_option("serialize"))
+			{
+
+				stream << std::format(
+R"(private:
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int))") << std::endl;
+				stream << "{" << std::endl;
+
+				for (auto& v : table.values)
+				{
+					if (v.value_type != ValueType::CB) continue;
+
+					stream << std::format(
+						R"(     ar& NVP({});)", v.name) << std::endl;
+
+				}
+				stream << "}" << std::endl;
+			}
+
 
 			stream.pop();
 		}
@@ -630,6 +654,7 @@ void generate_cpp_table(const Table& table)
 			declare_func(ValueType::SRV);
 			declare_func(ValueType::UAV);
 			declare_func(ValueType::SMP);
+
 
 			if (table.bindless_table)
 			{

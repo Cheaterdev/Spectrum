@@ -10,6 +10,16 @@ namespace Table
 			float3 normal;
 			float2 tc;
 			float4 tangent;
+			private:
+	friend class boost::serialization::access;
+	template<class Archive>
+	void serialize(Archive & ar, const unsigned int)
+			{
+			     ar& NVP(pos);
+			     ar& NVP(normal);
+			     ar& NVP(tc);
+			     ar& NVP(tangent);
+			}
 		} &cb;
 		float3& GetPos() { return cb.pos; }
 		float3& GetNormal() { return cb.normal; }

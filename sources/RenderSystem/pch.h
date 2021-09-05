@@ -133,6 +133,8 @@ struct closesthit_identifier
 
 
 #include "Lighting/BRDF.h"
+
+#include "Mesh/MeshletGeneration.h"
 namespace EngineAssets
 {
 	extern EngineAsset<MeshAsset> material_tester;

@@ -406,7 +406,7 @@ namespace DX12
 			push(v != nullptr);
 
 			if (v)
-				for (int i = 0; i < n; i++)
+				for (UINT i = 0; i < n; i++)
 				{
 
 					push(v[i]);
@@ -420,7 +420,7 @@ namespace DX12
 			push(v != nullptr);
 
 			if (v)
-				for (int i = 0; i < N; i++)
+				for (UINT i = 0; i < N; i++)
 				{
 
 					push(v[i]);
@@ -567,7 +567,7 @@ namespace DX12
 				}
 				else 	if (pDesc->Inputs.DescsLayout == D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS)
 				{
-					for (int i = 0; i < pDesc->Inputs.NumDescs; i++)
+					for (UINT i = 0; i < pDesc->Inputs.NumDescs; i++)
 					{
 						push(*pDesc->Inputs.ppGeometryDescs[i]);
 					}

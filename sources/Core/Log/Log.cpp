@@ -75,7 +75,7 @@ Log& LogBlock::operator<<(const Log::endline&)
     return log << *this;
 }
 
-LogBlock& LogBlock::operator<<(char smth)
+LogBlock& LogBlock::operator<<(string_view smth)
 {
     if (need_logging())
         *s << smth;
@@ -83,44 +83,12 @@ LogBlock& LogBlock::operator<<(char smth)
     return (*this);
 }
 
-LogBlock& LogBlock::operator<<(char* smth)
-{
-    if (need_logging())
-        *s << smth;
-
-    return (*this);
-}
-
-LogBlock& LogBlock::operator<<(const char* smth)
-{
-    if (need_logging())
-        *s << smth;
-
-    return *this;
-}
-/*
-LogBlock& LogBlock::operator<<(wchar_t smth)
-{
-    if (need_logging())
-        *s << smth;
-
-    return (*this);
-}*/
-
-LogBlock& LogBlock::operator<<(wchar_t* smth)
+LogBlock& LogBlock::operator<<(wstring_view smth)
 {
     if (need_logging())
         *s << convert(smth);
 
     return (*this);
-}
-
-LogBlock& LogBlock::operator<<(const wchar_t* smth)
-{
-    if (need_logging())
-        *s << convert(smth);
-
-    return *this;
 }
 
 LogBlock::LogBlock(Log& output, log_level_internal level) : log(output)

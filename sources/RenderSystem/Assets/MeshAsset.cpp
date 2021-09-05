@@ -318,7 +318,7 @@ void MeshAssetInstance::on_remove()
 			i++;
 		}
 		meshpart_handle.Free();
-		meshpart_handle = TypedHandle<mesh_info_part::CB>();
+		meshpart_handle = TypedHandle<Table::MeshCommandData::CB>();
 	}
 }
 

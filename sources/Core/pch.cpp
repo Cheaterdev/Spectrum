@@ -6,7 +6,7 @@ void com_deleter(IUnknown* pComResource)
         pComResource->Release();
 }
 
-std::wstring convert(const std::string& s)
+std::wstring convert(std::string_view s)
 {
     std::wstring w;
     w.resize(s.size());
@@ -14,7 +14,7 @@ std::wstring convert(const std::string& s)
     return w;
 }
 
-std::string convert(const std::wstring& s)
+std::string convert(std::wstring_view s)
 {
     std::string w;
     w.resize(s.size());

@@ -622,8 +622,7 @@ namespace DX12
 			return max_count;
 		}
 		template<class T>
-		HandleTable create_table(T _count,
-			typename std::enable_if<std::is_scalar<T>::value>::type* = 0)
+		HandleTable create_table(T _count) requires(std::is_scalar_v<T>)
 		{
 
 			UINT count = static_cast<UINT>(_count);

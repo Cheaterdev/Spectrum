@@ -16,8 +16,11 @@ struct LogLevel
 template <class T>
 struct need_log_serialize
 {
-    static const bool value = true;
+    static const bool value = !std::is_scalar_v<T>;
 };
+
+template <class T>
+concept NonString = !std::is_convertible_v<T, std::string_view> && !std::is_convertible_v<T, std::wstring_view>;
 
 static auto start_time = std::chrono::high_resolution_clock::now();
 
@@ -102,21 +105,13 @@ class LogBlock
             return *this;
         }
 
-        LogBlock& operator<<(const char* smth);
+        LogBlock& operator<<(std::string_view);
 
-        LogBlock& operator<<(char* smth);
+        LogBlock& operator<<(std::wstring_view);
 
-        LogBlock& operator<<(char smth);
 
-        LogBlock& operator<<(const wchar_t* smth);
-
-        LogBlock& operator<<(wchar_t* smth);
-
-        LogBlock& operator<<(wchar_t smth);
-
-        template < class T,
-                   typename std::enable_if < std::is_scalar <T>::value || !need_log_serialize<T>::value >::type* = nullptr >
-        LogBlock & operator<<(T smth)
+        template < NonString T>
+        LogBlock & operator<<(T smth) requires (!need_log_serialize<T>::value )
         {
             if (need_logging())
                 *s << smth;
@@ -124,9 +119,8 @@ class LogBlock
             return *this;
         }
 
-        template < class T,
-                   typename std::enable_if < !(std::is_scalar <T>::value || !need_log_serialize<T>::value) >::type* = nullptr >
-        LogBlock & operator<<(const T& smth)
+        template < NonString T>
+        LogBlock & operator<<(const T& smth) requires (need_log_serialize<T>::value)
         {
             if (need_logging())
             {
@@ -140,22 +134,7 @@ class LogBlock
         }
 
 
-
-        LogBlock& operator<<(const std::wstring& smth)
-        {
-            if (need_logging())
-            {
-                simple_log_archive oa(*s);
-                //	*s << "{ ";
-                oa << convert(smth);
-                //	*s << "} ";
-            }
-
-            return *this;
-        }
-
-
-        Log& operator<<(const Log::endline& smth);
+	Log& operator<<(const Log::endline& smth);
 
         std::string get_string() const;
 };

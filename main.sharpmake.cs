@@ -108,12 +108,6 @@ public class CustomTarget : ITarget
 				conf.Defines.Add("PROFILING");	
 			}
 			
-			
-		//	 conf.ReferencesByNuGetPackage.Add(
-        //        "Microsoft.Direct3D.D3D12", "1.4.9"
-        //    );
-			
-			
         }
         
      

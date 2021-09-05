@@ -1,4 +1,5 @@
 [nobind]
+[serialize]
 struct mesh_vertex_input
 {
     float3 pos;

@@ -1,7 +1,7 @@
 #include "pch.h"
 void camera::update(float2 offset )
 {
-	auto jitter_mat = mat4x4::translation({ offset, 0 });
+	auto jitter_mat = mat4x4::translation(vec3{ offset, 0 });
 	auto proj_jittered = proj_mat;// *jitter_mat;
 
 	vec3 _dir = target - position;// (0, 0, 1);

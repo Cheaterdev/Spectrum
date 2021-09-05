@@ -15,7 +15,7 @@ CFW1TextRenderer::CFW1TextRenderer() :
 	m_pGlyphProvider(NULL),
 	
 	m_currentFlags(0),
-	m_currentColor(0xff000000),
+	m_currentColor(1.0f),
 	
 	m_cachedGlyphMap(0),
 	m_pCachedGlyphMapFontFace(NULL),

@@ -139,7 +139,6 @@ private:
 
             MD5 hash;
 			MD5 blob_hash;
-            D3D::reflection reflection;
 
             //   DX11_ClassLinkage class_linkage;
             //   std::vector<ID3D11ClassInstance*>    class_instances;
@@ -267,7 +266,6 @@ private:
             void serialize(Archive& ar, const unsigned int)
             {
                 ar& NVP(blob);
-                ar& NVP(reflection);
                 ar& NVP(hash);
                 ar& NVP(slots_usage);
             	

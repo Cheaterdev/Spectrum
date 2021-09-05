@@ -27,7 +27,7 @@ quat::quat(vec4 v) : vec4(v.x, v.y, v.z, v.w)
 
 quat quat::operator*(const quat& q) const
 {
-	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = cross(v1, v2) + q.w*v1 + w*v2;
+	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = vec3::cross(v1, v2) + q.w*v1 + w*v2;
 	quat p(temp);
 	p.w = w*q.w - dot(v1, v2);
 	return p;
@@ -35,7 +35,7 @@ quat quat::operator*(const quat& q) const
 
 quat& quat::operator*=(const quat& q)
 {
-	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = cross(v1, v2) + q.w*v1 + w*v2;
+	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = vec3::cross(v1, v2) + q.w*v1 + w*v2;
 	x = temp.x;
 	y = temp.y;
 	z = temp.z;

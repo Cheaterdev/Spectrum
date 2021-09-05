@@ -302,7 +302,7 @@ namespace materials
             universal_material(MaterialGraph::ptr graph);
 			Slots::MaterialInfo::Compiled compiled_material_info;
 
-			TypedHandle<material_info_part::CB> info_handle;
+			TypedHandle<Table::MaterialCommandData::CB> info_handle;
     	
 			void update_rtx();
 			void test();

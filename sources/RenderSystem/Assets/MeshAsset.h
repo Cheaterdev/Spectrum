@@ -1,42 +1,4 @@
 class MeshAssetInstance;
-/*
-struct Vertex
-{
-    float3 pos;
-    float3 normal;
-    float2 tc;
-    float4 tangent;
-private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
-	{
-		ar& NVP(pos);
-		ar& NVP(normal);
-		ar& NVP(tc);
-		ar& NVP(tangent);
-	}
-
-};*/
-
-
-namespace boost
-{
-    namespace serialization
-    {
-
-        template<class Archive>
-        void serialize(Archive& archive, Table::mesh_vertex_input::CB& e, const unsigned int /*version*/)
-        {
-            archive& NVP(e.normal);
-			archive& NVP(e.pos);
-			archive& NVP(e.tangent);
-			archive& NVP(e.tc);
-
-        }
-
-    }
-}
 
 struct MeshInfo
 {
@@ -63,45 +25,16 @@ struct MeshInfo
             ar& NVP(index_count);
             ar& NVP(primitive);
             ar& NVP(node_index);
-	//		vertex_offset = 0;
         }
 };
-
-using command = Table::CommandData;
-using mesh_info_part = Table::MeshCommandData;
-using material_info_part = Table::MaterialCommandData;
-
-
-
-namespace boost
-{
-    namespace serialization
-    {
-
-        template<class Archive>
-        void serialize(Archive& ar, command& g, const unsigned int)
-        {
-            //	ar & g.DefaultValue;
-            ar& g.cb.material_cb;
-            ar& g.cb.mesh_cb;
-            ar& g.cb.draw_commands;
-        }
-
-    }
-
-}
-using box_command = DrawIndexedArguments;
 
 struct MeshNode
 {
         mat4x4 local_matrix;
         mat4x4 mesh_matrix;
-        using ptr = s_ptr<MeshNode>;
-        //std::vector<unsigned int> meshes;
 
         unsigned int mesh_id = -1;
         std::vector<MeshNode> childs;
-      //  unsigned int index;
 	
         virtual void iterate(std::function<bool(MeshNode*)> f)
         {
@@ -121,7 +54,6 @@ struct MeshNode
             ar& NVP(mesh_matrix);
             ar& NVP(mesh_id);
             ar& NVP(childs);
-//           ar& NVP(index);
         }
 };
 
@@ -136,7 +68,7 @@ public:
 
 
 };
-class MeshData: public loader<MeshData, std::string, AssetLoadingContext::ptr>//, public resource_manager_simple<MeshData, std::string>
+class MeshData: public loader<MeshData, std::string, AssetLoadingContext::ptr>
 {
     public:
         using ptr = std::shared_ptr<MeshData>;
@@ -145,8 +77,6 @@ class MeshData: public loader<MeshData, std::string, AssetLoadingContext::ptr>//
 
         std::vector<MeshInfo> meshes;
         std::vector<MaterialAsset::ptr> materials;
-
-        //std::vector<MeshNode*> nodes;
         MeshNode root_node;
         std::shared_ptr<Primitive> primitive;
 
@@ -199,10 +129,7 @@ class MeshAsset : public Asset
         virtual Asset_Type get_type();
         virtual void update_preview(Render::Texture::ptr preview);
         virtual AssetStorage::ptr  register_new(std::wstring name = L"", Guid g = Guid());
-        virtual void reload_resource() override
-        {
-            // mesh->reload_resource();
-        }
+        virtual void reload_resource() override { }
 
 
         void init_gpu();
@@ -212,10 +139,7 @@ class MeshAsset : public Asset
         template<class Archive>
         void serialize(Archive& ar, const unsigned int)
         {
-            // ar& NVP(local_transform);
             ar& NVP(primitive);
-            //   ar& NVP(meshes);
-            //   ar& NVP(materials);
             ar& NVP(vertex_buffer);
             ar& NVP(index_buffer);
             ar& NVP(meshes);
@@ -254,7 +178,7 @@ class MeshAssetInstance : public scene_object, public AssetHolder, public Render
         bool ras_inited = false;
 		//std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
      
-        TypedHandle<mesh_info_part::CB> meshpart_handle;
+        TypedHandle<Table::MeshCommandData::CB> meshpart_handle;
 		TypedHandle<Table::MeshInstance::CB> instance_handle;
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
@@ -391,11 +315,11 @@ public:
 
 
 
-class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public virtual_gpu_buffer<material_info_part>
+class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public virtual_gpu_buffer<Table::MaterialCommandData>
 {
-	static const size_t MAX_COMMANDS_SIZE = 1_gb/sizeof(material_info_part);
+	static const size_t MAX_COMMANDS_SIZE = 1_gb/sizeof(Table::MaterialCommandData);
 public:
-    universal_material_info_part_manager() :virtual_gpu_buffer<material_info_part>(MAX_COMMANDS_SIZE)
+    universal_material_info_part_manager() :virtual_gpu_buffer<Table::MaterialCommandData>(MAX_COMMANDS_SIZE)
 	{
 
 	}

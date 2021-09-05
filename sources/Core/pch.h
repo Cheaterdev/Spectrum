@@ -166,8 +166,8 @@ using serialization_iarchive = boost::archive::binary_iarchive;
 
 void com_deleter(IUnknown* pComResource);
 
-std::wstring convert(const std::string& str);
-std::string convert(const std::wstring& wstr);
+std::wstring convert(std::string_view str);
+std::string convert(std::wstring_view wstr);
 std::string to_lower(const std::string& str);
 std::wstring to_lower(const std::wstring& str);
 
