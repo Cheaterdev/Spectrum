@@ -235,6 +235,7 @@ class MeshAssetInstance : public scene_object, public AssetHolder, public Render
             Slots::MeshInfo mesh_info;
 
             DrawIndexedArguments draw_arguments;
+            DispatchMeshArguments dispatch_mesh_arguments;
             UINT material_id;
             MaterialAsset* material;
             UINT meshlet_offset;

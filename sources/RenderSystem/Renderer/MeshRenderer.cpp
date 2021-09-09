@@ -21,12 +21,12 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
 	default_pipeline.blend.independ_blend = false;
 	default_pipeline.blend.render_target[0].enabled = false;
-	default_pipeline.vertex = shader;
+	default_pipeline.mesh = mshader;
 	default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
 
 	if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 	{
-		default_pipeline.geometry = voxel_geometry_shader;
+		default_pipeline.mesh = mshader_voxel;
 		default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
 		default_pipeline.rtv.enable_depth = false;
 		default_pipeline.rasterizer.conservative = GetAsyncKeyState('B');
@@ -286,7 +286,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 
 
-	graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
+	graphics.set_index_buffer(IndexBufferView());// universal_index_manager::get().buffer->get_index_buffer_view(true));
 	while (end != pipelines.end())
 	{
 
@@ -383,12 +383,15 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 {
 	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
+	mshader = Render::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
+	mshader_voxel = Render::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
+
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DrawIndexedArguments>(sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout));
+	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout));
 
 	UINT max_meshes = 1024 * 1024;
 

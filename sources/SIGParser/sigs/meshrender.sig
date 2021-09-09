@@ -51,6 +51,12 @@ struct DrawIndexedArguments
 }
 
 [shader_only]
+struct DispatchMeshArguments
+{
+	uint3 counts;
+}
+
+[shader_only]
 struct DispatchArguments
 {
 	uint3 counts;
@@ -73,7 +79,7 @@ struct CommandData
 {
 	GPUAddress mesh_cb;
 	GPUAddress material_cb;
-	DrawIndexedArguments draw_commands;
+	DispatchMeshArguments draw_commands;
 }
 
 struct MeshCommandData
@@ -81,7 +87,7 @@ struct MeshCommandData
 	uint material_id;
 	uint node_offset;
 	GPUAddress mesh_cb;
-	DrawIndexedArguments draw_commands;
+	DispatchMeshArguments draw_commands;
 }
 
 struct MaterialCommandData

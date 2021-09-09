@@ -86,6 +86,7 @@ enum class SlotID: unsigned int
 	MeshInfo = "MeshInfo"_crc32 ,
 	Meshlet = "Meshlet"_crc32 ,
 	DrawIndexedArguments = "DrawIndexedArguments"_crc32 ,
+	DispatchMeshArguments = "DispatchMeshArguments"_crc32 ,
 	DispatchArguments = "DispatchArguments"_crc32 ,
 	GPUAddress = "GPUAddress"_crc32 ,
 	MeshInstance = "MeshInstance"_crc32 ,

@@ -292,7 +292,7 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 
 	meshpart[0].material_id = static_cast<materials::universal_material*>(rendering[i].material)->get_material_id();
 	meshpart[0].mesh_cb = info.compiled_mesh_info.cb;
-	meshpart[0].draw_commands = info.draw_arguments;
+	meshpart[0].draw_commands = info.dispatch_mesh_arguments;
 	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
 
 	meshpart_handle.write(i, meshpart);
@@ -348,7 +348,7 @@ void MeshAssetInstance::on_add(scene_object* parent)
 
 			meshpart[i].mesh_cb = info.compiled_mesh_info.cb;
 			meshpart[i].material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
-			meshpart[i].draw_commands = info.draw_arguments;
+			meshpart[i].draw_commands = info.dispatch_mesh_arguments;
 			meshpart[i].node_offset = info.mesh_info.GetNode_offset();
 
 
@@ -527,6 +527,12 @@ void MeshAssetInstance::update_nodes()
 			info.draw_arguments.BaseVertexLocation = 0;
 			info.draw_arguments.InstanceCount = 1;
 			info.draw_arguments.StartInstanceLocation = 0;
+
+
+			info.dispatch_mesh_arguments.ThreadGroupCountX = mesh_asset->meshes[m].meshlets.size();
+			info.dispatch_mesh_arguments.ThreadGroupCountY = 1;
+			info.dispatch_mesh_arguments.ThreadGroupCountZ = 1;
+
 
 			info.primitive = mesh_asset->meshes[m].primitive;
 

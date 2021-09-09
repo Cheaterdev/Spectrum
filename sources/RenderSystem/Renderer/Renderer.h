@@ -78,6 +78,8 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
       
         Render::vertex_shader::ptr shader;
         Render::geometry_shader::ptr voxel_geometry_shader;
+        Render::mesh_shader::ptr mshader;
+        Render::mesh_shader::ptr mshader_voxel;
 
         IndirectCommand indirect_command_signature;
 

@@ -50,7 +50,6 @@ vertex_output transform(matrix node_global_matrix, matrix node_global_matrix_pre
     return o;
 }
 
-
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void VS(
@@ -60,13 +59,7 @@ void VS(
     out vertices vertex_output verts[64]
 )
 {
-  //  uint vcount = meshInfo.GetVertex_offset();
- //   SetMeshOutputCounts(vcount,0);
-
     Meshlet m = sceneData.GetMeshlets()[meshInfo.GetMeshlet_offset() + gid];
-
-  //  DebugInfo info = CreateDebugInfo();
-  // info.Log(gid, uint4(meshInfo.GetMeshlet_offset(), gid,0, 0));
   
     SetMeshOutputCounts(m.GetVertexCount(),  m.GetPrimitiveCount());
  

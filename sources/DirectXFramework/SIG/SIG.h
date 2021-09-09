@@ -33,6 +33,30 @@ private:
 
 };
 
+class DispatchMeshArguments : public D3D12_DISPATCH_MESH_ARGUMENTS
+{
+public:
+	static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
+	{
+		D3D12_INDIRECT_ARGUMENT_DESC desc;
+		desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
+		return desc;
+	}
+
+private:
+	friend class boost::serialization::access;
+
+	template<class Archive>
+	void serialize(Archive& ar, const unsigned int)
+	{
+		ar& NVP(ThreadGroupCountX);
+		ar& NVP(ThreadGroupCountY);
+		ar& NVP(ThreadGroupCountZ);
+	}
+
+};
+
+
 class DispatchArguments : public D3D12_DISPATCH_ARGUMENTS
 {
 public:
