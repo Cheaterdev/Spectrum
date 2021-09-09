@@ -88,6 +88,8 @@ void materials::universal_material::update()
 		material_info.GetData() = pixel_data;
 		compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 		local_addr = compiled_material_info.cb;
+
+		local_addr_ids = compiled_material_info.offsets_cb;
 		{
 			auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
 			elem[0].pipeline_id = pipeline->get_id();
@@ -187,6 +189,8 @@ void materials::universal_material::compile()
 	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 
 	local_addr = compiled_material_info.cb;
+	local_addr_ids = compiled_material_info.offsets_cb;
+
 	if (!info_handle)
 	{
 		info_handle = universal_material_info_part_manager::get().allocate(1);

@@ -30,8 +30,8 @@ void DX12::PipelineStateDesc::serialize(Archive& ar, const unsigned int)
 		save_header(hull);
 		save_header(domain);
 
-		//	save_header(mesh);
-		//	save_header(amplification);
+			save_header(mesh);
+			save_header(amplification);
 
 	}
 	else
@@ -65,11 +65,11 @@ void DX12::PipelineStateDesc::serialize(Archive& ar, const unsigned int)
 		load_header(hull);
 		load_header(domain);
 
-		//	load_header(mesh);
-		//	load_header(amplification);
+			load_header(mesh);
+			load_header(amplification);
 	}
 }
-
+/*
 
 template<class Archive>
 void DX12::GraphicsPipelineStateDesc::serialize(Archive& ar, const unsigned int)
@@ -128,4 +128,4 @@ void DX12::GraphicsPipelineStateDesc::serialize(Archive& ar, const unsigned int)
 		load_header(mesh);
 		load_header(amplification);
 	}
-}
+}*/

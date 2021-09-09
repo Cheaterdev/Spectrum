@@ -423,6 +423,8 @@ struct  SimpleGraphicsPSO {
 	D3D::shader_header geometry;
 	D3D::shader_header hull;
 	D3D::shader_header domain;
+	D3D::shader_header mesh;
+	D3D::shader_header amplification;
 
 
 	std::vector<DXGI_FORMAT> rtv_formats;

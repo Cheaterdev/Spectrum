@@ -114,7 +114,7 @@ void generate_bind(my_stream& stream, const std::string& pass_cb, const std::str
 			if (v.bindless) continue;
 
 		
-			if ( true || v.type.starts_with("Append") || v.as_array)
+			if ( true/* rtx is an issue*/)
 			{
 				stream << std::format("result.{}.{}{} = {}_{}_{};", get_name_for(type), parent, v.name, get_name_for(type), slot.id, i) << std::endl;
 			}
@@ -123,11 +123,11 @@ void generate_bind(my_stream& stream, const std::string& pass_cb, const std::str
 			{
 				for (int a = 0; a < v.array_count; a++)
 				{
-					stream << "result." << get_name_for(type) << "." << parent << v.name << "["<<a<<"] = ResourceDescriptorHeap[(pass_" << pass_cb << "." << get_name_for(type) << "_" << i << " << 1) >> 1  + "<<a << "]; " << std::endl;
+					stream << "result." << get_name_for(type) << "." << parent << v.name << "["<<a<<"] = ResourceDescriptorHeap[(pass_" << pass_cb << "." << get_name_for(type) << "_" << i << ") + "<<a << "]; " << std::endl;
 
 				}
 			}else
-			stream << "result." << get_name_for(type) << "." << parent << v.name << " = ResourceDescriptorHeap[(pass_"<< pass_cb <<"." << get_name_for(type) << "_" << i << " << 1) >> 1];" << std::endl;
+			stream << "result." << get_name_for(type) << "." << parent << v.name << " = ResourceDescriptorHeap[(pass_"<< pass_cb <<"." << get_name_for(type) << "_" << i << " ) ];" << std::endl;
 
 			i += v.array_count;
 		}
@@ -1319,6 +1319,12 @@ void generate_pso(PSO& pso)
 
 		if (d.find_option("HS"))
 			defines += ", &SimpleGraphicsPSO::hull";
+
+		if (d.find_option("MS"))
+			defines += ", &SimpleGraphicsPSO::mesh";
+
+		if (d.find_option("AS"))
+			defines += ", &SimpleGraphicsPSO::amplification";
 
 		defines += "> ";
 		defines += d.name;

@@ -137,7 +137,7 @@ namespace DX12
 
 		void write(UploadInfo& info, size_t offset, void* data, size_t size)
 		{
-			memcpy(info.resource->buffer_data + info.offset + offset, data, size);
+			if(size>0) memcpy(info.resource->buffer_data + info.offset + offset, data, size);
 		}
 
 
@@ -1104,6 +1104,8 @@ namespace DX12
 		{
 			draw_indexed(args.IndexCountPerInstance, args.StartIndexLocation, args.BaseVertexLocation, args.InstanceCount, args.StartInstanceLocation);
 		}
+
+		void dispatch_mesh(ivec3 v);
 		/*
 				HandleTable place_uav(UINT count)
 				{
@@ -1332,6 +1334,8 @@ namespace DX12
 		template<class Hit, class Miss, class Raygen>
 		void dispatch_rays(ivec2 size, ResourceAddress hit_buffer, UINT hit_count, ResourceAddress miss_buffer, UINT miss_count, ResourceAddress raygen_buffer)
 		{
+
+			base.setup_debug(this);
 			D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
 			// Since each shader table has only one shader record, the stride is same as the size.
 			dispatchDesc.HitGroupTable.StartAddress = hit_buffer.address;
@@ -1358,6 +1362,8 @@ namespace DX12
 			list->DispatchRays(&dispatchDesc);
 
 			base.create_transition_point(false);
+
+			get_base().print_debug();
 		}
 
 	};

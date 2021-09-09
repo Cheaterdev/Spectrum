@@ -30,6 +30,18 @@ struct MeshInfo
 {
     uint node_offset;
     uint vertex_offset;
+	uint meshlet_offset;
+	uint meshlet_count;
+	uint meshlet_unique_offset;
+	uint meshlet_vertex_offset;
+}
+
+struct Meshlet
+{
+    uint vertexCount;
+    uint vertexOffset;
+    uint primitiveCount;
+    uint primitiveOffset;
 }
 
 [shader_only]

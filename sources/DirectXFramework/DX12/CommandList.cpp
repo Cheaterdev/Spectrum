@@ -44,20 +44,23 @@ namespace DX12
 		auto pso_name = current_pipeline->name;
 		get_copy().read_buffer(debug_buffer.get(), 0, 3 * sizeof(Table::DebugStruct::CB), [this, pso_name](const char* data, UINT64 size)
 			{
+
+				LogBlock block(Log::get(), log_level_internal::level_all);
+
 				if (first_debug_log)
 				{
-					Log::get() << "-----------------------------------------" << Log::endl;
+					block << "-----------------------------------------\n";
 
 					first_debug_log = false;
 				}
 				auto result = reinterpret_cast<const Table::DebugStruct::CB*>(data);
 
-				Log::get() << "DEBUG(" << name << "): " << pso_name<< Log::endl;
+				block << "DEBUG(" << name << "): " << pso_name<< "\n";
 				for (int i = 0; i < 3; i++)
 				{
-					Log::get() << "debug(" << i << "): " << result[i].v.x << " " << result[i].v.y << " " << result[i].v.z << " " << result[i].v.w << " " << Log::endl;
+					block << "debug(" << i << "): " << result[i].v.x << " " << result[i].v.y << " " << result[i].v.z << " " << result[i].v.w << " " << "\n";
 				}
-
+				Log::get() << block;
 			});
 
 		StructuredBuffer<Table::DebugStruct>* structured = static_cast<StructuredBuffer<Table::DebugStruct>*>(debug_buffer.get());
@@ -290,6 +293,21 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		get_base().print_debug();
 	}
 
+	void GraphicsContext::dispatch_mesh(ivec3 v)
+	{
+
+		PROFILE_GPU(L"dispatch_mesh");
+		base.create_transition_point();
+		base.setup_debug(this);
+
+		commit_tables();
+		//get_base().transition(index.resource, ResourceState::INDEX_BUFFER);
+		//list->IASetIndexBuffer(&index.view);
+
+		list->DispatchMesh(v.x,v.y,v.z);
+		base.create_transition_point(false);
+		get_base().print_debug();
+	}
 
 
 	void GraphicsContext::set_scissors(sizer_long rect)

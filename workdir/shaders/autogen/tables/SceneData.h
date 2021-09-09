@@ -2,6 +2,7 @@
 #include "MaterialCommandData.h"
 #include "MeshCommandData.h"
 #include "MeshInstance.h"
+#include "Meshlet.h"
 #include "mesh_vertex_input.h"
 #include "node_data.h"
 struct SceneData_srv
@@ -11,6 +12,8 @@ struct SceneData_srv
 	StructuredBuffer<MeshCommandData> meshes;
 	StructuredBuffer<MaterialCommandData> materials;
 	StructuredBuffer<MeshInstance> meshInstances;
+	StructuredBuffer<Meshlet> meshlets;
+	StructuredBuffer<uint> indices;
 };
 struct SceneData
 {
@@ -20,6 +23,8 @@ struct SceneData
 	StructuredBuffer<MeshCommandData> GetMeshes() { return srv.meshes; }
 	StructuredBuffer<MaterialCommandData> GetMaterials() { return srv.materials; }
 	StructuredBuffer<MeshInstance> GetMeshInstances() { return srv.meshInstances; }
+	StructuredBuffer<Meshlet> GetMeshlets() { return srv.meshlets; }
+	StructuredBuffer<uint> GetIndices() { return srv.indices; }
 	Texture2D<float4> GetMaterial_textures(int i) { return bindless[i]; }
 
 };

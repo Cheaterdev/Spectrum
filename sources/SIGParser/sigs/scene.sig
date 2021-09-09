@@ -12,6 +12,10 @@ struct SceneData
 
 	StructuredBuffer<MeshInstance> meshInstances;
 
+	StructuredBuffer<Meshlet> meshlets;
+
+	StructuredBuffer<uint> indices;
+
 	Texture2D<float4> material_textures[];
 }
 

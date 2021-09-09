@@ -1,5 +1,16 @@
 class MeshAssetInstance;
 
+template <typename T>
+struct InlineMeshlet
+{
+    unsigned int primitive_offset;
+    unsigned int unique_offset;
+
+    std::vector<T> UniqueVertexIndices;
+    std::vector<T> PrimitiveIndices;
+};
+
+
 struct MeshInfo
 {
         unsigned int vertex_offset;
@@ -12,7 +23,14 @@ struct MeshInfo
 		
         unsigned int node_index;
 
+
+    
+        unsigned int meshlets_offset;
+
         RaytracingAccelerationStructure::ptr ras;
+
+
+        std::vector<InlineMeshlet<UINT>> meshlets;
     private:
         friend class boost::serialization::access;
         template<class Archive>
@@ -105,7 +123,14 @@ class MeshAsset : public Asset
 
         TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
-      
+
+        TypedHandle<UINT32> unique_index_handle;
+        TypedHandle<UINT32> primitive_index_handle;
+
+
+        TypedHandle<Table::Meshlet::CB> meshlet_handle;
+
+
         std::vector<MeshInfo> meshes;
         std::vector<MaterialAsset::ref> materials;
 
@@ -212,7 +237,8 @@ class MeshAssetInstance : public scene_object, public AssetHolder, public Render
             DrawIndexedArguments draw_arguments;
             UINT material_id;
             MaterialAsset* material;
-
+            UINT meshlet_offset;
+            UINT meshlet_count;
             UINT node_id;
             mat4x4 global_mat;
             
@@ -292,6 +318,18 @@ public:
 
 	}
 };
+
+
+class universal_meshlet_manager :public Singleton<universal_meshlet_manager>, public virtual_gpu_buffer<Table::Meshlet>
+{
+    static const size_t MAX_VERTEXES_SIZE = 2_gb / sizeof(Table::Meshlet::CB);
+public:
+    universal_meshlet_manager() :virtual_gpu_buffer<Table::Meshlet>(MAX_VERTEXES_SIZE)
+    {
+
+    }
+};
+
 
 class universal_index_manager :public Singleton<universal_index_manager>, public virtual_gpu_buffer<UINT32>
 {

@@ -616,11 +616,29 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 mesh.index_count = native_mesh->mNumFaces * 3;
                 mesh.index_offset = index_count;
                 mesh.primitive = get_best_primitive(position_function, native_mesh->mNumVertices);
+             
+
+                /// hate this, just do normally later
+                std::vector<float3> poses;
+
+                for(int i=0;i< mesh.vertex_count;i++)
+                {
+                    poses.push_back(vertices[i+ mesh.vertex_offset].pos);//argh!!
+                }
+                Meshletize(64, 128,
+                    indices.data() + mesh.index_offset, mesh.index_count,
+                    poses.data(), mesh.vertex_count,
+                    mesh.meshlets
+                );
+
                 result->meshes[i] = (mesh);
+
                 return true;
             }));
             index_count += native_mesh->mNumFaces * 3;
             vertex_count += native_mesh->mNumVertices;
+
+
             //   result_mesh->material_index = native_mesh->mMaterialIndex;
         }
 
@@ -664,6 +682,14 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
         };
         node_parser(scene->mRootNode, result->root_node, nullptr);
         result->calculate_size();
+
+
+
+
+
+
+
+
         return result;
     }
 

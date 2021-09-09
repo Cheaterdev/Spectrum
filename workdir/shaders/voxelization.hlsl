@@ -1,4 +1,3 @@
-
 #include "autogen/Voxelization.h"
 
 static const VoxelInfo voxel_info = GetVoxelization().GetInfo();

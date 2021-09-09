@@ -20,6 +20,10 @@ Render::PipelineState::ptr SimpleGraphicsPSO::create()
 	if (!domain.entry_point.empty())	desc.domain = Render::domain_shader::get_resource(domain);
 	if (!hull.entry_point.empty())	desc.hull = Render::hull_shader::get_resource(hull);
 
+	if (!mesh.entry_point.empty())	desc.mesh = Render::mesh_shader::get_resource(mesh);
+	if (!amplification.entry_point.empty())	desc.amplification = Render::amplification_shader::get_resource(amplification);
+
+
 	desc.rtv.rtv_formats = rtv_formats;
 	desc.rtv.ds_format = ds;
 	desc.rasterizer.cull_mode = cull;

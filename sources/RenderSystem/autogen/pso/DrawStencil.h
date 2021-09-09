@@ -13,9 +13,9 @@ namespace PSOS
 			
 			SimplePSO mpso("DrawStencil");
 			mpso.root_signature = Layouts::DefaultLayout;
-			mpso.vertex.file_name = "shaders/triangle.hlsl";
-			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = 0;
+			mpso.mesh.file_name = "shaders/mesh_shader.hlsl";
+			mpso.mesh.entry_point = "VS";
+			mpso.mesh.flags = 0;
 			mpso.pixel.file_name = "shaders/stencil.hlsl";
 			mpso.pixel.entry_point = "PS";
 			mpso.pixel.flags = 0;

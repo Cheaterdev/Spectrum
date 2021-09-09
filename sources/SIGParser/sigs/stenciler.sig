@@ -38,7 +38,7 @@ GraphicsPSO DrawStencil
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = triangle;
+	mesh = mesh_shader;
 
 	[EntryPoint = PS]
 	pixel = stencil;
@@ -56,7 +56,7 @@ GraphicsPSO DrawSelected
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = triangle;
+	mesh = mesh_shader;
 
 	[EntryPoint = PS_RESULT]
 	pixel = stencil;
@@ -97,7 +97,7 @@ GraphicsPSO DrawAxis
 	root = DefaultLayout;
 
 	[EntryPoint = VS]
-	vertex = triangle;
+	mesh = mesh_shader;
 
 	[EntryPoint = PS_COLOR]
 	pixel = stencil;

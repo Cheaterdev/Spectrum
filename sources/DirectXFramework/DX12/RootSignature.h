@@ -273,7 +273,7 @@ namespace DX12
             }
 
             RootSignature(std::initializer_list<DescriptorTable> table);
-            RootSignature(const RootSignatureDesc& desc, D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+            RootSignature(const RootSignatureDesc& desc, D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED);
 
             ComPtr<ID3D12RootSignature> get_native();
 			void set_unfixed(int i)
@@ -293,8 +293,8 @@ namespace DX12
                 if constexpr (HasCB<T>)
                     desc.remove(T::Slot::CB_ID);
 
-    //            if constexpr (HasSRV<T> || HasSMP<T> || HasUAV<T>)
-    //                desc.remove(T::Slot::CB_ID + 1);
+          //      if constexpr (HasSRV<T> || HasSMP<T> || HasUAV<T>)
+            //        desc.remove(T::Slot::CB_ID + 1);
 
             }
 

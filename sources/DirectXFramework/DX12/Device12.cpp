@@ -186,14 +186,14 @@ namespace DX12
 
 #ifdef DEV
 		//if(false)
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+	/*	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
 
 
 			debugController->EnableDebugLayer();
 			//	spDebugController1->SetEnableGPUBasedValidation(true);
-		}
+		}*/
 #endif
 
 
@@ -222,7 +222,7 @@ namespace DX12
 				++i;
 			}
 		}
-		crasher.Initialize();
+//		crasher.Initialize();
 		try
 		{
 			HRESULT hr = D3D12CreateDevice(
@@ -242,7 +242,7 @@ namespace DX12
 			//	TRACE("*** Unhandled Exception ***");
 		}
 
-		const uint32_t aftermathFlags =
+	/*	const uint32_t aftermathFlags =
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
 			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.
 			GFSDK_Aftermath_FeatureFlags_CallStackCapturing;    // Generate debug information for shaders.
@@ -251,7 +251,7 @@ namespace DX12
 			GFSDK_Aftermath_Version_API,
 			aftermathFlags,
 			m_device.Get());
-
+		*/
 
 		
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};

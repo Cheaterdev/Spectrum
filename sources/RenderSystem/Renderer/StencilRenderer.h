@@ -1,6 +1,6 @@
 #pragma once
 
-class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Events::Runner
+class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Events::Runner, public VariableContext
 {
      //   RenderTargetTable table;
     //    Render::StructuredBuffer<UINT>::ptr id_buffer;
@@ -55,6 +55,9 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
 
         Scene::ptr scene;
         camera* player_cam;
+
+        Variable<bool> draw_aabb = { false,"Draw AABB", this };
+
 
         using ptr = s_ptr<stencil_renderer>;
         std::vector<std::pair<MeshAssetInstance::ptr, int>> selected;

@@ -174,6 +174,8 @@ public:
 			    sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->structuredBuffer;
 				sceneData.GetMeshes() = scene->mesh_infos->buffer->structuredBuffer;
 				sceneData.GetMeshInstances() = universal_mesh_instance_manager::get().buffer->structuredBuffer;
+                sceneData.GetMeshlets() = universal_meshlet_manager::get().buffer->structuredBuffer;
+				  sceneData.GetIndices() = universal_index_manager::get().buffer->structuredBuffer;
 
 				compiledScene = sceneData.compile(frame);
 

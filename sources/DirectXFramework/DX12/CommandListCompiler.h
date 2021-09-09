@@ -5,7 +5,7 @@ namespace DX12
 
 	struct CommandListCompiled
 	{
-		ComPtr<ID3D12GraphicsCommandList4> m_commandList;
+		ComPtr<ID3D12GraphicsCommandList6> m_commandList;
 		ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 
 		operator bool()
@@ -630,6 +630,32 @@ namespace DX12
 					compiled.m_commandList->DispatchRays(pDesc);
 				});
 		};
+
+		virtual void STDMETHODCALLTYPE DispatchMesh(
+			_In_  UINT ThreadGroupCountX,
+			_In_  UINT ThreadGroupCountY,
+			_In_  UINT ThreadGroupCountZ)
+		{
+			push(ThreadGroupCountX);
+			push(ThreadGroupCountY);
+			push(ThreadGroupCountZ);
+
+
+			tasks.emplace_back([this]()
+				{
+	
+					UINT ThreadGroupCountX;
+					UINT ThreadGroupCountY;
+					UINT ThreadGroupCountZ;
+
+				 pop(ThreadGroupCountX);
+				 pop(ThreadGroupCountY);
+				 pop(ThreadGroupCountZ);
+
+					compiled.m_commandList->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
+				});
+		}
+
 
 		void  ClearState(
 			ID3D12PipelineState* pPipelineState)

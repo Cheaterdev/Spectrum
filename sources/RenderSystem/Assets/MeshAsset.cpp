@@ -62,8 +62,67 @@ void MeshAsset::init_gpu()
 			index_handle.write(0, index_buffer);
 	}
 
+	UINT unique_ids = 0;
+	UINT primitive_ids = 0;
 
-//	if (GetAsyncKeyState('8')) return;
+	UINT meshlets_count = 0;
+
+	std::vector<UINT32> unique_ids_buffer;
+	std::vector<UINT32> priimitive_ids_buffer;
+
+
+	std::vector<Table::Meshlet::CB> meshlets;
+
+	for (auto& mesh : meshes)
+	{
+	//	mesh.meshlet_index_offset = primitive_ids;
+	//	mesh.meshlet_unique_offset = unique_ids;
+mesh.meshlets_offset = meshlets_count;
+		meshlets_count += mesh.meshlets.size();
+
+		
+		for(auto& meshet:mesh.meshlets)
+		{
+
+			Table::Meshlet::CB meshlet_row;
+			meshlet_row.primitiveCount = meshet.PrimitiveIndices.size()/3;
+			meshlet_row.primitiveOffset = primitive_ids/3;
+
+			meshlet_row.vertexCount = meshet.UniqueVertexIndices.size();
+			meshlet_row.vertexOffset = unique_ids;
+
+			meshlets.emplace_back(meshlet_row);
+
+			unique_ids_buffer.insert(unique_ids_buffer.end(), meshet.UniqueVertexIndices.begin(), meshet.UniqueVertexIndices.end());
+			priimitive_ids_buffer.insert(priimitive_ids_buffer.end(), meshet.PrimitiveIndices.begin(), meshet.PrimitiveIndices.end());
+
+
+			unique_ids += meshet.UniqueVertexIndices.size();
+			primitive_ids += meshet.PrimitiveIndices.size();
+
+		}
+		
+	}
+
+
+    {
+		universal_index_manager::get().allocate(unique_index_handle, unique_ids);
+
+		unique_index_handle.write(0, unique_ids_buffer);
+	}
+
+	{
+		universal_index_manager::get().allocate(primitive_index_handle, primitive_ids);
+		primitive_index_handle.write(0, priimitive_ids_buffer);
+	}
+
+	{
+		universal_meshlet_manager::get().allocate(meshlet_handle, meshlets_count);
+		meshlet_handle.write(0, meshlets);
+	}
+
+
+
 
 	/*if (meshes.size())
 	{
@@ -121,7 +180,11 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	vertex_buffer = data->vertex_buffer;
 	index_buffer = data->index_buffer;
 
-	
+
+
+
+
+
 
 	meshes = data->meshes;
 	root_node = data->root_node;
@@ -481,6 +544,14 @@ void MeshAssetInstance::update_nodes()
 
 			info.mesh_info.GetNode_offset() = UINT(nodes_handle.get_offset() + nodes.size() - 1);
 			info.mesh_info.GetVertex_offset() = UINT(mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset);
+			info.mesh_info.GetMeshlet_offset() = mesh_asset->meshlet_handle.get_offset() + mesh_asset->meshes[m].meshlets_offset;
+
+
+			info.mesh_info.GetMeshlet_unique_offset() = mesh_asset->unique_index_handle.get_offset();
+			info.mesh_info.GetMeshlet_vertex_offset() = mesh_asset->primitive_index_handle.get_offset();
+
+			info.meshlet_offset = mesh_asset->meshes[m].meshlets_offset;
+			info.meshlet_count = mesh_asset->meshes[m].meshlets.size();
 
 			auto& my_node = gpu_nodes[UINT(info.mesh_info.GetNode_offset() - nodes_handle.get_offset())];
 			my_node.node_global_matrix = info.global_mat;
@@ -560,6 +631,7 @@ void SceneFrameManager::prepare(CommandList::ptr& command_list, Scene& scene)
 	universal_index_manager::get().prepare(command_list);
 	universal_material_manager::get().prepare(command_list);
 
+	universal_meshlet_manager::get().prepare(command_list);
 	universal_mesh_instance_manager::get().prepare(command_list);
 	//	universal_mesh_info_part_manager::get().prepare(command_list);
 	universal_material_info_part_manager::get().prepare(command_list);

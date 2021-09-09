@@ -59,6 +59,8 @@ struct SelectLocal<T>
 			std::wstring wshader_name;
 			Events::Event<void> on_change;
 			D3D12_GPU_VIRTUAL_ADDRESS local_addr;
+			D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
+
 			Render::library_shader::ptr raytracing_lib;		
 		};
 
@@ -67,6 +69,7 @@ struct SelectLocal<T>
 		{
 			Render::shader_identifier id;
 			D3D12_GPU_VIRTUAL_ADDRESS local_addr;
+		//	D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 
 		private:
 			friend class boost::serialization::access;

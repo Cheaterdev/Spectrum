@@ -251,7 +251,7 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 	//throw std::exception("The method or operation is not implemented.");
 }
 
-stencil_renderer::stencil_renderer()
+stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
 {
 
 
@@ -389,18 +389,19 @@ void stencil_renderer::generate(FrameGraph& graph)
 								continue;
 
 							current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
-							m.mesh_info.set(graphics);
+							m.compiled_mesh_info.set(graphics);
 
 							{
 								Slots::Instance instance;
 								instance.GetInstanceId() = (UINT)current.size();
 								instance.set(graphics);
 							}
-							graphics.draw(m.draw_arguments);
+							graphics.dispatch_mesh(ivec3(m.meshlet_count, 1, 1));
 						}
 					};
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_pipeline(GetPSO<PSOS::DrawStencil>());
+					scene->compiledScene.set(graphics);
 
 					list.clear_uav(data.id_buffer->get_uav_clear());
 					list.clear_uav(data.axis_id_buffer->get_uav_clear());
@@ -420,18 +421,6 @@ void stencil_renderer::generate(FrameGraph& graph)
 						buffer.GetViewBuffer() = data.id_buffer->rwStructuredBuffer;
 						buffer.set(graphics);
 					}
-
-					{
-						Slots::SceneData sceneData;
-						sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
-						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
-						sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
-
-
-						sceneData.set(graphics);
-					}
-					graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
-
 
 
 					table.clear_depth(graphics);
@@ -466,15 +455,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 						buffer.set(graphics);
 					}
 
-					{
-						Slots::SceneData sceneData;
-						sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
-						sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
-						sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
-
-						sceneData.set(graphics);
-					}
-					graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
+				
 
 
 					axis->iterate([&](scene_object* node)
@@ -491,7 +472,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 								{
 									auto& m = l->rendering[i];
 
-									m.mesh_info.set(graphics);
+									m.compiled_mesh_info.set(graphics);
 
 									{
 										Slots::Instance instance;
@@ -499,7 +480,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 										instance.set(graphics);
 									}
 
-									graphics.draw(m.draw_arguments);
+									graphics.dispatch_mesh(ivec3(m.meshlet_count, 1, 1));
 								}
 							}
 
@@ -568,17 +549,8 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 				auto& graphics = list.get_graphics();
 
 				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
-				{
-					Slots::SceneData sceneData;
-					sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
-					sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
-					sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
 
-					sceneData.set(graphics);
-				}
-				graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
-
-
+				scene->compiledScene.set(graphics);
 
 				{
 					graphics.set_rtv(1, data.Stencil_color_tex->renderTarget, Handle());
@@ -601,9 +573,9 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 						int i = sel.second;
 						{
 							auto& m = l->rendering[i];
-							m.mesh_info.set(graphics);
+							m.compiled_mesh_info.set(graphics);
 
-							graphics.draw(m.draw_arguments);
+							graphics.dispatch_mesh(ivec3(m.meshlet_count,1,1));
 						}
 					}
 
@@ -637,7 +609,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 
 				graphics.set_rtv(1, data.ResultTexture->renderTarget, Handle());
 
-				{
+			if(draw_aabb){
 					graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
@@ -654,7 +626,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 						int i = sel.second;
 						{
 							auto& m = l->rendering[i];
-							m.mesh_info.set(graphics);
+							m.compiled_mesh_info.set(graphics);
 
 							graphics.draw_indexed(36, 0, 0);
 						}
@@ -665,14 +637,12 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 				// draw axis
 				{
 
-					graphics.set_index_buffer(universal_index_manager::get().buffer->get_index_buffer_view(true));
-
+				graphics.set_index_buffer(IndexBufferView());// universal_index_manager::get().buffer->get_index_buffer_view(true));
+			
 					{
 						Slots::FrameInfo frameInfo;
-
 						auto camera = frameInfo.MapCamera();
 						camera.cb = axis_cam.camera_cb.current;
-						//memcpy(&camera.cb, &axis_cam.camera_cb.current, sizeof(camera.cb));
 						frameInfo.set(graphics);
 					}
 					graphics.set_pipeline(GetPSO<PSOS::DrawAxis>());
@@ -688,12 +658,12 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 							color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted , 1 };
 							color.set(graphics);
 						}
-						m.mesh_info.set(graphics);
-						graphics.draw(m.draw_arguments);
+						m.compiled_mesh_info.set(graphics);
+						//graphics.draw(m.draw_arguments);
+
+						graphics.dispatch_mesh(ivec3(m.meshlet_count, 1, 1));
 						i++;
 					}
-
-
 
 				}
 

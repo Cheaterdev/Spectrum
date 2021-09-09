@@ -196,6 +196,9 @@ namespace DX12
 		hull_shader::ptr hull;
 		domain_shader::ptr domain;
 
+		mesh_shader::ptr mesh;
+		amplification_shader::ptr amplification;
+
 		D3D12_PRIMITIVE_TOPOLOGY_TYPE topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
 		BlendState blend;
@@ -217,6 +220,10 @@ namespace DX12
 			if (hull && hull->get_header().file_name.empty()) return true;
 			if (domain && domain->get_header().file_name.empty()) return true;
 
+			if (mesh && mesh->get_header().file_name.empty()) return true;
+			if (amplification && amplification->get_header().file_name.empty()) return true;
+
+
 			return false;
 		}
 
@@ -228,43 +235,6 @@ namespace DX12
 		void serialize(Archive& ar, const unsigned int);
 	};
 
-
-
-	struct GraphicsPipelineStateDesc
-	{
-		std::string name;
-		RootSignature::ptr root_signature;
-		mesh_shader::ptr mesh;
-		amplification_shader::ptr amplification;
-
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-		BlendState blend;
-		RasterizerState rasterizer;
-		RTVState rtv;
-		GraphicsPipelineStateDesc()
-		{
-			rtv.rtv_formats.emplace_back(DXGI_FORMAT_R8G8B8A8_UNORM);
-			rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_BACK;
-			rasterizer.fill_mode = D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID;
-		}
-
-		bool is_memory()
-		{
-
-			if (mesh && mesh->get_header().file_name.empty()) return true;
-			if (amplification && amplification->get_header().file_name.empty()) return true;
-
-			return false;
-		}
-
-		bool operator==(const GraphicsPipelineStateDesc& r) const = default;
-		std::strong_ordering  operator<=>(const  GraphicsPipelineStateDesc& r)  const = default;
-	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int);
-	};
 	
 	class PipelineLibrary :public Singleton<PipelineLibrary>
 	{
@@ -422,49 +392,7 @@ namespace DX12
 		}
 	};
 
-
-
-	/*
-	class GraphicsPipelineState : public PipelineStateBase
-	{
-		friend class PipelineStateCache;
-
-		GraphicsPipelineState(PipelineStateDesc _desc, std::string cache);
-
-	public:
-		GraphicsPipelineState() = default;
-		using ptr = s_ptr<GraphicsPipelineState>;
-		const  PipelineStateDesc desc;
-		void on_change() override;
-
-
-		static ptr create(PipelineStateDesc& desc, std::string name);
-
-		virtual ~PipelineState();
-
-	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
-		{
-			if constexpr (Archive::is_saving::value)
-			{
-				ComPtr<ID3DBlob> blob;
-				tracked_info->m_pipelineState->GetCachedBlob(&blob);
-				std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
-
-
-				ar& NVP(str);
-			}
-
-			else
-			{
-				std::string str;
-				ar& NVP(str);
-			}
-		}
-	};
-	*/
+	
 
 	class ComputePipelineState;
 
@@ -642,6 +570,9 @@ namespace DX12
 			for (auto& l : desc.libraries)
 			{
 				l.include(raytracingPipeline);
+
+
+				debuggable |= l.library && l.library->depends_on("DebugInfo");
 			}
 
 			if (desc.global_root)
@@ -703,6 +634,8 @@ namespace DX12
 			{
 				auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
 				sharedCollection->SetExistingCollection(c->get_native().Get());
+
+				debuggable |= c->debuggable;
 			}
 
 
@@ -710,6 +643,8 @@ namespace DX12
 			TEST(tracked_info->m_StateObject.As(&stateObjectProperties));
 
 			event_change();
+
+
 
 		}
 

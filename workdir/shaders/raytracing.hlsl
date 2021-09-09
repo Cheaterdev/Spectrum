@@ -232,7 +232,7 @@ upscale_result get_history(VoxelScreen voxel_screen, Camera prev_camera, float3 
 	return result;
 }
 
-
+//#include "autogen/DebugInfo.h"
 
 [shader("raygeneration")]
 void ShadowRaygenShader()
@@ -248,10 +248,13 @@ void ShadowRaygenShader()
 	const Raytracing raytracing = CreateRaytracing();
 	const FrameInfo frame = CreateFrameInfo();
 	
+	// DebugInfo info = CreateDebugInfo();
 
 	const RWTexture2D<float4> tex_noise = voxel_output.GetNoise();
 
-
+	uint2 dd;
+	tex_noise.GetDimensions(dd.x, dd.y);
+	//info.Log(0,uint4(pass_VoxelOutput.uav_0, dd.x, dd.y, 0));
 	float raw_z = voxel_screen.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 	//float4 gbufer_normals = voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy];
@@ -285,7 +288,7 @@ void ShadowRaygenShader()
 	}
 
 
-	tex_noise[itc] = lerp(tex_noise[itc], shadow, 0.01);// !payload_shadow.hit;
+	tex_noise[itc] =  lerp(tex_noise[itc], shadow, 0.01);// !payload_shadow.hit;
 }
 
 

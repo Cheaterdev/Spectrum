@@ -84,6 +84,7 @@ enum class SlotID: unsigned int
 	AABB = "AABB"_crc32 ,
 	node_data = "node_data"_crc32 ,
 	MeshInfo = "MeshInfo"_crc32 ,
+	Meshlet = "Meshlet"_crc32 ,
 	DrawIndexedArguments = "DrawIndexedArguments"_crc32 ,
 	DispatchArguments = "DispatchArguments"_crc32 ,
 	GPUAddress = "GPUAddress"_crc32 ,

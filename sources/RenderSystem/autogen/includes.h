@@ -19,6 +19,7 @@
 #include "tables\AABB.h"
 #include "tables\node_data.h"
 #include "slots\MeshInfo.h"
+#include "tables\Meshlet.h"
 #include "tables\MeshInstance.h"
 #include "tables\CommandData.h"
 #include "tables\MeshCommandData.h"
