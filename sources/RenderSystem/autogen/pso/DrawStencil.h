@@ -16,6 +16,9 @@ namespace PSOS
 			mpso.mesh.file_name = "shaders/mesh_shader.hlsl";
 			mpso.mesh.entry_point = "VS";
 			mpso.mesh.flags = 0;
+			mpso.amplification.file_name = "shaders/mesh_shader.hlsl";
+			mpso.amplification.entry_point = "AS";
+			mpso.amplification.flags = 0;
 			mpso.pixel.file_name = "shaders/stencil.hlsl";
 			mpso.pixel.entry_point = "PS";
 			mpso.pixel.flags = 0;

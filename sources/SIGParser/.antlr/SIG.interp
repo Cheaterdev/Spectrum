@@ -16,7 +16,7 @@ null
 'miss'
 'closest_hit'
 'raygen'
-'amp'
+'amplification'
 'mesh'
 'ds'
 'cull'

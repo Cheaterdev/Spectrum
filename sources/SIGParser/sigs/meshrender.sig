@@ -44,6 +44,16 @@ struct Meshlet
     uint primitiveOffset;
 }
 
+
+struct MeshletCullData
+{
+    float4 BoundingSphere;
+    uint   NormalCone;
+    float  ApexOffset;
+}
+
+
+
 [shader_only]
 struct DrawIndexedArguments
 {

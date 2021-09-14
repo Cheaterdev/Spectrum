@@ -13,6 +13,7 @@ struct SceneData
 	StructuredBuffer<MeshInstance> meshInstances;
 
 	StructuredBuffer<Meshlet> meshlets;
+	StructuredBuffer<MeshletCullData> meshletCullData;
 
 	StructuredBuffer<uint> indices;
 

@@ -164,22 +164,32 @@ public:
 	}
 
 
-	Vector<T> normalized(float eps = Math::eps12)
+	Vector<T> normalized(float eps = Math::eps12) const
 	{
 		Vector res(*this);
 		return res.normalize();
 	}
 
-	Format max_element()
+	Format max_element() const
 	{
 		return *std::max_element(values.begin(), values.end());
 	}
 
-	Format sum()
+	Format sum() const
 	{
 		return std::accumulate(values.begin(), values.end(), 0);
 	}
 
+
+
+	auto abs() const
+	{
+		Vector<typename T::CONSTUCTIBLE_TYPE> result;
+
+		for (int i = 0; i < N; ++i)
+			result[i] = std::abs(values[i]);
+		return result;
+	}
 	template<typename T>
 	static auto min(const Vector<T>& v1, const Vector<T>& v2)
 	{
@@ -198,6 +208,17 @@ public:
 
 		for (int i = 0; i < N; ++i)
 			result[i] = std::max(v1[i], v2[i]);
+
+		return result;
+	}
+
+	template<typename T>
+	static	auto clamp(const Vector<T>& v, const Vector<T>& _min, const Vector<T>& _max)
+	{
+		Vector<typename T::CONSTUCTIBLE_TYPE> result;
+
+		for (int i = 0; i < N; ++i)
+			result[i] = std::clamp(v[i], _min[i], _max[i]);
 
 		return result;
 	}

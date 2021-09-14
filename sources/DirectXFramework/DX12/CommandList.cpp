@@ -292,6 +292,10 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.create_transition_point(false);
 		get_base().print_debug();
 	}
+	void GraphicsContext::dispatch_mesh(D3D12_DISPATCH_MESH_ARGUMENTS args)
+	{
+		dispatch_mesh(ivec3{ args.ThreadGroupCountX, args.ThreadGroupCountY, args.ThreadGroupCountZ });
+	}
 
 	void GraphicsContext::dispatch_mesh(ivec3 v)
 	{

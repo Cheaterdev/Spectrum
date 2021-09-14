@@ -176,6 +176,7 @@ public:
 				sceneData.GetMeshInstances() = universal_mesh_instance_manager::get().buffer->structuredBuffer;
                 sceneData.GetMeshlets() = universal_meshlet_manager::get().buffer->structuredBuffer;
 				  sceneData.GetIndices() = universal_index_manager::get().buffer->structuredBuffer;
+                  sceneData.GetMeshletCullData() = universal_meshletculldata_manager::get().buffer->structuredBuffer;
 
 				compiledScene = sceneData.compile(frame);
 

@@ -261,7 +261,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
     try
     {
-        scene = importer.ReadFile(std::filesystem::path(file_name).filename().generic_string(), aiProcess_GenBoundingBoxes| aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
+        scene = importer.ReadFile(std::filesystem::path(file_name).filename().generic_string(), aiProcess_JoinIdenticalVertices| aiProcess_GenBoundingBoxes| aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
     }
 
     catch (const std::exception &e)
@@ -625,12 +625,18 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 {
                     poses.push_back(vertices[i+ mesh.vertex_offset].pos);//argh!!
                 }
-                Meshletize(64, 128,
+                Meshletize(64, 126,
                     indices.data() + mesh.index_offset, mesh.index_count,
                     poses.data(), mesh.vertex_count,
                     mesh.meshlets
                 );
 
+                for (auto& m : mesh.meshlets)
+                {
+                    ComputeCullData(poses.data(), mesh.vertex_count, m, 0);
+
+                }
+               
                 result->meshes[i] = (mesh);
 
                 return true;

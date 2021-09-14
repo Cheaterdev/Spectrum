@@ -81,6 +81,9 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
         Render::mesh_shader::ptr mshader;
         Render::mesh_shader::ptr mshader_voxel;
 
+        Render::amplification_shader::ptr ashader;
+        Render::amplification_shader::ptr ashader_voxel;
+
         IndirectCommand indirect_command_signature;
 
         IndirectCommand boxes_command;

@@ -40,6 +40,9 @@ GraphicsPSO DrawStencil
 	[EntryPoint = VS]
 	mesh = mesh_shader;
 
+	[EntryPoint = AS]
+	amplification = mesh_shader;
+
 	[EntryPoint = PS]
 	pixel = stencil;
 
@@ -57,6 +60,9 @@ GraphicsPSO DrawSelected
 
 	[EntryPoint = VS]
 	mesh = mesh_shader;
+
+	[EntryPoint = AS]
+	amplification = mesh_shader;
 
 	[EntryPoint = PS_RESULT]
 	pixel = stencil;
@@ -98,6 +104,10 @@ GraphicsPSO DrawAxis
 
 	[EntryPoint = VS]
 	mesh = mesh_shader;
+
+	[EntryPoint = AS]
+	amplification = mesh_shader;
+
 
 	[EntryPoint = PS_COLOR]
 	pixel = stencil;

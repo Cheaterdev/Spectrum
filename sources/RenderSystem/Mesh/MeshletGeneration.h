@@ -15,3 +15,10 @@ void BuildAdjacencyList(
 );
 
 float4 MinimumBoundingSphere(float3* points, uint32_t count);
+
+
+HRESULT ComputeCullData(
+    const float3* positions, uint32_t vertexCount,
+    InlineMeshlet<UINT>& meshlet,
+    DWORD flags
+);

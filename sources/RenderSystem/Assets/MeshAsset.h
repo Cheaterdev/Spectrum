@@ -8,6 +8,8 @@ struct InlineMeshlet
 
     std::vector<T> UniqueVertexIndices;
     std::vector<T> PrimitiveIndices;
+
+    Table::MeshletCullData::CB cull_data;
 };
 
 
@@ -129,6 +131,7 @@ class MeshAsset : public Asset
 
 
         TypedHandle<Table::Meshlet::CB> meshlet_handle;
+ TypedHandle<Table::MeshletCullData::CB> meshlet_cull_handle;
 
 
         std::vector<MeshInfo> meshes;
@@ -364,6 +367,16 @@ public:
 	}
 };
 
+
+class universal_meshletculldata_manager :public Singleton<universal_meshletculldata_manager>, public virtual_gpu_buffer<Table::MeshletCullData>
+{
+	static const size_t MAX_COMMANDS_SIZE = 1_gb/sizeof(Table::MeshletCullData);
+public:
+    universal_meshletculldata_manager() :virtual_gpu_buffer<Table::MeshletCullData>(MAX_COMMANDS_SIZE)
+	{
+
+	}
+};
 class SceneFrameManager :public Singleton<SceneFrameManager>
 {
 

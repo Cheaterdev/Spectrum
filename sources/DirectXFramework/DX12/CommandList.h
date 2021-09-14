@@ -1106,12 +1106,8 @@ namespace DX12
 		}
 
 		void dispatch_mesh(ivec3 v);
-		/*
-				HandleTable place_uav(UINT count)
-				{
-					return uav_descriptors.place(count);
-				}
-				*/
+		void dispatch_mesh(D3D12_DISPATCH_MESH_ARGUMENTS args);
+
 
 		HandleTableLight place_rtv(UINT count)
 		{

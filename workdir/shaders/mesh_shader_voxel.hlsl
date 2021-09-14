@@ -61,29 +61,95 @@ float4 TransformPosition(float2 In)
     return float4((In) * 2 - 1, 0, 1);
 }
 
+
+struct Payload
+{
+    uint MeshletIndices[32];
+};
+
+
+
+#ifdef BUILD_FUNC_AS
+groupshared Payload s_Payload;
+
+[NumThreads(32, 1, 1)]
+void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid : SV_GroupID)
+{
+
+    bool visible = false;
+
+
+    // Check bounds of meshlet cull data resource
+    if (dtid < meshInfo.GetMeshlet_count())
+    {
+      //  node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
+   //    matrix m = node.GetNode_global_matrix();
+    
+        // Do visibility testing for this thread
+        visible =  true;//IsVisible(sceneData.GetMeshletCullData()[meshInfo.GetMeshlet_offset() + dtid], m, 1, frameInfo.GetCamera());
+    }
+
+    // Compact visible meshlets into the export payload array 
+    if (visible)
+    {
+        uint index = WavePrefixCountBits(visible);
+        s_Payload.MeshletIndices[index] = dtid;
+    }
+    
+    // Dispatch the required number of MS threadgroups to render the visible meshlets
+    uint visibleCount = WaveActiveCountBits(visible);
+    DispatchMesh(visibleCount, 3, 1, s_Payload);
+}
+#endif
+
+#include "autogen/DebugInfo.h"
+
+
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void VS(
     uint gtid : SV_GroupThreadID,
-    uint gid : SV_GroupID,
-    out indices uint3 tris[256],
-    out vertices vertex_output verts[64*3]
+      uint2 gid2 : SV_GroupID,
+	  in payload Payload payload,
+    out indices uint3 tris[126],
+    out vertices vertex_output verts[64]
 )
 {
+   uint gid = gid2.x;
+   
+    uint meshletIndex = payload.MeshletIndices[gid];
+    if (meshletIndex >= meshInfo.GetMeshlet_count()) return;
+    Meshlet m = sceneData.GetMeshlets()[meshInfo.GetMeshlet_offset() + meshletIndex];   
+	
+	
+    uint primPart = ceil(float(m.GetPrimitiveCount()) / 3);
+    uint primStart = min(gid2.y * primPart, m.GetPrimitiveCount());
+    uint primEnd = min(primStart+ primPart, m.GetPrimitiveCount());
 
-    Meshlet m = sceneData.GetMeshlets()[meshInfo.GetMeshlet_offset() + gid];
+    uint primCount = primEnd - primStart;
+    uint primIndex = primStart + gtid;
 
-    SetMeshOutputCounts(m.GetPrimitiveCount()*3, m.GetPrimitiveCount());
+//if (meshletIndex >= meshInfo.GetMeshlet_count()) return;
 
-    if (gtid < m.GetPrimitiveCount())
+    SetMeshOutputCounts(primCount*3, primCount);
+
+if(primCount>=64)
+{
+GetDebugInfo().Log(1,uint4(1,1,1,1));
+}
+  
+    if (gtid < primCount )
     {
+	
+	      tris[gtid] = uint3(3 * gtid, 3 * gtid + 1, 3 * gtid + 2);
+        uint index_offset = meshInfo.GetMeshlet_vertex_offset() + 3 * (m.GetPrimitiveOffset() + primIndex);
+        uint index_offset0 = sceneData.GetIndices()[index_offset];
+        uint index_offset1 = sceneData.GetIndices()[index_offset + 1];
+        uint index_offset2 = sceneData.GetIndices()[index_offset + 2];
 
-        tris[gtid] = uint3(3 * gtid, 3 * gtid + 1, 3 * gtid + 2);
-
-
-    	uint vi0 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + 3 * gtid];
-    	uint vi1 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + 3 * gtid+1];
-        uint vi2 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + 3 * gtid+2];
+        uint vi0 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + index_offset0];
+        uint vi1 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + index_offset1];
+        uint vi2 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + index_offset2];
 
         node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
         matrix m = node.GetNode_global_matrix();

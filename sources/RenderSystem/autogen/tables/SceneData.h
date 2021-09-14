@@ -3,6 +3,7 @@
 #include "MeshCommandData.h"
 #include "MeshInstance.h"
 #include "Meshlet.h"
+#include "MeshletCullData.h"
 #include "mesh_vertex_input.h"
 #include "node_data.h"
 namespace Table 
@@ -18,6 +19,7 @@ namespace Table
 			Render::HLSL::StructuredBuffer<MaterialCommandData> materials;
 			Render::HLSL::StructuredBuffer<MeshInstance> meshInstances;
 			Render::HLSL::StructuredBuffer<Meshlet> meshlets;
+			Render::HLSL::StructuredBuffer<MeshletCullData> meshletCullData;
 			Render::HLSL::StructuredBuffer<uint> indices;
 		} &srv;
 		Render::Bindless& bindless;
@@ -27,6 +29,7 @@ namespace Table
 		Render::HLSL::StructuredBuffer<MaterialCommandData>& GetMaterials() { return srv.materials; }
 		Render::HLSL::StructuredBuffer<MeshInstance>& GetMeshInstances() { return srv.meshInstances; }
 		Render::HLSL::StructuredBuffer<Meshlet>& GetMeshlets() { return srv.meshlets; }
+		Render::HLSL::StructuredBuffer<MeshletCullData>& GetMeshletCullData() { return srv.meshletCullData; }
 		Render::HLSL::StructuredBuffer<uint>& GetIndices() { return srv.indices; }
 		Render::Bindless& GetMaterial_textures() { return bindless; }
 		SceneData(SRV&srv,Render::Bindless &bindless) :srv(srv),bindless(bindless){}

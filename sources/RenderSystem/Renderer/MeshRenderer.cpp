@@ -22,11 +22,13 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	default_pipeline.blend.independ_blend = false;
 	default_pipeline.blend.render_target[0].enabled = false;
 	default_pipeline.mesh = mshader;
-	default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
+		default_pipeline.amplification = ashader;
+default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
 
 	if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 	{
 		default_pipeline.mesh = mshader_voxel;
+		default_pipeline.amplification = ashader_voxel;
 		default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
 		default_pipeline.rtv.enable_depth = false;
 		default_pipeline.rasterizer.conservative = GetAsyncKeyState('B');
@@ -386,6 +388,8 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 	mshader = Render::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
 	mshader_voxel = Render::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
 
+	ashader = Render::amplification_shader::get_resource({ "shaders/mesh_shader.hlsl", "AS", 0, {} });
+	ashader_voxel = Render::amplification_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "AS", 0, {} });
 	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();

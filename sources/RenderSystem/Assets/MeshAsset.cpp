@@ -72,6 +72,7 @@ void MeshAsset::init_gpu()
 
 
 	std::vector<Table::Meshlet::CB> meshlets;
+	std::vector<Table::MeshletCullData::CB> meshlet_cull;
 
 	for (auto& mesh : meshes)
 	{
@@ -93,6 +94,7 @@ mesh.meshlets_offset = meshlets_count;
 
 			meshlets.emplace_back(meshlet_row);
 
+			meshlet_cull.emplace_back(meshet.cull_data);
 			unique_ids_buffer.insert(unique_ids_buffer.end(), meshet.UniqueVertexIndices.begin(), meshet.UniqueVertexIndices.end());
 			priimitive_ids_buffer.insert(priimitive_ids_buffer.end(), meshet.PrimitiveIndices.begin(), meshet.PrimitiveIndices.end());
 
@@ -122,6 +124,10 @@ mesh.meshlets_offset = meshlets_count;
 	}
 
 
+	{
+		universal_meshletculldata_manager::get().allocate(meshlet_cull_handle, meshlets_count);
+		meshlet_cull_handle.write(0, meshlet_cull);
+	}
 
 
 	/*if (meshes.size())
@@ -529,7 +535,7 @@ void MeshAssetInstance::update_nodes()
 			info.draw_arguments.StartInstanceLocation = 0;
 
 
-			info.dispatch_mesh_arguments.ThreadGroupCountX = mesh_asset->meshes[m].meshlets.size();
+			info.dispatch_mesh_arguments.ThreadGroupCountX = Math::DivideByMultiple(mesh_asset->meshes[m].meshlets.size(), 32);
 			info.dispatch_mesh_arguments.ThreadGroupCountY = 1;
 			info.dispatch_mesh_arguments.ThreadGroupCountZ = 1;
 
@@ -552,6 +558,7 @@ void MeshAssetInstance::update_nodes()
 			info.mesh_info.GetVertex_offset() = UINT(mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset);
 			info.mesh_info.GetMeshlet_offset() = mesh_asset->meshlet_handle.get_offset() + mesh_asset->meshes[m].meshlets_offset;
 
+			info.mesh_info.GetMeshlet_count() = mesh_asset->meshes[m].meshlets.size();
 
 			info.mesh_info.GetMeshlet_unique_offset() = mesh_asset->unique_index_handle.get_offset();
 			info.mesh_info.GetMeshlet_vertex_offset() = mesh_asset->primitive_index_handle.get_offset();
@@ -641,6 +648,7 @@ void SceneFrameManager::prepare(CommandList::ptr& command_list, Scene& scene)
 	universal_mesh_instance_manager::get().prepare(command_list);
 	//	universal_mesh_info_part_manager::get().prepare(command_list);
 	universal_material_info_part_manager::get().prepare(command_list);
+	universal_meshletculldata_manager::get().prepare(command_list);
 
 	scene.mesh_infos->prepare(command_list);
 	scene.raytrace->prepare(command_list);

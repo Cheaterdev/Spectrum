@@ -240,7 +240,7 @@ shader_type:
 |'miss'
 |'closest_hit'
 |'raygen'
-|'amp'
+|'amplification'
 |'mesh'
 ;
 pso_param_id: 

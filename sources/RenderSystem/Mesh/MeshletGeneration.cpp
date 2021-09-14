@@ -711,3 +711,154 @@ float4 MinimumBoundingSphere(float3* points, uint32_t count)
     return float4(center, radius);
 }
 
+
+inline float3 QuantizeSNorm(float3 value)
+{
+    return (float3::clamp(value, float3(-1), float3(1)) * 0.5f + float3(0.5f)) * 255.0f;
+}
+
+inline float3 QuantizeUNorm(float3 value)
+{
+    return float3::clamp(value, float3(0), float3(1)) * 255.0f;
+}
+
+static const DWORD CNORM_WIND_CW = 1;
+
+HRESULT ComputeCullData(
+    const float3* positions, uint32_t vertexCount,
+    InlineMeshlet<UINT>& meshlet,
+    DWORD flags
+)
+{
+    UNREFERENCED_PARAMETER(vertexCount);
+
+    float3 vertices[256];
+    float3 normals[256];
+
+  
+        auto& m = meshlet;
+        auto& c = meshlet.cull_data;
+
+        // Cache vertices
+        for (uint32_t i = 0; i < m.UniqueVertexIndices.size(); ++i)
+        {
+            uint32_t vIndex = m.UniqueVertexIndices[i];
+
+            assert(vIndex < vertexCount);
+            vertices[i] = positions[vIndex];
+        }
+
+        // Generate primitive normals & cache
+        for (uint32_t i = 0; i < m.PrimitiveIndices.size()/3; ++i)
+        {
+            auto i0 = m.PrimitiveIndices[ 3*i];
+            auto i1 = m.PrimitiveIndices[3 * i+1];
+            auto i2 = m.PrimitiveIndices[3 * i+2];
+
+            float3 triangle[3]
+            {
+               vertices[i0],
+               vertices[i1],
+                vertices[i2],
+            };
+
+            float3 p10 = triangle[1] - triangle[0];
+            float3 p20 = triangle[2] - triangle[0];
+            float3 n = vec3::cross(p10, p20).normalized();
+
+           normals[i] = (flags & CNORM_WIND_CW) != 0 ? -n : n;
+        }
+
+        // Calculate spatial bounds
+        float4 positionBounds = MinimumBoundingSphere(vertices, m.UniqueVertexIndices.size());
+        c.BoundingSphere= positionBounds;
+
+        // Calculate the normal cone
+        // 1. Normalized center point of minimum bounding sphere of unit normals == conic axis
+        float4 normalBounds = MinimumBoundingSphere(normals, m.PrimitiveIndices.size()/3);
+
+        // 2. Calculate dot product of all normals to conic axis, selecting minimum
+        float3 axis = normalBounds.normalized();
+
+        float minDot = 1;
+        for (uint32_t i = 0; i < m.PrimitiveIndices.size()/3; ++i)
+        {
+            float dot = vec3::dot(axis, normals[i]);
+            minDot = std::min(minDot, dot);
+        }
+
+        if (minDot< 0.1f)
+        {
+            uint8_t* cone = reinterpret_cast<uint8_t *>(&c.NormalCone);
+            // Degenerate cone
+            cone[0] = 127;
+            cone[1] = 127;
+            cone[2] = 127;
+            cone[3] = 255;
+            return S_OK;
+        }
+
+        // Find the point on center-t*axis ray that lies in negative half-space of all triangles
+        float maxt = 0;
+
+        for (uint32_t i = 0; i < m.PrimitiveIndices.size() / 3; ++i)
+        {
+      //      auto primitive = primitiveIndices[m.cb.primitiveOffset + i];
+
+            auto i0 = m.PrimitiveIndices[3 * i];
+            auto i1 = m.PrimitiveIndices[3 * i + 1];
+            auto i2 = m.PrimitiveIndices[3 * i + 2];
+
+
+            uint32_t indices[3]
+            {
+                i0,
+                i1,
+                i2,
+            };
+
+            float3 triangle[3]
+            {
+                vertices[indices[0]],
+                vertices[indices[1]],
+                vertices[indices[2]],
+            };
+
+            float3 c = positionBounds - triangle[0];
+
+            float3 n = normals[i];
+            float dc = vec3::dot(c, n);
+            float dn = vec3::dot(axis, n);
+
+            // dn should be larger than mindp cutoff above
+            assert(dn > 0.0f);
+            float t = dc / dn;
+
+            maxt = (t > maxt) ? t : maxt;
+        }
+
+        // cone apex should be in the negative half-space of all cluster triangles by construction
+        c.ApexOffset = maxt;
+
+        // cos(a) for normal cone is minDot; we need to add 90 degrees on both sides and invert the cone
+        // which gives us -cos(a+90) = -(-sin(a)) = sin(a) = sqrt(1 - cos^2(a))
+        float coneCutoff = sqrtf(1 - minDot * minDot);
+
+        // 3. Quantize to uint8
+        float3 quantized = QuantizeSNorm(axis);
+        uint8_t* cone = reinterpret_cast<uint8_t*>(&c.NormalCone);
+
+        cone[0] = (uint8_t)quantized.x;
+        cone[1] = (uint8_t)quantized.y;
+        cone[2] = (uint8_t)quantized.z;
+
+        float3 error = ((quantized / 255.0f) * 2.0f - float3(1)) - axis;
+        error = error.abs().sum();
+
+        quantized = QuantizeUNorm(float3(coneCutoff) + error);
+        quantized = vec3::min(quantized + float3(1), float3(255.0f));
+        cone[3] = (uint8_t)quantized.x;
+    
+
+    return S_OK;
+}

@@ -4735,16 +4735,16 @@ std::vector<std::string> SIGParser::_ruleNames = {
 std::vector<std::string> SIGParser::_literalNames = {
   "", "'::'", "','", "'Sampler'", "'define'", "'rtv'", "'blend'", "':'", 
   "'compute'", "'vertex'", "'pixel'", "'domain'", "'hull'", "'geometry'", 
-  "'miss'", "'closest_hit'", "'raygen'", "'amp'", "'mesh'", "'ds'", "'cull'", 
-  "'depth_func'", "'depth_write'", "'conservative'", "'enable_depth'", "'topology'", 
-  "'enable_stencil'", "'stencil_func'", "'stencil_pass_op'", "'stencil_read_mask'", 
-  "'stencil_write_mask'", "'recursion_depth'", "'payload'", "'per_material'", 
-  "'local'", "'||'", "'&&'", "'=='", "'!='", "'>'", "'<'", "'>='", "'<='", 
-  "'+'", "'-'", "'*'", "'/'", "'%'", "'^'", "'!'", "';'", "'='", "'('", 
-  "')'", "'{'", "'}'", "'['", "']'", "'true'", "'false'", "'log'", "'layout'", 
-  "'struct'", "'ComputePSO'", "'GraphicsPSO'", "'RaytracePSO'", "'RaytraceRaygen'", 
-  "'RaytracePass'", "'slot'", "'rt'", "'RTV'", "'DSV'", "'root'", "", "", 
-  "", "", "", "", "'%{'", "'}%'"
+  "'miss'", "'closest_hit'", "'raygen'", "'amplification'", "'mesh'", "'ds'", 
+  "'cull'", "'depth_func'", "'depth_write'", "'conservative'", "'enable_depth'", 
+  "'topology'", "'enable_stencil'", "'stencil_func'", "'stencil_pass_op'", 
+  "'stencil_read_mask'", "'stencil_write_mask'", "'recursion_depth'", "'payload'", 
+  "'per_material'", "'local'", "'||'", "'&&'", "'=='", "'!='", "'>'", "'<'", 
+  "'>='", "'<='", "'+'", "'-'", "'*'", "'/'", "'%'", "'^'", "'!'", "';'", 
+  "'='", "'('", "')'", "'{'", "'}'", "'['", "']'", "'true'", "'false'", 
+  "'log'", "'layout'", "'struct'", "'ComputePSO'", "'GraphicsPSO'", "'RaytracePSO'", 
+  "'RaytraceRaygen'", "'RaytracePass'", "'slot'", "'rt'", "'RTV'", "'DSV'", 
+  "'root'", "", "", "", "", "", "", "'%{'", "'}%'"
 };
 
 std::vector<std::string> SIGParser::_symbolicNames = {

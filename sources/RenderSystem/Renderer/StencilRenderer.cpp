@@ -396,7 +396,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 								instance.GetInstanceId() = (UINT)current.size();
 								instance.set(graphics);
 							}
-							graphics.dispatch_mesh(ivec3(m.meshlet_count, 1, 1));
+							graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 						}
 					};
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -480,7 +480,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 										instance.set(graphics);
 									}
 
-									graphics.dispatch_mesh(ivec3(m.meshlet_count, 1, 1));
+									graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 								}
 							}
 
@@ -575,7 +575,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 							auto& m = l->rendering[i];
 							m.compiled_mesh_info.set(graphics);
 
-							graphics.dispatch_mesh(ivec3(m.meshlet_count,1,1));
+							graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 						}
 					}
 
@@ -661,7 +661,7 @@ void stencil_renderer::generate_after(FrameGraph& graph)
 						m.compiled_mesh_info.set(graphics);
 						//graphics.draw(m.draw_arguments);
 
-						graphics.dispatch_mesh(ivec3(m.meshlet_count, 1, 1));
+						graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 						i++;
 					}
 
