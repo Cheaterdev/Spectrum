@@ -44,7 +44,7 @@ struct Meshlet
     uint primitiveOffset;
 }
 
-
+[serialize]
 struct MeshletCullData
 {
     float4 BoundingSphere;

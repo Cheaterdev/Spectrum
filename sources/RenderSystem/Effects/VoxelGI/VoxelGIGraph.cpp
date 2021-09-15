@@ -536,12 +536,9 @@ void VoxelGI::screen(FrameGraph& graph)
 
 
 
-			Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
-
-
-			compiledScene.set(command_list->get_compute());
-			graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
-
+			graph.set_slot(SlotID::FrameInfo, compute);
+			graph.set_slot(SlotID::VoxelInfo, compute);
+			graph.set_slot(SlotID::SceneData, compute);
 
 
 			{
@@ -558,7 +555,7 @@ void VoxelGI::screen(FrameGraph& graph)
 
 			//scene->voxels_compiled.set(compute);
 			//	scene->voxels_compiled.set(compute);
-			graph.set_slot(SlotID::VoxelInfo, compute);
+
 
 			{
 				Slots::VoxelOutput output;
@@ -854,13 +851,10 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 			{
 
-				Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
-
 				graph.set_slot(SlotID::FrameInfo, compute);
 				graph.set_slot(SlotID::FrameInfo, graphics);
-
-				compiledScene.set(compute);
-				compiledScene.set(graphics);
+				graph.set_slot(SlotID::SceneData, compute);
+				graph.set_slot(SlotID::SceneData, graphics);
 			}
 
 

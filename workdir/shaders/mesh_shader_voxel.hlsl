@@ -102,8 +102,6 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid 
 }
 #endif
 
-#include "autogen/DebugInfo.h"
-
 
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
@@ -133,10 +131,6 @@ void VS(
 
     SetMeshOutputCounts(primCount*3, primCount);
 
-if(primCount>=64)
-{
-GetDebugInfo().Log(1,uint4(1,1,1,1));
-}
   
     if (gtid < primCount )
     {

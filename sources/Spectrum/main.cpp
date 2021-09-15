@@ -528,62 +528,50 @@ public:
 				GBufferViewDesc gbuffer;
 
 				Handlers::Texture H(RTXDebug);
+
+				Handlers::Texture H(RTXDebugPrev);
 			};
 
 			graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
 				builder.create(data.RTXDebug, { ivec3(size, 1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+				builder.create(data.RTXDebugPrev, { ivec3(size, 1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 
 				}, [this, &graph](RTXDebugData& data, FrameContext& context) {
 					auto& compute = context.get_list()->get_compute();
+					auto& copy = context.get_list()->get_copy();
 
 					if (data.RTXDebug.is_new())
 					{
 						context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
 					}
 
-
-
-					//compute.set_signature(get_Signature(Layouts::DefaultLayout));
 					compute.set_signature(RTX::get().rtx.m_root_sig);
-					auto gbuffer = data.gbuffer.actualize(context);
-
-					{
-						scene->compiledScene.set(compute);
-					}
-
-
-					{
-						Slots::VoxelScreen voxelScreen;
-						gbuffer.SetTable(voxelScreen.MapGbuffer());
-						//		voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
-						//		voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
-								//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
-						voxelScreen.set(compute);
-					}
-
-					//	scene->voxels_compiled.set(graphics);
-					//	scene->voxels_compiled.set(compute);
 
 					graph.set_slot(SlotID::VoxelInfo, compute);
 					graph.set_slot(SlotID::FrameInfo, compute);
-
-
-
-
+					graph.set_slot(SlotID::SceneData, compute);
+					
 					{
 						Slots::VoxelOutput output;
-
-						//	output.GetFrames() = gi_filtered.rwTexture2D;
 						output.GetNoise() = data.RTXDebug->rwTexture2D;
-						//output.GetDirAndPdf() = dir_and_pdf.rwTexture2D;
 						output.set(compute);
 					}
 
+					{
+						auto gbuffer = data.gbuffer.actualize(context);
 
+						Slots::VoxelScreen voxelScreen;
+						gbuffer.SetTable(voxelScreen.MapGbuffer());
+						voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
+						voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
+						voxelScreen.set(compute);
+					}
 					RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
 
+
+					copy.copy_resource(data.RTXDebugPrev->resource, data.RTXDebug->resource);
 				});
 		}
 
@@ -622,25 +610,29 @@ public:
 
 		graph.add_slot_generator([this](FrameGraph& graph) {
 
-				PROFILE(L"FrameInfo");
-				Slots::FrameInfo frameInfo;
-				//// hack zone
-				auto &sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
-				if (sky.resource)
-					frameInfo.GetSky() = sky.get_handler<Handlers::Texture>()->texture—ube;
-				/////////
-				frameInfo.GetSunDir() = graph.sunDir;
-				frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
+			PROFILE(L"FrameInfo");
+			Slots::FrameInfo frameInfo;
+			//// hack zone
+			auto& sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
+			if (sky.resource)
+				frameInfo.GetSky() = sky.get_handler<Handlers::Texture>()->texture—ube;
+			/////////
+			frameInfo.GetSunDir() = graph.sunDir;
+			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
 
 
-				frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
-				frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
+			frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
+			frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
 
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
+			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
 
-				auto compiled = frameInfo.compile(*graph.builder.current_frame);
-				graph.register_slot_setter(compiled);
+			auto compiled = frameInfo.compile(*graph.builder.current_frame);
+			graph.register_slot_setter(compiled);
+			});
+			
+			graph.add_slot_generator([this](FrameGraph& graph) {
+				graph.register_slot_setter(scene->compiledScene);
 			});
 
 	}

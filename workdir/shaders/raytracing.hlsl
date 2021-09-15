@@ -266,7 +266,7 @@ void ShadowRaygenShader()
 	{
 
 		float hit_rate = 0;
-		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
+		int samples = 4;// payload2.recursion < 2 ? 3 : 1;
 		for (int i = 0; i < samples; i++)
 		{
 			float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime() + float(i)/10);
@@ -287,8 +287,23 @@ void ShadowRaygenShader()
 		shadow = 1.0 - hit_rate / samples;
 	}
 
+	float2 delta = voxel_screen.GetGbuffer().GetMotion().SampleLevel(pointClampSampler, tc, 0).xy;
+	float2 prev_tc = tc - delta;
 
-	tex_noise[itc] =  lerp(tex_noise[itc], shadow, 0.01);// !payload_shadow.hit;
+	float l = length(pos - frame.GetCamera().GetPosition());
+
+	upscale_result reprojected = get_history(voxel_screen, frame.GetPrevCamera(), pos, prev_tc, dims, l);
+
+	float speed = 1.0 / (1.0 + reprojected.frames);
+
+
+	shadow = lerp(reprojected.history, shadow, speed);
+
+
+
+
+
+	tex_noise[itc] = float4(shadow.xxx, float(reprojected.frames) / FRAMES);// lerp(tex_noise[itc], shadow, 0.01);// !payload_shadow.hit;
 }
 
 

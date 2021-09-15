@@ -441,16 +441,22 @@ namespace DX12
 		Cache<PipelineStateDesc, PipelineState::ptr> cache;
 		Cache<ComputePipelineStateDesc, ComputePipelineState::ptr> compute_cache;
 
+		std::mutex m;
 		std::map<std::string, std::string> binary_cache;
 
 		friend class Singleton<PipelineStateCache>;
 
 		virtual ~PipelineStateCache()
 		{
+			std::lock_guard<std::mutex> g(m);
+
+			
 			FileSystem::get().save_data("pso",Serializer::serialize(binary_cache));
 		}
 		PipelineStateCache() : cache([this](const PipelineStateDesc& desc)
 			{
+				std::lock_guard<std::mutex> g(m);
+
 				std::string binary = desc.name.empty()?"": binary_cache[desc.name];
 
 
@@ -466,6 +472,8 @@ namespace DX12
 
 			}), compute_cache([this](const ComputePipelineStateDesc& desc)
 				{
+					std::lock_guard<std::mutex> g(m);
+
 					std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
 
 
@@ -481,6 +489,8 @@ namespace DX12
 
 				})
 		{
+
+			std::lock_guard<std::mutex> g(m);
 
 			auto file = FileSystem::get().get_file("pso");
 			if(file)

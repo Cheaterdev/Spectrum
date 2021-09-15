@@ -10,6 +10,18 @@ struct InlineMeshlet
     std::vector<T> PrimitiveIndices;
 
     Table::MeshletCullData::CB cull_data;
+
+private:
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int)
+    {
+        ar& NVP(UniqueVertexIndices);
+        ar& NVP(PrimitiveIndices);
+        ar& NVP(cull_data);
+  
+    }
+
 };
 
 
@@ -45,6 +57,8 @@ struct MeshInfo
             ar& NVP(index_count);
             ar& NVP(primitive);
             ar& NVP(node_index);
+            ar& NVP(meshlets);
+
         }
 };
 
