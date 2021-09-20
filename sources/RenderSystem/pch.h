@@ -6,8 +6,6 @@
 //#define OCULUS_SUPPORT
 #endif
 #endif
-#include <entt/entt.hpp>
-
 
 #include "../DirectXFramework/pch.h"
 #include "../FlowGraph/pch.h"

@@ -23,6 +23,7 @@
 #include <map>
 #include <unordered_map>
 #include <set>
+#include <unordered_set>
 #include <assert.h>
 #include <memory>
 #include <thread>
@@ -51,6 +52,10 @@ using namespace std;
 
 namespace ranges = std::ranges;
 namespace view = ranges::views;
+
+#include <crossguid/guid.hpp>
+
+using Guid = xg::Guid;
 
 #include <magic_enum.hpp>
 
@@ -208,7 +213,6 @@ HRESULT test(HRESULT hr, std::string str = "");
 #include "Math/math_serialization.h"
 
 #include "BinaryObjects.h"
-#include "Platform.h"
 
 #include "Threads/Threading.h"
 
@@ -217,8 +221,7 @@ HRESULT test(HRESULT hr, std::string str = "");
 #include "Application/Application.h"
 #include "Profiling/Profiling.h"
 #include "Patterns/StateContext.h"
-#define GUID_WINDOWS
-#include "guid/guid.h"
+
 #include "Allocators/Allocators.h"
 
 

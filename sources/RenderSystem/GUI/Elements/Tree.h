@@ -175,7 +175,7 @@ namespace GUI
         };
 
     	template<class TreeNode>
-        class tree_element : public base, public tree_item_listener
+        class tree_element : public base
         {
                 friend class GUI::Elements::tree<TreeNode>;
                 friend class toogle_icon;
@@ -203,7 +203,7 @@ namespace GUI
                 {
                     auto tree_elem = add_tree(creator, node);
                     tree_elem->node = node;
-                    node->register_listener(tree_elem.get());
+                //    node->register_listener(tree_elem.get());
 
                     for (int i = 0; i < node->get_child_count(); i++)
                         tree_elem->init(creator, node->get_child(i));
@@ -241,6 +241,18 @@ namespace GUI
                     other->padding = { 0, 2, 0, 2 };
                     other->on_empty = [this]() {on_empty();};
                     add_child(other);
+
+
+                    elem->event_on_add_child.register_handler(this, [this](base_tree* child)
+                    {
+                            init(this->creator, static_cast<TreeNode*>(child));
+                    });
+
+                    elem->event_on_remove.register_handler(this, [this]()
+                        {
+                            run_on_ui([this]() {  remove_from_parent(); });
+                        });
+
                 }
 
 
@@ -249,17 +261,7 @@ namespace GUI
                     other->visible = !other->visible.get();
                     on_toogle(other->visible);
                 }
-
-                void tree_on_remove()
-                {
-                    run_on_ui([this](){  remove_from_parent(); });
-                  
-                }
-
-                void tree_added_child(TreeNode* child)
-                {
-                   init(creator, child); 
-                }
+            
         };
 
 
@@ -312,7 +314,7 @@ namespace GUI
                     //this->controller = controller;
                     //  base_tree* root = controller->get_root();
                     auto root_elem = add_tree(root);
-                    root->register_listener(root_elem.get());
+             //       root->register_listener(root_elem.get());
                     root_elem->node = root;
 
                     for (int i = 0; i < root->get_child_count(); i++)

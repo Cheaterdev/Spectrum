@@ -100,6 +100,21 @@ namespace boost
 		}
 
 
+		template<class Archive>
+		inline void serialize(Archive& ar, Guid& g, unsigned version)
+		{
+			if constexpr (Archive::is_loading::value)
+			{
+				std::array<unsigned char, 16> v;
+				ar& NVP(v);
+				g = Guid(v);
 
+			}else
+			{
+				auto& v = g.bytes();
+				ar& NVP(v);
+			}
+			//boost::serialization::split_free(ar, tp, version);
+		}
 	}
 }

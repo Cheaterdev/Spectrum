@@ -135,8 +135,3 @@ int Scene::get_child_count(scene_object*node)
 	return node->get_childs().size();
 }
 */
-
-tree_item_listener::~tree_item_listener()
-{
-
-}

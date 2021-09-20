@@ -1,3 +1,23 @@
+using guid_compare = decltype([](const xg::Guid& l, const xg::Guid& r) {
+	auto& a = l.bytes();
+	auto& b = r.bytes();
+
+
+	for (unsigned int i = 0; i < b.size(); i++)
+	{
+		if (a[i] != b[i])
+			return a[i] < b[i];
+	}
+
+	return false;
+});
+
+using guid_set = std::set<Guid, guid_compare>;
+
+template<class T>
+using guid_map = std::map<Guid,T, guid_compare>;
+
+
 enum class Asset_Type : int
 {
 	UNKNOWN,
@@ -198,7 +218,7 @@ class AssetReference : public AssetReferenceBase
 				Guid guid;
 				ar& NVP(guid);
 
-				if (guid.is_good())
+				if (guid.isValid())
 				{
 					auto storage = AssetManager::get().get_storage(guid);
 
@@ -302,7 +322,7 @@ class AssetHolder
 	protected:
 		virtual void on_asset_change(std::shared_ptr<Asset> asset);
 	public:
-		std::set<Guid> get_reference_ids();
+		guid_set get_reference_ids();
 
 		friend class boost::serialization::access;
 
@@ -406,6 +426,7 @@ BOOST_SERIALIZATION_ASSUME_ABSTRACT(Asset);
 
 class folder_item;
 
+
 class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public EditObject
 {
 		LEAK_TEST(AssetStorage)
@@ -420,7 +441,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 				Guid id;
 				std::wstring name;
 
-				std::set<Guid> references;
+				guid_set references;
 				std::set<std::wstring> additional_files;
 				Asset_Type type;
 
@@ -502,7 +523,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 		folder_item* get_folder();
 		static AssetStorage::ptr try_load(file::ptr f);
 
-	std::set<Guid> get_references()
+		 guid_set get_references() 
 	{
 		return header->references;
 	}
@@ -563,7 +584,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 
 		AssetManager();
 		~AssetManager();
-		std::map<Guid, AssetStorage::ptr> assets;
+		guid_map<AssetStorage::ptr> assets;
 		std::mutex m;
 		std::vector<std::function<void()>> funcs;
 		folder_item::ptr tree_folders;
@@ -662,16 +683,19 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 		{
 			return MessageBoxA(0, str.c_str(), "message", MB_YESNO) == IDOK;
 		};
-		std::map<Guid, AssetStorage::ptr> get_assets();
 
+		guid_map<AssetStorage::ptr> get_assets()
+		{
+			return assets;
+		}
 
 		template<class T>
 		AssetStorage::ptr add_asset(s_ptr<T> asset, std::wstring name = L"", Guid id = Guid())
 		{
 			auto storage = (new AssetStorage(asset))->get_ptr();
 
-			if (!id.is_good())
-				id = GuidGenerator::get().newGuid();
+			if (!id.isValid())
+				id = xg::newGuid();
 
 			if (name.empty())
 				name = convert(to_string(id));
@@ -754,7 +778,7 @@ public:
 		std::lock_guard<std::mutex> g(m);
 		auto data = Hasher::hash(convert(name));
 
-		std::vector<unsigned char> ids(16);
+		std::array<unsigned char, 16> ids;
 		for (int i = 0; i < 16; i++)
 			ids[i] = data[i];
 		id = Guid(ids);

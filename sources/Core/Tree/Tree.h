@@ -1,116 +1,42 @@
 #pragma once
 
-class base_tree;
-//class tree_contoller_base;
-
-class tree_item_listener: public Events::prop_handler
-{
-	friend class base_tree;
-	base_tree* tree = nullptr;
-protected:
-	virtual void tree_on_add() {};
-	virtual void tree_on_remove() {};
-	virtual void tree_added_child(base_tree*) {};
-	virtual void tree_removed_child(base_tree*) {};
-
-	virtual ~tree_item_listener();;
-};
-
-class tree_listener
-{
-	tree_item_listener* controller;
-public:
-	tree_listener(tree_item_listener* controller)
-	{
-		this->controller = controller;
-	}
-};
-
-
-
 class base_tree
 {
 
-
-protected:
-
+public:
 	Events::Event<void> event_on_add;
 	Events::Event<void> event_on_remove;
 	Events::Event<base_tree*> event_on_add_child;
 	Events::Event<base_tree*> event_on_remove_child;
 
-	std::set<tree_item_listener*> listeners;
+protected:
 	virtual void on_add()
 	{
 		event_on_add();
-
 	}
 
 	virtual void on_remove()
 	{
-
 		event_on_remove();
-
 	}
-
-
 
 	virtual void added_child(base_tree* obj)
 	{
-
 		event_on_add_child(obj);
-
 	}
-
 
 
 	virtual void removed_child(base_tree* obj)
 	{
-
 		event_on_remove_child(obj);
-	
 	}
 
-
-	// tree_contoller_base* controller;
 public:
-
-	/*virtual bool is_parent(base_tree*)
-	{
-		return false;
-	}
-
-
-	virtual void add_child(base_tree*)
-	{
-	}*/
-	void register_listener(tree_item_listener* listener)
-	{
-		event_on_add.register_handler(listener, [listener]() {listener->tree_on_add();});
-		event_on_remove.register_handler(listener, [listener]() {listener->tree_on_remove(); });
-
-		event_on_add_child.register_handler(listener, [listener](base_tree* obj) {listener->tree_added_child(obj); });
-		event_on_remove_child.register_handler(listener, [listener](base_tree* obj) {listener->tree_removed_child(obj); });
-
-		
-		listeners.insert(listener);
-		listener->tree = this;
-	}
-	void unregister_listener(tree_item_listener* listener)
-	{
-		listeners.erase(listener);
-	}
 
 	virtual std::wstring get_name() const
 	{
 		return L"some_tree_item";
 	}
-
-/*	virtual base_tree* get_child(int i) = 0;
-	virtual size_t get_child_count() = 0;
-
-	virtual int calculate_depth() = 0;*/
-
 };
 
 template <class P, class T> class tree_selector;
@@ -151,15 +77,6 @@ protected:
 	using element_type = typename _child_holder::value_type;
 	T* parent = nullptr;
 	bool ownered = false;
-
-
-	/*virtual void add_child(base_tree* obj) override
-	{
-		tree_base* s = dynamic_cast<tree_base*>(obj);
-
-		if (s && s->parent != this)
-			add_child(s->get_ptr());
-	}*/
 
 
 public:
@@ -258,8 +175,6 @@ virtual 	int calculate_depth()
 	virtual void on_remove()
 	{
 		base_tree::on_remove();
-		//  parent = nullptr;
-		//        controller = nullptr;
 	}
 
 	virtual void add_child(element_type obj)
@@ -271,11 +186,6 @@ virtual 	int calculate_depth()
 
 		childs.insert(obj);
 		obj->on_add(static_cast<T*>(this));
-
-	/*	if constexpr(std::is_pointer<element_type>::value)
-			base_tree::added_child(obj);
-		else
-			base_tree::added_child(obj.get());*/
 	}
 
 	virtual void remove_child(element_type obj)
@@ -284,10 +194,6 @@ virtual 	int calculate_depth()
 		real_childs.erase(obj);
 		obj->on_parent_removed();
 		obj->on_remove();
-		/*if constexpr (std::is_pointer<element_type>::value)
-			base_tree::removed_child(obj);
-		else
-			base_tree::removed_child(obj.get());*/
 	}
 
 	virtual void remove_from_parent()
@@ -310,10 +216,6 @@ virtual 	int calculate_depth()
 		{
 			for (auto& c : childs)
 				c->iterate(f);
-
-			/*
-			for (auto &c : ownered_childs)
-			c->iterate(f);*/
 		}
 	}
 	virtual void iterate(std::function<bool(T*)> f)

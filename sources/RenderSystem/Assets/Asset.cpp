@@ -6,7 +6,7 @@
 AssetManager::AssetManager()
 {
     has_worker = false;
-    GuidGenerator::create();
+
     tree_folders.reset(new folder_item(L"All assets"));
     std::function<void(std::filesystem::path, folder_item::ptr)> iter;
     iter = [this, &iter](std::filesystem::path name, folder_item::ptr  w)
@@ -134,10 +134,6 @@ AssetManager::~AssetManager()
 		a.second->get_asset()->reload_resource();
 }
 
- std::map<Guid, AssetStorage::ptr> AssetManager::get_assets()
-{
-	return assets;
-}
 
  folder_item::ptr AssetManager::get_folders()
 {
@@ -460,8 +456,8 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
     header.set(Header());
     editor.set(Editor());
 
-    if (!header->id.is_good())
-        header->id = GuidGenerator::get().newGuid();
+    if (!header->id.isValid())
+        header->id = xg::newGuid();
 
     if (header->name.empty())
         header->name = convert(to_string(header->id));
@@ -600,9 +596,9 @@ std::future<Asset::ptr> AssetStorage::load_asset()
             {
                 try
                 {
-                    std::wstringstream s;
-                    s << L"loading " << r;
-                    auto task = TaskInfoManager::get().create_task(s.str());
+                    std::stringstream s;
+                    s << "loading " << r;
+                    auto task = TaskInfoManager::get().create_task(convert(s.str()));
                     auto storage = AssetManager::get().get_storage(r);
 
                     if (!storage)
@@ -749,9 +745,9 @@ void AssetStorage::save()
 {
 }
 
- std::set<Guid> AssetHolder::get_reference_ids()
+ guid_set AssetHolder::get_reference_ids()
 {
-	std::set<Guid> r;
+	 guid_set r;
 	m.lock();
 
 	for (auto a : assets)

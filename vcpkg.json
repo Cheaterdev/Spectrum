@@ -13,6 +13,6 @@
 		"boost-lockfree",	
 		"antlr4",
 		"magic-enum",
-		"entt"
+		"crossguid"
 	]
 }
