@@ -1,11 +1,5 @@
 #include "pch.h"
 
-void com_deleter(IUnknown* pComResource)
-{
-    if (pComResource)
-        pComResource->Release();
-}
-
 std::wstring convert(std::string_view s)
 {
     std::wstring w;
@@ -21,7 +15,6 @@ std::string convert(std::wstring_view s)
 	std::transform(s.begin(), s.end(), w.begin(), [](wint_t c) {return static_cast<char>(wctob(c)); });
     return w;
 }
-
 
 HRESULT test(HRESULT hr, std::string str)
 {
@@ -41,7 +34,6 @@ std::string to_lower(const std::string& str)
                    ::tolower);
     return lowered;
 }
-
 
 std::wstring to_lower(const std::wstring& str)
 {

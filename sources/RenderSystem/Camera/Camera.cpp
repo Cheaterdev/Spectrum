@@ -19,8 +19,8 @@ void camera::update(float2 offset )
 	params.viewProj = view_proj_mat;
 	params.view = view_mat;
 	params.proj = proj_jittered;
-	params.position = pos;
-	params.direction = _dir.normalize();
+	params.position = float4(pos,0);
+	params.direction = float4(_dir.normalize(),0);
 	params.invViewProj = inv_view_proj_mat;
 	(params.invProj = proj_jittered).inverse();
 	(params.invView = view_mat).inverse();
@@ -28,7 +28,7 @@ void camera::update(float2 offset )
 	calculate(inv_view_proj_mat);
 	vec3 right = vec3::cross(params.direction, _up);
 	res_up = vec3::cross(params.direction, right);
-	params.jitter = { 0, 0 };// offset;
+	params.jitter = { 0, 0,0,0 };// offset;
 	
 
 	for (int i = 0; i < 6; i++)

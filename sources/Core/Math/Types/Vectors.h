@@ -3,6 +3,36 @@
 #pragma warning(disable:4201)
 #pragma warning(disable:4520)
 
+namespace internal
+{
+
+	template<typename T> concept IsVectorType =
+		requires () {
+		T::N;
+	};
+
+
+	template<class T>
+	consteval int get_count() requires (!IsVectorType<T>)
+	{
+		return 0xff;
+	}
+
+	template<class T>
+	consteval int get_count() requires (IsVectorType<T>)
+	{
+		return T::N;
+	}
+
+	template< class ...Args>
+	consteval int calc_count()
+	{
+		return (0 + ... + get_count<Args>());
+	}
+
+}
+
+
 // Basic vector
 template<typename T>
 class Vector : public T
@@ -13,18 +43,20 @@ public:
 	using T::N;
 	using raw = typename T;
 private:
+
+
 	template<int i, class D, class ...Args>
 	void set_internal(D d, Args ...args) requires (std::is_compound_v<D>)
 	{
 		constexpr int size = std::min(N, D::N);
-		for (int t = 0; t < size; t++)
+		for (int t : view::iota(0, size))
 			values[i + t] = static_cast<Format>(d.values[t]);
 
 		set_internal<i + size>(args...);
 	}
 
 	template<int i, class D, class ...Args>
-	void set_internal(D d, Args ...args)requires (!std::is_compound_v<D>)
+	void set_internal(D d, Args ...args) requires (!std::is_compound_v<D>)
 	{
 		values[i] = static_cast<Format>(d);
 		set_internal<i + 1>(args...);
@@ -46,13 +78,20 @@ public:
 
 
 	template<class ...Args>
-	Vector(Args ...args) requires(T::GENERATE_CONSTRUCTOR)
+	Vector(Args ...args) requires(T::GENERATE_CONSTRUCTOR && (internal::calc_count<Args...>() >= N))
 	{
 		set(args...);
 	}
 
+	template<class V>
+	Vector(V v) requires(T::GENERATE_CONSTRUCTOR && (!std::is_compound_v<V>))
+	{
+		set(v);
+	}
+
+
 	template<class ...Args>
-	void set(Args ...args)
+	void set(Args ...args)  requires (internal::calc_count<Args...>() >= N)
 	{
 		set_internal<0>(args...);
 	}
@@ -60,7 +99,7 @@ public:
 	template<class V>
 	void set(V v) requires (!std::is_compound_v<V>)
 	{
-		for (int t = 0; t < N; t++)
+		for (int t : view::iota(0, N))
 			T::values[t] = static_cast<Format>(v);
 	}
 
@@ -75,7 +114,7 @@ public:
 	template<class T2>
 	Vector& operator=(const Vector<T2>& v) requires(N == T2::N)
 	{
-		for (int i = 0; i < T::N; ++i)
+		for (int i : view::iota(0, N))
 			values[i] = static_cast<Format>(v[i]);
 		return *this;
 	}
@@ -84,7 +123,7 @@ public:
 	{
 		Vector result;
 
-		for (int i = 0; i < T::N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = values[i] + v[i];
 
 		return result;
@@ -95,7 +134,7 @@ public:
 	{
 		Vector result(*this);
 
-		for (int i = 0; i < T::N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = values[i] - v[i];
 
 		return result;
@@ -105,7 +144,7 @@ public:
 	{
 		Vector<T> result;
 
-		for (int i = 0; i < T::N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = -values[i];
 
 		return result;
@@ -113,7 +152,7 @@ public:
 
 	inline Vector& operator+=(const Vector& v)
 	{
-		for (int i = 0; i < T::N; ++i)
+		for (int i : view::iota(0, N))
 			values[i] += v[i];
 
 		return *this;
@@ -121,7 +160,7 @@ public:
 
 	inline Vector& operator-=(const Vector& v)
 	{
-		for (int i = 0; i < T::N; ++i)
+		for (int i : view::iota(0, N))
 			values[i] -= v[i];
 
 		return *this;
@@ -129,7 +168,7 @@ public:
 
 	inline Vector& operator*=(const Format& n)
 	{
-		for (int i = 0; i < T::N; ++i)
+		for (int i : view::iota(0, N))
 			values[i] *= n;
 
 		return *this;
@@ -137,7 +176,7 @@ public:
 
 	inline Vector& operator/=(const Format& n)
 	{
-		for (int i = 0; i < T::N; ++i)
+		for (int i : view::iota(0, N))
 			values[i] /= n;
 
 		return *this;
@@ -186,16 +225,16 @@ public:
 	{
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = std::abs(values[i]);
 		return result;
 	}
 	template<typename T>
-	static auto min(const Vector<T>& v1, const Vector<T>& v2)
+	static auto min(const Vector<T>& v1, const Vector<T>& v2) 
 	{
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = std::min(v1[i], v2[i]);
 
 		return result;
@@ -206,7 +245,7 @@ public:
 	{
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = std::max(v1[i], v2[i]);
 
 		return result;
@@ -217,7 +256,7 @@ public:
 	{
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = std::clamp(v[i], _min[i], _max[i]);
 
 		return result;
@@ -228,7 +267,7 @@ public:
 	{
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = values[i] > v2[i];
 
 		return result;
@@ -238,7 +277,7 @@ public:
 	auto operator<(const Vector<T>& v2) const {
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = values[i] < v2[i];
 
 		return result;
@@ -250,7 +289,7 @@ public:
 	{
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = values[i] >= v2[i];
 
 		return result;
@@ -260,7 +299,7 @@ public:
 	auto operator<=(const Vector<T>& v2) const {
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = values[i] <= v2[i];
 
 		return result;
@@ -272,7 +311,7 @@ public:
 	{
 		Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
-		for (int i = 0; i < N; ++i)
+		for (int i : view::iota(0, N))
 			result[i] = fabs(v1[i]);
 
 		return result;
@@ -283,7 +322,7 @@ public:
 	{
 		Format r = 0.0;
 
-		for (int i = 0; i < T::N; i++)
+		for (int i : view::iota(0, N))
 			r += a[i] * b[i];
 
 		return r;
@@ -295,13 +334,25 @@ public:
 		return Vector<T>(v1.y * v2.z - v2.y * v1.z, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v2.x * v1.y);
 	}
 
+	private:
+		SERIALIZE()
+		{
+			ar& NP("values", values);
+		}
 
+		void serialize(simple_log_archive& ar, const unsigned int) requires (N<4)
+		{
+			if constexpr (N > 0)ar& NP("x", values[0]);
+			if constexpr (N > 1)ar& NP("y", values[1]);
+			if constexpr (N > 2)ar& NP("z", values[2]);
+			if constexpr (N > 3)ar& NP("w", values[3]);
+		}
 };
 
 template<typename T>
 bool operator==(const Vector<T>& a, const Vector<T>& b)
 {
-	for (unsigned int i = 0; i < T::N; ++i)
+	for (int i : view::iota(0, T::N))
 		if (a[i] != b[i])
 			return false;
 
@@ -311,7 +362,7 @@ bool operator==(const Vector<T>& a, const Vector<T>& b)
 template<typename T>
 bool operator!=(const Vector<T>& a, const Vector<T>& b)
 {
-	for (unsigned int i = 0; i < T::N; ++i)
+	for (int i : view::iota(0, T::N))
 		if (a[i] != b[i])
 			return true;
 
@@ -321,29 +372,29 @@ bool operator!=(const Vector<T>& a, const Vector<T>& b)
 template<typename T, typename T2>
 Vector<T> operator*(T2 n, Vector<T> v) requires(std::is_scalar_v<T2>)
 {
-	for (int i = 0; i < T::N; ++i)
+	for (int i : view::iota(0, T::N))
 		v[i] = static_cast<Vector<T>::Format>(n * v[i]);
 
 	return v;
 }
 
 template<typename T, typename T2>
-auto operator*(const Vector<T>& a, const Vector<T2>& b)
+auto operator*(const Vector<T>& a, const Vector<T2>& b)  requires(T::N == T2::N)
 {
 	Vector<typename T::CONSTUCTIBLE_TYPE> v;
 
-	for (int i = 0; i < T::N; ++i)
+	for (int i : view::iota(0, T::N))
 		v[i] = a[i] * b[i];
 
 	return v;
 }
 
 template<typename T, typename T2>
-auto operator/(const Vector<T>& a, const Vector<T2>& b)
+auto operator/(const Vector<T>& a, const Vector<T2>& b)  requires(T::N == T2::N)
 {
 	Vector<typename T::CONSTUCTIBLE_TYPE> v;
 
-	for (int i = 0; i < T::N; ++i)
+	for (int i : view::iota(0, T::N))
 		v[i] = a[i] / b[i];
 
 	return v;
@@ -352,7 +403,7 @@ auto operator/(const Vector<T>& a, const Vector<T2>& b)
 template<typename T, typename T2>
 Vector<T> operator*(Vector<T> v, T2 n) requires(std::is_scalar_v<T2>)
 {
-	for (int i = 0; i < T::N; ++i)
+	for (int i : view::iota(0, T::N))
 		v[i] = static_cast<Vector<T>::Format>(n * v[i]);
 	return v;
 }
@@ -360,7 +411,7 @@ Vector<T> operator*(Vector<T> v, T2 n) requires(std::is_scalar_v<T2>)
 template<typename T, typename T2>
 Vector<T> operator/(T2 n, Vector<T> v)  requires(std::is_scalar_v<T2>)
 {
-	for (int i = 0; i < T::N; ++i)
+	for (int i : view::iota(0, T::N))
 		v[i] = n / v[i];
 
 	return v;
@@ -369,7 +420,7 @@ Vector<T> operator/(T2 n, Vector<T> v)  requires(std::is_scalar_v<T2>)
 template<typename T, typename T2>
 Vector<T> operator/(Vector<T> v, T2 n) requires(std::is_scalar_v<T2>)
 {
-	for (int i = 0; i < T::N; ++i)
+	for (int i : view::iota(0, T::N))
 		v[i] = static_cast<T::Format>(static_cast<T2>(v[i]) / n);
 
 	return v;
@@ -726,7 +777,7 @@ public:
 		grid_size = size;
 
 		size_t sum = 1;
-		for (int i = 0; i < V::N; ++i)
+		for (int i : view::iota(0, V::N))
 		{
 			scalers[i] = sum;
 			sum *= size[i];

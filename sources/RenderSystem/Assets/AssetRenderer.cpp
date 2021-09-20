@@ -14,7 +14,8 @@ public:
 
 	void render(FrameGraph& graph)
 	{
-
+		graph.scene->update(*graph.builder.current_frame);
+		
 		{
 
 			CommandList::ptr command_list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
@@ -123,7 +124,7 @@ public:
 			if (sky.resource)
 				frameInfo.GetSky() = sky.get_handler<Handlers::Texture>()->textureÑube;
 			/////////
-			frameInfo.GetSunDir() = graph.sunDir;
+			frameInfo.GetSunDir().xyz = graph.sunDir;
 			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
 
 
@@ -136,6 +137,11 @@ public:
 			auto compiled = frameInfo.compile(*graph.builder.current_frame);
 			graph.register_slot_setter(compiled);
 		});
+
+		graph.add_slot_generator([this](FrameGraph& graph) {
+			graph.register_slot_setter(graph.scene->compiledScene);
+			});
+		
 //		graph.add_pass([])
 	}
 

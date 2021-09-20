@@ -464,8 +464,8 @@ bool MeshAssetInstance::update_transforms()
 			my_node.node_inverse_matrix.inverse();
 
 
-			my_node.aabb.min = info.primitive->get_min();
-			my_node.aabb.max = info.primitive->get_max();
+			my_node.aabb.min = float4(info.primitive->get_min(),0);
+			my_node.aabb.max = float4(info.primitive->get_max(),0);
 
 
 			need_update_mats = prev_mat != info.global_mat;
@@ -573,8 +573,8 @@ void MeshAssetInstance::update_nodes()
 
 			my_node.node_global_matrix_prev = info.global_mat;
 
-			my_node.aabb.min = info.primitive->get_min();
-			my_node.aabb.max = info.primitive->get_max();
+			my_node.aabb.min = float4(info.primitive->get_min(), 0);
+			my_node.aabb.max = float4(info.primitive->get_max(),0);
 
 			info.material_id = UINT(mesh_asset->meshes[m].material);
 			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();

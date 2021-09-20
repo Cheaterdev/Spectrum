@@ -28,6 +28,9 @@ public:
     virtual LRESULT MsgProc(MSG msg);
 
     static void process_messages();
+
+
+    static std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension);
 };
 
 class WinErrorLogger : public Log

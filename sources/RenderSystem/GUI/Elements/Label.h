@@ -31,7 +31,7 @@ namespace GUI
                 bool need_recalculate = false;
                 bool calculated = false;
                 sizer lay1, lay2, area1, area2;
-                rect text_size;
+                float2 text_size;
                 ivec2 w;
                 float scaled = 1;
 
@@ -53,7 +53,7 @@ namespace GUI
                 }
                 virtual void draw(Render::context& c) override;
 
-                unsigned int get_index(vec3 at);
+                unsigned int get_index(vec2 at);
                 Fonts::FontGeometry::ptr get_geometry();
                 virtual void recalculate(Render::context& c);
 

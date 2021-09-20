@@ -1,8 +1,4 @@
 #pragma once
-/*#define CRTDBG_MAP_ALLOC
-#define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
-#include <crtdbg.h>*/
 
 #define SPECTRUM_ENABLE_EXEPTIONS
 // support windows 7
@@ -47,15 +43,14 @@
 #include <ranges>
 #include <numeric>
 #include <comdef.h>
-// BOOST includes
-//#define BOOST_DECL_EXPORTS
-//#define BOOST_WARCHIVE_SOURCE
-//#define BOOST_ARCHIVE_DECL
+#include <locale>
+#include <codecvt>
+#include <cmath>
+#include <ranges>
 using namespace std;
 
-#pragma warning(disable:4512)
-#pragma warning(disable:4100)
-#pragma warning(disable:4310)
+namespace ranges = std::ranges;
+namespace view = ranges::views;
 
 #include <magic_enum.hpp>
 
@@ -65,11 +60,28 @@ using namespace std;
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/list.hpp>
+#include <boost/serialization/set.hpp>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+
+
+#include "../3rdparty/ZipLib/ZipFile.h"
+#include "../3rdparty/ZipLib/streams/memstream.h"
+
+
 
 #define NVP(name) boost::serialization::make_nvp(BOOST_PP_STRINGIZE(name), name)
 #define NP(name, param) boost::serialization::make_nvp(name, param)
 
-
+#define SAVE_PARENT(type) boost::serialization::make_nvp("parent", boost::serialization::base_object<type>(*this))
+#define SERIALIZE() friend class boost::serialization::access; template<class Archive> void serialize(Archive& ar, const unsigned int version)
 
 constexpr std::size_t operator "" _t(unsigned long long int x)
 {
@@ -96,16 +108,6 @@ constexpr std::size_t operator "" _kb(unsigned long long int x) {
 
 
 
-#include <boost/serialization/vector.hpp>
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/array.hpp>
-#include <boost/serialization/list.hpp>
-#include <boost/serialization/set.hpp>
-#include <boost/serialization/nvp.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/access.hpp>
-#include <boost/serialization/base_object.hpp>
-#include <boost/serialization/export.hpp>
 
 
 
@@ -131,23 +133,6 @@ private:
 };
 #include "serialization/shared_ptr.h"
 
-//#include "serialization/portable_iarchive.hpp"
-
-//#include "serialization/portable_oarchive.hpp"
-
-#pragma warning(default:4512)
-#pragma warning(default:4100)
-#pragma warning(default:4310)
-
-/*
-typedef  eos::portable_oarchive serialization_oarchive;
-typedef  eos::portable_iarchive serialization_iarchive;
-
-typedef  eos::portable_oarchive serialization_portable_oarchive;
-typedef  eos::portable_iarchive serialization_portable_iarchive;
-
-*/
-
 using serialization_oarchive = boost::archive::binary_oarchive;
 using portable_iarchive = boost::archive::binary_iarchive;
 
@@ -155,16 +140,6 @@ using serialization_oarchive = boost::archive::binary_oarchive;
 using serialization_iarchive = boost::archive::binary_iarchive;
 
 
-//#include <boost/system/error_code.hpp>
-//#include <boost/uuid/uuid.hpp>            // uuid class
-//#include <boost/uuid/uuid_generators.hpp> // generators
-//#include <boost/uuid/uuid_io.hpp>         // streaming operators etc.
-
-#include <string>
-#include <locale>
-#include <codecvt>
-
-void com_deleter(IUnknown* pComResource);
 
 std::wstring convert(std::string_view str);
 std::string convert(std::wstring_view wstr);
@@ -173,7 +148,6 @@ std::wstring to_lower(const std::wstring& str);
 
 template<class T> using s_ptr = std::shared_ptr<T>;
 template<class T> using w_ptr = std::weak_ptr<T>;
-
 
 
 template <class T>
@@ -198,25 +172,10 @@ public:
 
 HRESULT test(HRESULT hr, std::string str = "");
 
-template <class T>
-void unreferenced_parameter(const T&)
-{
-};
 #define STRINGIZE(x) #x
-#include <type_traits>
-#define USE_MATH_DEFINES
-
-#include <cmath>
-
-
-#define LESS(x) {if(l.x<r.x) return true; if(r.x<l.x) return false;}
-#define OP_E(x)\
-	if(!(l.x==r.x)) return false;
 
 // CORE includes
 
-#include "../3rdparty/ZipLib/ZipFile.h"
-#include "../3rdparty/ZipLib/streams/memstream.h"
 #include "DebugInfo/Exceptions.h"
 #include "Data/Data.h"
 #include "patterns/Singleton.h"
@@ -239,11 +198,11 @@ void unreferenced_parameter(const T&)
 #include "Tree/Tree.h"
 
 #include "Math/Constants.h"
-#include "Math/Vectors.h"
-#include "Math/Quaternions.h"
-#include "Math/Matrices.h"
+#include "Math/Types/Vectors.h"
+#include "Math/Types/Quaternions.h"
+#include "Math/Types/Matrices.h"
 
-#include "Math/GeometryPrimitives.h"
+#include "Math/Primitives/Intersections.h"
 
 
 #include "Math/math_serialization.h"

@@ -299,7 +299,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, FrameG
 
 				auto params = utils.MapParams();
 				params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
-				params.GetVoxels_per_tile() = normal.tex_result->get_tile_shape();
+				params.GetVoxels_per_tile() = ivec4(normal.tex_result->get_tile_shape(),0);
 				utils.set(compute);
 			}
 
@@ -1135,7 +1135,7 @@ void VoxelGI::lighting(FrameGraph& graph)
 
 				auto params = ligthing.MapParams();
 				params.GetTiles() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
-				params.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
+				params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();
 
 				auto pssm = ligthing.MapPssmGlobal();
 
@@ -1224,7 +1224,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 
 						auto params = utils.MapParams();
 						params.GetTiles() = gpu_tiles_buffer[i]->buffer->structuredBuffer;
-						params.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
+						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();
 
 						utils.set(compute);
 					}
@@ -1262,7 +1262,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 
 						auto params = mipmapping.MapParams();
 						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
-						params.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
+						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();
 
 						mipmapping.set(compute);
 					}
@@ -1310,12 +1310,12 @@ void VoxelGI::generate(FrameGraph& graph)
 	if(need_start_new)
 		all_scene_regen_counter = 3;
 
-	voxel_info.GetMin() = min;
-	voxel_info.GetSize() = size;
+	voxel_info.GetMin().xyz = min;
+	voxel_info.GetSize().xyz = size;
 	voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z = max(200.0f, voxel_info.GetSize().max_element());
 
-	voxel_info.GetVoxel_tiles_count() = tex_lighting.tex_result->get_tiles_count(0);
-	voxel_info.GetVoxels_per_tile() = tex_lighting.tex_result->get_tile_shape();
+	voxel_info.GetVoxel_tiles_count().xyz = tex_lighting.tex_result->get_tiles_count(0);
+	voxel_info.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();
 
 	scene->voxels_compiled = scene->voxel_info.compile(*graph.builder.current_frame);
 

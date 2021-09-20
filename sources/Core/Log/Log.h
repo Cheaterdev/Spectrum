@@ -27,15 +27,10 @@ static auto start_time = std::chrono::high_resolution_clock::now();
 class Log : public Singleton<Log>
 {
         friend class Singleton<Log>;
-        //friend class LogListener;
         friend class LogBlock;
-
 
         struct endline {};
         std::mutex m;
-        //   std::set<LogListener*> listeners;
-        //  std::vector< std::function<void(const LogBlock&)>> listener_functions;
-
         log_level_internal logging_level;
     protected:
         Log();
@@ -66,11 +61,6 @@ class Log : public Singleton<Log>
         // this functions are last what user sees
         virtual void crash_error(std::string message, std::string at = "");
         virtual void crash_error(HRESULT hr, std::string at = "");
-
-        /*  void register_listener(std::function<void(const LogBlock&)> f)
-          {
-              listener_functions.push_back(f);
-          }*/
 };
 
 class LogBlock

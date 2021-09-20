@@ -13,8 +13,8 @@ namespace GUI
 			rect p = render_bounds.get();
 			auto orig = c.ui_clipping;
 			c.ui_clipping = intersect(c.ui_clipping ,math::convert(p));
-			p.w = std::min(text_size.pos.x, render_bounds->w);
-			p.h = std::min(text_size.pos.y, render_bounds->h);
+			p.w = std::min(text_size.x, render_bounds->w);
+			p.h = std::min(text_size.y, render_bounds->h);
 		
 			if (c.ui_clipping.left < c.ui_clipping.right)
 				if (c.ui_clipping.top < c.ui_clipping.bottom)
@@ -22,11 +22,11 @@ namespace GUI
 				p.w = std::ceil(p.w);
 				p.h = std::ceil(p.h);
 
-				if ((magnet_text&FW1_CENTER)&&text_size.pos.x < render_bounds->w)
-					p.x += (p.w - std::ceil(text_size.pos.x)) / 2;
+				if ((magnet_text&FW1_CENTER)&&text_size.x < render_bounds->w)
+					p.x += (p.w - std::ceil(text_size.x)) / 2;
 
-				if ((magnet_text&FW1_VCENTER)&&text_size.pos.y < render_bounds->h)
-					p.y += (p.h - std::ceil(text_size.pos.y)) / 2;
+				if ((magnet_text&FW1_VCENTER)&&text_size.y < render_bounds->h)
+					p.y += (p.h - std::ceil(text_size.y)) / 2;
 				sizer intersected = intersect(math::convert(p), c.ui_clipping);
 					if((intersected.top < intersected.bottom && intersected.left < intersected.right))
 				renderer->draw(c, cache, p);
@@ -68,10 +68,10 @@ namespace GUI
 			}
 			//if (!cache.texture) {
 		
-			rect p = {0,0,text_size.pos};
+			rect p = {0,0,text_size};
 		//	rect p =  render_bounds.get() / scaled;
-			p.w = std::min(text_size.pos.x, render_bounds->w/ scaled);
-			p.h = std::min(text_size.pos.y, render_bounds->h / scaled);
+			p.w = std::min(text_size.x, render_bounds->w/ scaled);
+			p.h = std::min(text_size.y, render_bounds->h / scaled);
 			p.x = 0;
 			p.y = 0;
 			lay2 = math::convert(p);
@@ -128,7 +128,7 @@ namespace GUI
 			return geomerty;
 		}
 
-		unsigned int label::get_index(vec3 at)
+		unsigned int label::get_index(vec2 at)
 		{
 			return geomerty->get_index(at);
 		}

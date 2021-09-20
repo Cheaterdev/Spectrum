@@ -50,9 +50,9 @@ class tangent_generator
         tangent_generator(std::function<vec3(unsigned int)> positions, std::function<vec2(unsigned int)> tc, std::function<vec3(unsigned int)> normals, std::function<ivec3(unsigned int)> faces, unsigned int faces_count , unsigned int vertex_count)
         {
             std::vector<vec3> tan1, tan2;
-            tan1.resize(vertex_count, vec3(0, 0, 0));
-            tan2.resize(vertex_count, vec3(0, 0, 0));
-            tangents.resize(vertex_count, vec3(0, 0, 0));
+            tan1.resize(vertex_count, vec4(0));
+            tan2.resize(vertex_count, vec4(0));
+            tangents.resize(vertex_count, vec4(0));
 
             //binormals.resize(vertex_count, vec3(0, 0, 0));
             for (unsigned int i = 0; i < faces_count; i++)

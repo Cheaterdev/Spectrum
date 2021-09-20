@@ -242,7 +242,7 @@ ivec2 Window::get_size() const
 }
 
 
-std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension)
+std::vector<std::string> Window::file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension)
 {
 	std::vector<std::string> result;
 

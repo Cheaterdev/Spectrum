@@ -582,7 +582,7 @@ public:
 
 		};
 		graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
-			builder.create(data.ResultTexture, { graph.frame_size, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 });
+			builder.create(data.ResultTexture, { uint3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 });
 			}, [](no& data, FrameContext& _context) {});
 
 
@@ -617,7 +617,7 @@ public:
 			if (sky.resource)
 				frameInfo.GetSky() = sky.get_handler<Handlers::Texture>()->textureÑube;
 			/////////
-			frameInfo.GetSunDir() = graph.sunDir;
+			frameInfo.GetSunDir().xyz = graph.sunDir;
 			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
 
 
@@ -628,7 +628,7 @@ public:
 			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
 
 			auto compiled = frameInfo.compile(*graph.builder.current_frame);
-			graph.register_slot_setter(compiled);
+				graph.register_slot_setter(compiled);
 			});
 			
 			graph.add_slot_generator([this](FrameGraph& graph) {
@@ -1275,6 +1275,11 @@ protected:
 		Window::process_messages();
 	}
 
+	std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension) override
+	{
+		return Window::file_open(Name, StartPath,Extension);
+	}
+
 };
 
 void SetupDebug()
@@ -1359,8 +1364,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	EVENT("start");
 	Application::create<RenderApplication>();
 	EVENT("create");
-
-
+	
 	// There can be error while creating, so test
 	if (Application::is_good())
 	{

@@ -17,4 +17,8 @@ class Application : public Singleton<Application>
         void shutdown();
         bool is_alive() const { return alive; }
 
+        virtual std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension)
+        {
+            return std::vector<std::string>();
+        }
 };

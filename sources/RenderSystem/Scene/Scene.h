@@ -165,23 +165,21 @@ public:
             }
 
 
-			{
+            {
                 PROFILE(L"SceneData");
-				Slots::SceneData sceneData;
-				sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
-				sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
-				sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
-			    sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->structuredBuffer;
-				sceneData.GetMeshes() = scene->mesh_infos->buffer->structuredBuffer;
-				sceneData.GetMeshInstances() = universal_mesh_instance_manager::get().buffer->structuredBuffer;
+                Slots::SceneData sceneData;
+                sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
+                sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
+                sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
+                sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->structuredBuffer;
+                sceneData.GetMeshes() = scene->mesh_infos->buffer->structuredBuffer;
+                sceneData.GetMeshInstances() = universal_mesh_instance_manager::get().buffer->structuredBuffer;
                 sceneData.GetMeshlets() = universal_meshlet_manager::get().buffer->structuredBuffer;
-				  sceneData.GetIndices() = universal_index_manager::get().buffer->structuredBuffer;
-                  sceneData.GetMeshletCullData() = universal_meshletculldata_manager::get().buffer->structuredBuffer;
+                sceneData.GetIndices() = universal_index_manager::get().buffer->structuredBuffer;
+                sceneData.GetMeshletCullData() = universal_meshletculldata_manager::get().buffer->structuredBuffer;
 
-				compiledScene = sceneData.compile(frame);
-
-
-			}
+                compiledScene = sceneData.compile(frame);
+            }
 
 
             auto build = [&](my_unique_vector<UINT>& data, Slots::GatherPipelineGlobal::Compiled & target) {

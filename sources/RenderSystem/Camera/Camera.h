@@ -81,7 +81,7 @@ class camera : public Frustum
         vec2 to_local(vec3 world) const
         {
             vec4 dir =	vec4(world, 1) * get_view_proj();
-            vec3 res(dir / dir.w);
+            vec2 res(dir / dir.w);
             res = res * 0.5 + vec2(0.5, 0.5);
             return res;
         }

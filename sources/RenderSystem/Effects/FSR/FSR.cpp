@@ -18,8 +18,8 @@ void FSR::generate(FrameGraph& graph)
 	graph.pass<SkyData>("FSR", [this, &graph](SkyData& data, TaskBuilder& builder)
 		{
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.recreate(data.ResultTextureUpscaled, { graph.upscale_size, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess);
-builder.create(data.FSRTemp, { graph.upscale_size, DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess);
+			builder.recreate(data.ResultTextureUpscaled, { uint3(graph.upscale_size,1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess);
+builder.create(data.FSRTemp, { uint3(graph.upscale_size,1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess);
 
 		
 			return true;

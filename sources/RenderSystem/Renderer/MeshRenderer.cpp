@@ -429,14 +429,14 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		std::vector<vec4> verts(8);
 		vec3 v0(-0.5, -0.5, 0.5);
 		vec3 v1(0.5, 0.5, 0.5);
-		verts[0] = vec3(-1.0f, 1.0f, -1.0f);
-		verts[1] = vec3(1.0f, 1.0f, -1.0f);
-		verts[2] = vec3(1.0f, 1.0f, 1.0f);
-		verts[3] = vec3(-1.0f, 1.0f, 1.0f);
-		verts[4] = vec3(-1.0f, -1.0f, -1.0f);
-		verts[5] = vec3(1.0f, -1.0f, -1.0f);
-		verts[6] = vec3(1.0f, -1.0f, 1.0f);
-		verts[7] = vec3(-1.0f, -1.0f, 1.0f);
+		verts[0] = vec4(-1.0f, 1.0f, -1.0f,0);
+		verts[1] = vec4(1.0f, 1.0f, -1.0f,0);
+		verts[2] = vec4(1.0f, 1.0f, 1.0f,0);
+		verts[3] = vec4(-1.0f, 1.0f, 1.0f,0);
+		verts[4] = vec4(-1.0f, -1.0f, -1.0f,0);
+		verts[5] = vec4(1.0f, -1.0f, -1.0f,0);
+		verts[6] = vec4(1.0f, -1.0f, 1.0f,0);
+		verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
 		index_buffer.reset(new Render::IndexBuffer(data));
 
 		vertex_buffer.reset(new Render::StructuredBuffer<vec4>(8));

@@ -289,12 +289,12 @@ namespace GUI
                 menu_list::ptr menu(new menu_list());
                 menu->add_item("TILE")->on_click = [this](menu_list_element::ptr e)
                 {                
-					auto files = file_open("Choose your destiny", "", "png|*.png|" "jpg|*.jpg|" "all|*.*|"   "|");
+					auto files = Application::get().file_open("Choose your destiny", "", "png|*.png|" "jpg|*.jpg|" "all|*.*|"   "|");
                 };
                 menu->add_item("Import asset")->on_click = [this](menu_list_element::ptr e)
                 {
 				
-                       auto files = file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|"  "blend|*.blend|"  "all|*.*|"   "|");
+                       auto files = Application::get().file_open("Choose your destiny", "", "dds|*.dds|" "png|*.png|" "jpg|*.jpg|"  "obj|*.obj|"  "blend|*.blend|"  "all|*.*|"   "|");
 
 					   struct material_info
 					   {

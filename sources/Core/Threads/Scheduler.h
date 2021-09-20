@@ -7,7 +7,6 @@
 #include <boost/lockfree/spsc_queue.hpp>
 using namespace concurrency;
 
-#define GSysInfo SystemInfo::get()
 enum class TaskPriority : int
 {
 	LOW,
