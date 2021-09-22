@@ -1,3 +1,4 @@
+#include "Application/Application.h"
 
 class Window : public DX12::hwnd_provider
 {

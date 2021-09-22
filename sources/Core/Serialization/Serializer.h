@@ -308,3 +308,18 @@ public:
 		return data;
 	}
 };
+
+
+class Hasher
+{
+public:
+
+	static std::string hash(std::string_view);
+
+	template<NonString T>
+	static std::string hash(const T& obj)
+	{
+		return hash(Serializer::serialize(obj));
+	}
+
+};

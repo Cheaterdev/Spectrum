@@ -1,5 +1,6 @@
 #include "pch.h"
 #include <io.h>
+#include "Threads/Scheduler.h"
 
 std::string native_file_provider::load_all(file* info)
 {

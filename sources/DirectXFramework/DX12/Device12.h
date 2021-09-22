@@ -1,5 +1,6 @@
 #pragma once
-#include "../../3rdparty/Aftermath/NsightAftermathGpuCrashTracker.h"
+
+class GpuCrashTracker;
 
 namespace DX12
 {
@@ -15,7 +16,7 @@ namespace DX12
 		IdGenerator<Thread::Lockable> id_generator;
 		friend class CommandList;
 		bool rtx = false;
-		GpuCrashTracker crasher;
+		std::unique_ptr<GpuCrashTracker> crasher;
 	public:
 		void stop_all();
 		virtual ~Device();

@@ -14,51 +14,50 @@
 
 using Sharpmake;
 using System;
-
+using System.Collections.Generic;
 namespace Spectrum
 {
-	
-[Fragment, Flags]
-public enum Mode
-{
-    Dev = 1,
-	Profile = 2,
-    Retail = 4
-}
 
-public class CustomTarget : ITarget
-{
-	  // DevEnv and Platform are mandatory on all targets so we define them.
-    public Platform Platform;    public DevEnv DevEnv;
+    [Fragment, Flags]
+    public enum Mode
+    {
+        Dev = 1,
+        Profile = 2,
+        Retail = 4
+    }
+
+    public class CustomTarget : ITarget
+    {
+        // DevEnv and Platform are mandatory on all targets so we define them.
+        public Platform Platform; public DevEnv DevEnv;
 
 
-    // Also put debug/release configurations since this is common.
-    public Optimization Optimization;
-    public Mode Mode;
-}
+        // Also put debug/release configurations since this is common.
+        public Optimization Optimization;
+        public Mode Mode;
+    }
 
 
     [Sharpmake.Generate]
     public class Common : Project
     {
-        public Common(): base(typeof(CustomTarget))
+        public Common() : base(typeof(CustomTarget))
         {
             SourceFilesExtensions.Add(".sig");
             SourceFilesExtensions.Add(".hlsl");
 
             RootPath = @"[project.SharpmakeCsPath]\projects\[project.Name]";
 
-            AddTargets(new CustomTarget{
+            AddTargets(new CustomTarget
+            {
                 Platform = Platform.win64,
-               DevEnv =  DevEnv.vs2019,
-              Optimization =   Optimization.Release,
-				Mode = Mode.Dev | Mode.Profile | Mode.Retail
+                DevEnv = DevEnv.vs2019,
+                Optimization = Optimization.Release,
+                Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
-			
-			CustomProperties.Add("VcpkgEnabled", "true");
-			CustomProperties.Add("VcpkgEnableManifest", "true");
-			
 
+            CustomProperties.Add("VcpkgEnabled", "true");
+            CustomProperties.Add("VcpkgEnableManifest", "true");
         }
 
         [Configure]
@@ -67,14 +66,16 @@ public class CustomTarget : ITarget
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 
-            conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);		
-            conf.Options.Add(Options.Vc.Compiler.Exceptions.Enable);		
-            conf.Options.Add(Options.Vc.Compiler.RTTI.Enable);		
-            conf.Options.Add(Options.Vc.Linker.SubSystem.Application);		
-            conf.Options.Add(Options.Vc.General.WindowsTargetPlatformVersion.Latest);		
-            conf.Options.Add(Options.Vc.Compiler.FunctionLevelLinking.Disable);		
-            conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreadedDLL);		
-            conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);		     
+            conf.IncludePaths.Add(SourceRootPath);
+
+            conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);
+            conf.Options.Add(Options.Vc.Compiler.Exceptions.Enable);
+            conf.Options.Add(Options.Vc.Compiler.RTTI.Enable);
+            conf.Options.Add(Options.Vc.Linker.SubSystem.Windows);
+            conf.Options.Add(Options.Vc.General.WindowsTargetPlatformVersion.Latest);
+            conf.Options.Add(Options.Vc.Compiler.FunctionLevelLinking.Disable);
+            conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreadedDLL);
+            conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
             conf.AdditionalCompilerOptions.Add("/bigobj");
@@ -85,44 +86,46 @@ public class CustomTarget : ITarget
             conf.Defines.Add("BOOST_NO_USER_CONFIG");
             conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
             conf.Defines.Add("BOOST_ENDIAN_DEPRECATED_NAMES");
-          
+
             conf.Defines.Add("BOOST_ALL_NO_LIB");
-            conf.Defines.Add("NOMINMAX");    
+            conf.Defines.Add("NOMINMAX");
 
 
-			if (target.Mode == Mode.Dev)
-			{
-				conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);		
-				conf.Options.Add(Options.Vc.Compiler.Inline.Disable);	
-                conf.Defines.Remove("NDEBUG");	
+            if (target.Mode == Mode.Dev)
+            {
+                conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);
+                conf.Options.Add(Options.Vc.Compiler.Inline.Disable);
                 conf.Defines.Add("DEV");
-				conf.Defines.Add("PROFILING");
-			}else{
-				conf.Options.Add(Options.Vc.Linker.LinkTimeCodeGeneration.UseLinkTimeCodeGeneration);				
-				conf.Options.Add(Options.Vc.Compiler.Optimization.FullOptimization);		
-				conf.Defines.Add("RETAIL");	
-			}
-    
-			if (target.Mode == Mode.Profile)
-			{
-				conf.Defines.Add("PROFILING");	
-			}
-			
+                conf.Defines.Add("PROFILING");
+            }
+            else
+            {
+                conf.Options.Add(Options.Vc.Linker.LinkTimeCodeGeneration.UseLinkTimeCodeGeneration);
+                conf.Options.Add(Options.Vc.Compiler.Optimization.FullOptimization);
+                conf.Defines.Add("RETAIL");
+                conf.Defines.Remove("NDEBUG");
+            }
+
+            if (target.Mode == Mode.Profile)
+            {
+                conf.Defines.Add("PROFILING");
+            }
+
         }
-        
-     
+
+
     }
 
-     [Sharpmake.Generate]
+    [Sharpmake.Generate]
     public class Library : Common
     {
         public Library()
         {
-   
+
         }
 
-        public override void  ConfigureAll(Configuration conf, CustomTarget target)
-        {           
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
             base.ConfigureAll(conf, target);
 
             conf.Output = Configuration.OutputType.Lib;
@@ -131,7 +134,7 @@ public class CustomTarget : ITarget
 
 
 
-     [Sharpmake.Generate]
+    [Sharpmake.Generate]
     public class Application : Common
     {
         public Application()
@@ -146,23 +149,30 @@ public class CustomTarget : ITarget
     public class ZipLib : Library
     {
         public ZipLib()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\3rdparty\ZipLib";
             AssemblyName = "ZipLib";
+			
+        }
+			
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+			conf.IncludePaths.Add(@"[project.SourceRootPath]");
         }
     }
 
-  [Sharpmake.Generate]
+    [Sharpmake.Generate]
     public class Aftermath : Library
     {
         public Aftermath()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\3rdparty\Aftermath";
             AssemblyName = "Aftermath";
         }
 
-        
-        public override void ConfigureAll(Configuration conf, CustomTarget target) 
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
             conf.LibraryFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.lib");
@@ -170,27 +180,28 @@ public class CustomTarget : ITarget
             conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
         }
     }
+	
 
     [Sharpmake.Generate]
     public class Core : Library
     {
         public Core()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Core";
             AssemblyName = "Core";
         }
 
-        public override void ConfigureAll(Configuration conf, CustomTarget target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
 
             conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp"; 
+            conf.PrecompSource = "pch.cpp";
 
             conf.LibraryFiles.Add("Dbghelp.lib");
             conf.LibraryFiles.Add("version.lib");
 
-            conf.AddPrivateDependency<ZipLib>(target);     
+            conf.AddPublicDependency<ZipLib>(target);
         }
     }
 
@@ -198,19 +209,19 @@ public class CustomTarget : ITarget
     public class FileSystem : Library
     {
         public FileSystem()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\FileSystem";
             AssemblyName = "FileSystem";
         }
 
-        public override void ConfigureAll(Configuration conf, CustomTarget target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
 
             conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";    
+            conf.PrecompSource = "pch.cpp";
 
-            conf.AddPrivateDependency<Core>(target);     
+            conf.AddPublicDependency<Core>(target);
         }
     }
 
@@ -218,31 +229,40 @@ public class CustomTarget : ITarget
     public class DirectXFramework : Library
     {
         public DirectXFramework()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\DirectXFramework";
             AssemblyName = "DirectXFramework";
         }
 
-        public override void ConfigureAll(Configuration conf, CustomTarget target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
 
             conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";    
+            conf.PrecompSource = "pch.cpp";
 
 
             conf.LibraryFiles.Add("dxgi.lib");
             conf.LibraryFiles.Add("d3d12.lib");
-            conf.LibraryFiles.Add("dxguid.lib");    
-            conf.LibraryFiles.Add("dxcompiler.lib");    
+            conf.LibraryFiles.Add("dxguid.lib");
+            conf.LibraryFiles.Add("dxcompiler.lib");
 
             conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxcompiler.dll");
             conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxil.dll");
-            
-         
-            conf.AddPrivateDependency<FileSystem>(target);     
-            conf.AddPublicDependency<Aftermath>(target);     
-         
+
+			{ // AgilitySDK
+				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\d3d\build\native\include", 66);
+				conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\d3d\build\native\bin\x64\D3D12Core.dll", "D3D12"));
+
+				if(target.Mode!=Mode.Retail)
+conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\d3d\build\native\bin\x64\D3D12SDKLayers.dll", "D3D12"));
+			}
+
+			
+	
+            conf.AddPublicDependency<FileSystem>(target);
+            conf.AddPrivateDependency<Aftermath>(target);
+
         }
     }
 
@@ -250,19 +270,19 @@ public class CustomTarget : ITarget
     public class FlowGraph : Library
     {
         public FlowGraph()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\FlowGraph";
             AssemblyName = "FlowGraph";
         }
 
-        public override void ConfigureAll(Configuration conf, CustomTarget target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
 
             conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";    
+            conf.PrecompSource = "pch.cpp";
 
-            conf.AddPrivateDependency<DirectXFramework>(target);     
+            conf.AddPrivateDependency<DirectXFramework>(target);
         }
     }
 
@@ -270,20 +290,20 @@ public class CustomTarget : ITarget
     public class RenderSystem : Library
     {
         public RenderSystem()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\RenderSystem";
             AssemblyName = "RenderSystem";
         }
 
-        public override void ConfigureAll(Configuration conf, CustomTarget target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
 
             conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";    
+            conf.PrecompSource = "pch.cpp";
 
-            conf.AddPrivateDependency<DirectXFramework>(target);    
-            conf.AddPrivateDependency<FlowGraph>(target);               
+            conf.AddPublicDependency<DirectXFramework>(target);
+            conf.AddPublicDependency<FlowGraph>(target);
         }
     }
 
@@ -291,58 +311,58 @@ public class CustomTarget : ITarget
     public class SIGParser : Application
     {
         public SIGParser()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\SIGParser";
             AssemblyName = "SIGParser";
         }
 
-  public override void ConfigureAll(Configuration conf, CustomTarget target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
-            conf.Options.Remove(Options.Vc.Linker.SubSystem.Application);		
-            conf.Options.Add(Options.Vc.General.CharacterSet.Unicode);	                  
+            conf.Options.Remove(Options.Vc.Linker.SubSystem.Windows);
+            conf.Options.Add(Options.Vc.General.CharacterSet.Unicode);
             conf.Options.Remove(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors    
-            conf.Options.Add(Options.Vc.General.WarningLevel.Level0);		 // hate warnings, love errors
+            conf.Options.Add(Options.Vc.General.WarningLevel.Level0);        // hate warnings, love errors
 
 
-  conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings ();
-            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory= @"[project.SharpmakeCsPath]\sources\SIGParser";
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
+            conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\SIGParser";
 
         }
     }
 
 
- [Sharpmake.Generate]
+    [Sharpmake.Generate]
     public class Spectrum : Application
     {
         public Spectrum()
-        { 
+        {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Spectrum";
             AssemblyName = "Spectrum";
         }
 
-  public override void ConfigureAll(Configuration conf, CustomTarget target) 
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
 
             conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";    
-            
-            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings ();
+            conf.PrecompSource = "pch.cpp";
+
+            conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
-            
-            conf.AddPrivateDependency<DirectXFramework>(target);    
-            conf.AddPrivateDependency<RenderSystem>(target);             
+
+            conf.AddPublicDependency<DirectXFramework>(target);
+            conf.AddPublicDependency<RenderSystem>(target);
         }
     }
 
 
- [Sharpmake.Generate]
+    [Sharpmake.Generate]
     public class Resources : Common
     {
         public Resources()
-        { 
-             SourceRootPath = @"[project.SharpmakeCsPath]\workdir";
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\workdir";
             AssemblyName = "Resources";
         }
 
@@ -356,11 +376,12 @@ public class CustomTarget : ITarget
         public SpectrumSolution()
         : base(typeof(CustomTarget))
         {
-            AddTargets(new CustomTarget{
-               Platform =  Platform.win64,
-               DevEnv =  DevEnv.vs2019,
-              Optimization =   Optimization.Release,       
-			Mode = 	Mode.Dev | Mode.Profile | Mode.Retail
+            AddTargets(new CustomTarget
+            {
+                Platform = Platform.win64,
+                DevEnv = DevEnv.vs2019,
+                Optimization = Optimization.Release,
+                Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
         }
 
@@ -369,18 +390,18 @@ public class CustomTarget : ITarget
         {
             conf.SolutionFileName = "Spectrum";
             conf.SolutionPath = @"[solution.SharpmakeCsPath]\projects\";
-    string platformName = string.Empty;
-    
-		switch (target.Mode)
-        {
-            case Mode.Dev: platformName += "Dev"; break;
-            case Mode.Retail: platformName += "Retail"; break;
-			  case Mode.Profile: platformName += "Profile"; break;
-            default:
-                throw new NotImplementedException();
-        }
-		conf.Name = platformName; 
-		
+            string platformName = string.Empty;
+
+            switch (target.Mode)
+            {
+                case Mode.Dev: platformName += "Dev"; break;
+                case Mode.Retail: platformName += "Retail"; break;
+                case Mode.Profile: platformName += "Profile"; break;
+                default:
+                    throw new NotImplementedException();
+            }
+            conf.Name = platformName;
+
             conf.AddProject<Spectrum>(target);
             conf.AddProject<SIGParser>(target);
             conf.AddProject<Resources>(target);

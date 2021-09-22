@@ -276,10 +276,11 @@ namespace DX12
             RootSignature(const RootSignatureDesc& desc, D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED);
 
             ComPtr<ID3D12RootSignature> get_native();
-			void set_unfixed(int i)
-			{
-				desc.tables[i].fixed = false;
-			}
+            void set_unfixed(int i)
+            {
+                desc.tables[i].fixed = false;
+            }
+
             const RootSignatureDesc& get_desc() const
             {
                 return desc;

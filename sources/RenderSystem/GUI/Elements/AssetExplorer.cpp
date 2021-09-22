@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "Application/Application.h"
 
 namespace GUI
 {

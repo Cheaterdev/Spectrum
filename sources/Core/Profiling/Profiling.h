@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Log/Log.h"
+#include "patterns/Singleton.h"
+#include "Tree/Tree.h"
 //#define PROFILING
 
 class Timer;
@@ -195,11 +198,6 @@ public:
 	}
 };
 
-#define MERGE_(a,b)  a##b
-#define LABEL_(a) MERGE_(__timer__, a)
-
-
-#define UNIQUE_NAME LABEL_(__LINE__)
 
 
 #ifdef PROFILING

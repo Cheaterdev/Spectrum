@@ -1,4 +1,6 @@
 #pragma once
+#include "Patterns/StateContext.h"
+
 namespace DX12
 {
 	class Transitions;

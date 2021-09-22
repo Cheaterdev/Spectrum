@@ -1,4 +1,4 @@
-#pragma warning (disable : 4127 )
+#pragma once
 
 // Use this class only if you really need shared_ptr of singleton's instance.
 // "With Great Power Comes Great Responsibility" (c)
@@ -7,11 +7,6 @@ class SingletonAccessor
 {
     public:
         static std::shared_ptr<T> get_native();
-};
-
-class singleton_system
-{
-
 };
 
 template <typename T>
@@ -24,17 +19,9 @@ class Singleton
         static std::mutex create_mutex;
         friend class SingletonAccessor<T>;
 
-	/*	std::set<std::shared_ptr<void>> dependencies;*/
     protected:
-	/*	template<class ...Args>
-		void depends_on()
-		{
-			(Args::get(), ...);
-		}
-		*/
-        Singleton();
-
-        virtual  ~Singleton();
+        Singleton() = default;
+        virtual  ~Singleton() = default;
     public:
 
         template<typename G = T>

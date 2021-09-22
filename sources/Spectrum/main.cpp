@@ -1292,7 +1292,6 @@ void SetupDebug()
 	// Here we can disable some of notification types
 	ClassLogger<resource_system>::get().set_logging_level(Log::LEVEL_ERROR);
 	ClassLogger<Resource>::get().set_logging_level(Log::LEVEL_ERROR);
-	ClassLogger<singleton_system>::get().set_logging_level(Log::LEVEL_ALL);
 	ClassLogger<Render::Resource>::get().set_logging_level(Log::LEVEL_ERROR);
 	Log::get() << Log::LEVEL_INFO << "info text" << Log::endl;
 	Log::get() << Log::LEVEL_WARNING << "warning text" << Log::endl;

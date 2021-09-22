@@ -13,6 +13,7 @@
 		"boost-lockfree",	
 		"antlr4",
 		"magic-enum",
-		"crossguid"
+		"crossguid",
+		"crc32c"
 	]
 }

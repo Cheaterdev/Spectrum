@@ -1,4 +1,5 @@
 #pragma once
+#include "Patterns/IdGenerator.h"
 
 template<class T, UINT part_count>
 class NonCopyableFastIndexer

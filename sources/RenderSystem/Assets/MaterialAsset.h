@@ -8,7 +8,7 @@ namespace materials
 		UINT id;
 	public:
 		using ptr = std::shared_ptr<Pipeline>;
-        _Big_uint128 hash;
+        unsigned int hash;
 		Pipeline(UINT id) :id(id)
 		{
 

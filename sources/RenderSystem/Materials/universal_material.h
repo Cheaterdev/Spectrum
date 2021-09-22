@@ -139,7 +139,7 @@ namespace materials
 
 	class PipelineManager :public Singleton<PipelineManager>
 	{
-		std::map<std::_Big_uint128, Pipeline::ptr> pipelines;
+		std::map<unsigned int, Pipeline::ptr> pipelines;
 		std::mutex m;
 	public:
 		Pipeline::ptr get_pipeline( Pipeline::ptr orig)
@@ -155,7 +155,7 @@ namespace materials
 		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel,std::string raytracing, MaterialContext::ptr context)
 		{
 			std::lock_guard<std::mutex> g(m);
-			auto hash = MD5(pixel+tess).hex();
+			auto hash = crc32(pixel+tess);
 			auto&& pip = pipelines[hash];
 
 

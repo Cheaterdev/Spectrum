@@ -1,6 +1,10 @@
 #pragma once
 
 #include "CommandListCompiler.h"
+#include "Patterns/StateContext.h"
+#include "Profiling/Profiling.h"
+#include "Threads/Threading.h"
+
 enum class Layouts;
 namespace DX12
 {

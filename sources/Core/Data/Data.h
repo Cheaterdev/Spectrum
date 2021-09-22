@@ -14,38 +14,6 @@ namespace DataPacker
 };
 
 
-inline size_t HashIterate(size_t Next, size_t CurrentHash = 2166136261U)
-{
-	return 16777619U * CurrentHash ^ Next;
-}
-
-template <typename T> inline size_t HashRange(const T* Begin, const T* End, size_t InitialVal = 2166136261U)
-{
-	size_t Val = InitialVal;
-
-	while (Begin < End)
-		Val = HashIterate((size_t)* Begin++, Val);
-
-	return Val;
-}
-
-template <typename T> inline size_t HashStateArray(const T* StateDesc, size_t Count, size_t InitialVal = 2166136261U)
-{
-	static_assert((sizeof(T) & 3) == 0, "State object is not word-aligned");
-	return HashRange((UINT*)StateDesc, (UINT*)(StateDesc + Count), InitialVal);
-}
-
-template <typename T> inline size_t HashState(const T* StateDesc, size_t InitialVal = 2166136261U)
-{
-	static_assert((sizeof(T) & 3) == 0, "State object is not word-aligned");
-	return HashRange((UINT*)StateDesc, (UINT*)(StateDesc + 1), InitialVal);
-}
-
-template<typename T> concept HaveEqual =
-requires (T a, T b) {
-	a == b;
-};
-
 class MyVariant
 {
 
@@ -306,96 +274,6 @@ public:
 	}
 };
 
-#define GENERATE_OPS __GENERATE_OPS__
-
-template<typename T> concept EnumType =
-requires (T t) {
-	{T::__GENERATE_OPS__ } ;
-};
-
-template<EnumType Enum>
-Enum operator ~(const Enum l)
-{
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum> (
-		~static_cast<underlying>(l)
-		);
-}
-
-template<EnumType Enum>
-Enum operator |(const Enum lhs, const Enum rhs)
-{
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum> (
-		static_cast<underlying>(lhs) |
-		static_cast<underlying>(rhs)
-		);
-}
-
-
-
-template<EnumType Enum>
-Enum operator &(const Enum lhs, const Enum rhs)
-{
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum> (
-		static_cast<underlying>(lhs) &
-		static_cast<underlying>(rhs)
-		);
-}
-
-
-template<EnumType Enum>
-bool operator &&(const Enum lhs, const Enum rhs)
-{
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum> (
-		static_cast<underlying>(lhs) &&
-		static_cast<underlying>(rhs)
-		);
-}
-
-
-
-template<EnumType Enum>
-bool operator ==(const Enum lhs, const Enum rhs)
-{
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum> (
-		static_cast<underlying>(lhs) ==
-		static_cast<underlying>(rhs)
-		);
-}
-
-template<EnumType Enum>
-bool operator !=(const Enum lhs, const Enum rhs)
-{
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum> (
-		static_cast<underlying>(lhs) !=
-		static_cast<underlying>(rhs)
-		);
-}
-
-template<EnumType Enum>
-bool operator <=(const Enum lhs, const Enum rhs)
-{
-	using underlying = typename std::underlying_type<Enum>::type;
-	return static_cast<Enum> (
-		static_cast<underlying>(lhs) <=
-		static_cast<underlying>(rhs)
-		);
-}
-
-template<EnumType Enum>
- bool check(Enum lhs)
-{
-	using underlying = typename std::underlying_type<Enum>::type;
-	return  (
-		static_cast<underlying>(lhs)
-		) != 0;
-}
-
 
  template<EnumType E, class T, std::size_t N = std::size_t(E::__GENERATE_OPS__)>
 class enum_array : public std::array<T, N> {
@@ -427,72 +305,24 @@ class B: public helper
 	std::set<A*> inserts;
 };*/
 
+
+
 template <class T>
-class Member
+class my_unique_vector : public std::vector<T>
 {
-	T member;
-protected:
-	T& get()
+public:
+	using 	std::vector<T>::insert;
+
+	void insert(const T& elem)
 	{
-		return member;
+		std::vector<T>::push_back(elem);
 	}
-
-};
-template< class ...Args>
-class GenerateMembersImpl
-{
-
-};
-
-template<class T, class ...Args>
-class GenerateMembersImpl<T,Args...> : public Member<T>, public GenerateMembersImpl<Args...>
-{
-
-};
-
-
-template< class ...Args>
-class GenerateMembers:public GenerateMembersImpl<Args...>
-{
-protected:
-	template<class T>
-	T& get_member()
+	void erase(const T& elem)
 	{
-		return Member<T>::get();
+		auto it = std::find(std::vector<T>::begin(), std::vector<T>::end(), elem);
+
+		if (it != std::vector<T>::end())
+			std::vector<T>::erase(it);
 	}
 };
 
-namespace Templates
-{
-
-
-template <typename Head0, typename Head1, typename... Tail>
-constexpr auto min(Head0&& head0, Head1&& head1, Tail &&... tail)
-{
-	if constexpr (sizeof...(tail) == 0) {
-		return head0 < head1 ? head0 : head1;
-	}
-	else {
-		return min(min(head0, head1), tail...);
-	}
-}
-
-
-
-template <typename Head0>
-constexpr auto max(Head0 head0)
-{
-	return head0;
-}
-
-template <typename Head0, typename Head1, typename... Tail>
-constexpr auto max(Head0 head0, Head1 head1, Tail ... tail)
-{
-	if constexpr (sizeof...(tail) == 0) {
-		return head0 >head1 ? head0 : head1;
-	}
-	else {
-		return max(max(head0, head1), tail...);
-	}
-}
-}

@@ -101,6 +101,28 @@ virtual ~ThreadScope()
 	}
 };
 
+
+class SpinLock
+{
+public:
+	void lock()
+	{
+		while (lck.test_and_set(std::memory_order_acquire))
+		{
+		}
+	}
+
+	void unlock()
+	{
+		lck.clear(std::memory_order_release);
+	}
+	SpinLock() = default;
+	SpinLock(const SpinLock&) {}
+	void operator=(const SpinLock&) {}
+private:
+	std::atomic_flag lck = ATOMIC_FLAG_INIT;
+};
+
 #ifdef DEV
 	#define THREAD_SCOPE(x) volatile ThreadScope UNIQUE_NAME(ThreadType::x);
 	#define CHECK_THREAD(x) {ThreadScope::check_type(ThreadType::x);};

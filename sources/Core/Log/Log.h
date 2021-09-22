@@ -1,8 +1,9 @@
 #pragma once
 #pragma warning( push )
 #pragma warning( disable : 4512 )
+#include "patterns/Singleton.h"
+#include "Events/Events.h"
 
-#include "simple_archive.h"
 //class LogListener;
 class LogBlock;
 
@@ -19,8 +20,6 @@ struct need_log_serialize
     static const bool value = !std::is_scalar_v<T>;
 };
 
-template <class T>
-concept NonString = !std::is_convertible_v<T, std::string_view> && !std::is_convertible_v<T, std::wstring_view>;
 
 static auto start_time = std::chrono::high_resolution_clock::now();
 

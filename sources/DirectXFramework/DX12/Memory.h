@@ -1,4 +1,6 @@
 #pragma once
+#include "Patterns/StateContext.h"
+#include "Utils/Allocators/Allocators.h"
 
 namespace DX12
 {

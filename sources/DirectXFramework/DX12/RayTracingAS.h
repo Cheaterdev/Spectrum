@@ -39,10 +39,10 @@ namespace DX12
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
 
-			currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 16, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
+			currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
 		//	prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 1024, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
 
-			scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 16, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+			scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 			
 			scratchInfo->reserve(*list, bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
 			currentResource->reserve(*list, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes);
@@ -79,8 +79,8 @@ namespace DX12
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 			
 
-			currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 16, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
-			prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 16, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
+			currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
+			prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, ResourceState::RAYTRACING_STRUCTURE);
 
 			
 			scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024*16 ,counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);

@@ -137,8 +137,8 @@ private:
             static const char* compile_code;
 			static const char* compile_code_dxil;
 
-            MD5 hash;
-			MD5 blob_hash;
+            unsigned int hash;
+            unsigned int blob_hash;
 
             //   DX11_ClassLinkage class_linkage;
             //   std::vector<ID3D11ClassInstance*>    class_instances;
@@ -177,15 +177,15 @@ private:
 
             void own_id()
             {
-				blob_hash = MD5(blob);
-                this->id = shader_ids[blob_hash.hexdigest()];
+				blob_hash = crc32(blob);
+                this->id = shader_ids[blob_hash];
             }
         public:
-            static Cache<std::string, size_t> shader_ids;
+            static Cache<unsigned int, size_t> shader_ids;
 
             UsedSlots slots_usage;
             Events::Event<void> on_change;
-            const MD5& get_hash() const
+            const unsigned int& get_hash() const
             {
                 return hash;
             }
@@ -221,7 +221,7 @@ private:
 				result->blob = std::move(*res_blob);
 				result->own_id();
                 result->compile();
-				result->hash = MD5(result->blob);
+				result->hash = crc32(result->blob);
                 result->slots_usage.merge(depender);
 				return result;
             }
@@ -254,7 +254,7 @@ private:
                 result->blob = std::move(*res_blob);
                 result->compile();
                 result->own_id();
-                result->hash = MD5(result->blob);
+                result->hash = crc32(result->blob);
                 result->slots_usage.merge(depender);
            
             
@@ -278,7 +278,7 @@ private:
     };
 
     template<class _shader_type>
-    Cache<std::string, size_t> Shader<_shader_type>::shader_ids([](const std::string& blob)
+    Cache<unsigned int, size_t> Shader<_shader_type>::shader_ids([](unsigned int)
     {
         return Shader<_shader_type>::shader_ids.size();
     });

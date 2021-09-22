@@ -68,15 +68,6 @@ DXGI_FORMAT to_linear(DXGI_FORMAT);
 DXGI_FORMAT to_typeless(DXGI_FORMAT);
 
 bool is_shader_visible(DXGI_FORMAT);
-#define OP(x,y)\
-if (l.x == r.x)\
-{\
-	y\
-}\
-else \
-	return l.x < r.x;
-#define OP_LAST(x,y)\
-	return l.x < r.x;
 
 namespace boost
 {
@@ -114,20 +105,3 @@ namespace boost
 	}
 }
 
-
-template<std::size_t index, typename T, typename Tuple>
-constexpr int tuple_element_index_helper()
-{
-    if constexpr (index == std::tuple_size_v<Tuple>) {
-        return index;
-    }
-    else {
-        return std::is_same_v<T, std::tuple_element_t<index, Tuple>> ?
-            index : tuple_element_index_helper<index + 1, T, Tuple>();
-    }
-}
-
-template<typename T, typename Tuple>
-constexpr int tuple_element_index() {
-    return tuple_element_index_helper<0, T, Tuple>();
-}

@@ -1,3 +1,4 @@
+#include "Threads/Scheduler.h"
 
 class camera;
 class debug_drawer;
