@@ -1,5 +1,4 @@
 #include <Utils/Hash/crc32.h>
-
 enum class Layouts: int
 {
 	UNKNOWN,

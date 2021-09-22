@@ -3,6 +3,21 @@
 
 BOOST_CLASS_EXPORT(AABB)
 
+
+AABB::AABB(Primitive* other) :min(other->get_min()), max(other->get_max())
+{
+}
+
+AABB::AABB(std::function<vec3(UINT)> functor, unsigned size) : min(functor(0)), max(min)
+{
+	for (unsigned int i = 1; i < size; i++)
+	{
+		vec3 pos = functor(i);
+		min = vec3::min(min, pos);
+		max = vec3::max(max, pos);
+	}
+}
+
 const primitive_types AABB::get_type() const
 {
 	return primitive_types::aabb;
@@ -27,18 +42,6 @@ void AABB::set(Primitive* other, mat4x4& m)
 	vec3 b = other->get_max() * m;
 	min = vec3::min(a, b);
 	max = vec3::max(a, b);
-}
-
-AABB::AABB(std::function<vec3(UINT)> functor, unsigned size)
-{
-	min = max = functor(0);
-
-	for (unsigned int i = 1; i < size; i++)
-	{
-		vec3 pos = functor(i);
-		min = vec3::min(min, pos);
-		max = vec3::max(max, pos);
-	}
 }
 
 vec3 AABB::get_min()
@@ -87,13 +90,6 @@ void AABB::apply_transform(ptr primitive, mat4x4& mi)
 		max = vec3::max(max, pos);
 	}
 }
-
-AABB::AABB(Primitive* other)
-{
-	min = other->get_min();
-	max = other->get_max();
-}
-
 
 std::shared_ptr<Primitive> AABB::clone()
 {

@@ -251,11 +251,13 @@ namespace Spectrum
             conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxil.dll");
 
 			{ // AgilitySDK
-				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\d3d\build\native\include", 66);
-				conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\d3d\build\native\bin\x64\D3D12Core.dll", "D3D12"));
+				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\include", 66);
+				conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12Core.dll", "D3D12"));
 
-				if(target.Mode!=Mode.Retail)
-conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\d3d\build\native\bin\x64\D3D12SDKLayers.dll", "D3D12"));
+				if(target.Mode != Mode.Retail)
+				{
+					conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12SDKLayers.dll", "D3D12"));
+				}
 			}
 
 			
