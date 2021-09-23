@@ -1,4 +1,5 @@
 #pragma once
+#include "Quaternions.h"
 template<typename matrix_type>
 class matrix : public matrix_type
 {

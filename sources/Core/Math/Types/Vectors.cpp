@@ -1,7 +1,5 @@
 #include "pch.h"
-
-
-
+#include "Vectors.h"
 
 vec3 closest_point_on_line(const vec3 &a, const vec3 &b, const vec3 &p)
 {

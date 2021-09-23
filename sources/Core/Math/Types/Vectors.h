@@ -1,7 +1,6 @@
 #pragma once
-
-#pragma warning(disable:4201)
-#pragma warning(disable:4520)
+#include "Math/Constants.h"
+#include "Serialization/serialization.h"
 
 namespace internal
 {
@@ -340,13 +339,7 @@ public:
 			ar& NP("values", values);
 		}
 
-		void serialize(simple_log_archive& ar, const unsigned int) requires (N<4)
-		{
-			if constexpr (N > 0)ar& NP("x", values[0]);
-			if constexpr (N > 1)ar& NP("y", values[1]);
-			if constexpr (N > 2)ar& NP("z", values[2]);
-			if constexpr (N > 3)ar& NP("w", values[3]);
-		}
+
 };
 
 template<typename T>

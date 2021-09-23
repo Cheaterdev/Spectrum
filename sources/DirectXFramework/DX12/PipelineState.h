@@ -1,6 +1,6 @@
 #pragma once
-#include <compare>
 
+#include "Serialization/Serializer.h"
 
 bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
 std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);

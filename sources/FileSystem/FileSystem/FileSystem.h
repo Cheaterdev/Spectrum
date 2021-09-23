@@ -1,3 +1,4 @@
+#include "Serialization/Serializer.h"
 struct file;
 
 class file_provider

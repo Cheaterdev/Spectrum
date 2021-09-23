@@ -19,6 +19,19 @@ constexpr std::size_t operator "" _gb(unsigned long long int x) { return x * 102
 template <class T> concept NonString = !std::is_convertible_v<T, std::string_view> && !std::is_convertible_v<T, std::wstring_view>;
 template<typename T> concept HaveEqual = requires (T a, T b) { a == b; };
 
+template<typename T>
+concept Enum = std::is_enum_v<T>;
+
+template<typename T>
+concept Scalar = std::is_scalar_v<T>;
+
+template<typename T>
+concept Fundamental = std::is_fundamental_v<T>;
+
+template<typename T>
+concept NonFundamental = !std::is_fundamental_v<T>;
+
+
 template<std::size_t index, typename T, typename Tuple>
 constexpr int tuple_element_index_helper()
 {
@@ -206,3 +219,23 @@ protected:
 	}
 };
 
+
+
+using guid_compare = decltype([](const xg::Guid& l, const xg::Guid& r) {
+	auto& a = l.bytes();
+	auto& b = r.bytes();
+
+
+	for (unsigned int i = 0; i < b.size(); i++)
+	{
+		if (a[i] != b[i])
+			return a[i] < b[i];
+	}
+
+	return false;
+	});
+
+using guid_set = std::set<Guid, guid_compare>;
+
+template<class T>
+using guid_map = std::map<Guid, T, guid_compare>;

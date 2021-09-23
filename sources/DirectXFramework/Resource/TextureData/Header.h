@@ -151,7 +151,6 @@ struct texture_mip_data
     template<class Archive>
     void load(Archive& ar, const unsigned int)
     {
-        auto t = CounterManager::get().start_count<texture_mip_data>();
 		UINT size;
         ar& NVP(size);
         data.resize(size);
@@ -194,7 +193,6 @@ struct mip
     template<class Archive>
     void serialize(Archive& ar, const unsigned int)
     {
-        auto t = CounterManager::get().start_count<mip>();
         ar& NVP(mips);
     }
 };
@@ -220,7 +218,6 @@ class texture_data : public texture_data_header
         template<class Archive>
         void serialize(Archive& ar, const unsigned int)
         {
-            auto t = CounterManager::get().start_count<texture_data>();
             ar& NVP(boost::serialization::base_object<texture_data_header>(*this));
             ar& NVP(array);
         }

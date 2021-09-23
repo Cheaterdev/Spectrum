@@ -3,6 +3,8 @@
 #include "Log/Log.h"
 #include "patterns/Singleton.h"
 #include "Tree/Tree.h"
+#include "Math/Types/Vectors.h"
+
 //#define PROFILING
 
 class Timer;

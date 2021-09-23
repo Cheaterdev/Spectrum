@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "utils.h"
+#include "Log/Log.h"
 
 std::wstring convert(std::string_view s)
 {

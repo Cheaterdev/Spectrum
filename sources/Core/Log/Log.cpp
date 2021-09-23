@@ -1,4 +1,7 @@
 #include "pch.h"
+
+#include  "Log.h"
+
 #define BOOST_DECL_EXPORTS
 #define BOOST_WARCHIVE_SOURCE
 #define BOOST_ARCHIVE_DECL
@@ -67,7 +70,7 @@ void Log::crash_error(HRESULT hr, std::string at /*= ""*/)
 
 std::string LogBlock::get_string() const
 {
-    return "[" + current_level_name + "] : " + s->str();
+    return "[" + current_level_name + "] : " + data->s.str();
 }
 
 Log& LogBlock::operator<<(const Log::endline&)
@@ -78,7 +81,7 @@ Log& LogBlock::operator<<(const Log::endline&)
 LogBlock& LogBlock::operator<<(string_view smth)
 {
     if (need_logging())
-        *s << smth;
+        data->s << smth;
 
     return (*this);
 }
@@ -86,9 +89,15 @@ LogBlock& LogBlock::operator<<(string_view smth)
 LogBlock& LogBlock::operator<<(wstring_view smth)
 {
     if (need_logging())
-        *s << convert(smth);
+        data->s << convert(smth);
 
     return (*this);
+}
+
+
+LogBlock::shared_data::shared_data():archive(s)
+{
+	
 }
 
 LogBlock::LogBlock(Log& output, log_level_internal level) : log(output)
@@ -96,10 +105,12 @@ LogBlock::LogBlock(Log& output, log_level_internal level) : log(output)
     log_level = level;
     current_level =log_level_internal::level_info;
     current_level_name = LogLevel<log_level_internal::level_info>::NAME;
-    s.reset(new std::ostringstream());
+
+    data = std::make_shared<shared_data>();
+  //  s.reset(new std::ostringstream());
     auto delta = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count();
     //  auto now_c = std::chrono::system_clock::to_time_t(now);
-    *s << delta << ' ';
+   data->s << delta << ' ';
 }
 
 LogListener::~LogListener()
@@ -111,7 +122,8 @@ LogListener::LogListener()
 {
 //   Log::get().listeners.insert(this);
     active = true;
-    Log::get().on_log.register_handler(this, std::bind(&LogListener::on_log, this, std::placeholders::_1));
+    Log::get().on_log.register_handler(this, [this](const LogBlock& v) { on_log(v); } );
+
 }
 
 

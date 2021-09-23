@@ -1299,6 +1299,16 @@ void SetupDebug()
 	Log::get() << Log::LEVEL_ERROR << "error text" << Log::endl;
 }
 
+struct test
+{
+	D3D12_AUTO_BREADCRUMB_OP op = D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE;
+	std::string str = "wtf";
+
+	SERIALIZE()
+	{
+		ar& NVP(op)& NVP(str);
+	}
+} v;
 
 #include <DbgHelp.h>
 int APIENTRY WinMain(_In_ HINSTANCE hinst,
@@ -1357,13 +1367,18 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 			return nullptr;
 		});
 
-
 	auto result_code = 0;
 	SetupDebug();
 	EVENT("start");
 	Application::create<RenderApplication>();
 	EVENT("create");
-	
+
+
+
+	Log::get() << v << Log::endl;
+	Log::get() << D3D12_AUTO_BREADCRUMB_OP_ATOMICCOPYBUFFERUINT << Log::endl;
+
+
 	// There can be error while creating, so test
 	if (Application::is_good())
 	{

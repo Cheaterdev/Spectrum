@@ -1,3 +1,4 @@
+#include "Events/Tasks.h"
 class MeshAssetInstance;
 
 template <typename T>

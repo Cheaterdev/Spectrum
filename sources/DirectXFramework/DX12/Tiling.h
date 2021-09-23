@@ -1,4 +1,7 @@
 #pragma once
+#include "Math/Math.h"
+
+
 namespace DX12
 {
 	class ResourceHeap;

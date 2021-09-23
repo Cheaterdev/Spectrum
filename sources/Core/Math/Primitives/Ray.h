@@ -1,5 +1,5 @@
 #pragma once
-#include "Primitive.h"
+#include "Plane.h"
 
 
 class Ray

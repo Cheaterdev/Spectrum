@@ -1,3 +1,7 @@
+#pragma once
+#include "Debug/Exceptions.h"
+#include "Utils/utils.h"
+
 namespace DataPacker
 {
 

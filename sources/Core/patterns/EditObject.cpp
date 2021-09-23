@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "EditObject.h"
 void EditObject::save()
 {
     on_save();

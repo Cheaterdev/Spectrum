@@ -67,6 +67,18 @@ using Guid = xg::Guid;
 #include <boost/stacktrace.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
 #include <boost/predef/other/endian.h>
+
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/map.hpp>
+#include <boost/serialization/array.hpp>
+#include <boost/serialization/list.hpp>
+#include <boost/serialization/set.hpp>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/access.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/export.hpp>
+
 #define BOOST_PREDEF_DETAIL_ENDIAN_COMPAT_H
 
 
@@ -81,33 +93,12 @@ using Guid = xg::Guid;
 HRESULT test(HRESULT hr, std::string str = "");
 
 
-// CORE includes
-
-#include "Utils/utils.h"
-
-#include "Debug/Exceptions.h"
-
-#include "Serialization/serialization.h"
-
-
-#include "Data/Data.h"
-#include "patterns/SharedObject.h"
-#include "patterns/EditObject.h"
-#include "Patterns/Holdable.h"
-
-#include "Log/Log.h"
-
-#include "Serialization/Serializer.h"
-
-
-#include "Events/Tasks.h"
 
 
 
-#include "Math/Math.h"
 
-#include "Debug/Debug.h"
-#include "Data/BinaryObjects.h"
+
+
 
 
 
