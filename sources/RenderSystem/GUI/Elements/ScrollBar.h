@@ -1,3 +1,7 @@
+#pragma once
+#include "Dragger.h"
+#include "GUI/Skin.h"
+
 namespace GUI
 {
     namespace Elements

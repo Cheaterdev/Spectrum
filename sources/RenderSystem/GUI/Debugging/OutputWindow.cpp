@@ -1,4 +1,9 @@
 #include "pch.h"
+
+#include "OutputWindow.h"
+#include "GUI/Elements/ScrollContainer.h"
+#include "GUI/Renderer/Renderer.h"
+
 namespace GUI
 {
     namespace Elements

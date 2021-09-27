@@ -1,4 +1,7 @@
 #pragma once
+#include "Scene/Scene.h"
+#include "Camera/Camera.h"
+#include "GUI/Elements/MenuList.h"
 
 class stencil_renderer : public GUI::base, public FrameGraph::GraphGenerator, public Events::Runner, public VariableContext
 {

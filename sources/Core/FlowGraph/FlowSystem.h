@@ -1,3 +1,7 @@
+#pragma once
+
+#include "GUI/Elements/FlowGraph/ComponentWindow.h"
+
 namespace FlowGraph
 {
 

@@ -1,4 +1,7 @@
+#pragma once
 #include "FlowGraph/FlowGraph.h"
+#include "GUI/Elements/Resizer.h"
+#include "GUI/Elements/Button.h"
 
 namespace GUI
 {

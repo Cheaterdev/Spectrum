@@ -1,4 +1,4 @@
-
+#include "Assets/MeshAsset.h"
 
 void Meshletize(
     UINT maxVerts, UINT maxPrims,

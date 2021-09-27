@@ -1,4 +1,5 @@
 #pragma once
+#include "FrameGraph/FrameGraph.h"
 
 
 class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraph::GraphGenerator

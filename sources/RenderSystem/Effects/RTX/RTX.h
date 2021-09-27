@@ -1,3 +1,5 @@
+#include "Materials/universal_material.h"
+#include "Assets/MeshAsset.h"
 
 class RTX :public Singleton<RTX>, Events::prop_handler,
 	public Events::Runner

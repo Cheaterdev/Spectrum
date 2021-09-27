@@ -1,4 +1,8 @@
 #include "pch.h"
+#include "TaskViewer.h"
+#include "GUI/Elements/ScrollContainer.h"
+#include "GUI/Elements/Button.h"
+
 namespace GUI
 {
     namespace Elements

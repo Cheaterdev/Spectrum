@@ -1,7 +1,8 @@
 #include "pch.h"
-
-
-
+#include "TimerGraph.h"
+#include "GUI/Elements/ScrollContainer.h"
+#include "GUI/Elements/Button.h"
+#include "GUI/Elements/Image.h"
 namespace GUI
 {
 	namespace Elements

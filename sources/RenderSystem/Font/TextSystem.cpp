@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "TextSystem.h"
 
 namespace Fonts
 {

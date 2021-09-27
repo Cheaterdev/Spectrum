@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "VisibilityBuffer.h"
 
 
 VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
@@ -9,7 +9,7 @@ VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 	buffer = std::make_shared<Render::Texture>(desc);
 	buffer->set_name("VisibilityBuffer::buffer");
 
-	load_tiles_buffer = std::make_shared<Render::StructuredBuffer<uint4>>(sizes.x * sizes.y * sizes.z, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	load_tiles_buffer = std::make_shared<Render::StructuredBuffer<uint4>>(sizes.x * sizes.y * sizes.z, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
 /*
 void VisibilityBuffer::wait_for_results()
@@ -20,7 +20,7 @@ void VisibilityBuffer::wait_for_results()
 */
 
 
-std::future<visibility_update> VisibilityBuffer::update(CommandList::ptr& list)
+std::future<visibility_update> VisibilityBuffer::update(Render::CommandList::ptr& list)
 {
 
 

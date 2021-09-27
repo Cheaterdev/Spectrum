@@ -1,4 +1,5 @@
 #pragma once
+#include "Assets/Asset.h"
 
 class BinaryAsset : public Asset
 {

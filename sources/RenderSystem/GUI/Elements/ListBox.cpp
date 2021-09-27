@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "ListBox.h"
+#include "GUI/Renderer/Renderer.h"
 
 void GUI::Elements::list_box::draw(Render::context& c)
 {

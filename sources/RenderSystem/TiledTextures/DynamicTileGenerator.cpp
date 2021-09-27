@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "DynamicTileGenerator.h"
 
 
 bool TileDynamicGenerator::make_tile(uint3 pos)

@@ -1,4 +1,6 @@
-
+#pragma once
+#include "Scene/Scene.h"
+#include "Assets/TextureAsset.h"
 
 class renderer
 {

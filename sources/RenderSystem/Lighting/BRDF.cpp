@@ -1,6 +1,5 @@
-
-#include <pch.h>
-
+#include "pch.h"
+#include "BRDF.h"
 
 void BRDF::create_new()
 {

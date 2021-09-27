@@ -1,7 +1,12 @@
 #include "pch.h"
+#include "Canvas.h"
 #include "FlowGraph/FlowSystem.h"
 
-
+#include "GUI/Elements/AssetExplorer.h"
+#include "GUI/Elements/FlowGraph/FlowManager.h"
+#include "GUI/Elements/MenuList.h"
+#include "GUI/Elements/ScrollContainer.h"
+#include "GUI/Renderer/Renderer.h"
 
 
 void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)

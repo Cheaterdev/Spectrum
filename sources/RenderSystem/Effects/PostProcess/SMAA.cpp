@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "SMAA.h"
+
 using namespace FrameGraph;
 
 SMAA::SMAA()

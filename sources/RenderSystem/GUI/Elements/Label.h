@@ -1,4 +1,7 @@
 #pragma once
+#include "GUI/GUI.h"
+#include "Font/TextSystem.h"
+
 namespace GUI
 {
     namespace Elements

@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "FSR.h"
+
 // CAS
 #define A_CPU
 #include "ffx_a.h"

@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "Sky.h"
+
+#include "Helpers/MipMapGeneration.h"
 
 using namespace FrameGraph;
 

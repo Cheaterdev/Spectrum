@@ -1,4 +1,9 @@
 #include "pch.h"
+#include "Assets/EngineAssets.h"
+#include "PSSM.h"
+#include "Renderer/Renderer.h"
+
+#include "Camera/Camera.h"
 using namespace FrameGraph;
 float jit = 0;
 

@@ -98,7 +98,7 @@ namespace Render
 }
 
 
-#include "FW1FontWrapper/Source/FW1CompileSettings.h"
+//#include "FW1FontWrapper/Source/FW1CompileSettings.h"
 #include "FW1FontWrapper/Source/FW1FontWrapper.h"
 
 
@@ -112,12 +112,7 @@ typedef CComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 #include "SIG/Layout.h"
 #include "SIG/Slots.h"
 #include "SIG/PSO.h"
-
 #include "SIG/RTX.h"
-
 #include "../RenderSystem/autogen/includes.h"
-
-
-
 #include "DX12/PipelineState.hpp"
 #include "DX12/Tiling.hpp"

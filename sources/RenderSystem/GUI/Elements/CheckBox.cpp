@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "CheckBox.h"
+#include "GUI/Renderer/Renderer.h"
 
 namespace GUI
 {

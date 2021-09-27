@@ -1,5 +1,5 @@
 #include "pch.h"
-
+#include "BinaryAsset.h"
 
 BOOST_CLASS_EXPORT(BinaryAsset);
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<BinaryAsset>);

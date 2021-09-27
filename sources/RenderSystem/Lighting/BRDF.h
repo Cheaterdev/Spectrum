@@ -1,5 +1,5 @@
 #pragma once
-
+#include "Assets/TextureAsset.h"
 
 class BRDF: public TextureAsset
 {

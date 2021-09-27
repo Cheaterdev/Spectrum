@@ -1,6 +1,6 @@
 #include "pch.h"
 
-
+#include "Scene/Scene.h"
 
 
 scene_object::~scene_object()

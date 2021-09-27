@@ -1,7 +1,6 @@
 #include "pch.h"
-//BOOST_CLASS_EXPORT(Asset);
-
-
+#include "Asset.h"
+#include "Events/Tasks.h"
 
 AssetManager::AssetManager()
 {

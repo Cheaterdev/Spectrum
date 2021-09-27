@@ -1,4 +1,7 @@
+#pragma once
 #include "Label.h"
+#include "ScrollBar.h"
+
 namespace GUI
 {
 	namespace Elements

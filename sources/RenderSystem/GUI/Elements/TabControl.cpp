@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
-
+#include "TabControl.h"
+#include "GUI/Renderer/Renderer.h"
 
 namespace GUI
 {

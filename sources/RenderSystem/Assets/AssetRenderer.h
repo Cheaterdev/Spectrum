@@ -1,3 +1,10 @@
+#include "Renderer/Renderer.h"
+#include "Assets/MaterialAsset.h"
+#include "Assets/TextureAsset.h"
+#include "Assets/MeshAsset.h"
+
+#include "Camera/Camera.h"
+
 class G_Buffer;
 class LightSystem;
 class SSGI;

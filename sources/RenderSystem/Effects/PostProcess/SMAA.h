@@ -1,4 +1,6 @@
 #pragma once
+#include "FrameGraph/FrameGraph.h"
+
 class SMAA :Events::prop_handler, public FrameGraph::GraphGenerator
 {
 	Render::Texture::ptr area_tex;

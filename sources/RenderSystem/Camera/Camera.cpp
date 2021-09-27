@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "camera.h"
+
 void camera::update(float2 offset )
 {
 	auto jitter_mat = mat4x4::translation(vec3{ offset, 0 });

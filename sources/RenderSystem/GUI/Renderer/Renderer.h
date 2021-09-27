@@ -1,3 +1,6 @@
+#pragma once
+#include "GUI/GUI.h"
+
 namespace GUI
 {
 

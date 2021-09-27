@@ -1,6 +1,11 @@
 #pragma once
+#include "TiledTextures/VisibilityBuffer.h"
+#include "TiledTextures/GPUTilesBuffer.h"
+#include "TiledTextures/DynamicTileGenerator.h"
 
+#include "Lighting/PSSM.h"
 
+#include "Renderer/Renderer.h"
 
 class GBufferDownsampler;
 

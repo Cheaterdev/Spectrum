@@ -1,3 +1,7 @@
+#pragma once
+#include "TabControl.h"
+#include "Resizer.h"
+
 namespace GUI
 {
     namespace Elements

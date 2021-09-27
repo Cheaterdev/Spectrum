@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "Helpers/MipMapGeneration.h"
+#include "Label.h"
+#include "GUI/Renderer/Renderer.h"
 
 namespace GUI
 {

@@ -1,7 +1,5 @@
 #include "pch.h"
-
-
-
+#include "Resizer.h"
 
 bool GUI::Elements::resizer::on_mouse_move(vec2 pos)
 {

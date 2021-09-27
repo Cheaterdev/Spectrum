@@ -1,4 +1,5 @@
 #include "Application/Application.h"
+#include "GUI/GUI.h"
 
 class Window : public DX12::hwnd_provider
 {

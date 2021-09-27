@@ -1,4 +1,6 @@
 #pragma once
+#include "Resizer.h"
+
 namespace GUI
 {
 	namespace Elements

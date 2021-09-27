@@ -1,7 +1,5 @@
 #include "pch.h"
-
-
-
+#include "Resizable.h"
 
 GUI::Elements::resizable::resizable()
 {

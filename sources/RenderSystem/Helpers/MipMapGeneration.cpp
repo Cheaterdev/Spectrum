@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "MipMapGeneration.h"
 
 
 MipMapGenerator::MipMapGenerator()
@@ -14,7 +15,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::
 {
 	generate(compute_context, tex, tex->texture_2d());
 }
-void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, TextureView view)
+void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, Render::TextureView view)
 {
 
 	for (int i = 0; i <6; i++) 
@@ -22,7 +23,7 @@ void MipMapGenerator::generate_cube(Render::ComputeContext& compute_context, Tex
 		generate(compute_context,view.create_2d_slice(i, *compute_context.get_base().frame_resources));
 }
 
-void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureView  view)
+void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::TextureView  view)
 {
 	//return;
 	PROFILE_GPU(L"downsampling");
@@ -85,7 +86,7 @@ void MipMapGenerator::generate(Render::ComputeContext& compute_context, TextureV
 	}
 }
 
-void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Texture2DView::ptr view)
+void MipMapGenerator::generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::Texture2DView::ptr view)
 {
 
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
@@ -169,7 +170,8 @@ void MipMapGenerator::downsample_depth(Render::ComputeContext& compute_context, 
 
 }
 
-void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* cam, GBuffer& buffer, TextureView tempColor)
+void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* cam, GBuffer& buffer,
+	Render::TextureView tempColor)
 {
 
 	PROFILE_GPU(L"generate_quality");
@@ -183,16 +185,16 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 	{
 		{
 			Slots::GBuffer gbuffer;
-		buffer.SetTable(gbuffer);
-		gbuffer.set(list);
+			buffer.SetTable(gbuffer);
+			gbuffer.set(list);
 		}
 		list.set_pipeline(GetPSO<PSOS::QualityColor>());
-		list.set_rtv(1, tempColor.renderTarget,Handle());
+		list.set_rtv(1, tempColor.renderTarget, Render::Handle());
 		list.draw(4);
 	}
 
 
-	
+
 	{
 
 		Slots::GBufferQuality quality;
@@ -202,7 +204,7 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 		list.get_base().clear_stencil(buffer.quality.depthStencil);
 		list.set_pipeline(GetPSO<PSOS::QualityToStencil>());
 
-		list.set_rtv(0, Handle(), buffer.quality.depthStencil);
+		list.set_rtv(0, Render::Handle(), buffer.quality.depthStencil);
 
 		list.set_stencil_ref(1);
 		list.draw(4);
@@ -212,7 +214,6 @@ void MipMapGenerator::generate_quality(Render::GraphicsContext& list, camera* ca
 		list.draw(4);
 	}
 }
-
 
 void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render::Texture::ptr to, Render::Texture::ptr from)
 {
@@ -229,7 +230,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	data.GetSrcTex()  = from->texture_2d()->texture2D;
 	data.set(list);
 
-	list.set_rtv(1, view->get_rtv(), Handle());	
+	list.set_rtv(1, view->get_rtv(), Render::Handle());
 	list.draw(4);
 }
 
@@ -249,7 +250,7 @@ void MipMapGenerator::copy_texture_2d_slow(Render::GraphicsContext& list, Render
 	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
-	list.set_rtv(1, view->get_rtv(), Handle());
+	list.set_rtv(1, view->get_rtv(), Render::Handle());
 	list.draw(4);
 }
 
@@ -264,7 +265,7 @@ void MipMapGenerator::render_texture_2d_slow(Render::GraphicsContext& list, Rend
 	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
-	list.set_rtv(1,to.renderTarget, Handle());
+	list.set_rtv(1,to.renderTarget, Render::Handle());
 	list.draw(4);
 }
 
@@ -280,7 +281,7 @@ void MipMapGenerator::write_to_depth(Render::GraphicsContext& list, Render::Text
 	list.set_viewport(to.get_viewport());
 	list.set_scissor(to.get_scissor());
 
-	list.set_rtv(0, Handle(), to.depthStencil);
+	list.set_rtv(0, Render::Handle(), to.depthStencil);
 
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 	list.draw(4);

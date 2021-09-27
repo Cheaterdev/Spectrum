@@ -1,5 +1,5 @@
 #pragma once
-#include <boost/functional/hash.hpp>
+#include "Label.h"
 
 namespace GUI
 {

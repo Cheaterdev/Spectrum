@@ -1,3 +1,6 @@
+#pragma once
+#include "Assets/Asset.h"
+
 class TextureAsset;
 class TextureAssetRenderer : public Singleton<TextureAssetRenderer>
 {

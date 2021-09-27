@@ -1,6 +1,36 @@
 #include "pch.h"
 
 #include "FlowGraph/FlowSystem.h"
+#include "Assets/EngineAssets.h"
+#include "Assets/AssetRenderer.h"
+
+
+#include "Effects/Sky.h"
+#include "Effects/PostProcess/SMAA.h"
+#include "Effects/VoxelGI/VoxelGI.h"
+#include "Effects/RTX/RTX.h"
+#include "Effects/FSR/FSR.h"
+
+#include "Lighting/PSSM.h"
+
+#include "Renderer/StencilRenderer.h"
+
+#include "Materials/universal_material.h"
+
+#include "GUI/Elements/AssetExplorer.h"
+#include "GUI/Debugging/TimerGraph.h"
+#include "GUI/Debugging/OutputWindow.h"
+#include "GUI/Debugging/TaskViewer.h"
+#include "GUI/Debugging/TimerWatcher.h"
+
+#include "GUI/Elements/FlowGraph/FlowManager.h"
+#include "GUI/Elements/FlowGraph/ParameterWindow.h"
+#include "GUI/Elements/CircleSelector.h"
+#include "GUI/Elements/Tree.h"
+#include "GUI/Elements/DockBase.h"
+#include "GUI/Elements/ComboBox.h"
+#include "GUI/Elements/ListBox.h"
+
 using namespace FrameGraph;
 
 HRESULT device_fail()
@@ -1190,6 +1220,7 @@ protected:
 		RTX::create();
 		
 		EVENT("AssetManager");
+		AssetRenderer::create();
 		AssetManager::create();
 		EVENT("WindowRender");
 

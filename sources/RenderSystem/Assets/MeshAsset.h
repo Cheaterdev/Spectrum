@@ -1,4 +1,11 @@
+#pragma once
+
 #include "Events/Tasks.h"
+#include "Assets/MaterialAsset.h"
+#include "Scene/SceneObject.h"
+
+#include "GUI/GUI.h"
+
 class MeshAssetInstance;
 
 template <typename T>

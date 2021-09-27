@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "Assets/EngineAssets.h"
+#include "Renderer/Renderer.h"
+#include "Helpers/MipMapGeneration.h"
 
 void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {

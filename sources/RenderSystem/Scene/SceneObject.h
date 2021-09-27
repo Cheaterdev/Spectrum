@@ -1,5 +1,8 @@
-enum class object_type : int {SCENE, OBJECT, MESH, MESH_NODE, CAMERA};
+#pragma once
 
+#include "Occlusion/Occluder.h"
+
+enum class object_type : int {SCENE, OBJECT, MESH, MESH_NODE, CAMERA};
 
 class Scene;
 class scene_object : public tree<scene_object, std::set<std::shared_ptr<scene_object>>, occluder>

@@ -1,5 +1,8 @@
 #include "pch.h"
-
+#include "Canvas.h"
+#include "Comment.h"
+#include "GUI/Elements/Button.h"
+#include "GUI/Renderer/Renderer.h"
 
 void GUI::Elements::FlowGraph::comment::draw(Render::context& c)
 {

@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Threads/Scheduler.h"
 #include "Patterns/Holdable.h"
 #include "FrameGraph/FrameGraph.h"

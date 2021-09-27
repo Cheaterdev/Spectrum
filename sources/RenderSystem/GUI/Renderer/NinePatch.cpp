@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "GUI/Renderer/Renderer.h"
 
 namespace GUI
 {

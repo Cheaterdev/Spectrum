@@ -1,3 +1,7 @@
+#pragma once
+
+#include "Context/Context.h"
+
 enum class mouse_button : int
 {
     LEFT,

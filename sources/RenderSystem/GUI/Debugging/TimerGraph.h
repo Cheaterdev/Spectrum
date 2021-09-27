@@ -1,4 +1,6 @@
 #pragma once
+#include "GUI/Elements/ScrollContainer.h"
+#include "GUI/Elements/Image.h"
 
 namespace GUI
 {

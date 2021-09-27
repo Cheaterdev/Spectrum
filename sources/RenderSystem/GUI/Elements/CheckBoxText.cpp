@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "CheckBoxText.h"
+#include "HorizontalLayout.h"
+
 namespace GUI
 {
 	namespace Elements

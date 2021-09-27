@@ -1,3 +1,6 @@
+#pragma once
+#include "Assets/Asset.h"
+#include "Context/Context.h"
 
 class MaterialAsset;
 namespace materials

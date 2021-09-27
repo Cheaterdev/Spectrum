@@ -1,6 +1,16 @@
 #include "pch.h"
 #include "Application/Application.h"
 
+#include "AssetExplorer.h"
+#include "Materials/universal_material.h"
+#include "Assets/MeshAsset.h"
+#include "GUI/Elements/FlowGraph/FlowManager.h"
+#include "GUI/Elements/Tree.h"
+#include "GUI/Elements/DockBase.h"
+#include "GUI/Elements/ComboBox.h"
+#include "GUI/Elements/MenuList.h"
+#include "GUI/Elements/Window.h"
+
 namespace GUI
 {
     namespace Elements
@@ -452,7 +462,6 @@ namespace GUI
 
             };
             AssetManager::get().add_listener(this);
-            AssetRenderer::create();
             GUI::Elements::button::ptr save_all_but(new GUI::Elements::button());
             save_all_but->get_label()->text = "SAVE";
             save_all_but->height_size = size_type::MATCH_PARENT;

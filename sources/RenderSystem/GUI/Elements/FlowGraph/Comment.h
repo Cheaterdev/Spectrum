@@ -1,3 +1,7 @@
+#pragma once
+#include "ComponentWindow.h"
+#include "GUI/Elements/Resizable.h"
+
 namespace GUI
 {
     namespace Elements

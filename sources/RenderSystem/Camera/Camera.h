@@ -1,6 +1,5 @@
-#ifdef OCULUS_SUPPORT
-#include "OVR_CAPI_D3D.h"
-#endif
+#pragma once
+
 class camera : public Frustum
 {
     public:

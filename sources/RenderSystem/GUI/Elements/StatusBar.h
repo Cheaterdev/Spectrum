@@ -1,3 +1,7 @@
+#pragma once
+#include "GUI/GUI.h"
+#include "GUI/Skin.h"
+
 namespace GUI
 {
     namespace Elements

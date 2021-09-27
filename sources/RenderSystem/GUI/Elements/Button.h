@@ -1,4 +1,8 @@
+#pragma once
 #include "Label.h"
+#include "Image.h"
+#include "GUI/Skin.h"
+
 namespace GUI
 {
     namespace Elements

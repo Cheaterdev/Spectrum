@@ -1,4 +1,9 @@
 #pragma once
+#include "Resizable.h"
+#include "Dragger.h"
+#include "Button.h"
+#include "GUI/Skin.h"
+
 namespace GUI
 {
     namespace Elements

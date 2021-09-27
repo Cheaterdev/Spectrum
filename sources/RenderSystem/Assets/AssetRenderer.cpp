@@ -1,4 +1,12 @@
 #include "pch.h"
+
+#include "Assets/EngineAssets.h"
+#include "Effects/Sky.h"
+#include "Lighting/PSSM.h"
+
+#include "AssetRenderer.h"
+#include "Helpers/MipMapGeneration.h"
+
 using namespace FrameGraph;
 
 class SceneRenderWorkflow

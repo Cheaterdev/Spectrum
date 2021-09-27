@@ -1,3 +1,8 @@
+#include "Assets/Asset.h"
+#include "GUI/Elements/Container.h"
+#include "GUI/Elements/StatusBar.h"
+#include "GUI/Elements/Image.h"
+
 namespace GUI
 {
     namespace Elements

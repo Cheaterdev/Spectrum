@@ -1,4 +1,6 @@
 #include "FlowGraph/FlowGraph.h"
+#include "GUI/Elements/FlowGraph/Canvas.h"
+#include "GUI/Elements/TabControl.h"
 
 namespace GUI
 {

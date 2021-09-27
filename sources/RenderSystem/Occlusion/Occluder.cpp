@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "Occluder.h"
+
 
 BOOST_CLASS_EXPORT_IMPLEMENT(occluder)
 

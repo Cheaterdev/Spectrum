@@ -1,5 +1,13 @@
 #include "pch.h"
 
+#include "GUI/Elements/AssetExplorer.h"
+#include "GUI/Elements/ValueBox.h"
+#include "GUI/Elements/CheckBoxText.h"
+#include "GUI/Elements/HorizontalLayout.h"
+#include "GUI/Elements/ColoredRect.h"
+
+#include "Values.h"
+
 /*
 int get_size(FlowGraph::data_types v)
 {
