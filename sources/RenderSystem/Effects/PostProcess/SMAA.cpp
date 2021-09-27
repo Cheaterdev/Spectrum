@@ -1,5 +1,5 @@
 #include "pch.h"
-
+using namespace FrameGraph;
 
 SMAA::SMAA()
 {
@@ -8,7 +8,7 @@ SMAA::SMAA()
 
 }
 
-void SMAA::generate(FrameGraph& graph)
+void SMAA::generate(Graph& graph)
 {
 
 	struct SMAAData

@@ -78,7 +78,7 @@ struct DataHolder : public Table
 	template<class Context, class UAV>
 	void place_uav(Compiled& compiled, Context& context, UAV& uav) const
 	{
-		auto count = sizeof(uav) / sizeof(Render::Handle);
+		auto count = static_cast<UINT>(sizeof(uav) / sizeof(Render::Handle));
 
 		compiled.table_uav = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(count);
 		compiled.offsets_uav.resize(count);

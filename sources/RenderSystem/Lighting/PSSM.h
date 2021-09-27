@@ -1,4 +1,4 @@
-class PSSM:public FrameGraphGenerator
+class PSSM:public FrameGraph::GraphGenerator
 {
 
 	ShaderMaterial::ptr mat;
@@ -17,7 +17,7 @@ class PSSM:public FrameGraphGenerator
 	size_t counter = 0;
 public:
 
-	virtual void generate(FrameGraph& graph) override;
+	virtual void generate(FrameGraph::Graph& graph) override;
 
 	float3 get_position();
 

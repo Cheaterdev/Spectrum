@@ -4,7 +4,9 @@
 #include "ffx_a.h"
 #include "ffx_fsr1.h"
 
-void FSR::generate(FrameGraph& graph)
+using namespace FrameGraph;
+
+void FSR::generate(Graph& graph)
 {
 	struct SkyData
 	{

@@ -1,5 +1,5 @@
 #include "pch.h"
-
+using namespace FrameGraph;
 
 namespace GUI
 {
@@ -279,7 +279,7 @@ namespace GUI
         {
             sizer all_pos = { pos.get(), pos.get() + scaled_size.get() };
             all_pos +=
-            {	-margin->left, -margin->top, margin->right, margin->bottom};
+                sizer{	-margin->left, -margin->top, margin->right, margin->bottom};
             float2 all_size = { all_pos.right - all_pos.left, all_pos.bottom - all_pos.top };
             all_pos *= scale;
             all_size *= scale;
@@ -906,7 +906,7 @@ namespace GUI
     }
 
 
-     void user_interface::create_graph(FrameGraph& graph)
+     void user_interface::create_graph(Graph& graph)
      {
       //   return;
          process_graph(graph);
@@ -1193,7 +1193,7 @@ namespace GUI
 
     void user_interface::remove_base(base* object)
     {
-		auto frame_gen = dynamic_cast<FrameGraphGenerator*>(object);
+		auto frame_gen = dynamic_cast<GraphGenerator*>(object);
 		if (frame_gen)
 			frame_generators.erase(frame_gen);
     }
@@ -1201,7 +1201,7 @@ namespace GUI
     void user_interface::add_base(base* object)
     {
         //   components.insert(object);
-        auto frame_gen = dynamic_cast<FrameGraphGenerator*>(object);
+        auto frame_gen = dynamic_cast<GraphGenerator*>(object);
         if (frame_gen)
             frame_generators.insert(frame_gen);
     }

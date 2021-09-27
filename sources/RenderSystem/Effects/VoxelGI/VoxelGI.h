@@ -115,7 +115,7 @@ public:
 	}
 
 
-	void load_static(std::list<ivec3> &tiles )
+	void load_static(std::list<uint3> &tiles )
 	{
 		for (auto& pos : tiles)
 		{
@@ -128,7 +128,7 @@ public:
 		}
 	}
 
-	void zero_static(std::list<ivec3>& tiles)
+	void zero_static(std::list<uint3>& tiles)
 	{
 		for (auto& pos : tiles)
 		{
@@ -140,7 +140,7 @@ public:
 		}
 	}
 
-	void load_dynamic(std::list<ivec3>& tiles)
+	void load_dynamic(std::list<uint3>& tiles)
 	{
 		for (auto& pos : tiles)
 		{
@@ -153,7 +153,7 @@ public:
 		}
 	}
 
-	void zero_dynamic(std::list<ivec3>& tiles)
+	void zero_dynamic(std::list<uint3>& tiles)
 	{
 		for (auto& pos : tiles)
 		{
@@ -179,10 +179,10 @@ public:
 	}
 };
 
+using namespace FrameGraph;
 
 
-
-class VoxelGI :public Events::prop_handler, public FrameGraphGenerator, VariableContext
+class VoxelGI :public Events::prop_handler, public FrameGraph::GraphGenerator, VariableContext
 {
 public:
 
@@ -261,17 +261,17 @@ public:
 	void start_new(Render::CommandList& list);
 
 	VoxelGI(Scene::ptr& scene);
-	void voxelize(MeshRenderContext::ptr& context, main_renderer* r, FrameGraph& graph);
+	void voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph& graph);
 	void generate(MeshRenderContext::ptr& context, main_renderer::ptr r, PSSM& pssm);
 
-	void lighting(FrameGraph& graph);
-	void mipmapping(FrameGraph& graph);
-	void screen(FrameGraph& graph);
-	void screen_reflection(FrameGraph& graph);
+	void lighting(Graph& graph);
+	void mipmapping(Graph& graph);
+	void screen(Graph& graph);
+	void screen_reflection(Graph& graph);
 
 
-	virtual void generate(FrameGraph& graph) override;
-	virtual void voxelize(FrameGraph& graph) ;
-	virtual void debug(FrameGraph& graph);
+	virtual void generate(Graph& graph) override;
+	virtual void voxelize(Graph& graph) ;
+	virtual void debug(Graph& graph);
 
 };

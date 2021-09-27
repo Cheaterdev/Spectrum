@@ -1,5 +1,6 @@
 #include "pch.h"
 
+using namespace FrameGraph;
 
 class GBufferDownsampler :public Events::prop_handler
 {
@@ -8,7 +9,7 @@ public:
 	using ptr = std::shared_ptr<GBufferDownsampler>;
 
 
-	void generate(FrameGraph& graph)
+	void generate(Graph& graph)
 	{
 
 		struct DownsampleData
@@ -208,7 +209,7 @@ void VoxelGI::start_new(Render::CommandList& list)
 }
 
 
-void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, FrameGraph& graph)
+void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph& graph)
 {
 	auto& graphics = context->list->get_graphics();
 	auto& compute = context->list->get_compute();
@@ -373,7 +374,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, FrameG
 
 
 
-void VoxelGI::debug(FrameGraph& graph)
+void VoxelGI::debug(Graph& graph)
 {
 	struct VoxelDebugData
 	{
@@ -444,7 +445,7 @@ void VoxelGI::debug(FrameGraph& graph)
 
 
 
-void VoxelGI::screen(FrameGraph& graph)
+void VoxelGI::screen(Graph& graph)
 {
 	struct Screen
 	{
@@ -781,7 +782,7 @@ void VoxelGI::screen(FrameGraph& graph)
 
 
 
-void VoxelGI::screen_reflection(FrameGraph& graph)
+void VoxelGI::screen_reflection(Graph& graph)
 {
 	struct ScreenReflection
 	{
@@ -1029,7 +1030,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 }
 
 
-void VoxelGI::voxelize(FrameGraph& graph)
+void VoxelGI::voxelize(Graph& graph)
 {
 	struct Voxelize
 	{
@@ -1068,7 +1069,7 @@ void VoxelGI::voxelize(FrameGraph& graph)
 		});
 }
 
-void VoxelGI::lighting(FrameGraph& graph)
+void VoxelGI::lighting(Graph& graph)
 {
 
 
@@ -1162,7 +1163,7 @@ void VoxelGI::lighting(FrameGraph& graph)
 }
 
 
-void VoxelGI::mipmapping(FrameGraph& graph)
+void VoxelGI::mipmapping(Graph& graph)
 {
 	struct Mipmapping
 	{
@@ -1278,7 +1279,7 @@ void VoxelGI::mipmapping(FrameGraph& graph)
 		}, PassFlags::Compute);
 
 }
-void VoxelGI::generate(FrameGraph& graph)
+void VoxelGI::generate(Graph& graph)
 {
 
 	graph.builder.pass_texture("VoxelAlbedo", albedo.tex_result);

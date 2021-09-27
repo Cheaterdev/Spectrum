@@ -157,7 +157,7 @@ namespace DX12
 
 	};
 
-	class TransitionPoint;
+	struct TransitionPoint;
 	
 	struct Transition
 	{
@@ -449,7 +449,7 @@ namespace DX12
 		using ptr = std::unique_ptr<ResourceStateManager>;
 		UINT get_subres_count()
 		{
-			return gpu_state.subres.size();
+			return static_cast<UINT>(gpu_state.subres.size());
 		}
 		ResourceStateManager();
 		SubResourcesGPU copy_gpu() const

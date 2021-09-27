@@ -61,7 +61,7 @@ class camera : public Frustum
             dir.y = -dir.y;
             dir = dir * get_inv_view_proj();
             vec3 res(dir / dir.w);
-            res -= camera_cb.current.position;
+            res -= camera_cb.current.position.xyz;
             res.normalize();
             return res;
         }

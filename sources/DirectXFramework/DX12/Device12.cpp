@@ -21,8 +21,8 @@ namespace DX12
 		}
 	};
 	
-	class RaytracingBuildDescBottomInputs;
-	class RaytracingBuildDescTopInputs;
+	struct RaytracingBuildDescBottomInputs;
+	struct RaytracingBuildDescTopInputs;
 	void  Device::stop_all()
 	{
 		swap_chains.clear();

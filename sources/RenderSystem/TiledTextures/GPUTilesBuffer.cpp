@@ -28,7 +28,7 @@ void GPUTilesBuffer::insert(ivec3 pos)
 	{
 		used_tiles.emplace_back(pos);
 		tiles_updated = true;
-		tile_positions[pos] = used_tiles.size() - 1;
+		tile_positions[pos] = static_cast<int>(used_tiles.size() - 1);
 	}
 }
 
@@ -51,7 +51,7 @@ void GPUTilesBuffer::update(Render::CommandList::ptr list)
 		buffer->set_data(list, 0, used_tiles);
 		DispatchArguments args;
 
-		args.ThreadGroupCountX = used_tiles.size() * shape.x/4;
+		args.ThreadGroupCountX = static_cast<UINT>(used_tiles.size() * shape.x/4);
 		args.ThreadGroupCountY = shape.y/4;
 		args.ThreadGroupCountZ = shape.z/4;
 

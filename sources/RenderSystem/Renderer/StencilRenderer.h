@@ -1,6 +1,6 @@
 #pragma once
 
-class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Events::Runner, public VariableContext
+class stencil_renderer : public GUI::base, public FrameGraph::GraphGenerator, public Events::Runner, public VariableContext
 {
      //   RenderTargetTable table;
     //    Render::StructuredBuffer<UINT>::ptr id_buffer;
@@ -49,8 +49,8 @@ class stencil_renderer : public GUI::base, public FrameGraphGenerator, public Ev
 		Plane current_plane;
 
     public:
-		virtual void generate(FrameGraph& graph) override;
-		void generate_after(FrameGraph& graph);
+		virtual void generate(FrameGraph::Graph& graph) override;
+		void generate_after(FrameGraph::Graph& graph);
 		Scene::ptr debug_scene;
 
         Scene::ptr scene;

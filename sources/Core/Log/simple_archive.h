@@ -48,6 +48,9 @@ class simple_log_archive
 	}
 
 public:
+
+	static constexpr bool PRETTY = true;
+
 	///////////////////////////////////////////////////
 	// Implement requirements for archive concept
 
@@ -91,7 +94,7 @@ public:
 	}
 
 	template<class T>
-	simple_log_archive& operator<<(T* const t)
+	simple_log_archive& operator<<(T t) requires (std::is_pointer_v<T>)
 	{
 		m_os << " ->";
 
@@ -159,21 +162,3 @@ public:
 		m_depth(0), t_depth(0)
 	{}
 };
-
-
-#include "Math/Types/Vectors.h"
-namespace boost
-{
-	namespace serialization
-	{
-		template<class Type>
-		void serialize(simple_log_archive& ar, Vector<Type> v, const unsigned int) requires (Vector<Type>::N < 4)
-		{
-			if constexpr (Vector<Type>::N > 0)ar& NP("x", v.values[0]);
-			if constexpr (Vector<Type>::N > 1)ar& NP("y", v.values[1]);
-			if constexpr (Vector<Type>::N > 2)ar& NP("z", v.values[2]);
-			if constexpr (Vector<Type>::N > 3)ar& NP("w", v.values[3]);
-		}
-	}
-}
-

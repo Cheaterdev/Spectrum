@@ -370,7 +370,7 @@ namespace DX12 {
 
 		void ByteAddressBuffer::create(Resource* resource, UINT offset , UINT size )
 		{
-			if (size == 0) size = resource->get_desc().Width / 4;
+			if (size == 0) size = static_cast<UINT>(resource->get_desc().Width / 4);
 
 			D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
 			desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -387,7 +387,7 @@ namespace DX12 {
 
 		void RWByteAddressBuffer::create(Resource* resource, UINT offset , UINT size )
 		{
-			if (size == 0) size = resource->get_desc().Width / 4;
+			if (size == 0) size = static_cast<UINT>(resource->get_desc().Width / 4);
 			D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
 			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 			desc.Format = DXGI_FORMAT_R32_TYPELESS;

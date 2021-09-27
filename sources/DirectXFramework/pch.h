@@ -1,6 +1,5 @@
 #pragma once
 #include "../Core/pch.h"
-#include "../FileSystem/pch.h"
 
 // DirectX includes
 #include <d3dcompiler.h>

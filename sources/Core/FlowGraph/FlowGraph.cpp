@@ -1,6 +1,7 @@
 // FlowGraph.cpp : Defines the entry point for the console application.
 //
 #include "pch.h"
+#include "FlowGraph.h"
 
 namespace FlowGraph
 {
@@ -788,7 +789,7 @@ namespace FlowGraph
 					float d = from_pos.x - (to_pos.x - scale * 150);
 
 					
-					force += Math::clamp(-d/10, -5.0f,5.0f);
+					force += vec2(Math::clamp(-d/10, -5.0f,5.0f));
 
 
 				}

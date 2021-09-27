@@ -9,7 +9,7 @@ namespace Render
 }
 class AssetRenderer : public Singleton<AssetRenderer>
 {
-	FrameGraph graph;
+    FrameGraph::Graph graph;
     UINT frame = 0;
 
         friend class Singleton<AssetRenderer>;

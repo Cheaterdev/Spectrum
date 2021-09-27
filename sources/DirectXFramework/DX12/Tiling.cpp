@@ -11,7 +11,7 @@ namespace DX12 {
 		//load_tiles(target, { begin,0,0 }, { end,0,0 });
 	}
 
-	void TiledResourceManager::load_tile(update_tiling_info& target, ivec3 pos, uint subres, bool recursive)
+	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive)
 	{
 		auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
 		auto& tile = tiles[subres][pos];
@@ -35,7 +35,7 @@ namespace DX12 {
 		}
 	}
 
-	void  TiledResourceManager::zero_tile(update_tiling_info& target, ivec3 pos, uint subres)
+	void  TiledResourceManager::zero_tile(update_tiling_info& target, uint3 pos, uint subres)
 	{
 		auto& tile = tiles[subres][pos];
 
@@ -55,9 +55,9 @@ namespace DX12 {
 
 				uint3 my_pos = parent_pos * 2;
 
-				auto is_mapped = [&](ivec3 pos) {
+				auto is_mapped = [&](uint3 pos) {
 				
-					if (math::all(pos >= ivec3(0,0,0)) && math::all(pos < tiles[subres].size()))
+					if (math::all(pos >= uint3(0,0,0)) && math::all(pos < tiles[subres].size()))
 					{
 						return !!tiles[subres][pos].heap_position.heap;
 					}
@@ -70,7 +70,7 @@ namespace DX12 {
 				for (int x = 0; x < 2; x++)
 					for (int y = 0; y < 2; y++)
 						for (int z = 0; z < 2; z++)
-							can_unmap = can_unmap && !is_mapped(my_pos + ivec3(x,y,z));
+							can_unmap = can_unmap && !is_mapped(my_pos + uint3(x,y,z));
 
 				if (can_unmap)
 				{
@@ -81,7 +81,7 @@ namespace DX12 {
 		}
 	}
 
-	void TiledResourceManager::load_tiles_internal(update_tiling_info& target, ivec3 from, ivec3 to, uint subres, bool recursive)
+	void TiledResourceManager::load_tiles_internal(update_tiling_info& target, uint3 from, uint3 to, uint subres, bool recursive)
 	{
 		for (uint x = from.x; x <= to.x; x++)
 			for (uint y = from.y; y <= to.y; y++)
@@ -91,7 +91,7 @@ namespace DX12 {
 				}
 	}
 
-	void TiledResourceManager::load_tiles(CommandList* list, ivec3 from, ivec3 to, uint subres)
+	void TiledResourceManager::load_tiles(CommandList* list, uint3 from, uint3 to, uint subres)
 	{
 
 		update_tiling_info info;
@@ -106,7 +106,7 @@ namespace DX12 {
 			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
-	void TiledResourceManager::zero_tiles(CommandList* list, ivec3 from, ivec3 to)
+	void TiledResourceManager::zero_tiles(CommandList* list, uint3 from, uint3 to)
 	{
 
 		update_tiling_info info;
@@ -130,7 +130,7 @@ namespace DX12 {
 	}
 
 
-	void TiledResourceManager::load_tiles(CommandList* list, std::list<ivec3> &tiles, uint subres, bool recursive)
+	void TiledResourceManager::load_tiles(CommandList* list, std::list<uint3> &tiles, uint subres, bool recursive)
 	{
 		update_tiling_info info;
 		info.resource = static_cast<Resource*>(this);
@@ -147,7 +147,7 @@ namespace DX12 {
 		else
 			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
-	void TiledResourceManager::zero_tiles(CommandList* list, std::list<ivec3> &tiles_to_remove)
+	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3> &tiles_to_remove)
 	{
 		update_tiling_info info;
 		info.resource = static_cast<Resource*>(this);
@@ -176,7 +176,7 @@ namespace DX12 {
 		info.resource = static_cast<Resource*>(this);
 		for (int i = 0; i < tiles.size(); i++)
 		{
-			ivec3 size = tiles[i].size();
+			uint3 size = tiles[i].size();
 
 			for (uint x = 0; x < tiles[i].size().x; x++)
 				for (uint y = 0; y < tiles[i].size().y; y++)
@@ -190,7 +190,7 @@ namespace DX12 {
 	}
 
 
-	void TiledResourceManager::copy_mappings(CommandList& list, ivec3 target_pos, TiledResourceManager* source, ivec3 source_pos, ivec3 size)
+	void TiledResourceManager::copy_mappings(CommandList& list, uint3 target_pos, TiledResourceManager* source, uint3 source_pos, uint3 size)
 	{
 		update_tiling_info info;
 
@@ -203,7 +203,7 @@ namespace DX12 {
 		list.update_tilings(std::move(info));
 	}
 
-	void TiledResourceManager::map_tile(update_tiling_info& info, ivec3 pos, TileHeapPosition heap_pos)
+	void TiledResourceManager::map_tile(update_tiling_info& info, uint3 pos, TileHeapPosition heap_pos)
 	{
 		auto& tile = tiles[0][pos];
 
@@ -212,12 +212,12 @@ namespace DX12 {
 		info.add_tile(tile);
 	}
 
-	ivec3 TiledResourceManager::get_tiles_count(int mip_level)
+	uint3 TiledResourceManager::get_tiles_count(int mip_level)
 	{
 		return tiles[mip_level].size();
 		
 	}
-	ivec3 TiledResourceManager::get_tile_shape()
+	uint3 TiledResourceManager::get_tile_shape()
 	{
 		return tile_shape;
 	}

@@ -1,3 +1,5 @@
+#include "FlowGraph/FlowGraph.h"
+
 namespace GUI
 {
     namespace Elements

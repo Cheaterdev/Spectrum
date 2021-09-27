@@ -1,18 +1,18 @@
 #pragma once
 
 
-class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraphGenerator
+class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraph::GraphGenerator
 {
 public:
 
 	CubeMapEnviromentProcessor();
 
-	virtual void generate(FrameGraph& graph) override;
+	virtual void generate(FrameGraph::Graph& graph) override;
 };
 
 
 
-class SkyRender :public Events::prop_handler, public FrameGraphGenerator
+class SkyRender :public Events::prop_handler, public FrameGraph::GraphGenerator
 {
 	Render::Texture::ptr transmittance;
 	Render::Texture::ptr irradiance;
@@ -26,7 +26,7 @@ public:
 
 	SkyRender();
 
-	virtual void generate(FrameGraph& graph) override;
-	 void generate_sky(FrameGraph& graph) ;
+	virtual void generate(FrameGraph::Graph& graph) override;
+	 void generate_sky(FrameGraph::Graph& graph) ;
 
 };

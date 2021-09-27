@@ -770,12 +770,12 @@ HRESULT ComputeCullData(
         }
 
         // Calculate spatial bounds
-        float4 positionBounds = MinimumBoundingSphere(vertices, m.UniqueVertexIndices.size());
+        float4 positionBounds = MinimumBoundingSphere(vertices, static_cast<UINT>(m.UniqueVertexIndices.size()));
         c.BoundingSphere= positionBounds;
 
         // Calculate the normal cone
         // 1. Normalized center point of minimum bounding sphere of unit normals == conic axis
-        float4 normalBounds = MinimumBoundingSphere(normals, m.PrimitiveIndices.size()/3);
+        float4 normalBounds = MinimumBoundingSphere(normals, static_cast<UINT>(m.PrimitiveIndices.size()/3));
 
         // 2. Calculate dot product of all normals to conic axis, selecting minimum
         float3 axis = normalBounds.normalized();
@@ -824,7 +824,7 @@ HRESULT ComputeCullData(
                 vertices[indices[2]],
             };
 
-            float3 c = positionBounds - triangle[0];
+            float3 c = positionBounds.xyz - triangle[0];
 
             float3 n = normals[i];
             float dc = vec3::dot(c, n);

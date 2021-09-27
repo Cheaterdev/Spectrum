@@ -3,18 +3,18 @@
 
 struct visibility_update
 {
-	std::list<ivec3> tiles_to_load;
-	std::list<ivec3> tiles_to_remove;
+	std::list<uint3> tiles_to_load;
+	std::list<uint3> tiles_to_remove;
 
 };
 class VisibilityBuffer
 {
 	std::vector<unsigned char> clear_data;
-	ivec3 sizes;
+	uint3 sizes;
 
 
 protected:
-	virtual void process_tile_readback(ivec3 pos, char level) = 0;
+	virtual void process_tile_readback(uint3 pos, char level) = 0;
 
 public:
 	Render::Texture::ptr buffer;
@@ -22,7 +22,7 @@ public:
 	Render::StructuredBuffer<uint4>::ptr load_tiles_buffer;
 	using ptr = std::shared_ptr<VisibilityBuffer>;
 
-	VisibilityBuffer(ivec3 sizes);
+	VisibilityBuffer(uint3 sizes);
 
 	std::future<visibility_update> waiter;
 
@@ -35,13 +35,13 @@ public:
 
 class VisibilityBufferUniversal : public VisibilityBuffer
 {
-	virtual void process_tile_readback(ivec3 pos, char level) override;
+	virtual void process_tile_readback(uint3 pos, char level) override;
 
 public:
 
 	using VisibilityBuffer::VisibilityBuffer;
 	using ptr = std::shared_ptr<VisibilityBufferUniversal>;
 
-	std::function<void(ivec3, int)> on_process;
+	std::function<void(uint3, int)> on_process;
 
 };

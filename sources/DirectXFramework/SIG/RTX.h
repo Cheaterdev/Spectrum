@@ -45,7 +45,7 @@ struct SelectLocal<T>
 		std::tuple<Passes...> passes;
 		std::tuple<Raygens...> raygen;
 
-		static const UINT MaxPayloadSizeInBytes = Templates::max(sizeof(Underlying<typename Passes::Payload>)...);
+		static const UINT MaxPayloadSizeInBytes = static_cast<UINT>(Templates::max(sizeof(Underlying<typename Passes::Payload>)...));
 		static const UINT MaxAttributeSizeInBytes = sizeof(float2);
 
 		Render::StateObject::ptr m_dxrStateObject;
@@ -137,7 +137,7 @@ struct SelectLocal<T>
 			else
 				info = &materials[mat];
 
-			return info->handle.get_offset();;
+			return static_cast<UINT>(info->handle.get_offset());
 		}
 		void init_material(material* mat)
 		{
@@ -297,15 +297,15 @@ struct SelectLocal<T>
 		template<class T>
 		void dispatch(ivec3 size, Render::ComputeContext& compute)
 		{
-			constexpr int generator = tuple_element_index<T, std::tuple<Raygens...> >();
+			constexpr size_t generator = tuple_element_index<T, std::tuple<Raygens...> >();
 
 
-			static_assert(generator == T::ID);
+			static_assert(static_cast<UINT>(generator) == T::ID);
 			compute.set_pipeline(m_dxrStateObject);
 			compute.dispatch_rays<hit_type, Render::shader_identifier, Render::shader_identifier>(size,
-				hitgroup_ids->buffer->get_resource_address(), hitgroup_ids->max_size(),
-				miss_ids->get_resource_address(), miss_ids->get_count(),
-				raygen_ids->get_resource_address().offset(generator * sizeof(raygen_type)));
+				hitgroup_ids->buffer->get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
+				miss_ids->get_resource_address(), static_cast<UINT>(miss_ids->get_count()),
+				raygen_ids->get_resource_address().offset(static_cast<UINT>(generator * sizeof(raygen_type))));
 		}
 	};
 

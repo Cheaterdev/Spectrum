@@ -72,7 +72,7 @@ namespace DX12
 	Texture::ptr SwapChain::get_prev_frame()
 	{
 		int id = m_frameIndex - 1;
-		if (id == -1)id = frames.size() - 1;
+		if (id == -1)id = static_cast<int>(frames.size() - 1);
 		return frames[id].m_renderTarget;
 	}
 

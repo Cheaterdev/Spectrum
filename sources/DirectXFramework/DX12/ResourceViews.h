@@ -99,12 +99,12 @@ namespace DX12
 			if (size) view_desc.Buffer.Size = size;
 			srv_handle = HLSL::Buffer<T>(frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
 
-			srv_handle.create(resource.get(), format, view_desc.Buffer.Offset / sizeof(Underlying<T>), view_desc.Buffer.Size / sizeof(Underlying<T>));
+			srv_handle.create(resource.get(), format, static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 
 			auto& desc = resource->get_desc();
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
 				uav_handle = HLSL::RWBuffer<T>(frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
-				uav_handle.create(resource.get(), format, view_desc.Buffer.Offset / sizeof(Underlying<T>), view_desc.Buffer.Size / sizeof(Underlying<T>));
+				uav_handle.create(resource.get(), format, static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 			}
 		}
 
@@ -582,7 +582,7 @@ namespace DX12
 	
 
 		template<class F>
-		StructuredBufferView(Resource::ptr resource, F& frame, explicit BufferType counted = BufferType::NONE, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+		StructuredBufferView(Resource::ptr resource, F& frame, BufferType counted = BufferType::NONE, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
 		{
 			init_desc();
 
@@ -614,17 +614,17 @@ namespace DX12
 			auto& desc = resource->get_desc();
 
 			if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
-				structuredBuffer.create(resource.get(), view_desc.Buffer.Offset / sizeof(Underlying<T>), view_desc.Buffer.Size / sizeof(Underlying<T>));
+				structuredBuffer.create(resource.get(), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 			}
 
 
 			if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
 
-				rwStructuredBuffer.create(resource.get(), view_desc.Buffer.Offset / sizeof(Underlying<T>), view_desc.Buffer.Size / sizeof(Underlying<T>));
-				rwRAW.create(resource.get(), DXGI_FORMAT::DXGI_FORMAT_R8_UINT, view_desc.Buffer.Offset, view_desc.Buffer.Size);
+				rwStructuredBuffer.create(resource.get(), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
+				rwRAW.create(resource.get(), DXGI_FORMAT::DXGI_FORMAT_R8_UINT, static_cast<UINT>(view_desc.Buffer.Offset), static_cast<UINT>(view_desc.Buffer.Size));
 
 				if (counted == BufferType::COUNTED)
-					appendStructuredBuffer.create(resource.get(), 0, resource.get(), view_desc.Buffer.Offset / sizeof(Underlying<T>), view_desc.Buffer.Size / sizeof(Underlying<T>));
+					appendStructuredBuffer.create(resource.get(), 0, resource.get(), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 			}
 		}
 		Handle get_uav_clear() { return rwRAW; }

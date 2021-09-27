@@ -118,7 +118,8 @@ public:
 		return *this;
 	}
 
-	inline Vector operator+(const Vector& v) const
+	template<class T2>
+	inline Vector operator+(const Vector<T2>& v) const requires(N == T2::N)
 	{
 		Vector result;
 
@@ -129,7 +130,7 @@ public:
 	}
 
 	template<class T2>
-	inline Vector operator-(const Vector<T2>& v) const
+	inline Vector operator-(const Vector<T2>& v) const requires(N == T2::N)
 	{
 		Vector result(*this);
 
@@ -148,16 +149,16 @@ public:
 
 		return result;
 	}
-
-	inline Vector& operator+=(const Vector& v)
+	template<class T2>
+	inline Vector& operator+=(const Vector<T2>& v) requires(N == T2::N)
 	{
 		for (int i : view::iota(0, N))
 			values[i] += v[i];
 
 		return *this;
 	}
-
-	inline Vector& operator-=(const Vector& v)
+	template<class T2>
+	inline Vector& operator-=(const Vector<T2>& v) requires(N == T2::N)
 	{
 		for (int i : view::iota(0, N))
 			values[i] -= v[i];
@@ -165,7 +166,7 @@ public:
 		return *this;
 	}
 
-	inline Vector& operator*=(const Format& n)
+	inline Vector& operator*=(const Format& n) 
 	{
 		for (int i : view::iota(0, N))
 			values[i] *= n;
@@ -215,7 +216,7 @@ public:
 
 	Format sum() const
 	{
-		return std::accumulate(values.begin(), values.end(), 0);
+		return std::accumulate(values.begin(), values.end(), Format(0));
 	}
 
 
@@ -319,7 +320,7 @@ public:
 	template<typename T>
 	static Format dot(const Vector<T>& a, const Vector<T>& b)
 	{
-		Format r = 0.0;
+		Format r(0);
 
 		for (int i : view::iota(0, N))
 			r += a[i] * b[i];
@@ -334,12 +335,22 @@ public:
 	}
 
 	private:
+
+		SERIALIZE_PRETTY() requires (N <= 4)
+		{
+			if constexpr (N > 0)ar& NP("x", values[0]);
+			if constexpr (N > 1)ar& NP("y", values[1]);
+			if constexpr (N > 2)ar& NP("z", values[2]);
+			if constexpr (N > 3)ar& NP("w", values[3]);
+		}
+
+
 		SERIALIZE()
 		{
 			ar& NP("values", values);
 		}
 
-
+	
 };
 
 template<typename T>
@@ -703,9 +714,9 @@ typedef Vector<vec3_t<unsigned char>> rgb8;
 
 
 using uint = UINT;
-using uint2 = ivec2;
-using uint3 = ivec3;
-using uint4 = ivec4;
+using uint2 = Vector<vec2_t<uint>>;
+using uint3 = Vector<vec3_t<uint>>;
+using uint4 = Vector<vec4_t<uint>>;
 
 
 
@@ -772,7 +783,7 @@ public:
 		size_t sum = 1;
 		for (int i : view::iota(0, V::N))
 		{
-			scalers[i] = sum;
+			scalers[i] = static_cast<V::Format>(sum);
 			sum *= size[i];
 		}
 

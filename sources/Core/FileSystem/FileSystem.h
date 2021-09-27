@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Serialization/Serializer.h"
 struct file;
 
@@ -474,3 +476,21 @@ std::vector<typename loader<_resource, _header, _context>::loader_func> loader<_
 
 template<class _resource, class _header, class _context>
 bool loader<_resource, _header, _context>::inited = _resource::init_default_loaders();
+
+
+
+namespace boost {
+	namespace serialization {
+		template<class Archive>
+		void serialize(Archive& ar, std::filesystem::path& p,
+			const unsigned int version)
+		{
+			std::wstring s;
+			if (Archive::is_saving::value)
+				s = p.wstring();
+			ar& boost::serialization::make_nvp("string", s);
+			if (Archive::is_loading::value)
+				p = s;
+		}
+	}
+}

@@ -537,8 +537,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 			base.transition(resource, Render::ResourceState::COPY_SOURCE);
 		//else
 	//		base.transition(resource, Render::ResourceState::COMMON);
-		int res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
-		UINT size = res_stride * box.y * box.z;
+		UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
+		UINT64 size = res_stride * box.y * box.z;
 		auto info = base.read_data(size, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 		CD3DX12_TEXTURE_COPY_LOCATION source(resource->get_native().Get(), sub_resource);
 		CD3DX12_TEXTURE_COPY_LOCATION dest;
@@ -548,7 +548,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		dest.PlacedFootprint.Footprint.Width = box.x;
 		dest.PlacedFootprint.Footprint.Height = box.y;
 		dest.PlacedFootprint.Footprint.Depth = box.z;
-		dest.PlacedFootprint.Footprint.RowPitch = res_stride;
+		dest.PlacedFootprint.Footprint.RowPitch = static_cast<UINT>(res_stride);
 		dest.PlacedFootprint.Footprint.Format = to_srv(Layouts.Footprint.Format);
 		list->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
 		auto result = std::make_shared<std::promise<bool>>();

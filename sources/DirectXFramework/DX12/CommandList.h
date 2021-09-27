@@ -1251,7 +1251,7 @@ namespace DX12
 			inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
 			inputs.Flags = Flags;
 			inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
-			inputs.NumDescs = descs.size();
+			inputs.NumDescs = static_cast<UINT>(descs.size());
 			inputs.pGeometryDescs = descs.data();
 
 			return inputs;

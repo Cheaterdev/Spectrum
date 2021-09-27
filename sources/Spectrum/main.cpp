@@ -1,13 +1,7 @@
 #include "pch.h"
-#include <filesystem>
 
-#ifdef OCULUS_SUPPORT
-// Include the Oculus SDK
-#include "OVR_CAPI_D3D.h"
-ovrEyeRenderDesc eyeRenderDesc[2];
-
-#endif
-
+#include "FlowGraph/FlowSystem.h"
+using namespace FrameGraph;
 
 HRESULT device_fail()
 {
@@ -74,14 +68,14 @@ class GraphDebugRender : public GUI::Elements::FlowGraph::canvas
 {
 public:
 
-	void generate(FrameGraph& graph)
+	void generate(Graph& graph)
 	{
 
 	}
 
 };
 
-class triangle_drawer : public GUI::Elements::image, public FrameGraphGenerator, VariableContext, public FrameGraphUsage
+class triangle_drawer : public GUI::Elements::image, public GraphGenerator, VariableContext, public GraphUsage
 {
 	main_renderer::ptr scene_renderer;
 	main_renderer::ptr gpu_scene_renderer;
@@ -372,11 +366,11 @@ public:
 
 	}
 
-	FrameGraph* last_graph = nullptr;
+	Graph* last_graph = nullptr;
 	tick_timer my_timer;
 	ResourceAllocInfo* debug_tex_handle = nullptr;
 
-	void generate(FrameGraph& graph)
+	void generate(Graph& graph)
 	{
 
 		last_graph = &graph;
@@ -608,7 +602,7 @@ public:
 			Handlers::Texture debug_tex;
 		};
 
-		graph.add_slot_generator([this](FrameGraph& graph) {
+		graph.add_slot_generator([this](Graph& graph) {
 
 			PROFILE(L"FrameInfo");
 			Slots::FrameInfo frameInfo;
@@ -631,7 +625,7 @@ public:
 				graph.register_slot_setter(compiled);
 			});
 			
-			graph.add_slot_generator([this](FrameGraph& graph) {
+			graph.add_slot_generator([this](Graph& graph) {
 				graph.register_slot_setter(scene->compiledScene);
 			});
 
@@ -695,7 +689,7 @@ class PassNode : public::FlowGraph::Node , public  GUI::Elements::FlowGraph::Vis
 	}
 };
 
-class FrameGraphRender : public Window, public GUI::user_interface
+class GraphRender : public Window, public GUI::user_interface
 {
 	Render::SwapChain::ptr swap_chain;
 
@@ -705,7 +699,7 @@ class FrameGraphRender : public Window, public GUI::user_interface
 	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
 	std::future<void> task_future;
 
-	FrameGraph graph;
+	Graph graph;
 
 	count_meter fps;
 
@@ -958,7 +952,7 @@ resource_stages[&res.second] = input;
 
 	}
 
-	FrameGraphRender()
+	GraphRender()
 	{
 		Window::input_handler = this;
 		DX12::swap_chain_desc desc;
@@ -1145,7 +1139,7 @@ resource_stages[&res.second] = input;
 		}
 	}
 
-	virtual ~FrameGraphRender()
+	virtual ~GraphRender()
 	{
 
 		if (task_future.valid())
@@ -1170,7 +1164,7 @@ class RenderApplication : public Application
 	friend class Singleton<Application>;
 
 
-	std::shared_ptr<FrameGraphRender> main_window;
+	std::shared_ptr<GraphRender> main_window;
 	//std::shared_ptr<WindowRender> main_window;
 #ifdef OCULUS_SUPPORT
 	std::shared_ptr<OVRRender> ovr;
@@ -1208,7 +1202,7 @@ protected:
 
 		
 		//	main_window = std::make_shared<WindowRender>();
-		main_window = std::make_shared<FrameGraphRender>();
+		main_window = std::make_shared<GraphRender>();
 	
 
 		create_task([this]() {
@@ -1303,10 +1297,10 @@ struct test
 {
 	D3D12_AUTO_BREADCRUMB_OP op = D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE;
 	std::string str = "wtf";
-
+	vec4 data = {1,2,3,4};
 	SERIALIZE()
 	{
-		ar& NVP(op)& NVP(str);
+		ar& NVP(op)& NVP(str)& NVP(data);
 	}
 } v;
 

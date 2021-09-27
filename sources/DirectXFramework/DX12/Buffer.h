@@ -630,7 +630,7 @@ namespace DX12
 			list->update_tilings(std::move(updates));
 			for (auto& elems : update_list)
 			{
-				buffer->set_data(list ,elems.offset * sizeof(T), elems.data);
+				buffer->set_data(list , static_cast<UINT>(elems.offset * sizeof(T)), elems.data);
 				//buffer->set_data(list, (UINT)elems.offset * sizeof(T), elems.data.data(), (UINT)elems.size);
 			}
 

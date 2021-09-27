@@ -1,4 +1,5 @@
 #include "pch.h"
+using namespace FrameGraph;
 
 class SceneRenderWorkflow
 {
@@ -12,7 +13,7 @@ public:
 
 	main_renderer::ptr scene_renderer;
 
-	void render(FrameGraph& graph)
+	void render(Graph& graph)
 	{
 		graph.scene->update(*graph.builder.current_frame);
 		
@@ -115,7 +116,7 @@ public:
 			});
 
 
-		graph.add_slot_generator([this](FrameGraph& graph) {
+		graph.add_slot_generator([this](Graph& graph) {
 
 			PROFILE(L"FrameInfo");
 			Slots::FrameInfo frameInfo;
@@ -138,7 +139,7 @@ public:
 			graph.register_slot_setter(compiled);
 		});
 
-		graph.add_slot_generator([this](FrameGraph& graph) {
+		graph.add_slot_generator([this](Graph& graph) {
 			graph.register_slot_setter(graph.scene->compiledScene);
 			});
 		

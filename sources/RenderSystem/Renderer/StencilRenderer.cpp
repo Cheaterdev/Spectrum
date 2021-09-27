@@ -2,6 +2,7 @@
 using namespace GUI;
 
 using namespace Elements;
+using namespace FrameGraph;
 
 void stencil_renderer::select_current()
 {
@@ -315,7 +316,7 @@ stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
 
 
 
-void stencil_renderer::generate(FrameGraph& graph)
+void stencil_renderer::generate(Graph& graph)
 {
 	process_tasks();
 
@@ -525,7 +526,7 @@ void stencil_renderer::generate(FrameGraph& graph)
 }
 
 
-void stencil_renderer::generate_after(FrameGraph& graph)
+void stencil_renderer::generate_after(Graph& graph)
 {
 	if (selected.empty())
 		return;

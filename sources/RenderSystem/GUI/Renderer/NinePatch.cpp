@@ -58,7 +58,7 @@ namespace GUI
 
 		auto margin = c.scale * item.margins;
 		auto padding = c.scale * item.padding;
-		r += { -margin.left, -margin.top, margin.left + margin.right, margin.top + margin.bottom};
+		r += rect{ -margin.left, -margin.top, margin.left + margin.right, margin.top + margin.bottom};
 
 		float tl = 0, tt = 0, tr = 0, tb = 0;
 

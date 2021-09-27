@@ -621,7 +621,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                 /// hate this, just do normally later
                 std::vector<float3> poses;
 
-                for(int i=0;i< mesh.vertex_count;i++)
+                for(UINT i=0;i< mesh.vertex_count;i++)
                 {
                     poses.push_back(vertices[i+ mesh.vertex_offset].pos);//argh!!
                 }

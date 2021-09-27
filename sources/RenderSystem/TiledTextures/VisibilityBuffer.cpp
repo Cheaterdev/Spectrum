@@ -2,7 +2,7 @@
 
 
 
-VisibilityBuffer::VisibilityBuffer(ivec3 sizes) :sizes(sizes)
+VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {
 	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8_UINT, sizes.x, sizes.y, sizes.z, 1, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
 
@@ -45,7 +45,7 @@ std::future<visibility_update> VisibilityBuffer::update(CommandList::ptr& list)
 	}
 
 	compute.set_pipeline(GetPSO<PSOS::VoxelVisibility>());
-	compute.dispach(sizes);
+	compute.dispach(ivec3(sizes));
 
 
 	auto info = std::make_shared<_info>();
@@ -62,7 +62,7 @@ std::future<visibility_update> VisibilityBuffer::update(CommandList::ptr& list)
 
 			visibility_update update;
 
-			for (int i = 0; i < info->size; i++)
+			for (UINT i = 0; i < info->size; i++)
 				update.tiles_to_load.emplace_back(tiles[i]);
 
 			promise->set_value(update);
@@ -74,7 +74,7 @@ std::future<visibility_update> VisibilityBuffer::update(CommandList::ptr& list)
 	return future;
 }
 
-void VisibilityBufferUniversal::process_tile_readback(ivec3 pos, char level)
+void VisibilityBufferUniversal::process_tile_readback(uint3 pos, char level)
 {
 	PROFILE(L"process_tile_readback");
 	on_process(pos, level);

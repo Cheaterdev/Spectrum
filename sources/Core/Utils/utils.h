@@ -16,6 +16,7 @@ constexpr std::size_t operator "" _kb(unsigned long long int x) { return x * 102
 constexpr std::size_t operator "" _mb(unsigned long long int x) { return x * 1024 * 1024; }
 constexpr std::size_t operator "" _gb(unsigned long long int x) { return x * 1024 * 1024 * 1024; }
 
+
 template <class T> concept NonString = !std::is_convertible_v<T, std::string_view> && !std::is_convertible_v<T, std::wstring_view>;
 template<typename T> concept HaveEqual = requires (T a, T b) { a == b; };
 
@@ -33,7 +34,7 @@ concept NonFundamental = !std::is_fundamental_v<T>;
 
 
 template<std::size_t index, typename T, typename Tuple>
-constexpr int tuple_element_index_helper()
+constexpr size_t tuple_element_index_helper()
 {
 	if constexpr (index == std::tuple_size_v<Tuple>) {
 		return index;
@@ -45,7 +46,7 @@ constexpr int tuple_element_index_helper()
 }
 
 template<typename T, typename Tuple>
-constexpr int tuple_element_index() {
+constexpr size_t tuple_element_index() {
 	return tuple_element_index_helper<0, T, Tuple>();
 }
 

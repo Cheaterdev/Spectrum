@@ -68,7 +68,7 @@ namespace DX12
 			
 			RaytracingBuildDescTopInputs inputs;
 			inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
-			inputs.NumDescs = instances.size();
+			inputs.NumDescs = static_cast<UINT>(instances.size());
 
 			if (instances.size())
 			{

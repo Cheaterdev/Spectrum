@@ -85,7 +85,7 @@ Format det() const requires(matrix_type::N == 4 && matrix_type::M == 4)
 bool inverse() requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	Format d = det();
-	d = 1.0 / d;
+	d = Format(1) / d;
 
 	matrix m;
 	m.a11 = matrix_type::a22 * matrix_type::a33 * matrix_type::a44 + matrix_type::a32 * matrix_type::a43 * matrix_type::a24 + matrix_type::a23 * matrix_type::a34 * matrix_type::a42 - matrix_type::a24 * matrix_type::a33 * matrix_type::a42 - matrix_type::a32 * matrix_type::a23 * matrix_type::a44 - matrix_type::a43 * matrix_type::a34 * matrix_type::a22;

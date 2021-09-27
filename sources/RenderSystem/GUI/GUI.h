@@ -580,7 +580,7 @@ namespace GUI
 
             bool is_updating_layout = false;
 
-            my_unique_vector<FrameGraphGenerator*> frame_generators;
+            my_unique_vector<FrameGraph::GraphGenerator*> frame_generators;
             cursor_style cursor = cursor_style::ARROW;
 
         public:
@@ -609,14 +609,14 @@ namespace GUI
          //   virtual void draw_ui(Render::context&);
 
 			virtual void process_ui(float dt);
-			virtual void create_graph(FrameGraph& graph);
+			virtual void create_graph(FrameGraph::Graph& graph);
 
             void add_task(std::function<void()> f)
             {
                 Events::Runner::run(f);
             }
 
-            void process_graph(FrameGraph & graph)
+            void process_graph(FrameGraph::Graph & graph)
             {
 //				std::lock_guard<std::mutex> g(m);
                 /*
@@ -642,7 +642,7 @@ namespace GUI
                 //				std::lock_guard<std::mutex> g(m);
 
                 auto f = [&](base* elem) {
-                    auto frame_gen = dynamic_cast<FrameGraphUsage*>(elem);
+                    auto frame_gen = dynamic_cast<FrameGraph::GraphUsage*>(elem);
                     if (frame_gen)
                         frame_gen->use(builder);
 

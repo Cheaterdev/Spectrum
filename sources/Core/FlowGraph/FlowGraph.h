@@ -1,5 +1,9 @@
 #pragma once
-#include "thread_pool.h"
+
+#include "Serialization/serialization.h"
+#include "Data/Data.h"
+#include "Math/Math.h"
+#include "Utils/Hash/crc32.h"
 
 namespace FlowGraph
 {
@@ -338,8 +342,6 @@ namespace FlowGraph
             parameter::ptr to;
             bool enabled = true;
             using ptr = s_ptr<connection>;
-            LEAK_TEST(connection)
-
 
             template <class M = connection>
             std::shared_ptr<M> get_ptr()
@@ -393,7 +395,7 @@ namespace FlowGraph
             friend class output;
             friend class Node;
         protected:
-            LEAK_TEST(input)
+
 
             input(Node* owner)
             {
@@ -424,7 +426,6 @@ namespace FlowGraph
 
     class output: public parameter
     {
-            LEAK_TEST(output)
 
         public:
 
@@ -460,7 +461,6 @@ namespace FlowGraph
 
     class window : public std::enable_shared_from_this<window>, public listenable
     {
-            LEAK_TEST(window)
 
         public:
             using ptr = s_ptr<window>;
@@ -508,8 +508,6 @@ namespace FlowGraph
 
     class Node :  public window
     {
-            LEAK_TEST(Node)
-
             friend class graph;
             friend class input;
             friend class output;
@@ -676,8 +674,6 @@ namespace FlowGraph
 
     class graph_input : public input
     {
-            LEAK_TEST(graph_input)
-
         public:
             using ptr = s_ptr<graph_input>;
             bool link(parameter::ptr i) override;
@@ -702,7 +698,6 @@ namespace FlowGraph
 
     class graph_output : public output
     {
-            LEAK_TEST(graph_output)
 
         public:
             using ptr = s_ptr<graph_output>;
@@ -741,8 +736,6 @@ namespace FlowGraph
             friend class Node;
             friend class connection;
         protected:
-            LEAK_TEST(graph)
-
 
             std::set<std::shared_ptr<Node>> nodes;
             std::set<std::shared_ptr<window>> windows;

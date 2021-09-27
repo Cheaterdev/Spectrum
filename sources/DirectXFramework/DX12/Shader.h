@@ -51,15 +51,15 @@ public:
 	
     bool operator==(const shader_with_id<T>& r) const
     {
-        int my = shader? shader->id : -5;
-        int other = r.shader ? r.shader->id : -5;
+        size_t my = shader? shader->id : -5;
+        size_t other = r.shader ? r.shader->id : -5;
 
         return my == other;
     }
     std::strong_ordering  operator<=>(const  shader_with_id<T>& r)  const
     {
-        int my = shader ? shader->id : -5;
-        int other = r.shader ? r.shader->id : -5;
+        size_t my = shader ? shader->id : -5;
+        size_t other = r.shader ? r.shader->id : -5;
 
         return my <=> other;
     }

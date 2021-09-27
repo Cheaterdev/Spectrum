@@ -2,7 +2,7 @@
 
 
 
-bool TileDynamicGenerator::make_tile(ivec3 pos)
+bool TileDynamicGenerator::make_tile(uint3 pos)
 {
 	auto &v = all_tiles[pos];
 	
@@ -34,7 +34,7 @@ void TileDynamicGenerator::remove_all()
 	old_tiles.clear();
 }
 
-TileDynamicGenerator::TileDynamicGenerator(ivec3 tile_count) :tile_count(tile_count)
+TileDynamicGenerator::TileDynamicGenerator(uint3 tile_count) :tile_count(tile_count)
 {
 	all_tiles.resize(tile_count);
 }

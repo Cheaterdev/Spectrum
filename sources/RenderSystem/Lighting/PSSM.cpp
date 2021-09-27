@@ -1,5 +1,5 @@
 #include "pch.h"
-
+using namespace FrameGraph;
 float jit = 0;
 
 float3 PSSM::get_position()
@@ -25,7 +25,7 @@ PSSM::PSSM()
 
 
 
-void PSSM::generate(FrameGraph& graph)
+void PSSM::generate(Graph& graph)
 {
 
 

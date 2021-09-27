@@ -12,7 +12,7 @@ namespace DX12
 		void StructuredBuffer<T>::create(Resource* resource, UINT first_elem, UINT count)
 		{
 
-			if (count == 0) count = resource->get_desc().Width / sizeof(Underlying<T>);
+			if (count == 0) count = static_cast<UINT>(resource->get_desc().Width / sizeof(Underlying<T>));
 			D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
 			desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 			desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -30,7 +30,7 @@ namespace DX12
 		template<class T>
 		void RWStructuredBuffer<T>::create(Resource* resource, UINT first_elem, UINT count)
 		{
-			if (count == 0) count = resource->get_desc().Width / sizeof(Underlying<T>);
+			if (count == 0) count = static_cast<UINT>(resource->get_desc().Width / sizeof(Underlying<T>));
 
 			D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
 			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
@@ -66,7 +66,7 @@ namespace DX12
 		void Buffer<T>::create(Resource* resource, DXGI_FORMAT format, UINT first_elem, UINT count)
 		{
 
-			if (count == 0) count = resource->get_desc().Width / sizeof(Underlying<T>);
+			if (count == 0) count = static_cast<UINT>(resource->get_desc().Width / sizeof(Underlying<T>));
 			D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
 
 			desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
@@ -85,7 +85,7 @@ namespace DX12
 		template<class T>
 		void RWBuffer<T>::create(Resource* resource, DXGI_FORMAT format, UINT first_elem, UINT count)
 		{
-			if (count == 0) count = resource->get_desc().Width / sizeof(Underlying<T>);
+			if (count == 0) count = static_cast<UINT>(resource->get_desc().Width / sizeof(Underlying<T>));
 			D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
 
 			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;

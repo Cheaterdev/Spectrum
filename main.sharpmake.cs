@@ -205,25 +205,6 @@ namespace Spectrum
         }
     }
 
-    [Sharpmake.Generate]
-    public class FileSystem : Library
-    {
-        public FileSystem()
-        {
-            SourceRootPath = @"[project.SharpmakeCsPath]\sources\FileSystem";
-            AssemblyName = "FileSystem";
-        }
-
-        public override void ConfigureAll(Configuration conf, CustomTarget target)
-        {
-            base.ConfigureAll(conf, target);
-
-            conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";
-
-            conf.AddPublicDependency<Core>(target);
-        }
-    }
 
     [Sharpmake.Generate]
     public class DirectXFramework : Library
@@ -262,29 +243,9 @@ namespace Spectrum
 
 			
 	
-            conf.AddPublicDependency<FileSystem>(target);
+            conf.AddPublicDependency<Core>(target);
             conf.AddPrivateDependency<Aftermath>(target);
 
-        }
-    }
-
-    [Sharpmake.Generate]
-    public class FlowGraph : Library
-    {
-        public FlowGraph()
-        {
-            SourceRootPath = @"[project.SharpmakeCsPath]\sources\FlowGraph";
-            AssemblyName = "FlowGraph";
-        }
-
-        public override void ConfigureAll(Configuration conf, CustomTarget target)
-        {
-            base.ConfigureAll(conf, target);
-
-            conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";
-
-            conf.AddPrivateDependency<DirectXFramework>(target);
         }
     }
 
@@ -305,7 +266,6 @@ namespace Spectrum
             conf.PrecompSource = "pch.cpp";
 
             conf.AddPublicDependency<DirectXFramework>(target);
-            conf.AddPublicDependency<FlowGraph>(target);
         }
     }
 

@@ -1,10 +1,14 @@
 #include "Threads/Scheduler.h"
 #include "Patterns/Holdable.h"
+#include "FrameGraph/FrameGraph.h"
 
 class camera;
 class debug_drawer;
 class vertex_transform;
 class GBuffer;
+
+using namespace FrameGraph;
+
 namespace materials
 {
     class material;
@@ -341,7 +345,6 @@ public:
 
 
 };
-
 
 
 class GBufferViewDesc

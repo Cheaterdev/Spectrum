@@ -51,6 +51,7 @@
 #include <any>
 #include <atomic>
 #include <typeindex>
+#include <filesystem>
 using namespace std;
 
 namespace ranges = std::ranges;
@@ -66,7 +67,7 @@ using Guid = xg::Guid;
 
 #include <boost/stacktrace.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
-#include <boost/predef/other/endian.h>
+//#include <boost/predef/other/endian.h>
 
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>

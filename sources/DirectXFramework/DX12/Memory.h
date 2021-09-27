@@ -365,7 +365,7 @@ namespace DX12
 
 			TileHeapPosition result;
 
-			result.offset = handle.get_offset() / (64 * 1024);
+			result.offset = static_cast<UINT>(handle.get_offset() / (64 * 1024));
 			result.heap = handle.get_heap();
 
 			result.handle = handle;

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-
+using namespace FrameGraph;
 
 
 SkyRender::SkyRender()
@@ -12,7 +12,7 @@ SkyRender::SkyRender()
 
 
 
-void SkyRender::generate_sky(FrameGraph& graph)
+void SkyRender::generate_sky(Graph& graph)
 {
 
 	struct SkyData
@@ -59,7 +59,7 @@ void SkyRender::generate_sky(FrameGraph& graph)
 		});
 }
 
-void SkyRender::generate(FrameGraph& graph)
+void SkyRender::generate(Graph& graph)
 {
 
 	struct SkyData
@@ -155,7 +155,7 @@ CubeMapEnviromentProcessor::CubeMapEnviromentProcessor()
 
 }
 
-void CubeMapEnviromentProcessor::generate(FrameGraph& graph)
+void CubeMapEnviromentProcessor::generate(Graph& graph)
 {
 
 	struct EnvData
