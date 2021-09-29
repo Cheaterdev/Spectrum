@@ -3,7 +3,9 @@
 #include "Log/Log.h"
 #include "patterns/Singleton.h"
 #include "Tree/Tree.h"
-#include "Math/Types/Vectors.h"
+
+import Vectors;
+
 
 //#define PROFILING
 

@@ -1,5 +1,34 @@
-#include "pch.h"
-#include "Quaternions.h"
+export module Quaternion;
+import Vectors;
+import Constants;
+
+export
+
+{
+	class quat : public vec4
+	{
+	public:
+		quat() = default;
+		quat(float x, float y, float z, float w = 1);
+		quat(vec3 dir, float angle);
+		quat(vec3 v);
+		quat(vec4 v);
+
+		float norm() const;
+		float magnitude() const;
+
+		quat& conjugate();
+		quat& inverse();
+
+		void identity();
+		quat operator*(const quat& q) const;
+		quat& operator*=(const quat& q);
+
+		void to_axis_angle(vec3& axis, float& angle) const;
+		vec3 rotate(const vec3& vec);
+	};
+
+}
 
 quat::quat(float x, float y, float z, float w)
 {
@@ -13,8 +42,8 @@ quat::quat(vec3 dir, float angle)
 {
 	dir.normalize();
 	angle *= 0.5f;
-	w = cos(angle);
-	dir *= sin(angle);
+	w = Math::cos(angle);
+	dir *= Math::sin(angle);
 	x = dir.x;
 	y = dir.y;
 	z = dir.z;
@@ -27,13 +56,19 @@ quat::quat(vec4 v) : vec4(v.x, v.y, v.z, v.w)
 {}
 
 float quat::norm() const
-{ return x*x + y*y + z*z + w*w; }
+{
+	return x * x + y * y + z * z + w * w;
+}
 
 float quat::magnitude() const
-{ return sqrt(norm()); }
+{
+	return Math::sqrt(norm());
+}
 
 quat& quat::conjugate()
-{ x *= -1; y *= -1; z *= -1; return *this; }
+{
+	x *= -1; y *= -1; z *= -1; return *this;
+}
 
 quat& quat::inverse()
 {
@@ -43,15 +78,17 @@ quat& quat::inverse()
 }
 
 void quat::identity()
-{ x = y = z = 0; w = 1; }
+{
+	x = y = z = 0; w = 1;
+}
 
 void quat::to_axis_angle(vec3& axis, float& angle) const
 {
 
-	angle = acosf(w);
+	angle = Math::acos(w);
 
 	// pre-compute to save time
-	float sinf_theta_inv = 1.0f / sinf(angle);
+	float sinf_theta_inv = 1.0f / Math::sin(angle);
 
 	// now the vector
 	axis.x = x * sinf_theta_inv;
@@ -73,7 +110,7 @@ vec3 quat::rotate(const vec3& vec)
 	float num7 = x * num2;
 	float num8 = x * num3;
 	float num9 = y * num3;
-	float num10 =w * num;
+	float num10 = w * num;
 	float num11 = w * num2;
 	float num12 = w * num3;
 
@@ -87,18 +124,18 @@ vec3 quat::rotate(const vec3& vec)
 
 quat quat::operator*(const quat& q) const
 {
-	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = vec3::cross(v1, v2) + q.w*v1 + w*v2;
+	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = vec3::cross(v1, v2) + q.w * v1 + w * v2;
 	quat p(temp);
-	p.w = w*q.w - dot(v1, v2);
+	p.w = w * q.w - dot(v1, v2);
 	return p;
 }
 
 quat& quat::operator*=(const quat& q)
 {
-	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = vec3::cross(v1, v2) + q.w*v1 + w*v2;
+	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = vec3::cross(v1, v2) + q.w * v1 + w * v2;
 	x = temp.x;
 	y = temp.y;
 	z = temp.z;
-	w = w*q.w - dot(v1, v2);
+	w = w * q.w - dot(v1, v2);
 	return *this;
 }

@@ -1,6 +1,6 @@
 #pragma once
 #include "Debug/Debug.h"
-#include "Math/Constants.h"
+import Constants;
 
 struct AllocationHandle;
 struct MemoryInfo

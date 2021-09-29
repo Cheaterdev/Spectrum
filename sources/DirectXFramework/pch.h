@@ -10,7 +10,6 @@
 #include <pix.h>
 using namespace Microsoft::WRL;
 
-#include "helper.h"
 #include "d3dx12.h"
 
 #include <DirectXTex.h>

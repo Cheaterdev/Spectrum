@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "helper.h"
 #include "Shaders.h"
 
 #define DXIL_FOURCC(ch0, ch1, ch2, ch3) (                            \

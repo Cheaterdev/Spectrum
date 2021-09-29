@@ -1,6 +1,8 @@
-#include "Constants.h"
-#include "Types/Vectors.h"
-#include "Types/Quaternions.h"
-#include "Types/Matrices.h"
+
+import Constants;
+import Vectors;
+import Quaternion;
+import Matrices;
+
 
 #include "Primitives/Intersections.h"

@@ -199,6 +199,42 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual antlrcpp::Any visitRtx_pso_stat(SIGParser::Rtx_pso_statContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtx_pso_block(SIGParser::Rtx_pso_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtx_pso_definition(SIGParser::Rtx_pso_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtx_pass_stat(SIGParser::Rtx_pass_statContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtx_pass_block(SIGParser::Rtx_pass_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtx_pass_definition(SIGParser::Rtx_pass_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtx_raygen_stat(SIGParser::Rtx_raygen_statContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtx_raygen_block(SIGParser::Rtx_raygen_blockContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual antlrcpp::Any visitRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual antlrcpp::Any visitShader_type(SIGParser::Shader_typeContext *ctx) override {
     return visitChildren(ctx);
   }

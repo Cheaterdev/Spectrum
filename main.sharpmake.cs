@@ -45,6 +45,9 @@ namespace Spectrum
         {
             SourceFilesExtensions.Add(".sig");
             SourceFilesExtensions.Add(".hlsl");
+			SourceFilesExtensions.Add(".ixx");
+
+			SourceFilesCompileExtensions.Add(".ixx");
 
             RootPath = @"[project.SharpmakeCsPath]\projects\[project.Name]";
 
@@ -67,6 +70,8 @@ namespace Spectrum
             conf.ProjectPath = @"[project.RootPath]";
 
             conf.IncludePaths.Add(SourceRootPath);
+			conf.ExportAdditionalLibrariesEvenForStaticLib = true;
+			conf.PrecompSourceExcludeExtension.Add(".ixx");
 
             conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);
             conf.Options.Add(Options.Vc.Compiler.Exceptions.Enable);

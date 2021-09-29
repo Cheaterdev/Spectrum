@@ -111,6 +111,24 @@ public:
 
     virtual antlrcpp::Any visitGraphics_pso_definition(SIGParser::Graphics_pso_definitionContext *context) = 0;
 
+    virtual antlrcpp::Any visitRtx_pso_stat(SIGParser::Rtx_pso_statContext *context) = 0;
+
+    virtual antlrcpp::Any visitRtx_pso_block(SIGParser::Rtx_pso_blockContext *context) = 0;
+
+    virtual antlrcpp::Any visitRtx_pso_definition(SIGParser::Rtx_pso_definitionContext *context) = 0;
+
+    virtual antlrcpp::Any visitRtx_pass_stat(SIGParser::Rtx_pass_statContext *context) = 0;
+
+    virtual antlrcpp::Any visitRtx_pass_block(SIGParser::Rtx_pass_blockContext *context) = 0;
+
+    virtual antlrcpp::Any visitRtx_pass_definition(SIGParser::Rtx_pass_definitionContext *context) = 0;
+
+    virtual antlrcpp::Any visitRtx_raygen_stat(SIGParser::Rtx_raygen_statContext *context) = 0;
+
+    virtual antlrcpp::Any visitRtx_raygen_block(SIGParser::Rtx_raygen_blockContext *context) = 0;
+
+    virtual antlrcpp::Any visitRtx_raygen_definition(SIGParser::Rtx_raygen_definitionContext *context) = 0;
+
     virtual antlrcpp::Any visitShader_type(SIGParser::Shader_typeContext *context) = 0;
 
     virtual antlrcpp::Any visitPso_param_id(SIGParser::Pso_param_idContext *context) = 0;

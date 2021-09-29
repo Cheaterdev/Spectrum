@@ -1,4 +1,6 @@
 #pragma once
+
+#include "helper.h"
 #include "patterns/IdGenerator.h"
 #include "patterns/StateContext.h"
 #include "Data/Data.h"

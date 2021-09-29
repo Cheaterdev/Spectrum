@@ -1,7 +1,9 @@
 #pragma once
-#include "../Constants.h"
-#include "../Types/Vectors.h"
-#include "../Types/Matrices.h"
+import Constants;
+import Vectors;
+import Quaternion;
+import Matrices;
+#include "Serialization/serialization.h"
 
 enum class primitive_types
 {

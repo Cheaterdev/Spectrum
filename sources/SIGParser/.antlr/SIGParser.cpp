@@ -1,8 +1,9 @@
 
-// Generated from SIG.g4 by ANTLR 4.9.2
+// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
 
 
 #include "SIGListener.h"
+#include "SIGVisitor.h"
 
 #include "SIGParser.h"
 
@@ -128,6 +129,14 @@ void SIGParser::ParseContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitParse(this);
+}
+
+
+antlrcpp::Any SIGParser::ParseContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitParse(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::ParseContext* SIGParser::parse() {
@@ -266,6 +275,14 @@ void SIGParser::Bind_optionContext::exitRule(tree::ParseTreeListener *listener) 
     parserListener->exitBind_option(this);
 }
 
+
+antlrcpp::Any SIGParser::Bind_optionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitBind_option(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Bind_optionContext* SIGParser::bind_option() {
   Bind_optionContext *_localctx = _tracker.createInstance<Bind_optionContext>(_ctx, getState());
   enterRule(_localctx, 2, SIGParser::RuleBind_option);
@@ -338,6 +355,14 @@ void SIGParser::Options_assignContext::exitRule(tree::ParseTreeListener *listene
     parserListener->exitOptions_assign(this);
 }
 
+
+antlrcpp::Any SIGParser::Options_assignContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOptions_assign(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Options_assignContext* SIGParser::options_assign() {
   Options_assignContext *_localctx = _tracker.createInstance<Options_assignContext>(_ctx, getState());
   enterRule(_localctx, 4, SIGParser::RuleOptions_assign);
@@ -395,6 +420,14 @@ void SIGParser::OptionContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitOption(this);
+}
+
+
+antlrcpp::Any SIGParser::OptionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOption(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::OptionContext* SIGParser::option() {
@@ -471,6 +504,14 @@ void SIGParser::Option_blockContext::exitRule(tree::ParseTreeListener *listener)
     parserListener->exitOption_block(this);
 }
 
+
+antlrcpp::Any SIGParser::Option_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOption_block(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Option_blockContext* SIGParser::option_block() {
   Option_blockContext *_localctx = _tracker.createInstance<Option_blockContext>(_ctx, getState());
   enterRule(_localctx, 8, SIGParser::RuleOption_block);
@@ -541,6 +582,14 @@ void SIGParser::Array_count_idContext::exitRule(tree::ParseTreeListener *listene
     parserListener->exitArray_count_id(this);
 }
 
+
+antlrcpp::Any SIGParser::Array_count_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitArray_count_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Array_count_idContext* SIGParser::array_count_id() {
   Array_count_idContext *_localctx = _tracker.createInstance<Array_count_idContext>(_ctx, getState());
   enterRule(_localctx, 10, SIGParser::RuleArray_count_id);
@@ -600,6 +649,14 @@ void SIGParser::ArrayContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitArray(this);
+}
+
+
+antlrcpp::Any SIGParser::ArrayContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitArray(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::ArrayContext* SIGParser::array() {
@@ -684,6 +741,14 @@ void SIGParser::Value_declarationContext::exitRule(tree::ParseTreeListener *list
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitValue_declaration(this);
+}
+
+
+antlrcpp::Any SIGParser::Value_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitValue_declaration(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Value_declarationContext* SIGParser::value_declaration() {
@@ -773,6 +838,14 @@ void SIGParser::Slot_declarationContext::exitRule(tree::ParseTreeListener *liste
     parserListener->exitSlot_declaration(this);
 }
 
+
+antlrcpp::Any SIGParser::Slot_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitSlot_declaration(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Slot_declarationContext* SIGParser::slot_declaration() {
   Slot_declarationContext *_localctx = _tracker.createInstance<Slot_declarationContext>(_ctx, getState());
   enterRule(_localctx, 16, SIGParser::RuleSlot_declaration);
@@ -840,6 +913,14 @@ void SIGParser::Sampler_declarationContext::exitRule(tree::ParseTreeListener *li
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitSampler_declaration(this);
+}
+
+
+antlrcpp::Any SIGParser::Sampler_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitSampler_declaration(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Sampler_declarationContext* SIGParser::sampler_declaration() {
@@ -921,6 +1002,14 @@ void SIGParser::Define_declarationContext::exitRule(tree::ParseTreeListener *lis
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitDefine_declaration(this);
+}
+
+
+antlrcpp::Any SIGParser::Define_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitDefine_declaration(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Define_declarationContext* SIGParser::define_declaration() {
@@ -1020,6 +1109,14 @@ void SIGParser::Rtv_formats_declarationContext::exitRule(tree::ParseTreeListener
     parserListener->exitRtv_formats_declaration(this);
 }
 
+
+antlrcpp::Any SIGParser::Rtv_formats_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtv_formats_declaration(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rtv_formats_declarationContext* SIGParser::rtv_formats_declaration() {
   Rtv_formats_declarationContext *_localctx = _tracker.createInstance<Rtv_formats_declarationContext>(_ctx, getState());
   enterRule(_localctx, 22, SIGParser::RuleRtv_formats_declaration);
@@ -1108,6 +1205,14 @@ void SIGParser::Blends_declarationContext::exitRule(tree::ParseTreeListener *lis
     parserListener->exitBlends_declaration(this);
 }
 
+
+antlrcpp::Any SIGParser::Blends_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitBlends_declaration(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Blends_declarationContext* SIGParser::blends_declaration() {
   Blends_declarationContext *_localctx = _tracker.createInstance<Blends_declarationContext>(_ctx, getState());
   enterRule(_localctx, 24, SIGParser::RuleBlends_declaration);
@@ -1192,6 +1297,14 @@ void SIGParser::Pso_paramContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitPso_param(this);
 }
 
+
+antlrcpp::Any SIGParser::Pso_paramContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitPso_param(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Pso_paramContext* SIGParser::pso_param() {
   Pso_paramContext *_localctx = _tracker.createInstance<Pso_paramContext>(_ctx, getState());
   enterRule(_localctx, 26, SIGParser::RulePso_param);
@@ -1263,6 +1376,14 @@ void SIGParser::Type_with_templateContext::exitRule(tree::ParseTreeListener *lis
     parserListener->exitType_with_template(this);
 }
 
+
+antlrcpp::Any SIGParser::Type_with_templateContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitType_with_template(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Type_with_templateContext* SIGParser::type_with_template() {
   Type_with_templateContext *_localctx = _tracker.createInstance<Type_with_templateContext>(_ctx, getState());
   enterRule(_localctx, 28, SIGParser::RuleType_with_template);
@@ -1329,6 +1450,14 @@ void SIGParser::Inherit_idContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitInherit_id(this);
 }
 
+
+antlrcpp::Any SIGParser::Inherit_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitInherit_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Inherit_idContext* SIGParser::inherit_id() {
   Inherit_idContext *_localctx = _tracker.createInstance<Inherit_idContext>(_ctx, getState());
   enterRule(_localctx, 30, SIGParser::RuleInherit_id);
@@ -1380,6 +1509,14 @@ void SIGParser::Name_idContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitName_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Name_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitName_id(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Name_idContext* SIGParser::name_id() {
@@ -1435,6 +1572,14 @@ void SIGParser::Type_idContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitType_id(this);
 }
 
+
+antlrcpp::Any SIGParser::Type_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitType_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Type_idContext* SIGParser::type_id() {
   Type_idContext *_localctx = _tracker.createInstance<Type_idContext>(_ctx, getState());
   enterRule(_localctx, 34, SIGParser::RuleType_id);
@@ -1486,6 +1631,14 @@ void SIGParser::Option_idContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitOption_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Option_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOption_id(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Option_idContext* SIGParser::option_id() {
@@ -1541,6 +1694,14 @@ void SIGParser::Owner_idContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitOwner_id(this);
 }
 
+
+antlrcpp::Any SIGParser::Owner_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitOwner_id(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Owner_idContext* SIGParser::owner_id() {
   Owner_idContext *_localctx = _tracker.createInstance<Owner_idContext>(_ctx, getState());
   enterRule(_localctx, 38, SIGParser::RuleOwner_id);
@@ -1592,6 +1753,14 @@ void SIGParser::Template_idContext::exitRule(tree::ParseTreeListener *listener) 
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitTemplate_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Template_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTemplate_id(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Template_idContext* SIGParser::template_id() {
@@ -1657,6 +1826,14 @@ void SIGParser::Value_idContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitValue_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Value_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitValue_id(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Value_idContext* SIGParser::value_id() {
@@ -1744,6 +1921,14 @@ void SIGParser::Insert_blockContext::exitRule(tree::ParseTreeListener *listener)
     parserListener->exitInsert_block(this);
 }
 
+
+antlrcpp::Any SIGParser::Insert_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitInsert_block(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Insert_blockContext* SIGParser::insert_block() {
   Insert_blockContext *_localctx = _tracker.createInstance<Insert_blockContext>(_ctx, getState());
   enterRule(_localctx, 44, SIGParser::RuleInsert_block);
@@ -1807,6 +1992,14 @@ void SIGParser::Path_idContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitPath_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Path_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitPath_id(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Path_idContext* SIGParser::path_id() {
@@ -1879,6 +2072,14 @@ void SIGParser::InheritContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitInherit(this);
+}
+
+
+antlrcpp::Any SIGParser::InheritContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitInherit(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::InheritContext* SIGParser::inherit() {
@@ -1957,6 +2158,14 @@ void SIGParser::Layout_statContext::exitRule(tree::ParseTreeListener *listener) 
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitLayout_stat(this);
+}
+
+
+antlrcpp::Any SIGParser::Layout_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitLayout_stat(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Layout_statContext* SIGParser::layout_stat() {
@@ -2038,6 +2247,14 @@ void SIGParser::Layout_blockContext::exitRule(tree::ParseTreeListener *listener)
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitLayout_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Layout_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitLayout_block(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Layout_blockContext* SIGParser::layout_block() {
@@ -2124,6 +2341,14 @@ void SIGParser::Layout_definitionContext::exitRule(tree::ParseTreeListener *list
     parserListener->exitLayout_definition(this);
 }
 
+
+antlrcpp::Any SIGParser::Layout_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitLayout_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Layout_definitionContext* SIGParser::layout_definition() {
   Layout_definitionContext *_localctx = _tracker.createInstance<Layout_definitionContext>(_ctx, getState());
   enterRule(_localctx, 54, SIGParser::RuleLayout_definition);
@@ -2200,6 +2425,14 @@ void SIGParser::Table_statContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitTable_stat(this);
+}
+
+
+antlrcpp::Any SIGParser::Table_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTable_stat(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Table_statContext* SIGParser::table_stat() {
@@ -2282,6 +2515,14 @@ void SIGParser::Table_blockContext::exitRule(tree::ParseTreeListener *listener) 
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitTable_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Table_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTable_block(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Table_blockContext* SIGParser::table_block() {
@@ -2378,6 +2619,14 @@ void SIGParser::Table_definitionContext::exitRule(tree::ParseTreeListener *liste
     parserListener->exitTable_definition(this);
 }
 
+
+antlrcpp::Any SIGParser::Table_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitTable_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Table_definitionContext* SIGParser::table_definition() {
   Table_definitionContext *_localctx = _tracker.createInstance<Table_definitionContext>(_ctx, getState());
   enterRule(_localctx, 60, SIGParser::RuleTable_definition);
@@ -2469,6 +2718,14 @@ void SIGParser::Rt_color_declarationContext::exitRule(tree::ParseTreeListener *l
     parserListener->exitRt_color_declaration(this);
 }
 
+
+antlrcpp::Any SIGParser::Rt_color_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRt_color_declaration(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rt_color_declarationContext* SIGParser::rt_color_declaration() {
   Rt_color_declarationContext *_localctx = _tracker.createInstance<Rt_color_declarationContext>(_ctx, getState());
   enterRule(_localctx, 62, SIGParser::RuleRt_color_declaration);
@@ -2534,6 +2791,14 @@ void SIGParser::Rt_ds_declarationContext::exitRule(tree::ParseTreeListener *list
     parserListener->exitRt_ds_declaration(this);
 }
 
+
+antlrcpp::Any SIGParser::Rt_ds_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRt_ds_declaration(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rt_ds_declarationContext* SIGParser::rt_ds_declaration() {
   Rt_ds_declarationContext *_localctx = _tracker.createInstance<Rt_ds_declarationContext>(_ctx, getState());
   enterRule(_localctx, 64, SIGParser::RuleRt_ds_declaration);
@@ -2597,6 +2862,14 @@ void SIGParser::Rt_statContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRt_stat(this);
+}
+
+
+antlrcpp::Any SIGParser::Rt_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRt_stat(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Rt_statContext* SIGParser::rt_stat() {
@@ -2680,6 +2953,14 @@ void SIGParser::Rt_blockContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitRt_block(this);
 }
 
+
+antlrcpp::Any SIGParser::Rt_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRt_block(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rt_blockContext* SIGParser::rt_block() {
   Rt_blockContext *_localctx = _tracker.createInstance<Rt_blockContext>(_ctx, getState());
   enterRule(_localctx, 68, SIGParser::RuleRt_block);
@@ -2761,6 +3042,14 @@ void SIGParser::Rt_definitionContext::exitRule(tree::ParseTreeListener *listener
     parserListener->exitRt_definition(this);
 }
 
+
+antlrcpp::Any SIGParser::Rt_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRt_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rt_definitionContext* SIGParser::rt_definition() {
   Rt_definitionContext *_localctx = _tracker.createInstance<Rt_definitionContext>(_ctx, getState());
   enterRule(_localctx, 70, SIGParser::RuleRt_definition);
@@ -2820,6 +3109,14 @@ void SIGParser::Array_value_holderContext::exitRule(tree::ParseTreeListener *lis
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitArray_value_holder(this);
+}
+
+
+antlrcpp::Any SIGParser::Array_value_holderContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitArray_value_holder(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Array_value_holderContext* SIGParser::array_value_holder() {
@@ -2885,6 +3182,14 @@ void SIGParser::Array_value_idsContext::exitRule(tree::ParseTreeListener *listen
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitArray_value_ids(this);
+}
+
+
+antlrcpp::Any SIGParser::Array_value_idsContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitArray_value_ids(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Array_value_idsContext* SIGParser::array_value_ids() {
@@ -2969,6 +3274,14 @@ void SIGParser::Root_sigContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitRoot_sig(this);
 }
 
+
+antlrcpp::Any SIGParser::Root_sigContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRoot_sig(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Root_sigContext* SIGParser::root_sig() {
   Root_sigContext *_localctx = _tracker.createInstance<Root_sigContext>(_ctx, getState());
   enterRule(_localctx, 76, SIGParser::RuleRoot_sig);
@@ -3046,6 +3359,14 @@ void SIGParser::ShaderContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitShader(this);
+}
+
+
+antlrcpp::Any SIGParser::ShaderContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitShader(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::ShaderContext* SIGParser::shader() {
@@ -3130,6 +3451,14 @@ void SIGParser::Compute_pso_statContext::exitRule(tree::ParseTreeListener *liste
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitCompute_pso_stat(this);
+}
+
+
+antlrcpp::Any SIGParser::Compute_pso_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitCompute_pso_stat(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Compute_pso_statContext* SIGParser::compute_pso_stat() {
@@ -3218,6 +3547,14 @@ void SIGParser::Compute_pso_blockContext::exitRule(tree::ParseTreeListener *list
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitCompute_pso_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Compute_pso_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitCompute_pso_block(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Compute_pso_blockContext* SIGParser::compute_pso_block() {
@@ -3317,6 +3654,14 @@ void SIGParser::Compute_pso_definitionContext::exitRule(tree::ParseTreeListener 
     parserListener->exitCompute_pso_definition(this);
 }
 
+
+antlrcpp::Any SIGParser::Compute_pso_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitCompute_pso_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Compute_pso_definitionContext* SIGParser::compute_pso_definition() {
   Compute_pso_definitionContext *_localctx = _tracker.createInstance<Compute_pso_definitionContext>(_ctx, getState());
   enterRule(_localctx, 84, SIGParser::RuleCompute_pso_definition);
@@ -3409,6 +3754,14 @@ void SIGParser::Graphics_pso_statContext::exitRule(tree::ParseTreeListener *list
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitGraphics_pso_stat(this);
+}
+
+
+antlrcpp::Any SIGParser::Graphics_pso_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitGraphics_pso_stat(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Graphics_pso_statContext* SIGParser::graphics_pso_stat() {
@@ -3518,6 +3871,14 @@ void SIGParser::Graphics_pso_blockContext::exitRule(tree::ParseTreeListener *lis
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitGraphics_pso_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Graphics_pso_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitGraphics_pso_block(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Graphics_pso_blockContext* SIGParser::graphics_pso_block() {
@@ -3635,6 +3996,14 @@ void SIGParser::Graphics_pso_definitionContext::exitRule(tree::ParseTreeListener
     parserListener->exitGraphics_pso_definition(this);
 }
 
+
+antlrcpp::Any SIGParser::Graphics_pso_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitGraphics_pso_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Graphics_pso_definitionContext* SIGParser::graphics_pso_definition() {
   Graphics_pso_definitionContext *_localctx = _tracker.createInstance<Graphics_pso_definitionContext>(_ctx, getState());
   enterRule(_localctx, 90, SIGParser::RuleGraphics_pso_definition);
@@ -3709,6 +4078,14 @@ void SIGParser::Rtx_pso_statContext::exitRule(tree::ParseTreeListener *listener)
     parserListener->exitRtx_pso_stat(this);
 }
 
+
+antlrcpp::Any SIGParser::Rtx_pso_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_pso_stat(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rtx_pso_statContext* SIGParser::rtx_pso_stat() {
   Rtx_pso_statContext *_localctx = _tracker.createInstance<Rtx_pso_statContext>(_ctx, getState());
   enterRule(_localctx, 92, SIGParser::RuleRtx_pso_stat);
@@ -3781,6 +4158,14 @@ void SIGParser::Rtx_pso_blockContext::exitRule(tree::ParseTreeListener *listener
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRtx_pso_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Rtx_pso_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_pso_block(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Rtx_pso_blockContext* SIGParser::rtx_pso_block() {
@@ -3867,6 +4252,14 @@ void SIGParser::Rtx_pso_definitionContext::exitRule(tree::ParseTreeListener *lis
     parserListener->exitRtx_pso_definition(this);
 }
 
+
+antlrcpp::Any SIGParser::Rtx_pso_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_pso_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rtx_pso_definitionContext* SIGParser::rtx_pso_definition() {
   Rtx_pso_definitionContext *_localctx = _tracker.createInstance<Rtx_pso_definitionContext>(_ctx, getState());
   enterRule(_localctx, 96, SIGParser::RuleRtx_pso_definition);
@@ -3943,6 +4336,14 @@ void SIGParser::Rtx_pass_statContext::exitRule(tree::ParseTreeListener *listener
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRtx_pass_stat(this);
+}
+
+
+antlrcpp::Any SIGParser::Rtx_pass_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_pass_stat(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Rtx_pass_statContext* SIGParser::rtx_pass_stat() {
@@ -4050,6 +4451,14 @@ void SIGParser::Rtx_pass_blockContext::exitRule(tree::ParseTreeListener *listene
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRtx_pass_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Rtx_pass_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_pass_block(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Rtx_pass_blockContext* SIGParser::rtx_pass_block() {
@@ -4170,6 +4579,14 @@ void SIGParser::Rtx_pass_definitionContext::exitRule(tree::ParseTreeListener *li
     parserListener->exitRtx_pass_definition(this);
 }
 
+
+antlrcpp::Any SIGParser::Rtx_pass_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_pass_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rtx_pass_definitionContext* SIGParser::rtx_pass_definition() {
   Rtx_pass_definitionContext *_localctx = _tracker.createInstance<Rtx_pass_definitionContext>(_ctx, getState());
   enterRule(_localctx, 102, SIGParser::RuleRtx_pass_definition);
@@ -4257,6 +4674,14 @@ void SIGParser::Rtx_raygen_statContext::exitRule(tree::ParseTreeListener *listen
     parserListener->exitRtx_raygen_stat(this);
 }
 
+
+antlrcpp::Any SIGParser::Rtx_raygen_statContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_raygen_stat(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rtx_raygen_statContext* SIGParser::rtx_raygen_stat() {
   Rtx_raygen_statContext *_localctx = _tracker.createInstance<Rtx_raygen_statContext>(_ctx, getState());
   enterRule(_localctx, 104, SIGParser::RuleRtx_raygen_stat);
@@ -4340,6 +4765,14 @@ void SIGParser::Rtx_raygen_blockContext::exitRule(tree::ParseTreeListener *liste
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRtx_raygen_block(this);
+}
+
+
+antlrcpp::Any SIGParser::Rtx_raygen_blockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_raygen_block(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Rtx_raygen_blockContext* SIGParser::rtx_raygen_block() {
@@ -4444,6 +4877,14 @@ void SIGParser::Rtx_raygen_definitionContext::exitRule(tree::ParseTreeListener *
     parserListener->exitRtx_raygen_definition(this);
 }
 
+
+antlrcpp::Any SIGParser::Rtx_raygen_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitRtx_raygen_definition(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Rtx_raygen_definitionContext* SIGParser::rtx_raygen_definition() {
   Rtx_raygen_definitionContext *_localctx = _tracker.createInstance<Rtx_raygen_definitionContext>(_ctx, getState());
   enterRule(_localctx, 108, SIGParser::RuleRtx_raygen_definition);
@@ -4523,6 +4964,14 @@ void SIGParser::Shader_typeContext::exitRule(tree::ParseTreeListener *listener) 
     parserListener->exitShader_type(this);
 }
 
+
+antlrcpp::Any SIGParser::Shader_typeContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitShader_type(this);
+  else
+    return visitor->visitChildren(this);
+}
+
 SIGParser::Shader_typeContext* SIGParser::shader_type() {
   Shader_typeContext *_localctx = _tracker.createInstance<Shader_typeContext>(_ctx, getState());
   enterRule(_localctx, 110, SIGParser::RuleShader_type);
@@ -4589,6 +5038,14 @@ void SIGParser::Pso_param_idContext::exitRule(tree::ParseTreeListener *listener)
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitPso_param_id(this);
+}
+
+
+antlrcpp::Any SIGParser::Pso_param_idContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitPso_param_id(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Pso_param_idContext* SIGParser::pso_param_id() {
@@ -4670,6 +5127,14 @@ void SIGParser::Bool_typeContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitBool_type(this);
+}
+
+
+antlrcpp::Any SIGParser::Bool_typeContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
+    return parserVisitor->visitBool_type(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 SIGParser::Bool_typeContext* SIGParser::bool_type() {

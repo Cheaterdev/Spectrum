@@ -1,6 +1,8 @@
 #pragma once
 #include "Data/Data.h"
 #include "Serialization/serialization.h"
+
+import Vectors;
 namespace Events
 {
 

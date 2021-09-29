@@ -1,7 +1,7 @@
 #pragma once
 #include "Debug/Exceptions.h"
 #include "Utils/utils.h"
-
+#include "Serialization/serialization.h"
 namespace DataPacker
 {
 
@@ -212,9 +212,7 @@ public:
 	}
 
 private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
+	SERIALIZE()
 	{
 		ar& NVP(table);
 	}

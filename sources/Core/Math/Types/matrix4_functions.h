@@ -1,3 +1,4 @@
+
 static 	matrix translation(vec3 dpos) requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	matrix r;
@@ -155,7 +156,7 @@ matrix& scaling(float scaleX, float scaleY, float scaleZ)requires(matrix_type::N
 	matrix_type::a41 = matrix_type::a42 = matrix_type::a43 = 0.0f;
 	return *this;
 }
-matrix& look_at(const vec3& eye, const vec3& at, const vec3& up)requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& look_at(const vec3& eye, const vec3& at, const vec3& up)requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	vec3 zaxis = (at - eye).normalize();
 	vec3 xaxis = vec3::cross(up, zaxis).normalize();
@@ -169,7 +170,7 @@ matrix& look_at(const vec3& eye, const vec3& at, const vec3& up)requires(matrix_
 	matrix_type::a44 = 1;
 	return *this;
 }
-matrix& perspective(float fovy, float aspect, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& perspective(float fovy, float aspect, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	float yScale = 1 / tan(0.5f * fovy);
 	float xScale = yScale / aspect;
@@ -179,7 +180,7 @@ matrix& perspective(float fovy, float aspect, float zn, float zf) requires(matri
 	matrix_type::a41 = 0; matrix_type::a42 = 0; matrix_type::a43 = -zn * matrix_type::a33; matrix_type::a44 = 0;
 	return *this;
 }
-matrix& orthographic(float l, float r, float t, float b, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& orthographic(float l, float r, float t, float b, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	/*
 	2/(r-l)      0            0           0
@@ -193,7 +194,7 @@ matrix& orthographic(float l, float r, float t, float b, float zn, float zf) req
 	matrix_type::a41 = (l + r) / (l - r); matrix_type::a42 = -(t + b) / (b - t); matrix_type::a43 = zn / (zn - zf); matrix_type::a44 = 1;
 	return *this;
 }
-matrix& orthogonalize() requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& orthogonalize() requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	// Gram-Schmidt
 	vec3 a(matrix_type::a11, matrix_type::a21, matrix_type::a31),
@@ -218,7 +219,7 @@ matrix& orthogonalize() requires(matrix_type::N == 4 && matrix_type::M == 4)
 	return *this;
 }
 
-matrix& skew(vec3& v)requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& skew(vec3& v)requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	matrix_type::a11 = 0; matrix_type::a12 = -v.z; matrix_type::a13 = v.y; matrix_type::a14 = 0;
 	matrix_type::a21 = v.z; matrix_type::a22 = 0; matrix_type::a23 = -v.x; matrix_type::a24 = 0;
@@ -226,7 +227,7 @@ matrix& skew(vec3& v)requires(matrix_type::N == 4 && matrix_type::M == 4)
 	matrix_type::a41 = 0; matrix_type::a42 = 0; matrix_type::a43 = 0; matrix_type::a44 = 1;
 	return *this;
 }
-matrix& skew(vec4& v) requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& skew(vec4& v) requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	matrix_type::a11 = 0; matrix_type::a12 = -v.z; matrix_type::a13 = v.y; matrix_type::a14 = 0;
 	matrix_type::a21 = v.z; matrix_type::a22 = 0; matrix_type::a23 = -v.x; matrix_type::a24 = 0;
@@ -235,7 +236,7 @@ matrix& skew(vec4& v) requires(matrix_type::N == 4 && matrix_type::M == 4)
 	return *this;
 }
 
-matrix& skew(quat& q) requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& skew(quat& q) requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	matrix_type::a11 = -q.x; matrix_type::a12 = -q.y; matrix_type::a13 = -q.z; matrix_type::a14 = 0;
 	matrix_type::a21 = q.w; matrix_type::a22 = q.z; matrix_type::a23 = -q.y; matrix_type::a24 = 0;
