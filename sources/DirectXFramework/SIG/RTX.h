@@ -1,6 +1,9 @@
+#pragma once
+#include "Concepts.h"
 
+#include "DX12/PipelineState.h"
+#include "DX12/HLSLDescriptors.hpp"
 
-#define CACHE_ALIGN(x) __declspec(align(x))
 
 template<typename T> concept HasLocalData =
 requires () {

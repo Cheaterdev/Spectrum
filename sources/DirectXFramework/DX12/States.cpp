@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "States.h"
+#include "Resource.h"
+#include "CommandList.h"
 
 namespace DX12
 {

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "FSR.h"
 
+#include "../RenderSystem/autogen/includes.h"
 // CAS
 #define A_CPU
 #include "ffx_a.h"

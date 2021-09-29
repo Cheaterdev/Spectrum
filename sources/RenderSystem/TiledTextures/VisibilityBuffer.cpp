@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "VisibilityBuffer.h"
 
+#include "../RenderSystem/autogen/includes.h"
 
 VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {

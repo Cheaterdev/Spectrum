@@ -1,4 +1,5 @@
 #include "Serialization/serialization.h"
+#include "FileSystem/FileSystem.h"
 
 static void GetSurfaceInfo2(_In_ size_t width,
                             _In_ size_t height,

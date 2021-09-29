@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "GPUTimer.h"
 
 namespace DX12
 {

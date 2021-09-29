@@ -6,6 +6,8 @@
 #define LABEL_(a) MERGE_(__timer__, a)
 #define UNIQUE_NAME LABEL_(__LINE__)
 
+#define CACHE_ALIGN(x) __declspec(align(x))
+
 #define GEN_DEF_COMP(x) \
 	bool operator==(const x& r) const = default;\
 	std::strong_ordering  operator<=>(const  x& r) const = default;

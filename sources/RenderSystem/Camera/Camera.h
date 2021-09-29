@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../RenderSystem/autogen/includes.h"
 class camera : public Frustum
 {
     public:

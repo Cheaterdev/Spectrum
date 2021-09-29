@@ -1,4 +1,7 @@
 #include "pch.h"
+
+#include "../RenderSystem/autogen/includes.h"
+
 void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 {
 	 std::vector<task<void>> tasks;

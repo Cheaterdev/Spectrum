@@ -1,4 +1,6 @@
 #pragma once
+#include "DX12/Fence.h"
+#include "DX12/Descriptors.h"
 
 namespace DX12
 {

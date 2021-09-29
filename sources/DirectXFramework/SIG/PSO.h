@@ -1,3 +1,10 @@
+#pragma once
+#include "Concepts.h"
+
+#include "D3D\Shaders.h"
+#include "Data/Data.h"
+#include "Threads/Threading.h"
+#include "DX12/PipelineState.h"
 
 #define ALL_FORMATS \
 DXGI_FORMAT_UNKNOWN	,\

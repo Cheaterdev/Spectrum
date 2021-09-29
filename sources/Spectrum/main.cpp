@@ -31,6 +31,13 @@
 #include "GUI/Elements/ComboBox.h"
 #include "GUI/Elements/ListBox.h"
 
+#include "DX12/GPUTimer.h"
+
+
+#include "Platform/Window.h"
+
+
+
 using namespace FrameGraph;
 
 HRESULT device_fail()

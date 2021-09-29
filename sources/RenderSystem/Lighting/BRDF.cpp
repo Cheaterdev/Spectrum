@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "BRDF.h"
 
+#include "../RenderSystem/autogen/includes.h"
 void BRDF::create_new()
 {
 

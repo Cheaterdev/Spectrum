@@ -1,4 +1,7 @@
 #pragma once
+#include "DX12/RootSignature.h"
+#include "DX12/Device12.h"
+
 namespace DX12
 {
 	class IndirectCommand

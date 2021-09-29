@@ -7,6 +7,8 @@
 #include "AssetRenderer.h"
 #include "Helpers/MipMapGeneration.h"
 
+#include "DX12/Queue.h"
+
 using namespace FrameGraph;
 
 class SceneRenderWorkflow

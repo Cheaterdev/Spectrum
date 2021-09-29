@@ -1,12 +1,18 @@
 #pragma once
 
 #include "Serialization/Serializer.h"
-
 #include "FileSystem/FileSystem.h"
+#include "D3D\Shaders.h"
+
+#include "RootSignature.h"
+#include "Shader.h"
+#include "Device12.h"
+#include "Memory.h"
 
 bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
 std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
 
+DX12::RootLayout::ptr get_Signature(Layouts id);
 
 namespace DX12
 {
@@ -232,9 +238,75 @@ namespace DX12
 		bool operator==(const PipelineStateDesc& r) const = default;
 		std::strong_ordering  operator<=>(const  PipelineStateDesc& r)  const = default;
 	private: 
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int);
+	SERIALIZE()
+	{
+		ar& NVP(name);
+
+		ar& NVP(topology);
+		ar& NVP(blend);
+		ar& NVP(rasterizer);
+		ar& NVP(rtv);
+
+
+		if constexpr (Archive::is_saving::value)
+		{
+
+			auto sig = dynamic_cast<RootLayout*>(root_signature.get());
+			ar& NVP(sig->layout);
+			auto save_header = [&](auto& shader) {
+
+				bool has_header = !!shader;
+				ar& NVP(has_header);
+
+				if (has_header)
+					ar& NVP(shader->get_header());
+			};
+
+			save_header(pixel);
+			save_header(vertex);
+			save_header(geometry);
+			save_header(hull);
+			save_header(domain);
+
+			save_header(mesh);
+			save_header(amplification);
+
+		}
+		else
+		{
+			Layouts l;
+
+			ar& NVP(l);
+
+			root_signature = get_Signature(l);
+			auto load_header = [&]<class T>(std::shared_ptr<T>&shader) {
+
+				using Type = decltype(*shader.get());
+				bool has_header;
+				ar& NVP(has_header);
+
+				if (has_header)
+				{
+					D3D::shader_header header;
+					ar& NVP(header);
+
+					shader = Type::get_resource(header);
+				}
+
+			};
+
+
+
+			load_header(pixel);
+			load_header(vertex);
+			load_header(geometry);
+			load_header(hull);
+			load_header(domain);
+
+			load_header(mesh);
+			load_header(amplification);
+		}
+	}
 	};
 
 	

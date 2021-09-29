@@ -1,4 +1,11 @@
 #pragma once
+#include "SIG/SIG.h"
+#include "SIG/RT.h"
+#include "SIG/Layout.h"
+#include "SIG/Slots.h"
+#include "SIG/PSO.h"
+#include "SIG/RTX.h"
+
 #include "layout\FrameLayout.h"
 #include "layout\DefaultLayout.h"
 #include "slots\TextureRenderer.h"

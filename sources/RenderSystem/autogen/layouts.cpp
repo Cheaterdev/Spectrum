@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "../RenderSystem/autogen/includes.h"
 static enum_array<Layouts, DX12::RootLayout::ptr> signatures;
 void init_signatures()
 {

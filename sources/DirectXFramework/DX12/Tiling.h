@@ -1,6 +1,6 @@
 #pragma once
 #include "Math/Math.h"
-
+#include "DX12/Memory.h"
 
 namespace DX12
 {
@@ -26,7 +26,7 @@ namespace DX12
 
 		void load_tiles_internal(update_tiling_info& target, uint3 from, uint3 to, uint subres, bool recursive);
 	
-
+		static void commit(update_tiling_info& info, CommandList* list);
 	public:
 		HeapType tile_heap_type = HeapType::DEFAULT;
 		void load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive);
@@ -45,7 +45,17 @@ namespace DX12
 
 
 		template<std::ranges::view R>
-		void load_tiles2(CommandList* list, R tiles, uint subres = 0, bool recursive=false);
+		void load_tiles2(CommandList* list, R tiles, uint subres=0, bool recursive=false)
+		{
+			update_tiling_info info;
+			info.resource = static_cast<Resource*>(this);
+
+			for (auto t : tiles)
+				load_tile(info, t, subres, recursive);
+
+			commit(info, list);
+
+		}
 
 		void load_tiles(CommandList* list, std::list<uint3>& tiles, uint subres = 0, bool recursive = false);
 		void zero_tiles(CommandList* list, std::list<uint3>& tiles);

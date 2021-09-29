@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DX12/PipelineState.h"
 
 namespace DX12
 {

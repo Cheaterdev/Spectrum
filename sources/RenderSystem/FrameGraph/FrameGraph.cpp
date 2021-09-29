@@ -2,6 +2,8 @@
 #include "pch.h"
 
 #include "FrameGraph.h"
+#include "DX12/Queue.h"
+
 
 namespace FrameGraph
 {

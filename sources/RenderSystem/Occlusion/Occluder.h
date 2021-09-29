@@ -1,3 +1,5 @@
+#pragma once
+#include "Math/Math.h"
 class occluder
 {
 	vec3 min;

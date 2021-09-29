@@ -1,3 +1,5 @@
+#pragma once
+
 template<typename T> concept HasData =
 requires (T t) {
 	t.data;

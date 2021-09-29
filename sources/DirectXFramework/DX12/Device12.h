@@ -1,9 +1,35 @@
 #pragma once
+#include "patterns/IdGenerator.h"
+#include "patterns/StateContext.h"
+#include "Data/Data.h"
 
 class GpuCrashTracker;
 
 namespace DX12
 {
+	struct swap_chain_desc;
+	struct RaytracingBuildDescBottomInputs;
+	struct RaytracingBuildDescTopInputs;
+	class SwapChain;
+	class Queue;
+	struct Handle;
+	class Resource;
+	struct ResourceAllocationInfo;
+
+	typedef D3D12_VIEWPORT Viewport;
+	class CommandList;
+
+
+	enum class CommandListType : int
+	{
+		DIRECT = D3D12_COMMAND_LIST_TYPE_DIRECT,
+		BUNDLE = D3D12_COMMAND_LIST_TYPE_BUNDLE,
+		COMPUTE = D3D12_COMMAND_LIST_TYPE_COMPUTE,
+		COPY = D3D12_COMMAND_LIST_TYPE_COPY,
+
+		GENERATE_OPS
+	};
+
 	class Device : public Singleton<Device>
 	{
 		ComPtr<ID3D12Device5> m_device;
@@ -12,7 +38,7 @@ namespace DX12
 		std::vector <ComPtr<IDXGIAdapter3> > vAdapters;
 
 		//   std::shared_ptr<CommandList> upload_list;
-		enum_array<CommandListType, Queue::ptr> queues;
+		enum_array<CommandListType, std::shared_ptr<Queue>> queues;
 		IdGenerator<Thread::Lockable> id_generator;
 		friend class CommandList;
 		bool rtx = false;
@@ -25,14 +51,14 @@ namespace DX12
 		std::shared_ptr<CommandList> get_upload_list();
 		ComPtr<ID3D12Device5> get_native_device();
 
-		Queue::ptr& get_queue(CommandListType type);
+		std::shared_ptr<Queue>& get_queue(CommandListType type);
 
 		size_t get_vram();
 
 		Device();
 
 		ResourceAllocationInfo get_alloc_info(CD3DX12_RESOURCE_DESC& desc);
-		std::shared_ptr<SwapChain> create_swap_chain(const DX12::swap_chain_desc& desc);
+		std::shared_ptr<SwapChain> create_swap_chain(const swap_chain_desc& desc);
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescBottomInputs& desc);
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescTopInputs& desc);

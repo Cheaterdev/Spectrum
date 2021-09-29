@@ -15,8 +15,12 @@ namespace DX12
 		return{ get_gpu_address(), static_cast<UINT>(size) };
 	}
 
+	 GPUBuffer::GPUBuffer()
+	 {
+	 }
+
     GPUBuffer::GPUBuffer(UINT64 count, UINT stride) : count(count),
-        stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(std::max(static_cast<UINT64>(4),count * stride)), HeapType::DEFAULT, ResourceState::COMMON)
+	                                                   stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(std::max(static_cast<UINT64>(4),count * stride)), HeapType::DEFAULT, ResourceState::COMMON)
     {
         size = count * stride;
     }
@@ -27,6 +31,23 @@ namespace DX12
         set_data(list, offset, v);
         list->end();
         list->execute_and_wait();
+    }
+
+    GPUBuffer::~GPUBuffer()
+    {
+	    size = 0;
+    }
+
+    void GPUBuffer::place_raw_uav(Handle h)
+    {
+	    D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+	    desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+	    desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	    desc.Buffer.NumElements = static_cast<UINT>(get_desc().Width/4);
+	    desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+
+				
+	    Device::get().create_uav(h, this, desc);
     }
 
     void GPUBuffer::set_data(DX12::CommandList::ptr& list, unsigned int offset, const std::string& v)

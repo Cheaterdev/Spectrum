@@ -1,13 +1,10 @@
+#pragma once
+#include "Buffer.h"
 
 namespace DX12
 {
-
 	namespace HLSL
 	{
-
-
-
-
 		template<class T>
 		void StructuredBuffer<T>::create(Resource* resource, UINT first_elem, UINT count)
 		{

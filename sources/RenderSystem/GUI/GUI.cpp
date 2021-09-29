@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "GUI/Elements/Window.h"
 #include "GUI/Renderer/Renderer.h"
+#include "DX12/Queue.h"
 
 using namespace FrameGraph;
 

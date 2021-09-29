@@ -5,6 +5,8 @@
 
 #include "CFW1Object.h"
 
+#include "DX12/Texture.h"
+#include "DX12/Buffer.h"
 
 namespace FW1FontWrapper
 {

@@ -1,5 +1,9 @@
 #include "pch.h"
 #include "CommandList.h"
+#include "GPUTimer.h"
+
+
+#include "../RenderSystem/autogen/includes.h"
 
 namespace DX12
 {

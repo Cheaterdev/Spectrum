@@ -1,4 +1,7 @@
 #pragma once
+#include "D3D\Shaders.h"
+#include "../RenderSystem/autogen/enums.h"
+
 std::optional<SlotID> get_slot(std::string_view slot_name);
 
 template<class T>
@@ -204,7 +207,7 @@ private:
 
 			static shader_with_id<_shader_type> create_from_memory(std::string data, std::string func_name, UINT flags, std::vector<D3D::shader_macro> macros = {})
             {
-                auto t = CounterManager::get().start_count<_shader_type>();
+               // auto t = CounterManager::get().start_count<_shader_type>();
                 resource_file_depender depender;
 				D3D::shader_include In("shaders/", depender);
 

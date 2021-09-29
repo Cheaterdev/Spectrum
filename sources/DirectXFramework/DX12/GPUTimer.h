@@ -1,5 +1,8 @@
 #pragma once
 
+#include "DX12/Queue.h"
+#include "DX12/Buffer.h"
+
 namespace DX12
 {
 	class GPUTimeManager : public Singleton<GPUTimeManager>

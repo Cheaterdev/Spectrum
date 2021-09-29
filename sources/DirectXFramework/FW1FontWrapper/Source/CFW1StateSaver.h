@@ -4,6 +4,7 @@
 #define IncludeGuard__FW1_CFW1StateSaver
 
 
+#include "FW1FontWrapper/Source/FW1FontWrapper.h"
 namespace FW1FontWrapper {
 
 

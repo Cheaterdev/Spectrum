@@ -1,8 +1,12 @@
+#pragma once
+
 #include "Utils/Allocators/Allocators.h"
 #include "Math/Math.h"
 
 namespace DX12
 {
+	class CommandList;
+
 	enum class HandleType : char
 	{
 		CBV,
@@ -919,3 +923,5 @@ namespace DX12
 	};
 
 }
+
+

@@ -1,6 +1,8 @@
 #pragma once
 
-#include "DX12/Resource.h"
+
+#include "DX12/Texture.h"
+#include "Threads/Scheduler.h"
 
 class camera;
 class main_renderer;

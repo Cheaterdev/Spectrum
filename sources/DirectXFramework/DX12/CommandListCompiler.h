@@ -1,4 +1,6 @@
 #pragma once
+#include "Math/Math.h"
+#include "DX12/Device12.h"
 
 namespace DX12
 {

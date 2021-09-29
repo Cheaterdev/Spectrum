@@ -1,7 +1,7 @@
 #include  "pch.h"
 #include <wincodec.h>
 
-
+#include "DX12/Texture.h"
 
 texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
 {

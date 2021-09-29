@@ -1,4 +1,8 @@
+#pragma once
+
 #include <Utils/Hash/crc32.h>
+#include "Utils/utils.h"
+
 enum class Layouts: int
 {
 	UNKNOWN,

@@ -3,6 +3,7 @@
 #include "Utils/Allocators/Allocators.h"
 #include "Math/Math.h"
 
+#include "DX12/Descriptors.h"
 namespace DX12
 {
 	enum class HeapType : int

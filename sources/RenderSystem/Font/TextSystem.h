@@ -1,3 +1,9 @@
+
+#include "FW1FontWrapper/Source/FW1FontWrapper.h"
+typedef CComPtr<IFW1Factory>			FW1_Factory;
+typedef CComPtr<IFW1FontWrapper>		FW1_Font;
+typedef CComPtr<IFW1TextGeometry>		FW1_TextGeometry;
+
 namespace Fonts
 {
     class FontSystem;

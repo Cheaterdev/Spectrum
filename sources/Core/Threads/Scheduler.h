@@ -2,8 +2,6 @@
 #include "../Profiling/Profiling.h"
 #include "Threads/Threading.h"
 
-using namespace concurrency;
-
 enum class TaskPriority : int
 {
 	LOW,

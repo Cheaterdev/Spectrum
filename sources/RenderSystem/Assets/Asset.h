@@ -2,6 +2,7 @@
 
 #include "patterns/EditObject.h"
 
+#include "DX12/Texture.h"
 
 
 enum class Asset_Type : int

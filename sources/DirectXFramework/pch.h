@@ -37,82 +37,16 @@ if (FAILED(hr)) \
 
 #endif //  DEBUG
 
-
-#include "D3D\Shaders.h"
-
-
-#include "Resource\TextureData\Header.h"
-#include "D3D/TextureLoader.h"
-
-
 namespace DX12
 {
-
-	typedef D3D12_VIEWPORT Viewport;
-	class CommandList;
+	
 }
-
-#include "../RenderSystem/autogen/enums.h"
-
-#include "SIG/Concepts.h"
-
-#include "DX12/RootSignature.h"
-#include "DX12/Descriptors.h"
-
-#include "DX12/Memory.h"
-#include "DX12/Tiling.h"
-
-#include "DX12/Fence.h"
-#include "DX12/States.h"
-#include "DX12/Resource.h"
-#include "DX12/ResourceViews.h"
-
-#include "DX12/Shader.h"
-#include "DX12/IndirectCommand.h"
-#include "DX12/CommandList.h"
-
-#include "DX12/Swapchain12.h"
-
-#include "DX12/Queue.h"
-#include "DX12/Device12.h"
-
-
-
-
-#include "DX12/Texture.h"
-#include "DX12/PipelineState.h"
-#include "DX12/Buffer.h"
-#include "DX12/GPUTimer.h"
-#include "DX12/Samplers.h"
-
-#include "DX12/RayTracingAS.h"
-
-#include "DX12/HLSLDescriptors.hpp"
-
-
 namespace Render
 {
 	using namespace DX12;
-
-	typedef CommandList::ptr Context;
 }
 
 
-//#include "FW1FontWrapper/Source/FW1CompileSettings.h"
-#include "FW1FontWrapper/Source/FW1FontWrapper.h"
 
 
-typedef CComPtr<IFW1Factory>			FW1_Factory;
-typedef CComPtr<IFW1FontWrapper>		FW1_Font;
-typedef CComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 
-
-#include "SIG/SIG.h"
-#include "SIG/RT.h"
-#include "SIG/Layout.h"
-#include "SIG/Slots.h"
-#include "SIG/PSO.h"
-#include "SIG/RTX.h"
-#include "../RenderSystem/autogen/includes.h"
-#include "DX12/PipelineState.hpp"
-#include "DX12/Tiling.hpp"

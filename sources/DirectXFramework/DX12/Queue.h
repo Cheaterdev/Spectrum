@@ -1,10 +1,12 @@
 #pragma once
 #include "Threads/Scheduler.h"
+#include "Device12.h"
+#include "DX12/CommandList.h"
+
 namespace DX12
 {
 
 	class TransitionCommandList;
-	class Device;
 	class Queue
 	{
 		std::wstring name;

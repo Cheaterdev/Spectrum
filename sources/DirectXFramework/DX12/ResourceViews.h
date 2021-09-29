@@ -1,9 +1,10 @@
 #pragma once
 #include "Math/Math.h"
-
+#include "DX12/Resource.h"
 
 namespace DX12
 {
+	class CommandList;
 
 	class ResourceView
 	{

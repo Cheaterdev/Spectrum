@@ -1,4 +1,6 @@
 #include "pch.h"
+#include "Window.h"
+
 #include <ShlObj.h>
 #include <Shobjidl.h>
 #include <Commdlg.h>

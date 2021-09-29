@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Queue.h"
 
 namespace DX12 {
 
@@ -317,6 +318,17 @@ namespace DX12 {
 
 			info.add_tile(packed_tiles);
 		}
+	}
+
+	void TiledResourceManager::commit(update_tiling_info& info, CommandList* list)
+	{
+		// TODO: make list
+		if (list)
+		{
+			list->update_tilings(std::move(info));
+		}
+		else
+			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 }
 

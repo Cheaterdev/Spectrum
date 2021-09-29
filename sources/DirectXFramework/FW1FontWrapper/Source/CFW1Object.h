@@ -3,7 +3,7 @@
 #ifndef IncludeGuard__FW1_CFW1Object
 #define IncludeGuard__FW1_CFW1Object
 
-
+#include "FW1FontWrapper/Source/FW1FontWrapper.h"
 namespace FW1FontWrapper {
 
 

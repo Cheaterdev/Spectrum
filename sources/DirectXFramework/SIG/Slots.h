@@ -1,3 +1,4 @@
+#include "Concepts.h"
 
 template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
 struct CompiledData

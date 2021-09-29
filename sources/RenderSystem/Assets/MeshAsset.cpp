@@ -3,6 +3,8 @@
 #include "Assets/AssetRenderer.h"
 #include "Materials/universal_material.h"
 
+#include "DX12/Queue.h"
+
 bool MeshData::init_default_loaders()
 {
 	add_loader(load_assimp);

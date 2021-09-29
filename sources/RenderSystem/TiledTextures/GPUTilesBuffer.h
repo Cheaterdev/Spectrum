@@ -1,4 +1,6 @@
 #pragma once
+#include "DX12/Buffer.h"
+#include "SIG/SIG.h"
 
 class GPUTilesBuffer
 {

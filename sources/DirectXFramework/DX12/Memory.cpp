@@ -1,4 +1,7 @@
 #include "pch.h"
+#include "Memory.h"
+#include "Device12.h"
+#include "Resource.h"
 
 namespace DX12
 {

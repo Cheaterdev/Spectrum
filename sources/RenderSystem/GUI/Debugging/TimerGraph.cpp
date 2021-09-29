@@ -3,6 +3,9 @@
 #include "GUI/Elements/ScrollContainer.h"
 #include "GUI/Elements/Button.h"
 #include "GUI/Elements/Image.h"
+
+#include "DX12/GPUTimer.h"
+
 namespace GUI
 {
 	namespace Elements

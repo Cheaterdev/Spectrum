@@ -89,7 +89,7 @@ using Guid = xg::Guid;
 #include <ppltasks.h>
 #include <ppl.h>
 #include <agents.h>
-
+using namespace concurrency;
 
 HRESULT test(HRESULT hr, std::string str = "");
 

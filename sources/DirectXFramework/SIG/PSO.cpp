@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include "../RenderSystem/autogen/includes.h"
+
 Render::ComputePipelineState::ptr SimpleComputePSO::create()
 {
 	Render::ComputePipelineStateDesc desc;

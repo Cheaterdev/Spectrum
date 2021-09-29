@@ -6,6 +6,9 @@
 
 #include "GUI/GUI.h"
 
+#include "DX12/RayTracingAS.h"
+
+#include "../RenderSystem/autogen/includes.h"
 class MeshAssetInstance;
 
 template <typename T>

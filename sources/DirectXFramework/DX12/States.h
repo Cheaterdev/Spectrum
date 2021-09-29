@@ -1,19 +1,16 @@
 #pragma once
+#include "Utils/utils.h"
+
 #include "Patterns/StateContext.h"
+#include "States.h"
+
+#include "Device12.h"
 
 namespace DX12
 {
 	class Transitions;
 	class Resource;
-	enum class CommandListType : int
-	{
-		DIRECT = D3D12_COMMAND_LIST_TYPE_DIRECT,
-		BUNDLE = D3D12_COMMAND_LIST_TYPE_BUNDLE,
-		COMPUTE = D3D12_COMMAND_LIST_TYPE_COMPUTE,
-		COPY = D3D12_COMMAND_LIST_TYPE_COPY,
 
-		GENERATE_OPS
-	};
 	enum class ResourceState : UINT
 	{
 		COMMON = D3D12_RESOURCE_STATE_COMMON,

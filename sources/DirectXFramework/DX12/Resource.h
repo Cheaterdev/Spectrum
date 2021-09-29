@@ -1,4 +1,10 @@
 #pragma once
+#include "DX12/Memory.h"
+#include "DX12/Tiling.h"
+#include "DX12/Fence.h"
+#include "DX12/States.h"
+#include "DX12/Device12.h"
+
 namespace DX12
 {
 

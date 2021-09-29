@@ -4,6 +4,7 @@
 #include "Patterns/Holdable.h"
 #include "FrameGraph/FrameGraph.h"
 
+#include "../RenderSystem/autogen/includes.h"
 class camera;
 class debug_drawer;
 class vertex_transform;

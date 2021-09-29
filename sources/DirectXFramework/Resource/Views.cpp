@@ -1,5 +1,6 @@
 #include "pch.h"
-
+#include "DX12/CommandList.h"
+#include "DX12/ResourceViews.h"
 
 
  void DX12::BufferView::place_cb(Handle h) {

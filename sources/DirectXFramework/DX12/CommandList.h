@@ -5,6 +5,12 @@
 #include "Profiling/Profiling.h"
 #include "Threads/Threading.h"
 
+#include "DX12/Fence.h"
+#include "DX12/IndirectCommand.h"
+#include "DX12/Resource.h"
+#include "DX12/ResourceViews.h"
+#include "DX12/Shader.h"
+
 enum class Layouts;
 namespace DX12
 {

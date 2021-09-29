@@ -1,9 +1,12 @@
 #include "pch.h"
 #include "Samplers.h"
 #include "Device12.h"
+#include "Swapchain12.h"
+#include "GPUTimer.h"
 
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
+
 
 namespace DX12
 {
@@ -21,8 +24,7 @@ namespace DX12
 		}
 	};
 	
-	struct RaytracingBuildDescBottomInputs;
-	struct RaytracingBuildDescTopInputs;
+
 	void  Device::stop_all()
 	{
 		swap_chains.clear();

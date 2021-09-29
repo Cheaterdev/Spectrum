@@ -1,4 +1,9 @@
 #pragma once
+#include "Resource\TextureData\Header.h"
+
+#include "CommandList.h"
+#include "Resource.h"
+
 namespace DX12
 {
 

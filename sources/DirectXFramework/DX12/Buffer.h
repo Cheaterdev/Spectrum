@@ -2,6 +2,12 @@
 #include "Utils/Allocators/Allocators.h"
 #include "Serialization/serialization.h"
 
+#include "DX12/CommandList.h"
+#include "DX12/Device12.h"
+#include "DX12/Resource.h"
+
+#include "SIG/Concepts.h"
+
 namespace DX12
 {
 
@@ -9,7 +15,7 @@ namespace DX12
 	class GPUBuffer : public Resource
 	{
 		protected:
-			GPUBuffer() = default;
+			GPUBuffer();
 
 			GPUBuffer(UINT64 count, UINT stride);
 
@@ -28,10 +34,7 @@ namespace DX12
 
 			void set_data(unsigned int offset, const std::string& v);
 		public:
-			virtual ~GPUBuffer()
-			{
-				size = 0;
-			}
+			virtual ~GPUBuffer();
 			using ptr = std::shared_ptr<GPUBuffer>;
 			GPUBuffer(UINT64 size, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, ResourceState state = ResourceState::COMMON,HeapType heap_type = HeapType::DEFAULT);
 
@@ -64,17 +67,7 @@ namespace DX12
 			IndexBufferView get_index_buffer_view(bool is_32, unsigned int offset = 0, UINT size = 0);
 
 
-			void place_raw_uav(Handle  h)
-			{
-				D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-				desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-				desc.Format = DXGI_FORMAT_R32_TYPELESS;
-				desc.Buffer.NumElements = static_cast<UINT>(get_desc().Width/4);
-				desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-
-				
-				Device::get().create_uav(h, this, desc);
-			}
+			void place_raw_uav(Handle  h);
 
 			void place_structured_uav(Handle h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
 	

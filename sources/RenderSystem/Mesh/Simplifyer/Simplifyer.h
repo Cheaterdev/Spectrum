@@ -1,3 +1,6 @@
+#pragma once
+#include "Math/Math.h"
+
 class mesh_simplifyer
 {
         //std::function<vec3(unsigned int)> positions;
