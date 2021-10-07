@@ -1,6 +1,7 @@
 module;
-#include <cmath>
+
 export module Constants;
+import stl.core;
 
 export
 {

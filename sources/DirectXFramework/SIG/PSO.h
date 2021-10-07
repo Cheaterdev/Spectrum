@@ -1,10 +1,13 @@
 #pragma once
-#include "Concepts.h"
-
-#include "D3D\Shaders.h"
 #include "Data/Data.h"
 #include "Threads/Threading.h"
+#include "Profiling/Profiling.h"
+
+#include "Concepts.h"
+#include "D3D\Shaders.h"
 #include "DX12/PipelineState.h"
+#include "utils/utils.h"
+
 
 #define ALL_FORMATS \
 DXGI_FORMAT_UNKNOWN	,\
@@ -520,12 +523,12 @@ static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
 PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {return psos[key.GetKey()];}; \
 name() \
-{\
-	PSOBase::shuffle_pairs<name>([&](Keys& key)\
-		{\
-			auto pso = init_pso(key);\
+{ \
+	PSOBase::shuffle_pairs<name>([&](Keys& key) \
+		{ \
+			auto pso = init_pso(key); \
 			psos[key] = pso.create(); \
-		}, __VA_ARGS__);\
+		} , ## __VA_ARGS__); \
 }
 
 
@@ -541,7 +544,7 @@ name() \
 		{\
 			auto pso = init_pso(key);\
 			psos[key] = pso.create();\
-		}, __VA_ARGS__);\
+		} , ## __VA_ARGS__);\
 }
 
 class PSOBase

@@ -1,12 +1,14 @@
 #pragma once
 #include "Utils/Allocators/Allocators.h"
-#include "Serialization/serialization.h"
+#include "Serialization/serialization_defines.h"
 
 #include "DX12/CommandList.h"
 #include "DX12/Device12.h"
 #include "DX12/Resource.h"
 
 #include "SIG/Concepts.h"
+
+import serialization;
 
 namespace DX12
 {

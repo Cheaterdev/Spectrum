@@ -3,7 +3,7 @@ import Constants;
 import Vectors;
 import Quaternion;
 import Matrices;
-#include "Serialization/serialization.h"
+#include "Serialization/serialization_defines.h"
 
 enum class primitive_types
 {

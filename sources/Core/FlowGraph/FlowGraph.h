@@ -1,9 +1,11 @@
 #pragma once
 
-#include "Serialization/serialization.h"
+#include "Serialization/serialization_defines.h"
 #include "Data/Data.h"
 #include "Math/Math.h"
 #include "Utils/Hash/crc32.h"
+
+import serialization;
 
 namespace FlowGraph
 {

@@ -86,14 +86,16 @@ namespace Spectrum
             conf.AdditionalCompilerOptions.Add("/bigobj");
 
             conf.Defines.Add("_MBCS");
-            conf.Defines.Add("_SCL_SECURE_NO_WARNINGS");
+			conf.Defines.Add("BOOST_NO_USER_CONFIG");
+			conf.Defines.Add("BOOST_ENDIAN_DEPRECATED_NAMES");
+			conf.Defines.Add("BOOST_ALL_NO_LIB");
+			
+			conf.Defines.Add("_SCL_SECURE_NO_WARNINGS");
             conf.Defines.Add("_CRT_SECURE_NO_WARNINGS");
-            conf.Defines.Add("BOOST_NO_USER_CONFIG");
-            conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
-            conf.Defines.Add("BOOST_ENDIAN_DEPRECATED_NAMES");
-
-            conf.Defines.Add("BOOST_ALL_NO_LIB");
             conf.Defines.Add("NOMINMAX");
+            conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
+       
+  
 
 
             if (target.Mode == Mode.Dev)
@@ -186,7 +188,30 @@ namespace Spectrum
         }
     }
 	
+	
+[Sharpmake.Generate]
+    public class Modules : Library
+    {
+        public Modules()
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\Modules";
+            AssemblyName = "Modules";
+			
+			CustomProperties.Add("ScanSourceForModuleDependencies", "true");
+        }
 
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+            conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
+
+			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
+
+        }
+    }
+	
+	
     [Sharpmake.Generate]
     public class Core : Library
     {
@@ -205,8 +230,9 @@ namespace Spectrum
 
             conf.LibraryFiles.Add("Dbghelp.lib");
             conf.LibraryFiles.Add("version.lib");
-
-            conf.AddPublicDependency<ZipLib>(target);
+			
+			conf.AddPublicDependency<Modules>(target);
+			conf.AddPublicDependency<ZipLib>(target);
         }
     }
 
@@ -248,8 +274,10 @@ namespace Spectrum
 
 			
 	
-            conf.AddPublicDependency<Core>(target);
+            conf.AddPublicDependency<Core>(target);	
+
             conf.AddPrivateDependency<Aftermath>(target);
+			
 
         }
     }

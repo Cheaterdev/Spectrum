@@ -2,8 +2,9 @@
 #include <atlbase.h>
 
 #include "patterns/Singleton.h"
-#include "Serialization/serialization.h"
+#include "Serialization/serialization_defines.h"
 
+import serialization;
 
 typedef ComPtr<IDXGISwapChain1>		DXGI_SwapChain;
 typedef ComPtr<IDXGISurface2>			DXGI_Surface;

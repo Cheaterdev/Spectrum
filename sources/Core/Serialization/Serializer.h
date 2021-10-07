@@ -1,7 +1,7 @@
 #pragma once
 #include "Log/Log.h"
 #include "serialization_archives.h"
-#include "serialization.h"
+#include "serialization_defines.h"
 class Serializer
 {
 

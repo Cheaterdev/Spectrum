@@ -1,7 +1,10 @@
 #pragma once
 #include "Debug/Exceptions.h"
 #include "Utils/utils.h"
-#include "Serialization/serialization.h"
+#include "Serialization/serialization_defines.h"
+
+import serialization;
+
 namespace DataPacker
 {
 

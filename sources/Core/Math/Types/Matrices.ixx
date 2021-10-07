@@ -1,14 +1,12 @@
 module;
-#include <type_traits>
-
+#include "Serialization/serialization_defines.h"
 export module Matrices;
 
-
+import stl.core;
 import Quaternion;
 import Vectors;
 import Constants;
-
-#include "Serialization/serialization.h"
+import serialization;
 
 export {
 

@@ -1,7 +1,10 @@
-#include "Serialization/serialization.h"
+#include "Serialization/serialization_defines.h"
 #include "FileSystem/FileSystem.h"
 
 #include "helper.h"
+
+import serialization;
+
 static void GetSurfaceInfo2(_In_ size_t width,
                             _In_ size_t height,
                             _In_ DXGI_FORMAT fmt,

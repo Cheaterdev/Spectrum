@@ -1,26 +1,10 @@
 module;
-#include <typeinfo>
-#include <cmath>
-#include <ranges>
-#include <algorithm>
-#include <numeric>
-#include <vector>
-#include <array>
-
-#define NVP(name) serialization::make_nvp("hello", name)
-#define NP(name, param) serialization::make_nvp(name, param)
-
-#define SAVE_PARENT(type) serialization::make_nvp("parent", serialization::base_object<type>(*this))
-#define SERIALIZE() friend class serialization::access; template<class Archive> void serialize(Archive& ar, const unsigned int version)
-#define SERIALIZE_PRETTY() friend class serialization::access; template<PrettyArchive Archive> void serialize(Archive& ar, const unsigned int version)
-
-
+#include "Serialization/serialization_defines.h"
 export module Vectors;
-export import Constants;
-export import serialization;
-namespace ranges = std::ranges;
-namespace view = std::ranges::views;
 
+import Constants;
+import stl.core;
+import serialization;
 
 namespace internal
 {
@@ -29,7 +13,6 @@ namespace internal
 		requires () {
 		T::N;
 	};
-
 
 	template<class T>
 	consteval int get_count() requires (!IsVectorType<T>)
