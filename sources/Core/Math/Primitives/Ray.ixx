@@ -1,8 +1,19 @@
-#pragma once
-#include "Plane.h"
+module;
+#include "Serialization/serialization_defines.h"
+export module Ray;
 
+export import Constants;
+export import Vectors;
+export import Quaternion;
+export import Matrices;
+export import Primitive;
 
-class Ray
+import Plane;
+
+import stl.memory;
+import serialization;
+
+export class Ray
 {
 public:
 
@@ -21,7 +32,10 @@ private:
 	}
 };
 
-inline Ray::Ray(vec3 p, vec3 r): pos(p), dir(r)
+module: private;
+
+
+inline Ray::Ray(vec3 p, vec3 r) : pos(p), dir(r)
 {
 }
 
@@ -40,3 +54,6 @@ inline bool Ray::intersect(Plane& p, vec3& res)
 }
 
 inline Ray::Ray() = default;
+
+
+BOOST_CLASS_EXPORT(Ray)

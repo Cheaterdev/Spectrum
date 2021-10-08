@@ -1,7 +1,17 @@
-#pragma once
-#include "Primitive.h"
+module;
+#include "Serialization/serialization_defines.h"
+export module Sphere;
 
-class Sphere : public Primitive
+export import Constants;
+export import Vectors;
+export import Quaternion;
+export import Matrices;
+export import Primitive;
+
+import stl.memory;
+import serialization;
+
+export class Sphere : public Primitive
 {
 public:
 	std::shared_ptr<Primitive>clone() override
@@ -51,3 +61,21 @@ private:
 		ar& NVP(pos)& NVP(radius);
 	}
 };
+
+
+module: private;
+
+
+Sphere::Sphere(vec3 pos, float radius)
+{
+	this->pos = pos;
+	this->radius = radius;
+}
+
+float Sphere::GetSurfaceArea() const
+{
+	const float cfArea = 4.0f * Math::pi;
+	return cfArea * radius * radius;
+}
+
+BOOST_CLASS_EXPORT(Sphere)

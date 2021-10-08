@@ -96,7 +96,7 @@ namespace Spectrum
             conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
        
   
-
+            conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106")); //module reference issues
 
             if (target.Mode == Mode.Dev)
             {

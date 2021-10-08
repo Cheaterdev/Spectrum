@@ -1,5 +1,50 @@
-#include "pch.h"
-#include "AABB.h"
+module;
+#include "Serialization/serialization_defines.h"
+export module AABB;
+
+export import Constants;
+export import Vectors;
+export import Quaternion;
+export import Matrices;
+export import Primitive;
+
+import stl.memory;
+import stl.core;
+import serialization;
+
+export
+class AABB : public Primitive
+{
+public:
+	vec3 min, max;
+
+	AABB() = default;
+	AABB(Primitive* other);
+	AABB(std::function<vec3(uint)> functor, unsigned int size);
+
+	void set(Primitive* other);
+
+	std::shared_ptr<Primitive> clone() override;
+	const primitive_types get_type() const override;
+	float get_volume() const override;
+	void set(Primitive* other, mat4x4& m) override;
+
+	vec3 get_min() override;
+	vec3 get_max() override;
+	void combine(Primitive* other) override;
+	void combine(Primitive* other, mat4x4& m) override;
+	void apply_transform(ptr r, mat4x4& mi) override;
+private:
+	SERIALIZE()
+	{
+		ar& SAVE_PARENT(Primitive);
+		ar& NVP(min)& NVP(max);
+	}
+};
+
+
+module: private;
+
 
 BOOST_CLASS_EXPORT(AABB)
 
@@ -8,9 +53,9 @@ AABB::AABB(Primitive* other) :min(other->get_min()), max(other->get_max())
 {
 }
 
-AABB::AABB(std::function<vec3(UINT)> functor, unsigned size) : min(functor(0)), max(min)
+AABB::AABB(std::function<vec3(uint)> functor, uint size) : min(functor(0)), max(min)
 {
-	for (unsigned int i = 1; i < size; i++)
+	for (uint i = 1; i < size; i++)
 	{
 		vec3 pos = functor(i);
 		min = vec3::min(min, pos);
