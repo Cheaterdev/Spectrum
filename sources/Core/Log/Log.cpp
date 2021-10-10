@@ -1,8 +1,6 @@
 #include "pch.h"
 #include  "Log.h"
 
-#include <comdef.h>
-
 const std::string LogLevel<log_level_internal::level_none>::NAME = "NONE";
 const std::string LogLevel<log_level_internal::level_error>::NAME = "ERROR";
 const std::string LogLevel<log_level_internal::level_warning>::NAME = "WARNING";
@@ -59,8 +57,10 @@ void Log::crash_error(std::string message, std::string at)
 
 void Log::crash_error(HRESULT hr, std::string at /*= ""*/)
 {
-    _com_error err(hr);
-    crash_error((err.ErrorMessage()), at);
+
+    assert(false);
+    //_com_error err(hr);
+  //  crash_error((err.ErrorMessage()), at);
 }
 
 std::string LogBlock::get_string() const

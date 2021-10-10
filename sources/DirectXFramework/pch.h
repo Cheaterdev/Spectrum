@@ -19,6 +19,15 @@ using namespace Microsoft::WRL;
 //#include "../3rdparty/DirectXTex/ScreenGrab/ScreenGrab.h"
 
 HRESULT device_fail();
+
+HRESULT test(HRESULT hr, std::string str = "");
+
+
+
+
+
+
+
 #ifdef  DEBUG
 #define TEST(x)\
 	assert(SUCCEEDED(x))

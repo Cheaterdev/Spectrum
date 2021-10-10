@@ -18,8 +18,7 @@
 #include <set>
 #include <unordered_set>
 #include <sstream>
-#include <fstream>
-#include <istream>
+
 #include <atomic>
 #include <type_traits>
 #include <queue>
@@ -42,5 +41,8 @@
 
 
 
-#include <comdef.h>
+// #include <fstream>  // linking issues
+
+
+//#include <comdef.h>
 #include <assert.h>
