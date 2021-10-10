@@ -1,6 +1,7 @@
 #pragma once
+
 #include "Debug/Exceptions.h"
-import Utils;
+
 #include "utils/utils_macros.h"
 #include "Serialization/serialization_defines.h"
 
@@ -8,7 +9,7 @@ import ZipLib;
 import serialization;
 
 import stl.core;
-
+import Utils;
 
 namespace DataPacker
 {
@@ -296,43 +297,3 @@ public:
         return std::array<T, N>::operator[]((std::size_t)e);
     }
 };
-///////////////////////////////////////////////
-///
-///
-/*
-
-class A
-{
-	bool used_by(helper*)
-	{
-		
-	}
-};
-
-
-class B: public helper
-{
-	std::set<A*> inserts;
-};*/
-
-
-
-template <class T>
-class my_unique_vector : public std::vector<T>
-{
-public:
-	using 	std::vector<T>::insert;
-
-	void insert(const T& elem)
-	{
-		std::vector<T>::push_back(elem);
-	}
-	void erase(const T& elem)
-	{
-		auto it = std::find(std::vector<T>::begin(), std::vector<T>::end(), elem);
-
-		if (it != std::vector<T>::end())
-			std::vector<T>::erase(it);
-	}
-};
-

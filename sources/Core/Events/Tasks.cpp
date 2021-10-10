@@ -1,7 +1,7 @@
 #include "pch_core.h"
 #include "Events/Tasks.h"
 #include "Log/Log.h"
-#include "Events/Events.h"
+import Events;
 
 std::shared_ptr<Task> TaskInfoManager::create_task(std::wstring name)
 {

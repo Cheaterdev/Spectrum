@@ -1,5 +1,6 @@
 #pragma once
-#include "Events.h"
+import Events;
+
 import Singleton;
 
 class Task

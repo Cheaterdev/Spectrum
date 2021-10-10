@@ -1,8 +1,7 @@
-module;
-
-#include "Events/Events.h"
 export module Tree;
-import Singleton;
+export import Singleton;
+export import Events;
+export import stl.core;
 
 export class base_tree
 {
