@@ -2,11 +2,12 @@ module;
 #include "serialization_defines.h"
 export module serialization;
 export import boost.serialization;
-import stl.core;
-import stl.threading;
-import crossguid;
+export import stl.core;
+export import stl.threading;
+export import crossguid;
 
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
+
 
 namespace boost
 {
@@ -20,12 +21,12 @@ namespace boost
 			archive << NVP(data);
 		}
 
-		static std::map<void*, std::weak_ptr<void>> hash;
-		static std::mutex m;
-
 		export template<class Archive, class Type>
 		void load(Archive& archive, std::shared_ptr<Type>& value, const unsigned int)
 		{
+			static std::map<void*, std::weak_ptr<void>> hash;
+			static std::mutex m;
+
 			Type* data;
 			archive >> NVP(data);
 			std::lock_guard<std::mutex> g(m);
@@ -129,3 +130,4 @@ namespace boost
 		}
 	}
 }
+

@@ -5,6 +5,7 @@
 
 import Utils;
 import crc32;
+import "boost.serialization.h";
 
 class Serializer
 {

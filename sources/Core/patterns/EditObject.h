@@ -1,5 +1,7 @@
 class EditContainer;
 
+import stl.core;
+
 class EditObject
 {
 	friend class EditContainer;
