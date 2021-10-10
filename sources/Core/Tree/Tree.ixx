@@ -1,6 +1,10 @@
-#pragma once
+module;
 
-class base_tree
+#include "Events/Events.h"
+export module Tree;
+import Singleton;
+
+export class base_tree
 {
 
 public:
@@ -60,7 +64,7 @@ struct tree_selector<P, T> : public std::enable_shared_from_this<T>
 {
 };
 
-template<class T, class _child_holder, class  ...Args >
+export template<class T, class _child_holder, class  ...Args >
 class tree : public  tree_selector<typename _child_holder::value_type, tree<T, _child_holder, Args...>>, public base_tree, public Args...
 {
 
@@ -242,7 +246,7 @@ public:
 	}
 };
 
-class VariableContext:public tree<VariableContext, std::set<VariableContext*> >, public Singleton<VariableContext>
+export class VariableContext:public tree<VariableContext, std::set<VariableContext*> >, public Singleton<VariableContext>
 {
 	friend class Singleton<VariableContext>;
 	std::wstring name;
@@ -279,7 +283,7 @@ public:
 	}
 };
 
-template<class T>
+export template<class T>
 class Variable:public VariableBase
 {
 	T value;

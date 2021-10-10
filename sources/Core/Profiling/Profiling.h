@@ -2,10 +2,10 @@
 
 #include "Log/Log.h"
 import Singleton;
-#include "Tree/Tree.h"
+
 import Utils;
 import Vectors;
-
+import Tree;
 
 //#define PROFILING
 
