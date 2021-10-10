@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Serialization/Serializer.h"
+
 #include "FileSystem/FileSystem.h"
 #include "D3D\Shaders.h"
 
@@ -520,57 +520,9 @@ namespace DX12
 
 		friend class Singleton<PipelineStateCache>;
 
-		virtual ~PipelineStateCache()
-		{
-			std::lock_guard<std::mutex> g(m);
+		virtual ~PipelineStateCache();
 
-			
-			FileSystem::get().save_data("pso",Serializer::serialize(binary_cache));
-		}
-		PipelineStateCache() : cache([this](const PipelineStateDesc& desc)
-			{
-				std::lock_guard<std::mutex> g(m);
-
-				std::string binary = desc.name.empty()?"": binary_cache[desc.name];
-
-
-				//Log::get() << desc << Log::endl;
-				auto state=  PipelineState::ptr(new PipelineState(desc, binary));
-
-				if (!desc.name.empty())
-				{
-					binary_cache[desc.name] = state->get_cache();
-				}
-
-				return state;
-
-			}), compute_cache([this](const ComputePipelineStateDesc& desc)
-				{
-					std::lock_guard<std::mutex> g(m);
-
-					std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
-
-
-					//Log::get() << desc << Log::endl;
-					auto state = ComputePipelineState::ptr(new ComputePipelineState(desc,binary));
-
-					if (!desc.name.empty())
-					{
-						binary_cache[desc.name] = state->get_cache();
-					}
-
-					return state;
-
-				})
-		{
-
-			std::lock_guard<std::mutex> g(m);
-
-			auto file = FileSystem::get().get_file("pso");
-			if(file)
-			Serializer::deserialize(file->load_all(), binary_cache);
-			
-		}
+		PipelineStateCache();
 	public:
 
 		static PipelineState::ptr get_cache(PipelineStateDesc& desc, std::string name ="");

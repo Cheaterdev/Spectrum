@@ -1,6 +1,6 @@
 #include "pch_dx.h"
 #include "PipelineState.h"
-
+#include "Serialization/Serializer.h"
 
 #define E(x) 	if ( l.x != r.x) return false;
 #define C(x) 	if (auto cmp = l.x <=> r.x; cmp != 0) return cmp;
@@ -369,7 +369,60 @@ unsigned int i = 0;
 		unregister_shader(desc.amplification);
 
 	}
-	
+
+
+	PipelineStateCache::~PipelineStateCache()
+	{
+		std::lock_guard<std::mutex> g(m);
+
+			
+		FileSystem::get().save_data("pso",Serializer::serialize(binary_cache));
+	}
+
+	PipelineStateCache::PipelineStateCache(): cache([this](const PipelineStateDesc& desc)
+	{
+		std::lock_guard<std::mutex> g(m);
+
+		std::string binary = desc.name.empty()?"": binary_cache[desc.name];
+
+
+		//Log::get() << desc << Log::endl;
+		auto state=  PipelineState::ptr(new PipelineState(desc, binary));
+
+		if (!desc.name.empty())
+		{
+			binary_cache[desc.name] = state->get_cache();
+		}
+
+		return state;
+
+	}), compute_cache([this](const ComputePipelineStateDesc& desc)
+	{
+		std::lock_guard<std::mutex> g(m);
+
+		std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
+
+
+		//Log::get() << desc << Log::endl;
+		auto state = ComputePipelineState::ptr(new ComputePipelineState(desc,binary));
+
+		if (!desc.name.empty())
+		{
+			binary_cache[desc.name] = state->get_cache();
+		}
+
+		return state;
+
+	})
+	{
+
+		std::lock_guard<std::mutex> g(m);
+
+		auto file = FileSystem::get().get_file("pso");
+		if(file)
+			Serializer::deserialize(file->load_all(), binary_cache);
+			
+	}
 
 	PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)
 	{

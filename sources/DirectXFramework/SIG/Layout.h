@@ -1,5 +1,5 @@
 #pragma once
-#include "Concepts.h"
+import Concepts;
 
 #include "DX12/Samplers.h"
 

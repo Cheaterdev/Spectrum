@@ -1,4 +1,5 @@
-#include "Concepts.h"
+import Concepts;
+
 #include "DX12/CommandList.h"
 
 

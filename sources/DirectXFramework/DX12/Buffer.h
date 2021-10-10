@@ -6,7 +6,7 @@
 #include "DX12/Device12.h"
 #include "DX12/Resource.h"
 
-#include "SIG/Concepts.h"
+import Concepts;
 
 import serialization;
 

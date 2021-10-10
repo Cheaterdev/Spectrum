@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Concepts.h"
+import Concepts;
+
 #include "DX12/Descriptors.h"
 
 namespace DX12

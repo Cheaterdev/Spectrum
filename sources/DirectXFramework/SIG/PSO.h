@@ -3,7 +3,7 @@
 #include "Threads/Threading.h"
 #include "Profiling/Profiling.h"
 
-#include "Concepts.h"
+import Concepts;
 #include "D3D\Shaders.h"
 #include "DX12/PipelineState.h"
 import Utils;
