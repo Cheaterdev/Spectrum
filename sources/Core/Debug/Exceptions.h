@@ -1,4 +1,6 @@
 
+#include <boost/stacktrace.hpp>
+
 namespace Exceptions
 {
 	using stack_trace = boost::stacktrace::stacktrace;

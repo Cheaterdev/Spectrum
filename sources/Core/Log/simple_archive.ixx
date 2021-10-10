@@ -1,8 +1,19 @@
-#pragma once
-#include "Utils/utils.h"
-#include <boost/archive/xml_oarchive.hpp>
+module;
+///#include "Utils/utils.h"
 
-class simple_log_archive
+export module simple_log_archive;
+
+export import boost.serialization;
+
+import stl.core;
+import magic_enum;
+
+
+template<typename T>
+concept Enum = std::is_enum_v<T>;
+
+
+export class simple_log_archive
 {
 	std::ostream& m_os;
 	unsigned int m_depth;
@@ -44,7 +55,7 @@ class simple_log_archive
 
 	void save(const std::wstring& s)
 	{
-		m_os << convert(s);
+	//	m_os << convert(s);
 	}
 
 public:

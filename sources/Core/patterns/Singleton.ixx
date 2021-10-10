@@ -1,16 +1,20 @@
-#pragma once
+export module Singleton;
+
+import stl.memory;
+import stl.core;
+import stl.threading;
 
 // Use this class only if you really need shared_ptr of singleton's instance.
 // "With Great Power Comes Great Responsibility" (c)
-template <class T>
-class SingletonAccessor
+export template <class T>
+ class SingletonAccessor
 {
     public:
         static std::shared_ptr<T> get_native();
 };
 
-template <typename T>
-class Singleton
+export template <typename T>
+ class Singleton
 {
         static T* ptr;
         static std::vector<char> memory;
@@ -79,6 +83,8 @@ class Singleton
             return instance.get();
         }
 };
+
+module: private;
 
 template <typename T>
 std::shared_ptr<T>  Singleton<T>::instance;

@@ -1,5 +1,5 @@
 #pragma once
-#include "patterns/Singleton.h"
+import Singleton;
 
 class Application : public Singleton<Application>
 {

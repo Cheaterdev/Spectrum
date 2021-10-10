@@ -257,7 +257,7 @@ void FileSystem::iterate_dirs(std::filesystem::path path, std::function<void(std
 
 std::string file::load_all()
 {
-    PROFILE(L"load_all");
+    //PROFILE(L"load_all");
     return provider->load_all(this);
 }
 template <typename TP>

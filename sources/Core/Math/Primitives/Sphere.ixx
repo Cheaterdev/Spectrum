@@ -62,6 +62,7 @@ private:
 	}
 };
 
+//BOOST_CLASS_EXPORT(Sphere)
 
 module: private;
 
@@ -78,4 +79,3 @@ float Sphere::GetSurfaceArea() const
 	return cfArea * radius * radius;
 }
 
-BOOST_CLASS_EXPORT(Sphere)

@@ -1,5 +1,5 @@
 #pragma once
-#include "patterns/Singleton.h"
+import Singleton;
 #include "GUI/GUI.h"
 
 struct Skin: public Singleton<Skin>

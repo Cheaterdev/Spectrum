@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Log/Log.h"
-#include "patterns/Singleton.h"
+import Singleton;
 #include "Tree/Tree.h"
-
+#include "Utils/utils.h"
 import Vectors;
 
 
@@ -205,13 +205,13 @@ public:
 
 
 #ifdef PROFILING
-#define PROFILE(x) auto UNIQUE_NAME = Profiler::get().start(x);
+#define PROFILE(x) auto SPECTRUM_UNIQUE_NAME = Profiler::get().start(x);
 #else
 #define PROFILE(x) ;
 #endif
 
 #ifdef PROFILING
-#define PROFILE_GPU(x) auto UNIQUE_NAME = Render::Eventer::thread_current?Render::Eventer::thread_current->start(x):Timer(nullptr, nullptr);
+#define PROFILE_GPU(x) auto SPECTRUM_UNIQUE_NAME = Render::Eventer::thread_current?Render::Eventer::thread_current->start(x):Timer(nullptr, nullptr);
 #else
 #define PROFILE_GPU(x) ;
 #endif

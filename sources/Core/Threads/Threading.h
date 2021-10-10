@@ -124,7 +124,7 @@ private:
 };
 
 #ifdef DEV
-	#define THREAD_SCOPE(x) volatile ThreadScope UNIQUE_NAME(ThreadType::x);
+	#define THREAD_SCOPE(x) volatile ThreadScope SPECTRUM_UNIQUE_NAME(ThreadType::x);
 	#define CHECK_THREAD(x) {ThreadScope::check_type(ThreadType::x);};
 #else
 	#define THREAD_SCOPE(x) ;

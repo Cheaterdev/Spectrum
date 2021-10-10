@@ -3,7 +3,10 @@
 #include "Utils/utils.h"
 #include "Serialization/serialization_defines.h"
 
+import ZipLib;
 import serialization;
+import stl.core;
+
 
 namespace DataPacker
 {
@@ -16,7 +19,7 @@ namespace DataPacker
 
 	std::string zip_to_string(ZipArchive::Ptr archive);
 
-	std::string load_all(istream& s);
+	std::string load_all(std::istream& s);
 
 };
 

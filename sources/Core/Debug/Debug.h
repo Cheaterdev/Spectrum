@@ -1,6 +1,6 @@
 #include <boost/stacktrace.hpp>
 
-#include "patterns/Singleton.h"
+import Singleton;
 #include "Log/Log.h"
 
 // #define LEAK_TEST_ENABLE

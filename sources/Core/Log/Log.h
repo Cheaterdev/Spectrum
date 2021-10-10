@@ -1,9 +1,12 @@
 #pragma once
 #pragma warning( push )
 #pragma warning( disable : 4512 )
-#include "patterns/Singleton.h"
+
 #include "Events/Events.h"
-#include "simple_archive.h"
+//#include "simple_archive.h"
+
+import Singleton;
+import simple_log_archive;
 //class LogListener;
 class LogBlock;
 

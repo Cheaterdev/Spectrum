@@ -1,12 +1,5 @@
 #include "pch.h"
-
 #include  "Log.h"
-
-#define BOOST_DECL_EXPORTS
-#define BOOST_WARCHIVE_SOURCE
-#define BOOST_ARCHIVE_DECL
-#include <boost/archive/impl/basic_xml_oarchive.ipp>
-#include <boost/archive/impl/xml_oarchive_impl.ipp>
 
 const std::string LogLevel<log_level_internal::level_none>::NAME = "NONE";
 const std::string LogLevel<log_level_internal::level_error>::NAME = "ERROR";

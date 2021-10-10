@@ -46,7 +46,7 @@ private:
 module: private;
 
 
-BOOST_CLASS_EXPORT(AABB)
+//BOOST_CLASS_EXPORT(AABB)
 
 
 AABB::AABB(Primitive* other) :min(other->get_min()), max(other->get_max())

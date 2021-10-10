@@ -1,7 +1,7 @@
 #pragma once
 #include <atlbase.h>
 
-#include "patterns/Singleton.h"
+import Singleton;
 #include "Serialization/serialization_defines.h"
 
 import serialization;

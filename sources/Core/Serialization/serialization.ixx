@@ -1,17 +1,20 @@
 module;
+#include "serialization_defines.h"
 export module serialization;
 export import boost.serialization;
-//import stl.core;
+import stl.core;
+import stl.threading;
+import crossguid;
 
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
-/*
+
 namespace boost
 {
 	namespace serialization
 	{
 
-		template<class Archive, class Type>
-		void save(Archive& archive, const std::shared_ptr<Type>& value, const unsigned int
+		export template<class Archive, class Type>
+		void save(Archive& archive, const std::shared_ptr<Type>& value, const unsigned int)
 		{
 			Type* data = value.get();
 			archive << NVP(data);
@@ -20,7 +23,7 @@ namespace boost
 		static std::map<void*, std::weak_ptr<void>> hash;
 		static std::mutex m;
 
-		template<class Archive, class Type>
+		export template<class Archive, class Type>
 		void load(Archive& archive, std::shared_ptr<Type>& value, const unsigned int)
 		{
 			Type* data;
@@ -37,14 +40,14 @@ namespace boost
 			else value = static_pointer_cast<Type>(info.lock());
 		}
 
-		template<class Archive, class Type>
+		export template<class Archive, class Type>
 		inline void serialize(Archive& archive, std::shared_ptr<Type>& value, const unsigned int version)
 		{
 			split_free(archive, value, version);
 		}
 
 
-		template<class Archive, class Type>
+		export template<class Archive, class Type>
 		void save(Archive& archive, const std::unique_ptr<Type>& value, const unsigned int)
 		{
 			Type* data = value.get();
@@ -53,7 +56,7 @@ namespace boost
 
 
 
-		template<class Archive, class Type>
+		export template<class Archive, class Type>
 		void load(Archive& archive, std::unique_ptr<Type>& value, const unsigned int )
 		{
 			Type* data;
@@ -65,13 +68,13 @@ namespace boost
 			//	archive & NVP(data);
 		}
 
-		template<class Archive, class Type>
+		export template<class Archive, class Type>
 		inline void serialize(Archive& archive, std::unique_ptr<Type>& value, const unsigned int version)
 		{
 			split_free(archive, value, version);
 		}
 
-		template<class Archive, class Type>
+		export template<class Archive, class Type>
 		inline void serialize(Archive& archive, std::span<Type>& values, const unsigned int version)
 		{
 			for (int i = 0; i < values.size(); i++)
@@ -85,7 +88,7 @@ namespace boost
 
 		namespace chrn = std::chrono;
 
-		template<class Archive, typename clock>
+		export template<class Archive, typename clock>
 		void load(Archive& ar, chrn::time_point<clock>& tp, unsigned)
 		{
 			chrn::milliseconds::rep millis;
@@ -93,21 +96,21 @@ namespace boost
 			tp = chrn::time_point<clock>(chrn::milliseconds(millis));
 		}
 
-		template<class Archive, typename clock>
+		export template<class Archive, typename clock>
 		void save(Archive& ar, chrn::time_point<clock> const& tp, unsigned)
 		{
 			chrn::milliseconds::rep millis = chrn::duration_cast<chrn::milliseconds>(tp.time_since_epoch()).count();
 			ar& NVP(millis);
 		}
 
-		template<class Archive, typename clock>
+		export template<class Archive, typename clock>
 		inline void serialize(Archive& ar, std::chrono::time_point<clock>& tp, unsigned version)
 		{
 			boost::serialization::split_free(ar, tp, version);
 		}
 
 
-		template<class Archive>
+		export template<class Archive>
 		inline void serialize(Archive& ar, Guid& g, unsigned version)
 		{
 			if constexpr (Archive::is_loading::value)
@@ -126,4 +129,3 @@ namespace boost
 		}
 	}
 }
-*/

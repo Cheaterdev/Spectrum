@@ -1,10 +1,16 @@
 #pragma once
 
+import stl.core;
+#include <magic_enum.hpp>
+#include <crossguid/guid.hpp>
+
+using Guid = xg::Guid;
+
 #define STRINGIZE(x) #x
 
-#define MERGE_(a,b)  a##b
-#define LABEL_(a) MERGE_(__timer__, a)
-#define UNIQUE_NAME LABEL_(__LINE__)
+#define SPECTRUM_MERGE_(a,b)  a##b
+#define SPECTRUM_LABEL_(a) SPECTRUM_MERGE_(__timer__, a)
+#define SPECTRUM_UNIQUE_NAME SPECTRUM_LABEL_(__LINE__)
 
 #define CACHE_ALIGN(x) __declspec(align(x))
 

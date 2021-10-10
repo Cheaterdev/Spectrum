@@ -96,6 +96,10 @@ namespace Events
 	template<class T>
 	class Event : public prop_handler
 	{
+	public:
+		using func_type = std::function<void(T)>;
+
+	private:
 		//	using FUNC  =std::function<void)>
 	//	std::vector<std::shared_ptr<std::function<void(T)>>>handlers;
 		std::vector<prop_t_helper<T>*> i_helpers;
@@ -105,7 +109,7 @@ namespace Events
 	public:
 		Runner* runner = nullptr;
 		std::function<void(std::function<void(T)> f)> default_state;
-
+		
 		void operator=(std::function<void(T)> func)
 		{
 			register_handler(nullptr, func);

@@ -65,5 +65,5 @@ void Primitive::set(Primitive*, mat4x4&)
 {}
 
 
-BOOST_CLASS_EXPORT(Primitive)
+//BOOST_CLASS_EXPORT(Primitive)
 

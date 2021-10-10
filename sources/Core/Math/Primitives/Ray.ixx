@@ -56,4 +56,4 @@ inline bool Ray::intersect(Plane& p, vec3& res)
 inline Ray::Ray() = default;
 
 
-BOOST_CLASS_EXPORT(Ray)
+//BOOST_CLASS_EXPORT(Ray)

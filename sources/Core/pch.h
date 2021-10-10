@@ -57,13 +57,13 @@ using namespace std;
 namespace ranges = std::ranges;
 namespace view = ranges::views;
 
-#include "crc32c/crc32c.h"
+
 
 #include <crossguid/guid.hpp>
 
 using Guid = xg::Guid;
 
-#include <magic_enum.hpp>
+
 
 #include <boost/stacktrace.hpp>
 #include <boost/lockfree/spsc_queue.hpp>
@@ -82,9 +82,6 @@ using Guid = xg::Guid;
 
 #define BOOST_PREDEF_DETAIL_ENDIAN_COMPAT_H
 
-
-#include "ZipFile.h"
-#include "streams/memstream.h"
 
 #include <ppltasks.h>
 #include <ppl.h>

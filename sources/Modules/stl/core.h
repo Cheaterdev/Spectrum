@@ -12,12 +12,14 @@
 #include <vector>
 #include <typeinfo>
 #include <algorithm>
-#include <fstream>
+
 #include <map>
 #include <unordered_map>
 #include <set>
 #include <unordered_set>
 #include <sstream>
+#include <fstream>
+#include <istream>
 #include <atomic>
 #include <type_traits>
 #include <queue>

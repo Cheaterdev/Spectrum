@@ -146,5 +146,5 @@ std::shared_ptr<Primitive> Frustum::clone()
 	return std::shared_ptr<Primitive>(new Frustum(*this));
 };
 
-BOOST_CLASS_EXPORT(Frustum)
+//BOOST_CLASS_EXPORT(Frustum)
 

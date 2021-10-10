@@ -207,7 +207,7 @@ namespace Spectrum
             conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
 
 			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
-
+			conf.AddPublicDependency<ZipLib>(target);
         }
     }
 	
@@ -232,7 +232,7 @@ namespace Spectrum
             conf.LibraryFiles.Add("version.lib");
 			
 			conf.AddPublicDependency<Modules>(target);
-			conf.AddPublicDependency<ZipLib>(target);
+		
         }
     }
 
