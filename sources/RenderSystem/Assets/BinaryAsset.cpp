@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "pch_render.h"
 #include "BinaryAsset.h"
 
 BOOST_CLASS_EXPORT(BinaryAsset);

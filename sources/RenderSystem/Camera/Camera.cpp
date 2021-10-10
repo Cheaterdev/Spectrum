@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "pch_render.h"
 #include "camera.h"
 
 void camera::update(float2 offset )

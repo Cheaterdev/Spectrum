@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "pch_dx.h"
 HRESULT test(HRESULT hr, std::string str)
 {
 	//	if (FAILED(hr))

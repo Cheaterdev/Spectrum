@@ -1,6 +1,6 @@
 // CFW1ColorRGBAInterface.cpp
 
-#include "pch.h"
+#include "pch_dx.h"
 
 #include "CFW1ColorRGBA.h"
 

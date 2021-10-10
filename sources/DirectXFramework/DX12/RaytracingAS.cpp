@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "pch_dx.h"
 #include "RayTracingAS.h"
 #include "Queue.h"
 

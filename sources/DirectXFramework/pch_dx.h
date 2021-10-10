@@ -1,8 +1,8 @@
 #pragma once
-#include "../Core/pch.h"
+#include "pch_core.h"
 
 #include "d3dx12.h"
-#include "dxc/dxcapi.use.h"
+
 #include <wrl.h>
 using namespace Microsoft::WRL;
 

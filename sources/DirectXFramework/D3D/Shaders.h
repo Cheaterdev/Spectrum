@@ -1,5 +1,6 @@
 #pragma once
 #include "FileSystem/FileSystem.h"
+#include "dxc/dxcapi.use.h"
 
 #ifndef D3DCOMPILE_DEBUG
 #define D3DCOMPILE_DEBUG                          (1 << 0)

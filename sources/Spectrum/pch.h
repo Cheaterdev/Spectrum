@@ -2,7 +2,7 @@
 #pragma once
 #define ALTERNATIVE_SCHEDULER
 
-#include "../Core/pch.h"
+#include "pch_core.h"
 
-#include "../RenderSystem/pch.h"
+#include "pch_render.h"
 

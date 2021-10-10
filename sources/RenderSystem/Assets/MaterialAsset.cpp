@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "pch_render.h"
 #include "Assets/AssetRenderer.h"
 
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MaterialAsset>);

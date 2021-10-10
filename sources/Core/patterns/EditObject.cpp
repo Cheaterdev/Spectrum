@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "pch_core.h"
 #include "EditObject.h"
 
 import stl.threading;

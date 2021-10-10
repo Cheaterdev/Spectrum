@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../DirectXFramework/pch.h"
+#include "pch_dx.h"
 
 
 namespace Render

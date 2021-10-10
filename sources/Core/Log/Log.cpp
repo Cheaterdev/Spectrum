@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "pch_core.h"
 #include  "Log.h"
 
 const std::string LogLevel<log_level_internal::level_none>::NAME = "NONE";

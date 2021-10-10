@@ -228,8 +228,8 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-            conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";
+           // conf.PrecompHeader = "pch.h";
+           // conf.PrecompSource = "pch.cpp";
 
            // conf.LibraryFiles.Add("Dbghelp.lib");
             conf.LibraryFiles.Add("Onecore.lib");
@@ -253,8 +253,8 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-            conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";
+           // conf.PrecompHeader = "pch.h";
+          //  conf.PrecompSource = "pch.cpp";
 
 
             conf.LibraryFiles.Add("dxgi.lib");
@@ -298,8 +298,8 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-            conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";
+           // conf.PrecompHeader = "pch.h";
+          //  conf.PrecompSource = "pch.cpp";
 
             conf.AddPublicDependency<DirectXFramework>(target);
         }
@@ -343,8 +343,8 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-            conf.PrecompHeader = "pch.h";
-            conf.PrecompSource = "pch.cpp";
+            //conf.PrecompHeader = "pch.h";
+            //conf.PrecompSource = "pch.cpp";
 
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
