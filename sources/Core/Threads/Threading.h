@@ -4,6 +4,8 @@ import stl.threading;
 import stl.core;
 import stl.memory;
 
+import windows;
+
 #ifdef _WIN32
 const DWORD MS_VC_EXCEPTION = 0x406D1388;
 

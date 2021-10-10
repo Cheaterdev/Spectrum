@@ -4,6 +4,8 @@
 
 import stl.core;
 import stl.threading;
+import windows;
+
 
 template<class T, UINT part_count>
 class NonCopyableFastIndexer

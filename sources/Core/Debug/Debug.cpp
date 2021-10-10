@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Exceptions.h"
-#include <DbgHelp.h>
 
 namespace Exceptions
 {

@@ -3,6 +3,9 @@
 #include "serialization_archives.h"
 #include "serialization_defines.h"
 
+import Utils;
+import crc32;
+
 class Serializer
 {
 
@@ -318,7 +321,10 @@ class Hasher
 {
 public:
 
-	static std::string hash(std::string_view);
+	static std::string hash(std::string_view str)
+	{
+		return to_string(crc32(str));
+	}
 
 	template<NonString T>
 	static std::string hash(const T& obj)

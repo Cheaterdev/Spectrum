@@ -89,13 +89,16 @@ namespace Spectrum
 			conf.Defines.Add("BOOST_NO_USER_CONFIG");
 			conf.Defines.Add("BOOST_ENDIAN_DEPRECATED_NAMES");
 			conf.Defines.Add("BOOST_ALL_NO_LIB");
+			conf.Defines.Add("BOOST_NO_CXX11_NOEXCEPT");
 			
 			conf.Defines.Add("_SCL_SECURE_NO_WARNINGS");
             conf.Defines.Add("_CRT_SECURE_NO_WARNINGS");
             conf.Defines.Add("NOMINMAX");
             conf.Defines.Add("_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING");
        
-  
+			conf.Defines.Add("WIN32_LEAN_AND_MEAN");
+            conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
+            
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106")); //module reference issues
 
             if (target.Mode == Mode.Dev)
