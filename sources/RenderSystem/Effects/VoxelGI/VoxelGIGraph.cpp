@@ -1319,7 +1319,7 @@ void VoxelGI::generate(Graph& graph)
 
 	voxel_info.GetMin().xyz = min;
 	voxel_info.GetSize().xyz = size;
-	voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z = max(200.0f, voxel_info.GetSize().max_element());
+	voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z = std::max(200.0f, voxel_info.GetSize().max_element());
 
 	voxel_info.GetVoxel_tiles_count().xyz = tex_lighting.tex_result->get_tiles_count(0);
 	voxel_info.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();

@@ -34,7 +34,7 @@ class AssetRenderer : public Singleton<AssetRenderer>
 		
 		AssetRenderer();
 
-        mutex lock;
+        std::mutex lock;
 		std::shared_ptr<SSGI> ssgi;
 		std::shared_ptr<SkyRender> sky;
 		std::shared_ptr<Render::OVRContext> vr_context ;

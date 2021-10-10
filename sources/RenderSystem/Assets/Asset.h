@@ -210,14 +210,14 @@ class AssetReference : public AssetReferenceBase
 					auto storage = AssetManager::get().get_storage(guid);
 
 					if (!storage)
-						throw exception("cant load reference, no asset storage");
+						throw std::exception("cant load reference, no asset storage");
 					if (!storage->is_loaded())
 						Log::get() << "UNWANTED BEHAVIOUR FOR " << "->" << convert(storage->get_name()) << Log::endl;
 
 					auto ass = storage->get_asset();
 
 					if (!ass)
-						throw exception("cant load reference");
+						throw std::exception("cant load reference");
 
 					asset = ass->get_ptr<T>();
 					base_asset = asset;
@@ -390,11 +390,11 @@ public:
 		virtual void save() override;
 
 		virtual void reload_resource() {};
-		virtual void load(istream&& s)
+		virtual void load(std::istream&& s)
 		{
 		}
 
-		virtual void save(ostream&& s)
+		virtual void save(std::ostream&& s)
 		{
 		}
 	private:

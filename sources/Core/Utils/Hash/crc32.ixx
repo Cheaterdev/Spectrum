@@ -1,6 +1,9 @@
-#pragma once
+export module crc32;
 
-import crc32;
+import crc32c;
+
+export
+{
 
 static constexpr unsigned int crc_32_tab[] = {
 	0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -47,6 +50,9 @@ static constexpr unsigned int crc_32_tab[] = {
 	0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94,
 	0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d };
 
+
+
+
 constexpr unsigned int crc32_helper(const char* v, std::size_t c,
 	unsigned int crc) {
 	return c == 0 ?
@@ -55,16 +61,19 @@ constexpr unsigned int crc32_helper(const char* v, std::size_t c,
 			crc_32_tab[((crc) ^ (v[0])) & 0xff] ^ ((crc) >> 8));
 }
 
-constexpr unsigned int operator "" _crc32(const char* v, std::size_t c) {
-	return crc32_helper(v, c, 0xFFFFFFFF);
-}
 
-inline unsigned int crc32(std::string_view s) {
-	return crc32c::Crc32c(s);
-}
+	constexpr unsigned int operator "" _crc32(const char* v, std::size_t c) {
+		return crc32_helper(v, c, 0xFFFFFFFF);
+	}
+
+	unsigned int crc32(std::string_view s) {
+		return crc32c::Crc32c(s);
+	}
 
 
-inline size_t HashIterate(size_t Next, size_t CurrentHash = 2166136261U)
-{
-	return 16777619U * CurrentHash ^ Next;
+	size_t HashIterate(size_t Next, size_t CurrentHash = 2166136261U)
+	{
+		return 16777619U * CurrentHash ^ Next;
+	}
+
 }

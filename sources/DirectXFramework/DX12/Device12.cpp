@@ -238,11 +238,6 @@ namespace DX12
 				IID_PPV_ARGS(&m_device)
 			);
 		}
-		catch (_com_error  error)
-		{
-			Log::get() << error.ErrorMessage() << Log::endl;
-
-		}
 		catch (...)
 		{
 			Log::get() << "*** Unhandled Exception ***" << Log::endl;

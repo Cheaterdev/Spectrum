@@ -82,7 +82,7 @@ public:
 	template<class T>
 	static std::string serialize(const T& object, bool compress = false)
 	{
-		ostringstream stream(ios::binary | ios::out);
+		std::ostringstream stream(std::ios::binary | std::ios::out);
 		serialization_oarchive oa(stream);
 
 		try
@@ -112,7 +112,7 @@ public:
 	template<class T>
 	static std::string serialize_simple(const T& object)
 	{
-		ostringstream stream(ios::binary | ios::out);
+		std::ostringstream stream(std::ios::binary | std::ios::out);
 		serialization_oarchive oa(stream);
 
 		try
@@ -151,7 +151,7 @@ public:
 	}
 
 	template<class T>
-	static std::shared_ptr<T> deserialize(istream& s)
+	static std::shared_ptr<T> deserialize(std::istream& s)
 	{
 		try
 		{
@@ -187,7 +187,7 @@ public:
 	}
 
 	template<class T>
-	static void deserialize_simple(istream& data, T& obj)
+	static void deserialize_simple(std::istream& data, T& obj)
 	{
 		//    if (data.size() < sizeof(unsigned long))
 //return;
@@ -248,9 +248,9 @@ public:
 };
 
 template<class T>
-std::string to_string(T& elem)
+std::string to_string(const T& elem)
 {
-	stringstream s;
+	std::stringstream s;
 	s << elem;
 	return s.str();
 }

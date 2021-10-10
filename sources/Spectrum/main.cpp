@@ -1261,7 +1261,7 @@ protected:
 
 		main_window = nullptr;
 
-		std::this_thread::sleep_for(100ms);
+		std::this_thread::sleep_for(100_ms);
 		scheduler::reset();
 		//
 

@@ -1,6 +1,10 @@
 #pragma once
 #include "Patterns/IdGenerator.h"
 
+
+import stl.core;
+import stl.threading;
+
 template<class T, UINT part_count>
 class NonCopyableFastIndexer
 {
@@ -58,7 +62,7 @@ class StateContext;
 class ContextGenerator
 {
 	IdGenerator<> generator;
-	atomic_uint64_t global_id;
+	std::atomic_uint64_t global_id;
 public:
 	
 	void generate(StateContext * context);

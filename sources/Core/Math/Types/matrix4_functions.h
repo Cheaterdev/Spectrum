@@ -117,14 +117,14 @@ bool inverse() requires(matrix_type::N == 4 && matrix_type::M == 4)
 matrix& transpose()requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	// row 1
-	swap(matrix_type::a12, matrix_type::a21);
-	swap(matrix_type::a13, matrix_type::a31);
-	swap(matrix_type::a14, matrix_type::a41);
+	std::swap(matrix_type::a12, matrix_type::a21);
+	std::swap(matrix_type::a13, matrix_type::a31);
+	std::swap(matrix_type::a14, matrix_type::a41);
 	// row 2
-	swap(matrix_type::a23, matrix_type::a32);
-	swap(matrix_type::a24, matrix_type::a42);
+	std::swap(matrix_type::a23, matrix_type::a32);
+	std::swap(matrix_type::a24, matrix_type::a42);
 	// row 3
-	swap(matrix_type::a34, matrix_type::a43);
+	std::swap(matrix_type::a34, matrix_type::a43);
 	return *this;
 }
 

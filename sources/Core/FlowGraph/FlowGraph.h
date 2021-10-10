@@ -3,7 +3,7 @@
 #include "Serialization/serialization_defines.h"
 #include "Data/Data.h"
 #include "Math/Math.h"
-#include "Utils/Hash/crc32.h"
+import crc32;
 
 import serialization;
 

@@ -335,7 +335,7 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 		memcpy(infoLog.data(), error->GetBufferPointer(), error->GetBufferSize());
 		infoLog[error->GetBufferSize()] = 0;
 
-		string errorMsg = "Shader Compiler Error:\n";
+		std::string errorMsg = "Shader Compiler Error:\n";
 		errorMsg += file_name + "\n";
 		errorMsg.append((infoLog));
 		Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;

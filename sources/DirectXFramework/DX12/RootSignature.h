@@ -189,7 +189,7 @@ namespace DX12
                 parameters.erase(i);
             }
 
-            const vector<D3D12_STATIC_SAMPLER_DESC>& samplers() const
+            const std::vector<D3D12_STATIC_SAMPLER_DESC>& samplers() const
             {
                 return samplers_map;
             }

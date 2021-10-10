@@ -2,6 +2,10 @@
 
 #include "Threads/Threading.h"
 
+
+import stl.threading;
+import stl.core;
+
 template<class LockPolicy = Thread::Lockable>
 class IdGenerator
 {

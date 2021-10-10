@@ -939,7 +939,7 @@ void generate_include_list(const Parsed& parsed)
 
 	{
 		my_stream stream(cpp_path, "enums.h");
-		stream << R"(#include <Utils/Hash/crc32.h>)" << std::endl;
+		stream << R"(import crc32;)" << std::endl;
 
 		stream << "enum class Layouts: int" << std::endl;
 

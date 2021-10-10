@@ -5,6 +5,9 @@
 #include "Events/Events.h"
 //#include "simple_archive.h"
 
+import stl.threading;
+import stl.core;
+import stl.memory;
 import Singleton;
 import simple_log_archive;
 //class LogListener;

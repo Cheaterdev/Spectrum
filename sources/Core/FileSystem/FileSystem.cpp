@@ -3,6 +3,11 @@
 #include "Threads/Scheduler.h"
 #include "FileSystem.h"
 
+import Utils;
+import stl.core;
+
+
+
 std::string native_file_provider::load_all(file* info)
 {
     std::string result;
@@ -54,14 +59,14 @@ void native_file_provider::on_change(const std::filesystem::path& path, std::fun
 			
 			if (handle == INVALID_HANDLE_VALUE)
 			{
-				std::this_thread::sleep_for(2000ms);
+				std::this_thread::sleep_for(2000_ms);
 				continue;
 			}
 
             while (thread_pool::is_good() && WAIT_OBJECT_0 == WaitForSingleObject(handle, 200))
             {
                 // wait while os make file accessable
-                std::this_thread::sleep_for(100ms);
+                std::this_thread::sleep_for(100_ms);
                 f();
                 break;
             }
@@ -92,11 +97,11 @@ std::shared_ptr<file> native_file_provider::get_file(std::filesystem::path file_
 
     return result;
 }
-std::shared_ptr<istream> native_file_provider::create_stream(std::filesystem::path file_name)
+std::shared_ptr<std::istream> native_file_provider::create_stream(std::filesystem::path file_name)
 {
-	return  std::shared_ptr<istream>(new ifstream(file_name.generic_wstring(), ios::binary), [](istream* str) {
+	return  std::shared_ptr<std::istream>(new std::ifstream(file_name.generic_wstring(), std::ios::binary), [](std::istream* str) {
 	//	Log::get() << "istream deleter" << Log::endl;
-		((ifstream*)str)->close();
+		((std::ifstream*)str)->close();
 		delete str; 
 	}); //std::shared_ptr<istream> stream;
 }

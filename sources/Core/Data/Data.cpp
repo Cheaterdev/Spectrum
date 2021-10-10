@@ -47,13 +47,13 @@ namespace DataPacker
 		return s.str();
 	}
 
-	std::string load_all(istream& s)
+	std::string load_all(std::istream& s)
 	{
 		std::string result;
-		s.seekg(0, ios::end);
+		s.seekg(0, std::ios::end);
 		auto size = UINT(s.tellg());
 		result.resize(size);
-		s.seekg(0, ios::beg);
+		s.seekg(0, std::ios::beg);
 		s.read(const_cast<char*>(result.data()), result.size());
 		//memcpy(reinterpret_cast<char*>(result.data()),s.)
 		return std::move(result);

@@ -1,6 +1,8 @@
 #include "pch.h"
 #include  "Log.h"
 
+#include <comdef.h>
+
 const std::string LogLevel<log_level_internal::level_none>::NAME = "NONE";
 const std::string LogLevel<log_level_internal::level_error>::NAME = "ERROR";
 const std::string LogLevel<log_level_internal::level_warning>::NAME = "WARNING";
@@ -71,7 +73,7 @@ Log& LogBlock::operator<<(const Log::endline&)
     return log << *this;
 }
 
-LogBlock& LogBlock::operator<<(string_view smth)
+LogBlock& LogBlock::operator<<(std::string_view smth)
 {
     if (need_logging())
         data->s << smth;
@@ -79,7 +81,7 @@ LogBlock& LogBlock::operator<<(string_view smth)
     return (*this);
 }
 
-LogBlock& LogBlock::operator<<(wstring_view smth)
+LogBlock& LogBlock::operator<<(std::wstring_view smth)
 {
     if (need_logging())
         data->s << convert(smth);
@@ -136,7 +138,7 @@ void FileTXTLogger::on_log(const LogBlock& log)
 FileTXTLogger::FileTXTLogger(std::string file_name /*= "log.txt"*/)
 {
 //	DeleteFile(file_name.c_str());
-    log_file.open(file_name,  ios::trunc);
+    log_file.open(file_name,  std::ios::trunc);
 }
 
 void VSOutputLogger::on_log(const LogBlock& log)

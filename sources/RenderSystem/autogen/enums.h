@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Utils/Hash/crc32.h>
+import crc32;
 import Utils;
 #include "utils/utils_macros.h"
 

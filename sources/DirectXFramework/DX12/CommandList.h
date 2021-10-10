@@ -713,7 +713,7 @@ namespace DX12
 
 
 	public:
-		using ptr = shared_ptr<CommandList>;
+		using ptr = std::shared_ptr<CommandList>;
 	protected:
 		CommandList() = default;
 		friend class Queue;

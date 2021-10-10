@@ -1,5 +1,8 @@
 #include "pch.h"
 #include "EditObject.h"
+
+import stl.threading;
+
 void EditObject::save()
 {
     on_save();

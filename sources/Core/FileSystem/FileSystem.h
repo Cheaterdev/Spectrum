@@ -3,7 +3,7 @@
 #include "Serialization/Serializer.h"
 
 import stl.filesystem;
-
+import stl.memory;
 struct file;
 
 class file_provider
@@ -14,7 +14,7 @@ public:
 
 	virtual std::string load_all(file*) = 0;
 	virtual std::shared_ptr<file> get_file(std::filesystem::path) = 0;
-	virtual std::shared_ptr<istream> create_stream(std::filesystem::path) = 0;
+	virtual std::shared_ptr<std::istream> create_stream(std::filesystem::path) = 0;
 
 	virtual bool save_data(std::filesystem::path, std::string) { return false; };
 
@@ -38,7 +38,7 @@ public:
 struct file
 {
 	std::string load_all();
-	std::shared_ptr<istream> get_new_stream()
+	std::shared_ptr<std::istream> get_new_stream()
 	{
 		std::filesystem::path full_path(std::filesystem::current_path());
 	//	Log::get() << "Current path is : " << full_path.generic_string() << Log::endl;
@@ -101,7 +101,7 @@ public:
 	virtual void iterate(std::filesystem::path path, std::function<void(file::ptr)> f, bool recursive);
 	virtual void iterate_dirs(std::filesystem::path, std::function<void(std::filesystem::path)> f, bool recursive);
 	virtual void on_change(const std::filesystem::path&, std::function<void()>) override;
-	virtual std::shared_ptr<istream> create_stream(std::filesystem::path);
+	virtual std::shared_ptr<std::istream> create_stream(std::filesystem::path);
 
 	virtual ~native_file_provider()
 	{

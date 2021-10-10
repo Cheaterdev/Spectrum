@@ -16,6 +16,17 @@ export
 	constexpr std::size_t operator "" _gb(unsigned long long int x) { return x * 1024 * 1024 * 1024; }
 
 
+
+	constexpr std::chrono::milliseconds operator ""_ms(unsigned long long ms)
+	{
+		return std::chrono::milliseconds(ms);
+	}
+	constexpr std::chrono::duration<long double, std::milli> operator ""_ms(long double ms)
+	{
+		return std::chrono::duration<long double, std::milli>(ms);
+	}
+
+
 	template <class T> concept NonString = !std::is_convertible_v<T, std::string_view> && !std::is_convertible_v<T, std::wstring_view>;
 	template<typename T> concept HaveEqual = requires (T a, T b) { a == b; };
 
