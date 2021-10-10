@@ -6,8 +6,8 @@
 #include "Concepts.h"
 #include "D3D\Shaders.h"
 #include "DX12/PipelineState.h"
-#include "utils/utils.h"
-
+import Utils;
+#include "utils/utils_macros.h"
 
 import ppl;
 using namespace concurrency;

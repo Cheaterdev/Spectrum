@@ -1,5 +1,5 @@
 module;
-///#include "Utils/utils.h"
+///import Utils;
 
 export module simple_log_archive;
 

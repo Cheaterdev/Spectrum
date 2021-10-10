@@ -1,7 +1,8 @@
 #pragma once
 
 #include <Utils/Hash/crc32.h>
-#include "Utils/utils.h"
+import Utils;
+#include "utils/utils_macros.h"
 
 enum class Layouts: int
 {

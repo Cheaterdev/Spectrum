@@ -1,6 +1,7 @@
 #pragma once
 #include "Debug/Exceptions.h"
-#include "Utils/utils.h"
+import Utils;
+#include "utils/utils_macros.h"
 #include "Serialization/serialization_defines.h"
 
 import ZipLib;

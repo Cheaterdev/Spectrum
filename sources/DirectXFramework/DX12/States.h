@@ -1,6 +1,6 @@
 #pragma once
-#include "Utils/utils.h"
-
+import Utils;
+#include "utils/utils_macros.h"
 #include "Patterns/StateContext.h"
 #include "States.h"
 
