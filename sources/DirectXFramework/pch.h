@@ -1,32 +1,13 @@
 #pragma once
 #include "../Core/pch.h"
 
-// DirectX includes
-#include <d3dcompiler.h>
-
-#include <d3d12.h>
-#include <dxgi1_5.h>
+#include "d3dx12.h"
+#include "dxc/dxcapi.use.h"
 #include <wrl.h>
-#include <pix.h>
 using namespace Microsoft::WRL;
 
-#include "d3dx12.h"
-
-#include <DirectXTex.h>
-
-#include "dxc/dxcapi.use.h"
-
-//#include "../3rdparty/DirectXTex/ScreenGrab/ScreenGrab.h"
-
 HRESULT device_fail();
-
 HRESULT test(HRESULT hr, std::string str = "");
-
-
-
-
-
-
 
 #ifdef  DEBUG
 #define TEST(x)\

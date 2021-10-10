@@ -1,4 +1,9 @@
 #pragma once
+
+import d3d12;
+import windows;
+using namespace Microsoft::WRL;
+
 namespace DX12
 {
 	class Device;

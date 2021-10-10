@@ -231,8 +231,8 @@ namespace Spectrum
             conf.PrecompHeader = "pch.h";
             conf.PrecompSource = "pch.cpp";
 
-            conf.LibraryFiles.Add("Dbghelp.lib");
-            conf.LibraryFiles.Add("version.lib");
+           // conf.LibraryFiles.Add("Dbghelp.lib");
+            conf.LibraryFiles.Add("Onecore.lib");
 			
 			conf.AddPublicDependency<Modules>(target);
 		

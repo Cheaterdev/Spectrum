@@ -1350,8 +1350,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 {
 	setlocale(LC_ALL, "");
 	CoInitialize(NULL);
-	static	HANDLE process = GetCurrentProcess();
-	SymInitialize(process, NULL, TRUE);
 
 
 
@@ -1425,6 +1423,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	CounterManager::get().print();
 	EVENT("end");
 	CoUninitialize();
-	SymCleanup(process);
+
 	return result_code;
 }
