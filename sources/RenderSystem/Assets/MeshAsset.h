@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Events/Tasks.h"
+import Tasks;
 #include "Assets/MaterialAsset.h"
 #include "Scene/SceneObject.h"
 

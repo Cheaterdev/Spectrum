@@ -1,5 +1,5 @@
 #pragma once
-#include "Events/Tasks.h"
+import Tasks;
 #include "GUI/Elements/ScrollContainer.h"
 
 namespace GUI

@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "TextureAsset.h"
 #include "Helpers/MipMapGeneration.h"
-#include "Events/Tasks.h"
+import Tasks;
 #include "Context/Context.h"
 
 BOOST_CLASS_EXPORT(TextureAsset);

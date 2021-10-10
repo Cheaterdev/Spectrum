@@ -1,6 +1,6 @@
 #include "pch_render.h"
 #include "Asset.h"
-#include "Events/Tasks.h"
+import Tasks;
 
 import ppl;
 using namespace concurrency;
