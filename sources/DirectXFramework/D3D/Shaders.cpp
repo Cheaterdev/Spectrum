@@ -231,7 +231,7 @@ public:
 		auto ppData = reinterpret_cast<const void*>(data->data());
 		auto pBytes = static_cast<unsigned int>(data->size());
 		includes.insert(std::move(data));
-		CComPtr<IDxcBlobEncoding> pEncodingIncludeSource;
+		ComPtr<IDxcBlobEncoding> pEncodingIncludeSource;
 		D3D12ShaderCompilerInfo::get().library->CreateBlobWithEncodingFromPinned((LPBYTE)ppData, pBytes, CP_ACP, &pEncodingIncludeSource);
 		*ppIncludeSource = pEncodingIncludeSource.Detach();
 		return S_OK;

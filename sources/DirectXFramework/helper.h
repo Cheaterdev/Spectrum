@@ -1,5 +1,4 @@
 #pragma once
-#include <atlbase.h>
 
 import Singleton;
 #include "Serialization/serialization_defines.h"

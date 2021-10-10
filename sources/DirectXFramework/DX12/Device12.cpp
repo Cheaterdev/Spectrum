@@ -186,7 +186,7 @@ namespace DX12
 		
 
 		ComPtr<ID3D12Debug> debugController;
-		CComPtr<ID3D12Debug1> spDebugController1;
+		ComPtr<ID3D12Debug1> spDebugController1;
 
 #ifdef DEV
 		//if(false)

@@ -178,7 +178,7 @@ namespace Fonts
         //   m.raw()[13] = offset.y / h;
         font->native_font->DrawGeometry(
             command_list,
-            geometry,
+            geometry.Get(),
             reinterpret_cast<FW1_RECTF*>(&clip_rect),
             m.raw(),
             flags | FW1_CLIPRECT
@@ -194,7 +194,7 @@ namespace Fonts
         geometry->Clear();
         font->native_font->AnalyzeString(command_list, str.c_str(),
                                          nullptr, size, reinterpret_cast<FW1_RECTF*>(&area),
-            color, flags | FW1_CLIPRECT/*| FW1_NOFLUSH*/, geometry);
+            color, flags | FW1_CLIPRECT/*| FW1_NOFLUSH*/, geometry.Get());
     }
 
     FontGeometry::FontGeometry()

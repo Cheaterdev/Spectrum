@@ -375,11 +375,11 @@ namespace DX12
 	class QueryHeap
 	{
 
-			CComPtr<ID3D12QueryHeap> heap;
+			ComPtr<ID3D12QueryHeap> heap;
 		public:
 			QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP);
 
-			CComPtr<ID3D12QueryHeap> get_native();
+			ComPtr<ID3D12QueryHeap> get_native();
 
 			using ptr = std::shared_ptr<QueryHeap>;
 	};

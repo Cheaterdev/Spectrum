@@ -2,6 +2,7 @@
 #include "Log/Log.h"
 #include "serialization_archives.h"
 #include "serialization_defines.h"
+
 class Serializer
 {
 

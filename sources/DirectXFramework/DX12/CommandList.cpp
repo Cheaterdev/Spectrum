@@ -191,7 +191,7 @@ namespace DX12
 
 	void Eventer::insert_time(QueryHeap& pQueryHeap, uint32_t QueryIdx)
 	{
-		compiler.EndQuery(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, QueryIdx);
+		compiler.EndQuery(pQueryHeap.get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, QueryIdx);
 	}
 
 	void Eventer::resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)> f)
@@ -199,7 +199,7 @@ namespace DX12
 		CommandList* list = static_cast<CommandList*>(this); // :(
 		auto info = list->read_data(NumQueries* sizeof(UINT64));
 		
-		compiler.ResolveQueryData(pQueryHeap.get_native(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_native().Get(), info.offset);
+		compiler.ResolveQueryData(pQueryHeap.get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_native().Get(), info.offset);
 		on_execute_funcs.emplace_back([info, f, NumQueries]() {
 
 			UINT64* data = reinterpret_cast<UINT64*>(info.get_cpu_data());
@@ -609,7 +609,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
-		list->ResolveQueryData(query_heap->get_native(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_native().Get(), info.offset);
+		list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_native().Get(), info.offset);
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{

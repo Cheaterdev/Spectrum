@@ -1,10 +1,9 @@
 #pragma once
 
 import stl.core;
-#include <magic_enum.hpp>
-#include <crossguid/guid.hpp>
+import magic_enum;
+import crossguid;
 
-using Guid = xg::Guid;
 
 #define STRINGIZE(x) #x
 

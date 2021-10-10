@@ -1,6 +1,11 @@
 #pragma once
 #include "../Profiling/Profiling.h"
 #include "Threads/Threading.h"
+#include <boost/lockfree/spsc_queue.hpp>
+
+
+import ppl;
+using namespace concurrency;
 
 enum class TaskPriority : int
 {

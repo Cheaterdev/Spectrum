@@ -2,6 +2,9 @@
 #include "Asset.h"
 #include "Events/Tasks.h"
 
+import ppl;
+using namespace concurrency;
+
 AssetManager::AssetManager()
 {
     has_worker = false;

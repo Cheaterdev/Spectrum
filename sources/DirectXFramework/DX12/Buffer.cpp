@@ -209,7 +209,7 @@ namespace DX12
 		heap->SetName(L"QueryHeap");
 	}
 
-	 CComPtr<ID3D12QueryHeap> DX12::QueryHeap::get_native()
+	 ComPtr<ID3D12QueryHeap> DX12::QueryHeap::get_native()
 	{
 		return heap;
 	}

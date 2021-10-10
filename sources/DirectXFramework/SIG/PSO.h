@@ -9,6 +9,9 @@
 #include "utils/utils.h"
 
 
+import ppl;
+using namespace concurrency;
+
 #define ALL_FORMATS \
 DXGI_FORMAT_UNKNOWN	,\
 DXGI_FORMAT_R32G32B32A32_TYPELESS,\

@@ -57,18 +57,6 @@ using namespace std;
 namespace ranges = std::ranges;
 namespace view = ranges::views;
 
-
-
-#include <crossguid/guid.hpp>
-
-using Guid = xg::Guid;
-
-
-
-#include <boost/stacktrace.hpp>
-#include <boost/lockfree/spsc_queue.hpp>
-//#include <boost/predef/other/endian.h>
-
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/array.hpp>
@@ -80,13 +68,7 @@ using Guid = xg::Guid;
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/export.hpp>
 
-#define BOOST_PREDEF_DETAIL_ENDIAN_COMPAT_H
 
-
-#include <ppltasks.h>
-#include <ppl.h>
-#include <agents.h>
-using namespace concurrency;
 
 HRESULT test(HRESULT hr, std::string str = "");
 
