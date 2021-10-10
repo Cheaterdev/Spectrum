@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Serialization/Serializer.h"
+
+import stl.filesystem;
+
 struct file;
 
 class file_provider
