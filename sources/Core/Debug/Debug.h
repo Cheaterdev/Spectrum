@@ -1,5 +1,5 @@
 import Singleton;
-#include "Log/Log.h"
+import Log;
 
 // #define LEAK_TEST_ENABLE
 #ifdef LEAK_TEST_ENABLE

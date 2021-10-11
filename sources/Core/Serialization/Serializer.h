@@ -1,11 +1,12 @@
 #pragma once
-#include "Log/Log.h"
+
 #include "serialization_archives.h"
 #include "serialization_defines.h"
-
+import Log;
 import Utils;
 import crc32;
 import boost.serialization;
+import Data;
 //import boost.archives;
 
 class Serializer

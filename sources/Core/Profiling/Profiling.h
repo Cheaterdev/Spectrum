@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Log/Log.h"
+import Log;
 import Singleton;
 
 import Utils;
@@ -158,7 +158,7 @@ public:
 	Events::Event<TimedBlock*> on_cpu_timer_start;
 	Events::Event<TimedBlock*> on_cpu_timer_end;
 	Events::Event<TimedBlock*> on_gpu_timer;
-	Events::Event<UINT64> on_frame;
+	Events::Event<std::uint64_t> on_frame;
 
 	Profiler() : TimedBlock(L"")
 	{

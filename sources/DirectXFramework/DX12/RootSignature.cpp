@@ -1,6 +1,6 @@
 #include "pch_dx.h"
 #include "RootSignature.h"
-#include "Log/Log.h"
+import Log;
 #include "Device12.h"
 namespace DX12
 {
