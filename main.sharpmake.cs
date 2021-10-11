@@ -21,7 +21,7 @@ namespace Spectrum
     [Fragment, Flags]
     public enum Mode
     {
-        Dev = 1,
+        Debug = 1,
         Profile = 2,
         Retail = 4
     }
@@ -56,11 +56,13 @@ namespace Spectrum
                 Platform = Platform.win64,
                 DevEnv = DevEnv.vs2019,
                 Optimization = Optimization.Release,
-                Mode = Mode.Dev | Mode.Profile | Mode.Retail
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail
             });
 
             CustomProperties.Add("VcpkgEnabled", "true");
             CustomProperties.Add("VcpkgEnableManifest", "true");
+			CustomProperties.Add("VcpkgTriplet", "x64-windows-static");
+			//CustomProperties.Add("VcpkgConfiguration", "Release");
         }
 
         [Configure]
@@ -79,7 +81,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.Linker.SubSystem.Windows);
             conf.Options.Add(Options.Vc.General.WindowsTargetPlatformVersion.Latest);
             conf.Options.Add(Options.Vc.Compiler.FunctionLevelLinking.Disable);
-            conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreadedDLL);
+            conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreaded);
             conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
@@ -101,7 +103,7 @@ namespace Spectrum
             
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106")); //module reference issues
 
-            if (target.Mode == Mode.Dev)
+            if (target.Mode == Mode.Debug)
             {
                 conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);
                 conf.Options.Add(Options.Vc.Compiler.Inline.Disable);
@@ -325,7 +327,8 @@ namespace Spectrum
 
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\SIGParser";
-
+   conf.Defines.Add("ANTLR4CPP_STATIC");
+         
         }
     }
 
@@ -379,7 +382,7 @@ namespace Spectrum
                 Platform = Platform.win64,
                 DevEnv = DevEnv.vs2019,
                 Optimization = Optimization.Release,
-                Mode = Mode.Dev | Mode.Profile | Mode.Retail
+                Mode = Mode.Debug | Mode.Profile | Mode.Retail
             });
         }
 
@@ -392,7 +395,7 @@ namespace Spectrum
 
             switch (target.Mode)
             {
-                case Mode.Dev: platformName += "Dev"; break;
+                case Mode.Debug: platformName += "Debug"; break;
                 case Mode.Retail: platformName += "Retail"; break;
                 case Mode.Profile: platformName += "Profile"; break;
                 default:

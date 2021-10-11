@@ -1,10 +1,10 @@
 #pragma once
 
 #include "Serialization/serialization_defines.h"
-#include "Data/Data.h"
+import Data;
 #include "Math/Math.h"
 import crc32;
-
+import Utils;
 import serialization;
 
 namespace FlowGraph

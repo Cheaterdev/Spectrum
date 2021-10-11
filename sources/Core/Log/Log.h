@@ -2,7 +2,7 @@
 #pragma warning( push )
 #pragma warning( disable : 4512 )
 
-#include "Data/Data.h"
+import Data;
 
 #include <fstream>
 //#include "simple_archive.h"
@@ -14,6 +14,8 @@ import Singleton;
 import simple_log_archive;
 import Events;
 import Utils;
+
+import windows;
 
 //class LogListener;
 class LogBlock;

@@ -1,5 +1,6 @@
 #pragma once
-#include "Data/Data.h"
+import Data;
+import stl.core;
 
 class Holder
 {

@@ -4,6 +4,7 @@ import Singleton;
 import d3d12;
 #include "Serialization/serialization_defines.h"
 
+#include "utils/utils_macros.h"
 import serialization;
 
 typedef ComPtr<IDXGISwapChain1>		DXGI_SwapChain;

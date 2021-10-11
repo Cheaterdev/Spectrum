@@ -3,6 +3,9 @@
 #include "Utils/Allocators/Allocators.h"
 #include "Math/Math.h"
 
+#include "utils/utils_macros.h"
+
+import Data;
 namespace DX12
 {
 	class CommandList;

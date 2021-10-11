@@ -1,5 +1,5 @@
 #pragma once
-#include "Data/Data.h"
+import Data;
 #include "../RenderSystem/autogen/enums.h"
 
 namespace DX12

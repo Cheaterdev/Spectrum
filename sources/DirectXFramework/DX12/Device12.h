@@ -1,9 +1,10 @@
 #pragma once
 
+#include "utils/utils_macros.h"
 #include "helper.h"
 #include "patterns/IdGenerator.h"
 #include "patterns/StateContext.h"
-#include "Data/Data.h"
+import Data;
 
 class GpuCrashTracker;
 

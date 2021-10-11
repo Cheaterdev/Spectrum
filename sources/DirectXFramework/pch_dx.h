@@ -2,9 +2,7 @@
 #include "pch_core.h"
 
 #include "d3dx12.h"
-
-#include <wrl.h>
-using namespace Microsoft::WRL;
+import d3d12;
 
 HRESULT device_fail();
 HRESULT test(HRESULT hr, std::string str = "");

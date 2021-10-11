@@ -1,11 +1,11 @@
 
 module;
-#include "Data/Data.h"
 #include "Serialization/serialization_defines.h"
 
 export module Events;
 
 import Vectors;
+import Data;
 import serialization;
 import my_unique_vector;
 

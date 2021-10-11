@@ -1342,7 +1342,7 @@ struct test
 	}
 } v;
 
-#include <DbgHelp.h>
+//#include <DbgHelp.h>
 int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	_In_opt_ HINSTANCE,
 	_In_ LPTSTR,

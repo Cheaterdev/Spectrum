@@ -1,9 +1,13 @@
 #pragma once
 
+
+#include "utils/utils_macros.h"
 #include "CommandListCompiler.h"
 #include "Patterns/StateContext.h"
 #include "Profiling/Profiling.h"
 #include "Threads/Threading.h"
+#include "Debug/Exceptions.h"
+
 
 #include "DX12/Fence.h"
 #include "DX12/IndirectCommand.h"

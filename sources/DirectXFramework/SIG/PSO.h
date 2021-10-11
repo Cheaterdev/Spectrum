@@ -1,5 +1,5 @@
 #pragma once
-#include "Data/Data.h"
+import Data;
 #include "Threads/Threading.h"
 #include "Profiling/Profiling.h"
 

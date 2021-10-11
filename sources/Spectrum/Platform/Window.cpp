@@ -15,7 +15,7 @@ void TrackMouse(HWND hwnd)
 }
 
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK MyWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     // Recover the pointer to our class, don't forget to type cast it back
     Window* winptr = (Window*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
@@ -40,7 +40,7 @@ void Window::InitWindow(int width, int height, LPCTSTR name)
     WNDCLASSEX wc = { 0 };
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_HREDRAW | CS_VREDRAW;
-    wc.lpfnWndProc = (WNDPROC)WndProc;
+    wc.lpfnWndProc = (WNDPROC)MyWndProc;
     wc.cbClsExtra = NULL;
     wc.cbWndExtra = NULL;
     wc.hInstance = GetModuleHandle(NULL);
