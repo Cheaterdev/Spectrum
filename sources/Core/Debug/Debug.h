@@ -1,5 +1,3 @@
-#include <boost/stacktrace.hpp>
-
 import Singleton;
 #include "Log/Log.h"
 

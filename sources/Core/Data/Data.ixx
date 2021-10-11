@@ -1,7 +1,5 @@
 module;
 
-#include "Debug/Exceptions.h"
-
 #include "utils/utils_macros.h"
 #include "Serialization/serialization_defines.h"
 
@@ -12,6 +10,8 @@ import serialization;
 
 import stl.core;
 import Utils;
+import Exceptions;
+
 export
 {
 

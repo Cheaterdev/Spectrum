@@ -6,7 +6,7 @@
 #include "Patterns/StateContext.h"
 #include "Profiling/Profiling.h"
 #include "Threads/Threading.h"
-#include "Debug/Exceptions.h"
+import Exceptions;
 
 
 #include "DX12/Fence.h"

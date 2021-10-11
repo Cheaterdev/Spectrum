@@ -63,7 +63,7 @@ AssetManager::~AssetManager()
 	
 
 	auto my_task = [this, asset]() {
-		SPECTRUM_TRY
+		try {
 		auto& preview = asset->holder->get_preview();
 
 		if (!preview || !preview->is_rt())
@@ -75,7 +75,8 @@ AssetManager::~AssetManager()
 
 		asset->update_preview(asset->holder->get_preview());
 		asset->holder->on_preview(asset->holder->get_preview());
-		SPECTRUM_CATCH
+		}
+		catch (const std::system_error& e) { Log::get() << Log::LEVEL_ERROR << e.what() << Log::endl; }
 	};
 
 	if (task_inited)
