@@ -1,8 +1,8 @@
 #pragma once
-#include "Patterns/StateContext.h"
-#include "Utils/Allocators/Allocators.h"
+import StateContext;
+import Allocators;
 #include "Math/Math.h"
-
+import Threading;
 #include "DX12/Descriptors.h"
 namespace DX12
 {

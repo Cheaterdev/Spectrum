@@ -37,7 +37,7 @@
 #include "Platform/Window.h"
 
 
-
+import Debug;
 using namespace FrameGraph;
 
 HRESULT device_fail()

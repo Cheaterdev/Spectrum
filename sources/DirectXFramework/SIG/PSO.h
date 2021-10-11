@@ -1,6 +1,6 @@
 #pragma once
 import Data;
-#include "Threads/Threading.h"
+import Threading;
 #include "Profiling/Profiling.h"
 
 import Concepts;

@@ -3,9 +3,9 @@
 
 #include "utils/utils_macros.h"
 #include "CommandListCompiler.h"
-#include "Patterns/StateContext.h"
+import StateContext;
 #include "Profiling/Profiling.h"
-#include "Threads/Threading.h"
+import Threading;
 import Exceptions;
 
 

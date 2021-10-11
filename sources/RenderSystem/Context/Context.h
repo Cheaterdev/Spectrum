@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Threads/Scheduler.h"
-#include "Patterns/Holdable.h"
+import Holdable;
 #include "FrameGraph/FrameGraph.h"
 
 #include "../RenderSystem/autogen/includes.h"

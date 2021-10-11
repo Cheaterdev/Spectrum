@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utils/Allocators/Allocators.h"
+import Allocators;
 #include "Math/Math.h"
 
 #include "utils/utils_macros.h"

@@ -2,6 +2,7 @@
 #include "Resource.h"
 #include "Device12.h"
 
+import Debug;
 namespace DX12
 {
 	TrackedResource::~TrackedResource()

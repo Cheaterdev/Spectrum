@@ -2,8 +2,8 @@
 
 #include "utils/utils_macros.h"
 #include "helper.h"
-#include "patterns/IdGenerator.h"
-#include "patterns/StateContext.h"
+import IdGenerator;
+import StateContext;
 import Data;
 
 class GpuCrashTracker;

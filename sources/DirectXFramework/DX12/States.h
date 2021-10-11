@@ -1,7 +1,7 @@
 #pragma once
 import Utils;
 #include "utils/utils_macros.h"
-#include "Patterns/StateContext.h"
+import StateContext;
 #include "States.h"
 
 #include "Device12.h"

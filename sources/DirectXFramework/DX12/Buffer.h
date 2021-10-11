@@ -1,5 +1,5 @@
 #pragma once
-#include "Utils/Allocators/Allocators.h"
+import Allocators;
 #include "Serialization/serialization_defines.h"
 
 #include "DX12/CommandList.h"

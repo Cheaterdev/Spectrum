@@ -7,7 +7,7 @@
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
 
-
+import Debug;
 namespace DX12
 {
 

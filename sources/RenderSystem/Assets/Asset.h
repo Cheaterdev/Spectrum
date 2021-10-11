@@ -1,6 +1,6 @@
 #pragma once
 
-#include "patterns/EditObject.h"
+import EditObject;
 
 #include "DX12/Texture.h"
 
