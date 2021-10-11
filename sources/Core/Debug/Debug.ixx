@@ -1,7 +1,13 @@
+export module Debug;
+
+import stl.core;
+import stl.threading;
 import Singleton;
 import Log;
 
-// #define LEAK_TEST_ENABLE
+export
+{
+
 #ifdef LEAK_TEST_ENABLE
 class LeakDetectorInstance;
 class LeakDetector : public Singleton<LeakDetector>
@@ -62,11 +68,6 @@ public:
 };
 
 #define LEAK_TEST(x) LeakDetectorInstance ___leak_tester = LeakDetectorInstance(#x);
-
-#else
-
-
-#define LEAK_TEST(x) ;
 
 #endif
 
@@ -145,6 +146,56 @@ public:
 		assert(prev == id);
 	}
 };
-#define THREAD_CHECKER std::atomic<std::thread::id> __checker_;
 
-#define ASSERT_SINGLETHREAD Checker __g__(__checker_);
+
+}
+
+
+module:private;
+
+
+#ifdef LEAK_TEST_ENABLE
+void LeakDetector::add(LeakDetectorInstance* e)
+{
+	instances.insert(e);
+	name_counters[e->name]++;
+
+	if (breaks.count(alloc_number) > 0)
+		assert(false);
+
+	e->alloc_number = alloc_number++;
+}
+
+void LeakDetector::remove(LeakDetectorInstance* e)
+{
+	name_counters[e->name]--;
+	instances.erase(e);
+}
+
+LeakDetector::~LeakDetector()
+{
+	Log::get() << "LEAKS COUNT: " << instances.size() << Log::endl;
+	OutputDebugStringA(("LEAKS COUNT: " + std::to_string(instances.size()) + "\n").c_str());
+	OutputDebugStringA("\n");
+
+	for (auto&& i : instances)
+	{
+		OutputDebugStringA("\n");
+		OutputDebugStringA(("-------------LEAK:" + std::to_string(i->alloc_number) + " \n" + i->stack + "\n").c_str());
+	}
+
+	OutputDebugStringA("\n");
+	OutputDebugStringA(("SUMMARY: " + std::to_string(instances.size()) + "\n").c_str());
+
+	for (auto&& i : name_counters)
+	{
+		if (i.second == 0) continue;
+
+		OutputDebugStringA("\n");
+		OutputDebugStringA((i.first + ": " + std::to_string(i.second) + "\n").c_str());
+	}
+}
+
+
+
+#endif

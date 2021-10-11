@@ -1,6 +1,8 @@
 #pragma once
-#include "Debug/Debug.h"
+import Debug;
 import Constants;
+import stl.core;
+import stl.threading;
 
 struct AllocationHandle;
 struct MemoryInfo

@@ -5,6 +5,7 @@
 
 #include "utils/utils_macros.h"
 
+import Log;
 import Data;
 namespace DX12
 {

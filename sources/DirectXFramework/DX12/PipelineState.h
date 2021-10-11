@@ -9,6 +9,7 @@
 #include "Device12.h"
 #include "Memory.h"
 
+import Singleton;
 bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
 std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
 

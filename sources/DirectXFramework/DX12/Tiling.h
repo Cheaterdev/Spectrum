@@ -2,6 +2,7 @@
 #include "Math/Math.h"
 #include "DX12/Memory.h"
 
+import Events;
 namespace DX12
 {
 	class ResourceHeap;
