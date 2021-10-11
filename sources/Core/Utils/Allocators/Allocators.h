@@ -3,8 +3,11 @@ import Debug;
 import Constants;
 import stl.core;
 import stl.threading;
+#include "Utils/utils_macros.h"
 
 struct AllocationHandle;
+
+
 struct MemoryInfo
 {
 	size_t offset;

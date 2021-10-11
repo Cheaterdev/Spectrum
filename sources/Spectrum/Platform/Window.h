@@ -1,4 +1,4 @@
-#include "Application/Application.h"
+import Application;
 #include "GUI/GUI.h"
 
 #include "DX12/Swapchain12.h"

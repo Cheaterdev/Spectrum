@@ -12,3 +12,14 @@
 	bool operator==(const x& r) const = default;\
 	std::strong_ordering  operator<=>(const  x& r) const = default;
 #define GENERATE_OPS __GENERATE_OPS__
+
+
+
+#define THREAD_CHECKER std::atomic<std::thread::id> __checker_;
+#define ASSERT_SINGLETHREAD Checker __g__(__checker_);
+
+#ifdef LEAK_TEST_ENABLE
+#define LEAK_TEST(x) LeakDetectorInstance ___leak_tester = LeakDetectorInstance(#x);
+#else
+#define LEAK_TEST(x) ;
+#endif

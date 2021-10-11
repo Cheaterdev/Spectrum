@@ -1,8 +1,12 @@
-#pragma once
-import Singleton;
+export module Application;
 
-class Application : public Singleton<Application>
+import Singleton;
+import Utils;
+
+export
 {
+    class Application : public Singleton<Application>
+    {
         std::atomic<bool> alive;
         friend class Singleton<Application>;
     protected:
@@ -22,4 +26,40 @@ class Application : public Singleton<Application>
         {
             return std::vector<std::string>();
         }
-};
+    };
+}
+
+
+module: private;
+
+Application::Application()
+{
+    alive = true;
+    tick_interval = 50_ms;
+    //  Engine::create();
+}
+
+Application::~Application()
+{
+    alive = false;
+    //   Engine::reset();
+}
+
+
+void Application::on_tick()
+{
+}
+
+void Application::run()
+{
+    while (alive)
+    {
+        on_tick();
+        //  std::this_thread::sleep_for(tick_interval);
+    }
+}
+
+void Application::shutdown()
+{
+    alive = false;
+}

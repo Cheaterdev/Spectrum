@@ -1,5 +1,5 @@
 #include "pch_render.h"
-#include "Application/Application.h"
+import Application;
 
 #include "AssetExplorer.h"
 #include "Materials/universal_material.h"
