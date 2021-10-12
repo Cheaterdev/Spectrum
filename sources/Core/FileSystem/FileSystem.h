@@ -1,10 +1,15 @@
 #pragma once
+#include "utils/utils_macros.h"
 
 #include "Serialization/Serializer.h"
+import Utils;
+import Log;
+import Singleton;
 
 import stl.filesystem;
 import stl.memory;
 struct file;
+struct windows;
 
 class file_provider
 {
@@ -337,7 +342,7 @@ protected:
 
 		catch (std::exception& e)
 		{
-			Log::get().crash_error(E_FAIL, e.what());
+			Log::get().crash_error(0, e.what());
 		}
 	}
 

@@ -4,6 +4,7 @@
 
 std::optional<SlotID> get_slot(std::string_view slot_name);
 
+import Data;
 template<class T>
 class shader_with_id
 {

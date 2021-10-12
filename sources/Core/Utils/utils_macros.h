@@ -1,5 +1,4 @@
 
-
 #define STRINGIZE(x) #x
 
 #define SPECTRUM_MERGE_(a,b)  a##b
@@ -46,3 +45,4 @@
 #define CHECK_THREAD(x) ;
 #endif
 
+#include "Serialization/serialization_defines.h"
