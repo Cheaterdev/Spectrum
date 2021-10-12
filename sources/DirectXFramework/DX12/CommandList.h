@@ -4,7 +4,7 @@
 #include "utils/utils_macros.h"
 #include "CommandListCompiler.h"
 import StateContext;
-#include "Profiling/Profiling.h"
+import Profiling;
 import Threading;
 import Exceptions;
 

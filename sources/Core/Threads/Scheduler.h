@@ -1,6 +1,7 @@
 #pragma once
-#include "../Profiling/Profiling.h"
+import Profiling;
 import Threading;
+import Singleton;
 #include <boost/lockfree/spsc_queue.hpp>
 
 

@@ -1,7 +1,7 @@
 #pragma once
 import Data;
 import Threading;
-#include "Profiling/Profiling.h"
+import Profiling;
 
 import Concepts;
 #include "D3D\Shaders.h"
