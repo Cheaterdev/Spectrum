@@ -2,7 +2,7 @@
 
 
 #include "DX12/Texture.h"
-#include "Threads/Scheduler.h"
+import Scheduler;
 
 #include "utils/utils_macros.h"
 class camera;

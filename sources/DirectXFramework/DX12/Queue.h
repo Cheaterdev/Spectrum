@@ -1,7 +1,9 @@
 #pragma once
-#include "Threads/Scheduler.h"
+import Scheduler;
+#include "Threads/Executors.h"
 #include "Device12.h"
 #include "DX12/CommandList.h"
+
 
 namespace DX12
 {

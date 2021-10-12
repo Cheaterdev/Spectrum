@@ -1,6 +1,6 @@
 #include "pch_core.h"
 #include <io.h>
-#include "Threads/Scheduler.h"
+import Scheduler;
 #include "FileSystem.h"
 
 import Utils;

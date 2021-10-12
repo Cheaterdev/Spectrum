@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Threads/Scheduler.h"
+import Scheduler;
 import Holdable;
 #include "FrameGraph/FrameGraph.h"
-
+#include "Threads/Executors.h"
 #include "../RenderSystem/autogen/includes.h"
 class camera;
 class debug_drawer;
