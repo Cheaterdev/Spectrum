@@ -2,15 +2,15 @@
 
 
 #include "utils/utils_macros.h"
-#include "CommandListCompiler.h"
+import CommandListCompiler;
 import StateContext;
 import Profiling;
 import Threading;
 import Exceptions;
-
+import RootSignature;
 
 import Fence;
-#include "DX12/IndirectCommand.h"
+import IndirectCommand;
 #include "DX12/Resource.h"
 #include "DX12/ResourceViews.h"
 #include "DX12/Shader.h"

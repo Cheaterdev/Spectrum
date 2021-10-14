@@ -1,6 +1,9 @@
 #include "pch_dx.h"
-#include "CommandListCompiler.h"
 #include "utils/utils_macros.h"
+
+import CommandListCompiler;
+import Device;
+
 namespace DX12
 {
 	
