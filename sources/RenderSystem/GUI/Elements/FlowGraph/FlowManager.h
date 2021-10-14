@@ -1,4 +1,4 @@
-#include "FlowGraph/FlowGraph.h"
+import FlowGraph;
 #include "GUI/Elements/FlowGraph/Canvas.h"
 #include "GUI/Elements/TabControl.h"
 

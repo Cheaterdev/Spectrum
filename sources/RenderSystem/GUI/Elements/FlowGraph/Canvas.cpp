@@ -1,6 +1,6 @@
 #include "pch_render.h"
 #include "Canvas.h"
-#include "FlowGraph/FlowSystem.h"
+#include "FlowSystem.h"
 
 #include "GUI/Elements/AssetExplorer.h"
 #include "GUI/Elements/FlowGraph/FlowManager.h"

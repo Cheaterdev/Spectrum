@@ -603,7 +603,7 @@ TextureNode::TextureNode(TextureAsset::ptr _Asset, bool to_linear)
 	o_g = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
 	o_b = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
 	o_a = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
-	++::FlowGraph::counter;
+
 }
 
 TextureNode::TextureNode()
@@ -612,10 +612,7 @@ TextureNode::TextureNode()
 
 TextureNode::~TextureNode()
 {
-	--::FlowGraph::counter;
 
-	if (::FlowGraph::counter <= 0)
-		::FlowGraph::counter = 0;
 }
 
 void TextureNode::operator()(MaterialContext* context)
@@ -765,10 +762,6 @@ TiledTextureNode::TiledTextureNode()/* : asset(this)*/
 
 TiledTextureNode::~TiledTextureNode()
 {
-	--::FlowGraph::counter;
-
-	if (::FlowGraph::counter <= 0)
-		::FlowGraph::counter = 0;
 }
 
 void TiledTextureNode::operator()(MaterialContext* context)
