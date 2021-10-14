@@ -3,7 +3,7 @@
 import Scheduler;
 import Holdable;
 #include "FrameGraph/FrameGraph.h"
-#include "Threads/Executors.h"
+import Executors;
 #include "../RenderSystem/autogen/includes.h"
 class camera;
 class debug_drawer;

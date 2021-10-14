@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "FlowGraph/FlowSystem.h"
+#include "FlowSystem.h"
 #include "Assets/EngineAssets.h"
 #include "Assets/AssetRenderer.h"
 

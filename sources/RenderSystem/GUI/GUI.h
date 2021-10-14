@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Context/Context.h"
-#include "Threads/Executors.h"
+import Executors;
 enum class mouse_button : int
 {
     LEFT,

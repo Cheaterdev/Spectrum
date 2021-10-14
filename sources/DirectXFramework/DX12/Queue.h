@@ -1,6 +1,6 @@
 #pragma once
 import Scheduler;
-#include "Threads/Executors.h"
+import Executors;
 #include "Device12.h"
 #include "DX12/CommandList.h"
 
