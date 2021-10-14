@@ -1,5 +1,6 @@
 #pragma once
-#include "FileSystem/FileSystem.h"
+import FileSystem;
+#include "FileSystem/ResourceManager.h"
 #include "dxc/dxcapi.use.h"
 
 #ifndef D3DCOMPILE_DEBUG

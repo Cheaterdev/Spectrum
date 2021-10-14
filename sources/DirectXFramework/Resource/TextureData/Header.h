@@ -1,6 +1,5 @@
 #include "Serialization/serialization_defines.h"
-#include "FileSystem/FileSystem.h"
-
+import FileSystem;
 #include "helper.h"
 
 import serialization;

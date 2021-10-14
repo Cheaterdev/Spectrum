@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "FileSystem/FileSystem.h"
+import FileSystem;
 #include "D3D\Shaders.h"
 
 #include "RootSignature.h"

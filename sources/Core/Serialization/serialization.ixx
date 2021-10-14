@@ -4,6 +4,8 @@ export module serialization;
 export import boost.serialization;
 export import stl.core;
 export import stl.threading;
+export import stl.filesystem;
+
 export import crossguid;
 
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
@@ -128,6 +130,20 @@ namespace boost
 			}
 			//boost::serialization::split_free(ar, tp, version);
 		}
+
+
+		export template<class Archive>
+		void serialize(Archive& ar, std::filesystem::path& p,
+			const unsigned int version)
+		{
+			std::wstring s;
+			if (Archive::is_saving::value)
+				s = p.wstring();
+			ar& boost::serialization::make_nvp("string", s);
+			if (Archive::is_loading::value)
+				p = s;
+		}
+
 	}
 }
 

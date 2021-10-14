@@ -1,36 +1,160 @@
-#include "pch_core.h"
-#include <io.h>
-import Scheduler;
-#include "FileSystem.h"
+module;
+
+#include "utils/utils_macros.h"
+export module FileSystem;
 
 import Utils;
-import stl.core;
+import Log;
+import Singleton;
+import Scheduler;
+
+import stl.filesystem;
+import stl.memory;
 import windows;
+
+import serialization;
+
+export
+{
+
+	struct file;
+
+class file_provider
+{
+
+public:
+	using ptr = s_ptr<file_provider>;
+
+	virtual std::string load_all(file*) = 0;
+	virtual std::shared_ptr<file> get_file(std::filesystem::path) = 0;
+	virtual std::shared_ptr<std::istream> create_stream(std::filesystem::path) = 0;
+
+	virtual bool save_data(std::filesystem::path, std::string) { return false; };
+
+	virtual void iterate(std::filesystem::path, std::function<void(s_ptr<file>)> f, bool recursive) {};
+	virtual void iterate_dirs(std::filesystem::path, std::function<void(std::filesystem::path)> f, bool recursive) {};
+
+	virtual void on_change(const std::filesystem::path&, std::function<void()>) {};
+	// TODO:
+	/*
+	save_file
+	get_file_info
+
+	iterate all files|dirs
+
+	streaming?
+	*/
+	//  virtual file_info get_info(std::string) = 0;
+	//    virtual void save_file(const std::string &, const std::string &) = 0;
+};
+
+struct file
+{
+	std::string load_all();
+	std::shared_ptr<std::istream> get_new_stream()
+	{
+		std::filesystem::path full_path(std::filesystem::current_path());
+	//	Log::get() << "Current path is : " << full_path.generic_string() << Log::endl;
+
+		return provider->create_stream(file_name);
+	}
+	file(file_provider* _provider, std::filesystem::path _file_name) : provider(_provider), file_name(_file_name) {};
+public:
+	using ptr = s_ptr<file>;
+	std::filesystem::path file_name;
+	std::filesystem::file_time_type edit_time;
+
+	file_provider* provider;
+
+private:
+	//	std::shared_ptr<istream> input_stream;
+};
+
+
+class FileSystem : public Singleton<FileSystem>
+{
+	std::vector<file_provider::ptr> providers;
+public:
+	void register_provider(file_provider::ptr provider)
+	{
+		providers.push_back(provider);
+	}
+
+
+	//	virtual file::ptr get_file(std::wstring);
+	virtual file::ptr get_file(std::filesystem::path);
+	virtual bool save_data(std::filesystem::path file_name, std::string data);
+
+	template<class T>
+	s_ptr<T> get_provider()
+	{
+		for (auto& p : providers)
+		{
+			auto r = std::dynamic_pointer_cast<T>(p);
+
+			if (r)
+				return r;
+		}
+
+		return nullptr;
+	}
+	virtual void iterate(std::filesystem::path path, std::function<void(file::ptr)> f, bool recursive);
+	virtual void iterate_dirs(std::filesystem::path path, std::function<void(std::filesystem::path)> f, bool recursive);
+
+	//	virtual void save_file(const std::string &, const std::string &) = 0;
+};
+
+class native_file_provider : public file_provider
+{
+public:
+	virtual std::string load_all(file*);
+
+	virtual std::shared_ptr<file> get_file(std::filesystem::path dir);
+	virtual bool save_data(std::filesystem::path dir, std::string data);
+	virtual void iterate(std::filesystem::path path, std::function<void(file::ptr)> f, bool recursive);
+	virtual void iterate_dirs(std::filesystem::path, std::function<void(std::filesystem::path)> f, bool recursive);
+	virtual void on_change(const std::filesystem::path&, std::function<void()>) override;
+	virtual std::shared_ptr<std::istream> create_stream(std::filesystem::path);
+
+	virtual ~native_file_provider()
+	{
+		int a;
+		a = 0;
+	}
+};
+
+
+
+}
+
+
+module: private;
+
 
 
 std::string native_file_provider::load_all(file* info)
 {
     std::string result;
 
-	std::filesystem::path file_path(info->file_name);
-	std::filesystem::path abs_path = std::filesystem::absolute(file_path);
+    std::filesystem::path file_path(info->file_name);
+    std::filesystem::path abs_path = std::filesystem::absolute(file_path);
 
-	std::ifstream file(abs_path.c_str(), std::ios::in | std::ios::binary);
+    std::ifstream file(abs_path.c_str(), std::ios::in | std::ios::binary);
 
-	
-	try {
-   // file.open(abs_path.c_str(), std::ios::in | std::ios::binary);
-	}
-	catch (std::ios_base::failure& e) {
-		Log::get() << e.what() << Log::endl;
-		return result;
-	}
+
+    try {
+        // file.open(abs_path.c_str(), std::ios::in | std::ios::binary);
+    }
+    catch (std::ios_base::failure& e) {
+        Log::get() << e.what() << Log::endl;
+        return result;
+    }
 
     if (!file.is_open())
     {
-		char data[256];
-		strerror_s(data, 256, errno);
-        Log::get() << "No file found: " << info->file_name <<" "<< data <<Log::endl;
+        char data[256];
+        strerror_s(data, 256, errno);
+        Log::get() << "No file found: " << info->file_name << " " << data << Log::endl;
         return result;
     }
 
@@ -47,33 +171,33 @@ std::string native_file_provider::load_all(file* info)
 
 void native_file_provider::on_change(const std::filesystem::path& path, std::function<void()> f)
 {
-	auto s2 = path.parent_path().generic_wstring();
+    auto s2 = path.parent_path().generic_wstring();
     thread_pool::get().enqueue([s2, f]()
-    {
-        while (thread_pool::is_good())
         {
-            auto handle = FindFirstChangeNotificationW(
-                              s2.c_str(),                       // directory to watch
-                              false,                          // watch the subtree
-                              FILE_NOTIFY_CHANGE_LAST_WRITE);  // watch dir name changes
-			
-			if (handle == INVALID_HANDLE_VALUE)
-			{
-				std::this_thread::sleep_for(2000_ms);
-				continue;
-			}
-
-            while (thread_pool::is_good() && WAIT_OBJECT_0 == WaitForSingleObject(handle, 200))
+            while (thread_pool::is_good())
             {
-                // wait while os make file accessable
-                std::this_thread::sleep_for(100_ms);
-                f();
-                break;
-            }
-        }
+                auto handle = FindFirstChangeNotificationW(
+                    s2.c_str(),                       // directory to watch
+                    false,                          // watch the subtree
+                    FILE_NOTIFY_CHANGE_LAST_WRITE);  // watch dir name changes
 
-        Log::get() << "on_change ended" << Log::endl;
-    });
+                if (handle == INVALID_HANDLE_VALUE)
+                {
+                    std::this_thread::sleep_for(2000_ms);
+                    continue;
+                }
+
+                while (thread_pool::is_good() && WAIT_OBJECT_0 == WaitForSingleObject(handle, 200))
+                {
+                    // wait while os make file accessable
+                    std::this_thread::sleep_for(100_ms);
+                    f();
+                    break;
+                }
+            }
+
+            Log::get() << "on_change ended" << Log::endl;
+        });
 }
 
 
@@ -93,17 +217,17 @@ std::shared_ptr<file> native_file_provider::get_file(std::filesystem::path file_
     //     Log::get() << "NO FILE " << file_name << Log::endl;
 
     if (ec)
-        Log::get() << Log::LEVEL_ERROR << "file: " << file_name << " msg:" <<   ec.message() << Log::endl;
+        Log::get() << Log::LEVEL_ERROR << "file: " << file_name << " msg:" << ec.message() << Log::endl;
 
     return result;
 }
 std::shared_ptr<std::istream> native_file_provider::create_stream(std::filesystem::path file_name)
 {
-	return  std::shared_ptr<std::istream>(new std::ifstream(file_name.generic_wstring(), std::ios::binary), [](std::istream* str) {
-	//	Log::get() << "istream deleter" << Log::endl;
-		((std::ifstream*)str)->close();
-		delete str; 
-	}); //std::shared_ptr<istream> stream;
+    return  std::shared_ptr<std::istream>(new std::ifstream(file_name.generic_wstring(), std::ios::binary), [](std::istream* str) {
+        //	Log::get() << "istream deleter" << Log::endl;
+        ((std::ifstream*)str)->close();
+        delete str;
+        }); //std::shared_ptr<istream> stream;
 }
 
 
@@ -264,69 +388,4 @@ std::string file::load_all()
 {
     //PROFILE(L"load_all");
     return provider->load_all(this);
-}
-template <typename TP>
-std::time_t to_time_t(TP tp)
-{
-    using namespace std::chrono;
-    auto sctp = time_point_cast<system_clock::duration>(tp - TP::clock::now()
-        + system_clock::now());
-    return system_clock::to_time_t(sctp);
-}
-bool resource_file_depender::depender::need_update()
-{
-    auto file = FileSystem::get().get_file(file_name);
-
-    if (file)
-    {
-        auto a = to_time_t(modify_time);
-        auto b = to_time_t(file->edit_time);
-    	if(a<b)
-    	{
-   
-            Log::get() << "Current " << to_time_t(modify_time) << " file: " << to_time_t(file->edit_time) <<Log::endl;
-
-                return true;
-    	}
-    }
-       
-
-    return false;
-}
-
-void resource_file_depender::add_depend(std::shared_ptr<file> _file)
-{
-    if (!_file) return;
-
-    depender d;
-    d.file_name = _file->file_name.generic_wstring();
-    d.modify_time = _file->edit_time;
-    files.push_back(d);
-}
-
-void resource_file_depender::clear()
-{
-    files.clear();
-}
-bool resource_file_depender::depends_on(std::string v)
-{
-
-    auto wstr = convert(v);
-    for (auto f : files)
-    {
-        if (f.file_name.find(wstr) != std::string::npos)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-bool resource_file_depender::need_update()
-{
-    for (auto& d : files)
-        if (d.need_update())
-            return true;
-
-    return false;
 }
