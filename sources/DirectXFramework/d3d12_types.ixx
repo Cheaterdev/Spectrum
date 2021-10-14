@@ -86,6 +86,76 @@ export
 		};
 
 
+
+		enum class HandleType : char
+		{
+			CBV,
+			RTV,
+			DSV,
+			SRV,
+			UAV,
+			SMP
+		};
+
+		enum class DescriptorHeapType : char
+		{
+			CBV_SRV_UAV = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+			SAMPLER = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+			RTV = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+			DSV = D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+			, GENERATE_OPS
+		};
+		enum class DescriptorHeapFlags : char
+		{
+			NONE = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+			SHADER_VISIBLE = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
+
+		};
+
+
+		enum class ResourceType : char
+		{
+
+			BUFFER,
+			TEXTURE1D,
+			//	TEXTURE1DARRAY,
+			TEXTURE2D,
+			//TEXTURE2DARRAY,
+			TEXTURE3D,
+			CUBE
+		};
+
+
+
+		struct ResourceViewDesc
+		{
+			ResourceType type;
+			DXGI_FORMAT format;
+
+			union
+			{
+				struct
+				{
+
+					UINT PlaneSlice;
+					UINT MipSlice;
+					UINT FirstArraySlice;
+					UINT MipLevels;
+					UINT ArraySize;
+				} Texture2D;
+
+				struct
+				{
+					UINT64 Size;
+					UINT64 Offset;
+					UINT64 Stride;
+					bool counted;
+				} Buffer;
+
+			};
+		};
+
+
 		struct input_layout_row
 		{
 			std::string SemanticName;

@@ -1,6 +1,7 @@
 #pragma once
 #include "DX12/Fence.h"
-#include "DX12/Descriptors.h"
+import Descriptors;
+import Vectors;
 
 namespace DX12
 {

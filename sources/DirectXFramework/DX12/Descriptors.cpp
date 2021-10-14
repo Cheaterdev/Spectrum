@@ -1,9 +1,31 @@
 #include "pch_dx.h"
-#include "Descriptors.h"
-#include "Device12.h"
-#include "CommandList.h"
 
+#include "Device12.h"
+#include "Resource.h"
+import Descriptors;
 namespace DX12 {
+
+	DescriptorHeapType get_heap_type(HandleType type)
+	{
+		switch (type)
+		{
+		case HandleType::CBV:
+		case HandleType::SRV:
+		case HandleType::UAV:
+			return DescriptorHeapType::CBV_SRV_UAV;
+
+		case HandleType::RTV:
+			return DescriptorHeapType::RTV;
+
+		case HandleType::DSV:
+			return DescriptorHeapType::DSV;
+
+		case HandleType::SMP:
+			return DescriptorHeapType::SAMPLER;
+		}
+
+		return DescriptorHeapType();
+	}
 
 	DescriptorHeapManager::DescriptorHeapManager()
 	{
@@ -64,14 +86,14 @@ namespace DX12 {
 		*resource_info = *r.resource_info;
 	}
 
-
+/*
 	void Handle::clear(CommandList& list, float4 color) const
 	{
 
 		list.clear_rtv(*this, color);
 	}
 
-
+	*/
 	Handle DescriptorPage::place()
 	{
 		Handle h =  heap->handle(heap_offset + (offset++));

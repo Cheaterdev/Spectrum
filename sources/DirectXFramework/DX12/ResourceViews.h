@@ -2,6 +2,8 @@
 #include "Math/Math.h"
 #include "DX12/Resource.h"
 
+import Descriptors;
+
 namespace DX12
 {
 	class CommandList;

@@ -2,14 +2,17 @@
 import StateContext;
 import Allocators;
 #include "Math/Math.h"
+#include "Utils/utils_macros.h"
 import Threading;
-#include "DX12/Descriptors.h"
-
+import Singleton;
+//#include "DX12/Descriptors.h"
+//#include "Resource.h"
 import d3d12_types;
-
+import Utils;
 namespace DX12
 {
-	
+	class Resource;
+
 	struct TrackedObjectState
 	{
 		bool used = false;

@@ -1,8 +1,7 @@
 #pragma once
 
 import Concepts;
-
-#include "DX12/Descriptors.h"
+import Descriptors;
 #include "Serialization/serialization_defines.h"
 
 namespace DX12

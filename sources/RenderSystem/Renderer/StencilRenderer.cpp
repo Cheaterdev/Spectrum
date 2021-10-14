@@ -568,8 +568,8 @@ void stencil_renderer::generate_after(Graph& graph)
 
 				{
 					graphics.set_rtv(1, data.Stencil_color_tex->renderTarget, Handle());
-					data.Stencil_color_tex->renderTarget.clear(list);
-
+			//		data.Stencil_color_tex->renderTarget.clear(list);
+					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0,0,0,0));
 					graphics.set_pipeline(GetPSO<PSOS::DrawSelected>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_viewports({ data.Stencil_color_tex->get_viewport() });

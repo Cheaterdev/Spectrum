@@ -6,7 +6,7 @@ import Events;
 namespace DX12
 {
 	class ResourceHeap;
-
+	class CommandList;
 
 
 	class TiledResourceManager
