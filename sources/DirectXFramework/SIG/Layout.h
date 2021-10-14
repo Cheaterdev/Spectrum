@@ -1,4 +1,6 @@
 #pragma once
+#include "pch_dx.h"
+#include "DX12/RootSignature.h"
 import Concepts;
 import Samplers;
 

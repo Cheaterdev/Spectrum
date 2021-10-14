@@ -1,5 +1,5 @@
 #pragma once
-#include "SIG/SIG.h"
+import SIG;
 #include "SIG/RT.h"
 #include "SIG/Layout.h"
 #include "SIG/Slots.h"

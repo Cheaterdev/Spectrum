@@ -3,7 +3,7 @@ module;
 
 export module d3d12_types;
 
-import d3d12;
+export import d3d12;
 import Utils;
 import serialization;
 

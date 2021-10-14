@@ -1,5 +1,8 @@
+#include "pch_dx.h"
+#include "DX12/Resource.h"
+#include "DX12/CommandList.h"
 import Concepts;
-
+import Descriptors;
 template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
 struct CompiledData
 {
