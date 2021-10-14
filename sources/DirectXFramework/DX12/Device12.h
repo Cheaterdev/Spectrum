@@ -5,7 +5,7 @@
 import IdGenerator;
 import StateContext;
 import Data;
-
+import d3d12_types;
 class GpuCrashTracker;
 
 namespace DX12
@@ -21,17 +21,6 @@ namespace DX12
 
 	typedef D3D12_VIEWPORT Viewport;
 	class CommandList;
-
-
-	enum class CommandListType : int
-	{
-		DIRECT = D3D12_COMMAND_LIST_TYPE_DIRECT,
-		BUNDLE = D3D12_COMMAND_LIST_TYPE_BUNDLE,
-		COMPUTE = D3D12_COMMAND_LIST_TYPE_COMPUTE,
-		COPY = D3D12_COMMAND_LIST_TYPE_COPY,
-
-		GENERATE_OPS
-	};
 
 	class Device : public Singleton<Device>
 	{

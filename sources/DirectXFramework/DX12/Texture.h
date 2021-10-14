@@ -1,9 +1,10 @@
 #pragma once
-#include "Resource\TextureData.h"
 
 #include "CommandList.h"
 #include "Resource.h"
 
+import TextureData;
+import d3d12_types;
 namespace DX12
 {
 

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "DX12/PipelineState.h"
+import d3d12_types;
+import Vectors;
 
 namespace DX12
 {

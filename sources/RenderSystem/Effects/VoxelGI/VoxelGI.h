@@ -30,10 +30,10 @@ public:
 
 	void set(CD3DX12_RESOURCE_DESC desc)
 	{
-		tex_dynamic.reset(new Render::Texture(desc, ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
-		tex_static.reset(new Render::Texture(desc, ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_dynamic.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_static.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
 
-		tex_result.reset(new Render::Texture(desc, ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_result.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
 
 
 		tex_dynamic->on_load = [this](ivec4 pos) {

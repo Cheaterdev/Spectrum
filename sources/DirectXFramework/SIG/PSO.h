@@ -441,7 +441,7 @@ struct  SimpleGraphicsPSO {
 
 
 	std::vector<DXGI_FORMAT> rtv_formats;
-	std::vector<Render::RenderTarget> blend;
+	std::vector<RenderTarget> blend;
 	std::string name;
 
 	bool conservative;

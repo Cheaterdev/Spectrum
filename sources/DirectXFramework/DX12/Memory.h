@@ -4,17 +4,11 @@ import Allocators;
 #include "Math/Math.h"
 import Threading;
 #include "DX12/Descriptors.h"
+
+import d3d12_types;
+
 namespace DX12
 {
-	enum class HeapType : int
-	{
-		DEFAULT = D3D12_HEAP_TYPE_DEFAULT,
-		UPLOAD = D3D12_HEAP_TYPE_UPLOAD,
-		READBACK = D3D12_HEAP_TYPE_READBACK,
-		CUSTOM = D3D12_HEAP_TYPE_CUSTOM,
-		RESERVED = 10,
-		PRESENT = 5
-	};
 	
 	struct TrackedObjectState
 	{

@@ -27,9 +27,9 @@ namespace DX12
 			m_swapChain->GetBuffer(n, IID_PPV_ARGS(&render_target));
 			auto handle = heap->create_table(1);
 
-			frames[n].m_renderTarget.reset(new Texture(render_target, handle, Render::ResourceState::PRESENT));
+			frames[n].m_renderTarget.reset(new Texture(render_target, handle, ResourceState::PRESENT));
 			frames[n].m_renderTarget->set_name(std::string("swap_chain_") + std::to_string(n));
-			//	frames[n].m_renderTarget->assume_gpu_state(Render::ResourceState::PRESENT);
+			//	frames[n].m_renderTarget->assume_gpu_state(ResourceState::PRESENT);
 
 			//	frames[n].m_renderTarget->debug = true;
 

@@ -2,7 +2,6 @@
 
 import Singleton;
 import d3d12;
-#include "Serialization/serialization_defines.h"
 
 #include "utils/utils_macros.h"
 import serialization;

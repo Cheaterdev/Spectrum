@@ -24,6 +24,8 @@ if (FAILED(hr)) \
 
 #endif //  DEBUG
 
+#define Render DX12
+/*
 namespace DX12
 {
 	
@@ -31,7 +33,7 @@ namespace DX12
 namespace Render
 {
 	using namespace DX12;
-}
+}*/
 
 
 

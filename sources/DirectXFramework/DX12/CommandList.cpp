@@ -367,7 +367,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		base.create_transition_point();
 	//	if (base.type != CommandListType::COPY)
-			base.transition(resource, Render::ResourceState::COPY_DEST);
+			base.transition(resource, ResourceState::COPY_DEST);
 		
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
@@ -401,7 +401,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		desc.SizeInBytes = (UINT)Math::AlignUp(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 
 		assert(desc.SizeInBytes < 65536);
-		Handle h = list.frame_resources->get_cpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place();
+		Handle h = list.frame_resources->get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place();
 
 		Device::get().create_cbv(h, resource.get(), desc);
 
@@ -433,7 +433,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		base.create_transition_point();
 
-		base.transition(resource, Render::ResourceState::COPY_DEST);
+		base.transition(resource, ResourceState::COPY_DEST);
 	
 		D3D12_RESOURCE_DESC Desc = resource->get_desc();
 		UINT rows_count = box.y;
@@ -538,9 +538,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		
 	base.create_transition_point();
 	//	if (base.type != CommandListType::COPY)
-			base.transition(resource, Render::ResourceState::COPY_SOURCE);
+			base.transition(resource, ResourceState::COPY_SOURCE);
 		//else
-	//		base.transition(resource, Render::ResourceState::COMMON);
+	//		base.transition(resource, ResourceState::COMMON);
 		UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 		UINT64 size = res_stride * box.y * box.z;
 		auto info = base.read_data(size, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
@@ -580,7 +580,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		
 	base.create_transition_point();
 	
-		base.transition(resource, Render::ResourceState::COPY_SOURCE);
+		base.transition(resource, ResourceState::COPY_SOURCE);
 
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
@@ -892,8 +892,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.create_transition_point();
 		//if (base.type != CommandListType::COPY)
 		{
-			base.transition(source, Render::ResourceState::COPY_SOURCE);
-			base.transition(dest, Render::ResourceState::COPY_DEST);
+			base.transition(source, ResourceState::COPY_SOURCE);
+			base.transition(dest, ResourceState::COPY_DEST);
 		}
 
 		list->CopyBufferRegion(dest->get_native().Get(), s_dest, source->get_native().Get(), s_source, size);
@@ -904,8 +904,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.create_transition_point();
 	//	if (base.type != CommandListType::COPY)
 		{
-			base.transition(source, Render::ResourceState::COPY_SOURCE);
-			base.transition(dest, Render::ResourceState::COPY_DEST);
+			base.transition(source, ResourceState::COPY_SOURCE);
+			base.transition(dest, ResourceState::COPY_DEST);
 		}
 		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
 		base.create_transition_point(false);
@@ -917,8 +917,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		{
 
 
-			base.transition(source, Render::ResourceState::COPY_SOURCE);
-			base.transition(dest, Render::ResourceState::COPY_DEST);
+			base.transition(source, ResourceState::COPY_SOURCE);
+			base.transition(dest, ResourceState::COPY_DEST);
 		}
 
 		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
@@ -929,8 +929,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.create_transition_point();
 		//if (base.type != CommandListType::COPY) 
 		{
-			base.transition(source, Render::ResourceState::COPY_SOURCE, source_subres);
-			base.transition(dest, Render::ResourceState::COPY_DEST, dest_subres);
+			base.transition(source, ResourceState::COPY_SOURCE, source_subres);
+			base.transition(dest, ResourceState::COPY_DEST, dest_subres);
 		}
 
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_native().Get(), dest_subres);
@@ -944,8 +944,8 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.create_transition_point();
 		//if (base.type != CommandListType::COPY) 
 		{
-			base.transition(from, Render::ResourceState::COPY_SOURCE);
-			base.transition(to, Render::ResourceState::COPY_DEST);
+			base.transition(from, ResourceState::COPY_SOURCE);
+			base.transition(to, ResourceState::COPY_DEST);
 		}
 
 		
@@ -1156,9 +1156,9 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		return result;
 	}
 
-	Render::CommandList::ptr FrameResources::start_list(std::string name, CommandListType type)
+	CommandList::ptr FrameResources::start_list(std::string name, CommandListType type)
 	{
-		auto list = Render::Device::get().get_queue(type)->get_free_list();
+		auto list = Device::get().get_queue(type)->get_free_list();
 		list->begin(name);
 		list->frame_resources = shared_from_this();
 		return list;

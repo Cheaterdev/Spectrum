@@ -4,32 +4,6 @@
 
 import Debug;
 
-#define E(x) 	if ( l.x != r.x) return false;
-#define C(x) 	if (auto cmp = l.x <=> r.x; cmp != 0) return cmp;
-
-bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
-{
-	E(StencilDepthFailOp)
-		E(StencilFailOp)
-		E(StencilFunc)
-		E(StencilPassOp)
-
-
-		return true;
-}
-
-
-std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
-{
-	C(StencilDepthFailOp)
-		C(StencilFailOp)
-		C(StencilFunc)
-		C(StencilPassOp)
-
-
-		return std::strong_ordering::equal;
-}
-
 template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T>
 struct TypeToOBJ;
 
