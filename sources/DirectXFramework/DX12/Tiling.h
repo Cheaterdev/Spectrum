@@ -1,6 +1,6 @@
 #pragma once
 #include "Math/Math.h"
-#include "DX12/Memory.h"
+import Memory;
 
 import Events;
 namespace DX12

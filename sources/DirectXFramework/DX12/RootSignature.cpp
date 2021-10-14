@@ -1,7 +1,7 @@
 #include "pch_dx.h"
 #include "RootSignature.h"
 import Log;
-#include "Device12.h"
+import Device;
 namespace DX12
 {
 

@@ -1,7 +1,7 @@
 #include "pch_dx.h"
 import Samplers;
 
-#include "Device12.h"
+import Device;
 #include "GPUTimer.h"
 import Debug;
 namespace DX12

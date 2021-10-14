@@ -2,7 +2,7 @@
 
 #include "CommandList.h"
 #include "Resource.h"
-
+#include "helper.h"
 import TextureData;
 import d3d12_types;
 namespace DX12

@@ -1,8 +1,11 @@
-#pragma once
+export module Fence;
 
 import d3d12;
 import windows;
 using namespace Microsoft::WRL;
+export
+{
+
 
 namespace DX12
 {
@@ -57,4 +60,5 @@ namespace DX12
 			}
 		}
 	};
+}
 }

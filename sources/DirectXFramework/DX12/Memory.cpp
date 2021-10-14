@@ -1,6 +1,6 @@
 #include "pch_dx.h"
 #include "Memory.h"
-#include "Device12.h"
+import Device;
 #include "Resource.h"
 
 namespace DX12

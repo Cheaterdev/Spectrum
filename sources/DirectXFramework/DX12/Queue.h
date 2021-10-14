@@ -1,7 +1,7 @@
 #pragma once
 import Scheduler;
 import Executors;
-#include "Device12.h"
+import Device;
 #include "DX12/CommandList.h"
 
 

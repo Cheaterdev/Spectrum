@@ -1,6 +1,7 @@
 #include "pch_dx.h"
 #include "Resource.h"
-#include "Device12.h"
+#include "helper.h"
+import Device;
 
 import Debug;
 namespace DX12

@@ -9,7 +9,7 @@ import Threading;
 import Exceptions;
 
 
-#include "DX12/Fence.h"
+import Fence;
 #include "DX12/IndirectCommand.h"
 #include "DX12/Resource.h"
 #include "DX12/ResourceViews.h"

@@ -1,7 +1,8 @@
 #include "pch_dx.h"
-#include "Fence.h"
-#include "Device12.h"
+#include "Utils/utils_macros.h"
+import Device;
 import Profiling;
+import Fence;
 
 namespace DX12
 {

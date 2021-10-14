@@ -1,6 +1,6 @@
 #pragma once
 #include "Buffer.h"
-
+#include "helper.h"
 namespace DX12
 {
 	namespace HLSL

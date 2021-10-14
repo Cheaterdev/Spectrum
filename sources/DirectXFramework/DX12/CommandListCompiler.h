@@ -1,7 +1,7 @@
 #pragma once
 #include "Math/Math.h"
-#include "DX12/Device12.h"
-
+import Device;
+import d3d12_types;
 namespace DX12
 {
 

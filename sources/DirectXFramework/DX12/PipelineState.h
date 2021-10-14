@@ -6,11 +6,10 @@ import FileSystem;
 
 #include "RootSignature.h"
 #include "Shader.h"
-#include "Device12.h"
-#include "Memory.h"
-
+import Device;
+import Memory;
 import Singleton;
-
+import d3d12_types;
 DX12::RootLayout::ptr get_Signature(Layouts id);
 
 namespace DX12

@@ -1,6 +1,6 @@
 #pragma once
 #include "DX12/RootSignature.h"
-#include "DX12/Device12.h"
+import Device;
 
 namespace DX12
 {

@@ -1,9 +1,9 @@
 #pragma once
-#include "DX12/Memory.h"
+import Memory;
 #include "DX12/Tiling.h"
-#include "DX12/Fence.h"
+import Fence;
 #include "DX12/States.h"
-#include "DX12/Device12.h"
+import Device;
 
 namespace DX12
 {

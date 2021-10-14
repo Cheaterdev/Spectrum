@@ -4,7 +4,7 @@ import Utils;
 import StateContext;
 #include "States.h"
 
-#include "Device12.h"
+import Device;
 import d3d12_types;
 namespace DX12
 {

@@ -1,13 +1,13 @@
 #include "pch_dx.h"
 
-#include "Device12.h"
+import Device;
 #include "Swapchain12.h"
 #include "PipelineState.h"
 #include "GPUTimer.h"
 
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
-
+#include "helper.h"
 import Debug;
 import Samplers;
 namespace DX12

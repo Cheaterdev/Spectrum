@@ -3,7 +3,7 @@ import Allocators;
 #include "Serialization/serialization_defines.h"
 
 #include "DX12/CommandList.h"
-#include "DX12/Device12.h"
+import Device;
 #include "DX12/Resource.h"
 
 import Concepts;

@@ -1,5 +1,5 @@
 #pragma once
-#include "DX12/Fence.h"
+import Fence;
 import Descriptors;
 import Vectors;
 
