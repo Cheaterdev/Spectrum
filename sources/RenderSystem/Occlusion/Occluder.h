@@ -109,10 +109,8 @@ class occluder
 
     private:
 		Primitive::ptr primitive;
-        friend class boost::serialization::access;
 
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
         {
             ar& NVP(primitive);
 			if(Archive::is_loading::value)

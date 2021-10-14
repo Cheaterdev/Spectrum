@@ -617,9 +617,7 @@ void generate_cpp_table(const Table& table)
 
 				stream << std::format(
 R"(private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive & ar, const unsigned int))") << std::endl;
+	SERIALIZE()") << std::endl;
 				stream << "{" << std::endl;
 
 				for (auto& v : table.values)

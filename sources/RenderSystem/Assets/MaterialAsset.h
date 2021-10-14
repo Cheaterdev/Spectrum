@@ -24,10 +24,7 @@ namespace materials
 		UINT get_id() { return id; }
 	private:
 
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int file_version)
+        SERIALIZE()
 		{
 			ar& NVP(hash);
             ar& NVP(id);
@@ -46,13 +43,12 @@ namespace materials
 			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) = 0;
             virtual ~material() = default;
             virtual void compile() {};
-            friend class boost::serialization::access;
+
             size_t get_pipeline_id()
             {
                 return pipeline_id;
             }
-            template<class Archive>
-            void serialize(Archive& ar, const unsigned int)
+            SERIALIZE()
             {
                 ar& NVP(pipeline_id);
             }
@@ -79,11 +75,7 @@ class MaterialAsset : public Asset, public materials::material
         MaterialAsset() = default;
     private:
 
-
-        friend class boost::serialization::access;
-
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<Asset>(*this));
             ar& NVP(boost::serialization::base_object<materials::material>(*this));

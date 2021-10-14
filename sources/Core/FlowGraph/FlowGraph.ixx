@@ -16,99 +16,7 @@ export
 
 	namespace FlowGraph
 	{
-		/*  enum class data_types : int
-		  {
-			  STRING,
-			  INT,
-			  BOOLEAN
-		  };
-		*/
-
-		// todo: make string to int manager
-		/*
-		struct data_types
-		{
-				virtual ~data_types()
-				{
-				}
-
-				static const data_types INT;
-				static const data_types STRING;
-
-				data_types(std::string name = "");
-
-				bool operator==(const data_types& r)
-				{
-					return name == r.name;
-				}
-				bool operator!=(const data_types& r)
-				{
-					return name != r.name;
-				}
-
-				virtual bool can_link(data_types* r);
-				std::string to_string() const;
-			private:
-				std::string name;
-
-				friend class boost::serialization::access;
-				template<class Archive>
-				void serialize(Archive& ar, const unsigned int)
-				{
-					ar& NVP(name);
-				}
-		};*/
-
-		//typedef std::string  data_types;
-
-		/* template<int T>
-		 struct data_classes;
-
-		 template<>
-		 struct data_classes<static_cast<int>(data_types::STRING)>
-		 {
-			 typedef std::string type;
-		 };
-
-
-		 template<>
-		 struct data_classes<static_cast<int>(data_types::INT)>
-		 {
-			 typedef int type;
-		 };
-
-		 template<>
-		 struct data_classes<static_cast<int>(data_types::BOOLEAN)>
-		 {
-			 typedef bool type;
-		 };
-
-		 template<class T>
-		 struct class_to_type;
-
-		 template<>
-		 struct class_to_type<std::string>
-		 {
-			 static const data_types type = data_types::STRING;
-		 };
-
-
-		 template<>
-		 struct class_to_type<int>
-		 {
-			 static const data_types type = data_types::INT;
-		 };
-
-		 template<>
-		 struct class_to_type<bool>
-		 {
-			 static const data_types type = data_types::BOOLEAN;
-		 };*/
-
-
-		 //typedef std::reference_wrapper<const std::type_info> data_types;
-
-		//static std::atomic_int counter;
+	
 
 		struct parameter;
 
@@ -192,9 +100,7 @@ export
 			virtual bool can_cast(parameter_type* other) = 0;
 			virtual ~parameter_type() = default;
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 
 			}
@@ -212,9 +118,7 @@ export
 			}
 			virtual ~strict_parameter() = default;
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<parameter_type>(*this));
 
@@ -329,9 +233,7 @@ export
 			void unlink_input();
 			void unlink_output();
 
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(type);
 				ar& NVP(name);
@@ -378,9 +280,7 @@ export
 			}
 
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(from);
 				ar& NVP(to);
@@ -421,9 +321,7 @@ export
 			virtual void on_put();
 			//
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<parameter>(*this));
 			}
@@ -459,9 +357,7 @@ export
 			virtual void remove();
 			virtual void on_put();
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<parameter>(*this));
 			}
@@ -499,9 +395,7 @@ export
 			virtual void on_tell(graph_listener* listener) override;
 
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(name);
 				ar& NVP(pos);
@@ -656,9 +550,7 @@ export
 				return std::static_pointer_cast<M>(shared_from_this());
 			}
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<window>(*this));
 				ar& NVP(input_parametres);
@@ -695,9 +587,7 @@ export
 
 
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<input>(*this));
 			}
@@ -716,9 +606,7 @@ export
 
 			virtual bool can_link(parameter* o);
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<output>(*this));
 			}
@@ -874,9 +762,7 @@ export
 
 					}*/
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<Node>(*this));
 				ar& NVP(nodes);
@@ -920,9 +806,7 @@ export
 			virtual void on_done(T* type) { Node::on_done(type); };
 			virtual void on_start(T* type) { Node::on_start(type); };
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<Node>(*this));
 			}

@@ -75,9 +75,7 @@ struct SelectLocal<T>
 		//	D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				//	std::byte data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
 

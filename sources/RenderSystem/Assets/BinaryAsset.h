@@ -31,11 +31,7 @@ class BinaryAsset : public Asset
 
 
 
-
-        friend class boost::serialization::access;
-
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<Asset>(*this));
             ar& NVP(data);

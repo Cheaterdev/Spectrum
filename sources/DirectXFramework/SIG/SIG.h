@@ -26,10 +26,7 @@ public:
 	}
 
 private:
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
+	SERIALIZE()
 	{
 		ar& NVP(IndexCountPerInstance);
 		ar& NVP(InstanceCount);
@@ -51,10 +48,7 @@ public:
 	}
 
 private:
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
+	SERIALIZE()
 	{
 		ar& NVP(ThreadGroupCountX);
 		ar& NVP(ThreadGroupCountY);

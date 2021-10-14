@@ -113,9 +113,7 @@ namespace DX12
 			}
 
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				if (Archive::is_loading::value)
 				{
@@ -271,9 +269,7 @@ namespace DX12
 			HandleTable counted_srv;
 		private:
 	
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<GPUBuffer>(*this));
 				init_views();
@@ -319,9 +315,7 @@ namespace DX12
 			}
 
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<GPUBuffer>(*this));
 				init_views();
@@ -361,9 +355,7 @@ namespace DX12
 		
 		
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(boost::serialization::base_object<GPUBuffer>(*this));
 			}

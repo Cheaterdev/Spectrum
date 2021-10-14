@@ -269,10 +269,7 @@ class BinaryData
 	std::shared_ptr<T> data;
 	std::string packed_data;
 private:
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
+	SERIALIZE()
 	{
 		if (data&& Archive::is_saving::value)
 			packed_data = Serializer::serialize(*data);

@@ -46,9 +46,7 @@ namespace DX12
 		auto   operator<=>(const  input_layout_row& r)  const = default;
 
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(SemanticName);
 			ar& NVP(SemanticIndex);
@@ -69,9 +67,7 @@ namespace DX12
 		bool operator==(const input_layout_header&) const = default;
 		auto   operator<=>(const  input_layout_header& r)  const = default;
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(inputs);
 
@@ -89,9 +85,7 @@ namespace DX12
 		auto   operator<=>(const  RasterizerState& r)  const = default;
 
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(cull_mode);
 			ar& NVP(fill_mode);
@@ -113,9 +107,7 @@ namespace DX12
 
 
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(enabled);
 			ar& NVP(source);
@@ -137,9 +129,7 @@ namespace DX12
 
 
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 
 			ar& NVP(independ_blend);
@@ -177,9 +167,7 @@ namespace DX12
 	bool operator==(const RTVState& r) const = default;
 	auto  operator<=>(const  RTVState& r)  const = default;
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(enable_depth);
 			ar& NVP(enable_depth_write);
@@ -445,9 +433,7 @@ namespace DX12
 		virtual ~PipelineState();
 
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			if constexpr (Archive::is_saving::value)
 			{

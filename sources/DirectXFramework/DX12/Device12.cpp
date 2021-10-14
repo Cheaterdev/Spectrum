@@ -16,9 +16,7 @@ namespace DX12
 	{
 		std::wstring name;
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(name);
 		}

@@ -32,10 +32,7 @@ namespace materials
 		size_t pipeline_id = -1;
 	
 
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int file_version)
+		SERIALIZE()
 		{
 			ar& NVP(ps_shader);
 			ar& NVP(ds_shader);
@@ -72,10 +69,7 @@ namespace materials
 
 	private:
 
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int file_version)
+		SERIALIZE()
 		{
 			ar& NVP(boost::serialization::base_object<Pipeline>(*this));
 			ar& NVP(pixel);
@@ -132,10 +126,7 @@ namespace materials
 		}
 	private:
 
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int file_version)
+		SERIALIZE()
 		{
 			ar& NVP(boost::serialization::base_object<Pipeline>(*this));
 			ar& NVP(passes);
@@ -338,10 +329,7 @@ namespace materials
             virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override{}
 			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) override{}
         private:
-            friend class boost::serialization::access;
-
-            template<class Archive>
-            void serialize(Archive& ar, const unsigned int file_version);
+			SERIALIZE();
 
     };
 	

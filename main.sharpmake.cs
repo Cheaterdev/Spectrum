@@ -241,6 +241,29 @@ namespace Spectrum
         }
     }
 
+	[Sharpmake.Generate]
+    public class DXCompiler : Library
+    {
+        public DXCompiler()
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\DXC";
+            AssemblyName = "DXC";
+        }
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxcompiler.dll");
+            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxil.dll");
+			
+			conf.LibraryFiles.Add("dxcompiler.lib");
+						
+			conf.AddPublicDependency<Modules>(target);
+		
+        }
+    }
+
 
     [Sharpmake.Generate]
     public class DirectXFramework : Library
@@ -255,17 +278,9 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-           // conf.PrecompHeader = "pch.h";
-          //  conf.PrecompSource = "pch.cpp";
-
-
             conf.LibraryFiles.Add("dxgi.lib");
             conf.LibraryFiles.Add("d3d12.lib");
             conf.LibraryFiles.Add("dxguid.lib");
-            conf.LibraryFiles.Add("dxcompiler.lib");
-
-            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxcompiler.dll");
-            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxil.dll");
 
 			{ // AgilitySDK
 				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\include", 66);
@@ -277,13 +292,10 @@ namespace Spectrum
 				}
 			}
 
-			
-	
             conf.AddPublicDependency<Core>(target);	
+			conf.AddPrivateDependency<DXCompiler>(target);	
 
             conf.AddPrivateDependency<Aftermath>(target);
-			
-
         }
     }
 

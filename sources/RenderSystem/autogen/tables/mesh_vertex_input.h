@@ -11,9 +11,7 @@ namespace Table
 			float2 tc;
 			float4 tangent;
 			private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive & ar, const unsigned int)
+				SERIALIZE()
 			{
 			     ar& NVP(pos);
 			     ar& NVP(normal);

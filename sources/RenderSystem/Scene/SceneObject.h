@@ -96,10 +96,7 @@ class scene_object : public tree<scene_object, std::set<std::shared_ptr<scene_ob
 		virtual void on_remove() override;
 
     private:
-        friend class boost::serialization::access;
-
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             if (Archive::is_loading::value)
                 remove_all();

@@ -78,9 +78,7 @@ class resource_file_depender
 	private:
 
 		inline const std::wstring& get_name() const { return file_name; }
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+SERIALIZE()
 		{
 			ar& NVP(file_name)& NVP(modify_time);
 		}
@@ -95,9 +93,7 @@ public:
 	void clear();
 	bool depends_on(std::string v);
 private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
+	SERIALIZE()
 	{
 		ar& NVP(files);
 	}

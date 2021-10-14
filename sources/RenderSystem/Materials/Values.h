@@ -28,9 +28,7 @@ struct ShaderParamType:public ::FlowGraph::parameter_type
     }
 
 private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
+    SERIALIZE()
 	{
         ar& NVP(boost::serialization::base_object<::FlowGraph::parameter_type>(*this));
 		ar& NVP(M);
@@ -64,9 +62,7 @@ public:
 
 
 private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
+    SERIALIZE()
 	{
 		ar& NVP(boost::serialization::base_object<::FlowGraph::parameter_type>(*this));
 
@@ -86,9 +82,7 @@ struct shader_parameter
 
 
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(name);
             ar&  NVP(type);
@@ -178,9 +172,7 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
 
    
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<T>(*this));
         }
@@ -235,10 +227,7 @@ struct Uniform
     Events::Event<Uniform*> on_change;
     using ptr = std::shared_ptr<Uniform>;
 
-    friend class boost::serialization::access;
-
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int)
+    SERIALIZE()
     {
         ar& NVP(name);
         //   ar& NVP(shader_name);
@@ -267,10 +256,7 @@ struct TextureSRVParams
 private:
 
 
-	friend class boost::serialization::access;
-
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int file_version)
+    SERIALIZE()
 	{
 		ar& NVP(asset);
 		ar& NVP(to_linear);
@@ -389,9 +375,7 @@ class MaterialFunction : public MaterialGraphNode
         void add_function(std::string s);
 
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<::FlowGraph::graph>(*this));
         }
@@ -434,9 +418,7 @@ class MaterialGraph : public MaterialFunction
     FlowGraph::output::ptr get_tess_displacement();
         virtual void start(MaterialContext* context);
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<::FlowGraph::graph>(*this));
             ar& NVP(position);
@@ -492,9 +474,7 @@ class TextureNode : public MaterialNode, public AssetHolder
 
         virtual GUI::base::ptr create_editor_window();
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<::FlowGraph::Node>(*this));
             ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
@@ -525,9 +505,7 @@ class PowerNode : public MaterialNode
 
         void operator()(MaterialContext*) override;
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<::FlowGraph::Node>(*this));
             ar& NVP(i_vec);
@@ -553,9 +531,7 @@ class VectorNode : public MaterialNode
 
         virtual GUI::base::ptr create_editor_window()override;
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
             ar& NVP(o_value);
@@ -580,9 +556,7 @@ class ScalarNode : public MaterialNode
 
         virtual GUI::base::ptr create_editor_window()override;
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
             ar& NVP(o_value);
@@ -602,9 +576,7 @@ class SumNode : public MaterialNode
 
         void operator()(MaterialContext*);
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<::FlowGraph::Node>(*this));
             ar& NVP(i_vec);
@@ -626,9 +598,7 @@ class MulNode : public MaterialNode
 
         void operator()(MaterialContext* c) override;
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<::FlowGraph::Node>(*this));
             ar& NVP(i_vec);
@@ -705,9 +675,7 @@ public:
 
 	//virtual GUI::base::ptr create_editor_window()override;
 private:
-	friend class boost::serialization::access;
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int)
+    SERIALIZE()
 	{
 		ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
 		ar& NVP(inputs.albedo);
@@ -748,9 +716,7 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
         return Node::test_start();
         }*/
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
             ar& NVP(boost::serialization::base_object<AssetHolder>(*this));

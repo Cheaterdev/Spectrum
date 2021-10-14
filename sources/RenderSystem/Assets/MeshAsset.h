@@ -23,9 +23,7 @@ struct InlineMeshlet
     Table::MeshletCullData::CB cull_data;
 
 private:
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int)
+    SERIALIZE()
     {
         ar& NVP(UniqueVertexIndices);
         ar& NVP(PrimitiveIndices);
@@ -57,9 +55,7 @@ struct MeshInfo
 
         std::vector<InlineMeshlet<UINT>> meshlets;
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(vertex_offset);
             ar& NVP(vertex_count);
@@ -91,9 +87,7 @@ struct MeshNode
         }
 
     private:
-        friend class boost::serialization::access;
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(local_matrix);
             ar& NVP(mesh_matrix);
@@ -187,10 +181,7 @@ class MeshAsset : public Asset
 
         void init_gpu();
     private:
-        friend class boost::serialization::access;
-
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int)
+        SERIALIZE()
         {
             ar& NVP(primitive);
             ar& NVP(vertex_buffer);
@@ -309,10 +300,7 @@ class MeshAssetInstance : public scene_object, public AssetHolder, public Render
        
         MeshAssetInstance();
 
-        friend class boost::serialization::access;
-
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int);
+        SERIALIZE();
 
 };
 

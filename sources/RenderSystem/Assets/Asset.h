@@ -58,10 +58,7 @@ class AssetReferenceBase
 {
 		friend class AssetHolder;
 		friend class Asset;
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 		}
 
@@ -193,10 +190,7 @@ class AssetReference : public AssetReferenceBase
 
 		*/
 
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(boost::serialization::base_object<AssetReferenceBase>(*this));
 
@@ -311,10 +305,7 @@ class AssetHolder
 	public:
 		guid_set get_reference_ids();
 
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 		}
 		virtual ~AssetHolder()
@@ -398,10 +389,7 @@ public:
 		{
 		}
 	private:
-		friend class boost::serialization::access;
-
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
 			ar& NVP(name);
@@ -433,10 +421,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 				Asset_Type type;
 
 			private:
-				friend class boost::serialization::access;
-
-				template<class Archive>
-				void serialize(Archive& ar, const unsigned int)
+				SERIALIZE()
 				{
 					ar& NVP(id);
 					ar& NVP(name);
@@ -452,10 +437,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 		{
 				Render::Texture::ptr preview;
 			private:
-				friend class boost::serialization::access;
-
-				template<class Archive>
-				void serialize(Archive& ar, const unsigned int)
+				SERIALIZE()
 				{
 				   ar & NVP(preview);
 				}

@@ -1,5 +1,5 @@
 #pragma once
-#include "Resource\TextureData\Header.h"
+#include "Resource\TextureData.h"
 
 #include "CommandList.h"
 #include "Resource.h"
@@ -16,10 +16,7 @@ namespace DX12
 
             texure_header(std::filesystem::path name, bool force_srgb = false, bool mips = true);
         private:
-            friend class boost::serialization::access;
-
-            template<class Archive>
-            void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
             {
                 ar& NVP(name)&NVP(force_srgb)&NVP(mips);
             }
