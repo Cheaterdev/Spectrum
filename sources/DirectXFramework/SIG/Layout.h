@@ -1,7 +1,6 @@
 #pragma once
 import Concepts;
-
-#include "DX12/Samplers.h"
+import Samplers;
 
 template<class T>
 struct AutoGenSignatureDesc

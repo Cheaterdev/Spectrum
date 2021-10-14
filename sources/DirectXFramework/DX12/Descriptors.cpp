@@ -1,7 +1,6 @@
 #include "pch_dx.h"
 #include "Descriptors.h"
 #include "Device12.h"
-#include "Resource.h"
 #include "CommandList.h"
 
 namespace DX12 {

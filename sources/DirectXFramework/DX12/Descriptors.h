@@ -2,11 +2,15 @@
 
 import Allocators;
 #include "Math/Math.h"
+#include "d3dx12.h"
 
 #include "utils/utils_macros.h"
 
 import Log;
 import Data;
+import d3d12_types;
+import d3d12;
+
 namespace DX12
 {
 	class CommandList;

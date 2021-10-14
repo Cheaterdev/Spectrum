@@ -7,6 +7,7 @@ import Concepts;
 #include "D3D\Shaders.h"
 #include "DX12/PipelineState.h"
 import Utils;
+import d3d12_types;
 #include "utils/utils_macros.h"
 
 import ppl;
@@ -441,7 +442,7 @@ struct  SimpleGraphicsPSO {
 
 
 	std::vector<DXGI_FORMAT> rtv_formats;
-	std::vector<RenderTarget> blend;
+	std::vector<Render::RenderTarget> blend;
 	std::string name;
 
 	bool conservative;

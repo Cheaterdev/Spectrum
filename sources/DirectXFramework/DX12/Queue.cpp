@@ -1,5 +1,6 @@
 #include "pch_dx.h"
-#include "Samplers.h"
+import Samplers;
+
 #include "Device12.h"
 #include "GPUTimer.h"
 import Debug;
