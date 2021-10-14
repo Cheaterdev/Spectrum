@@ -1,7 +1,7 @@
 #include "pch_dx.h"
-
-#include "../RenderSystem/autogen/includes.h"
-
+#include "PSO.h"
+//#include "autogen/includes.h"
+void init_pso(enum_array<PSO, PSOBase::ptr>&);
 Render::ComputePipelineState::ptr SimpleComputePSO::create()
 {
 	Render::ComputePipelineStateDesc desc;

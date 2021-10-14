@@ -1,5 +1,5 @@
 #pragma once
-#include "DX12/RootSignature.h"
+import RootSignature;
 import Device;
 
 namespace DX12

@@ -8,7 +8,7 @@ import Tasks;
 
 #include "DX12/RayTracingAS.h"
 
-#include "../RenderSystem/autogen/includes.h"
+#include "autogen/includes.h"
 class MeshAssetInstance;
 
 template <typename T>

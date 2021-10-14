@@ -4,7 +4,7 @@
 import FileSystem;
 #include "D3D\Shaders.h"
 
-#include "RootSignature.h"
+import RootSignature;
 #include "Shader.h"
 import Device;
 import Memory;

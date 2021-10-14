@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "SMAA.h"
 
-#include "../RenderSystem/autogen/includes.h"
+#include "autogen/includes.h"
 using namespace FrameGraph;
 
 SMAA::SMAA()

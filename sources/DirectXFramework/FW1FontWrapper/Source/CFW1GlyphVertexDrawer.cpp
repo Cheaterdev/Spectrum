@@ -4,7 +4,7 @@
 
 #include "CFW1GlyphVertexDrawer.h"
 
-#include "../RenderSystem/autogen/includes.h"
+#include "autogen/includes.h"
 
 #define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
 

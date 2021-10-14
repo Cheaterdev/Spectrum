@@ -4,7 +4,7 @@ import Scheduler;
 import Holdable;
 #include "FrameGraph/FrameGraph.h"
 import Executors;
-#include "../RenderSystem/autogen/includes.h"
+#include "autogen/includes.h"
 class camera;
 class debug_drawer;
 class vertex_transform;

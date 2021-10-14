@@ -213,6 +213,16 @@ namespace Spectrum
 
 			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
 			conf.AddPublicDependency<ZipLib>(target);
+			
+			{ // AgilitySDK
+				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\include", 66);
+				conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12Core.dll", "D3D12"));
+
+				if(target.Mode != Mode.Retail)
+				{
+					conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12SDKLayers.dll", "D3D12"));
+				}
+			}
         }
     }
 	
@@ -282,15 +292,7 @@ namespace Spectrum
             conf.LibraryFiles.Add("d3d12.lib");
             conf.LibraryFiles.Add("dxguid.lib");
 
-			{ // AgilitySDK
-				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\include", 66);
-				conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12Core.dll", "D3D12"));
-
-				if(target.Mode != Mode.Retail)
-				{
-					conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12SDKLayers.dll", "D3D12"));
-				}
-			}
+			
 
             conf.AddPublicDependency<Core>(target);	
 			conf.AddPrivateDependency<DXCompiler>(target);	

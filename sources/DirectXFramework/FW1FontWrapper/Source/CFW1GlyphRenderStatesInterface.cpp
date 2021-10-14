@@ -4,7 +4,7 @@
 
 #include "CFW1GlyphRenderStates.h"
 
-#include "../RenderSystem/autogen/includes.h"
+#include "autogen/includes.h"
 
 
 namespace FW1FontWrapper

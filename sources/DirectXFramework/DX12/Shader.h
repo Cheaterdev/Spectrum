@@ -1,7 +1,6 @@
 #pragma once
 #include "D3D\Shaders.h"
-#include "../RenderSystem/autogen/enums.h"
-
+import Enums;
 std::optional<SlotID> get_slot(std::string_view slot_name);
 
 import Data;

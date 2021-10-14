@@ -3,7 +3,7 @@
 #include "GPUTimer.h"
 
 
-#include "../RenderSystem/autogen/includes.h"
+#include "autogen/includes.h"
 
 namespace DX12
 {

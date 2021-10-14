@@ -1,6 +1,6 @@
-#include "pch_render.h"
+#include "pch_dx.h"
 
-#include "../RenderSystem/autogen/includes.h"
+#include "autogen/includes.h"
 
 import ppl;
 using namespace concurrency;
