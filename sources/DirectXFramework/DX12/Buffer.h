@@ -7,6 +7,7 @@ import Device;
 import Resource;
 
 import Concepts;
+import Log;
 
 import serialization;
 

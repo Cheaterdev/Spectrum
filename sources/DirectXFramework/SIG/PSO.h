@@ -4,7 +4,7 @@ import Threading;
 import Profiling;
 
 import Concepts;
-#include "D3D\Shaders.h"
+import D3D.Shaders;
 #include "DX12/PipelineState.h"
 import Utils;
 import d3d12_types;

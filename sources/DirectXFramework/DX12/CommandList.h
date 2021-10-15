@@ -17,7 +17,14 @@ import Descriptors;
 import Constants;
 import Vectors;
 import Matrices;
-#include "DX12/Shader.h"
+import Enums;
+import Data;
+import Singleton;
+
+import stl.core;
+
+
+//#include "DX12/Shader.h"
 
 enum class Layouts;
 namespace DX12
@@ -905,7 +912,7 @@ namespace DX12
 
 
 		RootSignature::ptr root_sig;
-		UsedSlots used_slots;
+//		UsedSlots used_slots;
 	protected:
 		CommandList& base;
 		SignatureDataSetter(CommandList& base) :base(base) {

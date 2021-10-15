@@ -1,8 +1,11 @@
 #pragma once
-#include "D3D\Shaders.h"
+#include "FileSystem/ResourceManager.h"
+import D3D.Shaders;
 import Enums;
-std::optional<SlotID> get_slot(std::string_view slot_name);
+import stl.core;
 
+std::optional<SlotID> get_slot(std::string_view slot_name);
+import FileDepender;
 import Data;
 template<class T>
 class shader_with_id
@@ -79,57 +82,57 @@ namespace DX12
 {
     class PipelineStateBase;
 
-class UsedSlots
-{
-   
-public:
-    std::set<SlotID> slots_usage;
-	void merge(resource_file_depender & depender)
-	{
-        for (auto& d : depender.get_files())
+    class UsedSlots
+    {
+
+    public:
+        std::set<SlotID> slots_usage;
+        void merge(resource_file_depender& depender)
         {
-            auto autogen_start = d.file_name.find(L"autogen");
-            if (autogen_start != std::wstring::npos)
+            for (auto& d : depender.get_files())
             {
-                auto autogen_end = autogen_start + 6;
-
-                auto last_slash = d.file_name.find_first_of(L"\\/", autogen_end);
-
-                if (last_slash == autogen_end + 1)
+                auto autogen_start = d.file_name.find(L"autogen");
+                if (autogen_start != std::wstring::npos)
                 {
-                  
-                    if (d.file_name.find_first_of(L"\\/", last_slash+1) == std::wstring::npos)
+                    auto autogen_end = autogen_start + 6;
+
+                    auto last_slash = d.file_name.find_first_of(L"\\/", autogen_end);
+
+                    if (last_slash == autogen_end + 1)
                     {
-                        auto point = d.file_name.find(L".", last_slash);
 
-                        auto name = d.file_name.substr(last_slash + 1, point - last_slash - 1);
+                        if (d.file_name.find_first_of(L"\\/", last_slash + 1) == std::wstring::npos)
+                        {
+                            auto point = d.file_name.find(L".", last_slash);
 
-                        auto slot_id = get_slot(convert(name));
+                            auto name = d.file_name.substr(last_slash + 1, point - last_slash - 1);
 
-                        assert(slot_id);
-                        slots_usage.insert(slot_id.value());
+                            auto slot_id = get_slot(convert(name));
+
+                            assert(slot_id);
+                            slots_usage.insert(slot_id.value());
+                        }
                     }
                 }
             }
         }
-	}
-    void merge(UsedSlots& other)
-	{
+        void merge(UsedSlots& other)
+        {
 
-        slots_usage.merge(other.slots_usage);
-	}
-void clear()
-	{
-    slots_usage.clear();
-	}
-private:
-    friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int)
-    {
-        ar& NVP(slots_usage);
-    }
-};
+            slots_usage.merge(other.slots_usage);
+        }
+        void clear()
+        {
+            slots_usage.clear();
+        }
+    private:
+        friend class boost::serialization::access;
+        template<class Archive>
+        void serialize(Archive& ar, const unsigned int)
+        {
+            ar& NVP(slots_usage);
+        }
+    };
 
     template<class _shader_type>
     class Shader : public resource_manager<_shader_type, D3D::shader_header>

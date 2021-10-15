@@ -1364,6 +1364,6 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 		base.set_pipeline_internal(pipeline.get());
 		
 		
-		used_slots = pipeline->slots;
+	//	used_slots = pipeline->slots;
 	}
 }

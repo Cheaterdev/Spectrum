@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CommandList.h"
+#include "FileSystem/ResourceManager.h"
 import Resource;
 #include "helper.h"
 import TextureData;

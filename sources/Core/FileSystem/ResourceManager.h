@@ -9,6 +9,7 @@ import Singleton;
 import stl.filesystem;
 import stl.memory;
 import FileSystem;
+import FileDepender;
 
 class resource_system
 {
@@ -66,38 +67,6 @@ class resource_manager_base : public Singleton<resource_manager_base<_resource, 
 	}
 };
 
-
-class resource_file_depender
-{
-	struct depender
-	{
-		std::wstring file_name;
-		std::filesystem::file_time_type modify_time;
-
-		bool need_update();
-	private:
-
-		inline const std::wstring& get_name() const { return file_name; }
-SERIALIZE()
-		{
-			ar& NVP(file_name)& NVP(modify_time);
-		}
-	};
-	std::vector<depender> files;
-public:
-
-	inline const std::vector<depender>& get_files() const { return files; }
-
-	void add_depend(std::shared_ptr<file> _file);
-	bool need_update();
-	void clear();
-	bool depends_on(std::string v);
-private:
-	SERIALIZE()
-	{
-		ar& NVP(files);
-	}
-};
 
 template<class T> concept CanReload =
 requires (T t, T t2) {

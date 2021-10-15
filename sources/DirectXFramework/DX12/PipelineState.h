@@ -2,7 +2,7 @@
 
 
 import FileSystem;
-#include "D3D\Shaders.h"
+import D3D.Shaders;
 
 import RootSignature;
 #include "Shader.h"

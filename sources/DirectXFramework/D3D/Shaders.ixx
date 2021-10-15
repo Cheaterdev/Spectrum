@@ -1,7 +1,16 @@
-#pragma once
+module;
+
+#include "utils/utils_macros.h"
+export module D3D.Shaders;
+
+import Singleton;
 import FileSystem;
-#include "FileSystem/ResourceManager.h"
+import FileDepender;
 import DXCompiler;
+import serialization;
+
+export
+{
 
 namespace D3D
 {
@@ -92,3 +101,5 @@ struct D3D12ShaderCompilerInfo :public Singleton<D3D12ShaderCompilerInfo>
 	}
 };
 
+
+}
