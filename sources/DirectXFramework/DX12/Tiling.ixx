@@ -14,8 +14,7 @@ export
 
 	namespace DX12
 	{
-		class ResourceHeap;
-		class CommandList;
+
 
 		struct update_tiling_info
 		{

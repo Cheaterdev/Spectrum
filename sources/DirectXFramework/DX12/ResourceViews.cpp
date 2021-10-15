@@ -1,6 +1,6 @@
 #include "pch_dx.h"
 import ResourceViews;
-#include "DX12/CommandList.h"
+import CommandList;
 
 namespace DX12
 {

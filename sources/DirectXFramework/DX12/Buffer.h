@@ -1,16 +1,21 @@
 #pragma once
-import Allocators;
 #include "Serialization/serialization_defines.h"
 
-#include "DX12/CommandList.h"
+import Allocators;
+
 import Device;
 import Resource;
 
 import Concepts;
 import Log;
+import Descriptors;
 
 import serialization;
-
+import stl.core;
+import Constants;
+import Vectors;
+import Matrices;
+import CommandList;
 namespace DX12
 {
 
@@ -32,9 +37,7 @@ namespace DX12
 			HandleTable srv;
 			HandleTable static_uav;
 		
-			void set_data(DX12::CommandList::ptr& list, unsigned int offset, const  std::string& v);
-
-
+			void set_data(CommandList::ptr& list, unsigned int offset, const  std::string& v);
 			void set_data(unsigned int offset, const std::string& v);
 		public:
 			virtual ~GPUBuffer();

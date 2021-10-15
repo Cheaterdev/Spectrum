@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "DX12/CommandList.h"
+import CommandList;
 import ResourceViews;
 
 

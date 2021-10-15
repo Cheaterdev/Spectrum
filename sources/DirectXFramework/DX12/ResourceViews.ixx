@@ -13,7 +13,7 @@ export
 
 	namespace DX12
 	{
-		class CommandList;
+		//class CommandList;
 
 		class ResourceView
 		{
@@ -644,10 +644,6 @@ export
 
 		};
 
-		struct IndexBufferView
-		{
-			D3D12_INDEX_BUFFER_VIEW view;
-			Resource* resource = nullptr;
-		};
+	
 	}
 }

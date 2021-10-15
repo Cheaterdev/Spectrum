@@ -11,7 +11,7 @@
 
 #include "Math/Math.h"
 
-#include "DX12/CommandList.h"
+import CommandList;
 /// <summary>The current FW1 version.</summary>
 /// <remarks>This constant should be used when calling FW1CreateFactory to make sure the library version matches the headers.</remarks>
 #define FW1_VERSION 0x110f

@@ -1,7 +1,7 @@
 import Concepts;
 
-#include "DX12/CommandList.h"
-
+import CommandList;
+import Descriptors;
 
 struct CompiledRT
 {

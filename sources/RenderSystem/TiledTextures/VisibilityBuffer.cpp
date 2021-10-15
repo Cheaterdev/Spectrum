@@ -2,6 +2,7 @@
 #include "VisibilityBuffer.h"
 
 #include "autogen/includes.h"
+import ResourceViews;
 
 VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {

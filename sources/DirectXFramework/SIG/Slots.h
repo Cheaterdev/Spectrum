@@ -1,6 +1,6 @@
 #include "pch_dx.h"
 import Resource;
-#include "DX12/CommandList.h"
+import CommandList;
 import Concepts;
 import Descriptors;
 template<class _SlotTable, SlotID _ID, class _Table, class _Slot>

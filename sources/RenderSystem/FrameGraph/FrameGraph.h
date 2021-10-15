@@ -9,6 +9,8 @@ class camera;
 class main_renderer;
 class Scene;
 import d3d12_types;
+import ResourceViews;
+
 namespace FrameGraph
 {
 

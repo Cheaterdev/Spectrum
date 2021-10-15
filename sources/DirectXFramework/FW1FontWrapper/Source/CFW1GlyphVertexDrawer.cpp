@@ -7,7 +7,7 @@
 #include "autogen/includes.h"
 
 #define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
-
+import ResourceViews;
 
 namespace FW1FontWrapper
 {

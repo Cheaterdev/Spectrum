@@ -1,7 +1,7 @@
 #include "pch_dx.h"
-
+import Utils;
 import Resource;
-#include "CommandList.h"
+import CommandList;
 
 import States;
 

@@ -6,6 +6,7 @@
 #include "CFW1GlyphRenderStates.h"
 
 #include "autogen/includes.h"
+import ResourceViews;
 
 namespace FW1FontWrapper
 {

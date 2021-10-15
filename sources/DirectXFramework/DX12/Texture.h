@@ -1,11 +1,12 @@
 #pragma once
 
-#include "CommandList.h"
+import CommandList;
 #include "FileSystem/ResourceManager.h"
 import Resource;
 #include "helper.h"
 import TextureData;
 import d3d12_types;
+import Descriptors;
 namespace DX12
 {
 
