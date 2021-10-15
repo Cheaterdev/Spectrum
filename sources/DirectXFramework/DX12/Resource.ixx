@@ -58,7 +58,7 @@ export
 		//class Resource;
 		using Resource_ptr = std::shared_ptr<Resource>;
 
-		class FrameResources;
+
 
 
 		class TrackedResource : public TrackedObject

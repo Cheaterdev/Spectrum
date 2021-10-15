@@ -12,7 +12,11 @@ import RootSignature;
 import Fence;
 import IndirectCommand;
 import Resource;
-#include "DX12/ResourceViews.h"
+import ResourceViews;
+import Descriptors;
+import Constants;
+import Vectors;
+import Matrices;
 #include "DX12/Shader.h"
 
 enum class Layouts;

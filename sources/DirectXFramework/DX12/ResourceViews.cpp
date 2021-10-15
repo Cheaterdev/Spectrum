@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "ResourceViews.h"
+import ResourceViews;
 #include "DX12/CommandList.h"
 
 namespace DX12
@@ -23,4 +23,24 @@ namespace DX12
 		}
 	}
 
+
+	TextureView TextureView::create_2d_slice(UINT slice, FrameResources& frame)
+	{
+		ResourceViewDesc desc = view_desc;
+		desc.type = ResourceType::TEXTURE2D;
+		desc.Texture2D.ArraySize = 1;
+		desc.Texture2D.FirstArraySlice = slice;
+
+		return TextureView(resource, frame, desc);
+	}
+
+	TextureView TextureView::create_mip(UINT mip, FrameResources& frame)
+	{
+		ResourceViewDesc desc = view_desc;
+
+		desc.Texture2D.MipSlice += mip;
+		desc.Texture2D.MipLevels = 1;
+
+		return TextureView(resource, frame, desc);
+	}
 }

@@ -11,7 +11,7 @@ struct Handle;
 //class Resource;
 struct ResourceAllocationInfo;
 
-
+class FrameResources;
 class CommandList;
 
 }
