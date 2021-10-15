@@ -4,7 +4,7 @@ import Allocators;
 
 #include "DX12/CommandList.h"
 import Device;
-#include "DX12/Resource.h"
+import Resource;
 
 import Concepts;
 

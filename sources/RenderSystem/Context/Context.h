@@ -2,6 +2,7 @@
 
 import Scheduler;
 import Holdable;
+import Device;
 #include "FrameGraph/FrameGraph.h"
 import Executors;
 #include "autogen/includes.h"

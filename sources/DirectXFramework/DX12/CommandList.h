@@ -11,7 +11,7 @@ import RootSignature;
 
 import Fence;
 import IndirectCommand;
-#include "DX12/Resource.h"
+import Resource;
 #include "DX12/ResourceViews.h"
 #include "DX12/Shader.h"
 

@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "DX12/Resource.h"
+import Resource;
 #include "DX12/CommandList.h"
 import Concepts;
 import Descriptors;

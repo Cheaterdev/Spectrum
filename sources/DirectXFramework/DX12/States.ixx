@@ -1,6 +1,8 @@
 module;
 #include "pch_dx.h"
 #include "Utils/utils_macros.h"
+
+#include "dx12_types.h"
 export module States;
 
 import Utils;
@@ -14,8 +16,6 @@ export
 
 	namespace DX12
 	{
-		class Transitions;
-		class Resource;
 
 
 		 const ResourceState& GetSupportedStates(CommandListType type)

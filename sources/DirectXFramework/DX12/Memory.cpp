@@ -2,7 +2,7 @@
 #include "utils/utils_macros.h"
 #include "Memory.h"
 import Device;
-#include "Resource.h"
+import Resource;
 
 namespace DX12
 {

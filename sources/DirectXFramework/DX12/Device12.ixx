@@ -2,6 +2,7 @@ module;
 #include "utils/utils_macros.h"
 #include "helper.h"
 #include "d3dx12.h"
+#include "dx12_types.h"
 export module Device;
 
 import IdGenerator;
@@ -17,18 +18,8 @@ export
 
 	namespace DX12
 	{
-		struct swap_chain_desc;
-		struct RaytracingBuildDescBottomInputs;
-		struct RaytracingBuildDescTopInputs;
-		class SwapChain;
-		class Queue;
-		struct Handle;
-		class Resource;
-		struct ResourceAllocationInfo;
-
+		
 		typedef D3D12_VIEWPORT Viewport;
-		class CommandList;
-
 		class Device : public Singleton<Device>
 		{
 			ComPtr<ID3D12Device5> m_device;

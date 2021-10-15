@@ -1,5 +1,6 @@
 module;
 #include "Utils/utils_macros.h"
+#include "dx12_types.h"
 export module Memory;
 
 import StateContext;
@@ -17,7 +18,7 @@ export
 
 	namespace DX12
 	{
-		class Resource;
+		//class Resource;
 
 		struct TrackedObjectState
 		{
@@ -305,23 +306,7 @@ export
 			TileHeapPosition heap_position;
 		};
 
-		struct update_tiling_info
-		{
-			std::map<ResourceHeap*, std::vector<ResourceTile>> tiles;
-			Resource* resource = nullptr;
 
-			Resource* source = nullptr;
-			ivec3 pos;
-			ivec3 source_pos;
-			ivec3 size;
-			uint source_subres;
-			uint target_subres;
-
-			void add_tile(ResourceTile tile)
-			{
-				tiles[tile.heap_position.heap.get()].push_back(tile);
-			}
-		};
 
 		// for tiles now, only
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CommandList.h"
-#include "Resource.h"
+import Resource;
 #include "helper.h"
 import TextureData;
 import d3d12_types;

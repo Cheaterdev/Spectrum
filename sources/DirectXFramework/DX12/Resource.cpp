@@ -1,9 +1,18 @@
 #include "pch_dx.h"
-#include "Resource.h"
-#include "helper.h"
-import Device;
+#include "d3dx12.h"
+#include "utils/utils_macros.h"
 
+#include "helper.h"
+import Resource;
 import Debug;
+ //import Memory;
+ import Tiling;
+ import Fence;
+ import States;
+ import Device;
+import stl.core;
+import stl.memory;
+
 namespace DX12
 {
 	TrackedResource::~TrackedResource()

@@ -1,6 +1,6 @@
 #include "pch_dx.h"
 
-#include "Resource.h"
+import Resource;
 #include "CommandList.h"
 
 import States;

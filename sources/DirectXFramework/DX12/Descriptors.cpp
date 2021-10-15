@@ -1,8 +1,10 @@
 #include "pch_dx.h"
 #include "utils/utils_macros.h"
 import Device;
-#include "Resource.h"
+import Resource;
 import Descriptors;
+import d3d12_types;
+
 namespace DX12 {
 
 	DescriptorHeapType get_heap_type(HandleType type)

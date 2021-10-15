@@ -1,8 +1,9 @@
 #pragma once
 #include "Math/Math.h"
-#include "DX12/Resource.h"
+import Resource;
 
 import Descriptors;
+import d3d12_types;
 
 namespace DX12
 {
