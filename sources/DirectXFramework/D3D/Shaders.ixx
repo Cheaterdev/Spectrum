@@ -78,6 +78,19 @@ namespace D3D
 
 
 
+ const CLSID _CLSID_DxcCompiler = {
+    0x73e22d93,
+    0xe6ce,
+    0x47f3,
+    {0xb5, 0xbf, 0xf0, 0x66, 0x4f, 0x39, 0xc1, 0xb0} };
+
+// {EF6A8087-B0EA-4D56-9E45-D07E1A8B7806}
+ const GUID _CLSID_DxcLibrary = {
+    0x6245d6af,
+    0x66e0,
+    0x48fd,
+    {0x80, 0xb4, 0x4d, 0x27, 0x17, 0x96, 0x74, 0x8c} };
+
 
 struct D3D12ShaderCompilerInfo :public Singleton<D3D12ShaderCompilerInfo>
 {
@@ -93,10 +106,10 @@ struct D3D12ShaderCompilerInfo :public Singleton<D3D12ShaderCompilerInfo>
 		auto hr = DxcDllHelper.Initialize();
 		//	Utils::Validate(hr, L"Failed to initialize DxCDllSupport!");
 
-		DxcDllHelper.CreateInstance(CLSID_DxcCompiler, &compiler);
+		DxcDllHelper.CreateInstance(_CLSID_DxcCompiler, &compiler);
 		//	Utils::Validate(hr, L"Failed to create DxcCompiler!");
 
-		DxcDllHelper.CreateInstance(CLSID_DxcLibrary, &library);
+		DxcDllHelper.CreateInstance(_CLSID_DxcLibrary, &library);
 	//	Utils::Validate(hr, L"Failed to create DxcLibrary!");
 	}
 };
