@@ -51,7 +51,8 @@ struct DefaultLayout: public FrameLayout
 		static const unsigned int CB_ID = 27;
 		static inline const std::vector<UINT> tables = {27};
 	};
+
 	template<class Processor> static void for_each(Processor& processor) {
-		processor.process<CameraData,SceneData,PassData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({Render::Samplers::SamplerLinearWrapDesc,Render::Samplers::SamplerPointClampDesc,Render::Samplers::SamplerLinearClampDesc,Render::Samplers::SamplerAnisoBorderDesc,Render::Samplers::SamplerPointBorderDesc});
+		processor.template process<CameraData,SceneData,PassData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({Render::Samplers::SamplerLinearWrapDesc,Render::Samplers::SamplerPointClampDesc,Render::Samplers::SamplerLinearClampDesc,Render::Samplers::SamplerAnisoBorderDesc,Render::Samplers::SamplerPointBorderDesc});
 	}
 };

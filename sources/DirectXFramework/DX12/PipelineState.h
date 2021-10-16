@@ -6,6 +6,7 @@ import D3D.Shaders;
 
 import RootSignature;
 #include "Shader.h"
+#include "pch_dx.h"
 import Device;
 import Memory;
 import Singleton;

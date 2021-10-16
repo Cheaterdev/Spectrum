@@ -1,9 +1,11 @@
-#pragma once
-import Concepts;
-
+module;
 #include "DX12/PipelineState.h"
 #include "DX12/HLSLDescriptors.hpp"
+export module RTX;
 
+import Concepts;
+export
+{
 
 template<typename T> concept HasLocalData =
 requires () {
@@ -435,3 +437,6 @@ struct SelectLocal<T>
 			miss_ids.push_back(miss_id);
 		}
 	};
+
+
+}

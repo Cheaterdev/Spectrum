@@ -382,7 +382,7 @@ namespace GUI
 					   };
 
 					   auto mat_info = std::make_shared<material_info>();
-					   std::vector<task<void>> tasks;
+					   std::vector<concurrency::task<void>> tasks;
 					   tasks.reserve(files.size());
                       for(auto s:files)
                         {
@@ -391,7 +391,7 @@ namespace GUI
                             std::string ext = to_lower(s.substr(s.find_last_of(".") + 1));
 
                             if (ext == "png" || ext == "jpg" || ext == "jpeg" || ext == "dds" || ext == "tga")
-								tasks.emplace_back(create_task([s, mat_info](){
+								tasks.emplace_back(concurrency::create_task([s, mat_info](){
 								auto asset = (new TextureAsset(convert(s)));
 								asset->try_register();
 
@@ -416,7 +416,7 @@ namespace GUI
                             }));
 							else
                          //   if (ext == "blend" || ext == "obj" || ext == "3ds" || ext == "dae" || ext == "fbx" || ext == "rw4" || ext == "stl")
-								create_task([this,s]()
+								concurrency::create_task([this,s]()
                             {
 
 								auto context = std::make_shared<AssetLoadingContext>();

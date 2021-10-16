@@ -1,5 +1,12 @@
 #include "pch_dx.h"
-#include "PSO.h"
+#include "DX12/dx12_types.h"
+#include "DX12/PipelineState.h"
+#include "utils/utils_macros.h"
+import Enums;
+import PSO;
+import Data;
+import Profiling;
+import serialization;
 //#include "autogen/includes.h"
 void init_pso(enum_array<PSO, PSOBase::ptr>&);
 Render::ComputePipelineState::ptr SimpleComputePSO::create()

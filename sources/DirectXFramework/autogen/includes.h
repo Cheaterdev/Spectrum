@@ -1,10 +1,18 @@
 #pragma once
+#include "pch_dx.h"
+#include "DX12/dx12_types.h"
+#include "DX12/PipelineState.h"
+#include "DX12/HLSLDescriptors.hpp"
+import Vectors;
+import Matrices;
+import Samplers;
+
 import SIG;
-#include "SIG/RT.h"
-#include "SIG/Layout.h"
-#include "SIG/Slots.h"
-#include "SIG/PSO.h"
-#include "SIG/RTX.h"
+import RT;
+import Layout;
+import Slots;
+import PSO;
+import RTX;
 
 #include "layout\FrameLayout.h"
 #include "layout\DefaultLayout.h"

@@ -1,16 +1,21 @@
+
+export module RT;
+
 import Concepts;
 
 import CommandList;
 import Descriptors;
+export
+{
 
 struct CompiledRT
 {
-	Render::HandleTableLight table_rtv;
-	Render::HandleTableLight table_dsv;
+	DX12::HandleTableLight table_rtv;
+	DX12::HandleTableLight table_dsv;
 
 
 
-	const CompiledRT& set(Render::GraphicsContext& graphics, bool use_transitions = true) const
+	const CompiledRT& set(DX12::GraphicsContext& graphics, bool use_transitions = true) const
 	{
 		graphics.set_rtv(table_rtv, table_dsv[0]);
 
@@ -29,14 +34,14 @@ class RTHolder :public Table
 	template<class Context, class RTV>
 	void place_rtv(CompiledRT& compiled, Context& context, RTV& rtv) const
 	{
-		compiled.table_rtv = context.get_cpu_heap(Render::DescriptorHeapType::RTV).place(sizeof(rtv) / sizeof(Render::Handle));
-		auto ptr = reinterpret_cast<Render::Handle*>(&rtv);
+		compiled.table_rtv = context.get_cpu_heap(DX12::DescriptorHeapType::RTV).place(sizeof(rtv) / sizeof(DX12::Handle));
+		auto ptr = reinterpret_cast<DX12::Handle*>(&rtv);
 		for (UINT i = 0; i < (UINT)compiled.table_rtv.get_count(); i++)
 		{
-			Render::Handle* handle = ptr + i;
+			DX12::Handle* handle = ptr + i;
 			compiled.table_rtv[i].place(*handle);
 
-			//Render::Device::get().create_rtv(compiled.table_rtv[i], handle->resource_info->resource_ptr, handle->resource_info->rtv);
+			//DX12::Device::get().create_rtv(compiled.table_rtv[i], handle->resource_info->resource_ptr, handle->resource_info->rtv);
 
 		}
 	}
@@ -45,11 +50,11 @@ class RTHolder :public Table
 	template<class Context, class DSV>
 	void place_dsv(CompiledRT& compiled, Context& context, DSV& dsv) const
 	{
-		compiled.table_dsv = context.get_cpu_heap(Render::DescriptorHeapType::DSV).place(sizeof(dsv) / sizeof(Render::Handle));
-		auto ptr = reinterpret_cast<Render::Handle*>(&dsv);
+		compiled.table_dsv = context.get_cpu_heap(DX12::DescriptorHeapType::DSV).place(sizeof(dsv) / sizeof(DX12::Handle));
+		auto ptr = reinterpret_cast<DX12::Handle*>(&dsv);
 		for (UINT i = 0; i < (UINT)compiled.table_dsv.get_count(); i++)
 		{
-			Render::Handle* handle = ptr + i;
+			DX12::Handle* handle = ptr + i;
 			compiled.table_dsv[i].place(*handle);
 		}
 	}
@@ -80,10 +85,12 @@ public:
 	}
 
 
-	void set(Render::GraphicsContext& context, bool use_transitions = true) const
+	void set(DX12::GraphicsContext& context, bool use_transitions = true) const
 	{
 		compile(context.get_base()).set(context, use_transitions);
 	}
 
 };
 
+
+}
