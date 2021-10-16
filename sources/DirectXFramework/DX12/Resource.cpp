@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "d3dx12.h"
+
 #include "utils/utils_macros.h"
 
 #include "helper.h"

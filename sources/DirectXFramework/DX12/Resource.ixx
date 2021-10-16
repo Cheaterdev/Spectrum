@@ -1,5 +1,5 @@
 module;
-#include "d3dx12.h"
+
 #include "utils/utils_macros.h"
 export module Resource;
 
@@ -8,6 +8,7 @@ export import Tiling;
 export import Fence;
 export import States;
 export import Device;
+import d3d12;
 import stl.memory;
 export
 {

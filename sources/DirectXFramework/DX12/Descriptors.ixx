@@ -1,6 +1,5 @@
 module;
 #include "utils/utils_macros.h"
-#include "d3dx12.h"
 export module Descriptors;
 
 
