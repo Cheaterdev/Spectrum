@@ -2,6 +2,7 @@
 #include "Dragger.h"
 #include "GUI/Skin.h"
 
+import Constants;
 namespace GUI
 {
     namespace Elements

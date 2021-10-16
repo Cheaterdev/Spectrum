@@ -90,7 +90,7 @@ struct D3D12ShaderCompilerInfo :public Singleton<D3D12ShaderCompilerInfo>
 
 	D3D12ShaderCompilerInfo()
 	{
-		DxcDllHelper.Initialize();
+		auto hr = DxcDllHelper.Initialize();
 		//	Utils::Validate(hr, L"Failed to initialize DxCDllSupport!");
 
 		DxcDllHelper.CreateInstance(CLSID_DxcCompiler, &compiler);

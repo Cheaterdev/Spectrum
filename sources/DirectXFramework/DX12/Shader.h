@@ -82,7 +82,7 @@ namespace DX12
 {
     class PipelineStateBase;
 
-    class UsedSlots
+   /* class UsedSlots
     {
 
     public:
@@ -132,7 +132,7 @@ namespace DX12
         {
             ar& NVP(slots_usage);
         }
-    };
+    };*/
 
     template<class _shader_type>
     class Shader : public resource_manager<_shader_type, D3D::shader_header>
@@ -189,7 +189,7 @@ namespace DX12
         public:
             static Cache<unsigned int, size_t> shader_ids;
 
-            UsedSlots slots_usage;
+         //   UsedSlots slots_usage;
             Events::Event<void> on_change;
             const unsigned int& get_hash() const
             {
@@ -261,7 +261,7 @@ namespace DX12
                 result->compile();
                 result->own_id();
                 result->hash = crc32(result->blob);
-                result->slots_usage.merge(depender);
+               // result->slots_usage.merge(depender);
            
             
                 return result;
@@ -273,7 +273,7 @@ namespace DX12
             {
                 ar& NVP(blob);
                 ar& NVP(hash);
-                ar& NVP(slots_usage);
+              //  ar& NVP(slots_usage);
             	
                 if (Archive::is_loading::value)
                 {

@@ -3,9 +3,11 @@
 import Scheduler;
 import Holdable;
 import Device;
+#include "DX12/PipelineState.h"
 #include "FrameGraph/FrameGraph.h"
 import Executors;
-#include "autogen/includes.h"
+import Autogen;
+import Quaternion;
 class camera;
 class debug_drawer;
 class vertex_transform;

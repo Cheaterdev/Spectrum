@@ -1,9 +1,10 @@
 #include "pch_dx.h"
 
+#include "helper.h"
 #include "GPUTimer.h"
+#include "DX12/PipelineState.h"
 
-
-#include "autogen/includes.h"
+import Autogen;
 import Debug;
 import Exceptions;
 

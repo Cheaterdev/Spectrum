@@ -9,6 +9,7 @@ import Resource;
 import Concepts;
 import Log;
 import Descriptors;
+#include "DX12/HLSLDescriptors.hpp"
 
 import serialization;
 import stl.core;

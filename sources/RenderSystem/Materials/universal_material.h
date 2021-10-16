@@ -3,7 +3,13 @@
 #include "Context/Context.h"
 #include "Assets/BinaryAsset.h"
 #include "Assets/MaterialAsset.h"
+#include "DX12/Buffer.h"
 
+import Descriptors;
+import Concepts;
+import Layout;
+import SIG;
+#include "DX12/HLSLDescriptors.hpp"
 
 namespace materials
 {

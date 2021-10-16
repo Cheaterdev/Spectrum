@@ -26,7 +26,6 @@ import stl.core;
 import stl.memory;
 
 
-
 export{
 	enum class Layouts;
 

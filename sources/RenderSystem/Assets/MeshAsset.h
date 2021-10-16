@@ -7,9 +7,22 @@ import Tasks;
 #include "GUI/GUI.h"
 
 #include "DX12/RayTracingAS.h"
+#include "DX12/Buffer.h"
 
-#include "autogen/includes.h"
+#include "DX12/PipelineState.h"
+#include "DX12/HLSLDescriptors.hpp"
+#include "pch_dx.h"
+import stl.core;
+
+import Concepts;
+
+
+import Autogen;
+import Descriptors;
+import Concepts;
+import Layout;
 class MeshAssetInstance;
+#include "DX12/HLSLDescriptors.hpp"
 
 template <typename T>
 struct InlineMeshlet

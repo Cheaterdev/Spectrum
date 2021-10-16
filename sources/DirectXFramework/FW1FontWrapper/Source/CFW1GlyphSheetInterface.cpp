@@ -5,7 +5,7 @@
 #include "CFW1GlyphSheet.h"
 #include "CFW1GlyphRenderStates.h"
 
-#include "autogen/includes.h"
+import Autogen;
 import ResourceViews;
 
 namespace FW1FontWrapper

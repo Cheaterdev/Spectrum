@@ -157,41 +157,41 @@ namespace DX12
 
 
 		
-		slots.clear();
+		//slots.clear();
 		if (desc.vertex)
 		{
 			creator.include(desc.vertex);
-			slots.merge(desc.vertex->slots_usage);
+	//		slots.merge(desc.vertex->slots_usage);
 		}
 		if (desc.pixel)
 		{
 			creator.include(desc.pixel);
-			slots.merge(desc.pixel->slots_usage);
+		//	slots.merge(desc.pixel->slots_usage);
 		}
 		if (desc.geometry)
 		{
 			creator.include(desc.geometry);
-			slots.merge(desc.geometry->slots_usage);
+	//		slots.merge(desc.geometry->slots_usage);
 		}
 		if (desc.domain)
 		{
 			creator.include(desc.domain);
-			slots.merge(desc.domain->slots_usage);
+	//		slots.merge(desc.domain->slots_usage);
 		}
 		if (desc.hull)
 		{
 			creator.include(desc.hull);
-			slots.merge(desc.hull->slots_usage);
+		//	slots.merge(desc.hull->slots_usage);
 		}
 		if (desc.mesh)
 		{
 			creator.include(desc.mesh);
-			slots.merge(desc.mesh->slots_usage);
+		//	slots.merge(desc.mesh->slots_usage);
 		}
 		if (desc.amplification)
 		{
 			creator.include(desc.amplification);
-			slots.merge(desc.amplification->slots_usage);
+		//	slots.merge(desc.amplification->slots_usage);
 		}
 		
 		{

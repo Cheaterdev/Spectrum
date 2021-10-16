@@ -38,6 +38,7 @@
 
 import ppl;
 import Debug;
+import PSO;
 using namespace FrameGraph;
 
 HRESULT device_fail()

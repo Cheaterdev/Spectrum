@@ -1,6 +1,6 @@
 #pragma once
 
-#include "autogen/includes.h"
+import Autogen;
 import Frustum;
 class camera : public Frustum
 {
