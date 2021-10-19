@@ -1,4 +1,4 @@
-
+#pragma once
 #include "FW1FontWrapper/Source/FW1FontWrapper.h"
 typedef ComPtr<IFW1Factory>			FW1_Factory;
 typedef ComPtr<IFW1FontWrapper>		FW1_Font;

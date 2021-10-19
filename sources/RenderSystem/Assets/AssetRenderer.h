@@ -1,3 +1,4 @@
+#pragma once
 #include "Renderer/Renderer.h"
 #include "Assets/MaterialAsset.h"
 #include "Assets/TextureAsset.h"

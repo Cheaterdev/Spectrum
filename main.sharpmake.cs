@@ -21,7 +21,7 @@ namespace Spectrum
     [Fragment, Flags]
     public enum Mode
     {
-        Debug = 1,
+        Dev = 1,
         Profile = 2,
         Retail = 4
     }
@@ -56,18 +56,19 @@ namespace Spectrum
                 Platform = Platform.win64,
                 DevEnv = DevEnv.vs2019,
                 Optimization = Optimization.Release,
-                Mode = Mode.Debug | Mode.Profile | Mode.Retail
+                Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
 
             CustomProperties.Add("VcpkgEnabled", "true");
             CustomProperties.Add("VcpkgEnableManifest", "true");
 			CustomProperties.Add("VcpkgTriplet", "x64-windows-static");
-			//CustomProperties.Add("VcpkgConfiguration", "Release");
+			CustomProperties.Add("VcpkgConfiguration", "Release");
         }
 
         [Configure]
         public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
+            conf.IsBlobbed = true;
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 
@@ -103,7 +104,7 @@ namespace Spectrum
             
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106")); //module reference issues
 
-            if (target.Mode == Mode.Debug)
+            if (target.Mode == Mode.Dev)
             {
                 conf.Options.Add(Options.Vc.Compiler.Optimization.Disable);
                 conf.Options.Add(Options.Vc.Compiler.Inline.Disable);
@@ -244,7 +245,7 @@ namespace Spectrum
            // conf.PrecompSource = "pch.cpp";
 
            // conf.LibraryFiles.Add("Dbghelp.lib");
-            conf.LibraryFiles.Add("Onecore.lib");
+        //   
 			
 			conf.AddPublicDependency<Modules>(target);
 		
@@ -363,6 +364,8 @@ namespace Spectrum
             //conf.PrecompHeader = "pch.h";
             //conf.PrecompSource = "pch.cpp";
 
+            conf.LibraryFiles.Add("Onecore.lib");
+
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
@@ -395,8 +398,8 @@ namespace Spectrum
             {
                 Platform = Platform.win64,
                 DevEnv = DevEnv.vs2019,
-                Optimization = Optimization.Release,
-                Mode = Mode.Debug | Mode.Profile | Mode.Retail
+                Optimization =  Optimization.Release,
+                Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
         }
 
@@ -406,10 +409,19 @@ namespace Spectrum
             conf.SolutionFileName = "Spectrum";
             conf.SolutionPath = @"[solution.SharpmakeCsPath]\projects\";
             string platformName = string.Empty;
-
+/*
+			switch (target.Optimization)
+            {
+                case Optimization.Debug: platformName += "Debug "; break;
+                case Optimization.Release: platformName += "Release "; break;
+                default:
+                    throw new NotImplementedException();
+            }
+			*/
+			
             switch (target.Mode)
             {
-                case Mode.Debug: platformName += "Debug"; break;
+                case Mode.Dev: platformName += "Dev"; break;
                 case Mode.Retail: platformName += "Retail"; break;
                 case Mode.Profile: platformName += "Profile"; break;
                 default:

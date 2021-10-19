@@ -1,3 +1,4 @@
+#pragma once
 #include "Assets/Asset.h"
 #include "GUI/Elements/Container.h"
 #include "GUI/Elements/StatusBar.h"

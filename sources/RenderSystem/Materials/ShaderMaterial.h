@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Assets/MaterialAsset.h"
 
 class ShaderMaterial: public materials::material, public AssetHolder

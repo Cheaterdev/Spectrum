@@ -1,3 +1,4 @@
+#pragma once
 #include "Materials/universal_material.h"
 #include "Assets/MeshAsset.h"
 

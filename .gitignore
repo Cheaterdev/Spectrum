@@ -13,6 +13,7 @@ AgilitySDK/
 *.nv-gpudmp*
 
 #VS-specific
+*.blob.cpp
 *.user
 obj/
 bin/

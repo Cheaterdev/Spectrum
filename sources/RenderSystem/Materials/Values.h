@@ -1,3 +1,4 @@
+#pragma once
 import FlowGraph;
 #include "Assets/TextureAsset.h"
 #include "GUI/Elements/FlowGraph/ComponentWindow.h"

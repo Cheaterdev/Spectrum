@@ -1,4 +1,5 @@
-﻿#include "MenuList.h"
+﻿#pragma once
+#include "MenuList.h"
 #include "Button.h"
 
 namespace GUI
