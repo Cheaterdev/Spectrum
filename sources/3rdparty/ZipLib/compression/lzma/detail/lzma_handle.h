@@ -1,7 +1,7 @@
 #pragma once
 #include "lzma_alloc.h"
 
-#include "../../../extlibs/lzma/LzmaEnc.h"
+#include "7zip/C/LzmaEnc.h"
 
 namespace detail
 {

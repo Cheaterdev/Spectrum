@@ -2,8 +2,8 @@
 #include "lzma_handle.h"
 #include "lzma_out_stream.h"
 
-#include "../../../extlibs/lzma/7zVersion.h"
-#include "../../../extlibs/lzma/LzmaEnc.h"
+//#include "7zip/C/Version.h"
+#include "7zip/C/LzmaEnc.h"
 
 namespace detail
 {
@@ -17,8 +17,8 @@ namespace detail
 
       lzma_header()
       {
-        _header[0] = MY_VER_MAJOR;
-        _header[1] = MY_VER_MINOR;
+          _header[0] = 1;// MY_VER_MAJOR;
+          _header[1] = 2;// MY_VER_MINOR;
         _header[2] = LZMA_PROPS_SIZE & 0xFF;
         _header[3] = (LZMA_PROPS_SIZE >> 8) & 0xFF;
       }

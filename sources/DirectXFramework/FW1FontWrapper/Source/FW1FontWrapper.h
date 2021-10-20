@@ -6,7 +6,7 @@
 #ifndef IncludeGuard__FW1_FW1FontWrapper_h
 #define IncludeGuard__FW1_FW1FontWrapper_h
 
-#include <D3D11.h>
+//#include <D3D11.h>
 #include <DWrite.h>
 
 #include "Math/Math.h"
@@ -316,24 +316,6 @@ public:
     /// <param name="pDesc">Pointer to a sheet description.</param>
     virtual void STDMETHODCALLTYPE GetDesc(
         __out FW1_GLYPHSHEETDESC* pDesc
-    ) = 0;
-
-    /// <summary>Get the ID3D11ShaderResourceView for the sheet's texture.</summary>
-    /// <remarks></remarks>
-    /// <returns>Standard HRESULT error code.</returns>
-    /// <param name="ppSheetTextureSRV">Address of a pointer to an ID3D11ShaderResourceView.</param>
-    virtual HRESULT STDMETHODCALLTYPE GetSheetTexture(
-        __out ID3D11ShaderResourceView** ppSheetTextureSRV
-    ) = 0;
-
-    /// <summary>Get the ID3D11ShaderResourceView for the sheet's coord buffer.</summary>
-    /// <remarks>The coord buffer contains 32 bytes per glyph, stored as two float4, representing the data in an FW1_GLYPHCOORDS structure.<br/>
-    /// If the sheet is created without a hardware coord buffer, the method will return success and set the coord buffer to NULL.
-    /// See IFW1Factory::CreateGlyphSheet.</remarks>
-    /// <returns>Standard HRESULT error code.</returns>
-    /// <param name="ppCoordBufferSRV">Address of a pointer to an ID3D11ShaderResourceView.</param>
-    virtual HRESULT STDMETHODCALLTYPE GetCoordBuffer(
-        __out ID3D11ShaderResourceView** ppCoordBufferSRV
     ) = 0;
 
     /// <summary>Get a sheet's coord-buffer, as an array of FW1_GLYPHCOORDS.</summary>

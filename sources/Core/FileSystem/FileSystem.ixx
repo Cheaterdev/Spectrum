@@ -196,7 +196,7 @@ void native_file_provider::on_change(const std::filesystem::path& path, std::fun
                 }
             }
 
-            Log::get() << "on_change ended" << Log::endl;
+//            Log::get() << "on_change ended" << Log::endl;
         });
 }
 

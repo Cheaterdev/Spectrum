@@ -14,6 +14,7 @@
 		"antlr4",
 		"magic-enum",
 		"crossguid",
-		"crc32c"
+		"crc32c",
+		"7zip"
 	]
 }

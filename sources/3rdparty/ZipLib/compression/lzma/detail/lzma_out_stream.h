@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../extlibs/lzma/Types.h"
+#include "7zip/C/7zTypes.h"
 
 namespace detail
 {
@@ -14,9 +14,9 @@ namespace detail
         : _bytesWritten(0)
         , _stream(nullptr)
       {
-        this->Write = [](void* p, const void* buf, size_t size)
+        this->Write = [](const ISeqOutStream* p, const void* buf, size_t size)
         {
-          lzma_out_stream* pthis = static_cast<lzma_out_stream*>(p);
+          lzma_out_stream* pthis = const_cast<lzma_out_stream*>(reinterpret_cast<const lzma_out_stream*>(p));
           return pthis->write(buf, size);
         };
       }

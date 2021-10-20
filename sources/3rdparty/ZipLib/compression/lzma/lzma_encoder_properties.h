@@ -3,7 +3,7 @@
 
 #include "detail/lzma_handle.h"
 
-#include "../../extlibs/lzma/LzmaEnc.h"
+#include "7zip/C/LzmaEnc.h"
 
 struct lzma_encoder_properties
   : compression_encoder_properties_interface

@@ -145,8 +145,8 @@ export {
 			//   Log::get().listeners.insert(this);
 			active = true;
 
-			//	typename Events::Event<LogBlock*>::func_type f = [this](LogBlock* v) { on_log(*v); };
-			//	Log::get().on_log.register_handler(this, f);
+				typename Events::Event<const LogBlock*>::func_type f = [this](const LogBlock* v) { on_log(*v); };
+				Log::get().on_log.register_handler(this, f);
 
 		}
 

@@ -447,17 +447,17 @@ export
 
 
 		public:
-			virtual UINT get_id()
+			virtual unsigned int get_id()
 			{
 				return "undefined"_crc32;
 			}
 
-			UINT get_graph_id()
+			unsigned int get_graph_id()
 			{
 				return "undefined"_crc32;
 			}
 
-			virtual UINT get_id_with_links()
+			virtual unsigned int get_id_with_links()
 			{
 
 				std::stringstream total;

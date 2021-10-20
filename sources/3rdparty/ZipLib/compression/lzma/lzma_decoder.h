@@ -4,7 +4,7 @@
 #include "detail/lzma_alloc.h"
 #include "lzma_decoder_properties.h"
 
-#include "../../extlibs/lzma/LzmaDec.h"
+#include "7zip/C/LzmaDec.h"
 
 #include <cstdint>
 

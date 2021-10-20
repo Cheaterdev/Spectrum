@@ -7,7 +7,7 @@ import IdGenerator;
 import Threading;
 
 export{
-	template<class T, UINT part_count>
+	template<class T, unsigned int part_count>
 	class NonCopyableFastIndexer
 	{
 
@@ -17,7 +17,7 @@ export{
 		mutable std::map<int, T> state_map;
 
 	public:
-		T& operator[](UINT id)
+		T& operator[](unsigned int id)
 		{
 			if (id < part_count)
 				return states[id];

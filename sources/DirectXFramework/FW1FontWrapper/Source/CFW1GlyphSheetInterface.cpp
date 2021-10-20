@@ -40,28 +40,6 @@ namespace FW1FontWrapper
     }
 
 
-// Get the sheet texture
-    HRESULT STDMETHODCALLTYPE CFW1GlyphSheet::GetSheetTexture(ID3D11ShaderResourceView** ppSheetTextureSRV)
-    {
-        if (ppSheetTextureSRV == NULL)
-            return E_INVALIDARG;
-
-        Log::get() << "unsup" << Log::endl;
-        return S_OK;
-    }
-
-
-// Get the glyph coordinate buffer
-    HRESULT STDMETHODCALLTYPE CFW1GlyphSheet::GetCoordBuffer(ID3D11ShaderResourceView** ppCoordBufferSRV)
-    {
-        if (ppCoordBufferSRV == NULL)
-            return E_INVALIDARG;
-
-        Log::get() << "unsup" << Log::endl;
-        return S_OK;
-    }
-
-
 // Get glyph coordinate array for all glyphs in the sheet
     const FW1_GLYPHCOORDS* STDMETHODCALLTYPE CFW1GlyphSheet::GetGlyphCoords()
     {
@@ -241,7 +219,7 @@ namespace FW1FontWrapper
                 if (dirtyRect.right > dirtyRect.left && dirtyRect.bottom > dirtyRect.top)
                 {
                     UINT8* srcMem = m_textureData;
-                    D3D11_BOX dstBox;
+                    D3D12_BOX dstBox;
                     ZeroMemory(&dstBox, sizeof(dstBox));
                     dstBox.left = dirtyRect.left;
                     dstBox.right = dirtyRect.right;

@@ -63,6 +63,9 @@ namespace Spectrum
             CustomProperties.Add("VcpkgEnableManifest", "true");
 			CustomProperties.Add("VcpkgTriplet", "x64-windows-static");
 			CustomProperties.Add("VcpkgConfiguration", "Release");
+
+         //   BlobWorkFileCount = 8;
+        //    GeneratableBlobCount  = 8;
         }
 
         [Configure]

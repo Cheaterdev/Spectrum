@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../extlibs/lzma/Types.h"
+#include "7zip/C/7zTypes.h"
 
 #include <condition_variable>
 #include <mutex>
@@ -27,9 +27,9 @@ namespace detail
         , _internalInputBuffer(nullptr)
         , _endOfStream(false)
       {
-        this->Read = [](void* p, void* buf, size_t* size) -> SRes
+        this->Read = [](const ISeqInStream* p, void* buf, size_t* size) -> SRes
         {
-          lzma_in_stream* pthis = static_cast<lzma_in_stream*>(p);
+          lzma_in_stream* pthis = const_cast<lzma_in_stream*>(reinterpret_cast<const lzma_in_stream*>(p));
           return pthis->read(buf, size);
         };
       }

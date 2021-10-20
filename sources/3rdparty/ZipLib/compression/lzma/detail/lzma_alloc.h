@@ -1,5 +1,5 @@
 #pragma once
-#include "../../../extlibs/lzma/Types.h"
+#include <7zip/C/7zTypes.h>
 
 namespace detail
 {
@@ -9,8 +9,8 @@ namespace detail
     public:
       lzma_alloc()
       {
-        this->Alloc = [](void*, size_t size)   { return malloc(size); };
-        this->Free  = [](void*, void* address) { free(address); };
+        this->Alloc = [](ISzAllocPtr, size_t size)   { return malloc(size); };
+        this->Free  = [](ISzAllocPtr, void* address) { free(address); };
       }
   };
 }

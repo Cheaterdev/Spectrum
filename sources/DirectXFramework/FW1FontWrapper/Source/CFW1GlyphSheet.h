@@ -22,8 +22,6 @@ namespace FW1FontWrapper
             // IFW1GlyphSheet
             virtual void STDMETHODCALLTYPE GetDesc(FW1_GLYPHSHEETDESC* pDesc);
 
-            virtual HRESULT STDMETHODCALLTYPE GetSheetTexture(ID3D11ShaderResourceView** ppSheetTextureSRV);
-            virtual HRESULT STDMETHODCALLTYPE GetCoordBuffer(ID3D11ShaderResourceView** ppCoordBufferSRV);
 
             virtual const FW1_GLYPHCOORDS* STDMETHODCALLTYPE GetGlyphCoords();
             virtual HRESULT STDMETHODCALLTYPE BindSheet(Render::CommandList::ptr& pContext, UINT Flags);
