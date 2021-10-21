@@ -303,7 +303,7 @@ class AssetHolder
 	protected:
 		virtual void on_asset_change(std::shared_ptr<Asset> asset);
 	public:
-		guid_set get_reference_ids();
+		std::set<Guid> get_reference_ids();
 
 		SERIALIZE()
 		{
@@ -416,7 +416,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 				Guid id;
 				std::wstring name;
 
-				guid_set references;
+				std::set<Guid> references;
 				std::set<std::wstring> additional_files;
 				Asset_Type type;
 
@@ -492,7 +492,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 		folder_item* get_folder();
 		static AssetStorage::ptr try_load(file::ptr f);
 
-		 guid_set get_references() 
+		 std::set<Guid> get_references() 
 	{
 		return header->references;
 	}
@@ -553,7 +553,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 
 		AssetManager();
 		~AssetManager();
-		guid_map<AssetStorage::ptr> assets;
+		std::map<Guid, AssetStorage::ptr> assets;
 		std::mutex m;
 		std::vector<std::function<void()>> funcs;
 		folder_item::ptr tree_folders;
@@ -653,7 +653,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 			return MessageBoxA(0, str.c_str(), "message", MB_YESNO) == IDOK;
 		};
 
-		guid_map<AssetStorage::ptr> get_assets()
+		std::map<Guid, AssetStorage::ptr> get_assets()
 		{
 			return assets;
 		}
@@ -748,8 +748,11 @@ public:
 		auto data = Hasher::hash(convert(name));
 
 		std::array<unsigned char, 16> ids;
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < data.size(); i++)
 			ids[i] = data[i];
+
+		for (int i = data.size(); i < 16; i++)
+			ids[i] = 0;
 		id = Guid(ids);
 
 	}

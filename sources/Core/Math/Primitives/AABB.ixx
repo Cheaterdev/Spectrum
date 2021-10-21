@@ -1,5 +1,6 @@
 module;
 #include "Serialization/serialization_defines.h"
+#include "Serialization/serialization_archives.h"
 export module AABB;
 
 export import Constants;
@@ -42,6 +43,7 @@ private:
 	}
 };
 
+BOOST_CLASS_EXPORT(AABB);
 
 module: private;
 

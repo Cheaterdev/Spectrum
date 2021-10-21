@@ -748,9 +748,9 @@ void AssetStorage::save()
 {
 }
 
- guid_set AssetHolder::get_reference_ids()
+ std::set<Guid> AssetHolder::get_reference_ids()
 {
-	 guid_set r;
+	 std::set<Guid> r;
 	m.lock();
 
 	for (auto a : assets)

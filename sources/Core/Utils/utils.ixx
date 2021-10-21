@@ -229,30 +229,6 @@ export
 		}
 	};
 
-
-
-	struct guid_compare {
-		bool operator()(const Guid& l, const Guid& r) const {
-			auto& a = l.bytes();
-			auto& b = r.bytes();
-
-
-			for (unsigned int i = 0; i < b.size(); i++)
-			{
-				if (a[i] != b[i])
-					return a[i] < b[i];
-			}
-
-			return false;
-		}
-	};
-
-
-	using guid_set = std::set<Guid, guid_compare>;
-
-	template<class T>
-	using guid_map = std::map<Guid, T, guid_compare>;
-
 }
 
 module: private;

@@ -1,3 +1,6 @@
+#define isValid() operator<(const Guid &rhs) const { return _bytes < rhs._bytes;} \
+bool isValid()
+
 #include <crossguid/guid.hpp>
 
-using Guid = xg::Guid;
+#undef isValid
