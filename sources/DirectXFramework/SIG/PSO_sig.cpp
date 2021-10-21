@@ -1,7 +1,7 @@
 #include "pch_dx.h"
 #include "DX12/dx12_types.h"
 #include "DX12/PipelineState.h"
-#include "utils/utils_macros.h"
+
 import Enums;
 import PSO;
 import Data;

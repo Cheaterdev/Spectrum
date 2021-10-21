@@ -62,7 +62,7 @@ private:
 	}
 };
 
-//BOOST_CLASS_EXPORT(Sphere)
+
 
 module: private;
 

@@ -1,6 +1,7 @@
 module;
-#include "serialization_defines.h"
+
 export module serialization;
+export import "serialization_defines.h";
 export import boost.serialization;
 export import stl.core;
 export import stl.threading;

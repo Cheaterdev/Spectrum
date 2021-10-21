@@ -6,6 +6,7 @@ export module TextureData;
 
 import FileSystem;
 import serialization;
+import Utils;
 
 export
 {

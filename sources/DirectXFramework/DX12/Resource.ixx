@@ -1,6 +1,6 @@
 module;
 
-#include "utils/utils_macros.h"
+
 export module Resource;
 
 export import Memory;
@@ -10,6 +10,7 @@ export import States;
 export import Device;
 import d3d12;
 import stl.memory;
+import Utils;
 export
 {
 	namespace DX12

@@ -831,6 +831,17 @@ export
 
 }
 
+/*
+BOOST_CLASS_EXPORT_KEY(FlowGraph::window);
+BOOST_CLASS_EXPORT_KEY(FlowGraph::Node);
+BOOST_CLASS_EXPORT_KEY(FlowGraph::input);
+BOOST_CLASS_EXPORT_KEY(FlowGraph::output);
+BOOST_CLASS_EXPORT_KEY(FlowGraph::graph);
+BOOST_CLASS_EXPORT_KEY(FlowGraph::graph_input);
+BOOST_CLASS_EXPORT_KEY(FlowGraph::graph_output);
+BOOST_CLASS_EXPORT_KEY(FlowGraph::parameter_type);
+BOOST_CLASS_EXPORT_KEY(FlowGraph::strict_parameter);
+*/
 module:private;
 
 namespace FlowGraph
@@ -1775,21 +1786,4 @@ namespace FlowGraph
 	}*/
 }
 
-
-
-BOOST_CLASS_EXPORT(FlowGraph::window);
-
-BOOST_CLASS_EXPORT(FlowGraph::Node);
-BOOST_CLASS_EXPORT(FlowGraph::input);
-BOOST_CLASS_EXPORT(FlowGraph::output);
-
-BOOST_CLASS_EXPORT(FlowGraph::graph);
-
-BOOST_CLASS_EXPORT(FlowGraph::graph_input);
-BOOST_CLASS_EXPORT(FlowGraph::graph_output);
-
-BOOST_CLASS_EXPORT(FlowGraph::parameter_type);
-
-
-BOOST_CLASS_EXPORT(FlowGraph::strict_parameter);
 

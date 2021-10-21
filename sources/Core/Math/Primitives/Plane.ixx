@@ -85,4 +85,3 @@ Plane::operator Vector<vec4_t<float>>() const
     return vec4(n, d);
 }
 
-//BOOST_CLASS_EXPORT(Plane)

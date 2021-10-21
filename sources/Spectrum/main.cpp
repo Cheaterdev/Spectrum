@@ -39,6 +39,7 @@
 import ppl;
 import Debug;
 import PSO;
+import Utils;
 using namespace FrameGraph;
 
 HRESULT device_fail()
@@ -1403,7 +1404,6 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	EVENT("start");
 	Application::create<RenderApplication>();
 	EVENT("create");
-
 
 
 	Log::get() << v << Log::endl;

@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "Utils/utils_macros.h"
+
 import Device;
 import Profiling;
 import Fence;

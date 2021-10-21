@@ -3,7 +3,7 @@
 import Singleton;
 import d3d12;
 
-#include "utils/utils_macros.h"
+import Utils;
 import serialization;
 
 typedef ComPtr<IDXGISwapChain1>		DXGI_SwapChain;

@@ -1,5 +1,5 @@
 module;
-#include "utils/utils_macros.h"
+
 
 export module d3d12_types;
 

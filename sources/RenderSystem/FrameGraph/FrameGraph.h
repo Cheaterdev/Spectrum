@@ -4,7 +4,7 @@
 #include "DX12/Texture.h"
 import Scheduler;
 
-#include "utils/utils_macros.h"
+
 class camera;
 class main_renderer;
 class Scene;

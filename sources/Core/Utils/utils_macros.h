@@ -44,5 +44,3 @@
 #define THREAD_SCOPE(x) ;
 #define CHECK_THREAD(x) ;
 #endif
-
-#include "Serialization/serialization_defines.h"

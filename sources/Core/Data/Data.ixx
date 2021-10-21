@@ -1,6 +1,4 @@
 module;
-
-#include "utils/utils_macros.h"
 #include "Serialization/serialization_defines.h"
 
 export module Data;

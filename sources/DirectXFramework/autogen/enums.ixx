@@ -1,5 +1,5 @@
 module;
-#include "utils/utils_macros.h"
+
 export module Enums;
 
 import crc32;

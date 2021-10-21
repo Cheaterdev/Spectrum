@@ -1,6 +1,6 @@
 module;
 
-#include "utils/utils_macros.h"
+
 export module D3D.Shaders;
 
 import Singleton;
@@ -8,6 +8,7 @@ import FileSystem;
 import FileDepender;
 import DXCompiler;
 import serialization;
+import Utils;
 
 export
 {

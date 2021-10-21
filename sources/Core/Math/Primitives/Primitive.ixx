@@ -64,6 +64,3 @@ void Primitive::apply_transform(ptr, mat4x4&)
 void Primitive::set(Primitive*, mat4x4&)
 {}
 
-
-//BOOST_CLASS_EXPORT(Primitive)
-

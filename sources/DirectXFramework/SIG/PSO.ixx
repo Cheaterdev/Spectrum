@@ -1,7 +1,7 @@
 module;
 #include "DX12/dx12_types.h"
 #include "DX12/PipelineState.h"
-#include "utils/utils_macros.h"
+
 export module PSO;
 
 import Data;

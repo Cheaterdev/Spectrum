@@ -1,5 +1,5 @@
 module;
-#include "Utils/utils_macros.h"
+
 #include "dx12_types.h"
 export module Memory;
 

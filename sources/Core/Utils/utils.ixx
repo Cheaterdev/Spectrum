@@ -1,7 +1,7 @@
 module;
-#include "utils/utils_macros.h"
 export module Utils;
 
+export import "utils/utils_macros.h";
 export import stl.core;
 export import magic_enum;
 import crossguid;

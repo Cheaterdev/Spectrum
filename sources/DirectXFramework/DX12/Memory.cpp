@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "utils/utils_macros.h"
+
 #include "Memory.h"
 import Device;
 import Resource;
