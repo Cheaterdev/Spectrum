@@ -1,7 +1,11 @@
-#pragma once
+module;
 
+//#include "Serialization/Serializer.h"
+#include "serialization/serialization_archives.h"
 
-#include "Serialization/Serializer.h"
+export module ResourceManager;
+import Serializer;
+import serialization;
 import Utils;
 import Log;
 import Singleton;
@@ -10,6 +14,9 @@ import stl.filesystem;
 import stl.memory;
 import FileSystem;
 import FileDepender;
+
+export
+{
 
 class resource_system
 {
@@ -336,3 +343,5 @@ std::vector<typename loader<_resource, _header, _context>::loader_func> loader<_
 template<class _resource, class _header, class _context>
 bool loader<_resource, _header, _context>::inited = _resource::init_default_loaders();
 
+
+}

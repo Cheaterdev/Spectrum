@@ -10,7 +10,6 @@ import Tasks;
 #include "DX12/Buffer.h"
 
 #include "DX12/PipelineState.h"
-#include "DX12/HLSLDescriptors.hpp"
 #include "pch_dx.h"
 import stl.core;
 
@@ -22,7 +21,7 @@ import Descriptors;
 import Concepts;
 import Layout;
 class MeshAssetInstance;
-#include "DX12/HLSLDescriptors.hpp"
+
 
 template <typename T>
 struct InlineMeshlet

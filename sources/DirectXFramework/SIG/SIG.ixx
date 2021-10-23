@@ -8,7 +8,7 @@ import d3d12_types;
 
 import Concepts;
 import Descriptors;
-
+import Resource;
 import serialization;
 export
 {

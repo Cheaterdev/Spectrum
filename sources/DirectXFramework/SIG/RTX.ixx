@@ -1,9 +1,10 @@
 module;
 #include "DX12/PipelineState.h"
-#include "DX12/HLSLDescriptors.hpp"
+#include "DX12/Buffer.h"
 
 export module RTX;
 import Descriptors;
+
 
 import Concepts;
 export

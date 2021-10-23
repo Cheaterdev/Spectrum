@@ -2,7 +2,7 @@ module;
 #include "pch_dx.h"
 #include "DX12/dx12_types.h"
 #include "DX12/PipelineState.h"
-#include "DX12/HLSLDescriptors.hpp"
+#include "DX12/Buffer.h"
 
 export module Autogen;
 

@@ -1,11 +1,11 @@
 module;
-
+#include "helper.h"
 export module Descriptors;
 
 
 import Allocators;
 import Vectors;
-
+import Resource;
 
 import stl.threading;
 import stl.core;
@@ -852,6 +852,6 @@ export
 
 	}
 
-
+#include "HLSLDescriptors.hpp"
 
 }

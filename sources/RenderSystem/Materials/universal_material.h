@@ -9,7 +9,6 @@ import Descriptors;
 import Concepts;
 import Layout;
 import SIG;
-#include "DX12/HLSLDescriptors.hpp"
 
 namespace materials
 {

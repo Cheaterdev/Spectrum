@@ -1,7 +1,10 @@
 #include "pch_dx.h"
 #include "PipelineState.h"
-#include "Serialization/Serializer.h"
+//#include "Serialization/Serializer.h"
+//#include "serialization_archives.h"
+#include "serialization/serialization_archives.h"
 
+import Serializer;
 import Debug;
 
 template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T>

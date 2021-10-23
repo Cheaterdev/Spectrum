@@ -7,7 +7,6 @@
 #include "GUI/Elements/MenuList.h"
 #include "GUI/Elements/ScrollContainer.h"
 #include "GUI/Renderer/Renderer.h"
-#include "DX12/HLSLDescriptors.hpp"
 
 
 void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)

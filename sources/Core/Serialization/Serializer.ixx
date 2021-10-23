@@ -1,7 +1,9 @@
-#pragma once
+module;
 
 #include "serialization_archives.h"
 #include "serialization_defines.h"
+export module Serializer;
+
 import Log;
 import Utils;
 import crc32;
@@ -9,6 +11,8 @@ import boost.serialization;
 import Data;
 import windows;
 //import boost.archives;
+export
+{
 
 class Serializer
 {
@@ -334,3 +338,5 @@ public:
 	}
 
 };
+
+}

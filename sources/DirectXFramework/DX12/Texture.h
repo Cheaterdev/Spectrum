@@ -1,7 +1,10 @@
 #pragma once
 
 import CommandList;
-#include "FileSystem/ResourceManager.h"
+//#include "FileSystem/ResourceManager.h"
+import ResourceManager;
+#include "serialization/serialization_archives.h"
+
 import Resource;
 #include "helper.h"
 import TextureData;

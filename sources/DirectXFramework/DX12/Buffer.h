@@ -1,6 +1,4 @@
 #pragma once
-#include "Serialization/serialization_defines.h"
-
 import Allocators;
 
 import Device;
@@ -9,7 +7,6 @@ import Resource;
 import Concepts;
 import Log;
 import Descriptors;
-#include "DX12/HLSLDescriptors.hpp"
 
 import serialization;
 import stl.core;
@@ -535,7 +532,7 @@ namespace DX12
 
 	public:
 
-		typename StructuredBuffer<Type>::ptr buffer;
+		StructuredBuffer<Type>::ptr buffer;
 		using ptr = std::shared_ptr<virtual_gpu_buffer<Type, AllocatorType>>;
 
 

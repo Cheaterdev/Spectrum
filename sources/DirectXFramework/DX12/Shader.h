@@ -1,5 +1,5 @@
 #pragma once
-#include "FileSystem/ResourceManager.h"
+import ResourceManager;
 import D3D.Shaders;
 import Enums;
 import stl.core;
@@ -7,6 +7,11 @@ import stl.core;
 std::optional<SlotID> get_slot(std::string_view slot_name);
 import FileDepender;
 import Data;
+import Utils;
+import crc32;
+import serialization;
+import Events;
+
 template<class T>
 class shader_with_id
 {

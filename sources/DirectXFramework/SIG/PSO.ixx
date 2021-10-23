@@ -1,8 +1,10 @@
 module;
+
 #include "DX12/dx12_types.h"
 #include "DX12/PipelineState.h"
 
 export module PSO;
+export import "PSO_defines.h";
 
 import Data;
 import Threading;
