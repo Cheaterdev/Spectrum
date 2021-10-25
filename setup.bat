@@ -1,4 +1,4 @@
-Sharpmake/bootstrap.bat
-install_agility_sdk.bat
-generate_project.bat
+call Sharpmake/bootstrap.bat
+call install_agility_sdk.bat
+call generate_project.bat
 vcpkg integrate install

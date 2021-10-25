@@ -76,7 +76,7 @@ namespace Spectrum
             conf.ProjectPath = @"[project.RootPath]";
 
             conf.IncludePaths.Add(SourceRootPath);
-			conf.ExportAdditionalLibrariesEvenForStaticLib = true;
+		//	conf.ExportAdditionalLibrariesEvenForStaticLib = true;
 			conf.PrecompSourceExcludeExtension.Add(".ixx");
 
             conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.Latest);
