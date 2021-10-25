@@ -3,7 +3,7 @@
 #include "Assets/AssetRenderer.h"
 #include "Materials/universal_material.h"
 
-#include "DX12/Queue.h"
+import Queue;
 
 bool MeshData::init_default_loaders()
 {

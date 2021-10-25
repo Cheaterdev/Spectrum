@@ -1,6 +1,6 @@
 #include "pch_dx.h"
 #include "Texture.h"
-#include "Queue.h"
+import Queue;
 
 namespace DX12
 {

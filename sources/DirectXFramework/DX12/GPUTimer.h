@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DX12/Queue.h"
+import Queue;
 import Buffer;
 
 namespace DX12

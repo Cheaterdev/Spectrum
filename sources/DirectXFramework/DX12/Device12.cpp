@@ -1,7 +1,8 @@
 #include "pch_dx.h"
 
 import Device;
-#include "Swapchain12.h"
+import SwapChain;
+
 #include "PipelineState.h"
 #include "GPUTimer.h"
 

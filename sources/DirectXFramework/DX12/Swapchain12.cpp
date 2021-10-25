@@ -1,7 +1,7 @@
 #include "pch_dx.h"
-#include "Swapchain12.h"
 #include "Texture.h"
-#include "Queue.h"
+import SwapChain;
+import Queue;
 
 namespace DX12
 {

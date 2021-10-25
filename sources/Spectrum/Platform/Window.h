@@ -2,7 +2,7 @@
 import Application;
 #include "GUI/GUI.h"
 
-#include "DX12/Swapchain12.h"
+import SwapChain;
 
 class Window : public DX12::hwnd_provider
 {

@@ -1,6 +1,6 @@
 #include "pch_dx.h"
-#include "RayTracingAS.h"
-#include "Queue.h"
+import RaytracingAS;
+import Queue;
 
 DX12::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<GeometryDesc> desc,
 	CommandList::ptr list)

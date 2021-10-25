@@ -7,7 +7,7 @@
 #include "AssetRenderer.h"
 #include "Helpers/MipMapGeneration.h"
 
-#include "DX12/Queue.h"
+import Queue;
 
 using namespace FrameGraph;
 

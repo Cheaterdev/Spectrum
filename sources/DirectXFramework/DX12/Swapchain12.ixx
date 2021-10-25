@@ -1,7 +1,12 @@
-#pragma once
+export module SwapChain;
+
 import Fence;
 import Descriptors;
 import Vectors;
+import d3d12;
+
+export
+{
 
 namespace DX12
 {
@@ -52,4 +57,5 @@ namespace DX12
 		void resize(ivec2 size);
 
 	};
+}
 }

@@ -2,7 +2,7 @@
 #include "pch_render.h"
 
 #include "FrameGraph.h"
-#include "DX12/Queue.h"
+import Queue;
 
 
 namespace FrameGraph

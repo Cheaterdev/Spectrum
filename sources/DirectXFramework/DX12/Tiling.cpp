@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "Queue.h"
+import Queue;
 import Tiling;
 import Constants;
 

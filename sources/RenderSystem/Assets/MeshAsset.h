@@ -6,7 +6,7 @@ import Tasks;
 
 #include "GUI/GUI.h"
 
-#include "DX12/RayTracingAS.h"
+import RaytracingAS;
 import Buffer;
 
 #include "DX12/PipelineState.h"
