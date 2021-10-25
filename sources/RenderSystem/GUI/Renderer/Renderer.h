@@ -1,6 +1,6 @@
 #pragma once
 #include "GUI/GUI.h"
-#include "DX12/Buffer.h"
+import Buffer;
 namespace GUI
 {
 

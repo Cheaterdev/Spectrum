@@ -272,8 +272,8 @@ stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
 	docking = GUI::dock::PARENT;
 	clickable = true;
 	/*
-	id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
-	axis_id_buffer.reset(new Render::StructuredBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+	id_buffer.reset(new Render::StructureBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+	axis_id_buffer.reset(new Render::StructureBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 
 
 	id_buffer->set_name("stencil_renderer::id_buffer");
@@ -320,7 +320,7 @@ stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
 	verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
 	index_buffer.reset(new Render::IndexBuffer(data));
 
-	vertex_buffer.reset(new Render::StructuredBuffer<vec4>(8));
+	vertex_buffer.reset(new Render::StructureBuffer<vec4>(8));
 	vertex_buffer->set_raw_data(verts);
 
 

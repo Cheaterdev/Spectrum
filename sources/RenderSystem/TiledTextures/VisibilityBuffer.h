@@ -1,6 +1,6 @@
 #pragma once
 #include "DX12/Texture.h"
-#include "DX12/Buffer.h"
+import Buffer;
 
 struct visibility_update
 {
@@ -20,7 +20,7 @@ protected:
 public:
 	Render::Texture::ptr buffer;
 
-	Render::StructuredBuffer<uint4>::ptr load_tiles_buffer;
+	Render::StructureBuffer<uint4>::ptr load_tiles_buffer;
 	using ptr = std::shared_ptr<VisibilityBuffer>;
 
 	VisibilityBuffer(uint3 sizes);

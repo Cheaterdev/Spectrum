@@ -3,7 +3,7 @@
 #include "Context/Context.h"
 #include "Assets/BinaryAsset.h"
 #include "Assets/MaterialAsset.h"
-#include "DX12/Buffer.h"
+import Buffer;
 
 import Descriptors;
 import Concepts;

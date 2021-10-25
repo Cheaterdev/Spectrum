@@ -7,7 +7,7 @@ import Tasks;
 #include "GUI/GUI.h"
 
 #include "DX12/RayTracingAS.h"
-#include "DX12/Buffer.h"
+import Buffer;
 
 #include "DX12/PipelineState.h"
 #include "pch_dx.h"

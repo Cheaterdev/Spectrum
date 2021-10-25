@@ -1,5 +1,5 @@
 #pragma once
-#include "DX12/Buffer.h"
+import Buffer;
 import SIG;
 
 class GPUTilesBuffer
@@ -12,8 +12,8 @@ public:
 
 	std::vector<ivec3> used_tiles;
 	using ptr = std::shared_ptr<GPUTilesBuffer>;
-	Render::StructuredBuffer<ivec3>::ptr buffer;
-	Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer;
+	Render::StructureBuffer<ivec3>::ptr buffer;
+	Render::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
 	uint32_t size();
 	void set_size(ivec3 size, ivec3 shape);
 

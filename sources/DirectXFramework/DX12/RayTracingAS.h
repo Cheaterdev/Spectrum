@@ -1,6 +1,6 @@
 #pragma once
-#include "DX12/Buffer.h"
-
+import Buffer;
+import VirtualBuffer;
 class MaterialAsset;
 
 namespace DX12

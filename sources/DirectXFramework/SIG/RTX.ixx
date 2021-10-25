@@ -1,12 +1,16 @@
 module;
+#include "pch_Dx.h"
 #include "DX12/PipelineState.h"
-#include "DX12/Buffer.h"
+
 
 export module RTX;
 import Descriptors;
-
+import Buffer;
+import VirtualBuffer;
 
 import Concepts;
+import Vectors;
+
 export
 {
 
@@ -100,8 +104,8 @@ struct SelectLocal<T>
 		};
 
 		//	using hit_type = shader_identifier;
-		Render::StructuredBuffer<Render::shader_identifier>::ptr miss_ids;
-		Render::StructuredBuffer<raygen_type>::ptr raygen_ids;
+		Render::StructureBuffer<Render::shader_identifier>::ptr miss_ids;
+		Render::StructureBuffer<raygen_type>::ptr raygen_ids;
 
 		Render::virtual_gpu_buffer<hit_type>::ptr hitgroup_ids;
 
@@ -253,8 +257,8 @@ struct SelectLocal<T>
 			(std::get<Passes>(passes).init_ids(m_dxrStateObject, miss_ids), ...);
 			(std::get<Raygens>(raygen).init_ids(m_dxrStateObject, raygen_ids), ...);
 
-			this->miss_ids = std::make_shared<Render::StructuredBuffer<Render::shader_identifier>>(miss_ids.size());
-			this->raygen_ids = std::make_shared<Render::StructuredBuffer<raygen_type>>(raygen_ids.size());
+			this->miss_ids = std::make_shared<Render::StructureBuffer<Render::shader_identifier>>(miss_ids.size());
+			this->raygen_ids = std::make_shared<Render::StructureBuffer<raygen_type>>(raygen_ids.size());
 
 			this->miss_ids->set_raw_data(miss_ids);
 			this->raygen_ids->set_raw_data(raygen_ids);

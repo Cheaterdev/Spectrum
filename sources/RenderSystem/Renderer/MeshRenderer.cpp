@@ -166,7 +166,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 
 	if (invisibleToo)
 	{
-		list.clear_counter(meshes_invisible_ids->buffer);
+		meshes_invisible_ids->buffer->clear_counter(mesh_render_context->list);
 		list.clear_uav(meshes_invisible_ids->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
 
 	}
@@ -211,9 +211,8 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 
 	{
 
-		list.clear_counter(commands_boxes->buffer);
-		list.clear_counter(meshes_ids->buffer);
-
+		commands_boxes->buffer->clear_counter(mesh_render_context->list);
+		meshes_ids->buffer->clear_counter(mesh_render_context->list);
 
 		compute.set_pipeline(GetPSO<PSOS::GatherBoxes>());
 		gather_boxes_compiled.set(compute);
@@ -314,7 +313,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		}
 
 		for (int i = 0; i < total; i++)
-			list.clear_counter(commands_buffer[i]->buffer);
+			commands_buffer[i]->buffer->clear_counter(mesh_render_context->list);
 
 
 		{
@@ -442,10 +441,10 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
 		index_buffer.reset(new Render::IndexBuffer(data));
 
-		vertex_buffer.reset(new Render::StructuredBuffer<vec4>(8));
+		vertex_buffer.reset(new Render::StructureBuffer<vec4>(8));
 		vertex_buffer->set_raw_data(verts);
 
-		draw_boxes_first = std::make_shared<Render::StructuredBuffer<DrawIndexedArguments>>(1);
+		draw_boxes_first = std::make_shared<Render::StructureBuffer<DrawIndexedArguments>>(1);
 
 		DrawIndexedArguments args;
 
@@ -467,12 +466,12 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 
 
 	{
-		dispatch_buffer = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		dispatch_buffer = std::make_shared<Render::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<Table::CommandData>));
 	}
 
 	{
-		dispatch_buffer111 = std::make_shared<Render::StructuredBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		dispatch_buffer111 = std::make_shared<Render::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		DispatchArguments args;
 		args.ThreadGroupCountX = 1;
 		args.ThreadGroupCountY = 1;

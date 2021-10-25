@@ -238,8 +238,8 @@ private:
 	bool recreate_static = false;
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
-//	Render::StructuredBuffer<uint2>::ptr hi;
-//	Render::StructuredBuffer<uint2>::ptr low;
+//	Render::StructureBuffer<uint2>::ptr hi;
+//	Render::StructureBuffer<uint2>::ptr low;
 
 	ivec3 lighed_to_albedo_coeff;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;

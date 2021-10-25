@@ -480,8 +480,8 @@ void VoxelGI::screen(Graph& graph)
 	/*
 	if (!hi || hi->get_count() < count)
 	{
-		hi = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		low = std::make_shared<Render::StructuredBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		hi = std::make_shared<Render::StructureBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		low = std::make_shared<Render::StructureBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 	}*/
 

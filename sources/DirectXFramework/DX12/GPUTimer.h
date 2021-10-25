@@ -1,7 +1,7 @@
 #pragma once
 
 #include "DX12/Queue.h"
-#include "DX12/Buffer.h"
+import Buffer;
 
 namespace DX12
 {

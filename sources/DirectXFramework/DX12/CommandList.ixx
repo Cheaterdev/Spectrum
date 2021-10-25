@@ -21,7 +21,7 @@ import Matrices;
 import Enums;
 import Data;
 import Singleton;
-
+//import Buffer;
 import stl.core;
 import stl.memory;
 
@@ -791,11 +791,7 @@ export{
 				create_transition_point(false);
 			}
 
-			template<class T>
-			void clear_counter(std::shared_ptr<StructuredBuffer<T>>& buffer)
-			{
-				clear_uav(buffer->counted_uav[0]);
-			}
+		
 
 
 			void clear_stencil(Handle dsv, UINT8 stencil = 0)

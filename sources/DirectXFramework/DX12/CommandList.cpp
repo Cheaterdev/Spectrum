@@ -32,14 +32,14 @@ namespace DX12
 		compiler.SetName(L"SpectrumCommandList");
 
 
-		debug_buffer = std::make_shared<StructuredBuffer<Table::DebugStruct>>(64, counterType::NONE, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		debug_buffer = std::make_shared<StructureBuffer<Table::DebugStruct>>(64, counterType::NONE, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 	}
 
 	void CommandList::setup_debug(SignatureDataSetter* setter)
 	{
 		if (!current_pipeline->debuggable) return;
 		Slots::DebugInfo info;
-		StructuredBuffer<Table::DebugStruct>* structured = static_cast<StructuredBuffer<Table::DebugStruct>*>(debug_buffer.get());
+		StructureBuffer<Table::DebugStruct>* structured = static_cast<StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
 		info.GetDebug() = structured->rwStructuredBuffer;
 		info.set(*setter);
 
@@ -71,7 +71,7 @@ namespace DX12
 				Log::get() << block;
 			});
 
-		StructuredBuffer<Table::DebugStruct>* structured = static_cast<StructuredBuffer<Table::DebugStruct>*>(debug_buffer.get());
+		StructureBuffer<Table::DebugStruct>* structured = static_cast<StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
 		clear_uav(structured->get_raw_uav());
 	}
 

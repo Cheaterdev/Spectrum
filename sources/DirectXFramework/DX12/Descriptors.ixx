@@ -149,6 +149,7 @@ export
 			template<class T>
 			struct StructuredBuffer : public Handle
 			{
+				using ptr = int;
 				static const HandleType TYPE = HandleType::SRV;
 
 				StructuredBuffer() = default;

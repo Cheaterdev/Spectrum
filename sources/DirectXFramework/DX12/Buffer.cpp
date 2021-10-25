@@ -1,6 +1,6 @@
 #include "pch_dx.h"
-#include "Buffer.h"
 
+import Buffer;
 namespace DX12
 {
 
@@ -174,32 +174,32 @@ namespace DX12
 
 
 
-	 DX12::UploadBuffer::UploadBuffer(UINT64 count) : Resource(CD3DX12_RESOURCE_DESC::Buffer(count, D3D12_RESOURCE_FLAG_NONE), HeapType::UPLOAD, ResourceState::GEN_READ)
+	UploadBuffer::UploadBuffer(UINT64 count) : Resource(CD3DX12_RESOURCE_DESC::Buffer(count, D3D12_RESOURCE_FLAG_NONE), HeapType::UPLOAD, ResourceState::GEN_READ)
 	{
 
 	}
 
-	 DX12::UploadBuffer::~UploadBuffer()
+	 UploadBuffer::~UploadBuffer()
 	{
 
 	}
 
-	 char * DX12::UploadBuffer::get_data()
+	 char * UploadBuffer::get_data()
 	{
 		return (char*)buffer_data;
 	}
 
-	 DX12::CPUBuffer::CPUBuffer(UINT64 count, int stride) : stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(count * stride), HeapType::READBACK, ResourceState::COPY_DEST)
+	CPUBuffer::CPUBuffer(UINT64 count, int stride) : stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(count * stride), HeapType::READBACK, ResourceState::COPY_DEST)
 	{
 	}
 
-	 void DX12::CPUBuffer::unmap()
+	 void CPUBuffer::unmap()
 	{
 		 mapped = false;
          tracked_info->m_Resource->Unmap(0, nullptr);
 	}
 
-	 DX12::QueryHeap::QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type)
+	QueryHeap::QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type)
 	{
 		D3D12_QUERY_HEAP_DESC QueryHeapDesc;
 		QueryHeapDesc.Count = max_count;

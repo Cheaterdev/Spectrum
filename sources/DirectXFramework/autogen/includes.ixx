@@ -2,14 +2,15 @@ module;
 #include "pch_dx.h"
 #include "DX12/dx12_types.h"
 #include "DX12/PipelineState.h"
-#include "DX12/Buffer.h"
+
 
 export module Autogen;
 
 import Vectors;
 import Matrices;
 import Samplers;
-
+import Buffer;
+import Descriptors;
 import SIG;
 import RT;
 import Layout;

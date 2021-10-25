@@ -123,14 +123,14 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		virtual_gpu_buffer<Table::CommandData>::ptr commands_buffer[8];
 
 
-		Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer;
-        Render::StructuredBuffer<DispatchArguments>::ptr dispatch_buffer111;
+		Render::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
+        Render::StructureBuffer<DispatchArguments>::ptr dispatch_buffer111;
 
         IndirectCommand dispatch_command;
 
 	
-		Render::StructuredBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
-		Render::StructuredBuffer<vec4>::ptr vertex_buffer;
+		Render::StructureBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
+		Render::StructureBuffer<vec4>::ptr vertex_buffer;
 		Render::IndexBuffer::ptr index_buffer;
 		virtual_gpu_buffer<UINT>::ptr visible_boxes;
 		virtual_gpu_buffer<UINT>::ptr meshes_ids;

@@ -11,7 +11,7 @@ VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 	buffer = std::make_shared<Render::Texture>(desc);
 	buffer->set_name("VisibilityBuffer::buffer");
 
-	load_tiles_buffer = std::make_shared<Render::StructuredBuffer<uint4>>(sizes.x * sizes.y * sizes.z, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	load_tiles_buffer = std::make_shared<Render::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
 /*
 void VisibilityBuffer::wait_for_results()
@@ -36,7 +36,7 @@ std::future<visibility_update> VisibilityBuffer::update(Render::CommandList::ptr
 		UINT size;
 	};
 
-	list->clear_counter(load_tiles_buffer);
+	load_tiles_buffer->clear_counter(list);
 
 	{
 		Slots::VoxelVisibility data;

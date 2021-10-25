@@ -6,12 +6,12 @@
 class stencil_renderer : public GUI::base, public FrameGraph::GraphGenerator, public Events::Runner, public VariableContext
 {
      //   RenderTargetTable table;
-    //    Render::StructuredBuffer<UINT>::ptr id_buffer;
+    //    Render::StructureBuffer<UINT>::ptr id_buffer;
         camera cam;
         camera axis_intersect_cam;
 
 
-     //   Render::StructuredBuffer<UINT>::ptr axis_id_buffer;
+     //   Render::StructureBuffer<UINT>::ptr axis_id_buffer;
 
         MeshAssetInstance::ptr axis;
      //   PlacedAllocator allocator;
@@ -42,7 +42,7 @@ class stencil_renderer : public GUI::base, public FrameGraph::GraphGenerator, pu
         float3 get_normal(int axis);
         std::pair<MeshAssetInstance::ptr, int> mouse_on_object;
 
-		Render::StructuredBuffer<vec4>::ptr vertex_buffer;
+		Render::StructureBuffer<vec4>::ptr vertex_buffer;
 		Render::IndexBuffer::ptr index_buffer;
 
         virtual bool can_accept(GUI::drag_n_drop_package::ptr p) override;

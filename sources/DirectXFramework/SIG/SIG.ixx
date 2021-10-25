@@ -10,6 +10,8 @@ import Concepts;
 import Descriptors;
 import Resource;
 import serialization;
+import Buffer;
+
 export
 {
 
