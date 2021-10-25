@@ -9,6 +9,7 @@ import Descriptors;
 import Concepts;
 import Layout;
 import SIG;
+import crc32;
 
 namespace materials
 {

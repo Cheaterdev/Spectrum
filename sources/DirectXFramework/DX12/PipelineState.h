@@ -5,12 +5,14 @@ import FileSystem;
 import D3D.Shaders;
 
 import RootSignature;
-#include "Shader.h"
+
 #include "pch_dx.h"
+import Shader;
 import Device;
 import Memory;
 import Singleton;
 import d3d12_types;
+import serialization;
 DX12::RootLayout::ptr get_Signature(Layouts id);
 
 namespace DX12

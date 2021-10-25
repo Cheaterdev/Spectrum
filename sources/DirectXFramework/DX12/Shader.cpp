@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "Shader.h"
+import Shader;
 
 namespace DX12
 {
