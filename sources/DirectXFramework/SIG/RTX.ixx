@@ -1,8 +1,5 @@
 module;
 #include "pch_Dx.h"
-#include "DX12/PipelineState.h"
-
-
 export module RTX;
 import Descriptors;
 import Buffer;
@@ -10,8 +7,15 @@ import VirtualBuffer;
 
 import Concepts;
 import Vectors;
+import Utils;
+import Memory;
+import Events;
+import IdGenerator;
+import PipelineState;
+import Shader;
 
 export
+
 {
 
 template<typename T> concept HasLocalData =

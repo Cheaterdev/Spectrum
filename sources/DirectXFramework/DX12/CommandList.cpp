@@ -2,7 +2,7 @@
 
 #include "helper.h"
 #include "GPUTimer.h"
-#include "DX12/PipelineState.h"
+import PipelineState;
 
 import Autogen;
 import Debug;

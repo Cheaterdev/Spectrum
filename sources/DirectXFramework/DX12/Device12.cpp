@@ -3,7 +3,7 @@
 import Device;
 import SwapChain;
 
-#include "PipelineState.h"
+import PipelineState;
 #include "GPUTimer.h"
 
 #include "GFSDK_Aftermath.h"

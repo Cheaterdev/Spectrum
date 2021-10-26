@@ -1,19 +1,24 @@
-#pragma once
-
+module;
+#include "dx12_types.h"
+#include "pch_dx.h"
+export module PipelineState;
 
 import FileSystem;
 import D3D.Shaders;
 
 import RootSignature;
 
-#include "pch_dx.h"
 import Shader;
 import Device;
-import Memory;
+export import Memory;
 import Singleton;
 import d3d12_types;
 import serialization;
 DX12::RootLayout::ptr get_Signature(Layouts id);
+
+export
+{
+
 
 namespace DX12
 {
@@ -62,7 +67,8 @@ namespace DX12
 		}
 
 		bool operator==(const PipelineStateDesc& r) const = default;
-		std::strong_ordering  operator<=>(const  PipelineStateDesc& r)  const = default;
+		
+		auto  operator<=>(const  PipelineStateDesc& r)  const = default;
 	private:
 		SERIALIZE()
 		{
@@ -291,9 +297,6 @@ namespace DX12
 
 	
 
-	class ComputePipelineState;
-
-
 	struct ComputePipelineStateDesc
 	{
 		RootSignature::ptr root_signature;
@@ -357,7 +360,6 @@ namespace DX12
 
 	using shader_identifier = std::array<std::byte, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
 
-	class StateObject;
 
 
 	struct HitGroup
@@ -400,6 +402,7 @@ namespace DX12
 		}
 		
 	};
+	class StateObject;
 	struct StateObjectDesc
 	{
 
@@ -566,3 +569,6 @@ namespace DX12
 
 BOOST_CLASS_EXPORT_KEY(DX12::PipelineStateBase);
 BOOST_CLASS_EXPORT_KEY(DX12::PipelineState);
+
+
+}

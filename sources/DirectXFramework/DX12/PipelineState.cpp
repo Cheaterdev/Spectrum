@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "PipelineState.h"
+import PipelineState;
 //#include "Serialization/Serializer.h"
 //#include "serialization_archives.h"
 #include "serialization/serialization_archives.h"

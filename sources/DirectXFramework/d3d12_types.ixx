@@ -202,7 +202,10 @@ export
 		{
 			std::vector<input_layout_row> inputs;
 
-			bool operator==(const input_layout_header&) const = default;
+			bool operator==(const input_layout_header&r) const
+			{
+				return inputs == r.inputs;
+			}
 			auto   operator<=>(const  input_layout_header& r)  const = default;
 		private:
 			SERIALIZE()

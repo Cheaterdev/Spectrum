@@ -9,7 +9,7 @@ import Tasks;
 import RaytracingAS;
 import Buffer;
 
-#include "DX12/PipelineState.h"
+import PipelineState;
 #include "pch_dx.h"
 import stl.core;
 

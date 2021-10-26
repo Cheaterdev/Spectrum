@@ -1,11 +1,11 @@
 module;
 
 #include "DX12/dx12_types.h"
-#include "DX12/PipelineState.h"
+#include "pch_dx.h"
 
 export module PSO;
 export import "PSO_defines.h";
-
+import PipelineState;
 import Data;
 import Threading;
 import Profiling;
@@ -13,9 +13,11 @@ import Profiling;
 import Concepts;
 import D3D.Shaders;
 
+import RootSignature;
 import Utils;
 import d3d12_types;
-
+import Memory;
+import Enums;
 
 import ppl;
 using namespace concurrency;

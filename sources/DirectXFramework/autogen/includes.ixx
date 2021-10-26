@@ -1,11 +1,9 @@
 module;
 #include "pch_dx.h"
 #include "DX12/dx12_types.h"
-#include "DX12/PipelineState.h"
-
-
 export module Autogen;
 
+import PipelineState;
 import Vectors;
 import Matrices;
 import Samplers;
@@ -22,6 +20,7 @@ import Enums;
 import Data;
 import RootSignature;
 
+import Utils;
 export
 {
 #include "layout\FrameLayout.h"
