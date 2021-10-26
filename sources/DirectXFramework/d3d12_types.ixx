@@ -202,10 +202,17 @@ export
 		{
 			std::vector<input_layout_row> inputs;
 
-			bool operator==(const input_layout_header&r) const
+#define INVOKE_ICE
+
+#ifdef INVOKE_ICE
+			bool operator==(const input_layout_header& r) const = default;
+#else
+			bool operator==(const input_layout_header& r) const
 			{
 				return inputs == r.inputs;
 			}
+#endif
+
 			auto   operator<=>(const  input_layout_header& r)  const = default;
 		private:
 			SERIALIZE()
