@@ -202,7 +202,7 @@ export
 		{
 			std::vector<input_layout_row> inputs;
 
-#define INVOKE_ICE
+//#define INVOKE_ICE
 
 #ifdef INVOKE_ICE
 			bool operator==(const input_layout_header& r) const = default;
