@@ -1,4 +1,4 @@
-set VS_TYPE=latest
+set VS_TYPE=prerelease
 call Sharpmake/bootstrap.bat
 call install_agility_sdk.bat
 call generate_project.bat
