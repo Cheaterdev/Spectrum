@@ -3,6 +3,7 @@
 import Tasks;
 import Debug;
 import ppl;
+import FileSystem;
 using namespace concurrency;
 
 AssetManager::AssetManager()

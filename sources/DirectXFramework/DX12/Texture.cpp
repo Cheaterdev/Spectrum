@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "Texture.h"
+import Texture;
 import Queue;
 
 namespace DX12
@@ -58,24 +58,6 @@ namespace DX12
    
 
     const Texture::ptr Texture::null(new Texture(nullptr));
-
-
-    bool operator<(const texure_header& l, const texure_header& r)
-    {
-        if (l.name < r.name)return true;
-
-        if (r.name < l.name)return false;
-
-        if (l.mips < r.mips)return true;
-
-        if (r.mips < l.mips)return false;
-
-        if (l.force_srgb < r.force_srgb)return true;
-
-        if (r.force_srgb < l.force_srgb)return false;
-
-        return false;
-    }
 
     texure_header::texure_header(std::filesystem::path name, bool force_srgb /*= false*/, bool mips /*= true*/)
     {

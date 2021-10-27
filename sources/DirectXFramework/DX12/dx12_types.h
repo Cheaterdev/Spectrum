@@ -39,6 +39,8 @@ class FrameResourceManager;
 class GPUTimeManager;
 class Eventer;
 
+struct texure_header;
+
 }
 
 

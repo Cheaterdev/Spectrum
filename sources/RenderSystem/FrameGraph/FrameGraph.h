@@ -1,15 +1,19 @@
 #pragma once
 
 
-#include "DX12/Texture.h"
+import Texture;
 import Scheduler;
 
-
+import Utils;
+import serialization;
 class camera;
 class main_renderer;
 class Scene;
 import d3d12_types;
 import ResourceViews;
+import CommandList;
+
+import Vectors;
 
 namespace FrameGraph
 {

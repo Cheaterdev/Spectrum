@@ -1,10 +1,14 @@
 #pragma once
-
+#include "serialization/serialization_archives.h"
 import EditObject;
 import Utils;
 import Serializer;
-#include "DX12/Texture.h"
-
+import Texture;
+import serialization;
+import Tree;
+import ZipLib;
+import Data;
+import stl.memory;
 
 enum class Asset_Type : int
 {
@@ -191,47 +195,8 @@ class AssetReference : public AssetReferenceBase
 
 		*/
 
-		SERIALIZE()
-		{
-			ar& NVP(boost::serialization::base_object<AssetReferenceBase>(*this));
+		SERIALIZE();
 
-			if (Archive::is_loading::value)
-			{
-				Guid guid;
-				ar& NVP(guid);
-
-				if (guid.isValid())
-				{
-					auto storage = AssetManager::get().get_storage(guid);
-
-					if (!storage)
-						throw std::exception("cant load reference, no asset storage");
-					if (!storage->is_loaded())
-						Log::get() << "UNWANTED BEHAVIOUR FOR " << "->" << convert(storage->get_name()) << Log::endl;
-
-					auto ass = storage->get_asset();
-
-					if (!ass)
-						throw std::exception("cant load reference");
-
-					asset = ass->get_ptr<T>();
-					base_asset = asset;
-					init();
-				}
-			}
-
-			else
-			{
-
-				Guid guid;
-				
-				if (asset) guid = asset->get_id();
-
-				ar& NVP(guid);
-			}
-
-			//        ar &NVP(data);
-		}
 };
 namespace boost
 {
@@ -776,3 +741,49 @@ public:
 		return asset;
 	}
 };
+
+
+
+template<class T>
+template<class Archive>
+void AssetReference<T>::serialize(Archive& ar, const unsigned int)
+{
+	ar& NVP(boost::serialization::base_object<AssetReferenceBase>(*this));
+
+	if (Archive::is_loading::value)
+	{
+		Guid guid;
+		ar& NVP(guid);
+
+		if (guid.isValid())
+		{
+			auto storage = AssetManager::get().get_storage(guid);
+
+			if (!storage)
+				throw std::exception("cant load reference, no asset storage");
+			if (!storage->is_loaded())
+				Log::get() << "UNWANTED BEHAVIOUR FOR " << "->" << convert(storage->get_name()) << Log::endl;
+
+			auto ass = storage->get_asset();
+
+			if (!ass)
+				throw std::exception("cant load reference");
+
+			asset = ass->get_ptr<T>();
+			base_asset = asset;
+			init();
+		}
+	}
+
+	else
+	{
+
+		Guid guid;
+
+		if (asset) guid = asset->get_id();
+
+		ar& NVP(guid);
+	}
+
+	//        ar &NVP(data);
+}

@@ -1,5 +1,6 @@
 #include "pch_dx.h"
-#include "Texture.h"
+
+import Texture;
 import SwapChain;
 import Queue;
 

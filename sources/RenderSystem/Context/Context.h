@@ -5,6 +5,7 @@ import Holdable;
 import Device;
 import PipelineState;
 #include "FrameGraph/FrameGraph.h"
+#include "helper.h"
 import Executors;
 import Autogen;
 import Quaternion;

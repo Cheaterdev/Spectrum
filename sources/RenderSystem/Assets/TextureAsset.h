@@ -1,5 +1,6 @@
 #pragma once
 #include "Assets/Asset.h"
+import CommandList;
 
 class TextureAsset;
 class TextureAssetRenderer : public Singleton<TextureAssetRenderer>

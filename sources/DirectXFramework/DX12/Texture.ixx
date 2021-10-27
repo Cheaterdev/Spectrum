@@ -1,15 +1,19 @@
-#pragma once
+module;
+#include "serialization/serialization_archives.h"
+#include "helper.h"
+#include "dx12_types.h"
+export module Texture;
 
 import CommandList;
-//#include "FileSystem/ResourceManager.h"
 import ResourceManager;
-#include "serialization/serialization_archives.h"
 
 import Resource;
-#include "helper.h"
 import TextureData;
 import d3d12_types;
 import Descriptors;
+
+export
+{
 namespace DX12
 {
 
@@ -21,14 +25,14 @@ namespace DX12
             texure_header() = default;
 
             texure_header(std::filesystem::path name, bool force_srgb = false, bool mips = true);
+			auto  operator<=>(const  texure_header& r)  const = default;
         private:
 			SERIALIZE()
             {
                 ar& NVP(name)&NVP(force_srgb)&NVP(mips);
             }
     };
-    bool operator<(const texure_header& l, const texure_header& r);
-
+ 
 	enum class PixelSpace : int {
 		NONE,
 		MAKE_LINERAR,
@@ -397,4 +401,7 @@ namespace DX12
             BOOST_SERIALIZATION_SPLIT_MEMBER()
 
     };
+}
+
+
 }

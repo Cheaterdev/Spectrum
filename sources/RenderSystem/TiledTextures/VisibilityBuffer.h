@@ -1,5 +1,5 @@
 #pragma once
-#include "DX12/Texture.h"
+import Texture;
 import Buffer;
 
 struct visibility_update
