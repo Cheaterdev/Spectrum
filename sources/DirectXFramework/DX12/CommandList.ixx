@@ -566,8 +566,7 @@ export{
 
 		};
 
-		class GPUTimeManager;
-		class Eventer;
+
 
 		class GPUTimer
 		{

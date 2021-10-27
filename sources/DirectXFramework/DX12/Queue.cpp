@@ -2,7 +2,7 @@
 import Samplers;
 
 import Device;
-#include "GPUTimer.h"
+import GPUTimer;
 import Debug;
 import Queue;
 namespace DX12

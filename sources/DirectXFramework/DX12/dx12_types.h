@@ -36,6 +36,9 @@ class ComputeContext;
 class CopyContext;
 class FrameResourceManager;
 
+class GPUTimeManager;
+class Eventer;
+
 }
 
 

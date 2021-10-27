@@ -1,7 +1,8 @@
 #include "pch_dx.h"
 
 #include "helper.h"
-#include "GPUTimer.h"
+import GPUTimer;
+import Queue;
 import PipelineState;
 
 import Autogen;

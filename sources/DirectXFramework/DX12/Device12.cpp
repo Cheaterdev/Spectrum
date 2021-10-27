@@ -4,7 +4,7 @@ import Device;
 import SwapChain;
 
 import PipelineState;
-#include "GPUTimer.h"
+import GPUTimer;
 
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"

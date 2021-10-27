@@ -1,6 +1,6 @@
 #include "pch_dx.h"
 
-#include "GPUTimer.h"
+import GPUTimer;
 
 namespace DX12
 {
