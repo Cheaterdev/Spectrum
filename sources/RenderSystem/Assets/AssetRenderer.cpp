@@ -208,6 +208,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	graph.setup();
 	graph.compile(frame++);
 	graph.render();
+	graph.commit_command_lists();
 	graph.reset();
 	mesh_plane->remove_from_parent();
 }

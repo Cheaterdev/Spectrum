@@ -678,6 +678,8 @@ namespace FrameGraph
 		void compile(int frame);
 		void render();
 
+
+		void commit_command_lists();
 		void reset();
 	};
 

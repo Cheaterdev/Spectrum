@@ -49,8 +49,14 @@ namespace DX12
 		}
 	}
 
+	void SwapChain::wait_for_free()
+	{
+		frames[m_frameIndex].fence_event.wait();
+
+	}
 	void SwapChain::present(FenceWaiter event_time)
 	{
+
 		frames[m_frameIndex].fence_event = event_time;
 		m_swapChain->Present(0, 0);
 	}
@@ -60,10 +66,9 @@ namespace DX12
 	{
 		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-		frames[m_frameIndex].fence_event.wait();
-
-		if (GetAsyncKeyState(VK_F8))
-			for (auto& f : frames)	f.fence_event.wait();
+	
+//		if (GetAsyncKeyState(VK_F8))
+	//		for (auto& f : frames)	f.fence_event.wait();
 	}
 
 

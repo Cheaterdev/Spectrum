@@ -571,6 +571,13 @@ namespace FrameGraph
 				pass->render(builder.current_frame);
 
 		}
+		
+
+	}
+
+
+	void Graph::commit_command_lists()
+	{
 		{
 			PROFILE(L"wait");
 
@@ -856,7 +863,6 @@ namespace FrameGraph
 			}
 
 		}
-
 
 	}
 

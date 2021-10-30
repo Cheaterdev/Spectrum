@@ -819,12 +819,16 @@ public:
 			process_ui((float)main_timer.tick());
 			{
 				PROFILE(L"Wait next");
+
 				swap_chain->start_next();
 			}
+
 			setup_graph();
+
 			graph.render();
 	
-
+			swap_chain->wait_for_free();
+			graph.commit_command_lists();
 			{
 
 				PROFILE(L"reset");
