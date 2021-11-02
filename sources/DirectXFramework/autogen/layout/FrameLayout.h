@@ -37,8 +37,7 @@ struct FrameLayout
 		static const unsigned int UAV_ID = 11;
 		static inline const std::vector<UINT> tables = {9, 11};
 	};
-
-	template<class Processor > static void for_each(Processor& processor) {
+	template<class Processor> static void for_each(Processor& processor) {
 		processor.template process<CameraData,SceneData,PassData,DebugInfo>({Render::Samplers::SamplerLinearWrapDesc,Render::Samplers::SamplerPointClampDesc,Render::Samplers::SamplerLinearClampDesc,Render::Samplers::SamplerAnisoBorderDesc,Render::Samplers::SamplerPointBorderDesc});
 	}
 };

@@ -18,9 +18,9 @@ ConstantBuffer<Pass_VoxelOutput> pass_VoxelOutput: register( b2, space6);
 const VoxelOutput CreateVoxelOutput()
 {
 	VoxelOutput result;
-	result.uav.noise = uav_6_0;// ResourceDescriptorHeap[pass_VoxelOutput.uav_0];
-	result.uav.frames = uav_6_1;// ResourceDescriptorHeap[pass_VoxelOutput.uav_1];
-	result.uav.DirAndPdf = uav_6_2;// ResourceDescriptorHeap[pass_VoxelOutput.uav_2];
+	result.uav.noise = uav_6_0;
+	result.uav.frames = uav_6_1;
+	result.uav.DirAndPdf = uav_6_2;
 	return result;
 }
 #ifndef NO_GLOBAL

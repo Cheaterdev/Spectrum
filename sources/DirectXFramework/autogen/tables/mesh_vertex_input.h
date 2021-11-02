@@ -11,7 +11,7 @@ namespace Table
 			float2 tc;
 			float4 tangent;
 			private:
-				SERIALIZE()
+	SERIALIZE()
 			{
 			     ar& NVP(pos);
 			     ar& NVP(normal);

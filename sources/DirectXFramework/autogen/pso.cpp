@@ -1,3 +1,4 @@
+
 #include "pch_dx.h"
 
 import Autogen;
@@ -13,6 +14,7 @@ import RootSignature;
 
 import ppl;
 using namespace concurrency;
+
 void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 {
 	 std::vector<task<void>> tasks;

@@ -10,7 +10,7 @@ namespace Table
 			uint NormalCone;
 			float ApexOffset;
 			private:
-				SERIALIZE()
+	SERIALIZE()
 			{
 			     ar& NVP(BoundingSphere);
 			     ar& NVP(NormalCone);

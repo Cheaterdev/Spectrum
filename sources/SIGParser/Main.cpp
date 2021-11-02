@@ -7,7 +7,7 @@
 #include <format>
 #include <string>
 #include <iostream>
-static const std::string cpp_path = "../../sources/RenderSystem/autogen";
+static const std::string cpp_path = "../../sources/DirectXFramework/autogen";
 static const std::string hlsl_path = "../../workdir/shaders/autogen";
 
 Parsed parsed;
@@ -617,7 +617,7 @@ void generate_cpp_table(const Table& table)
 
 				stream << std::format(
 R"(private:
-	SERIALIZE()") << std::endl;
+	SERIALIZE())") << std::endl;
 				stream << "{" << std::endl;
 
 				for (auto& v : table.values)
@@ -883,11 +883,42 @@ R"(private:
 
 void generate_include_list(const Parsed& parsed)
 {
-	my_stream stream(cpp_path, "includes.h");
+	{
+		my_stream stream(cpp_path, "autogen.ixx");
 
 
-	stream << "#pragma once" << std::endl;
+	stream << R"(
+module;
+#include "pch_dx.h"
+#include "DX12/dx12_types.h"
+export module Autogen;
 
+import PipelineState;
+import Vectors;
+import Matrices;
+import Samplers;
+import Buffer;
+import Descriptors;
+import SIG;
+import RT;
+import Layout;
+import Slots;
+import PSO;
+import RTX;
+import Enums;
+
+import Data;
+import RootSignature;
+
+import Utils;
+import serialization;
+
+export
+{
+
+)" << std::endl;
+
+	stream.push();
 	for (auto& l : parsed.layouts)
 	{
 		stream << "#include \"layout\\" << l.name << ".h\"" << std::endl;
@@ -935,10 +966,76 @@ void generate_include_list(const Parsed& parsed)
 	stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
 	stream << "UINT get_slot_id(SlotID id);" << std::endl;
 
-	{
-		my_stream stream(cpp_path, "enums.h");
-		stream << R"(import crc32;)" << std::endl;
+	stream.pop();
+	stream << "}" << std::endl;
 
+	stream << "module: private;" << std::endl;
+
+	stream << "static enum_array<Layouts, DX12::RootLayout::ptr> signatures;" << std::endl;
+	stream << "void init_signatures()" << std::endl;
+
+	stream << "{" << std::endl;
+	{
+		stream.push();
+
+		for (auto& l : parsed.layouts)
+		{
+			stream << "signatures[Layouts::" << l.name << "] = AutoGenSignatureDesc<" << l.name << ">().create_signature(Layouts::" << l.name << ");" << std::endl;
+		}
+
+		stream.pop();
+	}
+
+	stream << "}" << std::endl;
+
+
+	stream << "Render::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
+	stream << "{" << std::endl;
+	stream << "\treturn signatures[id];" << std::endl;
+	stream << "}" << std::endl;
+
+	{
+		stream << "std::optional<SlotID> get_slot(std::string_view slot_name)" << std::endl;
+		stream << "{" << std::endl;
+
+		stream.push();
+		{
+
+			for (auto& t : parsed.tables)
+			{
+				if (!t.slot) continue;
+
+				stream << "if(slot_name == \"" << t.name << "\")" << std::endl;
+				stream << "{" << std::endl;
+				stream.push();
+				stream << "return SlotID::" << t.name << ";" << std::endl;
+				stream.pop();
+				stream << "}" << std::endl;
+
+			}
+			stream << "return std::nullopt;" << std::endl;
+
+		}
+		stream.pop();
+		stream << "}" << std::endl;
+
+
+}
+
+	{
+		my_stream stream(cpp_path, "enums.ixx");
+		stream << R"(
+module;
+
+export module Enums;
+
+import crc32;
+import Utils;
+
+export
+{
+)" << std::endl;
+		stream.push();
 		stream << "enum class Layouts: int" << std::endl;
 
 		stream << "{" << std::endl;
@@ -996,63 +1093,10 @@ void generate_include_list(const Parsed& parsed)
 
 		stream << "};" << std::endl;
 
+		stream.pop();
+		stream << "}" << std::endl;
 	}
-
-
-	{
-		my_stream stream(cpp_path, "layouts.cpp");
-		stream << "#include \"pch.h\"" << std::endl;
-
-		stream << "static enum_array<Layouts, DX12::RootLayout::ptr> signatures;" << std::endl;
-		stream << "void init_signatures()" << std::endl;
-
-		stream << "{" << std::endl;
-		{
-			stream.push();
-
-			for (auto& l : parsed.layouts)
-			{
-				stream << "signatures[Layouts::" << l.name << "] = AutoGenSignatureDesc<" << l.name << ">().create_signature(Layouts::" << l.name << ");" << std::endl;
-			}
-
-			stream.pop();
-		}
-
-		stream << "}" << std::endl;
-
-
-		stream << "Render::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
-		stream << "{" << std::endl;
-		stream << "\treturn signatures[id];" << std::endl;
-		stream << "}" << std::endl;
-
-		{
-			stream << "std::optional<SlotID> get_slot(std::string_view slot_name)" << std::endl;
-			stream << "{" << std::endl;
-
-			stream.push();
-			{
-
-				for(auto &t:parsed.tables)
-				{
-					if (!t.slot) continue;
-
-					stream << "if(slot_name == \"" << t.name<<"\")" << std::endl;
-					stream << "{" << std::endl;
-					stream.push();
-					stream << "return SlotID::"<<t.name<<";" << std::endl;
-					stream.pop();
-					stream << "}" << std::endl;
-					
-				}
-				stream << "return std::nullopt;" << std::endl;
-
-			}
-			stream.pop();
-			stream << "}" << std::endl;
-
-
-		}
+	
 
 
 		{
@@ -1089,7 +1133,24 @@ void generate_include_list(const Parsed& parsed)
 	
 	{
 		my_stream stream(cpp_path, "pso.cpp");
-		stream << "#include \"pch.h\"" << std::endl;
+		stream << R"(
+#include "pch_dx.h"
+
+import Autogen;
+import Data;
+import SIG;
+import RT;
+import Layout;
+import Slots;
+import PSO;
+import RTX;
+import Enums;
+import RootSignature;
+
+import ppl;
+using namespace concurrency;
+)"
+			<< std::endl;
 
 		//stream << "static std::array<DX12::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
 		stream << "void init_pso(enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
@@ -1710,7 +1771,7 @@ void generate_cpp_layout(Layout& layout)
 				});
 
 
-			stream << "processor.process<" << result_string << ">({" << params_string << "});" << std::endl;
+			stream << "processor.template process<" << result_string << ">({" << params_string << "});" << std::endl;
 
 			stream.pop();
 		}
