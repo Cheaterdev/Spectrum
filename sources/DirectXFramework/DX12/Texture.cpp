@@ -98,30 +98,11 @@ namespace DX12
     {
         set_name(std::string("Texture_")+std::to_string(desc.Width)+"_"+std::to_string(desc.Height) + "_" + std::to_string(desc.DepthOrArraySize));
         desc = get_desc();
-
-        if (data)
-        {
-            tex_data = data;
-            auto list = Device::get().get_upload_list();
-
-            for (unsigned int a = 0; a < desc.ArraySize(); a++)
-            {
-                tex_data->array[a]->mips.resize(desc.MipLevels);
-
-                for (unsigned int m = 0; m < desc.MipLevels; m++)
-                {
-                    int i = D3D12CalcSubresource(m, a, 0, desc.MipLevels, desc.ArraySize());
-                    list->get_copy().update_texture(this, { 0, 0, 0 }, { tex_data->array[a]->mips[m]->width, tex_data->array[a]->mips[m]->height, tex_data->array[a]->mips[m]->depth }, i, (const char* )tex_data->array[a]->mips[m]->data.data(), tex_data->array[a]->mips[m]->width_stride, tex_data->array[a]->mips[m]->slice_stride);
-                }
-            }
-
-            list->end();
-			 list->execute_and_wait();
-
-        }
-
+		if(data)
+			upload_data(data);
         init();
     }
+
 	 texture_data::ptr Texture::get_data() const
 	{
 		auto desc = get_desc();
@@ -164,6 +145,38 @@ namespace DX12
 
 		return p_data;
 	}
+
+
+	 void Texture::upload_data(texture_data::ptr dat)
+	 {
+
+		 auto& data = *dat;
+		 data.format = to_typeless(data.format);
+		 CD3DX12_RESOURCE_DESC desc;
+
+		 if (data.depth > 1)
+			 desc = CD3DX12_RESOURCE_DESC::Tex3D(data.format, data.width, data.height, data.depth, data.mip_maps);
+		 else
+			 desc = CD3DX12_RESOURCE_DESC::Tex2D(data.format, data.width, data.height, data.array_size, data.mip_maps);
+
+		 Resource::init(desc, HeapType::DEFAULT, (desc.DepthOrArraySize * desc.MipLevels) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
+		 auto list = Device::get().get_upload_list();
+
+		 if (desc.ArraySize() * desc.MipLevels)
+		 {
+
+			 for (unsigned int a = 0; a < desc.ArraySize(); a++)
+				 for (unsigned int m = 0; m < desc.MipLevels; m++)
+				 {
+					 int i = m * desc.ArraySize() + a;
+					 list->get_copy().update_texture(this, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, (const char*)data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
+				 }
+		 }
+
+		 list->end();
+		 list->execute_and_wait();
+		 init();
+	 }
 	 Texture::ptr Texture::compress()
 	{
 		auto data = texture_data::compress(get_data());

@@ -714,10 +714,10 @@ public:
 		auto data = Hasher::hash(convert(name));
 
 		std::array<unsigned char, 16> ids;
-		for (int i = 0; i < data.size(); i++)
+		for (size_t i = 0; i < data.size(); i++)
 			ids[i] = data[i];
 
-		for (int i = data.size(); i < 16; i++)
+		for (size_t i = data.size(); i < 16; i++)
 			ids[i] = 0;
 		id = Guid(ids);
 

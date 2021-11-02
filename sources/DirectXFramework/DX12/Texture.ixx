@@ -309,7 +309,6 @@ namespace DX12
     {
             friend class resource_manager<Texture, texure_header>;
         protected:
-            std::shared_ptr<texture_data> tex_data;
 
             Texture();
 
@@ -356,50 +355,24 @@ namespace DX12
 
 			texture_data::ptr get_data() const;
 
+			void upload_data(texture_data::ptr);
 			Texture::ptr compress();
-            friend class boost::serialization::access;
-            template<class Archive>
-            void save(Archive& ar, const unsigned int) const
+
+			SERIALIZE()
             {
-                auto data = get_data();
-                ar& NVP(data);
+
+				if constexpr(Archive::is_saving::value)
+				{
+					auto data = get_data();
+					ar& NVP(data);
+				}
+				else
+				{
+					texture_data::ptr data;
+					ar& NVP(data);
+					upload_data(data);
+				}
             }
-
-            template<class Archive>
-            void load(Archive& ar, const unsigned int)
-            {
-                texture_data::ptr dat;
-                CD3DX12_RESOURCE_DESC desc;
-                ar& NVP(dat);
-                auto& data = *dat;
-
-				data.format = to_typeless(data.format);
-                if (data.depth > 1)
-                    desc = CD3DX12_RESOURCE_DESC::Tex3D(data.format, data.width, data.height, data.depth, data.mip_maps);
-                else
-                    desc = CD3DX12_RESOURCE_DESC::Tex2D(data.format, data.width, data.height, data.array_size, data.mip_maps);
-
-				Resource::init(desc, HeapType::DEFAULT, (desc.DepthOrArraySize * desc.MipLevels) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
-    auto list = Device::get().get_upload_list();
-
-                if (desc.ArraySize() * desc.MipLevels)
-                {
-                
-                    for (unsigned int a = 0; a < desc.ArraySize(); a++)
-                        for (unsigned int m = 0; m < desc.MipLevels; m++)
-                        {
-                            int i = m * desc.ArraySize() + a;
-                            list->get_copy().update_texture(this, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, (const char* )data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
-                        }
-
-             
-                }
-       list->end();
-                    list->execute_and_wait();
-                init();
-            }
-            BOOST_SERIALIZATION_SPLIT_MEMBER()
-
     };
 }
 

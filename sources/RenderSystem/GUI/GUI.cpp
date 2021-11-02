@@ -215,7 +215,7 @@ namespace GUI
 
     void base::remove_child(ptr obj)
     {
-        if (user_ui) CHECK_THREAD(GUI);
+        if (user_ui) CHECK_THREAD(GUI)
 
         auto&& g = lock();
         tree_base::remove_child(obj);
@@ -230,7 +230,7 @@ namespace GUI
 
     void base::add_child(ptr obj)
     {
-    	if(user_ui)  CHECK_THREAD(GUI);
+    	if(user_ui)  CHECK_THREAD(GUI)
     	
         auto&& g = lock();
         tree_base::add_child(obj);

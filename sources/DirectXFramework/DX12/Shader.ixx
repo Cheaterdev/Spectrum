@@ -81,9 +81,7 @@ export
 			return my <=> other;
 		}
 	private:
-		friend class boost::serialization::access;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(shader);
 		}
@@ -137,9 +135,7 @@ export
 				 slots_usage.clear();
 			 }
 		 private:
-			 friend class boost::serialization::access;
-			 template<class Archive>
-			 void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			 {
 				 ar& NVP(slots_usage);
 			 }
@@ -278,9 +274,7 @@ export
 				return result;
 			}
 		private:
-			friend class boost::serialization::access;
-			template<class Archive>
-			void serialize(Archive& ar, const unsigned int)
+			SERIALIZE()
 			{
 				ar& NVP(blob);
 				ar& NVP(hash);
