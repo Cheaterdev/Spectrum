@@ -6,6 +6,7 @@ export module Layout;
 import RootSignature;
 import Concepts;
 import Samplers;
+import D3D12.Types;
 export
 {
 
@@ -30,13 +31,13 @@ export
 		}
 
 		template< class ...A>
-		void process(std::initializer_list< Render::Samplers::SamplerDesc> samplers)
+		void process(std::initializer_list<HAL::SamplerDesc> samplers)
 		{
 
 			(process_one<A>(), ...);
 			for (auto& s : samplers)
 			{
-				desc.add_sampler(0, Render::ShaderVisibility::ALL, s);
+				desc.add_sampler(0, Render::ShaderVisibility::ALL, to_native(s));
 			}
 		}
 

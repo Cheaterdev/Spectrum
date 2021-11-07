@@ -15,6 +15,8 @@ import CommandList;
 
 import Vectors;
 
+import HAL.Types;
+
 namespace FrameGraph
 {
 
@@ -131,7 +133,7 @@ namespace FrameGraph
 		ResourceAllocInfo* orig = nullptr;
 
 		CD3DX12_RESOURCE_DESC d3ddesc;
-		Render::HeapType heap_type;
+		HAL::HeapType heap_type;
 		// setup
 		Pass* valid_from = nullptr;
 		Pass* valid_to = nullptr;
@@ -506,12 +508,12 @@ namespace FrameGraph
 
 		virtual bool setup(TaskBuilder& builder) = 0;
 
-		Render::CommandListType get_type()
+		HAL::CommandListType get_type()
 		{
-			Render::CommandListType type = Render::CommandListType::DIRECT;
+			HAL::CommandListType type = HAL::CommandListType::DIRECT;
 
 			if (check(flags & PassFlags::Compute))
-				type = Render::CommandListType::COMPUTE;
+				type = HAL::CommandListType::COMPUTE;
 
 			return type;
 		}

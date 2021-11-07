@@ -18,8 +18,9 @@ export import Constants;
 export import Vectors;
 export import Matrices;
 export import CommandList;
+export import HAL.Types;
 
-
+using namespace HAL;
 export
 {
 
@@ -246,7 +247,7 @@ export
 
 			using ptr = std::shared_ptr<StructureBuffer<T>>;
 			using type = Underlying<T>;
-			StructureBuffer(UINT64 count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, HeapType heap_type = HeapType::DEFAULT, ResourceState defaultState = ResourceState::COMMON);
+			StructureBuffer(UINT64 count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, HAL::HeapType heap_type = HAL::HeapType::DEFAULT, HAL::ResourceState defaultState = HAL::ResourceState::COMMON);
 
 			UINT get_counter_offset();
 

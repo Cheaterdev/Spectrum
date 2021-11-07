@@ -7,6 +7,10 @@ import Buffer;
 import Singleton;
 import IdGenerator;
 
+import HAL.Types;
+using namespace HAL;
+
+
 export
 {
 

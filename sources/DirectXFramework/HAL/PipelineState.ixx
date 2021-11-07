@@ -10,10 +10,11 @@ import RootSignature;
 
 import Shader;
 import Device;
-export import Memory;
+
 import Singleton;
 import d3d12_types;
 import serialization;
+import Trackable;
 DX12::RootLayout::ptr get_Signature(Layouts id);
 
 export

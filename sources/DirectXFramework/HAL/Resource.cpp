@@ -12,6 +12,9 @@ import Debug;
  import Device;
 import stl.core;
 import stl.memory;
+import HAL.Types;
+using namespace HAL;
+
 
 namespace DX12
 {
@@ -62,7 +65,7 @@ namespace DX12
 		}
 
 
-		if (heap_type == HeapType::RESERVED)
+		if (heap_type == HAL::HeapType::RESERVED)
 		{
 			if (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D)
 			{
@@ -173,11 +176,16 @@ namespace DX12
 		{
 			state = ResourceState::COPY_DEST;
 		}
+
+		D3D12_RESOURCE_STATES native_state = static_cast<D3D12_RESOURCE_STATES>(state);
+
+
+		Log::get() << (int)state << " " << (int)native_state<<Log::endl;
 		TEST(Device::get().get_native_device()->CreatePlacedResource(
 			handle.get_heap()->get_native().Get(),
 			handle.get_offset(),
 			&desc,
-			static_cast<D3D12_RESOURCE_STATES>(state),
+			native_state,
 			(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
 			IID_PPV_ARGS(&resource)));
 

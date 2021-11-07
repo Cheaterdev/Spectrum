@@ -2,6 +2,8 @@
 #include "Effects/RTX/RTX.h"
 #include "Assets/AssetRenderer.h"
 #include "Materials/universal_material.h"
+import HAL.Types;
+using namespace HAL;
 
 import Queue;
 

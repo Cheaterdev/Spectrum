@@ -770,9 +770,9 @@ public:
 
 			if (GetAsyncKeyState('R'))
 			{
-				Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal_and_wait();
-				Render::Device::get().get_queue(Render::CommandListType::COMPUTE)->signal_and_wait();
-				Render::Device::get().get_queue(Render::CommandListType::COPY)->signal_and_wait();
+				Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+				Render::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
+				Render::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
 				Render::pixel_shader::reload_all();
@@ -835,7 +835,7 @@ public:
 
 				graph.reset();
 			}
-			swap_chain->present(Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal());
+			swap_chain->present(Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal());
 		}
 
 	
@@ -1274,7 +1274,7 @@ protected:
 
 
 	//	
-		//   Render::Device::get().get_queue(Render::CommandListType::DIRECT)->stop_all();
+		//   Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->stop_all();
 		Render::Device::get().stop_all();
 		Skin::reset();
 		Render::Texture::reset_manager();

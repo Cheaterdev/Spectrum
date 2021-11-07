@@ -81,10 +81,10 @@ namespace DX12
 		template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T,class S>
 		void include_shader(S& shader)
 		{
-			std::string& blob = shader->get_blob();
+			auto& blob = shader->get_blob();
 			D3D12_SHADER_BYTECODE code;
 			code.BytecodeLength = blob.size();
-			code.pShaderBytecode = reinterpret_cast<UINT8*>(const_cast<char*>(blob.data()));
+			code.pShaderBytecode =blob.data();
 			internal_inluce<T>(code);
 		}
 	public:
@@ -429,7 +429,7 @@ unsigned int i = 0;
 			psoDesc.pRootSignature = desc.root_signature->get_native().Get();
 
 		if (desc.shader)
-			psoDesc.CS = { reinterpret_cast<UINT8*>(const_cast<char*>(desc.shader->get_blob().data())), static_cast<UINT>(desc.shader->get_blob().size()) };
+			psoDesc.CS = {desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
 
 
 		if (!cache.empty())

@@ -10,7 +10,11 @@ import Debug;
 import Exceptions;
 
 import CommandList;
+
+import D3D12.Types;
+
 namespace DX12
+
 {
 
 
@@ -1308,7 +1312,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	TransitionCommandList::TransitionCommandList(CommandListType type):type(type)
 	{
-		D3D12_COMMAND_LIST_TYPE t = static_cast<D3D12_COMMAND_LIST_TYPE>(type);
+		D3D12_COMMAND_LIST_TYPE t = to_native(type);
 
 		TEST(Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
 		TEST(Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));

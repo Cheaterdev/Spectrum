@@ -8,7 +8,8 @@
 #include "Renderer/Renderer.h"
 
 class GBufferDownsampler;
-
+import HAL.Types;
+using namespace HAL;
 class Texture3DMultiTiles
 {
 	update_tiling_info tilings_info;
@@ -30,10 +31,10 @@ public:
 
 	void set(CD3DX12_RESOURCE_DESC desc)
 	{
-		tex_dynamic.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
-		tex_static.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_dynamic.reset(new Render::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
+		tex_static.reset(new Render::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
-		tex_result.reset(new Render::Texture(desc, Render::ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_result.reset(new Render::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
 
 		tex_dynamic->on_load = [this](ivec4 pos) {
@@ -112,7 +113,7 @@ public:
 
 	void set(CD3DX12_RESOURCE_DESC desc)
 	{
-		tex_result.reset(new Render::Texture(desc, ResourceState::PIXEL_SHADER_RESOURCE, Render::HeapType::RESERVED));
+		tex_result.reset(new Render::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
 		static_tiles.resize(tex_result->get_tiles_count(), 0);
 		dynamic_tiles.resize(tex_result->get_tiles_count(), 0);

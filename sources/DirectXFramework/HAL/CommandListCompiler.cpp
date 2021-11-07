@@ -10,7 +10,7 @@ namespace DX12
 
 		void CommandListCompiler::create(CommandListType type)
 		{
-			D3D12_COMMAND_LIST_TYPE t = static_cast<D3D12_COMMAND_LIST_TYPE>(type);
+			D3D12_COMMAND_LIST_TYPE t = to_native(type);
 			TEST(Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&compiled.m_commandAllocator)));
 			TEST(Device::get().get_native_device()->CreateCommandList(0, t, compiled.m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&compiled.m_commandList)));
 			compiled.m_commandList->Close();
@@ -33,7 +33,7 @@ namespace DX12
 
 	void CommandListCompilerDelayed::create(CommandListType type)
 	{
-		D3D12_COMMAND_LIST_TYPE t = static_cast<D3D12_COMMAND_LIST_TYPE>(type);
+		D3D12_COMMAND_LIST_TYPE t = to_native(type);
 		TEST(Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&compiled.m_commandAllocator)));
 		TEST(Device::get().get_native_device()->CreateCommandList(0, t, compiled.m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&compiled.m_commandList)));
 		compiled.m_commandList->Close();

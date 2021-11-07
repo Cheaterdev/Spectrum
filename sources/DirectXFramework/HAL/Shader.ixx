@@ -146,7 +146,7 @@ export
 		{
 			friend class resource_manager<_shader_type, D3D::shader_header>;
 		protected:
-			std::string blob;
+			binary blob;
 			static const char* compile_code;
 			static const char* compile_code_dxil;
 
@@ -205,7 +205,7 @@ export
 
 			size_t id;
 
-			std::string& get_blob()
+			binary& get_blob()
 			{
 				return blob;
 			}
@@ -221,12 +221,12 @@ export
 				resource_file_depender depender;
 				D3D::shader_include In("shaders/", depender);
 
-				std::unique_ptr<std::string> res_blob;
+				std::optional<binary> res_blob;
 
 				while (!res_blob)
 				{
 					depender.clear();
-					res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader(data, macros, compile_code_dxil, func_name, &In);
+					res_blob = ShaderCompiler::get().Compile_Shader(data, macros, compile_code_dxil, func_name, &In);
 				}
 				auto result = std::make_shared<_shader_type>();
 
@@ -242,7 +242,7 @@ export
 			static std::shared_ptr<_shader_type> load_native(const D3D::shader_header& header, resource_file_depender& depender)
 			{
 
-				std::unique_ptr<std::string> res_blob;
+				std::optional<binary> res_blob;
 
 
 				while (!res_blob)
@@ -253,12 +253,12 @@ export
 					if (header.contains_text)
 					{
 						D3D::shader_include In("shaders/", depender);
-						res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
+						res_blob = ShaderCompiler::get().Compile_Shader(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
 					}
 					else
 					{
 						D3D::shader_include In(header.file_name, depender);
-						res_blob = D3D12ShaderCompilerInfo::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
+						res_blob = ShaderCompiler::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
 					}
 				}
 

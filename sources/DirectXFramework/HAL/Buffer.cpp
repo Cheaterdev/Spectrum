@@ -1,6 +1,8 @@
 #include "pch_dx.h"
 
 import Buffer;
+using namespace HAL;
+
 namespace DX12
 {
 

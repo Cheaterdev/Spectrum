@@ -25,7 +25,8 @@ import Singleton;
 import stl.core;
 import stl.memory;
 
-
+import HAL.ResourceState;
+using namespace HAL;
 export{
 	enum class Layouts;
 

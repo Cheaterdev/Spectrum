@@ -8,6 +8,10 @@ import Vectors;
 import Memory;
 import Events;
 import stl.core;
+
+import HAL.Types;
+using namespace HAL;
+
 export
 {
 

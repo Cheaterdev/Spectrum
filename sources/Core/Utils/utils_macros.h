@@ -9,7 +9,8 @@
 
 #define GEN_DEF_COMP(x) \
 	bool operator==(const x& r) const = default;\
-	std::strong_ordering  operator<=>(const  x& r) const = default;
+	auto operator<=>(const x& r) const = default;
+
 #define GENERATE_OPS __GENERATE_OPS__
 
 
@@ -44,3 +45,7 @@
 #define THREAD_SCOPE(x) ;
 #define CHECK_THREAD(x) ;
 #endif
+
+
+
+#define DISABLE_OPTIMIZATION __pragma(optimize( "", off ))

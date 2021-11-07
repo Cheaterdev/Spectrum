@@ -12,6 +12,9 @@ import TextureData;
 import d3d12_types;
 import Descriptors;
 
+import HAL.ResourceState;
+using namespace HAL;
+
 export
 {
 namespace DX12

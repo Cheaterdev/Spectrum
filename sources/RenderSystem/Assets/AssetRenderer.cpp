@@ -10,7 +10,8 @@
 import Queue;
 
 using namespace FrameGraph;
-
+import HAL.Types;
+using namespace HAL;
 class SceneRenderWorkflow
 {
 

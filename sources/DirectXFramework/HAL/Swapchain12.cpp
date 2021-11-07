@@ -30,10 +30,6 @@ namespace DX12
 
 			frames[n].m_renderTarget.reset(new Texture(render_target, handle, ResourceState::PRESENT));
 			frames[n].m_renderTarget->set_name(std::string("swap_chain_") + std::to_string(n));
-			//	frames[n].m_renderTarget->assume_gpu_state(ResourceState::PRESENT);
-
-			//	frames[n].m_renderTarget->debug = true;
-
 
 			D3D12_RENDER_TARGET_VIEW_DESC desc = {};
 			desc.Format = to_srv(frames[n].m_renderTarget->get_desc().Format);

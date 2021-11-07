@@ -26,7 +26,7 @@ namespace DX12
 
 
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT;
-		queueDesc.Type = static_cast<D3D12_COMMAND_LIST_TYPE>(type);
+		queueDesc.Type = to_native(type);
 		queueDesc.NodeMask = 1;
 		device->get_native_device()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&native));
 

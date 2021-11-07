@@ -1,6 +1,6 @@
 module;
 
-#include "DX12/dx12_types.h"
+#include "HAL/dx12_types.h"
 #include "pch_dx.h"
 
 export module PSO;

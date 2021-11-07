@@ -952,7 +952,7 @@ namespace GUI
 					 {
 						 c.labeled = &context.pre_executor;
                      	
-						 c.command_list_label = Render::Device::get().get_queue(Render::CommandListType::DIRECT)->get_free_list();
+						 c.command_list_label = Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
                      	
 						 c.command_list_label->begin("Label");
 
@@ -976,9 +976,7 @@ namespace GUI
 
 				 renderer->flush(c);
 
-				 //command_list->transition(texture.resource, Render::ResourceState::PRESENT);
-
-
+	
 			 });
 
 

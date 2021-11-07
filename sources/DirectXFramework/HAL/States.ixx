@@ -9,10 +9,12 @@ import Utils;
 import StateContext;
 import Device;
 import d3d12_types;
+import HAL.ResourceState;
+import HAL.Types;
 
 export
 {
-
+	using namespace HAL;
 
 	namespace DX12
 	{
@@ -279,7 +281,7 @@ export
 
 		struct ResourceListStateGPU
 		{
-			ResourceState state = ResourceState::UNKNOWN;
+			ResourceState state = HAL::ResourceState::UNKNOWN;
 		};
 
 		struct SubResourcesGPU

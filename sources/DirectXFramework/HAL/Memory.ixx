@@ -12,6 +12,10 @@ import d3d12_types;
 import Utils;
 import Vectors;
 import Constants;
+import Trackable;
+import HAL.Types;
+using namespace HAL;
+
 export
 {
 
@@ -19,39 +23,6 @@ export
 	namespace DX12
 	{
 		//class Resource;
-
-		struct TrackedObjectState
-		{
-			bool used = false;
-			void reset()
-			{
-				used = false;
-			}
-		};
-
-		template<class T>
-		class Trackable : public ObjectState<TrackedObjectState>
-		{
-		public:
-			mutable std::shared_ptr<T> tracked_info;
-			Trackable()
-			{
-				tracked_info = std::make_shared<T>();
-			}
-			virtual ~Trackable() {};
-
-		};
-
-		template <class T>
-		concept TrackableClass = std::is_base_of<ObjectState<TrackedObjectState>, T>::value;
-
-		class TrackedObject
-		{
-		public:
-			using ptr = std::shared_ptr<TrackedObject>;
-			virtual ~TrackedObject() = default;
-		};
-
 
 		class TrackedHeap : public TrackedObject
 		{

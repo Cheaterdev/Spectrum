@@ -4,6 +4,9 @@ import Scheduler;
 import Executors;
 import Device;
 import CommandList;
+import d3d12;
+import HAL.Types;
+using namespace HAL;
 
 export
 {

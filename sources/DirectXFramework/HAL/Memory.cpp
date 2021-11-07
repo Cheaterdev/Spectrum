@@ -23,7 +23,7 @@ namespace DX12
 		desc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 		desc.Properties.CreationNodeMask = 0;
 		desc.Properties.VisibleNodeMask = 0;
-		desc.Properties.Type = (D3D12_HEAP_TYPE)type;
+		desc.Properties.Type = to_native(type);
 		desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
 		TEST(Device::get().get_native_device()->CreateHeap(&desc, IID_PPV_ARGS(&tracked_info->heap)));

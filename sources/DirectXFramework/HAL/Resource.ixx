@@ -11,6 +11,10 @@ export import Device;
 import d3d12;
 import stl.memory;
 import Utils;
+import Trackable;
+import HAL.ResourceState;
+
+using namespace HAL;
 export
 {
 	namespace DX12
@@ -121,7 +125,7 @@ export
 				CD3DX12_RESOURCE_DESC desc;
 			bool force_delete = false;
 			D3D12_GPU_VIRTUAL_ADDRESS gpu_adress;
-			HeapType heap_type = HeapType::CUSTOM;
+			HeapType heap_type;
 			//  std::vector< unsigned int> states;
 			size_t id = 0;
 

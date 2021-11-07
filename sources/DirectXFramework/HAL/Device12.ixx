@@ -10,6 +10,8 @@ import StateContext;
 import Data;
 import d3d12_types;
 
+import HAL.Types;
+using namespace HAL;
 
 export
 {
