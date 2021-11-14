@@ -9,6 +9,7 @@ BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
 BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);
 BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelinePasses);
 BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelineSimple);
+
 DynamicData generate_data(std::vector<Uniform::ptr>& un)
 {
 	DynamicData data;
@@ -297,7 +298,7 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 
 void materials::universal_material::update_rtx()
 {
-	if (!Device::get().is_rtx_supported()) return;
+	if (!Render::Device::get().is_rtx_supported()) return;
 	RTX::get().rtx.update_material(this);
 
 

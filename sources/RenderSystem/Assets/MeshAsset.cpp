@@ -147,7 +147,7 @@ mesh.meshlets_offset = meshlets_count;
 	for (auto& mesh : meshes)
 	{
 	
-		auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+		auto list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 		list->begin("RTX");
 		universal_vertex_manager::get().prepare(list);
 		universal_index_manager::get().prepare(list);
@@ -397,7 +397,7 @@ void MeshAssetInstance::on_remove()
 
 void MeshAssetInstance::update_rtx_instance()
 {
-	if (!Device::get().is_rtx_supported()) return;
+	if (!Render::Device::get().is_rtx_supported()) return;
 
 	if (!ras_handle) scene->raytrace->allocate(ras_handle, rendering_count);
 
@@ -491,7 +491,7 @@ bool MeshAssetInstance::update_transforms()
 
 bool MeshAssetInstance::init_ras(CommandList::ptr list)
 {
-	if (!Device::get().is_rtx_supported()) return false;
+	if (!Render::Device::get().is_rtx_supported()) return false;
 
 
 
@@ -632,12 +632,12 @@ BOOST_CLASS_EXPORT_IMPLEMENT(MeshAssetInstance);
 
 
 
-template void MeshAssetInstance::serialize(serialization_oarchive& arch, const unsigned int version);
+/*template void MeshAssetInstance::serialize(serialization_oarchive& arch, const unsigned int version);
 template void MeshAssetInstance::serialize(serialization_iarchive& arch, const unsigned int version);
 
 template void AssetReference<MeshAsset>::serialize(serialization_oarchive& arch, const unsigned int version);
 template void AssetReference<MeshAsset>::serialize(serialization_iarchive& arch, const unsigned int version);
-
+*/
 void SceneFrameManager::prepare(CommandList::ptr& command_list, Scene& scene)
 {
 	auto timer = command_list->start(L"Upload data");

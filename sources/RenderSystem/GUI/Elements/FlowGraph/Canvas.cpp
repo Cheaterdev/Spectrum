@@ -401,9 +401,11 @@ void GUI::Elements::FlowGraph::canvas::on_key_action(long key)
                 p.first->remove();
         }
 
-    } if (key == VK_HOME)
+    } 
+    
+ //   if (key == VK_HOME)
 
-        FileSystem::get().save_data(L"graph.flg", Serializer::serialize(*g));
+   //     FileSystem::get().save_data(L"graph.flg", Serializer::serialize(*g));
 }
 
 bool GUI::Elements::FlowGraph::canvas::on_wheel(mouse_wheel type, float value, vec2 pos)

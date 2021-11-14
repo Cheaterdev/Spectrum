@@ -454,12 +454,12 @@ public:
 
 		{
 
-			CommandList::ptr command_list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			CommandList::ptr command_list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 
 			command_list->begin("pre");
 			{
 				SceneFrameManager::get().prepare(command_list, *scene);
-				if (Device::get().is_rtx_supported())
+				if (Render::Device::get().is_rtx_supported())
 				{
 					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), false);
 					RTX::get().prepare(command_list);
@@ -812,7 +812,7 @@ public:
 					}
 				}
 
-				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
+				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Render::Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}
 
 

@@ -12,45 +12,33 @@ namespace DX12
 		owner->free(handle);
 	}
 
-	void ResourceHeap::init(size_t size)
+	ResourceHeap::ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags)
 	{
-		tracked_info->heap = nullptr;
+		desc.Size = size;
+		desc.Type = type;
+		if(flags== D3D12_HEAP_FLAG_NONE)desc.Flags = HeapFlags::NONE;
+		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS) desc.Flags = HeapFlags::BUFFERS_ONLY;
+		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES) desc.Flags = HeapFlags::TEXTURES_ONLY;
+		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES) desc.Flags = HeapFlags::RTDS_ONLY;
 
-		
-		desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-		desc.Flags = flags;
-		desc.SizeInBytes = size;
-		desc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		desc.Properties.CreationNodeMask = 0;
-		desc.Properties.VisibleNodeMask = 0;
-		desc.Properties.Type = to_native(type);
-		desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-		TEST(Device::get().get_native_device()->CreateHeap(&desc, IID_PPV_ARGS(&tracked_info->heap)));
-
-		heap_size = size;
-
+		tracked_info->heap = std::make_shared<HAL::Heap>(*Device::get().get_hal_device(), desc);
 	}
-	
-	void ResourceHeap::init_cpu(ptr res)
-	{
-
-		if(desc.Flags&D3D12_HEAP_FLAG_DENY_BUFFERS)
-		{
-			return;
-		}
-		
-		CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(heap_size);
-
-		ResourceHandle handle(0, res);
-
-	
-		cpu_buffer = std::make_shared<Resource>(desc, handle);
-	}
-
 
 	std::span<std::byte> ResourceHeap::get_data()
 	{
-		return std::span(cpu_buffer->buffer_data, desc.SizeInBytes);
+		return tracked_info->heap->cpu_data();
 	}
+
+	void ResourceHeap::init_cpu(ptr res)
+	{
+			if (!tracked_info->heap->cpu_data().empty())
+			{
+
+				CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(this->desc.Size);
+				ResourceHandle handle(0, res);
+				cpu_buffer = std::make_shared<Resource>(desc, handle);
+			}
+	}
+
+
 }

@@ -6,7 +6,16 @@ import HAL.Sampler;
 
 using namespace HAL;
 
-D3D12_TEXTURE_ADDRESS_MODE to_native(TextureAddressMode mode)
+export namespace D3D
+{
+	using Heap		= ComPtr<ID3D12Heap>;
+	using Resource	= ComPtr<ID3D12Resource>;
+	using Device	= ComPtr<ID3D12Device5>;
+	using Adapter	= ComPtr<IDXGIAdapter3>;
+
+}
+
+export D3D12_TEXTURE_ADDRESS_MODE to_native(TextureAddressMode mode)
 {
 	static constexpr D3D12_TEXTURE_ADDRESS_MODE natives[] =
 	{
@@ -20,7 +29,7 @@ D3D12_TEXTURE_ADDRESS_MODE to_native(TextureAddressMode mode)
 	return natives[static_cast<uint>(mode)];
 }
 
-D3D12_COMPARISON_FUNC to_native(ComparisonFunc mode)
+export D3D12_COMPARISON_FUNC to_native(ComparisonFunc mode)
 {
 	static constexpr D3D12_COMPARISON_FUNC natives[] =
 	{
@@ -42,7 +51,7 @@ D3D12_COMPARISON_FUNC to_native(ComparisonFunc mode)
 }
 
 
-D3D12_FILTER to_native(Filter min, Filter mag, Filter mip, ComparisonFunc func)
+export D3D12_FILTER to_native(Filter min, Filter mag, Filter mip, ComparisonFunc func)
 {
 	static constexpr D3D12_FILTER natives[] =
 	{
@@ -155,6 +164,21 @@ export D3D12_HEAP_TYPE to_native(HeapType type)
 	};
 
 	return natives[static_cast<uint>(type)];
+}
+
+
+
+export D3D12_HEAP_FLAGS to_native(HeapFlags flags)
+{
+	static constexpr D3D12_HEAP_FLAGS  natives[] =
+	{
+		D3D12_HEAP_FLAG_NONE ,
+		D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS,
+		D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES,
+		D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES
+	};
+
+	return natives[static_cast<uint>(flags)];
 }
 
 

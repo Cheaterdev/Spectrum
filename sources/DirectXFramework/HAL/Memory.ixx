@@ -14,6 +14,8 @@ import Vectors;
 import Constants;
 import Trackable;
 import HAL.Types;
+import HAL.Heap;
+
 using namespace HAL;
 
 export
@@ -27,39 +29,29 @@ export
 		class TrackedHeap : public TrackedObject
 		{
 		public:
-			ComPtr<ID3D12Heap > heap;
+			HAL::Heap::ptr heap;
 		};
 
 		class ResourceHeap :std::enable_shared_from_this<ResourceHeap>, public Trackable<TrackedHeap>
 		{
 
-			D3D12_HEAP_DESC desc;
+			HAL::HeapDesc desc;
 		public:
 			std::shared_ptr<Resource> cpu_buffer;
 
-			HeapType type;
-			D3D12_HEAP_FLAGS flags;
-
-			size_t heap_size = 0;
 			using ptr = std::shared_ptr<ResourceHeap>;
 			ComPtr<ID3D12Heap > get_native()
 			{
-				return tracked_info->heap;
+				return tracked_info->heap->native_heap;
 			}
+			ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags);
 
 
-			ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags) :type(type), flags(flags)
-			{
-				init(size);
-			}
-			HeapType get_type() { return type; }
+			HeapType get_type() { return desc.Type; }
 			virtual ~ResourceHeap() = default;
 
-			void init_cpu(ptr);
-
 			std::span<std::byte> get_data();
-		protected:
-			void init(size_t size);
+			void init_cpu(ptr);
 		};
 
 		//	template<class AllocatorType>
@@ -168,11 +160,12 @@ export
 					}
 
 				}
-				auto res = std::make_shared<ResourceHeapPage>(size, index.type, index.flags);
+			
+			auto res = std::make_shared<ResourceHeapPage>(size, index.type, index.flags);
 
-				res->init_cpu(res);
+			res->init_cpu(res);
 
-				return res;
+			return res;
 
 			}
 

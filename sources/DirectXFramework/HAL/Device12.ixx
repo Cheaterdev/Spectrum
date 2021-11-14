@@ -11,6 +11,8 @@ import Data;
 import d3d12_types;
 
 import HAL.Types;
+import HAL.Device;
+
 using namespace HAL;
 
 export
@@ -24,7 +26,7 @@ export
 		typedef D3D12_VIEWPORT Viewport;
 		class Device : public Singleton<Device>
 		{
-			ComPtr<ID3D12Device5> m_device;
+			HAL::Device::ptr m_device;
 			ComPtr<IDXGIFactory4> factory;
 			std::vector<std::shared_ptr<SwapChain>> swap_chains;
 			std::vector <ComPtr<IDXGIAdapter3> > vAdapters;
@@ -39,6 +41,11 @@ export
 			void stop_all();
 			virtual ~Device();
 			void  check_errors();
+
+			HAL::Device::ptr get_hal_device()
+			{
+				return m_device;
+			}
 			ContextGenerator context_generator;
 			std::shared_ptr<CommandList> get_upload_list();
 			ComPtr<ID3D12Device5> get_native_device();

@@ -29,6 +29,13 @@ export namespace HAL
 		GENERATE_OPS
 	};
 
+	enum class HeapFlags:uint
+	{
+		NONE,
+		BUFFERS_ONLY,
+		TEXTURES_ONLY,
+		RTDS_ONLY
+	};
 	enum class ResourceState : uint
 	{
 		COMMON = 0,

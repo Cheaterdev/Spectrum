@@ -43,7 +43,7 @@ Scene::Scene()
 
 
 
-	if(Device::get().is_rtx_supported())
+	if(Render::Device::get().is_rtx_supported())
 	{
 		std::vector<InstanceDesc>  desc;
 		raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(desc);

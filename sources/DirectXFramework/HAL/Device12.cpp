@@ -12,6 +12,8 @@ import GPUTimer;
 import Debug;
 import Samplers;
 import d3d12;
+
+import HAL.Device;
 namespace DX12
 {
 
@@ -49,7 +51,7 @@ namespace DX12
 			ComPtr<ID3D12DebugDevice > debugController;
 			//  if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 			//    debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
-			m_device.Get()->QueryInterface(IID_PPV_ARGS(&debugController));
+			m_device->native_device.Get()->QueryInterface(IID_PPV_ARGS(&debugController));
 
 			//	if (debugController)
 			//		debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
@@ -72,7 +74,7 @@ namespace DX12
 	}
 	ComPtr<ID3D12Device5> Device::get_native_device()
 	{
-		return m_device;
+		return m_device->native_device;
 	}
 
 	Queue::ptr& Device::get_queue(CommandListType type)
@@ -104,7 +106,7 @@ namespace DX12
 		auto inputs = to_native(desc);
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
 
-		m_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+		m_device->native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
 
 		return info;
 	}
@@ -113,7 +115,7 @@ namespace DX12
 		auto inputs = to_native(desc);
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
 
-		m_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+		m_device->native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
 		return info;
 	}
 
@@ -151,7 +153,7 @@ namespace DX12
 
 	void Device::create_sampler(D3D12_SAMPLER_DESC desc, CD3DX12_CPU_DESCRIPTOR_HANDLE handle)
 	{
-		m_device->CreateSampler(&desc, handle);
+		m_device->native_device->CreateSampler(&desc, handle);
 	}
 	size_t Device::get_vram()
 	{
@@ -237,19 +239,12 @@ namespace DX12
 		crasher = std::make_unique<GpuCrashTracker>();
 
 		crasher->Initialize();
-		try
-		{
-			HRESULT hr = D3D12CreateDevice(
-				vAdapters[0].Get(),
-				D3D_FEATURE_LEVEL_12_1,
-				IID_PPV_ARGS(&m_device)
-			);
-		}
-		catch (...)
-		{
-			Log::get() << "*** Unhandled Exception ***" << Log::endl;
-			//	TRACE("*** Unhandled Exception ***");
-		}
+
+
+		HAL::DeviceDesc desc;
+		desc.adapter = vAdapters[0];
+		m_device = std::make_shared<HAL::Device>(desc);
+
 
 		const uint32_t aftermathFlags =
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
@@ -259,17 +254,17 @@ namespace DX12
 		auto afterres = GFSDK_Aftermath_DX12_Initialize(
 			GFSDK_Aftermath_Version_API,
 			aftermathFlags,
-			m_device.Get());
+			m_device->native_device.Get());
 		
 
 		
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
-		TEST(m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
+		TEST(m_device->native_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
 			&options5, sizeof(options5)));
 
 		//#ifdef DEBUG
 		ComPtr<ID3D12InfoQueue> d3dInfoQueue;
-		if (SUCCEEDED(m_device.As(&d3dInfoQueue)))
+		if (SUCCEEDED(m_device->native_device.As(&d3dInfoQueue)))
 		{
 
 			//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -299,9 +294,9 @@ namespace DX12
 	//	queues[CommandListType::COPY] = queues[CommandListType::COMPUTE] = queues[CommandListType::DIRECT];
 	//	m_device->SetStablePowerState(true);
 
-		auto res = m_device->GetNodeCount();
+		auto res = m_device->native_device->GetNodeCount();
 		D3D12_FEATURE_DATA_D3D12_OPTIONS featureData;
-		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));
+		m_device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));
 		auto m_tiledResourcesTier = featureData.TiledResourcesTier;
 
 		rtx = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
@@ -309,7 +304,7 @@ namespace DX12
 
 
 		D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_7 };
-		m_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
+		m_device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
 
 		assert(supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6);
 	}
@@ -326,19 +321,19 @@ namespace DX12
 			}
 		}
 
-		D3D12_RESOURCE_ALLOCATION_INFO info = m_device->GetResourceAllocationInfo(0, 1, &desc);
+		D3D12_RESOURCE_ALLOCATION_INFO info = m_device->native_device->GetResourceAllocationInfo(0, 1, &desc);
 		desc.Alignment = info.Alignment;
 
 		if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
 		{
 			desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			info = m_device->GetResourceAllocationInfo(0, 1, &desc);
+			info = m_device->native_device->GetResourceAllocationInfo(0, 1, &desc);
 
 
 			if (info.Alignment != D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 			{
 				desc.Alignment = 0;
-				info = m_device->GetResourceAllocationInfo(0, 1, &desc);
+				info = m_device->native_device->GetResourceAllocationInfo(0, 1, &desc);
 			}
 
 		}
@@ -367,7 +362,7 @@ namespace DX12
 	void  Device::create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv)
 	{
 		*h.resource_info = ResourceInfo(resource, rtv);
-		m_device->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.cpu);
+		m_device->native_device->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.cpu);
 	}
 
 	void  Device::create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
@@ -391,22 +386,22 @@ namespace DX12
 			assert(srv.TextureCube.MostDetailedMip + srv.TextureCube.MipLevels <= resource->get_desc().MipLevels);
 		}
 
-	m_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.cpu);
+	m_device->native_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.cpu);
 	}
 
 	void  Device::create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {
 		*h.resource_info = ResourceInfo(resource, counter, uav);
-		m_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.cpu);
+		m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.cpu);
 	}
 
 	void  Device::create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) {
 		*h.resource_info = ResourceInfo(resource, cbv);
-		m_device->CreateConstantBufferView(&cbv, h.cpu);
+		m_device->native_device->CreateConstantBufferView(&cbv, h.cpu);
 	}
 
 	void  Device::create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) {
 		*h.resource_info = ResourceInfo(resource, dsv);
-		m_device->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.cpu);
+		m_device->native_device->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.cpu);
 	}
 
 
@@ -414,7 +409,7 @@ namespace DX12
 	{
 		alive = false;
 		ComPtr<ID3D12DeviceRemovedExtendedData>  pDred;
-		TEST(m_device->QueryInterface(IID_PPV_ARGS(&pDred)));
+		TEST(m_device->native_device->QueryInterface(IID_PPV_ARGS(&pDred)));
 
 		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT DredAutoBreadcrumbsOutput = {};
 		D3D12_DRED_PAGE_FAULT_OUTPUT DredPageFaultOutput = {};
