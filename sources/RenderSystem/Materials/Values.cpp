@@ -500,8 +500,8 @@ BOOST_CLASS_EXPORT_IMPLEMENT(SpecToMetNode);
 BOOST_CLASS_EXPORT_IMPLEMENT(TextureSRVParams);
 
 
-BOOST_CLASS_EXPORT(ShaderParamType);
-BOOST_CLASS_EXPORT(VectorType);
+CEREAL_REGISTER_TYPE(ShaderParamType);
+CEREAL_REGISTER_TYPE(VectorType);
 
 
 MaterialGraph::MaterialGraph()

@@ -15,6 +15,7 @@
 		"magic-enum",
 		"crossguid",
 		"crc32c",
-		"7zip"
+		"7zip",
+		"cereal"
 	]
 }

@@ -101,7 +101,9 @@ class scene_object : public tree<scene_object, std::set<std::shared_ptr<scene_ob
             if (Archive::is_loading::value)
                 remove_all();
 
-            ar& NVP(name)&NVP(local_transform)&NVP(real_childs)&NVP(boost::serialization::base_object<occluder>(*this));
+            ar& NVP(name)&NVP(local_transform)&NVP(real_childs);
+
+            SAVE_PARENT(occluder);
 
             if (Archive::is_loading::value)
             {

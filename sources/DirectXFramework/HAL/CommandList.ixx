@@ -3,6 +3,7 @@ module;
 #include "dx12_types.h"
 export module CommandList;
 
+import Utils;
 import CommandListCompiler;
 import StateContext;
 import Profiling;
@@ -16,11 +17,13 @@ import Resource;
 import ResourceViews;
 import Descriptors;
 import Constants;
+
 import Vectors;
 import Matrices;
 import Enums;
 import Data;
 import Singleton;
+
 //import Buffer;
 import stl.core;
 import stl.memory;
@@ -317,7 +320,7 @@ export{
 
 			CommandListType type;
 
-			LEAK_TEST(CommandListBase)
+			LEAK_TEST(CommandListBase);
 
 				std::vector<std::function<void()>> on_execute_funcs;
 

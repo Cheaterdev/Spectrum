@@ -3,7 +3,7 @@ module;
 
 export module simple_log_archive;
 
-export import boost.serialization;
+export import cereal;
 
 import stl.core;
 import magic_enum;
@@ -13,7 +13,7 @@ template<typename T>
 concept Enum = std::is_enum_v<T>;
 
 
-export class simple_log_archive
+export class simple_log_archive: public cereal::OutputArchive<simple_log_archive>
 {
 	std::ostream& m_os;
 	unsigned int m_depth;
@@ -28,7 +28,7 @@ export class simple_log_archive
 	template<class T>
 	void save(const T& t)
 	{
-
+/*
 		if constexpr (std::is_enum_v<T>)
 		{
 			m_os << magic_enum::enum_name(t);
@@ -50,7 +50,7 @@ export class simple_log_archive
 				::boost::serialization::version<T>::value
 			);
 		}
-
+		*/
 	}
 
 	void save(const std::wstring& s)
@@ -62,11 +62,6 @@ public:
 
 	static constexpr bool PRETTY = true;
 
-	///////////////////////////////////////////////////
-	// Implement requirements for archive concept
-
-	typedef boost::mpl::bool_<false> is_loading;
-	typedef boost::mpl::bool_<true> is_saving;
 
 	// this can be a no-op since we ignore pointer polymorphism
 	template<class T>
@@ -117,7 +112,7 @@ public:
 		return *this;
 	}
 
-
+	/*
 	template<class T, int N>
 	simple_log_archive& operator<<(const T(&t)[N])
 	{
@@ -159,7 +154,7 @@ public:
 		m_os << "}";
 		return *this;
 	}
-
+	*/
 	// the & operator
 	template<class T>
 	simple_log_archive& operator&(const T& t)
@@ -169,7 +164,11 @@ public:
 	///////////////////////////////////////////////
 
 	simple_log_archive(std::ostream& os) :
+		cereal::OutputArchive<simple_log_archive>(this),
 		m_os(os),
 		m_depth(0), t_depth(0)
 	{}
 };
+
+
+CEREAL_REGISTER_ARCHIVE(simple_log_archive)

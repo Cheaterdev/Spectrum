@@ -67,7 +67,7 @@ public:
 	}
 };
 
-#define LEAK_TEST(x) LeakDetectorInstance ___leak_tester = LeakDetectorInstance(#x);
+
 
 #endif
 

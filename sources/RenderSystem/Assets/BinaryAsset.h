@@ -51,4 +51,4 @@ class BinaryAsset : public Asset
         }
 
 };
-BOOST_CLASS_EXPORT_KEY(AssetReference<BinaryAsset>);
+CEREAL_REGISTER_TYPE(AssetReference<BinaryAsset>);

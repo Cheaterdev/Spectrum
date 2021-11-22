@@ -121,7 +121,7 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<parameter_type>(*this));
+				SAVE_PARENT(parameter_type);
 
 			}
 
@@ -324,7 +324,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<parameter>(*this));
+				SAVE_PARENT(parameter);
+
 			}
 
 
@@ -360,7 +361,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<parameter>(*this));
+				SAVE_PARENT(parameter);
+
 			}
 		};
 
@@ -553,7 +555,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<window>(*this));
+				SAVE_PARENT(window);
+
 				ar& NVP(input_parametres);
 				ar& NVP(output_parametres);
 
@@ -590,7 +593,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<input>(*this));
+				SAVE_PARENT(input);
+
 			}
 
 		};
@@ -609,7 +613,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<output>(*this));
+				SAVE_PARENT(output);
+
 			}
 
 		};
@@ -765,7 +770,7 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<Node>(*this));
+				SAVE_PARENT(Node);
 				ar& NVP(nodes);
 				ar& NVP(cam_pos);
 				ar& NVP(windows);
@@ -809,7 +814,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<Node>(*this));
+				SAVE_PARENT(Node);
+
 			}
 
 		};
@@ -833,15 +839,15 @@ export
 }
 
 
-BOOST_CLASS_EXPORT(FlowGraph::window);
-BOOST_CLASS_EXPORT(FlowGraph::Node);
-BOOST_CLASS_EXPORT(FlowGraph::input);
-BOOST_CLASS_EXPORT(FlowGraph::output);
-BOOST_CLASS_EXPORT(FlowGraph::graph);
-BOOST_CLASS_EXPORT(FlowGraph::graph_input);
-BOOST_CLASS_EXPORT(FlowGraph::graph_output);
-BOOST_CLASS_EXPORT(FlowGraph::parameter_type);
-BOOST_CLASS_EXPORT(FlowGraph::strict_parameter);
+CEREAL_REGISTER_TYPE(FlowGraph::window);
+CEREAL_REGISTER_TYPE(FlowGraph::Node);
+CEREAL_REGISTER_TYPE(FlowGraph::input);
+CEREAL_REGISTER_TYPE(FlowGraph::output);
+CEREAL_REGISTER_TYPE(FlowGraph::graph);
+CEREAL_REGISTER_TYPE(FlowGraph::graph_input);
+CEREAL_REGISTER_TYPE(FlowGraph::graph_output);
+CEREAL_REGISTER_TYPE(FlowGraph::parameter_type);
+CEREAL_REGISTER_TYPE(FlowGraph::strict_parameter);
 
 module:private;
 

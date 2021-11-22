@@ -57,7 +57,7 @@ namespace materials
 
 }
 
-BOOST_CLASS_EXPORT_KEY(materials::material);
+CEREAL_REGISTER_TYPE(materials::material);
 class MaterialAsset : public Asset, public materials::material
 {
         LEAK_TEST(MaterialAsset)
@@ -77,11 +77,11 @@ class MaterialAsset : public Asset, public materials::material
 
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<Asset>(*this));
-            ar& NVP(boost::serialization::base_object<materials::material>(*this));
+            SAVE_PARENT(Asset);
+            SAVE_PARENT(materials::material);
         }
 
 };
 
 
-BOOST_CLASS_EXPORT_KEY(AssetReference<MaterialAsset>);
+CEREAL_REGISTER_TYPE(AssetReference<MaterialAsset>);

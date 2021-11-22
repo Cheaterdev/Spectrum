@@ -43,7 +43,7 @@ private:
 	}
 };
 
-BOOST_CLASS_EXPORT(AABB);
+CEREAL_REGISTER_TYPE(AABB);
 
 module: private;
 

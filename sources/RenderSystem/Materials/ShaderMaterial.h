@@ -29,4 +29,4 @@ class ShaderMaterial: public materials::material, public AssetHolder
 
 };
 
-BOOST_CLASS_EXPORT_KEY(ShaderMaterial);
+CEREAL_REGISTER_TYPE(ShaderMaterial);

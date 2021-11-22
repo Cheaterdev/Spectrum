@@ -4,7 +4,7 @@
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MaterialAsset>);
 
 
-BOOST_CLASS_EXPORT(MaterialAsset);
+CEREAL_REGISTER_TYPE(MaterialAsset);
 
 BOOST_CLASS_EXPORT_IMPLEMENT(materials::material);
 

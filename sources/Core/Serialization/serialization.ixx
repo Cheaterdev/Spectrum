@@ -2,7 +2,7 @@ module;
 
 export module serialization;
 export import "serialization_defines.h";
-export import boost.serialization;
+export import cereal;
 export import stl.core;
 export import stl.threading;
 export import stl.filesystem;
@@ -11,7 +11,7 @@ export import crossguid;
 
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
 
-
+export using serialization_exception = cereal::Exception;
 namespace boost
 {
 	namespace serialization
@@ -107,11 +107,6 @@ namespace boost
 			ar& NVP(millis);
 		}
 
-		export template<class Archive, typename clock>
-		inline void serialize(Archive& ar, std::chrono::time_point<clock>& tp, unsigned version)
-		{
-			boost::serialization::split_free(ar, tp, version);
-		}
 
 
 		export template<class Archive>
@@ -140,7 +135,7 @@ namespace boost
 			std::wstring s;
 			if (Archive::is_saving::value)
 				s = p.wstring();
-			ar& boost::serialization::make_nvp("string", s);
+			ar& NP("string", s);
 			if (Archive::is_loading::value)
 				p = s;
 		}

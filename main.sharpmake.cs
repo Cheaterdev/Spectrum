@@ -104,7 +104,8 @@ namespace Spectrum
        
 			conf.Defines.Add("WIN32_LEAN_AND_MEAN");
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
-            
+             conf.Defines.Add("CEREAL_THREAD_SAFE");
+           
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106")); //module reference issues
 
             if (target.Mode == Mode.Dev)

@@ -146,13 +146,22 @@ export
 		UINT slice_stride;
 
 
-		friend class boost::serialization::access;
-		template<class Archive>
-		void save(Archive& ar, const unsigned int) const
+		SERIALIZE()
 		{
-			UINT size = static_cast<UINT>(data.size());
-			ar& NVP(size);
-			ar.save_binary(data.data(), size);
+			if constexpr (Archive::is_loading::value)
+			{
+				UINT size;
+				ar& NVP(size);
+				data.resize(size);
+				ar.load_binary(data.data(), size);			
+			}
+			else
+			{
+				UINT size = static_cast<UINT>(data.size());
+				ar& NVP(size);
+				ar.save_binary(data.data(), size);
+			}
+
 			ar& NVP(width);
 			ar& NVP(height);
 			ar& NVP(depth);
@@ -160,21 +169,7 @@ export
 			ar& NVP(slice_stride);
 			ar& NVP(num_rows);
 		}
-		template<class Archive>
-		void load(Archive& ar, const unsigned int)
-		{
-			UINT size;
-			ar& NVP(size);
-			data.resize(size);
-			ar.load_binary(data.data(), size);
-			ar& NVP(width);
-			ar& NVP(height);
-			ar& NVP(depth);
-			ar& NVP(width_stride);
-			ar& NVP(slice_stride);
-			ar& NVP(num_rows);
-		}
-		BOOST_SERIALIZATION_SPLIT_MEMBER()
+		
 	};
 
 	struct mip
@@ -227,10 +222,9 @@ export
 		};
 
 
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
-			ar& NVP(boost::serialization::base_object<texture_data_header>(*this));
+			SAVE_PARENT(texture_data_header);
 			ar& NVP(array);
 		}
 		texture_data() {}

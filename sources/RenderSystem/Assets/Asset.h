@@ -357,12 +357,12 @@ public:
 	private:
 		SERIALIZE()
 		{
-			ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
+			 SAVE_PARENT(AssetHolder);
 			ar& NVP(name);
 			ar& NVP(additional_files);
 		}
 };
-BOOST_SERIALIZATION_ASSUME_ABSTRACT(Asset);
+//BOOST_SERIALIZATION_ASSUME_ABSTRACT(Asset);
 
 
 class folder_item;
@@ -748,8 +748,7 @@ template<class T>
 template<class Archive>
 void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 {
-	ar& NVP(boost::serialization::base_object<AssetReferenceBase>(*this));
-
+	SAVE_PARENT(AssetReferenceBase);
 	if (Archive::is_loading::value)
 	{
 		Guid guid;

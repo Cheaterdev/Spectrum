@@ -4,7 +4,7 @@
 import Tasks;
 #include "Context/Context.h"
 
-BOOST_CLASS_EXPORT(TextureAsset);
+CEREAL_REGISTER_TYPE(TextureAsset);
 BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<TextureAsset>);
 
 

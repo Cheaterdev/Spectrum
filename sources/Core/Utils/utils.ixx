@@ -71,9 +71,9 @@ export
 	using binary = std::vector<std::byte>;
 
 
-	template<typename T> concept EnumType =
-		requires (T t) {
-			{T::__GENERATE_OPS__ };
+	template<class T> concept EnumType =
+		requires () {
+		T::__GENERATE_OPS__;
 	};
 
 	template<EnumType Enum>

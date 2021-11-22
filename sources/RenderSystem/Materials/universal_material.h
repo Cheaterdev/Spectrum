@@ -341,8 +341,8 @@ namespace materials
 	
 }
 
-BOOST_CLASS_EXPORT_KEY(materials::universal_material);
+CEREAL_REGISTER_TYPE(materials::universal_material);
 
-BOOST_CLASS_EXPORT_KEY(materials::Pipeline);
-BOOST_CLASS_EXPORT_KEY(materials::PipelinePasses);
-BOOST_CLASS_EXPORT_KEY(materials::PipelineSimple);
+CEREAL_REGISTER_TYPE(materials::Pipeline);
+CEREAL_REGISTER_TYPE(materials::PipelinePasses);
+CEREAL_REGISTER_TYPE(materials::PipelineSimple);

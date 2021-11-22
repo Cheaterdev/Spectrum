@@ -2,12 +2,15 @@ module;
 
 #include "serialization_archives.h"
 #include "serialization_defines.h"
+
 export module Serializer;
 
+//import serialization;
+using serialization_exception = cereal::Exception;
 import Log;
 import Utils;
 import crc32;
-import boost.serialization;
+import cereal;
 import Data;
 import windows;
 //import boost.archives;
@@ -153,7 +156,7 @@ public:
 			return obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (serialization_exception e)
 		{
 			Log::get().crash_error(E_FAIL, e.what());
 		}
@@ -171,7 +174,7 @@ public:
 			return obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (serialization_exception e)
 		{
 			Log::get().crash_error(E_FAIL, e.what());
 		}
@@ -191,7 +194,7 @@ public:
 			get_stream(data) >> obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (serialization_exception e)
 		{
 			Log::get().crash_error(E_FAIL, e.what());
 		}
@@ -207,7 +210,7 @@ public:
 			get_stream(data) >> obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (serialization_exception e)
 		{
 			Log::get().crash_error(E_FAIL, e.what());
 		}
@@ -225,7 +228,7 @@ public:
 			return std::shared_ptr<T>(obj);
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (serialization_exception e)
 		{
 			Log::get().crash_error(E_FAIL, e.what());
 		}

@@ -567,9 +567,9 @@ namespace DX12
 
 
 
-
-BOOST_CLASS_EXPORT_KEY(DX12::PipelineStateBase);
-BOOST_CLASS_EXPORT_KEY(DX12::PipelineState);
-
+/*
+CEREAL_REGISTER_TYPE(DX12::PipelineStateBase);
+CEREAL_REGISTER_TYPE(DX12::PipelineState);
+*/
 
 }
