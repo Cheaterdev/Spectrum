@@ -5,10 +5,10 @@
 
 static IdGenerator ids;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelinePasses);
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelineSimple);
+// BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
+// BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);
+// BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelinePasses);
+// BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelineSimple);
 
 DynamicData generate_data(std::vector<Uniform::ptr>& un)
 {
@@ -388,7 +388,7 @@ template void materials::universal_material::serialize(serialization_iarchive& a
 template<class Archive>
 void materials::universal_material::serialize(Archive& ar, const unsigned int file_version)
 {
-	ar& NVP(boost::serialization::base_object<MaterialAsset>(*this));
+	SAVE_PARENT(MaterialAsset);
 	ar& NVP(textures);
 ////////////////////////////////////////////////////////////////////////////	ar& NVP(passes);
 	ar& NVP(graph);

@@ -12,12 +12,8 @@ export import crossguid;
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
 
 export using serialization_exception = cereal::Exception;
-namespace boost
-{
-	namespace serialization
-	{
 
-		export template<class Archive, class Type>
+	/*	export template<class Archive, class Type>
 		void save(Archive& archive, const std::shared_ptr<Type>& value, const unsigned int)
 		{
 			Type* data = value.get();
@@ -85,32 +81,19 @@ namespace boost
 			{
 				archive& values[i];
 			}
-		}
+		}*/
 
 
 
 
-		namespace chrn = std::chrono;
+	
+export
+{
 
-		export template<class Archive, typename clock>
-		void load(Archive& ar, chrn::time_point<clock>& tp, unsigned)
-		{
-			chrn::milliseconds::rep millis;
-			ar& NVP(millis);
-			tp = chrn::time_point<clock>(chrn::milliseconds(millis));
-		}
-
-		export template<class Archive, typename clock>
-		void save(Archive& ar, chrn::time_point<clock> const& tp, unsigned)
-		{
-			chrn::milliseconds::rep millis = chrn::duration_cast<chrn::milliseconds>(tp.time_since_epoch()).count();
-			ar& NVP(millis);
-		}
-
-
-
-		export template<class Archive>
-		inline void serialize(Archive& ar, Guid& g, unsigned version)
+	namespace cereal
+	{
+		template<class Archive>
+			void serialize(Archive& ar, Guid& g)
 		{
 			if constexpr (Archive::is_loading::value)
 			{
@@ -124,22 +107,45 @@ namespace boost
 				auto& v = g.bytes();
 				ar& NVP(v);
 			}
-			//boost::serialization::split_free(ar, tp, version);
 		}
-
-
-		export template<class Archive>
-		void serialize(Archive& ar, std::filesystem::path& p,
-			const unsigned int version)
-		{
-			std::wstring s;
-			if (Archive::is_saving::value)
-				s = p.wstring();
-			ar& NP("string", s);
-			if (Archive::is_loading::value)
-				p = s;
-		}
-
+	
+	template<class Archive>
+	void serialize(Archive& ar, std::filesystem::path& p)
+	{
+		std::wstring s;
+		if (Archive::is_saving::value)
+			s = p.wstring();
+		ar& NP("string", s);
+		if (Archive::is_loading::value)
+			p = s;
 	}
+
+
+
+
+	template<class Archive, typename clock>
+		void serialize(Archive& ar, std::chrono::time_point<clock>& tp)
+	{
+		/*std::chrono::milliseconds::rep millis;
+		ar& NVP(millis);
+		tp = std::chrono::time_point<clock>(std::chrono::milliseconds(millis));*/
+	}
+/*
+	template<class Archive, typename clock>
+		void save(Archive& ar, std::chrono::time_point<clock> const& tp)
+	{
+		std::chrono::milliseconds::rep millis = std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch()).count();
+		ar& NVP(millis);
+	}
+		*/
+		}
+
 }
+
+	
+		/*
+
+*/
+
+
 

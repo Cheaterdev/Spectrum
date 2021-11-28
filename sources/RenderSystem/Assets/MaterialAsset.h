@@ -57,7 +57,7 @@ namespace materials
 
 }
 
-CEREAL_REGISTER_TYPE(materials::material);
+// CEREAL_REGISTER_TYPE(materials::material);
 class MaterialAsset : public Asset, public materials::material
 {
         LEAK_TEST(MaterialAsset)
@@ -84,4 +84,4 @@ class MaterialAsset : public Asset, public materials::material
 };
 
 
-CEREAL_REGISTER_TYPE(AssetReference<MaterialAsset>);
+// CEREAL_REGISTER_TYPE(AssetReference<MaterialAsset>);

@@ -263,10 +263,11 @@ void MeshAsset::update_preview(Render::Texture::ptr preview)
 template<class Archive>
 void MeshAssetInstance::serialize(Archive& ar, const unsigned int)
 {
-	ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
+	SAVE_PARENT(AssetHolder);
+	SAVE_PARENT(scene_object);
+
 	ar& NVP(overrided_material);
 	ar& NVP(mesh_asset);
-	ar& NVP(boost::serialization::base_object<scene_object>(*this));
 	ar& NVP(type);
 
 	if (Archive::is_loading::value)
@@ -624,10 +625,10 @@ void MeshAssetInstance::init_asset()
 
 
 
-BOOST_CLASS_EXPORT_IMPLEMENT(MeshAsset);
-BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MeshAsset>);
+// BOOST_CLASS_EXPORT_IMPLEMENT(MeshAsset);
+// BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MeshAsset>);
 
-BOOST_CLASS_EXPORT_IMPLEMENT(MeshAssetInstance);
+// BOOST_CLASS_EXPORT_IMPLEMENT(MeshAssetInstance);
 
 
 

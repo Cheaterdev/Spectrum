@@ -77,7 +77,7 @@ namespace materials
 
 		SERIALIZE()
 		{
-			ar& NVP(boost::serialization::base_object<Pipeline>(*this));
+			SAVE_PARENT(Pipeline);
 			ar& NVP(pixel);
 		}
 
@@ -134,7 +134,8 @@ namespace materials
 
 		SERIALIZE()
 		{
-			ar& NVP(boost::serialization::base_object<Pipeline>(*this));
+			SAVE_PARENT(Pipeline);
+	
 			ar& NVP(passes);
 		}
 	};
@@ -341,8 +342,8 @@ namespace materials
 	
 }
 
-CEREAL_REGISTER_TYPE(materials::universal_material);
+// CEREAL_REGISTER_TYPE(materials::universal_material);
 
-CEREAL_REGISTER_TYPE(materials::Pipeline);
-CEREAL_REGISTER_TYPE(materials::PipelinePasses);
-CEREAL_REGISTER_TYPE(materials::PipelineSimple);
+// CEREAL_REGISTER_TYPE(materials::Pipeline);
+// CEREAL_REGISTER_TYPE(materials::PipelinePasses);
+// CEREAL_REGISTER_TYPE(materials::PipelineSimple);

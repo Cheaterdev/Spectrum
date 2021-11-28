@@ -291,7 +291,7 @@ export
 
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<GPUBuffer>(*this));
+				SAVE_PARENT(GPUBuffer);
 				init_views();
 			}
 
@@ -337,7 +337,7 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<GPUBuffer>(*this));
+				SAVE_PARENT(GPUBuffer);
 				init_views();
 			}
 
@@ -377,7 +377,7 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<GPUBuffer>(*this));
+				SAVE_PARENT(GPUBuffer);
 			}
 
 

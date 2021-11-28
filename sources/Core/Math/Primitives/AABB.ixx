@@ -43,7 +43,7 @@ private:
 	}
 };
 
-CEREAL_REGISTER_TYPE(AABB);
+// CEREAL_REGISTER_TYPE(AABB);
 
 module: private;
 

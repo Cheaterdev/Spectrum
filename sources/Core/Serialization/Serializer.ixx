@@ -5,7 +5,7 @@ module;
 
 export module Serializer;
 
-//import serialization;
+import serialization;
 using serialization_exception = cereal::Exception;
 import Log;
 import Utils;
@@ -14,6 +14,10 @@ import cereal;
 import Data;
 import windows;
 //import boost.archives;
+
+
+
+
 export
 {
 
@@ -223,9 +227,9 @@ public:
 
 		try
 		{
-			T* obj = nullptr;
+			std::shared_ptr<T> obj;
 			get_stream(data) >> obj;
-			return std::shared_ptr<T>(obj);
+			return obj;
 		}
 
 		catch (serialization_exception e)

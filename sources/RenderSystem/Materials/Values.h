@@ -32,7 +32,7 @@ struct ShaderParamType:public ::FlowGraph::parameter_type
 private:
     SERIALIZE()
 	{
-        ar& NVP(boost::serialization::base_object<::FlowGraph::parameter_type>(*this));
+        SAVE_PARENT(::FlowGraph::parameter_type);
 		ar& NVP(M);
 		ar& NVP(N);
         ar& NVP(name);
@@ -66,7 +66,7 @@ public:
 private:
     SERIALIZE()
 	{
-		ar& NVP(boost::serialization::base_object<::FlowGraph::parameter_type>(*this));
+        SAVE_PARENT(::FlowGraph::parameter_type);
 
 	}
 };
@@ -176,7 +176,7 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<T>(*this));
+            SAVE_PARENT(T);
         }
 
 };
@@ -238,8 +238,6 @@ struct Uniform
     }
 };
 
-
-BOOST_IS_BITWISE_SERIALIZABLE(Uniform::_value);
 
 struct TextureSRVParams
 {
@@ -379,7 +377,8 @@ class MaterialFunction : public MaterialGraphNode
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<::FlowGraph::graph>(*this));
+            SAVE_PARENT(::FlowGraph::graph);
+
         }
 
 };
@@ -422,8 +421,8 @@ class MaterialGraph : public MaterialFunction
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<::FlowGraph::graph>(*this));
-            ar& NVP(position);
+            SAVE_PARENT(::FlowGraph::graph);
+           ar& NVP(position);
             ar& NVP(texcoord);
             ar& NVP(i_base_color);
             ar& NVP(i_metallic);
@@ -478,8 +477,9 @@ class TextureNode : public MaterialNode, public AssetHolder
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<::FlowGraph::Node>(*this));
-            ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
+            SAVE_PARENT(::FlowGraph::Node);
+            SAVE_PARENT(AssetHolder);
+
             ar& NVP(texture_info);
             ar& NVP(i_tc);
             ar& NVP(o_vec4);
@@ -509,7 +509,7 @@ class PowerNode : public MaterialNode
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<::FlowGraph::Node>(*this));
+            SAVE_PARENT(::FlowGraph::Node);
             ar& NVP(i_vec);
             ar& NVP(i_power);
             ar& NVP(o_value);
@@ -535,7 +535,7 @@ class VectorNode : public MaterialNode
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
+            SAVE_PARENT(MaterialNode);
             ar& NVP(o_value);
             ar& NVP(uniform);
         }
@@ -560,7 +560,7 @@ class ScalarNode : public MaterialNode
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
+            SAVE_PARENT(MaterialNode);
             ar& NVP(o_value);
             ar& NVP(uniform);
         }
@@ -580,8 +580,8 @@ class SumNode : public MaterialNode
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<::FlowGraph::Node>(*this));
-            ar& NVP(i_vec);
+            SAVE_PARENT(::FlowGraph::Node);
+          ar& NVP(i_vec);
             ar& NVP(i_power);
             ar& NVP(o_value);
         }
@@ -602,7 +602,7 @@ class MulNode : public MaterialNode
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<::FlowGraph::Node>(*this));
+            SAVE_PARENT(::FlowGraph::Node);
             ar& NVP(i_vec);
             ar& NVP(i_power);
             ar& NVP(o_value);
@@ -679,7 +679,7 @@ public:
 private:
     SERIALIZE()
 	{
-		ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
+        SAVE_PARENT(MaterialNode);
 		ar& NVP(inputs.albedo);
 		ar& NVP(inputs.specular);
 
@@ -720,9 +720,10 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
     private:
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<MaterialNode>(*this));
-            ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
-       //     ar& NVP(asset);
+            SAVE_PARENT(MaterialNode);
+            SAVE_PARENT(AssetHolder);
+
+
             ar& NVP(i_tc);
             ar& NVP(o_vec4);
             ar& NVP(o_r);
@@ -734,12 +735,12 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
 };
 
 
-CEREAL_REGISTER_TYPE(ScalarNode);
-CEREAL_REGISTER_TYPE(MulNode);
-CEREAL_REGISTER_TYPE(SumNode);
-CEREAL_REGISTER_TYPE(TextureNode);
-CEREAL_REGISTER_TYPE(VectorNode);
-CEREAL_REGISTER_TYPE(TiledTextureNode);
-CEREAL_REGISTER_TYPE(MaterialGraph);
-CEREAL_REGISTER_TYPE(SpecToMetNode);
-CEREAL_REGISTER_TYPE(TextureSRVParams);
+// CEREAL_REGISTER_TYPE(ScalarNode);
+// CEREAL_REGISTER_TYPE(MulNode);
+// CEREAL_REGISTER_TYPE(SumNode);
+// CEREAL_REGISTER_TYPE(TextureNode);
+// CEREAL_REGISTER_TYPE(VectorNode);
+// CEREAL_REGISTER_TYPE(TiledTextureNode);
+// CEREAL_REGISTER_TYPE(MaterialGraph);
+// CEREAL_REGISTER_TYPE(SpecToMetNode);
+//// CEREAL_REGISTER_TYPE(TextureSRVParams);

@@ -148,7 +148,9 @@ export
 
 		SERIALIZE()
 		{
-			if constexpr (Archive::is_loading::value)
+
+			ar& data;
+			/*if constexpr (Archive::is_loading::value)
 			{
 				UINT size;
 				ar& NVP(size);
@@ -161,7 +163,7 @@ export
 				ar& NVP(size);
 				ar.save_binary(data.data(), size);
 			}
-
+			*/
 			ar& NVP(width);
 			ar& NVP(height);
 			ar& NVP(depth);

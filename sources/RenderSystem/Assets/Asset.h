@@ -197,6 +197,15 @@ class AssetReference : public AssetReferenceBase
 
 		SERIALIZE();
 
+		// We could define load_and_construct internally:
+ /*template <class Archive>
+ static void load_and_construct( Archive & ar, cereal::construct<AssetReference> & construct )
+ {
+//	std::shared_ptr<AssetHolder> owner;
+//	 ar& NVP(owner);
+//	construct(owner);
+ }
+ */
 };
 namespace boost
 {
@@ -266,6 +275,7 @@ class AssetHolder
 			return AssetReference<T>(this, link);
 		}
 
+//		virtual std::shared_ptr<Asset> get_asset_holder() = 0;
 	protected:
 		virtual void on_asset_change(std::shared_ptr<Asset> asset);
 	public:
@@ -323,7 +333,7 @@ public:
 		//  void set_name(std::string name);
 
 		virtual void update_preview(Render::Texture::ptr);
-
+	
 
 		using ptr = s_ptr<Asset>;
 		using ref = AssetReference<Asset>;
@@ -354,6 +364,7 @@ public:
 		virtual void save(std::ostream&& s)
 		{
 		}
+
 	private:
 		SERIALIZE()
 		{
@@ -748,6 +759,10 @@ template<class T>
 template<class Archive>
 void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 {
+	// save data required to construct instance
+	//auto owner = get_owner()->get_ptr();
+	//ar& NVP(owner);
+
 	SAVE_PARENT(AssetReferenceBase);
 	if (Archive::is_loading::value)
 	{

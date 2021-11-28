@@ -29,7 +29,7 @@ void BRDF::create_new()
 template<class Archive>
 void BRDF::serialize(Archive& ar, const unsigned int)
 {
-	ar& BOOST_SERIALIZATION_BASE_OBJECT_NVP(TextureAsset);
+	SAVE_PARENT(TextureAsset);
 
 }
-BOOST_CLASS_EXPORT_IMPLEMENT(BRDF);
+// BOOST_CLASS_EXPORT_IMPLEMENT(BRDF);

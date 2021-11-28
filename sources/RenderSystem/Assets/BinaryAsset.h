@@ -33,7 +33,7 @@ class BinaryAsset : public Asset
 
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<Asset>(*this));
+            SAVE_PARENT(Asset);
             ar& NVP(data);
             ar& NVP(file_depends);
             ar& NVP(file_name);
@@ -51,4 +51,4 @@ class BinaryAsset : public Asset
         }
 
 };
-CEREAL_REGISTER_TYPE(AssetReference<BinaryAsset>);
+// CEREAL_REGISTER_TYPE(AssetReference<BinaryAsset>);

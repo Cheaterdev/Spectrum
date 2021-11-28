@@ -35,7 +35,7 @@ export
 	{
 	public:
 		using ptr = std::shared_ptr<TrackedObject>;
-		virtual ~TrackedObject() = default;
+		virtual ~TrackedObject() {};
 	};
 
 

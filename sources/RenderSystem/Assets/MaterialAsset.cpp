@@ -1,12 +1,12 @@
 #include "pch_render.h"
 #include "Assets/AssetRenderer.h"
 
-BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MaterialAsset>);
+// BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MaterialAsset>);
 
 
-CEREAL_REGISTER_TYPE(MaterialAsset);
+// CEREAL_REGISTER_TYPE(MaterialAsset);
 
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::material);
+// BOOST_CLASS_EXPORT_IMPLEMENT(materials::material);
 
 
 template void AssetReference<MaterialAsset>::serialize(serialization_oarchive& arch, const unsigned int version);

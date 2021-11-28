@@ -2,7 +2,7 @@
 #include "Occluder.h"
 
 
-BOOST_CLASS_EXPORT_IMPLEMENT(occluder)
+//// BOOST_CLASS_EXPORT_IMPLEMENT(occluder)
 
 bool occluder::is_inside(const Frustum& f)
 {

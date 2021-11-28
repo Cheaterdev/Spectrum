@@ -202,11 +202,18 @@ class MeshAsset : public Asset
             ar& NVP(materials);
             ar& NVP(local_transform);
             ar& NVP(root_node);
-            ar& NVP(nodes);
-            ar& NVP(boost::serialization::base_object<Asset>(*this));
+       //     ar& NVP(nodes);
 
+            SAVE_PARENT(Asset);
             if constexpr (Archive::is_loading::value)
             {
+                root_node.iterate([this](MeshNode* node)
+                    {
+                        nodes.push_back(node);
+
+                        return true;
+                    });
+
                 init_gpu();
             }
         }
@@ -416,6 +423,6 @@ public:
 
 
 //BOOST_CLASS_TRACKING(material_holder, boost::serialization::track_never);
-CEREAL_REGISTER_TYPE(MeshAssetInstance);
-CEREAL_REGISTER_TYPE(MeshAsset);
-CEREAL_REGISTER_TYPE(AssetReference<MeshAsset>);
+// CEREAL_REGISTER_TYPE(MeshAssetInstance);
+// CEREAL_REGISTER_TYPE(MeshAsset);
+// CEREAL_REGISTER_TYPE(AssetReference<MeshAsset>);

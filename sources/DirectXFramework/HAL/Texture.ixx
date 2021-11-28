@@ -4,6 +4,7 @@ module;
 #include "dx12_types.h"
 export module Texture;
 
+import serialization;
 import CommandList;
 import ResourceManager;
 

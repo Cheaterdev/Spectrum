@@ -470,5 +470,5 @@ unsigned int i = 0;
 }
 
 
-BOOST_CLASS_EXPORT_IMPLEMENT(DX12::PipelineStateBase);
-BOOST_CLASS_EXPORT_IMPLEMENT(DX12::PipelineState);
+//// BOOST_CLASS_EXPORT_IMPLEMENT(DX12::PipelineStateBase);
+//// BOOST_CLASS_EXPORT_IMPLEMENT(DX12::PipelineState);

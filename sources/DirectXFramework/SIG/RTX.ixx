@@ -90,17 +90,13 @@ struct SelectLocal<T>
 		private:
 			SERIALIZE()
 			{
-				//	std::byte data[D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES];
 
-
-				//	for (int i = 0; i < D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; i++)
-				//		data[i] = id[i];;
-				ar& NP("data", boost::serialization::make_array(
+				ar& id;
+			/*	ar& NP("data", boost::serialization::make_array(
 					(std::byte*)this,
 					D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES
-				));
-				;
-				//	ar& NVP(local_addr);
+				));*/
+				
 			}
 
 
