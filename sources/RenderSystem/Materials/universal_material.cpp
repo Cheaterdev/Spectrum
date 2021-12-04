@@ -5,6 +5,18 @@
 
 static IdGenerator ids;
 
+import Buffer;
+
+import Descriptors;
+import Concepts;
+import Layout;
+import SIG;
+import crc32;
+
+import Utils;
+import Data;
+import stl.core;
+import stl.memory;
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelinePasses);

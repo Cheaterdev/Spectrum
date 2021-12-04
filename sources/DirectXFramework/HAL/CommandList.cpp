@@ -11,8 +11,12 @@ import Exceptions;
 
 import CommandList;
 
+import Buffer;
 import D3D12.Types;
+import HAL.Types;
 
+import HAL.ResourceState;
+using namespace HAL;
 namespace DX12
 
 {

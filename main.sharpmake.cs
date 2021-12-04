@@ -71,7 +71,7 @@ namespace Spectrum
         [Configure]
         public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
-            conf.IsBlobbed = true;
+         //   conf.IsBlobbed = true;
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 
@@ -319,6 +319,7 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
+         conf.IsBlobbed = true;
            // conf.PrecompHeader = "pch.h";
           //  conf.PrecompSource = "pch.cpp";
 
@@ -365,6 +366,7 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
+     conf.IsBlobbed = true;
             //conf.PrecompHeader = "pch.h";
             //conf.PrecompSource = "pch.cpp";
 

@@ -1,6 +1,9 @@
 #include "pch_dx.h"
+#include "helper.h"
 import Texture;
 import Queue;
+import HAL.Types;
+using namespace HAL;
 
 namespace DX12
 {

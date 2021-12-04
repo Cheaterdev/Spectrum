@@ -3,6 +3,17 @@ import Queue;
 import Tiling;
 import Constants;
 
+import Vectors;
+import Memory;
+import Events;
+import stl.core;
+
+import Resource;
+import CommandList;
+
+import HAL.Types;
+using namespace HAL;
+
 namespace DX12 {
 
 	void TiledResourceManager::map_buffer_part(update_tiling_info& target, size_t offset, size_t size)

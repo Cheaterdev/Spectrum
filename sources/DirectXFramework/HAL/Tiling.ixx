@@ -9,7 +9,7 @@ import Memory;
 import Events;
 import stl.core;
 
-import HAL.Types;
+export import HAL.Types;
 using namespace HAL;
 
 export
@@ -58,7 +58,7 @@ export
 
 			static void commit(update_tiling_info& info, CommandList* list);
 		public:
-			HeapType tile_heap_type = HeapType::DEFAULT;
+			HAL::HeapType tile_heap_type = HAL::HeapType::DEFAULT;
 			void load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive);
 			void zero_tile(update_tiling_info& target, uint3 pos, uint subres);
 			void copy_mappings(update_tiling_info& target, uint3 target_pos, TiledResourceManager* source, uint3 source_pos, uint3 size);

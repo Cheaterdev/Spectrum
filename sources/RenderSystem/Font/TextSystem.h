@@ -4,6 +4,10 @@ typedef ComPtr<IFW1Factory>			FW1_Factory;
 typedef ComPtr<IFW1FontWrapper>		FW1_Font;
 typedef ComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 
+
+import Data;
+import Utils;
+
 namespace Fonts
 {
     class FontSystem;

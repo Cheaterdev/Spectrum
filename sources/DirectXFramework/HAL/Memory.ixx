@@ -16,6 +16,7 @@ import Trackable;
 import HAL.Types;
 import HAL.Heap;
 
+import Utils;
 using namespace HAL;
 
 export
@@ -312,7 +313,7 @@ export
 
 			TileHeapPosition create_tile(D3D12_HEAP_FLAGS flags, HeapType type, UINT count = 1)
 			{
-				static const size_t TileSize = 64 * 1024_t;
+				static const size_t TileSize = 64 * 1024;
 
 				auto handle = alloc(count * TileSize, TileSize, flags, type);
 

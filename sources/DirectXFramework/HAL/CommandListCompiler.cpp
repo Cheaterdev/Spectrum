@@ -3,6 +3,15 @@
 
 import CommandListCompiler;
 import Device;
+import Vectors;
+import Device;
+import d3d12_types;
+import HAL.Types;
+import D3D12.Types;
+
+import Utils;
+
+using namespace HAL;
 
 namespace DX12
 {

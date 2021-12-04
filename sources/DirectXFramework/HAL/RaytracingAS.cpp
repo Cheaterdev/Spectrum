@@ -1,6 +1,10 @@
 #include "pch_dx.h"
 import RaytracingAS;
 import Queue;
+import HAL.Types;
+import D3D12.Types;
+using namespace HAL;
+
 
 DX12::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<GeometryDesc> desc,
 	CommandList::ptr list)

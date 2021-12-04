@@ -5,7 +5,8 @@
 #include "helper.h"
 import Resource;
 import Debug;
- //import Memory;
+import Log;
+
  import Tiling;
  import Fence;
  import States;

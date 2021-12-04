@@ -7,6 +7,11 @@ import PipelineState;
 import Serializer;
 import Debug;
 
+import Device;
+import Shader;
+import HAL.Types;
+using namespace HAL;
+
 template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T>
 struct TypeToOBJ;
 
@@ -338,14 +343,6 @@ unsigned int i = 0;
 	}
 	PipelineState::~PipelineState()
 	{
-		unregister_shader(desc.pixel);
-		unregister_shader(desc.vertex);
-		unregister_shader(desc.hull);
-		unregister_shader(desc.domain);
-		unregister_shader(desc.geometry);
-
-		unregister_shader(desc.mesh);
-		unregister_shader(desc.amplification);
 
 	}
 
@@ -463,7 +460,7 @@ unsigned int i = 0;
 
 	ComputePipelineState::~ComputePipelineState()
 	{
-		unregister_shader(desc.shader);
+
 
 	}
 

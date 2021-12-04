@@ -214,7 +214,7 @@ namespace DX12
 		ComPtr<ID3D12PipelineState> m_pipelineState;
 		ComPtr<ID3D12StateObject> m_StateObject;
 	};
-	class PipelineStateBase: public Trackable<TrackedPipeline>
+	class PipelineStateBase: public Trackable<TrackedPipeline>, public virtual Events::prop_handler
 	{
 		
 	protected:
@@ -226,15 +226,7 @@ namespace DX12
 		template<class T>
 		void register_shader(T shader)
 		{
-			if (shader)
-				shader->on_register(this);
-		}
-
-		template<class T>
-		void unregister_shader(T shader)
-		{
-			if (shader)
-				shader->on_unregister(this);
+			if(shader) shader->on_change.register_handler(this, [this]() { on_change(); });
 		}
 
 
@@ -552,10 +544,7 @@ namespace DX12
 		virtual ~StateObject()
 		{
 
-			for (auto& l : desc.libraries)
-			{
-				unregister_shader(l.library);
-			}
+
 		}
 		shader_identifier get_shader_id(std::wstring_view name)
 		{

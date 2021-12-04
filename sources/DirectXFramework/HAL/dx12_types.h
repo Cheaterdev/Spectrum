@@ -15,7 +15,7 @@ class FrameResources;
 class CommandList;
 class ResourceHeap;
 
-class PipelineState;
+//class PipelineState;
 class ComputePipelineState;
 class PipelineStateBase;
 class StateObject;

@@ -290,7 +290,7 @@ class AssetHolder
 
 };
 class AssetStorage;
-class Asset : public std::enable_shared_from_this<Asset>, public AssetHolder, public EditObject, public Events::prop_handler
+class Asset : public std::enable_shared_from_this<Asset>, public AssetHolder, public EditObject, public virtual Events::prop_handler
 {
 		friend class AssetManager;
 		friend class AssetStorage;

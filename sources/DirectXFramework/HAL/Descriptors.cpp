@@ -4,6 +4,7 @@ import Device;
 import Resource;
 import Descriptors;
 import d3d12_types;
+import Utils;
 
 namespace DX12 {
 

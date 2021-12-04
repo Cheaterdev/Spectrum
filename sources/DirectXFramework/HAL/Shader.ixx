@@ -1,3 +1,5 @@
+module;
+#include "dx12_types.h"
 export module Shader;
 
 
@@ -89,7 +91,7 @@ export
 	};
 	namespace DX12
 	{
-		class PipelineStateBase;
+		//class PipelineStateBase;
 
 		/* class UsedSlots
 		 {
@@ -156,23 +158,8 @@ export
 			//   DX11_ClassLinkage class_linkage;
 			//   std::vector<ID3D11ClassInstance*>    class_instances;
 			virtual void compile() {};
-			friend class PipelineStateBase;
-
-			std::mutex pipelines_mutex;
-			std::set<PipelineStateBase*> pipelines;
 
 
-			void on_register(PipelineStateBase* pip)
-			{
-				std::lock_guard<std::mutex> g(pipelines_mutex);
-				pipelines.insert(pip);
-			}
-
-			void on_unregister(PipelineStateBase* pip)
-			{
-				std::lock_guard<std::mutex> g(pipelines_mutex);
-				pipelines.erase(pip);
-			}
 			void operator=(const Shader& r)
 			{
 				resource_manager<_shader_type, D3D::shader_header>::operator=(r);
@@ -181,10 +168,6 @@ export
 				hash = r.hash;
 
 				on_change();
-
-				std::lock_guard<std::mutex> g(pipelines_mutex);
-				for (auto& p : pipelines)
-					p->on_change();
 			}
 
 

@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-
+import Log;
 import Device;
 import SwapChain;
 
@@ -13,7 +13,20 @@ import Debug;
 import Samplers;
 import d3d12;
 
+
+import IdGenerator;
+import StateContext;
+import Data;
+import d3d12_types;
+
+import HAL.Types;
 import HAL.Device;
+import CommandList;
+import Queue;
+
+using namespace HAL;
+
+
 namespace DX12
 {
 

@@ -54,7 +54,7 @@ struct SelectLocal<T>
 	template< class T, typename TypeListOne, typename TypeListTwo> struct RTXPSO;
 
 	template<class T, typename... Passes, typename... Raygens>
-	struct RTXPSO<T, Typelist<Passes...>, Typelist<Raygens...>> : public Events::prop_handler
+	struct RTXPSO<T, Typelist<Passes...>, Typelist<Raygens...>> : public virtual Events::prop_handler
 	{
 		using this_type = RTXPSO<T, Typelist<Passes...>, Typelist<Raygens...>>;
 

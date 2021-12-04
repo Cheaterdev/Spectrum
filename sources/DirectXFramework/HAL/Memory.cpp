@@ -4,6 +4,21 @@
 import Device;
 import Resource;
 
+import StateContext;
+import Allocators;
+
+import Threading;
+import Singleton;
+import d3d12_types;
+import Utils;
+import Vectors;
+import Constants;
+import Trackable;
+import HAL.Types;
+import HAL.Heap;
+
+using namespace HAL;
+
 namespace DX12
 {
 	void ResourceHandle::Free()
