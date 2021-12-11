@@ -16,5 +16,3 @@ private:
 };
 
 
-
-// CEREAL_REGISTER_TYPE(BRDF);

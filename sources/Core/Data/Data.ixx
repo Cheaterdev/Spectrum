@@ -301,6 +301,28 @@ export
 	};
 
 
+	class SharedObjectBase :public std::enable_shared_from_this<SharedObjectBase>
+	{
+	protected:
+
+	public:
+		virtual ~SharedObjectBase() = default;
+	};
+
+	template<class T>
+	class SharedObject :public virtual SharedObjectBase
+	{
+	public:
+		virtual ~SharedObject() = default;
+
+		template <class M = T>
+		std::shared_ptr<M> get_ptr()
+		{
+			return std::dynamic_pointer_cast<M>(SharedObjectBase::shared_from_this());
+		}
+	};
+
+
 }
 
 

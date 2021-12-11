@@ -53,4 +53,3 @@ private:
 	}
 
 };
-// CEREAL_REGISTER_TYPE(AssetReference<TextureAsset>);

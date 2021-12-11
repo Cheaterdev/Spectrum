@@ -1,6 +1,7 @@
 #include "pch_render.h"
 #include "BRDF.h"
 
+CEREAL_REGISTER_TYPE(BRDF);
 import Autogen;
 void BRDF::create_new()
 {

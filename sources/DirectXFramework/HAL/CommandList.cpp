@@ -1173,7 +1173,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	{
 		auto list = Device::get().get_queue(type)->get_free_list();
 		list->begin(name);
-		list->frame_resources = shared_from_this();
+		list->frame_resources = get_ptr();
 		return list;
 	}
 

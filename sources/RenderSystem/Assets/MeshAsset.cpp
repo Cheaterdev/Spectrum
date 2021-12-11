@@ -6,6 +6,8 @@ import HAL.Types;
 using namespace HAL;
 
 import Queue;
+CEREAL_REGISTER_TYPE(MeshAsset);
+CEREAL_REGISTER_TYPE(MaterialAsset);
 
 bool MeshData::init_default_loaders()
 {

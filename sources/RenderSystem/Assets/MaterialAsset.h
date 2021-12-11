@@ -77,11 +77,8 @@ class MaterialAsset : public Asset, public materials::material
 
         SERIALIZE()
         {
-            SAVE_PARENT(Asset);
-            SAVE_PARENT(materials::material);
+      //      SAVE_PARENT(Asset);
+       //     SAVE_PARENT(materials::material);
         }
 
 };
-
-
-// CEREAL_REGISTER_TYPE(AssetReference<MaterialAsset>);

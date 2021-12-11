@@ -3,8 +3,10 @@
 
 // BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MaterialAsset>);
 
-
-// CEREAL_REGISTER_TYPE(MaterialAsset);
+  //      SAVE_PARENT(Asset);
+   //     SAVE_PARENT(materials::material);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Asset, MaterialAsset)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(materials::material, MaterialAsset)
 
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::material);
 

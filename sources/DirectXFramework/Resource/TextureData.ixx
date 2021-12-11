@@ -7,7 +7,7 @@ export module TextureData;
 import FileSystem;
 import serialization;
 import Utils;
-
+import Log;
 export
 {
 
@@ -105,17 +105,26 @@ export
 
 	struct texture_data_header
 	{
-		uint32_t width;
-		uint32_t height;
-		uint32_t depth;
+		uint32_t width=100500;
+		uint32_t height = 100500;
+		uint32_t depth = 100500;
 
-		uint32_t array_size;
-		uint32_t mip_maps;
+		uint32_t array_size = 100500;
+		uint32_t mip_maps = 100500;
 		DXGI_FORMAT format;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+
+		virtual~texture_data_header() = default;
+
+		SERIALIZE()
 		{
-			ar& NVP(width)& NVP(height)& NVP(depth)& NVP(array_size)& NVP(mip_maps)& NVP(format);
+
+			Log::get() << "texture_data_header" << Log::endl;
+			ar& NVP(width);
+			ar& NVP(height);
+			ar& NVP(depth);
+			ar& NVP(array_size);
+			ar& NVP(mip_maps);
+			ar& NVP(format);
 		}
 	};
 
@@ -199,8 +208,7 @@ export
 			}
 		}
 
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(mips);
 		}
@@ -226,6 +234,7 @@ export
 
 		SERIALIZE()
 		{
+			Log::get() << "texture_data" << Log::endl;
 			SAVE_PARENT(texture_data_header);
 			ar& NVP(array);
 		}
@@ -441,3 +450,4 @@ texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int fla
 
 	return nullptr;
 }
+

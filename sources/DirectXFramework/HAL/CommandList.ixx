@@ -277,7 +277,7 @@ export{
 		public:
 			using Uploader<Thread::Lockable>::place_raw;
 		};
-		class FrameResources :public std::enable_shared_from_this<FrameResources>, public GPUCompiledManager<Thread::Lockable>
+		class FrameResources :public SharedObject<FrameResources>, public GPUCompiledManager<Thread::Lockable>
 		{
 
 			friend class FrameResourceManager;
@@ -709,7 +709,7 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList : public std::enable_shared_from_this<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>
+		class CommandList : public SharedObject<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>
 		{
 
 
@@ -765,10 +765,6 @@ export{
 				return frame_resources.get();
 			}
 
-			ptr get_ptr()
-			{
-				return std::static_pointer_cast<CommandList>(shared_from_this());
-			}
 			CommandList(CommandListType);
 
 			void begin(std::string name = "", Timer* t = nullptr);

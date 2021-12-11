@@ -17,6 +17,9 @@ import Utils;
 import Data;
 import stl.core;
 import stl.memory;
+
+CEREAL_REGISTER_TYPE(materials::universal_material);
+
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelinePasses);
@@ -299,8 +302,8 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 {
 
 	
-	include_file = register_asset(EngineAssets::material_header.get_asset());
-	include_file_raytacing = register_asset(EngineAssets::material_raytracing_header.get_asset());
+	include_file = EngineAssets::material_header.get_asset();
+	include_file_raytacing = EngineAssets::material_raytracing_header.get_asset();
 	this->graph = BinaryData<MaterialGraph>(graph);
 	graph->add_listener(this, false);
 	need_regenerate_material = true;
@@ -397,35 +400,4 @@ template void materials::universal_material::serialize(serialization_iarchive& a
 }
 
 
-template<class Archive>
-void materials::universal_material::serialize(Archive& ar, const unsigned int file_version)
-{
-	SAVE_PARENT(MaterialAsset);
-	ar& NVP(textures);
-////////////////////////////////////////////////////////////////////////////	ar& NVP(passes);
-	ar& NVP(graph);
-	ar& NVP(include_file);
-	ar& NVP(include_file_raytacing);
-
-	ar& NVP(ps_uniforms);
-	ar& NVP(tess_uniforms);
-	ar& NVP(pipeline);
-
-
-	ar& NVP(raytracing_lib);
-
-
-	if constexpr (Archive::is_loading::value)
-	{
-		auto new_pip = PipelineManager::get().get_pipeline(pipeline);
-
-		pipeline = nullptr;
-		pipeline = new_pip;
-	}
-
-
-	if constexpr(Archive::is_loading::value)
-	{
-		compile();
-	}
-}
+//CEREAL_REGISTER_DYNAMIC_INIT(myclasses)

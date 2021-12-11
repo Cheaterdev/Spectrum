@@ -132,7 +132,7 @@ export
 		template <class T>
 		concept class_parameter_type = std::is_base_of<parameter_type, T>::value;
 
-		struct parameter : public std::enable_shared_from_this<parameter>
+		struct parameter : public SharedObject<parameter>
 		{
 			// LEAK_TEST
 			MyVariant value;
@@ -161,12 +161,6 @@ export
 
 
 			void set_enabled(bool value, bool force = true);
-
-			template <class M = parameter>
-			std::shared_ptr<M> get_ptr()
-			{
-				return std::static_pointer_cast<M>(shared_from_this());
-			}
 
 
 			virtual void on_put();
@@ -246,7 +240,7 @@ export
 		};
 
 
-		class connection : public std::enable_shared_from_this<connection>, public listenable
+		class connection : public SharedObject<connection>, public listenable
 		{
 			graph* g = nullptr;
 		public:
@@ -254,12 +248,6 @@ export
 			parameter::ptr to;
 			bool enabled = true;
 			using ptr = s_ptr<connection>;
-
-			template <class M = connection>
-			std::shared_ptr<M> get_ptr()
-			{
-				return std::static_pointer_cast<M>(shared_from_this());
-			}
 
 			void registrate(graph* g, parameter::ptr& from, parameter::ptr& to);
 			void registrate(graph* g);
@@ -367,7 +355,7 @@ export
 		};
 
 
-		class window : public std::enable_shared_from_this<window>, public listenable
+		class window : public SharedObject<window>, public listenable
 		{
 
 		public:
@@ -388,12 +376,7 @@ export
 			virtual void on_remove();
 
 			void remove();
-			template <class M = window>
-			std::shared_ptr<M> get_ptr()
-			{
-				auto res = std::dynamic_pointer_cast<M>(shared_from_this());
-				return res;
-			}
+
 
 			virtual void on_tell(graph_listener* listener) override;
 
@@ -547,11 +530,7 @@ export
 
 			virtual ~Node();
 
-			template <class M = Node>
-			std::shared_ptr<M> get_ptr()
-			{
-				return std::static_pointer_cast<M>(shared_from_this());
-			}
+		
 		private:
 			SERIALIZE()
 			{
@@ -714,11 +693,6 @@ export
 			graph();
 
 			virtual ~graph();
-			template <class M = graph>
-			std::shared_ptr<M> get_ptr()
-			{
-				return std::static_pointer_cast<M>(shared_from_this());
-			}
 
 			/*
 			size_t calculate_unique_id()
@@ -838,16 +812,6 @@ export
 
 }
 
-
-// CEREAL_REGISTER_TYPE(FlowGraph::window);
-// CEREAL_REGISTER_TYPE(FlowGraph::Node);
-// CEREAL_REGISTER_TYPE(FlowGraph::input);
-// CEREAL_REGISTER_TYPE(FlowGraph::output);
-// CEREAL_REGISTER_TYPE(FlowGraph::graph);
-// CEREAL_REGISTER_TYPE(FlowGraph::graph_input);
-// CEREAL_REGISTER_TYPE(FlowGraph::graph_output);
-// CEREAL_REGISTER_TYPE(FlowGraph::parameter_type);
-// CEREAL_REGISTER_TYPE(FlowGraph::strict_parameter);
 
 module:private;
 

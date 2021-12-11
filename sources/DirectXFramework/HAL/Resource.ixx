@@ -118,7 +118,7 @@ export
 			}
 		};
 
-		export class Resource :public std::enable_shared_from_this<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
+		export class Resource :public SharedObject<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
 		{
 			LEAK_TEST(Resource)
 
@@ -184,15 +184,10 @@ export
 				return desc.Width;
 			}
 
-			ptr get_ptr()
-			{
-				return shared_from_this();
-			}
-
 			template<class T, class F, class ...Args>
 			typename T create_view(F& frame, Args ...args)
 			{
-				return T(shared_from_this(), frame, args...);
+				return T(get_ptr(), frame, args...);
 			}
 
 

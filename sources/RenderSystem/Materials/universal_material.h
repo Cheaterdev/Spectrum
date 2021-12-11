@@ -336,13 +336,41 @@ namespace materials
             virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override{}
 			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) override{}
         private:
-			SERIALIZE();
+			SERIALIZE() {
+				SAVE_PARENT(MaterialAsset);
+				ar& NVP(textures);
+				////////////////////////////////////////////////////////////////////////////	ar& NVP(passes);
+				ar& NVP(graph);
+				ar& NVP(include_file);
+				ar& NVP(include_file_raytacing);
+
+				ar& NVP(ps_uniforms);
+				ar& NVP(tess_uniforms);
+				ar& NVP(pipeline);
+
+
+				ar& NVP(raytracing_lib);
+
+
+				if constexpr (Archive::is_loading::value)
+				{
+					auto new_pip = PipelineManager::get().get_pipeline(pipeline);
+
+					pipeline = nullptr;
+					pipeline = new_pip;
+				}
+
+
+				if constexpr (Archive::is_loading::value)
+				{
+					compile();
+				}
+			}
 
     };
 	
 }
-
-// CEREAL_REGISTER_TYPE(materials::universal_material);
+//CEREAL_FORCE_DYNAMIC_INIT(myclasses)
 
 // CEREAL_REGISTER_TYPE(materials::Pipeline);
 // CEREAL_REGISTER_TYPE(materials::PipelinePasses);

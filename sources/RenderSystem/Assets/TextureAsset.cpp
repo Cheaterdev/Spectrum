@@ -4,8 +4,9 @@
 import Tasks;
 #include "Context/Context.h"
 
-// CEREAL_REGISTER_TYPE(TextureAsset);
-// BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<TextureAsset>);
+
+CEREAL_REGISTER_TYPE(TextureAsset);
+
 
 
 template void AssetReference<TextureAsset>::serialize(serialization_oarchive& arch, const unsigned int version);

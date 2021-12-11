@@ -3,6 +3,7 @@ module;
 #include "dx12_types.h"
 export module Memory;
 
+import Data;
 import StateContext;
 import Allocators;
 
@@ -33,7 +34,7 @@ export
 			HAL::Heap::ptr heap;
 		};
 
-		class ResourceHeap :std::enable_shared_from_this<ResourceHeap>, public Trackable<TrackedHeap>
+		class ResourceHeap :public SharedObject<ResourceHeap>, public Trackable<TrackedHeap>
 		{
 
 			HAL::HeapDesc desc;
@@ -66,7 +67,7 @@ export
 
 
 			}
-
+			virtual ~ResourceHeapPage() = default;
 		};
 
 		class HeapAllocatorInterface
@@ -221,6 +222,7 @@ export
 
 				auto heap = AllocateHeap(size);
 				auto handle = heap->TryAllocate(size, alignment);
+				assert(handle);
 				return { *handle,this, heap };
 
 			}

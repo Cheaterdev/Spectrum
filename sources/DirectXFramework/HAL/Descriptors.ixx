@@ -482,7 +482,7 @@ export
 			UINT count = 0;
 
 		};
-		class DescriptorHeap : public std::enable_shared_from_this<DescriptorHeap>
+		class DescriptorHeap : public SharedObject<DescriptorHeap>
 		{
 			//      std::vector<Handle> handles;
 			ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
@@ -497,7 +497,7 @@ export
 			HandleTable make_table(UINT count, UINT offset)
 			{
 				HandleTable res;
-				std::weak_ptr<DescriptorHeap> ptr = shared_from_this();
+				std::weak_ptr<DescriptorHeap> ptr = get_ptr();
 				res.info = std::shared_ptr<HandleTable::helper>(new HandleTable::helper, [ptr, count, offset](HandleTable::helper* e)
 					{
 						auto t = ptr.lock();

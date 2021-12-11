@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "BinaryAsset.h"
 
-// CEREAL_REGISTER_TYPE(BinaryAsset);
+CEREAL_REGISTER_TYPE(BinaryAsset);
 // BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<BinaryAsset>);
 
 
