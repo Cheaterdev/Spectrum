@@ -27,6 +27,7 @@ namespace DX12
             bool force_srgb;
             bool mips = true;
             texure_header() = default;
+			virtual ~texure_header() = default;
 
             texure_header(std::filesystem::path name, bool force_srgb = false, bool mips = true);
 			auto  operator<=>(const  texure_header& r)  const = default;

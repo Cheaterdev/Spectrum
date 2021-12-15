@@ -6,6 +6,8 @@ import ppl;
 import FileSystem;
 using namespace concurrency;
 
+
+CEREAL_REGISTER_TYPE(Asset);
 AssetManager::AssetManager()
 {
     has_worker = false;

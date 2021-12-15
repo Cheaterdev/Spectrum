@@ -47,7 +47,7 @@ protected:
 private:
     SERIALIZE()
     {
-        ar& SAVE_PARENT(Primitive);
+       SAVE_PARENT(Primitive);
         ar& NVP(global_points)& NVP(inverse_mat)& NVP(p);
     }
 };

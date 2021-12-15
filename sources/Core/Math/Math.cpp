@@ -1,7 +1,7 @@
 #include "Math.h"
 import serialization;
 
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Primitive, AABB)
+CEREAL_REGISTER_TYPE(AABB)
 
 CEREAL_REGISTER_TYPE(Frustum)
 CEREAL_REGISTER_TYPE(Primitive)

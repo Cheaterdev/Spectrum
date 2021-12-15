@@ -487,21 +487,21 @@ shader_parameter MaterialFunction::add_value(const ShaderParamType& type, std::s
 void MaterialFunction::add_function(std::string s)
 {
 	text += std::string("\t") + s + ";\n";
-}/*
-// BOOST_CLASS_EXPORT_IMPLEMENT(ScalarNode);
+}
+ CEREAL_REGISTER_TYPE(ScalarNode);
 
-// BOOST_CLASS_EXPORT_IMPLEMENT(MulNode);
-// BOOST_CLASS_EXPORT_IMPLEMENT(SumNode);
-// BOOST_CLASS_EXPORT_IMPLEMENT(TextureNode);
-// BOOST_CLASS_EXPORT_IMPLEMENT(VectorNode);
-// BOOST_CLASS_EXPORT_IMPLEMENT(TiledTextureNode);
-// BOOST_CLASS_EXPORT_IMPLEMENT(MaterialGraph);
-// BOOST_CLASS_EXPORT_IMPLEMENT(SpecToMetNode);
-// BOOST_CLASS_EXPORT_IMPLEMENT(TextureSRVParams);
-*/
+ CEREAL_REGISTER_TYPE(MulNode);
+ CEREAL_REGISTER_TYPE(SumNode);
+ CEREAL_REGISTER_TYPE(TextureNode);
+ CEREAL_REGISTER_TYPE(VectorNode);
+ CEREAL_REGISTER_TYPE(TiledTextureNode);
+CEREAL_REGISTER_TYPE(MaterialGraph);
+ CEREAL_REGISTER_TYPE(SpecToMetNode);
+//CEREAL_REGISTER_TYPE(TextureSRVParams);
 
-// CEREAL_REGISTER_TYPE(ShaderParamType);
-// CEREAL_REGISTER_TYPE(VectorType);
+
+ CEREAL_REGISTER_TYPE(ShaderParamType);
+ CEREAL_REGISTER_TYPE(VectorType);
 
 
 MaterialGraph::MaterialGraph()

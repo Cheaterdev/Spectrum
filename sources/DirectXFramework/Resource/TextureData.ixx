@@ -103,8 +103,9 @@ export
 			*outNumRows = numRows;
 	}
 
-	struct texture_data_header
+	class texture_data_header
 	{
+	public:
 		uint32_t width=100500;
 		uint32_t height = 100500;
 		uint32_t depth = 100500;
@@ -115,6 +116,7 @@ export
 
 		virtual~texture_data_header() = default;
 
+		private:
 		SERIALIZE()
 		{
 
@@ -158,7 +160,7 @@ export
 		SERIALIZE()
 		{
 
-			ar& data;
+			ar& NVP(data);
 			/*if constexpr (Archive::is_loading::value)
 			{
 				UINT size;
@@ -234,9 +236,9 @@ export
 
 		SERIALIZE()
 		{
-			Log::get() << "texture_data" << Log::endl;
 			SAVE_PARENT(texture_data_header);
 			ar& NVP(array);
+			Log::get() << "texture_data" << Log::endl;
 		}
 		texture_data() {}
 		texture_data(uint32_t array_count, uint32_t num_mips, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format)

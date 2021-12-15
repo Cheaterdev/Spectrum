@@ -19,6 +19,8 @@ import stl.core;
 import stl.memory;
 
 CEREAL_REGISTER_TYPE(materials::universal_material);
+CEREAL_REGISTER_TYPE(materials::PipelinePasses);
+CEREAL_REGISTER_TYPE(materials::PipelineSimple);
 
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
 // BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);

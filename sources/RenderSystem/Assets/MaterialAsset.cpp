@@ -1,19 +1,25 @@
 #include "pch_render.h"
 #include "Assets/AssetRenderer.h"
+import FlowGraph;
 
-// BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MaterialAsset>);
+CEREAL_REGISTER_TYPE(MaterialAsset);
+CEREAL_REGISTER_TYPE(AABB)
 
-  //      SAVE_PARENT(Asset);
-   //     SAVE_PARENT(materials::material);
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Asset, MaterialAsset)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(materials::material, MaterialAsset)
+CEREAL_REGISTER_TYPE(Frustum)
+CEREAL_REGISTER_TYPE(Primitive)
+CEREAL_REGISTER_TYPE(Sphere)
 
-// BOOST_CLASS_EXPORT_IMPLEMENT(materials::material);
+CEREAL_REGISTER_TYPE(FlowGraph::window);
+CEREAL_REGISTER_TYPE(FlowGraph::Node);
+CEREAL_REGISTER_TYPE(FlowGraph::input);
+CEREAL_REGISTER_TYPE(FlowGraph::output);
+CEREAL_REGISTER_TYPE(FlowGraph::graph);
+CEREAL_REGISTER_TYPE(FlowGraph::graph_input);
+CEREAL_REGISTER_TYPE(FlowGraph::graph_output);
+CEREAL_REGISTER_TYPE(FlowGraph::parameter_type);
+CEREAL_REGISTER_TYPE(FlowGraph::strict_parameter);
 
-
-template void AssetReference<MaterialAsset>::serialize(serialization_oarchive& arch, const unsigned int version);
-template void AssetReference<MaterialAsset>::serialize(serialization_iarchive& arch, const unsigned int version);
-
+CEREAL_REGISTER_TYPE(texture_data);
 //////////////////////////////////////////////////////////////////////////
 Asset_Type MaterialAsset::get_type()
 {

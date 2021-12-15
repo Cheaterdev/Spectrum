@@ -31,10 +31,10 @@ export class Primitive
 		virtual void apply_transform(ptr, mat4x4&);;
         virtual void set(Primitive*, mat4x4&);
 
-		virtual vec3 get_min() = 0;
-        virtual vec3 get_max() = 0;
+        virtual vec3 get_min() { return 0; }
+        virtual vec3 get_max() { return 0; }
         virtual ~Primitive() = default;
-        virtual ptr clone() = 0;
+        virtual ptr clone() { return nullptr; }
 
 private:
     SERIALIZE() {}

@@ -39,6 +39,7 @@ export
 	private:
 		SERIALIZE()
 		{
+			 SAVE_PARENT(Primitive);
 			ar& NVP(min)& NVP(max);
 		}
 	};

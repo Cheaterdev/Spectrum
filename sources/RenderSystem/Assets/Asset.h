@@ -280,10 +280,10 @@ public:
 		using ptr = s_ptr<Asset>;
 		using ref = AssetReference<Asset>;
 
-		virtual Asset_Type get_type() = 0;
-		/* {
+		virtual Asset_Type get_type()
+		 {
 			 return Asset_Type::UNKNOWN;
-		 }*/
+		 }
 
 
 		virtual ~Asset();;
@@ -697,7 +697,7 @@ void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 	auto owner_ptr = owner?owner->get_ptr():nullptr;
 	ar& NVP(owner_ptr);
 
-	SAVE_PARENT(AssetReferenceBase);
+	//SAVE_PARENT(AssetReferenceBase);
 	if (Archive::is_loading::value)
 	{
 		Guid guid;

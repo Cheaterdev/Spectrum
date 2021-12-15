@@ -288,6 +288,7 @@ export
 		{
 		public:
 			using ptr = s_ptr<input>;
+			virtual ~input() = default;
 		private:
 			friend class graph;
 			friend class output;
@@ -811,7 +812,6 @@ export
 
 
 }
-
 
 module:private;
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "Assets/Asset.h"
+#include "Assets/TextureAsset.h"
 #include "Context/Context.h"
 
 class MaterialAsset;
@@ -39,8 +39,8 @@ namespace materials
             size_t pipeline_id = 0;
         public:
             using ptr = s_ptr<material>;
-            virtual void set(MESH_TYPE type,MeshRenderContext::ptr&) = 0;
-			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) = 0;
+            virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) {};
+            virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc& pipeline) {};
             virtual ~material() = default;
             virtual void compile() {};
 
@@ -77,8 +77,10 @@ class MaterialAsset : public Asset, public materials::material
 
         SERIALIZE()
         {
-      //      SAVE_PARENT(Asset);
-       //     SAVE_PARENT(materials::material);
+            SAVE_PARENT(Asset);
+            SAVE_PARENT(materials::material);
         }
 
 };
+
+//CEREAL_REGISTER_TYPE2(MaterialAsset);
