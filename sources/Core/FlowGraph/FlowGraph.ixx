@@ -1,6 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
-#include "Serialization/serialization_archives.h"
 export module FlowGraph;
 
 
@@ -814,6 +811,16 @@ export
 }
 
 module:private;
+
+REGISTER_TYPE(FlowGraph::window);
+REGISTER_TYPE(FlowGraph::Node);
+REGISTER_TYPE(FlowGraph::input);
+REGISTER_TYPE(FlowGraph::output);
+REGISTER_TYPE(FlowGraph::graph);
+REGISTER_TYPE(FlowGraph::graph_input);
+REGISTER_TYPE(FlowGraph::graph_output);
+REGISTER_TYPE(FlowGraph::parameter_type);
+REGISTER_TYPE(FlowGraph::strict_parameter);
 
 namespace FlowGraph
 {

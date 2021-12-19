@@ -5,12 +5,7 @@ import Tasks;
 #include "Context/Context.h"
 
 
-CEREAL_REGISTER_TYPE(TextureAsset);
-
-
-
-template void AssetReference<TextureAsset>::serialize(serialization_oarchive& arch, const unsigned int version);
-template void AssetReference<TextureAsset>::serialize(serialization_iarchive& arch, const unsigned int version);
+REGISTER_TYPE(TextureAsset);
 
 TextureAssetRenderer::TextureAssetRenderer()
 {

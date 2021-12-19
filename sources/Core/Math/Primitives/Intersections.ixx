@@ -1,6 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
-#include "Serialization/serialization_archives.h"
 export module Intersections;
 
 export import Constants;

@@ -1,14 +1,8 @@
 #include "pch_render.h"
 #include "BinaryAsset.h"
 
-CEREAL_REGISTER_TYPE(BinaryAsset);
-// BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<BinaryAsset>);
+REGISTER_TYPE(BinaryAsset);
 
-
-template void AssetReference<BinaryAsset>::serialize(serialization_oarchive& arch, const unsigned int version);
-template void AssetReference<BinaryAsset>::serialize(serialization_iarchive& arch, const unsigned int version);
-
-//////////////////////////////////////////////////////////////////////////
 Asset_Type BinaryAsset::get_type()
 {
     return Asset_Type::BINARY;

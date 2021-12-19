@@ -6,7 +6,7 @@ import HAL.Types;
 using namespace HAL;
 
 import Queue;
-CEREAL_REGISTER_TYPE(MeshAsset);
+REGISTER_TYPE(MeshAsset);
 
 bool MeshData::init_default_loaders()
 {
@@ -623,23 +623,6 @@ void MeshAssetInstance::init_asset()
 }
 
 
-
-
-
-// BOOST_CLASS_EXPORT_IMPLEMENT(MeshAsset);
-// BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MeshAsset>);
-
-// BOOST_CLASS_EXPORT_IMPLEMENT(MeshAssetInstance);
-
-
-
-
-/*template void MeshAssetInstance::serialize(serialization_oarchive& arch, const unsigned int version);
-template void MeshAssetInstance::serialize(serialization_iarchive& arch, const unsigned int version);
-
-template void AssetReference<MeshAsset>::serialize(serialization_oarchive& arch, const unsigned int version);
-template void AssetReference<MeshAsset>::serialize(serialization_iarchive& arch, const unsigned int version);
-*/
 void SceneFrameManager::prepare(CommandList::ptr& command_list, Scene& scene)
 {
 	auto timer = command_list->start(L"Upload data");

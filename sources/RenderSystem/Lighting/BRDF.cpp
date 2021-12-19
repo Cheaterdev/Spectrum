@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "BRDF.h"
 
-CEREAL_REGISTER_TYPE(BRDF);
+REGISTER_TYPE(BRDF);
 import Autogen;
 void BRDF::create_new()
 {
@@ -33,4 +33,3 @@ void BRDF::serialize(Archive& ar, const unsigned int)
 	SAVE_PARENT(TextureAsset);
 
 }
-// BOOST_CLASS_EXPORT_IMPLEMENT(BRDF);

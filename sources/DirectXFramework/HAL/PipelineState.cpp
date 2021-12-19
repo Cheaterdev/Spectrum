@@ -1,8 +1,5 @@
 #include "pch_dx.h"
 import PipelineState;
-//#include "Serialization/Serializer.h"
-//#include "serialization_archives.h"
-#include "serialization/serialization_archives.h"
 
 import Serializer;
 import Debug;
@@ -465,7 +462,3 @@ unsigned int i = 0;
 	}
 
 }
-
-
-//// BOOST_CLASS_EXPORT_IMPLEMENT(DX12::PipelineStateBase);
-//// BOOST_CLASS_EXPORT_IMPLEMENT(DX12::PipelineState);

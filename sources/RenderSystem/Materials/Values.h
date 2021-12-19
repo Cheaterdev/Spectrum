@@ -735,12 +735,12 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
 };
 
 
-// CEREAL_REGISTER_TYPE(ScalarNode);
-// CEREAL_REGISTER_TYPE(MulNode);
-// CEREAL_REGISTER_TYPE(SumNode);
-// CEREAL_REGISTER_TYPE(TextureNode);
-// CEREAL_REGISTER_TYPE(VectorNode);
-// CEREAL_REGISTER_TYPE(TiledTextureNode);
-// CEREAL_REGISTER_TYPE(MaterialGraph);
-// CEREAL_REGISTER_TYPE(SpecToMetNode);
-//// CEREAL_REGISTER_TYPE(TextureSRVParams);
+// REGISTER_TYPE(ScalarNode);
+// REGISTER_TYPE(MulNode);
+// REGISTER_TYPE(SumNode);
+// REGISTER_TYPE(TextureNode);
+// REGISTER_TYPE(VectorNode);
+// REGISTER_TYPE(TiledTextureNode);
+// REGISTER_TYPE(MaterialGraph);
+// REGISTER_TYPE(SpecToMetNode);
+//// REGISTER_TYPE(TextureSRVParams);

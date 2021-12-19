@@ -7,7 +7,7 @@ import FileSystem;
 using namespace concurrency;
 
 
-CEREAL_REGISTER_TYPE(Asset);
+REGISTER_TYPE(Asset);
 AssetManager::AssetManager()
 {
     has_worker = false;
@@ -253,6 +253,7 @@ AssetReferenceBase::~AssetReferenceBase()
  void Asset::add_reference(AssetReferenceBase * ref)
 {
 	m.lock();
+	assert(ref->owner==this);
 	references.insert(ref);
 	m.unlock();
 }

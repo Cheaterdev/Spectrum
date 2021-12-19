@@ -423,6 +423,6 @@ public:
 
 
 //BOOST_CLASS_TRACKING(material_holder, boost::serialization::track_never);
-// CEREAL_REGISTER_TYPE(MeshAssetInstance);
-// CEREAL_REGISTER_TYPE(MeshAsset);
-// CEREAL_REGISTER_TYPE(AssetReference<MeshAsset>);
+// REGISTER_TYPE(MeshAssetInstance);
+// REGISTER_TYPE(MeshAsset);
+// REGISTER_TYPE(AssetReference<MeshAsset>);

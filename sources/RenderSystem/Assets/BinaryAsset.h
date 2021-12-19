@@ -51,4 +51,4 @@ class BinaryAsset : public Asset
         }
 
 };
-// CEREAL_REGISTER_TYPE(AssetReference<BinaryAsset>);
+// REGISTER_TYPE(AssetReference<BinaryAsset>);

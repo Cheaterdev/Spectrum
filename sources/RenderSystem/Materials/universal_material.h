@@ -372,6 +372,6 @@ namespace materials
 }
 //CEREAL_FORCE_DYNAMIC_INIT(myclasses)
 
-// CEREAL_REGISTER_TYPE(materials::Pipeline);
-// CEREAL_REGISTER_TYPE(materials::PipelinePasses);
-// CEREAL_REGISTER_TYPE(materials::PipelineSimple);
+// REGISTER_TYPE(materials::Pipeline);
+// REGISTER_TYPE(materials::PipelinePasses);
+// REGISTER_TYPE(materials::PipelineSimple);

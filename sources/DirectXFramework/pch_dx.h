@@ -1,6 +1,4 @@
 #pragma once
-#include "pch_core.h"
-
 
 import d3d12;
 

@@ -119,4 +119,4 @@ class occluder
 };
 
 
-// CEREAL_REGISTER_TYPE(occluder);
+// REGISTER_TYPE(occluder);

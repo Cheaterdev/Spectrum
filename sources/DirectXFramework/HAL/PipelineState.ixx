@@ -557,8 +557,8 @@ namespace DX12
 
 
 /*
-// CEREAL_REGISTER_TYPE(DX12::PipelineStateBase);
-// CEREAL_REGISTER_TYPE(DX12::PipelineState);
+// REGISTER_TYPE(DX12::PipelineStateBase);
+// REGISTER_TYPE(DX12::PipelineState);
 */
 
 }

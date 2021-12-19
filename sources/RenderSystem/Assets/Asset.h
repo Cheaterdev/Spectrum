@@ -1,5 +1,4 @@
 #pragma once
-#include "serialization/serialization_archives.h"
 import EditObject;
 import Utils;
 import Serializer;
@@ -700,6 +699,7 @@ void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 	//SAVE_PARENT(AssetReferenceBase);
 	if (Archive::is_loading::value)
 	{
+		owner = owner_ptr.get();
 		Guid guid;
 		ar& NVP(guid);
 

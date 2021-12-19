@@ -24,4 +24,4 @@ class ShaderMaterial: public materials::material, public AssetHolder
 
 };
 
-// CEREAL_REGISTER_TYPE(ShaderMaterial);
+// REGISTER_TYPE(ShaderMaterial);

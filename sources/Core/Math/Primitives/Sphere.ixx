@@ -1,6 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
-#include "Serialization/serialization_archives.h"
 export module Sphere;
 
 export import Constants;
@@ -67,6 +64,7 @@ private:
 
 module: private;
 
+REGISTER_TYPE(Sphere)
 
 Sphere::Sphere(vec3 pos, float radius)
 {

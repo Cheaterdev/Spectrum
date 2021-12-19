@@ -285,6 +285,8 @@ export
 
 module:private;
 
+REGISTER_TYPE(texture_data);
+
 texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
 {
 	DirectX::TexMetadata metadata = image.GetMetadata();

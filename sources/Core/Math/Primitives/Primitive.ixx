@@ -1,6 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
-#include "Serialization/serialization_archives.h"
 export module Primitive;
 
 export import Constants;
@@ -42,6 +39,7 @@ private:
 
 module: private;
 
+REGISTER_TYPE(Primitive)
 
 const primitive_types Primitive::get_type() const
 {

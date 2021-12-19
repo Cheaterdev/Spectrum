@@ -1,6 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
-#include "Serialization/serialization_archives.h"
 export module Frustum;
 
 export import Constants;
@@ -56,6 +53,7 @@ private:
 
 module: private;
 
+REGISTER_TYPE(Frustum)
 
 vec3 Frustum::get_min()
 {

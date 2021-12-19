@@ -57,7 +57,7 @@ namespace materials
 
 }
 
-// CEREAL_REGISTER_TYPE(materials::material);
+// REGISTER_TYPE(materials::material);
 class MaterialAsset : public Asset, public materials::material
 {
         LEAK_TEST(MaterialAsset)

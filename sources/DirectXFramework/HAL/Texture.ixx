@@ -1,5 +1,4 @@
 module;
-#include "serialization/serialization_archives.h"
 #include "helper.h"
 #include "dx12_types.h"
 export module Texture;

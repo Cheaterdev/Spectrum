@@ -1,6 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
-#include "Serialization/serialization_archives.h"
 export module AABB;
 
 export import Constants;
@@ -48,6 +45,7 @@ export
 module: private;
 
 
+REGISTER_TYPE(AABB)
 
 
 

@@ -2,24 +2,10 @@
 #include "Assets/AssetRenderer.h"
 import FlowGraph;
 
-CEREAL_REGISTER_TYPE(MaterialAsset);
-CEREAL_REGISTER_TYPE(AABB)
+REGISTER_TYPE(MaterialAsset);
 
-CEREAL_REGISTER_TYPE(Frustum)
-CEREAL_REGISTER_TYPE(Primitive)
-CEREAL_REGISTER_TYPE(Sphere)
 
-CEREAL_REGISTER_TYPE(FlowGraph::window);
-CEREAL_REGISTER_TYPE(FlowGraph::Node);
-CEREAL_REGISTER_TYPE(FlowGraph::input);
-CEREAL_REGISTER_TYPE(FlowGraph::output);
-CEREAL_REGISTER_TYPE(FlowGraph::graph);
-CEREAL_REGISTER_TYPE(FlowGraph::graph_input);
-CEREAL_REGISTER_TYPE(FlowGraph::graph_output);
-CEREAL_REGISTER_TYPE(FlowGraph::parameter_type);
-CEREAL_REGISTER_TYPE(FlowGraph::strict_parameter);
 
-CEREAL_REGISTER_TYPE(texture_data);
 //////////////////////////////////////////////////////////////////////////
 Asset_Type MaterialAsset::get_type()
 {

@@ -2,9 +2,6 @@
 #include "ShaderMaterial.h"
 #include "Materials/universal_material.h"
 
-// BOOST_CLASS_EXPORT_IMPLEMENT(ShaderMaterial);
-
-
 ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file(this)
 {
 
@@ -35,6 +32,3 @@ void ShaderMaterial::set(MESH_TYPE type, MeshRenderContext::ptr& context)
 {
     //context->pipeline.pixel = shader;
 }
-
-template void ShaderMaterial::serialize(serialization_oarchive& arch, const unsigned int version);
-template void ShaderMaterial::serialize(serialization_iarchive& arch, const unsigned int version);

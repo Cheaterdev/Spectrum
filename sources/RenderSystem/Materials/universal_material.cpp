@@ -18,14 +18,19 @@ import Data;
 import stl.core;
 import stl.memory;
 
-CEREAL_REGISTER_TYPE(materials::universal_material);
-CEREAL_REGISTER_TYPE(materials::PipelinePasses);
-CEREAL_REGISTER_TYPE(materials::PipelineSimple);
+import Serializer;
 
-// BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
-// BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);
-// BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelinePasses);
-// BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelineSimple);
+import serialization;
+import Log;
+import Utils;
+import crc32;
+
+import Data;
+import windows;
+REGISTER_TYPE(materials::universal_material);
+REGISTER_TYPE(materials::PipelinePasses);
+REGISTER_TYPE(materials::PipelineSimple);
+
 
 DynamicData generate_data(std::vector<Uniform::ptr>& un)
 {
@@ -296,7 +301,7 @@ void materials::universal_material::generate_material()
 
 MaterialGraph::ptr materials::universal_material::get_graph()
 {
-	return graph.get();
+	return  graph.get();
 }
 
 
@@ -387,9 +392,6 @@ void materials::universal_material::on_register(::FlowGraph::window*)
 {
 	on_graph_changed();
 }
-
-template void materials::universal_material::serialize(serialization_oarchive& arch, const unsigned int version);
-template void materials::universal_material::serialize(serialization_iarchive& arch, const unsigned int version);
 
  D3D_PRIMITIVE_TOPOLOGY materials::render_pass::get_topology()
 {

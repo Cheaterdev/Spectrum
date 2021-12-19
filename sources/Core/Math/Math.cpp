@@ -1,8 +1,0 @@
-#include "Math.h"
-import serialization;
-
-CEREAL_REGISTER_TYPE(AABB)
-
-CEREAL_REGISTER_TYPE(Frustum)
-CEREAL_REGISTER_TYPE(Primitive)
-CEREAL_REGISTER_TYPE(Sphere)
