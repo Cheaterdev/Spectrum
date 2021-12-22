@@ -2,8 +2,11 @@
 #include "Effects/RTX/RTX.h"
 #include "Assets/AssetRenderer.h"
 #include "Materials/universal_material.h"
+import HAL.Types;
+using namespace HAL;
 
 import Queue;
+REGISTER_TYPE(MeshAsset);
 
 bool MeshData::init_default_loaders()
 {
@@ -145,7 +148,7 @@ mesh.meshlets_offset = meshlets_count;
 	for (auto& mesh : meshes)
 	{
 	
-		auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+		auto list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 		list->begin("RTX");
 		universal_vertex_manager::get().prepare(list);
 		universal_index_manager::get().prepare(list);
@@ -261,10 +264,11 @@ void MeshAsset::update_preview(Render::Texture::ptr preview)
 template<class Archive>
 void MeshAssetInstance::serialize(Archive& ar, const unsigned int)
 {
-	ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
+	SAVE_PARENT(AssetHolder);
+	SAVE_PARENT(scene_object);
+
 	ar& NVP(overrided_material);
 	ar& NVP(mesh_asset);
-	ar& NVP(boost::serialization::base_object<scene_object>(*this));
 	ar& NVP(type);
 
 	if (Archive::is_loading::value)
@@ -395,7 +399,7 @@ void MeshAssetInstance::on_remove()
 
 void MeshAssetInstance::update_rtx_instance()
 {
-	if (!Device::get().is_rtx_supported()) return;
+	if (!Render::Device::get().is_rtx_supported()) return;
 
 	if (!ras_handle) scene->raytrace->allocate(ras_handle, rendering_count);
 
@@ -489,7 +493,7 @@ bool MeshAssetInstance::update_transforms()
 
 bool MeshAssetInstance::init_ras(CommandList::ptr list)
 {
-	if (!Device::get().is_rtx_supported()) return false;
+	if (!Render::Device::get().is_rtx_supported()) return false;
 
 
 
@@ -618,23 +622,6 @@ void MeshAssetInstance::init_asset()
 	//mesh_root(mesh_asset->root_node);
 }
 
-
-
-
-
-BOOST_CLASS_EXPORT_IMPLEMENT(MeshAsset);
-BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MeshAsset>);
-
-BOOST_CLASS_EXPORT_IMPLEMENT(MeshAssetInstance);
-
-
-
-
-template void MeshAssetInstance::serialize(serialization_oarchive& arch, const unsigned int version);
-template void MeshAssetInstance::serialize(serialization_iarchive& arch, const unsigned int version);
-
-template void AssetReference<MeshAsset>::serialize(serialization_oarchive& arch, const unsigned int version);
-template void AssetReference<MeshAsset>::serialize(serialization_iarchive& arch, const unsigned int version);
 
 void SceneFrameManager::prepare(CommandList::ptr& command_list, Scene& scene)
 {

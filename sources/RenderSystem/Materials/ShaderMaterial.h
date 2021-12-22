@@ -17,16 +17,11 @@ class ShaderMaterial: public materials::material, public AssetHolder
         virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override;
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) override;
     private:
-        friend class boost::serialization::access;
-
-        template<class Archive>
-        void save(Archive& ar, const unsigned int) const;
-
-        template<class Archive>
-        void load(Archive& ar, const unsigned int);
-        template<class Archive>
-        void serialize(Archive& ar, const unsigned int file_version);
+        SERIALIZE() {
+            SAVE_PARENT(materials::material);
+            SAVE_PARENT(AssetHolder);
+        }
 
 };
 
-BOOST_CLASS_EXPORT_KEY(ShaderMaterial);
+// REGISTER_TYPE(ShaderMaterial);

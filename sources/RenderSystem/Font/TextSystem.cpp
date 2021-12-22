@@ -1,6 +1,9 @@
 #include "pch_render.h"
 #include "TextSystem.h"
 
+import Utils;
+
+
 namespace Fonts
 {
 

@@ -1,6 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
-#include "Serialization/serialization_archives.h"
 export module FlowGraph;
 
 
@@ -121,7 +118,7 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<parameter_type>(*this));
+				SAVE_PARENT(parameter_type);
 
 			}
 
@@ -132,7 +129,7 @@ export
 		template <class T>
 		concept class_parameter_type = std::is_base_of<parameter_type, T>::value;
 
-		struct parameter : public std::enable_shared_from_this<parameter>
+		struct parameter : public SharedObject<parameter>
 		{
 			// LEAK_TEST
 			MyVariant value;
@@ -161,12 +158,6 @@ export
 
 
 			void set_enabled(bool value, bool force = true);
-
-			template <class M = parameter>
-			std::shared_ptr<M> get_ptr()
-			{
-				return std::static_pointer_cast<M>(shared_from_this());
-			}
 
 
 			virtual void on_put();
@@ -246,7 +237,7 @@ export
 		};
 
 
-		class connection : public std::enable_shared_from_this<connection>, public listenable
+		class connection : public SharedObject<connection>, public listenable
 		{
 			graph* g = nullptr;
 		public:
@@ -254,12 +245,6 @@ export
 			parameter::ptr to;
 			bool enabled = true;
 			using ptr = s_ptr<connection>;
-
-			template <class M = connection>
-			std::shared_ptr<M> get_ptr()
-			{
-				return std::static_pointer_cast<M>(shared_from_this());
-			}
 
 			void registrate(graph* g, parameter::ptr& from, parameter::ptr& to);
 			void registrate(graph* g);
@@ -300,6 +285,7 @@ export
 		{
 		public:
 			using ptr = s_ptr<input>;
+			virtual ~input() = default;
 		private:
 			friend class graph;
 			friend class output;
@@ -324,7 +310,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<parameter>(*this));
+				SAVE_PARENT(parameter);
+
 			}
 
 
@@ -360,12 +347,13 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<parameter>(*this));
+				SAVE_PARENT(parameter);
+
 			}
 		};
 
 
-		class window : public std::enable_shared_from_this<window>, public listenable
+		class window : public SharedObject<window>, public listenable
 		{
 
 		public:
@@ -386,12 +374,7 @@ export
 			virtual void on_remove();
 
 			void remove();
-			template <class M = window>
-			std::shared_ptr<M> get_ptr()
-			{
-				auto res = std::dynamic_pointer_cast<M>(shared_from_this());
-				return res;
-			}
+
 
 			virtual void on_tell(graph_listener* listener) override;
 
@@ -545,15 +528,12 @@ export
 
 			virtual ~Node();
 
-			template <class M = Node>
-			std::shared_ptr<M> get_ptr()
-			{
-				return std::static_pointer_cast<M>(shared_from_this());
-			}
+		
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<window>(*this));
+				SAVE_PARENT(window);
+
 				ar& NVP(input_parametres);
 				ar& NVP(output_parametres);
 
@@ -590,7 +570,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<input>(*this));
+				SAVE_PARENT(input);
+
 			}
 
 		};
@@ -609,7 +590,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<output>(*this));
+				SAVE_PARENT(output);
+
 			}
 
 		};
@@ -709,11 +691,6 @@ export
 			graph();
 
 			virtual ~graph();
-			template <class M = graph>
-			std::shared_ptr<M> get_ptr()
-			{
-				return std::static_pointer_cast<M>(shared_from_this());
-			}
 
 			/*
 			size_t calculate_unique_id()
@@ -765,7 +742,7 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<Node>(*this));
+				SAVE_PARENT(Node);
 				ar& NVP(nodes);
 				ar& NVP(cam_pos);
 				ar& NVP(windows);
@@ -809,7 +786,8 @@ export
 		private:
 			SERIALIZE()
 			{
-				ar& NVP(boost::serialization::base_object<Node>(*this));
+				SAVE_PARENT(Node);
+
 			}
 
 		};
@@ -832,18 +810,17 @@ export
 
 }
 
-
-BOOST_CLASS_EXPORT(FlowGraph::window);
-BOOST_CLASS_EXPORT(FlowGraph::Node);
-BOOST_CLASS_EXPORT(FlowGraph::input);
-BOOST_CLASS_EXPORT(FlowGraph::output);
-BOOST_CLASS_EXPORT(FlowGraph::graph);
-BOOST_CLASS_EXPORT(FlowGraph::graph_input);
-BOOST_CLASS_EXPORT(FlowGraph::graph_output);
-BOOST_CLASS_EXPORT(FlowGraph::parameter_type);
-BOOST_CLASS_EXPORT(FlowGraph::strict_parameter);
-
 module:private;
+
+REGISTER_TYPE(FlowGraph::window);
+REGISTER_TYPE(FlowGraph::Node);
+REGISTER_TYPE(FlowGraph::input);
+REGISTER_TYPE(FlowGraph::output);
+REGISTER_TYPE(FlowGraph::graph);
+REGISTER_TYPE(FlowGraph::graph_input);
+REGISTER_TYPE(FlowGraph::graph_output);
+REGISTER_TYPE(FlowGraph::parameter_type);
+REGISTER_TYPE(FlowGraph::strict_parameter);
 
 namespace FlowGraph
 {

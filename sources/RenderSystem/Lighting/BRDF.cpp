@@ -1,12 +1,13 @@
 #include "pch_render.h"
 #include "BRDF.h"
 
+REGISTER_TYPE(BRDF);
 import Autogen;
 void BRDF::create_new()
 {
 
 	texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
-	Render::CommandList::ptr list(new Render::CommandList(Render::CommandListType::DIRECT));
+	Render::CommandList::ptr list(new Render::CommandList(HAL::CommandListType::DIRECT));
 	list->begin("BRDF");
 
 
@@ -29,7 +30,6 @@ void BRDF::create_new()
 template<class Archive>
 void BRDF::serialize(Archive& ar, const unsigned int)
 {
-	ar& BOOST_SERIALIZATION_BASE_OBJECT_NVP(TextureAsset);
+	SAVE_PARENT(TextureAsset);
 
 }
-BOOST_CLASS_EXPORT_IMPLEMENT(BRDF);

@@ -1,7 +1,7 @@
 
 module;
 #include "pch_dx.h"
-#include "DX12/dx12_types.h"
+#include "HAL/dx12_types.h"
 export module Autogen;
 
 import PipelineState;

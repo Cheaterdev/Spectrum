@@ -288,7 +288,7 @@ export
 	};
 
 
-	template<EnumType E, class T, std::size_t N = std::size_t(E::__GENERATE_OPS__)>
+	template<class E, class T, std::size_t N = std::size_t(E::__GENERATE_OPS__)>
 	class enum_array : public std::array<T, N> {
 	public:
 		T& operator[] (E e) {
@@ -297,6 +297,28 @@ export
 
 		const T& operator[] (E e) const {
 			return std::array<T, N>::operator[]((std::size_t)e);
+		}
+	};
+
+
+	class SharedObjectBase :public std::enable_shared_from_this<SharedObjectBase>
+	{
+	protected:
+
+	public:
+		virtual ~SharedObjectBase() = default;
+	};
+
+	template<class T>
+	class SharedObject :public virtual SharedObjectBase
+	{
+	public:
+		virtual ~SharedObject() = default;
+
+		template <class M = T>
+		std::shared_ptr<M> get_ptr()
+		{
+			return std::dynamic_pointer_cast<M>(SharedObjectBase::shared_from_this());
 		}
 	};
 

@@ -15,11 +15,7 @@ export
 
 namespace D3D
 {
-    enum class D3D_VERSION
-    {
-        V11,
-        V12
-    };
+ 
     struct shader_macro
     {
             std::string name;
@@ -27,8 +23,7 @@ namespace D3D
             shader_macro() = default;
             shader_macro(std::string name, std::string value = "1");
 
-            bool operator==(const shader_macro&) const = default;
-            auto operator<=>(const  shader_macro& r)  const = default;
+            GEN_DEF_COMP(shader_macro)
         private:
             SERIALIZE()
             {
@@ -44,10 +39,7 @@ namespace D3D
             std::vector<shader_macro> macros;
             bool contains_text = false;
 
-            bool operator==(const shader_header&) const = default;
-            auto operator<=>(const  shader_header & r)  const = default;
-
-
+            GEN_DEF_COMP(shader_header)
         private:
             SERIALIZE()
             {
@@ -57,10 +49,7 @@ namespace D3D
                 ar& NVP(macros);
                 ar& NVP(contains_text);
             }
-
     };
-
-   // bool operator<(const shader_header& l, const shader_header& r);
 
 	class shader_include
 	{
@@ -73,46 +62,25 @@ namespace D3D
 		shader_include(std::string dir, resource_file_depender& _depender);
 		std::unique_ptr<std::string> load_file(std::string filename);
 	};
-
-
 }
 
 
 
- const CLSID _CLSID_DxcCompiler = {
-    0x73e22d93,
-    0xe6ce,
-    0x47f3,
-    {0xb5, 0xbf, 0xf0, 0x66, 0x4f, 0x39, 0xc1, 0xb0} };
 
-// {EF6A8087-B0EA-4D56-9E45-D07E1A8B7806}
- const GUID _CLSID_DxcLibrary = {
-    0x6245d6af,
-    0x66e0,
-    0x48fd,
-    {0x80, 0xb4, 0x4d, 0x27, 0x17, 0x96, 0x74, 0x8c} };
-
-
-struct D3D12ShaderCompilerInfo :public Singleton<D3D12ShaderCompilerInfo>
+struct ShaderCompiler :public Singleton<ShaderCompiler>
 {
-	dxc::DxcDllSupport		DxcDllHelper;
-	IDxcCompiler* compiler = nullptr;
-	IDxcLibrary* library = nullptr;
-	
-    std::unique_ptr<std::string> Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", D3D::shader_include* includer = nullptr, std::string file_name="");
-	std::unique_ptr<std::string> Compile_Shader_File(std::string filename, std::vector < D3D::shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", D3D::shader_include* includer = nullptr);
+    std::optional<binary> Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", D3D::shader_include* includer = nullptr, std::string file_name="");
+    std::optional<binary> Compile_Shader_File(std::string filename, std::vector < D3D::shader_macro> macros, std::string target = "lib_6_3", std::string entry_point = "", D3D::shader_include* includer = nullptr);
 
-	D3D12ShaderCompilerInfo()
-	{
-		auto hr = DxcDllHelper.Initialize();
-		//	Utils::Validate(hr, L"Failed to initialize DxCDllSupport!");
+private:
 
-		DxcDllHelper.CreateInstance(_CLSID_DxcCompiler, &compiler);
-		//	Utils::Validate(hr, L"Failed to create DxcCompiler!");
+    ShaderCompiler();
+    friend class Singleton<ShaderCompiler>;
+    friend class shader_include_dxil;
+    dxc::DxcDllSupport		DxcDllHelper;
+    IDxcCompiler* compiler = nullptr;
+    IDxcLibrary* library = nullptr;
 
-		DxcDllHelper.CreateInstance(_CLSID_DxcLibrary, &library);
-	//	Utils::Validate(hr, L"Failed to create DxcLibrary!");
-	}
 };
 
 

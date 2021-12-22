@@ -10,7 +10,8 @@
 import Queue;
 
 using namespace FrameGraph;
-
+import HAL.Types;
+using namespace HAL;
 class SceneRenderWorkflow
 {
 
@@ -29,7 +30,7 @@ public:
 		
 		{
 
-			CommandList::ptr command_list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			CommandList::ptr command_list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 
 			command_list->begin("pre");
 			{

@@ -7,50 +7,10 @@ import FileSystem;
 import FileDepender;
 import DXCompiler;
 import serialization;
-#define DXIL_FOURCC(ch0, ch1, ch2, ch3) (                            \
-  (uint32_t)(uint8_t)(ch0)        | (uint32_t)(uint8_t)(ch1) << 8  | \
-  (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24   \
-  )
-
 import Log;
 
 namespace D3D
-{/*
-	bool operator<(const shader_header& l, const shader_header& r)
-	{
-		if (l.file_name != r.file_name)
-			return l.file_name < r.file_name;
-		else
-		{
-			if (l.entry_point != r.entry_point)
-				return l.entry_point < r.entry_point;
-		}
-
-		if (l.macros.size() == r.macros.size())
-		{
-			for (int i = 0; i < l.macros.size(); i++)
-			{
-				auto ll = l.macros[i];
-				auto rr = r.macros[i];
-
-				if (ll.name == rr.name)
-				{
-					if (ll.value == rr.value)
-					{
-
-					}
-					else
-						return	ll.value < rr.value;
-
-
-				}
-				else
-					return	ll.name < rr.name;
-			}
-		}
-		return l.macros.size() < r.macros.size();
-	}
-	*/
+{
 
 	shader_macro::shader_macro(std::string name, std::string value /*= "1"*/)
 	{
@@ -73,22 +33,12 @@ namespace D3D
 
 	std::unique_ptr<std::string> shader_include::load_file(std::string pFileName)
 	{
-
-		/*auto sig = pFileName.find("sig:");
-		if (sig!=std::string::npos)
-		{
-			pFileName = "autogen/" + pFileName.substr(sig+4) +".h";
-		}
-
-		*/
-
 		auto sig = pFileName.find("autogen");
 		if (sig != std::string::npos)
 		{
 			autogen.emplace_back(pFileName);
 		}
 
-		
 		std::string file_name = dir + pFileName;
 		auto file = FileSystem::get().get_file(convert(file_name));
 
@@ -105,9 +55,6 @@ namespace D3D
 		return std::make_unique<std::string>(std::move(data));
 
 	}
-
-
-
 
 }
 
@@ -236,7 +183,7 @@ public:
 		auto pBytes = static_cast<unsigned int>(data->size());
 		includes.insert(std::move(data));
 		ComPtr<IDxcBlobEncoding> pEncodingIncludeSource;
-		D3D12ShaderCompilerInfo::get().library->CreateBlobWithEncodingFromPinned((LPBYTE)ppData, pBytes, CP_ACP, &pEncodingIncludeSource);
+		ShaderCompiler::get().library->CreateBlobWithEncodingFromPinned((LPBYTE)ppData, pBytes, CP_ACP, &pEncodingIncludeSource);
 		*ppIncludeSource = pEncodingIncludeSource.Detach();
 		return S_OK;
 	}
@@ -245,20 +192,20 @@ public:
 
 
 
-std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader_File(std::string filename, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point, D3D::shader_include* includer)
+std::optional<binary>  ShaderCompiler::Compile_Shader_File(std::string filename, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point, D3D::shader_include* includer)
 {
 	auto data = includer->load_file(filename);
 	return Compile_Shader(*data, macros, target, entry_point, includer, filename);
 }
 //
 
-std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point, D3D::shader_include* includer, std::string file_name)
+std::optional<binary>  ShaderCompiler::Compile_Shader(std::string shaderText, std::vector < D3D::shader_macro> macros, std::string target, std::string entry_point, D3D::shader_include* includer, std::string file_name)
 {
 
 	if (file_name.empty())
 		file_name = "shaders/unknown";
 	resource_file_depender dep;
-	D3D::shader_include in(file_name,dep);
+	D3D::shader_include in(file_name, dep);
 
 	if (!includer)includer = &in;
 
@@ -297,16 +244,12 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 	UINT32 code(0);
 	IDxcBlobEncoding* pSource(nullptr);
 
-	//	auto file = FileSystem::get().get_file("raytracing.hlsl");
-
-	//	auto data = file->load_all();
 	library->CreateBlobWithEncodingFromPinned((LPBYTE)shaderText.data(), (UINT)shaderText.size(), CP_UTF8, &pSource);
 
 
 	shader_include_dxil dxil_include(includer);
 	dxil_include.AddRef();
 	IDxcOperationResult* result;
-
 
 	vargs.push_back(L"-no-warnings");
 	vargs.push_back(L"-O3");
@@ -322,48 +265,55 @@ std::unique_ptr<std::string>  D3D12ShaderCompilerInfo::Compile_Shader(std::strin
 		&dxil_include,          // handler for #include directives
 		&result);
 
-	//Utils::Validate(hr, L"Error: failed to compile shader!");
-
 	// Verify the result
 	result->GetStatus(&hr);
 	if (FAILED(hr))
 	{
 		IDxcBlobEncoding* error;
 		hr = result->GetErrorBuffer(&error);
-		//	Utils::Validate(hr, L"Error: failed to get shader compiler error buffer!");
 
-			// Convert error blob to a string
 		std::string infoLog;
-
-		infoLog.resize(error->GetBufferSize() + 1);
-		memcpy(infoLog.data(), error->GetBufferPointer(), error->GetBufferSize());
-		infoLog[error->GetBufferSize()] = 0;
+		infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
 
 		std::string errorMsg = "Shader Compiler Error:\n";
 		errorMsg += file_name + "\n";
 		errorMsg.append((infoLog));
 		Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
 		MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
-		return nullptr;
+		return {};
 	}
 	ComPtr<IDxcBlob> resultBlob;
+	result->GetResult(&resultBlob);
 
-	hr = result->GetResult(&resultBlob);
+	binary blob_str;
+	blob_str.assign(static_cast<std::byte*>(resultBlob->GetBufferPointer()), static_cast<std::byte*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
 
-	std::string blob_str;
-	blob_str.assign(static_cast<char*>(resultBlob->GetBufferPointer()), static_cast<char*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
+	return std::move(blob_str);
 
-/*	CComPtr<ID3D12ShaderReflection> pProgramReflection;
+}
 
-	CComPtr<IDxcContainerReflection> pReflection;
-	UINT32 shaderIdx;
-	DxcDllHelper.CreateInstance(CLSID_DxcContainerReflection, &pReflection);
-	pReflection->Load(resultBlob.Get());
-	pReflection->FindFirstPartKind(DXIL_FOURCC('D', 'X', 'I', 'L'), &shaderIdx);
-	pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&pProgramReflection));
+const CLSID _CLSID_DxcCompiler = {
+   0x73e22d93,
+   0xe6ce,
+   0x47f3,
+   {0xb5, 0xbf, 0xf0, 0x66, 0x4f, 0x39, 0xc1, 0xb0} };
 
-	D3D::reflection reflection(pProgramReflection);
-	*/
-	return std::make_unique<std::string>(std::move(blob_str));
+// {EF6A8087-B0EA-4D56-9E45-D07E1A8B7806}
+const GUID _CLSID_DxcLibrary = {
+   0x6245d6af,
+   0x66e0,
+   0x48fd,
+   {0x80, 0xb4, 0x4d, 0x27, 0x17, 0x96, 0x74, 0x8c} };
 
+
+ShaderCompiler::ShaderCompiler()
+{
+	auto hr = DxcDllHelper.Initialize();
+	//	Utils::Validate(hr, L"Failed to initialize DxCDllSupport!");
+
+	DxcDllHelper.CreateInstance(_CLSID_DxcCompiler, &compiler);
+	//	Utils::Validate(hr, L"Failed to create DxcCompiler!");
+
+	DxcDllHelper.CreateInstance(_CLSID_DxcLibrary, &library);
+	//	Utils::Validate(hr, L"Failed to create DxcLibrary!");
 }

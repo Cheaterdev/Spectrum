@@ -401,9 +401,11 @@ void GUI::Elements::FlowGraph::canvas::on_key_action(long key)
                 p.first->remove();
         }
 
-    } if (key == VK_HOME)
+    } 
+    
+ //   if (key == VK_HOME)
 
-        FileSystem::get().save_data(L"graph.flg", Serializer::serialize(*g));
+   //     FileSystem::get().save_data(L"graph.flg", Serializer::serialize(*g));
 }
 
 bool GUI::Elements::FlowGraph::canvas::on_wheel(mouse_wheel type, float value, vec2 pos)
@@ -623,7 +625,7 @@ GUI::Elements::FlowGraph::canvas::renderer::renderer(GUI::Renderer* renderer)
         //   state_desc.layout.inputs.emplace_back({ "COLOR", 0, sizeof(vec2), 0, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
         line_state.reset(new Render::PipelineState(state_desc));
         inv_pixel.reset(new Render::ConstBuffer<vec2>());
-        line_vertex.reset(new Render::Buffer<line_vertexes>(Render::HeapType::DEFAULT, 512));
+        line_vertex.reset(new Render::Buffer<line_vertexes>(HAL::HeapType::DEFAULT, 512));
         gs_table = Render::DescriptorHeapManager::get().get_csu()->create_table(1);
         inv_pixel->place(gs_table[0]);
     }

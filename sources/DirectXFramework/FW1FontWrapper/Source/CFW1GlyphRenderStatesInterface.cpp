@@ -6,7 +6,6 @@
 
 import Autogen;
 
-
 namespace FW1FontWrapper
 {
 
@@ -31,8 +30,8 @@ namespace FW1FontWrapper
 // Set render states for glyph drawing
     void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(Render::CommandList::ptr& list, UINT Flags)
     {
-		auto current_state = GetPSO<PSOS::FontRender>();
-        list->get_graphics().set_pipeline(current_state);
+
+        list->get_graphics().set_pipeline(GetPSO<PSOS::FontRender>());
         list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_POINTLIST);	
     }
 

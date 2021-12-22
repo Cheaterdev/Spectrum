@@ -1,8 +1,13 @@
 
 #include "pch_render.h"
 
+#include "helper.h"
+
 #include "FrameGraph.h"
 import Queue;
+
+import HAL.Types;
+using namespace HAL;
 
 
 namespace FrameGraph
@@ -155,7 +160,7 @@ namespace FrameGraph
 
 		if (!list)
 		{
-			Render::CommandListType type = pass->get_type();
+			HAL::CommandListType type = pass->get_type();
 
 			list = frame->start_list(pass->name, type);
 
@@ -475,14 +480,14 @@ namespace FrameGraph
 
 		for (auto pass : enabled_passes)
 		{
-			Render::CommandListType type = pass->get_type();
+			HAL::CommandListType type = pass->get_type();
 
-			bool sync_to_graphics = last_graphics && type == Render::CommandListType::DIRECT;
-			bool sync_to_compute = last_compute && type == Render::CommandListType::COMPUTE;
+			bool sync_to_graphics = last_graphics && type == HAL::CommandListType::DIRECT;
+			bool sync_to_compute = last_compute && type == HAL::CommandListType::COMPUTE;
 
 
 
-			if (type == Render::CommandListType::COMPUTE)
+			if (type == HAL::CommandListType::COMPUTE)
 				pass->prev_pass = last_compute;
 			else
 				pass->prev_pass = last_graphics;
@@ -534,7 +539,7 @@ namespace FrameGraph
 			}
 
 
-			if (type == Render::CommandListType::COMPUTE)
+			if (type == HAL::CommandListType::COMPUTE)
 				last_compute = pass;
 			else
 				last_graphics = pass;
@@ -601,13 +606,13 @@ namespace FrameGraph
 					auto commandList = pass->context.list;
 					if (!commandList) continue;
 
-					Render::CommandListType list_type = commandList->get_type();
+					HAL::CommandListType list_type = commandList->get_type();
 
 					if (pass->wait_pass)
 					{
 						auto waitCommandList = pass->wait_pass->context.list;
 
-						//if(list_type == Render::CommandListType::COMPUTE)
+						//if(list_type == HAL::CommandListType::COMPUTE)
 							waitCommandList->prepare_transitions(commandList.get(), false);
 					}
 					else
@@ -616,7 +621,7 @@ namespace FrameGraph
 					{
 						auto waitCommandList = pass->prev_pass->context.list;
 
-					//	if (list_type == Render::CommandListType::DIRECT)
+					//	if (list_type == HAL::CommandListType::DIRECT)
 						if(waitCommandList) waitCommandList->prepare_transitions(commandList.get(), true);
 					}
 
@@ -774,7 +779,7 @@ namespace FrameGraph
 
 					UINT transitions = 0;
 
-					enum_array<Render::CommandListType, enum_array<Render::CommandListType, UINT>> call_ids = {};
+					enum_array<HAL::CommandListType, enum_array<HAL::CommandListType, UINT>> call_ids = {};
 
 
 					auto flush = [&]()
@@ -817,7 +822,7 @@ namespace FrameGraph
 					for (auto& pass : enabled_passes)
 					{
 
-						Render::CommandListType list_type = pass->get_type();
+						HAL::CommandListType list_type = pass->get_type();
 
 						if (pass->wait_pass)
 						{
@@ -833,7 +838,7 @@ namespace FrameGraph
 
 						}
 
-						if (list_type == Render::CommandListType::DIRECT)
+						if (list_type == HAL::CommandListType::DIRECT)
 							graphics.emplace_back(pass);
 						else
 							compute.emplace_back(pass);
@@ -857,7 +862,7 @@ namespace FrameGraph
 				info->view = nullptr;
 			}
 
-			if (info->heap_type != Render::HeapType::DEFAULT)
+			if (info->heap_type != HAL::HeapType::DEFAULT)
 			{
 				info->alloc_ptr.Free();
 			}
@@ -935,16 +940,16 @@ namespace FrameGraph
 				continue;
 
 
-			info->heap_type = Render::HeapType::DEFAULT;
+			info->heap_type = HAL::HeapType::DEFAULT;
 
 			if (check(info->flags & ResourceFlags::GenCPU))
 			{
-				info->heap_type = Render::HeapType::UPLOAD;
+				info->heap_type = HAL::HeapType::UPLOAD;
 			}
 
 			if (check(info->flags & ResourceFlags::ReadCPU))
 			{
-				info->heap_type = Render::HeapType::READBACK;
+				info->heap_type = HAL::HeapType::READBACK;
 			}
 
 			if (info->type == ResourceType::Texture)
@@ -1004,13 +1009,13 @@ namespace FrameGraph
 
 				if (check(info->flags & ResourceFlags::Counted))
 				{
-					//info->heap_type = Render::HeapType::READBACK;
+					//info->heap_type = HAL::HeapType::READBACK;
 				}
 
 				info->d3ddesc = CD3DX12_RESOURCE_DESC::Buffer(desc.size, flags);
 			}
 			/*
-					if (info->heap_type == Render::HeapType::UPLOAD)
+					if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
 						auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
 						auto alloc_ptr = current_alloc->alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
@@ -1019,7 +1024,7 @@ namespace FrameGraph
 						info->alloc_ptr = alloc_ptr;
 					}*/
 			if (check(info->flags & ResourceFlags::Static)) continue;
-			if (info->heap_type != Render::HeapType::DEFAULT)
+			if (info->heap_type != HAL::HeapType::DEFAULT)
 			{
 				//	auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
 				//	auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
@@ -1036,7 +1041,7 @@ namespace FrameGraph
 				events[pair.second.valid_to->call_id].free.insert(info);
 			}
 
-			//	if (info->heap_type != Render::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
+			//	if (info->heap_type != HAL::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
 
 
 		}
@@ -1106,11 +1111,11 @@ namespace FrameGraph
 				}
 				else
 				{
-					if (info->heap_type == Render::HeapType::UPLOAD)
+					if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
 						info->resource = std::make_shared<Render::Resource>(info->d3ddesc, info->heap_type);
 					}
-					else if (info->heap_type == Render::HeapType::READBACK)
+					else if (info->heap_type == HAL::HeapType::READBACK)
 					{
 						info->resource = std::make_shared<Render::Resource>(info->d3ddesc, info->heap_type);
 					}

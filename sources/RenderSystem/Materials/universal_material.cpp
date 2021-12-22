@@ -5,10 +5,33 @@
 
 static IdGenerator ids;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::universal_material);
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::Pipeline);
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelinePasses);
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::PipelineSimple);
+import Buffer;
+
+import Descriptors;
+import Concepts;
+import Layout;
+import SIG;
+import crc32;
+
+import Utils;
+import Data;
+import stl.core;
+import stl.memory;
+
+import Serializer;
+
+import serialization;
+import Log;
+import Utils;
+import crc32;
+
+import Data;
+import windows;
+REGISTER_TYPE(materials::universal_material);
+REGISTER_TYPE(materials::PipelinePasses);
+REGISTER_TYPE(materials::PipelineSimple);
+
+
 DynamicData generate_data(std::vector<Uniform::ptr>& un)
 {
 	DynamicData data;
@@ -278,7 +301,7 @@ void materials::universal_material::generate_material()
 
 MaterialGraph::ptr materials::universal_material::get_graph()
 {
-	return graph.get();
+	return  graph.get();
 }
 
 
@@ -286,8 +309,8 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 {
 
 	
-	include_file = register_asset(EngineAssets::material_header.get_asset());
-	include_file_raytacing = register_asset(EngineAssets::material_raytracing_header.get_asset());
+	include_file = EngineAssets::material_header.get_asset();
+	include_file_raytacing = EngineAssets::material_raytracing_header.get_asset();
 	this->graph = BinaryData<MaterialGraph>(graph);
 	graph->add_listener(this, false);
 	need_regenerate_material = true;
@@ -297,7 +320,7 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 
 void materials::universal_material::update_rtx()
 {
-	if (!Device::get().is_rtx_supported()) return;
+	if (!Render::Device::get().is_rtx_supported()) return;
 	RTX::get().rtx.update_material(this);
 
 
@@ -370,9 +393,6 @@ void materials::universal_material::on_register(::FlowGraph::window*)
 	on_graph_changed();
 }
 
-template void materials::universal_material::serialize(serialization_oarchive& arch, const unsigned int version);
-template void materials::universal_material::serialize(serialization_iarchive& arch, const unsigned int version);
-
  D3D_PRIMITIVE_TOPOLOGY materials::render_pass::get_topology()
 {
 	return  ds_shader ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -384,35 +404,4 @@ template void materials::universal_material::serialize(serialization_iarchive& a
 }
 
 
-template<class Archive>
-void materials::universal_material::serialize(Archive& ar, const unsigned int file_version)
-{
-	ar& NVP(boost::serialization::base_object<MaterialAsset>(*this));
-	ar& NVP(textures);
-////////////////////////////////////////////////////////////////////////////	ar& NVP(passes);
-	ar& NVP(graph);
-	ar& NVP(include_file);
-	ar& NVP(include_file_raytacing);
-
-	ar& NVP(ps_uniforms);
-	ar& NVP(tess_uniforms);
-	ar& NVP(pipeline);
-
-
-	ar& NVP(raytracing_lib);
-
-
-	if constexpr (Archive::is_loading::value)
-	{
-		auto new_pip = PipelineManager::get().get_pipeline(pipeline);
-
-		pipeline = nullptr;
-		pipeline = new_pip;
-	}
-
-
-	if constexpr(Archive::is_loading::value)
-	{
-		compile();
-	}
-}
+//CEREAL_REGISTER_DYNAMIC_INIT(myclasses)

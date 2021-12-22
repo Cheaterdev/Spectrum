@@ -5,6 +5,7 @@
 #include <numeric>
 #include <vector>
 #include <array>
+#include <bitset>
 
 
 #include <string>

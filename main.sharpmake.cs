@@ -71,7 +71,7 @@ namespace Spectrum
         [Configure]
         public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
-            conf.IsBlobbed = true;
+         //   conf.IsBlobbed = true;
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 
@@ -104,7 +104,8 @@ namespace Spectrum
        
 			conf.Defines.Add("WIN32_LEAN_AND_MEAN");
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
-            
+             conf.Defines.Add("CEREAL_THREAD_SAFE");
+           
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106")); //module reference issues
 
             if (target.Mode == Mode.Dev)
@@ -318,6 +319,7 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
+         conf.IsBlobbed = true;
            // conf.PrecompHeader = "pch.h";
           //  conf.PrecompSource = "pch.cpp";
 
@@ -364,6 +366,7 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
+     conf.IsBlobbed = true;
             //conf.PrecompHeader = "pch.h";
             //conf.PrecompSource = "pch.cpp";
 

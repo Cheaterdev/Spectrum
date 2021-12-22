@@ -1,14 +1,8 @@
 #include "pch_render.h"
 #include "BinaryAsset.h"
 
-BOOST_CLASS_EXPORT(BinaryAsset);
-BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<BinaryAsset>);
+REGISTER_TYPE(BinaryAsset);
 
-
-template void AssetReference<BinaryAsset>::serialize(serialization_oarchive& arch, const unsigned int version);
-template void AssetReference<BinaryAsset>::serialize(serialization_iarchive& arch, const unsigned int version);
-
-//////////////////////////////////////////////////////////////////////////
 Asset_Type BinaryAsset::get_type()
 {
     return Asset_Type::BINARY;
@@ -72,7 +66,7 @@ BinaryAsset::BinaryAsset()
 
 void BinaryAsset::update_preview(Render::Texture::ptr preview)
 {
-    /* Render::CommandList::ptr list(new Render::CommandList(Render::CommandListType::DIRECT));
+    /* Render::CommandList::ptr list(new Render::CommandList(HAL::CommandListType::DIRECT));
      list->begin();
      TextureAssetRenderer::get().render(this, preview, list);
      list->end();

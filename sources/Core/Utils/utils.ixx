@@ -68,12 +68,12 @@ export
 	template<class T> using s_ptr = std::shared_ptr<T>;
 	template<class T> using w_ptr = std::weak_ptr<T>;
 
+	using binary = std::vector<std::byte>;
 
 
-
-	template<typename T> concept EnumType =
-		requires (T t) {
-			{T::__GENERATE_OPS__ };
+	template<class T> concept EnumType =
+		requires () {
+		T::__GENERATE_OPS__;
 	};
 
 	template<EnumType Enum>

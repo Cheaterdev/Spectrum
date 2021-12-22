@@ -1,16 +1,10 @@
 #include "pch_render.h"
 #include "Assets/AssetRenderer.h"
+import FlowGraph;
 
-BOOST_CLASS_EXPORT_IMPLEMENT(AssetReference<MaterialAsset>);
-
-
-BOOST_CLASS_EXPORT(MaterialAsset);
-
-BOOST_CLASS_EXPORT_IMPLEMENT(materials::material);
+REGISTER_TYPE(MaterialAsset);
 
 
-template void AssetReference<MaterialAsset>::serialize(serialization_oarchive& arch, const unsigned int version);
-template void AssetReference<MaterialAsset>::serialize(serialization_iarchive& arch, const unsigned int version);
 
 //////////////////////////////////////////////////////////////////////////
 Asset_Type MaterialAsset::get_type()

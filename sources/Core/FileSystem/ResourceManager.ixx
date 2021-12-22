@@ -1,8 +1,3 @@
-module;
-
-//#include "Serialization/Serializer.h"
-#include "serialization/serialization_archives.h"
-
 export module ResourceManager;
 import Serializer;
 import serialization;

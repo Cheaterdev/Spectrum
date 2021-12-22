@@ -1,6 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
-#include "Serialization/serialization_archives.h"
 export module Sphere;
 
 export import Constants;
@@ -58,7 +55,7 @@ public:
 private:
 	SERIALIZE()
 	{
-		ar& SAVE_PARENT(Primitive);
+		SAVE_PARENT(Primitive);
 		ar& NVP(pos)& NVP(radius);
 	}
 };
@@ -67,6 +64,7 @@ private:
 
 module: private;
 
+REGISTER_TYPE(Sphere)
 
 Sphere::Sphere(vec3 pos, float radius)
 {

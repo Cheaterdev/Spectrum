@@ -1,16 +1,34 @@
 module;
-
-#include "serialization_archives.h"
 #include "serialization_defines.h"
+
 export module Serializer;
 
+import serialization;
+using serialization_exception = cereal::Exception;
 import Log;
 import Utils;
 import crc32;
-import boost.serialization;
+
 import Data;
 import windows;
 //import boost.archives;
+
+template<class Archive>
+class SerializationArchive: public Archive
+{
+public:
+
+	void* user_ptr = nullptr;
+	template <class ... Args>
+	SerializationArchive(Args && ... args) :
+		Archive(std::forward<Args>(args)...)
+	{ }
+};
+
+using iarchive = serialization_iarchive;
+using oarchive = serialization_oarchive;
+
+
 export
 {
 
@@ -23,7 +41,7 @@ public:
 	{
 		std::string data;
 		std::shared_ptr<std::istringstream> stream;
-		std::shared_ptr<serialization_iarchive> archive;
+		std::shared_ptr<iarchive> archive;
 
 	public:
 		serialization_istream(std::string data, unsigned int offset)
@@ -31,17 +49,17 @@ public:
 			this->data = data.substr(offset);
 			stream.reset(new std::istringstream(this->data, std::ios::binary | std::ios::in));
 			//stream->seekg(offset);
-			archive.reset(new serialization_iarchive(*stream));
+			archive.reset(new iarchive(*stream));
 		}
 
 		serialization_istream(std::istream & stream, unsigned int offset)
 		{
 			stream.seekg(offset, std::ios::beg);
-			archive.reset(new serialization_iarchive(stream));
+			archive.reset(new iarchive(stream));
 		}
 		serialization_istream(std::istream & stream)
 		{
-			archive.reset(new serialization_iarchive(stream));
+			archive.reset(new iarchive(stream));
 		}
 		template<class T>
 		serialization_istream& operator>>(T & data)
@@ -55,7 +73,7 @@ public:
 	class serialization_ostream
 	{
 		std::ostringstream stream;
-		serialization_oarchive archive;
+		oarchive archive;
 
 	public:
 		serialization_ostream() : stream(std::ios::binary | std::ios::out), archive(stream) {}
@@ -94,16 +112,16 @@ public:
 	static std::string serialize(const T& object, bool compress = false)
 	{
 		std::ostringstream stream(std::ios::binary | std::ios::out);
-		serialization_oarchive oa(stream);
+		oarchive oa(stream);
 
 		try
 		{
 			oa << object;
 		}
 
-		catch (std::exception e)
+		catch (const serialization_exception& e)
 		{
-			Log::get().crash_error(E_FAIL, e.what());
+			Log::get().crash_error("Serialization", e.what());
 			return "";
 		}
 
@@ -124,16 +142,16 @@ public:
 	static std::string serialize_simple(const T& object)
 	{
 		std::ostringstream stream(std::ios::binary | std::ios::out);
-		serialization_oarchive oa(stream);
+		oarchive oa(stream);
 
 		try
 		{
 			oa << object;
 		}
 
-		catch (std::exception e)
+		catch (const serialization_exception& e)
 		{
-			Log::get().crash_error(E_FAIL, e.what());
+			Log::get().crash_error("Serialization", e.what());
 			return "";
 		}
 
@@ -153,9 +171,9 @@ public:
 			return obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (const serialization_exception& e)
 		{
-			Log::get().crash_error(E_FAIL, e.what());
+			Log::get().crash_error("Serialization", e.what());
 		}
 
 		return std::shared_ptr<T>();
@@ -171,9 +189,9 @@ public:
 			return obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (const serialization_exception& e)
 		{
-			Log::get().crash_error(E_FAIL, e.what());
+			Log::get().crash_error("Serialization", e.what());
 		}
 
 		return std::shared_ptr<T>();
@@ -191,9 +209,9 @@ public:
 			get_stream(data) >> obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (const serialization_exception& e)
 		{
-			Log::get().crash_error(E_FAIL, e.what());
+			Log::get().crash_error("Serialization", e.what());
 		}
 	}
 
@@ -207,9 +225,9 @@ public:
 			get_stream(data) >> obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (const serialization_exception& e)
 		{
-			Log::get().crash_error(E_FAIL, e.what());
+			Log::get().crash_error("Serialization", e.what());
 		}
 	}
 	template<class T>
@@ -220,14 +238,14 @@ public:
 
 		try
 		{
-			T* obj = nullptr;
+			std::shared_ptr<T> obj;
 			get_stream(data) >> obj;
-			return std::shared_ptr<T>(obj);
+			return obj;
 		}
 
-		catch (boost::archive::archive_exception e)
+		catch (const serialization_exception& e)
 		{
-			Log::get().crash_error(E_FAIL, e.what());
+			Log::get().crash_error("Serialization", e.what());
 		}
 
 		return std::shared_ptr<T>();

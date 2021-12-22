@@ -6,6 +6,8 @@ import ppl;
 import FileSystem;
 using namespace concurrency;
 
+
+REGISTER_TYPE(Asset);
 AssetManager::AssetManager()
 {
     has_worker = false;
@@ -221,17 +223,7 @@ void AssetReferenceBase::init()
     if (owner)
         owner->register_reference(this);
 }
-/*
-AssetReferenceBase::AssetReferenceBase(AssetReferenceBase&& other) : owner(other._owner)
-{
-    base_asset = other.base_asset;
 
-    if (base_asset)
-        base_asset->add_reference(this);
-
-    if (owner)
-        owner->register_reference(this);
-}*/
 AssetReferenceBase::AssetReferenceBase(const AssetReferenceBase& other) : owner(other.owner)
 {
     base_asset = other.base_asset;
@@ -243,13 +235,8 @@ AssetReferenceBase::AssetReferenceBase(const AssetReferenceBase& other) : owner(
         owner->register_reference(this);
 }
 
-AssetReferenceBase::AssetReferenceBase(std::shared_ptr<Asset> asset , AssetHolder* _owner): owner(_owner)
+AssetReferenceBase::AssetReferenceBase(AssetHolder* _owner): owner(_owner)
 {
-    base_asset = asset;
-
-    if (owner&&base_asset)
-        base_asset->add_reference(this);
-
     if (owner)
         owner->register_reference(this);
 }
@@ -261,16 +248,12 @@ AssetReferenceBase::~AssetReferenceBase()
 
     if (owner)
         owner->unregister_reference(this);
-
-    // auto name = base_asset->name;
-//   Log::get() << 1 << " " << base_asset.get() << " " << base_asset.use_count() << " " << name << Log::endl;
-    base_asset = nullptr;
-//   Log::get() << 2 << " " << name << Log::endl;
 }
 
  void Asset::add_reference(AssetReferenceBase * ref)
 {
 	m.lock();
+	assert(ref->owner==this);
 	references.insert(ref);
 	m.unlock();
 }

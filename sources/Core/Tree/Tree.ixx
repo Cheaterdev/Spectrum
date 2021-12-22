@@ -2,7 +2,7 @@ export module Tree;
 export import Singleton;
 export import Events;
 export import stl.core;
-
+export import Data;
 export class base_tree
 {
 
@@ -59,7 +59,7 @@ struct tree_selector<P, T>
 };
 
 template<shared_ptr_type P, class T>
-struct tree_selector<P, T> : public std::enable_shared_from_this<T>
+struct tree_selector<P, T> : public SharedObject<T>
 {
 };
 

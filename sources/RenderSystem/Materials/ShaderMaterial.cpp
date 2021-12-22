@@ -2,31 +2,6 @@
 #include "ShaderMaterial.h"
 #include "Materials/universal_material.h"
 
-BOOST_CLASS_EXPORT_IMPLEMENT(ShaderMaterial);
-
-template<class Archive>
-void ShaderMaterial::load(Archive& ar, const unsigned int)
-{
-    ar& NVP(boost::serialization::base_object<material>(*this));
-    ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
-    //  ar& NVP(file);
-    //ar& NVP(shader);
-}
-
-template<class Archive>
-void ShaderMaterial::save(Archive& ar, const unsigned int) const
-{
-    ar& NVP(boost::serialization::base_object<material>(*this));
-    ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
-    //  ar& NVP(file);
-   // ar& NVP(shader);
-}
-template<class Archive>
-void ShaderMaterial::serialize(Archive& ar, const unsigned int file_version)
-{
-    boost::serialization::split_member(ar, *this, file_version);
-}
-
 ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file(this)
 {
 
@@ -57,6 +32,3 @@ void ShaderMaterial::set(MESH_TYPE type, MeshRenderContext::ptr& context)
 {
     //context->pipeline.pixel = shader;
 }
-
-template void ShaderMaterial::serialize(serialization_oarchive& arch, const unsigned int version);
-template void ShaderMaterial::serialize(serialization_iarchive& arch, const unsigned int version);

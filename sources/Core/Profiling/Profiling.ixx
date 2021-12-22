@@ -1,5 +1,7 @@
 export module Profiling;
 
+export import "macros.h";
+
 import Log;
 import Singleton;
 

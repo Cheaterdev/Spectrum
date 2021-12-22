@@ -1,5 +1,5 @@
 #pragma once
-#include "Assets/Asset.h"
+#include "Assets/TextureAsset.h"
 #include "Context/Context.h"
 
 class MaterialAsset;
@@ -39,8 +39,8 @@ namespace materials
             size_t pipeline_id = 0;
         public:
             using ptr = s_ptr<material>;
-            virtual void set(MESH_TYPE type,MeshRenderContext::ptr&) = 0;
-			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline) = 0;
+            virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) {};
+            virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc& pipeline) {};
             virtual ~material() = default;
             virtual void compile() {};
 
@@ -57,7 +57,7 @@ namespace materials
 
 }
 
-BOOST_CLASS_EXPORT_KEY(materials::material);
+// REGISTER_TYPE(materials::material);
 class MaterialAsset : public Asset, public materials::material
 {
         LEAK_TEST(MaterialAsset)
@@ -77,11 +77,10 @@ class MaterialAsset : public Asset, public materials::material
 
         SERIALIZE()
         {
-            ar& NVP(boost::serialization::base_object<Asset>(*this));
-            ar& NVP(boost::serialization::base_object<materials::material>(*this));
+            SAVE_PARENT(Asset);
+            SAVE_PARENT(materials::material);
         }
 
 };
 
-
-BOOST_CLASS_EXPORT_KEY(AssetReference<MaterialAsset>);
+//CEREAL_REGISTER_TYPE2(MaterialAsset);

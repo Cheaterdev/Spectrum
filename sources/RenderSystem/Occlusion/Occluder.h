@@ -119,4 +119,4 @@ class occluder
 };
 
 
-BOOST_CLASS_EXPORT_KEY(occluder);
+// REGISTER_TYPE(occluder);

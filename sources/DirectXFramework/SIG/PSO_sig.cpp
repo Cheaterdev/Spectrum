@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "DX12/dx12_types.h"
+#include "HAL/dx12_types.h"
 import PipelineState;
 
 import Enums;
@@ -7,7 +7,7 @@ import PSO;
 import Data;
 import Profiling;
 import serialization;
-//import Autogen;
+import Autogen;
 void init_pso(enum_array<PSO, PSOBase::ptr>&);
 Render::ComputePipelineState::ptr SimpleComputePSO::create()
 {

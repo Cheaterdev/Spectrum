@@ -7,7 +7,7 @@ export module TextureData;
 import FileSystem;
 import serialization;
 import Utils;
-
+import Log;
 export
 {
 
@@ -103,19 +103,30 @@ export
 			*outNumRows = numRows;
 	}
 
-	struct texture_data_header
+	class texture_data_header
 	{
-		uint32_t width;
-		uint32_t height;
-		uint32_t depth;
+	public:
+		uint32_t width=100500;
+		uint32_t height = 100500;
+		uint32_t depth = 100500;
 
-		uint32_t array_size;
-		uint32_t mip_maps;
+		uint32_t array_size = 100500;
+		uint32_t mip_maps = 100500;
 		DXGI_FORMAT format;
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+
+		virtual~texture_data_header() = default;
+
+		private:
+		SERIALIZE()
 		{
-			ar& NVP(width)& NVP(height)& NVP(depth)& NVP(array_size)& NVP(mip_maps)& NVP(format);
+
+			Log::get() << "texture_data_header" << Log::endl;
+			ar& NVP(width);
+			ar& NVP(height);
+			ar& NVP(depth);
+			ar& NVP(array_size);
+			ar& NVP(mip_maps);
+			ar& NVP(format);
 		}
 	};
 
@@ -146,13 +157,24 @@ export
 		UINT slice_stride;
 
 
-		friend class boost::serialization::access;
-		template<class Archive>
-		void save(Archive& ar, const unsigned int) const
+		SERIALIZE()
 		{
-			UINT size = static_cast<UINT>(data.size());
-			ar& NVP(size);
-			ar.save_binary(data.data(), size);
+
+			ar& NVP(data);
+			/*if constexpr (Archive::is_loading::value)
+			{
+				UINT size;
+				ar& NVP(size);
+				data.resize(size);
+				ar.load_binary(data.data(), size);			
+			}
+			else
+			{
+				UINT size = static_cast<UINT>(data.size());
+				ar& NVP(size);
+				ar.save_binary(data.data(), size);
+			}
+			*/
 			ar& NVP(width);
 			ar& NVP(height);
 			ar& NVP(depth);
@@ -160,21 +182,7 @@ export
 			ar& NVP(slice_stride);
 			ar& NVP(num_rows);
 		}
-		template<class Archive>
-		void load(Archive& ar, const unsigned int)
-		{
-			UINT size;
-			ar& NVP(size);
-			data.resize(size);
-			ar.load_binary(data.data(), size);
-			ar& NVP(width);
-			ar& NVP(height);
-			ar& NVP(depth);
-			ar& NVP(width_stride);
-			ar& NVP(slice_stride);
-			ar& NVP(num_rows);
-		}
-		BOOST_SERIALIZATION_SPLIT_MEMBER()
+		
 	};
 
 	struct mip
@@ -202,8 +210,7 @@ export
 			}
 		}
 
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
 			ar& NVP(mips);
 		}
@@ -227,11 +234,11 @@ export
 		};
 
 
-		template<class Archive>
-		void serialize(Archive& ar, const unsigned int)
+		SERIALIZE()
 		{
-			ar& NVP(boost::serialization::base_object<texture_data_header>(*this));
+			SAVE_PARENT(texture_data_header);
 			ar& NVP(array);
+			Log::get() << "texture_data" << Log::endl;
 		}
 		texture_data() {}
 		texture_data(uint32_t array_count, uint32_t num_mips, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format)
@@ -277,6 +284,8 @@ export
 }
 
 module:private;
+
+REGISTER_TYPE(texture_data);
 
 texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
 {
@@ -445,3 +454,4 @@ texture_data::ptr texture_data::load_texture(std::shared_ptr<file> file, int fla
 
 	return nullptr;
 }
+

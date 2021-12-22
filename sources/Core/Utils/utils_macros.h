@@ -9,7 +9,8 @@
 
 #define GEN_DEF_COMP(x) \
 	bool operator==(const x& r) const = default;\
-	std::strong_ordering  operator<=>(const  x& r) const = default;
+	auto operator<=>(const x& r) const = default;
+
 #define GENERATE_OPS __GENERATE_OPS__
 
 
@@ -23,20 +24,6 @@
 #define LEAK_TEST(x) ;
 #endif
 
-
-
-#ifdef PROFILING
-#define PROFILE(x) auto SPECTRUM_UNIQUE_NAME = Profiler::get().start(x);
-#else
-#define PROFILE(x) ;
-#endif
-
-#ifdef PROFILING
-#define PROFILE_GPU(x) auto SPECTRUM_UNIQUE_NAME = Render::Eventer::thread_current?Render::Eventer::thread_current->start(x):Timer(nullptr, nullptr);
-#else
-#define PROFILE_GPU(x) ;
-#endif
-
 #ifdef DEV
 #define THREAD_SCOPE(x) volatile ThreadScope SPECTRUM_UNIQUE_NAME(ThreadType::x);
 #define CHECK_THREAD(x) {ThreadScope::check_type(ThreadType::x);};
@@ -44,3 +31,7 @@
 #define THREAD_SCOPE(x) ;
 #define CHECK_THREAD(x) ;
 #endif
+
+
+
+#define DISABLE_OPTIMIZATION __pragma(optimize( "", off ))

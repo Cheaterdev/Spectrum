@@ -1,6 +1,8 @@
 export module crc32;
 
 import crc32c;
+import stl.core;
+import Utils;
 
 export
 {
@@ -66,11 +68,15 @@ constexpr unsigned int crc32_helper(const char* v, std::size_t c,
 		return crc32_helper(v, c, 0xFFFFFFFF);
 	}
 
+	unsigned int crc32(const binary& s) 
+	{
+		return crc32c::Crc32c((const uint8_t*)s.data(), s.size());
+	}
+	
 	unsigned int crc32(std::string_view s) {
 		return crc32c::Crc32c(s);
 	}
-
-
+	
 	size_t HashIterate(size_t Next, size_t CurrentHash = 2166136261U)
 	{
 		return 16777619U * CurrentHash ^ Next;

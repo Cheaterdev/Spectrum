@@ -41,7 +41,7 @@ public:
 private:
 	SERIALIZE()
 	{
-		ar& NVP(boost::serialization::base_object<Asset>(*this));
+		SAVE_PARENT(Asset);
 
 		if (texture == Render::Texture::null)
 			texture = nullptr;
@@ -53,4 +53,3 @@ private:
 	}
 
 };
-BOOST_CLASS_EXPORT_KEY(AssetReference<TextureAsset>);

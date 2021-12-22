@@ -16,5 +16,3 @@ private:
 };
 
 
-
-BOOST_CLASS_EXPORT_KEY(BRDF);

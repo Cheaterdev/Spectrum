@@ -1,5 +1,4 @@
 #pragma once
-#include "serialization/serialization_archives.h"
 import EditObject;
 import Utils;
 import Serializer;
@@ -63,11 +62,6 @@ class AssetReferenceBase
 {
 		friend class AssetHolder;
 		friend class Asset;
-		SERIALIZE()
-		{
-		}
-
-		//     virtual bool is_same_internal(const void*) const = 0;
 	protected:
 		std::shared_ptr<Asset> base_asset;
 		AssetHolder*  owner;
@@ -77,15 +71,7 @@ class AssetReferenceBase
 	public:
 		void destroy();
 		const  AssetHolder* get_owner() const;
-		/*    template<class T2>
-			bool is_same(const std::shared_ptr<T2>& _asset) const
-			{
-				return is_same_internal(&_asset);
-			}
-			*/
-		//  virtual void own(s_ptr<AssetReferenceBase>) = 0;
 		virtual Guid get_id() = 0;
-
 
 		const bool operator!=(const AssetReferenceBase& r)const 
 		{
@@ -96,11 +82,10 @@ class AssetReferenceBase
 		{
 			return base_asset == r.base_asset;
 		}
-		//   AssetReferenceBase(AssetReferenceBase&& other);
 		AssetReferenceBase(const AssetReferenceBase& other);
 
-		AssetReferenceBase(std::shared_ptr<Asset> asset = nullptr, AssetHolder* owner = nullptr);
-		virtual ~AssetReferenceBase();;
+		AssetReferenceBase(AssetHolder* owner = nullptr);
+		virtual ~AssetReferenceBase();
 };
 
 
@@ -114,21 +99,10 @@ class AssetReference : public AssetReferenceBase
 		LEAK_TEST(AssetReference)
 
 	public:
-		AssetReference(AssetHolder* owner) : AssetReferenceBase(nullptr, owner)
+		AssetReference(AssetHolder* owner) : AssetReferenceBase( owner)
 		{
 		}
 
-		AssetReference(AssetHolder* owner, const std::shared_ptr<T>& _asset) : AssetReferenceBase(_asset, owner), asset(_asset)
-		{
-		}
-/*		AssetReference() : AssetReferenceBase(nullptr, nullptr)
-		{
-
-		}*/
-		/*  AssetReference(AssetReference<T>&& other) : AssetReferenceBase(std::forward<AssetReferenceBase>(other))
-		  {
-			  asset = other.asset;
-		  }*/
 		AssetReference(const AssetReference<T>& other);
 		virtual ~AssetReference();
 		T* operator->()
@@ -150,9 +124,19 @@ class AssetReference : public AssetReferenceBase
 			destroy();
 			base_asset = r.base_asset;
 			asset = r.asset;
-			owner = r.owner;
 			init();
 		}
+
+		template<class T>
+		void operator=(std::shared_ptr<T> asset)
+		{
+			destroy();
+			base_asset = asset;
+			this->asset = asset;
+			init();
+		}
+
+
 		/*void operator=(AssetReference<T>&& r)
 		{
 			base_asset = r.base_asset;
@@ -184,69 +168,33 @@ class AssetReference : public AssetReferenceBase
 
 			return Guid();
 		}
+		AssetReference() = default;
 
 	private:
-		/*
-		virtual void own(s_ptr<AssetReferenceBase> r)
-		{
-			AssetReference<T>* ptr = static_cast<AssetReference<T>*>(r.get());
-			asset = ptr->asset;
-		};
-
-		*/
-
+	
 		SERIALIZE();
 
+		// We could define load_and_construct internally:
+ template <class Archive>
+ static void load_and_construct( Archive & ar, cereal::construct<AssetReference<T>> & construct )
+ {
+	std::shared_ptr<AssetHolder> owner;
+	 ar& NVP(owner);
+	construct(owner.get());
+ }
+ 
 };
-namespace boost
+
+template <class T>
+class AssetReferenceVector : public std::vector<T>
 {
-	namespace serialization
-	{
-		template<class Archive, class T>
-		inline void save_construct_data(
-			Archive& ar, const AssetReference<T>* t, const unsigned int file_version
-		)
-		{
-			// save data required to construct instance
-			const AssetHolder* owner = t->get_owner();
-			ar& NVP(owner);
-		}
+	AssetHolder* holder;
+public:
+	AssetReferenceVector(AssetHolder* holder) :holder(holder) {};
 
-		template<class Archive, class T>
-		inline void load_construct_data(
-			Archive& ar, AssetReference<T>* t, const unsigned int file_version
-		)
-		{
-			// retrieve data from archive required to construct new instance
-			AssetHolder* owner;
-			ar& NVP(owner);
-			// invoke inplace constructor to initialize instance of my_class
-			::new(t)AssetReference<T>(owner);
-		}
-	}
-}
-/*
-//////////////////////////////////////////////////////////////////////////
-////////////////////////// COMPILE TIME HACK /////////////////////////////
-/////////////////// THIS MUST NEVER BEING INVOKED! ///////////////////////
-//////////////////////////////////////////////////////////////////////////
 
-namespace boost {
-	namespace serialization {
-
-		template<class Archive,class  T>
-		inline void load_construct_data(
-			Archive & ar, AssetReference<T> * t, const unsigned int file_version
-			){
-		std:: shared_ptr<T> p;
-			::new(t)AssetReference<T>(p);
-		}
-	}
-} // namespace ...
-//////////////////////////////////////////////////////////////////////////
-*/
-
-class AssetHolder
+};
+class AssetHolder : public SharedObject<AssetHolder>
 {
 
 		friend class Asset;
@@ -261,11 +209,14 @@ class AssetHolder
 	public:
 
 		template<class T>
-		AssetReference<T> register_asset(const s_ptr<T>& link)
+		AssetReference<T> register_asset(s_ptr<T> link)
 		{
-			return AssetReference<T>(this, link);
+			auto r = AssetReference<T>(this);
+			r = link;
+			return r;
 		}
-
+		
+//		virtual std::shared_ptr<Asset> get_asset_holder() = 0;
 	protected:
 		virtual void on_asset_change(std::shared_ptr<Asset> asset);
 	public:
@@ -280,7 +231,7 @@ class AssetHolder
 
 };
 class AssetStorage;
-class Asset : public std::enable_shared_from_this<Asset>, public AssetHolder, public EditObject, public Events::prop_handler
+class Asset : public SharedObject<Asset>, public AssetHolder, public EditObject, public virtual Events::prop_handler
 {
 		friend class AssetManager;
 		friend class AssetStorage;
@@ -308,7 +259,7 @@ class Asset : public std::enable_shared_from_this<Asset>, public AssetHolder, pu
 
 
 public:
-
+	using SharedObject<Asset>::get_ptr;
 		Asset();
 
 		virtual void try_register();
@@ -323,21 +274,17 @@ public:
 		//  void set_name(std::string name);
 
 		virtual void update_preview(Render::Texture::ptr);
-
+	
 
 		using ptr = s_ptr<Asset>;
 		using ref = AssetReference<Asset>;
 
-		virtual Asset_Type get_type() = 0;
-		/* {
+		virtual Asset_Type get_type()
+		 {
 			 return Asset_Type::UNKNOWN;
-		 }*/
+		 }
 
-		template <class M = Asset>
-		std::shared_ptr<M> get_ptr()
-		{
-			return std::dynamic_pointer_cast<M>(shared_from_this());
-		}
+
 		virtual ~Asset();;
 
 		virtual void mark_changed() override;
@@ -354,21 +301,22 @@ public:
 		virtual void save(std::ostream&& s)
 		{
 		}
+
 	private:
 		SERIALIZE()
 		{
-			ar& NVP(boost::serialization::base_object<AssetHolder>(*this));
+			 SAVE_PARENT(AssetHolder);
 			ar& NVP(name);
 			ar& NVP(additional_files);
 		}
 };
-BOOST_SERIALIZATION_ASSUME_ABSTRACT(Asset);
+//BOOST_SERIALIZATION_ASSUME_ABSTRACT(Asset);
 
 
 class folder_item;
 
 
-class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public EditObject
+class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 {
 		LEAK_TEST(AssetStorage)
 
@@ -472,11 +420,7 @@ class AssetStorage : public std::enable_shared_from_this<AssetStorage>, public E
 		bool need_update_preview();
 
 		void mark_contents_changed();
-		template <class M = AssetStorage>
-		std::shared_ptr<M> get_ptr()
-		{
-			return std::dynamic_pointer_cast<M>(shared_from_this());
-		}
+
 		bool is_loaded();
 
 		Asset::ptr get_asset();
@@ -748,10 +692,14 @@ template<class T>
 template<class Archive>
 void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 {
-	ar& NVP(boost::serialization::base_object<AssetReferenceBase>(*this));
+	// save data required to construct instance
+	auto owner_ptr = owner?owner->get_ptr():nullptr;
+	ar& NVP(owner_ptr);
 
+	//SAVE_PARENT(AssetReferenceBase);
 	if (Archive::is_loading::value)
 	{
+		owner = owner_ptr.get();
 		Guid guid;
 		ar& NVP(guid);
 

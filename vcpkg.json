@@ -8,13 +8,11 @@
 		"liblzma",
 		"directxtex",
 		"assimp",
-		"boost-serialization",
-		"boost-stacktrace",
-		"boost-lockfree",	
 		"antlr4",
 		"magic-enum",
 		"crossguid",
 		"crc32c",
-		"7zip"
+		"7zip",
+		"cereal"
 	]
 }

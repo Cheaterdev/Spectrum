@@ -510,7 +510,7 @@ void VoxelGI::screen(Graph& graph)
 
 			auto& command_list = _context.get_list();
 
-			bool use_rtx = Device::get().is_rtx_supported() && this->use_rtx;
+			bool use_rtx = Render::Device::get().is_rtx_supported() && this->use_rtx;
 			auto gbuffer = data.gbuffer.actualize(_context);
 			auto sky_cubemap_filtered =*data.sky_cubemap_filtered;
 			auto noisy_output = *data.VoxelIndirectNoise;
@@ -914,7 +914,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 		});
 
-		if(Device::get().is_rtx_supported() && this->use_rtx)
+		if(Render::Device::get().is_rtx_supported() && this->use_rtx)
 	graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);

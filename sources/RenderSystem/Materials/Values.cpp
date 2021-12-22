@@ -488,20 +488,20 @@ void MaterialFunction::add_function(std::string s)
 {
 	text += std::string("\t") + s + ";\n";
 }
-BOOST_CLASS_EXPORT_IMPLEMENT(ScalarNode);
+ REGISTER_TYPE(ScalarNode);
 
-BOOST_CLASS_EXPORT_IMPLEMENT(MulNode);
-BOOST_CLASS_EXPORT_IMPLEMENT(SumNode);
-BOOST_CLASS_EXPORT_IMPLEMENT(TextureNode);
-BOOST_CLASS_EXPORT_IMPLEMENT(VectorNode);
-BOOST_CLASS_EXPORT_IMPLEMENT(TiledTextureNode);
-BOOST_CLASS_EXPORT_IMPLEMENT(MaterialGraph);
-BOOST_CLASS_EXPORT_IMPLEMENT(SpecToMetNode);
-BOOST_CLASS_EXPORT_IMPLEMENT(TextureSRVParams);
+ REGISTER_TYPE(MulNode);
+ REGISTER_TYPE(SumNode);
+ REGISTER_TYPE(TextureNode);
+ REGISTER_TYPE(VectorNode);
+ REGISTER_TYPE(TiledTextureNode);
+REGISTER_TYPE(MaterialGraph);
+ REGISTER_TYPE(SpecToMetNode);
+//REGISTER_TYPE(TextureSRVParams);
 
 
-BOOST_CLASS_EXPORT(ShaderParamType);
-BOOST_CLASS_EXPORT(VectorType);
+ REGISTER_TYPE(ShaderParamType);
+ REGISTER_TYPE(VectorType);
 
 
 MaterialGraph::MaterialGraph()

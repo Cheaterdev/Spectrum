@@ -454,12 +454,12 @@ public:
 
 		{
 
-			CommandList::ptr command_list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			CommandList::ptr command_list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 
 			command_list->begin("pre");
 			{
 				SceneFrameManager::get().prepare(command_list, *scene);
-				if (Device::get().is_rtx_supported())
+				if (Render::Device::get().is_rtx_supported())
 				{
 					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), false);
 					RTX::get().prepare(command_list);
@@ -770,9 +770,9 @@ public:
 
 			if (GetAsyncKeyState('R'))
 			{
-				Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal_and_wait();
-				Render::Device::get().get_queue(Render::CommandListType::COMPUTE)->signal_and_wait();
-				Render::Device::get().get_queue(Render::CommandListType::COPY)->signal_and_wait();
+				Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+				Render::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
+				Render::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
 				Render::pixel_shader::reload_all();
@@ -812,7 +812,7 @@ public:
 					}
 				}
 
-				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
+				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Render::Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}
 
 
@@ -835,7 +835,7 @@ public:
 
 				graph.reset();
 			}
-			swap_chain->present(Render::Device::get().get_queue(Render::CommandListType::DIRECT)->signal());
+			swap_chain->present(Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal());
 		}
 
 	
@@ -1274,7 +1274,7 @@ protected:
 
 
 	//	
-		//   Render::Device::get().get_queue(Render::CommandListType::DIRECT)->stop_all();
+		//   Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->stop_all();
 		Render::Device::get().stop_all();
 		Skin::reset();
 		Render::Texture::reset_manager();

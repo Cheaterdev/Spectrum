@@ -274,7 +274,7 @@ bool GUI::Elements::FlowGraph::component_window::on_mouse_action(mouse_action ac
 				menu->add_item("edit in new tab")->on_click = [this](menu_list_element::ptr e)
 			{
 				//node->register_output(::FlowGraph::data_types::INT, "ololo");
-				canva->main_manager->add_graph(canva->g->get_ptr(), node->get_ptr<::FlowGraph::graph>());
+				canva->main_manager->add_graph(canva->g->get_ptr<::FlowGraph::graph>(), node->get_ptr<::FlowGraph::graph>());
 			};
 
 			/*
