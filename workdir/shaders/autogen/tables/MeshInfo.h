@@ -1,12 +1,12 @@
 #pragma once
 struct MeshInfo_cb
 {
-	uint node_offset;
-	uint vertex_offset;
-	uint meshlet_offset;
-	uint meshlet_count;
-	uint meshlet_unique_offset;
-	uint meshlet_vertex_offset;
+	uint node_offset; // uint
+	uint vertex_offset; // uint
+	uint meshlet_offset; // uint
+	uint meshlet_count; // uint
+	uint meshlet_unique_offset; // uint
+	uint meshlet_vertex_offset; // uint
 };
 struct MeshInfo
 {

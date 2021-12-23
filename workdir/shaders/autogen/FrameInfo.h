@@ -20,9 +20,9 @@ const FrameInfo CreateFrameInfo()
 {
 	FrameInfo result;
 	result.cb = cb_0_0;
-	result.srv.bestFitNormals = srv_0_0;
-	result.srv.brdf = srv_0_1;
-	result.srv.sky = srv_0_2;
+	result.srv.bestFitNormals = (pass_FrameInfo.srv_0 );
+	result.srv.brdf = (pass_FrameInfo.srv_1 );
+	result.srv.sky = (pass_FrameInfo.srv_2 );
 	return result;
 }
 #ifndef NO_GLOBAL

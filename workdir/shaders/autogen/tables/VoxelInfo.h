@@ -1,10 +1,10 @@
 #pragma once
 struct VoxelInfo_cb
 {
-	float4 min;
-	float4 size;
-	uint4 voxels_per_tile;
-	uint4 voxel_tiles_count;
+	float4 min; // float4
+	float4 size; // float4
+	uint4 voxels_per_tile; // uint4
+	uint4 voxel_tiles_count; // uint4
 };
 struct VoxelInfo
 {

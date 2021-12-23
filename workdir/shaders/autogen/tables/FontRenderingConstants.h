@@ -1,8 +1,8 @@
 #pragma once
 struct FontRenderingConstants_cb
 {
-	float4x4 TransformMatrix;
-	float4 ClipRect;
+	float4x4 TransformMatrix; // float4x4
+	float4 ClipRect; // float4
 };
 struct FontRenderingConstants
 {

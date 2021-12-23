@@ -114,7 +114,7 @@ void generate_bind(my_stream& stream, const std::string& pass_cb, const std::str
 			if (v.bindless) continue;
 
 		
-			if ( true/* rtx is an issue*/)
+			if ( false)
 			{
 				stream << std::format("result.{}.{}{} = {}_{}_{};", get_name_for(type), parent, v.name, get_name_for(type), slot.id, i) << std::endl;
 			}
@@ -123,11 +123,11 @@ void generate_bind(my_stream& stream, const std::string& pass_cb, const std::str
 			{
 				for (int a = 0; a < v.array_count; a++)
 				{
-					stream << "result." << get_name_for(type) << "." << parent << v.name << "["<<a<<"] = ResourceDescriptorHeap[(pass_" << pass_cb << "." << get_name_for(type) << "_" << i << ") + "<<a << "]; " << std::endl;
+					stream << "result." << get_name_for(type) << "." << parent << v.name << "["<<a<<"] = (pass_" << pass_cb << "." << get_name_for(type) << "_" << i << ") + "<<a << "; " << std::endl;
 
 				}
 			}else
-			stream << "result." << get_name_for(type) << "." << parent << v.name << " = ResourceDescriptorHeap[(pass_"<< pass_cb <<"." << get_name_for(type) << "_" << i << " ) ];" << std::endl;
+			stream << "result." << get_name_for(type) << "." << parent << v.name << " = (pass_"<< pass_cb <<"." << get_name_for(type) << "_" << i << " );" << std::endl;
 
 			i += v.array_count;
 		}
@@ -296,8 +296,10 @@ void generate_table(Table& table)
 			if (v.value_type != type) continue;
 			if (v.bindless) continue;
 
-		//	if(v.value_type==ValueType::CB)
-			stream << v.type << " " << v.name <<generate_array(v) << ';' << std::endl;
+			if(v.value_type==ValueType::CB)
+			stream << v.type << " " << v.name <<generate_array(v) << "; // " << v.type << std::endl;
+			else
+				stream << "uint" << " " << v.name << generate_array(v) << "; // " << v.type << std::endl;
 		//	else
 		//		stream << v.type<<" " << v.name << ';' << std::endl;
 		}
@@ -340,6 +342,7 @@ void generate_table(Table& table)
 		for (auto& v : table.values)
 		{
 			if (v.value_type == ValueType::STRUCT) continue;
+			if (v.value_type == ValueType::CB) continue;
 			std::string cameled = v.name;
 			cameled[0] = std::toupper(cameled[0]);
 
@@ -349,15 +352,31 @@ void generate_table(Table& table)
 				if (v.bindless)
 					stream << v.type << " Get" << cameled << "(int i) { " << "return bindless[i]; }" << std::endl;
 				else
-					stream << v.type << " Get" << cameled << "(int i) { " << "return " <<  get_name_for(v.value_type) << "." << v.name <<   "[i]; }" << std::endl;
+					stream << v.type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" <<  get_name_for(v.value_type) << "." << v.name <<   "[i]]; }" << std::endl;
 			}
 			else
 			{
-				stream << v.type << " Get" << cameled << "() { " << "return " <<  get_name_for(v.value_type) << "." << v.name <<  "; }" << std::endl;
+				stream << v.type << " Get" << cameled << "() { " << "return ResourceDescriptorHeap[" <<  get_name_for(v.value_type) << "." << v.name <<  "]; }" << std::endl;
 
 			}
 		}
+		for (auto& v : table.values)
+		{
+			if (v.value_type != ValueType::CB) continue;
+			std::string cameled = v.name;
+			cameled[0] = std::toupper(cameled[0]);
 
+
+			if (v.as_array)
+			{
+				stream << v.type << " Get" << cameled << "(int i) { " << "return " << get_name_for(v.value_type) << "." << v.name << "[i]; }" << std::endl;
+			}
+			else
+			{
+				stream << v.type << " Get" << cameled << "() { " << "return " << get_name_for(v.value_type) << "." << v.name << "; }" << std::endl;
+
+			}
+		}
 
 		for (auto& v : table.values)
 		{
@@ -890,7 +909,7 @@ void generate_include_list(const Parsed& parsed)
 	stream << R"(
 module;
 #include "pch_dx.h"
-#include "DX12/dx12_types.h"
+#include "HAL/dx12_types.h"
 export module Autogen;
 
 import PipelineState;

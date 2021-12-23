@@ -16,8 +16,8 @@ ConstantBuffer<Pass_InitDispatch> pass_InitDispatch: register( b2, space5);
 const InitDispatch CreateInitDispatch()
 {
 	InitDispatch result;
-	result.uav.counter = uav_5_0;
-	result.uav.dispatch_data = uav_5_1;
+	result.uav.counter = (pass_InitDispatch.uav_0 );
+	result.uav.dispatch_data = (pass_InitDispatch.uav_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

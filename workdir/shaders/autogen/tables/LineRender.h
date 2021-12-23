@@ -2,12 +2,12 @@
 #include "VSLine.h"
 struct LineRender_srv
 {
-	StructuredBuffer<VSLine> vb;
+	uint vb; // StructuredBuffer<VSLine>
 };
 struct LineRender
 {
 	LineRender_srv srv;
-	StructuredBuffer<VSLine> GetVb() { return srv.vb; }
+	StructuredBuffer<VSLine> GetVb() { return ResourceDescriptorHeap[srv.vb]; }
 
 };
  const LineRender CreateLineRender(LineRender_srv srv)

@@ -20,9 +20,11 @@ const VoxelCopy CreateVoxelCopy()
 {
 	VoxelCopy result;
 	result.cb = cb_5_0;
-	result.srv.Source = srv_5_0;
-	result.uav.Target = uav_5_0;
-	result.srv.params.tiles = srv_5_2;
+	result.srv.Source[0] = (pass_VoxelCopy.srv_0) + 0; 
+	result.srv.Source[1] = (pass_VoxelCopy.srv_0) + 1; 
+	result.uav.Target[0] = (pass_VoxelCopy.uav_0) + 0; 
+	result.uav.Target[1] = (pass_VoxelCopy.uav_0) + 1; 
+	result.srv.params.tiles = (pass_VoxelCopy.srv_2 );
 	return result;
 }
 #ifndef NO_GLOBAL

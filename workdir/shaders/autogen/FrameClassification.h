@@ -18,9 +18,9 @@ ConstantBuffer<Pass_FrameClassification> pass_FrameClassification: register( b2,
 const FrameClassification CreateFrameClassification()
 {
 	FrameClassification result;
-	result.srv.frames = srv_6_0;
-	result.uav.hi = uav_6_0;
-	result.uav.low = uav_6_1;
+	result.srv.frames = (pass_FrameClassification.srv_0 );
+	result.uav.hi = (pass_FrameClassification.uav_0 );
+	result.uav.low = (pass_FrameClassification.uav_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

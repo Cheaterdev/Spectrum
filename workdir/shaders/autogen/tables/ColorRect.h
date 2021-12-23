@@ -1,8 +1,8 @@
 #pragma once
 struct ColorRect_cb
 {
-	float4 pos[2];
-	float4 color;
+	float4 pos[2]; // float4
+	float4 color; // float4
 };
 struct ColorRect
 {

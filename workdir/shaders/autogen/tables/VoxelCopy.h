@@ -6,20 +6,20 @@ struct VoxelCopy_cb
 };
 struct VoxelCopy_srv
 {
-	Texture3D<float4> Source[2];
+	uint Source[2]; // Texture3D<float4>
 	VoxelTilingParams_srv params;
 };
 struct VoxelCopy_uav
 {
-	RWTexture3D<float4> Target[2];
+	uint Target[2]; // RWTexture3D<float4>
 };
 struct VoxelCopy
 {
 	VoxelCopy_cb cb;
 	VoxelCopy_srv srv;
 	VoxelCopy_uav uav;
-	RWTexture3D<float4> GetTarget(int i) { return uav.Target[i]; }
-	Texture3D<float4> GetSource(int i) { return srv.Source[i]; }
+	RWTexture3D<float4> GetTarget(int i) { return ResourceDescriptorHeap[uav.Target[i]]; }
+	Texture3D<float4> GetSource(int i) { return ResourceDescriptorHeap[srv.Source[i]]; }
 	VoxelTilingParams GetParams() { return CreateVoxelTilingParams(cb.params,srv.params); }
 
 };

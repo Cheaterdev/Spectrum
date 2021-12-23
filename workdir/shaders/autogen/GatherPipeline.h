@@ -16,7 +16,14 @@ const GatherPipeline CreateGatherPipeline()
 {
 	GatherPipeline result;
 	result.cb = cb_5_0;
-	result.uav.commands = uav_5_0;
+	result.uav.commands[0] = (pass_GatherPipeline.uav_0) + 0; 
+	result.uav.commands[1] = (pass_GatherPipeline.uav_0) + 1; 
+	result.uav.commands[2] = (pass_GatherPipeline.uav_0) + 2; 
+	result.uav.commands[3] = (pass_GatherPipeline.uav_0) + 3; 
+	result.uav.commands[4] = (pass_GatherPipeline.uav_0) + 4; 
+	result.uav.commands[5] = (pass_GatherPipeline.uav_0) + 5; 
+	result.uav.commands[6] = (pass_GatherPipeline.uav_0) + 6; 
+	result.uav.commands[7] = (pass_GatherPipeline.uav_0) + 7; 
 	return result;
 }
 #ifndef NO_GLOBAL

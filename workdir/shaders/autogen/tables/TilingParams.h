@@ -1,12 +1,12 @@
 #pragma once
 struct TilingParams_srv
 {
-	StructuredBuffer<uint2> tiles;
+	uint tiles; // StructuredBuffer<uint2>
 };
 struct TilingParams
 {
 	TilingParams_srv srv;
-	StructuredBuffer<uint2> GetTiles() { return srv.tiles; }
+	StructuredBuffer<uint2> GetTiles() { return ResourceDescriptorHeap[srv.tiles]; }
 
 		
 uint2 get_pixel_pos(uint3 dispatchID)

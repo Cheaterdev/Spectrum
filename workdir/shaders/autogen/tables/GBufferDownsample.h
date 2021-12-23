@@ -1,14 +1,14 @@
 #pragma once
 struct GBufferDownsample_srv
 {
-	Texture2D<float4> normals;
-	Texture2D<float> depth;
+	uint normals; // Texture2D<float4>
+	uint depth; // Texture2D<float>
 };
 struct GBufferDownsample
 {
 	GBufferDownsample_srv srv;
-	Texture2D<float4> GetNormals() { return srv.normals; }
-	Texture2D<float> GetDepth() { return srv.depth; }
+	Texture2D<float4> GetNormals() { return ResourceDescriptorHeap[srv.normals]; }
+	Texture2D<float> GetDepth() { return ResourceDescriptorHeap[srv.depth]; }
 
 };
  const GBufferDownsample CreateGBufferDownsample(GBufferDownsample_srv srv)

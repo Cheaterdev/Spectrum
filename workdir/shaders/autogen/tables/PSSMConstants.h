@@ -1,8 +1,8 @@
 #pragma once
 struct PSSMConstants_cb
 {
-	int level;
-	float time;
+	int level; // int
+	float time; // float
 };
 struct PSSMConstants
 {

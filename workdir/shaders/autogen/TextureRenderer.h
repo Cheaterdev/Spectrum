@@ -14,7 +14,7 @@ ConstantBuffer<Pass_TextureRenderer> pass_TextureRenderer: register( b2, space4)
 const TextureRenderer CreateTextureRenderer()
 {
 	TextureRenderer result;
-	result.srv.texture = srv_4_0;
+	result.srv.texture = (pass_TextureRenderer.srv_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

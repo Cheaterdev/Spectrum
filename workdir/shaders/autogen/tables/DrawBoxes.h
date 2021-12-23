@@ -2,20 +2,20 @@
 #include "BoxInfo.h"
 struct DrawBoxes_srv
 {
-	StructuredBuffer<float4> vertices;
-	StructuredBuffer<BoxInfo> input_meshes;
+	uint vertices; // StructuredBuffer<float4>
+	uint input_meshes; // StructuredBuffer<BoxInfo>
 };
 struct DrawBoxes_uav
 {
-	RWStructuredBuffer<uint> visible_meshes;
+	uint visible_meshes; // RWStructuredBuffer<uint>
 };
 struct DrawBoxes
 {
 	DrawBoxes_srv srv;
 	DrawBoxes_uav uav;
-	StructuredBuffer<float4> GetVertices() { return srv.vertices; }
-	StructuredBuffer<BoxInfo> GetInput_meshes() { return srv.input_meshes; }
-	RWStructuredBuffer<uint> GetVisible_meshes() { return uav.visible_meshes; }
+	StructuredBuffer<float4> GetVertices() { return ResourceDescriptorHeap[srv.vertices]; }
+	StructuredBuffer<BoxInfo> GetInput_meshes() { return ResourceDescriptorHeap[srv.input_meshes]; }
+	RWStructuredBuffer<uint> GetVisible_meshes() { return ResourceDescriptorHeap[uav.visible_meshes]; }
 
 };
  const DrawBoxes CreateDrawBoxes(DrawBoxes_srv srv,DrawBoxes_uav uav)

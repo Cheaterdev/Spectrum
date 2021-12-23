@@ -1,10 +1,10 @@
 #pragma once
 struct Meshlet_cb
 {
-	uint vertexCount;
-	uint vertexOffset;
-	uint primitiveCount;
-	uint primitiveOffset;
+	uint vertexCount; // uint
+	uint vertexOffset; // uint
+	uint primitiveCount; // uint
+	uint primitiveOffset; // uint
 };
 struct Meshlet
 {

@@ -16,8 +16,8 @@ ConstantBuffer<Pass_PSSMData> pass_PSSMData: register( b2, space5);
 const PSSMData CreatePSSMData()
 {
 	PSSMData result;
-	result.srv.light_buffer = srv_5_0;
-	result.srv.light_cameras = srv_5_1;
+	result.srv.light_buffer = (pass_PSSMData.srv_0 );
+	result.srv.light_cameras = (pass_PSSMData.srv_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

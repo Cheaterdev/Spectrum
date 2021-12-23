@@ -16,8 +16,8 @@ ConstantBuffer<Pass_FontRendering> pass_FontRendering: register( b2, space4);
 const FontRendering CreateFontRendering()
 {
 	FontRendering result;
-	result.srv.tex0 = srv_4_0;
-	result.srv.positions = srv_4_1;
+	result.srv.tex0 = (pass_FontRendering.srv_0 );
+	result.srv.positions = (pass_FontRendering.srv_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

@@ -2,12 +2,12 @@
 #include "DebugStruct.h"
 struct DebugInfo_uav
 {
-	RWStructuredBuffer<DebugStruct> debug;
+	uint debug; // RWStructuredBuffer<DebugStruct>
 };
 struct DebugInfo
 {
 	DebugInfo_uav uav;
-	RWStructuredBuffer<DebugStruct> GetDebug() { return uav.debug; }
+	RWStructuredBuffer<DebugStruct> GetDebug() { return ResourceDescriptorHeap[uav.debug]; }
 
 		void Log(uint id, uint4 v)
 		{

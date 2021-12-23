@@ -16,8 +16,8 @@ ConstantBuffer<Pass_GatherBoxes> pass_GatherBoxes: register( b2, space5);
 const GatherBoxes CreateGatherBoxes()
 {
 	GatherBoxes result;
-	result.uav.culledMeshes = uav_5_0;
-	result.uav.visibleMeshes = uav_5_1;
+	result.uav.culledMeshes = (pass_GatherBoxes.uav_0 );
+	result.uav.visibleMeshes = (pass_GatherBoxes.uav_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

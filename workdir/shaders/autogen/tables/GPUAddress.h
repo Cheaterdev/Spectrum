@@ -1,7 +1,7 @@
 #pragma once
 struct GPUAddress_cb
 {
-	uint2 data;
+	uint2 data; // uint2
 };
 struct GPUAddress
 {

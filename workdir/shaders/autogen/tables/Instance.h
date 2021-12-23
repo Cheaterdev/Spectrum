@@ -1,7 +1,7 @@
 #pragma once
 struct Instance_cb
 {
-	uint instanceId;
+	uint instanceId; // uint
 };
 struct Instance
 {

@@ -2,13 +2,13 @@
 #include "GBuffer.h"
 struct PSSMLighting_srv
 {
-	Texture2D<float> light_mask;
+	uint light_mask; // Texture2D<float>
 	GBuffer_srv gbuffer;
 };
 struct PSSMLighting
 {
 	PSSMLighting_srv srv;
-	Texture2D<float> GetLight_mask() { return srv.light_mask; }
+	Texture2D<float> GetLight_mask() { return ResourceDescriptorHeap[srv.light_mask]; }
 	GBuffer GetGbuffer() { return CreateGBuffer(srv.gbuffer); }
 
 };

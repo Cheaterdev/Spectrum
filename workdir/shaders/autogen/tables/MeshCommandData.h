@@ -3,8 +3,8 @@
 #include "GPUAddress.h"
 struct MeshCommandData_cb
 {
-	uint material_id;
-	uint node_offset;
+	uint material_id; // uint
+	uint node_offset; // uint
 	GPUAddress_cb mesh_cb;
 	DispatchMeshArguments_cb draw_commands;
 };

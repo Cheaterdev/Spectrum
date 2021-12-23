@@ -20,9 +20,11 @@ const VoxelMipMap CreateVoxelMipMap()
 {
 	VoxelMipMap result;
 	result.cb = cb_5_0;
-	result.srv.SrcMip = srv_5_0;
-	result.uav.OutMips = uav_5_0;
-	result.srv.params.tiles = srv_5_1;
+	result.srv.SrcMip = (pass_VoxelMipMap.srv_0 );
+	result.uav.OutMips[0] = (pass_VoxelMipMap.uav_0) + 0; 
+	result.uav.OutMips[1] = (pass_VoxelMipMap.uav_0) + 1; 
+	result.uav.OutMips[2] = (pass_VoxelMipMap.uav_0) + 2; 
+	result.srv.params.tiles = (pass_VoxelMipMap.srv_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

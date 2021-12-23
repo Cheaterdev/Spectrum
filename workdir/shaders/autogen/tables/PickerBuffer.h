@@ -1,12 +1,12 @@
 #pragma once
 struct PickerBuffer_uav
 {
-	RWStructuredBuffer<uint> viewBuffer;
+	uint viewBuffer; // RWStructuredBuffer<uint>
 };
 struct PickerBuffer
 {
 	PickerBuffer_uav uav;
-	RWStructuredBuffer<uint> GetViewBuffer() { return uav.viewBuffer; }
+	RWStructuredBuffer<uint> GetViewBuffer() { return ResourceDescriptorHeap[uav.viewBuffer]; }
 
 };
  const PickerBuffer CreatePickerBuffer(PickerBuffer_uav uav)

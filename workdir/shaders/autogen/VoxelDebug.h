@@ -24,12 +24,12 @@ ConstantBuffer<Pass_VoxelDebug> pass_VoxelDebug: register( b2, space5);
 const VoxelDebug CreateVoxelDebug()
 {
 	VoxelDebug result;
-	result.srv.volume = srv_5_0;
-	result.srv.gbuffer.albedo = srv_5_1;
-	result.srv.gbuffer.normals = srv_5_2;
-	result.srv.gbuffer.specular = srv_5_3;
-	result.srv.gbuffer.depth = srv_5_4;
-	result.srv.gbuffer.motion = srv_5_5;
+	result.srv.volume = (pass_VoxelDebug.srv_0 );
+	result.srv.gbuffer.albedo = (pass_VoxelDebug.srv_1 );
+	result.srv.gbuffer.normals = (pass_VoxelDebug.srv_2 );
+	result.srv.gbuffer.specular = (pass_VoxelDebug.srv_3 );
+	result.srv.gbuffer.depth = (pass_VoxelDebug.srv_4 );
+	result.srv.gbuffer.motion = (pass_VoxelDebug.srv_5 );
 	return result;
 }
 #ifndef NO_GLOBAL

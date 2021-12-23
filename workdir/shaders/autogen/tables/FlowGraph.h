@@ -1,9 +1,9 @@
 #pragma once
 struct FlowGraph_cb
 {
-	float4 size;
-	float4 offset_size;
-	float2 inv_pixel;
+	float4 size; // float4
+	float4 offset_size; // float4
+	float2 inv_pixel; // float2
 };
 struct FlowGraph
 {

@@ -22,10 +22,10 @@ const SkyData CreateSkyData()
 {
 	SkyData result;
 	result.cb = cb_4_0;
-	result.srv.depthBuffer = srv_4_0;
-	result.srv.transmittance = srv_4_1;
-	result.srv.inscatter = srv_4_2;
-	result.srv.irradiance = srv_4_3;
+	result.srv.depthBuffer = (pass_SkyData.srv_0 );
+	result.srv.transmittance = (pass_SkyData.srv_1 );
+	result.srv.inscatter = (pass_SkyData.srv_2 );
+	result.srv.irradiance = (pass_SkyData.srv_3 );
 	return result;
 }
 #ifndef NO_GLOBAL

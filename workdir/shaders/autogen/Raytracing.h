@@ -16,8 +16,8 @@ ConstantBuffer<Pass_Raytracing> pass_Raytracing: register( b2, space7);
 const Raytracing CreateRaytracing()
 {
 	Raytracing result;
-	result.srv.scene = srv_7_0;
-	result.srv.index_buffer = srv_7_1;
+	result.srv.scene = (pass_Raytracing.srv_0 );
+	result.srv.index_buffer = (pass_Raytracing.srv_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

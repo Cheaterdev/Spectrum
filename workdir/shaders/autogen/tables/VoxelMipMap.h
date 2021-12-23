@@ -6,20 +6,20 @@ struct VoxelMipMap_cb
 };
 struct VoxelMipMap_srv
 {
-	Texture3D<float4> SrcMip;
+	uint SrcMip; // Texture3D<float4>
 	VoxelTilingParams_srv params;
 };
 struct VoxelMipMap_uav
 {
-	RWTexture3D<float4> OutMips[3];
+	uint OutMips[3]; // RWTexture3D<float4>
 };
 struct VoxelMipMap
 {
 	VoxelMipMap_cb cb;
 	VoxelMipMap_srv srv;
 	VoxelMipMap_uav uav;
-	RWTexture3D<float4> GetOutMips(int i) { return uav.OutMips[i]; }
-	Texture3D<float4> GetSrcMip() { return srv.SrcMip; }
+	RWTexture3D<float4> GetOutMips(int i) { return ResourceDescriptorHeap[uav.OutMips[i]]; }
+	Texture3D<float4> GetSrcMip() { return ResourceDescriptorHeap[srv.SrcMip]; }
 	VoxelTilingParams GetParams() { return CreateVoxelTilingParams(cb.params,srv.params); }
 
 };

@@ -29,14 +29,14 @@ ConstantBuffer<Pass_SceneData> pass_SceneData: register( b2, space1);
 const SceneData CreateSceneData()
 {
 	SceneData result;
-	result.srv.nodes = srv_1_0;
-	result.srv.vertexes = srv_1_1;
-	result.srv.meshes = srv_1_2;
-	result.srv.materials = srv_1_3;
-	result.srv.meshInstances = srv_1_4;
-	result.srv.meshlets = srv_1_5;
-	result.srv.meshletCullData = srv_1_6;
-	result.srv.indices = srv_1_7;
+	result.srv.nodes = (pass_SceneData.srv_0 );
+	result.srv.vertexes = (pass_SceneData.srv_1 );
+	result.srv.meshes = (pass_SceneData.srv_2 );
+	result.srv.materials = (pass_SceneData.srv_3 );
+	result.srv.meshInstances = (pass_SceneData.srv_4 );
+	result.srv.meshlets = (pass_SceneData.srv_5 );
+	result.srv.meshletCullData = (pass_SceneData.srv_6 );
+	result.srv.indices = (pass_SceneData.srv_7 );
 	return result;
 }
 #ifndef NO_GLOBAL

@@ -10,14 +10,14 @@ struct VoxelZero_srv
 };
 struct VoxelZero_uav
 {
-	RWTexture3D<float4> Target;
+	uint Target; // RWTexture3D<float4>
 };
 struct VoxelZero
 {
 	VoxelZero_cb cb;
 	VoxelZero_srv srv;
 	VoxelZero_uav uav;
-	RWTexture3D<float4> GetTarget() { return uav.Target; }
+	RWTexture3D<float4> GetTarget() { return ResourceDescriptorHeap[uav.Target]; }
 	VoxelTilingParams GetParams() { return CreateVoxelTilingParams(cb.params,srv.params); }
 
 };

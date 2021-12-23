@@ -18,9 +18,9 @@ ConstantBuffer<Pass_DenoiserHistoryFix> pass_DenoiserHistoryFix: register( b2, s
 const DenoiserHistoryFix CreateDenoiserHistoryFix()
 {
 	DenoiserHistoryFix result;
-	result.srv.color = srv_6_0;
-	result.srv.frames = srv_6_1;
-	result.uav.target = uav_6_0;
+	result.srv.color = (pass_DenoiserHistoryFix.srv_0 );
+	result.srv.frames = (pass_DenoiserHistoryFix.srv_1 );
+	result.uav.target = (pass_DenoiserHistoryFix.uav_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

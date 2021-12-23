@@ -16,7 +16,7 @@ const Countour CreateCountour()
 {
 	Countour result;
 	result.cb = cb_4_0;
-	result.srv.tex = srv_4_0;
+	result.srv.tex = (pass_Countour.srv_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

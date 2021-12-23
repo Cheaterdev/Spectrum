@@ -18,8 +18,8 @@ const VoxelZero CreateVoxelZero()
 {
 	VoxelZero result;
 	result.cb = cb_5_0;
-	result.uav.Target = uav_5_0;
-	result.srv.params.tiles = srv_5_0;
+	result.uav.Target = (pass_VoxelZero.uav_0 );
+	result.srv.params.tiles = (pass_VoxelZero.srv_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

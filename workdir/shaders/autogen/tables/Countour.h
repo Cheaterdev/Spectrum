@@ -1,18 +1,18 @@
 #pragma once
 struct Countour_cb
 {
-	float4 color;
+	float4 color; // float4
 };
 struct Countour_srv
 {
-	Texture2D<float4> tex;
+	uint tex; // Texture2D<float4>
 };
 struct Countour
 {
 	Countour_cb cb;
 	Countour_srv srv;
+	Texture2D<float4> GetTex() { return ResourceDescriptorHeap[srv.tex]; }
 	float4 GetColor() { return cb.color; }
-	Texture2D<float4> GetTex() { return srv.tex; }
 
 };
  const Countour CreateCountour(Countour_cb cb,Countour_srv srv)

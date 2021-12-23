@@ -32,16 +32,16 @@ ConstantBuffer<Pass_VoxelScreen> pass_VoxelScreen: register( b2, space5);
 const VoxelScreen CreateVoxelScreen()
 {
 	VoxelScreen result;
-	result.srv.voxels = srv_5_0;
-	result.srv.tex_cube = srv_5_1;
-	result.srv.prev_gi = srv_5_2;
-	result.srv.prev_frames = srv_5_3;
-	result.srv.prev_depth = srv_5_4;
-	result.srv.gbuffer.albedo = srv_5_5;
-	result.srv.gbuffer.normals = srv_5_6;
-	result.srv.gbuffer.specular = srv_5_7;
-	result.srv.gbuffer.depth = srv_5_8;
-	result.srv.gbuffer.motion = srv_5_9;
+	result.srv.voxels = (pass_VoxelScreen.srv_0 );
+	result.srv.tex_cube = (pass_VoxelScreen.srv_1 );
+	result.srv.prev_gi = (pass_VoxelScreen.srv_2 );
+	result.srv.prev_frames = (pass_VoxelScreen.srv_3 );
+	result.srv.prev_depth = (pass_VoxelScreen.srv_4 );
+	result.srv.gbuffer.albedo = (pass_VoxelScreen.srv_5 );
+	result.srv.gbuffer.normals = (pass_VoxelScreen.srv_6 );
+	result.srv.gbuffer.specular = (pass_VoxelScreen.srv_7 );
+	result.srv.gbuffer.depth = (pass_VoxelScreen.srv_8 );
+	result.srv.gbuffer.motion = (pass_VoxelScreen.srv_9 );
 	return result;
 }
 #ifndef NO_GLOBAL

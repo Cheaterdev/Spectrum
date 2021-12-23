@@ -18,9 +18,9 @@ ConstantBuffer<Pass_DrawBoxes> pass_DrawBoxes: register( b2, space5);
 const DrawBoxes CreateDrawBoxes()
 {
 	DrawBoxes result;
-	result.srv.vertices = srv_5_0;
-	result.srv.input_meshes = srv_5_1;
-	result.uav.visible_meshes = uav_5_0;
+	result.srv.vertices = (pass_DrawBoxes.srv_0 );
+	result.srv.input_meshes = (pass_DrawBoxes.srv_1 );
+	result.uav.visible_meshes = (pass_DrawBoxes.uav_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

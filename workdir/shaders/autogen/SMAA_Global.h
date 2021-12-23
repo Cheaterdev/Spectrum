@@ -16,7 +16,7 @@ const SMAA_Global CreateSMAA_Global()
 {
 	SMAA_Global result;
 	result.cb = cb_4_0;
-	result.srv.colorTex = srv_4_0;
+	result.srv.colorTex = (pass_SMAA_Global.srv_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

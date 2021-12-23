@@ -18,9 +18,9 @@ ConstantBuffer<Pass_VoxelUpscale> pass_VoxelUpscale: register( b2, space6);
 const VoxelUpscale CreateVoxelUpscale()
 {
 	VoxelUpscale result;
-	result.srv.tex_downsampled = srv_6_0;
-	result.srv.tex_gi_prev = srv_6_1;
-	result.srv.tex_depth_prev = srv_6_2;
+	result.srv.tex_downsampled = (pass_VoxelUpscale.srv_0 );
+	result.srv.tex_gi_prev = (pass_VoxelUpscale.srv_1 );
+	result.srv.tex_depth_prev = (pass_VoxelUpscale.srv_2 );
 	return result;
 }
 #ifndef NO_GLOBAL

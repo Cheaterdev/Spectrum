@@ -1,14 +1,14 @@
 #pragma once
 struct DenoiserDownsample_srv
 {
-	Texture2D<float4> color;
-	Texture2D<float> depth;
+	uint color; // Texture2D<float4>
+	uint depth; // Texture2D<float>
 };
 struct DenoiserDownsample
 {
 	DenoiserDownsample_srv srv;
-	Texture2D<float4> GetColor() { return srv.color; }
-	Texture2D<float> GetDepth() { return srv.depth; }
+	Texture2D<float4> GetColor() { return ResourceDescriptorHeap[srv.color]; }
+	Texture2D<float> GetDepth() { return ResourceDescriptorHeap[srv.depth]; }
 
 };
  const DenoiserDownsample CreateDenoiserDownsample(DenoiserDownsample_srv srv)

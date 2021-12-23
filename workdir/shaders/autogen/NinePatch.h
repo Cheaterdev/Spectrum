@@ -15,7 +15,7 @@ ConstantBuffer<Pass_NinePatch> pass_NinePatch: register( b2, space4);
 const NinePatch CreateNinePatch()
 {
 	NinePatch result;
-	result.srv.vb = srv_4_0;
+	result.srv.vb = (pass_NinePatch.srv_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

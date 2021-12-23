@@ -1,7 +1,7 @@
 #pragma once
 struct Frustum_cb
 {
-	float4 planes[6];
+	float4 planes[6]; // float4
 };
 struct Frustum
 {

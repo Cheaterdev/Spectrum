@@ -1,10 +1,10 @@
 #pragma once
 struct vertex_input_cb
 {
-	float2 pos;
-	float2 tc;
-	float4 mulColor;
-	float4 addColor;
+	float2 pos; // float2
+	float2 tc; // float2
+	float4 mulColor; // float4
+	float4 addColor; // float4
 };
 struct vertex_input
 {

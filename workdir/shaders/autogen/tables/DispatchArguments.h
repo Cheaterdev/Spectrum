@@ -1,7 +1,7 @@
 #pragma once
 struct DispatchArguments_cb
 {
-	uint3 counts;
+	uint3 counts; // uint3
 };
 struct DispatchArguments
 {

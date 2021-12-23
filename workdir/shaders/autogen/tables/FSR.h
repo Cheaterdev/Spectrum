@@ -6,19 +6,19 @@ struct FSR_cb
 };
 struct FSR_srv
 {
-	Texture2D<float4> source;
+	uint source; // Texture2D<float4>
 };
 struct FSR_uav
 {
-	RWTexture2D<float4> target;
+	uint target; // RWTexture2D<float4>
 };
 struct FSR
 {
 	FSR_cb cb;
 	FSR_srv srv;
 	FSR_uav uav;
-	Texture2D<float4> GetSource() { return srv.source; }
-	RWTexture2D<float4> GetTarget() { return uav.target; }
+	Texture2D<float4> GetSource() { return ResourceDescriptorHeap[srv.source]; }
+	RWTexture2D<float4> GetTarget() { return ResourceDescriptorHeap[uav.target]; }
 	FSRConstants GetConstants() { return CreateFSRConstants(cb.constants); }
 
 };

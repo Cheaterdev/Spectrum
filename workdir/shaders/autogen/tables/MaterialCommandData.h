@@ -2,7 +2,7 @@
 #include "GPUAddress.h"
 struct MaterialCommandData_cb
 {
-	uint pipeline_id;
+	uint pipeline_id; // uint
 	GPUAddress_cb material_cb;
 };
 struct MaterialCommandData

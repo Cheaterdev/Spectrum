@@ -30,14 +30,14 @@ const VoxelLighting CreateVoxelLighting()
 {
 	VoxelLighting result;
 	result.cb = cb_5_0;
-	result.srv.albedo = srv_5_0;
-	result.srv.normals = srv_5_1;
-	result.srv.lower = srv_5_2;
-	result.srv.tex_cube = srv_5_3;
-	result.uav.output = uav_5_0;
-	result.srv.pssmGlobal.light_buffer = srv_5_4;
-	result.srv.pssmGlobal.light_camera = srv_5_5;
-	result.srv.params.tiles = srv_5_6;
+	result.srv.albedo = (pass_VoxelLighting.srv_0 );
+	result.srv.normals = (pass_VoxelLighting.srv_1 );
+	result.srv.lower = (pass_VoxelLighting.srv_2 );
+	result.srv.tex_cube = (pass_VoxelLighting.srv_3 );
+	result.uav.output = (pass_VoxelLighting.uav_0 );
+	result.srv.pssmGlobal.light_buffer = (pass_VoxelLighting.srv_4 );
+	result.srv.pssmGlobal.light_camera = (pass_VoxelLighting.srv_5 );
+	result.srv.params.tiles = (pass_VoxelLighting.srv_6 );
 	return result;
 }
 #ifndef NO_GLOBAL

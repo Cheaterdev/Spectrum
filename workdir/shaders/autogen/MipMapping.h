@@ -18,8 +18,11 @@ const MipMapping CreateMipMapping()
 {
 	MipMapping result;
 	result.cb = cb_4_0;
-	result.srv.SrcMip = srv_4_0;
-	result.uav.OutMip = uav_4_0;
+	result.srv.SrcMip = (pass_MipMapping.srv_0 );
+	result.uav.OutMip[0] = (pass_MipMapping.uav_0) + 0; 
+	result.uav.OutMip[1] = (pass_MipMapping.uav_0) + 1; 
+	result.uav.OutMip[2] = (pass_MipMapping.uav_0) + 2; 
+	result.uav.OutMip[3] = (pass_MipMapping.uav_0) + 3; 
 	return result;
 }
 #ifndef NO_GLOBAL

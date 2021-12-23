@@ -16,8 +16,8 @@ ConstantBuffer<Pass_GatherPipelineGlobal> pass_GatherPipelineGlobal: register( b
 const GatherPipelineGlobal CreateGatherPipelineGlobal()
 {
 	GatherPipelineGlobal result;
-	result.srv.meshes_count = srv_4_0;
-	result.srv.commands = srv_4_1;
+	result.srv.meshes_count = (pass_GatherPipelineGlobal.srv_0 );
+	result.srv.commands = (pass_GatherPipelineGlobal.srv_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

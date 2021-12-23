@@ -2,25 +2,25 @@
 #include "Camera.h"
 struct FrameInfo_cb
 {
-	float4 time;
-	float4 sunDir;
+	float4 time; // float4
+	float4 sunDir; // float4
 	Camera_cb camera;
 	Camera_cb prevCamera;
 };
 struct FrameInfo_srv
 {
-	Texture2D<float4> bestFitNormals;
-	Texture3D<float4> brdf;
-	TextureCube<float4> sky;
+	uint bestFitNormals; // Texture2D<float4>
+	uint brdf; // Texture3D<float4>
+	uint sky; // TextureCube<float4>
 };
 struct FrameInfo
 {
 	FrameInfo_cb cb;
 	FrameInfo_srv srv;
+	Texture2D<float4> GetBestFitNormals() { return ResourceDescriptorHeap[srv.bestFitNormals]; }
+	Texture3D<float4> GetBrdf() { return ResourceDescriptorHeap[srv.brdf]; }
+	TextureCube<float4> GetSky() { return ResourceDescriptorHeap[srv.sky]; }
 	float4 GetTime() { return cb.time; }
-	Texture2D<float4> GetBestFitNormals() { return srv.bestFitNormals; }
-	Texture3D<float4> GetBrdf() { return srv.brdf; }
-	TextureCube<float4> GetSky() { return srv.sky; }
 	float4 GetSunDir() { return cb.sunDir; }
 	Camera GetCamera() { return CreateCamera(cb.camera); }
 	Camera GetPrevCamera() { return CreateCamera(cb.prevCamera); }

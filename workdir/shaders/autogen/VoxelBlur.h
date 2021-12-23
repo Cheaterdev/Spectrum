@@ -22,11 +22,11 @@ ConstantBuffer<Pass_VoxelBlur> pass_VoxelBlur: register( b2, space6);
 const VoxelBlur CreateVoxelBlur()
 {
 	VoxelBlur result;
-	result.srv.noisy_output = srv_6_0;
-	result.srv.hit_and_pdf = srv_6_1;
-	result.srv.prev_result = srv_6_2;
-	result.uav.screen_result = uav_6_0;
-	result.uav.gi_result = uav_6_1;
+	result.srv.noisy_output = (pass_VoxelBlur.srv_0 );
+	result.srv.hit_and_pdf = (pass_VoxelBlur.srv_1 );
+	result.srv.prev_result = (pass_VoxelBlur.srv_2 );
+	result.uav.screen_result = (pass_VoxelBlur.uav_0 );
+	result.uav.gi_result = (pass_VoxelBlur.uav_1 );
 	return result;
 }
 #ifndef NO_GLOBAL

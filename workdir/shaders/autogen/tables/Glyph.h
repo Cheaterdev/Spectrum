@@ -1,9 +1,9 @@
 #pragma once
 struct Glyph_cb
 {
-	float2 pos;
-	uint index;
-	float4 color;
+	float2 pos; // float2
+	uint index; // uint
+	float4 color; // float4
 };
 struct Glyph
 {

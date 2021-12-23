@@ -1,8 +1,8 @@
 #pragma once
 struct MaterialInfo_cb
 {
-	MaterialCB data;
-	uint textureOffset;
+	MaterialCB data; // MaterialCB
+	uint textureOffset; // uint
 };
 struct MaterialInfo
 {

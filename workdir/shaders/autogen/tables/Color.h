@@ -1,7 +1,7 @@
 #pragma once
 struct Color_cb
 {
-	float4 color;
+	float4 color; // float4
 };
 struct Color
 {

@@ -18,8 +18,8 @@ const FSR CreateFSR()
 {
 	FSR result;
 	result.cb = cb_4_0;
-	result.srv.source = srv_4_0;
-	result.uav.target = uav_4_0;
+	result.srv.source = (pass_FSR.srv_0 );
+	result.uav.target = (pass_FSR.uav_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

@@ -2,7 +2,7 @@
 #include "GBuffer.h"
 struct RaytracingRays_cb
 {
-	float pixelAngle;
+	float pixelAngle; // float
 };
 struct RaytracingRays_srv
 {
@@ -10,14 +10,14 @@ struct RaytracingRays_srv
 };
 struct RaytracingRays_uav
 {
-	RWTexture2D<float4> output;
+	uint output; // RWTexture2D<float4>
 };
 struct RaytracingRays
 {
 	RaytracingRays_cb cb;
 	RaytracingRays_srv srv;
 	RaytracingRays_uav uav;
-	RWTexture2D<float4> GetOutput() { return uav.output; }
+	RWTexture2D<float4> GetOutput() { return ResourceDescriptorHeap[uav.output]; }
 	float GetPixelAngle() { return cb.pixelAngle; }
 	GBuffer GetGbuffer() { return CreateGBuffer(srv.gbuffer); }
 

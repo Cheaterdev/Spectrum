@@ -14,7 +14,7 @@ ConstantBuffer<Pass_DrawStencil> pass_DrawStencil: register( b2, space4);
 const DrawStencil CreateDrawStencil()
 {
 	DrawStencil result;
-	result.srv.vertices = srv_4_0;
+	result.srv.vertices = (pass_DrawStencil.srv_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

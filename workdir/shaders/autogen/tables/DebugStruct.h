@@ -1,7 +1,7 @@
 #pragma once
 struct DebugStruct_cb
 {
-	uint4 v;
+	uint4 v; // uint4
 };
 struct DebugStruct
 {

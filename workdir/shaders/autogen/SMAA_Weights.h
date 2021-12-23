@@ -18,9 +18,9 @@ ConstantBuffer<Pass_SMAA_Weights> pass_SMAA_Weights: register( b2, space5);
 const SMAA_Weights CreateSMAA_Weights()
 {
 	SMAA_Weights result;
-	result.srv.areaTex = srv_5_0;
-	result.srv.searchTex = srv_5_1;
-	result.srv.edgesTex = srv_5_2;
+	result.srv.areaTex = (pass_SMAA_Weights.srv_0 );
+	result.srv.searchTex = (pass_SMAA_Weights.srv_1 );
+	result.srv.edgesTex = (pass_SMAA_Weights.srv_2 );
 	return result;
 }
 #ifndef NO_GLOBAL

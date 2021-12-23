@@ -7,27 +7,27 @@ struct VoxelLighting_cb
 };
 struct VoxelLighting_srv
 {
-	Texture3D<float4> albedo;
-	Texture3D<float4> normals;
-	Texture3D<float4> lower;
-	TextureCube<float4> tex_cube;
+	uint albedo; // Texture3D<float4>
+	uint normals; // Texture3D<float4>
+	uint lower; // Texture3D<float4>
+	uint tex_cube; // TextureCube<float4>
 	PSSMDataGlobal_srv pssmGlobal;
 	VoxelTilingParams_srv params;
 };
 struct VoxelLighting_uav
 {
-	RWTexture3D<float4> output;
+	uint output; // RWTexture3D<float4>
 };
 struct VoxelLighting
 {
 	VoxelLighting_cb cb;
 	VoxelLighting_srv srv;
 	VoxelLighting_uav uav;
-	RWTexture3D<float4> GetOutput() { return uav.output; }
-	Texture3D<float4> GetAlbedo() { return srv.albedo; }
-	Texture3D<float4> GetNormals() { return srv.normals; }
-	Texture3D<float4> GetLower() { return srv.lower; }
-	TextureCube<float4> GetTex_cube() { return srv.tex_cube; }
+	RWTexture3D<float4> GetOutput() { return ResourceDescriptorHeap[uav.output]; }
+	Texture3D<float4> GetAlbedo() { return ResourceDescriptorHeap[srv.albedo]; }
+	Texture3D<float4> GetNormals() { return ResourceDescriptorHeap[srv.normals]; }
+	Texture3D<float4> GetLower() { return ResourceDescriptorHeap[srv.lower]; }
+	TextureCube<float4> GetTex_cube() { return ResourceDescriptorHeap[srv.tex_cube]; }
 	PSSMDataGlobal GetPssmGlobal() { return CreatePSSMDataGlobal(srv.pssmGlobal); }
 	VoxelTilingParams GetParams() { return CreateVoxelTilingParams(cb.params,srv.params); }
 

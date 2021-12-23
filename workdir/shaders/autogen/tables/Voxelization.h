@@ -6,17 +6,17 @@ struct Voxelization_cb
 };
 struct Voxelization_uav
 {
-	RWTexture3D<float4> albedo;
-	RWTexture3D<float4> normals;
-	RWTexture3D<uint> visibility;
+	uint albedo; // RWTexture3D<float4>
+	uint normals; // RWTexture3D<float4>
+	uint visibility; // RWTexture3D<uint>
 };
 struct Voxelization
 {
 	Voxelization_cb cb;
 	Voxelization_uav uav;
-	RWTexture3D<float4> GetAlbedo() { return uav.albedo; }
-	RWTexture3D<float4> GetNormals() { return uav.normals; }
-	RWTexture3D<uint> GetVisibility() { return uav.visibility; }
+	RWTexture3D<float4> GetAlbedo() { return ResourceDescriptorHeap[uav.albedo]; }
+	RWTexture3D<float4> GetNormals() { return ResourceDescriptorHeap[uav.normals]; }
+	RWTexture3D<uint> GetVisibility() { return ResourceDescriptorHeap[uav.visibility]; }
 	VoxelInfo GetInfo() { return CreateVoxelInfo(cb.info); }
 
 };

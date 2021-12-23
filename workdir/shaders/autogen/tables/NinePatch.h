@@ -2,12 +2,12 @@
 #include "vertex_input.h"
 struct NinePatch_srv
 {
-	StructuredBuffer<vertex_input> vb;
+	uint vb; // StructuredBuffer<vertex_input>
 };
 struct NinePatch
 {
 	NinePatch_srv srv;
-	StructuredBuffer<vertex_input> GetVb() { return srv.vb; }
+	StructuredBuffer<vertex_input> GetVb() { return ResourceDescriptorHeap[srv.vb]; }
 	Texture2D<float4> GetTextures(int i) { return bindless[i]; }
 
 };

@@ -20,9 +20,9 @@ const Voxelization CreateVoxelization()
 {
 	Voxelization result;
 	result.cb = cb_6_0;
-	result.uav.albedo = uav_6_0;
-	result.uav.normals = uav_6_1;
-	result.uav.visibility = uav_6_2;
+	result.uav.albedo = (pass_Voxelization.uav_0 );
+	result.uav.normals = (pass_Voxelization.uav_1 );
+	result.uav.visibility = (pass_Voxelization.uav_2 );
 	return result;
 }
 #ifndef NO_GLOBAL

@@ -2,9 +2,9 @@
 #include "AABB.h"
 struct node_data_cb
 {
-	float4x4 node_global_matrix;
-	float4x4 node_global_matrix_prev;
-	float4x4 node_inverse_matrix;
+	float4x4 node_global_matrix; // float4x4
+	float4x4 node_global_matrix_prev; // float4x4
+	float4x4 node_inverse_matrix; // float4x4
 	AABB_cb aabb;
 };
 struct node_data

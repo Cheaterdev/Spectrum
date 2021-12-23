@@ -24,12 +24,12 @@ ConstantBuffer<Pass_PSSMLighting> pass_PSSMLighting: register( b2, space6);
 const PSSMLighting CreatePSSMLighting()
 {
 	PSSMLighting result;
-	result.srv.light_mask = srv_6_0;
-	result.srv.gbuffer.albedo = srv_6_1;
-	result.srv.gbuffer.normals = srv_6_2;
-	result.srv.gbuffer.specular = srv_6_3;
-	result.srv.gbuffer.depth = srv_6_4;
-	result.srv.gbuffer.motion = srv_6_5;
+	result.srv.light_mask = (pass_PSSMLighting.srv_0 );
+	result.srv.gbuffer.albedo = (pass_PSSMLighting.srv_1 );
+	result.srv.gbuffer.normals = (pass_PSSMLighting.srv_2 );
+	result.srv.gbuffer.specular = (pass_PSSMLighting.srv_3 );
+	result.srv.gbuffer.depth = (pass_PSSMLighting.srv_4 );
+	result.srv.gbuffer.motion = (pass_PSSMLighting.srv_5 );
 	return result;
 }
 #ifndef NO_GLOBAL

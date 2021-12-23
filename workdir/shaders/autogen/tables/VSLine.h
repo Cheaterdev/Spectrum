@@ -1,8 +1,8 @@
 #pragma once
 struct VSLine_cb
 {
-	float2 pos;
-	float4 color;
+	float2 pos; // float2
+	float4 color; // float4
 };
 struct VSLine
 {

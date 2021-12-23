@@ -1,14 +1,14 @@
 #pragma once
 struct Raytracing_srv
 {
-	RaytracingAccelerationStructure scene;
-	StructuredBuffer<uint> index_buffer;
+	uint scene; // RaytracingAccelerationStructure
+	uint index_buffer; // StructuredBuffer<uint>
 };
 struct Raytracing
 {
 	Raytracing_srv srv;
-	RaytracingAccelerationStructure GetScene() { return srv.scene; }
-	StructuredBuffer<uint> GetIndex_buffer() { return srv.index_buffer; }
+	RaytracingAccelerationStructure GetScene() { return ResourceDescriptorHeap[srv.scene]; }
+	StructuredBuffer<uint> GetIndex_buffer() { return ResourceDescriptorHeap[srv.index_buffer]; }
 
 };
  const Raytracing CreateRaytracing(Raytracing_srv srv)

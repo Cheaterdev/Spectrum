@@ -1,7 +1,7 @@
 #pragma once
 struct DrawIndexedArguments_cb
 {
-	uint data[5];
+	uint data[5]; // uint
 };
 struct DrawIndexedArguments
 {

@@ -1,11 +1,11 @@
 #pragma once
 struct FSRConstants_cb
 {
-	uint4 Const0;
-	uint4 Const1;
-	uint4 Const2;
-	uint4 Const3;
-	uint4 Sample;
+	uint4 Const0; // uint4
+	uint4 Const1; // uint4
+	uint4 Const2; // uint4
+	uint4 Const3; // uint4
+	uint4 Sample; // uint4
 };
 struct FSRConstants
 {

@@ -14,7 +14,7 @@ ConstantBuffer<Pass_CopyTexture> pass_CopyTexture: register( b2, space4);
 const CopyTexture CreateCopyTexture()
 {
 	CopyTexture result;
-	result.srv.srcTex = srv_4_0;
+	result.srv.srcTex = (pass_CopyTexture.srv_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

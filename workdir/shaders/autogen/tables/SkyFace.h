@@ -1,7 +1,7 @@
 #pragma once
 struct SkyFace_cb
 {
-	uint face;
+	uint face; // uint
 };
 struct SkyFace
 {

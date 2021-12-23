@@ -1,9 +1,9 @@
 #pragma once
 struct MeshletCullData_cb
 {
-	float4 BoundingSphere;
-	uint NormalCone;
-	float ApexOffset;
+	float4 BoundingSphere; // float4
+	uint NormalCone; // uint
+	float ApexOffset; // float
 };
 struct MeshletCullData
 {

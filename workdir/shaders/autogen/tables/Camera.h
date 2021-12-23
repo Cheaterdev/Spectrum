@@ -2,15 +2,15 @@
 #include "Frustum.h"
 struct Camera_cb
 {
-	float4x4 view;
-	float4x4 proj;
-	float4x4 viewProj;
-	float4x4 invView;
-	float4x4 invProj;
-	float4x4 invViewProj;
-	float4 position;
-	float4 direction;
-	float4 jitter;
+	float4x4 view; // float4x4
+	float4x4 proj; // float4x4
+	float4x4 viewProj; // float4x4
+	float4x4 invView; // float4x4
+	float4x4 invProj; // float4x4
+	float4x4 invViewProj; // float4x4
+	float4 position; // float4
+	float4 direction; // float4
+	float4 jitter; // float4
 	Frustum_cb frustum;
 };
 struct Camera

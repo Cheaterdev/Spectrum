@@ -1,8 +1,8 @@
 #pragma once
 struct AABB_cb
 {
-	float4 min;
-	float4 max;
+	float4 min; // float4
+	float4 max; // float4
 };
 struct AABB
 {

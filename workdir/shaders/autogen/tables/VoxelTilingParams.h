@@ -1,18 +1,18 @@
 #pragma once
 struct VoxelTilingParams_cb
 {
-	uint4 voxels_per_tile;
+	uint4 voxels_per_tile; // uint4
 };
 struct VoxelTilingParams_srv
 {
-	StructuredBuffer<int3> tiles;
+	uint tiles; // StructuredBuffer<int3>
 };
 struct VoxelTilingParams
 {
 	VoxelTilingParams_cb cb;
 	VoxelTilingParams_srv srv;
+	StructuredBuffer<int3> GetTiles() { return ResourceDescriptorHeap[srv.tiles]; }
 	uint4 GetVoxels_per_tile() { return cb.voxels_per_tile; }
-	StructuredBuffer<int3> GetTiles() { return srv.tiles; }
 
 		
 uint3 get_voxel_pos(uint3 dispatchID)

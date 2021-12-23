@@ -1,8 +1,8 @@
 #pragma once
 struct BoxInfo_cb
 {
-	uint node_offset;
-	uint mesh_id;
+	uint node_offset; // uint
+	uint mesh_id; // uint
 };
 struct BoxInfo
 {

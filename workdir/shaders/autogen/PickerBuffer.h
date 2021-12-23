@@ -14,7 +14,7 @@ ConstantBuffer<Pass_PickerBuffer> pass_PickerBuffer: register( b2, space4);
 const PickerBuffer CreatePickerBuffer()
 {
 	PickerBuffer result;
-	result.uav.viewBuffer = uav_4_0;
+	result.uav.viewBuffer = (pass_PickerBuffer.uav_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

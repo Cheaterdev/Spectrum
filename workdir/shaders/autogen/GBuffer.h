@@ -22,11 +22,11 @@ ConstantBuffer<Pass_GBuffer> pass_GBuffer: register( b2, space6);
 const GBuffer CreateGBuffer()
 {
 	GBuffer result;
-	result.srv.albedo = srv_6_0;
-	result.srv.normals = srv_6_1;
-	result.srv.specular = srv_6_2;
-	result.srv.depth = srv_6_3;
-	result.srv.motion = srv_6_4;
+	result.srv.albedo = (pass_GBuffer.srv_0 );
+	result.srv.normals = (pass_GBuffer.srv_1 );
+	result.srv.specular = (pass_GBuffer.srv_2 );
+	result.srv.depth = (pass_GBuffer.srv_3 );
+	result.srv.motion = (pass_GBuffer.srv_4 );
 	return result;
 }
 #ifndef NO_GLOBAL

@@ -1,8 +1,8 @@
 #pragma once
 struct MeshInstance_cb
 {
-	uint vertex_offset;
-	uint index_offset;
+	uint vertex_offset; // uint
+	uint index_offset; // uint
 };
 struct MeshInstance
 {

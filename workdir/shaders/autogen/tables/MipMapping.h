@@ -1,28 +1,28 @@
 #pragma once
 struct MipMapping_cb
 {
-	uint SrcMipLevel;
-	uint NumMipLevels;
-	float2 TexelSize;
+	uint SrcMipLevel; // uint
+	uint NumMipLevels; // uint
+	float2 TexelSize; // float2
 };
 struct MipMapping_srv
 {
-	Texture2D<float4> SrcMip;
+	uint SrcMip; // Texture2D<float4>
 };
 struct MipMapping_uav
 {
-	RWTexture2D<float4> OutMip[4];
+	uint OutMip[4]; // RWTexture2D<float4>
 };
 struct MipMapping
 {
 	MipMapping_cb cb;
 	MipMapping_srv srv;
 	MipMapping_uav uav;
+	RWTexture2D<float4> GetOutMip(int i) { return ResourceDescriptorHeap[uav.OutMip[i]]; }
+	Texture2D<float4> GetSrcMip() { return ResourceDescriptorHeap[srv.SrcMip]; }
 	uint GetSrcMipLevel() { return cb.SrcMipLevel; }
 	uint GetNumMipLevels() { return cb.NumMipLevels; }
 	float2 GetTexelSize() { return cb.TexelSize; }
-	RWTexture2D<float4> GetOutMip(int i) { return uav.OutMip[i]; }
-	Texture2D<float4> GetSrcMip() { return srv.SrcMip; }
 
 };
  const MipMapping CreateMipMapping(MipMapping_cb cb,MipMapping_srv srv,MipMapping_uav uav)

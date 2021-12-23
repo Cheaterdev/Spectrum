@@ -14,7 +14,7 @@ ConstantBuffer<Pass_LineRender> pass_LineRender: register( b2, space4);
 const LineRender CreateLineRender()
 {
 	LineRender result;
-	result.srv.vb = srv_4_0;
+	result.srv.vb = (pass_LineRender.srv_0 );
 	return result;
 }
 #ifndef NO_GLOBAL

@@ -26,12 +26,12 @@ const RaytracingRays CreateRaytracingRays()
 {
 	RaytracingRays result;
 	result.cb = cb_6_0;
-	result.uav.output = uav_6_0;
-	result.srv.gbuffer.albedo = srv_6_0;
-	result.srv.gbuffer.normals = srv_6_1;
-	result.srv.gbuffer.specular = srv_6_2;
-	result.srv.gbuffer.depth = srv_6_3;
-	result.srv.gbuffer.motion = srv_6_4;
+	result.uav.output = (pass_RaytracingRays.uav_0 );
+	result.srv.gbuffer.albedo = (pass_RaytracingRays.srv_0 );
+	result.srv.gbuffer.normals = (pass_RaytracingRays.srv_1 );
+	result.srv.gbuffer.specular = (pass_RaytracingRays.srv_2 );
+	result.srv.gbuffer.depth = (pass_RaytracingRays.srv_3 );
+	result.srv.gbuffer.motion = (pass_RaytracingRays.srv_4 );
 	return result;
 }
 #ifndef NO_GLOBAL

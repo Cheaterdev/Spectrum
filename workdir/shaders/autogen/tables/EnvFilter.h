@@ -1,9 +1,9 @@
 #pragma once
 struct EnvFilter_cb
 {
-	uint4 face;
-	float4 scaler;
-	uint4 size;
+	uint4 face; // uint4
+	float4 scaler; // float4
+	uint4 size; // uint4
 };
 struct EnvFilter
 {
