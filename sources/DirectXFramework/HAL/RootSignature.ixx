@@ -296,13 +296,8 @@ export
 			template<class T>
 			void process_one(RootSignatureDesc& desc)
 			{
-
-				if constexpr (HasCB<T>)
-					desc.remove(T::Slot::CB_ID);
-
-				//      if constexpr (HasSRV<T> || HasSMP<T> || HasUAV<T>)
-				  //        desc.remove(T::Slot::CB_ID + 1);
-
+				if constexpr (HasSlot<T>)
+					desc.remove(T::Slot::ID);
 			}
 
 

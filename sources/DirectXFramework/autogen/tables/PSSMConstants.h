@@ -4,14 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PSSMConstants
 	{
-		struct CB
+		int level;
+		float time;
+		int& GetLevel() { return level; }
+		float& GetTime() { return time; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			int level;
-			float time;
-		} &cb;
-		int& GetLevel() { return cb.level; }
-		float& GetTime() { return cb.time; }
-		PSSMConstants(CB&cb) :cb(cb){}
+			compiler.compile(level);
+			compiler.compile(time);
+		}
 	};
 	#pragma pack(pop)
 }

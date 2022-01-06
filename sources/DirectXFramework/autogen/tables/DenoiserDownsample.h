@@ -4,14 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserDownsample
 	{
-		struct SRV
+		Render::HLSL::Texture2D<float4> color;
+		Render::HLSL::Texture2D<float> depth;
+		Render::HLSL::Texture2D<float4>& GetColor() { return color; }
+		Render::HLSL::Texture2D<float>& GetDepth() { return depth; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture2D<float4> color;
-			Render::HLSL::Texture2D<float> depth;
-		} &srv;
-		Render::HLSL::Texture2D<float4>& GetColor() { return srv.color; }
-		Render::HLSL::Texture2D<float>& GetDepth() { return srv.depth; }
-		DenoiserDownsample(SRV&srv) :srv(srv){}
+			compiler.compile(color);
+			compiler.compile(depth);
+		}
 	};
 	#pragma pack(pop)
 }

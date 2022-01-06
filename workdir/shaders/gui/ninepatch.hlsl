@@ -31,7 +31,7 @@ quad_output VS(uint index : SV_VERTEXID, uint instance : SV_INSTANCEID)
 #ifdef BUILD_FUNC_PS
 float4 PS(quad_output i) : SV_TARGET0
 {
-    return  i.addColor + i.mulColor*GetNinePatch().GetTextures(i.texture_offset).Sample(anisoBordeSampler , i.tc);
+    return   i.addColor + i.mulColor *GetNinePatch().GetTextures(i.texture_offset).Sample(anisoBordeSampler , i.tc);
 }
 #endif
 

@@ -4,14 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MaterialInfo
 	{
-		struct CB
-		{
-			uint textureOffset;
-		} &cb;
+		uint textureOffset;
 		DynamicData data;
-		uint& GetTextureOffset() { return cb.textureOffset; }
+		uint& GetTextureOffset() { return textureOffset; }
 		DynamicData& GetData() { return data; }
-		MaterialInfo(CB&cb) :cb(cb){}
+		template<class Compiler>
+		void compile(Compiler& compiler) const
+		{
+			compiler.compile(data);
+			compiler.compile(textureOffset);
+		}
 	};
 	#pragma pack(pop)
 }

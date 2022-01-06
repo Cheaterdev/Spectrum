@@ -1,19 +1,8 @@
 #pragma once
-struct ColorRect_cb
+struct ColorRect
 {
 	float4 pos[2]; // float4
 	float4 color; // float4
+	float4 GetPos(int i) { return pos[i]; }
+	float4 GetColor() { return color; }
 };
-struct ColorRect
-{
-	ColorRect_cb cb;
-	float4 GetPos(int i) { return cb.pos[i]; }
-	float4 GetColor() { return cb.color; }
-
-};
- const ColorRect CreateColorRect(ColorRect_cb cb)
-{
-	const ColorRect result = {cb
-	};
-	return result;
-}

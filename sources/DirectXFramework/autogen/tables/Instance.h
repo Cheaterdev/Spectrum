@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Instance
 	{
-		struct CB
+		uint instanceId;
+		uint& GetInstanceId() { return instanceId; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			uint instanceId;
-		} &cb;
-		uint& GetInstanceId() { return cb.instanceId; }
-		Instance(CB&cb) :cb(cb){}
+			compiler.compile(instanceId);
+		}
 	};
 	#pragma pack(pop)
 }

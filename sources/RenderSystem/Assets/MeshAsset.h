@@ -32,7 +32,7 @@ struct InlineMeshlet
     std::vector<T> UniqueVertexIndices;
     std::vector<T> PrimitiveIndices;
 
-    Table::MeshletCullData::CB cull_data;
+    Table::MeshletCullData cull_data;
 
 private:
     SERIALIZE()
@@ -123,7 +123,7 @@ class MeshData: public loader<MeshData, std::string, AssetLoadingContext::ptr>
 {
     public:
         using ptr = std::shared_ptr<MeshData>;
-        std::vector<Table::mesh_vertex_input::CB> vertex_buffer;
+        std::vector<Table::mesh_vertex_input> vertex_buffer;
         std::vector<UINT32> index_buffer;
 
         std::vector<MeshInfo> meshes;
@@ -148,10 +148,10 @@ class MeshAsset : public Asset
         using ptr = s_ptr<MeshAsset>;
         using ref = AssetReference<MeshAsset>;
 	
-        std::vector<Table::mesh_vertex_input::CB> vertex_buffer;
+        std::vector<Table::mesh_vertex_input> vertex_buffer;
         std::vector<UINT32> index_buffer;
 
-        TypedHandle<Table::mesh_vertex_input::CB> vertex_handle;
+        TypedHandle<Table::mesh_vertex_input> vertex_handle;
         TypedHandle<UINT32> index_handle;
 
         TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
@@ -161,8 +161,8 @@ class MeshAsset : public Asset
         TypedHandle<UINT32> primitive_index_handle;
 
 
-        TypedHandle<Table::Meshlet::CB> meshlet_handle;
- TypedHandle<Table::MeshletCullData::CB> meshlet_cull_handle;
+        TypedHandle<Table::Meshlet> meshlet_handle;
+ TypedHandle<Table::MeshletCullData> meshlet_cull_handle;
 
 
         std::vector<MeshInfo> meshes;
@@ -241,8 +241,8 @@ class MeshAssetInstance : public scene_object, public AssetHolder, public Render
         bool ras_inited = false;
 		//std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
      
-        TypedHandle<Table::MeshCommandData::CB> meshpart_handle;
-		TypedHandle<Table::MeshInstance::CB> instance_handle;
+        TypedHandle<Table::MeshCommandData> meshpart_handle;
+		TypedHandle<Table::MeshInstance> instance_handle;
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
         size_t nodes_count;
@@ -264,7 +264,7 @@ class MeshAssetInstance : public scene_object, public AssetHolder, public Render
 		};
 
 
-        TypedHandle<Table::node_data::CB> nodes_handle;
+        TypedHandle<Table::node_data> nodes_handle;
         struct render_info
         {
   
@@ -326,7 +326,7 @@ class MeshAssetInstance : public scene_object, public AssetHolder, public Render
 
 class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public virtual_gpu_buffer<Table::MeshInstance>
 {
-	static const size_t MAX_NODES_SIZE = 1_gb / sizeof(Table::MeshInstance::CB);
+	static const size_t MAX_NODES_SIZE = 1_gb / sizeof(Table::MeshInstance);
 public:
     universal_mesh_instance_manager() :virtual_gpu_buffer<Table::MeshInstance>(MAX_NODES_SIZE)
 	{
@@ -337,7 +337,7 @@ public:
 
 class universal_nodes_manager :public Singleton<universal_nodes_manager>, public virtual_gpu_buffer<Table::node_data>
 {
-    static const size_t MAX_NODES_SIZE = 1_gb / sizeof(Table::node_data::CB);
+    static const size_t MAX_NODES_SIZE = 1_gb / sizeof(Table::node_data);
 public:
     universal_nodes_manager():virtual_gpu_buffer<Table::node_data>(MAX_NODES_SIZE)
 	{
@@ -347,7 +347,7 @@ public:
 
 class universal_vertex_manager :public Singleton<universal_vertex_manager>, public virtual_gpu_buffer<Table::mesh_vertex_input>
 {
-	static const size_t MAX_VERTEXES_SIZE = 2_gb / sizeof(Table::mesh_vertex_input::CB);
+	static const size_t MAX_VERTEXES_SIZE = 2_gb / sizeof(Table::mesh_vertex_input);
 public:
     universal_vertex_manager() :virtual_gpu_buffer<Table::mesh_vertex_input>(MAX_VERTEXES_SIZE)
 	{
@@ -358,7 +358,7 @@ public:
 
 class universal_meshlet_manager :public Singleton<universal_meshlet_manager>, public virtual_gpu_buffer<Table::Meshlet>
 {
-    static const size_t MAX_VERTEXES_SIZE = 2_gb / sizeof(Table::Meshlet::CB);
+    static const size_t MAX_VERTEXES_SIZE = 2_gb / sizeof(Table::Meshlet);
 public:
     universal_meshlet_manager() :virtual_gpu_buffer<Table::Meshlet>(MAX_VERTEXES_SIZE)
     {

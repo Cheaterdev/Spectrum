@@ -5,14 +5,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PSSMLighting
 	{
-		struct SRV
+		Render::HLSL::Texture2D<float> light_mask;
+		GBuffer gbuffer;
+		Render::HLSL::Texture2D<float>& GetLight_mask() { return light_mask; }
+		GBuffer& MapGbuffer() { return gbuffer; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture2D<float> light_mask;
-			GBuffer::SRV gbuffer;
-		} &srv;
-		Render::HLSL::Texture2D<float>& GetLight_mask() { return srv.light_mask; }
-		GBuffer MapGbuffer() { return GBuffer(srv.gbuffer); }
-		PSSMLighting(SRV&srv) :srv(srv){}
+			compiler.compile(light_mask);
+			compiler.compile(gbuffer);
+		}
 	};
 	#pragma pack(pop)
 }

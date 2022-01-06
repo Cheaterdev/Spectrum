@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct EnvSource
 	{
-		struct SRV
+		Render::HLSL::TextureCube<float4> sourceTex;
+		Render::HLSL::TextureCube<float4>& GetSourceTex() { return sourceTex; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::TextureCube<float4> sourceTex;
-		} &srv;
-		Render::HLSL::TextureCube<float4>& GetSourceTex() { return srv.sourceTex; }
-		EnvSource(SRV&srv) :srv(srv){}
+			compiler.compile(sourceTex);
+		}
 	};
 	#pragma pack(pop)
 }

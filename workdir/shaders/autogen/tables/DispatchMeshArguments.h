@@ -1,17 +1,6 @@
 #pragma once
-struct DispatchMeshArguments_cb
-{
-	uint3 counts; // uint3
-};
 struct DispatchMeshArguments
 {
-	DispatchMeshArguments_cb cb;
-	uint3 GetCounts() { return cb.counts; }
-
+	uint3 counts; // uint3
+	uint3 GetCounts() { return counts; }
 };
- const DispatchMeshArguments CreateDispatchMeshArguments(DispatchMeshArguments_cb cb)
-{
-	const DispatchMeshArguments result = {cb
-	};
-	return result;
-}

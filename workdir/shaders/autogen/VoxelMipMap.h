@@ -5,27 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelMipMap.h"
-ConstantBuffer<VoxelMipMap_cb> cb_5_0:register(b0,space5);
-Texture3D<float4> srv_5_0: register(t0, space5);
-RWTexture3D<float4> uav_5_0[3]: register(u0, space5);
-StructuredBuffer<int3> srv_5_1: register(t1, space5);
-struct Pass_VoxelMipMap
-{
-uint srv_0;
-uint srv_1;
-uint uav_0;
-};
-ConstantBuffer<Pass_VoxelMipMap> pass_VoxelMipMap: register( b2, space5);
+ConstantBuffer<VoxelMipMap> pass_VoxelMipMap: register( b2, space5);
 const VoxelMipMap CreateVoxelMipMap()
 {
-	VoxelMipMap result;
-	result.cb = cb_5_0;
-	result.srv.SrcMip = (pass_VoxelMipMap.srv_0 );
-	result.uav.OutMips[0] = (pass_VoxelMipMap.uav_0) + 0; 
-	result.uav.OutMips[1] = (pass_VoxelMipMap.uav_0) + 1; 
-	result.uav.OutMips[2] = (pass_VoxelMipMap.uav_0) + 2; 
-	result.srv.params.tiles = (pass_VoxelMipMap.srv_1 );
-	return result;
+	return pass_VoxelMipMap;
 }
 #ifndef NO_GLOBAL
 static const VoxelMipMap voxelMipMap_global = CreateVoxelMipMap();

@@ -4,16 +4,19 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SMAA_Weights
 	{
-		struct SRV
+		Render::HLSL::Texture2D<float4> areaTex;
+		Render::HLSL::Texture2D<float4> searchTex;
+		Render::HLSL::Texture2D<float4> edgesTex;
+		Render::HLSL::Texture2D<float4>& GetAreaTex() { return areaTex; }
+		Render::HLSL::Texture2D<float4>& GetSearchTex() { return searchTex; }
+		Render::HLSL::Texture2D<float4>& GetEdgesTex() { return edgesTex; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture2D<float4> areaTex;
-			Render::HLSL::Texture2D<float4> searchTex;
-			Render::HLSL::Texture2D<float4> edgesTex;
-		} &srv;
-		Render::HLSL::Texture2D<float4>& GetAreaTex() { return srv.areaTex; }
-		Render::HLSL::Texture2D<float4>& GetSearchTex() { return srv.searchTex; }
-		Render::HLSL::Texture2D<float4>& GetEdgesTex() { return srv.edgesTex; }
-		SMAA_Weights(SRV&srv) :srv(srv){}
+			compiler.compile(areaTex);
+			compiler.compile(searchTex);
+			compiler.compile(edgesTex);
+		}
 	};
 	#pragma pack(pop)
 }

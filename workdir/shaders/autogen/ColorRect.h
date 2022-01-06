@@ -5,16 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/ColorRect.h"
-ConstantBuffer<ColorRect_cb> cb_4_0:register(b0,space4);
-struct Pass_ColorRect
-{
-};
-ConstantBuffer<Pass_ColorRect> pass_ColorRect: register( b2, space4);
+ConstantBuffer<ColorRect> pass_ColorRect: register( b2, space4);
 const ColorRect CreateColorRect()
 {
-	ColorRect result;
-	result.cb = cb_4_0;
-	return result;
+	return pass_ColorRect;
 }
 #ifndef NO_GLOBAL
 static const ColorRect colorRect_global = CreateColorRect();

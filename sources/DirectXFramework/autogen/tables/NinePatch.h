@@ -5,14 +5,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct NinePatch
 	{
-		struct SRV
+		Render::HLSL::StructuredBuffer<vertex_input> vb;
+		std::vector<Render::HLSL::Texture2D<float4>> textures;
+		Render::HLSL::StructuredBuffer<vertex_input>& GetVb() { return vb; }
+		std::vector<Render::HLSL::Texture2D<float4>>& GetTextures() { return textures; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::StructuredBuffer<vertex_input> vb;
-		} &srv;
-		Render::Bindless& bindless;
-		Render::HLSL::StructuredBuffer<vertex_input>& GetVb() { return srv.vb; }
-		Render::Bindless& GetTextures() { return bindless; }
-		NinePatch(SRV&srv,Render::Bindless &bindless) :srv(srv),bindless(bindless){}
+			compiler.compile(vb);
+			compiler.compile(textures);
+		}
 	};
 	#pragma pack(pop)
 }

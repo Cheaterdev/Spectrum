@@ -4,14 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Test
 	{
-		struct CB
+		float data[16];
+		std::vector<Render::HLSL::Texture2D<float4>> tex;
+		float* GetData() { return data; }
+		std::vector<Render::HLSL::Texture2D<float4>>& GetTex() { return tex; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			float data[16];
-		} &cb;
-		Render::Bindless& bindless;
-		float* GetData() { return cb.data; }
-		Render::Bindless& GetTex() { return bindless; }
-		Test(CB&cb,Render::Bindless &bindless) :cb(cb),bindless(bindless){}
+			compiler.compile(data);
+			compiler.compile(tex);
+		}
 	};
 	#pragma pack(pop)
 }

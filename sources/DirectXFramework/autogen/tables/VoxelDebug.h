@@ -5,14 +5,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelDebug
 	{
-		struct SRV
+		Render::HLSL::Texture3D<float4> volume;
+		GBuffer gbuffer;
+		Render::HLSL::Texture3D<float4>& GetVolume() { return volume; }
+		GBuffer& MapGbuffer() { return gbuffer; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture3D<float4> volume;
-			GBuffer::SRV gbuffer;
-		} &srv;
-		Render::HLSL::Texture3D<float4>& GetVolume() { return srv.volume; }
-		GBuffer MapGbuffer() { return GBuffer(srv.gbuffer); }
-		VoxelDebug(SRV&srv) :srv(srv){}
+			compiler.compile(volume);
+			compiler.compile(gbuffer);
+		}
 	};
 	#pragma pack(pop)
 }

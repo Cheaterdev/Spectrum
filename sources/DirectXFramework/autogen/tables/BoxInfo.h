@@ -4,14 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct BoxInfo
 	{
-		struct CB
+		uint node_offset;
+		uint mesh_id;
+		uint& GetNode_offset() { return node_offset; }
+		uint& GetMesh_id() { return mesh_id; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			uint node_offset;
-			uint mesh_id;
-		} &cb;
-		uint& GetNode_offset() { return cb.node_offset; }
-		uint& GetMesh_id() { return cb.mesh_id; }
-		BoxInfo(CB&cb) :cb(cb){}
+			compiler.compile(node_offset);
+			compiler.compile(mesh_id);
+		}
 	};
 	#pragma pack(pop)
 }

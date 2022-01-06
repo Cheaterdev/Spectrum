@@ -4,17 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Countour
 	{
-		struct CB
+		float4 color;
+		Render::HLSL::Texture2D<float4> tex;
+		float4& GetColor() { return color; }
+		Render::HLSL::Texture2D<float4>& GetTex() { return tex; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			float4 color;
-		} &cb;
-		struct SRV
-		{
-			Render::HLSL::Texture2D<float4> tex;
-		} &srv;
-		float4& GetColor() { return cb.color; }
-		Render::HLSL::Texture2D<float4>& GetTex() { return srv.tex; }
-		Countour(CB&cb,SRV&srv) :cb(cb),srv(srv){}
+			compiler.compile(color);
+			compiler.compile(tex);
+		}
 	};
 	#pragma pack(pop)
 }

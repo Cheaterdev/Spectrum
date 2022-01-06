@@ -1082,7 +1082,7 @@ void VoxelGI::lighting(Graph& graph)
 	struct Lighting
 	{
 		Handlers::Texture H(global_depth);
-		Handlers::StructuredBuffer<Table::Camera::CB> H(global_camera);
+		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
 		Handlers::Texture H(VoxelLighted);
 		Handlers::Texture H(VoxelAlbedo);
 		Handlers::Texture H(VoxelNormal);

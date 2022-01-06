@@ -8,26 +8,134 @@ import Concepts;
 import Descriptors;
 import Enums;
 import Buffer;
+import SIG;
+import d3d12_types;
 
 export {
 
+
+	template<typename T> concept Compilable =
+		requires (T t) {
+		T::compile;
+	};
+
+	template<typename T> concept HandleType = std::is_base_of_v<Render::Handle, T>;
+
+	template<class Context>
+	class Compiler
+	{
+		
+	public:
+		Context* context;
+		std::vector<DX12::ResourceInfo*> resources;
+		std::stringstream s;
+		Compiler():s(std::stringstream::out | std::stringstream::binary)
+		{
+
+		}
+		template<HandleType T>
+		void compile(const T& handle)
+		{
+			auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(1);
+
+			if (handle.is_valid())
+			{
+				table[0].place(handle);
+
+				if (handle.resource_info)
+				{
+					resources.push_back(handle.resource_info);
+				}
+			}
+
+			uint offset = table.offset;
+			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
+		}
+
+		template<Compilable T>
+		void compile(const T& t) //equires (std::is_base_of_v<T, Handle>)
+		{
+			t.compile(*this);
+		}
+
+		void compile(const DynamicData& t)
+		{
+			s.write(reinterpret_cast<const char*>(t.data()), t.size());
+		}
+
+		template<HandleType T>
+		void compile(const std::vector<T>& t)
+		{
+			uint offset = 0;
+			if (!t.empty()) {
+				auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(t.size());
+				for (uint i = 0; i < t.size(); i++)
+				{
+					const Render::Handle& handle = t[i];
+					if (handle.is_valid())
+					{
+						table[i].place(handle);
+
+						if (handle.resource_info)
+						{
+							resources.push_back(handle.resource_info);
+						}
+					}
+				}
+
+				offset = table.offset;
+			}
+		//	std::vector<uint> offsets;
+
+		//	for (auto& e : t)
+		//	{
+		//		offsets.emplace_back(e.offset);
+
+		//		if (e.resource_info)
+		//		{
+		//			resources.push_back(e.resource_info);
+		//		}
+		//	}
+		//	auto info = uploader->place_raw(offsets);
+
+	
+			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
+	
+		}
+
+
+	
+
+
+		template<class T>
+		void compile(const T& t) //equires (std::is_base_of_v<T, Handle>)
+		{
+			auto start = s.str().length() % sizeof(uint4);
+			auto end = start + sizeof(T);
+
+			if (start != 0 && end > sizeof(uint4))
+			{
+				uint add = sizeof(uint4) - start;
+
+				for (int i = 0; i < add; i++)
+				{
+					char zero = 0;
+					s.write(reinterpret_cast<const char*>(&zero), sizeof(zero));
+				}
+			}
+			s.write(reinterpret_cast<const char*>(&t), sizeof(T));
+		//	t.compile(*this);
+		}
+	};
 	template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
 	struct CompiledData
 	{
+		std::vector<DX12::ResourceInfo*> resources;
 
 		static constexpr SlotID ID = _ID;
 		using Table = _Table;
 		using Slot = _Slot;
 		using SlotTable = _SlotTable;
-		Render::ResourceAddress cb;
-		Render::HandleTableLight table_srv;
-		Render::HandleTableLight table_uav;
-		Render::HandleTableLight table_smp;
-
-
-		std::vector<UINT> offsets_srv;
-		std::vector<UINT> offsets_uav;
-		std::vector<UINT> offsets_smp;
 
 		Render::ResourceAddress offsets_cb;
 		UINT offset_cb;
@@ -40,15 +148,19 @@ export {
 
 		const void set_tables(Render::SignatureDataSetter& graphics) const
 		{
-			if constexpr (HasSRV<Table>) graphics.set_table<Render::HandleType::SRV>(Slot::SRV_ID, table_srv);
-			if constexpr (HasSMP<Table>) graphics.set_table<Render::HandleType::SMP>(Slot::SMP_ID, table_smp);
-			if constexpr (HasUAV<Table>) graphics.set_table<Render::HandleType::UAV>(Slot::UAV_ID, table_uav);
-			if constexpr (HasCB<Table>) graphics.set_cb(Slot::CB_ID, cb);
-
-			if constexpr (HasSRV<Table> || HasSMP<Table> || HasUAV<Table>)
-				graphics.set_cb(Slot::CB_ID + 1, offsets_cb);
+			for(auto resource_info :resources)
+			graphics.get_base().transition(resource_info);
+			graphics.set_cb(Slot::ID, offsets_cb);
+		}
+		operator Render::ResourceAddress() const
+		{
+			return offsets_cb;
 		}
 
+		Render::ResourceAddress compiled()
+		{
+			return offsets_cb;
+		}
 	};
 
 	template<class _SlotTable, SlotID ID, class Table, class _Slot = Table::Slot>
@@ -60,154 +172,25 @@ export {
 
 		using Compiled = CompiledData<SlotTable, ID, Table, Slot>;
 
-		/*
-		template<class Context, class SRV>
-		void place_srv(Compiled& compiled, Context& context, SRV& srv) const
-		{
-			compiled.table_srv = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(sizeof(srv) / sizeof(Render::Handle));
-			auto ptr = reinterpret_cast<Render::Handle*>(&srv);
-			for (int i = 0; i < compiled.table_srv.get_count(); i++)
-			{
-				Render::Handle* handle = ptr + i;
-				compiled.table_srv[i].place(*handle);
-			}
-		}
-
-		template<class Context, class SRV>
-		void place_srv(Compiled& compiled, Context& context, SRV& srv, Render::Bindless& bindless) const
-		{
-			compiled.table_srv = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(sizeof(srv) / sizeof(Render::Handle));
-			auto ptr = reinterpret_cast<Render::Handle*>(&srv);
-			for (int i = 0; i < compiled.table_srv.get_count(); i++)
-			{
-				Render::Handle* handle = ptr + i;
-				//assert(!(*handle[0].resource_ptr)->debug);
-				compiled.table_srv[i].place(*handle);
-			}
-		}
-		*/
-
-		template<class Context, class UAV>
-		void place_uav(Compiled& compiled, Context& context, UAV& uav) const
-		{
-			auto count = static_cast<UINT>(sizeof(uav) / sizeof(Render::Handle));
-
-			compiled.table_uav = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(count);
-			compiled.offsets_uav.resize(count);
-
-
-			auto ptr = reinterpret_cast<Render::Handle*>(&uav);
-			for (int i = 0; i < sizeof(uav) / sizeof(Render::Handle); i++)
-			{
-				Render::Handle* handle = ptr + i;
-				if (ptr[i].cpu.ptr != 0)
-				{
-					compiled.table_uav[i].place(*handle);
-					compiled.offsets_uav[i] = compiled.table_uav.offset + i;// handle->offset;
-				}
-				else
-				{
-					compiled.table_uav[i].resource_info->resource_ptr = nullptr;
-					compiled.offsets_uav[i] = UINT_MAX;
-				}
-
-
-			}
-		}
-
-		template<class Context, class SMP>
-		void place_smp(Compiled& compiled, Context& context, SMP& smp) const
-		{
-			auto count = sizeof(smp) / sizeof(Render::Handle);
-
-			compiled.table_smp = context.get_gpu_heap(Render::DescriptorHeapType::SAMPLER).place(count);
-			compiled.offsets_smp.resize(count);
-
-			auto ptr = reinterpret_cast<Render::Handle*>(&smp);
-			for (int i = 0; i < compiled.table_smp.get_count(); i++)
-			{
-				Render::Handle* handle = ptr + i;
-				compiled.table_smp[i].place(*handle);
-			}
-		}
-
 
 		template<class Context>
 		Compiled compile(Context& context) const
 		{
 
+			Compiler<Context> compiler;
+			compiler.context = &context;
+			Table::compile(compiler);
+
+			
 			Compiled compiled;
 
+			auto str = compiler.s.str();
 
-			if constexpr (HasSRV<Table> || HasBindless<Table>)
-			{
-
-				UINT srv_count = 0;
-				if constexpr (HasSRV<Table>) srv_count += sizeof(Table::srv) / sizeof(Render::Handle);
-				if constexpr (HasBindless<Table>) srv_count += (UINT)Table::bindless.size();
-
-				if (srv_count > 0) {
-					compiled.table_srv = context.get_gpu_heap(Render::DescriptorHeapType::CBV_SRV_UAV).place(srv_count);
-					compiled.offsets_srv.resize(srv_count);
-
-
-					int _offset = 0;
-					if constexpr (HasSRV<Table>) {
-
-						Render::Handle* ptr = reinterpret_cast<Render::Handle*>(std::addressof(Table::srv));
-						for (int i = 0; i < sizeof(Table::srv) / sizeof(Render::Handle); i++)
-						{
-							if (ptr[i].cpu.ptr != 0)
-
-							{
-								compiled.offsets_srv[_offset] = compiled.table_srv.offset + _offset;// handle->offset;
-								compiled.table_srv[_offset++].place(ptr[i]);
-
-							}
-							else
-							{
-								compiled.table_srv[_offset++].resource_info->resource_ptr = nullptr;
-							}
-
-						}
-					}
-
-
-					if constexpr (HasBindless<Table>) {
-
-						for (int j = 0; j < Table::bindless.size(); j++)
-						{
-							if (Table::bindless[j].cpu.ptr != 0)
-							{
-								compiled.offsets_srv[_offset] = compiled.table_srv.offset + _offset;// handle->offset;
-								compiled.table_srv[_offset++].place(Table::bindless[j]);
-							}
-							else
-							{
-								compiled.table_srv[_offset++].resource_info->resource_ptr = nullptr;
-							}
-						}
-					}
-				}
-			}
-
-			if constexpr (HasUAV<Table>)
-				place_uav(compiled, context, Table::uav);
-
-			if constexpr (HasSMP<Table>)
-				place_smp(compiled, context, Table::smp);
-
-			if constexpr (HasCB<Table>)
-			{
-				if constexpr (HasData<Table>)
-					compiled.cb = context.place_raw(Table::data, Table::cb).get_resource_address();
-				else
-					compiled.cb = context.place_raw(Table::cb).get_resource_address();
-			}
-
-			if constexpr (HasSRV<Table> || HasSMP<Table> || HasUAV<Table>)
-				compiled.offsets_cb = context.place_raw(compiled.offsets_srv, compiled.offsets_uav, compiled.offsets_smp).get_resource_address();
-
+			auto ptr = reinterpret_cast<const std::byte*>(str.data());
+			std::vector<std::byte> data;
+			data.assign(ptr,ptr+ str.size());
+			compiled.offsets_cb = context.place_raw(data).get_resource_address();
+			compiled.resources = compiler.resources;
 			return compiled;
 		}
 
@@ -227,7 +210,7 @@ export {
 
 			D3D12_INDIRECT_ARGUMENT_DESC desc;
 			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
-			desc.ConstantBufferView.RootParameterIndex = Slot::CB_ID;
+			desc.ConstantBufferView.RootParameterIndex = Slot::ID;
 
 			return desc;
 		}

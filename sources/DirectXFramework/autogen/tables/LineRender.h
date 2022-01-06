@@ -5,12 +5,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct LineRender
 	{
-		struct SRV
+		Render::HLSL::StructuredBuffer<VSLine> vb;
+		Render::HLSL::StructuredBuffer<VSLine>& GetVb() { return vb; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::StructuredBuffer<VSLine> vb;
-		} &srv;
-		Render::HLSL::StructuredBuffer<VSLine>& GetVb() { return srv.vb; }
-		LineRender(SRV&srv) :srv(srv){}
+			compiler.compile(vb);
+		}
 	};
 	#pragma pack(pop)
 }

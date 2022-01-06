@@ -21,4 +21,6 @@
       dynamic_init_##LibName() {                           \
         ::cereal::detail::dynamic_init_dummy_##LibName();  \
       }                                                    \
-    } dynamic_init_instance_##LibName;                    
+    } dynamic_init_instance_##LibName;
+
+

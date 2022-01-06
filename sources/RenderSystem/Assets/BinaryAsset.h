@@ -1,4 +1,7 @@
 #pragma once
+#include <memory>
+#include <string>
+
 #include "Assets/Asset.h"
 
 class BinaryAsset : public Asset

@@ -791,7 +791,7 @@ HRESULT ComputeCullData(
 
         for (uint32_t i = 0; i < m.PrimitiveIndices.size() / 3; ++i)
         {
-      //      auto primitive = primitiveIndices[m.cb.primitiveOffset + i];
+      //      auto primitive = primitiveIndices[m.primitiveOffset + i];
 
             auto i0 = m.PrimitiveIndices[3 * i];
             auto i1 = m.PrimitiveIndices[3 * i + 1];

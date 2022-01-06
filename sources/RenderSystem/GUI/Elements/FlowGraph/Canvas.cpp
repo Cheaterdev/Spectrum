@@ -32,7 +32,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
         //	auto& b = *line_vertex;
         int count = 0;
 
-        std::vector<Table::VSLine::CB> vertexes;
+        std::vector<Table::VSLine> vertexes;
         vertexes.resize(4 * linking.size());
 
         for (auto& l : linking)
@@ -53,8 +53,8 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
         c.command_list->get_graphics().set_pipeline(GetPSO<PSOS::CanvasLines>());
         c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 
-		auto data = c.command_list->place_data(sizeof(Table::VSLine::CB) * vertexes.size(), sizeof(Table::VSLine::CB));
-		c.command_list->write<Table::VSLine::CB>(data, vertexes);
+		auto data = c.command_list->place_data(sizeof(Table::VSLine) * vertexes.size(), sizeof(Table::VSLine));
+		c.command_list->write<Table::VSLine>(data, vertexes);
 
 		auto view = data.resource->create_view<StructuredBufferView<Table::VSLine>>(*c.command_list->frame_resources, Render::BufferType::NONE, (UINT)data.offset, (UINT)data.size);
         {

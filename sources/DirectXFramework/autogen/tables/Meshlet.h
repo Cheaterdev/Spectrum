@@ -4,18 +4,22 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Meshlet
 	{
-		struct CB
+		uint vertexCount;
+		uint vertexOffset;
+		uint primitiveCount;
+		uint primitiveOffset;
+		uint& GetVertexCount() { return vertexCount; }
+		uint& GetVertexOffset() { return vertexOffset; }
+		uint& GetPrimitiveCount() { return primitiveCount; }
+		uint& GetPrimitiveOffset() { return primitiveOffset; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			uint vertexCount;
-			uint vertexOffset;
-			uint primitiveCount;
-			uint primitiveOffset;
-		} &cb;
-		uint& GetVertexCount() { return cb.vertexCount; }
-		uint& GetVertexOffset() { return cb.vertexOffset; }
-		uint& GetPrimitiveCount() { return cb.primitiveCount; }
-		uint& GetPrimitiveOffset() { return cb.primitiveOffset; }
-		Meshlet(CB&cb) :cb(cb){}
+			compiler.compile(vertexCount);
+			compiler.compile(vertexOffset);
+			compiler.compile(primitiveCount);
+			compiler.compile(primitiveOffset);
+		}
 	};
 	#pragma pack(pop)
 }

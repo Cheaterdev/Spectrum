@@ -60,7 +60,7 @@ void PSSM::generate(Graph& graph)
 	struct PSSMDataGlobal
 	{
 		Handlers::Texture H(global_depth);
-		Handlers::StructuredBuffer<Table::Camera::CB> H(global_camera);
+		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
 	};
 
 	graph.add_pass<PSSMDataGlobal>("PSSM_Global", [this, &graph](PSSMDataGlobal& data, TaskBuilder& builder) {
@@ -143,8 +143,8 @@ void PSSM::generate(Graph& graph)
 
 				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
 				auto camera = frameInfo.MapCamera();
-				//	memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
-				camera.cb = light_cam.camera_cb.current;
+				//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
+				camera = light_cam.camera_cb.current;
 				frameInfo.set(graphics);
 				frameInfo.set(compute);
 			}
@@ -266,8 +266,8 @@ void PSSM::generate(Graph& graph)
 
 					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
 					auto camera = frameInfo.MapCamera();
-					//	memcpy(&camera.cb, &graph.cam->camera_cb.current, sizeof(camera.cb));
-					camera.cb = light_cam.camera_cb.current;
+					//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
+					camera = light_cam.camera_cb.current;
 					frameInfo.set(graphics);
 					frameInfo.set(compute);
 				}

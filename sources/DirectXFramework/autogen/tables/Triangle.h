@@ -5,14 +5,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Triangle
 	{
-		struct CB
+		float lod;
+		mesh_vertex_input v;
+		float& GetLod() { return lod; }
+		mesh_vertex_input& MapV() { return v; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			float lod;
-			mesh_vertex_input::CB v;
-		} &cb;
-		float& GetLod() { return cb.lod; }
-		mesh_vertex_input MapV() { return mesh_vertex_input(cb.v); }
-		Triangle(CB&cb) :cb(cb){}
+			compiler.compile(lod);
+			compiler.compile(v);
+		}
 	};
 	#pragma pack(pop)
 }

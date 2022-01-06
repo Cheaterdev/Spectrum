@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SkyFace
 	{
-		struct CB
+		uint face;
+		uint& GetFace() { return face; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			uint face;
-		} &cb;
-		uint& GetFace() { return cb.face; }
-		SkyFace(CB&cb) :cb(cb){}
+			compiler.compile(face);
+		}
 	};
 	#pragma pack(pop)
 }

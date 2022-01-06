@@ -19,14 +19,14 @@ export
 		template<class T>
 		void process_one()
 		{
-			if constexpr (TableHasSRV<T>) desc[T::SRV_ID] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, -1, T::ID);
-			if constexpr (TableHasUAV<T>) desc[T::UAV_ID] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, T::UAV, T::ID);
-			if constexpr (TableHasSMP<T>) desc[T::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::SMP, T::ID);
-			desc[T::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::ID);
-			desc[T::CB_ID + 1] = Render::DescriptorConstBuffer(2, Render::ShaderVisibility::ALL, T::ID);
+		//	if constexpr (TableHasSRV<T>) desc[T::SRV_ID] = Render::DescriptorTable(Render::DescriptorRange::SRV, Render::ShaderVisibility::ALL, 0, -1, T::ID);
+		//	if constexpr (TableHasUAV<T>) desc[T::UAV_ID] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, T::UAV, T::ID);
+		//	if constexpr (TableHasSMP<T>) desc[T::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::SMP, T::ID);
+		//	desc[T::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::ID);
+			desc[T::ID] = Render::DescriptorConstBuffer(2, Render::ShaderVisibility::ALL, T::ID);
 
 
-			//	if constexpr (T::CB)	desc[T::CB_ID] = Render::DescriptorTable(Render::DescriptorRange::CBV, Render::ShaderVisibility::ALL, 0, T::CB, T::ID);
+			//	if constexpr (T)	desc[T::CB_ID] = Render::DescriptorTable(Render::DescriptorRange::CBV, Render::ShaderVisibility::ALL, 0, T, T::ID);
 
 		}
 
@@ -63,8 +63,8 @@ export
 			desc[T::Slot::UAV_ID] = Render::DescriptorTable(Render::DescriptorRange::UAV, Render::ShaderVisibility::ALL, 0, T::Slot::UAV, T::Slot::ID);
 		if constexpr (HasSMP<T>)
 			desc[T::Slot::SMP_ID] = Render::DescriptorTable(Render::DescriptorRange::SAMPLER, Render::ShaderVisibility::ALL, 0, T::Slot::SMP, T::Slot::ID);*/
-		if constexpr (HasCB<T>)
-			desc[T::Slot::CB_ID] = Render::DescriptorConstBuffer(0, Render::ShaderVisibility::ALL, T::Slot::ID);
+		if constexpr (HasSlot<T>)
+			desc[T::Slot::ID] = Render::DescriptorConstBuffer(2, Render::ShaderVisibility::ALL, T::Slot::ID);
 
 
 		//RTX!!!

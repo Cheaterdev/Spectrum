@@ -37,7 +37,7 @@ template<HasLocalData T>
 struct SelectLocal<T>
 {
 	using type = typename T::LocalData;
-	static const UINT size = sizeof(typename type::CB); //probably table, wtf to do with resources, cb only
+	static const UINT size = sizeof(type); 
 };
 
 
@@ -431,7 +431,7 @@ struct SelectLocal<T>
 			else
 			{
 				hit.id = state->get_shader_id(mat->wshader_name + std::wstring(Desc::name));
-				hit.local_addr = mat->local_addr;// compiled_material_info.cb;
+				hit.local_addr = mat->local_addr;// compiled_material_info;
 			}
 
 		}

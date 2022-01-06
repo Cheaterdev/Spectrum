@@ -1014,7 +1014,7 @@ export{
 				slot.id = Compiled::ID;
 				slot.dirty = true;
 
-				slot.tables = &Compiled::SlotTable::tables;
+//				slot.tables = &Compiled::SlotTable::tables;
 
 				compiled.set_tables(*this);
 			}

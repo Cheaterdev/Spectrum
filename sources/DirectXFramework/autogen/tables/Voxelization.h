@@ -5,21 +5,22 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Voxelization
 	{
-		struct CB
+		Render::HLSL::RWTexture3D<float4> albedo;
+		Render::HLSL::RWTexture3D<float4> normals;
+		Render::HLSL::RWTexture3D<uint> visibility;
+		VoxelInfo info;
+		Render::HLSL::RWTexture3D<float4>& GetAlbedo() { return albedo; }
+		Render::HLSL::RWTexture3D<float4>& GetNormals() { return normals; }
+		Render::HLSL::RWTexture3D<uint>& GetVisibility() { return visibility; }
+		VoxelInfo& MapInfo() { return info; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			VoxelInfo::CB info;
-		} &cb;
-		struct UAV
-		{
-			Render::HLSL::RWTexture3D<float4> albedo;
-			Render::HLSL::RWTexture3D<float4> normals;
-			Render::HLSL::RWTexture3D<uint> visibility;
-		} &uav;
-		Render::HLSL::RWTexture3D<float4>& GetAlbedo() { return uav.albedo; }
-		Render::HLSL::RWTexture3D<float4>& GetNormals() { return uav.normals; }
-		Render::HLSL::RWTexture3D<uint>& GetVisibility() { return uav.visibility; }
-		VoxelInfo MapInfo() { return VoxelInfo(cb.info); }
-		Voxelization(CB&cb,UAV&uav) :cb(cb),uav(uav){}
+			compiler.compile(albedo);
+			compiler.compile(normals);
+			compiler.compile(visibility);
+			compiler.compile(info);
+		}
 	};
 	#pragma pack(pop)
 }

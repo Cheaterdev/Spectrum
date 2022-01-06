@@ -8,6 +8,7 @@ export import stl.threading;
 export import stl.filesystem;
 
 export import crossguid;
+//export import simple_log_archive;
 
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
 

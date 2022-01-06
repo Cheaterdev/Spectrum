@@ -5,14 +5,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PSSMData
 	{
-		struct SRV
+		Render::HLSL::Texture2DArray<float> light_buffer;
+		Render::HLSL::StructuredBuffer<Camera> light_cameras;
+		Render::HLSL::Texture2DArray<float>& GetLight_buffer() { return light_buffer; }
+		Render::HLSL::StructuredBuffer<Camera>& GetLight_cameras() { return light_cameras; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture2DArray<float> light_buffer;
-			Render::HLSL::StructuredBuffer<Camera> light_cameras;
-		} &srv;
-		Render::HLSL::Texture2DArray<float>& GetLight_buffer() { return srv.light_buffer; }
-		Render::HLSL::StructuredBuffer<Camera>& GetLight_cameras() { return srv.light_cameras; }
-		PSSMData(SRV&srv) :srv(srv){}
+			compiler.compile(light_buffer);
+			compiler.compile(light_cameras);
+		}
 	};
 	#pragma pack(pop)
 }

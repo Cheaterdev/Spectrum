@@ -395,7 +395,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
             index_count += scene->mMeshes[i]->mNumFaces * 3;
         }
 
-        std::vector<Table::mesh_vertex_input::CB> vertices(vertex_count);
+        std::vector<Table::mesh_vertex_input> vertices(vertex_count);
         std::vector<UINT32> indices(index_count);
         vertex_count = 0;
         index_count = 0;

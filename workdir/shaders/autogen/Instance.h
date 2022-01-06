@@ -5,16 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Instance.h"
-ConstantBuffer<Instance_cb> cb_6_0:register(b0,space6);
-struct Pass_Instance
-{
-};
-ConstantBuffer<Pass_Instance> pass_Instance: register( b2, space6);
+ConstantBuffer<Instance> pass_Instance: register( b2, space6);
 const Instance CreateInstance()
 {
-	Instance result;
-	result.cb = cb_6_0;
-	return result;
+	return pass_Instance;
 }
 #ifndef NO_GLOBAL
 static const Instance instance_global = CreateInstance();

@@ -5,21 +5,22 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GatherMeshesBoxes
 	{
-		struct SRV
+		Render::HLSL::StructuredBuffer<BoxInfo> input_meshes;
+		Render::HLSL::StructuredBuffer<uint> visible_boxes;
+		Render::HLSL::AppendStructuredBuffer<uint> visibleMeshes;
+		Render::HLSL::AppendStructuredBuffer<uint> invisibleMeshes;
+		Render::HLSL::StructuredBuffer<BoxInfo>& GetInput_meshes() { return input_meshes; }
+		Render::HLSL::StructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
+		Render::HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
+		Render::HLSL::AppendStructuredBuffer<uint>& GetInvisibleMeshes() { return invisibleMeshes; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::StructuredBuffer<BoxInfo> input_meshes;
-			Render::HLSL::StructuredBuffer<uint> visible_boxes;
-		} &srv;
-		struct UAV
-		{
-			Render::HLSL::AppendStructuredBuffer<uint> visibleMeshes;
-			Render::HLSL::AppendStructuredBuffer<uint> invisibleMeshes;
-		} &uav;
-		Render::HLSL::StructuredBuffer<BoxInfo>& GetInput_meshes() { return srv.input_meshes; }
-		Render::HLSL::StructuredBuffer<uint>& GetVisible_boxes() { return srv.visible_boxes; }
-		Render::HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return uav.visibleMeshes; }
-		Render::HLSL::AppendStructuredBuffer<uint>& GetInvisibleMeshes() { return uav.invisibleMeshes; }
-		GatherMeshesBoxes(SRV&srv,UAV&uav) :srv(srv),uav(uav){}
+			compiler.compile(input_meshes);
+			compiler.compile(visible_boxes);
+			compiler.compile(visibleMeshes);
+			compiler.compile(invisibleMeshes);
+		}
 	};
 	#pragma pack(pop)
 }

@@ -6,14 +6,14 @@ namespace GUI
 
     class NinePatch
     {
-        using Vertex = Table::vertex_input::CB;
+        using Vertex = Table::vertex_input;
 
 			Render::HandleTable sampler_table;
 
            Render::IndexBuffer::ptr index_buffer;
 		   std::vector<Vertex> vertexes;
 
-		   std::vector<Render::Handle> textures_handles;
+		   std::vector<Render::HLSL::Texture2D<float4>> textures_handles;
 		   std::vector<Render::Handle> samplers_handles;
 
 		   std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;

@@ -5,12 +5,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FontRenderingGlyphs
 	{
-		struct SRV
+		Render::HLSL::StructuredBuffer<Glyph> data;
+		Render::HLSL::StructuredBuffer<Glyph>& GetData() { return data; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::StructuredBuffer<Glyph> data;
-		} &srv;
-		Render::HLSL::StructuredBuffer<Glyph>& GetData() { return srv.data; }
-		FontRenderingGlyphs(SRV&srv) :srv(srv){}
+			compiler.compile(data);
+		}
 	};
 	#pragma pack(pop)
 }

@@ -32,7 +32,7 @@ export
 
 	template<typename T> concept HasCB =
 		requires (T t) {
-		t.cb;
+		t;
 	};
 
 	template<typename T> concept HasRTV =
@@ -45,7 +45,10 @@ export
 		t.dsv;
 	};
 
-
+	template<typename T> concept HasSlot =
+		requires () {
+		T::Slot;
+	};
 	template<typename T> concept TableHasSRV =
 		requires (T t) {
 		t.SRV;
@@ -70,7 +73,7 @@ export
 
 	template<typename T> concept HasCBType =
 		requires () {
-		T::CB;
+		T;
 	};
 
 
@@ -84,7 +87,7 @@ export
 	template<HasCB T>
 	struct _Underlying<T>
 	{
-		using TYPE = typename T::CB;
+		using TYPE = typename T;
 	};
 
 	template<class T>

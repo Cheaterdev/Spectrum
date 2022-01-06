@@ -1,20 +1,9 @@
 #pragma once
 #include "BoxInfo.h"
-struct GatherBoxes_uav
+struct GatherBoxes
 {
 	uint culledMeshes; // AppendStructuredBuffer<BoxInfo>
 	uint visibleMeshes; // AppendStructuredBuffer<uint>
+	AppendStructuredBuffer<BoxInfo> GetCulledMeshes() { return ResourceDescriptorHeap[culledMeshes]; }
+	AppendStructuredBuffer<uint> GetVisibleMeshes() { return ResourceDescriptorHeap[visibleMeshes]; }
 };
-struct GatherBoxes
-{
-	GatherBoxes_uav uav;
-	AppendStructuredBuffer<BoxInfo> GetCulledMeshes() { return ResourceDescriptorHeap[uav.culledMeshes]; }
-	AppendStructuredBuffer<uint> GetVisibleMeshes() { return ResourceDescriptorHeap[uav.visibleMeshes]; }
-
-};
- const GatherBoxes CreateGatherBoxes(GatherBoxes_uav uav)
-{
-	const GatherBoxes result = {uav
-	};
-	return result;
-}

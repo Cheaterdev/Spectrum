@@ -59,7 +59,7 @@ namespace DX12
 		if (!current_pipeline->debuggable) return;
 
 		auto pso_name = current_pipeline->name;
-		get_copy().read_buffer(debug_buffer.get(), 0, 3 * sizeof(Table::DebugStruct::CB), [this, pso_name](const char* data, UINT64 size)
+		get_copy().read_buffer(debug_buffer.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](const char* data, UINT64 size)
 			{
 
 				LogBlock block(Log::get(), log_level_internal::level_all);
@@ -70,7 +70,7 @@ namespace DX12
 
 					first_debug_log = false;
 				}
-				auto result = reinterpret_cast<const Table::DebugStruct::CB*>(data);
+				auto result = reinterpret_cast<const Table::DebugStruct*>(data);
 
 				block << "DEBUG(" << name << "): " << pso_name<< "\n";
 				for (int i = 0; i < 3; i++)

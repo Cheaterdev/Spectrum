@@ -485,7 +485,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		gather.GetMeshes_count() = meshes_ids->buffer->structuredBufferCount;
 
 		gather_visible = gather.compile(StaticCompiledGPUData::get());
-		//	gather_visible.cb = meshes_ids->buffer->help_buffer->get_resource_address();
+		//	gather_visible = meshes_ids->buffer->help_buffer->get_resource_address();
 	}
 
 	{
@@ -493,7 +493,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer->structuredBufferCount;
 		gather_invisible = gather.compile(StaticCompiledGPUData::get());
-		//	gather_invisible.cb = meshes_invisible_ids->buffer->help_buffer->get_resource_address();
+		//	gather_invisible = meshes_invisible_ids->buffer->help_buffer->get_resource_address();
 	}
 
 	{
@@ -502,7 +502,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 
 		//gather.GetCommands() = // supposed to be null
 		gather_boxes_commands = gather.compile(StaticCompiledGPUData::get());
-		//gather_boxes_commands.cb = commands_boxes->buffer->help_buffer->get_resource_address();
+		//gather_boxes_commands = commands_boxes->buffer->help_buffer->get_resource_address();
 	}
 
 	{

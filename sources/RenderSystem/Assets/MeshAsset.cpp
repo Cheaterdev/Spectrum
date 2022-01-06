@@ -76,8 +76,8 @@ void MeshAsset::init_gpu()
 	std::vector<UINT32> priimitive_ids_buffer;
 
 
-	std::vector<Table::Meshlet::CB> meshlets;
-	std::vector<Table::MeshletCullData::CB> meshlet_cull;
+	std::vector<Table::Meshlet> meshlets;
+	std::vector<Table::MeshletCullData> meshlet_cull;
 
 	for (auto& mesh : meshes)
 	{
@@ -90,7 +90,7 @@ mesh.meshlets_offset = meshlets_count;
 		for(auto& meshet:mesh.meshlets)
 		{
 
-			Table::Meshlet::CB meshlet_row;
+			Table::Meshlet meshlet_row;
 			meshlet_row.primitiveCount = static_cast<UINT>(meshet.PrimitiveIndices.size()/3);
 			meshlet_row.primitiveOffset = primitive_ids/3;
 
@@ -145,6 +145,7 @@ mesh.meshlets_offset = meshlets_count;
 	}*/
 
 	int i = 0;
+	if(Render::Device::get().is_rtx_supported())
 	for (auto& mesh : meshes)
 	{
 	
@@ -157,13 +158,13 @@ mesh.meshlets_offset = meshlets_count;
 		GeometryDesc geometryDesc = {};
 		geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
 
-		geometryDesc.IndexBuffer = universal_index_manager::get().buffer->get_resource_address().offset(UINT(index_handle.get_offset() + mesh.index_offset) * sizeof(UINT32));
+		geometryDesc.IndexBuffer = universal_index_manager::get().buffer->get_resource_address().offset(static_cast<UINT>(index_handle.get_offset() + mesh.index_offset) * sizeof(UINT32));
 		geometryDesc.IndexCount = mesh.index_count;
 		geometryDesc.IndexFormat = DXGI_FORMAT_R32_UINT;
-		geometryDesc.Transform3x4 = mat.get_resource_address();//universal_nodes_manager::get().buffer->get_resource_address().offset(info.mesh_info.GetNode_offset() * sizeof(Table::node_data::CB));
+		geometryDesc.Transform3x4 = mat.get_resource_address();//universal_nodes_manager::get().buffer->get_resource_address().offset(info.mesh_info.GetNode_offset() * sizeof(Table::node_data));
 		geometryDesc.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-		geometryDesc.VertexBuffer = universal_vertex_manager::get().buffer->get_resource_address().offset(static_cast<UINT>((vertex_handle.get_offset() + mesh.vertex_offset) * sizeof(Table::mesh_vertex_input::CB)));
-		geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input::CB);
+		geometryDesc.VertexBuffer = universal_vertex_manager::get().buffer->get_resource_address().offset(static_cast<UINT>((vertex_handle.get_offset() + mesh.vertex_offset) * sizeof(Table::mesh_vertex_input)));
+		geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
 		geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
 		std::vector<GeometryDesc > descs;
@@ -303,7 +304,7 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 	rendering[i].material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
 
 	meshpart[0].material_id = static_cast<materials::universal_material*>(rendering[i].material)->get_material_id();
-	meshpart[0].mesh_cb = info.compiled_mesh_info.cb;
+	meshpart[0].mesh_cb = info.compiled_mesh_info.compiled();
 	meshpart[0].draw_commands = info.dispatch_mesh_arguments;
 	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
 
@@ -358,14 +359,14 @@ void MeshAssetInstance::on_add(scene_object* parent)
 		for (auto& info : rendering)
 		{
 
-			meshpart[i].mesh_cb = info.compiled_mesh_info.cb;
+			meshpart[i].mesh_cb = info.compiled_mesh_info.compiled();
 			meshpart[i].material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 			meshpart[i].draw_commands = info.dispatch_mesh_arguments;
 			meshpart[i].node_offset = info.mesh_info.GetNode_offset();
 
 
-			render_scene->command_ids[int(type)].insert((UINT)meshpart_handle.get_offset() + i);
-			render_scene->command_ids[int(MESH_TYPE::ALL)].insert((UINT)meshpart_handle.get_offset() + i);
+			render_scene->command_ids[static_cast<int>(type)].insert(static_cast<UINT>(meshpart_handle.get_offset()) + i);
+			render_scene->command_ids[static_cast<int>(MESH_TYPE::ALL)].insert(static_cast<UINT>(meshpart_handle.get_offset()) + i);
 
 
 			i++;
@@ -388,12 +389,12 @@ void MeshAssetInstance::on_remove()
 		int i = 0;
 		for (auto& info : rendering)
 		{
-			old_scene->command_ids[int(type)].erase((UINT)meshpart_handle.get_offset() + i);
-			old_scene->command_ids[int(MESH_TYPE::ALL)].erase((UINT)meshpart_handle.get_offset() + i);
+			old_scene->command_ids[static_cast<int>(type)].erase(static_cast<UINT>(meshpart_handle.get_offset()) + i);
+			old_scene->command_ids[static_cast<int>(MESH_TYPE::ALL)].erase(static_cast<UINT>(meshpart_handle.get_offset()) + i);
 			i++;
 		}
 		meshpart_handle.Free();
-		meshpart_handle = TypedHandle<Table::MeshCommandData::CB>();
+		meshpart_handle = TypedHandle<Table::MeshCommandData>();
 	}
 }
 
@@ -452,7 +453,7 @@ bool MeshAssetInstance::update_transforms()
 		int i = 0;
 		for (auto& info : rendering)
 		{
-			uint index = (UINT)info.mesh_info.GetNode_offset() - (UINT)nodes_handle.get_offset();
+			uint index = static_cast<UINT>(info.mesh_info.GetNode_offset()) - static_cast<UINT>(nodes_handle.get_offset());
 			auto& p = info.primitive;
 
 			if (!info.primitive_global)
@@ -533,7 +534,7 @@ void MeshAssetInstance::update_nodes()
 
 			render_info info;
 
-			info.draw_arguments.StartIndexLocation = UINT(mesh_asset->index_handle.get_offset() + mesh_asset->meshes[m].index_offset);
+			info.draw_arguments.StartIndexLocation = static_cast<UINT>(mesh_asset->index_handle.get_offset() + mesh_asset->meshes[m].index_offset);
 			info.draw_arguments.IndexCountPerInstance = mesh_asset->meshes[m].index_count;
 			info.draw_arguments.BaseVertexLocation = 0;
 			info.draw_arguments.InstanceCount = 1;
@@ -559,8 +560,8 @@ void MeshAssetInstance::update_nodes()
 			//	node_buffer[node->index] = mat;
 				//if(nodes_ptr) 
 
-			info.mesh_info.GetNode_offset() = UINT(nodes_handle.get_offset() + nodes.size() - 1);
-			info.mesh_info.GetVertex_offset() = UINT(mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset);
+			info.mesh_info.GetNode_offset() = static_cast<UINT>(nodes_handle.get_offset() + nodes.size() - 1);
+			info.mesh_info.GetVertex_offset() = static_cast<UINT>(mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset);
 			info.mesh_info.GetMeshlet_offset() = static_cast<UINT>(mesh_asset->meshlet_handle.get_offset() + mesh_asset->meshes[m].meshlets_offset);
 
 			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshlets.size());
@@ -571,7 +572,7 @@ void MeshAssetInstance::update_nodes()
 			info.meshlet_offset = mesh_asset->meshes[m].meshlets_offset;
 			info.meshlet_count = static_cast<UINT>(mesh_asset->meshes[m].meshlets.size());
 
-			auto& my_node = gpu_nodes[UINT(info.mesh_info.GetNode_offset() - nodes_handle.get_offset())];
+			auto& my_node = gpu_nodes[static_cast<UINT>(info.mesh_info.GetNode_offset() - nodes_handle.get_offset())];
 			my_node.node_global_matrix = info.global_mat;
 			my_node.node_inverse_matrix = info.global_mat;
 			my_node.node_inverse_matrix.inverse();
@@ -581,7 +582,7 @@ void MeshAssetInstance::update_nodes()
 			my_node.aabb.min = float4(info.primitive->get_min(), 0);
 			my_node.aabb.max = float4(info.primitive->get_max(),0);
 
-			info.material_id = UINT(mesh_asset->meshes[m].material);
+			info.material_id = static_cast<UINT>(mesh_asset->meshes[m].material);
 			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
 			info.compiled_mesh_info = info.mesh_info.compile(StaticCompiledGPUData::get());
 
@@ -589,8 +590,8 @@ void MeshAssetInstance::update_nodes()
 
 			assert(info.ras);
 
-			info.node_id = (UINT)(instance_handle.get_offset() + nodes.size() - 1);
-			auto& my_instance = gpu_instances[(UINT)nodes.size() - 1];
+			info.node_id = static_cast<UINT>(instance_handle.get_offset() + nodes.size() - 1);
+			auto& my_instance = gpu_instances[static_cast<UINT>(nodes.size()) - 1];
 			my_instance.index_offset = info.draw_arguments.StartIndexLocation;
 			my_instance.vertex_offset = info.mesh_info.GetVertex_offset();
 

@@ -119,8 +119,6 @@ export
 		private:
 		SERIALIZE()
 		{
-
-			Log::get() << "texture_data_header" << Log::endl;
 			ar& NVP(width);
 			ar& NVP(height);
 			ar& NVP(depth);
@@ -238,7 +236,6 @@ export
 		{
 			SAVE_PARENT(texture_data_header);
 			ar& NVP(array);
-			Log::get() << "texture_data" << Log::endl;
 		}
 		texture_data() {}
 		texture_data(uint32_t array_count, uint32_t num_mips, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format)

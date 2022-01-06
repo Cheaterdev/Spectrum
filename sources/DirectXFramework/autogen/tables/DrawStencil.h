@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DrawStencil
 	{
-		struct SRV
+		Render::HLSL::StructuredBuffer<float4> vertices;
+		Render::HLSL::StructuredBuffer<float4>& GetVertices() { return vertices; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::StructuredBuffer<float4> vertices;
-		} &srv;
-		Render::HLSL::StructuredBuffer<float4>& GetVertices() { return srv.vertices; }
-		DrawStencil(SRV&srv) :srv(srv){}
+			compiler.compile(vertices);
+		}
 	};
 	#pragma pack(pop)
 }

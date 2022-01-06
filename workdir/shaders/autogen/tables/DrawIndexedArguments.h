@@ -1,17 +1,6 @@
 #pragma once
-struct DrawIndexedArguments_cb
-{
-	uint data[5]; // uint
-};
 struct DrawIndexedArguments
 {
-	DrawIndexedArguments_cb cb;
-	uint GetData(int i) { return cb.data[i]; }
-
+	uint data[5]; // uint
+	uint GetData(int i) { return data[i]; }
 };
- const DrawIndexedArguments CreateDrawIndexedArguments(DrawIndexedArguments_cb cb)
-{
-	const DrawIndexedArguments result = {cb
-	};
-	return result;
-}

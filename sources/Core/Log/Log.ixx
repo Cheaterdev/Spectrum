@@ -16,7 +16,11 @@ import simple_log_archive;
 import Events;
 import Utils;
 import windows;
+import serialization;
 
+export import cereal;
+
+//using simple_log_archive = cereal::JSONOutputArchive;
 export {
 
 	class LogBlock;
@@ -119,7 +123,7 @@ export {
 		{
 			if (need_logging())
 			{
-				data->archive << smth;
+				data->archive << NP(typeid(T).name(), smth);
 			}
 
 			return *this;
@@ -304,6 +308,8 @@ void Log::crash_error(std::string message, std::string at)
 
 void Log::crash_error(HRESULT hr, std::string at /*= ""*/)
 {
+	std::string message = std::system_category().message(hr);
+	(*this) << LEVEL_ERROR << message << " at: " << at << endl;
 	//_com_error err(hr);
 	//crash_error((err.ErrorMessage()), at);
 }

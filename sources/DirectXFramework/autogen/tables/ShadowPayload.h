@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct ShadowPayload
 	{
-		struct CB
+		bool hit;
+		bool& GetHit() { return hit; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			bool hit;
-		} &cb;
-		bool& GetHit() { return cb.hit; }
-		ShadowPayload(CB&cb) :cb(cb){}
+			compiler.compile(hit);
+		}
 	};
 	#pragma pack(pop)
 }

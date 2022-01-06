@@ -4,17 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DownsampleDepth
 	{
-		struct SRV
+		Render::HLSL::Texture2D<float> srcTex;
+		Render::HLSL::RWTexture2D<float> targetTex;
+		Render::HLSL::Texture2D<float>& GetSrcTex() { return srcTex; }
+		Render::HLSL::RWTexture2D<float>& GetTargetTex() { return targetTex; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture2D<float> srcTex;
-		} &srv;
-		struct UAV
-		{
-			Render::HLSL::RWTexture2D<float> targetTex;
-		} &uav;
-		Render::HLSL::Texture2D<float>& GetSrcTex() { return srv.srcTex; }
-		Render::HLSL::RWTexture2D<float>& GetTargetTex() { return uav.targetTex; }
-		DownsampleDepth(SRV&srv,UAV&uav) :srv(srv),uav(uav){}
+			compiler.compile(srcTex);
+			compiler.compile(targetTex);
+		}
 	};
 	#pragma pack(pop)
 }

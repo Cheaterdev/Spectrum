@@ -1,19 +1,8 @@
 #pragma once
-struct MaterialInfo_cb
+struct MaterialInfo
 {
 	MaterialCB data; // MaterialCB
 	uint textureOffset; // uint
+	MaterialCB GetData() { return data; }
+	uint GetTextureOffset() { return textureOffset; }
 };
-struct MaterialInfo
-{
-	MaterialInfo_cb cb;
-	MaterialCB GetData() { return cb.data; }
-	uint GetTextureOffset() { return cb.textureOffset; }
-
-};
- const MaterialInfo CreateMaterialInfo(MaterialInfo_cb cb)
-{
-	const MaterialInfo result = {cb
-	};
-	return result;
-}

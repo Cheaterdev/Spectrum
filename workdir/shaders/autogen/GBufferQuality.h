@@ -5,17 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GBufferQuality.h"
-Texture2D<float4> srv_6_0: register(t0, space6);
-struct Pass_GBufferQuality
-{
-uint srv_0;
-};
-ConstantBuffer<Pass_GBufferQuality> pass_GBufferQuality: register( b2, space6);
+ConstantBuffer<GBufferQuality> pass_GBufferQuality: register( b2, space6);
 const GBufferQuality CreateGBufferQuality()
 {
-	GBufferQuality result;
-	result.srv.ref = (pass_GBufferQuality.srv_0 );
-	return result;
+	return pass_GBufferQuality;
 }
 #ifndef NO_GLOBAL
 static const GBufferQuality gBufferQuality_global = CreateGBufferQuality();

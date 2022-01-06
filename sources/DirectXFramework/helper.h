@@ -5,6 +5,9 @@ import d3d12;
 
 import Utils;
 import serialization;
+#include <d3d12.h>
+
+#include "Serialization/serialization_defines.h"
 
 typedef ComPtr<IDXGISwapChain1>		DXGI_SwapChain;
 typedef ComPtr<IDXGISurface2>			DXGI_Surface;
@@ -48,20 +51,20 @@ typedef ComPtr<IDXGIOutput1>			DXGI_Output;
 
 class string_heap : public Singleton<string_heap>
 {
-        friend class Singleton<string_heap>;
+	friend class Singleton<string_heap>;
 
-        std::set<std::string> strings;
+	std::set<std::string> strings;
 
-    public:
-        const char* get_string(std::string str)
-        {
-            auto data = strings.find(str);
+public:
+	const char* get_string(std::string str)
+	{
+		auto data = strings.find(str);
 
-            if (data == strings.end())
-                data = strings.insert(strings.end(), str);
+		if (data == strings.end())
+			data = strings.insert(strings.end(), str);
 
-            return data->c_str();
-        }
+		return data->c_str();
+	}
 
 };
 
@@ -75,38 +78,63 @@ DXGI_FORMAT to_typeless(DXGI_FORMAT);
 
 bool is_shader_visible(DXGI_FORMAT);
 
-namespace boost
+namespace cereal
 {
-	namespace serialization
+	template<class Archive>
+	void serialize(Archive& ar, D3D12_DEPTH_STENCILOP_DESC& g, const unsigned int)
 	{
+		//	ar & g.DefaultValue;
+		ar& NVPG(StencilDepthFailOp);
+		ar& NVPG(StencilFailOp);
+		ar& NVPG(StencilFunc);
+		ar& NVPG(StencilPassOp);
+	}
 
-		template<class Archive>
-		void serialize(Archive& ar, D3D12_DEPTH_STENCILOP_DESC& g, const unsigned int)
+	template<class Archive>
+	void serialize(Archive& ar, DXGI_SAMPLE_DESC& g, const unsigned int)
+	{
+		//	ar & g.DefaultValue;
+		ar& NVPG(Count);
+		ar& NVPG(Quality);
+	}
+
+
+	template<class Archive>
+	void serialize(Archive& ar, D3D12_RESOURCE_DESC& g, const unsigned int)
+	{
+		ar& NVPG(Dimension);
+		ar& NVPG(Alignment);
+		ar& NVPG(Width);
+		ar& NVPG(Height);
+		ar& NVPG(DepthOrArraySize);
+		ar& NVPG(MipLevels);
+		ar& NVPG(Format);
+		ar& NVPG(SampleDesc);
+		ar& NVPG(Layout);
+		ar& NVPG(Flags);
+	}
+
+
+	template<class Archive>
+	void serialize(Archive& ar, D3D12_AUTO_BREADCRUMB_NODE& g, const unsigned int)
+	{
+		std::wstring CommandListDebugName = g.pCommandListDebugNameW ? g.pCommandListDebugNameW : L"";
+		std::wstring CommandQueueDebugName = g.pCommandQueueDebugNameW ? g.pCommandQueueDebugNameW : L"";
+		ar& NVP(CommandListDebugName);
+		ar& NVP(CommandQueueDebugName);
+
+
+		std::vector<D3D12_AUTO_BREADCRUMB_OP> ops;
+		ops.assign(g.pCommandHistory, g.pCommandHistory+ g.BreadcrumbCount);
+		ar& NVP(ops);
+
+		if (g.pLastBreadcrumbValue)
 		{
-			//	ar & g.DefaultValue;
-			ar& g.StencilDepthFailOp;
-			ar& g.StencilFailOp;
-			ar& g.StencilFunc;
-			ar& g.StencilPassOp;
-		}
+			UINT offset = *g.pLastBreadcrumbValue;// (reinterpret_cast<UINT>(g.pLastBreadcrumbValue) - reinterpret_cast<UINT>(g.pCommandHistory)) / sizeof(D3D12_AUTO_BREADCRUMB_OP);
 
-		
-		template<class Archive>
-		void serialize(Archive& ar, D3D12_AUTO_BREADCRUMB_NODE& g, const unsigned int)
-		{
-			std::wstring CommandListDebugName = g.pCommandListDebugNameW?g.pCommandListDebugNameW:L"";
-			std::wstring CommandQueueDebugName = g.pCommandQueueDebugNameW ? g.pCommandQueueDebugNameW : L"";
-			ar& NVP(CommandListDebugName);
-			ar& NVP(CommandQueueDebugName);
-			ar& NP("OPS",make_array<const D3D12_AUTO_BREADCRUMB_OP>(g.pCommandHistory, g.BreadcrumbCount));
-
-			if(g.pLastBreadcrumbValue)
-			{
-				UINT offset = *g.pLastBreadcrumbValue;// (reinterpret_cast<UINT>(g.pLastBreadcrumbValue) - reinterpret_cast<UINT>(g.pCommandHistory)) / sizeof(D3D12_AUTO_BREADCRUMB_OP);
-
-				if(offset+1 < g.BreadcrumbCount)
+			if (offset + 1 < g.BreadcrumbCount)
 				ar& NVP(offset);
-			}
+
 		}
 	}
 }

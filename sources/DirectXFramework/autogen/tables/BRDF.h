@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct BRDF
 	{
-		struct UAV
+		Render::HLSL::RWTexture3D<float4> output;
+		Render::HLSL::RWTexture3D<float4>& GetOutput() { return output; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::RWTexture3D<float4> output;
-		} &uav;
-		Render::HLSL::RWTexture3D<float4>& GetOutput() { return uav.output; }
-		BRDF(UAV&uav) :uav(uav){}
+			compiler.compile(output);
+		}
 	};
 	#pragma pack(pop)
 }

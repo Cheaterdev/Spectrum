@@ -69,7 +69,7 @@ int intersect(Frustum f, AABB aabb, float4x4 mat)
 
 #include "autogen/GatherPipeline.h"
 static const GatherPipeline pipi = GetGatherPipeline();
-static const uint ids[8] = (uint[8])pipi.cb.pip_ids;
+static const uint ids[8] = (uint[8])pipi.pip_ids;
 void get_index(uint id, in CommandData command)
 {
 #define CHECK(x)    if (ids[x] == id) { pipi.GetCommands(x).Append(command); }
@@ -106,15 +106,15 @@ void CS(
         if (!intersect(GetFrameInfo().GetCamera().GetFrustum(), aabb, node.GetNode_global_matrix())) return;
 #endif
       
-        MaterialCommandData material = GetSceneData().GetMaterials()[mesh.cb.material_id];
+        MaterialCommandData material = GetSceneData().GetMaterials()[mesh.material_id];
 
  
         CommandData command;
-        command.cb.material_cb = material.cb.material_cb;
-        command.cb.mesh_cb = mesh.cb.mesh_cb;
-        command.cb.draw_commands = mesh.cb.draw_commands;
+        command.material_cb = material.material_cb;
+        command.mesh_cb = mesh.mesh_cb;
+        command.draw_commands = mesh.draw_commands;
        
-        get_index(material.cb.pipeline_id, command);
+        get_index(material.pipeline_id, command);
     //    GetDebugInfo().Log(dispatchID.x, uint4(dispatchID.x, id, 5, 5));
 
      //   pipi.GetCommands(0).Append(command);
@@ -159,8 +159,8 @@ void CS_boxes(
 
 
     BoxInfo info;
-    info.cb.node_offset = mesh.GetNode_offset();
-    info.cb.mesh_id = id;
+    info.node_offset = mesh.GetNode_offset();
+    info.mesh_id = id;
 
     pipi.GetCulledMeshes().Append(info);
 }

@@ -4,14 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct ColorRect
 	{
-		struct CB
+		float4 pos[2];
+		float4 color;
+		float4* GetPos() { return pos; }
+		float4& GetColor() { return color; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			float4 pos[2];
-			float4 color;
-		} &cb;
-		float4* GetPos() { return cb.pos; }
-		float4& GetColor() { return cb.color; }
-		ColorRect(CB&cb) :cb(cb){}
+			compiler.compile(pos);
+			compiler.compile(color);
+		}
 	};
 	#pragma pack(pop)
 }

@@ -4,21 +4,22 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FrameClassificationInitDispatch
 	{
-		struct SRV
+		Render::HLSL::StructuredBuffer<uint> hi_counter;
+		Render::HLSL::StructuredBuffer<uint> low_counter;
+		Render::HLSL::RWStructuredBuffer<DispatchArguments> hi_dispatch_data;
+		Render::HLSL::RWStructuredBuffer<DispatchArguments> low_dispatch_data;
+		Render::HLSL::StructuredBuffer<uint>& GetHi_counter() { return hi_counter; }
+		Render::HLSL::StructuredBuffer<uint>& GetLow_counter() { return low_counter; }
+		Render::HLSL::RWStructuredBuffer<DispatchArguments>& GetHi_dispatch_data() { return hi_dispatch_data; }
+		Render::HLSL::RWStructuredBuffer<DispatchArguments>& GetLow_dispatch_data() { return low_dispatch_data; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::StructuredBuffer<uint> hi_counter;
-			Render::HLSL::StructuredBuffer<uint> low_counter;
-		} &srv;
-		struct UAV
-		{
-			Render::HLSL::RWStructuredBuffer<DispatchArguments> hi_dispatch_data;
-			Render::HLSL::RWStructuredBuffer<DispatchArguments> low_dispatch_data;
-		} &uav;
-		Render::HLSL::StructuredBuffer<uint>& GetHi_counter() { return srv.hi_counter; }
-		Render::HLSL::StructuredBuffer<uint>& GetLow_counter() { return srv.low_counter; }
-		Render::HLSL::RWStructuredBuffer<DispatchArguments>& GetHi_dispatch_data() { return uav.hi_dispatch_data; }
-		Render::HLSL::RWStructuredBuffer<DispatchArguments>& GetLow_dispatch_data() { return uav.low_dispatch_data; }
-		FrameClassificationInitDispatch(SRV&srv,UAV&uav) :srv(srv),uav(uav){}
+			compiler.compile(hi_counter);
+			compiler.compile(low_counter);
+			compiler.compile(hi_dispatch_data);
+			compiler.compile(low_dispatch_data);
+		}
 	};
 	#pragma pack(pop)
 }

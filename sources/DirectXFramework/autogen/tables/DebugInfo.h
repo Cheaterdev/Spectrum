@@ -5,12 +5,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DebugInfo
 	{
-		struct UAV
+		Render::HLSL::RWStructuredBuffer<DebugStruct> debug;
+		Render::HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return debug; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::RWStructuredBuffer<DebugStruct> debug;
-		} &uav;
-		Render::HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return uav.debug; }
-		DebugInfo(UAV&uav) :uav(uav){}
+			compiler.compile(debug);
+		}
 	};
 	#pragma pack(pop)
 }

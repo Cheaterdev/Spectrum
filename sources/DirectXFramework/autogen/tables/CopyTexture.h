@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct CopyTexture
 	{
-		struct SRV
+		Render::HLSL::Texture2D<float4> srcTex;
+		Render::HLSL::Texture2D<float4>& GetSrcTex() { return srcTex; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture2D<float4> srcTex;
-		} &srv;
-		Render::HLSL::Texture2D<float4>& GetSrcTex() { return srv.srcTex; }
-		CopyTexture(SRV&srv) :srv(srv){}
+			compiler.compile(srcTex);
+		}
 	};
 	#pragma pack(pop)
 }

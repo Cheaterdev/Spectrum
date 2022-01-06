@@ -4,14 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GatherPipelineGlobal
 	{
-		struct SRV
+		Render::HLSL::StructuredBuffer<uint> meshes_count;
+		Render::HLSL::Buffer<uint> commands;
+		Render::HLSL::StructuredBuffer<uint>& GetMeshes_count() { return meshes_count; }
+		Render::HLSL::Buffer<uint>& GetCommands() { return commands; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::StructuredBuffer<uint> meshes_count;
-			Render::HLSL::Buffer<uint> commands;
-		} &srv;
-		Render::HLSL::StructuredBuffer<uint>& GetMeshes_count() { return srv.meshes_count; }
-		Render::HLSL::Buffer<uint>& GetCommands() { return srv.commands; }
-		GatherPipelineGlobal(SRV&srv) :srv(srv){}
+			compiler.compile(meshes_count);
+			compiler.compile(commands);
+		}
 	};
 	#pragma pack(pop)
 }

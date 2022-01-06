@@ -2,6 +2,7 @@
 
 #define NP(name, param) cereal::make_nvp(name, param)
 #define NVP(name) NP(SER_STR(name), name)
+#define NVPG(name) NP(SER_STR(name), g.name)
 
 #define SAVE_PARENT(type)  ar&NP("parent_" SER_STR(type), cereal::base_class<type>(this))
 #define SAVE_VPARENT(type)  ar&NP("parent_" SER_STR(type), cereal::virtual_base_class<type>(this))

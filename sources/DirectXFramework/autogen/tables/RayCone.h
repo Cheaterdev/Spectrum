@@ -4,14 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct RayCone
 	{
-		struct CB
+		float width;
+		float angle;
+		float& GetWidth() { return width; }
+		float& GetAngle() { return angle; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			float width;
-			float angle;
-		} &cb;
-		float& GetWidth() { return cb.width; }
-		float& GetAngle() { return cb.angle; }
-		RayCone(CB&cb) :cb(cb){}
+			compiler.compile(width);
+			compiler.compile(angle);
+		}
 	};
 	#pragma pack(pop)
 }

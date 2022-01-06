@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DebugStruct
 	{
-		struct CB
+		uint4 v;
+		uint4& GetV() { return v; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			uint4 v;
-		} &cb;
-		uint4& GetV() { return cb.v; }
-		DebugStruct(CB&cb) :cb(cb){}
+			compiler.compile(v);
+		}
 	};
 	#pragma pack(pop)
 }

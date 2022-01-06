@@ -202,27 +202,27 @@ namespace materials
 
 	};
 
-	class universal_material_manager :public Singleton<universal_material_manager>, protected DataAllocator<Render::Handle, ::CommonAllocator>
+	class universal_material_manager :public Singleton<universal_material_manager>, protected DataAllocator<Render::HLSL::Texture2D<float4>, ::CommonAllocator>
 	{
-		std::vector<Render::Handle> textures_data;
+		std::vector<Render::HLSL::Texture2D<float4>> textures_data;
 	public:
-		TypedHandle<Render::Handle> allocate(size_t size)
+		TypedHandle<Render::HLSL::Texture2D<float4>> allocate(size_t size)
 		{
-			TypedHandle<Render::Handle> result = Allocate(size);
+			TypedHandle<Render::HLSL::Texture2D<float4>> result = Allocate(size);
 			textures_data.resize(get_max_usage());
 			return result;
 		}
-		std::vector<Render::Handle>& get_textures()
+		std::vector<Render::HLSL::Texture2D<float4>>& get_textures()
 		{
 			return textures_data;
 		}
-		virtual	std::span<Render::Handle> aquire(size_t offset, size_t size) override {
+		virtual	std::span<Render::HLSL::Texture2D<float4>> aquire(size_t offset, size_t size) override {
 
 			return { textures_data.data()+offset, size };
 		}
 
 
-		virtual	void write(size_t offset, std::vector<Render::Handle>& v)  override {
+		virtual	void write(size_t offset, std::vector<Render::HLSL::Texture2D<float4>>& v)  override {
 			memcpy(textures_data.data() + offset, v.data(), sizeof(Render::Handle) * v.size());
 		}
 
@@ -230,13 +230,13 @@ namespace materials
 
 			for(auto i= from;i<to;i++)
 			{
-				textures_data[i] = Render::Handle();			
+				textures_data[i] = Render::HLSL::Texture2D<float4>();
 			}
 		}
 
 		
 
-		universal_material_manager(): DataAllocator<Render::Handle, ::CommonAllocator>(4096)
+		universal_material_manager(): DataAllocator<Render::HLSL::Texture2D<float4>, ::CommonAllocator>(4096)
 		{
 		}
 	};
@@ -264,7 +264,6 @@ namespace materials
             virtual	void on_unlink(::FlowGraph::parameter*, ::FlowGraph::parameter*) override;
             /*----------------------------------------------------------*/
 
-
             std::vector<TextureSRVParams::ptr> textures;	
             std::vector<Uniform::ptr> tess_uniforms;
             std::list<Events::prop_handler> handlers;
@@ -291,7 +290,7 @@ namespace materials
 
 			Slots::MaterialInfo material_info;
 		
-			TypedHandle<Render::Handle> textures_handle;
+			TypedHandle<Render::HLSL::Texture2D<float4>> textures_handle;
 			Render::HandleTable textures_handles;
 			Pipeline::ptr pipeline;
     
@@ -305,7 +304,7 @@ namespace materials
             universal_material(MaterialGraph::ptr graph);
 			Slots::MaterialInfo::Compiled compiled_material_info;
 
-			TypedHandle<Table::MaterialCommandData::CB> info_handle;
+			TypedHandle<Table::MaterialCommandData> info_handle;
     	
 			void update_rtx();
 			void test();

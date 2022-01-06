@@ -4,16 +4,19 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelOutput
 	{
-		struct UAV
+		Render::HLSL::RWTexture2D<float4> noise;
+		Render::HLSL::RWTexture2D<float> frames;
+		Render::HLSL::RWTexture2D<float4> DirAndPdf;
+		Render::HLSL::RWTexture2D<float4>& GetNoise() { return noise; }
+		Render::HLSL::RWTexture2D<float>& GetFrames() { return frames; }
+		Render::HLSL::RWTexture2D<float4>& GetDirAndPdf() { return DirAndPdf; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::RWTexture2D<float4> noise;
-			Render::HLSL::RWTexture2D<float> frames;
-			Render::HLSL::RWTexture2D<float4> DirAndPdf;
-		} &uav;
-		Render::HLSL::RWTexture2D<float4>& GetNoise() { return uav.noise; }
-		Render::HLSL::RWTexture2D<float>& GetFrames() { return uav.frames; }
-		Render::HLSL::RWTexture2D<float4>& GetDirAndPdf() { return uav.DirAndPdf; }
-		VoxelOutput(UAV&uav) :uav(uav){}
+			compiler.compile(noise);
+			compiler.compile(frames);
+			compiler.compile(DirAndPdf);
+		}
 	};
 	#pragma pack(pop)
 }

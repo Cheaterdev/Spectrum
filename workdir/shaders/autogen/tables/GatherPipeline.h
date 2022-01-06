@@ -1,24 +1,9 @@
 #pragma once
 #include "CommandData.h"
-struct GatherPipeline_cb
-{
-	uint4 pip_ids[2]; // uint4
-};
-struct GatherPipeline_uav
-{
-	uint commands[8]; // AppendStructuredBuffer<CommandData>
-};
 struct GatherPipeline
 {
-	GatherPipeline_cb cb;
-	GatherPipeline_uav uav;
-	AppendStructuredBuffer<CommandData> GetCommands(int i) { return ResourceDescriptorHeap[uav.commands[i]]; }
-	uint4 GetPip_ids(int i) { return cb.pip_ids[i]; }
-
+	uint4 pip_ids[2]; // uint4
+	uint commands[8]; // AppendStructuredBuffer<CommandData>
+	uint4 GetPip_ids(int i) { return pip_ids[i]; }
+	AppendStructuredBuffer<CommandData> GetCommands(int i) { return ResourceDescriptorHeap[commands[i]]; }
 };
- const GatherPipeline CreateGatherPipeline(GatherPipeline_cb cb,GatherPipeline_uav uav)
-{
-	const GatherPipeline result = {cb,uav
-	};
-	return result;
-}

@@ -73,6 +73,12 @@ namespace DX12
 				desc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
 				desc.Alignment = 4*1024;
 			}
+
+			Log::get() << "create " << desc.Dimension << Log::endl;
+
+			D3D12_RESOURCE_DESC ddd = desc;
+			Log::get() << "size " << ddd << Log::endl;
+
 			TEST(Device::get().get_native_device()->CreateReservedResource(
 				&desc,
 				static_cast<D3D12_RESOURCE_STATES>(state),

@@ -6,7 +6,7 @@ class camera : public Frustum
 {
     public:
 
-        using shader_params = Table::Camera::CB;
+        using shader_params = Table::Camera;
 
 #pragma pack(push, 4)
         struct camera_const

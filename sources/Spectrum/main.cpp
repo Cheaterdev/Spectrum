@@ -145,9 +145,9 @@ public:
 	//	PostProcessGraph::ptr render_graph;
 
 
-	Variable<bool> enable_gi = { true, "GI", this };
-	Variable<bool> enable_fsr = { true, "FSR", this };
-	Variable<bool> downsampled = { true, "downsampled", this };
+	Variable<bool> enable_gi = { false, "GI", this };
+	Variable<bool> enable_fsr = { false, "FSR", this };
+	Variable<bool> downsampled = { false, "downsampled", this };
 
 	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
@@ -490,6 +490,21 @@ public:
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
 
+			//	builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+			//	builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+
+				}, [this, &graph](GBufferData& data, FrameContext& _context) {
+
+				});
+
+			if(0)
+			graph.add_pass<GBufferData>("SCENE", [this, &graph](GBufferData& data, TaskBuilder& builder) {
+
+				auto size = graph.frame_size;
+				data.gbuffer.create(size, builder);
+				data.gbuffer.create_mips(size, builder);
+				data.gbuffer.create_quality(size, builder);
+
 				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
@@ -545,7 +560,7 @@ public:
 					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
 					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
 
-					gpu_scene_renderer->render(context, scene);
+					//gpu_scene_renderer->render(context, scene);
 
 					//	stenciler->render(context, scene);
 
@@ -565,7 +580,7 @@ public:
 
 				Handlers::Texture H(RTXDebugPrev);
 			};
-
+			if(0)
 			graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
@@ -621,16 +636,16 @@ public:
 
 
 
-		pssm.generate(graph);
+	//	pssm.generate(graph);
 		sky.generate(graph);
 
 		// remove on intel
-		if(enable_gi) voxel_gi->generate(graph);
+	//	if(enable_gi) voxel_gi->generate(graph);
 
 		
 		sky.generate_sky(graph);
 
-		stenciler->generate_after(graph);
+	//	stenciler->generate_after(graph);
 
 		smaa.generate(graph);
 		if(downsampled&&enable_fsr)
@@ -655,8 +670,8 @@ public:
 			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
 
 
-			frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
-			frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
+			frameInfo.MapCamera() = graph.cam->camera_cb.current;
+			frameInfo.MapPrevCamera() = graph.cam->camera_cb.prev;
 
 			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
 			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
@@ -1092,15 +1107,15 @@ resource_stages[&res.second] = input;
 					//	t->init(&Profiler::get());
 					//	dock->get_tabs()->add_page("Profiler", t);
 
-					GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
+				//	GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
 
-					dock->get_tabs()->add_page("Graph", t2);
+					//dock->get_tabs()->add_page("Graph", t2);
 
 
 
 					frameFlowGraph = std::make_shared< FrameFlowGraph>();
 
-					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
+					//dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
 
 				}
 			}
@@ -1343,9 +1358,23 @@ struct test
 	D3D12_AUTO_BREADCRUMB_OP op = D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE;
 	std::string str = "wtf";
 	vec4 data = {1,2,3,4};
+
+	std::vector<vec2> vec;
+	test()
+	{
+		vec.emplace_back(1,2);
+		vec.emplace_back(3, 4);
+		vec.emplace_back(5, 6);
+
+	}
+	template<class T = void>
+	void foo() requires(false)
+	{
+		
+	}
 	SERIALIZE()
 	{
-		ar& NVP(op)& NVP(str)& NVP(data);
+		ar& NVP(op)& NVP(str)& NVP(data)& NVP(vec);
 	}
 } v;
 
@@ -1406,14 +1435,26 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 
 	auto result_code = 0;
 	SetupDebug();
+	auto a = []() {
+		if constexpr (false)
+		{
+			v.foo();
+		}
+	};
+
+	a();
+
+	Log::get() << v << Log::endl;
+	Log::get() << D3D12_AUTO_BREADCRUMB_OP_ATOMICCOPYBUFFERUINT << Log::endl;
+
+
+
 	EVENT("start");
 	Application::create<RenderApplication>();
 	EVENT("create");
 
 
-	Log::get() << v << Log::endl;
-	Log::get() << D3D12_AUTO_BREADCRUMB_OP_ATOMICCOPYBUFFERUINT << Log::endl;
-
+	
 
 	// There can be error while creating, so test
 	if (Application::is_good())

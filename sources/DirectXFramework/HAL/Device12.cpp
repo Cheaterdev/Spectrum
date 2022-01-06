@@ -187,7 +187,7 @@ namespace DX12
 	{ 0xb2, 0x97, 0x81, 0xce, 0x9e, 0x18, 0x93, 0x3f }
 		};
 
-		D3D12EnableExperimentalFeatures(1, &_D3D12ExperimentalShaderModels, nullptr, nullptr);
+	//	D3D12EnableExperimentalFeatures(1, &_D3D12ExperimentalShaderModels, nullptr, nullptr);
 
 
 
@@ -215,8 +215,8 @@ namespace DX12
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
-
-
+		
+		
 			debugController->EnableDebugLayer();
 			//	spDebugController1->SetEnableGPUBasedValidation(true);
 		}
@@ -249,9 +249,9 @@ namespace DX12
 			}
 		}
 
-		crasher = std::make_unique<GpuCrashTracker>();
-
-		crasher->Initialize();
+		// crasher = std::make_unique<GpuCrashTracker>();
+		//
+		// crasher->Initialize();
 
 
 		HAL::DeviceDesc desc;
@@ -263,12 +263,12 @@ namespace DX12
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
 			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.
 			GFSDK_Aftermath_FeatureFlags_CallStackCapturing;    // Generate debug information for shaders.
-
-		auto afterres = GFSDK_Aftermath_DX12_Initialize(
-			GFSDK_Aftermath_Version_API,
-			aftermathFlags,
-			m_device->native_device.Get());
-		
+		//
+		// auto afterres = GFSDK_Aftermath_DX12_Initialize(
+		// 	GFSDK_Aftermath_Version_API,
+		// 	aftermathFlags,
+		// 	m_device->native_device.Get());
+		//
 
 		
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
@@ -312,7 +312,7 @@ namespace DX12
 		m_device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));
 		auto m_tiledResourcesTier = featureData.TiledResourcesTier;
 
-		rtx = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+		rtx = false;// options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
 
 
 

@@ -425,8 +425,8 @@ void stencil_renderer::generate(Graph& graph)
 						Slots::FrameInfo frameInfo;
 
 						auto camera = frameInfo.MapCamera();
-						//		memcpy(&camera.cb, &cam.camera_cb.current, sizeof(camera.cb));
-						camera.cb = cam.camera_cb.current;
+						//		memcpy(&camera, &cam.camera_cb.current, sizeof(camera));
+						camera = cam.camera_cb.current;
 						frameInfo.set(graphics);
 					}
 
@@ -459,8 +459,8 @@ void stencil_renderer::generate(Graph& graph)
 						Slots::FrameInfo frameInfo;
 
 						auto camera = frameInfo.MapCamera();
-						camera.cb = axis_intersect_cam.camera_cb.current;
-						//		memcpy(&camera.cb, &axis_intersect_cam.camera_cb.current, sizeof(camera.cb));
+						camera = axis_intersect_cam.camera_cb.current;
+						//		memcpy(&camera, &axis_intersect_cam.camera_cb.current, sizeof(camera));
 						frameInfo.set(graphics);
 					}
 					{
@@ -656,7 +656,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					{
 						Slots::FrameInfo frameInfo;
 						auto camera = frameInfo.MapCamera();
-						camera.cb = axis_cam.camera_cb.current;
+						camera = axis_cam.camera_cb.current;
 						frameInfo.set(graphics);
 					}
 					graphics.set_pipeline(GetPSO<PSOS::DrawAxis>());

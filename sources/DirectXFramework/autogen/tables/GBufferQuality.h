@@ -4,12 +4,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GBufferQuality
 	{
-		struct SRV
+		Render::HLSL::Texture2D<float4> ref;
+		Render::HLSL::Texture2D<float4>& GetRef() { return ref; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture2D<float4> ref;
-		} &srv;
-		Render::HLSL::Texture2D<float4>& GetRef() { return srv.ref; }
-		GBufferQuality(SRV&srv) :srv(srv){}
+			compiler.compile(ref);
+		}
 	};
 	#pragma pack(pop)
 }

@@ -112,13 +112,13 @@ void materials::universal_material::update()
 		material_info.GetTextureOffset() = textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
 		compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
-		local_addr = compiled_material_info.cb;
+		local_addr = compiled_material_info.compiled();
 
 		local_addr_ids = compiled_material_info.offsets_cb;
 		{
 			auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
 			elem[0].pipeline_id = pipeline->get_id();
-			elem[0].material_cb = compiled_material_info.cb;
+			elem[0].material_cb = compiled_material_info.compiled();
 
 			info_handle.write(0, elem);
 		
@@ -170,7 +170,7 @@ void materials::universal_material::compile()
 						func(textures_handles[i]);
 
 						auto textures_srvs = textures_handle.map(i);
-						textures_srvs[0] = textures_handles[i];
+						textures_srvs[0] = Render::HLSL::Texture2D<float4>(textures_handles[i]);
 						textures_handle.write(i, textures_srvs);
 						need_update_compiled = true;
 					});
@@ -181,7 +181,7 @@ void materials::universal_material::compile()
 				func(textures_handles[i]);
 				
 				auto textures_srvs = textures_handle.map(i);
-				textures_srvs[0] = textures_handles[i];
+				textures_srvs[0] = Render::HLSL::Texture2D<float4>(textures_handles[i]);
 				textures_handle.write(i, textures_srvs);
 			}
 
@@ -189,10 +189,12 @@ void materials::universal_material::compile()
 
 			mark_contents_changed();
 		}
-
+		
 //		textures_handle.write(0, textures_srvs);
 
 	}
+
+	
 	auto generate = [this](std::vector<Uniform::ptr>& un)
 	{
 		pixel_data = generate_data(un);
@@ -213,7 +215,7 @@ void materials::universal_material::compile()
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 
-	local_addr = compiled_material_info.cb;
+	local_addr = compiled_material_info.compiled();
 	local_addr_ids = compiled_material_info.offsets_cb;
 
 	if (!info_handle)
@@ -223,7 +225,7 @@ void materials::universal_material::compile()
 
 	auto elem = info_handle.map();
 	elem[0].pipeline_id = pipeline->get_id();
-	elem[0].material_cb = compiled_material_info.cb;
+	elem[0].material_cb = compiled_material_info.compiled();
 	info_handle.write(0,elem);
 
 	need_update_compiled = false;

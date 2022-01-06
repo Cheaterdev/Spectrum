@@ -19,7 +19,7 @@ std::string generate_array(const have_array& a)
 			return std::format("[{}]", a.array_count);
 		}
 		else {
-			return "[]";
+			return "";
 		}
 	}
 	return "";
@@ -95,94 +95,6 @@ void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::C
 
 }
 
-
-void generate_bind(my_stream& stream, const std::string& pass_cb, const std::string &parent, Table& table, Slot& slot, table_offsets& offsets)
-{
-	std::string write_to = "result";
-
-	if (parent.empty()) {
-		if (table.counts[ValueType::CB] > 0)
-			stream << std::format("result.cb = cb_{}_0;", slot.id) << std::endl;
-	}
-
-	auto process_type = [&](ValueType type) {
-
-		auto& i = offsets[type];
-		for (auto& v : table.values)
-		{
-			if (v.value_type != type) continue;
-			if (v.bindless) continue;
-
-		
-			if ( false)
-			{
-				stream << std::format("result.{}.{}{} = {}_{}_{};", get_name_for(type), parent, v.name, get_name_for(type), slot.id, i) << std::endl;
-			}
-			else
-			if (v.as_array)
-			{
-				for (int a = 0; a < v.array_count; a++)
-				{
-					stream << "result." << get_name_for(type) << "." << parent << v.name << "["<<a<<"] = (pass_" << pass_cb << "." << get_name_for(type) << "_" << i << ") + "<<a << "; " << std::endl;
-
-				}
-			}else
-			stream << "result." << get_name_for(type) << "." << parent << v.name << " = (pass_"<< pass_cb <<"." << get_name_for(type) << "_" << i << " );" << std::endl;
-
-			i += v.array_count;
-		}
-	};
-
-
-	process_type(ValueType::SRV);
-	process_type(ValueType::UAV);
-	process_type(ValueType::SMP);
-
-
-	for (auto& v : table.values)
-	{
-		if (v.value_type != ValueType::STRUCT) continue;
-
-		auto t = parsed.find_table(v.type);
-		std::string parent_to;
-		if (parent.empty())
-			parent_to = v.name + ".";
-		else
-			parent_to = parent + "." + v.name + ".";
-		generate_bind(stream, pass_cb, parent_to, *t, slot, offsets);
-	}
-
-	/*if (parent.empty())
-		for (auto& v : table.values)
-		{
-			if (v.value_type != ValueType::STRUCT) continue;
-
-			std::string pass;
-			auto t = parsed.find_table(v.type);
-			auto f = [&](ValueType type) {
-				if (t->counts[type] == 0) return;
-
-
-				if (pass.size()) pass += ",";
-				pass += std::string("result.") + get_name_for(type) + "." + v.name;
-			};
-
-			f(ValueType::CB);
-			f(ValueType::SRV);
-			f(ValueType::UAV);
-			f(ValueType::SMP);
-
-			stream << "result." << v.name << " = Create" << v.type << "(" << pass << ");" << std::endl;
-		}
-		*/
-
-}
-
-void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot)
-{
-	table_offsets offsets; generate_bind(stream, table.name, parent, table, slot, offsets);
-}
-
 void generate_pass_table(Table& table)
 {
 	my_stream stream(hlsl_path, table.name + ".h");
@@ -196,14 +108,14 @@ R"(#ifndef SLOT_{0}
 
 	stream << std::format(R"(#include "layout/{}.h")" ,table.slot->layout->name)<< std::endl;
 
-	if (table.bindless_srv)
-		stream << std::format(R"({} bindless[]: register(t{}, space{});)", table.bindless_srv->type , calculate_max_size(table) , table.slot->id) << std::endl;
+//	if (table.bindless_srv)
+	//	stream << std::format(R"({} bindless[]: register(t{}, space{});)", table.bindless_srv->type , calculate_max_size(table) , table.slot->id) << std::endl;
 
 	stream << std::format(R"(#include "tables/{}.h")", table.name) << std::endl;
 
 
 	// cb
-	if (table.counts[ValueType::CB] > 0) stream << std::format(R"(ConstantBuffer<{}_cb> cb_{}_0:register(b0,space{});)", table.name , table.slot->id ,table.slot->id ) << std::endl; // "ConstantBuffer<" << table.name << "_cb> cb_" << table.slot->id << "_0:register(b0,space" << table.slot->id << ");" << std::endl;
+//	if (table.counts[ValueType::CB] > 0) stream << std::format(R"(ConstantBuffer<{}_cb> cb_{}_0:register(b0,space{});)", table.name , table.slot->id ,table.slot->id ) << std::endl; // "ConstantBuffer<" << table.name << "_cb> cb_" << table.slot->id << "_0:register(b0,space" << table.slot->id << ");" << std::endl;
 
 
 
@@ -216,21 +128,7 @@ R"(#ifndef SLOT_{0}
 
 	std::stringstream struct_str;
 
-	struct_str << std::format(R"(struct Pass_{})", table.name) << std::endl;
-	struct_str << "{" << std::endl;
-
-
-	std::array<std::stringstream, ValueType::COUNT > types;
-
-	generate_pass(stream, types, table, offsets, *table.slot);
-	struct_str << types[ValueType::SRV].str();
-	struct_str << types[ValueType::UAV].str();
-	struct_str << types[ValueType::SMP].str();
-
-
-	struct_str << "};" << std::endl;
-
-	struct_str << "ConstantBuffer<Pass_" << table.name << "> pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
+	struct_str << "ConstantBuffer<" << table.name << "> pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
 
 	stream << struct_str.str();
 
@@ -241,20 +139,8 @@ R"(#ifndef SLOT_{0}
 		stream << "{" << std::endl;
 		{
 			stream.push();
-			stream << table.name << " result;" << std::endl;
 
-		//	stream << "Pass_"<<table.name << " pass;" << std::endl;
-
-
-			table_offsets offsets;
-			offsets[ValueType::SMP] = 0;
-			offsets[ValueType::UAV] = 0;
-			offsets[ValueType::SRV] = 0;
-			offsets[ValueType::CB] = 0;
-
-			offsets[ValueType::SMP] = table.slot->layout->samplers.size();
-			generate_bind(stream, table.name, "",table,  *table.slot, offsets);
-			stream << "return result;" << std::endl;
+			stream << "return pass_"<< table.name << ";" << std::endl;
 			stream.pop();
 		}
 		stream << "}" << std::endl;
@@ -287,41 +173,26 @@ void generate_table(Table& table)
 	
 	// declaration
 	auto declare_func = [&](ValueType type) {
-		if (table.counts[type] == 0) return;
-		stream << "struct " << table.name << "_" << get_name_for(type) << std::endl;
-
-		stream << "{" << std::endl;	stream.push();
+	//	if (table.counts[type] == 0) return;
+	
 		for (auto& v : table.values)
 		{
 			if (v.value_type != type) continue;
-			if (v.bindless) continue;
+		//	if (v.bindless) continue;
 
-			if(v.value_type==ValueType::CB)
+
+			if(v.value_type==ValueType::CB || v.value_type == ValueType::STRUCT)
 			stream << v.type << " " << v.name <<generate_array(v) << "; // " << v.type << std::endl;
 			else
-				stream << "uint" << " " << v.name << generate_array(v) << "; // " << v.type << std::endl;
-		//	else
+				stream << "uint" << " " << v.name << (v.bindless?"":generate_array(v)) << "; // " << v.type << std::endl;
 		//		stream << v.type<<" " << v.name << ';' << std::endl;
 		}
-
-		for (auto& v : table.values)
-		{
-			if (v.value_type == ValueType::STRUCT)
-			{
-				auto t = parsed.find_table(v.type);
-				if (t->counts[type] == 0) continue;
-				stream << v.type << "_" << get_name_for(type) << " " << v.name << ";" << std::endl;
-			}
-		}
-
-		stream.pop();
-		stream << "};" << std::endl;
 	};
 	
-	if (!table.cb_provided) declare_func(ValueType::CB);
-	declare_func(ValueType::SRV);
-	declare_func(ValueType::UAV);
-	declare_func(ValueType::SMP);
+	//if (!table.cb_provided) declare_func(ValueType::CB);
+	//declare_func(ValueType::SRV);
+	//declare_func(ValueType::UAV);
+	//declare_func(ValueType::SMP);
 
 	
 
@@ -333,11 +204,35 @@ void generate_table(Table& table)
 
 	{
 		stream.push();
-		if (table.counts[ValueType::CB] != 0) stream << table.name << "_cb cb;" << std::endl;
-		if (table.counts[ValueType::SRV] != 0) stream << table.name << "_srv srv;" << std::endl;
-		if (table.counts[ValueType::UAV] != 0) stream << table.name << "_uav uav;" << std::endl;
-		if (table.counts[ValueType::SMP] != 0)  stream << table.name << "_smp smp;" << std::endl;
+	//	if (table.counts[ValueType::CB] != 0) stream << table.name << "_cb cb;" << std::endl;
+	//	if (table.counts[ValueType::SRV] != 0) stream << table.name << "_srv srv;" << std::endl;
+	//	if (table.counts[ValueType::UAV] != 0) stream << table.name << "_uav uav;" << std::endl;
+	//	if (table.counts[ValueType::SMP] != 0)  stream << table.name << "_smp smp;" << std::endl;
 		
+		declare_func(ValueType::CB);
+		declare_func(ValueType::SRV);
+		declare_func(ValueType::UAV);
+		declare_func(ValueType::SMP);
+		declare_func(ValueType::STRUCT);
+
+		for (auto& v : table.values)
+		{
+			if (v.value_type != ValueType::CB&& v.value_type != ValueType::STRUCT) continue;
+			std::string cameled = v.name;
+			cameled[0] = std::toupper(cameled[0]);
+
+
+			if (v.as_array)
+			{
+				stream << v.type << " Get" << cameled << "(int i) { " << "return "  << v.name << "[i]; }" << std::endl;
+			}
+			else
+			{
+				stream << v.type << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
+
+			}
+		}
+
 
 		for (auto& v : table.values)
 		{
@@ -350,127 +245,25 @@ void generate_table(Table& table)
 			if (v.as_array)
 			{
 				if (v.bindless)
-					stream << v.type << " Get" << cameled << "(int i) { " << "return bindless[i]; }" << std::endl;
+					stream << v.type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" << v.name << " + i]; }" << std::endl;
 				else
-					stream << v.type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" <<  get_name_for(v.value_type) << "." << v.name <<   "[i]]; }" << std::endl;
+					stream << v.type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" <<  v.name <<   "[i]]; }" << std::endl;
 			}
 			else
 			{
-				stream << v.type << " Get" << cameled << "() { " << "return ResourceDescriptorHeap[" <<  get_name_for(v.value_type) << "." << v.name <<  "]; }" << std::endl;
-
-			}
-		}
-		for (auto& v : table.values)
-		{
-			if (v.value_type != ValueType::CB) continue;
-			std::string cameled = v.name;
-			cameled[0] = std::toupper(cameled[0]);
-
-
-			if (v.as_array)
-			{
-				stream << v.type << " Get" << cameled << "(int i) { " << "return " << get_name_for(v.value_type) << "." << v.name << "[i]; }" << std::endl;
-			}
-			else
-			{
-				stream << v.type << " Get" << cameled << "() { " << "return " << get_name_for(v.value_type) << "." << v.name << "; }" << std::endl;
+				stream << v.type << " Get" << cameled << "() { " << "return ResourceDescriptorHeap[" << v.name <<  "]; }" << std::endl;
 
 			}
 		}
 
-		for (auto& v : table.values)
-		{
-			if (v.value_type != ValueType::STRUCT) continue;
-			//	stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
-
-
-			std::string pass;
-			auto t = parsed.find_table(v.type);
-			auto f = [&](ValueType type) {
-				if (t->counts[type] == 0) return;
-				if (pass.size()) pass += ",";
-				pass += get_name_for(type) + "." + v.name;
-			};
-
-			f(ValueType::CB);
-			f(ValueType::SRV);
-			f(ValueType::UAV);
-			f(ValueType::SMP);
-
-
-			std::string cameled = v.name;
-			cameled[0] = std::toupper(cameled[0]);
-			/*
-						if (v.as_array)
-						{
-							stream << v.type << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
-						}
-						else
-
-						*/
-
-			stream << v.type << " Get" << cameled << "() { " << "return Create" << v.type << "(" << pass << "); }" << std::endl;
-		}
-
-		stream.pop();
 
 	}
 
+
+	if(!table.hlsl.empty())
 	stream << table.hlsl << std::endl;
+	stream.pop();
 	stream << "};" << std::endl;
-
-
-
-	//creation func bindless
-	
-	{
-
-		std::string types;
-		std::string args;
-
-
-		auto f = [&](ValueType type) {
-			if (table.counts[type] == 0) return;
-
-			if (types.size()) types += ",";
-			types += get_name_for(type);
-
-			if (args.size()) args += ",";
-			args += table.name + "_" + get_name_for(type) + " " + get_name_for(type);
-		};
-
-
-		f(ValueType::CB);
-		f(ValueType::SRV);
-		f(ValueType::UAV);
-		f(ValueType::SMP);
-
-		stream << " const " << table.name << " Create" << table.name << "(" << args << ")" << std::endl;
-		stream << "{" << std::endl;
-		{
-			stream.push();
-
-
-
-
-
-
-			stream << "const " << table.name << " result = {" << types << std::endl;
-		
-
-
-
-			stream << "};" << std::endl;
-
-			stream << "return result;" << std::endl;
-
-			stream.pop();
-		}
-		stream << "}" << std::endl;
-	}
-
-
-
 
 	// passes
 	if (table.slot)
@@ -578,70 +371,29 @@ void generate_cpp_table(const Table& table)
 	// declaration
 	auto declare_func = [&](ValueType type) {
 
-		if (table.cb_provided && type == ValueType::CB)
+		for (auto& v : table.values)
 		{
-			stream << "using CB = DefaultCB;" << std::endl;
+			if (v.find_option("dynamic")) continue;
+			if (v.value_type != type) continue;
+			//if (v.array_count == 0)
+			//	continue;
 
-			stream << "CB &cb;" << std::endl;
-			return;
+
+			stream << get_cpp_for(v) << " " << v.name << generate_array(v) << ';' << std::endl;
 		}
 
-		if (table.counts[type] == 0)
-		{
-		//	stream << "using " << str_toupper(get_name_for(type)) << " = Empty;" << std::endl;
-
-			return;
-		}
-
-
-		stream << "struct " << str_toupper(get_name_for(type)) << std::endl;
-
-		stream << "{" << std::endl;
-		{
-			stream.push();
-			for (auto& v : table.values)
-			{
-				if (v.find_option("dynamic"))
-					continue;
-				if (v.value_type != type) continue;
-				if (v.array_count == 0)
-					continue;
-
-
-				stream << get_cpp_for(v) << " " << v.name << generate_array(v) << ';' << std::endl;
-			}
-
-			for (auto& v : table.values)
-			{
-				if (v.find_option("dynamic"))
-					continue;
-
-				if (v.value_type == ValueType::STRUCT)
-				{
-
-					auto t = parsed.find_table(v.type);
-
-					if (t->find_option("shader_only"))
-						stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
-					else if (t->counts[type] > 0) 
-						stream << v.type << "::" << str_toupper(get_name_for(type)) << " " << v.name << generate_array(v) << ";" << std::endl;
-				}
-
-
-			}
-
-			if (type == ValueType::CB)
+		if (type == ValueType::CB)
 			if (table.find_option("serialize"))
 			{
 
 				stream << std::format(
-R"(private:
+					R"(private:
 	SERIALIZE())") << std::endl;
 				stream << "{" << std::endl;
 
 				for (auto& v : table.values)
 				{
-					if (v.value_type != ValueType::CB) continue;
+					if (v.value_type != ValueType::CB && v.value_type != ValueType::STRUCT) continue;
 
 					stream << std::format(
 						R"(     ar& NVP({});)", v.name) << std::endl;
@@ -651,9 +403,8 @@ R"(private:
 			}
 
 
-			stream.pop();
-		}
-		stream << "} &" << get_name_for(type) << ";" << std::endl;
+
+
 	};
 
 
@@ -667,15 +418,15 @@ R"(private:
 		stream << "{" << std::endl;
 		{
 			stream.push();
-			declare_func(ValueType::CB);
+			declare_func(ValueType::CB);	
 			declare_func(ValueType::SRV);
 			declare_func(ValueType::UAV);
 			declare_func(ValueType::SMP);
-
+			declare_func(ValueType::STRUCT);
 
 			if (table.bindless_table)
 			{
-				stream << "Render::Bindless& bindless;" << std::endl;
+		//		stream << "Render::Bindless bindless;" << std::endl;
 			}
 
 			for (auto& v : table.values)
@@ -697,11 +448,11 @@ R"(private:
 				std::string cameled = v.name;
 				cameled[0] = std::toupper(cameled[0]);
 
-				if (v.array_count == 0)
-					stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return bindless; }" << std::endl;
+			//	if (v.array_count == 0)
+			//		stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return bindless; }" << std::endl;
 
-				else
-					stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << get_name_for(v.value_type) << "." << v.name << "; }" << std::endl;
+			//	else
+					stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " <<  v.name << "; }" << std::endl;
 			}
 
 
@@ -736,35 +487,12 @@ R"(private:
 
 				if (vtable.find_option("shader_only"))
 				{
-					stream << v.type << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << "cb." << v.name << "; }" << std::endl;
+					stream << v.type << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " <<  v.name << "; }" << std::endl;
 					continue;
 				};
 
 
-				std::string pass;
-				auto t = parsed.find_table(v.type);
-				auto f = [&](ValueType type) {
-					if (t->counts[type] == 0) return;
-					if (pass.size()) pass += ",";
-					pass += get_name_for(type) + "." + v.name;
-				};
-
-				f(ValueType::CB);
-				f(ValueType::SRV);
-				f(ValueType::UAV);
-				f(ValueType::SMP);
-
-
-
-				if (vtable.bindless_table)
-				{
-					if (pass.size()) pass += ",";
-					pass += "bindless";
-
-				}
-
-
-				stream << v.type << " Map" << cameled << "() { " << "return " << v.type << "(" << pass << "); }" << std::endl;
+				stream << v.type << "& Map" << cameled << "() { " << "return "  << v.name << "; }" << std::endl;
 			}
 
 
@@ -802,8 +530,39 @@ R"(private:
 
 			}
 
-			stream << table.name << "(" << args << ") " << pass << "{}" << std::endl;
+		//	stream << table.name << "(" << args << ") " << pass << "{}" << std::endl;
+	
+
+			// declaration
+			auto compile_func = [&](ValueType type) {
+				//	if (table.counts[type] == 0) return;
+
+				for (auto& v : table.values)
+				{
+					if (v.value_type != type) continue;
+
+					stream << "compiler.compile(" << v.name << ");" << std::endl;
+
+				}
+			};
+			stream << "template<class Compiler>" << std::endl;
+
+			stream << "void compile(Compiler& compiler) const" << std::endl;
+			stream << "{" << std::endl;
+
+			stream.push();
+
+
+			compile_func(ValueType::CB);
+			compile_func(ValueType::SRV);
+			compile_func(ValueType::UAV);
+			compile_func(ValueType::SMP);
+			compile_func(ValueType::STRUCT);
 			stream.pop();
+
+			stream << "}" << std::endl;
+			stream.pop();
+
 			stream << "};" << std::endl;
 		}
 
@@ -811,6 +570,8 @@ R"(private:
 
 		stream.pop();
 	}
+
+
 	stream << "}" << std::endl;
 
 
@@ -833,60 +594,10 @@ R"(private:
 			stream << "{" << std::endl;
 			{
 				stream.push();
-
-				//stream << "using Slot = " << table.slot->layout->name << "::" << table.slot->name << ";" << std::endl;
-			//	stream << "using TableType = Table::" << table.name << ";" << std::endl;
-
-				std::string pass;
-				std::string copy;
-				std::string tables;
-
-				auto f = [&](ValueType type) {
-					if (table.counts[type] == 0) return;
-					if (pass.size()) pass += ",";
-					pass += get_name_for(type);
-
-					copy += get_name_for(type) + " = other." + get_name_for(type) + ";";
-					stream << str_toupper(get_name_for(type)) << " " << get_name_for(type) << ";" << std::endl;
-
-
-					if (!tables.empty())
-						tables += ", ";
-					if(table.slot->max_counts[type]>0)
-					tables += table.slot->layout->name+ "::" +table.slot->name+"::"+ str_toupper(get_name_for(type)) +"_ID";
-					
-
-				};
-
-				f(ValueType::CB);
-				f(ValueType::SRV);
-				f(ValueType::UAV);
-				f(ValueType::SMP);
-
-				if (table.bindless_table)
-				{
-					if (pass.size()) pass += ",";
-					pass += "bindless";
-					stream << "Render::Bindless bindless;" << std::endl;
-				}
-
-
-
 			
-			
-				stream << "static inline const std::vector<UINT> tables = {" << tables << "};" << std::endl;
-				
-				stream << table.name << "(): "\
-					"DataHolder("
-					<< pass <<
-					"){}" << std::endl;
 
-
-				stream << table.name << "(const " << table.name << "&other): "\
-					"DataHolder("
-					<< pass <<
-					"){" << copy << "}" << std::endl;
-
+				stream << table.name << "() = default;" << std::endl;
+	
 
 				stream.pop();
 			}

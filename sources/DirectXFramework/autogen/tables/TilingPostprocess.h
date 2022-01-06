@@ -5,12 +5,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct TilingPostprocess
 	{
-		struct SRV
+		TilingParams tiling;
+		TilingParams& MapTiling() { return tiling; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			TilingParams::SRV tiling;
-		} &srv;
-		TilingParams MapTiling() { return TilingParams(srv.tiling); }
-		TilingPostprocess(SRV&srv) :srv(srv){}
+			compiler.compile(tiling);
+		}
 	};
 	#pragma pack(pop)
 }

@@ -4,19 +4,19 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserHistoryFix
 	{
-		struct SRV
+		Render::HLSL::Texture2D<float4> color;
+		Render::HLSL::Texture2D<float> frames;
+		Render::HLSL::RWTexture2D<float4> target;
+		Render::HLSL::Texture2D<float4>& GetColor() { return color; }
+		Render::HLSL::Texture2D<float>& GetFrames() { return frames; }
+		Render::HLSL::RWTexture2D<float4>& GetTarget() { return target; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			Render::HLSL::Texture2D<float4> color;
-			Render::HLSL::Texture2D<float> frames;
-		} &srv;
-		struct UAV
-		{
-			Render::HLSL::RWTexture2D<float4> target;
-		} &uav;
-		Render::HLSL::Texture2D<float4>& GetColor() { return srv.color; }
-		Render::HLSL::Texture2D<float>& GetFrames() { return srv.frames; }
-		Render::HLSL::RWTexture2D<float4>& GetTarget() { return uav.target; }
-		DenoiserHistoryFix(SRV&srv,UAV&uav) :srv(srv),uav(uav){}
+			compiler.compile(color);
+			compiler.compile(frames);
+			compiler.compile(target);
+		}
 	};
 	#pragma pack(pop)
 }
