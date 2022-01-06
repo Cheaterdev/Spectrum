@@ -304,7 +304,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 				utils.GetTarget()[1] = normal.tex_dynamic->texture_3d()->rwTexture3D[0];
 				utils.GetSource()[1] = normal.tex_static->texture_3d()->texture3D;
 
-				auto params = utils.MapParams();
+				auto& params = utils.GetParams();
 				params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
 				params.GetVoxels_per_tile() = ivec4(normal.tex_result->get_tile_shape(),0);
 				utils.set(compute);
@@ -322,10 +322,10 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	context->render_type = RENDER_TYPE::VOXEL;
 
 	Slots::Voxelization voxelization;
-	voxelization.MapInfo().GetMin() = scene->voxel_info.GetMin();
-	voxelization.MapInfo().GetSize() = scene->voxel_info.GetSize();
-	voxelization.MapInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
-	voxelization.MapInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
+	voxelization.GetInfo().GetMin() = scene->voxel_info.GetMin();
+	voxelization.GetInfo().GetSize() = scene->voxel_info.GetSize();
+	voxelization.GetInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
+	voxelization.GetInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
 
 	voxelization.GetVisibility() = visibility->buffer->create_view<Render::TextureView>(*list.frame_resources).rwTexture3D;
 
@@ -439,7 +439,7 @@ void VoxelGI::debug(Graph& graph)
 			{
 				Slots::VoxelDebug debug;
 				debug.GetVolume() = voxel_lighted.texture3D;
-				gbuffer.SetTable(debug.MapGbuffer());
+				gbuffer.SetTable(debug.GetGbuffer());
 				debug.set(graphics);
 
 			}
@@ -550,7 +550,7 @@ void VoxelGI::screen(Graph& graph)
 
 			{
 				Slots::VoxelScreen voxelScreen;
-				gbuffer.SetTable(voxelScreen.MapGbuffer());
+				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
 				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
@@ -656,7 +656,7 @@ void VoxelGI::screen(Graph& graph)
 
 				{
 					Slots::TilingPostprocess tilingPostprocess;
-					auto tiling = tilingPostprocess.MapTiling();
+					auto& tiling = tilingPostprocess.GetTiling();
 					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
@@ -719,7 +719,7 @@ void VoxelGI::screen(Graph& graph)
 
 			{
 				Slots::VoxelScreen voxelScreen;
-				gbuffer.SetTable(voxelScreen.MapGbuffer());
+				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
 				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
@@ -754,7 +754,7 @@ void VoxelGI::screen(Graph& graph)
 
 				{
 					Slots::TilingPostprocess tilingPostprocess;
-					auto tiling = tilingPostprocess.MapTiling();
+					auto& tiling = tilingPostprocess.GetTiling();
 					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
@@ -768,7 +768,7 @@ void VoxelGI::screen(Graph& graph)
 
 				{
 					Slots::TilingPostprocess tilingPostprocess;
-					auto tiling = tilingPostprocess.MapTiling();
+					auto& tiling = tilingPostprocess.GetTiling();
 					tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
@@ -867,7 +867,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 			{
 				Slots::VoxelScreen voxelScreen;
-				gbuffer.SetTable(voxelScreen.MapGbuffer());
+				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
 				//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
@@ -972,7 +972,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 			{
 				Slots::VoxelScreen voxelScreen;
-				gbuffer.SetTable(voxelScreen.MapGbuffer());
+				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
 				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
@@ -1006,7 +1006,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 				{
 					Slots::TilingPostprocess tilingPostprocess;
-					auto tiling = tilingPostprocess.MapTiling();
+					auto& tiling = tilingPostprocess.GetTiling();
 					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
@@ -1021,7 +1021,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 				{
 					Slots::TilingPostprocess tilingPostprocess;
-					auto tiling = tilingPostprocess.MapTiling();
+					auto& tiling = tilingPostprocess.GetTiling();
 					tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
 					tilingPostprocess.set(compute);
 				}
@@ -1140,11 +1140,11 @@ void VoxelGI::lighting(Graph& graph)
 				ligthing.GetLower() = tex_lighting.tex_result->create_view<TextureView>(*graph.builder.current_frame, subres).texture3D;
 
 
-				auto params = ligthing.MapParams();
+				auto& params = ligthing.GetParams();
 				params.GetTiles() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
 				params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();
 
-				auto pssm = ligthing.MapPssmGlobal();
+				auto& pssm = ligthing.GetPssmGlobal();
 
 				pssm.GetLight_buffer() = data.global_depth->texture2D;
 
@@ -1229,7 +1229,7 @@ void VoxelGI::mipmapping(Graph& graph)
 						Slots::VoxelZero utils;
 						utils.GetTarget() = tex_lighting.tex_result->texture_3d()->rwTexture3D[i];
 
-						auto params = utils.MapParams();
+						auto& params = utils.GetParams();
 						params.GetTiles() = gpu_tiles_buffer[i]->buffer->structuredBuffer;
 						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();
 
@@ -1267,7 +1267,7 @@ void VoxelGI::mipmapping(Graph& graph)
 							//	list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d()->rwTexture3D[mip_count + i], vec4(0, 0, 0, 0));
 						}
 
-						auto params = mipmapping.MapParams();
+						auto &params = mipmapping.GetParams();
 						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
 						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();
 

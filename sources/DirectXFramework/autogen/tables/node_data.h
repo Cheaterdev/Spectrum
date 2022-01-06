@@ -12,7 +12,7 @@ namespace Table
 		float4x4& GetNode_global_matrix() { return node_global_matrix; }
 		float4x4& GetNode_global_matrix_prev() { return node_global_matrix_prev; }
 		float4x4& GetNode_inverse_matrix() { return node_inverse_matrix; }
-		AABB& MapAabb() { return aabb; }
+		AABB& GetAabb() { return aabb; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

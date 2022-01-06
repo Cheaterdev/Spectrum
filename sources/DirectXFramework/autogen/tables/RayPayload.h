@@ -14,7 +14,7 @@ namespace Table
 		float3& GetDir() { return dir; }
 		uint& GetRecursion() { return recursion; }
 		float& GetDist() { return dist; }
-		RayCone& MapCone() { return cone; }
+		RayCone& GetCone() { return cone; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

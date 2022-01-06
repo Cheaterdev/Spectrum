@@ -6,6 +6,13 @@ export using serialization_oarchive = cereal::BinaryOutputArchive;
 export using serialization_iarchive = cereal::BinaryInputArchive;
 
 import magic_enum;
+std::string _convert(std::wstring_view s)
+{
+	std::string w;
+	w.resize(s.size());
+	std::transform(s.begin(), s.end(), w.begin(), [](wint_t c) {return static_cast<char>(wctob(c)); });
+	return w;
+}
 
 export
 {
@@ -54,6 +61,7 @@ export
 
 		void save(const std::wstring& t)
 		{
+			save(_convert(t));
 		//	m_os << " " << convert(t);
 		}
 		static constexpr bool PRETTY = true;

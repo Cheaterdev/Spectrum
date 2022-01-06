@@ -18,8 +18,8 @@ namespace Table
 		Render::HLSL::Texture3D<float4>& GetNormals() { return normals; }
 		Render::HLSL::Texture3D<float4>& GetLower() { return lower; }
 		Render::HLSL::TextureCube<float4>& GetTex_cube() { return tex_cube; }
-		PSSMDataGlobal& MapPssmGlobal() { return pssmGlobal; }
-		VoxelTilingParams& MapParams() { return params; }
+		PSSMDataGlobal& GetPssmGlobal() { return pssmGlobal; }
+		VoxelTilingParams& GetParams() { return params; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

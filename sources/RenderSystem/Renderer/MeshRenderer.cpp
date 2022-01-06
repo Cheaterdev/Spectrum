@@ -73,7 +73,7 @@ default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_
 
 	init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 
-	if (!gbuffer || !use_gpu_occlusion)
+	//if (!gbuffer || !use_gpu_occlusion)
 	{
 		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
 		return;

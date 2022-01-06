@@ -12,7 +12,7 @@ namespace Table
 		Render::HLSL::RWTexture3D<float4>& GetAlbedo() { return albedo; }
 		Render::HLSL::RWTexture3D<float4>& GetNormals() { return normals; }
 		Render::HLSL::RWTexture3D<uint>& GetVisibility() { return visibility; }
-		VoxelInfo& MapInfo() { return info; }
+		VoxelInfo& GetInfo() { return info; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

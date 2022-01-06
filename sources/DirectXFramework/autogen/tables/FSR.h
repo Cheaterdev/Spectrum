@@ -10,7 +10,7 @@ namespace Table
 		FSRConstants constants;
 		Render::HLSL::Texture2D<float4>& GetSource() { return source; }
 		Render::HLSL::RWTexture2D<float4>& GetTarget() { return target; }
-		FSRConstants& MapConstants() { return constants; }
+		FSRConstants& GetConstants() { return constants; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

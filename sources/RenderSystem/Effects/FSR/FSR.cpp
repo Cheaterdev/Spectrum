@@ -39,7 +39,7 @@ builder.create(data.FSRTemp, { uint3(graph.upscale_size,1), DXGI_FORMAT::DXGI_FO
 				compute.set_pipeline(GetPSO<PSOS::FSR>());
 				{
 					Slots::FSR fsr;
-					auto constants = fsr.MapConstants();
+					auto& constants = fsr.GetConstants();
 					FsrEasuCon(reinterpret_cast<AU1*>(&constants.GetConst0()), reinterpret_cast<AU1*>(&constants.GetConst1()), reinterpret_cast<AU1*>(&constants.GetConst2()), reinterpret_cast<AU1*>(&constants.GetConst3()), static_cast<AF1>(graph.frame_size.x), static_cast<AF1>(graph.frame_size.y), static_cast<AF1>(graph.frame_size.x), static_cast<AF1>(graph.frame_size.y), (AF1)graph.upscale_size.x, (AF1)graph.upscale_size.y);
 					fsr.GetSource() = data.ResultTexture->texture2D;
 					fsr.GetTarget() = data.FSRTemp->rwTexture2D;
@@ -56,7 +56,7 @@ builder.create(data.FSRTemp, { uint3(graph.upscale_size,1), DXGI_FORMAT::DXGI_FO
 				compute.set_pipeline(GetPSO<PSOS::RCAS>(PSOS::RCAS::cas()));
 				{
 					Slots::FSR fsr;
-					auto constants = fsr.MapConstants();
+					auto& constants = fsr.GetConstants();
 					FsrRcasCon(reinterpret_cast<AU1*>(&constants.GetConst0()), 0.5);
 					fsr.GetSource() = data.FSRTemp->texture2D;
 					fsr.GetTarget() = data.ResultTextureUpscaled->rwTexture2D;

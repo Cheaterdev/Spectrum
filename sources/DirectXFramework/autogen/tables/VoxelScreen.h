@@ -16,7 +16,7 @@ namespace Table
 		Render::HLSL::Texture2D<float4>& GetPrev_gi() { return prev_gi; }
 		Render::HLSL::Texture2D<float>& GetPrev_frames() { return prev_frames; }
 		Render::HLSL::Texture2D<float>& GetPrev_depth() { return prev_depth; }
-		GBuffer& MapGbuffer() { return gbuffer; }
+		GBuffer& GetGbuffer() { return gbuffer; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

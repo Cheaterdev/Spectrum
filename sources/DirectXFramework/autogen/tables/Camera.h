@@ -24,7 +24,7 @@ namespace Table
 		float4& GetPosition() { return position; }
 		float4& GetDirection() { return direction; }
 		float4& GetJitter() { return jitter; }
-		Frustum& MapFrustum() { return frustum; }
+		Frustum& GetFrustum() { return frustum; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

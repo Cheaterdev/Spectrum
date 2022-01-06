@@ -483,7 +483,7 @@ public:
 
 			};
 
-			graph.add_pass<GBufferData>("GBUFFER", [this, &graph](GBufferData& data, TaskBuilder& builder) {
+			/*graph.add_pass<GBufferData>("GBUFFER", [this, &graph](GBufferData& data, TaskBuilder& builder) {
 
 				auto size = graph.frame_size;
 				data.gbuffer.create(size, builder);
@@ -495,9 +495,9 @@ public:
 
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
-				});
+				});*/
 
-			if(0)
+			
 			graph.add_pass<GBufferData>("SCENE", [this, &graph](GBufferData& data, TaskBuilder& builder) {
 
 				auto size = graph.frame_size;
@@ -560,7 +560,7 @@ public:
 					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
 					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
 
-					//gpu_scene_renderer->render(context, scene);
+					gpu_scene_renderer->render(context, scene);
 
 					//	stenciler->render(context, scene);
 
@@ -612,7 +612,7 @@ public:
 						auto gbuffer = data.gbuffer.actualize(context);
 
 						Slots::VoxelScreen voxelScreen;
-						gbuffer.SetTable(voxelScreen.MapGbuffer());
+						gbuffer.SetTable(voxelScreen.GetGbuffer());
 						voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 						voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
 						voxelScreen.set(compute);
@@ -636,16 +636,16 @@ public:
 
 
 
-	//	pssm.generate(graph);
+		pssm.generate(graph);
 		sky.generate(graph);
 
 		// remove on intel
-	//	if(enable_gi) voxel_gi->generate(graph);
+		if(enable_gi) voxel_gi->generate(graph);
 
 		
 		sky.generate_sky(graph);
 
-	//	stenciler->generate_after(graph);
+		stenciler->generate_after(graph);
 
 		smaa.generate(graph);
 		if(downsampled&&enable_fsr)
@@ -670,8 +670,8 @@ public:
 			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
 
 
-			frameInfo.MapCamera() = graph.cam->camera_cb.current;
-			frameInfo.MapPrevCamera() = graph.cam->camera_cb.prev;
+			frameInfo.GetCamera() = graph.cam->camera_cb.current;
+			frameInfo.GetPrevCamera() = graph.cam->camera_cb.prev;
 
 			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
 			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
@@ -1107,15 +1107,15 @@ resource_stages[&res.second] = input;
 					//	t->init(&Profiler::get());
 					//	dock->get_tabs()->add_page("Profiler", t);
 
-				//	GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
+					GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
 
-					//dock->get_tabs()->add_page("Graph", t2);
+					dock->get_tabs()->add_page("Graph", t2);
 
 
 
 					frameFlowGraph = std::make_shared< FrameFlowGraph>();
 
-					//dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
+					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
 
 				}
 			}

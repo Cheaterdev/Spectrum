@@ -8,7 +8,7 @@ namespace Table
 		float lod;
 		mesh_vertex_input v;
 		float& GetLod() { return lod; }
-		mesh_vertex_input& MapV() { return v; }
+		mesh_vertex_input& GetV() { return v; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

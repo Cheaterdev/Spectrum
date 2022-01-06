@@ -6,7 +6,7 @@ namespace Table
 	struct TilingPostprocess
 	{
 		TilingParams tiling;
-		TilingParams& MapTiling() { return tiling; }
+		TilingParams& GetTiling() { return tiling; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -492,7 +492,7 @@ void generate_cpp_table(const Table& table)
 				};
 
 
-				stream << v.type << "& Map" << cameled << "() { " << "return "  << v.name << "; }" << std::endl;
+				stream << v.type << "& Get" << cameled << "() { " << "return "  << v.name << "; }" << std::endl;
 			}
 
 

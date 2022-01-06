@@ -17,8 +17,8 @@ namespace Table
 		Render::HLSL::Texture3D<float4>& GetBrdf() { return brdf; }
 		Render::HLSL::TextureCube<float4>& GetSky() { return sky; }
 		float4& GetSunDir() { return sunDir; }
-		Camera& MapCamera() { return camera; }
-		Camera& MapPrevCamera() { return prevCamera; }
+		Camera& GetCamera() { return camera; }
+		Camera& GetPrevCamera() { return prevCamera; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

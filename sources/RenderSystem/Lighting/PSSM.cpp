@@ -142,7 +142,7 @@ void PSSM::generate(Graph& graph)
 				Slots::FrameInfo frameInfo;
 
 				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-				auto camera = frameInfo.MapCamera();
+				auto& camera = frameInfo.GetCamera();
 				//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 				camera = light_cam.camera_cb.current;
 				frameInfo.set(graphics);
@@ -265,7 +265,7 @@ void PSSM::generate(Graph& graph)
 					Slots::FrameInfo frameInfo;
 
 					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-					auto camera = frameInfo.MapCamera();
+					auto& camera = frameInfo.GetCamera();
 					//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 					camera = light_cam.camera_cb.current;
 					frameInfo.set(graphics);
@@ -306,7 +306,7 @@ void PSSM::generate(Graph& graph)
 			{
 				Slots::PSSMLighting lighting;
 
-				gbuffer.SetTable(lighting.MapGbuffer());
+				gbuffer.SetTable(lighting.GetGbuffer());
 
 				//lighting.GetLight_mask() = screen_light_mask.get_srv();
 
@@ -382,7 +382,7 @@ void PSSM::generate(Graph& graph)
 			{
 				Slots::PSSMLighting lighting;
 
-				gbuffer.SetTable(lighting.MapGbuffer());
+				gbuffer.SetTable(lighting.GetGbuffer());
 				lighting.set(graphics);
 			}
 
@@ -401,7 +401,7 @@ void PSSM::generate(Graph& graph)
 			{
 				Slots::PSSMLighting lighting;
 
-				gbuffer.SetTable(lighting.MapGbuffer());
+				gbuffer.SetTable(lighting.GetGbuffer());
 
 				if(data.RTXDebug)
 				lighting.GetLight_mask() = data.RTXDebug->texture2D;//data.LightMask->texture2D;

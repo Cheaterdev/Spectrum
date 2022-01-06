@@ -8,7 +8,7 @@ namespace Table
 		Render::HLSL::Texture3D<float4> volume;
 		GBuffer gbuffer;
 		Render::HLSL::Texture3D<float4>& GetVolume() { return volume; }
-		GBuffer& MapGbuffer() { return gbuffer; }
+		GBuffer& GetGbuffer() { return gbuffer; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

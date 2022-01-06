@@ -10,7 +10,7 @@ namespace Table
 		VoxelTilingParams params;
 		Render::HLSL::RWTexture3D<float4>* GetTarget() { return Target; }
 		Render::HLSL::Texture3D<float4>* GetSource() { return Source; }
-		VoxelTilingParams& MapParams() { return params; }
+		VoxelTilingParams& GetParams() { return params; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -122,18 +122,23 @@ namespace cereal
 		std::wstring CommandQueueDebugName = g.pCommandQueueDebugNameW ? g.pCommandQueueDebugNameW : L"";
 		ar& NVP(CommandListDebugName);
 		ar& NVP(CommandQueueDebugName);
+		if (g.pLastBreadcrumbValue && *g.pLastBreadcrumbValue < g.BreadcrumbCount - 1)
+		{
+			ar& NP("FAILED", true);
+		}
 
 
 		std::vector<D3D12_AUTO_BREADCRUMB_OP> ops;
-		ops.assign(g.pCommandHistory, g.pCommandHistory+ g.BreadcrumbCount);
-		ar& NVP(ops);
+		ops.assign(g.pCommandHistory, g.pCommandHistory + g.BreadcrumbCount);
 
-		if (g.pLastBreadcrumbValue)
+		UINT offset = g.pLastBreadcrumbValue ? (*g.pLastBreadcrumbValue) : g.BreadcrumbCount;
+
+		for (int i = 0; i < ops.size(); i++)
 		{
-			UINT offset = *g.pLastBreadcrumbValue;// (reinterpret_cast<UINT>(g.pLastBreadcrumbValue) - reinterpret_cast<UINT>(g.pCommandHistory)) / sizeof(D3D12_AUTO_BREADCRUMB_OP);
-
-			if (offset + 1 < g.BreadcrumbCount)
-				ar& NVP(offset);
+			auto op = ops[i];
+			if (i <= offset) ar& NP("DONE", op);
+			if (i == offset + 1) ar& NP("FAILED", op);
+			if (i > offset + 1) ar& NP("WAITING", op);
 
 		}
 	}

@@ -424,7 +424,7 @@ void stencil_renderer::generate(Graph& graph)
 					{
 						Slots::FrameInfo frameInfo;
 
-						auto camera = frameInfo.MapCamera();
+						auto& camera = frameInfo.GetCamera();
 						//		memcpy(&camera, &cam.camera_cb.current, sizeof(camera));
 						camera = cam.camera_cb.current;
 						frameInfo.set(graphics);
@@ -458,7 +458,7 @@ void stencil_renderer::generate(Graph& graph)
 					{
 						Slots::FrameInfo frameInfo;
 
-						auto camera = frameInfo.MapCamera();
+						auto& camera = frameInfo.GetCamera();
 						camera = axis_intersect_cam.camera_cb.current;
 						//		memcpy(&camera, &axis_intersect_cam.camera_cb.current, sizeof(camera));
 						frameInfo.set(graphics);
@@ -655,7 +655,7 @@ void stencil_renderer::generate_after(Graph& graph)
 			
 					{
 						Slots::FrameInfo frameInfo;
-						auto camera = frameInfo.MapCamera();
+						auto& camera = frameInfo.GetCamera();
 						camera = axis_cam.camera_cb.current;
 						frameInfo.set(graphics);
 					}

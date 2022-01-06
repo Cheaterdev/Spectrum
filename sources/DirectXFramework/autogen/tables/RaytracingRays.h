@@ -10,7 +10,7 @@ namespace Table
 		GBuffer gbuffer;
 		Render::HLSL::RWTexture2D<float4>& GetOutput() { return output; }
 		float& GetPixelAngle() { return pixelAngle; }
-		GBuffer& MapGbuffer() { return gbuffer; }
+		GBuffer& GetGbuffer() { return gbuffer; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

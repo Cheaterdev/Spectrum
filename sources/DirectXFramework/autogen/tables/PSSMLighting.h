@@ -8,7 +8,7 @@ namespace Table
 		Render::HLSL::Texture2D<float> light_mask;
 		GBuffer gbuffer;
 		Render::HLSL::Texture2D<float>& GetLight_mask() { return light_mask; }
-		GBuffer& MapGbuffer() { return gbuffer; }
+		GBuffer& GetGbuffer() { return gbuffer; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
