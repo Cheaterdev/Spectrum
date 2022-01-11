@@ -166,7 +166,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 
 	
 
-   return;
+  // return;
  
 	graph.start_new_frame();
 	if (!vr_context)

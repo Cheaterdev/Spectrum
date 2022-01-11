@@ -145,9 +145,9 @@ public:
 	//	PostProcessGraph::ptr render_graph;
 
 
-	Variable<bool> enable_gi = { false, "GI", this };
-	Variable<bool> enable_fsr = { false, "FSR", this };
-	Variable<bool> downsampled = { false, "downsampled", this };
+	Variable<bool> enable_gi = { true, "GI", this };
+	Variable<bool> enable_fsr = { true, "FSR", this };
+	Variable<bool> downsampled = { true, "downsampled", this };
 
 	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
@@ -580,7 +580,8 @@ public:
 
 				Handlers::Texture H(RTXDebugPrev);
 			};
-			if(0)
+			
+			if(Render::Device::get().is_rtx_supported())
 			graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);

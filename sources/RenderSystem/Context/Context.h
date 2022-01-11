@@ -341,7 +341,7 @@ public:
 	}HalfBuffer;
 
 
-	void SetTable(Table::GBuffer table)
+	void SetTable(Table::GBuffer& table)
 	{
 		table.GetAlbedo() = albedo.texture2D;
 		table.GetNormals() = normals.texture2D;

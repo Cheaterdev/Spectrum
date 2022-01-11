@@ -334,7 +334,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 		}
 
-
+		//if(0)
 		{
 			PROFILE_GPU(L"YO");
 			int current = 0;
