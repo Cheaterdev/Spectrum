@@ -242,7 +242,7 @@ namespace DX12
 
 	void  GraphicsContext::set(UINT i, const HandleTableLight& table)
 	{
-		list->SetGraphicsRootDescriptorTable(i, table.gpu);
+		list->SetGraphicsRootDescriptorTable(i, table.get_gpu());
 	}
 
 
@@ -253,7 +253,7 @@ namespace DX12
 
 	void GraphicsContext::set_rtv(const HandleTable& table, Handle h)
 	{
-		set_rtv(table.get_count(), table.get_base(), h);
+		set_rtv(table.get_count(), table[0], h);
 	}
 	void GraphicsContext::set_rtv(const HandleTableLight& table, Handle h)
 	{
@@ -265,13 +265,31 @@ namespace DX12
 		base.create_transition_point();
 		for (int i = 0; i < c; i++)
 		{
-			get_base().transition_rtv(&rt.resource_info[i]);
+			get_base().transition_rtv(&rt.get_resource_info()[i]);
 		}
 
 		if (h.is_valid())
-			get_base().transition_dsv(h.resource_info);
+			get_base().transition_dsv(h.get_resource_info());
 
-		list->OMSetRenderTargets(c, &rt.cpu, true, h.is_valid() ? &h.cpu : nullptr);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE dsv;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE *dsv_ptr = nullptr;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE* rtv_ptr = nullptr;
+
+		if (rt.is_valid())
+		{
+			rtv = rt.get_cpu();
+			rtv_ptr = &rtv;
+		}
+
+
+		if (h.is_valid())
+		{
+			dsv = h.get_cpu();
+			dsv_ptr = &dsv;
+		}
+
+		list->OMSetRenderTargets(c, rtv_ptr, true, dsv_ptr);
 
 		base.create_transition_point(false);
 	}
@@ -696,7 +714,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 					if (prev_transition->wanted_state == transition.wanted_state) continue;
 
-					assert(!point->start);
+//					assert(!point->start);
 					transitions.transition(transition.resource,
 						prev_transition->wanted_state,
 						transition.wanted_state,
@@ -1033,7 +1051,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 
 	void  ComputeContext::set(UINT i, const HandleTableLight& table)
 	{
-		list->SetComputeRootDescriptorTable(i, table.gpu);
+		list->SetComputeRootDescriptorTable(i, table.get_gpu());
 	}
 
 	
@@ -1364,7 +1382,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 					{
 						const auto& h = table[i];
 
-						base.stop_using(h.resource_info);
+						base.stop_using(h.get_resource_info());
 
 					}
 				}

@@ -5,7 +5,7 @@ import d3d12;
 HRESULT device_fail();
 HRESULT test(HRESULT hr, std::string str = "");
 
-#ifdef  DEBUG
+#ifdef  hDEBUG
 #define TEST(x)\
 	assert(SUCCEEDED(x))
 #else

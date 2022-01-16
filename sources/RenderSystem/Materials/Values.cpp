@@ -799,7 +799,7 @@ GUI::base::ptr TextureNode::create_editor_window()
 	GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
 	//img_inner->texture.texture = asset->get_texture();
 
-	//img_inner->texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
+	//img_inner->texture.srv = Render::StaticDescriptors::get().place(1);
 
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();

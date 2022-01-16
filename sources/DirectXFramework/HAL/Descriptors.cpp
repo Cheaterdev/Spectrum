@@ -29,21 +29,39 @@ namespace DX12 {
 
 		return DescriptorHeapType();
 	}
-
+	ResourceInfo* Handle::get_resource_info() const
+	{
+		return heap->get_resource_info(this);
+	}
+	Handle::operator bool() const
+	{
+		return !!heap;
+	}
+	CD3DX12_CPU_DESCRIPTOR_HANDLE Handle::get_cpu_read() const
+	{
+		return heap->get_cpu_read(offset_cpu);
+	}
+	CD3DX12_CPU_DESCRIPTOR_HANDLE Handle::get_cpu() const
+	{
+		return heap->get_handle(offset_cpu);
+	}
+	CD3DX12_GPU_DESCRIPTOR_HANDLE Handle::get_gpu() const
+	{
+		return heap->get_gpu_handle(offset_gpu);
+	}
 	DescriptorHeapManager::DescriptorHeapManager()
 	{
-		heap_cb_sr_ua_static.reset(new DescriptorHeap(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE));
 		heap_rt.reset(new DescriptorHeap(65536, DescriptorHeapType::RTV, DescriptorHeapFlags::NONE));
 		heap_ds.reset(new DescriptorHeap(65536, DescriptorHeapType::DSV, DescriptorHeapFlags::NONE));
 
 
-		gpu_heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(65536*8, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE));
-		gpu_heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(2048, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE));
+		heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(65536*8, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE));
+		heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(2048, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE));
 	
-		cpu_heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE));
-		cpu_heaps[DescriptorHeapType::RTV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::RTV, DescriptorHeapFlags::NONE));
-		cpu_heaps[DescriptorHeapType::DSV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::DSV, DescriptorHeapFlags::NONE));
-		cpu_heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE));
+	//	cpu_heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE));
+		heaps[DescriptorHeapType::RTV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::RTV, DescriptorHeapFlags::NONE));
+		heaps[DescriptorHeapType::DSV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::DSV, DescriptorHeapFlags::NONE));
+	//	cpu_heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE));
 	}
 
 
@@ -55,23 +73,37 @@ namespace DX12 {
 		rtvHeapDesc.Type = static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type);
 		rtvHeapDesc.Flags = static_cast<D3D12_DESCRIPTOR_HEAP_FLAGS>(flags);
 		rtvHeapDesc.NodeMask = 1;
-		TEST(Device::get().get_native_device()->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
-		descriptor_size = Device::get().get_native_device()->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type));
-		assert(m_rtvHeap);
+
+		TEST(Device::get().get_native_device()->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_MainHeap)));
+
+		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAGS::D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+		if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
+			TEST(Device::get().get_native_device()->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_CPUHeap)));
+
+		descriptor_size = Device::get().get_descriptor_size(type);
+	//	assert(m_GPUHeap);
 
 		resources.resize(max_count);
 	}
 
+	CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeap::get_cpu_read(UINT i)
+	{
+		if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
+
+		return  CD3DX12_CPU_DESCRIPTOR_HANDLE(m_CPUHeap->GetCPUDescriptorHandleForHeapStart(), i, descriptor_size);
+		else
+			return  CD3DX12_CPU_DESCRIPTOR_HANDLE(m_MainHeap->GetCPUDescriptorHandleForHeapStart(), i, descriptor_size);
+	}
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE DescriptorHeap::get_handle(UINT i)
 	{
-		return  CD3DX12_CPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), i, descriptor_size);
+		return  CD3DX12_CPU_DESCRIPTOR_HANDLE(m_MainHeap->GetCPUDescriptorHandleForHeapStart(), i, descriptor_size);
 	}
 
 	CD3DX12_GPU_DESCRIPTOR_HANDLE DescriptorHeap::get_gpu_handle(UINT i)
 	{
 		if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
-			return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_rtvHeap->GetGPUDescriptorHandleForHeapStart(), i, descriptor_size);
+			return CD3DX12_GPU_DESCRIPTOR_HANDLE(m_MainHeap->GetGPUDescriptorHandleForHeapStart(), i, descriptor_size);
 		
 		
 			return CD3DX12_GPU_DESCRIPTOR_HANDLE();
@@ -80,13 +112,23 @@ namespace DX12 {
 
 	void Handle::place(const Handle& r) const
 	{
-		assert(offset != UINT_MAX);
-		D3D12_DESCRIPTOR_HEAP_TYPE type = (D3D12_DESCRIPTOR_HEAP_TYPE)get_heap_type(r.resource_info->type);
+		//assert(offset != UINT_MAX);
+		D3D12_DESCRIPTOR_HEAP_TYPE type = (D3D12_DESCRIPTOR_HEAP_TYPE)get_heap_type(r.get_resource_info()->type);
 
-		if (cpu != r.cpu)
-			Device::get().get_native_device()->CopyDescriptorsSimple(1, cpu, r.cpu, type);
+		//if (cpu != r.cpu)
+		auto my_cpu = get_cpu_read();
 
-		*resource_info = *r.resource_info;
+
+		auto r_cpu = r.get_cpu_read();
+		Device::get().get_native_device()->CopyDescriptorsSimple(1, my_cpu, r_cpu, type);
+
+		if (offset_gpu != UINT_MAX) {
+			my_cpu = get_cpu();
+			Device::get().get_native_device()->CopyDescriptorsSimple(1, my_cpu, r_cpu, type);
+		}
+
+
+		*get_resource_info() = *r.get_resource_info();
 	}
 
 /*
@@ -100,7 +142,7 @@ namespace DX12 {
 	Handle DescriptorPage::place()
 	{
 		Handle h =  heap->handle(heap_offset + (offset++));
-		h.resource_info->resource_ptr = nullptr;
+		h.get_resource_info()->resource_ptr = nullptr;
 		return h;
 	}
 
@@ -113,7 +155,8 @@ namespace DX12 {
 
 		for (UINT i = 0; i < (UINT)table.get_count(); i++)
 		{
-			table[i].resource_info->resource_ptr = nullptr;
+			auto h = table[i];
+			h.get_resource_info()->resource_ptr = nullptr;
 		}
 		offset += count;
 		return table;
@@ -121,6 +164,19 @@ namespace DX12 {
 
 
 
+	HandleTable DescriptorPage::place2(UINT count)
+	{
+		assert(offset + count <= this->count);
+		auto table = heap->make_table(count, heap_offset + offset);
+
+		for (UINT i = 0; i < (UINT)table.get_count(); i++)
+		{
+			auto h = table[i];
+			h.get_resource_info()->resource_ptr = nullptr;
+		}
+		offset += count;
+		return table;
+	}
 	void DescriptorPage::free()
 	{
 		offset = 0;

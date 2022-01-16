@@ -107,13 +107,13 @@ export
 				init_desc();
 				view_desc.Buffer.Offset = offset;
 				if (size) view_desc.Buffer.Size = size;
-				srv_handle = HLSL::Buffer<T>(frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
+				srv_handle = HLSL::Buffer<T>(frame.get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
 
 				srv_handle.create(resource.get(), format, static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 
 				auto& desc = resource->get_desc();
 				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
-					uav_handle = HLSL::RWBuffer<T>(frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
+					uav_handle = HLSL::RWBuffer<T>(frame.get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
 					uav_handle.create(resource.get(), format, static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 				}
 			}
@@ -172,7 +172,7 @@ export
 			template<class F>
 			void init(F& frame)
 			{
-				HandleTableLight hlsl = frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(2);
+				HandleTableLight hlsl = frame.get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(2);
 
 				auto& desc = resource->get_desc();
 				if (view_desc.type == ResourceType::TEXTURE2D) {
@@ -536,7 +536,7 @@ export
 			{
 				init_desc();
 
-				HandleTableLight hlsl = frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(3);
+				HandleTableLight hlsl = frame.get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(3);
 
 				structuredBuffer = HLSL::StructuredBuffer<UINT>(hlsl[0]);
 				rwStructuredBuffer = HLSL::RWStructuredBuffer<UINT>(hlsl[1]);
@@ -596,7 +596,7 @@ export
 				if (size) view_desc.Buffer.Size = size;
 
 				view_desc.Buffer.counted = counted == BufferType::COUNTED;
-				HandleTableLight hlsl = frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(4);
+				HandleTableLight hlsl = frame.get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(4);
 
 				structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 				rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);

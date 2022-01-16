@@ -50,19 +50,20 @@ export {
 		template<HandleType T>
 		void compile(const T& handle)
 		{
-			auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(1);
+		//	auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(1);
 
 			if (handle.is_valid())
 			{
-				table[0].place(handle);
+		//		assert(handle.get_gpu);
+		//		table[0].place(handle);
 
-				if (handle.resource_info)
+				if (handle.get_resource_info())
 				{
-					resources.push_back(handle.resource_info);
+					resources.push_back(handle.get_resource_info());
 				}
 			}
 
-			uint offset = table.offset;
+			uint offset = handle.offset_gpu;
 			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 		}
 
@@ -72,22 +73,23 @@ export {
 
 			pad();
 
-			auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(N);
+		//	auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(N);
 
 			for (uint i = 0; i < N; i++)
 			{
 				auto& handle = handles[i];
 				if (handle.is_valid())
 				{
-					table[i].place(handle);
+				//	assert(handle.gpu.ptr);
+				//	table[i].place(handle);
 
-					if (handle.resource_info)
+					if (handle.get_resource_info())
 					{
-						resources.push_back(handle.resource_info);
+						resources.push_back(handle.get_resource_info());
 					}
 				}
 
-				uint offset = table.offset + i;
+				uint offset = handle.offset_gpu;
 				s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 				pad();
 			}
@@ -119,16 +121,17 @@ export {
 					const Render::Handle& handle = t[i];
 					if (handle.is_valid())
 					{
+					//	assert(handle.gpu.ptr);
 						table[i].place(handle);
 
-						if (handle.resource_info)
+						if (handle.get_resource_info())
 						{
-							resources.push_back(handle.resource_info);
+							resources.push_back(handle.get_resource_info());
 						}
 					}
 				}
 
-				offset = table.offset;
+				offset =  table.offset_gpu;
 			}
 			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 	
@@ -235,22 +238,14 @@ export {
 			compile(context.get_base()).set(context);
 		}
 
-
 		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
 		{
-			static_assert(HasCB<Table>);
-			static_assert(!HasSRV<Table>);
-			static_assert(!HasUAV<Table>);
-			static_assert(!HasSMP<Table>);
-
 			D3D12_INDIRECT_ARGUMENT_DESC desc;
 			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
 			desc.ConstantBufferView.RootParameterIndex = Slot::ID;
 
 			return desc;
 		}
-
-
 	};
 
 }

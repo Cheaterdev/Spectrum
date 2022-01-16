@@ -19,20 +19,14 @@ export
 
 	namespace DX12
 	{
-		//	class CommandList;
-
-
 		DescriptorHeapType get_heap_type(HandleType type);
 		class Resource;
-
-
 
 		struct ResourceInfo
 		{
 			Resource* resource_ptr = nullptr;
 
 			HandleType type;
-
 			union
 			{
 				D3D12_DEPTH_STENCIL_VIEW_DESC dsv;
@@ -82,46 +76,39 @@ export
 				this->cbv = cbv;
 			}
 
-
 			void for_each_subres(std::function<void(Resource*, UINT)> f) const;
 		};
 
+		class DescriptorHeap;
 		struct Handle
 		{
-			CD3DX12_CPU_DESCRIPTOR_HANDLE cpu;
-			CD3DX12_GPU_DESCRIPTOR_HANDLE gpu;
+			DescriptorHeap* heap = nullptr;
 
-			ResourceInfo* resource_info = nullptr;
+			ResourceInfo* get_resource_info() const;
+
+			CD3DX12_CPU_DESCRIPTOR_HANDLE get_cpu_read() const; 
+			CD3DX12_CPU_DESCRIPTOR_HANDLE get_cpu() const;
+			CD3DX12_GPU_DESCRIPTOR_HANDLE get_gpu() const;
 
 			bool is_valid() const
 			{
-				return cpu.ptr != 0 || gpu.ptr != 0;
+				return offset_gpu != UINT_MAX || offset_cpu != UINT_MAX;
 			}
 
-			operator bool()
-			{
-				return !!resource_info;
-			}
-			Handle()
-			{
-				gpu.ptr = 0;
-				cpu.ptr = 0;
-			}
-
+			operator bool() const;
 			void operator=(const std::function<void(Handle&)>& f)
 			{
 				f(*this);
 			}
 
-			UINT offset = UINT_MAX;
-
-			//const Handle& operator=(const Handle& h) = default;
-
+			UINT offset_gpu = UINT_MAX;
+			UINT offset_cpu = UINT_MAX;
+	
 			bool operator!=(const Handle& r)
 			{
-				if (cpu.ptr != r.cpu.ptr) return true;
+				if (offset_gpu != r.offset_gpu) return true;
 
-				if (gpu.ptr != r.gpu.ptr) return true;
+				if (offset_cpu != r.offset_cpu) return true;
 
 				return false;
 			}
@@ -412,19 +399,19 @@ export
 			Handle operator[](UINT i) const
 			{
 				assert(i < info->count);
-				Handle res = get_base();
-				res.cpu.Offset(i, info->descriptor_size);
-				res.gpu.Offset(i, info->descriptor_size);
-				res.resource_info += i;
-				res.offset += i;
+				Handle res;
+
+				res.heap = info->heap;
+				if(info->offset_cpu!=UINT_MAX) res.offset_cpu = info->offset_cpu + i;
+				if (info->offset_gpu != UINT_MAX)res.offset_gpu = info->offset_gpu + i;
 				return res;
 			}
 
-			Handle& get_base() const
+			/*Handle& get_base() const
 			{
 				return info->base;
 			}
-
+			*/
 			UINT get_count() const
 			{
 				return info ? info->count : 0;
@@ -441,8 +428,9 @@ export
 
 			struct helper
 			{
-				Handle base;
-				UINT descriptor_size;
+				DescriptorHeap *heap;
+				UINT offset_cpu;
+				UINT offset_gpu;
 				UINT count;
 			};
 
@@ -456,10 +444,8 @@ export
 			{
 				assert(i < count);
 				Handle res = *this;
-				res.cpu.Offset(i, descriptor_size);
-				res.gpu.Offset(i, descriptor_size);
-				res.resource_info = resource_info + i;
-				res.offset += i;
+				if (offset_cpu != UINT_MAX)  res.offset_cpu += i;
+				if (offset_gpu != UINT_MAX)  res.offset_gpu += i;
 				return res;
 			}
 
@@ -471,21 +457,20 @@ export
 
 			bool valid() const
 			{
-				return descriptor_size > 0;
+				return count > 0;
 			}
 
 
 		private:
 			friend class DescriptorHeap;
-
-			UINT descriptor_size = 0;
 			UINT count = 0;
-
 		};
+
 		class DescriptorHeap : public SharedObject<DescriptorHeap>
 		{
 			//      std::vector<Handle> handles;
-			ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+			ComPtr<ID3D12DescriptorHeap> m_MainHeap;
+			ComPtr<ID3D12DescriptorHeap> m_CPUHeap; 
 			std::vector<ResourceInfo> resources;
 			DescriptorHeapFlags flags;
 
@@ -494,6 +479,9 @@ export
 			UINT max_count;
 			std::mutex m;
 			std::map<UINT, std::deque<UINT>> frees;
+			UINT used_size = 0;
+		public:
+			Events::Event<void> on_free;
 			HandleTable make_table(UINT count, UINT offset)
 			{
 				HandleTable res;
@@ -507,16 +495,22 @@ export
 
 
 							t->frees[count].push_back(offset);
+
+							t->used_size -= e->count;
+
+							if (t->used_size == 0)
+							{
+								t->on_free();
+							}
 						}
 
 						delete e;
 					});
-				res.info->base.cpu = get_handle(offset);
-				res.info->base.gpu = get_gpu_handle(offset);
-				res.info->base.resource_info = resources.data() + offset;
-				res.info->descriptor_size = descriptor_size;
+				used_size += count;
+				res.info->heap = this;
+				res.info->offset_cpu = offset;
+				res.info->offset_gpu = offset;
 				res.info->count = count;
-				res.info->base.offset = offset;
 				return res;
 			}
 			template<class T>
@@ -532,14 +526,28 @@ export
 				place(table, i + 1, args...);
 			}
 
+			CD3DX12_CPU_DESCRIPTOR_HANDLE get_handle(UINT i);
+			CD3DX12_GPU_DESCRIPTOR_HANDLE get_gpu_handle(UINT i);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE get_cpu_read(UINT i);
+		
+			friend class Handle;
+
+			ResourceInfo* get_resource_info(const Handle* h)
+			{
+				return &resources[h->offset_cpu];
+			}
 		public:
 			using ptr = std::shared_ptr<DescriptorHeap>;
 
 			ComPtr<ID3D12DescriptorHeap> get_native()
 			{
-				return m_rtvHeap;
+				return m_MainHeap;
 			}
 
+			ComPtr<ID3D12DescriptorHeap> get_cpu_native()
+			{
+				return m_CPUHeap;
+			}
 
 			DescriptorHeap(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE);
 
@@ -563,11 +571,21 @@ export
 				UINT count = static_cast<UINT>(_count);
 				std::lock_guard<std::mutex> g(m);
 
+				// TODO: Uncomment
+			//	for(auto it = frees.lower_bound(count); it!=frees.end();it++)
+			//	if (it->size())
 				if (frees[count].size())
 				{
 					auto&& list = frees[count];
+
 					UINT offset = list.front();
 					list.pop_front();
+/*
+					if (it->size() > _count)
+					{
+						auto delta = it->size() - _count;
+						frees[delta].emplace_back(offset+_count);
+					}*/
 					return make_table(count, offset);
 				}
 
@@ -603,48 +621,41 @@ export
 				return res;
 			}
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE get_handle(UINT i);
-			CD3DX12_GPU_DESCRIPTOR_HANDLE get_gpu_handle(UINT i);
-
+		
 
 			Handle handle(UINT offset)
 			{
 				Handle res;
-				res.cpu = get_handle(offset);
-				res.gpu = get_gpu_handle(offset);
-				res.resource_info = resources.data() + offset;
+				res.offset_cpu = offset;
+				if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
+				res.offset_gpu = offset;
+				res.heap = this;
 				return res;
 			}
-
+			/*
 			HandleTable get_table_view(UINT offset, UINT count)
 			{
 				assert((offset + count) <= max_count && "Not enought handles");
 				HandleTable res;
 				res.info = std::shared_ptr<HandleTable::helper>(new HandleTable::helper);
-
-				res.info->base.cpu = get_handle(offset);
-				res.info->base.gpu = get_gpu_handle(offset);
-				res.info->base.resource_info = resources.data() + offset;
-				res.info->descriptor_size = descriptor_size;
+				res.info->offset_cpu = offset;
+				if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
+				res.info->offset_gpu = offset;
 				res.info->count = count;
-				res.info->base.offset = offset;
-
-
+				res.info->heap = this;
 				return res;
 			}
-
+			*/
 			HandleTableLight get_light_table_view(UINT offset, UINT count)
 			{
 				assert((offset + count) <= max_count && "Not enought handles");
 				HandleTableLight res;
 
-				res.cpu = get_handle(offset);
-				res.gpu = get_gpu_handle(offset);
-				res.descriptor_size = descriptor_size;
-				res.resource_info = resources.data() + offset;
+				res.offset_cpu = offset;
+				if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
+					res.offset_gpu = offset;
 				res.count = count;
-				res.offset = offset;
-
+				res.heap = this;
 				return res;
 			}
 
@@ -653,12 +664,12 @@ export
 		class DescriptorPage;
 
 
-		class DescriptorHeapPaged :public DescriptorHeap
+		class DescriptorHeapPaged :public DescriptorHeap 
 		{
 			CommonAllocator allocator;
 
 			UINT offset = 0;
-
+			//using DescriptorHeap::create_table;
 		public:
 			using ptr = std::shared_ptr<DescriptorHeapPaged>;
 
@@ -710,12 +721,12 @@ export
 
 			Handle place();
 			HandleTableLight place(UINT count);
+			HandleTable place2(UINT count);
 			void free();
 		};
 		class DescriptorHeapManager : public Singleton<DescriptorHeapManager>
 		{
 			friend class Singleton<DescriptorHeapManager>;
-			DescriptorHeap::ptr heap_cb_sr_ua_static;
 			DescriptorHeap::ptr heap_rt;
 			DescriptorHeap::ptr heap_ds;
 
@@ -724,24 +735,19 @@ export
 
 		public:
 
-			enum_array<DescriptorHeapType, DescriptorHeapPaged::ptr> cpu_heaps;
-			enum_array<DescriptorHeapType, DescriptorHeapPaged::ptr> gpu_heaps;
+			enum_array<DescriptorHeapType, DescriptorHeapPaged::ptr> heaps;
 
 
 			DescriptorHeapPaged::ptr get_cpu_heap(DescriptorHeapType type)
 			{
-				return cpu_heaps[type];
+				return heaps[type];
 			}
 
 			DescriptorHeapPaged::ptr get_gpu_heap(DescriptorHeapType type)
 			{
-				return gpu_heaps[type];
+				return heaps[type];
 			}
 
-			DescriptorHeap::ptr& get_csu_static()
-			{
-				return heap_cb_sr_ua_static;
-			}
 			DescriptorHeap::ptr& get_rt()
 			{
 				return heap_rt;
@@ -749,11 +755,69 @@ export
 
 			DescriptorHeapPaged::ptr& get_samplers()
 			{
-				return cpu_heaps[DescriptorHeapType::SAMPLER];
+				return heaps[DescriptorHeapType::SAMPLER];
 			}
 		};
 
+		//template<class LockPolicy = Thread::Free>
+		class StaticDescriptors: public Singleton<StaticDescriptors>
+		{
+			using LockPolicy = Thread::Lockable;
+			DescriptorHeapType type;
+			DescriptorHeapFlags flags = DescriptorHeapFlags::NONE;
 
+			friend class CommandList;
+			friend class GraphicsContext;
+			friend class ComputeContext;
+			template<class LockPolicy >
+			friend class GPUCompiledManager;
+			std::list<DescriptorPage*> pages;
+
+			typename LockPolicy::mutex m;
+			void create_heap(UINT count)
+			{
+				if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
+				{
+					pages.push_back(DescriptorHeapManager::get().get_gpu_heap(type)->create_page(count));
+				}
+				else
+				{
+					pages.push_back(DescriptorHeapManager::get().get_cpu_heap(type)->create_page(count));
+				}
+			}
+
+			HandleTable prepare(UINT count)
+			{
+				typename LockPolicy::guard g(m);
+
+				if (pages.empty() || !pages.back()->has_free_size(count))
+				{
+					create_heap(count);
+				}
+
+				return pages.back()->place2(count);
+			}
+
+		public:
+
+			using ptr = std::shared_ptr<StaticDescriptors>;
+			StaticDescriptors()// DescriptorHeapType type, DescriptorHeapFlags flags) :type(type), flags(flags)
+			{
+				type = DescriptorHeapType::CBV_SRV_UAV;
+				flags = DescriptorHeapFlags::SHADER_VISIBLE;
+			}
+
+			~StaticDescriptors()
+			{
+				reset();
+			}
+
+			HandleTable place(UINT count)
+			{
+				return prepare(count);
+			}
+
+		};
 
 
 		template<class LockPolicy = Thread::Free>

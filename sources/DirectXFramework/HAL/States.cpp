@@ -20,7 +20,7 @@ namespace DX12
 	void Barriers::validate()
 	{
 
-#ifdef DEV
+#ifdef _DEV
 		for (int j = 0; j < native.size() - 1; j++)
 		{
 			if (native.back().Type == native[j].Type)

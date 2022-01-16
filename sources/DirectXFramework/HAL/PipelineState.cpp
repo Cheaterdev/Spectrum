@@ -56,7 +56,7 @@ namespace DX12
 		{
 
 			data.resize(data.size() + size);
-			assert(data.size() > (write_offset + size));
+			assert(data.size() >= (write_offset + size));
 
 		}
 

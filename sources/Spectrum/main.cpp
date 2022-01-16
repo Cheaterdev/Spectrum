@@ -179,7 +179,7 @@ public:
 		texture.mul_color = { 1,1,1,0 };
 		texture.add_color = { 0,0,0,1 };
 
-	//	texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
+	//	texture.srv = Render::StaticDescriptors::get().place(1);
 
 	
 
@@ -810,7 +810,7 @@ public:
 			if (fps.tick())
 			{
 				size_t total = 0;
-				for (auto& h : DescriptorHeapManager::get().cpu_heaps)
+				for (auto& h : DescriptorHeapManager::get().heaps)
 				{
 					if (h)
 					{
@@ -820,13 +820,7 @@ public:
 		
 
 				size_t total_gpu = 0;		
-				for (auto& h : DescriptorHeapManager::get().gpu_heaps)
-				{
-					if (h)
-					{
-						total_gpu += h->used_size();
-					}
-				}
+
 
 				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Render::Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}

@@ -37,11 +37,17 @@ export
 			friend class CommandList;
 			bool rtx = false;
 			std::unique_ptr<GpuCrashTracker> crasher;
+
+			enum_array<DescriptorHeapType, UINT> descriptor_sizes;
 		public:
 			void stop_all();
 			virtual ~Device();
 			void  check_errors();
 
+			UINT get_descriptor_size(DescriptorHeapType type)
+			{
+				return descriptor_sizes[type];
+			}
 			HAL::Device::ptr get_hal_device()
 			{
 				return m_device;

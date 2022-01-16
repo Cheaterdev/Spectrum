@@ -43,7 +43,7 @@ namespace GUI
 			if (item.texture)
 			{
 				added = true;
-				textures_handles.emplace_back(item.texture->texture_2d()->get_static_srv());
+				textures_handles.emplace_back(item.texture->texture_2d()->texture2D);
 				//	c.command_list->use_resource(item.texture.get());
 			}
 

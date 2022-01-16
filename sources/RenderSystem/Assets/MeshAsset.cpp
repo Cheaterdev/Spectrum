@@ -588,7 +588,7 @@ void MeshAssetInstance::update_nodes()
 
 			info.ras = mesh_asset->meshes[m].ras;
 
-			assert(info.ras);
+			//assert(info.ras);
 
 			info.node_id = static_cast<UINT>(instance_handle.get_offset() + nodes.size() - 1);
 			auto& my_instance = gpu_instances[static_cast<UINT>(nodes.size()) - 1];

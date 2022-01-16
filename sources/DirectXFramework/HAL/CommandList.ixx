@@ -421,7 +421,7 @@ export{
 				if (type == TransitionType::ZERO) point = &transition_points.front();
 
 
-				if (type == TransitionType::LAST) 			assert(!point->start);
+				//if (type == TransitionType::LAST) 			assert(!point->start);
 				Transition& transition = point->transitions.emplace_back();
 
 				transition.resource = const_cast<Resource*>(resource);
@@ -774,10 +774,10 @@ export{
 			void clear_uav(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
 				create_transition_point();
-				transition_uav(h.resource_info);
+				transition_uav(h.get_resource_info());
 
-				auto handle = get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
-				get_native_list()->ClearUnorderedAccessViewFloat(handle.gpu, h.cpu, h.resource_info->resource_ptr->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
+				//auto handle = get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
+				get_native_list()->ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu_read(), h.get_resource_info()->resource_ptr->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 				create_transition_point(false);
 			}
 
@@ -785,8 +785,8 @@ export{
 			void clear_rtv(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
 				create_transition_point();
-				transition_rtv(h.resource_info);
-				get_native_list()->ClearRenderTargetView(h.cpu, ClearColor.data(), 0, nullptr);
+				transition_rtv(h.get_resource_info());
+				get_native_list()->ClearRenderTargetView(h.get_cpu(), ClearColor.data(), 0, nullptr);
 				create_transition_point(false);
 			}
 
@@ -796,18 +796,18 @@ export{
 			void clear_stencil(Handle dsv, UINT8 stencil = 0)
 			{
 				create_transition_point();
-				transition_dsv(dsv.resource_info);
+				transition_dsv(dsv.get_resource_info());
 
-				get_native_list()->ClearDepthStencilView(dsv.cpu, D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
+				get_native_list()->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
 				create_transition_point(false);
 			}
 
 			void clear_depth(Handle dsv, float depth = 0)
 			{
 				create_transition_point();
-				transition_dsv(dsv.resource_info);
+				transition_dsv(dsv.get_resource_info());
 
-				get_native_list()->ClearDepthStencilView(dsv.cpu, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
+				get_native_list()->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
 				create_transition_point(false);
 			}
 
@@ -924,7 +924,7 @@ export{
 					for (UINT i = 0; i < (UINT)table.get_count(); ++i)
 					{
 						const auto& h = table[i];
-						get_base().transition(h.resource_info);
+						get_base().transition(h.get_resource_info());
 					}
 
 					row.dirty = false;
@@ -944,9 +944,9 @@ export{
 						for (UINT i = 0; i < (UINT)table.get_count(); ++i)
 						{
 							const auto& h = table[i];
-							if (h.resource_info && h.resource_info->resource_ptr)
+							if (h.get_resource_info() && h.get_resource_info()->resource_ptr)
 							{
-								get_base().transition(h.resource_info);
+								get_base().transition(h.get_resource_info());
 							}
 						}
 					}
@@ -1145,18 +1145,18 @@ export{
 			{
 
 				auto f = [&](Handle h) {
-					get_base().transition_rtv(h.resource_info);
+					get_base().transition_rtv(h.get_resource_info());
 				};
 
 				(f(std::forward<Handles>(rtvlist)), ...);
 
 
 				if (h.is_valid())
-					get_base().transition_dsv(h.resource_info);
+					get_base().transition_dsv(h.get_resource_info());
 
 
-				CD3DX12_CPU_DESCRIPTOR_HANDLE ar[] = { (rtvlist.cpu)... };
-				list->OMSetRenderTargets(size(ar), ar, false, h.is_valid() ? &h.cpu : nullptr);
+				CD3DX12_CPU_DESCRIPTOR_HANDLE ar[] = { (rtvlist.get_cpu_read())... };
+				list->OMSetRenderTargets(size(ar), ar, false, h.is_valid() ? &h.get_cpu_read() : nullptr);
 			}
 
 

@@ -239,7 +239,7 @@ namespace DX12
 
 		if (!(res_desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
 		{
-			srvs = DescriptorHeapManager::get().get_csu_static()->create_table(1+ count);
+			srvs = StaticDescriptors::get().place(1+ count);
 			place_srv(srvs[0]);
 
 			for(int i=0;i<count;i++)
@@ -316,13 +316,13 @@ namespace DX12
 
         if (!(res_desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
         {
-            srvs = DescriptorHeapManager::get().get_csu_static()->create_table(1 + res_desc.MipLevels);
+            srvs = StaticDescriptors::get().place(1 + res_desc.MipLevels);
             place_srv(srvs[0]);
 
             for (int i = 0; i < res_desc.MipLevels; i++)
                 place_srv(srvs[1 + i], i);
 
-            static_srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+            static_srv = StaticDescriptors::get().place(1);
             place_srv(static_srv[0]);
         }
 
@@ -434,9 +434,9 @@ namespace DX12
         //    single_count = 6 * res_desc.MipLevels;
         //      rtvs = DescriptorHeapManager::get().get_rt()->create_table(single_count);
 		if (!(res_desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
-			srvs = DescriptorHeapManager::get().get_csu_static()->create_table(1 + res_desc.MipLevels);
+			srvs = StaticDescriptors::get().place(1 + res_desc.MipLevels);
 			place_srv(srvs[0]);
-			static_srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+			static_srv = StaticDescriptors::get().place(1);
 			place_srv(static_srv[0]);
 
 			for (int i = 0; i < res_desc.MipLevels; i++)
@@ -453,12 +453,12 @@ namespace DX12
 
         if (resource->get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
         {
-            uavs = DescriptorHeapManager::get().get_csu_static()->create_table(resource->get_desc().MipLevels);
+            uavs = StaticDescriptors::get().place(resource->get_desc().MipLevels);
 
             for (int i = 0; i < resource->get_desc().MipLevels; i++)
                 place_uav(uavs[i], i, 0);
 
-            static_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+            static_uav = StaticDescriptors::get().place(1);
             place_uav(static_uav[0]);
         }
 
@@ -494,7 +494,7 @@ namespace DX12
 
 
 
-		hlsl = DescriptorHeapManager::get().get_csu_static()->create_table(1 + 2*res_desc.MipLevels);
+		hlsl = StaticDescriptors::get().place(1 + 2*res_desc.MipLevels);
 		int offset = 0;
 		texture2D = HLSL::Texture2D<>(hlsl[offset++]);
 
@@ -673,7 +673,7 @@ namespace DX12
 	}
 	 Handle Texture2DView::get_srv()
 	{
-		return srvs.get_base();
+		return srvs[0];
 	}
 	 Handle Texture2DView::get_static_srv()
 	{
@@ -703,7 +703,7 @@ namespace DX12
 
     Texture3DView::Texture3DView(Resource* _resource) : View(_resource)
     {
-        srvs = DescriptorHeapManager::get().get_csu_static()->create_table(1 + resource->get_desc().MipLevels);
+        srvs = StaticDescriptors::get().place(1 + resource->get_desc().MipLevels);
         place_srv(srvs[0]);
 
         for (int i = 0; i < resource->get_desc().MipLevels; i++)
@@ -711,8 +711,8 @@ namespace DX12
 
         if (resource->get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
         {
-            uavs = DescriptorHeapManager::get().get_csu_static()->create_table(resource->get_desc().MipLevels);
-            static_uav = DescriptorHeapManager::get().get_csu_static()->create_table(resource->get_desc().MipLevels);
+            uavs = StaticDescriptors::get().place(resource->get_desc().MipLevels);
+            static_uav = StaticDescriptors::get().place(resource->get_desc().MipLevels);
 
             //		for (int i = 0; i < resource->get_desc().MipLevels; i++)
             for (int i = 0; i < resource->get_desc().MipLevels; i++)
@@ -723,12 +723,12 @@ namespace DX12
         }
 
 
-		static_srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+		static_srv = StaticDescriptors::get().place(1);
 		place_srv(static_srv[0]);
 
 
 
-		hlsl = DescriptorHeapManager::get().get_csu_static()->create_table(1 + 2*resource->get_desc().MipLevels);
+		hlsl = StaticDescriptors::get().place(1 + 2*resource->get_desc().MipLevels);
 
 		int offset = 0;
 		texture3D = HLSL::Texture3D<float4>(hlsl[offset++]);
@@ -803,7 +803,7 @@ namespace DX12
 	}
 	 Handle Texture3DView::get_static_uav()
 	{
-		return static_uav.get_base();
+		return static_uav[0];
 	}
 	 std::function<void(Handle)> Texture3DView::srv(int level, int levels)
 	{
@@ -841,17 +841,17 @@ namespace DX12
     {
         if (resource->get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
         {
-            uavs = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+            uavs = StaticDescriptors::get().place(1);
             //	for (int i = 0; i < resource->get_desc().MipLevels; i++)
             place_uav(uavs[0], 0, resource->get_desc().ArraySize(), 0, 0);
-            static_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+            static_uav = StaticDescriptors::get().place(1);
             //	for (int i = 0; i < resource->get_desc().MipLevels; i++)
             place_uav(static_uav[0], 0, resource->get_desc().ArraySize(), 0, 0);
         }
 
-        srvs = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+        srvs = StaticDescriptors::get().place(1);
         place_srv(srvs[0]);
-        static_srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+        static_srv = StaticDescriptors::get().place(1);
         place_srv(static_srv[0]);
         /*  auto res_desc = resource->get_desc();
           single_count = 6 * res_desc.MipLevels;

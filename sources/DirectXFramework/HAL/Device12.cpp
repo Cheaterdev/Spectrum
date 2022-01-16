@@ -187,7 +187,7 @@ namespace DX12
 	{ 0xb2, 0x97, 0x81, 0xce, 0x9e, 0x18, 0x93, 0x3f }
 		};
 
-	//	D3D12EnableExperimentalFeatures(1, &_D3D12ExperimentalShaderModels, nullptr, nullptr);
+		D3D12EnableExperimentalFeatures(1, &_D3D12ExperimentalShaderModels, nullptr, nullptr);
 
 
 
@@ -198,12 +198,16 @@ namespace DX12
 
 
 		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> pDredSettings;
-		TEST(D3D12GetDebugInterface(IID_PPV_ARGS(&pDredSettings)));
+		(D3D12GetDebugInterface(IID_PPV_ARGS(&pDredSettings)));
 
+		if (pDredSettings)
+		{
+			pDredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+			pDredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+
+		}
 		// Turn on AutoBreadcrumbs and Page Fault reporting
-		pDredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
-		pDredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
-
+		
 
 		
 
@@ -320,6 +324,12 @@ namespace DX12
 		m_device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
 
 		assert(supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6);
+
+		for (auto type : magic_enum::enum_values<DescriptorHeapType>())
+		{
+			descriptor_sizes[type] = m_device->native_device->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type));
+		}
+	
 	}
 
 
@@ -374,13 +384,13 @@ namespace DX12
 
 	void  Device::create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv)
 	{
-		*h.resource_info = ResourceInfo(resource, rtv);
-		m_device->native_device->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.cpu);
+		*h.get_resource_info() = ResourceInfo(resource, rtv);
+		m_device->native_device->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.get_cpu_read());
 	}
 
 	void  Device::create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
 	{
-		*h.resource_info = ResourceInfo(resource, srv);
+		*h.get_resource_info() = ResourceInfo(resource, srv);
 		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2D)
 		{
 			assert(srv.Texture2D.MipLevels>0);
@@ -399,22 +409,30 @@ namespace DX12
 			assert(srv.TextureCube.MostDetailedMip + srv.TextureCube.MipLevels <= resource->get_desc().MipLevels);
 		}
 
-	m_device->native_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.cpu);
+	m_device->native_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.get_cpu());
+	if (h.offset_gpu != UINT_MAX)
+		m_device->native_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.get_cpu_read());
 	}
 
 	void  Device::create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {
-		*h.resource_info = ResourceInfo(resource, counter, uav);
-		m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.cpu);
+		*h.get_resource_info() = ResourceInfo(resource, counter, uav);
+		m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.get_cpu());
+		if(h.offset_gpu!=UINT_MAX)
+m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.get_cpu_read());
+
 	}
 
 	void  Device::create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) {
-		*h.resource_info = ResourceInfo(resource, cbv);
-		m_device->native_device->CreateConstantBufferView(&cbv, h.cpu);
+		*h.get_resource_info() = ResourceInfo(resource, cbv);
+		m_device->native_device->CreateConstantBufferView(&cbv, h.get_cpu());
+
+		if (h.offset_gpu != UINT_MAX)
+			m_device->native_device->CreateConstantBufferView(&cbv, h.get_cpu_read());
 	}
 
 	void  Device::create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) {
-		*h.resource_info = ResourceInfo(resource, dsv);
-		m_device->native_device->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.cpu);
+		*h.get_resource_info() = ResourceInfo(resource, dsv);
+		m_device->native_device->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.get_cpu_read());
 	}
 
 

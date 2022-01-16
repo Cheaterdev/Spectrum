@@ -155,7 +155,7 @@ void materials::universal_material::compile()
 
 		textures_handle = universal_material_manager::get().allocate(textures.size());
 	
-		textures_handles = DescriptorHeapManager::get().get_csu_static()->create_table(textures.size());
+		textures_handles = StaticDescriptors::get().place(textures.size());
 		for (unsigned int i = 0; i < textures.size(); i++)
 		{
 			handlers.emplace_back();

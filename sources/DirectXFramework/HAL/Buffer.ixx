@@ -64,7 +64,7 @@ export
 
 			/* void init_const_buffer()
 			 {
-				 srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+				 srv = StaticDescriptors::get().place(1);
 				 D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
 				 SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				 SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -268,9 +268,9 @@ export
 
 			void place_uav(Handle h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
 
-			const Handle& get_raw_uav() const
+			Handle get_raw_uav() const
 			{
-				return static_raw_uav.get_base();
+				return static_raw_uav[0];
 			}
 
 			UINT get_stride()
@@ -398,7 +398,7 @@ export
 		template<class T>
 		inline void StructureBuffer<T>::init_views()
 		{
-			srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+			srv = StaticDescriptors::get().place(1);
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
 			SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 			SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
@@ -410,7 +410,7 @@ export
 			Device::get().create_srv(srv[0], this, SRVDesc);
 
 
-			hlsl = DescriptorHeapManager::get().get_csu_static()->create_table(4);
+			hlsl = StaticDescriptors::get().place(4);
 
 			structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 			rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
@@ -421,11 +421,11 @@ export
 
 			if (get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
 			{
-				uavs = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+				uavs = StaticDescriptors::get().place(1);
 				place_uav(uavs[0]);
-				static_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+				static_uav = StaticDescriptors::get().place(1);
 				place_uav(static_uav[0]);
-				static_raw_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+				static_raw_uav = StaticDescriptors::get().place(1);
 
 				place_raw_uav(static_raw_uav[0]);
 
@@ -436,11 +436,11 @@ export
 
 			if (counted == counterType::HELP_BUFFER)
 			{
-				counted_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+				counted_uav = StaticDescriptors::get().place(1);
 
 				help_buffer->place_raw_uav(counted_uav[0]);
 
-				counted_srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+				counted_srv = StaticDescriptors::get().place(1);
 
 				help_buffer->place_structured_srv(counted_srv[0], 4, 0, 1);
 

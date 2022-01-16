@@ -122,11 +122,11 @@ namespace DX12
 
     void ByteBuffer::init_views()
     {
-        srv = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+        srv = StaticDescriptors::get().place(1);
         place_srv(srv[0]);
-        uavs = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+        uavs = StaticDescriptors::get().place(1);
         place_uav(uavs[0]);
-        static_uav = DescriptorHeapManager::get().get_csu_static()->create_table(1);
+        static_uav = StaticDescriptors::get().place(1);
         place_uav(static_uav[0]);
     }
 
