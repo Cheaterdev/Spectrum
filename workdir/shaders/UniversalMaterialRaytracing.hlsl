@@ -32,7 +32,7 @@ float4 get_voxel(float3 pos, float level)
 
 Texture2D get_texture(uint i)
 {
-	return CreateSceneData().GetMaterial_textures(i + CreateMaterialInfo().GetTextureOffset());
+	return GetMaterialInfo().GetTextures(i);
 
 	//	return textures[i /*+ texture_offset*/];
 }

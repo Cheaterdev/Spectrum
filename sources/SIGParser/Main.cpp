@@ -245,7 +245,12 @@ void generate_table(Table& table)
 			if (v.as_array)
 			{
 				if (v.bindless)
-					stream << v.type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" << v.name << " + i]; }" << std::endl;
+				{
+					stream << v.type << " Get" << cameled << "(int i) { " << std::endl;
+					stream << "StructuredBuffer<uint> indirection = ResourceDescriptorHeap["<<v.name<<"]; " << std::endl;
+						stream << "uint id = indirection.Load(i);" << std::endl;
+						stream << "return ResourceDescriptorHeap[id]; }" << std::endl;
+				}
 				else
 					stream << v.type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" <<  v.name <<   "[i]]; }" << std::endl;
 			}

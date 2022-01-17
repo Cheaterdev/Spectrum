@@ -290,8 +290,10 @@ namespace materials
 
 			Slots::MaterialInfo material_info;
 		
-			TypedHandle<Render::HLSL::Texture2D<float4>> textures_handle;
-			Render::HandleTable textures_handles;
+	//		TypedHandle<Render::HLSL::Texture2D<float4>> textures_handle;
+		//	Render::HandleTable textures_handles;
+
+			std::vector<Render::HLSL::Texture2D<float4>> texture_srvs;
 			Pipeline::ptr pipeline;
     
         public:

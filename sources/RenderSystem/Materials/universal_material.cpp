@@ -109,7 +109,7 @@ void materials::universal_material::update()
 
 	if (need_update_compiled)
 	{
-		material_info.GetTextureOffset() = textures_handle ? (UINT)textures_handle.get_offset() : 0;
+		material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
 		compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 		local_addr = compiled_material_info.compiled();
@@ -149,49 +149,17 @@ void materials::universal_material::compile()
 	
 	handlers.clear();
 
-	if (textures.size())
+	texture_srvs.resize(textures.size());
+
+
+	for (int i = 0; i < textures.size(); i++)
 	{
-		textures_handle.Free();
-
-		textures_handle = universal_material_manager::get().allocate(textures.size());
-	
-		textures_handles = StaticDescriptors::get().place(textures.size());
-		for (unsigned int i = 0; i < textures.size(); i++)
-		{
-			handlers.emplace_back();
-			auto& t = textures[i];
-			TextureAsset::ptr tex = t->asset->get_ptr<TextureAsset>();
-
-			if (tex && tex->get_texture()->texture_2d())
-
-				t->to_linear.register_change(&handlers.back(), [this, i, tex ](bool to_linear)
-					{
-						auto func = tex->get_texture()->texture_2d()->srv(to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB);
-						func(textures_handles[i]);
-
-						auto textures_srvs = textures_handle.map(i);
-						textures_srvs[0] = Render::HLSL::Texture2D<float4>(textures_handles[i]);
-						textures_handle.write(i, textures_srvs);
-						need_update_compiled = true;
-					});
-
-			else
-			{				
-				auto func = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d()->srv();
-				func(textures_handles[i]);
-				
-				auto textures_srvs = textures_handle.map(i);
-				textures_srvs[0] = Render::HLSL::Texture2D<float4>(textures_handles[i]);
-				textures_handle.write(i, textures_srvs);
-			}
-
-			t->asset = register_asset(*t->asset);
-
-			mark_contents_changed();
-		}
-		
-//		textures_handle.write(0, textures_srvs);
-
+		auto& t = textures[i];
+		TextureAsset::ptr tex = t->asset->get_ptr<TextureAsset>();
+		if (tex && tex->get_texture()->texture_2d())
+			texture_srvs[i] = tex->get_texture()->texture_2d()->texture2D;
+		else
+			texture_srvs[i] = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d()->texture2D;
 	}
 
 	
@@ -211,7 +179,7 @@ void materials::universal_material::compile()
 
 	  
 	generate(ps_uniforms);
-	material_info.GetTextureOffset() = textures_handle?(UINT)textures_handle.get_offset():0;
+	material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 

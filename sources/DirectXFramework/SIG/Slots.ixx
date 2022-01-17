@@ -10,7 +10,7 @@ import Enums;
 import Buffer;
 import SIG;
 import d3d12_types;
-
+import ResourceViews;
 export {
 
 
@@ -50,13 +50,8 @@ export {
 		template<HandleType T>
 		void compile(const T& handle)
 		{
-		//	auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(1);
-
 			if (handle.is_valid())
 			{
-		//		assert(handle.get_gpu);
-		//		table[0].place(handle);
-
 				if (handle.get_resource_info())
 				{
 					resources.push_back(handle.get_resource_info());
@@ -73,16 +68,12 @@ export {
 
 			pad();
 
-		//	auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(N);
-
+	
 			for (uint i = 0; i < N; i++)
 			{
 				auto& handle = handles[i];
 				if (handle.is_valid())
 				{
-				//	assert(handle.gpu.ptr);
-				//	table[i].place(handle);
-
 					if (handle.get_resource_info())
 					{
 						resources.push_back(handle.get_resource_info());
@@ -114,24 +105,36 @@ export {
 		void compile(const std::vector<T>& t)
 		{
 			uint offset = 0;
+
+		
 			if (!t.empty()) {
-				auto table = context->get_gpu_heap(DX12::DescriptorHeapType::CBV_SRV_UAV).place(t.size());
+
+				std::vector<uint> offsets;
 				for (uint i = 0; i < t.size(); i++)
 				{
 					const Render::Handle& handle = t[i];
+
 					if (handle.is_valid())
 					{
-					//	assert(handle.gpu.ptr);
-						table[i].place(handle);
+						offsets.emplace_back(handle.offset_gpu);
 
 						if (handle.get_resource_info())
 						{
 							resources.push_back(handle.get_resource_info());
 						}
 					}
+					else
+					{
+						offsets.emplace_back(0);
+					}
 				}
 
-				offset =  table.offset_gpu;
+			
+				auto info = context->place_raw(offsets);
+				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(*context, DX12::BufferType::NONE, (UINT)info.offset, (UINT)info.size).structuredBuffer;
+
+				offset = srv.offset_gpu;
+
 			}
 			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 	

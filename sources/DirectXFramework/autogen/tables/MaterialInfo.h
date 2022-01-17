@@ -4,15 +4,15 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MaterialInfo
 	{
-		uint textureOffset;
+		std::vector<Render::HLSL::Texture2D<float4>> textures;
 		DynamicData data;
-		uint& GetTextureOffset() { return textureOffset; }
+		std::vector<Render::HLSL::Texture2D<float4>>& GetTextures() { return textures; }
 		DynamicData& GetData() { return data; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(data);
-			compiler.compile(textureOffset);
+			compiler.compile(textures);
 		}
 	};
 	#pragma pack(pop)

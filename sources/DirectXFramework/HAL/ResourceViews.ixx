@@ -505,8 +505,27 @@ export
 			HLSL::RWByteAddressBuffer rwbyteBuffer;
 
 			BufferView() = default;
+			template<class F>
+			BufferView(Resource::ptr resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+			{
+				init_desc();
 
-			BufferView(Resource::ptr resource, FrameResources& frame);
+				HandleTableLight hlsl = frame.get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(2);
+
+				byteBuffer = HLSL::ByteAddressBuffer(hlsl[0]);
+				rwbyteBuffer = HLSL::RWByteAddressBuffer(hlsl[1]);
+
+				auto& desc = resource->get_desc();
+
+				if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
+					byteBuffer.create(resource.get(), offset, size);
+				}
+
+				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+					rwbyteBuffer = HLSL::RWByteAddressBuffer(frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place());
+					rwbyteBuffer.create(resource.get(), offset, size);
+				}
+			}
 
 			~BufferView()
 			{
