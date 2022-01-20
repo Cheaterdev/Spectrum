@@ -5,11 +5,11 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelCopy
 	{
-		Render::HLSL::Texture3D<float4> Source[2];
-		Render::HLSL::RWTexture3D<float4> Target[2];
+		HLSL::Texture3D<float4> Source[2];
+		HLSL::RWTexture3D<float4> Target[2];
 		VoxelTilingParams params;
-		Render::HLSL::RWTexture3D<float4>* GetTarget() { return Target; }
-		Render::HLSL::Texture3D<float4>* GetSource() { return Source; }
+		HLSL::RWTexture3D<float4>* GetTarget() { return Target; }
+		HLSL::Texture3D<float4>* GetSource() { return Source; }
 		VoxelTilingParams& GetParams() { return params; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const

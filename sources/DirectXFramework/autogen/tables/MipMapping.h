@@ -7,13 +7,13 @@ namespace Table
 		uint SrcMipLevel;
 		uint NumMipLevels;
 		float2 TexelSize;
-		Render::HLSL::Texture2D<float4> SrcMip;
-		Render::HLSL::RWTexture2D<float4> OutMip[4];
+		HLSL::Texture2D<float4> SrcMip;
+		HLSL::RWTexture2D<float4> OutMip[4];
 		uint& GetSrcMipLevel() { return SrcMipLevel; }
 		uint& GetNumMipLevels() { return NumMipLevels; }
 		float2& GetTexelSize() { return TexelSize; }
-		Render::HLSL::RWTexture2D<float4>* GetOutMip() { return OutMip; }
-		Render::HLSL::Texture2D<float4>& GetSrcMip() { return SrcMip; }
+		HLSL::RWTexture2D<float4>* GetOutMip() { return OutMip; }
+		HLSL::Texture2D<float4>& GetSrcMip() { return SrcMip; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

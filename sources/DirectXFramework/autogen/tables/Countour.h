@@ -5,9 +5,9 @@ namespace Table
 	struct Countour
 	{
 		float4 color;
-		Render::HLSL::Texture2D<float4> tex;
+		HLSL::Texture2D<float4> tex;
 		float4& GetColor() { return color; }
-		Render::HLSL::Texture2D<float4>& GetTex() { return tex; }
+		HLSL::Texture2D<float4>& GetTex() { return tex; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

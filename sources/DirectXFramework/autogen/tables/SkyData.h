@@ -5,15 +5,15 @@ namespace Table
 	struct SkyData
 	{
 		float3 sunDir;
-		Render::HLSL::Texture2D<float> depthBuffer;
-		Render::HLSL::Texture2D<float4> transmittance;
-		Render::HLSL::Texture3D<float4> inscatter;
-		Render::HLSL::Texture2D<float4> irradiance;
+		HLSL::Texture2D<float> depthBuffer;
+		HLSL::Texture2D<float4> transmittance;
+		HLSL::Texture3D<float4> inscatter;
+		HLSL::Texture2D<float4> irradiance;
 		float3& GetSunDir() { return sunDir; }
-		Render::HLSL::Texture2D<float>& GetDepthBuffer() { return depthBuffer; }
-		Render::HLSL::Texture2D<float4>& GetTransmittance() { return transmittance; }
-		Render::HLSL::Texture3D<float4>& GetInscatter() { return inscatter; }
-		Render::HLSL::Texture2D<float4>& GetIrradiance() { return irradiance; }
+		HLSL::Texture2D<float>& GetDepthBuffer() { return depthBuffer; }
+		HLSL::Texture2D<float4>& GetTransmittance() { return transmittance; }
+		HLSL::Texture3D<float4>& GetInscatter() { return inscatter; }
+		HLSL::Texture2D<float4>& GetIrradiance() { return irradiance; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

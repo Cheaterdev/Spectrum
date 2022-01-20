@@ -5,9 +5,9 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelZero
 	{
-		Render::HLSL::RWTexture3D<float4> Target;
+		HLSL::RWTexture3D<float4> Target;
 		VoxelTilingParams params;
-		Render::HLSL::RWTexture3D<float4>& GetTarget() { return Target; }
+		HLSL::RWTexture3D<float4>& GetTarget() { return Target; }
 		VoxelTilingParams& GetParams() { return params; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const

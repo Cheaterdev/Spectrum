@@ -175,32 +175,6 @@ namespace DX12
     }
 
 
-
-	UploadBuffer::UploadBuffer(UINT64 count) : Resource(CD3DX12_RESOURCE_DESC::Buffer(count, D3D12_RESOURCE_FLAG_NONE), HeapType::UPLOAD, ResourceState::GEN_READ)
-	{
-
-	}
-
-	 UploadBuffer::~UploadBuffer()
-	{
-
-	}
-
-	 char * UploadBuffer::get_data()
-	{
-		return (char*)buffer_data;
-	}
-
-	CPUBuffer::CPUBuffer(UINT64 count, int stride) : stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(count * stride), HeapType::READBACK, ResourceState::COPY_DEST)
-	{
-	}
-
-	 void CPUBuffer::unmap()
-	{
-		 mapped = false;
-         tracked_info->m_Resource->Unmap(0, nullptr);
-	}
-
 	QueryHeap::QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type)
 	{
 		D3D12_QUERY_HEAP_DESC QueryHeapDesc;

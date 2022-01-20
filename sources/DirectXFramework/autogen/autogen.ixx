@@ -10,6 +10,8 @@ import Matrices;
 import Samplers;
 import Buffer;
 import Descriptors;
+import HLSLDescriptors;
+
 import SIG;
 import RT;
 import Layout;

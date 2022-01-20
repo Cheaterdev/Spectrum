@@ -8,6 +8,8 @@ import Resource;
 import Descriptors;
 import d3d12_types;
 
+import HLSLDescriptors;
+
 export
 {
 

@@ -5,9 +5,9 @@ namespace Table
 	struct Test
 	{
 		float data[16];
-		std::vector<Render::HLSL::Texture2D<float4>> tex;
+		std::vector<HLSL::Texture2D<float4>> tex;
 		float* GetData() { return data; }
-		std::vector<Render::HLSL::Texture2D<float4>>& GetTex() { return tex; }
+		std::vector<HLSL::Texture2D<float4>>& GetTex() { return tex; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

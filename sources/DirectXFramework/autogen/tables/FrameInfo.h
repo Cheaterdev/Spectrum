@@ -7,15 +7,15 @@ namespace Table
 	{
 		float4 time;
 		float4 sunDir;
-		Render::HLSL::Texture2D<float4> bestFitNormals;
-		Render::HLSL::Texture3D<float4> brdf;
-		Render::HLSL::TextureCube<float4> sky;
+		HLSL::Texture2D<float4> bestFitNormals;
+		HLSL::Texture3D<float4> brdf;
+		HLSL::TextureCube<float4> sky;
 		Camera camera;
 		Camera prevCamera;
 		float4& GetTime() { return time; }
-		Render::HLSL::Texture2D<float4>& GetBestFitNormals() { return bestFitNormals; }
-		Render::HLSL::Texture3D<float4>& GetBrdf() { return brdf; }
-		Render::HLSL::TextureCube<float4>& GetSky() { return sky; }
+		HLSL::Texture2D<float4>& GetBestFitNormals() { return bestFitNormals; }
+		HLSL::Texture3D<float4>& GetBrdf() { return brdf; }
+		HLSL::TextureCube<float4>& GetSky() { return sky; }
 		float4& GetSunDir() { return sunDir; }
 		Camera& GetCamera() { return camera; }
 		Camera& GetPrevCamera() { return prevCamera; }

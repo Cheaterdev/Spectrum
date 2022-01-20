@@ -19,6 +19,7 @@ export import Vectors;
 export import Matrices;
 export import CommandList;
 export import HAL.Types;
+import HLSLDescriptors;
 
 using namespace HAL;
 export
@@ -136,19 +137,6 @@ export
 					std::string data;
 					ar& NVP(data);
 
-					if (debug) {
-						UINT32* ptr = (UINT32*)data.data();
-
-						size_t count3 = data.size() / (sizeof(UINT32) * 3);
-
-						std::set<UINT32> indices[3];
-						for (size_t i = 0; i < count3 * 3; i++)
-						{
-							indices[i / (count3)].emplace(ptr[i]);
-						}
-
-
-					}
 					init(CD3DX12_RESOURCE_DESC::Buffer(size), HeapType::DEFAULT, ResourceState::COMMON);
 					set_data(0, data);
 				}
@@ -176,46 +164,6 @@ export
 
 		};
 
-		class UploadBuffer : public Resource
-		{
-
-		public:
-
-			using ptr = std::shared_ptr<UploadBuffer>;
-			UploadBuffer(UINT64 count);
-			virtual ~UploadBuffer();
-			char* get_data();
-
-
-
-
-		};
-
-
-		class CPUBuffer : public Resource
-		{
-			int stride;
-
-		public:
-			CPUBuffer(UINT64 count, int stride);
-
-			bool mapped = false;
-			template<class T = char>
-			T* map(int from, int to)
-			{
-				T* result = nullptr;
-				mapped = true;
-				D3D12_RANGE Range;
-				Range.Begin = from * stride;
-				Range.End = to * stride;
-				tracked_info->m_Resource->Map(0, &Range, reinterpret_cast<void**>(&result));
-				return result;
-			}
-
-
-			void unmap();
-
-		};
 
 		enum class counterType :int
 		{

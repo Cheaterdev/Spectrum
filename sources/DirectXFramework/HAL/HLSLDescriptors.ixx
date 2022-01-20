@@ -1,7 +1,345 @@
-namespace DX12
+module;
+#include "helper.h"
+export module HLSLDescriptors;
+
+
+import Allocators;
+import Vectors;
+import Resource;
+
+import stl.threading;
+import stl.core;
+
+import Log;
+import Data;
+import d3d12_types;
+import d3d12;
+
+import Descriptors;
+
+using namespace DX12;
+export
 {
 	namespace HLSL
 	{
+		struct RaytracingAccelerationStructure : public Handle
+		{
+			static const HandleType TYPE = HandleType::SRV;
+
+			RaytracingAccelerationStructure() = default;
+			RaytracingAccelerationStructure(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource);
+		};
+
+		template<class T>
+		struct StructuredBuffer : public Handle
+		{
+			using ptr = int;
+			static const HandleType TYPE = HandleType::SRV;
+
+			StructuredBuffer() = default;
+			explicit  StructuredBuffer(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT first_elem = 0, UINT count = 0);
+		};
+
+		template<class T>
+		struct RWStructuredBuffer : public Handle
+		{
+			static const HandleType TYPE = HandleType::UAV;
+
+			RWStructuredBuffer() = default;
+			explicit  RWStructuredBuffer(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT first_elem = 0, UINT count = 0);
+		};
+
+		template<class T>
+		struct AppendStructuredBuffer : public Handle
+		{
+			static const HandleType TYPE = HandleType::UAV;
+
+			AppendStructuredBuffer() = default;
+			explicit  AppendStructuredBuffer(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* counter_resource, UINT counter_offset, Resource* resource, UINT first_elem = 0, UINT count = 0);
+		};
+
+		struct ByteAddressBuffer : public Handle
+		{
+			static const HandleType TYPE = HandleType::SRV;
+
+			ByteAddressBuffer() = default;
+			explicit ByteAddressBuffer(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT offset = 0, UINT size = 0);
+		};
+
+
+		struct RWByteAddressBuffer : public Handle
+		{
+			static const HandleType TYPE = HandleType::UAV;
+
+			RWByteAddressBuffer() = default;
+			explicit RWByteAddressBuffer(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT offset = 0, UINT size = 0);
+		};
+
+		template<class T>
+		struct Buffer : public Handle
+		{
+			static const HandleType TYPE = HandleType::SRV;
+
+			Buffer() = default;
+			explicit  Buffer(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, DXGI_FORMAT format, UINT offset = 0, UINT size = 0);
+		};
+
+		template<class T>
+		struct RWBuffer : public Handle
+		{
+			static const HandleType TYPE = HandleType::UAV;
+
+			RWBuffer() = default;
+			explicit RWBuffer(const Handle& h) : Handle(h)
+			{
+
+			}
+			void create(Resource* resource, DXGI_FORMAT format, UINT offset = 0, UINT size = 0);
+		};
+
+		template<class T = float4>
+		struct Texture2D : public Handle
+		{
+			static const HandleType TYPE = HandleType::SRV;
+
+
+			Texture2D() = default;
+			explicit Texture2D(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			Texture2D(const Texture2D<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
+		};
+
+		template<class T = float4>
+		struct Texture2DArray : public Handle
+		{
+			static const HandleType TYPE = HandleType::SRV;
+
+			Texture2DArray() = default;
+			explicit Texture2DArray(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			Texture2DArray(const Texture2DArray<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0, UINT array_count = 1);
+		};
+
+		template<class T = float4>
+		struct Texture3D : public Handle
+		{
+			static const HandleType TYPE = HandleType::SRV;
+
+			Texture3D() = default;
+			explicit Texture3D(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			Texture3D(const Texture3D<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
+		};
+		template<class T = float4>
+		struct TextureCube : public Handle
+		{
+			static const HandleType TYPE = HandleType::SRV;
+
+			TextureCube() = default;
+			explicit TextureCube(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			TextureCube(const TextureCube<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
+		};
+
+		template<class T = float4>
+		struct RWTexture2D : public Handle
+		{
+			static const HandleType TYPE = HandleType::UAV;
+			RWTexture2D() = default;
+			explicit RWTexture2D(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			RWTexture2D(const RWTexture2D<T2>& h) : Handle(h)
+			{
+
+			}
+			void create(Resource* resource, UINT first_mip = 1, UINT array_offset = 0);
+		};
+
+		template<class T = float4>
+		struct RWTexture3D : public Handle
+		{
+			static const HandleType TYPE = HandleType::UAV;
+
+			RWTexture3D() = default;
+			explicit RWTexture3D(const Handle& h) : Handle(h)
+			{
+
+			}
+			template<class T2>
+			RWTexture3D(const RWTexture3D<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void create(Resource* resource, UINT first_mip = 1, UINT array_offset = 0);
+
+		};
+
+		template<class T = float4>
+		struct RenderTarget : public Handle
+		{
+			static const HandleType TYPE = HandleType::RTV;
+
+			RenderTarget() = default;
+			explicit RenderTarget(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			RenderTarget(const RenderTarget<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void createFrom2D(Resource* resource, UINT mip_offset = 0);
+			void createFrom2DArray(Resource* resource, UINT mip_offset = 0, UINT array_offset = 0);
+
+		};
+
+		template<class T = float4>
+		struct DepthStencil : public Handle
+		{
+			static const HandleType TYPE = HandleType::DSV;
+
+			DepthStencil() = default;
+			explicit DepthStencil(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			DepthStencil(const RenderTarget<T2>& h) : Handle(h)
+			{
+
+			}
+
+			void createFrom2D(Resource* resource, UINT mip_offset = 0);
+			void createFrom2DArray(Resource* resource, UINT mip_offset = 0, UINT array_offset = 0);
+
+		};
+
+
+
+		void RaytracingAccelerationStructure::create(Resource* resource)
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+			desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+			desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			desc.Format = DXGI_FORMAT_UNKNOWN;
+			desc.RaytracingAccelerationStructure.Location = resource->get_gpu_address();
+
+			Device::get().create_srv(*this, nullptr, desc);
+		}
+
+		void ByteAddressBuffer::create(Resource* resource, UINT offset, UINT size)
+		{
+			if (size == 0) size = static_cast<UINT>(resource->get_desc().Width / 4);
+
+			D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
+			desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+			desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			desc.Buffer.NumElements = size;
+			desc.Buffer.StructureByteStride = 0;
+			desc.Buffer.FirstElement = offset;
+
+			desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
+
+			Device::get().create_srv(*this, resource, desc);
+		}
+
+		void RWByteAddressBuffer::create(Resource* resource, UINT offset, UINT size)
+		{
+			if (size == 0) size = static_cast<UINT>(resource->get_desc().Width / 4);
+			D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
+			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+			desc.Format = DXGI_FORMAT_R32_TYPELESS;
+			desc.Buffer.NumElements = size;
+			desc.Buffer.StructureByteStride = 0;
+			desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+			desc.Buffer.FirstElement = offset;
+
+			Device::get().create_uav(*this, resource, desc);
+		}
+
+
+
 		template<class T>
 		void StructuredBuffer<T>::create(Resource* resource, UINT first_elem, UINT count)
 		{
@@ -341,6 +679,6 @@ namespace DX12
 			Device::get().create_dsv(*this, resource, desc);
 		}
 
-	}
 
+	}
 }

@@ -6,18 +6,18 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelLighting
 	{
-		Render::HLSL::Texture3D<float4> albedo;
-		Render::HLSL::Texture3D<float4> normals;
-		Render::HLSL::Texture3D<float4> lower;
-		Render::HLSL::TextureCube<float4> tex_cube;
-		Render::HLSL::RWTexture3D<float4> output;
+		HLSL::Texture3D<float4> albedo;
+		HLSL::Texture3D<float4> normals;
+		HLSL::Texture3D<float4> lower;
+		HLSL::TextureCube<float4> tex_cube;
+		HLSL::RWTexture3D<float4> output;
 		PSSMDataGlobal pssmGlobal;
 		VoxelTilingParams params;
-		Render::HLSL::RWTexture3D<float4>& GetOutput() { return output; }
-		Render::HLSL::Texture3D<float4>& GetAlbedo() { return albedo; }
-		Render::HLSL::Texture3D<float4>& GetNormals() { return normals; }
-		Render::HLSL::Texture3D<float4>& GetLower() { return lower; }
-		Render::HLSL::TextureCube<float4>& GetTex_cube() { return tex_cube; }
+		HLSL::RWTexture3D<float4>& GetOutput() { return output; }
+		HLSL::Texture3D<float4>& GetAlbedo() { return albedo; }
+		HLSL::Texture3D<float4>& GetNormals() { return normals; }
+		HLSL::Texture3D<float4>& GetLower() { return lower; }
+		HLSL::TextureCube<float4>& GetTex_cube() { return tex_cube; }
 		PSSMDataGlobal& GetPssmGlobal() { return pssmGlobal; }
 		VoxelTilingParams& GetParams() { return params; }
 		template<class Compiler>

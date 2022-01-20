@@ -40,7 +40,7 @@ namespace DX12
 			ar& NVP(name);
 		}
 	};
-	
+
 
 	void  Device::stop_all()
 	{
@@ -82,8 +82,8 @@ namespace DX12
 	void  Device::check_errors()
 	{
 		auto hr = get_native_device()->GetDeviceRemovedReason();
-		if(FAILED(hr))DumpDRED();
-		
+		if (FAILED(hr))DumpDRED();
+
 	}
 	ComPtr<ID3D12Device5> Device::get_native_device()
 	{
@@ -113,7 +113,7 @@ namespace DX12
 
 		return inputs;
 	}
-	
+
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO Device::calculateBuffers(const RaytracingBuildDescBottomInputs& desc)
 	{
 		auto inputs = to_native(desc);
@@ -207,9 +207,9 @@ namespace DX12
 
 		}
 		// Turn on AutoBreadcrumbs and Page Fault reporting
-		
 
-		
+
+
 
 		ComPtr<ID3D12Debug> debugController;
 		ComPtr<ID3D12Debug1> spDebugController1;
@@ -219,8 +219,8 @@ namespace DX12
 		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
 		{
 			debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
-		
-		
+
+
 			debugController->EnableDebugLayer();
 			//	spDebugController1->SetEnableGPUBasedValidation(true);
 		}
@@ -274,7 +274,7 @@ namespace DX12
 		// 	m_device->native_device.Get());
 		//
 
-		
+
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
 		TEST(m_device->native_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
 			&options5, sizeof(options5)));
@@ -308,8 +308,8 @@ namespace DX12
 		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
 
 
-	//	queues[CommandListType::COPY] = queues[CommandListType::COMPUTE] = queues[CommandListType::DIRECT];
-	//	m_device->SetStablePowerState(true);
+		//	queues[CommandListType::COPY] = queues[CommandListType::COMPUTE] = queues[CommandListType::DIRECT];
+		//	m_device->SetStablePowerState(true);
 
 		auto res = m_device->native_device->GetNodeCount();
 		D3D12_FEATURE_DATA_D3D12_OPTIONS featureData;
@@ -329,7 +329,7 @@ namespace DX12
 		{
 			descriptor_sizes[type] = m_device->native_device->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type));
 		}
-	
+
 	}
 
 
@@ -385,7 +385,7 @@ namespace DX12
 	void  Device::create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv)
 	{
 		*h.get_resource_info() = ResourceInfo(resource, rtv);
-		m_device->native_device->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.get_cpu_read());
+		m_device->native_device->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.get_cpu());
 	}
 
 	void  Device::create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
@@ -393,8 +393,8 @@ namespace DX12
 		*h.get_resource_info() = ResourceInfo(resource, srv);
 		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2D)
 		{
-			assert(srv.Texture2D.MipLevels>0);
-			assert(srv.Texture2D.MostDetailedMip + srv.Texture2D.MipLevels<= resource->get_desc().MipLevels);
+			assert(srv.Texture2D.MipLevels > 0);
+			assert(srv.Texture2D.MostDetailedMip + srv.Texture2D.MipLevels <= resource->get_desc().MipLevels);
 		}
 
 		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2DARRAY)
@@ -403,22 +403,20 @@ namespace DX12
 			assert(srv.Texture2DArray.MostDetailedMip + srv.Texture2DArray.MipLevels <= resource->get_desc().MipLevels);
 		}
 
-	if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURECUBE)
+		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURECUBE)
 		{
-		assert(srv.TextureCube.MipLevels > 0);
+			assert(srv.TextureCube.MipLevels > 0);
 			assert(srv.TextureCube.MostDetailedMip + srv.TextureCube.MipLevels <= resource->get_desc().MipLevels);
 		}
 
-	m_device->native_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.get_cpu());
-	if (h.offset_gpu != UINT_MAX)
-		m_device->native_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.get_cpu_read());
+		m_device->native_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.get_cpu());
 	}
 
 	void  Device::create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {
 		*h.get_resource_info() = ResourceInfo(resource, counter, uav);
 		m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.get_cpu());
-		if(h.offset_gpu!=UINT_MAX)
-m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.get_cpu_read());
+		if (h.offset_gpu != UINT_MAX)
+			m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.get_cpu_read());
 
 	}
 
@@ -427,12 +425,12 @@ m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(),
 		m_device->native_device->CreateConstantBufferView(&cbv, h.get_cpu());
 
 		if (h.offset_gpu != UINT_MAX)
-			m_device->native_device->CreateConstantBufferView(&cbv, h.get_cpu_read());
+			m_device->native_device->CreateConstantBufferView(&cbv, h.get_cpu());
 	}
 
 	void  Device::create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) {
 		*h.get_resource_info() = ResourceInfo(resource, dsv);
-		m_device->native_device->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.get_cpu_read());
+		m_device->native_device->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.get_cpu());
 	}
 
 
@@ -449,9 +447,9 @@ m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(),
 
 		auto parse_node = [](const D3D12_AUTO_BREADCRUMB_NODE& node)
 		{
-		//	DREDNode parsed;
+			//	DREDNode parsed;
 
-		//	parsed.name = node.pCommandListDebugNameW;
+			//	parsed.name = node.pCommandListDebugNameW;
 
 
 			Log::get() << node << Log::endl;
@@ -460,12 +458,12 @@ m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(),
 
 		auto node = DredAutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
 
-		while(node)
+		while (node)
 		{
 			parse_node(*node);
 			node = node->pNext;
 		}
-		
+
 	}
 
 }

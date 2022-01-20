@@ -5,9 +5,9 @@ namespace Table
 	struct VoxelTilingParams
 	{
 		uint4 voxels_per_tile;
-		Render::HLSL::StructuredBuffer<int3> tiles;
+		HLSL::StructuredBuffer<int3> tiles;
 		uint4& GetVoxels_per_tile() { return voxels_per_tile; }
-		Render::HLSL::StructuredBuffer<int3>& GetTiles() { return tiles; }
+		HLSL::StructuredBuffer<int3>& GetTiles() { return tiles; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

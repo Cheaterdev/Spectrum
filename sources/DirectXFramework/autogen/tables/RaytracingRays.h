@@ -6,9 +6,9 @@ namespace Table
 	struct RaytracingRays
 	{
 		float pixelAngle;
-		Render::HLSL::RWTexture2D<float4> output;
+		HLSL::RWTexture2D<float4> output;
 		GBuffer gbuffer;
-		Render::HLSL::RWTexture2D<float4>& GetOutput() { return output; }
+		HLSL::RWTexture2D<float4>& GetOutput() { return output; }
 		float& GetPixelAngle() { return pixelAngle; }
 		GBuffer& GetGbuffer() { return gbuffer; }
 		template<class Compiler>

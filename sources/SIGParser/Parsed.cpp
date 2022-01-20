@@ -89,15 +89,15 @@ std::string get_cpp_for(Value v)
 		if (noarg)
 			OutputDebugString(L"WTF");
 		if (v.array_count == 0)
-			return std::string("std::vector<Render::HLSL::") + arg + ">";
+			return std::string("std::vector<HLSL::") + arg + ">";
 		else
-			return std::string("Render::HLSL::") + arg;
+			return std::string("HLSL::") + arg;
 	}
 	case ValueType::UAV:
 	{
 		if (noarg)
 			OutputDebugString(L"WTF");
-		return std::string("Render::HLSL::") + arg;
+		return std::string("HLSL::") + arg;
 	}
 	case ValueType::SMP:
 	{	return "Render::Handle"; }

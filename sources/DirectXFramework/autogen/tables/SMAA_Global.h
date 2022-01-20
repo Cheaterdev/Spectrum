@@ -6,8 +6,8 @@ namespace Table
 	{
 		float4 subsampleIndices;
 		float4 SMAA_RT_METRICS;
-		Render::HLSL::Texture2D<float4> colorTex;
-		Render::HLSL::Texture2D<float4>& GetColorTex() { return colorTex; }
+		HLSL::Texture2D<float4> colorTex;
+		HLSL::Texture2D<float4>& GetColorTex() { return colorTex; }
 		float4& GetSubsampleIndices() { return subsampleIndices; }
 		float4& GetSMAA_RT_METRICS() { return SMAA_RT_METRICS; }
 		template<class Compiler>

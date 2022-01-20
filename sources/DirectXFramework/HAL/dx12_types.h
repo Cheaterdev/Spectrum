@@ -20,8 +20,6 @@ class ComputePipelineState;
 class PipelineStateBase;
 class StateObject;
 class IndexBufferBase;
-class UploadBuffer;
-class CPUBuffer;
 
 class GPUBuffer;
 

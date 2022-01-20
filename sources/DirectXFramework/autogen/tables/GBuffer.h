@@ -4,16 +4,16 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GBuffer
 	{
-		Render::HLSL::Texture2D<float4> albedo;
-		Render::HLSL::Texture2D<float4> normals;
-		Render::HLSL::Texture2D<float4> specular;
-		Render::HLSL::Texture2D<float> depth;
-		Render::HLSL::Texture2D<float2> motion;
-		Render::HLSL::Texture2D<float4>& GetAlbedo() { return albedo; }
-		Render::HLSL::Texture2D<float4>& GetNormals() { return normals; }
-		Render::HLSL::Texture2D<float4>& GetSpecular() { return specular; }
-		Render::HLSL::Texture2D<float>& GetDepth() { return depth; }
-		Render::HLSL::Texture2D<float2>& GetMotion() { return motion; }
+		HLSL::Texture2D<float4> albedo;
+		HLSL::Texture2D<float4> normals;
+		HLSL::Texture2D<float4> specular;
+		HLSL::Texture2D<float> depth;
+		HLSL::Texture2D<float2> motion;
+		HLSL::Texture2D<float4>& GetAlbedo() { return albedo; }
+		HLSL::Texture2D<float4>& GetNormals() { return normals; }
+		HLSL::Texture2D<float4>& GetSpecular() { return specular; }
+		HLSL::Texture2D<float>& GetDepth() { return depth; }
+		HLSL::Texture2D<float2>& GetMotion() { return motion; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

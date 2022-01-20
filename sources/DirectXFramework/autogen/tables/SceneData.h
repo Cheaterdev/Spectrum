@@ -11,24 +11,24 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SceneData
 	{
-		Render::HLSL::StructuredBuffer<node_data> nodes;
-		Render::HLSL::StructuredBuffer<mesh_vertex_input> vertexes;
-		Render::HLSL::StructuredBuffer<MeshCommandData> meshes;
-		Render::HLSL::StructuredBuffer<MaterialCommandData> materials;
-		Render::HLSL::StructuredBuffer<MeshInstance> meshInstances;
-		Render::HLSL::StructuredBuffer<Meshlet> meshlets;
-		Render::HLSL::StructuredBuffer<MeshletCullData> meshletCullData;
-		Render::HLSL::StructuredBuffer<uint> indices;
-		std::vector<Render::HLSL::Texture2D<float4>> material_textures;
-		Render::HLSL::StructuredBuffer<node_data>& GetNodes() { return nodes; }
-		Render::HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return vertexes; }
-		Render::HLSL::StructuredBuffer<MeshCommandData>& GetMeshes() { return meshes; }
-		Render::HLSL::StructuredBuffer<MaterialCommandData>& GetMaterials() { return materials; }
-		Render::HLSL::StructuredBuffer<MeshInstance>& GetMeshInstances() { return meshInstances; }
-		Render::HLSL::StructuredBuffer<Meshlet>& GetMeshlets() { return meshlets; }
-		Render::HLSL::StructuredBuffer<MeshletCullData>& GetMeshletCullData() { return meshletCullData; }
-		Render::HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
-		std::vector<Render::HLSL::Texture2D<float4>>& GetMaterial_textures() { return material_textures; }
+		HLSL::StructuredBuffer<node_data> nodes;
+		HLSL::StructuredBuffer<mesh_vertex_input> vertexes;
+		HLSL::StructuredBuffer<MeshCommandData> meshes;
+		HLSL::StructuredBuffer<MaterialCommandData> materials;
+		HLSL::StructuredBuffer<MeshInstance> meshInstances;
+		HLSL::StructuredBuffer<Meshlet> meshlets;
+		HLSL::StructuredBuffer<MeshletCullData> meshletCullData;
+		HLSL::StructuredBuffer<uint> indices;
+		std::vector<HLSL::Texture2D<float4>> material_textures;
+		HLSL::StructuredBuffer<node_data>& GetNodes() { return nodes; }
+		HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return vertexes; }
+		HLSL::StructuredBuffer<MeshCommandData>& GetMeshes() { return meshes; }
+		HLSL::StructuredBuffer<MaterialCommandData>& GetMaterials() { return materials; }
+		HLSL::StructuredBuffer<MeshInstance>& GetMeshInstances() { return meshInstances; }
+		HLSL::StructuredBuffer<Meshlet>& GetMeshlets() { return meshlets; }
+		HLSL::StructuredBuffer<MeshletCullData>& GetMeshletCullData() { return meshletCullData; }
+		HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
+		std::vector<HLSL::Texture2D<float4>>& GetMaterial_textures() { return material_textures; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

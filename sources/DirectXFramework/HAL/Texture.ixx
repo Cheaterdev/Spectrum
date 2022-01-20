@@ -11,6 +11,7 @@ import Resource;
 import TextureData;
 import d3d12_types;
 import Descriptors;
+import HLSLDescriptors;
 
 import HAL.ResourceState;
 using namespace HAL;

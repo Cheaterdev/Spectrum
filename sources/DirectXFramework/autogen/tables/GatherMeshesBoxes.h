@@ -5,14 +5,14 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GatherMeshesBoxes
 	{
-		Render::HLSL::StructuredBuffer<BoxInfo> input_meshes;
-		Render::HLSL::StructuredBuffer<uint> visible_boxes;
-		Render::HLSL::AppendStructuredBuffer<uint> visibleMeshes;
-		Render::HLSL::AppendStructuredBuffer<uint> invisibleMeshes;
-		Render::HLSL::StructuredBuffer<BoxInfo>& GetInput_meshes() { return input_meshes; }
-		Render::HLSL::StructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
-		Render::HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
-		Render::HLSL::AppendStructuredBuffer<uint>& GetInvisibleMeshes() { return invisibleMeshes; }
+		HLSL::StructuredBuffer<BoxInfo> input_meshes;
+		HLSL::StructuredBuffer<uint> visible_boxes;
+		HLSL::AppendStructuredBuffer<uint> visibleMeshes;
+		HLSL::AppendStructuredBuffer<uint> invisibleMeshes;
+		HLSL::StructuredBuffer<BoxInfo>& GetInput_meshes() { return input_meshes; }
+		HLSL::StructuredBuffer<uint>& GetVisible_boxes() { return visible_boxes; }
+		HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
+		HLSL::AppendStructuredBuffer<uint>& GetInvisibleMeshes() { return invisibleMeshes; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

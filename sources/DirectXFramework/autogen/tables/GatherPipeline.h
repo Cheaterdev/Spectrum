@@ -6,9 +6,9 @@ namespace Table
 	struct GatherPipeline
 	{
 		uint4 pip_ids[2];
-		Render::HLSL::AppendStructuredBuffer<CommandData> commands[8];
+		HLSL::AppendStructuredBuffer<CommandData> commands[8];
 		uint4* GetPip_ids() { return pip_ids; }
-		Render::HLSL::AppendStructuredBuffer<CommandData>* GetCommands() { return commands; }
+		HLSL::AppendStructuredBuffer<CommandData>* GetCommands() { return commands; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

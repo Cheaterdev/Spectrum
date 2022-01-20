@@ -5,13 +5,13 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Voxelization
 	{
-		Render::HLSL::RWTexture3D<float4> albedo;
-		Render::HLSL::RWTexture3D<float4> normals;
-		Render::HLSL::RWTexture3D<uint> visibility;
+		HLSL::RWTexture3D<float4> albedo;
+		HLSL::RWTexture3D<float4> normals;
+		HLSL::RWTexture3D<uint> visibility;
 		VoxelInfo info;
-		Render::HLSL::RWTexture3D<float4>& GetAlbedo() { return albedo; }
-		Render::HLSL::RWTexture3D<float4>& GetNormals() { return normals; }
-		Render::HLSL::RWTexture3D<uint>& GetVisibility() { return visibility; }
+		HLSL::RWTexture3D<float4>& GetAlbedo() { return albedo; }
+		HLSL::RWTexture3D<float4>& GetNormals() { return normals; }
+		HLSL::RWTexture3D<uint>& GetVisibility() { return visibility; }
 		VoxelInfo& GetInfo() { return info; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const

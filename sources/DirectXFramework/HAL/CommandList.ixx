@@ -60,11 +60,8 @@ export{
 			ResourceHeapAllocator<LockPolicy> allocator;
 			friend class BufferCache;
 			std::list<ResourceHandle> handles;
-			//	std::vector<std::shared_ptr<UploadBuffer>> upload_resources;
-		//		UINT64 resource_offset;
 			UINT heap_size = 0x200000;
 		protected:
-			//void reset();
 
 			template<class T>
 			size_t size_of(std::span<T>& elem)

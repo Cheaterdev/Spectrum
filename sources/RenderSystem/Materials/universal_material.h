@@ -202,27 +202,27 @@ namespace materials
 
 	};
 
-	class universal_material_manager :public Singleton<universal_material_manager>, protected DataAllocator<Render::HLSL::Texture2D<float4>, ::CommonAllocator>
+	class universal_material_manager :public Singleton<universal_material_manager>, protected DataAllocator<HLSL::Texture2D<float4>, ::CommonAllocator>
 	{
-		std::vector<Render::HLSL::Texture2D<float4>> textures_data;
+		std::vector<HLSL::Texture2D<float4>> textures_data;
 	public:
-		TypedHandle<Render::HLSL::Texture2D<float4>> allocate(size_t size)
+		TypedHandle<HLSL::Texture2D<float4>> allocate(size_t size)
 		{
-			TypedHandle<Render::HLSL::Texture2D<float4>> result = Allocate(size);
+			TypedHandle<HLSL::Texture2D<float4>> result = Allocate(size);
 			textures_data.resize(get_max_usage());
 			return result;
 		}
-		std::vector<Render::HLSL::Texture2D<float4>>& get_textures()
+		std::vector<HLSL::Texture2D<float4>>& get_textures()
 		{
 			return textures_data;
 		}
-		virtual	std::span<Render::HLSL::Texture2D<float4>> aquire(size_t offset, size_t size) override {
+		virtual	std::span<HLSL::Texture2D<float4>> aquire(size_t offset, size_t size) override {
 
 			return { textures_data.data()+offset, size };
 		}
 
 
-		virtual	void write(size_t offset, std::vector<Render::HLSL::Texture2D<float4>>& v)  override {
+		virtual	void write(size_t offset, std::vector<HLSL::Texture2D<float4>>& v)  override {
 			memcpy(textures_data.data() + offset, v.data(), sizeof(Render::Handle) * v.size());
 		}
 
@@ -230,13 +230,13 @@ namespace materials
 
 			for(auto i= from;i<to;i++)
 			{
-				textures_data[i] = Render::HLSL::Texture2D<float4>();
+				textures_data[i] = HLSL::Texture2D<float4>();
 			}
 		}
 
 		
 
-		universal_material_manager(): DataAllocator<Render::HLSL::Texture2D<float4>, ::CommonAllocator>(4096)
+		universal_material_manager(): DataAllocator<HLSL::Texture2D<float4>, ::CommonAllocator>(4096)
 		{
 		}
 	};
@@ -290,10 +290,10 @@ namespace materials
 
 			Slots::MaterialInfo material_info;
 		
-	//		TypedHandle<Render::HLSL::Texture2D<float4>> textures_handle;
+	//		TypedHandle<HLSL::Texture2D<float4>> textures_handle;
 		//	Render::HandleTable textures_handles;
 
-			std::vector<Render::HLSL::Texture2D<float4>> texture_srvs;
+			std::vector<HLSL::Texture2D<float4>> texture_srvs;
 			Pipeline::ptr pipeline;
     
         public:
