@@ -6,8 +6,8 @@ using namespace FrameGraph;
 
 SMAA::SMAA()
 {
-	area_tex = Render::Texture::get_resource({ "textures\\AreaTex.dds", false, false });
-	search_tex = Render::Texture::get_resource({ "textures\\SearchTex.dds", false, false });
+	area_tex = Graphics::Texture::get_resource({ "textures\\AreaTex.dds", false, false });
+	search_tex = Graphics::Texture::get_resource({ "textures\\SearchTex.dds", false, false });
 
 }
 
@@ -45,7 +45,7 @@ void SMAA::generate(Graph& graph)
 
 			graphics.set_viewport(data.SMAA_edges->get_viewport());
 			graphics.set_scissor(data.SMAA_edges->get_scissor());
-			graphics.set_rtv(1, data.SMAA_edges->renderTarget, Render::Handle());
+			graphics.set_rtv(1, data.SMAA_edges->renderTarget, Graphics::Handle());
 			graphics.get_base().clear_rtv(data.SMAA_edges->renderTarget);
 			graphics.get_base().clear_rtv(data.SMAA_blend->renderTarget);
 
@@ -72,7 +72,7 @@ void SMAA::generate(Graph& graph)
 				slot_edges.set(graphics);
 			}
 			graphics.set_pipeline(GetPSO<PSOS::BlendWeight>());
-			graphics.set_rtv(1, data.SMAA_blend->renderTarget, Render::Handle());
+			graphics.set_rtv(1, data.SMAA_blend->renderTarget, Graphics::Handle());
 			graphics.draw(4);
 
 
@@ -87,7 +87,7 @@ void SMAA::generate(Graph& graph)
 			}
 
 			graphics.set_pipeline(GetPSO<PSOS::Blending>());
-			graphics.set_rtv(1, data.ResultTextureNew->renderTarget, Render::Handle());
+			graphics.set_rtv(1, data.ResultTextureNew->renderTarget, Graphics::Handle());
 			graphics.draw(4);
 
 		});
@@ -95,12 +95,12 @@ void SMAA::generate(Graph& graph)
 	//resolving
 	/*    {
 	list.set_pipeline(state_resolve);
-	buffer->result_tex.swap(context->list, Render::ResourceState::RENDER_TARGET, Render::ResourceState::PIXEL_SHADER_RESOURCE);
+	buffer->result_tex.swap(context->list, Graphics::ResourceState::RENDER_TARGET, Graphics::ResourceState::PIXEL_SHADER_RESOURCE);
 	list.set(2, buffer->result_tex.second()->texture_2d()->get_srv());
 	temporal.set(context->list, 3);
-	list.set_rtv(1, buffer->result_tex.first()->texture_2d()->get_rtv(0), Render::Handle());
+	list.set_rtv(1, buffer->result_tex.first()->texture_2d()->get_rtv(0), Graphics::Handle());
 	list.draw(4);
 	}*/
-	//	list.transition(buffer->light_tex.get(), Render::ResourceState::PIXEL_SHADER_RESOURCE);
+	//	list.transition(buffer->light_tex.get(), Graphics::ResourceState::PIXEL_SHADER_RESOURCE);
 }
 

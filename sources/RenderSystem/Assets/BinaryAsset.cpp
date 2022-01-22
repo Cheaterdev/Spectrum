@@ -64,9 +64,9 @@ BinaryAsset::BinaryAsset()
 
 }
 
-void BinaryAsset::update_preview(Render::Texture::ptr preview)
+void BinaryAsset::update_preview(Graphics::Texture::ptr preview)
 {
-    /* Render::CommandList::ptr list(new Render::CommandList(HAL::CommandListType::DIRECT));
+    /* Graphics::CommandList::ptr list(new Graphics::CommandList(HAL::CommandListType::DIRECT));
      list->begin();
      TextureAssetRenderer::get().render(this, preview, list);
      list->end();

@@ -20,10 +20,10 @@ namespace GUI
 				(*data++) = i * 4 + j + 5;
 			}
 
-		index_buffer.reset(new Render::IndexBuffer(index_data));
+		index_buffer.reset(new Graphics::IndexBuffer(index_data));
 	}
 
-	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr pipeline_state)
+	void NinePatch::draw(Graphics::context& c, GUI::Texture& item, rect r, Graphics::PipelineState::ptr pipeline_state)
 	{
 		if (current_state && current_state != pipeline_state)
 		{
@@ -267,7 +267,7 @@ namespace GUI
 			flush(c);
 	}
 
-	void NinePatch::flush(Render::context& c)
+	void NinePatch::flush(Graphics::context& c)
 	{
 		if (vertexes.empty()) return;
 
@@ -278,7 +278,7 @@ namespace GUI
 
 		auto data = c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
 		c.command_list->write<Vertex>(data, vertexes);
-		auto view = data.resource->create_view<StructuredBufferView<Table::vertex_input>>(*c.command_list->frame_resources, Render::BufferType::NONE, (UINT)data.offset, (UINT)data.size);
+		auto view = data.resource->create_view<StructuredBufferView<Table::vertex_input>>(*c.command_list->frame_resources, Graphics::BufferType::NONE, (UINT)data.offset, (UINT)data.size);
 
 		{
 			Slots::NinePatch patch_data;
@@ -294,12 +294,12 @@ namespace GUI
 		textures_handles.clear();
 	}
 
-	void NinePatch::draw(Render::context& c, GUI::Texture& item, rect r)
+	void NinePatch::draw(Graphics::context& c, GUI::Texture& item, rect r)
 	{
 		draw(c, item, r, GetPSO<PSOS::NinePatch>());
 	}
 
-	void NinePatch::draw(Render::context& c, Render::PipelineState::ptr pipeline_state, rect r)
+	void NinePatch::draw(Graphics::context& c, Graphics::PipelineState::ptr pipeline_state, rect r)
 	{
 		GUI::Texture item;
 		draw(c, item, r, pipeline_state);

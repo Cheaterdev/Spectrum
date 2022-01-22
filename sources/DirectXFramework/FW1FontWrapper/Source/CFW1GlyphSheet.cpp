@@ -134,8 +134,8 @@ namespace FW1FontWrapper
     {
         // Create sheet texture
         CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8_UNORM, m_sheetWidth, m_sheetHeight, 1, m_mipLevelCount);
-        m_pTexture.reset(new Render::Texture(desc));
-        m_pCoordBuffer.reset(new Render::GPUBuffer(sizeof(vec4)*m_maxGlyphCount * 4));
+        m_pTexture.reset(new Graphics::Texture(desc));
+        m_pCoordBuffer.reset(new Graphics::GPUBuffer(sizeof(vec4)*m_maxGlyphCount * 4));
         return S_OK;
     }
 

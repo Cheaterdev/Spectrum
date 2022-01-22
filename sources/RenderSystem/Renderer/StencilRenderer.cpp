@@ -272,8 +272,8 @@ stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
 	docking = GUI::dock::PARENT;
 	clickable = true;
 	/*
-	id_buffer.reset(new Render::StructureBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
-	axis_id_buffer.reset(new Render::StructureBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+	id_buffer.reset(new Graphics::StructureBuffer<UINT>(1, Graphics::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+	axis_id_buffer.reset(new Graphics::StructureBuffer<UINT>(1, Graphics::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 
 
 	id_buffer->set_name("stencil_renderer::id_buffer");
@@ -318,9 +318,9 @@ stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
 	verts[5] = vec4(1.0f, -1.0f, -1.0f,0);
 	verts[6] = vec4(1.0f, -1.0f, 1.0f,0);
 	verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
-	index_buffer.reset(new Render::IndexBuffer(data));
+	index_buffer.reset(new Graphics::IndexBuffer(data));
 
-	vertex_buffer.reset(new Render::StructureBuffer<vec4>(8));
+	vertex_buffer.reset(new Graphics::StructureBuffer<vec4>(8));
 	vertex_buffer->set_raw_data(verts);
 
 
@@ -443,7 +443,7 @@ void stencil_renderer::generate(Graph& graph)
 					graphics.set_scissors(data.depth_tex->get_scissor());
 					obj->iterate([&](scene_object* node)
 						{
-							Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+							Graphics::renderable* render_object = dynamic_cast<Graphics::renderable*>(node);
 
 							if (render_object)
 							{
@@ -474,7 +474,7 @@ void stencil_renderer::generate(Graph& graph)
 
 					axis->iterate([&](scene_object* node)
 						{
-							Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+							Graphics::renderable* render_object = dynamic_cast<Graphics::renderable*>(node);
 
 							if (render_object)
 							{
@@ -614,7 +614,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 					graphics.set_viewport(data.ResultTexture->get_viewport());
 					graphics.set_scissor(data.ResultTexture->get_scissor());
-					graphics.set_rtv(1, data.ResultTexture->renderTarget, Render::Handle());
+					graphics.set_rtv(1, data.ResultTexture->renderTarget, Graphics::Handle());
 					{
 						PROFILE_GPU(L"blend");
 						graphics.draw(4);

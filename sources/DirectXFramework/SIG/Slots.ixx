@@ -19,7 +19,7 @@ export {
 		T::compile;
 	};
 
-	template<typename T> concept HandleType = std::is_base_of_v<Render::Handle, T>;
+	template<typename T> concept HandleType = std::is_base_of_v<Graphics::Handle, T>;
 
 	template<class Context>
 	class Compiler
@@ -40,7 +40,7 @@ export {
 		}
 	public:
 		Context* context;
-		std::vector<DX12::ResourceInfo*> resources;
+		std::vector<Graphics::ResourceInfo*> resources;
 		std::stringstream s;
 		Compiler():s(std::stringstream::out | std::stringstream::binary)
 		{
@@ -112,7 +112,7 @@ export {
 				std::vector<uint> offsets;
 				for (uint i = 0; i < t.size(); i++)
 				{
-					const Render::Handle& handle = t[i];
+					const Graphics::Handle& handle = t[i];
 
 					if (handle.is_valid())
 					{
@@ -131,7 +131,7 @@ export {
 
 			
 				auto info = context->place_raw(offsets);
-				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(*context, DX12::BufferType::NONE, (UINT)info.offset, (UINT)info.size).structuredBuffer;
+				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(*context, Graphics::BufferType::NONE, (UINT)info.offset, (UINT)info.size).structuredBuffer;
 
 				offset = srv.offset_gpu;
 
@@ -171,34 +171,34 @@ export {
 	template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
 	struct CompiledData
 	{
-		std::vector<DX12::ResourceInfo*> resources;
+		std::vector<Graphics::ResourceInfo*> resources;
 
 		static constexpr SlotID ID = _ID;
 		using Table = _Table;
 		using Slot = _Slot;
 		using SlotTable = _SlotTable;
 
-		Render::ResourceAddress offsets_cb;
+		Graphics::ResourceAddress offsets_cb;
 		UINT offset_cb;
 
-		const CompiledData<SlotTable, ID, Table, Slot>& set(Render::SignatureDataSetter& graphics) const
+		const CompiledData<SlotTable, ID, Table, Slot>& set(Graphics::SignatureDataSetter& graphics) const
 		{
 			graphics.set_slot(*this);
 			return *this;
 		}
 
-		const void set_tables(Render::SignatureDataSetter& graphics) const
+		const void set_tables(Graphics::SignatureDataSetter& graphics) const
 		{
 			for(auto resource_info :resources)
 			graphics.get_base().transition(resource_info);
 			graphics.set_cb(Slot::ID, offsets_cb);
 		}
-		operator Render::ResourceAddress() const
+		operator Graphics::ResourceAddress() const
 		{
 			return offsets_cb;
 		}
 
-		Render::ResourceAddress compiled()
+		Graphics::ResourceAddress compiled()
 		{
 			return offsets_cb;
 		}
@@ -236,7 +236,7 @@ export {
 		}
 
 
-		void set(Render::SignatureDataSetter& context) const
+		void set(Graphics::SignatureDataSetter& context) const
 		{
 			compile(context.get_base()).set(context);
 		}

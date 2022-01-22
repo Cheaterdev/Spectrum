@@ -431,7 +431,7 @@ void generate_cpp_table(const Table& table)
 
 			if (table.bindless_table)
 			{
-		//		stream << "Render::Bindless bindless;" << std::endl;
+		//		stream << "Graphics::Bindless bindless;" << std::endl;
 			}
 
 			for (auto& v : table.values)
@@ -531,7 +531,7 @@ void generate_cpp_table(const Table& table)
 				pass += "bindless(bindless)";
 
 				if (args.size()) args += ",";
-				args += "Render::Bindless &bindless";
+				args += "Graphics::Bindless &bindless";
 
 			}
 
@@ -697,7 +697,7 @@ export
 
 
 	stream << "void init_signatures();" << std::endl;
-	stream << "Render::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
+	stream << "Graphics::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
 	stream << "void init_pso(enum_array<PSO, PSOBase::ptr>&);" << std::endl;
 
 	stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
@@ -708,7 +708,7 @@ export
 
 	stream << "module: private;" << std::endl;
 
-	stream << "static enum_array<Layouts, DX12::RootLayout::ptr> signatures;" << std::endl;
+	stream << "static enum_array<Layouts, Graphics::RootLayout::ptr> signatures;" << std::endl;
 	stream << "void init_signatures()" << std::endl;
 
 	stream << "{" << std::endl;
@@ -726,7 +726,7 @@ export
 	stream << "}" << std::endl;
 
 
-	stream << "Render::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
+	stream << "Graphics::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
 	stream << "{" << std::endl;
 	stream << "\treturn signatures[id];" << std::endl;
 	stream << "}" << std::endl;
@@ -889,7 +889,7 @@ using namespace concurrency;
 )"
 			<< std::endl;
 
-		//stream << "static std::array<DX12::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
+		//stream << "static std::array<Graphics::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
 		stream << "void init_pso(enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
 
 		stream << "{" << std::endl;
@@ -919,7 +919,7 @@ using namespace concurrency;
 		stream << "}" << std::endl;
 
 /*
-		stream << "Render::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
+		stream << "Graphics::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
 		stream << "{" << std::endl;
 		stream << "\treturn pso[static_cast<int>(id)];" << std::endl;
 		stream << "}" << std::endl;
@@ -1231,7 +1231,7 @@ void generate_pso(PSO& pso)
 						{
 							if (!elems.empty())
 								elems += ", ";
-							elems += "Render::Blend::";
+							elems += "Graphics::Blend::";
 							elems += e.expr;
 						}
 
@@ -1302,7 +1302,7 @@ void generate_cpp_rt(RenderTarget& rt)
 						int i = 0;
 						for (auto& e : rt.rtvs)
 						{
-							stream << "Render::Handle" << " " << e.name << ";" << std::endl;
+							stream << "Graphics::Handle" << " " << e.name << ";" << std::endl;
 							i++;
 						}
 
@@ -1318,7 +1318,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					{
 						stream.push();
 
-						stream << "Render::Handle" << " " << rt.dsv->name << ";" << std::endl;
+						stream << "Graphics::Handle" << " " << rt.dsv->name << ";" << std::endl;
 
 						stream.pop();
 					}
@@ -1333,7 +1333,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					cameled[0] = std::toupper(cameled[0]);
 
 
-					stream << "Render::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
+					stream << "Graphics::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
 				}
 
 				if (rt.dsv)
@@ -1342,7 +1342,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					cameled[0] = std::toupper(cameled[0]);
 
 
-					stream << "Render::Handle&" << " Get" << cameled << "() { " << "return " << "dsv." << rt.dsv->name << "; }" << std::endl;
+					stream << "Graphics::Handle&" << " Get" << cameled << "() { " << "return " << "dsv." << rt.dsv->name << "; }" << std::endl;
 
 				}
 				std::string pass;
@@ -1503,7 +1503,7 @@ void generate_cpp_layout(Layout& layout)
 			layout.recursive_samplers([&](Sampler& slot) {
 
 				if (!first) params_string += ',';
-				params_string += "Render::Samplers::" + slot.expr;
+				params_string += "Graphics::Samplers::" + slot.expr;
 				first = false;
 				});
 

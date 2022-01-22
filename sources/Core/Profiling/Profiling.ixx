@@ -113,7 +113,7 @@ protected:
 	void update();
 private:
 	std::wstring name;
-/*	Render::GPUTimer timer;*/
+/*	Graphics::GPUTimer timer;*/
 };
 
 template<class T>
@@ -128,7 +128,7 @@ void TimedBlock::iterate_childs(T f)
 class Timer
 {
 	friend class TimedRoot;
-	/*friend class Render::Eventer;*/
+	/*friend class Graphics::Eventer;*/
 	friend class Profiler;
 
 	TimedBlock* block;
@@ -166,7 +166,7 @@ public:
 
 	Profiler() : TimedBlock(L"")
 	{
-	/*	Render::GPUTimeManager::create();*/
+	/*	Graphics::GPUTimeManager::create();*/
 	}
 
 	bool enabled = true;

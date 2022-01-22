@@ -19,7 +19,7 @@ namespace GUI
                     skin = Skin::get().DefaultStatusBar;
                 }
                 Skin::StatusBar skin;
-                virtual void draw(Render::context&) override;
+                virtual void draw(Graphics::context&) override;
 
                 virtual void add_child(base::ptr obj) override;
 

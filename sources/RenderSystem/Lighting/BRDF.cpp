@@ -6,12 +6,12 @@ import Autogen;
 void BRDF::create_new()
 {
 
-	texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
-	Render::CommandList::ptr list(new Render::CommandList(HAL::CommandListType::DIRECT));
+	texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+	Graphics::CommandList::ptr list(new Graphics::CommandList(HAL::CommandListType::DIRECT));
 	list->begin("BRDF");
 
 
-	Render::ComputeContext& compute_context = list->get_compute();
+	Graphics::ComputeContext& compute_context = list->get_compute();
 
 	compute_context.set_pipeline(GetPSO<PSOS::BRDF>());
 

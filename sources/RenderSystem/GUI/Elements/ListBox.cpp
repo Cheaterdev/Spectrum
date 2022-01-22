@@ -2,7 +2,7 @@
 #include "ListBox.h"
 #include "GUI/Renderer/Renderer.h"
 
-void GUI::Elements::list_box::draw(Render::context& c)
+void GUI::Elements::list_box::draw(Graphics::context& c)
 {
     renderer->draw_area(get_ptr(), c);
 }
@@ -44,7 +44,7 @@ namespace GUI
 {
 
 
-    void Elements::list_element::draw(Render::context& c)
+    void Elements::list_element::draw(Graphics::context& c)
     {
         //   if (selected)
         //      renderer->draw(this, c);

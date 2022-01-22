@@ -15,7 +15,7 @@ namespace GUI
                 using wptr = w_ptr<colored_rect>;
 
 
-                virtual void draw(Render::context& c) override;
+                virtual void draw(Graphics::context& c) override;
                 float4 color;
 
         };

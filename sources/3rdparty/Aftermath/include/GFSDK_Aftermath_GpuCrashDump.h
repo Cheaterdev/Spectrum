@@ -36,7 +36,7 @@
 *      Nsight Graphics GPU crash dump monitor for the calling process.
 *
 *
-*  2)  On DX11/DX12, call 'GFSDK_Aftermath_DXxx_Initialize', to initialize the library and
+*  2)  On DX11/Graphics, call 'GFSDK_Aftermath_DXxx_Initialize', to initialize the library and
 *      to enable additional Aftermath features that will affect the data captured in the
 *      GPU crash dumps, such as Aftermath event markers; automatic call stack markers for
 *      all draw calls, compute dispatches, ray dispatches, or copy operations; resource

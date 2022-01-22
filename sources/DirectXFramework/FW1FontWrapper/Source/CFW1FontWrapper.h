@@ -27,7 +27,7 @@ namespace FW1FontWrapper
             virtual HRESULT STDMETHODCALLTYPE GetVertexDrawer(IFW1GlyphVertexDrawer** ppVertexDrawer);
 
             virtual void STDMETHODCALLTYPE DrawTextLayout(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 IDWriteTextLayout* pTextLayout,
                 FLOAT OriginX,
                 FLOAT OriginY,
@@ -35,7 +35,7 @@ namespace FW1FontWrapper
                 UINT Flags
             );
             virtual void STDMETHODCALLTYPE DrawTextLayout(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 IDWriteTextLayout* pTextLayout,
                 FLOAT OriginX,
                 FLOAT OriginY,
@@ -46,7 +46,7 @@ namespace FW1FontWrapper
             );
 
             virtual void STDMETHODCALLTYPE DrawString(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 const WCHAR* pszString,
                 FLOAT FontSize,
                 FLOAT X,
@@ -55,7 +55,7 @@ namespace FW1FontWrapper
                 UINT Flags
             );
             virtual void STDMETHODCALLTYPE DrawString(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 const WCHAR* pszString,
                 const WCHAR* pszFontFamily,
                 FLOAT FontSize,
@@ -65,7 +65,7 @@ namespace FW1FontWrapper
                 UINT Flags
             );
             virtual void STDMETHODCALLTYPE DrawString(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 const WCHAR* pszString,
                 const WCHAR* pszFontFamily,
                 FLOAT FontSize,
@@ -85,7 +85,7 @@ namespace FW1FontWrapper
             );
 
             virtual void STDMETHODCALLTYPE AnalyzeString(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 const WCHAR* pszString,
                 const WCHAR* pszFontFamily,
                 FLOAT FontSize,
@@ -96,7 +96,7 @@ namespace FW1FontWrapper
             );
 
             virtual void STDMETHODCALLTYPE AnalyzeTextLayout(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 IDWriteTextLayout* pTextLayout,
                 FLOAT OriginX,
                 FLOAT OriginY,
@@ -106,14 +106,14 @@ namespace FW1FontWrapper
             );
 
             virtual void STDMETHODCALLTYPE DrawGeometry(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 IFW1TextGeometry* pGeometry,
                 const FW1_RECTF* pClipRect,
                 const FLOAT* pTransformMatrix,
                 UINT Flags
             );
 
-            virtual void STDMETHODCALLTYPE Flush(Render::CommandList::ptr& list);
+            virtual void STDMETHODCALLTYPE Flush(Graphics::CommandList::ptr& list);
 
             // Public functions
         public:

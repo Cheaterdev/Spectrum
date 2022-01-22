@@ -93,7 +93,7 @@ namespace FrameGraph
 
 		virtual void init(ResourceAllocInfo& info) = 0;
 
-		virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) = 0;
+		virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) = 0;
 	};
 
 
@@ -129,7 +129,7 @@ namespace FrameGraph
 		ResourceFlags flags;
 		bool placed;
 
-		Render::ResourceHandle alloc_ptr;
+		Graphics::ResourceHandle alloc_ptr;
 		ResourceAllocInfo* orig = nullptr;
 
 		CD3DX12_RESOURCE_DESC d3ddesc;
@@ -147,11 +147,11 @@ namespace FrameGraph
 		std::vector<ResourceRWState> states;
 		int last_writer;
 		//compile
-		std::map<Render::ResourceHandle, Render::Resource::ptr> resource_places;
-		Render::Resource::ptr resource;
+		std::map<Graphics::ResourceHandle, Graphics::Resource::ptr> resource_places;
+		Graphics::Resource::ptr resource;
 
 		std::shared_ptr<ResourceHandler> handler;
-		std::shared_ptr<Render::ResourceView> view;
+		std::shared_ptr<Graphics::ResourceView> view;
 
 		bool need_recreate = false;
 		bool passed = false;
@@ -221,12 +221,12 @@ namespace FrameGraph
 
 			auto& operator*()
 			{
-				return *static_cast<Render::StructuredBufferView<T>*>(info->view.get());
+				return *static_cast<Graphics::StructuredBufferView<T>*>(info->view.get());
 			}
 
 			auto operator->()
 			{
-				return static_cast<Render::StructuredBufferView<T>*>(info->view.get());
+				return static_cast<Graphics::StructuredBufferView<T>*>(info->view.get());
 			}
 			operator bool() const
 			{
@@ -237,7 +237,7 @@ namespace FrameGraph
 			StructuredBuffer(const Desc& desc) :m_desc(desc)
 			{
 
-				//info->buffer = Render::BufferView();
+				//info->buffer = Graphics::BufferView();
 			}
 			StructuredBuffer(std::string_view name) :name(name)
 			{
@@ -257,9 +257,9 @@ namespace FrameGraph
 
 			}
 
-			virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) override
+			virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) override
 			{
-				info.init_view<Render::StructuredBufferView<T>>(frame, m_desc.counted ? Render::BufferType::COUNTED : Render::BufferType::NONE);
+				info.init_view<Graphics::StructuredBufferView<T>>(frame, m_desc.counted ? Graphics::BufferType::COUNTED : Graphics::BufferType::NONE);
 			}
 		};
 
@@ -277,11 +277,11 @@ namespace FrameGraph
 			std::string name;
 			auto& operator*()
 			{
-				return *static_cast<Render::TextureView*>(info->view.get());
+				return *static_cast<Graphics::TextureView*>(info->view.get());
 			}
 			auto operator->()
 			{
-				return static_cast<Render::TextureView*>(info->view.get());
+				return static_cast<Graphics::TextureView*>(info->view.get());
 			}
 			operator bool() const
 			{
@@ -307,9 +307,9 @@ namespace FrameGraph
 				info.desc = desc;
 			}
 
-			virtual void init_view(ResourceAllocInfo& info, Render::FrameResources& frame) override
+			virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) override
 			{
-				info.init_view<Render::TextureView>(frame, check(info.flags & ResourceFlags::Cube));
+				info.init_view<Graphics::TextureView>(frame, check(info.flags & ResourceFlags::Cube));
 			}
 		};
 	};
@@ -317,10 +317,10 @@ namespace FrameGraph
 
 	struct Runtime
 	{
-		using Texture = Render::TextureView;
+		using Texture = Graphics::TextureView;
 
 		template<class T>
-		using StructuredBuffer = Render::StructuredBufferView<T>;
+		using StructuredBuffer = Graphics::StructuredBufferView<T>;
 	};
 
 
@@ -337,16 +337,16 @@ namespace FrameGraph
 
 		std::set<ResourceAllocInfo*> passed_resources;
 
-		Render::ResourceHeapAllocator<Thread::Free> allocator;
-		Render::ResourceHeapAllocator<Thread::Free> static_allocator;
+		Graphics::ResourceHeapAllocator<Thread::Free> allocator;
+		Graphics::ResourceHeapAllocator<Thread::Free> static_allocator;
 
 
-		Render::FrameResourceManager frames;
-		Render::FrameResources::ptr current_frame;
+		Graphics::FrameResourceManager frames;
+		Graphics::FrameResources::ptr current_frame;
 
-		std::map<int, Render::ResourceHeapAllocator<Thread::Free>> frame_allocs;
+		std::map<int, Graphics::ResourceHeapAllocator<Thread::Free>> frame_allocs;
 
-		Render::ResourceHeapAllocator<Thread::Free>* current_alloc;
+		Graphics::ResourceHeapAllocator<Thread::Free>* current_alloc;
 		Pass* current_pass = nullptr;
 		void begin(Pass* pass);
 
@@ -430,7 +430,7 @@ namespace FrameGraph
 		}
 
 		//void free_texture(ResourceHandler* handler);
-		void pass_texture(std::string name, Render::Texture::ptr tex, ResourceFlags flags = ResourceFlags::None);
+		void pass_texture(std::string name, Graphics::Texture::ptr tex, ResourceFlags flags = ResourceFlags::None);
 
 
 		void create_resources();
@@ -454,20 +454,20 @@ namespace FrameGraph
 	struct FrameContext
 	{
 		Pass* pass;
-		Render::FrameResources::ptr frame;
+		Graphics::FrameResources::ptr frame;
 
-		std::list<Render::ResourceView> textureViews;
+		std::list<Graphics::ResourceView> textureViews;
 
-		Render::CommandList::ptr list;
+		Graphics::CommandList::ptr list;
 
-		Render::CommandList::ptr& get_list();
-		void begin(Pass* pass, Render::FrameResources::ptr& frame);
+		Graphics::CommandList::ptr& get_list();
+		void begin(Pass* pass, Graphics::FrameResources::ptr& frame);
 		void end();
 
 
 		void execute();
 
-		void register_subview(const Render::ResourceView& view)
+		void register_subview(const Graphics::ResourceView& view)
 		{
 			textureViews.push_back(view);
 		}
@@ -499,7 +499,7 @@ namespace FrameGraph
 		FrameContext context;
 		std::set<Pass*> related;
 		std::future<void> render_task;
-		Render::FenceWaiter fence_end;
+		Graphics::FenceWaiter fence_end;
 
 		int graphic_count = 0;
 		int compute_count = 0;
@@ -519,7 +519,7 @@ namespace FrameGraph
 		}
 		void compile(TaskBuilder& builder);
 
-		virtual void render(Render::FrameResources::ptr& frame) = 0;
+		virtual void render(Graphics::FrameResources::ptr& frame) = 0;
 		void wait();
 		void execute();
 
@@ -562,7 +562,7 @@ namespace FrameGraph
 			return res;
 		}
 
-		virtual void render(Render::FrameResources::ptr& frame) override
+		virtual void render(Graphics::FrameResources::ptr& frame) override
 		{
 			if (!enabled || !renderable)  return;
 
@@ -598,7 +598,7 @@ namespace FrameGraph
 
 	class SlotContext
 	{
-		std::map<SlotID, std::function<void(Render::SignatureDataSetter&)>> slot_setters;
+		std::map<SlotID, std::function<void(Graphics::SignatureDataSetter&)>> slot_setters;
 
 	public:
 
@@ -607,12 +607,12 @@ namespace FrameGraph
 		void register_slot_setter(Compiled compiled)
 		{
 			SlotID id = Compiled::ID;
-			slot_setters[id] = [compiled](Render::SignatureDataSetter& setter) {
+			slot_setters[id] = [compiled](Graphics::SignatureDataSetter& setter) {
 				compiled.set(setter);
 			};
 		}
 
-		void set_slot(SlotID id, Render::SignatureDataSetter& setter)
+		void set_slot(SlotID id, Graphics::SignatureDataSetter& setter)
 		{
 			assert(slot_setters.contains(id));
 			slot_setters[id](setter);

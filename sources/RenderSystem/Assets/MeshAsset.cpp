@@ -145,11 +145,11 @@ mesh.meshlets_offset = meshlets_count;
 	}*/
 
 	int i = 0;
-	if(Render::Device::get().is_rtx_supported())
+	if(Graphics::Device::get().is_rtx_supported())
 	for (auto& mesh : meshes)
 	{
 	
-		auto list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+		auto list = Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 		list->begin("RTX");
 		universal_vertex_manager::get().prepare(list);
 		universal_index_manager::get().prepare(list);
@@ -173,7 +173,7 @@ mesh.meshlets_offset = meshlets_count;
 		mesh.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
 		list->execute_and_wait();
 
-	//	Render::Device::get().check_errors();
+	//	Graphics::Device::get().check_errors();
 		i++;
 	}
 
@@ -250,10 +250,10 @@ void MeshAsset::try_register()
 }
 
 
-void MeshAsset::update_preview(Render::Texture::ptr preview)
+void MeshAsset::update_preview(Graphics::Texture::ptr preview)
 {
 	if (!preview || !preview->is_rt())
-		preview.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 256, 256, 1, 6, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+		preview.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 256, 256, 1, 6, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 
 	if (!preview_mesh)
 		preview_mesh.reset(new MeshAssetInstance(get_ptr<MeshAsset>()));
@@ -400,7 +400,7 @@ void MeshAssetInstance::on_remove()
 
 void MeshAssetInstance::update_rtx_instance()
 {
-	if (!Render::Device::get().is_rtx_supported()) return;
+	if (!Graphics::Device::get().is_rtx_supported()) return;
 
 	if (!ras_handle) scene->raytrace->allocate(ras_handle, rendering_count);
 
@@ -494,7 +494,7 @@ bool MeshAssetInstance::update_transforms()
 
 bool MeshAssetInstance::init_ras(CommandList::ptr list)
 {
-	if (!Render::Device::get().is_rtx_supported()) return false;
+	if (!Graphics::Device::get().is_rtx_supported()) return false;
 
 
 

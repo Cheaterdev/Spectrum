@@ -3,7 +3,7 @@
 
 
 #define GEN_COMPUTE_PSO(name, ...) \
-using PSOState = Render::ComputePipelineState; \
+using PSOState = Graphics::ComputePipelineState; \
 using SimplePSO = SimpleComputePSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
@@ -19,7 +19,7 @@ name() \
 
 
 #define GEN_GRAPHICS_PSO(name, ...) \
-using PSOState = Render::PipelineState; \
+using PSOState = Graphics::PipelineState; \
 using SimplePSO = SimpleGraphicsPSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \

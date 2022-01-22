@@ -23,13 +23,13 @@ namespace materials
     class Pipeline;
 }
 
-namespace Render
+namespace Graphics
 {
 	
 
 	struct EyeInfo:public Holder
 	{
-		Render::Texture::ptr color_buffer;
+		Graphics::Texture::ptr color_buffer;
 		quat dir;
 		vec3 offset;
 		float fov = -1;
@@ -48,8 +48,8 @@ namespace Render
     {
         public:
 
-            Render::CommandList::ptr& command_list;
-			Render::CommandList::ptr command_list_label;
+            Graphics::CommandList::ptr& command_list;
+			Graphics::CommandList::ptr command_list_label;
 			std::shared_ptr<OVRContext>& ovr_context;
 
 			SingleThreadExecutorBatched* labeled;
@@ -63,15 +63,15 @@ namespace Render
             float scale = 1;
 
 
-			std::function<void(Render::context &c)> commit_scissor()
+			std::function<void(Graphics::context &c)> commit_scissor()
 			{
 				scissors = ui_clipping;
 				auto list = command_list;
 				auto clip = ui_clipping;
-				return [list, clip](Render::context &c) {list->get_graphics().set_scissors(clip); };
+				return [list, clip](Graphics::context &c) {list->get_graphics().set_scissors(clip); };
 			}
 			
-            context(Render::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context): command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
+            context(Graphics::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context): command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
             {
                 drawer = nullptr;
 //                cam = nullptr;
@@ -93,7 +93,7 @@ namespace Render
 
 
 }
-using namespace Render;
+using namespace Graphics;
 struct MeshRenderContext;
 
 enum class RENDER_TYPE
@@ -121,18 +121,18 @@ struct MeshRenderContext
 {
     private:
         //  std::vector<std::shared_ptr<materials::material>> materials;
-        Render::PipelineState::ptr current_state;
-        //  Render::PipelineStateDesc current_state_desc;
+        Graphics::PipelineState::ptr current_state;
+        //  Graphics::PipelineStateDesc current_state_desc;
     public:
         using ptr = s_ptr<MeshRenderContext>;
         int draw_count = 0;
 
         std::shared_ptr<materials::Pipeline> overrided_pipeline;
 
-        Render::PipelineStateDesc pipeline;
-		std::shared_ptr<Render::OVRContext> eye_context;
+        Graphics::PipelineStateDesc pipeline;
+		std::shared_ptr<Graphics::OVRContext> eye_context;
 	
-        Render::CommandList::ptr list;
+        Graphics::CommandList::ptr list;
      
         camera* cam = nullptr;
         RENDER_TYPE render_type = RENDER_TYPE::PIXEL;
@@ -140,13 +140,13 @@ struct MeshRenderContext
        TaskPriority priority = TaskPriority::NORMAL;
         float delta_time = 0;
         size_t current_time = 0;
-       // Render::Handle set_4_table;
+       // Graphics::Handle set_4_table;
 		vec2 screen_subsample = {0,0};
         GBuffer* g_buffer = nullptr;
         RT::Slot::GBuffer::Compiled gbuffer_compiled;
 
-        Render::Texture::ptr target_tex;
-      //  Render::HandleTable voxel_target;
+        Graphics::Texture::ptr target_tex;
+      //  Graphics::HandleTable voxel_target;
 
 
         SlotContext* slot_context = nullptr;
@@ -166,7 +166,7 @@ struct MeshRenderContext
         {
             if (!current_state || !(current_state->desc == pipeline))
             {
-                current_state = Render::PipelineStateCache::get_cache(pipeline);
+                current_state = Graphics::PipelineStateCache::get_cache(pipeline);
 
               
                 assert(pipeline == current_state->desc);
@@ -201,16 +201,16 @@ struct MeshRenderContext
 
 class RenderTargetTable
 {
-        Render::HandleTableLight rtv_table;
+        Graphics::HandleTableLight rtv_table;
     
         std::vector<DXGI_FORMAT>formats;
         DXGI_FORMAT depth_format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
-        //  Render::Handle depth_handle;
+        //  Graphics::Handle depth_handle;
 
-        std::vector<Render::TextureView> textures;
-        Render::TextureView depth_texture;
+        std::vector<Graphics::TextureView> textures;
+        Graphics::TextureView depth_texture;
 
-        std::vector<Render::Viewport> vps;
+        std::vector<Graphics::Viewport> vps;
         std::vector<sizer_long> scissors;
 
         void on_init(ivec2 size)
@@ -226,20 +226,20 @@ class RenderTargetTable
             scissors[0] = { 0, 0, size.x, size.y };
         }
     public:
-		Render::HandleTableLight dsv_table;
+		Graphics::HandleTableLight dsv_table;
 
         void clear_depth(MeshRenderContext::ptr& context, float value = 1)
         {
 			if (depth_texture)
                 context->list->clear_depth(dsv_table[0], value);
         }
-        void clear_stencil(Render::GraphicsContext& list, UINT8 stencil = 0)
+        void clear_stencil(Graphics::GraphicsContext& list, UINT8 stencil = 0)
         {
 			if (depth_texture)
                 list.get_base().clear_stencil(dsv_table[0], stencil);
         }
 
-        void clear_depth(Render::GraphicsContext& list, float value = 1)
+        void clear_depth(Graphics::GraphicsContext& list, float value = 1)
         {
 
             if (depth_texture)
@@ -248,13 +248,13 @@ class RenderTargetTable
         RenderTargetTable() {}
 
 
-        void set_window(Render::GraphicsContext& context)
+        void set_window(Graphics::GraphicsContext& context)
         {
             context.set_viewports(vps);
             context.set_scissors(scissors[0]);
         }
 
-        RenderTargetTable(Render::GraphicsContext& graphics, std::initializer_list<Render::TextureView> list, Render::TextureView depth)
+        RenderTargetTable(Graphics::GraphicsContext& graphics, std::initializer_list<Graphics::TextureView> list, Graphics::TextureView depth)
         {
            rtv_table = graphics.place_rtv((UINT)list.size());
             UINT i = 0;
@@ -295,12 +295,12 @@ class RenderTargetTable
             set(context->list->get_graphics(), clear_color, clear_depth);
         }
 
-        void set(Render::GraphicsContext& graphics,bool clear_color = false, bool clear_depth = false)
+        void set(Graphics::GraphicsContext& graphics,bool clear_color = false, bool clear_depth = false)
 		{
 
             auto& list = graphics.get_base();
 
-            graphics.set_rtv(rtv_table, dsv_table.valid()?dsv_table[0]:Render::Handle());
+            graphics.set_rtv(rtv_table, dsv_table.valid()?dsv_table[0]:Graphics::Handle());
 
 			if (clear_color)
 			{
@@ -321,22 +321,22 @@ class RenderTargetTable
 class GBuffer
 {
 public:
-	Render::TextureView albedo;
-	Render::TextureView normals;
-	Render::TextureView depth;
-	Render::TextureView specular;
-	Render::TextureView speed;
+	Graphics::TextureView albedo;
+	Graphics::TextureView normals;
+	Graphics::TextureView depth;
+	Graphics::TextureView specular;
+	Graphics::TextureView speed;
 
 
-	Render::TextureView quality;
-	Render::TextureView depth_mips;
-	Render::TextureView depth_prev_mips;
+	Graphics::TextureView quality;
+	Graphics::TextureView depth_mips;
+	Graphics::TextureView depth_prev_mips;
 
 	RenderTargetTable rtv_table;
 
 
 	struct {
-		Render::TextureView hiZ_depth, hiZ_depth_uav;
+		Graphics::TextureView hiZ_depth, hiZ_depth_uav;
 		RenderTargetTable hiZ_table;
 	}HalfBuffer;
 

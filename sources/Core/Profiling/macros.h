@@ -5,7 +5,7 @@
 #endif
 
 #ifdef PROFILING
-#define PROFILE_GPU(x) auto SPECTRUM_UNIQUE_NAME = Render::Eventer::thread_current?Render::Eventer::thread_current->start(x):Timer(nullptr, nullptr);
+#define PROFILE_GPU(x) auto SPECTRUM_UNIQUE_NAME = Graphics::Eventer::thread_current?Graphics::Eventer::thread_current->start(x):Timer(nullptr, nullptr);
 #else
 #define PROFILE_GPU(x) ;
 #endif

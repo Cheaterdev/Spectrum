@@ -10,7 +10,7 @@ namespace GUI
     class dark : public base
     {
         public:
-            virtual void draw(Render::context&) override;
+            virtual void draw(Graphics::context&) override;
     };
 
     void base::on_add(base* base_parent)
@@ -692,7 +692,7 @@ namespace GUI
         if (visibility)
 		{
 
-			rec_c.execute([this](Render::context &c) {
+			rec_c.execute([this](Graphics::context &c) {
 				draw(c);
 			});
 		}
@@ -732,7 +732,7 @@ namespace GUI
     //    if (visibility)
     //        draw_after(c);
 
-		rec_c.execute([this](Render::context &c) {
+		rec_c.execute([this](Graphics::context &c) {
 			draw_after(c);
 		});
     }
@@ -865,13 +865,13 @@ namespace GUI
             c->close_menus();
     }
 
-    void base::draw(Render::context& c) //
+    void base::draw(Graphics::context& c) //
     {
         if (draw_helper)
             renderer->draw_virtual(get_ptr(), c);
     }
 
-    void base::draw_after(Render::context&)
+    void base::draw_after(Graphics::context&)
     {
     }
 
@@ -929,15 +929,15 @@ namespace GUI
 				
 				 auto texture = (*data.o_texture);
 
-			//	 command_list->transition(texture.resource, Render::ResourceState::RENDER_TARGET);
-				 command_list->get_graphics().set_rtv(1, texture.renderTarget, Render::Handle());
+			//	 command_list->transition(texture.resource, Graphics::ResourceState::RENDER_TARGET);
+				 command_list->get_graphics().set_rtv(1, texture.renderTarget, Graphics::Handle());
 				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
 
 			
                  std::shared_ptr<OVRContext> ovr_context;
                  renderer->start();
 
-                 Render::context c(command_list, ovr_context);
+                 Graphics::context c(command_list, ovr_context);
                  c.command_list = command_list;
                
 				// c.offset = { 0, 0 };
@@ -952,7 +952,7 @@ namespace GUI
 					 {
 						 c.labeled = &context.pre_executor;
                      	
-						 c.command_list_label = Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
+						 c.command_list_label = Graphics::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list();
                      	
 						 c.command_list_label->begin("Label");
 
@@ -983,7 +983,7 @@ namespace GUI
      }
 
      /*
-    void user_interface::draw_ui(Render::context& c)
+    void user_interface::draw_ui(Graphics::context& c)
     {
         std::lock_guard<std::mutex> g(m);
 
@@ -1345,7 +1345,7 @@ namespace GUI
     }
 
 
-    void dark::draw(Render::context& c)
+    void dark::draw(Graphics::context& c)
     {
         renderer->draw_color(c, vec4(0.0, 0.0, 0.0, 0.5f), get_render_bounds());
     }

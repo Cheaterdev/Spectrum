@@ -16,7 +16,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	instances_count = 0;
 
-	Render::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
+	Graphics::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
@@ -285,7 +285,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	auto begin = pipelines.begin();
 	auto end = begin;
-	//	auto view = meshes_ids->buffer->help_buffer->create_view<Render::FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*list.frame_resources);
+	//	auto view = meshes_ids->buffer->help_buffer->create_view<Graphics::FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*list.frame_resources);
 
 
 
@@ -386,18 +386,18 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 
 mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 {
-	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
-	mshader = Render::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
-	mshader_voxel = Render::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
+	shader = Graphics::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
+	mshader = Graphics::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
+	mshader_voxel = Graphics::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
 
-	ashader = Render::amplification_shader::get_resource({ "shaders/mesh_shader.hlsl", "AS", 0, {} });
-	ashader_voxel = Render::amplification_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "AS", 0, {} });
-	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
+	ashader = Graphics::amplification_shader::get_resource({ "shaders/mesh_shader.hlsl", "AS", 0, {} });
+	ashader_voxel = Graphics::amplification_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "AS", 0, {} });
+	voxel_geometry_shader = Graphics::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout));
+	indirect_command_signature = Graphics::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout));
 
 	UINT max_meshes = 1024 * 1024;
 
@@ -439,12 +439,12 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		verts[5] = vec4(1.0f, -1.0f, -1.0f,0);
 		verts[6] = vec4(1.0f, -1.0f, 1.0f,0);
 		verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
-		index_buffer.reset(new Render::IndexBuffer(data));
+		index_buffer.reset(new Graphics::IndexBuffer(data));
 
-		vertex_buffer.reset(new Render::StructureBuffer<vec4>(8));
+		vertex_buffer.reset(new Graphics::StructureBuffer<vec4>(8));
 		vertex_buffer->set_raw_data(verts);
 
-		draw_boxes_first = std::make_shared<Render::StructureBuffer<DrawIndexedArguments>>(1);
+		draw_boxes_first = std::make_shared<Graphics::StructureBuffer<DrawIndexedArguments>>(1);
 
 		DrawIndexedArguments args;
 
@@ -459,19 +459,19 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 
 		{
 
-			boxes_command = Render::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(Underlying<Table::CommandData>));
+			boxes_command = Graphics::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(Underlying<Table::CommandData>));
 
 		}
 	}
 
 
 	{
-		dispatch_buffer = std::make_shared<Render::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<Table::CommandData>));
+		dispatch_buffer = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<Table::CommandData>));
 	}
 
 	{
-		dispatch_buffer111 = std::make_shared<Render::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		dispatch_buffer111 = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 		DispatchArguments args;
 		args.ThreadGroupCountX = 1;
 		args.ThreadGroupCountY = 1;

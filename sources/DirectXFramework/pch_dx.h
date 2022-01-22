@@ -23,16 +23,3 @@ if (FAILED(hr)) \
 #endif //  DEBUG
 
 
-namespace DX12
-{
-	
-}
-namespace Render
-{
-	using namespace DX12;
-}
-
-
-
-
-

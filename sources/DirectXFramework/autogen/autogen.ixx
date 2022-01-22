@@ -1,7 +1,7 @@
 
 module;
 #include "pch_dx.h"
-#include "HAL/dx12_types.h"
+#include "Graphics/dx12_types.h"
 export module Autogen;
 
 import PipelineState;
@@ -173,19 +173,19 @@ export
 	#include "pso\DenoiserDownsample.h"
 	#include "rtx\MainRTX.h"
 	void init_signatures();
-	Render::RootLayout::ptr get_Signature(Layouts id);
+	Graphics::RootLayout::ptr get_Signature(Layouts id);
 	void init_pso(enum_array<PSO, PSOBase::ptr>&);
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	UINT get_slot_id(SlotID id);
 }
 module: private;
-static enum_array<Layouts, DX12::RootLayout::ptr> signatures;
+static enum_array<Layouts, Graphics::RootLayout::ptr> signatures;
 void init_signatures()
 {
 	signatures[Layouts::FrameLayout] = AutoGenSignatureDesc<FrameLayout>().create_signature(Layouts::FrameLayout);
 	signatures[Layouts::DefaultLayout] = AutoGenSignatureDesc<DefaultLayout>().create_signature(Layouts::DefaultLayout);
 }
-Render::RootLayout::ptr get_Signature(Layouts id)
+Graphics::RootLayout::ptr get_Signature(Layouts id)
 {
 	return signatures[id];
 }

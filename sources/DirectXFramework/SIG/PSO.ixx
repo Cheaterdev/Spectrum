@@ -1,6 +1,6 @@
 module;
 
-#include "HAL/dx12_types.h"
+#include "Graphics/dx12_types.h"
 #include "pch_dx.h"
 
 export module PSO;
@@ -228,7 +228,7 @@ struct SimpleComputePSO {
 
 	}
 
-	Render::ComputePipelineState::ptr create();
+	Graphics::ComputePipelineState::ptr create();
 };
 
 
@@ -244,7 +244,7 @@ struct  SimpleGraphicsPSO {
 
 
 	std::vector<DXGI_FORMAT> rtv_formats;
-	std::vector<Render::RenderTarget> blend;
+	std::vector<Graphics::RenderTarget> blend;
 	std::string name;
 
 	bool conservative;
@@ -275,7 +275,7 @@ struct  SimpleGraphicsPSO {
 		stencil_pass_op = D3D12_STENCIL_OP_REPLACE;
 	}
 
-	Render::PipelineState::ptr create();
+	Graphics::PipelineState::ptr create();
 };
 
 
@@ -396,18 +396,18 @@ typename T::PSOState::ptr GetPSO(KeyPair<typename T::Keys> k = KeyPair<typename 
 template<class T>
 struct AutoGenPSO
 {
-	Render::ComputePipelineStateDesc desc;
+	Graphics::ComputePipelineStateDesc desc;
 
 	AutoGenPSO()
 	{
 		desc.root_signature = get_Signature(T::layout);
-		desc.shader = Render::compute_shader::get_resource(T::compute);
+		desc.shader = Graphics::compute_shader::get_resource(T::compute);
 	}
 
 
-	Render::ComputePipelineState::ptr create_pso(PSO pso, std::string name)
+	Graphics::ComputePipelineState::ptr create_pso(PSO pso, std::string name)
 	{
-		return Render::ComputePipelineState::create(desc, name);
+		return Graphics::ComputePipelineState::create(desc, name);
 	}
 };
 

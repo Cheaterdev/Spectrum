@@ -11,7 +11,7 @@ class LightSystem;
 class SSGI;
 class SkyRender;
 class SceneRenderWorkflow;
-namespace Render
+namespace Graphics
 {
 	struct OVRContext;
 }
@@ -22,7 +22,7 @@ class AssetRenderer : public Singleton<AssetRenderer>
 
         friend class Singleton<AssetRenderer>;
         main_renderer::ptr scene_renderer;
-        Render::FrameResourceManager frames;
+        Graphics::FrameResourceManager frames;
 
         camera cam;
         mesh_renderer::ptr meshes_renderer;
@@ -38,11 +38,11 @@ class AssetRenderer : public Singleton<AssetRenderer>
         std::mutex lock;
 		std::shared_ptr<SSGI> ssgi;
 		std::shared_ptr<SkyRender> sky;
-		std::shared_ptr<Render::OVRContext> vr_context ;
+		std::shared_ptr<Graphics::OVRContext> vr_context ;
     public:
 
-        virtual void draw(Scene::ptr scene, Render::Texture::ptr result);
-        virtual void draw(MaterialAsset::ptr m, Render::Texture::ptr result);
-		virtual void draw(scene_object::ptr scene, Render::Texture::ptr result);
+        virtual void draw(Scene::ptr scene, Graphics::Texture::ptr result);
+        virtual void draw(MaterialAsset::ptr m, Graphics::Texture::ptr result);
+		virtual void draw(scene_object::ptr scene, Graphics::Texture::ptr result);
 
 };

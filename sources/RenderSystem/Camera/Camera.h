@@ -246,7 +246,7 @@ class camera : public Frustum
 		}
         camera()
         {
-            //  const_buffer.reset(new Render::Buffer<shader_params>());
+            //  const_buffer.reset(new Graphics::Buffer<shader_params>());
         }
 
     private:

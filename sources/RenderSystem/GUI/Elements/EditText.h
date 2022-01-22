@@ -9,7 +9,7 @@ namespace GUI
         {
 
                 float time;
-                virtual void draw(Render::context& c) override;
+                virtual void draw(Graphics::context& c) override;
 
             public:
 
@@ -51,14 +51,14 @@ namespace GUI
 
                 virtual void on_key_action(long key) override;
 
-                void draw(Render::context& c);
+                void draw(Graphics::context& c);
 
                 virtual void on_mouse_enter(vec2 pos) override;
 
                 virtual void on_mouse_leave(vec2 pos) override;
 
 
-                //virtual void draw(Render::context &c) override;
+                //virtual void draw(Graphics::context &c) override;
         };
 
 

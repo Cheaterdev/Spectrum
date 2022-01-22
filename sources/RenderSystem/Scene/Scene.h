@@ -45,7 +45,7 @@ public:
     using wptr = w_ptr<Scene>;
 
     virtual ~Scene();
-    Render::RaytracingAccelerationStructure::ptr raytrace_scene;
+    Graphics::RaytracingAccelerationStructure::ptr raytrace_scene;
     Scene();
 
     Events::Event<scene_object*> on_element_add;

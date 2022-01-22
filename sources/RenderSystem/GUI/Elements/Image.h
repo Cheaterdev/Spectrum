@@ -12,7 +12,7 @@ namespace GUI
                 using wptr = w_ptr<image>;
 
                 Texture texture;
-                virtual void draw(Render::context& c);
+                virtual void draw(Graphics::context& c);
                 image()
                 {
                     clickable = false;

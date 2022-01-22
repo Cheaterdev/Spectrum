@@ -4,7 +4,7 @@ import Application;
 
 import SwapChain;
 
-class Window : public DX12::hwnd_provider
+class Window : public Graphics::hwnd_provider
 {
     HWND hwnd;
 

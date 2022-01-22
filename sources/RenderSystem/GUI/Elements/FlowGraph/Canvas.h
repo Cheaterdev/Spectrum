@@ -22,7 +22,7 @@ namespace GUI
                     using wptr = w_ptr<link_item>;
 
                     /*
-                                        virtual void draw(Render::context& c) override;
+                                        virtual void draw(Graphics::context& c) override;
                     					*/
                     bool inserted = false;
                     float beam_time = 0;
@@ -36,7 +36,7 @@ namespace GUI
                         drag_listener = true;
                         set_package("link_item");
                         skin = Skin::get().DefaultOptionBox;
-                        //	texture= Render::Texture::get_resource(Render::texure_header("textures/gui/option_normal.png"));
+                        //	texture= Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/option_normal.png"));
                     }
 
                     virtual bool need_drag_drop() override;
@@ -166,7 +166,7 @@ namespace GUI
                     ::FlowGraph::graph* g;
 
 
-                    virtual void draw(Render::context& c) override;
+                    virtual void draw(Graphics::context& c) override;
 
                     using ptr = s_ptr<canvas>;
                     using wptr = w_ptr<canvas>;

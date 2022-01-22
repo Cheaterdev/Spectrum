@@ -245,7 +245,7 @@ namespace GUI
     };
     struct Texture
     {
-        Render::Texture::ptr texture;
+        Graphics::Texture::ptr texture;
         sizer margins;
         sizer padding;
         sizer tc;
@@ -253,7 +253,7 @@ namespace GUI
 
         float4 mul_color;
         float4 add_color;
-		Render::Handle srv;
+		Graphics::Handle srv;
         Texture()
         {
             margins = { 0, 0, 0, 0 };
@@ -263,17 +263,17 @@ namespace GUI
             add_color = { 0,0,0,0 };
         }
 
-        void operator=(const       Render::Texture::ptr& texture)
+        void operator=(const       Graphics::Texture::ptr& texture)
         {
             this->texture = texture;
         }
     };
 	struct RecursiveContext
 	{
-		Render::context& render_context;
+		Graphics::context& render_context;
 		SingleThreadExecutorBatched executor;
 		SingleThreadExecutorBatched pre_executor;
-		RecursiveContext(Render::context& c):render_context(c)
+		RecursiveContext(Graphics::context& c):render_context(c)
 		{
 	
 		}
@@ -283,11 +283,11 @@ namespace GUI
 			executor.flush();
 		}
 
-		void execute(std::function<void(Render::context&)> f)
+		void execute(std::function<void(Graphics::context&)> f)
 		{
-			//auto new_c = std::make_shared<Render::context>(render_context);
+			//auto new_c = std::make_shared<Graphics::context>(render_context);
 			executor.add(std::move([f, new_c = render_context]() {
-				f(const_cast<Render::context&>(new_c));
+				f(const_cast<Graphics::context&>(new_c));
 			}));
 
 		}
@@ -300,7 +300,7 @@ namespace GUI
 		}
 	};
     class drag_n_drop;
-    class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public Events::prop_handler //, public Render::renderable
+    class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public Events::prop_handler //, public Graphics::renderable
     {
             friend class tree_base;
             friend class user_interface;
@@ -338,8 +338,8 @@ namespace GUI
 
             virtual void draw_recursive(RecursiveContext&, base* = nullptr);
 
-            virtual void draw(Render::context&); // override;;
-            virtual void draw_after(Render::context&);;
+            virtual void draw(Graphics::context&); // override;;
+            virtual void draw_after(Graphics::context&);;
 
 
      
@@ -610,7 +610,7 @@ namespace GUI
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
             virtual void key_action_event(long key);
 
-         //   virtual void draw_ui(Render::context&);
+         //   virtual void draw_ui(Graphics::context&);
 
 			virtual void process_ui(float dt);
 			virtual void create_graph(FrameGraph::Graph& graph);

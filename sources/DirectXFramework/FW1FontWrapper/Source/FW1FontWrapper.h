@@ -333,7 +333,7 @@ public:
     /// FW1_NOGEOMETRYSHADER: don't bind the coord buffer as a shader-resource for the geometry shader, even if it's available.
     /// </param>
     virtual HRESULT STDMETHODCALLTYPE BindSheet(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in UINT Flags
     ) = 0;
 
@@ -365,7 +365,7 @@ public:
     /// <returns>No return value.</returns>
     /// <param name="pContext">The context to use when updating device resources.</param>
     virtual void STDMETHODCALLTYPE Flush(
-        __in  Render::CommandList::ptr& pContext
+        __in  Graphics::CommandList::ptr& pContext
     ) = 0;
 };
 
@@ -411,7 +411,7 @@ MIDL_INTERFACE("A31EB6A2-7458-4e24-82B3-945A95623B1F") IFW1GlyphAtlas : public I
     /// <param name="SheetIndex">The index of the sheet to bind.</param>
     /// <param name="Flags">Flags that specify whether to set the geometry shader coord buffer. See IFW1GlyphSheet::BindSheet.</param>
     virtual HRESULT STDMETHODCALLTYPE BindSheet(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in UINT SheetIndex,
         __in UINT Flags
     ) = 0;
@@ -445,7 +445,7 @@ MIDL_INTERFACE("A31EB6A2-7458-4e24-82B3-945A95623B1F") IFW1GlyphAtlas : public I
     /// <returns>No return value.</returns>
     /// <param name="pContext">The context to use when updating device resources.</param>
     virtual void STDMETHODCALLTYPE Flush(
-        __in Render::CommandList::ptr& pContext
+        __in Graphics::CommandList::ptr& pContext
     ) = 0;
 };
 
@@ -644,7 +644,7 @@ MIDL_INTERFACE("906928B6-79D8-4b42-8CE4-DC7D7046F206") IFW1GlyphRenderStates : p
     /// FW1_CLIPRECT - Shaders will be set up to clip any drawn glyphs to the clip-rect set in IFW1GlyphRenderStates::UpdateShaderConstants.
     /// </param>
     virtual void STDMETHODCALLTYPE SetStates(
-        __in  Render::CommandList::ptr&,
+        __in  Graphics::CommandList::ptr&,
         __in UINT Flags
     ) = 0;
 
@@ -655,7 +655,7 @@ MIDL_INTERFACE("906928B6-79D8-4b42-8CE4-DC7D7046F206") IFW1GlyphRenderStates : p
     /// <param name="pClipRect">A pointer to a rectangle to clip drawn glyphs to.</param>
     /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which all glyph vertices will be multiplied with, in the geometry or vertex shader.</param>
     virtual void STDMETHODCALLTYPE UpdateShaderConstants(
-        __in  Render::CommandList::ptr&,
+        __in  Graphics::CommandList::ptr&,
         __in const FW1_RECTF * pClipRect,
         __in const FLOAT* pTransformMatrix
     ) = 0;
@@ -689,7 +689,7 @@ MIDL_INTERFACE("E6CD7A32-5B59-463c-9B1B-D44074FF655B") IFW1GlyphVertexDrawer : p
     /// If no sheet is known to already be set, specify 0xFFFFFFFF, or another value greater than the number of sheets in the atlas.
     /// </param>
     virtual UINT STDMETHODCALLTYPE DrawVertices(
-        __in Render::CommandList::ptr & pContext,
+        __in Graphics::CommandList::ptr & pContext,
         __in IFW1GlyphAtlas * pGlyphAtlas,
         __in const FW1_VERTEXDATA * pVertexData,
         __in UINT Flags,
@@ -755,7 +755,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Color">The default color of the text, as 0xAaBbGgRr.</param>
     /// <param name="Flags">See FW1_TEXT_FLAG. The alignment and word-wrapping flags have no meaning when drawing a preconstructed text layout.</param>
     virtual void STDMETHODCALLTYPE DrawTextLayout(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in IDWriteTextLayout * pTextLayout,
         __in FLOAT OriginX,
         __in FLOAT OriginY,
@@ -776,7 +776,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which the text will be transformed by.</param>
     /// <param name="Flags">See FW1_TEXT_FLAG. The alignment and word-wrapping flags have no meaning when drawing a preconstructed text layout.</param>
     virtual void STDMETHODCALLTYPE DrawTextLayout(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in IDWriteTextLayout * pTextLayout,
         __in FLOAT OriginX,
         __in FLOAT OriginY,
@@ -797,7 +797,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Color">The color of the text, as 0xAaBbGgRr.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawString(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in const WCHAR * pszString,
         __in FLOAT FontSize,
         __in FLOAT X,
@@ -818,7 +818,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Color">The color of the text, as 0xAaBbGgRr.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawString(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in const WCHAR * pszString,
         __in const WCHAR * pszFontFamily,
         __in FLOAT FontSize,
@@ -841,7 +841,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which the text will be transformed by, or NULL to draw in screen-space.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawString(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in const WCHAR * pszString,
         __in const WCHAR * pszFontFamily,
         __in FLOAT FontSize,
@@ -881,7 +881,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     /// <param name="pTextGeometry">An IFW1TextGeometry object that the output vertices will be appended to.</param>
     virtual void STDMETHODCALLTYPE AnalyzeString(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in const WCHAR * pszString,
         __in const WCHAR * pszFontFamily,
         __in FLOAT FontSize,
@@ -904,7 +904,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="Flags">See FW1_TEXT_FLAG. The alignment and word-wrapping flags have no meaning when using a preconstructed text layout.</param>
     /// <param name="pTextGeometry">An IFW1TextGeometry object that the output vertices will be appended to.</param>
     virtual void STDMETHODCALLTYPE AnalyzeTextLayout(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in IDWriteTextLayout * pTextLayout,
         __in FLOAT OriginX,
         __in FLOAT OriginY,
@@ -922,7 +922,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <param name="pTransformMatrix">An array of 16 floats, representing a matrix which the text will be transformed by, or NULL to draw in screen-space.</param>
     /// <param name="Flags">See the FW1_TEXT_FLAG enumeration.</param>
     virtual void STDMETHODCALLTYPE DrawGeometry(
-        __in  Render::CommandList::ptr & pContext,
+        __in  Graphics::CommandList::ptr & pContext,
         __in IFW1TextGeometry * pGeometry,
         __in const FW1_RECTF * pClipRect,
         __in const FLOAT * pTransformMatrix,
@@ -935,7 +935,7 @@ MIDL_INTERFACE("83347A5C-B0B1-460e-A35C-427E8B85F9F4") IFW1FontWrapper : public 
     /// <returns>No return value.</returns>
     /// <param name="pContext">The device context to use to update device resources.</param>
     virtual void STDMETHODCALLTYPE Flush(
-        __in  Render::CommandList::ptr& pContext
+        __in  Graphics::CommandList::ptr& pContext
     ) = 0;
 };
 

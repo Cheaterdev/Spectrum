@@ -28,7 +28,7 @@ namespace FW1FontWrapper
 
 // Draw vertices
     UINT STDMETHODCALLTYPE CFW1GlyphVertexDrawer::DrawVertices(
-        Render::CommandList::ptr& pContext,
+        Graphics::CommandList::ptr& pContext,
         IFW1GlyphAtlas* pGlyphAtlas,
         const FW1_VERTEXDATA* pVertexData,
         UINT Flags,

@@ -9,7 +9,7 @@
 namespace FW1FontWrapper {
 
 
-// Render target that provides pixels of one glyph-image at a time
+// Graphics target that provides pixels of one glyph-image at a time
 class CFW1DWriteRenderTarget : public CFW1Object<IFW1DWriteRenderTarget> {
 	public:
 		// IUnknown

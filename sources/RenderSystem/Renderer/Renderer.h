@@ -12,7 +12,7 @@ class renderer
 
         using ptr = s_ptr<renderer>;
 
-        virtual  bool add_object(Render::renderable* obj) = 0;
+        virtual  bool add_object(Graphics::renderable* obj) = 0;
         virtual void render(MeshRenderContext::ptr c, Scene::ptr obj) = 0;;
 
 		virtual void iterate(MESH_TYPE mesh_type, std::function<void(scene_object::ptr&)> f)=0;
@@ -49,7 +49,7 @@ class main_renderer
                   //  bool node_inside = node->is_node_inside(*c->cam);
                   //    if (!node_inside)
                   //        return false;
-                  Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+                  Graphics::renderable* render_object = dynamic_cast<Graphics::renderable*>(node);
 
                   if (render_object && node->is_inside(*c->cam))
                   {
@@ -78,13 +78,13 @@ class main_renderer
 class mesh_renderer : public renderer, public Events::prop_handler, VariableContext
 {
       
-        Render::vertex_shader::ptr shader;
-        Render::geometry_shader::ptr voxel_geometry_shader;
-        Render::mesh_shader::ptr mshader;
-        Render::mesh_shader::ptr mshader_voxel;
+        Graphics::vertex_shader::ptr shader;
+        Graphics::geometry_shader::ptr voxel_geometry_shader;
+        Graphics::mesh_shader::ptr mshader;
+        Graphics::mesh_shader::ptr mshader_voxel;
 
-        Render::amplification_shader::ptr ashader;
-        Render::amplification_shader::ptr ashader_voxel;
+        Graphics::amplification_shader::ptr ashader;
+        Graphics::amplification_shader::ptr ashader_voxel;
 
         IndirectCommand indirect_command_signature;
 
@@ -94,7 +94,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		TextureAsset::ptr best_fit_normals;
 
         //    MeshRenderContext::ptr mesh_render_context;
-        virtual bool add_object(Render::renderable* obj) override
+        virtual bool add_object(Graphics::renderable* obj) override
         {
             auto instance = dynamic_cast<MeshAssetInstance*>(obj);
             //   if (instance)
@@ -123,15 +123,15 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		virtual_gpu_buffer<Table::CommandData>::ptr commands_buffer[8];
 
 
-		Render::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
-        Render::StructureBuffer<DispatchArguments>::ptr dispatch_buffer111;
+		Graphics::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
+        Graphics::StructureBuffer<DispatchArguments>::ptr dispatch_buffer111;
 
         IndirectCommand dispatch_command;
 
 	
-		Render::StructureBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
-		Render::StructureBuffer<vec4>::ptr vertex_buffer;
-		Render::IndexBuffer::ptr index_buffer;
+		Graphics::StructureBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
+		Graphics::StructureBuffer<vec4>::ptr vertex_buffer;
+		Graphics::IndexBuffer::ptr index_buffer;
 		virtual_gpu_buffer<UINT>::ptr visible_boxes;
 		virtual_gpu_buffer<UINT>::ptr meshes_ids;
 		virtual_gpu_buffer<UINT>::ptr meshes_invisible_ids;
@@ -155,7 +155,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		Variable<bool> use_gpu_culling = Variable<bool>(false, "use_gpu_culling", this);
 		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth", this);*/
 	
-       // Render::RootSignature::ptr my_signature;
+       // Graphics::RootSignature::ptr my_signature;
 
         using ptr = s_ptr<mesh_renderer>;
         mesh_renderer();

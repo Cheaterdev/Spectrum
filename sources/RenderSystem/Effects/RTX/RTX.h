@@ -17,17 +17,17 @@ public:
 
 
 	template<class T>
-	void render(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec2 size)
+	void render(ComputeContext& compute, Graphics::RaytracingAccelerationStructure::ptr scene_as, ivec2 size)
 	{
 		render<T>(compute, scene_as, ivec3{size,1});
 	}
 
 
 	template<class T>
-	void render(ComputeContext& compute, Render::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
+	void render(ComputeContext& compute, Graphics::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
 	{
 
-		if (!Render::Device::get().is_rtx_supported()) return;
+		if (!Graphics::Device::get().is_rtx_supported()) return;
 		
 		{
 			Slots::Raytracing rtx;

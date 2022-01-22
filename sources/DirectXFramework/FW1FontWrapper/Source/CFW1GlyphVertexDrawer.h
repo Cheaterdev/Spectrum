@@ -20,7 +20,7 @@ namespace FW1FontWrapper
 
 
             virtual UINT STDMETHODCALLTYPE DrawVertices(
-                Render::CommandList::ptr& pContext,
+                Graphics::CommandList::ptr& pContext,
                 IFW1GlyphAtlas* pGlyphAtlas,
                 const FW1_VERTEXDATA* pVertexData,
                 UINT Flags,
@@ -51,13 +51,13 @@ namespace FW1FontWrapper
             HRESULT createBuffers();
 
             UINT drawVertices(
-                Render::CommandList::ptr& pContext,
+                Graphics::CommandList::ptr& pContext,
                 IFW1GlyphAtlas* pGlyphAtlas,
                 const FW1_VERTEXDATA* vertexData,
                 UINT preboundSheet
             );
             UINT drawGlyphsAsQuads(
-                Render::CommandList::ptr& pContext,
+                Graphics::CommandList::ptr& pContext,
                 IFW1GlyphAtlas* pGlyphAtlas,
                 const FW1_VERTEXDATA* vertexData,
                 UINT preboundSheet
@@ -67,8 +67,8 @@ namespace FW1FontWrapper
         private:
             std::wstring					m_lastError;
 
-            //  Render::Buffer<FW1_GLYPHVERTEX>::ptr m_pVertexBuffer;
-            Render::IndexBuffer::ptr m_pIndexBuffer;
+            //  Graphics::Buffer<FW1_GLYPHVERTEX>::ptr m_pVertexBuffer;
+            Graphics::IndexBuffer::ptr m_pIndexBuffer;
 
             UINT							m_vertexBufferSize;
             UINT							m_maxIndexCount;

@@ -16,7 +16,7 @@ export
 {
 
 
-	namespace DX12
+	namespace Graphics
 	{
 		using Bindless = std::vector<Handle>;
 
@@ -80,6 +80,6 @@ export
 		}
 	};
 
-	using DefaultCB = DX12::Resource*;// std::vector<std::byte>;
+	using DefaultCB = Graphics::Resource*;// std::vector<std::byte>;
 	using DynamicData = std::vector<std::byte>;// std::vector<std::byte>;
 }

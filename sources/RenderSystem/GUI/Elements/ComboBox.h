@@ -55,7 +55,7 @@ namespace GUI
                     return elem;
                 }
 
-                virtual void draw(Render::context& c) override;
+                virtual void draw(Graphics::context& c) override;
 
         };
 

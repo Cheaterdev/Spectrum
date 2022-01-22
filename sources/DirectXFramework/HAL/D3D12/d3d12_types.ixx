@@ -13,34 +13,11 @@ export
 
 	bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
 	std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
-	namespace DX12
+	namespace Graphics
 	{
 
 
-		enum class HandleType : char
-		{
-			CBV,
-			RTV,
-			DSV,
-			SRV,
-			UAV,
-			SMP
-		};
 
-		enum class DescriptorHeapType : char
-		{
-			CBV_SRV_UAV = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-			SAMPLER = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-			RTV = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-			DSV = D3D12_DESCRIPTOR_HEAP_TYPE_DSV
-			, GENERATE_OPS
-		};
-		enum class DescriptorHeapFlags : char
-		{
-			NONE = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-			SHADER_VISIBLE = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE
-
-		};
 
 
 		enum class ResourceType : char
@@ -83,74 +60,6 @@ export
 				} Buffer;
 
 			};
-		};
-
-
-		struct input_layout_row
-		{
-			std::string SemanticName;
-			UINT SemanticIndex;
-			DXGI_FORMAT Format;
-			UINT InputSlot;
-			UINT AlignedByteOffset;
-			D3D12_INPUT_CLASSIFICATION InputSlotClass;
-			UINT InstanceDataStepRate;
-
-			D3D12_INPUT_ELEMENT_DESC create_native() const
-			{
-				D3D12_INPUT_ELEMENT_DESC res;
-
-				res.SemanticName = SemanticName.c_str();
-				res.SemanticIndex = SemanticIndex;
-				res.Format = Format;
-				res.InputSlot = InputSlot;
-				res.AlignedByteOffset = AlignedByteOffset;
-				res.InputSlotClass = InputSlotClass;
-				res.InstanceDataStepRate = InstanceDataStepRate;
-
-				return res;
-			}
-			bool operator==(const input_layout_row&) const = default;
-			auto   operator<=>(const  input_layout_row& r)  const = default;
-
-		private:
-			SERIALIZE()
-			{
-				ar& NVP(SemanticName);
-				ar& NVP(SemanticIndex);
-				ar& NVP(Format);
-				ar& NVP(InputSlot);
-				ar& NVP(AlignedByteOffset);
-				ar& NVP(InputSlotClass);
-				ar& NVP(InstanceDataStepRate);
-
-			}
-
-
-		};
-		struct input_layout_header
-		{
-			std::vector<input_layout_row> inputs;
-
-//#define INVOKE_ICE
-
-#ifdef INVOKE_ICE
-			bool operator==(const input_layout_header& r) const = default;
-#else
-			bool operator==(const input_layout_header& r) const
-			{
-				return inputs == r.inputs;
-			}
-#endif
-
-			auto   operator<=>(const  input_layout_header& r)  const = default;
-		private:
-			SERIALIZE()
-			{
-				ar& NVP(inputs);
-
-			}
-
 		};
 
 
@@ -273,23 +182,20 @@ module:private;
 
 bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
 {
-	E(StencilDepthFailOp)
-		E(StencilFailOp)
-		E(StencilFunc)
-		E(StencilPassOp)
+	E(StencilDepthFailOp);
+	E(StencilFailOp);
+	E(StencilFunc);
+	E(StencilPassOp);
 
-
-		return true;
+	return true;
 }
-
 
 std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
 {
-	C(StencilDepthFailOp)
-		C(StencilFailOp)
-		C(StencilFunc)
-		C(StencilPassOp)
+	C(StencilDepthFailOp);
+	C(StencilFailOp);
+	C(StencilFunc);
+	C(StencilPassOp);
 
-
-		return std::strong_ordering::equal;
+	return std::strong_ordering::equal;
 }

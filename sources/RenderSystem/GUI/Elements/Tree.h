@@ -21,7 +21,7 @@ namespace GUI
         class toogle_icon : public GUI::Elements::image
         {
           //      GUI::Elements::tree_element* owner;
-				Render::Texture::ptr tex_closed, tex_opened;
+				Graphics::Texture::ptr tex_closed, tex_opened;
             public:
 
                 using ptr = s_ptr<toogle_icon>;
@@ -41,7 +41,7 @@ namespace GUI
     	protected:
             bool dropping = false;
 
-            void draw(Render::context& c, bool selected);
+            void draw(Graphics::context& c, bool selected);
     	};
     	template<class TreeNode>
         class line : public line_base
@@ -52,7 +52,7 @@ namespace GUI
                 GUI::Elements::tree_element<TreeNode>* owner;
 
            
-                void draw(Render::context& c)
+                void draw(Graphics::context& c)
                 {
                     line_base::draw(c, owner->selected);
                 }
@@ -133,7 +133,7 @@ namespace GUI
                 toogle_icon::ptr	open_icon(new toogle_icon());
 
                 open_icon->on_toogle = [tree]() {tree->toogle();};
-                //  open_icon->texture = Render::Texture::null;
+                //  open_icon->texture = Graphics::Texture::null;
               //    open_icon->size = { 16, 16 }; // size_type::MATCH_PARENT;
                 open_icon->docking = dock::LEFT;
 
@@ -216,8 +216,8 @@ namespace GUI
 
                 virtual void on_empty()
                 {
-                    //      open_icon->texture = Render::Texture::null;
-                    //      icon->texture = Render::Texture::null;
+                    //      open_icon->texture = Graphics::Texture::null;
+                    //      icon->texture = Graphics::Texture::null;
                 }
 
 
@@ -298,7 +298,7 @@ namespace GUI
 
 
 
-                void  draw(Render::context& c)
+                void  draw(Graphics::context& c)
                 {
               ///      renderer->draw_container(get_ptr(), c);
 

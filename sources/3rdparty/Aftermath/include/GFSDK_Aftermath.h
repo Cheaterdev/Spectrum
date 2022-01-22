@@ -19,7 +19,7 @@
 *  ████████████████████████████████████████████████████████ ██ █ ██ ████████████
 *
 *
-*  HOW TO USE AFTERMATH for DX11 and DX12
+*  HOW TO USE AFTERMATH for DX11 and Graphics
 *  --------------------------------------
 *
 *  Call 'GFSDK_Aftermath_DXxx_Initialize', to initialize the library and to enable
@@ -187,7 +187,7 @@ typedef struct GFSDK_Aftermath_ContextData
 // Minimal description of a graphics resource.
 typedef struct GFSDK_Aftermath_ResourceDescriptor
 {
-    // This is available in DX12 only and only if the application registers the
+    // This is available in Graphics only and only if the application registers the
     // resource pointers using GFSDK_Aftermath_DX12_RegisterResource().
 #ifdef __d3d12_h__
     GFSDK_AFTERMATH_DECLARE_POINTER_MEMBER(ID3D12Resource*, pAppResource);
@@ -230,7 +230,7 @@ typedef struct GFSDK_Aftermath_PageFaultInformation
 // [pDx11Device]; DX11-Only
 //      the current dx11 device pointer.
 //
-// [pDx12Device]; DX12-Only
+// [pDx12Device]; Graphics-Only
 //      the current dx12 device pointer.
 //
 // flags;
@@ -262,7 +262,7 @@ GFSDK_Aftermath_API GFSDK_Aftermath_DX12_Initialize(GFSDK_Aftermath_Version vers
 // (pDx11DeviceContext); DX11-Only
 //      Device context to use with Aftermath.
 //
-// (pDx12Unknown); DX12-Only
+// (pDx12Unknown); Graphics-Only
 //      Command list, Command Queue, or Device to use with Aftermath
 //      If a device, must be the same device given to GFSDK_Aftermath_DX12_Initialize()
 //
@@ -343,7 +343,7 @@ GFSDK_Aftermath_API GFSDK_Aftermath_SetEventMarker(const GFSDK_Aftermath_Context
 // pOutContextData;
 //      OUTPUT: context data for each context requested. Contains event
 //              last reached on the GPU, and status of context if
-//              applicable (DX12-Only).
+//              applicable (Graphics-Only).
 //      NOTE: must allocate enough space for 'numContexts' worth of structures.
 //            stack allocation is fine.
 //

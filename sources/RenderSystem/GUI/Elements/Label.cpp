@@ -9,7 +9,7 @@ namespace GUI
 	{
 
 
-		void label::draw(Render::context& c)
+		void label::draw(Graphics::context& c)
 		{
 		//	return;
 			recalculate(c);		
@@ -62,7 +62,7 @@ namespace GUI
 		{
 			on_text_changed(text.get());
 		}
-		void label::recalculate(Render::context& c)
+		void label::recalculate(Graphics::context& c)
 		{
 			if (!need_recalculate && ((w == ivec2(render_bounds->size / scaled) || (magnet_text & FW1_NOWORDWRAP))))
 			{
@@ -86,7 +86,7 @@ namespace GUI
 			w = vec2(render_bounds->size);
 			wptr _THIS = get_ptr<label>();
 
-			Render::Texture::ptr new_preview = cache.texture;
+			Graphics::Texture::ptr new_preview = cache.texture;
 			lay2.right = std::ceil(lay2.right);
 			lay2.bottom = std::ceil(lay2.bottom);
 
@@ -95,7 +95,7 @@ namespace GUI
 
 			if(!isnan(lay2.right))
 				if (!cache.texture || cache.texture->get_desc().Width < lay2.right || cache.texture->get_desc().Height < lay2.bottom)
-				cache.texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)lay2.right, (UINT)lay2.bottom, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+				cache.texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)lay2.right, (UINT)lay2.bottom, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 
 			auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
 
@@ -110,7 +110,7 @@ namespace GUI
 				auto rtv = cache.texture->texture_2d()->get_rtv();
 				command_list->get_graphics().set_rtv(1, rtv, Handle());
 
-				Render::Viewport vps;
+				Graphics::Viewport vps;
 				vps.Width = static_cast<float>(cache.texture->get_desc().Width);
 				vps.Height = static_cast<float>(cache.texture->get_desc().Height);
 				vps.TopLeftX = 0;

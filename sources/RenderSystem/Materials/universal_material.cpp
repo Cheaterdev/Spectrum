@@ -240,7 +240,7 @@ void materials::universal_material::generate_material()
 	auto raytracing_str = context->hit_shader.uniforms+ include_file_raytacing->get_data() + context->hit_shader.text;
 
 
-	raytracing_lib = Render::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true });
+	raytracing_lib = Graphics::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true });
 	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context);
 	ps_uniforms = context->uniforms_ps;
 
@@ -290,7 +290,7 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 
 void materials::universal_material::update_rtx()
 {
-	if (!Render::Device::get().is_rtx_supported()) return;
+	if (!Graphics::Device::get().is_rtx_supported()) return;
 	RTX::get().rtx.update_material(this);
 
 

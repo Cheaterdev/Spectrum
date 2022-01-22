@@ -4,7 +4,7 @@
 #include "GUI/Elements/Window.h"
 #include "GUI/Renderer/Renderer.h"
 
-void GUI::Elements::dock_base::draw_after(Render::context& c)
+void GUI::Elements::dock_base::draw_after(Graphics::context& c)
 {
 	if (virt->visible.get() && virt_base->get_parent())
 		renderer->draw_virtual(virt, c);

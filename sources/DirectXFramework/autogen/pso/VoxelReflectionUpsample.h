@@ -21,7 +21,7 @@ namespace PSOS
 			mpso.pixel.flags = 0;
 			
 			mpso.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
-			mpso.blend = { Render::Blend::Additive };
+			mpso.blend = { Graphics::Blend::Additive };
 			mpso.enable_stencil  = true;
 			mpso.enable_depth  = false;
 			mpso.stencil_func  = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;

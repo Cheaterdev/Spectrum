@@ -24,7 +24,7 @@ namespace GUI
 
                 AssetStorage::ptr asset;
 
-                void draw(Render::context& c);
+                void draw(Graphics::context& c);
 
                 virtual bool need_drag_drop() override;
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
@@ -40,7 +40,7 @@ namespace GUI
                 status_bar::ptr stat_bar;
                 container::ptr table;
                 folder_item* current_folder = nullptr;
-				void draw(Render::context& c);
+				void draw(Graphics::context& c);
 
             public:
                 using ptr = s_ptr<asset_explorer>;

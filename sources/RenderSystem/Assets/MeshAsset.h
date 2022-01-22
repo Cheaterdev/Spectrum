@@ -186,7 +186,7 @@ class MeshAsset : public Asset
         virtual void try_register();
 
         virtual Asset_Type get_type();
-        virtual void update_preview(Render::Texture::ptr preview);
+        virtual void update_preview(Graphics::Texture::ptr preview);
         virtual AssetStorage::ptr  register_new(std::wstring name = L"", Guid g = Guid());
         virtual void reload_resource() override { }
 
@@ -220,7 +220,7 @@ class MeshAsset : public Asset
 
 };
 
-class MeshAssetInstance : public scene_object, public AssetHolder, public Render::renderable
+class MeshAssetInstance : public scene_object, public AssetHolder, public Graphics::renderable
 {
         friend class mesh_renderer;
 		friend class gpu_mesh_renderer;

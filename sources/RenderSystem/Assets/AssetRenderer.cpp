@@ -30,7 +30,7 @@ public:
 		
 		{
 
-			CommandList::ptr command_list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			CommandList::ptr command_list = Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 
 			command_list->begin("pre");
 			{
@@ -161,7 +161,7 @@ public:
 
 
 
-void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
+void AssetRenderer::draw(Scene::ptr scene, Graphics::Texture::ptr result)
 {
 
 	
@@ -171,7 +171,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	graph.start_new_frame();
 	if (!vr_context)
 	{
-		vr_context = std::make_shared<Render::OVRContext>();
+		vr_context = std::make_shared<Graphics::OVRContext>();
 	}
 	
 
@@ -214,7 +214,7 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	mesh_plane->remove_from_parent();
 }
 
-void AssetRenderer::draw(MaterialAsset::ptr mat, Render::Texture::ptr result)
+void AssetRenderer::draw(MaterialAsset::ptr mat, Graphics::Texture::ptr result)
 {
 	std::lock_guard<std::mutex> g(lock);
 
@@ -225,7 +225,7 @@ void AssetRenderer::draw(MaterialAsset::ptr mat, Render::Texture::ptr result)
 	material_tester->remove_from_parent();
 }
 
-void AssetRenderer::draw(scene_object::ptr obj, Render::Texture::ptr result)
+void AssetRenderer::draw(scene_object::ptr obj, Graphics::Texture::ptr result)
 {
 	std::lock_guard<std::mutex> g(lock);
 

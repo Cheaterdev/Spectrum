@@ -34,7 +34,7 @@ namespace GUI
 
                 virtual bool on_drop(drag_n_drop_package::ptr, vec2) override;
 
-                virtual void draw_after(Render::context& c) override;
+                virtual void draw_after(Graphics::context& c) override;
 
 
                 dock get_docking(vec2 p);

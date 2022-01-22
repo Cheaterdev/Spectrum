@@ -8,6 +8,8 @@
 
 using namespace FrameGraph;
 
+import Graphics.Types;
+
 class GBufferDownsampler :public Events::prop_handler
 {
 
@@ -51,11 +53,11 @@ public:
 				{
 
 
-					auto table = graphics.get_base().get_cpu_heap(Render::DescriptorHeapType::RTV).place(2);
+					auto table = graphics.get_base().get_cpu_heap(Graphics::DescriptorHeapType::RTV).place(2);
 
 					{
-						Render::ResourceViewDesc subres;
-						subres.type = Render::ResourceType::TEXTURE2D;
+						Graphics::ResourceViewDesc subres;
+						subres.type = Graphics::ResourceType::TEXTURE2D;
 
 						subres.Texture2D.ArraySize = 1;
 						subres.Texture2D.FirstArraySlice = 0;
@@ -63,8 +65,8 @@ public:
 						subres.Texture2D.MipSlice = i;
 						subres.Texture2D.PlaneSlice = 0;
 
-						auto depth_view = gbuffer.depth_mips.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
-						auto normal_view = gbuffer.normals.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+						auto depth_view = gbuffer.depth_mips.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
+						auto normal_view = gbuffer.normals.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
 
 						table[0].place(depth_view.renderTarget);
 						table[1].place(normal_view.renderTarget);
@@ -77,7 +79,7 @@ public:
 
 					}
 
-					graphics.set_rtv(table, Render::Handle());
+					graphics.set_rtv(table, Graphics::Handle());
 
 					Slots::GBufferDownsample downsample;
 
@@ -85,15 +87,15 @@ public:
 
 					{
 						ResourceViewDesc subres;
-						subres.type = Render::ResourceType::TEXTURE2D;
+						subres.type = Graphics::ResourceType::TEXTURE2D;
 
 						subres.Texture2D.ArraySize = 1;
 						subres.Texture2D.FirstArraySlice = 0;
 						subres.Texture2D.MipLevels = 1;
 						subres.Texture2D.MipSlice = i - 1;
 						subres.Texture2D.PlaneSlice = 0;
-						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
-						downsample.GetNormals() = gbuffer.normals.resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
+						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
+						downsample.GetNormals() = gbuffer.normals.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
 					}
 					downsample.set(graphics);
 					graphics.draw(4);
@@ -125,7 +127,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 
 	{
-		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<DispatchArguments>));
+		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<DispatchArguments>));
 	}
 
 	{
@@ -199,7 +201,7 @@ void VoxelGI::init_states()
 
 }
 
-void VoxelGI::start_new(Render::CommandList& list)
+void VoxelGI::start_new(Graphics::CommandList& list)
 {
 
 
@@ -327,7 +329,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	voxelization.GetInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
 	voxelization.GetInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
 
-	voxelization.GetVisibility() = visibility->buffer->create_view<Render::TextureView>(*list.frame_resources).rwTexture3D;
+	voxelization.GetVisibility() = visibility->buffer->create_view<Graphics::TextureView>(*list.frame_resources).rwTexture3D;
 
 
 	if (all_scene_regen_counter)
@@ -356,7 +358,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 	graphics.set_viewport({ 0, 0,  albedo.tex_dynamic->get_size().xy });
 	graphics.set_scissor({ 0, 0,  albedo.tex_dynamic->get_size().xy });
-	graphics.set_rtv(0, Render::Handle(), Render::Handle());
+	graphics.set_rtv(0, Graphics::Handle(), Graphics::Handle());
 
 
 	{
@@ -428,7 +430,7 @@ void VoxelGI::debug(Graph& graph)
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
 
-			graphics.set_rtv(1, target_tex.renderTarget, Render::Handle());
+			graphics.set_rtv(1, target_tex.renderTarget, Graphics::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::VoxelDebug>());
 
 			graph.set_slot(SlotID::VoxelInfo, graphics);
@@ -480,8 +482,8 @@ void VoxelGI::screen(Graph& graph)
 	/*
 	if (!hi || hi->get_count() < count)
 	{
-		hi = std::make_shared<Render::StructureBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		low = std::make_shared<Render::StructureBuffer<uint2>>(count, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		hi = std::make_shared<Graphics::StructureBuffer<uint2>>(count, Graphics::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		low = std::make_shared<Graphics::StructureBuffer<uint2>>(count, Graphics::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 
 	}*/
 
@@ -510,7 +512,7 @@ void VoxelGI::screen(Graph& graph)
 
 			auto& command_list = _context.get_list();
 
-			bool use_rtx = Render::Device::get().is_rtx_supported() && this->use_rtx;
+			bool use_rtx = Graphics::Device::get().is_rtx_supported() && this->use_rtx;
 			auto gbuffer = data.gbuffer.actualize(_context);
 			auto sky_cubemap_filtered =*data.sky_cubemap_filtered;
 			auto noisy_output = *data.VoxelIndirectNoise;
@@ -637,8 +639,8 @@ void VoxelGI::screen(Graph& graph)
 				compute.set_pipeline(GetPSO<PSOS::DenoiserHistoryFix>());
 				{
 					Slots::DenoiserHistoryFix denoiser_history;
-					Render::ResourceViewDesc subres;
-					subres.type = Render::ResourceType::TEXTURE2D;
+					Graphics::ResourceViewDesc subres;
+					subres.type = Graphics::ResourceType::TEXTURE2D;
 
 					subres.Texture2D.ArraySize = 1;
 					subres.Texture2D.FirstArraySlice = 0;
@@ -835,7 +837,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 			auto dir_and_pdf = *(data.noise_dir_pdf);
 			//	auto gi_filtered = *(data.gi_filtered);
 
-			//	Render::TextureView downsampled_reflection = *(data.downsampled_reflection);
+			//	Graphics::TextureView downsampled_reflection = *(data.downsampled_reflection);
 
 
 
@@ -914,7 +916,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 		});
 
-		if(Render::Device::get().is_rtx_supported() && this->use_rtx)
+		if(Graphics::Device::get().is_rtx_supported() && this->use_rtx)
 	graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
@@ -1128,8 +1130,8 @@ void VoxelGI::lighting(Graph& graph)
 				ligthing.GetNormals() = normal.tex_result->texture_3d()->texture3D;
 				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d()->rwTexture3D[0];
 				ligthing.GetTex_cube() = sky_cubemap_filtered.texture—ube;
-				Render::ResourceViewDesc subres;
-				subres.type = Render::ResourceType::TEXTURE3D;
+				Graphics::ResourceViewDesc subres;
+				subres.type = Graphics::ResourceType::TEXTURE3D;
 
 				subres.Texture2D.ArraySize = 1;
 				subres.Texture2D.FirstArraySlice = 0;

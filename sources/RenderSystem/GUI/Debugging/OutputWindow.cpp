@@ -39,7 +39,7 @@ namespace GUI
                 scroll_container::think(dt);
                 //});
             }
-            void OutputWindow::draw(Render::context& c)
+            void OutputWindow::draw(Graphics::context& c)
             {
                 renderer->draw_area(get_ptr(), c);
             }

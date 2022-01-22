@@ -5,33 +5,33 @@ namespace GUI
 {
 
 
-    void Renderer::draw_area(base::ptr obj, Render::context& c)
+    void Renderer::draw_area(base::ptr obj, Graphics::context& c)
     {
         draw(c, area_tex, obj->get_render_bounds());
     }
 
-    void Renderer::draw_container(base::ptr obj, Render::context& c)
+    void Renderer::draw_container(base::ptr obj, Graphics::context& c)
     {
         draw(c, container_tex, obj->get_render_bounds());
     }
 
 
-    void Renderer::draw_virtual(base::ptr obj, Render::context& c)
+    void Renderer::draw_virtual(base::ptr obj, Graphics::context& c)
     {
         draw(c, virtual_tex, obj->get_render_bounds());
     }
 
 
-    void Renderer::draw_color(Render::context& c, float4 color, rect r)
+    void Renderer::draw_color(Graphics::context& c, float4 color, rect r)
     {
 		flush(c);
         simple_rect->draw(c, color, r);
     }
 
-    void Renderer::set(Render::context& c)
+    void Renderer::set(Graphics::context& c)
     {
     }
-	void Renderer::flush(Render::context& c)
+	void Renderer::flush(Graphics::context& c)
 	{
 		nine_patch->flush(c);
 	}
@@ -40,20 +40,20 @@ namespace GUI
      
         nine_patch.reset(new NinePatch());
         simple_rect.reset(new SimpleRect());
-        area_tex.texture = Render::Texture::get_resource({ "textures/gui/edit.png", false, false });
-        virtual_tex.texture = Render::Texture::get_resource({ "textures/gui/virtual.png", false , false });
-        container_tex.texture = Render::Texture::get_resource({ "textures/gui/background.png", false, false });
+        area_tex.texture = Graphics::Texture::get_resource({ "textures/gui/edit.png", false, false });
+        virtual_tex.texture = Graphics::Texture::get_resource({ "textures/gui/virtual.png", false , false });
+        container_tex.texture = Graphics::Texture::get_resource({ "textures/gui/background.png", false, false });
         area_tex.padding = { 5, 5, 5, 5 };
         virtual_tex.padding = { 5, 5, 5, 5 };
 		container_tex.padding = {2,2,2,2};
     }
 
-    void Renderer::draw(Render::context& c, Render::PipelineState::ptr state, rect r)
+    void Renderer::draw(Graphics::context& c, Graphics::PipelineState::ptr state, rect r)
     {
         nine_patch->draw(c, state, r);
     }
 
-    void Renderer::draw(Render::context& c, GUI::Texture& item, rect r)
+    void Renderer::draw(Graphics::context& c, GUI::Texture& item, rect r)
     {
         nine_patch->draw(c, item, r);
     }
@@ -62,7 +62,7 @@ namespace GUI
     {
     }
 
-    void SimpleRect::draw(Render::context& c, float4 color, rect r)
+    void SimpleRect::draw(Graphics::context& c, float4 color, rect r)
 	{
 		Slots::ColorRect color_data;
 

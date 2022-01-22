@@ -6,8 +6,8 @@ void GPUTilesBuffer::set_size(ivec3 size, ivec3 shape)
 	this->shape = shape;
 
 	tile_positions.resize(size, -1);
-	buffer.reset(new Render::StructureBuffer<ivec3>(size.x * size.y * size.z));
-	dispatch_buffer = std::make_shared<Render::StructureBuffer<DispatchArguments>>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	buffer.reset(new Graphics::StructureBuffer<ivec3>(size.x * size.y * size.z));
+	dispatch_buffer = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, Graphics::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
 
 void GPUTilesBuffer::clear()
@@ -46,7 +46,7 @@ void GPUTilesBuffer::erase(ivec3 pos)
 	}
 }
 
-void GPUTilesBuffer::update(Render::CommandList::ptr list)
+void GPUTilesBuffer::update(Graphics::CommandList::ptr list)
 {
 	if (tiles_updated) {
 		buffer->set_data(list, 0, used_tiles);

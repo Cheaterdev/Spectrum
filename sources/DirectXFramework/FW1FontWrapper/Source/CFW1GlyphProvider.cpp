@@ -258,7 +258,7 @@ namespace FW1FontWrapper
     }
 
 
-// Render and insert new glyph into a glyph-map
+// Graphics and insert new glyph into a glyph-map
     UINT CFW1GlyphProvider::insertNewGlyph(GlyphMap* glyphMap, UINT16 glyphIndex, IDWriteFontFace* pFontFace)
     {
         UINT glyphAtlasId = 0xffffffff;

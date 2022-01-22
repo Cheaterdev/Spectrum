@@ -36,7 +36,7 @@ GUI::Elements::edit_text::edit_text()
 	add_child(label_cursor);
 	padding = { 5, 5, 5, 5 };
 }
-void GUI::Elements::edit_text::draw(Render::context& c)
+void GUI::Elements::edit_text::draw(Graphics::context& c)
 {
 	process_keys();
 	label_text->recalculate(c);
@@ -106,7 +106,7 @@ void GUI::Elements::edit_text::process_keys()
 	label_text->text = text;
 	keys.clear();
 }
-void GUI::Elements::edit_cursor::draw(Render::context& c)
+void GUI::Elements::edit_cursor::draw(Graphics::context& c)
 {
 	if (!test_local_visible())
 		return;

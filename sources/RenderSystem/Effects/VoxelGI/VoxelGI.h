@@ -15,11 +15,11 @@ class Texture3DMultiTiles
 	update_tiling_info tilings_info;
 public:
 
-	Render::Texture::ptr tex_dynamic;
-	Render::Texture::ptr tex_static;
+	Graphics::Texture::ptr tex_dynamic;
+	Graphics::Texture::ptr tex_static;
 
 
-	Render::Texture::ptr tex_result;
+	Graphics::Texture::ptr tex_result;
 
 
 	void flush(CommandList& list)
@@ -31,10 +31,10 @@ public:
 
 	void set(CD3DX12_RESOURCE_DESC desc)
 	{
-		tex_dynamic.reset(new Render::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
-		tex_static.reset(new Render::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
+		tex_dynamic.reset(new Graphics::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
+		tex_static.reset(new Graphics::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
-		tex_result.reset(new Render::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
+		tex_result.reset(new Graphics::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
 
 		tex_dynamic->on_load = [this](ivec4 pos) {
@@ -101,7 +101,7 @@ class Texture3DRefTiles
 	grid<ivec3, bool> dynamic_tiles;
 
 public:
-	Render::Texture::ptr tex_result;
+	Graphics::Texture::ptr tex_result;
 
 
 	void flush(CommandList& list)
@@ -113,7 +113,7 @@ public:
 
 	void set(CD3DX12_RESOURCE_DESC desc)
 	{
-		tex_result.reset(new Render::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
+		tex_result.reset(new Graphics::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
 		static_tiles.resize(tex_result->get_tiles_count(), 0);
 		dynamic_tiles.resize(tex_result->get_tiles_count(), 0);
@@ -227,8 +227,8 @@ private:
 	
 	struct EyeData:public prop_handler
 	{
-		Render::Texture::ptr downsampled_reflection;
-		Render::Texture::ptr current_gi_texture;
+		Graphics::Texture::ptr downsampled_reflection;
+		Graphics::Texture::ptr current_gi_texture;
 
 		Events::prop<ivec2> size;
 		EyeData();
@@ -239,8 +239,8 @@ private:
 	bool recreate_static = false;
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
-//	Render::StructureBuffer<uint2>::ptr hi;
-//	Render::StructureBuffer<uint2>::ptr low;
+//	Graphics::StructureBuffer<uint2>::ptr hi;
+//	Graphics::StructureBuffer<uint2>::ptr low;
 
 	ivec3 lighed_to_albedo_coeff;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;
@@ -264,7 +264,7 @@ public:
 
 	
 	void resize(ivec2 size);
-	void start_new(Render::CommandList& list);
+	void start_new(Graphics::CommandList& list);
 
 	VoxelGI(Scene::ptr& scene);
 	void voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph& graph);

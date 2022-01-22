@@ -8,9 +8,9 @@ using namespace FrameGraph;
 
 SkyRender::SkyRender()
 {
-	transmittance = Render::Texture::get_resource({ "textures\\Transmit.dds", false, false });
-	irradiance = Render::Texture::get_resource({ "textures\\irradianceTexture.dds", false, false });
-	inscatter = Render::Texture::get_resource({ "textures\\inscatterTexture.dds", false, false });
+	transmittance = Graphics::Texture::get_resource({ "textures\\Transmit.dds", false, false });
+	irradiance = Graphics::Texture::get_resource({ "textures\\irradianceTexture.dds", false, false });
+	inscatter = Graphics::Texture::get_resource({ "textures\\inscatterTexture.dds", false, false });
 }
 
 
@@ -37,7 +37,7 @@ void SkyRender::generate_sky(Graph& graph)
 			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			graphics.set_viewport(data.ResultTexture->get_viewport());
 			graphics.set_scissor(data.ResultTexture->get_scissor());
-			graphics.set_rtv(1, data.ResultTexture->renderTarget, Render::Handle());
+			graphics.set_rtv(1, data.ResultTexture->renderTarget, Graphics::Handle());
 
 			{
 				Slots::SkyData skydata;
@@ -119,8 +119,8 @@ void SkyRender::generate(Graph& graph)
 
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Render::ResourceViewDesc subres;
-					subres.type = Render::ResourceType::TEXTURE2D;
+					Graphics::ResourceViewDesc subres;
+					subres.type = Graphics::ResourceType::TEXTURE2D;
 
 					subres.Texture2D.ArraySize = 1;
 					subres.Texture2D.FirstArraySlice = i;
@@ -128,7 +128,7 @@ void SkyRender::generate(Graph& graph)
 					subres.Texture2D.MipSlice = 0;
 					subres.Texture2D.PlaneSlice = 0;
 
-					auto face = data.sky_cubemap->resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+					auto face = data.sky_cubemap->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
 
 
 					Slots::SkyFace skyFace;
@@ -137,7 +137,7 @@ void SkyRender::generate(Graph& graph)
 
 					skyFace.set(graphics);
 
-					graphics.set_rtv(1, face.renderTarget, Render::Handle());
+					graphics.set_rtv(1, face.renderTarget, Graphics::Handle());
 
 					graphics.draw(4);
 				}
@@ -216,8 +216,8 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 				graphics.set_pipeline(GetPSO<PSOS::CubemapENV>(PSOS::CubemapENV::Level(std::min(m, 4u))));
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Render::ResourceViewDesc subres;
-					subres.type = Render::ResourceType::TEXTURE2D;
+					Graphics::ResourceViewDesc subres;
+					subres.type = Graphics::ResourceType::TEXTURE2D;
 
 					subres.Texture2D.ArraySize = 1;
 					subres.Texture2D.FirstArraySlice = i;
@@ -225,13 +225,13 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 					subres.Texture2D.MipSlice = m;
 					subres.Texture2D.PlaneSlice = 0;
 
-					auto face = data.sky_cubemap_filtered->resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+					auto face = data.sky_cubemap_filtered->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
 
 					if (i == 0) {
 						graphics.set_viewport(face.get_viewport());
 						graphics.set_scissor(face.get_scissor());
 					}
-					graphics.set_rtv(1, face.renderTarget, Render::Handle());
+					graphics.set_rtv(1, face.renderTarget, Graphics::Handle());
 
 					Slots::EnvFilter filter;
 					filter.GetFace().x = i;
@@ -250,8 +250,8 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 			for (unsigned int i = 0; i < 6; i++)
 			{
-				Render::ResourceViewDesc subres;
-				subres.type = Render::ResourceType::TEXTURE2D;
+				Graphics::ResourceViewDesc subres;
+				subres.type = Graphics::ResourceType::TEXTURE2D;
 
 				subres.Texture2D.ArraySize = 1;
 				subres.Texture2D.FirstArraySlice = i;
@@ -259,13 +259,13 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 				subres.Texture2D.MipSlice = 0;
 				subres.Texture2D.PlaneSlice = 0;
 
-				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<Render::TextureView>(*graphics.get_base().frame_resources, subres);
+				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
 
 				if (i == 0) {
 					graphics.set_viewport(face.get_viewport());
 					graphics.set_scissor(face.get_scissor());
 				}
-				graphics.set_rtv(1, face.renderTarget, Render::Handle());
+				graphics.set_rtv(1, face.renderTarget, Graphics::Handle());
 
 				Slots::EnvFilter filter;
 				filter.GetFace().x = i;

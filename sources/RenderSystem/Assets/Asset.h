@@ -273,7 +273,7 @@ public:
 
 		//  void set_name(std::string name);
 
-		virtual void update_preview(Render::Texture::ptr);
+		virtual void update_preview(Graphics::Texture::ptr);
 	
 
 		using ptr = s_ptr<Asset>;
@@ -349,7 +349,7 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 
 		struct Editor
 		{
-				Render::Texture::ptr preview;
+				Graphics::Texture::ptr preview;
 			private:
 				SERIALIZE()
 				{
@@ -397,7 +397,7 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 
 		bool contents_changed = false;
 	public:
-		Events::Event<const Render::Texture::ptr&> on_preview;
+		Events::Event<const Graphics::Texture::ptr&> on_preview;
 		using ptr = s_ptr<AssetStorage>;
 		AssetStorage(Asset::ptr _asset);
 
@@ -410,7 +410,7 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 	{
 		return header->references;
 	}
-		const Render::Texture::ptr& get_preview();
+		const Graphics::Texture::ptr& get_preview();
 
 		virtual void update_preview();
 

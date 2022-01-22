@@ -78,7 +78,7 @@ void PSSM::generate(Graph& graph)
 
 
 			std::vector<sizer_long> scissor;
-			std::vector<Render::Viewport> viewport;
+			std::vector<Graphics::Viewport> viewport;
 			camera light_cam;
 
 			light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
@@ -196,7 +196,7 @@ void PSSM::generate(Graph& graph)
 
 
 				std::vector<sizer_long> scissor;
-				std::vector<Render::Viewport> viewport;
+				std::vector<Graphics::Viewport> viewport;
 				camera light_cam;
 
 				light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
@@ -319,7 +319,7 @@ void PSSM::generate(Graph& graph)
 			graphics.set_viewport(data.LightMask->get_viewport());
 			graphics.set_scissor(data.LightMask->get_scissor());
 
-			graphics.set_rtv(1, data.LightMask->renderTarget, Render::Handle());
+			graphics.set_rtv(1, data.LightMask->renderTarget, Graphics::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::PSSMMask>());
 
 
@@ -411,7 +411,7 @@ void PSSM::generate(Graph& graph)
 				lighting.set(graphics);
 			}
 
-			graphics.set_rtv(1, data.ResultTexture->renderTarget, Render::Handle());
+			graphics.set_rtv(1, data.ResultTexture->renderTarget, Graphics::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::PSSMApply>());
 
 			graphics.draw(4);

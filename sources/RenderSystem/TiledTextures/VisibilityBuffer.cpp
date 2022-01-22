@@ -8,10 +8,10 @@ VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {
 	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8_UINT, sizes.x, sizes.y, sizes.z, 1, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
 
-	buffer = std::make_shared<Render::Texture>(desc);
+	buffer = std::make_shared<Graphics::Texture>(desc);
 	buffer->set_name("VisibilityBuffer::buffer");
 
-	load_tiles_buffer = std::make_shared<Render::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	load_tiles_buffer = std::make_shared<Graphics::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, Graphics::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
 }
 /*
 void VisibilityBuffer::wait_for_results()
@@ -22,7 +22,7 @@ void VisibilityBuffer::wait_for_results()
 */
 
 
-std::future<visibility_update> VisibilityBuffer::update(Render::CommandList::ptr& list)
+std::future<visibility_update> VisibilityBuffer::update(Graphics::CommandList::ptr& list)
 {
 
 
@@ -41,7 +41,7 @@ std::future<visibility_update> VisibilityBuffer::update(Render::CommandList::ptr
 	{
 		Slots::VoxelVisibility data;
 
-		data.GetVisibility()= buffer->create_view<Render::TextureView>(*list->frame_resources).texture3D;
+		data.GetVisibility()= buffer->create_view<Graphics::TextureView>(*list->frame_resources).texture3D;
 		data.GetVisible_tiles() = load_tiles_buffer->appendStructuredBuffer;
 		data.set(compute);
 	}

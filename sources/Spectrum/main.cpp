@@ -43,11 +43,13 @@ import PSO;
 import Utils;
 using namespace FrameGraph;
 
+import d3d12_types;
+
 HRESULT device_fail()
 {
-	auto hr = DX12::Device::get().get_native_device()->GetDeviceRemovedReason();
+	auto hr = Graphics::Device::get().get_native_device()->GetDeviceRemovedReason();
 
-	DX12::Device::get().DumpDRED();
+	Graphics::Device::get().DumpDRED();
 	Log::get().crash_error(hr);
 	return hr;
 }
@@ -132,7 +134,7 @@ class triangle_drawer : public GUI::Elements::image, public GraphGenerator, Vari
 
 
 
-		EyeData(Render::RootSignature::ptr sig)
+		EyeData(Graphics::RootSignature::ptr sig)
 		{
 
 		}
@@ -160,7 +162,7 @@ public:
 	//	gpu_cached_renderer::ptr gpu_meshes_renderer_dynamic;
 
 	Scene::ptr scene;
-	Render::QueryHeap::ptr query_heap;
+	Graphics::QueryHeap::ptr query_heap;
 	float draw_time;
 	MeshAssetInstance::ptr instance;
 
@@ -179,7 +181,7 @@ public:
 		texture.mul_color = { 1,1,1,0 };
 		texture.add_color = { 0,0,0,1 };
 
-	//	texture.srv = Render::StaticDescriptors::get().place(1);
+	//	texture.srv = Graphics::StaticDescriptors::get().place(1);
 
 	
 
@@ -190,7 +192,7 @@ public:
 		scene.reset(new Scene());
 		scene->name = L"Scene";
 
-		query_heap = std::make_shared<  Render::QueryHeap>(2, D3D12_QUERY_HEAP_TYPE::D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS);
+		query_heap = std::make_shared<  Graphics::QueryHeap>(2, D3D12_QUERY_HEAP_TYPE::D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS);
 		scene_renderer = std::make_shared<main_renderer>();
 		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
 
@@ -205,7 +207,7 @@ public:
 		//cam.position = vec3(0, 5, -30);
 
 		cam.position = vec3(0, 0, 0);
-		Render::PipelineStateCache::create();
+		Graphics::PipelineStateCache::create();
 		stenciler.reset(new stencil_renderer());
 		stenciler->player_cam = &cam;
 		stenciler->scene = scene;
@@ -240,7 +242,7 @@ public:
 				for (auto& e : last_graph->builder.alloc_resources)
 				{
 
-					if (e.second.type != ::ResourceType::Texture) continue;
+					if (e.second.type != FrameGraph::ResourceType::Texture) continue;
 
 					std::string str = e.first;
 					combo->add_item(str)->on_click = [this, str](GUI::Elements::menu_list_element::ptr) {debug_view = str; };
@@ -395,12 +397,12 @@ public:
 
 
 
-	void draw_eye(Render::CommandList::ptr _list, float dt, EyeData& data, Render::Texture::ptr target)
+	void draw_eye(Graphics::CommandList::ptr _list, float dt, EyeData& data, Graphics::Texture::ptr target)
 	{
 
 	}
 
-	void update_texture(Render::CommandList::ptr list, float dt, const std::shared_ptr<OVRContext>& vr)
+	void update_texture(Graphics::CommandList::ptr list, float dt, const std::shared_ptr<OVRContext>& vr)
 	{
 
 
@@ -454,12 +456,12 @@ public:
 
 		{
 
-			CommandList::ptr command_list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			CommandList::ptr command_list = Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 
 			command_list->begin("pre");
 			{
 				SceneFrameManager::get().prepare(command_list, *scene);
-				if (Render::Device::get().is_rtx_supported())
+				if (Graphics::Device::get().is_rtx_supported())
 				{
 					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), false);
 					RTX::get().prepare(command_list);
@@ -581,7 +583,7 @@ public:
 				Handlers::Texture H(RTXDebugPrev);
 			};
 			
-			if(Render::Device::get().is_rtx_supported())
+			if(Graphics::Device::get().is_rtx_supported())
 			graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
@@ -699,7 +701,7 @@ public:
 		if(builder.exists(debug_tex))
 		builder.need(debug_tex, ResourceFlags::PixelRead);
 	}
-	virtual void draw(Render::context& t) override
+	virtual void draw(Graphics::context& t) override
 	{
 		if(debug_tex) texture.srv = debug_tex->texture2D;
 		image::draw(t);
@@ -736,7 +738,7 @@ class PassNode : public::FlowGraph::Node , public  GUI::Elements::FlowGraph::Vis
 	GUI::base::ptr create_editor_window() override
 	{
 		GUI::Elements::image::ptr img(new GUI::Elements::image);
-		img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+		img->texture.texture = Graphics::Texture::get_resource({ "textures/gui/shadow.png", false, false });
 		img->texture.padding = { 9, 9, 9, 9 };
 		img->padding = { 9, 9, 9, 9 };
 		img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -747,7 +749,7 @@ class PassNode : public::FlowGraph::Node , public  GUI::Elements::FlowGraph::Vis
 
 class GraphRender : public Window, public GUI::user_interface
 {
-	Render::SwapChain::ptr swap_chain;
+	Graphics::SwapChain::ptr swap_chain;
 
 	tick_timer main_timer;
 	ivec2 new_size;
@@ -786,22 +788,22 @@ public:
 
 			if (GetAsyncKeyState('R'))
 			{
-				Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
-				Render::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
-				Render::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
+				Graphics::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+				Graphics::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
+				Graphics::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
-				Render::pixel_shader::reload_all();
-				Render::vertex_shader::reload_all();
-				Render::geometry_shader::reload_all();
-				Render::hull_shader::reload_all();
-				Render::domain_shader::reload_all();
-				Render::compute_shader::reload_all();
-				Render::library_shader::reload_all();
-				Render::mesh_shader::reload_all();
-				Render::amplification_shader::reload_all();
+				Graphics::pixel_shader::reload_all();
+				Graphics::vertex_shader::reload_all();
+				Graphics::geometry_shader::reload_all();
+				Graphics::hull_shader::reload_all();
+				Graphics::domain_shader::reload_all();
+				Graphics::compute_shader::reload_all();
+				Graphics::library_shader::reload_all();
+				Graphics::mesh_shader::reload_all();
+				Graphics::amplification_shader::reload_all();
 
-				Render::Texture::reload_all();
+				Graphics::Texture::reload_all();
 			}
 
 			Profiler::get().on_frame(frame_counter++);
@@ -822,7 +824,7 @@ public:
 				size_t total_gpu = 0;		
 
 
-				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Render::Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
+				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Graphics::Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}
 
 
@@ -845,7 +847,7 @@ public:
 
 				graph.reset();
 			}
-			swap_chain->present(Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal());
+			swap_chain->present(Graphics::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal());
 		}
 
 	
@@ -898,7 +900,7 @@ public:
 
 					context.get_list()->transition_present(data.swapchain->resource.get());
 
-					Render::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
+					Graphics::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
 						run_on_ui([this, ptr]() {	Profiler::get().update(); });
 
 						});
@@ -1009,12 +1011,12 @@ resource_stages[&res.second] = input;
 	GraphRender()
 	{
 		Window::input_handler = this;
-		DX12::swap_chain_desc desc;
+		Graphics::swap_chain_desc desc;
 		desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;
-		swap_chain = Render::Device::get().create_swap_chain(desc);
+		swap_chain = Graphics::Device::get().create_swap_chain(desc);
 
 		set_capture = [this](bool v)
 		{
@@ -1031,7 +1033,7 @@ resource_stages[&res.second] = input;
 		
 		{
 			GUI::Elements::image::ptr back(new GUI::Elements::image);
-			back->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/back_fill.png", false, false));
+			back->texture = Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/back_fill.png", false, false));
 			back->texture.tiled = true;
 			back->width_size = GUI::size_type::MATCH_PARENT;
 			back->height_size = GUI::size_type::MATCH_PARENT;
@@ -1236,7 +1238,7 @@ protected:
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 
 		EVENT("Device");
-		Render::Device::create();
+		Graphics::Device::create();
 
 		EVENT("PSO");
 		init_signatures();
@@ -1248,8 +1250,8 @@ protected:
 		AssetManager::create();
 		EVENT("WindowRender");
 
-	//	auto ps = Render::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
-	//	auto cs = Render::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
+	//	auto ps = Graphics::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
+	//	auto cs = Graphics::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
 
 #ifdef OCULUS_SUPPORT
 		//ovr = std::make_shared<OVRRender>();
@@ -1284,32 +1286,32 @@ protected:
 
 
 	//	
-		//   Render::Device::get().get_queue(HAL::CommandListType::DIRECT)->stop_all();
-		Render::Device::get().stop_all();
+		//   Graphics::Device::get().get_queue(HAL::CommandListType::DIRECT)->stop_all();
+		Graphics::Device::get().stop_all();
 		Skin::reset();
-		Render::Texture::reset_manager();
-		Render::pixel_shader::reset_manager();
-		Render::vertex_shader::reset_manager();
-		Render::domain_shader::reset_manager();
-		Render::hull_shader::reset_manager();
-		Render::geometry_shader::reset_manager();
-		Render::compute_shader::reset_manager();
+		Graphics::Texture::reset_manager();
+		Graphics::pixel_shader::reset_manager();
+		Graphics::vertex_shader::reset_manager();
+		Graphics::domain_shader::reset_manager();
+		Graphics::hull_shader::reset_manager();
+		Graphics::geometry_shader::reset_manager();
+		Graphics::compute_shader::reset_manager();
 		GUI::Elements::FlowGraph::manager::reset();
 		Profiler::reset();
-		Render::GPUTimeManager::reset();
+		Graphics::GPUTimeManager::reset();
 		///    main_window2 = nullptr;
 		Fonts::FontSystem::reset();
 		RTX::reset();
 		AssetRenderer::reset();
-		//Render::BufferCache::reset();
+		//Graphics::BufferCache::reset();
 		TextureAssetRenderer::reset();
 		AssetManager::reset();
 
 
-		Render::PipelineLibrary::reset();
+		Graphics::PipelineLibrary::reset();
 
-		Render::Device::reset();
-		//   Render::Device::reset();
+		Graphics::Device::reset();
+		//   Graphics::Device::reset();
 
 
 
@@ -1341,7 +1343,7 @@ void SetupDebug()
 	// Here we can disable some of notification types
 	ClassLogger<resource_system>::get().set_logging_level(Log::LEVEL_ERROR);
 	ClassLogger<Resource>::get().set_logging_level(Log::LEVEL_ERROR);
-	ClassLogger<Render::Resource>::get().set_logging_level(Log::LEVEL_ERROR);
+	ClassLogger<Graphics::Resource>::get().set_logging_level(Log::LEVEL_ERROR);
 	Log::get() << Log::LEVEL_INFO << "info text" << Log::endl;
 	Log::get() << Log::LEVEL_WARNING << "warning text" << Log::endl;
 	Log::get() << Log::LEVEL_DEBUG << "debug text" << Log::endl;

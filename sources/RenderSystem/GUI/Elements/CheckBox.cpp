@@ -7,7 +7,7 @@ namespace GUI
 	namespace Elements
 	{
 
-		void check_box::draw(Render::context& c)
+		void check_box::draw(Graphics::context& c)
 		{
 			if (is_checked())
 				renderer->draw(c, skin.Checked, get_render_bounds());

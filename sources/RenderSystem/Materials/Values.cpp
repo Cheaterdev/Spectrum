@@ -789,7 +789,7 @@ using namespace Elements;
 GUI::base::ptr TextureNode::create_editor_window()
 {
 	GUI::Elements::image::ptr img(new GUI::Elements::image);
-	img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+	img->texture.texture = Graphics::Texture::get_resource({ "textures/gui/shadow.png", false, false });
 	img->texture.padding = { 9, 9, 9, 9 };
 	img->padding = { 9, 9, 9, 9 };
 	img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -799,13 +799,11 @@ GUI::base::ptr TextureNode::create_editor_window()
 	GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
 	//img_inner->texture.texture = asset->get_texture();
 
-	//img_inner->texture.srv = Render::StaticDescriptors::get().place(1);
+	//img_inner->texture.srv = Graphics::StaticDescriptors::get().place(1);
 
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();
-//	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
 	img_inner->texture.srv = asset->get_texture()->texture_2d()->get_static_srv();
-	//img_inner->docking = GUI::dock::FILL;
 	img_inner->size = { 64, 64 };
 	img->add_child(img_inner);
 

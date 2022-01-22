@@ -42,9 +42,9 @@ namespace GUI
 			{
 
 			//	if (!debug_texture)
-			//		debug_texture.reset(new Render::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Render::ResourceState::PIXEL_SHADER_RESOURCE));
+			//		debug_texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Graphics::ResourceState::PIXEL_SHADER_RESOURCE));
 				GUI::Elements::image::ptr img(new GUI::Elements::image);
-				img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+				img->texture.texture = Graphics::Texture::get_resource({ "textures/gui/shadow.png", false, false });
 				img->texture.padding = { 9, 9, 9, 9 };
 				img->padding = { 9, 9, 9, 9 };
 				img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -224,7 +224,7 @@ namespace GUI
         }
 
 
-        void GUI::Elements::asset_item::draw(Render::context& c)
+        void GUI::Elements::asset_item::draw(Graphics::context& c)
         {
 			if (is_hovered())
 				back_im->texture = hover;
@@ -267,7 +267,7 @@ namespace GUI
 			img->add_child(name);
             set_package("asset");
             auto i = im;
-            asset->on_preview.register_handler(this, [i](Render::Texture::ptr preview)
+            asset->on_preview.register_handler(this, [i](Graphics::Texture::ptr preview)
             {
                 i->texture = preview;
             });
@@ -532,7 +532,7 @@ namespace GUI
         }
 
 
-		void GUI::Elements::asset_explorer::draw(Render::context& c)
+		void GUI::Elements::asset_explorer::draw(Graphics::context& c)
 		{
 		//	renderer->draw_container(get_ptr(), c);
 		}

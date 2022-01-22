@@ -111,10 +111,10 @@ namespace FrameGraph
 		current_pass = nullptr;
 	}
 
-	void TaskBuilder::pass_texture(std::string name, Render::Texture::ptr tex, ResourceFlags flags)
+	void TaskBuilder::pass_texture(std::string name, Graphics::Texture::ptr tex, ResourceFlags flags)
 	{
 		Handlers::Texture h(name);
-		//pass_texture(name, tex->create_view<Render::TextureView>(*current_frame), flags);
+		//pass_texture(name, tex->create_view<Graphics::TextureView>(*current_frame), flags);
 		create(h, { ivec3(0,0,0), DXGI_FORMAT::DXGI_FORMAT_UNKNOWN, 0 }, flags);
 		auto& info = *h.info;
 		info.passed = true;
@@ -155,7 +155,7 @@ namespace FrameGraph
 	}
 	*/
 
-	Render::CommandList::ptr& FrameContext::get_list()
+	Graphics::CommandList::ptr& FrameContext::get_list()
 	{
 
 		if (!list)
@@ -193,7 +193,7 @@ namespace FrameGraph
 		return list;
 	}
 
-	void FrameContext::begin(Pass* pass, Render::FrameResources::ptr& frame) {
+	void FrameContext::begin(Pass* pass, Graphics::FrameResources::ptr& frame) {
 
 		this->pass = pass;
 		this->frame = frame;
@@ -642,7 +642,7 @@ namespace FrameGraph
 					{
 
 
-						Render::SubResourcesGPU merged_state;
+						Graphics::SubResourcesGPU merged_state;
 
 						merged_state.subres.resize(resource->get_subres_count());
 
@@ -796,7 +796,7 @@ namespace FrameGraph
 							}
 							else
 							{
-								pass->fence_end = Render::Device::get().get_queue(pass->get_type())->get_last_fence();
+								pass->fence_end = Graphics::Device::get().get_queue(pass->get_type())->get_last_fence();
 							}
 						}
 
@@ -810,7 +810,7 @@ namespace FrameGraph
 							}
 							else
 							{
-								pass->fence_end = Render::Device::get().get_queue(pass->get_type())->get_last_fence();
+								pass->fence_end = Graphics::Device::get().get_queue(pass->get_type())->get_last_fence();
 							}
 
 						}
@@ -831,7 +831,7 @@ namespace FrameGraph
 							if (call_ids[list_type][type] < pass->wait_pass->call_id + 1)
 							{
 								flush();
-								Render::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
+								Graphics::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
 
 								call_ids[list_type][type] = pass->wait_pass->call_id + 1;
 							}
@@ -993,7 +993,7 @@ namespace FrameGraph
 				info->d3ddesc = CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, mip_count, 1, 0, flags);
 				info->placed = true;
 
-				Render::Device::get().get_alloc_info(info->d3ddesc);
+				Graphics::Device::get().get_alloc_info(info->d3ddesc);
 			}
 
 			if (info->type == ResourceType::Buffer)
@@ -1017,7 +1017,7 @@ namespace FrameGraph
 			/*
 					if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
-						auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
+						auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
 						auto alloc_ptr = current_alloc->alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
 						info->need_recreate = info->alloc_ptr != alloc_ptr;
@@ -1026,7 +1026,7 @@ namespace FrameGraph
 			if (check(info->flags & ResourceFlags::Static)) continue;
 			if (info->heap_type != HAL::HeapType::DEFAULT)
 			{
-				//	auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
+				//	auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
 				//	auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
 				//	info->need_recreate = info->alloc_ptr != alloc_ptr;
@@ -1061,7 +1061,7 @@ namespace FrameGraph
 				for (auto info : e.create)
 				{
 
-					auto creation_info = Render::Device::get().get_alloc_info(info->d3ddesc);
+					auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
 					auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
 					info->need_recreate = info->alloc_ptr != alloc_ptr;
@@ -1094,10 +1094,10 @@ namespace FrameGraph
 
 
 					//	res = nullptr;
-							//Render::Resource::ptr res;
+							//Graphics::Resource::ptr res;
 					if (!res || res->get_desc() != info->d3ddesc)
 					{
-						res = std::make_shared<Render::Resource>(info->d3ddesc, info->alloc_ptr);
+						res = std::make_shared<Graphics::Resource>(info->d3ddesc, info->alloc_ptr);
 						res->set_name(info->name);
 					}
 
@@ -1105,7 +1105,7 @@ namespace FrameGraph
 					{
 						info->is_new = true;
 					}
-					info->resource = res;// std::make_shared<Render::Resource>(info->d3ddesc, info->alloc_ptr);
+					info->resource = res;// std::make_shared<Graphics::Resource>(info->d3ddesc, info->alloc_ptr);
 
 		//			assert(res->tmp_handle == info->alloc_ptr);
 				}
@@ -1113,15 +1113,15 @@ namespace FrameGraph
 				{
 					if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
-						info->resource = std::make_shared<Render::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
 					}
 					else if (info->heap_type == HAL::HeapType::READBACK)
 					{
-						info->resource = std::make_shared<Render::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
 					}
 					else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
-						info->resource = std::make_shared<Render::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}
 

@@ -8,24 +8,24 @@ namespace GUI
     {
         using Vertex = Table::vertex_input;
 
-			Render::HandleTable sampler_table;
+			Graphics::HandleTable sampler_table;
 
-           Render::IndexBuffer::ptr index_buffer;
+           Graphics::IndexBuffer::ptr index_buffer;
 		   std::vector<Vertex> vertexes;
 
 		   std::vector<HLSL::Texture2D<float4>> textures_handles;
-		   std::vector<Render::Handle> samplers_handles;
+		   std::vector<Graphics::Handle> samplers_handles;
 
 		   std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
-		   Render::PipelineState::ptr current_state;
+		   Graphics::PipelineState::ptr current_state;
         public:
             int counter = 0;
             using ptr = s_ptr<NinePatch>;
             NinePatch();
-            void draw(Render::context& c, Render::PipelineState::ptr pipeline_state, rect r);
-            void draw(Render::context& c, GUI::Texture& item, rect r);
-            void draw(Render::context& c, GUI::Texture& item, rect r, Render::PipelineState::ptr pipeline_state);
-			void flush(Render::context& c);
+            void draw(Graphics::context& c, Graphics::PipelineState::ptr pipeline_state, rect r);
+            void draw(Graphics::context& c, GUI::Texture& item, rect r);
+            void draw(Graphics::context& c, GUI::Texture& item, rect r, Graphics::PipelineState::ptr pipeline_state);
+			void flush(Graphics::context& c);
     };
 
     class SimpleRect
@@ -43,13 +43,13 @@ namespace GUI
 
 
 
-            void draw(Render::context& c, float4 color, rect r);
+            void draw(Graphics::context& c, float4 color, rect r);
     };
 
     class Renderer 
     {
        
-          //  Render::HandleTable sampler_table;
+          //  Graphics::HandleTable sampler_table;
 
             NinePatch::ptr nine_patch;
             SimpleRect::ptr simple_rect;
@@ -61,27 +61,27 @@ namespace GUI
 
         public:
 
-       //     Render::RootSignature::ptr root_signature;
+       //     Graphics::RootSignature::ptr root_signature;
 
             using ptr = s_ptr<Renderer>;
             using wptr = w_ptr<Renderer>;
 
 
-            void draw_area(base::ptr obj, Render::context& c);
-            void draw_container(base::ptr obj, Render::context& c);
-            void draw_virtual(base::ptr obj, Render::context& c);
-            void draw_color(Render::context& c, float4 color, rect r);
-			void flush(Render::context& c);
+            void draw_area(base::ptr obj, Graphics::context& c);
+            void draw_container(base::ptr obj, Graphics::context& c);
+            void draw_virtual(base::ptr obj, Graphics::context& c);
+            void draw_color(Graphics::context& c, float4 color, rect r);
+			void flush(Graphics::context& c);
 
-            void draw(Render::context& c, GUI::Texture& item, rect r);
-            void draw(Render::context& c, Render::PipelineState::ptr state, rect r);
+            void draw(Graphics::context& c, GUI::Texture& item, rect r);
+            void draw(Graphics::context& c, Graphics::PipelineState::ptr state, rect r);
             Renderer();
 
             void start()
             {
                 nine_patch->counter = 0;
             }
-            void set(Render::context& c);
+            void set(Graphics::context& c);
     };
 }
 

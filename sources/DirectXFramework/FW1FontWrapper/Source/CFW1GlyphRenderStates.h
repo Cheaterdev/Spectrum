@@ -8,7 +8,7 @@
 
 namespace FW1FontWrapper
 {
-	using namespace Render;
+	using namespace Graphics;
 
     // Shader etc. needed to draw glyphs
     class CFW1GlyphRenderStates : public CFW1Object<IFW1GlyphRenderStates>
@@ -17,9 +17,9 @@ namespace FW1FontWrapper
             // IUnknown
             virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
 
-            virtual void STDMETHODCALLTYPE SetStates(Render::CommandList::ptr& list, UINT Flags);
+            virtual void STDMETHODCALLTYPE SetStates(Graphics::CommandList::ptr& list, UINT Flags);
             virtual void STDMETHODCALLTYPE UpdateShaderConstants(
-                Render::CommandList::ptr& list,
+                Graphics::CommandList::ptr& list,
                 const FW1_RECTF* pClipRect,
                 const FLOAT* pTransformMatrix
             );

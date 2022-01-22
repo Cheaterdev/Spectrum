@@ -2,7 +2,7 @@
 #include "StatusBar.h"
 #include "GUI/Renderer/Renderer.h"
 
-void GUI::Elements::status_bar::draw(Render::context& c)
+void GUI::Elements::status_bar::draw(Graphics::context& c)
 {
     renderer->draw(c, skin.Normal, get_render_bounds());
 }

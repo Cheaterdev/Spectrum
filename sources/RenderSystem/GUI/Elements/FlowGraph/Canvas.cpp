@@ -9,7 +9,7 @@
 #include "GUI/Renderer/Renderer.h"
 
 
-void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
+void GUI::Elements::FlowGraph::canvas::draw(Graphics::context& c)
 {
     g->cam_pos = contents->pos;
 	renderer->flush(c);
@@ -56,7 +56,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Render::context& c)
 		auto data = c.command_list->place_data(sizeof(Table::VSLine) * vertexes.size(), sizeof(Table::VSLine));
 		c.command_list->write<Table::VSLine>(data, vertexes);
 
-		auto view = data.resource->create_view<StructuredBufferView<Table::VSLine>>(*c.command_list->frame_resources, Render::BufferType::NONE, (UINT)data.offset, (UINT)data.size);
+		auto view = data.resource->create_view<StructuredBufferView<Table::VSLine>>(*c.command_list->frame_resources, Graphics::BufferType::NONE, (UINT)data.offset, (UINT)data.size);
         {
             Slots::LineRender linedata;
             linedata.GetVb() = view.structuredBuffer;
@@ -605,34 +605,34 @@ void GUI::Elements::FlowGraph::canvas::init(::FlowGraph::graph* g)
 /*
 GUI::Elements::FlowGraph::canvas::renderer::renderer(GUI::Renderer* renderer)
 {
-    Render::PipelineStateDesc state_desc;
+    Graphics::PipelineStateDesc state_desc;
     state_desc.root_signature = renderer->root_signature;
-    state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "PS", 0, {} });
-    state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "VS", 0, {} });
-    state.reset(new Render::PipelineState(state_desc));
+    state_desc.pixel = Graphics::pixel_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "PS", 0, {} });
+    state_desc.vertex = Graphics::vertex_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "VS", 0, {} });
+    state.reset(new Graphics::PipelineState(state_desc));
     {
-        Render::PipelineStateDesc state_desc;
+        Graphics::PipelineStateDesc state_desc;
         state_desc.root_signature = renderer->root_signature;
-        state_desc.pixel = Render::pixel_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "PS", 0, {} });
-        state_desc.vertex = Render::vertex_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "VS", 0, {} });
-        state_desc.geometry = Render::geometry_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "GS", 0, {} });
-        state_desc.domain = Render::domain_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "DS", 0, {} });
-        state_desc.hull = Render::hull_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "HS", 0, {} });
+        state_desc.pixel = Graphics::pixel_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "PS", 0, {} });
+        state_desc.vertex = Graphics::vertex_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "VS", 0, {} });
+        state_desc.geometry = Graphics::geometry_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "GS", 0, {} });
+        state_desc.domain = Graphics::domain_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "DS", 0, {} });
+        state_desc.hull = Graphics::hull_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "HS", 0, {} });
         state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
         state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
         state_desc.layout.inputs.push_back({ "COLOR", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
         //   state_desc.layout.inputs.emplace_back({ "SV_POSITION", 0, 0, 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
         //   state_desc.layout.inputs.emplace_back({ "COLOR", 0, sizeof(vec2), 0, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
-        line_state.reset(new Render::PipelineState(state_desc));
-        inv_pixel.reset(new Render::ConstBuffer<vec2>());
-        line_vertex.reset(new Render::Buffer<line_vertexes>(HAL::HeapType::DEFAULT, 512));
-        gs_table = Render::DescriptorHeapManager::get().get_csu()->create_table(1);
+        line_state.reset(new Graphics::PipelineState(state_desc));
+        inv_pixel.reset(new Graphics::ConstBuffer<vec2>());
+        line_vertex.reset(new Graphics::Buffer<line_vertexes>(HAL::HeapType::DEFAULT, 512));
+        gs_table = Graphics::DescriptorHeapManager::get().get_csu()->create_table(1);
         inv_pixel->place(gs_table[0]);
     }
 
 }
 
-void GUI::Elements::FlowGraph::canvas::renderer::render(Object* obj, Data* data, Render::context& c)
+void GUI::Elements::FlowGraph::canvas::renderer::render(Object* obj, Data* data, Graphics::context& c)
 {
     auto cb_vertex = data->cb_vertex;
     auto cb_pixel = data->cb_pixel;
@@ -683,7 +683,7 @@ void GUI::Elements::FlowGraph::canvas::renderer::render(Object* obj, Data* data,
     }
 }*/
 /*
-void GUI::Elements::FlowGraph::link_item::draw(Render::context& c)
+void GUI::Elements::FlowGraph::link_item::draw(Graphics::context& c)
 {
 //   renderer->draw(this, c);
 }*/

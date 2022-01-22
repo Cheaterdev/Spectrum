@@ -45,7 +45,7 @@ struct SelectLocal<T>
 	CACHE_ALIGN(64)
 		struct raygen_type
 	{
-		Render::shader_identifier id;
+		Graphics::shader_identifier id;
 	};
 
 	template < typename... >
@@ -64,9 +64,9 @@ struct SelectLocal<T>
 		static const UINT MaxPayloadSizeInBytes = static_cast<UINT>(Templates::max(sizeof(Underlying<typename Passes::Payload>)...));
 		static const UINT MaxAttributeSizeInBytes = sizeof(float2);
 
-		Render::StateObject::ptr m_dxrStateObject;
-		Render::RootSignature::ptr m_root_sig = get_Signature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
-		Render::RootSignature::ptr m_local_sig = create_local_signature<SelectLocal<Passes>::type...>();
+		Graphics::StateObject::ptr m_dxrStateObject;
+		Graphics::RootSignature::ptr m_root_sig = get_Signature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
+		Graphics::RootSignature::ptr m_local_sig = create_local_signature<SelectLocal<Passes>::type...>();
 
 		IdGenerator<Thread::Free> ids;
 		
@@ -77,13 +77,13 @@ struct SelectLocal<T>
 			D3D12_GPU_VIRTUAL_ADDRESS local_addr;
 			D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 
-			Render::library_shader::ptr raytracing_lib;		
+			Graphics::library_shader::ptr raytracing_lib;		
 		};
 
 		CACHE_ALIGN(32)
 			struct hit_type
 		{
-			Render::shader_identifier id;
+			Graphics::shader_identifier id;
 			D3D12_GPU_VIRTUAL_ADDRESS local_addr;
 		//	D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 
@@ -104,17 +104,17 @@ struct SelectLocal<T>
 		};
 
 		//	using hit_type = shader_identifier;
-		Render::StructureBuffer<Render::shader_identifier>::ptr miss_ids;
-		Render::StructureBuffer<raygen_type>::ptr raygen_ids;
+		Graphics::StructureBuffer<Graphics::shader_identifier>::ptr miss_ids;
+		Graphics::StructureBuffer<raygen_type>::ptr raygen_ids;
 
-		Render::virtual_gpu_buffer<hit_type>::ptr hitgroup_ids;
+		Graphics::virtual_gpu_buffer<hit_type>::ptr hitgroup_ids;
 
 
 		struct material_info
 		{
 			UINT index;
 			TypedHandle<hit_type> handle;
-			std::vector<Render::StateObject::ptr> collections;
+			std::vector<Graphics::StateObject::ptr> collections;
 		};
 
 
@@ -124,7 +124,7 @@ struct SelectLocal<T>
 		bool need_recreate = false;
 		std::mutex m;
 
-		void init_collection(Render::StateObjectDesc& desc)
+		void init_collection(Graphics::StateObjectDesc& desc)
 		{
 			desc.global_root = m_root_sig;
 			desc.MaxTraceRecursionDepth = T::MaxTraceRecursionDepth;
@@ -206,7 +206,7 @@ struct SelectLocal<T>
 		void compile()
 		{
 			std::lock_guard<std::mutex> g(m);
-			Render::StateObjectDesc raytracingPipeline;
+			Graphics::StateObjectDesc raytracingPipeline;
 			{
 				auto init_part = [&](auto& e) {
 					raytracingPipeline.collections.emplace_back(e.m_Collection);
@@ -221,7 +221,7 @@ struct SelectLocal<T>
 				for (auto& c : info.collections)
 					raytracingPipeline.collections.emplace_back(c);
 			}
-			m_dxrStateObject = std::make_shared<Render::StateObject>(raytracingPipeline);
+			m_dxrStateObject = std::make_shared<Graphics::StateObject>(raytracingPipeline);
 			m_dxrStateObject->event_change.register_handler(this, [this]() {
 				std::lock_guard<std::mutex> g(m);
 				init_ids();
@@ -251,14 +251,14 @@ struct SelectLocal<T>
 
 		void init_ids()
 		{
-			std::vector<Render::shader_identifier> miss_ids;
+			std::vector<Graphics::shader_identifier> miss_ids;
 			std::vector<raygen_type> raygen_ids;
 
 			(std::get<Passes>(passes).init_ids(m_dxrStateObject, miss_ids), ...);
 			(std::get<Raygens>(raygen).init_ids(m_dxrStateObject, raygen_ids), ...);
 
-			this->miss_ids = std::make_shared<Render::StructureBuffer<Render::shader_identifier>>(miss_ids.size());
-			this->raygen_ids = std::make_shared<Render::StructureBuffer<raygen_type>>(raygen_ids.size());
+			this->miss_ids = std::make_shared<Graphics::StructureBuffer<Graphics::shader_identifier>>(miss_ids.size());
+			this->raygen_ids = std::make_shared<Graphics::StructureBuffer<raygen_type>>(raygen_ids.size());
 
 			this->miss_ids->set_raw_data(miss_ids);
 			this->raygen_ids->set_raw_data(raygen_ids);
@@ -282,7 +282,7 @@ struct SelectLocal<T>
 		}
 
 
-		void prepare(Render::CommandList::ptr& list)
+		void prepare(Graphics::CommandList::ptr& list)
 		{
 			if (need_recreate)
 			{
@@ -300,19 +300,19 @@ struct SelectLocal<T>
 
 		RTXPSO()
 		{
-			hitgroup_ids = std::make_shared< Render::virtual_gpu_buffer<hit_type>>(1024 * 1024);
+			hitgroup_ids = std::make_shared< Graphics::virtual_gpu_buffer<hit_type>>(1024 * 1024);
 			init();
 		}
 
 		template<class T>
-		void dispatch(ivec3 size, Render::ComputeContext& compute)
+		void dispatch(ivec3 size, Graphics::ComputeContext& compute)
 		{
 			constexpr size_t generator = tuple_element_index<T, std::tuple<Raygens...> >();
 
 
 			static_assert(static_cast<UINT>(generator) == T::ID);
 			compute.set_pipeline(m_dxrStateObject);
-			compute.dispatch_rays<hit_type, Render::shader_identifier, Render::shader_identifier>(size,
+			compute.dispatch_rays<hit_type, Graphics::shader_identifier, Graphics::shader_identifier>(size,
 				hitgroup_ids->buffer->get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
 				miss_ids->get_resource_address(), static_cast<UINT>(miss_ids->get_count()),
 				raygen_ids->get_resource_address().offset(static_cast<UINT>(generator * sizeof(raygen_type))));
@@ -322,26 +322,26 @@ struct SelectLocal<T>
 	template <class Desc>
 	struct RaytraceRaygen
 	{
-		Render::StateObject::ptr m_Collection;
-		Render::shader_identifier raygen_id;
+		Graphics::StateObject::ptr m_Collection;
+		Graphics::shader_identifier raygen_id;
 
 		template<class RTX>
 		void init(RTX& rtx)
 		{
-			Render::StateObjectDesc raytracingPipeline;
+			Graphics::StateObjectDesc raytracingPipeline;
 			raytracingPipeline.collection = true;
 
 			rtx.init_collection(raytracingPipeline);
 
-			Render::LibraryObject lib;
-			lib.library = Render::library_shader::get_resource({ std::string(Desc::shader), "" , 0, {} });
+			Graphics::LibraryObject lib;
+			lib.library = Graphics::library_shader::get_resource({ std::string(Desc::shader), "" , 0, {} });
 			lib.export_shader(std::wstring(Desc::raygen));
 			raytracingPipeline.libraries.emplace_back(lib);
 
-			m_Collection = std::make_shared<Render::StateObject>(raytracingPipeline);
+			m_Collection = std::make_shared<Graphics::StateObject>(raytracingPipeline);
 		}
 
-		void init_ids(Render::StateObject::ptr& state, std::vector<raygen_type>& raygen_ids)
+		void init_ids(Graphics::StateObject::ptr& state, std::vector<raygen_type>& raygen_ids)
 		{
 			raygen_id = state->get_shader_id(std::wstring(Desc::raygen));
 
@@ -356,24 +356,24 @@ struct SelectLocal<T>
 	template <class Desc>
 	struct RaytracePass
 	{
-		Render::StateObject::ptr m_Collection;
+		Graphics::StateObject::ptr m_Collection;
 
-		Render::shader_identifier group_id;
-		Render::shader_identifier miss_id;
+		Graphics::shader_identifier group_id;
+		Graphics::shader_identifier miss_id;
 
 		template<class RTX>
 		void init(RTX& rtx)
 		{
-			Render::StateObjectDesc raytracingPipeline;
+			Graphics::StateObjectDesc raytracingPipeline;
 			raytracingPipeline.collection = true;
 			rtx.init_collection(raytracingPipeline);
 
-			Render::LibraryObject lib;
-			lib.library = Render::library_shader::get_resource({ std::string(Desc::shader), "" , 0, {} });
+			Graphics::LibraryObject lib;
+			lib.library = Graphics::library_shader::get_resource({ std::string(Desc::shader), "" , 0, {} });
 
 			if constexpr (!Desc::per_material)
 			{
-				Render::HitGroup group;
+				Graphics::HitGroup group;
 				group.local_root = rtx.m_local_sig;
 				group.name = std::wstring(Desc::name);
 				group.closest_hit_shader = std::wstring(Desc::hit_name);
@@ -386,23 +386,23 @@ struct SelectLocal<T>
 			lib.export_shader(std::wstring(Desc::miss_name));
 			raytracingPipeline.libraries.emplace_back(lib);
 
-			m_Collection = std::make_shared<Render::StateObject>(raytracingPipeline);
+			m_Collection = std::make_shared<Graphics::StateObject>(raytracingPipeline);
 		}
 
 		template<class RTX>
-		Render::StateObject::ptr init_for_material(RTX& rtx, RTX::material* mat)
+		Graphics::StateObject::ptr init_for_material(RTX& rtx, RTX::material* mat)
 		{
 			if constexpr (Desc::per_material)
 			{
-				Render::StateObjectDesc raytracingPipeline;
+				Graphics::StateObjectDesc raytracingPipeline;
 				raytracingPipeline.collection = true;
 				rtx.init_collection(raytracingPipeline);
 
-				Render::LibraryObject lib;
+				Graphics::LibraryObject lib;
 				lib.library = mat->raytracing_lib;
 				lib.export_shader(/*new*/ mat->wshader_name, /*was*/ std::wstring(Desc::hit_name));
 
-				Render::HitGroup group;
+				Graphics::HitGroup group;
 
 				group.local_root = rtx.m_local_sig;
 				group.name = mat->wshader_name + std::wstring(Desc::name);
@@ -412,7 +412,7 @@ struct SelectLocal<T>
 
 				raytracingPipeline.libraries.emplace_back(lib);
 
-				return std::make_shared<Render::StateObject>(raytracingPipeline);
+				return std::make_shared<Graphics::StateObject>(raytracingPipeline);
 
 				//	get_material_id(mat);
 			}
@@ -421,7 +421,7 @@ struct SelectLocal<T>
 		}
 
 		template<class M, class T>
-		void init_material_ids(Render::StateObject::ptr& state, M* mat, T& hit)
+		void init_material_ids(Graphics::StateObject::ptr& state, M* mat, T& hit)
 		{
 			if constexpr (!Desc::per_material)
 			{
@@ -436,7 +436,7 @@ struct SelectLocal<T>
 
 		}
 
-		void init_ids(Render::StateObject::ptr& state, std::vector<Render::shader_identifier>& miss_ids)
+		void init_ids(Graphics::StateObject::ptr& state, std::vector<Graphics::shader_identifier>& miss_ids)
 		{
 			if constexpr (!Desc::per_material) group_id = state->get_shader_id(std::wstring(Desc::name));
 			miss_id = state->get_shader_id(std::wstring(Desc::miss_name));

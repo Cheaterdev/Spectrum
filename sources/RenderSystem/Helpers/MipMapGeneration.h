@@ -7,20 +7,20 @@ class MipMapGenerator: public Singleton<MipMapGenerator>
 
     public:
         MipMapGenerator();
-		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex/*, Render::Texture2DView::ptr view*/);
-		void generate(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::Texture2DView::ptr view);
-		void generate(Render::ComputeContext& compute_context, Render::TextureView view);
-		void generate_cube(Render::ComputeContext& compute_context, Render::TextureView view);
-		void downsample_depth(Render::ComputeContext& compute_context, Render::Texture::ptr tex, Render::Texture::ptr& to);
+		void generate(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex/*, Graphics::Texture2DView::ptr view*/);
+		void generate(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex, Graphics::Texture2DView::ptr view);
+		void generate(Graphics::ComputeContext& compute_context, Graphics::TextureView view);
+		void generate_cube(Graphics::ComputeContext& compute_context, Graphics::TextureView view);
+		void downsample_depth(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex, Graphics::Texture::ptr& to);
 
-		void downsample_depth(Render::ComputeContext& compute_context, Render::TextureView& tex, Render::TextureView& to);
+		void downsample_depth(Graphics::ComputeContext& compute_context, Graphics::TextureView& tex, Graphics::TextureView& to);
 
-		void generate_quality(Render::GraphicsContext& context, camera* cam, GBuffer& buffer, Render::TextureView tempColor);
-        void write_to_depth(Render::GraphicsContext& list, Render::TextureView from, Render::TextureView to);
+		void generate_quality(Graphics::GraphicsContext& context, camera* cam, GBuffer& buffer, Graphics::TextureView tempColor);
+        void write_to_depth(Graphics::GraphicsContext& list, Graphics::TextureView from, Graphics::TextureView to);
 
 
-		void copy_texture_2d_slow(Render::GraphicsContext& context, Render::Texture::ptr to, Render::Texture::ptr from);
-		void copy_texture_2d_slow(Render::GraphicsContext& context, Render::Texture::ptr to, Render::TextureView from);
-		void render_texture_2d_slow(Render::GraphicsContext& context, Render::TextureView to, Render::TextureView from);
+		void copy_texture_2d_slow(Graphics::GraphicsContext& context, Graphics::Texture::ptr to, Graphics::Texture::ptr from);
+		void copy_texture_2d_slow(Graphics::GraphicsContext& context, Graphics::Texture::ptr to, Graphics::TextureView from);
+		void render_texture_2d_slow(Graphics::GraphicsContext& context, Graphics::TextureView to, Graphics::TextureView from);
 
 };

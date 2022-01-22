@@ -12,8 +12,8 @@ public:
 
 	std::vector<ivec3> used_tiles;
 	using ptr = std::shared_ptr<GPUTilesBuffer>;
-	Render::StructureBuffer<ivec3>::ptr buffer;
-	Render::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
+	Graphics::StructureBuffer<ivec3>::ptr buffer;
+	Graphics::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
 	uint32_t size();
 	void set_size(ivec3 size, ivec3 shape);
 
@@ -21,5 +21,5 @@ public:
 	void erase(ivec3 pos);
 	void clear();
 
-	void update(Render::CommandList::ptr list);
+	void update(Graphics::CommandList::ptr list);
 };

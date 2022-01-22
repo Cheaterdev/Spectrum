@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "HAL/dx12_types.h"
+#include "Graphics/dx12_types.h"
 import PipelineState;
 
 import Enums;
@@ -9,28 +9,28 @@ import Profiling;
 import serialization;
 import Autogen;
 void init_pso(enum_array<PSO, PSOBase::ptr>&);
-Render::ComputePipelineState::ptr SimpleComputePSO::create()
+Graphics::ComputePipelineState::ptr SimpleComputePSO::create()
 {
-	Render::ComputePipelineStateDesc desc;
+	Graphics::ComputePipelineStateDesc desc;
 	desc.root_signature = get_Signature(root_signature);
-	desc.shader = Render::compute_shader::get_resource(compute);
+	desc.shader = Graphics::compute_shader::get_resource(compute);
 
-	return Render::ComputePipelineState::create(desc, name);
+	return Graphics::ComputePipelineState::create(desc, name);
 }
 
-Render::PipelineState::ptr SimpleGraphicsPSO::create()
+Graphics::PipelineState::ptr SimpleGraphicsPSO::create()
 {
-	Render::PipelineStateDesc desc;
+	Graphics::PipelineStateDesc desc;
 	desc.root_signature = get_Signature(root_signature);
-	if (!vertex.entry_point.empty())	desc.vertex = Render::vertex_shader::get_resource(vertex);
-	if (!pixel.entry_point.empty())	desc.pixel = Render::pixel_shader::get_resource(pixel);
+	if (!vertex.entry_point.empty())	desc.vertex = Graphics::vertex_shader::get_resource(vertex);
+	if (!pixel.entry_point.empty())	desc.pixel = Graphics::pixel_shader::get_resource(pixel);
 
-	if (!geometry.entry_point.empty())	desc.geometry = Render::geometry_shader::get_resource(geometry);
-	if (!domain.entry_point.empty())	desc.domain = Render::domain_shader::get_resource(domain);
-	if (!hull.entry_point.empty())	desc.hull = Render::hull_shader::get_resource(hull);
+	if (!geometry.entry_point.empty())	desc.geometry = Graphics::geometry_shader::get_resource(geometry);
+	if (!domain.entry_point.empty())	desc.domain = Graphics::domain_shader::get_resource(domain);
+	if (!hull.entry_point.empty())	desc.hull = Graphics::hull_shader::get_resource(hull);
 
-	if (!mesh.entry_point.empty())	desc.mesh = Render::mesh_shader::get_resource(mesh);
-	if (!amplification.entry_point.empty())	desc.amplification = Render::amplification_shader::get_resource(amplification);
+	if (!mesh.entry_point.empty())	desc.mesh = Graphics::mesh_shader::get_resource(mesh);
+	if (!amplification.entry_point.empty())	desc.amplification = Graphics::amplification_shader::get_resource(amplification);
 
 
 	desc.rtv.rtv_formats = rtv_formats;
@@ -52,7 +52,7 @@ Render::PipelineState::ptr SimpleGraphicsPSO::create()
 	desc.blend.render_target[i] = blend[i];
 
 	desc.blend.independ_blend = rtv_formats.size() == blend.size();
-	return Render::PipelineState::create(desc, name);
+	return Graphics::PipelineState::create(desc, name);
 }
 
 PSOHolder::PSOHolder()

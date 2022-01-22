@@ -21,8 +21,8 @@ GUI::Elements::toogle_icon::toogle_icon()
 
     clickable = true;
 
-	tex_closed = Render::Texture::get_resource(Render::texure_header("textures/gui/tree_closed.png"));
-	tex_opened = Render::Texture::get_resource(Render::texure_header("textures/gui/tree_opened.png"));
+	tex_closed = Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/tree_closed.png"));
+	tex_opened = Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/tree_opened.png"));
 	texture = tex_opened;
 
 }
@@ -34,7 +34,7 @@ void GUI::Elements::toogle_icon::toogle(bool v)
 		texture = tex_closed;
 }
 
-void GUI::Elements::line_base::draw(Render::context& c, bool selected)
+void GUI::Elements::line_base::draw(Graphics::context& c, bool selected)
 {
 	 if (dropping)
 		 renderer->draw_color(c, float4(153, 114, 202, 255) / 255.0f, get_render_bounds());

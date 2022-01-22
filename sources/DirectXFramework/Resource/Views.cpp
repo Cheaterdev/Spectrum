@@ -3,7 +3,7 @@ import CommandList;
 import ResourceViews;
 
 
- void DX12::BufferView::place_cb(Handle h) {
+ void Graphics::BufferView::place_cb(Handle h) {
 	if (!resource) return;
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};

@@ -18,7 +18,7 @@ MaterialAsset::MaterialAsset(materials::material::ptr m)
     mark_changed();
 }
 
-void MaterialAsset::update_preview(Render::Texture::ptr preview)
+void MaterialAsset::update_preview(Graphics::Texture::ptr preview)
 {
     AssetRenderer::get().draw(get_ptr<MaterialAsset>(), preview);
     mark_changed();

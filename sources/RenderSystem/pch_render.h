@@ -3,7 +3,7 @@
 #include "pch_dx.h"
 
 
-namespace Render
+namespace Graphics
 {
-	using namespace DX12;
+	using namespace Graphics;
 }
