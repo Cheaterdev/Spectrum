@@ -70,7 +70,7 @@ GraphicsPSO RenderToDS
 
 
 	ds = DXGI_FORMAT_D32_FLOAT;
-	cull = NONE;
+	cull = None;
 	depth_func = ALWAYS;
 }
 

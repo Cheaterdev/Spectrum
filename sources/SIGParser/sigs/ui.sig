@@ -58,7 +58,7 @@ GraphicsPSO SimpleRect
 
 	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
 	blend = { AlphaBlend };
-	cull = NONE;
+	cull = None;
 }
 
 GraphicsPSO CanvasBack
@@ -72,7 +72,7 @@ GraphicsPSO CanvasBack
 	pixel = gui/canvas;
 
 	enable_depth = false;
-	cull = NONE;
+	cull = None;
 	topology = TRIANGLE;
 
 	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
@@ -112,7 +112,7 @@ GraphicsPSO CanvasLines
 	hull = gui/flow_line;
 
 	enable_depth = false;
-	cull = NONE;
+	cull = None;
 	topology = PATCH;
 
 	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };

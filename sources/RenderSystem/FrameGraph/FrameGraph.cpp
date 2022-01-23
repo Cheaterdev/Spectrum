@@ -6,8 +6,8 @@
 #include "FrameGraph.h"
 import Queue;
 
-import HAL.Types;
-using namespace HAL;
+import Graphics.Types;
+using namespace Graphics;
 
 
 namespace FrameGraph
@@ -160,7 +160,7 @@ namespace FrameGraph
 
 		if (!list)
 		{
-			HAL::CommandListType type = pass->get_type();
+			Graphics::CommandListType type = pass->get_type();
 
 			list = frame->start_list(pass->name, type);
 
@@ -480,14 +480,14 @@ namespace FrameGraph
 
 		for (auto pass : enabled_passes)
 		{
-			HAL::CommandListType type = pass->get_type();
+			Graphics::CommandListType type = pass->get_type();
 
-			bool sync_to_graphics = last_graphics && type == HAL::CommandListType::DIRECT;
-			bool sync_to_compute = last_compute && type == HAL::CommandListType::COMPUTE;
+			bool sync_to_graphics = last_graphics && type == Graphics::CommandListType::DIRECT;
+			bool sync_to_compute = last_compute && type == Graphics::CommandListType::COMPUTE;
 
 
 
-			if (type == HAL::CommandListType::COMPUTE)
+			if (type == Graphics::CommandListType::COMPUTE)
 				pass->prev_pass = last_compute;
 			else
 				pass->prev_pass = last_graphics;
@@ -539,7 +539,7 @@ namespace FrameGraph
 			}
 
 
-			if (type == HAL::CommandListType::COMPUTE)
+			if (type == Graphics::CommandListType::COMPUTE)
 				last_compute = pass;
 			else
 				last_graphics = pass;
@@ -606,13 +606,13 @@ namespace FrameGraph
 					auto commandList = pass->context.list;
 					if (!commandList) continue;
 
-					HAL::CommandListType list_type = commandList->get_type();
+					Graphics::CommandListType list_type = commandList->get_type();
 
 					if (pass->wait_pass)
 					{
 						auto waitCommandList = pass->wait_pass->context.list;
 
-						//if(list_type == HAL::CommandListType::COMPUTE)
+						//if(list_type == Graphics::CommandListType::COMPUTE)
 							waitCommandList->prepare_transitions(commandList.get(), false);
 					}
 					else
@@ -621,7 +621,7 @@ namespace FrameGraph
 					{
 						auto waitCommandList = pass->prev_pass->context.list;
 
-					//	if (list_type == HAL::CommandListType::DIRECT)
+					//	if (list_type == Graphics::CommandListType::DIRECT)
 						if(waitCommandList) waitCommandList->prepare_transitions(commandList.get(), true);
 					}
 
@@ -779,7 +779,7 @@ namespace FrameGraph
 
 					UINT transitions = 0;
 
-					enum_array<HAL::CommandListType, enum_array<HAL::CommandListType, UINT>> call_ids = {};
+					enum_array<Graphics::CommandListType, enum_array<Graphics::CommandListType, UINT>> call_ids = {};
 
 
 					auto flush = [&]()
@@ -822,7 +822,7 @@ namespace FrameGraph
 					for (auto& pass : enabled_passes)
 					{
 
-						HAL::CommandListType list_type = pass->get_type();
+						Graphics::CommandListType list_type = pass->get_type();
 
 						if (pass->wait_pass)
 						{
@@ -838,7 +838,7 @@ namespace FrameGraph
 
 						}
 
-						if (list_type == HAL::CommandListType::DIRECT)
+						if (list_type == Graphics::CommandListType::DIRECT)
 							graphics.emplace_back(pass);
 						else
 							compute.emplace_back(pass);
@@ -862,7 +862,7 @@ namespace FrameGraph
 				info->view = nullptr;
 			}
 
-			if (info->heap_type != HAL::HeapType::DEFAULT)
+			if (info->heap_type != Graphics::HeapType::DEFAULT)
 			{
 				info->alloc_ptr.Free();
 			}
@@ -940,16 +940,16 @@ namespace FrameGraph
 				continue;
 
 
-			info->heap_type = HAL::HeapType::DEFAULT;
+			info->heap_type = Graphics::HeapType::DEFAULT;
 
 			if (check(info->flags & ResourceFlags::GenCPU))
 			{
-				info->heap_type = HAL::HeapType::UPLOAD;
+				info->heap_type = Graphics::HeapType::UPLOAD;
 			}
 
 			if (check(info->flags & ResourceFlags::ReadCPU))
 			{
-				info->heap_type = HAL::HeapType::READBACK;
+				info->heap_type = Graphics::HeapType::READBACK;
 			}
 
 			if (info->type == ResourceType::Texture)
@@ -1009,13 +1009,13 @@ namespace FrameGraph
 
 				if (check(info->flags & ResourceFlags::Counted))
 				{
-					//info->heap_type = HAL::HeapType::READBACK;
+					//info->heap_type = Graphics::HeapType::READBACK;
 				}
 
 				info->d3ddesc = CD3DX12_RESOURCE_DESC::Buffer(desc.size, flags);
 			}
 			/*
-					if (info->heap_type == HAL::HeapType::UPLOAD)
+					if (info->heap_type == Graphics::HeapType::UPLOAD)
 					{
 						auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
 						auto alloc_ptr = current_alloc->alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
@@ -1024,7 +1024,7 @@ namespace FrameGraph
 						info->alloc_ptr = alloc_ptr;
 					}*/
 			if (check(info->flags & ResourceFlags::Static)) continue;
-			if (info->heap_type != HAL::HeapType::DEFAULT)
+			if (info->heap_type != Graphics::HeapType::DEFAULT)
 			{
 				//	auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
 				//	auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
@@ -1041,7 +1041,7 @@ namespace FrameGraph
 				events[pair.second.valid_to->call_id].free.insert(info);
 			}
 
-			//	if (info->heap_type != HAL::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
+			//	if (info->heap_type != Graphics::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
 
 
 		}
@@ -1111,11 +1111,11 @@ namespace FrameGraph
 				}
 				else
 				{
-					if (info->heap_type == HAL::HeapType::UPLOAD)
+					if (info->heap_type == Graphics::HeapType::UPLOAD)
 					{
 						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
 					}
-					else if (info->heap_type == HAL::HeapType::READBACK)
+					else if (info->heap_type == Graphics::HeapType::READBACK)
 					{
 						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
 					}

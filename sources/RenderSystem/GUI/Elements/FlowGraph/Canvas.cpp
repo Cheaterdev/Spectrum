@@ -625,7 +625,7 @@ GUI::Elements::FlowGraph::canvas::renderer::renderer(GUI::Renderer* renderer)
         //   state_desc.layout.inputs.emplace_back({ "COLOR", 0, sizeof(vec2), 0, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
         line_state.reset(new Graphics::PipelineState(state_desc));
         inv_pixel.reset(new Graphics::ConstBuffer<vec2>());
-        line_vertex.reset(new Graphics::Buffer<line_vertexes>(HAL::HeapType::DEFAULT, 512));
+        line_vertex.reset(new Graphics::Buffer<line_vertexes>(Graphics::HeapType::DEFAULT, 512));
         gs_table = Graphics::DescriptorHeapManager::get().get_csu()->create_table(1);
         inv_pixel->place(gs_table[0]);
     }

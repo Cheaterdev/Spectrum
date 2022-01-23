@@ -17,6 +17,7 @@ import serialization;
 import Trackable;
 Graphics::RootLayout::ptr get_Signature(Layouts id);
 
+import Graphics.Types;
 export
 {
 
@@ -46,8 +47,8 @@ namespace Graphics
 		PipelineStateDesc()
 		{
 			rtv.rtv_formats.emplace_back(DXGI_FORMAT_R8G8B8A8_UNORM);
-			rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_BACK;
-			rasterizer.fill_mode = D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID;
+			rasterizer.cull_mode = CullMode::Back;
+			rasterizer.fill_mode = FillMode::Solid;
 		}
 
 		bool is_memory()

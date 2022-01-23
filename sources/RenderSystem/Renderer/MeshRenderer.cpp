@@ -20,8 +20,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
-	default_pipeline.rasterizer.fill_mode = D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID;
-	default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+	default_pipeline.rasterizer.fill_mode = FillMode::Solid;
+	default_pipeline.rasterizer.cull_mode = CullMode::None;
 	default_pipeline.blend.independ_blend = false;
 	default_pipeline.blend.render_target[0].enabled = false;
 	default_pipeline.mesh = mshader;
@@ -32,7 +32,7 @@ default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_
 	{
 		default_pipeline.mesh = mshader_voxel;
 		default_pipeline.amplification = ashader_voxel;
-		default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+		default_pipeline.rasterizer.cull_mode = CullMode::None;
 		default_pipeline.rtv.enable_depth = false;
 		default_pipeline.rasterizer.conservative = GetAsyncKeyState('B');
 

@@ -788,9 +788,9 @@ public:
 
 			if (GetAsyncKeyState('R'))
 			{
-				Graphics::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
-				Graphics::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
-				Graphics::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
+				Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal_and_wait();
+				Graphics::Device::get().get_queue(Graphics::CommandListType::COMPUTE)->signal_and_wait();
+				Graphics::Device::get().get_queue(Graphics::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
 				Graphics::pixel_shader::reload_all();
@@ -847,7 +847,7 @@ public:
 
 				graph.reset();
 			}
-			swap_chain->present(Graphics::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal());
+			swap_chain->present(Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal());
 		}
 
 	
@@ -1286,7 +1286,7 @@ protected:
 
 
 	//	
-		//   Graphics::Device::get().get_queue(HAL::CommandListType::DIRECT)->stop_all();
+		//   Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->stop_all();
 		Graphics::Device::get().stop_all();
 		Skin::reset();
 		Graphics::Texture::reset_manager();

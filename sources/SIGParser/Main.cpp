@@ -1231,7 +1231,7 @@ void generate_pso(PSO& pso)
 						{
 							if (!elems.empty())
 								elems += ", ";
-							elems += "Graphics::Blend::";
+							elems += "Graphics::Blends::";
 							elems += e.expr;
 						}
 
@@ -1247,7 +1247,7 @@ void generate_pso(PSO& pso)
 
 	
 						if (e.type == "cull")
-							add = "D3D12_CULL_MODE::D3D12_CULL_MODE_";
+							add = "Graphics::CullMode::";
 						else if (e.type == "depth_func")
 							add = "D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_";
 						else if (e.type == "topology")

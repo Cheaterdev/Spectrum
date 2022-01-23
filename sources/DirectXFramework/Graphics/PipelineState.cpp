@@ -37,6 +37,8 @@ MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO, D3D12_CACHED_PIPELINE_STATE)
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT, DXGI_FORMAT);
 
 
+import D3D12.Types;
+using namespace HAL;
 namespace Graphics
 {
 	template < class V>
@@ -201,8 +203,8 @@ namespace Graphics
 		
 		{
 			CD3DX12_RASTERIZER_DESC RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-			RasterizerState.CullMode = desc.rasterizer.cull_mode;
-			RasterizerState.FillMode = desc.rasterizer.fill_mode;
+			RasterizerState.CullMode = to_native(desc.rasterizer.cull_mode);
+			RasterizerState.FillMode = to_native(desc.rasterizer.fill_mode);
 			RasterizerState.ConservativeRaster = desc.rasterizer.conservative ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 			creator.include((D3D12_RASTERIZER_DESC)RasterizerState);
 		}
@@ -213,10 +215,10 @@ namespace Graphics
 			for (unsigned int i = 0; i < 8; i++)
 			{
 				BlendState.RenderTarget[i].BlendEnable = desc.blend.render_target[i].enabled;
-				BlendState.RenderTarget[i].SrcBlend = desc.blend.render_target[i].source;
-				BlendState.RenderTarget[i].DestBlend = desc.blend.render_target[i].dest;
-				BlendState.RenderTarget[i].DestBlendAlpha = desc.blend.render_target[i].dest_alpha;
-				BlendState.RenderTarget[i].SrcBlendAlpha = desc.blend.render_target[i].source_alpha;
+				BlendState.RenderTarget[i].SrcBlend = to_native(desc.blend.render_target[i].source);
+				BlendState.RenderTarget[i].DestBlend = to_native(desc.blend.render_target[i].dest);
+				BlendState.RenderTarget[i].DestBlendAlpha = to_native(desc.blend.render_target[i].dest_alpha);
+				BlendState.RenderTarget[i].SrcBlendAlpha = to_native(desc.blend.render_target[i].source_alpha);
 
 			}
 			creator.include((D3D12_BLEND_DESC)BlendState);

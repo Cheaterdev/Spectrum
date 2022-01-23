@@ -21,9 +21,9 @@ namespace PSOS
 			mpso.pixel.flags = 0;
 			
 			mpso.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT };
-			mpso.blend = { Graphics::Blend::Additive };
+			mpso.blend = { Graphics::Blends::Additive };
 			mpso.enable_depth  = false;
-			mpso.cull  = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+			mpso.cull  = Graphics::CullMode::None;
 			return mpso;
 		}
 	};

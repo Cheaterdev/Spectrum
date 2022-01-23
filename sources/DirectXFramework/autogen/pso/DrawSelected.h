@@ -26,7 +26,7 @@ namespace PSOS
 			mpso.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8_SNORM };
 			mpso.blend = {  };
 			mpso.enable_depth  = false;
-			mpso.cull  = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+			mpso.cull  = Graphics::CullMode::None;
 			mpso.depth_func  = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
 			return mpso;
 		}

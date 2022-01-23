@@ -21,5 +21,16 @@ export {
 		using DescriptorHeapFlags = HAL::DescriptorHeapFlags;
 		using DescriptorHeapType = HAL::DescriptorHeapType;
 	
+
+		using Blend = HAL::Blend;
+		using CullMode = HAL::CullMode;
+		using FillMode = HAL::FillMode;
+
+
+		using RenderTarget = HAL::RenderTarget;
+using RasterizerState = HAL::RasterizerState;
+using BlendState = HAL::BlendState;
+using RTVState = HAL::RTVState;
+
 	}
 }

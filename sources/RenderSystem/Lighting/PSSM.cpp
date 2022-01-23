@@ -130,7 +130,7 @@ void PSSM::generate(Graph& graph)
 			command_list->get_graphics().set_viewports(viewport);
 			command_list->get_graphics().set_scissors(scissor[0]);
 			context->pipeline.blend.render_target[0].enabled = false;
-			context->pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_FRONT;
+			context->pipeline.rasterizer.cull_mode = CullMode::Front;
 
 			
 
@@ -256,7 +256,7 @@ void PSSM::generate(Graph& graph)
 				command_list->get_graphics().set_viewports(viewport);
 				command_list->get_graphics().set_scissors(scissor[0]);
 				context->pipeline.blend.render_target[0].enabled = false;
-				context->pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_FRONT;
+				context->pipeline.rasterizer.cull_mode = CullMode::Front;
 
 
 				table.set(context, false, true);

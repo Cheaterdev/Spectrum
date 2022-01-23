@@ -5,7 +5,7 @@ import Concepts;
 
 import CommandList;
 import Descriptors;
-import HAL.Types;
+import Graphics.Types;
 export
 {
 
@@ -35,7 +35,7 @@ class RTHolder :public Table
 	template<class Context, class RTV>
 	void place_rtv(CompiledRT& compiled, Context& context, RTV& rtv) const
 	{
-		compiled.table_rtv = context.get_cpu_heap(HAL::DescriptorHeapType::RTV).place(sizeof(rtv) / sizeof(Graphics::Handle));
+		compiled.table_rtv = context.get_cpu_heap(Graphics::DescriptorHeapType::RTV).place(sizeof(rtv) / sizeof(Graphics::Handle));
 		auto ptr = reinterpret_cast<Graphics::Handle*>(&rtv);
 		for (UINT i = 0; i < (UINT)compiled.table_rtv.get_count(); i++)
 		{
@@ -51,7 +51,7 @@ class RTHolder :public Table
 	template<class Context, class DSV>
 	void place_dsv(CompiledRT& compiled, Context& context, DSV& dsv) const
 	{
-		compiled.table_dsv = context.get_cpu_heap(HAL::DescriptorHeapType::DSV).place(sizeof(dsv) / sizeof(Graphics::Handle));
+		compiled.table_dsv = context.get_cpu_heap(Graphics::DescriptorHeapType::DSV).place(sizeof(dsv) / sizeof(Graphics::Handle));
 		auto ptr = reinterpret_cast<Graphics::Handle*>(&dsv);
 		for (UINT i = 0; i < (UINT)compiled.table_dsv.get_count(); i++)
 		{
