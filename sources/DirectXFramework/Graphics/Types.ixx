@@ -2,6 +2,7 @@ export module Graphics.Types;
 
 import HAL.Types;
 import HAL.Sampler;
+import HAL.Format;
 
 export {
 	namespace Graphics
@@ -39,5 +40,10 @@ using RTVState = HAL::RTVState;
 using ResourceViewDesc = HAL::ResourceViewDesc;
 
 using ResourceType = HAL::ResourceType;
+
+using Format = HAL::Format;
+using Formats = HAL::Formats;
+
+
 	}
 }

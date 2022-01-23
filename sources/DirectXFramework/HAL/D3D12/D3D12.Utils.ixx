@@ -3,6 +3,7 @@ import d3d12;
 import Vectors;
 import HAL.Types;
 import HAL.Sampler;
+import HAL.Format;
 
 using namespace HAL;
 
@@ -293,3 +294,56 @@ export D3D12_DEPTH_STENCILOP_DESC to_native(StencilDesc desc)
 	return result;
 }
 
+
+export DXGI_FORMAT to_native(Format format)
+{
+	return static_cast<DXGI_FORMAT>(format.get_native());
+}
+
+bool Format::is_shader_visible() const
+{
+	switch (native_format)
+	{
+
+	case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+	case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+	case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+	case DXGI_FORMAT_D24_UNORM_S8_UINT:
+	case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+	case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+		return false;
+	default:
+		return true;
+	}
+}
+
+
+Format Format::to_typeless() const
+{
+
+	switch (native_format)
+	{
+	case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+	case DXGI_FORMAT_R8G8B8A8_UNORM:
+	case DXGI_FORMAT_R8G8B8A8_UINT:
+	case DXGI_FORMAT_R8G8B8A8_SNORM:
+	case DXGI_FORMAT_R8G8B8A8_SINT:
+		return HAL::Formats::R8G8B8A8_TYPELESS;
+
+	default:
+		return *this;
+	}
+}
+
+namespace HAL
+{
+	const Format Formats::Unknown = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+
+	 const Format Formats::R8G8B8A8_UNORM_SRGB = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	 const Format Formats::R8G8B8A8_UNORM = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM;
+	 const Format Formats::R8G8B8A8_UINT = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UINT;
+	 const Format Formats::R8G8B8A8_SNORM = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_SNORM;
+	 const Format Formats::R8G8B8A8_SINT = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_SINT;
+
+	 const Format Formats::R8G8B8A8_TYPELESS = DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_TYPELESS;
+}

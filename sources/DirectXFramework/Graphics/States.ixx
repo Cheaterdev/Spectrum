@@ -8,7 +8,6 @@ export module States;
 import Utils;
 import StateContext;
 import Device;
-import HAL.ResourceState;
 import HAL.Types;
 
 export

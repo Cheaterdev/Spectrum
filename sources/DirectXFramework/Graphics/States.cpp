@@ -8,7 +8,6 @@ import States;
 import Utils;
 import StateContext;
 import Device;
-import HAL.ResourceState;
 import HAL.Types;
 
 using namespace HAL;

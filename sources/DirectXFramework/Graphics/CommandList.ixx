@@ -28,7 +28,6 @@ import Singleton;
 import stl.core;
 import stl.memory;
 
-import HAL.ResourceState;
 import HAL.Types;
 
 import d3d12;

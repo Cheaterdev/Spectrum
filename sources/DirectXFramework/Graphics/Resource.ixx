@@ -12,7 +12,6 @@ import d3d12;
 import stl.memory;
 import Utils;
 import Trackable;
-import HAL.ResourceState;
 
 using namespace HAL;
 export

@@ -7,7 +7,10 @@
 import Queue;
 
 import Graphics.Types;
+
+import D3D12.Utils;
 using namespace Graphics;
+
 
 
 namespace FrameGraph
@@ -973,7 +976,7 @@ namespace FrameGraph
 					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 				}
 
-				if (!is_shader_visible(desc.format))
+				if (!desc.format.is_shader_visible())
 					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
 				int mip_count = desc.mip_count;
@@ -990,7 +993,7 @@ namespace FrameGraph
 
 				}
 
-				info->d3ddesc = CD3DX12_RESOURCE_DESC::Tex2D(desc.format, desc.size.x, desc.size.y, desc.array_count, mip_count, 1, 0, flags);
+				info->d3ddesc = CD3DX12_RESOURCE_DESC::Tex2D(::to_native(desc.format), desc.size.x, desc.size.y, desc.array_count, mip_count, 1, 0, flags);
 				info->placed = true;
 
 				Graphics::Device::get().get_alloc_info(info->d3ddesc);

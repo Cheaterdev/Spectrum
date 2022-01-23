@@ -24,7 +24,7 @@ import CommandList;
 import Queue;
 
 using namespace HAL;
-
+import D3D12.Utils;
 
 namespace Graphics
 {
@@ -138,7 +138,7 @@ namespace Graphics
 		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 		swapChainDesc.Width = r.right - r.left;
 		swapChainDesc.Height = r.bottom - r.top;
-		swapChainDesc.Format = desc.format;
+		swapChainDesc.Format = ::to_native(desc.format);
 		swapChainDesc.Stereo = desc.stereo && factory->IsWindowedStereoEnabled();
 		swapChainDesc.SampleDesc.Count = 1;
 		swapChainDesc.SampleDesc.Quality = 0;

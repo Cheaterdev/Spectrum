@@ -249,14 +249,14 @@ namespace Graphics
 			rtvs.NumRenderTargets = static_cast<UINT>(desc.rtv.rtv_formats.size());
 unsigned int i = 0;
 			for (; i < desc.rtv.rtv_formats.size(); i++)
-				rtvs.RTFormats[i] = desc.rtv.rtv_formats[i];
+				rtvs.RTFormats[i] = to_native(desc.rtv.rtv_formats[i]);
 	for (; i < 8; i++)
 		rtvs.RTFormats[i] = DXGI_FORMAT_UNKNOWN;
 			creator.include(rtvs);
 		}
 
 		{
-			DXGI_FORMAT DSVFormat = desc.rtv.ds_format;
+			DXGI_FORMAT DSVFormat = to_native(desc.rtv.ds_format);
 
 			creator.include(DSVFormat);
 		}

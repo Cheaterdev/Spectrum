@@ -243,14 +243,14 @@ struct  SimpleGraphicsPSO {
 	D3D::shader_header amplification;
 
 
-	std::vector<DXGI_FORMAT> rtv_formats;
+	std::vector<Graphics::Format> rtv_formats;
 	std::vector<Graphics::RenderTarget> blend;
 	std::string name;
 
 	bool conservative;
 	bool depth_write;
 	bool enable_depth;
-	DXGI_FORMAT ds;
+	Graphics::Format ds;
 	Graphics::ComparisonFunc depth_func;
 	Graphics::CullMode cull;
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE topology;
@@ -264,7 +264,7 @@ struct  SimpleGraphicsPSO {
 	SimpleGraphicsPSO(std::string name) :name(name)
 	{
 		//Log::get() << "PSO: " << name << Log::endl;
-		ds = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+		ds = Graphics::Formats::Unknown;
 		conservative = false;
 		depth_write = true;
 		depth_func = Graphics::ComparisonFunc::LESS_EQUAL;

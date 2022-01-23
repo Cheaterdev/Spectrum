@@ -5,7 +5,6 @@ import d3d12;
 
 import Utils;
 import serialization;
-#include <d3d12.h>
 
 #include "Serialization/serialization_defines.h"
 

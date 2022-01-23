@@ -12,6 +12,7 @@ import HAL.Heap;
 
 import stl.core;
 
+import HAL.Format;
 
 export namespace HAL
 {
@@ -26,7 +27,7 @@ export namespace HAL
 	{
 		Vector<vec3_t<uint, false>> Dimensions;
 		uint ArraySize;
-		DXGI_FORMAT Format;
+		Format Format;
 	};
 
 	struct BufferDesc

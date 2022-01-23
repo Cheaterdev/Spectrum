@@ -5,6 +5,7 @@ import Queue;
 import HAL.Types;
 using namespace HAL;
 
+import D3D12.Utils;
 namespace Graphics
 {
 
@@ -154,13 +155,13 @@ namespace Graphics
 	 {
 
 		 auto& data = *dat;
-		 data.format = to_typeless(data.format);
+		 data.format = data.format.to_typeless();
 		 CD3DX12_RESOURCE_DESC desc;
 
 		 if (data.depth > 1)
-			 desc = CD3DX12_RESOURCE_DESC::Tex3D(data.format, data.width, data.height, data.depth, data.mip_maps);
+			 desc = CD3DX12_RESOURCE_DESC::Tex3D(to_native(data.format), data.width, data.height, data.depth, data.mip_maps);
 		 else
-			 desc = CD3DX12_RESOURCE_DESC::Tex2D(data.format, data.width, data.height, data.array_size, data.mip_maps);
+			 desc = CD3DX12_RESOURCE_DESC::Tex2D(to_native(data.format), data.width, data.height, data.array_size, data.mip_maps);
 
 		 Resource::init(desc, HeapType::DEFAULT, (desc.DepthOrArraySize * desc.MipLevels) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
 		 auto list = Device::get().get_upload_list();
@@ -187,7 +188,7 @@ namespace Graphics
 		if (!data) return nullptr;
 
 		auto desc = get_desc();
-		desc.Format = data->format;
+		desc.Format = to_native(data->format);
 		desc.MipLevels = data->mip_maps;
 		desc.Width = data->width;
 		desc.Height = data->height;
@@ -218,9 +219,9 @@ namespace Graphics
             CD3DX12_RESOURCE_DESC desc;
 
             if (tex_data->depth > 1)
-                desc = CD3DX12_RESOURCE_DESC::Tex3D(tex_data->format, tex_data->width, tex_data->height, tex_data->depth, tex_data->mip_maps);
+                desc = CD3DX12_RESOURCE_DESC::Tex3D(to_native(tex_data->format), tex_data->width, tex_data->height, tex_data->depth, tex_data->mip_maps);
             else
-                desc = CD3DX12_RESOURCE_DESC::Tex2D(tex_data->format, tex_data->width, tex_data->height, tex_data->array_size, tex_data->mip_maps);
+                desc = CD3DX12_RESOURCE_DESC::Tex2D(to_native(tex_data->format), tex_data->width, tex_data->height, tex_data->array_size, tex_data->mip_maps);
 
             return std::make_shared<Texture>(desc, ResourceState::PIXEL_SHADER_RESOURCE, HeapType::DEFAULT,tex_data);
         }

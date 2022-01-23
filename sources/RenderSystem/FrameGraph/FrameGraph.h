@@ -67,7 +67,7 @@ namespace FrameGraph
 	struct TextureDesc
 	{
 		ivec3 size;
-		DXGI_FORMAT format;
+		Graphics::Format format;
 		UINT array_count;
 		UINT mip_count;
 
@@ -268,7 +268,7 @@ namespace FrameGraph
 			struct Desc
 			{
 				ivec3 size;
-				DXGI_FORMAT format;
+				Graphics::Format format;
 				UINT array_count;
 				UINT mip_count;
 			}m_desc;

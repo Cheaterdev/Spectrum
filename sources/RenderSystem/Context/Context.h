@@ -203,8 +203,8 @@ class RenderTargetTable
 {
         Graphics::HandleTableLight rtv_table;
     
-        std::vector<DXGI_FORMAT>formats;
-        DXGI_FORMAT depth_format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
+        std::vector<Format> formats;
+        Format depth_format = Formats::Unknown;
         //  Graphics::Handle depth_handle;
 
         std::vector<Graphics::TextureView> textures;

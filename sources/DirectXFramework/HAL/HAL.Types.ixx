@@ -4,7 +4,7 @@ import Vectors;
 import Utils;
 import serialization;
 
-import d3d12; // TODO: remove
+import HAL.Format;
 
 export namespace HAL
 {
@@ -270,13 +270,13 @@ export namespace HAL
 		bool enable_depth_write = true;
 
 
-		DXGI_FORMAT ds_format = DXGI_FORMAT_UNKNOWN;
-		std::vector<DXGI_FORMAT> rtv_formats;
+		Format ds_format = Formats::Unknown;
+		std::vector<Format> rtv_formats;
 		ComparisonFunc func = ComparisonFunc::LESS;
 
 		bool enable_stencil = false;
-		UINT8 stencil_read_mask = 0xff;
-		UINT8 stencil_write_mask = 0xff;
+		uint8 stencil_read_mask = 0xff;
+		uint8 stencil_write_mask = 0xff;
 		StencilDesc stencil_desc;
 
 		RTVState()
@@ -323,25 +323,25 @@ export namespace HAL
 	struct ResourceViewDesc
 	{
 		ResourceType type;
-		DXGI_FORMAT format;
+		Format format;
 
 		union
 		{
 			struct
 			{
 
-				UINT PlaneSlice;
-				UINT MipSlice;
-				UINT FirstArraySlice;
-				UINT MipLevels;
-				UINT ArraySize;
+				uint PlaneSlice;
+				uint MipSlice;
+				uint FirstArraySlice;
+				uint MipLevels;
+				uint ArraySize;
 			} Texture2D;
 
 			struct
 			{
-				UINT64 Size;
-				UINT64 Offset;
-				UINT64 Stride;
+				uint64 Size;
+				uint64 Offset;
+				uint64 Stride;
 				bool counted;
 			} Buffer;
 

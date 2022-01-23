@@ -723,7 +723,9 @@ export
 	using uint3 = Vector<vec3_t<uint>>;
 	using uint4 = Vector<vec4_t<uint>>;
 
-
+	using uint8 = std::uint8_t;
+	using uint16 = std::uint16_t;
+	using uint64 = std::uint64_t;
 
 	sizer intersect(const sizer& a, const sizer& b);
 	rect intersect(const rect& a, const rect& b);

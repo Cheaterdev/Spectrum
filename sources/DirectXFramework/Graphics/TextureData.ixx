@@ -8,6 +8,12 @@ import FileSystem;
 import serialization;
 import Utils;
 import Log;
+
+import D3D12.Utils;
+import Graphics.Types;
+
+using namespace Graphics;
+
 export
 {
 
@@ -112,7 +118,7 @@ export
 
 		uint32_t array_size = 100500;
 		uint32_t mip_maps = 100500;
-		DXGI_FORMAT format;
+		Format format;
 
 		virtual~texture_data_header() = default;
 
@@ -367,7 +373,7 @@ texture_data::ptr texture_data::compress(texture_data::ptr orig)
 	metadata.height = orig->height;
 	metadata.arraySize = orig->array_size;
 	metadata.depth = orig->depth;
-	metadata.format = orig->format;
+	metadata.format = to_native(orig->format);
 	metadata.dimension = DirectX::TEX_DIMENSION_TEXTURE2D;
 	metadata.mipLevels = orig->mip_maps - 2;
 	metadata.miscFlags = 0;

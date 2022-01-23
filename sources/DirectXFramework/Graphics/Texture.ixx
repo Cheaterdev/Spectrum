@@ -12,9 +12,9 @@ import TextureData;
 import Descriptors;
 import HLSLDescriptors;
 
-import HAL.ResourceState;
 using namespace HAL;
 
+import Graphics.Types;
 export
 {
 namespace Graphics
@@ -319,7 +319,7 @@ namespace Graphics
             Texture(void*);
 
 
-			DXGI_FORMAT original_format;
+			Format original_format;
 
             CubemapView::ptr cubemap_view;
             Array2DView::ptr array_2d_view;

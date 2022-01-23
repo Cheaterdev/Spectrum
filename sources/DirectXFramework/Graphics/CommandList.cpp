@@ -15,7 +15,6 @@ import Buffer;
 import D3D12.Utils;
 import HAL.Types;
 
-import HAL.ResourceState;
 using namespace HAL;
 namespace Graphics
 

@@ -20,7 +20,6 @@ export import Matrices;
 export import CommandList;
 import Buffer;
 
-export import HAL.ResourceState;
 using namespace HAL;
 
 export

@@ -4,6 +4,7 @@ import Fence;
 import Descriptors;
 import Vectors;
 import d3d12;
+import Graphics.Types;
 
 export
 {
@@ -19,7 +20,7 @@ namespace Graphics
 	struct swap_chain_desc
 	{
 		int max_fps;
-		DXGI_FORMAT format;
+		Format format;
 		hwnd_provider* window;
 		hwnd_provider* fullscreen;
 		bool stereo;
