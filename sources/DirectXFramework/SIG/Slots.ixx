@@ -9,7 +9,6 @@ import Descriptors;
 import Enums;
 import Buffer;
 import SIG;
-import d3d12_types;
 import ResourceViews;
 export {
 

@@ -5,7 +5,6 @@ export module CommandListCompiler;
 
 import Vectors;
 import Device;
-import d3d12_types;
 
 import HAL.Types;
 using namespace HAL;

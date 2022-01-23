@@ -242,7 +242,7 @@ GraphicsPSO VoxelReflectionHi
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = ALWAYS;
-	stencil_pass_op = KEEP;
+	stencil_pass_op = Keep;
 
 	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
 	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -266,7 +266,7 @@ GraphicsPSO VoxelReflectionUpsample
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = ALWAYS;
-	stencil_pass_op = KEEP;
+	stencil_pass_op = Keep;
 
 	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
 	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -290,7 +290,7 @@ GraphicsPSO VoxelIndirectHi
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = EQUAL;
-	stencil_pass_op = KEEP;
+	stencil_pass_op = Keep;
 
 	blend = { Additive , None};
 	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R11G11B10_FLOAT};
@@ -324,7 +324,7 @@ GraphicsPSO VoxelIndirectUpsample
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = EQUAL;
-	stencil_pass_op = KEEP;
+	stencil_pass_op = Keep;
 
 	blend = { Additive , None};
 	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R11G11B10_FLOAT};

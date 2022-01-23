@@ -4,40 +4,8 @@ import Vectors;
 import Utils;
 import serialization;
 
-export import d3d12; // TODO remove
+import d3d12; // TODO: remove
 
-export
-{
-
-	//bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
-	//std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r);
-
-
-
-#define E(x) 	if ( l.x != r.x) return false;
-#define C(x) 	if (auto cmp = l.x <=> r.x; cmp != 0) return cmp;
-
-	bool operator==(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
-	{
-		E(StencilDepthFailOp);
-		E(StencilFailOp);
-		E(StencilFunc);
-		E(StencilPassOp);
-
-		return true;
-	}
-
-	std::strong_ordering operator<=>(const D3D12_DEPTH_STENCILOP_DESC& l, const D3D12_DEPTH_STENCILOP_DESC& r)
-	{
-		C(StencilDepthFailOp);
-		C(StencilFailOp);
-		C(StencilFunc);
-		C(StencilPassOp);
-
-		return std::strong_ordering::equal;
-	}
-
-}
 export namespace HAL
 {
 	enum class HeapType : uint
@@ -191,7 +159,52 @@ export namespace HAL
 		InvSrc1Alpha
 	};
 
+	enum class StencilOp: char
+	{
+		Keep,
+		Zero,
+		Replace,
+		IncrementSat,
+		DecrementSat,
+		Invert,
+		Increment,
+		Decrement
+	};
 
+	enum class ComparisonFunc : uint
+	{
+		NEVER,
+		LESS,
+		EQUAL,
+		LESS_EQUAL,
+		GREATER,
+		NOT_EQUAL,
+		GREATER_EQUAL,
+		ALWAYS,
+		NONE,
+		MIN,
+		MAX
+	};
+
+	struct StencilDesc
+	{
+		StencilOp      StencilFailOp;
+		StencilOp      StencilDepthFailOp;
+		StencilOp      StencilPassOp;
+		ComparisonFunc StencilFunc;
+
+		bool operator==(const StencilDesc&) const = default;
+		auto operator<=>(const StencilDesc& r)  const = default;
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(StencilFailOp);
+			ar& NVP(StencilDepthFailOp);
+			ar& NVP(StencilPassOp);
+			ar& NVP(StencilFunc);
+		}
+	};
 
 	struct RasterizerState
 	{
@@ -243,7 +256,9 @@ export namespace HAL
 		SERIALIZE()
 		{
 			ar& NVP(independ_blend);
-			for (auto& r : render_target)
+
+			ar& NVP(render_target);
+			for (auto& r : render_target) // ICE Here
 				ar& NVP(r);
 		}
 	};
@@ -257,19 +272,19 @@ export namespace HAL
 
 		DXGI_FORMAT ds_format = DXGI_FORMAT_UNKNOWN;
 		std::vector<DXGI_FORMAT> rtv_formats;
-		D3D12_COMPARISON_FUNC func = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_LESS;
+		ComparisonFunc func = ComparisonFunc::LESS;
 
 		bool enable_stencil = false;
 		UINT8 stencil_read_mask = 0xff;
 		UINT8 stencil_write_mask = 0xff;
-		D3D12_DEPTH_STENCILOP_DESC stencil_desc;
+		StencilDesc stencil_desc;
 
 		RTVState()
 		{
-			stencil_desc.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
-			stencil_desc.StencilFailOp = D3D12_STENCIL_OP_KEEP;
-			stencil_desc.StencilPassOp = D3D12_STENCIL_OP_KEEP;
-
+			stencil_desc.StencilDepthFailOp = StencilOp::Keep;
+			stencil_desc.StencilFailOp = StencilOp::Keep;
+			stencil_desc.StencilPassOp = StencilOp::Keep;
+			stencil_desc.StencilFunc = ComparisonFunc::LESS;
 		}
 		bool operator==(const RTVState& r) const = default;
 		auto  operator<=>(const  RTVState& r)  const = default;
@@ -289,6 +304,49 @@ export namespace HAL
 
 	};
 
+
+
+	enum class ResourceType : char
+	{
+
+		BUFFER,
+		TEXTURE1D,
+		//	TEXTURE1DARRAY,
+		TEXTURE2D,
+		//TEXTURE2DARRAY,
+		TEXTURE3D,
+		CUBE
+	};
+
+
+
+	struct ResourceViewDesc
+	{
+		ResourceType type;
+		DXGI_FORMAT format;
+
+		union
+		{
+			struct
+			{
+
+				UINT PlaneSlice;
+				UINT MipSlice;
+				UINT FirstArraySlice;
+				UINT MipLevels;
+				UINT ArraySize;
+			} Texture2D;
+
+			struct
+			{
+				UINT64 Size;
+				UINT64 Offset;
+				UINT64 Stride;
+				bool counted;
+			} Buffer;
+
+		};
+	};
 
 
 

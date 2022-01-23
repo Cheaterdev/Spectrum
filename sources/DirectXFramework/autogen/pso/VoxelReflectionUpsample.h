@@ -24,8 +24,8 @@ namespace PSOS
 			mpso.blend = { Graphics::Blends::Additive };
 			mpso.enable_stencil  = true;
 			mpso.enable_depth  = false;
-			mpso.stencil_func  = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
-			mpso.stencil_pass_op  = D3D12_STENCIL_OP::D3D12_STENCIL_OP_KEEP;
+			mpso.stencil_func  = Graphics::ComparisonFunc::ALWAYS;
+			mpso.stencil_pass_op  = Graphics::StencilOp::Keep;
 			mpso.ds  = DXGI_FORMAT_D24_UNORM_S8_UINT;
 			mpso.stencil_read_mask  = 2;
 			mpso.stencil_write_mask  = 2;

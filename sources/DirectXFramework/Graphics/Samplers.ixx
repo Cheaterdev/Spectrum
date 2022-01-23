@@ -1,7 +1,6 @@
 export module Samplers;
 
 import d3d12;
-import d3d12_types;
 import Vectors;
 
 export import Graphics.Types;

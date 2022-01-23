@@ -13,7 +13,6 @@ import stl.core;
 import Log;
 import Data;
 import HAL.Types;
-import d3d12_types;
 import d3d12;
 
 using namespace HAL;

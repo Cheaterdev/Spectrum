@@ -15,7 +15,6 @@ import D3D.Shaders;
 
 import RootSignature;
 import Utils;
-import d3d12_types;
 import Memory;
 import Enums;
 
@@ -252,15 +251,15 @@ struct  SimpleGraphicsPSO {
 	bool depth_write;
 	bool enable_depth;
 	DXGI_FORMAT ds;
-	D3D12_COMPARISON_FUNC depth_func;
+	Graphics::ComparisonFunc depth_func;
 	Graphics::CullMode cull;
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE topology;
 	char stencil_read_mask = 0;
 	char stencil_write_mask = 0;
 
 	bool enable_stencil = false;
-	D3D12_COMPARISON_FUNC stencil_func;
-	D3D12_STENCIL_OP stencil_pass_op;
+	Graphics::ComparisonFunc stencil_func;
+	Graphics::StencilOp stencil_pass_op;
 
 	SimpleGraphicsPSO(std::string name) :name(name)
 	{
@@ -268,12 +267,12 @@ struct  SimpleGraphicsPSO {
 		ds = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
 		conservative = false;
 		depth_write = true;
-		depth_func = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+		depth_func = Graphics::ComparisonFunc::LESS_EQUAL;
 		cull = Graphics::CullMode::Back;
 		topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		enable_depth = true;
-		stencil_func = D3D12_COMPARISON_FUNC_ALWAYS;
-		stencil_pass_op = D3D12_STENCIL_OP_REPLACE;
+		stencil_func = Graphics::ComparisonFunc::ALWAYS;
+		stencil_pass_op = Graphics::StencilOp::Replace;
 	}
 
 	Graphics::PipelineState::ptr create();

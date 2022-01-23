@@ -16,12 +16,12 @@ using namespace HAL;
 export namespace HAL
 {
 
-	enum class ResourceType:uint
+	enum class ResourceDimension :uint
 	{
 		BUFFER,
 		TEXTURE
 	};
-
+	
 	struct TextureDesc
 	{
 		Vector<vec3_t<uint, false>> Dimensions;
@@ -36,7 +36,7 @@ export namespace HAL
 
 	struct ResourceDesc
 	{
-		ResourceType Type;
+		ResourceDimension Type;
 
 		union
 		{
@@ -83,7 +83,7 @@ namespace HAL
 {
 	Resource::Resource(Device& device, const BufferDesc& bufferDesc, const PlacementAddress& address, ResourceState initialState)
 	{
-		desc.Type = ResourceType::BUFFER;
+		desc.Type = ResourceDimension::BUFFER;
 		desc.Buffer = bufferDesc;
 
 		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferDesc.SizeInBytes);

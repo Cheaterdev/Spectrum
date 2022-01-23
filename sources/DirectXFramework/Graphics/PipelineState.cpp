@@ -228,13 +228,13 @@ namespace Graphics
 			CD3DX12_DEPTH_STENCIL_DESC DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);;
 			DepthStencilState.DepthWriteMask = desc.rtv.enable_depth_write ? D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ZERO;
 			DepthStencilState.DepthEnable = desc.rtv.enable_depth;
-			DepthStencilState.DepthFunc = desc.rtv.func;
+			DepthStencilState.DepthFunc = to_native(desc.rtv.func);
 
 			DepthStencilState.StencilEnable = desc.rtv.enable_stencil;
 			DepthStencilState.StencilReadMask = desc.rtv.stencil_read_mask;
 			DepthStencilState.StencilWriteMask = desc.rtv.stencil_write_mask;
-			DepthStencilState.FrontFace = desc.rtv.stencil_desc;
-			DepthStencilState.BackFace = desc.rtv.stencil_desc;
+			DepthStencilState.FrontFace = to_native(desc.rtv.stencil_desc);
+			DepthStencilState.BackFace = to_native(desc.rtv.stencil_desc);
 
 			creator.include((D3D12_DEPTH_STENCIL_DESC)DepthStencilState);
 		}

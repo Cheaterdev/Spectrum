@@ -9,7 +9,6 @@ import Allocators;
 
 import Threading;
 import Singleton;
-import d3d12_types;
 import Utils;
 import Vectors;
 import Constants;
@@ -19,6 +18,8 @@ import HAL.Heap;
 
 import Utils;
 using namespace HAL;
+
+import d3d12;
 
 export
 {

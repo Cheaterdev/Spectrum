@@ -1249,13 +1249,13 @@ void generate_pso(PSO& pso)
 						if (e.type == "cull")
 							add = "Graphics::CullMode::";
 						else if (e.type == "depth_func")
-							add = "D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_";
+							add = "Graphics::ComparisonFunc::";
 						else if (e.type == "topology")
 							add = "D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_";
 						else if (e.type == "stencil_func")
-							add = "D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_";
+							add = "Graphics::ComparisonFunc::";
 						else if (e.type == "stencil_pass_op")
-							add = "D3D12_STENCIL_OP::D3D12_STENCIL_OP_";
+							add = "Graphics::StencilOp::";
 
 						stream << "mpso."<<e.type << "  = "<<add << e.expr << ";" << std::endl;
 					}

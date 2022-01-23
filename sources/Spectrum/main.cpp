@@ -43,8 +43,6 @@ import PSO;
 import Utils;
 using namespace FrameGraph;
 
-import d3d12_types;
-
 HRESULT device_fail()
 {
 	auto hr = Graphics::Device::get().get_native_device()->GetDeviceRemovedReason();

@@ -4,7 +4,6 @@ module;
 
 export module SIG;
 import stl.core;
-import d3d12_types;
 
 import Concepts;
 import Descriptors;

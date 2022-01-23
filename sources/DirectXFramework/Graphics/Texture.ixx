@@ -9,7 +9,6 @@ import ResourceManager;
 
 import Resource;
 import TextureData;
-import d3d12_types;
 import Descriptors;
 import HLSLDescriptors;
 

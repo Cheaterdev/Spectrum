@@ -24,7 +24,7 @@ namespace PSOS
 			mpso.blend = {  };
 			mpso.ds  = DXGI_FORMAT_D32_FLOAT;
 			mpso.cull  = Graphics::CullMode::None;
-			mpso.depth_func  = D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_ALWAYS;
+			mpso.depth_func  = Graphics::ComparisonFunc::ALWAYS;
 			return mpso;
 		}
 	};

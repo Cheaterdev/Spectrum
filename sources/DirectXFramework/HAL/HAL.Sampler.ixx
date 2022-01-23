@@ -1,5 +1,7 @@
 export module HAL.Sampler;
 
+import HAL.Types;
+
 import Vectors;
 
 export namespace HAL
@@ -20,20 +22,6 @@ export namespace HAL
         MIRROR_ONCE
     };
 
-    enum class ComparisonFunc : uint
-    {
-        NEVER,
-        LESS,
-        EQUAL,
-        LESS_EQUAL,
-        GREATER,
-        NOT_EQUAL,
-        GREATER_EQUAL,
-        ALWAYS,
-        NONE,
-        MIN,
-        MAX
-    };
 
     struct SamplerDesc
     {

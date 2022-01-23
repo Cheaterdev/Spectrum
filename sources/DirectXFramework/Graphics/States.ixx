@@ -8,7 +8,6 @@ export module States;
 import Utils;
 import StateContext;
 import Device;
-import d3d12_types;
 import HAL.ResourceState;
 import HAL.Types;
 

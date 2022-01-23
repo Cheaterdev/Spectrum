@@ -26,11 +26,18 @@ export {
 		using CullMode = HAL::CullMode;
 		using FillMode = HAL::FillMode;
 
+using StencilOp = HAL::StencilOp;
+using ComparisonFunc = HAL::ComparisonFunc;
+
 
 		using RenderTarget = HAL::RenderTarget;
 using RasterizerState = HAL::RasterizerState;
 using BlendState = HAL::BlendState;
 using RTVState = HAL::RTVState;
 
+
+using ResourceViewDesc = HAL::ResourceViewDesc;
+
+using ResourceType = HAL::ResourceType;
 	}
 }

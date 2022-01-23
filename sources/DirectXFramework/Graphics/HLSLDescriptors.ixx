@@ -12,7 +12,6 @@ import stl.core;
 
 import Log;
 import Data;
-import d3d12_types;
 import d3d12;
 
 import Descriptors;

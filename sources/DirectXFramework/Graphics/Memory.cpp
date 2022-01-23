@@ -9,7 +9,6 @@ import Allocators;
 
 import Threading;
 import Singleton;
-import d3d12_types;
 import Utils;
 import Vectors;
 import Constants;

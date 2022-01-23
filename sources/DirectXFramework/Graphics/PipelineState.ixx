@@ -12,7 +12,6 @@ import Shader;
 import Device;
 
 import Singleton;
-import d3d12_types;
 import serialization;
 import Trackable;
 Graphics::RootLayout::ptr get_Signature(Layouts id);
