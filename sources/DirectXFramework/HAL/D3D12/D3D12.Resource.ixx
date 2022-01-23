@@ -10,7 +10,7 @@ import D3D12.Types;
 import HAL.Device;
 import HAL.Heap;
 
-using namespace HAL;
+import stl.core;
 
 
 export namespace HAL
@@ -37,22 +37,7 @@ export namespace HAL
 	struct ResourceDesc
 	{
 		ResourceDimension Type;
-
-		union
-		{
-			struct
-			{
-			//	Vector<vec3_t<uint, false>> Dimensions;
-				uint ArraySize;
-				DXGI_FORMAT Format;
-			};
-			struct
-			{
-				BufferDesc Buffer;
-			};
-			
-		};
-
+		std::variant< TextureDesc, BufferDesc> desc = BufferDesc{ 0 };
 	};
 
 	struct PlacementAddress
@@ -84,7 +69,7 @@ namespace HAL
 	Resource::Resource(Device& device, const BufferDesc& bufferDesc, const PlacementAddress& address, ResourceState initialState)
 	{
 		desc.Type = ResourceDimension::BUFFER;
-		desc.Buffer = bufferDesc;
+		desc.desc = bufferDesc;
 
 		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferDesc.SizeInBytes);
 		device.native_device->CreatePlacedResource(
