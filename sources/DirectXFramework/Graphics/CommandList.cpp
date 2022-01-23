@@ -12,7 +12,7 @@ import Exceptions;
 import CommandList;
 
 import Buffer;
-import D3D12.Types;
+import D3D12.Utils;
 import HAL.Types;
 
 import HAL.ResourceState;

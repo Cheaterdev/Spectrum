@@ -6,7 +6,7 @@ import Device;
 import Vectors;
 import Device;
 import HAL.Types;
-import D3D12.Types;
+import D3D12.Utils;
 
 import Utils;
 

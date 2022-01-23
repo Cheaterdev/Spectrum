@@ -8,7 +8,7 @@ import Concepts;
 import Samplers;
 import Graphics.Types;
 
-import D3D12.Types;
+import D3D12.Utils;
 export
 {
 

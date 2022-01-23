@@ -1,4 +1,4 @@
-export module D3D12.Types;
+export module D3D12.Utils;
 import d3d12;
 import Vectors;
 import HAL.Types;

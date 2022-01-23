@@ -2,7 +2,7 @@
 import RaytracingAS;
 import Queue;
 import HAL.Types;
-import D3D12.Types;
+import D3D12.Utils;
 using namespace HAL;
 
 

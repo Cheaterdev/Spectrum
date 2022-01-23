@@ -6,7 +6,7 @@ import Utils;
 import HAL.Types;
 import HAL.Sampler;
 
-import D3D12.Types;
+import D3D12.Utils;
 import HAL.Device;
 
 using namespace HAL;
