@@ -120,7 +120,9 @@ export namespace HAL
 			BC7_UNORM_SRGB,
 		};
 
-		Format(Formats f): native_format(f)
+		using EnumClass = Formats;
+		
+		Format(Formats f) : native_format(f)
 		{
 
 		}

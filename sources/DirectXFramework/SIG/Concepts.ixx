@@ -76,6 +76,8 @@ export
 		T;
 	};
 
+	template<class T>
+	concept IsEnumClass = requires () { T::EnumClass; };
 
 
 	template<class T>
@@ -84,12 +86,15 @@ export
 		using TYPE = T;
 	};
 
-	template<HasCB T>
+	template<IsEnumClass T>
 	struct _Underlying<T>
 	{
-		using TYPE = typename T;
+		using TYPE = typename T::EnumClass;
 	};
 
 	template<class T>
 	using Underlying = typename _Underlying<T>::TYPE;
 }
+
+
+

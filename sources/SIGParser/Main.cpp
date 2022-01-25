@@ -649,6 +649,7 @@ import RootSignature;
 
 import Utils;
 import serialization;
+import Graphics.Types;
 
 export
 {
@@ -1052,7 +1053,11 @@ void generate_pso(PSO& pso)
 			auto opt = d.find_option("type");
 			if (opt)
 			{
+				keys += "Underlying<";
+				if (opt->value_atom.expr=="Format")
+					keys += "Graphics::";
 				keys += opt->value_atom.expr;
+				keys += ">";
 			}else
 
 			keys += "int";
