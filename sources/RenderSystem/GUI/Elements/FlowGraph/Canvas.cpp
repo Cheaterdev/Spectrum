@@ -619,10 +619,10 @@ GUI::Elements::FlowGraph::canvas::renderer::renderer(GUI::Renderer* renderer)
         state_desc.domain = Graphics::domain_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "DS", 0, {} });
         state_desc.hull = Graphics::hull_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "HS", 0, {} });
         state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-        state_desc.layout.inputs.push_back({ "SV_POSITION", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        state_desc.layout.inputs.push_back({ "COLOR", 0, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-        //   state_desc.layout.inputs.emplace_back({ "SV_POSITION", 0, 0, 0, DXGI_FORMAT::DXGI_FORMAT_R32G32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
-        //   state_desc.layout.inputs.emplace_back({ "COLOR", 0, sizeof(vec2), 0, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
+        state_desc.layout.inputs.push_back({ "SV_POSITION", 0, Graphics::Format::R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+        state_desc.layout.inputs.push_back({ "COLOR", 0, Graphics::Format::R32G32B32A32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+        //   state_desc.layout.inputs.emplace_back({ "SV_POSITION", 0, 0, 0, Graphics::Format::R32G32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
+        //   state_desc.layout.inputs.emplace_back({ "COLOR", 0, sizeof(vec2), 0, Graphics::Format::R32G32B32A32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
         line_state.reset(new Graphics::PipelineState(state_desc));
         inv_pixel.reset(new Graphics::ConstBuffer<vec2>());
         line_vertex.reset(new Graphics::Buffer<line_vertexes>(Graphics::HeapType::DEFAULT, 512));

@@ -118,7 +118,7 @@ namespace Graphics
 		desc.Format = to_typeless(desc.Format);
 
 		//  auto res = list->read_texture(resource, ivec3(0, 0, 0), ivec3(desc.Width, desc.Height, 1), i);
-		texture_data::ptr p_data(new texture_data(desc.ArraySize(), desc.MipLevels, static_cast<uint32_t>(desc.Width), desc.Height, desc.Depth(), desc.Format));
+		texture_data::ptr p_data(new texture_data(desc.ArraySize(), desc.MipLevels, static_cast<uint32_t>(desc.Width), desc.Height, desc.Depth(), from_native(desc.Format)));
 		auto& data = *p_data;
 		std::vector<std::future<bool>> tasks;
 

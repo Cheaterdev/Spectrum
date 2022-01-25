@@ -26,8 +26,8 @@ void SMAA::generate(Graph& graph)
 	graph.add_pass<SMAAData>("SMAA", [this, &graph](SMAAData& data, TaskBuilder& builder) {
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 
-		builder.create(data.SMAA_edges, { ivec3(graph.frame_size, 1), DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM,1 ,1}, ResourceFlags::RenderTarget);
-		builder.create(data.SMAA_blend, { ivec3(graph.frame_size, 1),  DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,1 ,1} ,ResourceFlags::RenderTarget);
+		builder.create(data.SMAA_edges, { ivec3(graph.frame_size, 1), Graphics::Format::R8G8_UNORM,1 ,1}, ResourceFlags::RenderTarget);
+		builder.create(data.SMAA_blend, { ivec3(graph.frame_size, 1),  Graphics::Format::R8G8B8A8_UNORM,1 ,1} ,ResourceFlags::RenderTarget);
 
 		 builder.recreate(data.ResultTextureNew, ResourceFlags::RenderTarget);
 

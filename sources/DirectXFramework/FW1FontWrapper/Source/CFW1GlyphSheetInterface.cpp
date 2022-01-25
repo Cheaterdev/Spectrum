@@ -7,6 +7,7 @@
 
 import Autogen;
 import ResourceViews;
+import Graphics.Types;
 
 namespace FW1FontWrapper
 {
@@ -53,7 +54,7 @@ namespace FW1FontWrapper
 
         Slots::FontRendering rendering;
 
-        rendering.GetPositions() = m_pCoordBuffer->create_view<FormattedBufferView<float4, DXGI_FORMAT::DXGI_FORMAT_R32G32B32A32_FLOAT>>(*list->frame_resources).srv_handle;
+        rendering.GetPositions() = m_pCoordBuffer->create_view<FormattedBufferView<float4, Graphics::Format::R32G32B32A32_FLOAT>>(*list->frame_resources).srv_handle;
 		rendering.GetTex0() = m_pTexture->texture_2d()->texture2D;
 
         rendering.set(list->get_graphics());

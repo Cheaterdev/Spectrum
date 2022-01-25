@@ -25,7 +25,7 @@ namespace PSOS
 			
 			mpso.rtv_formats = {  };
 			mpso.blend = {  };
-			mpso.ds  = DXGI_FORMAT_D32_FLOAT;
+			mpso.ds  = Graphics::Format::D32_FLOAT;
 			mpso.cull  = Graphics::CullMode::None;
 			mpso.depth_func  = Graphics::ComparisonFunc::LESS;
 			return mpso;

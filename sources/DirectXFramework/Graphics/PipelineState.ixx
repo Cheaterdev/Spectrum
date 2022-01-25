@@ -45,7 +45,7 @@ namespace Graphics
 		RTVState rtv;
 		PipelineStateDesc()
 		{
-			rtv.rtv_formats.emplace_back(DXGI_FORMAT_R8G8B8A8_UNORM);
+			rtv.rtv_formats.emplace_back(Format::R8G8B8A8_UNORM);
 			rasterizer.cull_mode = CullMode::Back;
 			rasterizer.fill_mode = FillMode::Solid;
 		}

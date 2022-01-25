@@ -6,7 +6,7 @@ import Autogen;
 void BRDF::create_new()
 {
 
-	texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+	texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex3D(to_native(Graphics::Format::R16G16B16A16_FLOAT), 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 	Graphics::CommandList::ptr list(new Graphics::CommandList(Graphics::CommandListType::DIRECT));
 	list->begin("BRDF");
 

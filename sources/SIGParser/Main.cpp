@@ -1215,7 +1215,7 @@ void generate_pso(PSO& pso)
 							}
 							else
 							{
-								elems += "DXGI_FORMAT::";
+								elems += "Graphics::Format::";
 								elems += e.expr;
 							}
 
@@ -1245,7 +1245,8 @@ void generate_pso(PSO& pso)
 
 						std::string add;
 
-	
+		if (e.type == "ds")
+							add = "Graphics::Format::";
 						if (e.type == "cull")
 							add = "Graphics::CullMode::";
 						else if (e.type == "depth_func")

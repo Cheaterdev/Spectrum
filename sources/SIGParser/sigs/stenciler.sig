@@ -46,7 +46,7 @@ GraphicsPSO DrawStencil
 	[EntryPoint = PS]
 	pixel = stencil;
 
-	ds = DXGI_FORMAT_D32_FLOAT;
+	ds = D32_FLOAT;
 	cull = None;
 	depth_func = LESS;
 }
@@ -69,7 +69,7 @@ GraphicsPSO DrawSelected
 	
 	
 
-	rtv = { DXGI_FORMAT_R8_SNORM };
+	rtv = { R8_SNORM };
 
 	enable_depth = false;
 	cull = None;
@@ -92,7 +92,7 @@ GraphicsPSO DrawBox
 	enable_depth = false;
 	cull = None;
 
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+	rtv = { R16G16B16A16_FLOAT };
 	blend = { Additive };
 }
 
@@ -115,7 +115,7 @@ GraphicsPSO DrawAxis
 	enable_depth = false;
 	cull = None;
 
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+	rtv = { R16G16B16A16_FLOAT };
 }
 
 
@@ -132,7 +132,7 @@ GraphicsPSO StencilerLast
 	enable_depth = false;
 	cull = None;
 
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+	rtv = { R16G16B16A16_FLOAT };
 	blend = { Additive };
 }
 

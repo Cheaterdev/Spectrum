@@ -14,6 +14,7 @@ class debug_drawer;
 class vertex_transform;
 class GBuffer;
 
+import D3D12.Utils;
 using namespace FrameGraph;
 
 namespace materials
@@ -204,7 +205,7 @@ class RenderTargetTable
         Graphics::HandleTableLight rtv_table;
     
         std::vector<Format> formats;
-        Format depth_format = Formats::Unknown;
+        Format depth_format = Format::UNKNOWN;
         //  Graphics::Handle depth_handle;
 
         std::vector<Graphics::TextureView> textures;
@@ -259,9 +260,9 @@ class RenderTargetTable
            rtv_table = graphics.place_rtv((UINT)list.size());
             UINT i = 0;
 
-            for (auto e : list)
+            for (auto& e : list)
             {
-                formats.emplace_back(e.get_desc().Format);
+                formats.emplace_back(from_native(e.get_desc().Format));
                 textures.emplace_back(e);
 
                 rtv_table[i++].place(e.renderTarget);
@@ -274,7 +275,7 @@ class RenderTargetTable
 
 
                 depth_texture = depth;
-                depth_format = to_dsv(depth.get_desc().Format);
+                depth_format = from_native(depth.get_desc().Format).to_dsv();
               //  depth.place_dsv(dsv_table[0]);
                 dsv_table[0].place(depth.depthStencil);
                 on_init(depth.get_size());
@@ -373,20 +374,20 @@ public:
 
 	void create(ivec2 size, TaskBuilder& builder)
 	{
-		builder.create(GBuffer_Albedo, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,1,1}, ResourceFlags::RenderTarget);
-	 builder.create(GBuffer_Normals, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,1,1}, ResourceFlags::RenderTarget);
-		 builder.create(GBuffer_Depth, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS,1,1}, ResourceFlags::DepthStencil);
-		builder.create(GBuffer_Specular, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,1,1}, ResourceFlags::RenderTarget);
-		 builder.create(GBuffer_Speed, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R16G16_FLOAT,1, 1}, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Albedo, { ivec3(size,1), Graphics::Format::R8G8B8A8_UNORM,1,1}, ResourceFlags::RenderTarget);
+	 builder.create(GBuffer_Normals, { ivec3(size,1), Graphics::Format::R8G8B8A8_UNORM,1,1}, ResourceFlags::RenderTarget);
+		 builder.create(GBuffer_Depth, { ivec3(size,1), Graphics::Format::R32_TYPELESS,1,1}, ResourceFlags::DepthStencil);
+		builder.create(GBuffer_Specular, { ivec3(size,1), Graphics::Format::R8G8B8A8_UNORM,1,1}, ResourceFlags::RenderTarget);
+		 builder.create(GBuffer_Speed, { ivec3(size,1), Graphics::Format::R16G16_FLOAT,1, 1}, ResourceFlags::RenderTarget);
 
 
-       builder.create(GBuffer_DepthMips, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS,1,1}, ResourceFlags::RenderTarget | ResourceFlags::Static);
-        builder.create(GBuffer_DepthPrev, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS,1,1}, ResourceFlags::RenderTarget | ResourceFlags::Static);
+       builder.create(GBuffer_DepthMips, { ivec3(size,1), Graphics::Format::R32_TYPELESS,1,1}, ResourceFlags::RenderTarget | ResourceFlags::Static);
+        builder.create(GBuffer_DepthPrev, { ivec3(size,1), Graphics::Format::R32_TYPELESS,1,1}, ResourceFlags::RenderTarget | ResourceFlags::Static);
 	}
 	
 	void create_quality(ivec2 size, TaskBuilder& builder)
 	{
-		 builder.create(GBuffer_Quality, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT,1,1}, ResourceFlags::DepthStencil);
+		 builder.create(GBuffer_Quality, { ivec3(size,1), Graphics::Format::D24_UNORM_S8_UINT,1,1}, ResourceFlags::DepthStencil);
 	}
    
 	void create_mips(ivec2 size, TaskBuilder& builder)
@@ -397,7 +398,7 @@ public:
 
 	auto create_temp_color(ivec2 size, TaskBuilder& builder)
 	{
-		return builder.create(GBuffer_TempColor, { ivec3(size,1), DXGI_FORMAT::DXGI_FORMAT_R8G8_UNORM,1,1}, ResourceFlags::RenderTarget);
+		return builder.create(GBuffer_TempColor, { ivec3(size,1), Graphics::Format::R8G8_UNORM,1,1}, ResourceFlags::RenderTarget);
 	}
 
     void need(TaskBuilder& builder, bool need_quality = false, bool need_mips = false)

@@ -29,7 +29,7 @@ namespace PSOS
 			mpso.hull.entry_point = "HS";
 			mpso.hull.flags = 0;
 			
-			mpso.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM };
+			mpso.rtv_formats = { Graphics::Format::R8G8B8A8_UNORM };
 			mpso.blend = { Graphics::Blends::AlphaBlend };
 			mpso.enable_depth  = false;
 			mpso.cull  = Graphics::CullMode::None;

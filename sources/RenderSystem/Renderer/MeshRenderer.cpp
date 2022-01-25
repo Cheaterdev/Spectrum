@@ -285,7 +285,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	auto begin = pipelines.begin();
 	auto end = begin;
-	//	auto view = meshes_ids->buffer->help_buffer->create_view<Graphics::FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*list.frame_resources);
+	//	auto view = meshes_ids->buffer->help_buffer->create_view<Graphics::FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(*list.frame_resources);
 
 
 
@@ -480,7 +480,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 	}
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
+		gather.GetCommands() = meshes_ids->buffer->create_view<FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
 
 		gather.GetMeshes_count() = meshes_ids->buffer->structuredBufferCount;
 
@@ -490,7 +490,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
+		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer->structuredBufferCount;
 		gather_invisible = gather.compile(StaticCompiledGPUData::get());
 		//	gather_invisible = meshes_invisible_ids->buffer->help_buffer->get_resource_address();

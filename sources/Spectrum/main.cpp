@@ -490,8 +490,8 @@ public:
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
 
-			//	builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
-			//	builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+			//	builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), Graphics::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+			//	builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), Graphics::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
@@ -505,8 +505,8 @@ public:
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
 
-				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
-				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), Graphics::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), Graphics::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 				}, [this,&graph](GBufferData& data, FrameContext& _context) {
 
@@ -585,8 +585,8 @@ public:
 			graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
-				builder.create(data.RTXDebug, { ivec3(size, 1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-				builder.create(data.RTXDebugPrev, { ivec3(size, 1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+				builder.create(data.RTXDebug, { ivec3(size, 1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+				builder.create(data.RTXDebugPrev, { ivec3(size, 1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 
 				}, [this, &graph](RTXDebugData& data, FrameContext& context) {
 					auto& compute = context.get_list()->get_compute();
@@ -632,7 +632,7 @@ public:
 
 		};
 		graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
-			builder.create(data.ResultTexture, { uint3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, 1 });
+			builder.create(data.ResultTexture, { uint3(graph.frame_size,1), Graphics::Format::R16G16B16A16_FLOAT, 1 });
 			}, [](no& data, FrameContext& _context) {});
 
 
@@ -1010,7 +1010,7 @@ resource_stages[&res.second] = input;
 	{
 		Window::input_handler = this;
 		Graphics::swap_chain_desc desc;
-		desc.format = DXGI_FORMAT_R8G8B8A8_UNORM;
+		desc.format = Graphics::Format::R8G8B8A8_UNORM;
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;

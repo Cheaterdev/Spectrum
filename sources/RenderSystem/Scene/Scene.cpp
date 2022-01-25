@@ -133,7 +133,7 @@ void Scene::update(FrameResources& frame)
 
 			if (data.size()) {
 				auto info = frame.place_raw(data);
-				auto srv = info.resource->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(frame,  (UINT)info.offset, (UINT)info.size).srv_handle;
+				auto srv = info.resource->create_view<FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(frame,  (UINT)info.offset, (UINT)info.size).srv_handle;
 				gather_global.GetCommands() = srv;
 			}
 

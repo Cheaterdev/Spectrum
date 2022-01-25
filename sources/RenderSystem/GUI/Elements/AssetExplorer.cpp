@@ -42,7 +42,7 @@ namespace GUI
 			{
 
 			//	if (!debug_texture)
-			//		debug_texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Graphics::ResourceState::PIXEL_SHADER_RESOURCE));
+			//		debug_texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex2D(Graphics::Format::R8G8B8A8_UNORM, 128, 128, 1, 1, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET), Graphics::ResourceState::PIXEL_SHADER_RESOURCE));
 				GUI::Elements::image::ptr img(new GUI::Elements::image);
 				img->texture.texture = Graphics::Texture::get_resource({ "textures/gui/shadow.png", false, false });
 				img->texture.padding = { 9, 9, 9, 9 };

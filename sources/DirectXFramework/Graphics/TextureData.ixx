@@ -140,13 +140,13 @@ export
 
 		using ptr = std::shared_ptr<texture_mip_data>;
 		texture_mip_data() {}
-		texture_mip_data(UINT w, UINT h, UINT d, DXGI_FORMAT format)
+		texture_mip_data(UINT w, UINT h, UINT d, Format format)
 		{
 			width = w;
 			height = h;
 			depth = d;
 			size_t a, b, c;
-			GetSurfaceInfo2(w, h, format, &a, &b, &c);
+			GetSurfaceInfo2(w, h, to_native(format), &a, &b, &c);
 			width_stride = static_cast<UINT>(b);
 			slice_stride = static_cast<UINT>(a);
 			num_rows = static_cast<UINT>(c);
@@ -195,7 +195,7 @@ export
 
 		std::vector<texture_mip_data::ptr> mips;
 		mip() {}
-		mip(uint32_t count, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format)
+		mip(uint32_t count, uint32_t width, uint32_t height, uint32_t depth, Format format)
 		{
 			mips.reserve(count);
 
@@ -244,7 +244,7 @@ export
 			ar& NVP(array);
 		}
 		texture_data() {}
-		texture_data(uint32_t array_count, uint32_t num_mips, uint32_t width, uint32_t height, uint32_t depth, DXGI_FORMAT format)
+		texture_data(uint32_t array_count, uint32_t num_mips, uint32_t width, uint32_t height, uint32_t depth, Format format)
 		{
 			array_size = array_count;
 			this->depth = depth;
@@ -300,7 +300,7 @@ texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
 	{
 		size_t depth = metadata.depth;
 		size_t idx = 0;
-		tex_data.reset(new texture_data(1u, (UINT)metadata.mipLevels, (UINT)metadata.width, (UINT)metadata.height, (UINT)metadata.depth, metadata.format));
+		tex_data.reset(new texture_data(1u, (UINT)metadata.mipLevels, (UINT)metadata.width, (UINT)metadata.height, (UINT)metadata.depth, from_native(metadata.format)));
 
 		for (size_t level = 0; level < metadata.mipLevels; ++level)
 		{
@@ -328,7 +328,7 @@ texture_data::ptr generate_tex_data(DirectX::ScratchImage& image)
 	{
 		//--- 1D or 2D texture case ---------------------------------------------------
 		size_t idx = 0;
-		tex_data.reset(new texture_data((UINT)metadata.arraySize, (UINT)metadata.mipLevels, (UINT)metadata.width, (UINT)metadata.height, (UINT)metadata.depth, metadata.format));
+		tex_data.reset(new texture_data((UINT)metadata.arraySize, (UINT)metadata.mipLevels, (UINT)metadata.width, (UINT)metadata.height, (UINT)metadata.depth, from_native(metadata.format)));
 
 		for (size_t item = 0; item < metadata.arraySize; ++item)
 		{

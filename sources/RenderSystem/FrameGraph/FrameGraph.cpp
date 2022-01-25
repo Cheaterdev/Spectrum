@@ -118,7 +118,7 @@ namespace FrameGraph
 	{
 		Handlers::Texture h(name);
 		//pass_texture(name, tex->create_view<Graphics::TextureView>(*current_frame), flags);
-		create(h, { ivec3(0,0,0), DXGI_FORMAT::DXGI_FORMAT_UNKNOWN, 0 }, flags);
+		create(h, { ivec3(0,0,0), Graphics::Format::UNKNOWN, 0 }, flags);
 		auto& info = *h.info;
 		info.passed = true;
 		info.placed = false;

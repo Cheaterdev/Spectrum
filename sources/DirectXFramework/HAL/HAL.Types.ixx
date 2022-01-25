@@ -270,7 +270,7 @@ export namespace HAL
 		bool enable_depth_write = true;
 
 
-		Format ds_format = Formats::Unknown;
+		Format ds_format = Format::UNKNOWN;
 		std::vector<Format> rtv_formats;
 		ComparisonFunc func = ComparisonFunc::LESS;
 

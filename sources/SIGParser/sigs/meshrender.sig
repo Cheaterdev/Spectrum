@@ -234,7 +234,7 @@ GraphicsPSO RenderBoxes
 	conservative = true;
 	depth_write = false;
 
-	ds = DXGI_FORMAT_D32_FLOAT;
+	ds = D32_FLOAT;
 
 	cull = None;
 

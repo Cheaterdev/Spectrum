@@ -371,7 +371,7 @@ void stencil_renderer::generate(Graph& graph)
 
 		graph.add_pass<Data>("stencil_renderer::before", [this, &graph](Data& data, TaskBuilder& builder) {
 
-			builder.create(data.depth_tex, { { 1,1,1 }, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+			builder.create(data.depth_tex, { { 1,1,1 }, Graphics::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 			builder.create(data.id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.axis_id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			}, [this, &graph](Data& data, FrameContext& _context) {
@@ -554,7 +554,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 		graph.add_pass<Data>("stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R8_SNORM,1 ,1} ,ResourceFlags::RenderTarget);
+			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,1), Graphics::Format::R8_SNORM,1 ,1} ,ResourceFlags::RenderTarget);
 
 			}, [this, &graph](Data& data, FrameContext& _context) {
 

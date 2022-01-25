@@ -8,6 +8,7 @@ import Resource;
 import Descriptors;
 import Graphics.Types;
 
+import D3D12.Utils;
 import HLSLDescriptors;
 
 export
@@ -30,7 +31,7 @@ export
 
 			}
 
-			auto get_desc()
+			auto get_desc() const
 			{
 				return resource->get_desc();
 			}
@@ -44,7 +45,7 @@ export
 			{
 				auto& desc = resource->get_desc();
 
-				view_desc.format = desc.Format;
+				view_desc.format = from_native(desc.Format);
 
 				if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 				{
@@ -94,7 +95,7 @@ export
 		};
 
 
-		template<class T, DXGI_FORMAT format>
+		template<class T, Format::Formats _format>
 		class FormattedBufferView :public ResourceView
 		{
 
@@ -106,17 +107,19 @@ export
 			template<class F>
 			FormattedBufferView(Resource::ptr resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
 			{
+
+				Format format = _format;
 				init_desc();
 				view_desc.Buffer.Offset = offset;
 				if (size) view_desc.Buffer.Size = size;
 				srv_handle = HLSL::Buffer<T>(frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
 
-				srv_handle.create(resource.get(), format, static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
+				srv_handle.create(resource.get(), to_native(format), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 
 				auto& desc = resource->get_desc();
 				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
 					uav_handle = HLSL::RWBuffer<T>(frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
-					uav_handle.create(resource.get(), format, static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
+					uav_handle.create(resource.get(), to_native(format), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 				}
 			}
 

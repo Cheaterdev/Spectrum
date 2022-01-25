@@ -23,7 +23,7 @@ namespace PSOS
 			mpso.pixel.entry_point = "PS_RESULT";
 			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8_SNORM };
+			mpso.rtv_formats = { Graphics::Format::R8_SNORM };
 			mpso.blend = {  };
 			mpso.enable_depth  = false;
 			mpso.cull  = Graphics::CullMode::None;

@@ -65,8 +65,8 @@ public:
 				//	data.gbuffer.create_quality(size, builder);
 
 
-				 builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1 ), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1},ResourceFlags::DepthStencil);
-				 builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+				 builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1 ), Graphics::Format::R32_TYPELESS, 1},ResourceFlags::DepthStencil);
+				 builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), Graphics::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 				}, [this,&graph](GBufferData& data, FrameContext& _context) {
 

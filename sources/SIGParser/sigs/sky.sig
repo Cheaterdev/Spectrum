@@ -44,7 +44,7 @@ GraphicsPSO Sky
 	[EntryPoint = PS]
 	pixel = sky;
 
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+	rtv = { R16G16B16A16_FLOAT };
 	blend = { Additive };
 }
 
@@ -59,7 +59,7 @@ GraphicsPSO SkyCube
 	[EntryPoint = PS_Cube]
 	pixel = sky;
 
-	rtv = { DXGI_FORMAT_R11G11B10_FLOAT };
+	rtv = { R11G11B10_FLOAT };
 }
 
 GraphicsPSO CubemapENV
@@ -77,7 +77,7 @@ GraphicsPSO CubemapENV
 	define Level = {1,8,32,64,128};
 
 
-	rtv = { DXGI_FORMAT_R11G11B10_FLOAT };
+	rtv = { R11G11B10_FLOAT };
 }
 
 GraphicsPSO CubemapENVDiffuse
@@ -90,5 +90,5 @@ GraphicsPSO CubemapENVDiffuse
 	[EntryPoint = PS_Diffuse]
 	pixel = cubemap_down;
 
-	rtv = { DXGI_FORMAT_R11G11B10_FLOAT };
+	rtv = { R11G11B10_FLOAT };
 }

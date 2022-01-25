@@ -42,8 +42,6 @@ using ResourceViewDesc = HAL::ResourceViewDesc;
 using ResourceType = HAL::ResourceType;
 
 using Format = HAL::Format;
-using Formats = HAL::Formats;
-
 
 	}
 }

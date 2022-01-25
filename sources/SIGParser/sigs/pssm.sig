@@ -74,7 +74,7 @@ GraphicsPSO PSSMMask
 	[EntryPoint = PS]
 	pixel = PSSM;
 
-	rtv = { DXGI_FORMAT_R8_UNORM };
+	rtv = { R8_UNORM };
 }
 
 GraphicsPSO PSSMApply
@@ -87,7 +87,7 @@ GraphicsPSO PSSMApply
 	[EntryPoint = PS_RESULT]
 	pixel = PSSM;
 
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+	rtv = { R16G16B16A16_FLOAT };
 }
 
 
@@ -101,5 +101,5 @@ GraphicsPSO GBufferDownsample
 	[EntryPoint = PS]
 	pixel = Downsample;
 
-	rtv = { DXGI_FORMAT_R32_FLOAT, DXGI_FORMAT_R8G8B8A8_UNORM };
+	rtv = { R32_FLOAT, R8G8B8A8_UNORM };
 }

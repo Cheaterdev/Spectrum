@@ -264,7 +264,7 @@ struct  SimpleGraphicsPSO {
 	SimpleGraphicsPSO(std::string name) :name(name)
 	{
 		//Log::get() << "PSO: " << name << Log::endl;
-		ds = Graphics::Formats::Unknown;
+		ds = Graphics::Format::UNKNOWN;
 		conservative = false;
 		depth_write = true;
 		depth_func = Graphics::ComparisonFunc::LESS_EQUAL;

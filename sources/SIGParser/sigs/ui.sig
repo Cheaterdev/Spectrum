@@ -41,7 +41,7 @@ GraphicsPSO NinePatch
 	[EntryPoint = PS]
 	pixel = gui/ninepatch;
 
-	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	rtv = { R8G8B8A8_UNORM };
 	blend = { AlphaBlend };
 }
 
@@ -56,7 +56,7 @@ GraphicsPSO SimpleRect
 	[EntryPoint = PS_COLOR]
 	pixel = gui/rect;
 
-	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	rtv = { R8G8B8A8_UNORM };
 	blend = { AlphaBlend };
 	cull = None;
 }
@@ -75,7 +75,7 @@ GraphicsPSO CanvasBack
 	cull = None;
 	topology = TRIANGLE;
 
-	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	rtv = { R8G8B8A8_UNORM };
 	blend = { AlphaBlend };
 }
 
@@ -115,6 +115,6 @@ GraphicsPSO CanvasLines
 	cull = None;
 	topology = PATCH;
 
-	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	rtv = { R8G8B8A8_UNORM };
 	blend = { AlphaBlend };
 }

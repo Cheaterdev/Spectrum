@@ -20,7 +20,7 @@ namespace PSOS
 			mpso.pixel.entry_point = "PS_COLOR";
 			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM };
+			mpso.rtv_formats = { Graphics::Format::R8G8B8A8_UNORM };
 			mpso.blend = { Graphics::Blends::AlphaBlend };
 			mpso.cull  = Graphics::CullMode::None;
 			return mpso;

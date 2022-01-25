@@ -20,13 +20,13 @@ namespace PSOS
 			mpso.pixel.entry_point = "PS";
 			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { DXGI_FORMAT::DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT::DXGI_FORMAT_R11G11B10_FLOAT };
+			mpso.rtv_formats = { Graphics::Format::R16G16B16A16_FLOAT, Graphics::Format::R11G11B10_FLOAT };
 			mpso.blend = { Graphics::Blends::Additive, Graphics::Blends::None };
 			mpso.enable_stencil  = true;
 			mpso.enable_depth  = false;
 			mpso.stencil_func  = Graphics::ComparisonFunc::EQUAL;
 			mpso.stencil_pass_op  = Graphics::StencilOp::Keep;
-			mpso.ds  = DXGI_FORMAT_D24_UNORM_S8_UINT;
+			mpso.ds  = Graphics::Format::D24_UNORM_S8_UINT;
 			mpso.stencil_read_mask  = 1;
 			mpso.stencil_write_mask  = 1;
 			return mpso;
