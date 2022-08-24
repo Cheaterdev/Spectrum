@@ -2,7 +2,7 @@
 import Application;
 #include "GUI/GUI.h"
 
-import SwapChain;
+import Graphics;
 
 class Window : public Graphics::hwnd_provider
 {

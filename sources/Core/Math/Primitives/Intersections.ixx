@@ -1,17 +1,17 @@
-export module Intersections;
+export module Math:Intersections;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
-export import Primitive;
+import :Constants;
+import :Vectors;
+import :Quaternion;
+import :Matrices;
+import :Primitive;
 
 import stl.memory;
 import serialization;
 
-import AABB;
-import Frustum;
-import Sphere;
+import :AABB;
+import :Frustum;
+import :Sphere;
 
 
 export {
@@ -37,9 +37,6 @@ export {
     }
 
 }
-
-
-module: private;
 
 
 INTERSECT_TYPE intersect(const Frustum& f, const Sphere& s, const mat4x4*)

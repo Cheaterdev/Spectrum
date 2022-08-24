@@ -31,15 +31,13 @@
 #include "GUI/Elements/ComboBox.h"
 #include "GUI/Elements/ListBox.h"
 
-import GPUTimer;
-import Queue;
+import Graphics;
 
 
 #include "Platform/Window.h"
 
 import ppl;
 import Debug;
-import PSO;
 import Utils;
 using namespace FrameGraph;
 
@@ -736,7 +734,7 @@ class PassNode : public::FlowGraph::Node , public  GUI::Elements::FlowGraph::Vis
 	GUI::base::ptr create_editor_window() override
 	{
 		GUI::Elements::image::ptr img(new GUI::Elements::image);
-		img->texture.texture = Graphics::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+		img->texture.texture = Graphics::Texture::get_resource({ to_path(L"textures/gui/shadow.png"), false, false });
 		img->texture.padding = { 9, 9, 9, 9 };
 		img->padding = { 9, 9, 9, 9 };
 		img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -1031,7 +1029,7 @@ resource_stages[&res.second] = input;
 		
 		{
 			GUI::Elements::image::ptr back(new GUI::Elements::image);
-			back->texture = Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/back_fill.png", false, false));
+			back->texture = Graphics::Texture::get_resource(Graphics::texure_header(to_path(L"textures/gui/back_fill.png"), false, false));
 			back->texture.tiled = true;
 			back->width_size = GUI::size_type::MATCH_PARENT;
 			back->height_size = GUI::size_type::MATCH_PARENT;
@@ -1134,7 +1132,7 @@ resource_stages[&res.second] = input;
 							{
 								try
 								{
-									auto f = FileSystem::get().get_file("scene.dat")->load_all();
+									auto f = FileSystem::get().get_file(to_path(L"scene.dat"))->load_all();
 									Serializer::deserialize(f, *drawer->scene);
 								}
 								catch (std::exception e)
@@ -1148,7 +1146,7 @@ resource_stages[&res.second] = input;
 					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 					{
 							auto data = Serializer::serialize(*drawer->scene);
-							FileSystem::get().save_data(L"scene.dat", data);
+							FileSystem::get().save_data(to_path(L"scene.dat"), data);
 					};
 					file->add_item("Quit")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 					{
@@ -1420,7 +1418,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	FlowGraph::FlowSystem::get().register_node<MaterialFunction>("MaterialFunction");
 	FlowGraph::FlowSystem::get().register_node("file", []()-> FlowGraph::graph::ptr
 		{
-			auto f = FileSystem::get().get_file("graph.flg");
+			auto f = FileSystem::get().get_file(to_path("graph.flg"));
 
 			if (f)
 				return Serializer::deserialize<FlowGraph::graph>(f->load_all());

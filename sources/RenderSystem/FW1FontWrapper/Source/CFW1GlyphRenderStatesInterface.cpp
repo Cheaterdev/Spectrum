@@ -4,8 +4,6 @@
 
 #include "CFW1GlyphRenderStates.h"
 
-import Autogen;
-
 namespace FW1FontWrapper
 {
 

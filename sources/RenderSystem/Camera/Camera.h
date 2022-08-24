@@ -1,7 +1,7 @@
 #pragma once
 
-import Autogen;
-import Frustum;
+import Graphics;
+import Math;
 class camera : public Frustum
 {
     public:

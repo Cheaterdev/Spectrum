@@ -1,7 +1,7 @@
 module;
 
-#include "dx12_types.h"
-export module Memory;
+//#include "dx12_types.h"
+export module Graphics:Memory;
 
 import Data;
 import StateContext;
@@ -10,8 +10,7 @@ import Allocators;
 import Threading;
 import Singleton;
 import Utils;
-import Vectors;
-import Constants;
+import Math;
 import Trackable;
 import HAL.Types;
 import HAL.Heap;
@@ -21,14 +20,13 @@ using namespace HAL;
 
 import d3d12;
 
+import :Definitions;
 export
 {
 
 
 	namespace Graphics
 	{
-	
-
 		class TrackedHeap : public TrackedObject
 		{
 		public:
@@ -249,12 +247,6 @@ export
 
 		};
 
-		struct ResourceAllocationInfo
-		{
-			size_t size;
-			size_t alignment;
-			D3D12_HEAP_FLAGS flags;
-		};
 
 		struct TileHeapPosition
 		{

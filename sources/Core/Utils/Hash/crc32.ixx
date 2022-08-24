@@ -4,8 +4,6 @@ import crc32c;
 import stl.core;
 import Utils;
 
-export
-{
 
 static constexpr unsigned int crc_32_tab[] = {
 	0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f,
@@ -53,6 +51,8 @@ static constexpr unsigned int crc_32_tab[] = {
 	0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d };
 
 
+export
+{
 
 
 constexpr unsigned int crc32_helper(const char* v, std::size_t c,

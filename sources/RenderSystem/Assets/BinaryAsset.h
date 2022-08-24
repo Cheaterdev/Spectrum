@@ -45,7 +45,7 @@ class BinaryAsset : public Asset
             {
                 reload_resource();
 				std::weak_ptr<bool> r = tester;
-                FileSystem::get().get_provider<native_file_provider>()->on_change(file_name, [this,r]()
+                FileSystem::get().get_provider<native_file_provider>()->on_change(to_path(file_name), [this,r]()
                 {
 					if(r.lock())
                     reload_resource();

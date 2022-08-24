@@ -1,4 +1,4 @@
-export module Fence;
+export module Graphics:Fence;
 
 import d3d12;
 import windows;

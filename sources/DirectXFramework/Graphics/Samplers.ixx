@@ -1,9 +1,9 @@
-export module Samplers;
+export module Graphics:Samplers;
 
 import d3d12;
-import Vectors;
+import Math;
 
-export import Graphics.Types;
+export import :Types;
 
 export namespace Graphics
 {
@@ -30,7 +30,7 @@ export namespace Graphics
     }
 }
 
-module:private;
+//module:private;
 
 
 namespace Graphics

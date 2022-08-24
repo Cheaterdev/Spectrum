@@ -1,11 +1,11 @@
-export module Queue;
+export module Graphics:Queue;
 
 import Scheduler;
 import Executors;
-import Device;
-import CommandList;
+import :Device;
+import :CommandList;
 import d3d12;
-import Fence;
+import :Fence;
 import HAL.Types;
 using namespace HAL;
 
@@ -15,7 +15,7 @@ export
 	namespace Graphics
 	{
 
-		class TransitionCommandList;
+		//class TransitionCommandList;
 		class Queue
 		{
 			std::wstring name;

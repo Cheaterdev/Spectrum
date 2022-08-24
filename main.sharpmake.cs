@@ -320,9 +320,7 @@ namespace Spectrum
             base.ConfigureAll(conf, target);
 
          conf.IsBlobbed = true;
-           // conf.PrecompHeader = "pch.h";
-          //  conf.PrecompSource = "pch.cpp";
-
+        
             conf.AddPublicDependency<DirectXFramework>(target);
         }
     }

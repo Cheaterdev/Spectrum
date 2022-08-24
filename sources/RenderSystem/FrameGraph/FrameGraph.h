@@ -1,7 +1,6 @@
 #pragma once
 
-
-import Texture;
+import Graphics;
 import Scheduler;
 
 import Utils;
@@ -9,12 +8,10 @@ import serialization;
 class camera;
 class main_renderer;
 class Scene;
-import ResourceViews;
-import CommandList;
 
-import Vectors;
 
-import Graphics.Types;
+import Math;
+
 
 namespace FrameGraph
 {

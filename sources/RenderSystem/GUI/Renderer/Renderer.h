@@ -1,6 +1,6 @@
 #pragma once
 #include "GUI/GUI.h"
-import Buffer;
+import Graphics;
 namespace GUI
 {
 

@@ -1,11 +1,11 @@
+module;
 #include "pch_dx.h"
-//
-import Device;
-import Resource;
-import Descriptors;
-import Utils;
+module Graphics:Descriptors;
+import :Device;
+import :Resource;
+import :Types;
 
-import Graphics.Types;
+import Utils;
 
 namespace Graphics {
 

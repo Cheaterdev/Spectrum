@@ -1,9 +1,9 @@
+module;
 #include "pch_dx.h"
+module Graphics:RootSignature;
+import :Device;
 
-
-import RootSignature;
 import Log;
-import Device;
 import Utils;
 
 namespace Graphics

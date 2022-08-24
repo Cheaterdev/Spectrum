@@ -1,15 +1,11 @@
-module;
-#include "Math/Math.h"
-#include "dx12_types.h"
-export module ResourceViews;
-
-import Resource;
-
-import Descriptors;
-import Graphics.Types;
+export module Graphics:ResourceViews;
+import :Resource;
+import :Descriptors;
+import :Types;
 
 import D3D12.Utils;
-import HLSLDescriptors;
+import :HLSLDescriptors;
+import :Device;
 
 export
 {
@@ -25,6 +21,7 @@ export
 			ResourceViewDesc view_desc;
 
 		public:
+			ResourceAddress addr;
 			Resource::ptr resource; //////////////
 			ResourceView()
 			{

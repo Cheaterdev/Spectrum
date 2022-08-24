@@ -32,7 +32,7 @@ GUI::Elements::window::window() : GUI::Elements::resizable()
     close_button->background_style = button::view_style::FLAT;
     close_button->get_label()->visible = false;
     close_button->get_image()->visible = true;
-    close_button->get_image()->texture = Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/window_close.png"));
+    close_button->get_image()->texture = Graphics::Texture::get_resource(Graphics::texure_header(to_path("textures/gui/window_close.png")));
     close_button->get_image()->docking = dock::FILL;
     close_button->get_image()->height_size = size_type::FIXED;
     close_button->get_image()->width_size = size_type::FIXED;

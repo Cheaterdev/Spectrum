@@ -5,9 +5,8 @@
 #include "CFW1GlyphSheet.h"
 #include "CFW1GlyphRenderStates.h"
 
-import Autogen;
-import ResourceViews;
-import Graphics.Types;
+//import Graphics;
+
 
 namespace FW1FontWrapper
 {

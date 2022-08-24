@@ -1,7 +1,8 @@
-export module RaytracingAS;
+export module Graphics:RaytracingAS;
 
-import Buffer;
-import VirtualBuffer;
+import :Buffer;
+import :VirtualBuffer;
+import :Queue;
 class MaterialAsset;
 
 export

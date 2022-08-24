@@ -789,7 +789,7 @@ using namespace Elements;
 GUI::base::ptr TextureNode::create_editor_window()
 {
 	GUI::Elements::image::ptr img(new GUI::Elements::image);
-	img->texture.texture = Graphics::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+	img->texture.texture = Graphics::Texture::get_resource({ to_path("textures/gui/shadow.png"), false, false });
 	img->texture.padding = { 9, 9, 9, 9 };
 	img->padding = { 9, 9, 9, 9 };
 	img->width_size = GUI::size_type::MATCH_CHILDREN;

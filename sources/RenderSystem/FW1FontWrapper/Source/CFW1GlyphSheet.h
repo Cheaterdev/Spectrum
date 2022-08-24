@@ -5,8 +5,7 @@
 
 #include "CFW1Object.h"
 
-import Texture;
-import Buffer;
+import Graphics;
 
 namespace FW1FontWrapper
 {

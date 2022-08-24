@@ -1,13 +1,13 @@
 #include "pch_render.h"
 #include "SMAA.h"
+import Graphics;
 
-import Autogen;
 using namespace FrameGraph;
 
 SMAA::SMAA()
 {
-	area_tex = Graphics::Texture::get_resource({ "textures\\AreaTex.dds", false, false });
-	search_tex = Graphics::Texture::get_resource({ "textures\\SearchTex.dds", false, false });
+	area_tex = Graphics::Texture::get_resource({ to_path(L"textures\\AreaTex.dds"), false, false });
+	search_tex = Graphics::Texture::get_resource({ to_path(L"textures\\SearchTex.dds"), false, false });
 
 }
 

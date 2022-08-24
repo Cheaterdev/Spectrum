@@ -3,25 +3,25 @@ module;
 #include "Graphics/dx12_types.h"
 #include "pch_dx.h"
 
-export module PSO;
+export module Graphics:PSO;
 export import "PSO_defines.h";
-import PipelineState;
+import :PipelineState;
 import Data;
 import Threading;
 import Profiling;
 
-import Concepts;
+import :Concepts;
 import D3D.Shaders;
 
-import RootSignature;
+import :RootSignature;
 import Utils;
-import Memory;
-import Enums;
+import :Memory;
+import :Enums;
 
 import ppl;
 using namespace concurrency;
 
-import Graphics.Types;
+import :Types;
 export
 {
 

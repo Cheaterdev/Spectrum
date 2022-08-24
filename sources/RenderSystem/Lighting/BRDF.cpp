@@ -2,7 +2,7 @@
 #include "BRDF.h"
 
 REGISTER_TYPE(BRDF);
-import Autogen;
+import Graphics;
 void BRDF::create_new()
 {
 

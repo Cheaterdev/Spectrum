@@ -1,11 +1,12 @@
+module;
 #include "pch_dx.h"
-import PipelineState;
+module Graphics:PipelineState;
+import :Device;
+import :Shader;
 
 import Serializer;
 import Debug;
 
-import Device;
-import Shader;
 import HAL.Types;
 using namespace HAL;
 
@@ -350,8 +351,8 @@ unsigned int i = 0;
 	{
 		std::lock_guard<std::mutex> g(m);
 
-			
-		FileSystem::get().save_data("pso",Serializer::serialize(binary_cache));
+		BUG_ALERT;
+//		FileSystem::get().save_data(L"pso",Serializer::serialize(binary_cache));
 	}
 
 	PipelineStateCache::PipelineStateCache(): cache([this](const PipelineStateDesc& desc)
@@ -393,9 +394,10 @@ unsigned int i = 0;
 
 		std::lock_guard<std::mutex> g(m);
 
-		auto file = FileSystem::get().get_file("pso");
-		if(file)
-			Serializer::deserialize(file->load_all(), binary_cache);
+		BUG_ALERT;
+		//auto file = FileSystem::get().get_file("pso");
+		//if(file)
+		//	Serializer::deserialize(file->load_all(), binary_cache);
 			
 	}
 

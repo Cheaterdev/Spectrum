@@ -1,8 +1,10 @@
+module;
 #include "pch_dx.h"
 
 #include "Memory.h"
-import Device;
-import Resource;
+module Graphics:Memory;
+import :Device;
+import :Resource;
 
 import StateContext;
 import Allocators;
@@ -10,8 +12,7 @@ import Allocators;
 import Threading;
 import Singleton;
 import Utils;
-import Vectors;
-import Constants;
+import Math;
 import Trackable;
 import HAL.Types;
 import HAL.Heap;

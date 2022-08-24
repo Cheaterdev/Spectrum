@@ -8,7 +8,7 @@
 
 using namespace FrameGraph;
 
-import Graphics.Types;
+import Graphics;
 
 class GBufferDownsampler :public Events::prop_handler
 {

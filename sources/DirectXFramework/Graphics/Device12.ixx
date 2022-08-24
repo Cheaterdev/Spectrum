@@ -2,8 +2,8 @@ module;
 
 #include "helper.h"
 
-#include "dx12_types.h"
-export module Device;
+//#include "dx12_types.h"
+export module Graphics:Device;
 
 import IdGenerator;
 import StateContext;
@@ -12,8 +12,8 @@ import Data;
 import HAL.Types;
 import HAL.Device;
 
-using namespace HAL;
-
+import :Definitions;
+//using namespace HAL;
 export
 {
 
@@ -21,7 +21,14 @@ export
 
 	namespace Graphics
 	{
-		
+
+		struct ResourceAllocationInfo
+		{
+			size_t size;
+			size_t alignment;
+			D3D12_HEAP_FLAGS flags;
+		};
+
 		typedef D3D12_VIEWPORT Viewport;
 		class Device : public Singleton<Device>
 		{
@@ -31,19 +38,19 @@ export
 			std::vector <ComPtr<IDXGIAdapter3> > vAdapters;
 
 			//   std::shared_ptr<CommandList> upload_list;
-			enum_array<CommandListType, std::shared_ptr<Queue>> queues;
+			enum_array<HAL::CommandListType, std::shared_ptr<Queue>> queues;
 			IdGenerator<Thread::Lockable> id_generator;
 			friend class CommandList;
 			bool rtx = false;
 			std::unique_ptr<GpuCrashTracker> crasher;
 
-			enum_array<DescriptorHeapType, UINT> descriptor_sizes;
+			enum_array<HAL::DescriptorHeapType, UINT> descriptor_sizes;
 		public:
 			void stop_all();
 			virtual ~Device();
 			void  check_errors();
 
-			UINT get_descriptor_size(DescriptorHeapType type)
+			UINT get_descriptor_size(HAL::DescriptorHeapType type)
 			{
 				return descriptor_sizes[type];
 			}
@@ -55,7 +62,7 @@ export
 			std::shared_ptr<CommandList> get_upload_list();
 			ComPtr<ID3D12Device5> get_native_device();
 
-			std::shared_ptr<Queue>& get_queue(CommandListType type);
+			std::shared_ptr<Queue>& get_queue(HAL::CommandListType type);
 
 			size_t get_vram();
 

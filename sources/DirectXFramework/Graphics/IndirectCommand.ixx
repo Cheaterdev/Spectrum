@@ -1,10 +1,10 @@
 module;
 #include "pch_dx.h"
 
-export module IndirectCommand;
+export module Graphics:IndirectCommand;
 
-import RootSignature;
-import Device;
+import :RootSignature;
+import :Device;
 import d3d12;
 import Utils;
 

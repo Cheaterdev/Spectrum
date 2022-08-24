@@ -1,6 +1,6 @@
-export module Quaternion;
-import Vectors;
-import Constants;
+export module Math:Quaternion;
+import :Vectors;
+import :Constants;
 
 export
 

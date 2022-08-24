@@ -1,18 +1,20 @@
+module;
 #include "pch_dx.h"
-import Log;
-import Device;
-import SwapChain;
-
-import PipelineState;
-import GPUTimer;
-
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
 #include "helper.h"
-import Debug;
-import Samplers;
-import d3d12;
+module Graphics:Device;
+import Log;
+import :SwapChain;
+import :PipelineState;
+import :GPUTimer;
+import :Samplers;
+import :CommandList;
+import :Queue;
 
+
+import Debug;
+import d3d12;
 
 import IdGenerator;
 import StateContext;
@@ -20,8 +22,6 @@ import Data;
 
 import HAL.Types;
 import HAL.Device;
-import CommandList;
-import Queue;
 
 using namespace HAL;
 import D3D12.Utils;

@@ -4,9 +4,7 @@
 #include "helper.h"
 
 #include "FrameGraph.h"
-import Queue;
-
-import Graphics.Types;
+import Graphics;
 
 import D3D12.Utils;
 using namespace Graphics;

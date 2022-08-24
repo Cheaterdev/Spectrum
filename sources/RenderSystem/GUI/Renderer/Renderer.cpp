@@ -40,9 +40,9 @@ namespace GUI
      
         nine_patch.reset(new NinePatch());
         simple_rect.reset(new SimpleRect());
-        area_tex.texture = Graphics::Texture::get_resource({ "textures/gui/edit.png", false, false });
-        virtual_tex.texture = Graphics::Texture::get_resource({ "textures/gui/virtual.png", false , false });
-        container_tex.texture = Graphics::Texture::get_resource({ "textures/gui/background.png", false, false });
+        area_tex.texture = Graphics::Texture::get_resource({ to_path(L"textures/gui/edit.png"), false, false });
+        virtual_tex.texture = Graphics::Texture::get_resource({ to_path(L"textures/gui/virtual.png"), false , false });
+        container_tex.texture = Graphics::Texture::get_resource({ to_path(L"textures/gui/background.png"), false, false });
         area_tex.padding = { 5, 5, 5, 5 };
         virtual_tex.padding = { 5, 5, 5, 5 };
 		container_tex.padding = {2,2,2,2};

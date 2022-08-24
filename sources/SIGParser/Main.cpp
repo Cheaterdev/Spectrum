@@ -629,7 +629,7 @@ module;
 export module Autogen;
 
 import PipelineState;
-import Vectors;
+import Math;
 import Matrices;
 import Samplers;
 import Buffer;
@@ -642,7 +642,7 @@ import Layout;
 import Slots;
 import PSO;
 import RTX;
-import Enums;
+import :Enums;
 
 import Data;
 import RootSignature;
@@ -882,7 +882,7 @@ import Layout;
 import Slots;
 import PSO;
 import RTX;
-import Enums;
+import :Enums;
 import RootSignature;
 
 import ppl;

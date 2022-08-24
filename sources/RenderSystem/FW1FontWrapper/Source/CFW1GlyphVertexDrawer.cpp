@@ -4,10 +4,9 @@
 
 #include "CFW1GlyphVertexDrawer.h"
 
-import Autogen;
+//import Graphics;
 
 #define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
-import ResourceViews;
 
 namespace FW1FontWrapper
 {

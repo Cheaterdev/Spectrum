@@ -1,6 +1,6 @@
 export module D3D12.Utils;
 import d3d12;
-import Vectors;
+import Math;
 import HAL.Types;
 import HAL.Sampler;
 import HAL.Format;

@@ -1,8 +1,8 @@
 module;
 #include "Serialization/serialization_defines.h"
-export module Vectors;
+export module Math:Vectors;
 
-import Constants;
+import :Constants;
 import stl.core;
 import serialization;
 

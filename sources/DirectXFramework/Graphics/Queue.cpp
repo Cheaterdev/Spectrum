@@ -1,11 +1,13 @@
+module;
 #include "pch_dx.h"
 #include "helper.h"
-import Samplers;
 
-import Device;
-import GPUTimer;
+module Graphics:Queue;
+import :Samplers;
+import :Device;
+import :GPUTimer;
+
 import Debug;
-import Queue;
 
 import HAL.Types;
 import D3D12.Utils;

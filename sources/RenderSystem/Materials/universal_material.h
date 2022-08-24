@@ -3,12 +3,8 @@
 #include "Context/Context.h"
 #include "Assets/BinaryAsset.h"
 #include "Assets/MaterialAsset.h"
-import Buffer;
+import Graphics;
 
-import Descriptors;
-import Concepts;
-import Layout;
-import SIG;
 import crc32;
 
 namespace materials

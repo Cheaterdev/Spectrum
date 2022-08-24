@@ -1,7 +1,7 @@
 export module HAL.Format;
 export import "Formats.h";
 
-import Vectors;
+import Math;
 import Utils;
 import serialization;
 

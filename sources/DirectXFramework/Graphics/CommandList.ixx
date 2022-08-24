@@ -1,26 +1,25 @@
 module;
 
-#include "dx12_types.h"
-export module CommandList;
+//#include "dx12_types.h"
+export module Graphics:CommandList;
 
 import Utils;
-import CommandListCompiler;
+import :CommandListCompiler;
 import StateContext;
 import Profiling;
 import Threading;
 import Exceptions;
-import RootSignature;
+import :RootSignature;
+import :Device;
+import :Fence;
+import :IndirectCommand;
+import :Resource;
+import :ResourceViews;
+import :Descriptors;
+//import :GPUTimer;
 
-import Fence;
-import IndirectCommand;
-import Resource;
-import ResourceViews;
-import Descriptors;
-import Constants;
-
-import Vectors;
-import Matrices;
-import Enums;
+import Math;
+import :Enums;
 import Data;
 import Singleton;
 
@@ -32,13 +31,15 @@ import HAL.Types;
 
 import d3d12;
 
+import :Definitions;
 using namespace HAL;
+
 export{
-	enum class Layouts;
+	//enum class Layouts;
 
 	namespace Graphics
 	{
-
+		class GraphicsContext;
 
 #define DEFAULT_ALIGN 256
 

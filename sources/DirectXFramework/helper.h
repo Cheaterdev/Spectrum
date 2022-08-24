@@ -132,7 +132,7 @@ namespace cereal
 
 		UINT offset = g.pLastBreadcrumbValue ? (*g.pLastBreadcrumbValue) : g.BreadcrumbCount;
 
-		for (int i = 0; i < ops.size(); i++)
+		for (UINT i = 0; i < ops.size(); i++)
 		{
 			auto op = ops[i];
 			if (i <= offset) ar& NP("DONE", op);

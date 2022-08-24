@@ -1,13 +1,12 @@
+module;
 #include "pch_dx.h"
-import Utils;
-import Resource;
-import CommandList;
+module Graphics:States;
 
-import States;
+import :Resource;
+import :CommandList;
 
 import Utils;
 import StateContext;
-import Device;
 import HAL.Types;
 
 using namespace HAL;

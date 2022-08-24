@@ -1,6 +1,6 @@
 #pragma once
-import Buffer;
-import SIG;
+import Graphics;
+
 
 class GPUTilesBuffer
 {

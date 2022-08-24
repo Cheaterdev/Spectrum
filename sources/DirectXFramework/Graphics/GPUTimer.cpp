@@ -1,9 +1,29 @@
+module;
 #include "pch_dx.h"
 
-import GPUTimer;
+module Graphics:GPUTimer;
+
 
 namespace Graphics
 {
+
+
+
+	QueryHeap::QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type)
+	{
+		D3D12_QUERY_HEAP_DESC QueryHeapDesc;
+		QueryHeapDesc.Count = max_count;
+		QueryHeapDesc.NodeMask = 1;
+		QueryHeapDesc.Type = type;
+		Device::get().get_native_device()->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&heap));
+		heap->SetName(L"QueryHeap");
+	}
+
+	ComPtr<ID3D12QueryHeap> Graphics::QueryHeap::get_native()
+	{
+		return heap;
+	}
+
 	void GPUTimeManager::start(GPUTimer& timer, Graphics::Eventer* list)
 	{
 		timer.queue_type = list->get_type();
@@ -13,7 +33,7 @@ namespace Graphics
 
 	}
 
-	void GPUTimeManager::end(GPUTimer& timer, Graphics::Eventer*  list)
+	void GPUTimeManager::end(GPUTimer& timer, Graphics::Eventer* list)
 	{
 		list->insert_time(heap, timer.id * 2 + 1);
 	}
@@ -22,12 +42,12 @@ namespace Graphics
 		return static_cast<float>(static_cast<double>(read_back_data[2 * timer.id + 1] - read_back_data[2 * timer.id]) / frequency);
 	}
 
-	double GPUTimeManager::get_start(GPUTimer&timer)
+	double GPUTimeManager::get_start(GPUTimer& timer)
 	{
 		return static_cast<double>(read_back_data[2 * timer.id]) / frequency;
 	}
 
-	double GPUTimeManager::get_end(GPUTimer&timer)
+	double GPUTimeManager::get_end(GPUTimer& timer)
 	{
 		return static_cast<double>(read_back_data[2 * timer.id + 1]) / frequency;
 	}

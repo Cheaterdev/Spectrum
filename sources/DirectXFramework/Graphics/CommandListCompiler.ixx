@@ -1,10 +1,10 @@
 module;
 #include "pch_dx.h"
 
-export module CommandListCompiler;
+export module Graphics:CommandListCompiler;
 
-import Vectors;
-import Device;
+import Math;
+import :Device;
 
 import HAL.Types;
 using namespace HAL;

@@ -1,20 +1,23 @@
 module;
 #include "helper.h"
-export module Descriptors;
+export module Graphics:Descriptors;
 
 
 import Allocators;
-import Vectors;
-import Resource;
+import Math;
+import :Resource;
 
 import stl.threading;
 import stl.core;
 
 import Log;
-import Data;
+import Data; 
+import Events;
+import Threading;
 import HAL.Types;
 import d3d12;
 
+//import :Definitions;
 using namespace HAL;
 export
 {
@@ -22,7 +25,6 @@ export
 	namespace Graphics
 	{
 		DescriptorHeapType get_heap_type(HandleType type);
-		class Resource;
 
 		struct ResourceInfo
 		{
@@ -81,7 +83,7 @@ export
 			void for_each_subres(std::function<void(Resource*, UINT)> f) const;
 		};
 
-		class DescriptorHeap;
+		//class DescriptorHeap;
 		struct Handle
 		{
 			DescriptorHeap* heap = nullptr;
@@ -121,7 +123,7 @@ export
 		};
 
 
-		class DescriptorHeap;
+	//	class DescriptorHeap;
 		//	class CommandList;
 		struct HandleTable
 		{

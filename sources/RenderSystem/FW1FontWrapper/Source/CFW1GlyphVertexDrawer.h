@@ -4,7 +4,7 @@
 #define IncludeGuard__FW1_CFW1GlyphVertexDrawer
 
 #include "CFW1Object.h"
-import Buffer;
+import Graphics;
 
 
 namespace FW1FontWrapper

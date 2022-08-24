@@ -1,16 +1,8 @@
 
 #include "pch_dx.h"
 
-import Autogen;
+import Graphics;
 import Data;
-import SIG;
-import RT;
-import Layout;
-import Slots;
-import PSO;
-import RTX;
-import Enums;
-import RootSignature;
 
 import ppl;
 using namespace concurrency;

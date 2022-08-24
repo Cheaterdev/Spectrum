@@ -1,15 +1,11 @@
-module;
-
-
-
-export module SIG;
+export module Graphics:SIG;
 import stl.core;
 
-import Concepts;
-import Descriptors;
-import Resource;
+import :Concepts;
+import :Descriptors;
+import :Resource;
 import serialization;
-import Buffer;
+import :Buffer;
 
 export
 {

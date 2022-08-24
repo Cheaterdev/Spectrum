@@ -1,8 +1,7 @@
 export module HAL.Sampler;
 
 import HAL.Types;
-
-import Vectors;
+import Math;
 
 export namespace HAL
 {

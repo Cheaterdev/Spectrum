@@ -2,7 +2,7 @@ module;
 
 #include "helper.h"
 
-export module TextureData;
+export module Graphics:TextureData;
 
 import FileSystem;
 import serialization;
@@ -10,7 +10,7 @@ import Utils;
 import Log;
 
 import D3D12.Utils;
-import Graphics.Types;
+import :Types;
 
 using namespace Graphics;
 
@@ -286,7 +286,7 @@ export
 
 }
 
-module:private;
+//module:private;
 
 REGISTER_TYPE(texture_data);
 

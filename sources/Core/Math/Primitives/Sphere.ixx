@@ -1,10 +1,10 @@
-export module Sphere;
+export module Math:Sphere;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
-export import Primitive;
+export import :Constants;
+export import :Vectors;
+export import :Quaternion;
+export import :Matrices;
+export import :Primitive;
 
 import stl.memory;
 import serialization;
@@ -60,9 +60,6 @@ private:
 	}
 };
 
-
-
-module: private;
 
 REGISTER_TYPE(Sphere)
 

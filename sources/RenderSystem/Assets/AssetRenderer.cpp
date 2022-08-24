@@ -7,7 +7,7 @@
 #include "AssetRenderer.h"
 #include "Helpers/MipMapGeneration.h"
 
-import Queue;
+import Graphics;
 
 using namespace FrameGraph;
 import HAL.Types;

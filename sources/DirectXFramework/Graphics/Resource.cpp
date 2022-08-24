@@ -1,16 +1,16 @@
+module; 
 #include "pch_dx.h"
-
-
-
 #include "helper.h"
-import Resource;
+module Graphics:Resource;
+
+import :Tiling;
+import :Fence;
+import :States;
+import :Device;
+
 import Debug;
 import Log;
 
- import Tiling;
- import Fence;
- import States;
- import Device;
 import stl.core;
 import stl.memory;
 import HAL.Types;
@@ -91,7 +91,7 @@ namespace Graphics
 		{
 			auto info = Device::get().get_alloc_info(desc);
 
-			tracked_info->alloc_handle = ResourceHeapPageManager::get().alloc(info.size, info.alignment, info.flags, heap_type);
+			tracked_info->alloc_handle = ResourceHeapPageManager::get().alloc(info.size, info.alignment, D3D12_HEAP_FLAGS(info.flags), heap_type);
 
 			if (heap_type == HeapType::UPLOAD)
 			{

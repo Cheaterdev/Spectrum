@@ -1,18 +1,18 @@
 module;
 #include "pch_Dx.h"
-export module RTX;
-import Descriptors;
-import Buffer;
-import VirtualBuffer;
+export module Graphics:RTX;
+import :Descriptors;
+import :Buffer;
+import :VirtualBuffer;
 
-import Concepts;
-import Vectors;
+import :Concepts;
+import Math;
 import Utils;
-import Memory;
+import :Memory;
 import Events;
 import IdGenerator;
-import PipelineState;
-import Shader;
+import :PipelineState;
+import :Shader;
 
 export
 

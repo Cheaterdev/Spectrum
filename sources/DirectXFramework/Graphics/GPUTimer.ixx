@@ -1,14 +1,13 @@
-module;
-#include "dx12_types.h"
-export module GPUTimer; 
+export module Graphics:GPUTimer;
 
-import Queue;
-import Buffer;
+import :Queue;
+import :Buffer;
 import Singleton;
 import IdGenerator;
 
 import HAL.Types;
 using namespace HAL;
+import :Definitions;
 
 
 export
@@ -16,6 +15,20 @@ export
 
 	namespace Graphics
 	{
+
+
+		class QueryHeap
+		{
+
+			ComPtr<ID3D12QueryHeap> heap;
+		public:
+			QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP);
+
+			ComPtr<ID3D12QueryHeap> get_native();
+
+			using ptr = std::shared_ptr<QueryHeap>;
+		};
+
 		class GPUTimeManager : public Singleton<GPUTimeManager>
 		{
 			friend class Singleton<GPUTimeManager>;
@@ -73,3 +86,4 @@ export
 
 	}
 }
+

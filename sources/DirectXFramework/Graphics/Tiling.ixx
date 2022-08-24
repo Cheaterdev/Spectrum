@@ -1,14 +1,15 @@
 module;
 #include "pch_dx.h"
 
-#include "dx12_types.h"
-export module Tiling;
+//#include "dx12_types.h"
+export module Graphics:Tiling;
 
-import Vectors;
-import Memory;
+import Math;
+import :Memory;
 import Events;
 import stl.core;
 
+import :Definitions;
 export import HAL.Types;
 using namespace HAL;
 
@@ -109,3 +110,6 @@ export
 		};
 	}
 }
+
+
+

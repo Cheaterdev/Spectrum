@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "GUI/Elements/Window.h"
 #include "GUI/Renderer/Renderer.h"
-import Queue;
+import Graphics;
 
 using namespace FrameGraph;
 

@@ -2,13 +2,11 @@
 
 import Scheduler;
 import Holdable;
-import Device;
-import PipelineState;
+import Graphics;
 #include "FrameGraph/FrameGraph.h"
 #include "helper.h"
 import Executors;
-import Autogen;
-import Quaternion;
+import Math;
 class camera;
 class debug_drawer;
 class vertex_transform;

@@ -1,17 +1,21 @@
+module;
 #include "pch_dx.h"
 
 #include "helper.h"
-import GPUTimer;
-import Queue;
-import PipelineState;
 
-import Autogen;
+module Graphics:CommandList;
+
+import :GPUTimer;
+import :Queue;
+import :PipelineState;
+
+import :Autogen;
+
+import :Buffer;
+
 import Debug;
 import Exceptions;
 
-import CommandList;
-
-import Buffer;
 import D3D12.Utils;
 import HAL.Types;
 

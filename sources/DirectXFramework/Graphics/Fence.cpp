@@ -1,8 +1,8 @@
+module;
 #include "pch_dx.h"
-
-import Device;
+module Graphics:Fence;
+import :Device;
 import Profiling;
-import Fence;
 
 namespace Graphics
 {

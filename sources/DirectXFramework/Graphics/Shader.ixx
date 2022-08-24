@@ -1,11 +1,11 @@
 module;
-#include "dx12_types.h"
-export module Shader;
+//#include "dx12_types.h"
+export module Graphics:Shader;
 
 
 import ResourceManager;
 import D3D.Shaders;
-import Enums;
+import :Enums;
 import stl.core;
 
 import FileDepender;
@@ -14,7 +14,6 @@ import Utils;
 import crc32;
 import serialization;
 import Events;
-
 
 //std::optional<SlotID> get_slot(std::string_view slot_name);
 export

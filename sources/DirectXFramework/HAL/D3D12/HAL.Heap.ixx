@@ -1,6 +1,6 @@
 export module HAL.Heap;
 import d3d12;
-import Vectors;
+import Math; 
 import Utils;
 
 import HAL.Types;

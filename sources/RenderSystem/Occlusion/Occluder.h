@@ -1,5 +1,4 @@
 #pragma once
-#include "Math/Math.h"
 #include "Serialization/serialization_defines.h"
 class occluder
 {

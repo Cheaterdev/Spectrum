@@ -6,7 +6,7 @@ import Log;
 import Singleton;
 
 import Utils;
-import Vectors;
+import Math;
 import Tree;
 
 //#define PROFILING

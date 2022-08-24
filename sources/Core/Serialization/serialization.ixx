@@ -10,6 +10,8 @@ export import stl.filesystem;
 export import crossguid;
 //export import simple_log_archive;
 
+import Utils;
+
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
 
 export using serialization_exception = cereal::Exception;
@@ -43,8 +45,10 @@ export
 			if (Archive::is_saving::value)
 				s = p.wstring();
 			ar& NP("string", s);
-			if (Archive::is_loading::value)
-				p = s;
+
+			//BUG_ALERT;
+//			if (Archive::is_loading::value)
+//				p = s;
 		}
 
 

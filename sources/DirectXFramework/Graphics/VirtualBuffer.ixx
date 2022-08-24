@@ -1,25 +1,22 @@
-module;
-#include "dx12_types.h"
-export module VirtualBuffer;
+export module Graphics:VirtualBuffer;
 
 export import Allocators;
 
-export import Device;
-export import Resource;
+export import :Device;
+export import :Resource;
 
-export import Concepts;
+export import :Concepts;
 export import Log;
-export import Descriptors;
+export import :Descriptors;
 
 export import serialization;
 export import stl.core;
 export import stl.memory;
-export import Constants;
-export import Vectors;
-export import Matrices;
-export import CommandList;
-import Buffer;
+export import Math;
+export import :CommandList;
+import :Buffer;
 
+import :Definitions;
 using namespace HAL;
 
 export

@@ -1,6 +1,6 @@
 export module HAL.Resource;
 import d3d12;
-import Vectors;
+import Math;
 import Utils;
 
 import HAL.Types;
@@ -47,13 +47,13 @@ export namespace HAL
 		size_t offset;
 	};
 
-	class Resource
+	class Resource2
 	{
 		ResourceDesc desc;
 	public:
-		using ptr = std::shared_ptr<Resource>;
-		Resource(Device& device, const TextureDesc& desc, const PlacementAddress &address, ResourceState initialState = ResourceState::GEN_READ);
-		Resource(Device& device, const BufferDesc& desc, const PlacementAddress& address, ResourceState initialState = ResourceState::GEN_READ);
+		using ptr = std::shared_ptr<Resource2>;
+		Resource2(Device& device, const TextureDesc& desc, const PlacementAddress &address, ResourceState initialState = ResourceState::GEN_READ);
+		Resource2(Device& device, const BufferDesc& desc, const PlacementAddress& address, ResourceState initialState = ResourceState::GEN_READ);
 
 		std::span<std::byte> cpu_data();
 
@@ -67,7 +67,7 @@ module:private;
 
 namespace HAL
 {
-	Resource::Resource(Device& device, const BufferDesc& bufferDesc, const PlacementAddress& address, ResourceState initialState)
+	Resource2::Resource2(Device& device, const BufferDesc& bufferDesc, const PlacementAddress& address, ResourceState initialState)
 	{
 		desc.Type = ResourceDimension::BUFFER;
 		desc.desc = bufferDesc;

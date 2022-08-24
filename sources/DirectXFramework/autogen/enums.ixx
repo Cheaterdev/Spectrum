@@ -1,7 +1,7 @@
 
 module;
 
-export module Enums;
+export module Graphics:Enums;
 
 import crc32;
 import Utils;

@@ -5,7 +5,6 @@
 import HAL.Types;
 using namespace HAL;
 
-import Queue;
 REGISTER_TYPE(MeshAsset);
 
 bool MeshData::init_default_loaders()

@@ -1,6 +1,6 @@
-export module Graphics.Types;
+export module Graphics:Types;
 
-import HAL.Types;
+export import HAL.Types;
 import HAL.Sampler;
 import HAL.Format;
 
@@ -21,27 +21,27 @@ export {
 		using HandleType = HAL::HandleType;
 		using DescriptorHeapFlags = HAL::DescriptorHeapFlags;
 		using DescriptorHeapType = HAL::DescriptorHeapType;
-	
+
 
 		using Blend = HAL::Blend;
 		using CullMode = HAL::CullMode;
 		using FillMode = HAL::FillMode;
 
-using StencilOp = HAL::StencilOp;
-using ComparisonFunc = HAL::ComparisonFunc;
+		using StencilOp = HAL::StencilOp;
+		using ComparisonFunc = HAL::ComparisonFunc;
 
 
 		using RenderTarget = HAL::RenderTarget;
-using RasterizerState = HAL::RasterizerState;
-using BlendState = HAL::BlendState;
-using RTVState = HAL::RTVState;
+		using RasterizerState = HAL::RasterizerState;
+		using BlendState = HAL::BlendState;
+		using RTVState = HAL::RTVState;
 
 
-using ResourceViewDesc = HAL::ResourceViewDesc;
+		using ResourceViewDesc = HAL::ResourceViewDesc;
 
-using ResourceType = HAL::ResourceType;
+		using ResourceType = HAL::ResourceType;
 
-using Format = HAL::Format;
+		using Format = HAL::Format;
 
 	}
 }

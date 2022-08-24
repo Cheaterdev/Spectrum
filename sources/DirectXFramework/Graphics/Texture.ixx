@@ -1,20 +1,22 @@
 module;
 #include "helper.h"
-#include "dx12_types.h"
-export module Texture;
+//#include "dx12_types.h"
+export module Graphics:Texture;
 
 import serialization;
-import CommandList;
+import :CommandList;
 import ResourceManager;
 
-import Resource;
-import TextureData;
-import Descriptors;
-import HLSLDescriptors;
+import :Resource;
+import :Device;
+import :TextureData;
+import :Descriptors;
+import :HLSLDescriptors;
 
-using namespace HAL;
+//using namespace HAL;
 
-import Graphics.Types;
+import :Types;
+import :Definitions;
 export
 {
 namespace Graphics

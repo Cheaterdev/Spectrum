@@ -1,10 +1,10 @@
-export module AABB;
+export module Math:AABB;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
-export import Primitive;
+import :Constants;
+import :Vectors;
+import :Quaternion;
+import :Matrices;
+import :Primitive;
 
 import stl.memory;
 import stl.core;
@@ -41,9 +41,6 @@ export
 		}
 	};
 }
-
-module: private;
-
 
 REGISTER_TYPE(AABB)
 

@@ -1,5 +1,6 @@
+module;
 #include "pch_dx.h"
-import Shader;
+module Graphics:Shader;
 
 namespace Graphics
 {

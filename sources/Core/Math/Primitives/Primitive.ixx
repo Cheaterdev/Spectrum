@@ -1,9 +1,9 @@
-export module Primitive;
+export module Math:Primitive;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
+export import :Constants;
+export import :Vectors;
+export import :Quaternion;
+export import :Matrices;
 import stl.memory;
 import serialization;
 
@@ -37,7 +37,6 @@ private:
     SERIALIZE() {}
 };
 
-module: private;
 
 REGISTER_TYPE(Primitive)
 

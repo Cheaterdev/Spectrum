@@ -1,6 +1,6 @@
 export module HAL.Types;
 
-import Vectors;
+import Math;
 import Utils;
 import serialization;
 

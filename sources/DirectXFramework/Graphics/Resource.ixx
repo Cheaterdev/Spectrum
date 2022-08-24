@@ -1,29 +1,22 @@
-module;
+export module Graphics:Resource;
 
-
-export module Resource;
-
-export import Memory;
-export import Tiling;
-export import Fence;
-export import States;
-export import Device;
-import d3d12;
+import :Memory;
+import :Tiling;
+import :Fence;
+import :States;
+import :Device;
+export import d3d12;
 import stl.memory;
 import Utils;
 import Trackable;
 
+//import :Definitions;
+
 using namespace HAL;
-export
-{
+export{
 	namespace Graphics
 	{
-
-
-		export class Resource;
-
-
-		export struct ResourceAddress
+		struct ResourceAddress
 		{
 			ResourceAddress()
 			{
@@ -37,8 +30,8 @@ export
 
 			}
 
-			D3D12_GPU_VIRTUAL_ADDRESS address = 0;
-			Resource* resource = nullptr;
+			D3D12_GPU_VIRTUAL_ADDRESS address;
+			Resource* resource;
 
 			explicit operator bool() const
 			{
@@ -57,16 +50,9 @@ export
 			}
 		};
 
+		export using Resource_ptr = std::shared_ptr<Resource>;
 
-
-
-		//class Resource;
-		using Resource_ptr = std::shared_ptr<Resource>;
-
-
-
-
-		class TrackedResource : public TrackedObject
+		export class TrackedResource : public TrackedObject
 		{
 			friend class TiledResourceManager;
 
@@ -116,8 +102,8 @@ export
 				used = false;
 			}
 		};
-
-		export class Resource :public SharedObject<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
+		
+		 class Resource :public SharedObject<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
 		{
 			LEAK_TEST(Resource)
 
@@ -178,7 +164,7 @@ export
 			}
 
 			// TODO:: works only for buffer now
-			auto get_size()
+			uint64 get_size()
 			{
 				return desc.Width;
 			}
@@ -211,12 +197,14 @@ export
 
 
 		};
-		struct IndexBufferView
+
+			struct IndexBufferView
 		{
 			D3D12_INDEX_BUFFER_VIEW view;
 			Resource* resource = nullptr;
 		};
 
-	}
 
+
+	}
 }

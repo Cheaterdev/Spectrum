@@ -1,15 +1,11 @@
-#include "pch_dx.h"
-import Queue;
-import Tiling;
-import Constants;
+module Graphics:Tiling;
+import :Resource;
+import :CommandList;
+import :Queue;
 
-import Vectors;
-import Memory;
+import Math;
 import Events;
 import stl.core;
-
-import Resource;
-import CommandList;
 
 import HAL.Types;
 using namespace HAL;
@@ -32,7 +28,7 @@ namespace Graphics {
 
 		if (!tile.heap_position.heap)
 		{
-			tile.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, tile_heap_type);
+			tile.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), tile_heap_type);
 			target.add_tile(tile);
 			on_load(ivec4(pos,subres));
 			if (recursive )
@@ -311,7 +307,7 @@ namespace Graphics {
 			auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
-				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, HeapType::DEFAULT, packed_mip_count);
+				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
 
 			info.add_tile(packed_tiles);
 
@@ -327,7 +323,7 @@ namespace Graphics {
 			auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
-				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(alloc_info.flags, HeapType::DEFAULT, packed_mip_count);
+				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
 
 			info.add_tile(packed_tiles);
 		}

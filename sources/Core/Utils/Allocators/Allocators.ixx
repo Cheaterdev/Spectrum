@@ -3,7 +3,7 @@ export module Allocators;
 
 import Debug;
 import Utils;
-import Constants;
+import Math;
 import stl.core;
 import stl.threading;
 

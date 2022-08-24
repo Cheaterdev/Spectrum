@@ -1,15 +1,15 @@
 module;
 #include "pch_dx.h"
-export module Slots;
+export module Graphics:Slots;
 
-import Resource;
-import CommandList;
-import Concepts;
-import Descriptors;
-import Enums;
-import Buffer;
-import SIG;
-import ResourceViews;
+import :Resource;
+import :CommandList;
+import :Concepts;
+import :Descriptors;
+import :Enums;
+import :Buffer;
+import :SIG;
+import :ResourceViews;
 export {
 
 
@@ -28,9 +28,9 @@ export {
 			auto start = s.str().length() % sizeof(uint4);
 			if (start != 0)
 			{
-				uint add = sizeof(uint4) - start;
+				size_t add = sizeof(uint4) - start;
 
-				for (int i = 0; i < add; i++)
+				for (size_t i = 0; i < add; i++)
 				{
 					char zero = 0;
 					s.write(reinterpret_cast<const char*>(&zero), sizeof(zero));

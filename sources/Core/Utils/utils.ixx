@@ -3,6 +3,8 @@ export module Utils;
 
 export import "utils/utils_macros.h";
 export import stl.core;
+export import stl.filesystem;
+
 export import magic_enum;
 import crossguid;
 
@@ -26,6 +28,21 @@ export
 		return std::chrono::duration<long double, std::milli>(ms);
 	}
 
+	std::wstring convert(std::string_view str);
+	std::string convert(std::wstring_view wstr);
+	std::string to_lower(std::string_view str);
+	std::wstring to_lower(std::wstring_view str);
+
+
+	std::filesystem::path to_path(std::wstring s)
+	{
+		return std::move(s);
+	}
+
+	std::filesystem::path to_path(std::string s)
+	{
+		return std::move(convert(s));
+	}
 
 	template <class T> concept NonString = !std::is_convertible_v<T, std::string_view> && !std::is_convertible_v<T, std::wstring_view>;
 	template<typename T> concept HaveEqual = requires (T a, T b) { a == b; };
@@ -59,11 +76,6 @@ export
 	constexpr size_t tuple_element_index() {
 		return tuple_element_index_helper<0, T, Tuple>();
 	}
-
-	std::wstring convert(std::string_view str);
-	std::string convert(std::wstring_view wstr);
-	std::string to_lower(std::string_view str);
-	std::wstring to_lower(std::wstring_view str);
 
 	template<class T> using s_ptr = std::shared_ptr<T>;
 	template<class T> using w_ptr = std::weak_ptr<T>;

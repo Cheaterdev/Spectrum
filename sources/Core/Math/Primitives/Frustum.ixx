@@ -1,11 +1,11 @@
-export module Frustum;
+export module Math:Frustum;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
-export import Primitive;
-import Plane;
+import :Constants;
+import :Vectors;
+import :Quaternion;
+import :Matrices;
+import :Primitive;
+import :Plane;
 
 import stl.memory;
 import serialization;
@@ -49,9 +49,6 @@ private:
     }
 };
 
-
-
-module: private;
 
 REGISTER_TYPE(Frustum)
 

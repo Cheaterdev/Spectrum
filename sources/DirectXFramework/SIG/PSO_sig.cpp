@@ -1,13 +1,11 @@
 #include "pch_dx.h"
 #include "Graphics/dx12_types.h"
-import PipelineState;
+import Graphics;
 
-import Enums;
-import PSO;
 import Data;
 import Profiling;
 import serialization;
-import Autogen;
+
 void init_pso(enum_array<PSO, PSOBase::ptr>&);
 Graphics::ComputePipelineState::ptr SimpleComputePSO::create()
 {

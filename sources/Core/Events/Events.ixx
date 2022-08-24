@@ -4,7 +4,7 @@ module;
 
 export module Events;
 
-import Vectors;
+import Math;
 import Data;
 import serialization;
 import my_unique_vector;

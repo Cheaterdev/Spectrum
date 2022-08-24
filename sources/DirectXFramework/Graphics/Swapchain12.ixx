@@ -1,10 +1,10 @@
-export module SwapChain;
+export module Graphics:SwapChain;
 
-import Fence;
-import Descriptors;
-import Vectors;
+import :Fence;
+import :Descriptors;
+import Math;
 import d3d12;
-import Graphics.Types;
+import :Types;
 
 export
 {

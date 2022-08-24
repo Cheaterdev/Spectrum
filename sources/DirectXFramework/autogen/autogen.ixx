@@ -2,31 +2,31 @@
 module;
 #include "pch_dx.h"
 #include "Graphics/dx12_types.h"
-export module Autogen;
+export module Graphics:Autogen;
 
-import PipelineState;
-import Vectors;
-import Matrices;
-import Samplers;
-import Buffer;
-import Descriptors;
-import HLSLDescriptors;
+import :PipelineState;
+import Math;
+import :Samplers;
+import :Buffer;
+import :Descriptors;
+import :HLSLDescriptors;
 
-import SIG;
-import RT;
-import Layout;
-import Slots;
-import PSO;
-import RTX;
-import Enums;
+import :SIG;
+import :RT;
+import :Layout;
+import :Slots;
+import :PSO;
+import :RTX;
+import :Enums;
 
 import Data;
-import RootSignature;
+import :RootSignature;
 
 import Utils;
 import serialization;
-import Graphics.Types;
+import :Types;
 
+import :Definitions;
 export
 {
 
@@ -179,7 +179,7 @@ export
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	UINT get_slot_id(SlotID id);
 }
-module: private;
+//module: private;
 static enum_array<Layouts, Graphics::RootLayout::ptr> signatures;
 void init_signatures()
 {

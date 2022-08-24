@@ -1,12 +1,12 @@
 module;
 #include "pch_dx.h"
 
-export module Layout;
+export module Graphics:Layout;
 
-import RootSignature;
-import Concepts;
-import Samplers;
-import Graphics.Types;
+import :RootSignature;
+import :Concepts;
+import :Samplers;
+import :Types;
 
 import D3D12.Utils;
 export

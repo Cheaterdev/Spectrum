@@ -1,10 +1,8 @@
+module;
 #include "pch_dx.h"
+module Graphics:CommandListCompiler;
 
-
-import CommandListCompiler;
-import Device;
-import Vectors;
-import Device;
+import Math;
 import HAL.Types;
 import D3D12.Utils;
 

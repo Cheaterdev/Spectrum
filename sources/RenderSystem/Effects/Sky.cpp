@@ -8,9 +8,9 @@ using namespace FrameGraph;
 
 SkyRender::SkyRender()
 {
-	transmittance = Graphics::Texture::get_resource({ "textures\\Transmit.dds", false, false });
-	irradiance = Graphics::Texture::get_resource({ "textures\\irradianceTexture.dds", false, false });
-	inscatter = Graphics::Texture::get_resource({ "textures\\inscatterTexture.dds", false, false });
+	transmittance = Graphics::Texture::get_resource({ to_path(L"textures\\Transmit.dds"), false, false });
+	irradiance = Graphics::Texture::get_resource({ to_path(L"textures\\irradianceTexture.dds"), false, false });
+	inscatter = Graphics::Texture::get_resource({ to_path(L"textures\\inscatterTexture.dds"), false, false });
 }
 
 

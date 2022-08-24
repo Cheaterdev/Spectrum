@@ -4,6 +4,7 @@ import Tasks;
 import Debug;
 import ppl;
 import FileSystem;
+import d3d12;
 using namespace concurrency;
 
 
@@ -12,11 +13,11 @@ AssetManager::AssetManager()
 {
     has_worker = false;
 
-    tree_folders.reset(new folder_item(L"All assets"));
+    tree_folders.reset(new folder_item(std::wstring(L"All assets")));
     std::function<void(std::filesystem::path, folder_item::ptr)> iter;
     iter = [this, &iter](std::filesystem::path name, folder_item::ptr  w)
     {
-        auto new_path = name/"";
+        auto new_path = name/ std::wstring(L"");
 		auto  folder_name = name.filename();
         folder_item::ptr f_item(new folder_item(folder_name));
         w->add_child(f_item);
@@ -36,7 +37,7 @@ AssetManager::AssetManager()
     };
     {
         auto t = CounterManager::get().start_count<folder_item>();
-        iter(L"assets", tree_folders);
+        iter(std::wstring(L"assets"), tree_folders);
     }
  
 }
@@ -467,7 +468,7 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
     if (header->type == Asset_Type::TILED_TEXTURE)
         s_type = L"TiledTextures";
 
-    file_path = std::filesystem::path(L"assets") / s_type / (header->name + L"_" + convert(to_string(header->id)) + L".asset");
+    file_path = to_path(L"assets") / to_path(s_type) / to_path(header->name + L"_" + convert(to_string(header->id)) + L".asset");
     folder = AssetManager::get().get_folders()->get_folder(file_path).get();
     folder->add_asset(ptr(this));
     update_preview();

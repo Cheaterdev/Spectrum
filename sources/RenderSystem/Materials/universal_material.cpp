@@ -5,12 +5,8 @@
 
 static IdGenerator ids;
 
-import Buffer;
+import Graphics;
 
-import Descriptors;
-import Concepts;
-import Layout;
-import SIG;
 import crc32;
 
 import Utils;

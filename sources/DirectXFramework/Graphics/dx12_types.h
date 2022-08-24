@@ -1,45 +1,3 @@
-namespace Graphics
-{
-class Resource;
-class Transitions;
-struct swap_chain_desc;
-struct RaytracingBuildDescBottomInputs;
-struct RaytracingBuildDescTopInputs;
-class SwapChain;
-class Queue;
-struct Handle;
-//class Resource;
-struct ResourceAllocationInfo;
-
-class FrameResources;
-class CommandList;
-class ResourceHeap;
-
-//class PipelineState;
-class ComputePipelineState;
-class PipelineStateBase;
-class StateObject;
-class IndexBufferBase;
-
-class GPUBuffer;
-
-template<class T> class StructuredBuffer;
-//  using BufferBase = GPUBuffer;
-class QueryHeap;
-
-class Texture;
-
-class GraphicsContext;
-class ComputeContext;
-class CopyContext;
-class FrameResourceManager;
-
-class GPUTimeManager;
-class Eventer;
-
-struct texure_header;
-
-}
 
 
 #define ALL_FORMATS \
@@ -143,6 +101,7 @@ DXGI_FORMAT_BC6H_SF16,\
 DXGI_FORMAT_BC7_TYPELESS,\
 DXGI_FORMAT_BC7_UNORM,\
 DXGI_FORMAT_BC7_UNORM_SRGB
+
 
 /*
 DXGI_FORMAT_AYUV,\

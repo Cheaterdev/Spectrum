@@ -1,6 +1,5 @@
 #pragma once
-import Texture;
-import Buffer;
+import Graphics;
 
 struct visibility_update
 {

@@ -1,6 +1,3 @@
-module;
-
-
 export module FileDepender;
 
 import Utils;
@@ -23,13 +20,13 @@ export
 	{
 		struct depender
 		{
-			std::wstring file_name;
+			std::filesystem::path file_name;
 			std::filesystem::file_time_type modify_time;
 
 			bool need_update();
 		private:
 
-			inline const std::wstring& get_name() const { return file_name; }
+			inline const std::wstring get_name() const { return file_name.wstring(); }
 			SERIALIZE()
 			{
 				ar& NVP(file_name)& NVP(modify_time);
@@ -105,7 +102,7 @@ bool resource_file_depender::depends_on(std::string v)
     auto wstr = convert(v);
     for (auto f : files)
     {
-        if (f.file_name.find(wstr) != std::string::npos)
+        if (f.file_name.wstring().find(wstr) != std::string::npos)
         {
             return true;
         }

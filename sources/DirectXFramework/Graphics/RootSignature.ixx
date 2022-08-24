@@ -1,11 +1,10 @@
-module;
-export module RootSignature;
+export module Graphics:RootSignature;
 import Data;
-import Enums;
+import :Enums;
 import d3d12;
-import Vectors;
+import Math;
 import stl.core;
-
+import :Definitions;
 export
 {
 
@@ -35,7 +34,7 @@ export
 
 
 		struct RootSignatureDesc;
-		struct HandleTable;
+		//struct HandleTable;
 
 		struct DescriptorTable
 		{
@@ -113,7 +112,7 @@ export
 
 
 
-		class RootSignature;
+		//class RootSignature;
 		struct RootSignatureDesc
 		{
 			friend class RootSignature;

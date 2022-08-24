@@ -16,7 +16,7 @@ std::string BinaryAsset::get_data()
 BinaryAsset::BinaryAsset(std::wstring file_name)
 {
 	tester = std::make_shared<bool>();
-    auto file = FileSystem::get().get_file(file_name);
+    auto file = FileSystem::get().get_file(to_path(file_name));
 
     if (file)
     {
@@ -27,7 +27,7 @@ BinaryAsset::BinaryAsset(std::wstring file_name)
     this->file_name = file_name;
     name = file_name.substr(file_name.find_last_of(L"\\") + 1);
     mark_changed();
-    FileSystem::get().get_provider<native_file_provider>()->on_change(file_name, [this]()
+    FileSystem::get().get_provider<native_file_provider>()->on_change(to_path(file_name), [this]()
     {
         reload_resource();
     });
@@ -46,12 +46,12 @@ void BinaryAsset::try_register()
 		return;
 
 	file_depends.clear();
-	auto file = FileSystem::get().get_file(file_name);
+	auto file = FileSystem::get().get_file(to_path(file_name));
 
 	if (file)
 	{
 		data = file->load_all();
-		file_depends.add_depend(file);
+		file_depends.add_depend((file));
 		mark_changed();
 	}
 
