@@ -179,7 +179,6 @@ export
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	UINT get_slot_id(SlotID id);
 }
-//module: private;
 static enum_array<Layouts, Graphics::RootLayout::ptr> signatures;
 void init_signatures()
 {

@@ -626,31 +626,31 @@ void generate_include_list(const Parsed& parsed)
 module;
 #include "pch_dx.h"
 #include "Graphics/dx12_types.h"
-export module Autogen;
+export module Graphics:Autogen;
 
-import PipelineState;
+import :PipelineState;
 import Math;
-import Matrices;
-import Samplers;
-import Buffer;
-import Descriptors;
-import HLSLDescriptors;
+import :Samplers;
+import :Buffer;
+import :Descriptors;
+import :HLSLDescriptors;
 
-import SIG;
-import RT;
-import Layout;
-import Slots;
-import PSO;
-import RTX;
+import :SIG;
+import :RT;
+import :Layout;
+import :Slots;
+import :PSO;
+import :RTX;
 import :Enums;
 
 import Data;
-import RootSignature;
+import :RootSignature;
 
 import Utils;
 import serialization;
-import Graphics.Types;
+import :Types;
 
+import :Definitions;
 export
 {
 
@@ -707,7 +707,7 @@ export
 	stream.pop();
 	stream << "}" << std::endl;
 
-	stream << "module: private;" << std::endl;
+//	stream << "module: private;" << std::endl;
 
 	stream << "static enum_array<Layouts, Graphics::RootLayout::ptr> signatures;" << std::endl;
 	stream << "void init_signatures()" << std::endl;
@@ -765,7 +765,7 @@ export
 		stream << R"(
 module;
 
-export module Enums;
+export module Graphics:Enums;
 
 import crc32;
 import Utils;
@@ -874,16 +874,8 @@ export
 		stream << R"(
 #include "pch_dx.h"
 
-import Autogen;
+import Graphics;
 import Data;
-import SIG;
-import RT;
-import Layout;
-import Slots;
-import PSO;
-import RTX;
-import :Enums;
-import RootSignature;
 
 import ppl;
 using namespace concurrency;
