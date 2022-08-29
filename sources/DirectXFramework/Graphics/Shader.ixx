@@ -2,9 +2,8 @@ module;
 
 export module Graphics:Shader;
 
-
+import HAL;
 import ResourceManager;
-import D3D.Shaders;
 import :Enums;
 import stl.core;
 

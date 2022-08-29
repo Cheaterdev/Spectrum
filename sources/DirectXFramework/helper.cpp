@@ -239,8 +239,3 @@ bool is_shader_visible(DXGI_FORMAT fmt)
 }
 
 
-
-
-extern "C" { _declspec(dllexport) extern const UINT D3D12SDKVersion = 4; }
-
-extern "C" { _declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }

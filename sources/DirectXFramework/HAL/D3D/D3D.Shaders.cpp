@@ -1,7 +1,8 @@
+
+module HAL:Shaders;
 #include "pch_dx.h"
 
 #include "helper.h"
-import D3D.Shaders;
 import Singleton;
 import FileSystem;
 import FileDepender;

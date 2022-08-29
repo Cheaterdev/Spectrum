@@ -4,7 +4,6 @@ module;
 export module Graphics:PipelineState;
 
 import FileSystem;
-import D3D.Shaders;
 
 import :RootSignature;
 

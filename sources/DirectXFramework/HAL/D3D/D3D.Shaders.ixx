@@ -1,7 +1,4 @@
-module;
-
-
-export module D3D.Shaders;
+export module HAL:Shaders;
 
 import Singleton;
 import FileSystem;

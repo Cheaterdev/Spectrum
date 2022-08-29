@@ -11,7 +11,6 @@ import Threading;
 import Profiling;
 
 import :Concepts;
-import D3D.Shaders;
 
 import :RootSignature;
 import Utils;

@@ -11,3 +11,5 @@ export import :Resource;
 export import :Fence;
 // TODO: Should be private
 export import :Utils;
+
+export import :Shaders;
