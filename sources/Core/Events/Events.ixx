@@ -325,7 +325,7 @@ export namespace Events
 		{
 			ar& NVP(value);
 
-			if constexpr(Archive::is_loading::value)
+			IF_LOAD()
 			{
 				send();
 			}

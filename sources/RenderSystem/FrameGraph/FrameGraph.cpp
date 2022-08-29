@@ -6,7 +6,6 @@
 #include "FrameGraph.h"
 import Graphics;
 
-import D3D12.Utils;
 using namespace Graphics;
 
 

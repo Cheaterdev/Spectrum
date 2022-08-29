@@ -14,7 +14,7 @@ import Log;
 import Data; 
 import Events;
 import Threading;
-import HAL.Types;
+import HAL;
 import d3d12;
 
 //import :Definitions;

@@ -3,7 +3,7 @@ import :Resource;
 import :Descriptors;
 import :Types;
 
-import D3D12.Utils;
+import HAL;
 import :HLSLDescriptors;
 import :Device;
 

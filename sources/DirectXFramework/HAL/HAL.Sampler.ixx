@@ -1,6 +1,6 @@
-export module HAL.Sampler;
+export module HAL:Sampler;
 
-import HAL.Types;
+import :Types;
 import Math;
 
 export namespace HAL

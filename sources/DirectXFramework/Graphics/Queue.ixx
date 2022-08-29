@@ -6,7 +6,7 @@ import :Device;
 import :CommandList;
 import d3d12;
 import :Fence;
-import HAL.Types;
+import HAL;
 using namespace HAL;
 
 export

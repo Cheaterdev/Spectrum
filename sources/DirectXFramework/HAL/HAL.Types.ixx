@@ -1,10 +1,10 @@
-export module HAL.Types;
+export module HAL:Types;
 
 import Math;
 import Utils;
 import serialization;
 
-import HAL.Format;
+import :Format;
 
 export namespace HAL
 {

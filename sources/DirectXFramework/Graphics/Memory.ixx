@@ -1,6 +1,6 @@
 module;
 
-//#include "dx12_types.h"
+
 export module Graphics:Memory;
 
 import Data;
@@ -12,9 +12,7 @@ import Singleton;
 import Utils;
 import Math;
 import Trackable;
-import HAL.Types;
-import HAL.Heap;
-
+import HAL;
 import Utils;
 using namespace HAL;
 

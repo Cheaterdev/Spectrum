@@ -15,7 +15,7 @@ export import stl.core;
 export import stl.memory;
 export import Math;
 export import :CommandList;
-export import HAL.Types;
+export import HAL;
 import :HLSLDescriptors;
 
 import d3d12;
@@ -129,7 +129,7 @@ export
 		private:
 			SERIALIZE()
 			{
-				if (Archive::is_loading::value)
+				IF_LOAD()
 				{
 					ar& NVP(count);
 					ar& NVP(stride);

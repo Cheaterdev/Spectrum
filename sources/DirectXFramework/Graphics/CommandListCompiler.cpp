@@ -3,8 +3,7 @@ module;
 module Graphics:CommandListCompiler;
 
 import Math;
-import HAL.Types;
-import D3D12.Utils;
+import HAL;
 
 import Utils;
 

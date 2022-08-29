@@ -1,12 +1,11 @@
-export module HAL.Device;
+export module HAL:Device;
 import d3d12;
 import Math;
 import Utils;
 
-import HAL.Types;
-import HAL.Sampler;
-
-import D3D12.Utils;
+import :Types;
+import :Sampler;
+import :Utils;
 
 using namespace HAL;
 
@@ -16,7 +15,7 @@ export namespace HAL
 	
 	struct DeviceDesc
 	{
-		D3D::Adapter adapter;
+		DXGI::Adapter adapter;
 	};
 	class Device
 	{		
@@ -31,7 +30,7 @@ export namespace HAL
 	};
 }
 
-module:private;
+//module:private;
 
 
 namespace HAL

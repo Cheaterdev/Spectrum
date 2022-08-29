@@ -1,13 +1,12 @@
-export module HAL.Heap;
+export module HAL:Heap;
 import d3d12;
 import Math; 
 import Utils;
 
-import HAL.Types;
-import HAL.Sampler;
-
-import D3D12.Utils;
-import HAL.Device;
+import :Types;
+import :Sampler;
+import :Utils;
+import :Device;
 
 using namespace HAL;
 
@@ -38,8 +37,6 @@ export namespace HAL
 		D3D::Resource cpu_buffer;
 	};
 }
-
-module:private;
 
 
 namespace HAL

@@ -20,7 +20,7 @@ import Data;
 import d3d12;
 
 import :Descriptors;
-import HAL.Types;
+import HAL;
 
 import :Resource;
 using namespace HAL;

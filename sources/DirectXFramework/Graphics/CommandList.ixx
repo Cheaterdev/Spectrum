@@ -1,6 +1,4 @@
 module;
-
-//#include "dx12_types.h"
 export module Graphics:CommandList;
 
 import Utils;
@@ -27,7 +25,7 @@ import Singleton;
 import stl.core;
 import stl.memory;
 
-import HAL.Types;
+import HAL;
 
 import d3d12;
 

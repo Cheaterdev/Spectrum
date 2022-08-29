@@ -1,9 +1,6 @@
 export module Graphics:Samplers;
-
-import d3d12;
+import :Types;
 import Math;
-
-export import :Types;
 
 export namespace Graphics
 {

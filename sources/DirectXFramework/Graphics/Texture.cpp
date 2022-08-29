@@ -4,10 +4,9 @@ module;
 module Graphics:Texture;
 import :Queue;
 
-import HAL.Types;
+import HAL;
 using namespace HAL;
 
-import D3D12.Utils;
 namespace Graphics
 {
 

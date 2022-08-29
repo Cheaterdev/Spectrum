@@ -112,7 +112,7 @@ class occluder
 		SERIALIZE()
         {
             ar& NVP(primitive);
-			if(Archive::is_loading::value)
+			IF_LOAD()
 			set_primitive(primitive);
         }
 };

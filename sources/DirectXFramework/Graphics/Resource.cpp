@@ -13,7 +13,7 @@ import Log;
 
 import stl.core;
 import stl.memory;
-import HAL.Types;
+import HAL;
 using namespace HAL;
 
 

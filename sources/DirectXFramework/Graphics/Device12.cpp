@@ -20,11 +20,9 @@ import IdGenerator;
 import StateContext;
 import Data;
 
-import HAL.Types;
-import HAL.Device;
+import HAL;
 
 using namespace HAL;
-import D3D12.Utils;
 
 namespace Graphics
 {

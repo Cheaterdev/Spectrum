@@ -16,8 +16,7 @@ import :Buffer;
 import Debug;
 import Exceptions;
 
-import D3D12.Utils;
-import HAL.Types;
+import HAL;
 
 using namespace HAL;
 namespace Graphics

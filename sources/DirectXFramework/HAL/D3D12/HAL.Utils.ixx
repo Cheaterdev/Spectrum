@@ -1,10 +1,9 @@
-export module D3D12.Utils;
+export module HAL:Utils;
 import d3d12;
 import Math;
-import HAL.Types;
-import HAL.Sampler;
-import HAL.Format;
 
+import :Types;
+import :Sampler;
 using namespace HAL;
 
 export namespace D3D
@@ -12,8 +11,29 @@ export namespace D3D
 	using Heap = ComPtr<ID3D12Heap>;
 	using Resource = ComPtr<ID3D12Resource>;
 	using Device = ComPtr<ID3D12Device5>;
-	using Adapter = ComPtr<IDXGIAdapter3>;
+	using Fence = ComPtr<ID3D12Fence>;
+	using CommandList = ComPtr<ID3D12GraphicsCommandList4>;
+	using CommandAllocator = ComPtr<ID3D12CommandAllocator>;
+	using CommandSignature = ComPtr<ID3D12CommandSignature>;
+	using PipelineState = ComPtr<ID3D12PipelineState>;
+	using StateObject = ComPtr<ID3D12StateObject>;
+	using StateObjectProperties = ComPtr<ID3D12StateObjectProperties>;
+	using Blob = ComPtr<ID3DBlob>;
+	using DescriptorHeap = ComPtr<ID3D12DescriptorHeap>;
+	using QueryHeap = ComPtr<ID3D12QueryHeap>;
 
+	using Debug = ComPtr<ID3D12Debug1>;
+	using InfoQueue = ComPtr<ID3D12InfoQueue>;
+}
+
+export namespace DXGI
+{
+	using Adapter = ComPtr<IDXGIAdapter3>;	
+	using Swapchain = ComPtr<IDXGISwapChain3>;
+	using Surface = ComPtr<IDXGISurface2>;
+	using Device = ComPtr<IDXGIDevice2>;
+	using Factory = ComPtr<IDXGIFactory2>;
+	using Output = ComPtr<IDXGIOutput1>;
 }
 
 export D3D12_TEXTURE_ADDRESS_MODE to_native(TextureAddressMode mode)
@@ -140,7 +160,6 @@ export D3D12_SAMPLER_DESC to_native(const SamplerDesc& desc)
 	return result;
 }
 
-
 export D3D12_COMMAND_LIST_TYPE to_native(CommandListType type)
 {
 	static constexpr D3D12_COMMAND_LIST_TYPE natives[] =
@@ -153,8 +172,6 @@ export D3D12_COMMAND_LIST_TYPE to_native(CommandListType type)
 	return natives[static_cast<uint>(type)];
 }
 
-
-
 export D3D12_HEAP_TYPE to_native(HeapType type)
 {
 	static constexpr D3D12_HEAP_TYPE natives[] =
@@ -166,8 +183,6 @@ export D3D12_HEAP_TYPE to_native(HeapType type)
 
 	return natives[static_cast<uint>(type)];
 }
-
-
 
 export D3D12_HEAP_FLAGS to_native(HeapFlags flags)
 {
@@ -182,8 +197,6 @@ export D3D12_HEAP_FLAGS to_native(HeapFlags flags)
 	return natives[static_cast<uint>(flags)];
 }
 
-
-
 export D3D12_DESCRIPTOR_HEAP_FLAGS to_native(DescriptorHeapFlags flags)
 {
 	static constexpr D3D12_DESCRIPTOR_HEAP_FLAGS natives[] =
@@ -194,8 +207,6 @@ export D3D12_DESCRIPTOR_HEAP_FLAGS to_native(DescriptorHeapFlags flags)
 
 	return natives[static_cast<uint>(flags)];
 }
-
-
 
 export D3D12_DESCRIPTOR_HEAP_TYPE to_native(DescriptorHeapType type)
 {
@@ -210,8 +221,6 @@ export D3D12_DESCRIPTOR_HEAP_TYPE to_native(DescriptorHeapType type)
 	return natives[static_cast<uint>(type)];
 }
 
-
-
 export D3D12_CULL_MODE to_native(CullMode mode)
 {
 	static constexpr D3D12_CULL_MODE natives[] =
@@ -224,7 +233,6 @@ export D3D12_CULL_MODE to_native(CullMode mode)
 	return natives[static_cast<uint>(mode)];
 }
 
-
 export D3D12_FILL_MODE to_native(FillMode mode)
 {
 	static constexpr D3D12_FILL_MODE natives[] =
@@ -235,8 +243,6 @@ export D3D12_FILL_MODE to_native(FillMode mode)
 
 	return natives[static_cast<uint>(mode)];
 }
-
-
 
 export D3D12_BLEND to_native(Blend blend)
 {
@@ -264,7 +270,6 @@ export D3D12_BLEND to_native(Blend blend)
 	return natives[static_cast<uint>(blend)];
 }
 
-
 export D3D12_STENCIL_OP to_native(StencilOp mode)
 {
 	static constexpr D3D12_STENCIL_OP natives[] =
@@ -282,7 +287,6 @@ export D3D12_STENCIL_OP to_native(StencilOp mode)
 	return natives[static_cast<uint>(mode)];
 }
 
-
 export D3D12_DEPTH_STENCILOP_DESC to_native(StencilDesc desc)
 {
 	D3D12_DEPTH_STENCILOP_DESC result;
@@ -293,7 +297,6 @@ export D3D12_DEPTH_STENCILOP_DESC to_native(StencilDesc desc)
 
 	return result;
 }
-
 
 export DXGI_FORMAT to_native(Format format)
 {

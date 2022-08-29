@@ -7,7 +7,7 @@ import :CommandList;
 
 import Utils;
 import StateContext;
-import HAL.Types;
+import HAL;
 
 using namespace HAL;
 namespace Graphics

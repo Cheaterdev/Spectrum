@@ -5,7 +5,7 @@ module Graphics:SwapChain;
 import :Texture;
 import :Queue;
 
-import HAL.Types;
+import HAL;
 using namespace HAL;
 
 namespace Graphics

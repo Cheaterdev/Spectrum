@@ -196,7 +196,7 @@ class MeshAsset : public Asset
        //     ar& NVP(nodes);
 
             SAVE_PARENT(Asset);
-            if constexpr (Archive::is_loading::value)
+            IF_LOAD()
             {
                 root_node.iterate([this](MeshNode* node)
                     {

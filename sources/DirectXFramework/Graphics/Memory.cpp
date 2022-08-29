@@ -14,8 +14,7 @@ import Singleton;
 import Utils;
 import Math;
 import Trackable;
-import HAL.Types;
-import HAL.Heap;
+import HAL;
 
 using namespace HAL;
 

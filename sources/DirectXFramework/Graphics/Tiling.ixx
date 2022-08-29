@@ -1,7 +1,7 @@
 module;
 #include "pch_dx.h"
 
-//#include "dx12_types.h"
+
 export module Graphics:Tiling;
 
 import Math;
@@ -10,7 +10,7 @@ import Events;
 import stl.core;
 
 import :Definitions;
-export import HAL.Types;
+export import HAL;
 using namespace HAL;
 
 export

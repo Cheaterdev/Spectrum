@@ -697,7 +697,7 @@ void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 	ar& NVP(owner_ptr);
 
 	//SAVE_PARENT(AssetReferenceBase);
-	if (Archive::is_loading::value)
+	IF_LOAD()
 	{
 		owner = owner_ptr.get();
 		Guid guid;

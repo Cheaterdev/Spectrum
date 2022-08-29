@@ -2,8 +2,8 @@ module;
 #include "pch_dx.h"
 module Graphics:RaytracingAS;
 import :Queue;
-import HAL.Types;
-import D3D12.Utils;
+import HAL;
+
 using namespace HAL;
 
 

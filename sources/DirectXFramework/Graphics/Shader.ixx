@@ -1,5 +1,5 @@
 module;
-//#include "dx12_types.h"
+
 export module Graphics:Shader;
 
 
@@ -262,7 +262,7 @@ export
 				ar& NVP(hash);
 				//  ar& NVP(slots_usage);
 
-				if (Archive::is_loading::value)
+				IF_LOAD()
 				{
 					own_id();
 					compile();

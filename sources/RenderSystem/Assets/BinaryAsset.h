@@ -41,7 +41,7 @@ class BinaryAsset : public Asset
             ar& NVP(file_depends);
             ar& NVP(file_name);
 
-            if (Archive::is_loading::value)
+            IF_LOAD()
             {
                 reload_resource();
 				std::weak_ptr<bool> r = tester;

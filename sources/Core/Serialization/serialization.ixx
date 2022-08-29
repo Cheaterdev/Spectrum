@@ -24,7 +24,7 @@ export
 		template<class Archive>
 		void serialize(Archive& ar, Guid& g)
 		{
-			if constexpr (Archive::is_loading::value)
+			IF_LOAD()
 			{
 				std::array<unsigned char, 16> v;
 				ar& NVP(v);

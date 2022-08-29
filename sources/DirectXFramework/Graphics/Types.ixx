@@ -1,8 +1,6 @@
 export module Graphics:Types;
 
-export import HAL.Types;
-import HAL.Sampler;
-import HAL.Format;
+export import HAL;
 
 export {
 	namespace Graphics

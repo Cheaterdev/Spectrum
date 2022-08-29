@@ -9,14 +9,13 @@ import :GPUTimer;
 
 import Debug;
 
-import HAL.Types;
-import D3D12.Utils;
+import HAL;
 
 using namespace HAL;
 namespace Graphics
 {
 
-	Queue::Queue(CommandListType type, Device* device) : commandListCounter(*device)
+	Queue::Queue(CommandListType type, Device* device) : commandListCounter(*device->get_hal_device())
 	{
 		auto t = CounterManager::get().start_count<Queue>();
 		this->type = type;

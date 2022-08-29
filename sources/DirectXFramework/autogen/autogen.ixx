@@ -1,7 +1,6 @@
 
 module;
 #include "pch_dx.h"
-#include "Graphics/dx12_types.h"
 export module Graphics:Autogen;
 
 import :PipelineState;

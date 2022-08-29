@@ -2,16 +2,13 @@ module;
 
 #include "helper.h"
 
-//#include "dx12_types.h"
+
 export module Graphics:Device;
 
 import IdGenerator;
 import StateContext;
 import Data;
-
-import HAL.Types;
-import HAL.Device;
-
+import HAL;
 import :Definitions;
 //using namespace HAL;
 export

@@ -2,7 +2,7 @@
 #include "Effects/RTX/RTX.h"
 #include "Assets/AssetRenderer.h"
 #include "Materials/universal_material.h"
-import HAL.Types;
+import HAL;
 using namespace HAL;
 
 REGISTER_TYPE(MeshAsset);
@@ -271,7 +271,7 @@ void MeshAssetInstance::serialize(Archive& ar, const unsigned int)
 	ar& NVP(mesh_asset);
 	ar& NVP(type);
 
-	if (Archive::is_loading::value)
+	IF_LOAD()
 		init_asset();
 }
 

@@ -6,7 +6,7 @@ export module Graphics:CommandListCompiler;
 import Math;
 import :Device;
 
-import HAL.Types;
+import HAL;
 using namespace HAL;
 
 export

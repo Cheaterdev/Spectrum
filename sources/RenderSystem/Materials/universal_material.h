@@ -40,7 +40,7 @@ namespace materials
 			ar& NVP(ds_shader);
 			ar& NVP(hs_shader);
 
-			if (Archive::is_loading::value)
+			IF_LOAD()
 				init_pipeline_id();
 		}
 	};
@@ -349,7 +349,7 @@ namespace materials
 				ar& NVP(raytracing_lib);
 
 
-				if constexpr (Archive::is_loading::value)
+				IF_LOAD()
 				{
 					auto new_pip = PipelineManager::get().get_pipeline(pipeline);
 
@@ -358,7 +358,7 @@ namespace materials
 				}
 
 
-				if constexpr (Archive::is_loading::value)
+				IF_LOAD()
 				{
 					compile();
 				}

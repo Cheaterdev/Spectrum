@@ -540,7 +540,7 @@ export
 				for (auto n : output_parametres)
 					n->owner = this;
 
-				if (Archive::is_loading::value)
+				IF_LOAD()
 				{
 					//	(*this).Node();
 				}

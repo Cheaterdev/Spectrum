@@ -12,7 +12,6 @@ class debug_drawer;
 class vertex_transform;
 class GBuffer;
 
-import D3D12.Utils;
 using namespace FrameGraph;
 
 namespace materials

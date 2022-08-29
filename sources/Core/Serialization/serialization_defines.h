@@ -11,3 +11,5 @@
 #define SERIALIZE_PRETTY()  friend class cereal::access; template<PrettyArchive Archive> void serialize(Archive& ar, const unsigned int version)
 
 #define REGISTER_TYPE(...) CEREAL_REGISTER_TYPE(__VA_ARGS__)
+#define IF_LOAD() if constexpr(Archive::is_loading::value)
+#define IF_SAVE() if constexpr(Archive::is_saving::value)

@@ -7,7 +7,7 @@ import Math;
 import Events;
 import stl.core;
 
-import HAL.Types;
+import HAL;
 using namespace HAL;
 
 namespace Graphics {

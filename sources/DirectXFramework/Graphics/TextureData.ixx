@@ -9,7 +9,7 @@ import serialization;
 import Utils;
 import Log;
 
-import D3D12.Utils;
+import HAL;
 import :Types;
 
 using namespace Graphics;

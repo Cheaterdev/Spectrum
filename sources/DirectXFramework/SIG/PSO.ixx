@@ -1,6 +1,6 @@
 module;
 
-#include "Graphics/dx12_types.h"
+
 #include "pch_dx.h"
 
 export module Graphics:PSO;

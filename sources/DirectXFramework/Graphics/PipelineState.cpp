@@ -7,7 +7,7 @@ import :Shader;
 import Serializer;
 import Debug;
 
-import HAL.Types;
+import HAL;
 using namespace HAL;
 
 template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T>
@@ -37,9 +37,6 @@ MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS, D3D12_RT_FORMAT_A
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO, D3D12_CACHED_PIPELINE_STATE);
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT, DXGI_FORMAT);
 
-
-import D3D12.Utils;
-using namespace HAL;
 namespace Graphics
 {
 	template < class V>

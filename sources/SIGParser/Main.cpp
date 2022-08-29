@@ -625,7 +625,7 @@ void generate_include_list(const Parsed& parsed)
 	stream << R"(
 module;
 #include "pch_dx.h"
-#include "Graphics/dx12_types.h"
+
 export module Graphics:Autogen;
 
 import :PipelineState;

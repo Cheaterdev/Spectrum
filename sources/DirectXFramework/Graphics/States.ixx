@@ -2,13 +2,13 @@ module;
 #include "pch_dx.h"
 
 
-//#include "dx12_types.h"
+
 export module Graphics:States;
 
 import Utils;
 import StateContext;
 import :Device;
-import HAL.Types;
+import HAL;
 
 import :Definitions;
 export

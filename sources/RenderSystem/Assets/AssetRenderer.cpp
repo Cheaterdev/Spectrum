@@ -10,7 +10,7 @@
 import Graphics;
 
 using namespace FrameGraph;
-import HAL.Types;
+import HAL;
 using namespace HAL;
 class SceneRenderWorkflow
 {

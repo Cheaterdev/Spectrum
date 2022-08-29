@@ -1,18 +1,18 @@
-export module HAL.Resource;
+export module HAL:Resource;
 import d3d12;
 import Math;
 import Utils;
 
-import HAL.Types;
-import HAL.Sampler;
+import :Types;
+import :Sampler;
 
-import D3D12.Utils;
-import HAL.Device;
-import HAL.Heap;
+import :Utils;
+import :Device;
+import :Heap;
 
 import stl.core;
 
-import HAL.Format;
+import :Format;
 
 export namespace HAL
 {
@@ -61,8 +61,6 @@ export namespace HAL
 		D3D::Resource native_resource;
 	};
 }
-
-module:private;
 
 
 namespace HAL

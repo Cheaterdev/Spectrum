@@ -1,4 +1,4 @@
-export module HAL.Format;
+export module HAL:Format;
 export import "Formats.h";
 
 import Math;

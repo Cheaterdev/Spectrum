@@ -98,14 +98,14 @@ class scene_object : public tree<scene_object, std::set<std::shared_ptr<scene_ob
     private:
         SERIALIZE()
         {
-            if (Archive::is_loading::value)
+            IF_LOAD()
                 remove_all();
 
             ar& NVP(name)&NVP(local_transform)&NVP(real_childs);
 
             SAVE_PARENT(occluder);
 
-            if (Archive::is_loading::value)
+            IF_LOAD()
             {
                 childs.insert(real_childs.begin(), real_childs.end());
 

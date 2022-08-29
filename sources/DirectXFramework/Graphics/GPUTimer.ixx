@@ -5,7 +5,7 @@ import :Buffer;
 import Singleton;
 import IdGenerator;
 
-import HAL.Types;
+import HAL;
 using namespace HAL;
 import :Definitions;
 

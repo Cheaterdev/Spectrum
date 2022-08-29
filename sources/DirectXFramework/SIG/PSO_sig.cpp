@@ -1,5 +1,5 @@
 #include "pch_dx.h"
-#include "Graphics/dx12_types.h"
+
 import Graphics;
 
 import Data;
