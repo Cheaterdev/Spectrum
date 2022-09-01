@@ -1,6 +1,6 @@
 // CFW1DWriteRenderTargetInterface.cpp
 
-#include "pch_dx.h"
+
 
 #include "CFW1DWriteRenderTarget.h"
 

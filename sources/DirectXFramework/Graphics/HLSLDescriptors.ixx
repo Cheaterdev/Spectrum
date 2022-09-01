@@ -667,6 +667,14 @@ export
 				desc.Texture2D.MipSlice = first_mip;
 
 				Graphics::Device::get().create_dsv(*this, resource, desc);
+
+
+				HAL::Views::DepthStencil dsv = {
+					.Format = HAL::Format::Formats::R32G32B32_UINT,
+					.Flags = HAL::Views::DepthStencil::Flags::None,
+					. View = HAL::Views::DepthStencil::Texture2D{0}
+				};
+
 			}
 
 

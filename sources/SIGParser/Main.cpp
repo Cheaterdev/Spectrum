@@ -624,7 +624,7 @@ void generate_include_list(const Parsed& parsed)
 
 	stream << R"(
 module;
-#include "pch_dx.h"
+
 
 export module Graphics:Autogen;
 
@@ -872,7 +872,7 @@ export
 	{
 		my_stream stream(cpp_path, "pso.cpp");
 		stream << R"(
-#include "pch_dx.h"
+
 
 import Graphics;
 import Data;

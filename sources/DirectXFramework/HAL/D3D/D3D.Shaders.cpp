@@ -1,6 +1,6 @@
 
 module HAL:Shaders;
-#include "pch_dx.h"
+
 
 #include "helper.h"
 import Singleton;

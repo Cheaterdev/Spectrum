@@ -1,5 +1,5 @@
 module;
-#include "pch_dx.h"
+
 #include "helper.h"
 module Graphics:SwapChain;
 import :Texture;

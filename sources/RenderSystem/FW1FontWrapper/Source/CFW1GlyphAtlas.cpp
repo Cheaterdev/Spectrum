@@ -1,6 +1,6 @@
 // CFW1GlyphAtlas.cpp
 
-#include "pch_dx.h"
+
 
 #include "CFW1GlyphAtlas.h"
 

@@ -1,5 +1,5 @@
 module;
-#include "pch_dx.h"
+import d3d12;
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
 #include "helper.h"

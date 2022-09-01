@@ -1,7 +1,7 @@
 module;
 
 
-#include "pch_dx.h"
+
 
 export module Graphics:PSO;
 export import "PSO_defines.h";

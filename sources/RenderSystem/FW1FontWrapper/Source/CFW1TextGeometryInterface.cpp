@@ -1,6 +1,6 @@
 // CFW1TextGeometryInterface.cpp
 
-#include "pch_dx.h"
+
 
 #include "CFW1TextGeometry.h"
 

@@ -1,6 +1,6 @@
 module;
 
-#include "pch_dx.h"
+
 export module Graphics:PipelineState;
 
 import FileSystem;

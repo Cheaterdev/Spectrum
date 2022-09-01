@@ -8,7 +8,7 @@ import Tasks;
 
 import Graphics;
 
-#include "pch_dx.h"
+
 import stl.core;
 
 class MeshAssetInstance;

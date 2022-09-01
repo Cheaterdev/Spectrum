@@ -14,6 +14,7 @@ import :Format;
 
 export namespace HAL
 {
+	using GPUAddressPtr = uint64;
 
 	enum class DescriptorRange : int
 	{

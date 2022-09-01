@@ -16,3 +16,5 @@ export import :Shaders;
 
 export import :RootSignature;
 export import :IndirectCommand;
+
+export import :Descriptors;

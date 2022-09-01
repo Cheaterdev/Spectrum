@@ -1,4 +1,4 @@
-#include "pch_dx.h"
+
 
 import Graphics;
 

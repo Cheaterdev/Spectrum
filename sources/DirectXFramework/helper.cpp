@@ -1,5 +1,4 @@
-#include "pch_dx.h"
-
+import d3d12;
 
 
 

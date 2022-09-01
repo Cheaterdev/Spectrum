@@ -1,6 +1,6 @@
 // CFW1GlyphRenderStates.cpp
 
-#include "pch_dx.h"
+
 
 #include "CFW1GlyphRenderStates.h"
 

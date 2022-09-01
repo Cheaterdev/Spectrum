@@ -1,6 +1,6 @@
 // CFW1TextRenderer.cpp
 
-#include "pch_dx.h"
+
 
 #include "CFW1TextRenderer.h"
 

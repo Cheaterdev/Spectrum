@@ -8,6 +8,7 @@ import Events;
 import stl.core;
 
 import HAL;
+
 using namespace HAL;
 
 namespace Graphics {
@@ -28,7 +29,7 @@ namespace Graphics {
 
 		if (!tile.heap_position.heap)
 		{
-			tile.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), tile_heap_type);
+			tile.heap_position = ResourceHeapPageManager::get().create_tile(static_cast<D3D12_HEAP_FLAGS>(alloc_info.flags), tile_heap_type);
 			target.add_tile(tile);
 			on_load(ivec4(pos,subres));
 			if (recursive )

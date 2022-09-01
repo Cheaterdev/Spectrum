@@ -1,5 +1,3 @@
-module;
-#include "pch_Dx.h"
 export module Graphics:RTX;
 import :Descriptors;
 import :Buffer;

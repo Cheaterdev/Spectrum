@@ -1,5 +1,5 @@
 module;
-#include "pch_dx.h"
+
 
 module Graphics:GPUTimer;
 
