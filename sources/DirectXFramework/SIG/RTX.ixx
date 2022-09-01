@@ -65,7 +65,7 @@ struct SelectLocal<T>
 		static const UINT MaxAttributeSizeInBytes = sizeof(float2);
 
 		Graphics::StateObject::ptr m_dxrStateObject;
-		Graphics::RootSignature::ptr m_root_sig = create_global_signature<SelectLocal<Passes>::type...>(*get_Signature(T::global_sig));
+		Graphics::RootSignature::ptr m_root_sig = get_Signature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
 		Graphics::RootSignature::ptr m_local_sig = create_local_signature<SelectLocal<Passes>::type...>();
 
 		IdGenerator<Thread::Free> ids;

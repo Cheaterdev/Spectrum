@@ -22,26 +22,27 @@ export
 
 	
 
-		template< class ...A>
-		RootSignature::ptr create_global_signature(RootSignature& sig)
-		{
-			RootSignatureDesc desc = sig.get_desc();
-
-			(process_one_sig<A>(desc), ...);
-
-			return std::make_shared<RootSignature>(*Graphics::Device::get().get_hal_device(), desc);
-		}
-
-
 
 		class RootLayout :public RootSignature
 		{
+			Device& device;
 		public:
 			using ptr = std::shared_ptr<RootLayout>;
 			const Layouts layout;
-			RootLayout(Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(*device.get_hal_device(), desc), layout(layout)
+			RootLayout(Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(*device.get_hal_device(), desc), device(device), layout(layout)
 			{
 			}
+
+			template< class ...A>
+			RootSignature::ptr create_global_signature() const
+			{
+				RootSignatureDesc desc = get_desc();
+
+				(process_one_sig<A>(desc), ...);
+
+				return std::make_shared<RootSignature>(*device.get_hal_device(), desc);
+			}
+
 		};
 	}
 }
