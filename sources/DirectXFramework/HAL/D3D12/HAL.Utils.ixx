@@ -1,6 +1,7 @@
 export module HAL:Utils;
 import d3d12;
 import Math;
+import Log;
 
 import :Types;
 import :Sampler;
@@ -21,6 +22,7 @@ export namespace D3D
 	using Blob = ComPtr<ID3DBlob>;
 	using DescriptorHeap = ComPtr<ID3D12DescriptorHeap>;
 	using QueryHeap = ComPtr<ID3D12QueryHeap>;
+	using RootSignature = ComPtr<ID3D12RootSignature>;
 
 	using Debug = ComPtr<ID3D12Debug1>;
 	using InfoQueue = ComPtr<ID3D12InfoQueue>;
@@ -34,6 +36,22 @@ export namespace DXGI
 	using Device = ComPtr<IDXGIDevice2>;
 	using Factory = ComPtr<IDXGIFactory2>;
 	using Output = ComPtr<IDXGIOutput1>;
+}
+
+
+export HRESULT TEST(HRESULT hr)
+{
+	//if (hr == 0x887a0005) device_fail();
+
+	if (FAILED(hr))
+		Log::get().crash_error(hr, "str");
+
+	if (FAILED(hr))
+	{
+		__debugbreak();
+		assert(false);
+	}
+	return hr;
 }
 
 export D3D12_TEXTURE_ADDRESS_MODE to_native(TextureAddressMode mode)
@@ -567,3 +585,33 @@ Format Format::to_typeless() const
 }
 
 
+
+export D3D12_DESCRIPTOR_RANGE_TYPE to_native(DescriptorRange range)
+{
+	static constexpr D3D12_DESCRIPTOR_RANGE_TYPE natives[] =
+	{
+		D3D12_DESCRIPTOR_RANGE_TYPE_SRV ,
+		D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+		D3D12_DESCRIPTOR_RANGE_TYPE_CBV ,
+		D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER
+	};
+
+	return natives[static_cast<uint>(range)];
+}
+
+export D3D12_SHADER_VISIBILITY to_native(ShaderVisibility visibility)
+{
+	static constexpr D3D12_SHADER_VISIBILITY natives[] =
+	{
+		D3D12_SHADER_VISIBILITY_ALL,
+		D3D12_SHADER_VISIBILITY_VERTEX,
+		D3D12_SHADER_VISIBILITY_HULL,
+		D3D12_SHADER_VISIBILITY_DOMAIN,
+		D3D12_SHADER_VISIBILITY_GEOMETRY,
+		D3D12_SHADER_VISIBILITY_PIXEL,
+		D3D12_SHADER_VISIBILITY_AMPLIFICATION,
+		D3D12_SHADER_VISIBILITY_MESH
+	};
+
+	return natives[static_cast<uint>(visibility)];
+}

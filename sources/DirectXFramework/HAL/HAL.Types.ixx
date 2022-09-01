@@ -2,12 +2,39 @@ export module HAL:Types;
 
 import Math;
 import Utils;
+import Data;
+
+
 import serialization;
+import stl.core;
 
 import :Format;
 
+#undef DOMAIN
+
 export namespace HAL
 {
+
+	enum class DescriptorRange : int
+	{
+		SRV,
+		UAV,
+		CBV,
+		SAMPLER
+	};
+
+	enum class ShaderVisibility : int
+	{
+		ALL,
+		VERTEX,
+		HULL,
+		DOMAIN,
+		GEOMETRY,
+		PIXEL,
+		AMPLIFICATION,
+		MESH
+	};
+
 	enum class HeapType : uint
 	{
 		DEFAULT,
@@ -347,6 +374,7 @@ export namespace HAL
 
 		};
 	};
+
 
 
 

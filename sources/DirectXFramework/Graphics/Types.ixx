@@ -5,6 +5,10 @@ export import HAL;
 export {
 	namespace Graphics
 	{
+
+		using DescriptorRange = HAL::DescriptorRange;
+		using ShaderVisibility = HAL::ShaderVisibility;
+
 		using SamplerDesc = HAL::SamplerDesc;
 		using Filter = HAL::Filter;
 		using TextureAddressMode = HAL::TextureAddressMode;
@@ -41,5 +45,10 @@ export {
 
 		using Format = HAL::Format;
 
+		using DescriptorConstBuffer = HAL::DescriptorConstBuffer;
+		using RootSignatureDesc = HAL::RootSignatureDesc;
+		using RootSignatureType = HAL::RootSignatureType;
+
+		using RootSignature = HAL::RootSignature;
 	}
 }

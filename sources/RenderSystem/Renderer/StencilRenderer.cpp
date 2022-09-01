@@ -504,7 +504,8 @@ void stencil_renderer::generate(Graph& graph)
 					copy.read_buffer(data.id_buffer->resource.get(), 0, 4, [current, this](const char* data, UINT64 size)
 						{
 
-							if (!data) device_fail();
+							assert(data);
+								//device_fail();
 
 							auto result = *reinterpret_cast<const int*>(data) - 1;
 

@@ -13,3 +13,5 @@ export import :Fence;
 export import :Utils;
 
 export import :Shaders;
+
+export import :RootSignature;
