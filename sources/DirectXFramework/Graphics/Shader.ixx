@@ -1,5 +1,3 @@
-module;
-
 export module Graphics:Shader;
 
 import HAL;

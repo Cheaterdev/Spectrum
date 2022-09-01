@@ -45,10 +45,6 @@ export {
 
 		using Format = HAL::Format;
 
-		using DescriptorConstBuffer = HAL::DescriptorConstBuffer;
-		using RootSignatureDesc = HAL::RootSignatureDesc;
-		using RootSignatureType = HAL::RootSignatureType;
 
-		using RootSignature = HAL::RootSignature;
 	}
 }
