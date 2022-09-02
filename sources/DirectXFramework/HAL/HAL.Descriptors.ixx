@@ -4,6 +4,7 @@ import d3d12;
 
 import :Types;
 import :Format;
+import :Resource;
 
 export namespace HAL
 {
@@ -15,7 +16,7 @@ export namespace HAL
 			struct Texture1D
 			{
 				uint MipSlice;
-			} 	TEX1D_DSV;
+			};
 
 			struct Texture1DArray
 			{
@@ -54,6 +55,7 @@ export namespace HAL
 				Readstencil = 0x2
 			};
 
+			Resource* Resource;
 			Format Format;
 			Flags Flags;
 
@@ -67,7 +69,7 @@ export namespace HAL
 				uint64 FirstElement;
 				uint NumElements;
 				uint StructureByteStride;
-				bool raw;
+				bool Raw;
 			};
 
 			struct Texture1D
@@ -143,6 +145,7 @@ export namespace HAL
 				GPUAddressPtr Location;
 			};
 
+			Resource* Resource;
 			Format Format;
 			uint Shader4ComponentMapping;
 			std::variant<Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D, Texture2DMS, Texture2DMSArray, Cube, CubeArray, Raytracing> View;
@@ -201,24 +204,31 @@ export namespace HAL
 				uint WSize;
 			};
 
+			Resource* Resource;
 			Format Format;
 			std::variant < Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture2DMS, Texture2DMSArray, Texture3D > View;
 		};
 
-		struct ResourceAddress
-		{
-			GPUAddressPtr address;
-		};
-
 		struct ConstantBuffer
 		{
-			GPUAddressPtr BufferLocation;
+			Resource* Resource;
+			uint OffsetInBytes;
 			uint SizeInBytes;
 		};
 
 
 		struct UnorderedAccess
 		{
+			struct Buffer
+			{
+				uint64 FirstElement;
+				uint NumElements;
+				uint StructureByteStride;
+				uint64 CounterOffsetInBytes;
+				bool Raw;
+				Resource* CounterResource;
+			};
+
 			struct Texture1D
 			{
 				uint MipSlice;
@@ -252,21 +262,10 @@ export namespace HAL
 				uint WSize;
 			};
 
+			Resource* Resource;
 			Format Format;
-			std::variant<Texture1D, Texture1DArray, Texture2D, Texture2DArray,  Texture3D> View;
+			std::variant<Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D> View;
 		};
 	}
 
-}/*
-
-				DEPTH_STENCIL_VIEW_DESC dsv;
-
-				struct
-				{
-					Resource* counter;
-					UNORDERED_ACCESS_VIEW_DESC desc;
-				} uav;
-
-				SHADER_RESOURCE_VIEW_DESC srv;
-				RENDER_TARGET_VIEW_DESC rtv;
-				CONSTANT_BUFFER_VIEW_DESC cbv;*/
+}
