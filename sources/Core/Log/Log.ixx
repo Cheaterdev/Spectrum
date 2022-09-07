@@ -69,8 +69,8 @@ export {
 		Log& operator<<(const LogBlock& smth);
 
 		// this functions are last what user sees
-		virtual void crash_error(std::string message, std::string at = "");
-		virtual void crash_error(HRESULT hr, std::string at = "");
+		virtual void crash_error(std::string message, std::string_view at = "");
+		virtual void crash_error(HRESULT hr, std::string_view at = "");
 	};
 	struct shared_data
 	{
@@ -149,8 +149,8 @@ export {
 			//   Log::get().listeners.insert(this);
 			active = true;
 
-				typename Events::Event<const LogBlock*>::func_type f = [this](const LogBlock* v) { on_log(*v); };
-				Log::get().on_log.register_handler(this, f);
+			typename Events::Event<const LogBlock*>::func_type f = [this](const LogBlock* v) { on_log(*v); };
+			Log::get().on_log.register_handler(this, f);
 
 		}
 
@@ -301,12 +301,12 @@ Log& Log::operator<<(const LogBlock& log)
 	return *this;
 }
 
-void Log::crash_error(std::string message, std::string at)
+void Log::crash_error(std::string message, std::string_view at)
 {
 	(*this) << LEVEL_ERROR << message << " at: " << at << endl;
 }
 
-void Log::crash_error(HRESULT hr, std::string at /*= ""*/)
+void Log::crash_error(HRESULT hr, std::string_view at /*= ""*/)
 {
 	std::string message = std::system_category().message(hr);
 	(*this) << LEVEL_ERROR << message << " at: " << at << endl;

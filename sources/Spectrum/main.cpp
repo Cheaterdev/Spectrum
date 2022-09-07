@@ -177,9 +177,9 @@ public:
 		texture.mul_color = { 1,1,1,0 };
 		texture.add_color = { 0,0,0,1 };
 
-	//	texture.srv = Graphics::StaticDescriptors::get().place(1);
+		//	texture.srv = Graphics::StaticDescriptors::get().place(1);
 
-	
+
 
 		auto t = CounterManager::get().start_count<triangle_drawer>();
 		thinkable = true;
@@ -197,7 +197,7 @@ public:
 
 		gpu_scene_renderer->register_renderer(std::make_shared<mesh_renderer>());
 
-		
+
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_static = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::STATIC));
 		//gpu_scene_renderer->register_renderer(gpu_meshes_renderer_dynamic = std::make_shared<gpu_cached_renderer>(scene, MESH_TYPE::DYNAMIC));
 		//cam.position = vec3(0, 5, -30);
@@ -266,8 +266,8 @@ public:
 		circle->on_change.register_handler(this, [this](const float2& value)
 			{
 				float2 v = value;
-					float3 dir = { 0.001 + v.x,sqrt(1.001 - v.length_squared()),-v.y };
-					pssm.set_position(dir);
+				float3 dir = { 0.001 + v.x,sqrt(1.001 - v.length_squared()),-v.y };
+				pssm.set_position(dir);
 			});
 
 		circle->set_value({ 1,0 });
@@ -417,7 +417,7 @@ public:
 
 		vr_context->eyes[0].offset = vec3(0, 0, 0);
 
-		ivec2 size = ivec2::max(ivec2(get_render_bounds().size),ivec2(64,64));
+		ivec2 size = ivec2::max(ivec2(get_render_bounds().size), ivec2(64, 64));
 		struct pass_data
 		{
 			ResourceHandler* o_texture;
@@ -428,8 +428,8 @@ public:
 
 		scene->update(*graph.builder.current_frame);
 
-		if(downsampled)
-		graph.frame_size = size/1.5;
+		if (downsampled)
+			graph.frame_size = size / 1.5;
 		else
 			graph.frame_size = size;
 
@@ -495,7 +495,7 @@ public:
 
 				});*/
 
-			
+
 			graph.add_pass<GBufferData>("SCENE", [this, &graph](GBufferData& data, TaskBuilder& builder) {
 
 				auto size = graph.frame_size;
@@ -506,7 +506,7 @@ public:
 				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), Graphics::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), Graphics::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
-				}, [this,&graph](GBufferData& data, FrameContext& _context) {
+				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
 
@@ -545,7 +545,7 @@ public:
 
 					RT::Slot::GBuffer rt_gbuffer;
 
-					
+
 					rt_gbuffer.GetAlbedo() = gbuffer.albedo.renderTarget;
 					rt_gbuffer.GetNormals() = gbuffer.normals.renderTarget;
 					rt_gbuffer.GetSpecular() = gbuffer.specular.renderTarget;
@@ -578,49 +578,49 @@ public:
 
 				Handlers::Texture H(RTXDebugPrev);
 			};
-			
-			if(Graphics::Device::get().is_rtx_supported())
-			graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
+
+			if (Graphics::Device::get().is_rtx_supported())
+				graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
 				builder.create(data.RTXDebug, { ivec3(size, 1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 				builder.create(data.RTXDebugPrev, { ivec3(size, 1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 
-				}, [this, &graph](RTXDebugData& data, FrameContext& context) {
-					auto& compute = context.get_list()->get_compute();
-					auto& copy = context.get_list()->get_copy();
+					}, [this, &graph](RTXDebugData& data, FrameContext& context) {
+						auto& compute = context.get_list()->get_compute();
+						auto& copy = context.get_list()->get_copy();
 
-					if (data.RTXDebug.is_new())
-					{
-						context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
-					}
+						if (data.RTXDebug.is_new())
+						{
+							context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
+						}
 
-					compute.set_signature(RTX::get().rtx.m_root_sig);
+						compute.set_signature(RTX::get().rtx.m_root_sig);
 
-					graph.set_slot(SlotID::VoxelInfo, compute);
-					graph.set_slot(SlotID::FrameInfo, compute);
-					graph.set_slot(SlotID::SceneData, compute);
-					
-					{
-						Slots::VoxelOutput output;
-						output.GetNoise() = data.RTXDebug->rwTexture2D;
-						output.set(compute);
-					}
+						graph.set_slot(SlotID::VoxelInfo, compute);
+						graph.set_slot(SlotID::FrameInfo, compute);
+						graph.set_slot(SlotID::SceneData, compute);
 
-					{
-						auto gbuffer = data.gbuffer.actualize(context);
+						{
+							Slots::VoxelOutput output;
+							output.GetNoise() = data.RTXDebug->rwTexture2D;
+							output.set(compute);
+						}
 
-						Slots::VoxelScreen voxelScreen;
-						gbuffer.SetTable(voxelScreen.GetGbuffer());
-						voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-						voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
-						voxelScreen.set(compute);
-					}
-					RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
+						{
+							auto gbuffer = data.gbuffer.actualize(context);
+
+							Slots::VoxelScreen voxelScreen;
+							gbuffer.SetTable(voxelScreen.GetGbuffer());
+							voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
+							voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
+							voxelScreen.set(compute);
+						}
+						RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
 
 
-					copy.copy_resource(data.RTXDebugPrev->resource, data.RTXDebug->resource);
-				});
+						copy.copy_resource(data.RTXDebugPrev->resource, data.RTXDebug->resource);
+					});
 		}
 
 
@@ -639,18 +639,18 @@ public:
 		sky.generate(graph);
 
 		// remove on intel
-		if(enable_gi) voxel_gi->generate(graph);
+		if (enable_gi) voxel_gi->generate(graph);
 
-		
+
 		sky.generate_sky(graph);
 
 		stenciler->generate_after(graph);
 
 		smaa.generate(graph);
-		if(downsampled&&enable_fsr)
-		fsr.generate(graph);
+		if (downsampled && enable_fsr)
+			fsr.generate(graph);
 
-		
+
 		struct debug_data
 		{
 			Handlers::Texture debug_tex;
@@ -676,11 +676,11 @@ public:
 			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
 
 			auto compiled = frameInfo.compile(*graph.builder.current_frame);
-				graph.register_slot_setter(compiled);
+			graph.register_slot_setter(compiled);
 			});
-			
-			graph.add_slot_generator([this](Graph& graph) {
-				graph.register_slot_setter(scene->compiledScene);
+
+		graph.add_slot_generator([this](Graph& graph) {
+			graph.register_slot_setter(scene->compiledScene);
 			});
 
 	}
@@ -694,12 +694,12 @@ public:
 			res_tex = debug_view;
 
 		debug_tex = Handlers::Texture(res_tex);
-		if(builder.exists(debug_tex))
-		builder.need(debug_tex, ResourceFlags::PixelRead);
+		if (builder.exists(debug_tex))
+			builder.need(debug_tex, ResourceFlags::PixelRead);
 	}
 	virtual void draw(Graphics::context& t) override
 	{
-		if(debug_tex) texture.srv = debug_tex->texture2D;
+		if (debug_tex) texture.srv = debug_tex->texture2D;
 		image::draw(t);
 	}
 
@@ -726,7 +726,7 @@ class FrameFlowGraph : public  ::FlowGraph::graph
 
 };
 
-class PassNode : public::FlowGraph::Node , public  GUI::Elements::FlowGraph::VisualGraph
+class PassNode : public::FlowGraph::Node, public  GUI::Elements::FlowGraph::VisualGraph
 {
 
 	virtual  void operator()(::FlowGraph::GraphContext*)
@@ -778,7 +778,7 @@ public:
 	{
 		if (swap_chain)	swap_chain->resize(new_size);
 
-	
+
 		{
 			std::lock_guard<std::mutex> g(m);
 
@@ -815,9 +815,9 @@ public:
 						total += h->used_size();
 					}
 				}
-		
 
-				size_t total_gpu = 0;		
+
+				size_t total_gpu = 0;
 
 
 				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Graphics::Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
@@ -834,7 +834,7 @@ public:
 			setup_graph();
 
 			graph.render();
-	
+
 			swap_chain->wait_for_free();
 			graph.commit_command_lists();
 			{
@@ -846,7 +846,7 @@ public:
 			swap_chain->present(Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal());
 		}
 
-	
+
 
 		if (Application::get().is_alive())
 		{
@@ -889,7 +889,7 @@ public:
 
 
 			auto ptr = get_ptr();
-		//	if(false)
+			//	if(false)
 			graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder) {
 				builder.need(data.swapchain, ResourceFlags::Required);
 				}, [this, ptr](pass_data& data, FrameContext& context) {
@@ -904,7 +904,7 @@ public:
 				}, PassFlags::Required);
 
 		}
-	
+
 		graph.setup();
 		graph.compile(swap_chain->m_frameIndex);
 
@@ -923,13 +923,13 @@ public:
 			std::map<ResourceAllocInfo*, ::FlowGraph::parameter::ptr> resource_stages;
 
 
-			for (auto &res : graph.builder.alloc_resources)
+			for (auto& res : graph.builder.alloc_resources)
 			{
 
 				if (res.second.passed)
 				{
-auto input = 				 	frameFlowGraph->register_input(res.second.name);
-resource_stages[&res.second] = input;
+					auto input = frameFlowGraph->register_input(res.second.name);
+					resource_stages[&res.second] = input;
 				}
 			}
 			for (auto pass : graph.passes)
@@ -937,13 +937,13 @@ resource_stages[&res.second] = input;
 				auto node = std::make_shared<PassNode>();
 				node->name = pass->name + " " + std::to_string(pass->id);
 
-				
+
 				if (!pass->enabled)
 				{
 					node->color = float4(1, 0, 0, 1);
 				}
 
-				if (check(pass->flags&PassFlags::Required))
+				if (check(pass->flags & PassFlags::Required))
 				{
 					node->color = float4(1, 1, 0, 1);
 				}
@@ -962,9 +962,9 @@ resource_stages[&res.second] = input;
 
 							prev->link(input);
 						}
-					auto output = 	node->register_output(info->name);
+						auto output = node->register_output(info->name);
 
-					resource_stages[info] = output;
+						resource_stages[info] = output;
 					}
 				}
 
@@ -1026,7 +1026,7 @@ resource_stages[&res.second] = input;
 
 
 
-		
+
 		{
 			GUI::Elements::image::ptr back(new GUI::Elements::image);
 			back->texture = Graphics::Texture::get_resource(Graphics::texure_header(to_path(L"textures/gui/back_fill.png"), false, false));
@@ -1063,7 +1063,7 @@ resource_stages[&res.second] = input;
 
 					auto b = std::make_shared<GUI::base>();
 
-					
+
 					auto folders = std::make_shared<GUI::Elements::tree<VariableContext>>();
 					folders->size = { 200, 150 };
 					folders->docking = GUI::dock::LEFT;
@@ -1073,19 +1073,19 @@ resource_stages[&res.second] = input;
 
 					b->add_child(folders);
 					b->add_child(table);
-					
+
 					folders->on_select = [this, table](VariableContext* elem)
 					{
-				
-							table->remove_all();
 
-							for(auto v:elem->variables)
-							{
-								auto property = GUI::Elements::create_property(*v);
-								table->add_child(property);
-							}
+						table->remove_all();
+
+						for (auto v : elem->variables)
+						{
+							auto property = GUI::Elements::create_property(*v);
+							table->add_child(property);
+						}
 					};
-					
+
 					folders->init(&VariableContext::get());
 
 					dock->get_tabs()->add_page("Properties", b);
@@ -1145,8 +1145,8 @@ resource_stages[&res.second] = input;
 					};
 					file->add_item("Save")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 					{
-							auto data = Serializer::serialize(*drawer->scene);
-							FileSystem::get().save_data(to_path(L"scene.dat"), data);
+						auto data = Serializer::serialize(*drawer->scene);
+						FileSystem::get().save_data(to_path(L"scene.dat"), data);
 					};
 					file->add_item("Quit")->on_click = [this](GUI::Elements::menu_list_element::ptr elem)
 					{
@@ -1174,7 +1174,7 @@ resource_stages[&res.second] = input;
 					add_child(bar);
 				}
 
-			
+
 				{
 					EVENT("Start Asset Explorer");
 					auto dock = d->get_dock(GUI::dock::RIGHT);
@@ -1185,7 +1185,7 @@ resource_stages[&res.second] = input;
 				}
 
 
-			
+
 
 			}
 		}
@@ -1199,14 +1199,14 @@ resource_stages[&res.second] = input;
 	}
 	void on_resize(vec2 size) override
 	{
-		new_size = vec2::max(size, vec2{64,64});
+		new_size = vec2::max(size, vec2{ 64,64 });
 	}
 
 
 	virtual void on_size_changed(const vec2& r) override
 	{
 		user_interface::on_size_changed(r);
-		
+
 	}
 };
 
@@ -1230,7 +1230,7 @@ protected:
 	{
 		THREAD_SCOPE(GUI);
 
-	//	assert(ppp.inited);
+		//	assert(ppp.inited);
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 
 		EVENT("Device");
@@ -1239,24 +1239,25 @@ protected:
 		EVENT("PSO");
 		init_signatures();
 		PSOHolder::create();
-		RTX::create();
-		
+		if (Device::get().is_rtx_supported())
+			RTX::create();
+
 		EVENT("AssetManager");
 		AssetRenderer::create();
 		AssetManager::create();
 		EVENT("WindowRender");
 
-	//	auto ps = Graphics::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
-	//	auto cs = Graphics::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
+		//	auto ps = Graphics::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
+		//	auto cs = Graphics::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
 
 #ifdef OCULUS_SUPPORT
 		//ovr = std::make_shared<OVRRender>();
 #endif
 
-		
+
 		//	main_window = std::make_shared<WindowRender>();
 		main_window = std::make_shared<GraphRender>();
-	
+
 
 		concurrency::create_task([this]() {
 
@@ -1324,7 +1325,7 @@ protected:
 
 	std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension) override
 	{
-		return Window::file_open(Name, StartPath,Extension);
+		return Window::file_open(Name, StartPath, Extension);
 	}
 
 };
@@ -1350,12 +1351,12 @@ struct test
 {
 	D3D12_AUTO_BREADCRUMB_OP op = D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE;
 	std::string str = "wtf";
-	vec4 data = {1,2,3,4};
+	vec4 data = { 1,2,3,4 };
 
 	std::vector<vec2> vec;
 	test()
 	{
-		vec.emplace_back(1,2);
+		vec.emplace_back(1, 2);
 		vec.emplace_back(3, 4);
 		vec.emplace_back(5, 6);
 
@@ -1363,7 +1364,7 @@ struct test
 	template<class T = void>
 	void foo() requires(false)
 	{
-		
+
 	}
 	SERIALIZE()
 	{
@@ -1447,7 +1448,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	EVENT("create");
 
 
-	
+
 
 	// There can be error while creating, so test
 	if (Application::is_good())

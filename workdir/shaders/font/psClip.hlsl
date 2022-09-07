@@ -20,9 +20,9 @@ float4 PS(PSIn Input) : SV_Target
 
     float a = tex0.Sample(pointClampSampler, Input.TexCoord);
 
-    if (a == 0.0f)
-        discard;
+  //  if (a == 0.0f)
+ //       discard;
 
-    return float4(Input.GlyphColor.xyz, a * Input.GlyphColor.w);
+    return 1;// float4(Input.GlyphColor.xyz, a * Input.GlyphColor.w);
 }
 ;

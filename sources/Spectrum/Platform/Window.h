@@ -6,17 +6,17 @@ import Graphics;
 
 class Window : public Graphics::hwnd_provider
 {
-    HWND hwnd;
+	HWND hwnd;
 
-    void InitWindow(int width, int height, LPCTSTR name);
+	void InitWindow(int width, int height, LPCTSTR name);
 protected:
-    Window(ivec2 size = {1024, 768}, std::string name = "Spectrum");
-    ~Window();
-    /** Window events */
- 
+	Window(ivec2 size = { 1024, 768 }, std::string name = "Spectrum");
+	~Window();
+	/** Window events */
+
 	std::atomic<bool> sizing;
-    POINT MinWindowSize;
-    ivec2 size;
+	POINT MinWindowSize;
+	ivec2 size;
 
 	virtual	void on_size_begin();
 	virtual	void on_size_end();
@@ -24,30 +24,30 @@ protected:
 	virtual	void on_paint();
 	virtual	void on_resize(vec2 new_size);
 
-	InputHandler * input_handler = nullptr;
-    //	std::string WindowsName;
+	InputHandler* input_handler = nullptr;
+	//	std::string WindowsName;
 public:
-    void redraw();
-    ivec2 get_size() const;
-    virtual	HWND get_hwnd() const { return hwnd; }
-    virtual LRESULT MsgProc(MSG msg);
+	void redraw();
+	ivec2 get_size() const;
+	virtual	HWND get_hwnd() const { return hwnd; }
+	virtual LRESULT MsgProc(MSG msg);
 
-    static void process_messages();
+	static void process_messages();
 
 
-    static std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension);
+	static std::vector<std::string> file_open(const std::string& Name, const std::string& StartPath, const std::string& Extension);
 };
 
 class WinErrorLogger : public Log
 {
-    virtual void crash_error(std::string message, std::string str) override
-    {
-        std::string msg = message + " at \n" + str + " \n Exit?";
+	virtual void crash_error(std::string message, std::string_view str) override
+	{
+		std::string msg = message + " at \n" + std::string(str) + " \n Exit?";
 
-        if (MessageBox(NULL, msg.c_str(), "ERROR", MB_YESNO) == IDNO)
-        {
-            if (Application::is_good())
-                Application::get().shutdown();
-        }
-    }
+		if (MessageBox(NULL, msg.c_str(), "ERROR", MB_YESNO) == IDNO)
+		{
+			if (Application::is_good())
+				Application::get().shutdown();
+		}
+	}
 };

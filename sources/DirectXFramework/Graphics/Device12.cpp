@@ -212,15 +212,15 @@ namespace Graphics
 		ComPtr<ID3D12Debug1> spDebugController1;
 
 #ifdef DEV
-		//if(false)
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-		{
-			debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
+		if (false)
+			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+			{
+				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
 
 
-			debugController->EnableDebugLayer();
-			//	spDebugController1->SetEnableGPUBasedValidation(true);
-		}
+				debugController->EnableDebugLayer();
+				//	spDebugController1->SetEnableGPUBasedValidation(true);
+			}
 #endif
 
 

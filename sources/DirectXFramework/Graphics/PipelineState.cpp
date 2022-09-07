@@ -80,13 +80,13 @@ namespace Graphics
 			push_one(r);
 		}
 
-		template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T,class S>
+		template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T, class S>
 		void include_shader(S& shader)
 		{
 			auto& blob = shader->get_blob();
 			D3D12_SHADER_BYTECODE code;
 			code.BytecodeLength = blob.size();
-			code.pShaderBytecode =blob.data();
+			code.pShaderBytecode = blob.data();
 			internal_inluce<T>(code);
 		}
 	public:
@@ -97,7 +97,7 @@ namespace Graphics
 			data.reserve(65536);
 		}
 		template<class T>
-		void include(const T&v)
+		void include(const T& v)
 		{
 			internal_inluce<OBJToType<T>::type>(v);
 		}
@@ -161,44 +161,44 @@ namespace Graphics
 		creator.include(desc.root_signature->get_native().Get());
 
 
-		
+
 		//slots.clear();
 		if (desc.vertex)
 		{
 			creator.include(desc.vertex);
-	//		slots.merge(desc.vertex->slots_usage);
+			//		slots.merge(desc.vertex->slots_usage);
 		}
 		if (desc.pixel)
 		{
 			creator.include(desc.pixel);
-		//	slots.merge(desc.pixel->slots_usage);
+			//	slots.merge(desc.pixel->slots_usage);
 		}
 		if (desc.geometry)
 		{
 			creator.include(desc.geometry);
-	//		slots.merge(desc.geometry->slots_usage);
+			//		slots.merge(desc.geometry->slots_usage);
 		}
 		if (desc.domain)
 		{
 			creator.include(desc.domain);
-	//		slots.merge(desc.domain->slots_usage);
+			//		slots.merge(desc.domain->slots_usage);
 		}
 		if (desc.hull)
 		{
 			creator.include(desc.hull);
-		//	slots.merge(desc.hull->slots_usage);
+			//	slots.merge(desc.hull->slots_usage);
 		}
 		if (desc.mesh)
 		{
 			creator.include(desc.mesh);
-		//	slots.merge(desc.mesh->slots_usage);
+			//	slots.merge(desc.mesh->slots_usage);
 		}
 		if (desc.amplification)
 		{
 			creator.include(desc.amplification);
-		//	slots.merge(desc.amplification->slots_usage);
+			//	slots.merge(desc.amplification->slots_usage);
 		}
-		
+
 		{
 			CD3DX12_RASTERIZER_DESC RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 			RasterizerState.CullMode = to_native(desc.rasterizer.cull_mode);
@@ -245,11 +245,11 @@ namespace Graphics
 		{
 			D3D12_RT_FORMAT_ARRAY rtvs;
 			rtvs.NumRenderTargets = static_cast<UINT>(desc.rtv.rtv_formats.size());
-unsigned int i = 0;
+			unsigned int i = 0;
 			for (; i < desc.rtv.rtv_formats.size(); i++)
 				rtvs.RTFormats[i] = to_native(desc.rtv.rtv_formats[i]);
-	for (; i < 8; i++)
-		rtvs.RTFormats[i] = DXGI_FORMAT_UNKNOWN;
+			for (; i < 8; i++)
+				rtvs.RTFormats[i] = DXGI_FORMAT_UNKNOWN;
 			creator.include(rtvs);
 		}
 
@@ -258,9 +258,9 @@ unsigned int i = 0;
 
 			creator.include(DSVFormat);
 		}
-	
 
-	
+
+
 
 		//psoDesc.SampleMask = UINT_MAX;
 	//	psoDesc.SampleDesc.Count = 1;
@@ -276,7 +276,7 @@ unsigned int i = 0;
 			cached.CachedBlobSizeInBytes = cache.size();
 			creator.include(cached);
 		}
-		
+
 
 		auto cached = creator.get_desc();
 		HRESULT hr = (Device::get().get_native_device()->CreatePipelineState(&cached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
@@ -303,7 +303,7 @@ unsigned int i = 0;
 		name = desc.name;
 	}
 
-	
+
 
 	PipelineState::ptr PipelineState::create(PipelineStateDesc& desc, std::string name)
 	{
@@ -348,118 +348,116 @@ unsigned int i = 0;
 	{
 		std::lock_guard<std::mutex> g(m);
 
-		BUG_ALERT;
-//		FileSystem::get().save_data(L"pso",Serializer::serialize(binary_cache));
+		FileSystem::get().save_data(L"pso", Serializer::serialize(binary_cache));
 	}
 
-	PipelineStateCache::PipelineStateCache(): cache([this](const PipelineStateDesc& desc)
+	PipelineStateCache::PipelineStateCache() : cache([this](const PipelineStateDesc& desc)
+		{
+			std::lock_guard<std::mutex> g(m);
+
+			std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
+
+
+			//Log::get() << desc << Log::endl;
+			auto state = PipelineState::ptr(new PipelineState(desc, binary));
+
+			if (!desc.name.empty())
+			{
+				binary_cache[desc.name] = state->get_cache();
+			}
+
+			return state;
+
+		}), compute_cache([this](const ComputePipelineStateDesc& desc)
+			{
+				std::lock_guard<std::mutex> g(m);
+
+				std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
+
+
+				//Log::get() << desc << Log::endl;
+				auto state = ComputePipelineState::ptr(new ComputePipelineState(desc, binary));
+
+				if (!desc.name.empty())
+				{
+					binary_cache[desc.name] = state->get_cache();
+				}
+
+				return state;
+
+			})
 	{
+
 		std::lock_guard<std::mutex> g(m);
 
-		std::string binary = desc.name.empty()?"": binary_cache[desc.name];
-
-
-		//Log::get() << desc << Log::endl;
-		auto state=  PipelineState::ptr(new PipelineState(desc, binary));
-
-		if (!desc.name.empty())
-		{
-			binary_cache[desc.name] = state->get_cache();
-		}
-
-		return state;
-
-	}), compute_cache([this](const ComputePipelineStateDesc& desc)
-	{
-		std::lock_guard<std::mutex> g(m);
-
-		std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
-
-
-		//Log::get() << desc << Log::endl;
-		auto state = ComputePipelineState::ptr(new ComputePipelineState(desc,binary));
-
-		if (!desc.name.empty())
-		{
-			binary_cache[desc.name] = state->get_cache();
-		}
-
-		return state;
-
-	})
-	{
-
-		std::lock_guard<std::mutex> g(m);
-
-		BUG_ALERT;
-		//auto file = FileSystem::get().get_file("pso");
-		//if(file)
-		//	Serializer::deserialize(file->load_all(), binary_cache);
-			
-	}
-
-	PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)
-	{
-
-		desc.name = name;
-
-		//	 return  PipelineState::ptr(new PipelineState(desc));
-		return Singleton<PipelineStateCache>::get().cache[desc];
-	}
-
-	ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
-	{
-		desc.name = name;
-		return Singleton<PipelineStateCache>::get().compute_cache[desc];
-	}
-
-	void ComputePipelineState::on_change()
-	{
-
-		root_signature = desc.root_signature;
-
-		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
-
-		if (desc.root_signature)
-			psoDesc.pRootSignature = desc.root_signature->get_native().Get();
-
-		if (desc.shader)
-			psoDesc.CS = {desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
-
-
-		if (!cache.empty())
-		{
-			psoDesc.CachedPSO.pCachedBlob = cache.c_str();
-			psoDesc.CachedPSO.CachedBlobSizeInBytes = cache.size();
-		}
-		else
-		{
-			//	assert(false);
-		}
-
-		HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
-
-		if (hr != S_OK)
-		{
-			psoDesc.CachedPSO = {};
-			hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
-		}
-
-
-		debuggable = desc.shader && desc.shader->depends_on("DebugInfo");
-
-		name = desc.name;
-
-		//	TEST(hr);
-
-		cache.clear();
+		auto file = FileSystem::get().get_file("pso");
+		if (file)
+			Serializer::deserialize(file->load_all(), binary_cache);
 
 	}
 
-	ComputePipelineState::~ComputePipelineState()
-	{
+			PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)
+			{
+
+				desc.name = name;
+
+				//	 return  PipelineState::ptr(new PipelineState(desc));
+				return Singleton<PipelineStateCache>::get().cache[desc];
+			}
+
+			ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
+			{
+				desc.name = name;
+				return Singleton<PipelineStateCache>::get().compute_cache[desc];
+			}
+
+			void ComputePipelineState::on_change()
+			{
+
+				root_signature = desc.root_signature;
+
+				D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
+
+				if (desc.root_signature)
+					psoDesc.pRootSignature = desc.root_signature->get_native().Get();
+
+				if (desc.shader)
+					psoDesc.CS = { desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
 
 
-	}
+				if (!cache.empty())
+				{
+					psoDesc.CachedPSO.pCachedBlob = cache.c_str();
+					psoDesc.CachedPSO.CachedBlobSizeInBytes = cache.size();
+				}
+				else
+				{
+					//	assert(false);
+				}
+
+				HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+
+				if (hr != S_OK)
+				{
+					psoDesc.CachedPSO = {};
+					hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+				}
+
+
+				debuggable = desc.shader && desc.shader->depends_on("DebugInfo");
+
+				name = desc.name;
+
+				//	TEST(hr);
+
+				cache.clear();
+
+			}
+
+			ComputePipelineState::~ComputePipelineState()
+			{
+
+
+			}
 
 }

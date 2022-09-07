@@ -33,8 +33,8 @@ export
 			}
 			else
 			{
-				auto& v = g.bytes();
-				ar& NVP(v);
+			auto& v = g.bytes();
+			ar& NVP(v);
 			}
 		}
 
@@ -47,8 +47,8 @@ export
 			ar& NP("string", s);
 
 			//BUG_ALERT;
-//			if (Archive::is_loading::value)
-//				p = s;
+			if (Archive::is_loading::value)
+				p = s;
 		}
 
 

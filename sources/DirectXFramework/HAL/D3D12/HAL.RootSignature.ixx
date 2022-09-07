@@ -302,18 +302,25 @@ namespace HAL
 
 		D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAGS::D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
+
+		if (desc.type == RootSignatureType::Local)
+		{
+			flags = D3D12_ROOT_SIGNATURE_FLAGS::D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+		}
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
 		rootSignatureDesc.Init_1_1(static_cast<UINT>(parameters.size()), parameters.data(), static_cast<UINT>(descs.size()), descs.data(), flags);
 		this->desc = desc;
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
-		TEST(D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &signature, &error));
+		auto hr = (D3D12SerializeVersionedRootSignature(&rootSignatureDesc, &signature, &error));
 
 		if (error)
 		{
 			Log::get().crash_error(static_cast<char*>(error->GetBufferPointer()));
 		}
+
+		TEST(hr);
 
 		TEST(device.native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
