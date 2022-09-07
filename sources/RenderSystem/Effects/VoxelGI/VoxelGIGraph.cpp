@@ -554,7 +554,7 @@ void VoxelGI::screen(Graph& graph)
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
+				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
 				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 				voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
@@ -723,7 +723,7 @@ void VoxelGI::screen(Graph& graph)
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
+				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
 				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 				voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
@@ -871,7 +871,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
+				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
 				voxelScreen.set(graphics);
 				voxelScreen.set(compute);
@@ -976,7 +976,7 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.texture—ube;
+				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
 				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 				voxelScreen.GetPrev_gi() = prev_gi.texture2D;
@@ -1129,7 +1129,7 @@ void VoxelGI::lighting(Graph& graph)
 				ligthing.GetAlbedo() = albedo.tex_result->texture_3d()->texture3D;
 				ligthing.GetNormals() = normal.tex_result->texture_3d()->texture3D;
 				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d()->rwTexture3D[0];
-				ligthing.GetTex_cube() = sky_cubemap_filtered.texture—ube;
+				ligthing.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				Graphics::ResourceViewDesc subres;
 				subres.type = Graphics::ResourceType::TEXTURE3D;
 

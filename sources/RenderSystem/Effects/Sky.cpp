@@ -205,7 +205,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 
 			Slots::EnvSource downsample;
-			downsample.GetSourceTex() = data.sky_cubemap->textureÑube;
+			downsample.GetSourceTex() = data.sky_cubemap->textureCube;
 			downsample.set(graphics);
 
 

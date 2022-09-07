@@ -16,16 +16,9 @@ import :Format;
 
 export namespace HAL
 {
-
-	enum class ResourceDimension :uint
-	{
-		BUFFER,
-		TEXTURE
-	};
-	
 	struct TextureDesc
 	{
-		Vector<vec3_t<uint, false>> Dimensions;
+		uint3 Dimensions;
 		uint ArraySize;
 		Format Format;
 	};
@@ -37,8 +30,7 @@ export namespace HAL
 
 	struct ResourceDesc
 	{
-		ResourceDimension Type;
-		std::variant< TextureDesc, BufferDesc> desc = BufferDesc{ 0 };
+		std::variant<TextureDesc, BufferDesc> desc = BufferDesc{ 0 };
 	};
 
 	struct PlacementAddress
@@ -56,7 +48,16 @@ export namespace HAL
 		Resource(Device& device, const BufferDesc& desc, const PlacementAddress& address, ResourceState initialState = ResourceState::GEN_READ);
 
 		std::span<std::byte> cpu_data();
+		const ResourceDesc& get_desc() const
+		{
+			return desc;
+		}
 
+		GPUAddressPtr get_address()
+		{
+			assert(false);
+			return 0;
+		}
 	public:
 		D3D::Resource native_resource;
 	};
@@ -67,7 +68,6 @@ namespace HAL
 {
 	Resource::Resource(Device& device, const BufferDesc& bufferDesc, const PlacementAddress& address, ResourceState initialState)
 	{
-		desc.Type = ResourceDimension::BUFFER;
 		desc.desc = bufferDesc;
 
 		CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferDesc.SizeInBytes);
@@ -79,7 +79,5 @@ namespace HAL
 			nullptr,
 			IID_PPV_ARGS(&native_resource));
 	}
-
-	
 
 }

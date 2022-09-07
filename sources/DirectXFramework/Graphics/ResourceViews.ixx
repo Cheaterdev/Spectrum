@@ -13,7 +13,48 @@ export
 	namespace Graphics
 	{
 		//class CommandList;
+		
+	enum class ResourceType : char
+	{
 
+		BUFFER,
+		TEXTURE1D,
+		//	TEXTURE1DARRAY,
+		TEXTURE2D,
+		//TEXTURE2DARRAY,
+		TEXTURE3D,
+		CUBE
+	};
+
+
+
+	struct ResourceViewDesc
+	{
+		ResourceType type;
+		Format format;
+
+		union
+		{
+			struct
+			{
+
+				uint PlaneSlice;
+				uint MipSlice;
+				uint FirstArraySlice;
+				uint MipLevels;
+				uint ArraySize;
+			} Texture2D;
+
+			struct
+			{
+				uint64 Size;
+				uint64 Offset;
+				uint64 Stride;
+				bool counted;
+			} Buffer;
+
+		};
+	};
 		class ResourceView
 		{
 
@@ -165,7 +206,7 @@ export
 			HLSL::Texture3D<> texture3D;
 			HLSL::RWTexture3D<> rwTexture3D;
 
-			HLSL::TextureCube<> texture—ube;
+			HLSL::TextureCube<> textureCube;
 			HLSL::Texture2DArray<> texture2DArray;
 
 			HLSL::RenderTarget<> renderTarget;
@@ -189,7 +230,7 @@ export
 				}
 				if (view_desc.type == ResourceType::CUBE)
 				{
-					texture—ube = HLSL::TextureCube<>(hlsl[0]);
+					textureCube = HLSL::TextureCube<>(hlsl[0]);
 					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
 				}
 
@@ -204,7 +245,7 @@ export
 					else if (view_desc.type == ResourceType::TEXTURE2D)
 						texture2DArray.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels, view_desc.Texture2D.FirstArraySlice, view_desc.Texture2D.ArraySize);
 					else if (view_desc.type == ResourceType::CUBE)
-						texture—ube.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels, view_desc.Texture2D.FirstArraySlice / 6);
+						textureCube.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels, view_desc.Texture2D.FirstArraySlice / 6);
 					else if (view_desc.type == ResourceType::TEXTURE3D)
 						texture3D.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels);
 					else
@@ -338,7 +379,7 @@ export
 		class TextureCube : public ResourceView
 		{
 		public:
-			HLSL::TextureCube<> texture—ube;
+			HLSL::TextureCube<> textureCube;
 
 			std::array<TextureView, 6> faces;
 		public:
@@ -360,7 +401,7 @@ export
 				}
 				if (view_desc.type == ResourceType::CUBE)
 				{
-					texture—ube = HLSL::TextureCube<>(hlsl[0]);
+					textureCube = HLSL::TextureCube<>(hlsl[0]);
 					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
 				}
 
@@ -375,7 +416,7 @@ export
 					else if (view_desc.type == ResourceType::TEXTURE2D)
 						texture2DArray.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels, view_desc.Texture2D.FirstArraySlice, view_desc.Texture2D.ArraySize);
 					else if (view_desc.type == ResourceType::CUBE)
-						texture—ube.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels, view_desc.Texture2D.FirstArraySlice / 6);
+						textureCube.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels, view_desc.Texture2D.FirstArraySlice / 6);
 					else if (view_desc.type == ResourceType::TEXTURE3D)
 						texture3D.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels);
 					else

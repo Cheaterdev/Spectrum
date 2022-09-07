@@ -38,11 +38,6 @@ export {
 		using BlendState = HAL::BlendState;
 		using RTVState = HAL::RTVState;
 
-
-		using ResourceViewDesc = HAL::ResourceViewDesc;
-
-		using ResourceType = HAL::ResourceType;
-
 		using Format = HAL::Format;
 
 

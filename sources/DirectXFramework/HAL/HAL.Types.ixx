@@ -315,7 +315,7 @@ export namespace HAL
 			stencil_desc.StencilFunc = ComparisonFunc::LESS;
 		}
 		bool operator==(const RTVState& r) const = default;
-		auto  operator<=>(const  RTVState& r)  const = default;
+		auto operator<=>(const  RTVState& r)  const = default;
 	private:
 		SERIALIZE()
 		{
@@ -331,52 +331,4 @@ export namespace HAL
 		}
 
 	};
-
-
-
-	enum class ResourceType : char
-	{
-
-		BUFFER,
-		TEXTURE1D,
-		//	TEXTURE1DARRAY,
-		TEXTURE2D,
-		//TEXTURE2DARRAY,
-		TEXTURE3D,
-		CUBE
-	};
-
-
-
-	struct ResourceViewDesc
-	{
-		ResourceType type;
-		Format format;
-
-		union
-		{
-			struct
-			{
-
-				uint PlaneSlice;
-				uint MipSlice;
-				uint FirstArraySlice;
-				uint MipLevels;
-				uint ArraySize;
-			} Texture2D;
-
-			struct
-			{
-				uint64 Size;
-				uint64 Offset;
-				uint64 Stride;
-				bool counted;
-			} Buffer;
-
-		};
-	};
-
-
-
-
 }
