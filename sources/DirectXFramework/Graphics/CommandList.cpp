@@ -544,7 +544,7 @@ void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
 	*/
 	void SignatureDataSetter::set_layout(Layouts layout)
 	{
-		set_signature(get_Signature(layout));
+		set_signature(Graphics::get_Signature(layout));
 	}
 	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
 	{

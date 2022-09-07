@@ -10,7 +10,7 @@ void init_pso(enum_array<PSO, PSOBase::ptr>&);
 Graphics::ComputePipelineState::ptr SimpleComputePSO::create()
 {
 	Graphics::ComputePipelineStateDesc desc;
-	desc.root_signature = get_Signature(root_signature);
+	desc.root_signature = Graphics::get_Signature(root_signature);
 	desc.shader = Graphics::compute_shader::get_resource(compute);
 
 	return Graphics::ComputePipelineState::create(desc, name);
@@ -19,7 +19,7 @@ Graphics::ComputePipelineState::ptr SimpleComputePSO::create()
 Graphics::PipelineState::ptr SimpleGraphicsPSO::create()
 {
 	Graphics::PipelineStateDesc desc;
-	desc.root_signature = get_Signature(root_signature);
+	desc.root_signature = Graphics::get_Signature(root_signature);
 	if (!vertex.entry_point.empty())	desc.vertex = Graphics::vertex_shader::get_resource(vertex);
 	if (!pixel.entry_point.empty())	desc.pixel = Graphics::pixel_shader::get_resource(pixel);
 

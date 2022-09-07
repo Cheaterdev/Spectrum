@@ -173,13 +173,17 @@ export
 	#include "pso\VoxelDebug.h"
 	#include "pso\DenoiserDownsample.h"
 	#include "rtx\MainRTX.h"
-	void init_signatures();
-	Graphics::RootLayout::ptr get_Signature(Layouts id);
-	void init_pso(enum_array<PSO, PSOBase::ptr>&);
-	std::optional<SlotID> get_slot(std::string_view slot_name);
-	UINT get_slot_id(SlotID id);
 }
+
 static enum_array<Layouts, Graphics::RootLayout::ptr> signatures;
+export namespace Graphics{
+	//void init_signatures();
+	//Graphics::RootLayout::ptr get_Signature(Layouts id);
+	//void init_pso(enum_array<PSO, PSOBase::ptr>&);
+	//std::optional<SlotID> get_slot(std::string_view slot_name);
+	//UINT get_slot_id(SlotID id);
+
+	
 void init_signatures()
 {
 	signatures[Layouts::FrameLayout] = AutoGenSignatureDesc<FrameLayout>().create_signature(Layouts::FrameLayout);
@@ -189,6 +193,7 @@ Graphics::RootLayout::ptr get_Signature(Layouts id)
 {
 	return signatures[id];
 }
+
 std::optional<SlotID> get_slot(std::string_view slot_name)
 {
 	if(slot_name == "TextureRenderer")
@@ -700,4 +705,6 @@ UINT get_slot_id(SlotID id)
 		return Slots::FrameClassificationInitDispatch::Slot::ID;
 	}
 	return -1;
+}
+
 }
