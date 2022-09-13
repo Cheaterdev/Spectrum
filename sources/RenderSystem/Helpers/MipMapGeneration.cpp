@@ -2,6 +2,8 @@
 
 #include "MipMapGeneration.h"
 
+#include "Profiling/macros.h"
+
 
 MipMapGenerator::MipMapGenerator()
 {
@@ -18,24 +20,24 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 void MipMapGenerator::generate_cube(Graphics::ComputeContext& compute_context, Graphics::TextureView view)
 {
 
-	for (int i = 0; i <6; i++) 
-		
-		generate(compute_context,view.create_2d_slice(i, *compute_context.get_base().frame_resources));
+	for (int i = 0; i < 6; i++)
+
+		generate(compute_context, view.create_2d_slice(i, *compute_context.get_base().frame_resources));
 }
 
 void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphics::TextureView  view)
 {
 	//return;
-	PROFILE_GPU(L"downsampling");
+	PROFILE(L"MipMapGenerator");
 
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
-	uint32_t maps = view.get_mip_count()-1;
+	uint32_t maps = view.get_mip_count() - 1;
 	auto size = view.get_size();
 	uint32_t prev = 0;
 
 	for (uint32_t TopMip = 0; TopMip < maps;)
 	{
-		
+
 		uint32_t SrcWidth = uint32_t(size.x >> TopMip);
 		uint32_t SrcHeight = uint32_t(size.y >> TopMip);
 		uint32_t DstWidth = SrcWidth >> 1;
@@ -46,11 +48,11 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 		compute_context.set_pipeline(GetPSO<PSOS::MipMapping>(
 			PSOS::MipMapping::NonPowerOfTwo(NonPowerOfTwo)
 			| PSOS::MipMapping::Gamma.Use(DirectX::IsSRGB(view.get_desc().Format))
-		));
+			));
 
 		uint32_t AdditionalMips;
 		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
-		uint32_t NumMips = 1 +(AdditionalMips > 3 ? 3 : AdditionalMips);
+		uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
 
 		if (TopMip + NumMips > maps)
 			NumMips = maps - TopMip;
@@ -88,6 +90,7 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 
 void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex, Graphics::Texture2DView::ptr view)
 {
+	PROFILE(L"MipMapGenerator");
 
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
 
@@ -111,7 +114,7 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 
 
 		uint32_t AdditionalMips;
-		_BitScanForward((unsigned long*)& AdditionalMips, DstWidth | DstHeight);
+		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
 		uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
 
 		if (TopMip + NumMips > maps)
@@ -123,7 +126,7 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 		if (DstWidth == 0)
 			DstWidth = 1;
 
-		if (DstHeight == 0) 
+		if (DstHeight == 0)
 			DstHeight = 1;
 
 		Slots::MipMapping data;
@@ -158,7 +161,7 @@ void MipMapGenerator::downsample_depth(Graphics::ComputeContext& compute_context
 
 }
 
-void MipMapGenerator::downsample_depth(Graphics::ComputeContext& compute_context, Graphics::TextureView& tex, Graphics::TextureView& to){
+void MipMapGenerator::downsample_depth(Graphics::ComputeContext& compute_context, Graphics::TextureView& tex, Graphics::TextureView& to) {
 	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
 
@@ -227,7 +230,7 @@ void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Grap
 
 
 	Slots::CopyTexture data;
-	data.GetSrcTex()  = from->texture_2d()->texture2D;
+	data.GetSrcTex() = from->texture_2d()->texture2D;
 	data.set(list);
 
 	list.set_rtv(1, view->get_rtv(), Graphics::Handle());
@@ -265,7 +268,7 @@ void MipMapGenerator::render_texture_2d_slow(Graphics::GraphicsContext& list, Gr
 	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
-	list.set_rtv(1,to.renderTarget, Graphics::Handle());
+	list.set_rtv(1, to.renderTarget, Graphics::Handle());
 	list.draw(4);
 }
 

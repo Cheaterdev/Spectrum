@@ -4,8 +4,8 @@ import Data;
 import d3d12;
 import Math;
 import Log;
-import :Types; 
-import :Sampler; 
+import :Types;
+import :Sampler;
 import :Device;
 import :Utils;
 import stl.core;
@@ -80,7 +80,7 @@ export namespace HAL
 		}
 	};
 
-	enum class RootSignatureType: uint
+	enum class RootSignatureType : uint
 	{
 		Global,
 		Local
@@ -163,11 +163,6 @@ export namespace HAL
 		void set_sampler(uint i, uint space, ShaderVisibility visibility, SamplerDesc desc)
 		{
 			sampler_map[{i, space}] = desc;
-		}
-
-		void add_sampler(int space, ShaderVisibility visibility, SamplerDesc desc)
-		{
-			set_sampler((int)sampler_map.size(), space, visibility, desc);
 		}
 
 		std::map<uint, table_info> tables;
@@ -290,7 +285,7 @@ namespace HAL
 				sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
 
 			sampler.ComparisonFunc = to_native(desc.ComparisonFunc);
-			sampler.Filter;// = to_native(desc.Filter);
+			sampler.Filter = to_native(desc.MinFilter, desc.MagFilter, desc.MipFilter, desc.ComparisonFunc);
 			sampler.MaxAnisotropy = desc.MaxAnisotropy;
 			sampler.MaxLOD = desc.MaxLOD;
 			sampler.MinLOD = desc.MinLOD;

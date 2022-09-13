@@ -50,9 +50,11 @@ export namespace HAL
 
 			enum class Flags : uint
 			{
-				None = 0,
-				ReadDepth = 0x1,
-				Readstencil = 0x2
+				None,
+				ReadOnlyDepth,
+				ReadOnlyStencil,
+
+				GENERATE_OPS
 			};
 
 			Resource* Resource;

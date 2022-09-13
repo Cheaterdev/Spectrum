@@ -10,6 +10,9 @@ workdir/pso
 AgilitySDK/
 Agility.zip
 
+PIX/
+pix.zip
+
 #aftermath dumps
 *.nv-gpudmp*
 

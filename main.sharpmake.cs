@@ -54,7 +54,7 @@ namespace Spectrum
             AddTargets(new CustomTarget
             {
                 Platform = Platform.win64,
-                DevEnv = DevEnv.vs2019,
+                DevEnv = DevEnv.vs2022,
                 Optimization = Optimization.Release,
                 Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
@@ -105,7 +105,8 @@ namespace Spectrum
 			conf.Defines.Add("WIN32_LEAN_AND_MEAN");
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
              conf.Defines.Add("CEREAL_THREAD_SAFE");
-           
+              conf.Defines.Add("USE_PIX");
+         
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106")); //module reference issues
 
             if (target.Mode == Mode.Dev)
@@ -227,6 +228,17 @@ namespace Spectrum
 				{
 					conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12SDKLayers.dll", "D3D12"));
 				}
+			}
+
+
+            { // PIX
+				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\PIX\Include\WinPixEventRuntime", 66);
+                 conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64\WinPixEventRuntime.dll");
+			
+			conf.LibraryFiles.Add("WinPixEventRuntime.lib");
+
+            	conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
+	
 			}
         }
     }
@@ -401,7 +413,7 @@ namespace Spectrum
             AddTargets(new CustomTarget
             {
                 Platform = Platform.win64,
-                DevEnv = DevEnv.vs2019,
+                DevEnv = DevEnv.vs2022,
                 Optimization =  Optimization.Release,
                 Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });

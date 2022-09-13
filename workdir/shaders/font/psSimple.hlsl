@@ -22,5 +22,5 @@ float4 PS(PSIn Input) : SV_Target
 //       discard;
 
 
-return 1;// float4(Input.GlyphColor.rgb, a * Input.GlyphColor.a);
+return float4(Input.GlyphColor.rgb, a * Input.GlyphColor.a);
 }

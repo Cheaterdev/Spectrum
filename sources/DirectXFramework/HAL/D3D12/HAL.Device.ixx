@@ -23,7 +23,9 @@ export namespace HAL
 	public:
 		using ptr = std::shared_ptr<Device>;
 		Device(DeviceDesc& desc);
-
+		virtual ~Device()
+		{
+		}
 
 	public:
 		D3D::Device native_device;
@@ -53,7 +55,7 @@ namespace HAL
 
 		for (auto type : magic_enum::enum_values<DescriptorHeapType>())
 		{
-			descriptor_sizes[type] = native_device->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type));
+			descriptor_sizes[type] = native_device->GetDescriptorHandleIncrementSize(to_native(type));
 		}
 	}
 }

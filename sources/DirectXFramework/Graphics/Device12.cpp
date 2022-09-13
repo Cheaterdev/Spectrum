@@ -1,5 +1,7 @@
 module;
 import d3d12;
+#include <dxgi.h>
+
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
 #include "helper.h"
@@ -168,7 +170,7 @@ namespace Graphics
 	size_t Device::get_vram()
 	{
 		DXGI_QUERY_VIDEO_MEMORY_INFO videoMemoryInfo;
-		vAdapters[0]->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
+		adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
 
 		size_t usedVRAM = videoMemoryInfo.CurrentUsage / 1024 / 1024;
 
@@ -212,15 +214,15 @@ namespace Graphics
 		ComPtr<ID3D12Debug1> spDebugController1;
 
 #ifdef DEV
-		if (false)
-			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-			{
-				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
+		//	if (false)
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+		{
+			debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
 
 
-				debugController->EnableDebugLayer();
-				//	spDebugController1->SetEnableGPUBasedValidation(true);
-			}
+			debugController->EnableDebugLayer();
+			//	spDebugController1->SetEnableGPUBasedValidation(true);
+		}
 #endif
 
 
@@ -231,6 +233,9 @@ namespace Graphics
 		UINT i = 0;
 		//ComPtr<IDXGIAdapter3> pAdapter;
 
+		// crasher = std::make_unique<GpuCrashTracker>();
+		//
+		// crasher->Initialize();
 		{
 			auto t = CounterManager::get().start_count<IDXGIAdapter>();
 
@@ -242,23 +247,40 @@ namespace Graphics
 				ComPtr<IDXGIAdapter3> pAdapter;
 				pAdapter.Attach(adapter);
 
-				vAdapters.push_back(pAdapter);
-				DXGI_ADAPTER_DESC desc;
-				pAdapter->GetDesc(&desc);
-				Log::get() << "adapter: " << convert(std::wstring(desc.Description)) << Log::endl;
+				DXGI_ADAPTER_DESC adapter_desc;
+				pAdapter->GetDesc(&adapter_desc);
+				Log::get() << "adapter: " << adapter_desc.Description << Log::endl;
 				++i;
+
+				HAL::DeviceDesc desc;
+				desc.adapter = pAdapter;
+				auto device = std::make_shared<HAL::Device>(desc);
+				D3D12_FEATURE_DATA_D3D12_OPTIONS options = {};
+				D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
+				D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
+				D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_7 };
+
+				TEST(device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7)));
+				TEST(device->native_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5)));
+				TEST(device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)));
+				device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
+
+				auto m_tiledResourcesTier = options.TiledResourcesTier;
+
+				//	options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
+
+				if (supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6 &&
+					options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER::D3D12_MESH_SHADER_TIER_1)
+				{
+
+					m_device = device;
+					this->adapter = pAdapter;
+					Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
+
+				}
 			}
 		}
-
-		// crasher = std::make_unique<GpuCrashTracker>();
-		//
-		// crasher->Initialize();
-
-
-		HAL::DeviceDesc desc;
-		desc.adapter = vAdapters[0];
-		m_device = std::make_shared<HAL::Device>(desc);
-
+		assert(m_device);
 
 		const uint32_t aftermathFlags =
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
@@ -321,12 +343,6 @@ namespace Graphics
 		m_device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
 
 		assert(supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6);
-
-		for (auto type : magic_enum::enum_values<DescriptorHeapType>())
-		{
-			descriptor_sizes[type] = m_device->native_device->GetDescriptorHandleIncrementSize(static_cast<D3D12_DESCRIPTOR_HEAP_TYPE>(type));
-		}
-
 	}
 
 

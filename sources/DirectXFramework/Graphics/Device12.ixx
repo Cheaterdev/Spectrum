@@ -32,8 +32,8 @@ export
 			HAL::Device::ptr m_device;
 			ComPtr<IDXGIFactory4> factory;
 			std::vector<std::shared_ptr<SwapChain>> swap_chains;
-			std::vector <ComPtr<IDXGIAdapter3> > vAdapters;
-
+			//	std::vector <ComPtr<IDXGIAdapter3> > vAdapters;
+			ComPtr<IDXGIAdapter3> adapter;
 			//   std::shared_ptr<CommandList> upload_list;
 			enum_array<HAL::CommandListType, std::shared_ptr<Queue>> queues;
 			IdGenerator<Thread::Lockable> id_generator;
@@ -41,7 +41,6 @@ export
 			bool rtx = false;
 			std::unique_ptr<GpuCrashTracker> crasher;
 
-			enum_array<HAL::DescriptorHeapType, UINT> descriptor_sizes;
 		public:
 			void stop_all();
 			virtual ~Device();
@@ -49,7 +48,7 @@ export
 
 			UINT get_descriptor_size(HAL::DescriptorHeapType type)
 			{
-				return descriptor_sizes[type];
+				return m_device->get_descriptor_size(type);
 			}
 			HAL::Device::ptr get_hal_device()
 			{

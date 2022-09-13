@@ -190,7 +190,7 @@ export namespace HAL
 	{
 		D3D12_RENDER_TARGET_VIEW_DESC desc;
 		desc.Format = to_native(view.Format);
-	
+
 		std::visit(overloaded{
 			[&](const Views::RenderTarget::Buffer& Buffer) {
 				desc.ViewDimension = D3D12_RTV_DIMENSION_BUFFER;
@@ -255,7 +255,73 @@ export namespace HAL
 			heap.device.native_device->CreateRenderTargetView(native_resource, &desc, h);
 		}
 	}
+	void Descriptor::place(const Views::DepthStencil& view)
+	{
+		D3D12_DEPTH_STENCIL_VIEW_DESC desc;
+		desc.Format = to_native(view.Format);
+		desc.Flags = D3D12_DSV_FLAGS::D3D12_DSV_FLAG_NONE;
 
+		if (check(view.Flags & Views::DepthStencil::Flags::ReadOnlyDepth))
+		{
+			desc.Flags |= D3D12_DSV_FLAGS::D3D12_DSV_FLAG_READ_ONLY_DEPTH;
+		}
+
+		if (check(view.Flags & Views::DepthStencil::Flags::ReadOnlyStencil))
+		{
+			desc.Flags |= D3D12_DSV_FLAGS::D3D12_DSV_FLAG_READ_ONLY_STENCIL;
+		}
+
+		std::visit(overloaded{
+			[&](const Views::DepthStencil::Texture1D& Texture1D) {
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1D;
+				desc.Texture1D.MipSlice = Texture1D.MipSlice;
+			},
+			[&](const Views::DepthStencil::Texture1DArray& Texture1DArray) {
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE1DARRAY;
+				desc.Texture1DArray.MipSlice = Texture1DArray.MipSlice;
+				desc.Texture1DArray.FirstArraySlice = Texture1DArray.FirstArraySlice;
+				desc.Texture1DArray.ArraySize = Texture1DArray.ArraySize;
+			},
+			[&](const Views::DepthStencil::Texture2D& Texture2D) {
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+				desc.Texture2D.MipSlice = Texture2D.MipSlice;
+			},
+			[&](const Views::DepthStencil::Texture2DArray& Texture2DArray) {
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+				desc.Texture2DArray.MipSlice = Texture2DArray.MipSlice;
+				desc.Texture2DArray.FirstArraySlice = Texture2DArray.FirstArraySlice;
+				desc.Texture2DArray.ArraySize = Texture2DArray.ArraySize;
+			},
+			[&](const Views::DepthStencil::Texture2DMS& Texture2DMS) {
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+			},
+			[&](const Views::DepthStencil::Texture2DMSArray& Texture2DMSArray) {
+				desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMSARRAY;
+				desc.Texture2DMSArray.FirstArraySlice = Texture2DMSArray.FirstArraySlice;
+				desc.Texture2DMSArray.ArraySize = Texture2DMSArray.ArraySize;
+			},
+			[&](auto other) {
+				assert(false);
+			}
+			}, view.View);
+
+
+		auto native_resource = view.Resource ? view.Resource->native_resource.Get() : nullptr;
+		auto size = heap.device.get_descriptor_size(heap.desc.HeapType);
+
+		{
+			auto h = heap.cpu_start;
+			h.Offset(offset, size);
+			heap.device.native_device->CreateDepthStencilView(native_resource, &desc, h);
+		}
+
+		if (heap.m_gpu_heap)
+		{
+			auto h = heap.gpu_start;
+			h.Offset(offset, size);
+			heap.device.native_device->CreateDepthStencilView(native_resource, &desc, h);
+		}
+	}
 	void Descriptor::place(const Views::UnorderedAccess& view)
 	{
 		Resource* counter_resource = nullptr;

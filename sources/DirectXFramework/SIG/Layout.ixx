@@ -29,9 +29,11 @@ export
 		{
 
 			(process_one<A>(), ...);
+
+			int i = 0;
 			for (auto& s : samplers)
 			{
-				desc.add_sampler(0, Graphics::ShaderVisibility::ALL, s);
+				desc.set_sampler(i++, 0, Graphics::ShaderVisibility::ALL, s);
 			}
 		}
 
