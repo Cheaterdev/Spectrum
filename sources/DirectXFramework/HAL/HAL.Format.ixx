@@ -14,11 +14,11 @@ export namespace HAL
 	{
 		Format(NativeFormat native_format) :native_format(Formats(static_cast<uint>(native_format))) {
 
-		}	
+		}
 	public:
 		enum Formats :uint
 		{
-			UNKNOWN,												
+			UNKNOWN,
 			R32G32B32A32_TYPELESS,
 			R32G32B32A32_FLOAT,
 			R32G32B32A32_UINT,
@@ -121,7 +121,7 @@ export namespace HAL
 		};
 
 		using EnumClass = Formats;
-		
+
 		Format(Formats f) : native_format(f)
 		{
 
@@ -143,10 +143,12 @@ export namespace HAL
 		}
 
 		bool is_shader_visible() const;
-
+		bool is_srgb() const;
 		Format to_typeless() const;
 
 		Format to_dsv() const;
+		Format to_srv() const;
+		uint get_default_mapping() const;
 	private:
 		Formats native_format = Formats::UNKNOWN;
 

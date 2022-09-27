@@ -28,6 +28,8 @@ export
 		return std::chrono::duration<long double, std::milli>(ms);
 	}
 
+	template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+
 	std::wstring convert(std::string_view str);
 	std::string convert(std::wstring_view wstr);
 	std::string to_lower(std::string_view str);
@@ -151,7 +153,28 @@ export
 			static_cast<underlying>(rhs)
 			);
 	}
+	template<EnumType Enum>
+	Enum& operator |=(Enum& lhs, const Enum rhs)
+	{
+		using underlying = typename std::underlying_type<Enum>::type;
+		lhs = static_cast<Enum> (
+			static_cast<underlying>(lhs) |
+			static_cast<underlying>(rhs)
+			);
 
+		return lhs;
+	}
+	template<EnumType Enum>
+	Enum& operator &=(Enum& lhs, const Enum rhs)
+	{
+		using underlying = typename std::underlying_type<Enum>::type;
+		lhs = static_cast<Enum> (
+			static_cast<underlying>(lhs) &
+			static_cast<underlying>(rhs)
+			);
+
+		return lhs;
+	}
 	template<EnumType Enum>
 	bool operator <=(const Enum lhs, const Enum rhs)
 	{

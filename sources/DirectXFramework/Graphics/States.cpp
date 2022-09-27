@@ -8,6 +8,7 @@ import :CommandList;
 import Utils;
 import StateContext;
 import HAL;
+#include <cassert>
 
 using namespace HAL;
 namespace Graphics
@@ -28,9 +29,9 @@ namespace Graphics
 
 #endif
 	}
-	Barriers::Barriers(CommandListType type):type(type)
+	Barriers::Barriers(CommandListType type) :type(type)
 	{
-		
+
 	}
 	void Barriers::clear()
 	{
@@ -42,19 +43,21 @@ namespace Graphics
 	}
 	void Barriers::uav(Resource* resource)
 	{
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_native().Get()));
+		native.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_dx()));
 	}
 
 	void Barriers::alias(Resource* from, Resource* to)
 	{
-		auto native_from = from ? from->get_native().Get() : nullptr;
-		auto native_to = to ? to->get_native().Get() : nullptr;
+		auto native_from = from ? from->get_dx() : nullptr;
+		auto native_to = to ? to->get_dx() : nullptr;
 
 		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(native_from, native_to));
 	}
 
 	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags)
 	{
+		if (before == ResourceState::RAYTRACING_STRUCTURE) return; // TODO: make proper target state for raytrace
+		if (after == ResourceState::RAYTRACING_STRUCTURE) return; // TODO: make proper target state for raytrace
 		assert(resource);
 
 		assert(before != ResourceState::UNKNOWN);
@@ -63,13 +66,13 @@ namespace Graphics
 		assert(IsFullySupport(type, before));
 		assert(IsFullySupport(type, after));
 
-		
+
 		D3D12_RESOURCE_BARRIER_FLAGS native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
-		if(flags==BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
+		if (flags == BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
 		if (flags == BarrierFlags::END) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
 
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(resource->get_native().Get(),
+		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(resource->get_dx(),
 			static_cast<D3D12_RESOURCE_STATES>(before),
 			static_cast<D3D12_RESOURCE_STATES>(after),
 			subres,
@@ -228,7 +231,7 @@ namespace Graphics
 						subres_cpu.add_transition(transition);
 					}
 				}
-			
+
 			}
 		};
 
@@ -258,7 +261,7 @@ namespace Graphics
 		}
 
 
-		if(need_add_uav)
+		if (need_add_uav)
 		{
 			list->create_uav_transition(resource);
 		}
@@ -309,7 +312,7 @@ namespace Graphics
 			if (gpu.state != first_state)
 			{
 				auto point = from->create_transition(resource, i, gpu.state, TransitionType::ZERO);
-		//		cpu.set_zero_transition(point);
+				//		cpu.set_zero_transition(point);
 				updated = true;
 			}
 		};
@@ -351,7 +354,7 @@ namespace Graphics
 	{
 		auto& state = get_state(list);
 
-		
+
 		auto transit = [&](UINT i)
 		{
 			auto last_transition = state.get_last_transition(i);
@@ -368,7 +371,7 @@ namespace Graphics
 		{
 			for (int i = 0; i < gpu_state.subres.size(); i++) transit(i);
 		}
-		
+
 	}
 	bool ResourceStateManager::transition(Transitions* from, Transitions* to) const
 	{

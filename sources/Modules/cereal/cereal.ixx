@@ -37,7 +37,7 @@ export
 		void save(const T& t)
 		{
 			if (serial)	m_os << ", ";
-			m_os <<magic_enum::enum_name(t);
+			m_os << magic_enum::enum_name(t);
 			serial = true;
 		}
 		template<class T>
@@ -47,7 +47,7 @@ export
 		void save(const T& t)
 		{
 			if (serial)	m_os << ", ";
-			m_os <<t;
+			m_os << t;
 			serial = true;
 		}
 
@@ -63,7 +63,7 @@ export
 		void save(const std::wstring& t)
 		{
 			save(_convert(t));
-		//	m_os << " " << convert(t);
+			//	m_os << " " << convert(t);
 		}
 		static constexpr bool PRETTY = true;
 
@@ -101,7 +101,7 @@ export
 	{
 		if (strcmp(m.name, "cereal_class_version") == 0) return;
 		archive.save(m);
-	
+
 	}
 
 	template<class T>
@@ -124,10 +124,10 @@ export
 		archive.save(m);
 	}
 	template<typename C, typename T>
-	concept can_save = requires(C c,T t)
+	concept can_save = requires(C c, T t)
 	{
-	
-	c.save(t);
+
+		c.save(t);
 	};
 
 	template<class T>
@@ -136,7 +136,7 @@ export
 		// indent according to object depth
 		for (unsigned int i = 0; i < m_depth; ++i)
 			m_os << ' ';
-		if(serial)	m_os << ", ";
+		if (serial)	m_os << ", ";
 		if constexpr (can_save<simple_log_archive, T>)
 		{
 			m_os << t.name << " = ";
@@ -146,7 +146,12 @@ export
 		}
 		else
 		{
-			m_os << t.name << " = {" << std::endl;
+			std::string type_name = typeid(T).name();
+
+			if (type_name.rfind("class std::variant", 0) == 0)
+				type_name = "std::variant<...>";
+
+			m_os << t.name << " = " << type_name << "{" << std::endl;
 			m_depth++;
 
 			serial = false;

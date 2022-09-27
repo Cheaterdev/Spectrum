@@ -1,6 +1,8 @@
 #include "pch_render.h"
 #include "Helpers/MipMapGeneration.h"
 #include "Label.h"
+
+#include "d3d12/d3dx12.h"
 #include "GUI/Renderer/Renderer.h"
 
 namespace GUI
@@ -97,8 +99,8 @@ namespace GUI
 			if (lay2.bottom == 0) lay2.bottom = 1;
 
 			if (!isnan(lay2.right))
-				if (!cache.texture || cache.texture->get_desc().Width < lay2.right || cache.texture->get_desc().Height < lay2.bottom)
-					cache.texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, (UINT)lay2.right, (UINT)lay2.bottom, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+				if (!cache.texture || cache.texture->get_desc().as_texture().Dimensions.x < lay2.right || cache.texture->get_desc().as_texture().Dimensions.y < lay2.bottom)
+					cache.texture.reset(new Graphics::Texture(HAL::ResourceDesc::Tex2D(Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 			auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
 
@@ -116,8 +118,8 @@ namespace GUI
 					PROFILE(L"label");
 
 					Graphics::Viewport vps;
-					vps.Width = static_cast<float>(cache.texture->get_desc().Width);
-					vps.Height = static_cast<float>(cache.texture->get_desc().Height);
+					vps.Width = static_cast<float>(cache.texture->get_desc().as_texture().Dimensions.x);
+					vps.Height = static_cast<float>(cache.texture->get_desc().as_texture().Dimensions.y);
 					vps.TopLeftX = 0;
 					vps.TopLeftY = 0;
 					vps.MinDepth = 0.0f;
@@ -128,7 +130,7 @@ namespace GUI
 					geomerty->draw(command_list, lay2, 0, { 0,0 });
 					MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
 				});
-			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().Width,cache.texture->get_desc().Height) };
+			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().as_texture().Dimensions.x,cache.texture->get_desc().as_texture().Dimensions.y) };
 		}
 
 		Fonts::FontGeometry::ptr label::get_geometry()

@@ -43,6 +43,11 @@ export
 			{
 				return tracked_info->heap->native_heap;
 			}
+
+			HAL::Heap::ptr get_hal()
+			{
+				return tracked_info->heap;
+			}
 			ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags);
 
 
@@ -159,12 +164,12 @@ export
 					}
 
 				}
-			
-			auto res = std::make_shared<ResourceHeapPage>(size, index.type, index.flags);
 
-			res->init_cpu(res);
+				auto res = std::make_shared<ResourceHeapPage>(size, index.type, index.flags);
 
-			return res;
+				res->init_cpu(res);
+
+				return res;
 
 			}
 

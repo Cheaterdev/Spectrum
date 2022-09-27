@@ -59,16 +59,16 @@ namespace GUI
 
 		auto margin = c.scale * item.margins;
 		auto padding = c.scale * item.padding;
-		r += rect{ -margin.left, -margin.top, margin.left + margin.right, margin.top + margin.bottom};
+		r += rect{ -margin.left, -margin.top, margin.left + margin.right, margin.top + margin.bottom };
 
 		float tl = 0, tt = 0, tr = 0, tb = 0;
 
 		if (item.texture)
 		{
-			tl = static_cast<float>(item.padding.left) / item.texture->get_desc().Width;
-			tt = static_cast<float>(item.padding.top) / item.texture->get_desc().Height;
-			tr = static_cast<float>(item.padding.right) / item.texture->get_desc().Width;
-			tb = static_cast<float>(item.padding.bottom) / item.texture->get_desc().Height;
+			tl = static_cast<float>(item.padding.left) / item.texture->get_desc().as_texture().Dimensions.x;
+			tt = static_cast<float>(item.padding.top) / item.texture->get_desc().as_texture().Dimensions.y;
+			tr = static_cast<float>(item.padding.right) / item.texture->get_desc().as_texture().Dimensions.x;
+			tb = static_cast<float>(item.padding.bottom) / item.texture->get_desc().as_texture().Dimensions.y;
 		}
 
 		sizer new_tc = item.tc;

@@ -21,10 +21,10 @@ import d3d12;
 import IdGenerator;
 import StateContext;
 import Data;
-
+import Debug;
 import HAL;
 
-using namespace HAL;
+//using namespace HAL;
 
 namespace Graphics
 {
@@ -214,15 +214,15 @@ namespace Graphics
 		ComPtr<ID3D12Debug1> spDebugController1;
 
 #ifdef DEV
-		//	if (false)
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-		{
-			debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
+		if constexpr (BuildOptions::Debug)
+			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+			{
+				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
 
 
-			debugController->EnableDebugLayer();
-			//	spDebugController1->SetEnableGPUBasedValidation(true);
-		}
+				debugController->EnableDebugLayer();
+				//	spDebugController1->SetEnableGPUBasedValidation(true);
+			}
 #endif
 
 
@@ -346,33 +346,40 @@ namespace Graphics
 	}
 
 
-	Graphics::ResourceAllocationInfo Device::get_alloc_info(CD3DX12_RESOURCE_DESC& desc)
+	Graphics::ResourceAllocationInfo Device::get_alloc_info(const HAL::ResourceDesc& desc)
 	{
-
-		if (desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+		auto native_desc = ::to_native(desc);
+		/*if (native_desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
-			if ((desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
+
+			if ((native_desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
 			{
-				desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+				native_desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
 			}
-		}
-
-		D3D12_RESOURCE_ALLOCATION_INFO info = m_device->native_device->GetResourceAllocationInfo(0, 1, &desc);
-		desc.Alignment = info.Alignment;
-
-		if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+		}*/
+		if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
 		{
-			desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			info = m_device->native_device->GetResourceAllocationInfo(0, 1, &desc);
+
+			assert(native_desc.SampleDesc.Count > 0);
+		}
+		D3D12_RESOURCE_ALLOCATION_INFO info = m_device->native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+		native_desc.Alignment = info.Alignment;
+
+
+		// TODO small alignment
+		/*if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+		{
+			native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+			info = m_device->native_device->GetResourceAllocationInfo(0, 1, &native_desc);
 
 
 			if (info.Alignment != D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 			{
-				desc.Alignment = 0;
-				info = m_device->native_device->GetResourceAllocationInfo(0, 1, &desc);
+				native_desc.Alignment = 0;
+				info = m_device->native_device->GetResourceAllocationInfo(0, 1, &native_desc);
 			}
 
-		}
+		}*/
 
 		ResourceAllocationInfo result;
 
@@ -381,11 +388,11 @@ namespace Graphics
 		result.flags = D3D12_HEAP_FLAG_NONE;
 
 
-		if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+		if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
 		{
 			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
 		}
-		else if (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
+		else if (native_desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
 		{
 			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
 		}
@@ -394,55 +401,6 @@ namespace Graphics
 
 		return result;
 	}
-
-	void  Device::create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv)
-	{
-		*h.get_resource_info() = ResourceInfo(resource, rtv);
-		m_device->native_device->CreateRenderTargetView(resource->get_native().Get(), &rtv, h.get_cpu());
-	}
-
-	void  Device::create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv)
-	{
-		*h.get_resource_info() = ResourceInfo(resource, srv);
-		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2D)
-		{
-			assert(srv.Texture2D.MipLevels > 0);
-			assert(srv.Texture2D.MostDetailedMip + srv.Texture2D.MipLevels <= resource->get_desc().MipLevels);
-		}
-
-		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2DARRAY)
-		{
-			assert(srv.Texture2DArray.MipLevels > 0);
-			assert(srv.Texture2DArray.MostDetailedMip + srv.Texture2DArray.MipLevels <= resource->get_desc().MipLevels);
-		}
-
-		if (srv.ViewDimension == D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURECUBE)
-		{
-			assert(srv.TextureCube.MipLevels > 0);
-			assert(srv.TextureCube.MostDetailedMip + srv.TextureCube.MipLevels <= resource->get_desc().MipLevels);
-		}
-
-		m_device->native_device->CreateShaderResourceView(resource ? resource->get_native().Get() : nullptr, &srv, h.get_cpu());
-	}
-
-	void  Device::create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter) {
-		*h.get_resource_info() = ResourceInfo(resource, counter, uav);
-		m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.get_cpu());
-		if (h.offset_gpu != UINT_MAX)
-			m_device->native_device->CreateUnorderedAccessView(resource->get_native().Get(), counter ? counter->get_native().Get() : nullptr, &uav, h.get_cpu_read());
-
-	}
-
-	void  Device::create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) {
-		*h.get_resource_info() = ResourceInfo(resource, cbv);
-		m_device->native_device->CreateConstantBufferView(&cbv, h.get_cpu());
-	}
-
-	void  Device::create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) {
-		*h.get_resource_info() = ResourceInfo(resource, dsv);
-		m_device->native_device->CreateDepthStencilView(resource->get_native().Get(), &dsv, h.get_cpu());
-	}
-
 
 	void Device::DumpDRED()
 	{

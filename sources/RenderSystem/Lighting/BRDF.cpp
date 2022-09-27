@@ -6,7 +6,7 @@ import Graphics;
 void BRDF::create_new()
 {
 
-	texture.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex3D(to_native(Graphics::Format::R16G16B16A16_FLOAT), 64, 64, 64, 1,  D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+	texture.reset(new Graphics::Texture(HAL::ResourceDesc::Tex3D(Graphics::Format::R16G16B16A16_FLOAT, { 64, 64, 64 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
 	Graphics::CommandList::ptr list(new Graphics::CommandList(Graphics::CommandListType::DIRECT));
 	list->begin("BRDF");
 
@@ -21,7 +21,7 @@ void BRDF::create_new()
 		data.set(compute_context);
 	}
 
-	compute_context.dispach(texture->get_size(), ivec3(4,4,4));
+	compute_context.dispach(texture->get_size(), ivec3(4, 4, 4));
 	list->end();
 	list->execute_and_wait();
 }

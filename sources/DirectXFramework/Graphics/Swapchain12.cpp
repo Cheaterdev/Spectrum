@@ -1,5 +1,7 @@
 module;
 
+#include <string>
+
 #include "helper.h"
 module Graphics:SwapChain;
 import :Texture;
@@ -28,24 +30,24 @@ namespace Graphics
 		// Create a RTV for each frame.
 		for (UINT n = 0; n < frames.size(); n++)
 		{
-			ComPtr<ID3D12Resource> render_target;
+			D3D::Resource  render_target;
 			m_swapChain->GetBuffer(n, IID_PPV_ARGS(&render_target));
+
+			auto hal_resource = std::make_shared<HAL::Resource>(render_target);
 			auto handle = heap->create_table(1);
 
-			frames[n].m_renderTarget.reset(new Texture(render_target, handle, ResourceState::PRESENT));
+			frames[n].m_renderTarget.reset(new Texture(hal_resource, handle, ResourceState::PRESENT));
 			frames[n].m_renderTarget->set_name(std::string("swap_chain_") + std::to_string(n));
 
-			D3D12_RENDER_TARGET_VIEW_DESC desc = {};
-			desc.Format = to_srv(frames[n].m_renderTarget->get_desc().Format);
-			desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2D;
-			desc.Texture2D.MipSlice = 0;
-			desc.Texture2D.PlaneSlice = 0;
-
-
-			Device::get().create_rtv(handle[0], frames[n].m_renderTarget.get(), desc);
-
-
-
+			handle[0] = HAL::Views::RenderTarget{
+			.Resource = frames[n].m_renderTarget->get_hal().get(),
+			.Format = frames[n].m_renderTarget->get_desc().as_texture().Format.to_srv(),
+			.View = HAL::Views::RenderTarget::Texture2D
+				{
+					.MipSlice = 0,
+					.PlaneSlice = 0
+				}
+			};
 		}
 	}
 
@@ -66,9 +68,9 @@ namespace Graphics
 	{
 		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-	
-//		if (GetAsyncKeyState(VK_F8))
-	//		for (auto& f : frames)	f.fence_event.wait();
+
+		//		if (GetAsyncKeyState(VK_F8))
+			//		for (auto& f : frames)	f.fence_event.wait();
 	}
 
 

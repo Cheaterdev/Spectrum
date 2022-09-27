@@ -12,7 +12,7 @@ namespace Graphics
 		scene.create(resource.get());
 	}
 
-	
+
 
 	TextureView TextureView::create_2d_slice(UINT slice, FrameResources& frame)
 	{
@@ -42,8 +42,8 @@ namespace Graphics
 		desc.BufferLocation = resource->get_gpu_address();
 		desc.SizeInBytes = (UINT)view_desc.Buffer.Size;
 		assert(desc.SizeInBytes < 65536);
-
-		Device::get().create_cbv(h, resource.get(), desc);
+		assert(0);
+		//	Device::get().create_cbv(h, resource.get(), desc);
 	}
 
 }

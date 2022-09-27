@@ -47,4 +47,4 @@
 
 
 //#include <comdef.h>
-#include <assert.h>
+#include <cassert>

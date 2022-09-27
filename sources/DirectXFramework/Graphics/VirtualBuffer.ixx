@@ -27,7 +27,7 @@ export
 	{
 
 
-	
+
 
 		template<class Type, class AllocatorType = CommonAllocator, class T = Underlying<Type>>
 		class virtual_gpu_buffer : protected DataAllocator<T, AllocatorType>
@@ -153,7 +153,7 @@ export
 
 				update_list.clear();
 			}
-			virtual_gpu_buffer(size_t max_size, counterType countType = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, HAL::ResourceState state = HAL::ResourceState::COMMON) :Base(max_size)
+			virtual_gpu_buffer(size_t max_size, counterType countType = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::ResourceState state = HAL::ResourceState::COMMON) :Base(max_size)
 			{
 				buffer = std::make_shared<StructureBuffer<Type>>(max_size, countType, flags, HeapType::RESERVED, state);
 

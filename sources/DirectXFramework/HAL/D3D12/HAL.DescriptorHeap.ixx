@@ -7,6 +7,7 @@ import :Descriptors;
 import :Resource;
 
 import Utils;
+import Debug;
 
 export namespace HAL
 {
@@ -27,28 +28,38 @@ export namespace HAL
 		Descriptor(DescriptorHeap& heap, uint offset) : heap(heap), offset(offset)
 		{
 		}
-		void operator=(const Descriptor& r);
+
 		friend class DescriptorHeap;
 	public:
+		void operator=(const Descriptor& r);
+
 		void place(const Views::ShaderResource& view);
 		void place(const Views::UnorderedAccess& view);
 		void place(const Views::RenderTarget& view);
 		void place(const Views::ConstantBuffer& view);
 		void place(const Views::DepthStencil& view);
 
+		D3D12_CPU_DESCRIPTOR_HANDLE  get_cpu();
+		D3D12_GPU_DESCRIPTOR_HANDLE  get_gpu();
+
 	};
 
 	class DescriptorHeap
 	{
+	public:// TODO
 		D3D::DescriptorHeap m_cpu_heap;
 		D3D::DescriptorHeap m_gpu_heap;
 
 		const DescriptorHeapDesc desc;
 		const Device& device;
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE cpu_start;
-		CD3DX12_CPU_DESCRIPTOR_HANDLE gpu_start;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE  cpu_start;
+		CD3DX12_CPU_DESCRIPTOR_HANDLE  gpu_cpu_start;
 
+
+		CD3DX12_GPU_DESCRIPTOR_HANDLE  gpu_start;
+
+		uint handle_size;
 		friend class Descriptor;
 	public:
 		DescriptorHeap(Device& device, const DescriptorHeapDesc& desc) :device(device), desc(desc)
@@ -66,8 +77,12 @@ export namespace HAL
 			{
 				native_desc.Flags = to_native(DescriptorHeapFlags::SHADER_VISIBLE);
 				TEST(device.native_device->CreateDescriptorHeap(&native_desc, IID_PPV_ARGS(&m_gpu_heap)));
-				gpu_start = m_gpu_heap->GetCPUDescriptorHandleForHeapStart();
+				gpu_cpu_start = m_gpu_heap->GetCPUDescriptorHandleForHeapStart();
+
+				gpu_start = m_gpu_heap->GetGPUDescriptorHandleForHeapStart();
 			}
+
+			handle_size = device.get_descriptor_size(desc.HeapType);
 		}
 
 		Descriptor operator[](uint i)
@@ -76,21 +91,29 @@ export namespace HAL
 		}
 	};
 
-	template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 
 	void Descriptor::place(const Views::ShaderResource& view)
 	{
+		if constexpr (BuildOptions::Debug)
+		{
+			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
+		}
 		D3D12_SHADER_RESOURCE_VIEW_DESC desc;
 
 		desc.Format = to_native(view.Format);
-		desc.Shader4ComponentMapping = view.Shader4ComponentMapping;
+		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;// view.Shader4ComponentMapping;
+		auto native_resource = view.Resource ? view.Resource->native_resource.Get() : nullptr;
+
 
 		std::visit(overloaded{
 			[&](const Views::ShaderResource::Buffer& Buffer) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
 				desc.Buffer.FirstElement = Buffer.FirstElement;
 				desc.Buffer.NumElements = Buffer.NumElements;
+				desc.Buffer.StructureByteStride = Buffer.StructureByteStride;
 				desc.Buffer.Flags = Buffer.Raw ? D3D12_BUFFER_SRV_FLAG_RAW : D3D12_BUFFER_SRV_FLAG_NONE;
+
+				assert(Buffer.StructureByteStride == 0 || view.Format == Format::UNKNOWN);
 			},
 			[&](const Views::ShaderResource::Texture1D& Texture1D) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
@@ -107,14 +130,16 @@ export namespace HAL
 				desc.Texture1DArray.ArraySize = Texture1DArray.ArraySize;
 			},
 			[&](const Views::ShaderResource::Texture2D& Texture2D) {
+
+					auto tdesc = view.Resource->get_desc().as_texture();
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 				desc.Texture2D.MostDetailedMip = Texture2D.MostDetailedMip;
 				desc.Texture2D.MipLevels = Texture2D.MipLevels;
 				desc.Texture2D.ResourceMinLODClamp = Texture2D.ResourceMinLODClamp;
 				desc.Texture2D.PlaneSlice = Texture2D.PlaneSlice;
-
+				assert(desc.Texture2D.PlaneSlice == 0);
 				assert(desc.Texture2D.MipLevels > 0);
-				assert(desc.Texture2D.MostDetailedMip + desc.Texture2D.MipLevels <= view.Resource->get_desc().MipLevels);
+				assert(desc.Texture2D.MostDetailedMip + desc.Texture2D.MipLevels <= view.Resource->get_desc().as_texture().MipLevels);
 			},
 			[&](const Views::ShaderResource::Texture2DArray& Texture2DArray) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
@@ -125,8 +150,9 @@ export namespace HAL
 				desc.Texture2DArray.FirstArraySlice = Texture2DArray.FirstArraySlice;
 				desc.Texture2DArray.ArraySize = Texture2DArray.ArraySize;
 
+				assert(desc.Texture2DArray.PlaneSlice == 0);
 				assert(desc.Texture2DArray.MipLevels > 0);
-				assert(desc.Texture2DArray.MostDetailedMip + desc.Texture2DArray.MipLevels <= view.Resource->get_desc().MipLevels);
+				assert(desc.Texture2DArray.MostDetailedMip + desc.Texture2DArray.MipLevels <= view.Resource->get_desc().as_texture().MipLevels);
 			},
 			[&](const Views::ShaderResource::Texture3D& Texture3D) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
@@ -149,7 +175,7 @@ export namespace HAL
 				desc.TextureCube.ResourceMinLODClamp = Cube.ResourceMinLODClamp;
 
 				assert(desc.TextureCube.MipLevels > 0);
-				assert(desc.TextureCube.MostDetailedMip + desc.TextureCube.MipLevels <= view.Resource->get_desc().MipLevels);
+				assert(desc.TextureCube.MostDetailedMip + desc.TextureCube.MipLevels <= view.Resource->get_desc().as_texture().MipLevels);
 			},
 			[&](const Views::ShaderResource::CubeArray& CubeArray) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
@@ -162,6 +188,7 @@ export namespace HAL
 			[&](const Views::ShaderResource::Raytracing& Raytracing) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
 				desc.RaytracingAccelerationStructure.Location = Raytracing.Location;
+				native_resource = nullptr;
 			},
 			[&](auto other) {
 				assert(false);
@@ -169,7 +196,6 @@ export namespace HAL
 			}, view.View);
 
 
-		auto native_resource = view.Resource ? view.Resource->native_resource.Get() : nullptr;
 		auto size = heap.device.get_descriptor_size(heap.desc.HeapType);
 
 		{
@@ -180,14 +206,21 @@ export namespace HAL
 
 		if (heap.m_gpu_heap)
 		{
-			auto h = heap.gpu_start;
+			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateShaderResourceView(native_resource, &desc, h);
 		}
+
+		if constexpr (BuildOptions::Debug)	TEST(heap.device.native_device->GetDeviceRemovedReason());
 	}
 
 	void Descriptor::place(const Views::RenderTarget& view)
 	{
+		if constexpr (BuildOptions::Debug)
+		{
+			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
+		}
+
 		D3D12_RENDER_TARGET_VIEW_DESC desc;
 		desc.Format = to_native(view.Format);
 
@@ -211,6 +244,9 @@ export namespace HAL
 				desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 				desc.Texture2D.MipSlice = Texture2D.MipSlice;
 				desc.Texture2D.PlaneSlice = Texture2D.PlaneSlice;
+
+
+				assert(desc.Texture2D.PlaneSlice == 0);
 			},
 			[&](const Views::RenderTarget::Texture2DArray& Texture2DArray) {
 				desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
@@ -218,6 +254,8 @@ export namespace HAL
 				desc.Texture2DArray.PlaneSlice = Texture2DArray.PlaneSlice;
 				desc.Texture2DArray.FirstArraySlice = Texture2DArray.FirstArraySlice;
 				desc.Texture2DArray.ArraySize = Texture2DArray.ArraySize;
+
+				assert(desc.Texture2DArray.PlaneSlice == 0);
 			},
 			[&](const Views::RenderTarget::Texture3D& Texture3D) {
 				desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE3D;
@@ -250,13 +288,20 @@ export namespace HAL
 
 		if (heap.m_gpu_heap)
 		{
-			auto h = heap.gpu_start;
+			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateRenderTargetView(native_resource, &desc, h);
 		}
+
+		if constexpr (BuildOptions::Debug)	TEST(heap.device.native_device->GetDeviceRemovedReason());
 	}
 	void Descriptor::place(const Views::DepthStencil& view)
 	{
+		if constexpr (BuildOptions::Debug)
+		{
+			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
+		}
+
 		D3D12_DEPTH_STENCIL_VIEW_DESC desc;
 		desc.Format = to_native(view.Format);
 		desc.Flags = D3D12_DSV_FLAGS::D3D12_DSV_FLAG_NONE;
@@ -317,13 +362,21 @@ export namespace HAL
 
 		if (heap.m_gpu_heap)
 		{
-			auto h = heap.gpu_start;
+			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateDepthStencilView(native_resource, &desc, h);
 		}
+
+		if constexpr (BuildOptions::Debug)	TEST(heap.device.native_device->GetDeviceRemovedReason());
+
 	}
 	void Descriptor::place(const Views::UnorderedAccess& view)
 	{
+		if constexpr (BuildOptions::Debug)
+		{
+			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
+		}
+
 		Resource* counter_resource = nullptr;
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
 
@@ -334,8 +387,16 @@ export namespace HAL
 				desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 				desc.Buffer.FirstElement = Buffer.FirstElement;
 				desc.Buffer.NumElements = Buffer.NumElements;
+				desc.Buffer.StructureByteStride = Buffer.StructureByteStride;
 				desc.Buffer.Flags = Buffer.Raw ? D3D12_BUFFER_UAV_FLAG_RAW : D3D12_BUFFER_UAV_FLAG_NONE;
+				desc.Buffer.CounterOffsetInBytes = Buffer.CounterOffsetInBytes;
+
 				counter_resource = Buffer.CounterResource;
+
+
+				assert((desc.Buffer.FirstElement + desc.Buffer.NumElements) * desc.Buffer.StructureByteStride <= view.Resource->get_desc().as_buffer().SizeInBytes);
+				assert(!counter_resource || Buffer.StructureByteStride);
+				assert(!counter_resource || Buffer.StructureByteStride);
 			},
 			[&](const Views::UnorderedAccess::Texture1D& Texture1D) {
 				desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE1D;
@@ -351,6 +412,8 @@ export namespace HAL
 				desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 				desc.Texture2D.MipSlice = Texture2D.MipSlice;
 				desc.Texture2D.PlaneSlice = Texture2D.PlaneSlice;
+
+				assert(desc.Texture2D.PlaneSlice == 0);
 			},
 			[&](const Views::UnorderedAccess::Texture2DArray& Texture2DArray) {
 				desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
@@ -359,8 +422,7 @@ export namespace HAL
 				desc.Texture2DArray.FirstArraySlice = Texture2DArray.FirstArraySlice;
 				desc.Texture2DArray.ArraySize = Texture2DArray.ArraySize;
 
-				assert(desc.Texture2DArray.MipLevels > 0);
-				assert(desc.Texture2DArray.MostDetailedMip + desc.Texture2DArray.MipLevels <= view.Resource->get_desc().MipLevels);
+				assert(desc.Texture2DArray.PlaneSlice == 0);
 			},
 			[&](const Views::UnorderedAccess::Texture3D& Texture3D) {
 				desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
@@ -387,15 +449,21 @@ export namespace HAL
 
 		if (heap.m_gpu_heap)
 		{
-			auto h = heap.gpu_start;
+			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateUnorderedAccessView(native_resource, native_counter_resource, &desc, h);
 		}
 
+		if constexpr (BuildOptions::Debug)	TEST(heap.device.native_device->GetDeviceRemovedReason());
 	}
 
 	void Descriptor::place(const Views::ConstantBuffer& view)
 	{
+		if constexpr (BuildOptions::Debug)
+		{
+			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
+		}
+
 		D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
 
 		desc.BufferLocation = view.Resource->get_address() + view.OffsetInBytes;
@@ -412,20 +480,35 @@ export namespace HAL
 
 		if (heap.m_gpu_heap)
 		{
-			auto h = heap.gpu_start;
+			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateConstantBufferView(&desc, h);
 		}
 
+		if constexpr (BuildOptions::Debug)	TEST(heap.device.native_device->GetDeviceRemovedReason());
 	}
 	void Descriptor::operator=(const Descriptor& r)
 	{
-		assert(heap->desc.HeapType == r.heap->desc.HeapType);
+		assert(heap.desc.HeapType == r.heap.desc.HeapType);
 		D3D12_DESCRIPTOR_HEAP_TYPE type = (D3D12_DESCRIPTOR_HEAP_TYPE)to_native(heap.desc.HeapType);
 
 		auto my = heap.cpu_start;
 		auto other = r.heap.cpu_start;
+		auto size = heap.device.get_descriptor_size(heap.desc.HeapType);
+		my.Offset(offset, size);
+		other.Offset(r.offset, size);
+
+		assert(my != other);
 		heap.device.native_device->CopyDescriptorsSimple(1, my, other, type);
 	}
 
+	D3D12_CPU_DESCRIPTOR_HANDLE  Descriptor::get_cpu()
+	{
+		return { heap.cpu_start.ptr + heap.handle_size * offset };
+	}
+
+	D3D12_GPU_DESCRIPTOR_HANDLE  Descriptor::get_gpu()
+	{
+		return { heap.gpu_start.ptr + heap.handle_size * offset };
+	}
 }

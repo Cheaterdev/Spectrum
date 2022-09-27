@@ -23,17 +23,17 @@ void FSR::generate(Graph& graph)
 	graph.pass<SkyData>("FSR", [this, &graph](SkyData& data, TaskBuilder& builder)
 		{
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.recreate(data.ResultTextureUpscaled, { uint3(graph.upscale_size,1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess);
-builder.create(data.FSRTemp, { uint3(graph.upscale_size,1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess);
+			builder.recreate(data.ResultTextureUpscaled, { uint3(graph.upscale_size,1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ::ResourceFlags::UnorderedAccess);
+			builder.create(data.FSRTemp, { uint3(graph.upscale_size,1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ::ResourceFlags::UnorderedAccess);
 
-		
+
 			return true;
 		}, [this, &graph](SkyData& data, FrameContext& _context)
 		{
 			auto& list = *_context.get_list();
 			auto& compute = list.get_compute();
 
-		
+
 			{
 
 				compute.set_pipeline(GetPSO<PSOS::FSR>());

@@ -49,39 +49,6 @@ bool is_shader_visible(DXGI_FORMAT);
 
 namespace cereal
 {
-	template<class Archive>
-	void serialize(Archive& ar, D3D12_DEPTH_STENCILOP_DESC& g, const unsigned int)
-	{
-		//	ar & g.DefaultValue;
-		ar& NVPG(StencilDepthFailOp);
-		ar& NVPG(StencilFailOp);
-		ar& NVPG(StencilFunc);
-		ar& NVPG(StencilPassOp);
-	}
-
-	template<class Archive>
-	void serialize(Archive& ar, DXGI_SAMPLE_DESC& g, const unsigned int)
-	{
-		//	ar & g.DefaultValue;
-		ar& NVPG(Count);
-		ar& NVPG(Quality);
-	}
-
-
-	template<class Archive>
-	void serialize(Archive& ar, D3D12_RESOURCE_DESC& g, const unsigned int)
-	{
-		ar& NVPG(Dimension);
-		ar& NVPG(Alignment);
-		ar& NVPG(Width);
-		ar& NVPG(Height);
-		ar& NVPG(DepthOrArraySize);
-		ar& NVPG(MipLevels);
-		ar& NVPG(Format);
-		ar& NVPG(SampleDesc);
-		ar& NVPG(Layout);
-		ar& NVPG(Flags);
-	}
 
 
 	template<class Archive>

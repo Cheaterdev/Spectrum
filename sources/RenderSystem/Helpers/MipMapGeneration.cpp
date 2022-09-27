@@ -47,7 +47,7 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 
 		compute_context.set_pipeline(GetPSO<PSOS::MipMapping>(
 			PSOS::MipMapping::NonPowerOfTwo(NonPowerOfTwo)
-			| PSOS::MipMapping::Gamma.Use(DirectX::IsSRGB(view.get_desc().Format))
+			| PSOS::MipMapping::Gamma.Use(view.get_desc().as_texture().Format.is_srgb())
 			));
 
 		uint32_t AdditionalMips;
@@ -94,13 +94,13 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 
 	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
 
-	uint32_t maps = tex->get_desc().MipLevels - 1;
+	uint32_t maps = tex->get_desc().as_texture().MipLevels - 1;
 	uint32_t prev = 0;
 
 	for (uint32_t TopMip = 0; TopMip < maps;)
 	{
-		uint32_t SrcWidth = uint32_t(tex->get_desc().Width >> TopMip);
-		uint32_t SrcHeight = uint32_t(tex->get_desc().Height >> TopMip);
+		uint32_t SrcWidth = uint32_t(tex->get_desc().as_texture().Dimensions.x >> TopMip);
+		uint32_t SrcHeight = uint32_t(tex->get_desc().as_texture().Dimensions.y >> TopMip);
 		uint32_t DstWidth = SrcWidth >> 1;
 		uint32_t DstHeight = SrcHeight >> 1;
 		uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
@@ -109,7 +109,7 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 
 		compute_context.set_pipeline(GetPSO<PSOS::MipMapping>(
 			PSOS::MipMapping::NonPowerOfTwo(NonPowerOfTwo)
-			| PSOS::MipMapping::Gamma.Use(DirectX::IsSRGB(tex->get_desc().Format))
+			| PSOS::MipMapping::Gamma.Use(tex->get_desc().as_texture().Format.is_srgb())
 			));
 
 
@@ -157,7 +157,7 @@ void MipMapGenerator::downsample_depth(Graphics::ComputeContext& compute_context
 	data.GetSrcTex() = tex->texture_2d()->texture2D;
 	data.GetTargetTex() = to->texture_2d()->rwTexture2D[0];
 	data.set(compute_context);
-	compute_context.dispach(ivec2(tex->get_desc().Width, tex->get_desc().Height), ivec2(8, 8));
+	compute_context.dispach(ivec2(tex->get_desc().as_texture().Dimensions.x, tex->get_desc().as_texture().Dimensions.y), ivec2(8, 8));
 
 }
 
@@ -220,7 +220,8 @@ void MipMapGenerator::generate_quality(Graphics::GraphicsContext& list, camera* 
 
 void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Graphics::Texture::ptr to, Graphics::Texture::ptr from)
 {
-	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(from_native(to->texture_2d()->get_rtv().get_resource_info()->rtv.Format))));
+	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d()->get_rtv().get_resource_info()->view);
+	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
 
 	auto& view = to->texture_2d();
 
@@ -240,7 +241,8 @@ void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Grap
 
 void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Graphics::Texture::ptr to, Graphics::TextureView from)
 {
-	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(from_native(to->texture_2d()->get_rtv().get_resource_info()->rtv.Format))));
+	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d()->get_rtv().get_resource_info()->view);
+	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
 
 
 	auto& view = to->texture_2d();
@@ -261,7 +263,8 @@ void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Grap
 
 void MipMapGenerator::render_texture_2d_slow(Graphics::GraphicsContext& list, Graphics::TextureView to, Graphics::TextureView from)
 {
-	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(from_native(to.renderTarget.get_resource_info()->rtv.Format))));
+	auto hal_view = std::get<HAL::Views::RenderTarget>(to.renderTarget.get_resource_info()->view);
+	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
 	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	Slots::CopyTexture data;

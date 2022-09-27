@@ -31,8 +31,8 @@ namespace Graphics {
 		{
 			tile.heap_position = ResourceHeapPageManager::get().create_tile(static_cast<D3D12_HEAP_FLAGS>(alloc_info.flags), tile_heap_type);
 			target.add_tile(tile);
-			on_load(ivec4(pos,subres));
-			if (recursive )
+			on_load(ivec4(pos, subres));
+			if (recursive)
 			{
 				if (subres != tiles.size() - 1)
 				{
@@ -53,10 +53,10 @@ namespace Graphics {
 		if (tile.heap_position.heap)
 		{
 			tile.heap_position.handle.Free();
-		
+
 			tile.heap_position.heap = nullptr;
 			target.add_tile(tile);
-		
+
 			on_zero(ivec4(pos, subres));
 
 
@@ -67,8 +67,8 @@ namespace Graphics {
 				uint3 my_pos = parent_pos * 2;
 
 				auto is_mapped = [&](uint3 pos) {
-				
-					if (math::all(pos >= uint3(0,0,0)) && math::all(pos < tiles[subres].size()))
+
+					if (math::all(pos >= uint3(0, 0, 0)) && math::all(pos < tiles[subres].size()))
 					{
 						return !!tiles[subres][pos].heap_position.heap;
 					}
@@ -81,7 +81,7 @@ namespace Graphics {
 				for (int x = 0; x < 2; x++)
 					for (int y = 0; y < 2; y++)
 						for (int z = 0; z < 2; z++)
-							can_unmap = can_unmap && !is_mapped(my_pos + uint3(x,y,z));
+							can_unmap = can_unmap && !is_mapped(my_pos + uint3(x, y, z));
 
 				if (can_unmap)
 				{
@@ -128,7 +128,7 @@ namespace Graphics {
 			for (uint y = from.y; y <= to.y; y++)
 				for (uint z = from.z; z <= to.z; z++)
 				{
-					zero_tile(info, {x,y,z}, 0);
+					zero_tile(info, { x,y,z }, 0);
 				}
 
 		// TODO: make list
@@ -141,7 +141,7 @@ namespace Graphics {
 	}
 
 
-	void TiledResourceManager::load_tiles(CommandList* list, std::list<uint3> &tiles, uint subres, bool recursive)
+	void TiledResourceManager::load_tiles(CommandList* list, std::list<uint3>& tiles, uint subres, bool recursive)
 	{
 		update_tiling_info info;
 		info.resource = static_cast<Resource*>(this);
@@ -158,16 +158,16 @@ namespace Graphics {
 		else
 			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
-	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3> &tiles_to_remove)
+	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3>& tiles_to_remove)
 	{
 		update_tiling_info info;
 		info.resource = static_cast<Resource*>(this);
 
 
-			for(auto t: tiles_to_remove)
-				{
-					zero_tile(info, t, 0);
-				}
+		for (auto t : tiles_to_remove)
+		{
+			zero_tile(info, t, 0);
+		}
 
 		// TODO: make list
 		if (list)
@@ -226,7 +226,7 @@ namespace Graphics {
 	uint3 TiledResourceManager::get_tiles_count(int mip_level)
 	{
 		return tiles[mip_level].size();
-		
+
 	}
 	uint3 TiledResourceManager::get_tile_shape()
 	{
@@ -245,7 +245,7 @@ namespace Graphics {
 
 		auto desc = resource->get_desc();
 
-		Device::get().get_native_device()->GetResourceTiling(resource->get_native().Get(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
+		Device::get().get_native_device()->GetResourceTiling(resource->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 		packed_mip_count = mip_info.NumTilesForPackedMips;
 		packed_subresource_offset = mip_info.NumStandardMips;
 		unpacked_mip_count = mip_info.NumStandardMips;
@@ -254,12 +254,12 @@ namespace Graphics {
 
 			this->tile_shape = { tile_shape.WidthInTexels,tile_shape.HeightInTexels,tile_shape.DepthInTexels };
 
-			if (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
+			if (desc.is_buffer())
 			{
 				tiles.resize(1);
 				tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
 				for (uint x = 0; x < tiles[0].size().x; x++)
-							tiles[0][{x, 0, 0}].pos = { x,0,0 };
+					tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
 				resource->tracked_info->gpu_tiles.resize(1);
 				resource->tracked_info->gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
@@ -274,7 +274,7 @@ namespace Graphics {
 
 				packed_tiles.pos = { 0,0,0 };
 				packed_tiles.subresource = mip_info.NumStandardMips;
-		
+
 
 				for (UINT i = 0; i < mip_info.NumStandardMips; i++)
 				{
@@ -294,7 +294,7 @@ namespace Graphics {
 							}
 				}
 			}
-			
+
 		}
 	}
 

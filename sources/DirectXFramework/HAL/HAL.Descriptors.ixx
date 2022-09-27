@@ -16,6 +16,12 @@ export namespace HAL
 			struct Texture1D
 			{
 				uint MipSlice;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+				}
 			};
 
 			struct Texture1DArray
@@ -23,11 +29,25 @@ export namespace HAL
 				uint MipSlice;
 				uint FirstArraySlice;
 				uint ArraySize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+				}
 			};
 
 			struct Texture2D
 			{
 				uint MipSlice;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+				}
 			};
 
 			struct Texture2DArray
@@ -35,17 +55,38 @@ export namespace HAL
 				uint MipSlice;
 				uint FirstArraySlice;
 				uint ArraySize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+				}
 			};
 
 			struct Texture2DMS
 			{
 				uint UnusedField_NothingToDefine;
+
+			private:
+				SERIALIZE()
+				{
+
+				}
 			};
 
 			struct Texture2DMSArray
 			{
 				uint FirstArraySlice;
 				uint ArraySize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+				}
 			};
 
 			enum class Flags : uint
@@ -62,6 +103,15 @@ export namespace HAL
 			Flags Flags;
 
 			std::variant<Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture2DMS, Texture2DMSArray> View;
+
+		private:
+			SERIALIZE()
+			{
+				ar& NVP(Resource);
+				ar& NVP(Format);
+				ar& NVP(Flags);
+				ar& NVP(View);
+			}
 		};
 
 		struct ShaderResource
@@ -72,6 +122,15 @@ export namespace HAL
 				uint NumElements;
 				uint StructureByteStride;
 				bool Raw;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(FirstElement);
+					ar& NVP(NumElements);
+					ar& NVP(StructureByteStride);
+					ar& NVP(Raw);
+				}
 			};
 
 			struct Texture1D
@@ -79,6 +138,14 @@ export namespace HAL
 				uint MostDetailedMip;
 				uint MipLevels;
 				float ResourceMinLODClamp;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MostDetailedMip);
+					ar& NVP(MipLevels);
+					ar& NVP(ResourceMinLODClamp);
+				}
 			};
 
 			struct Texture1DArray
@@ -88,6 +155,16 @@ export namespace HAL
 				uint FirstArraySlice;
 				uint ArraySize;
 				float ResourceMinLODClamp;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MostDetailedMip);
+					ar& NVP(MipLevels);
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+					ar& NVP(ResourceMinLODClamp);
+				}
 			};
 
 			struct Texture2D
@@ -96,6 +173,14 @@ export namespace HAL
 				uint MipLevels;
 				uint PlaneSlice;
 				float ResourceMinLODClamp;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MostDetailedMip);
+					ar& NVP(MipLevels);
+					ar& NVP(ResourceMinLODClamp);
+				}
 			};
 
 			struct Texture2DArray
@@ -106,6 +191,17 @@ export namespace HAL
 				uint ArraySize;
 				uint PlaneSlice;
 				float ResourceMinLODClamp;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MostDetailedMip);
+					ar& NVP(MipLevels);
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+					ar& NVP(PlaneSlice);
+					ar& NVP(ResourceMinLODClamp);
+				}
 			};
 
 			struct Texture3D
@@ -113,6 +209,14 @@ export namespace HAL
 				uint MostDetailedMip;
 				uint MipLevels;
 				float ResourceMinLODClamp;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MostDetailedMip);
+					ar& NVP(MipLevels);
+					ar& NVP(ResourceMinLODClamp);
+				}
 			};
 
 			struct Cube
@@ -120,6 +224,14 @@ export namespace HAL
 				uint MostDetailedMip;
 				uint MipLevels;
 				float ResourceMinLODClamp;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MostDetailedMip);
+					ar& NVP(MipLevels);
+					ar& NVP(ResourceMinLODClamp);
+				}
 			};
 
 			struct CubeArray
@@ -129,28 +241,63 @@ export namespace HAL
 				uint First2DArrayFace;
 				uint NumCubes;
 				float ResourceMinLODClamp;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MostDetailedMip);
+					ar& NVP(MipLevels);
+					ar& NVP(First2DArrayFace);
+					ar& NVP(NumCubes);
+					ar& NVP(ResourceMinLODClamp);
+				}
 			};
 
 			struct Texture2DMS
 			{
 				uint UnusedField_NothingToDefine;
+
+			private:
+				SERIALIZE()
+				{
+				}
 			};
 
 			struct Texture2DMSArray
 			{
 				uint FirstArraySlice;
 				uint ArraySize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+				}
 			};
 
 			struct Raytracing
 			{
 				GPUAddressPtr Location;
+
+			private:
+				SERIALIZE()
+				{
+				}
 			};
 
 			Resource* Resource;
 			Format Format;
-			uint Shader4ComponentMapping;
+			//uint Shader4ComponentMapping;
 			std::variant<Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D, Texture2DMS, Texture2DMSArray, Cube, CubeArray, Raytracing> View;
+		private:
+			SERIALIZE()
+			{
+				ar& NVP(Resource);
+				ar& NVP(Format);
+				ar& NVP(View);
+			}
+
 		};
 
 		struct RenderTarget
@@ -160,11 +307,24 @@ export namespace HAL
 			{
 				uint64 FirstElement;
 				uint NumElements;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(FirstElement);
+					ar& NVP(NumElements);
+				}
 			};
 
 			struct Texture1D
 			{
 				uint MipSlice;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+				}
 			};
 
 			struct Texture1DArray
@@ -172,17 +332,37 @@ export namespace HAL
 				uint MipSlice;
 				uint FirstArraySlice;
 				uint ArraySize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+				}
 			};
 
 			struct Texture2D
 			{
 				uint MipSlice;
 				uint PlaneSlice;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(PlaneSlice);
+				}
 			};
 
 			struct Texture2DMS
 			{
 				uint UnusedField_NothingToDefine;
+
+			private:
+				SERIALIZE()
+				{
+				}
 			};
 
 			struct Texture2DArray
@@ -191,12 +371,28 @@ export namespace HAL
 				uint FirstArraySlice;
 				uint ArraySize;
 				uint PlaneSlice;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+					ar& NVP(PlaneSlice);
+				}
 			};
 
 			struct Texture2DMSArray
 			{
 				uint FirstArraySlice;
 				uint ArraySize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+				}
 			};
 
 			struct Texture3D
@@ -204,11 +400,27 @@ export namespace HAL
 				uint MipSlice;
 				uint FirstWSlice;
 				uint WSize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(FirstWSlice);
+					ar& NVP(WSize);
+				}
 			};
 
 			Resource* Resource;
 			Format Format;
 			std::variant < Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture2DMS, Texture2DMSArray, Texture3D > View;
+
+		private:
+			SERIALIZE()
+			{
+				ar& NVP(Resource);
+				ar& NVP(Format);
+				ar& NVP(View);
+			}
 		};
 
 		struct ConstantBuffer
@@ -216,24 +428,48 @@ export namespace HAL
 			Resource* Resource;
 			uint OffsetInBytes;
 			uint SizeInBytes;
-		};
 
+		private:
+			SERIALIZE()
+			{
+				ar& NVP(Resource);
+				ar& NVP(OffsetInBytes);
+				ar& NVP(SizeInBytes);
+			}
+		};
 
 		struct UnorderedAccess
 		{
 			struct Buffer
 			{
-				uint64 FirstElement;
+				uint FirstElement;
 				uint NumElements;
 				uint StructureByteStride;
-				uint64 CounterOffsetInBytes;
 				bool Raw;
+				uint64 CounterOffsetInBytes;
 				Resource* CounterResource;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(FirstElement);
+					ar& NVP(NumElements);
+					ar& NVP(StructureByteStride);
+					ar& NVP(Raw);
+					ar& NVP(CounterOffsetInBytes);
+					ar& NVP(CounterResource);
+				}
 			};
 
 			struct Texture1D
 			{
 				uint MipSlice;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+				}
 			};
 
 			struct Texture1DArray
@@ -241,12 +477,27 @@ export namespace HAL
 				uint MipSlice;
 				uint FirstArraySlice;
 				uint ArraySize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+				}
 			};
 
 			struct Texture2D
 			{
 				uint MipSlice;
 				uint PlaneSlice;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(PlaneSlice);
+				}
 			};
 
 			struct Texture2DArray
@@ -255,6 +506,15 @@ export namespace HAL
 				uint FirstArraySlice;
 				uint ArraySize;
 				uint PlaneSlice;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(FirstArraySlice);
+					ar& NVP(ArraySize);
+					ar& NVP(PlaneSlice);
+				}
 			};
 
 			struct Texture3D
@@ -262,12 +522,37 @@ export namespace HAL
 				uint MipSlice;
 				uint FirstWSlice;
 				uint WSize;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(MipSlice);
+					ar& NVP(FirstWSlice);
+					ar& NVP(WSize);
+				}
 			};
 
 			Resource* Resource;
 			Format Format;
-			std::variant<Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D> View;
+			std::variant<Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D> View;
+
+
+		private:
+			SERIALIZE()
+			{
+				ar& NVP(Resource);
+				ar& NVP(Format);
+				ar& NVP(View);
+			}
+
 		};
+
+		template <class T> concept ViewTemplate = std::is_same_v<T, UnorderedAccess>
+		|| std::is_same_v<T, ConstantBuffer>
+			|| std::is_same_v<T, RenderTarget>
+			|| std::is_same_v<T, DepthStencil>
+			|| std::is_same_v<T, ShaderResource>;
+
 	}
 
 }

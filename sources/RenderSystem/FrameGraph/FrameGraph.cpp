@@ -576,7 +576,7 @@ namespace FrameGraph
 				pass->render(builder.current_frame);
 
 		}
-		
+
 
 	}
 
@@ -956,25 +956,25 @@ namespace FrameGraph
 			{
 				TextureDesc desc = info->desc.get<TextureDesc>();
 
-				D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+				HAL::ResFlags flags = HAL::ResFlags::None;
 
 				if (check(info->flags & ResourceFlags::RenderTarget))
 				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+					flags |= HAL::ResFlags::RenderTarget;
 				}
 
 				if (check(info->flags & ResourceFlags::DepthStencil))
 				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+					flags |= HAL::ResFlags::DepthStencil;
 				}
 
 				if (check(info->flags & ResourceFlags::UnorderedAccess))
 				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+					flags |= HAL::ResFlags::UnorderedAccess;
 				}
 
-				if (!desc.format.is_shader_visible())
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+				if (desc.format.is_shader_visible())
+					flags |= HAL::ResFlags::ShaderResource;
 
 				int mip_count = desc.mip_count;
 
@@ -990,7 +990,7 @@ namespace FrameGraph
 
 				}
 
-				info->d3ddesc = CD3DX12_RESOURCE_DESC::Tex2D(::to_native(desc.format), desc.size.x, desc.size.y, desc.array_count, mip_count, 1, 0, flags);
+				info->d3ddesc = HAL::ResourceDesc::Tex2D(desc.format, { desc.size.x, desc.size.y }, desc.array_count, mip_count, flags);
 				info->placed = true;
 
 				Graphics::Device::get().get_alloc_info(info->d3ddesc);
@@ -1000,11 +1000,11 @@ namespace FrameGraph
 			{
 				BufferDesc desc = info->desc.get<BufferDesc>();
 
-				D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+				HAL::ResFlags flags = HAL::ResFlags::ShaderResource;
 
 				if (check(info->flags & ResourceFlags::UnorderedAccess))
 				{
-					flags |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+					flags |= HAL::ResFlags::UnorderedAccess;
 				}
 
 				if (check(info->flags & ResourceFlags::Counted))
@@ -1012,7 +1012,7 @@ namespace FrameGraph
 					//info->heap_type = Graphics::HeapType::READBACK;
 				}
 
-				info->d3ddesc = CD3DX12_RESOURCE_DESC::Buffer(desc.size, flags);
+				info->d3ddesc = HAL::ResourceDesc::Buffer(desc.size, flags);
 			}
 			/*
 					if (info->heap_type == Graphics::HeapType::UPLOAD)
@@ -1121,6 +1121,7 @@ namespace FrameGraph
 					}
 					else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
+						assert(info->name != "id_buffer");
 						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}

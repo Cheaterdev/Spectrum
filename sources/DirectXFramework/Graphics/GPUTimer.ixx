@@ -6,7 +6,7 @@ import Singleton;
 import IdGenerator;
 
 import HAL;
-using namespace HAL;
+//using namespace HAL;
 import :Definitions;
 
 

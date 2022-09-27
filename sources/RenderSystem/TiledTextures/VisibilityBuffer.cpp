@@ -5,12 +5,12 @@ import Graphics;
 
 VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {
-	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8_UINT, sizes.x, sizes.y, sizes.z, 1, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
+	auto desc = HAL::ResourceDesc::Tex3D(Format::R8_UINT, { sizes.x, sizes.y, sizes.z }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
 
 	buffer = std::make_shared<Graphics::Texture>(desc);
 	buffer->set_name("VisibilityBuffer::buffer");
 
-	load_tiles_buffer = std::make_shared<Graphics::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, Graphics::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	load_tiles_buffer = std::make_shared<Graphics::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, Graphics::counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
 /*
 void VisibilityBuffer::wait_for_results()
@@ -40,7 +40,7 @@ std::future<visibility_update> VisibilityBuffer::update(Graphics::CommandList::p
 	{
 		Slots::VoxelVisibility data;
 
-		data.GetVisibility()= buffer->create_view<Graphics::TextureView>(*list->frame_resources).texture3D;
+		data.GetVisibility() = buffer->create_view<Graphics::TextureView>(*list->frame_resources).texture3D;
 		data.GetVisible_tiles() = load_tiles_buffer->appendStructuredBuffer;
 		data.set(compute);
 	}
@@ -56,7 +56,7 @@ std::future<visibility_update> VisibilityBuffer::update(Graphics::CommandList::p
 		});
 
 
-	  copy.read_buffer(load_tiles_buffer.get(), 0, load_tiles_buffer->get_size(), [this, info, promise](const char* data, UINT64 size)
+	copy.read_buffer(load_tiles_buffer.get(), 0, load_tiles_buffer->get_size(), [this, info, promise](const char* data, UINT64 size)
 		{
 			PROFILE(L"Read Tiles");
 			const uint4* tiles = reinterpret_cast<const uint4*>(data);

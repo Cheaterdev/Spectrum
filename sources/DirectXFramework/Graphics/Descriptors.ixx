@@ -11,7 +11,7 @@ import stl.threading;
 import stl.core;
 
 import Log;
-import Data; 
+import Data;
 import Events;
 import Threading;
 import HAL;
@@ -26,58 +26,41 @@ export
 	{
 		DescriptorHeapType get_heap_type(HandleType type);
 
+
 		struct ResourceInfo
 		{
 			Resource* resource_ptr = nullptr;
+			Resource* counter_resource = nullptr;
 
-			HandleType type;
-			union
-			{
-				D3D12_DEPTH_STENCIL_VIEW_DESC dsv;
+			std::variant<HAL::Views::DepthStencil, HAL::Views::UnorderedAccess, HAL::Views::ShaderResource, HAL::Views::RenderTarget, HAL::Views::ConstantBuffer> view;
 
-				struct
-				{
-					Resource* counter;
-					D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
-				} uav;
-
-				D3D12_SHADER_RESOURCE_VIEW_DESC srv;
-				D3D12_RENDER_TARGET_VIEW_DESC rtv;
-				D3D12_CONSTANT_BUFFER_VIEW_DESC cbv;
-
-			};
 
 			ResourceInfo() = default;
 
-			ResourceInfo(Resource* resource_ptr, D3D12_SHADER_RESOURCE_VIEW_DESC srv) :resource_ptr(resource_ptr)
+			ResourceInfo(Resource* resource_ptr, HAL::Views::ShaderResource srv) :resource_ptr(resource_ptr)
 			{
-				type = HandleType::SRV;
-				this->srv = srv;
+				view = srv;
 			}
 
-			ResourceInfo(Resource* resource_ptr, D3D12_DEPTH_STENCIL_VIEW_DESC dsv) :resource_ptr(resource_ptr)
+			ResourceInfo(Resource* resource_ptr, HAL::Views::DepthStencil dsv) :resource_ptr(resource_ptr)
 			{
-				type = HandleType::DSV;
-				this->dsv = dsv;
+				view = dsv;
 			}
 
-			ResourceInfo(Resource* resource_ptr, Resource* counter_ptr, D3D12_UNORDERED_ACCESS_VIEW_DESC uav) :resource_ptr(resource_ptr)
+			ResourceInfo(Resource* resource_ptr, Resource* counter_ptr, HAL::Views::UnorderedAccess uav) :resource_ptr(resource_ptr)
 			{
-				type = HandleType::UAV;
-				this->uav.desc = uav;
-				this->uav.counter = counter_ptr;
+				view = uav;
+				this->counter_resource = counter_ptr;
 			}
 
-			ResourceInfo(Resource* resource_ptr, D3D12_RENDER_TARGET_VIEW_DESC rtv) :resource_ptr(resource_ptr)
+			ResourceInfo(Resource* resource_ptr, HAL::Views::RenderTarget rtv) :resource_ptr(resource_ptr)
 			{
-				type = HandleType::RTV;
-				this->rtv = rtv;
+				view = rtv;
 			}
 
-			ResourceInfo(Resource* resource_ptr, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv) :resource_ptr(resource_ptr)
+			ResourceInfo(Resource* resource_ptr, HAL::Views::ConstantBuffer cbv) :resource_ptr(resource_ptr)
 			{
-				type = HandleType::CBV;
-				this->cbv = cbv;
+				view = cbv;
 			}
 
 			void for_each_subres(std::function<void(Resource*, UINT)> f) const;
@@ -90,13 +73,9 @@ export
 
 			ResourceInfo* get_resource_info() const;
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE get_cpu_read() const; 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE get_cpu() const;
-			CD3DX12_GPU_DESCRIPTOR_HANDLE get_gpu() const;
-
 			bool is_valid() const
 			{
-				return offset_gpu != UINT_MAX || offset_cpu != UINT_MAX;
+				return heap && offset != UINT_MAX;
 			}
 
 			operator bool() const;
@@ -105,26 +84,30 @@ export
 				f(*this);
 			}
 
-			UINT offset_gpu = UINT_MAX;
-			UINT offset_cpu = UINT_MAX;
-	
+			UINT offset = UINT_MAX;
+
+
 			bool operator!=(const Handle& r)
 			{
-				if (offset_gpu != r.offset_gpu) return true;
-
-				if (offset_cpu != r.offset_cpu) return true;
-
+				if (offset != r.offset) return true;
 				return false;
 			}
 
 			void place(const Handle& r) const;
 
+			template<HAL::Views::ViewTemplate T>
+			void operator=(const T& v);
+
+
+			D3D12_CPU_DESCRIPTOR_HANDLE get_cpu() const;
+
+			D3D12_GPU_DESCRIPTOR_HANDLE get_gpu()const;
 			//	void clear(CommandList& list, float4 = { 0, 0, 0, 0 }) const;
 		};
 
 
-	//	class DescriptorHeap;
-		//	class CommandList;
+		//	class DescriptorHeap;
+			//	class CommandList;
 		struct HandleTable
 		{
 			Handle operator[](UINT i) const
@@ -133,8 +116,7 @@ export
 				Handle res;
 
 				res.heap = info->heap;
-				if(info->offset_cpu!=UINT_MAX) res.offset_cpu = info->offset_cpu + i;
-				if (info->offset_gpu != UINT_MAX)res.offset_gpu = info->offset_gpu + i;
+				if (info->offset != UINT_MAX) res.offset = info->offset + i;
 				return res;
 			}
 
@@ -159,9 +141,8 @@ export
 
 			struct helper
 			{
-				DescriptorHeap *heap;
-				UINT offset_cpu;
-				UINT offset_gpu;
+				DescriptorHeap* heap;
+				UINT offset;
 				UINT count;
 			};
 
@@ -175,8 +156,7 @@ export
 			{
 				assert(i < count);
 				Handle res = *this;
-				if (offset_cpu != UINT_MAX)  res.offset_cpu += i;
-				if (offset_gpu != UINT_MAX)  res.offset_gpu += i;
+				if (offset != UINT_MAX)  res.offset += i;
 				return res;
 			}
 
@@ -199,9 +179,8 @@ export
 
 		class DescriptorHeap : public SharedObject<DescriptorHeap>
 		{
-			//      std::vector<Handle> handles;
-			ComPtr<ID3D12DescriptorHeap> m_MainHeap;
-			ComPtr<ID3D12DescriptorHeap> m_CPUHeap; 
+			friend class Handle;
+			HAL::DescriptorHeap native_heap;
 			std::vector<ResourceInfo> resources;
 			DescriptorHeapFlags flags;
 
@@ -212,6 +191,15 @@ export
 			std::map<UINT, std::deque<UINT>> frees;
 			UINT used_size = 0;
 		public:
+
+			auto get_dx() const
+			{
+				if (native_heap.m_gpu_heap)
+					return native_heap.m_gpu_heap.Get();
+				return native_heap.m_cpu_heap.Get();
+			}
+
+
 			Events::Event<void> on_free;
 			HandleTable make_table(UINT count, UINT offset)
 			{
@@ -239,8 +227,7 @@ export
 					});
 				used_size += count;
 				res.info->heap = this;
-				res.info->offset_cpu = offset;
-				res.info->offset_gpu = offset;
+				res.info->offset = offset;
 				res.info->count = count;
 				return res;
 			}
@@ -257,28 +244,14 @@ export
 				place(table, i + 1, args...);
 			}
 
-			CD3DX12_CPU_DESCRIPTOR_HANDLE get_handle(UINT i);
-			CD3DX12_GPU_DESCRIPTOR_HANDLE get_gpu_handle(UINT i);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE get_cpu_read(UINT i);
-		
 			friend struct Handle;
 
 			ResourceInfo* get_resource_info(const Handle* h)
 			{
-				return &resources[h->offset_cpu];
+				return &resources[h->offset];
 			}
 		public:
 			using ptr = std::shared_ptr<DescriptorHeap>;
-
-			ComPtr<ID3D12DescriptorHeap> get_native()
-			{
-				return m_MainHeap;
-			}
-
-			ComPtr<ID3D12DescriptorHeap> get_cpu_native()
-			{
-				return m_CPUHeap;
-			}
 
 			DescriptorHeap(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE);
 
@@ -311,12 +284,12 @@ export
 
 					UINT offset = list.front();
 					list.pop_front();
-/*
-					if (it->size() > _count)
-					{
-						auto delta = it->size() - _count;
-						frees[delta].emplace_back(offset+_count);
-					}*/
+					/*
+										if (it->size() > _count)
+										{
+											auto delta = it->size() - _count;
+											frees[delta].emplace_back(offset+_count);
+										}*/
 					return make_table(count, offset);
 				}
 
@@ -352,14 +325,12 @@ export
 				return res;
 			}
 
-		
+
 
 			Handle handle(UINT offset)
 			{
 				Handle res;
-				res.offset_cpu = offset;
-				if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
-				res.offset_gpu = offset;
+				res.offset = offset;
 				res.heap = this;
 				return res;
 			}
@@ -381,10 +352,7 @@ export
 			{
 				assert((offset + count) <= max_count && "Not enought handles");
 				HandleTableLight res;
-
-				res.offset_cpu = offset;
-				if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
-					res.offset_gpu = offset;
+				res.offset = offset;
 				res.count = count;
 				res.heap = this;
 				return res;
@@ -395,7 +363,7 @@ export
 		class DescriptorPage;
 
 
-		class DescriptorHeapPaged :public DescriptorHeap 
+		class DescriptorHeapPaged :public DescriptorHeap
 		{
 			CommonAllocator allocator;
 
@@ -491,7 +459,7 @@ export
 		};
 
 		//template<class LockPolicy = Thread::Free>
-		class StaticDescriptors: public Singleton<StaticDescriptors>
+		class StaticDescriptors : public Singleton<StaticDescriptors>
 		{
 			using LockPolicy = Thread::Lockable;
 			DescriptorHeapType type;
@@ -646,6 +614,36 @@ export
 			}
 		};
 
+
+		D3D12_CPU_DESCRIPTOR_HANDLE Handle::get_cpu()const
+		{
+			return heap->native_heap[offset].get_cpu();
+		}
+
+		D3D12_GPU_DESCRIPTOR_HANDLE Handle::get_gpu()const
+		{
+			return heap->native_heap[offset].get_gpu();
+		}
+
+
+		template<HAL::Views::ViewTemplate T>
+		void Handle::operator=(const T& v)
+		{
+			heap->native_heap[offset].place(v);
+
+			if constexpr (std::is_same_v < T, HAL::Views::UnorderedAccess>)
+			{
+				if (auto buffer = std::get_if<HAL::Views::UnorderedAccess::Buffer>(&v.View))
+					*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource->user_data), buffer->CounterResource ? static_cast<Resource*>(buffer->CounterResource->user_data) : nullptr, v);
+				else
+					*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource->user_data), nullptr, v);
+			}
+			else
+			{
+				*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource->user_data), v);
+			}
+
+		}
 	}
 
 }

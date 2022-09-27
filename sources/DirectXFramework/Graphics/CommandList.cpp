@@ -1,5 +1,4 @@
-module;
-
+﻿module;
 
 #include "helper.h"
 
@@ -20,7 +19,7 @@ import Exceptions;
 
 import HAL;
 
-using namespace HAL;
+//using namespace HAL;
 namespace Graphics
 
 {
@@ -45,7 +44,7 @@ namespace Graphics
 		compiler.SetName(L"SpectrumCommandList");
 
 
-		debug_buffer = std::make_shared<StructureBuffer<Table::DebugStruct>>(64, counterType::NONE, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		debug_buffer = std::make_shared<StructureBuffer<Table::DebugStruct>>(64, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	}
 
 	void CommandList::setup_debug(SignatureDataSetter* setter)
@@ -122,8 +121,8 @@ namespace Graphics
 		if (type != CommandListType::COPY) {
 			std::array<ID3D12DescriptorHeap*, 2> heaps;
 
-			heaps[0] = DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::SAMPLER)->get_native().Get();
-			heaps[1] = DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV)->get_native().Get();
+			heaps[0] = DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::SAMPLER)->get_dx();
+			heaps[1] = DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV)->get_dx();
 			compiler.SetDescriptorHeaps(2, heaps.data());
 		}
 	}
@@ -217,7 +216,7 @@ namespace Graphics
 		CommandList* list = static_cast<CommandList*>(this); // :(
 		auto info = list->read_data(NumQueries * sizeof(UINT64));
 
-		compiler.ResolveQueryData(pQueryHeap.get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_native().Get(), info.offset);
+		compiler.ResolveQueryData(pQueryHeap.get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_dx(), info.offset);
 		on_execute_funcs.emplace_back([info, f, NumQueries]() {
 
 			UINT64* data = reinterpret_cast<UINT64*>(info.get_cpu_data());
@@ -236,10 +235,10 @@ namespace Graphics
 		ID3D12DescriptorHeap* heaps[2] = { 0 };
 
 		if (a)
-			heaps[0] = a->get_native().Get();
+			heaps[0] = a->get_dx();
 
 		if (b)
-			heaps[1] = b->get_native().Get();
+			heaps[1] = b->get_dx();
 
 		list->SetDescriptorHeaps(b ? 2 : 1, heaps);
 	}
@@ -247,7 +246,7 @@ namespace Graphics
 
 	void  GraphicsContext::set(UINT i, const HandleTableLight& table)
 	{
-		list->SetGraphicsRootDescriptorTable(i, table.get_gpu());
+		assert(false);//list->SetGraphicsRootDescriptorTable(i, table.get_gpu());
 	}
 
 
@@ -408,7 +407,7 @@ namespace Graphics
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
 		list->CopyBufferRegion(
-			resource->get_native().Get(), offset, info.resource->get_native().Get(), info.offset, size);
+			resource->get_dx(), offset, info.resource->get_dx(), info.offset, size);
 		base.create_transition_point(false);
 	}
 
@@ -439,7 +438,7 @@ namespace Graphics
 		assert(desc.SizeInBytes < 65536);
 		Handle h = list.frame_resources->get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place();
 
-		Device::get().create_cbv(h, resource.get(), desc);
+		assert(false);// Device::get().create_cbv(h, resource.get(), desc);
 
 		return h;
 	}
@@ -471,12 +470,12 @@ namespace Graphics
 
 		base.transition(resource, ResourceState::COPY_DEST);
 
-		D3D12_RESOURCE_DESC Desc = resource->get_desc();
+		D3D12_RESOURCE_DESC Desc = to_native(resource->get_desc());
 		UINT rows_count = box.y;
 
 		if (Desc.Format == DXGI_FORMAT_BC7_UNORM_SRGB || Desc.Format == DXGI_FORMAT_BC7_UNORM)
 			rows_count /= 4;
-
+		assert(row_stride >= box.x * BitsPerPixel(Desc.Format) / 8);
 		int res_stride = Math::AlignUp(row_stride, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 		int size = res_stride * rows_count * box.z;
 		const auto info = base.place_data(size, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
@@ -524,9 +523,11 @@ namespace Graphics
 				}
 			}
 
-		CD3DX12_TEXTURE_COPY_LOCATION Dst(resource->get_native().Get(), sub_resource);
+
+		assert(box.z > 0);
+		CD3DX12_TEXTURE_COPY_LOCATION Dst(resource->get_dx(), sub_resource);
 		CD3DX12_TEXTURE_COPY_LOCATION Src;
-		Src.pResource = info.resource->get_native().Get();
+		Src.pResource = info.resource->get_dx();
 		Src.Type = D3D12_TEXTURE_COPY_TYPE::D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		Src.PlacedFootprint.Offset = info.offset;
 		Src.PlacedFootprint.Footprint.Width = box.x;
@@ -535,7 +536,7 @@ namespace Graphics
 		Src.PlacedFootprint.Footprint.RowPitch = res_stride;
 		Src.PlacedFootprint.Footprint.Format = Layouts.Footprint.Format;
 		list->CopyTextureRegion(&Dst, offset.x, offset.y, offset.z, &Src, nullptr);
-
+		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 	/*
@@ -561,7 +562,7 @@ namespace Graphics
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 		UINT NumRows;
 		UINT64 RowSizesInBytes;
-		D3D12_RESOURCE_DESC Desc = resource->get_desc();
+		D3D12_RESOURCE_DESC Desc = to_native(resource->get_desc());
 		Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 
 		if (!RequiredSize)
@@ -580,9 +581,11 @@ namespace Graphics
 		UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 		UINT64 size = res_stride * box.y * box.z;
 		auto info = base.read_data(size, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-		CD3DX12_TEXTURE_COPY_LOCATION source(resource->get_native().Get(), sub_resource);
+		CD3DX12_TEXTURE_COPY_LOCATION source(resource->get_dx(), sub_resource);
 		CD3DX12_TEXTURE_COPY_LOCATION dest;
-		dest.pResource = info.resource->get_native().Get();
+
+		assert(box.z > 0);
+		dest.pResource = info.resource->get_dx();
 		dest.Type = D3D12_TEXTURE_COPY_TYPE::D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 		dest.PlacedFootprint.Offset = info.offset;
 		dest.PlacedFootprint.Footprint.Width = box.x;
@@ -591,6 +594,8 @@ namespace Graphics
 		dest.PlacedFootprint.Footprint.RowPitch = static_cast<UINT>(res_stride);
 		dest.PlacedFootprint.Footprint.Format = to_srv(Layouts.Footprint.Format);
 		list->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
+
+		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, res_stride, NumRows]()
 			{
@@ -621,7 +626,8 @@ namespace Graphics
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
-		list->CopyBufferRegion(info.resource->get_native().Get(), info.offset, resource->get_native().Get(), offset, size);
+		list->CopyBufferRegion(info.resource->get_dx(), info.offset, resource->get_dx(), offset, size);
+		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
 				f(reinterpret_cast<char*>(info.get_cpu_data()), size);
@@ -645,7 +651,8 @@ namespace Graphics
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
-		list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_native().Get(), info.offset);
+		list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.offset);
+		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
@@ -932,7 +939,7 @@ namespace Graphics
 			base.transition(dest, ResourceState::COPY_DEST);
 		}
 
-		list->CopyBufferRegion(dest->get_native().Get(), s_dest, source->get_native().Get(), s_source, size);
+		list->CopyBufferRegion(dest->get_dx(), s_dest, source->get_dx(), s_source, size);
 		base.create_transition_point(false);
 	}
 	void CopyContext::copy_resource(Resource* dest, Resource* source)
@@ -943,7 +950,7 @@ namespace Graphics
 			base.transition(source, ResourceState::COPY_SOURCE);
 			base.transition(dest, ResourceState::COPY_DEST);
 		}
-		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
+		list->CopyResource(dest->get_dx(), source->get_dx());
 		base.create_transition_point(false);
 	}
 	void CopyContext::copy_resource(const Resource::ptr& dest, const Resource::ptr& source)
@@ -957,7 +964,7 @@ namespace Graphics
 			base.transition(dest, ResourceState::COPY_DEST);
 		}
 
-		list->CopyResource(dest->get_native().Get(), source->get_native().Get());
+		list->CopyResource(dest->get_dx(), source->get_dx());
 		base.create_transition_point(false);
 	}
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
@@ -969,9 +976,10 @@ namespace Graphics
 			base.transition(dest, ResourceState::COPY_DEST, dest_subres);
 		}
 
-		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_native().Get(), dest_subres);
-		CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_native().Get(), source_subres);
+		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_dx(), dest_subres);
+		CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_dx(), source_subres);
 		list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 
@@ -985,8 +993,8 @@ namespace Graphics
 		}
 
 
-		CD3DX12_TEXTURE_COPY_LOCATION Dst(to->get_native().Get(), 0);
-		CD3DX12_TEXTURE_COPY_LOCATION Src(from->get_native().Get(), 0);
+		CD3DX12_TEXTURE_COPY_LOCATION Dst(to->get_dx(), 0);
+		CD3DX12_TEXTURE_COPY_LOCATION Src(from->get_dx(), 0);
 
 		D3D12_BOX box;
 		box.left = from_pos.x;
@@ -998,6 +1006,7 @@ namespace Graphics
 		box.bottom = from_pos.y + size.y;
 		box.back = from_pos.z + size.z;
 		list->CopyTextureRegion(&Dst, to_pos.x, to_pos.y, to_pos.z, &Src, &box);
+		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 
@@ -1056,7 +1065,7 @@ namespace Graphics
 
 	void  ComputeContext::set(UINT i, const HandleTableLight& table)
 	{
-		list->SetComputeRootDescriptorTable(i, table.get_gpu());
+		assert(false);//list->SetComputeRootDescriptorTable(i, table.get_gpu());
 	}
 
 
@@ -1219,9 +1228,9 @@ namespace Graphics
 		list->ExecuteIndirect(
 			command_types.command_signature.Get(),
 			max_commands,
-			command_buffer ? command_buffer->get_native().Get() : nullptr,
+			command_buffer ? command_buffer->get_dx() : nullptr,
 			command_offset,
-			counter_buffer ? counter_buffer->get_native().Get() : nullptr,
+			counter_buffer ? counter_buffer->get_dx() : nullptr,
 			counter_offset);
 		base.create_transition_point(false);
 		get_base().print_debug();
@@ -1242,9 +1251,9 @@ namespace Graphics
 		list->ExecuteIndirect(
 			command_types.command_signature.Get(),
 			max_commands,
-			command_buffer ? command_buffer->get_native().Get() : nullptr,
+			command_buffer ? command_buffer->get_dx() : nullptr,
 			command_offset,
-			counter_buffer ? counter_buffer->get_native().Get() : nullptr,
+			counter_buffer ? counter_buffer->get_dx() : nullptr,
 			counter_offset);
 		base.create_transition_point(false);
 		get_base().print_debug();

@@ -49,7 +49,7 @@ public:
 
 				graphics.set_pipeline(GetPSO<PSOS::GBufferDownsample>());
 
-				for (int i = 1; i < gbuffer.depth_mips.resource->get_desc().MipLevels; i++)
+				for (uint i = 1; i < gbuffer.depth_mips.resource->get_desc().as_texture().MipLevels; i++)
 				{
 
 
@@ -127,17 +127,17 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 
 	{
-		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(*Graphics::Device::get().get_hal_device(),sizeof(Underlying<DispatchArguments>));
+		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(*Graphics::Device::get().get_hal_device(), sizeof(Underlying<DispatchArguments>));
 	}
 
 	{
-		CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8G8B8A8_UNORM, 512, 512, 512, 1, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
+		auto desc = HAL::ResourceDesc::Tex3D(Format::R8G8B8A8_UNORM, { 512, 512, 512 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
 
 		albedo.set(desc);
 		normal.set(desc);
 
-		desc.MipLevels = 7;
-		desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+		desc.as_texture().MipLevels = 7;
+		desc.as_texture().Format = Format::R16G16B16A16_FLOAT;
 		tex_lighting.set(desc);
 
 		lighed_to_albedo_coeff = tex_lighting.tex_result->get_tiles_count() / albedo.tex_result->get_tiles_count();
@@ -308,7 +308,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 				auto& params = utils.GetParams();
 				params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
-				params.GetVoxels_per_tile() = ivec4(normal.tex_result->get_tile_shape(),0);
+				params.GetVoxels_per_tile() = ivec4(normal.tex_result->get_tile_shape(), 0);
 				utils.set(compute);
 			}
 
@@ -396,8 +396,8 @@ void VoxelGI::debug(Graph& graph)
 
 	graph.add_pass<VoxelDebugData>("VoxelDebug", [this, size](VoxelDebugData& data, TaskBuilder& builder) {
 
-		 builder.create(data.VoxelDebug, { ivec3(size,1),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1}, ResourceFlags::RenderTarget);
-		 builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
+		builder.create(data.VoxelDebug, { ivec3(size,1),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::RenderTarget);
+		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 
 		data.gbuffer.need(builder);
 
@@ -479,20 +479,13 @@ void VoxelGI::screen(Graph& graph)
 
 	auto size = graph.frame_size;
 	int count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
-	/*
-	if (!hi || hi->get_count() < count)
-	{
-		hi = std::make_shared<Graphics::StructureBuffer<uint2>>(count, Graphics::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		low = std::make_shared<Graphics::StructureBuffer<uint2>>(count, Graphics::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-
-	}*/
 
 	graph.add_pass<Screen>("VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
 
 
 		data.gbuffer.need(builder, false);
-		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,1),  Graphics::Format::R16_FLOAT, 1 ,1}, ResourceFlags::UnorderedAccess);
-		 builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,1), Graphics::Format::R16G16B16A16_FLOAT,1 ,0}, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,1),  Graphics::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,1), Graphics::Format::R16G16B16A16_FLOAT,1 ,0 }, ResourceFlags::UnorderedAccess);
 		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,1), Graphics::Format::R16G16B16A16_FLOAT , 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
@@ -514,7 +507,7 @@ void VoxelGI::screen(Graph& graph)
 
 			bool use_rtx = Graphics::Device::get().is_rtx_supported() && this->use_rtx;
 			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered =*data.sky_cubemap_filtered;
+			auto sky_cubemap_filtered = *data.sky_cubemap_filtered;
 			auto noisy_output = *data.VoxelIndirectNoise;
 			auto gi_filtered = *data.VoxelIndirectFiltered;
 			auto frames_count = *data.VoxelFramesCount;
@@ -644,7 +637,7 @@ void VoxelGI::screen(Graph& graph)
 
 					subres.Texture2D.ArraySize = 1;
 					subres.Texture2D.FirstArraySlice = 0;
-					subres.Texture2D.MipLevels = noisy_output.resource->get_desc().MipLevels - 1;
+					subres.Texture2D.MipLevels = noisy_output.resource->get_desc().as_texture().MipLevels - 1;
 					subres.Texture2D.MipSlice = 1;
 					subres.Texture2D.PlaneSlice = 0;
 
@@ -681,12 +674,12 @@ void VoxelGI::screen(Graph& graph)
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
-	 builder.need(data.VoxelIndirectFiltered, ResourceFlags::UnorderedAccess);
-	 builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
+		builder.need(data.VoxelIndirectFiltered, ResourceFlags::UnorderedAccess);
+		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		builder.need(data.VoxelFramesCount, ResourceFlags::UnorderedAccess);
 		builder.need(data.VoxelIndirectNoise, ResourceFlags::ComputeRead);
 
-		builder.need(data.VoxelScreen_hi,ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_hi, ResourceFlags::ComputeRead);
 		builder.need(data.VoxelScreen_low, ResourceFlags::ComputeRead);
 
 
@@ -802,24 +795,24 @@ void VoxelGI::screen_reflection(Graph& graph)
 		Handlers::Texture H(sky_cubemap_filtered);
 
 		Handlers::Texture H(noise_dir_pdf);
-Handlers::Texture H(prev_gi_temp);
+		Handlers::Texture H(prev_gi_temp);
 
-Handlers::Texture H(ResultTexture);
+		Handlers::Texture H(ResultTexture);
 
 
-Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
-Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
+		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
+		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_low);
 
-Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
-Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
+		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
+		Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 	};
 	auto size = graph.frame_size;
 
 	graph.add_pass<ScreenReflection>("ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
-		 builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-		 builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,1),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1}, ResourceFlags::UnorderedAccess);
-		 builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,1),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
+		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
+		builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,1),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,1),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
 		//	data.downsampled_reflection = builder.create("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, Graphics::Format::R11G11B10_FLOAT, ResourceFlags::RenderTarget);
@@ -916,80 +909,80 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 		});
 
-		if(Graphics::Device::get().is_rtx_supported() && this->use_rtx)
-	graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
+	if (Graphics::Device::get().is_rtx_supported() && this->use_rtx)
+		graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
 		builder.create(data.VoxelReflectionFiltered, { ivec3(size.x, size.y,1),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-		 builder.create(data.prev_gi_temp, { ivec3(size.x, size.y,1), Graphics::Format::R16G16B16A16_FLOAT,1,1 },ResourceFlags::RenderTarget);
+		builder.create(data.prev_gi_temp, { ivec3(size.x, size.y,1), Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::RenderTarget);
 
-	
+
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 
-	 builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelReflectionNoise, ResourceFlags::ComputeRead);
 
-		 builder.need(data.noise_dir_pdf, ResourceFlags::ComputeRead); 
-
-
-		 builder.need(data.VoxelScreen_hi, ResourceFlags::ComputeRead);
-		 builder.need(data.VoxelScreen_low, ResourceFlags::ComputeRead);
-		 builder.need(data.VoxelScreen_low_data, ResourceFlags::ComputeRead);
-		 builder.need(data.VoxelScreen_hi_data, ResourceFlags::ComputeRead);
-
-		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
-
-			auto& command_list = _context.get_list();
+		builder.need(data.noise_dir_pdf, ResourceFlags::ComputeRead);
 
 
-			auto target_tex = *(data.ResultTexture);
-			auto gbuffer = data.gbuffer.actualize(_context);
-			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
-			auto noisy_output = *(data.VoxelReflectionNoise);
-			//	auto frames_count = *(data.frames_count);
-			auto dir_and_pdf = *(data.noise_dir_pdf);
+		builder.need(data.VoxelScreen_hi, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_low, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_low_data, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelScreen_hi_data, ResourceFlags::ComputeRead);
 
-			auto cur_gi = *(data.VoxelReflectionFiltered);
+			}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
-			auto prev_gi = *(data.prev_gi_temp);
-
-			if (data.VoxelReflectionFiltered.is_new())
-			{
-				command_list->clear_uav(cur_gi.rwTexture2D, vec4(0, 0, 0, 0));
-			}
-
-			command_list->get_copy().copy_resource(prev_gi.resource, cur_gi.resource);
-
-			auto size = target_tex.get_size();
-
-			auto scene = graph.scene;
-			auto renderer = graph.renderer;
-
-			auto& compute = command_list->get_compute();
-
-			//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+				auto& command_list = _context.get_list();
 
 
-			{
-				Slots::VoxelScreen voxelScreen;
-				gbuffer.SetTable(voxelScreen.GetGbuffer());
-				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
-				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
-				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-				voxelScreen.GetPrev_gi() = prev_gi.texture2D;
-				//	voxelScreen.set(graphics);
-				voxelScreen.set(compute);
-			}
+				auto target_tex = *(data.ResultTexture);
+				auto gbuffer = data.gbuffer.actualize(_context);
+				auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
+				auto noisy_output = *(data.VoxelReflectionNoise);
+				//	auto frames_count = *(data.frames_count);
+				auto dir_and_pdf = *(data.noise_dir_pdf);
 
-			//	scene->voxels_compiled.set(compute);
+				auto cur_gi = *(data.VoxelReflectionFiltered);
+
+				auto prev_gi = *(data.prev_gi_temp);
+
+				if (data.VoxelReflectionFiltered.is_new())
+				{
+					command_list->clear_uav(cur_gi.rwTexture2D, vec4(0, 0, 0, 0));
+				}
+
+				command_list->get_copy().copy_resource(prev_gi.resource, cur_gi.resource);
+
+				auto size = target_tex.get_size();
+
+				auto scene = graph.scene;
+				auto renderer = graph.renderer;
+
+				auto& compute = command_list->get_compute();
+
+				//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+				compute.set_signature(get_Signature(Layouts::DefaultLayout));
+
+
+				{
+					Slots::VoxelScreen voxelScreen;
+					gbuffer.SetTable(voxelScreen.GetGbuffer());
+					voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
+					voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
+					//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
+					voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
+					voxelScreen.GetPrev_gi() = prev_gi.texture2D;
+					//	voxelScreen.set(graphics);
+					voxelScreen.set(compute);
+				}
+
 				//	scene->voxels_compiled.set(compute);
-			graph.set_slot(SlotID::VoxelInfo, compute);
-			graph.set_slot(SlotID::FrameInfo, compute);
+					//	scene->voxels_compiled.set(compute);
+				graph.set_slot(SlotID::VoxelInfo, compute);
+				graph.set_slot(SlotID::FrameInfo, compute);
 
-{
+				{
 					Slots::VoxelBlur voxelBlur;
 
 					voxelBlur.GetNoisy_output() = noisy_output.texture2D;
@@ -1001,38 +994,38 @@ Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 					voxelBlur.set(compute);
 				}
-			{
-				PROFILE_GPU(L"blur");
-				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(/*PSOS::VoxelIndirectFilter::Blur() |*/ PSOS::VoxelIndirectFilter::Reflection()));
-				
+				{
+					PROFILE_GPU(L"blur");
+					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(/*PSOS::VoxelIndirectFilter::Blur() |*/ PSOS::VoxelIndirectFilter::Reflection()));
+
+
+					{
+						Slots::TilingPostprocess tilingPostprocess;
+						auto& tiling = tilingPostprocess.GetTiling();
+						tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
+						tilingPostprocess.set(compute);
+					}
+
+
+					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
+				}
 
 				{
-					Slots::TilingPostprocess tilingPostprocess;
-					auto& tiling = tilingPostprocess.GetTiling();
-					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
-					tilingPostprocess.set(compute);
+					PROFILE_GPU(L"blur2");
+					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Reflection()));
+
+					{
+						Slots::TilingPostprocess tilingPostprocess;
+						auto& tiling = tilingPostprocess.GetTiling();
+						tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
+						tilingPostprocess.set(compute);
+					}
+
+					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
 				}
 
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
-			}
-
-			{
-				PROFILE_GPU(L"blur2");
-				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Reflection()));
-
-				{
-					Slots::TilingPostprocess tilingPostprocess;
-					auto& tiling = tilingPostprocess.GetTiling();
-					tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
-					tilingPostprocess.set(compute);
-				}
-
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
-			}
-
-
-		}, PassFlags::Compute);
+			}, PassFlags::Compute);
 
 	refl_index = 1 - refl_index;
 }
@@ -1050,8 +1043,8 @@ void VoxelGI::voxelize(Graph& graph)
 	graph.add_pass<Voxelize>("voxelize", [this](Voxelize& data, TaskBuilder& builder) {
 
 
-	builder.need(data.VoxelAlbedo, ResourceFlags::UnorderedAccess);
-		 builder.need(data.VoxelNormal, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelAlbedo, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelNormal, ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](Voxelize& data, FrameContext& _context) {
 			auto& command_list = _context.get_list();
@@ -1135,7 +1128,7 @@ void VoxelGI::lighting(Graph& graph)
 
 				subres.Texture2D.ArraySize = 1;
 				subres.Texture2D.FirstArraySlice = 0;
-				subres.Texture2D.MipLevels = tex_lighting.tex_result->get_desc().MipLevels - 1;
+				subres.Texture2D.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;
 				subres.Texture2D.MipSlice = 1;
 				subres.Texture2D.PlaneSlice = 0;
 
@@ -1180,7 +1173,7 @@ void VoxelGI::mipmapping(Graph& graph)
 
 	graph.add_pass<Mipmapping>("Mipmapping", [this](Mipmapping& data, TaskBuilder& builder) {
 
-		 builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](Mipmapping& data, FrameContext& _context) {
 
@@ -1219,7 +1212,7 @@ void VoxelGI::mipmapping(Graph& graph)
 			compute.set_pipeline(GetPSO<PSOS::VoxelZero>());
 			{
 				PROFILE_GPU(L"ZERO");
-				for (int i = 1; i < tex_lighting.tex_result->get_desc().MipLevels; i++)
+				for (uint i = 1; i < tex_lighting.tex_result->get_desc().as_texture().MipLevels; i++)
 				{
 					if (i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
 					{
@@ -1250,11 +1243,11 @@ void VoxelGI::mipmapping(Graph& graph)
 				PROFILE_GPU(L"EXEC");
 				unsigned int mip_count = 1;
 
-				while (mip_count < tex_lighting.tex_result->get_desc().MipLevels)
+				while (mip_count < tex_lighting.tex_result->get_desc().as_texture().MipLevels)
 				{
 
 					if (!gpu_tiles_buffer[mip_count]) break;
-					unsigned int current_mips = std::min(3u, tex_lighting.tex_result->get_desc().MipLevels - mip_count);
+					unsigned int current_mips = std::min(3u, tex_lighting.tex_result->get_desc().as_texture().MipLevels - mip_count);
 					compute.set_pipeline(GetPSO<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(current_mips)));
 
 					{
@@ -1269,7 +1262,7 @@ void VoxelGI::mipmapping(Graph& graph)
 							//	list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d()->rwTexture3D[mip_count + i], vec4(0, 0, 0, 0));
 						}
 
-						auto &params = mipmapping.GetParams();
+						auto& params = mipmapping.GetParams();
 						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
 						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tile_shape();
 
@@ -1316,7 +1309,7 @@ void VoxelGI::generate(Graph& graph)
 
 	prev = cur;
 
-	if(need_start_new)
+	if (need_start_new)
 		all_scene_regen_counter = 3;
 
 	voxel_info.GetMin().xyz = min;

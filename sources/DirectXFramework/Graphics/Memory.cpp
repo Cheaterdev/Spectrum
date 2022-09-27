@@ -30,7 +30,7 @@ namespace Graphics
 	{
 		desc.Size = size;
 		desc.Type = type;
-		if(flags== D3D12_HEAP_FLAG_NONE)desc.Flags = HeapFlags::NONE;
+		if (flags == D3D12_HEAP_FLAG_NONE)desc.Flags = HeapFlags::NONE;
 		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS) desc.Flags = HeapFlags::BUFFERS_ONLY;
 		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES) desc.Flags = HeapFlags::TEXTURES_ONLY;
 		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES) desc.Flags = HeapFlags::RTDS_ONLY;
@@ -45,13 +45,11 @@ namespace Graphics
 
 	void ResourceHeap::init_cpu(ptr res)
 	{
-			if (!tracked_info->heap->cpu_data().empty())
-			{
-
-				CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Buffer(this->desc.Size);
-				ResourceHandle handle(0, res);
-				cpu_buffer = std::make_shared<Resource>(desc, handle);
-			}
+		if (!tracked_info->heap->cpu_data().empty())
+		{
+			ResourceHandle handle(0, res);
+			cpu_buffer = std::make_shared<Resource>(ResourceDesc::Buffer(this->desc.Size), handle);
+		}
 	}
 
 

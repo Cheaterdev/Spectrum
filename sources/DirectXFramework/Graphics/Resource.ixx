@@ -74,20 +74,20 @@ export{
 			}
 
 		public:
-			ComPtr<ID3D12Resource> m_Resource;
+			HAL::Resource::ptr m_Resource;
 			ResourceHandle alloc_handle;
 			bool debug = false;
 
 			using ptr = std::shared_ptr<TrackedResource>;
 			TrackedResource() = default;
 
-			void set_resource(ComPtr<ID3D12Resource> resource)
+			void set_resource(HAL::Resource::ptr resource)
 			{
 				m_Resource = resource;
 			}
 
 
-			TrackedResource(ComPtr<ID3D12Resource> resource) :m_Resource(resource)
+			TrackedResource(HAL::Resource::ptr resource) :m_Resource(resource)
 			{
 			}
 
@@ -102,13 +102,11 @@ export{
 				used = false;
 			}
 		};
-		
-		 class Resource :public SharedObject<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
+
+		class Resource :public SharedObject<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
 		{
 			LEAK_TEST(Resource)
-
-				CD3DX12_RESOURCE_DESC desc;
-			bool force_delete = false;
+				bool force_delete = false;
 			D3D12_GPU_VIRTUAL_ADDRESS gpu_adress;
 			HeapType heap_type;
 			//  std::vector< unsigned int> states;
@@ -117,7 +115,7 @@ export{
 		protected:
 
 
-			void init(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
+			void init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 		public:
 
 
@@ -128,16 +126,18 @@ export{
 			mutable bool debug = false;
 			std::string name;
 			void set_name(std::string name);
-			const CD3DX12_RESOURCE_DESC& get_desc() const
+
+			const auto& get_desc() const
 			{
-				return desc;
+				return get_hal()->get_desc();
 			}
+
 			using ptr = std::shared_ptr<Resource>;
 
-			Resource(const CD3DX12_RESOURCE_DESC& desc, HeapType heap_type, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
-			Resource(const ComPtr<ID3D12Resource>& resouce, ResourceState state, bool own = false);
+			Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
+			Resource(const HAL::Resource::ptr& resouce, ResourceState state, bool own = false);
 
-			Resource(const CD3DX12_RESOURCE_DESC& desc, ResourceHandle handle, bool own = false);
+			Resource(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
 			Resource() = default;
 
 			virtual ~Resource();
@@ -147,7 +147,7 @@ export{
 				return heap_type;
 			}
 
-			ComPtr<ID3D12Resource> get_native() const
+			HAL::Resource::ptr get_hal() const
 			{
 				return tracked_info->m_Resource;
 			}
@@ -166,7 +166,7 @@ export{
 			// TODO:: works only for buffer now
 			uint64 get_size()
 			{
-				return desc.Width;
+				return get_desc().as_buffer().SizeInBytes;// desc.BufferDesc.desc.get<BufferDesc>
 			}
 
 			template<class T, class F, class ...Args>
@@ -175,7 +175,10 @@ export{
 				return T(get_ptr(), frame, args...);
 			}
 
-
+			auto get_dx() const
+			{
+				return get_hal()->native_resource.Get();
+			}
 
 #ifdef DEV
 			std::mutex m;
@@ -198,7 +201,7 @@ export{
 
 		};
 
-			struct IndexBufferView
+		struct IndexBufferView
 		{
 			D3D12_INDEX_BUFFER_VIEW view;
 			Resource* resource = nullptr;

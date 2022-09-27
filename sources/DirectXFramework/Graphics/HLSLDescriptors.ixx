@@ -123,7 +123,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, DXGI_FORMAT format, UINT offset = 0, UINT size = 0);
+			void create(Graphics::Resource* resource, Format format, UINT offset = 0, UINT size = 0);
 		};
 
 		template<class T>
@@ -136,7 +136,7 @@ export
 			{
 
 			}
-			void create(Graphics::Resource* resource, DXGI_FORMAT format, UINT offset = 0, UINT size = 0);
+			void create(Graphics::Resource* resource, Format format, UINT offset = 0, UINT size = 0);
 		};
 
 		template<class T = float4>
@@ -303,52 +303,31 @@ export
 
 	}
 }
-//	module: private;
 
-	//CD3DX12_RESOURCE_DESC& get_desc(Graphics::Resource* r);
-	//D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address(Graphics::Resource* r);
 namespace HLSL
 {
 	void RaytracingAccelerationStructure::create(Graphics::Resource* resource)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-		desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.RaytracingAccelerationStructure.Location = (resource->get_gpu_address());
-
-		Graphics::Device::get().create_srv(*this, nullptr, desc);
+		HAL::Views::ShaderResource desc = { resource->get_hal().get(), HAL::Format::UNKNOWN, HAL::Views::ShaderResource::Raytracing {resource->get_resource_address()} };
+		Handle::operator=(desc);
 	}
 
 	void ByteAddressBuffer::create(Graphics::Resource* resource, UINT offset, UINT size)
 	{
-		if (size == 0) size = static_cast<UINT>(resource->get_desc().Width / 4);
+		auto buffer_desc = resource->get_desc().as_buffer();
+		if (size == 0) size = static_cast<UINT>(buffer_desc.SizeInBytes / 4);
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-		desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		desc.Format = DXGI_FORMAT_R32_TYPELESS;
-		desc.Buffer.NumElements = size;
-		desc.Buffer.StructureByteStride = 0;
-		desc.Buffer.FirstElement = offset;
-
-		desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-
-		Graphics::Device::get().create_srv(*this, resource, desc);
+		HAL::Views::ShaderResource desc = { resource->get_hal().get(), Format::R32_TYPELESS, HAL::Views::ShaderResource::Buffer {offset, size, 0, true} };
+		Handle::operator=(desc);
 	}
 
 	void RWByteAddressBuffer::create(Graphics::Resource* resource, UINT offset, UINT size)
 	{
-		if (size == 0) size = static_cast<UINT>(resource->get_desc().Width / 4);
-		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		desc.Format = DXGI_FORMAT_R32_TYPELESS;
-		desc.Buffer.NumElements = size;
-		desc.Buffer.StructureByteStride = 0;
-		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-		desc.Buffer.FirstElement = offset;
+		auto buffer_desc = resource->get_desc().as_buffer();
+		if (size == 0) size = static_cast<UINT>(buffer_desc.SizeInBytes / 4);
 
-		Graphics::Device::get().create_uav(*this, resource, desc);
+		HAL::Views::UnorderedAccess desc = { resource->get_hal().get(), Format::R32_TYPELESS, HAL::Views::UnorderedAccess::Buffer {offset, size, 0, true, 0, nullptr} };
+		Handle::operator=(desc);
 	}
 
 
@@ -356,94 +335,51 @@ namespace HLSL
 	template<class T>
 	void StructuredBuffer<T>::create(Graphics::Resource* resource, UINT first_elem, UINT count)
 	{
+		auto buffer_desc = resource->get_desc().as_buffer();
+		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		if (count == 0) count = static_cast<UINT>(resource->get_desc().Width / sizeof(Underlying<T>));
-		D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
-		desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		desc.Format = DXGI_FORMAT_UNKNOWN;
-
-		desc.Buffer.StructureByteStride = sizeof(Underlying<T>);
-		desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-		desc.Buffer.NumElements = count;
-		desc.Buffer.FirstElement = first_elem;
-
-		Graphics::Device::get().create_srv(*this, resource, desc);
+		HAL::Views::ShaderResource desc = { resource->get_hal().get(), Format::UNKNOWN, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false} };
+		Handle::operator=(desc);
 	}
 
 
 	template<class T>
 	void RWStructuredBuffer<T>::create(Graphics::Resource* resource, UINT first_elem, UINT count)
 	{
-		if (count == 0) count = static_cast<UINT>(resource->get_desc().Width / sizeof(Underlying<T>));
+		auto buffer_desc = resource->get_desc().as_buffer();
+		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
-		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
-
-		desc.Buffer.StructureByteStride = sizeof(Underlying<T>);
-		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-		desc.Buffer.NumElements = count;
-		desc.Buffer.FirstElement = first_elem;
-		desc.Buffer.CounterOffsetInBytes = 0;
-
-		Graphics::Device::get().create_uav(*this, resource, desc);
+		HAL::Views::UnorderedAccess desc = { resource->get_hal().get(), Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, 0, nullptr} };
+		Handle::operator=(desc);
 	}
 
 
 	template<class T>
 	void AppendStructuredBuffer<T>::create(Graphics::Resource* counter_resource, UINT counter_offset, Graphics::Resource* resource, UINT first_elem, UINT count)
 	{
-
-		D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
-		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		desc.Format = DXGI_FORMAT::DXGI_FORMAT_UNKNOWN;
-
-		desc.Buffer.StructureByteStride = sizeof(Underlying<T>);
-		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-		desc.Buffer.NumElements = count;
-		desc.Buffer.FirstElement = first_elem;
-		desc.Buffer.CounterOffsetInBytes = counter_offset;
-
-		Graphics::Device::get().create_uav(*this, resource, desc, counter_resource);
+		HAL::Views::UnorderedAccess desc = { resource->get_hal().get(), Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource->get_hal().get()} };
+		Handle::operator=(desc);
 	}
 	template<class T>
-	void Buffer<T>::create(Graphics::Resource* resource, DXGI_FORMAT format, UINT first_elem, UINT count)
+	void Buffer<T>::create(Graphics::Resource* resource, Format format, UINT first_elem, UINT count)
 	{
+		auto buffer_desc = resource->get_desc().as_buffer();
+		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		if (count == 0) count = static_cast<UINT>(resource->get_desc().Width / sizeof(Underlying<T>));
-		D3D12_SHADER_RESOURCE_VIEW_DESC  desc = {};
-
-		desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		desc.Format = format;
-		desc.Buffer.StructureByteStride = 0;
-		desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-
-		desc.Buffer.NumElements = count;
-		desc.Buffer.FirstElement = first_elem;
-
-		Graphics::Device::get().create_srv(*this, resource, desc);
+		HAL::Views::ShaderResource desc = { resource->get_hal().get(), format, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), 0, false} };
+		Handle::operator= (desc);
 	}
 
 
 	template<class T>
-	void RWBuffer<T>::create(Graphics::Resource* resource, DXGI_FORMAT format, UINT first_elem, UINT count)
+	void RWBuffer<T>::create(Graphics::Resource* resource, Format format, UINT first_elem, UINT count)
 	{
-		if (count == 0) count = static_cast<UINT>(resource->get_desc().Width / sizeof(Underlying<T>));
-		D3D12_UNORDERED_ACCESS_VIEW_DESC  desc = {};
+		auto buffer_desc = resource->get_desc().as_buffer();
+		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 
-		desc.Format = format;
-
-		desc.Buffer.StructureByteStride = 0;
-		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-		desc.Buffer.NumElements = count;
-		desc.Buffer.FirstElement = first_elem;
-		desc.Buffer.CounterOffsetInBytes = 0;
-
-		Graphics::Device::get().create_uav(*this, resource, desc);
+		HAL::Views::UnorderedAccess desc = { resource->get_hal().get(), format, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), 0, false, 0, nullptr} };
+		Handle::operator= (desc);
 	}
 
 
@@ -452,87 +388,98 @@ namespace HLSL
 	template<class T>
 	void Texture2D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		auto resDesc = resource->get_desc();
-		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);
-		srvDesc.Format = to_srv(resource->get_desc().Format);
+		auto texture_desc = resource->get_desc().as_texture();
 
-		bool is_array = resDesc.ArraySize() > 1;
+		bool is_array = texture_desc.ArraySize > 1;
 		if (is_array)
 		{
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-			srvDesc.Texture2DArray.MipLevels = mip_levels;
-			srvDesc.Texture2DArray.MostDetailedMip = first_mip;
-			srvDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
-
-			srvDesc.Texture2DArray.FirstArraySlice = array_offset;// view_desc.Texture2D.FirstArraySlice;
-			srvDesc.Texture2DArray.PlaneSlice = 0;
-			srvDesc.Texture2DArray.ArraySize = 1;// view_desc.Texture2D.ArraySize;
+			auto desc = HAL::Views::ShaderResource{
+				.Resource = resource->get_hal().get(),
+				.Format = texture_desc.Format.to_srv(),
+				.View = HAL::Views::ShaderResource::Texture2DArray
+					{
+						.MostDetailedMip = first_mip,
+						.MipLevels = mip_levels,
+						.FirstArraySlice = array_offset,
+						.ArraySize = 1,
+						.PlaneSlice = 0,
+						.ResourceMinLODClamp = 0
+					}
+			};
+			Handle::operator= (desc);
 		}
 		else
 		{
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2D;
-			srvDesc.Texture2D.MipLevels = mip_levels;
-			srvDesc.Texture2D.MostDetailedMip = first_mip;
-			srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-			srvDesc.Texture2D.PlaneSlice = 0;
+			auto desc = HAL::Views::ShaderResource{
+				.Resource = resource->get_hal().get(),
+				.Format = texture_desc.Format.to_srv(),
+				.View = HAL::Views::ShaderResource::Texture2D
+					{
+						.MostDetailedMip = first_mip,
+						.MipLevels = mip_levels,
+						.ResourceMinLODClamp = 0
+					}
+			};
+			Handle::operator= (desc);
 		}
-
-		Graphics::Device::get().create_srv(*this, resource, srvDesc);
 	}
 
 
 	template<class T>
 	void RWTexture2D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT array_offset)
 	{
-
-		D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
-		desc.Format = to_srv(resource->get_desc().Format);
-		auto resDesc = resource->get_desc();
-
-
-		bool is_array = resDesc.ArraySize() > 1;
+		auto texture_desc = resource->get_desc().as_texture();
+		bool is_array = texture_desc.ArraySize > 1;
 
 
 		if (!is_array)
 		{
-			desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2D;
-			desc.Texture2D.PlaneSlice = 0;
-			desc.Texture2D.MipSlice = first_mip;
+			auto desc = HAL::Views::UnorderedAccess{
+			.Resource = resource->get_hal().get(),
+			.Format = resource->get_desc().as_texture().Format.to_srv(),
+			.View = HAL::Views::UnorderedAccess::Texture2D
+				{
+					.MipSlice = first_mip,
+					.PlaneSlice = 0
+				}
+			};
+			Handle::operator= (desc);
 		}
 		else
 		{
-			desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-			desc.Texture2DArray.PlaneSlice = 0;
-			desc.Texture2DArray.MipSlice = first_mip;
-			desc.Texture2DArray.FirstArraySlice = array_offset;
-			desc.Texture2DArray.ArraySize = 1;
+
+			auto desc = HAL::Views::UnorderedAccess{
+				.Resource = resource->get_hal().get(),
+				.Format = resource->get_desc().as_texture().Format.to_srv(),
+				.View = HAL::Views::UnorderedAccess::Texture2DArray
+					{
+						.MipSlice = first_mip,
+						.FirstArraySlice = array_offset,
+						.ArraySize = 1,
+						.PlaneSlice = 0
+					}
+			};
+			Handle::operator= (desc);
 		}
-
-
-		Graphics::Device::get().create_uav(*this, resource, desc);
 	}
 
 	template<class T>
 	void Texture2DArray<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset, UINT array_count)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		auto resDesc = resource->get_desc();
-		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);
-		srvDesc.Format = to_srv(resource->get_desc().Format);
-
-
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
-		srvDesc.Texture2DArray.MipLevels = mip_levels;
-		srvDesc.Texture2DArray.MostDetailedMip = first_mip;
-		srvDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
-
-		srvDesc.Texture2DArray.FirstArraySlice = array_offset;// view_desc.Texture2D.FirstArraySlice;
-		srvDesc.Texture2DArray.PlaneSlice = 0;
-		srvDesc.Texture2DArray.ArraySize = array_count;// view_desc.Texture2D.ArraySize;
-
-
-		Graphics::Device::get().create_srv(*this, resource, srvDesc);
+		auto desc = HAL::Views::ShaderResource{
+			.Resource = resource->get_hal().get(),
+			.Format = resource->get_desc().as_texture().Format.to_srv(),
+			.View = HAL::Views::ShaderResource::Texture2DArray
+					{
+						.MostDetailedMip = first_mip,
+						.MipLevels = mip_levels,
+						.FirstArraySlice = array_offset,
+						.ArraySize = array_count,
+						.PlaneSlice = 0,
+						.ResourceMinLODClamp = 0
+					}
+		};
+		Handle::operator= (desc);
 	}
 
 
@@ -540,66 +487,73 @@ namespace HLSL
 	template<class T>
 	void Texture3D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		auto resDesc = resource->get_desc();
-		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);
-		srvDesc.Format = to_srv(resource->get_desc().Format);
-
-		srvDesc.ViewDimension = D3D12_SRV_DIMENSION::D3D12_SRV_DIMENSION_TEXTURE3D;
-		srvDesc.Texture3D.MipLevels = mip_levels;
-		srvDesc.Texture3D.MostDetailedMip = first_mip;
-		srvDesc.Texture3D.ResourceMinLODClamp = 0.0f;
+		auto desc = HAL::Views::ShaderResource{
+				.Resource = resource->get_hal().get(),
+				.Format = resource->get_desc().as_texture().Format.to_srv(),
+				.View = HAL::Views::ShaderResource::Texture3D
+						{
+							.MostDetailedMip = first_mip,
+							.MipLevels = mip_levels,
+							.ResourceMinLODClamp = 0
+						}
+		};
+		Handle::operator= (desc);
 
 		assert(array_offset == 0);
-		Graphics::Device::get().create_srv(*this, resource, srvDesc);
 	}
 
 	template<class T>
 	void RWTexture3D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT array_offset)
 	{
-		D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
-		desc.Format = to_srv(resource->get_desc().Format);
-		auto resDesc = resource->get_desc();
-
-		desc.ViewDimension = D3D12_UAV_DIMENSION::D3D12_UAV_DIMENSION_TEXTURE3D;
-		desc.Texture3D.FirstWSlice = 0;
-		desc.Texture3D.MipSlice = first_mip;
-		desc.Texture3D.WSize = -1;// std::max(UINT(1), UINT(resDesc.Depth() >> desc.Texture3D.MipSlice));
+		auto desc = HAL::Views::UnorderedAccess{
+				.Resource = resource->get_hal().get(),
+				.Format = resource->get_desc().as_texture().Format.to_srv(),
+				.View = HAL::Views::UnorderedAccess::Texture3D
+						{
+							.MipSlice = uint(first_mip),
+							.FirstWSlice = 0,
+							.WSize = resource->get_desc().as_texture().Dimensions.z >> uint(first_mip)
+						}
+		};
+		Handle::operator= (desc);
 
 		assert(array_offset == 0);
-
-		Graphics::Device::get().create_uav(*this, resource, desc);
 	}
 
 	template<class T>
 	void TextureCube<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT cube_offset)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-		auto resDesc = resource->get_desc();
-		srvDesc.Shader4ComponentMapping = get_default_mapping(resource->get_desc().Format);
-		srvDesc.Format = to_srv(resource->get_desc().Format);
-
 		if (cube_offset > 0)
 		{
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
-
-			srvDesc.TextureCubeArray.MipLevels = mip_levels;
-			srvDesc.TextureCubeArray.MostDetailedMip = first_mip;
-			srvDesc.TextureCubeArray.ResourceMinLODClamp = 0.0;
-			srvDesc.TextureCubeArray.First2DArrayFace = cube_offset * 6;
+			auto desc = HAL::Views::ShaderResource{
+			resource->get_hal().get(),
+			resource->get_desc().as_texture().Format.to_srv(),
+			HAL::Views::ShaderResource::CubeArray{
+				.MostDetailedMip = 0,
+				.MipLevels = resource->get_desc().as_texture().MipLevels,
+				.First2DArrayFace = cube_offset * 6,
+				.NumCubes = 1,
+				.ResourceMinLODClamp = 0
+			}
+			};
+			Handle::operator= (desc);
 
 		}
 		else
 		{
-			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 
-			srvDesc.TextureCube.MipLevels = mip_levels;
-			srvDesc.TextureCube.MostDetailedMip = first_mip;
-			srvDesc.TextureCube.ResourceMinLODClamp = 0.0;
+			auto desc = HAL::Views::ShaderResource{
+				resource->get_hal().get(),
+				resource->get_desc().as_texture().Format.to_srv(),
+				HAL::Views::ShaderResource::Cube{
+					.MostDetailedMip = 0,
+					.MipLevels = resource->get_desc().as_texture().MipLevels,
+					.ResourceMinLODClamp = 0
+				}
+			};
+			Handle::operator= (desc);
+
 		}
-
-
-		Graphics::Device::get().create_srv(*this, resource, srvDesc);
 	}
 
 
@@ -607,19 +561,16 @@ namespace HLSL
 	template<class T>
 	void RenderTarget<T>::createFrom2D(Graphics::Resource* resource, UINT first_mip)
 	{
-		D3D12_RENDER_TARGET_VIEW_DESC desc = {};
-		auto resDesc = resource->get_desc();
-
-		desc.Format = to_srv(resource->get_desc().Format);
-
-
-		desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2D;
-
-		desc.Texture2D.MipSlice = first_mip;
-		desc.Texture2D.PlaneSlice = 0;
-
-
-		Graphics::Device::get().create_rtv(*this, resource, desc);
+		auto desc = HAL::Views::RenderTarget{
+			.Resource = resource->get_hal().get(),
+			.Format = resource->get_desc().as_texture().Format.to_srv(),
+			.View = HAL::Views::RenderTarget::Texture2D
+				{
+					.MipSlice = first_mip,
+					.PlaneSlice = 0
+				}
+		};
+		Handle::operator= (desc);
 	}
 
 
@@ -630,22 +581,19 @@ namespace HLSL
 	template<class T>
 	void RenderTarget<T>::createFrom2DArray(Graphics::Resource* resource, UINT first_mip, UINT array_id)
 	{
-		D3D12_RENDER_TARGET_VIEW_DESC desc = {};
-		auto resDesc = resource->get_desc();
+		auto desc = HAL::Views::RenderTarget{
+	.Resource = resource->get_hal().get(),
+	.Format = resource->get_desc().as_texture().Format.to_srv(),
+	.View = HAL::Views::RenderTarget::Texture2DArray
+		{
+			.MipSlice = first_mip,
+			.FirstArraySlice = uint(array_id),
+			.ArraySize = 1,
+			.PlaneSlice = 0
+		}
+		};
+		Handle::operator= (desc);
 
-		desc.Format = to_srv(resource->get_desc().Format);
-
-
-		desc.ViewDimension = D3D12_RTV_DIMENSION::D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-
-		desc.Texture2DArray.MipSlice = first_mip;
-		desc.Texture2DArray.PlaneSlice = 0;
-
-
-		desc.Texture2DArray.FirstArraySlice = array_id;
-		desc.Texture2DArray.ArraySize = 1;//wtf 
-
-		Graphics::Device::get().create_rtv(*this, resource, desc);
 
 	}
 
@@ -656,25 +604,16 @@ namespace HLSL
 	template<class T>
 	void DepthStencil<T>::createFrom2D(Graphics::Resource* resource, UINT first_mip)
 	{
-		auto resDesc = resource->get_desc();
-
-		D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
-
-		desc.Format = to_dsv(resource->get_desc().Format);
-
-
-		desc.ViewDimension = D3D12_DSV_DIMENSION::D3D12_DSV_DIMENSION_TEXTURE2D;
-		desc.Texture2D.MipSlice = first_mip;
-
-		Graphics::Device::get().create_dsv(*this, resource, desc);
-
-
-		HAL::Views::DepthStencil dsv = {
-			.Format = HAL::Format::Formats::R32G32B32_UINT,
-			.Flags = HAL::Views::DepthStencil::Flags::None,
-			. View = HAL::Views::DepthStencil::Texture2D{0}
+		auto desc = HAL::Views::DepthStencil{
+		.Resource = resource->get_hal().get(),
+		.Format = resource->get_desc().as_texture().Format.to_dsv(),
+		.Flags = HAL::Views::DepthStencil::Flags::None,
+		.View = HAL::Views::DepthStencil::Texture2D
+			{
+				.MipSlice = first_mip
+			}
 		};
-
+		Handle::operator= (desc);
 	}
 
 
@@ -685,19 +624,18 @@ namespace HLSL
 	template<class T>
 	void DepthStencil<T>::createFrom2DArray(Graphics::Resource* resource, UINT first_mip, UINT array_id)
 	{
-		auto resDesc = resource->get_desc();
-
-		D3D12_DEPTH_STENCIL_VIEW_DESC desc = {};
-
-		desc.Format = to_dsv(resource->get_desc().Format);
-
-
-		desc.ViewDimension = D3D12_DSV_DIMENSION::D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-		desc.Texture2DArray.MipSlice = first_mip;
-		desc.Texture2DArray.FirstArraySlice = array_id;
-		desc.Texture2DArray.ArraySize = 1; // wtf;
-
-		Graphics::Device::get().create_dsv(*this, resource, desc);
+		auto desc = HAL::Views::DepthStencil{
+		.Resource = resource->get_hal().get(),
+		.Format = resource->get_desc().as_texture().Format.to_dsv(),
+		.Flags = HAL::Views::DepthStencil::Flags::None,
+		.View = HAL::Views::DepthStencil::Texture2DArray
+			{
+				.MipSlice = first_mip,
+				.FirstArraySlice = array_id,
+				.ArraySize = 1,
+			}
+		};
+		Handle::operator= (desc);
 	}
 
 }

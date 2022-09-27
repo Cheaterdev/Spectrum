@@ -1336,7 +1336,7 @@ void SetupDebug()
 	FileTXTLogger::create();
 	VSOutputLogger::create();
 	//  ConsoleLogger::create();
-	Log::get().set_logging_level(Log::LEVEL_ALL);
+	Log::get().set_logging_level(Log::LEVEL_WARNING);
 	// Here we can disable some of notification types
 	ClassLogger<resource_system>::get().set_logging_level(Log::LEVEL_ERROR);
 	ClassLogger<Resource>::get().set_logging_level(Log::LEVEL_ERROR);

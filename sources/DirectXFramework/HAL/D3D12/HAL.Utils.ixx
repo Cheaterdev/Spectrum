@@ -554,6 +554,24 @@ bool Format::is_shader_visible() const
 	}
 }
 
+bool Format::is_srgb() const
+{
+	switch (native_format)
+	{
+	case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+	case DXGI_FORMAT_BC1_UNORM_SRGB:
+	case DXGI_FORMAT_BC2_UNORM_SRGB:
+	case DXGI_FORMAT_BC3_UNORM_SRGB:
+	case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+	case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+	case DXGI_FORMAT_BC7_UNORM_SRGB:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
 Format  Format::to_dsv() const
 {
 	switch (native_format)
@@ -590,6 +608,44 @@ Format Format::to_typeless() const
 }
 
 
+Format Format::to_srv() const
+{
+
+	switch (native_format)
+	{
+	case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+		return HAL::Format::R8G8B8A8_UNORM;
+
+	case DXGI_FORMAT_R32_TYPELESS:
+		return HAL::Format::R32_FLOAT;
+
+	case DXGI_FORMAT_R16_TYPELESS:
+		return HAL::Format::R16_FLOAT;
+
+	case DXGI_FORMAT_R8_TYPELESS:
+		return HAL::Format::R8_UNORM;
+
+	default:
+		return *this;
+	}
+}
+
+uint  Format::get_default_mapping()const
+{
+	return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+	switch (native_format)
+	{
+	case DXGI_FORMAT_R32_TYPELESS:
+	case DXGI_FORMAT_R32_FLOAT:
+	case DXGI_FORMAT_R16_TYPELESS:
+	case DXGI_FORMAT_R16_FLOAT:
+		return D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0;
+
+	default:
+		return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	}
+}
 
 export D3D12_DESCRIPTOR_RANGE_TYPE to_native(DescriptorRange range)
 {
@@ -619,4 +675,133 @@ export D3D12_SHADER_VISIBILITY to_native(ShaderVisibility visibility)
 	};
 
 	return natives[static_cast<uint>(visibility)];
+}
+
+export D3D12_RESOURCE_FLAGS to_native(const ResFlags& flags)
+{
+	D3D12_RESOURCE_FLAGS result = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE;
+
+	if (!check(flags & ResFlags::ShaderResource))
+	{
+		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
+	}
+
+	if (check(flags & ResFlags::UnorderedAccess))
+	{
+		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+	}
+
+	if (check(flags & ResFlags::RenderTarget))
+	{
+		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+	}
+
+	if (check(flags & ResFlags::DepthStencil))
+	{
+		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+	}
+
+	return result;
+}
+
+
+export ResFlags from_native(D3D12_RESOURCE_FLAGS flags)
+{
+	ResFlags result = ResFlags::None;
+
+	if (!(flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE))
+	{
+		result |= ResFlags::ShaderResource;
+	}
+
+	if (flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
+	{
+		result |= ResFlags::UnorderedAccess;
+	}
+
+	if (flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
+	{
+		result |= ResFlags::RenderTarget;
+	}
+
+	if (flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
+	{
+		result |= ResFlags::DepthStencil;
+	}
+
+	return result;
+}
+
+
+export CD3DX12_RESOURCE_DESC to_native(const ResourceDesc& desc)
+{
+	if (desc.is_buffer())
+	{
+		auto buffer_desc = desc.as_buffer();
+		return CD3DX12_RESOURCE_DESC::Buffer(buffer_desc.SizeInBytes, to_native(desc.Flags));
+	}
+	else
+	{
+		auto texture_desc = desc.as_texture();
+
+
+		if (texture_desc.is1D())
+		{
+			return  CD3DX12_RESOURCE_DESC::Tex1D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.ArraySize, texture_desc.MipLevels, to_native(desc.Flags));
+		}
+
+		if (texture_desc.is2D())
+		{
+			return  CD3DX12_RESOURCE_DESC::Tex2D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.ArraySize, texture_desc.MipLevels, 1, 0, to_native(desc.Flags));
+		}
+
+		if (texture_desc.is3D())
+		{
+			assert(texture_desc.ArraySize == 1);
+			return  CD3DX12_RESOURCE_DESC::Tex3D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.Dimensions.z, texture_desc.MipLevels, to_native(desc.Flags));
+		}
+	}
+	assert(false);
+
+	return CD3DX12_RESOURCE_DESC::Buffer(0, to_native(desc.Flags));
+}
+
+
+export namespace cereal
+{
+	template<class Archive>
+	void serialize(Archive& ar, D3D12_DEPTH_STENCILOP_DESC& g, const unsigned int)
+	{
+		//	ar & g.DefaultValue;
+		ar& NVPG(StencilDepthFailOp);
+		ar& NVPG(StencilFailOp);
+		ar& NVPG(StencilFunc);
+		ar& NVPG(StencilPassOp);
+	}
+
+	template<class Archive>
+	void serialize(Archive& ar, DXGI_SAMPLE_DESC& g, const unsigned int)
+	{
+		//	ar & g.DefaultValue;
+		ar& NVPG(Count);
+		ar& NVPG(Quality);
+	}
+
+
+	template<class Archive>
+	void serialize(Archive& ar, D3D12_RESOURCE_DESC& g, const unsigned int)
+	{
+		ar& NVPG(Dimension);
+		ar& NVPG(Alignment);
+		ar& NVPG(Width);
+		ar& NVPG(Height);
+		ar& NVPG(DepthOrArraySize);
+		ar& NVPG(MipLevels);
+		ar& NVPG(Format);
+		ar& NVPG(SampleDesc);
+		ar& NVPG(Layout);
+		ar& NVPG(Flags);
+	}
+
+
 }

@@ -30,7 +30,7 @@ import HAL;
 import d3d12;
 
 import :Definitions;
-using namespace HAL;
+//using namespace HAL;
 
 export{
 	//enum class Layouts;
@@ -321,7 +321,7 @@ export{
 
 			LEAK_TEST(CommandListBase);
 
-				std::vector<std::function<void()>> on_execute_funcs;
+			std::vector<std::function<void()>> on_execute_funcs;
 
 			std::list<FenceWaiter> waits;
 
@@ -473,12 +473,10 @@ export{
 			{
 				if (!info || !info->resource_ptr) return;
 
-				auto& handle_type = info->type;
-
 				auto target_state = ResourceState::COMMON;
 
 
-				if (handle_type == HandleType::SRV)
+				if (std::holds_alternative<HAL::Views::ShaderResource>(info->view))
 				{
 					if (type == CommandListType::DIRECT)
 					{
@@ -491,15 +489,15 @@ export{
 					}
 
 				}
-				else if (handle_type == HandleType::UAV)
+				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info->view))
 				{
 					target_state = ResourceState::UNORDERED_ACCESS;
 				}
-				else if (handle_type == HandleType::RTV)
+				else 	if (std::holds_alternative<HAL::Views::RenderTarget>(info->view))
 				{
 					target_state = ResourceState::RENDER_TARGET;
 				}
-				else if (handle_type == HandleType::DSV)
+				else 	if (std::holds_alternative<HAL::Views::DepthStencil>(info->view))
 				{
 					target_state = ResourceState::DEPTH_WRITE;
 
@@ -526,7 +524,7 @@ export{
 			//remove this all
 			void transition_rtv(const ResourceInfo* info)
 			{
-				assert(info->type == HandleType::RTV);
+				assert(std::holds_alternative<HAL::Views::RenderTarget>(info->view));
 
 				info->for_each_subres([&](const Resource* resource, UINT subres)
 					{
@@ -536,7 +534,7 @@ export{
 
 			void transition_uav(const ResourceInfo* info)
 			{
-				assert(info->type == HandleType::UAV);
+				assert(std::holds_alternative<HAL::Views::UnorderedAccess>(info->view));
 
 				info->for_each_subres([&](const Resource* resource, UINT subres)
 					{
@@ -547,7 +545,7 @@ export{
 
 			void transition_dsv(const ResourceInfo* info)
 			{
-				assert(info->type == HandleType::DSV);
+				assert(std::holds_alternative<HAL::Views::DepthStencil>(info->view));
 
 				info->for_each_subres([&](const Resource* resource, UINT subres)
 					{
@@ -558,7 +556,7 @@ export{
 
 			void transition_srv(const ResourceInfo* info)
 			{
-				assert(info->type == HandleType::SRV);
+				assert(std::holds_alternative<HAL::Views::ShaderResource>(info->view));
 
 				assert(false);
 
@@ -774,9 +772,9 @@ export{
 			{
 				create_transition_point();
 				transition_uav(h.get_resource_info());
+				auto dx_resource = h.get_resource_info()->resource_ptr->get_hal()->native_resource.Get();
 
-				//auto handle = get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(h);
-				get_native_list()->ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu_read(), h.get_resource_info()->resource_ptr->get_native().Get(), reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
+				get_native_list()->ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 				create_transition_point(false);
 			}
 
@@ -789,7 +787,7 @@ export{
 				create_transition_point(false);
 			}
 
-		
+
 
 
 			void clear_stencil(Handle dsv, UINT8 stencil = 0)
@@ -1013,7 +1011,7 @@ export{
 				slot.id = Compiled::ID;
 				slot.dirty = true;
 
-//				slot.tables = &Compiled::SlotTable::tables;
+				//				slot.tables = &Compiled::SlotTable::tables;
 
 				compiled.set_tables(*this);
 			}
@@ -1155,7 +1153,7 @@ export{
 
 
 				CD3DX12_CPU_DESCRIPTOR_HANDLE ar[] = { (rtvlist.get_cpu_read())... };
-				list->OMSetRenderTargets(size(ar), ar, false, h.is_valid() ? &h.get_cpu_read() : nullptr);
+				assert(false);//list->OMSetRenderTargets(size(ar), ar, false, h.is_valid() ? &h.get_cpu_read() : nullptr);
 			}
 
 

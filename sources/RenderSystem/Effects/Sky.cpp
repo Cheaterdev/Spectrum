@@ -26,8 +26,8 @@ void SkyRender::generate_sky(Graph& graph)
 	};
 
 	graph.add_pass<SkyData>("Sky", [this, &graph](SkyData& data, TaskBuilder& builder) {
-			builder.need(data.GBuffer_Depth, ResourceFlags::PixelRead);
-			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
+		builder.need(data.GBuffer_Depth, ResourceFlags::PixelRead);
+		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 		}, [this, &graph](SkyData& data, FrameContext& _context) {
 			auto& list = *_context.get_list();
 
@@ -53,7 +53,7 @@ void SkyRender::generate_sky(Graph& graph)
 				skydata.set(graphics);
 
 			}
-	
+
 			graph.set_slot(SlotID::FrameInfo, graphics);
 
 			graphics.draw(4);
@@ -71,7 +71,7 @@ void SkyRender::generate(Graph& graph)
 	};
 
 	graph.pass<SkyData>("CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
-		builder.create(data.sky_cubemap, {ivec3(256, 256, 1), Graphics::Format::R11G11B10_FLOAT, 6}, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		builder.create(data.sky_cubemap, { ivec3(256, 256, 1), Graphics::Format::R11G11B10_FLOAT, 6 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
 		bool changed = (graph.sunDir - dir).length() > 0.001;
 
 		if (changed)
@@ -90,7 +90,7 @@ void SkyRender::generate(Graph& graph)
 
 			auto& graphics = list.get_graphics();
 
-		
+
 			graphics.set_pipeline(GetPSO<PSOS::SkyCube>());
 
 			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
@@ -169,7 +169,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 	};
 
 	graph.pass<EnvData>("CubeMapDownsample", [this, &graph](EnvData& data, TaskBuilder& builder) {
-		 builder.need(data.sky_cubemap, ResourceFlags::UnorderedAccess);
+		builder.need(data.sky_cubemap, ResourceFlags::UnorderedAccess);
 		if (data.sky_cubemap.is_changed())
 		{
 			return true;
@@ -183,10 +183,10 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 
 	graph.pass<EnvData>("CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
-		 builder.need(data.sky_cubemap, ResourceFlags::PixelRead);
+		builder.need(data.sky_cubemap, ResourceFlags::PixelRead);
 
-		 builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,1),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
-		 builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,1),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,1),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,1),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
 
 		if (data.sky_cubemap.is_changed())
 		{
@@ -210,7 +210,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 
 
-			UINT count = data.sky_cubemap_filtered->resource->get_desc().MipLevels;
+			UINT count = data.sky_cubemap_filtered->resource->get_desc().as_texture().MipLevels;
 			for (unsigned int m = 0; m < count; m++)
 			{
 				graphics.set_pipeline(GetPSO<PSOS::CubemapENV>(PSOS::CubemapENV::Level(std::min(m, 4u))));
@@ -237,7 +237,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 					filter.GetFace().x = i;
 
 					filter.GetScaler().x = (float(m) + 0.5f) / count;
-					filter.GetSize().x = (UINT)data.sky_cubemap->resource->get_desc().Width;
+					filter.GetSize().x = (UINT)data.sky_cubemap->resource->get_desc().as_texture().Dimensions.x;
 					filter.set(graphics);
 
 					graphics.draw(4);
@@ -271,7 +271,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 				filter.GetFace().x = i;
 
 				filter.GetScaler().x = (float(0) + 0.5f) / count;
-				filter.GetSize().x = (UINT)data.sky_cubemap_filtered_diffuse->resource->get_desc().Width;
+				filter.GetSize().x = (UINT)data.sky_cubemap_filtered_diffuse->resource->get_desc().as_texture().Dimensions.x;
 				filter.set(graphics);
 
 				graphics.draw(4);

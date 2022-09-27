@@ -30,7 +30,7 @@ public:
 	}
 
 
-	void set(CD3DX12_RESOURCE_DESC desc)
+	void set(HAL::ResourceDesc desc)
 	{
 		tex_dynamic.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
 		tex_static.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
@@ -67,7 +67,7 @@ public:
 				heap_pos.handle = ResourceHandle();
 				tex_result->map_tile(tilings_info, pos, heap_pos);
 			}
-			
+
 		};
 
 		tex_static->on_zero = [this](ivec4 pos) {
@@ -88,7 +88,7 @@ public:
 		tex_static->zero_tiles(list);
 
 		tilings_info.tiles.clear();
-	//	flush(list);
+		//	flush(list);
 	}
 };
 
@@ -112,7 +112,7 @@ public:
 	}
 
 
-	void set(CD3DX12_RESOURCE_DESC desc)
+	void set(HAL::ResourceDesc desc)
 	{
 		tex_result.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
 
@@ -122,7 +122,7 @@ public:
 	}
 
 
-	void load_static(std::list<uint3> &tiles )
+	void load_static(std::list<uint3>& tiles)
 	{
 		for (auto& pos : tiles)
 		{
@@ -130,7 +130,7 @@ public:
 
 			if (!dynamic_tiles[pos])
 			{
-				tex_result->load_tile(tilings_info, pos, 0 , true);
+				tex_result->load_tile(tilings_info, pos, 0, true);
 			}
 		}
 	}
@@ -179,7 +179,7 @@ public:
 		tilings_info.tiles.clear();
 
 		tex_result->zero_tiles(list);
-		
+
 
 		static_tiles.fill(false);
 		dynamic_tiles.fill(false);
@@ -204,12 +204,12 @@ public:
 	float3 size;
 
 
-	
+
 private:
 	std::shared_ptr<GBufferDownsampler> downsampler;
 
 	VisibilityBufferUniversal::ptr visibility;
-	
+
 
 	TileDynamicGenerator dynamic_generator_voxelizing;
 	TileDynamicGenerator dynamic_generator_lighted;
@@ -225,8 +225,8 @@ private:
 	int light_counter = 0;
 
 	std::future<visibility_update> vis_update;
-	
-	struct EyeData:public prop_handler
+
+	struct EyeData :public prop_handler
 	{
 		Graphics::Texture::ptr downsampled_reflection;
 		Graphics::Texture::ptr current_gi_texture;
@@ -240,8 +240,8 @@ private:
 	bool recreate_static = false;
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
-//	Graphics::StructureBuffer<uint2>::ptr hi;
-//	Graphics::StructureBuffer<uint2>::ptr low;
+	//	Graphics::StructureBuffer<uint2>::ptr hi;
+	//	Graphics::StructureBuffer<uint2>::ptr low;
 
 	ivec3 lighed_to_albedo_coeff;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;
@@ -263,7 +263,7 @@ public:
 	Variable<bool> denoiser = { true, "denoiser", this };
 	Variable<bool> reflecton = { true, "reflecton", this };
 
-	
+
 	void resize(ivec2 size);
 	void start_new(Graphics::CommandList& list);
 
@@ -278,7 +278,7 @@ public:
 
 
 	virtual void generate(Graph& graph) override;
-	virtual void voxelize(Graph& graph) ;
+	virtual void voxelize(Graph& graph);
 	virtual void debug(Graph& graph);
 
 };

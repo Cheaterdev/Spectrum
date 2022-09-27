@@ -41,7 +41,7 @@ export {
 		Context* context;
 		std::vector<Graphics::ResourceInfo*> resources;
 		std::stringstream s;
-		Compiler():s(std::stringstream::out | std::stringstream::binary)
+		Compiler() :s(std::stringstream::out | std::stringstream::binary)
 		{
 
 		}
@@ -57,17 +57,17 @@ export {
 				}
 			}
 
-			uint offset = handle.offset_gpu;
+			uint offset = handle.offset;
 			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 		}
 
 		template<HandleType T, uint N>
-		void compile(const T(& handles)[N])
+		void compile(const T(&handles)[N])
 		{
 
 			pad();
 
-	
+
 			for (uint i = 0; i < N; i++)
 			{
 				auto& handle = handles[i];
@@ -79,13 +79,13 @@ export {
 					}
 				}
 
-				uint offset = handle.offset_gpu;
+				uint offset = handle.offset;
 				s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 				pad();
 			}
-		
 
-		
+
+
 		}
 
 		template<Compilable T>
@@ -105,7 +105,7 @@ export {
 		{
 			uint offset = 0;
 
-		
+
 			if (!t.empty()) {
 
 				std::vector<uint> offsets;
@@ -115,7 +115,7 @@ export {
 
 					if (handle.is_valid())
 					{
-						offsets.emplace_back(handle.offset_gpu);
+						offsets.emplace_back(handle.offset);
 
 						if (handle.get_resource_info())
 						{
@@ -128,21 +128,21 @@ export {
 					}
 				}
 
-			
+
 				auto info = context->place_raw(offsets);
 				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(*context, Graphics::BufferType::NONE, (UINT)info.offset, (UINT)info.size).structuredBuffer;
 
-				offset = srv.offset_gpu;
+				offset = srv.offset;
 
 			}
 			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
-	
+
 		}
 
 
-	
+
 		template<class T, uint N>
-		void compile(const T (&t)[N]) //equires (std::is_base_of_v<T, Handle>)
+		void compile(const T(&t)[N]) //equires (std::is_base_of_v<T, Handle>)
 		{
 			pad();
 
@@ -164,7 +164,7 @@ export {
 				pad();
 			}
 			s.write(reinterpret_cast<const char*>(&t), sizeof(T));
-		//	t.compile(*this);
+			//	t.compile(*this);
 		}
 	};
 	template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
@@ -188,8 +188,8 @@ export {
 
 		const void set_tables(Graphics::SignatureDataSetter& graphics) const
 		{
-			for(auto resource_info :resources)
-			graphics.get_base().transition(resource_info);
+			for (auto resource_info : resources)
+				graphics.get_base().transition(resource_info);
 			graphics.set_cb(Slot::ID, offsets_cb);
 		}
 		operator Graphics::ResourceAddress() const
@@ -221,14 +221,14 @@ export {
 			compiler.context = &context;
 			Table::compile(compiler);
 
-			
+
 			Compiled compiled;
 
 			auto str = compiler.s.str();
 
 			auto ptr = reinterpret_cast<const std::byte*>(str.data());
 			std::vector<std::byte> data;
-			data.assign(ptr,ptr+ str.size());
+			data.assign(ptr, ptr + str.size());
 			compiled.offsets_cb = context.place_raw(data).get_resource_address();
 			compiled.resources = compiler.resources;
 			return compiled;

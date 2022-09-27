@@ -21,7 +21,7 @@ import :HLSLDescriptors;
 import d3d12;
 
 //import :Definitions;
-using namespace HAL;
+//using namespace HAL;
 export
 {
 
@@ -29,7 +29,7 @@ export
 	namespace Graphics
 	{
 
-		
+
 		class GPUBuffer : public Resource
 		{
 		protected:
@@ -52,12 +52,12 @@ export
 		public:
 			virtual ~GPUBuffer();
 			using ptr = std::shared_ptr<GPUBuffer>;
-			GPUBuffer(UINT64 size, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, ResourceState state = ResourceState::COMMON, HeapType heap_type = HeapType::DEFAULT);
+			GPUBuffer(UINT64 size, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, ResourceState state = ResourceState::COMMON, HeapType heap_type = HeapType::DEFAULT);
 
 			template<class T>
 			static ptr create_const_buffer()
 			{
-				auto res = make_shared<GPUBuffer>(sizeof(T), D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE);
+				auto res = make_shared<GPUBuffer>(sizeof(T), HAL::ResFlags::ShaderResource);
 				// res->init_const_buffer();
 				return res;
 			}
@@ -109,7 +109,7 @@ export
 				list->end();
 				list->execute_and_wait();
 			}
-			
+
 			template<class T>
 			void set_data(Graphics::CommandList::ptr& list, std::vector<T>& v)
 			{
@@ -137,27 +137,27 @@ export
 					std::string data;
 					ar& NVP(data);
 
-					init(CD3DX12_RESOURCE_DESC::Buffer(size), HeapType::DEFAULT, ResourceState::COMMON);
+					init(HAL::Resource::Buffer(size), HeapType::DEFAULT, ResourceState::COMMON);
 					set_data(0, data);
 				}
 
 				else
 				{
-					std::string data;
-					auto list = Device::get().get_upload_list();
-					//	list->transition(this, ResourceState::COPY_SOURCE);
-					auto task = list->get_copy().read_buffer(this, 0, get_size(), [&data](const char* mem, UINT64 size)
-						{
-							data.assign(mem, mem + size);
-						});
-					//	list->transition(this, ResourceState::COMMON);
-					list->end();
-					list->execute();
-					task.wait();
-					ar& NVP(count);
-					ar& NVP(stride);
-					ar& NVP(size);
-					ar& NVP(data);
+				std::string data;
+				auto list = Device::get().get_upload_list();
+				//	list->transition(this, ResourceState::COPY_SOURCE);
+				auto task = list->get_copy().read_buffer(this, 0, get_size(), [&data](const char* mem, UINT64 size)
+					{
+						data.assign(mem, mem + size);
+					});
+				//	list->transition(this, ResourceState::COMMON);
+				list->end();
+				list->execute();
+				task.wait();
+				ar& NVP(count);
+				ar& NVP(stride);
+				ar& NVP(size);
+				ar& NVP(data);
 				}
 			}
 
@@ -195,7 +195,7 @@ export
 
 			using ptr = std::shared_ptr<StructureBuffer<T>>;
 			using type = Underlying<T>;
-			StructureBuffer(UINT64 count, counterType counted = counterType::NONE, D3D12_RESOURCE_FLAGS flags = D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, HAL::HeapType heap_type = HAL::HeapType::DEFAULT, HAL::ResourceState defaultState = HAL::ResourceState::COMMON);
+			StructureBuffer(UINT64 count, counterType counted = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::HeapType heap_type = HAL::HeapType::DEFAULT, HAL::ResourceState defaultState = HAL::ResourceState::COMMON);
 
 			UINT get_counter_offset();
 
@@ -211,7 +211,7 @@ export
 			{
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(type));
 			}
-			
+
 			void place_uav(Handle h);
 
 			void place_uav(Handle h, GPUBuffer::ptr counter_resource, unsigned int offset = 0);
@@ -335,28 +335,21 @@ export
 		template<class T>
 		inline void StructureBuffer<T>::init_views()
 		{
+			HAL::Views::ShaderResource desc = { get_hal().get(), Format::UNKNOWN, HAL::Views::ShaderResource::Buffer {0, static_cast<uint>(count), stride, false} };
+
 			srv = StaticDescriptors::get().place(1);
-			D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
-			SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-			SRVDesc.Format = DXGI_FORMAT_UNKNOWN;
-			SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-			SRVDesc.Buffer.NumElements = static_cast<UINT>(count);
-			SRVDesc.Buffer.StructureByteStride = stride;
-			SRVDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
-
-			Device::get().create_srv(srv[0], this, SRVDesc);
-
+			srv[0] = desc;
 
 			hlsl = StaticDescriptors::get().place(4);
 
 			structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 			rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
 			appendStructuredBuffer = HLSL::AppendStructuredBuffer<T>(hlsl[2]);
-
 			structuredBufferCount = HLSL::StructuredBuffer<UINT>(hlsl[3]);
-			Device::get().create_srv(structuredBuffer, this, SRVDesc);
 
-			if (get_desc().Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
+			structuredBuffer.create(this, 0, static_cast<uint>(count));
+
+			if (check(get_desc().Flags & HAL::ResFlags::UnorderedAccess))
 			{
 				uavs = StaticDescriptors::get().place(1);
 				place_uav(uavs[0]);
@@ -389,7 +382,7 @@ export
 
 		}
 		template<class T>
-		inline StructureBuffer<T>::StructureBuffer(UINT64 count, counterType counted, D3D12_RESOURCE_FLAGS flags, HeapType heap_type, ResourceState defaultState) : GPUBuffer(counted == counterType::SELF ? (Math::AlignUp(count * sizeof(type), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(type)), flags, defaultState, heap_type)
+		inline StructureBuffer<T>::StructureBuffer(UINT64 count, counterType counted, HAL::ResFlags flags, HeapType heap_type, ResourceState defaultState) : GPUBuffer(counted == counterType::SELF ? (Math::AlignUp(count * sizeof(type), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(type)), flags, defaultState, heap_type)
 		{
 			stride = sizeof(type);
 			this->count = count;
@@ -416,42 +409,24 @@ export
 		{
 			list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(type)));
 		}
-		
+
 		template<class T>
 		inline void StructureBuffer<T>::place_uav(Handle  h)
 		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			desc.Format = DXGI_FORMAT_UNKNOWN;
-			desc.Buffer.NumElements = static_cast<UINT>(count);
-			desc.Buffer.StructureByteStride = stride;
-			desc.Buffer.CounterOffsetInBytes = 0;
+			HAL::Resource* counter_resource = get_hal().get();
+			uint64 counter_offset = 0;
 
-			if (counted == counterType::SELF)
-				desc.Buffer.CounterOffsetInBytes = std::max(0, (int)size - (int)sizeof(UINT));
-
-
-			desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-			Resource* counter_resource = nullptr;
-
-			if (counted == counterType::SELF) counter_resource = this;
-			if (counted == counterType::HELP_BUFFER) counter_resource = help_buffer.get();
-
-
-			Device::get().create_uav(h, this, desc, counter_resource);
+			if (counted == counterType::HELP_BUFFER) counter_resource = help_buffer->get_hal().get();
+			if (counted == counterType::SELF)	counter_offset = std::max(0, (int)size - (int)sizeof(UINT));
+			auto b = HAL::Views::UnorderedAccess::Buffer{ 0u, static_cast<uint>(count),  static_cast<uint>(stride), false, counter_offset, counter_resource };
+			h = HAL::Views::UnorderedAccess{ get_hal().get(), Format::UNKNOWN, b };
 		}
+
 		template<class T>
 		inline void StructureBuffer<T>::place_uav(Handle  h, GPUBuffer::ptr counter_resource, unsigned int offset)
 		{
-			D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-			desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-			desc.Format = DXGI_FORMAT_UNKNOWN;
-			desc.Buffer.NumElements = static_cast<UINT>(count);
-			desc.Buffer.StructureByteStride = stride;
-			desc.Buffer.CounterOffsetInBytes = offset;
-			desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-
-			Device::get().create_uav(h, this, desc, counter_resource);
+			auto b = HAL::Views::UnorderedAccess::Buffer{ offset, static_cast<uint>(count),  static_cast<uint>(stride), false, 0,  nullptr };
+			h = HAL::Views::UnorderedAccess{ get_hal().get(), Format::UNKNOWN, b };
 		}
 
 
@@ -472,9 +447,10 @@ export
 namespace Graphics
 {
 
-	GPUBuffer::GPUBuffer(UINT64 _size, D3D12_RESOURCE_FLAGS flags /*= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE*/, ResourceState state, HeapType heap_type) : size(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
+	GPUBuffer::GPUBuffer(UINT64 _size, HAL::ResFlags flags, ResourceState state, HeapType heap_type) : size(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
 		count(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
-		stride(1), Resource(CD3DX12_RESOURCE_DESC::Buffer(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT), flags), heap_type, state)
+		stride(1), Resource({ HAL::BufferDesc{ Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT) }, flags
+			}, heap_type, state)
 	{
 	}
 
@@ -488,7 +464,7 @@ namespace Graphics
 	}
 
 	GPUBuffer::GPUBuffer(UINT64 count, UINT stride) : count(count),
-		stride(stride), Resource(CD3DX12_RESOURCE_DESC::Buffer(std::max(static_cast<UINT64>(4), count* stride)), HeapType::DEFAULT, ResourceState::COMMON)
+		stride(stride), Resource({ HAL::BufferDesc{ std::max(static_cast<UINT64>(4), count * stride) }, HAL::ResFlags::ShaderResource }, HeapType::DEFAULT, ResourceState::COMMON)
 	{
 		size = count * stride;
 	}
@@ -508,14 +484,8 @@ namespace Graphics
 
 	void GPUBuffer::place_raw_uav(Handle h)
 	{
-		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		desc.Format = DXGI_FORMAT_R32_TYPELESS;
-		desc.Buffer.NumElements = static_cast<UINT>(get_desc().Width / 4);
-		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-
-
-		Device::get().create_uav(h, this, desc);
+		auto b = HAL::Views::UnorderedAccess::Buffer{ 0u, static_cast<UINT>(get_desc().as_buffer().SizeInBytes / 4),  0u, true, 0, nullptr };
+		h = HAL::Views::UnorderedAccess{ get_hal().get(), Format::R32_TYPELESS, b };
 	}
 
 	void GPUBuffer::set_data(Graphics::CommandList::ptr& list, unsigned int offset, const std::string& v)
@@ -525,43 +495,21 @@ namespace Graphics
 
 	void GPUBuffer::place_srv_buffer(Handle  handle)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC  srv = {};
-		srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		srv.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-		srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srv.Buffer.FirstElement = 0;
-		srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE;
-		srv.Buffer.StructureByteStride = 0;
-		srv.Buffer.NumElements = static_cast<UINT>(count / sizeof(vec4));
+		HAL::Views::ShaderResource desc = { get_hal().get(), Format::R32G32B32A32_FLOAT, HAL::Views::ShaderResource::Buffer {0, static_cast<UINT>(count / sizeof(vec4)), 0, false} };
 
-		Device::get().create_srv(handle, this, srv);
+		handle = desc;
 	}
 
 	void GPUBuffer::place_structured_uav(Handle  h, GPUBuffer::ptr counter_resource, unsigned int offset)
 	{
-		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		desc.Format = DXGI_FORMAT_UNKNOWN;
-		desc.Buffer.NumElements = static_cast<UINT>(count);
-		desc.Buffer.StructureByteStride = stride;
-		desc.Buffer.CounterOffsetInBytes = offset;
-		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-
-		Device::get().create_uav(h, this, desc, counter_resource.get());
+		auto b = HAL::Views::UnorderedAccess::Buffer{ offset, static_cast<UINT>(count),  stride, false, 0, nullptr };
+		h = HAL::Views::UnorderedAccess{ get_hal().get(), Format::UNKNOWN, b };
 	}
 
 	void GPUBuffer::place_structured_srv(Handle handle, UINT stride, unsigned int offset, unsigned int count)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC  srv = {};
-		srv.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		srv.Format = DXGI_FORMAT_UNKNOWN;
-		srv.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		srv.Buffer.FirstElement = offset;
-		srv.Buffer.Flags = D3D12_BUFFER_SRV_FLAGS::D3D12_BUFFER_SRV_FLAG_NONE;
-		srv.Buffer.StructureByteStride = stride;
-		srv.Buffer.NumElements = count;
-
-		Device::get().create_srv(handle, this, srv);
+		HAL::Views::ShaderResource desc = { get_hal().get(), Format::R32G32B32A32_FLOAT, HAL::Views::ShaderResource::Buffer {offset,count, 0, false} };
+		handle = desc;
 	}
 
 	const HandleTable& GPUBuffer::get_srv()
@@ -581,7 +529,7 @@ namespace Graphics
 	{
 		return count;
 	}
-	ByteBuffer::ByteBuffer(UINT count) : GPUBuffer(count, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
+	ByteBuffer::ByteBuffer(UINT count) : GPUBuffer(count, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
 	{
 		init_views();
 	}
@@ -599,28 +547,16 @@ namespace Graphics
 
 	void ByteBuffer::place_uav(Handle h)
 	{
-		D3D12_UNORDERED_ACCESS_VIEW_DESC desc = {};
-		desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-		desc.Format = DXGI_FORMAT_R32_TYPELESS;
-		desc.Buffer.NumElements = static_cast<UINT>(count / 4);
-		desc.Buffer.StructureByteStride = 0;
-		desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
 
-		Device::get().create_uav(h, this, desc);
+		auto b = HAL::Views::UnorderedAccess::Buffer{ 0, static_cast<UINT>(count / 4),  0, true, 0, nullptr };
+		h = HAL::Views::UnorderedAccess{ get_hal().get(), Format::R32_TYPELESS, b };
+
 	}
 
 	void ByteBuffer::place_srv(Handle h)
 	{
-		D3D12_SHADER_RESOURCE_VIEW_DESC desc = {};
-		desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		desc.Format = DXGI_FORMAT_R32_TYPELESS;
-		desc.Buffer.NumElements = static_cast<UINT>(count / 4);
-		desc.Buffer.StructureByteStride = 0;
-		desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-
-
-		Device::get().create_srv(h, this, desc);
+		HAL::Views::ShaderResource desc = { get_hal().get(), Format::R32G32B32A32_FLOAT, HAL::Views::ShaderResource::Buffer {0,static_cast<UINT>(count / 4), 0, true} };
+		h = desc;
 	}
 	IndexBuffer::IndexBuffer(UINT64 size) : GPUBuffer(size)
 	{

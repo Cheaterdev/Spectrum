@@ -11,15 +11,17 @@ import :Device;
 import HAL;
 
 import :Definitions;
+
+using namespace HAL;
+
 export
 {
-	using namespace HAL;
 
 	namespace Graphics
 	{
 
 
-		 const ResourceState& GetSupportedStates(CommandListType type)
+		const ResourceState& GetSupportedStates(CommandListType type)
 		{
 			if (type == CommandListType::COPY) return COPY_STATES;
 			if (type == CommandListType::COMPUTE) return COMPUTE_STATES;
@@ -27,13 +29,13 @@ export
 		}
 
 
-		  bool IsFullySupport(CommandListType type, const ResourceState& states)
+		bool IsFullySupport(CommandListType type, const ResourceState& states)
 		{
 			return (GetSupportedStates(type) & states) == states;
 		}
 
 
-		  CommandListType GetBestType(const ResourceState& states, CommandListType preferred_type)
+		CommandListType GetBestType(const ResourceState& states, CommandListType preferred_type)
 		{
 			if (states == ResourceState::COMMON)
 				return CommandListType::DIRECT;
@@ -51,7 +53,7 @@ export
 			return CommandListType::DIRECT;
 		}
 
-		 bool can_merge_state(const ResourceState& source, const ResourceState& need)
+		bool can_merge_state(const ResourceState& source, const ResourceState& need)
 		{
 			assert(source != ResourceState::UNKNOWN);
 			assert(need != ResourceState::UNKNOWN);
@@ -68,7 +70,7 @@ export
 		}
 
 
-		 ResourceState merge_state(const ResourceState& source, const ResourceState& need)
+		ResourceState merge_state(const ResourceState& source, const ResourceState& need)
 		{
 			assert(need != ResourceState::UNKNOWN);
 

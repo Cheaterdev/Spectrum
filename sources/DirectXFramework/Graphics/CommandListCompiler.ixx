@@ -7,7 +7,7 @@ import Math;
 import :Device;
 
 import HAL;
-using namespace HAL;
+//using namespace HAL;
 
 export
 {
@@ -39,7 +39,7 @@ export
 
 			}
 
-			void create(CommandListType type);
+			void create(HAL::CommandListType type);
 
 			void reset();
 			CommandListCompiled compile();
@@ -543,7 +543,7 @@ export
 
 			}
 
-			void create(CommandListType type);
+			void create(HAL::CommandListType type);
 
 			void reset();
 			CommandListCompiled compile();

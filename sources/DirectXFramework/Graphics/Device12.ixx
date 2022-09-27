@@ -64,7 +64,7 @@ export
 
 			Device();
 
-			ResourceAllocationInfo get_alloc_info(CD3DX12_RESOURCE_DESC& desc);
+			ResourceAllocationInfo get_alloc_info(const HAL::ResourceDesc& desc);
 			std::shared_ptr<SwapChain> create_swap_chain(const swap_chain_desc& desc);
 
 			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescBottomInputs& desc);
@@ -77,11 +77,6 @@ export
 			void create_sampler(D3D12_SAMPLER_DESC desc, CD3DX12_CPU_DESCRIPTOR_HANDLE handle);
 
 			bool is_rtx_supported() { return rtx; }
-			void create_rtv(Handle h, Resource* resource, D3D12_RENDER_TARGET_VIEW_DESC rtv);
-			void create_srv(Handle h, Resource* resource, D3D12_SHADER_RESOURCE_VIEW_DESC srv);
-			void create_uav(Handle h, Resource* resource, D3D12_UNORDERED_ACCESS_VIEW_DESC uav, Resource* counter = nullptr);
-			void create_cbv(Handle h, Resource* resource, D3D12_CONSTANT_BUFFER_VIEW_DESC cbv);
-			void create_dsv(Handle h, Resource* resource, D3D12_DEPTH_STENCIL_VIEW_DESC dsv);
 
 			mutable bool alive = true;
 			void DumpDRED();

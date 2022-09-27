@@ -100,7 +100,7 @@ namespace Graphics
 	void  Queue::gpu_wait(FenceWaiter waiter)
 	{
 		if (!waiter) return;
-		
+
 		std::unique_lock<std::mutex> lock(queue_mutex);
 		gpu_wait_internal(waiter);
 	}
@@ -163,9 +163,9 @@ namespace Graphics
 
 		result.wait();
 
-//		Device::get().check_errors();
+		//		Device::get().check_errors();
 	}
-	
+
 	void Queue::signal_and_wait()
 	{
 		std::promise<int> promise;
@@ -232,7 +232,7 @@ namespace Graphics
 			}
 
 			native->UpdateTileMappings(
-				infos.resource->get_native().Get(),
+				infos.resource->get_dx(),
 				UINT(startCoordinates.size()),
 				&startCoordinates[0],
 				&regionSizes[0],
@@ -268,9 +268,11 @@ namespace Graphics
 			TRS.Depth = infos.size.z;
 			TRS.NumTiles = TRS.Width * TRS.Height * TRS.Depth;
 
-			native->CopyTileMappings(infos.resource->get_native().Get(), &target, infos.source->get_native().Get(), &source, &TRS, D3D12_TILE_MAPPING_FLAG_NONE);
+			auto dx_target_resource = infos.resource->get_dx();
+			auto dx_source_resource = infos.source->get_dx();
+			native->CopyTileMappings(dx_target_resource, &target, dx_source_resource, &source, &TRS, D3D12_TILE_MAPPING_FLAG_NONE);
 		}
-	//	signal_and_wait_internal();
+		//	signal_and_wait_internal();
 
 	}
 	FenceWaiter Queue::run_transition_list(FenceWaiter after, std::shared_ptr<TransitionCommandList>& list)
@@ -281,19 +283,19 @@ namespace Graphics
 
 		ID3D12CommandList* s[] = { list->get_native().Get() };
 		get_native()->ExecuteCommandLists(_countof(s), s);
-	//	signal_and_wait_internal();
+		//	signal_and_wait_internal();
 		return signal_internal();
 	}
 	FenceWaiter Queue::execute_internal(CommandList* list)
 	{
 		PROFILE(L"execute_internal");
 
-		if (stop|| !Device::get().alive)
+		if (stop || !Device::get().alive)
 			return { &commandListCounter,m_fenceValue };
-		
+
 		std::unique_lock<std::mutex> lock(queue_mutex);
 
-		
+
 		auto cl = list->get_ptr();
 
 		{
@@ -359,7 +361,7 @@ namespace Graphics
 			ID3D12CommandList* s[] = { list->compiled.m_commandList.Get() };
 			native->ExecuteCommandLists(_countof(s), s);
 		}
-	//	signal_and_wait_internal();
+		//	signal_and_wait_internal();
 		const FenceWaiter execution_fence = signal_internal();
 
 		{

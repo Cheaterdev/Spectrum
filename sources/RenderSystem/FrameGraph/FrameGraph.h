@@ -128,7 +128,7 @@ namespace FrameGraph
 		Graphics::ResourceHandle alloc_ptr;
 		ResourceAllocInfo* orig = nullptr;
 
-		CD3DX12_RESOURCE_DESC d3ddesc;
+		HAL::ResourceDesc d3ddesc;
 		Graphics::HeapType heap_type;
 		// setup
 		Pass* valid_from = nullptr;

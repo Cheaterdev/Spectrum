@@ -187,7 +187,7 @@ export namespace HAL
 		InvSrc1Alpha
 	};
 
-	enum class StencilOp: char
+	enum class StencilOp : char
 	{
 		Keep,
 		Zero,
@@ -331,4 +331,130 @@ export namespace HAL
 		}
 
 	};
+
+
+
+
+	enum class ResFlags :uint
+	{
+		None = 0,
+		ShaderResource = 1 << 0,
+		UnorderedAccess = 1 << 1,
+		RenderTarget = 1 << 2,
+		DepthStencil = 1 << 3,
+		CrossAdapter = 1 << 4,
+
+		GENERATE_OPS
+	};
+
+	struct TextureDesc
+	{
+		uint3 Dimensions;
+		uint ArraySize;
+		uint MipLevels;
+		Format Format;
+
+		bool is1D() const { return Dimensions.y == 0 && Dimensions.z == 0; }
+		bool is2D() const { return Dimensions.y != 0 && Dimensions.z == 0; }
+		bool is3D() const { return Dimensions.y != 0 && Dimensions.z != 0; }
+
+		bool operator==(const TextureDesc&) const = default;
+		auto operator<=>(const TextureDesc&)  const = default;
+
+		inline uint CalcSubresource(uint MipSlice, uint ArraySlice, uint PlaneSlice) const
+		{
+			return MipSlice + ArraySlice * MipLevels + PlaneSlice * MipLevels * ArraySize;
+		}
+
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(Dimensions);
+			ar& NVP(ArraySize);
+			ar& NVP(MipLevels);
+			ar& NVP(Format);
+		}
+
+	};
+
+	struct BufferDesc
+	{
+		size_t SizeInBytes;
+
+		bool operator==(const BufferDesc&) const = default;
+		auto operator<=>(const BufferDesc&)  const = default;
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(SizeInBytes);
+		}
+	};
+
+	struct ResourceDesc
+	{
+		std::variant<TextureDesc, BufferDesc> desc = BufferDesc{ 0 };
+		ResFlags Flags;
+
+		bool operator==(const ResourceDesc&) const = default;
+		auto operator<=>(const ResourceDesc&)  const = default;
+
+
+		static ResourceDesc Buffer(size_t SizeInBytes, ResFlags Flags = ResFlags::ShaderResource)
+		{
+			return ResourceDesc{ BufferDesc{SizeInBytes}, Flags };
+		}
+		static ResourceDesc Tex1D(Format Format, uint Size, uint ArraySize, uint MipLevels, ResFlags Flags = ResFlags::ShaderResource)
+		{
+			return ResourceDesc{ TextureDesc{uint3(Size,0,0), ArraySize,MipLevels, Format, }, Flags };
+		}
+		static ResourceDesc Tex2D(Format Format, uint2 Size, uint ArraySize, uint MipLevels, ResFlags Flags = ResFlags::ShaderResource)
+		{
+			return ResourceDesc{ TextureDesc{uint3(Size,0), ArraySize,MipLevels, Format, }, Flags };
+		}
+		static ResourceDesc Tex3D(Format Format, uint3 Size, uint MipLevels, ResFlags Flags = ResFlags::ShaderResource)
+		{
+			return ResourceDesc{ TextureDesc{Size, 1,MipLevels, Format, }, Flags };
+		}
+		bool is_buffer() const
+		{
+			return std::holds_alternative<HAL::BufferDesc>(desc);
+		}
+
+		bool is_texture() const
+		{
+			return std::holds_alternative<HAL::TextureDesc>(desc);
+		}
+
+		const HAL::BufferDesc& as_buffer() const
+		{
+			return std::get<HAL::BufferDesc>(desc);
+		}
+
+		const HAL::TextureDesc& as_texture() const
+		{
+			return std::get<HAL::TextureDesc>(desc);
+		}
+
+		HAL::BufferDesc& as_buffer()
+		{
+			return std::get<HAL::BufferDesc>(desc);
+		}
+
+		HAL::TextureDesc& as_texture()
+		{
+			return std::get<HAL::TextureDesc>(desc);
+		}
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(desc);
+			ar& NVP(Flags);
+		}
+
+	};
+
+
+
 }

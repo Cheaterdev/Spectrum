@@ -37,6 +37,18 @@ export namespace HAL
 		{
 			return descriptor_sizes[type];
 		}
+
+		uint Subresources(const ResourceDesc& desc) const
+		{
+			if (desc.is_buffer())
+				return 1;
+
+			auto texture_desc = desc.as_texture();
+			uint count = D3D12GetFormatPlaneCount(native_device.Get(), to_native(texture_desc.Format));
+			return texture_desc.MipLevels * texture_desc.ArraySize * count;
+		}
+
+
 	};
 }
 

@@ -1,6 +1,6 @@
 export module HAL;
 
-export import :Format; 
+export import :Format;
 export import :Types;
 export import :Sampler;
 
@@ -18,3 +18,4 @@ export import :RootSignature;
 export import :IndirectCommand;
 
 export import :Descriptors;
+export import :DescriptorHeap;

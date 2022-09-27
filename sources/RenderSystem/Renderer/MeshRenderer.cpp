@@ -25,8 +25,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	default_pipeline.blend.independ_blend = false;
 	default_pipeline.blend.render_target[0].enabled = false;
 	default_pipeline.mesh = mshader;
-		default_pipeline.amplification = ashader;
-default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
+	default_pipeline.amplification = ashader;
+	default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
 
 	if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 	{
@@ -94,7 +94,7 @@ default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 	}
 
-	
+
 
 
 	//if (false)// !GetAsyncKeyState(VK_F7))
@@ -138,14 +138,14 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 		init_dispatch_compiled.set(compute);
 		from.set(compute);
 
-		
+
 		compute.dispach(1, 1, 1);
 
 		/*graphics.execute_indirect(
 			dispatch_command,
 			1,
 			dispatch_buffer111.get());
-		
+
 		*/
 		//		list.print_debug();
 	}
@@ -183,7 +183,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 			dispatch_buffer.get());
 	}
 
-	
+
 	list.transition_uav(meshes_ids->buffer.get());
 	list.transition_uav(meshes_ids->buffer->help_buffer.get());
 	if (invisibleToo)
@@ -192,7 +192,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 		list.transition_uav(meshes_invisible_ids->buffer->help_buffer.get());
 	}
 
-//	meshes_ids->debug_print(list);
+	//	meshes_ids->debug_print(list);
 
 }
 
@@ -300,8 +300,8 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			((UINT*)gather.GetPip_ids())[total] = end->second->get_id();
 			gather.GetCommands()[total] = commands_buffer[total]->buffer->appendStructuredBuffer;
 
-	/*		list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
-			list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);*/
+			/*		list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
+					list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);*/
 			end++; total++;
 			if (end == pipelines.end()) break;
 		}
@@ -357,7 +357,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					PROFILE_GPU(L"compile");
 
 					if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
-					mesh_render_context->voxelization_compiled.set(graphics);
+						mesh_render_context->voxelization_compiled.set(graphics);
 				}
 				{
 					PROFILE_GPU(L"execute_indirect");
@@ -384,7 +384,7 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 }
 
 
-mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
+mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 {
 	shader = Graphics::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	mshader = Graphics::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
@@ -397,19 +397,19 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Graphics::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(*Graphics::Device::get().get_hal_device(),sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout).get());
+	indirect_command_signature = Graphics::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(*Graphics::Device::get().get_hal_device(), sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout).get());
 
 	UINT max_meshes = 1024 * 1024;
 
-	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	visible_boxes = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	visible_boxes = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	for (int i = 0; i < 8; i++)
-		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 
 
-	meshes_ids->buffer->get_native()->SetName(L"meshes_ids");
+	//meshes_ids->buffer->get_native()->SetName(L"meshes_ids");
 	{
 
 		std::vector<unsigned int> data = { 3, 1, 0,
@@ -431,14 +431,14 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		std::vector<vec4> verts(8);
 		vec3 v0(-0.5, -0.5, 0.5);
 		vec3 v1(0.5, 0.5, 0.5);
-		verts[0] = vec4(-1.0f, 1.0f, -1.0f,0);
-		verts[1] = vec4(1.0f, 1.0f, -1.0f,0);
-		verts[2] = vec4(1.0f, 1.0f, 1.0f,0);
-		verts[3] = vec4(-1.0f, 1.0f, 1.0f,0);
-		verts[4] = vec4(-1.0f, -1.0f, -1.0f,0);
-		verts[5] = vec4(1.0f, -1.0f, -1.0f,0);
-		verts[6] = vec4(1.0f, -1.0f, 1.0f,0);
-		verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
+		verts[0] = vec4(-1.0f, 1.0f, -1.0f, 0);
+		verts[1] = vec4(1.0f, 1.0f, -1.0f, 0);
+		verts[2] = vec4(1.0f, 1.0f, 1.0f, 0);
+		verts[3] = vec4(-1.0f, 1.0f, 1.0f, 0);
+		verts[4] = vec4(-1.0f, -1.0f, -1.0f, 0);
+		verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
+		verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
+		verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
 		index_buffer.reset(new Graphics::IndexBuffer(data));
 
 		vertex_buffer.reset(new Graphics::StructureBuffer<vec4>(8));
@@ -459,19 +459,19 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 
 		{
 
-			boxes_command = Graphics::IndirectCommand::create_command<DrawIndexedArguments>(*Graphics::Device::get().get_hal_device(),sizeof(Underlying<Table::CommandData>));
+			boxes_command = Graphics::IndirectCommand::create_command<DrawIndexedArguments>(*Graphics::Device::get().get_hal_device(), sizeof(Underlying<Table::CommandData>));
 
 		}
 	}
 
 
 	{
-		dispatch_buffer = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(*Graphics::Device::get().get_hal_device(),sizeof(Underlying<Table::CommandData>));
+		dispatch_buffer = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(*Graphics::Device::get().get_hal_device(), sizeof(Underlying<Table::CommandData>));
 	}
 
 	{
-		dispatch_buffer111 = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		dispatch_buffer111 = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 		DispatchArguments args;
 		args.ThreadGroupCountX = 1;
 		args.ThreadGroupCountY = 1;

@@ -55,15 +55,15 @@ Asset_Type MeshAsset::get_type()
 void MeshAsset::init_gpu()
 {
 
-	
+
 	{
 		universal_vertex_manager::get().allocate(vertex_handle, vertex_buffer.size());
-			vertex_handle.write(0, vertex_buffer);
+		vertex_handle.write(0, vertex_buffer);
 	}
 
 	{
 		universal_index_manager::get().allocate(index_handle, index_buffer.size());
-			index_handle.write(0, index_buffer);
+		index_handle.write(0, index_buffer);
 	}
 
 	UINT unique_ids = 0;
@@ -80,18 +80,18 @@ void MeshAsset::init_gpu()
 
 	for (auto& mesh : meshes)
 	{
-	//	mesh.meshlet_index_offset = primitive_ids;
-	//	mesh.meshlet_unique_offset = unique_ids;
-mesh.meshlets_offset = meshlets_count;
+		//	mesh.meshlet_index_offset = primitive_ids;
+		//	mesh.meshlet_unique_offset = unique_ids;
+		mesh.meshlets_offset = meshlets_count;
 		meshlets_count += static_cast<UINT>(mesh.meshlets.size());
 
-		
-		for(auto& meshet:mesh.meshlets)
+
+		for (auto& meshet : mesh.meshlets)
 		{
 
 			Table::Meshlet meshlet_row;
-			meshlet_row.primitiveCount = static_cast<UINT>(meshet.PrimitiveIndices.size()/3);
-			meshlet_row.primitiveOffset = primitive_ids/3;
+			meshlet_row.primitiveCount = static_cast<UINT>(meshet.PrimitiveIndices.size() / 3);
+			meshlet_row.primitiveOffset = primitive_ids / 3;
 
 			meshlet_row.vertexCount = static_cast<UINT>(meshet.UniqueVertexIndices.size());
 			meshlet_row.vertexOffset = unique_ids;
@@ -107,11 +107,11 @@ mesh.meshlets_offset = meshlets_count;
 			primitive_ids += static_cast<UINT>(meshet.PrimitiveIndices.size());
 
 		}
-		
+
 	}
 
 
-    {
+	{
 		universal_index_manager::get().allocate(unique_index_handle, unique_ids);
 
 		unique_index_handle.write(0, unique_ids_buffer);
@@ -139,44 +139,44 @@ mesh.meshlets_offset = meshlets_count;
 		auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
 		list->begin("pre_RTX");
 
-	
-		list->execute_and_wait();	
+
+		list->execute_and_wait();
 	}*/
 
 	int i = 0;
-	if(Graphics::Device::get().is_rtx_supported())
-	for (auto& mesh : meshes)
-	{
-	
-		auto list = Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
-		list->begin("RTX");
-		universal_vertex_manager::get().prepare(list);
-		universal_index_manager::get().prepare(list);
-		auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
+	if (Graphics::Device::get().is_rtx_supported())
+		for (auto& mesh : meshes)
+		{
 
-		GeometryDesc geometryDesc = {};
-		geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+			auto list = Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			list->begin("RTX");
+			universal_vertex_manager::get().prepare(list);
+			universal_index_manager::get().prepare(list);
+			auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
 
-		geometryDesc.IndexBuffer = universal_index_manager::get().buffer->get_resource_address().offset(static_cast<UINT>(index_handle.get_offset() + mesh.index_offset) * sizeof(UINT32));
-		geometryDesc.IndexCount = mesh.index_count;
-		geometryDesc.IndexFormat = DXGI_FORMAT_R32_UINT;
-		geometryDesc.Transform3x4 = mat.get_resource_address();//universal_nodes_manager::get().buffer->get_resource_address().offset(info.mesh_info.GetNode_offset() * sizeof(Table::node_data));
-		geometryDesc.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-		geometryDesc.VertexBuffer = universal_vertex_manager::get().buffer->get_resource_address().offset(static_cast<UINT>((vertex_handle.get_offset() + mesh.vertex_offset) * sizeof(Table::mesh_vertex_input)));
-		geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
-		geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+			GeometryDesc geometryDesc = {};
+			geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
 
-		std::vector<GeometryDesc > descs;
-		descs.push_back(geometryDesc);
+			geometryDesc.IndexBuffer = universal_index_manager::get().buffer->get_resource_address().offset(static_cast<UINT>(index_handle.get_offset() + mesh.index_offset) * sizeof(UINT32));
+			geometryDesc.IndexCount = mesh.index_count;
+			geometryDesc.IndexFormat = DXGI_FORMAT_R32_UINT;
+			geometryDesc.Transform3x4 = mat.get_resource_address();//universal_nodes_manager::get().buffer->get_resource_address().offset(info.mesh_info.GetNode_offset() * sizeof(Table::node_data));
+			geometryDesc.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+			geometryDesc.VertexBuffer = universal_vertex_manager::get().buffer->get_resource_address().offset(static_cast<UINT>((vertex_handle.get_offset() + mesh.vertex_offset) * sizeof(Table::mesh_vertex_input)));
+			geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
+			geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
-		mesh.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
-		list->execute_and_wait();
+			std::vector<GeometryDesc > descs;
+			descs.push_back(geometryDesc);
 
-	//	Graphics::Device::get().check_errors();
-		i++;
-	}
+			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
+			list->execute_and_wait();
 
-	
+			//	Graphics::Device::get().check_errors();
+			i++;
+		}
+
+
 }
 MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 {
@@ -203,16 +203,16 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 	root_node.iterate([this](MeshNode* node)
 		{
 			nodes.push_back(node);
-			
+
 			return true;
 		});
 
 
-	for(int i = 0;i<nodes.size();i++)
+	for (int i = 0; i < nodes.size(); i++)
 	{
 		auto m = nodes[i]->mesh_id;
-		if(m != -1)
-		meshes[m].node_index = i;
+		if (m != -1)
+			meshes[m].node_index = i;
 	}
 	for (auto& m : data->materials)
 		materials.emplace_back(register_asset(m));
@@ -252,7 +252,7 @@ void MeshAsset::try_register()
 void MeshAsset::update_preview(Graphics::Texture::ptr preview)
 {
 	if (!preview || !preview->is_rt())
-		preview.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R8G8B8A8_UNORM, 256, 256, 1, 6, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+		preview.reset(new Graphics::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 	if (!preview_mesh)
 		preview_mesh.reset(new MeshAssetInstance(get_ptr<MeshAsset>()));
@@ -470,8 +470,8 @@ bool MeshAssetInstance::update_transforms()
 			my_node.node_inverse_matrix.inverse();
 
 
-			my_node.aabb.min = float4(info.primitive->get_min(),0);
-			my_node.aabb.max = float4(info.primitive->get_max(),0);
+			my_node.aabb.min = float4(info.primitive->get_min(), 0);
+			my_node.aabb.max = float4(info.primitive->get_max(), 0);
 
 
 			need_update_mats = prev_mat != info.global_mat;
@@ -579,7 +579,7 @@ void MeshAssetInstance::update_nodes()
 			my_node.node_global_matrix_prev = info.global_mat;
 
 			my_node.aabb.min = float4(info.primitive->get_min(), 0);
-			my_node.aabb.max = float4(info.primitive->get_max(),0);
+			my_node.aabb.max = float4(info.primitive->get_max(), 0);
 
 			info.material_id = static_cast<UINT>(mesh_asset->meshes[m].material);
 			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();

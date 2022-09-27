@@ -13,48 +13,48 @@ export
 	namespace Graphics
 	{
 		//class CommandList;
-		
-	enum class ResourceType : char
-	{
 
-		BUFFER,
-		TEXTURE1D,
-		//	TEXTURE1DARRAY,
-		TEXTURE2D,
-		//TEXTURE2DARRAY,
-		TEXTURE3D,
-		CUBE
-	};
-
-
-
-	struct ResourceViewDesc
-	{
-		ResourceType type;
-		Format format;
-
-		union
+		enum class ResourceType : char
 		{
-			struct
-			{
 
-				uint PlaneSlice;
-				uint MipSlice;
-				uint FirstArraySlice;
-				uint MipLevels;
-				uint ArraySize;
-			} Texture2D;
-
-			struct
-			{
-				uint64 Size;
-				uint64 Offset;
-				uint64 Stride;
-				bool counted;
-			} Buffer;
-
+			BUFFER,
+			TEXTURE1D,
+			//	TEXTURE1DARRAY,
+			TEXTURE2D,
+			//TEXTURE2DARRAY,
+			TEXTURE3D,
+			CUBE
 		};
-	};
+
+
+
+		struct ResourceViewDesc
+		{
+			ResourceType type;
+			Format format;
+
+			union
+			{
+				struct
+				{
+
+					uint PlaneSlice;
+					uint MipSlice;
+					uint FirstArraySlice;
+					uint MipLevels;
+					uint ArraySize;
+				} Texture2D;
+
+				struct
+				{
+					uint64 Size;
+					uint64 Offset;
+					uint64 Stride;
+					bool counted;
+				} Buffer;
+
+			};
+		};
 		class ResourceView
 		{
 
@@ -81,46 +81,52 @@ export
 
 			void init_desc()
 			{
-				auto& desc = resource->get_desc();
-
-				view_desc.format = from_native(desc.Format);
-
-				if (desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+				if (resource->get_desc().is_buffer())
 				{
+					auto buffer_desc = resource->get_desc().as_buffer();
+
 					view_desc.type = ResourceType::BUFFER;
 					view_desc.Buffer.Offset = 0;
-					view_desc.Buffer.Size = desc.Width;
+					view_desc.Buffer.Size = buffer_desc.SizeInBytes;
 					view_desc.Buffer.Stride = 0;
+					view_desc.format = HAL::Format::UNKNOWN;
 				}
-
-				if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D)
+				else
 				{
-					view_desc.type = ResourceType::TEXTURE1D;
-				}
+					auto texture_desc = resource->get_desc().as_texture();
+					view_desc.format = texture_desc.Format;
 
-				if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
-				{
+
+					if (texture_desc.is1D())
 					{
+						view_desc.type = ResourceType::TEXTURE1D;
+					}
+
+
+					if (texture_desc.is2D())
+					{
+
 						view_desc.type = ResourceType::TEXTURE2D;
-						view_desc.Texture2D.ArraySize = desc.ArraySize();
+						view_desc.Texture2D.ArraySize = texture_desc.ArraySize;
 						view_desc.Texture2D.MipSlice = 0;
 						view_desc.Texture2D.FirstArraySlice = 0;
 						view_desc.Texture2D.PlaneSlice = 0;
-						view_desc.Texture2D.MipLevels = desc.MipLevels;
+						view_desc.Texture2D.MipLevels = texture_desc.MipLevels;
+
+					}
+
+
+					if (texture_desc.is3D())
+					{
+						view_desc.type = ResourceType::TEXTURE3D;
+
+						view_desc.Texture2D.ArraySize = 1;
+						view_desc.Texture2D.MipSlice = 0;
+						view_desc.Texture2D.FirstArraySlice = 0;
+						view_desc.Texture2D.PlaneSlice = 0;
+						view_desc.Texture2D.MipLevels = texture_desc.MipLevels;
 					}
 				}
-
-				if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D)
-				{
-					view_desc.type = ResourceType::TEXTURE3D;
-
-					view_desc.Texture2D.ArraySize = 1;
-					view_desc.Texture2D.MipSlice = 0;
-					view_desc.Texture2D.FirstArraySlice = 0;
-					view_desc.Texture2D.PlaneSlice = 0;
-					view_desc.Texture2D.MipLevels = desc.MipLevels;
-				}
-
 
 			}
 
@@ -152,12 +158,12 @@ export
 				if (size) view_desc.Buffer.Size = size;
 				srv_handle = HLSL::Buffer<T>(frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
 
-				srv_handle.create(resource.get(), to_native(format), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
+				srv_handle.create(resource.get(), format, static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 
-				auto& desc = resource->get_desc();
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+				auto& desc = resource->get_desc().as_buffer();
+				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
 					uav_handle = HLSL::RWBuffer<T>(frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
-					uav_handle.create(resource.get(), to_native(format), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
+					uav_handle.create(resource.get(), format, static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 				}
 			}
 
@@ -168,13 +174,13 @@ export
 
 			virtual void place_cb(Handle h) {
 				if (!resource) return;
+				assert(false);
+				//D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
+				//desc.BufferLocation = resource->get_gpu_address();
+				//desc.SizeInBytes = (UINT)view_desc.Buffer.Size;
+				//assert(desc.SizeInBytes < 65536);
 
-				D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
-				desc.BufferLocation = resource->get_gpu_address();
-				desc.SizeInBytes = (UINT)view_desc.Buffer.Size;
-				assert(desc.SizeInBytes < 65536);
-
-				Device::get().create_cbv(h, resource.get(), desc);
+				//Device::get().create_cbv(h, resource.get(), desc);
 			}
 			void write(UINT64 offset, T* data, UINT64 count)
 			{
@@ -217,7 +223,7 @@ export
 			{
 				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(2);
 
-				auto& desc = resource->get_desc();
+				auto& desc = resource->get_desc().as_texture();
 				if (view_desc.type == ResourceType::TEXTURE2D) {
 					texture2D = HLSL::Texture2D<>(hlsl[0]);
 					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
@@ -238,7 +244,7 @@ export
 					texture2DArray = HLSL::Texture2DArray<>(hlsl[0]);
 
 
-				if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
 
 					if (view_desc.type == ResourceType::TEXTURE2D && view_desc.Texture2D.ArraySize == 1)
 						texture2D.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.MipLevels, view_desc.Texture2D.FirstArraySlice);
@@ -252,7 +258,7 @@ export
 						assert(false);
 				}
 
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
 					if ((view_desc.type == ResourceType::TEXTURE2D || view_desc.type == ResourceType::CUBE) && view_desc.Texture2D.ArraySize == 1)
 						rwTexture2D.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.FirstArraySlice);
 					else if (view_desc.type == ResourceType::TEXTURE3D)
@@ -261,7 +267,7 @@ export
 						assert(false);
 				}
 
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::RenderTarget)) {
 
 					HandleTableLight rtv = frame.get_cpu_heap(HAL::DescriptorHeapType::RTV).place(1);
 
@@ -277,7 +283,7 @@ export
 					}
 				}
 
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::DepthStencil)) {
 					HandleTableLight dsv = frame.get_cpu_heap(HAL::DescriptorHeapType::DSV).place(1);
 					depthStencil = HLSL::DepthStencil<>(dsv[0]);
 
@@ -299,18 +305,17 @@ export
 			TextureView(Resource::ptr resource, F& frame, bool cube = false) :ResourceView(resource)
 			{
 				init_desc();
+				auto& texture_desc = resource->get_desc().as_texture();
 
-				auto& desc = resource->get_desc();
-
-				if (cube && desc.ArraySize() % 6 == 0)
+				if (cube && texture_desc.ArraySize % 6 == 0)
 				{
 
 					view_desc.type = ResourceType::CUBE;
-					view_desc.Texture2D.ArraySize = desc.ArraySize() / 6;
+					view_desc.Texture2D.ArraySize = texture_desc.ArraySize / 6;
 					view_desc.Texture2D.MipSlice = 0;
 					view_desc.Texture2D.FirstArraySlice = 0;
 					view_desc.Texture2D.PlaneSlice = 0;
-					view_desc.Texture2D.MipLevels = desc.MipLevels;
+					view_desc.Texture2D.MipLevels = texture_desc.MipLevels;
 				}
 
 				init(frame);
@@ -330,13 +335,14 @@ export
 			Viewport get_viewport()
 			{
 
-				auto desc = resource->get_desc();
+				auto& texture_desc = resource->get_desc().as_texture();
+
 				UINT scaler = 1 << view_desc.Texture2D.MipSlice;
 
 
 				Viewport p;
-				p.Width = std::max(1.0f, static_cast<float>(resource->get_desc().Width / scaler));
-				p.Height = std::max(1.0f, static_cast<float>(resource->get_desc().Height / scaler));
+				p.Width = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.x / scaler));
+				p.Height = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.y / scaler));
 				p.TopLeftX = 0;
 				p.TopLeftY = 0;
 				p.MinDepth = 0;
@@ -348,11 +354,10 @@ export
 
 			sizer_long get_scissor()
 			{
-				auto desc = resource->get_desc();
 				UINT scaler = 1 << view_desc.Texture2D.MipSlice;
+				auto& texture_desc = resource->get_desc().as_texture();
 
-
-				return { 0,0, std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) };
+				return { 0,0, std::max(1u,texture_desc.Dimensions.x / scaler),std::max(1u,texture_desc.Dimensions.y / scaler) };
 			}
 			UINT get_mip_count()
 			{
@@ -361,11 +366,11 @@ export
 
 			ivec2 get_size()
 			{
-				auto desc = resource->get_desc();
+				auto& texture_desc = resource->get_desc().as_texture();
+
 				UINT scaler = 1 << view_desc.Texture2D.MipSlice;
 
-
-				return { std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) };
+				return { std::max(1u,texture_desc.Dimensions.x / scaler),std::max(1u,texture_desc.Dimensions.y / scaler) };
 			}
 
 			TextureView create_2d_slice(UINT slice, FrameResources& frame);
@@ -558,13 +563,13 @@ export
 				byteBuffer = HLSL::ByteAddressBuffer(hlsl[0]);
 				rwbyteBuffer = HLSL::RWByteAddressBuffer(hlsl[1]);
 
-				auto& desc = resource->get_desc();
+				auto& desc = resource->get_desc().as_buffer();
 
-				if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
 					byteBuffer.create(resource.get(), offset, size);
 				}
 
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
 					rwbyteBuffer = HLSL::RWByteAddressBuffer(frame.get_cpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
 					rwbyteBuffer.create(resource.get(), offset, size);
 				}
@@ -603,15 +608,15 @@ export
 				structuredBuffer = HLSL::StructuredBuffer<UINT>(hlsl[0]);
 				rwStructuredBuffer = HLSL::RWStructuredBuffer<UINT>(hlsl[1]);
 				rwRAW = HLSL::RWBuffer<std::byte>(hlsl[2]);
-				auto& desc = resource->get_desc();
+				auto& desc = resource->get_desc().as_buffer();
 
-				if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
 					structuredBuffer.create(resource.get(), offset / sizeof(UINT), 1);
 				}
 
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
 					rwStructuredBuffer.create(resource.get(), offset / sizeof(UINT), 1);
-					rwRAW.create(resource.get(), DXGI_FORMAT::DXGI_FORMAT_R8_UINT, offset, sizeof(UINT));
+					rwRAW.create(resource.get(), Format::R8_UINT, offset, sizeof(UINT));
 				}
 			}
 		};
@@ -667,17 +672,17 @@ export
 
 				rwRAW = HLSL::RWBuffer<std::byte>(hlsl[3]);
 
-				auto& desc = resource->get_desc();
+				auto& desc = resource->get_desc().as_buffer();
 
-				if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
 					structuredBuffer.create(resource.get(), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
 				}
 
 
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
+				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
 
 					rwStructuredBuffer.create(resource.get(), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
-					rwRAW.create(resource.get(), DXGI_FORMAT::DXGI_FORMAT_R8_UINT, static_cast<UINT>(view_desc.Buffer.Offset), static_cast<UINT>(view_desc.Buffer.Size));
+					rwRAW.create(resource.get(), Format::R8_UINT, static_cast<UINT>(view_desc.Buffer.Offset), static_cast<UINT>(view_desc.Buffer.Size));
 
 					if (counted == BufferType::COUNTED)
 						appendStructuredBuffer.create(resource.get(), 0, resource.get(), static_cast<UINT>(view_desc.Buffer.Offset / sizeof(Underlying<T>)), static_cast<UINT>(view_desc.Buffer.Size / sizeof(Underlying<T>)));
@@ -692,12 +697,13 @@ export
 			virtual void place_cb(Handle h) {
 				if (!resource) return;
 
-				D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
-				desc.BufferLocation = resource->get_gpu_address();
-				desc.SizeInBytes = (UINT)view_desc.Buffer.Size;
-				assert(desc.SizeInBytes < 65536);
+				assert(false);
+				/*	D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
+					desc.BufferLocation = resource->get_gpu_address();
+					desc.SizeInBytes = (UINT)view_desc.Buffer.Size;
+					assert(desc.SizeInBytes < 65536);
 
-				Device::get().create_cbv(h, resource.get(), desc);
+					Device::get().create_cbv(h, resource.get(), desc);*/
 			}
 			void write(UINT64 offset, T* data, UINT64 count)
 			{
@@ -706,6 +712,6 @@ export
 
 		};
 
-	
+
 	}
 }
