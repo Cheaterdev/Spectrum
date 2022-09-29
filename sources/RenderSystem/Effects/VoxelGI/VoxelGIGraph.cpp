@@ -286,7 +286,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	if (clear_scene && all_scene_regen_counter)
 	{
 		PROFILE_GPU(L"clear");
-		list.clear_uav(albedo.tex_static->texture_3d()->get_static_uav());
+		list.clear_uav(albedo.tex_static->texture_3d()->rwTexture3D[0]);
 	}
 	else
 	{

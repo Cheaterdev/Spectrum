@@ -84,7 +84,7 @@ namespace Graphics
 			});
 
 		StructureBuffer<Table::DebugStruct>* structured = static_cast<StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
-		clear_uav(structured->get_raw_uav());
+		clear_uav(structured->rwByteAddressBuffer);
 	}
 
 

@@ -10,7 +10,7 @@ export
 
 	struct BuildOptions
 	{
-		static constexpr bool Debug = false;
+		static constexpr bool Debug = true;
 		static constexpr bool Release = false;
 
 	};

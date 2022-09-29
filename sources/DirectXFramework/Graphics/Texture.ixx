@@ -48,25 +48,20 @@ export
 		class View
 		{
 		protected:
+			HandleTable hlsl;
 			HandleTable rtvs;
-			HandleTable srvs;
-			HandleTable uavs;
 
-			HandleTable static_srv;
-			HandleTable static_uav;
 
 			Resource* resource;
 			View(Resource* resource) :resource(resource)
 			{
 
 			}
-
-			virtual Handle get_srv() = 0;
 		};
 
 		class Texture2DView :public View
 		{
-			HandleTable hlsl;
+
 		public:
 			HLSL::Texture2D<> texture2D;
 			std::vector<HLSL::RWTexture2D<>> rwTexture2D;
@@ -75,10 +70,8 @@ export
 			int single_count;
 			std::vector<Viewport> p;
 			std::vector<sizer_long> scissor;
-			//     std::vector<HandleTable> array_rtv;
 
 			int array_index = 0;
-
 
 		public:
 			using ptr = std::shared_ptr<Texture2DView>;
@@ -87,46 +80,16 @@ export
 
 			Handle get_rtv(UINT mip = 0);
 
-			void place_srv(Handle h);
-			void place_srv(Handle h, UINT mip);
 
 			void place_rtv(Handle h, int i = 0);
-
-
 			void place_dsv(Handle h, UINT mip = 0);
-
-			void place_uav(Handle h, UINT mip = 0, UINT slice = 0);
-
-
-			std::function<void(Handle)>uav(UINT mip = 0, UINT slice = 0);
-
-
-			std::function<void(Handle)>srv(PixelSpace space = PixelSpace::NONE);
-
-			std::function<void(Handle)>srv(UINT mip, UINT levels = 1);
 
 			std::function<void(Handle)>rtv(UINT mip);
 
-			Handle get_srv(UINT mip);
-			Handle get_srv();
-			Handle get_static_srv();
-
-			Handle get_static_uav();
-			Handle get_uav(UINT mip = 0);
 
 			Viewport get_viewport(UINT mip = 0);
-
 			sizer_long get_scissor(UINT mip = 0);
-			/*
-			const HandleTable& get_rtv(UINT index, UINT mip)
-			{
-			return rtv[mip][index];
-			}
 
-			const HandleTable& get_rtv(UINT mip)
-			{
-			return array_rtv[mip];
-			}*/
 		};
 
 		class CubemapView :public View
@@ -136,18 +99,11 @@ export
 			std::vector<Viewport> p;
 			std::vector<sizer_long> scissor;
 			std::array<Texture2DView::ptr, 6> faces;
-			//     std::vector<HandleTable> array_rtv;
 		public:
 			using ptr = std::shared_ptr<CubemapView>;
 			CubemapView(Resource* _resource, int offset = 0);
 
 			Handle get_rtv(UINT index, UINT mip);
-			Handle get_srv(UINT mip);
-
-			Handle get_srv();
-			void place_srv(Handle h);
-
-			void place_srv(Handle h, UINT mip);
 
 			Texture2DView::ptr face(int i)
 			{
@@ -155,17 +111,6 @@ export
 			}
 			Viewport get_viewport(UINT mip = 0);
 			sizer_long get_scissor(UINT mip = 0);
-			Handle get_static_srv();
-			/*
-			const HandleTable& get_rtv(UINT index, UINT mip)
-			{
-				return rtv[mip][index];
-			}
-
-			const HandleTable& get_rtv(UINT mip)
-			{
-				return array_rtv[mip];
-			}*/
 		};
 
 		class CubemapArrayView :public View
@@ -174,49 +119,22 @@ export
 
 			std::vector<CubemapView::ptr> views;
 			int offset = 0;
-			//     std::vector<HandleTable> array_rtv;
-
 
 		public:
 			using ptr = std::shared_ptr<CubemapArrayView>;
 			CubemapArrayView(Resource* _resource);
-
-
 			CubemapView::ptr cubemap(int i)
 			{
 				return views[i];
 			}
-			Handle get_srv(UINT i)
-			{
-				return srvs[1 + i];
-			}
 
-			Handle get_srv()
-			{
-				return srvs[0];
-			}
-
-
-			void place_srv(Handle h);
-			void place_srv(Handle h, UINT mip);
-
-
-
-			/*
-			const HandleTable& get_rtv(UINT index, UINT mip)
-			{
-			return rtv[mip][index];
-			}
-
-			const HandleTable& get_rtv(UINT mip)
-			{
-			return array_rtv[mip];
-			}*/
 		};
 
 		class Array2DView :public View
 		{
-
+		public:
+			HLSL::Texture2DArray<> texture2DArray;
+			HLSL::RWTexture2DArray<> rwTexture2DArray;
 		private:
 			int single_count;
 
@@ -226,40 +144,10 @@ export
 
 			Array2DView(Resource* _resource);
 
-			Handle get_rtv(UINT index, UINT mip);
-
-			void place_srv(Handle h);
-
-
-			void place_dsv(Handle h, UINT mip = 0, UINT slice = 0, UINT slice_count = 1);
-
-			void place_uav(Handle h, UINT first = 0, UINT count = 0, UINT mip = 0, UINT slice = 0);
-
-
-
 			Texture2DView::ptr tex2d(int i)
 			{
 				return views[i];
 			}
-
-			std::function<void(Handle)> uav(UINT first = 0, UINT count = 0, UINT mip = 0);
-
-			Handle get_srv();
-
-			Handle get_uav();
-			Handle get_static_srv();
-
-			Handle get_static_uav();
-			/*
-			const HandleTable& get_rtv(UINT index, UINT mip)
-			{
-			return rtv[mip][index];
-			}
-
-			const HandleTable& get_rtv(UINT mip)
-			{
-			return array_rtv[mip];
-			}*/
 		};
 
 
@@ -273,41 +161,12 @@ export
 			std::vector<HLSL::Texture3D<>> texture3DMips;
 		private:
 			int single_count;
-			//     std::vector<HandleTable> array_rtv;
 		public:
-
-
-
 			using ptr = std::shared_ptr<Texture3DView>;
 			Texture3DView(Resource* _resource);
 
 			Handle get_rtv(UINT index, UINT mip);
 
-			void place_srv(Handle h, int level = -1);
-
-
-
-			void place_uav(Handle h, int level = 0);
-			Handle get_srv(int i);
-			Handle get_uav(int i = 0);
-			Handle get_static_srv();
-			Handle get_srv();
-
-
-			Handle get_static_uav();
-			std::function<void(Handle)>srv(int level = -1, int levels = -1);
-
-			std::function<void(Handle)>uav(int level = 0);
-			/*
-			const HandleTable& get_rtv(UINT index, UINT mip)
-			{
-			return rtv[mip][index];
-			}
-
-			const HandleTable& get_rtv(UINT mip)
-			{
-			return array_rtv[mip];
-			}*/
 		};
 
 

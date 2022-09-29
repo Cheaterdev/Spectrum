@@ -237,34 +237,6 @@ namespace Graphics
 	{
 		auto res_desc = resource->get_desc();
 
-		uint count = res_desc.as_texture().ArraySize / 6;
-
-
-		for (uint i = 0; i < count; i++)
-			views.emplace_back(new CubemapView(resource, i));
-
-		if (check(res_desc.Flags & HAL::ResFlags::ShaderResource))
-		{
-			srvs = StaticDescriptors::get().place(1 + count);
-			place_srv(srvs[0]);
-
-			for (uint i = 0; i < count; i++)
-				place_srv(srvs[1 + i], i);
-
-		}
-	}
-
-	void CubemapArrayView::place_srv(Handle  h)
-	{
-		uint count = resource->get_desc().as_texture().ArraySize / 6;
-		auto b = HAL::Views::ShaderResource::CubeArray{ 0, 0, 0, count, 0 };
-		h = HAL::Views::ShaderResource{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-	}
-
-	void CubemapArrayView::place_srv(Handle h, UINT offset)
-	{
-		auto b = HAL::Views::ShaderResource::CubeArray{ 0, 0, offset * 6, 1, 0 };
-		h = HAL::Views::ShaderResource{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
 	}
 
 	CubemapView::CubemapView(Resource* _resource, int offset) : View(_resource)
@@ -290,14 +262,14 @@ namespace Graphics
 
 		if (check(res_desc.Flags & HAL::ResFlags::ShaderResource))
 		{
-			srvs = StaticDescriptors::get().place(1 + res_desc.as_texture().MipLevels);
+			/*srvs = StaticDescriptors::get().place(1 + res_desc.as_texture().MipLevels);
 			place_srv(srvs[0]);
 
 			for (uint i = 0; i < res_desc.as_texture().MipLevels; i++)
 				place_srv(srvs[1 + i], i);
 
 			static_srv = StaticDescriptors::get().place(1);
-			place_srv(static_srv[0]);
+			place_srv(static_srv[0]);*/
 		}
 
 		p.resize(res_desc.as_texture().MipLevels);
@@ -326,28 +298,6 @@ namespace Graphics
 		return rtvs[index + 6 * mip];
 	}
 
-	Handle CubemapView::get_srv(UINT mip)
-	{
-		return srvs[1 + mip];
-	}
-
-	Handle CubemapView::get_srv()
-	{
-		return srvs[0];
-	}
-
-	void CubemapView::place_srv(Handle  h)
-	{
-		auto b = HAL::Views::ShaderResource::Cube{ 0, resource->get_desc().as_texture().MipLevels, 0 };
-		h = HAL::Views::ShaderResource{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-	}
-
-	void CubemapView::place_srv(Handle  h, UINT mip)
-	{
-		auto b = HAL::Views::ShaderResource::Cube{ 0, resource->get_desc().as_texture().MipLevels, 0 };
-		h = HAL::Views::ShaderResource{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-	}
-
 	Viewport CubemapView::get_viewport(UINT mip)
 	{
 		return p[mip];
@@ -358,10 +308,7 @@ namespace Graphics
 		return scissor[mip];
 	}
 
-	Handle CubemapView::get_static_srv()
-	{
-		return static_srv[0];
-	}
+
 
 	Texture2DView::Texture2DView(Resource* _resource, HandleTable t) : View(_resource)
 	{
@@ -385,18 +332,23 @@ namespace Graphics
 	Texture2DView::Texture2DView(Resource* _resource, int array_index) : View(_resource), array_index(array_index)
 	{
 		auto res_desc = resource->get_desc();
-		//    single_count = 6 * res_desc.MipLevels;
-		//      rtvs = DescriptorHeapManager::get().get_rt()->create_table(single_count);
+
+		hlsl = StaticDescriptors::get().place(1 + 2 * res_desc.as_texture().MipLevels);
+		int offset = 0;
+
 		if (check(res_desc.Flags & HAL::ResFlags::ShaderResource)) {
-			srvs = StaticDescriptors::get().place(1 + res_desc.as_texture().MipLevels);
-			place_srv(srvs[0]);
-			static_srv = StaticDescriptors::get().place(1);
-			place_srv(static_srv[0]);
 
+			texture2D = HLSL::Texture2D<>(hlsl[offset++]);
+			texture2D.create(resource, 0, res_desc.as_texture().MipLevels, array_index);
+
+			texture2DMips.resize(res_desc.as_texture().MipLevels);
 			for (uint i = 0; i < res_desc.as_texture().MipLevels; i++)
-				place_srv(srvs[i + 1], i);
-
+			{
+				texture2DMips[i] = HLSL::Texture2D<>(hlsl[offset++]);
+				texture2DMips[i].create(resource, i, 1, array_index);
+			}
 		}
+
 		if (check(res_desc.Flags & HAL::ResFlags::RenderTarget))
 		{
 			rtvs = DescriptorHeapManager::get().get_rt()->create_table(res_desc.as_texture().MipLevels);
@@ -407,13 +359,12 @@ namespace Graphics
 
 		if (check(res_desc.Flags & HAL::ResFlags::UnorderedAccess))
 		{
-			uavs = StaticDescriptors::get().place(resource->get_desc().as_texture().MipLevels);
-
-			for (uint i = 0; i < resource->get_desc().as_texture().MipLevels; i++)
-				place_uav(uavs[i], i, 0);
-
-			static_uav = StaticDescriptors::get().place(1);
-			place_uav(static_uav[0]);
+			rwTexture2D.resize(res_desc.as_texture().MipLevels);
+			for (uint i = 0; i < res_desc.as_texture().MipLevels; i++)
+			{
+				rwTexture2D[i] = HLSL::RWTexture2D<>(hlsl[offset++]);
+				rwTexture2D[i].create(resource, i, array_index);
+			}
 		}
 
 		p.resize(res_desc.as_texture().MipLevels);
@@ -430,61 +381,13 @@ namespace Graphics
 			p[i].MaxDepth = 1;
 			scissor[i] = { 0, 0, p[i].Width , p[i].Height };
 		}
-
-		/*  for (int m = 0; m < res_desc.MipLevels; m++)
-		  {
-			  for (int i = 0; i < 6; i++)
-			  {
-				  D3D12_RENDER_TARGET_VIEW_DESC desc;
-				  desc.Format = to_srv(res_desc.Format);
-				  desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-				  desc.Texture2DArray.PlaneSlice = 0;
-				  desc.Texture2DArray.MipSlice = m;
-				  desc.Texture2DArray.ArraySize = 1;
-				  desc.Texture2DArray.FirstArraySlice = i;
-				  Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, rtvs[i + 6 * m].cpu);
-			  }
-		  }*/
-
-
-
-		hlsl = StaticDescriptors::get().place(1 + 2 * res_desc.as_texture().MipLevels);
-		int offset = 0;
-		texture2D = HLSL::Texture2D<>(hlsl[offset++]);
-
-		place_srv(texture2D);
-
-		if (check(res_desc.Flags & HAL::ResFlags::UnorderedAccess))
-		{
-			rwTexture2D.resize(res_desc.as_texture().MipLevels);
-			for (uint i = 0; i < res_desc.as_texture().MipLevels; i++)
-			{
-				rwTexture2D[i] = HLSL::RWTexture2D<>(hlsl[offset++]);
-				place_uav(rwTexture2D[i], i, 0);
-			}
-
-
-		}
-
-		texture2DMips.resize(res_desc.as_texture().MipLevels);
-		for (uint i = 0; i < res_desc.as_texture().MipLevels; i++)
-		{
-			texture2DMips[i] = HLSL::Texture2D<>(hlsl[offset++]);
-			place_srv(texture2DMips[i], i);
-		}
 	}
+
 	Handle Texture2DView::get_rtv(UINT mip)
 	{
 		return rtvs[mip];
 	}
-	void Texture2DView::place_srv(Handle  h)
-	{
-		srv()(h);
-	}
-	void Texture2DView::place_srv(Handle  h, UINT mip)
-	{
-		srv(mip)(h);
-	}
+
 	void Texture2DView::place_rtv(Handle  h, int i)
 	{
 		rtv(i)(h);
@@ -503,71 +406,7 @@ namespace Graphics
 		}
 	}
 
-	void Texture2DView::place_uav(Handle  h, UINT mip, UINT slice)
-	{
-		uav(mip, slice)(h);
-	}
-	std::function<void(Handle)> Texture2DView::uav(UINT mip, UINT slice)
-	{
-		return [this, mip, slice](Handle  h)
-		{
-			if (!resource) return;
 
-			if (array_index == -1)
-			{
-				auto b = HAL::Views::UnorderedAccess::Texture2D{ mip,slice };
-				h = HAL::Views::UnorderedAccess{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-			}
-			else
-			{
-				auto b = HAL::Views::UnorderedAccess::Texture2DArray{ mip,uint(array_index), 1, slice };
-				h = HAL::Views::UnorderedAccess{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-			}
-
-		};
-	}
-	std::function<void(Handle)> Texture2DView::srv(PixelSpace space)
-	{
-		return [this, space](Handle h)
-		{
-			if (!resource) return;
-
-			//	if (space == PixelSpace::MAKE_LINERAR)
-			//		srvDesc.Format = to_linear(srvDesc.Format);
-			if (array_index == -1)
-			{
-
-				auto b = HAL::Views::ShaderResource::Texture2D{ 0, resource->get_desc().as_texture().MipLevels, 0 };
-				h = HAL::Views::ShaderResource{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-			}
-			else
-			{
-
-				auto b = HAL::Views::ShaderResource::Texture2DArray{ 0, resource->get_desc().as_texture().MipLevels, uint(array_index),1,0 };
-				h = HAL::Views::ShaderResource{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-			}
-		};
-	}
-	std::function<void(Handle)> Texture2DView::srv(UINT mip, UINT levels)
-	{
-		return [this, mip, levels](Handle  h)
-		{
-
-			if (array_index == -1)
-			{
-
-				auto b = HAL::Views::ShaderResource::Texture2D{ mip, levels, 0 };
-				h = HAL::Views::ShaderResource{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-			}
-			else
-			{
-
-				auto b = HAL::Views::ShaderResource::Texture2DArray{ mip, levels, uint(array_index),1,0 };
-				h = HAL::Views::ShaderResource{ resource->get_hal().get(), resource->get_desc().as_texture().Format.to_srv(), b };
-			}
-
-		};
-	}
 	std::function<void(Handle)> Texture2DView::rtv(UINT mip)
 	{
 		return [this, mip](Handle  h)
@@ -602,26 +441,7 @@ namespace Graphics
 		}
 		};
 	}
-	Handle Texture2DView::get_srv(UINT mip)
-	{
-		return srvs[mip + 1];
-	}
-	Handle Texture2DView::get_srv()
-	{
-		return srvs[0];
-	}
-	Handle Texture2DView::get_static_srv()
-	{
-		return static_srv[0];
-	}
-	Handle Texture2DView::get_static_uav()
-	{
-		return static_uav[0];
-	}
-	Handle Texture2DView::get_uav(UINT mip)
-	{
-		return uavs[mip];
-	}
+
 	Viewport Texture2DView::get_viewport(UINT mip)
 	{
 		return p[mip];
@@ -631,272 +451,61 @@ namespace Graphics
 		return scissor[mip];
 	}
 
-	Handle Texture3DView::get_static_srv()
-	{
-		return static_srv[0];
-	}
-
 	Texture3DView::Texture3DView(Resource* _resource) : View(_resource)
 	{
-		srvs = StaticDescriptors::get().place(1 + resource->get_desc().as_texture().MipLevels);
-		place_srv(srvs[0]);
 
-		for (uint i = 0; i < resource->get_desc().as_texture().MipLevels; i++)
-			place_srv(srvs[1 + i], i);
+		auto res_desc = resource->get_desc();
 
-		if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess))
-		{
-			uavs = StaticDescriptors::get().place(resource->get_desc().as_texture().MipLevels);
-			static_uav = StaticDescriptors::get().place(resource->get_desc().as_texture().MipLevels);
+		hlsl = StaticDescriptors::get().place(1 + 2 * res_desc.as_texture().MipLevels);
+		int offset = 0;
 
-			//		for (int i = 0; i < resource->get_desc().MipLevels; i++)
-			for (uint i = 0; i < resource->get_desc().as_texture().MipLevels; i++)
+		if (check(res_desc.Flags & HAL::ResFlags::ShaderResource)) {
+
+			texture3D = HLSL::Texture3D<>(hlsl[offset++]);
+			texture3D.create(resource, 0, res_desc.as_texture().MipLevels);
+
+
+			texture3DMips.resize(resource->get_desc().as_texture().MipLevels);
+			for (int i = 0; i < texture3DMips.size(); i++)
 			{
-				uavs[i] = uav(i);//place_uav(uavs[i], i);
-				static_uav[i] = uav(i);
+				texture3DMips[i] = HLSL::Texture3D<>(hlsl[offset++]);
+				texture3DMips[i].create(resource, i, 1);
 			}
 		}
 
-
-		static_srv = StaticDescriptors::get().place(1);
-		place_srv(static_srv[0]);
-
-
-
-		hlsl = StaticDescriptors::get().place(1 + 2 * resource->get_desc().as_texture().MipLevels);
-
-		int offset = 0;
-		texture3D = HLSL::Texture3D<float4>(hlsl[offset++]);
-
-		place_srv(texture3D);
-
-
-		texture3DMips.resize(resource->get_desc().as_texture().MipLevels);
-		for (int i = 0; i < texture3DMips.size(); i++)
-		{
-			texture3DMips[i] = HLSL::Texture3D<>(hlsl[offset++]);
-			srv(i, 1)(texture3DMips[i]);
-		}
-
-		if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess))
+		if (check(res_desc.Flags & HAL::ResFlags::UnorderedAccess))
 		{
 			rwTexture3D.resize(resource->get_desc().as_texture().MipLevels);
 			for (uint i = 0; i < resource->get_desc().as_texture().MipLevels; i++)
 			{
 				rwTexture3D[i] = HLSL::RWTexture3D<>(hlsl[offset++]);
-				place_uav(rwTexture3D[i], i);
+				rwTexture3D[i].create(resource, i);
 			}
-
 		}
 
-
-
-		/*   auto res_desc = resource->get_desc();
-		   single_count = 6 * res_desc.MipLevels;
-		   rtvs = DescriptorHeapManager::get().get_rt()->create_table(single_count);
-
-		   for (int m = 0; m < res_desc.MipLevels; m++)
-		   {
-			   for (int i = 0; i < 6; i++)
-			   {
-				   D3D12_RENDER_TARGET_VIEW_DESC desc;
-				   desc.Format = to_srv(res_desc.Format);
-				   desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-				   desc.Texture2DArray.PlaneSlice = 0;
-				   desc.Texture2DArray.MipSlice = m;
-				   desc.Texture2DArray.ArraySize = 1;
-				   desc.Texture2DArray.FirstArraySlice = i;
-				   Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, rtvs[i + 6 * m].cpu);
-			   }
-		   }*/
-	}
-	Handle Texture3DView::get_rtv(UINT index, UINT mip)
-	{
-		return rtvs[index + 6 * mip];
-	}
-	void Texture3DView::place_srv(Handle  h, int level)
-	{
-		srv(level)(h);
-	}
-	void Texture3DView::place_uav(Handle  h, int level)
-	{
-		uav(level)(h);
-	}
-	Handle Texture3DView::get_srv(int i)
-	{
-		return srvs[i + 1];
 	}
 
-	Handle Texture3DView::get_srv()
-	{
-		return srvs[0];
-	}
 
-	Handle Texture3DView::get_uav(int i)
-	{
-		return uavs[i];
-	}
-	Handle Texture3DView::get_static_uav()
-	{
-		return static_uav[0];
-	}
-	std::function<void(Handle)> Texture3DView::srv(int level, int levels)
-	{
-		return [this, level, levels](Handle  h)
-		{
-			h = HAL::Views::ShaderResource{
-				.Resource = resource->get_hal().get(),
-				.Format = resource->get_desc().as_texture().Format.to_srv(),
-				.View = HAL::Views::ShaderResource::Texture3D
-						{
-							.MostDetailedMip = uint(level == -1 ? 0 : level),
-							.MipLevels = (levels == -1) ? (level == -1 ? resource->get_desc().as_texture().MipLevels : resource->get_desc().as_texture().MipLevels - level) : (levels),
-							.ResourceMinLODClamp = 0
-						}
-			};
-		};
-	}
-	std::function<void(Handle)> Texture3DView::uav(int level)
-	{
-		return [this, level](Handle  h)
-		{
-			h = HAL::Views::UnorderedAccess{
-				.Resource = resource->get_hal().get(),
-				.Format = resource->get_desc().as_texture().Format.to_srv(),
-				.View = HAL::Views::UnorderedAccess::Texture3D
-						{
-							.MipSlice = uint(level),
-							.FirstWSlice = 0,
-							.WSize = uint(resource->get_desc().as_texture().Dimensions.z / (1 << level))
-						}
-			};
-		};
-	}
 	Array2DView::Array2DView(Resource* _resource) : View(_resource)
 	{
-		if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess))
-		{
-			uavs = StaticDescriptors::get().place(1);
-			//	for (int i = 0; i < resource->get_desc().MipLevels; i++)
-			place_uav(uavs[0], 0, resource->get_desc().as_texture().ArraySize, 0, 0);
-			static_uav = StaticDescriptors::get().place(1);
-			//	for (int i = 0; i < resource->get_desc().MipLevels; i++)
-			place_uav(static_uav[0], 0, resource->get_desc().as_texture().ArraySize, 0, 0);
+		auto res_desc = resource->get_desc();
+
+		hlsl = StaticDescriptors::get().place(1 + 2 * res_desc.as_texture().MipLevels);
+		int offset = 0;
+
+		if (check(res_desc.Flags & HAL::ResFlags::ShaderResource)) {
+
+			texture2DArray = HLSL::Texture2DArray<>(hlsl[offset++]);
+			texture2DArray.create(resource, 0, res_desc.as_texture().MipLevels, 0, res_desc.as_texture().ArraySize);
+
 		}
 
-		srvs = StaticDescriptors::get().place(1);
-		place_srv(srvs[0]);
-		static_srv = StaticDescriptors::get().place(1);
-		place_srv(static_srv[0]);
-		/*  auto res_desc = resource->get_desc();
-		  single_count = 6 * res_desc.MipLevels;
-		  rtvs = DescriptorHeapManager::get().get_rt()->create_table(single_count);
-
-		  for (int m = 0; m < res_desc.MipLevels; m++)
-		  {
-			  for (int i = 0; i < 6; i++)
-			  {
-				  D3D12_RENDER_TARGET_VIEW_DESC desc;
-				  desc.Format = to_srv(res_desc.Format);
-				  desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-				  desc.Texture2DArray.PlaneSlice = 0;
-				  desc.Texture2DArray.MipSlice = m;
-				  desc.Texture2DArray.ArraySize = 1;
-				  desc.Texture2DArray.FirstArraySlice = i;
-				  Device::get().get_native_device()->CreateRenderTargetView(resource->get_native().Get(), &desc, rtvs[i + 6 * m].cpu);
-			  }
-		  }*/
-	}
-
-	Handle Array2DView::get_rtv(UINT index, UINT mip)
-	{
-		return rtvs[index + 6 * mip];
-	}
-
-	void Array2DView::place_srv(Handle  h)
-	{
-		h = HAL::Views::ShaderResource{
-			.Resource = resource->get_hal().get(),
-			.Format = resource->get_desc().as_texture().Format.to_srv(),
-			.View = HAL::Views::ShaderResource::Texture2DArray
-					{
-						.MostDetailedMip = 0,
-						.MipLevels = resource->get_desc().as_texture().MipLevels,
-						.FirstArraySlice = 0,
-						.ArraySize = resource->get_desc().as_texture().ArraySize,
-						.PlaneSlice = 0,
-						.ResourceMinLODClamp = 0
-					}
-		};
-	}
-
-	void Array2DView::place_dsv(Handle  h, UINT mip, UINT slice, UINT slice_count)
-	{
-		h = HAL::Views::DepthStencil{
-		.Resource = resource->get_hal().get(),
-		.Format = resource->get_desc().as_texture().Format.to_srv(),
-		.View = HAL::Views::DepthStencil::Texture2DArray
-			{
-				.MipSlice = mip,
-				.FirstArraySlice = slice,
-				.ArraySize = slice_count,
-			}
-		};
-	}
-
-	void Array2DView::place_uav(Handle  h, UINT first, UINT count, UINT mip, UINT slice)
-	{
-		h = HAL::Views::UnorderedAccess{
-			.Resource = resource->get_hal().get(),
-			.Format = resource->get_desc().as_texture().Format.to_srv(),
-			.View = HAL::Views::UnorderedAccess::Texture2DArray
-					{
-						.MipSlice = mip,
-						.FirstArraySlice = first,
-						.ArraySize = count,
-						.PlaneSlice = slice
-					}
-		};
-	}
-
-	std::function<void(Handle)> Array2DView::uav(UINT first, UINT count, UINT mip)
-	{
-		return [this, first, count, mip](Handle h)
+		if (check(res_desc.Flags & HAL::ResFlags::UnorderedAccess))
 		{
-			if (!resource) return;
-			h = HAL::Views::UnorderedAccess{
-			.Resource = resource->get_hal().get(),
-			.Format = resource->get_desc().as_texture().Format.to_srv(),
-			.View = HAL::Views::UnorderedAccess::Texture2DArray
-			{
-				.MipSlice = mip,
-				.FirstArraySlice = first,
-				.ArraySize = count,
-				.PlaneSlice = 0
-			}
-			};
-
-		};
+			rwTexture2DArray = HLSL::RWTexture2DArray<>(hlsl[offset++]);
+			rwTexture2DArray.create(resource, 0, res_desc.as_texture().MipLevels, 0, res_desc.as_texture().ArraySize);
+		}
 	}
 
-	Handle Array2DView::get_srv()
-	{
-		return srvs[0];
-	}
-
-	Handle Array2DView::get_uav()
-	{
-		return uavs[0];
-	}
-
-	Handle Array2DView::get_static_srv()
-	{
-		return static_srv[0];
-	}
-
-	Handle Array2DView::get_static_uav()
-	{
-		return static_uav[0];
-	}
 
 }

@@ -145,15 +145,15 @@ shader_parameter MaterialContext::get_texture(TextureSRVParams::ptr& p, shader_p
 std::string MaterialContext::generate_uniform_struct()
 {
 
-	
+
 	std::string result = "struct MaterialCB\n{\n";
 	result += uniform_struct;
-	
+
 	if (uniform_struct.empty())
 		result += "int dummy;\n";
 
 	result += "};\n";
-	
+
 	uniform_offset = 0;
 	return result;
 }
@@ -195,7 +195,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 			hit_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
 		}
 
-	
+
 
 
 		pixel_shader.text = text;
@@ -205,7 +205,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 
 		if (textures.empty())
 		{
-		//	hit_shader.macros.emplace_back("REFRACTION", "");
+			//	hit_shader.macros.emplace_back("REFRACTION", "");
 		}
 	}
 
@@ -232,7 +232,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		{
 			tess_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
 		}
-	
+
 		tess_shader.text = text;
 
 	}
@@ -309,9 +309,9 @@ std::list<FlowGraph::Node::ptr>  MaterialFunction::on_drop(MyVariant value)
 
 	if (item->asset->get_type() == Asset_Type::TILED_TEXTURE)
 	{
-	//	TiledTextureNode::ptr node(new TiledTextureNode(item->asset->get_asset()->get_ptr<TiledTexture>()));
-	//	register_node(node);
-	//	result.push_back(node);
+		//	TiledTextureNode::ptr node(new TiledTextureNode(item->asset->get_asset()->get_ptr<TiledTexture>()));
+		//	register_node(node);
+		//	result.push_back(node);
 	}
 
 
@@ -488,25 +488,25 @@ void MaterialFunction::add_function(std::string s)
 {
 	text += std::string("\t") + s + ";\n";
 }
- REGISTER_TYPE(ScalarNode);
+REGISTER_TYPE(ScalarNode);
 
- REGISTER_TYPE(MulNode);
- REGISTER_TYPE(SumNode);
- REGISTER_TYPE(TextureNode);
- REGISTER_TYPE(VectorNode);
- REGISTER_TYPE(TiledTextureNode);
+REGISTER_TYPE(MulNode);
+REGISTER_TYPE(SumNode);
+REGISTER_TYPE(TextureNode);
+REGISTER_TYPE(VectorNode);
+REGISTER_TYPE(TiledTextureNode);
 REGISTER_TYPE(MaterialGraph);
- REGISTER_TYPE(SpecToMetNode);
+REGISTER_TYPE(SpecToMetNode);
 //REGISTER_TYPE(TextureSRVParams);
 
 
- REGISTER_TYPE(ShaderParamType);
- REGISTER_TYPE(VectorType);
+REGISTER_TYPE(ShaderParamType);
+REGISTER_TYPE(VectorType);
 
 
 MaterialGraph::MaterialGraph()
 {
-	position = register_input( "position",ShaderParams::FLOAT3);
+	position = register_input("position", ShaderParams::FLOAT3);
 	texcoord = register_input(/*ShaderParams::FLOAT2,*/ "texcoord", ShaderParams::FLOAT2);
 	i_base_color = register_output(/*ShaderParams::FLOAT4,*/ "base color", ShaderParams::FLOAT4);
 	i_metallic = register_output(/*ShaderParams::FLOAT1,*/ "metallic", ShaderParams::FLOAT1);
@@ -803,7 +803,7 @@ GUI::base::ptr TextureNode::create_editor_window()
 
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();
-	img_inner->texture.srv = asset->get_texture()->texture_2d()->get_static_srv();
+	img_inner->texture.srv = asset->get_texture()->texture_2d()->texture2D;
 	img_inner->size = { 64, 64 };
 	img->add_child(img_inner);
 
@@ -830,8 +830,8 @@ GUI::base::ptr TextureNode::create_editor_window()
 	chk_srgb->on_check = [this, img_inner, asset](bool v) {
 
 		texture_info->to_linear = v;
-	//	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
-		//	owner->co
+		//	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
+			//	owner->co
 	};
 	back->add_child(chk_srgb);
 

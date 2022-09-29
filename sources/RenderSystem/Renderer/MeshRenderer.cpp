@@ -167,7 +167,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	if (invisibleToo)
 	{
 		meshes_invisible_ids->buffer->clear_counter(mesh_render_context->list);
-		list.clear_uav(meshes_invisible_ids->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
+		list.clear_uav(meshes_invisible_ids->buffer->rwByteAddressBuffer, ivec4{ 999,999,999,999 });
 
 	}
 
@@ -257,7 +257,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 
-	list.clear_uav(visible_boxes->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
+	list.clear_uav(visible_boxes->buffer->rwByteAddressBuffer, ivec4{ 999,999,999,999 });
 
 	draw_boxes_compiled.set(graphics);
 

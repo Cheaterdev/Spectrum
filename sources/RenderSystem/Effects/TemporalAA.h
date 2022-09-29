@@ -55,7 +55,7 @@ public:
 		offsets = { float2(0,0) };
 		subsamples = { float4(0,0) };
 	}
-	//   HandleTable srv_table;
+
 	void resize(ivec2 size)
 	{
 		textures.clear();

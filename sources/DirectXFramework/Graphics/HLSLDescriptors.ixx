@@ -197,7 +197,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
+			void create(Graphics::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0);
 		};
 		template<class T = float4>
 		struct TextureCube : public Handle
@@ -238,6 +238,25 @@ export
 		};
 
 		template<class T = float4>
+		struct RWTexture2DArray : public Handle
+		{
+			static const HandleType TYPE = HandleType::UAV;
+			RWTexture2DArray() = default;
+			explicit RWTexture2DArray(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			template<class T2>
+			RWTexture2DArray(const RWTexture2DArray<T2>& h) : Handle(h)
+			{
+
+			}
+			void create(Graphics::Resource* resource, UINT first_mip = 0, UINT mip_levels = 1, UINT array_offset = 0, UINT array_count = 1);
+		};
+
+
+		template<class T = float4>
 		struct RWTexture3D : public Handle
 		{
 			static const HandleType TYPE = HandleType::UAV;
@@ -253,7 +272,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_mip = 1, UINT array_offset = 0);
+			void create(Graphics::Resource* resource, UINT first_mip = 1);
 
 		};
 
@@ -483,9 +502,25 @@ namespace HLSL
 	}
 
 
+	template<class T>
+	void RWTexture2DArray<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset, UINT array_count)
+	{
+		auto desc = HAL::Views::UnorderedAccess{
+				.Resource = resource->get_hal().get(),
+				.Format = resource->get_desc().as_texture().Format.to_srv(),
+				.View = HAL::Views::UnorderedAccess::Texture2DArray
+					{
+						.MipSlice = first_mip,
+						.FirstArraySlice = array_offset,
+						.ArraySize = array_count,
+						.PlaneSlice = 0
+					}
+		};
+		Handle::operator= (desc);
+	}
 
 	template<class T>
-	void Texture3D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset)
+	void Texture3D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels)
 	{
 		auto desc = HAL::Views::ShaderResource{
 				.Resource = resource->get_hal().get(),
@@ -498,12 +533,10 @@ namespace HLSL
 						}
 		};
 		Handle::operator= (desc);
-
-		assert(array_offset == 0);
 	}
 
 	template<class T>
-	void RWTexture3D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT array_offset)
+	void RWTexture3D<T>::create(Graphics::Resource* resource, UINT first_mip)
 	{
 		auto desc = HAL::Views::UnorderedAccess{
 				.Resource = resource->get_hal().get(),
@@ -516,8 +549,6 @@ namespace HLSL
 						}
 		};
 		Handle::operator= (desc);
-
-		assert(array_offset == 0);
 	}
 
 	template<class T>

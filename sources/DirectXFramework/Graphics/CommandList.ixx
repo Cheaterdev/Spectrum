@@ -20,6 +20,7 @@ import Math;
 import :Enums;
 import Data;
 import Singleton;
+import Debug;
 
 //import Buffer;
 import stl.core;
@@ -773,6 +774,17 @@ export{
 				create_transition_point();
 				transition_uav(h.get_resource_info());
 				auto dx_resource = h.get_resource_info()->resource_ptr->get_hal()->native_resource.Get();
+
+
+				if (BuildOptions::Debug)
+				{
+					auto uav = std::get<HAL::Views::UnorderedAccess>(h.get_resource_info()->view);
+					if (h.get_resource_info()->resource_ptr->get_desc().is_buffer())
+					{
+						auto buffer = std::get<HAL::Views::UnorderedAccess::Buffer>(uav.View);
+						assert(buffer.StructureByteStride == 0);
+					}
+				}
 
 				get_native_list()->ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 				create_transition_point(false);

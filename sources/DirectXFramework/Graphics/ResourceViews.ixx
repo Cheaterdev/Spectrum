@@ -262,7 +262,7 @@ export
 					if ((view_desc.type == ResourceType::TEXTURE2D || view_desc.type == ResourceType::CUBE) && view_desc.Texture2D.ArraySize == 1)
 						rwTexture2D.create(resource.get(), view_desc.Texture2D.MipSlice, view_desc.Texture2D.FirstArraySlice);
 					else if (view_desc.type == ResourceType::TEXTURE3D)
-						rwTexture3D.create(resource.get(), view_desc.Texture2D.MipSlice, 0);
+						rwTexture3D.create(resource.get(), view_desc.Texture2D.MipSlice);
 					else
 						assert(false);
 				}

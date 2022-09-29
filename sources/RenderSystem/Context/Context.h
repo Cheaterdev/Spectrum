@@ -144,7 +144,6 @@ public:
 	RT::Slot::GBuffer::Compiled gbuffer_compiled;
 
 	Graphics::Texture::ptr target_tex;
-	//  Graphics::HandleTable voxel_target;
 
 
 	SlotContext* slot_context = nullptr;

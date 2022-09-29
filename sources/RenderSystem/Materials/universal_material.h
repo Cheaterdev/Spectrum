@@ -9,7 +9,7 @@ import crc32;
 
 namespace materials
 {
-	
+
 	struct render_pass
 	{
 		Graphics::pixel_shader::ptr ps_shader;
@@ -32,7 +32,7 @@ namespace materials
 
 	private:
 		size_t pipeline_id = -1;
-	
+
 
 		SERIALIZE()
 		{
@@ -78,11 +78,11 @@ namespace materials
 		}
 
 	};
-	class PipelinePasses:public Pipeline
+	class PipelinePasses :public Pipeline
 	{
 
 		std::vector<render_pass> passes;
-		
+
 		render_pass& get_pass(RENDER_TYPE render_type, MESH_TYPE type)
 		{
 
@@ -102,7 +102,7 @@ namespace materials
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
 		PipelinePasses() = default;
-		PipelinePasses(UINT id, std::vector<render_pass> & passes):Pipeline(id),passes(passes)
+		PipelinePasses(UINT id, std::vector<render_pass>& passes) :Pipeline(id), passes(passes)
 		{
 
 		}
@@ -131,7 +131,7 @@ namespace materials
 		SERIALIZE()
 		{
 			SAVE_PARENT(Pipeline);
-	
+
 			ar& NVP(passes);
 		}
 	};
@@ -141,7 +141,7 @@ namespace materials
 		std::map<unsigned int, Pipeline::ptr> pipelines;
 		std::mutex m;
 	public:
-		Pipeline::ptr get_pipeline( Pipeline::ptr orig)
+		Pipeline::ptr get_pipeline(Pipeline::ptr orig)
 		{
 			std::lock_guard<std::mutex> g(m);
 
@@ -151,10 +151,10 @@ namespace materials
 
 			return pip;
 		}
-		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel,std::string raytracing, MaterialContext::ptr context)
+		Pipeline::ptr get_pipeline(std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context)
 		{
 			std::lock_guard<std::mutex> g(m);
-			auto hash = crc32(pixel+tess);
+			auto hash = crc32(pixel + tess);
 			auto&& pip = pipelines[hash];
 
 
@@ -164,13 +164,13 @@ namespace materials
 				passes.resize(PASS_TYPE::COUNTER);
 
 				passes[PASS_TYPE::DEFERRED].ps_shader = Graphics::pixel_shader::get_resource({ pixel, "PS", 0,context->get_pixel_result().macros, true });// create_from_memory(pixel, "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_pixel_result().macros);
-				
+
 				if (!tess.empty()) {
 					passes[PASS_TYPE::DEFERRED].hs_shader = Graphics::hull_shader::get_resource({ tess, "HS", 0,context->get_tess_result().macros, true });//  Graphics::hull_shader::create_from_memory(tess, "HS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
 					passes[PASS_TYPE::DEFERRED].ds_shader = Graphics::domain_shader::get_resource({ tess, "DS", 0,context->get_tess_result().macros, true });// Graphics::domain_shader::create_from_memory(tess, "DS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
 
 				}
-				
+
 				if (!voxel.empty()) {
 					auto macros = context->get_voxel_result().macros;
 					passes[PASS_TYPE::VOXEL_STATIC].ps_shader = Graphics::pixel_shader::get_resource({ pixel, "PS_VOXEL", 0,macros, true });//  Graphics::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
@@ -183,7 +183,7 @@ namespace materials
 					passes[PASS_TYPE::VOXEL_DYNAMIC].ds_shader = passes[PASS_TYPE::VOXEL_STATIC].ds_shader = passes[PASS_TYPE::DEFERRED].ds_shader;
 				}
 
-				
+
 				auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), passes);
 				pipeline->raytrace_lib = Graphics::library_shader::get_resource({ raytracing, "" , 0, context->hit_shader.macros, true });
 
@@ -214,7 +214,7 @@ namespace materials
 		}
 		virtual	std::span<HLSL::Texture2D<float4>> aquire(size_t offset, size_t size) override {
 
-			return { textures_data.data()+offset, size };
+			return { textures_data.data() + offset, size };
 		}
 
 
@@ -224,15 +224,15 @@ namespace materials
 
 		virtual void on_free(size_t from, size_t to) override {
 
-			for(auto i= from;i<to;i++)
+			for (auto i = from; i < to; i++)
 			{
 				textures_data[i] = HLSL::Texture2D<float4>();
 			}
 		}
 
-		
 
-		universal_material_manager(): DataAllocator<HLSL::Texture2D<float4>, ::CommonAllocator>(4096)
+
+		universal_material_manager() : DataAllocator<HLSL::Texture2D<float4>, ::CommonAllocator>(4096)
 		{
 		}
 	};
@@ -240,132 +240,130 @@ namespace materials
 	class command_data
 	{
 		UINT index;
-		
+
 	};
 
-    class universal_material : public MaterialAsset, ::FlowGraph::graph_listener, public MainRTX::material
-    {
-            LEAK_TEST(universal_material)
-            /*----------------------------------------------------------*/
-            virtual	void on_register(::FlowGraph::window*)override;
-            virtual	void on_remove(::FlowGraph::window*)override;
+	class universal_material : public MaterialAsset, ::FlowGraph::graph_listener, public MainRTX::material
+	{
+		LEAK_TEST(universal_material)
+			/*----------------------------------------------------------*/
+			virtual	void on_register(::FlowGraph::window*)override;
+		virtual	void on_remove(::FlowGraph::window*)override;
 
-            virtual	void on_add_input(::FlowGraph::parameter*)override;
-            virtual	void on_remove_input(::FlowGraph::parameter*)override;
+		virtual	void on_add_input(::FlowGraph::parameter*)override;
+		virtual	void on_remove_input(::FlowGraph::parameter*)override;
 
-            virtual	void on_add_output(::FlowGraph::parameter*)override;
-            virtual	void on_remove_output(::FlowGraph::parameter*)override;
+		virtual	void on_add_output(::FlowGraph::parameter*)override;
+		virtual	void on_remove_output(::FlowGraph::parameter*)override;
 
-            virtual	void on_link(::FlowGraph::parameter*, ::FlowGraph::parameter*)override;
-            virtual	void on_unlink(::FlowGraph::parameter*, ::FlowGraph::parameter*) override;
-            /*----------------------------------------------------------*/
+		virtual	void on_link(::FlowGraph::parameter*, ::FlowGraph::parameter*)override;
+		virtual	void on_unlink(::FlowGraph::parameter*, ::FlowGraph::parameter*) override;
+		/*----------------------------------------------------------*/
 
-            std::vector<TextureSRVParams::ptr> textures;	
-            std::vector<Uniform::ptr> tess_uniforms;
-            std::list<Events::prop_handler> handlers;
+		std::vector<TextureSRVParams::ptr> textures;
+		std::vector<Uniform::ptr> tess_uniforms;
+		std::list<Events::prop_handler> handlers;
 
-			DynamicData pixel_data;
+		DynamicData pixel_data;
 
-            BinaryData<MaterialGraph> graph;
+		BinaryData<MaterialGraph> graph;
 
-            MaterialContext::ptr context;
+		MaterialContext::ptr context;
 
-            BinaryAsset::ref include_file;
-			BinaryAsset::ref include_file_raytacing;
+		BinaryAsset::ref include_file;
+		BinaryAsset::ref include_file_raytacing;
 
-            bool need_update_uniforms = false;
-			bool need_update_compiled = false;
+		bool need_update_uniforms = false;
+		bool need_update_compiled = false;
 
-            std::mutex m;
-            virtual void on_asset_change(std::shared_ptr<Asset> asset) override;
-            virtual void compile() override;
-            universal_material();
-            bool need_regenerate_material = false;
+		std::mutex m;
+		virtual void on_asset_change(std::shared_ptr<Asset> asset) override;
+		virtual void compile() override;
+		universal_material();
+		bool need_regenerate_material = false;
 
-			void generate_texture_handles();
+		void generate_texture_handles();
 
-			Slots::MaterialInfo material_info;
-		
-	//		TypedHandle<HLSL::Texture2D<float4>> textures_handle;
-		//	Graphics::HandleTable textures_handles;
+		Slots::MaterialInfo material_info;
+		==
 
 			std::vector<HLSL::Texture2D<float4>> texture_srvs;
-			Pipeline::ptr pipeline;
-    
-        public:
-            using ptr = s_ptr<universal_material>;
-			std::vector<Uniform::ptr> ps_uniforms;
+		Pipeline::ptr pipeline;
+
+	public:
+		using ptr = s_ptr<universal_material>;
+		std::vector<Uniform::ptr> ps_uniforms;
 		//	Events::Event<void> on_change;
 	//		const std::wstring wshader_name;
-		
+
 	//		Graphics::library_shader::ptr raytracing_lib;
-            universal_material(MaterialGraph::ptr graph);
-			Slots::MaterialInfo::Compiled compiled_material_info;
+		universal_material(MaterialGraph::ptr graph);
+		Slots::MaterialInfo::Compiled compiled_material_info;
 
-			TypedHandle<Table::MaterialCommandData> info_handle;
-    	
-			void update_rtx();
-			void test();
+		TypedHandle<Table::MaterialCommandData> info_handle;
 
-            void update();
-        
-			UINT get_material_id()
+		void update_rtx();
+		void test();
+
+		void update();
+
+		UINT get_material_id()
+		{
+			return (UINT)info_handle.get_offset();
+		}
+
+		Pipeline::ptr get_pipeline() {
+			return pipeline;
+		}
+
+		size_t  get_id();
+
+		MaterialGraph::ptr get_graph();
+
+		Slots::MaterialInfo& get_render_info() {
+			return material_info;
+		}
+
+
+		void on_graph_changed();
+		void generate_material();
+
+		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override {}
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Graphics::PipelineStateDesc& pipeline) override {}
+	private:
+		SERIALIZE() {
+			SAVE_PARENT(MaterialAsset);
+			ar& NVP(textures);
+			////////////////////////////////////////////////////////////////////////////	ar& NVP(passes);
+			ar& NVP(graph);
+			ar& NVP(include_file);
+			ar& NVP(include_file_raytacing);
+
+			ar& NVP(ps_uniforms);
+			ar& NVP(tess_uniforms);
+			ar& NVP(pipeline);
+
+
+			ar& NVP(raytracing_lib);
+
+
+			IF_LOAD()
 			{
-				return (UINT)info_handle.get_offset();
+				auto new_pip = PipelineManager::get().get_pipeline(pipeline);
+
+				pipeline = nullptr;
+				pipeline = new_pip;
 			}
 
-			Pipeline::ptr get_pipeline() {
-				return pipeline;
+
+			IF_LOAD()
+			{
+				compile();
 			}
+		}
 
-			size_t  get_id();
+	};
 
-            MaterialGraph::ptr get_graph();
-
-			Slots::MaterialInfo& get_render_info() {
-				return material_info;
-			}
-
-	
-            void on_graph_changed();
-            void generate_material();
-
-            virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override{}
-			virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Graphics::PipelineStateDesc &pipeline) override{}
-        private:
-			SERIALIZE() {
-				SAVE_PARENT(MaterialAsset);
-				ar& NVP(textures);
-				////////////////////////////////////////////////////////////////////////////	ar& NVP(passes);
-				ar& NVP(graph);
-				ar& NVP(include_file);
-				ar& NVP(include_file_raytacing);
-
-				ar& NVP(ps_uniforms);
-				ar& NVP(tess_uniforms);
-				ar& NVP(pipeline);
-
-
-				ar& NVP(raytracing_lib);
-
-
-				IF_LOAD()
-				{
-					auto new_pip = PipelineManager::get().get_pipeline(pipeline);
-
-					pipeline = nullptr;
-					pipeline = new_pip;
-				}
-
-
-				IF_LOAD()
-				{
-					compile();
-				}
-			}
-
-    };
-	
 }
 //CEREAL_FORCE_DYNAMIC_INIT(myclasses)
 
