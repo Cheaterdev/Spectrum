@@ -49,8 +49,7 @@ namespace GUI
 	class Renderer
 	{
 
-		==
-			NinePatch::ptr nine_patch;
+		NinePatch::ptr nine_patch;
 		SimpleRect::ptr simple_rect;
 
 		Texture area_tex;

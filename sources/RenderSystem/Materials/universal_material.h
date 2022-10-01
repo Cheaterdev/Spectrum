@@ -285,9 +285,8 @@ namespace materials
 		void generate_texture_handles();
 
 		Slots::MaterialInfo material_info;
-		==
 
-			std::vector<HLSL::Texture2D<float4>> texture_srvs;
+		std::vector<HLSL::Texture2D<float4>> texture_srvs;
 		Pipeline::ptr pipeline;
 
 	public:

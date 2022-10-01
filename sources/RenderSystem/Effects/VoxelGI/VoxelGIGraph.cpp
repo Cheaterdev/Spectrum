@@ -56,14 +56,12 @@ public:
 					auto table = graphics.get_base().get_cpu_heap(Graphics::DescriptorHeapType::RTV).place(2);
 
 					{
-						Graphics::ResourceViewDesc subres;
-						subres.type = Graphics::ResourceType::TEXTURE2D;
+						Graphics::TextureViewDesc subres;
 
-						subres.Texture2D.ArraySize = 1;
-						subres.Texture2D.FirstArraySlice = 0;
-						subres.Texture2D.MipLevels = 1;
-						subres.Texture2D.MipSlice = i;
-						subres.Texture2D.PlaneSlice = 0;
+						subres.ArraySize = 1;
+						subres.FirstArraySlice = 0;
+						subres.MipLevels = 1;
+						subres.MipSlice = i;
 
 						auto depth_view = gbuffer.depth_mips.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
 						auto normal_view = gbuffer.normals.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
@@ -86,14 +84,13 @@ public:
 
 
 					{
-						ResourceViewDesc subres;
-						subres.type = Graphics::ResourceType::TEXTURE2D;
+						TextureViewDesc subres;
 
-						subres.Texture2D.ArraySize = 1;
-						subres.Texture2D.FirstArraySlice = 0;
-						subres.Texture2D.MipLevels = 1;
-						subres.Texture2D.MipSlice = i - 1;
-						subres.Texture2D.PlaneSlice = 0;
+						subres.ArraySize = 1;
+						subres.FirstArraySlice = 0;
+						subres.MipLevels = 1;
+						subres.MipSlice = i - 1;
+
 						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
 						downsample.GetNormals() = gbuffer.normals.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
 					}
@@ -632,18 +629,16 @@ void VoxelGI::screen(Graph& graph)
 				compute.set_pipeline(GetPSO<PSOS::DenoiserHistoryFix>());
 				{
 					Slots::DenoiserHistoryFix denoiser_history;
-					Graphics::ResourceViewDesc subres;
-					subres.type = Graphics::ResourceType::TEXTURE2D;
+					Graphics::TextureViewDesc subres;
 
-					subres.Texture2D.ArraySize = 1;
-					subres.Texture2D.FirstArraySlice = 0;
-					subres.Texture2D.MipLevels = noisy_output.resource->get_desc().as_texture().MipLevels - 1;
-					subres.Texture2D.MipSlice = 1;
-					subres.Texture2D.PlaneSlice = 0;
+					subres.ArraySize = 1;
+					subres.FirstArraySlice = 0;
+					subres.MipLevels = noisy_output.resource->get_desc().as_texture().MipLevels - 1;
+					subres.MipSlice = 1;
 
 					denoiser_history.GetColor() = noisy_output.resource->create_view<TextureView>(*graph.builder.current_frame, subres).texture2D;
 
-					subres.Texture2D.MipLevels = 1;
+					subres.MipLevels = 1;
 					denoiser_history.GetFrames() = frames_count.texture2D;
 					denoiser_history.GetTarget() = noisy_output.rwTexture2D;
 					denoiser_history.set(compute);
@@ -658,7 +653,7 @@ void VoxelGI::screen(Graph& graph)
 
 				//	compute.dispach(frames_count.get_size());
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource);
 			}
 
 
@@ -754,7 +749,7 @@ void VoxelGI::screen(Graph& graph)
 					tilingPostprocess.set(compute);
 				}
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource);
 			}
 
 			{
@@ -769,7 +764,7 @@ void VoxelGI::screen(Graph& graph)
 				}
 
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource);
 			}
 
 
@@ -1007,7 +1002,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 					}
 
 
-					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
+					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource);
 				}
 
 				{
@@ -1021,7 +1016,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 						tilingPostprocess.set(compute);
 					}
 
-					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
+					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource);
 				}
 
 
@@ -1123,14 +1118,12 @@ void VoxelGI::lighting(Graph& graph)
 				ligthing.GetNormals() = normal.tex_result->texture_3d()->texture3D;
 				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d()->rwTexture3D[0];
 				ligthing.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				Graphics::ResourceViewDesc subres;
-				subres.type = Graphics::ResourceType::TEXTURE3D;
+				Graphics::TextureViewDesc subres;
 
-				subres.Texture2D.ArraySize = 1;
-				subres.Texture2D.FirstArraySlice = 0;
-				subres.Texture2D.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;
-				subres.Texture2D.MipSlice = 1;
-				subres.Texture2D.PlaneSlice = 0;
+				subres.ArraySize = 1;
+				subres.FirstArraySlice = 0;
+				subres.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;
+				subres.MipSlice = 1;
 
 				ligthing.GetLower() = tex_lighting.tex_result->create_view<TextureView>(*graph.builder.current_frame, subres).texture3D;
 

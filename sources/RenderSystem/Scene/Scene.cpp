@@ -23,7 +23,7 @@ Scene::Scene()
 
 		if (render_object->type == MESH_TYPE::DYNAMIC)
 			dynamic_objects.insert(render_object);
-	});
+		});
 
 	on_element_remove.register_handler(this, [this](scene_object* object) {
 
@@ -36,14 +36,14 @@ Scene::Scene()
 
 		if (render_object->type == MESH_TYPE::DYNAMIC)
 			dynamic_objects.erase(render_object);
-	});
+		});
 
-	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::MeshCommandData>>(1024 * 1024 );
+	mesh_infos = std::make_shared< virtual_gpu_buffer<Table::MeshCommandData>>(1024 * 1024);
 	raytrace = std::make_shared< virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(1024 * 1024);
 
 
 
-	if(Graphics::Device::get().is_rtx_supported())
+	if (Graphics::Device::get().is_rtx_supported())
 	{
 		std::vector<InstanceDesc>  desc;
 		raytrace_scene = std::make_shared<RaytracingAccelerationStructure>(desc);
@@ -55,7 +55,7 @@ bool Scene::init_ras(CommandList::ptr& list)
 	bool res = false;
 	auto mesh_func = [&](MeshAssetInstance* l)
 	{
-		res|=l->init_ras(list);
+		res |= l->init_ras(list);
 
 	};
 
@@ -78,11 +78,11 @@ void Scene::update(FrameResources& frame)
 		{
 			auto mat = static_cast<materials::universal_material*>(r.material);
 			mats.insert(mat);
-		
+
 			pipelines[mat->get_id()] = mat->get_pipeline();
 		}
 
-       
+
 	};
 
 	for (auto m : static_objects)
@@ -114,9 +114,9 @@ void Scene::update(FrameResources& frame)
 	}
 
 
-	auto build = [&](my_unique_vector<UINT>& data, Slots::GatherPipelineGlobal::Compiled & target) {
+	auto build = [&](my_unique_vector<UINT>& data, Slots::GatherPipelineGlobal::Compiled& target) {
 
-				
+
 
 		{
 			//	auto timer = list.start(L"GatherMat");
@@ -129,19 +129,19 @@ void Scene::update(FrameResources& frame)
 				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(frame, BufferType::NONE, (UINT)info.offset, (UINT)info.size).structuredBuffer;
 				gather_global.GetMeshes_count() = srv;
 			}
-				
+
 
 			if (data.size()) {
 				auto info = frame.place_raw(data);
-				auto srv = info.resource->create_view<FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(frame,  (UINT)info.offset, (UINT)info.size).srv_handle;
+				auto srv = info.resource->create_view<FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(frame, (UINT)info.offset, (UINT)info.size).buffer;
 				gather_global.GetCommands() = srv;
 			}
 
 			target = gather_global.compile(frame);
 
 		}
-            
-            
+
+
 	};
 
 	build(command_ids[(int)MESH_TYPE::STATIC], compiledGather[(int)MESH_TYPE::STATIC]);

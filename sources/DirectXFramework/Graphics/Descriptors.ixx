@@ -99,6 +99,13 @@ export
 			void operator=(const T& v);
 
 
+
+			void operator=(const Handle& r)
+			{
+				//				assert(r.heap);
+				heap = r.heap;
+				offset = r.offset;
+			}
 			D3D12_CPU_DESCRIPTOR_HANDLE get_cpu() const;
 
 			D3D12_GPU_DESCRIPTOR_HANDLE get_gpu()const;

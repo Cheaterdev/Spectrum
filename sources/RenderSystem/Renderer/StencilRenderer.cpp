@@ -265,7 +265,7 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 	//throw std::exception("The method or operation is not implemented.");
 }
 
-stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
+stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 {
 
 
@@ -310,14 +310,14 @@ stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
 	std::vector<vec4> verts(8);
 	vec3 v0(-0.5, -0.5, 0.5);
 	vec3 v1(0.5, 0.5, 0.5);
-	verts[0] = vec4(-1.0f, 1.0f, -1.0f,0);
-	verts[1] = vec4(1.0f, 1.0f, -1.0f,0);
-	verts[2] = vec4(1.0f, 1.0f, 1.0f,0);
-	verts[3] = vec4(-1.0f, 1.0f, 1.0f,0);
-	verts[4] = vec4(-1.0f, -1.0f, -1.0f,0);
-	verts[5] = vec4(1.0f, -1.0f, -1.0f,0);
-	verts[6] = vec4(1.0f, -1.0f, 1.0f,0);
-	verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
+	verts[0] = vec4(-1.0f, 1.0f, -1.0f, 0);
+	verts[1] = vec4(1.0f, 1.0f, -1.0f, 0);
+	verts[2] = vec4(1.0f, 1.0f, 1.0f, 0);
+	verts[3] = vec4(-1.0f, 1.0f, 1.0f, 0);
+	verts[4] = vec4(-1.0f, -1.0f, -1.0f, 0);
+	verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
+	verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
+	verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
 	index_buffer.reset(new Graphics::IndexBuffer(data));
 
 	vertex_buffer.reset(new Graphics::StructureBuffer<vec4>(8));
@@ -469,7 +469,7 @@ void stencil_renderer::generate(Graph& graph)
 						buffer.set(graphics);
 					}
 
-				
+
 
 
 					axis->iterate([&](scene_object* node)
@@ -501,11 +501,11 @@ void stencil_renderer::generate(Graph& graph)
 							return true;
 						});
 
-					copy.read_buffer(data.id_buffer->resource.get(), 0, 4, [current, this](const char* data, UINT64 size)
+					copy.read_buffer(data.id_buffer->resource, 0, 4, [current, this](const char* data, UINT64 size)
 						{
 
 							assert(data);
-								//device_fail();
+							//device_fail();
 
 							auto result = *reinterpret_cast<const int*>(data) - 1;
 
@@ -523,7 +523,7 @@ void stencil_renderer::generate(Graph& graph)
 
 						});
 
-					copy.read_buffer(data.axis_id_buffer->resource.get(), 0, 4, [this](const char* data, UINT64 size)
+					copy.read_buffer(data.axis_id_buffer->resource, 0, 4, [this](const char* data, UINT64 size)
 						{
 
 							auto result = *reinterpret_cast<const int*>(data) - 1;
@@ -555,7 +555,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 		graph.add_pass<Data>("stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,1), Graphics::Format::R8_SNORM,1 ,1} ,ResourceFlags::RenderTarget);
+			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,1), Graphics::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
 
 			}, [this, &graph](Data& data, FrameContext& _context) {
 
@@ -569,8 +569,8 @@ void stencil_renderer::generate_after(Graph& graph)
 
 				{
 					graphics.set_rtv(1, data.Stencil_color_tex->renderTarget, Handle());
-			//		data.Stencil_color_tex->renderTarget.clear(list);
-					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0,0,0,0));
+					//		data.Stencil_color_tex->renderTarget.clear(list);
+					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0, 0, 0, 0));
 					graphics.set_pipeline(GetPSO<PSOS::DrawSelected>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_viewports({ data.Stencil_color_tex->get_viewport() });
@@ -624,7 +624,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 				graphics.set_rtv(1, data.ResultTexture->renderTarget, Handle());
 
-			if(draw_aabb){
+				if (draw_aabb) {
 					graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 					graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
@@ -652,8 +652,8 @@ void stencil_renderer::generate_after(Graph& graph)
 				// draw axis
 				{
 
-				graphics.set_index_buffer(IndexBufferView());// universal_index_manager::get().buffer->get_index_buffer_view(true));
-			
+					graphics.set_index_buffer(IndexBufferView());// universal_index_manager::get().buffer->get_index_buffer_view(true));
+
 					{
 						Slots::FrameInfo frameInfo;
 						auto& camera = frameInfo.GetCamera();

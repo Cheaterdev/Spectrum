@@ -562,8 +562,8 @@ public:
 
 					//	stenciler->render(context, scene);
 
-					command_list->get_copy().copy_texture(gbuffer.depth_prev_mips.resource, 0, gbuffer.depth_mips.resource, 0);
-					command_list->get_copy().copy_texture(gbuffer.depth_mips.resource, 0, gbuffer.depth.resource, 0);
+					command_list->get_copy().copy_texture(gbuffer.depth_prev_mips.resource->get_ptr(), 0, gbuffer.depth_mips.resource->get_ptr(), 0);
+					command_list->get_copy().copy_texture(gbuffer.depth_mips.resource->get_ptr(), 0, gbuffer.depth.resource->get_ptr(), 0);
 
 					//	
 				});
@@ -894,7 +894,7 @@ public:
 				builder.need(data.swapchain, ResourceFlags::Required);
 				}, [this, ptr](pass_data& data, FrameContext& context) {
 
-					context.get_list()->transition_present(data.swapchain->resource.get());
+					context.get_list()->transition_present(data.swapchain->resource);
 
 					Graphics::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
 						run_on_ui([this, ptr]() {	Profiler::get().update(); });

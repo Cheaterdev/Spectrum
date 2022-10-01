@@ -119,14 +119,12 @@ void SkyRender::generate(Graph& graph)
 
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Graphics::ResourceViewDesc subres;
-					subres.type = Graphics::ResourceType::TEXTURE2D;
+					Graphics::TextureViewDesc subres;
 
-					subres.Texture2D.ArraySize = 1;
-					subres.Texture2D.FirstArraySlice = i;
-					subres.Texture2D.MipLevels = 1;
-					subres.Texture2D.MipSlice = 0;
-					subres.Texture2D.PlaneSlice = 0;
+					subres.ArraySize = 1;
+					subres.FirstArraySlice = i;
+					subres.MipLevels = 1;
+					subres.MipSlice = 0;
 
 					auto face = data.sky_cubemap->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
 
@@ -216,14 +214,12 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 				graphics.set_pipeline(GetPSO<PSOS::CubemapENV>(PSOS::CubemapENV::Level(std::min(m, 4u))));
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Graphics::ResourceViewDesc subres;
-					subres.type = Graphics::ResourceType::TEXTURE2D;
+					Graphics::TextureViewDesc subres;
 
-					subres.Texture2D.ArraySize = 1;
-					subres.Texture2D.FirstArraySlice = i;
-					subres.Texture2D.MipLevels = 1;
-					subres.Texture2D.MipSlice = m;
-					subres.Texture2D.PlaneSlice = 0;
+					subres.ArraySize = 1;
+					subres.FirstArraySlice = i;
+					subres.MipLevels = 1;
+					subres.MipSlice = m;
 
 					auto face = data.sky_cubemap_filtered->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
 
@@ -250,14 +246,12 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 			for (unsigned int i = 0; i < 6; i++)
 			{
-				Graphics::ResourceViewDesc subres;
-				subres.type = Graphics::ResourceType::TEXTURE2D;
+				Graphics::TextureViewDesc subres;
 
-				subres.Texture2D.ArraySize = 1;
-				subres.Texture2D.FirstArraySlice = i;
-				subres.Texture2D.MipLevels = 1;
-				subres.Texture2D.MipSlice = 0;
-				subres.Texture2D.PlaneSlice = 0;
+				subres.ArraySize = 1;
+				subres.FirstArraySlice = i;
+				subres.MipLevels = 1;
+				subres.MipSlice = 0;
 
 				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
 

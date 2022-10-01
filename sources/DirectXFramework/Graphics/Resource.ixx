@@ -172,7 +172,7 @@ export{
 			template<class T, class F, class ...Args>
 			typename T create_view(F& frame, Args ...args)
 			{
-				return T(get_ptr(), frame, args...);
+				return T(this, frame, args...);
 			}
 
 			auto get_dx() const
