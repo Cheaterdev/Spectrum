@@ -130,7 +130,7 @@ export {
 
 
 				auto info = context->place_raw(offsets);
-				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(*context, Graphics::BufferType::NONE, (UINT)info.offset, (UINT)info.size).structuredBuffer;
+				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(*context, Graphics::StructuredBufferViewDesc{ (uint)info.offset, (uint)info.size,false }).structuredBuffer;
 
 				offset = srv.offset;
 

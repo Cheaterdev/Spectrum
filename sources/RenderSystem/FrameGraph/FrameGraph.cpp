@@ -114,14 +114,18 @@ namespace FrameGraph
 	void TaskBuilder::pass_texture(std::string name, Graphics::Texture::ptr tex, ResourceFlags flags)
 	{
 		Handlers::Texture h(name);
-		//pass_texture(name, tex->create_view<Graphics::TextureView>(*current_frame), flags);
 		create(h, { ivec3(0,0,0), Graphics::Format::UNKNOWN, 0 }, flags);
 		auto& info = *h.info;
 		info.passed = true;
-		info.placed = false;
-		info.type = ResourceType::Texture;
+
 		info.resource = tex;
+		info.d3ddesc = tex->get_desc();
 		passed_resources.insert(&info);
+
+		h.desc.array_count = tex->get_desc().as_texture().ArraySize;
+		h.desc.format = tex->get_desc().as_texture().Format;
+		h.desc.mip_count = tex->get_desc().as_texture().MipLevels;
+		h.desc.size = tex->get_desc().as_texture().Dimensions;
 
 		h.init_view(info, *current_frame);
 	}
@@ -940,6 +944,9 @@ namespace FrameGraph
 				continue;
 
 
+
+
+			info->handler->init(*info);
 			info->heap_type = Graphics::HeapType::DEFAULT;
 
 			if (check(info->flags & ResourceFlags::GenCPU))
@@ -952,78 +959,8 @@ namespace FrameGraph
 				info->heap_type = Graphics::HeapType::READBACK;
 			}
 
-			if (info->type == ResourceType::Texture)
-			{
-				TextureDesc desc = info->desc.get<TextureDesc>();
-
-				HAL::ResFlags flags = HAL::ResFlags::None;
-
-				if (check(info->flags & ResourceFlags::RenderTarget))
-				{
-					flags |= HAL::ResFlags::RenderTarget;
-				}
-
-				if (check(info->flags & ResourceFlags::DepthStencil))
-				{
-					flags |= HAL::ResFlags::DepthStencil;
-				}
-
-				if (check(info->flags & ResourceFlags::UnorderedAccess))
-				{
-					flags |= HAL::ResFlags::UnorderedAccess;
-				}
-
-				if (desc.format.is_shader_visible())
-					flags |= HAL::ResFlags::ShaderResource;
-
-				int mip_count = desc.mip_count;
-
-				if (mip_count == 0) {
-					mip_count = 1;
-					auto tsize = desc.size;
-
-					while (tsize.x != 1 && tsize.y != 1)
-					{
-						tsize /= 2;
-						mip_count++;
-					}
-
-				}
-
-				info->d3ddesc = HAL::ResourceDesc::Tex2D(desc.format, { desc.size.x, desc.size.y }, desc.array_count, mip_count, flags);
-				info->placed = true;
-
-				Graphics::Device::get().get_alloc_info(info->d3ddesc);
-			}
-
-			if (info->type == ResourceType::Buffer)
-			{
-				BufferDesc desc = info->desc.get<BufferDesc>();
-
-				HAL::ResFlags flags = HAL::ResFlags::ShaderResource;
-
-				if (check(info->flags & ResourceFlags::UnorderedAccess))
-				{
-					flags |= HAL::ResFlags::UnorderedAccess;
-				}
-
-				if (check(info->flags & ResourceFlags::Counted))
-				{
-					//info->heap_type = Graphics::HeapType::READBACK;
-				}
-
-				info->d3ddesc = HAL::ResourceDesc::Buffer(desc.size, flags);
-			}
-			/*
-					if (info->heap_type == Graphics::HeapType::UPLOAD)
-					{
-						auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
-						auto alloc_ptr = current_alloc->alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
-
-						info->need_recreate = info->alloc_ptr != alloc_ptr;
-						info->alloc_ptr = alloc_ptr;
-					}*/
 			if (check(info->flags & ResourceFlags::Static)) continue;
+
 			if (info->heap_type != Graphics::HeapType::DEFAULT)
 			{
 				//	auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
@@ -1062,11 +999,7 @@ namespace FrameGraph
 				{
 
 					auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
-					auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
-
-					info->need_recreate = info->alloc_ptr != alloc_ptr;
-					info->alloc_ptr = alloc_ptr;
-
+					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 				}
 			}
 		}
@@ -1087,14 +1020,10 @@ namespace FrameGraph
 				if (!info->enabled)
 					continue;
 
-
 				if (info->alloc_ptr.handle)
 				{
 					auto& res = info->resource_places[info->alloc_ptr];
 
-
-					//	res = nullptr;
-							//Graphics::Resource::ptr res;
 					if (!res || res->get_desc() != info->d3ddesc)
 					{
 						res = std::make_shared<Graphics::Resource>(info->d3ddesc, info->alloc_ptr);
@@ -1105,9 +1034,7 @@ namespace FrameGraph
 					{
 						info->is_new = true;
 					}
-					info->resource = res;// std::make_shared<Graphics::Resource>(info->d3ddesc, info->alloc_ptr);
-
-		//			assert(res->tmp_handle == info->alloc_ptr);
+					info->resource = res;
 				}
 				else
 				{

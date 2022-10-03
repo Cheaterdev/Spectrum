@@ -26,6 +26,13 @@ export
 			bool cube = false;
 		};
 
+		struct CubeViewDesc
+		{
+			uint MipSlice = 0;
+			uint MipLevels = 0;
+			uint FirstArraySlice = 0;
+			uint ArraySize = 0;
+		};
 
 		class ResourceView
 		{
@@ -55,29 +62,55 @@ export
 
 
 		};
-
+		struct FormattedBufferViewDesc
+		{
+			uint offset;
+			uint size;
+		};
 
 		template<class T, Format::Formats _format>
 		class FormattedBufferView :public ResourceView
 		{
 
 		public:
+
+			using Desc = FormattedBufferViewDesc;
+
+			Desc desc;
 			FormattedBufferView() = default;
 			HLSL::Buffer<T> buffer;
 			HLSL::RWBuffer<T> rwBuffer;
 
 			template<class F>
-			FormattedBufferView(Resource* resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+			void init(F& frame)
 			{
 				Format format = _format;
 				buffer = HLSL::Buffer<T>(frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
-				buffer.create(resource, format, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
+				buffer.create(resource, format, static_cast<UINT>(desc.offset / sizeof(Underlying<T>)), static_cast<UINT>(desc.size / sizeof(Underlying<T>)));
 
-				auto& desc = resource->get_desc().as_buffer();
+				//
 				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
 					rwBuffer = HLSL::RWBuffer<T>(frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
-					rwBuffer.create(resource, format, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
+					rwBuffer.create(resource, format, static_cast<UINT>(desc.offset / sizeof(Underlying<T>)), static_cast<UINT>(desc.size / sizeof(Underlying<T>)));
 				}
+			}
+
+
+			template<class F>
+			FormattedBufferView(Resource* resource, F& frame, FormattedBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
+			{
+				init(frame);
+			}
+
+			template<class F>
+			FormattedBufferView(Resource* resource, F& frame) : ResourceView(resource)
+			{
+				auto& res_desc = resource->get_desc().as_buffer();
+
+				desc.offset = 0;
+				desc.size = res_desc.SizeInBytes;
+
+				init(frame);
 			}
 
 			~FormattedBufferView()
@@ -89,6 +122,7 @@ export
 			{
 				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 			}
+
 		};
 
 
@@ -119,13 +153,17 @@ export
 			HLSL::DepthStencil<> depthStencil;
 		public:
 			template<class F>
-			void init(F& frame, TextureViewDesc view_desc)
+			void init(F& frame, TextureViewDesc _view_desc)
 			{
-				this->view_desc = view_desc;
-
-				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(3);
+				view_desc = _view_desc;
 
 				auto& desc = resource->get_desc().as_texture();
+
+				if (view_desc.MipLevels == 0)
+				{
+					view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
+				}
+				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(3);
 				if (desc.is2D()) {
 					texture2D = HLSL::Texture2D<>(hlsl[0]);
 					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
@@ -272,171 +310,77 @@ export
 
 
 		};
-		/*
 
-		class TextureCube : public ResourceView
+		class CubeView :public ResourceView
 		{
+			CubeViewDesc view_desc;
 		public:
+
 			HLSL::TextureCube<> textureCube;
 
-			std::array<TextureView, 6> faces;
 		public:
 			template<class F>
-			void init(F& frame)
+			void init(F& frame, CubeViewDesc _view_desc)
 			{
-				HandleTableLight hlsl = frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(2);
+				view_desc = _view_desc;
 
-				auto& desc = resource->get_desc();
-				if (view_desc.type == ResourceType::TEXTURE2D) {
-					texture2D = HLSL::Texture2D<>(hlsl[0]);
-					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
+				auto& desc = resource->get_desc().as_texture();
 
-				}
-				if (view_desc.type == ResourceType::TEXTURE3D)
+				if (view_desc.MipLevels == 0)
 				{
-					texture3D = HLSL::Texture3D<>(hlsl[0]);
-					rwTexture3D = HLSL::RWTexture3D<>(hlsl[1]);
+					view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
 				}
-				if (view_desc.type == ResourceType::CUBE)
-				{
-					textureCube = HLSL::TextureCube<>(hlsl[0]);
-					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
-				}
-
-				if (view_desc.type == ResourceType::TEXTURE2D)
-					texture2DArray = HLSL::Texture2DArray<>(hlsl[0]);
+				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(1);
+				assert(desc.is2D());
+				textureCube = HLSL::TextureCube<>(hlsl[0]);
 
 
-				if (!(desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE)) {
 
-					if (view_desc.type == ResourceType::TEXTURE2D && ArraySize == 1)
-						texture2D.create(resource.get(), MipSlice, MipLevels, FirstArraySlice);
-					else if (view_desc.type == ResourceType::TEXTURE2D)
-						texture2DArray.create(resource.get(), MipSlice, MipLevels, FirstArraySlice, ArraySize);
-					else if (view_desc.type == ResourceType::CUBE)
-						textureCube.create(resource.get(), MipSlice, MipLevels, FirstArraySlice / 6);
-					else if (view_desc.type == ResourceType::TEXTURE3D)
-						texture3D.create(resource.get(), MipSlice, MipLevels);
-					else
-						assert(false);
+
+
+				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
+
+
+					assert(desc.is2D());
+					textureCube.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice / 6);
+
 				}
 
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) {
-					if ((view_desc.type == ResourceType::TEXTURE2D || view_desc.type == ResourceType::CUBE) && ArraySize == 1)
-						rwTexture2D.create(resource.get(), MipSlice, FirstArraySlice);
-					else if (view_desc.type == ResourceType::TEXTURE3D)
-						rwTexture3D.create(resource.get(), MipSlice, 0);
-					else
-						assert(false);
-				}
 
-				if (desc.Flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) {
-
-					HandleTableLight rtv = frame.get_cpu_heap(DescriptorHeapType::RTV).place(1);
-
-					renderTarget = rtv[0];
-					place_rtv(renderTarget);
-				}
 
 			}
-			TextureCube() = default;
+			CubeView() = default;
 
 			template<class F>
-			TextureCube(Resource::ptr resource, F & frame) :ResourceView(resource)
+			CubeView(Resource* resource, F& frame) :ResourceView(resource)
 			{
-				init_desc();
+				auto& texture_desc = resource->get_desc().as_texture();
+				uint array_size = texture_desc.ArraySize / 6;
 
-				auto& desc = resource->get_desc();
-
-				view_desc.type = ResourceType::CUBE;
-				ArraySize = desc.ArraySize() / 6;
-				MipSlice = 0;
-				FirstArraySlice = 0;
-				PlaneSlice = 0;
-				MipLevels = desc.MipLevels;
-
-				init_views(frame);
-				init(frame);
+				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
-
 			template<class F>
-			TextureCube(Resource::ptr resource, F & frame, ResourceViewDesc vdesc) :ResourceView(resource)
+			CubeView(Resource* resource, F& frame, CubeViewDesc vdesc) :ResourceView(resource)
 			{
 
-				view_desc = vdesc;
-				init_views(frame);
-				init(frame);
-
+				init(frame, vdesc);
 
 			}
 
-			virtual void place_rtv(Handle h);
-			virtual void place_dsv(Handle h);
-
-			Viewport get_viewport()
-			{
-
-				auto desc = resource->get_desc();
-				UINT scaler = 1 << MipSlice;
-
-
-				Viewport p;
-				p.Width = std::max(1.0f, static_cast<float>(resource->get_desc().Width / scaler));
-				p.Height = std::max(1.0f, static_cast<float>(resource->get_desc().Height / scaler));
-				p.TopLeftX = 0;
-				p.TopLeftY = 0;
-				p.MinDepth = 0;
-				p.MaxDepth = 1;
-
-				return p;
-			}
-
-
-			sizer_long get_scissor()
-			{
-				auto desc = resource->get_desc();
-				UINT scaler = 1 << MipSlice;
-
-
-				return { 0,0, std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) };
-			}
-			UINT get_mip_count()
-			{
-				return MipLevels;
-			}
 
 			ivec2 get_size()
 			{
-				auto desc = resource->get_desc();
-				UINT scaler = 1 << MipSlice;
+				auto& texture_desc = resource->get_desc().as_texture();
 
+				UINT scaler = 1 << view_desc.MipSlice;
 
-				return { std::max(1ull,desc.Width / scaler),std::max(1u,desc.Height / scaler) };
+				return uint2::max({ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
 			}
 
-			TextureView create_2d_slice(UINT slice, FrameResources & frame)
-			{
-				ResourceViewDesc desc = view_desc;
-				desc.type = ResourceType::TEXTURE2D;
-				desc.Texture2D.ArraySize = 1;
-				desc.Texture2D.FirstArraySlice = slice;
+			TextureView create_face(UINT face, FrameResources& frame);
 
-				return TextureView(resource, frame, desc);
-			}
-
-			TextureCube create_mip(UINT mip, FrameResources & frame)
-			{
-				ResourceViewDesc desc = view_desc;
-
-				desc.Texture2D.MipSlice += mip;
-				desc.Texture2D.MipLevels = 1;
-
-				return TextureCube(resource, frame, desc);
-			}
-
-
+			CubeView create_mip(UINT mip, FrameResources& frame);
 		};
-		*/
 
 		class BufferView : public ResourceView
 		{
@@ -466,11 +410,6 @@ export
 				}
 			}
 
-			~BufferView()
-			{
-
-			}
-
 			template<class T>
 			void write(UINT64 offset, T* data, UINT64 count)
 			{
@@ -491,8 +430,6 @@ export
 			template<class F>
 			CounterView(Resource* resource, F& frame, UINT offset = 0) :ResourceView(resource)
 			{
-				/*	init_desc();*/
-
 				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(3);
 
 				structuredBuffer = HLSL::StructuredBuffer<UINT>(hlsl[0]);
@@ -511,17 +448,22 @@ export
 			}
 		};
 
-		enum class BufferType
+
+
+		struct StructuredBufferViewDesc
 		{
-			NONE,
-			COUNTED
+			uint offset;
+			uint size;
+			bool counted;
 		};
 		template<class T>
 		class StructuredBufferView :public ResourceView
 		{
 
-			int local_offset = 0;
 		public:
+			using Desc = StructuredBufferViewDesc;
+
+			Desc desc;
 			HLSL::RWBuffer<std::byte> rwRAW;
 			HLSL::StructuredBuffer<T> structuredBuffer;
 			HLSL::RWStructuredBuffer<T> rwStructuredBuffer;
@@ -533,18 +475,18 @@ export
 
 
 			template<class F>
-			StructuredBufferView(Resource* resource, F& frame, BufferType counted = BufferType::NONE, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+			void init(F& frame)
 			{
-				/*	init_desc();*/
+				uint local_offset = 0;
+				UINT offset = desc.offset;
+				UINT64 size = desc.size;
 
-				local_offset = 0;
-				if (counted == BufferType::COUNTED)
+				if (desc.counted)
 				{
 					local_offset = Math::AlignUp(4, sizeof(Underlying<T>));
 					if (size == 0) size = resource->get_desc().as_buffer().SizeInBytes;
 					size -= local_offset;
 					offset += local_offset;
-
 
 					counter_view = resource->create_view<CounterView>(frame, 0);
 				}
@@ -558,7 +500,6 @@ export
 
 				rwRAW = HLSL::RWBuffer<std::byte>(hlsl[3]);
 
-				auto& desc = resource->get_desc().as_buffer();
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
 					structuredBuffer.create(resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
@@ -570,16 +511,29 @@ export
 					rwStructuredBuffer.create(resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
 					rwRAW.create(resource, Format::R8_UINT, static_cast<UINT>(offset), static_cast<UINT>(size));
 
-					if (counted == BufferType::COUNTED)
+					if (desc.counted)
 						appendStructuredBuffer.create(resource, 0, resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
 				}
 			}
-			Handle get_uav_clear() { return rwRAW; }
-			~StructuredBufferView()
-			{
 
+			template<class F>
+			StructuredBufferView(Resource* resource, F& frame, StructuredBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
+			{
+				init(frame);
 			}
 
+			template<class F>
+			StructuredBufferView(Resource* resource, F& frame) : ResourceView(resource)
+			{
+				auto& res_desc = resource->get_desc().as_buffer();
+
+				desc.offset = 0;
+				desc.size = res_desc.SizeInBytes;
+				desc.counted = false;
+
+				init(frame);
+			}
+			Handle get_uav_clear() { return rwRAW; }
 
 			void write(UINT64 offset, T* data, UINT64 count)
 			{

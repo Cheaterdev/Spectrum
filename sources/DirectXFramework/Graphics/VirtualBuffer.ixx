@@ -21,7 +21,7 @@ using namespace HAL;
 
 export
 {
-
+	constexpr bool use_virtual = true;
 
 	namespace Graphics
 	{
@@ -82,8 +82,7 @@ export
 				std::lock_guard<std::mutex> g(m);
 				TypedHandle<T> result = Base::Allocate(n);
 
-
-				buffer->map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
+				if constexpr (use_virtual)	buffer->map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
 				return result;
 			}
 
@@ -93,7 +92,7 @@ export
 
 				result.Free();
 				result = Base::Allocate(n);
-				buffer->map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
+				if constexpr (use_virtual) buffer->map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
 			}
 			/*
 				T* map_elements(size_t offset, size_t size = 1)
@@ -107,7 +106,7 @@ export
 			void reserve(CommandList& list, size_t offset)
 			{
 				std::lock_guard<std::mutex> g(m);
-				buffer->map_buffer_part(updates, 0, offset * sizeof(T));
+				if constexpr (use_virtual)	buffer->map_buffer_part(updates, 0, offset * sizeof(T));
 
 				updates.resource = buffer.get();
 				list.update_tilings(std::move(updates));
@@ -155,7 +154,11 @@ export
 			}
 			virtual_gpu_buffer(size_t max_size, counterType countType = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::ResourceState state = HAL::ResourceState::COMMON) :Base(max_size)
 			{
-				buffer = std::make_shared<StructureBuffer<Type>>(max_size, countType, flags, HeapType::RESERVED, state);
+				if constexpr (use_virtual)
+					buffer = std::make_shared<StructureBuffer<Type>>(max_size, countType, flags, HeapType::RESERVED, state);
+
+				else
+					buffer = std::make_shared<StructureBuffer<Type>>(std::min(256_mb, max_size), countType, flags, HeapType::DEFAULT, state);
 
 				// buffer = std::make_shared<Graphics::StructureBuffer<T>>(max_size, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, DefaultAllocator::get());
 			}

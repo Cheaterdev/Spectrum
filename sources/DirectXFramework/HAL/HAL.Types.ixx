@@ -359,6 +359,7 @@ export namespace HAL
 		bool is3D() const { return Dimensions.y != 0 && Dimensions.z != 0; }
 
 		bool operator==(const TextureDesc&) const = default;
+		bool operator!=(const TextureDesc&) const = default;
 		auto operator<=>(const TextureDesc&)  const = default;
 
 		inline uint CalcSubresource(uint MipSlice, uint ArraySlice, uint PlaneSlice) const
@@ -383,6 +384,7 @@ export namespace HAL
 		size_t SizeInBytes;
 
 		bool operator==(const BufferDesc&) const = default;
+		bool operator!=(const BufferDesc&) const = default;
 		auto operator<=>(const BufferDesc&)  const = default;
 
 	private:
@@ -398,6 +400,7 @@ export namespace HAL
 		ResFlags Flags;
 
 		bool operator==(const ResourceDesc&) const = default;
+		bool operator!=(const ResourceDesc&) const = default;
 		auto operator<=>(const ResourceDesc&)  const = default;
 
 

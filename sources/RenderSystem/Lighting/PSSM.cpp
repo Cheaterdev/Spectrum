@@ -24,7 +24,7 @@ void PSSM::set_position(float3 p)
 
 PSSM::PSSM()
 {
-	mat.reset(new ShaderMaterial("",""));
+	mat.reset(new ShaderMaterial("", ""));
 	position = float3(200, 400, 200);
 }
 
@@ -64,7 +64,7 @@ void PSSM::generate(Graph& graph)
 	};
 
 	graph.add_pass<PSSMDataGlobal>("PSSM_Global", [this, &graph](PSSMDataGlobal& data, TaskBuilder& builder) {
-		builder.create(data.global_depth, { ivec3(1024, 1024,1), Graphics::Format::R32_TYPELESS, 1 ,1}, ResourceFlags::DepthStencil);
+		builder.create(data.global_depth, { ivec3(1024, 1024,0), Graphics::Format::R32_TYPELESS, 1 ,1 }, ResourceFlags::DepthStencil);
 		builder.create(data.global_camera, { 1 }, ResourceFlags::GenCPU);
 		}, [this, &graph, cam, points_all](PSSMDataGlobal& data, FrameContext& _context) {
 
@@ -132,7 +132,7 @@ void PSSM::generate(Graph& graph)
 			context->pipeline.blend.render_target[0].enabled = false;
 			context->pipeline.rasterizer.cull_mode = CullMode::Front;
 
-			
+
 
 			table.set(context, false, true);
 
@@ -152,7 +152,7 @@ void PSSM::generate(Graph& graph)
 			renderer->render(context, scene->get_ptr<Scene>());
 
 
-});
+		});
 
 
 
@@ -169,7 +169,7 @@ void PSSM::generate(Graph& graph)
 	};
 
 	graph.add_pass<PSSMData>("PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		builder.create(data.PSSM_Depths, { ivec3(size,1), Graphics::Format::R32_TYPELESS,renders_size ,1}, ResourceFlags::None);
+		builder.create(data.PSSM_Depths, { ivec3(size,0), Graphics::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::None);
 		builder.create(data.PSSM_Cameras, { renders_size }, ResourceFlags::GenCPU);
 		}, [](PSSMData& data, FrameContext& _context) {});
 
@@ -216,7 +216,7 @@ void PSSM::generate(Graph& graph)
 				context->cam = &light_cam;
 
 				auto depth_tex = data.PSSM_Depths->create_2d_slice(i, *graph.builder.current_frame);
-			//	auto shadow_cameras = _context.get_buffer(data.shadow_cameras);
+				//	auto shadow_cameras = _context.get_buffer(data.shadow_cameras);
 
 				auto scene = graph.scene;
 				auto renderer = graph.renderer;
@@ -282,11 +282,11 @@ void PSSM::generate(Graph& graph)
 	// relight pass
 	graph.add_pass<PSSMData>("PSSM_GenerateMask", [this, &graph](PSSMData& data, TaskBuilder& builder) {
 
-		builder.create(data.LightMask, { ivec3(graph.frame_size,1), Graphics::Format::R8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.LightMask, { ivec3(graph.frame_size,0), Graphics::Format::R8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 		data.gbuffer.need(builder);
 		builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
 		builder.need(data.PSSM_Cameras, ResourceFlags::None);
-		
+
 		}, [this, &graph](PSSMData& data, FrameContext& _context) {
 
 			GBuffer gbuffer = data.gbuffer.actualize(_context);
@@ -347,18 +347,19 @@ void PSSM::generate(Graph& graph)
 
 	// relight pass
 	graph.add_pass<PSSMData>("PSSM_Combine", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		
+
 		data.gbuffer.need(builder);
 
-	  //  builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
+		//  builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 		builder.need(data.PSSM_Cameras, ResourceFlags::None);
-		
+
 		if (builder.exists(data.RTXDebug))
 		{
-			
+
 			builder.need(data.RTXDebug, ResourceFlags::PixelRead);
-		}else
+		}
+		else
 		{
 			builder.need(data.LightMask, ResourceFlags::PixelRead);
 
@@ -387,13 +388,13 @@ void PSSM::generate(Graph& graph)
 			}
 
 			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			
+
 			graphics.set_viewport(data.ResultTexture->get_viewport());
 			graphics.set_scissor(data.ResultTexture->get_scissor());
 
 			{
 				Slots::PSSMData pssmdata;
-			//	pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
+				//	pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
 				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
 				pssmdata.set(graphics);
 			}
@@ -403,8 +404,8 @@ void PSSM::generate(Graph& graph)
 
 				gbuffer.SetTable(lighting.GetGbuffer());
 
-				if(data.RTXDebug)
-				lighting.GetLight_mask() = data.RTXDebug->texture2D;//data.LightMask->texture2D;
+				if (data.RTXDebug)
+					lighting.GetLight_mask() = data.RTXDebug->texture2D;//data.LightMask->texture2D;
 				else
 					lighting.GetLight_mask() = data.LightMask->texture2D;
 

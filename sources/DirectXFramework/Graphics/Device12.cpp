@@ -398,7 +398,9 @@ namespace Graphics
 		}
 		else
 			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+		if constexpr (BuildOptions::Debug)	TEST(m_device->native_device->GetDeviceRemovedReason());
 
+		assert(result.size != UINT64_MAX);
 		return result;
 	}
 

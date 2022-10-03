@@ -71,7 +71,7 @@ void SkyRender::generate(Graph& graph)
 	};
 
 	graph.pass<SkyData>("CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
-		builder.create(data.sky_cubemap, { ivec3(256, 256, 1), Graphics::Format::R11G11B10_FLOAT, 6 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), Graphics::Format::R11G11B10_FLOAT, 6 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
 		bool changed = (graph.sunDir - dir).length() > 0.001;
 
 		if (changed)
@@ -183,8 +183,8 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 	graph.pass<EnvData>("CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
 		builder.need(data.sky_cubemap, ResourceFlags::PixelRead);
 
-		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,1),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
-		builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,1),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,0),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,0),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
 
 		if (data.sky_cubemap.is_changed())
 		{

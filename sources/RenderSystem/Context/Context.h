@@ -370,20 +370,20 @@ public:
 
 	void create(ivec2 size, TaskBuilder& builder)
 	{
-		builder.create(GBuffer_Albedo, { ivec3(size,1), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-		builder.create(GBuffer_Normals, { ivec3(size,1), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-		builder.create(GBuffer_Depth, { ivec3(size,1), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::DepthStencil);
-		builder.create(GBuffer_Specular, { ivec3(size,1), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-		builder.create(GBuffer_Speed, { ivec3(size,1), Graphics::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Albedo, { ivec3(size,0), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Normals, { ivec3(size,0), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Depth, { ivec3(size,0), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::DepthStencil);
+		builder.create(GBuffer_Specular, { ivec3(size,0), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Speed, { ivec3(size,0), Graphics::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
 
 
-		builder.create(GBuffer_DepthMips, { ivec3(size,1), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
-		builder.create(GBuffer_DepthPrev, { ivec3(size,1), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(GBuffer_DepthMips, { ivec3(size,0), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(GBuffer_DepthPrev, { ivec3(size,0), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
 	}
 
 	void create_quality(ivec2 size, TaskBuilder& builder)
 	{
-		builder.create(GBuffer_Quality, { ivec3(size,1), Graphics::Format::D24_UNORM_S8_UINT,1,1 }, ResourceFlags::DepthStencil);
+		builder.create(GBuffer_Quality, { ivec3(size,0), Graphics::Format::D24_UNORM_S8_UINT,1,1 }, ResourceFlags::DepthStencil);
 	}
 
 	void create_mips(ivec2 size, TaskBuilder& builder)
@@ -394,7 +394,7 @@ public:
 
 	auto create_temp_color(ivec2 size, TaskBuilder& builder)
 	{
-		return builder.create(GBuffer_TempColor, { ivec3(size,1), Graphics::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		return builder.create(GBuffer_TempColor, { ivec3(size,0), Graphics::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 	}
 
 	void need(TaskBuilder& builder, bool need_quality = false, bool need_mips = false)

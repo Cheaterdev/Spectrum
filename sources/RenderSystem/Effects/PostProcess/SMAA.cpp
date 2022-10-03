@@ -26,13 +26,13 @@ void SMAA::generate(Graph& graph)
 	graph.add_pass<SMAAData>("SMAA", [this, &graph](SMAAData& data, TaskBuilder& builder) {
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 
-		builder.create(data.SMAA_edges, { ivec3(graph.frame_size, 1), Graphics::Format::R8G8_UNORM,1 ,1}, ResourceFlags::RenderTarget);
-		builder.create(data.SMAA_blend, { ivec3(graph.frame_size, 1),  Graphics::Format::R8G8B8A8_UNORM,1 ,1} ,ResourceFlags::RenderTarget);
+		builder.create(data.SMAA_edges, { ivec3(graph.frame_size, 0), Graphics::Format::R8G8_UNORM,1 ,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.SMAA_blend, { ivec3(graph.frame_size, 0),  Graphics::Format::R8G8B8A8_UNORM,1 ,1 }, ResourceFlags::RenderTarget);
 
-		 builder.recreate(data.ResultTextureNew, ResourceFlags::RenderTarget);
+		builder.recreate(data.ResultTextureNew, ResourceFlags::RenderTarget);
 
 		}, [this, &graph](SMAAData& data, FrameContext& _context) {
-					auto& list = *_context.get_list();
+			auto& list = *_context.get_list();
 
 			auto& graphics = list.get_graphics();
 
@@ -53,12 +53,12 @@ void SMAA::generate(Graph& graph)
 
 				Slots::SMAA_Global slot_global;
 				slot_global.GetColorTex() = data.ResultTexture->texture2D;
-				slot_global.GetSubsampleIndices() = float4(0,0,0,0);
+				slot_global.GetSubsampleIndices() = float4(0, 0, 0, 0);
 				slot_global.GetSMAA_RT_METRICS() = float4(1.0f / size.x, 1.0f / size.y, size);
 
 				slot_global.set(graphics);
 			}
-		
+
 
 			graphics.draw(4);
 

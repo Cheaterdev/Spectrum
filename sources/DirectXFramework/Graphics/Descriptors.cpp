@@ -33,6 +33,8 @@ namespace Graphics {
 	}
 	ResourceInfo* Handle::get_resource_info() const
 	{
+
+		assert(heap);
 		return heap->get_resource_info(this);
 	}
 	Handle::operator bool() const

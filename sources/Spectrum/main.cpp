@@ -238,7 +238,7 @@ public:
 				for (auto& e : last_graph->builder.alloc_resources)
 				{
 
-					if (e.second.type != FrameGraph::ResourceType::Texture) continue;
+					if (e.second.d3ddesc.is_buffer()) continue;
 
 					std::string str = e.first;
 					combo->add_item(str)->on_click = [this, str](GUI::Elements::menu_list_element::ptr) {debug_view = str; };
@@ -583,8 +583,8 @@ public:
 				graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
-				builder.create(data.RTXDebug, { ivec3(size, 1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-				builder.create(data.RTXDebugPrev, { ivec3(size, 1), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+				builder.create(data.RTXDebug, { ivec3(size, 0), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+				builder.create(data.RTXDebugPrev, { ivec3(size,0), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 
 					}, [this, &graph](RTXDebugData& data, FrameContext& context) {
 						auto& compute = context.get_list()->get_compute();
@@ -630,7 +630,7 @@ public:
 
 		};
 		graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
-			builder.create(data.ResultTexture, { uint3(graph.frame_size,1), Graphics::Format::R16G16B16A16_FLOAT, 1 });
+			builder.create(data.ResultTexture, { uint3(graph.frame_size,0), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::RenderTarget);
 			}, [](no& data, FrameContext& _context) {});
 
 

@@ -393,7 +393,7 @@ void VoxelGI::debug(Graph& graph)
 
 	graph.add_pass<VoxelDebugData>("VoxelDebug", [this, size](VoxelDebugData& data, TaskBuilder& builder) {
 
-		builder.create(data.VoxelDebug, { ivec3(size,1),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.VoxelDebug, { ivec3(size,0),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::RenderTarget);
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 
 		data.gbuffer.need(builder);
@@ -481,14 +481,14 @@ void VoxelGI::screen(Graph& graph)
 
 
 		data.gbuffer.need(builder, false);
-		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,1),  Graphics::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,1), Graphics::Format::R16G16B16A16_FLOAT,1 ,0 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,1), Graphics::Format::R16G16B16A16_FLOAT , 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,0),  Graphics::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,0), Graphics::Format::R16G16B16A16_FLOAT,1 ,0 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,0), Graphics::Format::R16G16B16A16_FLOAT , 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 
-		builder.create(data.VoxelScreen_hi, { 1 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelScreen_low, { 1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelScreen_hi, { 1u, false }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelScreen_low, { 1u, false }, ResourceFlags::UnorderedAccess);
 
 
 		UINT count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
@@ -806,8 +806,8 @@ void VoxelGI::screen_reflection(Graph& graph)
 	graph.add_pass<ScreenReflection>("ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-		builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,1),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,1),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,0),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,0),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
 		//	data.downsampled_reflection = builder.create("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, Graphics::Format::R11G11B10_FLOAT, ResourceFlags::RenderTarget);
@@ -910,8 +910,8 @@ void VoxelGI::screen_reflection(Graph& graph)
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
-		builder.create(data.VoxelReflectionFiltered, { ivec3(size.x, size.y,1),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-		builder.create(data.prev_gi_temp, { ivec3(size.x, size.y,1), Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.VoxelReflectionFiltered, { ivec3(size.x, size.y,0),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.create(data.prev_gi_temp, { ivec3(size.x, size.y,0), Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::RenderTarget);
 
 
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);

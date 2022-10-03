@@ -120,6 +120,8 @@ export namespace HAL
 				desc.Texture1D.MostDetailedMip = Texture1D.MostDetailedMip;
 				desc.Texture1D.MipLevels = Texture1D.MipLevels;
 				desc.Texture1D.ResourceMinLODClamp = Texture1D.ResourceMinLODClamp;
+
+				if (desc.Texture1D.MipLevels == 0) desc.Texture1D.MipLevels = view.Resource->get_desc().as_texture().MipLevels - desc.Texture1D.MostDetailedMip;
 			},
 			[&](const Views::ShaderResource::Texture1DArray& Texture1DArray) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
@@ -128,6 +130,8 @@ export namespace HAL
 				desc.Texture1DArray.ResourceMinLODClamp = Texture1DArray.ResourceMinLODClamp;
 				desc.Texture1DArray.FirstArraySlice = Texture1DArray.FirstArraySlice;
 				desc.Texture1DArray.ArraySize = Texture1DArray.ArraySize;
+
+				if (desc.Texture1DArray.MipLevels == 0) desc.Texture1DArray.MipLevels = view.Resource->get_desc().as_texture().MipLevels - Texture1DArray.MostDetailedMip;
 			},
 			[&](const Views::ShaderResource::Texture2D& Texture2D) {
 
@@ -137,6 +141,10 @@ export namespace HAL
 				desc.Texture2D.MipLevels = Texture2D.MipLevels;
 				desc.Texture2D.ResourceMinLODClamp = Texture2D.ResourceMinLODClamp;
 				desc.Texture2D.PlaneSlice = Texture2D.PlaneSlice;
+
+
+				if (desc.Texture2D.MipLevels == 0) desc.Texture2D.MipLevels = view.Resource->get_desc().as_texture().MipLevels - desc.Texture2D.MostDetailedMip;
+
 				assert(desc.Texture2D.PlaneSlice == 0);
 				assert(desc.Texture2D.MipLevels > 0);
 				assert(desc.Texture2D.MostDetailedMip + desc.Texture2D.MipLevels <= view.Resource->get_desc().as_texture().MipLevels);
@@ -150,6 +158,9 @@ export namespace HAL
 				desc.Texture2DArray.FirstArraySlice = Texture2DArray.FirstArraySlice;
 				desc.Texture2DArray.ArraySize = Texture2DArray.ArraySize;
 
+				if (desc.Texture2DArray.MipLevels == 0) desc.Texture2DArray.MipLevels = view.Resource->get_desc().as_texture().MipLevels - desc.Texture2DArray.MostDetailedMip;
+
+
 				assert(desc.Texture2DArray.PlaneSlice == 0);
 				assert(desc.Texture2DArray.MipLevels > 0);
 				assert(desc.Texture2DArray.MostDetailedMip + desc.Texture2DArray.MipLevels <= view.Resource->get_desc().as_texture().MipLevels);
@@ -159,6 +170,8 @@ export namespace HAL
 				desc.Texture3D.MostDetailedMip = Texture3D.MostDetailedMip;
 				desc.Texture3D.MipLevels = Texture3D.MipLevels;
 				desc.Texture3D.ResourceMinLODClamp = Texture3D.ResourceMinLODClamp;
+
+				if (desc.Texture3D.MipLevels == 0) desc.Texture3D.MipLevels = view.Resource->get_desc().as_texture().MipLevels - desc.Texture3D.MostDetailedMip;
 			},
 			[&](const Views::ShaderResource::Texture2DMS& Texture2DMS) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
@@ -174,6 +187,8 @@ export namespace HAL
 				desc.TextureCube.MipLevels = Cube.MipLevels;
 				desc.TextureCube.ResourceMinLODClamp = Cube.ResourceMinLODClamp;
 
+				if (desc.TextureCube.MipLevels == 0) desc.TextureCube.MipLevels = view.Resource->get_desc().as_texture().MipLevels - desc.TextureCube.MostDetailedMip;
+
 				assert(desc.TextureCube.MipLevels > 0);
 				assert(desc.TextureCube.MostDetailedMip + desc.TextureCube.MipLevels <= view.Resource->get_desc().as_texture().MipLevels);
 			},
@@ -184,6 +199,9 @@ export namespace HAL
 				desc.TextureCubeArray.ResourceMinLODClamp = CubeArray.ResourceMinLODClamp;
 				desc.TextureCubeArray.NumCubes = CubeArray.NumCubes;
 				desc.TextureCubeArray.First2DArrayFace = CubeArray.First2DArrayFace;
+
+				if (desc.TextureCubeArray.MipLevels == 0) desc.TextureCubeArray.MipLevels = view.Resource->get_desc().as_texture().MipLevels - desc.TextureCubeArray.MostDetailedMip;
+
 			},
 			[&](const Views::ShaderResource::Raytracing& Raytracing) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;

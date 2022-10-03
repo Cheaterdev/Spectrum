@@ -239,9 +239,9 @@ GI_RESULT PS(quad_output i)
  float dist = 0;
 
 
- float4 reflection =  trace_refl(0, v, pos + scaler * normal / m, normalize(r), normal, angle);
+ float4 reflection = float4(get_sky(r, 0),1);// trace_refl(0, v, pos + scaler * normal / m, normalize(r), normal, angle);
 
- float3 screen = get_PBR(metallic * albedo, reflection, normal, v, roughness, metallic);
+ float3 screen = reflection;// get_PBR(metallic * albedo, reflection, normal, v, roughness, metallic);
 #ifdef REFLECTION
  result.screen.xyz = 0;
 
@@ -347,7 +347,7 @@ GI_RESULT PS_low(quad_output i)
 
 //	float4 downsampled = tex_ray.SampleLevel(linearSampler, i.tc, 0);
 
-	float  roughness = pow(gbuffer.GetNormals()[tc].w, 1);
+	float  roughness = 0;// pow(gbuffer.GetNormals()[tc].w, 1);
 	float metallic = albedo.w;// specular.w;
 							  //float fresnel = calc_fresnel(1- roughness, normal, v);
 

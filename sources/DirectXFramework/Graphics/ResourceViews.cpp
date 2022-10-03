@@ -34,5 +34,28 @@ namespace Graphics
 
 		return TextureView(resource, frame, desc);
 	}
+	TextureView CubeView::create_face(UINT face, FrameResources& frame)
+	{
+		TextureViewDesc desc;
 
+		desc.MipSlice = view_desc.MipSlice;
+		desc.MipLevels = view_desc.MipLevels;
+
+
+		desc.ArraySize = 1;
+		desc.FirstArraySlice = view_desc.FirstArraySlice + face;
+		desc.cube = false;
+
+		return TextureView(resource, frame, desc);
+	}
+
+	CubeView CubeView::create_mip(UINT mip, FrameResources& frame)
+	{
+		CubeViewDesc desc = view_desc;
+
+		desc.MipSlice += mip;
+		desc.MipLevels = 1;
+
+		return CubeView(resource, frame, desc);
+	}
 }

@@ -5,6 +5,7 @@ import Scheduler;
 
 import Utils;
 import serialization;
+#include <memory>
 class camera;
 class main_renderer;
 class Scene;
@@ -53,13 +54,13 @@ namespace FrameGraph
 
 	static const ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
 
-	struct BufferDesc
-	{
-		size_t size;
-		bool counted;
+	//struct BufferDesc
+	//{
+	//	size_t size;
+	//	bool counted;
 
-		auto   operator<=>(const  BufferDesc& r)  const = default;
-	};
+	//	auto   operator<=>(const  BufferDesc& r)  const = default;
+	//};
 
 	struct TextureDesc
 	{
@@ -120,10 +121,10 @@ namespace FrameGraph
 	{
 		std::string name;
 		// desc
-		ResourceType type;
-		MyVariant desc;
+		//ResourceType type;
+		//MyVariant desc;
 		ResourceFlags flags;
-		bool placed;
+
 
 		Graphics::ResourceHandle alloc_ptr;
 		ResourceAllocInfo* orig = nullptr;
@@ -149,7 +150,6 @@ namespace FrameGraph
 		std::shared_ptr<ResourceHandler> handler;
 		std::shared_ptr<Graphics::ResourceView> view;
 
-		bool need_recreate = false;
 		bool passed = false;
 		size_t frame_id;
 
@@ -177,7 +177,7 @@ namespace FrameGraph
 		T& clone_handler(std::shared_ptr<ResourceHandler>& h)
 		{
 			//	if (!handler)
-			handler = std::make_shared<T>(static_cast<T*>(h.get())->m_desc);
+			handler = std::make_shared<T>(static_cast<T*>(h.get())->desc);
 			//	else
 			//		*handler = T(args...);
 
@@ -204,110 +204,326 @@ namespace FrameGraph
 	struct Handlers
 	{
 		template<class T>
-		class StructuredBuffer : public ResourceHandler
+		class UniversalHandler : public ResourceHandler
 		{
-
 		public:
-			std::string name;
-			struct Desc
-			{
-				UINT count;
-				bool counted;
-			}m_desc;
+			using Desc = T;
+			using View = typename T::View;
+			Desc desc;
 
+			std::string name;
 			auto& operator*()
 			{
-				return *static_cast<Graphics::StructuredBufferView<T>*>(info->view.get());
+				return *static_cast<View*>(info->view.get());
 			}
 
 			auto operator->()
 			{
-				return static_cast<Graphics::StructuredBufferView<T>*>(info->view.get());
+				return static_cast<View*>(info->view.get());
 			}
+
 			operator bool() const
 			{
 				return !!info;
 			}
-			StructuredBuffer() = default;
 
-			StructuredBuffer(const Desc& desc) :m_desc(desc)
+			UniversalHandler() = default;
+
+			UniversalHandler(const Desc& desc) :desc(desc)
 			{
 
 				//info->buffer = Graphics::BufferView();
 			}
-			StructuredBuffer(std::string_view name) :name(name)
+			UniversalHandler(std::string_view name) :name(name)
 			{
 
 			}
+
 			virtual void init(ResourceAllocInfo& info) override
 			{
-				auto s = m_desc.count * sizeof(Underlying<T>);
-				if (m_desc.counted)
-				{
-					s += std::max(4ull, sizeof(Underlying<T>));
-				}
-				auto desc = BufferDesc{ s , m_desc.counted };
-				info.need_recreate = info.desc != desc;
-				info.type = ResourceType::Buffer;
-				info.desc = desc;
-
+				info.d3ddesc = desc.create_resource_desc(info.flags);
 			}
 
 			virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) override
 			{
-				info.init_view<Graphics::StructuredBufferView<T>>(frame, m_desc.counted ? Graphics::BufferType::COUNTED : Graphics::BufferType::NONE);
+				info.init_view<View>(frame, desc.as_view(info.flags));
 			}
 		};
 
-		class Texture : public ResourceHandler
+		template<class T, Graphics::Format::Formats format>
+		struct FormattedDesc
 		{
-		public:
-			struct Desc
-			{
-				ivec3 size;
-				Graphics::Format format;
-				UINT array_count;
-				UINT mip_count;
-			}m_desc;
 
-			std::string name;
-			auto& operator*()
-			{
-				return *static_cast<Graphics::TextureView*>(info->view.get());
-			}
-			auto operator->()
-			{
-				return static_cast<Graphics::TextureView*>(info->view.get());
-			}
-			operator bool() const
-			{
-				return !!info;
-			}
-			Texture() = default;
+			using View = Graphics::FormattedBufferView<T, format>;
+			uint count;
 
-			Texture(std::string_view name) :name(name)
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
 			{
+				HAL::ResFlags flags = HAL::ResFlags::ShaderResource;
 
+				if (check(resflags & ResourceFlags::UnorderedAccess))
+				{
+					flags |= HAL::ResFlags::UnorderedAccess;
+				}
+				return HAL::ResourceDesc::Buffer(count * sizeof(Underlying<T>), flags);
 			}
 
-			Texture(const Desc& desc) :m_desc(desc)
-			{
 
-			}
-
-			virtual void init(ResourceAllocInfo& info)override
+			Graphics::FormattedBufferViewDesc as_view(ResourceFlags resflags)
 			{
-				auto desc = TextureDesc{ m_desc.size, m_desc.format, m_desc.array_count,m_desc.mip_count };
-				info.need_recreate = info.desc != desc;
-				info.type = ResourceType::Texture;
-				info.desc = desc;
-			}
-
-			virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) override
-			{
-				info.init_view<Graphics::TextureView>(frame, check(info.flags & ResourceFlags::Cube));
+				return { 0, count * sizeof(Underlying<T>) };
 			}
 		};
+
+		template<class T>
+		struct StructuredDesc
+		{
+
+			using View = Graphics::StructuredBufferView<T>;
+			uint count;
+			bool counted;
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
+			{
+				HAL::ResFlags flags = HAL::ResFlags::ShaderResource;
+
+				if (check(resflags & ResourceFlags::UnorderedAccess))
+				{
+					flags |= HAL::ResFlags::UnorderedAccess;
+				}
+
+				uint size = count * sizeof(Underlying<T>);
+
+				if (counted)
+				{
+					uint local_offset = Math::AlignUp(4, sizeof(Underlying<T>));
+					size += local_offset;
+				}
+
+				return HAL::ResourceDesc::Buffer(size, flags);
+			}
+
+
+			Graphics::StructuredBufferViewDesc as_view(ResourceFlags resflags)
+			{
+				return { 0, count * sizeof(Underlying<T>), counted };
+			}
+		};
+
+
+		struct TextureDesc
+		{
+
+			using View = Graphics::TextureView;
+			ivec3 size;
+			Graphics::Format format;
+			UINT array_count;
+			UINT mip_count;
+
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
+			{
+
+				HAL::ResFlags flags = HAL::ResFlags::None;
+
+				if (check(resflags & ResourceFlags::RenderTarget))
+				{
+					flags |= HAL::ResFlags::RenderTarget;
+				}
+
+				if (check(resflags & ResourceFlags::DepthStencil))
+				{
+					flags |= HAL::ResFlags::DepthStencil;
+				}
+
+				if (check(resflags & ResourceFlags::UnorderedAccess))
+				{
+					flags |= HAL::ResFlags::UnorderedAccess;
+				}
+
+				if (format.is_shader_visible())
+					flags |= HAL::ResFlags::ShaderResource;
+
+				if (mip_count == 0) {
+					mip_count = 1;
+					auto tsize = size;
+
+					while (tsize.x != 1 && tsize.y != 1)
+					{
+						tsize /= 2;
+						mip_count++;
+					}
+
+				}
+
+				return HAL::ResourceDesc::Tex2D(format, size, array_count, mip_count, flags);
+			}
+
+
+			Graphics::TextureViewDesc as_view(ResourceFlags resflags)
+			{
+				uint ar = array_count;
+				bool cube = check(resflags & ResourceFlags::Cube);
+
+				if (cube)
+				{
+					ar /= 6;
+				}
+				return { 0, mip_count, 0, ar, cube };
+			}
+		};
+
+		template<class T, Graphics::Format::Formats format>
+		using FormattedBuffer = UniversalHandler<FormattedDesc<T, format>>;
+
+
+		template<class T>
+		using StructuredBuffer = UniversalHandler<StructuredDesc<T>>;
+
+		using Texture = UniversalHandler<TextureDesc>;
+
+
+
+		//template<class T>
+		//class StructuredBuffer : public ResourceHandler
+		//{
+
+		//public:
+		//	std::string name;
+		//	struct Desc
+		//	{
+		//		UINT count;
+		//		bool counted;
+		//	}m_desc;
+
+		//	auto& operator*()
+		//	{
+		//		return *static_cast<Graphics::StructuredBufferView<T>*>(info->view.get());
+		//	}
+
+		//	auto operator->()
+		//	{
+		//		return static_cast<Graphics::StructuredBufferView<T>*>(info->view.get());
+		//	}
+		//	operator bool() const
+		//	{
+		//		return !!info;
+		//	}
+		//	StructuredBuffer() = default;
+
+		//	StructuredBuffer(const Desc& desc) :m_desc(desc)
+		//	{
+
+		//		//info->buffer = Graphics::BufferView();
+		//	}
+		//	StructuredBuffer(std::string_view name) :name(name)
+		//	{
+
+		//	}
+		//	virtual void init(ResourceAllocInfo& info) override
+		//	{
+		//		auto s = m_desc.count * sizeof(Underlying<T>);
+		//		if (m_desc.counted)
+		//		{
+		//			s += std::max(4ull, sizeof(Underlying<T>));
+		//		}
+		//		/*		auto desc = BufferDesc{ s , m_desc.counted };
+		//				info.need_recreate = info.desc != desc;
+		//				info.type = ResourceType::Buffer;*/
+		//		info.d3ddesc = HAL::ResourceDesc::Buffer(s);
+
+		//	}
+
+		//	virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) override
+		//	{
+		//		info.init_view<Graphics::StructuredBufferView<T>>(frame, m_desc.counted ? Graphics::BufferType::COUNTED : Graphics::BufferType::NONE);
+		//	}
+		//};
+
+	//	class Texture : public ResourceHandler
+	//	{
+	//	public:
+	//		struct Desc
+	//		{
+	//			ivec3 size;
+	//			Graphics::Format format;
+	//			UINT array_count;
+	//			UINT mip_count;
+	//		}m_desc;
+
+	//		std::string name;
+	//		auto& operator*()
+	//		{
+	//			return *static_cast<Graphics::TextureView*>(info->view.get());
+	//		}
+	//		auto operator->()
+	//		{
+	//			return static_cast<Graphics::TextureView*>(info->view.get());
+	//		}
+	//		operator bool() const
+	//		{
+	//			return !!info;
+	//		}
+	//		Texture() = default;
+
+	//		Texture(std::string_view name) :name(name)
+	//		{
+
+	//		}
+
+	//		Texture(const Desc& desc) :m_desc(desc)
+	//		{
+
+	//		}
+
+	//		virtual void init(ResourceAllocInfo& info)override
+	//		{
+	//			//auto desc = TextureDesc{ m_desc.size, m_desc.format, m_desc.array_count,m_desc.mip_count };
+	//			//info.need_recreate = info.desc != desc;
+	//			//info.type = ResourceType::Texture;
+
+
+	//			HAL::ResFlags flags = HAL::ResFlags::None;
+
+	//			if (check(info.flags & ResourceFlags::RenderTarget))
+	//			{
+	//				flags |= HAL::ResFlags::RenderTarget;
+	//			}
+
+	//			if (check(info.flags & ResourceFlags::DepthStencil))
+	//			{
+	//				flags |= HAL::ResFlags::DepthStencil;
+	//			}
+
+	//			if (check(info.flags & ResourceFlags::UnorderedAccess))
+	//			{
+	//				flags |= HAL::ResFlags::UnorderedAccess;
+	//			}
+
+	//			//	if (desc.format.is_shader_visible())
+	//			//		flags |= HAL::ResFlags::ShaderResource;
+
+	//				/*	int mip_count = desc.mip_count;
+
+	//					if (mip_count == 0) {
+	//						mip_count = 1;
+	//						auto tsize = desc.size;
+
+	//						while (tsize.x != 1 && tsize.y != 1)
+	//						{
+	//							tsize /= 2;
+	//							mip_count++;
+	//						}
+
+	//					}*/
+
+
+	//			info.d3ddesc = HAL::ResourceDesc::Tex2D(m_desc.format, m_desc.size, m_desc.mip_count, m_desc.array_count);
+	//		}
+
+	//		virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) override
+	//		{
+	//			info.init_view<Graphics::TextureView>(frame, check(info.flags & ResourceFlags::Cube));
+	//		}
+	//	};
 	};
 
 
@@ -361,7 +577,7 @@ namespace FrameGraph
 			ResourceAllocInfo& info = alloc_resources[name];
 			T& handler = info.create_handler<T>(desc);
 			init(info, name, flags);
-			handler.init(info);
+			//handler.init(info);
 			result = handler;
 
 		}
@@ -378,7 +594,7 @@ namespace FrameGraph
 			ResourceAllocInfo& info = alloc_resources[name];
 			T& handler = info.clone_handler<T>(old_info.handler);
 			init(info, name, flags);
-			handler.init(info);
+			//handler.init(info);
 			info.orig = &old_info;
 
 
@@ -399,7 +615,7 @@ namespace FrameGraph
 			ResourceAllocInfo& info = alloc_resources[name];
 			T& handler = info.create_handler<T>(desc);
 			init(info, name, flags);
-			handler.init(info);
+			//handler.init(info);
 			info.orig = &old_info;
 
 

@@ -278,7 +278,7 @@ namespace GUI
 
 		auto data = c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
 		c.command_list->write<Vertex>(data, vertexes);
-		auto view = data.resource->create_view<StructuredBufferView<Table::vertex_input>>(*c.command_list->frame_resources, Graphics::BufferType::NONE, (UINT)data.offset, (UINT)data.size);
+		auto view = data.resource->create_view<StructuredBufferView<Table::vertex_input>>(*c.command_list->frame_resources, StructuredBufferViewDesc{ (UINT)data.offset, (UINT)data.size,false });
 
 		{
 			Slots::NinePatch patch_data;
