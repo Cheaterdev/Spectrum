@@ -462,7 +462,7 @@ void VoxelGI::screen(Graph& graph)
 		Handlers::Texture H(VoxelIndirectNoise);
 		Handlers::Texture H(VoxelIndirectFiltered);
 
-		Handlers::Texture H(sky_cubemap_filtered);
+		Handlers::Cube H(sky_cubemap_filtered);
 
 
 		Handlers::StructuredBuffer<DispatchArguments> H(VoxelScreen_hi);
@@ -787,7 +787,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 		Handlers::Texture H(VoxelReflectionNoise);
 		Handlers::Texture H(VoxelReflectionFiltered);
 
-		Handlers::Texture H(sky_cubemap_filtered);
+		Handlers::Cube H(sky_cubemap_filtered);
 
 		Handlers::Texture H(noise_dir_pdf);
 		Handlers::Texture H(prev_gi_temp);
@@ -1076,7 +1076,7 @@ void VoxelGI::lighting(Graph& graph)
 		Handlers::Texture H(VoxelLighted);
 		Handlers::Texture H(VoxelAlbedo);
 		Handlers::Texture H(VoxelNormal);
-		Handlers::Texture H(sky_cubemap_filtered);
+		Handlers::Cube H(sky_cubemap_filtered);
 	};
 
 

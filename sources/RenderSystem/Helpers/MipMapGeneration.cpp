@@ -17,12 +17,12 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 {
 	generate(compute_context, tex, tex->texture_2d());
 }
-void MipMapGenerator::generate_cube(Graphics::ComputeContext& compute_context, Graphics::TextureView view)
+void MipMapGenerator::generate_cube(Graphics::ComputeContext& compute_context, Graphics::CubeView view)
 {
 
 	for (int i = 0; i < 6; i++)
 
-		generate(compute_context, view.create_2d_slice(i, *compute_context.get_base().frame_resources));
+		generate(compute_context, view.create_face(i, *compute_context.get_base().frame_resources));
 }
 
 void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphics::TextureView  view)

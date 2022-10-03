@@ -20,7 +20,6 @@ namespace Graphics
 
 		desc.ArraySize = 1;
 		desc.FirstArraySlice = slice;
-		desc.cube = false;
 
 		return TextureView(resource, frame, desc);
 	}
@@ -44,7 +43,6 @@ namespace Graphics
 
 		desc.ArraySize = 1;
 		desc.FirstArraySlice = view_desc.FirstArraySlice + face;
-		desc.cube = false;
 
 		return TextureView(resource, frame, desc);
 	}

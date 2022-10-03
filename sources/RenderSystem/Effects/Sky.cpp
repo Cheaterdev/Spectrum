@@ -67,11 +67,11 @@ void SkyRender::generate(Graph& graph)
 
 	struct SkyData
 	{
-		Handlers::Texture H(sky_cubemap);
+		Handlers::Cube H(sky_cubemap);
 	};
 
 	graph.pass<SkyData>("CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
-		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), Graphics::Format::R11G11B10_FLOAT, 6 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), Graphics::Format::R11G11B10_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
 		bool changed = (graph.sunDir - dir).length() > 0.001;
 
 		if (changed)
@@ -161,9 +161,9 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 	struct EnvData
 	{
-		Handlers::Texture H(sky_cubemap);
-		Handlers::Texture H(sky_cubemap_filtered);
-		Handlers::Texture H(sky_cubemap_filtered_diffuse);
+		Handlers::Cube H(sky_cubemap);
+		Handlers::Cube H(sky_cubemap_filtered);
+		Handlers::Cube H(sky_cubemap_filtered_diffuse);
 	};
 
 	graph.pass<EnvData>("CubeMapDownsample", [this, &graph](EnvData& data, TaskBuilder& builder) {
@@ -183,8 +183,8 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 	graph.pass<EnvData>("CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
 		builder.need(data.sky_cubemap, ResourceFlags::PixelRead);
 
-		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,0),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
-		builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,0),  Graphics::Format::R11G11B10_FLOAT,6 }, ResourceFlags::RenderTarget | ResourceFlags::Cube | ResourceFlags::Static);
+		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,0),  Graphics::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,0),  Graphics::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
 
 		if (data.sky_cubemap.is_changed())
 		{

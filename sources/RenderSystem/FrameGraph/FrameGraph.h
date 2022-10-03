@@ -45,8 +45,6 @@ namespace FrameGraph
 		Static = (1 << 9),
 		Required = (1 << 10),
 
-		Cube = (1 << 11),
-		Counted = (1 << 12),
 		Changed = (1 << 13)
 
 		, GENERATE_OPS
@@ -360,16 +358,66 @@ namespace FrameGraph
 
 			Graphics::TextureViewDesc as_view(ResourceFlags resflags)
 			{
-				uint ar = array_count;
-				bool cube = check(resflags & ResourceFlags::Cube);
-
-				if (cube)
-				{
-					ar /= 6;
-				}
-				return { 0, mip_count, 0, ar, cube };
+				return { 0, mip_count, 0, array_count };
 			}
 		};
+
+
+
+		struct CubeDesc
+		{
+
+			using View = Graphics::CubeView;
+			ivec3 size;
+			Graphics::Format format;
+			UINT array_count;
+			UINT mip_count;
+
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
+			{
+
+				HAL::ResFlags flags = HAL::ResFlags::None;
+
+				if (check(resflags & ResourceFlags::RenderTarget))
+				{
+					flags |= HAL::ResFlags::RenderTarget;
+				}
+
+				if (check(resflags & ResourceFlags::DepthStencil))
+				{
+					flags |= HAL::ResFlags::DepthStencil;
+				}
+
+				if (check(resflags & ResourceFlags::UnorderedAccess))
+				{
+					flags |= HAL::ResFlags::UnorderedAccess;
+				}
+
+				if (format.is_shader_visible())
+					flags |= HAL::ResFlags::ShaderResource;
+
+				if (mip_count == 0) {
+					mip_count = 1;
+					auto tsize = size;
+
+					while (tsize.x != 1 && tsize.y != 1)
+					{
+						tsize /= 2;
+						mip_count++;
+					}
+
+				}
+
+				return HAL::ResourceDesc::Tex2D(format, size, array_count * 6, mip_count, flags);
+			}
+
+
+			Graphics::CubeViewDesc as_view(ResourceFlags resflags)
+			{
+				return { 0, mip_count, 0, array_count * 6 };
+			}
+		};
+
 
 		template<class T, Graphics::Format::Formats format>
 		using FormattedBuffer = UniversalHandler<FormattedDesc<T, format>>;
@@ -381,6 +429,7 @@ namespace FrameGraph
 		using Texture = UniversalHandler<TextureDesc>;
 
 
+		using Cube = UniversalHandler<CubeDesc>;
 
 		//template<class T>
 		//class StructuredBuffer : public ResourceHandler

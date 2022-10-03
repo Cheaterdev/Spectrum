@@ -23,7 +23,6 @@ export
 			uint FirstArraySlice = 0;
 			uint ArraySize = 0;
 
-			bool cube = false;
 		};
 
 		struct CubeViewDesc
@@ -146,7 +145,7 @@ export
 			HLSL::Texture3D<> texture3D;
 			HLSL::RWTexture3D<> rwTexture3D;
 
-			HLSL::TextureCube<> textureCube;
+
 			HLSL::Texture2DArray<> texture2DArray;
 
 			HLSL::RenderTarget<> renderTarget;
@@ -170,11 +169,7 @@ export
 
 					texture2DArray = HLSL::Texture2DArray<>(hlsl[2]);
 
-					if (view_desc.cube)
-					{
-						textureCube = HLSL::TextureCube<>(hlsl[0]);
-						rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
-					}
+
 				}
 
 				if (desc.is3D()) {
@@ -185,12 +180,7 @@ export
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
 
-					if (view_desc.cube)
-					{
-						assert(desc.is2D());
-						textureCube.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice / 6);
-					}
-					else if (desc.is2D() && view_desc.ArraySize == 1)
+					if (desc.is2D() && view_desc.ArraySize == 1)
 						texture2D.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice);
 					else if (desc.is2D())
 						texture2DArray.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice, view_desc.ArraySize);
@@ -201,7 +191,7 @@ export
 				}
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
-					if ((desc.is2D() || view_desc.cube) && view_desc.ArraySize == 1)
+					if (desc.is2D() && view_desc.ArraySize == 1)
 						rwTexture2D.create(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
 					else if (desc.is3D())
 						rwTexture3D.create(resource, view_desc.MipSlice);
@@ -244,15 +234,12 @@ export
 			TextureView() = default;
 
 			template<class F>
-			TextureView(Resource* resource, F& frame, bool cube = false) :ResourceView(resource)
+			TextureView(Resource* resource, F& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
-				if (cube)
-				{
-					array_size /= 6;
-				}
-				init(frame, { 0, texture_desc.MipLevels, 0,array_size, cube });
+
+				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
 			template<class F>
 			TextureView(Resource* resource, F& frame, TextureViewDesc vdesc) :ResourceView(resource)
@@ -368,6 +355,33 @@ export
 			}
 
 
+			Viewport get_viewport()
+			{
+
+				auto& texture_desc = resource->get_desc().as_texture();
+
+				UINT scaler = 1 << view_desc.MipSlice;
+
+
+				Viewport p;
+				p.Width = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.x / scaler));
+				p.Height = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.y / scaler));
+				p.TopLeftX = 0;
+				p.TopLeftY = 0;
+				p.MinDepth = 0;
+				p.MaxDepth = 1;
+
+				return p;
+			}
+
+
+			sizer_long get_scissor()
+			{
+				UINT scaler = 1 << view_desc.MipSlice;
+				auto& texture_desc = resource->get_desc().as_texture();
+
+				return { 0,0, std::max(1u,texture_desc.Dimensions.x / scaler),std::max(1u,texture_desc.Dimensions.y / scaler) };
+			}
 			ivec2 get_size()
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
