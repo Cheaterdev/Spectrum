@@ -61,13 +61,13 @@ export
 			}
 
 			D3D12_CONSTANT_BUFFER_VIEW_DESC get_const_view();
-			IndexBufferView get_index_buffer_view(bool is_32, unsigned int offset = 0, UINT size = 0);
+			IndexBufferView get_index_buffer_view(unsigned int offset = 0, UINT size = 0);
 
 
 			UINT64 get_count();
 
 			template<class T>
-			void set_raw_data(std::vector<T>& v)
+			void set_raw_data(const std::vector<T>& v)
 			{
 				auto list = Device::get().get_upload_list();
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
@@ -175,6 +175,14 @@ export
 			using type = Underlying<T>;
 			StructureBuffer(UINT64 count, counterType counted = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::HeapType heap_type = HAL::HeapType::DEFAULT, HAL::ResourceState defaultState = HAL::ResourceState::COMMON);
 
+
+
+			explicit StructureBuffer(const std::vector<T>& v) : StructureBuffer(v.size())
+			{
+				GPUBuffer::set_raw_data(v);
+			}
+
+
 			UINT get_counter_offset();
 
 			UINT64 get_count()
@@ -251,46 +259,7 @@ export
 
 
 		};
-
-		class IndexBuffer : public GPUBuffer
-		{
-			IndexBuffer();;
-		public:
-			using ptr = std::shared_ptr<IndexBuffer>;
-
-			explicit IndexBuffer(UINT64 size);
-			template<class T>
-			explicit IndexBuffer(const std::vector<T>& v) : GPUBuffer(static_cast<UINT>(v.size()), sizeof(T))
-			{
-				set_data(0, v);
-			}
-			template<class T>
-			void set_data(Graphics::CommandList::ptr& list, unsigned int offset, const  std::vector<T>& v)
-			{
-				//	list->transition(this,  ResourceState::COPY_DEST);
-				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
-				//	list->transition(this,  ResourceState::COMMON);
-			}
-
-			template<class T>
-			void set_data(unsigned int offset, const std::vector<T>& v)
-			{
-				auto list = Device::get().get_upload_list();
-				set_data(list, offset, v);
-				list->end();
-				list->execute_and_wait();
-			}
-
-
-		private:
-			SERIALIZE()
-			{
-				SAVE_PARENT(GPUBuffer);
-			}
-
-
-		};
-
+		using IndexBuffer = StructureBuffer<unsigned int>;
 
 		template<class T>
 		inline void StructureBuffer<T>::init_views()
@@ -358,6 +327,9 @@ export
 		{
 			list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(type)));
 		}
+
+
+
 
 	}
 
@@ -434,19 +406,19 @@ namespace Graphics
 		byteAddressBuffer.create(this, 0, static_cast<UINT>(get_desc().as_buffer().SizeInBytes / 4));
 		rwByteAddressBuffer.create(this, 0, static_cast<UINT>(get_desc().as_buffer().SizeInBytes / 4));
 	}
-	IndexBuffer::IndexBuffer(UINT64 size) : GPUBuffer(size)
-	{
-	}
+	//IndexBuffer::IndexBuffer(UINT64 size) : GPUBuffer(size)
+	//{
+	//}
 
-	IndexBuffer::IndexBuffer()
-	{
-	}
+	//IndexBuffer::IndexBuffer()
+	//{
+	//}
 
-	IndexBufferView GPUBuffer::get_index_buffer_view(bool is_32, unsigned int offset /*= 0*/, UINT size /*= 0*/)
+	IndexBufferView GPUBuffer::get_index_buffer_view(unsigned int offset /*= 0*/, UINT size /*= 0*/)
 	{
 		IndexBufferView view;
 		view.view.BufferLocation = get_gpu_address() + offset;
-		view.view.Format = is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+		view.view.Format = DXGI_FORMAT_R32_UINT;// is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
 		view.view.SizeInBytes = static_cast<UINT>(size ? size : this->size);
 		view.resource = this;
 		return view;

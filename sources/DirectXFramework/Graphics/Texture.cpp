@@ -41,23 +41,10 @@ namespace Graphics
 		return uint3::max(uint3(1, 1, 1), desc.Dimensions / (1 << mip));
 	}
 
-	TextureView& Texture::texture_2d()
-	{
-		return texture_2d_view;
-	}
-
-	Texture3DView& Texture::texture_3d()
-	{
-		return texture_3d_view;
-	}
-
 	bool Texture::is_rt()
 	{
 		return check(get_desc().Flags & HAL::ResFlags::RenderTarget);
 	}
-
-
-
 
 	const Texture::ptr Texture::null(new Texture(nullptr));
 

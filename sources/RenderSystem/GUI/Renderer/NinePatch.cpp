@@ -273,7 +273,7 @@ namespace GUI
 
 		auto& graphics = c.command_list->get_graphics();
 		graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
+		graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 		graphics.set_pipeline(current_state);
 
 		auto data = c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));

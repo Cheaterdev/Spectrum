@@ -68,12 +68,9 @@ export
 
 			ivec3 get_size(int mip = 0);
 
-			TextureView& texture_2d();
-
-			Texture3DView& texture_3d();
-			CubeView& cube() {
-				return cube_view;
-			}
+			TextureView& texture_2d() { return texture_2d_view; }
+			Texture3DView& texture_3d() { return texture_3d_view; }
+			CubeView& cube() { return cube_view; }
 
 			static ptr load_native(const texure_header& header, resource_file_depender& depender);
 
@@ -84,7 +81,6 @@ export
 
 			Texture(HAL::Resource::ptr native, ResourceState state);
 			Texture(HAL::ResourceDesc desc, ResourceState state = ResourceState::PIXEL_SHADER_RESOURCE, HeapType heap_type = HeapType::DEFAULT, std::shared_ptr<texture_data> data = nullptr);
-
 
 			texture_data::ptr get_data() const;
 

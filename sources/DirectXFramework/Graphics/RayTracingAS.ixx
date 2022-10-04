@@ -28,7 +28,6 @@ export
 		public:
 			virtual_gpu_buffer<std::byte>::ptr currentResource;
 
-			//GPUBuffer::ptr resource;
 			using ptr = std::shared_ptr<RaytracingAccelerationStructure>;
 			HLSL::RaytracingAccelerationStructure raytracing_handle;
 

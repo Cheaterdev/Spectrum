@@ -65,7 +65,7 @@ namespace FW1FontWrapper
 	{
 		// Create vertex buffer
 //        m_pVertexBuffer.reset(new Graphics::Buffer<FW1_GLYPHVERTEX>(HAL::HeapType::DEFAULT, m_vertexBufferSize / sizeof(FW1_GLYPHVERTEX)));
-		std::vector<unsigned short> indices(m_maxIndexCount);
+		std::vector<unsigned int> indices(m_maxIndexCount);
 
 		for (UINT i = 0; i < m_maxIndexCount / 6; ++i)
 		{

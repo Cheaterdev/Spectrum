@@ -14,14 +14,13 @@ export
 		class SwapChain;
 		class Queue;
 		struct Handle;
-		//class Resource;
+
 		class DescriptorHeap;
-	//	struct ResourceAllocationInfo;
+
 		class FrameResources;
 		class CommandList;
 		class ResourceHeap;
 
-		//class PipelineState;
 		class ComputePipelineState;
 		class PipelineStateBase;
 		class StateObject;
@@ -30,7 +29,7 @@ export
 		class GPUBuffer;
 
 		template<class T> class StructuredBuffer;
-		//  using BufferBase = GPUBuffer;
+
 		class QueryHeap;
 
 		class Texture;

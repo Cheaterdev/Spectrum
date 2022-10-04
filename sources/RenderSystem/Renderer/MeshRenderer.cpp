@@ -253,7 +253,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	gbuffer->HalfBuffer.hiZ_table.set_window(graphics);
 
 	graphics.set_pipeline(GetPSO<PSOS::RenderBoxes>());
-	graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
+	graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 

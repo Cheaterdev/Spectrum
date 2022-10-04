@@ -627,7 +627,7 @@ void stencil_renderer::generate_after(Graph& graph)
 				if (draw_aabb) {
 					graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
 					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-					graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
+					graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 					{
 						Slots::DrawStencil draw;
 						draw.GetVertices() = vertex_buffer->structuredBuffer;
