@@ -151,24 +151,6 @@ export
 		};
 
 
-		class Texture3DView :public View
-		{
-
-			HandleTable hlsl;
-		public:
-			HLSL::Texture3D<float4> texture3D;
-			std::vector<HLSL::RWTexture3D<>> rwTexture3D;
-			std::vector<HLSL::Texture3D<>> texture3DMips;
-		private:
-			int single_count;
-		public:
-			using ptr = std::shared_ptr<Texture3DView>;
-			Texture3DView(Resource* _resource);
-
-			Handle get_rtv(UINT index, UINT mip);
-
-		};
-
 
 		class Texture : public resource_manager<Texture, texure_header>, public Resource
 		{
@@ -185,7 +167,7 @@ export
 			CubemapView::ptr cubemap_view;
 			Array2DView::ptr array_2d_view;
 			Texture2DView::ptr texture_2d_view;
-			Texture3DView::ptr texture_3d_view;
+			Texture3DView texture_3d_view;
 			CubemapArrayView::ptr array_cubemap_view;
 			void init();
 		public:
@@ -196,7 +178,7 @@ export
 
 			Texture2DView::ptr& texture_2d();
 
-			Texture3DView::ptr& texture_3d();
+			Texture3DView& texture_3d();
 
 			Array2DView::ptr& array2d();
 

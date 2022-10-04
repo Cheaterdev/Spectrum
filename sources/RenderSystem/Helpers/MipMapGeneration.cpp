@@ -11,18 +11,15 @@ MipMapGenerator::MipMapGenerator()
 
 }
 
-
-
 void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex)
 {
 	generate(compute_context, tex, tex->texture_2d());
 }
+
 void MipMapGenerator::generate_cube(Graphics::ComputeContext& compute_context, Graphics::CubeView view)
 {
-
 	for (int i = 0; i < 6; i++)
-
-		generate(compute_context, view.create_face(i, *compute_context.get_base().frame_resources));
+		generate(compute_context, view.get_face(i));
 }
 
 void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphics::TextureView  view)

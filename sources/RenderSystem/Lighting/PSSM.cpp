@@ -141,7 +141,7 @@ void PSSM::generate(Graph& graph)
 			{
 				Slots::FrameInfo frameInfo;
 
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
+				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 				auto& camera = frameInfo.GetCamera();
 				//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 				camera = light_cam.camera_cb.current;
@@ -264,7 +264,7 @@ void PSSM::generate(Graph& graph)
 				{
 					Slots::FrameInfo frameInfo;
 
-					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
+					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 					auto& camera = frameInfo.GetCamera();
 					//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 					camera = light_cam.camera_cb.current;

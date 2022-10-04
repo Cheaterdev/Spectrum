@@ -278,12 +278,12 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 	PROFILE_GPU(L"voxelizing");
 
-	//list.clear_uav(tiled_volume_albedo_dynamic, tiled_volume_albedo_dynamic->texture_3d()->get_static_uav());
+	//list.clear_uav(tiled_volume_albedo_dynamic, tiled_volume_albedo_dynamic->texture_3d().get_static_uav());
 
 	if (clear_scene && all_scene_regen_counter)
 	{
 		PROFILE_GPU(L"clear");
-		list.clear_uav(albedo.tex_static->texture_3d()->rwTexture3D[0]);
+		list.clear_uav(albedo.tex_static->texture_3d().mips[0].rwTexture3D);
 	}
 	else
 	{
@@ -297,11 +297,11 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 			{
 				Slots::VoxelCopy utils;
-				utils.GetTarget()[0] = albedo.tex_dynamic->texture_3d()->rwTexture3D[0];
-				utils.GetSource()[0] = albedo.tex_static->texture_3d()->texture3D;
+				utils.GetTarget()[0] = albedo.tex_dynamic->texture_3d().mips[0].rwTexture3D;
+				utils.GetSource()[0] = albedo.tex_static->texture_3d().texture3D;
 
-				utils.GetTarget()[1] = normal.tex_dynamic->texture_3d()->rwTexture3D[0];
-				utils.GetSource()[1] = normal.tex_static->texture_3d()->texture3D;
+				utils.GetTarget()[1] = normal.tex_dynamic->texture_3d().mips[0].rwTexture3D;
+				utils.GetSource()[1] = normal.tex_static->texture_3d().texture3D;
 
 				auto& params = utils.GetParams();
 				params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
@@ -332,15 +332,15 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	if (all_scene_regen_counter)
 	{
 		context->render_mesh = MESH_TYPE::STATIC;
-		voxelization.GetAlbedo() = albedo.tex_static->texture_3d()->rwTexture3D[0];
-		voxelization.GetNormals() = normal.tex_static->texture_3d()->rwTexture3D[0];
+		voxelization.GetAlbedo() = albedo.tex_static->texture_3d().mips[0].rwTexture3D;
+		voxelization.GetNormals() = normal.tex_static->texture_3d().mips[0].rwTexture3D;
 	}
 	else
 	{
 		context->render_mesh = MESH_TYPE::DYNAMIC;
 
-		voxelization.GetAlbedo() = albedo.tex_dynamic->texture_3d()->rwTexture3D[0];
-		voxelization.GetNormals() = normal.tex_dynamic->texture_3d()->rwTexture3D[0];
+		voxelization.GetAlbedo() = albedo.tex_dynamic->texture_3d().mips[0].rwTexture3D;
+		voxelization.GetNormals() = normal.tex_dynamic->texture_3d().mips[0].rwTexture3D;
 	}
 
 	albedo.flush(list);
@@ -543,7 +543,7 @@ void VoxelGI::screen(Graph& graph)
 			{
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.GetGbuffer());
-				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
+				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
 				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
@@ -710,7 +710,7 @@ void VoxelGI::screen(Graph& graph)
 			{
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.GetGbuffer());
-				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
+				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
 				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
@@ -858,7 +858,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 			{
 				Slots::VoxelScreen voxelScreen;
 				gbuffer.SetTable(voxelScreen.GetGbuffer());
-				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
+				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
 				voxelScreen.set(graphics);
@@ -963,7 +963,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 				{
 					Slots::VoxelScreen voxelScreen;
 					gbuffer.SetTable(voxelScreen.GetGbuffer());
-					voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d()->texture3D;
+					voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
 					voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 					//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
 					voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
@@ -1114,9 +1114,9 @@ void VoxelGI::lighting(Graph& graph)
 			Slots::VoxelLighting ligthing;
 			{
 
-				ligthing.GetAlbedo() = albedo.tex_result->texture_3d()->texture3D;
-				ligthing.GetNormals() = normal.tex_result->texture_3d()->texture3D;
-				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d()->rwTexture3D[0];
+				ligthing.GetAlbedo() = albedo.tex_result->texture_3d().texture3D;
+				ligthing.GetNormals() = normal.tex_result->texture_3d().texture3D;
+				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d().mips[0].rwTexture3D;
 				ligthing.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				Graphics::TextureViewDesc subres;
 
@@ -1209,13 +1209,13 @@ void VoxelGI::mipmapping(Graph& graph)
 				{
 					if (i >= gpu_tiles_buffer.size() || !gpu_tiles_buffer[i])
 					{
-						list.clear_uav(tex_lighting.tex_result->texture_3d()->rwTexture3D[i], vec4(0, 0, 0, 0));
+						list.clear_uav(tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D, vec4(0, 0, 0, 0));
 						continue;
 					}
 
 					{
 						Slots::VoxelZero utils;
-						utils.GetTarget() = tex_lighting.tex_result->texture_3d()->rwTexture3D[i];
+						utils.GetTarget() = tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D;
 
 						auto& params = utils.GetParams();
 						params.GetTiles() = gpu_tiles_buffer[i]->buffer->structuredBuffer;
@@ -1247,12 +1247,12 @@ void VoxelGI::mipmapping(Graph& graph)
 
 
 						Slots::VoxelMipMap mipmapping;
-						mipmapping.GetSrcMip() = tex_lighting.tex_result->texture_3d()->texture3DMips[mip_count - 1];
+						mipmapping.GetSrcMip() = tex_lighting.tex_result->texture_3d().mips[mip_count - 1].texture3D;
 
 						for (unsigned int i = 0; i < current_mips; i++)
 						{
-							mipmapping.GetOutMips()[i] = tex_lighting.tex_result->texture_3d()->rwTexture3D[mip_count + i];
-							//	list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d()->rwTexture3D[mip_count + i], vec4(0, 0, 0, 0));
+							mipmapping.GetOutMips()[i] = tex_lighting.tex_result->texture_3d().mips[mip_count + i].rwTexture3D;
+							//	list.clear_uav(tex_lighting.tex_result, tex_lighting.tex_result->texture_3d().rwTexture3D[mip_count + i], vec4(0, 0, 0, 0));
 						}
 
 						auto& params = mipmapping.GetParams();

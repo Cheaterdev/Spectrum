@@ -29,7 +29,7 @@ namespace Graphics
 				array_2d_view = std::make_shared<Array2DView>(this);
 
 			if (desc.is3D())
-				texture_3d_view = std::make_shared<Texture3DView>(this);
+				texture_3d_view = Texture3DView(this, StaticCompiledGPUData::get());
 			else
 				texture_2d_view = std::make_shared<Texture2DView>(this);
 		}
@@ -54,7 +54,7 @@ namespace Graphics
 		return texture_2d_view;
 	}
 
-	Texture3DView::ptr& Texture::texture_3d()
+	Texture3DView& Texture::texture_3d()
 	{
 		return texture_3d_view;
 	}
@@ -451,39 +451,6 @@ namespace Graphics
 		return scissor[mip];
 	}
 
-	Texture3DView::Texture3DView(Resource* _resource) : View(_resource)
-	{
-
-		auto res_desc = resource->get_desc();
-
-		hlsl = StaticDescriptors::get().place(1 + 2 * res_desc.as_texture().MipLevels);
-		int offset = 0;
-
-		if (check(res_desc.Flags & HAL::ResFlags::ShaderResource)) {
-
-			texture3D = HLSL::Texture3D<>(hlsl[offset++]);
-			texture3D.create(resource, 0, res_desc.as_texture().MipLevels);
-
-
-			texture3DMips.resize(resource->get_desc().as_texture().MipLevels);
-			for (int i = 0; i < texture3DMips.size(); i++)
-			{
-				texture3DMips[i] = HLSL::Texture3D<>(hlsl[offset++]);
-				texture3DMips[i].create(resource, i, 1);
-			}
-		}
-
-		if (check(res_desc.Flags & HAL::ResFlags::UnorderedAccess))
-		{
-			rwTexture3D.resize(resource->get_desc().as_texture().MipLevels);
-			for (uint i = 0; i < resource->get_desc().as_texture().MipLevels; i++)
-			{
-				rwTexture3D[i] = HLSL::RWTexture3D<>(hlsl[offset++]);
-				rwTexture3D[i].create(resource, i);
-			}
-		}
-
-	}
 
 
 	Array2DView::Array2DView(Resource* _resource) : View(_resource)

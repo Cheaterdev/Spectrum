@@ -33,6 +33,12 @@ export
 			uint ArraySize = 0;
 		};
 
+		struct Texture3DViewDesc
+		{
+			uint MipSlice = 0;
+			uint MipLevels = 0;
+		};
+
 		class ResourceView
 		{
 
@@ -298,12 +304,130 @@ export
 
 		};
 
+
+		class Texture3DView :public ResourceView
+		{
+			Texture3DViewDesc view_desc;
+		public:
+			HLSL::Texture3D<> texture3D;
+
+			struct Mip
+			{
+				HLSL::Texture3D<> texture3D;
+				HLSL::RWTexture3D<> rwTexture3D;
+			};
+
+			std::vector<Mip> mips;
+
+		public:
+			template<class F>
+			void init(F& frame, Texture3DViewDesc _view_desc)
+			{
+				view_desc = _view_desc;
+
+				auto& desc = resource->get_desc().as_texture();
+
+				if (view_desc.MipLevels == 0)
+				{
+					view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
+				}
+				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(1 + view_desc.MipLevels * 2);
+				assert(desc.is3D());
+
+
+				uint offset = 0;
+				mips.resize(view_desc.MipLevels);
+				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
+					texture3D = HLSL::Texture3D<>(hlsl[offset++]);
+					texture3D.create(resource, view_desc.MipSlice, view_desc.MipLevels);
+
+					for (int i = 0; i < view_desc.MipLevels; i++)
+					{
+						mips[i].texture3D = HLSL::Texture3D<>(hlsl[offset++]);
+						mips[i].texture3D.create(resource, view_desc.MipSlice + i, 1);
+					}
+				}
+
+				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
+					for (int i = 0; i < view_desc.MipLevels; i++)
+					{
+						mips[i].rwTexture3D = HLSL::RWTexture3D<>(hlsl[offset++]);
+						mips[i].rwTexture3D.create(resource, view_desc.MipSlice + i);
+					}
+				}
+			}
+
+			Texture3DView() = default;
+
+			template<class F>
+			Texture3DView(Resource* resource, F& frame) :ResourceView(resource)
+			{
+				auto& texture_desc = resource->get_desc().as_texture();
+				uint array_size = texture_desc.ArraySize;
+
+				init(frame, { 0, texture_desc.MipLevels });
+			}
+			template<class F>
+			Texture3DView(Resource* resource, F& frame, Texture3DViewDesc vdesc) :ResourceView(resource)
+			{
+
+				init(frame, vdesc);
+
+			}
+
+
+			Viewport get_viewport()
+			{
+
+				auto& texture_desc = resource->get_desc().as_texture();
+
+				UINT scaler = 1 << view_desc.MipSlice;
+
+
+				Viewport p;
+				p.Width = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.x / scaler));
+				p.Height = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.y / scaler));
+				p.TopLeftX = 0;
+				p.TopLeftY = 0;
+				p.MinDepth = 0;
+				p.MaxDepth = 1;
+
+				return p;
+			}
+
+
+			sizer_long get_scissor()
+			{
+				UINT scaler = 1 << view_desc.MipSlice;
+				auto& texture_desc = resource->get_desc().as_texture();
+
+				return { 0,0, std::max(1u,texture_desc.Dimensions.x / scaler),std::max(1u,texture_desc.Dimensions.y / scaler) };
+			}
+			UINT get_mip_count()
+			{
+				return view_desc.MipLevels;
+			}
+
+			ivec2 get_size()
+			{
+				auto& texture_desc = resource->get_desc().as_texture();
+
+				UINT scaler = 1 << view_desc.MipSlice;
+
+				return uint2::max({ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
+			}
+		};
+
+
 		class CubeView :public ResourceView
 		{
 			CubeViewDesc view_desc;
 		public:
 
 			HLSL::TextureCube<> textureCube;
+
+
+			std::array<TextureView, 6> faces;
 
 		public:
 			template<class F>
@@ -322,18 +446,26 @@ export
 				textureCube = HLSL::TextureCube<>(hlsl[0]);
 
 
-
-
-
 				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
-
-
 					assert(desc.is2D());
 					textureCube.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice / 6);
-
 				}
 
+				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
+					TextureViewDesc desc;
 
+					desc.MipSlice = view_desc.MipSlice;
+					desc.MipLevels = view_desc.MipLevels;
+					desc.ArraySize = 1;
+
+
+					for (int i = 0; i < 6; i++)
+					{
+						desc.FirstArraySlice = view_desc.FirstArraySlice + i;
+						faces[i] = TextureView(resource, frame, desc);
+					}
+
+				}
 
 			}
 			CubeView() = default;
@@ -391,7 +523,7 @@ export
 				return uint2::max({ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
 			}
 
-			TextureView create_face(UINT face, FrameResources& frame);
+			TextureView get_face(UINT face);
 
 			CubeView create_mip(UINT mip, FrameResources& frame);
 		};
@@ -521,7 +653,6 @@ export
 
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
-
 					rwStructuredBuffer.create(resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
 					rwRAW.create(resource, Format::R8_UINT, static_cast<UINT>(offset), static_cast<UINT>(size));
 
