@@ -113,21 +113,45 @@ namespace FrameGraph
 
 	void TaskBuilder::pass_texture(std::string name, Graphics::Texture::ptr tex, ResourceFlags flags)
 	{
-		Handlers::Texture h(name);
-		create(h, { ivec3(0,0,0), Graphics::Format::UNKNOWN, 0 }, flags);
-		auto& info = *h.info;
-		info.passed = true;
+		auto tex_desc = tex->get_desc().as_texture();
+		if (tex_desc.is2D())
+		{
+			Handlers::Texture h(name);
+			create(h, { ivec3(0,0,0), Graphics::Format::UNKNOWN, 0 }, flags);
+			auto& info = *h.info;
+			info.passed = true;
 
-		info.resource = tex;
-		info.d3ddesc = tex->get_desc();
-		passed_resources.insert(&info);
+			info.resource = tex;
+			info.d3ddesc = tex->get_desc();
+			passed_resources.insert(&info);
 
-		h.desc.array_count = tex->get_desc().as_texture().ArraySize;
-		h.desc.format = tex->get_desc().as_texture().Format;
-		h.desc.mip_count = tex->get_desc().as_texture().MipLevels;
-		h.desc.size = tex->get_desc().as_texture().Dimensions;
+			h.desc.array_count = tex->get_desc().as_texture().ArraySize;
+			h.desc.format = tex->get_desc().as_texture().Format;
+			h.desc.mip_count = tex->get_desc().as_texture().MipLevels;
+			h.desc.size = tex->get_desc().as_texture().Dimensions;
 
-		h.init_view(info, *current_frame);
+			h.init_view(info, *current_frame);
+
+		}
+		else if (tex_desc.is3D())
+		{
+			Handlers::Texture3D h(name);
+			create(h, { ivec3(0,0,0), Graphics::Format::UNKNOWN, }, flags);
+			auto& info = *h.info;
+			info.passed = true;
+
+			info.resource = tex;
+			info.d3ddesc = tex->get_desc();
+			passed_resources.insert(&info);
+
+			h.desc.format = tex->get_desc().as_texture().Format;
+			h.desc.mip_count = tex->get_desc().as_texture().MipLevels;
+			h.desc.size = tex->get_desc().as_texture().Dimensions;
+
+			h.init_view(info, *current_frame);
+		}
+		else
+			assert(false);
 	}
 
 	void TaskBuilder::reset()

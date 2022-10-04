@@ -326,7 +326,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	voxelization.GetInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
 	voxelization.GetInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
 
-	voxelization.GetVisibility() = visibility->buffer->create_view<Graphics::TextureView>(*list.frame_resources).rwTexture3D;
+	voxelization.GetVisibility() = visibility->buffer->create_view<Graphics::Texture3DView>(*list.frame_resources).mips[0].rwTexture3D;
 
 
 	if (all_scene_regen_counter)
@@ -385,7 +385,7 @@ void VoxelGI::debug(Graph& graph)
 	{
 		GBufferViewDesc gbuffer;
 		Handlers::Texture H(VoxelDebug);
-		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture3D H(VoxelLighted);
 
 	};
 
@@ -457,7 +457,7 @@ void VoxelGI::screen(Graph& graph)
 		GBufferViewDesc gbuffer;
 		Handlers::Texture H(ResultTexture);
 
-		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture3D H(VoxelLighted);
 		Handlers::Texture H(VoxelFramesCount);
 		Handlers::Texture H(VoxelIndirectNoise);
 		Handlers::Texture H(VoxelIndirectFiltered);
@@ -1073,9 +1073,9 @@ void VoxelGI::lighting(Graph& graph)
 	{
 		Handlers::Texture H(global_depth);
 		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
-		Handlers::Texture H(VoxelLighted);
-		Handlers::Texture H(VoxelAlbedo);
-		Handlers::Texture H(VoxelNormal);
+		Handlers::Texture3D H(VoxelLighted);
+		Handlers::Texture3D H(VoxelAlbedo);
+		Handlers::Texture3D H(VoxelNormal);
 		Handlers::Cube H(sky_cubemap_filtered);
 	};
 
@@ -1118,14 +1118,13 @@ void VoxelGI::lighting(Graph& graph)
 				ligthing.GetNormals() = normal.tex_result->texture_3d().texture3D;
 				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d().mips[0].rwTexture3D;
 				ligthing.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				Graphics::TextureViewDesc subres;
+				Graphics::Texture3DViewDesc subres;
 
-				subres.ArraySize = 1;
-				subres.FirstArraySlice = 0;
+
 				subres.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;
 				subres.MipSlice = 1;
 
-				ligthing.GetLower() = tex_lighting.tex_result->create_view<TextureView>(*graph.builder.current_frame, subres).texture3D;
+				ligthing.GetLower() = tex_lighting.tex_result->create_view<Texture3DView>(*graph.builder.current_frame, subres).texture3D;
 
 
 				auto& params = ligthing.GetParams();
@@ -1161,7 +1160,7 @@ void VoxelGI::mipmapping(Graph& graph)
 {
 	struct Mipmapping
 	{
-		Handlers::Texture H(VoxelLighted);
+		Handlers::Texture3D H(VoxelLighted);
 	};
 
 	graph.add_pass<Mipmapping>("Mipmapping", [this](Mipmapping& data, TaskBuilder& builder) {

@@ -40,7 +40,7 @@ std::future<visibility_update> VisibilityBuffer::update(Graphics::CommandList::p
 	{
 		Slots::VoxelVisibility data;
 
-		data.GetVisibility() = buffer->create_view<Graphics::TextureView>(*list->frame_resources).texture3D;
+		data.GetVisibility() = buffer->create_view<Graphics::Texture3DView>(*list->frame_resources).texture3D;
 		data.GetVisible_tiles() = load_tiles_buffer->appendStructuredBuffer;
 		data.set(compute);
 	}

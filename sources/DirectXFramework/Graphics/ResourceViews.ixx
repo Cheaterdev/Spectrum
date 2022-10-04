@@ -148,8 +148,8 @@ export
 			HLSL::Texture2D<> texture2D;
 			HLSL::RWTexture2D<> rwTexture2D;
 
-			HLSL::Texture3D<> texture3D;
-			HLSL::RWTexture3D<> rwTexture3D;
+			//	HLSL::Texture3D<> texture3D;
+			//	HLSL::RWTexture3D<> rwTexture3D;
 
 
 			HLSL::Texture2DArray<> texture2DArray;
@@ -178,10 +178,10 @@ export
 
 				}
 
-				if (desc.is3D()) {
-					texture3D = HLSL::Texture3D<>(hlsl[0]);
-					rwTexture3D = HLSL::RWTexture3D<>(hlsl[1]);
-				}
+				/*	if (desc.is3D()) {
+						texture3D = HLSL::Texture3D<>(hlsl[0]);
+						rwTexture3D = HLSL::RWTexture3D<>(hlsl[1]);
+					}*/
 
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
@@ -190,8 +190,8 @@ export
 						texture2D.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice);
 					else if (desc.is2D())
 						texture2DArray.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice, view_desc.ArraySize);
-					else if (desc.is3D())
-						texture3D.create(resource, view_desc.MipSlice, view_desc.MipLevels);
+					//	else if (desc.is3D())
+					//		texture3D.create(resource, view_desc.MipSlice, view_desc.MipLevels);
 					else
 						assert(false);
 				}
@@ -199,8 +199,8 @@ export
 				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
 					if (desc.is2D() && view_desc.ArraySize == 1)
 						rwTexture2D.create(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
-					else if (desc.is3D())
-						rwTexture3D.create(resource, view_desc.MipSlice);
+					//	else if (desc.is3D())
+					//		rwTexture3D.create(resource, view_desc.MipSlice);
 					else
 						assert(false);
 				}

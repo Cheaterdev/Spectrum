@@ -362,6 +362,58 @@ namespace FrameGraph
 			}
 		};
 
+		struct Texture3DDesc
+		{
+
+			using View = Graphics::Texture3DView;
+			ivec3 size;
+			Graphics::Format format;
+			UINT mip_count;
+
+			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
+			{
+
+				HAL::ResFlags flags = HAL::ResFlags::None;
+
+				if (check(resflags & ResourceFlags::RenderTarget))
+				{
+					flags |= HAL::ResFlags::RenderTarget;
+				}
+
+				if (check(resflags & ResourceFlags::DepthStencil))
+				{
+					flags |= HAL::ResFlags::DepthStencil;
+				}
+
+				if (check(resflags & ResourceFlags::UnorderedAccess))
+				{
+					flags |= HAL::ResFlags::UnorderedAccess;
+				}
+
+				if (format.is_shader_visible())
+					flags |= HAL::ResFlags::ShaderResource;
+
+				if (mip_count == 0) {
+					mip_count = 1;
+					auto tsize = size;
+
+					while (tsize.x != 1 && tsize.y != 1 && tsize.z != 1)
+					{
+						tsize /= 2;
+						mip_count++;
+					}
+
+				}
+
+				return HAL::ResourceDesc::Tex3D(format, size, mip_count, flags);
+			}
+
+
+			Graphics::Texture3DViewDesc as_view(ResourceFlags resflags)
+			{
+				return { 0, mip_count };
+			}
+		};
 
 
 		struct CubeDesc
@@ -430,6 +482,7 @@ namespace FrameGraph
 
 
 		using Cube = UniversalHandler<CubeDesc>;
+		using Texture3D = UniversalHandler<Texture3DDesc>;
 
 		//template<class T>
 		//class StructuredBuffer : public ResourceHandler
