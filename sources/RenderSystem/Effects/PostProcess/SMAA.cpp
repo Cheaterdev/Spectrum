@@ -65,8 +65,8 @@ void SMAA::generate(Graph& graph)
 			{
 
 				Slots::SMAA_Weights slot_edges;
-				slot_edges.GetSearchTex() = search_tex->texture_2d()->texture2D;
-				slot_edges.GetAreaTex() = area_tex->texture_2d()->texture2D;
+				slot_edges.GetSearchTex() = search_tex->texture_2d().texture2D;
+				slot_edges.GetAreaTex() = area_tex->texture_2d().texture2D;
 				slot_edges.GetEdgesTex() = data.SMAA_edges->texture2D;
 
 				slot_edges.set(graphics);
@@ -96,9 +96,9 @@ void SMAA::generate(Graph& graph)
 	/*    {
 	list.set_pipeline(state_resolve);
 	buffer->result_tex.swap(context->list, Graphics::ResourceState::RENDER_TARGET, Graphics::ResourceState::PIXEL_SHADER_RESOURCE);
-	list.set(2, buffer->result_tex.second()->texture_2d()->get_srv());
+	list.set(2, buffer->result_tex.second()->texture_2d().get_srv());
 	temporal.set(context->list, 3);
-	list.set_rtv(1, buffer->result_tex.first()->texture_2d()->get_rtv(0), Graphics::Handle());
+	list.set_rtv(1, buffer->result_tex.first()->texture_2d().get_rtv(0), Graphics::Handle());
 	list.draw(4);
 	}*/
 	//	list.transition(buffer->light_tex.get(), Graphics::ResourceState::PIXEL_SHADER_RESOURCE);

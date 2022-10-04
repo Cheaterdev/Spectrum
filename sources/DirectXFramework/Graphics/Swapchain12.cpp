@@ -17,7 +17,7 @@ namespace Graphics
 	{
 		sc->GetDesc(&desc);
 		m_swapChain = sc;
-		heap.reset(new DescriptorHeap(desc.BufferCount, DescriptorHeapType::RTV));
+		//heap.reset(new DescriptorHeap(desc.BufferCount, DescriptorHeapType::RTV));
 		frames.resize(desc.BufferCount);
 		on_change();
 	}
@@ -25,7 +25,7 @@ namespace Graphics
 	void  SwapChain::on_change()
 	{
 		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-		heap->reset();
+		//heap->reset();
 
 		// Create a RTV for each frame.
 		for (UINT n = 0; n < frames.size(); n++)
@@ -34,20 +34,11 @@ namespace Graphics
 			m_swapChain->GetBuffer(n, IID_PPV_ARGS(&render_target));
 
 			auto hal_resource = std::make_shared<HAL::Resource>(render_target);
-			auto handle = heap->create_table(1);
 
-			frames[n].m_renderTarget.reset(new Texture(hal_resource, handle, ResourceState::PRESENT));
+			frames[n].m_renderTarget.reset(new Texture(hal_resource, ResourceState::PRESENT));
 			frames[n].m_renderTarget->set_name(std::string("swap_chain_") + std::to_string(n));
 
-			handle[0] = HAL::Views::RenderTarget{
-			.Resource = frames[n].m_renderTarget->get_hal().get(),
-			.Format = frames[n].m_renderTarget->get_desc().as_texture().Format.to_srv(),
-			.View = HAL::Views::RenderTarget::Texture2D
-				{
-					.MipSlice = 0,
-					.PlaneSlice = 0
-				}
-			};
+
 		}
 	}
 

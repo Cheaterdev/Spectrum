@@ -673,7 +673,7 @@ public:
 			frameInfo.GetPrevCamera() = graph.cam->camera_cb.prev;
 
 			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
-			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 
 			auto compiled = frameInfo.compile(*graph.builder.current_frame);
 			graph.register_slot_setter(compiled);

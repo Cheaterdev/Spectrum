@@ -111,8 +111,8 @@ namespace GUI
 					if (!my_ptr) return;
 					auto command_list = const_cast<CommandList*>(_command_list.get())->get_ptr(); //wtf is this
 					geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
-					command_list->clear_rtv(cache.texture->texture_2d()->get_rtv());
-					auto rtv = cache.texture->texture_2d()->get_rtv();
+					command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
+					auto rtv = cache.texture->texture_2d().renderTarget;
 					command_list->get_graphics().set_rtv(1, rtv, Handle());
 
 					PROFILE(L"label");

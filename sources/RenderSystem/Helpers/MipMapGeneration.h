@@ -8,7 +8,6 @@ class MipMapGenerator : public Singleton<MipMapGenerator>
 public:
 	MipMapGenerator();
 	void generate(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex/*, Graphics::Texture2DView::ptr view*/);
-	void generate(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex, Graphics::Texture2DView::ptr view);
 	void generate(Graphics::ComputeContext& compute_context, Graphics::TextureView view);
 	void generate_cube(Graphics::ComputeContext& compute_context, Graphics::CubeView view);
 	void downsample_depth(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex, Graphics::Texture::ptr& to);

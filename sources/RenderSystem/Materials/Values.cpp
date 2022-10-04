@@ -803,7 +803,7 @@ GUI::base::ptr TextureNode::create_editor_window()
 
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();
-	img_inner->texture.srv = asset->get_texture()->texture_2d()->texture2D;
+	img_inner->texture.srv = asset->get_texture()->texture_2d().texture2D;
 	img_inner->size = { 64, 64 };
 	img->add_child(img_inner);
 
@@ -830,7 +830,7 @@ GUI::base::ptr TextureNode::create_editor_window()
 	chk_srgb->on_check = [this, img_inner, asset](bool v) {
 
 		texture_info->to_linear = v;
-		//	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
+		//	asset->get_texture()->texture_2d().srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
 			//	owner->co
 	};
 	back->add_child(chk_srgb);

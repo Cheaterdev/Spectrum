@@ -23,10 +23,10 @@ public:
 		{
 			////				list->transition(textures[i], Graphics::ResourceState::PIXEL_SHADER_RESOURCE);
 
-			((SignatureDataSetter*)&list->get_graphics())->set_dynamic(slot, i, textures[std::min(all_count - 1, i)]->texture_2d()->get_static_srv());
+			((SignatureDataSetter*)&list->get_graphics())->set_dynamic(slot, i, textures[std::min(all_count - 1, i)]->texture_2d().get_static_srv());
 		}
-		// list->get_graphics().set_dynamic(slot, 0, current->texture_2d()->get_static_srv());
-		//list->get_graphics().set_dynamic(slot, 1, prev->texture_2d()->get_static_srv());
+		// list->get_graphics().set_dynamic(slot, 0, current->texture_2d().get_static_srv());
+		//list->get_graphics().set_dynamic(slot, 1, prev->texture_2d().get_static_srv());
 	}
 
 	TemporalAA()
@@ -68,7 +68,7 @@ public:
 			textures.emplace_back(new Graphics::Texture(HAL::ResourceDesc::Tex2D(Graphics::Format::R16G16B16A16_FLOAT, { size.x, size.y }, 1, 0, HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess), Graphics::ResourceState::PIXEL_SHADER_RESOURCE));
 
 			textures[i]->set_name(std::string("TemporalAA_") + std::to_string(i));
-			//      srv_table[i] = textures.back()->texture_2d()->srv();
+			//      srv_table[i] = textures.back()->texture_2d().srv();
 		}
 	}
 

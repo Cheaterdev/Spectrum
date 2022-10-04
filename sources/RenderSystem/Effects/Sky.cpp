@@ -43,8 +43,8 @@ void SkyRender::generate_sky(Graph& graph)
 				Slots::SkyData skydata;
 
 				skydata.GetInscatter() = inscatter->texture_3d().texture3D;
-				skydata.GetIrradiance() = irradiance->texture_2d()->texture2D;
-				skydata.GetTransmittance() = transmittance->texture_2d()->texture2D;
+				skydata.GetIrradiance() = irradiance->texture_2d().texture2D;
+				skydata.GetTransmittance() = transmittance->texture_2d().texture2D;
 
 				skydata.GetDepthBuffer() = data.GBuffer_Depth->texture2D;
 
@@ -101,8 +101,8 @@ void SkyRender::generate(Graph& graph)
 				Slots::SkyData data;
 
 				data.GetInscatter() = inscatter->texture_3d().texture3D;
-				data.GetIrradiance() = irradiance->texture_2d()->texture2D;
-				data.GetTransmittance() = transmittance->texture_2d()->texture2D;
+				data.GetIrradiance() = irradiance->texture_2d().texture2D;
+				data.GetTransmittance() = transmittance->texture_2d().texture2D;
 				data.GetSunDir() = graph.sunDir;
 				data.set(graphics);
 
