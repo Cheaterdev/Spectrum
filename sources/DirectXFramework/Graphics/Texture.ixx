@@ -1,6 +1,3 @@
-module;
-#include "helper.h"
-
 export module Graphics:Texture;
 
 import serialization;

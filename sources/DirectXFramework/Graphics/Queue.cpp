@@ -1,7 +1,3 @@
-module;
-
-#include "helper.h"
-
 module Graphics:Queue;
 import :Samplers;
 import :Device;

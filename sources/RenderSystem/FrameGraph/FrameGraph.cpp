@@ -1,8 +1,6 @@
 
 #include "pch_render.h"
 
-#include "helper.h"
-
 #include "FrameGraph.h"
 import Graphics;
 

@@ -1,7 +1,6 @@
 ﻿module;
 
-#include "helper.h"
-
+import d3d12;
 #include <pix3.h>
 
 module Graphics:CommandList;
@@ -475,7 +474,7 @@ namespace Graphics
 
 		if (Desc.Format == DXGI_FORMAT_BC7_UNORM_SRGB || Desc.Format == DXGI_FORMAT_BC7_UNORM)
 			rows_count /= 4;
-		assert(row_stride >= box.x * BitsPerPixel(Desc.Format) / 8);
+		assert(row_stride >= box.x * from_native(Desc.Format).size() / 8);
 		int res_stride = Math::AlignUp(row_stride, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 		int size = res_stride * rows_count * box.z;
 		const auto info = base.place_data(size, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
@@ -592,7 +591,7 @@ namespace Graphics
 		dest.PlacedFootprint.Footprint.Height = box.y;
 		dest.PlacedFootprint.Footprint.Depth = box.z;
 		dest.PlacedFootprint.Footprint.RowPitch = static_cast<UINT>(res_stride);
-		dest.PlacedFootprint.Footprint.Format = to_srv(Layouts.Footprint.Format);
+		dest.PlacedFootprint.Footprint.Format = to_native(from_native(Layouts.Footprint.Format).to_srv());
 		list->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
 
 		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_native_device()->GetDeviceRemovedReason());

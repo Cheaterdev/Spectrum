@@ -1,7 +1,3 @@
-module;
-
-#include "helper.h"
-
 export module Graphics:TextureData;
 
 import FileSystem;
@@ -9,6 +5,7 @@ import serialization;
 import Utils;
 import Log;
 
+import d3d12;
 import HAL;
 import :Types;
 
@@ -92,7 +89,7 @@ export
 
 		else
 		{
-			size_t bpp = BitsPerPixel(fmt);
+			size_t bpp = from_native(fmt).size();
 			rowBytes = (width * bpp + 7) / 8; // round up to nearest byte
 			numRows = height;
 		}
@@ -112,7 +109,7 @@ export
 	class texture_data_header
 	{
 	public:
-		uint32_t width=100500;
+		uint32_t width = 100500;
 		uint32_t height = 100500;
 		uint32_t depth = 100500;
 
@@ -122,7 +119,7 @@ export
 
 		virtual~texture_data_header() = default;
 
-		private:
+	private:
 		SERIALIZE()
 		{
 			ar& NVP(width);
@@ -170,7 +167,7 @@ export
 				UINT size;
 				ar& NVP(size);
 				data.resize(size);
-				ar.load_binary(data.data(), size);			
+				ar.load_binary(data.data(), size);
 			}
 			else
 			{
@@ -186,7 +183,7 @@ export
 			ar& NVP(slice_stride);
 			ar& NVP(num_rows);
 		}
-		
+
 	};
 
 	struct mip

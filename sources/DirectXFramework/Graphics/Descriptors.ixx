@@ -1,5 +1,3 @@
-module;
-#include "helper.h"
 export module Graphics:Descriptors;
 
 

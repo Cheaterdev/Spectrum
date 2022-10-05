@@ -1,6 +1,3 @@
-module;
-
-#include "helper.h"
 module Graphics:Resource;
 
 import :Tiling;
@@ -32,32 +29,32 @@ namespace Graphics
 	{
 		auto t = CounterManager::get().start_count<Resource>();
 		heap_type = _heap_type;
-		D3D12_CLEAR_VALUE value;
+		//D3D12_CLEAR_VALUE value;
 
-		if (desc.is_texture())
-		{
+		//if (desc.is_texture())
+		//{
 
-			auto texture_desc = desc.as_texture();
-			value.Format = to_srv(to_native(texture_desc.Format));
-			value.Color[0] = clear_value.x;
-			value.Color[1] = clear_value.y;
-			value.Color[2] = clear_value.z;
-			value.Color[3] = clear_value.w;
+		//	auto texture_desc = desc.as_texture();
+		//	value.Format = to_srv(to_native(texture_desc.Format));
+		//	value.Color[0] = clear_value.x;
+		//	value.Color[1] = clear_value.y;
+		//	value.Color[2] = clear_value.z;
+		//	value.Color[3] = clear_value.w;
 
-			if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-			{
-				value.Format = to_dsv(to_native(texture_desc.Format));
-				value.DepthStencil.Depth = 1.0f;
-				value.DepthStencil.Stencil = 0;
-			}
+		//	if (check(desc.Flags & HAL::ResFlags::DepthStencil))
+		//	{
+		//		value.Format = to_dsv(to_native(texture_desc.Format));
+		//		value.DepthStencil.Depth = 1.0f;
+		//		value.DepthStencil.Stencil = 0;
+		//	}
 
 
-			if (!texture_desc.Format.is_shader_visible())
-			{
-				assert(false);
-				//desc.Flags = desc.Flags & (~HAL::ResFlags::ShaderResource);
-			}
-		}
+		//	if (!texture_desc.Format.is_shader_visible())
+		//	{
+		//		assert(false);
+		//		//desc.Flags = desc.Flags & (~HAL::ResFlags::ShaderResource);
+		//	}
+		//}
 
 
 
@@ -160,7 +157,7 @@ namespace Graphics
 		auto t = CounterManager::get().start_count<Resource>();
 
 		//tmp_handle = handle;
-		D3D12_CLEAR_VALUE value;
+	/*	D3D12_CLEAR_VALUE value;
 
 		if (desc.is_texture())
 		{
@@ -181,7 +178,7 @@ namespace Graphics
 
 
 
-		}
+		}*/
 
 
 		ResourceState state;

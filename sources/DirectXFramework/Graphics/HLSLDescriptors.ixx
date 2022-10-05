@@ -1,28 +1,25 @@
-module;
-#include "helper.h"
 export module Graphics:HLSLDescriptors;
 //import :Definitions;
 
-import Allocators;
-import Math;
-//import Resource;
 
 import :Memory;
 import :Tiling;
 import :Fence;
 import :States;
 import :Device;
+import :Resource;
+import :Descriptors;
+
 import stl.threading;
 import stl.core;
 
 import Log;
 import Data;
-import d3d12;
+import Allocators;
+import Math;
 
-import :Descriptors;
 import HAL;
 
-import :Resource;
 using namespace HAL;
 using namespace Graphics;
 export

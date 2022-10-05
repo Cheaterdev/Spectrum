@@ -1,8 +1,6 @@
 
 module HAL:Shaders;
 
-
-#include "helper.h"
 import Singleton;
 import FileSystem;
 import FileDepender;

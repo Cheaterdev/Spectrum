@@ -4,7 +4,6 @@ import d3d12;
 
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
-#include "helper.h"
 module Graphics:Device;
 import Log;
 import :SwapChain;

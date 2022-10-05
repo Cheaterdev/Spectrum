@@ -1,8 +1,3 @@
-module;
-
-#include <string>
-
-#include "helper.h"
 module Graphics:SwapChain;
 import :Texture;
 import :Queue;

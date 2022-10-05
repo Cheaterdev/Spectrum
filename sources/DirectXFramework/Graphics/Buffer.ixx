@@ -221,44 +221,6 @@ export
 
 		};
 
-		class ByteBuffer : public GPUBuffer
-		{
-			ByteBuffer() = default;
-
-			void init_views();
-		public:
-			using ptr = std::shared_ptr<ByteBuffer>;
-
-			HLSL::ByteAddressBuffer byteAddressBuffer;
-			HLSL::RWByteAddressBuffer rwByteAddressBuffer;
-
-			ByteBuffer(UINT count);
-
-			template<class T>
-			void set_data(Graphics::CommandList::ptr& list, unsigned int offset, const  std::vector<T>& v)
-			{
-				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
-			}
-
-			template<class T>
-			void set_data(unsigned int offset, const  std::vector<T>& v)
-			{
-				auto list = Device::get().get_upload_list();
-				set_data(list, offset, v);
-				list->end();
-				list->execute_and_wait();
-			}
-
-
-		private:
-			SERIALIZE()
-			{
-				SAVE_PARENT(GPUBuffer);
-				init_views();
-			}
-
-
-		};
 		using IndexBuffer = StructureBuffer<unsigned int>;
 
 		template<class T>
@@ -392,27 +354,6 @@ namespace Graphics
 	{
 		return count;
 	}
-	ByteBuffer::ByteBuffer(UINT count) : GPUBuffer(count, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)
-	{
-		init_views();
-	}
-	void ByteBuffer::init_views()
-	{
-		hlsl = StaticDescriptors::get().place(2);
-
-		byteAddressBuffer = HLSL::ByteAddressBuffer(hlsl[0]);
-		rwByteAddressBuffer = HLSL::RWByteAddressBuffer(hlsl[1]);
-
-		byteAddressBuffer.create(this, 0, static_cast<UINT>(get_desc().as_buffer().SizeInBytes / 4));
-		rwByteAddressBuffer.create(this, 0, static_cast<UINT>(get_desc().as_buffer().SizeInBytes / 4));
-	}
-	//IndexBuffer::IndexBuffer(UINT64 size) : GPUBuffer(size)
-	//{
-	//}
-
-	//IndexBuffer::IndexBuffer()
-	//{
-	//}
 
 	IndexBufferView GPUBuffer::get_index_buffer_view(unsigned int offset /*= 0*/, UINT size /*= 0*/)
 	{

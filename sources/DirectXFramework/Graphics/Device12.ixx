@@ -1,15 +1,13 @@
-module;
-
-#include "helper.h"
-
-
 export module Graphics:Device;
 
 import IdGenerator;
+import Singleton;
 import StateContext;
 import Data;
 import HAL;
 import :Definitions;
+
+import d3d12;
 //using namespace HAL;
 export
 {
