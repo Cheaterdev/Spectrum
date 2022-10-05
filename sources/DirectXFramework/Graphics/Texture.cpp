@@ -1,9 +1,4 @@
-﻿module;
-
-#include <memory>
-
-#include "helper.h"
-module Graphics:Texture;
+﻿module Graphics:Texture;
 import :Queue;
 
 import HAL;
