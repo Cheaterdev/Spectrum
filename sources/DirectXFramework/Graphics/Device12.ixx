@@ -28,10 +28,10 @@ export
 		class Device : public Singleton<Device>
 		{
 			HAL::Device::ptr m_device;
-			ComPtr<IDXGIFactory4> factory;
+
 			std::vector<std::shared_ptr<SwapChain>> swap_chains;
 			//	std::vector <ComPtr<IDXGIAdapter3> > vAdapters;
-			ComPtr<IDXGIAdapter3> adapter;
+			HAL::Adapter::ptr adapter;
 			//   std::shared_ptr<CommandList> upload_list;
 			enum_array<HAL::CommandListType, std::shared_ptr<Queue>> queues;
 			IdGenerator<Thread::Lockable> id_generator;

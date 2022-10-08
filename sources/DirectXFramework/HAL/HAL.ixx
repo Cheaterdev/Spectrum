@@ -1,6 +1,8 @@
 export module HAL;
 
 export import :Format;
+
+export import :FormatImpl;
 export import :Types;
 export import :Sampler;
 
@@ -19,3 +21,12 @@ export import :IndirectCommand;
 
 export import :Descriptors;
 export import :DescriptorHeap;
+
+export import :Adapter;
+export import :Debug;
+
+
+export namespace HAL
+{
+	void init();
+}

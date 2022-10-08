@@ -16,8 +16,8 @@ namespace Graphics
 	void CommandListCompiler::create(CommandListType type)
 	{
 		D3D12_COMMAND_LIST_TYPE t = to_native(type);
-		TEST(Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&compiled.m_commandAllocator)));
-		TEST(Device::get().get_native_device()->CreateCommandList(0, t, compiled.m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&compiled.m_commandList)));
+		TEST(Device::get().get_hal_device(), Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&compiled.m_commandAllocator)));
+		TEST(Device::get().get_hal_device(), Device::get().get_native_device()->CreateCommandList(0, t, compiled.m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&compiled.m_commandList)));
 		compiled.m_commandList->Close();
 	}
 
@@ -31,7 +31,7 @@ namespace Graphics
 	void CommandListCompiler::reset()
 	{
 		compiled.m_commandAllocator->Reset();
-		TEST(compiled.m_commandList->Reset(compiled.m_commandAllocator.Get(), nullptr));
+		TEST(Device::get().get_hal_device(), compiled.m_commandList->Reset(compiled.m_commandAllocator.Get(), nullptr));
 	}
 
 
@@ -39,8 +39,8 @@ namespace Graphics
 	void CommandListCompilerDelayed::create(CommandListType type)
 	{
 		D3D12_COMMAND_LIST_TYPE t = to_native(type);
-		TEST(Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&compiled.m_commandAllocator)));
-		TEST(Device::get().get_native_device()->CreateCommandList(0, t, compiled.m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&compiled.m_commandList)));
+		TEST(Device::get().get_hal_device(), Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&compiled.m_commandAllocator)));
+		TEST(Device::get().get_hal_device(), Device::get().get_native_device()->CreateCommandList(0, t, compiled.m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&compiled.m_commandList)));
 		compiled.m_commandList->Close();
 	}
 
@@ -59,7 +59,7 @@ namespace Graphics
 	void CommandListCompilerDelayed::reset()
 	{
 		compiled.m_commandAllocator->Reset();
-		TEST(compiled.m_commandList->Reset(compiled.m_commandAllocator.Get(), nullptr));
+		TEST(Device::get().get_hal_device(), compiled.m_commandList->Reset(compiled.m_commandAllocator.Get(), nullptr));
 
 		write_offset = 0;
 		read_offset = 0;

@@ -341,7 +341,7 @@ export
 					texture3D = HLSL::Texture3D<>(hlsl[offset++]);
 					texture3D.create(resource, view_desc.MipSlice, view_desc.MipLevels);
 
-					for (int i = 0; i < view_desc.MipLevels; i++)
+					for (uint i = 0; i < view_desc.MipLevels; i++)
 					{
 						mips[i].texture3D = HLSL::Texture3D<>(hlsl[offset++]);
 						mips[i].texture3D.create(resource, view_desc.MipSlice + i, 1);
@@ -349,7 +349,7 @@ export
 				}
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
-					for (int i = 0; i < view_desc.MipLevels; i++)
+					for (uint i = 0; i < view_desc.MipLevels; i++)
 					{
 						mips[i].rwTexture3D = HLSL::RWTexture3D<>(hlsl[offset++]);
 						mips[i].rwTexture3D.create(resource, view_desc.MipSlice + i);
@@ -459,7 +459,7 @@ export
 					desc.ArraySize = 1;
 
 
-					for (int i = 0; i < 6; i++)
+					for (uint i = 0; i < 6; i++)
 					{
 						desc.FirstArraySlice = view_desc.FirstArraySlice + i;
 						faces[i] = TextureView(resource, frame, desc);

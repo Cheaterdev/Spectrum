@@ -27,19 +27,6 @@ import HAL;
 
 namespace Graphics
 {
-
-
-	struct DREDNode
-	{
-		std::wstring name;
-	private:
-		SERIALIZE()
-		{
-			ar& NVP(name);
-		}
-	};
-
-
 	void  Device::stop_all()
 	{
 		swap_chains.clear();
@@ -138,14 +125,14 @@ namespace Graphics
 		swapChainDesc.Width = r.right - r.left;
 		swapChainDesc.Height = r.bottom - r.top;
 		swapChainDesc.Format = ::to_native(desc.format);
-		swapChainDesc.Stereo = desc.stereo && factory->IsWindowedStereoEnabled();
+		swapChainDesc.Stereo = desc.stereo && HAL::Adapters::get().get_factory()->IsWindowedStereoEnabled();
 		swapChainDesc.SampleDesc.Count = 1;
 		swapChainDesc.SampleDesc.Quality = 0;
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swapChainDesc.BufferCount = 3 + static_cast<int>(swapChainDesc.Stereo);
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		ComPtr<IDXGISwapChain1> swapChain;
-		HRESULT res = factory->CreateSwapChainForHwnd(
+		HRESULT res = HAL::Adapters::get().get_factory()->CreateSwapChainForHwnd(
 			queues[CommandListType::DIRECT]->get_native().Get(),
 			desc.window->get_hwnd(),
 			&swapChainDesc, nullptr, nullptr, &swapChain);
@@ -168,117 +155,42 @@ namespace Graphics
 	}
 	size_t Device::get_vram()
 	{
-		DXGI_QUERY_VIDEO_MEMORY_INFO videoMemoryInfo;
-		adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
-
-		size_t usedVRAM = videoMemoryInfo.CurrentUsage / 1024 / 1024;
-
-		return usedVRAM;
+		return m_device->get_vram();
 	}
 
 	Device::Device()
 	{
-		const UUID _D3D12ExperimentalShaderModels = { /* 76f5573e-f13a-40f5-b297-81ce9e18933f */
-	0x76f5573e,
-	0xf13a,
-	0x40f5,
-	{ 0xb2, 0x97, 0x81, 0xce, 0x9e, 0x18, 0x93, 0x3f }
-		};
-
-		D3D12EnableExperimentalFeatures(1, &_D3D12ExperimentalShaderModels, nullptr, nullptr);
-
-
-
-		//	Singleton::depends_on<Application>();
 		auto t = CounterManager::get().start_count<Device>();
-		//#ifdef DEBUG
-				// Enable the D3D12 debug layer.
 
 
-		ComPtr<ID3D12DeviceRemovedExtendedDataSettings> pDredSettings;
-		(D3D12GetDebugInterface(IID_PPV_ARGS(&pDredSettings)));
+		HAL::init();
 
-		if (pDredSettings)
-		{
-			pDredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
-			pDredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+	
 
-		}
-		// Turn on AutoBreadcrumbs and Page Fault reporting
-
-
-
-
-		ComPtr<ID3D12Debug> debugController;
-		ComPtr<ID3D12Debug1> spDebugController1;
-
-#ifdef DEV
-		if constexpr (BuildOptions::Debug)
-			if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+		HAL::Adapters::get().enumerate([&](HAL::Adapter::ptr adapter)
 			{
-				debugController->QueryInterface(IID_PPV_ARGS(&spDebugController1));
-
-
-				debugController->EnableDebugLayer();
-				//	spDebugController1->SetEnableGPUBasedValidation(true);
-			}
-#endif
-
-
-		{
-			auto t = CounterManager::get().start_count<IDXGIFactory2>();
-			CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
-		}
-		UINT i = 0;
-		//ComPtr<IDXGIAdapter3> pAdapter;
-
-		// crasher = std::make_unique<GpuCrashTracker>();
-		//
-		// crasher->Initialize();
-		{
-			auto t = CounterManager::get().start_count<IDXGIAdapter>();
-
-			IDXGIAdapter3* adapter;
-
-			while (factory->EnumAdapters(i, reinterpret_cast<IDXGIAdapter**>(&adapter)) != DXGI_ERROR_NOT_FOUND)
-			{
-
-				ComPtr<IDXGIAdapter3> pAdapter;
-				pAdapter.Attach(adapter);
-
-				DXGI_ADAPTER_DESC adapter_desc;
-				pAdapter->GetDesc(&adapter_desc);
+			
+				DXGI_ADAPTER_DESC adapter_desc = adapter->get_desc();
 				Log::get() << "adapter: " << adapter_desc.Description << Log::endl;
-				++i;
 
 				HAL::DeviceDesc desc;
-				desc.adapter = pAdapter;
+				desc.adapter = adapter;
 				auto device = std::make_shared<HAL::Device>(desc);
-				D3D12_FEATURE_DATA_D3D12_OPTIONS options = {};
-				D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
-				D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
-				D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_7 };
 
-				TEST(device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7)));
-				TEST(device->native_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5)));
-				TEST(device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)));
-				device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
 
-				auto m_tiledResourcesTier = options.TiledResourcesTier;
+				auto props = device->get_properties();
+			
 
-				//	options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
-
-				if (supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6 &&
-					options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER::D3D12_MESH_SHADER_TIER_1)
+				if (props.mesh_shader&& props.full_bindless)
 				{
 
 					m_device = device;
-					this->adapter = pAdapter;
+					this->adapter = adapter;
 					Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
 
 				}
-			}
-		}
+			});
+
 		assert(m_device);
 
 		const uint32_t aftermathFlags =
@@ -290,12 +202,7 @@ namespace Graphics
 		// 	GFSDK_Aftermath_Version_API,
 		// 	aftermathFlags,
 		// 	m_device->native_device.Get());
-		//
 
-
-		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
-		TEST(m_device->native_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
-			&options5, sizeof(options5)));
 
 		//#ifdef DEBUG
 		ComPtr<ID3D12InfoQueue> d3dInfoQueue;
@@ -325,23 +232,7 @@ namespace Graphics
 		queues[CommandListType::COMPUTE].reset(new Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
 
-
-		//	queues[CommandListType::COPY] = queues[CommandListType::COMPUTE] = queues[CommandListType::DIRECT];
-		//	m_device->SetStablePowerState(true);
-
-		auto res = m_device->native_device->GetNodeCount();
-		D3D12_FEATURE_DATA_D3D12_OPTIONS featureData;
-		m_device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &featureData, sizeof(featureData));
-		auto m_tiledResourcesTier = featureData.TiledResourcesTier;
-
-		rtx = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
-
-
-
-		D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_7 };
-		m_device->native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel));
-
-		assert(supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6);
+		rtx = m_device->get_properties().rtx;
 	}
 
 
@@ -397,7 +288,7 @@ namespace Graphics
 		}
 		else
 			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-		if constexpr (BuildOptions::Debug)	TEST(m_device->native_device->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(get_hal_device(), m_device->native_device->GetDeviceRemovedReason());
 
 		assert(result.size != UINT64_MAX);
 		return result;
@@ -406,33 +297,7 @@ namespace Graphics
 	void Device::DumpDRED()
 	{
 		alive = false;
-		ComPtr<ID3D12DeviceRemovedExtendedData>  pDred;
-		TEST(m_device->native_device->QueryInterface(IID_PPV_ARGS(&pDred)));
-
-		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT DredAutoBreadcrumbsOutput = {};
-		D3D12_DRED_PAGE_FAULT_OUTPUT DredPageFaultOutput = {};
-		TEST(pDred->GetAutoBreadcrumbsOutput(&DredAutoBreadcrumbsOutput));
-		TEST(pDred->GetPageFaultAllocationOutput(&DredPageFaultOutput));
-
-		auto parse_node = [](const D3D12_AUTO_BREADCRUMB_NODE& node)
-		{
-			//	DREDNode parsed;
-
-			//	parsed.name = node.pCommandListDebugNameW;
-
-
-			Log::get() << node << Log::endl;
-		};
-
-
-		auto node = DredAutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
-
-		while (node)
-		{
-			parse_node(*node);
-			node = node->pNext;
-		}
-
+		
 	}
 
 }

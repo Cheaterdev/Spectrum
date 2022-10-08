@@ -37,7 +37,7 @@ export namespace HAL
 			commandSignatureDesc.ByteStride = size;// (0 + ... + sizeof(Underlying<Args>));
 
 			assert(commandSignatureDesc.ByteStride == size);
-			TEST(device.native_device->CreateCommandSignature(&commandSignatureDesc, layout ? layout->get_native().Get() : nullptr, IID_PPV_ARGS(&command_signature)));
+			TEST((&device),device.native_device->CreateCommandSignature(&commandSignatureDesc, layout ? layout->get_native().Get() : nullptr, IID_PPV_ARGS(&command_signature)));
 
 			return IndirectCommand(command_signature);
 		}

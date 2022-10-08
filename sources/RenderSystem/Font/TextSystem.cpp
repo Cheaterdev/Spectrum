@@ -83,11 +83,11 @@ namespace Fonts
 
     FontSystem::FontSystem()
     {
-        TEST(FW1CreateFactory(FW1_VERSION, &pFW1Factory));
+        FW1CreateFactory(FW1_VERSION, &pFW1Factory);
         fonts.create_func = [this](const std::string & font_name)-> Font::ptr
         {
             Font::ptr font(new Font());
-            TEST(pFW1Factory->CreateFontWrapper(convert(font_name).c_str(), &font->native_font));
+            pFW1Factory->CreateFontWrapper(convert(font_name).c_str(), &font->native_font);
             font->font_name = font_name;
             font->native_font->GetRenderStates(&font->pRenderStates);
             return font;
