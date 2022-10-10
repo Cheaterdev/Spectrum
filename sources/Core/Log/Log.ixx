@@ -1,10 +1,3 @@
-module;
-
-
-#define BOOST_DECL_S
-#define BOOST_WARCHIVE_SOURCE
-#define BOOST_ARCHIVE_DECL
-
 export module Log;
 
 import Data;

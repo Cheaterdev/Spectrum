@@ -58,7 +58,7 @@ namespace Graphics {
 	}
 
 
-	DescriptorHeap::DescriptorHeap(UINT num, DescriptorHeapType type, HAL::DescriptorHeapFlags flags) :native_heap(*Device::get().get_hal_device(), HAL::DescriptorHeapDesc{ num, type , flags }), flags(flags)
+	DescriptorHeap::DescriptorHeap(UINT num, DescriptorHeapType type, HAL::DescriptorHeapFlags flags) :native_heap(Device::get(), HAL::DescriptorHeapDesc{ num, type , flags }), flags(flags)
 	{
 		max_count = num;
 

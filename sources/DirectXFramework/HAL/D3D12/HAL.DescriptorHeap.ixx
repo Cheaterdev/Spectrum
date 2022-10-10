@@ -70,13 +70,13 @@ export namespace HAL
 			native_desc.Flags = to_native(DescriptorHeapFlags::NONE);
 			native_desc.NodeMask = 1;
 
-			TEST((&device), device.native_device->CreateDescriptorHeap(&native_desc, IID_PPV_ARGS(&m_cpu_heap)));
+			TEST(device, device.native_device->CreateDescriptorHeap(&native_desc, IID_PPV_ARGS(&m_cpu_heap)));
 			cpu_start = m_cpu_heap->GetCPUDescriptorHandleForHeapStart();
 
 			if (check(desc.Flags & DescriptorHeapFlags::SHADER_VISIBLE))
 			{
 				native_desc.Flags = to_native(DescriptorHeapFlags::SHADER_VISIBLE);
-				TEST((&device), device.native_device->CreateDescriptorHeap(&native_desc, IID_PPV_ARGS(&m_gpu_heap)));
+				TEST(device, device.native_device->CreateDescriptorHeap(&native_desc, IID_PPV_ARGS(&m_gpu_heap)));
 				gpu_cpu_start = m_gpu_heap->GetCPUDescriptorHandleForHeapStart();
 
 				gpu_start = m_gpu_heap->GetGPUDescriptorHandleForHeapStart();
@@ -220,7 +220,7 @@ export namespace HAL
 			auto h = heap.cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateShaderResourceView(native_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST((&heap.device),heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (BuildOptions::Debug)	TEST(heap.device,heap.device.native_device->GetDeviceRemovedReason());
 		}
 
 		if (heap.m_gpu_heap)
@@ -228,7 +228,7 @@ export namespace HAL
 			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateShaderResourceView(native_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 	}
 
@@ -302,7 +302,7 @@ export namespace HAL
 			auto h = heap.cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateRenderTargetView(native_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 
 		if (heap.m_gpu_heap)
@@ -310,7 +310,7 @@ export namespace HAL
 			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateRenderTargetView(native_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 	}
 
@@ -386,7 +386,7 @@ export namespace HAL
 			heap.device.native_device->CreateDepthStencilView(native_resource, &desc, h);
 		}
 
-		if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 
 	}
 	void Descriptor::place(const Views::UnorderedAccess& view)
@@ -464,7 +464,7 @@ export namespace HAL
 			h.Offset(offset, size);
 
 			heap.device.native_device->CreateUnorderedAccessView(native_resource, native_counter_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 
 
@@ -473,7 +473,7 @@ export namespace HAL
 			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateUnorderedAccessView(native_resource, native_counter_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 	}
 
@@ -496,7 +496,7 @@ export namespace HAL
 			h.Offset(offset, size);
 
 			heap.device.native_device->CreateConstantBufferView(&desc, h);
-			if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 
 		if (heap.m_gpu_heap)
@@ -504,7 +504,7 @@ export namespace HAL
 			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateConstantBufferView(&desc, h);
-			if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 	}
 
@@ -521,7 +521,7 @@ export namespace HAL
 
 		assert(my != other);
 		heap.device.native_device->CopyDescriptorsSimple(1, my, other, type);
-		if constexpr (BuildOptions::Debug)	TEST((&heap.device), heap.device.native_device->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE  Descriptor::get_cpu()

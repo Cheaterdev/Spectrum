@@ -172,7 +172,6 @@ void MeshAsset::init_gpu()
 			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
 			list->execute_and_wait();
 
-			//	Graphics::Device::get().check_errors();
 			i++;
 		}
 

@@ -135,7 +135,7 @@ namespace HAL
 
 		if (address.heap)
 		{
-			TEST((&device),device.native_device->CreatePlacedResource(
+			TEST(device,device.native_device->CreatePlacedResource(
 				address.heap->native_heap.Get(),
 				address.offset,
 				&resourceDesc,
@@ -151,7 +151,7 @@ namespace HAL
 				//resourceDesc.Alignment = 4 * 1024;
 			}
 
-			TEST((&device),device.native_device->CreateReservedResource(
+			TEST(device,device.native_device->CreateReservedResource(
 				&resourceDesc,
 				static_cast<D3D12_RESOURCE_STATES>(initialState),
 				nullptr,

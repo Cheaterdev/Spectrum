@@ -1,6 +1,3 @@
-module;
-#include "serialization_defines.h"
-
 export module Serializer;
 
 import serialization;

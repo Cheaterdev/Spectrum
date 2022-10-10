@@ -1,5 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
 export module Math:Vectors;
 
 import :Constants;

@@ -45,15 +45,7 @@ namespace Graphics
 	Device::~Device()
 	{
 		stop_all();
-		{
-			ComPtr<ID3D12DebugDevice > debugController;
-			//  if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-			//    debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
-			m_device->native_device.Get()->QueryInterface(IID_PPV_ARGS(&debugController));
-
-			//	if (debugController)
-			//		debugController->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL);
-		}
+		
 	}
 
 	std::shared_ptr<CommandList> Device::get_upload_list()
@@ -64,15 +56,9 @@ namespace Graphics
 	}
 
 
-	void  Device::check_errors()
-	{
-		auto hr = get_native_device()->GetDeviceRemovedReason();
-		if (FAILED(hr))DumpDRED();
-
-	}
 	ComPtr<ID3D12Device5> Device::get_native_device()
 	{
-		return m_device->native_device;
+		return native_device;
 	}
 
 	Queue::ptr& Device::get_queue(CommandListType type)
@@ -104,7 +90,7 @@ namespace Graphics
 		auto inputs = to_native(desc);
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
 
-		m_device->native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+		native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
 
 		return info;
 	}
@@ -113,7 +99,7 @@ namespace Graphics
 		auto inputs = to_native(desc);
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
 
-		m_device->native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+		native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
 		return info;
 	}
 
@@ -149,49 +135,38 @@ namespace Graphics
 		return result;
 	}
 
-	void Device::create_sampler(D3D12_SAMPLER_DESC desc, CD3DX12_CPU_DESCRIPTOR_HANDLE handle)
+	 std::shared_ptr<Device> Device::create_singleton()
 	{
-		m_device->native_device->CreateSampler(&desc, handle);
-	}
-	size_t Device::get_vram()
-	{
-		return m_device->get_vram();
-	}
-
-	Device::Device()
-	{
-		auto t = CounterManager::get().start_count<Device>();
-
-
 		HAL::init();
 
-	
-
+		std::shared_ptr<Device> result;
 		HAL::Adapters::get().enumerate([&](HAL::Adapter::ptr adapter)
 			{
-			
+
 				DXGI_ADAPTER_DESC adapter_desc = adapter->get_desc();
 				Log::get() << "adapter: " << adapter_desc.Description << Log::endl;
 
 				HAL::DeviceDesc desc;
 				desc.adapter = adapter;
-				auto device = std::make_shared<HAL::Device>(desc);
+				auto device = std::make_shared<Device>(desc);
+
+				const auto &props = device->get_properties();
 
 
-				auto props = device->get_properties();
-			
-
-				if (props.mesh_shader&& props.full_bindless)
+				if (props.mesh_shader && props.full_bindless)
 				{
-
-					m_device = device;
-					this->adapter = adapter;
 					Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
-
+					result = device;
 				}
 			});
+		return result;
+	}
 
-		assert(m_device);
+	Device::Device(HAL::DeviceDesc desc)
+	{
+		init(desc);
+
+	//	assert(m_device);
 
 		const uint32_t aftermathFlags =
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
@@ -201,12 +176,12 @@ namespace Graphics
 		// auto afterres = GFSDK_Aftermath_DX12_Initialize(
 		// 	GFSDK_Aftermath_Version_API,
 		// 	aftermathFlags,
-		// 	m_device->native_device.Get());
+		// 	native_device.Get());
 
 
 		//#ifdef DEBUG
 		ComPtr<ID3D12InfoQueue> d3dInfoQueue;
-		if (SUCCEEDED(m_device->native_device.As(&d3dInfoQueue)))
+		if (SUCCEEDED(native_device.As(&d3dInfoQueue)))
 		{
 
 			//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
@@ -232,7 +207,7 @@ namespace Graphics
 		queues[CommandListType::COMPUTE].reset(new Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
 
-		rtx = m_device->get_properties().rtx;
+		rtx = get_properties().rtx;
 	}
 
 
@@ -252,7 +227,7 @@ namespace Graphics
 
 			assert(native_desc.SampleDesc.Count > 0);
 		}
-		D3D12_RESOURCE_ALLOCATION_INFO info = m_device->native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+		D3D12_RESOURCE_ALLOCATION_INFO info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
 		native_desc.Alignment = info.Alignment;
 
 
@@ -260,13 +235,13 @@ namespace Graphics
 		/*if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
 		{
 			native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			info = m_device->native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+			info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
 
 
 			if (info.Alignment != D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 			{
 				native_desc.Alignment = 0;
-				info = m_device->native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+				info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
 			}
 
 		}*/
@@ -288,7 +263,7 @@ namespace Graphics
 		}
 		else
 			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-		if constexpr (BuildOptions::Debug)	TEST(get_hal_device(), m_device->native_device->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(*this, native_device->GetDeviceRemovedReason());
 
 		assert(result.size != UINT64_MAX);
 		return result;

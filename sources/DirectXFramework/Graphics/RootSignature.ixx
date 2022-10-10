@@ -29,7 +29,7 @@ export
 		public:
 			using ptr = std::shared_ptr<RootLayout>;
 			const Layouts layout;
-			RootLayout(Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(*device.get_hal_device(), desc), device(device), layout(layout)
+			RootLayout(Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(device, desc), device(device), layout(layout)
 			{
 			}
 
@@ -40,7 +40,7 @@ export
 
 				(process_one_sig<A>(desc), ...);
 
-				return std::make_shared<RootSignature>(*device.get_hal_device(), desc);
+				return std::make_shared<RootSignature>(device, desc);
 			}
 
 		};

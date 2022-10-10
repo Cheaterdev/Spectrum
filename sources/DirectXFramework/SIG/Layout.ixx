@@ -66,7 +66,7 @@ export
 
 		desc.set_type(Graphics::RootSignatureType::Local);
 
-		return std::make_shared<Graphics::RootSignature>(*Graphics::Device::get().get_hal_device(), desc);
+		return std::make_shared<Graphics::RootSignature>(Graphics::Device::get(), desc);
 	}
 
 

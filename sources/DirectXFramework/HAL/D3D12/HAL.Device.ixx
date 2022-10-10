@@ -11,6 +11,11 @@ import :Adapter;
 using namespace HAL;
 
 
+class Graphics
+{
+	class Device;
+};
+
 export namespace HAL
 {
 
@@ -28,18 +33,13 @@ export namespace HAL
 	};
 	class Device
 	{
-		DeviceProperties properties;
+	
 	public:
 		using ptr = std::shared_ptr<Device>;
-		Device(DeviceDesc& desc);
+		void init(DeviceDesc& desc);
 
-		const DeviceProperties& get_properties() const
-		{
-			return properties;
-		}
-		virtual ~Device()
-		{
-		}
+	
+		virtual ~Device() = default;
 
 	public:
 		D3D::Device native_device;
@@ -72,38 +72,7 @@ export namespace HAL
 
 namespace HAL
 {
-	Device::Device(DeviceDesc& desc)
-	{
-		D3D12CreateDevice(
-			desc.adapter->native_adapter.Get(),
-			D3D_FEATURE_LEVEL_12_1,
-			IID_PPV_ARGS(&native_device)
-		);
-
-		if (!native_device) return;
-
-		for (auto type : magic_enum::enum_values<DescriptorHeapType>())
-		{
-			if(type!= DescriptorHeapType::__GENERATE_OPS__) // TODO: ooooooooooooooooooooops
-			descriptor_sizes[type] = native_device->GetDescriptorHandleIncrementSize(to_native(type));
-		}
-
-
-		D3D12_FEATURE_DATA_D3D12_OPTIONS options = {};
-		D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
-		D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
-		D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_7 };
-
-		TEST(this,native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7)));
-		TEST(this, native_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5)));
-		TEST(this, native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)));
-		TEST(this, native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_SHADER_MODEL, &supportedShaderModel, sizeof(supportedShaderModel)));
-
 	
-		properties.rtx = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;	
-		properties.full_bindless = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
-		properties.mesh_shader = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER::D3D12_MESH_SHADER_TIER_1;
-	}
 
 	size_t Device::get_vram()
 	{
@@ -116,12 +85,12 @@ namespace HAL
 	void Device::dump_dred()
 	{
 		ComPtr<ID3D12DeviceRemovedExtendedData>  pDred;
-		TEST(this, native_device->QueryInterface(IID_PPV_ARGS(&pDred)));
+		TEST(*this, native_device->QueryInterface(IID_PPV_ARGS(&pDred)));
 
 		D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT DredAutoBreadcrumbsOutput = {};
 		D3D12_DRED_PAGE_FAULT_OUTPUT DredPageFaultOutput = {};
-		TEST(this, pDred->GetAutoBreadcrumbsOutput(&DredAutoBreadcrumbsOutput));
-		TEST(this, pDred->GetPageFaultAllocationOutput(&DredPageFaultOutput));
+		TEST(*this, pDred->GetAutoBreadcrumbsOutput(&DredAutoBreadcrumbsOutput));
+		TEST(*this, pDred->GetPageFaultAllocationOutput(&DredPageFaultOutput));
 
 		auto parse_node = [](const D3D12_AUTO_BREADCRUMB_NODE& node)
 		{

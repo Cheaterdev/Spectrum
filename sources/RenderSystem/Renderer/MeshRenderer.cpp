@@ -397,7 +397,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Graphics::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(*Graphics::Device::get().get_hal_device(), sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout).get());
+	indirect_command_signature = Graphics::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(Graphics::Device::get(), sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout).get());
 
 	UINT max_meshes = 1024 * 1024;
 
@@ -459,7 +459,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 		{
 
-			boxes_command = Graphics::IndirectCommand::create_command<DrawIndexedArguments>(*Graphics::Device::get().get_hal_device(), sizeof(Underlying<Table::CommandData>));
+			boxes_command = Graphics::IndirectCommand::create_command<DrawIndexedArguments>(Graphics::Device::get(), sizeof(Underlying<Table::CommandData>));
 
 		}
 	}
@@ -467,7 +467,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 	{
 		dispatch_buffer = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(*Graphics::Device::get().get_hal_device(), sizeof(Underlying<Table::CommandData>));
+		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(Graphics::Device::get(), sizeof(Underlying<Table::CommandData>));
 	}
 
 	{

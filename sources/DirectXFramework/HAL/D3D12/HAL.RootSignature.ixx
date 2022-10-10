@@ -315,9 +315,9 @@ namespace HAL
 			Log::get().crash_error(static_cast<char*>(error->GetBufferPointer()));
 		}
 
-		TEST((&device), hr);
+		TEST(device, hr);
 
-		TEST((&device),device.native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+		TEST(device,device.native_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
 
 	D3D::RootSignature RootSignature::get_native()

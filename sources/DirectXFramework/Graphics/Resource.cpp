@@ -124,7 +124,7 @@ namespace Graphics
 
 
 		}
-		HAL::Resource::ptr resource = std::make_shared<HAL::Resource>(*Device::get().get_hal_device(), desc, address, state);
+		HAL::Resource::ptr resource = std::make_shared<HAL::Resource>(Device::get(), desc, address, state);
 
 		resource->user_data = this;
 		tracked_info->set_resource(resource);
@@ -137,7 +137,7 @@ namespace Graphics
 		if (heap_type != HeapType::READBACK && desc.is_buffer())
 			gpu_adress = get_dx()->GetGPUVirtualAddress();
 
-		init_subres(Device::get().get_hal_device()->Subresources(get_desc()), state);
+		init_subres(Device::get().Subresources(get_desc()), state);
 
 		init_tilings();
 
@@ -206,7 +206,7 @@ namespace Graphics
 		}
 		PlacementAddress address = { handle.get_heap()->get_hal().get(),handle.get_offset() };
 
-		HAL::Resource::ptr resource = std::make_shared<HAL::Resource>(*Device::get().get_hal_device(), desc, address, state);
+		HAL::Resource::ptr resource = std::make_shared<HAL::Resource>(Device::get(), desc, address, state);
 		resource->user_data = this;
 		tracked_info->set_resource(resource);
 		id = counter_id.fetch_add(1);
@@ -216,7 +216,7 @@ namespace Graphics
 		if (heap_type != HeapType::READBACK && desc.is_buffer())
 			gpu_adress = get_dx()->GetGPUVirtualAddress();
 
-		init_subres(Device::get().get_hal_device()->Subresources(get_desc()), state);
+		init_subres(Device::get().Subresources(get_desc()), state);
 
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
 		{
@@ -247,7 +247,7 @@ namespace Graphics
 		if (get_desc().is_buffer())
 			gpu_adress = get_dx()->GetGPUVirtualAddress();
 
-		init_subres(Device::get().get_hal_device()->Subresources(get_desc()), state);
+		init_subres(Device::get().Subresources(get_desc()), state);
 
 		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD || HeapProperties.Type == D3D12_HEAP_TYPE_READBACK)
 		{

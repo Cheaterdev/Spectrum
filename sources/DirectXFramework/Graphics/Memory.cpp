@@ -35,7 +35,7 @@ namespace Graphics
 		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES) desc.Flags = HeapFlags::TEXTURES_ONLY;
 		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES) desc.Flags = HeapFlags::RTDS_ONLY;
 
-		tracked_info->heap = std::make_shared<HAL::Heap>(*Device::get().get_hal_device(), desc);
+		tracked_info->heap = std::make_shared<HAL::Heap>(Device::get(), desc);
 	}
 
 	std::span<std::byte> ResourceHeap::get_data()

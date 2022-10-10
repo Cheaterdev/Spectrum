@@ -11,7 +11,7 @@ using namespace HAL;
 namespace Graphics
 {
 
-	Queue::Queue(CommandListType type, Device* device) : commandListCounter(*device->get_hal_device())
+	Queue::Queue(CommandListType type, Device* device) : commandListCounter(*device)
 	{
 		auto t = CounterManager::get().start_count<Queue>();
 		this->type = type;
@@ -159,7 +159,6 @@ namespace Graphics
 
 		result.wait();
 
-		//		Device::get().check_errors();
 	}
 
 	void Queue::signal_and_wait()

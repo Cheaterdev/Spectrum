@@ -1,5 +1,3 @@
-module;
-#include "Serialization/serialization_defines.h"
 export module Math:Matrices;
 
 import stl.core;
@@ -63,7 +61,7 @@ export {
 			return &rows[0][0];
 		}
 		typename matrix_type::RowFormat& operator[](unsigned int i) { return rows[i]; }
-		typename const matrix_type::RowFormat& operator[](unsigned int i) const { return rows[i]; }
+		const typename matrix_type::RowFormat& operator[](unsigned int i) const { return rows[i]; }
 
 		typename matrix_type::RowFormat GetRow(unsigned int i) const { return rows[i]; }
 		typename matrix_type::ColumnFormat GetColumn(unsigned int j) const
@@ -193,7 +191,7 @@ export {
 		return result;
 	}
 
-	template<typename int _N, typename int _M, typename data_type>
+	template<int _N, int _M, typename data_type>
 	class matrix_data_t
 	{
 	public:

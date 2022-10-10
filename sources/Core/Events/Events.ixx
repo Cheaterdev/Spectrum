@@ -1,7 +1,3 @@
-
-module;
-#include "Serialization/serialization_defines.h"
-
 export module Events;
 
 import Math;

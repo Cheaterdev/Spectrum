@@ -124,7 +124,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 
 	{
-		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(*Graphics::Device::get().get_hal_device(), sizeof(Underlying<DispatchArguments>));
+		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(Graphics::Device::get(), sizeof(Underlying<DispatchArguments>));
 	}
 
 	{

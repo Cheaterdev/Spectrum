@@ -535,7 +535,7 @@ namespace Graphics
 		Src.PlacedFootprint.Footprint.RowPitch = res_stride;
 		Src.PlacedFootprint.Footprint.Format = Layouts.Footprint.Format;
 		list->CopyTextureRegion(&Dst, offset.x, offset.y, offset.z, &Src, nullptr);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_hal_device(),Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(Device::get(),Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 	/*
@@ -594,7 +594,7 @@ namespace Graphics
 		dest.PlacedFootprint.Footprint.Format = to_native(from_native(Layouts.Footprint.Format).to_srv());
 		list->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
 
-		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_hal_device(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, res_stride, NumRows]()
 			{
@@ -626,7 +626,7 @@ namespace Graphics
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
 		list->CopyBufferRegion(info.resource->get_dx(), info.offset, resource->get_dx(), offset, size);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_hal_device(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
 				f(reinterpret_cast<char*>(info.get_cpu_data()), size);
@@ -651,7 +651,7 @@ namespace Graphics
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
 		list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.offset);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_hal_device(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
@@ -978,7 +978,7 @@ namespace Graphics
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_dx(), dest_subres);
 		CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_dx(), source_subres);
 		list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_hal_device(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 
@@ -1005,7 +1005,7 @@ namespace Graphics
 		box.bottom = from_pos.y + size.y;
 		box.back = from_pos.z + size.z;
 		list->CopyTextureRegion(&Dst, to_pos.x, to_pos.y, to_pos.z, &Src, &box);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get().get_hal_device(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 
@@ -1349,8 +1349,8 @@ namespace Graphics
 	{
 		D3D12_COMMAND_LIST_TYPE t = to_native(type);
 
-		TEST(Device::get().get_hal_device(), Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
-		TEST(Device::get().get_hal_device(),  Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+		TEST(Device::get(), Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
+		TEST(Device::get(),  Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 		m_commandList->Close();
 		m_commandList->SetName(L"TransitionCommandList");
 	}
