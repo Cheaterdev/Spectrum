@@ -231,7 +231,7 @@ namespace Graphics
 				UINT(startCoordinates.size()),
 				&startCoordinates[0],
 				&regionSizes[0],
-				heap ? heap->get_native().Get() : nullptr,
+				heap ? heap->native_heap.Get() : nullptr,
 				UINT(rangeFlags.size()),
 				&rangeFlags[0],
 				&heapRangeStartOffsets[0],

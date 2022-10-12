@@ -124,6 +124,7 @@ export{
 				info.resource = handle.get_heap()->cpu_buffer;
 				info.offset = handle.get_offset();
 				info.size = uploadBufferSize;
+				assert(info.resource);
 				return info;
 			}
 

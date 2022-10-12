@@ -10,12 +10,6 @@ import :Adapter;
 
 using namespace HAL;
 
-
-class Graphics
-{
-	class Device;
-};
-
 export namespace HAL
 {
 
@@ -31,16 +25,21 @@ export namespace HAL
 		bool mesh_shader = false;
 		bool full_bindless = false;
 	};
+
 	class Device
 	{
-	
-	public:
-		using ptr = std::shared_ptr<Device>;
-		void init(DeviceDesc& desc);
 
-	
+	protected:
+		void init(DeviceDesc& desc);
 		virtual ~Device() = default;
 
+
+	public:
+		using ptr = std::shared_ptr<Device>;
+	
+
+	
+	
 	public:
 		D3D::Device native_device;
 		enum_array<DescriptorHeapType, uint> descriptor_sizes;

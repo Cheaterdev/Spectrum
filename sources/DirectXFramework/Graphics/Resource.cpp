@@ -110,7 +110,7 @@ namespace Graphics
 		else
 		{
 			tracked_info->alloc_handle = ResourceHeapPageManager::get().alloc(alloc_info.size, alloc_info.alignment, D3D12_HEAP_FLAGS(alloc_info.flags), heap_type);
-			address = { tracked_info->alloc_handle.get_heap()->get_hal().get(),tracked_info->alloc_handle.get_offset() };
+			address = { tracked_info->alloc_handle.get_heap().get(),tracked_info->alloc_handle.get_offset() };
 
 
 			//	assert(0);
@@ -204,7 +204,7 @@ namespace Graphics
 		{
 			state = ResourceState::COPY_DEST;
 		}
-		PlacementAddress address = { handle.get_heap()->get_hal().get(),handle.get_offset() };
+		PlacementAddress address = { handle.get_heap().get(),handle.get_offset() };
 
 		HAL::Resource::ptr resource = std::make_shared<HAL::Resource>(Device::get(), desc, address, state);
 		resource->user_data = this;

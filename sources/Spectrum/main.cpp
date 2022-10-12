@@ -41,15 +41,6 @@ import Debug;
 import Utils;
 using namespace FrameGraph;
 
-HRESULT device_fail()
-{
-	auto hr = Graphics::Device::get().get_native_device()->GetDeviceRemovedReason();
-
-	Graphics::Device::get().DumpDRED();
-	Log::get().crash_error(hr);
-	return hr;
-}
-
 
 class tick_timer
 {

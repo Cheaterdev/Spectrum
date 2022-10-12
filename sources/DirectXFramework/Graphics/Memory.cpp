@@ -35,17 +35,12 @@ namespace Graphics
 		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES) desc.Flags = HeapFlags::TEXTURES_ONLY;
 		if (flags == D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES) desc.Flags = HeapFlags::RTDS_ONLY;
 
-		tracked_info->heap = std::make_shared<HAL::Heap>(Device::get(), desc);
-	}
-
-	std::span<std::byte> ResourceHeap::get_data()
-	{
-		return tracked_info->heap->cpu_data();
+		HAL::Heap::init(Device::get(), desc);
 	}
 
 	void ResourceHeap::init_cpu(ptr res)
 	{
-		if (!tracked_info->heap->cpu_data().empty())
+		if (!get_data().empty())
 		{
 			ResourceHandle handle(0, res);
 			cpu_buffer = std::make_shared<Resource>(ResourceDesc::Buffer(this->desc.Size), handle);

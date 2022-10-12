@@ -12,7 +12,7 @@ import d3d12;
 export
 {
 
-	class GpuCrashTracker;
+	
 
 	namespace Graphics
 	{
@@ -28,11 +28,7 @@ export
 		class Device : public Singleton<Device>, public HAL::Device
 		{
 			friend class HAL::Device;
-		private:
-			Device(HAL::DeviceDesc desc);
-			virtual ~Device();
-
-			static std::shared_ptr<Device> create_singleton();
+			friend class Singleton<Device>;
 		private:
 			
 			HAL::DeviceProperties properties;
@@ -42,9 +38,13 @@ export
 			IdGenerator<Thread::Lockable> id_generator;
 			friend class CommandList;
 			bool rtx = false;
-			std::unique_ptr<GpuCrashTracker> crasher;
-
+		
 		public:
+			Device(HAL::DeviceDesc desc);
+			virtual ~Device();
+
+			static std::shared_ptr<Device> create_singleton();
+
 			void stop_all();
 		
 			const HAL::DeviceProperties& get_properties() const { return properties;}
@@ -69,11 +69,7 @@ export
 			bool is_rtx_supported() { return rtx; }
 
 			mutable bool alive = true;
-			void DumpDRED();
 		};
-
-
-
 
 	}
 }

@@ -1,9 +1,6 @@
 module;
 import d3d12;
-#include <dxgi.h>
 
-#include "GFSDK_Aftermath.h"
-#include "NsightAftermathGpuCrashTracker.h"
 module Graphics:Device;
 import Log;
 import :SwapChain;
@@ -38,14 +35,11 @@ namespace Graphics
 		Singleton<StaticCompiledGPUData>::reset();
 		DescriptorHeapManager::reset();
 		PipelineStateCache::reset();
-		//#ifdef DEBUG
-		// Enable the D3D12 debug layer.
-		//#endif
 	}
+
 	Device::~Device()
 	{
 		stop_all();
-		
 	}
 
 	std::shared_ptr<CommandList> Device::get_upload_list()
@@ -54,7 +48,6 @@ namespace Graphics
 		list->begin("UploadList");
 		return list;
 	}
-
 
 	ComPtr<ID3D12Device5> Device::get_native_device()
 	{
@@ -166,43 +159,6 @@ namespace Graphics
 	{
 		init(desc);
 
-	//	assert(m_device);
-
-		const uint32_t aftermathFlags =
-			GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
-			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.
-			GFSDK_Aftermath_FeatureFlags_CallStackCapturing;    // Generate debug information for shaders.
-		//
-		// auto afterres = GFSDK_Aftermath_DX12_Initialize(
-		// 	GFSDK_Aftermath_Version_API,
-		// 	aftermathFlags,
-		// 	native_device.Get());
-
-
-		//#ifdef DEBUG
-		ComPtr<ID3D12InfoQueue> d3dInfoQueue;
-		if (SUCCEEDED(native_device.As(&d3dInfoQueue)))
-		{
-
-			//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-			//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
-			D3D12_MESSAGE_ID hide[] =
-			{
-				D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
-				D3D12_MESSAGE_ID_GETHEAPPROPERTIES_INVALIDRESOURCE,
-				D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT,
-				D3D12_MESSAGE_ID_NON_RETAIL_SHADER_MODEL_WONT_VALIDATE,
-				D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH,
-				D3D12_MESSAGE_ID_EMPTY_DISPATCH
-			};
-			D3D12_INFO_QUEUE_FILTER filter = {};
-			filter.DenyList.NumIDs = _countof(hide);
-			filter.DenyList.pIDList = hide;
-			d3dInfoQueue->AddStorageFilterEntries(&filter);
-
-		}
-		//#endif
-				// Describe and create the command queue.
 		queues[CommandListType::DIRECT].reset(new Queue(CommandListType::DIRECT, this));
 		queues[CommandListType::COMPUTE].reset(new Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
@@ -269,10 +225,5 @@ namespace Graphics
 		return result;
 	}
 
-	void Device::DumpDRED()
-	{
-		alive = false;
-		
-	}
 
 }

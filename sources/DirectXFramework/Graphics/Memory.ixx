@@ -25,29 +25,15 @@ export
 
 	namespace Graphics
 	{
-		class TrackedHeap : public TrackedObject
+		class ResourceHeap :public SharedObject<ResourceHeap>, public ObjectState<TrackedObjectState>, public TrackedObject, public HAL::Heap
 		{
-		public:
-			HAL::Heap::ptr heap;
-		};
-
-		class ResourceHeap :public SharedObject<ResourceHeap>, public Trackable<TrackedHeap>
-		{
-
+			friend class HAL::Heap;
 			HAL::HeapDesc desc;
 		public:
 			std::shared_ptr<Resource> cpu_buffer;
 
 			using ptr = std::shared_ptr<ResourceHeap>;
-			ComPtr<ID3D12Heap > get_native()
-			{
-				return tracked_info->heap->native_heap;
-			}
 
-			HAL::Heap::ptr get_hal()
-			{
-				return tracked_info->heap;
-			}
 			ResourceHeap(size_t size, HeapType type, D3D12_HEAP_FLAGS flags);
 
 
