@@ -794,7 +794,7 @@ namespace Graphics
 		ResourceState states = ResourceState::COMMON;
 		for (auto& r : used_resources)
 		{
-			states = states | r->process_transitions(result, discards, this);
+			states = states | r->get_state_manager().process_transitions(result, discards, this);
 		}
 
 		auto transition_type = GetBestType(states, type);
@@ -811,7 +811,7 @@ namespace Graphics
 	{
 
 
-		if (resource->transition(this, to))
+		if (resource->get_state_manager().transition(this, to))
 		{
 			track_object(*resource);
 			use_resource(resource);
@@ -821,9 +821,9 @@ namespace Graphics
 	{
 		for (auto& resource : to->used_resources)
 		{
-			bool is_new = !resource->is_used(this);
+			bool is_new = !resource->get_state_manager().is_used(this);
 			if ((all && is_new) || (!all && !is_new))
-				if (resource->transition(this, to))
+				if (resource->get_state_manager().transition(this, to))
 				{
 					track_object(*resource);
 					use_resource(resource);
@@ -840,7 +840,7 @@ namespace Graphics
 	void Transitions::use_resource(const Resource* resource)
 	{
 
-		auto& state = resource->get_cpu_state(this);
+		auto& state = const_cast<Resource*>(resource)->get_state_manager().get_cpu_state(this);
 		if (!state.used)
 		{
 			state.used = true;
@@ -868,14 +868,14 @@ namespace Graphics
 			to = ResourceState::COMMON;
 
 
-		track_object(*resource);
+		track_object(*const_cast<Resource*>(resource));
 
 		CommandList* list = static_cast<CommandList*>(this); // :(
 
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
-			resource->transition(this, to, subres);
+			const_cast<Resource*>(resource)->get_state_manager().transition(this, to, subres);
 		}
 	}
 

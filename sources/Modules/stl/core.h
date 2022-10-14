@@ -12,14 +12,14 @@
 #include <array>
 #include <vector>
 #include <typeinfo>
-#include <algorithm>
+#include <functional>
 
 #include <map>
 #include <unordered_map>
 #include <set>
 #include <unordered_set>
 #include <sstream>
-
+#include <utility>
 #include <atomic>
 #include <type_traits>
 #include <queue>
@@ -42,7 +42,7 @@
 #include<variant>
 #include<system_error>
 
-
+#include <cstdint>
 #include <fstream>  // linking issues
 
 

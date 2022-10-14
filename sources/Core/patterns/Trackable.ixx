@@ -26,6 +26,11 @@ export
 		}
 		virtual ~Trackable() {};
 
+		std::shared_ptr<T> get_tracked() const
+		{
+			return tracked_info;
+		}
+
 	};
 
 	template <class T>

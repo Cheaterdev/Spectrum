@@ -25,7 +25,7 @@ namespace Graphics
 	std::atomic_size_t counter_id;
 
 
-	void Resource::init(const ResourceDesc& desc, HeapType _heap_type, ResourceState state, vec4 clear_value)
+	void Resource::_init(const ResourceDesc& desc, HeapType _heap_type, ResourceState state, vec4 clear_value)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
 		heap_type = _heap_type;
@@ -109,14 +109,14 @@ namespace Graphics
 		}
 		else
 		{
-			tracked_info->alloc_handle = ResourceHeapPageManager::get().alloc(alloc_info.size, alloc_info.alignment, D3D12_HEAP_FLAGS(alloc_info.flags), heap_type);
-			address = { tracked_info->alloc_handle.get_heap().get(),tracked_info->alloc_handle.get_offset() };
+			alloc_handle = ResourceHeapPageManager::get().alloc(alloc_info.size, alloc_info.alignment, D3D12_HEAP_FLAGS(alloc_info.flags), heap_type);
+			address = { alloc_handle.get_heap().get(),alloc_handle.get_offset() };
 
 
 			//	assert(0);
 				/*	TEST(Device::get().get_native_device()->CreatePlacedResource(
-						tracked_info->alloc_handle.get_heap()->get_native().Get(),
-						tracked_info->alloc_handle.get_offset(),
+						alloc_handle.get_heap()->get_native().Get(),
+						alloc_handle.get_offset(),
 						&desc,
 						static_cast<D3D12_RESOURCE_STATES>(state),
 						(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
@@ -124,22 +124,14 @@ namespace Graphics
 
 
 		}
-		HAL::Resource::ptr resource = std::make_shared<HAL::Resource>(Device::get(), desc, address, state);
-
-		resource->user_data = this;
-		tracked_info->set_resource(resource);
-
-		id = counter_id.fetch_add(1);
-
-		get_dx()->SetName(std::to_wstring(id).c_str());
-		//	Log::get() << "resource creation: " << id << " at:\n" << get_stack_trace().to_string() << Log::endl;
+		init(Device::get(), desc, address, state);
 
 		if (heap_type != HeapType::READBACK && desc.is_buffer())
 			gpu_adress = get_dx()->GetGPUVirtualAddress();
 
-		init_subres(Device::get().Subresources(get_desc()), state);
+		state_manager.init_subres(Device::get().Subresources(get_desc()), state);
 
-		init_tilings();
+		tiled_manager.init_tilings();
 
 
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
@@ -147,12 +139,12 @@ namespace Graphics
 			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
 	}
-	Resource::Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state, vec4 clear_value)
+	Resource::Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state, vec4 clear_value) :state_manager(this), tiled_manager(this)
 	{
-		init(desc, heap_type, state, clear_value);
+		_init(desc, heap_type, state, clear_value);
 	}
 
-	Resource::Resource(const ResourceDesc& desc, ResourceHandle handle, bool own)
+	Resource::Resource(const ResourceDesc& desc, ResourceHandle handle,bool own) :state_manager(this), tiled_manager(this)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
 
@@ -206,17 +198,13 @@ namespace Graphics
 		}
 		PlacementAddress address = { handle.get_heap().get(),handle.get_offset() };
 
-		HAL::Resource::ptr resource = std::make_shared<HAL::Resource>(Device::get(), desc, address, state);
-		resource->user_data = this;
-		tracked_info->set_resource(resource);
-		id = counter_id.fetch_add(1);
+		init(Device::get(), desc, address, state);
 
-		get_dx()->SetName(std::to_wstring(id).c_str());
 
 		if (heap_type != HeapType::READBACK && desc.is_buffer())
 			gpu_adress = get_dx()->GetGPUVirtualAddress();
 
-		init_subres(Device::get().Subresources(get_desc()), state);
+		state_manager.init_subres(Device::get().Subresources(get_desc()), state);
 
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
 		{
@@ -225,29 +213,25 @@ namespace Graphics
 
 		if (own)
 		{
-			tracked_info->alloc_handle = handle;
+			alloc_handle = handle;
 		}
 	}
 
 
-	Resource::Resource(const HAL::Resource::ptr& resource, ResourceState state, bool own)
+	Resource::Resource(const D3D::Resource& resource, ResourceState state):state_manager(this), tiled_manager(this)
 	{
-		resource->user_data = this;
-		tracked_info->set_resource(resource);
-
+		init(resource);
 
 		D3D12_HEAP_PROPERTIES HeapProperties;
 		D3D12_HEAP_FLAGS  HeapFlags;
 		get_dx()->GetHeapProperties(&HeapProperties, &HeapFlags);
 
 		heap_type = (HeapType)HeapProperties.Type;
-		force_delete = !own;
-		id = counter_id.fetch_add(1);
 
 		if (get_desc().is_buffer())
 			gpu_adress = get_dx()->GetGPUVirtualAddress();
 
-		init_subres(Device::get().Subresources(get_desc()), state);
+		state_manager.init_subres(Device::get().Subresources(get_desc()), state);
 
 		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD || HeapProperties.Type == D3D12_HEAP_TYPE_READBACK)
 		{
@@ -261,7 +245,7 @@ namespace Graphics
 
 		debug = name == "gi_filtered_reflection";
 
-		tracked_info->debug = debug;
+		debug = debug;
 	}
 
 	Resource::~Resource()

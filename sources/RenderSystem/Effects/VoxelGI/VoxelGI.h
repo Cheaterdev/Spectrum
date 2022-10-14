@@ -38,43 +38,43 @@ public:
 		tex_result.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
 
 
-		tex_dynamic->on_load = [this](ivec4 pos) {
-			auto heap_pos = tex_dynamic->tiles[0][pos].heap_position;
+		tex_dynamic->get_tiled_manager().on_load = [this](ivec4 pos) {
+			auto heap_pos = tex_dynamic->get_tiled_manager().tiles[0][pos].heap_position;
 			heap_pos.handle = ResourceHandle();
-			tex_result->map_tile(tilings_info, pos, heap_pos);
+			tex_result->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
 		};
 
 
-		tex_dynamic->on_zero = [this](ivec4 pos) {
-			if (tex_static->is_mapped(pos.xyz, pos.w))
+		tex_dynamic->get_tiled_manager().on_zero = [this](ivec4 pos) {
+			if (tex_static->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				auto heap_pos = tex_static->tiles[0][pos].heap_position;
+				auto heap_pos = tex_static->get_tiled_manager().tiles[0][pos].heap_position;
 				heap_pos.handle = ResourceHandle();
-				tex_result->map_tile(tilings_info, pos, heap_pos);
+				tex_result->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
 			}
 			else
 			{
-				tex_result->zero_tile(tilings_info, pos, 0);
+				tex_result->get_tiled_manager().zero_tile(tilings_info, pos, 0);
 			}
 		};
 
 
-		tex_static->on_load = [this](ivec4 pos) {
+		tex_static->get_tiled_manager().on_load = [this](ivec4 pos) {
 
-			if (!tex_dynamic->is_mapped(pos.xyz, pos.w))
+			if (!tex_dynamic->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				auto heap_pos = tex_static->tiles[0][pos].heap_position;
+				auto heap_pos = tex_static->get_tiled_manager().tiles[0][pos].heap_position;
 				heap_pos.handle = ResourceHandle();
-				tex_result->map_tile(tilings_info, pos, heap_pos);
+				tex_result->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
 			}
 
 		};
 
-		tex_static->on_zero = [this](ivec4 pos) {
+		tex_static->get_tiled_manager().on_zero = [this](ivec4 pos) {
 
-			if (!tex_dynamic->is_mapped(pos.xyz, pos.w))
+			if (!tex_dynamic->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				tex_result->zero_tile(tilings_info, pos, 0);
+				tex_result->get_tiled_manager().zero_tile(tilings_info, pos, 0);
 			}
 
 		};
@@ -84,8 +84,8 @@ public:
 
 	void zero_tiles(CommandList& list)
 	{
-		tex_dynamic->zero_tiles(list);
-		tex_static->zero_tiles(list);
+		tex_dynamic->get_tiled_manager().zero_tiles(list);
+		tex_static->get_tiled_manager().zero_tiles(list);
 
 		tilings_info.tiles.clear();
 		//	flush(list);
@@ -116,8 +116,8 @@ public:
 	{
 		tex_result.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
 
-		static_tiles.resize(tex_result->get_tiles_count(), 0);
-		dynamic_tiles.resize(tex_result->get_tiles_count(), 0);
+		static_tiles.resize(tex_result->get_tiled_manager().get_tiles_count(), 0);
+		dynamic_tiles.resize(tex_result->get_tiled_manager().get_tiles_count(), 0);
 
 	}
 
@@ -130,7 +130,7 @@ public:
 
 			if (!dynamic_tiles[pos])
 			{
-				tex_result->load_tile(tilings_info, pos, 0, true);
+				tex_result->get_tiled_manager().load_tile(tilings_info, pos, 0, true);
 			}
 		}
 	}
@@ -142,7 +142,7 @@ public:
 			static_tiles[pos] = false;
 			if (!dynamic_tiles[pos])
 			{
-				tex_result->zero_tile(tilings_info, pos, 0);
+				tex_result->get_tiled_manager().zero_tile(tilings_info, pos, 0);
 			}
 		}
 	}
@@ -155,7 +155,7 @@ public:
 
 			if (!static_tiles[pos])
 			{
-				tex_result->load_tile(tilings_info, pos, 0, true);
+				tex_result->get_tiled_manager().load_tile(tilings_info, pos, 0, true);
 			}
 		}
 	}
@@ -167,7 +167,7 @@ public:
 			dynamic_tiles[pos] = false;
 			if (!static_tiles[pos])
 			{
-				tex_result->zero_tile(tilings_info, pos, 0);
+				tex_result->get_tiled_manager().zero_tile(tilings_info, pos, 0);
 			}
 		}
 	}
@@ -178,7 +178,7 @@ public:
 	{
 		tilings_info.tiles.clear();
 
-		tex_result->zero_tiles(list);
+		tex_result->get_tiled_manager().zero_tiles(list);
 
 
 		static_tiles.fill(false);

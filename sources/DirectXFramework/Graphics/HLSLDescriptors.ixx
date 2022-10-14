@@ -324,7 +324,7 @@ namespace HLSL
 {
 	void RaytracingAccelerationStructure::create(Graphics::Resource* resource)
 	{
-		HAL::Views::ShaderResource desc = { resource->get_hal().get(), HAL::Format::UNKNOWN, HAL::Views::ShaderResource::Raytracing {resource->get_resource_address()} };
+		HAL::Views::ShaderResource desc = { resource, HAL::Format::UNKNOWN, HAL::Views::ShaderResource::Raytracing {resource->get_resource_address()} };
 		Handle::operator=(desc);
 	}
 
@@ -333,7 +333,7 @@ namespace HLSL
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (size == 0) size = static_cast<UINT>(buffer_desc.SizeInBytes / 4);
 
-		HAL::Views::ShaderResource desc = { resource->get_hal().get(), Format::R32_TYPELESS, HAL::Views::ShaderResource::Buffer {offset, size, 0, true} };
+		HAL::Views::ShaderResource desc = { resource, Format::R32_TYPELESS, HAL::Views::ShaderResource::Buffer {offset, size, 0, true} };
 		Handle::operator=(desc);
 	}
 
@@ -342,7 +342,7 @@ namespace HLSL
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (size == 0) size = static_cast<UINT>(buffer_desc.SizeInBytes / 4);
 
-		HAL::Views::UnorderedAccess desc = { resource->get_hal().get(), Format::R32_TYPELESS, HAL::Views::UnorderedAccess::Buffer {offset, size, 0, true, 0, nullptr} };
+		HAL::Views::UnorderedAccess desc = { resource, Format::R32_TYPELESS, HAL::Views::UnorderedAccess::Buffer {offset, size, 0, true, 0, nullptr} };
 		Handle::operator=(desc);
 	}
 
@@ -354,7 +354,7 @@ namespace HLSL
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		HAL::Views::ShaderResource desc = { resource->get_hal().get(), Format::UNKNOWN, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false} };
+		HAL::Views::ShaderResource desc = { resource, Format::UNKNOWN, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false} };
 		Handle::operator=(desc);
 	}
 
@@ -365,7 +365,7 @@ namespace HLSL
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		HAL::Views::UnorderedAccess desc = { resource->get_hal().get(), Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, 0, nullptr} };
+		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, 0, nullptr} };
 		Handle::operator=(desc);
 	}
 
@@ -373,7 +373,7 @@ namespace HLSL
 	template<class T>
 	void AppendStructuredBuffer<T>::create(Graphics::Resource* counter_resource, UINT counter_offset, Graphics::Resource* resource, UINT first_elem, UINT count)
 	{
-		HAL::Views::UnorderedAccess desc = { resource->get_hal().get(), Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource->get_hal().get()} };
+		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource} };
 		Handle::operator=(desc);
 	}
 	template<class T>
@@ -382,7 +382,7 @@ namespace HLSL
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		HAL::Views::ShaderResource desc = { resource->get_hal().get(), format, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), 0, false} };
+		HAL::Views::ShaderResource desc = { resource, format, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), 0, false} };
 		Handle::operator= (desc);
 	}
 
@@ -394,7 +394,7 @@ namespace HLSL
 		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
 
-		HAL::Views::UnorderedAccess desc = { resource->get_hal().get(), format, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), 0, false, 0, nullptr} };
+		HAL::Views::UnorderedAccess desc = { resource, format, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), 0, false, 0, nullptr} };
 		Handle::operator= (desc);
 	}
 
@@ -410,7 +410,7 @@ namespace HLSL
 		if (is_array)
 		{
 			auto desc = HAL::Views::ShaderResource{
-				.Resource = resource->get_hal().get(),
+				.Resource = resource,
 				.Format = texture_desc.Format.to_srv(),
 				.View = HAL::Views::ShaderResource::Texture2DArray
 					{
@@ -427,7 +427,7 @@ namespace HLSL
 		else
 		{
 			auto desc = HAL::Views::ShaderResource{
-				.Resource = resource->get_hal().get(),
+				.Resource = resource,
 				.Format = texture_desc.Format.to_srv(),
 				.View = HAL::Views::ShaderResource::Texture2D
 					{
@@ -451,7 +451,7 @@ namespace HLSL
 		if (!is_array)
 		{
 			auto desc = HAL::Views::UnorderedAccess{
-			.Resource = resource->get_hal().get(),
+			.Resource = resource,
 			.Format = resource->get_desc().as_texture().Format.to_srv(),
 			.View = HAL::Views::UnorderedAccess::Texture2D
 				{
@@ -465,7 +465,7 @@ namespace HLSL
 		{
 
 			auto desc = HAL::Views::UnorderedAccess{
-				.Resource = resource->get_hal().get(),
+				.Resource = resource,
 				.Format = resource->get_desc().as_texture().Format.to_srv(),
 				.View = HAL::Views::UnorderedAccess::Texture2DArray
 					{
@@ -483,7 +483,7 @@ namespace HLSL
 	void Texture2DArray<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset, UINT array_count)
 	{
 		auto desc = HAL::Views::ShaderResource{
-			.Resource = resource->get_hal().get(),
+			.Resource = resource,
 			.Format = resource->get_desc().as_texture().Format.to_srv(),
 			.View = HAL::Views::ShaderResource::Texture2DArray
 					{
@@ -503,7 +503,7 @@ namespace HLSL
 	void RWTexture2DArray<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset, UINT array_count)
 	{
 		auto desc = HAL::Views::UnorderedAccess{
-				.Resource = resource->get_hal().get(),
+				.Resource = resource,
 				.Format = resource->get_desc().as_texture().Format.to_srv(),
 				.View = HAL::Views::UnorderedAccess::Texture2DArray
 					{
@@ -520,7 +520,7 @@ namespace HLSL
 	void Texture3D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels)
 	{
 		auto desc = HAL::Views::ShaderResource{
-				.Resource = resource->get_hal().get(),
+				.Resource = resource,
 				.Format = resource->get_desc().as_texture().Format.to_srv(),
 				.View = HAL::Views::ShaderResource::Texture3D
 						{
@@ -536,7 +536,7 @@ namespace HLSL
 	void RWTexture3D<T>::create(Graphics::Resource* resource, UINT first_mip)
 	{
 		auto desc = HAL::Views::UnorderedAccess{
-				.Resource = resource->get_hal().get(),
+				.Resource = resource,
 				.Format = resource->get_desc().as_texture().Format.to_srv(),
 				.View = HAL::Views::UnorderedAccess::Texture3D
 						{
@@ -554,7 +554,7 @@ namespace HLSL
 		if (cube_offset > 0)
 		{
 			auto desc = HAL::Views::ShaderResource{
-			resource->get_hal().get(),
+			resource,
 			resource->get_desc().as_texture().Format.to_srv(),
 			HAL::Views::ShaderResource::CubeArray{
 				.MostDetailedMip = 0,
@@ -571,7 +571,7 @@ namespace HLSL
 		{
 
 			auto desc = HAL::Views::ShaderResource{
-				resource->get_hal().get(),
+				resource,
 				resource->get_desc().as_texture().Format.to_srv(),
 				HAL::Views::ShaderResource::Cube{
 					.MostDetailedMip = 0,
@@ -590,7 +590,7 @@ namespace HLSL
 	void RenderTarget<T>::createFrom2D(Graphics::Resource* resource, UINT first_mip)
 	{
 		auto desc = HAL::Views::RenderTarget{
-			.Resource = resource->get_hal().get(),
+			.Resource = resource,
 			.Format = resource->get_desc().as_texture().Format.to_srv(),
 			.View = HAL::Views::RenderTarget::Texture2D
 				{
@@ -610,7 +610,7 @@ namespace HLSL
 	void RenderTarget<T>::createFrom2DArray(Graphics::Resource* resource, UINT first_mip, UINT array_id)
 	{
 		auto desc = HAL::Views::RenderTarget{
-	.Resource = resource->get_hal().get(),
+	.Resource = resource,
 	.Format = resource->get_desc().as_texture().Format.to_srv(),
 	.View = HAL::Views::RenderTarget::Texture2DArray
 		{
@@ -633,7 +633,7 @@ namespace HLSL
 	void DepthStencil<T>::createFrom2D(Graphics::Resource* resource, UINT first_mip)
 	{
 		auto desc = HAL::Views::DepthStencil{
-		.Resource = resource->get_hal().get(),
+		.Resource = resource,
 		.Format = resource->get_desc().as_texture().Format.to_dsv(),
 		.Flags = HAL::Views::DepthStencil::Flags::None,
 		.View = HAL::Views::DepthStencil::Texture2D
@@ -653,7 +653,7 @@ namespace HLSL
 	void DepthStencil<T>::createFrom2DArray(Graphics::Resource* resource, UINT first_mip, UINT array_id)
 	{
 		auto desc = HAL::Views::DepthStencil{
-		.Resource = resource->get_hal().get(),
+		.Resource = resource,
 		.Format = resource->get_desc().as_texture().Format.to_dsv(),
 		.Flags = HAL::Views::DepthStencil::Flags::None,
 		.View = HAL::Views::DepthStencil::Texture2DArray

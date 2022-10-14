@@ -7,6 +7,8 @@ import Utils;
 import Exceptions;
 
 import ZipLib;
+
+import shared_ptr;
 export
 {
 
@@ -315,11 +317,11 @@ export
 		template <class M = T>
 		std::shared_ptr<M> get_ptr()
 		{
-			return std::dynamic_pointer_cast<M>(SharedObjectBase::shared_from_this());
+			return std::dynamic_pointer_cast<M>(shared_from_this());
 		}
 	};
 
-
+	
 }
 
 

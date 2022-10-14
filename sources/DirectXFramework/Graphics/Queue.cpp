@@ -318,7 +318,7 @@ namespace Graphics
 						auto list = cl;
 						auto& updates = list->tile_updates;
 						for (auto& u : updates)
-							u.resource->tracked_info->on_tile_update(u);
+							u.resource->on_tile_update(u);
 						updates.clear();
 					});
 			}

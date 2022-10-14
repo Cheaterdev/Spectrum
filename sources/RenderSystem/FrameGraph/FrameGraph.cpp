@@ -670,7 +670,7 @@ namespace FrameGraph
 
 						Graphics::SubResourcesGPU merged_state;
 
-						merged_state.subres.resize(resource->get_subres_count());
+						merged_state.subres.resize(resource->get_state_manager().get_subres_count());
 
 
 						for (auto& pass : state.passes)
@@ -678,7 +678,7 @@ namespace FrameGraph
 							auto commandList = pass->context.list;
 							if (!commandList) continue;
 
-							auto& cpu_state = resource->get_cpu_state(commandList.get());
+							auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
 
 
 							merged_state.merge(cpu_state);
@@ -695,7 +695,7 @@ namespace FrameGraph
 							auto commandList = pass->context.list;
 							if (!commandList) continue;
 
-							auto& cpu_state = resource->get_cpu_state(commandList.get());
+							auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
 
 							cpu_state.prepare_for(commandList->get_type(), merged_state);
 							/*for (int i = 0; i < merged_state.size(); i++)
@@ -759,7 +759,7 @@ namespace FrameGraph
 
 					}
 
-					auto gpu_state = info.resource->copy_gpu();
+					auto gpu_state = info.resource->get_state_manager().copy_gpu();
 
 					for (int i = 0; i < info.states.size(); i++)
 					{
@@ -769,7 +769,7 @@ namespace FrameGraph
 							auto commandList = pass->context.list;
 							if (!commandList) continue;
 
-							info.resource->prepare_state(commandList.get(), gpu_state);
+							info.resource->get_state_manager().prepare_state(commandList.get(), gpu_state);
 						}
 					}
 				}

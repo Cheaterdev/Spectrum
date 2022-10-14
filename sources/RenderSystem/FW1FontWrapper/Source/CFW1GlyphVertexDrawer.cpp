@@ -77,7 +77,7 @@ namespace FW1FontWrapper
 			indices[i * 6 + 5] = static_cast<UINT16>(i * 4 + 2);
 		}
 
-		m_pIndexBuffer.reset(new  Graphics::IndexBuffer(indices));
+		m_pIndexBuffer = Graphics::IndexBuffer::make_buffer(indices);
 		return S_OK;
 	}
 

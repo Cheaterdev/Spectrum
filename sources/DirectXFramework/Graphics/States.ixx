@@ -398,17 +398,17 @@ export
 
 		protected:
 			mutable SubResourcesGPU gpu_state;
-			virtual ~ResourceStateManager() = default;
-
+			
 
 		public:
+			virtual ~ResourceStateManager() = default;
 
 			using ptr = std::unique_ptr<ResourceStateManager>;
 			UINT get_subres_count()
 			{
 				return static_cast<UINT>(gpu_state.subres.size());
 			}
-			ResourceStateManager();
+			ResourceStateManager(const Resource* resource);
 			SubResourcesGPU copy_gpu() const
 			{
 				return gpu_state;

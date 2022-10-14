@@ -20,7 +20,7 @@ export
 	namespace Graphics
 	{
 
-
+		
 		struct update_tiling_info
 		{
 			std::map<ResourceHeap*, std::vector<ResourceTile>> tiles;
@@ -41,7 +41,7 @@ export
 
 		class TiledResourceManager
 		{
-
+			Resource* resource;
 		public://for now
 			std::vector<grid<uint3, ResourceTile>> tiles;
 
@@ -53,16 +53,18 @@ export
 		protected:
 			uint3 tile_shape;
 			//virtual	ComPtr<ID3D12Resource>& get_d3d_resource() = 0;
-			void init_tilings();
-
 			void load_tiles_internal(update_tiling_info& target, uint3 from, uint3 to, uint subres, bool recursive);
 
 			static void commit(update_tiling_info& info, CommandList* list);
-		public:
+
+	
+		public:		TiledResourceManager(Resource* resource) :resource(resource) {}void init_tilings();
+
+			
 			HAL::HeapType tile_heap_type = HAL::HeapType::DEFAULT;
 			void load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive);
 			void zero_tile(update_tiling_info& target, uint3 pos, uint subres);
-			void copy_mappings(update_tiling_info& target, uint3 target_pos, TiledResourceManager* source, uint3 source_pos, uint3 size);
+			void copy_mappings(update_tiling_info& target, uint3 target_pos, Resource* source, uint3 source_pos, uint3 size);
 
 			void load_packed(update_tiling_info& target);
 
@@ -79,7 +81,7 @@ export
 			void load_tiles2(CommandList* list, R tiles, uint subres = 0, bool recursive = false)
 			{
 				update_tiling_info info;
-				info.resource = static_cast<Resource*>(this);
+				info.resource = resource;
 
 				for (auto t : tiles)
 					load_tile(info, t, subres, recursive);
@@ -97,7 +99,7 @@ export
 				return !!tiles[subres][pos].heap_position.heap;
 			}
 
-			void copy_mappings(CommandList& list, uint3 target_pos, TiledResourceManager* source, uint3 source_pos, uint3 size);
+			void copy_mappings(CommandList& list, uint3 target_pos, Resource* source, uint3 source_pos, uint3 size);
 
 			void map_tile(update_tiling_info&, uint3 target_pos, TileHeapPosition pos);
 

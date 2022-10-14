@@ -33,7 +33,7 @@ export
 		class GPUBuffer : public Resource
 		{
 		protected:
-			GPUBuffer();
+		/*	GPUBuffer();*/
 
 			GPUBuffer(UINT64 count, UINT stride);
 
@@ -176,10 +176,11 @@ export
 			StructureBuffer(UINT64 count, counterType counted = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::HeapType heap_type = HAL::HeapType::DEFAULT, HAL::ResourceState defaultState = HAL::ResourceState::COMMON);
 
 
-
-			explicit StructureBuffer(const std::vector<T>& v) : StructureBuffer(v.size())
+			static StructureBuffer::ptr make_buffer(const std::vector<T>& v)
 			{
-				GPUBuffer::set_raw_data(v);
+				auto result = std::make_shared<StructureBuffer>(v.size());
+				result->set_raw_data(v);
+				return result;
 			}
 
 
@@ -320,9 +321,9 @@ namespace Graphics
 		return{ get_gpu_address(), static_cast<UINT>(size) };
 	}
 
-	GPUBuffer::GPUBuffer()
-	{
-	}
+	//GPUBuffer::GPUBuffer()
+	//{
+	//}
 
 	GPUBuffer::GPUBuffer(UINT64 count, UINT stride) : count(count),
 		stride(stride), Resource({ HAL::BufferDesc{ std::max(static_cast<UINT64>(4), count * stride) }, HAL::ResFlags::ShaderResource }, HeapType::DEFAULT, ResourceState::COMMON)

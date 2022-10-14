@@ -96,7 +96,7 @@ namespace Graphics
 		}
 	}
 
-	ResourceStateManager::ResourceStateManager() : resource(static_cast<Resource*>(this))
+	ResourceStateManager::ResourceStateManager(const Resource* resource) : resource(resource)
 	{
 	}
 
@@ -343,7 +343,7 @@ namespace Graphics
 
 		if (updated)
 		{
-			from->track_object(*resource);
+			from->track_object(*const_cast<Resource*>(resource));
 			from->use_resource(resource);
 		}
 

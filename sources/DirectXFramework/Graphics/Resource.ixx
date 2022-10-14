@@ -50,8 +50,7 @@ export{
 			}
 		};
 
-		export using Resource_ptr = std::shared_ptr<Resource>;
-
+	
 		export class TrackedResource : public TrackedObject
 		{
 			friend class TiledResourceManager;
@@ -74,82 +73,68 @@ export{
 			}
 
 		public:
-			HAL::Resource::ptr m_Resource;
+			//HAL::Resource::ptr m_Resource;
 			ResourceHandle alloc_handle;
 			bool debug = false;
 
 			using ptr = std::shared_ptr<TrackedResource>;
 			TrackedResource() = default;
 
-			void set_resource(HAL::Resource::ptr resource)
-			{
-				m_Resource = resource;
-			}
-
-
-			TrackedResource(HAL::Resource::ptr resource) :m_Resource(resource)
-			{
-			}
-
 			~TrackedResource();
 		};
 
-		struct ResourceContextState
-		{
-			bool used = false;
-			void reset()
-			{
-				used = false;
-			}
-		};
-
-		class Resource :public SharedObject<Resource>, public Trackable<TrackedResource>, public ResourceStateManager, public TiledResourceManager
+		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>,  public TrackedResource, public HAL::Resource
 		{
 			LEAK_TEST(Resource)
-				bool force_delete = false;
 			D3D12_GPU_VIRTUAL_ADDRESS gpu_adress;
 			HeapType heap_type;
-			//  std::vector< unsigned int> states;
-			size_t id = 0;
 
 		protected:
-
-
-			void init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
+			ResourceStateManager state_manager;
+			TiledResourceManager tiled_manager;
+			void _init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 		public:
 
 
+			ResourceStateManager& get_state_manager()
+			{
+				return state_manager;
+			}
+
+
+			TiledResourceManager& get_tiled_manager()
+			{
+				return tiled_manager;
+			}
+			std::shared_ptr<Resource> get_tracked()
+			{
+				return get_ptr<Resource>();
+			}
+
 			ResourceAllocationInfo alloc_info;
 			std::optional<FenceWaiter> load_fence;
-			//ResourceHandle tmp_handle;
 			std::byte* buffer_data = nullptr;
-			mutable bool debug = false;
 			std::string name;
 			void set_name(std::string name);
 
 			const auto& get_desc() const
 			{
-				return get_hal()->get_desc();
+				return desc;
 			}
 
 			using ptr = std::shared_ptr<Resource>;
 
 			Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
-			Resource(const HAL::Resource::ptr& resouce, ResourceState state, bool own = false);
+			Resource(const D3D::Resource& resouce, ResourceState state);
 
-			Resource(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
-			Resource() = default;
+			Resource(const ResourceDesc& desc, ResourceHandle handle,bool own=false);
+			Resource():state_manager(this), tiled_manager(this) {};
 
 			virtual ~Resource();
 
 			HeapType get_heap_type() const
 			{
 				return heap_type;
-			}
-
-			HAL::Resource::ptr get_hal() const
-			{
-				return tracked_info->m_Resource;
 			}
 
 			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address() const
@@ -177,7 +162,7 @@ export{
 
 			auto get_dx() const
 			{
-				return get_hal()->native_resource.Get();
+				return native_resource.Get();
 			}
 
 #ifdef DEV

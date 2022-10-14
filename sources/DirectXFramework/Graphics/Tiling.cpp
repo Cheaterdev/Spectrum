@@ -24,7 +24,7 @@ namespace Graphics {
 
 	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive)
 	{
-		auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
+		auto& alloc_info = resource->alloc_info;
 		auto& tile = tiles[subres][pos];
 
 		if (!tile.heap_position.heap)
@@ -106,7 +106,7 @@ namespace Graphics {
 	{
 
 		update_tiling_info info;
-		info.resource = static_cast<Resource*>(this);
+		info.resource = resource;
 		load_tiles_internal(info, from, to, subres, true);
 		// TODO: make list
 		if (list)
@@ -121,7 +121,7 @@ namespace Graphics {
 	{
 
 		update_tiling_info info;
-		info.resource = static_cast<Resource*>(this);
+		info.resource = resource;
 
 
 		for (uint x = from.x; x <= to.x; x++)
@@ -144,7 +144,7 @@ namespace Graphics {
 	void TiledResourceManager::load_tiles(CommandList* list, std::list<uint3>& tiles, uint subres, bool recursive)
 	{
 		update_tiling_info info;
-		info.resource = static_cast<Resource*>(this);
+		info.resource = resource;
 
 		for (auto t : tiles)
 			load_tile(info, t, subres, recursive);
@@ -161,7 +161,7 @@ namespace Graphics {
 	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3>& tiles_to_remove)
 	{
 		update_tiling_info info;
-		info.resource = static_cast<Resource*>(this);
+		info.resource = resource;
 
 
 		for (auto t : tiles_to_remove)
@@ -184,7 +184,7 @@ namespace Graphics {
 	void TiledResourceManager::zero_tiles(CommandList& list)
 	{
 		update_tiling_info info;
-		info.resource = static_cast<Resource*>(this);
+		info.resource = resource;
 		for (int i = 0; i < tiles.size(); i++)
 		{
 			uint3 size = tiles[i].size();
@@ -201,11 +201,11 @@ namespace Graphics {
 	}
 
 
-	void TiledResourceManager::copy_mappings(CommandList& list, uint3 target_pos, TiledResourceManager* source, uint3 source_pos, uint3 size)
+	void TiledResourceManager::copy_mappings(CommandList& list, uint3 target_pos, Resource* source, uint3 source_pos, uint3 size)
 	{
 		update_tiling_info info;
 
-		info.resource = static_cast<Resource*>(this);
+		info.resource = resource;
 
 		info.source = static_cast<Resource*>(source);
 		info.source_pos = source_pos;
@@ -241,7 +241,6 @@ namespace Graphics {
 		//  UINT first_sub_res;
 		D3D12_SUBRESOURCE_TILING tilings[20];
 
-		auto resource = static_cast<Resource*>(this);
 
 		auto desc = resource->get_desc();
 
@@ -261,16 +260,16 @@ namespace Graphics {
 				for (uint x = 0; x < tiles[0].size().x; x++)
 					tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
-				resource->tracked_info->gpu_tiles.resize(1);
-				resource->tracked_info->gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
-				for (uint x = 0; x < resource->tracked_info->gpu_tiles[0].size().x; x++)
-					resource->tracked_info->gpu_tiles[0][{x, 0, 0}].pos = { x,0,0 };
+				resource->gpu_tiles.resize(1);
+				resource->gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
+				for (uint x = 0; x < resource->gpu_tiles[0].size().x; x++)
+					resource->gpu_tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
 			}
 			else
 			{
 				tiles.resize(mip_info.NumStandardMips);
-				resource->tracked_info->gpu_tiles.resize(mip_info.NumStandardMips);
+				resource->gpu_tiles.resize(mip_info.NumStandardMips);
 
 				packed_tiles.pos = { 0,0,0 };
 				packed_tiles.subresource = mip_info.NumStandardMips;
@@ -279,7 +278,7 @@ namespace Graphics {
 				for (UINT i = 0; i < mip_info.NumStandardMips; i++)
 				{
 					tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
-					resource->tracked_info->gpu_tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
+					resource->gpu_tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
 
 					for (uint x = 0; x < tiles[i].size().x; x++)
 						for (uint y = 0; y < tiles[i].size().y; y++)
@@ -289,8 +288,8 @@ namespace Graphics {
 								tiles[i][{x, y, z}].pos = { x,y,z };
 								tiles[i][{x, y, z}].subresource = i;
 
-								resource->tracked_info->gpu_tiles[i][{x, y, z}].pos = { x,y,z };
-								resource->tracked_info->gpu_tiles[i][{x, y, z}].subresource = i;;
+								resource->gpu_tiles[i][{x, y, z}].pos = { x,y,z };
+								resource->gpu_tiles[i][{x, y, z}].subresource = i;;
 							}
 				}
 			}
@@ -304,8 +303,8 @@ namespace Graphics {
 		if (packed_mip_count)
 		{
 			update_tiling_info info;
-			info.resource = static_cast<Resource*>(this);
-			auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
+			info.resource = resource;
+			auto& alloc_info = resource->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
 				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
@@ -321,7 +320,7 @@ namespace Graphics {
 
 		if (packed_mip_count)
 		{
-			auto& alloc_info = static_cast<Resource*>(this)->alloc_info;
+			auto& alloc_info = resource->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
 				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);

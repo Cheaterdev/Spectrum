@@ -55,12 +55,14 @@ export namespace HAL
 
 	class Resource
 	{
+	protected:
 		ResourceDesc desc;
 	public:
 		using ptr = std::shared_ptr<Resource>;
-		Resource(Device& device, const ResourceDesc& desc, const PlacementAddress& address, ResourceState initialState = ResourceState::GEN_READ);
-		Resource(D3D::Resource  resource) : native_resource(resource)
+		void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, ResourceState initialState = ResourceState::GEN_READ);
+		void init(D3D::Resource  resource)
 		{
+			native_resource = resource;
 			desc = extract(resource);
 		}
 		std::span<std::byte> cpu_data();
@@ -77,7 +79,6 @@ export namespace HAL
 		}
 	public:
 		D3D::Resource native_resource;
-		void* user_data = nullptr;
 
 	private:
 		SERIALIZE_PRETTY()
@@ -112,8 +113,9 @@ export
 
 namespace HAL
 {
-	Resource::Resource(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, ResourceState initialState) :desc(_desc)
+	void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, ResourceState initialState)
 	{
+		desc = _desc;
 		CD3DX12_RESOURCE_DESC resourceDesc = to_native(desc);
 
 

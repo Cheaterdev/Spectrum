@@ -8,6 +8,7 @@ import Singleton;
 import Utils;
 import Math;
 import Tree;
+import shared_ptr;
 
 //#define PROFILING
 export

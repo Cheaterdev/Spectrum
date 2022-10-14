@@ -337,14 +337,14 @@ export{
 			}
 		public:
 
-			template<class T>
-			void track_object(const Trackable<T>& obj)
+			template<TrackableClass T>
+			void track_object(T& obj)
 			{
-				auto& state = obj.get_state(this);
+				auto& state = obj.ObjectState<TrackedObjectState>::get_state(this);
 				if (!state.used)
 				{
 					state.used = true;
-					tracked_resources.emplace_back(obj.tracked_info);
+					tracked_resources.emplace_back(obj.get_tracked());
 				}
 			}
 
@@ -519,7 +519,7 @@ export{
 
 				info->for_each_subres([&](const Resource* resource, UINT subres)
 					{
-						resource->stop_using(this, subres);
+						const_cast<Resource*>(resource)->get_state_manager().stop_using(this, subres);
 					});
 			}
 
@@ -774,7 +774,7 @@ export{
 			{
 				create_transition_point();
 				transition_uav(h.get_resource_info());
-				auto dx_resource = h.get_resource_info()->resource_ptr->get_hal()->native_resource.Get();
+				auto dx_resource = h.get_resource_info()->resource_ptr->native_resource.Get();
 
 
 				if (BuildOptions::Debug)

@@ -639,13 +639,13 @@ export
 			if constexpr (std::is_same_v < T, HAL::Views::UnorderedAccess>)
 			{
 				if (auto buffer = std::get_if<HAL::Views::UnorderedAccess::Buffer>(&v.View))
-					*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource->user_data), buffer->CounterResource ? static_cast<Resource*>(buffer->CounterResource->user_data) : nullptr, v);
+					*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource), buffer->CounterResource ? static_cast<Resource*>(buffer->CounterResource) : nullptr, v);
 				else
-					*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource->user_data), nullptr, v);
+					*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource), nullptr, v);
 			}
 			else
 			{
-				*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource->user_data), v);
+				*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource), v);
 			}
 
 		}

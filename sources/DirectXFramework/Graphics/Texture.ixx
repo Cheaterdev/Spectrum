@@ -76,7 +76,7 @@ export
 
 			static const ptr null;
 
-			Texture(HAL::Resource::ptr native, ResourceState state);
+			Texture(D3D::Resource native, ResourceState state);
 			Texture(HAL::ResourceDesc desc, ResourceState state = ResourceState::PIXEL_SHADER_RESOURCE, HeapType heap_type = HeapType::DEFAULT, std::shared_ptr<texture_data> data = nullptr);
 
 			texture_data::ptr get_data() const;

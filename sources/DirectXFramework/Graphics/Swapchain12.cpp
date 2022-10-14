@@ -28,9 +28,9 @@ namespace Graphics
 			D3D::Resource  render_target;
 			m_swapChain->GetBuffer(n, IID_PPV_ARGS(&render_target));
 
-			auto hal_resource = std::make_shared<HAL::Resource>(render_target);
+			//auto hal_resource = std::make_shared<Resource>(render_target);
 
-			frames[n].m_renderTarget.reset(new Texture(hal_resource, ResourceState::PRESENT));
+			frames[n].m_renderTarget.reset(new Texture(render_target, ResourceState::PRESENT));
 			frames[n].m_renderTarget->set_name(std::string("swap_chain_") + std::to_string(n));
 
 

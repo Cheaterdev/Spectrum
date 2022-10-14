@@ -9,7 +9,7 @@ namespace Graphics
 
 	void Texture::init()
 	{
-		if (tracked_info->m_Resource)
+		if (native_resource)
 		{
 
 			auto desc = get_desc().as_texture();
@@ -59,7 +59,7 @@ namespace Graphics
 		init();
 	}
 
-	Texture::Texture(HAL::Resource::ptr native, ResourceState state) : Resource(native, state)
+	Texture::Texture(D3D::Resource native, ResourceState state) : Resource(native, state)
 	{
 		//    resource.reset(new Resource(native));
 		set_name("Texture");
@@ -133,7 +133,7 @@ namespace Graphics
 			desc = HAL::ResourceDesc::Tex2D(data.format, { data.width, data.height }, data.array_size, data.mip_maps);
 
 
-		Resource::init(desc, HeapType::DEFAULT, (data.array_size * data.mip_maps) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
+		Resource::_init(desc, HeapType::DEFAULT, (data.array_size * data.mip_maps) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
 		auto list = Device::get().get_upload_list();
 
 		if (data.array_size * data.mip_maps)

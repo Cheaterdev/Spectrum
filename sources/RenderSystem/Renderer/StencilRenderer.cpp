@@ -318,7 +318,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
 	verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
 	verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
-	index_buffer.reset(new Graphics::IndexBuffer(data));
+	index_buffer = Graphics::IndexBuffer::make_buffer(data);
 
 	vertex_buffer.reset(new Graphics::StructureBuffer<vec4>(8));
 	vertex_buffer->set_raw_data(verts);

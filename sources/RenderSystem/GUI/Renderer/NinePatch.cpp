@@ -20,7 +20,7 @@ namespace GUI
 				(*data++) = i * 4 + j + 5;
 			}
 
-		index_buffer.reset(new Graphics::IndexBuffer(index_data));
+		index_buffer = Graphics::IndexBuffer::make_buffer(index_data);
 	}
 
 	void NinePatch::draw(Graphics::context& c, GUI::Texture& item, rect r, Graphics::PipelineState::ptr pipeline_state)
