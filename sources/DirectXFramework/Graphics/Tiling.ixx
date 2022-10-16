@@ -50,6 +50,10 @@ export
 			UINT unpacked_mip_count;
 
 			UINT packed_subresource_offset = 0;
+
+			std::vector<grid<uint3, ResourceTile>> gpu_tiles;
+			ResourceTile gpu_packed_tile;
+
 		protected:
 			uint3 tile_shape;
 			//virtual	ComPtr<ID3D12Resource>& get_d3d_resource() = 0;
@@ -109,6 +113,20 @@ export
 			Events::Event<uint4> on_load;
 			Events::Event<uint4> on_zero;
 
+
+			void on_tile_update(const update_tiling_info& info)
+			{
+				for (auto& [heap, tiles] : info.tiles)
+				{
+					for (auto tile : tiles)
+					{
+						if (tile.subresource == gpu_tiles.size())
+							gpu_packed_tile = tile;
+						else
+							gpu_tiles[tile.subresource][tile.pos] = tile;
+					}
+				}
+			}
 		};
 	}
 }

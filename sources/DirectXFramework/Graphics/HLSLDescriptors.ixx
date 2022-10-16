@@ -324,7 +324,7 @@ namespace HLSL
 {
 	void RaytracingAccelerationStructure::create(Graphics::Resource* resource)
 	{
-		HAL::Views::ShaderResource desc = { resource, HAL::Format::UNKNOWN, HAL::Views::ShaderResource::Raytracing {resource->get_resource_address()} };
+		HAL::Views::ShaderResource desc = { resource, HAL::Format::UNKNOWN, HAL::Views::ShaderResource::Raytracing {0} };
 		Handle::operator=(desc);
 	}
 

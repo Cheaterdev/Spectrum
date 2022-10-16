@@ -72,7 +72,7 @@ namespace Graphics
 		inputs.Flags = desc.Flags;
 		inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
 		inputs.NumDescs = desc.NumDescs;
-		inputs.InstanceDescs = desc.instances.address;
+		inputs.InstanceDescs = Graphics::to_native(desc.instances);
 
 
 		return inputs;

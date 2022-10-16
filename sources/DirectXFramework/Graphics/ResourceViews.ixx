@@ -43,7 +43,6 @@ export
 		{
 
 		public:
-			ResourceAddress addr;
 			Resource* resource; //////////////
 			ResourceView()
 			{

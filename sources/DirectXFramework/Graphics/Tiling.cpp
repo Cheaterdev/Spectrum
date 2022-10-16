@@ -260,16 +260,16 @@ namespace Graphics {
 				for (uint x = 0; x < tiles[0].size().x; x++)
 					tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
-				resource->gpu_tiles.resize(1);
-				resource->gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
-				for (uint x = 0; x < resource->gpu_tiles[0].size().x; x++)
-					resource->gpu_tiles[0][{x, 0, 0}].pos = { x,0,0 };
+				gpu_tiles.resize(1);
+				gpu_tiles[0].resize(uint3(tilings[0].WidthInTiles, tilings[0].HeightInTiles, tilings[0].DepthInTiles));
+				for (uint x = 0; x < gpu_tiles[0].size().x; x++)
+					gpu_tiles[0][{x, 0, 0}].pos = { x,0,0 };
 
 			}
 			else
 			{
 				tiles.resize(mip_info.NumStandardMips);
-				resource->gpu_tiles.resize(mip_info.NumStandardMips);
+				gpu_tiles.resize(mip_info.NumStandardMips);
 
 				packed_tiles.pos = { 0,0,0 };
 				packed_tiles.subresource = mip_info.NumStandardMips;
@@ -278,7 +278,7 @@ namespace Graphics {
 				for (UINT i = 0; i < mip_info.NumStandardMips; i++)
 				{
 					tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
-					resource->gpu_tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
+					gpu_tiles[i].resize(uint3(tilings[i].WidthInTiles, tilings[i].HeightInTiles, tilings[i].DepthInTiles));
 
 					for (uint x = 0; x < tiles[i].size().x; x++)
 						for (uint y = 0; y < tiles[i].size().y; y++)
@@ -288,8 +288,8 @@ namespace Graphics {
 								tiles[i][{x, y, z}].pos = { x,y,z };
 								tiles[i][{x, y, z}].subresource = i;
 
-								resource->gpu_tiles[i][{x, y, z}].pos = { x,y,z };
-								resource->gpu_tiles[i][{x, y, z}].subresource = i;;
+								gpu_tiles[i][{x, y, z}].pos = { x,y,z };
+								gpu_tiles[i][{x, y, z}].subresource = i;;
 							}
 				}
 			}

@@ -18,109 +18,61 @@ export{
 	{
 		struct ResourceAddress
 		{
-			ResourceAddress()
-			{
-				address = 0;
-				resource = nullptr;
-
-			}
-
-			ResourceAddress(D3D12_GPU_VIRTUAL_ADDRESS address, Resource* resource) :address(address), resource(resource)
-			{
-
-			}
-
-			D3D12_GPU_VIRTUAL_ADDRESS address;
-			Resource* resource;
+			Resource* resource = nullptr;
+			uint64 resource_offset = 0;
 
 			explicit operator bool() const
 			{
-				return address;
+				return resource;
 			}
 
-			ResourceAddress offset(UINT v) const
+			ResourceAddress offset(UINT offset) const
 			{
-				return ResourceAddress(address + v, resource);
-			}
-
-
-			operator D3D12_GPU_VIRTUAL_ADDRESS() const
-			{
-				return address;
+				return { resource, resource_offset + offset };
 			}
 		};
-
 	
-		export class TrackedResource : public TrackedObject
+		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>,  public TrackedObject, public HAL::Resource
 		{
-			friend class TiledResourceManager;
 
-			std::vector<grid<uint3, ResourceTile>> gpu_tiles;
-			ResourceTile gpu_packed_tile;
-		public:
-			void on_tile_update(const update_tiling_info& info)
-			{
-				for (auto& [heap, tiles] : info.tiles)
-				{
-					for (auto tile : tiles)
-					{
-						if (tile.subresource == gpu_tiles.size())
-							gpu_packed_tile = tile;
-						else
-							gpu_tiles[tile.subresource][tile.pos] = tile;
-					}
-				}
-			}
-
-		public:
-			//HAL::Resource::ptr m_Resource;
-			ResourceHandle alloc_handle;
-			bool debug = false;
-
-			using ptr = std::shared_ptr<TrackedResource>;
-			TrackedResource() = default;
-
-			~TrackedResource();
-		};
-
-		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>,  public TrackedResource, public HAL::Resource
-		{
+			friend class HAL::Resource;
 			LEAK_TEST(Resource)
-			D3D12_GPU_VIRTUAL_ADDRESS gpu_adress;
+			ResourceAddress gpu_address;
 			HeapType heap_type;
-
+			ResourceDesc desc;
 		protected:
 			ResourceStateManager state_manager;
 			TiledResourceManager tiled_manager;
 			void _init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 		public:
-
-
+		
+	
+			const ResourceDesc& get_desc() const
+			{
+				return desc;
+			}
+	ResourceHandle alloc_handle;
 			ResourceStateManager& get_state_manager()
 			{
 				return state_manager;
 			}
 
-
 			TiledResourceManager& get_tiled_manager()
 			{
 				return tiled_manager;
 			}
+
 			std::shared_ptr<Resource> get_tracked()
 			{
 				return get_ptr<Resource>();
 			}
 
 			ResourceAllocationInfo alloc_info;
-			std::optional<FenceWaiter> load_fence;
+		//	std::optional<FenceWaiter> load_fence;
 			std::byte* buffer_data = nullptr;
 			std::string name;
 			void set_name(std::string name);
 
-			const auto& get_desc() const
-			{
-				return desc;
-			}
 
 			using ptr = std::shared_ptr<Resource>;
 
@@ -137,15 +89,9 @@ export{
 				return heap_type;
 			}
 
-			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address() const
+			ResourceAddress get_resource_address() const
 			{
-				return gpu_adress;
-			}
-
-			ResourceAddress get_resource_address()
-			{
-				assert(gpu_adress > 0);
-				return ResourceAddress(gpu_adress, this);
+				return gpu_address;
 			}
 
 			// TODO:: works only for buffer now
@@ -183,16 +129,43 @@ export{
 			}
 #endif
 
-
+				private:
+					SERIALIZE_PRETTY()
+					{
+						ar& NVP(desc);
+					}
 		};
-
-		struct IndexBufferView
+		// TODOmove to hal
+		GPUAddressPtr to_native(const ResourceAddress& address)
 		{
-			D3D12_INDEX_BUFFER_VIEW view;
-			Resource* resource = nullptr;
-		};
-
-
+			return address.resource ? (address.resource->get_address() + address.resource_offset) : 0;
+		}
 
 	}
+
+
+}
+
+
+
+
+export
+{
+
+	namespace cereal
+	{
+		template<class Archive>
+		void serialize(Archive& ar, Graphics::Resource*& g)
+		{
+			if (g)
+			{
+				auto desc = g->get_desc();
+			//	auto native_desc = g->native_resource->GetDesc();
+
+				ar& NVP(desc);
+			//	ar& NVP(native_desc);
+			}
+		}
+	}
+
 }

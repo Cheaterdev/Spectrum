@@ -278,11 +278,12 @@ export namespace HAL
 
 			struct Raytracing
 			{
-				GPUAddressPtr Location;
+				uint OffsetInBytes;
 
 			private:
 				SERIALIZE()
 				{
+					ar& NVP(OffsetInBytes);
 				}
 			};
 
@@ -547,6 +548,23 @@ export namespace HAL
 
 		};
 
+		struct IndexBuffer
+		{
+			Format Format;
+			uint	SizeInBytes =0;
+			uint64 OffsetInBytes=0;
+			Resource* Resource = nullptr;
+		private:
+			SERIALIZE()
+			{
+				ar& NVP(Format);
+				ar& NVP(SizeInBytes);
+				ar& NVP(OffsetInBytes);
+
+				ar& NVP(Resource);
+			}
+		};
+	
 		template <class T> concept ViewTemplate = std::is_same_v<T, UnorderedAccess>
 		|| std::is_same_v<T, ConstantBuffer>
 			|| std::is_same_v<T, RenderTarget>

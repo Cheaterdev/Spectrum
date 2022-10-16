@@ -652,7 +652,7 @@ void stencil_renderer::generate_after(Graph& graph)
 				// draw axis
 				{
 
-					graphics.set_index_buffer(IndexBufferView());// universal_index_manager::get().buffer->get_index_buffer_view(true));
+					graphics.set_index_buffer(HAL::Views::IndexBuffer());// universal_index_manager::get().buffer->get_index_buffer_view(true));
 
 					{
 						Slots::FrameInfo frameInfo;

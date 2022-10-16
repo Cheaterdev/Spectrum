@@ -29,7 +29,7 @@ namespace Graphics
 
 
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT;
-		queueDesc.Type = to_native(type);
+		queueDesc.Type = ::to_native(type);
 		queueDesc.NodeMask = 1;
 		device->get_native_device()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&native));
 
@@ -318,7 +318,7 @@ namespace Graphics
 						auto list = cl;
 						auto& updates = list->tile_updates;
 						for (auto& u : updates)
-							u.resource->on_tile_update(u);
+							u.resource->get_tiled_manager().on_tile_update(u);
 						updates.clear();
 					});
 			}

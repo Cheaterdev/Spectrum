@@ -146,7 +146,7 @@ namespace Graphics
 		reset();
 		topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 		reset_tables();
-		index = IndexBufferView();
+		index = HAL::Views::IndexBuffer();
 	}
 	void GraphicsContext::end()
 	{
@@ -323,8 +323,13 @@ namespace Graphics
 		base.setup_debug(this);
 
 		commit_tables();
-		get_base().transition(index.resource, ResourceState::INDEX_BUFFER);
-		list->IASetIndexBuffer(&index.view);
+		get_base().transition(static_cast<Graphics::Resource*>(index.Resource), ResourceState::INDEX_BUFFER);
+		D3D12_INDEX_BUFFER_VIEW native;
+		native.SizeInBytes = index.Resource ? index.SizeInBytes : 0;
+		native.Format = ::to_native(index.Format);
+		native.BufferLocation = index.Resource ? to_native(static_cast<Graphics::Resource*>(index.Resource)->get_resource_address().offset(index.OffsetInBytes)):0;// index.Resource ? static_cast<Graphics::Resource*>(index.Resource)->get_resource_address() + index.OffsetInBytes : 0;
+		list->IASetIndexBuffer(&native);
+
 
 		list->DrawIndexedInstanced(index_count, instance_count, index_offset, vertex_offset, instance_offset);
 		base.create_transition_point(false);
@@ -412,14 +417,12 @@ namespace Graphics
 
 	D3D12_GPU_VIRTUAL_ADDRESS UploadInfo::get_gpu_address()
 	{
-		return resource->get_gpu_address() + offset;
+		return to_native(resource->get_resource_address().offset(offset));
 	}
 
 	ResourceAddress UploadInfo::get_resource_address()
 	{
-		ResourceAddress address = resource->get_resource_address();
-		address.address += offset;
-		return address;
+		return resource->get_resource_address().offset(offset);
 	}
 
 
@@ -427,20 +430,7 @@ namespace Graphics
 	{
 		return resource->buffer_data + offset;
 	}
-	Handle UploadInfo::create_cbv(CommandList& list)
-	{
 
-		D3D12_CONSTANT_BUFFER_VIEW_DESC  desc = {};
-		desc.BufferLocation = resource->get_gpu_address() + offset;
-		desc.SizeInBytes = (UINT)Math::AlignUp(size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
-
-		assert(desc.SizeInBytes < 65536);
-		Handle h = list.frame_resources->get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place();
-
-		assert(false);// Device::get().create_cbv(h, resource.get(), desc);
-
-		return h;
-	}
 	std::byte* Readbacker::ReadBackInfo::get_cpu_data() const
 	{
 		return resource->buffer_data + offset;
@@ -469,7 +459,7 @@ namespace Graphics
 
 		base.transition(resource, ResourceState::COPY_DEST);
 
-		D3D12_RESOURCE_DESC Desc = to_native(resource->get_desc());
+		D3D12_RESOURCE_DESC Desc = ::to_native(resource->get_desc());
 		UINT rows_count = box.y;
 
 		if (Desc.Format == DXGI_FORMAT_BC7_UNORM_SRGB || Desc.Format == DXGI_FORMAT_BC7_UNORM)
@@ -561,7 +551,7 @@ namespace Graphics
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 		UINT NumRows;
 		UINT64 RowSizesInBytes;
-		D3D12_RESOURCE_DESC Desc = to_native(resource->get_desc());
+		D3D12_RESOURCE_DESC Desc = ::to_native(resource->get_desc());
 		Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 
 		if (!RequiredSize)
@@ -591,7 +581,7 @@ namespace Graphics
 		dest.PlacedFootprint.Footprint.Height = box.y;
 		dest.PlacedFootprint.Footprint.Depth = box.z;
 		dest.PlacedFootprint.Footprint.RowPitch = static_cast<UINT>(res_stride);
-		dest.PlacedFootprint.Footprint.Format = to_native(from_native(Layouts.Footprint.Format).to_srv());
+		dest.PlacedFootprint.Footprint.Format = ::to_native(from_native(Layouts.Footprint.Format).to_srv());
 		list->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
 
 		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
@@ -1219,8 +1209,14 @@ namespace Graphics
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
-		get_base().transition(index.resource, ResourceState::INDEX_BUFFER);
-		list->IASetIndexBuffer(&index.view);
+		get_base().transition(static_cast<Graphics::Resource*>(index.Resource), ResourceState::INDEX_BUFFER);
+
+
+		D3D12_INDEX_BUFFER_VIEW native;
+		native.SizeInBytes = index.Resource?index.SizeInBytes:0;
+		native.Format = ::to_native(index.Format);
+		native.BufferLocation = index.Resource?to_native(static_cast<Graphics::Resource*>(index.Resource)->get_resource_address().offset(index.OffsetInBytes)):0;
+		list->IASetIndexBuffer(&native);
 
 		commit_tables();
 
@@ -1264,9 +1260,9 @@ namespace Graphics
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
 
-		desc.DestAccelerationStructureData = build_desc.DestAccelerationStructureData.address;
-		desc.SourceAccelerationStructureData = build_desc.SourceAccelerationStructureData.address;
-		desc.ScratchAccelerationStructureData = build_desc.ScratchAccelerationStructureData.address;
+		desc.DestAccelerationStructureData = to_native(build_desc.DestAccelerationStructureData);
+		desc.SourceAccelerationStructureData = to_native(build_desc.SourceAccelerationStructureData);
+		desc.ScratchAccelerationStructureData = to_native(build_desc.ScratchAccelerationStructureData);
 
 		desc.Inputs = Device::get().to_native(bottom);
 
@@ -1294,9 +1290,9 @@ namespace Graphics
 
 		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
 
-		desc.DestAccelerationStructureData = build_desc.DestAccelerationStructureData.address;
-		desc.SourceAccelerationStructureData = build_desc.SourceAccelerationStructureData.address;
-		desc.ScratchAccelerationStructureData = build_desc.ScratchAccelerationStructureData.address;
+		desc.DestAccelerationStructureData = to_native(build_desc.DestAccelerationStructureData);
+		desc.SourceAccelerationStructureData = to_native(build_desc.SourceAccelerationStructureData);
+		desc.ScratchAccelerationStructureData = to_native(build_desc.ScratchAccelerationStructureData);
 
 		desc.Inputs = Device::get().to_native(top);
 		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
@@ -1347,7 +1343,7 @@ namespace Graphics
 
 	TransitionCommandList::TransitionCommandList(CommandListType type) :type(type)
 	{
-		D3D12_COMMAND_LIST_TYPE t = to_native(type);
+		D3D12_COMMAND_LIST_TYPE t = ::to_native(type);
 
 		TEST(Device::get(), Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
 		TEST(Device::get(),  Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));

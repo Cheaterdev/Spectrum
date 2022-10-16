@@ -16,10 +16,6 @@ using namespace HAL;
 
 namespace Graphics
 {
-	TrackedResource::~TrackedResource()
-	{
-		alloc_handle.Free();
-	}
 
 	static std::atomic_size_t counter[3] = { 0, 0, 0 };
 	std::atomic_size_t counter_id;
@@ -126,14 +122,11 @@ namespace Graphics
 		}
 		init(Device::get(), desc, address, state);
 
-		if (heap_type != HeapType::READBACK && desc.is_buffer())
-			gpu_adress = get_dx()->GetGPUVirtualAddress();
-
 		state_manager.init_subres(Device::get().Subresources(get_desc()), state);
 
 		tiled_manager.init_tilings();
 
-
+		gpu_address = ResourceAddress{ this,0 };
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
 		{
 			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
@@ -142,6 +135,7 @@ namespace Graphics
 	Resource::Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state, vec4 clear_value) :state_manager(this), tiled_manager(this)
 	{
 		_init(desc, heap_type, state, clear_value);
+
 	}
 
 	Resource::Resource(const ResourceDesc& desc, ResourceHandle handle,bool own) :state_manager(this), tiled_manager(this)
@@ -200,10 +194,6 @@ namespace Graphics
 
 		init(Device::get(), desc, address, state);
 
-
-		if (heap_type != HeapType::READBACK && desc.is_buffer())
-			gpu_adress = get_dx()->GetGPUVirtualAddress();
-
 		state_manager.init_subres(Device::get().Subresources(get_desc()), state);
 
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
@@ -215,6 +205,9 @@ namespace Graphics
 		{
 			alloc_handle = handle;
 		}
+
+		gpu_address = ResourceAddress{ this,0 };
+
 	}
 
 
@@ -228,24 +221,19 @@ namespace Graphics
 
 		heap_type = (HeapType)HeapProperties.Type;
 
-		if (get_desc().is_buffer())
-			gpu_adress = get_dx()->GetGPUVirtualAddress();
-
 		state_manager.init_subres(Device::get().Subresources(get_desc()), state);
 
 		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD || HeapProperties.Type == D3D12_HEAP_TYPE_READBACK)
 		{
 			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
+
+		gpu_address = ResourceAddress{ this,0 };
+
 	}
 	void Resource::set_name(std::string name)
 	{
 		this->name = name;
-		//get_dx()->SetName(convert(name).c_str());
-
-		debug = name == "gi_filtered_reflection";
-
-		debug = debug;
 	}
 
 	Resource::~Resource()
@@ -259,7 +247,7 @@ namespace Graphics
 
 		assert(lists.empty());
 #endif 
-
+		alloc_handle.Free();
 	}
 
 }

@@ -1014,7 +1014,7 @@ export{
 					get_base().track_object(*address.resource);
 					get_base().transition(address.resource, ResourceState::VERTEX_AND_CONSTANT_BUFFER);
 				}
-				set_const_buffer(index, address.address);
+				set_const_buffer(index, to_native(address));
 			}
 
 			template<class Compiled>
@@ -1076,7 +1076,7 @@ export{
 
 			void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
 			void set(UINT, const HandleTableLight&)override;
-			IndexBufferView index;
+			HAL::Views::IndexBuffer index;
 		public:
 
 			CommandList& get_base()
@@ -1175,7 +1175,7 @@ export{
 				return viewports;
 			}
 
-			void set_index_buffer(IndexBufferView view)
+			void set_index_buffer(HAL::Views::IndexBuffer view)
 			{
 				index = view;
 
@@ -1236,15 +1236,15 @@ export{
 				D3D12_RAYTRACING_GEOMETRY_DESC geom;
 				geom.Flags = i.Flags;
 				geom.Type = i.Type;
-				geom.Triangles.IndexBuffer = i.IndexBuffer.address;
+				geom.Triangles.IndexBuffer = Graphics::to_native(i.IndexBuffer);
 				geom.Triangles.IndexCount = i.IndexCount;
 				geom.Triangles.IndexFormat = i.IndexFormat;
 
-				geom.Triangles.VertexBuffer.StartAddress = i.VertexBuffer.address;
+				geom.Triangles.VertexBuffer.StartAddress = Graphics::to_native(i.VertexBuffer);
 				geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
 				geom.Triangles.VertexFormat = i.VertexFormat;
 
-				geom.Triangles.Transform3x4 = i.Transform3x4.address;
+				geom.Triangles.Transform3x4 = Graphics::to_native(i.Transform3x4);
 				descs.emplace_back(geom);
 
 				geometry.emplace_back(i);
@@ -1347,15 +1347,15 @@ export{
 				base.setup_debug(this);
 				D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
 				// Since each shader table has only one shader record, the stride is same as the size.
-				dispatchDesc.HitGroupTable.StartAddress = hit_buffer.address;
+				dispatchDesc.HitGroupTable.StartAddress = to_native(hit_buffer);
 				dispatchDesc.HitGroupTable.SizeInBytes = sizeof(Hit) * hit_count;
 				dispatchDesc.HitGroupTable.StrideInBytes = sizeof(Hit);
 
-				dispatchDesc.MissShaderTable.StartAddress = miss_buffer.address;
+				dispatchDesc.MissShaderTable.StartAddress = to_native(miss_buffer);
 				dispatchDesc.MissShaderTable.SizeInBytes = sizeof(Miss) * miss_count;
 				dispatchDesc.MissShaderTable.StrideInBytes = sizeof(Miss);
 
-				dispatchDesc.RayGenerationShaderRecord.StartAddress = raygen_buffer.address;
+				dispatchDesc.RayGenerationShaderRecord.StartAddress = to_native(raygen_buffer);
 				dispatchDesc.RayGenerationShaderRecord.SizeInBytes = sizeof(Raygen);
 				dispatchDesc.Width = size.x;
 				dispatchDesc.Height = size.y;

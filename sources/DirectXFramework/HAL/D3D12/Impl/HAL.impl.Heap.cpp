@@ -27,8 +27,6 @@ namespace HAL
 		device.native_device->CreateHeap(&native_desc, IID_PPV_ARGS(&native_heap));
 
 
-		if (desc.Type != HeapType::DEFAULT)
-		{
 			if (desc.Flags != HeapFlags::TEXTURES_ONLY && desc.Flags != HeapFlags::RTDS_ONLY)
 			{
 				CD3DX12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(desc.Size);
@@ -42,10 +40,16 @@ namespace HAL
 					nullptr,
 					IID_PPV_ARGS(&cpu_buffer));
 
+
+				gpu_address = (GPUAddressPtr)cpu_buffer->GetGPUVirtualAddress();
+
+				if (desc.Type != HeapType::DEFAULT)
+				{
 				D3D12_RANGE Range;
 				Range.Begin = 0;
 				Range.End = desc.Size;
 
+			
 				cpu_buffer->Map(0, &Range, reinterpret_cast<void**>(&cpu_address));
 
 			}
@@ -53,10 +57,14 @@ namespace HAL
 
 	}
 
+	GPUAddressPtr Heap::get_address() const
+	{
+		return gpu_address;
+	}
 
 	Heap::~Heap()
 	{
-		if (cpu_buffer) cpu_buffer->Unmap(0, nullptr);
+		if (cpu_address) cpu_buffer->Unmap(0, nullptr);
 	}
 }
 

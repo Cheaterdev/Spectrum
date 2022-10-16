@@ -24,6 +24,7 @@ export namespace HAL
 	class Heap
 	{
 	protected:
+		GPUAddressPtr gpu_address = 0;
 		std::byte* cpu_address = nullptr;
 	public:
 		using ptr = std::shared_ptr<Heap>;
@@ -31,7 +32,7 @@ export namespace HAL
 		~Heap();
 
 		std::span<std::byte> cpu_data();
-
+		GPUAddressPtr get_address() const;
 	public:
 		D3D::Heap native_heap;
 		D3D::Resource cpu_buffer;

@@ -60,8 +60,7 @@ export
 				return res;
 			}
 
-			D3D12_CONSTANT_BUFFER_VIEW_DESC get_const_view();
-			IndexBufferView get_index_buffer_view(unsigned int offset = 0, UINT size = 0);
+			HAL::Views::IndexBuffer get_index_buffer_view(unsigned int offset = 0, UINT size = 0);
 
 
 			UINT64 get_count();
@@ -316,14 +315,6 @@ namespace Graphics
 	{
 	}
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC GPUBuffer::get_const_view()
-	{
-		return{ get_gpu_address(), static_cast<UINT>(size) };
-	}
-
-	//GPUBuffer::GPUBuffer()
-	//{
-	//}
 
 	GPUBuffer::GPUBuffer(UINT64 count, UINT stride) : count(count),
 		stride(stride), Resource({ HAL::BufferDesc{ std::max(static_cast<UINT64>(4), count * stride) }, HAL::ResFlags::ShaderResource }, HeapType::DEFAULT, ResourceState::COMMON)
@@ -356,13 +347,13 @@ namespace Graphics
 		return count;
 	}
 
-	IndexBufferView GPUBuffer::get_index_buffer_view(unsigned int offset /*= 0*/, UINT size /*= 0*/)
+	HAL::Views::IndexBuffer GPUBuffer::get_index_buffer_view(unsigned int offset /*= 0*/, UINT size /*= 0*/)
 	{
-		IndexBufferView view;
-		view.view.BufferLocation = get_gpu_address() + offset;
-		view.view.Format = DXGI_FORMAT_R32_UINT;// is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
-		view.view.SizeInBytes = static_cast<UINT>(size ? size : this->size);
-		view.resource = this;
+		HAL::Views::IndexBuffer view;
+		view.OffsetInBytes = offset;
+		view.Format = HAL::Format::R32_UINT;// is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+		view.SizeInBytes = static_cast<UINT>(size ? size : this->size);
+		view.Resource = this;
 		return view;
 	}
 
