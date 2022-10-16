@@ -21,7 +21,7 @@ namespace PSOS
 			mpso.pixel.flags = 0;
 			
 			mpso.rtv_formats = { Graphics::Format::R8G8B8A8_UNORM };
-			mpso.blend = { Graphics::Blends::AlphaBlend };
+			mpso.blend = { HAL::Blends::AlphaBlend };
 			mpso.cull  = Graphics::CullMode::None;
 			return mpso;
 		}

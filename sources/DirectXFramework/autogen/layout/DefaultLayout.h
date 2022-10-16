@@ -54,6 +54,6 @@ struct DefaultLayout: public FrameLayout
 		static inline const std::vector<UINT> tables = {27, 29};
 	};
 	template<class Processor> static void for_each(Processor& processor) {
-		processor.template process<CameraData,SceneData,PassData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({Graphics::Samplers::SamplerLinearWrapDesc,Graphics::Samplers::SamplerPointClampDesc,Graphics::Samplers::SamplerLinearClampDesc,Graphics::Samplers::SamplerAnisoBorderDesc,Graphics::Samplers::SamplerPointBorderDesc});
+		processor.template process<CameraData,SceneData,PassData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({HAL::Samplers::SamplerLinearWrapDesc,HAL::Samplers::SamplerPointClampDesc,HAL::Samplers::SamplerLinearClampDesc,HAL::Samplers::SamplerAnisoBorderDesc,HAL::Samplers::SamplerPointBorderDesc});
 	}
 };

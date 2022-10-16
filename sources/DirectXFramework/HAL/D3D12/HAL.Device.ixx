@@ -1,4 +1,4 @@
-export module HAL:Device;
+export module HAL:D3D12.Device;
 import d3d12;
 import Math;
 import Utils;

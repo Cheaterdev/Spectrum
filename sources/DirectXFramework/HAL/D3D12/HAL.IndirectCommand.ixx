@@ -1,8 +1,8 @@
-export module HAL:IndirectCommand;
+export module HAL:D3D12.IndirectCommand;
 
 import :Types;
 import :Utils;
-import :RootSignature;
+import :D3D12.RootSignature;
 
 export namespace HAL
 {

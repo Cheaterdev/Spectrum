@@ -1,4 +1,4 @@
-export module HAL:RootSignature;
+export module HAL:D3D12.RootSignature;
 
 import Data;
 import d3d12;
@@ -6,7 +6,7 @@ import Math;
 import Log;
 import :Types;
 import :Sampler;
-import :Device;
+import :D3D12.Device;
 import :Utils;
 import stl.core;
 

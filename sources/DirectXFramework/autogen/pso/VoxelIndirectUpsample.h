@@ -21,7 +21,7 @@ namespace PSOS
 			mpso.pixel.flags = 0;
 			
 			mpso.rtv_formats = { Graphics::Format::R16G16B16A16_FLOAT, Graphics::Format::R11G11B10_FLOAT };
-			mpso.blend = { Graphics::Blends::Additive, Graphics::Blends::None };
+			mpso.blend = { HAL::Blends::Additive, HAL::Blends::None };
 			mpso.enable_stencil  = true;
 			mpso.enable_depth  = false;
 			mpso.stencil_func  = Graphics::ComparisonFunc::EQUAL;

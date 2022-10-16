@@ -1,4 +1,4 @@
-export module HAL:Heap;
+export module HAL:D3D12.Heap;
 import d3d12;
 import Math; 
 import Utils;
@@ -6,7 +6,7 @@ import Utils;
 import :Types;
 import :Sampler;
 import :Utils;
-import :Device;
+import :D3D12.Device;
 
 using namespace HAL;
 

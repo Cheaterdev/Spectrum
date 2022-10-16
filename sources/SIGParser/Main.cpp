@@ -1228,7 +1228,7 @@ void generate_pso(PSO& pso)
 						{
 							if (!elems.empty())
 								elems += ", ";
-							elems += "Graphics::Blends::";
+							elems += "HAL::Blends::";
 							elems += e.expr;
 						}
 
@@ -1501,7 +1501,7 @@ void generate_cpp_layout(Layout& layout)
 			layout.recursive_samplers([&](Sampler& slot) {
 
 				if (!first) params_string += ',';
-				params_string += "Graphics::Samplers::" + slot.expr;
+				params_string += "HAL::Samplers::" + slot.expr;
 				first = false;
 				});
 

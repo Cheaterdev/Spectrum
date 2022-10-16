@@ -1,13 +1,10 @@
-export module HAL:FormatImpl;
+module HAL:Format;
 
 import :Format;
 import d3d12;
 
 namespace HAL
 {
-
-
-
 	bool Format::is_shader_visible() const
 	{
 		switch (native_format)

@@ -1,10 +1,10 @@
-export module HAL:DescriptorHeap;
+export module HAL:D3D12.DescriptorHeap;
 
-import :Device;
+import :D3D12.Device;
 import :Utils;
 import :Types;
 import :Descriptors;
-import :Resource;
+import :D3D12.Resource;
 
 import Utils;
 import Debug;

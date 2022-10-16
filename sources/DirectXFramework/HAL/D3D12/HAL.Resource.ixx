@@ -1,4 +1,4 @@
-export module HAL:Resource;
+export module HAL:D3D12.Resource;
 import d3d12;
 import Math;
 import Utils;
@@ -7,8 +7,8 @@ import :Types;
 import :Sampler;
 
 import :Utils;
-import :Device;
-import :Heap;
+import :D3D12.Device;
+import :D3D12.Heap;
 
 import stl.core;
 
