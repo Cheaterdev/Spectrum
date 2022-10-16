@@ -5,7 +5,6 @@ export module Graphics:Layout;
 
 import :RootSignature;
 import :Concepts;
-import :Samplers;
 import :Types;
 import :Device;
 //import :Utils;

@@ -11,6 +11,7 @@ export import :Utils;
 export import :Shaders;
 
 
+export import :RootSignature;
 export import :Descriptors;
 
 

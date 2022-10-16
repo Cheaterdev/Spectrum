@@ -6,7 +6,6 @@ import :Resource;
 import :Types;
 
 import Utils;
-#include <intsafe.h>
 
 namespace Graphics {
 

@@ -4,7 +4,7 @@ import d3d12;
 
 import :Types;
 import :Format;
-import :D3D12.Resource;
+import :API.Resource;
 
 export namespace HAL
 {

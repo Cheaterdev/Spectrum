@@ -1,5 +1,4 @@
 module Graphics:Queue;
-import :Samplers;
 import :Device;
 import :GPUTimer;
 

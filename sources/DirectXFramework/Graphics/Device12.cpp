@@ -6,7 +6,6 @@ import Log;
 import :SwapChain;
 import :PipelineState;
 import :GPUTimer;
-import :Samplers;
 import :CommandList;
 import :Queue;
 

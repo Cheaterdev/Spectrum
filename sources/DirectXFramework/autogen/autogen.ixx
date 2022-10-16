@@ -6,7 +6,6 @@ export module Graphics:Autogen;
 
 import :PipelineState;
 import Math;
-import :Samplers;
 import :Buffer;
 import :Descriptors;
 import :HLSLDescriptors;

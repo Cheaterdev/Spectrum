@@ -1,5 +1,5 @@
-export module HAL:D3D12.Fence;
-import :D3D12.Device;
+export module HAL:API.Fence;
+import :API.Device;
 
 import d3d12;
 import windows;

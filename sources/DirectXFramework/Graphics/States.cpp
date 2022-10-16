@@ -8,7 +8,7 @@ import :CommandList;
 import Utils;
 import StateContext;
 import HAL;
-#include <cassert>
+
 
 using namespace HAL;
 namespace Graphics

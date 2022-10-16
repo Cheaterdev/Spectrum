@@ -15,6 +15,7 @@ export
 		using RootSignature = HAL::RootSignature;
 
 
+
 		class RootLayout :public RootSignature
 		{
 			Device& device;
