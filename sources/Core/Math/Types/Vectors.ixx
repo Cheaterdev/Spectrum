@@ -804,6 +804,10 @@ export
 		{
 			return data[V::dot(i, scalers)];
 		}
+		decltype(auto) operator[](const V& i) const
+		{
+			return data[V::dot(i, scalers)];
+		}
 
 		auto begin()
 		{

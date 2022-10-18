@@ -98,7 +98,7 @@ export
 			void zero_tiles(CommandList* list, std::list<uint3>& tiles);
 			void zero_tiles(CommandList& list);
 
-			inline bool is_mapped(uint3 pos, uint subres)
+			inline bool is_mapped(uint3 pos, uint subres) const
 			{
 				return !!tiles[subres][pos].heap_position.heap;
 			}
@@ -114,19 +114,7 @@ export
 			Events::Event<uint4> on_zero;
 
 
-			void on_tile_update(const update_tiling_info& info)
-			{
-				for (auto& [heap, tiles] : info.tiles)
-				{
-					for (auto tile : tiles)
-					{
-						if (tile.subresource == gpu_tiles.size())
-							gpu_packed_tile = tile;
-						else
-							gpu_tiles[tile.subresource][tile.pos] = tile;
-					}
-				}
-			}
+			void on_tile_update(const update_tiling_info& info);
 		};
 	}
 }

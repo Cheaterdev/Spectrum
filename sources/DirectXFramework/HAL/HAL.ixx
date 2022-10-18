@@ -13,7 +13,8 @@ export import :Shaders;
 
 export import :RootSignature;
 export import :Descriptors;
-
+export import :Heap;
+export import :HeapAllocators;
 
 export import :Adapter;
 export import :Debug;

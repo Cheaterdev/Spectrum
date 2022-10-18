@@ -438,11 +438,11 @@ namespace Graphics
 	Readbacker::ReadBackInfo Readbacker::read_data(UINT64 uploadBufferSize, unsigned int alignment)
 	{
 		const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
-		auto handle = allocator.alloc(AlignedSize, alignment, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, HeapType::READBACK);
+		auto handle = allocator.alloc(AlignedSize, alignment, HAL::MemoryType::COMMITED, HeapType::READBACK);
 
 		handles.emplace_back(handle);
 		ReadBackInfo info;
-		info.resource = handle.get_heap()->cpu_buffer;
+		info.resource = std::static_pointer_cast<Graphics::Resource>(handle.get_heap()->as_buffer());
 		info.offset = handle.get_offset();
 		info.size = uploadBufferSize;
 		return info;

@@ -4,27 +4,24 @@ import HAL;
 import d3d12;
 import Math;
 import Utils;
+import :Resource;
 
 #undef THIS
 namespace HAL
 {
-	void Heap::init(Device& device, const HeapDesc& desc)
-
+	Heap::Heap(Device& device, const HeapDesc& desc):desc(desc)
 	{
-		auto THIS = static_cast<Graphics::ResourceHeap*>(this);
+			D3D12_HEAP_DESC native_desc;
+			native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
+			native_desc.Flags = to_native(desc.Flags);
+			native_desc.SizeInBytes = desc.Size;
+			native_desc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+			native_desc.Properties.CreationNodeMask = 0;
+			native_desc.Properties.VisibleNodeMask = 0;
+			native_desc.Properties.Type = to_native(desc.Type);
+			native_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-		THIS->desc = desc;
-		D3D12_HEAP_DESC native_desc;
-		native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-		native_desc.Flags = to_native(desc.Flags);
-		native_desc.SizeInBytes = desc.Size;
-		native_desc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-		native_desc.Properties.CreationNodeMask = 0;
-		native_desc.Properties.VisibleNodeMask = 0;
-		native_desc.Properties.Type = to_native(desc.Type);
-		native_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-
-		device.native_device->CreateHeap(&native_desc, IID_PPV_ARGS(&native_heap));
+			device.native_device->CreateHeap(&native_desc, IID_PPV_ARGS(&native_heap));
 
 
 			if (desc.Flags != HeapFlags::TEXTURES_ONLY && desc.Flags != HeapFlags::RTDS_ONLY)
@@ -45,33 +42,37 @@ namespace HAL
 
 				if (desc.Type != HeapType::DEFAULT)
 				{
-				D3D12_RANGE Range;
-				Range.Begin = 0;
-				Range.End = desc.Size;
+					D3D12_RANGE Range;
+					Range.Begin = 0;
+					Range.End = desc.Size;
 
-			
-				cpu_buffer->Map(0, &Range, reinterpret_cast<void**>(&cpu_address));
 
+					cpu_buffer->Map(0, &Range, reinterpret_cast<void**>(&cpu_address));
+
+				}
 			}
+
+			buffer.reset(new Graphics::Resource(/*device,*/ ResourceDesc::Buffer(desc.Size), PlacementAddress { this,0 }));
+
 		}
 
-	}
+	
+		
+		std::span<std::byte> Heap::get_data()
+		{
+			return std::span(cpu_address, cpu_address ? desc.Size : 0);
+		}
 
-	GPUAddressPtr Heap::get_address() const
-	{
-		return gpu_address;
-	}
+		namespace API
+		{
+			Heap::~Heap()
+			{
+				if (cpu_address) cpu_buffer->Unmap(0, nullptr);
+			}
+			GPUAddressPtr Heap::get_address() const
+			{
+				return gpu_address;
+			}
 
-	Heap::~Heap()
-	{
-		if (cpu_address) cpu_buffer->Unmap(0, nullptr);
-	}
-}
-
-namespace Graphics
-{
-	std::span<std::byte> ResourceHeap::get_data()
-	{
-		return std::span(cpu_address, cpu_address ? desc.Size : 0);
-	}
+		}
 }

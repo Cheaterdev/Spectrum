@@ -105,7 +105,7 @@ namespace Graphics
 		}
 		else
 		{
-			alloc_handle = ResourceHeapPageManager::get().alloc(alloc_info.size, alloc_info.alignment, D3D12_HEAP_FLAGS(alloc_info.flags), heap_type);
+			alloc_handle = ResourceHeapPageManager::get().alloc(alloc_info.size, alloc_info.alignment, HAL::MemoryType::COMMITED, heap_type);
 			address = { alloc_handle.get_heap().get(),alloc_handle.get_offset() };
 
 
@@ -205,6 +205,72 @@ namespace Graphics
 		{
 			alloc_handle = handle;
 		}
+
+		gpu_address = ResourceAddress{ this,0 };
+
+	}
+	Resource::Resource(const ResourceDesc& desc, PlacementAddress address) :state_manager(this), tiled_manager(this)
+	{
+		auto t = CounterManager::get().start_count<Resource>();
+
+		//tmp_handle = handle;
+	/*	D3D12_CLEAR_VALUE value;
+
+		if (desc.is_texture())
+		{
+
+			auto texture_desc = desc.as_texture();
+			value.Format = to_srv(to_native(texture_desc.Format));
+			value.Color[0] = 0;
+			value.Color[1] = 0;
+			value.Color[2] = 0;
+			value.Color[3] = 0;
+
+			if (check(desc.Flags & HAL::ResFlags::DepthStencil))
+			{
+				value.Format = to_dsv(to_native(texture_desc.Format));
+				value.DepthStencil.Depth = 1.0f;
+				value.DepthStencil.Stencil = 0;
+			}
+
+
+
+		}*/
+
+
+		ResourceState state;
+
+
+		if (check(desc.Flags & HAL::ResFlags::DepthStencil))
+			state = ResourceState::DEPTH_WRITE;
+		else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
+			state = ResourceState::RENDER_TARGET;
+		else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
+			state = ResourceState::PIXEL_SHADER_RESOURCE;
+
+		else
+			state = ResourceState::COPY_DEST;
+
+
+		heap_type = address.heap->get_type();
+
+		if (heap_type == HeapType::UPLOAD)
+		{
+			state = ResourceState::GEN_READ;
+		}if (heap_type == HeapType::READBACK)
+		{
+			state = ResourceState::COPY_DEST;
+		}
+			init(Device::get(), desc, address, state);
+
+		state_manager.init_subres(Device::get().Subresources(get_desc()), state);
+
+		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
+		{
+			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
+		}
+
+	
 
 		gpu_address = ResourceAddress{ this,0 };
 

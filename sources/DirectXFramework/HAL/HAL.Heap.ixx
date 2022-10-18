@@ -1,12 +1,16 @@
-export module HAL:D3D12.Heap;
+export module HAL:Heap;
 import d3d12;
 import Math; 
 import Utils;
 
+import Trackable;
+import StateContext;
+
 import :Types;
 import :Sampler;
 import :Utils;
-import :D3D12.Device;
+import :API.Device;
+import :API.Heap;
 
 using namespace HAL;
 
@@ -21,21 +25,26 @@ export namespace HAL
 		HeapFlags Flags;
 	};
 
-	class Heap
+	class Resource;
+	class Heap :public SharedObject<Heap>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Heap
 	{
-	protected:
-		GPUAddressPtr gpu_address = 0;
-		std::byte* cpu_address = nullptr;
+		friend class API::Heap;
+		HeapDesc desc;
+		std::shared_ptr<Resource> buffer;
 	public:
 		using ptr = std::shared_ptr<Heap>;
-		void init(Device& device, const HeapDesc& desc);
-		~Heap();
 
-		std::span<std::byte> cpu_data();
-		GPUAddressPtr get_address() const;
-	public:
-		D3D::Heap native_heap;
-		D3D::Resource cpu_buffer;
+		Heap(Device& device, const HeapDesc& desc);
+
+		HeapType get_type() { return desc.Type; }
+		virtual ~Heap() = default;
+
+		std::span<std::byte> get_data();
+	
+		std::shared_ptr<Resource> as_buffer()
+		{
+			return buffer;
+		}
 	};
 }
 

@@ -114,14 +114,14 @@ export{
 				const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
 
 
-				auto handle = allocator.alloc(AlignedSize, alignment, D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS, HeapType::UPLOAD);
+				auto handle = allocator.alloc(AlignedSize, alignment, HAL::MemoryType::COMMITED, HeapType::UPLOAD);
 
 				//	auto handle = BufferCache::get().get_upload(AlignedSize, alignment);
 				typename LockPolicy::guard g(m);
 
 				handles.emplace_back(handle);
 				UploadInfo info;
-				info.resource = handle.get_heap()->cpu_buffer;
+				info.resource = std::static_pointer_cast<Graphics::Resource>(handle.get_heap()->as_buffer());
 				info.offset = handle.get_offset();
 				info.size = uploadBufferSize;
 				assert(info.resource);

@@ -1021,7 +1021,7 @@ namespace FrameGraph
 				{
 
 					auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
-					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
+					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, HAL::MemoryType::COMMITED, info->heap_type);
 				}
 			}
 		}

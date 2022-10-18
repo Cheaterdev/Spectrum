@@ -8,7 +8,7 @@ import :Sampler;
 
 import :Utils;
 import :API.Device;
-import :API.Heap;
+import :Heap;
 
 import stl.core;
 

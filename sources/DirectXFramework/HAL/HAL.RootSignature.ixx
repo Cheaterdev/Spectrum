@@ -99,10 +99,6 @@ export namespace HAL
 
 	struct RootSignatureDesc
 	{
-		//friend class RootSignature;
-
-		bool local = false;
-
 		using ParameterType = std::variant<DescriptorTable, DescriptorConstBuffer, DescriptorSRV, DescriptorUAV, DescriptorConstants>;
 		struct Position
 		{
@@ -110,12 +106,6 @@ export namespace HAL
 			uint space;
 			GEN_DEF_COMP(Position);
 		};
-		//struct table_info
-		//{
-		//	int count;
-		//	bool fixed = true;
-		//	DescriptorRange type;
-		//};
 
 		struct helper
 		{
@@ -177,8 +167,6 @@ export namespace HAL
 		{
 			sampler_map[{i, space}] = desc;
 		}
-
-	//	std::map<uint, table_info> tables;
 
 		void set_type(RootSignatureType type)
 		{

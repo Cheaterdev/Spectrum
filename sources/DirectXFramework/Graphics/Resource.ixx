@@ -78,7 +78,8 @@ export{
 
 			Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 			Resource(const D3D::Resource& resouce, ResourceState state);
-
+			Resource(const ResourceDesc& desc, PlacementAddress handle);
+		
 			Resource(const ResourceDesc& desc, ResourceHandle handle,bool own=false);
 			Resource():state_manager(this), tiled_manager(this) {};
 

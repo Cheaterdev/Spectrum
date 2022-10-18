@@ -19,8 +19,7 @@ export
 
 		class FrameResources;
 		class CommandList;
-		class ResourceHeap;
-
+	
 		class ComputePipelineState;
 		class PipelineStateBase;
 		class StateObject;

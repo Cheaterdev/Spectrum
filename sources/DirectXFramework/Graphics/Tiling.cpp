@@ -339,6 +339,20 @@ namespace Graphics {
 		else
 			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
+
+	void TiledResourceManager::on_tile_update(const update_tiling_info& info)
+	{
+		for (auto& [heap, tiles] : info.tiles)
+		{
+			for (auto tile : tiles)
+			{
+				if (tile.subresource == gpu_tiles.size())
+					gpu_packed_tile = tile;
+				else
+					gpu_tiles[tile.subresource][tile.pos] = tile;
+			}
+		}
+	}
 }
 
 
