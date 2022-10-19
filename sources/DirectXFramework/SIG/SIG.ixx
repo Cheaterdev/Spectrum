@@ -3,7 +3,6 @@ import stl.core;
 
 import :Concepts;
 import :Descriptors;
-import :Resource;
 import serialization;
 import :Buffer;
 
@@ -75,6 +74,6 @@ export
 		}
 	};
 
-	using DefaultCB = Graphics::Resource*;// std::vector<std::byte>;
+	using DefaultCB = HAL::Resource*;// std::vector<std::byte>;
 	using DynamicData = std::vector<std::byte>;// std::vector<std::byte>;
 }

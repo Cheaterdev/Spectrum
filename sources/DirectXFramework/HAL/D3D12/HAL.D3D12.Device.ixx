@@ -50,8 +50,10 @@ export namespace HAL
 		uint get_descriptor_size(DescriptorHeapType type) const
 		{
 			return descriptor_sizes[type];
+
 		}
 
+		ResourceAllocationInfo get_alloc_info(const ResourceDesc& desc);
 		uint Subresources(const ResourceDesc& desc) const
 		{
 			if (desc.is_buffer())

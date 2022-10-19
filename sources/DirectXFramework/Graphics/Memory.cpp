@@ -1,6 +1,6 @@
 module Graphics:Memory;
 import :Device;
-import :Resource;
+
 
 import StateContext;
 import Allocators;

@@ -1,5 +1,4 @@
 export module Graphics:ResourceViews;
-import :Resource;
 import :Descriptors;
 import :Types;
 
@@ -43,7 +42,7 @@ export
 		{
 
 		public:
-			Resource* resource; //////////////
+			HAL::Resource* resource; //////////////
 			ResourceView()
 			{
 
@@ -54,7 +53,7 @@ export
 				return resource->get_desc();
 			}
 
-			ResourceView(Resource* _resource) :resource(_resource)
+			ResourceView(HAL::Resource* _resource) :resource(_resource)
 			{
 
 			}
@@ -101,13 +100,13 @@ export
 
 
 			template<class F>
-			FormattedBufferView(Resource* resource, F& frame, FormattedBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
+			FormattedBufferView(HAL::Resource* resource, F& frame, FormattedBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
 			{
 				init(frame);
 			}
 
 			template<class F>
-			FormattedBufferView(Resource* resource, F& frame) : ResourceView(resource)
+			FormattedBufferView(HAL::Resource* resource, F& frame) : ResourceView(resource)
 			{
 				auto& res_desc = resource->get_desc().as_buffer();
 
@@ -137,7 +136,7 @@ export
 			HLSL::RaytracingAccelerationStructure scene;
 
 			RTXSceneView() = default;
-			RTXSceneView(Resource* resource, FrameResources& frame);
+			RTXSceneView(HAL::Resource* resource, FrameResources& frame);
 
 		};
 		class TextureView :public ResourceView
@@ -239,7 +238,7 @@ export
 			TextureView() = default;
 
 			template<class F>
-			TextureView(Resource* resource, F& frame) :ResourceView(resource)
+			TextureView(HAL::Resource* resource, F& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
@@ -247,7 +246,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
 			template<class F>
-			TextureView(Resource* resource, F& frame, TextureViewDesc vdesc) :ResourceView(resource)
+			TextureView(HAL::Resource* resource, F& frame, TextureViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -359,7 +358,7 @@ export
 			Texture3DView() = default;
 
 			template<class F>
-			Texture3DView(Resource* resource, F& frame) :ResourceView(resource)
+			Texture3DView(HAL::Resource* resource, F& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
@@ -367,7 +366,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels });
 			}
 			template<class F>
-			Texture3DView(Resource* resource, F& frame, Texture3DViewDesc vdesc) :ResourceView(resource)
+			Texture3DView(HAL::Resource* resource, F& frame, Texture3DViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -470,7 +469,7 @@ export
 			CubeView() = default;
 
 			template<class F>
-			CubeView(Resource* resource, F& frame) :ResourceView(resource)
+			CubeView(HAL::Resource* resource, F& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize / 6;
@@ -478,7 +477,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
 			template<class F>
-			CubeView(Resource* resource, F& frame, CubeViewDesc vdesc) :ResourceView(resource)
+			CubeView(HAL::Resource* resource, F& frame, CubeViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -536,7 +535,7 @@ export
 
 			BufferView() = default;
 			template<class F>
-			BufferView(Resource* resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+			BufferView(HAL::Resource* resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
 			{
 				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(2);
 
@@ -573,7 +572,7 @@ export
 			CounterView() = default;
 
 			template<class F>
-			CounterView(Resource* resource, F& frame, UINT offset = 0) :ResourceView(resource)
+			CounterView(HAL::Resource* resource, F& frame, UINT offset = 0) :ResourceView(resource)
 			{
 				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(3);
 
@@ -661,13 +660,13 @@ export
 			}
 
 			template<class F>
-			StructuredBufferView(Resource* resource, F& frame, StructuredBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
+			StructuredBufferView(HAL::Resource* resource, F& frame, StructuredBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
 			{
 				init(frame);
 			}
 
 			template<class F>
-			StructuredBufferView(Resource* resource, F& frame) : ResourceView(resource)
+			StructuredBufferView(HAL::Resource* resource, F& frame) : ResourceView(resource)
 			{
 				auto& res_desc = resource->get_desc().as_buffer();
 

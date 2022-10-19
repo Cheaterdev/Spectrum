@@ -4,7 +4,6 @@ import serialization;
 import :CommandList;
 import ResourceManager;
 
-import :Resource;
 import :Device;
 import :TextureData;
 import :Descriptors;
@@ -43,7 +42,7 @@ export
 		};
 
 
-		class Texture : public resource_manager<Texture, texure_header>, public Resource
+		class Texture : public resource_manager<Texture, texure_header>, public HAL::Resource
 		{
 			friend class resource_manager<Texture, texure_header>;
 		protected:

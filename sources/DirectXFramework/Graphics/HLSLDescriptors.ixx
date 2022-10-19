@@ -5,7 +5,7 @@ export module Graphics:HLSLDescriptors;
 import :Memory;
 import :Fence;
 import :Device;
-import :Resource;
+
 import :Descriptors;
 
 import stl.threading;
@@ -34,7 +34,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource);
+			void create(HAL::Resource* resource);
 		};
 
 		template<class T>
@@ -49,7 +49,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_elem = 0, UINT count = 0);
+			void create(HAL::Resource* resource, UINT first_elem = 0, UINT count = 0);
 		};
 
 		template<class T>
@@ -63,7 +63,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_elem = 0, UINT count = 0);
+			void create(HAL::Resource* resource, UINT first_elem = 0, UINT count = 0);
 		};
 
 		template<class T>
@@ -77,7 +77,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* counter_resource, UINT counter_offset, Graphics::Resource* resource, UINT first_elem = 0, UINT count = 0);
+			void create(HAL::Resource* counter_resource, UINT counter_offset, HAL::Resource* resource, UINT first_elem = 0, UINT count = 0);
 		};
 
 		struct ByteAddressBuffer : public Handle
@@ -90,7 +90,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT offset = 0, UINT size = 0);
+			void create(HAL::Resource* resource, UINT offset = 0, UINT size = 0);
 		};
 
 
@@ -104,7 +104,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT offset = 0, UINT size = 0);
+			void create(HAL::Resource* resource, UINT offset = 0, UINT size = 0);
 		};
 
 		template<class T>
@@ -118,7 +118,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, Format format, UINT offset = 0, UINT size = 0);
+			void create(HAL::Resource* resource, Format format, UINT offset = 0, UINT size = 0);
 		};
 
 		template<class T>
@@ -131,7 +131,7 @@ export
 			{
 
 			}
-			void create(Graphics::Resource* resource, Format format, UINT offset = 0, UINT size = 0);
+			void create(HAL::Resource* resource, Format format, UINT offset = 0, UINT size = 0);
 		};
 
 		template<class T = float4>
@@ -152,7 +152,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
+			void create(HAL::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
 		};
 
 		template<class T = float4>
@@ -172,7 +172,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0, UINT array_count = 1);
+			void create(HAL::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0, UINT array_count = 1);
 		};
 
 		template<class T = float4>
@@ -192,7 +192,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0);
+			void create(HAL::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0);
 		};
 		template<class T = float4>
 		struct TextureCube : public Handle
@@ -211,7 +211,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
+			void create(HAL::Resource* resource, UINT first_mip = 1, UINT mip_levels = 0, UINT array_offset = 0);
 		};
 
 		template<class T = float4>
@@ -229,7 +229,7 @@ export
 			{
 
 			}
-			void create(Graphics::Resource* resource, UINT first_mip = 1, UINT array_offset = 0);
+			void create(HAL::Resource* resource, UINT first_mip = 1, UINT array_offset = 0);
 		};
 
 		template<class T = float4>
@@ -247,7 +247,7 @@ export
 			{
 
 			}
-			void create(Graphics::Resource* resource, UINT first_mip = 0, UINT mip_levels = 1, UINT array_offset = 0, UINT array_count = 1);
+			void create(HAL::Resource* resource, UINT first_mip = 0, UINT mip_levels = 1, UINT array_offset = 0, UINT array_count = 1);
 		};
 
 
@@ -267,7 +267,7 @@ export
 
 			}
 
-			void create(Graphics::Resource* resource, UINT first_mip = 1);
+			void create(HAL::Resource* resource, UINT first_mip = 1);
 
 		};
 
@@ -288,8 +288,8 @@ export
 
 			}
 
-			void createFrom2D(Graphics::Resource* resource, UINT mip_offset = 0);
-			void createFrom2DArray(Graphics::Resource* resource, UINT mip_offset = 0, UINT array_offset = 0);
+			void createFrom2D(HAL::Resource* resource, UINT mip_offset = 0);
+			void createFrom2DArray(HAL::Resource* resource, UINT mip_offset = 0, UINT array_offset = 0);
 
 		};
 
@@ -310,8 +310,8 @@ export
 
 			}
 
-			void createFrom2D(Graphics::Resource* resource, UINT mip_offset = 0);
-			void createFrom2DArray(Graphics::Resource* resource, UINT mip_offset = 0, UINT array_offset = 0);
+			void createFrom2D(HAL::Resource* resource, UINT mip_offset = 0);
+			void createFrom2DArray(HAL::Resource* resource, UINT mip_offset = 0, UINT array_offset = 0);
 
 		};
 
@@ -320,13 +320,13 @@ export
 
 namespace HLSL
 {
-	void RaytracingAccelerationStructure::create(Graphics::Resource* resource)
+	void RaytracingAccelerationStructure::create(HAL::Resource* resource)
 	{
 		HAL::Views::ShaderResource desc = { resource, HAL::Format::UNKNOWN, HAL::Views::ShaderResource::Raytracing {0} };
 		Handle::operator=(desc);
 	}
 
-	void ByteAddressBuffer::create(Graphics::Resource* resource, UINT offset, UINT size)
+	void ByteAddressBuffer::create(HAL::Resource* resource, UINT offset, UINT size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (size == 0) size = static_cast<UINT>(buffer_desc.SizeInBytes / 4);
@@ -335,7 +335,7 @@ namespace HLSL
 		Handle::operator=(desc);
 	}
 
-	void RWByteAddressBuffer::create(Graphics::Resource* resource, UINT offset, UINT size)
+	void RWByteAddressBuffer::create(HAL::Resource* resource, UINT offset, UINT size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (size == 0) size = static_cast<UINT>(buffer_desc.SizeInBytes / 4);
@@ -347,7 +347,7 @@ namespace HLSL
 
 
 	template<class T>
-	void StructuredBuffer<T>::create(Graphics::Resource* resource, UINT first_elem, UINT count)
+	void StructuredBuffer<T>::create(HAL::Resource* resource, UINT first_elem, UINT count)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
@@ -358,7 +358,7 @@ namespace HLSL
 
 
 	template<class T>
-	void RWStructuredBuffer<T>::create(Graphics::Resource* resource, UINT first_elem, UINT count)
+	void RWStructuredBuffer<T>::create(HAL::Resource* resource, UINT first_elem, UINT count)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
@@ -369,13 +369,13 @@ namespace HLSL
 
 
 	template<class T>
-	void AppendStructuredBuffer<T>::create(Graphics::Resource* counter_resource, UINT counter_offset, Graphics::Resource* resource, UINT first_elem, UINT count)
+	void AppendStructuredBuffer<T>::create(HAL::Resource* counter_resource, UINT counter_offset, HAL::Resource* resource, UINT first_elem, UINT count)
 	{
 		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource} };
 		Handle::operator=(desc);
 	}
 	template<class T>
-	void Buffer<T>::create(Graphics::Resource* resource, Format format, UINT first_elem, UINT count)
+	void Buffer<T>::create(HAL::Resource* resource, Format format, UINT first_elem, UINT count)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
@@ -386,7 +386,7 @@ namespace HLSL
 
 
 	template<class T>
-	void RWBuffer<T>::create(Graphics::Resource* resource, Format format, UINT first_elem, UINT count)
+	void RWBuffer<T>::create(HAL::Resource* resource, Format format, UINT first_elem, UINT count)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<UINT>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
@@ -400,7 +400,7 @@ namespace HLSL
 
 
 	template<class T>
-	void Texture2D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset)
+	void Texture2D<T>::create(HAL::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset)
 	{
 		auto texture_desc = resource->get_desc().as_texture();
 
@@ -440,7 +440,7 @@ namespace HLSL
 
 
 	template<class T>
-	void RWTexture2D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT array_offset)
+	void RWTexture2D<T>::create(HAL::Resource* resource, UINT first_mip, UINT array_offset)
 	{
 		auto texture_desc = resource->get_desc().as_texture();
 		bool is_array = texture_desc.ArraySize > 1;
@@ -478,7 +478,7 @@ namespace HLSL
 	}
 
 	template<class T>
-	void Texture2DArray<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset, UINT array_count)
+	void Texture2DArray<T>::create(HAL::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset, UINT array_count)
 	{
 		auto desc = HAL::Views::ShaderResource{
 			.Resource = resource,
@@ -498,7 +498,7 @@ namespace HLSL
 
 
 	template<class T>
-	void RWTexture2DArray<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset, UINT array_count)
+	void RWTexture2DArray<T>::create(HAL::Resource* resource, UINT first_mip, UINT mip_levels, UINT array_offset, UINT array_count)
 	{
 		auto desc = HAL::Views::UnorderedAccess{
 				.Resource = resource,
@@ -515,7 +515,7 @@ namespace HLSL
 	}
 
 	template<class T>
-	void Texture3D<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels)
+	void Texture3D<T>::create(HAL::Resource* resource, UINT first_mip, UINT mip_levels)
 	{
 		auto desc = HAL::Views::ShaderResource{
 				.Resource = resource,
@@ -531,7 +531,7 @@ namespace HLSL
 	}
 
 	template<class T>
-	void RWTexture3D<T>::create(Graphics::Resource* resource, UINT first_mip)
+	void RWTexture3D<T>::create(HAL::Resource* resource, UINT first_mip)
 	{
 		auto desc = HAL::Views::UnorderedAccess{
 				.Resource = resource,
@@ -547,7 +547,7 @@ namespace HLSL
 	}
 
 	template<class T>
-	void TextureCube<T>::create(Graphics::Resource* resource, UINT first_mip, UINT mip_levels, UINT cube_offset)
+	void TextureCube<T>::create(HAL::Resource* resource, UINT first_mip, UINT mip_levels, UINT cube_offset)
 	{
 		if (cube_offset > 0)
 		{
@@ -585,7 +585,7 @@ namespace HLSL
 
 
 	template<class T>
-	void RenderTarget<T>::createFrom2D(Graphics::Resource* resource, UINT first_mip)
+	void RenderTarget<T>::createFrom2D(HAL::Resource* resource, UINT first_mip)
 	{
 		auto desc = HAL::Views::RenderTarget{
 			.Resource = resource,
@@ -605,7 +605,7 @@ namespace HLSL
 
 
 	template<class T>
-	void RenderTarget<T>::createFrom2DArray(Graphics::Resource* resource, UINT first_mip, UINT array_id)
+	void RenderTarget<T>::createFrom2DArray(HAL::Resource* resource, UINT first_mip, UINT array_id)
 	{
 		auto desc = HAL::Views::RenderTarget{
 	.Resource = resource,
@@ -628,7 +628,7 @@ namespace HLSL
 
 
 	template<class T>
-	void DepthStencil<T>::createFrom2D(Graphics::Resource* resource, UINT first_mip)
+	void DepthStencil<T>::createFrom2D(HAL::Resource* resource, UINT first_mip)
 	{
 		auto desc = HAL::Views::DepthStencil{
 		.Resource = resource,
@@ -648,7 +648,7 @@ namespace HLSL
 
 
 	template<class T>
-	void DepthStencil<T>::createFrom2DArray(Graphics::Resource* resource, UINT first_mip, UINT array_id)
+	void DepthStencil<T>::createFrom2DArray(HAL::Resource* resource, UINT first_mip, UINT array_id)
 	{
 		auto desc = HAL::Views::DepthStencil{
 		.Resource = resource,

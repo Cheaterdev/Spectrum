@@ -40,9 +40,9 @@ export
 			RaytracingAccelerationStructure(std::vector<InstanceDesc> instances);
 
 
-			void update(CommandList::ptr list, UINT size, ResourceAddress address, bool need_rebuild);
+			void update(CommandList::ptr list, UINT size, HAL::ResourceAddress address, bool need_rebuild);
 
-			ResourceAddress get_gpu_address() const;
+			HAL::ResourceAddress get_gpu_address() const;
 		};
 
 

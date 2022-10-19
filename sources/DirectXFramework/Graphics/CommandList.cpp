@@ -323,11 +323,11 @@ namespace Graphics
 		base.setup_debug(this);
 
 		commit_tables();
-		get_base().transition(static_cast<Graphics::Resource*>(index.Resource), ResourceState::INDEX_BUFFER);
+		get_base().transition(static_cast<HAL::Resource*>(index.Resource), ResourceState::INDEX_BUFFER);
 		D3D12_INDEX_BUFFER_VIEW native;
 		native.SizeInBytes = index.Resource ? index.SizeInBytes : 0;
 		native.Format = ::to_native(index.Format);
-		native.BufferLocation = index.Resource ? to_native(static_cast<Graphics::Resource*>(index.Resource)->get_resource_address().offset(index.OffsetInBytes)):0;// index.Resource ? static_cast<Graphics::Resource*>(index.Resource)->get_resource_address() + index.OffsetInBytes : 0;
+		native.BufferLocation = index.Resource ? to_native(static_cast<HAL::Resource*>(index.Resource)->get_resource_address().offset(index.OffsetInBytes)):0;// index.Resource ? static_cast<HAL::Resource*>(index.Resource)->get_resource_address() + index.OffsetInBytes : 0;
 		list->IASetIndexBuffer(&native);
 
 
@@ -420,7 +420,7 @@ namespace Graphics
 		return to_native(resource->get_resource_address().offset(offset));
 	}
 
-	ResourceAddress UploadInfo::get_resource_address()
+	HAL::ResourceAddress UploadInfo::get_resource_address()
 	{
 		return resource->get_resource_address().offset(offset);
 	}
@@ -442,7 +442,7 @@ namespace Graphics
 
 		handles.emplace_back(handle);
 		ReadBackInfo info;
-		info.resource = std::static_pointer_cast<Graphics::Resource>(handle.get_heap()->as_buffer());
+		info.resource = std::static_pointer_cast<HAL::Resource>(handle.get_heap()->as_buffer());
 		info.offset = handle.get_offset();
 		info.size = uploadBufferSize;
 		return info;
@@ -1209,13 +1209,13 @@ namespace Graphics
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
-		get_base().transition(static_cast<Graphics::Resource*>(index.Resource), ResourceState::INDEX_BUFFER);
+		get_base().transition(static_cast<HAL::Resource*>(index.Resource), ResourceState::INDEX_BUFFER);
 
 
 		D3D12_INDEX_BUFFER_VIEW native;
 		native.SizeInBytes = index.Resource?index.SizeInBytes:0;
 		native.Format = ::to_native(index.Format);
-		native.BufferLocation = index.Resource?to_native(static_cast<Graphics::Resource*>(index.Resource)->get_resource_address().offset(index.OffsetInBytes)):0;
+		native.BufferLocation = index.Resource?to_native(static_cast<HAL::Resource*>(index.Resource)->get_resource_address().offset(index.OffsetInBytes)):0;
 		list->IASetIndexBuffer(&native);
 
 		commit_tables();

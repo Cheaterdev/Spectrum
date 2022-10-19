@@ -18,9 +18,9 @@ namespace HAL
 		}
 		D3D12_SHADER_RESOURCE_VIEW_DESC desc;
 
-		desc.Format = to_native(view.Format);
+		desc.Format = ::to_native(view.Format);
 		desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;// view.Shader4ComponentMapping;
-		auto native_resource = to_resource(view.Resource) ? to_resource(view.Resource)->native_resource.Get() : nullptr;
+		auto native_resource = (view.Resource) ? (view.Resource)->native_resource.Get() : nullptr;
 
 
 		std::visit(overloaded{
@@ -39,7 +39,7 @@ namespace HAL
 				desc.Texture1D.MipLevels = Texture1D.MipLevels;
 				desc.Texture1D.ResourceMinLODClamp = Texture1D.ResourceMinLODClamp;
 
-				if (desc.Texture1D.MipLevels == 0) desc.Texture1D.MipLevels = to_resource(view.Resource)->get_desc().as_texture().MipLevels - desc.Texture1D.MostDetailedMip;
+				if (desc.Texture1D.MipLevels == 0) desc.Texture1D.MipLevels = (view.Resource)->get_desc().as_texture().MipLevels - desc.Texture1D.MostDetailedMip;
 			},
 			[&](const Views::ShaderResource::Texture1DArray& Texture1DArray) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1DARRAY;
@@ -49,11 +49,11 @@ namespace HAL
 				desc.Texture1DArray.FirstArraySlice = Texture1DArray.FirstArraySlice;
 				desc.Texture1DArray.ArraySize = Texture1DArray.ArraySize;
 
-				if (desc.Texture1DArray.MipLevels == 0) desc.Texture1DArray.MipLevels = to_resource(view.Resource)->get_desc().as_texture().MipLevels - Texture1DArray.MostDetailedMip;
+				if (desc.Texture1DArray.MipLevels == 0) desc.Texture1DArray.MipLevels = (view.Resource)->get_desc().as_texture().MipLevels - Texture1DArray.MostDetailedMip;
 			},
 			[&](const Views::ShaderResource::Texture2D& Texture2D) {
 
-					auto tdesc = to_resource(view.Resource)->get_desc().as_texture();
+					auto tdesc = (view.Resource)->get_desc().as_texture();
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 				desc.Texture2D.MostDetailedMip = Texture2D.MostDetailedMip;
 				desc.Texture2D.MipLevels = Texture2D.MipLevels;
@@ -61,11 +61,11 @@ namespace HAL
 				desc.Texture2D.PlaneSlice = Texture2D.PlaneSlice;
 
 
-				if (desc.Texture2D.MipLevels == 0) desc.Texture2D.MipLevels = to_resource(view.Resource)->get_desc().as_texture().MipLevels - desc.Texture2D.MostDetailedMip;
+				if (desc.Texture2D.MipLevels == 0) desc.Texture2D.MipLevels = (view.Resource)->get_desc().as_texture().MipLevels - desc.Texture2D.MostDetailedMip;
 
 				assert(desc.Texture2D.PlaneSlice == 0);
 				assert(desc.Texture2D.MipLevels > 0);
-				assert(desc.Texture2D.MostDetailedMip + desc.Texture2D.MipLevels <= to_resource(view.Resource)->get_desc().as_texture().MipLevels);
+				assert(desc.Texture2D.MostDetailedMip + desc.Texture2D.MipLevels <= (view.Resource)->get_desc().as_texture().MipLevels);
 			},
 			[&](const Views::ShaderResource::Texture2DArray& Texture2DArray) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
@@ -76,12 +76,12 @@ namespace HAL
 				desc.Texture2DArray.FirstArraySlice = Texture2DArray.FirstArraySlice;
 				desc.Texture2DArray.ArraySize = Texture2DArray.ArraySize;
 
-				if (desc.Texture2DArray.MipLevels == 0) desc.Texture2DArray.MipLevels = to_resource(view.Resource)->get_desc().as_texture().MipLevels - desc.Texture2DArray.MostDetailedMip;
+				if (desc.Texture2DArray.MipLevels == 0) desc.Texture2DArray.MipLevels = (view.Resource)->get_desc().as_texture().MipLevels - desc.Texture2DArray.MostDetailedMip;
 
 
 				assert(desc.Texture2DArray.PlaneSlice == 0);
 				assert(desc.Texture2DArray.MipLevels > 0);
-				assert(desc.Texture2DArray.MostDetailedMip + desc.Texture2DArray.MipLevels <= to_resource(view.Resource)->get_desc().as_texture().MipLevels);
+				assert(desc.Texture2DArray.MostDetailedMip + desc.Texture2DArray.MipLevels <= (view.Resource)->get_desc().as_texture().MipLevels);
 			},
 			[&](const Views::ShaderResource::Texture3D& Texture3D) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
@@ -89,7 +89,7 @@ namespace HAL
 				desc.Texture3D.MipLevels = Texture3D.MipLevels;
 				desc.Texture3D.ResourceMinLODClamp = Texture3D.ResourceMinLODClamp;
 
-				if (desc.Texture3D.MipLevels == 0) desc.Texture3D.MipLevels = to_resource(view.Resource)->get_desc().as_texture().MipLevels - desc.Texture3D.MostDetailedMip;
+				if (desc.Texture3D.MipLevels == 0) desc.Texture3D.MipLevels = (view.Resource)->get_desc().as_texture().MipLevels - desc.Texture3D.MostDetailedMip;
 			},
 			[&](const Views::ShaderResource::Texture2DMS& Texture2DMS) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
@@ -105,10 +105,10 @@ namespace HAL
 				desc.TextureCube.MipLevels = Cube.MipLevels;
 				desc.TextureCube.ResourceMinLODClamp = Cube.ResourceMinLODClamp;
 
-				if (desc.TextureCube.MipLevels == 0) desc.TextureCube.MipLevels = to_resource(view.Resource)->get_desc().as_texture().MipLevels - desc.TextureCube.MostDetailedMip;
+				if (desc.TextureCube.MipLevels == 0) desc.TextureCube.MipLevels = (view.Resource)->get_desc().as_texture().MipLevels - desc.TextureCube.MostDetailedMip;
 
 				assert(desc.TextureCube.MipLevels > 0);
-				assert(desc.TextureCube.MostDetailedMip + desc.TextureCube.MipLevels <= to_resource(view.Resource)->get_desc().as_texture().MipLevels);
+				assert(desc.TextureCube.MostDetailedMip + desc.TextureCube.MipLevels <= (view.Resource)->get_desc().as_texture().MipLevels);
 			},
 			[&](const Views::ShaderResource::CubeArray& CubeArray) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBEARRAY;
@@ -118,12 +118,12 @@ namespace HAL
 				desc.TextureCubeArray.NumCubes = CubeArray.NumCubes;
 				desc.TextureCubeArray.First2DArrayFace = CubeArray.First2DArrayFace;
 
-				if (desc.TextureCubeArray.MipLevels == 0) desc.TextureCubeArray.MipLevels = to_resource(view.Resource)->get_desc().as_texture().MipLevels - desc.TextureCubeArray.MostDetailedMip;
+				if (desc.TextureCubeArray.MipLevels == 0) desc.TextureCubeArray.MipLevels = (view.Resource)->get_desc().as_texture().MipLevels - desc.TextureCubeArray.MostDetailedMip;
 
 			},
 			[&](const Views::ShaderResource::Raytracing& Raytracing) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-				desc.RaytracingAccelerationStructure.Location = to_native(to_resource(view.Resource)->get_resource_address().offset(Raytracing.OffsetInBytes));
+				desc.RaytracingAccelerationStructure.Location = to_native((view.Resource)->get_resource_address().offset(Raytracing.OffsetInBytes));
 				native_resource = nullptr;
 			},
 			[&](auto other) {
@@ -158,7 +158,7 @@ namespace HAL
 		}
 
 		D3D12_RENDER_TARGET_VIEW_DESC desc;
-		desc.Format = to_native(view.Format);
+		desc.Format = ::to_native(view.Format);
 
 		std::visit(overloaded{
 			[&](const Views::RenderTarget::Buffer& Buffer) {
@@ -213,7 +213,7 @@ namespace HAL
 			}, view.View);
 
 
-		auto native_resource = to_resource(view.Resource) ? to_resource(view.Resource)->native_resource.Get() : nullptr;
+		auto native_resource = (view.Resource) ? (view.Resource)->native_resource.Get() : nullptr;
 		auto size = heap.device.get_descriptor_size(heap.desc.HeapType);
 
 		{
@@ -240,7 +240,7 @@ namespace HAL
 		}
 
 		D3D12_DEPTH_STENCIL_VIEW_DESC desc;
-		desc.Format = to_native(view.Format);
+		desc.Format = ::to_native(view.Format);
 		desc.Flags = D3D12_DSV_FLAGS::D3D12_DSV_FLAG_NONE;
 
 		if (check(view.Flags & Views::DepthStencil::Flags::ReadOnlyDepth))
@@ -288,7 +288,7 @@ namespace HAL
 			}, view.View);
 
 
-		auto native_resource = to_resource(view.Resource) ? to_resource(view.Resource)->native_resource.Get() : nullptr;
+		auto native_resource = (view.Resource) ? (view.Resource)->native_resource.Get() : nullptr;
 		auto size = heap.device.get_descriptor_size(heap.desc.HeapType);
 
 		{
@@ -317,7 +317,7 @@ namespace HAL
 		Resource* counter_resource = nullptr;
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
 
-		desc.Format = to_native(view.Format);
+		desc.Format = ::to_native(view.Format);
 
 		std::visit(overloaded{
 			[&](const Views::UnorderedAccess::Buffer& Buffer) {
@@ -331,7 +331,7 @@ namespace HAL
 				counter_resource = Buffer.CounterResource;
 
 
-				assert((desc.Buffer.FirstElement + desc.Buffer.NumElements) * desc.Buffer.StructureByteStride <= to_resource(view.Resource)->get_desc().as_buffer().SizeInBytes);
+				assert((desc.Buffer.FirstElement + desc.Buffer.NumElements) * desc.Buffer.StructureByteStride <= (view.Resource)->get_desc().as_buffer().SizeInBytes);
 				assert(!counter_resource || Buffer.StructureByteStride);
 				assert(!counter_resource || Buffer.StructureByteStride);
 			},
@@ -372,7 +372,7 @@ namespace HAL
 			}
 			}, view.View);
 
-		auto native_resource = to_resource(view.Resource) ? to_resource(view.Resource)->native_resource.Get() : nullptr;
+		auto native_resource = (view.Resource) ? (view.Resource)->native_resource.Get() : nullptr;
 		auto native_counter_resource = counter_resource ? counter_resource->native_resource.Get() : nullptr;
 
 		auto size = heap.device.get_descriptor_size(heap.desc.HeapType);
@@ -404,7 +404,7 @@ namespace HAL
 
 		D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
 
-		desc.BufferLocation = to_resource(view.Resource)->get_address() + view.OffsetInBytes;
+		desc.BufferLocation = (view.Resource)->get_address() + view.OffsetInBytes;
 		desc.SizeInBytes = view.SizeInBytes;
 
 		auto size = heap.device.get_descriptor_size(heap.desc.HeapType);
@@ -429,7 +429,7 @@ namespace HAL
 	void Descriptor::operator=(const Descriptor& r)
 	{
 		assert(heap.desc.HeapType == r.heap.desc.HeapType);
-		D3D12_DESCRIPTOR_HEAP_TYPE type = (D3D12_DESCRIPTOR_HEAP_TYPE)to_native(heap.desc.HeapType);
+		D3D12_DESCRIPTOR_HEAP_TYPE type = (D3D12_DESCRIPTOR_HEAP_TYPE)::to_native(heap.desc.HeapType);
 
 		auto my = heap.cpu_start;
 		auto other = r.heap.cpu_start;

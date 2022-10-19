@@ -23,6 +23,10 @@ export namespace HAL
 		size_t offset;
 	};
 
+	namespace API
+	{
+		
+	
 	class Resource
 	{
 		GPUAddressPtr address;
@@ -42,6 +46,7 @@ export namespace HAL
 
 
 	};
+	}
 }
 
 
@@ -51,7 +56,7 @@ export
 	namespace cereal
 	{
 		template<class Archive>
-		void serialize(Archive& ar, HAL::Resource*& g)
+		void serialize(Archive& ar, HAL::API::Resource*& g)
 		{
 		/*	if (g)
 			{

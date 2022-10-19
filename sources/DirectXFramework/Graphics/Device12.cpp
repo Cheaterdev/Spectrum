@@ -71,7 +71,7 @@ namespace Graphics
 		inputs.Flags = desc.Flags;
 		inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
 		inputs.NumDescs = desc.NumDescs;
-		inputs.InstanceDescs = Graphics::to_native(desc.instances);
+		inputs.InstanceDescs = ::to_native(desc.instances);
 
 
 		return inputs;
@@ -165,64 +165,6 @@ namespace Graphics
 		rtx = get_properties().rtx;
 	}
 
-
-	Graphics::ResourceAllocationInfo Device::get_alloc_info(const HAL::ResourceDesc& desc)
-	{
-		auto native_desc = ::to_native(desc);
-		/*if (native_desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
-		{
-
-			if ((native_desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
-			{
-				native_desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
-			}
-		}*/
-		if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
-		{
-
-			assert(native_desc.SampleDesc.Count > 0);
-		}
-		D3D12_RESOURCE_ALLOCATION_INFO info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
-		native_desc.Alignment = info.Alignment;
-
-
-		// TODO small alignment
-		/*if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
-		{
-			native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
-
-
-			if (info.Alignment != D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
-			{
-				native_desc.Alignment = 0;
-				info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
-			}
-
-		}*/
-
-		ResourceAllocationInfo result;
-
-		result.size = info.SizeInBytes;
-		result.alignment = info.Alignment;
-		result.flags = D3D12_HEAP_FLAG_NONE;
-
-
-		if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
-		{
-			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
-		}
-		else if (native_desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
-		{
-			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
-		}
-		else
-			result.flags |= D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-		if constexpr (BuildOptions::Debug)	TEST(*this, native_device->GetDeviceRemovedReason());
-
-		assert(result.size != UINT64_MAX);
-		return result;
-	}
 
 
 }

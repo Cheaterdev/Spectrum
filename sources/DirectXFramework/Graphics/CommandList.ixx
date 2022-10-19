@@ -11,7 +11,6 @@ import :RootSignature;
 import :Device;
 import :Fence;
 import :IndirectCommand;
-import :Resource;
 import :ResourceViews;
 import :Descriptors;
 //import :GPUTimer;
@@ -47,11 +46,11 @@ export{
 
 		struct UploadInfo
 		{
-			std::shared_ptr<Resource> resource;
+			std::shared_ptr<HAL::Resource> resource;
 			UINT64 offset;
 			UINT64 size;
 			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address();
-			ResourceAddress get_resource_address();
+			HAL::ResourceAddress get_resource_address();
 			Handle create_cbv(CommandList& list);
 
 			std::byte* get_cpu_data() const;
@@ -121,7 +120,7 @@ export{
 
 				handles.emplace_back(handle);
 				UploadInfo info;
-				info.resource = std::static_pointer_cast<Graphics::Resource>(handle.get_heap()->as_buffer());
+				info.resource = std::static_pointer_cast<HAL::Resource>(handle.get_heap()->as_buffer());
 				info.offset = handle.get_offset();
 				info.size = uploadBufferSize;
 				assert(info.resource);
@@ -213,7 +212,7 @@ export{
 
 			struct ReadBackInfo
 			{
-				std::shared_ptr<Resource> resource;
+				std::shared_ptr<HAL::Resource> resource;
 				UINT64 offset;
 				UINT64 size;
 
@@ -367,7 +366,7 @@ export{
 		{
 
 
-			std::list<Resource*> used_resources;
+			std::list<HAL::Resource*> used_resources;
 
 			std::shared_ptr<TransitionCommandList> transition_list;
 
@@ -384,15 +383,15 @@ export{
 
 			void make_split_barriers();
 
-			void transition(const Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-			void transition(const Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 
 		public:
 			void free_resources();
 
 			UINT transition_count = 0;
 			//	TransitionPoint* start_transition;
-			HAL::Transition* create_transition(const Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST)
+			HAL::Transition* create_transition(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST)
 			{
 				HAL::TransitionPoint* point = nullptr;
 
@@ -403,7 +402,7 @@ export{
 				//if (type == TransitionType::LAST) 			assert(!point->start);
 				HAL::Transition& transition = point->transitions.emplace_back();
 
-				transition.resource = const_cast<Resource*>(resource);
+				transition.resource = const_cast<HAL::Resource*>(resource);
 				transition.subres = subres;
 				transition.wanted_state = state;
 
@@ -411,16 +410,16 @@ export{
 				return &transition;
 			}
 
-			void create_uav_transition(const Resource* resource)
+			void create_uav_transition(const HAL::Resource* resource)
 			{
 				auto& point = transition_points.back();
-				point.uav_transitions.emplace_back(const_cast<Resource*>(resource));
+				point.uav_transitions.emplace_back(const_cast<HAL::Resource*>(resource));
 			}
 
-			void create_aliasing_transition(const Resource* resource)
+			void create_aliasing_transition(const HAL::Resource* resource)
 			{
 				auto& point = transition_points.back();
-				point.aliasing.emplace_back(const_cast<Resource*>(resource));
+				point.aliasing.emplace_back(const_cast<HAL::Resource*>(resource));
 			}
 
 			HAL::TransitionPoint* get_last_transition_point()
@@ -428,17 +427,17 @@ export{
 				return &transition_points.back();
 			}
 
-			void use_resource(const Resource* resource);
+			void use_resource(const HAL::Resource* resource);
 		public:
 			void prepare_transitions(Transitions* to, bool all);
 
 
-			void merge_transition(Transitions* to, Resource* res);
-			void transition_uav(Resource* resource);
-			void transition(Resource* from, Resource* to);
+			void merge_transition(Transitions* to, HAL::Resource* res);
+			void transition_uav(HAL::Resource* resource);
+			void transition(HAL::Resource* from, HAL::Resource* to);
 			std::shared_ptr<TransitionCommandList> fix_pretransitions();
 
-			void transition_present(const Resource* resource_ptr)
+			void transition_present(const HAL::Resource* resource_ptr)
 			{
 
 				create_transition_point();
@@ -484,7 +483,7 @@ export{
 				}
 				else assert(false);
 
-				info->for_each_subres([&](const Resource* resource, UINT subres)
+				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
 					{
 						transition(resource, target_state, subres);
 					});
@@ -495,9 +494,9 @@ export{
 				if (!info || !info->resource_ptr) return;
 
 
-				info->for_each_subres([&](const Resource* resource, UINT subres)
+				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
 					{
-						const_cast<Resource*>(resource)->get_state_manager().stop_using(this, subres);
+						const_cast<HAL::Resource*>(resource)->get_state_manager().stop_using(this, subres);
 					});
 			}
 
@@ -506,7 +505,7 @@ export{
 			{
 				assert(std::holds_alternative<HAL::Views::RenderTarget>(info->view));
 
-				info->for_each_subres([&](const Resource* resource, UINT subres)
+				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
 					{
 						transition(resource, ResourceState::RENDER_TARGET, subres);
 					});
@@ -516,7 +515,7 @@ export{
 			{
 				assert(std::holds_alternative<HAL::Views::UnorderedAccess>(info->view));
 
-				info->for_each_subres([&](const Resource* resource, UINT subres)
+				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
 					{
 						transition(resource, ResourceState::UNORDERED_ACCESS, subres);
 					});
@@ -527,7 +526,7 @@ export{
 			{
 				assert(std::holds_alternative<HAL::Views::DepthStencil>(info->view));
 
-				info->for_each_subres([&](const Resource* resource, UINT subres)
+				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
 					{
 						transition(resource, ResourceState::DEPTH_WRITE, subres);
 					});
@@ -711,7 +710,7 @@ export{
 			PipelineStateBase* current_pipeline;
 			PipelineStateBase* first_pipeline;
 
-			std::list<update_tiling_info> tile_updates;
+			std::list<HAL::update_tiling_info> tile_updates;
 
 
 
@@ -719,11 +718,11 @@ export{
 
 		public:
 
-			void update_tilings(update_tiling_info&& info)
+			void update_tilings(HAL::update_tiling_info&& info)
 			{
 				tile_updates.emplace_back(std::move(info));
 
-				track_object(*to_resource(info.resource));
+				track_object(*(info.resource));
 			}
 
 			FrameResources::ptr frame_resources;
@@ -813,24 +812,24 @@ export{
 			CopyContext(const CopyContext&) = delete;
 			CopyContext(CopyContext&&) = delete;
 		public:
-			void copy_resource(Resource* dest, Resource* source);
-			void copy_resource(const Resource::ptr& dest, const Resource::ptr& source);
-			void copy_texture(const Resource::ptr& dest, int, const Resource::ptr& source, int);
-			void copy_texture(const Resource::ptr& dest, ivec3, const Resource::ptr& source, ivec3, ivec3);
-			void copy_buffer(Resource* dest, int s_dest, Resource* source, int s_source, int size);
+			void copy_resource(HAL::Resource* dest, HAL::Resource* source);
+			void copy_resource(const HAL::Resource::ptr& dest, const HAL::Resource::ptr& source);
+			void copy_texture(const HAL::Resource::ptr& dest, int, const HAL::Resource::ptr& source, int);
+			void copy_texture(const HAL::Resource::ptr& dest, ivec3, const HAL::Resource::ptr& source, ivec3, ivec3);
+			void copy_buffer(HAL::Resource* dest, int s_dest, HAL::Resource* source, int s_source, int size);
 
 
 			//TODO: remove
-			void update_buffer(Resource::ptr resource, UINT offset, const char* data, UINT size);
-			void update_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
-			void update_buffer(Resource* resource, UINT offset, const char* data, UINT size);
-			void update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
+			void update_buffer(HAL::Resource::ptr resource, UINT offset, const char* data, UINT size);
+			void update_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
+			void update_buffer(HAL::Resource* resource, UINT offset, const char* data, UINT size);
+			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
 
 
-			std::future<bool> read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>);
-			std::future<bool> read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>);
-			std::future<bool> read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)>);
+			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>);
+			std::future<bool> read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>);
+			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)>);
 			std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(const char*, UINT64)>);
 		};
 		/*
@@ -985,7 +984,7 @@ export{
 			}
 
 
-			void set_cb(UINT index, const ResourceAddress& address)
+			void set_cb(UINT index, const HAL::ResourceAddress& address)
 			{
 				if (address.resource)
 				{
@@ -1163,7 +1162,7 @@ export{
 
 			void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
 			void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
-			void execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset = 0, Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
 		};
 
@@ -1173,14 +1172,14 @@ export{
 			D3D12_RAYTRACING_GEOMETRY_TYPE Type;
 			D3D12_RAYTRACING_GEOMETRY_FLAGS Flags;
 
-			ResourceAddress Transform3x4;
+			HAL::ResourceAddress Transform3x4;
 			DXGI_FORMAT IndexFormat;
 			DXGI_FORMAT VertexFormat;
 			UINT IndexCount;
 			UINT VertexCount;
-			ResourceAddress IndexBuffer;
+			HAL::ResourceAddress IndexBuffer;
 
-			ResourceAddress VertexBuffer;
+			HAL::ResourceAddress VertexBuffer;
 			UINT64 VertexStrideInBytes;
 		};
 		struct InstanceDesc
@@ -1190,17 +1189,17 @@ export{
 			UINT InstanceMask : 8;
 			UINT InstanceContributionToHitGroupIndex : 24;
 			UINT Flags : 8;
-			ResourceAddress AccelerationStructure;
+			HAL::ResourceAddress AccelerationStructure;
 		};
 
 
 
 		struct RaytracingDesc
 		{
-			ResourceAddress DestAccelerationStructureData;
+			HAL::ResourceAddress DestAccelerationStructureData;
 			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs;
-			ResourceAddress SourceAccelerationStructureData;
-			ResourceAddress ScratchAccelerationStructureData;
+			HAL::ResourceAddress SourceAccelerationStructureData;
+			HAL::ResourceAddress ScratchAccelerationStructureData;
 		};
 
 		struct RaytracingBuildDescBottomInputs
@@ -1214,15 +1213,15 @@ export{
 				D3D12_RAYTRACING_GEOMETRY_DESC geom;
 				geom.Flags = i.Flags;
 				geom.Type = i.Type;
-				geom.Triangles.IndexBuffer = Graphics::to_native(i.IndexBuffer);
+				geom.Triangles.IndexBuffer = ::to_native(i.IndexBuffer);
 				geom.Triangles.IndexCount = i.IndexCount;
 				geom.Triangles.IndexFormat = i.IndexFormat;
 
-				geom.Triangles.VertexBuffer.StartAddress = Graphics::to_native(i.VertexBuffer);
+				geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
 				geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
 				geom.Triangles.VertexFormat = i.VertexFormat;
 
-				geom.Triangles.Transform3x4 = Graphics::to_native(i.Transform3x4);
+				geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
 				descs.emplace_back(geom);
 
 				geometry.emplace_back(i);
@@ -1249,14 +1248,14 @@ export{
 		{
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
 			UINT NumDescs;
-			ResourceAddress instances;
+			HAL::ResourceAddress instances;
 		};
 
 		struct RaytracingBuildDescStructure
 		{
-			ResourceAddress DestAccelerationStructureData;
-			ResourceAddress SourceAccelerationStructureData;
-			ResourceAddress ScratchAccelerationStructureData;
+			HAL::ResourceAddress DestAccelerationStructureData;
+			HAL::ResourceAddress SourceAccelerationStructureData;
+			HAL::ResourceAddress ScratchAccelerationStructureData;
 		};
 
 
@@ -1311,7 +1310,7 @@ export{
 
 
 
-			void execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset = 0, Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
 
 
@@ -1319,7 +1318,7 @@ export{
 			void build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescTopInputs& top);
 
 			template<class Hit, class Miss, class Raygen>
-			void dispatch_rays(ivec2 size, ResourceAddress hit_buffer, UINT hit_count, ResourceAddress miss_buffer, UINT miss_count, ResourceAddress raygen_buffer)
+			void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
 			{
 
 				base.setup_debug(this);

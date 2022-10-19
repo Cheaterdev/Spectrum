@@ -1,12 +1,13 @@
 #pragma once
 #include "FW1FontWrapper/Source/FW1FontWrapper.h"
+import d3d12;
+
+import Data;
+import Utils;
 typedef ComPtr<IFW1Factory>			FW1_Factory;
 typedef ComPtr<IFW1FontWrapper>		FW1_Font;
 typedef ComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 
-
-import Data;
-import Utils;
 
 namespace Fonts
 {

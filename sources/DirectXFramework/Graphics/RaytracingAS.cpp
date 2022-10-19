@@ -133,7 +133,7 @@ void Graphics::RaytracingAccelerationStructure::update(CommandList::ptr list, UI
 	raytracing_handle.create(currentResource->buffer.get());
 }
 
-Graphics::ResourceAddress Graphics::RaytracingAccelerationStructure::get_gpu_address() const
+HAL::ResourceAddress Graphics::RaytracingAccelerationStructure::get_gpu_address() const
 {
 	return currentResource->buffer->get_resource_address();
 }

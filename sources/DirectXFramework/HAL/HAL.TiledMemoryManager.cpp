@@ -1,5 +1,4 @@
 module Graphics:Memory;
-import :Resource;
 import :CommandList;
 import :Queue;
 import :Device;
@@ -22,7 +21,7 @@ namespace HAL {
 
 	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive)
 	{
-		auto& alloc_info = to_resource(resource)->alloc_info;
+		auto& alloc_info = (resource)->alloc_info;
 		auto& tile = tiles[subres][pos];
 
 		if (!tile.heap_position.heap)
@@ -240,9 +239,9 @@ namespace HAL {
 		D3D12_SUBRESOURCE_TILING tilings[20];
 
 
-		auto desc = to_resource(resource)->get_desc();
+		auto desc = (resource)->get_desc();
 
-		Graphics::Device::get().get_native_device()->GetResourceTiling(to_resource(resource)->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
+		Graphics::Device::get().get_native_device()->GetResourceTiling((resource)->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 		packed_mip_count = mip_info.NumTilesForPackedMips;
 		packed_subresource_offset = mip_info.NumStandardMips;
 		unpacked_mip_count = mip_info.NumStandardMips;
@@ -302,7 +301,7 @@ namespace HAL {
 		{
 			update_tiling_info info;
 			info.resource = resource;
-			auto& alloc_info = to_resource(resource)->alloc_info;
+			auto& alloc_info = (resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
 				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
@@ -318,7 +317,7 @@ namespace HAL {
 
 		if (packed_mip_count)
 		{
-			auto& alloc_info = to_resource(resource)->alloc_info;
+			auto& alloc_info = (resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
 				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);

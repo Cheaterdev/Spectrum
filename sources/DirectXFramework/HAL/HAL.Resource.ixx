@@ -1,22 +1,20 @@
-export module Graphics:Resource;
+export module HAL:Resource;
 
-import :Memory;
-import :Device;
-export import d3d12;
+import :HeapAllocators;
+import :API.Device;
+import :API.Resource;
+
+import :TiledMemeoryManager;
+import :ResourceStates;
+
+
 import stl.memory;
 import Utils;
 import Trackable;
 
-//import :Definitions;
-
-using namespace HAL;
 export{
-	namespace Graphics
+	namespace HAL
 	{
-
-		using update_tiling_info = HAL::update_tiling_info;
-		using TiledResourceManager = HAL::TiledResourceManager;
-
 
 		struct ResourceAddress
 		{
@@ -34,11 +32,9 @@ export{
 			}
 		};
 	
-		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>,  public TrackedObject, public HAL::Resource
+		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>,  public TrackedObject, public API::Resource
 		{
-
-			friend class HAL::Resource;
-			LEAK_TEST(Resource)
+			friend class API::Resource;
 			ResourceAddress gpu_address;
 			HeapType heap_type;
 			ResourceDesc desc;
@@ -138,25 +134,14 @@ export{
 						ar& NVP(desc);
 					}
 		};
-		// TODOmove to hal
-		GPUAddressPtr to_native(const ResourceAddress& address)
-		{
-			return address.resource ? (address.resource->get_address() + address.resource_offset) : 0;
-		}
+		
 
 	}
 
-
-
-	Graphics::Resource* to_resource(HAL::Resource* resource)
+	// TODOmove to hal
+	HAL::GPUAddressPtr to_native(const HAL::ResourceAddress& address)
 	{
-		return static_cast<Graphics::Resource*>(resource);
-	}
-
-
-	const Graphics::Resource* to_resource(const HAL::Resource* resource)
-	{
-		return static_cast<const Graphics::Resource*>(resource);
+		return address.resource ? (address.resource->get_address() + address.resource_offset) : 0;
 	}
 }
 
@@ -169,7 +154,7 @@ export
 	namespace cereal
 	{
 		template<class Archive>
-		void serialize(Archive& ar, Graphics::Resource*& g)
+		void serialize(Archive& ar, HAL::Resource*& g)
 		{
 			if (g)
 			{

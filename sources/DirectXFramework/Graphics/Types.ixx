@@ -5,7 +5,7 @@ export import HAL;
 export {
 	namespace Graphics
 	{
-
+		using Resource = HAL::Resource;
 		using DescriptorRange = HAL::DescriptorRange;
 		using ShaderVisibility = HAL::ShaderVisibility;
 

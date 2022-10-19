@@ -4,7 +4,6 @@ import HAL;
 import d3d12;
 import Math;
 import Utils;
-import :Resource;
 
 #undef THIS
 namespace HAL
@@ -13,12 +12,12 @@ namespace HAL
 	{
 			D3D12_HEAP_DESC native_desc;
 			native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-			native_desc.Flags = to_native(desc.Flags);
+			native_desc.Flags = ::to_native(desc.Flags);
 			native_desc.SizeInBytes = desc.Size;
 			native_desc.Properties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 			native_desc.Properties.CreationNodeMask = 0;
 			native_desc.Properties.VisibleNodeMask = 0;
-			native_desc.Properties.Type = to_native(desc.Type);
+			native_desc.Properties.Type = ::to_native(desc.Type);
 			native_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
 			device.native_device->CreateHeap(&native_desc, IID_PPV_ARGS(&native_heap));
@@ -52,7 +51,7 @@ namespace HAL
 				}
 			}
 
-			buffer.reset(new Graphics::Resource(/*device,*/ ResourceDesc::Buffer(desc.Size), PlacementAddress { this,0 }));
+			buffer.reset(new HAL::Resource(/*device,*/ ResourceDesc::Buffer(desc.Size), PlacementAddress { this,0 }));
 
 		}
 

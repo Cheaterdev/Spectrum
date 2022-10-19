@@ -1,11 +1,9 @@
-module Graphics:Fence;
+module HAL:Fence;
 
-import HAL;
 import d3d12;
 import Math;
 import Utils;
 import Profiling;
-import :Resource;
 
 #undef THIS
 namespace HAL

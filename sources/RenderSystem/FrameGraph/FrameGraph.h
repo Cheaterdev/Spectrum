@@ -64,8 +64,8 @@ namespace FrameGraph
 	{
 		ivec3 size;
 		Graphics::Format format;
-		UINT array_count;
-		UINT mip_count;
+		uint array_count;
+		uint mip_count;
 
 		auto   operator<=>(const  TextureDesc& r)  const = default;
 	};
@@ -142,8 +142,8 @@ namespace FrameGraph
 		std::vector<ResourceRWState> states;
 		int last_writer;
 		//compile
-		std::map<Graphics::ResourceHandle, Graphics::Resource::ptr> resource_places;
-		Graphics::Resource::ptr resource;
+		std::map<Graphics::ResourceHandle, HAL::Resource::ptr> resource_places;
+		HAL::Resource::ptr resource;
 
 		std::shared_ptr<ResourceHandler> handler;
 		std::shared_ptr<Graphics::ResourceView> view;

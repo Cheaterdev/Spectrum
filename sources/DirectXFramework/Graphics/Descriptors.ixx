@@ -3,7 +3,6 @@ export module Graphics:Descriptors;
 
 import Allocators;
 import Math;
-import :Resource;
 
 import stl.threading;
 import stl.core;
@@ -64,10 +63,10 @@ export
 			void for_each_subres(std::function<void(Resource*, UINT)> f) const;
 		};
 
-		//class DescriptorHeap;
+		class DescriptorHeap;
 		struct Handle
 		{
-			DescriptorHeap* heap = nullptr;
+			Graphics::DescriptorHeap* heap = nullptr;
 
 			ResourceInfo* get_resource_info() const;
 

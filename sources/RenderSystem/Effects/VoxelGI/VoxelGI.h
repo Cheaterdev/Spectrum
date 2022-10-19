@@ -13,7 +13,7 @@ import Graphics;
 
 class Texture3DMultiTiles
 {
-	update_tiling_info tilings_info;
+	HAL::update_tiling_info tilings_info;
 public:
 
 	Graphics::Texture::ptr tex_dynamic;
@@ -96,7 +96,7 @@ public:
 
 class Texture3DRefTiles
 {
-	update_tiling_info tilings_info;
+	HAL::update_tiling_info tilings_info;
 
 	grid<ivec3, bool> static_tiles;
 	grid<ivec3, bool> dynamic_tiles;

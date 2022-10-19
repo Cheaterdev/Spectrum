@@ -459,5 +459,12 @@ export namespace HAL
 	};
 
 
+	struct ResourceAllocationInfo
+	{
+		size_t size;
+		size_t alignment;
+		HeapFlags flags;
+	};
+
 
 }

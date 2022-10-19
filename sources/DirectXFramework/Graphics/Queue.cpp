@@ -226,7 +226,7 @@ namespace Graphics
 			}
 
 			native->UpdateTileMappings(
-				to_resource(infos.resource)->get_dx(),
+				(infos.resource)->get_dx(),
 				UINT(startCoordinates.size()),
 				&startCoordinates[0],
 				&regionSizes[0],
@@ -262,8 +262,8 @@ namespace Graphics
 			TRS.Depth = infos.size.z;
 			TRS.NumTiles = TRS.Width * TRS.Height * TRS.Depth;
 
-			auto dx_target_resource = to_resource(infos.resource)->get_dx();
-			auto dx_source_resource = to_resource(infos.source)->get_dx();
+			auto dx_target_resource = (infos.resource)->get_dx();
+			auto dx_source_resource = (infos.source)->get_dx();
 			native->CopyTileMappings(dx_target_resource, &target, dx_source_resource, &source, &TRS, D3D12_TILE_MAPPING_FLAG_NONE);
 		}
 		//	signal_and_wait_internal();
@@ -317,7 +317,7 @@ namespace Graphics
 						auto list = cl;
 						auto& updates = list->tile_updates;
 						for (auto& u : updates)
-							to_resource(u.resource)->get_tiled_manager().on_tile_update(u);
+							(u.resource)->get_tiled_manager().on_tile_update(u);
 						updates.clear();
 					});
 			}

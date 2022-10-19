@@ -3,7 +3,6 @@ export module Graphics:VirtualBuffer;
 export import Allocators;
 
 export import :Device;
-export import :Resource;
 
 export import :Concepts;
 export import Log;

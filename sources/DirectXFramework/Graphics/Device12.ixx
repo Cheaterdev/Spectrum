@@ -17,12 +17,7 @@ export
 	namespace Graphics
 	{
 
-		struct ResourceAllocationInfo
-		{
-			size_t size;
-			size_t alignment;
-			D3D12_HEAP_FLAGS flags;
-		};
+
 
 		typedef D3D12_VIEWPORT Viewport;
 		class Device : public Singleton<Device>, public HAL::Device
@@ -56,7 +51,7 @@ export
 
 	
 		
-			ResourceAllocationInfo get_alloc_info(const HAL::ResourceDesc& desc);
+			
 			std::shared_ptr<SwapChain> create_swap_chain(const swap_chain_desc& desc);
 
 			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescBottomInputs& desc);

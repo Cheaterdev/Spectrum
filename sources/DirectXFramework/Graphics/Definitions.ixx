@@ -5,8 +5,7 @@ export
 {
 	namespace Graphics
 	{
-		//struct ResourceAddress;
-		class Resource;
+
 		class Transitions;
 		struct swap_chain_desc;
 		struct RaytracingBuildDescBottomInputs;

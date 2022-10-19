@@ -1048,7 +1048,7 @@ namespace FrameGraph
 
 					if (!res || res->get_desc() != info->d3ddesc)
 					{
-						res = std::make_shared<Graphics::Resource>(info->d3ddesc, info->alloc_ptr);
+						res = std::make_shared<HAL::Resource>(info->d3ddesc, info->alloc_ptr);
 						res->set_name(info->name);
 					}
 
@@ -1062,16 +1062,16 @@ namespace FrameGraph
 				{
 					if (info->heap_type == Graphics::HeapType::UPLOAD)
 					{
-						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
 					}
 					else if (info->heap_type == Graphics::HeapType::READBACK)
 					{
-						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
 					}
 					else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
 						assert(info->name != "id_buffer");
-						info->resource = std::make_shared<Graphics::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}
 

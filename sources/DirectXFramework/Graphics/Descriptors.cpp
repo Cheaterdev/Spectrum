@@ -2,7 +2,6 @@ module;
 
 module Graphics:Descriptors;
 import :Device;
-import :Resource;
 import :Types;
 
 import Utils;
@@ -137,7 +136,7 @@ namespace Graphics {
 		delete page;
 	}
 
-	void for_each(const ResourceInfo* info, const HAL::Views::RenderTarget& view, std::function<void(Resource*, UINT)> f)
+	void for_each(const ResourceInfo* info, const HAL::Views::RenderTarget& view, std::function<void(HAL::Resource*, UINT)> f)
 	{
 
 		std::visit(overloaded{
@@ -169,7 +168,7 @@ namespace Graphics {
 			}, view.View);
 	}
 
-	void for_each(const ResourceInfo* info, const HAL::Views::UnorderedAccess& view, std::function<void(Resource*, UINT)> f)
+	void for_each(const ResourceInfo* info, const HAL::Views::UnorderedAccess& view, std::function<void(HAL::Resource*, UINT)> f)
 	{
 
 
@@ -238,7 +237,7 @@ if (desc.MipLevels == 1 && desc.is2D())
 	}
 
 
-	void for_each(const ResourceInfo* info, const HAL::Views::DepthStencil& view, std::function<void(Resource*, UINT)> f)
+	void for_each(const ResourceInfo* info, const HAL::Views::DepthStencil& view, std::function<void(HAL::Resource*, UINT)> f)
 	{
 		std::visit(overloaded{
 		[&](const HAL::Views::DepthStencil::Texture1D& Texture1D) {
@@ -278,7 +277,7 @@ auto& desc = info->resource_ptr->get_desc().as_texture();
 	}
 
 
-	void for_each(const ResourceInfo* info, const HAL::Views::ShaderResource& view, std::function<void(Resource*, UINT)> f)
+	void for_each(const ResourceInfo* info, const HAL::Views::ShaderResource& view, std::function<void(HAL::Resource*, UINT)> f)
 	{
 		std::visit(overloaded{
 		[&](const HAL::Views::ShaderResource::Buffer& Buffer) {
@@ -376,7 +375,7 @@ f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
 	}
 
 
-	void ResourceInfo::for_each_subres(std::function<void(Resource*, UINT)> f) const
+	void ResourceInfo::for_each_subres(std::function<void(HAL::Resource*, UINT)> f) const
 	{
 
 		std::visit(overloaded{

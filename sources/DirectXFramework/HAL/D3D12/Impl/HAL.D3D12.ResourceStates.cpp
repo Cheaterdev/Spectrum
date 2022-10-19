@@ -1,11 +1,11 @@
 module Graphics:CommandList;
 
-import :Resource;
 import :CommandList;
 
 import Utils;
 import StateContext;
 
+import HAL;
 namespace HAL
 {
 
@@ -38,13 +38,13 @@ namespace HAL
 	}
 	void Barriers::uav(Resource* resource)
 	{
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(to_resource(resource)->get_dx()));
+		native.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV((resource)->get_dx()));
 	}
 
 	void Barriers::alias(Resource* from, Resource* to)
 	{
-		auto native_from = from ? to_resource(from)->get_dx() : nullptr;
-		auto native_to = to ? to_resource(to)->get_dx() : nullptr;
+		auto native_from = from ? (from)->get_dx() : nullptr;
+		auto native_to = to ? (to)->get_dx() : nullptr;
 
 		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(native_from, native_to));
 	}
@@ -67,7 +67,7 @@ namespace HAL
 		if (flags == BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
 		if (flags == BarrierFlags::END) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
 
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(to_resource(resource)->get_dx(),
+		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition((resource)->get_dx(),
 			static_cast<D3D12_RESOURCE_STATES>(before),
 			static_cast<D3D12_RESOURCE_STATES>(after),
 			subres,
@@ -199,7 +199,7 @@ namespace HAL
 			if (!subres_cpu.used)
 			{
 				subres_cpu.used = true;
-				last_transition = subres_cpu.first_transition = subres_cpu.last_transition = to_hal(list)->create_transition(to_resource(resource), subres, state);
+				last_transition = subres_cpu.first_transition = subres_cpu.last_transition = to_hal(list)->create_transition((resource), subres, state);
 			}
 			else
 			{
@@ -221,7 +221,7 @@ namespace HAL
 					}
 					else
 					{
-						auto transition = to_hal(list)->create_transition(to_resource(resource), subres, state);
+						auto transition = to_hal(list)->create_transition((resource), subres, state);
 						last_transition = transition;
 						subres_cpu.add_transition(transition);
 					}
@@ -258,7 +258,7 @@ namespace HAL
 
 		if (need_add_uav)
 		{
-			to_hal(list)->create_uav_transition(to_resource(resource));
+			to_hal(list)->create_uav_transition((resource));
 		}
 	}
 
@@ -306,7 +306,7 @@ namespace HAL
 
 			if (gpu.state != first_state)
 			{
-				auto point = to_hal(from)->create_transition(to_resource(resource), i, gpu.state, TransitionType::ZERO);
+				auto point = to_hal(from)->create_transition((resource), i, gpu.state, TransitionType::ZERO);
 				//		cpu.set_zero_transition(point);
 				updated = true;
 			}
@@ -338,8 +338,8 @@ namespace HAL
 
 		if (updated)
 		{
-			to_hal(from)->track_object(*to_resource(const_cast<Resource*>(resource)));
-			to_hal(from)->use_resource(to_resource(resource));
+			to_hal(from)->track_object(*(const_cast<Resource*>(resource)));
+			to_hal(from)->use_resource((resource));
 		}
 
 	}

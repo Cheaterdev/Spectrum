@@ -4,7 +4,6 @@ export module Graphics:Buffer;
 
 export import Allocators;
 
-export import :Resource;
 
 export import :Concepts;
 export import Log;
@@ -30,7 +29,7 @@ export
 	{
 
 
-		class GPUBuffer : public Resource
+		class GPUBuffer : public HAL::Resource
 		{
 		protected:
 		/*	GPUBuffer();*/
@@ -238,7 +237,7 @@ export
 			rwByteAddressBuffer = HLSL::RWByteAddressBuffer(hlsl[5]);
 			rwByteAddressBufferCount = HLSL::RWByteAddressBuffer(hlsl[6]);
 
-			Graphics::Resource* counter_resource = this;
+			HAL::Resource* counter_resource = this;
 			uint64 counter_offset = 0;
 
 			if (counted == counterType::HELP_BUFFER) counter_resource = help_buffer.get();

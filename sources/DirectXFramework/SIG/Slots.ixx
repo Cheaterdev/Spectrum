@@ -2,7 +2,6 @@ module;
 
 export module Graphics:Slots;
 
-import :Resource;
 import :CommandList;
 import :Concepts;
 import :Descriptors;
@@ -177,7 +176,7 @@ export {
 		using Slot = _Slot;
 		using SlotTable = _SlotTable;
 
-		Graphics::ResourceAddress offsets_cb;
+		HAL::ResourceAddress offsets_cb;
 		UINT offset_cb;
 
 		const CompiledData<SlotTable, ID, Table, Slot>& set(Graphics::SignatureDataSetter& graphics) const
@@ -192,12 +191,12 @@ export {
 				graphics.get_base().transition(resource_info);
 			graphics.set_cb(Slot::ID, offsets_cb);
 		}
-		operator Graphics::ResourceAddress() const
+		operator HAL::ResourceAddress() const
 		{
 			return offsets_cb;
 		}
 
-		Graphics::ResourceAddress compiled()
+		HAL::ResourceAddress compiled()
 		{
 			return offsets_cb;
 		}
