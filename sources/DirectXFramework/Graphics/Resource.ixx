@@ -1,7 +1,6 @@
 export module Graphics:Resource;
 
 import :Memory;
-import :Fence;
 import :States;
 import :Device;
 export import d3d12;

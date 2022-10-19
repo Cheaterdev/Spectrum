@@ -11,6 +11,7 @@ export import :Utils;
 export import :Shaders;
 
 
+export import :Fence;
 export import :RootSignature;
 export import :Descriptors;
 export import :Heap;
