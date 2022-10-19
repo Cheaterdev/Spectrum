@@ -1,6 +1,5 @@
 module Graphics:Resource;
 
-import :Tiling;
 import :Fence;
 import :States;
 import :Device;

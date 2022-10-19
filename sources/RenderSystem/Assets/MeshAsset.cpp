@@ -490,7 +490,7 @@ bool MeshAssetInstance::update_transforms()
 }
 
 
-bool MeshAssetInstance::init_ras(CommandList::ptr list)
+bool MeshAssetInstance::init_ras(Graphics::CommandList::ptr list)
 {
 	if (!Graphics::Device::get().is_rtx_supported()) return false;
 
@@ -622,7 +622,7 @@ void MeshAssetInstance::init_asset()
 }
 
 
-void SceneFrameManager::prepare(CommandList::ptr& command_list, Scene& scene)
+void SceneFrameManager::prepare(Graphics::CommandList::ptr& command_list, Scene& scene)
 {
 	auto timer = command_list->start(L"Upload data");
 

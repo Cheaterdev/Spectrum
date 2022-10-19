@@ -708,7 +708,7 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList : public SharedObject<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>
+		class CommandList : public SharedObject<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>, public HAL::CommandList
 		{
 
 
@@ -745,7 +745,7 @@ export{
 			{
 				tile_updates.emplace_back(std::move(info));
 
-				track_object(*info.resource);
+				track_object(*to_resource(info.resource));
 			}
 
 			FrameResources::ptr frame_resources;
@@ -1392,4 +1392,19 @@ export{
 		};
 	}
 
+
+	Graphics::CommandList* to_hal(HAL::CommandList* resource)
+	{
+		return static_cast<Graphics::CommandList*>(resource);
+	}
+
+	Graphics::CommandList& to_hal(HAL::CommandList& resource)
+	{
+		return *static_cast<Graphics::CommandList*>(&resource);
+	}
+
+	Graphics::CommandList::ptr to_hal(std::shared_ptr<HAL::CommandList>& resource)
+	{
+		return std::static_pointer_cast<Graphics::CommandList>(resource);
+	}
 }

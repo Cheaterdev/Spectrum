@@ -23,7 +23,7 @@ public:
 	Graphics::Texture::ptr tex_result;
 
 
-	void flush(CommandList& list)
+	void flush(Graphics::CommandList& list)
 	{
 		tilings_info.resource = tex_result.get();
 		list.update_tilings(std::move(tilings_info));
@@ -82,10 +82,10 @@ public:
 	}
 
 
-	void zero_tiles(CommandList& list)
+	void zero_tiles(Graphics::CommandList& list)
 	{
-		tex_dynamic->get_tiled_manager().zero_tiles(list);
-		tex_static->get_tiled_manager().zero_tiles(list);
+		tex_dynamic->get_tiled_manager().zero_tiles((list));
+		tex_static->get_tiled_manager().zero_tiles((list));
 
 		tilings_info.tiles.clear();
 		//	flush(list);
@@ -105,7 +105,7 @@ public:
 	Graphics::Texture::ptr tex_result;
 
 
-	void flush(CommandList& list)
+	void flush(Graphics::CommandList& list)
 	{
 		tilings_info.resource = tex_result.get();
 		list.update_tilings(std::move(tilings_info));
@@ -174,7 +174,7 @@ public:
 
 
 
-	void zero_tiles(CommandList& list)
+	void zero_tiles(Graphics::CommandList& list)
 	{
 		tilings_info.tiles.clear();
 

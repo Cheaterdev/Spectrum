@@ -15,9 +15,11 @@ export import :RootSignature;
 export import :Descriptors;
 export import :Heap;
 export import :HeapAllocators;
+export import :TiledMemeoryManager;
 
 export import :Adapter;
 export import :Debug;
+export import :Removeme;
 
 
 export import :API;

@@ -1,29 +1,23 @@
-module;
-
-
-
-export module Graphics:Tiling;
+export module HAL:TiledMemeoryManager;
 
 import Math;
-import :Memory;
+import :Heap;
+import :HeapAllocators;
+import :Removeme;
 import Events;
 import stl.core;
-
-import :Definitions;
-export import HAL;
-using namespace HAL;
 
 export
 {
 
 
-	namespace Graphics
+	namespace HAL
 	{
 
 		
 		struct update_tiling_info
 		{
-			std::map<ResourceHeap*, std::vector<ResourceTile>> tiles;
+			std::map<Heap*, std::vector<ResourceTile>> tiles;
 			Resource* resource = nullptr;
 
 			Resource* source = nullptr;

@@ -1,7 +1,6 @@
 export module Graphics:Resource;
 
 import :Memory;
-import :Tiling;
 import :Fence;
 import :States;
 import :Device;
@@ -16,6 +15,11 @@ using namespace HAL;
 export{
 	namespace Graphics
 	{
+
+		using update_tiling_info = HAL::update_tiling_info;
+		using TiledResourceManager = HAL::TiledResourceManager;
+
+
 		struct ResourceAddress
 		{
 			Resource* resource = nullptr;
@@ -144,6 +148,12 @@ export{
 
 	}
 
+
+
+	Graphics::Resource* to_resource(HAL::Resource* resource)
+	{
+		return static_cast<Graphics::Resource*>(resource);
+	}
 
 }
 

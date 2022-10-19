@@ -8,10 +8,7 @@ import Debug;
 #undef THIS
 namespace HAL
 {
-	Graphics::Resource* to_resource(HAL::Resource* resource)
-	{
-		return static_cast<Graphics::Resource*>(resource);
-	}
+
 
 	void Descriptor::place(const Views::ShaderResource& view)
 	{

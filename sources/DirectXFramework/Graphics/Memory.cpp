@@ -1,7 +1,3 @@
-module;
-
-
-#include "Memory.h"
 module Graphics:Memory;
 import :Device;
 import :Resource;

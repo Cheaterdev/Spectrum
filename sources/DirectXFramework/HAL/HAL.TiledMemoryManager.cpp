@@ -1,17 +1,15 @@
-module Graphics:Tiling;
+module Graphics:Memory;
 import :Resource;
 import :CommandList;
 import :Queue;
-
+import :Device;
 import Math;
 import Events;
 import stl.core;
 
 import HAL;
 
-using namespace HAL;
-
-namespace Graphics {
+namespace HAL {
 
 	void TiledResourceManager::map_buffer_part(update_tiling_info& target, size_t offset, size_t size)
 	{
@@ -24,7 +22,7 @@ namespace Graphics {
 
 	void TiledResourceManager::load_tile(update_tiling_info& target, uint3 pos, uint subres, bool recursive)
 	{
-		auto& alloc_info = resource->alloc_info;
+		auto& alloc_info = to_resource(resource)->alloc_info;
 		auto& tile = tiles[subres][pos];
 
 		if (!tile.heap_position.heap)
@@ -111,10 +109,10 @@ namespace Graphics {
 		// TODO: make list
 		if (list)
 		{
-			list->update_tilings(std::move(info));
+			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 	void TiledResourceManager::zero_tiles(CommandList* list, uint3 from, uint3 to)
@@ -134,10 +132,10 @@ namespace Graphics {
 		// TODO: make list
 		if (list)
 		{
-			list->update_tilings(std::move(info));
+			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 
@@ -153,10 +151,10 @@ namespace Graphics {
 		// TODO: make list
 		if (list)
 		{
-			list->update_tilings(std::move(info));
+			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3>& tiles_to_remove)
 	{
@@ -172,10 +170,10 @@ namespace Graphics {
 		// TODO: make list
 		if (list)
 		{
-			list->update_tilings(std::move(info));
+			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 
 	}
 
@@ -197,7 +195,7 @@ namespace Graphics {
 					}
 		}
 
-		list.update_tilings(std::move(info));
+		to_hal(list).update_tilings(std::move(info));
 	}
 
 
@@ -211,7 +209,7 @@ namespace Graphics {
 		info.source_pos = source_pos;
 		info.pos = target_pos;
 		info.size = size;
-		list.update_tilings(std::move(info));
+		to_hal(list).update_tilings(std::move(info));
 	}
 
 	void TiledResourceManager::map_tile(update_tiling_info& info, uint3 pos, TileHeapPosition heap_pos)
@@ -242,9 +240,9 @@ namespace Graphics {
 		D3D12_SUBRESOURCE_TILING tilings[20];
 
 
-		auto desc = resource->get_desc();
+		auto desc = to_resource(resource)->get_desc();
 
-		Device::get().get_native_device()->GetResourceTiling(resource->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
+		Graphics::Device::get().get_native_device()->GetResourceTiling(to_resource(resource)->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 		packed_mip_count = mip_info.NumTilesForPackedMips;
 		packed_subresource_offset = mip_info.NumStandardMips;
 		unpacked_mip_count = mip_info.NumStandardMips;
@@ -304,14 +302,14 @@ namespace Graphics {
 		{
 			update_tiling_info info;
 			info.resource = resource;
-			auto& alloc_info = resource->alloc_info;
+			auto& alloc_info = to_resource(resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
 				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
 
 			info.add_tile(packed_tiles);
 
-			list.update_tilings(std::move(info));
+			to_hal(list).update_tilings(std::move(info));
 		}
 	}
 
@@ -320,7 +318,7 @@ namespace Graphics {
 
 		if (packed_mip_count)
 		{
-			auto& alloc_info = resource->alloc_info;
+			auto& alloc_info = to_resource(resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
 				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
@@ -334,10 +332,10 @@ namespace Graphics {
 		// TODO: make list
 		if (list)
 		{
-			list->update_tilings(std::move(info));
+			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 	void TiledResourceManager::on_tile_update(const update_tiling_info& info)

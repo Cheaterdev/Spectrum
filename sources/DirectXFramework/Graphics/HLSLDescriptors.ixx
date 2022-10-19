@@ -3,7 +3,6 @@ export module Graphics:HLSLDescriptors;
 
 
 import :Memory;
-import :Tiling;
 import :Fence;
 import :States;
 import :Device;

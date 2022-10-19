@@ -6,7 +6,6 @@ export import :Types;
 export import :Device;
 export import :Memory;
 export import :Resource;
-export import :Tiling;
 export import :Buffer;
 export import :Texture;
 export import :RaytracingAS;
