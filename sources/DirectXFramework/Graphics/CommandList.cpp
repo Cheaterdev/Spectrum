@@ -695,7 +695,7 @@ namespace Graphics
 		}
 		compiler.func([point, this](ID3D12GraphicsCommandList4* list)
 			{
-				Barriers  transitions(type);
+				HAL::Barriers  transitions(type);
 
 				for (auto uav : point->uav_transitions)
 				{
@@ -760,9 +760,9 @@ namespace Graphics
 				prev_point->compiled_transitions.transition(transition.resource,
 					prev_transition->wanted_state,
 					transition.wanted_state,
-					transition.subres, BarrierFlags::BEGIN);
+					transition.subres, HAL::BarrierFlags::BEGIN);
 
-				transition.flags = BarrierFlags::END;
+				transition.flags = HAL::BarrierFlags::END;
 				/*
 				transitions.transition(transition.resource,
 					prev_transition->wanted_state,
@@ -777,8 +777,8 @@ namespace Graphics
 	{
 		PROFILE(L"fix_pretransitions");
 
-		Barriers result(CommandListType::DIRECT);
-		std::vector<Resource*> discards;
+		HAL::Barriers result(CommandListType::DIRECT);
+		std::vector<HAL::Resource*> discards;
 
 
 		ResourceState states = ResourceState::COMMON;
@@ -1351,7 +1351,7 @@ namespace Graphics
 		m_commandList->SetName(L"TransitionCommandList");
 	}
 
-	void TransitionCommandList::create_transition_list(const Barriers& transitions, std::vector<Resource*>& discards)
+	void TransitionCommandList::create_transition_list(const HAL::Barriers& transitions, std::vector<HAL::Resource*>& discards)
 	{
 		m_commandAllocator->Reset();
 		m_commandList->Reset(m_commandAllocator.Get(), nullptr);

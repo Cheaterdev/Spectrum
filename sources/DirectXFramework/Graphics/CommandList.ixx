@@ -363,29 +363,7 @@ export{
 		class TransitionCommandList;
 
 
-		struct TransitionPoint
-		{
-			std::list<Transition> transitions;
-			std::list<Resource*> uav_transitions;
-			std::list<Resource*> aliasing;
-
-			Barriers  compiled_transitions;
-
-			bool start = false;
-			TransitionPoint* prev_point = nullptr;
-			TransitionPoint* next_point = nullptr;
-
-			TransitionPoint(CommandListType type) :compiled_transitions(type)
-			{
-			}
-		};
-
-		enum class TransitionType :int
-		{
-			ZERO,
-			LAST
-		};
-		class Transitions : public virtual CommandListBase
+		class Transitions : public virtual CommandListBase, public HAL::Transitions
 		{
 
 
@@ -400,7 +378,7 @@ export{
 		protected:
 			void begin();
 			void on_execute();
-			std::list<TransitionPoint> transition_points;
+			std::list<HAL::TransitionPoint> transition_points;
 
 			void create_transition_point(bool end = true);
 
@@ -414,16 +392,16 @@ export{
 
 			UINT transition_count = 0;
 			//	TransitionPoint* start_transition;
-			Transition* create_transition(const Resource* resource, UINT subres, ResourceState state, TransitionType type = TransitionType::LAST)
+			HAL::Transition* create_transition(const Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST)
 			{
-				TransitionPoint* point = nullptr;
+				HAL::TransitionPoint* point = nullptr;
 
-				if (type == TransitionType::LAST) point = &transition_points.back();
-				if (type == TransitionType::ZERO) point = &transition_points.front();
+				if (type == HAL::TransitionType::LAST) point = &transition_points.back();
+				if (type == HAL::TransitionType::ZERO) point = &transition_points.front();
 
 
 				//if (type == TransitionType::LAST) 			assert(!point->start);
-				Transition& transition = point->transitions.emplace_back();
+				HAL::Transition& transition = point->transitions.emplace_back();
 
 				transition.resource = const_cast<Resource*>(resource);
 				transition.subres = subres;
@@ -445,7 +423,7 @@ export{
 				point.aliasing.emplace_back(const_cast<Resource*>(resource));
 			}
 
-			TransitionPoint* get_last_transition_point()
+			HAL::TransitionPoint* get_last_transition_point()
 			{
 				return &transition_points.back();
 			}
@@ -1378,7 +1356,7 @@ export{
 		};
 
 
-		class TransitionCommandList
+		class TransitionCommandList: public HAL::TransitionCommandList
 		{
 			ComPtr<ID3D12GraphicsCommandList4> m_commandList;
 			ComPtr<ID3D12CommandAllocator> m_commandAllocator;
@@ -1387,7 +1365,7 @@ export{
 			using ptr = std::shared_ptr<TransitionCommandList>;
 			inline CommandListType get_type() { return type; }
 			TransitionCommandList(CommandListType type);
-			void create_transition_list(const Barriers& transitions, std::vector<Resource*>& duscards);
+			void create_transition_list(const HAL::Barriers& transitions, std::vector<HAL::Resource*>& duscards);
 			ComPtr<ID3D12GraphicsCommandList4> get_native();
 		};
 	}
@@ -1407,4 +1385,20 @@ export{
 	{
 		return std::static_pointer_cast<Graphics::CommandList>(resource);
 	}
+
+
+	Graphics::Transitions* to_hal(HAL::Transitions* resource)
+	{
+		return static_cast<Graphics::Transitions*>(resource);
+	}
+
+	Graphics::Transitions& to_hal(HAL::Transitions& resource)
+	{
+		return *static_cast<Graphics::Transitions*>(&resource);
+	}
+
+	//Graphics::Transitions::ptr to_hal(std::shared_ptr<HAL::Transitions>& resource)
+	//{
+	//	return std::static_pointer_cast<Graphics::Transitions>(resource);
+	//}
 }

@@ -4,7 +4,6 @@ export module Graphics:HLSLDescriptors;
 
 import :Memory;
 import :Fence;
-import :States;
 import :Device;
 import :Resource;
 import :Descriptors;

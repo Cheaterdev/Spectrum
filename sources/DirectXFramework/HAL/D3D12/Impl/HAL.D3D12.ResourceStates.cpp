@@ -1,17 +1,12 @@
-module;
-
-module Graphics:States;
+module Graphics:CommandList;
 
 import :Resource;
 import :CommandList;
 
 import Utils;
 import StateContext;
-import HAL;
 
-
-using namespace HAL;
-namespace Graphics
+namespace HAL
 {
 
 
@@ -43,13 +38,13 @@ namespace Graphics
 	}
 	void Barriers::uav(Resource* resource)
 	{
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(resource->get_dx()));
+		native.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV(to_resource(resource)->get_dx()));
 	}
 
 	void Barriers::alias(Resource* from, Resource* to)
 	{
-		auto native_from = from ? from->get_dx() : nullptr;
-		auto native_to = to ? to->get_dx() : nullptr;
+		auto native_from = from ? to_resource(from)->get_dx() : nullptr;
+		auto native_to = to ? to_resource(to)->get_dx() : nullptr;
 
 		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(native_from, native_to));
 	}
@@ -72,7 +67,7 @@ namespace Graphics
 		if (flags == BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
 		if (flags == BarrierFlags::END) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
 
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(resource->get_dx(),
+		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition(to_resource(resource)->get_dx(),
 			static_cast<D3D12_RESOURCE_STATES>(before),
 			static_cast<D3D12_RESOURCE_STATES>(after),
 			subres,
@@ -102,13 +97,13 @@ namespace Graphics
 
 	bool  ResourceStateManager::is_used(Transitions* list) const
 	{
-		SubResourcesCPU& s = get_state(list);
+		SubResourcesCPU& s = get_state(to_hal(list));
 		return s.used;
 	}
 
 	SubResourcesCPU& ResourceStateManager::get_cpu_state(Transitions* list) const
 	{
-		auto& state = get_state(list);
+		auto& state = get_state(to_hal(list));
 		return state;
 	}
 
@@ -120,7 +115,7 @@ namespace Graphics
 
 		if (!resource) return processed_states;
 
-		auto& cpu_state = get_state(list);
+		auto& cpu_state = get_state(to_hal(list));
 
 		auto merge_one = [&, this](UINT i) {
 			auto& gpu = gpu_state.get_subres_state(i);
@@ -191,7 +186,7 @@ namespace Graphics
 
 	void ResourceStateManager::transition(Transitions* list, ResourceState state, unsigned int s) const
 	{
-		auto& cpu_state = get_state(list);
+		auto& cpu_state = get_state(to_hal(list));
 
 		Transition* last_transition = nullptr;
 
@@ -204,7 +199,7 @@ namespace Graphics
 			if (!subres_cpu.used)
 			{
 				subres_cpu.used = true;
-				last_transition = subres_cpu.first_transition = subres_cpu.last_transition = list->create_transition(resource, subres, state);
+				last_transition = subres_cpu.first_transition = subres_cpu.last_transition = to_hal(list)->create_transition(to_resource(resource), subres, state);
 			}
 			else
 			{
@@ -226,7 +221,7 @@ namespace Graphics
 					}
 					else
 					{
-						auto transition = list->create_transition(resource, subres, state);
+						auto transition = to_hal(list)->create_transition(to_resource(resource), subres, state);
 						last_transition = transition;
 						subres_cpu.add_transition(transition);
 					}
@@ -263,7 +258,7 @@ namespace Graphics
 
 		if (need_add_uav)
 		{
-			list->create_uav_transition(resource);
+			to_hal(list)->create_uav_transition(to_resource(resource));
 		}
 	}
 
@@ -273,7 +268,7 @@ namespace Graphics
 	{
 
 		//return ;
-		auto& cpu_state = get_state(from);
+		auto& cpu_state = get_state(to_hal(from));
 
 		if (!cpu_state.used) return;
 
@@ -285,7 +280,7 @@ namespace Graphics
 
 			if (!cpu.used)	return;
 
-			if (!IsFullySupport(from->get_type(), gpu.state))  return;
+			if (!IsFullySupport(to_hal(from)->get_type(), gpu.state))  return;
 
 			auto first_transition = cpu_state.get_first_transition(i);
 			auto last_transition = cpu_state.get_last_transition(i);
@@ -302,7 +297,7 @@ namespace Graphics
 
 			if (!cpu.used) return;
 
-			if (!IsFullySupport(from->get_type(), gpu.state))  return;
+			if (!IsFullySupport(to_hal(from)->get_type(), gpu.state))  return;
 
 			auto first_transition = cpu_state.get_first_transition(i);
 			auto last_transition = cpu_state.get_last_transition(i);
@@ -311,7 +306,7 @@ namespace Graphics
 
 			if (gpu.state != first_state)
 			{
-				auto point = from->create_transition(resource, i, gpu.state, TransitionType::ZERO);
+				auto point = to_hal(from)->create_transition(to_resource(resource), i, gpu.state, TransitionType::ZERO);
 				//		cpu.set_zero_transition(point);
 				updated = true;
 			}
@@ -343,8 +338,8 @@ namespace Graphics
 
 		if (updated)
 		{
-			from->track_object(*const_cast<Resource*>(resource));
-			from->use_resource(resource);
+			to_hal(from)->track_object(*to_resource(const_cast<Resource*>(resource)));
+			to_hal(from)->use_resource(to_resource(resource));
 		}
 
 	}
@@ -352,14 +347,14 @@ namespace Graphics
 
 	void ResourceStateManager::stop_using(Transitions* list, UINT subres) const
 	{
-		auto& state = get_state(list);
+		auto& state = get_state(to_hal(list));
 
 
 		auto transit = [&](UINT i)
 		{
 			auto last_transition = state.get_last_transition(i);
 
-			last_transition->last_used_point = list->get_last_transition_point();
+			last_transition->last_used_point = to_hal(list)->get_last_transition_point();
 		};
 
 
@@ -377,7 +372,7 @@ namespace Graphics
 	{
 
 		return false;
-		auto& to_state = get_state(to);
+		auto& to_state = get_state(to_hal(to));
 
 		if (!to_state.used)
 			return false;
@@ -390,7 +385,7 @@ namespace Graphics
 			auto& subres_to = to_state.get_subres_state(i);
 			if (subres_to.used)
 			{
-				if (IsFullySupport(from->get_type(), subres_to.get_first_state()))
+				if (IsFullySupport(to_hal(from)->get_type(), subres_to.get_first_state()))
 
 					used = true;
 				else

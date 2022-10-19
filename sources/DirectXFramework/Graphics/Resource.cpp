@@ -1,7 +1,6 @@
 module Graphics:Resource;
 
 import :Fence;
-import :States;
 import :Device;
 
 import Debug;

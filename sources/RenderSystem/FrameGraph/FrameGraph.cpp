@@ -668,7 +668,7 @@ namespace FrameGraph
 					{
 
 
-						Graphics::SubResourcesGPU merged_state;
+						HAL::SubResourcesGPU merged_state;
 
 						merged_state.subres.resize(resource->get_state_manager().get_subres_count());
 

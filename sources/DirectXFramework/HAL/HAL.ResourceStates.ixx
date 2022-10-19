@@ -1,25 +1,25 @@
-module;
-
-
-
-
-export module Graphics:States;
+export module HAL:ResourceStates;
 
 import Utils;
 import StateContext;
-import :Device;
-import HAL;
-
-import :Definitions;
+import :API.Device;
+import :API.Resource;
+import :Types;
+import :Removeme;
 
 using namespace HAL;
 
 export
 {
 
-	namespace Graphics
+	namespace HAL
 	{
 
+		enum class TransitionType :int
+		{
+			ZERO,
+			LAST
+		};
 
 		const ResourceState& GetSupportedStates(CommandListType type)
 		{
@@ -130,7 +130,22 @@ export
 			BarrierFlags flags = BarrierFlags::SINGLE;
 		};
 
+		struct TransitionPoint
+		{
+			std::list<HAL::Transition> transitions;
+			std::list<Resource*> uav_transitions;
+			std::list<Resource*> aliasing;
 
+			HAL::Barriers  compiled_transitions;
+
+			bool start = false;
+			TransitionPoint* prev_point = nullptr;
+			TransitionPoint* next_point = nullptr;
+
+			TransitionPoint(CommandListType type) :compiled_transitions(type)
+			{
+			}
+		};
 		struct ResourceListStateCPU
 		{
 			Transition* first_transition = nullptr;

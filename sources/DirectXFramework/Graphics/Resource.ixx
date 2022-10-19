@@ -1,7 +1,6 @@
 export module Graphics:Resource;
 
 import :Memory;
-import :States;
 import :Device;
 export import d3d12;
 import stl.memory;
@@ -154,6 +153,11 @@ export{
 		return static_cast<Graphics::Resource*>(resource);
 	}
 
+
+	const Graphics::Resource* to_resource(const HAL::Resource* resource)
+	{
+		return static_cast<const Graphics::Resource*>(resource);
+	}
 }
 
 

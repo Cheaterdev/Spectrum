@@ -12,7 +12,6 @@ export import :RaytracingAS;
 export import :Descriptors;
 export import :ResourceViews;
 export import :RootSignature;
-export import :States;
 export import :SwapChain;
 export import :PipelineState;
 export import :VirtualBuffer;
