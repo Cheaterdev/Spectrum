@@ -1,8 +1,3 @@
-module;
-
-
-
-
 export module Graphics:PSO;
 export import "PSO_defines.h";
 import :PipelineState;
@@ -14,7 +9,6 @@ import :Concepts;
 
 import :RootSignature;
 import Utils;
-import :Memory;
 import :Enums;
 
 import ppl;

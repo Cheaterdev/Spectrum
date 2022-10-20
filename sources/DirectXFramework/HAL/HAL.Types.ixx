@@ -1,7 +1,7 @@
 export module HAL:Types;
 
 import Math;
-import Utils;
+export import Utils;
 import Data;
 
 

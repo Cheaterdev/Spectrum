@@ -5,7 +5,6 @@ import Executors;
 import :Device;
 import :CommandList;
 import d3d12;
-import :Fence;
 import HAL;
 using namespace HAL;
 

@@ -1,6 +1,5 @@
 export module Graphics:SwapChain;
 
-import :Fence;
 import Math;
 import d3d12;
 import :Types;

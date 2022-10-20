@@ -9,8 +9,7 @@ import Threading;
 import Exceptions;
 import :RootSignature;
 import :Device;
-import :Fence;
-import :IndirectCommand;
+
 import :ResourceViews;
 
 

@@ -1,4 +1,4 @@
-module Graphics:Memory;
+module Graphics;
 import :CommandList;
 import :Queue;
 import :Device;

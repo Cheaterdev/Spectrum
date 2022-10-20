@@ -1,9 +1,5 @@
 export module Graphics:HLSLDescriptors;
-//import :Definitions;
 
-
-import :Memory;
-import :Fence;
 import :Device;
 
 

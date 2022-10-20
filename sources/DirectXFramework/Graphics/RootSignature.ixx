@@ -8,11 +8,7 @@ export
 {
 	namespace Graphics
 	{
-		using DescriptorConstBuffer = HAL::DescriptorConstBuffer;
-		using RootSignatureDesc = HAL::RootSignatureDesc;
-		using RootSignatureType = HAL::RootSignatureType;
 
-		using RootSignature = HAL::RootSignature;
 
 
 

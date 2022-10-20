@@ -1,4 +1,4 @@
-module Graphics:Memory;
+module Graphics;
 
 import HAL;
 import d3d12;

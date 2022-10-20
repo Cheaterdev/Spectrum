@@ -46,5 +46,26 @@ using HandleTable = HAL::HandleTable;
 	using ResourceInfo = HAL::ResourceInfo;
 	using DescriptorHeap = HAL::DescriptorHeap;
 
+
+	using ResourceHeap = HAL::Heap;
+
+	using ResourceHeapPage = HAL::ResourceHeapPage;
+	using ResourceHandle = HAL::ResourceHandle;
+
+	template<class LockPolicy>
+	using ResourceHeapAllocator = HAL::ResourceHeapAllocator<LockPolicy>;
+
+	using Event = HAL::Event;
+	using Fence = HAL::Fence;
+	using FenceWaiter = HAL::FenceWaiter;
+
+	using IndirectCommand = HAL::IndirectCommand;
+
+
+	using DescriptorConstBuffer = HAL::DescriptorConstBuffer;
+	using RootSignatureDesc = HAL::RootSignatureDesc;
+	using RootSignatureType = HAL::RootSignatureType;
+
+	using RootSignature = HAL::RootSignature;
 	}
 }

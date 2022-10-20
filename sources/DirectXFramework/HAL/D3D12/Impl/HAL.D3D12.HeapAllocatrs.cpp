@@ -1,4 +1,4 @@
-module Graphics:Memory;
+module Graphics;
 
 import HAL;
 import d3d12;
@@ -12,5 +12,10 @@ namespace HAL
 	{
 		return std::make_shared<HeapFactory>(Graphics::Device::get());
 	}
+	 void ResourceHandle::Free()
+	 {
+		 if (!handle) return;
+		 owner->free(handle);
+	 }
 
 }
