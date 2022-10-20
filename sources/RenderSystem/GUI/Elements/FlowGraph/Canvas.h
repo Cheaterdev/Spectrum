@@ -36,7 +36,7 @@ namespace GUI
                         drag_listener = true;
                         set_package("link_item");
                         skin = Skin::get().DefaultOptionBox;
-                        //	texture= Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/option_normal.png"));
+                        //	texture= Graphics::Texture::get_resource(HAL::texure_header("textures/gui/option_normal.png"));
                     }
 
                     virtual bool need_drag_drop() override;

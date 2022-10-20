@@ -35,7 +35,7 @@ Graphics::Texture::ptr TextureAsset::get_texture()
 TextureAsset::TextureAsset(std::filesystem::path file_name)
 {
 	auto task = TaskInfoManager::get().create_task(file_name.generic_wstring());
-	texture = Graphics::Texture::get_resource(Graphics::texure_header(file_name, true));
+	texture = Graphics::Texture::get_resource(HAL::texure_header(file_name, true));
 
 	if (!texture)
 		texture = Graphics::Texture::null;

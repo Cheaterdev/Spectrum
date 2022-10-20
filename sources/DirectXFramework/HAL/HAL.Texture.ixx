@@ -1,17 +1,19 @@
-export module Graphics:Texture;
+export module HAL:Texture;
 
 import serialization;
 import ResourceManager;
 
-import :Device;
+import :Resource;
+import :ResourceViews;
+import :TextureData;
 
 //using namespace HAL;
 
 import :Types;
-import :Definitions;
+
 export
 {
-	namespace Graphics
+	namespace HAL
 	{
 
 		struct texure_header

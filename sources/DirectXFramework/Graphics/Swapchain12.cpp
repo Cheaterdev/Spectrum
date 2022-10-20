@@ -1,5 +1,4 @@
 module Graphics:SwapChain;
-import :Texture;
 import :Queue;
 
 import HAL;

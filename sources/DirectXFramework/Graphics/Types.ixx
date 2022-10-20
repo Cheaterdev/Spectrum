@@ -88,5 +88,8 @@ using RTXSceneView = HAL::RTXSceneView;
 	using BufferView = HAL::BufferView;
 	using ResourceView = HAL::ResourceView;
 
+
+	using Texture = HAL::Texture;
+
 	}
 }

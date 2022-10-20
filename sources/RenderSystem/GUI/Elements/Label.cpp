@@ -2,7 +2,6 @@
 #include "Helpers/MipMapGeneration.h"
 #include "Label.h"
 
-#include "d3d12/d3dx12.h"
 #include "GUI/Renderer/Renderer.h"
 
 namespace GUI

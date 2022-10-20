@@ -5,7 +5,7 @@ export import :Types;
 
 export import :Device;
 export import :Buffer;
-export import :Texture;
+
 export import :RaytracingAS;
 
 export import :RootSignature;

@@ -25,7 +25,6 @@ export
 		};
 
 
-		class Texture;
 
 		class SwapChain
 		{

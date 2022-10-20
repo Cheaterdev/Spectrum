@@ -1020,7 +1020,7 @@ public:
 
 		{
 			GUI::Elements::image::ptr back(new GUI::Elements::image);
-			back->texture = Graphics::Texture::get_resource(Graphics::texure_header(to_path(L"textures/gui/back_fill.png"), false, false));
+			back->texture = Graphics::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/back_fill.png"), false, false));
 			back->texture.tiled = true;
 			back->width_size = GUI::size_type::MATCH_PARENT;
 			back->height_size = GUI::size_type::MATCH_PARENT;

@@ -21,7 +21,7 @@ export import :TiledMemeoryManager;
 export import :ResourceStates;
 export import :ResourceViews;
 export import :Resource;
-
+export import :Texture;
 export import :Adapter;
 export import :Debug;
 export import :Removeme;

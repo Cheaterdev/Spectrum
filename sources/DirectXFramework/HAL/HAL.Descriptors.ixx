@@ -1,7 +1,5 @@
 export module HAL:Descriptors;
 
-import d3d12;
-
 import :Types;
 import :Format;
 import :API.Resource;

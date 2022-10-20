@@ -1,10 +1,10 @@
-﻿module Graphics:Texture;
+﻿module Graphics;
 import :Queue;
 
 import HAL;
-using namespace HAL;
 
-namespace Graphics
+
+namespace HAL
 {
 
 	void Texture::init()
@@ -14,7 +14,7 @@ namespace Graphics
 
 			auto desc = get_desc().as_texture();
 			if (desc.ArraySize == 6)
-				cube_view = CubeView(this, StaticCompiledGPUData::get());
+				cube_view = CubeView(this, Graphics::StaticCompiledGPUData::get());
 
 			/*		if (desc.ArraySize % 6 == 0)
 						array_cubemap_view = std::make_shared<CubemapArrayView>(this);*/
@@ -24,9 +24,9 @@ namespace Graphics
 									array_2d_view = std::make_shared<Array2DView>(this);*/
 
 			if (desc.is3D())
-				texture_3d_view = Texture3DView(this, StaticCompiledGPUData::get());
+				texture_3d_view = Texture3DView(this, Graphics::StaticCompiledGPUData::get());
 			else
-				texture_2d_view = TextureView(this, StaticCompiledGPUData::get());
+				texture_2d_view = TextureView(this, Graphics::StaticCompiledGPUData::get());
 		}
 	}
 
@@ -76,7 +76,7 @@ namespace Graphics
 		auto desc = get_desc().as_texture();
 		//auto list = Device::get().get_upload_list();
 
-		auto list = Device::get().get_queue(CommandListType::COPY)->get_free_list();
+		auto list = Graphics::Device::get().get_queue(CommandListType::COPY)->get_free_list();
 		list->begin("Texture Readback");
 
 		desc.Format = desc.Format.to_typeless();
@@ -130,7 +130,7 @@ namespace Graphics
 
 
 		Resource::_init(desc, HeapType::DEFAULT, (data.array_size * data.mip_maps) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
-		auto list = Device::get().get_upload_list();
+		auto list = Graphics::Device::get().get_upload_list();
 
 		if (data.array_size * data.mip_maps)
 		{
@@ -161,7 +161,7 @@ namespace Graphics
 		return create(data, HeapType::DEFAULT); //std::make_shared<Texture>(HAL::ResourceDesc{ desc, HAL::ResFlags::ShaderResource }, ResourceState::COMMON, HeapType::DEFAULT, data);
 	}
 
-	Graphics::Texture::ptr Texture::load_native(const texure_header& header, resource_file_depender& depender)
+	Texture::ptr Texture::load_native(const texure_header& header, resource_file_depender& depender)
 	{
 		auto file = FileSystem::get().get_file(header.name);
 

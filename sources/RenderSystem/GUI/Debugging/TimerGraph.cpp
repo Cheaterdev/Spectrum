@@ -28,7 +28,7 @@ namespace GUI
 
 				name_lbl->text = convert(data->block->get_name());
 
-				texture.texture = Graphics::Texture::get_resource(Graphics::texure_header(to_path(L"textures/gui/background.png")));
+				texture.texture = Graphics::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/background.png")));
 				texture.padding = {2,2,2,2 };
 
 				name = data->block->get_name();
@@ -54,7 +54,7 @@ namespace GUI
 
 				name_lbl->docking = dock::FILL;
 				add_child(name_lbl);
-				texture.texture = Graphics::Texture::get_resource(Graphics::texure_header(to_path(L"textures/gui/background.png")));
+				texture.texture = Graphics::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/background.png")));
 				texture.padding = {2,2,2,2};
 
 				name_lbl->text = convert(data->block->get_name());
@@ -161,7 +161,7 @@ namespace GUI
 						back->width_size = size_type::FIXED;
 						//	back->width_size = size_type::MATCH_CHILDREN;
 						back->x_type = pos_x_type::LEFT;
-					//	back->texture.texture = Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/debug_back.png"));
+					//	back->texture.texture = Graphics::Texture::get_resource(HAL::texure_header("textures/gui/debug_back.png"));
 					//	back->texture.padding = { 16,16,16,16 };
 						back->padding = { 4,4,4,4 };
 						back->size = { 80000 * std::chrono::duration<double>(end - start).count() ,0 };
@@ -174,9 +174,9 @@ namespace GUI
 						line->docking = dock::TOP;
 						line->height_size = size_type::FIXED;
 						line->width_size = size_type::MATCH_PARENT;
-						line->texture.texture = Graphics::Texture::get_resource(Graphics::texure_header(to_path(L"textures/gui/background.png")));
+						line->texture.texture = Graphics::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/background.png")));
 
-						//	back->texture.texture = Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/debug_back.png"));
+						//	back->texture.texture = Graphics::Texture::get_resource(HAL::texure_header("textures/gui/debug_back.png"));
 							back->texture.padding = { 1,1,1,1 };
 						line->size = {1,1 };
 						front->add_child(line);
@@ -207,7 +207,7 @@ namespace GUI
 						back->height_size = size_type::MATCH_CHILDREN;
 						back->width_size = size_type::FIXED;
 						back->x_type = pos_x_type::LEFT;
-					//	back->texture.texture = Graphics::Texture::get_resource(Graphics::texure_header("textures/gui/debug_back.png"));
+					//	back->texture.texture = Graphics::Texture::get_resource(HAL::texure_header("textures/gui/debug_back.png"));
 					//	back->texture.padding = { 16,16,16,16 };
 					//	back->padding = { 4,4,4,4 };
 						back->size = { 80000 * std::chrono::duration<double>(end - start).count() ,0 };
@@ -260,7 +260,7 @@ namespace GUI
 				back->height_size = size_type::MATCH_CHILDREN;
 				back->width_size = size_type::MATCH_CHILDREN;
 			//	back->x_type = pos_x_type::LEFT;
-				back->texture.texture = Graphics::Texture::get_resource(Graphics::texure_header(to_path(L"textures/gui/debug_back.png")));
+				back->texture.texture = Graphics::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/debug_back.png")));
 				back->texture.padding = { 16,16,16,16 };
 				back->padding = { 4,4,4,4 };
 				//back->size = {100,100 };
