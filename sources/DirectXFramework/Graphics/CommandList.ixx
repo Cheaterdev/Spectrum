@@ -10,8 +10,6 @@ import Exceptions;
 import :RootSignature;
 import :Device;
 
-import :ResourceViews;
-
 
 import Math;
 import :Enums;
@@ -275,7 +273,7 @@ export{
 		public:
 			using Uploader<Thread::Lockable>::place_raw;
 		};
-		class FrameResources :public SharedObject<FrameResources>, public GPUCompiledManager<Thread::Lockable>
+		class FrameResources :public SharedObject<FrameResources>, public GPUCompiledManager<Thread::Lockable>, public HAL::FrameResources
 		{
 
 			friend class FrameResourceManager;
@@ -1398,4 +1396,19 @@ export{
 	//{
 	//	return std::static_pointer_cast<Graphics::Transitions>(resource);
 	//}
+
+	Graphics::FrameResources* to_hal(HAL::FrameResources* resource)
+	{
+		return static_cast<Graphics::FrameResources*>(resource);
+	}
+
+	Graphics::FrameResources& to_hal(HAL::FrameResources& resource)
+	{
+		return *static_cast<Graphics::FrameResources*>(&resource);
+	}
+
+	Graphics::FrameResources::ptr to_hal(std::shared_ptr<HAL::FrameResources>& resource)
+	{
+		return std::static_pointer_cast<Graphics::FrameResources>(resource);
+	}
 }

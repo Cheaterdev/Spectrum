@@ -1,14 +1,14 @@
-module Graphics:ResourceViews;
+module Graphics;
 import :CommandList;
 import :Types;
 
-namespace Graphics
+namespace HAL
 {
 
 	RTXSceneView::RTXSceneView(Resource* resource, FrameResources& frame) :ResourceView(resource)
 	{
 		/*	init_desc();*/
-		scene = frame.get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place<HLSL::RaytracingAccelerationStructure>();
+		scene = to_hal(frame).get_cpu_heap(DescriptorHeapType::CBV_SRV_UAV).place<HLSL::RaytracingAccelerationStructure>();
 		scene.create(resource);
 	}
 
@@ -21,7 +21,7 @@ namespace Graphics
 		desc.ArraySize = 1;
 		desc.FirstArraySlice = slice;
 
-		return TextureView(resource, frame, desc);
+		return TextureView(resource, to_hal(frame), desc);
 	}
 
 	TextureView TextureView::create_mip(UINT mip, FrameResources& frame)
@@ -31,7 +31,7 @@ namespace Graphics
 		desc.MipSlice += mip;
 		desc.MipLevels = 1;
 
-		return TextureView(resource, frame, desc);
+		return TextureView(resource, to_hal(frame), desc);
 	}
 	TextureView CubeView::get_face(UINT face)
 	{
@@ -45,6 +45,6 @@ namespace Graphics
 		desc.MipSlice += mip;
 		desc.MipLevels = 1;
 
-		return CubeView(resource, frame, desc);
+		return CubeView(resource, to_hal(frame), desc);
 	}
 }

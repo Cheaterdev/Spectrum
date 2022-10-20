@@ -15,7 +15,6 @@ export
 	
 		
 
-		class FrameResources;
 		class CommandList;
 	
 		class ComputePipelineState;

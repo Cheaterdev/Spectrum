@@ -14,7 +14,7 @@ export import stl.memory;
 export import Math;
 export import :CommandList;
 export import HAL;
-import :HLSLDescriptors;
+
 
 import d3d12;
 

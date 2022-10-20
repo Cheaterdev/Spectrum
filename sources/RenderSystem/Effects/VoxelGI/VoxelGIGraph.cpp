@@ -1135,7 +1135,7 @@ void VoxelGI::lighting(Graph& graph)
 
 				pssm.GetLight_buffer() = data.global_depth->texture2D;
 
-				auto buffer_view = data.global_camera->resource->create_view<StructuredBufferView<Table::Camera>>(*graph.builder.current_frame);
+				auto buffer_view = data.global_camera->resource->create_view<HAL::StructuredBufferView<Table::Camera>>(*graph.builder.current_frame);
 
 				pssm.GetLight_camera() = buffer_view.structuredBuffer;
 

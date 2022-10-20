@@ -9,7 +9,7 @@ import Debug;
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
 
-#undef THIS;
+#undef THIS
 namespace HAL
 {
 	void Device::init(DeviceDesc& desc)

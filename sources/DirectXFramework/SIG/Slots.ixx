@@ -8,7 +8,7 @@ import :Concepts;
 import :Enums;
 import :Buffer;
 import :SIG;
-import :ResourceViews;
+
 export {
 
 
@@ -129,7 +129,7 @@ export {
 
 
 				auto info = context->place_raw(offsets);
-				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(*context, Graphics::StructuredBufferViewDesc{ (uint)info.offset, (uint)info.size,false }).structuredBuffer;
+				auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, Graphics::StructuredBufferViewDesc{ (uint)info.offset, (uint)info.size,false }).structuredBuffer;
 
 				offset = srv.offset;
 

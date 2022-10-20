@@ -10,12 +10,13 @@ import stl.core;
 
 import :Format;
 
+import d3d12;////////////
 #undef DOMAIN
 
 export namespace HAL
 {
 	using GPUAddressPtr = uint64;
-
+	typedef D3D12_VIEWPORT Viewport;
 	enum class DescriptorRange : int
 	{
 		SRV,

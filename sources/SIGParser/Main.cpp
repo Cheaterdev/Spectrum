@@ -633,7 +633,7 @@ import Math;
 import :Samplers;
 import :Buffer;
 import :Descriptors;
-import :HLSLDescriptors;
+
 
 import :SIG;
 import :RT;

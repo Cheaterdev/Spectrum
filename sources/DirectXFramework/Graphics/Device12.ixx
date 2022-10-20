@@ -19,7 +19,7 @@ export
 
 
 
-		typedef D3D12_VIEWPORT Viewport;
+		
 		class Device : public Singleton<Device>, public HAL::Device
 		{
 			friend class HAL::Device;

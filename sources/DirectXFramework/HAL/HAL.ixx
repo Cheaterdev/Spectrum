@@ -9,7 +9,7 @@ export import :Sampler;
 export import :Utils;
 
 export import :Shaders;
-
+export import :HLSL;
 
 export import :Fence;
 export import :RootSignature;
@@ -19,6 +19,7 @@ export import :Heap;
 export import :HeapAllocators;
 export import :TiledMemeoryManager;
 export import :ResourceStates;
+export import :ResourceViews;
 export import :Resource;
 
 export import :Adapter;

@@ -41,31 +41,52 @@ export {
 		using Format = HAL::Format;
 		using Handle = HAL::Handle;
 		using HandleTableLight = HAL::HandleTableLight;
-using HandleTable = HAL::HandleTable;
+		using HandleTable = HAL::HandleTable;
 
-	using ResourceInfo = HAL::ResourceInfo;
-	using DescriptorHeap = HAL::DescriptorHeap;
-
-
-	using ResourceHeap = HAL::Heap;
-
-	using ResourceHeapPage = HAL::ResourceHeapPage;
-	using ResourceHandle = HAL::ResourceHandle;
-
-	template<class LockPolicy>
-	using ResourceHeapAllocator = HAL::ResourceHeapAllocator<LockPolicy>;
-
-	using Event = HAL::Event;
-	using Fence = HAL::Fence;
-	using FenceWaiter = HAL::FenceWaiter;
-
-	using IndirectCommand = HAL::IndirectCommand;
+		using ResourceInfo = HAL::ResourceInfo;
+		using DescriptorHeap = HAL::DescriptorHeap;
 
 
-	using DescriptorConstBuffer = HAL::DescriptorConstBuffer;
-	using RootSignatureDesc = HAL::RootSignatureDesc;
-	using RootSignatureType = HAL::RootSignatureType;
+		using ResourceHeap = HAL::Heap;
 
-	using RootSignature = HAL::RootSignature;
+		using ResourceHeapPage = HAL::ResourceHeapPage;
+		using ResourceHandle = HAL::ResourceHandle;
+
+		template<class LockPolicy>
+		using ResourceHeapAllocator = HAL::ResourceHeapAllocator<LockPolicy>;
+
+		using Event = HAL::Event;
+		using Fence = HAL::Fence;
+		using FenceWaiter = HAL::FenceWaiter;
+
+		using IndirectCommand = HAL::IndirectCommand;
+
+
+		using DescriptorConstBuffer = HAL::DescriptorConstBuffer;
+		using RootSignatureDesc = HAL::RootSignatureDesc;
+		using RootSignatureType = HAL::RootSignatureType;
+
+		using RootSignature = HAL::RootSignature;
+
+		using Viewport = HAL::Viewport;
+
+	using TextureView = HAL::TextureView;
+	using Texture3DView = HAL::Texture3DView;
+	using CubeView = HAL::CubeView;
+	using TextureViewDesc = HAL::TextureViewDesc;
+	using CubeViewDesc = HAL::CubeViewDesc;
+	using Texture3DViewDesc = HAL::Texture3DViewDesc;
+	using FormattedBufferViewDesc = HAL::FormattedBufferViewDesc;
+using StructuredBufferViewDesc = HAL::StructuredBufferViewDesc;
+template<class T, Format::Formats _format>
+using FormattedBufferView = HAL::FormattedBufferView<T, _format>;
+
+template<class T>
+using StructuredBufferView = HAL::StructuredBufferView<T>;
+
+using RTXSceneView = HAL::RTXSceneView;
+	using BufferView = HAL::BufferView;
+	using ResourceView = HAL::ResourceView;
+
 	}
 }

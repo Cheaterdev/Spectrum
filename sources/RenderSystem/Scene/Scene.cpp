@@ -67,7 +67,7 @@ bool Scene::init_ras(Graphics::CommandList::ptr& list)
 	return res;
 }
 
-void Scene::update(FrameResources& frame)
+void Scene::update(Graphics::FrameResources& frame)
 {
 	mats.clear();
 	pipelines.clear();
@@ -126,14 +126,14 @@ void Scene::update(FrameResources& frame)
 
 
 				auto info = frame.place_raw(UINT(data.size()));
-				auto srv = info.resource->create_view<StructuredBufferView<UINT>>(frame, StructuredBufferViewDesc{ (UINT)info.offset, (UINT)info.size,false }).structuredBuffer;
+				auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(frame, StructuredBufferViewDesc{ (UINT)info.offset, (UINT)info.size,false }).structuredBuffer;
 				gather_global.GetMeshes_count() = srv;
 			}
 
 
 			if (data.size()) {
 				auto info = frame.place_raw(data);
-				auto srv = info.resource->create_view<FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(frame, FormattedBufferViewDesc{ (UINT)info.offset, (UINT)info.size }).buffer;
+				auto srv = info.resource->create_view<HAL::FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(frame, FormattedBufferViewDesc{ (UINT)info.offset, (UINT)info.size }).buffer;
 				gather_global.GetCommands() = srv;
 			}
 

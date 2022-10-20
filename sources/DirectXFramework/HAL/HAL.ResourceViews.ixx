@@ -1,14 +1,12 @@
-export module Graphics:ResourceViews;
+export module HAL:ResourceViews;
 import :Types;
-
-import HAL;
-import :HLSLDescriptors;
-import :Device;
+import :HLSL;
+import :API.Device;
 
 export
 {
 
-	namespace Graphics
+	namespace HAL
 	{
 		struct TextureViewDesc
 		{
@@ -41,7 +39,7 @@ export
 		{
 
 		public:
-			HAL::Resource* resource; //////////////
+			Resource* resource; //////////////
 			ResourceView()
 			{
 

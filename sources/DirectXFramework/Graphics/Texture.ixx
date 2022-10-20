@@ -7,7 +7,7 @@ import ResourceManager;
 import :Device;
 import :TextureData;
 
-import :HLSLDescriptors;
+
 
 //using namespace HAL;
 

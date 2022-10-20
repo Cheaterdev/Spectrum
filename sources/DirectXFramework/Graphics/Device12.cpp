@@ -1,6 +1,3 @@
-module;
-import d3d12;
-
 module Graphics:Device;
 import Log;
 import :SwapChain;

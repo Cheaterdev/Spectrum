@@ -8,7 +8,6 @@ export import :Buffer;
 export import :Texture;
 export import :RaytracingAS;
 
-export import :ResourceViews;
 export import :RootSignature;
 export import :SwapChain;
 export import :PipelineState;

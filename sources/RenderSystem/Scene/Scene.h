@@ -80,7 +80,7 @@ public:
 
     bool init_ras(CommandList::ptr& list);
 
-    void update(FrameResources& frame);
+    void update(Graphics::FrameResources& frame);
 
 
     void iterate_meshes(MESH_TYPE mesh_type, std::function<void(scene_object::ptr)> f)
