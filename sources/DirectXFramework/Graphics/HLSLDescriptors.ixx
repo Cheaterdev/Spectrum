@@ -6,7 +6,6 @@ import :Memory;
 import :Fence;
 import :Device;
 
-import :Descriptors;
 
 import stl.threading;
 import stl.core;

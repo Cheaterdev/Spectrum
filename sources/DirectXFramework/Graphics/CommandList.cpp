@@ -120,8 +120,8 @@ namespace Graphics
 		if (type != CommandListType::COPY) {
 			std::array<ID3D12DescriptorHeap*, 2> heaps;
 
-			heaps[0] = DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::SAMPLER)->get_dx();
-			heaps[1] = DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV)->get_dx();
+			heaps[0] = HAL::DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::SAMPLER)->get_dx();
+			heaps[1] = HAL::DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV)->get_dx();
 			compiler.SetDescriptorHeaps(2, heaps.data());
 		}
 	}

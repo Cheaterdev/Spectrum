@@ -12,8 +12,7 @@ import :Device;
 import :Fence;
 import :IndirectCommand;
 import :ResourceViews;
-import :Descriptors;
-//import :GPUTimer;
+
 
 import Math;
 import :Enums;
@@ -227,18 +226,18 @@ export{
 		template<class LockPolicy = Thread::Free>
 		class GPUCompiledManager : public Uploader<LockPolicy>
 		{
-			enum_array<HAL::DescriptorHeapType, typename DynamicDescriptor<LockPolicy>::ptr> cpu_heaps;
-			enum_array<HAL::DescriptorHeapType, typename DynamicDescriptor<LockPolicy>::ptr> gpu_heaps;
+			enum_array<HAL::DescriptorHeapType, typename HAL::DynamicDescriptor<LockPolicy>::ptr> cpu_heaps;
+			enum_array<HAL::DescriptorHeapType, typename HAL::DynamicDescriptor<LockPolicy>::ptr> gpu_heaps;
 
 		public:
 
-			DynamicDescriptor<LockPolicy>& get_cpu_heap(HAL::DescriptorHeapType type)
+			HAL::DynamicDescriptor<LockPolicy>& get_cpu_heap(HAL::DescriptorHeapType type)
 			{
 				assert(cpu_heaps[type]);
 				return *cpu_heaps[type];
 			}
 
-			DynamicDescriptor<LockPolicy>& get_gpu_heap(HAL::DescriptorHeapType type)
+			HAL::DynamicDescriptor<LockPolicy>& get_gpu_heap(HAL::DescriptorHeapType type)
 			{
 				assert(cpu_heaps[type]);
 				return *gpu_heaps[type];
@@ -246,13 +245,13 @@ export{
 
 			GPUCompiledManager()
 			{
-				gpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
-				gpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE);
+				gpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
+				gpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE);
 
-				cpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::RTV] = std::make_shared<DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::RTV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::DSV] = std::make_shared<DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::DSV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE);
+				cpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE);
+				cpu_heaps[DescriptorHeapType::RTV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::RTV, DescriptorHeapFlags::NONE);
+				cpu_heaps[DescriptorHeapType::DSV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::DSV, DescriptorHeapFlags::NONE);
+				cpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE);
 			}
 
 			void reset()

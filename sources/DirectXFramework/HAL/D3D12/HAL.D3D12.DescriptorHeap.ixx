@@ -11,7 +11,10 @@ import Debug;
 
 export namespace HAL
 {
-
+	namespace API
+	{
+		class DescriptorHeap;
+	}
 	struct DescriptorHeapDesc
 	{
 		uint Count;
@@ -29,7 +32,7 @@ export namespace HAL
 		{
 		}
 
-		friend class DescriptorHeap;
+		friend class API::DescriptorHeap;
 	public:
 		void operator=(const Descriptor& r);
 
@@ -43,7 +46,10 @@ export namespace HAL
 		D3D12_GPU_DESCRIPTOR_HANDLE  get_gpu();
 
 	};
-
+	namespace API
+	{
+		
+	
 	class DescriptorHeap
 	{
 	public:// TODO
@@ -62,7 +68,7 @@ export namespace HAL
 		uint handle_size;
 		friend class Descriptor;
 	public:
-		DescriptorHeap(Device& device, const DescriptorHeapDesc& desc) :device(device), desc(desc)
+		DescriptorHeap(Device& device, const DescriptorHeapDesc& desc);/* : device(device), desc(desc)
 		{
 			D3D12_DESCRIPTOR_HEAP_DESC native_desc = {};
 			native_desc.NumDescriptors = desc.Count;
@@ -83,12 +89,12 @@ export namespace HAL
 			}
 
 			handle_size = device.get_descriptor_size(desc.HeapType);
-		}
+		}*/
 
-		Descriptor operator[](uint i)
-		{
+		Descriptor operator[](uint i);
+		/*{
 			return Descriptor{ *this, i };
-		}
+		}*/
 	};
-
+	}
 }

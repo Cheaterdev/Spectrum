@@ -39,7 +39,12 @@ export {
 		using RTVState = HAL::RTVState;
 
 		using Format = HAL::Format;
+		using Handle = HAL::Handle;
+		using HandleTableLight = HAL::HandleTableLight;
+using HandleTable = HAL::HandleTable;
 
+	using ResourceInfo = HAL::ResourceInfo;
+	using DescriptorHeap = HAL::DescriptorHeap;
 
 	}
 }

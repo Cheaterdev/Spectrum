@@ -7,7 +7,7 @@ export module Graphics:Autogen;
 import :PipelineState;
 import Math;
 import :Buffer;
-import :Descriptors;
+
 import :HLSLDescriptors;
 
 import :SIG;

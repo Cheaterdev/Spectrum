@@ -6,7 +6,6 @@ export import :Device;
 
 export import :Concepts;
 export import Log;
-export import :Descriptors;
 
 export import serialization;
 export import stl.core;

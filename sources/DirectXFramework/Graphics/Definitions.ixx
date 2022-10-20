@@ -12,9 +12,8 @@ export
 		struct RaytracingBuildDescTopInputs;
 		class SwapChain;
 		class Queue;
-		struct Handle;
-
-		class DescriptorHeap;
+	
+		
 
 		class FrameResources;
 		class CommandList;

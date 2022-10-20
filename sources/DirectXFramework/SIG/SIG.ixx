@@ -2,7 +2,6 @@ export module Graphics:SIG;
 import stl.core;
 
 import :Concepts;
-import :Descriptors;
 import serialization;
 import :Buffer;
 

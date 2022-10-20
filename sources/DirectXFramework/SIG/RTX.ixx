@@ -1,5 +1,5 @@
 export module Graphics:RTX;
-import :Descriptors;
+
 import :Buffer;
 import :VirtualBuffer;
 

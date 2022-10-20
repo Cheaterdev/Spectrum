@@ -7,7 +7,6 @@ export import Allocators;
 
 export import :Concepts;
 export import Log;
-export import :Descriptors;
 
 export import serialization;
 export import stl.core;
@@ -225,7 +224,7 @@ export
 		template<class T>
 		inline void StructureBuffer<T>::init_views()
 		{
-			hlsl = StaticDescriptors::get().place(7);
+			hlsl = HAL::StaticDescriptors::get().place(7);
 
 			structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 			rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);

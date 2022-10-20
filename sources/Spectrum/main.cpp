@@ -799,7 +799,7 @@ public:
 			if (fps.tick())
 			{
 				size_t total = 0;
-				for (auto& h : DescriptorHeapManager::get().heaps)
+				for (auto& h : HAL::DescriptorHeapManager::get().heaps)
 				{
 					if (h)
 					{

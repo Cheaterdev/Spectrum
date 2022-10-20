@@ -1,5 +1,7 @@
-export module Graphics:Descriptors;
+export module HAL:DescriptorHeap;
 
+
+import :API.DescriptorHeap;
 
 import Allocators;
 import Math;
@@ -11,15 +13,11 @@ import Log;
 import Data;
 import Events;
 import Threading;
-import HAL;
-import d3d12;
 
-//import :Definitions;
-using namespace HAL;
 export
 {
 
-	namespace Graphics
+	namespace HAL
 	{
 		DescriptorHeapType get_heap_type(HandleType type);
 
@@ -66,7 +64,7 @@ export
 		class DescriptorHeap;
 		struct Handle
 		{
-			Graphics::DescriptorHeap* heap = nullptr;
+			HAL::DescriptorHeap* heap = nullptr;
 
 			ResourceInfo* get_resource_info() const;
 
@@ -181,10 +179,9 @@ export
 			UINT count = 0;
 		};
 
-		class DescriptorHeap : public SharedObject<DescriptorHeap>
+		class DescriptorHeap : public SharedObject<DescriptorHeap>, public API::DescriptorHeap
 		{
 			friend class Handle;
-			HAL::DescriptorHeap native_heap;
 			std::vector<ResourceInfo> resources;
 			DescriptorHeapFlags flags;
 
@@ -198,9 +195,9 @@ export
 
 			auto get_dx() const
 			{
-				if (native_heap.m_gpu_heap)
-					return native_heap.m_gpu_heap.Get();
-				return native_heap.m_cpu_heap.Get();
+				if (m_gpu_heap)
+					return m_gpu_heap.Get();
+				return m_cpu_heap.Get();
 			}
 
 
@@ -257,7 +254,7 @@ export
 		public:
 			using ptr = std::shared_ptr<DescriptorHeap>;
 
-			DescriptorHeap(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE);
+			DescriptorHeap(Device& device,UINT num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE);
 
 			virtual ~DescriptorHeap()
 			{
@@ -376,7 +373,7 @@ export
 		public:
 			using ptr = std::shared_ptr<DescriptorHeapPaged>;
 
-			DescriptorHeapPaged(UINT num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE) : DescriptorHeap(num, type, flags), allocator(num / 32)
+			DescriptorHeapPaged(Device& device, UINT num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::NONE) : DescriptorHeap(device,num, type, flags), allocator(num / 32)
 			{
 
 			}
@@ -434,9 +431,11 @@ export
 			DescriptorHeap::ptr heap_ds;
 
 
-			DescriptorHeapManager();
-
+		
 		public:
+	DescriptorHeapManager(Device& device);
+
+			static std::shared_ptr<DescriptorHeapManager> create_singleton();
 
 			enum_array<DescriptorHeapType, DescriptorHeapPaged::ptr> heaps;
 
@@ -465,6 +464,7 @@ export
 		//template<class LockPolicy = Thread::Free>
 		class StaticDescriptors : public Singleton<StaticDescriptors>
 		{
+		public://///////////////
 			using LockPolicy = Thread::Lockable;
 			DescriptorHeapType type;
 			DescriptorHeapFlags flags = DescriptorHeapFlags::NONE;
@@ -526,6 +526,7 @@ export
 		template<class LockPolicy = Thread::Free>
 		class DynamicDescriptor
 		{
+		public://///////////////
 			DescriptorHeapType type;
 			DescriptorHeapFlags flags = DescriptorHeapFlags::NONE;
 
@@ -621,19 +622,19 @@ export
 
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle::get_cpu()const
 		{
-			return heap->native_heap[offset].get_cpu();
+			return (*heap)[offset].get_cpu();
 		}
 
 		D3D12_GPU_DESCRIPTOR_HANDLE Handle::get_gpu()const
 		{
-			return heap->native_heap[offset].get_gpu();
+			return (*heap)[offset].get_gpu();
 		}
 
 
 		template<HAL::Views::ViewTemplate T>
 		void Handle::operator=(const T& v)
 		{
-			heap->native_heap[offset].place(v);
+			(*heap)[offset].place(v);
 
 			if constexpr (std::is_same_v < T, HAL::Views::UnorderedAccess>)
 			{

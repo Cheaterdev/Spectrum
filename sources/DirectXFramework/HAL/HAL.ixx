@@ -14,6 +14,7 @@ export import :Shaders;
 export import :Fence;
 export import :RootSignature;
 export import :Descriptors;
+export import :DescriptorHeap;
 export import :Heap;
 export import :HeapAllocators;
 export import :TiledMemeoryManager;

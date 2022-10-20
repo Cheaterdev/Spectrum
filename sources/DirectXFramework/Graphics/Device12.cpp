@@ -32,7 +32,7 @@ namespace Graphics
 
 
 		Singleton<StaticCompiledGPUData>::reset();
-		DescriptorHeapManager::reset();
+		HAL::DescriptorHeapManager::reset();
 		PipelineStateCache::reset();
 	}
 

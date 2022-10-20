@@ -4,7 +4,7 @@ export module Graphics:Slots;
 
 import :CommandList;
 import :Concepts;
-import :Descriptors;
+
 import :Enums;
 import :Buffer;
 import :SIG;

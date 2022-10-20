@@ -1,12 +1,10 @@
-module;
-
-module Graphics:Descriptors;
-import :Device;
+module Graphics:CommandList;
+import HAL;
 import :Types;
 
 import Utils;
 
-namespace Graphics {
+namespace HAL {
 
 	DescriptorHeapType get_heap_type(HandleType type)
 	{
@@ -39,28 +37,32 @@ namespace Graphics {
 	{
 		return !!heap;
 	}
-
-	DescriptorHeapManager::DescriptorHeapManager()
+	std::shared_ptr<DescriptorHeapManager> DescriptorHeapManager::create_singleton()
 	{
-		heap_rt.reset(new DescriptorHeap(65536, DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::NONE));
-		heap_ds.reset(new DescriptorHeap(65536, DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::NONE));
+		return std::make_shared<DescriptorHeapManager>(Graphics::Device::get());
+	}
+
+	DescriptorHeapManager::DescriptorHeapManager(Device&device)
+	{
+		heap_rt.reset(new DescriptorHeap(device,65536, DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::NONE));
+		heap_ds.reset(new DescriptorHeap(device, 65536, DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::NONE));
 
 
-		heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(65536 * 8, DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::SHADER_VISIBLE));
-		heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(2048, DescriptorHeapType::SAMPLER, HAL::DescriptorHeapFlags::SHADER_VISIBLE));
+		heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(device, 65536 * 8, DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::SHADER_VISIBLE));
+		heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(device, 2048, DescriptorHeapType::SAMPLER, HAL::DescriptorHeapFlags::SHADER_VISIBLE));
 
 		//	cpu_heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE));
-		heaps[DescriptorHeapType::RTV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::NONE));
-		heaps[DescriptorHeapType::DSV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::NONE));
+		heaps[DescriptorHeapType::RTV].reset(new DescriptorHeapPaged(device, 65536, DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::NONE));
+		heaps[DescriptorHeapType::DSV].reset(new DescriptorHeapPaged(device, 65536, DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::NONE));
 		//	cpu_heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE));
 	}
 
 
-	DescriptorHeap::DescriptorHeap(UINT num, DescriptorHeapType type, HAL::DescriptorHeapFlags flags) :native_heap(Device::get(), HAL::DescriptorHeapDesc{ num, type , flags }), flags(flags)
+	DescriptorHeap::DescriptorHeap(Device & device, UINT num, DescriptorHeapType type, HAL::DescriptorHeapFlags flags) :API::DescriptorHeap(device, HAL::DescriptorHeapDesc{ num, type , flags }), flags(flags)
 	{
 		max_count = num;
 
-		descriptor_size = Device::get().get_descriptor_size(type);
+		descriptor_size = device.get_descriptor_size(type);
 		//	assert(m_GPUHeap);
 
 		resources.resize(max_count);
@@ -69,7 +71,7 @@ namespace Graphics {
 
 	void Handle::place(const Handle& r) const
 	{
-		heap->native_heap[offset] = r.heap->native_heap[r.offset];
+		(*heap)[offset] = (*r.heap)[r.offset];
 		*get_resource_info() = *r.get_resource_info();
 	}
 

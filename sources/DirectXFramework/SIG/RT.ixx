@@ -4,7 +4,7 @@ export module Graphics:RT;
 import :Concepts;
 
 import :CommandList;
-import :Descriptors;
+
 import :Types;
 export
 {
