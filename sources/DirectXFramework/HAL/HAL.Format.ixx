@@ -10,6 +10,13 @@ export namespace HAL
 
 	enum class NativeFormat : uint {};
 
+	struct SurfaceInfo
+	{
+		uint numBytes;
+		uint rowBytes;
+		uint numRows;
+	};
+
 	class Format
 	{
 		Format(NativeFormat native_format) :native_format(Formats(static_cast<uint>(native_format))) {
@@ -132,7 +139,7 @@ export namespace HAL
 		{
 			return native_format;
 		}
-		uint size();
+		uint size() const;
 
 		bool operator==(const Format&) const = default;
 		std::strong_ordering operator<=>(const Format& r)  const = default;
@@ -149,6 +156,8 @@ export namespace HAL
 		Format to_dsv() const;
 		Format to_srv() const;
 		uint get_default_mapping() const;
+
+		SurfaceInfo  surface_info(uint2 size)const;
 	private:
 		Formats native_format = Formats::UNKNOWN;
 

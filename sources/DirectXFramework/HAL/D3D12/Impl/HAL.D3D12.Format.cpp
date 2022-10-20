@@ -98,7 +98,7 @@ namespace HAL
 		}
 	}
 
-	UINT Format::size()
+	UINT Format::size()const
 	{
 		switch (native_format)
 		{
@@ -241,5 +241,87 @@ namespace HAL
 			return D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 		}
 	}
+
+
+	SurfaceInfo  Format::surface_info(uint2 size) const
+	{
+		uint numBytes = 0;
+		uint rowBytes = 0;
+		uint numRows = 0;
+
+		bool bc = false;
+		bool packed = false;
+		size_t bcnumBytesPerBlock = 0;
+
+		switch (native_format)
+		{
+		case DXGI_FORMAT_BC1_TYPELESS:
+		case DXGI_FORMAT_BC1_UNORM:
+		case DXGI_FORMAT_BC1_UNORM_SRGB:
+		case DXGI_FORMAT_BC4_TYPELESS:
+		case DXGI_FORMAT_BC4_UNORM:
+		case DXGI_FORMAT_BC4_SNORM:
+			bc = true;
+			bcnumBytesPerBlock = 8;
+			break;
+
+		case DXGI_FORMAT_BC2_TYPELESS:
+		case DXGI_FORMAT_BC2_UNORM:
+		case DXGI_FORMAT_BC2_UNORM_SRGB:
+		case DXGI_FORMAT_BC3_TYPELESS:
+		case DXGI_FORMAT_BC3_UNORM:
+		case DXGI_FORMAT_BC3_UNORM_SRGB:
+		case DXGI_FORMAT_BC5_TYPELESS:
+		case DXGI_FORMAT_BC5_UNORM:
+		case DXGI_FORMAT_BC5_SNORM:
+		case DXGI_FORMAT_BC6H_TYPELESS:
+		case DXGI_FORMAT_BC6H_UF16:
+		case DXGI_FORMAT_BC6H_SF16:
+		case DXGI_FORMAT_BC7_TYPELESS:
+		case DXGI_FORMAT_BC7_UNORM:
+		case DXGI_FORMAT_BC7_UNORM_SRGB:
+			bc = true;
+			bcnumBytesPerBlock = 16;
+			break;
+
+		case DXGI_FORMAT_R8G8_B8G8_UNORM:
+		case DXGI_FORMAT_G8R8_G8B8_UNORM:
+			packed = true;
+			break;
+		}
+
+		if (bc)
+		{
+			size_t numBlocksWide = 0;
+
+			if (size.x > 0)
+				numBlocksWide = std::max<size_t>(1, (size.x + 3) / 4);
+
+			size_t numBlocksHigh = 0;
+
+			if (size.y > 0)
+				numBlocksHigh = std::max<size_t>(1, (size.y + 3) / 4);
+
+			rowBytes = numBlocksWide * bcnumBytesPerBlock;
+			numRows = numBlocksHigh;
+		}
+
+		else if (packed)
+		{
+			rowBytes = ((size.x + 1) >> 1) * 4;
+			numRows = size.y;
+		}
+
+		else
+		{
+			size_t bpp = this->size();
+			rowBytes = (size.x * bpp + 7) / 8; // round up to nearest byte
+			numRows = size.y;
+		}
+
+		numBytes = rowBytes * numRows;
+			return { numBytes,rowBytes,numRows };
+	}
+
 
 }

@@ -66,12 +66,8 @@ namespace Graphics
 		//	resource->debug = true;
 		init();
 	}
-	Texture::Texture(HAL::ResourceDesc desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, HeapType heap_type, std::shared_ptr<texture_data> data /*= nullptr*/) :Resource(desc, heap_type, data ? ResourceState::COPY_DEST : state)
+	Texture::Texture(HAL::ResourceDesc desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, HeapType heap_type) :Resource(desc, heap_type,  state)
 	{
-		//set_name(std::string("Texture_") + std::to_string(desc.Width) + "_" + std::to_string(desc.Height) + "_" + std::to_string(desc.DepthOrArraySize));
-		//desc = get_desc();
-		if (data)
-			upload_data(data);
 		init();
 	}
 
@@ -162,7 +158,7 @@ namespace Graphics
 		desc.MipLevels = data->mip_maps;
 		desc.Dimensions = uint3(data->width, data->height, 0);
 
-		return std::make_shared<Texture>(HAL::ResourceDesc{ desc, HAL::ResFlags::ShaderResource }, ResourceState::COMMON, HeapType::DEFAULT, data);
+		return create(data, HeapType::DEFAULT); //std::make_shared<Texture>(HAL::ResourceDesc{ desc, HAL::ResFlags::ShaderResource }, ResourceState::COMMON, HeapType::DEFAULT, data);
 	}
 
 	Graphics::Texture::ptr Texture::load_native(const texure_header& header, resource_file_depender& depender)
@@ -183,17 +179,26 @@ namespace Graphics
 			if (!tex_data)
 				return nullptr;
 
-			HAL::ResourceDesc desc;
 
-			if (tex_data->depth > 1)
-				desc = HAL::ResourceDesc::Tex3D(tex_data->format, { tex_data->width, tex_data->height, tex_data->depth }, tex_data->mip_maps);
-			else
-				desc = HAL::ResourceDesc::Tex2D(tex_data->format, { tex_data->width, tex_data->height }, tex_data->array_size, tex_data->mip_maps);
-
-			return std::make_shared<Texture>(desc, ResourceState::PIXEL_SHADER_RESOURCE, HeapType::DEFAULT, tex_data);
+			return create(tex_data, HeapType::DEFAULT);
 		}
 
 		return nullptr;
+	}
+	 Texture::ptr Texture::create(HAL::texture_data::ptr& tex_data, HeapType heap_type)
+	{
+		HAL::ResourceDesc desc;
+
+		if (tex_data->depth > 1)
+			desc = HAL::ResourceDesc::Tex3D(tex_data->format, { tex_data->width, tex_data->height, tex_data->depth }, tex_data->mip_maps);
+		else
+			desc = HAL::ResourceDesc::Tex2D(tex_data->format, { tex_data->width, tex_data->height }, tex_data->array_size, tex_data->mip_maps);
+		auto texture = std::make_shared<Texture>(desc, ResourceState::COPY_DEST, HeapType::DEFAULT);
+
+
+		texture->upload_data(tex_data);
+
+		return texture;
 	}
 
 

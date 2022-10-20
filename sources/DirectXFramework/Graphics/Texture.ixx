@@ -1,13 +1,9 @@
 export module Graphics:Texture;
 
 import serialization;
-import :CommandList;
 import ResourceManager;
 
 import :Device;
-import :TextureData;
-
-
 
 //using namespace HAL;
 
@@ -76,11 +72,13 @@ export
 			static const ptr null;
 
 			Texture(D3D::Resource native, ResourceState state);
-			Texture(HAL::ResourceDesc desc, ResourceState state = ResourceState::PIXEL_SHADER_RESOURCE, HeapType heap_type = HeapType::DEFAULT, std::shared_ptr<texture_data> data = nullptr);
+			Texture(HAL::ResourceDesc desc, ResourceState state = ResourceState::PIXEL_SHADER_RESOURCE, HeapType heap_type = HeapType::DEFAULT);
 
-			texture_data::ptr get_data() const;
+			static Texture::ptr create(HAL::texture_data::ptr& data, HeapType heap_type = HeapType::DEFAULT);
 
-			void upload_data(texture_data::ptr);
+			HAL::texture_data::ptr get_data() const;
+
+			void upload_data(HAL::texture_data::ptr);
 			Texture::ptr compress();
 
 			SERIALIZE()
@@ -93,7 +91,7 @@ export
 				}
 				else
 				{
-					texture_data::ptr data;
+					HAL::texture_data::ptr data;
 					ar& NVP(data);
 					upload_data(data);
 				}

@@ -26,7 +26,7 @@ export import :Adapter;
 export import :Debug;
 export import :Removeme;
 
-
+export import :TextureData;
 export import :API;
 
 export namespace HAL
