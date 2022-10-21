@@ -736,7 +736,7 @@ class PassNode : public::FlowGraph::Node, public  GUI::Elements::FlowGraph::Visu
 
 class GraphRender : public Window, public GUI::user_interface
 {
-	Graphics::SwapChain::ptr swap_chain;
+	HAL::SwapChain::ptr swap_chain;
 
 	tick_timer main_timer;
 	ivec2 new_size;
@@ -998,7 +998,7 @@ public:
 	GraphRender()
 	{
 		Window::input_handler = this;
-		Graphics::swap_chain_desc desc;
+		HAL::swap_chain_desc desc;
 		desc.format = Graphics::Format::R8G8B8A8_UNORM;
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
@@ -1363,7 +1363,7 @@ struct test
 	}
 } v;
 
-//#include <DbgHelp.h>
+#include <shellscalingapi.h>
 int APIENTRY WinMain(_In_ HINSTANCE hinst,
 	_In_opt_ HINSTANCE,
 	_In_ LPTSTR,
@@ -1371,7 +1371,7 @@ int APIENTRY WinMain(_In_ HINSTANCE hinst,
 {
 	setlocale(LC_ALL, "");
 	CoInitialize(NULL);
-
+	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
 
 	//entry->SetCompressionStream();

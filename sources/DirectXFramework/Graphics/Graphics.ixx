@@ -9,7 +9,6 @@ export import :Buffer;
 export import :RaytracingAS;
 
 export import :RootSignature;
-export import :SwapChain;
 export import :PipelineState;
 export import :VirtualBuffer;
 

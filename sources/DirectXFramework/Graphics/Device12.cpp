@@ -1,6 +1,5 @@
 module Graphics:Device;
 import Log;
-import :SwapChain;
 import :PipelineState;
 import :GPUTimer;
 import :CommandList;
@@ -92,7 +91,7 @@ namespace Graphics
 		return info;
 	}
 
-	std::shared_ptr<SwapChain> Device::create_swap_chain(const swap_chain_desc& desc)
+	std::shared_ptr<HAL::SwapChain> Device::create_swap_chain(const HAL::swap_chain_desc& desc)
 	{
 		RECT r;
 		GetClientRect(desc.window->get_hwnd(), &r);
@@ -113,11 +112,11 @@ namespace Graphics
 			&swapChainDesc, nullptr, nullptr, &swapChain);
 		ComPtr<IDXGISwapChain3> m_swapChain;
 		swapChain.As(&m_swapChain);
-		std::shared_ptr<SwapChain> result;
+		std::shared_ptr<HAL::SwapChain> result;
 
 		if (m_swapChain)
 		{
-			result.reset(new SwapChain(m_swapChain, desc));
+			result.reset(new HAL::SwapChain(m_swapChain, desc));
 			swap_chains.push_back(result);
 		}
 

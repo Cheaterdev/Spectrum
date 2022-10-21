@@ -22,6 +22,7 @@ export import :ResourceStates;
 export import :ResourceViews;
 export import :Resource;
 export import :Texture;
+export import :SwapChain;
 export import :Adapter;
 export import :Debug;
 export import :Removeme;

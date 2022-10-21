@@ -4,7 +4,7 @@ import Application;
 
 import Graphics;
 
-class Window : public Graphics::hwnd_provider
+class Window : public HAL::hwnd_provider
 {
 	HWND hwnd;
 

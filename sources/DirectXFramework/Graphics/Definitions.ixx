@@ -6,11 +6,8 @@ export
 	namespace Graphics
 	{
 
-		class Transitions;
-		struct swap_chain_desc;
 		struct RaytracingBuildDescBottomInputs;
 		struct RaytracingBuildDescTopInputs;
-		class SwapChain;
 		class Queue;
 	
 		
