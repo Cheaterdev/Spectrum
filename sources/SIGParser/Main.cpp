@@ -991,7 +991,7 @@ void generate_pso(PSO& pso)
 
 			if (!pso.compute.name.empty())
 			{
-				stream << "static inline const D3D::shader_header compute = { \"shaders/" << pso.compute.name << ".hlsl\", \"" << pso.compute.find_option("EntryPoint")->value_atom.expr << "\", 0,{";
+				stream << "static inline const HAL::shader_header compute = { \"shaders/" << pso.compute.name << ".hlsl\", \"" << pso.compute.find_option("EntryPoint")->value_atom.expr << "\", 0,{";
 
 				bool first = true;
 				for (auto option : pso.compute.options)

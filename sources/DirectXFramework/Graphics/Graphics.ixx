@@ -19,7 +19,6 @@ export import :Queue;
 
 
 export import :GPUTimer;
-export import :Shader;
 
 export import :SIG;
 export import :RT;

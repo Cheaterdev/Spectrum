@@ -1,8 +1,8 @@
-export module Graphics:Shader;
+export module HAL:Shader;
 
-import HAL;
+import :ShaderCompiler;
 import ResourceManager;
-import :Enums;
+//import :Enums;
 import stl.core;
 
 import FileDepender;
@@ -85,7 +85,7 @@ export
 		}
 
 	};
-	namespace Graphics
+	namespace HAL
 	{
 		//class PipelineStateBase;
 
@@ -140,9 +140,9 @@ export
 		 };*/
 
 		template<class _shader_type>
-		class Shader : public resource_manager<_shader_type, D3D::shader_header>
+		class Shader : public resource_manager<_shader_type, shader_header>
 		{
-			friend class resource_manager<_shader_type, D3D::shader_header>;
+			friend class resource_manager<_shader_type, shader_header>;
 		protected:
 			binary blob;
 			static const char* compile_code;
@@ -158,7 +158,7 @@ export
 
 			void operator=(const Shader& r)
 			{
-				resource_manager<_shader_type, D3D::shader_header>::operator=(r);
+				resource_manager<_shader_type, shader_header>::operator=(r);
 				// reflection = r.reflection;
 				blob = r.blob;
 				hash = r.hash;
@@ -189,16 +189,16 @@ export
 				return blob;
 			}
 
-			const D3D::shader_header& get_header() const
+			const HAL::shader_header& get_header() const
 			{
-				return resource_manager<_shader_type, D3D::shader_header>::header;
+				return resource_manager<_shader_type, HAL::shader_header>::header;
 			}
 
-			static shader_with_id<_shader_type> create_from_memory(std::string data, std::string func_name, UINT flags, std::vector<D3D::shader_macro> macros = {})
+			static shader_with_id<_shader_type> create_from_memory(std::string data, std::string func_name, UINT flags, std::vector<HAL::shader_macro> macros = {})
 			{
 				// auto t = CounterManager::get().start_count<_shader_type>();
 				resource_file_depender depender;
-				D3D::shader_include In("shaders/", depender);
+				HAL::shader_include In("shaders/", depender);
 
 				std::optional<binary> res_blob;
 
@@ -218,7 +218,7 @@ export
 				return result;
 			}
 
-			static std::shared_ptr<_shader_type> load_native(const D3D::shader_header& header, resource_file_depender& depender)
+			static std::shared_ptr<_shader_type> load_native(const HAL::shader_header& header, resource_file_depender& depender)
 			{
 
 				std::optional<binary> res_blob;
@@ -231,12 +231,12 @@ export
 
 					if (header.contains_text)
 					{
-						D3D::shader_include In("shaders/", depender);
+						HAL::shader_include In("shaders/", depender);
 						res_blob = ShaderCompiler::get().Compile_Shader(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
 					}
 					else
 					{
-						D3D::shader_include In(header.file_name, depender);
+						HAL::shader_include In(header.file_name, depender);
 						res_blob = ShaderCompiler::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
 					}
 				}

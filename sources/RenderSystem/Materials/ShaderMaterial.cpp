@@ -7,7 +7,7 @@ ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file
 
 	if (!file_name.empty())
 	{
-		auto shader = Graphics::pixel_shader::get_resource({ file_name, entry,{} });
+		auto shader = HAL::pixel_shader::get_resource({ file_name, entry,{} });
 
 		pipeline = std::make_shared<materials::PipelineSimple>(0, shader);
 
@@ -22,7 +22,7 @@ ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file
 void ShaderMaterial::on_asset_change(std::shared_ptr<Asset> asset)
 {
 	// if (asset == *file)
-	//      shader = Graphics::pixel_shader::create_from_memory(file->get_data(), "PC", 0);
+	//      shader = HAL::pixel_shader::create_from_memory(file->get_data(), "PC", 0);
 }
 void ShaderMaterial::set(RENDER_TYPE render_type, MESH_TYPE type, Graphics::PipelineStateDesc &pipeline)
 {

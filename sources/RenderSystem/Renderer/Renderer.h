@@ -78,7 +78,7 @@ class main_renderer
 class mesh_renderer : public renderer, public Events::prop_handler, VariableContext
 {
       
-        Graphics::vertex_shader::ptr shader;
+        HAL::vertex_shader::ptr shader;
         Graphics::geometry_shader::ptr voxel_geometry_shader;
         Graphics::mesh_shader::ptr mshader;
         Graphics::mesh_shader::ptr mshader_voxel;

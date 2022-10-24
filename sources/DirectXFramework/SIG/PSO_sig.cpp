@@ -20,8 +20,8 @@ Graphics::PipelineState::ptr SimpleGraphicsPSO::create()
 {
 	Graphics::PipelineStateDesc desc;
 	desc.root_signature = Graphics::get_Signature(root_signature);
-	if (!vertex.entry_point.empty())	desc.vertex = Graphics::vertex_shader::get_resource(vertex);
-	if (!pixel.entry_point.empty())	desc.pixel = Graphics::pixel_shader::get_resource(pixel);
+	if (!vertex.entry_point.empty())	desc.vertex = HAL::vertex_shader::get_resource(vertex);
+	if (!pixel.entry_point.empty())	desc.pixel = HAL::pixel_shader::get_resource(pixel);
 
 	if (!geometry.entry_point.empty())	desc.geometry = Graphics::geometry_shader::get_resource(geometry);
 	if (!domain.entry_point.empty())	desc.domain = Graphics::domain_shader::get_resource(domain);

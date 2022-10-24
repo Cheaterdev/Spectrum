@@ -8,7 +8,7 @@ export import :Sampler;
 // TODO: Should be private
 export import :Utils;
 
-export import :Shaders;
+export import :Shader;
 export import :HLSL;
 
 export import :Fence;
@@ -26,7 +26,7 @@ export import :SwapChain;
 export import :Adapter;
 export import :Debug;
 export import :Removeme;
-
+export import :Shader;
 export import :TextureData;
 export import :API;
 

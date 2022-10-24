@@ -780,8 +780,8 @@ public:
 				Graphics::Device::get().get_queue(Graphics::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
-				Graphics::pixel_shader::reload_all();
-				Graphics::vertex_shader::reload_all();
+				HAL::pixel_shader::reload_all();
+				HAL::vertex_shader::reload_all();
 				Graphics::geometry_shader::reload_all();
 				Graphics::hull_shader::reload_all();
 				Graphics::domain_shader::reload_all();
@@ -997,6 +997,7 @@ public:
 
 	GraphRender()
 	{
+		//scale = 1.25f;
 		Window::input_handler = this;
 		HAL::swap_chain_desc desc;
 		desc.format = Graphics::Format::R8G8B8A8_UNORM;
@@ -1238,7 +1239,7 @@ protected:
 		AssetManager::create();
 		EVENT("WindowRender");
 
-		//	auto ps = Graphics::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
+		//	auto ps = HAL::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
 		//	auto cs = Graphics::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
 
 #ifdef OCULUS_SUPPORT
@@ -1278,8 +1279,8 @@ protected:
 		Graphics::Device::get().stop_all();
 		Skin::reset();
 		Graphics::Texture::reset_manager();
-		Graphics::pixel_shader::reset_manager();
-		Graphics::vertex_shader::reset_manager();
+		HAL::pixel_shader::reset_manager();
+		HAL::vertex_shader::reset_manager();
 		Graphics::domain_shader::reset_manager();
 		Graphics::hull_shader::reset_manager();
 		Graphics::geometry_shader::reset_manager();

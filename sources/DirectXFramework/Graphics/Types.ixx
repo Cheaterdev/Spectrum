@@ -91,5 +91,18 @@ using RTXSceneView = HAL::RTXSceneView;
 
 	using Texture = HAL::Texture;
 
+
+
+	using vertex_shader = HAL::vertex_shader;
+	using pixel_shader = HAL::pixel_shader;
+	using geometry_shader = HAL::geometry_shader;
+	using hull_shader = HAL::hull_shader;
+	using domain_shader = HAL::domain_shader;
+
+	using mesh_shader = HAL::mesh_shader;
+	using amplification_shader = HAL::amplification_shader;
+	using compute_shader = HAL::compute_shader;
+	using library_shader = HAL::library_shader;
+
 	}
 }

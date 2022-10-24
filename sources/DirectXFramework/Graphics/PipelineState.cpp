@@ -2,7 +2,6 @@ module;
 
 module Graphics:PipelineState;
 import :Device;
-import :Shader;
 
 import Serializer;
 import Debug;

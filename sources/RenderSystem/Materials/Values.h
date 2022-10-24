@@ -268,7 +268,7 @@ struct ShaderSource
     std::string uniforms;
 	std::string text;
 	std::string function_name;
-	std::vector<D3D::shader_macro> macros;
+	std::vector<HAL::shader_macro> macros;
 };
 class MaterialContext : public FlowGraph::GraphContext
 {

@@ -7,7 +7,6 @@ import FileSystem;
 
 import :RootSignature;
 
-import :Shader;
 import :Device;
 
 import Singleton;
@@ -119,7 +118,7 @@ namespace Graphics
 
 					if (has_header)
 					{
-						D3D::shader_header header;
+						HAL::shader_header header;
 						ar& NVP(header);
 
 						shader = Type::get_resource(header);

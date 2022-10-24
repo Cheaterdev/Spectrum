@@ -386,7 +386,7 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 
 mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 {
-	shader = Graphics::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
+	shader = HAL::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
 	mshader = Graphics::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
 	mshader_voxel = Graphics::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
 

@@ -12,7 +12,7 @@ namespace materials
 
 	struct render_pass
 	{
-		Graphics::pixel_shader::ptr ps_shader;
+		HAL::pixel_shader::ptr ps_shader;
 		Graphics::domain_shader::ptr ds_shader;
 		Graphics::hull_shader::ptr hs_shader;
 
@@ -163,7 +163,7 @@ namespace materials
 				std::vector<render_pass> passes;
 				passes.resize(PASS_TYPE::COUNTER);
 
-				passes[PASS_TYPE::DEFERRED].ps_shader = Graphics::pixel_shader::get_resource({ pixel, "PS", 0,context->get_pixel_result().macros, true });// create_from_memory(pixel, "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_pixel_result().macros);
+				passes[PASS_TYPE::DEFERRED].ps_shader = HAL::pixel_shader::get_resource({ pixel, "PS", 0,context->get_pixel_result().macros, true });// create_from_memory(pixel, "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_pixel_result().macros);
 
 				if (!tess.empty()) {
 					passes[PASS_TYPE::DEFERRED].hs_shader = Graphics::hull_shader::get_resource({ tess, "HS", 0,context->get_tess_result().macros, true });//  Graphics::hull_shader::create_from_memory(tess, "HS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
@@ -173,10 +173,10 @@ namespace materials
 
 				if (!voxel.empty()) {
 					auto macros = context->get_voxel_result().macros;
-					passes[PASS_TYPE::VOXEL_STATIC].ps_shader = Graphics::pixel_shader::get_resource({ pixel, "PS_VOXEL", 0,macros, true });//  Graphics::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
+					passes[PASS_TYPE::VOXEL_STATIC].ps_shader = HAL::pixel_shader::get_resource({ pixel, "PS_VOXEL", 0,macros, true });//  HAL::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
 
 					macros.emplace_back("VOXEL_DYNAMIC", "1");
-					passes[PASS_TYPE::VOXEL_DYNAMIC].ps_shader = Graphics::pixel_shader::get_resource({ pixel, "PS_VOXEL", 0,macros, true });//  Graphics::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
+					passes[PASS_TYPE::VOXEL_DYNAMIC].ps_shader = HAL::pixel_shader::get_resource({ pixel, "PS_VOXEL", 0,macros, true });//  HAL::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
 
 
 					passes[PASS_TYPE::VOXEL_DYNAMIC].hs_shader = passes[PASS_TYPE::VOXEL_STATIC].hs_shader = passes[PASS_TYPE::DEFERRED].hs_shader;

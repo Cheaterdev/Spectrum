@@ -212,7 +212,7 @@ requires (T t) {
 
 struct SimpleComputePSO {
 	Layouts root_signature;
-	D3D::shader_header compute;
+	HAL::shader_header compute;
 	std::string name;
 
 	SimpleComputePSO(std::string name) :name(name)
@@ -227,13 +227,13 @@ struct SimpleComputePSO {
 
 struct  SimpleGraphicsPSO {
 	Layouts root_signature;
-	D3D::shader_header pixel;
-	D3D::shader_header vertex;
-	D3D::shader_header geometry;
-	D3D::shader_header hull;
-	D3D::shader_header domain;
-	D3D::shader_header mesh;
-	D3D::shader_header amplification;
+	HAL::shader_header pixel;
+	HAL::shader_header vertex;
+	HAL::shader_header geometry;
+	HAL::shader_header hull;
+	HAL::shader_header domain;
+	HAL::shader_header mesh;
+	HAL::shader_header amplification;
 
 
 	std::vector<Graphics::Format> rtv_formats;
@@ -281,7 +281,7 @@ struct ShaderDefine
 
 	}
 	template<class PSO, auto Shader>
-	void ApplyOne(PSO& pso, D3D::shader_macro& m) const
+	void ApplyOne(PSO& pso, HAL::shader_macro& m) const
 	{
 		(pso.*Shader).macros.emplace_back(m);
 	}
@@ -295,7 +295,7 @@ struct ShaderDefine
 	{
 		if ((keys.*Member).use)
 		{
-			D3D::shader_macro m;
+			HAL::shader_macro m;
 
 
 			if constexpr (CanToString<decltype((keys.*Member).value)>)

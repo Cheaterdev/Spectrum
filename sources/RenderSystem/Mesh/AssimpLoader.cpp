@@ -523,8 +523,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     }
                 }
 
-                //  m->shader = Graphics::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });
-                //  m->shader_color = Graphics::pixel_shader::get_resource({ "material.hlsl", "PS_Color", 0, {} });
+                //  m->shader = HAL::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });
+                //  m->shader_color = HAL::pixel_shader::get_resource({ "material.hlsl", "PS_Color", 0, {} });
                 //   m->compile();
                 aiString mat_name;
                 //if (aiGetMaterialString(native_material, AI_MATKEY_NAME, &mat_name) == aiReturn_SUCCESS)
