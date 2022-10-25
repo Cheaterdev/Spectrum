@@ -443,7 +443,7 @@ public:
 
 		{
 
-			CommandList::ptr command_list = Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			CommandList::ptr command_list = to_hal(Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 
 			command_list->begin("pre");
 			{
@@ -514,8 +514,8 @@ public:
 
 					context->cam = &eyes[0]->cam;
 
-					command_list->get_graphics().set_layout(Layouts::DefaultLayout);
-					command_list->get_compute().set_layout(Layouts::DefaultLayout);
+					command_list->get_graphics().set_signature(get_Signature(Layouts::DefaultLayout));
+					command_list->get_compute().set_signature(get_Signature(Layouts::DefaultLayout));
 
 
 					//				gpu_meshes_renderer_static->update(context);
@@ -1292,7 +1292,6 @@ protected:
 		Fonts::FontSystem::reset();
 		RTX::reset();
 		AssetRenderer::reset();
-		//Graphics::BufferCache::reset();
 		TextureAssetRenderer::reset();
 		AssetManager::reset();
 

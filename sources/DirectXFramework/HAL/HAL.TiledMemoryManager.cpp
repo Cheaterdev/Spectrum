@@ -1,6 +1,5 @@
 module Graphics;
 import :CommandList;
-import :Queue;
 import :Device;
 import Math;
 import Events;

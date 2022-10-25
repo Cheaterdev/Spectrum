@@ -12,7 +12,7 @@ import :Device;
 
 
 import Math;
-import :Enums;
+//import :Enums;
 import Data;
 import Singleton;
 import Debug;
@@ -26,7 +26,7 @@ import HAL;
 import d3d12;
 
 import :Definitions;
-//using namespace HAL;
+using namespace HAL;
 
 export{
 	//enum class Layouts;
@@ -45,18 +45,14 @@ export{
 			std::shared_ptr<HAL::Resource> resource;
 			UINT64 offset;
 			UINT64 size;
-			D3D12_GPU_VIRTUAL_ADDRESS get_gpu_address();
 			HAL::ResourceAddress get_resource_address();
-			Handle create_cbv(CommandList& list);
-
 			std::byte* get_cpu_data() const;
 		};
 
 		template<class LockPolicy>
 		class Uploader
 		{
-			ResourceHeapAllocator<LockPolicy> allocator;
-			friend class BufferCache;
+			HAL::ResourceHeapAllocator<LockPolicy> allocator;
 			std::list<ResourceHandle> handles;
 			UINT heap_size = 0x200000;
 		protected:
@@ -111,7 +107,6 @@ export{
 
 				auto handle = allocator.alloc(AlignedSize, alignment, HAL::MemoryType::COMMITED, HeapType::UPLOAD);
 
-				//	auto handle = BufferCache::get().get_upload(AlignedSize, alignment);
 				typename LockPolicy::guard g(m);
 
 				handles.emplace_back(handle);
@@ -200,7 +195,6 @@ export{
 		class Readbacker
 		{
 			ResourceHeapAllocator<Thread::Free> allocator;
-			friend class BufferCache;
 			std::vector<ResourceHandle> handles;
 		protected:
 			void reset();
@@ -653,7 +647,7 @@ export{
 
 				on_fence.clear();
 			}
-		protected:
+		public:
 			CommandListCompiled compiled;
 
 
@@ -681,7 +675,7 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList : public SharedObject<CommandList>, public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>, public HAL::CommandList
+		class CommandList :  public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>, public HAL::CommandList
 		{
 
 
@@ -948,7 +942,7 @@ export{
 				return base;
 			}
 
-			void set_layout(Layouts layout);
+		//	void set_layout(Layouts layout);
 
 			void set_signature(const RootSignature::ptr& signature)
 			{
@@ -1376,11 +1370,24 @@ export{
 		return *static_cast<Graphics::CommandList*>(&resource);
 	}
 
-	Graphics::CommandList::ptr to_hal(std::shared_ptr<HAL::CommandList>& resource)
+	Graphics::CommandList::ptr to_hal(const std::shared_ptr<HAL::CommandList>& resource)
 	{
 		return std::static_pointer_cast<Graphics::CommandList>(resource);
 	}
+	Graphics::TransitionCommandList* to_hal(HAL::TransitionCommandList* resource)
+	{
+		return static_cast<Graphics::TransitionCommandList*>(resource);
+	}
 
+	Graphics::TransitionCommandList& to_hal(HAL::TransitionCommandList& resource)
+	{
+		return *static_cast<Graphics::TransitionCommandList*>(&resource);
+	}
+
+	Graphics::TransitionCommandList::ptr to_hal(const std::shared_ptr<HAL::TransitionCommandList>& resource)
+	{
+		return std::static_pointer_cast<Graphics::TransitionCommandList>(resource);
+	}
 
 	Graphics::Transitions* to_hal(HAL::Transitions* resource)
 	{

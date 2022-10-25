@@ -73,8 +73,8 @@ void PSSM::generate(Graph& graph)
 			auto& graphics = command_list->get_graphics();
 			auto& compute = command_list->get_compute();
 
-			graphics.set_layout(Layouts::DefaultLayout);
-			compute.set_layout(Layouts::DefaultLayout);
+			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+			compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
 
 			std::vector<sizer_long> scissor;
@@ -191,8 +191,8 @@ void PSSM::generate(Graph& graph)
 				auto& graphics = command_list->get_graphics();
 				auto& compute = command_list->get_compute();
 
-				graphics.set_layout(Layouts::DefaultLayout);
-				compute.set_layout(Layouts::DefaultLayout);
+				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+				compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
 
 				std::vector<sizer_long> scissor;
@@ -297,8 +297,8 @@ void PSSM::generate(Graph& graph)
 			auto& compute = list.get_compute();
 
 			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
-			graphics.set_layout(Layouts::DefaultLayout);
-			compute.set_layout(Layouts::DefaultLayout);
+			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+			compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
 			graph.set_slot(SlotID::FrameInfo, graphics);
 			graph.set_slot(SlotID::FrameInfo, compute);
@@ -374,8 +374,8 @@ void PSSM::generate(Graph& graph)
 			auto& compute = list.get_compute();
 
 			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
-			graphics.set_layout(Layouts::DefaultLayout);
-			compute.set_layout(Layouts::DefaultLayout);
+			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+			compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
 			graph.set_slot(SlotID::FrameInfo, graphics);
 			graph.set_slot(SlotID::FrameInfo, compute);

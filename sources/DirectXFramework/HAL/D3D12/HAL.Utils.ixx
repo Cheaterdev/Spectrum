@@ -26,6 +26,7 @@ export namespace D3D
 	using DescriptorHeap = ComPtr<ID3D12DescriptorHeap>;
 	using QueryHeap = ComPtr<ID3D12QueryHeap>;
 	using RootSignature = ComPtr<ID3D12RootSignature>;
+	using CommandQueue = ComPtr<ID3D12CommandQueue>;
 
 	using Debug = ComPtr<ID3D12Debug1>;
 	using InfoQueue = ComPtr<ID3D12InfoQueue>;

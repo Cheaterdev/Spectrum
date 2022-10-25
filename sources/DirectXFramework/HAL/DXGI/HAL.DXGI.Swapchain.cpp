@@ -1,5 +1,4 @@
 module Graphics;
-import :Queue;
 import :Device;
 
 import HAL;

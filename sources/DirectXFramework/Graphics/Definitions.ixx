@@ -8,7 +8,7 @@ export
 
 		struct RaytracingBuildDescBottomInputs;
 		struct RaytracingBuildDescTopInputs;
-		class Queue;
+
 	
 		
 
@@ -34,6 +34,7 @@ export
 
 		class GPUTimeManager;
 		class Eventer;
+class TransitionCommandList;
 
 		struct texure_header;
 

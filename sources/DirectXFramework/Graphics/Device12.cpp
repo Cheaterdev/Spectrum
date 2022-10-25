@@ -3,7 +3,6 @@ import Log;
 import :PipelineState;
 import :GPUTimer;
 import :CommandList;
-import :Queue;
 
 
 import Debug;
@@ -39,7 +38,7 @@ namespace Graphics
 
 	std::shared_ptr<CommandList> Device::get_upload_list()
 	{
-		auto list = queues[CommandListType::COPY]->get_free_list();
+		auto list = to_hal(queues[CommandListType::COPY]->get_free_list());
 		list->begin("UploadList");
 		return list;
 	}
@@ -49,7 +48,7 @@ namespace Graphics
 		return native_device;
 	}
 
-	Queue::ptr& Device::get_queue(CommandListType type)
+	HAL::Queue::ptr& Device::get_queue(CommandListType type)
 	{
 		return queues[type];
 	}
@@ -154,9 +153,9 @@ namespace Graphics
 	{
 		init(desc);
 
-		queues[CommandListType::DIRECT].reset(new Queue(CommandListType::DIRECT, this));
-		queues[CommandListType::COMPUTE].reset(new Queue(CommandListType::COMPUTE, this));
-		queues[CommandListType::COPY].reset(new Queue(CommandListType::COPY, this));
+		queues[CommandListType::DIRECT].reset(new HAL::Queue(CommandListType::DIRECT, this));
+		queues[CommandListType::COMPUTE].reset(new HAL::Queue(CommandListType::COMPUTE, this));
+		queues[CommandListType::COPY].reset(new HAL::Queue(CommandListType::COPY, this));
 
 		rtx = get_properties().rtx;
 	}

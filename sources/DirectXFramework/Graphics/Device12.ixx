@@ -29,7 +29,7 @@ export
 			HAL::DeviceProperties properties;
 			std::vector<std::shared_ptr<HAL::SwapChain>> swap_chains;
 			HAL::Adapter::ptr adapter;
-			enum_array<HAL::CommandListType, std::shared_ptr<Queue>> queues;
+			enum_array<HAL::CommandListType, std::shared_ptr<HAL::Queue>> queues;
 			IdGenerator<Thread::Lockable> id_generator;
 			friend class CommandList;
 			bool rtx = false;
@@ -47,7 +47,7 @@ export
 			std::shared_ptr<CommandList> get_upload_list();
 			ComPtr<ID3D12Device5> get_native_device();
 
-			std::shared_ptr<Queue>& get_queue(HAL::CommandListType type);
+			std::shared_ptr<HAL::Queue>& get_queue(HAL::CommandListType type);
 
 	
 		
@@ -67,4 +67,23 @@ export
 		};
 
 	}
+
+
+
+	Graphics::Device* to_hal(HAL::Device* resource)
+	{
+		return static_cast<Graphics::Device*>(resource);
+	}
+
+	Graphics::Device& to_hal(HAL::Device& resource)
+	{
+		return *static_cast<Graphics::Device*>(&resource);
+	}
+
+	//Graphics::Device::ptr to_hal(std::shared_ptr<HAL::Device>& resource)
+	//{
+	//	return std::static_pointer_cast<Graphics::Device>(resource);
+	//}
+
+
 }

@@ -148,7 +148,7 @@ void MeshAsset::init_gpu()
 		for (auto& mesh : meshes)
 		{
 
-			auto list = Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			auto list = to_hal(Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 			list->begin("RTX");
 			universal_vertex_manager::get().prepare(list);
 			universal_index_manager::get().prepare(list);

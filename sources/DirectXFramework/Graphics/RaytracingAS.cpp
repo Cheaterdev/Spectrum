@@ -1,7 +1,4 @@
-module;
-
 module Graphics:RaytracingAS;
-import :Queue;
 import HAL;
 
 using namespace HAL;
@@ -40,7 +37,7 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 
 
 
-	auto list = Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+	auto list = to_hal(Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 	list->begin("RaytracingAccelerationStructure");
 
 

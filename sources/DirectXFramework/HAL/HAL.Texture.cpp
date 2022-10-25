@@ -1,5 +1,4 @@
 ﻿module Graphics;
-import :Queue;
 
 import HAL;
 
@@ -76,7 +75,7 @@ namespace HAL
 		auto desc = get_desc().as_texture();
 		//auto list = Device::get().get_upload_list();
 
-		auto list = Graphics::Device::get().get_queue(CommandListType::COPY)->get_free_list();
+		auto list = to_hal(Graphics::Device::get().get_queue(CommandListType::COPY)->get_free_list());
 		list->begin("Texture Readback");
 
 		desc.Format = desc.Format.to_typeless();

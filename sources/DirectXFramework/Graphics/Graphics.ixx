@@ -15,7 +15,6 @@ export import :VirtualBuffer;
 
 export import :CommandList;
 export import :CommandListCompiler;
-export import :Queue;
 
 
 export import :GPUTimer;

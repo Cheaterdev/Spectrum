@@ -30,7 +30,7 @@ public:
 
 		{
 
-			CommandList::ptr command_list = Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			CommandList::ptr command_list = to_hal(Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 
 			command_list->begin("pre");
 			{
@@ -74,8 +74,8 @@ public:
 
 					//graph.scene->init_ras();
 
-					command_list->get_graphics().set_layout(Layouts::DefaultLayout);
-					command_list->get_compute().set_layout(Layouts::DefaultLayout);
+					command_list->get_graphics().set_signature(get_Signature(Layouts::DefaultLayout));
+					command_list->get_compute().set_signature(get_Signature(Layouts::DefaultLayout));
 
 					MeshRenderContext::ptr context(new MeshRenderContext());
 					context->current_time = (size_t)time;

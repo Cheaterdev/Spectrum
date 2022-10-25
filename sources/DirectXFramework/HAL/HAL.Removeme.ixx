@@ -1,10 +1,11 @@
 export module HAL:Removeme;
 
 import stl.memory;
+import Data;
 
 export namespace HAL
 {
-    class CommandList
+    class CommandList:public SharedObject<CommandList>
     {
     	public:
         CommandList() = default;

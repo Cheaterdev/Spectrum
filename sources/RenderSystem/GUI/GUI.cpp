@@ -952,7 +952,7 @@ namespace GUI
 					 {
 						 c.labeled = &context.pre_executor;
                      	
-						 c.command_list_label = Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->get_free_list();
+						 c.command_list_label = to_hal(Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->get_free_list());
                      	
 						 c.command_list_label->begin("Label");
 

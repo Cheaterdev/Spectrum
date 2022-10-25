@@ -7,7 +7,7 @@ export import :Sampler;
 
 // TODO: Should be private
 export import :Utils;
-
+export import :Queue;
 export import :Shader;
 export import :HLSL;
 

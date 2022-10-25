@@ -1,6 +1,5 @@
 export module Graphics:GPUTimer;
 
-import :Queue;
 import :Buffer;
 import Singleton;
 import IdGenerator;

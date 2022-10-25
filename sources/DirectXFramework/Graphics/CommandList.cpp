@@ -6,7 +6,6 @@ import d3d12;
 module Graphics:CommandList;
 
 import :GPUTimer;
-import :Queue;
 import :PipelineState;
 
 import :Autogen;
@@ -415,10 +414,6 @@ namespace Graphics
 		base.create_transition_point(false);
 	}
 
-	D3D12_GPU_VIRTUAL_ADDRESS UploadInfo::get_gpu_address()
-	{
-		return to_native(resource->get_resource_address().offset(offset));
-	}
 
 	HAL::ResourceAddress UploadInfo::get_resource_address()
 	{
@@ -535,10 +530,10 @@ namespace Graphics
 		base.set_pipeline_internal(state.get());
 	}
 	*/
-	void SignatureDataSetter::set_layout(Layouts layout)
-	{
-		set_signature(Graphics::get_Signature(layout));
-	}
+	//void SignatureDataSetter::set_layout(Layouts layout)
+	//{
+	//	set_signature(Graphics::get_Signature(layout));
+	//}
 	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
 	{
 		return read_texture(resource.get(), offset, box, sub_resource, f);
@@ -791,7 +786,7 @@ namespace Graphics
 
 		if (result)
 		{
-			transition_list = Device::get().get_queue(transition_type)->get_transition_list();
+			transition_list = to_hal(Device::get().get_queue(transition_type)->get_transition_list());
 			transition_list->create_transition_list(result, discards);
 			return transition_list;
 		}
@@ -1193,9 +1188,9 @@ namespace Graphics
 	CommandList::ptr FrameResources::start_list(std::string name, CommandListType type)
 	{
 		auto list = Device::get().get_queue(type)->get_free_list();
-		list->begin(name);
-		list->frame_resources = get_ptr();
-		return list;
+		to_hal(list)->begin(name);
+		to_hal(list)->frame_resources = get_ptr();
+		return to_hal(list);
 	}
 
 
