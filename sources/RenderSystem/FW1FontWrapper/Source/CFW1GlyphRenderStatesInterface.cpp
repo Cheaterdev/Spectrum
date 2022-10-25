@@ -57,10 +57,10 @@ namespace FW1FontWrapper
 
             if (vps.size())
             {
-                if (vps[0].Width >= 1.0f && vps[0].Height >= 1.0f)
+                if (vps[0].size.x >= 1.0f && vps[0].size.y >= 1.0f)
                 {
-                    w = vps[0].Width;
-                    h = vps[0].Height;
+                    w = vps[0].size.x;
+                    h = vps[0].size.y;
                 }
             }
 

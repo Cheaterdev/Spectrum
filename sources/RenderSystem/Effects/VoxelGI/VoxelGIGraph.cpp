@@ -353,7 +353,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	context->pipeline.rtv.enable_depth_write = false;
 	context->pipeline.rtv.ds_format = Format::UNKNOWN;
 
-	graphics.set_viewport({ 0, 0,  albedo.tex_dynamic->get_size().xy });
+	graphics.set_viewport(float4{ 0, 0,  albedo.tex_dynamic->get_size().xy });
 	graphics.set_scissor({ 0, 0,  albedo.tex_dynamic->get_size().xy });
 	graphics.set_rtv(0, Graphics::Handle(), Graphics::Handle());
 

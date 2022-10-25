@@ -3,7 +3,6 @@ import :Device;
 import :GPUTimer;
 import :CommandList;
 
-import d3d12;
 import Debug;
 
 import HAL;
@@ -48,7 +47,7 @@ namespace HAL
 	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
 	{
 		std::unique_lock<std::mutex> lock(queue_mutex);
-		signal(fence, value);
+		API::Queue::signal(fence, value);
 		return FenceWaiter{ &fence, value };
 	}
 

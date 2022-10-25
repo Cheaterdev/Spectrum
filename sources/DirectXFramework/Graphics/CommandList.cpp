@@ -367,7 +367,14 @@ namespace Graphics
 	void GraphicsContext::set_viewports(std::vector<Viewport> viewports)
 	{
 		this->viewports = viewports;
-		list->RSSetViewports(static_cast<UINT>(viewports.size()), viewports.data());
+
+		std::vector<D3D12_VIEWPORT> vps(viewports.size());
+
+		for(uint i=0;i<vps.size();i++)
+		{
+			vps[i] = to_native(viewports[i]);
+		}
+		list->RSSetViewports(static_cast<UINT>(vps.size()), vps.data());
 	}
 
 	void GraphicsContext::set_scissor(sizer_long rect)
@@ -382,19 +389,19 @@ namespace Graphics
 	{
 		this->viewports.resize(1);
 		this->viewports[0] = v;
-		list->RSSetViewports(static_cast<UINT>(viewports.size()), viewports.data());
+
+		set_viewports(viewports);
 	}
 
 	void GraphicsContext::set_viewport(vec4 v)
 	{
 		this->viewports.resize(1);
-		this->viewports[0].TopLeftX = v.x;
-		this->viewports[0].TopLeftY = v.y;
-		this->viewports[0].Width = v.z;
-		this->viewports[0].Height = v.w;
-		this->viewports[0].MinDepth = 0;
-		this->viewports[0].MaxDepth = 1;
-		list->RSSetViewports(static_cast<UINT>(viewports.size()), viewports.data());
+		this->viewports[0].pos.x = v.x;
+		this->viewports[0].pos.y = v.y;
+		this->viewports[0].size.x = v.z;
+		this->viewports[0].size.y = v.w;
+		this->viewports[0].depths = { 0, 1 };
+		set_viewports(viewports);
 	}
 
 	void  CopyContext::update_buffer(Resource::ptr resource, UINT offset, const  char* data, UINT size)

@@ -117,14 +117,12 @@ namespace GUI
 					PROFILE(L"label");
 
 					Graphics::Viewport vps;
-					vps.Width = static_cast<float>(cache.texture->get_desc().as_texture().Dimensions.x);
-					vps.Height = static_cast<float>(cache.texture->get_desc().as_texture().Dimensions.y);
-					vps.TopLeftX = 0;
-					vps.TopLeftY = 0;
-					vps.MinDepth = 0.0f;
-					vps.MaxDepth = 1.0f;
+					vps.size = cache.texture->get_desc().as_texture().Dimensions;
+					vps.pos = { 0,0 };
+					vps.depths = { 0,1 };
+
 					command_list->get_graphics().set_viewports({ vps });
-					sizer_long s = { 0, 0, vps.Width , vps.Height };
+					sizer_long s = { 0, 0, vps.size };
 					command_list->get_graphics().set_scissors({ s });
 					geomerty->draw(command_list, lay2, 0, { 0,0 });
 					MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);

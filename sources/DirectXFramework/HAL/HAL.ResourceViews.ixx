@@ -262,12 +262,9 @@ export
 
 
 				Viewport p;
-				p.Width = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.x / scaler));
-				p.Height = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.y / scaler));
-				p.TopLeftX = 0;
-				p.TopLeftY = 0;
-				p.MinDepth = 0;
-				p.MaxDepth = 1;
+				p.size = float2::max({ 1.0f,1.0f }, texture_desc.Dimensions / scaler);
+				p.pos = { 0,0 };
+				p.depths = {0,1};
 
 				return p;
 			}
@@ -382,13 +379,9 @@ export
 
 
 				Viewport p;
-				p.Width = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.x / scaler));
-				p.Height = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.y / scaler));
-				p.TopLeftX = 0;
-				p.TopLeftY = 0;
-				p.MinDepth = 0;
-				p.MaxDepth = 1;
-
+				p.size = float2::max({ 1.0f,1.0f }, texture_desc.Dimensions / scaler);
+				p.pos = { 0,0 };
+				p.depths = { 0,1 };
 				return p;
 			}
 
@@ -493,12 +486,9 @@ export
 
 
 				Viewport p;
-				p.Width = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.x / scaler));
-				p.Height = std::max(1.0f, static_cast<float>(texture_desc.Dimensions.y / scaler));
-				p.TopLeftX = 0;
-				p.TopLeftY = 0;
-				p.MinDepth = 0;
-				p.MaxDepth = 1;
+				p.size = float2::max({ 1.0f,1.0f }, texture_desc.Dimensions / scaler);
+				p.pos = { 0,0 };
+				p.depths = { 0,1 };
 
 				return p;
 			}

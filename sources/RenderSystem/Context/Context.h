@@ -212,13 +212,14 @@ class RenderTargetTable
 	void on_init(ivec2 size)
 	{
 		vps.resize(1);
-		vps[0].MinDepth = 0.0f;
-		vps[0].MaxDepth = 1.0f;
 		scissors.resize(1);
-		vps[0].Width = static_cast<float>(size.x);
-		vps[0].Height = static_cast<float>(size.y);
-		vps[0].TopLeftX = 0;
-		vps[0].TopLeftY = 0;
+
+
+		vps[0].size = size;
+		vps[0].pos = { 0,0 };
+		vps[0].depths = { 0,1 };
+
+
 		scissors[0] = { 0, 0, size.x, size.y };
 	}
 public:

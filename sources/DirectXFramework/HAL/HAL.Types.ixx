@@ -11,13 +11,19 @@ import stl.core;
 
 import :Format;
 
-import d3d12;////////////
 #undef DOMAIN
 
 export namespace HAL
 {
 	using GPUAddressPtr = uint64;
-	typedef D3D12_VIEWPORT Viewport;
+
+	struct Viewport
+	{
+		float2 pos;
+		float2 size;
+		float2 depths;
+	};
+
 	enum class DescriptorRange : int
 	{
 		SRV,
@@ -490,7 +496,7 @@ export namespace HAL
 	{
 		std::string file_name;
 		std::string entry_point;
-		DWORD flags;
+		uint flags;
 		std::vector<shader_macro> macros;
 		bool contains_text = false;
 

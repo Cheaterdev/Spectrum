@@ -115,12 +115,9 @@ void PSSM::generate(Graph& graph)
 
 
 			viewport.resize(1);
-			viewport[0].MinDepth = 0.0f;
-			viewport[0].MaxDepth = 1.0f;
-			viewport[0].Width = static_cast<float>(size.x);
-			viewport[0].Height = static_cast<float>(size.y);
-			viewport[0].TopLeftX = 0;
-			viewport[0].TopLeftY = 0;
+			viewport[0].depths = { 0,1 };
+			viewport[0].size = size;
+			viewport[0].pos = { 0,0 };
 
 			scissor.resize(1);
 			scissor[0] = { 0, 0, size.x, size.y };
@@ -241,12 +238,10 @@ void PSSM::generate(Graph& graph)
 
 				data.PSSM_Cameras->write(i * sizeof(camera::shader_params), reinterpret_cast<Table::Camera*>(&light_cam.camera_cb.current), 1);
 				viewport.resize(1);
-				viewport[0].MinDepth = 0.0f;
-				viewport[0].MaxDepth = 1.0f;
-				viewport[0].Width = static_cast<float>(size.x);
-				viewport[0].Height = static_cast<float>(size.y);
-				viewport[0].TopLeftX = 0;
-				viewport[0].TopLeftY = 0;
+				viewport[0].depths = { 0,1 };
+				viewport[0].size = size;
+				viewport[0].pos = { 0,0 };
+
 
 				scissor.resize(1);
 				scissor[0] = { 0, 0, size.x, size.y };

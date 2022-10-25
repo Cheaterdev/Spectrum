@@ -605,6 +605,11 @@ export ResFlags from_native(D3D12_RESOURCE_FLAGS flags)
 }
 
 
+export D3D12_VIEWPORT to_native(Viewport v)
+{
+	return D3D12_VIEWPORT{ v.pos.x,v.pos.y,v.size.x,v.size.y,v.depths.x,v.depths.y };
+}
+
 export CD3DX12_RESOURCE_DESC to_native(const ResourceDesc& desc)
 {
 	if (desc.is_buffer())
