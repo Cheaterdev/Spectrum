@@ -94,12 +94,12 @@ namespace Graphics
 		}
 		else
 			compiler.SetName(convert(name).c_str());
-		compiled = CommandListCompiled();
+		compiled = HAL::Private::CommandListCompiled();
 #ifdef DEV
 		begin_stack = Exceptions::get_stack_trace();
 #endif
 
-		Device::get().context_generator.generate(this);
+		HAL::Device::get().context_generator.generate(this);
 		first_debug_log = true;
 
 
@@ -474,7 +474,7 @@ namespace Graphics
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 		UINT NumRows;
 		UINT64 RowSizesInBytes;
-		Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, info.offset, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
+		HAL::Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, info.offset, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 
 		if (res_stride == row_stride)
 		{
@@ -527,7 +527,7 @@ namespace Graphics
 		Src.PlacedFootprint.Footprint.RowPitch = res_stride;
 		Src.PlacedFootprint.Footprint.Format = Layouts.Footprint.Format;
 		list->CopyTextureRegion(&Dst, offset.x, offset.y, offset.z, &Src, nullptr);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get(),Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 	/*
@@ -554,7 +554,7 @@ namespace Graphics
 		UINT NumRows;
 		UINT64 RowSizesInBytes;
 		D3D12_RESOURCE_DESC Desc = ::to_native(resource->get_desc());
-		Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
+		HAL::Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 
 		if (!RequiredSize)
 		{
@@ -586,7 +586,7 @@ namespace Graphics
 		dest.PlacedFootprint.Footprint.Format = ::to_native(from_native(Layouts.Footprint.Format).to_srv());
 		list->CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
 
-		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, res_stride, NumRows]()
 			{
@@ -618,7 +618,7 @@ namespace Graphics
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
 		list->CopyBufferRegion(info.resource->get_dx(), info.offset, resource->get_dx(), offset, size);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
 				f(reinterpret_cast<char*>(info.get_cpu_data()), size);
@@ -643,7 +643,7 @@ namespace Graphics
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
 		list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.offset);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
@@ -678,7 +678,7 @@ namespace Graphics
 
 		free_tracked_objects();
 
-		Device::get().context_generator.free(this);
+		HAL::Device::get().context_generator.free(this);
 
 	}
 	void Transitions::create_transition_point(bool end)
@@ -793,7 +793,7 @@ namespace Graphics
 
 		if (result)
 		{
-			transition_list = to_hal(Device::get().get_queue(transition_type)->get_transition_list());
+			transition_list = to_hal(HAL::Device::get().get_queue(transition_type)->get_transition_list());
 			transition_list->create_transition_list(result, discards);
 			return transition_list;
 		}
@@ -970,7 +970,7 @@ namespace Graphics
 		CD3DX12_TEXTURE_COPY_LOCATION Dst(dest->get_dx(), dest_subres);
 		CD3DX12_TEXTURE_COPY_LOCATION Src(source->get_dx(), source_subres);
 		list->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 
@@ -1194,10 +1194,10 @@ namespace Graphics
 
 	CommandList::ptr FrameResources::start_list(std::string name, CommandListType type)
 	{
-		auto list = Device::get().get_queue(type)->get_free_list();
-		to_hal(list)->begin(name);
-		to_hal(list)->frame_resources = get_ptr();
-		return to_hal(list);
+		auto list = to_hal(HAL::Device::get().get_queue(type)->get_free_list());
+		list->begin(name);
+		list->frame_resources = get_ptr();
+		return list;
 	}
 
 
@@ -1256,7 +1256,7 @@ namespace Graphics
 		get_base().print_debug();
 	}
 
-	void ComputeContext::build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescBottomInputs& bottom)
+	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom)
 	{
 		base.create_transition_point();
 
@@ -1286,7 +1286,7 @@ namespace Graphics
 	}
 
 
-	void ComputeContext::build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescTopInputs& top)
+	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top)
 	{
 		base.create_transition_point();
 
@@ -1296,7 +1296,7 @@ namespace Graphics
 		desc.SourceAccelerationStructureData = to_native(build_desc.SourceAccelerationStructureData);
 		desc.ScratchAccelerationStructureData = to_native(build_desc.ScratchAccelerationStructureData);
 
-		desc.Inputs = Device::get().to_native(top);
+		desc.Inputs = HAL::Device::get().to_native(top);
 		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
 		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
 		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
@@ -1347,8 +1347,8 @@ namespace Graphics
 	{
 		D3D12_COMMAND_LIST_TYPE t = ::to_native(type);
 
-		TEST(Device::get(), Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
-		TEST(Device::get(),  Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
+		TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateCommandAllocator(t, IID_PPV_ARGS(&m_commandAllocator)));
+		TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateCommandList(0, t, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList)));
 		m_commandList->Close();
 		m_commandList->SetName(L"TransitionCommandList");
 	}

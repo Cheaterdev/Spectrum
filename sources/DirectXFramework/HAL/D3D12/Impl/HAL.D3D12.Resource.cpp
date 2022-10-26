@@ -171,7 +171,7 @@ namespace HAL
 			state = ResourceState::COPY_DEST;
 		}
 
-		alloc_info = Graphics::Device::get().get_alloc_info(desc);
+		alloc_info = HAL::Device::get().get_alloc_info(desc);
 
 		PlacementAddress address = {};
 
@@ -214,9 +214,9 @@ namespace HAL
 
 
 		}
-		init(Graphics::Device::get(), desc, address, state);
+		init(HAL::Device::get(), desc, address, state);
 
-		state_manager.init_subres(Graphics::Device::get().Subresources(get_desc()), state);
+		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 
 		tiled_manager.init_tilings();
 
@@ -286,9 +286,9 @@ namespace HAL
 		}
 		PlacementAddress address = { handle.get_heap().get(),handle.get_offset() };
 
-		init(Graphics::Device::get(), desc, address, state);
+		init(HAL::Device::get(), desc, address, state);
 
-		state_manager.init_subres(Graphics::Device::get().Subresources(get_desc()), state);
+		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
 		{
@@ -355,9 +355,9 @@ namespace HAL
 		{
 			state = ResourceState::COPY_DEST;
 		}
-		init(Graphics::Device::get(), desc, address, state);
+		init(HAL::Device::get(), desc, address, state);
 
-		state_manager.init_subres(Graphics::Device::get().Subresources(get_desc()), state);
+		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 
 		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
 		{
@@ -381,7 +381,7 @@ namespace HAL
 
 		heap_type = (HeapType)HeapProperties.Type;
 
-		state_manager.init_subres(Graphics::Device::get().Subresources(get_desc()), state);
+		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 
 		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD || HeapProperties.Type == D3D12_HEAP_TYPE_READBACK)
 		{
@@ -411,4 +411,43 @@ namespace HAL
 	}
 
 
+		void RaytracingBuildDescBottomInputs::add_geometry(GeometryDesc i)
+		{
+			D3D12_RAYTRACING_GEOMETRY_DESC geom;
+			geom.Flags = i.Flags;
+			geom.Type = i.Type;
+			geom.Triangles.IndexBuffer = ::to_native(i.IndexBuffer);
+			geom.Triangles.IndexCount = i.IndexCount;
+			geom.Triangles.IndexFormat = i.IndexFormat;
+
+			geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
+			geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
+			geom.Triangles.VertexFormat = i.VertexFormat;
+
+			geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
+			descs.emplace_back(geom);
+
+			geometry.emplace_back(i);
+		}
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS RaytracingBuildDescBottomInputs::to_native() const
+		{
+			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
+
+			inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+			inputs.Flags = ::to_native(Flags);
+			inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
+			inputs.NumDescs = static_cast<UINT>(descs.size());
+			inputs.pGeometryDescs = descs.data();
+
+			return inputs;
+		}
+
+
+
+}
+
+HAL::GPUAddressPtr to_native(const HAL::ResourceAddress& address)
+{
+	return address.resource ? (address.resource->get_address() + address.resource_offset) : 0;
 }

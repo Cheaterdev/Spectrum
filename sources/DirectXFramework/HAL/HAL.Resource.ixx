@@ -16,22 +16,7 @@ export{
 	namespace HAL
 	{
 
-		struct ResourceAddress
-		{
-			Resource* resource = nullptr;
-			uint64 resource_offset = 0;
-
-			explicit operator bool() const
-			{
-				return resource;
-			}
-
-			ResourceAddress offset(UINT offset) const
-			{
-				return { resource, resource_offset + offset };
-			}
-		};
-	
+		
 		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>,  public TrackedObject, public API::Resource
 		{
 			friend class API::Resource;
@@ -138,11 +123,7 @@ export{
 
 	}
 
-	// TODOmove to hal
-	HAL::GPUAddressPtr to_native(const HAL::ResourceAddress& address)
-	{
-		return address.resource ? (address.resource->get_address() + address.resource_offset) : 0;
-	}
+
 }
 
 

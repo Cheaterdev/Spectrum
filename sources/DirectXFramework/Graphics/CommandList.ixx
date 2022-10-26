@@ -2,14 +2,11 @@ module;
 export module Graphics:CommandList;
 
 import Utils;
-import :CommandListCompiler;
 import StateContext;
 import Profiling;
 import Threading;
 import Exceptions;
 import :RootSignature;
-import :Device;
-
 
 import Math;
 //import :Enums;
@@ -316,11 +313,11 @@ export{
 
 			std::list<FenceWaiter> waits;
 
-			CommandListCompilerDelayed compiler;
+			HAL::Private::CommandListCompilerDelayed compiler;
 
 			std::list<TrackedObject::ptr> tracked_resources;
 
-			CommandListCompilerDelayed* get_native_list()
+			HAL::Private::CommandListCompilerDelayed* get_native_list()
 			{
 				return &compiler;
 			}
@@ -648,7 +645,7 @@ export{
 				on_fence.clear();
 			}
 		public:
-			CommandListCompiled compiled;
+			HAL::Private::CommandListCompiled compiled;
 
 
 
@@ -796,7 +793,7 @@ export{
 			friend class CommandList;
 
 			CommandList& base;
-			CommandListCompilerDelayed* list;
+			HAL::Private::CommandListCompilerDelayed* list;
 
 			CopyContext(CommandList& base) :base(base), list(base.get_native_list()) {}
 			CopyContext(const CopyContext&) = delete;
@@ -1008,7 +1005,7 @@ export{
 		class GraphicsContext : public SignatureDataSetter
 		{
 			friend class CommandList;
-			CommandListCompilerDelayed* list;
+			HAL::Private::CommandListCompilerDelayed* list;
 
 			GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {
 			}
@@ -1157,96 +1154,7 @@ export{
 		};
 
 
-		struct GeometryDesc
-		{
-			D3D12_RAYTRACING_GEOMETRY_TYPE Type;
-			D3D12_RAYTRACING_GEOMETRY_FLAGS Flags;
 
-			HAL::ResourceAddress Transform3x4;
-			DXGI_FORMAT IndexFormat;
-			DXGI_FORMAT VertexFormat;
-			UINT IndexCount;
-			UINT VertexCount;
-			HAL::ResourceAddress IndexBuffer;
-
-			HAL::ResourceAddress VertexBuffer;
-			UINT64 VertexStrideInBytes;
-		};
-		struct InstanceDesc
-		{
-			FLOAT Transform[3][4];
-			UINT InstanceID : 24;
-			UINT InstanceMask : 8;
-			UINT InstanceContributionToHitGroupIndex : 24;
-			UINT Flags : 8;
-			HAL::ResourceAddress AccelerationStructure;
-		};
-
-
-
-		struct RaytracingDesc
-		{
-			HAL::ResourceAddress DestAccelerationStructureData;
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs;
-			HAL::ResourceAddress SourceAccelerationStructureData;
-			HAL::ResourceAddress ScratchAccelerationStructureData;
-		};
-
-		struct RaytracingBuildDescBottomInputs
-		{
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
-
-
-
-			void add_geometry(GeometryDesc i)
-			{
-				D3D12_RAYTRACING_GEOMETRY_DESC geom;
-				geom.Flags = i.Flags;
-				geom.Type = i.Type;
-				geom.Triangles.IndexBuffer = ::to_native(i.IndexBuffer);
-				geom.Triangles.IndexCount = i.IndexCount;
-				geom.Triangles.IndexFormat = i.IndexFormat;
-
-				geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
-				geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
-				geom.Triangles.VertexFormat = i.VertexFormat;
-
-				geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
-				descs.emplace_back(geom);
-
-				geometry.emplace_back(i);
-			}
-
-			std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
-			std::vector<GeometryDesc> geometry;
-
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native() const
-			{
-				D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
-
-				inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-				inputs.Flags = Flags;
-				inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
-				inputs.NumDescs = static_cast<UINT>(descs.size());
-				inputs.pGeometryDescs = descs.data();
-
-				return inputs;
-			}
-		};
-
-		struct RaytracingBuildDescTopInputs
-		{
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
-			UINT NumDescs;
-			HAL::ResourceAddress instances;
-		};
-
-		struct RaytracingBuildDescStructure
-		{
-			HAL::ResourceAddress DestAccelerationStructureData;
-			HAL::ResourceAddress SourceAccelerationStructureData;
-			HAL::ResourceAddress ScratchAccelerationStructureData;
-		};
 
 
 		class ComputeContext : public SignatureDataSetter
@@ -1254,7 +1162,7 @@ export{
 			friend class CommandList;
 
 
-			CommandListCompilerDelayed* list;
+			HAL::Private::CommandListCompilerDelayed* list;
 
 			ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {}
 			ComputeContext(const ComputeContext&) = delete;
@@ -1304,8 +1212,8 @@ export{
 
 
 
-			void build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescBottomInputs& bottom);
-			void build_ras(const RaytracingBuildDescStructure& build_desc, const RaytracingBuildDescTopInputs& top);
+			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
+			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top);
 
 			template<class Hit, class Miss, class Raygen>
 			void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)

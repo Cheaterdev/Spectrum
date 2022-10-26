@@ -9,7 +9,7 @@ import StateContext;
 import :Types;
 import :Sampler;
 import :Utils;
-import :API.Device;
+import :Device;
 import :API.Heap;
 
 using namespace HAL;

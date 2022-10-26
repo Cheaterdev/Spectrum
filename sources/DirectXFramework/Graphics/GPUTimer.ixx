@@ -45,7 +45,7 @@ export
 			int max_used_timers = 0;
 			GPUTimeManager() : heap(MAX_TIMERS * 2)
 			{
-				Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_native()->GetTimestampFrequency(&frequency);
+				HAL::Device::get().get_queue(CommandListType::DIRECT)->get_native()->GetTimestampFrequency(&frequency);
 			}
 			unsigned int get_id()
 			{
@@ -68,7 +68,7 @@ export
 			{
 				UINT64 cpu_start;
 				UINT64 gpu_start;
-				Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_native()->GetClockCalibration(&gpu_start, &cpu_start);
+				HAL::Device::get().get_queue(CommandListType::DIRECT)->get_native()->GetClockCalibration(&gpu_start, &cpu_start);
 				return static_cast<double>(gpu_start) / frequency;
 			}
 

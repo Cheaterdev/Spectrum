@@ -66,7 +66,7 @@ export
 			template<class T>
 			void set_raw_data(const std::vector<T>& v)
 			{
-				auto list = Device::get().get_upload_list();
+				auto list = to_hal(HAL::Device::get().get_upload_list());
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 				list->end();
 				list->execute_and_wait();
@@ -75,7 +75,7 @@ export
 			template<class T>
 			void set_data(const T& v)
 			{
-				auto list = Device::get().get_upload_list();
+				auto list = to_hal(HAL::Device::get().get_upload_list());
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 				list->end();
 				list->execute_and_wait();
@@ -115,7 +115,7 @@ export
 				else
 				{
 				std::string data;
-				auto list = Device::get().get_upload_list();
+				auto list = to_hal(HAL::Device::get().get_upload_list());
 				auto task = list->get_copy().read_buffer(this, 0, get_size(), [&data](const char* mem, UINT64 size)
 					{
 						data.assign(mem, mem + size);
@@ -322,7 +322,7 @@ namespace Graphics
 
 	void GPUBuffer::set_data(unsigned int offset, const std::string& v)
 	{
-		auto list = Device::get().get_upload_list();
+		auto list = to_hal(HAL::Device::get().get_upload_list());
 		set_data(list, offset, v);
 		list->end();
 		list->execute_and_wait();

@@ -7,8 +7,8 @@ using namespace HAL;
 Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<GeometryDesc> desc,
 	CommandList::ptr list)
 {
-	RaytracingBuildDescBottomInputs inputs;
-	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+	HAL::RaytracingBuildDescBottomInputs inputs;
+	inputs.Flags = RaytracingBuildFlags::PREFER_FAST_TRACE;
 
 	for (auto& e : desc)
 		inputs.add_geometry(e);
@@ -22,7 +22,7 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 
 	scratchInfo->reserve(*list, bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
 	currentResource->reserve(*list, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes);
-	RaytracingBuildDescStructure bottomLevelBuildDesc;
+	HAL::RaytracingBuildDescStructure bottomLevelBuildDesc;
 	{
 		bottomLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer->get_resource_address();
 		bottomLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer->get_resource_address();
@@ -41,8 +41,8 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 	list->begin("RaytracingAccelerationStructure");
 
 
-	RaytracingBuildDescTopInputs inputs;
-	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+	HAL::RaytracingBuildDescTopInputs inputs;
+	inputs.Flags = RaytracingBuildFlags::ALLOW_UPDATE;
 	inputs.NumDescs = static_cast<UINT>(instances.size());
 
 	if (instances.size())
@@ -85,16 +85,16 @@ void Graphics::RaytracingAccelerationStructure::update(CommandList::ptr list, UI
 	//	return;
 	//	if (resource) return;
 
-	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+	RaytracingBuildFlags buildFlags = RaytracingBuildFlags::ALLOW_UPDATE;
 	need_rebuild = true;
 	if (!need_rebuild)
-		buildFlags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+		buildFlags |= RaytracingBuildFlags::PERFORM_UPDATE;
 
 
 	std::swap(prevResource, currentResource);
 
-	RaytracingBuildDescTopInputs inputs;
-	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+	HAL::RaytracingBuildDescTopInputs inputs;
+	inputs.Flags = RaytracingBuildFlags::ALLOW_UPDATE;
 	inputs.NumDescs = size;
 	inputs.instances = address;
 
@@ -113,7 +113,7 @@ void Graphics::RaytracingAccelerationStructure::update(CommandList::ptr list, UI
 
 	//auto instanceDescs = list->place_raw(instances);
 
-	RaytracingBuildDescStructure topLevelBuildDesc;
+	HAL::RaytracingBuildDescStructure topLevelBuildDesc;
 	{
 		topLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer->get_resource_address();
 		topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer->get_resource_address();

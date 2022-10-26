@@ -443,12 +443,12 @@ public:
 
 		{
 
-			CommandList::ptr command_list = to_hal(Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+			CommandList::ptr command_list = to_hal(HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 
 			command_list->begin("pre");
 			{
 				SceneFrameManager::get().prepare(command_list, *scene);
-				if (Graphics::Device::get().is_rtx_supported())
+				if (HAL::Device::get().is_rtx_supported())
 				{
 					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), false);
 					RTX::get().prepare(command_list);
@@ -570,7 +570,7 @@ public:
 				Handlers::Texture H(RTXDebugPrev);
 			};
 
-			if (Graphics::Device::get().is_rtx_supported())
+			if (HAL::Device::get().is_rtx_supported())
 				graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
@@ -775,9 +775,9 @@ public:
 
 			if (GetAsyncKeyState('R'))
 			{
-				Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal_and_wait();
-				Graphics::Device::get().get_queue(Graphics::CommandListType::COMPUTE)->signal_and_wait();
-				Graphics::Device::get().get_queue(Graphics::CommandListType::COPY)->signal_and_wait();
+				HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal_and_wait();
+				HAL::Device::get().get_queue(Graphics::CommandListType::COMPUTE)->signal_and_wait();
+				HAL::Device::get().get_queue(Graphics::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
 				HAL::pixel_shader::reload_all();
@@ -811,7 +811,7 @@ public:
 				size_t total_gpu = 0;
 
 
-				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(Graphics::Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
+				label_fps->text = std::to_string(fps.get()) + " " + std::to_string(HAL::Device::get().get_vram()) + " " + std::to_string(total) + " " + std::to_string(total_gpu) + " " + std::to_string(graph_usage);
 			}
 
 
@@ -834,7 +834,7 @@ public:
 
 				graph.reset();
 			}
-			swap_chain->present(Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal());
+			swap_chain->present(HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal());
 		}
 
 
@@ -1004,7 +1004,7 @@ public:
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;
-		swap_chain = Graphics::Device::get().create_swap_chain(desc);
+		swap_chain = std::make_shared<HAL::SwapChain>(HAL::Device::get(),desc);
 
 		set_capture = [this](bool v)
 		{
@@ -1226,7 +1226,7 @@ protected:
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 
 		EVENT("Device");
-		Graphics::Device::create();
+		HAL::Device::create();
 
 		EVENT("PSO");
 		init_signatures();
@@ -1275,8 +1275,8 @@ protected:
 
 
 	//	
-		//   Graphics::Device::get().get_queue(Graphics::CommandListType::DIRECT)->stop_all();
-		Graphics::Device::get().stop_all();
+		//   HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->stop_all();
+		HAL::Device::get().stop_all();
 		Skin::reset();
 		Graphics::Texture::reset_manager();
 		HAL::pixel_shader::reset_manager();
@@ -1298,8 +1298,8 @@ protected:
 
 		Graphics::PipelineLibrary::reset();
 
-		Graphics::Device::reset();
-		//   Graphics::Device::reset();
+		HAL::Device::reset();
+		//   HAL::Device::reset();
 
 
 

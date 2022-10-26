@@ -6,8 +6,7 @@ export module Graphics:Layout;
 import :RootSignature;
 import :Concepts;
 import :Types;
-import :Device;
-//import :Utils;
+
 export
 {
 
@@ -45,7 +44,7 @@ export
 
 		Graphics::RootLayout::ptr create_signature(Layouts layout)
 		{
-			return std::make_shared<Graphics::RootLayout>(Graphics::Device::get(), desc, layout);
+			return std::make_shared<Graphics::RootLayout>(HAL::Device::get(), desc, layout);
 		}
 	};
 
@@ -65,7 +64,7 @@ export
 
 		desc.set_type(Graphics::RootSignatureType::Local);
 
-		return std::make_shared<Graphics::RootSignature>(Graphics::Device::get(), desc);
+		return std::make_shared<Graphics::RootSignature>(HAL::Device::get(), desc);
 	}
 
 

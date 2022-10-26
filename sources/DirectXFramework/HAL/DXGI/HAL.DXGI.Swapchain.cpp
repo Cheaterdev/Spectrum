@@ -1,16 +1,35 @@
-module Graphics;
-import :Device;
-
+module HAL:SwapChain;
+import:Device;
 import HAL;
 
 import d3d12;
 #undef THIS
 namespace HAL
 {
-	SwapChain::SwapChain(SwapChain::native_container sc, swap_chain_desc c_desc)
+	SwapChain::SwapChain(Device& device, swap_chain_desc c_desc)
 	{
-		sc->GetDesc(&desc);
-		m_swapChain = sc;
+
+		RECT r;
+		GetClientRect(c_desc.window->get_hwnd(), &r);
+		DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+		swapChainDesc.Width = r.right - r.left;
+		swapChainDesc.Height = r.bottom - r.top;
+		swapChainDesc.Format = ::to_native(c_desc.format);
+		swapChainDesc.Stereo = c_desc.stereo && HAL::Adapters::get().get_factory()->IsWindowedStereoEnabled();
+		swapChainDesc.SampleDesc.Count = 1;
+		swapChainDesc.SampleDesc.Quality = 0;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.BufferCount = 3 + static_cast<int>(swapChainDesc.Stereo);
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		ComPtr<IDXGISwapChain1> swapChain;
+		HRESULT res = HAL::Adapters::get().get_factory()->CreateSwapChainForHwnd(
+			device.get_queue(CommandListType::DIRECT)->get_native().Get(),
+			c_desc.window->get_hwnd(),
+			&swapChainDesc, nullptr, nullptr, &swapChain);
+
+		swapChain.As(&m_swapChain);
+
+		m_swapChain->GetDesc(&desc);
 
 		frames.resize(desc.BufferCount);
 		on_change();
@@ -48,7 +67,7 @@ namespace HAL
 			if (size.y == desc.BufferDesc.Height)
 				return;
 
-		auto& q = Graphics::Device::get().get_queue(CommandListType::DIRECT);
+		auto& q = HAL::Device::get().get_queue(CommandListType::DIRECT);
 
 		q->signal_and_wait();
 

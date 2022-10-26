@@ -822,7 +822,7 @@ namespace FrameGraph
 							}
 							else
 							{
-								pass->fence_end = Graphics::Device::get().get_queue(pass->get_type())->get_last_fence();
+								pass->fence_end = HAL::Device::get().get_queue(pass->get_type())->get_last_fence();
 							}
 						}
 
@@ -836,7 +836,7 @@ namespace FrameGraph
 							}
 							else
 							{
-								pass->fence_end = Graphics::Device::get().get_queue(pass->get_type())->get_last_fence();
+								pass->fence_end = HAL::Device::get().get_queue(pass->get_type())->get_last_fence();
 							}
 
 						}
@@ -857,7 +857,7 @@ namespace FrameGraph
 							if (call_ids[list_type][type] < pass->wait_pass->call_id + 1)
 							{
 								flush();
-								Graphics::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
+								HAL::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
 
 								call_ids[list_type][type] = pass->wait_pass->call_id + 1;
 							}
@@ -985,7 +985,7 @@ namespace FrameGraph
 
 			if (info->heap_type != Graphics::HeapType::DEFAULT)
 			{
-				//	auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
+				//	auto creation_info = HAL::Device::get().get_alloc_info(info->d3ddesc);
 				//	auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
 
 				//	info->need_recreate = info->alloc_ptr != alloc_ptr;
@@ -1020,7 +1020,7 @@ namespace FrameGraph
 				for (auto info : e.create)
 				{
 
-					auto creation_info = Graphics::Device::get().get_alloc_info(info->d3ddesc);
+					auto creation_info = HAL::Device::get().get_alloc_info(info->d3ddesc);
 					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, HAL::MemoryType::COMMITED, info->heap_type);
 				}
 			}

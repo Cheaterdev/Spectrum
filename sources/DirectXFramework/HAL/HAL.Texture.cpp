@@ -75,7 +75,7 @@ namespace HAL
 		auto desc = get_desc().as_texture();
 		//auto list = Device::get().get_upload_list();
 
-		auto list = to_hal(Graphics::Device::get().get_queue(CommandListType::COPY)->get_free_list());
+		auto list = to_hal(HAL::Device::get().get_queue(CommandListType::COPY)->get_free_list());
 		list->begin("Texture Readback");
 
 		desc.Format = desc.Format.to_typeless();
@@ -129,7 +129,7 @@ namespace HAL
 
 
 		Resource::_init(desc, HeapType::DEFAULT, (data.array_size * data.mip_maps) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
-		auto list = Graphics::Device::get().get_upload_list();
+		auto list = to_hal(HAL::Device::get().get_upload_list());
 
 		if (data.array_size * data.mip_maps)
 		{

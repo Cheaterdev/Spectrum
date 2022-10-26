@@ -3,7 +3,6 @@ export module Graphics;
 
 export import :Types;
 
-export import :Device;
 export import :Buffer;
 
 export import :RaytracingAS;
@@ -14,8 +13,6 @@ export import :VirtualBuffer;
 
 
 export import :CommandList;
-export import :CommandListCompiler;
-
 
 export import :GPUTimer;
 

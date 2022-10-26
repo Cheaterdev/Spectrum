@@ -15,7 +15,7 @@ namespace Graphics
 		QueryHeapDesc.Count = max_count;
 		QueryHeapDesc.NodeMask = 1;
 		QueryHeapDesc.Type = type;
-		Device::get().get_native_device()->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&heap));
+		HAL::Device::get().get_native_device()->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&heap));
 		heap->SetName(L"QueryHeap");
 	}
 

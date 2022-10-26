@@ -1,5 +1,4 @@
 module Graphics;
-import :Device;
 import :GPUTimer;
 import :CommandList;
 
@@ -13,7 +12,7 @@ using namespace HAL;
 namespace HAL
 {
 
-	Queue::Queue(CommandListType type, Device* device) : commandListCounter(*to_hal(device)), type(type)
+	Queue::Queue(CommandListType type, Device* device) : commandListCounter(*device), type(type)
 	{
 		API::Queue::construct(type, device);
 		m_fenceValue = 0;
@@ -126,10 +125,8 @@ namespace HAL
 
 	namespace API
 	{
-		void Queue::construct(HAL::CommandListType type, Device* _device)
+		void Queue::construct(HAL::CommandListType type, Device* device)
 		{
-
-			auto device = to_hal(_device);
 			auto t = CounterManager::get().start_count<Queue>();
 		
 			// Describe and create the command queue.
@@ -148,7 +145,7 @@ namespace HAL
 			queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT;
 			queueDesc.Type = ::to_native(type);
 			queueDesc.NodeMask = 1;
-			device->get_native_device()->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&native));
+			device->native_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&native));
 
 			auto name = std::string("DXQueue: ") + std::string(magic_enum::enum_name(type));
 

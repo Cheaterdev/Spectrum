@@ -1,5 +1,5 @@
 module Graphics;
-import :Device;
+
 import :GPUTimer;
 import :CommandList;
 
@@ -117,7 +117,7 @@ namespace HAL
 	{
 		PROFILE(L"execute_internal");
 
-		if (stop || !Graphics::Device::get().alive)
+		if (stop || !HAL::Device::get().alive)
 			return { &commandListCounter,m_fenceValue };
 
 		std::unique_lock<std::mutex> lock(queue_mutex);
@@ -169,7 +169,7 @@ namespace HAL
 			{
 				// Need to request other queue to make a proper transition.
 				// It's OK, but better to avoid this
-				auto queue = Graphics::Device::get().get_queue(transition_list->get_type());
+				auto queue = HAL::Device::get().get_queue(transition_list->get_type());
 				auto waiter = queue->run_transition_list(last_executed_fence, std::static_pointer_cast<HAL::TransitionCommandList>(transition_list));
 
 				API::Queue::gpu_wait(waiter);
@@ -191,7 +191,7 @@ namespace HAL
 
 		executor.enqueue([cl, this]()
 			{
-				if (!Graphics::Device::get().alive) return;
+				if (!HAL::Device::get().alive) return;
 
 				auto list = cl;
 				to_hal(list)->get_execution_fence().get().wait();

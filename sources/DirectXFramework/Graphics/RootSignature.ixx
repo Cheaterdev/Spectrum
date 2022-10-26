@@ -1,7 +1,6 @@
 export module Graphics:RootSignature;
 import :Enums;
 import :Types;
-import :Device;
 import stl.core;
 
 export
@@ -14,7 +13,7 @@ export
 
 		class RootLayout :public RootSignature
 		{
-			Device& device;
+			HAL::Device& device;
 
 			template<class T>
 			void process_one_sig(Graphics::RootSignatureDesc& desc) const
@@ -26,7 +25,7 @@ export
 		public:
 			using ptr = std::shared_ptr<RootLayout>;
 			const Layouts layout;
-			RootLayout(Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(device, desc), device(device), layout(layout)
+			RootLayout(HAL::Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(device, desc), device(device), layout(layout)
 			{
 			}
 

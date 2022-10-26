@@ -1,18 +1,14 @@
-module;
-
-
-export module Graphics:CommandListCompiler;
+export module HAL:Private.CommandListCompiler;
 
 import Math;
-import :Device;
+import :API.Device;
 
-import HAL;
-//using namespace HAL;
+import d3d12;
 
-export
+export namespace HAL
 {
 
-	namespace Graphics
+	namespace Private
 	{
 
 		struct CommandListCompiled

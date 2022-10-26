@@ -2,12 +2,10 @@ module;
 
 
 export module Graphics:PipelineState;
-
+import d3d12;
 import FileSystem;
 
 import :RootSignature;
-
-import :Device;
 
 import Singleton;
 import serialization;
@@ -151,11 +149,11 @@ namespace Graphics
 			if (file)
 			{
 				auto data = file->load_all();
-				TEST(Device::get(), Device::get().get_native_device()->CreatePipelineLibrary(data.data(), data.size(), IID_PPV_ARGS(&m_pipelineLibrary)));
+				TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreatePipelineLibrary(data.data(), data.size(), IID_PPV_ARGS(&m_pipelineLibrary)));
 			}
 		
 			if(!m_pipelineLibrary)
-				TEST(Device::get(),  Device::get().get_native_device()->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&m_pipelineLibrary)));
+				TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&m_pipelineLibrary)));
 
 		}
 
@@ -170,7 +168,7 @@ namespace Graphics
 			if (data.size())
 			{
 
-				TEST(Device::get(), m_pipelineLibrary->Serialize(data.data(), data.size()));
+				TEST(HAL::Device::get(), m_pipelineLibrary->Serialize(data.data(), data.size()));
 
 				FileSystem::get().save_data(std::wstring(L"pso"), data);
 			}
@@ -185,7 +183,7 @@ namespace Graphics
 
 			if (name.empty())
 			{
-				TEST(Device::get(), Device::get().get_native_device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&res)));
+				TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&res)));
 			}
 			else
 			{
@@ -194,8 +192,8 @@ namespace Graphics
 
 				if (E_INVALIDARG == hr)
 				{
-					TEST(Device::get(), Device::get().get_native_device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&res)));
-					TEST(Device::get(), m_pipelineLibrary->StorePipeline(wname.c_str(), res.Get()));
+					TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&res)));
+					TEST(HAL::Device::get(), m_pipelineLibrary->StorePipeline(wname.c_str(), res.Get()));
 				}
 
 			}
@@ -492,8 +490,8 @@ namespace Graphics
 			}
 
 
-			TEST(Device::get(), Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&tracked_info->m_StateObject)));
-			TEST(Device::get(), tracked_info->m_StateObject.As(&stateObjectProperties));
+			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&tracked_info->m_StateObject)));
+			TEST(HAL::Device::get(), tracked_info->m_StateObject.As(&stateObjectProperties));
 
 			event_change();
 

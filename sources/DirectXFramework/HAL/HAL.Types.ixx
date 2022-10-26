@@ -10,11 +10,18 @@ import serialization;
 import stl.core;
 
 import :Format;
+import d3d12;
 
 #undef DOMAIN
 
 export namespace HAL
 {
+
+	class Resource;
+	class Device;
+	class Queue;
+
+
 	using GPUAddressPtr = uint64;
 
 	struct Viewport
@@ -522,6 +529,115 @@ export namespace HAL
 
 		shader_include(std::string dir, resource_file_depender& _depender);
 		std::unique_ptr<std::string> load_file(std::string filename);
+	};
+
+
+	struct ResourceAddress
+	{
+		Resource* resource = nullptr;
+		uint64 resource_offset = 0;
+
+		explicit operator bool() const
+		{
+			return resource;
+		}
+
+		ResourceAddress offset(UINT offset) const
+		{
+			return { resource, resource_offset + offset };
+		}
+	};
+
+
+	///////////////////////////////////////////////////
+	struct GeometryDesc
+	{
+		D3D12_RAYTRACING_GEOMETRY_TYPE Type;
+		D3D12_RAYTRACING_GEOMETRY_FLAGS Flags;
+
+		HAL::ResourceAddress Transform3x4;
+		DXGI_FORMAT IndexFormat;
+		DXGI_FORMAT VertexFormat;
+		UINT IndexCount;
+		UINT VertexCount;
+		HAL::ResourceAddress IndexBuffer;
+
+		HAL::ResourceAddress VertexBuffer;
+		UINT64 VertexStrideInBytes;
+	};
+	struct InstanceDesc
+	{
+		FLOAT Transform[3][4];
+		UINT InstanceID : 24;
+		UINT InstanceMask : 8;
+		UINT InstanceContributionToHitGroupIndex : 24;
+		UINT Flags : 8;
+		HAL::ResourceAddress AccelerationStructure;
+	};
+
+
+	enum class RaytracingBuildFlags:uint
+	{
+		NONE = 0,
+		ALLOW_UPDATE = 0x1,
+		ALLOW_COMPACTION = 0x2,
+		PREFER_FAST_TRACE = 0x4,
+		PREFER_FAST_BUILD = 0x8,
+		MINIMIZE_MEMORY = 0x10,
+		PERFORM_UPDATE = 0x20,
+		GENERATE_OPS
+	};
+
+
+	struct RaytracingDesc
+	{
+		HAL::ResourceAddress DestAccelerationStructureData;
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs;
+		HAL::ResourceAddress SourceAccelerationStructureData;
+		HAL::ResourceAddress ScratchAccelerationStructureData;
+	};
+
+	struct RaytracingBuildDescBottomInputs
+	{
+		RaytracingBuildFlags Flags;
+
+
+
+		void add_geometry(GeometryDesc i);
+
+		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
+		std::vector<GeometryDesc> geometry;
+
+		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native() const;
+	};
+
+	struct RaytracingBuildDescTopInputs
+	{
+		RaytracingBuildFlags Flags;
+		UINT NumDescs;
+		HAL::ResourceAddress instances;
+	};
+
+	struct RaytracingBuildDescStructure
+	{
+		HAL::ResourceAddress DestAccelerationStructureData;
+		HAL::ResourceAddress SourceAccelerationStructureData;
+		HAL::ResourceAddress ScratchAccelerationStructureData;
+	};
+
+
+	struct hwnd_provider
+	{
+		virtual	HWND get_hwnd() const = 0;
+	};
+
+	struct swap_chain_desc
+	{
+		int max_fps;
+		Format format;
+		hwnd_provider* window;
+		hwnd_provider* fullscreen;
+		bool stereo;
 	};
 
 }

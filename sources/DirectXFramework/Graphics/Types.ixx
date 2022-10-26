@@ -103,6 +103,7 @@ using RTXSceneView = HAL::RTXSceneView;
 	using amplification_shader = HAL::amplification_shader;
 	using compute_shader = HAL::compute_shader;
 	using library_shader = HAL::library_shader;
+	using Device = HAL::Device;
 
 	}
 }

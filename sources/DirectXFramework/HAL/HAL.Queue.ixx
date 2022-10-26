@@ -2,7 +2,6 @@ export module HAL:Queue;
 
 import Scheduler;
 import Executors;
-import :API.Device;
 import :Fence;
 import :Types;
 import :Removeme;

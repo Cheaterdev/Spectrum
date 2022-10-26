@@ -34,10 +34,10 @@ export
 			MaterialAsset* material;
 
 
-			RaytracingAccelerationStructure(std::vector<GeometryDesc>  desc, CommandList::ptr list);
+			RaytracingAccelerationStructure(std::vector<HAL::GeometryDesc>  desc, CommandList::ptr list);
 
 
-			RaytracingAccelerationStructure(std::vector<InstanceDesc> instances);
+			RaytracingAccelerationStructure(std::vector<HAL::InstanceDesc> instances);
 
 
 			void update(CommandList::ptr list, UINT size, HAL::ResourceAddress address, bool need_rebuild);

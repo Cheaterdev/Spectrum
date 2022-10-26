@@ -1,6 +1,5 @@
 module Graphics;
 import :CommandList;
-import :Device;
 import Math;
 import Events;
 import stl.core;
@@ -110,7 +109,7 @@ namespace HAL {
 			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 	void TiledResourceManager::zero_tiles(CommandList* list, uint3 from, uint3 to)
@@ -133,7 +132,7 @@ namespace HAL {
 			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 
@@ -152,7 +151,7 @@ namespace HAL {
 			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 	void TiledResourceManager::zero_tiles(CommandList* list, std::list<uint3>& tiles_to_remove)
 	{
@@ -171,7 +170,7 @@ namespace HAL {
 			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 
 	}
 
@@ -240,7 +239,7 @@ namespace HAL {
 
 		auto desc = (resource)->get_desc();
 
-		Graphics::Device::get().get_native_device()->GetResourceTiling((resource)->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
+		HAL::Device::get().get_native_device()->GetResourceTiling((resource)->get_dx(), &num_tiles, &mip_info, &tile_shape, &num_sub_res, 0, tilings);
 		packed_mip_count = mip_info.NumTilesForPackedMips;
 		packed_subresource_offset = mip_info.NumStandardMips;
 		unpacked_mip_count = mip_info.NumStandardMips;
@@ -333,7 +332,7 @@ namespace HAL {
 			to_hal(list)->update_tilings(std::move(info));
 		}
 		else
-			Graphics::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
+			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
 	}
 
 	void TiledResourceManager::on_tile_update(const update_tiling_info& info)

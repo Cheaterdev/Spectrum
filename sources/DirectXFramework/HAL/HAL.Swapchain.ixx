@@ -7,6 +7,7 @@ import :Format;
 import :Texture;
 import :Fence;
 import :API.SwapChain;
+import :Device;
 
 export namespace HAL
 {
@@ -27,7 +28,7 @@ export namespace HAL
 	public:
 		using ptr = std::shared_ptr<SwapChain>;
 
-		SwapChain(API::SwapChain::native_container sc, swap_chain_desc c_desc);
+		SwapChain(Device& device, swap_chain_desc c_desc);
 		void present(FenceWaiter event_time);
 		UINT m_frameIndex;
 

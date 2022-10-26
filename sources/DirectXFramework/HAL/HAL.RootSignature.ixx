@@ -9,7 +9,7 @@ export import :Utils;
 export import stl.core;
 
 export import :API.RootSignature;
-export import :API.Device;
+export import :Device;
 
 export namespace HAL
 {

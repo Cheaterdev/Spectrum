@@ -27,7 +27,7 @@ public:
 	void render(ComputeContext& compute, Graphics::RaytracingAccelerationStructure::ptr scene_as, ivec3 size)
 	{
 
-		if (!Graphics::Device::get().is_rtx_supported()) return;
+		if (!HAL::Device::get().is_rtx_supported()) return;
 		
 		{
 			Slots::Raytracing rtx;

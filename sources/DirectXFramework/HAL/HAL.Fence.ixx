@@ -1,5 +1,5 @@
 export module HAL:Fence;
-import :API.Device;
+import :Device;
 import :API.Fence;
 
 export namespace HAL

@@ -144,11 +144,11 @@ void MeshAsset::init_gpu()
 	}*/
 
 	int i = 0;
-	if (Graphics::Device::get().is_rtx_supported())
+	if (HAL::Device::get().is_rtx_supported())
 		for (auto& mesh : meshes)
 		{
 
-			auto list = to_hal(Graphics::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+			auto list = to_hal(HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 			list->begin("RTX");
 			universal_vertex_manager::get().prepare(list);
 			universal_index_manager::get().prepare(list);
@@ -398,7 +398,7 @@ void MeshAssetInstance::on_remove()
 
 void MeshAssetInstance::update_rtx_instance()
 {
-	if (!Graphics::Device::get().is_rtx_supported()) return;
+	if (!HAL::Device::get().is_rtx_supported()) return;
 
 	if (!ras_handle) scene->raytrace->allocate(ras_handle, rendering_count);
 
@@ -492,7 +492,7 @@ bool MeshAssetInstance::update_transforms()
 
 bool MeshAssetInstance::init_ras(Graphics::CommandList::ptr list)
 {
-	if (!Graphics::Device::get().is_rtx_supported()) return false;
+	if (!HAL::Device::get().is_rtx_supported()) return false;
 
 
 

@@ -124,7 +124,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 
 	{
-		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(Graphics::Device::get(), sizeof(Underlying<DispatchArguments>));
+		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<DispatchArguments>));
 	}
 
 	{
@@ -502,7 +502,7 @@ void VoxelGI::screen(Graph& graph)
 
 			auto& command_list = _context.get_list();
 
-			bool use_rtx = Graphics::Device::get().is_rtx_supported() && this->use_rtx;
+			bool use_rtx = HAL::Device::get().is_rtx_supported() && this->use_rtx;
 			auto gbuffer = data.gbuffer.actualize(_context);
 			auto sky_cubemap_filtered = *data.sky_cubemap_filtered;
 			auto noisy_output = *data.VoxelIndirectNoise;
@@ -904,7 +904,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 		});
 
-	if (Graphics::Device::get().is_rtx_supported() && this->use_rtx)
+	if (HAL::Device::get().is_rtx_supported() && this->use_rtx)
 		graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);

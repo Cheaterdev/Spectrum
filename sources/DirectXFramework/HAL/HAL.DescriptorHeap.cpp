@@ -39,7 +39,7 @@ namespace HAL {
 	}
 	std::shared_ptr<DescriptorHeapManager> DescriptorHeapManager::create_singleton()
 	{
-		return std::make_shared<DescriptorHeapManager>(Graphics::Device::get());
+		return std::make_shared<DescriptorHeapManager>(HAL::Device::get());
 	}
 
 	DescriptorHeapManager::DescriptorHeapManager(Device&device)
