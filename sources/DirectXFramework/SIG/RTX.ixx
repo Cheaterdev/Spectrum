@@ -42,7 +42,7 @@ struct SelectLocal<T>
 	CACHE_ALIGN(64)
 		struct raygen_type
 	{
-		Graphics::shader_identifier id;
+		HAL::shader_identifier id;
 	};
 
 	template < typename... >
@@ -71,8 +71,8 @@ struct SelectLocal<T>
 		{
 			std::wstring wshader_name;
 			Events::Event<void> on_change;
-			D3D12_GPU_VIRTUAL_ADDRESS local_addr;
-			D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
+			HAL::ResourceAddress local_addr;
+			//D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 
 			Graphics::library_shader::ptr raytracing_lib;		
 		};
@@ -80,8 +80,8 @@ struct SelectLocal<T>
 		CACHE_ALIGN(32)
 			struct hit_type
 		{
-			Graphics::shader_identifier id;
-			D3D12_GPU_VIRTUAL_ADDRESS local_addr;
+			HAL::shader_identifier id;
+			HAL::GPUAddressPtr local_addr;
 		//	D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 
 		private:
@@ -101,7 +101,7 @@ struct SelectLocal<T>
 		};
 
 		//	using hit_type = shader_identifier;
-		Graphics::StructureBuffer<Graphics::shader_identifier>::ptr miss_ids;
+		Graphics::StructureBuffer<HAL::shader_identifier>::ptr miss_ids;
 		Graphics::StructureBuffer<raygen_type>::ptr raygen_ids;
 
 		Graphics::virtual_gpu_buffer<hit_type>::ptr hitgroup_ids;
@@ -248,13 +248,13 @@ struct SelectLocal<T>
 
 		void init_ids()
 		{
-			std::vector<Graphics::shader_identifier> miss_ids;
+			std::vector<HAL::shader_identifier> miss_ids;
 			std::vector<raygen_type> raygen_ids;
 
 			(std::get<Passes>(passes).init_ids(m_dxrStateObject, miss_ids), ...);
 			(std::get<Raygens>(raygen).init_ids(m_dxrStateObject, raygen_ids), ...);
 
-			this->miss_ids = std::make_shared<Graphics::StructureBuffer<Graphics::shader_identifier>>(miss_ids.size());
+			this->miss_ids = std::make_shared<Graphics::StructureBuffer<HAL::shader_identifier>>(miss_ids.size());
 			this->raygen_ids = std::make_shared<Graphics::StructureBuffer<raygen_type>>(raygen_ids.size());
 
 			this->miss_ids->set_raw_data(miss_ids);
@@ -309,7 +309,7 @@ struct SelectLocal<T>
 
 			static_assert(static_cast<UINT>(generator) == T::ID);
 			compute.set_pipeline(m_dxrStateObject);
-			compute.dispatch_rays<hit_type, Graphics::shader_identifier, Graphics::shader_identifier>(size,
+			compute.dispatch_rays<hit_type, HAL::shader_identifier, HAL::shader_identifier>(size,
 				hitgroup_ids->buffer->get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
 				miss_ids->get_resource_address(), static_cast<UINT>(miss_ids->get_count()),
 				raygen_ids->get_resource_address().offset(static_cast<UINT>(generator * sizeof(raygen_type))));
@@ -320,7 +320,7 @@ struct SelectLocal<T>
 	struct RaytraceRaygen
 	{
 		Graphics::StateObject::ptr m_Collection;
-		Graphics::shader_identifier raygen_id;
+		HAL::shader_identifier raygen_id;
 
 		template<class RTX>
 		void init(RTX& rtx)
@@ -355,8 +355,8 @@ struct SelectLocal<T>
 	{
 		Graphics::StateObject::ptr m_Collection;
 
-		Graphics::shader_identifier group_id;
-		Graphics::shader_identifier miss_id;
+		HAL::shader_identifier group_id;
+		HAL::shader_identifier miss_id;
 
 		template<class RTX>
 		void init(RTX& rtx)
@@ -428,12 +428,12 @@ struct SelectLocal<T>
 			else
 			{
 				hit.id = state->get_shader_id(mat->wshader_name + std::wstring(Desc::name));
-				hit.local_addr = mat->local_addr;// compiled_material_info;
+				hit.local_addr = to_native(mat->local_addr);// compiled_material_info;
 			}
 
 		}
 
-		void init_ids(Graphics::StateObject::ptr& state, std::vector<Graphics::shader_identifier>& miss_ids)
+		void init_ids(Graphics::StateObject::ptr& state, std::vector<HAL::shader_identifier>& miss_ids)
 		{
 			if constexpr (!Desc::per_material) group_id = state->get_shader_id(std::wstring(Desc::name));
 			miss_id = state->get_shader_id(std::wstring(Desc::miss_name));

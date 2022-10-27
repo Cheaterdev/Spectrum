@@ -1296,7 +1296,7 @@ protected:
 		AssetManager::reset();
 
 
-		Graphics::PipelineLibrary::reset();
+		//Graphics::PipelineLibrary::reset();
 
 		HAL::Device::reset();
 		//   HAL::Device::reset();

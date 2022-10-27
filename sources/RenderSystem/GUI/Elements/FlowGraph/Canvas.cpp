@@ -51,7 +51,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Graphics::context& c)
 		}
 
 		c.command_list->get_graphics().set_pipeline(GetPSO<PSOS::CanvasLines>());
-		c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
+		c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::PATCH, HAL::PrimitiveTopologyFeed::LIST, false, 4);
 
 		auto data = c.command_list->place_data(sizeof(Table::VSLine) * vertexes.size(), sizeof(Table::VSLine));
 		c.command_list->write<Table::VSLine>(data, vertexes);
@@ -646,7 +646,7 @@ void GUI::Elements::FlowGraph::canvas::renderer::render(Object* obj, Data* data,
 	(*cb_pixel)[0].size = vec4(obj->render_bounds->size, obj->user_ui->size.get());
 	(*cb_pixel)[0].offset_scale = vec3(obj->contents->pos.get(), 1.0f / obj->contents->scale);
 	data->update(c.command_list);
-	c.command_list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 	c.command_list->get_graphics().set_pipeline(state);
 	c.command_list->get_graphics().set(0, vertex_table);
 	c.command_list->get_graphics().set(1, pixel_table);

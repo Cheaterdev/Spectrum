@@ -118,11 +118,11 @@ namespace materials
 
 			if (pass->ds_shader)
 			{
-				pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+				pipeline.topology = HAL::PrimitiveTopologyType::PATCH;
 			}
 			else
 			{
-				pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+				pipeline.topology = HAL::PrimitiveTopologyType::TRIANGLE;
 			}
 
 		}

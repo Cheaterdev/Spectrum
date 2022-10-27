@@ -143,7 +143,7 @@ namespace Graphics
 	void GraphicsContext::begin()
 	{
 		reset();
-		topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+		native_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 		reset_tables();
 		index = HAL::Views::IndexBuffer();
 	}
@@ -267,11 +267,11 @@ namespace Graphics
 		base.create_transition_point();
 		for (int i = 0; i < c; i++)
 		{
-			get_base().transition_rtv(&rt.get_resource_info()[i]);
+			get_base().transition(&rt.get_resource_info()[i]);
 		}
 
 		if (h.is_valid())
-			get_base().transition_dsv(h.get_resource_info());
+			get_base().transition(h.get_resource_info());
 
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtv;
 		CD3DX12_CPU_DESCRIPTOR_HANDLE dsv;

@@ -117,7 +117,7 @@ void MipMapGenerator::generate_quality(Graphics::GraphicsContext& list, camera* 
 	PROFILE_GPU(L"generate_quality");
 	list.set_signature(get_Signature(Layouts::DefaultLayout));
 
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 	list.set_viewport(tempColor.get_viewport());
 	list.set_scissor(tempColor.get_scissor());
 
@@ -162,7 +162,7 @@ void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Grap
 
 	auto& view = to->texture_2d();
 
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 	list.set_viewport(view.get_viewport());
 	list.set_scissor(view.get_scissor());
 
@@ -184,7 +184,7 @@ void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Grap
 
 	auto& view = to->texture_2d();
 
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 	list.set_viewport(view.get_viewport());
 	list.set_scissor(view.get_scissor());
 
@@ -202,7 +202,7 @@ void MipMapGenerator::render_texture_2d_slow(Graphics::GraphicsContext& list, Gr
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to.renderTarget.get_resource_info()->view);
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 	Slots::CopyTexture data;
 	data.GetSrcTex() = from.texture2D;
@@ -226,7 +226,7 @@ void MipMapGenerator::write_to_depth(Graphics::GraphicsContext& list, Graphics::
 
 	list.set_rtv(0, Graphics::Handle(), to.depthStencil);
 
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 	list.draw(4);
-	list.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 }

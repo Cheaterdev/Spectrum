@@ -308,7 +308,7 @@ void PSSM::generate(Graph& graph)
 				lighting.set(graphics);
 			}
 
-			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 
 			graphics.set_viewport(data.LightMask->get_viewport());
@@ -382,7 +382,7 @@ void PSSM::generate(Graph& graph)
 				lighting.set(graphics);
 			}
 
-			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 			graphics.set_viewport(data.ResultTexture->get_viewport());
 			graphics.set_scissor(data.ResultTexture->get_scissor());

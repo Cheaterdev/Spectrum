@@ -640,4 +640,20 @@ export namespace HAL
 		bool stereo;
 	};
 
+	enum class PrimitiveTopologyType:uint
+	{
+		UNDEFINED,
+		POINT,
+		LINE,
+		TRIANGLE,
+		PATCH
+	};
+
+	enum class PrimitiveTopologyFeed :uint
+	{
+		LIST,
+		STRIP
+	};
+	using shader_identifier = std::array<std::byte, 32/*D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES*/>;
+
 }

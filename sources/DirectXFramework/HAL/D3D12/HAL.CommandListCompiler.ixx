@@ -128,9 +128,9 @@ export namespace HAL
 			}
 
 			void  IASetPrimitiveTopology(
-				D3D12_PRIMITIVE_TOPOLOGY PrimitiveTopology)
+				D3D12_PRIMITIVE_TOPOLOGY PrimitiveTopologyType)
 			{
-				compiled.m_commandList->IASetPrimitiveTopology(PrimitiveTopology);
+				compiled.m_commandList->IASetPrimitiveTopology(PrimitiveTopologyType);
 			}
 
 			void  RSSetViewports(
@@ -815,15 +815,15 @@ export namespace HAL
 			}
 
 			void  IASetPrimitiveTopology(
-				D3D12_PRIMITIVE_TOPOLOGY PrimitiveTopology)
+				D3D12_PRIMITIVE_TOPOLOGY PrimitiveTopologyType)
 			{
-				push(PrimitiveTopology);
+				push(PrimitiveTopologyType);
 
 				tasks.emplace_back([this]()
 					{
-						D3D12_PRIMITIVE_TOPOLOGY PrimitiveTopology;
-						pop(PrimitiveTopology);
-						compiled.m_commandList->IASetPrimitiveTopology(PrimitiveTopology);
+						D3D12_PRIMITIVE_TOPOLOGY PrimitiveTopologyType;
+						pop(PrimitiveTopologyType);
+						compiled.m_commandList->IASetPrimitiveTopology(PrimitiveTopologyType);
 					});
 			}
 

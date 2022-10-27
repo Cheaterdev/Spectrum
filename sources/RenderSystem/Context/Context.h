@@ -170,13 +170,13 @@ public:
 
 		list->get_graphics().set_pipeline(current_state);
 
-		if (current_state->desc.topology == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH)
+		if (current_state->desc.topology == HAL::PrimitiveTopologyType::PATCH)
 		{
-			list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST);
+			list->get_graphics().set_topology(HAL::PrimitiveTopologyType::PATCH, HAL::PrimitiveTopologyFeed::LIST, false, 3);
 		}
 		else
 		{
-			list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 		}
 
 	}

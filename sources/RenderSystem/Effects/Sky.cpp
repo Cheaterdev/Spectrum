@@ -34,7 +34,7 @@ void SkyRender::generate_sky(Graph& graph)
 			auto& graphics = list.get_graphics();
 
 			graphics.set_pipeline(GetPSO<PSOS::Sky>());
-			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 			graphics.set_viewport(data.ResultTexture->get_viewport());
 			graphics.set_scissor(data.ResultTexture->get_scissor());
 			graphics.set_rtv(1, data.ResultTexture->renderTarget, Graphics::Handle());
@@ -93,7 +93,7 @@ void SkyRender::generate(Graph& graph)
 
 			graphics.set_pipeline(GetPSO<PSOS::SkyCube>());
 
-			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 
 
@@ -199,7 +199,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 			auto& list = *_context.get_list();
 			auto& graphics = list.get_graphics();
 
-			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 
 			Slots::EnvSource downsample;

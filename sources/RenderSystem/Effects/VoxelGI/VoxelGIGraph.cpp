@@ -44,7 +44,7 @@ public:
 
 				graph.set_slot(SlotID::FrameInfo, graphics);
 
-				graphics.set_topology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+				graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 
 				graphics.set_pipeline(GetPSO<PSOS::GBufferDownsample>());
@@ -422,7 +422,7 @@ void VoxelGI::debug(Graph& graph)
 
 			auto& graphics = context->list->get_graphics();
 
-			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
@@ -526,7 +526,7 @@ void VoxelGI::screen(Graph& graph)
 
 			auto& compute = command_list->get_compute();
 
-			//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 			if (use_rtx)
 
 				command_list->get_compute().set_signature(RTX::get().rtx.m_root_sig);
@@ -701,7 +701,7 @@ void VoxelGI::screen(Graph& graph)
 
 			auto& compute = command_list->get_compute();
 
-			//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 			compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
 			graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
@@ -843,7 +843,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 			auto& compute = context->list->get_compute();
 
 
-			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 
 			{
@@ -956,7 +956,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 				auto& compute = command_list->get_compute();
 
-				//	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+				//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 				compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
 

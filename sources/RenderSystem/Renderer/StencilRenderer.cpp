@@ -413,7 +413,7 @@ void stencil_renderer::generate(Graph& graph)
 							graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 						}
 					};
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					graphics.set_pipeline(GetPSO<PSOS::DrawStencil>());
 					scene->compiledScene.set(graphics);
 
@@ -572,7 +572,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					//		data.Stencil_color_tex->renderTarget.clear(list);
 					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0, 0, 0, 0));
 					graphics.set_pipeline(GetPSO<PSOS::DrawSelected>());
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					graphics.set_viewports({ data.Stencil_color_tex->get_viewport() });
 					graphics.set_scissors(data.Stencil_color_tex->get_scissor());
 
@@ -604,7 +604,7 @@ void stencil_renderer::generate_after(Graph& graph)
 				// apply color mask
 				{
 					graphics.set_pipeline(GetPSO<PSOS::StencilerLast>());
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 					{
 						Slots::Countour contour;
@@ -626,7 +626,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 				if (draw_aabb) {
 					graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 					{
 						Slots::DrawStencil draw;
@@ -661,7 +661,7 @@ void stencil_renderer::generate_after(Graph& graph)
 						frameInfo.set(graphics);
 					}
 					graphics.set_pipeline(GetPSO<PSOS::DrawAxis>());
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					int i = 0;
 
 					for (auto& m : axis->rendering)

@@ -246,7 +246,7 @@ struct  SimpleGraphicsPSO {
 	Graphics::Format ds;
 	Graphics::ComparisonFunc depth_func;
 	Graphics::CullMode cull;
-	D3D12_PRIMITIVE_TOPOLOGY_TYPE topology;
+	HAL::PrimitiveTopologyType topology;
 	char stencil_read_mask = 0;
 	char stencil_write_mask = 0;
 
@@ -262,7 +262,7 @@ struct  SimpleGraphicsPSO {
 		depth_write = true;
 		depth_func = Graphics::ComparisonFunc::LESS_EQUAL;
 		cull = Graphics::CullMode::Back;
-		topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		topology = HAL::PrimitiveTopologyType::TRIANGLE;
 		enable_depth = true;
 		stencil_func = Graphics::ComparisonFunc::ALWAYS;
 		stencil_pass_op = Graphics::StencilOp::Replace;

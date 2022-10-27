@@ -488,7 +488,7 @@ export{
 			}
 
 			//remove this all
-			void transition_rtv(const ResourceInfo* info)
+	/*		void transition_rtv(const ResourceInfo* info)
 			{
 				assert(std::holds_alternative<HAL::Views::RenderTarget>(info->view));
 
@@ -529,7 +529,7 @@ export{
 
 
 
-			}
+			}*/
 
 		};
 
@@ -737,7 +737,7 @@ export{
 			void clear_uav(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
 				create_transition_point();
-				transition_uav(h.get_resource_info());
+				transition(h.get_resource_info());
 				auto dx_resource = h.get_resource_info()->resource_ptr->native_resource.Get();
 
 
@@ -759,7 +759,7 @@ export{
 			void clear_rtv(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
 				create_transition_point();
-				transition_rtv(h.get_resource_info());
+				transition(h.get_resource_info());
 				get_native_list()->ClearRenderTargetView(h.get_cpu(), ClearColor.data(), 0, nullptr);
 				create_transition_point(false);
 			}
@@ -770,7 +770,7 @@ export{
 			void clear_stencil(Handle dsv, UINT8 stencil = 0)
 			{
 				create_transition_point();
-				transition_dsv(dsv.get_resource_info());
+				transition(dsv.get_resource_info());
 
 				get_native_list()->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
 				create_transition_point(false);
@@ -779,7 +779,7 @@ export{
 			void clear_depth(Handle dsv, float depth = 0)
 			{
 				create_transition_point();
-				transition_dsv(dsv.get_resource_info());
+				transition(dsv.get_resource_info());
 
 				get_native_list()->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
 				create_transition_point(false);
@@ -853,14 +853,14 @@ export{
 			friend class CommandList;
 
 
-			struct SlotInfo
+			/*struct SlotInfo
 			{
 				SlotID id;
 				bool dirty = false;
 
 				const std::vector<UINT>* tables;
 			};
-			std::vector<SlotInfo> slots;
+			std::vector<SlotInfo> slots;*/
 
 
 			RootSignature::ptr root_sig;
@@ -869,7 +869,7 @@ export{
 			CommandList& base;
 			SignatureDataSetter(CommandList& base) :base(base) {
 				tables.resize(32); // !!!!!!!!!!!
-				slots.resize(32); // !!!!!!!!!!!
+			//	slots.resize(32); // !!!!!!!!!!!
 			}
 
 			virtual void set(UINT, const HandleTableLight&) = 0;
@@ -984,9 +984,9 @@ export{
 			template<class Compiled>
 			void set_slot(Compiled& compiled)
 			{
-				auto& slot = slots[Compiled::Slot::ID];
-				slot.id = Compiled::ID;
-				slot.dirty = true;
+				//auto& slot = slots[Compiled::Slot::ID];
+				//slot.id = Compiled::ID;
+				//slot.dirty = true;
 
 				//				slot.tables = &Compiled::SlotTable::tables;
 
@@ -1030,8 +1030,7 @@ export{
 
 			bool valid_scissor = false;
 			std::vector<Viewport> viewports;
-			D3D_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-
+			D3D_PRIMITIVE_TOPOLOGY  native_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
 
 			void begin();
@@ -1048,12 +1047,13 @@ export{
 				return base;
 			}
 
-			void set_topology(D3D_PRIMITIVE_TOPOLOGY topology)
+			void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0)
 			{
-				if (this->topology != topology)
-					list->IASetPrimitiveTopology(topology);
+				auto native = to_native(topology, feedType, adjusted, controlpoints);
+				if (this->native_topology != native)
+					list->IASetPrimitiveTopology(native);
 
-				this->topology = topology;
+				this->native_topology = native;
 			}
 
 

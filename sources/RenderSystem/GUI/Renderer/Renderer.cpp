@@ -96,7 +96,7 @@ namespace GUI
 
         color_data.set(c.command_list->get_graphics());
 
-        c.command_list->get_graphics().set_topology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
         c.command_list->get_graphics().set_pipeline(GetPSO<PSOS::SimpleRect>());
         c.command_list->get_graphics().draw(4);
 

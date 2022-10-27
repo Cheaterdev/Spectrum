@@ -35,7 +35,7 @@ namespace Graphics
 		mesh_shader::ptr mesh;
 		amplification_shader::ptr amplification;
 
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		HAL::PrimitiveTopologyType topology;
 
 		BlendState blend;
 		RasterizerState rasterizer;
@@ -45,6 +45,8 @@ namespace Graphics
 			rtv.rtv_formats.emplace_back(Format::R8G8B8A8_UNORM);
 			rasterizer.cull_mode = CullMode::Back;
 			rasterizer.fill_mode = FillMode::Solid;
+
+			topology = HAL::PrimitiveTopologyType::TRIANGLE;
 		}
 
 		bool is_memory()
@@ -136,72 +138,6 @@ namespace Graphics
 				load_header(amplification);
 			}
 		}
-	};
-	
-	class PipelineLibrary :public Singleton<PipelineLibrary>
-	{
-		ComPtr<ID3D12PipelineLibrary> m_pipelineLibrary;
-	public:
-		PipelineLibrary()
-		{
-			auto file = FileSystem::get().get_file(std::wstring(L"pso"));
-
-			if (file)
-			{
-				auto data = file->load_all();
-				TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreatePipelineLibrary(data.data(), data.size(), IID_PPV_ARGS(&m_pipelineLibrary)));
-			}
-		
-			if(!m_pipelineLibrary)
-				TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(&m_pipelineLibrary)));
-
-		}
-
-
-		virtual ~PipelineLibrary()
-		{
-
-			std::string data;
-
-			data.resize(m_pipelineLibrary->GetSerializedSize());
-
-			if (data.size())
-			{
-
-				TEST(HAL::Device::get(), m_pipelineLibrary->Serialize(data.data(), data.size()));
-
-				FileSystem::get().save_data(std::wstring(L"pso"), data);
-			}
-
-		}
-
-
-		ComPtr<ID3D12PipelineState> create(std::string name,const D3D12_GRAPHICS_PIPELINE_STATE_DESC &desc)
-		{
-			ComPtr<ID3D12PipelineState> res;
-
-
-			if (name.empty())
-			{
-				TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&res)));
-			}
-			else
-			{
-				std::wstring wname = convert(name);
-				HRESULT hr = m_pipelineLibrary->LoadGraphicsPipeline(wname.c_str(), &desc, IID_PPV_ARGS(&res));
-
-				if (E_INVALIDARG == hr)
-				{
-					TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&res)));
-					TEST(HAL::Device::get(), m_pipelineLibrary->StorePipeline(wname.c_str(), res.Get()));
-				}
-
-			}
-			
-			return res;;
-		}
-
-
 	};
 
 	class TrackedPipeline : public TrackedObject
@@ -347,7 +283,6 @@ namespace Graphics
 
 
 
-	using shader_identifier = std::array<std::byte, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES>;
 
 
 
@@ -410,7 +345,7 @@ namespace Graphics
 		
 	};
 
-	class StateObject:public PipelineStateBase, public virtual Events::prop_handler
+	class StateObject:public PipelineStateBase//, public virtual Events::prop_handler
 	{
 		ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
 
@@ -499,9 +434,9 @@ namespace Graphics
 
 		}
 
-		static shader_identifier identify(void* data)
+		static HAL::shader_identifier identify(void* data)
 		{
-			shader_identifier result;
+			HAL::shader_identifier result;
 
 			memcpy(result.data(), data, result.size());
 
@@ -542,7 +477,7 @@ namespace Graphics
 
 
 		}
-		shader_identifier get_shader_id(std::wstring_view name)
+		HAL::shader_identifier get_shader_id(std::wstring_view name)
 		{
 			return identify(stateObjectProperties->GetShaderIdentifier(name.data()));
 		}

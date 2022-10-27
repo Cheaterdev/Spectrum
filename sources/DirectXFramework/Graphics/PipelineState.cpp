@@ -236,7 +236,7 @@ namespace Graphics
 		}
 
 		{
-			D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType = desc.topology;
+			D3D12_PRIMITIVE_TOPOLOGY_TYPE PrimitiveTopologyType = to_native(desc.topology);
 			creator.include(PrimitiveTopologyType);
 		}
 

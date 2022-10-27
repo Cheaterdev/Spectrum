@@ -33,7 +33,7 @@ namespace PSOS
 			mpso.blend = { HAL::Blends::AlphaBlend };
 			mpso.enable_depth  = false;
 			mpso.cull  = Graphics::CullMode::None;
-			mpso.topology  = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+			mpso.topology  = HAL::PrimitiveTopologyType::PATCH;
 			return mpso;
 		}
 	};

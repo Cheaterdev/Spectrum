@@ -30,7 +30,7 @@ namespace FW1FontWrapper
     {
 
         list->get_graphics().set_pipeline(GetPSO<PSOS::FontRender>());
-        list->get_graphics().set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_POINTLIST);	
+        list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT, HAL::PrimitiveTopologyFeed::LIST);
     }
 
 

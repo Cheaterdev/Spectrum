@@ -1249,7 +1249,7 @@ void generate_pso(PSO& pso)
 						else if (e.type == "depth_func")
 							add = "Graphics::ComparisonFunc::";
 						else if (e.type == "topology")
-							add = "D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_";
+							add = "HAL::PrimitiveTopologyType::";
 						else if (e.type == "stencil_func")
 							add = "Graphics::ComparisonFunc::";
 						else if (e.type == "stencil_pass_op")

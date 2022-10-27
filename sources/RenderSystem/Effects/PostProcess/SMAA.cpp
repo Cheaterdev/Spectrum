@@ -37,7 +37,7 @@ void SMAA::generate(Graph& graph)
 			auto& graphics = list.get_graphics();
 
 
-			graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 			ivec2 size = graph.frame_size;
 

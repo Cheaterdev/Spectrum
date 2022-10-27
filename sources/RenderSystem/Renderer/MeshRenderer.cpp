@@ -17,7 +17,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	instances_count = 0;
 
 	Graphics::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
-	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	default_pipeline.topology = HAL::PrimitiveTopologyType::TRIANGLE;
 	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
 	default_pipeline.rasterizer.fill_mode = FillMode::Solid;
@@ -45,7 +45,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
-	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
 
 	std::map<size_t, materials::Pipeline::ptr> pipelines_local;
@@ -254,7 +254,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set_pipeline(GetPSO<PSOS::RenderBoxes>());
 	graphics.set_index_buffer(index_buffer->get_index_buffer_view());
-	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
 
 	list.clear_uav(visible_boxes->buffer->rwByteAddressBuffer, ivec4{ 999,999,999,999 });

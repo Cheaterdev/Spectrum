@@ -25,7 +25,7 @@ namespace PSOS
 			
 			mpso.rtv_formats = { Graphics::Format::R8G8B8A8_UNORM };
 			mpso.blend = {  };
-			mpso.topology  = D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+			mpso.topology  = HAL::PrimitiveTopologyType::POINT;
 			mpso.enable_depth  = false;
 			return mpso;
 		}

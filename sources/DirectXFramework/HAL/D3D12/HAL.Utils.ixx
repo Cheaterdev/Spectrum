@@ -10,6 +10,8 @@ import :Types;
 import :Sampler;
 using namespace HAL;
 
+static_assert(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES == 32);
+
 export namespace D3D
 {
 	using Heap = ComPtr<ID3D12Heap>;
@@ -56,6 +58,19 @@ export D3D12_TEXTURE_ADDRESS_MODE to_native(TextureAddressMode mode)
 	return natives[static_cast<uint>(mode)];
 }
 
+export D3D12_PRIMITIVE_TOPOLOGY_TYPE to_native(PrimitiveTopologyType topology)
+{
+	static constexpr D3D12_PRIMITIVE_TOPOLOGY_TYPE natives[] =
+	{
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH
+	};
+
+	return natives[static_cast<uint>(topology)];
+}
 export D3D12_COMPARISON_FUNC to_native(ComparisonFunc mode)
 {
 	static constexpr D3D12_COMPARISON_FUNC natives[] =
@@ -625,6 +640,60 @@ export D3D12_VIEWPORT to_native(Viewport v)
 	return D3D12_VIEWPORT{ v.pos.x,v.pos.y,v.size.x,v.size.y,v.depths.x,v.depths.y };
 }
 
+
+export D3D_PRIMITIVE_TOPOLOGY to_native(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType, bool adjusted, uint controlpoints)
+{
+	switch (topology)
+	{
+	case HAL::PrimitiveTopologyType::POINT:
+	{
+		assert(feedType == HAL::PrimitiveTopologyFeed::LIST);
+		assert(!adjusted);
+		assert(controlpoints == 0);
+		return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+	}
+	case HAL::PrimitiveTopologyType::LINE:
+	{
+		assert(controlpoints == 0);
+		switch (feedType)
+		{
+		case HAL::PrimitiveTopologyFeed::LIST:
+		{
+			return adjusted ? D3D_PRIMITIVE_TOPOLOGY_LINELIST_ADJ : D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+		}
+
+		case HAL::PrimitiveTopologyFeed::STRIP:
+		{
+			return adjusted ? D3D_PRIMITIVE_TOPOLOGY_LINESTRIP_ADJ : D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+		}
+		}
+
+	}
+	case HAL::PrimitiveTopologyType::TRIANGLE:
+	{
+		assert(controlpoints == 0);
+		switch (feedType)
+		{
+		case HAL::PrimitiveTopologyFeed::LIST:
+		{
+			return adjusted ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST_ADJ : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		}
+
+		case HAL::PrimitiveTopologyFeed::STRIP:
+		{
+			return adjusted ? D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP_ADJ : D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+		}
+		}
+	}
+	case HAL::PrimitiveTopologyType::PATCH:
+	{
+		assert(controlpoints >= 1 && controlpoints <= 32);
+		return D3D_PRIMITIVE_TOPOLOGY(uint(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) - 1 + controlpoints);
+	}
+	}
+	assert(false);
+	return D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+}
 
 export CD3DX12_RESOURCE_DESC to_native(const ResourceDesc& desc)
 {
