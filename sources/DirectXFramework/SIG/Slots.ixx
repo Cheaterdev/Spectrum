@@ -129,7 +129,7 @@ export {
 
 
 				auto info = context->place_raw(offsets);
-				auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, Graphics::StructuredBufferViewDesc{ (uint)info.offset, (uint)info.size,false }).structuredBuffer;
+				auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, Graphics::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,false }).structuredBuffer;
 
 				offset = srv.offset;
 
@@ -228,7 +228,7 @@ export {
 			auto ptr = reinterpret_cast<const std::byte*>(str.data());
 			std::vector<std::byte> data;
 			data.assign(ptr, ptr + str.size());
-			compiled.offsets_cb = context.place_raw(data).get_resource_address();
+			compiled.offsets_cb = context.place_raw(data);
 			compiled.resources = compiler.resources;
 			return compiled;
 		}

@@ -160,7 +160,7 @@ void MeshAsset::init_gpu()
 			geometryDesc.IndexBuffer = universal_index_manager::get().buffer->get_resource_address().offset(static_cast<UINT>(index_handle.get_offset() + mesh.index_offset) * sizeof(UINT32));
 			geometryDesc.IndexCount = mesh.index_count;
 			geometryDesc.IndexFormat = DXGI_FORMAT_R32_UINT;
-			geometryDesc.Transform3x4 = mat.get_resource_address();//universal_nodes_manager::get().buffer->get_resource_address().offset(info.mesh_info.GetNode_offset() * sizeof(Table::node_data));
+			geometryDesc.Transform3x4 = mat;//universal_nodes_manager::get().buffer->get_resource_address().offset(info.mesh_info.GetNode_offset() * sizeof(Table::node_data));
 			geometryDesc.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
 			geometryDesc.VertexBuffer = universal_vertex_manager::get().buffer->get_resource_address().offset(static_cast<UINT>((vertex_handle.get_offset() + mesh.vertex_offset) * sizeof(Table::mesh_vertex_input)));
 			geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);

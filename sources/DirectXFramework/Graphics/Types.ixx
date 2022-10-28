@@ -90,6 +90,7 @@ using RTXSceneView = HAL::RTXSceneView;
 
 
 	using Texture = HAL::Texture;
+using HandleTable = HAL::HandleTable;
 
 
 

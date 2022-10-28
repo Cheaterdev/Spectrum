@@ -213,7 +213,7 @@ namespace Graphics
 		CommandList* list = static_cast<CommandList*>(this); // :(
 		auto info = list->read_data(NumQueries * sizeof(UINT64));
 
-		compiler.ResolveQueryData(pQueryHeap.get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_dx(), info.offset);
+		compiler.ResolveQueryData(pQueryHeap.get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, info.resource->get_dx(), info.resource_offset);
 		on_execute_funcs.emplace_back([info, f, NumQueries]() {
 
 			UINT64* data = reinterpret_cast<UINT64*>(info.get_cpu_data());
@@ -416,39 +416,12 @@ namespace Graphics
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
 		list->CopyBufferRegion(
-			resource->get_dx(), offset, info.resource->get_dx(), info.offset, size);
+			resource->get_dx(), offset, info.resource->get_dx(), info.resource_offset, size);
 		base.create_transition_point(false);
 	}
 
 
-	HAL::ResourceAddress UploadInfo::get_resource_address()
-	{
-		return resource->get_resource_address().offset(offset);
-	}
-
-
-	std::byte* UploadInfo::get_cpu_data() const
-	{
-		return resource->buffer_data + offset;
-	}
-
-	std::byte* Readbacker::ReadBackInfo::get_cpu_data() const
-	{
-		return resource->buffer_data + offset;
-	}
-	Readbacker::ReadBackInfo Readbacker::read_data(UINT64 uploadBufferSize, unsigned int alignment)
-	{
-		const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
-		auto handle = allocator.alloc(AlignedSize, alignment, HAL::MemoryType::COMMITED, HeapType::READBACK);
-
-		handles.emplace_back(handle);
-		ReadBackInfo info;
-		info.resource = std::static_pointer_cast<HAL::Resource>(handle.get_heap()->as_buffer());
-		info.offset = handle.get_offset();
-		info.size = uploadBufferSize;
-		return info;
-	}
-
+	
 	void CopyContext::update_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
 		update_texture(resource.get(), offset, box, sub_resource, data, row_stride, slice_stride);
@@ -473,7 +446,7 @@ namespace Graphics
 		D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 		UINT NumRows;
 		UINT64 RowSizesInBytes;
-		HAL::Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, info.offset, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
+		HAL::Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, info.resource_offset, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 
 		if (res_stride == row_stride)
 		{
@@ -519,7 +492,7 @@ namespace Graphics
 		CD3DX12_TEXTURE_COPY_LOCATION Src;
 		Src.pResource = info.resource->get_dx();
 		Src.Type = D3D12_TEXTURE_COPY_TYPE::D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		Src.PlacedFootprint.Offset = info.offset;
+		Src.PlacedFootprint.Offset = info.resource_offset;
 		Src.PlacedFootprint.Footprint.Width = box.x;
 		Src.PlacedFootprint.Footprint.Height = box.y;
 		Src.PlacedFootprint.Footprint.Depth = box.z;
@@ -577,7 +550,7 @@ namespace Graphics
 		assert(box.z > 0);
 		dest.pResource = info.resource->get_dx();
 		dest.Type = D3D12_TEXTURE_COPY_TYPE::D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-		dest.PlacedFootprint.Offset = info.offset;
+		dest.PlacedFootprint.Offset = info.resource_offset;
 		dest.PlacedFootprint.Footprint.Width = box.x;
 		dest.PlacedFootprint.Footprint.Height = box.y;
 		dest.PlacedFootprint.Footprint.Depth = box.z;
@@ -616,7 +589,7 @@ namespace Graphics
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
-		list->CopyBufferRegion(info.resource->get_dx(), info.offset, resource->get_dx(), offset, size);
+		list->CopyBufferRegion(info.resource->get_dx(), info.resource_offset, resource->get_dx(), offset, size);
 		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
@@ -641,7 +614,7 @@ namespace Graphics
 		//  auto size = resource->get_size();
 		auto info = base.read_data(size);
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
-		list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.offset);
+		list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.resource_offset);
 		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
@@ -1331,14 +1304,7 @@ namespace Graphics
 
 
 	}
-	void Readbacker::reset()
-	{
-		for (auto& h : handles)
-			h.Free();
-		handles.clear();
 
-
-	}
 
 
 

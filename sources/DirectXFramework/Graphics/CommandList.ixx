@@ -6,8 +6,8 @@ import StateContext;
 import Profiling;
 import Threading;
 import Exceptions;
-import :RootSignature;
-
+//import :RootSignature;
+import :Types;
 import Math;
 //import :Enums;
 import Data;
@@ -31,184 +31,6 @@ export{
 	namespace Graphics
 	{
 		class GraphicsContext;
-
-#define DEFAULT_ALIGN 256
-
-
-
-
-		struct UploadInfo
-		{
-			std::shared_ptr<HAL::Resource> resource;
-			UINT64 offset;
-			UINT64 size;
-			HAL::ResourceAddress get_resource_address();
-			std::byte* get_cpu_data() const;
-		};
-
-		template<class LockPolicy>
-		class Uploader
-		{
-			HAL::ResourceHeapAllocator<LockPolicy> allocator;
-			std::list<ResourceHandle> handles;
-			UINT heap_size = 0x200000;
-		protected:
-
-			template<class T>
-			size_t size_of(std::span<T>& elem)
-			{
-				return sizeof(T) * elem.size();
-			}
-			template<class T>
-			size_t size_of(std::vector<T>& elem)
-			{
-				return sizeof(T) * elem.size();
-			}
-
-			template<class T>
-			size_t size_of(my_unique_vector<T>& elem)
-			{
-				return sizeof(T) * elem.size();
-			}
-
-			template<class T>
-			size_t size_of(T& elem)
-			{
-				return sizeof(T);
-			}
-
-			typename LockPolicy::mutex m;
-
-		public:
-
-
-			//	UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
-
-
-			void reset()
-			{
-				typename LockPolicy::guard g(m);
-
-				for (auto& h : handles)
-					h.Free();
-				handles.clear();
-
-
-			}
-
-
-			UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN)
-			{
-				const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
-
-
-				auto handle = allocator.alloc(AlignedSize, alignment, HAL::MemoryType::COMMITED, HeapType::UPLOAD);
-
-				typename LockPolicy::guard g(m);
-
-				handles.emplace_back(handle);
-				UploadInfo info;
-				info.resource = std::static_pointer_cast<HAL::Resource>(handle.get_heap()->as_buffer());
-				info.offset = handle.get_offset();
-				info.size = uploadBufferSize;
-				assert(info.resource);
-				return info;
-			}
-
-
-
-			template<class ...Args>
-			UploadInfo place_raw(Args... args)
-			{
-				size_t size = (0 + ... + size_of(args));
-
-
-
-				auto info = place_data(size);
-
-
-				//	memcpy(info.resource->get_data() + info.offset, data, size);
-				size_t start = 0;
-				{
-					(write(info, start, std::forward<Args>(args)), ...);
-				}
-				return info;
-			}
-
-			void write(UploadInfo& info, size_t offset, void* data, size_t size)
-			{
-				if (size > 0) memcpy(info.resource->buffer_data + info.offset + offset, data, size);
-			}
-
-
-
-
-
-			//void write(UploadInfo& info, size_t offset, void* data, size_t size);
-
-			template<class T>
-			void write(UploadInfo& info, const std::span<T>& arg)
-			{
-				write(info, 0, (void*)arg.data(), arg.size() * sizeof(T));
-			}
-			template<class T>
-			void write(UploadInfo& info, const std::vector<T>& arg)
-			{
-				write(info, 0, (void*)arg.data(), arg.size() * sizeof(T));
-			}
-
-			template<class T>
-			void write(UploadInfo& info, const my_unique_vector<T>& arg)
-			{
-				write(info, 0, (void*)arg.data(), arg.size() * sizeof(T));
-			}
-
-			template<class T>
-			void write(UploadInfo& info, size_t& offset, const std::vector<T>& arg)
-			{
-				write(info, offset, (void*)arg.data(), arg.size() * sizeof(T));
-				offset += arg.size() * sizeof(T);
-			}
-
-
-			template<class T>
-			void write(UploadInfo& info, size_t& offset, const my_unique_vector<T>& arg)
-			{
-				write(info, offset, (void*)arg.data(), arg.size() * sizeof(T));
-				offset += arg.size() * sizeof(T);
-
-			}
-			template<class T>
-			void write(UploadInfo& info, size_t& offset, const T& arg)
-			{
-				write(info, offset, (void*)&arg, sizeof(T));
-				offset += sizeof(T);
-
-				//Log::get() << "write " <<  Log::endl;
-			}
-		};
-
-
-		class Readbacker
-		{
-			ResourceHeapAllocator<Thread::Free> allocator;
-			std::vector<ResourceHandle> handles;
-		protected:
-			void reset();
-		public:
-
-			struct ReadBackInfo
-			{
-				std::shared_ptr<HAL::Resource> resource;
-				UINT64 offset;
-				UINT64 size;
-
-				std::byte* get_cpu_data() const;
-			};
-
-			ReadBackInfo read_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN);
-
-		};
 
 
 		template<class LockPolicy = Thread::Free>
@@ -264,33 +86,27 @@ export{
 		public:
 			using Uploader<Thread::Lockable>::place_raw;
 		};
+
 		class FrameResources :public SharedObject<FrameResources>, public GPUCompiledManager<Thread::Lockable>, public HAL::FrameResources
 		{
-
 			friend class FrameResourceManager;
 
 			std::uint64_t frame_number = 0;
 			std::mutex m;
-
-
-
 		public:
-
-
-
+			using ptr = std::shared_ptr<FrameResources>;
 
 			~FrameResources()
 			{
 				reset();
 			}
-			using ptr = std::shared_ptr<FrameResources>;
+
 			std::uint64_t get_frame()
 			{
 				return frame_number;
 			}
 
 			std::shared_ptr<CommandList> start_list(std::string name = "", CommandListType type = CommandListType::DIRECT);
-
 		};
 
 		class FrameResourceManager :public Singleton<FrameResourceManager>
@@ -311,8 +127,7 @@ export{
 
 			std::vector<std::function<void()>> on_execute_funcs;
 
-			std::list<FenceWaiter> waits;
-
+		
 			HAL::Private::CommandListCompilerDelayed compiler;
 
 			std::list<TrackedObject::ptr> tracked_resources;
@@ -486,51 +301,6 @@ export{
 						const_cast<HAL::Resource*>(resource)->get_state_manager().stop_using(this, subres);
 					});
 			}
-
-			//remove this all
-	/*		void transition_rtv(const ResourceInfo* info)
-			{
-				assert(std::holds_alternative<HAL::Views::RenderTarget>(info->view));
-
-				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
-					{
-						transition(resource, ResourceState::RENDER_TARGET, subres);
-					});
-			}
-
-			void transition_uav(const ResourceInfo* info)
-			{
-				assert(std::holds_alternative<HAL::Views::UnorderedAccess>(info->view));
-
-				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
-					{
-						transition(resource, ResourceState::UNORDERED_ACCESS, subres);
-					});
-			}
-
-
-			void transition_dsv(const ResourceInfo* info)
-			{
-				assert(std::holds_alternative<HAL::Views::DepthStencil>(info->view));
-
-				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
-					{
-						transition(resource, ResourceState::DEPTH_WRITE, subres);
-					});
-			}
-
-
-			void transition_srv(const ResourceInfo* info)
-			{
-				assert(std::holds_alternative<HAL::Views::ShaderResource>(info->view));
-
-				assert(false);
-
-
-
-
-			}*/
-
 		};
 
 
@@ -628,10 +398,6 @@ export{
 			std::promise<FenceWaiter> execute_fence;
 			std::shared_future<FenceWaiter> execute_fence_result;
 
-
-			std::list<FenceWaiter> waits;
-
-
 			void on_send(FenceWaiter fence)
 			{
 
@@ -672,7 +438,7 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList :  public Readbacker, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>, public HAL::CommandList
+		class CommandList :  public Readbacker<Thread::Free>, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>, public HAL::CommandList
 		{
 
 
@@ -819,25 +585,6 @@ export{
 			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)>);
 			std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(const char*, UINT64)>);
 		};
-		/*
-		class StateManager
-		{
-			std::vector<Handle> rtvs;
-			Handle dsv;
-
-			std::vector<Handle> tables;
-
-		public:
-			void set_signature(const RootSignature::ptr&);
-
-			template<class Compiled>
-			void set_slot(Compiled& compiled)
-			{
-
-			}
-
-		};
-		*/
 
 
 		class SignatureDataSetter
@@ -852,24 +599,12 @@ export{
 
 			friend class CommandList;
 
-
-			/*struct SlotInfo
-			{
-				SlotID id;
-				bool dirty = false;
-
-				const std::vector<UINT>* tables;
-			};
-			std::vector<SlotInfo> slots;*/
-
-
 			RootSignature::ptr root_sig;
 			//		UsedSlots used_slots;
 		protected:
 			CommandList& base;
 			SignatureDataSetter(CommandList& base) :base(base) {
 				tables.resize(32); // !!!!!!!!!!!
-			//	slots.resize(32); // !!!!!!!!!!!
 			}
 
 			virtual void set(UINT, const HandleTableLight&) = 0;
@@ -882,9 +617,7 @@ export{
 				{
 					row.dirty = false;
 				}
-
 			}
-
 
 			void commit_tables()
 			{
@@ -903,30 +636,6 @@ export{
 
 					row.dirty = false;
 				}
-
-				/*
-				for (auto& row : slots)
-				{
-					if (!row.dirty) continue;
-
-					auto& used_tables = *row.tables;
-
-					for (auto &id : used_tables)
-					{
-						auto& table = tables[id].table;
-
-						for (UINT i = 0; i < (UINT)table.get_count(); ++i)
-						{
-							const auto& h = table[i];
-							if (h.get_resource_info() && h.get_resource_info()->resource_ptr)
-							{
-								get_base().transition(h.get_resource_info());
-							}
-						}
-					}
-
-					row.dirty = false;
-				}*/
 			}
 
 		public:
@@ -939,8 +648,6 @@ export{
 				return base;
 			}
 
-		//	void set_layout(Layouts layout);
-
 			void set_signature(const RootSignature::ptr& signature)
 			{
 				if (root_sig == signature) return;
@@ -950,7 +657,6 @@ export{
 				auto& desc = signature->get_desc();
 
 				on_set_signature(signature);
-				//	tables.resize(desc.tables.size());
 			}
 
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
@@ -984,12 +690,6 @@ export{
 			template<class Compiled>
 			void set_slot(Compiled& compiled)
 			{
-				//auto& slot = slots[Compiled::Slot::ID];
-				//slot.id = Compiled::ID;
-				//slot.dirty = true;
-
-				//				slot.tables = &Compiled::SlotTable::tables;
-
 				compiled.set_tables(*this);
 			}
 
@@ -1011,22 +711,6 @@ export{
 			}
 			GraphicsContext(const GraphicsContext&) = delete;
 			GraphicsContext(GraphicsContext&&) = delete;
-
-			template<class T, class W>
-			void set(T* _where, W what)
-			{
-				*_where = what->get_vertex_buffer_view();
-				//    what->update(this);
-			}
-
-			template<class T, class W, class ...Args>
-			void set(T* _where, W what, Args...args)
-			{
-				*_where = what->get_vertex_buffer_view();
-				//what->update(this);
-				set(_where++, args...);
-			}
-
 
 			bool valid_scissor = false;
 			std::vector<Viewport> viewports;
@@ -1111,28 +795,6 @@ export{
 			{
 				list->OMSetStencilRef(ref);
 			}
-			template<class T, size_t N>
-			constexpr size_t size(T(&)[N]) { return N; }
-
-			template<class ...Handles>
-			void set_rtvs(const Handle& h, Handles... rtvlist)
-			{
-
-				auto f = [&](Handle h) {
-					get_base().transition_rtv(h.get_resource_info());
-				};
-
-				(f(std::forward<Handles>(rtvlist)), ...);
-
-
-				if (h.is_valid())
-					get_base().transition_dsv(h.get_resource_info());
-
-
-				CD3DX12_CPU_DESCRIPTOR_HANDLE ar[] = { (rtvlist.get_cpu_read())... };
-				assert(false);//list->OMSetRenderTargets(size(ar), ar, false, h.is_valid() ? &h.get_cpu_read() : nullptr);
-			}
-
 
 			std::vector<Viewport> get_viewports()
 			{

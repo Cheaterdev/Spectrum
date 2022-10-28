@@ -78,8 +78,10 @@ export{
 				return gpu_address;
 			}
 
+			std::span<std::byte> cpu_data() const;
+
 			// TODO:: works only for buffer now
-			uint64 get_size()
+			uint64 get_size()const
 			{
 				return get_desc().as_buffer().SizeInBytes;// desc.BufferDesc.desc.get<BufferDesc>
 			}

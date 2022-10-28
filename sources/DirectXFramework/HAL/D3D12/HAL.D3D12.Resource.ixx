@@ -34,7 +34,6 @@ export namespace HAL
 		using ptr = std::shared_ptr<Resource>;
 		void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, ResourceState initialState = ResourceState::GEN_READ);
 		void init(D3D::Resource  resource);
-		std::span<std::byte> cpu_data();
 
 		GPUAddressPtr get_address()
 		{

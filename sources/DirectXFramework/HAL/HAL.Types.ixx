@@ -546,6 +546,8 @@ export namespace HAL
 		{
 			return { resource, resource_offset + offset };
 		}
+
+		std::byte* get_cpu_data() const;
 	};
 
 

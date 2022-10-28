@@ -409,8 +409,16 @@ namespace HAL
 #endif 
 		alloc_handle.Free();
 	}
+	std::span<std::byte> Resource::cpu_data()const
+	{
 
+		return { buffer_data,buffer_data + get_size() };
+	}
 
+	std::byte* ResourceAddress::get_cpu_data() const
+	{
+		return resource->cpu_data().data() + resource_offset;
+	}
 		void RaytracingBuildDescBottomInputs::add_geometry(GeometryDesc i)
 		{
 			D3D12_RAYTRACING_GEOMETRY_DESC geom;

@@ -47,8 +47,7 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 
 	if (instances.size())
 	{
-		auto instanceDescs = list->place_raw(instances);
-		inputs.instances = instanceDescs.get_resource_address();
+		inputs.instances = list->place_raw(instances);
 	}
 
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
