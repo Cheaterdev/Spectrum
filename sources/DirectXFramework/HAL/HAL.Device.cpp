@@ -20,7 +20,7 @@ namespace HAL
 
 		Singleton<Graphics::StaticCompiledGPUData>::reset();
 		HAL::DescriptorHeapManager::reset();
-		Graphics::PipelineStateCache::reset();
+		HAL::PipelineStateCache::reset();
 	}
 
 	Device::~Device()

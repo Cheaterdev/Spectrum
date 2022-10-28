@@ -14,9 +14,7 @@ export
 
 		class CommandList;
 	
-		class ComputePipelineState;
-		class PipelineStateBase;
-		class StateObject;
+
 		class IndexBufferBase;
 
 		class GPUBuffer;

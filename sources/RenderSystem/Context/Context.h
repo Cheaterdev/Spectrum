@@ -162,7 +162,7 @@ public:
 	{
 		if (!current_state || !(current_state->desc == pipeline))
 		{
-			current_state = Graphics::PipelineStateCache::get_cache(pipeline);
+			current_state = HAL::PipelineStateCache::get_cache(pipeline);
 
 
 			assert(pipeline == current_state->desc);

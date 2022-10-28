@@ -1,10 +1,5 @@
-
-module;
-
-
 export module Graphics:Autogen;
 
-import :PipelineState;
 import Math;
 import :Buffer;
 

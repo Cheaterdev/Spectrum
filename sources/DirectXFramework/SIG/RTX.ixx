@@ -8,7 +8,6 @@ import Math;
 import Utils;
 import Events;
 import IdGenerator;
-import :PipelineState;
 
 
 export
@@ -370,11 +369,11 @@ struct SelectLocal<T>
 
 			if constexpr (!Desc::per_material)
 			{
-				Graphics::HitGroup group;
+				HAL::HitGroup group;
 				group.local_root = rtx.m_local_sig;
 				group.name = std::wstring(Desc::name);
 				group.closest_hit_shader = std::wstring(Desc::hit_name);
-				group.type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+				group.type = HAL::HitGroupType::TRIANGLES;
 				raytracingPipeline.hit_groups.emplace_back(group);
 				lib.export_shader(std::wstring(Desc::hit_name));
 			}
@@ -399,12 +398,12 @@ struct SelectLocal<T>
 				lib.library = mat->raytracing_lib;
 				lib.export_shader(/*new*/ mat->wshader_name, /*was*/ std::wstring(Desc::hit_name));
 
-				Graphics::HitGroup group;
+				HAL::HitGroup group;
 
 				group.local_root = rtx.m_local_sig;
 				group.name = mat->wshader_name + std::wstring(Desc::name);
 				group.closest_hit_shader = mat->wshader_name;
-				group.type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+				group.type = HAL::HitGroupType::TRIANGLES;
 				raytracingPipeline.hit_groups.emplace_back(group);
 
 				raytracingPipeline.libraries.emplace_back(lib);

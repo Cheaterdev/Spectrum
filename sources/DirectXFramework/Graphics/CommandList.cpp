@@ -6,7 +6,6 @@ import d3d12;
 module Graphics:CommandList;
 
 import :GPUTimer;
-import :PipelineState;
 
 import :Autogen;
 

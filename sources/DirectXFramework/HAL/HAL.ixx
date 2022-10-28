@@ -31,7 +31,7 @@ export import :Removeme;
 export import :Shader;
 export import :TextureData;
 export import :API;
-
+export import :PipelineState;
 export namespace HAL
 {
 	void init();

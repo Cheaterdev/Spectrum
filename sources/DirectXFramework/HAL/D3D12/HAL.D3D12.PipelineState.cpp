@@ -1,12 +1,9 @@
-module;
+module HAL:PipelineState;
 
-module Graphics:PipelineState;
+import d3d12;
 
-import Serializer;
-import Debug;
+#undef THIS
 
-import HAL;
-using namespace HAL;
 
 template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T>
 struct TypeToOBJ;
@@ -35,8 +32,6 @@ MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS, D3D12_RT_FORMAT_A
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO, D3D12_CACHED_PIPELINE_STATE);
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT, DXGI_FORMAT);
 
-namespace Graphics
-{
 	template < class V>
 	struct alignas(void*) Record
 	{
@@ -101,38 +96,38 @@ namespace Graphics
 		}
 
 
-		void include(vertex_shader::ptr shader)
+		void include(HAL::vertex_shader::ptr shader)
 		{
 			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS>(shader);
 		}
 
-		void include(pixel_shader::ptr shader)
+		void include(HAL::pixel_shader::ptr shader)
 		{
 			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS>(shader);
 		}
 
-		void include(geometry_shader::ptr shader)
+		void include(HAL::geometry_shader::ptr shader)
 		{
 			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_GS>(shader);
 		}
 
-		void include(domain_shader::ptr shader)
+		void include(HAL::domain_shader::ptr shader)
 		{
 			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DS>(shader);
 		}
 
-		void include(hull_shader::ptr shader)
+		void include(HAL::hull_shader::ptr shader)
 		{
 			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_HS>(shader);
 		}
 
 
-		void include(mesh_shader::ptr shader)
+		void include(HAL::mesh_shader::ptr shader)
 		{
 			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS>(shader);
 		}
 
-		void include(amplification_shader::ptr shader)
+		void include(HAL::amplification_shader::ptr shader)
 		{
 			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS>(shader);
 		}
@@ -147,12 +142,146 @@ namespace Graphics
 		}
 	};
 
+
+namespace HAL
+{
+	namespace API
+	{
+		ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
+		{
+			auto THIS = static_cast<HAL::PipelineStateBase*>(this);
+			return THIS->tracked_info->m_pipelineState;
+		}
+
+		ComPtr<ID3D12StateObject> PipelineStateBase::get_native_state()
+		{
+			auto THIS = static_cast<HAL::PipelineStateBase*>(this);
+			return THIS->tracked_info->m_StateObject;
+		}
+
+
+		std::string PipelineStateBase::get_cache()
+		{
+
+			auto THIS = static_cast<HAL::PipelineStateBase*>(this);
+
+
+			ComPtr<ID3DBlob> blob;
+			THIS->tracked_info->m_pipelineState->GetCachedBlob(&blob);
+			std::string str((char*)blob->GetBufferPointer(), blob->GetBufferSize());
+
+			return str;
+		}
+
+
+
+	}
+
+
+
+	HAL::shader_identifier StateObject::get_shader_id(std::wstring_view name)
+	{
+		return identify(stateObjectProperties->GetShaderIdentifier(name.data()));
+	}
+	void StateObject::on_change()
+	{
+		tracked_info.reset(new API::TrackedPipeline());
+		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ desc.collection ? D3D12_STATE_OBJECT_TYPE_COLLECTION : D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE };
+
+		for (auto& l : desc.libraries)
+		{
+
+			auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
+
+			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)l.library->get_blob().data(), l.library->get_blob().size());
+			lib->SetDXILLibrary(&libdxil);
+
+			for (auto& e : l.exports)
+			{
+
+				lib->DefineExport(e.first.c_str(), e.second.empty() ? nullptr : e.second.c_str());
+			}
+
+			debuggable |= l.library && l.library->depends_on("DebugInfo");
+		}
+
+		if (desc.global_root)
+		{
+			auto globalRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_GLOBAL_ROOT_SIGNATURE_SUBOBJECT>();
+
+			globalRootSignature->SetRootSignature(desc.global_root->get_native().Get());
+		}
+
+		if (desc.MaxTraceRecursionDepth)
+		{
+			auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
+			pipelineConfig->Config(desc.MaxTraceRecursionDepth);
+		}
+
+		if (desc.MaxPayloadSizeInBytes)
+		{
+			auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+			shaderConfig->Config(desc.MaxPayloadSizeInBytes, desc.MaxAttributeSizeInBytes);
+		}
+
+
+		std::map<RootSignature::ptr, CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT*> roots;
+
+
+		for (auto& e : desc.hit_groups)
+		{
+			if (e.local_root)
+				roots[e.local_root] = nullptr;
+		}
+
+
+		for (auto& e : roots)
+		{
+			auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
+			localRootSignature->SetRootSignature(e.first->get_native().Get());
+
+			auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+			rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
+
+			e.second = rootSignatureAssociation;
+		}
+
+
+		for (auto& e : desc.hit_groups)
+		{
+			auto hitGroup = raytracingPipeline.CreateSubobject<CD3DX12_HIT_GROUP_SUBOBJECT>();
+
+			hitGroup->SetHitGroupExport(e.name.c_str());
+			//TODO: more shaders
+			hitGroup->SetClosestHitShaderImport(e.closest_hit_shader.c_str());
+			hitGroup->SetHitGroupType(to_native(e.type));
+
+			if (e.local_root)
+				roots[e.local_root]->AddExport(e.name.c_str());
+		}
+
+		for (auto& c : desc.collections)
+		{
+			auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
+			sharedCollection->SetExistingCollection(c->get_native_state().Get());
+
+			debuggable |= c->debuggable;
+		}
+
+
+		TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&tracked_info->m_StateObject)));
+		TEST(HAL::Device::get(), tracked_info->m_StateObject.As(&stateObjectProperties));
+
+		event_change();
+
+	}
+
 	void PipelineState::on_change()
 	{
+		tracked_info.reset(new API::TrackedPipeline());
 		root_signature = desc.root_signature;
 
-		auto t = CounterManager::get().start_count<PipelineState>();
-
+	
 		PSOCreator creator;
 
 
@@ -303,159 +432,48 @@ namespace Graphics
 
 
 
-	PipelineState::ptr PipelineState::create(PipelineStateDesc& desc, std::string name)
+	void ComputePipelineState::on_change()
 	{
-		return PipelineStateCache::get_cache(desc, name);
-	}
+		tracked_info.reset(new API::TrackedPipeline());
 
-	ComputePipelineState::ptr ComputePipelineState::create(ComputePipelineStateDesc& desc, std::string name)
-	{
-		return PipelineStateCache::get_cache(desc, name);
-	}
+		root_signature = desc.root_signature;
 
-	ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
-	{
-		return tracked_info->m_pipelineState;
-	}
+		D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
 
-	ComPtr<ID3D12StateObject> PipelineStateBase::get_native_state()
-	{
-		return tracked_info->m_StateObject;
-	}
-	PipelineState::PipelineState(PipelineStateDesc _desc, std::string cache) : desc(_desc)
-	{
-		this->cache = cache;
-		on_change();
-		register_shader(desc.pixel);
-		register_shader(desc.vertex);
-		register_shader(desc.hull);
-		register_shader(desc.domain);
-		register_shader(desc.geometry);
+		if (desc.root_signature)
+			psoDesc.pRootSignature = desc.root_signature->get_native().Get();
 
-		register_shader(desc.mesh);
-		register_shader(desc.amplification);
-
-	}
-	PipelineState::~PipelineState()
-	{
-
-	}
+		if (desc.shader)
+			psoDesc.CS = { desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
 
 
-	PipelineStateCache::~PipelineStateCache()
-	{
-		std::lock_guard<std::mutex> g(m);
-
-		FileSystem::get().save_data(L"pso", Serializer::serialize(binary_cache));
-	}
-
-	PipelineStateCache::PipelineStateCache() : cache([this](const PipelineStateDesc& desc)
+		if (!cache.empty())
 		{
-			std::lock_guard<std::mutex> g(m);
+			psoDesc.CachedPSO.pCachedBlob = cache.c_str();
+			psoDesc.CachedPSO.CachedBlobSizeInBytes = cache.size();
+		}
+		else
+		{
+			//	assert(false);
+		}
 
-			std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
+		HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 
-
-			//Log::get() << desc << Log::endl;
-			auto state = PipelineState::ptr(new PipelineState(desc, binary));
-
-			if (!desc.name.empty())
-			{
-				binary_cache[desc.name] = state->get_cache();
-			}
-
-			return state;
-
-		}), compute_cache([this](const ComputePipelineStateDesc& desc)
-			{
-				std::lock_guard<std::mutex> g(m);
-
-				std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
+		if (hr != S_OK)
+		{
+			psoDesc.CachedPSO = {};
+			hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+		}
 
 
-				//Log::get() << desc << Log::endl;
-				auto state = ComputePipelineState::ptr(new ComputePipelineState(desc, binary));
+		debuggable = desc.shader && desc.shader->depends_on("DebugInfo");
 
-				if (!desc.name.empty())
-				{
-					binary_cache[desc.name] = state->get_cache();
-				}
+		name = desc.name;
 
-				return state;
+		//	TEST(hr);
 
-			})
-	{
-
-		std::lock_guard<std::mutex> g(m);
-
-		auto file = FileSystem::get().get_file("pso");
-		if (file)
-			Serializer::deserialize(file->load_all(), binary_cache);
+		cache.clear();
 
 	}
-
-			PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)
-			{
-
-				desc.name = name;
-
-				//	 return  PipelineState::ptr(new PipelineState(desc));
-				return Singleton<PipelineStateCache>::get().cache[desc];
-			}
-
-			ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
-			{
-				desc.name = name;
-				return Singleton<PipelineStateCache>::get().compute_cache[desc];
-			}
-
-			void ComputePipelineState::on_change()
-			{
-
-				root_signature = desc.root_signature;
-
-				D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
-
-				if (desc.root_signature)
-					psoDesc.pRootSignature = desc.root_signature->get_native().Get();
-
-				if (desc.shader)
-					psoDesc.CS = { desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
-
-
-				if (!cache.empty())
-				{
-					psoDesc.CachedPSO.pCachedBlob = cache.c_str();
-					psoDesc.CachedPSO.CachedBlobSizeInBytes = cache.size();
-				}
-				else
-				{
-					//	assert(false);
-				}
-
-				HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
-
-				if (hr != S_OK)
-				{
-					psoDesc.CachedPSO = {};
-					hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
-				}
-
-
-				debuggable = desc.shader && desc.shader->depends_on("DebugInfo");
-
-				name = desc.name;
-
-				//	TEST(hr);
-
-				cache.clear();
-
-			}
-
-			ComputePipelineState::~ComputePipelineState()
-			{
-
-
-			}
 
 }

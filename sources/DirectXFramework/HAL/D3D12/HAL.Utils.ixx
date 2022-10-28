@@ -695,6 +695,17 @@ export D3D_PRIMITIVE_TOPOLOGY to_native(HAL::PrimitiveTopologyType topology, HAL
 	return D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 }
 
+export D3D12_HIT_GROUP_TYPE  to_native(HitGroupType type)
+{
+	static constexpr D3D12_HIT_GROUP_TYPE  natives[] =
+	{
+		D3D12_HIT_GROUP_TYPE_TRIANGLES ,
+		D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE
+	};
+
+	return natives[static_cast<uint>(type)];
+}
+
 export CD3DX12_RESOURCE_DESC to_native(const ResourceDesc& desc)
 {
 	if (desc.is_buffer())

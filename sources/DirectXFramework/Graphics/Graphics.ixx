@@ -8,7 +8,6 @@ export import :Buffer;
 export import :RaytracingAS;
 
 export import :RootSignature;
-export import :PipelineState;
 export import :VirtualBuffer;
 
 

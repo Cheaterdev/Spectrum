@@ -194,7 +194,7 @@ public:
 		//cam.position = vec3(0, 5, -30);
 
 		cam.position = vec3(0, 0, 0);
-		Graphics::PipelineStateCache::create();
+		HAL::PipelineStateCache::create();
 		stenciler.reset(new stencil_renderer());
 		stenciler->player_cam = &cam;
 		stenciler->scene = scene;

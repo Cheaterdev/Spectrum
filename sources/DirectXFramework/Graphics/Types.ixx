@@ -36,7 +36,7 @@ export {
 		using RenderTarget = HAL::RenderTarget;
 		using RasterizerState = HAL::RasterizerState;
 		using BlendState = HAL::BlendState;
-		using RTVState = HAL::RTVState;
+		using RenderTargetState = HAL::RenderTargetState;
 
 		using Format = HAL::Format;
 		using Handle = HAL::Handle;
@@ -104,6 +104,21 @@ using RTXSceneView = HAL::RTXSceneView;
 	using compute_shader = HAL::compute_shader;
 	using library_shader = HAL::library_shader;
 	using Device = HAL::Device;
+
+
+using PipelineStateBase = HAL::PipelineStateBase;
+using ComputePipelineState = HAL::ComputePipelineState;
+
+using PipelineState = HAL::PipelineState;
+
+using ComputePipelineStateDesc = HAL::ComputePipelineStateDesc;
+
+using PipelineStateDesc = HAL::PipelineStateDesc;
+
+
+using StateObjectDesc = HAL::StateObjectDesc;
+using StateObject = HAL::StateObject;
+using LibraryObject = HAL::LibraryObject;
 
 	}
 }

@@ -1,6 +1,5 @@
 export module Graphics:PSO;
 export import "PSO_defines.h";
-import :PipelineState;
 import Data;
 import Threading;
 import Profiling;

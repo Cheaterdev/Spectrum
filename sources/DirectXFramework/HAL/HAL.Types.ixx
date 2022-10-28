@@ -307,7 +307,7 @@ export namespace HAL
 	};
 
 
-	struct RTVState
+	struct RenderTargetState
 	{
 		bool enable_depth = false;
 		bool enable_depth_write = true;
@@ -322,15 +322,15 @@ export namespace HAL
 		uint8 stencil_write_mask = 0xff;
 		StencilDesc stencil_desc;
 
-		RTVState()
+		RenderTargetState()
 		{
 			stencil_desc.StencilDepthFailOp = StencilOp::Keep;
 			stencil_desc.StencilFailOp = StencilOp::Keep;
 			stencil_desc.StencilPassOp = StencilOp::Keep;
 			stencil_desc.StencilFunc = ComparisonFunc::LESS;
 		}
-		bool operator==(const RTVState& r) const = default;
-		auto operator<=>(const  RTVState& r)  const = default;
+		bool operator==(const RenderTargetState& r) const = default;
+		auto operator<=>(const  RenderTargetState& r)  const = default;
 	private:
 		SERIALIZE()
 		{
@@ -656,4 +656,9 @@ export namespace HAL
 	};
 	using shader_identifier = std::array<std::byte, 32/*D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES*/>;
 
+	enum class HitGroupType :uint
+	{
+		TRIANGLES,
+		PROCEDURAL
+	};
 }
