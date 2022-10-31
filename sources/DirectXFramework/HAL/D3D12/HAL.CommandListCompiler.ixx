@@ -34,7 +34,10 @@ export namespace HAL
 			{
 
 			}
+			CommandListCompiler(CommandListCompiled& compiled):compiled(compiled)
+			{
 
+			}
 			void create(HAL::CommandListType type);
 
 			void reset();
@@ -552,14 +555,20 @@ export namespace HAL
 				return 0;
 			};
 
-
-			void func(std::function<void(ID3D12GraphicsCommandList4* list)>  f)
+			void func(std::function<void(CommandListCompiled&)>  f)
+			{
+				tasks.emplace_back([this, f]()
+					{
+						f(compiled);
+					});
+			}
+	/*		void func(std::function<void(ID3D12GraphicsCommandList4* list)>  f)
 			{
 				tasks.emplace_back([this, f]()
 					{
 						f(compiled.m_commandList.Get());
 					});
-			}
+			}*/
 			virtual void  BuildRaytracingAccelerationStructure(
 				const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC* pDesc,
 				UINT NumPostbuildInfoDescs,

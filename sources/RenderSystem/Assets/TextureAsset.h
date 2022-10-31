@@ -9,7 +9,7 @@ class TextureAssetRenderer : public Singleton<TextureAssetRenderer>
 	TextureAssetRenderer();
 	virtual ~TextureAssetRenderer();
 public:
-	void render(TextureAsset* asset, Graphics::Texture::ptr target, Graphics::CommandList::ptr c);
+	void render(TextureAsset* asset, Graphics::Texture::ptr target, HAL::CommandList::ptr c);
 };
 
 

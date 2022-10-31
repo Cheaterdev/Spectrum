@@ -45,8 +45,8 @@ namespace Graphics
 	{
 	public:
 
-		Graphics::CommandList::ptr& command_list;
-		Graphics::CommandList::ptr command_list_label;
+		HAL::CommandList::ptr& command_list;
+		HAL::CommandList::ptr command_list_label;
 		std::shared_ptr<OVRContext>& ovr_context;
 
 		SingleThreadExecutorBatched* labeled;
@@ -68,7 +68,7 @@ namespace Graphics
 			return [list, clip](Graphics::context& c) {list->get_graphics().set_scissors(clip); };
 		}
 
-		context(Graphics::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context) : command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
+		context(HAL::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context) : command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
 		{
 			drawer = nullptr;
 			//                cam = nullptr;
@@ -129,7 +129,7 @@ public:
 	Graphics::PipelineStateDesc pipeline;
 	std::shared_ptr<Graphics::OVRContext> eye_context;
 
-	Graphics::CommandList::ptr list;
+	HAL::CommandList::ptr list;
 
 	camera* cam = nullptr;
 	RENDER_TYPE render_type = RENDER_TYPE::PIXEL;
@@ -137,7 +137,7 @@ public:
 	TaskPriority priority = TaskPriority::NORMAL;
 	float delta_time = 0;
 	size_t current_time = 0;
-	// Graphics::Handle set_4_table;
+	// HAL::Handle set_4_table;
 	vec2 screen_subsample = { 0,0 };
 	GBuffer* g_buffer = nullptr;
 	RT::Slot::GBuffer::Compiled gbuffer_compiled;
@@ -201,7 +201,7 @@ class RenderTargetTable
 
 	std::vector<Format> formats;
 	Format depth_format = Format::UNKNOWN;
-	//  Graphics::Handle depth_handle;
+	//  HAL::Handle depth_handle;
 
 	std::vector<Graphics::TextureView> textures;
 	Graphics::TextureView depth_texture;
@@ -230,13 +230,13 @@ public:
 		if (depth_texture)
 			context->list->clear_depth(dsv_table[0], value);
 	}
-	void clear_stencil(Graphics::GraphicsContext& list, UINT8 stencil = 0)
+	void clear_stencil(HAL::GraphicsContext& list, UINT8 stencil = 0)
 	{
 		if (depth_texture)
 			list.get_base().clear_stencil(dsv_table[0], stencil);
 	}
 
-	void clear_depth(Graphics::GraphicsContext& list, float value = 1)
+	void clear_depth(HAL::GraphicsContext& list, float value = 1)
 	{
 
 		if (depth_texture)
@@ -245,13 +245,13 @@ public:
 	RenderTargetTable() {}
 
 
-	void set_window(Graphics::GraphicsContext& context)
+	void set_window(HAL::GraphicsContext& context)
 	{
 		context.set_viewports(vps);
 		context.set_scissors(scissors[0]);
 	}
 
-	RenderTargetTable(Graphics::GraphicsContext& graphics, std::initializer_list<Graphics::TextureView> list, Graphics::TextureView depth)
+	RenderTargetTable(HAL::GraphicsContext& graphics, std::initializer_list<Graphics::TextureView> list, Graphics::TextureView depth)
 	{
 		rtv_table = graphics.place_rtv((UINT)list.size());
 		UINT i = 0;
@@ -292,12 +292,12 @@ public:
 		set(context->list->get_graphics(), clear_color, clear_depth);
 	}
 
-	void set(Graphics::GraphicsContext& graphics, bool clear_color = false, bool clear_depth = false)
+	void set(HAL::GraphicsContext& graphics, bool clear_color = false, bool clear_depth = false)
 	{
 
 		auto& list = graphics.get_base();
 
-		graphics.set_rtv(rtv_table, dsv_table.valid() ? dsv_table[0] : Graphics::Handle());
+		graphics.set_rtv(rtv_table, dsv_table.valid() ? dsv_table[0] : HAL::Handle());
 
 		if (clear_color)
 		{

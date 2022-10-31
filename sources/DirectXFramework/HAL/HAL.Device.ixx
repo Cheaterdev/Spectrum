@@ -5,8 +5,6 @@ import Singleton;
 import StateContext;
 import Data;
 import :API.Device;
-//import :SwapChain;
-import d3d12;
 
 export namespace HAL
 {

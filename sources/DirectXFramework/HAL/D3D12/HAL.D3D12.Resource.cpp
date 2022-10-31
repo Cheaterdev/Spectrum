@@ -419,37 +419,7 @@ namespace HAL
 	{
 		return resource->cpu_data().data() + resource_offset;
 	}
-		void RaytracingBuildDescBottomInputs::add_geometry(GeometryDesc i)
-		{
-			D3D12_RAYTRACING_GEOMETRY_DESC geom;
-			geom.Flags = i.Flags;
-			geom.Type = i.Type;
-			geom.Triangles.IndexBuffer = ::to_native(i.IndexBuffer);
-			geom.Triangles.IndexCount = i.IndexCount;
-			geom.Triangles.IndexFormat = i.IndexFormat;
-
-			geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
-			geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
-			geom.Triangles.VertexFormat = i.VertexFormat;
-
-			geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
-			descs.emplace_back(geom);
-
-			geometry.emplace_back(i);
-		}
-
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS RaytracingBuildDescBottomInputs::to_native() const
-		{
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
-
-			inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-			inputs.Flags = ::to_native(Flags);
-			inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
-			inputs.NumDescs = static_cast<UINT>(descs.size());
-			inputs.pGeometryDescs = descs.data();
-
-			return inputs;
-		}
+		
 
 
 

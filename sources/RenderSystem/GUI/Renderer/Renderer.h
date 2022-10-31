@@ -14,7 +14,7 @@ namespace GUI
 		std::vector<Vertex> vertexes;
 
 		std::vector<HLSL::Texture2D<float4>> textures_handles;
-		std::vector<Graphics::Handle> samplers_handles;
+		std::vector<HAL::Handle> samplers_handles;
 
 		std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
 		Graphics::PipelineState::ptr current_state;

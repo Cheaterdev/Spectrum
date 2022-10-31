@@ -23,7 +23,7 @@ public:
 	Graphics::Texture::ptr tex_result;
 
 
-	void flush(Graphics::CommandList& list)
+	void flush(HAL::CommandList& list)
 	{
 		tilings_info.resource = tex_result.get();
 		list.update_tilings(std::move(tilings_info));
@@ -82,7 +82,7 @@ public:
 	}
 
 
-	void zero_tiles(Graphics::CommandList& list)
+	void zero_tiles(HAL::CommandList& list)
 	{
 		tex_dynamic->get_tiled_manager().zero_tiles((list));
 		tex_static->get_tiled_manager().zero_tiles((list));
@@ -105,7 +105,7 @@ public:
 	Graphics::Texture::ptr tex_result;
 
 
-	void flush(Graphics::CommandList& list)
+	void flush(HAL::CommandList& list)
 	{
 		tilings_info.resource = tex_result.get();
 		list.update_tilings(std::move(tilings_info));
@@ -174,7 +174,7 @@ public:
 
 
 
-	void zero_tiles(Graphics::CommandList& list)
+	void zero_tiles(HAL::CommandList& list)
 	{
 		tilings_info.tiles.clear();
 
@@ -265,7 +265,7 @@ public:
 
 
 	void resize(ivec2 size);
-	void start_new(Graphics::CommandList& list);
+	void start_new(HAL::CommandList& list);
 
 	VoxelGI(Scene::ptr& scene);
 	void voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph& graph);

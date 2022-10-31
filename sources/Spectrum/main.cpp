@@ -149,7 +149,7 @@ public:
 	//	gpu_cached_renderer::ptr gpu_meshes_renderer_dynamic;
 
 	Scene::ptr scene;
-	Graphics::QueryHeap::ptr query_heap;
+	HAL::QueryHeap::ptr query_heap;
 	float draw_time;
 	MeshAssetInstance::ptr instance;
 
@@ -179,7 +179,6 @@ public:
 		scene.reset(new Scene());
 		scene->name = L"Scene";
 
-		query_heap = std::make_shared<  Graphics::QueryHeap>(2, D3D12_QUERY_HEAP_TYPE::D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS);
 		scene_renderer = std::make_shared<main_renderer>();
 		scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
 
@@ -384,12 +383,12 @@ public:
 
 
 
-	void draw_eye(Graphics::CommandList::ptr _list, float dt, EyeData& data, Graphics::Texture::ptr target)
+	void draw_eye(HAL::CommandList::ptr _list, float dt, EyeData& data, Graphics::Texture::ptr target)
 	{
 
 	}
 
-	void update_texture(Graphics::CommandList::ptr list, float dt, const std::shared_ptr<OVRContext>& vr)
+	void update_texture(HAL::CommandList::ptr list, float dt, const std::shared_ptr<OVRContext>& vr)
 	{
 
 
@@ -443,7 +442,7 @@ public:
 
 		{
 
-			CommandList::ptr command_list = to_hal(HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+			CommandList::ptr command_list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 
 			command_list->begin("pre");
 			{
@@ -1297,6 +1296,8 @@ protected:
 
 
 		//Graphics::PipelineLibrary::reset();
+
+
 
 		HAL::Device::reset();
 		//   HAL::Device::reset();

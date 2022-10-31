@@ -1,6 +1,6 @@
 module Graphics;
 import :GPUTimer;
-import :CommandList;
+
 
 import d3d12;
 import Debug;
@@ -154,13 +154,13 @@ namespace HAL
 
 		void Queue::execute(CommandList* list)
 		{
-			ID3D12CommandList* s[] = { to_hal(list)->compiled.m_commandList.Get() };
+			ID3D12CommandList* s[] = { (list)->compiled.m_commandList.Get() };
 			native->ExecuteCommandLists(_countof(s), s);
 		}
 
 		void Queue::execute(TransitionCommandList* list)
 		{
-			ID3D12CommandList* s[] = { to_hal(list)->get_native().Get() };
+			ID3D12CommandList* s[] = { (list)->get_native().Get() };
 			native->ExecuteCommandLists(_countof(s), s);
 		}
 

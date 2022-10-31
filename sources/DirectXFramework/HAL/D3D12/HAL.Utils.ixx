@@ -706,6 +706,86 @@ export D3D12_HIT_GROUP_TYPE  to_native(HitGroupType type)
 	return natives[static_cast<uint>(type)];
 }
 
+
+
+export D3D12_RAYTRACING_GEOMETRY_TYPE   to_native(GeometryType type)
+{
+	static constexpr D3D12_RAYTRACING_GEOMETRY_TYPE   natives[] =
+	{
+		D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES  ,
+		D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS
+	};
+
+	return natives[static_cast<uint>(type)];
+}
+
+
+
+export D3D12_RAYTRACING_GEOMETRY_FLAGS   to_native(GeometryFlags flags)
+{
+	static constexpr D3D12_RAYTRACING_GEOMETRY_FLAGS   natives[] =
+	{
+		D3D12_RAYTRACING_GEOMETRY_FLAG_NONE  ,
+		D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE
+	};
+
+	return natives[static_cast<uint>(flags)];
+}
+
+export struct RaytracingDescNative:public D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS
+{
+	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
+
+
+	
+	
+};
+
+
+export RaytracingDescNative&& to_native(const RaytracingBuildDescBottomInputs &inputs)
+{
+	RaytracingDescNative result;
+	auto add_geometry = [&](const GeometryDesc& i)
+	{
+		D3D12_RAYTRACING_GEOMETRY_DESC geom;
+		geom.Flags = to_native(i.Flags);
+		geom.Type = to_native(i.Type);
+		geom.Triangles.IndexBuffer = ::to_native(i.IndexBuffer);
+		geom.Triangles.IndexCount = i.IndexCount;
+		geom.Triangles.IndexFormat = ::to_native(i.IndexFormat);
+		geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
+		geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
+		geom.Triangles.VertexFormat = ::to_native(i.VertexFormat);
+		geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
+		result.descs.emplace_back(geom);
+	};
+
+	for (auto& e : inputs.geometry)
+	{
+		add_geometry(e);
+	}
+
+	result.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+	result.Flags = ::to_native(inputs.Flags);
+	result.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
+	result.NumDescs = static_cast<UINT>(result.descs.size());
+	result.pGeometryDescs = result.descs.data();
+
+	return std::move(result);
+}
+
+export D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  to_native(const RaytracingBuildDescTopInputs& inputs)
+{
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS result;
+	result.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+	result.Flags = ::to_native(inputs.Flags);
+	result.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
+	result.NumDescs = inputs.NumDescs;
+	result.InstanceDescs = ::to_native(inputs.instances);
+
+	return result;
+}
+
 export CD3DX12_RESOURCE_DESC to_native(const ResourceDesc& desc)
 {
 	if (desc.is_buffer())

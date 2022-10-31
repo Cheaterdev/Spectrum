@@ -1,4 +1,4 @@
-module Graphics:CommandList;
+module Graphics;
 import HAL;
 import :Types;
 
@@ -147,7 +147,7 @@ namespace HAL {
 
 				if (desc.MipLevels == 1 && desc.is2D() == 1)
 			{
-				f(info->resource_ptr,  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -176,8 +176,8 @@ namespace HAL {
 
 		std::visit(overloaded{
 			[&](const HAL::Views::UnorderedAccess::Buffer& Buffer) {
-				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-			if (info->counter_resource) f(info->counter_resource,  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
+			if (info->counter_resource) f(info->counter_resource, ALL_SUBRESOURCES);
 			},
 			[&](const HAL::Views::UnorderedAccess::Texture1D& Texture1D) {
 	assert(false);
@@ -190,7 +190,7 @@ namespace HAL {
 
 if (desc.MipLevels == 1 && desc.is2D())
 			{
-				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -203,7 +203,7 @@ if (desc.MipLevels == 1 && desc.is2D())
 
 			if (desc.MipLevels == 1 && desc.is2D() && desc.ArraySize == 1)
 			{
-				f(info->resource_ptr,  D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -221,7 +221,7 @@ if (desc.MipLevels == 1 && desc.is2D())
 
 				if (Texture3D.FirstWSlice == 0 && Texture3D.WSize == desc.Dimensions.z && desc.MipLevels == 1)
 			{
-				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -283,7 +283,7 @@ auto& desc = info->resource_ptr->get_desc().as_texture();
 	{
 		std::visit(overloaded{
 		[&](const HAL::Views::ShaderResource::Buffer& Buffer) {
-			f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			f(info->resource_ptr, ALL_SUBRESOURCES);
 		},
 		[&](const HAL::Views::ShaderResource::Texture1D& Texture1D) {
 	assert(false);
@@ -296,7 +296,7 @@ auto& desc = info->resource_ptr->get_desc().as_texture();
 
 			if (Texture2D.MipLevels == desc.MipLevels && Texture2D.MostDetailedMip == 0 && desc.is2D())
 			{
-				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -312,7 +312,7 @@ auto& desc = info->resource_ptr->get_desc().as_texture();
 
 			if (Texture2DArray.MipLevels == desc.MipLevels && Texture2DArray.MostDetailedMip == 0 && Texture2DArray.FirstArraySlice == 0 && Texture2DArray.ArraySize == desc.ArraySize && desc.is2D())
 			{
-				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -329,7 +329,7 @@ auto& desc = info->resource_ptr->get_desc().as_texture();
 
 			if (Texture3D.MipLevels == desc.MipLevels && Texture3D.MostDetailedMip == 0)
 			{
-				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -351,7 +351,7 @@ assert(false);
 
 			if (Cube.MipLevels == desc.MipLevels && Cube.MostDetailedMip == 0)
 			{
-				f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				f(info->resource_ptr, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -367,7 +367,7 @@ assert(false);
 assert(false);
 		},
 		[&](const HAL::Views::ShaderResource::Raytracing& Raytracing) {
-f(info->resource_ptr, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+f(info->resource_ptr, ALL_SUBRESOURCES);
 		},
 		[&](auto other) {
 			assert(false);

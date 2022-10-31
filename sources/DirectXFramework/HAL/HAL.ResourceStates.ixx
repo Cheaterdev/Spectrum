@@ -14,6 +14,10 @@ export
 
 	namespace HAL
 	{
+		class Transitions;
+
+
+		static constexpr uint ALL_SUBRESOURCES = std::numeric_limits<uint>::max();
 
 		enum class TransitionType :int
 		{
@@ -136,13 +140,13 @@ export
 			std::list<Resource*> uav_transitions;
 			std::list<Resource*> aliasing;
 
-			HAL::Barriers  compiled_transitions;
+			//HAL::Barriers  compiled_transitions;
 
 			bool start = false;
 			TransitionPoint* prev_point = nullptr;
 			TransitionPoint* next_point = nullptr;
 
-			TransitionPoint(CommandListType type) :compiled_transitions(type)
+			TransitionPoint(CommandListType type)// :compiled_transitions(type)
 			{
 			}
 		};
@@ -241,7 +245,7 @@ export
 			}
 			ResourceListStateCPU& get_subres_state(UINT id, bool force = false)
 			{
-				if ((!force && all_states_same) || id == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+				if ((!force && all_states_same) || id == ALL_SUBRESOURCES)
 					return all_state;
 
 				return subres[id];
@@ -252,7 +256,7 @@ export
 			{
 
 
-				if (all_states_same || id == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+				if (all_states_same || id == ALL_SUBRESOURCES)
 					return all_state;
 
 				return subres[id];
@@ -271,7 +275,7 @@ export
 				if (all_states_same)
 					return all_state.last_transition;
 
-				if (id == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES) return nullptr;
+				if (id == ALL_SUBRESOURCES) return nullptr;
 
 				return subres[id].last_transition;
 			}
@@ -340,7 +344,7 @@ export
 			{
 				if (cpu_state.all_states_same)
 				{
-					auto all_state = cpu_state.get_last_state(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+					auto all_state = cpu_state.get_last_state(ALL_SUBRESOURCES);
 					make_all_state(all_state);
 				}
 				else
@@ -368,7 +372,7 @@ export
 			}
 			ResourceListStateGPU& get_subres_state(UINT id)
 			{
-				if (all_states_same || id == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+				if (all_states_same || id == ALL_SUBRESOURCES)
 					return all_state;
 
 				return subres[id];
@@ -388,7 +392,7 @@ export
 
 				if (all_states_same)
 				{
-					all_state.state = merge_state(all_state.state, other.get_first_state(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES));
+					all_state.state = merge_state(all_state.state, other.get_first_state(ALL_SUBRESOURCES));
 				}
 				else
 				{

@@ -18,7 +18,7 @@ namespace Fonts
            return res_manager::get().get_resource(h);
        }
     */
-    void Font::draw(Graphics::CommandList::ptr& command_list, std::wstring str, float size, vec2 pos, float4 color,  unsigned int flags /*= 0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::wstring str, float size, vec2 pos, float4 color,  unsigned int flags /*= 0*/)
     {
 
         native_font->DrawString(
@@ -33,7 +33,7 @@ namespace Fonts
     }
 
 
-    void Font::draw(Graphics::CommandList::ptr& command_list, std::wstring str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*= 0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::wstring str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*= 0*/)
     {
 
         native_font->DrawString(
@@ -49,7 +49,7 @@ namespace Fonts
         );
     }
 
-    void Font::draw(Graphics::CommandList::ptr& command_list, std::wstring str, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::wstring str, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
     {
         draw(command_list, str, size, area, area, color, flags);
     }
@@ -57,18 +57,18 @@ namespace Fonts
 
 
 
-    void Font::draw(Graphics::CommandList::ptr& command_list, std::string str, float size, vec2 pos, float4 color, unsigned int flags /*=0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::string str, float size, vec2 pos, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, pos, color, flags);
     }
 
 
-    void Font::draw(Graphics::CommandList::ptr& command_list, std::string str, float size, sizer area, float4 color, unsigned int flags /*=0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::string str, float size, sizer area, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, area, color, flags);
     }
 
-    void Font::draw(Graphics::CommandList::ptr& command_list, std::string str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*=0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::string str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, area, clip_rect, color, flags);
     }
@@ -150,7 +150,7 @@ namespace Fonts
         return index;
     }
 
-    void FontGeometry::draw(Graphics::CommandList::ptr& command_list, sizer clip_rect, unsigned int flags /*= 0*/, vec2 offset /*= {0,0}*/, float scale  /*= 1*/)
+    void FontGeometry::draw(HAL::CommandList::ptr& command_list, sizer clip_rect, unsigned int flags /*= 0*/, vec2 offset /*= {0,0}*/, float scale  /*= 1*/)
     {
         std::lock_guard<std::mutex> guard(m);
 
@@ -188,7 +188,7 @@ namespace Fonts
         );
     }
 
-    void FontGeometry::set(Graphics::CommandList::ptr& command_list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
+    void FontGeometry::set(HAL::CommandList::ptr& command_list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
     {
         std::lock_guard<std::mutex> guard(m);
         this->size = size;

@@ -101,7 +101,7 @@ namespace FW1FontWrapper
 
 // Draw text layout
     void STDMETHODCALLTYPE CFW1FontWrapper::DrawTextLayout(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         IDWriteTextLayout* pTextLayout,
         FLOAT OriginX,
         FLOAT OriginY,
@@ -115,7 +115,7 @@ namespace FW1FontWrapper
 
 // Draw text layout
     void STDMETHODCALLTYPE CFW1FontWrapper::DrawTextLayout(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         IDWriteTextLayout* pTextLayout,
         FLOAT OriginX,
         FLOAT OriginY,
@@ -174,7 +174,7 @@ namespace FW1FontWrapper
 
 // Draw text
     void STDMETHODCALLTYPE CFW1FontWrapper::DrawString(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         const WCHAR* pszString,
         FLOAT FontSize,
         FLOAT X,
@@ -192,7 +192,7 @@ namespace FW1FontWrapper
 
 // Draw text
     void STDMETHODCALLTYPE CFW1FontWrapper::DrawString(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         const WCHAR* pszString,
         const WCHAR* pszFontFamily,
         FLOAT FontSize,
@@ -211,7 +211,7 @@ namespace FW1FontWrapper
 
 // Draw text
     void STDMETHODCALLTYPE CFW1FontWrapper::DrawString(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         const WCHAR* pszString,
         const WCHAR* pszFontFamily,
         FLOAT FontSize,
@@ -277,7 +277,7 @@ namespace FW1FontWrapper
 
 // Create geometry from a string
     void STDMETHODCALLTYPE CFW1FontWrapper::AnalyzeString(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         const WCHAR* pszString,
         const WCHAR* pszFontFamily,
         FLOAT FontSize,
@@ -307,7 +307,7 @@ namespace FW1FontWrapper
 
 // Create geometry from a text layout
     void STDMETHODCALLTYPE CFW1FontWrapper::AnalyzeTextLayout(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         IDWriteTextLayout* pTextLayout,
         FLOAT OriginX,
         FLOAT OriginY,
@@ -363,7 +363,7 @@ namespace FW1FontWrapper
 
 // Draw vertices
     void STDMETHODCALLTYPE CFW1FontWrapper::DrawGeometry(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         IFW1TextGeometry* pGeometry,
         const FW1_RECTF* pClipRect,
         const FLOAT* pTransformMatrix,
@@ -392,7 +392,7 @@ namespace FW1FontWrapper
 
 
 // Flush the glyph atlas
-    void STDMETHODCALLTYPE CFW1FontWrapper::Flush(Graphics::CommandList::ptr& list)
+    void STDMETHODCALLTYPE CFW1FontWrapper::Flush(HAL::CommandList::ptr& list)
     {
         m_pGlyphAtlas->Flush(list);
     }

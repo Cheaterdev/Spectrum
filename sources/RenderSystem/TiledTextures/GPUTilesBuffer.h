@@ -21,5 +21,5 @@ public:
 	void erase(ivec3 pos);
 	void clear();
 
-	void update(Graphics::CommandList::ptr list);
+	void update(HAL::CommandList::ptr list);
 };

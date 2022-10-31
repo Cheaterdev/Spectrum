@@ -23,7 +23,7 @@ namespace FW1FontWrapper
 
 
 		virtual const FW1_GLYPHCOORDS* STDMETHODCALLTYPE GetGlyphCoords();
-		virtual HRESULT STDMETHODCALLTYPE BindSheet(Graphics::CommandList::ptr& pContext, UINT Flags);
+		virtual HRESULT STDMETHODCALLTYPE BindSheet(HAL::CommandList::ptr& pContext, UINT Flags);
 
 		virtual UINT STDMETHODCALLTYPE InsertGlyph(
 			const FW1_GLYPHMETRICS* pGlyphMetrics,
@@ -32,7 +32,7 @@ namespace FW1FontWrapper
 			UINT PixelStride
 		);
 		virtual void STDMETHODCALLTYPE CloseSheet();
-		virtual void STDMETHODCALLTYPE Flush(Graphics::CommandList::ptr& pContext);
+		virtual void STDMETHODCALLTYPE Flush(HAL::CommandList::ptr& pContext);
 
 		// Public functions
 	public:

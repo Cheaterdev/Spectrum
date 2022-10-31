@@ -10,9 +10,6 @@ export import :RaytracingAS;
 export import :RootSignature;
 export import :VirtualBuffer;
 
-
-export import :CommandList;
-
 export import :GPUTimer;
 
 export import :SIG;

@@ -20,7 +20,7 @@ namespace FW1FontWrapper
 
 
             virtual UINT STDMETHODCALLTYPE DrawVertices(
-                Graphics::CommandList::ptr& pContext,
+                HAL::CommandList::ptr& pContext,
                 IFW1GlyphAtlas* pGlyphAtlas,
                 const FW1_VERTEXDATA* pVertexData,
                 UINT Flags,
@@ -51,13 +51,13 @@ namespace FW1FontWrapper
             HRESULT createBuffers();
 
             UINT drawVertices(
-                Graphics::CommandList::ptr& pContext,
+                HAL::CommandList::ptr& pContext,
                 IFW1GlyphAtlas* pGlyphAtlas,
                 const FW1_VERTEXDATA* vertexData,
                 UINT preboundSheet
             );
             UINT drawGlyphsAsQuads(
-                Graphics::CommandList::ptr& pContext,
+                HAL::CommandList::ptr& pContext,
                 IFW1GlyphAtlas* pGlyphAtlas,
                 const FW1_VERTEXDATA* vertexData,
                 UINT preboundSheet

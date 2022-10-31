@@ -1300,7 +1300,7 @@ void generate_cpp_rt(RenderTarget& rt)
 						int i = 0;
 						for (auto& e : rt.rtvs)
 						{
-							stream << "Graphics::Handle" << " " << e.name << ";" << std::endl;
+							stream << "HAL::Handle" << " " << e.name << ";" << std::endl;
 							i++;
 						}
 
@@ -1316,7 +1316,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					{
 						stream.push();
 
-						stream << "Graphics::Handle" << " " << rt.dsv->name << ";" << std::endl;
+						stream << "HAL::Handle" << " " << rt.dsv->name << ";" << std::endl;
 
 						stream.pop();
 					}
@@ -1331,7 +1331,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					cameled[0] = std::toupper(cameled[0]);
 
 
-					stream << "Graphics::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
+					stream << "HAL::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
 				}
 
 				if (rt.dsv)
@@ -1340,7 +1340,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					cameled[0] = std::toupper(cameled[0]);
 
 
-					stream << "Graphics::Handle&" << " Get" << cameled << "() { " << "return " << "dsv." << rt.dsv->name << "; }" << std::endl;
+					stream << "HAL::Handle&" << " Get" << cameled << "() { " << "return " << "dsv." << rt.dsv->name << "; }" << std::endl;
 
 				}
 				std::string pass;

@@ -13,7 +13,7 @@ TextureAssetRenderer::TextureAssetRenderer()
 }
 TextureAssetRenderer::~TextureAssetRenderer() {}
 
-void TextureAssetRenderer::render(TextureAsset* asset, Graphics::Texture::ptr target, Graphics::CommandList::ptr c)
+void TextureAssetRenderer::render(TextureAsset* asset, Graphics::Texture::ptr target, HAL::CommandList::ptr c)
 {
 	if (!asset->get_texture()->texture_2d()) return;
 	MipMapGenerator::get().copy_texture_2d_slow(c->get_graphics(), target, asset->get_texture());
@@ -63,7 +63,7 @@ void TextureAsset::update_preview(Graphics::Texture::ptr preview)
 	if (!preview || !preview->is_rt())
 		preview.reset(new Graphics::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
-	auto list = FrameResourceManager::get().begin_frame()->start_list("TextureAsset");
+	auto list = (HAL::FrameResourceManager::get().begin_frame()->start_list("TextureAsset"));
 
 	TextureAssetRenderer::get().render(this, preview, list);
 	list->end();

@@ -37,7 +37,7 @@ void SkyRender::generate_sky(Graph& graph)
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 			graphics.set_viewport(data.ResultTexture->get_viewport());
 			graphics.set_scissor(data.ResultTexture->get_scissor());
-			graphics.set_rtv(1, data.ResultTexture->renderTarget, Graphics::Handle());
+			graphics.set_rtv(1, data.ResultTexture->renderTarget, HAL::Handle());
 
 			{
 				Slots::SkyData skydata;
@@ -135,7 +135,7 @@ void SkyRender::generate(Graph& graph)
 
 					skyFace.set(graphics);
 
-					graphics.set_rtv(1, face.renderTarget, Graphics::Handle());
+					graphics.set_rtv(1, face.renderTarget, HAL::Handle());
 
 					graphics.draw(4);
 				}
@@ -227,7 +227,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 						graphics.set_viewport(face.get_viewport());
 						graphics.set_scissor(face.get_scissor());
 					}
-					graphics.set_rtv(1, face.renderTarget, Graphics::Handle());
+					graphics.set_rtv(1, face.renderTarget, HAL::Handle());
 
 					Slots::EnvFilter filter;
 					filter.GetFace().x = i;
@@ -259,7 +259,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 					graphics.set_viewport(face.get_viewport());
 					graphics.set_scissor(face.get_scissor());
 				}
-				graphics.set_rtv(1, face.renderTarget, Graphics::Handle());
+				graphics.set_rtv(1, face.renderTarget, HAL::Handle());
 
 				Slots::EnvFilter filter;
 				filter.GetFace().x = i;

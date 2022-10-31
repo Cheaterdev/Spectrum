@@ -1,121 +1,38 @@
-module;
-export module Graphics:CommandList;
+export module HAL:CommandList;
 
 import Utils;
 import StateContext;
 import Profiling;
 import Threading;
 import Exceptions;
-//import :RootSignature;
 import :Types;
 import Math;
-//import :Enums;
 import Data;
 import Singleton;
 import Debug;
+import Trackable;
 
-//import Buffer;
 import stl.core;
 import stl.memory;
 
-import HAL;
-
-import d3d12;
-
-import :Definitions;
-using namespace HAL;
+import :Private.CommandListTranslator;
+import :ResourceStates;
+import :Resource;
+import :DescriptorHeap;
+import :Fence;
+import :FrameManager;
+import :PipelineState;
+import :API.IndirectCommand;
+import :API.CommandList;
+import :QueryHeap;
 
 export{
-	//enum class Layouts;
 
-	namespace Graphics
+	namespace HAL
 	{
-		class GraphicsContext;
+	//	class GPUBuffer;
 
-
-		template<class LockPolicy = Thread::Free>
-		class GPUCompiledManager : public Uploader<LockPolicy>
-		{
-			enum_array<HAL::DescriptorHeapType, typename HAL::DynamicDescriptor<LockPolicy>::ptr> cpu_heaps;
-			enum_array<HAL::DescriptorHeapType, typename HAL::DynamicDescriptor<LockPolicy>::ptr> gpu_heaps;
-
-		public:
-
-			HAL::DynamicDescriptor<LockPolicy>& get_cpu_heap(HAL::DescriptorHeapType type)
-			{
-				assert(cpu_heaps[type]);
-				return *cpu_heaps[type];
-			}
-
-			HAL::DynamicDescriptor<LockPolicy>& get_gpu_heap(HAL::DescriptorHeapType type)
-			{
-				assert(cpu_heaps[type]);
-				return *gpu_heaps[type];
-			}
-
-			GPUCompiledManager()
-			{
-				gpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
-				gpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE);
-
-				cpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::RTV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::RTV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::DSV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::DSV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE);
-			}
-
-			void reset()
-			{
-
-				for (auto& h : gpu_heaps)
-					if (h)
-						h->reset();
-
-				for (auto& h : cpu_heaps)
-					if (h)
-						h->reset();
-
-				Uploader<LockPolicy>::reset();
-			}
-
-		};
-
-
-		class StaticCompiledGPUData :public Singleton<StaticCompiledGPUData>, public GPUCompiledManager<Thread::Lockable>
-		{
-		public:
-			using Uploader<Thread::Lockable>::place_raw;
-		};
-
-		class FrameResources :public SharedObject<FrameResources>, public GPUCompiledManager<Thread::Lockable>, public HAL::FrameResources
-		{
-			friend class FrameResourceManager;
-
-			std::uint64_t frame_number = 0;
-			std::mutex m;
-		public:
-			using ptr = std::shared_ptr<FrameResources>;
-
-			~FrameResources()
-			{
-				reset();
-			}
-
-			std::uint64_t get_frame()
-			{
-				return frame_number;
-			}
-
-			std::shared_ptr<CommandList> start_list(std::string name = "", CommandListType type = CommandListType::DIRECT);
-		};
-
-		class FrameResourceManager :public Singleton<FrameResourceManager>
-		{
-			std::atomic_size_t frame_number = 0;
-
-		public:
-			FrameResources::ptr begin_frame();
-		};
+		
 
 		class CommandListBase : public StateContext
 		{
@@ -123,16 +40,14 @@ export{
 
 			CommandListType type;
 
-			LEAK_TEST(CommandListBase);
-
 			std::vector<std::function<void()>> on_execute_funcs;
 
-		
-			HAL::Private::CommandListCompilerDelayed compiler;
+			using CompilerType = HAL::Private::CommandListTranslator<HAL::Private::CommandListCompilerDelayed>;
+			CompilerType compiler;
 
 			std::list<TrackedObject::ptr> tracked_resources;
 
-			HAL::Private::CommandListCompilerDelayed* get_native_list()
+			CompilerType* get_native_list()
 			{
 				return &compiler;
 			}
@@ -164,10 +79,8 @@ export{
 		class TransitionCommandList;
 
 
-		class Transitions : public virtual CommandListBase, public HAL::Transitions
+		class Transitions : public virtual CommandListBase
 		{
-
-
 			std::list<HAL::Resource*> used_resources;
 
 			std::shared_ptr<TransitionCommandList> transition_list;
@@ -181,12 +94,68 @@ export{
 			void on_execute();
 			std::list<HAL::TransitionPoint> transition_points;
 
-			void create_transition_point(bool end = true);
+			void create_transition_point(bool end = true)
+
+			{
+				auto prev_point = transition_points.empty() ? nullptr : &transition_points.back();
+				auto point = &transition_points.emplace_back(type);
+
+				if (prev_point) prev_point->next_point = point;
+				point->prev_point = prev_point;
+
+				point->start = !end;
+
+				if (end)
+				{
+					assert(point->prev_point->start);
+				}
+				compiler.func([point, this](Private::CommandListTranslator<Private::CommandListCompiler>& list)
+					{
+						HAL::Barriers  transitions(type);
+
+						for (auto uav : point->uav_transitions)
+						{
+							transitions.uav(uav);
+						}
+
+						for (auto& uav : point->aliasing)
+						{
+							transitions.alias(nullptr, uav);
+						}
+
+						for (auto& transition : point->transitions)
+						{
+							auto prev_transition = transition.prev_transition;
+
+							if (!prev_transition) continue;
+
+							if (prev_transition->wanted_state == transition.wanted_state) continue;
+
+							//					assert(!point->start);
+							transitions.transition(transition.resource,
+								prev_transition->wanted_state,
+								transition.wanted_state,
+								transition.subres, transition.flags);
+						}
+
+						list.transitions(transitions);
+
+						/*			{
+
+										auto& native_transitions = point->compiled_transitions.get_native();
+										if (!native_transitions.empty())
+										{
+											list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
+										}
+									}*/
+
+					});
+			}
 
 			void make_split_barriers();
 
-			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
+			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 
 		public:
 			void free_resources();
@@ -244,7 +213,7 @@ export{
 
 				create_transition_point();
 
-				transition(resource_ptr, ResourceState::PRESENT, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+				transition(resource_ptr, ResourceState::PRESENT, ALL_SUBRESOURCES);
 
 				create_transition_point(false);
 			}
@@ -307,7 +276,7 @@ export{
 
 		class GPUTimer
 		{
-			friend class GPUTimeManager;
+		public://		friend class GPUTimeManager;
 
 			int id;
 
@@ -438,7 +407,7 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList :  public Readbacker<Thread::Free>, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>, public HAL::CommandList
+		class CommandList :  public Readbacker<Thread::Free>, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>, public SharedObject<CommandList>
 		{
 
 
@@ -482,7 +451,7 @@ export{
 			void setup_debug(SignatureDataSetter*);
 			void print_debug();
 			bool first_debug_log = true;
-			std::shared_ptr<GPUBuffer> debug_buffer;
+			//std::shared_ptr<GPUBuffer> debug_buffer;
 
 			GraphicsContext& get_graphics();
 			ComputeContext& get_compute();
@@ -504,20 +473,7 @@ export{
 			{
 				create_transition_point();
 				transition(h.get_resource_info());
-				auto dx_resource = h.get_resource_info()->resource_ptr->native_resource.Get();
-
-
-				if (BuildOptions::Debug)
-				{
-					auto uav = std::get<HAL::Views::UnorderedAccess>(h.get_resource_info()->view);
-					if (h.get_resource_info()->resource_ptr->get_desc().is_buffer())
-					{
-						auto buffer = std::get<HAL::Views::UnorderedAccess::Buffer>(uav.View);
-						assert(buffer.StructureByteStride == 0);
-					}
-				}
-
-				get_native_list()->ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
+				compiler.clear_uav(h, ClearColor);
 				create_transition_point(false);
 			}
 
@@ -526,28 +482,28 @@ export{
 			{
 				create_transition_point();
 				transition(h.get_resource_info());
-				get_native_list()->ClearRenderTargetView(h.get_cpu(), ClearColor.data(), 0, nullptr);
+				compiler.clear_rtv(h, ClearColor);
 				create_transition_point(false);
 			}
 
 
 
 
-			void clear_stencil(Handle dsv, UINT8 stencil = 0)
+			void clear_stencil(const Handle& h, UINT8 stencil = 0)
 			{
 				create_transition_point();
-				transition(dsv.get_resource_info());
+				transition(h.get_resource_info());
 
-				get_native_list()->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_STENCIL, 0, stencil, 0, nullptr);
+				compiler.clear_stencil(h, stencil);
 				create_transition_point(false);
 			}
 
-			void clear_depth(Handle dsv, float depth = 0)
+			void clear_depth(const Handle& h, float depth = 0)
 			{
 				create_transition_point();
-				transition(dsv.get_resource_info());
+				transition(h.get_resource_info());
 
-				get_native_list()->ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
+				compiler.clear_depth(h, depth);
 				create_transition_point(false);
 			}
 
@@ -559,7 +515,7 @@ export{
 			friend class CommandList;
 
 			CommandList& base;
-			HAL::Private::CommandListCompilerDelayed* list;
+			CommandList::CompilerType* list;
 
 			CopyContext(CommandList& base) :base(base), list(base.get_native_list()) {}
 			CopyContext(const CopyContext&) = delete;
@@ -608,7 +564,7 @@ export{
 			}
 
 			virtual void set(UINT, const HandleTableLight&) = 0;
-			virtual void set_const_buffer(UINT i, const D3D12_GPU_VIRTUAL_ADDRESS&) = 0;
+			virtual void set_const_buffer(UINT i, ResourceAddress address) = 0;
 
 
 			void reset_tables()
@@ -684,7 +640,7 @@ export{
 					get_base().track_object(*address.resource);
 					get_base().transition(address.resource, ResourceState::VERTEX_AND_CONSTANT_BUFFER);
 				}
-				set_const_buffer(index, to_native(address));
+				set_const_buffer(index, address);
 			}
 
 			template<class Compiled>
@@ -705,7 +661,7 @@ export{
 		class GraphicsContext : public SignatureDataSetter
 		{
 			friend class CommandList;
-			HAL::Private::CommandListCompilerDelayed* list;
+			CommandList::CompilerType* list;
 
 			GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {
 			}
@@ -714,14 +670,13 @@ export{
 
 			bool valid_scissor = false;
 			std::vector<Viewport> viewports;
-			D3D_PRIMITIVE_TOPOLOGY  native_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
-
+		
 
 			void begin();
 			void end();
 			void on_execute();
 
-			void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&)override;
+			void set_const_buffer(UINT, ResourceAddress address)override;
 			void set(UINT, const HandleTableLight&)override;
 			HAL::Views::IndexBuffer index;
 		public:
@@ -733,11 +688,7 @@ export{
 
 			void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0)
 			{
-				auto native = to_native(topology, feedType, adjusted, controlpoints);
-				if (this->native_topology != native)
-					list->IASetPrimitiveTopology(native);
-
-				this->native_topology = native;
+				list->set_topology(topology, feedType, adjusted, controlpoints);
 			}
 
 
@@ -793,7 +744,7 @@ export{
 
 			void set_stencil_ref(UINT ref)
 			{
-				list->OMSetStencilRef(ref);
+				list->set_stencil_ref(ref);
 			}
 
 			std::vector<Viewport> get_viewports()
@@ -824,7 +775,7 @@ export{
 			friend class CommandList;
 
 
-			HAL::Private::CommandListCompilerDelayed* list;
+			CommandList::CompilerType* list;
 
 			ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {}
 			ComputeContext(const ComputeContext&) = delete;
@@ -848,7 +799,7 @@ export{
 
 
 
-			virtual void set_const_buffer(UINT, const D3D12_GPU_VIRTUAL_ADDRESS&) override;
+			virtual void set_const_buffer(UINT, ResourceAddress address) override;
 
 
 		public:
@@ -880,24 +831,7 @@ export{
 			template<class Hit, class Miss, class Raygen>
 			void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
 			{
-
 				base.setup_debug(this);
-				D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
-				// Since each shader table has only one shader record, the stride is same as the size.
-				dispatchDesc.HitGroupTable.StartAddress = to_native(hit_buffer);
-				dispatchDesc.HitGroupTable.SizeInBytes = sizeof(Hit) * hit_count;
-				dispatchDesc.HitGroupTable.StrideInBytes = sizeof(Hit);
-
-				dispatchDesc.MissShaderTable.StartAddress = to_native(miss_buffer);
-				dispatchDesc.MissShaderTable.SizeInBytes = sizeof(Miss) * miss_count;
-				dispatchDesc.MissShaderTable.StrideInBytes = sizeof(Miss);
-
-				dispatchDesc.RayGenerationShaderRecord.StartAddress = to_native(raygen_buffer);
-				dispatchDesc.RayGenerationShaderRecord.SizeInBytes = sizeof(Raygen);
-				dispatchDesc.Width = size.x;
-				dispatchDesc.Height = size.y;
-				dispatchDesc.Depth = 1;
-
 				base.create_transition_point();
 
 				base.transition(hit_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
@@ -905,7 +839,7 @@ export{
 				base.transition(raygen_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
 				commit_tables();
-				list->DispatchRays(&dispatchDesc);
+				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer,hit_count,miss_buffer, miss_count, raygen_buffer);
 
 				base.create_transition_point(false);
 
@@ -915,77 +849,17 @@ export{
 		};
 
 
-		class TransitionCommandList: public HAL::TransitionCommandList
+		class TransitionCommandList:public API::TransitionCommandList
 		{
-			ComPtr<ID3D12GraphicsCommandList4> m_commandList;
-			ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 			CommandListType type;
 		public:
 			using ptr = std::shared_ptr<TransitionCommandList>;
 			inline CommandListType get_type() { return type; }
 			TransitionCommandList(CommandListType type);
 			void create_transition_list(const HAL::Barriers& transitions, std::vector<HAL::Resource*>& duscards);
-			ComPtr<ID3D12GraphicsCommandList4> get_native();
 		};
 	}
 
 
-	Graphics::CommandList* to_hal(HAL::CommandList* resource)
-	{
-		return static_cast<Graphics::CommandList*>(resource);
-	}
 
-	Graphics::CommandList& to_hal(HAL::CommandList& resource)
-	{
-		return *static_cast<Graphics::CommandList*>(&resource);
-	}
-
-	Graphics::CommandList::ptr to_hal(const std::shared_ptr<HAL::CommandList>& resource)
-	{
-		return std::static_pointer_cast<Graphics::CommandList>(resource);
-	}
-	Graphics::TransitionCommandList* to_hal(HAL::TransitionCommandList* resource)
-	{
-		return static_cast<Graphics::TransitionCommandList*>(resource);
-	}
-
-	Graphics::TransitionCommandList& to_hal(HAL::TransitionCommandList& resource)
-	{
-		return *static_cast<Graphics::TransitionCommandList*>(&resource);
-	}
-
-	Graphics::TransitionCommandList::ptr to_hal(const std::shared_ptr<HAL::TransitionCommandList>& resource)
-	{
-		return std::static_pointer_cast<Graphics::TransitionCommandList>(resource);
-	}
-
-	Graphics::Transitions* to_hal(HAL::Transitions* resource)
-	{
-		return static_cast<Graphics::Transitions*>(resource);
-	}
-
-	Graphics::Transitions& to_hal(HAL::Transitions& resource)
-	{
-		return *static_cast<Graphics::Transitions*>(&resource);
-	}
-
-	//Graphics::Transitions::ptr to_hal(std::shared_ptr<HAL::Transitions>& resource)
-	//{
-	//	return std::static_pointer_cast<Graphics::Transitions>(resource);
-	//}
-
-	Graphics::FrameResources* to_hal(HAL::FrameResources* resource)
-	{
-		return static_cast<Graphics::FrameResources*>(resource);
-	}
-
-	Graphics::FrameResources& to_hal(HAL::FrameResources& resource)
-	{
-		return *static_cast<Graphics::FrameResources*>(&resource);
-	}
-
-	Graphics::FrameResources::ptr to_hal(std::shared_ptr<HAL::FrameResources>& resource)
-	{
-		return std::static_pointer_cast<Graphics::FrameResources>(resource);
-	}
 }

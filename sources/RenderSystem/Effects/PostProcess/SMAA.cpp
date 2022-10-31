@@ -45,7 +45,7 @@ void SMAA::generate(Graph& graph)
 
 			graphics.set_viewport(data.SMAA_edges->get_viewport());
 			graphics.set_scissor(data.SMAA_edges->get_scissor());
-			graphics.set_rtv(1, data.SMAA_edges->renderTarget, Graphics::Handle());
+			graphics.set_rtv(1, data.SMAA_edges->renderTarget, HAL::Handle());
 			graphics.get_base().clear_rtv(data.SMAA_edges->renderTarget);
 			graphics.get_base().clear_rtv(data.SMAA_blend->renderTarget);
 
@@ -72,7 +72,7 @@ void SMAA::generate(Graph& graph)
 				slot_edges.set(graphics);
 			}
 			graphics.set_pipeline(GetPSO<PSOS::BlendWeight>());
-			graphics.set_rtv(1, data.SMAA_blend->renderTarget, Graphics::Handle());
+			graphics.set_rtv(1, data.SMAA_blend->renderTarget, HAL::Handle());
 			graphics.draw(4);
 
 
@@ -87,7 +87,7 @@ void SMAA::generate(Graph& graph)
 			}
 
 			graphics.set_pipeline(GetPSO<PSOS::Blending>());
-			graphics.set_rtv(1, data.ResultTextureNew->renderTarget, Graphics::Handle());
+			graphics.set_rtv(1, data.ResultTextureNew->renderTarget, HAL::Handle());
 			graphics.draw(4);
 
 		});
@@ -98,7 +98,7 @@ void SMAA::generate(Graph& graph)
 	buffer->result_tex.swap(context->list, Graphics::ResourceState::RENDER_TARGET, Graphics::ResourceState::PIXEL_SHADER_RESOURCE);
 	list.set(2, buffer->result_tex.second()->texture_2d().get_srv());
 	temporal.set(context->list, 3);
-	list.set_rtv(1, buffer->result_tex.first()->texture_2d().get_rtv(0), Graphics::Handle());
+	list.set_rtv(1, buffer->result_tex.first()->texture_2d().get_rtv(0), HAL::Handle());
 	list.draw(4);
 	}*/
 	//	list.transition(buffer->light_tex.get(), Graphics::ResourceState::PIXEL_SHADER_RESOURCE);

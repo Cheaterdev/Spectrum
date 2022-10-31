@@ -120,6 +120,9 @@ using PipelineStateDesc = HAL::PipelineStateDesc;
 using StateObjectDesc = HAL::StateObjectDesc;
 using StateObject = HAL::StateObject;
 using LibraryObject = HAL::LibraryObject;
+using FrameResources = HAL::FrameResources;
+using StaticCompiledGPUData = HAL::StaticCompiledGPUData;
+using CommandList = HAL::CommandList;
 
 	}
 }

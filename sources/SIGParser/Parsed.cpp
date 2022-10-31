@@ -100,7 +100,7 @@ std::string get_cpp_for(Value v)
 		return std::string("HLSL::") + arg;
 	}
 	case ValueType::SMP:
-	{	return "Graphics::Handle"; }
+	{	return "HAL::Handle"; }
 
 	}
 

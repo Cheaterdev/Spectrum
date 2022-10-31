@@ -70,13 +70,8 @@ export namespace HAL
 			size_t get_vram();
 
 
-/// todo
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescBottomInputs& desc);
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native(const RaytracingBuildDescTopInputs& desc);
-
-
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO calculateBuffers(const RaytracingBuildDescBottomInputs& desc);
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO calculateBuffers(const RaytracingBuildDescTopInputs& desc);
+			RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescBottomInputs& desc);
+			RaytracingPrebuildInfo calculateBuffers(const RaytracingBuildDescTopInputs& desc);
 
 		};
 	}
@@ -144,43 +139,73 @@ namespace HAL
 
 		}
 
+		//void RaytracingBuildDescBottomInputs::add_geometry(GeometryDesc i)
+		//{
+		//	D3D12_RAYTRACING_GEOMETRY_DESC geom;
+		//	geom.Flags = i.Flags;
+		//	geom.Type = i.Type;
+		//	geom.Triangles.IndexBuffer = ::to_native(i.IndexBuffer);
+		//	geom.Triangles.IndexCount = i.IndexCount;
+		//	geom.Triangles.IndexFormat = i.IndexFormat;
+
+		//	geom.Triangles.VertexBuffer.StartAddress = ::to_native(i.VertexBuffer);
+		//	geom.Triangles.VertexBuffer.StrideInBytes = i.VertexStrideInBytes;
+		//	geom.Triangles.VertexFormat = i.VertexFormat;
+
+		//	geom.Triangles.Transform3x4 = ::to_native(i.Transform3x4);
+		//	descs.emplace_back(geom);
+
+		//	geometry.emplace_back(i);
+		//}
+
+		//D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS RaytracingBuildDescBottomInputs::to_native() const
+		//{
+		//	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
+
+		//	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+		//	inputs.Flags = ::to_native(Flags);
+		//	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
+		//	inputs.NumDescs = static_cast<UINT>(descs.size());
+		//	inputs.pGeometryDescs = descs.data();
+
+		//	return inputs;
+		//}
+
+		//D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Device::to_native(const RaytracingBuildDescBottomInputs& desc)
+		//{
+		//	return desc.to_native();
+		//}
+
+		//D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Device::to_native(const RaytracingBuildDescTopInputs& desc)
+		//{
+		//	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
+
+		//	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+		//	inputs.Flags = ::to_native(desc.Flags);
+		//	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
+		//	inputs.NumDescs = desc.NumDescs;
+		//	inputs.InstanceDescs = ::to_native(desc.instances);
 
 
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Device::to_native(const RaytracingBuildDescBottomInputs& desc)
-		{
-			return desc.to_native();
-		}
+		//	return inputs;
+		//}
 
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Device::to_native(const RaytracingBuildDescTopInputs& desc)
-		{
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs;
-
-			inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE::D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-			inputs.Flags = ::to_native(desc.Flags);
-			inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT::D3D12_ELEMENTS_LAYOUT_ARRAY;
-			inputs.NumDescs = desc.NumDescs;
-			inputs.InstanceDescs = ::to_native(desc.instances);
-
-
-			return inputs;
-		}
-
-		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO Device::calculateBuffers(const RaytracingBuildDescBottomInputs& desc)
+		RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescBottomInputs& desc)
 		{
 			auto inputs = to_native(desc);
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
 
 			native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
 
-			return info;
+			return  { info.ResultDataMaxSizeInBytes,info.ScratchDataSizeInBytes,info.UpdateScratchDataSizeInBytes };
 		}
-		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO Device::calculateBuffers(const RaytracingBuildDescTopInputs& desc)
+		RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescTopInputs& desc)
 		{
 			auto inputs = to_native(desc);
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
 
 			native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
-			return info;
+			return { info.ResultDataMaxSizeInBytes,info.ScratchDataSizeInBytes,info.UpdateScratchDataSizeInBytes };
 		}
 
 

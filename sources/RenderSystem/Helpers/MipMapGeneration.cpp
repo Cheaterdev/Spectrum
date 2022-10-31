@@ -11,18 +11,18 @@ MipMapGenerator::MipMapGenerator()
 
 }
 
-void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex)
+void MipMapGenerator::generate(HAL::ComputeContext& compute_context, Graphics::Texture::ptr tex)
 {
 	generate(compute_context, tex->texture_2d());
 }
 
-void MipMapGenerator::generate_cube(Graphics::ComputeContext& compute_context, Graphics::CubeView view)
+void MipMapGenerator::generate_cube(HAL::ComputeContext& compute_context, Graphics::CubeView view)
 {
 	for (int i = 0; i < 6; i++)
 		generate(compute_context, view.get_face(i));
 }
 
-void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphics::TextureView  view)
+void MipMapGenerator::generate(HAL::ComputeContext& compute_context, Graphics::TextureView  view)
 {
 	//return;
 	PROFILE(L"MipMapGenerator");
@@ -86,7 +86,7 @@ void MipMapGenerator::generate(Graphics::ComputeContext& compute_context, Graphi
 }
 
 
-void MipMapGenerator::downsample_depth(Graphics::ComputeContext& compute_context, Graphics::Texture::ptr tex, Graphics::Texture::ptr& to)
+void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, Graphics::Texture::ptr tex, Graphics::Texture::ptr& to)
 {
 	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
@@ -98,7 +98,7 @@ void MipMapGenerator::downsample_depth(Graphics::ComputeContext& compute_context
 
 }
 
-void MipMapGenerator::downsample_depth(Graphics::ComputeContext& compute_context, Graphics::TextureView& tex, Graphics::TextureView& to) {
+void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, Graphics::TextureView& tex, Graphics::TextureView& to) {
 	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
 
@@ -110,7 +110,7 @@ void MipMapGenerator::downsample_depth(Graphics::ComputeContext& compute_context
 
 }
 
-void MipMapGenerator::generate_quality(Graphics::GraphicsContext& list, camera* cam, GBuffer& buffer,
+void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, GBuffer& buffer,
 	Graphics::TextureView tempColor)
 {
 
@@ -129,7 +129,7 @@ void MipMapGenerator::generate_quality(Graphics::GraphicsContext& list, camera* 
 			gbuffer.set(list);
 		}
 		list.set_pipeline(GetPSO<PSOS::QualityColor>());
-		list.set_rtv(1, tempColor.renderTarget, Graphics::Handle());
+		list.set_rtv(1, tempColor.renderTarget, HAL::Handle());
 		list.draw(4);
 	}
 
@@ -144,7 +144,7 @@ void MipMapGenerator::generate_quality(Graphics::GraphicsContext& list, camera* 
 		list.get_base().clear_stencil(buffer.quality.depthStencil);
 		list.set_pipeline(GetPSO<PSOS::QualityToStencil>());
 
-		list.set_rtv(0, Graphics::Handle(), buffer.quality.depthStencil);
+		list.set_rtv(0, HAL::Handle(), buffer.quality.depthStencil);
 
 		list.set_stencil_ref(1);
 		list.draw(4);
@@ -155,7 +155,7 @@ void MipMapGenerator::generate_quality(Graphics::GraphicsContext& list, camera* 
 	}
 }
 
-void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Graphics::Texture::ptr to, Graphics::Texture::ptr from)
+void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, Graphics::Texture::ptr to, Graphics::Texture::ptr from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info()->view);
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
@@ -171,12 +171,12 @@ void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Grap
 	data.GetSrcTex() = from->texture_2d().texture2D;
 	data.set(list);
 
-	list.set_rtv(1, view.renderTarget, Graphics::Handle());
+	list.set_rtv(1, view.renderTarget, HAL::Handle());
 	list.draw(4);
 }
 
 
-void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Graphics::Texture::ptr to, Graphics::TextureView from)
+void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, Graphics::Texture::ptr to, Graphics::TextureView from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info()->view);
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
@@ -192,13 +192,13 @@ void MipMapGenerator::copy_texture_2d_slow(Graphics::GraphicsContext& list, Grap
 	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
-	list.set_rtv(1, view.renderTarget, Graphics::Handle());
+	list.set_rtv(1, view.renderTarget, HAL::Handle());
 	list.draw(4);
 }
 
 
 
-void MipMapGenerator::render_texture_2d_slow(Graphics::GraphicsContext& list, Graphics::TextureView to, Graphics::TextureView from)
+void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, Graphics::TextureView to, Graphics::TextureView from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to.renderTarget.get_resource_info()->view);
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
@@ -208,13 +208,13 @@ void MipMapGenerator::render_texture_2d_slow(Graphics::GraphicsContext& list, Gr
 	data.GetSrcTex() = from.texture2D;
 	data.set(list);
 
-	list.set_rtv(1, to.renderTarget, Graphics::Handle());
+	list.set_rtv(1, to.renderTarget, HAL::Handle());
 	list.draw(4);
 }
 
 
 
-void MipMapGenerator::write_to_depth(Graphics::GraphicsContext& list, Graphics::TextureView from, Graphics::TextureView to)
+void MipMapGenerator::write_to_depth(HAL::GraphicsContext& list, Graphics::TextureView from, Graphics::TextureView to)
 {
 	list.set_pipeline(GetPSO<PSOS::RenderToDS>());
 	Slots::CopyTexture data;
@@ -224,7 +224,7 @@ void MipMapGenerator::write_to_depth(Graphics::GraphicsContext& list, Graphics::
 	list.set_viewport(to.get_viewport());
 	list.set_scissor(to.get_scissor());
 
-	list.set_rtv(0, Graphics::Handle(), to.depthStencil);
+	list.set_rtv(0, HAL::Handle(), to.depthStencil);
 
 	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 	list.draw(4);

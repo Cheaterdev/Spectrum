@@ -30,7 +30,7 @@ public:
 
 		{
 
-			CommandList::ptr command_list = to_hal(HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+			CommandList::ptr command_list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 
 			command_list->begin("pre");
 			{

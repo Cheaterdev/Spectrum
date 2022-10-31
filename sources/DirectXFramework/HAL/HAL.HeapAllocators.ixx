@@ -296,6 +296,10 @@ export namespace HAL
 	{
 	public:
 		ResourceHeapPageManager() = default;
+		~ResourceHeapPageManager()
+		{
+			
+		}
 	};
 
 

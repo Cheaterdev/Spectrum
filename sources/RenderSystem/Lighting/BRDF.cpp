@@ -7,11 +7,11 @@ void BRDF::create_new()
 {
 
 	texture.reset(new Graphics::Texture(HAL::ResourceDesc::Tex3D(Graphics::Format::R16G16B16A16_FLOAT, { 64, 64, 64 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
-	Graphics::CommandList::ptr list(new Graphics::CommandList(Graphics::CommandListType::DIRECT));
+	HAL::CommandList::ptr list(new HAL::CommandList(Graphics::CommandListType::DIRECT));
 	list->begin("BRDF");
 
 
-	Graphics::ComputeContext& compute_context = list->get_compute();
+	HAL::ComputeContext& compute_context = list->get_compute();
 
 	compute_context.set_pipeline(GetPSO<PSOS::BRDF>());
 

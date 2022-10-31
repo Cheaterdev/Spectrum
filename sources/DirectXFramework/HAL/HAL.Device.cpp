@@ -2,7 +2,6 @@ module Graphics;
 import Log;
 
 import Debug;
-import d3d12;
 
 import IdGenerator;
 import StateContext;
@@ -21,6 +20,8 @@ namespace HAL
 		Singleton<Graphics::StaticCompiledGPUData>::reset();
 		HAL::DescriptorHeapManager::reset();
 		HAL::PipelineStateCache::reset();
+
+		HAL::HeapFactory::reset();
 	}
 
 	Device::~Device()
@@ -30,7 +31,7 @@ namespace HAL
 
 	std::shared_ptr<CommandList> Device::get_upload_list()
 	{
-		auto list = to_hal(queues[CommandListType::COPY]->get_free_list());
+		auto list = (queues[CommandListType::COPY]->get_free_list());
 		list->begin("UploadList");
 		return list;
 	}

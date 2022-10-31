@@ -1,7 +1,6 @@
 module Graphics;
 
 import :GPUTimer;
-import :CommandList;
 
 import Debug;
 
@@ -62,8 +61,8 @@ namespace HAL
 			return e;
 		}
 
-		std::shared_ptr<Graphics::CommandList> res_ptr;
-		res_ptr.reset(new Graphics::CommandList(type), del_func);
+		std::shared_ptr<HAL::CommandList> res_ptr;
+		res_ptr.reset(new HAL::CommandList(type), del_func);
 		return res_ptr;
 	}
 
@@ -78,8 +77,8 @@ namespace HAL
 			return e;
 		}
 
-		std::shared_ptr<Graphics::TransitionCommandList> res_ptr;
-		res_ptr.reset(new Graphics::TransitionCommandList(type), del_transition);
+		std::shared_ptr<TransitionCommandList> res_ptr;
+		res_ptr.reset(new TransitionCommandList(type), del_transition);
 		return res_ptr;
 	}
 
@@ -123,14 +122,14 @@ namespace HAL
 		std::unique_lock<std::mutex> lock(queue_mutex);
 
 
-		auto cl = to_hal(list)->get_ptr();
+		auto cl = (list)->get_ptr();
 
 		{
 			PROFILE(L"update_tile_mappings");
 
 			bool has_updates = false;
 
-			auto& updates = to_hal(list)->tile_updates;
+			auto& updates = (list)->tile_updates;
 			{
 				for (auto& u : updates)
 				{
@@ -147,7 +146,7 @@ namespace HAL
 					{
 						execution_fence.wait();
 						auto list = cl;
-						auto& updates = to_hal(list)->tile_updates;
+						auto& updates = (list)->tile_updates;
 						for (auto& u : updates)
 							(u.resource)->get_tiled_manager().on_tile_update(u);
 						updates.clear();
@@ -156,11 +155,11 @@ namespace HAL
 		}
 
 
-		auto transition_list = to_hal(list)->fix_pretransitions();
+		auto transition_list = (list)->fix_pretransitions();
 
 		if (transition_list)
 		{
-			if (transition_list->get_type() == to_hal(list)->get_type())
+			if (transition_list->get_type() == (list)->get_type())
 			{
 				API::Queue::execute(transition_list.get());
 				API::Queue::execute(list);
@@ -185,8 +184,8 @@ namespace HAL
 
 		{
 			PROFILE(L"on_send");
-			to_hal(list)->on_send(execution_fence);
-			to_hal(list)->free_resources();
+			(list)->on_send(execution_fence);
+			(list)->free_resources();
 		}
 
 		executor.enqueue([cl, this]()
@@ -194,9 +193,9 @@ namespace HAL
 				if (!HAL::Device::get().alive) return;
 
 				auto list = cl;
-				to_hal(list)->get_execution_fence().get().wait();
+				(list)->get_execution_fence().get().wait();
 				PROFILE(L"on_execute");
-				to_hal(list)->on_execute();
+				(list)->on_execute();
 			});
 
 		last_executed_fence = execution_fence;
@@ -205,12 +204,12 @@ namespace HAL
 
 	FenceWaiter Queue::execute(std::shared_ptr<CommandList> list)
 	{
-		assert(this->type == to_hal(list)->type);
+		assert(this->type == (list)->type);
 		return execute_internal (list.get());
 	}
 
 	FenceWaiter Queue::execute(CommandList* list)
 	{
-		return execute(to_hal(list)->get_ptr());
+		return execute((list)->get_ptr());
 	}
 }

@@ -28,7 +28,7 @@ public:
 
 	//void wait_for_results();
 
-	std::future<visibility_update> update(Graphics::CommandList::ptr& list);
+	std::future<visibility_update> update(HAL::CommandList::ptr& list);
 
 
 };

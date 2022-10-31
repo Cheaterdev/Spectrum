@@ -108,7 +108,7 @@ namespace GUI
 				{
 					ptr my_ptr = _THIS.lock();
 					if (!my_ptr) return;
-					auto command_list = const_cast<Graphics::CommandList*>(_command_list.get())->get_ptr<Graphics::CommandList>(); //wtf is this
+					auto command_list = const_cast<HAL::CommandList*>(_command_list.get())->get_ptr<HAL::CommandList>(); //wtf is this
 					geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
 					command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
 					auto rtv = cache.texture->texture_2d().renderTarget;

@@ -16,7 +16,7 @@ class TemporalAA
 	UINT all_count = 1;
 public:
 
-	void set(Graphics::CommandList::ptr& list, int slot)
+	void set(HAL::CommandList::ptr& list, int slot)
 	{
 
 		for (UINT i = 0; i < textures.size(); i++)

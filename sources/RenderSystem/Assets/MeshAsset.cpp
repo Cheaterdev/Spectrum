@@ -142,29 +142,29 @@ void MeshAsset::init_gpu()
 
 		list->execute_and_wait();
 	}*/
-
+#undef OPAQUE
 	int i = 0;
 	if (HAL::Device::get().is_rtx_supported())
 		for (auto& mesh : meshes)
 		{
 
-			auto list = to_hal(HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+			auto list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 			list->begin("RTX");
 			universal_vertex_manager::get().prepare(list);
 			universal_index_manager::get().prepare(list);
 			auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
 
 			GeometryDesc geometryDesc = {};
-			geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+			geometryDesc.Type = HAL::GeometryType::TRIANGLES;
 
 			geometryDesc.IndexBuffer = universal_index_manager::get().buffer->get_resource_address().offset(static_cast<UINT>(index_handle.get_offset() + mesh.index_offset) * sizeof(UINT32));
 			geometryDesc.IndexCount = mesh.index_count;
-			geometryDesc.IndexFormat = DXGI_FORMAT_R32_UINT;
+			geometryDesc.IndexFormat = Format::R32_UINT;
 			geometryDesc.Transform3x4 = mat;//universal_nodes_manager::get().buffer->get_resource_address().offset(info.mesh_info.GetNode_offset() * sizeof(Table::node_data));
-			geometryDesc.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+			geometryDesc.VertexFormat = Format::R32G32B32_FLOAT;
 			geometryDesc.VertexBuffer = universal_vertex_manager::get().buffer->get_resource_address().offset(static_cast<UINT>((vertex_handle.get_offset() + mesh.vertex_offset) * sizeof(Table::mesh_vertex_input)));
 			geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
-			geometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+			geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
 
 			std::vector<GeometryDesc > descs;
 			descs.push_back(geometryDesc);
@@ -490,7 +490,7 @@ bool MeshAssetInstance::update_transforms()
 }
 
 
-bool MeshAssetInstance::init_ras(Graphics::CommandList::ptr list)
+bool MeshAssetInstance::init_ras(HAL::CommandList::ptr list)
 {
 	if (!HAL::Device::get().is_rtx_supported()) return false;
 
@@ -622,7 +622,7 @@ void MeshAssetInstance::init_asset()
 }
 
 
-void SceneFrameManager::prepare(Graphics::CommandList::ptr& command_list, Scene& scene)
+void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scene)
 {
 	auto timer = command_list->start(L"Upload data");
 

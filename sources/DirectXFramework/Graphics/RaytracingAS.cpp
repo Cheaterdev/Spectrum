@@ -9,11 +9,9 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 {
 	HAL::RaytracingBuildDescBottomInputs inputs;
 	inputs.Flags = RaytracingBuildFlags::PREFER_FAST_TRACE;
+	inputs.geometry = desc;
 
-	for (auto& e : desc)
-		inputs.add_geometry(e);
-
-	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
+	auto bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
 
 	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, ResourceState::RAYTRACING_STRUCTURE);
@@ -37,7 +35,7 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 
 
 
-	auto list = to_hal(Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+	auto list = (Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 	list->begin("RaytracingAccelerationStructure");
 
 
@@ -50,7 +48,7 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 		inputs.instances = list->place_raw(instances);
 	}
 
-	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
+	auto topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
 
 	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, ResourceState::RAYTRACING_STRUCTURE);
@@ -97,7 +95,7 @@ void Graphics::RaytracingAccelerationStructure::update(CommandList::ptr list, UI
 	inputs.NumDescs = size;
 	inputs.instances = address;
 
-	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
+	auto topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
 	UINT64 max = topLevelPrebuildInfo.ScratchDataSizeInBytes;
 

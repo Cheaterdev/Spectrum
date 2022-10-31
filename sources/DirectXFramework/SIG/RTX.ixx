@@ -278,7 +278,7 @@ struct SelectLocal<T>
 		}
 
 
-		void prepare(Graphics::CommandList::ptr& list)
+		void prepare(HAL::CommandList::ptr& list)
 		{
 			if (need_recreate)
 			{
@@ -301,7 +301,7 @@ struct SelectLocal<T>
 		}
 
 		template<class T>
-		void dispatch(ivec3 size, Graphics::ComputeContext& compute)
+		void dispatch(ivec3 size, HAL::ComputeContext& compute)
 		{
 			constexpr size_t generator = tuple_element_index<T, std::tuple<Raygens...> >();
 

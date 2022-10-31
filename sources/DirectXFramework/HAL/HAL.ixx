@@ -30,8 +30,13 @@ export import :Debug;
 export import :Removeme;
 export import :Shader;
 export import :TextureData;
+
+export import :FrameManager;
 export import :API;
 export import :PipelineState;
+export import :CommandList;
+
+
 export namespace HAL
 {
 	void init();

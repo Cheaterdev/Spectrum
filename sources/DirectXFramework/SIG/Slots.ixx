@@ -2,7 +2,6 @@ module;
 
 export module Graphics:Slots;
 
-import :CommandList;
 import :Concepts;
 
 import :Enums;
@@ -17,7 +16,7 @@ export {
 		T::compile;
 	};
 
-	template<typename T> concept HandleType = std::is_base_of_v<Graphics::Handle, T>;
+	template<typename T> concept HandleType = std::is_base_of_v<HAL::Handle, T>;
 
 	template<class Context>
 	class Compiler
@@ -38,7 +37,7 @@ export {
 		}
 	public:
 		Context* context;
-		std::vector<Graphics::ResourceInfo*> resources;
+		std::vector<HAL::ResourceInfo*> resources;
 		std::stringstream s;
 		Compiler() :s(std::stringstream::out | std::stringstream::binary)
 		{
@@ -110,7 +109,7 @@ export {
 				std::vector<uint> offsets;
 				for (uint i = 0; i < t.size(); i++)
 				{
-					const Graphics::Handle& handle = t[i];
+					const HAL::Handle& handle = t[i];
 
 					if (handle.is_valid())
 					{
@@ -169,7 +168,7 @@ export {
 	template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
 	struct CompiledData
 	{
-		std::vector<Graphics::ResourceInfo*> resources;
+		std::vector<HAL::ResourceInfo*> resources;
 
 		static constexpr SlotID ID = _ID;
 		using Table = _Table;
@@ -179,13 +178,13 @@ export {
 		HAL::ResourceAddress offsets_cb;
 		UINT offset_cb;
 
-		const CompiledData<SlotTable, ID, Table, Slot>& set(Graphics::SignatureDataSetter& graphics) const
+		const CompiledData<SlotTable, ID, Table, Slot>& set(HAL::SignatureDataSetter& graphics) const
 		{
 			graphics.set_slot(*this);
 			return *this;
 		}
 
-		const void set_tables(Graphics::SignatureDataSetter& graphics) const
+		const void set_tables(HAL::SignatureDataSetter& graphics) const
 		{
 			for (auto resource_info : resources)
 				graphics.get_base().transition(resource_info);
@@ -234,7 +233,7 @@ export {
 		}
 
 
-		void set(Graphics::SignatureDataSetter& context) const
+		void set(HAL::SignatureDataSetter& context) const
 		{
 			compile(context.get_base()).set(context);
 		}

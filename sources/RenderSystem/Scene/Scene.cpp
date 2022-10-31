@@ -50,7 +50,7 @@ Scene::Scene()
 	}
 }
 
-bool Scene::init_ras(Graphics::CommandList::ptr& list)
+bool Scene::init_ras(HAL::CommandList::ptr& list)
 {
 	bool res = false;
 	auto mesh_func = [&](MeshAssetInstance* l)

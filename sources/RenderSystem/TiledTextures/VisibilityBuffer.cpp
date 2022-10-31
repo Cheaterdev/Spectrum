@@ -21,7 +21,7 @@ void VisibilityBuffer::wait_for_results()
 */
 
 
-std::future<visibility_update> VisibilityBuffer::update(Graphics::CommandList::ptr& list)
+std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& list)
 {
 
 

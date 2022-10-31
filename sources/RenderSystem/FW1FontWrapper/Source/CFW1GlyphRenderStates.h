@@ -17,9 +17,9 @@ namespace FW1FontWrapper
             // IUnknown
             virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject);
 
-            virtual void STDMETHODCALLTYPE SetStates(Graphics::CommandList::ptr& list, UINT Flags);
+            virtual void STDMETHODCALLTYPE SetStates(HAL::CommandList::ptr& list, UINT Flags);
             virtual void STDMETHODCALLTYPE UpdateShaderConstants(
-                Graphics::CommandList::ptr& list,
+                HAL::CommandList::ptr& list,
                 const FW1_RECTF* pClipRect,
                 const FLOAT* pTransformMatrix
             );

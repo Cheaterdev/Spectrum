@@ -930,7 +930,7 @@ namespace GUI
 				 auto texture = (*data.o_texture);
 
 			//	 command_list->transition(texture.resource, Graphics::ResourceState::RENDER_TARGET);
-				 command_list->get_graphics().set_rtv(1, texture.renderTarget, Graphics::Handle());
+				 command_list->get_graphics().set_rtv(1, texture.renderTarget, HAL::Handle());
 				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
 
 			
@@ -952,7 +952,7 @@ namespace GUI
 					 {
 						 c.labeled = &context.pre_executor;
                      	
-						 c.command_list_label = to_hal(HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->get_free_list());
+						 c.command_list_label = (HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->get_free_list());
                      	
 						 c.command_list_label->begin("Label");
 

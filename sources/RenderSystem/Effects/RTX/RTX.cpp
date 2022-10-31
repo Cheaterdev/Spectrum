@@ -2,7 +2,7 @@
 #include "RTX.h"
 
 
-void RTX::prepare(Graphics::CommandList::ptr& list)
+void RTX::prepare(HAL::CommandList::ptr& list)
 {
 	rtx.prepare(list);
 }

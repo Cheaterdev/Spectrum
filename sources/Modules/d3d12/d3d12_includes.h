@@ -6,3 +6,4 @@
 
 #include <DirectXTex.h>
 
+#undef OPAQUE

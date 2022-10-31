@@ -22,7 +22,7 @@ class AssetRenderer : public Singleton<AssetRenderer>
 
         friend class Singleton<AssetRenderer>;
         main_renderer::ptr scene_renderer;
-        Graphics::FrameResourceManager frames;
+        HAL::FrameResourceManager frames;
 
         camera cam;
         mesh_renderer::ptr meshes_renderer;

@@ -46,7 +46,7 @@ void GPUTilesBuffer::erase(ivec3 pos)
 	}
 }
 
-void GPUTilesBuffer::update(Graphics::CommandList::ptr list)
+void GPUTilesBuffer::update(HAL::CommandList::ptr list)
 {
 	if (tiles_updated) {
 		buffer->set_data(list, 0, used_tiles);

@@ -647,7 +647,7 @@ template<class T>
 class EngineAsset
 {
 	//static std::map<AssetStorage::ptr, std::function<Asset*()>> assets;
-	typename T::ptr asset;
+	std::weak_ptr<T> asset;
 	std::function<T*()> creator;
 	Guid id; std::wstring name;
 	std::mutex m;
@@ -672,18 +672,23 @@ public:
 	{
 		std::lock_guard<std::mutex> g(m);
 
-		if(!asset)
-			asset = AssetManager::get().get<T>(id);
+		auto shared = asset.lock();
 
-		if (!asset&&creator)
+		if (shared) return shared;
+
+		shared = AssetManager::get().get<T>(id);
+
+		if (!shared &&creator)
 		{
 			auto asset_ptr = creator();
 			asset_ptr->register_new(name, id);
-			asset = asset_ptr->get_ptr<T>();
+			shared = asset_ptr->get_ptr<T>();
 		}
-
-		return asset;
+		asset = shared;
+		return shared;
 	}
+
+	
 };
 
 

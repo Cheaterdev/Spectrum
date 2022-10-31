@@ -253,7 +253,7 @@ namespace GUI
 
         float4 mul_color;
         float4 add_color;
-		Graphics::Handle srv;
+		HAL::Handle srv;
         Texture()
         {
             margins = { 0, 0, 0, 0 };

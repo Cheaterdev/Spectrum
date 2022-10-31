@@ -1,6 +1,5 @@
-module Graphics:CommandList;
+module Graphics;
 
-import :CommandList;
 
 import Utils;
 import StateContext;
@@ -70,7 +69,7 @@ namespace HAL
 		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition((resource)->get_dx(),
 			static_cast<D3D12_RESOURCE_STATES>(before),
 			static_cast<D3D12_RESOURCE_STATES>(after),
-			subres,
+			subres== ALL_SUBRESOURCES? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES:subres,
 			native_flags));
 
 		validate();
@@ -84,7 +83,7 @@ namespace HAL
 		if (state.all_states_same && all_state.first_transition)
 		{
 
-			auto states = state.get_subres_state(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES).state;
+			auto states = state.get_subres_state(ALL_SUBRESOURCES).state;
 
 			states = GetSupportedStates(type) & states;
 			all_state.first_transition->wanted_state = merge_state(states, all_state.first_transition->wanted_state);
@@ -97,13 +96,13 @@ namespace HAL
 
 	bool  ResourceStateManager::is_used(Transitions* list) const
 	{
-		SubResourcesCPU& s = get_state(to_hal(list));
+		SubResourcesCPU& s = get_state((list));
 		return s.used;
 	}
 
 	SubResourcesCPU& ResourceStateManager::get_cpu_state(Transitions* list) const
 	{
-		auto& state = get_state(to_hal(list));
+		auto& state = get_state((list));
 		return state;
 	}
 
@@ -115,7 +114,7 @@ namespace HAL
 
 		if (!resource) return processed_states;
 
-		auto& cpu_state = get_state(to_hal(list));
+		auto& cpu_state = get_state((list));
 
 		auto merge_one = [&, this](UINT i) {
 			auto& gpu = gpu_state.get_subres_state(i);
@@ -155,8 +154,8 @@ namespace HAL
 
 		if (cpu_state.all_state.first_transition && gpu_state.all_states_same)
 		{
-			merge_one(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-			transition_one(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			merge_one(ALL_SUBRESOURCES);
+			transition_one(ALL_SUBRESOURCES);
 		}
 		else
 		{
@@ -186,7 +185,7 @@ namespace HAL
 
 	void ResourceStateManager::transition(Transitions* list, ResourceState state, unsigned int s) const
 	{
-		auto& cpu_state = get_state(to_hal(list));
+		auto& cpu_state = get_state((list));
 
 		Transition* last_transition = nullptr;
 
@@ -199,7 +198,7 @@ namespace HAL
 			if (!subres_cpu.used)
 			{
 				subres_cpu.used = true;
-				last_transition = subres_cpu.first_transition = subres_cpu.last_transition = to_hal(list)->create_transition((resource), subres, state);
+				last_transition = subres_cpu.first_transition = subres_cpu.last_transition = (list)->create_transition((resource), subres, state);
 			}
 			else
 			{
@@ -221,7 +220,7 @@ namespace HAL
 					}
 					else
 					{
-						auto transition = to_hal(list)->create_transition((resource), subres, state);
+						auto transition = (list)->create_transition((resource), subres, state);
 						last_transition = transition;
 						subres_cpu.add_transition(transition);
 					}
@@ -230,7 +229,7 @@ namespace HAL
 			}
 		};
 
-		if (s == D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)
+		if (s == ALL_SUBRESOURCES)
 		{
 			if (!cpu_state.all_states_same)
 			{
@@ -241,7 +240,7 @@ namespace HAL
 			}
 			else
 			{
-				transition_one(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, true);
+				transition_one(ALL_SUBRESOURCES, true);
 			}
 		}
 		else
@@ -258,7 +257,7 @@ namespace HAL
 
 		if (need_add_uav)
 		{
-			to_hal(list)->create_uav_transition((resource));
+			(list)->create_uav_transition((resource));
 		}
 	}
 
@@ -268,7 +267,7 @@ namespace HAL
 	{
 
 		//return ;
-		auto& cpu_state = get_state(to_hal(from));
+		auto& cpu_state = get_state((from));
 
 		if (!cpu_state.used) return;
 
@@ -280,7 +279,7 @@ namespace HAL
 
 			if (!cpu.used)	return;
 
-			if (!IsFullySupport(to_hal(from)->get_type(), gpu.state))  return;
+			if (!IsFullySupport((from)->get_type(), gpu.state))  return;
 
 			auto first_transition = cpu_state.get_first_transition(i);
 			auto last_transition = cpu_state.get_last_transition(i);
@@ -297,7 +296,7 @@ namespace HAL
 
 			if (!cpu.used) return;
 
-			if (!IsFullySupport(to_hal(from)->get_type(), gpu.state))  return;
+			if (!IsFullySupport((from)->get_type(), gpu.state))  return;
 
 			auto first_transition = cpu_state.get_first_transition(i);
 			auto last_transition = cpu_state.get_last_transition(i);
@@ -306,7 +305,7 @@ namespace HAL
 
 			if (gpu.state != first_state)
 			{
-				auto point = to_hal(from)->create_transition((resource), i, gpu.state, TransitionType::ZERO);
+				auto point = (from)->create_transition((resource), i, gpu.state, TransitionType::ZERO);
 				//		cpu.set_zero_transition(point);
 				updated = true;
 			}
@@ -338,8 +337,8 @@ namespace HAL
 
 		if (updated)
 		{
-			to_hal(from)->track_object(*(const_cast<Resource*>(resource)));
-			to_hal(from)->use_resource((resource));
+			(from)->track_object(*(const_cast<Resource*>(resource)));
+			(from)->use_resource((resource));
 		}
 
 	}
@@ -347,20 +346,20 @@ namespace HAL
 
 	void ResourceStateManager::stop_using(Transitions* list, UINT subres) const
 	{
-		auto& state = get_state(to_hal(list));
+		auto& state = get_state((list));
 
 
 		auto transit = [&](UINT i)
 		{
 			auto last_transition = state.get_last_transition(i);
 
-			last_transition->last_used_point = to_hal(list)->get_last_transition_point();
+			last_transition->last_used_point = (list)->get_last_transition_point();
 		};
 
 
 		if (state.all_states_same)
 		{
-			transit(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			transit(ALL_SUBRESOURCES);
 		}
 		else
 		{
@@ -372,7 +371,7 @@ namespace HAL
 	{
 
 		return false;
-		auto& to_state = get_state(to_hal(to));
+		auto& to_state = get_state((to));
 
 		if (!to_state.used)
 			return false;
@@ -385,7 +384,7 @@ namespace HAL
 			auto& subres_to = to_state.get_subres_state(i);
 			if (subres_to.used)
 			{
-				if (IsFullySupport(to_hal(from)->get_type(), subres_to.get_first_state()))
+				if (IsFullySupport((from)->get_type(), subres_to.get_first_state()))
 
 					used = true;
 				else
@@ -397,7 +396,7 @@ namespace HAL
 
 
 		if (to_state.all_states_same)
-			if (!check(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES)) return false;
+			if (!check(ALL_SUBRESOURCES)) return false;
 			else
 			{
 				for (int i = 0; i < gpu_state.subres.size(); i++)
@@ -417,7 +416,7 @@ namespace HAL
 
 		if (to_state.all_states_same)
 		{
-			transit(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			transit(ALL_SUBRESOURCES);
 		}
 		else
 		{

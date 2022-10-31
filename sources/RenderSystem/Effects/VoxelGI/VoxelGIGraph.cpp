@@ -77,7 +77,7 @@ public:
 
 					}
 
-					graphics.set_rtv(table, Graphics::Handle());
+					graphics.set_rtv(table, HAL::Handle());
 
 					Slots::GBufferDownsample downsample;
 
@@ -198,7 +198,7 @@ void VoxelGI::init_states()
 
 }
 
-void VoxelGI::start_new(Graphics::CommandList& list)
+void VoxelGI::start_new(HAL::CommandList& list)
 {
 
 
@@ -355,7 +355,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 	graphics.set_viewport(float4{ 0, 0,  albedo.tex_dynamic->get_size().xy });
 	graphics.set_scissor({ 0, 0,  albedo.tex_dynamic->get_size().xy });
-	graphics.set_rtv(0, Graphics::Handle(), Graphics::Handle());
+	graphics.set_rtv(0, HAL::Handle(), HAL::Handle());
 
 
 	{
@@ -427,7 +427,7 @@ void VoxelGI::debug(Graph& graph)
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
 
-			graphics.set_rtv(1, target_tex.renderTarget, Graphics::Handle());
+			graphics.set_rtv(1, target_tex.renderTarget, HAL::Handle());
 			graphics.set_pipeline(GetPSO<PSOS::VoxelDebug>());
 
 			graph.set_slot(SlotID::VoxelInfo, graphics);

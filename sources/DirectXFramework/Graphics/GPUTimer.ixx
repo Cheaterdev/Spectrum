@@ -16,24 +16,15 @@ export
 	{
 
 
-		class QueryHeap
-		{
-
-			ComPtr<ID3D12QueryHeap> heap;
-		public:
-			QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP);
-
-			ComPtr<ID3D12QueryHeap> get_native();
-
-			using ptr = std::shared_ptr<QueryHeap>;
-		};
 
 		class GPUTimeManager : public Singleton<GPUTimeManager>
 		{
 			friend class Singleton<GPUTimeManager>;
-			friend class GPUTimer;
 
-			QueryHeap heap;
+		public:
+			//riend class GPUTimer;
+
+			HAL::QueryHeap heap;
 			std::mutex buffer_lock;
 			static const int MAX_TIMERS = 1024;
 			IdGenerator<Thread::Lockable> ids;
@@ -43,7 +34,7 @@ export
 			UINT64 frequency;
 
 			int max_used_timers = 0;
-			GPUTimeManager() : heap(MAX_TIMERS * 2)
+			GPUTimeManager() : heap(HAL::Device::get() ,{ MAX_TIMERS * 2 })
 			{
 				HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_native()->GetTimestampFrequency(&frequency);
 			}
@@ -57,12 +48,12 @@ export
 				ids.put(id);
 			}
 		public:
-			void start(GPUTimer&, Graphics::Eventer* list);
-			void end(GPUTimer&, Graphics::Eventer* list);
-			float get_time(GPUTimer&);
+			void start(HAL::GPUTimer&, HAL::Eventer* list);
+			void end(HAL::GPUTimer&, HAL::Eventer* list);
+			float get_time(HAL::GPUTimer&);
 
-			double get_start(GPUTimer&);
-			double get_end(GPUTimer&);
+			double get_start(HAL::GPUTimer&);
+			double get_end(HAL::GPUTimer&);
 
 			double get_now()
 			{
@@ -72,7 +63,7 @@ export
 				return static_cast<double>(gpu_start) / frequency;
 			}
 
-			void read_buffer(CommandList::ptr& list, std::function<void()> f)
+			void read_buffer(HAL::CommandList::ptr& list, std::function<void()> f)
 			{
 				list->resolve_times(heap, max_used_timers, [this, f](std::span<UINT64> data) {
 					std::copy(data.begin(), data.end(), read_back_data.begin());

@@ -5,6 +5,7 @@ export module Graphics:Buffer;
 export import Allocators;
 
 
+export import :Types;
 export import :Concepts;
 export import Log;
 
@@ -12,11 +13,11 @@ export import serialization;
 export import stl.core;
 export import stl.memory;
 export import Math;
-export import :CommandList;
+
 export import HAL;
 
 
-import d3d12;
+//import d3d12;
 
 //import :Definitions;
 //using namespace HAL;
@@ -43,7 +44,7 @@ export
 			HAL::HandleTable hlsl;
 
 
-			void set_data(CommandList::ptr& list, unsigned int offset, const  std::string& v);
+			void set_data(HAL::CommandList::ptr& list, unsigned int offset, const  std::string& v);
 			void set_data(unsigned int offset, const std::string& v);
 		public:
 			virtual ~GPUBuffer();
@@ -66,7 +67,7 @@ export
 			template<class T>
 			void set_raw_data(const std::vector<T>& v)
 			{
-				auto list = to_hal(HAL::Device::get().get_upload_list());
+				auto list = (HAL::Device::get().get_upload_list());
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 				list->end();
 				list->execute_and_wait();
@@ -75,24 +76,24 @@ export
 			template<class T>
 			void set_data(const T& v)
 			{
-				auto list = to_hal(HAL::Device::get().get_upload_list());
+				auto list = (HAL::Device::get().get_upload_list());
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 				list->end();
 				list->execute_and_wait();
 			}
 
 			template<class T>
-			void set_data(Graphics::CommandList::ptr& list, std::vector<T>& v)
+			void set_data(HAL::CommandList::ptr& list, std::vector<T>& v)
 			{
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 			}
 			template<class T>
-			void set_data(Graphics::CommandList::ptr& list, const T& v)
+			void set_data(HAL::CommandList::ptr& list, const T& v)
 			{
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 			}
 			template<class T>
-			void set_data(Graphics::CommandList::ptr& list, UINT offset, const T* data, UINT size)
+			void set_data(HAL::CommandList::ptr& list, UINT offset, const T* data, UINT size)
 			{
 				list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(data), size * sizeof(T));
 			}
@@ -115,7 +116,7 @@ export
 				else
 				{
 				std::string data;
-				auto list = to_hal(HAL::Device::get().get_upload_list());
+				auto list = (HAL::Device::get().get_upload_list());
 				auto task = list->get_copy().read_buffer(this, 0, get_size(), [&data](const char* mem, UINT64 size)
 					{
 						data.assign(mem, mem + size);
@@ -189,9 +190,9 @@ export
 			}
 			using GPUBuffer::set_data;
 
-			void set_data(Graphics::CommandList::ptr& list, unsigned int offset, std::vector<type>& v);
+			void set_data(HAL::CommandList::ptr& list, unsigned int offset, std::vector<type>& v);
 
-			void set_data(Graphics::CommandList::ptr& list, const type& v)
+			void set_data(HAL::CommandList::ptr& list, const type& v)
 			{
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(type));
 			}
@@ -203,7 +204,7 @@ export
 			GPUBuffer::ptr help_buffer;
 
 
-			void clear_counter(Graphics::CommandList::ptr& list)
+			void clear_counter(HAL::CommandList::ptr& list)
 			{
 				list->clear_uav(rwByteAddressBufferCount);
 			}
@@ -283,7 +284,7 @@ export
 		}
 
 		template<class T>
-		inline void StructureBuffer<T>::set_data(Graphics::CommandList::ptr& list, unsigned int offset, std::vector<type>& v)
+		inline void StructureBuffer<T>::set_data(HAL::CommandList::ptr& list, unsigned int offset, std::vector<type>& v)
 		{
 			list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(type)));
 		}
@@ -322,7 +323,7 @@ namespace Graphics
 
 	void GPUBuffer::set_data(unsigned int offset, const std::string& v)
 	{
-		auto list = to_hal(HAL::Device::get().get_upload_list());
+		auto list = (HAL::Device::get().get_upload_list());
 		set_data(list, offset, v);
 		list->end();
 		list->execute_and_wait();
@@ -334,7 +335,7 @@ namespace Graphics
 	}
 
 
-	void GPUBuffer::set_data(Graphics::CommandList::ptr& list, unsigned int offset, const std::string& v)
+	void GPUBuffer::set_data(HAL::CommandList::ptr& list, unsigned int offset, const std::string& v)
 	{
 		list->get_copy().update_buffer(this, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(char)));
 	}

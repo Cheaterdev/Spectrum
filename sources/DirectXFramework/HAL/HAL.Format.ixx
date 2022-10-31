@@ -141,6 +141,11 @@ export namespace HAL
 		}
 		uint size() const;
 
+		bool operator==(const Formats& v) const
+		{
+
+			return native_format == v;
+		}
 		bool operator==(const Format&) const = default;
 		std::strong_ordering operator<=>(const Format& r)  const = default;
 

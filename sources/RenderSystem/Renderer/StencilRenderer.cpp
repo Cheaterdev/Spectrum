@@ -615,7 +615,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 					graphics.set_viewport(data.ResultTexture->get_viewport());
 					graphics.set_scissor(data.ResultTexture->get_scissor());
-					graphics.set_rtv(1, data.ResultTexture->renderTarget, Graphics::Handle());
+					graphics.set_rtv(1, data.ResultTexture->renderTarget, HAL::Handle());
 					{
 						PROFILE_GPU(L"blend");
 						graphics.draw(4);

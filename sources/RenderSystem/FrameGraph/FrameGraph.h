@@ -503,8 +503,8 @@ namespace FrameGraph
 		Graphics::ResourceHeapAllocator<Thread::Free> static_allocator;
 
 
-		Graphics::FrameResourceManager frames;
-		Graphics::FrameResources::ptr current_frame;
+		HAL::FrameResourceManager frames;
+		HAL::FrameResources::ptr current_frame;
 
 		std::map<int, Graphics::ResourceHeapAllocator<Thread::Free>> frame_allocs;
 
@@ -620,9 +620,9 @@ namespace FrameGraph
 
 		std::list<Graphics::ResourceView> textureViews;
 
-		Graphics::CommandList::ptr list;
+		HAL::CommandList::ptr list;
 
-		Graphics::CommandList::ptr& get_list();
+		HAL::CommandList::ptr& get_list();
 		void begin(Pass* pass, Graphics::FrameResources::ptr& frame);
 		void end();
 
@@ -760,7 +760,7 @@ namespace FrameGraph
 
 	class SlotContext
 	{
-		std::map<SlotID, std::function<void(Graphics::SignatureDataSetter&)>> slot_setters;
+		std::map<SlotID, std::function<void(HAL::SignatureDataSetter&)>> slot_setters;
 
 	public:
 
@@ -769,12 +769,12 @@ namespace FrameGraph
 		void register_slot_setter(Compiled compiled)
 		{
 			SlotID id = Compiled::ID;
-			slot_setters[id] = [compiled](Graphics::SignatureDataSetter& setter) {
+			slot_setters[id] = [compiled](HAL::SignatureDataSetter& setter) {
 				compiled.set(setter);
 			};
 		}
 
-		void set_slot(SlotID id, Graphics::SignatureDataSetter& setter)
+		void set_slot(SlotID id, HAL::SignatureDataSetter& setter)
 		{
 			assert(slot_setters.contains(id));
 			slot_setters[id](setter);

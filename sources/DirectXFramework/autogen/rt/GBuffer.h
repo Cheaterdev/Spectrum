@@ -7,20 +7,20 @@ namespace RT
 		{
 			struct RTV
 			{
-				Graphics::Handle albedo;
-				Graphics::Handle normals;
-				Graphics::Handle specular;
-				Graphics::Handle motion;
+				HAL::Handle albedo;
+				HAL::Handle normals;
+				HAL::Handle specular;
+				HAL::Handle motion;
 			} &rtv;
 			struct DSV
 			{
-				Graphics::Handle depth;
+				HAL::Handle depth;
 			}&dsv;
-			Graphics::Handle& GetAlbedo() { return rtv.albedo; }
-			Graphics::Handle& GetNormals() { return rtv.normals; }
-			Graphics::Handle& GetSpecular() { return rtv.specular; }
-			Graphics::Handle& GetMotion() { return rtv.motion; }
-			Graphics::Handle& GetDepth() { return dsv.depth; }
+			HAL::Handle& GetAlbedo() { return rtv.albedo; }
+			HAL::Handle& GetNormals() { return rtv.normals; }
+			HAL::Handle& GetSpecular() { return rtv.specular; }
+			HAL::Handle& GetMotion() { return rtv.motion; }
+			HAL::Handle& GetDepth() { return dsv.depth; }
 		GBuffer(RTV & rtv, DSV & dsv):rtv(rtv), dsv(dsv){}
 		};
 	}

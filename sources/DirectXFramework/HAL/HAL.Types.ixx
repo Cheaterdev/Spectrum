@@ -10,7 +10,7 @@ import serialization;
 import stl.core;
 
 import :Format;
-import d3d12;
+import windows;
 
 #undef DOMAIN
 
@@ -542,7 +542,7 @@ export namespace HAL
 			return resource;
 		}
 
-		ResourceAddress offset(UINT offset) const
+		ResourceAddress offset(uint offset) const
 		{
 			return { resource, resource_offset + offset };
 		}
@@ -552,28 +552,42 @@ export namespace HAL
 
 
 	///////////////////////////////////////////////////
+	///
+
+	enum class GeometryType :uint
+	{
+TRIANGLES,
+PROCEDURAL
+	};
+#undef OPAQUE
+	enum class GeometryFlags :uint
+	{
+		NONE,
+		OPAQUE
+	};
+
 	struct GeometryDesc
 	{
-		D3D12_RAYTRACING_GEOMETRY_TYPE Type;
-		D3D12_RAYTRACING_GEOMETRY_FLAGS Flags;
+		GeometryType Type;
+		GeometryFlags Flags;
 
 		HAL::ResourceAddress Transform3x4;
-		DXGI_FORMAT IndexFormat;
-		DXGI_FORMAT VertexFormat;
-		UINT IndexCount;
-		UINT VertexCount;
+		Format IndexFormat;
+		Format VertexFormat;
+		uint IndexCount;
+		uint VertexCount;
 		HAL::ResourceAddress IndexBuffer;
 
 		HAL::ResourceAddress VertexBuffer;
-		UINT64 VertexStrideInBytes;
+		uint64 VertexStrideInBytes;
 	};
 	struct InstanceDesc
 	{
-		FLOAT Transform[3][4];
-		UINT InstanceID : 24;
-		UINT InstanceMask : 8;
-		UINT InstanceContributionToHitGroupIndex : 24;
-		UINT Flags : 8;
+		float Transform[3][4];
+		uint InstanceID : 24;
+		uint InstanceMask : 8;
+		uint InstanceContributionToHitGroupIndex : 24;
+		uint Flags : 8;
 		HAL::ResourceAddress AccelerationStructure;
 	};
 
@@ -590,33 +604,17 @@ export namespace HAL
 		GENERATE_OPS
 	};
 
-
-	struct RaytracingDesc
-	{
-		HAL::ResourceAddress DestAccelerationStructureData;
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Inputs;
-		HAL::ResourceAddress SourceAccelerationStructureData;
-		HAL::ResourceAddress ScratchAccelerationStructureData;
-	};
-
 	struct RaytracingBuildDescBottomInputs
 	{
 		RaytracingBuildFlags Flags;
-
-
-
-		void add_geometry(GeometryDesc i);
-
-		std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
 		std::vector<GeometryDesc> geometry;
 
-		D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS to_native() const;
 	};
 
 	struct RaytracingBuildDescTopInputs
 	{
 		RaytracingBuildFlags Flags;
-		UINT NumDescs;
+		uint NumDescs;
 		HAL::ResourceAddress instances;
 	};
 
@@ -626,7 +624,12 @@ export namespace HAL
 		HAL::ResourceAddress SourceAccelerationStructureData;
 		HAL::ResourceAddress ScratchAccelerationStructureData;
 	};
-
+	struct RaytracingPrebuildInfo
+	{
+		uint64 ResultDataMaxSizeInBytes;
+		uint64 ScratchDataSizeInBytes;
+		uint64 UpdateScratchDataSizeInBytes;
+	};
 
 	struct hwnd_provider
 	{

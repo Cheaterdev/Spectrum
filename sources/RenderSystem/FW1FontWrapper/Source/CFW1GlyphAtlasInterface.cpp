@@ -75,7 +75,7 @@ namespace FW1FontWrapper
 
 
 // Set sheet shader resources
-    HRESULT STDMETHODCALLTYPE CFW1GlyphAtlas::BindSheet(Graphics::CommandList::ptr& pContext, UINT SheetIndex, UINT Flags)
+    HRESULT STDMETHODCALLTYPE CFW1GlyphAtlas::BindSheet(HAL::CommandList::ptr& pContext, UINT SheetIndex, UINT Flags)
     {
         if (SheetIndex < m_sheetCount)
             return m_glyphSheets[SheetIndex]->BindSheet(pContext, Flags);
@@ -172,7 +172,7 @@ namespace FW1FontWrapper
 
 
 // Flush all sheets with possible new glyphs
-    void STDMETHODCALLTYPE CFW1GlyphAtlas::Flush(Graphics::CommandList::ptr& pContext)
+    void STDMETHODCALLTYPE CFW1GlyphAtlas::Flush(HAL::CommandList::ptr& pContext)
     {
         UINT first = 0;
         UINT end = 0;

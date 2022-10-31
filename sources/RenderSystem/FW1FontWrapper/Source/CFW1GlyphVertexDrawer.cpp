@@ -84,7 +84,7 @@ namespace FW1FontWrapper
 
 	// Draw vertices
 	UINT CFW1GlyphVertexDrawer::drawVertices(
-		Graphics::CommandList::ptr& pContext,
+		HAL::CommandList::ptr& pContext,
 		IFW1GlyphAtlas* pGlyphAtlas,
 		const FW1_VERTEXDATA* vertexData,
 		UINT preboundSheet
@@ -155,7 +155,7 @@ namespace FW1FontWrapper
 
 	// Draw vertices as quads
 	UINT CFW1GlyphVertexDrawer::drawGlyphsAsQuads(
-		Graphics::CommandList::ptr& pContext,
+		HAL::CommandList::ptr& pContext,
 		IFW1GlyphAtlas* pGlyphAtlas,
 		const FW1_VERTEXDATA* vertexData,
 		UINT preboundSheet

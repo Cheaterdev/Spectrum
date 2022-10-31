@@ -1,5 +1,5 @@
 module Graphics;
-import :CommandList;
+
 import Math;
 import Events;
 import stl.core;
@@ -106,7 +106,7 @@ namespace HAL {
 		// TODO: make list
 		if (list)
 		{
-			to_hal(list)->update_tilings(std::move(info));
+			(list)->update_tilings(std::move(info));
 		}
 		else
 			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
@@ -129,7 +129,7 @@ namespace HAL {
 		// TODO: make list
 		if (list)
 		{
-			to_hal(list)->update_tilings(std::move(info));
+			(list)->update_tilings(std::move(info));
 		}
 		else
 			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
@@ -148,7 +148,7 @@ namespace HAL {
 		// TODO: make list
 		if (list)
 		{
-			to_hal(list)->update_tilings(std::move(info));
+			(list)->update_tilings(std::move(info));
 		}
 		else
 			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
@@ -167,7 +167,7 @@ namespace HAL {
 		// TODO: make list
 		if (list)
 		{
-			to_hal(list)->update_tilings(std::move(info));
+			(list)->update_tilings(std::move(info));
 		}
 		else
 			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);
@@ -192,7 +192,7 @@ namespace HAL {
 					}
 		}
 
-		to_hal(list).update_tilings(std::move(info));
+		(list).update_tilings(std::move(info));
 	}
 
 
@@ -206,7 +206,7 @@ namespace HAL {
 		info.source_pos = source_pos;
 		info.pos = target_pos;
 		info.size = size;
-		to_hal(list).update_tilings(std::move(info));
+		(list).update_tilings(std::move(info));
 	}
 
 	void TiledResourceManager::map_tile(update_tiling_info& info, uint3 pos, TileHeapPosition heap_pos)
@@ -306,7 +306,7 @@ namespace HAL {
 
 			info.add_tile(packed_tiles);
 
-			to_hal(list).update_tilings(std::move(info));
+			(list).update_tilings(std::move(info));
 		}
 	}
 
@@ -329,7 +329,7 @@ namespace HAL {
 		// TODO: make list
 		if (list)
 		{
-			to_hal(list)->update_tilings(std::move(info));
+			(list)->update_tilings(std::move(info));
 		}
 		else
 			HAL::Device::get().get_queue(CommandListType::DIRECT)->update_tile_mappings(info);

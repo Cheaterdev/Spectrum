@@ -26,7 +26,7 @@ namespace FW1FontWrapper
 
 
 // Set render states for glyph drawing
-    void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(Graphics::CommandList::ptr& list, UINT Flags)
+    void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(HAL::CommandList::ptr& list, UINT Flags)
     {
 
         list->get_graphics().set_pipeline(GetPSO<PSOS::FontRender>());
@@ -36,7 +36,7 @@ namespace FW1FontWrapper
 
 // Update constant buffer
     void STDMETHODCALLTYPE CFW1GlyphRenderStates::UpdateShaderConstants(
-        Graphics::CommandList::ptr& list,
+        HAL::CommandList::ptr& list,
         const FW1_RECTF* pClipRect,
         const FLOAT* pTransformMatrix
     )

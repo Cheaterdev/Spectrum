@@ -48,7 +48,7 @@ namespace FW1FontWrapper
 
 
 	// Set sheet shader resources
-	HRESULT STDMETHODCALLTYPE CFW1GlyphSheet::BindSheet(Graphics::CommandList::ptr& list, UINT Flags)
+	HRESULT STDMETHODCALLTYPE CFW1GlyphSheet::BindSheet(HAL::CommandList::ptr& list, UINT Flags)
 	{
 
 		Slots::FontRendering rendering;
@@ -188,7 +188,7 @@ namespace FW1FontWrapper
 
 
 	// Flush any inserted glyphs
-	void STDMETHODCALLTYPE CFW1GlyphSheet::Flush(Graphics::CommandList::ptr& pContext)
+	void STDMETHODCALLTYPE CFW1GlyphSheet::Flush(HAL::CommandList::ptr& pContext)
 	{
 		EnterCriticalSection(&m_flushCriticalSection);
 

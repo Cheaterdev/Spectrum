@@ -181,14 +181,14 @@ namespace FrameGraph
 	}
 	*/
 
-	Graphics::CommandList::ptr& FrameContext::get_list()
+	HAL::CommandList::ptr& FrameContext::get_list()
 	{
 
 		if (!list)
 		{
 			Graphics::CommandListType type = pass->get_type();
 
-			list = frame->start_list(pass->name, type);
+			list = (frame->start_list(pass->name, type));
 
 			for (auto info : pass->used.resource_creations)
 			{

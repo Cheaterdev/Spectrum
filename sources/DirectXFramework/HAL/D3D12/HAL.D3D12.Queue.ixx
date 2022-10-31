@@ -2,7 +2,7 @@ export module HAL:API.Queue;
 import :Types;
 import :Utils;
 import :Fence;
-import :Removeme;
+import :CommandList;
 
 export namespace HAL
 {

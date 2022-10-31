@@ -2,6 +2,7 @@ export module HAL:ResourceViews;
 import :Types;
 import :HLSL;
 import :API.Device;
+import :FrameManager;
 
 export
 {
@@ -135,7 +136,7 @@ export
 			HLSL::RaytracingAccelerationStructure scene;
 
 			RTXSceneView() = default;
-			RTXSceneView(HAL::Resource* resource, FrameResources& frame);
+			RTXSceneView(HAL::Resource* resource, HAL::FrameResources& frame);
 
 		};
 		class TextureView :public ResourceView
@@ -291,9 +292,9 @@ export
 				return uint2::max({ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
 			}
 
-			TextureView create_2d_slice(UINT slice, FrameResources& frame);
+			TextureView create_2d_slice(UINT slice, HAL::FrameResources& frame);
 
-			TextureView create_mip(UINT mip, FrameResources& frame);
+			TextureView create_mip(UINT mip, HAL::FrameResources& frame);
 
 
 		};
@@ -512,7 +513,7 @@ export
 
 			TextureView get_face(UINT face);
 
-			CubeView create_mip(UINT mip, FrameResources& frame);
+			CubeView create_mip(UINT mip, HAL::FrameResources& frame);
 		};
 
 		class BufferView : public ResourceView
