@@ -16,7 +16,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	instances_count = 0;
 
-	Graphics::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
+	HAL::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = HAL::PrimitiveTopologyType::TRIANGLE;
 	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
@@ -285,7 +285,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	auto begin = pipelines.begin();
 	auto end = begin;
-	//	auto view = meshes_ids->buffer->help_buffer->create_view<Graphics::FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(*list.frame_resources);
+	//	auto view = meshes_ids->buffer->help_buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(*list.frame_resources);
 
 
 
@@ -387,17 +387,17 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 {
 	shader = HAL::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
-	mshader = Graphics::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
-	mshader_voxel = Graphics::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
+	mshader = HAL::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
+	mshader_voxel = HAL::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
 
-	ashader = Graphics::amplification_shader::get_resource({ "shaders/mesh_shader.hlsl", "AS", 0, {} });
-	ashader_voxel = Graphics::amplification_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "AS", 0, {} });
-	voxel_geometry_shader = Graphics::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
+	ashader = HAL::amplification_shader::get_resource({ "shaders/mesh_shader.hlsl", "AS", 0, {} });
+	ashader_voxel = HAL::amplification_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "AS", 0, {} });
+	voxel_geometry_shader = HAL::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Graphics::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout).get());
+	indirect_command_signature = HAL::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout).get());
 
 	UINT max_meshes = 1024 * 1024;
 
@@ -439,12 +439,12 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
 		verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
 		verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
-		index_buffer = Graphics::IndexBuffer::make_buffer(data);
+		index_buffer = HAL::IndexBuffer::make_buffer(data);
 
-		vertex_buffer.reset(new Graphics::StructureBuffer<vec4>(8));
+		vertex_buffer.reset(new HAL::StructureBuffer<vec4>(8));
 		vertex_buffer->set_raw_data(verts);
 
-		draw_boxes_first = std::make_shared<Graphics::StructureBuffer<DrawIndexedArguments>>(1);
+		draw_boxes_first = std::make_shared<HAL::StructureBuffer<DrawIndexedArguments>>(1);
 
 		DrawIndexedArguments args;
 
@@ -459,19 +459,19 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 		{
 
-			boxes_command = Graphics::IndirectCommand::create_command<DrawIndexedArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>));
+			boxes_command = HAL::IndirectCommand::create_command<DrawIndexedArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>));
 
 		}
 	}
 
 
 	{
-		dispatch_buffer = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>));
+		dispatch_buffer = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>));
 	}
 
 	{
-		dispatch_buffer111 = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		dispatch_buffer111 = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 		DispatchArguments args;
 		args.ThreadGroupCountX = 1;
 		args.ThreadGroupCountY = 1;
@@ -480,7 +480,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	}
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_ids->buffer->create_view<HAL::FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(StaticCompiledGPUData::get()).buffer;
+		gather.GetCommands() = meshes_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(StaticCompiledGPUData::get()).buffer;
 
 		gather.GetMeshes_count() = meshes_ids->buffer->structuredBufferCount;
 
@@ -490,7 +490,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<HAL::FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(StaticCompiledGPUData::get()).buffer;
+		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(StaticCompiledGPUData::get()).buffer;
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer->structuredBufferCount;
 		gather_invisible = gather.compile(StaticCompiledGPUData::get());
 		//	gather_invisible = meshes_invisible_ids->buffer->help_buffer->get_resource_address();

@@ -27,7 +27,7 @@ class BinaryAsset : public Asset
         std::string get_data();
 
         virtual Asset_Type get_type();
-        virtual void update_preview(Graphics::Texture::ptr preview);
+        virtual void update_preview(HAL::Texture::ptr preview);
         virtual void try_register();
 		virtual void reload_resource() override;
     private:

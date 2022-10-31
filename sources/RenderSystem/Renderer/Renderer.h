@@ -79,12 +79,12 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 {
       
         HAL::vertex_shader::ptr shader;
-        Graphics::geometry_shader::ptr voxel_geometry_shader;
-        Graphics::mesh_shader::ptr mshader;
-        Graphics::mesh_shader::ptr mshader_voxel;
+        HAL::geometry_shader::ptr voxel_geometry_shader;
+        HAL::mesh_shader::ptr mshader;
+        HAL::mesh_shader::ptr mshader_voxel;
 
-        Graphics::amplification_shader::ptr ashader;
-        Graphics::amplification_shader::ptr ashader_voxel;
+        HAL::amplification_shader::ptr ashader;
+        HAL::amplification_shader::ptr ashader_voxel;
 
         IndirectCommand indirect_command_signature;
 
@@ -123,15 +123,15 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		virtual_gpu_buffer<Table::CommandData>::ptr commands_buffer[8];
 
 
-		Graphics::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
-        Graphics::StructureBuffer<DispatchArguments>::ptr dispatch_buffer111;
+		HAL::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
+        HAL::StructureBuffer<DispatchArguments>::ptr dispatch_buffer111;
 
         IndirectCommand dispatch_command;
 
 	
-		Graphics::StructureBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
-		Graphics::StructureBuffer<vec4>::ptr vertex_buffer;
-		Graphics::IndexBuffer::ptr index_buffer;
+		HAL::StructureBuffer<DrawIndexedArguments>::ptr draw_boxes_first;
+		HAL::StructureBuffer<vec4>::ptr vertex_buffer;
+		HAL::IndexBuffer::ptr index_buffer;
 		virtual_gpu_buffer<UINT>::ptr visible_boxes;
 		virtual_gpu_buffer<UINT>::ptr meshes_ids;
 		virtual_gpu_buffer<UINT>::ptr meshes_invisible_ids;
@@ -155,7 +155,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		Variable<bool> use_gpu_culling = Variable<bool>(false, "use_gpu_culling", this);
 		Variable<bool> clear_depth = Variable<bool>(true, "clear_depth", this);*/
 	
-       // Graphics::RootSignature::ptr my_signature;
+       // HAL::RootSignature::ptr my_signature;
 
         using ptr = s_ptr<mesh_renderer>;
         mesh_renderer();

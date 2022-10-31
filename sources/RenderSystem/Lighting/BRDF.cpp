@@ -6,8 +6,8 @@ import Graphics;
 void BRDF::create_new()
 {
 
-	texture.reset(new Graphics::Texture(HAL::ResourceDesc::Tex3D(Graphics::Format::R16G16B16A16_FLOAT, { 64, 64, 64 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
-	HAL::CommandList::ptr list(new HAL::CommandList(Graphics::CommandListType::DIRECT));
+	texture.reset(new HAL::Texture(HAL::ResourceDesc::Tex3D(HAL::Format::R16G16B16A16_FLOAT, { 64, 64, 64 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess)));
+	HAL::CommandList::ptr list(new HAL::CommandList(HAL::CommandListType::DIRECT));
 	list->begin("BRDF");
 
 

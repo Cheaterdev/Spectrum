@@ -53,18 +53,18 @@ public:
 				{
 
 
-					auto table = graphics.get_base().get_cpu_heap(Graphics::DescriptorHeapType::RTV).place(2);
+					auto table = graphics.get_base().get_cpu_heap(HAL::DescriptorHeapType::RTV).place(2);
 
 					{
-						Graphics::TextureViewDesc subres;
+						HAL::TextureViewDesc subres;
 
 						subres.ArraySize = 1;
 						subres.FirstArraySlice = 0;
 						subres.MipLevels = 1;
 						subres.MipSlice = i;
 
-						auto depth_view = gbuffer.depth_mips.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
-						auto normal_view = gbuffer.normals.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
+						auto depth_view = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres);
+						auto normal_view = gbuffer.normals.resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres);
 
 						table[0].place(depth_view.renderTarget);
 						table[1].place(normal_view.renderTarget);
@@ -91,8 +91,8 @@ public:
 						subres.MipLevels = 1;
 						subres.MipSlice = i - 1;
 
-						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
-						downsample.GetNormals() = gbuffer.normals.resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
+						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
+						downsample.GetNormals() = gbuffer.normals.resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
 					}
 					downsample.set(graphics);
 					graphics.draw(4);
@@ -124,7 +124,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 
 	{
-		dispatch_command = Graphics::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<DispatchArguments>));
+		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<DispatchArguments>));
 	}
 
 	{
@@ -326,7 +326,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	voxelization.GetInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
 	voxelization.GetInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
 
-	voxelization.GetVisibility() = visibility->buffer->create_view<Graphics::Texture3DView>(*list.frame_resources).mips[0].rwTexture3D;
+	voxelization.GetVisibility() = visibility->buffer->create_view<HAL::Texture3DView>(*list.frame_resources).mips[0].rwTexture3D;
 
 
 	if (all_scene_regen_counter)
@@ -393,7 +393,7 @@ void VoxelGI::debug(Graph& graph)
 
 	graph.add_pass<VoxelDebugData>("VoxelDebug", [this, size](VoxelDebugData& data, TaskBuilder& builder) {
 
-		builder.create(data.VoxelDebug, { ivec3(size,0),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.VoxelDebug, { ivec3(size,0),  HAL::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::RenderTarget);
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 
 		data.gbuffer.need(builder);
@@ -481,9 +481,9 @@ void VoxelGI::screen(Graph& graph)
 
 
 		data.gbuffer.need(builder, false);
-		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,0),  Graphics::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,0), Graphics::Format::R16G16B16A16_FLOAT,1 ,0 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,0), Graphics::Format::R16G16B16A16_FLOAT , 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.create(data.VoxelFramesCount, { ivec3(size.x, size.y,0),  HAL::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelIndirectNoise, { ivec3(size.x, size.y,0), HAL::Format::R16G16B16A16_FLOAT,1 ,0 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelIndirectFiltered, { ivec3(size.x, size.y,0), HAL::Format::R16G16B16A16_FLOAT , 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
 
@@ -629,7 +629,7 @@ void VoxelGI::screen(Graph& graph)
 				compute.set_pipeline(GetPSO<PSOS::DenoiserHistoryFix>());
 				{
 					Slots::DenoiserHistoryFix denoiser_history;
-					Graphics::TextureViewDesc subres;
+					HAL::TextureViewDesc subres;
 
 					subres.ArraySize = 1;
 					subres.FirstArraySlice = 0;
@@ -806,11 +806,11 @@ void VoxelGI::screen_reflection(Graph& graph)
 	graph.add_pass<ScreenReflection>("ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-		builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,0),  Graphics::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::UnorderedAccess);
-		builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,0),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::UnorderedAccess);
+		builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
-		//	data.downsampled_reflection = builder.create("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, Graphics::Format::R11G11B10_FLOAT, ResourceFlags::RenderTarget);
+		//	data.downsampled_reflection = builder.create("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, HAL::Format::R11G11B10_FLOAT, ResourceFlags::RenderTarget);
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
 		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
@@ -825,7 +825,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 			auto dir_and_pdf = *(data.noise_dir_pdf);
 			//	auto gi_filtered = *(data.gi_filtered);
 
-			//	Graphics::TextureView downsampled_reflection = *(data.downsampled_reflection);
+			//	HAL::TextureView downsampled_reflection = *(data.downsampled_reflection);
 
 
 
@@ -910,8 +910,8 @@ void VoxelGI::screen_reflection(Graph& graph)
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
 		data.gbuffer.need(builder, false);
-		builder.create(data.VoxelReflectionFiltered, { ivec3(size.x, size.y,0),  Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-		builder.create(data.prev_gi_temp, { ivec3(size.x, size.y,0), Graphics::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.VoxelReflectionFiltered, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+		builder.create(data.prev_gi_temp, { ivec3(size.x, size.y,0), HAL::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::RenderTarget);
 
 
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
@@ -1118,7 +1118,7 @@ void VoxelGI::lighting(Graph& graph)
 				ligthing.GetNormals() = normal.tex_result->texture_3d().texture3D;
 				ligthing.GetOutput() = tex_lighting.tex_result->texture_3d().mips[0].rwTexture3D;
 				ligthing.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				Graphics::Texture3DViewDesc subres;
+				HAL::Texture3DViewDesc subres;
 
 
 				subres.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;

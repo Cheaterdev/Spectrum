@@ -1,4 +1,4 @@
-export module Graphics:SIG;
+export module HAL:SIG;
 import stl.core;
 
 import :Concepts;

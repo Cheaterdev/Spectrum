@@ -72,8 +72,8 @@ void AssetManager::add_preview(Asset::ptr asset)
 
 			if (!preview || !preview->is_rt())
 			{
-				Graphics::Texture::ptr new_preview;
-				new_preview.reset(new Graphics::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { 256, 256 }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+				HAL::Texture::ptr new_preview;
+				new_preview.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { 256, 256 }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 				asset->holder->editor->preview = new_preview;
 			}
 
@@ -111,8 +111,8 @@ void AssetManager::add_preview(Asset::ptr asset)
 
 				if (!preview || !preview->is_rt())
 				{
-					Graphics::Texture::ptr new_preview;
-					new_preview.reset(new Graphics::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, 256, 256, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
+					HAL::Texture::ptr new_preview;
+					new_preview.reset(new HAL::Texture(CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_R16G16B16A16_FLOAT, 256, 256, 1, 0, 1, 0, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)));
 					asset->holder->editor->preview = new_preview;
 				}
 
@@ -287,7 +287,7 @@ Asset::~Asset()
 {
 }
 
-void Asset::update_preview(Graphics::Texture::ptr)
+void Asset::update_preview(HAL::Texture::ptr)
 {
 }
 void Asset::set_name(std::wstring name)
@@ -424,7 +424,7 @@ AssetStorage::AssetStorage(file::ptr f)
 		return *res;
 	};
 
-	on_preview.default_state = [this](std::function<void(const Graphics::Texture::ptr&)> f)
+	on_preview.default_state = [this](std::function<void(const HAL::Texture::ptr&)> f)
 	{
 		create_task([f, this]()
 			{
@@ -473,7 +473,7 @@ AssetStorage::AssetStorage(Asset::ptr _asset) : asset(_asset)
 	folder->add_asset(ptr(this));
 	update_preview();
 	mark_changed();
-	on_preview.default_state = [this](std::function<void(const Graphics::Texture::ptr&)> f)
+	on_preview.default_state = [this](std::function<void(const HAL::Texture::ptr&)> f)
 	{
 		f(editor->preview);
 	};
@@ -511,7 +511,7 @@ AssetStorage::ptr AssetStorage::try_load(file::ptr f)
 	return nullptr;
 }
 
-const Graphics::Texture::ptr& AssetStorage::get_preview()
+const HAL::Texture::ptr& AssetStorage::get_preview()
 {
 	return editor->preview;
 }

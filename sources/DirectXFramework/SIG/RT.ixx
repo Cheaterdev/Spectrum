@@ -1,8 +1,10 @@
 
-export module Graphics:RT;
+export module HAL:RT;
 
 import :Concepts;
+import :DescriptorHeap;
 
+import :CommandList;
 
 import :Types;
 export
@@ -10,8 +12,8 @@ export
 
 	struct CompiledRT
 	{
-		Graphics::HandleTableLight table_rtv;
-		Graphics::HandleTableLight table_dsv;
+		HAL::HandleTableLight table_rtv;
+		HAL::HandleTableLight table_dsv;
 
 
 
@@ -34,7 +36,7 @@ export
 		template<class Context, class RTV>
 		void place_rtv(CompiledRT& compiled, Context& context, RTV& rtv) const
 		{
-			compiled.table_rtv = context.get_cpu_heap(Graphics::DescriptorHeapType::RTV).place(sizeof(rtv) / sizeof(HAL::Handle));
+			compiled.table_rtv = context.get_cpu_heap(HAL::DescriptorHeapType::RTV).place(sizeof(rtv) / sizeof(HAL::Handle));
 			auto ptr = reinterpret_cast<HAL::Handle*>(&rtv);
 			for (UINT i = 0; i < (UINT)compiled.table_rtv.get_count(); i++)
 			{
@@ -50,7 +52,7 @@ export
 		template<class Context, class DSV>
 		void place_dsv(CompiledRT& compiled, Context& context, DSV& dsv) const
 		{
-			compiled.table_dsv = context.get_cpu_heap(Graphics::DescriptorHeapType::DSV).place(sizeof(dsv) / sizeof(HAL::Handle));
+			compiled.table_dsv = context.get_cpu_heap(HAL::DescriptorHeapType::DSV).place(sizeof(dsv) / sizeof(HAL::Handle));
 			auto ptr = reinterpret_cast<HAL::Handle*>(&dsv);
 			for (UINT i = 0; i < (UINT)compiled.table_dsv.get_count(); i++)
 			{

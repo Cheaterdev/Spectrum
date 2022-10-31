@@ -53,7 +53,7 @@ GUI::Elements::FlowGraph::comment::comment(canvas* canva, ::FlowGraph::window* w
     close_button->background_style = button::view_style::NO_BACKGROUND;
     close_button->get_label()->visible = false;
     close_button->get_image()->visible = true;
-    close_button->get_image()->texture = Graphics::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/window_close.png")));
+    close_button->get_image()->texture = HAL::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/window_close.png")));
     close_button->get_image()->docking = dock::FILL;
     close_button->padding = { 5, 5, 5, 5 };
     close_button->docking = dock::RIGHT;

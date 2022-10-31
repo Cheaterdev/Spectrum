@@ -17,9 +17,9 @@ protected:
 	virtual void process_tile_readback(uint3 pos, char level) = 0;
 
 public:
-	Graphics::Texture::ptr buffer;
+	HAL::Texture::ptr buffer;
 
-	Graphics::StructureBuffer<uint4>::ptr load_tiles_buffer;
+	HAL::StructureBuffer<uint4>::ptr load_tiles_buffer;
 	using ptr = std::shared_ptr<VisibilityBuffer>;
 
 	VisibilityBuffer(uint3 sizes);

@@ -8,9 +8,9 @@ using namespace FrameGraph;
 
 SkyRender::SkyRender()
 {
-	transmittance = Graphics::Texture::get_resource({ to_path(L"textures\\Transmit.dds"), false, false });
-	irradiance = Graphics::Texture::get_resource({ to_path(L"textures\\irradianceTexture.dds"), false, false });
-	inscatter = Graphics::Texture::get_resource({ to_path(L"textures\\inscatterTexture.dds"), false, false });
+	transmittance = HAL::Texture::get_resource({ to_path(L"textures\\Transmit.dds"), false, false });
+	irradiance = HAL::Texture::get_resource({ to_path(L"textures\\irradianceTexture.dds"), false, false });
+	inscatter = HAL::Texture::get_resource({ to_path(L"textures\\inscatterTexture.dds"), false, false });
 }
 
 
@@ -71,7 +71,7 @@ void SkyRender::generate(Graph& graph)
 	};
 
 	graph.pass<SkyData>("CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
-		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), Graphics::Format::R11G11B10_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
 		bool changed = (graph.sunDir - dir).length() > 0.001;
 
 		if (changed)
@@ -119,14 +119,14 @@ void SkyRender::generate(Graph& graph)
 
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Graphics::TextureViewDesc subres;
+					HAL::TextureViewDesc subres;
 
 					subres.ArraySize = 1;
 					subres.FirstArraySlice = i;
 					subres.MipLevels = 1;
 					subres.MipSlice = 0;
 
-					auto face = data.sky_cubemap->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
+					auto face = data.sky_cubemap->resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres);
 
 
 					Slots::SkyFace skyFace;
@@ -183,8 +183,8 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 	graph.pass<EnvData>("CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
 		builder.need(data.sky_cubemap, ResourceFlags::PixelRead);
 
-		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,0),  Graphics::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
-		builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,0),  Graphics::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,0),  HAL::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(data.sky_cubemap_filtered_diffuse, { ivec3(64, 64,0),  HAL::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
 
 		if (data.sky_cubemap.is_changed())
 		{
@@ -214,14 +214,14 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 				graphics.set_pipeline(GetPSO<PSOS::CubemapENV>(PSOS::CubemapENV::Level(std::min(m, 4u))));
 				for (unsigned int i = 0; i < 6; i++)
 				{
-					Graphics::TextureViewDesc subres;
+					HAL::TextureViewDesc subres;
 
 					subres.ArraySize = 1;
 					subres.FirstArraySlice = i;
 					subres.MipLevels = 1;
 					subres.MipSlice = m;
 
-					auto face = data.sky_cubemap_filtered->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
+					auto face = data.sky_cubemap_filtered->resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres);
 
 					if (i == 0) {
 						graphics.set_viewport(face.get_viewport());
@@ -246,14 +246,14 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 			for (unsigned int i = 0; i < 6; i++)
 			{
-				Graphics::TextureViewDesc subres;
+				HAL::TextureViewDesc subres;
 
 				subres.ArraySize = 1;
 				subres.FirstArraySlice = i;
 				subres.MipLevels = 1;
 				subres.MipSlice = 0;
 
-				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<Graphics::TextureView>(*graphics.get_base().frame_resources, subres);
+				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres);
 
 				if (i == 0) {
 					graphics.set_viewport(face.get_viewport());

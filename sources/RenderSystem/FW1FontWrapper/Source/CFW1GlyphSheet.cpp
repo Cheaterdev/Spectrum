@@ -134,8 +134,8 @@ namespace FW1FontWrapper
 	{
 		// Create sheet texture
 		HAL::ResourceDesc desc = HAL::ResourceDesc::Tex2D(HAL::Format::R8_UNORM, { m_sheetWidth, m_sheetHeight }, 1, m_mipLevelCount);
-		m_pTexture.reset(new Graphics::Texture(desc));
-		m_pCoordBuffer.reset(new Graphics::StructureBuffer<float4>(m_maxGlyphCount * 4));
+		m_pTexture.reset(new HAL::Texture(desc));
+		m_pCoordBuffer.reset(new HAL::StructureBuffer<float4>(m_maxGlyphCount * 4));
 		return S_OK;
 	}
 

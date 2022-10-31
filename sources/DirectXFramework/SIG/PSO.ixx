@@ -1,10 +1,11 @@
-export module Graphics:PSO;
+export module HAL:PSO;
 export import "PSO_defines.h";
 import Data;
 import Threading;
 import Profiling;
 
 import :Concepts;
+import :PipelineState;
 
 import :RootSignature;
 import Utils;
@@ -220,7 +221,7 @@ struct SimpleComputePSO {
 
 	}
 
-	Graphics::ComputePipelineState::ptr create();
+	HAL::ComputePipelineState::ptr create();
 };
 
 
@@ -235,39 +236,39 @@ struct  SimpleGraphicsPSO {
 	HAL::shader_header amplification;
 
 
-	std::vector<Graphics::Format> rtv_formats;
-	std::vector<Graphics::RenderTarget> blend;
+	std::vector<HAL::Format> rtv_formats;
+	std::vector<HAL::RenderTarget> blend;
 	std::string name;
 
 	bool conservative;
 	bool depth_write;
 	bool enable_depth;
-	Graphics::Format ds;
-	Graphics::ComparisonFunc depth_func;
-	Graphics::CullMode cull;
+	HAL::Format ds;
+	HAL::ComparisonFunc depth_func;
+	HAL::CullMode cull;
 	HAL::PrimitiveTopologyType topology;
 	char stencil_read_mask = 0;
 	char stencil_write_mask = 0;
 
 	bool enable_stencil = false;
-	Graphics::ComparisonFunc stencil_func;
-	Graphics::StencilOp stencil_pass_op;
+	HAL::ComparisonFunc stencil_func;
+	HAL::StencilOp stencil_pass_op;
 
 	SimpleGraphicsPSO(std::string name) :name(name)
 	{
 		//Log::get() << "PSO: " << name << Log::endl;
-		ds = Graphics::Format::UNKNOWN;
+		ds = HAL::Format::UNKNOWN;
 		conservative = false;
 		depth_write = true;
-		depth_func = Graphics::ComparisonFunc::LESS_EQUAL;
-		cull = Graphics::CullMode::Back;
+		depth_func = HAL::ComparisonFunc::LESS_EQUAL;
+		cull = HAL::CullMode::Back;
 		topology = HAL::PrimitiveTopologyType::TRIANGLE;
 		enable_depth = true;
-		stencil_func = Graphics::ComparisonFunc::ALWAYS;
-		stencil_pass_op = Graphics::StencilOp::Replace;
+		stencil_func = HAL::ComparisonFunc::ALWAYS;
+		stencil_pass_op = HAL::StencilOp::Replace;
 	}
 
-	Graphics::PipelineState::ptr create();
+	HAL::PipelineState::ptr create();
 };
 
 
@@ -388,18 +389,18 @@ typename T::PSOState::ptr GetPSO(KeyPair<typename T::Keys> k = KeyPair<typename 
 template<class T>
 struct AutoGenPSO
 {
-	Graphics::ComputePipelineStateDesc desc;
+	HAL::ComputePipelineStateDesc desc;
 
 	AutoGenPSO()
 	{
 		desc.root_signature = get_Signature(T::layout);
-		desc.shader = Graphics::compute_shader::get_resource(T::compute);
+		desc.shader = HAL::compute_shader::get_resource(T::compute);
 	}
 
 
-	Graphics::ComputePipelineState::ptr create_pso(PSO pso, std::string name)
+	HAL::ComputePipelineState::ptr create_pso(PSO pso, std::string name)
 	{
-		return Graphics::ComputePipelineState::create(desc, name);
+		return HAL::ComputePipelineState::create(desc, name);
 	}
 };
 

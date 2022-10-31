@@ -1,4 +1,4 @@
-export module Graphics:VirtualBuffer;
+export module HAL:VirtualBuffer;
 
 export import Allocators;
 
@@ -13,14 +13,11 @@ export import Math;
 import :Buffer;
 import :Types;
 
-import :Definitions;
-using namespace HAL;
-
 export
 {
 	constexpr bool use_virtual = true;
 
-	namespace Graphics
+	namespace HAL
 	{
 
 
@@ -157,7 +154,7 @@ export
 				else
 					buffer = std::make_shared<StructureBuffer<Type>>(std::min(256_mb, max_size), countType, flags, HeapType::DEFAULT, state);
 
-				// buffer = std::make_shared<Graphics::StructureBuffer<T>>(max_size, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, DefaultAllocator::get());
+				// buffer = std::make_shared<HAL::StructureBuffer<T>>(max_size, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, DefaultAllocator::get());
 			}
 		};
 

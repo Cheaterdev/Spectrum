@@ -16,11 +16,11 @@ class Texture3DMultiTiles
 	HAL::update_tiling_info tilings_info;
 public:
 
-	Graphics::Texture::ptr tex_dynamic;
-	Graphics::Texture::ptr tex_static;
+	HAL::Texture::ptr tex_dynamic;
+	HAL::Texture::ptr tex_static;
 
 
-	Graphics::Texture::ptr tex_result;
+	HAL::Texture::ptr tex_result;
 
 
 	void flush(HAL::CommandList& list)
@@ -32,10 +32,10 @@ public:
 
 	void set(HAL::ResourceDesc desc)
 	{
-		tex_dynamic.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
-		tex_static.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
+		tex_dynamic.reset(new HAL::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
+		tex_static.reset(new HAL::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
-		tex_result.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
+		tex_result.reset(new HAL::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
 
 		tex_dynamic->get_tiled_manager().on_load = [this](ivec4 pos) {
@@ -102,7 +102,7 @@ class Texture3DRefTiles
 	grid<ivec3, bool> dynamic_tiles;
 
 public:
-	Graphics::Texture::ptr tex_result;
+	HAL::Texture::ptr tex_result;
 
 
 	void flush(HAL::CommandList& list)
@@ -114,7 +114,7 @@ public:
 
 	void set(HAL::ResourceDesc desc)
 	{
-		tex_result.reset(new Graphics::Texture(desc, Graphics::ResourceState::PIXEL_SHADER_RESOURCE, Graphics::HeapType::RESERVED));
+		tex_result.reset(new HAL::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
 		static_tiles.resize(tex_result->get_tiled_manager().get_tiles_count(), 0);
 		dynamic_tiles.resize(tex_result->get_tiled_manager().get_tiles_count(), 0);
@@ -228,8 +228,8 @@ private:
 
 	struct EyeData :public prop_handler
 	{
-		Graphics::Texture::ptr downsampled_reflection;
-		Graphics::Texture::ptr current_gi_texture;
+		HAL::Texture::ptr downsampled_reflection;
+		HAL::Texture::ptr current_gi_texture;
 
 		Events::prop<ivec2> size;
 		EyeData();
@@ -240,8 +240,8 @@ private:
 	bool recreate_static = false;
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
-	//	Graphics::StructureBuffer<uint2>::ptr hi;
-	//	Graphics::StructureBuffer<uint2>::ptr low;
+	//	HAL::StructureBuffer<uint2>::ptr hi;
+	//	HAL::StructureBuffer<uint2>::ptr low;
 
 	ivec3 lighed_to_albedo_coeff;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;

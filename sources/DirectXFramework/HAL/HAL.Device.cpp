@@ -17,7 +17,7 @@ namespace HAL
 			q = nullptr;
 
 
-		Singleton<Graphics::StaticCompiledGPUData>::reset();
+		Singleton<HAL::StaticCompiledGPUData>::reset();
 		HAL::DescriptorHeapManager::reset();
 		HAL::PipelineStateCache::reset();
 

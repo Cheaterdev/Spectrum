@@ -1,18 +1,16 @@
-export module Graphics:GPUTimer;
+export module HAL:GPUTimer;
 
 import :Buffer;
+import :Queue;
 import Singleton;
 import IdGenerator;
 
-import HAL;
-//using namespace HAL;
-import :Definitions;
 
 
 export
 {
 
-	namespace Graphics
+	namespace HAL
 	{
 
 

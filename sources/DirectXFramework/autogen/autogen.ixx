@@ -1,4 +1,4 @@
-export module Graphics:Autogen;
+export module HAL:Autogen;
 
 import Math;
 import :Buffer;
@@ -19,8 +19,8 @@ import :RootSignature;
 import Utils;
 import serialization;
 import :Types;
+import :PipelineState;
 
-import :Definitions;
 export
 {
 
@@ -169,10 +169,10 @@ export
 	#include "rtx\MainRTX.h"
 }
 
-static enum_array<Layouts, Graphics::RootLayout::ptr> signatures;
-export namespace Graphics{
+static enum_array<Layouts, HAL::RootLayout::ptr> signatures;
+export namespace HAL{
 	//void init_signatures();
-	//Graphics::RootLayout::ptr get_Signature(Layouts id);
+	//HAL::RootLayout::ptr get_Signature(Layouts id);
 	//void init_pso(enum_array<PSO, PSOBase::ptr>&);
 	//std::optional<SlotID> get_slot(std::string_view slot_name);
 	//UINT get_slot_id(SlotID id);
@@ -183,7 +183,7 @@ void init_signatures()
 	signatures[Layouts::FrameLayout] = AutoGenSignatureDesc<FrameLayout>().create_signature(Layouts::FrameLayout);
 	signatures[Layouts::DefaultLayout] = AutoGenSignatureDesc<DefaultLayout>().create_signature(Layouts::DefaultLayout);
 }
-Graphics::RootLayout::ptr get_Signature(Layouts id)
+HAL::RootLayout::ptr get_Signature(Layouts id)
 {
 	return signatures[id];
 }

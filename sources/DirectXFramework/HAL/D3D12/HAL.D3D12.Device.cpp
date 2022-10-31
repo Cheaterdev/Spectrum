@@ -1,6 +1,6 @@
-module Graphics;
+module HAL:Device;
+import :Debug;
 
-import HAL;
 import d3d12;
 import Math;
 import Utils;

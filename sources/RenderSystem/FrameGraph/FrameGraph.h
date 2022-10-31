@@ -63,7 +63,7 @@ namespace FrameGraph
 	struct TextureDesc
 	{
 		ivec3 size;
-		Graphics::Format format;
+		HAL::Format format;
 		uint array_count;
 		uint mip_count;
 
@@ -88,7 +88,7 @@ namespace FrameGraph
 
 		virtual void init(ResourceAllocInfo& info) = 0;
 
-		virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) = 0;
+		virtual void init_view(ResourceAllocInfo& info, HAL::FrameResources& frame) = 0;
 	};
 
 
@@ -124,11 +124,11 @@ namespace FrameGraph
 		ResourceFlags flags;
 
 
-		Graphics::ResourceHandle alloc_ptr;
+		HAL::ResourceHandle alloc_ptr;
 		ResourceAllocInfo* orig = nullptr;
 
 		HAL::ResourceDesc d3ddesc;
-		Graphics::HeapType heap_type;
+		HAL::HeapType heap_type;
 		// setup
 		Pass* valid_from = nullptr;
 		Pass* valid_to = nullptr;
@@ -142,11 +142,11 @@ namespace FrameGraph
 		std::vector<ResourceRWState> states;
 		int last_writer;
 		//compile
-		std::map<Graphics::ResourceHandle, HAL::Resource::ptr> resource_places;
+		std::map<HAL::ResourceHandle, HAL::Resource::ptr> resource_places;
 		HAL::Resource::ptr resource;
 
 		std::shared_ptr<ResourceHandler> handler;
-		std::shared_ptr<Graphics::ResourceView> view;
+		std::shared_ptr<HAL::ResourceView> view;
 
 		bool passed = false;
 		size_t frame_id;
@@ -230,7 +230,7 @@ namespace FrameGraph
 			UniversalHandler(const Desc& desc) :desc(desc)
 			{
 
-				//info->buffer = Graphics::BufferView();
+				//info->buffer = HAL::BufferView();
 			}
 			UniversalHandler(std::string_view name) :name(name)
 			{
@@ -242,17 +242,17 @@ namespace FrameGraph
 				info.d3ddesc = desc.create_resource_desc(info.flags);
 			}
 
-			virtual void init_view(ResourceAllocInfo& info, Graphics::FrameResources& frame) override
+			virtual void init_view(ResourceAllocInfo& info, HAL::FrameResources& frame) override
 			{
 				info.init_view<View>(frame, desc.as_view(info.flags));
 			}
 		};
 
-		template<class T, Graphics::Format::Formats format>
+		template<class T, HAL::Format::Formats format>
 		struct FormattedDesc
 		{
 
-			using View = Graphics::FormattedBufferView<T, format>;
+			using View = HAL::FormattedBufferView<T, format>;
 			uint count;
 
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
@@ -267,7 +267,7 @@ namespace FrameGraph
 			}
 
 
-			Graphics::FormattedBufferViewDesc as_view(ResourceFlags resflags)
+			HAL::FormattedBufferViewDesc as_view(ResourceFlags resflags)
 			{
 				return { 0, count * sizeof(Underlying<T>) };
 			}
@@ -277,7 +277,7 @@ namespace FrameGraph
 		struct StructuredDesc
 		{
 
-			using View = Graphics::StructuredBufferView<T>;
+			using View = HAL::StructuredBufferView<T>;
 			uint count;
 			bool counted;
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
@@ -301,7 +301,7 @@ namespace FrameGraph
 			}
 
 
-			Graphics::StructuredBufferViewDesc as_view(ResourceFlags resflags)
+			HAL::StructuredBufferViewDesc as_view(ResourceFlags resflags)
 			{
 				return { 0, count * sizeof(Underlying<T>), counted };
 			}
@@ -311,9 +311,9 @@ namespace FrameGraph
 		struct TextureDesc
 		{
 
-			using View = Graphics::TextureView;
+			using View = HAL::TextureView;
 			ivec3 size;
-			Graphics::Format format;
+			HAL::Format format;
 			UINT array_count;
 			UINT mip_count;
 
@@ -356,7 +356,7 @@ namespace FrameGraph
 			}
 
 
-			Graphics::TextureViewDesc as_view(ResourceFlags resflags)
+			HAL::TextureViewDesc as_view(ResourceFlags resflags)
 			{
 				return { 0, mip_count, 0, array_count };
 			}
@@ -365,9 +365,9 @@ namespace FrameGraph
 		struct Texture3DDesc
 		{
 
-			using View = Graphics::Texture3DView;
+			using View = HAL::Texture3DView;
 			ivec3 size;
-			Graphics::Format format;
+			HAL::Format format;
 			UINT mip_count;
 
 			HAL::ResourceDesc create_resource_desc(ResourceFlags resflags)
@@ -409,7 +409,7 @@ namespace FrameGraph
 			}
 
 
-			Graphics::Texture3DViewDesc as_view(ResourceFlags resflags)
+			HAL::Texture3DViewDesc as_view(ResourceFlags resflags)
 			{
 				return { 0, mip_count };
 			}
@@ -419,9 +419,9 @@ namespace FrameGraph
 		struct CubeDesc
 		{
 
-			using View = Graphics::CubeView;
+			using View = HAL::CubeView;
 			ivec3 size;
-			Graphics::Format format;
+			HAL::Format format;
 			UINT array_count;
 			UINT mip_count;
 
@@ -464,14 +464,14 @@ namespace FrameGraph
 			}
 
 
-			Graphics::CubeViewDesc as_view(ResourceFlags resflags)
+			HAL::CubeViewDesc as_view(ResourceFlags resflags)
 			{
 				return { 0, mip_count, 0, array_count * 6 };
 			}
 		};
 
 
-		template<class T, Graphics::Format::Formats format>
+		template<class T, HAL::Format::Formats format>
 		using FormattedBuffer = UniversalHandler<FormattedDesc<T, format>>;
 
 
@@ -499,16 +499,16 @@ namespace FrameGraph
 
 		std::set<ResourceAllocInfo*> passed_resources;
 
-		Graphics::ResourceHeapAllocator<Thread::Free> allocator;
-		Graphics::ResourceHeapAllocator<Thread::Free> static_allocator;
+		HAL::ResourceHeapAllocator<Thread::Free> allocator;
+		HAL::ResourceHeapAllocator<Thread::Free> static_allocator;
 
 
 		HAL::FrameResourceManager frames;
 		HAL::FrameResources::ptr current_frame;
 
-		std::map<int, Graphics::ResourceHeapAllocator<Thread::Free>> frame_allocs;
+		std::map<int, HAL::ResourceHeapAllocator<Thread::Free>> frame_allocs;
 
-		Graphics::ResourceHeapAllocator<Thread::Free>* current_alloc;
+		HAL::ResourceHeapAllocator<Thread::Free>* current_alloc;
 		Pass* current_pass = nullptr;
 		void begin(Pass* pass);
 
@@ -592,7 +592,7 @@ namespace FrameGraph
 		}
 
 		//void free_texture(ResourceHandler* handler);
-		void pass_texture(std::string name, Graphics::Texture::ptr tex, ResourceFlags flags = ResourceFlags::None);
+		void pass_texture(std::string name, HAL::Texture::ptr tex, ResourceFlags flags = ResourceFlags::None);
 
 
 		void create_resources();
@@ -616,20 +616,20 @@ namespace FrameGraph
 	struct FrameContext
 	{
 		Pass* pass;
-		Graphics::FrameResources::ptr frame;
+		HAL::FrameResources::ptr frame;
 
-		std::list<Graphics::ResourceView> textureViews;
+		std::list<HAL::ResourceView> textureViews;
 
 		HAL::CommandList::ptr list;
 
 		HAL::CommandList::ptr& get_list();
-		void begin(Pass* pass, Graphics::FrameResources::ptr& frame);
+		void begin(Pass* pass, HAL::FrameResources::ptr& frame);
 		void end();
 
 
 		void execute();
 
-		void register_subview(const Graphics::ResourceView& view)
+		void register_subview(const HAL::ResourceView& view)
 		{
 			textureViews.push_back(view);
 		}
@@ -661,7 +661,7 @@ namespace FrameGraph
 		FrameContext context;
 		std::set<Pass*> related;
 		std::future<void> render_task;
-		Graphics::FenceWaiter fence_end;
+		HAL::FenceWaiter fence_end;
 
 		int graphic_count = 0;
 		int compute_count = 0;
@@ -670,18 +670,18 @@ namespace FrameGraph
 
 		virtual bool setup(TaskBuilder& builder) = 0;
 
-		Graphics::CommandListType get_type()
+		HAL::CommandListType get_type()
 		{
-			Graphics::CommandListType type = Graphics::CommandListType::DIRECT;
+			HAL::CommandListType type = HAL::CommandListType::DIRECT;
 
 			if (check(flags & PassFlags::Compute))
-				type = Graphics::CommandListType::COMPUTE;
+				type = HAL::CommandListType::COMPUTE;
 
 			return type;
 		}
 		void compile(TaskBuilder& builder);
 
-		virtual void render(Graphics::FrameResources::ptr& frame) = 0;
+		virtual void render(HAL::FrameResources::ptr& frame) = 0;
 		void wait();
 		void execute();
 
@@ -724,7 +724,7 @@ namespace FrameGraph
 			return res;
 		}
 
-		virtual void render(Graphics::FrameResources::ptr& frame) override
+		virtual void render(HAL::FrameResources::ptr& frame) override
 		{
 			if (!enabled || !renderable)  return;
 

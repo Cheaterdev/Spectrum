@@ -21,7 +21,7 @@ namespace GUI
         class toogle_icon : public GUI::Elements::image
         {
           //      GUI::Elements::tree_element* owner;
-				Graphics::Texture::ptr tex_closed, tex_opened;
+				HAL::Texture::ptr tex_closed, tex_opened;
             public:
 
                 using ptr = s_ptr<toogle_icon>;
@@ -133,7 +133,7 @@ namespace GUI
                 toogle_icon::ptr	open_icon(new toogle_icon());
 
                 open_icon->on_toogle = [tree]() {tree->toogle();};
-                //  open_icon->texture = Graphics::Texture::null;
+                //  open_icon->texture = HAL::Texture::null;
               //    open_icon->size = { 16, 16 }; // size_type::MATCH_PARENT;
                 open_icon->docking = dock::LEFT;
 
@@ -216,8 +216,8 @@ namespace GUI
 
                 virtual void on_empty()
                 {
-                    //      open_icon->texture = Graphics::Texture::null;
-                    //      icon->texture = Graphics::Texture::null;
+                    //      open_icon->texture = HAL::Texture::null;
+                    //      icon->texture = HAL::Texture::null;
                 }
 
 

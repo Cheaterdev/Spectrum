@@ -20,7 +20,7 @@ namespace PSOS
 			mpso.pixel.entry_point = "PS";
 			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { Graphics::Format::R8G8B8A8_UNORM };
+			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM };
 			mpso.blend = { HAL::Blends::AlphaBlend };
 			return mpso;
 		}

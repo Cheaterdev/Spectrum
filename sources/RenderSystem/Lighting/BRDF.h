@@ -3,7 +3,7 @@
 
 class BRDF: public TextureAsset
 {
-	Graphics::Texture::ptr brdf_texture;
+	HAL::Texture::ptr brdf_texture;
 
 public:
 

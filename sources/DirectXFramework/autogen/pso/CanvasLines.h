@@ -29,10 +29,10 @@ namespace PSOS
 			mpso.hull.entry_point = "HS";
 			mpso.hull.flags = 0;
 			
-			mpso.rtv_formats = { Graphics::Format::R8G8B8A8_UNORM };
+			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM };
 			mpso.blend = { HAL::Blends::AlphaBlend };
 			mpso.enable_depth  = false;
-			mpso.cull  = Graphics::CullMode::None;
+			mpso.cull  = HAL::CullMode::None;
 			mpso.topology  = HAL::PrimitiveTopologyType::PATCH;
 			return mpso;
 		}

@@ -20,7 +20,7 @@ namespace PSOS
 			mpso.pixel.entry_point = "DX10_SMAALumaEdgeDetectionPS";
 			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { Graphics::Format::R8G8_UNORM };
+			mpso.rtv_formats = { HAL::Format::R8G8_UNORM };
 			mpso.blend = {  };
 			return mpso;
 		}

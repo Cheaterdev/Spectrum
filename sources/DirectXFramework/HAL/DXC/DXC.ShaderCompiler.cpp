@@ -1,6 +1,6 @@
 
 module HAL:ShaderCompiler;
-
+import wrl;
 import Singleton;
 import FileSystem;
 import FileDepender;

@@ -8,23 +8,23 @@ namespace GUI
 	{
 		using Vertex = Table::vertex_input;
 
-		Graphics::HandleTable sampler_table;
+		HAL::HandleTable sampler_table;
 
-		Graphics::IndexBuffer::ptr index_buffer;
+		HAL::IndexBuffer::ptr index_buffer;
 		std::vector<Vertex> vertexes;
 
 		std::vector<HLSL::Texture2D<float4>> textures_handles;
 		std::vector<HAL::Handle> samplers_handles;
 
 		std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
-		Graphics::PipelineState::ptr current_state;
+		HAL::PipelineState::ptr current_state;
 	public:
 		int counter = 0;
 		using ptr = s_ptr<NinePatch>;
 		NinePatch();
-		void draw(Graphics::context& c, Graphics::PipelineState::ptr pipeline_state, rect r);
+		void draw(Graphics::context& c, HAL::PipelineState::ptr pipeline_state, rect r);
 		void draw(Graphics::context& c, GUI::Texture& item, rect r);
-		void draw(Graphics::context& c, GUI::Texture& item, rect r, Graphics::PipelineState::ptr pipeline_state);
+		void draw(Graphics::context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state);
 		void flush(Graphics::context& c);
 	};
 
@@ -59,7 +59,7 @@ namespace GUI
 
 	public:
 
-		//     Graphics::RootSignature::ptr root_signature;
+		//     HAL::RootSignature::ptr root_signature;
 
 		using ptr = s_ptr<Renderer>;
 		using wptr = w_ptr<Renderer>;
@@ -72,7 +72,7 @@ namespace GUI
 		void flush(Graphics::context& c);
 
 		void draw(Graphics::context& c, GUI::Texture& item, rect r);
-		void draw(Graphics::context& c, Graphics::PipelineState::ptr state, rect r);
+		void draw(Graphics::context& c, HAL::PipelineState::ptr state, rect r);
 		Renderer();
 
 		void start()

@@ -177,7 +177,7 @@ public:
 	virtual void try_register();
 
 	virtual Asset_Type get_type();
-	virtual void update_preview(Graphics::Texture::ptr preview);
+	virtual void update_preview(HAL::Texture::ptr preview);
 	virtual AssetStorage::ptr  register_new(std::wstring name = L"", Guid g = Guid());
 	virtual void reload_resource() override { }
 

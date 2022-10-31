@@ -236,7 +236,7 @@ void materials::universal_material::generate_material()
 	auto raytracing_str = context->hit_shader.uniforms + include_file_raytacing->get_data() + context->hit_shader.text;
 
 
-	raytracing_lib = Graphics::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true });
+	raytracing_lib = HAL::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true });
 	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context);
 	ps_uniforms = context->uniforms_ps;
 

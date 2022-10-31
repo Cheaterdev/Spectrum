@@ -1,34 +1,33 @@
-
-
-import Graphics;
+import HAL;
 
 import Data;
 import Profiling;
 import serialization;
 
-void init_pso(enum_array<PSO, PSOBase::ptr>&);
-Graphics::ComputePipelineState::ptr SimpleComputePSO::create()
-{
-	Graphics::ComputePipelineStateDesc desc;
-	desc.root_signature = Graphics::get_Signature(root_signature);
-	desc.shader = Graphics::compute_shader::get_resource(compute);
 
-	return Graphics::ComputePipelineState::create(desc, name);
+void init_pso(enum_array<PSO, PSOBase::ptr>&);
+HAL::ComputePipelineState::ptr SimpleComputePSO::create()
+{
+	HAL::ComputePipelineStateDesc desc;
+	desc.root_signature = HAL::get_Signature(root_signature);
+	desc.shader = HAL::compute_shader::get_resource(compute);
+
+	return HAL::ComputePipelineState::create(desc, name);
 }
 
-Graphics::PipelineState::ptr SimpleGraphicsPSO::create()
+HAL::PipelineState::ptr SimpleGraphicsPSO::create()
 {
-	Graphics::PipelineStateDesc desc;
-	desc.root_signature = Graphics::get_Signature(root_signature);
+	HAL::PipelineStateDesc desc;
+	desc.root_signature = HAL::get_Signature(root_signature);
 	if (!vertex.entry_point.empty())	desc.vertex = HAL::vertex_shader::get_resource(vertex);
 	if (!pixel.entry_point.empty())	desc.pixel = HAL::pixel_shader::get_resource(pixel);
 
-	if (!geometry.entry_point.empty())	desc.geometry = Graphics::geometry_shader::get_resource(geometry);
-	if (!domain.entry_point.empty())	desc.domain = Graphics::domain_shader::get_resource(domain);
-	if (!hull.entry_point.empty())	desc.hull = Graphics::hull_shader::get_resource(hull);
+	if (!geometry.entry_point.empty())	desc.geometry = HAL::geometry_shader::get_resource(geometry);
+	if (!domain.entry_point.empty())	desc.domain = HAL::domain_shader::get_resource(domain);
+	if (!hull.entry_point.empty())	desc.hull = HAL::hull_shader::get_resource(hull);
 
-	if (!mesh.entry_point.empty())	desc.mesh = Graphics::mesh_shader::get_resource(mesh);
-	if (!amplification.entry_point.empty())	desc.amplification = Graphics::amplification_shader::get_resource(amplification);
+	if (!mesh.entry_point.empty())	desc.mesh = HAL::mesh_shader::get_resource(mesh);
+	if (!amplification.entry_point.empty())	desc.amplification = HAL::amplification_shader::get_resource(amplification);
 
 
 	desc.rtv.rtv_formats = rtv_formats;
@@ -50,7 +49,7 @@ Graphics::PipelineState::ptr SimpleGraphicsPSO::create()
 	desc.blend.render_target[i] = blend[i];
 
 	desc.blend.independ_blend = rtv_formats.size() == blend.size();
-	return Graphics::PipelineState::create(desc, name);
+	return HAL::PipelineState::create(desc, name);
 }
 
 PSOHolder::PSOHolder()

@@ -21,38 +21,38 @@ namespace HAL
 	{
 //	GPUTimer::GPUTimer()
 //	{
-//		id = Singleton<Graphics::GPUTimeManager>::get().get_id();
+//		id = Singleton<HAL::GPUTimeManager>::get().get_id();
 //	}
 //
 //	GPUTimer::~GPUTimer()
 //	{
-//		Singleton<Graphics::GPUTimeManager>::get().put_id(id);
+//		Singleton<HAL::GPUTimeManager>::get().put_id(id);
 //	}
 //
 //	void GPUTimer::start(Eventer* list)
 //	{
-//		Singleton<Graphics::GPUTimeManager>::get().start(*this, list);
+//		Singleton<HAL::GPUTimeManager>::get().start(*this, list);
 //	}
 //
 //	void GPUTimer::end(Eventer* list)
 //	{
-//		Singleton<Graphics::GPUTimeManager>::get().end(*this, list);
+//		Singleton<HAL::GPUTimeManager>::get().end(*this, list);
 //		list = nullptr;
 //	}
 //
 //	float GPUTimer::get_time()
 //	{
-//		return Singleton<Graphics::GPUTimeManager>::get().get_time(*this);
+//		return Singleton<HAL::GPUTimeManager>::get().get_time(*this);
 //	}
 //
 //	double GPUTimer::get_start()
 //	{
-//		return Singleton<Graphics::GPUTimeManager>::get().get_start(*this);
+//		return Singleton<HAL::GPUTimeManager>::get().get_start(*this);
 //	}
 //
 //	double GPUTimer::get_end()
 //	{
-//		return Singleton<Graphics::GPUTimeManager>::get().get_end(*this);
+//		return Singleton<HAL::GPUTimeManager>::get().get_end(*this);
 //	}
 //	QueryHeap::QueryHeap(UINT max_count, D3D12_QUERY_HEAP_TYPE type)
 //	{
@@ -88,14 +88,14 @@ namespace HAL
 //		compiler.SetName(L"SpectrumCommandList");
 //
 //
-//		//debug_buffer = std::make_shared<Graphics::StructureBuffer<Table::DebugStruct>>(64, Graphics::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+//		//debug_buffer = std::make_shared<HAL::StructureBuffer<Table::DebugStruct>>(64, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 //	}
 //
 //	void CommandList::setup_debug(SignatureDataSetter* setter)
 //	{
 //		//if (!current_pipeline->debuggable) return;
 //		//Slots::DebugInfo info;
-//		//Graphics::StructureBuffer<Table::DebugStruct>* structured = static_cast<Graphics::StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
+//		//HAL::StructureBuffer<Table::DebugStruct>* structured = static_cast<HAL::StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
 //		//info.GetDebug() = structured->rwStructuredBuffer;
 //		//info.set(*setter);
 //
@@ -558,7 +558,7 @@ namespace HAL
 //	*/
 //	//void SignatureDataSetter::set_layout(Layouts layout)
 //	//{
-//	//	set_signature(Graphics::get_Signature(layout));
+//	//	set_signature(HAL::get_Signature(layout));
 //	//}
 //	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
 //	{

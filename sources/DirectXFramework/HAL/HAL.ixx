@@ -37,6 +37,24 @@ export import :PipelineState;
 export import :CommandList;
 
 
+export import :Raytracing;
+
+export import :VirtualBuffer;
+export import :Buffer;
+export import :GPUTimer;
+
+
+export import :SIG;
+export import :RT;
+export import :Layout;
+export import :Slots;
+export import :PSO;
+export import :RTX;
+export import :Enums;
+
+export import :Autogen;
+
+
 export namespace HAL
 {
 	void init();

@@ -2,9 +2,9 @@
 #include "pch_render.h"
 
 #include "FrameGraph.h"
-import Graphics;
+import HAL;
 
-using namespace Graphics;
+using namespace HAL;
 
 
 
@@ -109,13 +109,13 @@ namespace FrameGraph
 		current_pass = nullptr;
 	}
 
-	void TaskBuilder::pass_texture(std::string name, Graphics::Texture::ptr tex, ResourceFlags flags)
+	void TaskBuilder::pass_texture(std::string name, HAL::Texture::ptr tex, ResourceFlags flags)
 	{
 		auto tex_desc = tex->get_desc().as_texture();
 		if (tex_desc.is2D())
 		{
 			Handlers::Texture h(name);
-			create(h, { ivec3(0,0,0), Graphics::Format::UNKNOWN, 0 }, flags);
+			create(h, { ivec3(0,0,0), HAL::Format::UNKNOWN, 0 }, flags);
 			auto& info = *h.info;
 			info.passed = true;
 
@@ -134,7 +134,7 @@ namespace FrameGraph
 		else if (tex_desc.is3D())
 		{
 			Handlers::Texture3D h(name);
-			create(h, { ivec3(0,0,0), Graphics::Format::UNKNOWN, }, flags);
+			create(h, { ivec3(0,0,0), HAL::Format::UNKNOWN, }, flags);
 			auto& info = *h.info;
 			info.passed = true;
 
@@ -186,7 +186,7 @@ namespace FrameGraph
 
 		if (!list)
 		{
-			Graphics::CommandListType type = pass->get_type();
+			HAL::CommandListType type = pass->get_type();
 
 			list = (frame->start_list(pass->name, type));
 
@@ -219,7 +219,7 @@ namespace FrameGraph
 		return list;
 	}
 
-	void FrameContext::begin(Pass* pass, Graphics::FrameResources::ptr& frame) {
+	void FrameContext::begin(Pass* pass, HAL::FrameResources::ptr& frame) {
 
 		this->pass = pass;
 		this->frame = frame;
@@ -506,14 +506,14 @@ namespace FrameGraph
 
 		for (auto pass : enabled_passes)
 		{
-			Graphics::CommandListType type = pass->get_type();
+			HAL::CommandListType type = pass->get_type();
 
-			bool sync_to_graphics = last_graphics && type == Graphics::CommandListType::DIRECT;
-			bool sync_to_compute = last_compute && type == Graphics::CommandListType::COMPUTE;
+			bool sync_to_graphics = last_graphics && type == HAL::CommandListType::DIRECT;
+			bool sync_to_compute = last_compute && type == HAL::CommandListType::COMPUTE;
 
 
 
-			if (type == Graphics::CommandListType::COMPUTE)
+			if (type == HAL::CommandListType::COMPUTE)
 				pass->prev_pass = last_compute;
 			else
 				pass->prev_pass = last_graphics;
@@ -565,7 +565,7 @@ namespace FrameGraph
 			}
 
 
-			if (type == Graphics::CommandListType::COMPUTE)
+			if (type == HAL::CommandListType::COMPUTE)
 				last_compute = pass;
 			else
 				last_graphics = pass;
@@ -632,13 +632,13 @@ namespace FrameGraph
 					auto commandList = pass->context.list;
 					if (!commandList) continue;
 
-					Graphics::CommandListType list_type = commandList->get_type();
+					HAL::CommandListType list_type = commandList->get_type();
 
 					if (pass->wait_pass)
 					{
 						auto waitCommandList = pass->wait_pass->context.list;
 
-						//if(list_type == Graphics::CommandListType::COMPUTE)
+						//if(list_type == HAL::CommandListType::COMPUTE)
 							waitCommandList->prepare_transitions(commandList.get(), false);
 					}
 					else
@@ -647,7 +647,7 @@ namespace FrameGraph
 					{
 						auto waitCommandList = pass->prev_pass->context.list;
 
-					//	if (list_type == Graphics::CommandListType::DIRECT)
+					//	if (list_type == HAL::CommandListType::DIRECT)
 						if(waitCommandList) waitCommandList->prepare_transitions(commandList.get(), true);
 					}
 
@@ -805,7 +805,7 @@ namespace FrameGraph
 
 					UINT transitions = 0;
 
-					enum_array<Graphics::CommandListType, enum_array<Graphics::CommandListType, UINT>> call_ids = {};
+					enum_array<HAL::CommandListType, enum_array<HAL::CommandListType, UINT>> call_ids = {};
 
 
 					auto flush = [&]()
@@ -848,7 +848,7 @@ namespace FrameGraph
 					for (auto& pass : enabled_passes)
 					{
 
-						Graphics::CommandListType list_type = pass->get_type();
+						HAL::CommandListType list_type = pass->get_type();
 
 						if (pass->wait_pass)
 						{
@@ -864,7 +864,7 @@ namespace FrameGraph
 
 						}
 
-						if (list_type == Graphics::CommandListType::DIRECT)
+						if (list_type == HAL::CommandListType::DIRECT)
 							graphics.emplace_back(pass);
 						else
 							compute.emplace_back(pass);
@@ -888,7 +888,7 @@ namespace FrameGraph
 				info->view = nullptr;
 			}
 
-			if (info->heap_type != Graphics::HeapType::DEFAULT)
+			if (info->heap_type != HAL::HeapType::DEFAULT)
 			{
 				info->alloc_ptr.Free();
 			}
@@ -969,21 +969,21 @@ namespace FrameGraph
 
 
 			info->handler->init(*info);
-			info->heap_type = Graphics::HeapType::DEFAULT;
+			info->heap_type = HAL::HeapType::DEFAULT;
 
 			if (check(info->flags & ResourceFlags::GenCPU))
 			{
-				info->heap_type = Graphics::HeapType::UPLOAD;
+				info->heap_type = HAL::HeapType::UPLOAD;
 			}
 
 			if (check(info->flags & ResourceFlags::ReadCPU))
 			{
-				info->heap_type = Graphics::HeapType::READBACK;
+				info->heap_type = HAL::HeapType::READBACK;
 			}
 
 			if (check(info->flags & ResourceFlags::Static)) continue;
 
-			if (info->heap_type != Graphics::HeapType::DEFAULT)
+			if (info->heap_type != HAL::HeapType::DEFAULT)
 			{
 				//	auto creation_info = HAL::Device::get().get_alloc_info(info->d3ddesc);
 				//	auto alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, creation_info.flags, info->heap_type);
@@ -1000,7 +1000,7 @@ namespace FrameGraph
 				events[pair.second.valid_to->call_id].free.insert(info);
 			}
 
-			//	if (info->heap_type != Graphics::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
+			//	if (info->heap_type != HAL::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
 
 
 		}
@@ -1060,11 +1060,11 @@ namespace FrameGraph
 				}
 				else
 				{
-					if (info->heap_type == Graphics::HeapType::UPLOAD)
+					if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
 						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
 					}
-					else if (info->heap_type == Graphics::HeapType::READBACK)
+					else if (info->heap_type == HAL::HeapType::READBACK)
 					{
 						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
 					}

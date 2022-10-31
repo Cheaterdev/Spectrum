@@ -67,7 +67,7 @@ bool Scene::init_ras(HAL::CommandList::ptr& list)
 	return res;
 }
 
-void Scene::update(Graphics::FrameResources& frame)
+void Scene::update(HAL::FrameResources& frame)
 {
 	mats.clear();
 	pipelines.clear();
@@ -133,7 +133,7 @@ void Scene::update(Graphics::FrameResources& frame)
 
 			if (data.size()) {
 				auto info = frame.place_raw(data);
-				auto srv = info.resource->create_view<HAL::FormattedBufferView<UINT, Graphics::Format::R32_UINT>>(frame, FormattedBufferViewDesc{ (UINT)info.resource_offset, (UINT)info.size }).buffer;
+				auto srv = info.resource->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(frame, FormattedBufferViewDesc{ (UINT)info.resource_offset, (UINT)info.size }).buffer;
 				gather_global.GetCommands() = srv;
 			}
 

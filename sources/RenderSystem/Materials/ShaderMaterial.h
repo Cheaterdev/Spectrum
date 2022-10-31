@@ -15,7 +15,7 @@ class ShaderMaterial: public materials::material, public AssetHolder
 		materials::Pipeline::ptr get_pipeline() { return pipeline; }
 
         virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override;
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Graphics::PipelineStateDesc &pipeline) override;
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc &pipeline) override;
     private:
         SERIALIZE() {
             SAVE_PARENT(materials::material);

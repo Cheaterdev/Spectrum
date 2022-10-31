@@ -1,4 +1,4 @@
-export module Graphics:RaytracingAS;
+export module HAL:Raytracing;
 
 import :Buffer;
 import :VirtualBuffer;
@@ -9,7 +9,7 @@ export
 {
 
 
-	namespace Graphics
+	namespace HAL
 	{
 
 

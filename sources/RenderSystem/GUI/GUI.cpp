@@ -929,12 +929,12 @@ namespace GUI
 				
 				 auto texture = (*data.o_texture);
 
-			//	 command_list->transition(texture.resource, Graphics::ResourceState::RENDER_TARGET);
+			//	 command_list->transition(texture.resource, HAL::ResourceState::RENDER_TARGET);
 				 command_list->get_graphics().set_rtv(1, texture.renderTarget, HAL::Handle());
 				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
 
 			
-                 std::shared_ptr<OVRContext> ovr_context;
+                 std::shared_ptr<Graphics::OVRContext> ovr_context;
                  renderer->start();
 
                  Graphics::context c(command_list, ovr_context);
@@ -952,7 +952,7 @@ namespace GUI
 					 {
 						 c.labeled = &context.pre_executor;
                      	
-						 c.command_list_label = (HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->get_free_list());
+						 c.command_list_label = (HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list());
                      	
 						 c.command_list_label->begin("Label");
 

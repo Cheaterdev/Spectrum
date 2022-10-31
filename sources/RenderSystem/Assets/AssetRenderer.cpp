@@ -65,8 +65,8 @@ public:
 				//	data.gbuffer.create_quality(size, builder);
 
 
-				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 0), Graphics::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
-				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 0), Graphics::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 0), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
@@ -161,7 +161,7 @@ public:
 
 
 
-void AssetRenderer::draw(Scene::ptr scene, Graphics::Texture::ptr result)
+void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 {
 
 
@@ -214,7 +214,7 @@ void AssetRenderer::draw(Scene::ptr scene, Graphics::Texture::ptr result)
 	mesh_plane->remove_from_parent();
 }
 
-void AssetRenderer::draw(MaterialAsset::ptr mat, Graphics::Texture::ptr result)
+void AssetRenderer::draw(MaterialAsset::ptr mat, HAL::Texture::ptr result)
 {
 	std::lock_guard<std::mutex> g(lock);
 
@@ -225,7 +225,7 @@ void AssetRenderer::draw(MaterialAsset::ptr mat, Graphics::Texture::ptr result)
 	material_tester->remove_from_parent();
 }
 
-void AssetRenderer::draw(scene_object::ptr obj, Graphics::Texture::ptr result)
+void AssetRenderer::draw(scene_object::ptr obj, HAL::Texture::ptr result)
 {
 	std::lock_guard<std::mutex> g(lock);
 

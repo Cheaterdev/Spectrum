@@ -41,7 +41,7 @@ namespace GUI
 			GUI::base::ptr create_editor_window() override
 			{
 				GUI::Elements::image::ptr img(new GUI::Elements::image);
-				img->texture.texture = Graphics::Texture::get_resource({ to_path(L"textures/gui/shadow.png"), false, false });
+				img->texture.texture = HAL::Texture::get_resource({ to_path(L"textures/gui/shadow.png"), false, false });
 				img->texture.padding = { 9, 9, 9, 9 };
 				img->padding = { 9, 9, 9, 9 };
 				img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -264,7 +264,7 @@ namespace GUI
 			img->add_child(name);
 			set_package("asset");
 			auto i = im;
-			asset->on_preview.register_handler(this, [i](Graphics::Texture::ptr preview)
+			asset->on_preview.register_handler(this, [i](HAL::Texture::ptr preview)
 				{
 					i->texture = preview;
 				});

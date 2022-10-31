@@ -1,14 +1,8 @@
-module;
+module HAL:GPUTimer;
 
 
-module Graphics:GPUTimer;
-
-import HAL;
-namespace Graphics
+namespace HAL
 {
-
-
-
 
 	void GPUTimeManager::start(HAL::GPUTimer& timer, HAL::Eventer* list)
 	{

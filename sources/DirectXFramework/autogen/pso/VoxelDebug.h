@@ -20,7 +20,7 @@ namespace PSOS
 			mpso.pixel.entry_point = "Debug";
 			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { Graphics::Format::R16G16B16A16_FLOAT };
+			mpso.rtv_formats = { HAL::Format::R16G16B16A16_FLOAT };
 			mpso.blend = {  };
 			mpso.enable_depth  = false;
 			return mpso;

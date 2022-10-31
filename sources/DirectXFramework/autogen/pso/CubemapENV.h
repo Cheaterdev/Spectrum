@@ -24,7 +24,7 @@ KeyValue<int,NonNullable,1,8,32,64,128> Level;
 			mpso.pixel.flags = 0;
 			Level.Apply(mpso, key);
 
-			mpso.rtv_formats = { Graphics::Format::R11G11B10_FLOAT };
+			mpso.rtv_formats = { HAL::Format::R11G11B10_FLOAT };
 			mpso.blend = {  };
 			return mpso;
 		}

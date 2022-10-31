@@ -431,7 +431,7 @@ void generate_cpp_table(const Table& table)
 
 			if (table.bindless_table)
 			{
-		//		stream << "Graphics::Bindless bindless;" << std::endl;
+		//		stream << "HAL::Bindless bindless;" << std::endl;
 			}
 
 			for (auto& v : table.values)
@@ -531,7 +531,7 @@ void generate_cpp_table(const Table& table)
 				pass += "bindless(bindless)";
 
 				if (args.size()) args += ",";
-				args += "Graphics::Bindless &bindless";
+				args += "HAL::Bindless &bindless";
 
 			}
 
@@ -698,7 +698,7 @@ export
 
 
 	stream << "void init_signatures();" << std::endl;
-	stream << "Graphics::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
+	stream << "HAL::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
 	stream << "void init_pso(enum_array<PSO, PSOBase::ptr>&);" << std::endl;
 
 	stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
@@ -709,7 +709,7 @@ export
 
 //	stream << "module: private;" << std::endl;
 
-	stream << "static enum_array<Layouts, Graphics::RootLayout::ptr> signatures;" << std::endl;
+	stream << "static enum_array<Layouts, HAL::RootLayout::ptr> signatures;" << std::endl;
 	stream << "void init_signatures()" << std::endl;
 
 	stream << "{" << std::endl;
@@ -727,7 +727,7 @@ export
 	stream << "}" << std::endl;
 
 
-	stream << "Graphics::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
+	stream << "HAL::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
 	stream << "{" << std::endl;
 	stream << "\treturn signatures[id];" << std::endl;
 	stream << "}" << std::endl;
@@ -882,7 +882,7 @@ using namespace concurrency;
 )"
 			<< std::endl;
 
-		//stream << "static std::array<Graphics::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
+		//stream << "static std::array<HAL::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
 		stream << "void init_pso(enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
 
 		stream << "{" << std::endl;
@@ -912,7 +912,7 @@ using namespace concurrency;
 		stream << "}" << std::endl;
 
 /*
-		stream << "Graphics::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
+		stream << "HAL::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
 		stream << "{" << std::endl;
 		stream << "\treturn pso[static_cast<int>(id)];" << std::endl;
 		stream << "}" << std::endl;
@@ -1047,7 +1047,7 @@ void generate_pso(PSO& pso)
 			{
 				keys += "Underlying<";
 				if (opt->value_atom.expr=="Format")
-					keys += "Graphics::";
+					keys += "HAL::";
 				keys += opt->value_atom.expr;
 				keys += ">";
 			}else
@@ -1212,7 +1212,7 @@ void generate_pso(PSO& pso)
 							}
 							else
 							{
-								elems += "Graphics::Format::";
+								elems += "HAL::Format::";
 								elems += e.expr;
 							}
 
@@ -1243,17 +1243,17 @@ void generate_pso(PSO& pso)
 						std::string add;
 
 		if (e.type == "ds")
-							add = "Graphics::Format::";
+							add = "HAL::Format::";
 						if (e.type == "cull")
-							add = "Graphics::CullMode::";
+							add = "HAL::CullMode::";
 						else if (e.type == "depth_func")
-							add = "Graphics::ComparisonFunc::";
+							add = "HAL::ComparisonFunc::";
 						else if (e.type == "topology")
 							add = "HAL::PrimitiveTopologyType::";
 						else if (e.type == "stencil_func")
-							add = "Graphics::ComparisonFunc::";
+							add = "HAL::ComparisonFunc::";
 						else if (e.type == "stencil_pass_op")
-							add = "Graphics::StencilOp::";
+							add = "HAL::StencilOp::";
 
 						stream << "mpso."<<e.type << "  = "<<add << e.expr << ";" << std::endl;
 					}

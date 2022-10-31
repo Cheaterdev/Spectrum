@@ -272,8 +272,8 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	docking = GUI::dock::PARENT;
 	clickable = true;
 	/*
-	id_buffer.reset(new Graphics::StructureBuffer<UINT>(1, Graphics::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
-	axis_id_buffer.reset(new Graphics::StructureBuffer<UINT>(1, Graphics::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+	id_buffer.reset(new HAL::StructureBuffer<UINT>(1, HAL::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+	axis_id_buffer.reset(new HAL::StructureBuffer<UINT>(1, HAL::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 
 
 	id_buffer->set_name("stencil_renderer::id_buffer");
@@ -318,9 +318,9 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
 	verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
 	verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
-	index_buffer = Graphics::IndexBuffer::make_buffer(data);
+	index_buffer = HAL::IndexBuffer::make_buffer(data);
 
-	vertex_buffer.reset(new Graphics::StructureBuffer<vec4>(8));
+	vertex_buffer.reset(new HAL::StructureBuffer<vec4>(8));
 	vertex_buffer->set_raw_data(verts);
 
 
@@ -371,7 +371,7 @@ void stencil_renderer::generate(Graph& graph)
 
 		graph.add_pass<Data>("stencil_renderer::before", [this, &graph](Data& data, TaskBuilder& builder) {
 
-			builder.create(data.depth_tex, { { 1,1,0 }, Graphics::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+			builder.create(data.depth_tex, { { 1,1,0 }, HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 			builder.create(data.id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.axis_id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			}, [this, &graph](Data& data, FrameContext& _context) {
@@ -555,7 +555,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 		graph.add_pass<Data>("stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,0), Graphics::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
+			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,0), HAL::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
 
 			}, [this, &graph](Data& data, FrameContext& _context) {
 

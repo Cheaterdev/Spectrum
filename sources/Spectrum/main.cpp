@@ -121,7 +121,7 @@ class triangle_drawer : public GUI::Elements::image, public GraphGenerator, Vari
 
 
 
-		EyeData(Graphics::RootSignature::ptr sig)
+		EyeData(HAL::RootSignature::ptr sig)
 		{
 
 		}
@@ -156,7 +156,7 @@ public:
 
 
 
-	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
+	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	PSSM pssm;
 	SMAA smaa;
 	SkyRender sky;
@@ -168,7 +168,7 @@ public:
 		texture.mul_color = { 1,1,1,0 };
 		texture.add_color = { 0,0,0,1 };
 
-		//	texture.srv = Graphics::StaticDescriptors::get().place(1);
+		//	texture.srv = HAL::StaticDescriptors::get().place(1);
 
 
 
@@ -383,12 +383,12 @@ public:
 
 
 
-	void draw_eye(HAL::CommandList::ptr _list, float dt, EyeData& data, Graphics::Texture::ptr target)
+	void draw_eye(HAL::CommandList::ptr _list, float dt, EyeData& data, HAL::Texture::ptr target)
 	{
 
 	}
 
-	void update_texture(HAL::CommandList::ptr list, float dt, const std::shared_ptr<OVRContext>& vr)
+	void update_texture(HAL::CommandList::ptr list, float dt, const std::shared_ptr<Graphics::OVRContext>& vr)
 	{
 
 
@@ -478,8 +478,8 @@ public:
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
 
-			//	builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), Graphics::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
-			//	builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), Graphics::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+			//	builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+			//	builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
@@ -493,8 +493,8 @@ public:
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
 
-				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), Graphics::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
-				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), Graphics::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
@@ -573,8 +573,8 @@ public:
 				graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto size = graph.frame_size;
 				data.gbuffer.need(builder, false);
-				builder.create(data.RTXDebug, { ivec3(size, 0), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-				builder.create(data.RTXDebugPrev, { ivec3(size,0), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+				builder.create(data.RTXDebug, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+				builder.create(data.RTXDebugPrev, { ivec3(size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 
 					}, [this, &graph](RTXDebugData& data, FrameContext& context) {
 						auto& compute = context.get_list()->get_compute();
@@ -620,7 +620,7 @@ public:
 
 		};
 		graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
-			builder.create(data.ResultTexture, { uint3(graph.frame_size,0), Graphics::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::RenderTarget);
+			builder.create(data.ResultTexture, { uint3(graph.frame_size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::RenderTarget);
 			}, [](no& data, FrameContext& _context) {});
 
 
@@ -724,7 +724,7 @@ class PassNode : public::FlowGraph::Node, public  GUI::Elements::FlowGraph::Visu
 	GUI::base::ptr create_editor_window() override
 	{
 		GUI::Elements::image::ptr img(new GUI::Elements::image);
-		img->texture.texture = Graphics::Texture::get_resource({ to_path(L"textures/gui/shadow.png"), false, false });
+		img->texture.texture = HAL::Texture::get_resource({ to_path(L"textures/gui/shadow.png"), false, false });
 		img->texture.padding = { 9, 9, 9, 9 };
 		img->padding = { 9, 9, 9, 9 };
 		img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -740,7 +740,7 @@ class GraphRender : public Window, public GUI::user_interface
 	tick_timer main_timer;
 	ivec2 new_size;
 
-	std::shared_ptr<OVRContext> vr_context = std::make_shared<OVRContext>();
+	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	std::future<void> task_future;
 
 	Graph graph;
@@ -774,22 +774,22 @@ public:
 
 			if (GetAsyncKeyState('R'))
 			{
-				HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal_and_wait();
-				HAL::Device::get().get_queue(Graphics::CommandListType::COMPUTE)->signal_and_wait();
-				HAL::Device::get().get_queue(Graphics::CommandListType::COPY)->signal_and_wait();
+				HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+				HAL::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
+				HAL::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
 				HAL::pixel_shader::reload_all();
 				HAL::vertex_shader::reload_all();
-				Graphics::geometry_shader::reload_all();
-				Graphics::hull_shader::reload_all();
-				Graphics::domain_shader::reload_all();
-				Graphics::compute_shader::reload_all();
-				Graphics::library_shader::reload_all();
-				Graphics::mesh_shader::reload_all();
-				Graphics::amplification_shader::reload_all();
+				HAL::geometry_shader::reload_all();
+				HAL::hull_shader::reload_all();
+				HAL::domain_shader::reload_all();
+				HAL::compute_shader::reload_all();
+				HAL::library_shader::reload_all();
+				HAL::mesh_shader::reload_all();
+				HAL::amplification_shader::reload_all();
 
-				Graphics::Texture::reload_all();
+				HAL::Texture::reload_all();
 			}
 
 			Profiler::get().on_frame(frame_counter++);
@@ -833,7 +833,7 @@ public:
 
 				graph.reset();
 			}
-			swap_chain->present(HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->signal());
+			swap_chain->present(HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal());
 		}
 
 
@@ -886,7 +886,7 @@ public:
 
 					context.get_list()->transition_present(data.swapchain->resource);
 
-					Graphics::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
+					HAL::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
 						run_on_ui([this, ptr]() {	Profiler::get().update(); });
 
 						});
@@ -999,7 +999,7 @@ public:
 		//scale = 1.25f;
 		Window::input_handler = this;
 		HAL::swap_chain_desc desc;
-		desc.format = Graphics::Format::R8G8B8A8_UNORM;
+		desc.format = HAL::Format::R8G8B8A8_UNORM;
 		desc.fullscreen = nullptr;
 		desc.stereo = false;
 		desc.window = this;
@@ -1020,7 +1020,7 @@ public:
 
 		{
 			GUI::Elements::image::ptr back(new GUI::Elements::image);
-			back->texture = Graphics::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/back_fill.png"), false, false));
+			back->texture = HAL::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/back_fill.png"), false, false));
 			back->texture.tiled = true;
 			back->width_size = GUI::size_type::MATCH_PARENT;
 			back->height_size = GUI::size_type::MATCH_PARENT;
@@ -1239,7 +1239,7 @@ protected:
 		EVENT("WindowRender");
 
 		//	auto ps = HAL::pixel_shader::get_resource({ "test.hlsl", "PS", 0,{}, false });
-		//	auto cs = Graphics::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
+		//	auto cs = HAL::compute_shader::get_resource({ "test.hlsl", "CS", 0,{}, false });
 
 #ifdef OCULUS_SUPPORT
 		//ovr = std::make_shared<OVRRender>();
@@ -1274,19 +1274,19 @@ protected:
 
 
 	//	
-		//   HAL::Device::get().get_queue(Graphics::CommandListType::DIRECT)->stop_all();
+		//   HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->stop_all();
 		HAL::Device::get().stop_all();
 		Skin::reset();
-		Graphics::Texture::reset_manager();
+		HAL::Texture::reset_manager();
 		HAL::pixel_shader::reset_manager();
 		HAL::vertex_shader::reset_manager();
-		Graphics::domain_shader::reset_manager();
-		Graphics::hull_shader::reset_manager();
-		Graphics::geometry_shader::reset_manager();
-		Graphics::compute_shader::reset_manager();
+		HAL::domain_shader::reset_manager();
+		HAL::hull_shader::reset_manager();
+		HAL::geometry_shader::reset_manager();
+		HAL::compute_shader::reset_manager();
 		GUI::Elements::FlowGraph::manager::reset();
 		Profiler::reset();
-		Graphics::GPUTimeManager::reset();
+		HAL::GPUTimeManager::reset();
 		///    main_window2 = nullptr;
 		Fonts::FontSystem::reset();
 		RTX::reset();
@@ -1295,7 +1295,7 @@ protected:
 		AssetManager::reset();
 
 
-		//Graphics::PipelineLibrary::reset();
+		//HAL::PipelineLibrary::reset();
 
 
 

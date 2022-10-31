@@ -1,7 +1,7 @@
 #pragma once
 
 
-using namespace Graphics;
+using namespace HAL;
 
 class TemporalAA
 {
@@ -21,7 +21,7 @@ public:
 
 		for (UINT i = 0; i < textures.size(); i++)
 		{
-			////				list->transition(textures[i], Graphics::ResourceState::PIXEL_SHADER_RESOURCE);
+			////				list->transition(textures[i], HAL::ResourceState::PIXEL_SHADER_RESOURCE);
 
 			((SignatureDataSetter*)&list->get_graphics())->set_dynamic(slot, i, textures[std::min(all_count - 1, i)]->texture_2d().get_static_srv());
 		}
@@ -65,7 +65,7 @@ public:
 
 		for (UINT i = 0; i < offsets.size(); i++)
 		{
-			textures.emplace_back(new Graphics::Texture(HAL::ResourceDesc::Tex2D(Graphics::Format::R16G16B16A16_FLOAT, { size.x, size.y }, 1, 0, HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess), Graphics::ResourceState::PIXEL_SHADER_RESOURCE));
+			textures.emplace_back(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R16G16B16A16_FLOAT, { size.x, size.y }, 1, 0, HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess), HAL::ResourceState::PIXEL_SHADER_RESOURCE));
 
 			textures[i]->set_name(std::string("TemporalAA_") + std::to_string(i));
 			//      srv_table[i] = textures.back()->texture_2d().srv();

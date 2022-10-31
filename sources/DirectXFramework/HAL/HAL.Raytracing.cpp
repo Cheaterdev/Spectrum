@@ -1,10 +1,11 @@
-module Graphics:RaytracingAS;
-import HAL;
+module HAL:Raytracing;
+import :Queue;
+import :Device;
 
 using namespace HAL;
 
 
-Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<GeometryDesc> desc,
+HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<GeometryDesc> desc,
 	CommandList::ptr list)
 {
 	HAL::RaytracingBuildDescBottomInputs inputs;
@@ -30,7 +31,7 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 
 }
 
-Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<InstanceDesc> instances)
+HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<InstanceDesc> instances)
 {
 
 
@@ -76,7 +77,7 @@ Graphics::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::
 	raytracing_handle.create(currentResource->buffer.get());
 }
 
-void Graphics::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT size, ResourceAddress address,
+void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT size, ResourceAddress address,
 	bool need_rebuild)
 {
 	//	return;
@@ -127,7 +128,7 @@ void Graphics::RaytracingAccelerationStructure::update(CommandList::ptr list, UI
 	raytracing_handle.create(currentResource->buffer.get());
 }
 
-HAL::ResourceAddress Graphics::RaytracingAccelerationStructure::get_gpu_address() const
+HAL::ResourceAddress HAL::RaytracingAccelerationStructure::get_gpu_address() const
 {
 	return currentResource->buffer->get_resource_address();
 }

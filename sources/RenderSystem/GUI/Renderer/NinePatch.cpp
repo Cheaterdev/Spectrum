@@ -20,10 +20,10 @@ namespace GUI
 				(*data++) = i * 4 + j + 5;
 			}
 
-		index_buffer = Graphics::IndexBuffer::make_buffer(index_data);
+		index_buffer = HAL::IndexBuffer::make_buffer(index_data);
 	}
 
-	void NinePatch::draw(Graphics::context& c, GUI::Texture& item, rect r, Graphics::PipelineState::ptr pipeline_state)
+	void NinePatch::draw(Graphics::context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state)
 	{
 		if (current_state && current_state != pipeline_state)
 		{
@@ -299,7 +299,7 @@ namespace GUI
 		draw(c, item, r, GetPSO<PSOS::NinePatch>());
 	}
 
-	void NinePatch::draw(Graphics::context& c, Graphics::PipelineState::ptr pipeline_state, rect r)
+	void NinePatch::draw(Graphics::context& c, HAL::PipelineState::ptr pipeline_state, rect r)
 	{
 		GUI::Texture item;
 		draw(c, item, r, pipeline_state);

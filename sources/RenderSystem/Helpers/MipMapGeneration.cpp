@@ -11,18 +11,18 @@ MipMapGenerator::MipMapGenerator()
 
 }
 
-void MipMapGenerator::generate(HAL::ComputeContext& compute_context, Graphics::Texture::ptr tex)
+void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Texture::ptr tex)
 {
 	generate(compute_context, tex->texture_2d());
 }
 
-void MipMapGenerator::generate_cube(HAL::ComputeContext& compute_context, Graphics::CubeView view)
+void MipMapGenerator::generate_cube(HAL::ComputeContext& compute_context, HAL::CubeView view)
 {
 	for (int i = 0; i < 6; i++)
 		generate(compute_context, view.get_face(i));
 }
 
-void MipMapGenerator::generate(HAL::ComputeContext& compute_context, Graphics::TextureView  view)
+void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::TextureView  view)
 {
 	//return;
 	PROFILE(L"MipMapGenerator");
@@ -86,7 +86,7 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, Graphics::T
 }
 
 
-void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, Graphics::Texture::ptr tex, Graphics::Texture::ptr& to)
+void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL::Texture::ptr tex, HAL::Texture::ptr& to)
 {
 	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
@@ -98,7 +98,7 @@ void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, Gra
 
 }
 
-void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, Graphics::TextureView& tex, Graphics::TextureView& to) {
+void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL::TextureView& tex, HAL::TextureView& to) {
 	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
 
 
@@ -111,7 +111,7 @@ void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, Gra
 }
 
 void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, GBuffer& buffer,
-	Graphics::TextureView tempColor)
+	HAL::TextureView tempColor)
 {
 
 	PROFILE_GPU(L"generate_quality");
@@ -155,7 +155,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 	}
 }
 
-void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, Graphics::Texture::ptr to, Graphics::Texture::ptr from)
+void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::Texture::ptr from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info()->view);
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
@@ -176,7 +176,7 @@ void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, Graphics:
 }
 
 
-void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, Graphics::Texture::ptr to, Graphics::TextureView from)
+void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::TextureView from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info()->view);
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
@@ -198,7 +198,7 @@ void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, Graphics:
 
 
 
-void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, Graphics::TextureView to, Graphics::TextureView from)
+void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, HAL::TextureView to, HAL::TextureView from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to.renderTarget.get_resource_info()->view);
 	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
@@ -214,7 +214,7 @@ void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, Graphic
 
 
 
-void MipMapGenerator::write_to_depth(HAL::GraphicsContext& list, Graphics::TextureView from, Graphics::TextureView to)
+void MipMapGenerator::write_to_depth(HAL::GraphicsContext& list, HAL::TextureView from, HAL::TextureView to)
 {
 	list.set_pipeline(GetPSO<PSOS::RenderToDS>());
 	Slots::CopyTexture data;

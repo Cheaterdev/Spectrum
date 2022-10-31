@@ -20,10 +20,10 @@ namespace PSOS
 			mpso.pixel.entry_point = "PS";
 			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { Graphics::Format::R16G16B16A16_FLOAT };
+			mpso.rtv_formats = { HAL::Format::R16G16B16A16_FLOAT };
 			mpso.blend = { HAL::Blends::Additive };
 			mpso.enable_depth  = false;
-			mpso.cull  = Graphics::CullMode::None;
+			mpso.cull  = HAL::CullMode::None;
 			return mpso;
 		}
 	};

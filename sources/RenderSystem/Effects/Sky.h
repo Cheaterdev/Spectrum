@@ -15,9 +15,9 @@ public:
 
 class SkyRender :public Events::prop_handler, public FrameGraph::GraphGenerator
 {
-	Graphics::Texture::ptr transmittance;
-	Graphics::Texture::ptr irradiance;
-	Graphics::Texture::ptr inscatter;
+	HAL::Texture::ptr transmittance;
+	HAL::Texture::ptr irradiance;
+	HAL::Texture::ptr inscatter;
 	
 	bool processed = false;
 

@@ -245,7 +245,7 @@ namespace GUI
     };
     struct Texture
     {
-        Graphics::Texture::ptr texture;
+        HAL::Texture::ptr texture;
         sizer margins;
         sizer padding;
         sizer tc;
@@ -263,7 +263,7 @@ namespace GUI
             add_color = { 0,0,0,0 };
         }
 
-        void operator=(const       Graphics::Texture::ptr& texture)
+        void operator=(const       HAL::Texture::ptr& texture)
         {
             this->texture = texture;
         }

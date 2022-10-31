@@ -13,7 +13,7 @@ namespace HAL
 
 			auto desc = get_desc().as_texture();
 			if (desc.ArraySize == 6)
-				cube_view = CubeView(this, Graphics::StaticCompiledGPUData::get());
+				cube_view = CubeView(this, HAL::StaticCompiledGPUData::get());
 
 			/*		if (desc.ArraySize % 6 == 0)
 						array_cubemap_view = std::make_shared<CubemapArrayView>(this);*/
@@ -23,9 +23,9 @@ namespace HAL
 									array_2d_view = std::make_shared<Array2DView>(this);*/
 
 			if (desc.is3D())
-				texture_3d_view = Texture3DView(this, Graphics::StaticCompiledGPUData::get());
+				texture_3d_view = Texture3DView(this, HAL::StaticCompiledGPUData::get());
 			else
-				texture_2d_view = TextureView(this, Graphics::StaticCompiledGPUData::get());
+				texture_2d_view = TextureView(this, HAL::StaticCompiledGPUData::get());
 		}
 	}
 

@@ -90,7 +90,7 @@ namespace GUI
 			w = vec2(render_bounds->size);
 			wptr _THIS = get_ptr<label>();
 
-			Graphics::Texture::ptr new_preview = cache.texture;
+			HAL::Texture::ptr new_preview = cache.texture;
 			lay2.right = std::ceil(lay2.right);
 			lay2.bottom = std::ceil(lay2.bottom);
 
@@ -99,7 +99,7 @@ namespace GUI
 
 			if (!isnan(lay2.right))
 				if (!cache.texture || cache.texture->get_desc().as_texture().Dimensions.x < lay2.right || cache.texture->get_desc().as_texture().Dimensions.y < lay2.bottom)
-					cache.texture.reset(new Graphics::Texture(HAL::ResourceDesc::Tex2D(Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+					cache.texture.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 			auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
 
@@ -116,7 +116,7 @@ namespace GUI
 
 					PROFILE(L"label");
 
-					Graphics::Viewport vps;
+					HAL::Viewport vps;
 					vps.size = cache.texture->get_desc().as_texture().Dimensions;
 					vps.pos = { 0,0 };
 					vps.depths = { 0,1 };

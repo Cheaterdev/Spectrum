@@ -1,6 +1,4 @@
-module;
-
-export module Graphics:Buffer;
+export module HAL:Buffer;
 
 export import Allocators;
 
@@ -14,18 +12,19 @@ export import stl.core;
 export import stl.memory;
 export import Math;
 
-export import HAL;
+import :Resource;
 
+import :ResourceStates;
 
-//import d3d12;
+import :DescriptorHeap;
+import :CommandList;
+import :HLSL;
 
-//import :Definitions;
-//using namespace HAL;
 export
 {
 
 
-	namespace Graphics
+	namespace HAL
 	{
 
 
@@ -304,7 +303,7 @@ export
 
 
 
-namespace Graphics
+namespace HAL
 {
 
 	GPUBuffer::GPUBuffer(UINT64 _size, HAL::ResFlags flags, HAL::ResourceState state, HAL::HeapType heap_type) : size(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),

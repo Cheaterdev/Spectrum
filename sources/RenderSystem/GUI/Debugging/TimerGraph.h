@@ -25,7 +25,7 @@ namespace GUI
 
 				double start_time;
 				double end_time;
-				Graphics::CommandListType queue_type;
+				HAL::CommandListType queue_type;
 
 			};
 			struct collected_data

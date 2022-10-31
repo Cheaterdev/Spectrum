@@ -8,7 +8,7 @@
 
 namespace FW1FontWrapper
 {
-	using namespace Graphics;
+	using namespace HAL;
 
     // Shader etc. needed to draw glyphs
     class CFW1GlyphRenderStates : public CFW1Object<IFW1GlyphRenderStates>

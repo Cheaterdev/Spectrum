@@ -1,4 +1,4 @@
-export module Graphics:Concepts;
+export module HAL:Concepts;
 
 export
 {

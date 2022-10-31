@@ -67,8 +67,8 @@ namespace FW1FontWrapper
         private:
             std::wstring					m_lastError;
 
-            //  Graphics::Buffer<FW1_GLYPHVERTEX>::ptr m_pVertexBuffer;
-            Graphics::IndexBuffer::ptr m_pIndexBuffer;
+            //  HAL::Buffer<FW1_GLYPHVERTEX>::ptr m_pVertexBuffer;
+            HAL::IndexBuffer::ptr m_pIndexBuffer;
 
             UINT							m_vertexBufferSize;
             UINT							m_maxIndexCount;

@@ -26,7 +26,7 @@ namespace Graphics
 
 	struct EyeInfo :public Holder
 	{
-		Graphics::Texture::ptr color_buffer;
+		HAL::Texture::ptr color_buffer;
 		quat dir;
 		vec3 offset;
 		float fov = -1;
@@ -90,7 +90,7 @@ namespace Graphics
 
 
 }
-using namespace Graphics;
+using namespace HAL;
 struct MeshRenderContext;
 
 enum class RENDER_TYPE
@@ -118,15 +118,15 @@ struct MeshRenderContext
 {
 private:
 	//  std::vector<std::shared_ptr<materials::material>> materials;
-	Graphics::PipelineState::ptr current_state;
-	//  Graphics::PipelineStateDesc current_state_desc;
+	HAL::PipelineState::ptr current_state;
+	//  HAL::PipelineStateDesc current_state_desc;
 public:
 	using ptr = s_ptr<MeshRenderContext>;
 	int draw_count = 0;
 
 	std::shared_ptr<materials::Pipeline> overrided_pipeline;
 
-	Graphics::PipelineStateDesc pipeline;
+	HAL::PipelineStateDesc pipeline;
 	std::shared_ptr<Graphics::OVRContext> eye_context;
 
 	HAL::CommandList::ptr list;
@@ -142,7 +142,7 @@ public:
 	GBuffer* g_buffer = nullptr;
 	RT::Slot::GBuffer::Compiled gbuffer_compiled;
 
-	Graphics::Texture::ptr target_tex;
+	HAL::Texture::ptr target_tex;
 
 
 	SlotContext* slot_context = nullptr;
@@ -197,16 +197,16 @@ public:
 
 class RenderTargetTable
 {
-	Graphics::HandleTableLight rtv_table;
+	HAL::HandleTableLight rtv_table;
 
 	std::vector<Format> formats;
 	Format depth_format = Format::UNKNOWN;
 	//  HAL::Handle depth_handle;
 
-	std::vector<Graphics::TextureView> textures;
-	Graphics::TextureView depth_texture;
+	std::vector<HAL::TextureView> textures;
+	HAL::TextureView depth_texture;
 
-	std::vector<Graphics::Viewport> vps;
+	std::vector<HAL::Viewport> vps;
 	std::vector<sizer_long> scissors;
 
 	void on_init(ivec2 size)
@@ -223,7 +223,7 @@ class RenderTargetTable
 		scissors[0] = { 0, 0, size.x, size.y };
 	}
 public:
-	Graphics::HandleTableLight dsv_table;
+	HAL::HandleTableLight dsv_table;
 
 	void clear_depth(MeshRenderContext::ptr& context, float value = 1)
 	{
@@ -251,7 +251,7 @@ public:
 		context.set_scissors(scissors[0]);
 	}
 
-	RenderTargetTable(HAL::GraphicsContext& graphics, std::initializer_list<Graphics::TextureView> list, Graphics::TextureView depth)
+	RenderTargetTable(HAL::GraphicsContext& graphics, std::initializer_list<HAL::TextureView> list, HAL::TextureView depth)
 	{
 		rtv_table = graphics.place_rtv((UINT)list.size());
 		UINT i = 0;
@@ -318,22 +318,22 @@ public:
 class GBuffer
 {
 public:
-	Graphics::TextureView albedo;
-	Graphics::TextureView normals;
-	Graphics::TextureView depth;
-	Graphics::TextureView specular;
-	Graphics::TextureView speed;
+	HAL::TextureView albedo;
+	HAL::TextureView normals;
+	HAL::TextureView depth;
+	HAL::TextureView specular;
+	HAL::TextureView speed;
 
 
-	Graphics::TextureView quality;
-	Graphics::TextureView depth_mips;
-	Graphics::TextureView depth_prev_mips;
+	HAL::TextureView quality;
+	HAL::TextureView depth_mips;
+	HAL::TextureView depth_prev_mips;
 
 	RenderTargetTable rtv_table;
 
 
 	struct {
-		Graphics::TextureView hiZ_depth, hiZ_depth_uav;
+		HAL::TextureView hiZ_depth, hiZ_depth_uav;
 		RenderTargetTable hiZ_table;
 	}HalfBuffer;
 
@@ -370,20 +370,20 @@ public:
 
 	void create(ivec2 size, TaskBuilder& builder)
 	{
-		builder.create(GBuffer_Albedo, { ivec3(size,0), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-		builder.create(GBuffer_Normals, { ivec3(size,0), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-		builder.create(GBuffer_Depth, { ivec3(size,0), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::DepthStencil);
-		builder.create(GBuffer_Specular, { ivec3(size,0), Graphics::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
-		builder.create(GBuffer_Speed, { ivec3(size,0), Graphics::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Albedo, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Normals, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Depth, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::DepthStencil);
+		builder.create(GBuffer_Specular, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(GBuffer_Speed, { ivec3(size,0), HAL::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
 
 
-		builder.create(GBuffer_DepthMips, { ivec3(size,0), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
-		builder.create(GBuffer_DepthPrev, { ivec3(size,0), Graphics::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(GBuffer_DepthMips, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
+		builder.create(GBuffer_DepthPrev, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
 	}
 
 	void create_quality(ivec2 size, TaskBuilder& builder)
 	{
-		builder.create(GBuffer_Quality, { ivec3(size,0), Graphics::Format::D24_UNORM_S8_UINT,1,1 }, ResourceFlags::DepthStencil);
+		builder.create(GBuffer_Quality, { ivec3(size,0), HAL::Format::D24_UNORM_S8_UINT,1,1 }, ResourceFlags::DepthStencil);
 	}
 
 	void create_mips(ivec2 size, TaskBuilder& builder)
@@ -394,7 +394,7 @@ public:
 
 	auto create_temp_color(ivec2 size, TaskBuilder& builder)
 	{
-		return builder.create(GBuffer_TempColor, { ivec3(size,0), Graphics::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		return builder.create(GBuffer_TempColor, { ivec3(size,0), HAL::Format::R8G8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 	}
 
 	void need(TaskBuilder& builder, bool need_quality = false, bool need_mips = false)

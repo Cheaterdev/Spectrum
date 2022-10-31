@@ -1,7 +1,7 @@
 export module HAL:Utils;
 export import "macros.h";
 
-
+import wrl;
 import d3d12;
 import Math;
 import Log;

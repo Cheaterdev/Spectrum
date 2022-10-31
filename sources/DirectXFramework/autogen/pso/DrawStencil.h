@@ -25,9 +25,9 @@ namespace PSOS
 			
 			mpso.rtv_formats = {  };
 			mpso.blend = {  };
-			mpso.ds  = Graphics::Format::D32_FLOAT;
-			mpso.cull  = Graphics::CullMode::None;
-			mpso.depth_func  = Graphics::ComparisonFunc::LESS;
+			mpso.ds  = HAL::Format::D32_FLOAT;
+			mpso.cull  = HAL::CullMode::None;
+			mpso.depth_func  = HAL::ComparisonFunc::LESS;
 			return mpso;
 		}
 	};

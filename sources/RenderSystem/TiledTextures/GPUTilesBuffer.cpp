@@ -6,8 +6,8 @@ void GPUTilesBuffer::set_size(ivec3 size, ivec3 shape)
 	this->shape = shape;
 
 	tile_positions.resize(size, -1);
-	buffer.reset(new Graphics::StructureBuffer<ivec3>(size.x * size.y * size.z));
-	dispatch_buffer = std::make_shared<Graphics::StructureBuffer<DispatchArguments>>(1, Graphics::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	buffer.reset(new HAL::StructureBuffer<ivec3>(size.x * size.y * size.z));
+	dispatch_buffer = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
 
 void GPUTilesBuffer::clear()

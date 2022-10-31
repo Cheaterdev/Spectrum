@@ -41,8 +41,8 @@ class AssetRenderer : public Singleton<AssetRenderer>
 		std::shared_ptr<Graphics::OVRContext> vr_context ;
     public:
 
-        virtual void draw(Scene::ptr scene, Graphics::Texture::ptr result);
-        virtual void draw(MaterialAsset::ptr m, Graphics::Texture::ptr result);
-		virtual void draw(scene_object::ptr scene, Graphics::Texture::ptr result);
+        virtual void draw(Scene::ptr scene, HAL::Texture::ptr result);
+        virtual void draw(MaterialAsset::ptr m, HAL::Texture::ptr result);
+		virtual void draw(scene_object::ptr scene, HAL::Texture::ptr result);
 
 };

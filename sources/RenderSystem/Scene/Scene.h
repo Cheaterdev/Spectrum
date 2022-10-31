@@ -45,7 +45,7 @@ public:
     using wptr = w_ptr<Scene>;
 
     virtual ~Scene();
-    Graphics::RaytracingAccelerationStructure::ptr raytrace_scene;
+    HAL::RaytracingAccelerationStructure::ptr raytrace_scene;
     Scene();
 
     Events::Event<scene_object*> on_element_add;
@@ -80,7 +80,7 @@ public:
 
     bool init_ras(CommandList::ptr& list);
 
-    void update(Graphics::FrameResources& frame);
+    void update(HAL::FrameResources& frame);
 
 
     void iterate_meshes(MESH_TYPE mesh_type, std::function<void(scene_object::ptr)> f)

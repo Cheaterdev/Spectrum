@@ -605,28 +605,28 @@ void GUI::Elements::FlowGraph::canvas::init(::FlowGraph::graph* g)
 /*
 GUI::Elements::FlowGraph::canvas::renderer::renderer(GUI::Renderer* renderer)
 {
-	Graphics::PipelineStateDesc state_desc;
+	HAL::PipelineStateDesc state_desc;
 	state_desc.root_signature = renderer->root_signature;
 	state_desc.pixel = HAL::pixel_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "PS", 0, {} });
 	state_desc.vertex = HAL::vertex_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "VS", 0, {} });
-	state.reset(new Graphics::PipelineState(state_desc));
+	state.reset(new HAL::PipelineState(state_desc));
 	{
-		Graphics::PipelineStateDesc state_desc;
+		HAL::PipelineStateDesc state_desc;
 		state_desc.root_signature = renderer->root_signature;
 		state_desc.pixel = HAL::pixel_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "PS", 0, {} });
 		state_desc.vertex = HAL::vertex_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "VS", 0, {} });
-		state_desc.geometry = Graphics::geometry_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "GS", 0, {} });
-		state_desc.domain = Graphics::domain_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "DS", 0, {} });
-		state_desc.hull = Graphics::hull_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "HS", 0, {} });
+		state_desc.geometry = HAL::geometry_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "GS", 0, {} });
+		state_desc.domain = HAL::domain_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "DS", 0, {} });
+		state_desc.hull = HAL::hull_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "HS", 0, {} });
 		state_desc.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
-		state_desc.layout.inputs.push_back({ "SV_POSITION", 0, Graphics::Format::R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-		state_desc.layout.inputs.push_back({ "COLOR", 0, Graphics::Format::R32G32B32A32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
-		//   state_desc.layout.inputs.emplace_back({ "SV_POSITION", 0, 0, 0, Graphics::Format::R32G32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
-		//   state_desc.layout.inputs.emplace_back({ "COLOR", 0, sizeof(vec2), 0, Graphics::Format::R32G32B32A32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
-		line_state.reset(new Graphics::PipelineState(state_desc));
-		inv_pixel.reset(new Graphics::ConstBuffer<vec2>());
-		line_vertex.reset(new Graphics::Buffer<line_vertexes>(Graphics::HeapType::DEFAULT, 512));
-		gs_table = Graphics::DescriptorHeapManager::get().get_csu()->create_table(1);
+		state_desc.layout.inputs.push_back({ "SV_POSITION", 0, HAL::Format::R32G32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+		state_desc.layout.inputs.push_back({ "COLOR", 0, HAL::Format::R32G32B32A32_FLOAT, 0, sizeof(vec2), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+		//   state_desc.layout.inputs.emplace_back({ "SV_POSITION", 0, 0, 0, HAL::Format::R32G32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
+		//   state_desc.layout.inputs.emplace_back({ "COLOR", 0, sizeof(vec2), 0, HAL::Format::R32G32B32A32_FLOAT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA });
+		line_state.reset(new HAL::PipelineState(state_desc));
+		inv_pixel.reset(new HAL::ConstBuffer<vec2>());
+		line_vertex.reset(new HAL::Buffer<line_vertexes>(HAL::HeapType::DEFAULT, 512));
+		gs_table = HAL::DescriptorHeapManager::get().get_csu()->create_table(1);
 		inv_pixel->place(gs_table[0]);
 	}
 

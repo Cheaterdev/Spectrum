@@ -13,7 +13,7 @@ TextureAssetRenderer::TextureAssetRenderer()
 }
 TextureAssetRenderer::~TextureAssetRenderer() {}
 
-void TextureAssetRenderer::render(TextureAsset* asset, Graphics::Texture::ptr target, HAL::CommandList::ptr c)
+void TextureAssetRenderer::render(TextureAsset* asset, HAL::Texture::ptr target, HAL::CommandList::ptr c)
 {
 	if (!asset->get_texture()->texture_2d()) return;
 	MipMapGenerator::get().copy_texture_2d_slow(c->get_graphics(), target, asset->get_texture());
@@ -27,7 +27,7 @@ Asset_Type TextureAsset::get_type()
 	return Asset_Type::TEXTURE;
 }
 
-Graphics::Texture::ptr TextureAsset::get_texture()
+HAL::Texture::ptr TextureAsset::get_texture()
 {
 	return texture;
 }
@@ -35,17 +35,17 @@ Graphics::Texture::ptr TextureAsset::get_texture()
 TextureAsset::TextureAsset(std::filesystem::path file_name)
 {
 	auto task = TaskInfoManager::get().create_task(file_name.generic_wstring());
-	texture = Graphics::Texture::get_resource(HAL::texure_header(file_name, true));
+	texture = HAL::Texture::get_resource(HAL::texure_header(file_name, true));
 
 	if (!texture)
-		texture = Graphics::Texture::null;
+		texture = HAL::Texture::null;
 
 	name = file_name.filename().wstring();
 	mark_changed();
 }
 void TextureAsset::try_register()
 {
-	if ((texture && texture != Graphics::Texture::null))
+	if ((texture && texture != HAL::Texture::null))
 		Asset::try_register();
 }
 
@@ -58,10 +58,10 @@ TextureAsset::TextureAsset()
 {
 }
 
-void TextureAsset::update_preview(Graphics::Texture::ptr preview)
+void TextureAsset::update_preview(HAL::Texture::ptr preview)
 {
 	if (!preview || !preview->is_rt())
-		preview.reset(new Graphics::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+		preview.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 	auto list = (HAL::FrameResourceManager::get().begin_frame()->start_list("TextureAsset"));
 

@@ -248,10 +248,10 @@ void MeshAsset::try_register()
 }
 
 
-void MeshAsset::update_preview(Graphics::Texture::ptr preview)
+void MeshAsset::update_preview(HAL::Texture::ptr preview)
 {
 	if (!preview || !preview->is_rt())
-		preview.reset(new Graphics::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+		preview.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 	if (!preview_mesh)
 		preview_mesh.reset(new MeshAssetInstance(get_ptr<MeshAsset>()));

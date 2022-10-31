@@ -23,7 +23,7 @@ namespace PSOS
 			mpso.geometry.entry_point = "GS";
 			mpso.geometry.flags = 0;
 			
-			mpso.rtv_formats = { Graphics::Format::R8G8B8A8_UNORM };
+			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM };
 			mpso.blend = {  };
 			mpso.topology  = HAL::PrimitiveTopologyType::POINT;
 			mpso.enable_depth  = false;

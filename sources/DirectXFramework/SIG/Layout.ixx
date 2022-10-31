@@ -1,7 +1,4 @@
-module;
-
-
-export module Graphics:Layout;
+export module HAL:Layout;
 
 import :RootSignature;
 import :Concepts;
@@ -13,17 +10,17 @@ export
 	template<class T>
 	struct AutoGenSignatureDesc
 	{
-		Graphics::RootSignatureDesc desc;
+		HAL::RootSignatureDesc desc;
 
 
 		template<class T>
 		void process_one()
 		{
-			desc[T::ID] = Graphics::DescriptorConstBuffer(2, Graphics::ShaderVisibility::ALL, T::ID);
+			desc[T::ID] = HAL::DescriptorConstBuffer(2, HAL::ShaderVisibility::ALL, T::ID);
 		}
 
 		template< class ...A>
-		void process(std::initializer_list<Graphics::SamplerDesc> samplers)
+		void process(std::initializer_list<HAL::SamplerDesc> samplers)
 		{
 
 			(process_one<A>(), ...);
@@ -31,7 +28,7 @@ export
 			int i = 0;
 			for (auto& s : samplers)
 			{
-				desc.set_sampler(i++, 0, Graphics::ShaderVisibility::ALL, s);
+				desc.set_sampler(i++, 0, HAL::ShaderVisibility::ALL, s);
 			}
 		}
 
@@ -42,29 +39,29 @@ export
 		}
 
 
-		Graphics::RootLayout::ptr create_signature(Layouts layout)
+		HAL::RootLayout::ptr create_signature(Layouts layout)
 		{
-			return std::make_shared<Graphics::RootLayout>(HAL::Device::get(), desc, layout);
+			return std::make_shared<HAL::RootLayout>(HAL::Device::get(), desc, layout);
 		}
 	};
 
 	template<class T>
-	void process_one(Graphics::RootSignatureDesc& desc)
+	void process_one(HAL::RootSignatureDesc& desc)
 	{
 		if constexpr (HasSlot<T>)
-			desc[T::Slot::ID] = Graphics::DescriptorConstBuffer(2, Graphics::ShaderVisibility::ALL, T::Slot::ID);
+			desc[T::Slot::ID] = HAL::DescriptorConstBuffer(2, HAL::ShaderVisibility::ALL, T::Slot::ID);
 	}
 
 	template< class ...A>
-	Graphics::RootSignature::ptr create_local_signature()
+	HAL::RootSignature::ptr create_local_signature()
 	{
-		Graphics::RootSignatureDesc desc;
+		HAL::RootSignatureDesc desc;
 
 		(process_one<A>(desc), ...);
 
-		desc.set_type(Graphics::RootSignatureType::Local);
+		desc.set_type(HAL::RootSignatureType::Local);
 
-		return std::make_shared<Graphics::RootSignature>(HAL::Device::get(), desc);
+		return std::make_shared<HAL::RootSignature>(HAL::Device::get(), desc);
 	}
 
 

@@ -64,7 +64,7 @@ namespace FW1FontWrapper
 	HRESULT CFW1GlyphVertexDrawer::createBuffers()
 	{
 		// Create vertex buffer
-//        m_pVertexBuffer.reset(new Graphics::Buffer<FW1_GLYPHVERTEX>(HAL::HeapType::DEFAULT, m_vertexBufferSize / sizeof(FW1_GLYPHVERTEX)));
+//        m_pVertexBuffer.reset(new HAL::Buffer<FW1_GLYPHVERTEX>(HAL::HeapType::DEFAULT, m_vertexBufferSize / sizeof(FW1_GLYPHVERTEX)));
 		std::vector<unsigned int> indices(m_maxIndexCount);
 
 		for (UINT i = 0; i < m_maxIndexCount / 6; ++i)
@@ -77,7 +77,7 @@ namespace FW1FontWrapper
 			indices[i * 6 + 5] = static_cast<UINT16>(i * 4 + 2);
 		}
 
-		m_pIndexBuffer = Graphics::IndexBuffer::make_buffer(indices);
+		m_pIndexBuffer = HAL::IndexBuffer::make_buffer(indices);
 		return S_OK;
 	}
 
@@ -111,7 +111,7 @@ namespace FW1FontWrapper
 
 			pContext->write(data, std::span{ vertexData->pVertices + currentVertex, vertexCount });
 
-			auto view = data.resource->create_view<Graphics::StructuredBufferView<Table::Glyph>>(*pContext->frame_resources, StructuredBufferViewDesc{ (uint)data.resource_offset, (uint)data.size, false });
+			auto view = data.resource->create_view<HAL::StructuredBufferView<Table::Glyph>>(*pContext->frame_resources, StructuredBufferViewDesc{ (uint)data.resource_offset, (uint)data.size, false });
 
 
 			{

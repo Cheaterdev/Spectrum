@@ -1,5 +1,4 @@
-module Graphics;
-import :GPUTimer;
+module HAL:GPUTimer;
 
 
 import d3d12;

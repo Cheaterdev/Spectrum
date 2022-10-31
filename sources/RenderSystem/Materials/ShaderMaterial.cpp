@@ -24,7 +24,7 @@ void ShaderMaterial::on_asset_change(std::shared_ptr<Asset> asset)
 	// if (asset == *file)
 	//      shader = HAL::pixel_shader::create_from_memory(file->get_data(), "PC", 0);
 }
-void ShaderMaterial::set(RENDER_TYPE render_type, MESH_TYPE type, Graphics::PipelineStateDesc &pipeline)
+void ShaderMaterial::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc &pipeline)
 {
 	//pipeline.pixel = shader;
 }

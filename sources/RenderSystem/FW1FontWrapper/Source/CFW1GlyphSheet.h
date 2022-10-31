@@ -121,8 +121,8 @@ namespace FW1FontWrapper
 		UINT						m_glyphCount;
 
 
-		Graphics::Texture::ptr		m_pTexture;
-		Graphics::StructureBuffer<float4>::ptr	  m_pCoordBuffer;
+		HAL::Texture::ptr		m_pTexture;
+		HAL::StructureBuffer<float4>::ptr	  m_pCoordBuffer;
 
 		bool						m_closed;
 		bool						m_static;

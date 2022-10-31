@@ -23,11 +23,11 @@ namespace PSOS
 			mpso.pixel.entry_point = "PS_RESULT";
 			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { Graphics::Format::R8_SNORM };
+			mpso.rtv_formats = { HAL::Format::R8_SNORM };
 			mpso.blend = {  };
 			mpso.enable_depth  = false;
-			mpso.cull  = Graphics::CullMode::None;
-			mpso.depth_func  = Graphics::ComparisonFunc::ALWAYS;
+			mpso.cull  = HAL::CullMode::None;
+			mpso.depth_func  = HAL::ComparisonFunc::ALWAYS;
 			return mpso;
 		}
 	};

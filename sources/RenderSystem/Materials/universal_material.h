@@ -13,8 +13,8 @@ namespace materials
 	struct render_pass
 	{
 		HAL::pixel_shader::ptr ps_shader;
-		Graphics::domain_shader::ptr ds_shader;
-		Graphics::hull_shader::ptr hs_shader;
+		HAL::domain_shader::ptr ds_shader;
+		HAL::hull_shader::ptr hs_shader;
 
 		void init_pipeline_id()
 		{
@@ -64,7 +64,7 @@ namespace materials
 
 		}PipelineSimple() = default;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, Graphics::PipelineStateDesc& pipeline) override {
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc& pipeline) override {
 
 			pipeline.pixel = pixel;
 		}
@@ -106,9 +106,9 @@ namespace materials
 		{
 
 		}
-		Graphics::library_shader::ptr  raytrace_lib;
+		HAL::library_shader::ptr  raytrace_lib;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, Graphics::PipelineStateDesc& pipeline) override
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc& pipeline) override
 		{
 			auto pass = &get_pass(render_type, type);
 
@@ -166,8 +166,8 @@ namespace materials
 				passes[PASS_TYPE::DEFERRED].ps_shader = HAL::pixel_shader::get_resource({ pixel, "PS", 0,context->get_pixel_result().macros, true });// create_from_memory(pixel, "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_pixel_result().macros);
 
 				if (!tess.empty()) {
-					passes[PASS_TYPE::DEFERRED].hs_shader = Graphics::hull_shader::get_resource({ tess, "HS", 0,context->get_tess_result().macros, true });//  Graphics::hull_shader::create_from_memory(tess, "HS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
-					passes[PASS_TYPE::DEFERRED].ds_shader = Graphics::domain_shader::get_resource({ tess, "DS", 0,context->get_tess_result().macros, true });// Graphics::domain_shader::create_from_memory(tess, "DS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
+					passes[PASS_TYPE::DEFERRED].hs_shader = HAL::hull_shader::get_resource({ tess, "HS", 0,context->get_tess_result().macros, true });//  HAL::hull_shader::create_from_memory(tess, "HS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
+					passes[PASS_TYPE::DEFERRED].ds_shader = HAL::domain_shader::get_resource({ tess, "DS", 0,context->get_tess_result().macros, true });// HAL::domain_shader::create_from_memory(tess, "DS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
 
 				}
 
@@ -185,7 +185,7 @@ namespace materials
 
 
 				auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), passes);
-				pipeline->raytrace_lib = Graphics::library_shader::get_resource({ raytracing, "" , 0, context->hit_shader.macros, true });
+				pipeline->raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , 0, context->hit_shader.macros, true });
 
 				pipeline->hash = hash;
 
@@ -295,7 +295,7 @@ namespace materials
 		//	Events::Event<void> on_change;
 	//		const std::wstring wshader_name;
 
-	//		Graphics::library_shader::ptr raytracing_lib;
+	//		HAL::library_shader::ptr raytracing_lib;
 		universal_material(MaterialGraph::ptr graph);
 		Slots::MaterialInfo::Compiled compiled_material_info;
 
@@ -328,7 +328,7 @@ namespace materials
 		void generate_material();
 
 		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override {}
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, Graphics::PipelineStateDesc& pipeline) override {}
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc& pipeline) override {}
 	private:
 		SERIALIZE() {
 			SAVE_PARENT(MaterialAsset);
