@@ -1,5 +1,6 @@
-module Graphics;// HAL:Private.CommandListCompiler;
+module HAL:Private.CommandListCompiler;
 
+import :Device;
 import Math;
 import Utils;
 

@@ -1,5 +1,5 @@
 #pragma once
-import Graphics;
+import HAL;
 
 
 class GPUTilesBuffer

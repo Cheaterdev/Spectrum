@@ -5,7 +5,7 @@
 
 static IdGenerator ids;
 
-import Graphics;
+import HAL;
 
 import crc32;
 

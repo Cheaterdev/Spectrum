@@ -1,6 +1,6 @@
 #include "pch_render.h"
 #include "FSR.h"
-import Graphics;
+import HAL;
 
 // CAS
 #define A_CPU

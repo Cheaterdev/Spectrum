@@ -2,7 +2,7 @@
 import EditObject;
 import Utils;
 import Serializer;
-import Graphics;
+import HAL;
 import serialization;
 import Tree;
 import ZipLib;

@@ -4,7 +4,7 @@
 
 #include "CFW1GlyphVertexDrawer.h"
 
-//import Graphics;
+//import HAL;
 
 #define SAFE_RELEASE(pObject) { if(pObject) { (pObject)->Release(); (pObject) = NULL; } }
 

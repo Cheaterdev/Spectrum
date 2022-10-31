@@ -5,7 +5,7 @@
 #include "CFW1GlyphSheet.h"
 #include "CFW1GlyphRenderStates.h"
 
-//import Graphics;
+//import HAL;
 
 
 namespace FW1FontWrapper

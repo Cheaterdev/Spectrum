@@ -8,7 +8,7 @@
 #include "Renderer/Renderer.h"
 
 class GBufferDownsampler;
-import Graphics;
+import HAL;
 
 
 class Texture3DMultiTiles

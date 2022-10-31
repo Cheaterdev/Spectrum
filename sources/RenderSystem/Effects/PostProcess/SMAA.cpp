@@ -1,6 +1,6 @@
 #include "pch_render.h"
 #include "SMAA.h"
-import Graphics;
+import HAL;
 
 using namespace FrameGraph;
 

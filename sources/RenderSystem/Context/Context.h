@@ -2,7 +2,7 @@
 
 import Scheduler;
 import Holdable;
-import Graphics;
+import HAL;
 #include "FrameGraph/FrameGraph.h"
 import Executors;
 import Math;

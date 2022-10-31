@@ -5,7 +5,7 @@
 
 #include "CFW1Object.h"
 
-import Graphics;
+import HAL;
 
 namespace FW1FontWrapper
 {

@@ -31,7 +31,7 @@
 #include "GUI/Elements/ComboBox.h"
 #include "GUI/Elements/ListBox.h"
 
-import Graphics;
+import HAL;
 
 
 #include "Platform/Window.h"

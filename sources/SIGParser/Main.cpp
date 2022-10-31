@@ -874,7 +874,7 @@ export
 		stream << R"(
 
 
-import Graphics;
+import HAL;
 import Data;
 
 import ppl;

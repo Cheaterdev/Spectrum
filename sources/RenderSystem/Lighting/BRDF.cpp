@@ -2,7 +2,7 @@
 #include "BRDF.h"
 
 REGISTER_TYPE(BRDF);
-import Graphics;
+import HAL;
 void BRDF::create_new()
 {
 

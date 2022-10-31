@@ -7,7 +7,7 @@
 #include "AssetRenderer.h"
 #include "Helpers/MipMapGeneration.h"
 
-import Graphics;
+import HAL;
 
 using namespace FrameGraph;
 import HAL;

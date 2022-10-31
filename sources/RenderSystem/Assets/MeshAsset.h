@@ -6,7 +6,7 @@ import Tasks;
 
 #include "GUI/GUI.h"
 
-import Graphics;
+import HAL;
 
 
 import stl.core;

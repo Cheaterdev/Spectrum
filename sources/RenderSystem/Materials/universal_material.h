@@ -3,7 +3,7 @@
 #include "Context/Context.h"
 #include "Assets/BinaryAsset.h"
 #include "Assets/MaterialAsset.h"
-import Graphics;
+import HAL;
 
 import crc32;
 

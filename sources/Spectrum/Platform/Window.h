@@ -2,7 +2,7 @@
 import Application;
 #include "GUI/GUI.h"
 
-import Graphics;
+import HAL;
 
 class Window : public HAL::hwnd_provider
 {

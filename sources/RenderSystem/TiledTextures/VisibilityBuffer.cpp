@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "VisibilityBuffer.h"
 
-import Graphics;
+import HAL;
 
 VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {

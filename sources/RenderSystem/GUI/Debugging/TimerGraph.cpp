@@ -3,7 +3,7 @@
 #include "GUI/Elements/ScrollContainer.h"
 #include "GUI/Elements/Button.h"
 #include "GUI/Elements/Image.h"
-import Graphics;
+import HAL;
 namespace GUI
 {
 	namespace Elements

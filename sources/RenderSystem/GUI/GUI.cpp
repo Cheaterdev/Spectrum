@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "GUI/Elements/Window.h"
 #include "GUI/Renderer/Renderer.h"
-import Graphics;
+import HAL;
 
 using namespace FrameGraph;
 
