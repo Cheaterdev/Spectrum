@@ -6,7 +6,7 @@ export import :Types;
 export import :Sampler;
 
 // TODO: Should be private
-export import :Utils;
+//export import :Utils;
 
 export import :Device;
 export import :Queue;
@@ -19,20 +19,20 @@ export import :Descriptors;
 export import :DescriptorHeap;
 export import :Heap;
 export import :HeapAllocators;
-export import :TiledMemeoryManager;
+export import :TiledMemoryManager;
 export import :ResourceStates;
 export import :ResourceViews;
 export import :Resource;
 export import :Texture;
 export import :SwapChain;
 export import :Adapter;
-export import :Debug;
-export import :Removeme;
+//export import :Debug;
+
 export import :Shader;
 export import :TextureData;
 
 export import :FrameManager;
-export import :API;
+//export import :API;
 export import :PipelineState;
 export import :CommandList;
 

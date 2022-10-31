@@ -1,4 +1,4 @@
-module Graphics;
+module HAL:TiledMemoryManager;
 
 import Math;
 import Events;

@@ -266,12 +266,12 @@ namespace Spectrum
 
 
     [Sharpmake.Generate]
-    public class DirectXFramework : Library
+    public class HAL : Library
     {
-        public DirectXFramework()
+        public HAL()
         {
-            SourceRootPath = @"[project.SharpmakeCsPath]\sources\DirectXFramework";
-            AssemblyName = "DirectXFramework";
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\HAL";
+            AssemblyName = "HAL";
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)
@@ -303,7 +303,7 @@ namespace Spectrum
 
          conf.IsBlobbed = true;
         
-            conf.AddPublicDependency<DirectXFramework>(target);
+            conf.AddPublicDependency<HAL>(target);
         }
     }
 
@@ -352,7 +352,7 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
-            conf.AddPublicDependency<DirectXFramework>(target);
+            conf.AddPublicDependency<HAL>(target);
             conf.AddPublicDependency<RenderSystem>(target);
         }
     }

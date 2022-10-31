@@ -1,4 +1,4 @@
-module Graphics;// HAL:FrameManager;
+module HAL:FrameManager;
 
 import Utils;
 import StateContext;

@@ -1,6 +1,6 @@
-module Graphics;
+module HAL:Resource;
 import wrl;
-import HAL;
+
 import d3d12;
 import Math;
 import Utils;

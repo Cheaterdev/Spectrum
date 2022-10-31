@@ -4,7 +4,7 @@ import :HeapAllocators;
 import :API.Device;
 import :API.Resource;
 
-import :TiledMemeoryManager;
+import :TiledMemoryManager;
 import :ResourceStates;
 
 

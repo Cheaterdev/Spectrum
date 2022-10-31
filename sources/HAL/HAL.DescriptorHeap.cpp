@@ -1,4 +1,4 @@
-module Graphics;
+module HAL:DescriptorHeap;
 import HAL;
 import :Types;
 

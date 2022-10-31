@@ -1,4 +1,4 @@
-module Graphics;
+module HAL:ResourceViews;
 
 import :Types;
 

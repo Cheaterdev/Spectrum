@@ -1,4 +1,4 @@
-module Graphics;
+module HAL:Device;
 import Log;
 
 import Debug;
@@ -7,7 +7,7 @@ import IdGenerator;
 import StateContext;
 import Data;
 import Debug;
-
+import HAL;
 
 namespace HAL
 {

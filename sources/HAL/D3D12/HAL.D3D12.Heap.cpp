@@ -1,4 +1,4 @@
-module Graphics;
+module HAL:Heap;
 
 import HAL;
 import d3d12;

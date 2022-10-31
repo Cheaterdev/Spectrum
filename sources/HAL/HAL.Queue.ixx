@@ -4,8 +4,7 @@ import Scheduler;
 import Executors;
 import :Fence;
 import :Types;
-import :Removeme;
-import :TiledMemeoryManager;
+import :TiledMemoryManager;
 import :API.Queue;
 
 export namespace HAL

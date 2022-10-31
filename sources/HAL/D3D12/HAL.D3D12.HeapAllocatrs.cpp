@@ -1,6 +1,6 @@
-module Graphics;
+module HAL:HeapAllocators;
 
-import HAL;
+import :Device;
 import d3d12;
 import Math;
 import Utils;

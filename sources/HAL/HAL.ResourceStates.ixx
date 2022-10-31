@@ -2,11 +2,10 @@ export module HAL:ResourceStates;
 
 import Utils;
 import StateContext;
-import :API.Device;
-import :API.Resource;
-import :Types;
-import :Removeme;
 
+import :Types;
+
+import d3d12;
 using namespace HAL;
 
 export
