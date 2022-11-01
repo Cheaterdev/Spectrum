@@ -29,23 +29,20 @@ namespace HAL
 	}
 	void Barriers::clear()
 	{
-		native.clear();
+		barriers.clear();
 	}
-	const std::vector<D3D12_RESOURCE_BARRIER>& Barriers::get_native() const
+	const std::vector<Barrier>& Barriers::get_barriers() const
 	{
-		return native;
+		return barriers;
 	}
 	void Barriers::uav(Resource* resource)
 	{
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::UAV((resource)->get_dx()));
+		barriers.emplace_back(BarrierUAV{ resource });// CD3DX12_RESOURCE_BARRIER::UAV((resource)->get_dx()));
 	}
 
 	void Barriers::alias(Resource* from, Resource* to)
 	{
-		auto native_from = from ? (from)->get_dx() : nullptr;
-		auto native_to = to ? (to)->get_dx() : nullptr;
-
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(native_from, native_to));
+		barriers.emplace_back(BarrierAlias{ from, to });// (CD3DX12_RESOURCE_BARRIER::Aliasing(native_from, native_to));
 	}
 
 	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags)
@@ -60,17 +57,17 @@ namespace HAL
 		assert(IsFullySupport(type, before));
 		assert(IsFullySupport(type, after));
 
+		barriers.emplace_back(BarrierTransition{ const_cast<Resource*>(resource) ,before ,after ,subres ,flags });//
+		//D3D12_RESOURCE_BARRIER_FLAGS native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
-		D3D12_RESOURCE_BARRIER_FLAGS native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
+		//if (flags == BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
+		//if (flags == BarrierFlags::END) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
 
-		if (flags == BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
-		if (flags == BarrierFlags::END) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
-
-		native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition((resource)->get_dx(),
-			static_cast<D3D12_RESOURCE_STATES>(before),
-			static_cast<D3D12_RESOURCE_STATES>(after),
-			subres== ALL_SUBRESOURCES? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES:subres,
-			native_flags));
+		//native.emplace_back(CD3DX12_RESOURCE_BARRIER::Transition((resource)->get_dx(),
+		//	static_cast<D3D12_RESOURCE_STATES>(before),
+		//	static_cast<D3D12_RESOURCE_STATES>(after),
+		//	subres== ALL_SUBRESOURCES? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES:subres,
+		//	native_flags));
 
 		validate();
 	}
@@ -315,8 +312,8 @@ namespace HAL
 
 		if (cpu_state.all_state.first_transition && gpu_state.all_states_same)
 		{
-			merge_one(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-			transition_one(D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
+			merge_one(ALL_SUBRESOURCES);
+			transition_one(ALL_SUBRESOURCES);
 		}
 		else
 		{

@@ -5,7 +5,6 @@ import StateContext;
 
 import :Types;
 
-import d3d12;
 using namespace HAL;
 
 export
@@ -95,9 +94,36 @@ export
 			END = 2,
 			SINGLE = BEGIN | END
 		};
+
+		struct BarrierTransition
+		{
+			Resource* resource;
+			ResourceState before;
+			ResourceState after;
+			UINT subres;
+			BarrierFlags flags;
+		};
+
+		struct BarrierUAV
+		{
+			Resource* resource;
+			
+		};
+		struct BarrierAlias
+		{
+			Resource* before;
+			Resource* after;
+
+		};
+
+
+		using Barrier = std::variant<BarrierTransition, BarrierUAV,BarrierAlias>;
+
 		class Barriers
 		{
-			std::vector<D3D12_RESOURCE_BARRIER> native;
+
+
+			std::vector<Barrier> barriers;
 
 			void validate();
 			CommandListType type;
@@ -106,10 +132,10 @@ export
 			Barriers(CommandListType type);
 			inline operator bool() const
 			{
-				return !native.empty();
+				return !barriers.empty();
 			}
 			void clear();
-			const std::vector<D3D12_RESOURCE_BARRIER>& get_native() const;
+			const std::vector<Barrier>& get_barriers() const;
 			void uav(Resource* resource);
 			void alias(Resource* from, Resource* to);
 
