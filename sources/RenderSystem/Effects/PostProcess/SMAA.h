@@ -1,5 +1,7 @@
 #pragma once
 #include "FrameGraph/FrameGraph.h"
+import Events;
+import HAL;
 
 class SMAA :Events::prop_handler, public FrameGraph::GraphGenerator
 {

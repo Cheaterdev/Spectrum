@@ -418,19 +418,27 @@ public:
 
 		scene->update(*graph.builder.current_frame);
 
+
+		auto& timeinfo = graph.get_context<TimeInfo>();
+		auto& skyinfo = graph.get_context<SkyInfo>();
+		auto& caminfo = graph.get_context<CameraInfo>();
+		auto& sceneinfo = graph.get_context<SceneInfo>();
+		auto& vp = graph.get_context<ViewportInfo>();
+
+
 		if (downsampled)
-			graph.frame_size = size / 1.5;
+			vp.frame_size = size / 1.5;
 		else
-			graph.frame_size = size;
+			vp.frame_size = size;
 
-		graph.upscale_size = size;
+		vp.upscale_size = size;
 
-		graph.scene = scene.get();
-		graph.renderer = gpu_scene_renderer.get();
-		graph.cam = &cam;
-		graph.time = (float)my_timer.tick();
-		graph.totalTime += graph.time;
-		graph.sunDir = pssm.get_position();
+		sceneinfo.scene = scene.get();
+		sceneinfo.renderer = gpu_scene_renderer.get();
+		caminfo.cam = &cam;
+		timeinfo.time = (float)my_timer.tick();
+		timeinfo.totalTime += timeinfo.time;
+		skyinfo.sunDir = pssm.get_position();
 		cam.update({ 0,0 });
 
 
@@ -487,8 +495,9 @@ public:
 
 
 			graph.add_pass<GBufferData>("SCENE", [this, &graph](GBufferData& data, TaskBuilder& builder) {
+				auto& frame = graph.get_context<ViewportInfo>();
 
-				auto size = graph.frame_size;
+				auto size = frame.frame_size;
 				data.gbuffer.create(size, builder);
 				data.gbuffer.create_mips(size, builder);
 				data.gbuffer.create_quality(size, builder);
@@ -571,7 +580,9 @@ public:
 
 			if (HAL::Device::get().is_rtx_supported())
 				graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
-				auto size = graph.frame_size;
+				auto& frame = graph.get_context<ViewportInfo>();
+
+				auto size = frame.frame_size;
 				data.gbuffer.need(builder, false);
 				builder.create(data.RTXDebug, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 				builder.create(data.RTXDebugPrev, { ivec3(size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
@@ -620,7 +631,8 @@ public:
 
 		};
 		graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
-			builder.create(data.ResultTexture, { uint3(graph.frame_size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::RenderTarget);
+			auto& frame = graph.get_context<ViewportInfo>();
+			builder.create(data.ResultTexture, { uint3(frame.frame_size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::RenderTarget);
 			}, [](no& data, FrameContext& _context) {});
 
 
@@ -649,18 +661,23 @@ public:
 		graph.add_slot_generator([this](Graph& graph) {
 
 			PROFILE(L"FrameInfo");
+			auto& time = graph.get_context<TimeInfo>();
+			auto& skyinfo = graph.get_context<SkyInfo>();
+			auto& cam = graph.get_context<CameraInfo>();
+
+
 			Slots::FrameInfo frameInfo;
 			//// hack zone
 			auto& sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
 			if (sky.resource)
 				frameInfo.GetSky() = sky.get_handler<Handlers::Cube>()->textureCube;
 			/////////
-			frameInfo.GetSunDir().xyz = graph.sunDir;
-			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
+			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
+			frameInfo.GetTime() = { time.time ,time.totalTime,0,0 };
 
 
-			frameInfo.GetCamera() = graph.cam->camera_cb.current;
-			frameInfo.GetPrevCamera() = graph.cam->camera_cb.prev;
+			frameInfo.GetCamera() = cam.cam->camera_cb.current;
+			frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
 
 			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;

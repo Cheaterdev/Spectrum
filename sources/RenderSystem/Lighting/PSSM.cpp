@@ -33,12 +33,14 @@ PSSM::PSSM()
 void PSSM::generate(Graph& graph)
 {
 
+	auto& sceneinfo = graph.get_context<SceneInfo>();
+	auto& caminfo = graph.get_context<CameraInfo>();
 
 
-	auto scene = graph.scene;
+	auto scene = sceneinfo.scene;
 	auto min = scene->get_min();
 	auto max = scene->get_max();
-	auto cam = graph.cam;
+	auto cam = caminfo.cam;
 
 
 	auto points_all = cam->get_points(min, max);
@@ -73,6 +75,10 @@ void PSSM::generate(Graph& graph)
 			auto& graphics = command_list->get_graphics();
 			auto& compute = command_list->get_compute();
 
+			auto& sceneinfo = graph.get_context<SceneInfo>();
+
+
+
 			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 			compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
@@ -97,8 +103,8 @@ void PSSM::generate(Graph& graph)
 			context->list = command_list;
 			context->cam = &light_cam;
 
-			auto scene = graph.scene;
-			auto renderer = graph.renderer;
+			auto scene = sceneinfo.scene;
+			auto renderer = sceneinfo.renderer;
 
 			auto table = RenderTargetTable(command_list->get_graphics(), {}, *data.global_depth);
 
@@ -188,6 +194,8 @@ void PSSM::generate(Graph& graph)
 				auto& graphics = command_list->get_graphics();
 				auto& compute = command_list->get_compute();
 
+				auto& sceneinfo = graph.get_context<SceneInfo>();
+
 				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
 				compute.set_signature(get_Signature(Layouts::DefaultLayout));
 
@@ -215,8 +223,8 @@ void PSSM::generate(Graph& graph)
 				auto depth_tex = data.PSSM_Depths->create_2d_slice(i, *graph.builder.current_frame);
 				//	auto shadow_cameras = _context.get_buffer(data.shadow_cameras);
 
-				auto scene = graph.scene;
-				auto renderer = graph.renderer;
+				auto scene = sceneinfo.scene;
+				auto renderer = sceneinfo.renderer;
 
 
 				//_context.register_subview(depth_tex);
@@ -276,8 +284,9 @@ void PSSM::generate(Graph& graph)
 
 	// relight pass
 	graph.add_pass<PSSMData>("PSSM_GenerateMask", [this, &graph](PSSMData& data, TaskBuilder& builder) {
+		auto& frame = graph.get_context<ViewportInfo>();
 
-		builder.create(data.LightMask, { ivec3(graph.frame_size,0), HAL::Format::R8_UNORM,1,1 }, ResourceFlags::RenderTarget);
+		builder.create(data.LightMask, { ivec3(frame.frame_size,0), HAL::Format::R8_UNORM,1,1 }, ResourceFlags::RenderTarget);
 		data.gbuffer.need(builder);
 		builder.need(data.PSSM_Depths, ResourceFlags::PixelRead);
 		builder.need(data.PSSM_Cameras, ResourceFlags::None);

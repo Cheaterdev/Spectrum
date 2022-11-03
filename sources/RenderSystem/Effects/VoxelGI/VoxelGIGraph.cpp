@@ -24,8 +24,9 @@ public:
 		{
 			GBufferViewDesc gbuffer;
 		};
+		auto& frame = graph.get_context<ViewportInfo>();
 
-		auto size = graph.frame_size;
+		auto size = frame.frame_size;
 
 		graph.add_pass<DownsampleData>("GBufferDownsampler", [this, size](DownsampleData& data, TaskBuilder& builder) {
 
@@ -388,8 +389,9 @@ void VoxelGI::debug(Graph& graph)
 		Handlers::Texture3D H(VoxelLighted);
 
 	};
+	auto& frame = graph.get_context<ViewportInfo>();
 
-	auto size = graph.frame_size;
+	auto size = frame.frame_size;
 
 	graph.add_pass<VoxelDebugData>("VoxelDebug", [this, size](VoxelDebugData& data, TaskBuilder& builder) {
 
@@ -403,6 +405,8 @@ void VoxelGI::debug(Graph& graph)
 			auto& command_list = _context.get_list();
 
 			auto voxel_lighted = *data.VoxelLighted;
+			auto& caminfo = graph.get_context<CameraInfo>();
+			auto& sceneinfo = graph.get_context<SceneInfo>();
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 			auto target_tex = *data.VoxelDebug;
@@ -414,10 +418,10 @@ void VoxelGI::debug(Graph& graph)
 			context->list = command_list;
 			//	context->eye_context = vr_context;
 
-			context->cam = graph.cam;
+			context->cam = caminfo.cam;
 
-			auto scene = graph.scene;
-			auto renderer = graph.renderer;
+			auto scene = sceneinfo.scene;
+			auto renderer = sceneinfo.renderer;
 			context->begin();
 
 			auto& graphics = context->list->get_graphics();
@@ -473,8 +477,9 @@ void VoxelGI::screen(Graph& graph)
 		Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 
 	};
+	auto& frame = graph.get_context<ViewportInfo>();
 
-	auto size = graph.frame_size;
+	auto size = frame.frame_size;
 	int count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
 
 	graph.add_pass<Screen>("VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
@@ -511,6 +516,8 @@ void VoxelGI::screen(Graph& graph)
 
 			auto size = noisy_output.get_size();
 
+			auto& sceneinfo = graph.get_context<SceneInfo>();
+
 
 			if (data.VoxelIndirectFiltered.is_new())
 			{
@@ -521,8 +528,8 @@ void VoxelGI::screen(Graph& graph)
 			}
 
 
-			auto scene = graph.scene;
-			auto renderer = graph.renderer;
+			auto scene = sceneinfo.scene;
+			auto renderer = sceneinfo.renderer;
 
 			auto& compute = command_list->get_compute();
 
@@ -568,7 +575,7 @@ void VoxelGI::screen(Graph& graph)
 
 			if (use_rtx)
 			{
-				RTX::get().render<Indirect>(compute, scene->raytrace_scene, noisy_output.get_size());
+				RTX::get().render<Indirect>(compute, sceneinfo.scene->raytrace_scene, noisy_output.get_size());
 			}
 			else
 			{
@@ -694,10 +701,13 @@ void VoxelGI::screen(Graph& graph)
 
 			auto gi_filtered = *(data.VoxelIndirectFiltered);
 
+			auto& sceneinfo = graph.get_context<SceneInfo>();
+
+
 			auto size = target_tex.get_size();
 
-			auto scene = graph.scene;
-			auto renderer = graph.renderer;
+			auto scene = sceneinfo.scene;
+			auto renderer = sceneinfo.renderer;
 
 			auto& compute = command_list->get_compute();
 
@@ -801,7 +811,9 @@ void VoxelGI::screen_reflection(Graph& graph)
 		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
 		Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
 	};
-	auto size = graph.frame_size;
+	auto& frame = graph.get_context<ViewportInfo>();
+
+	auto size = frame.frame_size;
 
 	graph.add_pass<ScreenReflection>("ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
@@ -827,16 +839,18 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 			//	HAL::TextureView downsampled_reflection = *(data.downsampled_reflection);
 
+			auto& caminfo = graph.get_context<CameraInfo>();
+			auto& sceneinfo = graph.get_context<SceneInfo>();
 
 
 			context->current_time = 0;
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
 
-			context->cam = graph.cam;
+			context->cam = caminfo.cam;
 
-			auto scene = graph.scene;
-			auto renderer = graph.renderer;
+			auto scene = sceneinfo.scene;
+			auto renderer = sceneinfo.renderer;
 			context->begin();
 
 			auto& graphics = context->list->get_graphics();
@@ -930,6 +944,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 				auto& command_list = _context.get_list();
 
+				auto& sceneinfo = graph.get_context<SceneInfo>();
 
 				auto target_tex = *(data.ResultTexture);
 				auto gbuffer = data.gbuffer.actualize(_context);
@@ -951,8 +966,8 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 				auto size = target_tex.get_size();
 
-				auto scene = graph.scene;
-				auto renderer = graph.renderer;
+				auto scene = sceneinfo.scene;
+				auto renderer = sceneinfo.renderer;
 
 				auto& compute = command_list->get_compute();
 
@@ -1043,6 +1058,8 @@ void VoxelGI::voxelize(Graph& graph)
 
 		}, [this, &graph](Voxelize& data, FrameContext& _context) {
 			auto& command_list = _context.get_list();
+			auto& cam = graph.get_context<CameraInfo>();
+			auto& sceneinfo = graph.get_context<SceneInfo>();
 
 			if (need_start_new)
 			{
@@ -1055,10 +1072,10 @@ void VoxelGI::voxelize(Graph& graph)
 			context->current_time = 0;
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
-			context->cam = graph.cam;
+			context->cam = cam.cam;
 
-			auto scene = graph.scene;
-			auto renderer = graph.renderer;
+			auto scene = sceneinfo.scene;
+			auto renderer = sceneinfo.renderer;
 			context->begin();
 
 			voxelize(context, renderer, graph);
@@ -1098,11 +1115,13 @@ void VoxelGI::lighting(Graph& graph)
 
 			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
 
+			auto& cam = graph.get_context<CameraInfo>();
+
 			MeshRenderContext::ptr context(new MeshRenderContext());
 			context->current_time = 0;
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
-			context->cam = graph.cam;
+			context->cam = cam.cam;
 
 
 
@@ -1172,6 +1191,7 @@ void VoxelGI::mipmapping(Graph& graph)
 			auto& command_list = _context.get_list();
 
 			auto voxel_lighted = *(data.VoxelLighted);
+			auto& cam = graph.get_context<CameraInfo>();
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
 
@@ -1181,7 +1201,7 @@ void VoxelGI::mipmapping(Graph& graph)
 			context->list = command_list;
 			//	context->eye_context = vr_context;
 
-			context->cam = graph.cam;
+			context->cam = cam.cam;
 
 
 

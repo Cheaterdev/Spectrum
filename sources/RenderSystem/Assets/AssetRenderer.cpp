@@ -26,7 +26,10 @@ public:
 
 	void render(Graph& graph)
 	{
-		graph.scene->update(*graph.builder.current_frame);
+		auto& sceneinfo = graph.get_context<SceneInfo>();
+		auto scene = sceneinfo.scene->get_ptr<Scene>().get();
+
+		scene->update(*graph.builder.current_frame);
 
 		{
 
@@ -34,8 +37,7 @@ public:
 
 			command_list->begin("pre");
 			{
-				auto scene = graph.scene->get_ptr<Scene>().get();
-
+		
 				SceneFrameManager::get().prepare(command_list, *scene);
 			}
 
@@ -44,9 +46,10 @@ public:
 			command_list->execute();
 		}
 
+		auto& frame = graph.get_context<ViewportInfo>();
 
 
-		auto size = graph.frame_size;
+		auto size = frame.frame_size;
 
 		{
 
@@ -71,6 +74,9 @@ public:
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
+					auto& frame = graph.get_context<ViewportInfo>();
+					auto& scene = graph.get_context<SceneInfo>();
+					auto& cam = graph.get_context<CameraInfo>();
 
 					//graph.scene->init_ras();
 
@@ -82,7 +88,7 @@ public:
 					context->priority = TaskPriority::HIGH;
 					context->list = command_list;
 
-					context->cam = graph.cam;
+					context->cam = cam.cam;
 
 					GBuffer gbuffer = data.gbuffer.actualize(_context);
 
@@ -101,7 +107,7 @@ public:
 					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
 
 
-					scene_renderer->render(context, graph.scene->get_ptr<Scene>());
+					scene_renderer->render(context, scene.scene->get_ptr<Scene>());
 
 
 					//	MipMapGenerator::get().copy_texture_2d_slow(command_list->get_graphics(), texture.texture, gbuffer.albedo);
@@ -128,7 +134,9 @@ public:
 
 
 		graph.add_slot_generator([this](Graph& graph) {
-
+			auto& time = graph.get_context<TimeInfo>();
+			auto& skyinfo = graph.get_context<SkyInfo>();
+			auto& cam = graph.get_context<CameraInfo>();
 			PROFILE(L"FrameInfo");
 			Slots::FrameInfo frameInfo;
 			//// hack zone
@@ -136,12 +144,12 @@ public:
 			if (sky.resource)
 				frameInfo.GetSky() = sky.get_handler<Handlers::Cube>()->textureCube;
 			/////////
-			frameInfo.GetSunDir().xyz = graph.sunDir;
-			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
+			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
+			frameInfo.GetTime() = { time.time ,time.totalTime,0,0 };
 
 
-			frameInfo.GetCamera() = graph.cam->camera_cb.current;
-			frameInfo.GetPrevCamera() = graph.cam->camera_cb.prev;
+			frameInfo.GetCamera() = cam.cam->camera_cb.current;
+			frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
 
 			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
 			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
@@ -151,7 +159,9 @@ public:
 			});
 
 		graph.add_slot_generator([this](Graph& graph) {
-			graph.register_slot_setter(graph.scene->compiledScene);
+			auto& scene = graph.get_context<SceneInfo>();
+
+			graph.register_slot_setter(scene.scene->compiledScene);
 			});
 
 		//		graph.add_pass([])
@@ -191,19 +201,27 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 	mesh_plane->local_transform.a42 = mn.y;
 	scene->update_transforms();
 
+
+	auto& time = graph.get_context<TimeInfo>();
+	auto& skyinfo = graph.get_context<SkyInfo>();
+	auto& caminfo = graph.get_context<CameraInfo>();
+	auto& sceneinfo = graph.get_context<SceneInfo>();
+	auto& vp = graph.get_context<ViewportInfo>();
+
+
 	cam.target = (mn + mx) / 2;
 	cam.position = cam.target + (vec3(30, 10, 30).normalize()) * ((mx - mn).length());
 	cam.set_projection_params(Math::pi / 4, 1, 1, 100 + (mn - mx).length());
 	cam.update();
 
 
-	graph.sunDir = float3(1, 1, 1).normalize();
+	skyinfo.sunDir = float3(1, 1, 1).normalize();
 
 	graph.builder.pass_texture("ResultTexture", result, ResourceFlags::Required);
-	graph.frame_size = result->get_size();
-	graph.scene = scene.get();
-	graph.renderer = scene_renderer.get();
-	graph.cam = &cam;
+	vp.frame_size = result->get_size();
+	sceneinfo.scene = scene.get();
+	sceneinfo.renderer = scene_renderer.get();
+	caminfo.cam = &cam;
 
 	rendering->render(graph);
 	graph.setup();

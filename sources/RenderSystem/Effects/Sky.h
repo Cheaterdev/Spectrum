@@ -1,6 +1,9 @@
 #pragma once
 #include "FrameGraph/FrameGraph.h"
 
+import Events;
+import Singleton;
+import HAL;
 
 class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraph::GraphGenerator
 {

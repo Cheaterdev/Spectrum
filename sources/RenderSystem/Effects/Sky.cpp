@@ -32,6 +32,7 @@ void SkyRender::generate_sky(Graph& graph)
 			auto& list = *_context.get_list();
 
 			auto& graphics = list.get_graphics();
+			auto& sky = graph.get_context<SkyInfo>();
 
 			graphics.set_pipeline(GetPSO<PSOS::Sky>());
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
@@ -48,7 +49,7 @@ void SkyRender::generate_sky(Graph& graph)
 
 				skydata.GetDepthBuffer() = data.GBuffer_Depth->texture2D;
 
-				skydata.GetSunDir() = graph.sunDir;
+				skydata.GetSunDir() = sky.sunDir;
 
 				skydata.set(graphics);
 
@@ -71,14 +72,16 @@ void SkyRender::generate(Graph& graph)
 	};
 
 	graph.pass<SkyData>("CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
+		auto& sky = graph.get_context<SkyInfo>();
+
 		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
-		bool changed = (graph.sunDir - dir).length() > 0.001;
+		bool changed = (sky.sunDir - dir).length() > 0.001;
 
 		if (changed)
 		{
 
 			data.sky_cubemap.changed();
-			dir = graph.sunDir;
+			dir = sky.sunDir;
 		}
 
 		return changed;
@@ -89,6 +92,7 @@ void SkyRender::generate(Graph& graph)
 			auto& list = *_context.get_list();
 
 			auto& graphics = list.get_graphics();
+			auto& sky = graph.get_context<SkyInfo>();
 
 
 			graphics.set_pipeline(GetPSO<PSOS::SkyCube>());
@@ -103,7 +107,7 @@ void SkyRender::generate(Graph& graph)
 				data.GetInscatter() = inscatter->texture_3d().texture3D;
 				data.GetIrradiance() = irradiance->texture_2d().texture2D;
 				data.GetTransmittance() = transmittance->texture_2d().texture2D;
-				data.GetSunDir() = graph.sunDir;
+				data.GetSunDir() = sky.sunDir;
 				data.set(graphics);
 
 			}

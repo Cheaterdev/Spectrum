@@ -1,7 +1,6 @@
+module Graphics:FrameGraph;
 
-#include "pch_render.h"
-
-#include "FrameGraph.h"
+import Scheduler;
 import HAL;
 
 using namespace HAL;

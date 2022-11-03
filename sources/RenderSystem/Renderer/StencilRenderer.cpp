@@ -333,23 +333,24 @@ void stencil_renderer::generate(Graph& graph)
 	process_tasks();
 
 	debug_scene->update_transforms();
+	auto& caminfo = graph.get_context<CameraInfo>();
 
-	cam = *graph.cam;
+	cam = *caminfo.cam;
 	cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
 	cam.target = cam.position + direction;
 	cam.update();
 
-	axis_cam = *graph.cam;
+	axis_cam = *caminfo.cam;
 
 
-	vec3 dir = /*axis_cam.position +*/ graph.cam->target - graph.cam->position;
+	vec3 dir = /*axis_cam.position +*/ caminfo.cam->target - caminfo.cam->position;
 	dir.normalize();
 	axis_cam.set_projection_params(1, 1000);
 	axis_cam.position -= (center_pos);
 	axis_cam.position.normalize();
 	axis_cam.position *= 200;
 	axis_cam.target = axis_cam.position + dir;//float3(0, 0, 0);//;
-	vec2 local = graph.cam->to_local(float3(0, 0, 0));
+	vec2 local = caminfo.cam->to_local(float3(0, 0, 0));
 	axis_cam.update();
 	axis_intersect_cam = axis_cam;
 	axis_intersect_cam.set_projection_params(1, 1000);
@@ -380,8 +381,9 @@ void stencil_renderer::generate(Graph& graph)
 				auto& graphics = list.get_graphics();
 				auto& copy = list.get_copy();
 
+				auto& sceneinfo = graph.get_context<SceneInfo>();
 
-				auto obj = graph.scene;
+				auto obj = sceneinfo.scene;
 
 				//SceneFrameManager::get().prepare(_context.get_list(), *debug_scene);
 
@@ -553,8 +555,11 @@ void stencil_renderer::generate_after(Graph& graph)
 		};
 
 		graph.add_pass<Data>("stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
+
+			auto& frame = graph.get_context<ViewportInfo>();
+
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,0), HAL::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
+			builder.create(data.Stencil_color_tex, { ivec3(frame.frame_size,0), HAL::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
 
 			}, [this, &graph](Data& data, FrameContext& _context) {
 

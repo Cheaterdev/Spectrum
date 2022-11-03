@@ -928,6 +928,7 @@ namespace GUI
 				 auto command_list = context.get_list();
 				
 				 auto texture = (*data.o_texture);
+                 auto& time = graph.get_context<TimeInfo>();
 
 			//	 command_list->transition(texture.resource, HAL::ResourceState::RENDER_TARGET);
 				 command_list->get_graphics().set_rtv(1, texture.renderTarget, HAL::Handle());
@@ -943,7 +944,7 @@ namespace GUI
 				// c.offset = { 0, 0 };
 				 c.window_size = scaled_size.get();
 				 c.scale = 1;
-                 c.delta_time = graph.time;
+                 c.delta_time = time.time;
 				 {
                      PROFILE_GPU(L"draw");
 					 RecursiveContext context(c);
