@@ -1,5 +1,9 @@
-#pragma once
+module;
+
 #include "FW1FontWrapper/Source/FW1FontWrapper.h"
+
+export module  Graphics:TextSystem;
+
 import wrl;
 
 import Data;
@@ -8,9 +12,11 @@ typedef ComPtr<IFW1Factory>			FW1_Factory;
 typedef ComPtr<IFW1FontWrapper>		FW1_Font;
 typedef ComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 
+export   using FW1_TEXT_FLAG = ::FW1_TEXT_FLAG;;
 
-namespace Fonts
+export namespace Fonts
 {
+  
     class FontSystem;
     class FontGeometry;
     class Font

@@ -149,7 +149,7 @@ namespace GUI
                 label::ptr label_text(new label());
                 label_text->docking = dock::LEFT;
                 label_text->text = convert(elem->get_name());
-                label_text->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
+                label_text->magnet_text = FW1_TEXT_FLAG::FW1_LEFT | FW1_TEXT_FLAG::FW1_VCENTER | FW1_TEXT_FLAG::FW1_NOWORDWRAP;
                 label_text->margin = { 5, 0, 0, 0 };
                 l->add_child(label_text);
                 tree->add_child(l);

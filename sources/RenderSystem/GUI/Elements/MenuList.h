@@ -92,7 +92,7 @@ namespace GUI
                 {
                     label::ptr e(new label());
                     e->text = elem;
-                    e->magnet_text = FW1_LEFT | FW1_VCENTER | FW1_NOWORDWRAP;
+                    e->magnet_text = FW1_TEXT_FLAG::FW1_LEFT | FW1_TEXT_FLAG::FW1_VCENTER | FW1_TEXT_FLAG::FW1_NOWORDWRAP;
                     e->docking = dock::FILL;
                     typename T::ptr l_e(new T(!vertical));
                     l_e->docking = vertical ? dock::TOP : dock::LEFT;

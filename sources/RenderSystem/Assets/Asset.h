@@ -1,3 +1,4 @@
+//export module Graphics:Asset;
 #pragma once
 import EditObject;
 import Utils;
@@ -8,6 +9,8 @@ import Tree;
 import ZipLib;
 import Data;
 import stl.memory;
+//export
+///{
 
 enum class Asset_Type : int
 {
@@ -740,3 +743,4 @@ void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 
 	//        ar &NVP(data);
 }
+//}

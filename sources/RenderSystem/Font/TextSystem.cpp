@@ -1,5 +1,7 @@
-#include "pch_render.h"
-#include "TextSystem.h"
+module;
+#include "FW1FontWrapper/Source/FW1FontWrapper.h"
+
+module Graphics:TextSystem;
 
 import Utils;
 
