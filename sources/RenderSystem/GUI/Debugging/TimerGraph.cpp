@@ -4,6 +4,8 @@
 #include "GUI/Elements/Button.h"
 #include "GUI/Elements/Image.h"
 import HAL;
+
+using namespace HAL;
 namespace GUI
 {
 	namespace Elements
@@ -277,7 +279,7 @@ namespace GUI
 						data.reset();
 						front->remove_all();
 
-						gpu_start = GPUTimeManager::get().get_now();
+						gpu_start = HAL::GPUTimeManager::get().get_now();
 						start = std::chrono::high_resolution_clock::now();
 
 						ended = false;

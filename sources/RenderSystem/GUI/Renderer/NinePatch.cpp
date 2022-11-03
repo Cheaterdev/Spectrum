@@ -1,6 +1,7 @@
 #include "pch_render.h"
 #include "GUI/Renderer/Renderer.h"
 
+using namespace HAL;
 namespace GUI
 {
 	NinePatch::NinePatch()

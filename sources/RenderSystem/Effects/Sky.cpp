@@ -6,6 +6,7 @@
 using namespace FrameGraph;
 
 
+using namespace HAL;
 SkyRender::SkyRender()
 {
 	transmittance = HAL::Texture::get_resource({ to_path(L"textures\\Transmit.dds"), false, false });

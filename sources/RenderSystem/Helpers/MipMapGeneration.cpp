@@ -2,9 +2,9 @@
 
 #include "MipMapGeneration.h"
 
-#include "Profiling/macros.h"
+import Profiling;
 
-
+using namespace HAL;
 
 //void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Texture::ptr tex)
 //{

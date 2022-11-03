@@ -1,7 +1,8 @@
 #pragma once
 
 import Tasks;
-#include "Assets/MaterialAsset.h"
+import Graphics;
+import ResourceManager;
 #include "Scene/SceneObject.h"
 
 //#include "GUI/GUI.h"
@@ -53,7 +54,7 @@ struct MeshInfo
 
 	unsigned int meshlets_offset;
 
-	RaytracingAccelerationStructure::ptr ras;
+	HAL::RaytracingAccelerationStructure::ptr ras;
 
 
 	std::vector<InlineMeshlet<UINT>> meshlets;
@@ -275,7 +276,7 @@ public:
 		//compiled
 		Slots::MeshInfo::Compiled compiled_mesh_info;
 
-		RaytracingAccelerationStructure::ptr ras;
+		HAL::RaytracingAccelerationStructure::ptr ras;
 	};
 
 	std::vector<render_info> rendering;
@@ -289,7 +290,7 @@ public:
 	//std::vector<RaytracingAccelerationStructure::ptr> create_raytracing_as();
 
 
-	bool init_ras(CommandList::ptr list);
+	bool init_ras(HAL::CommandList::ptr list);
 	using ptr = s_ptr<MeshAssetInstance>;
 	virtual ~MeshAssetInstance();
 	MeshAssetInstance(MeshAsset::ptr asset);
@@ -315,64 +316,64 @@ private:
 };
 
 
-class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public virtual_gpu_buffer<Table::MeshInstance>
+class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public HAL::virtual_gpu_buffer<Table::MeshInstance>
 {
 	static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::MeshInstance);
 public:
-	universal_mesh_instance_manager() :virtual_gpu_buffer<Table::MeshInstance>(MAX_NODES_SIZE)
+	universal_mesh_instance_manager() :HAL::virtual_gpu_buffer<Table::MeshInstance>(MAX_NODES_SIZE)
 	{
 
 	}
 };
 
 
-class universal_nodes_manager :public Singleton<universal_nodes_manager>, public virtual_gpu_buffer<Table::node_data>
+class universal_nodes_manager :public Singleton<universal_nodes_manager>, public HAL::virtual_gpu_buffer<Table::node_data>
 {
 	static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::node_data);
 public:
-	universal_nodes_manager() :virtual_gpu_buffer<Table::node_data>(MAX_NODES_SIZE)
+	universal_nodes_manager() :HAL::virtual_gpu_buffer<Table::node_data>(MAX_NODES_SIZE)
 	{
 
 	}
 };
 
-class universal_vertex_manager :public Singleton<universal_vertex_manager>, public virtual_gpu_buffer<Table::mesh_vertex_input>
+class universal_vertex_manager :public Singleton<universal_vertex_manager>, public HAL::virtual_gpu_buffer<Table::mesh_vertex_input>
 {
 	static const size_t MAX_VERTEXES_SIZE = 100_mb / sizeof(Table::mesh_vertex_input);
 public:
-	universal_vertex_manager() :virtual_gpu_buffer<Table::mesh_vertex_input>(MAX_VERTEXES_SIZE)
+	universal_vertex_manager() :HAL::virtual_gpu_buffer<Table::mesh_vertex_input>(MAX_VERTEXES_SIZE)
 	{
 
 	}
 };
 
 
-class universal_meshlet_manager :public Singleton<universal_meshlet_manager>, public virtual_gpu_buffer<Table::Meshlet>
+class universal_meshlet_manager :public Singleton<universal_meshlet_manager>, public HAL::virtual_gpu_buffer<Table::Meshlet>
 {
 	static const size_t MAX_VERTEXES_SIZE = 100_mb / sizeof(Table::Meshlet);
 public:
-	universal_meshlet_manager() :virtual_gpu_buffer<Table::Meshlet>(MAX_VERTEXES_SIZE)
+	universal_meshlet_manager() :HAL::virtual_gpu_buffer<Table::Meshlet>(MAX_VERTEXES_SIZE)
 	{
 
 	}
 };
 
 
-class universal_index_manager :public Singleton<universal_index_manager>, public virtual_gpu_buffer<UINT32>
+class universal_index_manager :public Singleton<universal_index_manager>, public HAL::virtual_gpu_buffer<UINT32>
 {
 	static const size_t MAX_INDEX_SIZE = 100_mb / sizeof(UINT32);
 public:
-	universal_index_manager() :virtual_gpu_buffer<UINT32>(MAX_INDEX_SIZE)
+	universal_index_manager() :HAL::virtual_gpu_buffer<UINT32>(MAX_INDEX_SIZE)
 	{
 
 	}
 };
 
-class universal_material_manager :public Singleton<universal_material_manager>, public virtual_gpu_buffer<std::byte>
+class universal_material_manager :public Singleton<universal_material_manager>, public HAL::virtual_gpu_buffer<std::byte>
 {
 	static const size_t MAX_bytes_SIZE = 100_mb;
 public:
-	universal_material_manager() :virtual_gpu_buffer<std::byte>(MAX_bytes_SIZE)
+	universal_material_manager() :HAL::virtual_gpu_buffer<std::byte>(MAX_bytes_SIZE)
 	{
 
 	}
@@ -380,22 +381,22 @@ public:
 
 
 
-class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public virtual_gpu_buffer<Table::MaterialCommandData>
+class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public HAL::virtual_gpu_buffer<Table::MaterialCommandData>
 {
 	static const size_t MAX_COMMANDS_SIZE = 100_mb / sizeof(Table::MaterialCommandData);
 public:
-	universal_material_info_part_manager() :virtual_gpu_buffer<Table::MaterialCommandData>(MAX_COMMANDS_SIZE)
+	universal_material_info_part_manager() :HAL::virtual_gpu_buffer<Table::MaterialCommandData>(MAX_COMMANDS_SIZE)
 	{
 
 	}
 };
 
 
-class universal_meshletculldata_manager :public Singleton<universal_meshletculldata_manager>, public virtual_gpu_buffer<Table::MeshletCullData>
+class universal_meshletculldata_manager :public Singleton<universal_meshletculldata_manager>, public HAL::virtual_gpu_buffer<Table::MeshletCullData>
 {
 	static const size_t MAX_COMMANDS_SIZE = 100_mb / sizeof(Table::MeshletCullData);
 public:
-	universal_meshletculldata_manager() :virtual_gpu_buffer<Table::MeshletCullData>(MAX_COMMANDS_SIZE)
+	universal_meshletculldata_manager() :HAL::virtual_gpu_buffer<Table::MeshletCullData>(MAX_COMMANDS_SIZE)
 	{
 
 	}
@@ -404,7 +405,7 @@ class SceneFrameManager :public Singleton<SceneFrameManager>
 {
 
 public:
-	void prepare(CommandList::ptr& command_list, Scene& scene);
+	void prepare(HAL::CommandList::ptr& command_list, Scene& scene);
 };
 
 

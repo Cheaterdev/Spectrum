@@ -2,11 +2,12 @@
 #include "Assets/EngineAssets.h"
 #include "PSSM.h"
 #include "Renderer/Renderer.h"
-
+#include "FrameGraph/FrameGraph.h"
 import Graphics;
 using namespace FrameGraph;
 float jit = 0;
-
+import HAL;
+using namespace HAL;
 float3 PSSM::get_position()
 {
 	pos_mutex.lock();

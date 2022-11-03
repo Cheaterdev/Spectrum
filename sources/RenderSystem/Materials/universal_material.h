@@ -1,13 +1,13 @@
 ﻿#pragma once
 #include "Materials/Values.h"
-#include "Context/Context.h"
-#include "Assets/MaterialAsset.h"
+
 import HAL;
 import Graphics;
 import Serializer;
 
 import crc32;
 
+using namespace HAL;
 namespace materials
 {
 

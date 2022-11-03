@@ -3,6 +3,9 @@
 #include "Renderer/Renderer.h"
 #include "Helpers/MipMapGeneration.h"
 
+import Graphics;
+
+using namespace HAL;
 void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
 

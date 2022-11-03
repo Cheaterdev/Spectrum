@@ -1,7 +1,10 @@
 #pragma once
 
 import Graphics;
+import Tree;
+import Utils;
 
+import stl.core;
 
 enum class object_type : int {SCENE, OBJECT, MESH, MESH_NODE, CAMERA};
 

@@ -4,6 +4,7 @@
 
 #include "GUI/Renderer/Renderer.h"
 
+using namespace HAL;
 namespace GUI
 {
 	namespace Elements
@@ -99,7 +100,7 @@ namespace GUI
 
 			if (!isnan(lay2.right))
 				if (!cache.texture || cache.texture->get_desc().as_texture().Dimensions.x < lay2.right || cache.texture->get_desc().as_texture().Dimensions.y < lay2.bottom)
-					cache.texture.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
+					cache.texture.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
 			auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
 

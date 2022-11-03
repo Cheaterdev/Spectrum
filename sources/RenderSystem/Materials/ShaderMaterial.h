@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Assets/MaterialAsset.h"
+import Graphics;
+import HAL;
 
 class ShaderMaterial: public materials::material, public AssetHolder
 {

@@ -1,6 +1,8 @@
 #pragma once
 #include "Scene/Scene.h"
 import Graphics;
+
+using namespace HAL;
 class renderer
 {
 

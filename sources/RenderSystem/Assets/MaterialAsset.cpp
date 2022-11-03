@@ -1,10 +1,10 @@
-#include "pch_render.h"
-#include "Assets/AssetRenderer.h"
-import FlowGraph;
+//module Graphics:MaterialAsset;
+
+#include "AssetRenderer.h"
 
 REGISTER_TYPE(MaterialAsset);
 
-
+import Graphics;
 
 //////////////////////////////////////////////////////////////////////////
 Asset_Type MaterialAsset::get_type()

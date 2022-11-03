@@ -2,7 +2,7 @@
 
 #include "Helpers/MipMapGeneration.h"
 import Tasks;
-#include "Context/Context.h"
+import Graphics;
 
 
 REGISTER_TYPE(TextureAsset);

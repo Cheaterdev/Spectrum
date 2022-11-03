@@ -9,6 +9,8 @@
 #include "GUI/Renderer/Renderer.h"
 
 
+
+using namespace HAL;
 void GUI::Elements::FlowGraph::canvas::draw(Graphics::context& c)
 {
 	g->cam_pos = contents->pos;

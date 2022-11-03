@@ -9,13 +9,16 @@
 #include "GUI/Elements/DockBase.h"
 #include "GUI/Elements/MenuList.h"
 #include "GUI/Elements/Window.h"
-
+#include "FrameGraph/FrameGraph.h"
 using namespace GUI;
 
 using namespace Elements;
 using namespace FrameGraph;
 
 import Graphics;
+
+
+using namespace HAL;
 void stencil_renderer::select_current()
 {
 	selected.clear();

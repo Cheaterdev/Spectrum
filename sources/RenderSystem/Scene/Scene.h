@@ -1,9 +1,11 @@
 #pragma once
 
-#include "Context/Context.h"
 #include "Assets/MeshAsset.h"
-#include "Assets/MaterialAsset.h"
 
+import Graphics;
+
+
+using namespace HAL;
 /*
 class PipelineHolder
 {
@@ -61,8 +63,8 @@ public:
 
  
 	static const int MAX_COMMANDS_SIZE = 1024 * 1024 * 64;
-    virtual_gpu_buffer<Table::MeshCommandData>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
- virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>::ptr raytrace;// (MAX_COMMANDS_SIZE)
+    HAL::virtual_gpu_buffer<Table::MeshCommandData>::ptr mesh_infos;// (MAX_COMMANDS_SIZE)
+    HAL::virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>::ptr raytrace;// (MAX_COMMANDS_SIZE)
 
 	my_unique_vector<UINT> command_ids[10];
 

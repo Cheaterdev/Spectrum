@@ -1,7 +1,5 @@
 #pragma once
-#include "Context/Context.h"
-
-//import Graphics;
+import Graphics;
 import HAL;
 
 class MipMapGenerator : public Singleton<MipMapGenerator>

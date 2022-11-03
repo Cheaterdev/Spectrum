@@ -1,5 +1,6 @@
 export module Graphics:FrameGraph;
 
+export import "defines.h";
 import HAL;
 import Scheduler;
 

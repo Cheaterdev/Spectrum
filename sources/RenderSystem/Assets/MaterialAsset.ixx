@@ -1,18 +1,22 @@
-#pragma once
-import Graphics;
-#include "Context/Context.h"
+export module Graphics:MaterialAsset;
+
+import Math;
+import HAL;
+
+import :Context;
+import :Asset;
 
 class MaterialAsset;
-namespace materials
+export namespace materials
 {
 
 	class Pipeline
 	{
-		UINT id;
+		uint id;
 	public:
 		using ptr = std::shared_ptr<Pipeline>;
         unsigned int hash;
-		Pipeline(UINT id) :id(id)
+		Pipeline(uint id) :id(id)
 		{
 
 		}
@@ -21,7 +25,7 @@ namespace materials
 		
 		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc& pipeline) = 0;
 
-		UINT get_id() { return id; }
+        uint get_id() { return id; }
 	private:
 
         SERIALIZE()
@@ -59,7 +63,7 @@ namespace materials
 }
 
 // REGISTER_TYPE(materials::material);
-class MaterialAsset : public Asset, public materials::material
+export class MaterialAsset : public Asset, public materials::material
 {
         LEAK_TEST(MaterialAsset)
 
