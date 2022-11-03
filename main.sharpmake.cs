@@ -301,7 +301,7 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-         conf.IsBlobbed = true;
+        // conf.IsBlobbed = true;
         
             conf.AddPublicDependency<HAL>(target);
         }

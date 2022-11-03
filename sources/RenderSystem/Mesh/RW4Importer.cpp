@@ -101,7 +101,7 @@ namespace Assimp
 
 
 			pScene->mMaterials = new aiMaterial*[scene_materials.size()];
-			pScene->mNumMaterials = (UINT)scene_materials.size();
+			pScene->mNumMaterials = (uint)scene_materials.size();
 			for (auto it : scene_materials)
 			{
 				auto mat = pScene->mMaterials[it.first] = new aiMaterial();
@@ -117,7 +117,7 @@ namespace Assimp
 
 
 			pScene->mMeshes = new aiMesh*[scene_meshes.size()];
-			pScene->mNumMeshes = (UINT)scene_meshes.size();
+			pScene->mNumMeshes = (uint)scene_meshes.size();
 			for (size_t i = 0; i < scene_meshes.size(); i++)
 			{
 				auto mesh = pScene->mMeshes[i] = new aiMesh();
@@ -125,7 +125,7 @@ namespace Assimp
 
 				mesh->mName = "name";
 				mesh->mVertices = new aiVector3D[rw4_mesh.poses.size()];
-				mesh->mNumVertices = (UINT)rw4_mesh.poses.size();
+				mesh->mNumVertices = (uint)rw4_mesh.poses.size();
 				mesh->mMaterialIndex = rw4_mesh.mat_id;
 				memcpy(mesh->mVertices, rw4_mesh.poses.data(), rw4_mesh.poses.size()*sizeof(vec3));
 
@@ -145,11 +145,11 @@ namespace Assimp
 
 
 
-				mesh->mNumFaces = (UINT)(rw4_mesh.index_data.size() / 3);
+				mesh->mNumFaces = (uint)(rw4_mesh.index_data.size() / 3);
 
 				mesh->mFaces = new aiFace[mesh->mNumFaces];
 
-				for (UINT i = 0; i < mesh->mNumFaces; i++)
+				for (uint i = 0; i < mesh->mNumFaces; i++)
 
 				{
 					auto &face = mesh->mFaces[i];
@@ -383,7 +383,7 @@ namespace Assimp
 
 				Mesh& new_mesh = scene_meshes.back();
 
-				child->mMeshes[child->mNumMeshes++] = (UINT)(scene_meshes.size() - 1);
+				child->mMeshes[child->mNumMeshes++] = (uint)(scene_meshes.size() - 1);
 
 				new_mesh.mat_id = lod.material;
 

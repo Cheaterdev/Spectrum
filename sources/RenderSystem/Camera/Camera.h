@@ -2,6 +2,8 @@
 
 import HAL;
 import Math;
+
+import windows;
 class camera : public Frustum
 {
     public:

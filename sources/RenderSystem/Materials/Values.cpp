@@ -853,3 +853,4 @@ bool ShaderParamType::can_cast(parameter_type* other)
 	bool res = M == type->M && N == type->N;
 	return res;
 }
+REGISTER_TYPE(MaterialContext);

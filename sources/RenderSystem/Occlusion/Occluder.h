@@ -1,4 +1,6 @@
 #pragma once
+import Math;
+
 class occluder
 {
 	vec3 min;

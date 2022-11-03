@@ -1,10 +1,12 @@
-﻿#include "pch_render.h"
+﻿
+#include "pch_render.h"
 #include "Assets/EngineAssets.h"
 #include "universal_material.h"
 #include "Effects/RTX/RTX.h"
 
 static IdGenerator ids;
 
+//import FrameGraph;
 import HAL;
 
 import crc32;
@@ -14,15 +16,24 @@ import Data;
 import stl.core;
 import stl.memory;
 
-import Serializer;
 
 import serialization;
+
+import Serializer;
 import Log;
 import Utils;
 import crc32;
 
 import Data;
 import windows;
+
+void removeme() // TODO: VS issue - make dummy unused func to compile entire cpp =[
+{
+	auto res = Serializer::deserialize<std::string>("");
+}
+
+
+
 REGISTER_TYPE(materials::universal_material);
 REGISTER_TYPE(materials::PipelinePasses);
 REGISTER_TYPE(materials::PipelineSimple);

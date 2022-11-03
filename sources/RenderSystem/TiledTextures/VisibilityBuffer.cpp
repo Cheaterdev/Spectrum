@@ -1,11 +1,11 @@
 #include "pch_render.h"
-#include "VisibilityBuffer.h"
+import Graphics;
 
 import HAL;
 
 VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {
-	auto desc = HAL::ResourceDesc::Tex3D(Format::R8_UINT, { sizes.x, sizes.y, sizes.z }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
+	auto desc = HAL::ResourceDesc::Tex3D(HAL::Format::R8_UINT, { sizes.x, sizes.y, sizes.z }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
 
 	buffer = std::make_shared<HAL::Texture>(desc);
 	buffer->set_name("VisibilityBuffer::buffer");

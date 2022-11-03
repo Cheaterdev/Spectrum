@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "GPUTilesBuffer.h"
+module Graphics:GPUTilesBuffer;
+
 
 void GPUTilesBuffer::set_size(ivec3 size, ivec3 shape)
 {

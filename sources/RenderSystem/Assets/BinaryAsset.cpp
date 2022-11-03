@@ -1,6 +1,10 @@
 #include "pch_render.h"
 #include "BinaryAsset.h"
 
+void removeme2() // TODO: VS issue - make dummy unused func to compile entire cpp =[
+{
+    auto res = Serializer::deserialize<std::string>("");
+}
 REGISTER_TYPE(BinaryAsset);
 
 Asset_Type BinaryAsset::get_type()

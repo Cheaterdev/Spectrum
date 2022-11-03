@@ -1,6 +1,6 @@
 export module Serializer;
 
-import serialization;
+export import serialization;
 using serialization_exception = cereal::Exception;
 import Log;
 import Utils;
