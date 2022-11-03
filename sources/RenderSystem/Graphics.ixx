@@ -6,3 +6,6 @@ export import :VisibilityBuffer;
 
 export import :Camera;
 export import :TextSystem;
+export import :Occluder;
+
+//export import :SceneObject;

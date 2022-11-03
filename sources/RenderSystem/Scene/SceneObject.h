@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Occlusion/Occluder.h"
+import Graphics;
+
 
 enum class object_type : int {SCENE, OBJECT, MESH, MESH_NODE, CAMERA};
 

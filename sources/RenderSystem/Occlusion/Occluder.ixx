@@ -1,7 +1,8 @@
-#pragma once
+export module Graphics:Occluder;
+
 import Math;
 
-class occluder
+export class occluder
 {
 	vec3 min;
 	vec3 max;
