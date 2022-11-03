@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "camera.h"
+module Graphics:Camera;
+import Math;
 
 void camera::update(float2 offset )
 {

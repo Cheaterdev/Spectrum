@@ -3,7 +3,7 @@
 #include "PSSM.h"
 #include "Renderer/Renderer.h"
 
-#include "Camera/Camera.h"
+import Graphics;
 using namespace FrameGraph;
 float jit = 0;
 

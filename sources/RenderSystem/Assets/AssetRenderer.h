@@ -4,7 +4,8 @@
 #include "Assets/TextureAsset.h"
 #include "Assets/MeshAsset.h"
 
-#include "Camera/Camera.h"
+
+import Graphics;
 
 class G_Buffer;
 class LightSystem;

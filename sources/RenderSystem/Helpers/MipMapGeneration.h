@@ -1,6 +1,7 @@
 #pragma once
-#include "Camera/Camera.h"
 #include "Context/Context.h"
+
+import Graphics;
 
 class MipMapGenerator : public Singleton<MipMapGenerator>
 {

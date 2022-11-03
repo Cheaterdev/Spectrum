@@ -1,10 +1,10 @@
-#pragma once
+export module Graphics:Camera;
 
 import HAL;
 import Math;
 
 import windows;
-class camera : public Frustum
+export class camera : public Frustum
 {
     public:
 
@@ -255,7 +255,7 @@ class camera : public Frustum
 
 };
 //TODO: move to game framework
-class first_person_camera : public camera
+export class first_person_camera : public camera
 {
         vec2 angles;
     public:

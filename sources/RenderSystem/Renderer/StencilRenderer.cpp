@@ -5,8 +5,6 @@
 #include "GUI/Elements/AssetExplorer.h"
 #include "Materials/universal_material.h"
 
-#include "Camera/Camera.h"
-
 #include "GUI/Elements/FlowGraph/FlowManager.h"
 #include "GUI/Elements/DockBase.h"
 #include "GUI/Elements/MenuList.h"
@@ -17,6 +15,7 @@ using namespace GUI;
 using namespace Elements;
 using namespace FrameGraph;
 
+import Graphics;
 void stencil_renderer::select_current()
 {
 	selected.clear();
