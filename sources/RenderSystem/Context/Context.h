@@ -6,17 +6,16 @@ import HAL;
 #include "FrameGraph/FrameGraph.h"
 import Executors;
 import Math;
-class camera;
-class debug_drawer;
-class vertex_transform;
+import Graphics;
+
 class GBuffer;
 
 using namespace FrameGraph;
 
 namespace materials
 {
-	class material;
-	class universal_material;
+	//class material;
+//class universal_material;
 	class Pipeline;
 }
 
@@ -51,7 +50,6 @@ namespace Graphics
 
 		SingleThreadExecutorBatched* labeled;
 		Batch* data;
-		debug_drawer* drawer;
 		sizer_long ui_clipping;
 		sizer_long scissors;
 		vec2 offset = { 0,0 };
@@ -70,7 +68,7 @@ namespace Graphics
 
 		context(HAL::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context) : command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
 		{
-			drawer = nullptr;
+			
 			//                cam = nullptr;
 			delta_time = 0;
 

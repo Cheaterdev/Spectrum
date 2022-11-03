@@ -2,6 +2,7 @@
 
 #include "Context/Context.h"
 #include "Assets/MeshAsset.h"
+#include "Assets/MaterialAsset.h"
 
 /*
 class PipelineHolder
@@ -65,7 +66,7 @@ public:
 
 	my_unique_vector<UINT> command_ids[10];
 
-	std::set<materials::universal_material*> mats;
+	std::set<MaterialAsset*> mats;
 	std::map<size_t, materials::Pipeline::ptr> pipelines;
 
 	Slots::SceneData::Compiled compiledScene;

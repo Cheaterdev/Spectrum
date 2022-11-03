@@ -1,9 +1,10 @@
 ﻿#pragma once
 #include "Materials/Values.h"
 #include "Context/Context.h"
-#include "Assets/BinaryAsset.h"
 #include "Assets/MaterialAsset.h"
 import HAL;
+import Graphics;
+import Serializer;
 
 import crc32;
 

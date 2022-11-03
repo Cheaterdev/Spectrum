@@ -1,5 +1,4 @@
-#include "pch_render.h"
-#include "Asset.h"
+module Graphics:Asset;
 import Tasks;
 import Debug;
 import ppl;
@@ -39,7 +38,10 @@ AssetManager::AssetManager()
 		auto t = CounterManager::get().start_count<folder_item>();
 		iter(std::wstring(L"assets"), tree_folders);
 	}
-
+	msg_box_func = [](std::string str)
+	{
+		return MessageBoxA(0, str.c_str(), "message", MB_YESNO) == IDOK;
+	};
 }
 
 AssetManager::~AssetManager()

@@ -1,6 +1,7 @@
-#include "pch_render.h"
-#include "BinaryAsset.h"
+module Graphics:BinaryAsset;
 
+
+import Serializer;
 void removeme2() // TODO: VS issue - make dummy unused func to compile entire cpp =[
 {
     auto res = Serializer::deserialize<std::string>("");

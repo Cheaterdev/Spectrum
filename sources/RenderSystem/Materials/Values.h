@@ -1,7 +1,6 @@
 #pragma once
 import FlowGraph;
-
-#include "Assets/TextureAsset.h"
+import Graphics;
 #include "GUI/Elements/FlowGraph/ComponentWindow.h"
 
 class VectorType;

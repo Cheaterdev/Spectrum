@@ -4,7 +4,7 @@ import Tasks;
 #include "Assets/MaterialAsset.h"
 #include "Scene/SceneObject.h"
 
-#include "GUI/GUI.h"
+//#include "GUI/GUI.h"
 
 import HAL;
 
@@ -105,7 +105,7 @@ public:
 
 	using ptr = std::shared_ptr<AssetLoadingContext>;
 
-	GUI::user_interface::ptr ui;
+	//GUI::user_interface::ptr ui;
 	Task::ptr loading_task;
 
 

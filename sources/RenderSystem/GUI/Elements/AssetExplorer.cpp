@@ -417,7 +417,7 @@ namespace GUI
 								{
 
 									auto context = std::make_shared<AssetLoadingContext>();
-									context->ui = user_ui->get_ptr<GUI::user_interface>();
+								//	context->ui = user_ui->get_ptr<GUI::user_interface>();
 									(new MeshAsset(convert(s), context))->try_register();
 								});
 						ext = "";

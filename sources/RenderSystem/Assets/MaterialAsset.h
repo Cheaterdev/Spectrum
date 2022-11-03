@@ -1,5 +1,5 @@
 #pragma once
-#include "Assets/TextureAsset.h"
+import Graphics;
 #include "Context/Context.h"
 
 class MaterialAsset;
@@ -43,6 +43,7 @@ namespace materials
             virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc& pipeline) {};
             virtual ~material() = default;
             virtual void compile() {};
+            virtual void update() {};
 
             size_t get_pipeline_id()
             {

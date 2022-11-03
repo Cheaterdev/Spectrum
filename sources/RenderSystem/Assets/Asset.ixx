@@ -1,5 +1,5 @@
-//export module Graphics:Asset;
-#pragma once
+export module Graphics:Asset;
+//#pragma once
 import EditObject;
 import Utils;
 import Serializer;
@@ -9,8 +9,8 @@ import Tree;
 import ZipLib;
 import Data;
 import stl.memory;
-//export
-///{
+export
+{
 
 enum class Asset_Type : int
 {
@@ -561,10 +561,7 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 		void reload_resources();
 
 
-		std::function<bool(std::string)> msg_box_func = [](std::string str)
-		{
-			return MessageBoxA(0, str.c_str(), "message", MB_YESNO) == IDOK;
-		};
+		std::function<bool(std::string)> msg_box_func;
 
 		std::map<Guid, AssetStorage::ptr> get_assets()
 		{
@@ -743,4 +740,4 @@ void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 
 	//        ar &NVP(data);
 }
-//}
+}

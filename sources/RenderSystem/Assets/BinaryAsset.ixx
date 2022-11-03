@@ -1,10 +1,9 @@
-#pragma once
-#include <memory>
-#include <string>
+export module Graphics:BinaryAsset;
 
-#include "Assets/Asset.h"
+import :Asset;
 
-class BinaryAsset : public Asset
+
+export class BinaryAsset : public Asset
 {
         std::string data;
         std::wstring file_name;

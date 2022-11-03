@@ -1,7 +1,6 @@
 #pragma once
 #include "Scene/Scene.h"
-#include "Assets/TextureAsset.h"
-
+import Graphics;
 class renderer
 {
 

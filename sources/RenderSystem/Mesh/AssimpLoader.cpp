@@ -332,7 +332,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 		}
 
 
-	
+	/*
 		if (context&&context->ui)
 		{
 
@@ -348,7 +348,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			if (settings.materials_remove)
 				scene = importer.ApplyPostProcessing(aiProcess_RemoveRedundantMaterials);
 
-		}
+		}*/
 
         auto scale = settings.scale;
 		{

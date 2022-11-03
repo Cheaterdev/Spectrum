@@ -2,8 +2,9 @@
 
 #include "Lighting/BRDF.h"
 #include "MeshAsset.h"
-#include "TextureAsset.h"
-#include "BinaryAsset.h"
+
+
+import Graphics;
 
 namespace EngineAssets
 {

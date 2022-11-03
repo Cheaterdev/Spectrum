@@ -3,8 +3,6 @@
 import Graphics;
 import Math;
 
-
-class camera;
 class main_renderer;
 class Scene;
 

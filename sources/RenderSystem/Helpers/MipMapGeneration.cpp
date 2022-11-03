@@ -5,16 +5,11 @@
 #include "Profiling/macros.h"
 
 
-MipMapGenerator::MipMapGenerator()
-{
 
-
-}
-
-void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Texture::ptr tex)
-{
-	generate(compute_context, tex->texture_2d());
-}
+//void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Texture::ptr tex)
+//{
+//	generate(compute_context, tex->texture_2d());
+//}
 
 void MipMapGenerator::generate_cube(HAL::ComputeContext& compute_context, HAL::CubeView view)
 {
@@ -154,26 +149,26 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 		list.draw(4);
 	}
 }
-
-void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::Texture::ptr from)
-{
-	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info()->view);
-	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
-
-	auto& view = to->texture_2d();
-
-	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-	list.set_viewport(view.get_viewport());
-	list.set_scissor(view.get_scissor());
-
-
-	Slots::CopyTexture data;
-	data.GetSrcTex() = from->texture_2d().texture2D;
-	data.set(list);
-
-	list.set_rtv(1, view.renderTarget, HAL::Handle());
-	list.draw(4);
-}
+//
+//void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::Texture::ptr from)
+//{
+//	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info()->view);
+//	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
+//
+//	auto& view = to->texture_2d();
+//
+//	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+//	list.set_viewport(view.get_viewport());
+//	list.set_scissor(view.get_scissor());
+//
+//
+//	Slots::CopyTexture data;
+//	data.GetSrcTex() = from->texture_2d().texture2D;
+//	data.set(list);
+//
+//	list.set_rtv(1, view.renderTarget, HAL::Handle());
+//	list.draw(4);
+//}
 
 
 void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::TextureView from)

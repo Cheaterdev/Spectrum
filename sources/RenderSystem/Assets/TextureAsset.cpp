@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "TextureAsset.h"
+//module Graphics:TextureAsset;
+
 #include "Helpers/MipMapGeneration.h"
 import Tasks;
 #include "Context/Context.h"
@@ -16,8 +16,8 @@ TextureAssetRenderer::~TextureAssetRenderer() {}
 void TextureAssetRenderer::render(TextureAsset* asset, HAL::Texture::ptr target, HAL::CommandList::ptr c)
 {
 	if (!asset->get_texture()->texture_2d()) return;
-	MipMapGenerator::get().copy_texture_2d_slow(c->get_graphics(), target, asset->get_texture());
-	MipMapGenerator::get().generate(c->get_compute(), target);
+	MipMapGenerator::get().copy_texture_2d_slow(c->get_graphics(), target, asset->get_texture()->texture_2d());
+	MipMapGenerator::get().generate(c->get_compute(), target->texture_2d());
 }
 
 

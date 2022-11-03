@@ -125,7 +125,7 @@ namespace GUI
 					sizer_long s = { 0, 0, vps.size };
 					command_list->get_graphics().set_scissors({ s });
 					geomerty->draw(command_list, lay2, 0, { 0,0 });
-					MipMapGenerator::get().generate(command_list->get_compute(), cache.texture);
+					MipMapGenerator::get().generate(command_list->get_compute(), cache.texture->texture_2d());
 				});
 			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().as_texture().Dimensions.x,cache.texture->get_desc().as_texture().Dimensions.y) };
 		}
