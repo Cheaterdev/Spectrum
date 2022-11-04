@@ -1,5 +1,4 @@
 #pragma once
-#include "Scene/Scene.h"
 #include "GUI/Elements/MenuList.h"
 
 import Graphics;

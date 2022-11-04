@@ -2,9 +2,8 @@
 
 import Graphics;
 import Math;
-
+import HAL;
 class main_renderer;
-class Scene;
 
 
 struct TimeInfo

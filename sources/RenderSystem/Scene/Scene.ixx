@@ -1,9 +1,9 @@
-#pragma once
+export module Graphics:Scene;
 
-#include "Assets/MeshAsset.h"
+import :SceneObject;
+import :MaterialAsset;
 
-import Graphics;
-
+import HAL;
 
 using namespace HAL;
 /*
@@ -37,7 +37,7 @@ public:
     }
 };
 */
-class Scene : public scene_object, Events::prop_handler
+export class Scene : public scene_object, Events::prop_handler
 {
 
 
@@ -57,8 +57,8 @@ public:
     Events::Event<scene_object*> on_changed;
 
     
-    std::set<MeshAssetInstance*> static_objects;
-	std::set<MeshAssetInstance*> dynamic_objects;
+    std::set<scene_object*> static_objects;
+	std::set<scene_object*> dynamic_objects;
 
 
  

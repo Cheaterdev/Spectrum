@@ -1,8 +1,6 @@
-#include "pch_render.h"
-
-#include "Scene/Scene.h"
-
-
+import Graphics;
+import Math;
+import HAL;
 scene_object::~scene_object()
 {
 }

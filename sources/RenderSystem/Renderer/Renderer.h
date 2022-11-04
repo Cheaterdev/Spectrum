@@ -1,5 +1,6 @@
 #pragma once
-#include "Scene/Scene.h"
+#include "Assets/MeshAsset.h"
+
 import Graphics;
 
 using namespace HAL;

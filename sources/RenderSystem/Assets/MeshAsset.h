@@ -3,7 +3,6 @@
 import Tasks;
 import Graphics;
 import ResourceManager;
-#include "Scene/SceneObject.h"
 
 //#include "GUI/GUI.h"
 

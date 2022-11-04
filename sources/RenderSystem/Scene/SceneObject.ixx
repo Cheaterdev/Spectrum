@@ -1,15 +1,18 @@
-#pragma once
+export module Graphics:SceneObject;
 
-import Graphics;
 import Tree;
 import Utils;
+import Math;
 
 import stl.core;
 
-enum class object_type : int {SCENE, OBJECT, MESH, MESH_NODE, CAMERA};
 
-class Scene;
-class scene_object : public tree<scene_object, std::set<std::shared_ptr<scene_object>>, occluder>
+import :Occluder;
+
+export enum class object_type : int {SCENE, OBJECT, MESH, MESH_NODE, CAMERA};
+
+export class Scene;
+export class scene_object : public tree<scene_object, std::set<std::shared_ptr<scene_object>>, occluder>
 {
 	using parent_type = tree<scene_object, std::set<std::shared_ptr<scene_object>>, occluder>;
 

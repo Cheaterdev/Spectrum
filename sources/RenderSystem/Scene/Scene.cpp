@@ -1,5 +1,6 @@
 #include "pch_render.h"
-#include "Scene.h"
+import Graphics;
+
 #include "Materials/universal_material.h"
 #include "Assets/MeshAsset.h"
 
@@ -53,9 +54,11 @@ Scene::Scene()
 bool Scene::init_ras(HAL::CommandList::ptr& list)
 {
 	bool res = false;
-	auto mesh_func = [&](MeshAssetInstance* l)
+	auto mesh_func = [&](scene_object* l)
 	{
-		res |= l->init_ras(list);
+		auto m = dynamic_cast<MeshAssetInstance*>(l);
+		if (m)
+		res |= m->init_ras(list);
 
 	};
 
@@ -72,9 +75,12 @@ void Scene::update(HAL::FrameResources& frame)
 	mats.clear();
 	pipelines.clear();
 
-	auto mesh_func = [&](MeshAssetInstance* l)
+	auto mesh_func = [&](scene_object* l)
 	{
-		for (auto r : l->rendering)
+
+		auto m = dynamic_cast<MeshAssetInstance*>(l);
+		if(m)
+		for (auto r : m->rendering)
 		{
 			auto mat = static_cast<materials::universal_material*>(r.material);
 			mats.insert(mat);

@@ -14,4 +14,6 @@ export import :TextureAsset;
 export import :MaterialAsset;
 
 export import :Context;
-//export import :SceneObject;
+
+export import :SceneObject;
+export import :Scene;
