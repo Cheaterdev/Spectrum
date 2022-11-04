@@ -1,8 +1,10 @@
-#pragma once
-import Graphics;
+export module Graphics:MipMapGenerator;
 import HAL;
 
-class MipMapGenerator : public Singleton<MipMapGenerator>
+import :Camera;
+
+import :Context;
+export class MipMapGenerator : public Singleton<MipMapGenerator>
 {
 
 public:

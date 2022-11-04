@@ -4,7 +4,6 @@
 #include "Renderer/Renderer.h"
 #include "Assets/MeshAsset.h"
 #include "FrameGraph/FrameGraph.h"
-#include "Helpers/MipMapGeneration.h"
 
 using namespace FrameGraph;
 

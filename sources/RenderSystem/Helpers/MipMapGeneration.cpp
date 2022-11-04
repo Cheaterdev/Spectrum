@@ -1,8 +1,6 @@
-#include "pch_render.h"
-
-#include "MipMapGeneration.h"
-
+module Graphics;
 import Profiling;
+import HAL;
 
 using namespace HAL;
 

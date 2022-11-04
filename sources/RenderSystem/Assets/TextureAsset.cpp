@@ -1,8 +1,8 @@
 //module Graphics:TextureAsset;
 
-#include "Helpers/MipMapGeneration.h"
 import Tasks;
 import Graphics;
+import serialization;
 
 
 REGISTER_TYPE(TextureAsset);

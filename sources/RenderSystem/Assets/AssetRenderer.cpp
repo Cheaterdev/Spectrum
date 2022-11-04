@@ -5,7 +5,7 @@
 #include "Lighting/PSSM.h"
 
 #include "AssetRenderer.h"
-#include "Helpers/MipMapGeneration.h"
+
 
 import HAL;
 
