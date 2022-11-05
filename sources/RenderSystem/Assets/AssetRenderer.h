@@ -1,7 +1,5 @@
 #pragma once
 #include "Renderer/Renderer.h"
-#include "Assets/MeshAsset.h"
-
 
 import Graphics;
 

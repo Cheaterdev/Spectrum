@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Lighting/BRDF.h"
-#include "MeshAsset.h"
 
 
 import Graphics;

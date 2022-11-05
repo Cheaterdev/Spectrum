@@ -2,7 +2,6 @@
 #include "VoxelGI.h"
 #include "Effects/RTX/RTX.h"
 #include "Renderer/Renderer.h"
-#include "Assets/MeshAsset.h"
 #include "FrameGraph/FrameGraph.h"
 
 using namespace FrameGraph;

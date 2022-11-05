@@ -1,7 +1,8 @@
 #pragma once
-#include "Assets/MeshAsset.h"
 
 import Graphics;
+import Utils;
+import HAL;
 
 using namespace HAL;
 class renderer

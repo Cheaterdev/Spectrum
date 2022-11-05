@@ -1,4 +1,5 @@
-#include "pch_render.h"
+import Graphics;
+
 #include "Effects/RTX/RTX.h"
 #include "Assets/AssetRenderer.h"
 #include "Materials/universal_material.h"

@@ -1,4 +1,4 @@
-module Graphics;
+module Graphics:MipMapGenerator;
 import Profiling;
 import HAL;
 

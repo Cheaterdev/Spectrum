@@ -1,7 +1,7 @@
-//module Graphics:TextureAsset;
+module Graphics:TextureAsset;
 
 import Tasks;
-import Graphics;
+import :MipMapGenerator;
 import serialization;
 
 

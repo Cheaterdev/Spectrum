@@ -12,12 +12,16 @@
 
 #include "Mesh/MeshletGeneration.h"
 #include "Materials/universal_material.h"
-#include "Assets/MeshAsset.h"
+
 
 #include "GUI/Elements/ValueBox.h"
 #include "GUI/Elements/ScrollContainer.h"
 #include "GUI/Elements/CheckBoxText.h"
 #include "GUI/Elements/Window.h"
+
+
+import Tasks;
+import Graphics;
 
 struct MeshLoadingSettings
 {

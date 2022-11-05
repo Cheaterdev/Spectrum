@@ -1,23 +1,24 @@
 #include "pch_render.h"
 #include "MeshletGeneration.h"
-#include "Assets/MeshAsset.h"
+
+import Graphics;
 namespace internal
 {
     template <typename T>
     void Meshletize(
-        UINT maxVerts, UINT maxPrims,
-        const T* indices, UINT indexCount,
-        const vec3* positions, UINT vertexCount,
+        uint maxVerts, uint maxPrims,
+        const T* indices, uint indexCount,
+        const vec3* positions, uint vertexCount,
         std::vector<InlineMeshlet<T>>& output);
 }
 
 
 
 void Meshletize(
-    UINT maxVerts, UINT maxPrims,
-    const UINT* indices, UINT indexCount,
-    const vec3* positions, UINT vertexCount,
-    std::vector<InlineMeshlet<UINT>>& output
+    uint maxVerts, uint maxPrims,
+    const uint* indices, uint indexCount,
+    const vec3* positions, uint vertexCount,
+    std::vector<InlineMeshlet<uint>>& output
 )
 {
     return internal::Meshletize(maxVerts, maxPrims, indices, indexCount, positions, vertexCount, output);
@@ -28,7 +29,7 @@ void Meshletize(
 // Helpers
 
 // Sort in reverse order to use vector as a queue with pop_back.
-bool CompareScores(const std::pair<UINT, float>& a, const std::pair<UINT, float>& b)
+bool CompareScores(const std::pair<uint, float>& a, const std::pair<uint, float>& b)
 {
     return a.second > b.second;
 }
@@ -43,13 +44,13 @@ vec3 ComputeNormal(vec3* tri)
 
 // Compute number of triangle vertices already exist in the meshlet
 template <typename T>
-UINT ComputeReuse(const InlineMeshlet<T>& meshlet, T(&triIndices)[3])
+uint ComputeReuse(const InlineMeshlet<T>& meshlet, T(&triIndices)[3])
 {
-    UINT count = 0;
+    uint count = 0;
 
-    for (UINT i = 0; i < static_cast<UINT>(meshlet.UniqueVertexIndices.size()); ++i)
+    for (uint i = 0; i < static_cast<uint>(meshlet.UniqueVertexIndices.size()); ++i)
     {
-        for (UINT j = 0; j < 3u; ++j)
+        for (uint j = 0; j < 3u; ++j)
         {
             if (meshlet.UniqueVertexIndices[i] == triIndices[j])
             {
@@ -70,13 +71,13 @@ float ComputeScore(const InlineMeshlet<T>& meshlet, vec4 sphere, vec3 normal, T(
     const float oriWeight = 0.333f;
 
     // Vertex reuse
-    UINT reuse = ComputeReuse(meshlet, triIndices);
+    uint reuse = ComputeReuse(meshlet, triIndices);
 
     float reuseScore = (1.0f-float(reuse) / 3.0f);
 
     // Distance from center point
     float maxSq = 0;
-    for (UINT i = 0; i < 3u; ++i)
+    for (uint i = 0; i < 3u; ++i)
     {
         vec3 v = triVerts[i] - sphere.xyz;
         maxSq = std::max(maxSq, v.length_squared());
@@ -97,7 +98,7 @@ float ComputeScore(const InlineMeshlet<T>& meshlet, vec4 sphere, vec3 normal, T(
 
 // Determines whether a candidate triangle can be added to a specific meshlet; if it can, does so.
 template <typename T>
-bool AddToMeshlet(UINT maxVerts, UINT maxPrims, InlineMeshlet<T>& meshlet, T(&tri)[3])
+bool AddToMeshlet(uint maxVerts, uint maxPrims, InlineMeshlet<T>& meshlet, T(&tri)[3])
 {
     // Are we already full of vertices?
     if (meshlet.UniqueVertexIndices.size() == maxVerts)
@@ -107,13 +108,13 @@ bool AddToMeshlet(UINT maxVerts, UINT maxPrims, InlineMeshlet<T>& meshlet, T(&tr
     if (meshlet.PrimitiveIndices.size() == maxPrims)
         return false;
 
-    static const UINT Undef = UINT(-1);
-    UINT indices[3] = { Undef, Undef, Undef };
-    UINT newCount = 3;
+    static const uint Undef = uint(-1);
+    uint indices[3] = { Undef, Undef, Undef };
+    uint newCount = 3;
 
-    for (UINT i = 0; i < meshlet.UniqueVertexIndices.size(); ++i)
+    for (uint i = 0; i < meshlet.UniqueVertexIndices.size(); ++i)
     {
-        for (UINT j = 0; j < 3; ++j)
+        for (uint j = 0; j < 3; ++j)
         {
             if (meshlet.UniqueVertexIndices[i] == tri[j])
             {
@@ -128,11 +129,11 @@ bool AddToMeshlet(UINT maxVerts, UINT maxPrims, InlineMeshlet<T>& meshlet, T(&tr
         return false;
 
     // Add unique vertex indices to unique vertex index list
-    for (UINT j = 0; j < 3; ++j)
+    for (uint j = 0; j < 3; ++j)
     {
         if (indices[j] == Undef)
         {
-            indices[j] = static_cast<UINT>(meshlet.UniqueVertexIndices.size());
+            indices[j] = static_cast<uint>(meshlet.UniqueVertexIndices.size());
             meshlet.UniqueVertexIndices.push_back(tri[j]);
         }
     }
@@ -146,7 +147,7 @@ bool AddToMeshlet(UINT maxVerts, UINT maxPrims, InlineMeshlet<T>& meshlet, T(&tr
 }
 
 template <typename T>
-bool IsMeshletFull(UINT maxVerts, UINT maxPrims, const InlineMeshlet<T>& meshlet)
+bool IsMeshletFull(uint maxVerts, uint maxPrims, const InlineMeshlet<T>& meshlet)
 {
     assert(meshlet.UniqueVertexIndices.size() <= maxVerts);
     assert(meshlet.PrimitiveIndices.size() <= maxPrims);
@@ -161,16 +162,16 @@ bool IsMeshletFull(UINT maxVerts, UINT maxPrims, const InlineMeshlet<T>& meshlet
 
 template <typename T>
 void internal::Meshletize(
-    UINT maxVerts, UINT maxPrims,
-    const T* indices, UINT indexCount,
-    const vec3* positions, UINT vertexCount,
+    uint maxVerts, uint maxPrims,
+    const T* indices, uint indexCount,
+    const vec3* positions, uint vertexCount,
     std::vector<InlineMeshlet<T>>& output
 )
 {
-    const UINT triCount = indexCount / 3;
+    const uint triCount = indexCount / 3;
 
     // Build a primitive adjacency list
-    std::vector<UINT> adjacency;
+    std::vector<uint> adjacency;
     adjacency.resize(indexCount);
 
     BuildAdjacencyList(indices, indexCount, positions, vertexCount, adjacency.data());
@@ -186,21 +187,21 @@ void internal::Meshletize(
 
     std::vector<vec3> m_positions;
     std::vector<vec3> normals;
-    std::vector<std::pair<UINT, float>> candidates;
-    std::unordered_set<UINT> candidateCheck;
+    std::vector<std::pair<uint, float>> candidates;
+    std::unordered_set<uint> candidateCheck;
 
     float4 psphere;
 	float3 normal;
 
     // Arbitrarily start at triangle zero.
-    UINT triIndex = 0;
+    uint triIndex = 0;
     candidates.push_back(std::make_pair(triIndex, 0.0f));
     candidateCheck.insert(triIndex);
 
     // Continue adding triangles until 
     while (!candidates.empty())
     {
-        UINT index = candidates.back().first;
+        uint index = candidates.back().first;
         candidates.pop_back();
 
         T tri[3] =
@@ -236,22 +237,22 @@ void internal::Meshletize(
             normals.push_back(Normal);
 
             // Compute new bounding sphere & normal axis
-            psphere = MinimumBoundingSphere(m_positions.data(), static_cast<UINT>(m_positions.size()));
+            psphere = MinimumBoundingSphere(m_positions.data(), static_cast<uint>(m_positions.size()));
 
-            float4 nsphere = MinimumBoundingSphere(normals.data(), static_cast<UINT>(normals.size()));
+            float4 nsphere = MinimumBoundingSphere(normals.data(), static_cast<uint>(normals.size()));
             normal = nsphere.xyz.normalized();
 
             // Find and add all applicable adjacent triangles to candidate list
-            const UINT adjIndex = index * 3;
+            const uint adjIndex = index * 3;
 
-            UINT adj[3] =
+            uint adj[3] =
             {
                 adjacency[adjIndex],
                 adjacency[adjIndex + 1],
                 adjacency[adjIndex + 2],
             };
 
-            for (UINT i = 0; i < 3u; ++i)
+            for (uint i = 0; i < 3u; ++i)
             {
                 // Invalid triangle in adjacency slot
                 if (adj[i] == -1)
@@ -270,9 +271,9 @@ void internal::Meshletize(
             }
 
             // Re-score remaining candidate triangles
-            for (UINT i = 0; i < static_cast<UINT>(candidates.size()); ++i)
+            for (uint i = 0; i < static_cast<uint>(candidates.size()); ++i)
             {
-                UINT candidate = candidates[i].first;
+                uint candidate = candidates[i].first;
 
                 T triIndices[3] =
                 {
@@ -714,7 +715,7 @@ static const DWORD CNORM_WIND_CW = 1;
 
 HRESULT ComputeCullData(
     const float3* positions, uint32_t vertexCount,
-    InlineMeshlet<UINT>& meshlet,
+    InlineMeshlet<uint>& meshlet,
     DWORD flags
 )
 {
@@ -758,12 +759,12 @@ HRESULT ComputeCullData(
         }
 
         // Calculate spatial bounds
-        float4 positionBounds = MinimumBoundingSphere(vertices, static_cast<UINT>(m.UniqueVertexIndices.size()));
+        float4 positionBounds = MinimumBoundingSphere(vertices, static_cast<uint>(m.UniqueVertexIndices.size()));
         c.BoundingSphere= positionBounds;
 
         // Calculate the normal cone
         // 1. Normalized center point of minimum bounding sphere of unit normals == conic axis
-        float4 normalBounds = MinimumBoundingSphere(normals, static_cast<UINT>(m.PrimitiveIndices.size()/3));
+        float4 normalBounds = MinimumBoundingSphere(normals, static_cast<uint>(m.PrimitiveIndices.size()/3));
 
         // 2. Calculate dot product of all normals to conic axis, selecting minimum
         float3 axis = normalBounds.normalized();

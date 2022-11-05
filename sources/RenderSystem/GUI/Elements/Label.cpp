@@ -1,5 +1,5 @@
 #include "pch_render.h"
-#include "Helpers/MipMapGeneration.h"
+
 #include "Label.h"
 
 #include "GUI/Renderer/Renderer.h"

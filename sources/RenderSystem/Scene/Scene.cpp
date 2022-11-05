@@ -1,8 +1,8 @@
-#include "pch_render.h"
-import Graphics;
+module;
 
 #include "Materials/universal_material.h"
-#include "Assets/MeshAsset.h"
+
+module Graphics:Scene;
 
 Scene::~Scene()
 {
