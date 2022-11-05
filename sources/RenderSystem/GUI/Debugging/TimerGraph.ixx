@@ -1,7 +1,9 @@
-#pragma once
-import GUI;
+export module GUI:Debug.TimerGraph;
+import :ScrollContainer;
+import :Image;
+
 import Profiling;
-namespace GUI
+export namespace GUI
 {
 	namespace Elements
 	{

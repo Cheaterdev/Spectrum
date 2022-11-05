@@ -1,9 +1,10 @@
-#pragma once
-import GUI;
+export module GUI:Debug.TaskViewer;
+import :ScrollContainer;
+
 import Tasks;
 
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

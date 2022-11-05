@@ -1,8 +1,7 @@
-#include "pch_render.h"
+module GUI:Debug.OutputWindow;
+import :Renderer;
+import :Label;
 
-#include "OutputWindow.h"
-
-import GUI;
 
 namespace GUI
 {

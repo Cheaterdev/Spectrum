@@ -1,9 +1,11 @@
-#pragma once
+export module GUI:Debug.TimerWatcher;
+import :ScrollContainer;
+import :Label;
+import :Tree;
 
-import GUI;
 //#include "GUI/Elements/Tree.h"
 
-namespace GUI
+export namespace GUI
 {
 	namespace Elements
 	{

@@ -29,3 +29,10 @@ export import :TabControl;
 export import :Tree;
 export import :ValueBox;
 export import :Window;
+
+
+export import  :Debug.OutputWindow;
+export import  :Debug.TaskViewer;
+export import  :Debug.TimerGraph;
+export import  :Debug.TimerWatcher;
+

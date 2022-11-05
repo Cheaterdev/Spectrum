@@ -1,7 +1,6 @@
-#include "pch_render.h"
-#include "TaskViewer.h"
-
-import GUI;
+module GUI:Debug.TaskViewer;
+import :Label;
+import :Button;
 
 namespace GUI
 {

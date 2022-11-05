@@ -18,10 +18,6 @@
 #include "Materials/universal_material.h"
 
 #include "GUI/Elements/Asset/AssetExplorer.h"
-#include "GUI/Debugging/TimerGraph.h"
-#include "GUI/Debugging/OutputWindow.h"
-#include "GUI/Debugging/TaskViewer.h"
-#include "GUI/Debugging/TimerWatcher.h"
 
 #include "GUI/Elements/FlowGraph/FlowManager.h"
 #include "GUI/Elements/FlowGraph/ParameterWindow.h"

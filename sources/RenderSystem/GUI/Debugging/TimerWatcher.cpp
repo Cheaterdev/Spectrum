@@ -1,8 +1,8 @@
-#include "pch_render.h"
-#include "TimerWatcher.h"
+module GUI:Debug.TimerWatcher;
+
+
 //#include "GUI/Elements/Image.h"
 
-import GUI;
 void GUI::Elements::Debug::TimedLabel::think(float dt)
 {
 	color.w = std::chrono::duration<double>(std::chrono::system_clock::now() - last_time).count() > 1 ? 128 :255;

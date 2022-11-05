@@ -1,6 +1,8 @@
+module GUI:Debug.TimerGraph;
+import :Label;
+import :Button;
 
-import GUI;
-#include "TimerGraph.h"/*
+/*
 #include "GUI/Elements/ScrollContainer.h"
 #include "GUI/Elements/Button.h"
 #include "GUI/Elements/Image.h"*/

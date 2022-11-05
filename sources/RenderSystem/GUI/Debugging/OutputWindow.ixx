@@ -1,7 +1,7 @@
+export module GUI:Debug.OutputWindow;
+import :ScrollContainer;
 
-import GUI;
-
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {
