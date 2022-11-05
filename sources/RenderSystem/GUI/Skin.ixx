@@ -1,8 +1,9 @@
-#pragma once
-import Singleton;
-import GUI;
+export module GUI:Skin;
 
-struct Skin: public Singleton<Skin>
+import Singleton;
+import :Base;
+
+export struct Skin: public Singleton<Skin>
 {
     struct Button
     {

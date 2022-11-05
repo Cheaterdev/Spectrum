@@ -1,6 +1,5 @@
 #pragma once
 #include "Dragger.h"
-#include "GUI/Skin.h"
 
 import Math;
 namespace GUI

@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "Skin.h"
+module GUI:Skin;
+
 
 Skin::Skin()
 {

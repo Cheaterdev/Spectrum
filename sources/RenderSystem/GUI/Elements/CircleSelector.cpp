@@ -1,7 +1,6 @@
 #include "pch_render.h"
 #include "CircleSelector.h"
 #include "Image.h"
-#include "GUI/Skin.h"
 
 namespace GUI
 {

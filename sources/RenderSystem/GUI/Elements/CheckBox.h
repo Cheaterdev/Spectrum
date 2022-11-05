@@ -1,6 +1,5 @@
 #pragma once
 import GUI;
-#include "GUI/Skin.h"
 
 namespace GUI
 {
