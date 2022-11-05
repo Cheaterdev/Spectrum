@@ -1,10 +1,17 @@
-#pragma once
+export module Graphics:Renderer;
 
-import Graphics;
 import Utils;
 import HAL;
+import :Context;
+import :Scene;
+import :SceneObject;
+import :TextureAsset;
+import :MeshAsset;
 
 using namespace HAL;
+export
+{
+
 class renderer
 {
 
@@ -164,3 +171,4 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
         mesh_renderer();
 
 };
+}

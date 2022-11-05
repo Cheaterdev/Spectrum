@@ -11,7 +11,7 @@ import HAL;
 
 using namespace FrameGraph;
 import HAL;
-//using namespace HAL;
+using namespace HAL;
 class SceneRenderWorkflow
 {
 

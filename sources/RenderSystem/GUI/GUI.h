@@ -1,5 +1,4 @@
 #pragma once
-
 import Graphics;
 import Math;
 import Executors;

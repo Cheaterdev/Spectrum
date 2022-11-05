@@ -1,7 +1,8 @@
 #pragma once
-#include "Renderer/Renderer.h"
 
 import Graphics;
+import Singleton;
+import HAL;
 
 class G_Buffer;
 class LightSystem;

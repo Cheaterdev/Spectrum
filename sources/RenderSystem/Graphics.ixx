@@ -20,3 +20,7 @@ export import :SceneObject;
 export import :Scene;
 
 export import :MipMapGenerator;
+
+export import :Renderer;
+
+//export import :StencilRenderer;

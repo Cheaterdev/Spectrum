@@ -3,13 +3,12 @@
 
 #include "Lighting/PSSM.h"
 
-#include "Renderer/Renderer.h"
 
 class GBufferDownsampler;
 import HAL;
 import Graphics;
 
-
+using namespace HAL;
 class Texture3DMultiTiles
 {
 	HAL::update_tiling_info tilings_info;

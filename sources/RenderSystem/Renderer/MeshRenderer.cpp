@@ -1,9 +1,9 @@
-#include "pch_render.h"
+module;
+
 #include "Assets/EngineAssets.h"
-#include "Renderer/Renderer.h"
+module Graphics:Renderer;
 
-
-import Graphics;
+import HAL;
 
 using namespace HAL;
 void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
