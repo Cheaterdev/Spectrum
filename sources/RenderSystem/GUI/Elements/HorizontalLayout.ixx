@@ -1,7 +1,7 @@
-#pragma once
-import GUI;
+export module GUI:HorizontalLayout;
+import :Base;
 
-namespace GUI
+export namespace GUI
 {
 	namespace Elements
 	{

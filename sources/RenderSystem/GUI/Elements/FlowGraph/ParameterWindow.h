@@ -1,6 +1,7 @@
 #pragma once
-#include "GUI/Elements/CheckBoxText.h"
+//#include "GUI/Elements/CheckBoxText.h"
 
+import GUI;
 
 namespace GUI
 {

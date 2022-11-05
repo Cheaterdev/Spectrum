@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "HorizontalLayout.h"
+module GUI:HorizontalLayout;
+import :Renderer;
 
 
 

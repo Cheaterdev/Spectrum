@@ -1,6 +1,5 @@
 #pragma once
-#include "GUI/Elements/MenuList.h"
-
+import GUI;
 import Graphics;
 class stencil_renderer : public GUI::base, public FrameGraph::GraphGenerator, public Events::Runner, public VariableContext
 {

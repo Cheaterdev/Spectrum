@@ -1,8 +1,10 @@
-﻿#pragma once
-#include "MenuList.h"
-#include "Button.h"
+﻿export module GUI:TabControl;
+import :Base;
+import :MenuList;
+import :Button;
 
-namespace GUI
+
+export namespace GUI
 {
     namespace Elements
     {

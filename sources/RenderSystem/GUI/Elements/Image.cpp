@@ -1,6 +1,5 @@
-#include "pch_render.h"
-#include "Image.h"
-
+module GUI:Image;
+import :Renderer;
 
 
 namespace GUI

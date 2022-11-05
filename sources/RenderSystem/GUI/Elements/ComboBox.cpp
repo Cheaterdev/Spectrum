@@ -1,6 +1,6 @@
-﻿#include "pch_render.h"
-#include "ComboBox.h"
-#include "MenuList.h"
+﻿module GUI:ComboBox;
+import :MenuList;
+import :Renderer;
 
 
 bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)

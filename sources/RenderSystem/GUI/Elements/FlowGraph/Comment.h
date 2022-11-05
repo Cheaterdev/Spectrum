@@ -1,6 +1,6 @@
 #pragma once
 #include "ComponentWindow.h"
-#include "GUI/Elements/Resizable.h"
+import GUI;
 
 namespace GUI
 {

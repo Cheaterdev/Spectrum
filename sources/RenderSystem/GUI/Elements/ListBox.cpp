@@ -1,6 +1,5 @@
-#include "pch_render.h"
-#include "ListBox.h"
-
+module GUI:ListBox;
+import :Renderer;
 
 void GUI::Elements::list_box::draw(Graphics::context& c)
 {

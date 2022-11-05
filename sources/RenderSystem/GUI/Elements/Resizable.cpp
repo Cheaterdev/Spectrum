@@ -1,5 +1,6 @@
-#include "pch_render.h"
-#include "Resizable.h"
+module GUI:Resizable;
+import :Renderer;
+
 
 GUI::Elements::resizable::resizable()
 {

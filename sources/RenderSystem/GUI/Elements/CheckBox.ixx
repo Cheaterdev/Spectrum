@@ -1,7 +1,8 @@
-#pragma once
-import GUI;
+export module GUI:CheckBox;
+import :Image;
+import :Skin;
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

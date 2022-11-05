@@ -1,8 +1,9 @@
-#pragma once
-#include "Label.h"
-#include "Image.h"
+export module GUI:Button;
+import :Image;
+import :Skin;
+import :Label;
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

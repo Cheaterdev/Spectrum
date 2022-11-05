@@ -1,8 +1,9 @@
-#pragma once
-#include "Label.h"
-#include "ScrollBar.h"
+export module GUI:ScrollContainer;
+import :Base;
+import :ScrollBar;
 
-namespace GUI
+
+export namespace GUI
 {
 	namespace Elements
 	{

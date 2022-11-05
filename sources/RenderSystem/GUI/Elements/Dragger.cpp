@@ -1,5 +1,6 @@
-#include "pch_render.h"
-#include "Dragger.h"
+module GUI:Dragger;
+import :Renderer;
+
 
 namespace GUI
 {

@@ -1,5 +1,6 @@
-#include "pch_render.h"
-#include "MenuList.h"
+module GUI:MenuList;
+import :Renderer;
+
 
 
 void GUI::Elements::menu_list::draw(Graphics::context& c)

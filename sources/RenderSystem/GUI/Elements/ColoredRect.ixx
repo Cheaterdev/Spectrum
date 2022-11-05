@@ -1,7 +1,9 @@
-#pragma once
-import GUI;
+export module GUI:ColoredRect;
+import :Base;
 
-namespace GUI
+import Graphics;
+
+export namespace GUI
 {
     namespace Elements
     {

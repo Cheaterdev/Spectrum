@@ -1,5 +1,6 @@
-#include "pch_render.h"
-#include "ScrollContainer.h"
+module GUI:ScrollContainer;
+import :Renderer;
+
 
 class c_contents : public GUI::base
 {

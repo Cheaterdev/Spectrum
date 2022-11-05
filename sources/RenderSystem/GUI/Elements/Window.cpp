@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "Window.h"
+module GUI:Window;
+import :Renderer;
 
 
 void GUI::Elements::window::draw(Graphics::context& c)

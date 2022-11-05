@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "StatusBar.h"
+module GUI:StatusBar;
+import :Renderer;
 
 
 void GUI::Elements::status_bar::draw(Graphics::context& c)

@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "Tree.h"
+module GUI:Tree;
+import :Renderer;
 
 
 bool GUI::Elements::toogle_icon::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)

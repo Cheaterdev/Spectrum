@@ -1,7 +1,8 @@
-#pragma once
-#include "Label.h"
+export module GUI:EditText;
+import :Base;
+import :Label;
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

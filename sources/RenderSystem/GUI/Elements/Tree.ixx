@@ -1,9 +1,10 @@
-#pragma once
+export module GUI:Tree;
+import :Base;
+import :ScrollContainer;
+import :Image;
+import :Label;
 
-#include "ScrollContainer.h"
-#include "Image.h"
-
-namespace GUI
+export namespace GUI
 {
 
     namespace Elements

@@ -1,6 +1,5 @@
-#include "pch_render.h"
-#include "GUI/Elements/Window.h"
-
+module GUI;
+import GUI;
 #include "FrameGraph/FrameGraph.h"
 import HAL;
 

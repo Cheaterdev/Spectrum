@@ -1,7 +1,10 @@
-#pragma once
-#include "ScrollContainer.h"
+export module GUI:MenuList;
+import :Base;
+import :ScrollContainer;
+import :Label;
 
-namespace GUI
+
+export namespace GUI
 {
 
     namespace Elements

@@ -2,13 +2,14 @@
 #include "Assets/EngineAssets.h"
 #include "StencilRenderer.h"
 
-#include "GUI/Elements/AssetExplorer.h"
+import GUI;
+#include "GUI/Elements/Asset/AssetExplorer.h"
 #include "Materials/universal_material.h"
 
 #include "GUI/Elements/FlowGraph/FlowManager.h"
-#include "GUI/Elements/DockBase.h"
-#include "GUI/Elements/MenuList.h"
-#include "GUI/Elements/Window.h"
+//#include "GUI/Elements/DockBase.h"
+//#include "GUI/Elements/MenuList.h"
+//#include "GUI/Elements/Window.h"
 #include "FrameGraph/FrameGraph.h"
 using namespace GUI;
 

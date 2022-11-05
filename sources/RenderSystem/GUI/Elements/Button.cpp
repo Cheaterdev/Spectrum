@@ -1,6 +1,6 @@
-#include "pch_render.h"
-#include "Button.h"
-import GUI;
+module GUI:Button;
+import :Label;
+import :Renderer;
 
 namespace GUI
 {

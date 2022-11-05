@@ -1,8 +1,9 @@
-#pragma once
-#include "TabControl.h"
-#include "Resizer.h"
+export module GUI:DockBase;
+import :TabControl;
+import :Resizer;
+import :Base;
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

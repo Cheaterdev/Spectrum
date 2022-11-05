@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "Container.h"
+module GUI:Container;
+import :Renderer;
 
 namespace GUI
 {

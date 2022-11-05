@@ -1,8 +1,10 @@
 #pragma once
 
+import GUI;
+
 #include "GUI/Elements/FlowGraph/Comment.h"
-#include "GUI/Elements/ScrollContainer.h"
-#include "GUI/Elements/CheckBox.h"
+//#include "GUI/Elements/ScrollContainer.h"
+//#include "GUI/Elements/CheckBox.h"
 namespace GUI
 {
     namespace Elements

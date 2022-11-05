@@ -1,7 +1,9 @@
-#pragma once
-#include "CheckBoxText.h"
+export module GUI:OptionBox;
+import :Base;
+import :CheckBoxText;
 
-namespace GUI
+
+export namespace GUI
 {
     namespace Elements
     {

@@ -1,8 +1,9 @@
-#pragma once
-import GUI;
+export module GUI:Label;
+import :Base;
+
 import Graphics;
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

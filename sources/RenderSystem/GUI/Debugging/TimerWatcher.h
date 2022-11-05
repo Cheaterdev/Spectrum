@@ -1,5 +1,7 @@
 #pragma once
-#include "GUI/Elements/Tree.h"
+
+import GUI;
+//#include "GUI/Elements/Tree.h"
 
 namespace GUI
 {

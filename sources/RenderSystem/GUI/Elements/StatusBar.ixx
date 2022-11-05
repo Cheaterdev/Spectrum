@@ -1,7 +1,8 @@
-#pragma once
-import GUI;
+export module GUI:StatusBar;
+import :Base;
+import :Skin;
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

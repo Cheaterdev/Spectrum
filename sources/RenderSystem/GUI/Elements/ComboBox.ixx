@@ -1,8 +1,9 @@
-﻿#pragma once
-#include "MenuList.h"
-#include "Button.h"
+﻿export module GUI:ComboBox;
+import :MenuList;
+import :Button;
 
-namespace GUI
+
+export namespace GUI
 {
     namespace Elements
     {

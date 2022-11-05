@@ -1,7 +1,8 @@
-#pragma once
-#include "Button.h"
+export module GUI:ValueBox;
+import :Base;
+import :Button;
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

@@ -1,8 +1,8 @@
-#include "pch_render.h"
-#include "DockBase.h"
-#include "TabControl.h"
-#include "GUI/Elements/Window.h"
-
+module GUI:EditText;
+import :DockBase;
+import :TabControl;
+import :Window;
+import :Renderer;
 
 void GUI::Elements::dock_base::draw_after(Graphics::context& c)
 {

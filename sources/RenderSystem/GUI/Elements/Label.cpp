@@ -1,8 +1,6 @@
-#include "pch_render.h"
-
-#include "Label.h"
-
-
+module GUI:Label;
+import HAL;
+import GUI;
 
 using namespace HAL;
 namespace GUI

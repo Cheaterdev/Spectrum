@@ -1,7 +1,8 @@
-#pragma once
-#include "Image.h"
+export module GUI:CircleSelector;
+import :Image;
+import :Skin;
 
-namespace GUI
+export namespace GUI
 {
 	namespace Elements
 	{

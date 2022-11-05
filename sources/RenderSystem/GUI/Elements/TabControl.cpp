@@ -1,5 +1,5 @@
-﻿#include "pch_render.h"
-#include "TabControl.h"
+﻿module GUI:TabControl;
+import :Renderer;
 
 
 namespace GUI

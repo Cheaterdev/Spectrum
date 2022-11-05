@@ -1,6 +1,5 @@
-#include "pch_render.h"
-#include "ScrollBar.h"
-import GUI;
+module GUI:ScrollBar;
+import :Renderer;
 
 namespace GUI
 {

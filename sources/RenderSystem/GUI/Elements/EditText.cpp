@@ -1,5 +1,6 @@
-#include "pch_render.h"
-#include "EditText.h"
+
+module GUI:EditText;
+import :Renderer;
 
 import GUI;
 

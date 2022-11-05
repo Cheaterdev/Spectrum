@@ -1,7 +1,8 @@
-#pragma once
-import GUI;
+export module GUI:Dragger;
 
-namespace GUI
+import :Base;
+
+export namespace GUI
 {
     namespace Elements
     {

@@ -1,7 +1,6 @@
 #pragma once
-#include "GUI/Elements/ScrollContainer.h"
-#include "GUI/Elements/Image.h"
-
+import GUI;
+import Profiling;
 namespace GUI
 {
 	namespace Elements

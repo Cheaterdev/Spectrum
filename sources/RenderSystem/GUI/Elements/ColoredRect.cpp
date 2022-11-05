@@ -1,6 +1,5 @@
-#include "pch_render.h"
-#include "ColoredRect.h"
-import GUI;
+module GUI:ColoredRect;
+import :Renderer;
 
 namespace GUI
 {

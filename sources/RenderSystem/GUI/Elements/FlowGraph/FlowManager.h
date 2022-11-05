@@ -2,8 +2,9 @@
 
 import FlowGraph;
 
+import GUI;
 #include "GUI/Elements/FlowGraph/Canvas.h"
-#include "GUI/Elements/TabControl.h"
+//#include "GUI/Elements/TabControl.h"
 
 namespace GUI
 {

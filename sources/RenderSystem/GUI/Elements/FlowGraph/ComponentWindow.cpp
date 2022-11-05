@@ -2,9 +2,10 @@
 #include "ComponentWindow.h"
 #include "GUI/Elements/FlowGraph/FlowManager.h"
 #include "GUI/Elements/FlowGraph/Canvas.h"
-#include "GUI/Elements/MenuList.h"
+//#include "GUI/Elements/MenuList.h"
 
 
+import GUI;
 
 void GUI::Elements::FlowGraph::component_window::draw(Graphics::context& c)
 {

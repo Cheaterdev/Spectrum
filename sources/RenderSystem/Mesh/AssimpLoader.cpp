@@ -14,10 +14,11 @@
 #include "Materials/universal_material.h"
 
 
-#include "GUI/Elements/ValueBox.h"
-#include "GUI/Elements/ScrollContainer.h"
-#include "GUI/Elements/CheckBoxText.h"
-#include "GUI/Elements/Window.h"
+import GUI;
+//#include "GUI/Elements/ValueBox.h"
+//#include "GUI/Elements/ScrollContainer.h"
+//#include "GUI/Elements/CheckBoxText.h"
+//#include "GUI/Elements/Window.h"
 
 
 import Tasks;

@@ -1,5 +1,6 @@
-#include "pch_render.h"
-#include "CheckBox.h"
+//#include "pch_render.h"
+//#include "CheckBox.h"
+module GUI;
 import GUI;
 
 namespace GUI

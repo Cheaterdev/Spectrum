@@ -1,9 +1,11 @@
-#pragma once
-#include "Resizable.h"
-#include "Dragger.h"
-#include "Button.h"
+export module GUI:Window;
+import :Base;
+import :Resizable;
+import :Dragger;
+import :Button;
 
-namespace GUI
+
+export namespace GUI
 {
     namespace Elements
     {

@@ -1,8 +1,10 @@
-#pragma once
-#include "Dragger.h"
+export module GUI:ScrollBar;
+import :Base;
+import :Dragger;
+import :Skin;
 
 import Math;
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

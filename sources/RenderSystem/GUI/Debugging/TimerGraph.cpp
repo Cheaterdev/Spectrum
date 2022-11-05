@@ -1,8 +1,9 @@
-#include "pch_render.h"
-#include "TimerGraph.h"
+
+import GUI;
+#include "TimerGraph.h"/*
 #include "GUI/Elements/ScrollContainer.h"
 #include "GUI/Elements/Button.h"
-#include "GUI/Elements/Image.h"
+#include "GUI/Elements/Image.h"*/
 import HAL;
 
 using namespace HAL;

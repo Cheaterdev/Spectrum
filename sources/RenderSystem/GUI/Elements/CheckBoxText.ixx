@@ -1,9 +1,11 @@
-#pragma once
-#include "HorizontalLayout.h"
-#include "CheckBox.h"
-#include "Label.h"
+export module GUI:CheckBoxText;
+import :Image;
+import :Skin;
+import :HorizontalLayout;
+import :Label;
+import :CheckBox;
 
-namespace GUI
+export namespace GUI
 {
 	namespace Elements
 	{

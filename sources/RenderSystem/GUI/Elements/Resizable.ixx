@@ -1,7 +1,9 @@
-#pragma once
-#include "Resizer.h"
+export module GUI:Resizable;
+import :Base;
+import :Resizer;
 
-namespace GUI
+
+export namespace GUI
 {
 	namespace Elements
 	{
