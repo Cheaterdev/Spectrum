@@ -1,6 +1,6 @@
 #include "pch_render.h"
 #include "Button.h"
-#include "GUI/Renderer/Renderer.h"
+import GUI;
 
 namespace GUI
 {

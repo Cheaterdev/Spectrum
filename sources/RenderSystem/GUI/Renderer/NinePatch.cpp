@@ -1,5 +1,5 @@
 #include "pch_render.h"
-#include "GUI/Renderer/Renderer.h"
+import GUI;
 
 using namespace HAL;
 namespace GUI

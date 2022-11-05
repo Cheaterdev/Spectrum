@@ -1,6 +1,6 @@
 #include "pch_render.h"
 #include "StatusBar.h"
-#include "GUI/Renderer/Renderer.h"
+
 
 void GUI::Elements::status_bar::draw(Graphics::context& c)
 {

@@ -5,7 +5,7 @@ import :MaterialAsset;
 
 import ResourceManager;
 
-//#include "GUI/GUI.h"
+//import GUI;
 
 import HAL;
 

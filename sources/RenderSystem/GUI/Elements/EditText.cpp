@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "EditText.h"
 #include "GUI/Skin.h"
-#include "GUI/Renderer/Renderer.h"
+import GUI;
 
 
 void GUI::Elements::edit_text::on_key_action(long key)

@@ -1,6 +1,6 @@
 #pragma once
 import Application;
-#include "GUI/GUI.h"
+import GUI;
 
 import HAL;
 

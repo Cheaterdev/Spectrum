@@ -1,6 +1,6 @@
 #include "pch_render.h"
 #include "Window.h"
-#include "GUI/Renderer/Renderer.h"
+
 
 void GUI::Elements::window::draw(Graphics::context& c)
 {

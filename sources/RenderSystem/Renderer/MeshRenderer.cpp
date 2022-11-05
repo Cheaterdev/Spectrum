@@ -1,7 +1,7 @@
 module;
 
 #include "Assets/EngineAssets.h"
-module Graphics:Renderer;
+module Graphics:MeshRenderer;
 
 import HAL;
 

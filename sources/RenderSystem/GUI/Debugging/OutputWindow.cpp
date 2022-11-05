@@ -2,7 +2,7 @@
 
 #include "OutputWindow.h"
 #include "GUI/Elements/ScrollContainer.h"
-#include "GUI/Renderer/Renderer.h"
+import GUI;
 
 namespace GUI
 {

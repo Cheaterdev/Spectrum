@@ -1,7 +1,8 @@
-#pragma once
-#include "GUI/GUI.h"
+export module GUI:Renderer;
+
+import :Base;
 import HAL;
-namespace GUI
+export namespace GUI
 {
 
 	class NinePatch

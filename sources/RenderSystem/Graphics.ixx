@@ -21,6 +21,6 @@ export import :Scene;
 
 export import :MipMapGenerator;
 
-export import :Renderer;
+export import :MeshRenderer;
 
 //export import :StencilRenderer;

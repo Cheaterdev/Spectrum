@@ -1,11 +1,23 @@
 #include "pch_render.h"
 #include "GUI/Elements/Window.h"
-#include "GUI/Renderer/Renderer.h"
+
 #include "FrameGraph/FrameGraph.h"
 import HAL;
 
 using namespace FrameGraph;
-
+static const LPCTSTR cursors[] =
+{
+    IDC_ARROW,
+    IDC_IBEAM,
+    IDC_SIZENS,
+    IDC_SIZEWE,
+    IDC_SIZENWSE,
+    IDC_SIZENESW,
+    IDC_SIZEALL,
+    IDC_NO ,
+    IDC_WAIT,
+    IDC_HAND
+};
 namespace GUI
 {
     class dark : public base
@@ -1216,7 +1228,7 @@ namespace GUI
 		if (really_focused)
 			really_focused->on_key_action(key);
 	}
-	
+    
 	void user_interface::mouse_move_event(vec2 pos)
 	{
 		run_on_ui([this, pos]()

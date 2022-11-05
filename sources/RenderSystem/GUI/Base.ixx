@@ -1,11 +1,14 @@
-#pragma once
+export module GUI:Base;
+
 import Graphics;
-import Math;
+export import Math;
 import Executors;
 import Utils;
 import windows;
-import HAL;
+export import HAL;
 import Tree;
+export
+{
 
 enum class mouse_button : int
 {
@@ -48,31 +51,19 @@ namespace GUI
 
     namespace offset
     {
-        static const vec2 CENTER(0.5, 0.5);
-        static const vec2 LEFT_TOP(0, 0);
-        static const vec2 LEFT_DOWN(0, 1);
-        static const vec2 RIGHT_TOP(1, 0);
-        static const vec2 RIGHT_DOWN(1, 1);
-        static const vec2 LEFT_CENTER(0, 0.5);
-        static const vec2 RIGHT_CENTER(1, 0.5);
+         const vec2 CENTER = {0.5,0.5};
+         const vec2 LEFT_TOP(0, 0);
+         const vec2 LEFT_DOWN(0, 1);
+         const vec2 RIGHT_TOP(1, 0);
+         const vec2 RIGHT_DOWN(1, 1);
+         const vec2 LEFT_CENTER(0, 0.5);
+         const vec2 RIGHT_CENTER(1, 0.5);
 
-        static const vec2 TOP_CENTER(0.5, 0);
-        static const vec2 DOWN_CENTER(0.5, 1);
+         const vec2 TOP_CENTER(0.5, 0);
+         const vec2 DOWN_CENTER(0.5, 1);
     };
 
-    static LPCTSTR cursors[] =
-    {
-        IDC_ARROW,
-        IDC_IBEAM,
-        IDC_SIZENS,
-        IDC_SIZEWE,
-        IDC_SIZENWSE,
-        IDC_SIZENESW,
-        IDC_SIZEALL,
-        IDC_NO ,
-        IDC_WAIT,
-        IDC_HAND
-    };
+  
 
     enum class cursor_style : int
     {
@@ -193,7 +184,7 @@ namespace GUI
             }
 
 #pragma warning(disable:4172)
-            const T& operator=(const T& r)
+            const T operator=(const T& r)
             {
                 const T& filtered = filter_func?filter_func(r):r;
 
@@ -678,4 +669,5 @@ namespace GUI
                  });
              }	  */
     };
+}
 }

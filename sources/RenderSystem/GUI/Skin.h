@@ -1,6 +1,6 @@
 #pragma once
 import Singleton;
-#include "GUI/GUI.h"
+import GUI;
 
 struct Skin: public Singleton<Skin>
 {

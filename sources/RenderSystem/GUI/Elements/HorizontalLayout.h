@@ -1,5 +1,5 @@
 #pragma once
-#include "GUI/GUI.h"
+import GUI;
 
 namespace GUI
 {

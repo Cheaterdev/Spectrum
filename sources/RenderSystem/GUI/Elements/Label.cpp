@@ -2,7 +2,7 @@
 
 #include "Label.h"
 
-#include "GUI/Renderer/Renderer.h"
+
 
 using namespace HAL;
 namespace GUI

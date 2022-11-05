@@ -2,7 +2,7 @@
 #include "DockBase.h"
 #include "TabControl.h"
 #include "GUI/Elements/Window.h"
-#include "GUI/Renderer/Renderer.h"
+
 
 void GUI::Elements::dock_base::draw_after(Graphics::context& c)
 {

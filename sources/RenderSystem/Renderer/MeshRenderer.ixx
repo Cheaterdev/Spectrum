@@ -1,4 +1,4 @@
-export module Graphics:Renderer;
+export module Graphics:MeshRenderer;
 
 import Utils;
 import HAL;
