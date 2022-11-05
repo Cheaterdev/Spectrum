@@ -736,13 +736,11 @@ export struct RaytracingDescNative:public D3D12_BUILD_RAYTRACING_ACCELERATION_ST
 {
 	std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> descs;
 
-
-	
 	
 };
 
 
-export RaytracingDescNative&& to_native(const RaytracingBuildDescBottomInputs &inputs)
+export RaytracingDescNative to_native(const RaytracingBuildDescBottomInputs &inputs)
 {
 	RaytracingDescNative result;
 	auto add_geometry = [&](const GeometryDesc& i)

@@ -1,11 +1,7 @@
 #include "pch_render.h"
 
-#include "GUI/Elements/AssetExplorer.h"
-#include "GUI/Elements/ValueBox.h"
-#include "GUI/Elements/CheckBoxText.h"
-#include "GUI/Elements/HorizontalLayout.h"
-#include "GUI/Elements/ColoredRect.h"
-
+#include "GUI/Elements/Asset/AssetExplorer.h"
+import GUI;
 #include "Values.h"
 
 /*

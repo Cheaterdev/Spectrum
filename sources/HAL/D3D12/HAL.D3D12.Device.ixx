@@ -193,6 +193,11 @@ namespace HAL
 		RaytracingPrebuildInfo Device::calculateBuffers(const RaytracingBuildDescBottomInputs& desc)
 		{
 			auto inputs = to_native(desc);
+
+			inputs.NumDescs = static_cast<UINT>(inputs.descs.size());
+			inputs.pGeometryDescs = inputs.descs.data();
+
+
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
 
 			native_device->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
