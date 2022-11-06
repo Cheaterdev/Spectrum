@@ -1,7 +1,7 @@
 #include "pch_render.h"
 #include "VoxelGI.h"
 #include "Effects/RTX/RTX.h"
-#include "FrameGraph/FrameGraph.h"
+import Graphics;
 
 using namespace FrameGraph;
 

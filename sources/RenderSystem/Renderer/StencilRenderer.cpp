@@ -5,7 +5,7 @@
 import GUI;
 #include "Materials/universal_material.h"
 
-#include "FrameGraph/FrameGraph.h"
+
 using namespace GUI;
 
 using namespace Elements;

@@ -1,6 +1,8 @@
 module GUI;
 import GUI;
-#include "FrameGraph/FrameGraph.h"
+import Graphics;
+import windows;
+
 import HAL;
 
 using namespace FrameGraph;

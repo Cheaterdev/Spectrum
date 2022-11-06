@@ -22,5 +22,5 @@ export import :Scene;
 export import :MipMapGenerator;
 
 export import :MeshRenderer;
-
+export import :FrameGraphContext;
 //export import :StencilRenderer;

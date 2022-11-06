@@ -1,6 +1,6 @@
 #pragma once
+import Graphics;
 
-#include "FrameGraph/FrameGraph.h"
 import Events;
 
 class FSR :public Events::prop_handler, public FrameGraph::GraphGenerator

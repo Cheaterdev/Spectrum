@@ -1,5 +1,6 @@
 #pragma once
-#include "FrameGraph/FrameGraph.h"
+import Graphics;
+
 import Events;
 import HAL;
 
