@@ -1,11 +1,13 @@
-#include "pch_render.h"
+module;
+
+#include "Materials/universal_material.h"
+module GUI:AssetExplorer;
+
+import :FlowGraph.FlowManager;
 import Application;
 import Graphics;
 
 import GUI;
-#include "AssetExplorer.h"
-#include "Materials/universal_material.h"
-#include "GUI/Elements/FlowGraph/FlowManager.h"
 //#include "GUI/Elements/Tree.h"
 //#include "GUI/Elements/DockBase.h"
 //#include "GUI/Elements/ComboBox.h"

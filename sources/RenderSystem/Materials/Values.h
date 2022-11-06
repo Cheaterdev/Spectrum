@@ -1,7 +1,7 @@
 #pragma once
 import FlowGraph;
 import Graphics;
-#include "GUI/Elements/FlowGraph/ComponentWindow.h"
+import GUI;
 
 class VectorType;
 

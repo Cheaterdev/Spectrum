@@ -1,12 +1,14 @@
-#pragma once
+export module GUI:FlowGraph.FlowManager;
+
+import :ScrollContainer;
+import :TabControl;
+import :FlowGraph.Canvas;
+
 
 import FlowGraph;
 
-import GUI;
-#include "GUI/Elements/FlowGraph/Canvas.h"
-//#include "GUI/Elements/TabControl.h"
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

@@ -1,8 +1,11 @@
-#pragma once
-#include "ComponentWindow.h"
-import GUI;
+export module GUI:FlowGraph.Comment;
 
-namespace GUI
+import :ScrollContainer;
+import :CheckBox;
+import :Resizable;
+import :FlowGraph.ComponentWindow;
+
+export namespace GUI
 {
     namespace Elements
     {

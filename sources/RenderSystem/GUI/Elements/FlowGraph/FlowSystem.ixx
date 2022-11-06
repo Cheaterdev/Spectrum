@@ -1,8 +1,17 @@
-#pragma once
+export module GUI:FlowSystem;
 
-#include "GUI/Elements/FlowGraph/ComponentWindow.h"
 
-namespace FlowGraph
+import :FlowGraph.Canvas;
+import :FlowGraph.Comment;
+import :FlowGraph.ComponentWindow;
+import :FlowGraph.FlowManager;
+import :FlowGraph.ParameterWindow;
+
+
+import Singleton;
+import stl.core;
+
+export namespace FlowGraph
 {
 
     class FlowSystem : public Singleton<FlowSystem>

@@ -1,8 +1,15 @@
-#pragma once
-import FlowGraph;
-import GUI;
+export module GUI:FlowGraph.ComponentWindow;
 
-namespace GUI
+import :ScrollContainer;
+import :CheckBox;
+import :Label;
+import :Button;
+import :Resizer;
+
+import FlowGraph;
+
+
+export namespace GUI
 {
     namespace Elements
     {

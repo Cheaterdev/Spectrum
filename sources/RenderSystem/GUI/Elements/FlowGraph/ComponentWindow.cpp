@@ -1,11 +1,9 @@
-#include "pch_render.h"
-#include "ComponentWindow.h"
-#include "GUI/Elements/FlowGraph/FlowManager.h"
-#include "GUI/Elements/FlowGraph/Canvas.h"
-//#include "GUI/Elements/MenuList.h"
+module GUI:FlowGraph.ComponentWindow;
 
+import :FlowGraph.FlowManager;
+import :FlowGraph.Canvas;
+import :Renderer;
 
-import GUI;
 
 void GUI::Elements::FlowGraph::component_window::draw(Graphics::context& c)
 {

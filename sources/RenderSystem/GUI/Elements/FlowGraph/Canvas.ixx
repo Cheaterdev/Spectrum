@@ -1,11 +1,10 @@
-#pragma once
+export module GUI:FlowGraph.Canvas;
 
-import GUI;
+import :ScrollContainer;
+import :CheckBox;
+import :FlowGraph.Comment;
 
-#include "GUI/Elements/FlowGraph/Comment.h"
-//#include "GUI/Elements/ScrollContainer.h"
-//#include "GUI/Elements/CheckBox.h"
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {

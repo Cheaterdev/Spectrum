@@ -1,17 +1,12 @@
-#include "pch_render.h"
-#include "Canvas.h"
-#include "FlowSystem.h"
-//
-#include "GUI/Elements/Asset/AssetExplorer.h"
-#include "GUI/Elements/FlowGraph/FlowManager.h"
-//#include "GUI/Elements/MenuList.h"
-//#include "GUI/Elements/ScrollContainer.h"
+module GUI:FlowGraph.Canvas;
 
-
+import  :FlowGraph.FlowManager;
 import Graphics;
-import GUI;
-
-
+import :FlowSystem;
+import :MenuList;
+import :ScrollContainer;
+import :Renderer;
+import :AssetExplorer;
 using namespace HAL;
 void GUI::Elements::FlowGraph::canvas::draw(Graphics::context& c)
 {

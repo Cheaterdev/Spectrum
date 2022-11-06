@@ -1,6 +1,5 @@
 #include "pch_render.h"
 
-#include "GUI/Elements/Asset/AssetExplorer.h"
 import GUI;
 #include "Values.h"
 

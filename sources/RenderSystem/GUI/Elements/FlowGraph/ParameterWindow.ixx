@@ -1,9 +1,13 @@
-#pragma once
-//#include "GUI/Elements/CheckBoxText.h"
+export module GUI:FlowGraph.ParameterWindow;
 
-import GUI;
+import :ScrollContainer;
+import :TabControl;
+import :CheckBoxText;
+import :FlowGraph.Canvas;
 
-namespace GUI
+
+
+export namespace GUI
 {
 	namespace Elements
 	{

@@ -1,12 +1,17 @@
-#pragma once
+export module GUI:AssetExplorer;
+
 import Graphics;
 
-import GUI;
+import :Container;
+import :StatusBar;
+import :Image;
+import :Label;
+
 //#include "GUI/Elements/Container.h"
 //#include "GUI/Elements/StatusBar.h"
 //#include "GUI/Elements/Image.h"
 
-namespace GUI
+export namespace GUI
 {
     namespace Elements
     {
