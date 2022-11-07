@@ -16,7 +16,7 @@ export namespace GUI
 
 			GUI::Texture cache;
 
-			virtual void draw(Graphics::context& c) override;
+			virtual void draw(Context& c) override;
 
 		};*/
 
@@ -55,11 +55,11 @@ export namespace GUI
                 {
                     font = nullptr;
                 }
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
 
                 unsigned int get_index(vec2 at);
                 Fonts::FontGeometry::ptr get_geometry();
-                virtual void recalculate(Graphics::context& c);
+                virtual void recalculate(Context& c);
 
                 virtual sizer update_layout(sizer r, float scale) override;
 

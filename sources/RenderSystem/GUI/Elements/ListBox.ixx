@@ -19,7 +19,7 @@ export namespace GUI
                 bool selected = false;
 
 
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 
@@ -43,7 +43,7 @@ export namespace GUI
                 list_box();
 
                 label::ptr add_item(std::string elem);
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
 
                 /*	virtual void on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 

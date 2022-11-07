@@ -56,7 +56,7 @@ export namespace GUI
                     return elem;
                 }
 
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
 
         };
 

@@ -2,7 +2,7 @@ module GUI:StatusBar;
 import :Renderer;
 
 
-void GUI::Elements::status_bar::draw(Graphics::context& c)
+void GUI::Elements::status_bar::draw(Context& c)
 {
     renderer->draw(c, skin.Normal, get_render_bounds());
 }

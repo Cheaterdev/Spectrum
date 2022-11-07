@@ -33,7 +33,7 @@ export namespace GUI
                     using ptr = s_ptr<comment>;
                     using wptr = w_ptr<comment>;
 
-                    virtual void draw(Graphics::context& c) override;
+                    virtual void draw(Context& c) override;
                     comment(canvas* canva, ::FlowGraph::window* wnd);
 
                     virtual void on_pos_changed(const vec2& r) override;

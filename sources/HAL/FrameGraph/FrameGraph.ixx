@@ -1,7 +1,6 @@
-export module Graphics:FrameGraph;
+export module HAL:FrameGraph;
 
 export import "defines.h";
-import HAL;
 import Scheduler;
 
 import Utils;
@@ -10,7 +9,12 @@ import serialization;
 import Math;
 
 import Holdable;
+import :Types;
+import :CommandList;
+import :ResourceViews;
+import :Texture;
 
+using namespace HAL;
  export namespace FrameGraph
 {
 
@@ -782,15 +786,10 @@ import Holdable;
 	};
 
 	
-	class Graph: private Holder, public VariableContext, public SlotContext
+	class Graph: public UniversalContext, public VariableContext, public SlotContext
 	{	
 	public:
 
-		template<class T>
-		T& get_context()
-		{
-			return Holder::get_or_create<T>();
-		}
 		std::list<std::shared_ptr<Pass>> passes;
 
 		std::list<std::shared_ptr<Pass>> required_passes;

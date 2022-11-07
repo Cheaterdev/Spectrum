@@ -35,7 +35,7 @@ export namespace GUI
                 {
                     label_text->text = title;
                 }
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
 
                 virtual bool on_mouse_action(mouse_action action, mouse_button button, vec2 pos) override;
 

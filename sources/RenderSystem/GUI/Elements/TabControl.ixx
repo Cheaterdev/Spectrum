@@ -21,7 +21,7 @@ export namespace GUI
 
                 base::ptr page;
                 w_ptr<tab_control> owner;
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
 
                 bool is_current()
                 {
@@ -97,8 +97,8 @@ export namespace GUI
                 virtual void add_child(base::ptr obj) override;
                 virtual void remove_child(base::ptr obj) override;
 
-                virtual void draw(Graphics::context& c) override;
-				virtual void draw_after(Graphics::context&) override;
+                virtual void draw(Context& c) override;
+				virtual void draw_after(Context&) override;
 
                 virtual void on_bounds_changed(const rect& r) override;
                 virtual void close_menus()
@@ -130,7 +130,7 @@ export namespace GUI
 
 				void remove_button(tab_button::ptr b);
 
-                virtual void draw(Graphics::context&) override;
+                virtual void draw(Context&) override;
 
         };
 

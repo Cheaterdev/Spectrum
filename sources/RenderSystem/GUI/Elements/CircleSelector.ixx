@@ -18,7 +18,7 @@ export namespace GUI
 			using wptr = w_ptr<circle_selector>;
 
 		
-			//virtual void draw(Graphics::context& c) override;
+			//virtual void draw(Context& c) override;
 			circle_selector();
 			Events::Event<float2> on_change;
 

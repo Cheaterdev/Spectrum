@@ -4,7 +4,7 @@ import :FlowGraph.Canvas;
 import :Renderer;
 
 
-void GUI::Elements::FlowGraph::comment::draw(Graphics::context& c)
+void GUI::Elements::FlowGraph::comment::draw(Context& c)
 {
     this->renderer->draw(c, Skin::get().FlowComment.Active, get_render_bounds());
 }

@@ -7,7 +7,7 @@ namespace GUI
     namespace Elements
     {
 
-        void button::draw(Graphics::context& c)
+        void button::draw(Context& c)
         {
             if (background_style == view_style::DEFAULT)
             {

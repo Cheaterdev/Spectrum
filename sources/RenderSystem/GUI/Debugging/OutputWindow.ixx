@@ -13,7 +13,7 @@ export namespace GUI
 
                     base::ptr current_block;
 
-                    virtual void draw(Graphics::context& c) override;
+                    virtual void draw(Context& c) override;
                     std::list< base::ptr> add;
                     std::mutex m;
                     virtual void think(float) override;

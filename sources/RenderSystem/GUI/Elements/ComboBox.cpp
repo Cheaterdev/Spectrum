@@ -21,7 +21,7 @@ bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button
 
     return true;
 }
-void GUI::Elements::combo_box::draw(Graphics::context& c)
+void GUI::Elements::combo_box::draw(Context& c)
 {
     if (is_pressed())
         renderer->draw(c, skin.Pressed, get_render_bounds());

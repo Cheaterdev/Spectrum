@@ -9,7 +9,7 @@ namespace GUI
 
 
 
-        void tab_button::draw(Graphics::context& c)
+        void tab_button::draw(Context& c)
         {
             if (is_current() || is_pressed())
                 renderer->draw(c, skin.Pressed, get_render_bounds());
@@ -84,12 +84,12 @@ namespace GUI
             skin = Skin::get().TabButton;
         }
 
-        void tab_strip::draw(Graphics::context& c)
+        void tab_strip::draw(Context& c)
         {
         //    renderer->draw(c, skin.Normal, get_render_bounds());
 			renderer->draw_container(get_ptr(),c);
         }
-		void tab_strip::draw_after(Graphics::context& c)
+		void tab_strip::draw_after(Context& c)
 		{
 		//	    renderer->draw(c, skin.Normal, get_render_bounds());
 			//	renderer->draw_container(get_ptr(),c);
@@ -296,7 +296,7 @@ namespace GUI
             add_child(contents);
         }
 
-        void tab_control::draw(Graphics::context& c)
+        void tab_control::draw(Context& c)
         {
             //  renderer->draw_container(get_ptr(), c);
         }

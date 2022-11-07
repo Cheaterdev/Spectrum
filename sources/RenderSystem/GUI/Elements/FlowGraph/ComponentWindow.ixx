@@ -76,7 +76,7 @@ export namespace GUI
                     using ptr = s_ptr<component_window>;
                     using wptr = w_ptr<component_window>;
 
-                    virtual void draw(Graphics::context& c) override;
+                    virtual void draw(Context& c) override;
                     component_window(canvas* canva, ::FlowGraph::Node* node, window_type type);
 
                     s_ptr<link_item> add_input(::FlowGraph::parameter* p);

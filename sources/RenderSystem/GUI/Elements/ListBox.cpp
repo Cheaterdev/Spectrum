@@ -1,7 +1,7 @@
 module GUI:ListBox;
 import :Renderer;
 
-void GUI::Elements::list_box::draw(Graphics::context& c)
+void GUI::Elements::list_box::draw(Context& c)
 {
     renderer->draw_area(get_ptr(), c);
 }
@@ -43,7 +43,7 @@ namespace GUI
 {
 
 
-    void Elements::list_element::draw(Graphics::context& c)
+    void Elements::list_element::draw(Context& c)
     {
         //   if (selected)
         //      renderer->draw(this, c);

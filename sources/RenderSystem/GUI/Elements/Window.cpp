@@ -2,7 +2,7 @@ module GUI:Window;
 import :Renderer;
 
 
-void GUI::Elements::window::draw(Graphics::context& c)
+void GUI::Elements::window::draw(Context& c)
 {
 	// skin->draw(this, c);
 	renderer->draw(c, skin.Active, get_render_bounds());

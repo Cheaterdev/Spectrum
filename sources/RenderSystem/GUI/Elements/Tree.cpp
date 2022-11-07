@@ -34,7 +34,7 @@ void GUI::Elements::toogle_icon::toogle(bool v)
 		texture = tex_closed;
 }
 
-void GUI::Elements::line_base::draw(Graphics::context& c, bool selected)
+void GUI::Elements::line_base::draw(Context& c, bool selected)
 {
 	 if (dropping)
 		 renderer->draw_color(c, float4(153, 114, 202, 255) / 255.0f, get_render_bounds());

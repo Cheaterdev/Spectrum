@@ -26,7 +26,7 @@ export namespace GUI
 
                 scroll_bar(scroll_type type);
                 Skin::Button drag_skin;
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
                 void set_sizes(float filled_size, float container_size, float container_pos)
                 {
                     float f = container_size;

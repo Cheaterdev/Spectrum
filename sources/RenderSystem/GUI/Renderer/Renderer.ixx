@@ -23,10 +23,10 @@ export namespace GUI
 		int counter = 0;
 		using ptr = s_ptr<NinePatch>;
 		NinePatch();
-		void draw(Graphics::context& c, HAL::PipelineState::ptr pipeline_state, rect r);
-		void draw(Graphics::context& c, GUI::Texture& item, rect r);
-		void draw(Graphics::context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state);
-		void flush(Graphics::context& c);
+		void draw(base::Context& c, HAL::PipelineState::ptr pipeline_state, rect r);
+		void draw(base::Context& c, GUI::Texture& item, rect r);
+		void draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state);
+		void flush(base::Context& c);
 	};
 
 	class SimpleRect
@@ -44,7 +44,7 @@ export namespace GUI
 
 
 
-		void draw(Graphics::context& c, float4 color, rect r);
+		void draw(base::Context& c, float4 color, rect r);
 	};
 
 	class Renderer
@@ -66,21 +66,21 @@ export namespace GUI
 		using wptr = w_ptr<Renderer>;
 
 
-		void draw_area(base::ptr obj, Graphics::context& c);
-		void draw_container(base::ptr obj, Graphics::context& c);
-		void draw_virtual(base::ptr obj, Graphics::context& c);
-		void draw_color(Graphics::context& c, float4 color, rect r);
-		void flush(Graphics::context& c);
+		void draw_area(base::ptr obj, base::Context& c);
+		void draw_container(base::ptr obj, base::Context& c);
+		void draw_virtual(base::ptr obj, base::Context& c);
+		void draw_color(base::Context& c, float4 color, rect r);
+		void flush(base::Context& c);
 
-		void draw(Graphics::context& c, GUI::Texture& item, rect r);
-		void draw(Graphics::context& c, HAL::PipelineState::ptr state, rect r);
+		void draw(base::Context& c, GUI::Texture& item, rect r);
+		void draw(base::Context& c, HAL::PipelineState::ptr state, rect r);
 		Renderer();
 
 		void start()
 		{
 			nine_patch->counter = 0;
 		}
-		void set(Graphics::context& c);
+		void set(base::Context& c);
 	};
 }
 

@@ -691,7 +691,7 @@ public:
 		if (builder.exists(debug_tex))
 			builder.need(debug_tex, ResourceFlags::PixelRead);
 	}
-	virtual void draw(Graphics::context& t) override
+	virtual void draw(base::Context& t) override
 	{
 		if (debug_tex) texture.srv = debug_tex->texture2D;
 		image::draw(t);

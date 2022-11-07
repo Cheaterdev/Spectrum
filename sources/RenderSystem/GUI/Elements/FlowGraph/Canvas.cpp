@@ -8,10 +8,13 @@ import :ScrollContainer;
 import :Renderer;
 import :AssetExplorer;
 using namespace HAL;
-void GUI::Elements::FlowGraph::canvas::draw(Graphics::context& c)
+void GUI::Elements::FlowGraph::canvas::draw(Context& context)
 {
+
+	auto& c = context.get_context<GUIInfo>();
+
 	g->cam_pos = contents->pos;
-	renderer->flush(c);
+	renderer->flush(context);
 	auto clip = c.scissors;
 	c.command_list->get_graphics().set_scissors(c.ui_clipping);
 
@@ -21,13 +24,13 @@ void GUI::Elements::FlowGraph::canvas::draw(Graphics::context& c)
 	graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
 	graph_data.set(c.command_list->get_graphics());
 
-	renderer->draw(c, GetPSO<PSOS::CanvasBack>(), get_render_bounds());
+	renderer->draw(context, GetPSO<PSOS::CanvasBack>(), get_render_bounds());
 
 
 	if (linking.size())
 	{
 
-		renderer->flush(c);
+		renderer->flush(context);
 		//	auto& b = *line_vertex;
 		int count = 0;
 
@@ -631,7 +634,7 @@ GUI::Elements::FlowGraph::canvas::renderer::renderer(GUI::Renderer* renderer)
 
 }
 
-void GUI::Elements::FlowGraph::canvas::renderer::render(Object* obj, Data* data, Graphics::context& c)
+void GUI::Elements::FlowGraph::canvas::renderer::render(Object* obj, Data* data, Context& c)
 {
 	auto cb_vertex = data->cb_vertex;
 	auto cb_pixel = data->cb_pixel;
@@ -682,7 +685,7 @@ void GUI::Elements::FlowGraph::canvas::renderer::render(Object* obj, Data* data,
 	}
 }*/
 /*
-void GUI::Elements::FlowGraph::link_item::draw(Graphics::context& c)
+void GUI::Elements::FlowGraph::link_item::draw(Context& c)
 {
 //   renderer->draw(this, c);
 }*/

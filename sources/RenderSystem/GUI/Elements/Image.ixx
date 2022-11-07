@@ -12,7 +12,7 @@ export namespace GUI
                 using wptr = w_ptr<image>;
 
                 Texture texture;
-                virtual void draw(Graphics::context& c);
+                virtual void draw(Context& c);
                 image()
                 {
                     clickable = false;

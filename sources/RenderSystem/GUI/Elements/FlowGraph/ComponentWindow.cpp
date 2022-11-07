@@ -5,7 +5,7 @@ import :FlowGraph.Canvas;
 import :Renderer;
 
 
-void GUI::Elements::FlowGraph::component_window::draw(Graphics::context& c)
+void GUI::Elements::FlowGraph::component_window::draw(Context& c)
 {
 	auto texture = selected ? skin.Active : skin.Inactive;
 

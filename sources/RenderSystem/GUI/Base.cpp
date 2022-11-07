@@ -24,7 +24,7 @@ namespace GUI
     class dark : public base
     {
         public:
-            virtual void draw(Graphics::context&) override;
+            virtual void draw(Context&) override;
     };
 
     void base::on_add(base* base_parent)
@@ -679,7 +679,7 @@ namespace GUI
         if (!test_local_visible())
             return;
 
-		auto &c = rec_c.render_context;
+		auto &c = rec_c.render_context.get_context<GUIInfo>();
 
         bool visibility = true;
         rect r_bounds = render_bounds.get();
@@ -706,7 +706,7 @@ namespace GUI
         if (visibility)
 		{
 
-			rec_c.execute([this](Graphics::context &c) {
+			rec_c.execute([this](Context &c) {
 				draw(c);
 			});
 		}
@@ -746,7 +746,7 @@ namespace GUI
     //    if (visibility)
     //        draw_after(c);
 
-		rec_c.execute([this](Graphics::context &c) {
+		rec_c.execute([this](Context &c) {
 			draw_after(c);
 		});
     }
@@ -879,13 +879,13 @@ namespace GUI
             c->close_menus();
     }
 
-    void base::draw(Graphics::context& c) //
+    void base::draw(Context& c) //
     {
         if (draw_helper)
             renderer->draw_virtual(get_ptr(), c);
     }
 
-    void base::draw_after(Graphics::context&)
+    void base::draw_after(Context&)
     {
     }
 
@@ -949,19 +949,21 @@ namespace GUI
 				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
 
 			
-                 std::shared_ptr<Graphics::OVRContext> ovr_context;
                  renderer->start();
 
-                 Graphics::context c(command_list, ovr_context);
+               
+
+                 auto& c = graph.get_context<GUIInfo>();
+
                  c.command_list = command_list;
                
-				// c.offset = { 0, 0 };
+				 c.offset = { 0, 0 };
 				 c.window_size = scaled_size.get();
 				 c.scale = 1;
                  c.delta_time = time.time;
 				 {
                      PROFILE_GPU(L"draw");
-					 RecursiveContext context(c);
+					 RecursiveContext context(graph);
 
 					 //if (!c.command_list_label)
 					 {
@@ -989,7 +991,7 @@ namespace GUI
 					 c.command_list_label = nullptr;
 				 }
 
-				 renderer->flush(c);
+				 renderer->flush(graph);
 
 	
 			 });
@@ -998,7 +1000,7 @@ namespace GUI
      }
 
      /*
-    void user_interface::draw_ui(Graphics::context& c)
+    void user_interface::draw_ui(Context& c)
     {
         std::lock_guard<std::mutex> g(m);
 
@@ -1360,7 +1362,7 @@ namespace GUI
     }
 
 
-    void dark::draw(Graphics::context& c)
+    void dark::draw(Context& c)
     {
         renderer->draw_color(c, vec4(0.0, 0.0, 0.0, 0.5f), get_render_bounds());
     }
@@ -1369,7 +1371,7 @@ namespace GUI
     {
     }
 
-    void drag_n_drop::draw(RecursiveContext& c)
+    void drag_n_drop::draw(RecursiveContext& context)
     {
         if (!dragging) return;
 
@@ -1377,11 +1379,12 @@ namespace GUI
 
         if (!p)
             return;
+        auto& c = context.render_context.get_context<GUIInfo>();
 
-        c.render_context.offset = cur_pos - start_pos;
+        c.offset = cur_pos - start_pos;
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
        if (p->drag_n_drop_copy)
-		   p->draw_recursive(c);
+		   p->draw_recursive(context);
            
     }
 

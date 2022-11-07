@@ -7,7 +7,6 @@ import Executors;
 import Math;
 
 import :Camera;
-import :FrameGraph;
 
 class GBuffer;
 

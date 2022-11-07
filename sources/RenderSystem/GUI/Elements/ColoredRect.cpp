@@ -6,7 +6,7 @@ namespace GUI
 	namespace Elements
 	{
 
-		void colored_rect::draw(Graphics::context& c)
+		void colored_rect::draw(Context& c)
 		{
 			renderer->draw_color(c, color, get_render_bounds());
 		}

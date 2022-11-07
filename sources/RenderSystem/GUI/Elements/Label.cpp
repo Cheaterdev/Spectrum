@@ -9,10 +9,11 @@ namespace GUI
 	{
 
 
-		void label::draw(Graphics::context& c)
+		void label::draw(Context& context)
 		{
 			//	return;
-			recalculate(c);
+			recalculate(context);
+			auto& c = context.get_context<GUIInfo>();
 
 			PROFILE(L"label");
 
@@ -35,7 +36,7 @@ namespace GUI
 						p.y += (p.h - std::ceil(text_size.y)) / 2;
 					sizer intersected = intersect(math::convert(p), c.ui_clipping);
 					if ((intersected.top < intersected.bottom && intersected.left < intersected.right))
-						renderer->draw(c, cache, p);
+						renderer->draw(context, cache, p);
 				}
 
 			c.ui_clipping = orig;
@@ -65,8 +66,10 @@ namespace GUI
 		{
 			on_text_changed(text.get());
 		}
-		void label::recalculate(Graphics::context& c)
+		void label::recalculate(Context& context)
 		{
+			auto& c = context.get_context<GUIInfo>();
+
 			if (!need_recalculate && ((w == ivec2(render_bounds->size / scaled) || (magnet_text & FW1_NOWORDWRAP))))
 			{
 				w = ivec2(render_bounds->size / scaled);

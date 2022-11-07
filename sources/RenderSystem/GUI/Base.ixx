@@ -1,15 +1,48 @@
 export module GUI:Base;
 
-import Graphics;
+//import Graphics;
 export import Math;
 import Executors;
 import Utils;
 import windows;
 export import HAL;
 import Tree;
+import Holdable;
 export
 {
 
+    struct GUIInfo
+    {
+        HAL::CommandList::ptr command_list;
+        HAL::CommandList::ptr command_list_label;
+  
+        SingleThreadExecutorBatched* labeled;
+        Batch* data;
+        sizer_long ui_clipping;
+        sizer_long scissors;
+        vec2 offset = { 0,0 };
+        float delta_time;
+        vec2 window_size;
+        float scale = 1;
+
+
+        std::function<void(UniversalContext&)> commit_scissor()
+        {
+          
+            scissors = ui_clipping;
+            return [list = command_list, clip = ui_clipping](UniversalContext& context)
+            {
+                auto& c = context.get_context<GUIInfo>();
+
+	            list->get_graphics().set_scissors(clip);
+            };
+        }
+        GUIInfo() = default;
+        GUIInfo(HAL::CommandList::ptr list) : command_list(list), command_list_label(command_list_label)
+        {
+            delta_time = 0;
+        }
+    };
 enum class mouse_button : int
 {
     LEFT,
@@ -266,10 +299,10 @@ namespace GUI
     };
 	struct RecursiveContext
 	{
-		Graphics::context& render_context;
+        UniversalContext& render_context;
 		SingleThreadExecutorBatched executor;
 		SingleThreadExecutorBatched pre_executor;
-		RecursiveContext(Graphics::context& c):render_context(c)
+		RecursiveContext(UniversalContext& c):render_context(c)
 		{
 	
 		}
@@ -279,11 +312,11 @@ namespace GUI
 			executor.flush();
 		}
 
-		void execute(std::function<void(Graphics::context&)> f)
+		void execute(std::function<void(UniversalContext&)> f)
 		{
-			//auto new_c = std::make_shared<Graphics::context>(render_context);
-			executor.add(std::move([f, new_c = render_context]() {
-				f(const_cast<Graphics::context&>(new_c));
+			//auto new_c = std::make_shared<Context>(render_context);
+			executor.add(std::move([f, new_c = render_context ]() {
+				f(const_cast<UniversalContext&>(new_c));
 			}));
 
 		}
@@ -303,6 +336,8 @@ namespace GUI
             friend class drag_n_drop;
             friend class Elements::layouts::horizontal;
         public:
+
+            using Context = UniversalContext;
             using ptr = s_ptr<base>;
             using wptr = w_ptr<base>;
 
@@ -334,8 +369,8 @@ namespace GUI
 
             virtual void draw_recursive(RecursiveContext&, base* = nullptr);
 
-            virtual void draw(Graphics::context&); // override;;
-            virtual void draw_after(Graphics::context&);;
+            virtual void draw(Context&); // override;;
+            virtual void draw_after(Context&);;
 
 
      
@@ -606,7 +641,7 @@ namespace GUI
             virtual void mouse_wheel_event(mouse_wheel type, float value, vec2 pos);
             virtual void key_action_event(long key);
 
-         //   virtual void draw_ui(Graphics::context&);
+         //   virtual void draw_ui(Context&);
 
 			virtual void process_ui(float dt);
 			virtual void create_graph(FrameGraph::Graph& graph);

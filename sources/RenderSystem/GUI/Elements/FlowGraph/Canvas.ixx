@@ -23,7 +23,7 @@ export namespace GUI
                     using wptr = w_ptr<link_item>;
 
                     /*
-                                        virtual void draw(Graphics::context& c) override;
+                                        virtual void draw(Context& c) override;
                     					*/
                     bool inserted = false;
                     float beam_time = 0;
@@ -167,7 +167,7 @@ export namespace GUI
                     ::FlowGraph::graph* g;
 
 
-                    virtual void draw(Graphics::context& c) override;
+                    virtual void draw(Context& c) override;
 
                     using ptr = s_ptr<canvas>;
                     using wptr = w_ptr<canvas>;

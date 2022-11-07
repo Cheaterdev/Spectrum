@@ -12,7 +12,7 @@ export namespace GUI
         {
                 property<bool> checked;
 
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
 
             protected:
                 virtual void on_check_changed(const bool& r);

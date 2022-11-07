@@ -224,7 +224,7 @@ namespace GUI
 		}
 
 
-		void GUI::Elements::asset_item::draw(Graphics::context& c)
+		void GUI::Elements::asset_item::draw(Context& c)
 		{
 			if (is_hovered())
 				back_im->texture = hover;
@@ -532,7 +532,7 @@ namespace GUI
 		}
 
 
-		void GUI::Elements::asset_explorer::draw(Graphics::context& c)
+		void GUI::Elements::asset_explorer::draw(Context& c)
 		{
 			//	renderer->draw_container(get_ptr(), c);
 		}

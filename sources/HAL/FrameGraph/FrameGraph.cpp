@@ -1,7 +1,7 @@
-module Graphics:FrameGraph;
-
-import Scheduler;
+module HAL:FrameGraph;
 import HAL;
+import Scheduler;
+
 
 using namespace HAL;
 

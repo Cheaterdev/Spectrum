@@ -42,7 +42,7 @@ export namespace GUI
     	protected:
             bool dropping = false;
 
-            void draw(Graphics::context& c, bool selected);
+            void draw(Context& c, bool selected);
     	};
     	template<class TreeNode>
         class line : public line_base
@@ -53,7 +53,7 @@ export namespace GUI
                 GUI::Elements::tree_element<TreeNode>* owner;
 
            
-                void draw(Graphics::context& c)
+                void draw(Context& c)
                 {
                     line_base::draw(c, owner->selected);
                 }
@@ -299,7 +299,7 @@ export namespace GUI
 
 
 
-                void  draw(Graphics::context& c)
+                void  draw(Context& c)
                 {
               ///      renderer->draw_container(get_ptr(), c);
 

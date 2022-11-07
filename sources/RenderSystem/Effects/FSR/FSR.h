@@ -1,5 +1,6 @@
 #pragma once
 import Graphics;
+import HAL;
 
 import Events;
 

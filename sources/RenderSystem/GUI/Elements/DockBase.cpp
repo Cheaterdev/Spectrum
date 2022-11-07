@@ -4,7 +4,7 @@ import :TabControl;
 import :Window;
 import :Renderer;
 
-void GUI::Elements::dock_base::draw_after(Graphics::context& c)
+void GUI::Elements::dock_base::draw_after(Context& c)
 {
 	if (virt->visible.get() && virt_base->get_parent())
 		renderer->draw_virtual(virt, c);

@@ -3,7 +3,7 @@ import :Renderer;
 
 namespace GUI
 {
-	void Elements::scroll_bar::draw(Graphics::context& c)
+	void Elements::scroll_bar::draw(Context& c)
 	{
 		renderer->draw_color(c, float4(0, 0, 0, 0.5), get_render_bounds());
 		renderer->draw_color(c, float4(1, 1, 1, 0.5), drag->get_render_bounds());

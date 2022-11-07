@@ -6,7 +6,7 @@ namespace GUI
 {
     namespace Elements
     {
-        void image::draw(Graphics::context& c)
+        void image::draw(Context& c)
         {
             renderer->draw(c, texture, get_render_bounds());
         }

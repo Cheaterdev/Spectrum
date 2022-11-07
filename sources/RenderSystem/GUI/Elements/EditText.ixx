@@ -10,7 +10,7 @@ export namespace GUI
         {
 
                 float time;
-                virtual void draw(Graphics::context& c) override;
+                virtual void draw(Context& c) override;
 
             public:
 
@@ -52,14 +52,14 @@ export namespace GUI
 
                 virtual void on_key_action(long key) override;
 
-                void draw(Graphics::context& c);
+                void draw(Context& c);
 
                 virtual void on_mouse_enter(vec2 pos) override;
 
                 virtual void on_mouse_leave(vec2 pos) override;
 
 
-                //virtual void draw(Graphics::context &c) override;
+                //virtual void draw(Context &c) override;
         };
 
 
