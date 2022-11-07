@@ -31,9 +31,6 @@ export import :ValueBox;
 export import :Window;
 
 
-export import :AssetExplorer;
-
-
 export import  :Debug.OutputWindow;
 export import  :Debug.TaskViewer;
 export import  :Debug.TimerGraph;

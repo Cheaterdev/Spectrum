@@ -1,19 +1,24 @@
-#pragma once
+export module Graphics:Materials.Values;
+
 import FlowGraph;
-import Graphics;
+import :Asset;
+import :TextureAsset;
+
 import GUI;
+export
+{
 
 class VectorType;
 
-struct ShaderParamType:public ::FlowGraph::parameter_type
+constexpr struct ShaderParamType:public ::FlowGraph::parameter_type
 {
 	 int M;
      int N;
-     std::string name;
+     std::string    name;
 
      bool can_cast(parameter_type* other) override;
      ShaderParamType() = default;
-    ShaderParamType(int M, int N, std::string name):M(M),N(N), name(name)
+     constexpr  ShaderParamType(int M, int N, std::string name):M(M),N(N), name(name)
     {
         
     }
@@ -41,7 +46,7 @@ private:
 class VectorType:public ::FlowGraph::parameter_type
 {
 public:
-    VectorType()
+   constexpr VectorType()
 	{
 
 	}
@@ -91,14 +96,14 @@ struct shader_parameter
 };
 
 
-namespace ShaderParams
+struct ShaderParams:public Singleton<ShaderParams>
 {
     // TODO: make const
-   static  VectorType VECTOR;
-    static  ShaderParamType FLOAT1(1,1,"float");
-    static  ShaderParamType FLOAT2(1,2,"float2");
-    static  ShaderParamType FLOAT3(1,3,"float3");
-    static  ShaderParamType FLOAT4(1,4,"float4");
+    const  VectorType VECTOR;
+    const ShaderParamType FLOAT1= ShaderParamType(1,1,"float");
+    const ShaderParamType FLOAT2 = ShaderParamType(1,2,"float2");
+    const ShaderParamType FLOAT3 = ShaderParamType(1,3,"float3");
+    const ShaderParamType FLOAT4 = ShaderParamType(1,4,"float4");
 };
 template <class T, class N>
 class TemplatedParameter: public T
@@ -118,19 +123,19 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
 
         int get_N(FlowGraph::data_types v)
         {
-            if (v == ShaderParams::FLOAT1)
+            if (v == ShaderParams::get().FLOAT1)
                 return 1;
 
-            if (v == ShaderParams::FLOAT2)
+            if (v == ShaderParams::get().FLOAT2)
                 return 2;
 
-            if (v == ShaderParams::FLOAT3)
+            if (v == ShaderParams::get().FLOAT3)
                 return 3;
 
-            if (v == ShaderParams::FLOAT4)
+            if (v == ShaderParams::get().FLOAT4)
                 return 4;
 
-            if (v == ShaderParams::VECTOR)
+            if (v == ShaderParams::get().VECTOR)
                 return 4;
 
             return 0;
@@ -146,7 +151,7 @@ class MaterialTNode : public T, public  GUI::Elements::FlowGraph::VisualGraph
         {
             if (is_vector(a) && is_vector(b))
             {
-                if (a == ShaderParams::VECTOR || b == ShaderParams::VECTOR)
+                if (a == ShaderParams::get().VECTOR || b == ShaderParams::get().VECTOR)
                     return true;
 
                 return get_N(a) <= get_N(b);
@@ -431,13 +436,13 @@ class MaterialGraph : public MaterialFunction
             ar& NVP(i_emissive);
             ar& NVP(i_normal);
             ar& NVP(i_tess_displacement);
-            i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::FLOAT4);
-            i_metallic->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
-			i_roughness->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
-       //     i_specular->default_value = shader_parameter("float4(0,0,0,0)", ShaderParams::FLOAT4);
-            i_normal->default_value = shader_parameter("float4(0.5,0.5,1,0)", ShaderParams::FLOAT4);
-            i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::FLOAT4);
-            i_tess_displacement->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
+            i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
+            i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+			i_roughness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+       //     i_specular->default_value = shader_parameter("float4(0,0,0,0)", ShaderParams::get().FLOAT4);
+            i_normal->default_value = shader_parameter("float4(0.5,0.5,1,0)", ShaderParams::get().FLOAT4);
+            i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::get().FLOAT4);
+            i_tess_displacement->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
         }
 
 };
@@ -463,7 +468,7 @@ class TextureNode : public MaterialNode, public AssetHolder
              {
                  shader_parameter input;
                  input.name = "input.tc";
-                 input.type = ShaderParams::FLOAT2;
+                 input.type = ShaderParams::get().FLOAT2;
                  i_tc->put(input);
                  return false;
              }
@@ -638,11 +643,11 @@ public:
 
 	SpecToMetNode()
 	{
-		inputs.albedo = register_input(/*ShaderParams::FLOAT4, */"albedo");
-		inputs.specular = register_input(/*ShaderParams::FLOAT4, */"specular");
+		inputs.albedo = register_input(/*ShaderParams::get().FLOAT4, */"albedo");
+		inputs.specular = register_input(/*ShaderParams::get().FLOAT4, */"specular");
 
-		outputs.albedo = register_output(/*ShaderParams::FLOAT4,*/ "albedo");
-		outputs.metallic = register_output(/*ShaderParams::FLOAT1,*/ "metallic");
+		outputs.albedo = register_output(/*ShaderParams::get().FLOAT4,*/ "albedo");
+		outputs.metallic = register_output(/*ShaderParams::get().FLOAT1,*/ "metallic");
 
 	}
 
@@ -650,9 +655,9 @@ public:
 	{
 		auto mat_graph = static_cast<MaterialFunction*>(owner);
 	
-	auto res1 = 	mat_graph->add_value(ShaderParams::FLOAT4);
+	auto res1 = 	mat_graph->add_value(ShaderParams::get().FLOAT4);
 
-	auto res2 = mat_graph->add_value(ShaderParams::FLOAT1);
+	auto res2 = mat_graph->add_value(ShaderParams::get().FLOAT1);
 
 
 	auto val1 = inputs.albedo->get<shader_parameter>();
@@ -708,7 +713,7 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
         {
         shader_parameter input;
         input.name = "input.tc";
-        input.type = ShaderParams::FLOAT2;
+        input.type = ShaderParams::get().FLOAT2;
         i_tc->put(input);
         return false;
         }
@@ -733,7 +738,7 @@ class TiledTextureNode : public MaterialNode, public AssetHolder
 
 };
 
-
+}
 // REGISTER_TYPE(ScalarNode);
 // REGISTER_TYPE(MulNode);
 // REGISTER_TYPE(SumNode);

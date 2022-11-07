@@ -11,7 +11,6 @@
 #include <assimp\IOSystem.hpp>
 
 #include "Mesh/MeshletGeneration.h"
-#include "Materials/universal_material.h"
 
 
 import GUI;

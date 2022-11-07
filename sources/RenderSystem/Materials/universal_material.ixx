@@ -1,14 +1,17 @@
-﻿#pragma once
-#include "Materials/Values.h"
+﻿export module Graphics:Materials.UniversalMaterial;
+import :Materials.Values;
 
+import :Asset;
+import :MaterialAsset;
+import :BinaryAsset;
 import HAL;
-import Graphics;
+
 import Serializer;
 
 import crc32;
 
 using namespace HAL;
-namespace materials
+export namespace materials
 {
 
 	struct render_pass

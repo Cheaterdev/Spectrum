@@ -1,7 +1,11 @@
-#pragma once
+export module Graphics:StencilRenderer;
+import :Camera;
+import :MeshAsset;
+import :Scene;
+
 import GUI;
-import Graphics;
-class stencil_renderer : public GUI::base, public FrameGraph::GraphGenerator, public Events::Runner, public VariableContext
+
+export class stencil_renderer : public GUI::base, public FrameGraph::GraphGenerator, public Events::Runner, public VariableContext
 {
      //   RenderTargetTable table;
     //    HAL::StructureBuffer<UINT>::ptr id_buffer;

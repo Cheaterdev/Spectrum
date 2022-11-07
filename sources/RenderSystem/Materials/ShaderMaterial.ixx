@@ -1,9 +1,9 @@
-#pragma once
+export module Graphics:Materials.ShaderMaterial;
+import :MaterialAsset;
 
-import Graphics;
 import HAL;
 
-class ShaderMaterial: public materials::material, public AssetHolder
+export class ShaderMaterial: public materials::material, public AssetHolder
 {
   
     materials::Pipeline::ptr pipeline;

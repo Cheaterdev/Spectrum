@@ -1,8 +1,6 @@
 export module GUI:ColoredRect;
 import :Base;
 
-import Graphics;
-
 export namespace GUI
 {
     namespace Elements

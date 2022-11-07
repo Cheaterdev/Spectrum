@@ -1,10 +1,9 @@
-#include "pch_render.h"
+module;
 #include "Assets/EngineAssets.h"
-#include "StencilRenderer.h"
+module Graphics:StencilRenderer;
 
+import :Materials.UniversalMaterial;
 import GUI;
-#include "Materials/universal_material.h"
-
 
 using namespace GUI;
 

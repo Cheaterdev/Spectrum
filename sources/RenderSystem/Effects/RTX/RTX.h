@@ -1,5 +1,7 @@
 #pragma once
-#include "Materials/universal_material.h"
+import Graphics;
+import HAL;
+import Events;
 
 class RTX :public Singleton<RTX>, Events::prop_handler,
 	public Events::Runner

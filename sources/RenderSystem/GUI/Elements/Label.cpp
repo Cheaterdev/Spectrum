@@ -1,6 +1,7 @@
 module GUI:Label;
 import HAL;
 import GUI;
+import Graphics;
 
 using namespace HAL;
 namespace GUI

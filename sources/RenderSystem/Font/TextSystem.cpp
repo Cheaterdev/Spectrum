@@ -1,7 +1,7 @@
 module;
 #include "FW1FontWrapper/Source/FW1FontWrapper.h"
 
-module Graphics:TextSystem;
+module TextSystem;
 
 import Utils;
 

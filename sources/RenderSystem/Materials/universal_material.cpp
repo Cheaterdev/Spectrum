@@ -1,8 +1,8 @@
-﻿
+﻿module;
 #include "pch_render.h"
 #include "Assets/EngineAssets.h"
-#include "universal_material.h"
 #include "Effects/RTX/RTX.h"
+module Graphics:Materials.UniversalMaterial;
 
 static IdGenerator ids;
 
@@ -26,6 +26,8 @@ import crc32;
 
 import Data;
 import windows;
+
+using namespace HAL;
 
 void removeme() // TODO: VS issue - make dummy unused func to compile entire cpp =[
 {
@@ -58,22 +60,22 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 		std::byte* ptr = nullptr;
 
 
-		if (u->type == ShaderParams::FLOAT1)
+		if (u->type == ShaderParams::get().FLOAT1)
 		{
 			ptr = reinterpret_cast<std::byte*>(&u->value.f_value);
 		}
 
-		if (u->type == ShaderParams::FLOAT2)
+		if (u->type == ShaderParams::get().FLOAT2)
 		{
 			ptr = reinterpret_cast<std::byte*>(&u->value.f2_value);
 		}
 
-		if (u->type == ShaderParams::FLOAT3)
+		if (u->type == ShaderParams::get().FLOAT3)
 		{
 			ptr = reinterpret_cast<std::byte*>(&u->value.f3_value);
 		}
 
-		if (u->type == ShaderParams::FLOAT4)
+		if (u->type == ShaderParams::get().FLOAT4)
 		{
 			ptr = reinterpret_cast<std::byte*>(&u->value.f4_value);
 		}

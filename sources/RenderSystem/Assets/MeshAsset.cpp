@@ -2,7 +2,6 @@ import Graphics;
 
 #include "Effects/RTX/RTX.h"
 #include "Assets/AssetRenderer.h"
-#include "Materials/universal_material.h"
 import HAL;
 using namespace HAL;
 

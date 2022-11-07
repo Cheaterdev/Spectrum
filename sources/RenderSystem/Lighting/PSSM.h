@@ -1,5 +1,6 @@
 #pragma once
-#include "Materials/ShaderMaterial.h"
+import Graphics;
+import HAL;
 
 class PSSM:public FrameGraph::GraphGenerator
 {

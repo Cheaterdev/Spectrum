@@ -2,7 +2,7 @@ module;
 
 #include "FW1FontWrapper/Source/FW1FontWrapper.h"
 
-export module  Graphics:TextSystem;
+export module  TextSystem;
 
 import wrl;
 

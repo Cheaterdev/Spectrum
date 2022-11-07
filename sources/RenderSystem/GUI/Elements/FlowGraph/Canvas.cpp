@@ -1,12 +1,12 @@
 module GUI:FlowGraph.Canvas;
 
 import  :FlowGraph.FlowManager;
-import Graphics;
+
 import :FlowSystem;
 import :MenuList;
 import :ScrollContainer;
 import :Renderer;
-import :AssetExplorer;
+import Graphics;
 using namespace HAL;
 void GUI::Elements::FlowGraph::canvas::draw(Context& context)
 {

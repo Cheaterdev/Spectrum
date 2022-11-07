@@ -1,6 +1,5 @@
-#include "pch_render.h"
-#include "ShaderMaterial.h"
-#include "Materials/universal_material.h"
+module Graphics:Materials.ShaderMaterial;
+import :Materials.UniversalMaterial;
 
 ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file(this)
 {

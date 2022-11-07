@@ -5,7 +5,6 @@ export import :GPUTilesBuffer;
 export import :VisibilityBuffer;
 
 export import :Camera;
-export import :TextSystem;
 export import :Occluder;
 
 export import :Asset;
@@ -22,5 +21,11 @@ export import :Scene;
 export import :MipMapGenerator;
 
 export import :MeshRenderer;
+export import :StencilRenderer;
 export import :FrameGraphContext;
-//export import :StencilRenderer;
+export import :AssetExplorer;
+
+
+export import :Materials.Values;
+export import :Materials.UniversalMaterial;
+export import :Materials.ShaderMaterial;

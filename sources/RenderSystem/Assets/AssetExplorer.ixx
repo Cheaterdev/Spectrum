@@ -1,15 +1,8 @@
-export module GUI:AssetExplorer;
+export module Graphics:AssetExplorer;
 
-import Graphics;
+import GUI;
 
-import :Container;
-import :StatusBar;
-import :Image;
-import :Label;
-
-//#include "GUI/Elements/Container.h"
-//#include "GUI/Elements/StatusBar.h"
-//#include "GUI/Elements/Image.h"
+import :Asset;
 
 export namespace GUI
 {

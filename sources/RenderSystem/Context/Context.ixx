@@ -39,42 +39,6 @@ export{
 		};
 
 
-		class context
-		{
-		public:
-
-			HAL::CommandList::ptr& command_list;
-			HAL::CommandList::ptr command_list_label;
-			std::shared_ptr<OVRContext>& ovr_context;
-
-			SingleThreadExecutorBatched* labeled;
-			Batch* data;
-			sizer_long ui_clipping;
-			sizer_long scissors;
-			vec2 offset = { 0,0 };
-			float delta_time;
-			vec2 window_size;
-			float scale = 1;
-
-
-			std::function<void(Graphics::context& c)> commit_scissor()
-			{
-				scissors = ui_clipping;
-				auto list = command_list;
-				auto clip = ui_clipping;
-				return [list, clip](Graphics::context& c) {list->get_graphics().set_scissors(clip); };
-			}
-
-			context(HAL::CommandList::ptr& list, std::shared_ptr<OVRContext>& ovr_context) : command_list(list), command_list_label(command_list_label), ovr_context(ovr_context)
-			{
-
-				//                cam = nullptr;
-				delta_time = 0;
-
-
-			}
-		};
-
 		class renderable
 		{
 		public:

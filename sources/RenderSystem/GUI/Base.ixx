@@ -1,6 +1,5 @@
 export module GUI:Base;
 
-//import Graphics;
 export import Math;
 import Executors;
 import Utils;

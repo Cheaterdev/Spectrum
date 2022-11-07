@@ -12,10 +12,6 @@
 
 #include "Lighting/PSSM.h"
 
-#include "Renderer/StencilRenderer.h"
-
-#include "Materials/universal_material.h"
-
 
 import GUI;
 import HAL;

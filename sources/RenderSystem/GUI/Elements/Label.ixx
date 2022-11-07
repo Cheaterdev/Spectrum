@@ -1,7 +1,7 @@
 export module GUI:Label;
 import :Base;
 
-import Graphics;
+import TextSystem;
 
 export namespace GUI
 {
