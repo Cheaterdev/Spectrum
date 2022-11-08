@@ -1,5 +1,4 @@
-module;
-export module Utils;
+export module Core:Utils;
 
 export import "utils/utils_macros.h";
 export import stl.core;
@@ -265,8 +264,6 @@ export
 	};
 
 }
-
-module: private;
 
 
 std::wstring convert(std::string_view s)

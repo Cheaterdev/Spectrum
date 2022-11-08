@@ -1,6 +1,5 @@
 module Graphics:Occluder;
-
-import Math;
+import Core;
 
 bool occluder::is_inside(const Frustum& f)
 {

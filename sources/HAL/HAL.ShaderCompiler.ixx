@@ -2,8 +2,7 @@ export module HAL:ShaderCompiler;
 
 import :API.ShaderCompiler;
 import :Types;
-import Singleton;
-import Utils;
+import Core;
 
 export namespace HAL
 {

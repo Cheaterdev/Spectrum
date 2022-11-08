@@ -1,8 +1,8 @@
 export module Graphics:GPUTilesBuffer;
 
-import Math;
+import Core;
 import HAL;
-import stl.core;
+
 export {
 
 	class GPUTilesBuffer

@@ -1,10 +1,10 @@
-export module FlowGraph;
+export module Core:FlowGraph;
 
-import Data;
-import crc32;
-import Utils;
-import serialization;
-import Math;
+import :Data;
+import :crc32;
+import :Utils;
+import :serialization;
+import :Math;
 
 export
 {
@@ -807,7 +807,6 @@ export
 
 }
 
-module:private;
 
 REGISTER_TYPE(FlowGraph::window);
 REGISTER_TYPE(FlowGraph::Node);

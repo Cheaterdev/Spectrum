@@ -1,8 +1,8 @@
-export module Scheduler;
+export module Core:Scheduler;
 
-import Profiling;
-import Threading;
-import Singleton;
+import :Profiling;
+import :Threading;
+import :Singleton;
 import ppl;
 using namespace concurrency;
 

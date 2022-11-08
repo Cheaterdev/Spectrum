@@ -1,9 +1,7 @@
 export module HAL:Format;
 export import "Formats.h";
 
-import Math;
-import Utils;
-import serialization;
+import Core;
 
 export namespace HAL
 {

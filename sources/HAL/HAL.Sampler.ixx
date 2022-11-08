@@ -1,7 +1,7 @@
 export module HAL:Sampler;
 
 import :Types;
-import Math;
+import Core;
 
 export namespace HAL
 {

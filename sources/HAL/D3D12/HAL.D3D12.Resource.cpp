@@ -2,9 +2,7 @@ module HAL:Resource;
 import wrl;
 
 import d3d12;
-import Math;
-import Utils;
-import Debug;
+import Core;
 
 #undef THIS
 

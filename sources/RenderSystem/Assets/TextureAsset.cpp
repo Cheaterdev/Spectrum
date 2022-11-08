@@ -1,8 +1,6 @@
 module Graphics:TextureAsset;
-
-import Tasks;
+import Core;
 import :MipMapGenerator;
-import serialization;
 
 
 REGISTER_TYPE(TextureAsset);

@@ -1,8 +1,7 @@
 module HAL:Queue;
 
 import :GPUTimer;
-
-import Debug;
+import Core;
 
 import HAL;
 #undef THIS

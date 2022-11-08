@@ -1,12 +1,10 @@
 export module HAL:RootSignature;
 
-export import Data;
-export import Math;
-export import Log;
+import Core;
 export import :Types;
 export import :Sampler;
 export import :Utils;
-export import stl.core;
+
 
 export import :API.RootSignature;
 export import :Device;

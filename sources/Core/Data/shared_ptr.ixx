@@ -20,12 +20,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-export module shared_ptr;
+export module Core:shared_ptr;
 
 export import stl.core;
 export import stl.memory;
 
-import serialization;
+import :serialization;
 export namespace Core
 {
 //	template<class T>

@@ -1,8 +1,8 @@
-export module crc32;
+export module Core:crc32;
 
 import crc32c;
 import stl.core;
-import Utils;
+import :Utils;
 
 
 static constexpr unsigned int crc_32_tab[] = {

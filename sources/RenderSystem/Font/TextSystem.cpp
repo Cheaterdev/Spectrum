@@ -3,7 +3,7 @@ module;
 
 module TextSystem;
 
-import Utils;
+import Core;
 
 
 namespace Fonts

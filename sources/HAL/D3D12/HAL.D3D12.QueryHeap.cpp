@@ -1,8 +1,7 @@
 module HAL:QueryHeap;
 
-import d3d12;
-import Math;
-import Utils;
+import d3d12; 
+import Core;
 
 import :API.QueryHeap;
 #undef THIS

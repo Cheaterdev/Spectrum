@@ -1,7 +1,6 @@
 export module HAL:SwapChain;
 
-import Math;
-
+import Core;
 import :Types;
 import :Format;
 import :Texture;

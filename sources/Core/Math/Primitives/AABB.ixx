@@ -1,14 +1,14 @@
-export module Math:AABB;
+export module Core:Math.AABB;
 
-import :Constants;
-import :Vectors;
-import :Quaternion;
-import :Matrices;
-import :Primitive;
+import :Math.Constants;
+import :Math.Vectors;
+import :Math.Quaternion;
+import :Math.Matrices;
+import :Math.Primitive;
 
 import stl.memory;
 import stl.core;
-import serialization;
+import :serialization;
 
 export
 {

@@ -1,9 +1,9 @@
-export module Debug;
+export module Core:Debug;
 
 import stl.core;
 import stl.threading;
-import Singleton;
-import Log;
+import :Singleton;
+import :Log;
 
 export
 {
@@ -158,7 +158,6 @@ export
 }
 
 
-module:private;
 
 
 #ifdef LEAK_TEST_ENABLE

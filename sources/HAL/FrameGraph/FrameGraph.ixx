@@ -1,14 +1,7 @@
 export module HAL:FrameGraph;
 
 export import "defines.h";
-import Scheduler;
-
-import Utils;
-import serialization;
-
-import Math;
-
-import Holdable;
+import Core;
 import :Types;
 import :CommandList;
 import :ResourceViews;

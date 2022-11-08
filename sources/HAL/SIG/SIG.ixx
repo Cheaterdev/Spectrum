@@ -2,7 +2,7 @@ export module HAL:SIG;
 import stl.core;
 
 import :Concepts;
-import serialization;
+import Core;
 import :Buffer;
 
 export

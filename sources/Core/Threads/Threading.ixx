@@ -1,4 +1,4 @@
-export module Threading;
+export module Core:Threading;
 
 import stl.threading;
 import stl.core;
@@ -118,7 +118,6 @@ private:
 }
 
 
-module:private;
 
 
 

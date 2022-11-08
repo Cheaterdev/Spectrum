@@ -1,19 +1,7 @@
 export module HAL:API.CommandList;
-
-import Utils;
-import StateContext;
-import Profiling;
-import Threading;
-import Exceptions;
+import Core;
 import :Types;
-import Math;
-import Data;
-import Singleton;
-import Debug;
-import Trackable;
 
-import stl.core;
-import stl.memory;
 
 import :Private.CommandListCompiler;
 import :ResourceStates;

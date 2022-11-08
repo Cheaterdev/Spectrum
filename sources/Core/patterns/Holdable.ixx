@@ -1,5 +1,5 @@
-export module Holdable;
-import Data;
+export module Core:Holdable;
+import :Data;
 import stl.core;
 
 export
@@ -70,5 +70,3 @@ export
 		}
 	};
 }
-
-module: private;

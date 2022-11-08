@@ -6,8 +6,7 @@ import HAL;
 #include "Platform/Window.h"
 
 import ppl;
-import Debug;
-import Utils;
+import Core;
 using namespace FrameGraph;
 using namespace HAL;
 

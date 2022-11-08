@@ -1,10 +1,8 @@
 export module HAL:TiledMemoryManager;
 
-import Math;
 import :Heap;
 import :HeapAllocators;
-import Events;
-import stl.core;
+import Core;
 
 export
 {

@@ -1,14 +1,14 @@
-export module ResourceManager;
-import Serializer;
-import serialization;
-import Utils;
-import Log;
-import Singleton;
+export module Core:ResourceManager;
+import :Serializer;
+import :serialization;
+import :Utils;
+import :Log;
+import :Singleton;
 
 import stl.filesystem;
 import stl.memory;
-import FileSystem;
-import FileDepender;
+import :FileSystem;
+import :FileDepender;
 
 export
 {

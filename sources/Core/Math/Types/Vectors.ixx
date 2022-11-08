@@ -1,8 +1,8 @@
-export module Math:Vectors;
+export module Core:Math.Vectors;
 
-import :Constants;
+import :Math.Constants;
 import stl.core;
-import serialization;
+import :serialization;
 
 namespace internal
 {

@@ -2,9 +2,7 @@ module HAL:DescriptorHeap;
 
 import :Resource;
 import d3d12;
-import Math;
-import Utils;
-import Debug;
+import Core;
 
 #undef THIS
 namespace HAL

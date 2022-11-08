@@ -2,8 +2,7 @@ module HAL:GPUTimer;
 
 
 import d3d12;
-import Debug;
-import Profiling;
+import Core;
 import HAL;
 #undef THIS
 

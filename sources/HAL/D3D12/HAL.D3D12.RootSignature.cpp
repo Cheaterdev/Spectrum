@@ -1,17 +1,14 @@
 module HAL:API.RootSignature;
 
-
-import Data;
+import Core;
 import d3d12;
-import Math;
-import Log;
 import :Types;
 import :Sampler;
 
 import :RootSignature;
 import :API.Device;
 import :Utils;
-import stl.core;
+
 
 namespace HAL
 {

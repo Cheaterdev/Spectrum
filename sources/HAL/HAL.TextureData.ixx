@@ -1,9 +1,6 @@
 export module HAL:TextureData;
 
-import FileSystem;
-import serialization;
-import Utils;
-import Log;
+import Core;
 
 import :Utils;
 import :Types;

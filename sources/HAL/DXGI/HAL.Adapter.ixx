@@ -3,8 +3,7 @@ import :Utils;
 
 import d3d12;
 
-export import Singleton;
-import stl.memory;
+import Core;
 
 export namespace HAL
 {

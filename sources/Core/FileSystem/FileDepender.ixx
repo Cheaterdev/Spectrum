@@ -1,16 +1,16 @@
-export module FileDepender;
+export module Core:FileDepender;
 
-import Utils;
-import Log;
-import Singleton;
-import Scheduler;
+import :Utils;
+import :Log;
+import :Singleton;
+import :Scheduler;
 
 import stl.filesystem;
 import stl.memory;
 import windows;
 
-import serialization;
-import FileSystem;
+import :serialization;
+import :FileSystem;
 
 export
 {
@@ -50,7 +50,7 @@ export
 
 }
 
-module: private;
+
 
 
 template <typename TP>

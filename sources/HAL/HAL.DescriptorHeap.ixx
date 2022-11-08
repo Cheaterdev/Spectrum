@@ -3,17 +3,7 @@ export module HAL:DescriptorHeap;
 
 import :API.DescriptorHeap;
 
-import Allocators;
-import Math;
-
-import stl.threading;
-import stl.core;
-
-import Log;
-import Data;
-import Events;
-import Threading;
-
+import Core;
 export
 {
 

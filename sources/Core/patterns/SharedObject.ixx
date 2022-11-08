@@ -1,6 +1,6 @@
-export module SharedObject;
+export module Core:SharedObject;
 
-import Utils;
+import :Utils;
 import stl.core;
 
 export

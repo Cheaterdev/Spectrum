@@ -1,6 +1,4 @@
-module;
-
-export module serialization;
+export module Core:serialization;
 export import "serialization_defines.h";
 export import cereal;
 export import stl.core;
@@ -10,7 +8,7 @@ export import stl.filesystem;
 export import crossguid;
 //export import simple_log_archive;
 
-import Utils;
+import :Utils;
 
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
 

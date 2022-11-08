@@ -1,14 +1,14 @@
-export module Data;
+export module Core:Data;
 
-import serialization;
+import :serialization;
 
 import stl.core;
-import Utils;
-import Exceptions;
+import :Utils;
+import :Exceptions;
 
 import ZipLib;
 
-import shared_ptr;
+import :shared_ptr;
 export
 {
 
@@ -324,8 +324,6 @@ export
 	
 }
 
-
-module: private;
 
 
 namespace DataPacker

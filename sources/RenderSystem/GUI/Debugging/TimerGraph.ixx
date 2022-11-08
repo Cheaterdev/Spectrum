@@ -1,8 +1,7 @@
 export module GUI:Debug.TimerGraph;
 import :ScrollContainer;
 import :Image;
-
-import Profiling;
+import Core;
 export namespace GUI
 {
 	namespace Elements

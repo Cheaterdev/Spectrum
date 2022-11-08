@@ -1,14 +1,11 @@
 export module HAL:PSO;
 export import "PSO_defines.h";
-import Data;
-import Threading;
-import Profiling;
-
+import Core;
 import :Concepts;
 import :PipelineState;
 
 import :RootSignature;
-import Utils;
+
 import :Enums;
 
 import ppl;

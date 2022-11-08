@@ -7,6 +7,7 @@ export using serialization_oarchive = cereal::BinaryOutputArchive;
 export using serialization_iarchive = cereal::BinaryInputArchive;
 
 import magic_enum;
+
 std::string _convert(std::wstring_view s)
 {
 	std::string w;
@@ -15,17 +16,20 @@ std::string _convert(std::wstring_view s)
 	return w;
 }
 
+template<typename T>
+concept Enum = std::is_enum_v<T>;
+
+template<typename T>
+concept loggable = std::is_enum_v<T> || std::is_arithmetic_v<T> || std::is_same_v<std::string, T> || std::is_same_v<std::wstring, T>;
+
+template <typename T> concept arithmetic = std::is_arithmetic_v<T>;// && !std::is_enum_v<T>;
+
+
+
 export
 {
 
-	template<typename T>
-	concept loggable = std::is_enum_v<T> || std::is_arithmetic_v<T> || std::is_same_v<std::string, T> || std::is_same_v<std::wstring, T>;
-
-	template<typename T>
-	concept Enum = std::is_enum_v<T>;
-	template <typename T> concept arithmetic = std::is_arithmetic_v<T>;// && !std::is_enum_v<T>;
-
-	class simple_log_archive : public cereal::OutputArchive<simple_log_archive>, public cereal::traits::TextArchive
+		class simple_log_archive : public cereal::OutputArchive<simple_log_archive>, public cereal::traits::TextArchive
 	{
 		std::ostream& m_os;
 		unsigned int m_depth;

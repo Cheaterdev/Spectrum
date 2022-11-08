@@ -1,4 +1,4 @@
-export module Singleton;
+export module Core:Singleton;
 
 import stl.memory;
 import stl.core;
@@ -95,7 +95,6 @@ export template <typename T>
         }
 };
 
-module: private;
 
 template <typename T>
 std::shared_ptr<T>  Singleton<T>::instance;

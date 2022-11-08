@@ -2,7 +2,7 @@ module HAL:DescriptorHeap;
 import HAL;
 import :Types;
 
-import Utils;
+import Core;
 
 namespace HAL {
 

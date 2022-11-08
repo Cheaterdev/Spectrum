@@ -1,18 +1,8 @@
 module HAL:FrameManager;
 
-import Utils;
-import StateContext;
-import Profiling;
-import Threading;
-import Exceptions;
+import Core;
 import :Types;
-import Math;
-import Data;
-import Singleton;
-import Debug;
 
-import stl.core;
-import stl.memory;
 
 import HAL;
 

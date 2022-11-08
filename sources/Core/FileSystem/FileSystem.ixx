@@ -1,15 +1,15 @@
-export module FileSystem;
+export module Core:FileSystem;
 
-import Utils;
-import Log;
-import Singleton;
-import Scheduler;
+import :Utils;
+import :Log;
+import :Singleton;
+import :Scheduler;
 
 import stl.filesystem;
 import stl.memory;
 import windows;
 
-import serialization;
+import :serialization;
 
 export
 {
@@ -125,7 +125,7 @@ public:
 }
 
 
-module: private;
+
 
 
 

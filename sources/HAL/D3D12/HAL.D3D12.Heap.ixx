@@ -1,7 +1,6 @@
 export module HAL:API.Heap;
 import d3d12;
-import Math;
-import Utils;
+import Core;
 
 import :Types;
 import :Sampler;

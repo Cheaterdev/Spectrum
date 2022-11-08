@@ -1,8 +1,6 @@
 module HAL:ResourceStates;
 
-
-import Utils;
-import StateContext;
+import Core;
 
 import HAL;
 namespace HAL

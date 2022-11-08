@@ -1,8 +1,7 @@
 export module HAL:API.ShaderCompiler;
 
 import DXCompiler;
-import serialization;
-import Utils;
+import Core;
 
 export namespace HAL
 {

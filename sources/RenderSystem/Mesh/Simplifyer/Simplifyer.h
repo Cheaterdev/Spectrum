@@ -1,7 +1,5 @@
 #pragma once
-
-import Math;
-import stl.core;
+import Core;
 
 class mesh_simplifyer
 {

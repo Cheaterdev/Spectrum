@@ -1,14 +1,14 @@
-export module Math:Frustum;
+export module Core:Math.Frustum;
 
-import :Constants;
-import :Vectors;
-import :Quaternion;
-import :Matrices;
-import :Primitive;
-import :Plane;
+import :Math.Constants;
+import :Math.Vectors;
+import :Math.Quaternion;
+import :Math.Matrices;
+import :Math.Primitive;
+import :Math.Plane;
 
 import stl.memory;
-import serialization;
+import :serialization;
 
 export class Frustum : public Primitive
 {

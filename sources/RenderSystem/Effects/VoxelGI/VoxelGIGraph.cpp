@@ -2,7 +2,7 @@ module Graphics:VoxelGI;
 
 import Graphics;
 import HAL;
-import Events;
+import Core;
 
 
 using namespace FrameGraph;

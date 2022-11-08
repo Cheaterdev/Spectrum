@@ -1,16 +1,8 @@
 export module HAL:Buffer;
 
-export import Allocators;
-
-
 export import :Types;
 export import :Concepts;
-export import Log;
-
-export import serialization;
-export import stl.core;
-export import stl.memory;
-export import Math;
+import Core;
 
 import :Resource;
 

@@ -1,10 +1,6 @@
-
-module;
-
 export module HAL:Enums;
 
-import crc32;
-import Utils;
+import Core;
 
 export
 {

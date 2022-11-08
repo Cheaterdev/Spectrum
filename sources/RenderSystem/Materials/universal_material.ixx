@@ -5,10 +5,7 @@ import :Asset;
 import :MaterialAsset;
 import :BinaryAsset;
 import HAL;
-
-import Serializer;
-
-import crc32;
+import Core;
 
 using namespace HAL;
 export namespace materials

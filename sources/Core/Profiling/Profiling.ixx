@@ -1,14 +1,14 @@
-export module Profiling;
+export module Core:Profiling;
 
 export import "macros.h";
 
-import Log;
-import Singleton;
+import :Log;
+import :Singleton;
 
-import Utils;
-import Math;
-import Tree;
-import shared_ptr;
+import :Utils;
+import :Math;
+import :Tree;
+import :shared_ptr;
 
 //#define PROFILING
 export
@@ -211,7 +211,6 @@ public:
 
 }
 
-module: private;
 thread_local TimedBlock* Profiler::current_block = nullptr;
 
 

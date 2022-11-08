@@ -1,7 +1,5 @@
 export module HAL:Texture;
-
-import serialization;
-import ResourceManager;
+import Core;
 
 import :Resource;
 import :ResourceViews;

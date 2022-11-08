@@ -1,9 +1,5 @@
 export module HAL:PipelineState;
-
-import FileSystem;
-import Singleton;
-import serialization;
-import Trackable;
+import Core;
 import :Types;
 import :RootSignature;
 import :Shader;

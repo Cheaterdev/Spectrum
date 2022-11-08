@@ -1,7 +1,6 @@
 module HAL:PipelineState;
 
-import Serializer;
-import Debug;
+import Core;
 import :Device;
 
 namespace HAL

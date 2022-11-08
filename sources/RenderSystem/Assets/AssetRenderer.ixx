@@ -1,6 +1,5 @@
 export module Graphics:AssetRenderer;
-
-import Singleton;
+import Core;
 import HAL;
  import :MeshRenderer;
  import :Sky;

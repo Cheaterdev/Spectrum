@@ -1,14 +1,8 @@
 export module Graphics:Asset;
-//#pragma once
-import EditObject;
-import Utils;
-import Serializer;
+
 import HAL;
-import serialization;
-import Tree;
-import ZipLib;
-import Data;
-import stl.memory;
+import Core;
+
 export
 {
 

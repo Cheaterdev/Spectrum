@@ -4,11 +4,7 @@ import d3d12;
 #include <pix3.h>
 
 module HAL:API.CommandList;
-
-
-import Debug;
-import Exceptions;
-import Profiling;
+import Core;
 
 import :Private.CommandListCompiler;
 import HAL;

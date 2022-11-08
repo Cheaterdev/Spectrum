@@ -1,10 +1,8 @@
 module HAL:Device;
 import :Debug;
 
-import d3d12;
-import Math;
-import Utils;
-import Debug;
+import d3d12; 
+import Core;
 
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"

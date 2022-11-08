@@ -1,12 +1,7 @@
 
 module HAL:ShaderCompiler;
 import wrl;
-import Singleton;
-import FileSystem;
-import FileDepender;
-import DXCompiler;
-import serialization;
-import Log;
+import Core;
 
 namespace HAL
 {

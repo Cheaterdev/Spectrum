@@ -5,9 +5,7 @@ module;
 export module  TextSystem;
 
 import wrl;
-
-import Data;
-import Utils;
+import Core;
 typedef ComPtr<IFW1Factory>			FW1_Factory;
 typedef ComPtr<IFW1FontWrapper>		FW1_Font;
 typedef ComPtr<IFW1TextGeometry>		FW1_TextGeometry;

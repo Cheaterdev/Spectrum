@@ -1,8 +1,8 @@
-export module Trackable;
-import Data;
+export module Core:Trackable;
+import :Data;
 import stl.core;
 
-import StateContext;
+import :StateContext;
 export
 {
 
@@ -45,5 +45,3 @@ export
 
 
 }
-
-module: private;

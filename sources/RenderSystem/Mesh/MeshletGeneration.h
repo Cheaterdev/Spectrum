@@ -1,7 +1,6 @@
 #pragma once
 import Graphics;
-import Math;
-import stl.core;
+import Core;
 import windows;
 
 void Meshletize(

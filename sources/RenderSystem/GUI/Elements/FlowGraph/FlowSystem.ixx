@@ -8,9 +8,7 @@ import :FlowGraph.FlowManager;
 import :FlowGraph.ParameterWindow;
 
 
-import Singleton;
-import stl.core;
-
+import Core;
 export namespace FlowGraph
 {
 

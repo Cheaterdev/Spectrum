@@ -2,8 +2,7 @@ export module Graphics:Sky;
 
 
 
-import Events;
-import Singleton;
+import Core;
 import HAL;
 
 export class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraph::GraphGenerator

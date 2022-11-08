@@ -1,9 +1,9 @@
-export module Events;
+export module Core:Events;
 
-import Math;
-import Data;
-import serialization;
-import my_unique_vector;
+import :Math;
+import :Data;
+import :serialization;
+import :my_unique_vector;
 
 export namespace Events
 {

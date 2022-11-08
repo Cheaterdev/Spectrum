@@ -1,4 +1,4 @@
-export module my_unique_vector;
+export module Core:my_unique_vector;
 
 import stl.core;
 

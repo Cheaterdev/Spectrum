@@ -1,10 +1,6 @@
 module HAL:TextureData;
 
-import FileSystem;
-import serialization;
-import Utils;
-import Log;
-
+import Core;
 import d3d12;
 
 import :Utils;

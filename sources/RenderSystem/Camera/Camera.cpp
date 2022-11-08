@@ -1,5 +1,5 @@
 module Graphics:Camera;
-import Math;
+import Core;
 
 void camera::update(float2 offset )
 {

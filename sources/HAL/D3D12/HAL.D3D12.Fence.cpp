@@ -1,9 +1,7 @@
 module HAL:Fence;
 
 import d3d12;
-import Math;
-import Utils;
-import Profiling;
+import Core;
 
 #undef THIS
 namespace HAL

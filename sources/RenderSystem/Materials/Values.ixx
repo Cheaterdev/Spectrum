@@ -1,6 +1,5 @@
 export module Graphics:Materials.Values;
-
-import FlowGraph;
+import Core;
 import :Asset;
 import :TextureAsset;
 

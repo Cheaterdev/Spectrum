@@ -1,6 +1,5 @@
 export module Graphics:MaterialAsset;
-
-import Math;
+import Core;
 import HAL;
 
 import :Context;

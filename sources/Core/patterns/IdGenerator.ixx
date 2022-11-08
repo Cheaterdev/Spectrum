@@ -1,6 +1,6 @@
-export module IdGenerator;
+export module Core:IdGenerator;
 
-import Threading;
+import :Threading;
 
 import stl.threading;
 import stl.core;

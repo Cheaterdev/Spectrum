@@ -1,8 +1,7 @@
 export module HAL:API.PipelineState;
 import d3d12;
 import wrl;
-
-import Trackable;
+import Core;
 import :Types;
 
 export namespace HAL

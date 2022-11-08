@@ -1,6 +1,6 @@
 export module HAL:Autogen;
 
-import Math;
+import Core;
 import :Buffer;
 
 
@@ -13,11 +13,7 @@ import :PSO;
 import :RTX;
 import :Enums;
 
-import Data;
 import :RootSignature;
-
-import Utils;
-import serialization;
 import :Types;
 import :PipelineState;
 

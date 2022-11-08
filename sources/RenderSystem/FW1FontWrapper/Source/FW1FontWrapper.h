@@ -8,7 +8,7 @@
 
 //#include <D3D11.h>
 #include <DWrite.h>
-
+import Core;
 import HAL;
 /// <summary>The current FW1 version.</summary>
 /// <remarks>This constant should be used when calling FW1CreateFactory to make sure the library version matches the headers.</remarks>

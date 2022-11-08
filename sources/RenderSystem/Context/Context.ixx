@@ -1,10 +1,7 @@
 export module Graphics:Context;
-
-import Scheduler;
-import Holdable;
+import Core;
 import HAL;
-import Executors;
-import Math;
+
 
 import :Camera;
 

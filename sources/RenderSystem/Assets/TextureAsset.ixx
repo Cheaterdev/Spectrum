@@ -1,8 +1,7 @@
 export module Graphics:TextureAsset;
 
 import :Asset;
-
-import Singleton;
+import Core;
 import HAL;
 
 export{

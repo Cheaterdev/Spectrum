@@ -1,11 +1,5 @@
 export module HAL:Heap;
-
-import Math; 
-import Utils;
-
-import Trackable;
-import StateContext;
-
+import Core;
 import :Types;
 import :Sampler;
 import :Utils;

@@ -6,7 +6,7 @@ import :Label;
 import :Button;
 import :Resizer;
 
-import FlowGraph;
+import Core;
 
 
 export namespace GUI

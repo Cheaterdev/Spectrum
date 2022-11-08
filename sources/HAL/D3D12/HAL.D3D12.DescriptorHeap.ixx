@@ -6,8 +6,7 @@ import :Types;
 import :Descriptors;
 import :API.Resource;
 
-import Utils;
-import Debug;
+import Core;
 
 export namespace HAL
 {

@@ -1,13 +1,13 @@
-export module Math;
+export module Core:Math;
 
-export import :Constants;
-export import :Vectors;
-export import :Quaternion;
-export import :Matrices;
+export import :Math.Constants;
+export import :Math.Vectors;
+export import :Math.Quaternion;
+export import :Math.Matrices;
 
-export import :AABB;
-export import :Frustum;
-export import :Sphere;
-export import :Ray;
+export import :Math.AABB;
+export import :Math.Frustum;
+export import :Math.Sphere;
+export import :Math.Ray;
 
-export import :Intersections;
+export import :Math.Intersections;

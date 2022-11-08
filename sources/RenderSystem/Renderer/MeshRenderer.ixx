@@ -1,6 +1,6 @@
 export module Graphics:MeshRenderer;
 
-import Utils;
+import Core;
 import HAL;
 import :Context;
 import :Scene;

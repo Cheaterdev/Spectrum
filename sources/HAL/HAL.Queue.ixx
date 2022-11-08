@@ -1,7 +1,5 @@
 export module HAL:Queue;
-
-import Scheduler;
-import Executors;
+import Core;
 import :Fence;
 import :Types;
 import :TiledMemoryManager;

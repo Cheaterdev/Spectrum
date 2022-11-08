@@ -1,11 +1,5 @@
 export module HAL:HeapAllocators;
-
-import Math; 
-import Utils;
-import my_unique_vector;
-import Trackable;
-import StateContext;
-import Allocators;
+import Core;
 
 import :Types;
 import :Utils;

@@ -1,7 +1,6 @@
 export module HAL:API.Resource;
 import d3d12;
-import Math;
-import Utils;
+import Core;
 
 import :Types;
 import :Sampler;
@@ -10,7 +9,6 @@ import :Utils;
 import :API.Device;
 import :Heap;
 
-import stl.core;
 
 import :Format;
 

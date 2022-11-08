@@ -1,12 +1,5 @@
 module HAL:Device;
-import Log;
-
-import Debug;
-
-import IdGenerator;
-import StateContext;
-import Data;
-import Debug;
+import Core;
 import HAL;
 
 namespace HAL

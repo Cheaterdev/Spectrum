@@ -1,12 +1,9 @@
 export module GUI:Base;
 
-export import Math;
-import Executors;
-import Utils;
+import Core;
 import windows;
 export import HAL;
-import Tree;
-import Holdable;
+
 export
 {
 

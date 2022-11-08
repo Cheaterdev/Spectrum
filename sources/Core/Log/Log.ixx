@@ -1,15 +1,15 @@
-export module Log;
+export module Core:Log;
 
-import Data;
+import :Data;
 import stl.threading;
 import stl.core;
 import stl.memory;
-import Singleton;
-import simple_log_archive;
-import Events;
-import Utils;
+import :Singleton;
+
+import :Events;
+import :Utils;
 import windows;
-import serialization;
+import :serialization;
 
 export import cereal;
 
@@ -223,7 +223,6 @@ export {
 	}
 
 }
-module: private;
 
 
 static auto start_time = std::chrono::high_resolution_clock::now();

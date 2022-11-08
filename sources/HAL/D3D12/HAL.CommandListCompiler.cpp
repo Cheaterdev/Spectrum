@@ -1,8 +1,7 @@
 module HAL:Private.CommandListCompiler;
 
 import :Device;
-import Math;
-import Utils;
+import Core;
 
 namespace HAL
 {

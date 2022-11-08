@@ -1,9 +1,6 @@
 export module HAL:Device;
 
-import IdGenerator;
-import Singleton;
-import StateContext;
-import Data;
+import Core;
 import :API.Device;
 
 export namespace HAL

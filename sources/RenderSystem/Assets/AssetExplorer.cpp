@@ -1,8 +1,7 @@
 module Graphics:AssetExplorer;
 import :Materials.UniversalMaterial;
 import :MeshAsset;
-
-import Application;
+import Core;
 
 import GUI;
 

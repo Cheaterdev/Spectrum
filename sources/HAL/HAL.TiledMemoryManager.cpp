@@ -1,9 +1,6 @@
 module HAL:TiledMemoryManager;
 
-import Math;
-import Events;
-import stl.core;
-
+import Core;
 import HAL;
 
 namespace HAL {

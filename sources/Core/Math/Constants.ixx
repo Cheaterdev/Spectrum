@@ -1,4 +1,4 @@
-export module Math:Constants;
+export module Core:Math.Constants;
 import stl.core;
 
 export

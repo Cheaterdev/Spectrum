@@ -1,6 +1,6 @@
 export module Graphics:Occluder;
 
-import Math;
+import Core;
 
 export class occluder
 {

@@ -1,5 +1,5 @@
 #pragma once
-import Application;
+import Core;
 import GUI;
 
 import HAL;

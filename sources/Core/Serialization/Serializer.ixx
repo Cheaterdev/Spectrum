@@ -1,12 +1,12 @@
-export module Serializer;
+export module Core:Serializer;
 
-export import serialization;
+export import :serialization;
 using serialization_exception = cereal::Exception;
-import Log;
-import Utils;
-import crc32;
+import :Log;
+import :Utils;
+import :crc32;
 
-import Data;
+import :Data;
 import windows;
 //import boost.archives;
 

@@ -1,7 +1,6 @@
 export module Graphics:TileDynamicGenerator;
 
-import Math;
-import stl.core;
+import Core;
 export {
 
 	class TileDynamicGenerator

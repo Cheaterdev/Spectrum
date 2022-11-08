@@ -1,15 +1,15 @@
-export module Math:Ray;
+export module Core:Math.Ray;
 
-import :Constants;
-import :Vectors;
-import :Quaternion;
-import :Matrices;
-import :Primitive;
+import :Math.Constants;
+import :Math.Vectors;
+import :Math.Quaternion;
+import :Math.Matrices;
+import :Math.Primitive;
 
-import :Plane;
+import :Math.Plane;
 
 import stl.memory;
-import serialization;
+import :serialization;
 
 export class Ray
 {

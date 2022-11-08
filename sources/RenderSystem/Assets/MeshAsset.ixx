@@ -1,11 +1,7 @@
 export module Graphics:MeshAsset;
-import Tasks;
+import Core;
 import :SceneObject;
 import :MaterialAsset;
-
-import ResourceManager;
-
-//import GUI;
 
 import HAL;
 

@@ -2,8 +2,7 @@ module HAL:HeapAllocators;
 
 import :Device;
 import d3d12;
-import Math;
-import Utils;
+import Core;
 
 
 namespace HAL

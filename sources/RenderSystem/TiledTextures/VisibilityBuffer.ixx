@@ -1,6 +1,6 @@
 export module Graphics:VisibilityBuffer;
 
-import Math;
+import Core;
 import HAL;
 export {
 

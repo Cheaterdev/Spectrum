@@ -1,8 +1,6 @@
 export module GUI:Debug.TaskViewer;
 import :ScrollContainer;
-
-import Tasks;
-
+import Core;
 
 export namespace GUI
 {

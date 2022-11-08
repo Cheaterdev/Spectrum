@@ -1,17 +1,10 @@
 export module HAL:VirtualBuffer;
 
-export import Allocators;
-
 export import :Concepts;
-export import Log;
-
-export import serialization;
-export import stl.core;
-export import stl.memory;
-export import Math;
-
 import :Buffer;
 import :Types;
+
+import Core;
 
 export
 {

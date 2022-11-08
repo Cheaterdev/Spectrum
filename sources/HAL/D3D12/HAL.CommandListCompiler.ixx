@@ -1,6 +1,5 @@
 export module HAL:Private.CommandListCompiler;
-
-import Math;
+import Core;
 import :API.Device;
 
 import d3d12;

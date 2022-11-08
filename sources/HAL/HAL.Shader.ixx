@@ -1,16 +1,7 @@
 export module HAL:Shader;
 
 import :ShaderCompiler;
-import ResourceManager;
-//import :Enums;
-import stl.core;
-
-import FileDepender;
-import Data;
-import Utils;
-import crc32;
-import serialization;
-import Events;
+import Core;
 
 //std::optional<SlotID> get_slot(std::string_view slot_name);
 export

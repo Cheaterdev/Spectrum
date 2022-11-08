@@ -1,5 +1,5 @@
 module Graphics:MipMapGenerator;
-import Profiling;
+import Core;
 import HAL;
 
 using namespace HAL;

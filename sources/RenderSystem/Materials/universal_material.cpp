@@ -4,29 +4,13 @@
 import :EngineAssets;
 import :RTX;
 
-static IdGenerator ids;
 
 //import FrameGraph;
 import HAL;
-
-import crc32;
-
-import Utils;
-import Data;
-import stl.core;
-import stl.memory;
-
-
-import serialization;
-
-import Serializer;
-import Log;
-import Utils;
-import crc32;
-
-import Data;
+import Core;
 import windows;
 
+static IdGenerator ids;
 using namespace HAL;
 
 void removeme() // TODO: VS issue - make dummy unused func to compile entire cpp =[

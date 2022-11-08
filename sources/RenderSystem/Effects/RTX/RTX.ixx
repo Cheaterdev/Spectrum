@@ -3,7 +3,7 @@ export module Graphics:RTX;
 import :MeshAsset;
 
 import HAL;
-import Events;
+import Core;
 
 export class RTX :public Singleton<RTX>, Events::prop_handler,
 	public Events::Runner

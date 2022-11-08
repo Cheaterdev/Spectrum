@@ -4,9 +4,7 @@ import :ScrollContainer;
 import :TabControl;
 import :FlowGraph.Canvas;
 
-
-import FlowGraph;
-
+import Core;
 
 export namespace GUI
 {

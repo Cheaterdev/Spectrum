@@ -1,5 +1,5 @@
 import Graphics;
-import Math;
+import Core;
 import HAL;
 scene_object::~scene_object()
 {

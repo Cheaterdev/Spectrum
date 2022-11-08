@@ -1,11 +1,6 @@
 export module Graphics:SceneObject;
 
-import Tree;
-import Utils;
-import Math;
-
-import stl.core;
-
+import Core;
 
 import :Occluder;
 

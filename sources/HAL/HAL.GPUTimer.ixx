@@ -2,9 +2,7 @@ export module HAL:GPUTimer;
 
 import :Buffer;
 import :Queue;
-import Singleton;
-import IdGenerator;
-
+import Core;
 
 
 export

@@ -1,6 +1,5 @@
 export module GUI:Skin;
-
-import Singleton;
+import Core;
 import :Base;
 
 export struct Skin: public Singleton<Skin>

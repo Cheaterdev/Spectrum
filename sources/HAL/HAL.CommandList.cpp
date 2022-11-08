@@ -6,9 +6,7 @@ import :Autogen;
 
 import :Buffer;
 
-import Debug;
-import Exceptions;
-import Profiling;
+import Core;
 
 import HAL;
 

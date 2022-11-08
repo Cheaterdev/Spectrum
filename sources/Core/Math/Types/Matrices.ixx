@@ -1,10 +1,10 @@
-export module Math:Matrices;
+export module Core:Math.Matrices;
 
 import stl.core;
-import :Quaternion;
-import :Vectors;
-import :Constants;
-import serialization;
+import :Math.Quaternion;
+import :Math.Vectors;
+import :Math.Constants;
+import :serialization;
 
 export {
 

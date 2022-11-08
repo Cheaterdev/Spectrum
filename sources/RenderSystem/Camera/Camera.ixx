@@ -1,7 +1,7 @@
 export module Graphics:Camera;
 
 import HAL;
-import Math;
+import Core;
 
 import windows;
 export class camera : public Frustum

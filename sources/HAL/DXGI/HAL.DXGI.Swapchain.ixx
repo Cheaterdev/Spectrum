@@ -1,6 +1,6 @@
 export module HAL:API.SwapChain;
 import wrl;
-import Math;
+import Core;
 import d3d12;
 import :Types;
 

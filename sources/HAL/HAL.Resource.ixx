@@ -7,10 +7,7 @@ import :API.Resource;
 import :TiledMemoryManager;
 import :ResourceStates;
 
-
-import stl.memory;
-import Utils;
-import Trackable;
+import Core;
 
 export{
 	namespace HAL

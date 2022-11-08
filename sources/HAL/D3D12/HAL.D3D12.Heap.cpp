@@ -2,8 +2,7 @@ module HAL:Heap;
 
 import HAL;
 import d3d12;
-import Math;
-import Utils;
+import Core;
 
 #undef THIS
 namespace HAL

@@ -1,7 +1,6 @@
 module Graphics:BinaryAsset;
 
-
-import Serializer;
+import Core;
 void removeme2() // TODO: VS issue - make dummy unused func to compile entire cpp =[
 {
     auto res = Serializer::deserialize<std::string>("");

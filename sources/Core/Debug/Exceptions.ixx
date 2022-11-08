@@ -1,4 +1,4 @@
-export module Exceptions;
+export module Core:Exceptions;
 
 //#include <boost/stacktrace.hpp>
 import stl.core;
@@ -17,7 +17,6 @@ export namespace Exceptions
 	stack_trace get_stack_trace();	
 }
 
-module: private;
 
 namespace Exceptions
 {

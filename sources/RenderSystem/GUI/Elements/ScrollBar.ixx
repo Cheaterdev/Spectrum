@@ -2,8 +2,7 @@ export module GUI:ScrollBar;
 import :Base;
 import :Dragger;
 import :Skin;
-
-import Math;
+import Core;
 export namespace GUI
 {
     namespace Elements

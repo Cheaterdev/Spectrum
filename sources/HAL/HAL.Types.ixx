@@ -1,13 +1,6 @@
 export module HAL:Types;
 
-import Math;
-export import Utils;
-import Data;
-
-import FileDepender;
-
-import serialization;
-import stl.core;
+import Core;
 
 import :Format;
 import windows;

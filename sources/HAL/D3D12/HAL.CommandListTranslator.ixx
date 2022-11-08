@@ -5,8 +5,7 @@ import d3d12;
 #include <pix3.h>
 
 export module HAL:Private.CommandListTranslator;
-
-import Math;
+import Core;
 import :API.Device;
 import :Private.CommandListCompiler;
 
