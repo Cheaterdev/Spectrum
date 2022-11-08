@@ -1,10 +1,10 @@
-#pragma once
-import Graphics;
+export module Graphics:FSR;
+
 import HAL;
 
 import Events;
 
-class FSR :public Events::prop_handler, public FrameGraph::GraphGenerator
+export class FSR :public Events::prop_handler, public FrameGraph::GraphGenerator
 {
 public:
 	using ptr = std::shared_ptr<FSR>;

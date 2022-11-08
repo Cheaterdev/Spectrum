@@ -1,11 +1,13 @@
-#include "pch_render.h"
-#include "VoxelGI.h"
-#include "Effects/RTX/RTX.h"
+module Graphics:VoxelGI;
+
 import Graphics;
+import HAL;
+import Events;
+
 
 using namespace FrameGraph;
+using namespace HAL;
 
-import HAL;
 
 class GBufferDownsampler :public Events::prop_handler
 {
@@ -82,7 +84,7 @@ public:
 
 
 					{
-						TextureViewDesc subres;
+						HAL::TextureViewDesc subres;
 
 						subres.ArraySize = 1;
 						subres.FirstArraySlice = 0;

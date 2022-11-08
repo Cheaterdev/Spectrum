@@ -1,6 +1,12 @@
-#include "pch_render.h"
+module;
+
 #include "Assets/EngineAssets.h"
-#include "PSSM.h"
+module Graphics:PSSM;
+
+import :PSSM;
+import :BRDF;
+import HAL;
+
 
 import Graphics;
 using namespace FrameGraph;

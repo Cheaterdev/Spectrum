@@ -1,8 +1,15 @@
-#include "pch_render.h"
-#include "BRDF.h"
+module Graphics:BRDF;
+
+import :TextureAsset;
+import :Asset;
+
+
 
 REGISTER_TYPE(BRDF);
 import HAL;
+
+
+
 void BRDF::create_new()
 {
 
@@ -33,3 +40,9 @@ void BRDF::serialize(Archive& ar, const unsigned int)
 	SAVE_PARENT(TextureAsset);
 
 }
+
+EngineAsset<BRDF> EngineAssets::brdf(L"brdf", [] {
+	BRDF* brdf = new BRDF();
+	brdf->create_new();
+	return  brdf;
+	});

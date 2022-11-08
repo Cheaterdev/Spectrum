@@ -1,8 +1,10 @@
 ﻿module;
 #include "pch_render.h"
 #include "Assets/EngineAssets.h"
-#include "Effects/RTX/RTX.h"
 module Graphics:Materials.UniversalMaterial;
+
+
+import :RTX;
 
 static IdGenerator ids;
 

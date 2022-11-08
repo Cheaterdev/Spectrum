@@ -1,10 +1,9 @@
-#pragma once
-import Graphics;
+export module Graphics:SMAA;
 
 import Events;
 import HAL;
 
-class SMAA :Events::prop_handler, public FrameGraph::GraphGenerator
+export class SMAA :Events::prop_handler, public FrameGraph::GraphGenerator
 {
 	HAL::Texture::ptr area_tex;
 	HAL::Texture::ptr search_tex;

@@ -1,9 +1,11 @@
-#pragma once
-import Graphics;
+export module Graphics:RTX;
+
+import :MeshAsset;
+
 import HAL;
 import Events;
 
-class RTX :public Singleton<RTX>, Events::prop_handler,
+export class RTX :public Singleton<RTX>, Events::prop_handler,
 	public Events::Runner
 {
 
@@ -37,7 +39,7 @@ public:
 			rtx.set(compute);
 		}
 
-		if(!GetAsyncKeyState('8'))
+	
 		rtx.dispatch<T>(size, compute);
 	}
 

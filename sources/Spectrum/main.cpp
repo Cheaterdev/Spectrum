@@ -4,15 +4,6 @@
 #include "Assets/AssetRenderer.h"
 
 
-#include "Effects/Sky.h"
-#include "Effects/PostProcess/SMAA.h"
-#include "Effects/VoxelGI/VoxelGI.h"
-#include "Effects/RTX/RTX.h"
-#include "Effects/FSR/FSR.h"
-
-#include "Lighting/PSSM.h"
-
-
 import GUI;
 import HAL;
 
@@ -23,6 +14,7 @@ import ppl;
 import Debug;
 import Utils;
 using namespace FrameGraph;
+using namespace HAL;
 
 
 class tick_timer

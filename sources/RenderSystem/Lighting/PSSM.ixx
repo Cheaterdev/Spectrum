@@ -1,8 +1,9 @@
-#pragma once
-import Graphics;
+export module Graphics:PSSM;
+import :Materials.ShaderMaterial;
+
 import HAL;
 
-class PSSM:public FrameGraph::GraphGenerator
+export class PSSM:public FrameGraph::GraphGenerator
 {
 
 	ShaderMaterial::ptr mat;

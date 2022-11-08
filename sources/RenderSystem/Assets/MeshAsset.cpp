@@ -1,6 +1,4 @@
 import Graphics;
-
-#include "Effects/RTX/RTX.h"
 #include "Assets/AssetRenderer.h"
 import HAL;
 using namespace HAL;

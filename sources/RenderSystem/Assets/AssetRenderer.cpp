@@ -1,10 +1,9 @@
 #include "pch_render.h"
+#include "AssetRenderer.h"
 
 #include "Assets/EngineAssets.h"
-#include "Effects/Sky.h"
-#include "Lighting/PSSM.h"
+import Graphics;
 
-#include "AssetRenderer.h"
 
 
 import HAL;

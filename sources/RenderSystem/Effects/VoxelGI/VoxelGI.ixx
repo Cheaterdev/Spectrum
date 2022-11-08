@@ -1,15 +1,18 @@
-#pragma once
+export module Graphics:VoxelGI;
+
+import :PSSM;
+import :VisibilityBuffer;
+import :TileDynamicGenerator;
+import :GPUTilesBuffer;
+import :Scene;
+import :MeshRenderer;
 
 
-#include "Lighting/PSSM.h"
-
-
-class GBufferDownsampler;
+ class GBufferDownsampler;
 import HAL;
-import Graphics;
 
 using namespace HAL;
-class Texture3DMultiTiles
+export class Texture3DMultiTiles
 {
 	HAL::update_tiling_info tilings_info;
 public:
@@ -92,7 +95,7 @@ public:
 
 
 
-class Texture3DRefTiles
+export class Texture3DRefTiles
 {
 	HAL::update_tiling_info tilings_info;
 
@@ -187,7 +190,7 @@ public:
 using namespace FrameGraph;
 
 
-class VoxelGI :public Events::prop_handler, public FrameGraph::GraphGenerator, VariableContext
+export class VoxelGI :public Events::prop_handler, public FrameGraph::GraphGenerator, VariableContext
 {
 public:
 

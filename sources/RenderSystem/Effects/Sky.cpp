@@ -1,5 +1,7 @@
-#include "pch_render.h"
-#include "Sky.h"
+module Graphics:Sky;
+import :FrameGraphContext;
+import :MipMapGenerator;
+import HAL;
 
 
 using namespace FrameGraph;

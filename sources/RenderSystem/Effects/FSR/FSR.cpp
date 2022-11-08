@@ -1,5 +1,6 @@
-#include "pch_render.h"
-#include "FSR.h"
+module Graphics:FSR;
+import :FrameGraphContext;
+
 import HAL;
 
 // CAS

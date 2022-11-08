@@ -34,11 +34,6 @@ namespace EngineAssets
 
 
 
-	EngineAsset<BRDF> brdf(L"brdf", [] {
-		BRDF* brdf = new BRDF();
-		brdf->create_new();
-		return  brdf;
-		});
 
 
 }

@@ -29,3 +29,11 @@ export import :AssetExplorer;
 export import :Materials.Values;
 export import :Materials.UniversalMaterial;
 export import :Materials.ShaderMaterial;
+
+export import :PSSM;
+export import :BRDF;
+export import :Sky;
+export import :SMAA;
+export import :FSR;
+export import :VoxelGI;
+export import :RTX;

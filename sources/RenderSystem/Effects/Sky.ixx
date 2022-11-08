@@ -1,12 +1,12 @@
-#pragma once
-import Graphics;
+export module Graphics:Sky;
+
 
 
 import Events;
 import Singleton;
 import HAL;
 
-class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraph::GraphGenerator
+export class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraph::GraphGenerator
 {
 public:
 
@@ -17,7 +17,7 @@ public:
 
 
 
-class SkyRender :public Events::prop_handler, public FrameGraph::GraphGenerator
+export class SkyRender :public Events::prop_handler, public FrameGraph::GraphGenerator
 {
 	HAL::Texture::ptr transmittance;
 	HAL::Texture::ptr irradiance;

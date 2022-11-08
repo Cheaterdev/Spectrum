@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Lighting/BRDF.h"
-
 
 import Graphics;
 
@@ -17,5 +15,4 @@ namespace EngineAssets
 	extern EngineAsset<TextureAsset> best_fit_normals;
 	extern EngineAsset<TextureAsset> missing_texture;
 
-	extern EngineAsset<BRDF> brdf;
 }
