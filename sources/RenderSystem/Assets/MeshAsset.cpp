@@ -1,5 +1,9 @@
-import Graphics;
-#include "Assets/AssetRenderer.h"
+module Graphics:MeshAsset;
+import :Scene;
+import :AssetRenderer;
+import :Materials.UniversalMaterial;
+import :RTX;
+
 import HAL;
 using namespace HAL;
 

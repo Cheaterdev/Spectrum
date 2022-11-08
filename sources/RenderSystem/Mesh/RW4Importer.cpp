@@ -1,4 +1,4 @@
-#include "pch_render.h"
+
 
 #include <assimp\Importer.hpp>
 #include <assimp\importerdesc.h>

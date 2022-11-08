@@ -1,8 +1,6 @@
-module;
-
-#include "AssetRenderer.h"
 module Graphics:MaterialAsset;
 
+import :AssetRenderer;
 
 REGISTER_TYPE(MaterialAsset);
 

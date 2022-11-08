@@ -1,4 +1,4 @@
-#include "pch_render.h"
+
 #include "MeshletGeneration.h"
 
 import Graphics;

@@ -12,6 +12,8 @@ export import :BinaryAsset;
 export import :TextureAsset;
 export import :MaterialAsset;
 export import :MeshAsset;
+export import :EngineAssets;
+export import :AssetRenderer;
 
 export import :Context;
 

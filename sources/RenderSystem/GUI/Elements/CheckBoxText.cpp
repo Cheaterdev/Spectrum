@@ -1,7 +1,5 @@
-//#include "pch_render.h"
-//#include "CheckBoxText.h"
-//#include "HorizontalLayout.h"
-module GUI;
+module GUI:CheckBoxText;
+
 import GUI;
 namespace GUI
 {

@@ -1,9 +1,7 @@
-﻿module;
-#include "pch_render.h"
-#include "Assets/EngineAssets.h"
-module Graphics:Materials.UniversalMaterial;
+﻿module Graphics:Materials.UniversalMaterial;
 
 
+import :EngineAssets;
 import :RTX;
 
 static IdGenerator ids;

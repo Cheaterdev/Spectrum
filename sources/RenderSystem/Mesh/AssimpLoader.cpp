@@ -1,4 +1,4 @@
-#include "pch_render.h"
+
 
 #include "Simplifyer/Simplifyer.h"
 #include <assimp\Importer.hpp>

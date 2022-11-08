@@ -1,9 +1,6 @@
 #include "pch.h"
 
-#include "Assets/EngineAssets.h"
-#include "Assets/AssetRenderer.h"
-
-
+import Graphics;
 import GUI;
 import HAL;
 

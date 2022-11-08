@@ -1,19 +1,15 @@
-#pragma once
+export module Graphics:AssetRenderer;
 
-import Graphics;
 import Singleton;
 import HAL;
+ import :MeshRenderer;
+ import :Sky;
 
-class G_Buffer;
-class LightSystem;
-class SSGI;
-class SkyRender;
+
+
 class SceneRenderWorkflow;
-namespace Graphics
-{
-	struct OVRContext;
-}
-class AssetRenderer : public Singleton<AssetRenderer>
+
+export  class AssetRenderer : public Singleton<AssetRenderer>
 {
     FrameGraph::Graph graph;
     UINT frame = 0;
@@ -34,9 +30,9 @@ class AssetRenderer : public Singleton<AssetRenderer>
 		AssetRenderer();
 
         std::mutex lock;
-		std::shared_ptr<SSGI> ssgi;
+	//	std::shared_ptr<SSGI> ssgi;
 		std::shared_ptr<SkyRender> sky;
-		std::shared_ptr<Graphics::OVRContext> vr_context ;
+
     public:
 
         virtual void draw(Scene::ptr scene, HAL::Texture::ptr result);

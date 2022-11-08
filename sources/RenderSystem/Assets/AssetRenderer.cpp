@@ -1,15 +1,16 @@
-#include "pch_render.h"
-#include "AssetRenderer.h"
 
-#include "Assets/EngineAssets.h"
-import Graphics;
-
-
+module  Graphics:AssetRenderer;
 
 import HAL;
+import :MeshRenderer;
+import :Sky;
+import :PSSM;
+import :FrameGraphContext;
+import :MipMapGenerator;
+import :EngineAssets;
+import :BRDF;
 
 using namespace FrameGraph;
-import HAL;
 using namespace HAL;
 class SceneRenderWorkflow
 {
@@ -173,15 +174,7 @@ public:
 void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 {
 
-
-
-	// return;
-
 	graph.start_new_frame();
-	if (!vr_context)
-	{
-		vr_context = std::make_shared<Graphics::OVRContext>();
-	}
 
 
 	scene->update_transforms();

@@ -1,7 +1,8 @@
-#include "pch_render.h"
-
-#include "EngineAssets.h"
-
+module Graphics:EngineAssets;
+import :Asset;
+import :MeshAsset;
+import :BinaryAsset;
+import :TextureAsset;
 
 namespace EngineAssets
 {

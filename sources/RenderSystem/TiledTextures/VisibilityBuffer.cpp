@@ -1,5 +1,5 @@
-#include "pch_render.h"
-import Graphics;
+
+module Graphics:VisibilityBuffer;
 
 import HAL;
 

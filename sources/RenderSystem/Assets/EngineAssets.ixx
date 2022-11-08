@@ -1,9 +1,10 @@
-#pragma once
+export module Graphics:EngineAssets;
+import :Asset;
+import :MeshAsset;
+import :BinaryAsset;
+import :TextureAsset;
 
-
-import Graphics;
-
-namespace EngineAssets
+export namespace EngineAssets
 {
 	extern EngineAsset<MeshAsset> material_tester;
 	extern EngineAsset<MeshAsset> axis;

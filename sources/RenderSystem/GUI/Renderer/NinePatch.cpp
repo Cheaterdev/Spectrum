@@ -1,4 +1,4 @@
-#include "pch_render.h"
+
 import GUI;
 
 using namespace HAL;
