@@ -1,10 +1,9 @@
-module;
-
-#include "Assets/EngineAssets.h"
 module Graphics:PSSM;
 
 import :PSSM;
 import :BRDF;
+import :EngineAssets;
+
 import HAL;
 
 

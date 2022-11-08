@@ -1,8 +1,9 @@
-module;
-
-#include "Materials/universal_material.h"
-
 module Graphics:Scene;
+import :Materials.UniversalMaterial;
+import :MeshAsset;
+
+import HAL;
+using namespace HAL;
 
 Scene::~Scene()
 {

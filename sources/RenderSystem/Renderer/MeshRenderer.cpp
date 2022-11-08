@@ -1,7 +1,6 @@
-module;
-
-#include "Assets/EngineAssets.h"
 module Graphics:MeshRenderer;
+import :EngineAssets;
+import :MipMapGenerator;
 
 import HAL;
 

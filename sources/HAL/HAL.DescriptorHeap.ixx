@@ -181,7 +181,7 @@ export
 
 		class DescriptorHeap : public SharedObject<DescriptorHeap>, public API::DescriptorHeap
 		{
-			friend class Handle;
+			friend struct Handle;
 			std::vector<ResourceInfo> resources;
 			DescriptorHeapFlags flags;
 

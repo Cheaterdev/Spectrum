@@ -1,6 +1,5 @@
-module;
-#include "Assets/EngineAssets.h"
 module Graphics:StencilRenderer;
+import :EngineAssets;
 
 import :Materials.UniversalMaterial;
 import GUI;

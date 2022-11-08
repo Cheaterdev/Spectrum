@@ -1,5 +1,3 @@
-#include "pch.h"
-
 import Graphics;
 import GUI;
 import HAL;
