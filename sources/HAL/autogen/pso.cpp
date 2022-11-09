@@ -1,5 +1,3 @@
-
-
 import HAL;
 import Core;
 
@@ -63,4 +61,3 @@ void init_pso(enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(pso[PSO::DenoiserDownsample]));
 	 when_all(begin(tasks), end(tasks)).wait();
 }
-

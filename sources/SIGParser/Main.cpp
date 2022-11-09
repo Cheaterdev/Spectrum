@@ -7,7 +7,7 @@
 #include <format>
 #include <string>
 #include <iostream>
-static const std::string cpp_path = "../../sources/DirectXFramework/autogen";
+static const std::string cpp_path = "../../sources/HAL/autogen";
 static const std::string hlsl_path = "../../workdir/shaders/autogen";
 
 Parsed parsed;
@@ -623,18 +623,12 @@ void generate_include_list(const Parsed& parsed)
 
 
 	stream << R"(
-module;
+export module HAL:Autogen;
 
-
-export module Graphics:Autogen;
+import Core;
 
 import :PipelineState;
-import Math;
-import :Samplers;
 import :Buffer;
-import :Descriptors;
-
-
 import :SIG;
 import :RT;
 import :Layout;
@@ -642,15 +636,9 @@ import :Slots;
 import :PSO;
 import :RTX;
 import :Enums;
-
-import Data;
 import :RootSignature;
-
-import Utils;
-import serialization;
 import :Types;
 
-import :Definitions;
 export
 {
 
@@ -762,13 +750,9 @@ export
 
 	{
 		my_stream stream(cpp_path, "enums.ixx");
-		stream << R"(
-module;
+		stream << R"(export module HAL:Enums;
 
-export module Graphics:Enums;
-
-import crc32;
-import Utils;
+import Core;
 
 export
 {
@@ -871,11 +855,8 @@ export
 	
 	{
 		my_stream stream(cpp_path, "pso.cpp");
-		stream << R"(
-
-
-import HAL;
-import Data;
+		stream << R"(import HAL;
+import Core;
 
 import ppl;
 using namespace concurrency;

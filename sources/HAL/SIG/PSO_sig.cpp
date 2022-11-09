@@ -6,7 +6,7 @@ void init_pso(enum_array<PSO, PSOBase::ptr>&);
 HAL::ComputePipelineState::ptr SimpleComputePSO::create()
 {
 	HAL::ComputePipelineStateDesc desc;
-	desc.root_signature = HAL::get_Signature(root_signature);
+	desc.root_signature = get_Signature(root_signature);
 	desc.shader = HAL::compute_shader::get_resource(compute);
 
 	return HAL::ComputePipelineState::create(desc, name);
@@ -15,7 +15,7 @@ HAL::ComputePipelineState::ptr SimpleComputePSO::create()
 HAL::PipelineState::ptr SimpleGraphicsPSO::create()
 {
 	HAL::PipelineStateDesc desc;
-	desc.root_signature = HAL::get_Signature(root_signature);
+	desc.root_signature = get_Signature(root_signature);
 	if (!vertex.entry_point.empty())	desc.vertex = HAL::vertex_shader::get_resource(vertex);
 	if (!pixel.entry_point.empty())	desc.pixel = HAL::pixel_shader::get_resource(pixel);
 
