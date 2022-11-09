@@ -3,7 +3,6 @@ module HAL:FrameManager;
 import Core;
 import :Types;
 
-
 import HAL;
 
 namespace HAL {

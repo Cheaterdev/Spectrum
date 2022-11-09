@@ -282,7 +282,7 @@ namespace GUI
 						data.reset();
 						front->remove_all();
 
-						gpu_start = HAL::GPUTimeManager::get().get_now();
+						gpu_start = HAL::Device::get().get_time_manager().get_now();
 						start = std::chrono::high_resolution_clock::now();
 
 						ended = false;

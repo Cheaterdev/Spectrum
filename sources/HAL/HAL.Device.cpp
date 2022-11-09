@@ -1,6 +1,9 @@
 module HAL:Device;
 import Core;
 import HAL;
+import :FrameManager;
+import :GPUTimer;
+import :HeapAllocators;
 
 namespace HAL
 {
@@ -10,11 +13,7 @@ namespace HAL
 			q = nullptr;
 
 
-		Singleton<HAL::StaticCompiledGPUData>::reset();
-		HAL::DescriptorHeapManager::reset();
 		HAL::PipelineStateCache::reset();
-
-		HAL::HeapFactory::reset();
 	}
 
 	Device::~Device()
@@ -70,8 +69,40 @@ namespace HAL
 		queues[CommandListType::COPY].reset(new HAL::Queue(CommandListType::COPY, this));
 
 		rtx = get_properties().rtx;
+
+		frame_manager = std::make_unique<FrameResourceManager>(*this);
+		time_manager = std::make_unique<GPUTimeManager>(*this);
+		heap_factory = std::make_unique<HeapFactory>(*this);
+
+		static_gpu_data = std::make_unique<StaticCompiledGPUData>(*this);
+		descriptor_heap_manager = std::make_unique<DescriptorHeapManager>(*this);
+		resource_heap_manager = std::make_unique<ResourceHeapPageManager>(*this);
+
 	}
 
 
+	FrameResourceManager& Device::get_frame_manager()
+	{
+		return *frame_manager;
+	}
 
+	GPUTimeManager& Device::get_time_manager()
+	{
+		return *time_manager;
+	}
+	HeapFactory& Device::get_heap_factory()
+	{
+		return *heap_factory;
+	}
+
+
+	StaticCompiledGPUData& Device::get_static_gpu_data() {
+		return *static_gpu_data;
+	}
+	DescriptorHeapManager& Device::get_descriptor_heap_manager() {
+		return *descriptor_heap_manager;
+	}
+	ResourceHeapPageManager& Device::get_resource_heap_manager() {
+		return *resource_heap_manager;
+	}
 }

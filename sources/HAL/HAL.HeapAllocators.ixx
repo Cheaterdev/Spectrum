@@ -90,7 +90,7 @@ export namespace HAL
 
 		GEN_DEF_COMP(HeapIndex);
 	};
-	class HeapFactory : public Singleton<HeapFactory>
+	class HeapFactory
 	{
 
 		using heap_list = std::list<ResourceHeapPage::ptr>;
@@ -134,9 +134,6 @@ export namespace HAL
 			
 		}
 
-
-		static std::shared_ptr<HeapFactory> create_singleton();
-
 	};
 
 	template<class LockPolicy = Thread::Free>
@@ -160,7 +157,7 @@ export namespace HAL
 
 			size = std::max(Math::AlignUp(size, Alignment), Alignment);
 
-			auto res = HeapFactory::get().AllocateHeap(creation_info, size);
+			auto res = Device::get().get_heap_factory().AllocateHeap(creation_info, size);
 			all_heaps.emplace_back(res);
 			return res;
 		}
@@ -202,7 +199,7 @@ export namespace HAL
 
 				all_heaps.erase(h);
 
-				HeapFactory::get().Free(creation_info, ptr);
+				Device::get().get_heap_factory().Free(creation_info, ptr);
 			}
 		}
 
@@ -286,10 +283,11 @@ export namespace HAL
 
 	};
 
-	class ResourceHeapPageManager :public ResourceHeapAllocator<Thread::Lockable>, public  Singleton<ResourceHeapPageManager>
+	class ResourceHeapPageManager :public ResourceHeapAllocator<Thread::Lockable>
 	{
+		Device& device;
 	public:
-		ResourceHeapPageManager() = default;
+		ResourceHeapPageManager(Device& device) :device(device) {}
 		~ResourceHeapPageManager()
 		{
 			

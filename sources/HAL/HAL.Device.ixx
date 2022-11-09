@@ -5,6 +5,12 @@ import :API.Device;
 
 export namespace HAL
 {
+	class FrameResourceManager;
+	class GPUTimeManager;
+class HeapFactory;
+class StaticCompiledGPUData;
+class DescriptorHeapManager;
+class ResourceHeapPageManager;
 
 	class Queue;
 		class Device : public Singleton<Device>, public API::Device
@@ -20,7 +26,13 @@ export namespace HAL
 			IdGenerator<Thread::Lockable> id_generator;
 			friend class CommandList;
 			bool rtx = false;
-		
+			std::unique_ptr<FrameResourceManager> frame_manager;
+			std::unique_ptr<GPUTimeManager> time_manager;
+			std::unique_ptr<HeapFactory> heap_factory;
+			std::unique_ptr<StaticCompiledGPUData> static_gpu_data;
+			std::unique_ptr<DescriptorHeapManager> descriptor_heap_manager;
+			std::unique_ptr<ResourceHeapPageManager> resource_heap_manager;
+
 		public:
 			Device(HAL::DeviceDesc desc);
 			virtual ~Device();
@@ -38,6 +50,14 @@ export namespace HAL
 			bool is_rtx_supported() { return rtx; }
 
 			mutable bool alive = true;
+
+			FrameResourceManager& get_frame_manager();
+			GPUTimeManager& get_time_manager();
+			HeapFactory& get_heap_factory();
+			StaticCompiledGPUData& get_static_gpu_data();
+			DescriptorHeapManager& get_descriptor_heap_manager();
+			ResourceHeapPageManager& get_resource_heap_manager();
+
 		};
 
 	

@@ -482,19 +482,19 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	}
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(StaticCompiledGPUData::get()).buffer;
+		gather.GetCommands() = meshes_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(HAL::Device::get().get_static_gpu_data()).buffer;
 
 		gather.GetMeshes_count() = meshes_ids->buffer->structuredBufferCount;
 
-		gather_visible = gather.compile(StaticCompiledGPUData::get());
+		gather_visible = gather.compile(HAL::Device::get().get_static_gpu_data());
 		//	gather_visible = meshes_ids->buffer->help_buffer->get_resource_address();
 	}
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(StaticCompiledGPUData::get()).buffer;
+		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(HAL::Device::get().get_static_gpu_data()).buffer;
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer->structuredBufferCount;
-		gather_invisible = gather.compile(StaticCompiledGPUData::get());
+		gather_invisible = gather.compile(HAL::Device::get().get_static_gpu_data());
 		//	gather_invisible = meshes_invisible_ids->buffer->help_buffer->get_resource_address();
 	}
 
@@ -503,14 +503,14 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		gather.GetMeshes_count() = commands_boxes->buffer->structuredBufferCount;
 
 		//gather.GetCommands() = // supposed to be null
-		gather_boxes_commands = gather.compile(StaticCompiledGPUData::get());
+		gather_boxes_commands = gather.compile(HAL::Device::get().get_static_gpu_data());
 		//gather_boxes_commands = commands_boxes->buffer->help_buffer->get_resource_address();
 	}
 
 	{
 		Slots::InitDispatch init_dispatch;
 		init_dispatch.GetDispatch_data() = dispatch_buffer->rwStructuredBuffer;
-		init_dispatch_compiled = init_dispatch.compile(StaticCompiledGPUData::get());
+		init_dispatch_compiled = init_dispatch.compile(HAL::Device::get().get_static_gpu_data());
 	}
 
 	{
@@ -520,7 +520,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		gather_neshes_boxes.GetVisibleMeshes() = meshes_ids->buffer->appendStructuredBuffer;
 		gather_neshes_boxes.GetInvisibleMeshes() = meshes_invisible_ids->buffer->appendStructuredBuffer;
 
-		gather_neshes_boxes_compiled = gather_neshes_boxes.compile(StaticCompiledGPUData::get());
+		gather_neshes_boxes_compiled = gather_neshes_boxes.compile(HAL::Device::get().get_static_gpu_data());
 	}
 
 	{
@@ -529,14 +529,14 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		draw_boxes.GetVisible_meshes() = visible_boxes->buffer->rwStructuredBuffer;
 		draw_boxes.GetVertices() = vertex_buffer->structuredBuffer;
 
-		draw_boxes_compiled = draw_boxes.compile(StaticCompiledGPUData::get());
+		draw_boxes_compiled = draw_boxes.compile(HAL::Device::get().get_static_gpu_data());
 	}
 	{
 		Slots::GatherBoxes gather;
 		gather.GetCulledMeshes() = commands_boxes->buffer->appendStructuredBuffer;
 		gather.GetVisibleMeshes() = meshes_ids->buffer->appendStructuredBuffer;
 
-		gather_boxes_compiled = gather.compile(StaticCompiledGPUData::get());
+		gather_boxes_compiled = gather.compile(HAL::Device::get().get_static_gpu_data());
 	}
 }
 

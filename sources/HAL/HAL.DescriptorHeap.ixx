@@ -414,9 +414,8 @@ export
 			HandleTable place2(UINT count);
 			void free();
 		};
-		class DescriptorHeapManager : public Singleton<DescriptorHeapManager>
+		class DescriptorHeapManager
 		{
-			friend class Singleton<DescriptorHeapManager>;
 			DescriptorHeap::ptr heap_rt;
 			DescriptorHeap::ptr heap_ds;
 
@@ -452,7 +451,7 @@ export
 		};
 
 		//template<class LockPolicy = Thread::Free>
-		class StaticDescriptors : public Singleton<StaticDescriptors>
+		class StaticDescriptors
 		{
 		public://///////////////
 			using LockPolicy = Thread::Lockable;
@@ -471,11 +470,11 @@ export
 			{
 				if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
 				{
-					pages.push_back(DescriptorHeapManager::get().get_gpu_heap(type)->create_page(count));
+					pages.push_back(Device::get().get_descriptor_heap_manager().get_gpu_heap(type)->create_page(count));
 				}
 				else
 				{
-					pages.push_back(DescriptorHeapManager::get().get_cpu_heap(type)->create_page(count));
+					pages.push_back(Device::get().get_descriptor_heap_manager().get_cpu_heap(type)->create_page(count));
 				}
 			}
 
@@ -500,10 +499,6 @@ export
 				flags = DescriptorHeapFlags::SHADER_VISIBLE;
 			}
 
-			~StaticDescriptors()
-			{
-				reset();
-			}
 
 			HandleTable place(UINT count)
 			{
@@ -532,11 +527,11 @@ export
 			{
 				if (flags == DescriptorHeapFlags::SHADER_VISIBLE)
 				{
-					pages.push_back(DescriptorHeapManager::get().get_gpu_heap(type)->create_page(count));
+					pages.push_back(Device::get().get_descriptor_heap_manager().get_gpu_heap(type)->create_page(count));
 				}
 				else
 				{
-					pages.push_back(DescriptorHeapManager::get().get_cpu_heap(type)->create_page(count));
+					pages.push_back(Device::get().get_descriptor_heap_manager().get_cpu_heap(type)->create_page(count));
 				}
 			}
 

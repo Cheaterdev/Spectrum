@@ -5,6 +5,7 @@ import :Types;
 import :HeapAllocators;
 import :DescriptorHeap;
 import :Private.CommandListCompiler;
+import :Device;
 export
 namespace HAL {
 
@@ -56,10 +57,13 @@ namespace HAL {
 		};
 
 
-		class StaticCompiledGPUData :public Singleton<StaticCompiledGPUData>, public GPUCompiledManager<Thread::Lockable>
+		class StaticCompiledGPUData : public GPUCompiledManager<Thread::Lockable>
 		{
+			Device& device;
 		public:
 			using Uploader<Thread::Lockable>::place_raw;
+
+			StaticCompiledGPUData(Device& device) :device(device) {}
 		};
 
 		class FrameResources :public SharedObject<FrameResources>, public GPUCompiledManager<Thread::Lockable>
@@ -84,11 +88,12 @@ namespace HAL {
 			std::shared_ptr<CommandList> start_list(std::string name = "", CommandListType type = CommandListType::DIRECT);
 		};
 
-		class FrameResourceManager :public Singleton<FrameResourceManager>
+		class FrameResourceManager
 		{
 			std::atomic_size_t frame_number = 0;
-
+			Device& device;
 		public:
+			FrameResourceManager(Device& device) :device(device){}
 			FrameResources::ptr begin_frame();
 		};
 

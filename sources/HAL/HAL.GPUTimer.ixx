@@ -2,6 +2,7 @@ export module HAL:GPUTimer;
 
 import :Buffer;
 import :Queue;
+import :Device;
 import Core;
 
 
@@ -10,13 +11,9 @@ export
 
 	namespace HAL
 	{
-
-
-
-		class GPUTimeManager : public Singleton<GPUTimeManager>
+		class GPUTimeManager
 		{
-			friend class Singleton<GPUTimeManager>;
-
+			Device& device;
 		public:
 			//riend class GPUTimer;
 
@@ -30,9 +27,9 @@ export
 			UINT64 frequency;
 
 			int max_used_timers = 0;
-			GPUTimeManager() : heap(HAL::Device::get() ,{ MAX_TIMERS * 2 })
+			GPUTimeManager(Device & device) : device(device), heap(device,{ MAX_TIMERS * 2 })
 			{
-				HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_native()->GetTimestampFrequency(&frequency);
+				device.get_queue(HAL::CommandListType::DIRECT)->get_native()->GetTimestampFrequency(&frequency);
 			}
 			unsigned int get_id()
 			{
@@ -55,7 +52,7 @@ export
 			{
 				UINT64 cpu_start;
 				UINT64 gpu_start;
-				HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_native()->GetClockCalibration(&gpu_start, &cpu_start);
+				device.get_queue(HAL::CommandListType::DIRECT)->get_native()->GetClockCalibration(&gpu_start, &cpu_start);
 				return static_cast<double>(gpu_start) / frequency;
 			}
 

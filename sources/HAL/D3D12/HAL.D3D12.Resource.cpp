@@ -197,7 +197,7 @@ namespace HAL
 		}
 		else
 		{
-			alloc_handle = ResourceHeapPageManager::get().alloc(alloc_info.size, alloc_info.alignment, HAL::MemoryType::COMMITED, heap_type);
+			alloc_handle = Device::get().get_resource_heap_manager().alloc(alloc_info.size, alloc_info.alignment, HAL::MemoryType::COMMITED, heap_type);
 			address = { alloc_handle.get_heap().get(),alloc_handle.get_offset() };
 
 

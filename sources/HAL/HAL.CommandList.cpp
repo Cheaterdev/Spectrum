@@ -17,38 +17,38 @@ namespace HAL
 
 	GPUTimer::GPUTimer()
 	{
-		id = Singleton<HAL::GPUTimeManager>::get().get_id();
+		id = HAL::Device::get().get_time_manager().get_id();
 	}
 
 	GPUTimer::~GPUTimer()
 	{
-		Singleton<HAL::GPUTimeManager>::get().put_id(id);
+		HAL::Device::get().get_time_manager().put_id(id);
 	}
 
 	void GPUTimer::start(Eventer* list)
 	{
-		Singleton<HAL::GPUTimeManager>::get().start(*this, list);
+		HAL::Device::get().get_time_manager().start(*this, list);
 	}
 
 	void GPUTimer::end(Eventer* list)
 	{
-		Singleton<HAL::GPUTimeManager>::get().end(*this, list);
+		HAL::Device::get().get_time_manager().end(*this, list);
 		list = nullptr;
 	}
 
 	float GPUTimer::get_time()
 	{
-		return Singleton<HAL::GPUTimeManager>::get().get_time(*this);
+		return HAL::Device::get().get_time_manager().get_time(*this);
 	}
 
 	double GPUTimer::get_start()
 	{
-		return Singleton<HAL::GPUTimeManager>::get().get_start(*this);
+		return HAL::Device::get().get_time_manager().get_start(*this);
 	}
 
 	double GPUTimer::get_end()
 	{
-		return Singleton<HAL::GPUTimeManager>::get().get_end(*this);
+		return HAL::Device::get().get_time_manager().get_end(*this);
 	}
 
 	CommandList::CommandList(CommandListType type)
@@ -145,7 +145,7 @@ namespace HAL
 		Eventer::begin(name, t);
 
 		if (type != CommandListType::COPY) {
-			compiler.set_descriptor_heaps(HAL::DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).get(), HAL::DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::SAMPLER).get());
+			compiler.set_descriptor_heaps(HAL::Device::get().get_descriptor_heap_manager().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).get(), HAL::Device::get().get_descriptor_heap_manager().get_gpu_heap(DescriptorHeapType::SAMPLER).get());
 		}
 	}
 

@@ -71,7 +71,7 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 	list->end();
 	list->execute_and_wait();
 
-	handle_table = StaticDescriptors::get().place(1);// DescriptorHeapManager::get().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV)->create_table(1);
+	handle_table = Device::get().get_descriptor_heap_manager().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV)->create_table(1);
 
 	raytracing_handle = HLSL::RaytracingAccelerationStructure(handle_table[0]);
 	raytracing_handle.create(currentResource->buffer.get());

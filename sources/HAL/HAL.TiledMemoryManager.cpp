@@ -21,7 +21,7 @@ namespace HAL {
 
 		if (!tile.heap_position.heap)
 		{
-			tile.heap_position = ResourceHeapPageManager::get().create_tile(static_cast<D3D12_HEAP_FLAGS>(alloc_info.flags), tile_heap_type);
+			tile.heap_position = Device::get().get_resource_heap_manager().create_tile(static_cast<D3D12_HEAP_FLAGS>(alloc_info.flags), tile_heap_type);
 			target.add_tile(tile);
 			on_load(ivec4(pos, subres));
 			if (recursive)
@@ -299,7 +299,7 @@ namespace HAL {
 			auto& alloc_info = (resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
-				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
+				packed_tiles.heap_position = Device::get().get_resource_heap_manager().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
 
 			info.add_tile(packed_tiles);
 
@@ -315,7 +315,7 @@ namespace HAL {
 			auto& alloc_info = (resource)->alloc_info;
 
 			if (!packed_tiles.heap_position.heap)
-				packed_tiles.heap_position = ResourceHeapPageManager::get().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
+				packed_tiles.heap_position = Device::get().get_resource_heap_manager().create_tile(D3D12_HEAP_FLAGS(alloc_info.flags), HeapType::DEFAULT, packed_mip_count);
 
 			info.add_tile(packed_tiles);
 		}

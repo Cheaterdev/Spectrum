@@ -61,7 +61,7 @@ void TextureAsset::update_preview(HAL::Texture::ptr preview)
 	if (!preview || !preview->is_rt())
 		preview.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { 256, 256 }, 1, 6, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
-	auto list = (HAL::FrameResourceManager::get().begin_frame()->start_list("TextureAsset"));
+	auto list = (HAL::Device::get().get_frame_manager().begin_frame()->start_list("TextureAsset"));
 
 	TextureAssetRenderer::get().render(this, preview, list);
 	list->end();

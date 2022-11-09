@@ -143,7 +143,7 @@ export
 			counterType counted = counterType::NONE;
 			void init_views();
 
-			HAL::HandleTable hlsl;
+			HAL::HandleTableLight hlsl;
 
 		public:
 
@@ -216,7 +216,7 @@ export
 		template<class T>
 		inline void StructureBuffer<T>::init_views()
 		{
-			hlsl = HAL::StaticDescriptors::get().place(7);
+			hlsl = HAL::Device::get().get_static_gpu_data().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(7);
 
 			structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 			rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);

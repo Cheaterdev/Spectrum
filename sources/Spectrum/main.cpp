@@ -784,13 +784,13 @@ public:
 			if (fps.tick())
 			{
 				size_t total = 0;
-				for (auto& h : HAL::DescriptorHeapManager::get().heaps)
-				{
-					if (h)
-					{
-						total += h->used_size();
-					}
-				}
+				//for (auto& h : HAL::DescriptorHeapManager::get().heaps)
+				//{
+				//	if (h)
+				//	{
+				//		total += h->used_size();
+				//	}
+				//}
 
 
 				size_t total_gpu = 0;
@@ -872,7 +872,7 @@ public:
 
 					context.get_list()->transition_present(data.swapchain->resource);
 
-					HAL::GPUTimeManager::get().read_buffer(context.get_list(), [ptr, this]() {
+					HAL::Device::get().get_time_manager().read_buffer(context.get_list(), [ptr, this]() {
 						run_on_ui([this, ptr]() {	Profiler::get().update(); });
 
 						});
@@ -1272,7 +1272,6 @@ protected:
 		HAL::compute_shader::reset_manager();
 		GUI::Elements::FlowGraph::manager::reset();
 		Profiler::reset();
-		HAL::GPUTimeManager::reset();
 		///    main_window2 = nullptr;
 		Fonts::FontSystem::reset();
 		RTX::reset();

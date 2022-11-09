@@ -584,7 +584,7 @@ void MeshAssetInstance::update_nodes()
 
 			info.material_id = static_cast<UINT>(mesh_asset->meshes[m].material);
 			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
-			info.compiled_mesh_info = info.mesh_info.compile(StaticCompiledGPUData::get());
+			info.compiled_mesh_info = info.mesh_info.compile(HAL::Device::get().get_static_gpu_data());
 
 			info.ras = mesh_asset->meshes[m].ras;
 

@@ -104,7 +104,7 @@ void materials::universal_material::update()
 	{
 		material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
-		compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
+		compiled_material_info = material_info.compile(HAL::Device::get().get_static_gpu_data());
 		local_addr = compiled_material_info.compiled();
 
 		//local_addr_ids = to_native(compiled_material_info.offsets_cb);
@@ -174,7 +174,7 @@ void materials::universal_material::compile()
 	generate(ps_uniforms);
 	material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 	material_info.GetData() = pixel_data;
-	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
+	compiled_material_info = material_info.compile(HAL::Device::get().get_static_gpu_data());
 
 	local_addr = compiled_material_info.compiled();
 	//local_addr_ids = to_native(compiled_material_info.offsets_cb);

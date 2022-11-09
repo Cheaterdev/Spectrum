@@ -92,7 +92,7 @@ namespace FrameGraph
 
 
 	}
-	TaskBuilder::TaskBuilder() : allocator(false), static_allocator(false)
+	TaskBuilder::TaskBuilder() : allocator(false), static_allocator(false), frames(Device::get())
 	{
 
 	}
