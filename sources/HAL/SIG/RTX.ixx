@@ -57,8 +57,8 @@ struct SelectLocal<T>
 		static const UINT MaxAttributeSizeInBytes = sizeof(float2);
 
 		HAL::StateObject::ptr m_dxrStateObject;
-		HAL::RootSignature::ptr m_root_sig = get_Signature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
-		HAL::RootSignature::ptr m_local_sig = create_local_signature<SelectLocal<Passes>::type...>();
+		HAL::RootSignature::ptr m_root_sig = HAL::Device::get().get_engine_pso_holder().GetSignature(T::global_sig)->create_global_signature<SelectLocal<Passes>::type...>();
+		HAL::RootSignature::ptr m_local_sig = create_local_signature<SelectLocal<Passes>::type...>(HAL::Device::get());
 
 		IdGenerator<Thread::Free> ids;
 		
@@ -199,6 +199,7 @@ struct SelectLocal<T>
 		{
 			std::lock_guard<std::mutex> g(m);
 			HAL::StateObjectDesc raytracingPipeline;
+			raytracingPipeline.global_root = m_root_sig;
 			{
 				auto init_part = [&](auto& e) {
 					raytracingPipeline.collections.emplace_back(e.m_Collection);

@@ -3,6 +3,7 @@ export module HAL:Layout;
 import :RootSignature;
 import :Concepts;
 import :Types;
+import :Device;
 
 export
 {
@@ -39,9 +40,9 @@ export
 		}
 
 
-		HAL::RootLayout::ptr create_signature(Layouts layout)
+		HAL::RootLayout::ptr create_signature(HAL::Device& device, Layouts layout)
 		{
-			return std::make_shared<HAL::RootLayout>(HAL::Device::get(), desc, layout);
+			return std::make_shared<HAL::RootLayout>(device, desc, layout);
 		}
 	};
 
@@ -53,7 +54,7 @@ export
 	}
 
 	template< class ...A>
-	HAL::RootSignature::ptr create_local_signature()
+	HAL::RootSignature::ptr create_local_signature(HAL::Device& device)
 	{
 		HAL::RootSignatureDesc desc;
 
@@ -61,7 +62,7 @@ export
 
 		desc.set_type(HAL::RootSignatureType::Local);
 
-		return std::make_shared<HAL::RootSignature>(HAL::Device::get(), desc);
+		return std::make_shared<HAL::RootSignature>(device, desc);
 	}
 
 

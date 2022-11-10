@@ -36,7 +36,7 @@ void SkyRender::generate_sky(Graph& graph)
 			auto& graphics = list.get_graphics();
 			auto& sky = graph.get_context<SkyInfo>();
 
-			graphics.set_pipeline(GetPSO<PSOS::Sky>());
+			graphics.set_pipeline<PSOS::Sky>();
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 			graphics.set_viewport(data.ResultTexture->get_viewport());
 			graphics.set_scissor(data.ResultTexture->get_scissor());
@@ -97,7 +97,7 @@ void SkyRender::generate(Graph& graph)
 			auto& sky = graph.get_context<SkyInfo>();
 
 
-			graphics.set_pipeline(GetPSO<PSOS::SkyCube>());
+			graphics.set_pipeline<PSOS::SkyCube>();
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
@@ -206,7 +206,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 			auto& graphics = list.get_graphics();
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+			graphics.set_signature(Layouts::DefaultLayout);
 
 			Slots::EnvSource downsample;
 			downsample.GetSourceTex() = data.sky_cubemap->textureCube;
@@ -217,7 +217,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 			UINT count = data.sky_cubemap_filtered->resource->get_desc().as_texture().MipLevels;
 			for (unsigned int m = 0; m < count; m++)
 			{
-				graphics.set_pipeline(GetPSO<PSOS::CubemapENV>(PSOS::CubemapENV::Level(std::min(m, 4u))));
+				graphics.set_pipeline<PSOS::CubemapENV>(PSOS::CubemapENV::Level(std::min(m, 4u)));
 				for (unsigned int i = 0; i < 6; i++)
 				{
 					HAL::TextureViewDesc subres;
@@ -248,7 +248,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 
 
-			graphics.set_pipeline(GetPSO<PSOS::CubemapENVDiffuse>());
+			graphics.set_pipeline<PSOS::CubemapENVDiffuse>();
 
 			for (unsigned int i = 0; i < 6; i++)
 			{

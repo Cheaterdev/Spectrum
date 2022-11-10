@@ -4,7 +4,6 @@ export module HAL:Autogen;
 import Core;
 
 import :PipelineState;
-import :Buffer;
 import :SIG;
 import :RT;
 import :Layout;
@@ -161,22 +160,10 @@ export
 	#include "pso\VoxelDebug.h"
 	#include "pso\DenoiserDownsample.h"
 	#include "rtx\MainRTX.h"
-	void init_signatures();
-	HAL::RootLayout::ptr get_Signature(Layouts id);
-	void init_pso(enum_array<PSO, PSOBase::ptr>&);
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	UINT get_slot_id(SlotID id);
 }
-static enum_array<Layouts, HAL::RootLayout::ptr> signatures;
-void init_signatures()
-{
-	signatures[Layouts::FrameLayout] = AutoGenSignatureDesc<FrameLayout>().create_signature(Layouts::FrameLayout);
-	signatures[Layouts::DefaultLayout] = AutoGenSignatureDesc<DefaultLayout>().create_signature(Layouts::DefaultLayout);
-}
-HAL::RootLayout::ptr get_Signature(Layouts id)
-{
-	return signatures[id];
-}
+
 std::optional<SlotID> get_slot(std::string_view slot_name)
 {
 	if(slot_name == "TextureRenderer")

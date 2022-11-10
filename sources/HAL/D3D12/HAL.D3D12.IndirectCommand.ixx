@@ -23,6 +23,7 @@ export namespace HAL
 
 		}
 
+	
 		template<class ...Args>
 		static IndirectCommand create_command(Device& device, UINT size, RootSignature* layout = nullptr)
 		{
@@ -42,6 +43,10 @@ export namespace HAL
 
 			return IndirectCommand(command_signature);
 		}
-
+	template<class ...Args>
+		static IndirectCommand create_command_layout(Device& device, UINT size, auto layout)
+		{
+			return create_command<Args...>(device, size, device.get_engine_pso_holder().GetSignature(layout).get());
+		}
 	};
 }

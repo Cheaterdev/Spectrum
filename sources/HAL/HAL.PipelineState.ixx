@@ -225,7 +225,7 @@ export namespace HAL
 
 
 
-	class PipelineStateCache : public Singleton<PipelineStateCache>
+	class PipelineStateCache
 	{
 		Cache<PipelineStateDesc, PipelineState::ptr> cache;
 		Cache<ComputePipelineStateDesc, ComputePipelineState::ptr> compute_cache;
@@ -233,12 +233,11 @@ export namespace HAL
 		std::mutex m;
 		std::map<std::string, std::string> binary_cache;
 
-		friend class Singleton<PipelineStateCache>;
-
-		virtual ~PipelineStateCache();
-
-		PipelineStateCache();
+		Device& device;
+	
 	public:
+		PipelineStateCache(Device& device);
+	virtual ~PipelineStateCache();
 
 		static PipelineState::ptr get_cache(PipelineStateDesc& desc, std::string name = "");
 		static ComputePipelineState::ptr get_cache(ComputePipelineStateDesc& desc, std::string name = "");

@@ -40,18 +40,20 @@ namespace HAL
 		FileSystem::get().save_data(L"pso", Serializer::serialize(binary_cache));
 	}
 
-	PipelineStateCache::PipelineStateCache() : cache([this](const PipelineStateDesc& desc)
+	PipelineStateCache::PipelineStateCache(Device& device) :device(device), cache([this](const PipelineStateDesc& desc)
 		{
-			std::lock_guard<std::mutex> g(m);
-
-			std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
-
+			std::string binary;
+			{
+				std::lock_guard<std::mutex> g(m);
+				binary = desc.name.empty() ? "" : binary_cache[desc.name];
+			}
 
 			//Log::get() << desc << Log::endl;
 			auto state = PipelineState::ptr(new PipelineState(desc, binary));
 
 			if (!desc.name.empty())
 			{
+				std::lock_guard<std::mutex> g(m);
 				binary_cache[desc.name] = state->get_cache();
 			}
 
@@ -59,16 +61,18 @@ namespace HAL
 
 		}), compute_cache([this](const ComputePipelineStateDesc& desc)
 			{
-				std::lock_guard<std::mutex> g(m);
-
-				std::string binary = desc.name.empty() ? "" : binary_cache[desc.name];
-
+				std::string binary;
+				{
+					std::lock_guard<std::mutex> g(m);
+					binary = desc.name.empty() ? "" : binary_cache[desc.name];
+				}
 
 				//Log::get() << desc << Log::endl;
 				auto state = ComputePipelineState::ptr(new ComputePipelineState(desc, binary));
 
 				if (!desc.name.empty())
 				{
+					std::lock_guard<std::mutex> g(m);
 					binary_cache[desc.name] = state->get_cache();
 				}
 
@@ -91,13 +95,13 @@ namespace HAL
 				desc.name = name;
 
 				//	 return  PipelineState::ptr(new PipelineState(desc));
-				return Singleton<PipelineStateCache>::get().cache[desc];
+				return desc.root_signature->get_device().get_pipeline_state_cache().cache[desc];
 			}
 
 			ComputePipelineState::ptr PipelineStateCache::get_cache(ComputePipelineStateDesc& desc, std::string name)
 			{
 				desc.name = name;
-				return Singleton<PipelineStateCache>::get().compute_cache[desc];
+				return desc.root_signature->get_device().get_pipeline_state_cache().compute_cache[desc];
 			}
 
 

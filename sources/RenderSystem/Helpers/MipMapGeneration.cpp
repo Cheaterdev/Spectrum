@@ -20,7 +20,7 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 	//return;
 	PROFILE(L"MipMapGenerator");
 
-	compute_context.set_signature(get_Signature(Layouts::DefaultLayout));
+	compute_context.set_signature(Layouts::DefaultLayout);
 	uint32_t maps = view.get_mip_count() - 1;
 	auto size = view.get_size();
 	uint32_t prev = 0;
@@ -35,10 +35,10 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 		uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
 
 
-		compute_context.set_pipeline(GetPSO<PSOS::MipMapping>(
+		compute_context.set_pipeline<PSOS::MipMapping>(
 			PSOS::MipMapping::NonPowerOfTwo(NonPowerOfTwo)
 			| PSOS::MipMapping::Gamma.Use(view.get_desc().as_texture().Format.is_srgb())
-			));
+			);
 
 		uint32_t AdditionalMips;
 		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
@@ -81,7 +81,7 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 
 void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL::Texture::ptr tex, HAL::Texture::ptr& to)
 {
-	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
+	compute_context.set_pipeline<PSOS::DownsampleDepth>();
 
 	Slots::DownsampleDepth data;
 	data.GetSrcTex() = tex->texture_2d().texture2D;
@@ -92,7 +92,7 @@ void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL
 }
 
 void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL::TextureView& tex, HAL::TextureView& to) {
-	compute_context.set_pipeline(GetPSO<PSOS::DownsampleDepth>());
+	compute_context.set_pipeline<PSOS::DownsampleDepth>();
 
 
 	Slots::DownsampleDepth data;
@@ -108,7 +108,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 {
 
 	PROFILE_GPU(L"generate_quality");
-	list.set_signature(get_Signature(Layouts::DefaultLayout));
+	list.set_signature(Layouts::DefaultLayout);
 
 	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 	list.set_viewport(tempColor.get_viewport());
@@ -121,7 +121,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 			buffer.SetTable(gbuffer);
 			gbuffer.set(list);
 		}
-		list.set_pipeline(GetPSO<PSOS::QualityColor>());
+		list.set_pipeline<PSOS::QualityColor>();
 		list.set_rtv(1, tempColor.renderTarget, HAL::Handle());
 		list.draw(4);
 	}
@@ -135,14 +135,14 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 		quality.set(list);
 
 		list.get_base().clear_stencil(buffer.quality.depthStencil);
-		list.set_pipeline(GetPSO<PSOS::QualityToStencil>());
+		list.set_pipeline<PSOS::QualityToStencil>();
 
 		list.set_rtv(0, HAL::Handle(), buffer.quality.depthStencil);
 
 		list.set_stencil_ref(1);
 		list.draw(4);
 
-		list.set_pipeline(GetPSO<PSOS::QualityToStencilREfl>());
+		list.set_pipeline<PSOS::QualityToStencilREfl>();
 		list.set_stencil_ref(2);
 		list.draw(4);
 	}
@@ -172,7 +172,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::TextureView from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info()->view);
-	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
+	list.set_pipeline<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format));
 
 
 	auto& view = to->texture_2d();
@@ -194,7 +194,7 @@ void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Text
 void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, HAL::TextureView to, HAL::TextureView from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to.renderTarget.get_resource_info()->view);
-	list.set_pipeline(GetPSO<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format)));
+	list.set_pipeline<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format));
 	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 	Slots::CopyTexture data;
@@ -209,7 +209,7 @@ void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, HAL::Te
 
 void MipMapGenerator::write_to_depth(HAL::GraphicsContext& list, HAL::TextureView from, HAL::TextureView to)
 {
-	list.set_pipeline(GetPSO<PSOS::RenderToDS>());
+	list.set_pipeline<PSOS::RenderToDS>();
 	Slots::CopyTexture data;
 	data.GetSrcTex() = from.texture2D;
 	data.set(list);

@@ -269,8 +269,8 @@ namespace HAL
 		}
 
 
-		TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&tracked_info->m_StateObject)));
-		TEST(HAL::Device::get(), tracked_info->m_StateObject.As(&stateObjectProperties));
+		TEST(desc.global_root->get_device(), desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&tracked_info->m_StateObject)));
+		TEST(desc.global_root->get_device(), tracked_info->m_StateObject.As(&stateObjectProperties));
 
 		event_change();
 
@@ -406,11 +406,11 @@ namespace HAL
 
 
 		auto cached = creator.get_desc();
-		HRESULT hr = (Device::get().get_native_device()->CreatePipelineState(&cached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+		HRESULT hr = (root_signature->get_device().get_native_device()->CreatePipelineState(&cached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 
 		if (hr != S_OK)
 		{
-			hr = (Device::get().get_native_device()->CreatePipelineState(&nonCached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+			hr = (root_signature->get_device().get_native_device()->CreatePipelineState(&nonCached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 		}
 
 
@@ -457,12 +457,12 @@ namespace HAL
 			//	assert(false);
 		}
 
-		HRESULT hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+		HRESULT hr = (root_signature->get_device().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 
 		if (hr != S_OK)
 		{
 			psoDesc.CachedPSO = {};
-			hr = (Device::get().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+			hr = (root_signature->get_device().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 		}
 
 

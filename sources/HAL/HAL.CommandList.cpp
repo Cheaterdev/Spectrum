@@ -928,7 +928,6 @@ namespace HAL
 		assert(false);//list->SetComputeRootDescriptorTable(i, table.get_gpu());
 	}
 
-
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
 	{
 		if (current_pipeline != pipeline)

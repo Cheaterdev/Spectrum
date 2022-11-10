@@ -80,8 +80,8 @@ public:
 
 					//graph.scene->init_ras();
 
-					command_list->get_graphics().set_signature(get_Signature(Layouts::DefaultLayout));
-					command_list->get_compute().set_signature(get_Signature(Layouts::DefaultLayout));
+					command_list->get_graphics().set_signature(Layouts::DefaultLayout);
+					command_list->get_compute().set_signature(Layouts::DefaultLayout);
 
 					MeshRenderContext::ptr context(new MeshRenderContext());
 					context->current_time = (size_t)time;

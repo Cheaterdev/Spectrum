@@ -4,6 +4,7 @@ import HAL;
 import :FrameManager;
 import :GPUTimer;
 import :HeapAllocators;
+import :PSO;
 
 namespace HAL
 {
@@ -12,8 +13,6 @@ namespace HAL
 		for (auto&& q : queues)
 			q = nullptr;
 
-
-		HAL::PipelineStateCache::reset();
 	}
 
 	Device::~Device()
@@ -33,7 +32,7 @@ namespace HAL
 		return queues[type];
 	}
 
-	 std::shared_ptr<Device> Device::create_singleton()
+	std::shared_ptr<Device> Device::create_singleton()
 	{
 		HAL::init();
 
@@ -48,7 +47,7 @@ namespace HAL
 				desc.adapter = adapter;
 				auto device = std::make_shared<Device>(desc);
 
-				const auto &props = device->get_properties();
+				const auto& props = device->get_properties();
 
 
 				if (props.mesh_shader && props.full_bindless)
@@ -57,6 +56,8 @@ namespace HAL
 					result = device;
 				}
 			});
+
+		result->init_managers();
 		return result;
 	}
 
@@ -64,6 +65,11 @@ namespace HAL
 	{
 		init(desc);
 
+		
+	}
+
+	void Device::init_managers()
+	{
 		queues[CommandListType::DIRECT].reset(new HAL::Queue(CommandListType::DIRECT, this));
 		queues[CommandListType::COMPUTE].reset(new HAL::Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new HAL::Queue(CommandListType::COPY, this));
@@ -77,10 +83,12 @@ namespace HAL
 		static_gpu_data = std::make_unique<StaticCompiledGPUData>(*this);
 		descriptor_heap_manager = std::make_unique<DescriptorHeapManager>(*this);
 		resource_heap_manager = std::make_unique<ResourceHeapPageManager>(*this);
+		pipeline_state_cache = std::make_unique<PipelineStateCache>(*this);
 
+		engine_pso_holder = std::make_unique<EnginePSOHolder>();
+
+		engine_pso_holder->init(*this);
 	}
-
-
 	FrameResourceManager& Device::get_frame_manager()
 	{
 		return *frame_manager;
@@ -104,5 +112,11 @@ namespace HAL
 	}
 	ResourceHeapPageManager& Device::get_resource_heap_manager() {
 		return *resource_heap_manager;
+	}
+	PipelineStateCache& Device::get_pipeline_state_cache() {
+		return *pipeline_state_cache;
+	}
+	EnginePSOHolder& Device::get_engine_pso_holder() {
+		return *engine_pso_holder;
 	}
 }

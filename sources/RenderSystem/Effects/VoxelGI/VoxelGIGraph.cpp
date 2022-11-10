@@ -40,14 +40,14 @@ public:
 				auto gbuffer = data.gbuffer.actualize(_context);
 				auto& graphics = command_list->get_graphics();
 
-				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+				graphics.set_signature(Layouts::DefaultLayout);
 
 				graph.set_slot(SlotID::FrameInfo, graphics);
 
 				graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 
-				graphics.set_pipeline(GetPSO<PSOS::GBufferDownsample>());
+				graphics.set_pipeline<PSOS::GBufferDownsample>();
 
 				for (uint i = 1; i < gbuffer.depth_mips.resource->get_desc().as_texture().MipLevels; i++)
 				{
@@ -290,7 +290,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 		PROFILE_GPU(L"copy");
 
 		albedo_tiles->update(context->list);
-		compute.set_pipeline(GetPSO<PSOS::VoxelCopy>());
+		compute.set_pipeline<PSOS::VoxelCopy>();
 		//scene->voxels_compiled.set(compute);
 		graph.set_slot(SlotID::VoxelInfo, compute);
 		{
@@ -431,7 +431,7 @@ void VoxelGI::debug(Graph& graph)
 			graphics.set_scissor(target_tex.get_scissor());
 
 			graphics.set_rtv(1, target_tex.renderTarget, HAL::Handle());
-			graphics.set_pipeline(GetPSO<PSOS::VoxelDebug>());
+			graphics.set_pipeline<PSOS::VoxelDebug>();
 
 			graph.set_slot(SlotID::VoxelInfo, graphics);
 			graph.set_slot(SlotID::FrameInfo, graphics);
@@ -537,7 +537,7 @@ void VoxelGI::screen(Graph& graph)
 
 				command_list->get_compute().set_signature(RTX::get().rtx.m_root_sig);
 			else
-				compute.set_signature(get_Signature(Layouts::DefaultLayout));
+				compute.set_signature(Layouts::DefaultLayout);
 
 
 
@@ -579,12 +579,12 @@ void VoxelGI::screen(Graph& graph)
 			else
 			{
 				PROFILE_GPU(L"noise");
-				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectLow>());
+				compute.set_pipeline<PSOS::VoxelIndirectLow>();
 				compute.dispach(size);
 			}
 
 
-			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+			compute.set_signature(Layouts::DefaultLayout);
 			{
 				PROFILE_GPU(L"classification");
 
@@ -601,7 +601,7 @@ void VoxelGI::screen(Graph& graph)
 					frame_classification.set(compute);
 				}
 
-				compute.set_pipeline(GetPSO<PSOS::FrameClassification>());
+				compute.set_pipeline<PSOS::FrameClassification>();
 				//compute.dispach(uint2( Math::DivideByMultiple(size.x, 32) , Math::DivideByMultiple(size.y, 32)));
 
 				uint2 tiles_count = uint2(Math::DivideByMultiple(size.x, 32), Math::DivideByMultiple(size.y, 32));
@@ -620,7 +620,7 @@ void VoxelGI::screen(Graph& graph)
 
 					frame_classification_init.set(compute);
 				}
-				compute.set_pipeline(GetPSO<PSOS::FrameClassificationInitDispatch>());
+				compute.set_pipeline<PSOS::FrameClassificationInitDispatch>();
 				compute.dispach(1, 1, 1);
 			}
 
@@ -632,7 +632,7 @@ void VoxelGI::screen(Graph& graph)
 			if (denoiser)
 			{
 				PROFILE_GPU(L"history");
-				compute.set_pipeline(GetPSO<PSOS::DenoiserHistoryFix>());
+				compute.set_pipeline<PSOS::DenoiserHistoryFix>();
 				{
 					Slots::DenoiserHistoryFix denoiser_history;
 					HAL::TextureViewDesc subres;
@@ -711,7 +711,7 @@ void VoxelGI::screen(Graph& graph)
 			auto& compute = command_list->get_compute();
 
 			//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+			compute.set_signature(Layouts::DefaultLayout);
 
 			graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
 
@@ -749,7 +749,7 @@ void VoxelGI::screen(Graph& graph)
 
 			{
 				PROFILE_GPU(L"blur");
-				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Blur()));
+				compute.set_pipeline<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Blur());
 
 				{
 					Slots::TilingPostprocess tilingPostprocess;
@@ -763,7 +763,7 @@ void VoxelGI::screen(Graph& graph)
 
 			{
 				PROFILE_GPU(L"blur2");
-				compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>());
+				compute.set_pipeline<PSOS::VoxelIndirectFilter>();
 
 				{
 					Slots::TilingPostprocess tilingPostprocess;
@@ -857,7 +857,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+			graphics.set_signature(Layouts::DefaultLayout);
 
 			{
 
@@ -911,7 +911,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 				PROFILE_GPU(L"full");
 				graphics.set_stencil_ref(2);
-				graphics.set_pipeline(GetPSO<PSOS::VoxelReflectionHi>());
+				graphics.set_pipeline<PSOS::VoxelReflectionHi>();
 				graphics.draw(4);
 			}
 
@@ -971,7 +971,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 				auto& compute = command_list->get_compute();
 
 				//	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-				compute.set_signature(get_Signature(Layouts::DefaultLayout));
+				compute.set_signature(Layouts::DefaultLayout);
 
 
 				{
@@ -1005,7 +1005,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 				}
 				{
 					PROFILE_GPU(L"blur");
-					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(/*PSOS::VoxelIndirectFilter::Blur() |*/ PSOS::VoxelIndirectFilter::Reflection()));
+					compute.set_pipeline<PSOS::VoxelIndirectFilter>(/*PSOS::VoxelIndirectFilter::Blur() |*/ PSOS::VoxelIndirectFilter::Reflection());
 
 
 					{
@@ -1021,7 +1021,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 				{
 					PROFILE_GPU(L"blur2");
-					compute.set_pipeline(GetPSO<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Reflection()));
+					compute.set_pipeline<PSOS::VoxelIndirectFilter>(PSOS::VoxelIndirectFilter::Reflection());
 
 					{
 						Slots::TilingPostprocess tilingPostprocess;
@@ -1127,7 +1127,7 @@ void VoxelGI::lighting(Graph& graph)
 			auto& list = *context->list;
 			auto& compute = context->list->get_compute();
 
-			compute.set_pipeline(GetPSO<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use((all_scene_regen_counter == 0) && multiple_bounces)));
+			compute.set_pipeline<PSOS::Lighting>(PSOS::Lighting::SecondBounce.Use((all_scene_regen_counter == 0) && multiple_bounces));
 
 			Slots::VoxelLighting ligthing;
 			{
@@ -1213,14 +1213,14 @@ void VoxelGI::mipmapping(Graph& graph)
 
 
 
-			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+			compute.set_signature(Layouts::DefaultLayout);
 
 
 			//graph.scene->voxels_compiled.set(compute);
 			graph.set_slot(SlotID::VoxelInfo, compute);
 
 
-			compute.set_pipeline(GetPSO<PSOS::VoxelZero>());
+			compute.set_pipeline<PSOS::VoxelZero>();
 			{
 				PROFILE_GPU(L"ZERO");
 				for (uint i = 1; i < tex_lighting.tex_result->get_desc().as_texture().MipLevels; i++)
@@ -1259,7 +1259,7 @@ void VoxelGI::mipmapping(Graph& graph)
 
 					if (!gpu_tiles_buffer[mip_count]) break;
 					unsigned int current_mips = std::min(3u, tex_lighting.tex_result->get_desc().as_texture().MipLevels - mip_count);
-					compute.set_pipeline(GetPSO<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(current_mips)));
+					compute.set_pipeline<PSOS::VoxelDownsample>(PSOS::VoxelDownsample::Count(current_mips));
 
 					{
 

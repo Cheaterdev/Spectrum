@@ -108,7 +108,7 @@ export{
 		vec3 sky_dir;
 		MeshRenderContext()
 		{
-			pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
+			pipeline.root_signature = HAL::Device::get().get_engine_pso_holder().GetSignature(Layouts::DefaultLayout);
 		}
 		void begin()
 		{

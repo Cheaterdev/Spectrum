@@ -179,6 +179,8 @@ export namespace HAL
 
 	class RootSignature: public API::RootSignature
 	{
+	protected:
+		HAL::Device& device;
 		RootSignatureDesc desc;
 	public:
 		using ptr = std::shared_ptr<RootSignature>;
@@ -188,6 +190,11 @@ export namespace HAL
 		{
 			return desc;
 		}
+
+		Device& get_device()
+		{
+			return device;
+		}
 	};
 
 
@@ -196,7 +203,7 @@ export namespace HAL
 
 	class RootLayout :public RootSignature
 	{
-		HAL::Device& device;
+		
 
 		template<class T>
 		void process_one_sig(RootSignatureDesc& desc) const
@@ -208,7 +215,7 @@ export namespace HAL
 	public:
 		using ptr = std::shared_ptr<RootLayout>;
 		const Layouts layout;
-		RootLayout(HAL::Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(device, desc), device(device), layout(layout)
+		RootLayout(HAL::Device& device, const RootSignatureDesc& desc, Layouts layout) :RootSignature(device, desc), layout(layout)
 		{
 		}
 

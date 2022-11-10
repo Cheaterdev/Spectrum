@@ -20,7 +20,7 @@ void BRDF::create_new()
 
 	HAL::ComputeContext& compute_context = list->get_compute();
 
-	compute_context.set_pipeline(GetPSO<PSOS::BRDF>());
+	compute_context.set_pipeline<PSOS::BRDF>();
 
 	{
 		Slots::BRDF data;

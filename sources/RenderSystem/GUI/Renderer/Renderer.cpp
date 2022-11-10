@@ -100,7 +100,7 @@ namespace GUI
         color_data.set(info.command_list->get_graphics());
 
         info.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-        info.command_list->get_graphics().set_pipeline(GetPSO<PSOS::SimpleRect>());
+        info.command_list->get_graphics().set_pipeline<PSOS::SimpleRect>();
         info.command_list->get_graphics().draw(4);
 
     }

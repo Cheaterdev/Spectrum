@@ -20,7 +20,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	HAL::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
 	default_pipeline.topology = HAL::PrimitiveTopologyType::TRIANGLE;
-	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
+	default_pipeline.root_signature = HAL::Device::get().get_engine_pso_holder().GetSignature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
 	default_pipeline.rasterizer.fill_mode = FillMode::Solid;
 	default_pipeline.rasterizer.cull_mode = CullMode::None;
@@ -135,7 +135,7 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 	auto& list = *mesh_render_context->list;
 
 	{
-		compute.set_pipeline(GetPSO<PSOS::InitDispatch>());
+		compute.set_pipeline<PSOS::InitDispatch>();
 
 		init_dispatch_compiled.set(compute);
 		from.set(compute);
@@ -175,7 +175,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 
 	{
 
-		compute.set_pipeline(GetPSO<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo)));
+		compute.set_pipeline<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo));
 		scene->compiledGather[(int)mesh_render_context->render_mesh].set(compute);
 		gather_neshes_boxes_compiled.set(compute);
 
@@ -216,7 +216,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 		commands_boxes->buffer->clear_counter(mesh_render_context->list);
 		meshes_ids->buffer->clear_counter(mesh_render_context->list);
 
-		compute.set_pipeline(GetPSO<PSOS::GatherBoxes>());
+		compute.set_pipeline<PSOS::GatherBoxes>();
 		gather_boxes_compiled.set(compute);
 		gatherData.set(compute);
 
@@ -254,7 +254,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	gbuffer->HalfBuffer.hiZ_table.set(graphics);
 	gbuffer->HalfBuffer.hiZ_table.set_window(graphics);
 
-	graphics.set_pipeline(GetPSO<PSOS::RenderBoxes>());
+	graphics.set_pipeline<PSOS::RenderBoxes>();
 	graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
@@ -321,7 +321,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		{
 			PROFILE_GPU(L"GatherMats");
 
-			compute.set_pipeline(GetPSO<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling)));
+			compute.set_pipeline<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling));
 			gatherData.set(compute);
 			gather.set(compute);
 
@@ -399,7 +399,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = HAL::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout).get());
+	indirect_command_signature = HAL::IndirectCommand::create_command_layout<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>), Layouts::DefaultLayout);
 
 	UINT max_meshes = 1024 * 1024;
 

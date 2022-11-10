@@ -8,12 +8,12 @@ using SimplePSO = SimpleComputePSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
 PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {return psos[key.GetKey()];}; \
-name() \
+name(HAL::Device&device) \
 { \
 	PSOBase::shuffle_pairs<name>([&](Keys& key) \
 		{ \
 			auto pso = init_pso(key); \
-			psos[key] = pso.create(); \
+			psos[key] = pso.create(device); \
 		} , ## __VA_ARGS__); \
 }
 
@@ -24,12 +24,12 @@ using SimplePSO = SimpleGraphicsPSO; \
 static const PSO ID = PSO::name;\
 std::map<Keys, PSOState::ptr> psos = {}; \
 PSOState::ptr GetPSO(KeyPair<Keys> key = KeyPair<Keys>()) {return psos[key.GetKey()];}; \
-name() \
+name(HAL::Device&device) \
 { \
 	PSOBase::shuffle_pairs<name>([&](Keys& key)\
 		{\
 			auto pso = init_pso(key);\
-			psos[key] = pso.create();\
+			psos[key] = pso.create(device);\
 		} , ## __VA_ARGS__);\
 }
 

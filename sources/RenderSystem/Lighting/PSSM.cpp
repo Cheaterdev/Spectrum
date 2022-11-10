@@ -84,8 +84,8 @@ void PSSM::generate(Graph& graph)
 
 
 
-			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
-			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+			graphics.set_signature(Layouts::DefaultLayout);
+			compute.set_signature(Layouts::DefaultLayout);
 
 
 			std::vector<sizer_long> scissor;
@@ -201,8 +201,8 @@ void PSSM::generate(Graph& graph)
 
 				auto& sceneinfo = graph.get_context<SceneInfo>();
 
-				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
-				compute.set_signature(get_Signature(Layouts::DefaultLayout));
+				graphics.set_signature(Layouts::DefaultLayout);
+				compute.set_signature(Layouts::DefaultLayout);
 
 
 				std::vector<sizer_long> scissor;
@@ -306,8 +306,8 @@ void PSSM::generate(Graph& graph)
 			auto& compute = list.get_compute();
 
 			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
-			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
-			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+			graphics.set_signature(Layouts::DefaultLayout);
+			compute.set_signature(Layouts::DefaultLayout);
 
 			graph.set_slot(SlotID::FrameInfo, graphics);
 			graph.set_slot(SlotID::FrameInfo, compute);
@@ -329,7 +329,7 @@ void PSSM::generate(Graph& graph)
 			graphics.set_scissor(data.LightMask->get_scissor());
 
 			graphics.set_rtv(1, data.LightMask->renderTarget, HAL::Handle());
-			graphics.set_pipeline(GetPSO<PSOS::PSSMMask>());
+			graphics.set_pipeline<PSOS::PSSMMask>();
 
 
 			{
@@ -383,8 +383,8 @@ void PSSM::generate(Graph& graph)
 			auto& compute = list.get_compute();
 
 			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
-			graphics.set_signature(get_Signature(Layouts::DefaultLayout));
-			compute.set_signature(get_Signature(Layouts::DefaultLayout));
+			graphics.set_signature(Layouts::DefaultLayout);
+			compute.set_signature(Layouts::DefaultLayout);
 
 			graph.set_slot(SlotID::FrameInfo, graphics);
 			graph.set_slot(SlotID::FrameInfo, compute);
@@ -422,7 +422,7 @@ void PSSM::generate(Graph& graph)
 			}
 
 			graphics.set_rtv(1, data.ResultTexture->renderTarget, HAL::Handle());
-			graphics.set_pipeline(GetPSO<PSOS::PSSMApply>());
+			graphics.set_pipeline<PSOS::PSSMApply>();
 
 			graphics.draw(4);
 

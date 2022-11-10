@@ -1,21 +1,22 @@
 import HAL;
 import Core;
 
+void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>&);
+void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>&);
 
-void init_pso(enum_array<PSO, PSOBase::ptr>&);
-HAL::ComputePipelineState::ptr SimpleComputePSO::create()
+HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 {
 	HAL::ComputePipelineStateDesc desc;
-	desc.root_signature = get_Signature(root_signature);
+	desc.root_signature = device.get_engine_pso_holder().GetSignature(root_signature);
 	desc.shader = HAL::compute_shader::get_resource(compute);
 
 	return HAL::ComputePipelineState::create(desc, name);
 }
 
-HAL::PipelineState::ptr SimpleGraphicsPSO::create()
+HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 {
 	HAL::PipelineStateDesc desc;
-	desc.root_signature = get_Signature(root_signature);
+	desc.root_signature = device.get_engine_pso_holder().GetSignature(root_signature);
 	if (!vertex.entry_point.empty())	desc.vertex = HAL::vertex_shader::get_resource(vertex);
 	if (!pixel.entry_point.empty())	desc.pixel = HAL::pixel_shader::get_resource(pixel);
 
@@ -49,8 +50,9 @@ HAL::PipelineState::ptr SimpleGraphicsPSO::create()
 	return HAL::PipelineState::create(desc, name);
 }
 
-PSOHolder::PSOHolder()
+void EnginePSOHolder::init(HAL::Device&device)
 {
 	ScopedCounter counter("pso init");
-	init_pso(psos);
+	init_signatures(device, signatures);
+	init_pso(device,psos);
 }

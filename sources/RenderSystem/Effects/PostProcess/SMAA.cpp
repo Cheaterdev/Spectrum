@@ -44,7 +44,7 @@ void SMAA::generate(Graph& graph)
 
 			ivec2 size = frame.frame_size;
 
-			graphics.set_pipeline(GetPSO<PSOS::EdgeDetect>());
+			graphics.set_pipeline<PSOS::EdgeDetect>();
 
 			graphics.set_viewport(data.SMAA_edges->get_viewport());
 			graphics.set_scissor(data.SMAA_edges->get_scissor());
@@ -74,7 +74,7 @@ void SMAA::generate(Graph& graph)
 
 				slot_edges.set(graphics);
 			}
-			graphics.set_pipeline(GetPSO<PSOS::BlendWeight>());
+			graphics.set_pipeline<PSOS::BlendWeight>();
 			graphics.set_rtv(1, data.SMAA_blend->renderTarget, HAL::Handle());
 			graphics.draw(4);
 
@@ -89,7 +89,7 @@ void SMAA::generate(Graph& graph)
 				slot_blend.set(graphics);
 			}
 
-			graphics.set_pipeline(GetPSO<PSOS::Blending>());
+			graphics.set_pipeline<PSOS::Blending>();
 			graphics.set_rtv(1, data.ResultTextureNew->renderTarget, HAL::Handle());
 			graphics.draw(4);
 

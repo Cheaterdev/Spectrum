@@ -29,7 +29,7 @@ namespace FW1FontWrapper
     void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(HAL::CommandList::ptr& list, UINT Flags)
     {
 
-        list->get_graphics().set_pipeline(GetPSO<PSOS::FontRender>());
+        list->get_graphics().set_pipeline<PSOS::FontRender>();
         list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT, HAL::PrimitiveTopologyFeed::LIST);
     }
 

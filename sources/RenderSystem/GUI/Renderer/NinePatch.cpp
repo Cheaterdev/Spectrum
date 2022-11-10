@@ -49,7 +49,7 @@ namespace GUI
 				//	c.command_list->use_resource(item.texture.get());
 			}
 
-		if (!added && current_state == GetPSO<PSOS::NinePatch>())
+		if (!added && current_state == HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::NinePatch>())
 		{
 			return;
 		}
@@ -299,7 +299,7 @@ namespace GUI
 
 	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r)
 	{
-		draw(c, item, r, GetPSO<PSOS::NinePatch>());
+		draw(c, item, r, HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::NinePatch>());
 	}
 
 	void NinePatch::draw(base::Context& c, HAL::PipelineState::ptr pipeline_state, rect r)

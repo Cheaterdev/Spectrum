@@ -38,7 +38,7 @@ void FSR::generate(Graph& graph)
 			auto& frame = graph.get_context<ViewportInfo>();
 			{
 
-				compute.set_pipeline(GetPSO<PSOS::FSR>());
+				compute.set_pipeline<PSOS::FSR>();
 				{
 					Slots::FSR fsr;
 					auto& constants = fsr.GetConstants();
@@ -55,7 +55,7 @@ void FSR::generate(Graph& graph)
 
 			{
 
-				compute.set_pipeline(GetPSO<PSOS::RCAS>(PSOS::RCAS::cas()));
+				compute.set_pipeline<PSOS::RCAS>(PSOS::RCAS::cas());
 				{
 					Slots::FSR fsr;
 					auto& constants = fsr.GetConstants();

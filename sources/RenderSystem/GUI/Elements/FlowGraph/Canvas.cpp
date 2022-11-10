@@ -24,7 +24,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& context)
 	graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
 	graph_data.set(c.command_list->get_graphics());
 
-	renderer->draw(context, GetPSO<PSOS::CanvasBack>(), get_render_bounds());
+	renderer->draw(context, HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::CanvasBack>(), get_render_bounds());
 
 
 	if (linking.size())
@@ -52,7 +52,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& context)
 			count++;
 		}
 
-		c.command_list->get_graphics().set_pipeline(GetPSO<PSOS::CanvasLines>());
+		c.command_list->get_graphics().set_pipeline<PSOS::CanvasLines>();
 		c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::PATCH, HAL::PrimitiveTopologyFeed::LIST, false, 4);
 
 		auto data = c.command_list->place_data(sizeof(Table::VSLine) * vertexes.size(), sizeof(Table::VSLine));

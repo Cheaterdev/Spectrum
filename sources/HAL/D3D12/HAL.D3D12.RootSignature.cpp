@@ -51,7 +51,7 @@ namespace HAL
 
 	}
 
-	RootSignature::RootSignature(Device& device, const RootSignatureDesc& desc)
+	RootSignature::RootSignature(Device& device, const RootSignatureDesc& desc):device(device)
 	{
 		std::vector<CD3DX12_ROOT_PARAMETER1> parameters;
 		std::list<CD3DX12_DESCRIPTOR_RANGE1> ranges;

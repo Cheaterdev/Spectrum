@@ -162,7 +162,7 @@ public:
 		//cam.position = vec3(0, 5, -30);
 
 		cam.position = vec3(0, 0, 0);
-		HAL::PipelineStateCache::create();
+
 		stenciler.reset(new stencil_renderer());
 		stenciler->player_cam = &cam;
 		stenciler->scene = scene;
@@ -491,8 +491,8 @@ public:
 
 					context->cam = &eyes[0]->cam;
 
-					command_list->get_graphics().set_signature(get_Signature(Layouts::DefaultLayout));
-					command_list->get_compute().set_signature(get_Signature(Layouts::DefaultLayout));
+					command_list->get_graphics().set_signature(Layouts::DefaultLayout);
+					command_list->get_compute().set_signature(Layouts::DefaultLayout);
 
 
 					//				gpu_meshes_renderer_static->update(context);
@@ -1214,8 +1214,8 @@ protected:
 		HAL::Device::create();
 
 		EVENT("PSO");
-		init_signatures();
-		PSOHolder::create();
+
+
 		if (Device::get().is_rtx_supported())
 			RTX::create();
 

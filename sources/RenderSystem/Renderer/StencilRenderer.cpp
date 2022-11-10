@@ -412,7 +412,7 @@ void stencil_renderer::generate(Graph& graph)
 						}
 					};
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-					graphics.set_pipeline(GetPSO<PSOS::DrawStencil>());
+					graphics.set_pipeline<PSOS::DrawStencil>();
 					scene->compiledScene.set(graphics);
 
 					list.clear_uav(data.id_buffer->get_uav_clear());
@@ -564,7 +564,7 @@ void stencil_renderer::generate_after(Graph& graph)
 				auto& list = *_context.get_list();
 				auto& graphics = list.get_graphics();
 
-				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+				graphics.set_signature(Layouts::DefaultLayout);
 
 				scene->compiledScene.set(graphics);
 
@@ -572,7 +572,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					graphics.set_rtv(1, data.Stencil_color_tex->renderTarget, Handle());
 					//		data.Stencil_color_tex->renderTarget.clear(list);
 					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0, 0, 0, 0));
-					graphics.set_pipeline(GetPSO<PSOS::DrawSelected>());
+					graphics.set_pipeline<PSOS::DrawSelected>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					graphics.set_viewports({ data.Stencil_color_tex->get_viewport() });
 					graphics.set_scissors(data.Stencil_color_tex->get_scissor());
@@ -604,7 +604,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 				// apply color mask
 				{
-					graphics.set_pipeline(GetPSO<PSOS::StencilerLast>());
+					graphics.set_pipeline<PSOS::StencilerLast>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 					{
@@ -626,7 +626,7 @@ void stencil_renderer::generate_after(Graph& graph)
 				graphics.set_rtv(1, data.ResultTexture->renderTarget, Handle());
 
 				if (draw_aabb) {
-					graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
+					graphics.set_pipeline<PSOS::DrawBox>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 					{
@@ -661,7 +661,7 @@ void stencil_renderer::generate_after(Graph& graph)
 						camera = axis_cam.camera_cb.current;
 						frameInfo.set(graphics);
 					}
-					graphics.set_pipeline(GetPSO<PSOS::DrawAxis>());
+					graphics.set_pipeline<PSOS::DrawAxis>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					int i = 0;
 

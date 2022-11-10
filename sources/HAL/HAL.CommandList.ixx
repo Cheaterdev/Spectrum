@@ -14,6 +14,9 @@ import :API.IndirectCommand;
 import :API.CommandList;
 import :QueryHeap;
 
+import :PSO;
+
+//import :Autogen;
 export{
 
 	namespace HAL
@@ -603,10 +606,22 @@ export{
 				on_set_signature(signature);
 			}
 
+			template<Enum T>
+			void set_signature(T layout)
+			{
+				set_signature(HAL::Device::get().get_engine_pso_holder().GetSignature(layout));
+			}
+
+
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
 			void set_pipeline(std::shared_ptr<PipelineStateBase> pipeline);
 
+			template<class T>
+			void set_pipeline(KeyPair<typename T::Keys> k = KeyPair<typename T::Keys>())
+			{
+				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
+			}
 			template<HandleType type>
 			void set_table(UINT index, const HandleTableLight& table)
 			{
@@ -681,9 +696,6 @@ export{
 
 
 			void on_set_signature(const RootSignature::ptr&) override;
-			//	void set_pipeline(std::shared_ptr<PipelineState>);
-
-
 
 
 			void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
@@ -799,7 +811,6 @@ export{
 
 
 			void on_set_signature(const RootSignature::ptr&) override;
-			//	void set_pipeline(std::shared_ptr<ComputePipelineState>);
 
 
 			void dispach(int = 1, int = 1, int = 1);

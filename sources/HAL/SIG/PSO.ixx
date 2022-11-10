@@ -218,7 +218,7 @@ struct SimpleComputePSO {
 
 	}
 
-	HAL::ComputePipelineState::ptr create();
+	HAL::ComputePipelineState::ptr create(HAL::Device& device);
 };
 
 
@@ -265,7 +265,7 @@ struct  SimpleGraphicsPSO {
 		stencil_pass_op = HAL::StencilOp::Replace;
 	}
 
-	HAL::PipelineState::ptr create();
+	HAL::PipelineState::ptr create(HAL::Device& device);
 };
 
 
@@ -351,23 +351,23 @@ protected:
 
 public:
 	template <class T>
-	static auto create(ptr& target)
+	static auto create(HAL::Device&device, ptr& target)
 	{
 		return create_task([&]()
 		{
 				PROFILE(convert(typeid(T).name()));
-				target = std::make_shared<T>();
+				target = std::make_shared<T>(device);
 		});
 	}
 };
 
-class PSOHolder : public Singleton<PSOHolder>
+class EnginePSOHolder
 {
 	using ptr = std::shared_ptr<PSOBase>;
 	enum_array<PSO, ptr> psos;
-
+	enum_array<Layouts, HAL::RootLayout::ptr> signatures;
 public:
-	PSOHolder();
+	void init(HAL::Device&device);
 
 	template<class T>
 	typename T::PSOState::ptr GetPSO(KeyPair<typename T::Keys> k = KeyPair<typename T::Keys>())
@@ -375,14 +375,13 @@ public:
 		auto pso = static_cast<T*>(psos[T::ID].get());
 		return pso->GetPSO(k);
 	}
+	HAL::RootLayout::ptr GetSignature(Layouts l)
+	{
+		return signatures[l];
+	}
 };
 
 
-template<class T>
-typename T::PSOState::ptr GetPSO(KeyPair<typename T::Keys> k = KeyPair<typename T::Keys>())
-{
-	return PSOHolder::get().GetPSO<T>(k);
-}
 template<class T>
 struct AutoGenPSO
 {

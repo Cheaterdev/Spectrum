@@ -2,7 +2,7 @@ export module HAL:Device;
 
 import Core;
 import :API.Device;
-
+export class EnginePSOHolder;
 export namespace HAL
 {
 	class FrameResourceManager;
@@ -11,8 +11,10 @@ class HeapFactory;
 class StaticCompiledGPUData;
 class DescriptorHeapManager;
 class ResourceHeapPageManager;
-
+class PipelineStateCache;
 	class Queue;
+
+
 		class Device : public Singleton<Device>, public API::Device
 		{
 			friend class API::Device;
@@ -32,6 +34,8 @@ class ResourceHeapPageManager;
 			std::unique_ptr<StaticCompiledGPUData> static_gpu_data;
 			std::unique_ptr<DescriptorHeapManager> descriptor_heap_manager;
 			std::unique_ptr<ResourceHeapPageManager> resource_heap_manager;
+		std::unique_ptr<PipelineStateCache> pipeline_state_cache;
+		std::unique_ptr<EnginePSOHolder> engine_pso_holder;
 
 		public:
 			Device(HAL::DeviceDesc desc);
@@ -39,6 +43,8 @@ class ResourceHeapPageManager;
 
 			static std::shared_ptr<Device> create_singleton();
 
+
+			void init_managers();
 			void stop_all();
 		
 			const HAL::DeviceProperties& get_properties() const { return properties;}
@@ -57,7 +63,8 @@ class ResourceHeapPageManager;
 			StaticCompiledGPUData& get_static_gpu_data();
 			DescriptorHeapManager& get_descriptor_heap_manager();
 			ResourceHeapPageManager& get_resource_heap_manager();
-
+			PipelineStateCache& get_pipeline_state_cache();
+			EnginePSOHolder& get_engine_pso_holder();
 		};
 
 	
