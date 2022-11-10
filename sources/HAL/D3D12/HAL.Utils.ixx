@@ -204,6 +204,20 @@ export D3D12_HEAP_TYPE to_native(HeapType type)
 	return natives[static_cast<uint>(type)];
 }
 
+export HeapType from_native(D3D12_HEAP_TYPE type)
+{
+	static constexpr HeapType natives[] =
+	{
+		HeapType::DEFAULT, //unused
+		HeapType::DEFAULT,
+		HeapType::UPLOAD,
+		HeapType::READBACK,
+		HeapType::RESERVED
+	};
+
+	return natives[static_cast<uint>(type)];
+}
+
 export D3D12_HEAP_FLAGS to_native(HeapFlags flags)
 {
 	static constexpr D3D12_HEAP_FLAGS  natives[] =

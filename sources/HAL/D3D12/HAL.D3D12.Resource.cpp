@@ -52,7 +52,9 @@ namespace HAL
 
 		THIS->desc = _desc;
 		CD3DX12_RESOURCE_DESC resourceDesc = to_native(THIS->desc);
+		D3D12_CLEAR_VALUE value;
 
+		D3D12_CLEAR_VALUE *pass_value=nullptr;
 
 		if (THIS->desc.is_texture())
 		{
@@ -63,13 +65,33 @@ namespace HAL
 				|| (texture_desc.is3D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE3D)
 			);
 
+			if (check(THIS->desc.Flags & HAL::ResFlags::RenderTarget))
+			{
+				value.Format = to_native(texture_desc.Format.to_srv());
+				value.Color[0] = 0;
+				value.Color[1] = 0;
+				value.Color[2] = 0;
+				value.Color[3] = 0;
+				pass_value = &value;
+			}
+		
+			if (check(THIS->desc.Flags & HAL::ResFlags::DepthStencil))
+			{
+				value.Format = to_native(texture_desc.Format.to_dsv());
+				value.DepthStencil.Depth = 1.0f;
+				value.DepthStencil.Stencil = 0;
+				pass_value = &value;
+			}
+
 			if (!texture_desc.Format.is_shader_visible())
 			{
 				THIS->desc.Flags &= (~HAL::ResFlags::ShaderResource);
 			}
 
+
 		}
 
+		
 		if (address.heap)
 		{
 			TEST(device, device.native_device->CreatePlacedResource(
@@ -77,7 +99,7 @@ namespace HAL
 				address.offset,
 				&resourceDesc,
 				static_cast<D3D12_RESOURCE_STATES>(initialState),
-				nullptr,
+				pass_value,
 				IID_PPV_ARGS(&native_resource)));
 		}
 		else
@@ -91,13 +113,15 @@ namespace HAL
 			TEST(device, device.native_device->CreateReservedResource(
 				&resourceDesc,
 				static_cast<D3D12_RESOURCE_STATES>(initialState),
-				nullptr,
-				//	(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
+				pass_value,
 				IID_PPV_ARGS(&native_resource)));
 		}
 
 		THIS->desc = extract(native_resource);
-		this->address = GPUAddressPtr(native_resource->GetGPUVirtualAddress());
+		if (THIS->desc.is_buffer())
+			this->address = GPUAddressPtr(native_resource->GetGPUVirtualAddress());
+		else
+			this->address = 0;
 
 	}
 	void Resource::init(D3D::Resource  resource)
@@ -377,7 +401,7 @@ namespace HAL
 		D3D12_HEAP_FLAGS  HeapFlags;
 		get_dx()->GetHeapProperties(&HeapProperties, &HeapFlags);
 
-		heap_type = (HeapType)HeapProperties.Type;
+		heap_type = from_native(HeapProperties.Type);
 
 		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 
@@ -392,6 +416,8 @@ namespace HAL
 	void Resource::set_name(std::string name)
 	{
 		this->name = name;
+		get_dx()->SetName(convert(name).c_str());
+
 	}
 
 	Resource::~Resource()

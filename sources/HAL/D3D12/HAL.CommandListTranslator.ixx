@@ -1,11 +1,7 @@
-module;
-
-
-import d3d12;
-#include <pix3.h>
-
 export module HAL:Private.CommandListTranslator;
-import Core;
+import Core; 
+import d3d12;
+
 import :API.Device;
 import :Private.CommandListCompiler;
 

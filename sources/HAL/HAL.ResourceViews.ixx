@@ -166,7 +166,11 @@ export
 				{
 					view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
 				}
+
 				HAL::HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(3);
+
+				PROFILE(L"create_views");
+
 				if (desc.is2D()) {
 					texture2D = HLSL::Texture2D<>(hlsl[0]);
 					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);

@@ -34,12 +34,14 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 		uint32_t DstHeight = SrcHeight >> 1;
 		uint32_t NonPowerOfTwo = (SrcWidth & 1) | (SrcHeight & 1) << 1;
 
+		{
+			PROFILE(L"set_pipeline");
 
 		compute_context.set_pipeline<PSOS::MipMapping>(
 			PSOS::MipMapping::NonPowerOfTwo(NonPowerOfTwo)
 			| PSOS::MipMapping::Gamma.Use(view.get_desc().as_texture().Format.is_srgb())
 			);
-
+	}
 		uint32_t AdditionalMips;
 		_BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
 		uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
@@ -60,13 +62,14 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 		data.GetSrcMipLevel() = TopMip;
 		data.GetNumMipLevels() = NumMips;
 		data.GetTexelSize() = { 1.0f / DstWidth, 1.0f / DstHeight };
-
-		for (uint32_t i = 0; i < NumMips; i++)
 		{
-			data.GetOutMip()[i] = view.create_mip(TopMip + 1 + i, *compute_context.get_base().frame_resources).rwTexture2D;
+			PROFILE(L"create_mip");
+			for (uint32_t i = 0; i < NumMips; i++)
+			{
+				data.GetOutMip()[i] = view.create_mip(TopMip + 1 + i, *compute_context.get_base().frame_resources).rwTexture2D;
+			}
+			data.GetSrcMip() = view.create_mip(TopMip, *compute_context.get_base().frame_resources).texture2D;
 		}
-		data.GetSrcMip() = view.create_mip(TopMip, *compute_context.get_base().frame_resources).texture2D;
-
 		data.set(compute_context);
 
 		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
