@@ -18,6 +18,7 @@ export struct Skin: public Singleton<Skin>
 
     } DefaultWindow, FlowWindow, FlowComment;
 
+
     struct TabStrip
     {
         GUI::Texture Normal;
@@ -65,6 +66,19 @@ export struct Skin: public Singleton<Skin>
         GUI::Texture Inner;
    
     } DefaultCircleSelector;
+
+
+  GUI::Texture WindowCloseButton;
+  GUI::Texture Background;
+  GUI::Texture TreeOpened;
+  GUI::Texture TreeClosed;
+  GUI::Texture DebugBack;
+  GUI::Texture Down;
+  GUI::Texture Shadow;
+  GUI::Texture Virtual;
+  GUI::Texture Edit;
+  GUI::Texture Fill;
+
 
     Skin();
 };

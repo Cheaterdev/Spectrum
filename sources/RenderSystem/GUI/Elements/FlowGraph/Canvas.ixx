@@ -22,9 +22,6 @@ export namespace GUI
                     using ptr = s_ptr<link_item>;
                     using wptr = w_ptr<link_item>;
 
-                    /*
-                                        virtual void draw(Context& c) override;
-                    					*/
                     bool inserted = false;
                     float beam_time = 0;
                     bool beaming = false;
@@ -37,7 +34,7 @@ export namespace GUI
                         drag_listener = true;
                         set_package("link_item");
                         skin = Skin::get().DefaultOptionBox;
-                        //	texture= HAL::Texture::get_resource(HAL::texure_header("textures/gui/option_normal.png"));
+
                     }
 
                     virtual bool need_drag_drop() override;

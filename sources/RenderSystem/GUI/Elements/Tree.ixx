@@ -22,7 +22,7 @@ export namespace GUI
         class toogle_icon : public GUI::Elements::image
         {
           //      GUI::Elements::tree_element* owner;
-				HAL::Texture::ptr tex_closed, tex_opened;
+            GUI::Texture tex_closed, tex_opened;
             public:
 
                 using ptr = s_ptr<toogle_icon>;

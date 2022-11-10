@@ -8,11 +8,28 @@ using namespace FrameGraph;
 
 
 using namespace HAL;
+
+
+#define STRINGIFY(x) #x
+#define PPCAT_NX(A, B) A ## B
+
+#define SKY_TEXTURE(name) \
+    EngineAsset<TextureAsset> name(PPCAT_NX(L,#name), [] { \
+		return new TextureAsset(to_path(L"textures/" STRINGIFY(name) ".dds")); \
+    })
+
+namespace EngineAssets
+{
+	SKY_TEXTURE(Transmit);
+	SKY_TEXTURE(irradianceTexture);
+	SKY_TEXTURE(inscatterTexture);
+
+}
 SkyRender::SkyRender()
 {
-	transmittance = HAL::Texture::get_resource({ to_path(L"textures\\Transmit.dds"), false, false });
-	irradiance = HAL::Texture::get_resource({ to_path(L"textures\\irradianceTexture.dds"), false, false });
-	inscatter = HAL::Texture::get_resource({ to_path(L"textures\\inscatterTexture.dds"), false, false });
+	transmittance = EngineAssets::Transmit.get_asset()->get_texture();
+	irradiance = EngineAssets::irradianceTexture.get_asset()->get_texture();
+	inscatter = EngineAssets::inscatterTexture.get_asset()->get_texture();
 }
 
 

@@ -2,6 +2,7 @@ module GUI:Renderer;
 
 import HAL;
 
+import :Skin;
 
 namespace GUI
 {
@@ -42,12 +43,11 @@ namespace GUI
      
         nine_patch.reset(new NinePatch());
         simple_rect.reset(new SimpleRect());
-        area_tex.texture = HAL::Texture::get_resource({ to_path(L"textures/gui/edit.png"), false, false });
-        virtual_tex.texture = HAL::Texture::get_resource({ to_path(L"textures/gui/virtual.png"), false , false });
-        container_tex.texture = HAL::Texture::get_resource({ to_path(L"textures/gui/background.png"), false, false });
-        area_tex.padding = { 5, 5, 5, 5 };
-        virtual_tex.padding = { 5, 5, 5, 5 };
-		container_tex.padding = {2,2,2,2};
+        area_tex = Skin::get().Edit;
+        virtual_tex = Skin::get().Virtual;
+        container_tex = Skin::get().Background;
+
+	
     }
 
     void Renderer::draw(base::Context& c, HAL::PipelineState::ptr state, rect r)

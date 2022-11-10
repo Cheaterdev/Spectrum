@@ -67,25 +67,7 @@ GUI::Elements::FlowGraph::component_window::component_window(canvas* canva, ::Fl
 	base::add_child(title_bar);
 	//title_bar->margin = {};
 	minimal_size = { 50, 50 };
-	/*  if (type == window_type::NODE)
-	  {
-		  close_button.reset(new button());
-		  close_button->size = { 25, 25 };
-		  close_button->padding = { 0, 0, 0, 0 };
-		  close_button->background_style = button::view_style::NO_BACKGROUND;
-		  close_button->get_label()->visible = false;
-		  close_button->get_image()->visible = true;
-		  close_button->get_image()->texture = HAL::Texture::get_resource(HAL::texure_header("textures/gui/window_close.png"));
-		  close_button->get_image()->docking = dock::FILL;
-		  close_button->padding = { 5, 5, 5, 5 };
-		  close_button->docking = dock::RIGHT;
-		  close_button->on_click = [this, node](button::ptr)
-		  {
-			  node->remove();
-		  };
-		  title_bar->add_child(close_button);
-	  }
-	*/
+	
 	title_bar->add_child(label_text);
 	contents_left.reset(new base());
 	contents_left->docking = dock::LEFT;

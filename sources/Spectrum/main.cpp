@@ -710,9 +710,8 @@ class PassNode : public::FlowGraph::Node, public  GUI::Elements::FlowGraph::Visu
 	GUI::base::ptr create_editor_window() override
 	{
 		GUI::Elements::image::ptr img(new GUI::Elements::image);
-		img->texture.texture = HAL::Texture::get_resource({ to_path(L"textures/gui/shadow.png"), false, false });
-		img->texture.padding = { 9, 9, 9, 9 };
-		img->padding = { 9, 9, 9, 9 };
+		img->texture = Skin::get().Shadow;
+		img->padding = img->texture.padding;
 		img->width_size = GUI::size_type::MATCH_CHILDREN;
 		img->height_size = GUI::size_type::MATCH_CHILDREN;
 		return img;
@@ -1006,7 +1005,7 @@ public:
 
 		{
 			GUI::Elements::image::ptr back(new GUI::Elements::image);
-			back->texture = HAL::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/back_fill.png"), false, false));
+			back->texture = Skin::get().Fill;
 			back->texture.tiled = true;
 			back->width_size = GUI::size_type::MATCH_PARENT;
 			back->height_size = GUI::size_type::MATCH_PARENT;

@@ -35,9 +35,9 @@ namespace GUI
 			GUI::base::ptr create_editor_window() override
 			{
 				GUI::Elements::image::ptr img(new GUI::Elements::image);
-				img->texture.texture = HAL::Texture::get_resource({ to_path(L"textures/gui/shadow.png"), false, false });
-				img->texture.padding = { 9, 9, 9, 9 };
-				img->padding = { 9, 9, 9, 9 };
+				img->texture = Skin::get().Shadow;
+
+				img->padding = img->texture.padding;
 				img->width_size = GUI::size_type::MATCH_CHILDREN;
 				img->height_size = GUI::size_type::MATCH_CHILDREN;
 				//   img->size = { 64, 64 };

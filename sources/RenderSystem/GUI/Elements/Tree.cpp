@@ -21,17 +21,19 @@ GUI::Elements::toogle_icon::toogle_icon()
 
     clickable = true;
 
-	tex_closed = HAL::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/tree_closed.png")));
-	tex_opened = HAL::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/tree_opened.png")));
-	texture = tex_opened;
+	tex_closed = Skin::get().TreeOpened;
+	tex_opened = Skin::get().TreeClosed;
+	texture = tex_opened.texture;
 
 }
 
 void GUI::Elements::toogle_icon::toogle(bool v)
 {
-	if (v) texture = tex_opened;
+	if (v) texture = tex_opened.texture;
+
 	else
-		texture = tex_closed;
+		texture = tex_closed.texture;
+
 }
 
 void GUI::Elements::line_base::draw(Context& c, bool selected)
