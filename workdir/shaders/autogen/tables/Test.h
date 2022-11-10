@@ -1,18 +1,11 @@
 #pragma once
-struct Test_cb
-{
-	float data[16];
-};
 struct Test
 {
-	Test_cb cb;
-	float GetData(int i) { return cb.data[i]; }
-	Texture2D<float4> GetTex(int i) { return bindless[i]; }
-
+	float data[16]; // float
+	uint tex; // Texture2D<float4>
+	float GetData(int i) { return data[i]; }
+	Texture2D<float4> GetTex(int i) { 
+	StructuredBuffer<uint> indirection = ResourceDescriptorHeap[tex]; 
+	uint id = indirection.Load(i);
+	return ResourceDescriptorHeap[id]; }
 };
- const Test CreateTest(Test_cb cb)
-{
-	const Test result = {cb
-	};
-	return result;
-}

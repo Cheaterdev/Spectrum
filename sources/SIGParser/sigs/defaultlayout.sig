@@ -39,7 +39,7 @@ struct DebugInfo
 		{
 			DebugStruct debug;
 
-            debug.cb.v = v;
+            debug.v = v;
 
             uav.debug[id] = debug;
 		}

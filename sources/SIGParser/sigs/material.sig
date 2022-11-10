@@ -2,5 +2,5 @@
 struct MaterialInfo
 {
 	[dynamic] MaterialCB data;
-    uint textureOffset;	
+    Texture2D<float4> textures[];
 }

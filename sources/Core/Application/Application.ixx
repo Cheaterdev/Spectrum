@@ -1,7 +1,7 @@
-export module Application;
+export module Core:Application;
 
-import Singleton;
-import Utils;
+import :Singleton;
+import :Utils;
 
 export
 {
@@ -30,7 +30,6 @@ export
 }
 
 
-module: private;
 
 Application::Application()
 {

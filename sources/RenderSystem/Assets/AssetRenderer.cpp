@@ -1,21 +1,21 @@
-#include "pch_render.h"
 
-#include "Assets/EngineAssets.h"
-#include "Effects/Sky.h"
-#include "Lighting/PSSM.h"
+module  Graphics:AssetRenderer;
 
-#include "AssetRenderer.h"
-#include "Helpers/MipMapGeneration.h"
-
-import Queue;
+import HAL;
+import :MeshRenderer;
+import :Sky;
+import :PSSM;
+import :FrameGraphContext;
+import :MipMapGenerator;
+import :EngineAssets;
+import :BRDF;
 
 using namespace FrameGraph;
-import HAL.Types;
 using namespace HAL;
 class SceneRenderWorkflow
 {
 
-	
+
 	PSSM pssm;
 	SkyRender sky;
 
@@ -26,16 +26,18 @@ public:
 
 	void render(Graph& graph)
 	{
-		graph.scene->update(*graph.builder.current_frame);
-		
+		auto& sceneinfo = graph.get_context<SceneInfo>();
+		auto scene = sceneinfo.scene->get_ptr<Scene>().get();
+
+		scene->update(*graph.builder.current_frame);
+
 		{
 
-			CommandList::ptr command_list = Render::Device::get().get_queue(CommandListType::DIRECT)->get_free_list();
+			CommandList::ptr command_list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 
 			command_list->begin("pre");
 			{
-				auto scene = graph.scene->get_ptr<Scene>().get();
-
+		
 				SceneFrameManager::get().prepare(command_list, *scene);
 			}
 
@@ -44,13 +46,14 @@ public:
 			command_list->execute();
 		}
 
+		auto& frame = graph.get_context<ViewportInfo>();
 
 
-		auto size = graph.frame_size;
+		auto size = frame.frame_size;
 
 		{
 
-			
+
 			struct GBufferData
 			{
 				GBufferViewDesc gbuffer;
@@ -65,24 +68,27 @@ public:
 				//	data.gbuffer.create_quality(size, builder);
 
 
-				 builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1 ), DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1},ResourceFlags::DepthStencil);
-				 builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), DXGI_FORMAT::DXGI_FORMAT_R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 0), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 0), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
 
-				}, [this,&graph](GBufferData& data, FrameContext& _context) {
+				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
 					auto& command_list = _context.get_list();
-		
+					auto& frame = graph.get_context<ViewportInfo>();
+					auto& scene = graph.get_context<SceneInfo>();
+					auto& cam = graph.get_context<CameraInfo>();
+
 					//graph.scene->init_ras();
 
-					command_list->get_graphics().set_layout(Layouts::DefaultLayout);
-					command_list->get_compute().set_layout(Layouts::DefaultLayout);
+					command_list->get_graphics().set_signature(Layouts::DefaultLayout);
+					command_list->get_compute().set_signature(Layouts::DefaultLayout);
 
 					MeshRenderContext::ptr context(new MeshRenderContext());
 					context->current_time = (size_t)time;
 					context->priority = TaskPriority::HIGH;
 					context->list = command_list;
 
-					context->cam = graph.cam;
+					context->cam = cam.cam;
 
 					GBuffer gbuffer = data.gbuffer.actualize(_context);
 
@@ -91,7 +97,7 @@ public:
 					gbuffer.HalfBuffer.hiZ_depth = *data.GBuffer_HiZ;
 					gbuffer.HalfBuffer.hiZ_table = RenderTargetTable(context->list->get_graphics(), {  }, gbuffer.HalfBuffer.hiZ_depth);
 					gbuffer.HalfBuffer.hiZ_depth_uav = *data.GBuffer_HiZ_UAV;
-				
+
 					context->g_buffer = &gbuffer;
 
 					gbuffer.rtv_table.set(context, true, true);
@@ -101,14 +107,14 @@ public:
 					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
 
 
-					scene_renderer->render(context, graph.scene->get_ptr<Scene>());
+					scene_renderer->render(context, scene.scene->get_ptr<Scene>());
 
 
 					//	MipMapGenerator::get().copy_texture_2d_slow(command_list->get_graphics(), texture.texture, gbuffer.albedo);
 				});
 		}
 
-	
+
 
 		pssm.generate(graph);
 		sky.generate(graph);
@@ -121,61 +127,57 @@ public:
 		graph.add_pass<no>("mip", [this, &graph](no& data, TaskBuilder& builder) {
 			builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 			}, [](no& data, FrameContext& _context) {
-			
-			
+
+
 				MipMapGenerator::get().generate(_context.get_list()->get_compute(), *data.ResultTexture);
 			});
 
 
 		graph.add_slot_generator([this](Graph& graph) {
-
+			auto& time = graph.get_context<TimeInfo>();
+			auto& skyinfo = graph.get_context<SkyInfo>();
+			auto& cam = graph.get_context<CameraInfo>();
 			PROFILE(L"FrameInfo");
 			Slots::FrameInfo frameInfo;
 			//// hack zone
-			auto &sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
+			auto& sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
 			if (sky.resource)
-				frameInfo.GetSky() = sky.get_handler<Handlers::Texture>()->texture—ube;
+				frameInfo.GetSky() = sky.get_handler<Handlers::Cube>()->textureCube;
 			/////////
-			frameInfo.GetSunDir().xyz = graph.sunDir;
-			frameInfo.GetTime() = { graph.time ,graph.totalTime,0,0 };
+			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
+			frameInfo.GetTime() = { time.time ,time.totalTime,0,0 };
 
 
-			frameInfo.MapCamera().cb = graph.cam->camera_cb.current;
-			frameInfo.MapPrevCamera().cb = graph.cam->camera_cb.prev;
+			frameInfo.GetCamera() = cam.cam->camera_cb.current;
+			frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
 
-			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d()->texture3D;
-			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d()->texture2D;
+			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
 
 			auto compiled = frameInfo.compile(*graph.builder.current_frame);
 			graph.register_slot_setter(compiled);
-		});
+			});
 
 		graph.add_slot_generator([this](Graph& graph) {
-			graph.register_slot_setter(graph.scene->compiledScene);
+			auto& scene = graph.get_context<SceneInfo>();
+
+			graph.register_slot_setter(scene.scene->compiledScene);
 			});
-		
-//		graph.add_pass([])
+
+		//		graph.add_pass([])
 	}
 
 };
 
 
 
-void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
+void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 {
 
-	
-
- //  return;
- 
 	graph.start_new_frame();
-	if (!vr_context)
-	{
-		vr_context = std::make_shared<Render::OVRContext>();
-	}
-	
 
-    scene->update_transforms();
+
+	scene->update_transforms();
 
 	auto mn = scene->get_min();
 	auto mx = scene->get_max();
@@ -186,24 +188,32 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	float y = mx.y - mn.y;
 
 
-	mesh_plane->local_transform.scaling(std::max(x, y) );
+	mesh_plane->local_transform.scaling(std::max(x, y));
 
 	mesh_plane->local_transform.a42 = mn.y;
 	scene->update_transforms();
 
-    cam.target = (mn + mx) / 2;
-    cam.position = cam.target + (vec3(30, 10, 30).normalize()) * ((mx - mn).length());
-    cam.set_projection_params(Math::pi / 4, 1, 1, 100 + (mn - mx).length());
-    cam.update();
+
+	auto& time = graph.get_context<TimeInfo>();
+	auto& skyinfo = graph.get_context<SkyInfo>();
+	auto& caminfo = graph.get_context<CameraInfo>();
+	auto& sceneinfo = graph.get_context<SceneInfo>();
+	auto& vp = graph.get_context<ViewportInfo>();
 
 
-	graph.sunDir = float3(1,1,1).normalize();
+	cam.target = (mn + mx) / 2;
+	cam.position = cam.target + (vec3(30, 10, 30).normalize()) * ((mx - mn).length());
+	cam.set_projection_params(Math::pi / 4, 1, 1, 100 + (mn - mx).length());
+	cam.update();
+
+
+	skyinfo.sunDir = float3(1, 1, 1).normalize();
 
 	graph.builder.pass_texture("ResultTexture", result, ResourceFlags::Required);
-	graph.frame_size = result->get_size();
-	graph.scene = scene.get();
-	graph.renderer = scene_renderer.get();
-	graph.cam = &cam;
+	vp.frame_size = result->get_size();
+	sceneinfo.scene = scene.get();
+	sceneinfo.renderer = scene_renderer.get();
+	caminfo.cam = &cam;
 
 	rendering->render(graph);
 	graph.setup();
@@ -214,18 +224,18 @@ void AssetRenderer::draw(Scene::ptr scene, Render::Texture::ptr result)
 	mesh_plane->remove_from_parent();
 }
 
-void AssetRenderer::draw(MaterialAsset::ptr mat, Render::Texture::ptr result)
+void AssetRenderer::draw(MaterialAsset::ptr mat, HAL::Texture::ptr result)
 {
 	std::lock_guard<std::mutex> g(lock);
 
 	scene->add_child(material_tester);
 	material_tester->override_material(1, mat);
 
-	draw(scene,result);
+	draw(scene, result);
 	material_tester->remove_from_parent();
 }
 
-void AssetRenderer::draw(scene_object::ptr obj, Render::Texture::ptr result)
+void AssetRenderer::draw(scene_object::ptr obj, HAL::Texture::ptr result)
 {
 	std::lock_guard<std::mutex> g(lock);
 
@@ -238,18 +248,18 @@ AssetRenderer::AssetRenderer()
 {
 	std::lock_guard<std::mutex> g(lock);
 
-    scene_renderer = std::make_shared<main_renderer>();
-    scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
-    cam.position = vec3(0, 5, -30);
+	scene_renderer = std::make_shared<main_renderer>();
+	scene_renderer->register_renderer(meshes_renderer = std::make_shared<mesh_renderer>());
+	cam.position = vec3(0, 5, -30);
 
 	mesh_plane.reset(new MeshAssetInstance(EngineAssets::plane.get_asset()));
-    material_tester.reset(new MeshAssetInstance(EngineAssets::material_tester.get_asset()));
+	material_tester.reset(new MeshAssetInstance(EngineAssets::material_tester.get_asset()));
 
 	scene = std::make_shared<Scene>();
-	
-	
+
+
 	rendering = std::make_shared<SceneRenderWorkflow>();
 	rendering->scene_renderer = scene_renderer;
-//	ssgi = std::make_shared<SSGI>(*gbuffer);
+	//	ssgi = std::make_shared<SSGI>(*gbuffer);
 
 }

@@ -5,17 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/SMAA_Blend.h"
-Texture2D<float4> srv_5_0: register(t0, space5);
-struct Pass_SMAA_Blend
-{
-uint srv_0;
-};
-ConstantBuffer<Pass_SMAA_Blend> pass_SMAA_Blend: register( b2, space5);
+ConstantBuffer<SMAA_Blend> pass_SMAA_Blend: register( b2, space5);
 const SMAA_Blend CreateSMAA_Blend()
 {
-	SMAA_Blend result;
-	result.srv.blendTex = srv_5_0;
-	return result;
+	return pass_SMAA_Blend;
 }
 #ifndef NO_GLOBAL
 static const SMAA_Blend sMAA_Blend_global = CreateSMAA_Blend();

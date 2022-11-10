@@ -7,6 +7,7 @@
 #include <cereal/types/complex.hpp>
 #include <cereal/types/set.hpp>
 #include <cereal/types/array.hpp>
+#include <cereal/types/variant.hpp>
 
 #include <cereal/archives/binary.hpp>
 
@@ -21,4 +22,6 @@
       dynamic_init_##LibName() {                           \
         ::cereal::detail::dynamic_init_dummy_##LibName();  \
       }                                                    \
-    } dynamic_init_instance_##LibName;                    
+    } dynamic_init_instance_##LibName;
+
+

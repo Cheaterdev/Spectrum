@@ -1,13 +1,9 @@
+export module Core:Events;
 
-module;
-#include "Serialization/serialization_defines.h"
-
-export module Events;
-
-import Vectors;
-import Data;
-import serialization;
-import my_unique_vector;
+import :Math;
+import :Data;
+import :serialization;
+import :my_unique_vector;
 
 export namespace Events
 {
@@ -325,7 +321,7 @@ export namespace Events
 		{
 			ar& NVP(value);
 
-			if constexpr(Archive::is_loading::value)
+			IF_LOAD()
 			{
 				send();
 			}

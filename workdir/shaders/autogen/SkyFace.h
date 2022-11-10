@@ -5,16 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/SkyFace.h"
-ConstantBuffer<SkyFace_cb> cb_5_0:register(b0,space5);
-struct Pass_SkyFace
-{
-};
-ConstantBuffer<Pass_SkyFace> pass_SkyFace: register( b2, space5);
+ConstantBuffer<SkyFace> pass_SkyFace: register( b2, space5);
 const SkyFace CreateSkyFace()
 {
-	SkyFace result;
-	result.cb = cb_5_0;
-	return result;
+	return pass_SkyFace;
 }
 #ifndef NO_GLOBAL
 static const SkyFace skyFace_global = CreateSkyFace();

@@ -5,3 +5,5 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <winerror.h>
+#undef OPAQUE
+#undef DOMAIN

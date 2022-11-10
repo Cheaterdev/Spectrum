@@ -1,13 +1,14 @@
-export module Profiling;
+export module Core:Profiling;
 
 export import "macros.h";
 
-import Log;
-import Singleton;
+import :Log;
+import :Singleton;
 
-import Utils;
-import Vectors;
-import Tree;
+import :Utils;
+import :Math;
+import :Tree;
+import :shared_ptr;
 
 //#define PROFILING
 export
@@ -113,7 +114,7 @@ protected:
 	void update();
 private:
 	std::wstring name;
-/*	Render::GPUTimer timer;*/
+/*	HAL::GPUTimer timer;*/
 };
 
 template<class T>
@@ -128,7 +129,7 @@ void TimedBlock::iterate_childs(T f)
 class Timer
 {
 	friend class TimedRoot;
-	/*friend class Render::Eventer;*/
+	/*friend class HAL::Eventer;*/
 	friend class Profiler;
 
 	TimedBlock* block;
@@ -166,7 +167,7 @@ public:
 
 	Profiler() : TimedBlock(L"")
 	{
-	/*	Render::GPUTimeManager::create();*/
+	/*	HAL::GPUTimeManager::create();*/
 	}
 
 	bool enabled = true;
@@ -210,7 +211,6 @@ public:
 
 }
 
-module: private;
 thread_local TimedBlock* Profiler::current_block = nullptr;
 
 

@@ -1,36 +1,25 @@
 #pragma once
 #include "Frustum.h"
-struct Camera_cb
-{
-	float4x4 view;
-	float4x4 proj;
-	float4x4 viewProj;
-	float4x4 invView;
-	float4x4 invProj;
-	float4x4 invViewProj;
-	float4 position;
-	float4 direction;
-	float4 jitter;
-	Frustum_cb frustum;
-};
 struct Camera
 {
-	Camera_cb cb;
-	float4x4 GetView() { return cb.view; }
-	float4x4 GetProj() { return cb.proj; }
-	float4x4 GetViewProj() { return cb.viewProj; }
-	float4x4 GetInvView() { return cb.invView; }
-	float4x4 GetInvProj() { return cb.invProj; }
-	float4x4 GetInvViewProj() { return cb.invViewProj; }
-	float4 GetPosition() { return cb.position; }
-	float4 GetDirection() { return cb.direction; }
-	float4 GetJitter() { return cb.jitter; }
-	Frustum GetFrustum() { return CreateFrustum(cb.frustum); }
-
+	float4x4 view; // float4x4
+	float4x4 proj; // float4x4
+	float4x4 viewProj; // float4x4
+	float4x4 invView; // float4x4
+	float4x4 invProj; // float4x4
+	float4x4 invViewProj; // float4x4
+	float4 position; // float4
+	float4 direction; // float4
+	float4 jitter; // float4
+	Frustum frustum; // Frustum
+	float4x4 GetView() { return view; }
+	float4x4 GetProj() { return proj; }
+	float4x4 GetViewProj() { return viewProj; }
+	float4x4 GetInvView() { return invView; }
+	float4x4 GetInvProj() { return invProj; }
+	float4x4 GetInvViewProj() { return invViewProj; }
+	float4 GetPosition() { return position; }
+	float4 GetDirection() { return direction; }
+	float4 GetJitter() { return jitter; }
+	Frustum GetFrustum() { return frustum; }
 };
- const Camera CreateCamera(Camera_cb cb)
-{
-	const Camera result = {cb
-	};
-	return result;
-}

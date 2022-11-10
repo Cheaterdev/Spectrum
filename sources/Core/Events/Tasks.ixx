@@ -1,7 +1,7 @@
-export module Tasks;
+export module Core:Tasks;
 
-import Events;
-import Singleton;
+import :Events;
+import :Singleton;
 import stl.core;
 
 export class Task
@@ -31,7 +31,6 @@ export class TaskInfoManager: public Singleton<TaskInfoManager>
 
 
 
-module:private;
 
 
 std::shared_ptr<Task> TaskInfoManager::create_task(std::wstring name)

@@ -6,34 +6,27 @@
 #include "MeshletCullData.h"
 #include "mesh_vertex_input.h"
 #include "node_data.h"
-struct SceneData_srv
-{
-	StructuredBuffer<node_data> nodes;
-	StructuredBuffer<mesh_vertex_input> vertexes;
-	StructuredBuffer<MeshCommandData> meshes;
-	StructuredBuffer<MaterialCommandData> materials;
-	StructuredBuffer<MeshInstance> meshInstances;
-	StructuredBuffer<Meshlet> meshlets;
-	StructuredBuffer<MeshletCullData> meshletCullData;
-	StructuredBuffer<uint> indices;
-};
 struct SceneData
 {
-	SceneData_srv srv;
-	StructuredBuffer<node_data> GetNodes() { return srv.nodes; }
-	StructuredBuffer<mesh_vertex_input> GetVertexes() { return srv.vertexes; }
-	StructuredBuffer<MeshCommandData> GetMeshes() { return srv.meshes; }
-	StructuredBuffer<MaterialCommandData> GetMaterials() { return srv.materials; }
-	StructuredBuffer<MeshInstance> GetMeshInstances() { return srv.meshInstances; }
-	StructuredBuffer<Meshlet> GetMeshlets() { return srv.meshlets; }
-	StructuredBuffer<MeshletCullData> GetMeshletCullData() { return srv.meshletCullData; }
-	StructuredBuffer<uint> GetIndices() { return srv.indices; }
-	Texture2D<float4> GetMaterial_textures(int i) { return bindless[i]; }
-
+	uint nodes; // StructuredBuffer<node_data>
+	uint vertexes; // StructuredBuffer<mesh_vertex_input>
+	uint meshes; // StructuredBuffer<MeshCommandData>
+	uint materials; // StructuredBuffer<MaterialCommandData>
+	uint meshInstances; // StructuredBuffer<MeshInstance>
+	uint meshlets; // StructuredBuffer<Meshlet>
+	uint meshletCullData; // StructuredBuffer<MeshletCullData>
+	uint indices; // StructuredBuffer<uint>
+	uint material_textures; // Texture2D<float4>
+	StructuredBuffer<node_data> GetNodes() { return ResourceDescriptorHeap[nodes]; }
+	StructuredBuffer<mesh_vertex_input> GetVertexes() { return ResourceDescriptorHeap[vertexes]; }
+	StructuredBuffer<MeshCommandData> GetMeshes() { return ResourceDescriptorHeap[meshes]; }
+	StructuredBuffer<MaterialCommandData> GetMaterials() { return ResourceDescriptorHeap[materials]; }
+	StructuredBuffer<MeshInstance> GetMeshInstances() { return ResourceDescriptorHeap[meshInstances]; }
+	StructuredBuffer<Meshlet> GetMeshlets() { return ResourceDescriptorHeap[meshlets]; }
+	StructuredBuffer<MeshletCullData> GetMeshletCullData() { return ResourceDescriptorHeap[meshletCullData]; }
+	StructuredBuffer<uint> GetIndices() { return ResourceDescriptorHeap[indices]; }
+	Texture2D<float4> GetMaterial_textures(int i) { 
+	StructuredBuffer<uint> indirection = ResourceDescriptorHeap[material_textures]; 
+	uint id = indirection.Load(i);
+	return ResourceDescriptorHeap[id]; }
 };
- const SceneData CreateSceneData(SceneData_srv srv)
-{
-	const SceneData result = {srv
-	};
-	return result;
-}

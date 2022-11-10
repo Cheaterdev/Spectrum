@@ -1,10 +1,10 @@
-#include "pch_render.h"
-#include "DockBase.h"
-#include "TabControl.h"
-#include "GUI/Elements/Window.h"
-#include "GUI/Renderer/Renderer.h"
+module GUI:EditText;
+import :DockBase;
+import :TabControl;
+import :Window;
+import :Renderer;
 
-void GUI::Elements::dock_base::draw_after(Render::context& c)
+void GUI::Elements::dock_base::draw_after(Context& c)
 {
 	if (virt->visible.get() && virt_base->get_parent())
 		renderer->draw_virtual(virt, c);

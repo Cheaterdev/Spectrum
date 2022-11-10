@@ -1,17 +1,6 @@
 #pragma once
-struct DebugStruct_cb
-{
-	uint4 v;
-};
 struct DebugStruct
 {
-	DebugStruct_cb cb;
-	uint4 GetV() { return cb.v; }
-
+	uint4 v; // uint4
+	uint4 GetV() { return v; }
 };
- const DebugStruct CreateDebugStruct(DebugStruct_cb cb)
-{
-	const DebugStruct result = {cb
-	};
-	return result;
-}

@@ -1,28 +1,13 @@
 #pragma once
 #include "VoxelInfo.h"
-struct Voxelization_cb
-{
-	VoxelInfo_cb info;
-};
-struct Voxelization_uav
-{
-	RWTexture3D<float4> albedo;
-	RWTexture3D<float4> normals;
-	RWTexture3D<uint> visibility;
-};
 struct Voxelization
 {
-	Voxelization_cb cb;
-	Voxelization_uav uav;
-	RWTexture3D<float4> GetAlbedo() { return uav.albedo; }
-	RWTexture3D<float4> GetNormals() { return uav.normals; }
-	RWTexture3D<uint> GetVisibility() { return uav.visibility; }
-	VoxelInfo GetInfo() { return CreateVoxelInfo(cb.info); }
-
+	uint albedo; // RWTexture3D<float4>
+	uint normals; // RWTexture3D<float4>
+	uint visibility; // RWTexture3D<uint>
+	VoxelInfo info; // VoxelInfo
+	VoxelInfo GetInfo() { return info; }
+	RWTexture3D<float4> GetAlbedo() { return ResourceDescriptorHeap[albedo]; }
+	RWTexture3D<float4> GetNormals() { return ResourceDescriptorHeap[normals]; }
+	RWTexture3D<uint> GetVisibility() { return ResourceDescriptorHeap[visibility]; }
 };
- const Voxelization CreateVoxelization(Voxelization_cb cb,Voxelization_uav uav)
-{
-	const Voxelization result = {cb,uav
-	};
-	return result;
-}

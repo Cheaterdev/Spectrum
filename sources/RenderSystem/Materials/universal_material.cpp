@@ -1,32 +1,25 @@
-﻿#include "pch_render.h"
-#include "Assets/EngineAssets.h"
-#include "universal_material.h"
-#include "Effects/RTX/RTX.h"
+﻿module Graphics:Materials.UniversalMaterial;
+
+
+import :EngineAssets;
+import :RTX;
+
+
+//import FrameGraph;
+import HAL;
+import Core;
+import windows;
 
 static IdGenerator ids;
+using namespace HAL;
 
-import Buffer;
+void removeme() // TODO: VS issue - make dummy unused func to compile entire cpp =[
+{
+	auto res = Serializer::deserialize<std::string>("");
+}
 
-import Descriptors;
-import Concepts;
-import Layout;
-import SIG;
-import crc32;
 
-import Utils;
-import Data;
-import stl.core;
-import stl.memory;
 
-import Serializer;
-
-import serialization;
-import Log;
-import Utils;
-import crc32;
-
-import Data;
-import windows;
 REGISTER_TYPE(materials::universal_material);
 REGISTER_TYPE(materials::PipelinePasses);
 REGISTER_TYPE(materials::PipelineSimple);
@@ -39,7 +32,7 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 	int offset = 0;
 
 	for (auto& u : un)
-	{	
+	{
 		int need_size = u->type.get_size();
 
 		while (offset > 0 && (offset + need_size) > 16)
@@ -51,22 +44,22 @@ DynamicData generate_data(std::vector<Uniform::ptr>& un)
 		std::byte* ptr = nullptr;
 
 
-		if (u->type == ShaderParams::FLOAT1)
+		if (u->type == ShaderParams::get().FLOAT1)
 		{
 			ptr = reinterpret_cast<std::byte*>(&u->value.f_value);
 		}
 
-		if (u->type == ShaderParams::FLOAT2)
+		if (u->type == ShaderParams::get().FLOAT2)
 		{
 			ptr = reinterpret_cast<std::byte*>(&u->value.f2_value);
 		}
 
-		if (u->type == ShaderParams::FLOAT3)
+		if (u->type == ShaderParams::get().FLOAT3)
 		{
 			ptr = reinterpret_cast<std::byte*>(&u->value.f3_value);
 		}
 
-		if (u->type == ShaderParams::FLOAT4)
+		if (u->type == ShaderParams::get().FLOAT4)
 		{
 			ptr = reinterpret_cast<std::byte*>(&u->value.f4_value);
 		}
@@ -109,90 +102,60 @@ void materials::universal_material::update()
 
 	if (need_update_compiled)
 	{
-		material_info.GetTextureOffset() = textures_handle ? (UINT)textures_handle.get_offset() : 0;
+		material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
-		compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
-		local_addr = compiled_material_info.cb;
+		compiled_material_info = material_info.compile(HAL::Device::get().get_static_gpu_data());
+		local_addr = compiled_material_info.compiled();
 
-		local_addr_ids = compiled_material_info.offsets_cb;
+		//local_addr_ids = to_native(compiled_material_info.offsets_cb);
 		{
 			auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
 			elem[0].pipeline_id = pipeline->get_id();
-			elem[0].material_cb = compiled_material_info.cb;
+			elem[0].material_cb = to_native(compiled_material_info.compiled());
 
 			info_handle.write(0, elem);
-		
+
 		}
 
 		update_rtx();
 	}
 
-	if(need_update_uniforms|| need_update_compiled)
-	mark_contents_changed();
-	
+	if (need_update_uniforms || need_update_compiled)
+		mark_contents_changed();
+
 	need_update_uniforms = false;
 	need_update_compiled = false;
-	
+
 
 }
 
- size_t  materials::universal_material::get_id()
- {
+size_t  materials::universal_material::get_id()
+{
 
 	return  pipeline->get_id(); ///TODO: change for graph id
- }
+}
 
 
 void materials::universal_material::compile()
 {
 	start_changing_contents();
-	
+
 	handlers.clear();
 
-	if (textures.size())
+	texture_srvs.resize(textures.size());
+
+
+	for (int i = 0; i < textures.size(); i++)
 	{
-		textures_handle.Free();
-
-		textures_handle = universal_material_manager::get().allocate(textures.size());
-	
-		textures_handles = DescriptorHeapManager::get().get_csu_static()->create_table(textures.size());
-		for (unsigned int i = 0; i < textures.size(); i++)
-		{
-			handlers.emplace_back();
-			auto& t = textures[i];
-			TextureAsset::ptr tex = t->asset->get_ptr<TextureAsset>();
-
-			if (tex && tex->get_texture()->texture_2d())
-
-				t->to_linear.register_change(&handlers.back(), [this, i, tex ](bool to_linear)
-					{
-						auto func = tex->get_texture()->texture_2d()->srv(to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB);
-						func(textures_handles[i]);
-
-						auto textures_srvs = textures_handle.map(i);
-						textures_srvs[0] = textures_handles[i];
-						textures_handle.write(i, textures_srvs);
-						need_update_compiled = true;
-					});
-
-			else
-			{				
-				auto func = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d()->srv();
-				func(textures_handles[i]);
-				
-				auto textures_srvs = textures_handle.map(i);
-				textures_srvs[0] = textures_handles[i];
-				textures_handle.write(i, textures_srvs);
-			}
-
-			t->asset = register_asset(*t->asset);
-
-			mark_contents_changed();
-		}
-
-//		textures_handle.write(0, textures_srvs);
-
+		auto& t = textures[i];
+		TextureAsset::ptr tex = t->asset->get_ptr<TextureAsset>();
+		if (tex && tex->get_texture()->texture_2d())
+			texture_srvs[i] = tex->get_texture()->texture_2d().texture2D;
+		else
+			texture_srvs[i] = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d().texture2D;
 	}
+
+
 	auto generate = [this](std::vector<Uniform::ptr>& un)
 	{
 		pixel_data = generate_data(un);
@@ -200,21 +163,21 @@ void materials::universal_material::compile()
 		for (auto u : un)
 		{
 			handlers.emplace_back();
-			u->on_change.register_handler(&handlers.back(), [this](Uniform * u)
-			{
-				need_update_uniforms = true;
-			});
+			u->on_change.register_handler(&handlers.back(), [this](Uniform* u)
+				{
+					need_update_uniforms = true;
+				});
 		}
 	};
 
-	  
-	generate(ps_uniforms);
-	material_info.GetTextureOffset() = textures_handle?(UINT)textures_handle.get_offset():0;
-	material_info.GetData() = pixel_data;
-	compiled_material_info = material_info.compile(StaticCompiledGPUData::get());
 
-	local_addr = compiled_material_info.cb;
-	local_addr_ids = compiled_material_info.offsets_cb;
+	generate(ps_uniforms);
+	material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
+	material_info.GetData() = pixel_data;
+	compiled_material_info = material_info.compile(HAL::Device::get().get_static_gpu_data());
+
+	local_addr = compiled_material_info.compiled();
+	//local_addr_ids = to_native(compiled_material_info.offsets_cb);
 
 	if (!info_handle)
 	{
@@ -223,8 +186,8 @@ void materials::universal_material::compile()
 
 	auto elem = info_handle.map();
 	elem[0].pipeline_id = pipeline->get_id();
-	elem[0].material_cb = compiled_material_info.cb;
-	info_handle.write(0,elem);
+	elem[0].material_cb = to_native(compiled_material_info.compiled());
+	info_handle.write(0, elem);
 
 	need_update_compiled = false;
 	need_update_uniforms = false;
@@ -246,7 +209,7 @@ void materials::universal_material::generate_texture_handles()
 
 void materials::universal_material::generate_material()
 {
-//   std::lock_guard<std::mutex> g(m);
+	//   std::lock_guard<std::mutex> g(m);
 	if (!context)
 		context.reset(new MaterialContext);
 
@@ -261,28 +224,28 @@ void materials::universal_material::generate_material()
 
 
 	auto ps_str = context->get_pixel_result().uniforms + include_file->get_data() + context->get_pixel_result().text;
-	auto tess_orig_shader =  context->get_tess_result().text;
-	auto tess_str = tess_orig_shader.empty()?std::string():(context->get_tess_result().uniforms + include_file->get_data() + tess_orig_shader);
+	auto tess_orig_shader = context->get_tess_result().text;
+	auto tess_str = tess_orig_shader.empty() ? std::string() : (context->get_tess_result().uniforms + include_file->get_data() + tess_orig_shader);
 	auto voxel_str = context->get_voxel_result().uniforms + include_file->get_data() + context->get_voxel_result().text;
 
-	
-
-	auto raytracing_str = context->hit_shader.uniforms+ include_file_raytacing->get_data() + context->hit_shader.text;
 
 
-	raytracing_lib = Render::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true });
+	auto raytracing_str = context->hit_shader.uniforms + include_file_raytacing->get_data() + context->hit_shader.text;
+
+
+	raytracing_lib = HAL::library_shader::get_resource({ raytracing_str, "" , 0, context->hit_shader.macros, true });
 	pipeline = PipelineManager::get().get_pipeline(ps_str, tess_str, voxel_str, raytracing_str, context);
 	ps_uniforms = context->uniforms_ps;
 
 
-//	tess_uniforms = context->uniforms_tess;
+	//	tess_uniforms = context->uniforms_tess;
 
 
-	//generate_texture_handles();
+		//generate_texture_handles();
 
-	//   if (textures_changed)
+		//   if (textures_changed)
 	{
-		for (auto & t : textures)
+		for (auto& t : textures)
 		{
 			t->asset.destroy();
 		}
@@ -291,8 +254,8 @@ void materials::universal_material::generate_material()
 		compile();
 	}
 
-  //  if ((textures_changed || shaders_changed))
-		mark_contents_changed();
+	//  if ((textures_changed || shaders_changed))
+	mark_contents_changed();
 
 	need_regenerate_material = false;
 
@@ -308,7 +271,7 @@ MaterialGraph::ptr materials::universal_material::get_graph()
 materials::universal_material::universal_material(MaterialGraph::ptr graph) : include_file(this), include_file_raytacing(this)
 {
 
-	
+
 	include_file = EngineAssets::material_header.get_asset();
 	include_file_raytacing = EngineAssets::material_raytracing_header.get_asset();
 	this->graph = BinaryData<MaterialGraph>(graph);
@@ -320,7 +283,7 @@ materials::universal_material::universal_material(MaterialGraph::ptr graph) : in
 
 void materials::universal_material::update_rtx()
 {
-	if (!Render::Device::get().is_rtx_supported()) return;
+	if (!HAL::Device::get().is_rtx_supported()) return;
 	RTX::get().rtx.update_material(this);
 
 
@@ -346,7 +309,7 @@ materials::universal_material::universal_material() : include_file(this), includ
 
 void materials::universal_material::on_asset_change(std::shared_ptr<Asset> asset)
 {
-	if (asset == *include_file||asset==*include_file_raytacing)
+	if (asset == *include_file || asset == *include_file_raytacing)
 		on_graph_changed();
 
 	if (asset->get_type() == Asset_Type::TEXTURE)
@@ -393,12 +356,12 @@ void materials::universal_material::on_register(::FlowGraph::window*)
 	on_graph_changed();
 }
 
- D3D_PRIMITIVE_TOPOLOGY materials::render_pass::get_topology()
+D3D_PRIMITIVE_TOPOLOGY materials::render_pass::get_topology()
 {
 	return  ds_shader ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 }
 
- size_t materials::render_pass::get_pipeline_id()
+size_t materials::render_pass::get_pipeline_id()
 {
 	return pipeline_id;
 }

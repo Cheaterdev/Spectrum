@@ -7,10 +7,10 @@ struct VoxelTilingParams
 		
 uint3 get_voxel_pos(uint3 dispatchID)
 {
-	uint tile_index = dispatchID.x / cb.voxels_per_tile.x;
-	uint3 tile_pos = GetTiles()[tile_index] * cb.voxels_per_tile.xyz;
+	uint tile_index = dispatchID.x / voxels_per_tile.x;
+	uint3 tile_pos = GetTiles()[tile_index] * voxels_per_tile.xyz;
 
-	uint3 tile_local_pos = dispatchID - int3(tile_index * cb.voxels_per_tile.x, 0, 0);
+	uint3 tile_local_pos = dispatchID - int3(tile_index * voxels_per_tile.x, 0, 0);
 	uint3 index = tile_pos + tile_local_pos;
 	return index;
 }
@@ -242,10 +242,10 @@ GraphicsPSO VoxelReflectionHi
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = ALWAYS;
-	stencil_pass_op = KEEP;
+	stencil_pass_op = Keep;
 
-	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
-	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	rtv = {R16G16B16A16_FLOAT};
+	ds = D24_UNORM_S8_UINT;
 		blend = { Additive };
 
 	stencil_read_mask = 2;
@@ -266,10 +266,10 @@ GraphicsPSO VoxelReflectionUpsample
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = ALWAYS;
-	stencil_pass_op = KEEP;
+	stencil_pass_op = Keep;
 
-	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
-	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	rtv = {R16G16B16A16_FLOAT};
+	ds = D24_UNORM_S8_UINT;
 	blend = { Additive };
 
 	stencil_read_mask = 2;
@@ -290,11 +290,11 @@ GraphicsPSO VoxelIndirectHi
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = EQUAL;
-	stencil_pass_op = KEEP;
+	stencil_pass_op = Keep;
 
 	blend = { Additive , None};
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R11G11B10_FLOAT};
-	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	rtv = { R16G16B16A16_FLOAT, R11G11B10_FLOAT};
+	ds = D24_UNORM_S8_UINT;
 
 	stencil_read_mask = 1;
 	stencil_write_mask = 1;
@@ -324,11 +324,11 @@ GraphicsPSO VoxelIndirectUpsample
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = EQUAL;
-	stencil_pass_op = KEEP;
+	stencil_pass_op = Keep;
 
 	blend = { Additive , None};
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R11G11B10_FLOAT};
-	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	rtv = { R16G16B16A16_FLOAT, R11G11B10_FLOAT};
+	ds = D24_UNORM_S8_UINT;
 
 	stencil_read_mask = 1;
 	stencil_write_mask = 1;
@@ -345,7 +345,7 @@ GraphicsPSO VoxelDebug
 	[EntryPoint = Debug]
 	pixel = voxel_screen_debug;
 
-	rtv = {DXGI_FORMAT_R16G16B16A16_FLOAT};
+	rtv = {R16G16B16A16_FLOAT};
 	enable_depth = false;
 }
 
@@ -369,7 +369,7 @@ GraphicsPSO DenoiserDownsample
 	[EntryPoint = PS]
 	pixel = DenoiserDownsample;
 
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT, DXGI_FORMAT_R16_FLOAT };
+	rtv = { R16G16B16A16_FLOAT, R16_FLOAT };
 }
 
 

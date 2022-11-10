@@ -1,10 +1,10 @@
-export module StateContext;
+export module Core:StateContext;
 
 import stl.core;
 import stl.threading;
 import windows;
-import IdGenerator;
-import Threading;
+import :IdGenerator;
+import :Threading;
 
 export{
 	template<class T, unsigned int part_count>
@@ -133,8 +133,6 @@ export{
 	};
 
 }
-
-module: private;
 
 
 void ContextGenerator::generate(StateContext* context)

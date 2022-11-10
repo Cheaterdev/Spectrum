@@ -79,21 +79,29 @@ std::string get_cpp_for(Value v)
 	std::string arg = v.type;
 	switch (v.value_type)
 	{
+	case ValueType::STRUCT:
 	case ValueType::CB:
-	{	return v.type; }
+	{
+		return v.type;
+	}
 	case ValueType::SRV:
-	{	if (noarg)
-		OutputDebugString(L"WTF");
-	if (v.array_count == 0)
-		return "Render::Bindless";
-	else
-		return std::string("Render::HLSL::") + arg; }
+	{
+		if (noarg)
+			OutputDebugString(L"WTF");
+		if (v.array_count == 0)
+			return std::string("std::vector<HLSL::") + arg + ">";
+		else
+			return std::string("HLSL::") + arg;
+	}
 	case ValueType::UAV:
-	{	if (noarg)
-		OutputDebugString(L"WTF");
-	return std::string("Render::HLSL::") + arg; }
+	{
+		if (noarg)
+			OutputDebugString(L"WTF");
+		return std::string("HLSL::") + arg;
+	}
 	case ValueType::SMP:
-	{	return "Render::Handle"; }
+	{	return "HAL::Handle"; }
+
 	}
 
 	return "";

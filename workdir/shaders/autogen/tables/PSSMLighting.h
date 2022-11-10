@@ -1,20 +1,9 @@
 #pragma once
 #include "GBuffer.h"
-struct PSSMLighting_srv
-{
-	Texture2D<float> light_mask;
-	GBuffer_srv gbuffer;
-};
 struct PSSMLighting
 {
-	PSSMLighting_srv srv;
-	Texture2D<float> GetLight_mask() { return srv.light_mask; }
-	GBuffer GetGbuffer() { return CreateGBuffer(srv.gbuffer); }
-
+	uint light_mask; // Texture2D<float>
+	GBuffer gbuffer; // GBuffer
+	GBuffer GetGbuffer() { return gbuffer; }
+	Texture2D<float> GetLight_mask() { return ResourceDescriptorHeap[light_mask]; }
 };
- const PSSMLighting CreatePSSMLighting(PSSMLighting_srv srv)
-{
-	const PSSMLighting result = {srv
-	};
-	return result;
-}

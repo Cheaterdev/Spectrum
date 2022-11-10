@@ -1,25 +1,14 @@
 #pragma once
-struct FSRConstants_cb
-{
-	uint4 Const0;
-	uint4 Const1;
-	uint4 Const2;
-	uint4 Const3;
-	uint4 Sample;
-};
 struct FSRConstants
 {
-	FSRConstants_cb cb;
-	uint4 GetConst0() { return cb.Const0; }
-	uint4 GetConst1() { return cb.Const1; }
-	uint4 GetConst2() { return cb.Const2; }
-	uint4 GetConst3() { return cb.Const3; }
-	uint4 GetSample() { return cb.Sample; }
-
+	uint4 Const0; // uint4
+	uint4 Const1; // uint4
+	uint4 Const2; // uint4
+	uint4 Const3; // uint4
+	uint4 Sample; // uint4
+	uint4 GetConst0() { return Const0; }
+	uint4 GetConst1() { return Const1; }
+	uint4 GetConst2() { return Const2; }
+	uint4 GetConst3() { return Const3; }
+	uint4 GetSample() { return Sample; }
 };
- const FSRConstants CreateFSRConstants(FSRConstants_cb cb)
-{
-	const FSRConstants result = {cb
-	};
-	return result;
-}

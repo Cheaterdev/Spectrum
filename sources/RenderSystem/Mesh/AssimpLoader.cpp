@@ -1,4 +1,4 @@
-#include "pch_render.h"
+
 
 #include "Simplifyer/Simplifyer.h"
 #include <assimp\Importer.hpp>
@@ -11,13 +11,16 @@
 #include <assimp\IOSystem.hpp>
 
 #include "Mesh/MeshletGeneration.h"
-#include "Materials/universal_material.h"
-#include "Assets/MeshAsset.h"
 
-#include "GUI/Elements/ValueBox.h"
-#include "GUI/Elements/ScrollContainer.h"
-#include "GUI/Elements/CheckBoxText.h"
-#include "GUI/Elements/Window.h"
+
+import GUI;
+//#include "GUI/Elements/ValueBox.h"
+//#include "GUI/Elements/ScrollContainer.h"
+//#include "GUI/Elements/CheckBoxText.h"
+//#include "GUI/Elements/Window.h"
+
+import Core;
+import Graphics;
 
 struct MeshLoadingSettings
 {
@@ -161,7 +164,7 @@ class MyIOStream : public Assimp::IOStream
         MyIOStream(std::string filename)
         {
             pos = 0;
-            auto file = FileSystem::get().get_file(filename);
+            auto file = FileSystem::get().get_file(to_path(filename));
 
             if (file)
                 data = file->load_all();
@@ -204,7 +207,7 @@ class MyIOSystem : public Assimp::IOSystem
         // Check whether a specific file exists
         bool Exists(const char* pFile) const
         {
-            return !!FileSystem::get().get_file(path / pFile);
+            return !!FileSystem::get().get_file(path / to_path(pFile));
         }
         // Get the path delimiter character we'd like to see
         virtual char getOsSeparator() const override
@@ -214,7 +217,7 @@ class MyIOSystem : public Assimp::IOSystem
         // ... and finally a method to open a custom stream
         virtual Assimp::IOStream* Open(const char* pFile, const char* pMode = "rb") override
         {
-			auto new_path = path / pFile;
+			auto new_path = path / to_path(pFile);
 			new_path = std::filesystem::canonical(new_path);
             auto file = FileSystem::get().get_file(new_path);
             files.add_depend(file);
@@ -256,7 +259,7 @@ public:
 std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, resource_file_depender& files, AssetLoadingContext::ptr & context)
 {
     Assimp::Importer importer;
-	std::filesystem::path directory = std::filesystem::path(file_name).parent_path();
+	std::filesystem::path directory = to_path(file_name).parent_path();
 
  //   if (directory.size())
    //     directory += std::string("\\");
@@ -269,7 +272,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
     try
     {
-        scene = importer.ReadFile(std::filesystem::path(file_name).filename().generic_string(), aiProcess_JoinIdenticalVertices| aiProcess_GenBoundingBoxes| aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
+        scene = importer.ReadFile(to_path(file_name).filename().generic_string(), aiProcess_JoinIdenticalVertices| aiProcess_GenBoundingBoxes| aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_GenSmoothNormals/* | aiProcess_PreTransformVertices*/);
     }
 
     catch (const std::exception &e)
@@ -312,7 +315,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			aiString path;
 			if (AI_SUCCESS == native_material->GetTexture(type, 0, &path))
 			{
-				auto native_path = directory / std::string(path.C_Str());
+				auto native_path = directory / to_path(path.C_Str());
 
 
 				check_texture(native_path);
@@ -332,7 +335,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 		}
 
 
-	
+	/*
 		if (context&&context->ui)
 		{
 
@@ -348,7 +351,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 			if (settings.materials_remove)
 				scene = importer.ApplyPostProcessing(aiProcess_RemoveRedundantMaterials);
 
-		}
+		}*/
 
         auto scale = settings.scale;
 		{
@@ -395,7 +398,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
             index_count += scene->mMeshes[i]->mNumFaces * 3;
         }
 
-        std::vector<Table::mesh_vertex_input::CB> vertices(vertex_count);
+        std::vector<Table::mesh_vertex_input> vertices(vertex_count);
         std::vector<UINT32> indices(index_count);
         vertex_count = 0;
         index_count = 0;
@@ -422,7 +425,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_DIFFUSE, 0, &path))
                 {
-                   auto native_path = directory / std::string(path.C_Str());
+                   auto native_path = directory / to_path(path.C_Str());
                     auto diff = get_texture(native_path);
                     tex_node = std::make_shared<TextureNode>(diff, true);
                     graph->register_node(tex_node);
@@ -441,7 +444,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 if (AI_SUCCESS == native_material->GetTexture(aiTextureType_NORMALS, 0, &path))
                 {
-					auto native_path = directory / std::string(path.C_Str());
+					auto native_path = directory / to_path(path.C_Str());
 					auto diff = get_texture(native_path);
                     auto tex_node = std::make_shared<TextureNode>(diff);
                     graph->register_node(tex_node);
@@ -451,7 +454,7 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
 
                 else if (AI_SUCCESS == native_material->GetTexture(aiTextureType_HEIGHT, 0, &path))
                 {
-					auto native_path = directory / std::string(path.C_Str());
+					auto native_path = directory / to_path(path.C_Str());
 					auto diff = get_texture(native_path);
                     auto tex_node = std::make_shared<TextureNode>(diff);
                     graph->register_node(tex_node);
@@ -523,8 +526,8 @@ std::shared_ptr<MeshData> MeshData::load_assimp(const std::string& file_name, re
                     }
                 }
 
-                //  m->shader = Render::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });
-                //  m->shader_color = Render::pixel_shader::get_resource({ "material.hlsl", "PS_Color", 0, {} });
+                //  m->shader = HAL::pixel_shader::get_resource({ "material.hlsl", "PS", 0, {} });
+                //  m->shader_color = HAL::pixel_shader::get_resource({ "material.hlsl", "PS_Color", 0, {} });
                 //   m->compile();
                 aiString mat_name;
                 //if (aiGetMaterialString(native_material, AI_MATKEY_NAME, &mat_name) == aiReturn_SUCCESS)

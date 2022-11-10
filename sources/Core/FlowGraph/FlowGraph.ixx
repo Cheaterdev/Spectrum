@@ -1,14 +1,11 @@
-export module FlowGraph;
+export module Core:FlowGraph;
 
+import :Data;
+import :crc32;
+import :Utils;
+import :serialization;
+import :Math;
 
-import Data;
-
-import crc32;
-import Utils;
-import serialization;
-
-import Constants;
-import Vectors;
 export
 {
 
@@ -152,7 +149,7 @@ export
 				value.clear();
 			}
 
-			using ptr = s_ptr<parameter>;
+			using ptr = std::shared_ptr<parameter>;
 
 			virtual ~parameter() {}
 
@@ -193,8 +190,8 @@ export
 			}
 			Node* owner;
 
-			std::set< s_ptr<connection>> input_connections;
-			std::set< s_ptr<connection>> output_connections;
+			std::set< std::shared_ptr<connection>> input_connections;
+			std::set< std::shared_ptr<connection>> output_connections;
 			virtual bool link(parameter::ptr i);
 			virtual bool unlink(parameter::ptr i);
 
@@ -244,7 +241,7 @@ export
 			parameter::ptr from;
 			parameter::ptr to;
 			bool enabled = true;
-			using ptr = s_ptr<connection>;
+			using ptr = std::shared_ptr<connection>;
 
 			void registrate(graph* g, parameter::ptr& from, parameter::ptr& to);
 			void registrate(graph* g);
@@ -284,7 +281,7 @@ export
 		class input : public parameter
 		{
 		public:
-			using ptr = s_ptr<input>;
+			using ptr = std::shared_ptr<input>;
 			virtual ~input() = default;
 		private:
 			friend class graph;
@@ -324,7 +321,7 @@ export
 
 		public:
 
-			using ptr = s_ptr<output>;
+			using ptr = std::shared_ptr<output>;
 		private:
 			friend class graph;
 			friend class Node;
@@ -357,7 +354,7 @@ export
 		{
 
 		public:
-			using ptr = s_ptr<window>;
+			using ptr = std::shared_ptr<window>;
 			graph* owner = nullptr;
 
 			std::string name;
@@ -463,7 +460,7 @@ export
 
 			virtual void on_done(GraphContext*);
 			virtual void on_start(GraphContext*);
-			using ptr = s_ptr<Node>;
+			using ptr = std::shared_ptr<Node>;
 
 			template<class T = strict_parameter>
 			input::ptr register_input(std::string name = "unnamed parameter", const T& param = T())
@@ -543,7 +540,7 @@ export
 				for (auto n : output_parametres)
 					n->owner = this;
 
-				if (Archive::is_loading::value)
+				IF_LOAD()
 				{
 					//	(*this).Node();
 				}
@@ -557,7 +554,7 @@ export
 		class graph_input : public input
 		{
 		public:
-			using ptr = s_ptr<graph_input>;
+			using ptr = std::shared_ptr<graph_input>;
 			bool link(parameter::ptr i) override;
 			graph_input() { immediate_send_next = false; can_output = true; };
 			graph_input(Node* n) : input(n) { immediate_send_next = false; can_output = true; }
@@ -581,7 +578,7 @@ export
 		{
 
 		public:
-			using ptr = s_ptr<graph_output>;
+			using ptr = std::shared_ptr<graph_output>;
 
 			graph_output() { immediate_send_next = false; can_input = true; };
 			graph_output(Node* n) : output(n) { immediate_send_next = false; can_input = true; }
@@ -640,7 +637,7 @@ export
 			vec2 pos_out = vec2(200, 0);
 
 			vec2 cam_pos = vec2(0, 0);
-			using ptr = s_ptr<graph>;
+			using ptr = std::shared_ptr<graph>;
 
 			void register_node(std::shared_ptr<window> node);
 			void remove_node(std::shared_ptr<window> node);
@@ -810,7 +807,6 @@ export
 
 }
 
-module:private;
 
 REGISTER_TYPE(FlowGraph::window);
 REGISTER_TYPE(FlowGraph::Node);
@@ -1374,7 +1370,7 @@ namespace FlowGraph
 
 	void parameter::unlink_input()
 	{
-		std::set< s_ptr<connection>>  i_c = input_connections;
+		std::set< std::shared_ptr<connection>>  i_c = input_connections;
 
 		for (auto c : i_c)
 			c->unlink();
@@ -1382,7 +1378,7 @@ namespace FlowGraph
 
 	void parameter::unlink_output()
 	{
-		std::set< s_ptr<connection>>  o_c = output_connections;
+		std::set< std::shared_ptr<connection>>  o_c = output_connections;
 
 		for (auto c : o_c)
 			c->unlink();

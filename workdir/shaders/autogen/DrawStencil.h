@@ -5,17 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/DrawStencil.h"
-StructuredBuffer<float4> srv_4_0: register(t0, space4);
-struct Pass_DrawStencil
-{
-uint srv_0;
-};
-ConstantBuffer<Pass_DrawStencil> pass_DrawStencil: register( b2, space4);
+ConstantBuffer<DrawStencil> pass_DrawStencil: register( b2, space4);
 const DrawStencil CreateDrawStencil()
 {
-	DrawStencil result;
-	result.srv.vertices = srv_4_0;
-	return result;
+	return pass_DrawStencil;
 }
 #ifndef NO_GLOBAL
 static const DrawStencil drawStencil_global = CreateDrawStencil();

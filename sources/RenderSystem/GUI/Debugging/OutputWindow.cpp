@@ -1,8 +1,7 @@
-#include "pch_render.h"
+module GUI:Debug.OutputWindow;
+import :Renderer;
+import :Label;
 
-#include "OutputWindow.h"
-#include "GUI/Elements/ScrollContainer.h"
-#include "GUI/Renderer/Renderer.h"
 
 namespace GUI
 {
@@ -39,7 +38,7 @@ namespace GUI
                 scroll_container::think(dt);
                 //});
             }
-            void OutputWindow::draw(Render::context& c)
+            void OutputWindow::draw(Context& c)
             {
                 renderer->draw_area(get_ptr(), c);
             }
@@ -56,7 +55,7 @@ namespace GUI
                     item->docking = dock::TOP;
                     item->text = block->get_string();
                     item->x_type = pos_x_type::LEFT;
-                    item->magnet_text = FW1_LEFT | FW1_VCENTER;
+                    item->magnet_text = FW1_TEXT_FLAG::FW1_LEFT | FW1_TEXT_FLAG::FW1_VCENTER;
 
                     if (block->get_level_internal() == log_level_internal::level_error)
                         item->color = rgba8(200, 0, 0, 255);

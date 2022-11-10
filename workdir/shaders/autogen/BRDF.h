@@ -5,17 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/BRDF.h"
-RWTexture3D<float4> uav_4_0: register(u0, space4);
-struct Pass_BRDF
-{
-uint uav_0;
-};
-ConstantBuffer<Pass_BRDF> pass_BRDF: register( b2, space4);
+ConstantBuffer<BRDF> pass_BRDF: register( b2, space4);
 const BRDF CreateBRDF()
 {
-	BRDF result;
-	result.uav.output = uav_4_0;
-	return result;
+	return pass_BRDF;
 }
 #ifndef NO_GLOBAL
 static const BRDF bRDF_global = CreateBRDF();

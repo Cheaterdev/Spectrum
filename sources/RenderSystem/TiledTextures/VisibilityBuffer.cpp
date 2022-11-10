@@ -1,17 +1,16 @@
-#include "pch_render.h"
-#include "VisibilityBuffer.h"
 
-import Autogen;
-import ResourceViews;
+module Graphics:VisibilityBuffer;
+
+import HAL;
 
 VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 {
-	CD3DX12_RESOURCE_DESC desc = CD3DX12_RESOURCE_DESC::Tex3D(DXGI_FORMAT_R8_UINT, sizes.x, sizes.y, sizes.z, 1, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE);
+	auto desc = HAL::ResourceDesc::Tex3D(HAL::Format::R8_UINT, { sizes.x, sizes.y, sizes.z }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
 
-	buffer = std::make_shared<Render::Texture>(desc);
+	buffer = std::make_shared<HAL::Texture>(desc);
 	buffer->set_name("VisibilityBuffer::buffer");
 
-	load_tiles_buffer = std::make_shared<Render::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, Render::counterType::HELP_BUFFER, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	load_tiles_buffer = std::make_shared<HAL::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, HAL::counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
 /*
 void VisibilityBuffer::wait_for_results()
@@ -22,7 +21,7 @@ void VisibilityBuffer::wait_for_results()
 */
 
 
-std::future<visibility_update> VisibilityBuffer::update(Render::CommandList::ptr& list)
+std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& list)
 {
 
 
@@ -41,12 +40,12 @@ std::future<visibility_update> VisibilityBuffer::update(Render::CommandList::ptr
 	{
 		Slots::VoxelVisibility data;
 
-		data.GetVisibility()= buffer->create_view<Render::TextureView>(*list->frame_resources).texture3D;
+		data.GetVisibility() = buffer->create_view<HAL::Texture3DView>(*list->frame_resources).texture3D;
 		data.GetVisible_tiles() = load_tiles_buffer->appendStructuredBuffer;
 		data.set(compute);
 	}
 
-	compute.set_pipeline(GetPSO<PSOS::VoxelVisibility>());
+	compute.set_pipeline<PSOS::VoxelVisibility>();
 	compute.dispach(ivec3(sizes));
 
 
@@ -57,7 +56,7 @@ std::future<visibility_update> VisibilityBuffer::update(Render::CommandList::ptr
 		});
 
 
-	  copy.read_buffer(load_tiles_buffer.get(), 0, load_tiles_buffer->get_size(), [this, info, promise](const char* data, UINT64 size)
+	copy.read_buffer(load_tiles_buffer.get(), 0, load_tiles_buffer->get_size(), [this, info, promise](const char* data, UINT64 size)
 		{
 			PROFILE(L"Read Tiles");
 			const uint4* tiles = reinterpret_cast<const uint4*>(data);
@@ -71,7 +70,7 @@ std::future<visibility_update> VisibilityBuffer::update(Render::CommandList::ptr
 		});
 
 
-	list->clear_uav(buffer->texture_3d()->get_static_uav());
+	list->clear_uav(buffer->texture_3d().mips[0].rwTexture3D);
 
 	return future;
 }

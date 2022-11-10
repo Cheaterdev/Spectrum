@@ -1,11 +1,11 @@
-export module Primitive;
+export module Core:Math.Primitive;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
+export import :Math.Constants;
+export import :Math.Vectors;
+export import :Math.Quaternion;
+export import :Math.Matrices;
 import stl.memory;
-import serialization;
+import :serialization;
 
 export enum class primitive_types
 {
@@ -37,7 +37,6 @@ private:
     SERIALIZE() {}
 };
 
-module: private;
 
 REGISTER_TYPE(Primitive)
 

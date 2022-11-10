@@ -1,13 +1,12 @@
-#include "pch_render.h"
-#include "ColoredRect.h"
-#include "GUI/Renderer/Renderer.h"
+module GUI:ColoredRect;
+import :Renderer;
 
 namespace GUI
 {
 	namespace Elements
 	{
 
-		void colored_rect::draw(Render::context& c)
+		void colored_rect::draw(Context& c)
 		{
 			renderer->draw_color(c, color, get_render_bounds());
 		}

@@ -1,14 +1,14 @@
-export module AABB;
+export module Core:Math.AABB;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
-export import Primitive;
+import :Math.Constants;
+import :Math.Vectors;
+import :Math.Quaternion;
+import :Math.Matrices;
+import :Math.Primitive;
 
 import stl.memory;
 import stl.core;
-import serialization;
+import :serialization;
 
 export
 {
@@ -41,9 +41,6 @@ export
 		}
 	};
 }
-
-module: private;
-
 
 REGISTER_TYPE(AABB)
 

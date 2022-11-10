@@ -1,13 +1,12 @@
-#include "pch_render.h"
-#include "ShaderMaterial.h"
-#include "Materials/universal_material.h"
+module Graphics:Materials.ShaderMaterial;
+import :Materials.UniversalMaterial;
 
 ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file(this)
 {
 
 	if (!file_name.empty())
 	{
-		auto shader = Render::pixel_shader::get_resource({ file_name, entry,{} });
+		auto shader = HAL::pixel_shader::get_resource({ file_name, entry,{} });
 
 		pipeline = std::make_shared<materials::PipelineSimple>(0, shader);
 
@@ -22,9 +21,9 @@ ShaderMaterial::ShaderMaterial(std::string file_name, std::string entry)//: file
 void ShaderMaterial::on_asset_change(std::shared_ptr<Asset> asset)
 {
 	// if (asset == *file)
-	//      shader = Render::pixel_shader::create_from_memory(file->get_data(), "PC", 0);
+	//      shader = HAL::pixel_shader::create_from_memory(file->get_data(), "PC", 0);
 }
-void ShaderMaterial::set(RENDER_TYPE render_type, MESH_TYPE type, Render::PipelineStateDesc &pipeline)
+void ShaderMaterial::set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc &pipeline)
 {
 	//pipeline.pixel = shader;
 }

@@ -4,7 +4,7 @@ struct quad_output
 float4 pos : SV_POSITION;
 };
 #include "../autogen/ColorRect.h"
-static const float2 pos[4] = (float2[4])GetColorRect().cb.pos;
+static const float2 pos[4] = (float2[4])GetColorRect().pos;
 
 #ifdef BUILD_FUNC_VS
 quad_output VS(uint index : SV_VERTEXID)

@@ -1,22 +1,18 @@
-#include "pch_render.h"
-#include "Assets/EngineAssets.h"
-#include "StencilRenderer.h"
+module Graphics:StencilRenderer;
+import :EngineAssets;
 
-#include "GUI/Elements/AssetExplorer.h"
-#include "Materials/universal_material.h"
-
-#include "Camera/Camera.h"
-
-#include "GUI/Elements/FlowGraph/FlowManager.h"
-#include "GUI/Elements/DockBase.h"
-#include "GUI/Elements/MenuList.h"
-#include "GUI/Elements/Window.h"
+import :Materials.UniversalMaterial;
+import GUI;
 
 using namespace GUI;
 
 using namespace Elements;
 using namespace FrameGraph;
 
+import Graphics;
+
+
+using namespace HAL;
 void stencil_renderer::select_current()
 {
 	selected.clear();
@@ -265,15 +261,15 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 	//throw std::exception("The method or operation is not implemented.");
 }
 
-stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
+stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 {
 
 
 	docking = GUI::dock::PARENT;
 	clickable = true;
 	/*
-	id_buffer.reset(new Render::StructureBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
-	axis_id_buffer.reset(new Render::StructureBuffer<UINT>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+	id_buffer.reset(new HAL::StructureBuffer<UINT>(1, HAL::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
+	axis_id_buffer.reset(new HAL::StructureBuffer<UINT>(1, HAL::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 
 
 	id_buffer->set_name("stencil_renderer::id_buffer");
@@ -310,17 +306,17 @@ stencil_renderer::stencil_renderer(): VariableContext(L"stencil")
 	std::vector<vec4> verts(8);
 	vec3 v0(-0.5, -0.5, 0.5);
 	vec3 v1(0.5, 0.5, 0.5);
-	verts[0] = vec4(-1.0f, 1.0f, -1.0f,0);
-	verts[1] = vec4(1.0f, 1.0f, -1.0f,0);
-	verts[2] = vec4(1.0f, 1.0f, 1.0f,0);
-	verts[3] = vec4(-1.0f, 1.0f, 1.0f,0);
-	verts[4] = vec4(-1.0f, -1.0f, -1.0f,0);
-	verts[5] = vec4(1.0f, -1.0f, -1.0f,0);
-	verts[6] = vec4(1.0f, -1.0f, 1.0f,0);
-	verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
-	index_buffer.reset(new Render::IndexBuffer(data));
+	verts[0] = vec4(-1.0f, 1.0f, -1.0f, 0);
+	verts[1] = vec4(1.0f, 1.0f, -1.0f, 0);
+	verts[2] = vec4(1.0f, 1.0f, 1.0f, 0);
+	verts[3] = vec4(-1.0f, 1.0f, 1.0f, 0);
+	verts[4] = vec4(-1.0f, -1.0f, -1.0f, 0);
+	verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
+	verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
+	verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
+	index_buffer = HAL::IndexBuffer::make_buffer(data);
 
-	vertex_buffer.reset(new Render::StructureBuffer<vec4>(8));
+	vertex_buffer.reset(new HAL::StructureBuffer<vec4>(8));
 	vertex_buffer->set_raw_data(verts);
 
 
@@ -334,23 +330,24 @@ void stencil_renderer::generate(Graph& graph)
 	process_tasks();
 
 	debug_scene->update_transforms();
+	auto& caminfo = graph.get_context<CameraInfo>();
 
-	cam = *graph.cam;
+	cam = *caminfo.cam;
 	cam.set_projection_params(0.01f, 1.f, 0.1f, 10000.f);
 	cam.target = cam.position + direction;
 	cam.update();
 
-	axis_cam = *graph.cam;
+	axis_cam = *caminfo.cam;
 
 
-	vec3 dir = /*axis_cam.position +*/ graph.cam->target - graph.cam->position;
+	vec3 dir = /*axis_cam.position +*/ caminfo.cam->target - caminfo.cam->position;
 	dir.normalize();
 	axis_cam.set_projection_params(1, 1000);
 	axis_cam.position -= (center_pos);
 	axis_cam.position.normalize();
 	axis_cam.position *= 200;
 	axis_cam.target = axis_cam.position + dir;//float3(0, 0, 0);//;
-	vec2 local = graph.cam->to_local(float3(0, 0, 0));
+	vec2 local = caminfo.cam->to_local(float3(0, 0, 0));
 	axis_cam.update();
 	axis_intersect_cam = axis_cam;
 	axis_intersect_cam.set_projection_params(1, 1000);
@@ -371,7 +368,7 @@ void stencil_renderer::generate(Graph& graph)
 
 		graph.add_pass<Data>("stencil_renderer::before", [this, &graph](Data& data, TaskBuilder& builder) {
 
-			builder.create(data.depth_tex, { { 1,1,1 }, DXGI_FORMAT::DXGI_FORMAT_R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
+			builder.create(data.depth_tex, { { 1,1,0 }, HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 			builder.create(data.id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.axis_id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			}, [this, &graph](Data& data, FrameContext& _context) {
@@ -381,8 +378,9 @@ void stencil_renderer::generate(Graph& graph)
 				auto& graphics = list.get_graphics();
 				auto& copy = list.get_copy();
 
+				auto& sceneinfo = graph.get_context<SceneInfo>();
 
-				auto obj = graph.scene;
+				auto obj = sceneinfo.scene;
 
 				//SceneFrameManager::get().prepare(_context.get_list(), *debug_scene);
 
@@ -413,8 +411,8 @@ void stencil_renderer::generate(Graph& graph)
 							graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 						}
 					};
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-					graphics.set_pipeline(GetPSO<PSOS::DrawStencil>());
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+					graphics.set_pipeline<PSOS::DrawStencil>();
 					scene->compiledScene.set(graphics);
 
 					list.clear_uav(data.id_buffer->get_uav_clear());
@@ -424,9 +422,9 @@ void stencil_renderer::generate(Graph& graph)
 					{
 						Slots::FrameInfo frameInfo;
 
-						auto camera = frameInfo.MapCamera();
-						//		memcpy(&camera.cb, &cam.camera_cb.current, sizeof(camera.cb));
-						camera.cb = cam.camera_cb.current;
+						auto& camera = frameInfo.GetCamera();
+						//		memcpy(&camera, &cam.camera_cb.current, sizeof(camera));
+						camera = cam.camera_cb.current;
 						frameInfo.set(graphics);
 					}
 
@@ -443,7 +441,7 @@ void stencil_renderer::generate(Graph& graph)
 					graphics.set_scissors(data.depth_tex->get_scissor());
 					obj->iterate([&](scene_object* node)
 						{
-							Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+							Graphics::renderable* render_object = dynamic_cast<Graphics::renderable*>(node);
 
 							if (render_object)
 							{
@@ -458,9 +456,9 @@ void stencil_renderer::generate(Graph& graph)
 					{
 						Slots::FrameInfo frameInfo;
 
-						auto camera = frameInfo.MapCamera();
-						camera.cb = axis_intersect_cam.camera_cb.current;
-						//		memcpy(&camera.cb, &axis_intersect_cam.camera_cb.current, sizeof(camera.cb));
+						auto& camera = frameInfo.GetCamera();
+						camera = axis_intersect_cam.camera_cb.current;
+						//		memcpy(&camera, &axis_intersect_cam.camera_cb.current, sizeof(camera));
 						frameInfo.set(graphics);
 					}
 					{
@@ -469,12 +467,12 @@ void stencil_renderer::generate(Graph& graph)
 						buffer.set(graphics);
 					}
 
-				
+
 
 
 					axis->iterate([&](scene_object* node)
 						{
-							Render::renderable* render_object = dynamic_cast<Render::renderable*>(node);
+							Graphics::renderable* render_object = dynamic_cast<Graphics::renderable*>(node);
 
 							if (render_object)
 							{
@@ -501,10 +499,11 @@ void stencil_renderer::generate(Graph& graph)
 							return true;
 						});
 
-					copy.read_buffer(data.id_buffer->resource.get(), 0, 4, [current, this](const char* data, UINT64 size)
+					copy.read_buffer(data.id_buffer->resource, 0, 4, [current, this](const char* data, UINT64 size)
 						{
 
-							if (!data) device_fail();
+							assert(data);
+							//device_fail();
 
 							auto result = *reinterpret_cast<const int*>(data) - 1;
 
@@ -522,7 +521,7 @@ void stencil_renderer::generate(Graph& graph)
 
 						});
 
-					copy.read_buffer(data.axis_id_buffer->resource.get(), 0, 4, [this](const char* data, UINT64 size)
+					copy.read_buffer(data.axis_id_buffer->resource, 0, 4, [this](const char* data, UINT64 size)
 						{
 
 							auto result = *reinterpret_cast<const int*>(data) - 1;
@@ -553,8 +552,11 @@ void stencil_renderer::generate_after(Graph& graph)
 		};
 
 		graph.add_pass<Data>("stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
+
+			auto& frame = graph.get_context<ViewportInfo>();
+
 			builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
-			builder.create(data.Stencil_color_tex, { ivec3(graph.frame_size,1), DXGI_FORMAT::DXGI_FORMAT_R8_SNORM,1 ,1} ,ResourceFlags::RenderTarget);
+			builder.create(data.Stencil_color_tex, { ivec3(frame.frame_size,0), HAL::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
 
 			}, [this, &graph](Data& data, FrameContext& _context) {
 
@@ -562,16 +564,16 @@ void stencil_renderer::generate_after(Graph& graph)
 				auto& list = *_context.get_list();
 				auto& graphics = list.get_graphics();
 
-				graphics.set_signature(get_Signature(Layouts::DefaultLayout));
+				graphics.set_signature(Layouts::DefaultLayout);
 
 				scene->compiledScene.set(graphics);
 
 				{
 					graphics.set_rtv(1, data.Stencil_color_tex->renderTarget, Handle());
-			//		data.Stencil_color_tex->renderTarget.clear(list);
-					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0,0,0,0));
-					graphics.set_pipeline(GetPSO<PSOS::DrawSelected>());
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					//		data.Stencil_color_tex->renderTarget.clear(list);
+					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0, 0, 0, 0));
+					graphics.set_pipeline<PSOS::DrawSelected>();
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					graphics.set_viewports({ data.Stencil_color_tex->get_viewport() });
 					graphics.set_scissors(data.Stencil_color_tex->get_scissor());
 
@@ -602,8 +604,8 @@ void stencil_renderer::generate_after(Graph& graph)
 
 				// apply color mask
 				{
-					graphics.set_pipeline(GetPSO<PSOS::StencilerLast>());
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+					graphics.set_pipeline<PSOS::StencilerLast>();
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 
 					{
 						Slots::Countour contour;
@@ -614,7 +616,7 @@ void stencil_renderer::generate_after(Graph& graph)
 
 					graphics.set_viewport(data.ResultTexture->get_viewport());
 					graphics.set_scissor(data.ResultTexture->get_scissor());
-					graphics.set_rtv(1, data.ResultTexture->renderTarget, Render::Handle());
+					graphics.set_rtv(1, data.ResultTexture->renderTarget, HAL::Handle());
 					{
 						PROFILE_GPU(L"blend");
 						graphics.draw(4);
@@ -623,10 +625,10 @@ void stencil_renderer::generate_after(Graph& graph)
 
 				graphics.set_rtv(1, data.ResultTexture->renderTarget, Handle());
 
-			if(draw_aabb){
-					graphics.set_pipeline(GetPSO<PSOS::DrawBox>());
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-					graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
+				if (draw_aabb) {
+					graphics.set_pipeline<PSOS::DrawBox>();
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
+					graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 					{
 						Slots::DrawStencil draw;
 						draw.GetVertices() = vertex_buffer->structuredBuffer;
@@ -651,16 +653,16 @@ void stencil_renderer::generate_after(Graph& graph)
 				// draw axis
 				{
 
-				graphics.set_index_buffer(IndexBufferView());// universal_index_manager::get().buffer->get_index_buffer_view(true));
-			
+					graphics.set_index_buffer(HAL::Views::IndexBuffer());// universal_index_manager::get().buffer->get_index_buffer_view(true));
+
 					{
 						Slots::FrameInfo frameInfo;
-						auto camera = frameInfo.MapCamera();
-						camera.cb = axis_cam.camera_cb.current;
+						auto& camera = frameInfo.GetCamera();
+						camera = axis_cam.camera_cb.current;
 						frameInfo.set(graphics);
 					}
-					graphics.set_pipeline(GetPSO<PSOS::DrawAxis>());
-					graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+					graphics.set_pipeline<PSOS::DrawAxis>();
+					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					int i = 0;
 
 					for (auto& m : axis->rendering)

@@ -16,7 +16,7 @@ void CS(
 	uint max_count = pip.GetMeshes_count()[0];
 
 	DispatchArguments dinfo;
-	dinfo.cb.counts =  uint3(((max_count + 64 - 1) / (64)), 1, 1);
+	dinfo.counts =  uint3(((max_count + 64 - 1) / (64)), 1, 1);
 
 	result[0] = dinfo;
 }

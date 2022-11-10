@@ -1,19 +1,8 @@
 #pragma once
-struct FontRendering_srv
-{
-	Texture2D<float> tex0;
-	Buffer<float4> positions;
-};
 struct FontRendering
 {
-	FontRendering_srv srv;
-	Texture2D<float> GetTex0() { return srv.tex0; }
-	Buffer<float4> GetPositions() { return srv.positions; }
-
+	uint tex0; // Texture2D<float>
+	uint positions; // Buffer<float4>
+	Texture2D<float> GetTex0() { return ResourceDescriptorHeap[tex0]; }
+	Buffer<float4> GetPositions() { return ResourceDescriptorHeap[positions]; }
 };
- const FontRendering CreateFontRendering(FontRendering_srv srv)
-{
-	const FontRendering result = {srv
-	};
-	return result;
-}

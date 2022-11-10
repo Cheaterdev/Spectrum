@@ -1,10 +1,10 @@
-#include "pch_render.h"
-#include "Assets/AssetRenderer.h"
-import FlowGraph;
+module Graphics:MaterialAsset;
+
+import :AssetRenderer;
 
 REGISTER_TYPE(MaterialAsset);
 
-
+import Graphics;
 
 //////////////////////////////////////////////////////////////////////////
 Asset_Type MaterialAsset::get_type()
@@ -18,7 +18,7 @@ MaterialAsset::MaterialAsset(materials::material::ptr m)
     mark_changed();
 }
 
-void MaterialAsset::update_preview(Render::Texture::ptr preview)
+void MaterialAsset::update_preview(HAL::Texture::ptr preview)
 {
     AssetRenderer::get().draw(get_ptr<MaterialAsset>(), preview);
     mark_changed();

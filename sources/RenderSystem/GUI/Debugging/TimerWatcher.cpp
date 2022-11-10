@@ -1,6 +1,7 @@
-#include "pch_render.h"
-#include "TimerWatcher.h"
-#include "GUI/Elements/Image.h"
+module GUI:Debug.TimerWatcher;
+
+
+//#include "GUI/Elements/Image.h"
 
 void GUI::Elements::Debug::TimedLabel::think(float dt)
 {
@@ -37,7 +38,7 @@ void GUI::Elements::Debug::TimeCreator::init_element(tree_element<TimedBlock>* t
 	auto timer = dynamic_cast<TimedBlock*>(elem);
 	base::ptr l(new line(tree));
 	toogle_icon::ptr	open_icon(new toogle_icon());
-	open_icon->texture = Render::Texture::null;
+	open_icon->texture = HAL::Texture::null;
 	open_icon->size = { 16, 16 }; // size_type::MATCH_PARENT;
 	open_icon->docking = dock::LEFT;
 	//open_icon->visible = false;

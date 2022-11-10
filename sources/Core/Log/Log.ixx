@@ -1,22 +1,19 @@
-module;
+export module Core:Log;
 
-
-#define BOOST_DECL_S
-#define BOOST_WARCHIVE_SOURCE
-#define BOOST_ARCHIVE_DECL
-
-export module Log;
-
-import Data;
+import :Data;
 import stl.threading;
 import stl.core;
 import stl.memory;
-import Singleton;
-import simple_log_archive;
-import Events;
-import Utils;
-import windows;
+import :Singleton;
 
+import :Events;
+import :Utils;
+import windows;
+import :serialization;
+
+export import cereal;
+
+//using simple_log_archive = cereal::JSONOutputArchive;
 export {
 
 	class LogBlock;
@@ -65,8 +62,8 @@ export {
 		Log& operator<<(const LogBlock& smth);
 
 		// this functions are last what user sees
-		virtual void crash_error(std::string message, std::string at = "");
-		virtual void crash_error(HRESULT hr, std::string at = "");
+		virtual void crash_error(std::string message, std::string_view at = "");
+		virtual void crash_error(HRESULT hr, std::string_view at = "");
 	};
 	struct shared_data
 	{
@@ -119,7 +116,7 @@ export {
 		{
 			if (need_logging())
 			{
-				data->archive << smth;
+				data->archive << NP(typeid(T).name(), smth);
 			}
 
 			return *this;
@@ -145,8 +142,8 @@ export {
 			//   Log::get().listeners.insert(this);
 			active = true;
 
-				typename Events::Event<const LogBlock*>::func_type f = [this](const LogBlock* v) { on_log(*v); };
-				Log::get().on_log.register_handler(this, f);
+			typename Events::Event<const LogBlock*>::func_type f = [this](const LogBlock* v) { on_log(*v); };
+			Log::get().on_log.register_handler(this, f);
 
 		}
 
@@ -226,7 +223,6 @@ export {
 	}
 
 }
-module: private;
 
 
 static auto start_time = std::chrono::high_resolution_clock::now();
@@ -297,13 +293,15 @@ Log& Log::operator<<(const LogBlock& log)
 	return *this;
 }
 
-void Log::crash_error(std::string message, std::string at)
+void Log::crash_error(std::string message, std::string_view at)
 {
 	(*this) << LEVEL_ERROR << message << " at: " << at << endl;
 }
 
-void Log::crash_error(HRESULT hr, std::string at /*= ""*/)
+void Log::crash_error(HRESULT hr, std::string_view at /*= ""*/)
 {
+	std::string message = std::system_category().message(hr);
+	(*this) << LEVEL_ERROR << message << " at: " << at << endl;
 	//_com_error err(hr);
 	//crash_error((err.ErrorMessage()), at);
 }

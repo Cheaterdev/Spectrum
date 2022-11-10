@@ -1,20 +1,9 @@
 #pragma once
 #include "Camera.h"
-struct PSSMDataGlobal_srv
-{
-	Texture2D<float> light_buffer;
-	StructuredBuffer<Camera> light_camera;
-};
 struct PSSMDataGlobal
 {
-	PSSMDataGlobal_srv srv;
-	Texture2D<float> GetLight_buffer() { return srv.light_buffer; }
-	StructuredBuffer<Camera> GetLight_camera() { return srv.light_camera; }
-
+	uint light_buffer; // Texture2D<float>
+	uint light_camera; // StructuredBuffer<Camera>
+	Texture2D<float> GetLight_buffer() { return ResourceDescriptorHeap[light_buffer]; }
+	StructuredBuffer<Camera> GetLight_camera() { return ResourceDescriptorHeap[light_camera]; }
 };
- const PSSMDataGlobal CreatePSSMDataGlobal(PSSMDataGlobal_srv srv)
-{
-	const PSSMDataGlobal result = {srv
-	};
-	return result;
-}

@@ -1,11 +1,13 @@
 #pragma once
-#include "Assets/MeshAsset.h"
+import Graphics;
+import Core;
+import windows;
 
 void Meshletize(
-    UINT maxVerts, UINT maxPrims,
-    const UINT* indices, UINT indexCount,
-    const float3* positions, UINT vertexCount,
-    std::vector<InlineMeshlet<UINT>>& output
+    uint maxVerts, uint maxPrims,
+    const uint* indices, uint indexCount,
+    const float3* positions, uint vertexCount,
+    std::vector<InlineMeshlet<uint>>& output
 );
 
 
@@ -20,6 +22,6 @@ float4 MinimumBoundingSphere(float3* points, uint32_t count);
 
 HRESULT ComputeCullData(
     const float3* positions, uint32_t vertexCount,
-    InlineMeshlet<UINT>& meshlet,
+    InlineMeshlet<uint>& meshlet,
     DWORD flags
 );

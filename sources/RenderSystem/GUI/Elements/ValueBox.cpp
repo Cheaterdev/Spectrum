@@ -1,5 +1,6 @@
-#include "pch_render.h"
-#include "ValueBox.h"
+module GUI:ValueBox;
+import :Renderer;
+
 
 namespace GUI
 {

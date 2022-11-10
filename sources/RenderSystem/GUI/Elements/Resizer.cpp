@@ -1,6 +1,48 @@
-#include "pch_render.h"
-#include "Resizer.h"
+module GUI:Resizer;
+import :Base;
+import :Dragger;
 
+//#include "Resizer.h"
+ namespace GUI
+{
+    namespace Elements
+    {
+        direction to_direction(dock d)
+        {
+            if (d == dock::LEFT)
+                return direction::LEFT;
+
+            if (d == dock::RIGHT)
+                return direction::RIGHT;
+
+            if (d == dock::TOP)
+                return direction::TOP;
+
+            if (d == dock::BOTTOM)
+                return direction::BOTTOM;
+
+            return direction::LEFT;
+        }
+
+        dock invert(dock d)
+        {
+            if (d == dock::LEFT)
+                return dock::RIGHT;
+
+            if (d == dock::RIGHT)
+                return dock::LEFT;
+
+            if (d == dock::TOP)
+                return dock::BOTTOM;
+
+            if (d == dock::BOTTOM)
+                return dock::TOP;
+
+            return dock::LEFT;
+        }
+
+    }
+}
 bool GUI::Elements::resizer::on_mouse_move(vec2 pos)
 {
     if (!dragging) return true;

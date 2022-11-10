@@ -27,14 +27,14 @@ void CS(
   //  GetDebugInfo().Log(0, hi[0]);
     {
         DispatchArguments dinfo;
-        dinfo.cb.counts = divide_by_multiple(uint3(hi[0]*32,32,1), uint3(8, 8, 1));
+        dinfo.counts = divide_by_multiple(uint3(hi[0]*32,32,1), uint3(8, 8, 1));
         hi_init[0] = dinfo;
     }
 
 	
     {
         DispatchArguments dinfo;
-        dinfo.cb.counts = divide_by_multiple(uint3(low[0] * 32, 32, 1), uint3(8, 8, 1));
+        dinfo.counts = divide_by_multiple(uint3(low[0] * 32, 32, 1), uint3(8, 8, 1));
         low_init[0] = dinfo;
     }
 

@@ -1,7 +1,9 @@
-#include "pch_render.h"
-#include "TextSystem.h"
+module;
+#include "FW1FontWrapper/Source/FW1FontWrapper.h"
 
-import Utils;
+module TextSystem;
+
+import Core;
 
 
 namespace Fonts
@@ -18,7 +20,7 @@ namespace Fonts
            return res_manager::get().get_resource(h);
        }
     */
-    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, vec2 pos, float4 color,  unsigned int flags /*= 0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::wstring str, float size, vec2 pos, float4 color,  unsigned int flags /*= 0*/)
     {
 
         native_font->DrawString(
@@ -33,7 +35,7 @@ namespace Fonts
     }
 
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*= 0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::wstring str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*= 0*/)
     {
 
         native_font->DrawString(
@@ -49,7 +51,7 @@ namespace Fonts
         );
     }
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::wstring str, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::wstring str, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
     {
         draw(command_list, str, size, area, area, color, flags);
     }
@@ -57,18 +59,18 @@ namespace Fonts
 
 
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, vec2 pos, float4 color, unsigned int flags /*=0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::string str, float size, vec2 pos, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, pos, color, flags);
     }
 
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, sizer area, float4 color, unsigned int flags /*=0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::string str, float size, sizer area, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, area, color, flags);
     }
 
-    void Font::draw(Render::CommandList::ptr& command_list, std::string str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*=0*/)
+    void Font::draw(HAL::CommandList::ptr& command_list, std::string str, float size, sizer area, sizer clip_rect, float4 color, unsigned int flags /*=0*/)
     {
         draw(command_list, convert(str), size, area, clip_rect, color, flags);
     }
@@ -83,11 +85,11 @@ namespace Fonts
 
     FontSystem::FontSystem()
     {
-        TEST(FW1CreateFactory(FW1_VERSION, &pFW1Factory));
+        FW1CreateFactory(FW1_VERSION, &pFW1Factory);
         fonts.create_func = [this](const std::string & font_name)-> Font::ptr
         {
             Font::ptr font(new Font());
-            TEST(pFW1Factory->CreateFontWrapper(convert(font_name).c_str(), &font->native_font));
+            pFW1Factory->CreateFontWrapper(convert(font_name).c_str(), &font->native_font);
             font->font_name = font_name;
             font->native_font->GetRenderStates(&font->pRenderStates);
             return font;
@@ -150,7 +152,7 @@ namespace Fonts
         return index;
     }
 
-    void FontGeometry::draw(Render::CommandList::ptr& command_list, sizer clip_rect, unsigned int flags /*= 0*/, vec2 offset /*= {0,0}*/, float scale  /*= 1*/)
+    void FontGeometry::draw(HAL::CommandList::ptr& command_list, sizer clip_rect, unsigned int flags /*= 0*/, vec2 offset /*= {0,0}*/, float scale  /*= 1*/)
     {
         std::lock_guard<std::mutex> guard(m);
 
@@ -164,10 +166,10 @@ namespace Fonts
 
         if (vps.size())
         {
-            if (vps[0].Width >= 1.0f && vps[0].Height >= 1.0f)
+            if (vps[0].size.x >= 1.0f && vps[0].size.y >= 1.0f)
             {
-                w = vps[0].Width;
-                h = vps[0].Height;
+                w = vps[0].size.x;
+                h = vps[0].size.y;
             }
         }
 
@@ -188,7 +190,7 @@ namespace Fonts
         );
     }
 
-    void FontGeometry::set(Render::CommandList::ptr& command_list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
+    void FontGeometry::set(HAL::CommandList::ptr& command_list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
     {
         std::lock_guard<std::mutex> guard(m);
         this->size = size;

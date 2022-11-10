@@ -1,4 +1,4 @@
-export module Singleton;
+export module Core:Singleton;
 
 import stl.memory;
 import stl.core;
@@ -11,6 +11,10 @@ export template <class T>
 {
     public:
         static std::shared_ptr<T> get_native();
+};
+template<class T> concept HasCreationFunc =
+    requires () {
+    T::create_singleton();// ->std::template shared_ptr<T>;
 };
 
 export template <typename T>
@@ -44,7 +48,13 @@ export template <typename T>
                 std::lock_guard<std::mutex> g(create_mutex);
 
                 if (instance) return instance.get();
-
+                if constexpr(HasCreationFunc<T>)
+                {
+                    instance = T::create_singleton();
+                    ptr = instance.get();
+                }else
+                {
+	          
                 memory.resize(sizeof(G));
               auto new_ptr = reinterpret_cast<T*>(memory.data());
                 // auto stack = get_stack_trace();
@@ -60,6 +70,7 @@ export template <typename T>
                 });
 
 				ptr = new_ptr;
+                }
             }
 
             return instance.get();
@@ -84,7 +95,6 @@ export template <typename T>
         }
 };
 
-module: private;
 
 template <typename T>
 std::shared_ptr<T>  Singleton<T>::instance;

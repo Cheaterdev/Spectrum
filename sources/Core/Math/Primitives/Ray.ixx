@@ -1,15 +1,15 @@
-export module Ray;
+export module Core:Math.Ray;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
-export import Primitive;
+import :Math.Constants;
+import :Math.Vectors;
+import :Math.Quaternion;
+import :Math.Matrices;
+import :Math.Primitive;
 
-import Plane;
+import :Math.Plane;
 
 import stl.memory;
-import serialization;
+import :serialization;
 
 export class Ray
 {
@@ -29,9 +29,6 @@ private:
 		ar& NVP(pos)& NVP(dir);
 	}
 };
-
-module: private;
-
 
 inline Ray::Ray(vec3 p, vec3 r) : pos(p), dir(r)
 {

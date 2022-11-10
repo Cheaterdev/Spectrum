@@ -1,8 +1,8 @@
-export module Executors;
+export module Core:Executors;
 
-import Profiling;
-import Threading;
-import Singleton;
+import :Profiling;
+import :Threading;
+import :Singleton;
 //#include <boost/lockfree/spsc_queue.hpp>
 import stl.core;
 import stl.threading;
@@ -65,7 +65,6 @@ protected:
 
 }
 
-module:private;
 
 
 void SingleThreadExecutorBatched::process_one(Batch& batch)

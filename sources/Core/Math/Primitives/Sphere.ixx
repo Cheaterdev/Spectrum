@@ -1,13 +1,13 @@
-export module Sphere;
+export module Core:Math.Sphere;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
-export import Primitive;
+export import :Math.Constants;
+export import :Math.Vectors;
+export import :Math.Quaternion;
+export import :Math.Matrices;
+export import :Math.Primitive;
 
 import stl.memory;
-import serialization;
+import :serialization;
 
 export class Sphere : public Primitive
 {
@@ -60,9 +60,6 @@ private:
 	}
 };
 
-
-
-module: private;
 
 REGISTER_TYPE(Sphere)
 

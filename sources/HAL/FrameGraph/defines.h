@@ -1,0 +1,1 @@
+#define H(x) x = #x

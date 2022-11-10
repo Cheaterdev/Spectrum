@@ -1,71 +1,78 @@
-export module Debug;
+export module Core:Debug;
 
 import stl.core;
 import stl.threading;
-import Singleton;
-import Log;
+import :Singleton;
+import :Log;
 
 export
 {
 
+	struct BuildOptions
+	{
+		static constexpr bool Debug = true;
+		static constexpr bool Release = false;
+
+	};
+
 #ifdef LEAK_TEST_ENABLE
-class LeakDetectorInstance;
-class LeakDetector : public Singleton<LeakDetector>
-{
-	std::set<LeakDetectorInstance*> instances;
-	std::set<long> breaks;
-	std::map<std::string, int> name_counters;
-	long alloc_number = 0;
-public:
-
-	void add(LeakDetectorInstance* e);
-
-	void remove(LeakDetectorInstance* e);
-
-	void break_on(long i)
+	class LeakDetectorInstance;
+	class LeakDetector : public Singleton<LeakDetector>
 	{
-		breaks.insert(i);
-	}
+		std::set<LeakDetectorInstance*> instances;
+		std::set<long> breaks;
+		std::map<std::string, int> name_counters;
+		long alloc_number = 0;
+	public:
 
-	virtual ~LeakDetector();
+		void add(LeakDetectorInstance* e);
 
-};
-class LeakDetectorInstance
-{
-	friend class LeakDetector;
-	std::string stack;
-	std::string name;
-	long alloc_number = -1;
-	LeakDetectorInstance() {}
-public:
-	LeakDetectorInstance& operator = (const LeakDetectorInstance& r)
+		void remove(LeakDetectorInstance* e);
+
+		void break_on(long i)
+		{
+			breaks.insert(i);
+		}
+
+		virtual ~LeakDetector();
+
+	};
+	class LeakDetectorInstance
 	{
-		this->stack = r.stack;
-		this->name = r.name;
-		LeakDetector::get().add(this);
-		return *this;
-	}
+		friend class LeakDetector;
+		std::string stack;
+		std::string name;
+		long alloc_number = -1;
+		LeakDetectorInstance() {}
+	public:
+		LeakDetectorInstance& operator = (const LeakDetectorInstance& r)
+		{
+			this->stack = r.stack;
+			this->name = r.name;
+			LeakDetector::get().add(this);
+			return *this;
+		}
 
-	LeakDetectorInstance(const LeakDetectorInstance& r)
-	{
-		stack = r.stack;
-		this->name = r.name;
-		LeakDetector::get().add(this);
-	}
+		LeakDetectorInstance(const LeakDetectorInstance& r)
+		{
+			stack = r.stack;
+			this->name = r.name;
+			LeakDetector::get().add(this);
+		}
 
 
-	LeakDetectorInstance(std::string name)
-	{
-		//         stack = get_stack_trace(true);
-		this->name = name;
-		LeakDetector::get().add(this);
-	}
+		LeakDetectorInstance(std::string name)
+		{
+			//         stack = get_stack_trace(true);
+			this->name = name;
+			LeakDetector::get().add(this);
+		}
 
-	virtual ~LeakDetectorInstance()
-	{
-		LeakDetector::get().remove(this);
-	}
-};
+		virtual ~LeakDetectorInstance()
+		{
+			LeakDetector::get().remove(this);
+		}
+	};
 
 
 
@@ -73,85 +80,84 @@ public:
 
 
 
-template<class T>
-class Counter;
+	template<class T>
+	class Counter;
 
-class CounterManager : public Singleton<CounterManager>
-{
-public:
-	std::vector<std::function<void()>> print_functions;
-
-	void print()
+	class CounterManager : public Singleton<CounterManager>
 	{
-		for (auto& f : print_functions)
-			f();
-	}
+	public:
+		std::vector<std::function<void()>> print_functions;
 
-	template<class T> Counter<T> start_count(std::string name = "")
-	{
-		return Counter<T>(name);
-	}
-};
-template<class T>
-class Counter
-{
-	std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
-	static std::atomic_int32_t time;
-	std::string name;
-public:
-
-	Counter(std::string name)
-	{
-		this->name = name;
-		static std::once_flag flag;
-		call_once(flag, []()
+		void print()
 		{
-			CounterManager::get().print_functions.push_back([]()
-			{
-				Log::get() << "summary [" << typeid(T).name() << "]: " << long(time) << Log::endl;
-			});
-		});
-	}
-	~Counter()
+			for (auto& f : print_functions)
+				f();
+		}
+
+		template<class T> Counter<T> start_count(std::string name = "")
+		{
+			return Counter<T>(name);
+		}
+	};
+	template<class T>
+	class Counter
 	{
-		long count = static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count());
-		// Log::get() << "timer [" << typeid(T).name() << "] " << name << " :" << count << Log::endl;
-		time.fetch_add(count);
-	}
+		std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
+		static std::atomic_int32_t time;
+		std::string name;
+	public:
 
-	static void log()
+		Counter(std::string name)
+		{
+			this->name = name;
+			static std::once_flag flag;
+			call_once(flag, []()
+				{
+					CounterManager::get().print_functions.push_back([]()
+						{
+							Log::get() << "summary [" << typeid(T).name() << "]: " << long(time) << Log::endl;
+						});
+				});
+		}
+		~Counter()
+		{
+			long count = static_cast<long>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start_time).count());
+			// Log::get() << "timer [" << typeid(T).name() << "] " << name << " :" << count << Log::endl;
+			time.fetch_add(count);
+		}
+
+		static void log()
+		{
+		}
+	};
+
+	template<class T>
+	std::atomic_int32_t Counter<T>::time = 0;
+
+
+	class Checker
 	{
-	}
-};
+		std::atomic<std::thread::id>& v;
+	public:
+		Checker(std::atomic<std::thread::id>& c) :v(c)
+		{
+			auto id = std::this_thread::get_id();
+			auto prev = v.exchange(id);
+			assert(prev == std::thread::id());
+		}
 
-template<class T>
-std::atomic_int32_t Counter<T>::time = 0;
-
-
-class Checker
-{
-	std::atomic<std::thread::id>& v;
-public:
-	Checker(std::atomic<std::thread::id>& c) :v(c)
-	{
-		auto id = std::this_thread::get_id();
-		auto prev = v.exchange(id);
-		assert(prev== std::thread::id());
-	}
-
-	~Checker()
-	{
-		auto id = std::this_thread::get_id();
-		auto prev = v.exchange(std::thread::id());
-		assert(prev == id);
-	}
-};
+		~Checker()
+		{
+			auto id = std::this_thread::get_id();
+			auto prev = v.exchange(std::thread::id());
+			assert(prev == id);
+		}
+	};
 
 
 }
 
 
-module:private;
 
 
 #ifdef LEAK_TEST_ENABLE

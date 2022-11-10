@@ -1,8 +1,8 @@
-export module Trackable;
-import Data;
+export module Core:Trackable;
+import :Data;
 import stl.core;
 
-import StateContext;
+import :StateContext;
 export
 {
 
@@ -26,6 +26,11 @@ export
 		}
 		virtual ~Trackable() {};
 
+		std::shared_ptr<T> get_tracked() const
+		{
+			return tracked_info;
+		}
+
 	};
 
 	template <class T>
@@ -40,5 +45,3 @@ export
 
 
 }
-
-module: private;

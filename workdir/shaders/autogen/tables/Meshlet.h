@@ -1,23 +1,12 @@
 #pragma once
-struct Meshlet_cb
-{
-	uint vertexCount;
-	uint vertexOffset;
-	uint primitiveCount;
-	uint primitiveOffset;
-};
 struct Meshlet
 {
-	Meshlet_cb cb;
-	uint GetVertexCount() { return cb.vertexCount; }
-	uint GetVertexOffset() { return cb.vertexOffset; }
-	uint GetPrimitiveCount() { return cb.primitiveCount; }
-	uint GetPrimitiveOffset() { return cb.primitiveOffset; }
-
+	uint vertexCount; // uint
+	uint vertexOffset; // uint
+	uint primitiveCount; // uint
+	uint primitiveOffset; // uint
+	uint GetVertexCount() { return vertexCount; }
+	uint GetVertexOffset() { return vertexOffset; }
+	uint GetPrimitiveCount() { return primitiveCount; }
+	uint GetPrimitiveOffset() { return primitiveOffset; }
 };
- const Meshlet CreateMeshlet(Meshlet_cb cb)
-{
-	const Meshlet result = {cb
-	};
-	return result;
-}

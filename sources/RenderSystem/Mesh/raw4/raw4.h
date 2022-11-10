@@ -1,7 +1,8 @@
 ﻿#ifndef _RAW4_H_
 #define _RAW4_H_
 
-#include "Math/Math.h"
+import Core;
+
 //------------------------------------------------------------------------------
 
 // Required vec3

@@ -5,20 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/InitDispatch.h"
-RWStructuredBuffer<uint> uav_5_0: register(u0, space5);
-RWStructuredBuffer<DispatchArguments> uav_5_1: register(u1, space5);
-struct Pass_InitDispatch
-{
-uint uav_0;
-uint uav_1;
-};
-ConstantBuffer<Pass_InitDispatch> pass_InitDispatch: register( b2, space5);
+ConstantBuffer<InitDispatch> pass_InitDispatch: register( b2, space5);
 const InitDispatch CreateInitDispatch()
 {
-	InitDispatch result;
-	result.uav.counter = uav_5_0;
-	result.uav.dispatch_data = uav_5_1;
-	return result;
+	return pass_InitDispatch;
 }
 #ifndef NO_GLOBAL
 static const InitDispatch initDispatch_global = CreateInitDispatch();

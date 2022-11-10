@@ -1,8 +1,8 @@
-#include "pch_render.h"
-#include "RTX.h"
+module Graphics:RTX;
+import HAL;
 
 
-void RTX::prepare(CommandList::ptr& list)
+void RTX::prepare(HAL::CommandList::ptr& list)
 {
 	rtx.prepare(list);
 }

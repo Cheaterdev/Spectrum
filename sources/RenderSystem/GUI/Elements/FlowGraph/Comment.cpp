@@ -1,10 +1,10 @@
-#include "pch_render.h"
-#include "Canvas.h"
-#include "Comment.h"
-#include "GUI/Elements/Button.h"
-#include "GUI/Renderer/Renderer.h"
+module GUI:FlowGraph.Comment;
 
-void GUI::Elements::FlowGraph::comment::draw(Render::context& c)
+import :FlowGraph.Canvas;
+import :Renderer;
+
+
+void GUI::Elements::FlowGraph::comment::draw(Context& c)
 {
     this->renderer->draw(c, Skin::get().FlowComment.Active, get_render_bounds());
 }
@@ -53,7 +53,7 @@ GUI::Elements::FlowGraph::comment::comment(canvas* canva, ::FlowGraph::window* w
     close_button->background_style = button::view_style::NO_BACKGROUND;
     close_button->get_label()->visible = false;
     close_button->get_image()->visible = true;
-    close_button->get_image()->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/window_close.png"));
+    close_button->get_image()->texture = HAL::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/window_close.png")));
     close_button->get_image()->docking = dock::FILL;
     close_button->padding = { 5, 5, 5, 5 };
     close_button->docking = dock::RIGHT;

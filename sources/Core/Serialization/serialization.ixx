@@ -1,6 +1,4 @@
-module;
-
-export module serialization;
+export module Core:serialization;
 export import "serialization_defines.h";
 export import cereal;
 export import stl.core;
@@ -8,6 +6,9 @@ export import stl.threading;
 export import stl.filesystem;
 
 export import crossguid;
+//export import simple_log_archive;
+
+import :Utils;
 
 export template<typename T> concept PrettyArchive = requires () { T::PRETTY; };
 
@@ -21,7 +22,7 @@ export
 		template<class Archive>
 		void serialize(Archive& ar, Guid& g)
 		{
-			if constexpr (Archive::is_loading::value)
+			IF_LOAD()
 			{
 				std::array<unsigned char, 16> v;
 				ar& NVP(v);
@@ -30,8 +31,8 @@ export
 			}
 			else
 			{
-				auto& v = g.bytes();
-				ar& NVP(v);
+			auto& v = g.bytes();
+			ar& NVP(v);
 			}
 		}
 
@@ -42,6 +43,8 @@ export
 			if (Archive::is_saving::value)
 				s = p.wstring();
 			ar& NP("string", s);
+
+			//BUG_ALERT;
 			if (Archive::is_loading::value)
 				p = s;
 		}

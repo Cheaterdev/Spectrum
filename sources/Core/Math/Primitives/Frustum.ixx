@@ -1,14 +1,14 @@
-export module Frustum;
+export module Core:Math.Frustum;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
-export import Primitive;
-import Plane;
+import :Math.Constants;
+import :Math.Vectors;
+import :Math.Quaternion;
+import :Math.Matrices;
+import :Math.Primitive;
+import :Math.Plane;
 
 import stl.memory;
-import serialization;
+import :serialization;
 
 export class Frustum : public Primitive
 {
@@ -49,9 +49,6 @@ private:
     }
 };
 
-
-
-module: private;
 
 REGISTER_TYPE(Frustum)
 

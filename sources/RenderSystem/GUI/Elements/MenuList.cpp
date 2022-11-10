@@ -1,8 +1,9 @@
-#include "pch_render.h"
-#include "MenuList.h"
-#include "GUI/Renderer/Renderer.h"
+module GUI:MenuList;
+import :Renderer;
 
-void GUI::Elements::menu_list::draw(Render::context& c)
+
+
+void GUI::Elements::menu_list::draw(Context& c)
 {
     renderer->draw_container(get_ptr(), c);
 }
@@ -51,7 +52,7 @@ void GUI::Elements::menu_list::close_menus()
 namespace GUI
 {
 
-    void Elements::menu_list_element::draw(Render::context& c)
+    void Elements::menu_list_element::draw(Context& c)
     {
             if (is_hovered())
 				renderer->draw_color(c, float4(53, 114, 202, 255) / 255.0f, get_render_bounds());

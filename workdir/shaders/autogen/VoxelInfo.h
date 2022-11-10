@@ -5,16 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelInfo.h"
-ConstantBuffer<VoxelInfo_cb> cb_4_0:register(b0,space4);
-struct Pass_VoxelInfo
-{
-};
-ConstantBuffer<Pass_VoxelInfo> pass_VoxelInfo: register( b2, space4);
+ConstantBuffer<VoxelInfo> pass_VoxelInfo: register( b2, space4);
 const VoxelInfo CreateVoxelInfo()
 {
-	VoxelInfo result;
-	result.cb = cb_4_0;
-	return result;
+	return pass_VoxelInfo;
 }
 #ifndef NO_GLOBAL
 static const VoxelInfo voxelInfo_global = CreateVoxelInfo();

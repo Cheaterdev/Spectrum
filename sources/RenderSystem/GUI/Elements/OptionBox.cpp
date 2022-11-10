@@ -1,6 +1,6 @@
-#include "pch_render.h"
-#include "OptionBox.h"
-#include "CheckBoxText.h"
+module GUI:OptionBox;
+import :Renderer;
+import :CheckBoxText;
 
 GUI::Elements::check_box_text::ptr GUI::Elements::option_group::create_option(bool value /*= false*/)
 {

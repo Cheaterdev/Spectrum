@@ -1,13 +1,13 @@
-#include "pch_render.h"
-#include "CheckBox.h"
-#include "GUI/Renderer/Renderer.h"
+module GUI:CheckBox;
+
+import GUI;
 
 namespace GUI
 {
 	namespace Elements
 	{
 
-		void check_box::draw(Render::context& c)
+		void check_box::draw(Context& c)
 		{
 			if (is_checked())
 				renderer->draw(c, skin.Checked, get_render_bounds());

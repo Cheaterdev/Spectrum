@@ -7,7 +7,7 @@
 #include <format>
 #include <string>
 #include <iostream>
-static const std::string cpp_path = "../../sources/DirectXFramework/autogen";
+static const std::string cpp_path = "../../sources/HAL/autogen";
 static const std::string hlsl_path = "../../workdir/shaders/autogen";
 
 Parsed parsed;
@@ -19,7 +19,7 @@ std::string generate_array(const have_array& a)
 			return std::format("[{}]", a.array_count);
 		}
 		else {
-			return "[]";
+			return "";
 		}
 	}
 	return "";
@@ -95,94 +95,6 @@ void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::C
 
 }
 
-
-void generate_bind(my_stream& stream, const std::string& pass_cb, const std::string &parent, Table& table, Slot& slot, table_offsets& offsets)
-{
-	std::string write_to = "result";
-
-	if (parent.empty()) {
-		if (table.counts[ValueType::CB] > 0)
-			stream << std::format("result.cb = cb_{}_0;", slot.id) << std::endl;
-	}
-
-	auto process_type = [&](ValueType type) {
-
-		auto& i = offsets[type];
-		for (auto& v : table.values)
-		{
-			if (v.value_type != type) continue;
-			if (v.bindless) continue;
-
-		
-			if ( true/* rtx is an issue*/)
-			{
-				stream << std::format("result.{}.{}{} = {}_{}_{};", get_name_for(type), parent, v.name, get_name_for(type), slot.id, i) << std::endl;
-			}
-			else
-			if (v.as_array)
-			{
-				for (int a = 0; a < v.array_count; a++)
-				{
-					stream << "result." << get_name_for(type) << "." << parent << v.name << "["<<a<<"] = ResourceDescriptorHeap[(pass_" << pass_cb << "." << get_name_for(type) << "_" << i << ") + "<<a << "]; " << std::endl;
-
-				}
-			}else
-			stream << "result." << get_name_for(type) << "." << parent << v.name << " = ResourceDescriptorHeap[(pass_"<< pass_cb <<"." << get_name_for(type) << "_" << i << " ) ];" << std::endl;
-
-			i += v.array_count;
-		}
-	};
-
-
-	process_type(ValueType::SRV);
-	process_type(ValueType::UAV);
-	process_type(ValueType::SMP);
-
-
-	for (auto& v : table.values)
-	{
-		if (v.value_type != ValueType::STRUCT) continue;
-
-		auto t = parsed.find_table(v.type);
-		std::string parent_to;
-		if (parent.empty())
-			parent_to = v.name + ".";
-		else
-			parent_to = parent + "." + v.name + ".";
-		generate_bind(stream, pass_cb, parent_to, *t, slot, offsets);
-	}
-
-	/*if (parent.empty())
-		for (auto& v : table.values)
-		{
-			if (v.value_type != ValueType::STRUCT) continue;
-
-			std::string pass;
-			auto t = parsed.find_table(v.type);
-			auto f = [&](ValueType type) {
-				if (t->counts[type] == 0) return;
-
-
-				if (pass.size()) pass += ",";
-				pass += std::string("result.") + get_name_for(type) + "." + v.name;
-			};
-
-			f(ValueType::CB);
-			f(ValueType::SRV);
-			f(ValueType::UAV);
-			f(ValueType::SMP);
-
-			stream << "result." << v.name << " = Create" << v.type << "(" << pass << ");" << std::endl;
-		}
-		*/
-
-}
-
-void generate_bind(my_stream& stream, std::string parent, Table& table, Slot& slot)
-{
-	table_offsets offsets; generate_bind(stream, table.name, parent, table, slot, offsets);
-}
-
 void generate_pass_table(Table& table)
 {
 	my_stream stream(hlsl_path, table.name + ".h");
@@ -196,14 +108,14 @@ R"(#ifndef SLOT_{0}
 
 	stream << std::format(R"(#include "layout/{}.h")" ,table.slot->layout->name)<< std::endl;
 
-	if (table.bindless_srv)
-		stream << std::format(R"({} bindless[]: register(t{}, space{});)", table.bindless_srv->type , calculate_max_size(table) , table.slot->id) << std::endl;
+//	if (table.bindless_srv)
+	//	stream << std::format(R"({} bindless[]: register(t{}, space{});)", table.bindless_srv->type , calculate_max_size(table) , table.slot->id) << std::endl;
 
 	stream << std::format(R"(#include "tables/{}.h")", table.name) << std::endl;
 
 
 	// cb
-	if (table.counts[ValueType::CB] > 0) stream << std::format(R"(ConstantBuffer<{}_cb> cb_{}_0:register(b0,space{});)", table.name , table.slot->id ,table.slot->id ) << std::endl; // "ConstantBuffer<" << table.name << "_cb> cb_" << table.slot->id << "_0:register(b0,space" << table.slot->id << ");" << std::endl;
+//	if (table.counts[ValueType::CB] > 0) stream << std::format(R"(ConstantBuffer<{}_cb> cb_{}_0:register(b0,space{});)", table.name , table.slot->id ,table.slot->id ) << std::endl; // "ConstantBuffer<" << table.name << "_cb> cb_" << table.slot->id << "_0:register(b0,space" << table.slot->id << ");" << std::endl;
 
 
 
@@ -216,21 +128,7 @@ R"(#ifndef SLOT_{0}
 
 	std::stringstream struct_str;
 
-	struct_str << std::format(R"(struct Pass_{})", table.name) << std::endl;
-	struct_str << "{" << std::endl;
-
-
-	std::array<std::stringstream, ValueType::COUNT > types;
-
-	generate_pass(stream, types, table, offsets, *table.slot);
-	struct_str << types[ValueType::SRV].str();
-	struct_str << types[ValueType::UAV].str();
-	struct_str << types[ValueType::SMP].str();
-
-
-	struct_str << "};" << std::endl;
-
-	struct_str << "ConstantBuffer<Pass_" << table.name << "> pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
+	struct_str << "ConstantBuffer<" << table.name << "> pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
 
 	stream << struct_str.str();
 
@@ -241,20 +139,8 @@ R"(#ifndef SLOT_{0}
 		stream << "{" << std::endl;
 		{
 			stream.push();
-			stream << table.name << " result;" << std::endl;
 
-		//	stream << "Pass_"<<table.name << " pass;" << std::endl;
-
-
-			table_offsets offsets;
-			offsets[ValueType::SMP] = 0;
-			offsets[ValueType::UAV] = 0;
-			offsets[ValueType::SRV] = 0;
-			offsets[ValueType::CB] = 0;
-
-			offsets[ValueType::SMP] = table.slot->layout->samplers.size();
-			generate_bind(stream, table.name, "",table,  *table.slot, offsets);
-			stream << "return result;" << std::endl;
+			stream << "return pass_"<< table.name << ";" << std::endl;
 			stream.pop();
 		}
 		stream << "}" << std::endl;
@@ -287,39 +173,26 @@ void generate_table(Table& table)
 	
 	// declaration
 	auto declare_func = [&](ValueType type) {
-		if (table.counts[type] == 0) return;
-		stream << "struct " << table.name << "_" << get_name_for(type) << std::endl;
-
-		stream << "{" << std::endl;	stream.push();
+	//	if (table.counts[type] == 0) return;
+	
 		for (auto& v : table.values)
 		{
 			if (v.value_type != type) continue;
-			if (v.bindless) continue;
+		//	if (v.bindless) continue;
 
-		//	if(v.value_type==ValueType::CB)
-			stream << v.type << " " << v.name <<generate_array(v) << ';' << std::endl;
-		//	else
+
+			if(v.value_type==ValueType::CB || v.value_type == ValueType::STRUCT)
+			stream << v.type << " " << v.name <<generate_array(v) << "; // " << v.type << std::endl;
+			else
+				stream << "uint" << " " << v.name << (v.bindless?"":generate_array(v)) << "; // " << v.type << std::endl;
 		//		stream << v.type<<" " << v.name << ';' << std::endl;
 		}
-
-		for (auto& v : table.values)
-		{
-			if (v.value_type == ValueType::STRUCT)
-			{
-				auto t = parsed.find_table(v.type);
-				if (t->counts[type] == 0) continue;
-				stream << v.type << "_" << get_name_for(type) << " " << v.name << ";" << std::endl;
-			}
-		}
-
-		stream.pop();
-		stream << "};" << std::endl;
 	};
 	
-	if (!table.cb_provided) declare_func(ValueType::CB);
-	declare_func(ValueType::SRV);
-	declare_func(ValueType::UAV);
-	declare_func(ValueType::SMP);
+	//if (!table.cb_provided) declare_func(ValueType::CB);
+	//declare_func(ValueType::SRV);
+	//declare_func(ValueType::UAV);
+	//declare_func(ValueType::SMP);
 
 	
 
@@ -331,15 +204,40 @@ void generate_table(Table& table)
 
 	{
 		stream.push();
-		if (table.counts[ValueType::CB] != 0) stream << table.name << "_cb cb;" << std::endl;
-		if (table.counts[ValueType::SRV] != 0) stream << table.name << "_srv srv;" << std::endl;
-		if (table.counts[ValueType::UAV] != 0) stream << table.name << "_uav uav;" << std::endl;
-		if (table.counts[ValueType::SMP] != 0)  stream << table.name << "_smp smp;" << std::endl;
+	//	if (table.counts[ValueType::CB] != 0) stream << table.name << "_cb cb;" << std::endl;
+	//	if (table.counts[ValueType::SRV] != 0) stream << table.name << "_srv srv;" << std::endl;
+	//	if (table.counts[ValueType::UAV] != 0) stream << table.name << "_uav uav;" << std::endl;
+	//	if (table.counts[ValueType::SMP] != 0)  stream << table.name << "_smp smp;" << std::endl;
 		
+		declare_func(ValueType::CB);
+		declare_func(ValueType::SRV);
+		declare_func(ValueType::UAV);
+		declare_func(ValueType::SMP);
+		declare_func(ValueType::STRUCT);
+
+		for (auto& v : table.values)
+		{
+			if (v.value_type != ValueType::CB&& v.value_type != ValueType::STRUCT) continue;
+			std::string cameled = v.name;
+			cameled[0] = std::toupper(cameled[0]);
+
+
+			if (v.as_array)
+			{
+				stream << v.type << " Get" << cameled << "(int i) { " << "return "  << v.name << "[i]; }" << std::endl;
+			}
+			else
+			{
+				stream << v.type << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
+
+			}
+		}
+
 
 		for (auto& v : table.values)
 		{
 			if (v.value_type == ValueType::STRUCT) continue;
+			if (v.value_type == ValueType::CB) continue;
 			std::string cameled = v.name;
 			cameled[0] = std::toupper(cameled[0]);
 
@@ -347,111 +245,30 @@ void generate_table(Table& table)
 			if (v.as_array)
 			{
 				if (v.bindless)
-					stream << v.type << " Get" << cameled << "(int i) { " << "return bindless[i]; }" << std::endl;
+				{
+					stream << v.type << " Get" << cameled << "(int i) { " << std::endl;
+					stream << "StructuredBuffer<uint> indirection = ResourceDescriptorHeap["<<v.name<<"]; " << std::endl;
+						stream << "uint id = indirection.Load(i);" << std::endl;
+						stream << "return ResourceDescriptorHeap[id]; }" << std::endl;
+				}
 				else
-					stream << v.type << " Get" << cameled << "(int i) { " << "return " <<  get_name_for(v.value_type) << "." << v.name <<   "[i]; }" << std::endl;
+					stream << v.type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" <<  v.name <<   "[i]]; }" << std::endl;
 			}
 			else
 			{
-				stream << v.type << " Get" << cameled << "() { " << "return " <<  get_name_for(v.value_type) << "." << v.name <<  "; }" << std::endl;
+				stream << v.type << " Get" << cameled << "() { " << "return ResourceDescriptorHeap[" << v.name <<  "]; }" << std::endl;
 
 			}
 		}
 
 
-		for (auto& v : table.values)
-		{
-			if (v.value_type != ValueType::STRUCT) continue;
-			//	stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
-
-
-			std::string pass;
-			auto t = parsed.find_table(v.type);
-			auto f = [&](ValueType type) {
-				if (t->counts[type] == 0) return;
-				if (pass.size()) pass += ",";
-				pass += get_name_for(type) + "." + v.name;
-			};
-
-			f(ValueType::CB);
-			f(ValueType::SRV);
-			f(ValueType::UAV);
-			f(ValueType::SMP);
-
-
-			std::string cameled = v.name;
-			cameled[0] = std::toupper(cameled[0]);
-			/*
-						if (v.as_array)
-						{
-							stream << v.type << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
-						}
-						else
-
-						*/
-
-			stream << v.type << " Get" << cameled << "() { " << "return Create" << v.type << "(" << pass << "); }" << std::endl;
-		}
-
-		stream.pop();
-
 	}
 
+
+	if(!table.hlsl.empty())
 	stream << table.hlsl << std::endl;
+	stream.pop();
 	stream << "};" << std::endl;
-
-
-
-	//creation func bindless
-	
-	{
-
-		std::string types;
-		std::string args;
-
-
-		auto f = [&](ValueType type) {
-			if (table.counts[type] == 0) return;
-
-			if (types.size()) types += ",";
-			types += get_name_for(type);
-
-			if (args.size()) args += ",";
-			args += table.name + "_" + get_name_for(type) + " " + get_name_for(type);
-		};
-
-
-		f(ValueType::CB);
-		f(ValueType::SRV);
-		f(ValueType::UAV);
-		f(ValueType::SMP);
-
-		stream << " const " << table.name << " Create" << table.name << "(" << args << ")" << std::endl;
-		stream << "{" << std::endl;
-		{
-			stream.push();
-
-
-
-
-
-
-			stream << "const " << table.name << " result = {" << types << std::endl;
-		
-
-
-
-			stream << "};" << std::endl;
-
-			stream << "return result;" << std::endl;
-
-			stream.pop();
-		}
-		stream << "}" << std::endl;
-	}
-
-
-
 
 	// passes
 	if (table.slot)
@@ -559,70 +376,29 @@ void generate_cpp_table(const Table& table)
 	// declaration
 	auto declare_func = [&](ValueType type) {
 
-		if (table.cb_provided && type == ValueType::CB)
+		for (auto& v : table.values)
 		{
-			stream << "using CB = DefaultCB;" << std::endl;
+			if (v.find_option("dynamic")) continue;
+			if (v.value_type != type) continue;
+			//if (v.array_count == 0)
+			//	continue;
 
-			stream << "CB &cb;" << std::endl;
-			return;
+
+			stream << get_cpp_for(v) << " " << v.name << generate_array(v) << ';' << std::endl;
 		}
 
-		if (table.counts[type] == 0)
-		{
-		//	stream << "using " << str_toupper(get_name_for(type)) << " = Empty;" << std::endl;
-
-			return;
-		}
-
-
-		stream << "struct " << str_toupper(get_name_for(type)) << std::endl;
-
-		stream << "{" << std::endl;
-		{
-			stream.push();
-			for (auto& v : table.values)
-			{
-				if (v.find_option("dynamic"))
-					continue;
-				if (v.value_type != type) continue;
-				if (v.array_count == 0)
-					continue;
-
-
-				stream << get_cpp_for(v) << " " << v.name << generate_array(v) << ';' << std::endl;
-			}
-
-			for (auto& v : table.values)
-			{
-				if (v.find_option("dynamic"))
-					continue;
-
-				if (v.value_type == ValueType::STRUCT)
-				{
-
-					auto t = parsed.find_table(v.type);
-
-					if (t->find_option("shader_only"))
-						stream << v.type << " " << v.name << generate_array(v) << ';' << std::endl;
-					else if (t->counts[type] > 0) 
-						stream << v.type << "::" << str_toupper(get_name_for(type)) << " " << v.name << generate_array(v) << ";" << std::endl;
-				}
-
-
-			}
-
-			if (type == ValueType::CB)
+		if (type == ValueType::CB)
 			if (table.find_option("serialize"))
 			{
 
 				stream << std::format(
-R"(private:
+					R"(private:
 	SERIALIZE())") << std::endl;
 				stream << "{" << std::endl;
 
 				for (auto& v : table.values)
 				{
-					if (v.value_type != ValueType::CB) continue;
+					if (v.value_type != ValueType::CB && v.value_type != ValueType::STRUCT) continue;
 
 					stream << std::format(
 						R"(     ar& NVP({});)", v.name) << std::endl;
@@ -632,9 +408,8 @@ R"(private:
 			}
 
 
-			stream.pop();
-		}
-		stream << "} &" << get_name_for(type) << ";" << std::endl;
+
+
 	};
 
 
@@ -648,15 +423,15 @@ R"(private:
 		stream << "{" << std::endl;
 		{
 			stream.push();
-			declare_func(ValueType::CB);
+			declare_func(ValueType::CB);	
 			declare_func(ValueType::SRV);
 			declare_func(ValueType::UAV);
 			declare_func(ValueType::SMP);
-
+			declare_func(ValueType::STRUCT);
 
 			if (table.bindless_table)
 			{
-				stream << "Render::Bindless& bindless;" << std::endl;
+		//		stream << "HAL::Bindless bindless;" << std::endl;
 			}
 
 			for (auto& v : table.values)
@@ -678,11 +453,11 @@ R"(private:
 				std::string cameled = v.name;
 				cameled[0] = std::toupper(cameled[0]);
 
-				if (v.array_count == 0)
-					stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return bindless; }" << std::endl;
+			//	if (v.array_count == 0)
+			//		stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return bindless; }" << std::endl;
 
-				else
-					stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << get_name_for(v.value_type) << "." << v.name << "; }" << std::endl;
+			//	else
+					stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " <<  v.name << "; }" << std::endl;
 			}
 
 
@@ -717,35 +492,12 @@ R"(private:
 
 				if (vtable.find_option("shader_only"))
 				{
-					stream << v.type << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << "cb." << v.name << "; }" << std::endl;
+					stream << v.type << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " <<  v.name << "; }" << std::endl;
 					continue;
 				};
 
 
-				std::string pass;
-				auto t = parsed.find_table(v.type);
-				auto f = [&](ValueType type) {
-					if (t->counts[type] == 0) return;
-					if (pass.size()) pass += ",";
-					pass += get_name_for(type) + "." + v.name;
-				};
-
-				f(ValueType::CB);
-				f(ValueType::SRV);
-				f(ValueType::UAV);
-				f(ValueType::SMP);
-
-
-
-				if (vtable.bindless_table)
-				{
-					if (pass.size()) pass += ",";
-					pass += "bindless";
-
-				}
-
-
-				stream << v.type << " Map" << cameled << "() { " << "return " << v.type << "(" << pass << "); }" << std::endl;
+				stream << v.type << "& Get" << cameled << "() { " << "return "  << v.name << "; }" << std::endl;
 			}
 
 
@@ -779,12 +531,43 @@ R"(private:
 				pass += "bindless(bindless)";
 
 				if (args.size()) args += ",";
-				args += "Render::Bindless &bindless";
+				args += "HAL::Bindless &bindless";
 
 			}
 
-			stream << table.name << "(" << args << ") " << pass << "{}" << std::endl;
+		//	stream << table.name << "(" << args << ") " << pass << "{}" << std::endl;
+	
+
+			// declaration
+			auto compile_func = [&](ValueType type) {
+				//	if (table.counts[type] == 0) return;
+
+				for (auto& v : table.values)
+				{
+					if (v.value_type != type) continue;
+
+					stream << "compiler.compile(" << v.name << ");" << std::endl;
+
+				}
+			};
+			stream << "template<class Compiler>" << std::endl;
+
+			stream << "void compile(Compiler& compiler) const" << std::endl;
+			stream << "{" << std::endl;
+
+			stream.push();
+
+
+			compile_func(ValueType::CB);
+			compile_func(ValueType::SRV);
+			compile_func(ValueType::UAV);
+			compile_func(ValueType::SMP);
+			compile_func(ValueType::STRUCT);
 			stream.pop();
+
+			stream << "}" << std::endl;
+			stream.pop();
+
 			stream << "};" << std::endl;
 		}
 
@@ -792,6 +575,8 @@ R"(private:
 
 		stream.pop();
 	}
+
+
 	stream << "}" << std::endl;
 
 
@@ -814,60 +599,10 @@ R"(private:
 			stream << "{" << std::endl;
 			{
 				stream.push();
-
-				//stream << "using Slot = " << table.slot->layout->name << "::" << table.slot->name << ";" << std::endl;
-			//	stream << "using TableType = Table::" << table.name << ";" << std::endl;
-
-				std::string pass;
-				std::string copy;
-				std::string tables;
-
-				auto f = [&](ValueType type) {
-					if (table.counts[type] == 0) return;
-					if (pass.size()) pass += ",";
-					pass += get_name_for(type);
-
-					copy += get_name_for(type) + " = other." + get_name_for(type) + ";";
-					stream << str_toupper(get_name_for(type)) << " " << get_name_for(type) << ";" << std::endl;
-
-
-					if (!tables.empty())
-						tables += ", ";
-					if(table.slot->max_counts[type]>0)
-					tables += table.slot->layout->name+ "::" +table.slot->name+"::"+ str_toupper(get_name_for(type)) +"_ID";
-					
-
-				};
-
-				f(ValueType::CB);
-				f(ValueType::SRV);
-				f(ValueType::UAV);
-				f(ValueType::SMP);
-
-				if (table.bindless_table)
-				{
-					if (pass.size()) pass += ",";
-					pass += "bindless";
-					stream << "Render::Bindless bindless;" << std::endl;
-				}
-
-
-
 			
-			
-				stream << "static inline const std::vector<UINT> tables = {" << tables << "};" << std::endl;
-				
-				stream << table.name << "(): "\
-					"DataHolder("
-					<< pass <<
-					"){}" << std::endl;
 
-
-				stream << table.name << "(const " << table.name << "&other): "\
-					"DataHolder("
-					<< pass <<
-					"){" << copy << "}" << std::endl;
-
+				stream << table.name << "() = default;" << std::endl;
+	
 
 				stream.pop();
 			}
@@ -888,30 +623,20 @@ void generate_include_list(const Parsed& parsed)
 
 
 	stream << R"(
-module;
-#include "pch_dx.h"
-#include "DX12/dx12_types.h"
-export module Autogen;
+export module HAL:Autogen;
 
-import PipelineState;
-import Vectors;
-import Matrices;
-import Samplers;
-import Buffer;
-import Descriptors;
-import SIG;
-import RT;
-import Layout;
-import Slots;
-import PSO;
-import RTX;
-import Enums;
+import Core;
 
-import Data;
-import RootSignature;
-
-import Utils;
-import serialization;
+import :PipelineState;
+import :SIG;
+import :RT;
+import :Layout;
+import :Slots;
+import :PSO;
+import :RTX;
+import :Enums;
+import :RootSignature;
+import :Types;
 
 export
 {
@@ -958,41 +683,13 @@ export
 		stream << "#include \"rtx\\" << t.name << ".h\"" << std::endl;
 	}
 
-
-	stream << "void init_signatures();" << std::endl;
-	stream << "Render::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
-	stream << "void init_pso(enum_array<PSO, PSOBase::ptr>&);" << std::endl;
-
 	stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
 	stream << "UINT get_slot_id(SlotID id);" << std::endl;
 
 	stream.pop();
 	stream << "}" << std::endl;
 
-	stream << "module: private;" << std::endl;
-
-	stream << "static enum_array<Layouts, DX12::RootLayout::ptr> signatures;" << std::endl;
-	stream << "void init_signatures()" << std::endl;
-
-	stream << "{" << std::endl;
-	{
-		stream.push();
-
-		for (auto& l : parsed.layouts)
-		{
-			stream << "signatures[Layouts::" << l.name << "] = AutoGenSignatureDesc<" << l.name << ">().create_signature(Layouts::" << l.name << ");" << std::endl;
-		}
-
-		stream.pop();
-	}
-
-	stream << "}" << std::endl;
-
-
-	stream << "Render::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
-	stream << "{" << std::endl;
-	stream << "\treturn signatures[id];" << std::endl;
-	stream << "}" << std::endl;
+//	stream << "module: private;" << std::endl;
 
 	{
 		stream << "std::optional<SlotID> get_slot(std::string_view slot_name)" << std::endl;
@@ -1024,13 +721,9 @@ export
 
 	{
 		my_stream stream(cpp_path, "enums.ixx");
-		stream << R"(
-module;
+		stream << R"(export module HAL:Enums;
 
-export module Enums;
-
-import crc32;
-import Utils;
+import Core;
 
 export
 {
@@ -1133,27 +826,30 @@ export
 	
 	{
 		my_stream stream(cpp_path, "pso.cpp");
-		stream << R"(
-#include "pch_dx.h"
-
-import Autogen;
-import Data;
-import SIG;
-import RT;
-import Layout;
-import Slots;
-import PSO;
-import RTX;
-import Enums;
-import RootSignature;
+		stream << R"(import HAL;
+import Core;
 
 import ppl;
 using namespace concurrency;
 )"
 			<< std::endl;
 
-		//stream << "static std::array<DX12::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
-		stream << "void init_pso(enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
+
+		stream << "void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>& signatures)" << std::endl;
+		stream << "{" << std::endl;
+		{
+			stream.push();
+			for (auto& l : parsed.layouts)
+			{
+				stream << "signatures[Layouts::" << l.name << "] = AutoGenSignatureDesc<" << l.name << ">().create_signature(device, Layouts::" << l.name << ");" << std::endl;
+			}
+			stream.pop();
+		}
+		stream << "}" << std::endl;
+
+
+		//stream << "static std::array<HAL::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
+		stream << "void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
 
 		stream << "{" << std::endl;
 		{
@@ -1164,14 +860,14 @@ using namespace concurrency;
 
 				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
 
-				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(pso[PSO::" << l.name << "]));" << std::endl;
+				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(device, pso[PSO::" << l.name << "]));" << std::endl;
 
 			}
 			for (auto& l : parsed.graphics_pso)
 			{
 				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
 
-				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(pso[PSO::" << l.name << "]));" << std::endl;
+				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(device,pso[PSO::" << l.name << "]));" << std::endl;
 			}
 
 
@@ -1182,7 +878,7 @@ using namespace concurrency;
 		stream << "}" << std::endl;
 
 /*
-		stream << "Render::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
+		stream << "HAL::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
 		stream << "{" << std::endl;
 		stream << "\treturn pso[static_cast<int>(id)];" << std::endl;
 		stream << "}" << std::endl;
@@ -1261,7 +957,7 @@ void generate_pso(PSO& pso)
 
 			if (!pso.compute.name.empty())
 			{
-				stream << "static inline const D3D::shader_header compute = { \"shaders/" << pso.compute.name << ".hlsl\", \"" << pso.compute.find_option("EntryPoint")->value_atom.expr << "\", 0,{";
+				stream << "static inline const HAL::shader_header compute = { \"shaders/" << pso.compute.name << ".hlsl\", \"" << pso.compute.find_option("EntryPoint")->value_atom.expr << "\", 0,{";
 
 				bool first = true;
 				for (auto option : pso.compute.options)
@@ -1315,7 +1011,11 @@ void generate_pso(PSO& pso)
 			auto opt = d.find_option("type");
 			if (opt)
 			{
+				keys += "Underlying<";
+				if (opt->value_atom.expr=="Format")
+					keys += "HAL::";
 				keys += opt->value_atom.expr;
+				keys += ">";
 			}else
 
 			keys += "int";
@@ -1478,7 +1178,7 @@ void generate_pso(PSO& pso)
 							}
 							else
 							{
-								elems += "DXGI_FORMAT::";
+								elems += "HAL::Format::";
 								elems += e.expr;
 							}
 
@@ -1494,7 +1194,7 @@ void generate_pso(PSO& pso)
 						{
 							if (!elems.empty())
 								elems += ", ";
-							elems += "Render::Blend::";
+							elems += "HAL::Blends::";
 							elems += e.expr;
 						}
 
@@ -1508,17 +1208,18 @@ void generate_pso(PSO& pso)
 
 						std::string add;
 
-	
+		if (e.type == "ds")
+							add = "HAL::Format::";
 						if (e.type == "cull")
-							add = "D3D12_CULL_MODE::D3D12_CULL_MODE_";
+							add = "HAL::CullMode::";
 						else if (e.type == "depth_func")
-							add = "D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_";
+							add = "HAL::ComparisonFunc::";
 						else if (e.type == "topology")
-							add = "D3D12_PRIMITIVE_TOPOLOGY_TYPE::D3D12_PRIMITIVE_TOPOLOGY_TYPE_";
+							add = "HAL::PrimitiveTopologyType::";
 						else if (e.type == "stencil_func")
-							add = "D3D12_COMPARISON_FUNC::D3D12_COMPARISON_FUNC_";
+							add = "HAL::ComparisonFunc::";
 						else if (e.type == "stencil_pass_op")
-							add = "D3D12_STENCIL_OP::D3D12_STENCIL_OP_";
+							add = "HAL::StencilOp::";
 
 						stream << "mpso."<<e.type << "  = "<<add << e.expr << ";" << std::endl;
 					}
@@ -1565,7 +1266,7 @@ void generate_cpp_rt(RenderTarget& rt)
 						int i = 0;
 						for (auto& e : rt.rtvs)
 						{
-							stream << "Render::Handle" << " " << e.name << ";" << std::endl;
+							stream << "HAL::Handle" << " " << e.name << ";" << std::endl;
 							i++;
 						}
 
@@ -1581,7 +1282,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					{
 						stream.push();
 
-						stream << "Render::Handle" << " " << rt.dsv->name << ";" << std::endl;
+						stream << "HAL::Handle" << " " << rt.dsv->name << ";" << std::endl;
 
 						stream.pop();
 					}
@@ -1596,7 +1297,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					cameled[0] = std::toupper(cameled[0]);
 
 
-					stream << "Render::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
+					stream << "HAL::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
 				}
 
 				if (rt.dsv)
@@ -1605,7 +1306,7 @@ void generate_cpp_rt(RenderTarget& rt)
 					cameled[0] = std::toupper(cameled[0]);
 
 
-					stream << "Render::Handle&" << " Get" << cameled << "() { " << "return " << "dsv." << rt.dsv->name << "; }" << std::endl;
+					stream << "HAL::Handle&" << " Get" << cameled << "() { " << "return " << "dsv." << rt.dsv->name << "; }" << std::endl;
 
 				}
 				std::string pass;
@@ -1766,7 +1467,7 @@ void generate_cpp_layout(Layout& layout)
 			layout.recursive_samplers([&](Sampler& slot) {
 
 				if (!first) params_string += ',';
-				params_string += "Render::Samplers::" + slot.expr;
+				params_string += "HAL::Samplers::" + slot.expr;
 				first = false;
 				});
 

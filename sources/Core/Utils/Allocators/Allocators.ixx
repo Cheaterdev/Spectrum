@@ -1,9 +1,9 @@
-export module Allocators;
+export module Core:Allocators;
 
 
-import Debug;
-import Utils;
-import Constants;
+import :Debug;
+import :Utils;
+import :Math;
 import stl.core;
 import stl.threading;
 
@@ -509,7 +509,6 @@ export
 	};
 }
 
-module:private;
 
 CommonAllocator::CommonAllocator(size_t size /*= std::numeric_limits<size_t>::max()*/) :size(size)
 {

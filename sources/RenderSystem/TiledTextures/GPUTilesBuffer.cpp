@@ -1,13 +1,13 @@
-#include "pch_render.h"
-#include "GPUTilesBuffer.h"
+module Graphics:GPUTilesBuffer;
+
 
 void GPUTilesBuffer::set_size(ivec3 size, ivec3 shape)
 {
 	this->shape = shape;
 
 	tile_positions.resize(size, -1);
-	buffer.reset(new Render::StructureBuffer<ivec3>(size.x * size.y * size.z));
-	dispatch_buffer = std::make_shared<Render::StructureBuffer<DispatchArguments>>(1, Render::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	buffer.reset(new HAL::StructureBuffer<ivec3>(size.x * size.y * size.z));
+	dispatch_buffer = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
 
 void GPUTilesBuffer::clear()
@@ -36,7 +36,7 @@ void GPUTilesBuffer::insert(ivec3 pos)
 void GPUTilesBuffer::erase(ivec3 pos)
 {
 	int tile_pos = tile_positions[pos];
-	if (tile_pos!=-1)
+	if (tile_pos != -1)
 	{
 		used_tiles[tile_pos] = used_tiles.back();
 		tile_positions[used_tiles[tile_pos]] = tile_pos;
@@ -46,15 +46,15 @@ void GPUTilesBuffer::erase(ivec3 pos)
 	}
 }
 
-void GPUTilesBuffer::update(Render::CommandList::ptr list)
+void GPUTilesBuffer::update(HAL::CommandList::ptr list)
 {
 	if (tiles_updated) {
 		buffer->set_data(list, 0, used_tiles);
 		DispatchArguments args;
 
-		args.ThreadGroupCountX = static_cast<UINT>(used_tiles.size() * shape.x/4);
-		args.ThreadGroupCountY = shape.y/4;
-		args.ThreadGroupCountZ = shape.z/4;
+		args.ThreadGroupCountX = static_cast<UINT>(used_tiles.size() * shape.x / 4);
+		args.ThreadGroupCountY = shape.y / 4;
+		args.ThreadGroupCountZ = shape.z / 4;
 
 		dispatch_buffer->set_data(list, args);
 	}

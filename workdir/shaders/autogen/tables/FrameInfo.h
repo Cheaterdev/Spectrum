@@ -1,30 +1,22 @@
 #pragma once
 #include "Camera.h"
-struct FrameInfo_cb
-{
-	float4 time;
-	float4 sunDir;
-	Camera_cb camera;
-	Camera_cb prevCamera;
-};
-struct FrameInfo_srv
-{
-	Texture2D<float4> bestFitNormals;
-	Texture3D<float4> brdf;
-	TextureCube<float4> sky;
-};
 struct FrameInfo
 {
-	FrameInfo_cb cb;
-	FrameInfo_srv srv;
-	float4 GetTime() { return cb.time; }
-	Texture2D<float4> GetBestFitNormals() { return srv.bestFitNormals; }
-	Texture3D<float4> GetBrdf() { return srv.brdf; }
-	TextureCube<float4> GetSky() { return srv.sky; }
-	float4 GetSunDir() { return cb.sunDir; }
-	Camera GetCamera() { return CreateCamera(cb.camera); }
-	Camera GetPrevCamera() { return CreateCamera(cb.prevCamera); }
-
+	float4 time; // float4
+	float4 sunDir; // float4
+	uint bestFitNormals; // Texture2D<float4>
+	uint brdf; // Texture3D<float4>
+	uint sky; // TextureCube<float4>
+	Camera camera; // Camera
+	Camera prevCamera; // Camera
+	float4 GetTime() { return time; }
+	Camera GetCamera() { return camera; }
+	Camera GetPrevCamera() { return prevCamera; }
+	float4 GetSunDir() { return sunDir; }
+	Texture2D<float4> GetBestFitNormals() { return ResourceDescriptorHeap[bestFitNormals]; }
+	Texture3D<float4> GetBrdf() { return ResourceDescriptorHeap[brdf]; }
+	TextureCube<float4> GetSky() { return ResourceDescriptorHeap[sky]; }
+	
 		float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 		{
 			return GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, 0.5 + 0.5 * NoV), 0);
@@ -58,9 +50,3 @@ struct FrameInfo
 
 	
 };
- const FrameInfo CreateFrameInfo(FrameInfo_cb cb,FrameInfo_srv srv)
-{
-	const FrameInfo result = {cb,srv
-	};
-	return result;
-}

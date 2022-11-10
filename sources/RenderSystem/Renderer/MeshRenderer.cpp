@@ -1,8 +1,10 @@
-#include "pch_render.h"
-#include "Assets/EngineAssets.h"
-#include "Renderer/Renderer.h"
-#include "Helpers/MipMapGeneration.h"
+module Graphics:MeshRenderer;
+import :EngineAssets;
+import :MipMapGenerator;
 
+import HAL;
+
+using namespace HAL;
 void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene)
 {
 
@@ -16,23 +18,23 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	instances_count = 0;
 
-	Render::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
-	default_pipeline.topology = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	default_pipeline.root_signature = get_Signature(Layouts::DefaultLayout);
+	HAL::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
+	default_pipeline.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+	default_pipeline.root_signature = HAL::Device::get().get_engine_pso_holder().GetSignature(Layouts::DefaultLayout);
 	default_pipeline.rtv.enable_depth = true;
-	default_pipeline.rasterizer.fill_mode = D3D12_FILL_MODE::D3D12_FILL_MODE_SOLID;
-	default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+	default_pipeline.rasterizer.fill_mode = FillMode::Solid;
+	default_pipeline.rasterizer.cull_mode = CullMode::None;
 	default_pipeline.blend.independ_blend = false;
 	default_pipeline.blend.render_target[0].enabled = false;
 	default_pipeline.mesh = mshader;
-		default_pipeline.amplification = ashader;
-default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
+	default_pipeline.amplification = ashader;
+	default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
 
 	if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 	{
 		default_pipeline.mesh = mshader_voxel;
 		default_pipeline.amplification = ashader_voxel;
-		default_pipeline.rasterizer.cull_mode = D3D12_CULL_MODE::D3D12_CULL_MODE_NONE;
+		default_pipeline.rasterizer.cull_mode = CullMode::None;
 		default_pipeline.rtv.enable_depth = false;
 		default_pipeline.rasterizer.conservative = GetAsyncKeyState('B');
 
@@ -45,7 +47,7 @@ default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
 
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
-	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
 
 	std::map<size_t, materials::Pipeline::ptr> pipelines_local;
@@ -73,7 +75,7 @@ default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_
 
 	init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 
-	if (!gbuffer || !use_gpu_occlusion)
+	//if (!gbuffer || !use_gpu_occlusion)
 	{
 		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
 		return;
@@ -94,7 +96,7 @@ default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_
 		MipMapGenerator::get().write_to_depth(graphics, gbuffer->HalfBuffer.hiZ_depth_uav, gbuffer->HalfBuffer.hiZ_depth);
 	}
 
-	
+
 
 
 	//if (false)// !GetAsyncKeyState(VK_F7))
@@ -133,19 +135,19 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 	auto& list = *mesh_render_context->list;
 
 	{
-		compute.set_pipeline(GetPSO<PSOS::InitDispatch>());
+		compute.set_pipeline<PSOS::InitDispatch>();
 
 		init_dispatch_compiled.set(compute);
 		from.set(compute);
 
-		
+
 		compute.dispach(1, 1, 1);
 
 		/*graphics.execute_indirect(
 			dispatch_command,
 			1,
 			dispatch_buffer111.get());
-		
+
 		*/
 		//		list.print_debug();
 	}
@@ -167,13 +169,13 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	if (invisibleToo)
 	{
 		meshes_invisible_ids->buffer->clear_counter(mesh_render_context->list);
-		list.clear_uav(meshes_invisible_ids->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
+		list.clear_uav(meshes_invisible_ids->buffer->rwByteAddressBuffer, ivec4{ 999,999,999,999 });
 
 	}
 
 	{
 
-		compute.set_pipeline(GetPSO<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo)));
+		compute.set_pipeline<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo));
 		scene->compiledGather[(int)mesh_render_context->render_mesh].set(compute);
 		gather_neshes_boxes_compiled.set(compute);
 
@@ -183,7 +185,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 			dispatch_buffer.get());
 	}
 
-	
+
 	list.transition_uav(meshes_ids->buffer.get());
 	list.transition_uav(meshes_ids->buffer->help_buffer.get());
 	if (invisibleToo)
@@ -192,7 +194,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 		list.transition_uav(meshes_invisible_ids->buffer->help_buffer.get());
 	}
 
-//	meshes_ids->debug_print(list);
+	//	meshes_ids->debug_print(list);
 
 }
 
@@ -214,7 +216,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 		commands_boxes->buffer->clear_counter(mesh_render_context->list);
 		meshes_ids->buffer->clear_counter(mesh_render_context->list);
 
-		compute.set_pipeline(GetPSO<PSOS::GatherBoxes>());
+		compute.set_pipeline<PSOS::GatherBoxes>();
 		gather_boxes_compiled.set(compute);
 		gatherData.set(compute);
 
@@ -252,12 +254,12 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	gbuffer->HalfBuffer.hiZ_table.set(graphics);
 	gbuffer->HalfBuffer.hiZ_table.set_window(graphics);
 
-	graphics.set_pipeline(GetPSO<PSOS::RenderBoxes>());
-	graphics.set_index_buffer(index_buffer->get_index_buffer_view(true));
-	graphics.set_topology(D3D_PRIMITIVE_TOPOLOGY::D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	graphics.set_pipeline<PSOS::RenderBoxes>();
+	graphics.set_index_buffer(index_buffer->get_index_buffer_view());
+	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
 
-	list.clear_uav(visible_boxes->buffer->get_raw_uav(), ivec4{ 999,999,999,999 });
+	list.clear_uav(visible_boxes->buffer->rwByteAddressBuffer, ivec4{ 999,999,999,999 });
 
 	draw_boxes_compiled.set(graphics);
 
@@ -285,12 +287,12 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	auto begin = pipelines.begin();
 	auto end = begin;
-	//	auto view = meshes_ids->buffer->help_buffer->create_view<Render::FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(*list.frame_resources);
+	//	auto view = meshes_ids->buffer->help_buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(*list.frame_resources);
 
 
 
 
-	graphics.set_index_buffer(IndexBufferView());// universal_index_manager::get().buffer->get_index_buffer_view(true));
+	graphics.set_index_buffer(HAL::Views::IndexBuffer());// universal_index_manager::get().buffer->get_index_buffer_view(true));
 	while (end != pipelines.end())
 	{
 
@@ -300,8 +302,8 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			((UINT*)gather.GetPip_ids())[total] = end->second->get_id();
 			gather.GetCommands()[total] = commands_buffer[total]->buffer->appendStructuredBuffer;
 
-	/*		list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
-			list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);*/
+			/*		list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
+					list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);*/
 			end++; total++;
 			if (end == pipelines.end()) break;
 		}
@@ -319,7 +321,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		{
 			PROFILE_GPU(L"GatherMats");
 
-			compute.set_pipeline(GetPSO<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling)));
+			compute.set_pipeline<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling));
 			gatherData.set(compute);
 			gather.set(compute);
 
@@ -334,7 +336,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 		}
 
-
+		//if(0)
 		{
 			PROFILE_GPU(L"YO");
 			int current = 0;
@@ -357,7 +359,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					PROFILE_GPU(L"compile");
 
 					if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
-					mesh_render_context->voxelization_compiled.set(graphics);
+						mesh_render_context->voxelization_compiled.set(graphics);
 				}
 				{
 					PROFILE_GPU(L"execute_indirect");
@@ -384,32 +386,32 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 }
 
 
-mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
+mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 {
-	shader = Render::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
-	mshader = Render::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
-	mshader_voxel = Render::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
+	shader = HAL::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
+	mshader = HAL::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
+	mshader_voxel = HAL::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
 
-	ashader = Render::amplification_shader::get_resource({ "shaders/mesh_shader.hlsl", "AS", 0, {} });
-	ashader_voxel = Render::amplification_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "AS", 0, {} });
-	voxel_geometry_shader = Render::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
+	ashader = HAL::amplification_shader::get_resource({ "shaders/mesh_shader.hlsl", "AS", 0, {} });
+	ashader_voxel = HAL::amplification_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "AS", 0, {} });
+	voxel_geometry_shader = HAL::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
 
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = Render::IndirectCommand::create_command<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(sizeof(Underlying<Table::CommandData>), get_Signature(Layouts::DefaultLayout));
+	indirect_command_signature = HAL::IndirectCommand::create_command_layout<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>), Layouts::DefaultLayout);
 
 	UINT max_meshes = 1024 * 1024;
 
-	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	visible_boxes = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+	commands_boxes = std::make_shared<virtual_gpu_buffer<Table::BoxInfo>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	visible_boxes = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	meshes_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	meshes_invisible_ids = std::make_shared<virtual_gpu_buffer<UINT>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	for (int i = 0; i < 8; i++)
-		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(max_meshes, counterType::HELP_BUFFER, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 
 
-	meshes_ids->buffer->get_native()->SetName(L"meshes_ids");
+	//meshes_ids->buffer->get_native()->SetName(L"meshes_ids");
 	{
 
 		std::vector<unsigned int> data = { 3, 1, 0,
@@ -431,20 +433,20 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		std::vector<vec4> verts(8);
 		vec3 v0(-0.5, -0.5, 0.5);
 		vec3 v1(0.5, 0.5, 0.5);
-		verts[0] = vec4(-1.0f, 1.0f, -1.0f,0);
-		verts[1] = vec4(1.0f, 1.0f, -1.0f,0);
-		verts[2] = vec4(1.0f, 1.0f, 1.0f,0);
-		verts[3] = vec4(-1.0f, 1.0f, 1.0f,0);
-		verts[4] = vec4(-1.0f, -1.0f, -1.0f,0);
-		verts[5] = vec4(1.0f, -1.0f, -1.0f,0);
-		verts[6] = vec4(1.0f, -1.0f, 1.0f,0);
-		verts[7] = vec4(-1.0f, -1.0f, 1.0f,0);
-		index_buffer.reset(new Render::IndexBuffer(data));
+		verts[0] = vec4(-1.0f, 1.0f, -1.0f, 0);
+		verts[1] = vec4(1.0f, 1.0f, -1.0f, 0);
+		verts[2] = vec4(1.0f, 1.0f, 1.0f, 0);
+		verts[3] = vec4(-1.0f, 1.0f, 1.0f, 0);
+		verts[4] = vec4(-1.0f, -1.0f, -1.0f, 0);
+		verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
+		verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
+		verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
+		index_buffer = HAL::IndexBuffer::make_buffer(data);
 
-		vertex_buffer.reset(new Render::StructureBuffer<vec4>(8));
+		vertex_buffer.reset(new HAL::StructureBuffer<vec4>(8));
 		vertex_buffer->set_raw_data(verts);
 
-		draw_boxes_first = std::make_shared<Render::StructureBuffer<DrawIndexedArguments>>(1);
+		draw_boxes_first = std::make_shared<HAL::StructureBuffer<DrawIndexedArguments>>(1);
 
 		DrawIndexedArguments args;
 
@@ -459,19 +461,19 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 
 		{
 
-			boxes_command = Render::IndirectCommand::create_command<DrawIndexedArguments>(sizeof(Underlying<Table::CommandData>));
+			boxes_command = HAL::IndirectCommand::create_command<DrawIndexedArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>));
 
 		}
 	}
 
 
 	{
-		dispatch_buffer = std::make_shared<Render::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
-		dispatch_command = Render::IndirectCommand::create_command<DispatchArguments>(sizeof(Underlying<Table::CommandData>));
+		dispatch_buffer = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>));
 	}
 
 	{
-		dispatch_buffer111 = std::make_shared<Render::StructureBuffer<DispatchArguments>>(1, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
+		dispatch_buffer111 = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 		DispatchArguments args;
 		args.ThreadGroupCountX = 1;
 		args.ThreadGroupCountY = 1;
@@ -480,20 +482,20 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 	}
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
+		gather.GetCommands() = meshes_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(HAL::Device::get().get_static_gpu_data()).buffer;
 
 		gather.GetMeshes_count() = meshes_ids->buffer->structuredBufferCount;
 
-		gather_visible = gather.compile(StaticCompiledGPUData::get());
-		//	gather_visible.cb = meshes_ids->buffer->help_buffer->get_resource_address();
+		gather_visible = gather.compile(HAL::Device::get().get_static_gpu_data());
+		//	gather_visible = meshes_ids->buffer->help_buffer->get_resource_address();
 	}
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<FormattedBufferView<UINT, DXGI_FORMAT::DXGI_FORMAT_R32_UINT>>(StaticCompiledGPUData::get()).srv_handle;
+		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(HAL::Device::get().get_static_gpu_data()).buffer;
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer->structuredBufferCount;
-		gather_invisible = gather.compile(StaticCompiledGPUData::get());
-		//	gather_invisible.cb = meshes_invisible_ids->buffer->help_buffer->get_resource_address();
+		gather_invisible = gather.compile(HAL::Device::get().get_static_gpu_data());
+		//	gather_invisible = meshes_invisible_ids->buffer->help_buffer->get_resource_address();
 	}
 
 	{
@@ -501,14 +503,14 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		gather.GetMeshes_count() = commands_boxes->buffer->structuredBufferCount;
 
 		//gather.GetCommands() = // supposed to be null
-		gather_boxes_commands = gather.compile(StaticCompiledGPUData::get());
-		//gather_boxes_commands.cb = commands_boxes->buffer->help_buffer->get_resource_address();
+		gather_boxes_commands = gather.compile(HAL::Device::get().get_static_gpu_data());
+		//gather_boxes_commands = commands_boxes->buffer->help_buffer->get_resource_address();
 	}
 
 	{
 		Slots::InitDispatch init_dispatch;
 		init_dispatch.GetDispatch_data() = dispatch_buffer->rwStructuredBuffer;
-		init_dispatch_compiled = init_dispatch.compile(StaticCompiledGPUData::get());
+		init_dispatch_compiled = init_dispatch.compile(HAL::Device::get().get_static_gpu_data());
 	}
 
 	{
@@ -518,7 +520,7 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		gather_neshes_boxes.GetVisibleMeshes() = meshes_ids->buffer->appendStructuredBuffer;
 		gather_neshes_boxes.GetInvisibleMeshes() = meshes_invisible_ids->buffer->appendStructuredBuffer;
 
-		gather_neshes_boxes_compiled = gather_neshes_boxes.compile(StaticCompiledGPUData::get());
+		gather_neshes_boxes_compiled = gather_neshes_boxes.compile(HAL::Device::get().get_static_gpu_data());
 	}
 
 	{
@@ -527,14 +529,14 @@ mesh_renderer::mesh_renderer():VariableContext(L"mesh_renderer")
 		draw_boxes.GetVisible_meshes() = visible_boxes->buffer->rwStructuredBuffer;
 		draw_boxes.GetVertices() = vertex_buffer->structuredBuffer;
 
-		draw_boxes_compiled = draw_boxes.compile(StaticCompiledGPUData::get());
+		draw_boxes_compiled = draw_boxes.compile(HAL::Device::get().get_static_gpu_data());
 	}
 	{
 		Slots::GatherBoxes gather;
 		gather.GetCulledMeshes() = commands_boxes->buffer->appendStructuredBuffer;
 		gather.GetVisibleMeshes() = meshes_ids->buffer->appendStructuredBuffer;
 
-		gather_boxes_compiled = gather.compile(StaticCompiledGPUData::get());
+		gather_boxes_compiled = gather.compile(HAL::Device::get().get_static_gpu_data());
 	}
 }
 

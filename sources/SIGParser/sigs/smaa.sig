@@ -38,7 +38,7 @@ GraphicsPSO EdgeDetect
 	[EntryPoint = DX10_SMAALumaEdgeDetectionPS]
 	pixel = SMAA;
 
-	rtv = { DXGI_FORMAT_R8G8_UNORM };
+	rtv = { R8G8_UNORM };
 }
 
 GraphicsPSO BlendWeight
@@ -51,7 +51,7 @@ GraphicsPSO BlendWeight
 	[EntryPoint = DX10_SMAABlendingWeightCalculationPS]
 	pixel = SMAA;
 
-	rtv = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	rtv = { R8G8B8A8_UNORM };
 }
 
 
@@ -65,5 +65,5 @@ GraphicsPSO Blending
 	[EntryPoint = DX10_SMAANeighborhoodBlendingPS]
 	pixel = SMAA;
 
-	rtv = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+	rtv = { R16G16B16A16_FLOAT };
 }

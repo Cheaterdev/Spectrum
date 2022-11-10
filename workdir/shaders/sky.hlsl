@@ -303,7 +303,7 @@ quad_output VS(uint index : SV_VERTEXID)
 float4 PS(quad_output i): SV_Target0
 { 
     float3 v = normalize(i.ray);
-	float raw_z = GetSkyData().GetDepthBuffer().SampleLevel(pointClampSampler, i.tc, 0).x;
+    float raw_z =  GetSkyData().GetDepthBuffer().SampleLevel(pointClampSampler, i.tc, 0).x;
     float3 p = depth_to_wpos(raw_z, i.tc.xy, camera.GetInvViewProj());
     float t = (raw_z < 1) * Scaler * length(p - camera.GetPosition());
 

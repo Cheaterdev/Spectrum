@@ -1,5 +1,5 @@
-#include "pch_render.h"
-#include "Occluder.h"
+module Graphics:Occluder;
+import Core;
 
 bool occluder::is_inside(const Frustum& f)
 {

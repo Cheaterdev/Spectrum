@@ -1,13 +1,13 @@
-#include "pch_render.h"
-#include "Button.h"
-#include "GUI/Renderer/Renderer.h"
+module GUI:Button;
+import :Label;
+import :Renderer;
 
 namespace GUI
 {
     namespace Elements
     {
 
-        void button::draw(Render::context& c)
+        void button::draw(Context& c)
         {
             if (background_style == view_style::DEFAULT)
             {

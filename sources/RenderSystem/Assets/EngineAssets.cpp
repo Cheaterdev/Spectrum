@@ -1,44 +1,40 @@
-#include "pch_render.h"
-
-#include "EngineAssets.h"
-
+module Graphics:EngineAssets;
+import :Asset;
+import :MeshAsset;
+import :BinaryAsset;
+import :TextureAsset;
 
 namespace EngineAssets
 {
 	EngineAsset<MeshAsset> material_tester(L"material_tester", [] {
-		return (new MeshAsset(L"resources\\mitsuba\\mitsuba-sphere.obj"));
+		return (new MeshAsset(to_path(L"resources\\mitsuba\\mitsuba-sphere.obj")));
 		});
 
 	EngineAsset<MeshAsset> plane(L"plane", [] {
-		return (new MeshAsset(L"resources\\plane.obj"));
+		return (new MeshAsset(to_path(L"resources\\plane.obj")));
 		});
 
 	EngineAsset<MeshAsset> axis(L"axis", [] {
-		return (new MeshAsset(L"resources\\axis.obj"));
+		return (new MeshAsset(to_path(L"resources\\axis.obj")));
 		});
 
 	EngineAsset<TextureAsset> best_fit_normals(L"best_fit_normals", [] {
-		return  new TextureAsset(L"resources\\best_fit_normals.dds");
+		return  new TextureAsset(to_path(L"resources\\best_fit_normals.dds"));
 		});
 	EngineAsset<TextureAsset> missing_texture(L"missing_texture", [] {
-		return  new TextureAsset(L"resources\\missing.png");
+		return  new TextureAsset(to_path(L"resources\\missing.png"));
 		});
 
 	EngineAsset<BinaryAsset> material_header(L"material_header", [] {
-		return  new BinaryAsset(L"shaders\\UniversalMaterial.hlsl");
+		return  new BinaryAsset(to_path(L"shaders\\UniversalMaterial.hlsl"));
 		});
 
 	EngineAsset<BinaryAsset> material_raytracing_header(L"material_header_raytracing", [] {
-		return  new BinaryAsset(L"shaders\\UniversalMaterialRaytracing.hlsl");
+		return  new BinaryAsset(to_path(L"shaders\\UniversalMaterialRaytracing.hlsl"));
 		});
 
 
 
-	EngineAsset<BRDF> brdf(L"brdf", [] {
-		BRDF* brdf = new BRDF();
-		brdf->create_new();
-		return  brdf;
-		});
 
 
 }

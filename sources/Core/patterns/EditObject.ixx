@@ -1,4 +1,4 @@
-export module EditObject;
+export module Core:EditObject;
 
 import stl.core;
 import stl.threading;
@@ -46,7 +46,6 @@ public:
 }
 
 
-module:private;
 
 
 void EditObject::save()

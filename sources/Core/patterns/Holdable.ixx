@@ -1,5 +1,5 @@
-export module Holdable;
-import Data;
+export module Core:Holdable;
+import :Data;
 import stl.core;
 
 export
@@ -35,7 +35,38 @@ export
 			return &obj.get<T>();
 		}
 
+
+		Holder clone()
+		{
+			Holder result;
+			for(const auto &[a,b]:objects)
+			{
+				result.objects[a] = b;
+			}
+
+			return result;
+		}
+	};
+
+
+	class UniversalContext
+	{
+		Holder holder;
+
+
+	public:
+		template<class T>
+		T& get_context()
+		{
+			return holder.get_or_create<T>();
+		}
+
+
+		UniversalContext clone()
+		{
+			UniversalContext result;
+			result.holder = holder.clone();
+			return result;
+		}
 	};
 }
-
-module: private;

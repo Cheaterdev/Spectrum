@@ -1,10 +1,8 @@
-module;
-#include "Serialization/serialization_defines.h"
-export module Vectors;
+export module Core:Math.Vectors;
 
-import Constants;
+import :Math.Constants;
 import stl.core;
-import serialization;
+import :serialization;
 
 namespace internal
 {
@@ -50,7 +48,7 @@ export
 
 
 		template<int i, class D, class ...Args>
-		void set_internal(D d, Args ...args) requires (std::is_compound_v<D>)
+		constexpr void set_internal(D d, Args ...args) requires (std::is_compound_v<D>)
 		{
 			constexpr int size = std::min(N, D::N);
 			for (int t : view::iota(0, size))
@@ -60,7 +58,7 @@ export
 		}
 
 		template<int i, class D, class ...Args>
-		void set_internal(D d, Args ...args) requires (!std::is_compound_v<D>)
+		constexpr void set_internal(D d, Args ...args) requires (!std::is_compound_v<D>)
 		{
 			values[i] = static_cast<Format>(d);
 			set_internal<i + 1>(args...);
@@ -68,7 +66,7 @@ export
 
 
 		template<int i>
-		void set_internal()
+		constexpr void set_internal()
 		{
 			//static_assert(i == T::N);
 		}
@@ -82,26 +80,26 @@ export
 
 
 		template<class ...Args>
-		Vector(Args ...args) requires(T::GENERATE_CONSTRUCTOR && (internal::calc_count<Args...>() >= N))
+		constexpr  Vector(Args ...args) requires(T::GENERATE_CONSTRUCTOR && (internal::calc_count<Args...>() >= N))
 		{
 			set(args...);
 		}
 
 		template<class V>
-		Vector(V v) requires(T::GENERATE_CONSTRUCTOR && (!std::is_compound_v<V>))
+		constexpr  Vector(V v) requires(T::GENERATE_CONSTRUCTOR && (!std::is_compound_v<V>))
 		{
 			set(v);
 		}
 
 
 		template<class ...Args>
-		void set(Args ...args)  requires (internal::calc_count<Args...>() >= N)
+		constexpr void set(Args ...args)  requires (internal::calc_count<Args...>() >= N)
 		{
 			set_internal<0>(args...);
 		}
 
 		template<class V>
-		void set(V v) requires (!std::is_compound_v<V>)
+		constexpr void set(V v) requires (!std::is_compound_v<V>)
 		{
 			for (int t : view::iota(0, N))
 				T::values[t] = static_cast<Format>(v);
@@ -723,7 +721,9 @@ export
 	using uint3 = Vector<vec3_t<uint>>;
 	using uint4 = Vector<vec4_t<uint>>;
 
-
+	using uint8 = std::uint8_t;
+	using uint16 = std::uint16_t;
+	using uint64 = std::uint64_t;
 
 	sizer intersect(const sizer& a, const sizer& b);
 	rect intersect(const rect& a, const rect& b);
@@ -801,6 +801,10 @@ export
 		}
 
 		decltype(auto) operator[](const V& i)
+		{
+			return data[V::dot(i, scalers)];
+		}
+		decltype(auto) operator[](const V& i) const
 		{
 			return data[V::dot(i, scalers)];
 		}

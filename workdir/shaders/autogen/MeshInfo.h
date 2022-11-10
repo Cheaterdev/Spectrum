@@ -5,16 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/MeshInfo.h"
-ConstantBuffer<MeshInfo_cb> cb_5_0:register(b0,space5);
-struct Pass_MeshInfo
-{
-};
-ConstantBuffer<Pass_MeshInfo> pass_MeshInfo: register( b2, space5);
+ConstantBuffer<MeshInfo> pass_MeshInfo: register( b2, space5);
 const MeshInfo CreateMeshInfo()
 {
-	MeshInfo result;
-	result.cb = cb_5_0;
-	return result;
+	return pass_MeshInfo;
 }
 #ifndef NO_GLOBAL
 static const MeshInfo meshInfo_global = CreateMeshInfo();

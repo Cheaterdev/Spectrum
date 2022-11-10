@@ -1,8 +1,8 @@
-#include "pch_render.h"
-#include "StatusBar.h"
-#include "GUI/Renderer/Renderer.h"
+module GUI:StatusBar;
+import :Renderer;
 
-void GUI::Elements::status_bar::draw(Render::context& c)
+
+void GUI::Elements::status_bar::draw(Context& c)
 {
     renderer->draw(c, skin.Normal, get_render_bounds());
 }

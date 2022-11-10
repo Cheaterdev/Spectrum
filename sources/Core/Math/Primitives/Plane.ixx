@@ -1,11 +1,11 @@
-export module Plane;
+export module Core:Math.Plane;
 
-export import Constants;
-export import Vectors;
-export import Quaternion;
-export import Matrices;
+export import :Math.Constants;
+export import :Math.Vectors;
+export import :Math.Quaternion;
+export import :Math.Matrices;
 import stl.memory;
-import serialization;
+import :serialization;
 
 export class Plane
 {
@@ -31,9 +31,6 @@ private:
         ar& NVP(n)& NVP(d)& NVP(origin);
     }
 };
-
-
-module: private;
 
 
 Plane::Plane(vec3 n, vec3 p)

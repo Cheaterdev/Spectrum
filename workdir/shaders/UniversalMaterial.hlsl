@@ -37,7 +37,7 @@ float2 tc : TEXCOORD;
  
 Texture2D get_texture(uint i) 
 {
-    return GetSceneData().GetMaterial_textures(i + GetMaterialInfo().GetTextureOffset());
+    return GetMaterialInfo().GetTextures(i);
 }
 
 void spec_to_metallic(float4 albedo, float3 specular,out float4 mat_albedo, out float metallic)

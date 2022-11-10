@@ -1,29 +1,27 @@
-#include "pch_render.h"
+module Graphics:Materials.Values;
 
-#include "GUI/Elements/AssetExplorer.h"
-#include "GUI/Elements/ValueBox.h"
-#include "GUI/Elements/CheckBoxText.h"
-#include "GUI/Elements/HorizontalLayout.h"
-#include "GUI/Elements/ColoredRect.h"
+import GUI;
 
-#include "Values.h"
+import :Asset;
+import :TextureAsset;
+import :AssetExplorer;
 
 /*
 int get_size(FlowGraph::data_types v)
 {
-	if (v == ShaderParams::FLOAT1)
+	if (v == ShaderParams::get().FLOAT1)
 		return 1;
 
-	if (v == ShaderParams::FLOAT2)
+	if (v == ShaderParams::get().FLOAT2)
 		return 2;
 
-	if (v == ShaderParams::FLOAT3)
+	if (v == ShaderParams::get().FLOAT3)
 		return 3;
 
-	if (v == ShaderParams::FLOAT4)
+	if (v == ShaderParams::get().FLOAT4)
 		return 4;
 
-	if (v == ShaderParams::VECTOR)
+	if (v == ShaderParams::get().VECTOR)
 		return 4;
 
 	return 0;
@@ -40,16 +38,16 @@ shader_parameter::shader_parameter(std::string str, ShaderParamType type)
 	this->type = type;
 	name = str;
 	/*
-				if (type == ShaderParams::FLOAT1)
+				if (type == ShaderParams::get().FLOAT1)
 					name = other.name + ".x";
 
-				if (type == ShaderParams::FLOAT2)
+				if (type == ShaderParams::get().FLOAT2)
 					name = other.name + ".xy";
 
-				if (type == ShaderParams::FLOAT3)
+				if (type == ShaderParams::get().FLOAT3)
 					name = other.name + ".xyz";
 
-				if (type == ShaderParams::FLOAT4)
+				if (type == ShaderParams::get().FLOAT4)
 					name = other.name + ".xyzw";
 					*/
 }
@@ -135,7 +133,7 @@ shader_parameter MaterialContext::get_texture(TextureSRVParams::ptr& p, shader_p
 	str += std::string("get_texture(") + std::to_string(texture_counter++) + std::string("),");
 	str += std::string("visibility[") + std::to_string(unordered_counter++) + std::string("]");
 	str += ")";
-	auto val = graph->add_value(ShaderParams::FLOAT4, str);
+	auto val = graph->add_value(ShaderParams::get().FLOAT4, str);
 	return val;
 	//textures.push_back(asset);
 	//return std::string("textures[") + std::to_string(textures.size() - 1) + std::string("]");
@@ -145,15 +143,15 @@ shader_parameter MaterialContext::get_texture(TextureSRVParams::ptr& p, shader_p
 std::string MaterialContext::generate_uniform_struct()
 {
 
-	
+
 	std::string result = "struct MaterialCB\n{\n";
 	result += uniform_struct;
-	
+
 	if (uniform_struct.empty())
 		result += "int dummy;\n";
 
 	result += "};\n";
-	
+
 	uniform_offset = 0;
 	return result;
 }
@@ -195,7 +193,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 			hit_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
 		}
 
-	
+
 
 
 		pixel_shader.text = text;
@@ -205,7 +203,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 
 		if (textures.empty())
 		{
-		//	hit_shader.macros.emplace_back("REFRACTION", "");
+			//	hit_shader.macros.emplace_back("REFRACTION", "");
 		}
 	}
 
@@ -232,7 +230,7 @@ void MaterialContext::start(std::string orig_file, MaterialGraph* graph)
 		{
 			tess_shader.macros.emplace_back("COMPILED_FUNC", graph->func_name);
 		}
-	
+
 		tess_shader.text = text;
 
 	}
@@ -309,9 +307,9 @@ std::list<FlowGraph::Node::ptr>  MaterialFunction::on_drop(MyVariant value)
 
 	if (item->asset->get_type() == Asset_Type::TILED_TEXTURE)
 	{
-	//	TiledTextureNode::ptr node(new TiledTextureNode(item->asset->get_asset()->get_ptr<TiledTexture>()));
-	//	register_node(node);
-	//	result.push_back(node);
+		//	TiledTextureNode::ptr node(new TiledTextureNode(item->asset->get_asset()->get_ptr<TiledTexture>()));
+		//	register_node(node);
+		//	result.push_back(node);
 	}
 
 
@@ -346,10 +344,10 @@ void MaterialFunction::on_finish()
 		mat_graph->add_function(func_call);
 		/*
 				o_vec4->put(val);
-				o_r->put(shader_parameter(val.name + ".r", ShaderParams::FLOAT1));
-				o_g->put(shader_parameter(val.name + ".g", ShaderParams::FLOAT1));
-				o_b->put(shader_parameter(val.name + ".b", ShaderParams::FLOAT1));
-				o_a->put(shader_parameter(val.name + ".a", ShaderParams::FLOAT1));
+				o_r->put(shader_parameter(val.name + ".r", ShaderParams::get().FLOAT1));
+				o_g->put(shader_parameter(val.name + ".g", ShaderParams::get().FLOAT1));
+				o_b->put(shader_parameter(val.name + ".b", ShaderParams::get().FLOAT1));
+				o_a->put(shader_parameter(val.name + ".a", ShaderParams::get().FLOAT1));
 				*/
 	}
 
@@ -488,41 +486,41 @@ void MaterialFunction::add_function(std::string s)
 {
 	text += std::string("\t") + s + ";\n";
 }
- REGISTER_TYPE(ScalarNode);
+REGISTER_TYPE(ScalarNode);
 
- REGISTER_TYPE(MulNode);
- REGISTER_TYPE(SumNode);
- REGISTER_TYPE(TextureNode);
- REGISTER_TYPE(VectorNode);
- REGISTER_TYPE(TiledTextureNode);
+REGISTER_TYPE(MulNode);
+REGISTER_TYPE(SumNode);
+REGISTER_TYPE(TextureNode);
+REGISTER_TYPE(VectorNode);
+REGISTER_TYPE(TiledTextureNode);
 REGISTER_TYPE(MaterialGraph);
- REGISTER_TYPE(SpecToMetNode);
+REGISTER_TYPE(SpecToMetNode);
 //REGISTER_TYPE(TextureSRVParams);
 
 
- REGISTER_TYPE(ShaderParamType);
- REGISTER_TYPE(VectorType);
+REGISTER_TYPE(ShaderParamType);
+REGISTER_TYPE(VectorType);
 
 
 MaterialGraph::MaterialGraph()
 {
-	position = register_input( "position",ShaderParams::FLOAT3);
-	texcoord = register_input(/*ShaderParams::FLOAT2,*/ "texcoord", ShaderParams::FLOAT2);
-	i_base_color = register_output(/*ShaderParams::FLOAT4,*/ "base color", ShaderParams::FLOAT4);
-	i_metallic = register_output(/*ShaderParams::FLOAT1,*/ "metallic", ShaderParams::FLOAT1);
-	i_roughness = register_output(/*ShaderParams::FLOAT1, */"roughness", ShaderParams::FLOAT1);
-	i_normal = register_output(/*ShaderParams::FLOAT4, */"normal", ShaderParams::FLOAT4);
-	i_tess_displacement = register_output(/*ShaderParams::FLOAT1,*/ "displacement", ShaderParams::FLOAT1);
-	i_glow = register_output(/*ShaderParams::FLOAT4, */"glow", ShaderParams::FLOAT4);
+	position = register_input("position", ShaderParams::get().FLOAT3);
+	texcoord = register_input(/*ShaderParams::get().FLOAT2,*/ "texcoord", ShaderParams::get().FLOAT2);
+	i_base_color = register_output(/*ShaderParams::get().FLOAT4,*/ "base color", ShaderParams::get().FLOAT4);
+	i_metallic = register_output(/*ShaderParams::get().FLOAT1,*/ "metallic", ShaderParams::get().FLOAT1);
+	i_roughness = register_output(/*ShaderParams::get().FLOAT1, */"roughness", ShaderParams::get().FLOAT1);
+	i_normal = register_output(/*ShaderParams::get().FLOAT4, */"normal", ShaderParams::get().FLOAT4);
+	i_tess_displacement = register_output(/*ShaderParams::get().FLOAT1,*/ "displacement", ShaderParams::get().FLOAT1);
+	i_glow = register_output(/*ShaderParams::get().FLOAT4, */"glow", ShaderParams::get().FLOAT4);
 
-	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::FLOAT4);
-	i_metallic->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
-	i_roughness->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
+	i_base_color->default_value = shader_parameter("float4(0,0,0,1)", ShaderParams::get().FLOAT4);
+	i_metallic->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
+	i_roughness->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 
-	i_normal->default_value = shader_parameter("float4(0.5,0.5,1,0)", ShaderParams::FLOAT4);
-	i_tess_displacement->default_value = shader_parameter("0.0", ShaderParams::FLOAT1);
+	i_normal->default_value = shader_parameter("float4(0.5,0.5,1,0)", ShaderParams::get().FLOAT4);
+	i_tess_displacement->default_value = shader_parameter("0.0", ShaderParams::get().FLOAT1);
 
-	i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::FLOAT4);
+	i_glow->default_value = shader_parameter("float4(0.0,0.0,0,0)", ShaderParams::get().FLOAT4);
 
 }
 
@@ -573,8 +571,8 @@ void MaterialGraph::start(MaterialContext* context)
 {
 	this->context = context;
 	reset_for();
-	position->put(shader_parameter("pos", ShaderParams::FLOAT3));
-	texcoord->put(shader_parameter("tc", ShaderParams::FLOAT2));
+	position->put(shader_parameter("pos", ShaderParams::get().FLOAT3));
+	texcoord->put(shader_parameter("tc", ShaderParams::get().FLOAT2));
 
 	for (auto n : nodes)
 	{
@@ -597,12 +595,12 @@ TextureNode::TextureNode(TextureAsset::ptr _Asset, bool to_linear)
 	texture_info->asset = register_asset<Asset>(_Asset);
 	texture_info->to_linear = to_linear;
 
-	i_tc = register_input(/*ShaderParams::FLOAT2,*/ "tc", ShaderParams::FLOAT2);
-	o_vec4 = register_output(/*ShaderParams::FLOAT4,*/ "", ShaderParams::FLOAT4);
-	o_r = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
-	o_g = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
-	o_b = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
-	o_a = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
+	i_tc = register_input(/*ShaderParams::get().FLOAT2,*/ "tc", ShaderParams::get().FLOAT2);
+	o_vec4 = register_output(/*ShaderParams::get().FLOAT4,*/ "", ShaderParams::get().FLOAT4);
+	o_r = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
+	o_g = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
+	o_b = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
+	o_a = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
 
 }
 
@@ -618,21 +616,21 @@ TextureNode::~TextureNode()
 void TextureNode::operator()(MaterialContext* context)
 {
 	auto mat_graph = static_cast<MaterialFunction*>(owner);
-	//auto val = mat_graph->add_value(ShaderParams::FLOAT4, "float4(1,0,0,1)");
-	auto val = mat_graph->add_value(ShaderParams::FLOAT4, std::string("sample(") + context->get_texture(texture_info) + ",Sampler, " + i_tc->get<shader_parameter>().name + ".xy, lod)");
-	o_vec4->put(shader_parameter("float4(" + val.name + ".xyz,1)", ShaderParams::FLOAT4));
-	o_r->put(shader_parameter(val.name + ".r", ShaderParams::FLOAT1));
-	o_g->put(shader_parameter(val.name + ".g", ShaderParams::FLOAT1));
-	o_b->put(shader_parameter(val.name + ".b", ShaderParams::FLOAT1));
-	o_a->put(shader_parameter(val.name + ".a", ShaderParams::FLOAT1));
+	//auto val = mat_graph->add_value(ShaderParams::get().FLOAT4, "float4(1,0,0,1)");
+	auto val = mat_graph->add_value(ShaderParams::get().FLOAT4, std::string("sample(") + context->get_texture(texture_info) + ",Sampler, " + i_tc->get<shader_parameter>().name + ".xy, lod)");
+	o_vec4->put(shader_parameter("float4(" + val.name + ".xyz,1)", ShaderParams::get().FLOAT4));
+	o_r->put(shader_parameter(val.name + ".r", ShaderParams::get().FLOAT1));
+	o_g->put(shader_parameter(val.name + ".g", ShaderParams::get().FLOAT1));
+	o_b->put(shader_parameter(val.name + ".b", ShaderParams::get().FLOAT1));
+	o_a->put(shader_parameter(val.name + ".a", ShaderParams::get().FLOAT1));
 	//	mat_graph
 }
 
 PowerNode::PowerNode()
 {
-	i_vec = register_input(/*ShaderParams::VECTOR, */"value", ShaderParams::VECTOR);
-	i_power = register_input(/*ShaderParams::VECTOR,*/ "power", ShaderParams::VECTOR);
-	o_value = register_output(/*ShaderParams::VECTOR,*/ "result", ShaderParams::VECTOR);
+	i_vec = register_input(/*ShaderParams::get().VECTOR, */"value", ShaderParams::get().VECTOR);
+	i_power = register_input(/*ShaderParams::get().VECTOR,*/ "power", ShaderParams::get().VECTOR);
+	o_value = register_output(/*ShaderParams::get().VECTOR,*/ "result", ShaderParams::get().VECTOR);
 }
 
 void PowerNode::operator()(MaterialContext*)
@@ -650,8 +648,8 @@ VectorNode::VectorNode(vec4 value)
 	uniform.reset(new Uniform);
 	uniform->value.f4_value = value;
 	uniform->name = "some_val";
-	uniform->type = ShaderParams::FLOAT4;
-	o_value = register_output(/*ShaderParams::VECTOR,*/ "", ShaderParams::VECTOR);
+	uniform->type = ShaderParams::get().FLOAT4;
+	o_value = register_output(/*ShaderParams::get().VECTOR,*/ "", ShaderParams::get().VECTOR);
 }
 
 VectorNode::VectorNode()
@@ -679,8 +677,8 @@ ScalarNode::ScalarNode(float value)
 	uniform.reset(new Uniform);
 	uniform->value.f_value = value;
 	uniform->name = "some_val";
-	uniform->type = ShaderParams::FLOAT1;
-	o_value = register_output(/*ShaderParams::FLOAT1,*/ "", ShaderParams::FLOAT1);
+	uniform->type = ShaderParams::get().FLOAT1;
+	o_value = register_output(/*ShaderParams::get().FLOAT1,*/ "", ShaderParams::get().FLOAT1);
 }
 
 void ScalarNode::operator()(MaterialContext* c)
@@ -708,9 +706,9 @@ GUI::base::ptr ScalarNode::create_editor_window()
 
 SumNode::SumNode()
 {
-	i_vec = register_input(/*ShaderParams::VECTOR,*/ "a", ShaderParams::VECTOR);
-	i_power = register_input(/*ShaderParams::VECTOR,*/ "b", ShaderParams::VECTOR);
-	o_value = register_output(/*ShaderParams::VECTOR,*/ "result", ShaderParams::VECTOR);
+	i_vec = register_input(/*ShaderParams::get().VECTOR,*/ "a", ShaderParams::get().VECTOR);
+	i_power = register_input(/*ShaderParams::get().VECTOR,*/ "b", ShaderParams::get().VECTOR);
+	o_value = register_output(/*ShaderParams::get().VECTOR,*/ "result", ShaderParams::get().VECTOR);
 }
 
 void SumNode::operator()(MaterialContext*)
@@ -724,9 +722,9 @@ void SumNode::operator()(MaterialContext*)
 
 MulNode::MulNode()
 {
-	i_vec = register_input(/*ShaderParams::VECTOR,*/ "a", ShaderParams::VECTOR);
-	i_power = register_input(/*ShaderParams::VECTOR,*/ "b", ShaderParams::VECTOR);
-	o_value = register_output(/*ShaderParams::VECTOR, */"result", ShaderParams::VECTOR);
+	i_vec = register_input(/*ShaderParams::get().VECTOR,*/ "a", ShaderParams::get().VECTOR);
+	i_power = register_input(/*ShaderParams::get().VECTOR,*/ "b", ShaderParams::get().VECTOR);
+	o_value = register_output(/*ShaderParams::get().VECTOR, */"result", ShaderParams::get().VECTOR);
 }
 
 void MulNode::operator()(MaterialContext* c)
@@ -738,7 +736,7 @@ void MulNode::operator()(MaterialContext* c)
 	/* Uniform v;
 	 v.name = "some_val";
 	 v.def_value = 5.0f;
-	 v.type = ShaderParams::FLOAT1;
+	 v.type = ShaderParams::get().FLOAT1;
 	 auto res = c->create_value(v);*/
 	o_value->put(res);
 }
@@ -746,12 +744,12 @@ void MulNode::operator()(MaterialContext* c)
 TiledTextureNode::TiledTextureNode(TiledTexture::ptr _Asset) : asset(this)
 {
 	asset = register_asset(_Asset);
-	i_tc = register_input("tc", ShaderParams::FLOAT2);
-	o_vec4 = register_output("vec4", ShaderParams::FLOAT4);
-	o_r = register_output( "r", ShaderParams::FLOAT1);
-	o_g = register_output("g", ShaderParams::FLOAT1);
-	o_b = register_output( "b"), ShaderParams::FLOAT1;
-	o_a = register_output("a", ShaderParams::FLOAT1);
+	i_tc = register_input("tc", ShaderParams::get().FLOAT2);
+	o_vec4 = register_output("vec4", ShaderParams::get().FLOAT4);
+	o_r = register_output( "r", ShaderParams::get().FLOAT1);
+	o_g = register_output("g", ShaderParams::get().FLOAT1);
+	o_b = register_output( "b"), ShaderParams::get().FLOAT1;
+	o_a = register_output("a", ShaderParams::get().FLOAT1);
 	++::FlowGraph::counter;
 }
 */
@@ -767,16 +765,16 @@ TiledTextureNode::~TiledTextureNode()
 void TiledTextureNode::operator()(MaterialContext* context)
 {
 	auto mat_graph = static_cast<MaterialFunction*>(owner);
-	//  auto val = mat_graph->add_value(ShaderParams::FLOAT4, "float4(1,0,0,1)");
+	//  auto val = mat_graph->add_value(ShaderParams::get().FLOAT4, "float4(1,0,0,1)");
 
 
 	///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /*	auto val = context->get_texture(*asset, i_tc->get<shader_parameter>());
 	o_vec4->put(val);
-	o_r->put(shader_parameter(val.name + ".r", ShaderParams::FLOAT1));
-	o_g->put(shader_parameter(val.name + ".g", ShaderParams::FLOAT1));
-	o_b->put(shader_parameter(val.name + ".b", ShaderParams::FLOAT1));
-	o_a->put(shader_parameter(val.name + ".a", ShaderParams::FLOAT1));*/
+	o_r->put(shader_parameter(val.name + ".r", ShaderParams::get().FLOAT1));
+	o_g->put(shader_parameter(val.name + ".g", ShaderParams::get().FLOAT1));
+	o_b->put(shader_parameter(val.name + ".b", ShaderParams::get().FLOAT1));
+	o_a->put(shader_parameter(val.name + ".a", ShaderParams::get().FLOAT1));*/
 	//	mat_graph
 }
 
@@ -789,7 +787,7 @@ using namespace Elements;
 GUI::base::ptr TextureNode::create_editor_window()
 {
 	GUI::Elements::image::ptr img(new GUI::Elements::image);
-	img->texture.texture = Render::Texture::get_resource({ "textures/gui/shadow.png", false, false });
+	img->texture.texture = HAL::Texture::get_resource({ to_path("textures/gui/shadow.png"), false, false });
 	img->texture.padding = { 9, 9, 9, 9 };
 	img->padding = { 9, 9, 9, 9 };
 	img->width_size = GUI::size_type::MATCH_CHILDREN;
@@ -799,13 +797,11 @@ GUI::base::ptr TextureNode::create_editor_window()
 	GUI::Elements::image::ptr img_inner(new GUI::Elements::image);
 	//img_inner->texture.texture = asset->get_texture();
 
-	//img_inner->texture.srv = Render::DescriptorHeapManager::get().get_csu_static()->create_table(1);
+	//img_inner->texture.srv = HAL::StaticDescriptors::get().place(1);
 
 
 	auto asset = (texture_info->asset)->get_ptr<TextureAsset>();
-//	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
-	img_inner->texture.srv = asset->get_texture()->texture_2d()->get_static_srv();
-	//img_inner->docking = GUI::dock::FILL;
+	img_inner->texture.srv = asset->get_texture()->texture_2d().texture2D;
 	img_inner->size = { 64, 64 };
 	img->add_child(img_inner);
 
@@ -832,8 +828,8 @@ GUI::base::ptr TextureNode::create_editor_window()
 	chk_srgb->on_check = [this, img_inner, asset](bool v) {
 
 		texture_info->to_linear = v;
-	//	asset->get_texture()->texture_2d()->srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
-		//	owner->co
+		//	asset->get_texture()->texture_2d().srv(texture_info->to_linear ? PixelSpace::MAKE_LINERAR : PixelSpace::MAKE_SRGB)(img_inner->texture.srv[0]);
+			//	owner->co
 	};
 	back->add_child(chk_srgb);
 
@@ -855,3 +851,4 @@ bool ShaderParamType::can_cast(parameter_type* other)
 	bool res = M == type->M && N == type->N;
 	return res;
 }
+REGISTER_TYPE(MaterialContext);

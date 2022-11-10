@@ -1,8 +1,8 @@
-export module Tree;
-export import Singleton;
-export import Events;
+export module Core:Tree;
+export import :Singleton;
+export import :Events;
 export import stl.core;
-export import Data;
+export import :Data;
 export class base_tree
 {
 

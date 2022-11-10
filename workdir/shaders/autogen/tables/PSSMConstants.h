@@ -1,19 +1,8 @@
 #pragma once
-struct PSSMConstants_cb
-{
-	int level;
-	float time;
-};
 struct PSSMConstants
 {
-	PSSMConstants_cb cb;
-	int GetLevel() { return cb.level; }
-	float GetTime() { return cb.time; }
-
+	int level; // int
+	float time; // float
+	int GetLevel() { return level; }
+	float GetTime() { return time; }
 };
- const PSSMConstants CreatePSSMConstants(PSSMConstants_cb cb)
-{
-	const PSSMConstants result = {cb
-	};
-	return result;
-}

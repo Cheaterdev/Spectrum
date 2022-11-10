@@ -1,23 +1,9 @@
-// Copyright (c) 2017 Ubisoft Entertainment
-// 
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// 
-// http://www.apache.org/licenses/LICENSE-2.0
-// 
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 using Sharpmake;
 using System;
 using System.Collections.Generic;
+
 namespace Spectrum
 {
-
     [Fragment, Flags]
     public enum Mode
     {
@@ -28,11 +14,9 @@ namespace Spectrum
 
     public class CustomTarget : ITarget
     {
-        // DevEnv and Platform are mandatory on all targets so we define them.
-        public Platform Platform; public DevEnv DevEnv;
 
-
-        // Also put debug/release configurations since this is common.
+        public Platform Platform; 
+        public DevEnv DevEnv;
         public Optimization Optimization;
         public Mode Mode;
     }
@@ -54,7 +38,7 @@ namespace Spectrum
             AddTargets(new CustomTarget
             {
                 Platform = Platform.win64,
-                DevEnv = DevEnv.vs2019,
+                DevEnv = DevEnv.vs2022,
                 Optimization = Optimization.Release,
                 Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });
@@ -71,7 +55,6 @@ namespace Spectrum
         [Configure]
         public virtual void ConfigureAll(Configuration conf, CustomTarget target)
         {
-         //   conf.IsBlobbed = true;
             conf.ProjectFileName = "[project.Name]";
             conf.ProjectPath = @"[project.RootPath]";
 
@@ -104,9 +87,10 @@ namespace Spectrum
        
 			conf.Defines.Add("WIN32_LEAN_AND_MEAN");
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
-             conf.Defines.Add("CEREAL_THREAD_SAFE");
-           
-            conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106")); //module reference issues
+            conf.Defines.Add("CEREAL_THREAD_SAFE");
+            conf.Defines.Add("USE_PIX");
+         
+            conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106", "4494")); //module reference issues
 
             if (target.Mode == Mode.Dev)
             {
@@ -228,6 +212,15 @@ namespace Spectrum
 					conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12SDKLayers.dll", "D3D12"));
 				}
 			}
+
+
+            { // PIX
+				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\PIX\Include\WinPixEventRuntime", 66);
+                conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64\WinPixEventRuntime.dll");
+			
+			    conf.LibraryFiles.Add("WinPixEventRuntime.lib");
+                conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
+			}
         }
     }
 	
@@ -244,15 +237,7 @@ namespace Spectrum
         public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
-
-           // conf.PrecompHeader = "pch.h";
-           // conf.PrecompSource = "pch.cpp";
-
-           // conf.LibraryFiles.Add("Dbghelp.lib");
-        //   
-			
-			conf.AddPublicDependency<Modules>(target);
-		
+			conf.AddPublicDependency<Modules>(target);	
         }
     }
 
@@ -281,12 +266,12 @@ namespace Spectrum
 
 
     [Sharpmake.Generate]
-    public class DirectXFramework : Library
+    public class HAL : Library
     {
-        public DirectXFramework()
+        public HAL()
         {
-            SourceRootPath = @"[project.SharpmakeCsPath]\sources\DirectXFramework";
-            AssemblyName = "DirectXFramework";
+            SourceRootPath = @"[project.SharpmakeCsPath]\sources\HAL";
+            AssemblyName = "HAL";
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)
@@ -297,11 +282,8 @@ namespace Spectrum
             conf.LibraryFiles.Add("d3d12.lib");
             conf.LibraryFiles.Add("dxguid.lib");
 
-			
-
             conf.AddPublicDependency<Core>(target);	
 			conf.AddPrivateDependency<DXCompiler>(target);	
-
             conf.AddPrivateDependency<Aftermath>(target);
         }
     }
@@ -319,11 +301,9 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-         conf.IsBlobbed = true;
-           // conf.PrecompHeader = "pch.h";
-          //  conf.PrecompSource = "pch.cpp";
-
-            conf.AddPublicDependency<DirectXFramework>(target);
+        // conf.IsBlobbed = true;
+        
+            conf.AddPublicDependency<HAL>(target);
         }
     }
 
@@ -347,8 +327,7 @@ namespace Spectrum
 
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\SIGParser";
-   conf.Defines.Add("ANTLR4CPP_STATIC");
-         
+            conf.Defines.Add("ANTLR4CPP_STATIC");
         }
     }
 
@@ -366,16 +345,14 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-     conf.IsBlobbed = true;
-            //conf.PrecompHeader = "pch.h";
-            //conf.PrecompSource = "pch.cpp";
+            //conf.IsBlobbed = true;
 
             conf.LibraryFiles.Add("Onecore.lib");
 
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\workdir";
 
-            conf.AddPublicDependency<DirectXFramework>(target);
+            conf.AddPublicDependency<HAL>(target);
             conf.AddPublicDependency<RenderSystem>(target);
         }
     }
@@ -403,7 +380,7 @@ namespace Spectrum
             AddTargets(new CustomTarget
             {
                 Platform = Platform.win64,
-                DevEnv = DevEnv.vs2019,
+                DevEnv = DevEnv.vs2022,
                 Optimization =  Optimization.Release,
                 Mode = Mode.Dev | Mode.Profile | Mode.Retail
             });

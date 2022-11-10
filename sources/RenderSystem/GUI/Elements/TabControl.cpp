@@ -1,6 +1,6 @@
-﻿#include "pch_render.h"
-#include "TabControl.h"
-#include "GUI/Renderer/Renderer.h"
+﻿module GUI:TabControl;
+import :Renderer;
+
 
 namespace GUI
 {
@@ -9,7 +9,7 @@ namespace GUI
 
 
 
-        void tab_button::draw(Render::context& c)
+        void tab_button::draw(Context& c)
         {
             if (is_current() || is_pressed())
                 renderer->draw(c, skin.Pressed, get_render_bounds());
@@ -68,7 +68,7 @@ namespace GUI
             close_button->background_style = button::view_style::FLAT;
             close_button->get_label()->visible = false;
             close_button->get_image()->visible = true;
-            close_button->get_image()->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/window_close.png"));
+            close_button->get_image()->texture = HAL::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/window_close.png")));
             close_button->get_image()->docking = dock::FILL;
             // close_button->padding = { 5, 5, 5, 5 };
             close_button->height_size = size_type::SQUARE;
@@ -84,12 +84,12 @@ namespace GUI
             skin = Skin::get().TabButton;
         }
 
-        void tab_strip::draw(Render::context& c)
+        void tab_strip::draw(Context& c)
         {
         //    renderer->draw(c, skin.Normal, get_render_bounds());
 			renderer->draw_container(get_ptr(),c);
         }
-		void tab_strip::draw_after(Render::context& c)
+		void tab_strip::draw_after(Context& c)
 		{
 		//	    renderer->draw(c, skin.Normal, get_render_bounds());
 			//	renderer->draw_container(get_ptr(),c);
@@ -111,7 +111,7 @@ namespace GUI
 			all->get_label()->visible = false;
 			all->background_style = button::view_style::FLAT;
 			all->get_image()->visible = true;
-			all->get_image()->texture = Render::Texture::get_resource(Render::texure_header("textures/gui/down.png"));
+			all->get_image()->texture = HAL::Texture::get_resource(HAL::texure_header(to_path(L"textures/gui/down.png")));
 			all->get_image()->docking = dock::FILL;
 			all->padding = { 5, 5, 5, 5 };
 			all->on_click = [this](button::ptr)
@@ -296,7 +296,7 @@ namespace GUI
             add_child(contents);
         }
 
-        void tab_control::draw(Render::context& c)
+        void tab_control::draw(Context& c)
         {
             //  renderer->draw_container(get_ptr(), c);
         }

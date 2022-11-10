@@ -69,8 +69,8 @@ GraphicsPSO RenderToDS
 	pixel = depth_render;
 
 
-	ds = DXGI_FORMAT_D32_FLOAT;
-	cull = NONE;
+	ds = D32_FLOAT;
+	cull = None;
 	depth_func = ALWAYS;
 }
 
@@ -85,7 +85,7 @@ GraphicsPSO QualityColor
 	[EntryPoint = PS]
 	pixel = gbuffer_quality;
 
-	rtv = { DXGI_FORMAT_R8G8_UNORM };
+	rtv = { R8G8_UNORM };
 	depth_write = false;
 
 }
@@ -104,9 +104,9 @@ GraphicsPSO QualityToStencil
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = ALWAYS;
-	stencil_pass_op = REPLACE;
+	stencil_pass_op = Replace;
 
-	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	ds = D24_UNORM_S8_UINT;
 
 
 	#make as define block
@@ -129,9 +129,9 @@ GraphicsPSO QualityToStencilREfl
 	enable_stencil = true;
 	enable_depth = false;
 	stencil_func = ALWAYS;
-	stencil_pass_op = REPLACE;
+	stencil_pass_op = Replace;
 
-	ds = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	ds = D24_UNORM_S8_UINT;
 
 
 	# make as define block
@@ -154,7 +154,7 @@ GraphicsPSO CopyTexture
 
 	enable_depth = false;
 
-	[type = DXGI_FORMAT]
+	[type = Format]
 	define Format = { ALL_RT_FORMATS };
 
 	rtv = { Format };

@@ -5,16 +5,10 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Color.h"
-ConstantBuffer<Color_cb> cb_4_0:register(b0,space4);
-struct Pass_Color
-{
-};
-ConstantBuffer<Pass_Color> pass_Color: register( b2, space4);
+ConstantBuffer<Color> pass_Color: register( b2, space4);
 const Color CreateColor()
 {
-	Color result;
-	result.cb = cb_4_0;
-	return result;
+	return pass_Color;
 }
 #ifndef NO_GLOBAL
 static const Color color_global = CreateColor();
