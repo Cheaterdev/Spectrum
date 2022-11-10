@@ -628,7 +628,6 @@ export module HAL:Autogen;
 import Core;
 
 import :PipelineState;
-import :Buffer;
 import :SIG;
 import :RT;
 import :Layout;
@@ -684,11 +683,6 @@ export
 		stream << "#include \"rtx\\" << t.name << ".h\"" << std::endl;
 	}
 
-
-	stream << "void init_signatures();" << std::endl;
-	stream << "HAL::RootLayout::ptr get_Signature(Layouts id);" << std::endl;
-	stream << "void init_pso(enum_array<PSO, PSOBase::ptr>&);" << std::endl;
-
 	stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
 	stream << "UINT get_slot_id(SlotID id);" << std::endl;
 
@@ -696,29 +690,6 @@ export
 	stream << "}" << std::endl;
 
 //	stream << "module: private;" << std::endl;
-
-	stream << "static enum_array<Layouts, HAL::RootLayout::ptr> signatures;" << std::endl;
-	stream << "void init_signatures()" << std::endl;
-
-	stream << "{" << std::endl;
-	{
-		stream.push();
-
-		for (auto& l : parsed.layouts)
-		{
-			stream << "signatures[Layouts::" << l.name << "] = AutoGenSignatureDesc<" << l.name << ">().create_signature(Layouts::" << l.name << ");" << std::endl;
-		}
-
-		stream.pop();
-	}
-
-	stream << "}" << std::endl;
-
-
-	stream << "HAL::RootLayout::ptr get_Signature(Layouts id)" << std::endl;
-	stream << "{" << std::endl;
-	stream << "\treturn signatures[id];" << std::endl;
-	stream << "}" << std::endl;
 
 	{
 		stream << "std::optional<SlotID> get_slot(std::string_view slot_name)" << std::endl;
@@ -863,8 +834,22 @@ using namespace concurrency;
 )"
 			<< std::endl;
 
+
+		stream << "void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>& signatures)" << std::endl;
+		stream << "{" << std::endl;
+		{
+			stream.push();
+			for (auto& l : parsed.layouts)
+			{
+				stream << "signatures[Layouts::" << l.name << "] = AutoGenSignatureDesc<" << l.name << ">().create_signature(device, Layouts::" << l.name << ");" << std::endl;
+			}
+			stream.pop();
+		}
+		stream << "}" << std::endl;
+
+
 		//stream << "static std::array<HAL::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
-		stream << "void init_pso(enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
+		stream << "void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
 
 		stream << "{" << std::endl;
 		{
@@ -875,14 +860,14 @@ using namespace concurrency;
 
 				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
 
-				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(pso[PSO::" << l.name << "]));" << std::endl;
+				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(device, pso[PSO::" << l.name << "]));" << std::endl;
 
 			}
 			for (auto& l : parsed.graphics_pso)
 			{
 				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
 
-				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(pso[PSO::" << l.name << "]));" << std::endl;
+				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(device,pso[PSO::" << l.name << "]));" << std::endl;
 			}
 
 

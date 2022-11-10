@@ -163,7 +163,6 @@ export
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	UINT get_slot_id(SlotID id);
 }
-
 std::optional<SlotID> get_slot(std::string_view slot_name)
 {
 	if(slot_name == "TextureRenderer")

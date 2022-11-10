@@ -9,29 +9,28 @@ void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::p
 	signatures[Layouts::FrameLayout] = AutoGenSignatureDesc<FrameLayout>().create_signature(device, Layouts::FrameLayout);
 	signatures[Layouts::DefaultLayout] = AutoGenSignatureDesc<DefaultLayout>().create_signature(device, Layouts::DefaultLayout);
 }
-
-void init_pso(HAL::Device &device, enum_array<PSO, PSOBase::ptr>& pso)
+void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {
 	 std::vector<task<void>> tasks;
-	tasks.emplace_back(PSOBase::create<PSOS::BRDF>(device,pso[PSO::BRDF]));
-	tasks.emplace_back(PSOBase::create<PSOS::FSR>(device,pso[PSO::FSR]));
-	tasks.emplace_back(PSOBase::create<PSOS::RCAS>(device,pso[PSO::RCAS]));
-	tasks.emplace_back(PSOBase::create<PSOS::GatherPipeline>(device,pso[PSO::GatherPipeline]));
-	tasks.emplace_back(PSOBase::create<PSOS::GatherBoxes>(device,pso[PSO::GatherBoxes]));
-	tasks.emplace_back(PSOBase::create<PSOS::InitDispatch>(device,pso[PSO::InitDispatch]));
-	tasks.emplace_back(PSOBase::create<PSOS::GatherMeshes>(device,pso[PSO::GatherMeshes]));
-	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepth>(device,pso[PSO::DownsampleDepth]));
-	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device,pso[PSO::MipMapping]));
-	tasks.emplace_back(PSOBase::create<PSOS::Lighting>(device,pso[PSO::Lighting]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelDownsample>(device,pso[PSO::VoxelDownsample]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelCopy>(device,pso[PSO::VoxelCopy]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelZero>(device,pso[PSO::VoxelZero]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelVisibility>(device,pso[PSO::VoxelVisibility]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectFilter>(device,pso[PSO::VoxelIndirectFilter]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectLow>(device,pso[PSO::VoxelIndirectLow]));
-	tasks.emplace_back(PSOBase::create<PSOS::DenoiserHistoryFix>(device,pso[PSO::DenoiserHistoryFix]));
-	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(device,pso[PSO::FrameClassification]));
-	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device,pso[PSO::FrameClassificationInitDispatch]));
+	tasks.emplace_back(PSOBase::create<PSOS::BRDF>(device, pso[PSO::BRDF]));
+	tasks.emplace_back(PSOBase::create<PSOS::FSR>(device, pso[PSO::FSR]));
+	tasks.emplace_back(PSOBase::create<PSOS::RCAS>(device, pso[PSO::RCAS]));
+	tasks.emplace_back(PSOBase::create<PSOS::GatherPipeline>(device, pso[PSO::GatherPipeline]));
+	tasks.emplace_back(PSOBase::create<PSOS::GatherBoxes>(device, pso[PSO::GatherBoxes]));
+	tasks.emplace_back(PSOBase::create<PSOS::InitDispatch>(device, pso[PSO::InitDispatch]));
+	tasks.emplace_back(PSOBase::create<PSOS::GatherMeshes>(device, pso[PSO::GatherMeshes]));
+	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepth>(device, pso[PSO::DownsampleDepth]));
+	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
+	tasks.emplace_back(PSOBase::create<PSOS::Lighting>(device, pso[PSO::Lighting]));
+	tasks.emplace_back(PSOBase::create<PSOS::VoxelDownsample>(device, pso[PSO::VoxelDownsample]));
+	tasks.emplace_back(PSOBase::create<PSOS::VoxelCopy>(device, pso[PSO::VoxelCopy]));
+	tasks.emplace_back(PSOBase::create<PSOS::VoxelZero>(device, pso[PSO::VoxelZero]));
+	tasks.emplace_back(PSOBase::create<PSOS::VoxelVisibility>(device, pso[PSO::VoxelVisibility]));
+	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectFilter>(device, pso[PSO::VoxelIndirectFilter]));
+	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectLow>(device, pso[PSO::VoxelIndirectLow]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserHistoryFix>(device, pso[PSO::DenoiserHistoryFix]));
+	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(device, pso[PSO::FrameClassification]));
+	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device, pso[PSO::FrameClassificationInitDispatch]));
 	tasks.emplace_back(PSOBase::create<PSOS::FontRender>(device,pso[PSO::FontRender]));
 	tasks.emplace_back(PSOBase::create<PSOS::RenderBoxes>(device,pso[PSO::RenderBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::RenderToDS>(device,pso[PSO::RenderToDS]));
