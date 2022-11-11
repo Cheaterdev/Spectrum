@@ -40,7 +40,8 @@ export namespace GUI
                 float scaled = 1;
 
 				GUI::Texture cache;
-
+                virtual void on_pre_render(Context& context) override;
+                virtual void pre_draw(HAL::CommandList::ptr list) override;
             public:
                 int magnet_text;
                 bool test = false;

@@ -8,7 +8,7 @@ namespace GUI
 
 		void colored_rect::draw(Context& c)
 		{
-			renderer->draw_color(c, color, get_render_bounds());
+			c.renderer->draw_color(c, color, get_render_bounds());
 		}
 	}
 

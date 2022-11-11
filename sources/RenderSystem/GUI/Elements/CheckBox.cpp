@@ -10,11 +10,11 @@ namespace GUI
 		void check_box::draw(Context& c)
 		{
 			if (is_checked())
-				renderer->draw(c, skin.Checked, get_render_bounds());
+				c.renderer->draw(c, skin.Checked, get_render_bounds());
 			else
-				renderer->draw(c, skin.Normal, get_render_bounds());
+				c.renderer->draw(c, skin.Normal, get_render_bounds());
 
-			//   renderer->draw(this, c);
+			//   context.renderer->draw(this, c);
 		}
 
 		check_box::check_box() : checked(std::bind(&check_box::on_check_changed, this, std::placeholders::_1))

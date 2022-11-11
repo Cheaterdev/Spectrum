@@ -51,6 +51,8 @@ namespace HAL
 
 
 		THIS->desc = _desc;
+
+//		Log::get() << "creating resource " << _desc << Log::endl;
 		CD3DX12_RESOURCE_DESC resourceDesc = to_native(THIS->desc);
 		D3D12_CLEAR_VALUE value;
 

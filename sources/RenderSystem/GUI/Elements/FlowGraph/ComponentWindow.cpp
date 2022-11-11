@@ -14,7 +14,7 @@ void GUI::Elements::FlowGraph::component_window::draw(Context& c)
 	else
 		texture.mul_color = float4(31, 63, 85, 255) / 255.0f;
 
-	this->renderer->draw(c, texture, get_render_bounds());
+	c.renderer->draw(c, texture, get_render_bounds());
 }
 
 GUI::Elements::FlowGraph::component_window::component_window(canvas* canva, ::FlowGraph::Node* node, window_type type)

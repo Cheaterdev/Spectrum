@@ -9,12 +9,14 @@ namespace GUI
 	namespace Elements
 	{
 
-
-		void label::draw(Context& context)
+		void label::on_pre_render(Context& context) 
 		{
-			//	return;
 			recalculate(context);
-			auto& c = context.get_context<GUIInfo>();
+
+		}
+
+		void label::draw(Context& c)
+		{
 
 			PROFILE(L"label");
 
@@ -37,7 +39,7 @@ namespace GUI
 						p.y += (p.h - std::ceil(text_size.y)) / 2;
 					sizer intersected = intersect(math::convert(p), c.ui_clipping);
 					if ((intersected.top < intersected.bottom && intersected.left < intersected.right))
-						renderer->draw(context, cache, p);
+						c.renderer->draw(c, cache, p);
 				}
 
 			c.ui_clipping = orig;
@@ -67,9 +69,8 @@ namespace GUI
 		{
 			on_text_changed(text.get());
 		}
-		void label::recalculate(Context& context)
+		void label::recalculate(Context& c)
 		{
-			auto& c = context.get_context<GUIInfo>();
 
 			if (!need_recalculate && ((w == ivec2(render_bounds->size / scaled) || (magnet_text & FW1_NOWORDWRAP))))
 			{
@@ -104,35 +105,54 @@ namespace GUI
 				if (!cache.texture || cache.texture->get_desc().as_texture().Dimensions.x < lay2.right || cache.texture->get_desc().as_texture().Dimensions.y < lay2.bottom)
 					cache.texture.reset(new HAL::Texture(HAL::ResourceDesc::Tex2D(HAL::Format::R8G8B8A8_UNORM, { lay2.right, (UINT)lay2.bottom }, 1, 0, HAL::ResFlags::ShaderResource | HAL::ResFlags::RenderTarget | HAL::ResFlags::UnorderedAccess)));
 
-			auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
+			//auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
+			user_ui->pre_draw_infos.emplace_back(this);
 
+			//c.labeled->add([this, _THIS, _command_list]
+			//	{
+			//		ptr my_ptr = _THIS.lock();
+			//		if (!my_ptr) return;
+			//		auto command_list = const_cast<HAL::CommandList*>(_command_list.get())->get_ptr<HAL::CommandList>(); //wtf is this
+			//		geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
+			//		command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
+			//		auto rtv = cache.texture->texture_2d().renderTarget;
+			//		command_list->get_graphics().set_rtv(1, rtv, Handle());
 
-			c.labeled->add([this, _THIS, _command_list]
-				{
-					ptr my_ptr = _THIS.lock();
-					if (!my_ptr) return;
-					auto command_list = const_cast<HAL::CommandList*>(_command_list.get())->get_ptr<HAL::CommandList>(); //wtf is this
-					geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
-					command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
-					auto rtv = cache.texture->texture_2d().renderTarget;
-					command_list->get_graphics().set_rtv(1, rtv, Handle());
+			//		PROFILE(L"label");
 
-					PROFILE(L"label");
+			//		HAL::Viewport vps;
+			//		vps.size = cache.texture->get_desc().as_texture().Dimensions;
+			//		vps.pos = { 0,0 };
+			//		vps.depths = { 0,1 };
 
-					HAL::Viewport vps;
-					vps.size = cache.texture->get_desc().as_texture().Dimensions;
-					vps.pos = { 0,0 };
-					vps.depths = { 0,1 };
-
-					command_list->get_graphics().set_viewports({ vps });
-					sizer_long s = { 0, 0, vps.size };
-					command_list->get_graphics().set_scissors({ s });
-					geomerty->draw(command_list, lay2, 0, { 0,0 });
-					MipMapGenerator::get().generate(command_list->get_compute(), cache.texture->texture_2d());
-				});
+			//		command_list->get_graphics().set_viewports({ vps });
+			//		sizer_long s = { 0, 0, vps.size };
+			//		command_list->get_graphics().set_scissors({ s });
+			//		geomerty->draw(command_list, lay2, 0, { 0,0 });
+			//		MipMapGenerator::get().generate(command_list->get_compute(), cache.texture->texture_2d());
+			//	});
 			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().as_texture().Dimensions.x,cache.texture->get_desc().as_texture().Dimensions.y) };
 		}
+		 void label::pre_draw(HAL::CommandList::ptr command_list)
+		{
+		 		geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
+		 		command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
+		 		auto rtv = cache.texture->texture_2d().renderTarget;
+		 		command_list->get_graphics().set_rtv(1, rtv, Handle());
 
+		 		PROFILE(L"label");
+
+		 		HAL::Viewport vps;
+		 		vps.size = cache.texture->get_desc().as_texture().Dimensions;
+		 		vps.pos = { 0,0 };
+		 		vps.depths = { 0,1 };
+
+		 		command_list->get_graphics().set_viewports({ vps });
+		 		sizer_long s = { 0, 0, vps.size };
+		 		command_list->get_graphics().set_scissors({ s });
+		 		geomerty->draw(command_list, lay2, 0, { 0,0 });
+		 		MipMapGenerator::get().generate(command_list->get_compute(), cache.texture->texture_2d());
+		};
 		Fonts::FontGeometry::ptr label::get_geometry()
 		{
 			return geomerty;

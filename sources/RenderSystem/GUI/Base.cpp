@@ -33,7 +33,6 @@ namespace GUI
         if (!base_parent) return;
 
         user_ui = base_parent->user_ui;
-        renderer = parent->renderer;
         map_to_pixels = map_to_pixels && base_parent->map_to_pixels;
         need_update_layout = true;
 
@@ -673,12 +672,11 @@ namespace GUI
             f();
     }
 
-    void base::draw_recursive(RecursiveContext& rec_c, base* p)
+    void base::draw_recursive(GUIInfo& c, base* p)
     {
         if (!test_local_visible())
             return;
 
-		auto &c = rec_c.render_context.get_context<GUIInfo>();
 
         bool visibility = true;
         rect r_bounds = render_bounds.get();
@@ -695,8 +693,9 @@ namespace GUI
         else
         {
             c.ui_clipping = user_ui->get_render_bounds();
+            c.scissors = user_ui->get_render_bounds();
 
-			rec_c.execute(c.commit_scissor());
+			//rec_c.execute(c.commit_scissor());
 			
         }
 
@@ -704,10 +703,11 @@ namespace GUI
 
         if (visibility)
 		{
-
-			rec_c.execute([this](Context &c) {
-				draw(c);
-			});
+           on_pre_render(c);
+            user_ui->draw_infos.emplace_back(c.ui_clipping, c.scissors,c.scale,this,c.offset,true);
+		//	rec_c.execute([this](Context &c) {
+		//		draw(c);
+		//	});
 		}
        
 
@@ -735,7 +735,7 @@ namespace GUI
        
                 for (auto& child : childs)
                     if (child->visible.get())
-                        child->draw_recursive(rec_c, this);
+                        child->draw_recursive(c, this);
             }
 
         c.ui_clipping = orig;
@@ -744,10 +744,11 @@ namespace GUI
 
     //    if (visibility)
     //        draw_after(c);
+        user_ui->draw_infos.emplace_back(c.ui_clipping, c.scissors,c.scale, this, c.offset, false);
 
-		rec_c.execute([this](Context &c) {
+		/*rec_c.execute([this](Context &c) {
 			draw_after(c);
-		});
+		});*/
     }
 
     bool base::need_drag_drop()
@@ -845,22 +846,7 @@ namespace GUI
 
         return parent->childs.back().get() == this;
     }
-
-    void base::set_skin(Renderer_ptr skin)
-    {
-        if (skin != this->renderer)
-            render_data.reset();
-
-        this->renderer = skin;
-
-        for (auto c : childs)
-            c->set_skin(skin);
-    }
-
-    GUI::Renderer_ptr base::get_skin()
-    {
-        return renderer;
-    }
+    
 
     bool base::is_menu_component()
     {
@@ -881,7 +867,7 @@ namespace GUI
     void base::draw(Context& c) //
     {
         if (draw_helper)
-            renderer->draw_virtual(get_ptr(), c);
+            c.renderer->draw_virtual(get_ptr(), c);
     }
 
     void base::draw_after(Context&)
@@ -925,116 +911,128 @@ namespace GUI
 
      void user_interface::create_graph(Graph& graph)
      {
+
+         GUIInfo c;
+
+         c.offset = { 0, 0 };
+         c.window_size = scaled_size.get();
+         c.scale = 1;
+         c.delta_time = 0;// time.time;
+
+
+         draw_infos.clear();
+         pre_draw_infos.clear();
+        draw_recursive(c);
+        drag.draw(c);
+
       //   return;
          process_graph(graph);
+
+
+        if(pre_draw_infos.size())
+        {
+            struct no
+            {
+           
+            };
+            graph.add_pass<no>("UI PREPARE", [this](no& data, TaskBuilder& builder) {
+                }, [this, &graph](no& data, FrameContext& context) {
+                    auto command_list = context.get_list();
+
+                    for (auto& e : pre_draw_infos)
+                    {
+                        e->pre_draw(command_list);
+                    }
+                }, PassFlags::Required);
+        }
+
          struct pass_data
          {
              Handlers::Texture o_texture = "swapchain";
          };
 
-		 graph.add_pass<pass_data>("UI RENDER",[this](pass_data& data, TaskBuilder& builder) {
+
+         uint per_thread =  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
+
+         uint start = 0; uint end = 0;
+         uint t = 0;
+        while(start< draw_infos.size())
+        {
+            end = std::min(start + per_thread, (uint)draw_infos.size());
+
+            graph.add_pass<pass_data>(std::string("UI RENDER_")+std::to_string(t++), [this](pass_data& data, TaskBuilder& builder) {
 			builder.need(data.o_texture, ResourceFlags::RenderTarget);
             use_graph(builder);
-			 }, [this,&graph](pass_data& data, FrameContext& context) {
-			//	 std::lock_guard<std::mutex> g(m);
+			 }, [this,&graph, start, end](pass_data& data, FrameContext& context) {
 
 				 auto command_list = context.get_list();
-				
-				 auto texture = (*data.o_texture);
-                // auto& time = graph.get_context<TimeInfo>();
 
-			//	 command_list->transition(texture.resource, HAL::ResourceState::RENDER_TARGET);
+				 auto texture = (*data.o_texture);
+
 				 command_list->get_graphics().set_rtv(1, texture.renderTarget, HAL::Handle());
 				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
 
-			
-                 renderer->start();
+                 command_list->get_graphics().set_signature(Layouts::DefaultLayout);
+                 command_list->get_compute().set_signature(Layouts::DefaultLayout);
 
-               
+                 Renderer renderer;
 
-                 auto& c = graph.get_context<GUIInfo>();
-
+                 GUIInfo c;
+                 c.renderer = &renderer;
                  c.command_list = command_list;
-               
-				 c.offset = { 0, 0 };
-				 c.window_size = scaled_size.get();
-				 c.scale = 1;
-                 c.delta_time = 0;// time.time;
+
+
+                 sizer scissors = {};
+
 				 {
                      PROFILE_GPU(L"draw");
-					 RecursiveContext context(graph);
+			
+              
+                    for(uint i=start;i<end;i++)
+                    {
+                        auto& e=draw_infos[i];
 
-					 //if (!c.command_list_label)
-					 {
-						 c.labeled = &context.pre_executor;
-                     	
-						 c.command_list_label = (HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list());
-                     	
-						 c.command_list_label->begin("Label");
+                        if (c.scissors != e.scissors)
+                        {
+                            renderer.flush(c);
+                            command_list->get_graphics().set_scissors(e.scissors);
 
-                         c.command_list_label->frame_resources = c.command_list->frame_resources;
+                        }
+                        c.scale = e.scale;
+                        c.ui_clipping = e.clip;
+                        c.offset = e.offset;
+                        c.scissors = e.scissors;
+                        c.window_size = scaled_size.get();
 
-					 }
+                       
+                        if(e.before)
+                        {
+                            e.elem->draw(c);
+                        }
+                        else
+                        {
+                            e.elem->draw_after(c);
+                        }
+                    }
+					 	
 
 
-					 draw_recursive(context);
-
-					 drag.draw(context);
-					 context.stop_and_wait();
+					
+				 	renderer.flush(c);
+		
 				 }
-
-				 if (c.command_list_label)
-				 {
-					 c.command_list_label->end();
-					 c.command_list_label->execute();
-					 c.command_list_label = nullptr;
-				 }
-
-				 renderer->flush(graph);
-
+                		
 	
 			 });
 
 
+            start = end ;
+        }
+		 
+
      }
 
-     /*
-    void user_interface::draw_ui(Context& c)
-    {
-        std::lock_guard<std::mutex> g(m);
-
-        process_ui();
-
-
-		{
-			auto timer = c.command_list->start(L"draw");
-			RecursiveContext context(c);
-
-			//if (!c.command_list_label)
-			{
-				c.labeled = &context.pre_executor;
-
-				c.command_list_label = c.command_list->get_sub_list();
-				c.command_list_label->begin("Label");
-			}
-
-
-			draw_recursive(context);
-			
-			drag.draw(context);
-			context.stop_and_wait();
-		}
-
-		if(c.command_list_label)
-		{
-			c.command_list_label->end();
-			c.command_list_label->execute();
-			c.command_list_label = nullptr;
-		}
-		
-		renderer->flush(c);	
-    }
-    */
+     
     void user_interface::mouse_action_event_internal(mouse_action action, mouse_button button, vec2 pos)
     {
      //   cursor = cursor_style::ARROW;
@@ -1200,7 +1198,6 @@ namespace GUI
     {
         THREAD_SCOPE(GUI);
         docking = dock::FILL;
-        renderer.reset(new Renderer());
         user_ui = this;
         back.reset(new dark());
         user_interface::add_child(back);
@@ -1363,14 +1360,14 @@ namespace GUI
 
     void dark::draw(Context& c)
     {
-        renderer->draw_color(c, vec4(0.0, 0.0, 0.0, 0.5f), get_render_bounds());
+        c.renderer->draw_color(c, vec4(0.0, 0.0, 0.0, 0.5f), get_render_bounds());
     }
 
     drag_n_drop::~drag_n_drop()
     {
     }
 
-    void drag_n_drop::draw(RecursiveContext& context)
+    void drag_n_drop::draw(GUIInfo& c)
     {
         if (!dragging) return;
 
@@ -1378,12 +1375,12 @@ namespace GUI
 
         if (!p)
             return;
-        auto& c = context.render_context.get_context<GUIInfo>();
 
         c.offset = cur_pos - start_pos;
+
 		/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
        if (p->drag_n_drop_copy)
-		   p->draw_recursive(context);
+		   p->draw_recursive(c);
            
     }
 

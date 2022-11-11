@@ -16,6 +16,7 @@ import :API.IndirectCommand;
 import :QueryHeap;
 
 import :Types;
+import :Debug;
 
 import d3d12;
 
@@ -72,7 +73,7 @@ export namespace HAL
 			}
 			void clear_uav(const Handle& h, vec4 ClearColor)
 			{
-				if (BuildOptions::Debug)
+				if (Debug::CheckErrors)
 				{
 					auto uav = std::get<HAL::Views::UnorderedAccess>(h.get_resource_info()->view);
 					if (h.get_resource_info()->resource_ptr->get_desc().is_buffer())

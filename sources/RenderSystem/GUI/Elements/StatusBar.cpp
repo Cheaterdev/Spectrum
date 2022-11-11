@@ -4,7 +4,7 @@ import :Renderer;
 
 void GUI::Elements::status_bar::draw(Context& c)
 {
-    renderer->draw(c, skin.Normal, get_render_bounds());
+    c.renderer->draw(c, skin.Normal, get_render_bounds());
 }
 
 void GUI::Elements::status_bar::add_child(base::ptr obj)

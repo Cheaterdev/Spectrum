@@ -8,7 +8,7 @@ namespace GUI
     {
         void image::draw(Context& c)
         {
-            renderer->draw(c, texture, get_render_bounds());
+            c.renderer->draw(c, texture, get_render_bounds());
         }
 
     }

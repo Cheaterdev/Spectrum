@@ -28,7 +28,7 @@ namespace GUI
     void Renderer::draw_color(base::Context& c, float4 color, rect r)
     {
 		flush(c);
-        simple_rect->draw(c, color, r);
+        simple_rect.draw(c, color, r);
     }
 
     void Renderer::set(base::Context& c)
@@ -36,28 +36,23 @@ namespace GUI
     }
 	void Renderer::flush(base::Context& c)
 	{
-		nine_patch->flush(c);
+		nine_patch.flush(c);
 	}
     Renderer::Renderer()
     {
-     
-        nine_patch.reset(new NinePatch());
-        simple_rect.reset(new SimpleRect());
         area_tex = Skin::get().Edit;
         virtual_tex = Skin::get().Virtual;
         container_tex = Skin::get().Background;
-
-	
     }
 
     void Renderer::draw(base::Context& c, HAL::PipelineState::ptr state, rect r)
     {
-        nine_patch->draw(c, state, r);
+        nine_patch.draw(c, state, r);
     }
 
     void Renderer::draw(base::Context& c, GUI::Texture& item, rect r)
     {
-        nine_patch->draw(c, item, r);
+        nine_patch.draw(c, item, r);
     }
 
     SimpleRect::SimpleRect()
@@ -67,8 +62,6 @@ namespace GUI
     void SimpleRect::draw(base::Context& c, float4 color, rect r)
 	{
 		Slots::ColorRect color_data;
-        auto& info = c.get_context<GUIInfo>();
-
 
         auto vertexes = (vec2*)color_data.GetPos();
 
@@ -77,12 +70,12 @@ namespace GUI
         vertexes[2] = float2(r.size.x, 0);
         vertexes[3] = float2(r.size.x, r.size.y);
 
-		auto &clip = info.ui_clipping;
+		auto &clip = c.ui_clipping;
 
 
 		for (int i = 0; i < 4; i++)
 		{
-			vertexes[i] += float2(r.pos) + info.offset;
+			vertexes[i] += float2(r.pos) + c.offset;
 			vertexes[i] = float2::max(vertexes[i], float2(clip.left_top));
 			vertexes[i] = float2::min(vertexes[i], float2(clip.right_bottom));
 
@@ -90,18 +83,18 @@ namespace GUI
            
         for (int i = 0; i < 4; i++)
         {
-            float2 t = 2 * vertexes[i] / info.window_size - float2(1, 1);
+            float2 t = 2 * vertexes[i] / c.window_size - float2(1, 1);
             vertexes[i] = { t.x, -t.y };
         }
 
       
         color_data.GetColor() = color;
 
-        color_data.set(info.command_list->get_graphics());
+        color_data.set(c.command_list->get_graphics());
 
-        info.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-        info.command_list->get_graphics().set_pipeline<PSOS::SimpleRect>();
-        info.command_list->get_graphics().draw(4);
+        c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
+        c.command_list->get_graphics().set_pipeline<PSOS::SimpleRect>();
+        c.command_list->get_graphics().draw(4);
 
     }
 

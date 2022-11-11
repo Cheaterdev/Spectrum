@@ -6,7 +6,7 @@ import :Renderer;
 
 void GUI::Elements::FlowGraph::comment::draw(Context& c)
 {
-    this->renderer->draw(c, Skin::get().FlowComment.Active, get_render_bounds());
+   c.renderer->draw(c, Skin::get().FlowComment.Active, get_render_bounds());
 }
 
 GUI::Elements::FlowGraph::comment::comment(canvas* canva, ::FlowGraph::window* wnd)

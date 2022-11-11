@@ -5,7 +5,7 @@ import :Renderer;
 void GUI::Elements::window::draw(Context& c)
 {
 	// skin->draw(this, c);
-	renderer->draw(c, skin.Active, get_render_bounds());
+	c.renderer->draw(c, skin.Active, get_render_bounds());
 	label_text->color = pressed ? rgba8(200, 200, 200, 255) : rgba8(255, 255, 255, 255);
 }
 

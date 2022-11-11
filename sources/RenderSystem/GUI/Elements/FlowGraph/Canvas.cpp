@@ -8,13 +8,12 @@ import :ScrollContainer;
 import :Renderer;
 import Graphics;
 using namespace HAL;
-void GUI::Elements::FlowGraph::canvas::draw(Context& context)
+void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 {
-
-	auto& c = context.get_context<GUIInfo>();
+	
 
 	g->cam_pos = contents->pos;
-	renderer->flush(context);
+	c.renderer->flush(c);
 	auto clip = c.scissors;
 	c.command_list->get_graphics().set_scissors(c.ui_clipping);
 
@@ -24,13 +23,13 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& context)
 	graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
 	graph_data.set(c.command_list->get_graphics());
 
-	renderer->draw(context, HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::CanvasBack>(), get_render_bounds());
+	c.renderer->draw(c, HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::CanvasBack>(), get_render_bounds());
 
 
 	if (linking.size())
 	{
 
-		renderer->flush(context);
+		c.renderer->flush(c);
 		//	auto& b = *line_vertex;
 		int count = 0;
 
@@ -68,7 +67,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& context)
 	}
 
 	c.command_list->get_graphics().set_scissors(clip);
-	//  this->renderer->draw(this, c);
+	//  this->context.renderer->draw(this, c);
 }
 
 void GUI::Elements::FlowGraph::canvas::on_register(::FlowGraph::window* w)
@@ -608,13 +607,13 @@ void GUI::Elements::FlowGraph::canvas::init(::FlowGraph::graph* g)
 GUI::Elements::FlowGraph::canvas::renderer::renderer(GUI::Renderer* renderer)
 {
 	HAL::PipelineStateDesc state_desc;
-	state_desc.root_signature = renderer->root_signature;
+	state_desc.root_signature = context.renderer->root_signature;
 	state_desc.pixel = HAL::pixel_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "PS", 0, {} });
 	state_desc.vertex = HAL::vertex_shader::get_resource({ "shaders\\gui\\canvas.hlsl", "VS", 0, {} });
 	state.reset(new HAL::PipelineState(state_desc));
 	{
 		HAL::PipelineStateDesc state_desc;
-		state_desc.root_signature = renderer->root_signature;
+		state_desc.root_signature = context.renderer->root_signature;
 		state_desc.pixel = HAL::pixel_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "PS", 0, {} });
 		state_desc.vertex = HAL::vertex_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "VS", 0, {} });
 		state_desc.geometry = HAL::geometry_shader::get_resource({ "shaders\\gui\\flow_line.hlsl", "GS", 0, {} });
@@ -687,7 +686,7 @@ void GUI::Elements::FlowGraph::canvas::renderer::render(Object* obj, Data* data,
 /*
 void GUI::Elements::FlowGraph::link_item::draw(Context& c)
 {
-//   renderer->draw(this, c);
+//   context.renderer->draw(this, c);
 }*/
 
 bool GUI::Elements::FlowGraph::link_item::need_drag_drop()

@@ -449,7 +449,7 @@ namespace HAL
 
 
 		list->update_texture(resource, offset, box, sub_resource,  info, layout);
-		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 	/*
@@ -480,7 +480,7 @@ namespace HAL
 		auto info = base.read_data(layout.size, layout.alignment);
 		list->read_texture(resource, offset, box, sub_resource, info, layout);
 
-		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, layout]()
 			{
@@ -510,7 +510,7 @@ namespace HAL
 
 		auto info = base.read_data(size);
 		list->copy_buffer(info.resource, info.resource_offset, resource, offset, size);
-		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
 				f(reinterpret_cast<char*>(info.get_cpu_data()), size);
@@ -536,7 +536,7 @@ namespace HAL
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
 		//list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.resource_offset);
 		assert(false);
-		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
@@ -853,7 +853,7 @@ namespace HAL
 		}
 
 		list->copy_texture(dest, dest_subres, source, source_subres);
-		if constexpr (BuildOptions::Debug)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 
@@ -866,7 +866,7 @@ namespace HAL
 			base.transition(to, ResourceState::COPY_DEST);
 		}
 		list->copy_texture(to, to_pos, from, from_pos, size);
-		if constexpr (BuildOptions::Debug)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
+		if constexpr (Debug::CheckErrors)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
 

@@ -6,14 +6,17 @@ export import HAL;
 
 export
 {
+    namespace GUI
+    {
+        class Renderer;
+    }
 
     struct GUIInfo
     {
+
+	    GUI::Renderer* renderer;
         HAL::CommandList::ptr command_list;
-        HAL::CommandList::ptr command_list_label;
-  
-        SingleThreadExecutorBatched* labeled;
-        Batch* data;
+
         sizer_long ui_clipping;
         sizer_long scissors;
         vec2 offset = { 0,0 };
@@ -21,20 +24,8 @@ export
         vec2 window_size;
         float scale = 1;
 
-
-        std::function<void(UniversalContext&)> commit_scissor()
-        {
-          
-            scissors = ui_clipping;
-            return [list = command_list, clip = ui_clipping](UniversalContext& context)
-            {
-                auto& c = context.get_context<GUIInfo>();
-
-	            list->get_graphics().set_scissors(clip);
-            };
-        }
         GUIInfo() = default;
-        GUIInfo(HAL::CommandList::ptr list) : command_list(list), command_list_label(command_list_label)
+        GUIInfo(HAL::CommandList::ptr list) : command_list(list)
         {
             delta_time = 0;
         }
@@ -74,8 +65,6 @@ struct InputHandler
 
 namespace GUI
 {
-    class Renderer;
-    using Renderer_ptr = s_ptr<Renderer>;
     class user_interface;
 
     namespace offset
@@ -254,20 +243,7 @@ namespace GUI
         }
     }
 
-    class RenderData
-    {
-
-
-        public:
-            virtual ~RenderData()
-            {
-            }
-
-            using ptr = s_ptr<RenderData>;
-
-            virtual void on_render_changed(const rect& r) {};
-
-    };
+   
     struct Texture
     {
         HAL::Texture::ptr texture;
@@ -293,37 +269,7 @@ namespace GUI
             this->texture = texture;
         }
     };
-	struct RecursiveContext
-	{
-        UniversalContext& render_context;
-		SingleThreadExecutorBatched executor;
-		SingleThreadExecutorBatched pre_executor;
-		RecursiveContext(UniversalContext& c):render_context(c)
-		{
 	
-		}
-
-		void flush()
-		{
-			executor.flush();
-		}
-
-		void execute(std::function<void(UniversalContext&)> f)
-		{
-			//auto new_c = std::make_shared<Context>(render_context);
-			executor.add(std::move([f, new_c = render_context ]() {
-				f(const_cast<UniversalContext&>(new_c));
-			}));
-
-		}
-
-		void stop_and_wait()
-		{
-			executor.stop_and_wait();
-			pre_executor.stop_and_wait();
-
-		}
-	};
     class drag_n_drop;
     class base : public tree<base, my_unique_vector<std::shared_ptr<base>>>, public Events::prop_handler //, public Graphics::renderable
     {
@@ -333,11 +279,10 @@ namespace GUI
             friend class Elements::layouts::horizontal;
         public:
 
-            using Context = UniversalContext;
+            using Context = GUIInfo;
             using ptr = s_ptr<base>;
             using wptr = w_ptr<base>;
-
-            RenderData::ptr render_data;
+            
         protected:
 
             using guard = std::lock_guard<std::mutex>;
@@ -363,8 +308,9 @@ namespace GUI
 
             virtual bool test_local_visible();
 
-            virtual void draw_recursive(RecursiveContext&, base* = nullptr);
+            virtual void draw_recursive(Context&, base* = nullptr);
 
+            virtual void pre_draw(HAL::CommandList::ptr list){}; // override;;
             virtual void draw(Context&); // override;;
             virtual void draw_after(Context&);;
 
@@ -425,9 +371,6 @@ namespace GUI
 
             virtual vec2 get_desired_size(vec2 cur);
 
-            Renderer_ptr renderer;
-
-
             bool drag_n_drop_copy = true;
             // drag n drop
         public:
@@ -456,6 +399,8 @@ namespace GUI
             virtual bool on_drop(drag_n_drop_package::ptr, vec2);
             virtual drag_n_drop_package::ptr get_package();
         public:
+
+            virtual void on_pre_render(Context&context){};
             rect get_render_bounds();
 
             user_interface* get_user_ui();
@@ -466,9 +411,6 @@ namespace GUI
 
             bool is_on_top();
 
-            virtual void set_skin(Renderer_ptr skin);
-
-            Renderer_ptr get_skin();
 
             virtual bool is_menu_component();
 
@@ -568,7 +510,7 @@ namespace GUI
 
             std::set<base*> dragdrop;
 
-            virtual void draw(RecursiveContext& c);
+            virtual void draw(base::Context& c);
 
             void on_drop(vec2 at) const;
 
@@ -582,10 +524,20 @@ namespace GUI
     };
 
 
+    struct draw_info
+    {
+        sizer clip;
+        sizer_long scissors;
+        float scale;
+        base* elem;
+        vec2 offset;
+        bool before;
+    };
+
     class user_interface : public base, public InputHandler, public Events::Runner
     {
             friend class base;
-
+         
             std::set<base*> components;
             std::set<base*> thinking;
 
@@ -613,8 +565,12 @@ namespace GUI
 
             my_unique_vector<FrameGraph::GraphGenerator*> frame_generators;
             cursor_style cursor = cursor_style::ARROW;
-
+         
         public:
+
+
+            std::vector<base*> pre_draw_infos;
+            std::vector<draw_info> draw_infos;
             using ptr = s_ptr<user_interface>;
             using wptr = w_ptr<user_interface>;
             std::mutex m;

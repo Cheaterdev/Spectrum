@@ -24,11 +24,11 @@ bool GUI::Elements::combo_box::on_mouse_action(mouse_action action, mouse_button
 void GUI::Elements::combo_box::draw(Context& c)
 {
     if (is_pressed())
-        renderer->draw(c, skin.Pressed, get_render_bounds());
+        c.renderer->draw(c, skin.Pressed, get_render_bounds());
     else if (is_hovered())
-        renderer->draw(c, skin.Hover, get_render_bounds());
+        c.renderer->draw(c, skin.Hover, get_render_bounds());
     else
-        renderer->draw(c, skin.Normal, get_render_bounds());
+        c.renderer->draw(c, skin.Normal, get_render_bounds());
 }
 
 

@@ -39,7 +39,7 @@ void GUI::Elements::toogle_icon::toogle(bool v)
 void GUI::Elements::line_base::draw(Context& c, bool selected)
 {
 	 if (dropping)
-		 renderer->draw_color(c, float4(153, 114, 202, 255) / 255.0f, get_render_bounds());
+		 c.renderer->draw_color(c, float4(153, 114, 202, 255) / 255.0f, get_render_bounds());
 	 else if (selected)
-		 renderer->draw_color(c, float4(53, 114, 202, 255) / 255.0f, get_render_bounds());
+		 c.renderer->draw_color(c, float4(53, 114, 202, 255) / 255.0f, get_render_bounds());
 }

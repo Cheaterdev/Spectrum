@@ -40,7 +40,7 @@ namespace GUI
             }
             void OutputWindow::draw(Context& c)
             {
-                renderer->draw_area(get_ptr(), c);
+                c.renderer->draw_area(get_ptr(), c);
             }
 
             OutputWindow::OutputWindow()

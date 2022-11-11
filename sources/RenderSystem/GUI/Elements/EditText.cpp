@@ -42,7 +42,7 @@ void GUI::Elements::edit_text::draw(Context& c)
 	process_keys();
 	label_text->recalculate(c);
 	update_caret();
-	renderer->draw(c, Skin::get().DefaultEditBox.Normal, get_render_bounds());
+	c.renderer->draw(c, Skin::get().DefaultEditBox.Normal, get_render_bounds());
 }
 void GUI::Elements::edit_text::on_mouse_enter(vec2 pos)
 {
@@ -120,7 +120,7 @@ void GUI::Elements::edit_cursor::draw(Context& c)
 	  //	c.dx_context.set(blend);
 	  //	c.dx_context.set(depth);
 	  c.dx_context.draw(4, 0);*/
-	renderer->draw_color(c, float4(0, 0, 0, 1), get_render_bounds());
+	c.renderer->draw_color(c, float4(0, 0, 0, 1), get_render_bounds());
 }
 GUI::Elements::edit_cursor::edit_cursor()
 {

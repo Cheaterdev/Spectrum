@@ -3,7 +3,7 @@ import :Renderer;
 
 void GUI::Elements::list_box::draw(Context& c)
 {
-    renderer->draw_area(get_ptr(), c);
+    c.renderer->draw_area(get_ptr(), c);
 }
 
 GUI::Elements::label::ptr GUI::Elements::list_box::add_item(std::string elem)
@@ -46,7 +46,7 @@ namespace GUI
     void Elements::list_element::draw(Context& c)
     {
         //   if (selected)
-        //      renderer->draw(this, c);
+        //      context.renderer->draw(this, c);
     }
 
     bool Elements::list_element::on_mouse_action(mouse_action action, mouse_button button, vec2 pos)

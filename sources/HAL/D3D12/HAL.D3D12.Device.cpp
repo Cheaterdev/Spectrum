@@ -145,7 +145,7 @@ namespace HAL
 			}
 			else
 				result.flags |= HeapFlags::TEXTURES_ONLY;
-			if constexpr (BuildOptions::Debug)	TEST(*this, native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(*this, native_device->GetDeviceRemovedReason());
 
 			assert(result.size != UINT64_MAX);
 			return result;

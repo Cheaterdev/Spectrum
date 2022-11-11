@@ -1,5 +1,5 @@
 module HAL:DescriptorHeap;
-
+import :Debug;
 import :Resource;
 import d3d12;
 import Core;
@@ -11,7 +11,7 @@ namespace HAL
 
 	void Descriptor::place(const Views::ShaderResource& view)
 	{
-		if constexpr (BuildOptions::Debug)
+		if constexpr (Debug::DebugViews)
 		{
 			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
 		}
@@ -137,7 +137,7 @@ namespace HAL
 			auto h = heap.cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateShaderResourceView(native_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 
 		if (heap.m_gpu_heap)
@@ -145,13 +145,13 @@ namespace HAL
 			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateShaderResourceView(native_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 	}
 
 	void Descriptor::place(const Views::RenderTarget& view)
 	{
-		if constexpr (BuildOptions::Debug)
+		if constexpr (Debug::DebugViews)
 		{
 			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
 		}
@@ -219,7 +219,7 @@ namespace HAL
 			auto h = heap.cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateRenderTargetView(native_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 
 		if (heap.m_gpu_heap)
@@ -227,13 +227,13 @@ namespace HAL
 			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateRenderTargetView(native_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 	}
 
 	void Descriptor::place(const Views::DepthStencil& view)
 	{
-		if constexpr (BuildOptions::Debug)
+		if constexpr (Debug::DebugViews)
 		{
 			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
 		}
@@ -303,12 +303,12 @@ namespace HAL
 			heap.device.native_device->CreateDepthStencilView(native_resource, &desc, h);
 		}
 
-		if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+		if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 
 	}
 	void Descriptor::place(const Views::UnorderedAccess& view)
 	{
-		if constexpr (BuildOptions::Debug)
+		if constexpr (Debug::DebugViews)
 		{
 			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
 		}
@@ -381,7 +381,7 @@ namespace HAL
 			h.Offset(offset, size);
 
 			heap.device.native_device->CreateUnorderedAccessView(native_resource, native_counter_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 
 
@@ -390,13 +390,13 @@ namespace HAL
 			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateUnorderedAccessView(native_resource, native_counter_resource, &desc, h);
-			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 	}
 
 	void Descriptor::place(const Views::ConstantBuffer& view)
 	{
-		if constexpr (BuildOptions::Debug)
+		if constexpr (Debug::DebugViews)
 		{
 			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
 		}
@@ -413,7 +413,7 @@ namespace HAL
 			h.Offset(offset, size);
 
 			heap.device.native_device->CreateConstantBufferView(&desc, h);
-			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 
 		if (heap.m_gpu_heap)
@@ -421,7 +421,7 @@ namespace HAL
 			auto h = heap.gpu_cpu_start;
 			h.Offset(offset, size);
 			heap.device.native_device->CreateConstantBufferView(&desc, h);
-			if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+			if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 		}
 	}
 
@@ -438,7 +438,7 @@ namespace HAL
 
 		assert(my != other);
 		heap.device.native_device->CopyDescriptorsSimple(1, my, other, type);
-		if constexpr (BuildOptions::Debug)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
+		if constexpr (Debug::CheckErrors)	TEST(heap.device, heap.device.native_device->GetDeviceRemovedReason());
 	}
 
 	D3D12_CPU_DESCRIPTOR_HANDLE  Descriptor::get_cpu()

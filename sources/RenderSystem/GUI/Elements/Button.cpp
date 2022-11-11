@@ -13,23 +13,23 @@ namespace GUI
             {
                 //skin->draw(this, c);
                 if (is_pressed())
-                    renderer->draw(c, skin.Pressed, get_render_bounds());
+                    c.renderer->draw(c, skin.Pressed, get_render_bounds());
                 else if (is_hovered())
-                    renderer->draw(c, skin.Hover, get_render_bounds());
+                    c.renderer->draw(c, skin.Hover, get_render_bounds());
                 else
-                    renderer->draw(c, skin.Normal, get_render_bounds());
+                    c.renderer->draw(c, skin.Normal, get_render_bounds());
             }
 
             if (background_style == view_style::FLAT)
             {
                 //skin->draw(this, c);
                 if (is_pressed())
-                    renderer->draw_color(c, float4(1, 1, 1, 0.1), get_render_bounds());
+                    c.renderer->draw_color(c, float4(1, 1, 1, 0.1), get_render_bounds());
                 else if (is_hovered())
-                    renderer->draw_color(c, float4(1, 1, 1, 0.3), get_render_bounds());
+                    c.renderer->draw_color(c, float4(1, 1, 1, 0.3), get_render_bounds());
 
                 //	else
-                //	renderer->draw(c, skin.Normal, get_render_bounds());
+                //	context.renderer->draw(c, skin.Normal, get_render_bounds());
             }
 
             label_text->color = pressed ? rgba8(200, 200, 200, 255) : rgba8(255, 255, 255, 255);

@@ -4,8 +4,18 @@ import GUI;
 using namespace HAL;
 namespace GUI
 {
+
+	HAL::IndexBuffer::ptr NinePatch::index_buffer;
 	NinePatch::NinePatch()
 	{
+if(!index_buffer)
+{
+	static std::mutex m;
+
+	std::lock_guard<std::mutex> g(m);
+
+	if (index_buffer)
+		return;
 
 		std::vector<unsigned int> index_data(9 * 2 * 3);
 		auto data = index_data.data();
@@ -22,6 +32,7 @@ namespace GUI
 			}
 
 		index_buffer = HAL::IndexBuffer::make_buffer(index_data);
+}
 	}
 
 	void NinePatch::draw(base::Context& c, GUI::Texture& item, rect r, HAL::PipelineState::ptr pipeline_state)
@@ -31,7 +42,6 @@ namespace GUI
 			flush(c);
 
 		}
-		auto& info = c.get_context<GUIInfo>();
 
 		bool added = false;
 		if (item.srv)
@@ -53,14 +63,19 @@ namespace GUI
 		{
 			return;
 		}
+		if(!added)
+		{
+			textures_handles.emplace_back(HAL::Texture::null->texture_2d().texture2D);
+
+		}
 		current_state = pipeline_state;
 
 		vertexes.resize(vertexes.size() + 16);
 
 		auto _vertexes = vertexes.data() + vertexes.size() - 16;
 
-		auto margin = info.scale * item.margins;
-		auto padding = info.scale * item.padding;
+		auto margin = c.scale * item.margins;
+		auto padding = c.scale * item.padding;
 		r += rect{ -margin.left, -margin.top, margin.left + margin.right, margin.top + margin.bottom };
 
 		float tl = 0, tt = 0, tr = 0, tb = 0;
@@ -92,12 +107,12 @@ namespace GUI
 		}
 
 		float scale = 1;
-		sizer clip = info.ui_clipping;
+		sizer clip = c.ui_clipping;
 		float4 x_pos = { 0, padding.left * scale, r.size.x - padding.right * scale, r.size.x };
 		float4 y_pos = { 0, padding.top * scale, r.size.y - padding.bottom * scale, r.size.y };
 
-		x_pos += float4(r.pos.x, r.pos.x, r.pos.x, r.pos.x) + float4(info.offset.x, info.offset.x, info.offset.x, info.offset.x);
-		y_pos += float4(r.pos.y, r.pos.y, r.pos.y, r.pos.y) + float4(info.offset.y, info.offset.y, info.offset.y, info.offset.y);
+		x_pos += float4(r.pos.x, r.pos.x, r.pos.x, r.pos.x) + float4(c.offset.x, c.offset.x, c.offset.x, c.offset.x);
+		y_pos += float4(r.pos.y, r.pos.y, r.pos.y, r.pos.y) + float4(c.offset.y, c.offset.y, c.offset.y, c.offset.y);
 
 		float4 x_tc = { new_tc.left, new_tc.left + tl, new_tc.right - tr, new_tc.right };
 		float4 y_tc = { new_tc.top, new_tc.top + tt, new_tc.bottom - tb, new_tc.bottom };
@@ -259,7 +274,7 @@ namespace GUI
 
 		for (int i = 0; i < 16; i++)
 		{
-			float2 t = 2 * _vertexes[i].pos / info.window_size - float2(1, 1);
+			float2 t = 2 * _vertexes[i].pos / c.window_size - float2(1, 1);
 			_vertexes[i].pos = { t.x, -t.y };
 			_vertexes[i].mulColor = item.mul_color;
 			_vertexes[i].addColor = item.add_color;
@@ -272,16 +287,19 @@ namespace GUI
 	void NinePatch::flush(base::Context& c)
 	{
 		if (vertexes.empty()) return;
-		auto& info = c.get_context<GUIInfo>();
-
-		auto& graphics = info.command_list->get_graphics();
+	
+		auto& graphics = c.command_list->get_graphics();
 		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 		graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 		graphics.set_pipeline(current_state);
 
-		auto data = info.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
-		info.command_list->write<Vertex>(data, vertexes);
-		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::vertex_input>>(*info.command_list->frame_resources, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,false });
+		{
+		
+		auto data = c.command_list->place_data(sizeof(Vertex) * vertexes.size(), sizeof(Vertex));
+		c.command_list->write<Vertex>(data, vertexes);
+
+
+		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::vertex_input>>(*c.command_list->frame_resources, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,false });
 
 		{
 			Slots::NinePatch patch_data;
@@ -289,7 +307,8 @@ namespace GUI
 			patch_data.GetTextures() = textures_handles;
 			patch_data.set(graphics);
 		}
-
+	}
+	
 		graphics.draw_indexed(9 * 2 * 3, 0, 0, UINT(vertexes.size() / 16));
 
 		current_state = nullptr;

@@ -5,7 +5,7 @@ import :Renderer;
 
 void GUI::Elements::menu_list::draw(Context& c)
 {
-    renderer->draw_container(get_ptr(), c);
+    c.renderer->draw_container(get_ptr(), c);
 }
 
 GUI::Elements::menu_list::menu_list(bool vertical)
@@ -55,9 +55,9 @@ namespace GUI
     void Elements::menu_list_element::draw(Context& c)
     {
             if (is_hovered())
-				renderer->draw_color(c, float4(53, 114, 202, 255) / 255.0f, get_render_bounds());
+				c.renderer->draw_color(c, float4(53, 114, 202, 255) / 255.0f, get_render_bounds());
 			else
-				renderer->draw_color(c, float4(5, 5, 5, 150) / 255.0f, get_render_bounds());
+				c.renderer->draw_color(c, float4(5, 5, 5, 150) / 255.0f, get_render_bounds());
 
     }
 

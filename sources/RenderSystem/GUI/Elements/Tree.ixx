@@ -301,7 +301,7 @@ export namespace GUI
 
                 void  draw(Context& c)
                 {
-              ///      renderer->draw_container(get_ptr(), c);
+              ///      context.renderer->draw_container(get_ptr(), c);
 
                 }
 

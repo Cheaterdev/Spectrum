@@ -8,16 +8,13 @@ export namespace GUI
 	class NinePatch
 	{
 		using Vertex = Table::vertex_input;
+		
 
-		HAL::HandleTable sampler_table;
-
-		HAL::IndexBuffer::ptr index_buffer;
+		static HAL::IndexBuffer::ptr index_buffer;
 		std::vector<Vertex> vertexes;
 
 		std::vector<HLSL::Texture2D<float4>> textures_handles;
-		std::vector<HAL::Handle> samplers_handles;
 
-		std::vector<D3D12_VERTEX_BUFFER_VIEW> vblist;
 		HAL::PipelineState::ptr current_state;
 	public:
 		int counter = 0;
@@ -50,8 +47,8 @@ export namespace GUI
 	class Renderer
 	{
 
-		NinePatch::ptr nine_patch;
-		SimpleRect::ptr simple_rect;
+		NinePatch nine_patch;
+		SimpleRect simple_rect;
 
 		Texture area_tex;
 		Texture virtual_tex;
@@ -78,7 +75,7 @@ export namespace GUI
 
 		void start()
 		{
-			nine_patch->counter = 0;
+			nine_patch.counter = 0;
 		}
 		void set(base::Context& c);
 	};

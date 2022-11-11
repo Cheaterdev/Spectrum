@@ -12,11 +12,11 @@ namespace GUI
         void tab_button::draw(Context& c)
         {
             if (is_current() || is_pressed())
-                renderer->draw(c, skin.Pressed, get_render_bounds());
+                c.renderer->draw(c, skin.Pressed, get_render_bounds());
             else if (is_hovered())
-                renderer->draw(c, skin.Hover, get_render_bounds());
+                c.renderer->draw(c, skin.Hover, get_render_bounds());
             else
-                renderer->draw(c, skin.Normal, get_render_bounds());
+                c.renderer->draw(c, skin.Normal, get_render_bounds());
         }
 
         void tab_button::on_drag_start()
@@ -86,17 +86,17 @@ namespace GUI
 
         void tab_strip::draw(Context& c)
         {
-        //    renderer->draw(c, skin.Normal, get_render_bounds());
-			renderer->draw_container(get_ptr(),c);
+        //    context.renderer->draw(c, skin.Normal, get_render_bounds());
+			c.renderer->draw_container(get_ptr(),c);
         }
 		void tab_strip::draw_after(Context& c)
 		{
-		//	    renderer->draw(c, skin.Normal, get_render_bounds());
-			//	renderer->draw_container(get_ptr(),c);
+		//	    context.renderer->draw(c, skin.Normal, get_render_bounds());
+			//	context.renderer->draw_container(get_ptr(),c);
 			auto bounds = get_render_bounds();
 			bounds.y += bounds.h - 3;
 			bounds.h = 3;
-			renderer->draw_color(c, float4(53, 114, 202,255)/255.0f, bounds);
+			c.renderer->draw_color(c, float4(53, 114, 202,255)/255.0f, bounds);
 		}
 
 		inline tab_strip::tab_strip()
@@ -298,7 +298,7 @@ namespace GUI
 
         void tab_control::draw(Context& c)
         {
-            //  renderer->draw_container(get_ptr(), c);
+            //  context.renderer->draw_container(get_ptr(), c);
         }
 
     }
