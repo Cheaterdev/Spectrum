@@ -10,7 +10,7 @@ namespace HAL {
 	FrameResources::ptr FrameResourceManager::begin_frame()
 	{
 
-		auto result = std::make_shared<FrameResources>();
+		auto result = std::make_shared<FrameResources>(HAL::Device::get());
 
 
 		result->frame_number = frame_number++;

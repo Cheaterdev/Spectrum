@@ -34,7 +34,10 @@ export namespace HAL
 		virtual ~Heap() = default;
 
 		std::span<std::byte> get_data();
-	
+	size_t get_size()
+	{
+		return desc.Size;
+	}
 		std::shared_ptr<Resource> as_buffer()
 		{
 			return buffer;

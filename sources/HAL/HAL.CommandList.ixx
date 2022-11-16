@@ -212,7 +212,7 @@ export{
 
 			void transition(const ResourceInfo* info)
 			{
-				if (!info || !info->resource_ptr) return;
+				if (!info || !info->is_valid()) return;
 
 				auto target_state = ResourceState::COMMON;
 
@@ -253,7 +253,7 @@ export{
 
 			void stop_using(const ResourceInfo* info)
 			{
-				if (!info || !info->resource_ptr) return;
+				if (!info || !info->is_valid()) return;
 
 
 				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)

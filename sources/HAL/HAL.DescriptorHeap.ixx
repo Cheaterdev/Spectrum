@@ -11,41 +11,20 @@ export
 	{
 		DescriptorHeapType get_heap_type(HandleType type);
 
-
 		struct ResourceInfo
 		{
-			Resource* resource_ptr = nullptr;
-			Resource* counter_resource = nullptr;
+			std::variant<HAL::Views::Null, HAL::Views::DepthStencil, HAL::Views::UnorderedAccess, HAL::Views::ShaderResource, HAL::Views::RenderTarget, HAL::Views::ConstantBuffer> view = HAL::Views::Null();
 
-			std::variant<HAL::Views::DepthStencil, HAL::Views::UnorderedAccess, HAL::Views::ShaderResource, HAL::Views::RenderTarget, HAL::Views::ConstantBuffer> view;
-
-
+			bool is_valid() const
+			{
+				return view.index() != 0;
+			}
 			ResourceInfo() = default;
 
-			ResourceInfo(Resource* resource_ptr, HAL::Views::ShaderResource srv) :resource_ptr(resource_ptr)
+			template<HAL::Views::ViewTemplate T>
+			ResourceInfo(const T &v) 
 			{
-				view = srv;
-			}
-
-			ResourceInfo(Resource* resource_ptr, HAL::Views::DepthStencil dsv) :resource_ptr(resource_ptr)
-			{
-				view = dsv;
-			}
-
-			ResourceInfo(Resource* resource_ptr, Resource* counter_ptr, HAL::Views::UnorderedAccess uav) :resource_ptr(resource_ptr)
-			{
-				view = uav;
-				this->counter_resource = counter_ptr;
-			}
-
-			ResourceInfo(Resource* resource_ptr, HAL::Views::RenderTarget rtv) :resource_ptr(resource_ptr)
-			{
-				view = rtv;
-			}
-
-			ResourceInfo(Resource* resource_ptr, HAL::Views::ConstantBuffer cbv) :resource_ptr(resource_ptr)
-			{
-				view = cbv;
+				view = v;
 			}
 
 			void for_each_subres(std::function<void(Resource*, UINT)> f) const;
@@ -620,18 +599,7 @@ export
 		void Handle::operator=(const T& v)
 		{
 			(*heap)[offset].place(v);
-
-			if constexpr (std::is_same_v < T, HAL::Views::UnorderedAccess>)
-			{
-				if (auto buffer = std::get_if<HAL::Views::UnorderedAccess::Buffer>(&v.View))
-					*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource), buffer->CounterResource ? static_cast<Resource*>(buffer->CounterResource) : nullptr, v);
-				else
-					*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource), nullptr, v);
-			}
-			else
-			{
-				*get_resource_info() = ResourceInfo(static_cast<Resource*>(v.Resource), v);
-			}
+			*get_resource_info() = ResourceInfo(v);
 
 		}
 	}

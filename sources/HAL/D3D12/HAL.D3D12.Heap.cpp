@@ -21,6 +21,8 @@ namespace HAL
 
 			device.native_device->CreateHeap(&native_desc, IID_PPV_ARGS(&native_heap));
 
+			if constexpr (Debug::CheckErrors)	TEST(device, device.native_device->GetDeviceRemovedReason());
+		
 
 			if (desc.Flags != HeapFlags::TEXTURES_ONLY && desc.Flags != HeapFlags::RTDS_ONLY)
 			{

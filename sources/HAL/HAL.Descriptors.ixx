@@ -9,6 +9,11 @@ export namespace HAL
 	// TODO: probably shoud not be used at all -> use hlsl direct mappings instead
 	namespace Views
 	{
+
+		struct Null
+		{
+			
+		};
 		struct DepthStencil
 		{
 			struct Texture1D

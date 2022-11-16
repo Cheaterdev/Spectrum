@@ -23,7 +23,7 @@ export namespace HAL
 		};
 
 		std::vector<Frame> frames;
-
+		Device& device;
 	public:
 		using ptr = std::shared_ptr<SwapChain>;
 

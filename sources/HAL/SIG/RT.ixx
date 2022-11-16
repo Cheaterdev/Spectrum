@@ -43,8 +43,6 @@ export
 				HAL::Handle* handle = ptr + i;
 				compiled.table_rtv[i].place(*handle);
 
-				//HAL::Device::get().create_rtv(compiled.table_rtv[i], handle->resource_info->resource_ptr, handle->resource_info->rtv);
-
 			}
 		}
 

@@ -6,7 +6,7 @@ import d3d12;
 #undef THIS
 namespace HAL
 {
-	SwapChain::SwapChain(Device& device, swap_chain_desc c_desc)
+	SwapChain::SwapChain(Device& device, swap_chain_desc c_desc):device(device)
 	{
 
 		RECT r;
@@ -67,7 +67,7 @@ namespace HAL
 			if (size.y == desc.BufferDesc.Height)
 				return;
 
-		auto& q = HAL::Device::get().get_queue(CommandListType::DIRECT);
+		auto& q = device.get_queue(CommandListType::DIRECT);
 
 		q->signal_and_wait();
 

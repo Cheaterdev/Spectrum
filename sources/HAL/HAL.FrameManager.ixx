@@ -29,7 +29,7 @@ namespace HAL {
 				return *gpu_heaps[type];
 			}
 
-			GPUCompiledManager()
+			GPUCompiledManager(Device& device):Uploader<LockPolicy>(device)
 			{
 				gpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
 				gpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE);
@@ -63,7 +63,7 @@ namespace HAL {
 		public:
 			using Uploader<Thread::Lockable>::place_raw;
 
-			StaticCompiledGPUData(Device& device) :device(device) {}
+			StaticCompiledGPUData(Device& device) :device(device), GPUCompiledManager<Thread::Lockable>(device) {}
 		};
 
 		class FrameResources :public SharedObject<FrameResources>, public GPUCompiledManager<Thread::Lockable>
@@ -74,7 +74,10 @@ namespace HAL {
 			std::mutex m;
 		public:
 			using ptr = std::shared_ptr<FrameResources>;
-
+			FrameResources(Device& device) : GPUCompiledManager<Thread::Lockable>(device)
+			{
+				
+			}
 			~FrameResources()
 			{
 				reset();

@@ -495,16 +495,19 @@ using namespace HAL;
 
 		std::set<ResourceAllocInfo*> passed_resources;
 
-		HAL::ResourceHeapAllocator<Thread::Free> allocator;
-		HAL::ResourceHeapAllocator<Thread::Free> static_allocator;
+
+		using AllocatorType = Allocators::HeapPageManager<AllocatorContext,Thread::Free>;
+
+		AllocatorType allocator;
+		AllocatorType static_allocator;
 
 
 		HAL::FrameResourceManager frames;
 		HAL::FrameResources::ptr current_frame;
 
-		std::map<int, HAL::ResourceHeapAllocator<Thread::Free>> frame_allocs;
+		std::map<int, std::shared_ptr<AllocatorType>> frame_allocs;
 
-		HAL::ResourceHeapAllocator<Thread::Free>* current_alloc;
+		AllocatorType* current_alloc;
 		Pass* current_pass = nullptr;
 		void begin(Pass* pass);
 

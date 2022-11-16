@@ -51,7 +51,7 @@ namespace HAL
 		return HAL::Device::get().get_time_manager().get_end(*this);
 	}
 
-	CommandList::CommandList(CommandListType type)
+	CommandList::CommandList(CommandListType type):GPUCompiledManager<Thread::Free>(Device::get()), HAL::Readbacker<Thread::Free>(Device::get())
 
 	{
 		this->type = type;

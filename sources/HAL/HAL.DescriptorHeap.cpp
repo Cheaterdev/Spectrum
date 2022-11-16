@@ -78,7 +78,7 @@ namespace HAL {
 	Handle DescriptorPage::place()
 	{
 		Handle h = heap->handle(heap_offset + (offset++));
-		h.get_resource_info()->resource_ptr = nullptr;
+		h.get_resource_info()->view = HAL::Views::Null();
 		return h;
 	}
 
@@ -92,7 +92,7 @@ namespace HAL {
 		for (UINT i = 0; i < (UINT)table.get_count(); i++)
 		{
 			auto h = table[i];
-			h.get_resource_info()->resource_ptr = nullptr;
+			h.get_resource_info()->view = HAL::Views::Null();
 		}
 		offset += count;
 		return table;
@@ -108,7 +108,7 @@ namespace HAL {
 		for (UINT i = 0; i < (UINT)table.get_count(); i++)
 		{
 			auto h = table[i];
-			h.get_resource_info()->resource_ptr = nullptr;
+			h.get_resource_info()->view = HAL::Views::Null();
 		}
 		offset += count;
 		return table;
@@ -143,25 +143,25 @@ namespace HAL {
 
 		std::visit(overloaded{
 			[&](const HAL::Views::RenderTarget::Texture2D& Texture2D) {
-				auto& desc = info->resource_ptr->get_desc().as_texture();
+				auto& desc = view.Resource->get_desc().as_texture();
 
 				if (desc.MipLevels == 1 && desc.is2D() == 1)
 			{
-				f(info->resource_ptr, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
 			}
 			else
 			{
 				UINT res = desc.CalcSubresource(Texture2D.MipSlice, 0, Texture2D.PlaneSlice);
-				f(info->resource_ptr,  res);
+				f(view.Resource,  res);
 			}
 			},
 			[&](const HAL::Views::RenderTarget::Texture2DArray& Texture2DArray) {
-					auto& desc = info->resource_ptr->get_desc().as_texture();
+					auto& desc = view.Resource->get_desc().as_texture();
 
 			for (UINT array = Texture2DArray.FirstArraySlice; array < Texture2DArray.FirstArraySlice + Texture2DArray.ArraySize; array++)
 			{
 				UINT res = desc.CalcSubresource(Texture2DArray.MipSlice, array, Texture2DArray.PlaneSlice);
-				f(info->resource_ptr, res);
+				f(view.Resource, res);
 			}
 			},
 			[&](auto other) {
@@ -176,8 +176,8 @@ namespace HAL {
 
 		std::visit(overloaded{
 			[&](const HAL::Views::UnorderedAccess::Buffer& Buffer) {
-				f(info->resource_ptr, ALL_SUBRESOURCES);
-			if (info->counter_resource) f(info->counter_resource, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
+			if (Buffer.CounterResource) f(Buffer.CounterResource, ALL_SUBRESOURCES);
 			},
 			[&](const HAL::Views::UnorderedAccess::Texture1D& Texture1D) {
 	assert(false);
@@ -186,24 +186,24 @@ namespace HAL {
 	assert(false);
 			},
 			[&](const HAL::Views::UnorderedAccess::Texture2D& Texture2D) {
-					auto& desc = info->resource_ptr->get_desc().as_texture();
+					auto& desc = view.Resource->get_desc().as_texture();
 
 if (desc.MipLevels == 1 && desc.is2D())
 			{
-				f(info->resource_ptr, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
 			}
 			else
 			{
 				UINT res = desc.CalcSubresource(Texture2D.MipSlice, 0, Texture2D.PlaneSlice);
-				f(info->resource_ptr,  res);
+				f(view.Resource,  res);
 			}
 			},
 			[&](const HAL::Views::UnorderedAccess::Texture2DArray& Texture2DArray) {
-					auto& desc = info->resource_ptr->get_desc().as_texture();
+					auto& desc = view.Resource->get_desc().as_texture();
 
 			if (desc.MipLevels == 1 && desc.is2D() && desc.ArraySize == 1)
 			{
-				f(info->resource_ptr, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -211,22 +211,22 @@ if (desc.MipLevels == 1 && desc.is2D())
 				for (UINT array = Texture2DArray.FirstArraySlice; array < Texture2DArray.FirstArraySlice + Texture2DArray.ArraySize; array++)
 				{
 					UINT res = desc.CalcSubresource(Texture2DArray.MipSlice, array, Texture2DArray.PlaneSlice);
-					f(info->resource_ptr, res);
+					f(view.Resource, res);
 				}
 
 			}
 			},
 			[&](const HAL::Views::UnorderedAccess::Texture3D& Texture3D) {
-					auto& desc = info->resource_ptr->get_desc().as_texture();
+					auto& desc = view.Resource->get_desc().as_texture();
 
 				if (Texture3D.FirstWSlice == 0 && Texture3D.WSize == desc.Dimensions.z && desc.MipLevels == 1)
 			{
-				f(info->resource_ptr, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
 			}
 			else
 			{
 				UINT res = desc.CalcSubresource(Texture3D.MipSlice, 0, 0);
-				f(info->resource_ptr,  res);
+				f(view.Resource,  res);
 			}
 			},
 			[&](auto other) {
@@ -249,20 +249,20 @@ if (desc.MipLevels == 1 && desc.is2D())
 	assert(false);
 		},
 		[&](const HAL::Views::DepthStencil::Texture2D& Texture2D) {
-auto& desc = info->resource_ptr->get_desc().as_texture();
+auto& desc = view.Resource->get_desc().as_texture();
 
 
 			UINT res = desc.CalcSubresource(Texture2D.MipSlice, 0, 0);
-			f(info->resource_ptr, res);
+			f(view.Resource, res);
 		},
 		[&](const HAL::Views::DepthStencil::Texture2DArray& Texture2DArray) {
 
-				auto& desc = info->resource_ptr->get_desc().as_texture();
+				auto& desc = view.Resource->get_desc().as_texture();
 
 			for (UINT array = Texture2DArray.FirstArraySlice; array < Texture2DArray.FirstArraySlice + Texture2DArray.ArraySize; array++)
 			{
 				UINT res = desc.CalcSubresource(Texture2DArray.MipSlice, array, 0);
-				f(info->resource_ptr, res);
+				f(view.Resource, res);
 			}
 		},
 		[&](const HAL::Views::DepthStencil::Texture2DMS& Texture2DMS) {
@@ -283,7 +283,7 @@ auto& desc = info->resource_ptr->get_desc().as_texture();
 	{
 		std::visit(overloaded{
 		[&](const HAL::Views::ShaderResource::Buffer& Buffer) {
-			f(info->resource_ptr, ALL_SUBRESOURCES);
+			f(view.Resource, ALL_SUBRESOURCES);
 		},
 		[&](const HAL::Views::ShaderResource::Texture1D& Texture1D) {
 	assert(false);
@@ -292,27 +292,27 @@ auto& desc = info->resource_ptr->get_desc().as_texture();
 	assert(false);
 		},
 		[&](const HAL::Views::ShaderResource::Texture2D& Texture2D) {
-				auto& desc = info->resource_ptr->get_desc().as_texture();
+				auto& desc = view.Resource->get_desc().as_texture();
 
 			if (Texture2D.MipLevels == desc.MipLevels && Texture2D.MostDetailedMip == 0 && desc.is2D())
 			{
-				f(info->resource_ptr, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
 			}
 			else
 			{
 				for (auto mip = Texture2D.MostDetailedMip; mip < Texture2D.MostDetailedMip + Texture2D.MipLevels; mip++)
 				{
 					UINT res = desc.CalcSubresource(mip, 0, Texture2D.PlaneSlice);
-					f(info->resource_ptr, res);
+					f(view.Resource, res);
 				}
 			}
 		},
 		[&](const HAL::Views::ShaderResource::Texture2DArray& Texture2DArray) {
-				auto& desc = info->resource_ptr->get_desc().as_texture();
+				auto& desc = view.Resource->get_desc().as_texture();
 
 			if (Texture2DArray.MipLevels == desc.MipLevels && Texture2DArray.MostDetailedMip == 0 && Texture2DArray.FirstArraySlice == 0 && Texture2DArray.ArraySize == desc.ArraySize && desc.is2D())
 			{
-				f(info->resource_ptr, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -320,23 +320,23 @@ auto& desc = info->resource_ptr->get_desc().as_texture();
 					for (auto array = Texture2DArray.FirstArraySlice; array < Texture2DArray.FirstArraySlice + Texture2DArray.ArraySize; array++)
 					{
 						UINT res = desc.CalcSubresource(mip, array, Texture2DArray.PlaneSlice);
-						f(info->resource_ptr, res);
+						f(view.Resource, res);
 					}
 			}
 		},
 		[&](const HAL::Views::ShaderResource::Texture3D& Texture3D) {
-				auto& desc = info->resource_ptr->get_desc().as_texture();
+				auto& desc = view.Resource->get_desc().as_texture();
 
 			if (Texture3D.MipLevels == desc.MipLevels && Texture3D.MostDetailedMip == 0)
 			{
-				f(info->resource_ptr, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
 			}
 			else
 			{
 				for (auto mip = Texture3D.MostDetailedMip; mip < Texture3D.MostDetailedMip + Texture3D.MipLevels; mip++)
 				{
 					UINT res = desc.CalcSubresource(mip, 0, 0);
-					f(info->resource_ptr, res);
+					f(view.Resource, res);
 				}
 			}
 		},
@@ -347,11 +347,11 @@ assert(false);
 assert(false);
 		},
 		[&](const HAL::Views::ShaderResource::Cube& Cube) {
-				auto& desc = info->resource_ptr->get_desc().as_texture();
+				auto& desc = view.Resource->get_desc().as_texture();
 
 			if (Cube.MipLevels == desc.MipLevels && Cube.MostDetailedMip == 0)
 			{
-				f(info->resource_ptr, ALL_SUBRESOURCES);
+				f(view.Resource, ALL_SUBRESOURCES);
 			}
 			else
 			{
@@ -359,7 +359,7 @@ assert(false);
 					for (auto array = 0; array < 6; array++)
 					{
 						UINT res = desc.CalcSubresource(mip, array, 0);
-						f(info->resource_ptr, res);
+						f(view.Resource, res);
 					}
 			}
 		},
@@ -367,7 +367,7 @@ assert(false);
 assert(false);
 		},
 		[&](const HAL::Views::ShaderResource::Raytracing& Raytracing) {
-f(info->resource_ptr, ALL_SUBRESOURCES);
+f(view.Resource, ALL_SUBRESOURCES);
 		},
 		[&](auto other) {
 			assert(false);

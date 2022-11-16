@@ -6,6 +6,8 @@ export import :Debug;
 export import :Utils;
 
 export import :Allocators;
+export import :PagedAllocators;
+
 export import :serialization;
 
 export import :FileSystem;

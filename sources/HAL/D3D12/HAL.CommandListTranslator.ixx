@@ -73,17 +73,18 @@ export namespace HAL
 			}
 			void clear_uav(const Handle& h, vec4 ClearColor)
 			{
+				auto uav = std::get<HAL::Views::UnorderedAccess>(h.get_resource_info()->view);
+				
 				if (Debug::CheckErrors)
 				{
-					auto uav = std::get<HAL::Views::UnorderedAccess>(h.get_resource_info()->view);
-					if (h.get_resource_info()->resource_ptr->get_desc().is_buffer())
+					if (uav.Resource->get_desc().is_buffer())
 					{
 						auto buffer = std::get<HAL::Views::UnorderedAccess::Buffer>(uav.View);
 						assert(buffer.StructureByteStride == 0);
 					}
 				}
 
-				auto dx_resource = h.get_resource_info()->resource_ptr->native_resource.Get();
+				auto dx_resource = uav.Resource->native_resource.Get();
 				compiler.ClearUnorderedAccessViewFloat(h.get_gpu(), h.get_cpu(), dx_resource, reinterpret_cast<FLOAT*>(ClearColor.data()), 0, nullptr);
 			}
 

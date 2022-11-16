@@ -92,7 +92,7 @@ namespace FrameGraph
 
 
 	}
-	TaskBuilder::TaskBuilder() : allocator(false), static_allocator(false), frames(Device::get())
+	TaskBuilder::TaskBuilder() : allocator(HAL::Device::get().get_heap_factory(), false), static_allocator(HAL::Device::get().get_heap_factory(), false), frames(Device::get())
 	{
 
 	}
@@ -575,8 +575,11 @@ namespace FrameGraph
 	{
 		PROFILE(L"Graphcompile");
 		//builder.allocator.begin_frame(frame);
-
-		builder.current_alloc = &builder.frame_allocs[frame];
+		std::shared_ptr<TaskBuilder::AllocatorType> & alloc= builder.frame_allocs[frame];
+		//TODO: ALARM!!!!
+		if (!alloc)
+			alloc = std::make_shared<TaskBuilder::AllocatorType>(HAL::Device::get().get_heap_factory());
+		builder.current_alloc = alloc.get();
 
 
 		builder.create_resources();
@@ -1019,7 +1022,9 @@ namespace FrameGraph
 				{
 
 					auto creation_info = HAL::Device::get().get_alloc_info(info->d3ddesc);
-					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, HAL::MemoryType::COMMITED, info->heap_type);
+					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
+
+					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index);
 				}
 			}
 		}

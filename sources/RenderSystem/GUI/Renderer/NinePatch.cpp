@@ -48,15 +48,12 @@ if(!index_buffer)
 		{
 			added = true;
 			textures_handles.emplace_back(item.srv);
-
-			//	c.command_list->use_resource(item.srv[0]->resource_info->resource_ptr);
 		}
 		else
 			if (item.texture)
 			{
 				added = true;
 				textures_handles.emplace_back(item.texture->texture_2d().texture2D);
-				//	c.command_list->use_resource(item.texture.get());
 			}
 
 		if (!added && current_state == HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::NinePatch>())
