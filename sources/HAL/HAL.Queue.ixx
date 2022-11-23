@@ -7,6 +7,12 @@ import :API.Queue;
 
 export namespace HAL
 {
+	struct ClockCalibrationInfo
+	{
+		uint64 cpu_time;
+		uint64 gpu_time;
+		uint64 frequency;
+	};
 	class Queue: public API::Queue
 	{
 		friend class API::Queue;
@@ -37,6 +43,7 @@ export namespace HAL
 
 		FenceWaiter signal_internal();
 		HAL::FenceWaiter execute_internal(CommandList* list);
+		uint64 frequency;
 
 		HAL::FenceWaiter run_transition_list(HAL::FenceWaiter after,const std::shared_ptr<TransitionCommandList>& list);
 	public:
@@ -49,8 +56,11 @@ export namespace HAL
 		std::shared_ptr<CommandList> get_free_list();
 		std::shared_ptr<TransitionCommandList> get_transition_list();
 		using ptr = std::shared_ptr<Queue>;
-
-
+		inline UINT64 get_frequency() const {
+			return frequency;
+				
+		}
+		ClockCalibrationInfo get_clock_time() const;
 		HAL::FenceWaiter get_last_fence()
 		{
 			return last_executed_fence;

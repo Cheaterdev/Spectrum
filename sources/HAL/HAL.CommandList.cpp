@@ -5,7 +5,7 @@ import :GPUTimer;
 import :Autogen;
 
 import :Buffer;
-
+import :Device;
 import Core;
 
 import HAL;
@@ -15,43 +15,51 @@ namespace HAL
 
 {
 
-	GPUTimer::GPUTimer()
+	GPUTimer::GPUTimer(Device& device)
 	{
-		id = HAL::Device::get().get_time_manager().get_id();
+		//id = device.get_time_manager().factory.alloc(2, 1, QueryType::Timestamp);
 	}
 
 	GPUTimer::~GPUTimer()
 	{
-		HAL::Device::get().get_time_manager().put_id(id);
+		//id.Free();
+		//HAL::Device::get().get_time_manager().put_id(id);
 	}
 
 	void GPUTimer::start(Eventer* list)
 	{
-		HAL::Device::get().get_time_manager().start(*this, list);
+		queue_type = list->get_type();
+		auto h = list->insert_time();
+		auto& data = h.get_heap()->read_back_data;
+
+		start_id = &data[h.get_offset()];
 	}
 
 	void GPUTimer::end(Eventer* list)
 	{
-		HAL::Device::get().get_time_manager().end(*this, list);
+		auto h = list->insert_time();
+		auto& data = h.get_heap()->read_back_data;
+
+		end_id = &data[h.get_offset()];
 		list = nullptr;
 	}
 
 	float GPUTimer::get_time()
 	{
-		return HAL::Device::get().get_time_manager().get_time(*this);
+		return get_end() - get_start();
 	}
 
 	double GPUTimer::get_start()
 	{
-		return HAL::Device::get().get_time_manager().get_start(*this);
+		return start_id ? *start_id : 0;
 	}
 
 	double GPUTimer::get_end()
 	{
-		return HAL::Device::get().get_time_manager().get_end(*this);
+		return end_id ? *end_id : 0;
 	}
 
-	CommandList::CommandList(CommandListType type):GPUCompiledManager<Thread::Free>(Device::get()), HAL::Readbacker<Thread::Free>(Device::get())
+	CommandList::CommandList(CommandListType type):GPUCompiledManager<Thread::Free>(Device::get()), HAL::Readbacker<Thread::Free>(Device::get()),Eventer(Device::get())
 
 	{
 		this->type = type;
@@ -70,22 +78,22 @@ namespace HAL
 		compiler.SetName(L"SpectrumCommandList");
 
 
-		//debug_buffer = std::make_shared<HAL::StructureBuffer<Table::DebugStruct>>(64, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		debug_buffer = std::make_shared<HAL::StructureBuffer<Table::DebugStruct>>(64, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	}
 
 	void CommandList::setup_debug(SignatureDataSetter* setter)
 	{
-		//if (!current_pipeline->debuggable) return;
-		//Slots::DebugInfo info;
-		//HAL::StructureBuffer<Table::DebugStruct>* structured = static_cast<HAL::StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
-		//info.GetDebug() = structured->rwStructuredBuffer;
-		//info.set(*setter);
+		if (!current_pipeline->debuggable) return;
+		Slots::DebugInfo info;
+		HAL::StructureBuffer<Table::DebugStruct>* structured = static_cast<HAL::StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
+		info.GetDebug() = structured->rwStructuredBuffer;
+		info.set(*setter);
 
 	}
 
 	void CommandList::print_debug()
 	{
-		/*if (!current_pipeline->debuggable) return;
+		if (!current_pipeline->debuggable) return;
 
 		auto pso_name = current_pipeline->name;
 		get_copy().read_buffer(debug_buffer.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](const char* data, UINT64 size)
@@ -110,7 +118,7 @@ namespace HAL
 			});
 
 		StructureBuffer<Table::DebugStruct>* structured = static_cast<StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
-		clear_uav(structured->rwByteAddressBuffer);*/
+		clear_uav(structured->rwByteAddressBuffer);
 	}
 
 
@@ -160,8 +168,9 @@ namespace HAL
 		if (graphics) graphics->end();
 		if (compute) compute->end();
 
-		Eventer::reset();
-
+		Eventer::end();
+		resolve_timers();
+		
 	}
 
 	void GraphicsContext::begin()
@@ -195,6 +204,16 @@ namespace HAL
 
 	}
 
+	void Eventer::resolve_timers()
+	{
+		factory.for_each([&, this](const QueryType& type, size_t max_usage, QueryHeap::ptr heap)
+			{
+				resolve_times(*heap, max_usage, [heap](std::span<UINT64> data) {
+					std::copy(data.begin(), data.end(), heap->read_back_data.begin());
+					});
+			});
+
+	}
 	void Sendable::on_done(std::function<void()> f)
 	{
 		on_execute_funcs.emplace_back(f);
@@ -202,6 +221,7 @@ namespace HAL
 	}
 	void Sendable::compile()
 	{
+
 		compiled = compiler.compile();
 	}
 	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
@@ -227,9 +247,13 @@ namespace HAL
 	}
 
 
-	void Eventer::insert_time(QueryHeap& pQueryHeap, uint32_t QueryIdx)
+	QueryHandle Eventer::insert_time()
 	{
-		compiler.insert_time(pQueryHeap, QueryIdx);
+		QueryHandle result = factory.alloc(1, 1, QueryType::Timestamp);
+		track_object(*result.get_heap());
+		assert(result.get_offset() < 64);
+		compiler.insert_time(result, 0);
+		return result;
 	}
 
 	void Eventer::resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)> f)
@@ -564,6 +588,7 @@ namespace HAL
 		on_execute_funcs.clear();
 		Uploader::reset();
 		Readbacker::reset();
+		Eventer::reset();
 
 		GPUCompiledManager::reset();
 		Transitions::on_execute();
@@ -960,13 +985,16 @@ namespace HAL
 		GPUBlock* b = dynamic_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
-			b->gpu_counter.timer.start(this);
+			b->gpu_timer.start(this);
 		}
 
 
 		//	static_cast<GPUBlock&>(timer->get_block()).gpu_counter.timer.start(this);
 		//	timer->block.begin_timings(executed ? nullptr : this);
 		current = &timer->get_block();
+
+	
+
 	}
 	void  Eventer::on_end(Timer* timer)
 	{
@@ -976,7 +1004,7 @@ namespace HAL
 		GPUBlock* b = dynamic_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
-			b->gpu_counter.timer.end(this);
+			b->gpu_timer.end(this);
 		}
 
 		current = timer->get_block().get_parent().get();
@@ -985,10 +1013,14 @@ namespace HAL
 	thread_local Eventer* Eventer::thread_current = nullptr;
 	void Eventer::reset()
 	{
+		factory.reset();
+	}
+
+	void Eventer::end()
+	{
 		thread_current = nullptr;
 		timer.reset();
 	}
-
 	void Eventer::begin(std::string name, Timer* t)
 	{
 		this->name = name;
@@ -1011,7 +1043,7 @@ namespace HAL
 	Timer  Eventer::start(std::wstring_view name)
 	{
 		if (Profiler::get().enabled)
-			return Timer(&current->get_child<GPUBlock>(name), this);
+			return Timer(&current->get_child<GPUBlock>(name, HAL::Device::get()), this);
 		else return Timer(nullptr, nullptr);
 		//return std::move(Timer(nullptr,nullptr));
 

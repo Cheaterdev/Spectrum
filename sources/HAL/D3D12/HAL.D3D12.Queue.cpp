@@ -116,15 +116,24 @@ namespace HAL
 			auto dx_source_resource = (infos.source)->get_dx();
 			native->CopyTileMappings(dx_target_resource, &target, dx_source_resource, &source, &TRS, D3D12_TILE_MAPPING_FLAG_NONE);
 		}
-		//	signal_and_wait_internal();
-
+	
 	}
 
+	//	signal_and_wait_internal();
+	ClockCalibrationInfo Queue::get_clock_time() const
+	{
+		UINT64 cpu_start;
+		UINT64 gpu_start;
+		native->GetClockCalibration(&gpu_start, &cpu_start);
+		return { cpu_start,gpu_start, frequency };
+	}
 
 	namespace API
 	{
 		void Queue::construct(HAL::CommandListType type, Device* device)
 		{
+			auto THIS = static_cast<HAL::Queue*>(this);
+
 			auto t = CounterManager::get().start_count<Queue>();
 		
 			// Describe and create the command queue.
@@ -148,6 +157,8 @@ namespace HAL
 			auto name = std::string("DXQueue: ") + std::string(magic_enum::enum_name(type));
 
 			native->SetName(convert(name).c_str());
+
+			native->GetTimestampFrequency(&THIS->frequency);
 		}
 
 		void Queue::execute(CommandList* list)

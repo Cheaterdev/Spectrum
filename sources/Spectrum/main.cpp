@@ -873,7 +873,6 @@ public:
 
 					HAL::Device::get().get_time_manager().read_buffer(context.get_list(), [ptr, this]() {
 						run_on_ui([this, ptr]() {	Profiler::get().update(); });
-
 						});
 
 				}, PassFlags::Required);

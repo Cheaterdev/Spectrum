@@ -157,9 +157,9 @@ export namespace HAL
 			}
 
 
-			void insert_time(QueryHeap& pQueryHeap, uint32_t QueryIdx)
+			void insert_time(const QueryHandle& handle, uint offset)
 			{
-				compiler.EndQuery(pQueryHeap.get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, QueryIdx);
+				compiler.EndQuery(handle.get_heap()->get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, handle.get_offset() + offset);
 			}
 
 			void resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, ResourceAddress destination)

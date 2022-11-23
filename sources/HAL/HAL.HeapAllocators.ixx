@@ -18,13 +18,21 @@ export namespace HAL
 		GEN_DEF_COMP(HeapIndex);
 	};
 	
-	struct AllocatorContext
+	struct ResourceContext
 	{
 		using HeapPageType = HAL::Heap;
 		using HeapMemoryOptions = HeapIndex;
 
 		static const size_t PageAlignment = 4 * 1024 * 1024;
 	};
+
+	struct ResourceAllocationContext
+	{
+		using AllocatorType = CommonAllocator;
+		using LockPolicy = Thread::Lockable;
+	};
+
+
 	using ResourceHandle = Allocators::HeapHandle<HAL::Heap>;
 
 
@@ -47,7 +55,7 @@ export namespace HAL
 	};
 
 
-	class HeapFactory:public Allocators::HeapFactory<AllocatorContext, Thread::Lockable>
+	class HeapFactory:public Allocators::HeapFactory<ResourceContext, ResourceAllocationContext>
 	{
 		Device& device;
 		virtual ptr_type make_heap(HeapIndex index, size_t size) override
@@ -64,17 +72,17 @@ export namespace HAL
 
 	};
 
-	class ResourceHeapPageManager :public Allocators::HeapPageManager<AllocatorContext, Thread::Lockable>
+	class ResourceHeapPageManager :public Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>
 	{
 		Device& device;
 	public:
-		ResourceHeapPageManager(Device& _device) :Allocators::HeapPageManager<AllocatorContext, Thread::Lockable>(_device.get_heap_factory()), device(_device) {}
+		ResourceHeapPageManager(Device& _device) :Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>(_device.get_heap_factory()), device(_device) {}
 		~ResourceHeapPageManager()
 		{
 			
 		}
 
-		using Allocators::HeapPageManager<AllocatorContext, Thread::Lockable>::alloc;
+		using Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>::alloc;
 
 		TileHeapPosition create_tile(HeapType type, UINT count = 1)
 		{
@@ -101,13 +109,23 @@ export namespace HAL
 		uint size;
 	};
 
-	template<class LockPolicy>
+
+
+	template<class ThisLockPolicy>
 	class CPUGPUAllocator
 	{
+
+
+		struct AllocationContext
+		{
+			using AllocatorType = LinearAllocator;
+			using LockPolicy = Thread::Lockable;
+		};
+
 		// todo: get rid of handles - clear allocator by force
-		Allocators::HeapPageManager<AllocatorContext, Thread::Lockable> allocator;
-		std::list<ResourceHandle> handles;
-		typename LockPolicy::mutex m;
+		Allocators::HeapPageManager<ResourceContext, AllocationContext> allocator;
+
+
 	public:
 		static constexpr uint DEFAULT_ALIGN = 256;
 
@@ -117,11 +135,7 @@ export namespace HAL
 		}
 		void reset()
 		{
-			typename LockPolicy::guard g(m);
-
-			for (auto& h : handles)
-				h.Free();
-			handles.clear();
+			allocator.reset();
 		}
 
 		UploadInfo aquire_data(UINT64 uploadBufferSize, HeapType heap_type, unsigned int alignment = DEFAULT_ALIGN)
@@ -130,11 +144,7 @@ export namespace HAL
 
 			HeapIndex index = { HAL::MemoryType::COMMITED , heap_type };
 			auto handle = allocator.alloc(AlignedSize, alignment, index);
-
-			typename LockPolicy::guard g(m);
-
-			handles.emplace_back(handle);
-
+	
 			return  { handle.get_heap()->as_buffer()->get_resource_address().offset(handle.get_offset()), uint(uploadBufferSize) };
 		}
 	};

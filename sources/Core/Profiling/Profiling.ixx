@@ -80,8 +80,8 @@ public:
 
 	int id;
 
-	template<class T = TimedBlock>
-	 TimedBlock& get_child(std::wstring_view name)
+	template<class T = TimedBlock, class ...Args>
+	 TimedBlock& get_child(std::wstring_view name, Args &&...args)
 	{
 		std::lock_guard<std::mutex> g(m);
 		auto it = std::find_if(childs.begin(), childs.end(), [name](const TimedBlock::ptr & p)->bool
@@ -91,7 +91,7 @@ public:
 
 		if (it == childs.end())
 		{
-			auto c = std::shared_ptr<TimedBlock>(new T(name));
+			auto c = std::shared_ptr<TimedBlock>(new T(name, std::forward<Args>(args)...));
 			add_child(c);
 			return *c;
 		}

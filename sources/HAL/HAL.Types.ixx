@@ -54,8 +54,8 @@ export namespace HAL
 
 	enum class MemoryType : uint
 	{
-		PHYSICAL,
-		VIRTUAL,
+		PHYSICAL = 1,
+		VIRTUAL = 2,
 		COMMITED = PHYSICAL | VIRTUAL
 	};
 
@@ -543,6 +543,12 @@ export namespace HAL
 		std::byte* get_cpu_data() const;
 	};
 
+
+	enum class QueryType:uint
+	{
+		Timestamp,
+		Statistics
+	};
 
 	///////////////////////////////////////////////////
 	///

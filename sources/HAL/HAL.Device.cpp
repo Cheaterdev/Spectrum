@@ -77,7 +77,6 @@ namespace HAL
 		rtx = get_properties().rtx;
 
 		frame_manager = std::make_unique<FrameResourceManager>(*this);
-		time_manager = std::make_unique<GPUTimeManager>(*this);
 		heap_factory = std::make_unique<HeapFactory>(*this);
 
 		static_gpu_data = std::make_unique<StaticCompiledGPUData>(*this);
@@ -85,6 +84,11 @@ namespace HAL
 		resource_heap_manager = std::make_unique<ResourceHeapPageManager>(*this);
 		pipeline_state_cache = std::make_unique<PipelineStateCache>(*this);
 
+
+		query_heap_factory = std::make_unique<QueryHeapFactory>(*this);
+		query_heap_manager = std::make_unique<QueryHeapPageManager>(*this);
+	time_manager = std::make_unique<GPUTimeManager>(*this);
+	
 		engine_pso_holder = std::make_unique<EnginePSOHolder>();
 
 		engine_pso_holder->init(*this);
@@ -118,5 +122,15 @@ namespace HAL
 	}
 	EnginePSOHolder& Device::get_engine_pso_holder() {
 		return *engine_pso_holder;
+	}
+
+	QueryHeapFactory& Device::get_query_heap_factory()
+	{
+		return *query_heap_factory;
+		
+	}
+	QueryHeapPageManager& Device::get_query_heap_manager()
+	{
+		return *query_heap_manager;
 	}
 }

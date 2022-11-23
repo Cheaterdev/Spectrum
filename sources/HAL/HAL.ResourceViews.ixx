@@ -621,7 +621,7 @@ export
 
 				if (desc.counted)
 				{
-					local_offset = Math::AlignUp(4, sizeof(Underlying<T>));
+					local_offset = Math::roundUp(4, sizeof(Underlying<T>));
 					if (size == 0) size = resource->get_desc().as_buffer().SizeInBytes;
 					size -= local_offset;
 					offset += local_offset;

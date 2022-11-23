@@ -75,7 +75,9 @@ export namespace GUI
 				std::chrono::time_point<std::chrono::high_resolution_clock>  start;
 				std::chrono::time_point<std::chrono::high_resolution_clock>  end;
 
-				double gpu_start;
+		
+				enum_array<HAL::CommandListType, HAL::ClockCalibrationInfo> clock_info;
+
 				std::mutex m;
 
 			//	std::map<TimedBlock*, block_data*> current_data;

@@ -14,7 +14,8 @@ class ResourceHeapPageManager;
 class PipelineStateCache;
 	class Queue;
 
-
+	class QueryHeapFactory;
+	class QueryHeapPageManager;
 		class Device : public Singleton<Device>, public API::Device
 		{
 			friend class API::Device;
@@ -36,6 +37,10 @@ class PipelineStateCache;
 			std::unique_ptr<ResourceHeapPageManager> resource_heap_manager;
 		std::unique_ptr<PipelineStateCache> pipeline_state_cache;
 		std::unique_ptr<EnginePSOHolder> engine_pso_holder;
+
+
+		std::unique_ptr<QueryHeapFactory> query_heap_factory;
+		std::unique_ptr<QueryHeapPageManager> query_heap_manager;
 
 		public:
 			Device(HAL::DeviceDesc desc);
@@ -65,6 +70,9 @@ class PipelineStateCache;
 			ResourceHeapPageManager& get_resource_heap_manager();
 			PipelineStateCache& get_pipeline_state_cache();
 			EnginePSOHolder& get_engine_pso_holder();
+
+			QueryHeapFactory& get_query_heap_factory();
+			QueryHeapPageManager& get_query_heap_manager();
 		};
 
 	

@@ -21,7 +21,7 @@ export{
 
 	namespace HAL
 	{
-	//	class GPUBuffer;
+		class GPUBuffer;
 
 		
 
@@ -269,12 +269,11 @@ export{
 		{
 		public://		friend class GPUTimeManager;
 
-			int id;
-
-
+			uint64* start_id = nullptr;
+			uint64* end_id = nullptr;
 		public:
 			CommandListType queue_type;
-			GPUTimer();
+			GPUTimer(Device& device);
 
 			virtual ~GPUTimer();
 
@@ -291,26 +290,23 @@ export{
 		};
 
 
-		class GPUCounter
-		{
-
-		public:
-			GPUTimer timer;
-			bool enabled = true;
-
-			std::chrono::time_point<std::chrono::high_resolution_clock>  start_time;
-			std::chrono::time_point<std::chrono::high_resolution_clock>  end_time;
-
-		};
-
 		class GPUBlock :public TimedBlock
 		{
 		public:
-			using TimedBlock::TimedBlock;
-
-			GPUCounter gpu_counter;
+			
+			GPUTimer gpu_timer;
+			GPUBlock(std::wstring_view name,Device&device) :TimedBlock(name),gpu_timer(device){}
+			
 		};
 
+
+		struct EventerQueryAllocationContext
+		{
+			using AllocatorType = LinearAllocator;
+			using LockPolicy = Thread::Free;
+		};
+
+		using EventerQueryManager = Allocators::HeapPageManager<QueryContext, EventerQueryAllocationContext>;
 
 		class Eventer : public virtual CommandListBase, public TimedRoot
 		{
@@ -324,10 +320,14 @@ export{
 #ifdef DEV
 			Exceptions::stack_trace begin_stack;
 #endif
+
+			EventerQueryManager factory;
 			std::string name;
 			void reset();
 			void begin(std::string name, Timer* t = nullptr);
 		public:
+			void end();
+			Eventer(Device& device):factory(device.get_query_heap_factory()){}
 			static thread_local Eventer* thread_current;
 
 			virtual Timer start(std::wstring_view name)override;
@@ -339,9 +339,9 @@ export{
 
 			void set_marker(const wchar_t* label);
 
-
+			void resolve_timers();
 			// timers
-			void insert_time(QueryHeap& pQueryHeap, uint32_t QueryIdx);
+			QueryHandle insert_time();
 			void resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
 
 		};
@@ -442,7 +442,7 @@ export{
 			void setup_debug(SignatureDataSetter*);
 			void print_debug();
 			bool first_debug_log = true;
-			//std::shared_ptr<GPUBuffer> debug_buffer;
+			std::shared_ptr<GPUBuffer> debug_buffer;
 
 			GraphicsContext& get_graphics();
 			ComputeContext& get_compute();

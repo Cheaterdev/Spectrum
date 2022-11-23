@@ -11,20 +11,12 @@ import stl.threading;
 
 export namespace Allocators
 {
-	/*class AllocatorContext
-	{
-		using HeapPageType = HAL::Heap;
-		using HeapMemoryOptions = HeapIndex;
-		using LockPolicy = Thread::Lockable;
 
-		static const size_t PageAlignment = 4 * 1024 * 1024;
-	};*/
 	template<class Context, class LockPolicy>
 	class HeapAllocator;
 
-	
-
-	
+	template<class HeapPageType>
+	struct HeapPage;
 
 
 	template<class HeapPageType>
@@ -45,23 +37,20 @@ export namespace Allocators
 
 
 		HeapHandle() = default;
-		HeapHandle(const CommonAllocator::Handle& handle) :handle(handle)
+		HeapHandle(const AllocatorHanle& handle, HeapPage<HeapPageType>* page) :handle(handle), page(page)
 		{
-			offset = handle.get_offset();
+		
 		}
-		/*Handle(size_t offset, HeapPage<Context>::ptr heap) : heap(heap), offset(offset)
-		{
-		}*/
 
 		std::shared_ptr<HeapPageType> get_heap() const
 		{
-			return static_cast<HeapHelper*>(handle.get_owner())->get_heap();
+			return page->get_heap();
 		}
 		
 
 		UINT64 get_offset() const
 		{
-			return offset;
+			return handle.get_offset();
 		}
 
 		void Free();
@@ -86,15 +75,10 @@ export namespace Allocators
 
 			return get_offset() == other.get_offset();
 		}
+		
 
-
-	//private:
-	//	friend class HeapAllocator<Context>;
-		/*HeapAllocatorInterface* owner = nullptr;*/
-
-		CommonAllocator::Handle handle;
-
-		size_t offset;
+		AllocatorHanle handle;
+		HeapPage<HeapPageType> *page = nullptr;
 
 	};
 	template<class Context>
@@ -106,15 +90,15 @@ export namespace Allocators
 		virtual void Free(Context::HeapMemoryOptions index, ptr_type page) = 0;
 	};
 
-	template<class Context>
+	template<class HeapPageType>
 	class HeapAllocatorInterface
 	{
 	public:
-		virtual HeapHandle<typename Context::HeapPageType> alloc(size_t size, size_t alignment) = 0;
-		virtual void free(HeapHandle<typename Context::HeapPageType>& handle) = 0;
+		virtual HeapHandle<HeapPageType> alloc(size_t size, size_t alignment) = 0;
+		virtual void free(HeapHandle<HeapPageType>& handle) = 0;
 	};
 
-	template<class Context, class LockPolicy>
+	template<class Context, class AllocationContext>
 	class HeapFactory: public HeapFactoryInterface<Context>
 	{
 	protected:
@@ -122,13 +106,13 @@ export namespace Allocators
 		using heap_list = std::list< ptr_type>;
 		std::map<typename Context::HeapMemoryOptions, heap_list> free_heaps;
 
-		typename LockPolicy::mutex m;
+		typename AllocationContext::LockPolicy::mutex m;
 
 		virtual ptr_type make_heap(Context::HeapMemoryOptions index, size_t size) = 0;
 	public:
 		ptr_type AllocateHeap(Context::HeapMemoryOptions index, size_t size) override
 		{
-			typename LockPolicy::guard g(m);
+			typename AllocationContext::LockPolicy::guard g(m);
 
 			auto& list = free_heaps[index];
 			if (!list.empty())
@@ -150,21 +134,24 @@ export namespace Allocators
 
 		void Free(Context::HeapMemoryOptions index, ptr_type page) override
 		{
-			typename LockPolicy::guard g(m);
+			typename AllocationContext::LockPolicy::guard g(m);
 			free_heaps[index].push_back(page);
 		}
 	};
 
-	template<class Context>
-	struct HeapPage : public HeapHandle<typename Context::HeapPageType>::HeapHelper
+	template<class HeapPageType>
+	struct HeapPage
 	{
 		using ptr = std::shared_ptr<HeapPage>;
-		using HandleType = HeapHandle<typename Context::HeapPageType>;
-		std::shared_ptr<typename Context::HeapPageType> heap;
-		HeapAllocatorInterface<Context>& owner;
-		HeapPage(std::shared_ptr<typename Context::HeapPageType> heap, size_t size, HeapAllocatorInterface<Context>& owner) : HeapHandle<typename Context::HeapPageType>::HeapHelper(size), owner(owner), heap(heap)
+		using HandleType = HeapHandle<HeapPageType>;
+		std::shared_ptr<HeapPageType> heap;
+		HeapAllocatorInterface<HeapPageType>& owner;
+
+		std::unique_ptr<Allocator> allocator;
+
+		HeapPage(std::shared_ptr<HeapPageType> heap,  Allocator* allocator, HeapAllocatorInterface<HeapPageType>& owner) : owner(owner), heap(heap)
 		{
-		
+			this->allocator.reset(allocator);
 
 		}
 		virtual ~HeapPage() = default;
@@ -173,7 +160,7 @@ export namespace Allocators
 			owner.free(handle);
 		}
 
-		std::shared_ptr<typename Context::HeapPageType> get_heap() override
+		std::shared_ptr<HeapPageType> get_heap() 
 		{
 			return heap;
 		}
@@ -181,15 +168,15 @@ export namespace Allocators
 	
 	};
 
-	template<class Context, class LockPolicy>
-	class HeapAllocator:public HeapAllocatorInterface<Context>
+	template<class Context, class AllocationContext>
+	class HeapAllocator:public HeapAllocatorInterface<typename Context::HeapPageType>
 	{
 		const typename Context::HeapMemoryOptions creation_info;
-		using heap_list = std::list<typename  HeapPage<Context>::ptr>;
+		using page_list = std::list<typename  HeapPage<typename Context::HeapPageType>::ptr>;
 
 
-		typename LockPolicy::mutex m;
-		heap_list all_heaps;
+		typename AllocationContext::LockPolicy::mutex m;
+		page_list all_pages;
 	
 		bool del_heaps;
 
@@ -205,59 +192,78 @@ export namespace Allocators
 
 		HeapHandle<typename Context::HeapPageType> alloc(size_t size, size_t alignment) override
 		{
-			typename LockPolicy::guard g(m);
+			typename AllocationContext::LockPolicy::guard g(m);
 
 
-			for (auto& heap : all_heaps)
+			for (auto& page : all_pages)
 			{
-				auto handle = heap->TryAllocate(size, alignment);
+				auto handle = page->allocator->TryAllocate(size, alignment);
 
 				if (handle)
 				{
-					return { *handle};
+					return { *handle, page.get()};
 				}
 			}
-			auto pagesize = std::max(Math::AlignUp(size, Context::PageAlignment), Context::PageAlignment);
+			auto pagesize = std::max(Math::roundUp(size, Context::PageAlignment), Context::PageAlignment);
 
-			auto heap = std::make_shared<HeapPage<Context>>(factory.AllocateHeap(creation_info, pagesize), pagesize, *this);
+			auto page = std::make_shared<HeapPage<typename Context::HeapPageType>>(factory.AllocateHeap(creation_info, pagesize), new typename AllocationContext::AllocatorType(pagesize), *this);
 
-			all_heaps.emplace_back(heap);
-			auto handle = heap->TryAllocate(size, alignment);
+			all_pages.emplace_back(page);
+			auto handle = page->allocator->TryAllocate(size, alignment);
 			assert(handle);
-			return { *handle };
+			return { *handle, page.get() };
 
 		}
 
 		void free(HeapHandle<typename Context::HeapPageType>& handle) override
 		{
-			typename LockPolicy::guard g(m);
+			typename AllocationContext::LockPolicy::guard g(m);
 
-			auto heap = static_cast<HeapPage<Context>*>(handle.handle.get_owner());
+			auto page = handle.page;
 			handle.handle.FreeAndClear();
 
 			//uint t = heap.use_count();
-			if (del_heaps && heap->is_empty())
+			if (del_heaps && page->allocator->isEmpty())
 			{
-				auto h = std::find_if(all_heaps.begin(), all_heaps.end(), [&](const typename HeapPage<Context>::ptr& p) {return p.get() == heap; });
+				auto h = std::find_if(all_pages.begin(), all_pages.end(), [&](const typename HeapPage<typename Context::HeapPageType>::ptr& p) {return p.get() == page; });
 				auto ptr = *h;
 
-				all_heaps.erase(h);
+				all_pages.erase(h);
 				factory.Free(creation_info, ptr->heap);
 			}
 		}
 
+		void for_each(std::function<void(const typename Context::HeapMemoryOptions& options, size_t max_usage, std::shared_ptr<typename Context::HeapPageType>)> f)
+		{
+			typename AllocationContext::LockPolicy::guard g(m);
+			for (auto &heap : all_pages)
+			{
+				f(creation_info, heap->allocator->get_max_usage(), heap->heap);
+			}
+		}
+
+		void reset()
+		{
+			for (auto& page : all_pages)
+			{
+				page->allocator->Reset();
+				factory.Free(creation_info, page->heap);
+			}
+
+			all_pages.clear();
+		}
 	};
 
 
 
 	// for tiles now, only
 
-	template<class Context, class LockPolicy>
+	template<class Context, class AllocationContext>
 	class HeapPageManager
 	{
-		using flags_map = std::map<typename Context::HeapMemoryOptions, std::shared_ptr<HeapAllocator<Context, LockPolicy>>>;
+		using flags_map = std::map<typename Context::HeapMemoryOptions, std::shared_ptr<HeapAllocator<Context, AllocationContext>>>;
 
-		typename LockPolicy::mutex m;
+		typename AllocationContext::LockPolicy::mutex m;
 		flags_map creators;
 		bool del_heaps;
 		HeapFactoryInterface<Context>& factory;
@@ -268,17 +274,33 @@ export namespace Allocators
 		}
 		HeapHandle<typename Context::HeapPageType> alloc(size_t size, size_t alignment, typename Context::HeapMemoryOptions options)
 		{
-			typename LockPolicy::guard g(m);
+			typename AllocationContext::LockPolicy::guard g(m);
 			auto& creator = creators[options];
 
 			if (!creator)
 			{
-				creator = std::make_shared<HeapAllocator<Context, LockPolicy>>(factory,options, del_heaps);
+				creator = std::make_shared<HeapAllocator<Context, AllocationContext>>(factory,options, del_heaps);
 			}
 
 			return creator->alloc(size, alignment);
 		}
 
+		void for_each(std::function<void(const typename Context::HeapMemoryOptions&options, size_t max_usage, std::shared_ptr<typename Context::HeapPageType>)>f)
+		{
+			typename AllocationContext::LockPolicy::guard g(m);
+			for(auto &[opt,creator]:creators)
+			{
+				creator->for_each(f);
+			}
+		}
+
+		void reset()
+		{
+			for (auto& [opt, creator] : creators)
+			{
+				creator->reset();
+			}
+		}
 	};
 
 
@@ -286,7 +308,7 @@ export namespace Allocators
 	void HeapHandle<HeapPageType>::Free()
 	{
 		if (!handle) return;
-		static_cast<HeapHelper*>(handle.get_owner())->handle_free(*this);
+		page->handle_free(*this);
 	}
 }
 

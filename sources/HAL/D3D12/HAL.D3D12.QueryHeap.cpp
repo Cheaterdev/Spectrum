@@ -7,7 +7,7 @@ import :API.QueryHeap;
 #undef THIS
 namespace HAL
 {
-	QueryHeap::QueryHeap(Device& device, const QueryHeapDesc& desc)
+	QueryHeap::QueryHeap(Device& device, const QueryHeapDesc& desc):desc(desc)
 	{
 		D3D12_QUERY_HEAP_DESC QueryHeapDesc;
 		QueryHeapDesc.Count = desc.Count;
@@ -15,6 +15,8 @@ namespace HAL
 		QueryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
 		device.get_native_device()->CreateQueryHeap(&QueryHeapDesc, IID_PPV_ARGS(&heap));
 		heap->SetName(L"QueryHeap");
+
+		read_back_data.resize(desc.Count);
 	}
 
 	namespace API

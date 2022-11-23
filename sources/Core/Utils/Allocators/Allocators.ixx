@@ -103,6 +103,12 @@ export
 		virtual std::optional<AllocatorHanle>  TryAllocate(size_t size, size_t align = 1) = 0;
 
 		virtual void Free(AllocatorHanle& handle) = 0;
+
+		virtual bool isEmpty() = 0;
+
+		virtual void Reset() = 0;
+
+		virtual size_t get_max_usage() = 0;
 	};
 
 
@@ -212,19 +218,19 @@ export
 
 		CommonAllocator(size_t size = std::numeric_limits<size_t>::max());
 		virtual ~CommonAllocator() = default;
-		size_t get_max_usage();
+		size_t get_max_usage() override;
 
 		std::optional<Handle> TryAllocate(size_t size, size_t align = 1) override final;
 		void Free(Handle& handle);
 
-		void Reset();
+		void Reset() override;
 
 		size_t get_size()
 		{
 			return size;
 		}
 
-		bool is_empty()
+		bool isEmpty() override
 		{
 			ASSERT_SINGLETHREAD
 
@@ -254,12 +260,15 @@ export
 			offset = 0;
 		}
 
-		size_t get_max_usage()
+		size_t get_max_usage() override
 		{
 			return offset;
 		}
 
-
+		bool isEmpty() override
+		{
+			return offset == 0;
+		}
 		void Free(Handle& handle)
 		{
 			//		assert(false);
@@ -268,8 +277,12 @@ export
 		std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
 		{
 
-			offset = Math::AlignUp(offset, align);
-
+			offset = Math::roundUp(offset, align);
+			//assert(offset % align == 0);
+			if(offset+size>this->size)
+			{
+				return std::nullopt;
+			}
 			MemoryInfo info;
 			info.aligned_offset = offset;
 			info.offset = offset;
@@ -279,7 +292,7 @@ export
 			return Handle(std::make_shared<DirectMemoryInfoProvider>(info), this);
 		}
 
-		void Reset()
+		void Reset() override
 		{
 			offset = 0;
 		}
@@ -306,7 +319,7 @@ export
 			offset = 0;
 		}
 
-		size_t get_max_usage()
+		size_t get_max_usage() override
 		{
 			return offset;
 		}
@@ -373,7 +386,10 @@ export
 			offset--;
 		}
 
-
+		void Reset() override
+		{
+			offset = 0;
+		}
 	};
 
 
