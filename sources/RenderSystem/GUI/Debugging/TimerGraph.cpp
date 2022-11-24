@@ -273,6 +273,7 @@ namespace GUI
 					m.lock();
 					if (need_start)
 					{
+						//Device::get().get_gpu_time_profiler().reset();
 						Profiler::get().enabled = true;
 						need_start = false;
 
@@ -294,30 +295,33 @@ namespace GUI
 
 					if (!ended&&(frame - started_frame > 10))
 					{
-						build();
+						run_on_ui([this]() {build(); });
+						
 					}
 				});
 
 
-				Profiler::get().on_gpu_timer.register_handler(this, [this](TimedBlock* block) {
+				Profiler::get().on_gpu_timer.register_handler(this, [this](std::pair<TimedBlock*, GPUTimerInterface*> p) {
 
 					
 					if (ended) return;
 					
-					GPUBlock * b = dynamic_cast<GPUBlock*>(block);
-					if (!b) return;
+					auto& timer = *static_cast<GPUTimer*>(p.second);
+				//	for(auto &timer:b->gpu_timers)
+					{
+						auto my_id = data.gpu_block_id.fetch_add(1);
+						assert(my_id < 4096 * 256);
+						auto& data = this->data.gpu_blocks[my_id];
 
+						data.block = p.first;
 
-					auto my_id = data.gpu_block_id.fetch_add(1);
-					auto& data = this->data.gpu_blocks[my_id];
+						auto freq = clock_info[timer.queue_type].frequency;
 
-					data.block = block;
-
-					auto freq = clock_info[b->gpu_timer.queue_type].frequency;
-
-					data.start_time = b->gpu_timer.get_start()/ freq;
-					data.end_time = b->gpu_timer.get_end() / freq;
-					data.queue_type = b->gpu_timer.queue_type;
+						data.start_time = timer.get_start() / freq;
+						data.end_time = timer.get_end() / freq;
+						data.queue_type = timer.queue_type;
+					}
+					//b->gpu_timers.clear();
 
 				/*
 

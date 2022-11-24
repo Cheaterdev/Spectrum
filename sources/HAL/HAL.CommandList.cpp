@@ -1,6 +1,5 @@
 ﻿module HAL:CommandList;
 
-import :GPUTimer;
 
 import :Autogen;
 
@@ -14,6 +13,18 @@ import HAL;
 namespace HAL
 
 {
+
+	void GPUBlock::start(Eventer* list)
+	{
+		list->gpu_timers.emplace_back(std::make_pair<TimedBlock*, GPUTimer>(this, GPUTimer(device)));
+		
+		list->gpu_timers.back().second.start(list);
+	}
+
+	void GPUBlock::end(Eventer* list)
+	{
+		list->gpu_timers.back().second.end(list);
+	}
 
 	GPUTimer::GPUTimer(Device& device)
 	{
@@ -29,19 +40,20 @@ namespace HAL
 	void GPUTimer::start(Eventer* list)
 	{
 		queue_type = list->get_type();
-		auto h = list->insert_time();
-		auto& data = h.get_heap()->read_back_data;
 
-		start_id = &data[h.get_offset()];
+		querys = static_cast<CommandList*>(list)->alloc_query(2, 1, QueryType::Timestamp);
+
+		if(querys)
+		list->insert_time(querys, 0);
 	}
 
 	void GPUTimer::end(Eventer* list)
 	{
-		auto h = list->insert_time();
-		auto& data = h.get_heap()->read_back_data;
-
-		end_id = &data[h.get_offset()];
+		if (querys)
+		list->insert_time(querys, 1);
 		list = nullptr;
+
+	
 	}
 
 	float GPUTimer::get_time()
@@ -51,15 +63,18 @@ namespace HAL
 
 	double GPUTimer::get_start()
 	{
-		return start_id ? *start_id : 0;
+		if (!querys) return 0;
+
+		return querys.get_heap()->read_back_data[querys.get_offset() + 0];
 	}
 
 	double GPUTimer::get_end()
 	{
-		return end_id ? *end_id : 0;
+		if (!querys) return 0;
+		return  querys.get_heap()->read_back_data[querys.get_offset() + 1];
 	}
 
-	CommandList::CommandList(CommandListType type):GPUCompiledManager<Thread::Free>(Device::get()), HAL::Readbacker<Thread::Free>(Device::get()),Eventer(Device::get())
+	CommandList::CommandList(CommandListType type):GPUEntityStorage<LocalAllocationPolicy>(Device::get()),Eventer(Device::get())
 
 	{
 		this->type = type;
@@ -169,7 +184,7 @@ namespace HAL
 		if (compute) compute->end();
 
 		Eventer::end();
-		resolve_timers();
+		resolve_timers(*this);
 		
 	}
 
@@ -204,16 +219,7 @@ namespace HAL
 
 	}
 
-	void Eventer::resolve_timers()
-	{
-		factory.for_each([&, this](const QueryType& type, size_t max_usage, QueryHeap::ptr heap)
-			{
-				resolve_times(*heap, max_usage, [heap](std::span<UINT64> data) {
-					std::copy(data.begin(), data.end(), heap->read_back_data.begin());
-					});
-			});
 
-	}
 	void Sendable::on_done(std::function<void()> f)
 	{
 		on_execute_funcs.emplace_back(f);
@@ -221,12 +227,13 @@ namespace HAL
 	}
 	void Sendable::compile()
 	{
+		static_cast<CommandList*>(this)->end();
 
 		compiled = compiler.compile();
 	}
 	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
 	{
-
+	
 		//TEST(compiler.Close());
 		if (!compiled)
 			compile();
@@ -247,13 +254,11 @@ namespace HAL
 	}
 
 
-	QueryHandle Eventer::insert_time()
+	void Eventer::insert_time(QueryHandle &handle, uint offset)
 	{
-		QueryHandle result = factory.alloc(1, 1, QueryType::Timestamp);
-		track_object(*result.get_heap());
-		assert(result.get_offset() < 64);
-		compiler.insert_time(result, 0);
-		return result;
+		track_object(*handle.get_heap());
+		compiler.insert_time(handle, offset);
+
 	}
 
 	void Eventer::resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)> f)
@@ -586,11 +591,11 @@ namespace HAL
 
 
 		on_execute_funcs.clear();
-		Uploader::reset();
-		Readbacker::reset();
-		Eventer::reset();
 
-		GPUCompiledManager::reset();
+	Eventer::reset();
+		
+		GPUEntityStorage<LocalAllocationPolicy>::reset();
+	
 		Transitions::on_execute();
 		frame_resources = nullptr;
 
@@ -985,7 +990,7 @@ namespace HAL
 		GPUBlock* b = dynamic_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
-			b->gpu_timer.start(this);
+			b->start(this);
 		}
 
 
@@ -1004,7 +1009,8 @@ namespace HAL
 		GPUBlock* b = dynamic_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
-			b->gpu_timer.end(this);
+		//	gpu_timers.emplace_back(b);
+			b->end(this);
 		}
 
 		current = timer->get_block().get_parent().get();
@@ -1013,16 +1019,28 @@ namespace HAL
 	thread_local Eventer* Eventer::thread_current = nullptr;
 	void Eventer::reset()
 	{
-		factory.reset();
+
+
+		for (auto& e : gpu_timers)
+		{
+		//	TimedBlock*, GPUTimer
+
+			Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>((TimedBlock * )e.first,(GPUTimerInterface*) ( & e.second)));
+		}
+		gpu_timers.clear();
 	}
 
 	void Eventer::end()
 	{
+		started = false;
 		thread_current = nullptr;
 		timer.reset();
+		
 	}
 	void Eventer::begin(std::string name, Timer* t)
 	{
+		assert(!started);
+		started = true;
 		this->name = name;
 		thread_current = this;
 
@@ -1030,6 +1048,7 @@ namespace HAL
 		TimedRoot::parent = t ? t->get_root() : &Profiler::get();
 		if (type != CommandListType::COPY && name.size())
 		{
+			assert(!timer);
 			timer.reset(new Timer(start(convert(name).c_str())));
 		}
 

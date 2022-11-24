@@ -64,7 +64,6 @@ void TextureAsset::update_preview(HAL::Texture::ptr preview)
 	auto list = (HAL::Device::get().get_frame_manager().begin_frame()->start_list("TextureAsset"));
 
 	TextureAssetRenderer::get().render(this, preview, list);
-	list->end();
 	list->execute();
 	//
 //   c.generate_mipmaps(preview->get_shader_view());

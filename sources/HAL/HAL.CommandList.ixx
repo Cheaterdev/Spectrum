@@ -265,12 +265,12 @@ export{
 
 
 
-		class GPUTimer
+		class GPUTimer:public GPUTimerInterface
 		{
 		public://		friend class GPUTimeManager;
 
-			uint64* start_id = nullptr;
-			uint64* end_id = nullptr;
+			QueryHandle querys;
+	
 		public:
 			CommandListType queue_type;
 			GPUTimer(Device& device);
@@ -284,19 +284,22 @@ export{
 			float get_time();
 
 
-			double get_start();
+			double get_start() override;
 
-			double get_end();
+			double get_end() override;
 		};
 
 
 		class GPUBlock :public TimedBlock
 		{
+			Device& device;
 		public:
 			
-			GPUTimer gpu_timer;
-			GPUBlock(std::wstring_view name,Device&device) :TimedBlock(name),gpu_timer(device){}
 			
+			GPUBlock(std::wstring_view name,Device&device) :TimedBlock(name), device(device){}
+			void start(Eventer* list);
+
+			void end(Eventer* list);
 		};
 
 
@@ -310,10 +313,11 @@ export{
 
 		class Eventer : public virtual CommandListBase, public TimedRoot
 		{
-
+			friend class GPUBlock;
+			std::list< std::pair<TimedBlock*,GPUTimer>> gpu_timers;
 			std::list<std::wstring> names;
 			TimedBlock* current;
-
+			bool started = false;
 			virtual  void on_start(Timer* timer) override;
 			virtual  void on_end(Timer* timer)override;
 		protected:
@@ -321,13 +325,12 @@ export{
 			Exceptions::stack_trace begin_stack;
 #endif
 
-			EventerQueryManager factory;
 			std::string name;
 			void reset();
 			void begin(std::string name, Timer* t = nullptr);
 		public:
 			void end();
-			Eventer(Device& device):factory(device.get_query_heap_factory()){}
+			Eventer(Device& device){}
 			static thread_local Eventer* thread_current;
 
 			virtual Timer start(std::wstring_view name)override;
@@ -338,12 +341,21 @@ export{
 			void end_event();
 
 			void set_marker(const wchar_t* label);
-
-			void resolve_timers();
+			
 			// timers
-			QueryHandle insert_time();
+			void insert_time(QueryHandle& handle, uint offset);
 			void resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
 
+			template <class T>
+			void resolve_timers(Allocators::HeapPageManager < QueryContext, T>&  manager)
+			{
+				manager.for_each([&, this](const QueryType& type, size_t max_usage, QueryHeap::ptr heap)
+					{
+						resolve_times(*heap, max_usage, [heap](std::span<UINT64> data) {
+							std::copy(data.begin(), data.end(), heap->read_back_data.begin());
+							});
+					});
+			}
 		};
 
 
@@ -398,7 +410,7 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList :  public Readbacker<Thread::Free>, public Transitions, public Eventer, public Sendable, public GPUCompiledManager<Thread::Free>, public SharedObject<CommandList>
+		class CommandList :  public GPUEntityStorage<LocalAllocationPolicy>, public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
 		{
 
 
@@ -412,6 +424,7 @@ export{
 			friend class GraphicsContext;
 			friend class ComputeContext;
 			friend class SignatureDataSetter;
+			friend class Sendable;
 
 			// TODO: make references?
 
@@ -428,6 +441,7 @@ export{
 
 
 			void set_pipeline_internal(PipelineStateBase* pipeline);
+			void end();
 
 		public:
 
@@ -457,8 +471,7 @@ export{
 			CommandList(CommandListType);
 
 			void begin(std::string name = "", Timer* t = nullptr);
-			void end();
-
+			
 
 			void clear_uav(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{

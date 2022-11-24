@@ -60,7 +60,6 @@ export
 			{
 				auto list = (HAL::Device::get().get_upload_list());
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
-				list->end();
 				list->execute_and_wait();
 			}
 
@@ -69,7 +68,6 @@ export
 			{
 				auto list = (HAL::Device::get().get_upload_list());
 				list->get_copy().update_buffer(this, 0, reinterpret_cast<const char*>(&v), sizeof(T));
-				list->end();
 				list->execute_and_wait();
 			}
 
@@ -316,7 +314,6 @@ namespace HAL
 	{
 		auto list = (HAL::Device::get().get_upload_list());
 		set_data(list, offset, v);
-		list->end();
 		list->execute_and_wait();
 	}
 

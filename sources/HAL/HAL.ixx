@@ -41,7 +41,7 @@ export import :Raytracing;
 
 export import :VirtualBuffer;
 export import :Buffer;
-export import :GPUTimer;
+
 
 
 export import :SIG;

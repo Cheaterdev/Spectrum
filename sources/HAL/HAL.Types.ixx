@@ -10,6 +10,25 @@ import windows;
 export namespace HAL
 {
 
+	struct GlobalAllocationPolicy
+	{
+		using AllocatorType = CommonAllocator;
+		using LockPolicy = Thread::Lockable;
+	};
+
+
+	struct FrameAllocationPolicy
+	{
+		using AllocatorType = LinearAllocator;
+		using LockPolicy = Thread::Lockable;
+	};
+
+	struct LocalAllocationPolicy
+	{
+		using AllocatorType = LinearAllocator;
+		using LockPolicy = Thread::Free;
+	};
+
 	class Resource;
 	class Device;
 	class Queue;

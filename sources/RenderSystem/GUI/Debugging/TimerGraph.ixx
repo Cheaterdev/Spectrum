@@ -42,8 +42,8 @@ export namespace GUI
 				{
 					block_id = 0;
 					gpu_block_id = 0;
-					blocks.resize(4096 * 128);
-					gpu_blocks.resize(4096 * 128);
+					blocks.reserve(4096 * 128);
+					gpu_blocks.reserve(4096 * 256);
 				}
 			};
 			class GraphElement :public image

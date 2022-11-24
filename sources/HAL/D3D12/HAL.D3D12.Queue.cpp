@@ -1,4 +1,4 @@
-module HAL:GPUTimer;
+module HAL:API.Queue;
 
 
 import d3d12;

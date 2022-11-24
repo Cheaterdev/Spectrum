@@ -73,13 +73,14 @@ export namespace HAL
 		}
 
 	};
-
-	class QueryHeapPageManager :public Allocators::HeapPageManager<QueryContext, QueryAllocationContext>
+	template<class AllocationPolicy>
+	class QueryHeapPageManager :public Allocators::HeapPageManager<QueryContext, AllocationPolicy>
 	{
 		Device& device;
 	public:
-		QueryHeapPageManager(Device& _device) :Allocators::HeapPageManager<QueryContext, QueryAllocationContext>(_device.get_query_heap_factory()), device(_device) {}
-		
+		QueryHeapPageManager(Device& _device) :Allocators::HeapPageManager<QueryContext, AllocationPolicy>(_device.get_query_heap_factory()), device(_device) {}
+
+
 	};
 
 }

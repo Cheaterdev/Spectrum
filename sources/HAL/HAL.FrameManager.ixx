@@ -6,11 +6,17 @@ import :HeapAllocators;
 import :DescriptorHeap;
 import :Private.CommandListCompiler;
 import :Device;
+import :QueryHeap;
 export
 namespace HAL {
 
+
+
+
+
+
 		template<class LockPolicy = Thread::Free>
-		class GPUCompiledManager : public Uploader<LockPolicy>
+		class GPUCompiledManager 
 		{
 			enum_array<HAL::DescriptorHeapType, typename HAL::DynamicDescriptor<LockPolicy>::ptr> cpu_heaps;
 			enum_array<HAL::DescriptorHeapType, typename HAL::DynamicDescriptor<LockPolicy>::ptr> gpu_heaps;
@@ -29,7 +35,7 @@ namespace HAL {
 				return *gpu_heaps[type];
 			}
 
-			GPUCompiledManager(Device& device):Uploader<LockPolicy>(device)
+			GPUCompiledManager(Device& device)
 			{
 				gpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
 				gpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE);
@@ -50,23 +56,54 @@ namespace HAL {
 				for (auto& h : cpu_heaps)
 					if (h)
 						h->reset();
-
-				Uploader<LockPolicy>::reset();
+				
 			}
 
 		};
 
+	
+		template<class AllocationPolicy>
+		struct GPUEntityStorage:
+			public CPUGPUAllocator<AllocationPolicy>,
+			public GPUCompiledManager<typename AllocationPolicy::LockPolicy>,
+			public QueryHeapPageManager<AllocationPolicy>
+		{
 
-		class StaticCompiledGPUData : public GPUCompiledManager<Thread::Lockable>
+			GPUEntityStorage(Device& device):
+			CPUGPUAllocator<AllocationPolicy>(device),
+			QueryHeapPageManager<AllocationPolicy>(device),
+			GPUCompiledManager<typename AllocationPolicy::LockPolicy>(device)
+			{
+				
+			}
+			CPUGPUAllocator<AllocationPolicy>::HandleType alloc_memory(size_t size, size_t alignment, CPUGPUAllocator<AllocationPolicy>::HeapMemoryOptions options)
+			{
+				return CPUGPUAllocator<AllocationPolicy>::alloc(size, alignment, options);
+			}
+
+			QueryHeapPageManager<AllocationPolicy>::HandleType  alloc_query(size_t size, size_t alignment, QueryHeapPageManager<AllocationPolicy>::HeapMemoryOptions options)
+			{
+				return QueryHeapPageManager<AllocationPolicy>::alloc(size,alignment,options);
+			}
+
+			void reset() requires (std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator>)
+			{
+				CPUGPUAllocator<AllocationPolicy>::reset();
+				QueryHeapPageManager<AllocationPolicy>::reset();
+				GPUCompiledManager<typename AllocationPolicy::LockPolicy>::reset();
+			}
+		};
+
+		class StaticCompiledGPUData : public GPUEntityStorage<GlobalAllocationPolicy>
 		{
 			Device& device;
 		public:
-			using Uploader<Thread::Lockable>::place_raw;
+			using GPUEntityStorage<GlobalAllocationPolicy>::place_raw;
 
-			StaticCompiledGPUData(Device& device) :device(device), GPUCompiledManager<Thread::Lockable>(device) {}
+			StaticCompiledGPUData(Device& device) :device(device), GPUEntityStorage<GlobalAllocationPolicy>(device) {}
 		};
 
-		class FrameResources :public SharedObject<FrameResources>, public GPUCompiledManager<Thread::Lockable>
+		class FrameResources :public SharedObject<FrameResources>, public GPUEntityStorage<FrameAllocationPolicy>
 		{
 			friend class FrameResourceManager;
 
@@ -74,7 +111,7 @@ namespace HAL {
 			std::mutex m;
 		public:
 			using ptr = std::shared_ptr<FrameResources>;
-			FrameResources(Device& device) : GPUCompiledManager<Thread::Lockable>(device)
+			FrameResources(Device& device) : GPUEntityStorage<FrameAllocationPolicy>(device)
 			{
 				
 			}

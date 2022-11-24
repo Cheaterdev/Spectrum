@@ -104,8 +104,7 @@ namespace HAL
 					}));
 			}
 
-		//	list->transition(resource, ResourceState::COPY_SOURCE, type, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES);
-		list->end();
+
 		list->execute();
 
 		for (auto&& t : tasks)
@@ -142,7 +141,6 @@ namespace HAL
 				}
 		}
 
-		list->end();
 		list->execute_and_wait();
 		init();
 	}

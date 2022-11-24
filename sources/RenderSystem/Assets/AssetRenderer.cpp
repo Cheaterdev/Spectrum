@@ -41,8 +41,6 @@ public:
 				SceneFrameManager::get().prepare(command_list, *scene);
 			}
 
-			command_list->end();
-
 			command_list->execute();
 		}
 

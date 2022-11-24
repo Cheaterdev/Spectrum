@@ -150,7 +150,15 @@ public:
 	}
 };
 
+class GPUTimerInterface
+{
+public:
+	virtual double get_start() = 0;
 
+	virtual double get_end() = 0;
+
+	virtual ~GPUTimerInterface() = default;
+};
 
 class Profiler : public Singleton<Profiler>, public TimedBlock, public TimedRoot
 {
@@ -162,7 +170,7 @@ class Profiler : public Singleton<Profiler>, public TimedBlock, public TimedRoot
 public:
 	Events::Event<TimedBlock*> on_cpu_timer_start;
 	Events::Event<TimedBlock*> on_cpu_timer_end;
-	Events::Event<TimedBlock*> on_gpu_timer;
+	Events::Event<std::pair<TimedBlock*, GPUTimerInterface*>> on_gpu_timer;
 	Events::Event<std::uint64_t> on_frame;
 
 	Profiler() : TimedBlock(L"")
@@ -246,7 +254,7 @@ void TimedBlock::update()
 {
 	std::lock_guard<std::mutex> g(m);
 
-	Profiler::get().on_gpu_timer(this);
+//	Profiler::get().on_gpu_timer(this);
 
 	for (auto& c : childs)
 		c->update();
