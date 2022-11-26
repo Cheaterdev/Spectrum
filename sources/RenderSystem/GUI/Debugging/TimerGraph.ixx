@@ -42,8 +42,8 @@ export namespace GUI
 				{
 					block_id = 0;
 					gpu_block_id = 0;
-					blocks.resize(4096 * 128);
-					gpu_blocks.resize(4096 * 128);
+					blocks.reserve(4096 * 128);
+					gpu_blocks.reserve(4096 * 256);
 				}
 			};
 			class GraphElement :public image
@@ -75,7 +75,9 @@ export namespace GUI
 				std::chrono::time_point<std::chrono::high_resolution_clock>  start;
 				std::chrono::time_point<std::chrono::high_resolution_clock>  end;
 
-				double gpu_start;
+		
+				enum_array<HAL::CommandListType, HAL::ClockCalibrationInfo> clock_info;
+
 				std::mutex m;
 
 			//	std::map<TimedBlock*, block_data*> current_data;

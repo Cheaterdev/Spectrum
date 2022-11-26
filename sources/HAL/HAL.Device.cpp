@@ -2,7 +2,7 @@ module HAL:Device;
 import Core;
 import HAL;
 import :FrameManager;
-import :GPUTimer;
+
 import :HeapAllocators;
 import :PSO;
 
@@ -77,13 +77,16 @@ namespace HAL
 		rtx = get_properties().rtx;
 
 		frame_manager = std::make_unique<FrameResourceManager>(*this);
-		time_manager = std::make_unique<GPUTimeManager>(*this);
 		heap_factory = std::make_unique<HeapFactory>(*this);
 
 		static_gpu_data = std::make_unique<StaticCompiledGPUData>(*this);
 		descriptor_heap_manager = std::make_unique<DescriptorHeapManager>(*this);
-		resource_heap_manager = std::make_unique<ResourceHeapPageManager>(*this);
+
 		pipeline_state_cache = std::make_unique<PipelineStateCache>(*this);
+
+
+		query_heap_factory = std::make_unique<QueryHeapFactory>(*this);
+
 
 		engine_pso_holder = std::make_unique<EnginePSOHolder>();
 
@@ -93,11 +96,7 @@ namespace HAL
 	{
 		return *frame_manager;
 	}
-
-	GPUTimeManager& Device::get_time_manager()
-	{
-		return *time_manager;
-	}
+	
 	HeapFactory& Device::get_heap_factory()
 	{
 		return *heap_factory;
@@ -110,13 +109,18 @@ namespace HAL
 	DescriptorHeapManager& Device::get_descriptor_heap_manager() {
 		return *descriptor_heap_manager;
 	}
-	ResourceHeapPageManager& Device::get_resource_heap_manager() {
-		return *resource_heap_manager;
-	}
+
 	PipelineStateCache& Device::get_pipeline_state_cache() {
 		return *pipeline_state_cache;
 	}
 	EnginePSOHolder& Device::get_engine_pso_holder() {
 		return *engine_pso_holder;
 	}
+
+	QueryHeapFactory& Device::get_query_heap_factory()
+	{
+		return *query_heap_factory;
+		
+	}
+
 }

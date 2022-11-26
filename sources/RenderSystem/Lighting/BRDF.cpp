@@ -29,7 +29,6 @@ void BRDF::create_new()
 	}
 
 	compute_context.dispach(texture->get_size(), ivec3(4, 4, 4));
-	list->end();
 	list->execute_and_wait();
 }
 

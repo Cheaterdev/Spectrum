@@ -4,6 +4,7 @@ import wrl;
 import d3d12;
 import Core;
 
+import :FrameManager;
 #undef THIS
 
 HAL::ResourceDesc extract(D3D::Resource resource)
@@ -225,7 +226,7 @@ namespace HAL
 		{
 			HeapIndex index = { HAL::MemoryType::COMMITED , heap_type };
 
-			alloc_handle = Device::get().get_resource_heap_manager().alloc(alloc_info.size, alloc_info.alignment, index);
+			alloc_handle = Device::get().get_static_gpu_data().alloc_memory(alloc_info.size, alloc_info.alignment, index);
 			address = { alloc_handle.get_heap().get(),alloc_handle.get_offset() };
 
 

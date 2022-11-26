@@ -225,7 +225,7 @@ namespace FrameGraph
 
 	void FrameContext::end()
 	{
-		if (list)list->end();
+		//if (list)list->end();
 	}
 
 

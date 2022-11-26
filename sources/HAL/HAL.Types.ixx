@@ -10,6 +10,25 @@ import windows;
 export namespace HAL
 {
 
+	struct GlobalAllocationPolicy
+	{
+		using AllocatorType = CommonAllocator;
+		using LockPolicy = Thread::Lockable;
+	};
+
+
+	struct FrameAllocationPolicy
+	{
+		using AllocatorType = LinearAllocator;
+		using LockPolicy = Thread::Lockable;
+	};
+
+	struct LocalAllocationPolicy
+	{
+		using AllocatorType = LinearAllocator;
+		using LockPolicy = Thread::Free;
+	};
+
 	class Resource;
 	class Device;
 	class Queue;
@@ -54,8 +73,8 @@ export namespace HAL
 
 	enum class MemoryType : uint
 	{
-		PHYSICAL,
-		VIRTUAL,
+		PHYSICAL = 1,
+		VIRTUAL = 2,
 		COMMITED = PHYSICAL | VIRTUAL
 	};
 
@@ -543,6 +562,12 @@ export namespace HAL
 		std::byte* get_cpu_data() const;
 	};
 
+
+	enum class QueryType:uint
+	{
+		Timestamp,
+		Statistics
+	};
 
 	///////////////////////////////////////////////////
 	///

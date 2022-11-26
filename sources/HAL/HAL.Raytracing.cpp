@@ -68,7 +68,7 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 	}
 
 	list->get_compute().build_ras(topLevelBuildDesc, inputs);
-	list->end();
+
 	list->execute_and_wait();
 
 	handle_table = Device::get().get_descriptor_heap_manager().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV)->create_table(1);

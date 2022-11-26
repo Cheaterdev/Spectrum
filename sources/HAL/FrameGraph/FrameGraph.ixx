@@ -289,7 +289,7 @@ using namespace HAL;
 
 				if (counted)
 				{
-					uint local_offset = Math::AlignUp(4, sizeof(Underlying<T>));
+					uint local_offset = Math::roundUp(4, sizeof(Underlying<T>));
 					size += local_offset;
 				}
 
@@ -482,6 +482,11 @@ using namespace HAL;
 
 	};
 
+	struct TaskBuilderResourceAllocationContext
+	{
+		using AllocatorType = CommonAllocator;
+		using LockPolicy = Thread::Free;
+	};
 
 	struct TaskBuilder
 	{
@@ -496,7 +501,7 @@ using namespace HAL;
 		std::set<ResourceAllocInfo*> passed_resources;
 
 
-		using AllocatorType = Allocators::HeapPageManager<AllocatorContext,Thread::Free>;
+		using AllocatorType = Allocators::HeapPageManager<ResourceContext, TaskBuilderResourceAllocationContext>;
 
 		AllocatorType allocator;
 		AllocatorType static_allocator;

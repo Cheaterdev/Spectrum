@@ -1,6 +1,5 @@
 module HAL:Queue;
 
-import :GPUTimer;
 import Core;
 
 import HAL;

@@ -80,8 +80,8 @@ public:
 
 	int id;
 
-	template<class T = TimedBlock>
-	 TimedBlock& get_child(std::wstring_view name)
+	template<class T = TimedBlock, class ...Args>
+	 TimedBlock& get_child(std::wstring_view name, Args &&...args)
 	{
 		std::lock_guard<std::mutex> g(m);
 		auto it = std::find_if(childs.begin(), childs.end(), [name](const TimedBlock::ptr & p)->bool
@@ -91,7 +91,7 @@ public:
 
 		if (it == childs.end())
 		{
-			auto c = std::shared_ptr<TimedBlock>(new T(name));
+			auto c = std::shared_ptr<TimedBlock>(new T(name, std::forward<Args>(args)...));
 			add_child(c);
 			return *c;
 		}
@@ -150,7 +150,15 @@ public:
 	}
 };
 
+class GPUTimerInterface
+{
+public:
+	virtual double get_start() = 0;
 
+	virtual double get_end() = 0;
+
+	virtual ~GPUTimerInterface() = default;
+};
 
 class Profiler : public Singleton<Profiler>, public TimedBlock, public TimedRoot
 {
@@ -162,7 +170,7 @@ class Profiler : public Singleton<Profiler>, public TimedBlock, public TimedRoot
 public:
 	Events::Event<TimedBlock*> on_cpu_timer_start;
 	Events::Event<TimedBlock*> on_cpu_timer_end;
-	Events::Event<TimedBlock*> on_gpu_timer;
+	Events::Event<std::pair<TimedBlock*, GPUTimerInterface*>> on_gpu_timer;
 	Events::Event<std::uint64_t> on_frame;
 
 	Profiler() : TimedBlock(L"")
@@ -246,7 +254,7 @@ void TimedBlock::update()
 {
 	std::lock_guard<std::mutex> g(m);
 
-	Profiler::get().on_gpu_timer(this);
+//	Profiler::get().on_gpu_timer(this);
 
 	for (auto& c : childs)
 		c->update();

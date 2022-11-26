@@ -84,6 +84,7 @@ export
 
 		template <typename T> __forceinline T AlignUp(T value, size_t alignment)
 		{
+			assert((alignment & (alignment - 1)) == 0);
 			return AlignUpWithMask(value, alignment - 1);
 		}
 

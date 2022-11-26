@@ -120,7 +120,7 @@ namespace GUI
 
 			void TimeGraph::build()
 			{
-
+				const uint scaler = 500000;
 				Profiler::get().enabled = false;
 				ended = true;
 				end = std::chrono::high_resolution_clock::now();
@@ -168,7 +168,7 @@ namespace GUI
 						back->x_type = pos_x_type::LEFT;
 
 						back->padding = { 4,4,4,4 };
-						back->size = { 80000 * std::chrono::duration<double>(end - start).count() ,0 };
+						back->size = { scaler * std::chrono::duration<double>(end - start).count() ,0 };
 						front->add_child(back);
 						e = back;
 
@@ -191,8 +191,8 @@ namespace GUI
 						auto& block = data.blocks[i];
 
 						GraphElement::ptr obj(new GraphElement(&block));
-						obj->pos = { 80000 * std::chrono::duration<double>(block.start_time - start).count(), 25 * (block.block->calculate_depth() - 1) };
-						obj->size = { 80000 * std::chrono::duration<double>(block.end_time - block.start_time).count() ,25 };
+						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - start).count(), 25 * (block.block->calculate_depth() - 1) };
+						obj->size = { scaler * std::chrono::duration<double>(block.end_time - block.start_time).count() ,25 };
 
 						thread_backs[block.thread_id - 1]->add_child(obj);
 
@@ -210,7 +210,7 @@ namespace GUI
 						back->width_size = size_type::FIXED;
 						back->x_type = pos_x_type::LEFT;
 
-						back->size = { 80000 * std::chrono::duration<double>(end - start).count() ,0 };
+						back->size = { scaler * std::chrono::duration<double>(end - start).count() ,0 };
 						front->add_child(back);
 						gpu_blocks[i] = back;
 					}
@@ -220,9 +220,12 @@ namespace GUI
 					for (int i = 0; i < gpu_blocks_size; i++)
 					{
 						auto& block = data.gpu_blocks[i];
+						auto freq = clock_info[block.queue_type].frequency;
 						GraphElement::ptr obj(new GraphElement(&block));
-						obj->pos = { 80000 * std::chrono::duration<double>(block.start_time - gpu_start).count(),  25 * (block.block->calculate_depth() - 1) };
-						obj->size = { 80000 * std::chrono::duration<double>(block.end_time - block.start_time).count() ,25 };
+
+						double gpu_start = double(clock_info[block.queue_type].gpu_time) / clock_info[block.queue_type].frequency;
+						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - gpu_start).count(),  25 * (block.block->calculate_depth() - 1) };
+						obj->size = { scaler * std::chrono::duration<double>((block.end_time - block.start_time)).count() ,25 };
 
 						int id = int(block.queue_type);
 						gpu_blocks[id]->add_child(obj);
@@ -236,8 +239,7 @@ namespace GUI
 			{
 				docking = dock::FILL;
 
-				start = std::chrono::high_resolution_clock::now();
-
+			
 				ended = true;
 
 				button::ptr btn_start(new button);
@@ -271,13 +273,16 @@ namespace GUI
 					m.lock();
 					if (need_start)
 					{
+						//Device::get().get_gpu_time_profiler().reset();
 						Profiler::get().enabled = true;
 						need_start = false;
 
 						data.reset();
 						front->remove_all();
 
-						gpu_start = HAL::Device::get().get_time_manager().get_now();
+						clock_info[CommandListType::DIRECT] = HAL::Device::get().get_queue(CommandListType::DIRECT)->get_clock_time();
+						clock_info[CommandListType::COMPUTE] = HAL::Device::get().get_queue(CommandListType::COMPUTE)->get_clock_time();
+						clock_info[CommandListType::COPY] = HAL::Device::get().get_queue(CommandListType::COPY)->get_clock_time();
 						start = std::chrono::high_resolution_clock::now();
 
 						ended = false;
@@ -290,29 +295,33 @@ namespace GUI
 
 					if (!ended&&(frame - started_frame > 10))
 					{
-						build();
+						run_on_ui([this]() {build(); });
+						
 					}
 				});
 
 
-				Profiler::get().on_gpu_timer.register_handler(this, [this](TimedBlock* block) {
+				Profiler::get().on_gpu_timer.register_handler(this, [this](std::pair<TimedBlock*, GPUTimerInterface*> p) {
 
 					
 					if (ended) return;
 					
-					GPUBlock * b = dynamic_cast<GPUBlock*>(block);
-					if (!b) return;
+					auto& timer = *static_cast<GPUTimer*>(p.second);
+				//	for(auto &timer:b->gpu_timers)
+					{
+						auto my_id = data.gpu_block_id.fetch_add(1);
+						assert(my_id < 4096 * 256);
+						auto& data = this->data.gpu_blocks[my_id];
 
+						data.block = p.first;
 
-					auto my_id = data.gpu_block_id.fetch_add(1);
-					auto& data = this->data.gpu_blocks[my_id];
+						auto freq = clock_info[timer.queue_type].frequency;
 
-					data.block = block;
-
-
-					data.start_time = b->gpu_counter.timer.get_start();
-					data.end_time = b->gpu_counter.timer.get_end();
-					data.queue_type = b->gpu_counter.timer.queue_type;
+						data.start_time = timer.get_start() / freq;
+						data.end_time = timer.get_end() / freq;
+						data.queue_type = timer.queue_type;
+					}
+					//b->gpu_timers.clear();
 
 				/*
 

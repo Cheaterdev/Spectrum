@@ -18,13 +18,21 @@ export namespace HAL
 		GEN_DEF_COMP(HeapIndex);
 	};
 	
-	struct AllocatorContext
+	struct ResourceContext
 	{
 		using HeapPageType = HAL::Heap;
 		using HeapMemoryOptions = HeapIndex;
 
 		static const size_t PageAlignment = 4 * 1024 * 1024;
 	};
+
+	struct ResourceAllocationContext
+	{
+		using AllocatorType = CommonAllocator;
+		using LockPolicy = Thread::Lockable;
+	};
+
+
 	using ResourceHandle = Allocators::HeapHandle<HAL::Heap>;
 
 
@@ -47,7 +55,7 @@ export namespace HAL
 	};
 
 
-	class HeapFactory:public Allocators::HeapFactory<AllocatorContext, Thread::Lockable>
+	class HeapFactory:public Allocators::HeapFactory<ResourceContext, ResourceAllocationContext>
 	{
 		Device& device;
 		virtual ptr_type make_heap(HeapIndex index, size_t size) override
@@ -64,17 +72,17 @@ export namespace HAL
 
 	};
 
-	class ResourceHeapPageManager :public Allocators::HeapPageManager<AllocatorContext, Thread::Lockable>
+	class ResourceHeapPageManager :public Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>
 	{
 		Device& device;
 	public:
-		ResourceHeapPageManager(Device& _device) :Allocators::HeapPageManager<AllocatorContext, Thread::Lockable>(_device.get_heap_factory()), device(_device) {}
+		ResourceHeapPageManager(Device& _device) :Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>(_device.get_heap_factory()), device(_device) {}
 		~ResourceHeapPageManager()
 		{
 			
 		}
 
-		using Allocators::HeapPageManager<AllocatorContext, Thread::Lockable>::alloc;
+		using Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>::alloc;
 
 		TileHeapPosition create_tile(HeapType type, UINT count = 1)
 		{
@@ -101,50 +109,10 @@ export namespace HAL
 		uint size;
 	};
 
-	template<class LockPolicy>
-	class CPUGPUAllocator
+
+	template<class AllocationPolicy>
+	class CPUGPUAllocator:public Allocators::HeapPageManager<ResourceContext, AllocationPolicy>
 	{
-		// todo: get rid of handles - clear allocator by force
-		Allocators::HeapPageManager<AllocatorContext, Thread::Lockable> allocator;
-		std::list<ResourceHandle> handles;
-		typename LockPolicy::mutex m;
-	public:
-		static constexpr uint DEFAULT_ALIGN = 256;
-
-		CPUGPUAllocator(Device&device):allocator(device.get_heap_factory())
-		{
-			
-		}
-		void reset()
-		{
-			typename LockPolicy::guard g(m);
-
-			for (auto& h : handles)
-				h.Free();
-			handles.clear();
-		}
-
-		UploadInfo aquire_data(UINT64 uploadBufferSize, HeapType heap_type, unsigned int alignment = DEFAULT_ALIGN)
-		{
-			const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
-
-			HeapIndex index = { HAL::MemoryType::COMMITED , heap_type };
-			auto handle = allocator.alloc(AlignedSize, alignment, index);
-
-			typename LockPolicy::guard g(m);
-
-			handles.emplace_back(handle);
-
-			return  { handle.get_heap()->as_buffer()->get_resource_address().offset(handle.get_offset()), uint(uploadBufferSize) };
-		}
-	};
-
-	template<class LockPolicy>
-	class Uploader :public CPUGPUAllocator<LockPolicy>
-	{
-
-	protected:
-
 		template<class T>
 		size_t size_of(std::span<T>& elem)
 		{
@@ -167,18 +135,33 @@ export namespace HAL
 		{
 			return sizeof(T);
 		}
+UploadInfo aquire_data(UINT64 uploadBufferSize, HeapType heap_type, unsigned int alignment = DEFAULT_ALIGN)
+		{
+			const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
 
+			HeapIndex index = { HAL::MemoryType::COMMITED , heap_type };
+			auto handle = alloc(AlignedSize, alignment, index);
+	
+			return  { handle.get_heap()->as_buffer()->get_resource_address().offset(handle.get_offset()), uint(uploadBufferSize) };
+		}
 
 	public:
-		Uploader(Device& device) :CPUGPUAllocator<LockPolicy>(device)
-		{
+		using Allocators::HeapPageManager<ResourceContext, AllocationPolicy>::alloc;
 
-		}
-		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = CPUGPUAllocator<LockPolicy>::DEFAULT_ALIGN)
-		{
-			return CPUGPUAllocator<LockPolicy>::aquire_data(uploadBufferSize, HeapType::UPLOAD, alignment);
-		}
+		static constexpr uint DEFAULT_ALIGN = 256;
 
+		CPUGPUAllocator(Device&device):Allocators::HeapPageManager<ResourceContext, AllocationPolicy>(device.get_heap_factory())
+		{
+			
+		}
+	
+
+	public:
+
+		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN)
+		{
+			return aquire_data(uploadBufferSize, HeapType::UPLOAD, alignment);
+		}
 
 		template<class ...Args>
 		UploadInfo place_raw(Args... args)
@@ -234,20 +217,29 @@ export namespace HAL
 			write(info, offset, (void*)&arg, sizeof(T));
 			offset += sizeof(T);
 		}
-	};
-
-
-	template<class LockPolicy>
-	class Readbacker :public CPUGPUAllocator<LockPolicy>
-	{
 	public:
-		Readbacker(Device& device) :CPUGPUAllocator<LockPolicy>(device)
-	{
-
-	}
-		UploadInfo read_data(UINT64 uploadBufferSize, unsigned int alignment = CPUGPUAllocator<LockPolicy>::DEFAULT_ALIGN)
+		UploadInfo read_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN)
 		{
-			return CPUGPUAllocator<LockPolicy>::aquire_data(uploadBufferSize, HeapType::READBACK, alignment);
+			return aquire_data(uploadBufferSize, HeapType::READBACK, alignment);
+		}
+
+	public:
+	
+		TileHeapPosition create_tile(HeapType type, UINT count = 1)
+		{
+			static const size_t TileSize = 64 * 1024;
+			HeapIndex index = { HAL::MemoryType::COMMITED , type };
+
+			auto handle = alloc(count * TileSize, TileSize, index);
+
+			TileHeapPosition result;
+
+			result.offset = static_cast<UINT>(handle.get_offset() / (64 * 1024));
+			result.heap = handle.get_heap();
+
+			result.handle = handle;
+			result.count = count;
+			return result;
 		}
 	};
 

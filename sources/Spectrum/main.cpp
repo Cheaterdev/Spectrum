@@ -431,8 +431,6 @@ public:
 				}
 			}
 
-			command_list->end();
-
 			command_list->execute();
 		}
 
@@ -871,10 +869,16 @@ public:
 
 					context.get_list()->transition_present(data.swapchain->resource);
 
-					HAL::Device::get().get_time_manager().read_buffer(context.get_list(), [ptr, this]() {
-						run_on_ui([this, ptr]() {	Profiler::get().update(); });
+					//context.get_list()->resolve_timers(Device::get().get_gpu_time_profiler());
 
-						});
+					//context.get_list()->on_done([this, ptr]()
+					//{
+					//	Profiler::get().update();
+					//	
+					//});
+					//HAL::Device::get().get_time_manager().read_buffer(context.get_list(), [ptr, this]() {
+					//	run_on_ui([this, ptr]() {	Profiler::get().update(); });
+					//	});
 
 				}, PassFlags::Required);
 
@@ -1205,7 +1209,6 @@ protected:
 	RenderApplication()
 	{
 		THREAD_SCOPE(GUI);
-
 		//	assert(ppp.inited);
 		FileSystem::get().register_provider(std::make_shared<native_file_provider>());
 
