@@ -14,7 +14,7 @@ export
 		class Transitions;
 
 
-		static constexpr uint ALL_SUBRESOURCES = std::numeric_limits<uint>::max();
+		constexpr uint ALL_SUBRESOURCES = std::numeric_limits<uint>::max();
 
 		enum class TransitionType :int
 		{

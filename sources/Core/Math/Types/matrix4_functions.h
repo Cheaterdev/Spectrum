@@ -202,17 +202,17 @@ type& orthogonalize() requires(matrix_type::N == 4 && matrix_type::M == 4)
 		c(matrix_type::a13, matrix_type::a23, matrix_type::a33);
 	float l;
 	// a
-	a.norm();
+	a.normalize();
 	// b
 	l = vec3::dot(a, b);
 	b -= l * a;
-	b.norm();
+	b.normalize();
 	// c
 	l = vec3::dot(a, c);
 	c -= l * a;
 	l = vec3::dot(b, c);
 	c -= l * b;
-	c.norm();
+	c.normalize();
 	matrix_type::a11 = a.x; matrix_type::a21 = a.y; matrix_type::a31 = a.z;
 	matrix_type::a12 = b.x; matrix_type::a22 = b.y; matrix_type::a32 = b.z;
 	matrix_type::a13 = c.x; matrix_type::a23 = c.y; matrix_type::a33 = c.z;

@@ -6,8 +6,8 @@ export namespace HAL
 
 	namespace Debug
 	{
-		static constexpr bool ValidationErrors = false;
-		static constexpr bool CheckErrors = false;
-		static constexpr bool DebugViews = false;
+		constexpr bool ValidationErrors = false;
+		constexpr bool CheckErrors = false;
+		constexpr bool DebugViews = false;
 	}
 }

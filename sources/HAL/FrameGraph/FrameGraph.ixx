@@ -46,7 +46,7 @@ using namespace HAL;
 		, GENERATE_OPS
 	};
 
-	static const constexpr ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
+	 const constexpr ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
 
 	//struct BufferDesc
 	//{
