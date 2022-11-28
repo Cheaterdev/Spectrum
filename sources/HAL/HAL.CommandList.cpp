@@ -17,13 +17,14 @@ namespace HAL
 	void GPUBlock::start(Eventer* list)
 	{
 		list->gpu_timers.emplace_back(std::make_pair<TimedBlock*, GPUTimer>(this, GPUTimer(device)));
-		
-		list->gpu_timers.back().second.start(list);
+
+		// todo: make block independent
+		//list->gpu_timers.back().second.start(list);
 	}
 
 	void GPUBlock::end(Eventer* list)
 	{
-		list->gpu_timers.back().second.end(list);
+		//list->gpu_timers.back().second.end(list);
 	}
 
 	GPUTimer::GPUTimer(Device& device)
@@ -39,6 +40,7 @@ namespace HAL
 
 	void GPUTimer::start(Eventer* list)
 	{
+		assert(!list);
 		queue_type = list->get_type();
 
 		querys = static_cast<CommandList*>(list)->alloc_query(2, 1, QueryType::Timestamp);
