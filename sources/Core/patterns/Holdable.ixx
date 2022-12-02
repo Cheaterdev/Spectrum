@@ -25,7 +25,7 @@ export
 		template<class T>
 		T* get_or_null()
 		{
-			std::any&& obj = objects[std::type_index(typeid(T))];
+			MyVariant& obj = objects[std::type_index(typeid(T))];
 
 			if (!obj.exists())
 			{

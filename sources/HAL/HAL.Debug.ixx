@@ -7,13 +7,13 @@ export namespace HAL
 	namespace Debug
 	{
 #ifdef DEV
-		static constexpr bool ValidationErrors = true;
-		static constexpr bool CheckErrors = true;
-		static constexpr bool DebugViews = false;
+		constexpr bool ValidationErrors = true;
+		constexpr bool CheckErrors = true;
+		constexpr bool DebugViews = false;
 #else
-		static constexpr bool ValidationErrors = false;
-		static constexpr bool CheckErrors = false;
-		static constexpr bool DebugViews = false;
+		constexpr bool ValidationErrors = false;
+		constexpr bool CheckErrors = false;
+		constexpr bool DebugViews = false;
 #endif
 	}
 }

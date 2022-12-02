@@ -398,7 +398,7 @@ texture_layout get_texture_layout(const Resource* resource, UINT sub_resource, i
 	UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 	UINT64 size = res_stride * rows_count * box.z;
 
-	return { size , rows_count , res_stride , res_stride * rows_count,D3D12_TEXTURE_DATA_PITCH_ALIGNMENT, from_native(Layouts.Footprint.Format) };
+	return { size , rows_count , res_stride , res_stride * rows_count,D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format) };
 }
 			void update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout)
 			{
