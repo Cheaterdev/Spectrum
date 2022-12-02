@@ -525,10 +525,13 @@ public:
 					gpu_scene_renderer->render(context, scene);
 
 					//	stenciler->render(context, scene);
-
-					command_list->get_copy().copy_texture(gbuffer.depth_prev_mips.resource->get_ptr(), 0, gbuffer.depth_mips.resource->get_ptr(), 0);
+					{
+						
+						command_list->get_copy().copy_texture(gbuffer.depth_prev_mips.resource->get_ptr(), 0, gbuffer.depth_mips.resource->get_ptr(), 0);
 					command_list->get_copy().copy_texture(gbuffer.depth_mips.resource->get_ptr(), 0, gbuffer.depth.resource->get_ptr(), 0);
 
+					}
+					
 					//	
 				});
 		}

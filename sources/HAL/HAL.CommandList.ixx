@@ -273,7 +273,7 @@ export{
 	
 		public:
 			CommandListType queue_type;
-			GPUTimer(Device& device);
+			GPUTimer();
 
 			virtual ~GPUTimer();
 
@@ -287,10 +287,19 @@ export{
 			double get_start() override;
 
 			double get_end() override;
+
+				
+		};
+		struct GPUTimers
+		{
+			std::list<GPUTimer> timers;
+			void reset()
+				{
+				timers.clear();
+				}
 		};
 
-
-		class GPUBlock :public TimedBlock
+		class GPUBlock :public TimedBlock, public ObjectState<GPUTimers>
 		{
 			Device& device;
 		public:
@@ -314,7 +323,7 @@ export{
 		class Eventer : public virtual CommandListBase, public TimedRoot
 		{
 			friend class GPUBlock;
-			std::list< std::pair<TimedBlock*,GPUTimer>> gpu_timers;
+			std::list< GPUBlock*> gpu_timers;
 			std::list<std::wstring> names;
 			TimedBlock* current;
 			bool started = false;
@@ -413,7 +422,7 @@ export{
 		class CommandList :  public GPUEntityStorage<LocalAllocationPolicy>, public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
 		{
 
-
+			bool active=false;
 		public:
 			using ptr = std::shared_ptr<CommandList>;
 		protected:
@@ -425,6 +434,7 @@ export{
 			friend class ComputeContext;
 			friend class SignatureDataSetter;
 			friend class Sendable;
+			friend class Eventer;
 
 			// TODO: make references?
 
@@ -441,9 +451,9 @@ export{
 
 
 			void set_pipeline_internal(PipelineStateBase* pipeline);
-			void end();
-
+			
 		public:
+			void end();
 
 			void update_tilings(HAL::update_tiling_info&& info)
 			{

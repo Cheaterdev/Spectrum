@@ -157,6 +157,7 @@ namespace HAL
 
 		if (transition_list)
 		{
+				PROFILE(L"execute_transitions");
 			if (transition_list->get_type() == (list)->get_type())
 			{
 				API::Queue::execute(transition_list.get());
@@ -176,6 +177,7 @@ namespace HAL
 		}
 		else
 		{
+				PROFILE(L"execute_simple");
 			API::Queue::execute(list);
 		}
 	//	Log::get() << Log::LEVEL_ERROR<< "Send " << list->name << Log::endl;

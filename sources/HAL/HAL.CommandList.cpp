@@ -16,7 +16,13 @@ namespace HAL
 
 	void GPUBlock::start(Eventer* list)
 	{
-		list->gpu_timers.emplace_back(std::make_pair<TimedBlock*, GPUTimer>(this, GPUTimer(device)));
+		auto l = static_cast<CommandList*>(list);
+
+		auto& timers = get_state(l);
+		timers.timers.emplace_back();
+
+		timers.timers.back().start(list);
+//		list->gpu_timers.emplace_back(std::make_pair<TimedBlock*, GPUTimer>(this, timer));
 
 		// todo: make block independent
 		//list->gpu_timers.back().second.start(list);
@@ -24,10 +30,14 @@ namespace HAL
 
 	void GPUBlock::end(Eventer* list)
 	{
-		//list->gpu_timers.back().second.end(list);
+	auto l = static_cast<CommandList*>(list);
+
+		auto& timers = get_state(l);
+
+		timers.timers.back().end(list);
 	}
 
-	GPUTimer::GPUTimer(Device& device)
+	GPUTimer::GPUTimer()
 	{
 		//id = device.get_time_manager().factory.alloc(2, 1, QueryType::Timestamp);
 	}
@@ -40,7 +50,6 @@ namespace HAL
 
 	void GPUTimer::start(Eventer* list)
 	{
-		assert(!list);
 		queue_type = list->get_type();
 
 		querys = static_cast<CommandList*>(list)->alloc_query(2,QueryType::Timestamp);
@@ -53,9 +62,6 @@ namespace HAL
 	{
 		if (querys)
 		list->insert_time(querys, 1);
-		list = nullptr;
-
-	
 	}
 
 	float GPUTimer::get_time()
@@ -141,6 +147,7 @@ namespace HAL
 
 	void CommandList::begin(std::string name, Timer* t)
 	{
+		active= true;
 		if (name.empty())
 		{
 			compiler.SetName(L"EmptyName");
@@ -190,7 +197,7 @@ namespace HAL
 
 		Eventer::end();
 		resolve_timers(*this);
-		
+		active=false;
 	}
 
 	void GraphicsContext::begin()
@@ -232,6 +239,7 @@ namespace HAL
 	}
 	void Sendable::compile()
 	{
+		if(static_cast<CommandList*>(this)->active)
 		static_cast<CommandList*>(this)->end();
 
 		compiled = compiler.compile();
@@ -999,6 +1007,7 @@ namespace HAL
 		GPUBlock* b = dynamic_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
+			gpu_timers.emplace_back(b);
 			b->start(this);
 		}
 
@@ -1018,7 +1027,7 @@ namespace HAL
 		GPUBlock* b = dynamic_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
-		//	gpu_timers.emplace_back(b);
+			
 			b->end(this);
 		}
 
@@ -1028,13 +1037,15 @@ namespace HAL
 	thread_local Eventer* Eventer::thread_current = nullptr;
 	void Eventer::reset()
 	{
+		auto l = static_cast<CommandList*>(this);
 
 
 		for (auto& e : gpu_timers)
 		{
-		//	TimedBlock*, GPUTimer
-
-			Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>((TimedBlock * )e.first,(GPUTimerInterface*) ( & e.second)));
+auto block = e;
+			auto &timers = block->get_state(l);
+			for(auto &t:timers.timers)
+			Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>(block, &t));
 		}
 		gpu_timers.clear();
 	}
