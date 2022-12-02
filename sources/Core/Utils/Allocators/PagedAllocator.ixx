@@ -27,8 +27,9 @@ export namespace Allocators
 		HeapHandle() = default;
 		HeapHandle(const AllocatorHanle& handle, std::shared_ptr<HeapPage<HeapPageType>> page) :handle(handle), page(page)
 		{
-		offset=handle.get_offset();
-		}
+		offset=handle.get_offset() + page->get_offset();
+			size=handle.get_size();
+	}
 
 		std::shared_ptr<HeapPageType> get_heap() const
 		{
@@ -42,7 +43,8 @@ export namespace Allocators
 		{
 			return !!handle.get_owner();
 		}
-		UINT64 get_offset() const;
+		inline UINT64 get_offset() const{return offset;}
+		inline UINT64 get_size() const {return size;}
 
 		void Free();
 
@@ -72,6 +74,7 @@ export namespace Allocators
 		AllocatorHanle handle;
 		std::weak_ptr<HeapPage<HeapPageType>>page;
 		uint offset = 0;
+		uint size = 0;
 	};
 	
 	template<class HeapPageType>
@@ -349,15 +352,7 @@ export namespace Allocators
 		if(p)
 		p->handle_free(*this);
 	}
-	template<class HeapPageType>
-	UINT64 HeapHandle<HeapPageType>::get_offset() const
-	{
-		
-		auto p =page.lock();
-		if(p)
-		return offset + p->get_offset();
-		return 0;
-	}
+
 
 	template<class HeapPageType>
 	bool HeapHandle<HeapPageType>::CanFree() const

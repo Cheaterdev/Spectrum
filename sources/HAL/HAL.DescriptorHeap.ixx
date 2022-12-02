@@ -68,7 +68,7 @@ export
 			using HeapPageType = HAL::DescriptorHeap;
 			using HeapMemoryOptions = DescriptorHeapIndex;
 
-			static const size_t PageAlignment = 16;
+			static const size_t PageAlignment = 256;
 		};
 
 		using DescriptorHeapHandle = Allocators::HeapHandle<HAL::DescriptorHeap>;
@@ -105,7 +105,7 @@ export
 			}
 			uint get_count() const
 			{
-				return count;
+				return handle.get_size();
 			}
 			
 			bool can_free() const

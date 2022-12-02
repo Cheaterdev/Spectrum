@@ -66,11 +66,11 @@ export
 		{
 			return provider->get_info();
 		}
-		size_t get_size();
+		size_t get_size() const;
 
-		operator bool();
+		operator bool() const;
 
-		size_t get_reset_id();
+		size_t get_reset_id()const;
 
 		Allocator* get_owner() const;
 
@@ -104,12 +104,12 @@ export
 
 		virtual void Free(AllocatorHanle& handle) = 0;
 
-		virtual bool isEmpty() = 0;
+		virtual bool isEmpty() const= 0;
 
 		virtual void Reset() = 0;
 
-		virtual size_t get_max_usage() = 0;
-		virtual size_t get_size() = 0;
+		virtual size_t get_max_usage() const= 0;
+		virtual size_t get_size() const= 0;
 	};
 
 
@@ -223,19 +223,19 @@ export
 			CommonAllocator(size_t start_region, size_t end_region);
 
 		virtual ~CommonAllocator() = default;
-		size_t get_max_usage() override;
+		size_t get_max_usage() const override;
 
 		std::optional<Handle> TryAllocate(size_t size, size_t align = 1) override final;
 		void Free(Handle& handle);
 
 		void Reset() override;
 
-		size_t get_size()override
+		size_t get_size() const override
 		{
 			return size;
 		}
 
-		bool isEmpty() override
+		bool isEmpty() const override
 		{
 			ASSERT_SINGLETHREAD
 
@@ -272,12 +272,12 @@ export
 		{
 			offset = start_region;
 		}
-		size_t get_max_usage() override
+		size_t get_max_usage() const override
 		{
 			return offset;
 		}
 
-		bool isEmpty() override
+		bool isEmpty() const override
 		{
 			return offset == start_region;
 		}
@@ -285,7 +285,7 @@ export
 		{
 			//		assert(false);
 		}
-		size_t get_size()override
+		size_t get_size()const override
 		{
 			return size;
 		}
@@ -334,7 +334,7 @@ export
 			offset = 0;
 		}
 
-		size_t get_max_usage() override
+		size_t get_max_usage() const override
 		{
 			return offset;
 		}
@@ -351,7 +351,7 @@ export
 			return Handle();
 		}
 
-		size_t get_size()override
+		size_t get_size() const override
 		{
 			return size;
 		}
@@ -451,12 +451,12 @@ export
 			return provider;
 		}
 
-		size_t get_offset()
+		size_t get_offset() const
 		{
 			return handle.get_offset();
 		}
 
-		size_t get_size()
+		size_t get_size() const
 		{
 			return handle.get_size();
 		}
@@ -554,7 +554,7 @@ CommonAllocator::CommonAllocator(size_t size /*= std::numeric_limits<size_t>::ma
 	Reset();
 }
 
-size_t CommonAllocator::get_max_usage()
+size_t CommonAllocator::get_max_usage() const
 {
 	return max_usage;
 }
@@ -813,17 +813,17 @@ size_t AllocatorHanle::get_offset() const
 	return provider->get_info().aligned_offset;
 }
 
-size_t AllocatorHanle::get_size()
+size_t AllocatorHanle::get_size() const
 {
 	return provider->get_info().size;
 }
 
-AllocatorHanle::operator bool()
+AllocatorHanle::operator bool() const
 {
 	return !!owner;
 }
 
-size_t AllocatorHanle::get_reset_id()
+size_t AllocatorHanle::get_reset_id() const
 {
 	return provider->get_info().reset_id;
 }

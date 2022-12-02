@@ -15,7 +15,7 @@
 
 
 
-#define THREAD_CHECKER std::atomic<std::thread::id> __checker_;
+#define THREAD_CHECKER mutable std::atomic<std::thread::id> __checker_;
 #define ASSERT_SINGLETHREAD Checker __g__(__checker_);
 
 #ifdef LEAK_TEST_ENABLE

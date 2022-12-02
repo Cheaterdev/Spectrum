@@ -562,6 +562,8 @@ public:
 						if (data.RTXDebug.is_new())
 						{
 							context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
+						context.get_list()->clear_uav(data.RTXDebugPrev->rwTexture2D, vec4(0, 0, 0, 0));
+
 						}
 
 						compute.set_signature(RTX::get().rtx.m_root_sig);

@@ -6,6 +6,7 @@ projects/
 workdir/cache/
 workdir/Assets/
 workdir/pso
+*.dat
 
 AgilitySDK/
 Agility.zip
