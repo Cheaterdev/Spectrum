@@ -971,7 +971,7 @@ namespace GUI
 
 				 command_list->get_graphics().set_rtv(1, texture.renderTarget, HAL::Handle());
 				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
-
+                // command_list->clear_rtv(texture.renderTarget,float4(1,0,0,1));
                  command_list->get_graphics().set_signature(Layouts::DefaultLayout);
                  command_list->get_compute().set_signature(Layouts::DefaultLayout);
 

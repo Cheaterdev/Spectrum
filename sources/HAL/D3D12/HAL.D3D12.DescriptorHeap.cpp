@@ -451,7 +451,10 @@ namespace HAL
 		return { heap.gpu_start.ptr + heap.handle_size * offset };
 	}
 
-
+	uint DescriptorHeap::get_size()
+	{
+		return desc.Count;
+	}
 	namespace API
 	{
 		DescriptorHeap::DescriptorHeap(Device& device, const DescriptorHeapDesc& desc) : device(device), desc(desc)
@@ -459,15 +462,15 @@ namespace HAL
 			D3D12_DESCRIPTOR_HEAP_DESC native_desc = {};
 			native_desc.NumDescriptors = desc.Count;
 			native_desc.Type = to_native(desc.HeapType);
-			native_desc.Flags = to_native(DescriptorHeapFlags::NONE);
+			native_desc.Flags = to_native(DescriptorHeapFlags::None);
 			native_desc.NodeMask = 1;
 
 			TEST(device, device.native_device->CreateDescriptorHeap(&native_desc, IID_PPV_ARGS(&m_cpu_heap)));
 			cpu_start = m_cpu_heap->GetCPUDescriptorHandleForHeapStart();
 
-			if (check(desc.Flags & DescriptorHeapFlags::SHADER_VISIBLE))
+			if (check(desc.Flags & DescriptorHeapFlags::ShaderVisible))
 			{
-				native_desc.Flags = to_native(DescriptorHeapFlags::SHADER_VISIBLE);
+				native_desc.Flags = to_native(DescriptorHeapFlags::ShaderVisible);
 				TEST(device, device.native_device->CreateDescriptorHeap(&native_desc, IID_PPV_ARGS(&m_gpu_heap)));
 				gpu_cpu_start = m_gpu_heap->GetCPUDescriptorHandleForHeapStart();
 

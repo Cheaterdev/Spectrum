@@ -94,6 +94,13 @@ export namespace HAL
 		/*{
 			return Descriptor{ *this, i };
 		}*/
+
+		auto get_dx() const
+		{
+			if (m_gpu_heap)
+				return m_gpu_heap.Get();
+			return m_cpu_heap.Get();
+		}
 	};
 	}
 }

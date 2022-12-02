@@ -53,7 +53,7 @@ public:
 				{
 
 
-					auto table = graphics.get_base().get_cpu_heap(HAL::DescriptorHeapType::RTV).place(2);
+					auto table = graphics.place_rtv(2);
 
 					{
 						HAL::TextureViewDesc subres;
@@ -63,8 +63,8 @@ public:
 						subres.MipLevels = 1;
 						subres.MipSlice = i;
 
-						auto depth_view = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres);
-						auto normal_view = gbuffer.normals.resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres);
+						auto depth_view = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
+						auto normal_view = gbuffer.normals.resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
 
 						table[0].place(depth_view.renderTarget);
 						table[1].place(normal_view.renderTarget);
@@ -91,8 +91,8 @@ public:
 						subres.MipLevels = 1;
 						subres.MipSlice = i - 1;
 
-						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
-						downsample.GetNormals() = gbuffer.normals.resource->create_view<HAL::TextureView>(*graphics.get_base().frame_resources, subres).texture2D;
+						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(graphics.get_base(), subres).texture2D;
+						downsample.GetNormals() = gbuffer.normals.resource->create_view<HAL::TextureView>(graphics.get_base(), subres).texture2D;
 					}
 					downsample.set(graphics);
 					graphics.draw(4);
@@ -326,7 +326,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	voxelization.GetInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
 	voxelization.GetInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
 
-	voxelization.GetVisibility() = visibility->buffer->create_view<HAL::Texture3DView>(*list.frame_resources).mips[0].rwTexture3D;
+	voxelization.GetVisibility() = visibility->buffer->create_view<HAL::Texture3DView>(list).mips[0].rwTexture3D;
 
 
 	if (all_scene_regen_counter)
@@ -642,7 +642,7 @@ void VoxelGI::screen(Graph& graph)
 					subres.MipLevels = noisy_output.resource->get_desc().as_texture().MipLevels - 1;
 					subres.MipSlice = 1;
 
-					denoiser_history.GetColor() = noisy_output.resource->create_view<TextureView>(*graph.builder.current_frame, subres).texture2D;
+					denoiser_history.GetColor() = noisy_output.resource->create_view<TextureView>(*command_list, subres).texture2D;
 
 					subres.MipLevels = 1;
 					denoiser_history.GetFrames() = frames_count.texture2D;
@@ -1142,7 +1142,7 @@ void VoxelGI::lighting(Graph& graph)
 				subres.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;
 				subres.MipSlice = 1;
 
-				ligthing.GetLower() = tex_lighting.tex_result->create_view<Texture3DView>(*graph.builder.current_frame, subres).texture3D;
+				ligthing.GetLower() = tex_lighting.tex_result->create_view<Texture3DView>(list, subres).texture3D;
 
 
 				auto& params = ligthing.GetParams();
@@ -1153,7 +1153,7 @@ void VoxelGI::lighting(Graph& graph)
 
 				pssm.GetLight_buffer() = data.global_depth->texture2D;
 
-				auto buffer_view = data.global_camera->resource->create_view<HAL::StructuredBufferView<Table::Camera>>(*graph.builder.current_frame);
+				auto buffer_view = data.global_camera->resource->create_view<HAL::StructuredBufferView<Table::Camera>>(list);
 
 				pssm.GetLight_camera() = buffer_view.structuredBuffer;
 

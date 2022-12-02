@@ -154,7 +154,10 @@ namespace FrameGraph
 	{
 		current_pass = nullptr;
 		//	allocator.reset();
-
+			for (auto& pair : alloc_resources)
+		{
+			pair.second.view=nullptr;
+		}
 		for (auto& info : passed_resources)
 		{
 			info->resource = nullptr;
@@ -912,6 +915,8 @@ namespace FrameGraph
 		builder.reset();
 
 		pre_run.clear();
+
+	
 	}
 
 

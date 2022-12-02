@@ -137,9 +137,7 @@ public:
 		texture.mul_color = { 1,1,1,0 };
 		texture.add_color = { 0,0,0,1 };
 
-		//	texture.srv = HAL::StaticDescriptors::get().place(1);
-
-
+	
 
 		auto t = CounterManager::get().start_count<triangle_drawer>();
 		thinkable = true;
@@ -635,9 +633,10 @@ public:
 
 			Slots::FrameInfo frameInfo;
 			//// hack zone
-			auto& sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
-			if (sky.resource)
-				frameInfo.GetSky() = sky.get_handler<Handlers::Cube>()->textureCube;
+			auto sky = graph.builder.get("sky_cubemap_filtered");
+			if (sky&&sky->resource)
+
+				frameInfo.GetSky() = sky->get_handler<Handlers::Cube>()->textureCube;
 			/////////
 			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
 			frameInfo.GetTime() = { time.time ,time.totalTime,0,0 };
@@ -675,6 +674,7 @@ public:
 	{
 		if (debug_tex) texture.srv = debug_tex->texture2D;
 		image::draw(t);
+		 texture.srv = Handle();
 	}
 
 

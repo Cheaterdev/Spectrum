@@ -6,6 +6,7 @@ import :API.Resource;
 
 import :TiledMemoryManager;
 import :ResourceStates;
+import :FrameManager;
 
 import Core;
 
@@ -83,7 +84,7 @@ export{
 				return get_desc().as_buffer().SizeInBytes;// desc.BufferDesc.desc.get<BufferDesc>
 			}
 
-			template<class T, class F, class ...Args>
+			template<class T, GPUEntityStorageType F, class ...Args>
 			typename T create_view(F& frame, Args ...args)
 			{
 				return T(this, frame, args...);

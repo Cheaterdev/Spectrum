@@ -29,113 +29,30 @@ namespace HAL {
 	}
 	ResourceInfo* Handle::get_resource_info() const
 	{
-
-		assert(heap);
-		return heap->get_resource_info(this);
+		return storage->get_heap()->get_resource_info(get_offset());
 	}
 	Handle::operator bool() const
 	{
-		return !!heap;
+		return is_valid();
 	}
-	std::shared_ptr<DescriptorHeapManager> DescriptorHeapManager::create_singleton()
+	DescriptorHeap::DescriptorHeap(Device & device, UINT num, DescriptorHeapType type, HAL::DescriptorHeapFlags flags) :API::DescriptorHeap(device, HAL::DescriptorHeapDesc{ num, type , flags })
 	{
-		return std::make_shared<DescriptorHeapManager>(HAL::Device::get());
-	}
-
-	DescriptorHeapManager::DescriptorHeapManager(Device&device)
-	{
-		heap_rt.reset(new DescriptorHeap(device,65536, DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::NONE));
-		heap_ds.reset(new DescriptorHeap(device, 65536, DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::NONE));
-
-
-		heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(device, 65536 * 8, DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::SHADER_VISIBLE));
-		heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(device, 2048, DescriptorHeapType::SAMPLER, HAL::DescriptorHeapFlags::SHADER_VISIBLE));
-
-		//	cpu_heaps[DescriptorHeapType::CBV_SRV_UAV].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE));
-		heaps[DescriptorHeapType::RTV].reset(new DescriptorHeapPaged(device, 65536, DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::NONE));
-		heaps[DescriptorHeapType::DSV].reset(new DescriptorHeapPaged(device, 65536, DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::NONE));
-		//	cpu_heaps[DescriptorHeapType::SAMPLER].reset(new DescriptorHeapPaged(65536, DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE));
-	}
-
-
-	DescriptorHeap::DescriptorHeap(Device & device, UINT num, DescriptorHeapType type, HAL::DescriptorHeapFlags flags) :API::DescriptorHeap(device, HAL::DescriptorHeapDesc{ num, type , flags }), flags(flags)
-	{
-		max_count = num;
 
 		descriptor_size = device.get_descriptor_size(type);
 		//	assert(m_GPUHeap);
 
-		resources.resize(max_count);
+		resources.resize(num);
 	}
 
 
 	void Handle::place(const Handle& r) const
 	{
-		(*heap)[offset] = (*r.heap)[r.offset];
+
+		auto& my_heap = *storage->get_heap();
+		auto& other_heap = *r.storage->get_heap();
+
+		my_heap[get_offset()] = other_heap[r.get_offset()];
 		*get_resource_info() = *r.get_resource_info();
-	}
-
-	Handle DescriptorPage::place()
-	{
-		Handle h = heap->handle(heap_offset + (offset++));
-		h.get_resource_info()->view = HAL::Views::Null();
-		return h;
-	}
-
-
-
-	HandleTableLight DescriptorPage::place(UINT count)
-	{
-		assert(offset + count <= this->count);
-		auto table = heap->get_light_table_view(heap_offset + offset, count);
-
-		for (UINT i = 0; i < (UINT)table.get_count(); i++)
-		{
-			auto h = table[i];
-			h.get_resource_info()->view = HAL::Views::Null();
-		}
-		offset += count;
-		return table;
-	}
-
-
-
-	HandleTable DescriptorPage::place2(UINT count)
-	{
-		assert(offset + count <= this->count);
-		auto table = heap->make_table(count, heap_offset + offset);
-
-		for (UINT i = 0; i < (UINT)table.get_count(); i++)
-		{
-			auto h = table[i];
-			h.get_resource_info()->view = HAL::Views::Null();
-		}
-		offset += count;
-		return table;
-	}
-	void DescriptorPage::free()
-	{
-		offset = 0;
-		heap->free_page(this);
-	}
-
-	DescriptorPage* DescriptorHeapPaged::create_page(UINT count)
-	{
-
-		UINT pages_count = (count + 32 - 1) / 32;
-
-		std::lock_guard<std::mutex> g(m);
-		auto handle = allocator.Allocate(pages_count, 1);
-
-		return new DescriptorPage(std::dynamic_pointer_cast<DescriptorHeapPaged>(shared_from_this()), handle, (UINT)(handle.get_offset() * 32), pages_count * 32);
-	}
-
-	void DescriptorHeapPaged::free_page(DescriptorPage* page)
-	{
-
-		std::lock_guard<std::mutex> g(m);
-		allocator.Free(page->alloc_handle);
-		delete page;
 	}
 
 	void for_each(const ResourceInfo* info, const HAL::Views::RenderTarget& view, std::function<void(HAL::Resource*, UINT)> f)

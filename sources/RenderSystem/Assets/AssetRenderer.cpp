@@ -138,9 +138,9 @@ public:
 			PROFILE(L"FrameInfo");
 			Slots::FrameInfo frameInfo;
 			//// hack zone
-			auto& sky = graph.builder.alloc_resources["sky_cubemap_filtered"];
-			if (sky.resource)
-				frameInfo.GetSky() = sky.get_handler<Handlers::Cube>()->textureCube;
+			auto sky = graph.builder.get("sky_cubemap_filtered");
+			if (sky && sky->resource)
+				frameInfo.GetSky() = sky->get_handler<Handlers::Cube>()->textureCube;
 			/////////
 			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
 			frameInfo.GetTime() = { time.time ,time.totalTime,0,0 };

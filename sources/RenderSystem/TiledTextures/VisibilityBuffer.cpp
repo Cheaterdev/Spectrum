@@ -40,7 +40,7 @@ std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& l
 	{
 		Slots::VoxelVisibility data;
 
-		data.GetVisibility() = buffer->create_view<HAL::Texture3DView>(*list->frame_resources).texture3D;
+		data.GetVisibility() = buffer->create_view<HAL::Texture3DView>(*list).texture3D;
 		data.GetVisible_tiles() = load_tiles_buffer->appendStructuredBuffer;
 		data.set(compute);
 	}

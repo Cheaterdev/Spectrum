@@ -43,7 +43,7 @@ namespace HAL
 		assert(!list);
 		queue_type = list->get_type();
 
-		querys = static_cast<CommandList*>(list)->alloc_query(2, 1, QueryType::Timestamp);
+		querys = static_cast<CommandList*>(list)->alloc_query(2,QueryType::Timestamp);
 
 		if(querys)
 		list->insert_time(querys, 0);
@@ -170,7 +170,10 @@ namespace HAL
 		Eventer::begin(name, t);
 
 		if (type != CommandListType::COPY) {
-			compiler.set_descriptor_heaps(HAL::Device::get().get_descriptor_heap_manager().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).get(), HAL::Device::get().get_descriptor_heap_manager().get_gpu_heap(DescriptorHeapType::SAMPLER).get());
+			compiler.set_descriptor_heaps(
+				HAL::Device::get().get_descriptor_heap_factory().get_cbv_srv_uav_heap().get(),
+				HAL::Device::get().get_descriptor_heap_factory().get_sampler_heap().get()
+			);
 		}
 	}
 
@@ -288,7 +291,7 @@ namespace HAL
 	}
 
 
-	void  GraphicsContext::set(UINT i, const HandleTableLight& table)
+	void  GraphicsContext::set(UINT i, const Handle& table)
 	{
 		assert(false);//list->SetGraphicsRootDescriptorTable(i, table.get_gpu());
 	}
@@ -299,17 +302,16 @@ namespace HAL
 		list->graphics_set_const_buffer(i, address);
 	}
 
-	void GraphicsContext::set_rtv(const HandleTable& table, Handle h)
-	{
-		set_rtv(table.get_count(), table[0], h);
-	}
-	void GraphicsContext::set_rtv(const HandleTableLight& table, Handle h)
+	void GraphicsContext::set_rtv(const Handle& table, Handle h)
 	{
 		set_rtv(table.get_count(), table, h);
 	}
 
 	void GraphicsContext::set_rtv(int c, Handle rt, Handle h)
 	{
+
+	
+
 		base.create_transition_point();
 		for (int i = 0; i < c; i++)
 		{
@@ -317,16 +319,21 @@ namespace HAL
 		}
 
 		if (h.is_valid())
+		{
+			if (rt.is_valid()) {
+			auto i = rt.get_resource_info();
+			auto rtv = std::get<HAL::Views::RenderTarget>(i->view);
+			auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info()->view);
+			assert(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
+		}
 			get_base().transition(h.get_resource_info());
+		}
 		list->set_rtv(c,rt,h);
 
 		base.create_transition_point(false);
 	}
 
-	void GraphicsContext::set_rtv(std::initializer_list<Handle> rt, Handle h)
-	{
-		set_rtv(place_rtv(rt), h);
-	}
+	
 
 	void GraphicsContext::draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
@@ -955,7 +962,7 @@ namespace HAL
 	}
 
 
-	void  ComputeContext::set(UINT i, const HandleTableLight& table)
+	void  ComputeContext::set(UINT i, const Handle& table)
 	{
 		assert(false);//list->SetComputeRootDescriptorTable(i, table.get_gpu());
 	}

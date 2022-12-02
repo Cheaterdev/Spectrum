@@ -2,7 +2,7 @@ export module HAL:Slots;
 
 import :ResourceViews;
 import :Concepts;
-
+import :DescriptorHeap;
 import :Enums;
 import :Buffer;
 import :SIG;
@@ -37,6 +37,8 @@ export {
 	public:
 		Context* context;
 		std::vector<HAL::ResourceInfo*> resources;
+	std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
+
 		std::stringstream s;
 		Compiler() :s(std::stringstream::out | std::stringstream::binary)
 		{
@@ -46,15 +48,15 @@ export {
 		template<HandleType T>
 		void compile(const T& handle)
 		{
+			uint offset = 0;
 			if (handle.is_valid())
 			{
-				if (handle.get_resource_info())
-				{
-					resources.push_back(handle.get_resource_info());
-				}
+				if(handle.get_storage()->can_free())
+				descriptors.insert(handle.get_storage());
+				resources.push_back(handle.get_resource_info());
+				offset = handle.get_offset();
 			}
 
-			uint offset = handle.offset;
 			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 		}
 
@@ -64,19 +66,19 @@ export {
 
 			pad();
 
-
+			
 			for (uint i = 0; i < N; i++)
 			{
+				uint offset = 0;
 				auto& handle = handles[i];
 				if (handle.is_valid())
 				{
-					if (handle.get_resource_info())
-					{
-						resources.push_back(handle.get_resource_info());
-					}
+					if(handle.get_storage()->can_free())
+				descriptors.insert(handle.get_storage());
+				resources.push_back(handle.get_resource_info());
+					offset = handle.get_offset();
 				}
 
-				uint offset = handle.offset;
 				s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 				pad();
 			}
@@ -112,12 +114,10 @@ export {
 
 					if (handle.is_valid())
 					{
-						offsets.emplace_back(handle.offset);
-
-						if (handle.get_resource_info())
-						{
-							resources.push_back(handle.get_resource_info());
-						}
+					if(handle.get_storage()->can_free())
+				descriptors.insert(handle.get_storage());
+					offsets.emplace_back(handle.get_offset());
+						resources.push_back(handle.get_resource_info());
 					}
 					else
 					{
@@ -128,8 +128,9 @@ export {
 
 				auto info = context->place_raw(offsets);
 				auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,false }).structuredBuffer;
-
-				offset = srv.offset;
+				if(srv.get_storage()->can_free())
+						descriptors.insert(srv.get_storage());
+		offset = srv.get_offset();
 
 			}
 			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
@@ -168,6 +169,7 @@ export {
 	struct CompiledData
 	{
 		std::vector<HAL::ResourceInfo*> resources;
+			std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
 
 		static constexpr SlotID ID = _ID;
 		using Table = _Table;
@@ -187,6 +189,10 @@ export {
 		{
 			for (auto resource_info : resources)
 				graphics.get_base().transition(resource_info);
+
+	for (auto d : descriptors)
+				graphics.get_base().track_object(*d);
+
 			graphics.set_cb(Slot::ID, offsets_cb);
 		}
 		operator HAL::ResourceAddress() const
@@ -228,6 +234,8 @@ export {
 			data.assign(ptr, ptr + str.size());
 			compiled.offsets_cb = context.place_raw(data);
 			compiled.resources = compiler.resources;
+compiled.descriptors = compiler.descriptors;
+
 			return compiled;
 		}
 

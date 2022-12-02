@@ -24,7 +24,7 @@ export
 
 			int current = 0;
 
-			HandleTable handle_table;
+			Handle handle_table;
 		public:
 			virtual_gpu_buffer<std::byte>::ptr currentResource;
 

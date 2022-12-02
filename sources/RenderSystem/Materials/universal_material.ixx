@@ -220,7 +220,13 @@ export namespace materials
 
 
 		virtual	void write(size_t offset, std::vector<HLSL::Texture2D<float4>>& v)  override {
-			memcpy(textures_data.data() + offset, v.data(), sizeof(HAL::Handle) * v.size());
+
+			for(int i=0;i<v.size();i++)
+			{
+					textures_data[offset+i] = v[i]; 
+			}
+		
+			//memcpy(textures_data.data() + offset, v.data(), sizeof(HAL::Handle) * v.size());
 		}
 
 		virtual void on_free(size_t from, size_t to) override {

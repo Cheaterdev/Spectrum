@@ -49,15 +49,10 @@ export namespace HAL
 	};
 
 
-	struct QueryAllocationContext
-	{
-		using AllocatorType = CommonAllocator;
-		using LockPolicy = Thread::Lockable;
-	};
 
 	using QueryHandle = Allocators::HeapHandle<HAL::QueryHeap>;
 
-	class QueryHeapFactory :public Allocators::HeapFactory<QueryContext, QueryAllocationContext>
+	class QueryHeapFactory :public Allocators::HeapFactory<QueryContext, GlobalAllocationPolicy>
 	{
 		Device& device;
 		virtual ptr_type make_heap(QueryType type, size_t size) override

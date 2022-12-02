@@ -553,7 +553,7 @@ export{
 			{
 				HandleType type;
 				bool dirty = false;
-				HandleTableLight table;
+				Handle table;
 			};
 			std::vector<RowInfo> tables;
 
@@ -567,7 +567,7 @@ export{
 				tables.resize(32); // !!!!!!!!!!!
 			}
 
-			virtual void set(UINT, const HandleTableLight&) = 0;
+			virtual void set(UINT, const Handle&) = 0;
 			virtual void set_const_buffer(UINT i, ResourceAddress address) = 0;
 
 
@@ -636,9 +636,9 @@ export{
 				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
 			}
 			template<HandleType type>
-			void set_table(UINT index, const HandleTableLight& table)
+			void set_table(UINT index, const Handle& table)
 			{
-				assert(table.valid());
+				assert(table.is_valid());
 
 				auto& row = tables[index];
 
@@ -693,7 +693,7 @@ export{
 			void on_execute();
 
 			void set_const_buffer(UINT, ResourceAddress address)override;
-			void set(UINT, const HandleTableLight&)override;
+			void set(UINT, const Handle&)override;
 			HAL::Views::IndexBuffer index;
 		public:
 
@@ -719,11 +719,9 @@ export{
 			void set_scissors(sizer_long rect);
 			void set_viewports(std::vector<Viewport> viewports);
 
-
-			void set_rtv(std::initializer_list<Handle> rt, Handle h);
-			void set_rtv(const HandleTable&, Handle);
+			void set_rtv(const Handle&, Handle);
 			void set_rtv(int c, Handle rt, Handle h);
-			void set_rtv(const HandleTableLight&, Handle);
+
 
 			void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
 			{
@@ -734,25 +732,26 @@ export{
 			void dispatch_mesh(D3D12_DISPATCH_MESH_ARGUMENTS args);
 
 
-			HandleTableLight place_rtv(UINT count)
+			Handle place_rtv(UINT count)
 			{
-				return get_base().get_cpu_heap(DescriptorHeapType::RTV).place(count);
+				return get_base().alloc_descriptor(count, DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
+
 			}
 
-			HandleTableLight place_dsv(UINT count)
+			Handle place_dsv(UINT count)
 			{
-				return get_base().get_cpu_heap(DescriptorHeapType::DSV).place(count);
+				return get_base().alloc_descriptor(count, DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
 			}
 
-			HandleTableLight place_rtv(std::initializer_list<Handle> list)
+	/*		Handle place_rtv(std::initializer_list<Handle> list)
 			{
 				return get_base().get_cpu_heap(DescriptorHeapType::RTV).place(list);
 			}
 
-			HandleTableLight place_dsv(std::initializer_list<Handle> list)
+			Handle place_dsv(std::initializer_list<Handle> list)
 			{
 				return get_base().get_cpu_heap(DescriptorHeapType::DSV).place(list);
-			}
+			}*/
 
 
 			void set_stencil_ref(UINT ref)
@@ -805,7 +804,7 @@ export{
 
 
 
-			void set(UINT, const HandleTableLight&)override;
+			void set(UINT, const Handle&)override;
 
 
 

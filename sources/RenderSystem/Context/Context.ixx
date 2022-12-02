@@ -155,7 +155,7 @@ export{
 
 	class RenderTargetTable
 	{
-		HAL::HandleTableLight rtv_table;
+		HAL::Handle rtv_table;
 
 		std::vector<Format> formats;
 		Format depth_format = Format::UNKNOWN;
@@ -181,7 +181,7 @@ export{
 			scissors[0] = { 0, 0, size.x, size.y };
 		}
 	public:
-		HAL::HandleTableLight dsv_table;
+		HAL::Handle dsv_table;
 
 		void clear_depth(MeshRenderContext::ptr& context, float value = 1)
 		{
@@ -211,6 +211,7 @@ export{
 
 		RenderTargetTable(HAL::GraphicsContext& graphics, std::initializer_list<HAL::TextureView> list, HAL::TextureView depth)
 		{
+			if(list.size())
 			rtv_table = graphics.place_rtv((UINT)list.size());
 			UINT i = 0;
 
@@ -221,6 +222,9 @@ export{
 
 				rtv_table[i++].place(e.renderTarget);
 				//   e.place_rtv(rtv_table[i++]);
+
+				auto rtv = std::get<HAL::Views::RenderTarget>(rtv_table[i-1].get_resource_info()->view);
+				
 			}
 
 			if (depth)
@@ -231,7 +235,7 @@ export{
 				depth_texture = depth;
 				depth_format = depth.get_desc().as_texture().Format.to_dsv();
 				//  depth.place_dsv(dsv_table[0]);
-				dsv_table[0].place(depth.depthStencil);
+				dsv_table.place(depth.depthStencil);
 				on_init(depth.get_size());
 				//      depth_handle = depth->get_ds();
 			}
@@ -255,7 +259,7 @@ export{
 
 			auto& list = graphics.get_base();
 
-			graphics.set_rtv(rtv_table, dsv_table.valid() ? dsv_table[0] : HAL::Handle());
+			graphics.set_rtv(rtv_table, dsv_table);
 
 			if (clear_color)
 			{

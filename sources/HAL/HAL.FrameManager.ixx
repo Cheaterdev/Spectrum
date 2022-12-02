@@ -13,66 +13,21 @@ namespace HAL {
 
 
 
-
-
-		template<class LockPolicy = Thread::Free>
-		class GPUCompiledManager 
-		{
-			enum_array<HAL::DescriptorHeapType, typename HAL::DynamicDescriptor<LockPolicy>::ptr> cpu_heaps;
-			enum_array<HAL::DescriptorHeapType, typename HAL::DynamicDescriptor<LockPolicy>::ptr> gpu_heaps;
-
-		public:
-
-			HAL::DynamicDescriptor<LockPolicy>& get_cpu_heap(HAL::DescriptorHeapType type)
-			{
-				assert(cpu_heaps[type]);
-				return *cpu_heaps[type];
-			}
-
-			HAL::DynamicDescriptor<LockPolicy>& get_gpu_heap(HAL::DescriptorHeapType type)
-			{
-				assert(cpu_heaps[type]);
-				return *gpu_heaps[type];
-			}
-
-			GPUCompiledManager(Device& device)
-			{
-				gpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::SHADER_VISIBLE);
-				gpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::SHADER_VISIBLE);
-
-				cpu_heaps[DescriptorHeapType::CBV_SRV_UAV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::RTV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::RTV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::DSV] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::DSV, DescriptorHeapFlags::NONE);
-				cpu_heaps[DescriptorHeapType::SAMPLER] = std::make_shared<HAL::DynamicDescriptor<LockPolicy>>(HAL::DescriptorHeapType::SAMPLER, DescriptorHeapFlags::NONE);
-			}
-
-			void reset()
-			{
-
-				for (auto& h : gpu_heaps)
-					if (h)
-						h->reset();
-
-				for (auto& h : cpu_heaps)
-					if (h)
-						h->reset();
-				
-			}
-
-		};
-
+			template<class T>
+		concept GPUEntityStorageType = requires () { T::IsGPUEntityStorage; };
 	
 		template<class AllocationPolicy>
 		struct GPUEntityStorage:
 			public CPUGPUAllocator<AllocationPolicy>,
-			public GPUCompiledManager<typename AllocationPolicy::LockPolicy>,
+			public DescriptorHeapPageManager<AllocationPolicy>,
 			public QueryHeapPageManager<AllocationPolicy>
 		{
+			using IsGPUEntityStorage = bool;
 
 			GPUEntityStorage(Device& device):
-			CPUGPUAllocator<AllocationPolicy>(device),
-			QueryHeapPageManager<AllocationPolicy>(device),
-			GPUCompiledManager<typename AllocationPolicy::LockPolicy>(device)
+				CPUGPUAllocator<AllocationPolicy>(device),
+				QueryHeapPageManager<AllocationPolicy>(device),
+				DescriptorHeapPageManager<AllocationPolicy>(device)
 			{
 				
 			}
@@ -81,16 +36,33 @@ namespace HAL {
 				return CPUGPUAllocator<AllocationPolicy>::alloc(size, alignment, options);
 			}
 
-			QueryHeapPageManager<AllocationPolicy>::HandleType  alloc_query(size_t size, size_t alignment, QueryHeapPageManager<AllocationPolicy>::HeapMemoryOptions options)
+			QueryHeapPageManager<AllocationPolicy>::HandleType  alloc_query(uint size,  QueryHeapPageManager<AllocationPolicy>::HeapMemoryOptions options)
 			{
-				return QueryHeapPageManager<AllocationPolicy>::alloc(size,alignment,options);
+				return QueryHeapPageManager<AllocationPolicy>::alloc(size,1,options);
+			}
+
+
+			Handle  alloc_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options)
+			{
+				auto h = DescriptorHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
+
+
+				
+				auto handle= Handle{std::make_shared<DescriptorHeapStorage>(h,size),0};
+
+				for (UINT i = 0; i < (UINT)handle.get_count(); i++)
+				{
+					handle[i].get_resource_info()->view = HAL::Views::Null();
+				}
+
+				return handle;
 			}
 
 			void reset() requires (std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator>)
 			{
 				CPUGPUAllocator<AllocationPolicy>::reset();
 				QueryHeapPageManager<AllocationPolicy>::reset();
-				GPUCompiledManager<typename AllocationPolicy::LockPolicy>::reset();
+				DescriptorHeapPageManager<AllocationPolicy>::reset();
 			}
 		};
 

@@ -109,6 +109,7 @@ export
 		virtual void Reset() = 0;
 
 		virtual size_t get_max_usage() = 0;
+		virtual size_t get_size() = 0;
 	};
 
 
@@ -187,8 +188,9 @@ export
 
 	class CommonAllocator :public Allocator
 	{
-
-		size_t size;
+		const size_t start_region;
+		const size_t end_region;
+		const size_t size;
 		size_t max_usage;
 		size_t reset_id;
 		struct block
@@ -217,6 +219,9 @@ export
 		using MemoryHandle = AllocationTracker<MemoryInfo>::Handle;
 
 		CommonAllocator(size_t size = std::numeric_limits<size_t>::max());
+
+			CommonAllocator(size_t start_region, size_t end_region);
+
 		virtual ~CommonAllocator() = default;
 		size_t get_max_usage() override;
 
@@ -225,7 +230,7 @@ export
 
 		void Reset() override;
 
-		size_t get_size()
+		size_t get_size()override
 		{
 			return size;
 		}
@@ -238,7 +243,7 @@ export
 				if (free_blocks.size() == 1)
 				{
 					auto& b = *free_blocks.begin();
-					return (b.begin == 0) && (b.end == size - 1);
+					return (b.begin == start_region) && (b.end == end_region-1);
 
 				}
 
@@ -248,18 +253,25 @@ export
 
 	class LinearAllocator : public Allocator
 	{
+
+		const size_t start_region;
+		const size_t end_region;
+
 	protected:
 		size_t offset;
-		size_t size;
+		const size_t size;
 	public:
 		using Handle = AllocatorHanle;
 		using MemoryHandle = MemoryInfo;
 
-		LinearAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size)
+		LinearAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size),start_region(0), end_region(size)
 		{
-			offset = 0;
+			offset = start_region;
 		}
-
+		LinearAllocator(size_t start_region, size_t end_region) :size(end_region-start_region),start_region(start_region), end_region(end_region)
+		{
+			offset = start_region;
+		}
 		size_t get_max_usage() override
 		{
 			return offset;
@@ -267,19 +279,22 @@ export
 
 		bool isEmpty() override
 		{
-			return offset == 0;
+			return offset == start_region;
 		}
 		void Free(Handle& handle)
 		{
 			//		assert(false);
 		}
-
+		size_t get_size()override
+		{
+			return size;
+		}
 		std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
 		{
 
 			offset = Math::roundUp(offset, align);
 			//assert(offset % align == 0);
-			if(offset+size>this->size)
+			if(offset+size>this->end_region)
 			{
 				return std::nullopt;
 			}
@@ -294,7 +309,7 @@ export
 
 		void Reset() override
 		{
-			offset = 0;
+			offset = start_region;
 		}
 	};
 
@@ -306,7 +321,7 @@ export
 
 	protected:
 		size_t offset;
-		size_t size;
+		const size_t size;
 		AllocationTracker<MemoryInfo> tracker;
 
 		std::vector<size_t> alloc_ids;
@@ -336,7 +351,10 @@ export
 			return Handle();
 		}
 
-
+		size_t get_size()override
+		{
+			return size;
+		}
 		std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
 		{
 			assert(align == 1);
@@ -525,8 +543,12 @@ export
 	};
 }
 
-
-CommonAllocator::CommonAllocator(size_t size /*= std::numeric_limits<size_t>::max()*/) :size(size)
+		CommonAllocator::CommonAllocator(size_t start_region, size_t end_region) :size(end_region-start_region),start_region(start_region), end_region(end_region)
+		{
+			reset_id = 0;
+	Reset();
+		}
+CommonAllocator::CommonAllocator(size_t size /*= std::numeric_limits<size_t>::max()*/) :size(size),start_region(0), end_region(size)
 {
 	reset_id = 0;
 	Reset();
@@ -545,9 +567,9 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 		{
 			size_t id;
 			MemoryInfo& res = tracker.place_handle(id);
-			res.aligned_offset = 0;
-			res.offset = 0;
-			res.size = 0;
+			res.aligned_offset = start_region;
+			res.offset = start_region;
+			res.size = start_region;
 			//	res.owner = this;
 			res.reset_id = reset_id;
 			return Handle(std::make_shared<TrackedMemoryInfoProvider>(id, tracker), nullptr);
@@ -620,12 +642,12 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 				res.size = size;
 				//	res.owner = this;
 				res.reset_id = reset_id;
-				assert(used_block.end < this->size);
+				assert(used_block.end < end_region);
 
 				max_usage = std::max(max_usage, used_block.end + 1);
 
-				if (max_usage < this->size / 2)
-					assert(!free_blocks.empty());
+			/*	if (max_usage < this->size / 2)
+					assert(!free_blocks.empty());*/
 				return Handle(std::make_shared<TrackedMemoryInfoProvider>(id, tracker), this);
 			}
 
@@ -761,9 +783,9 @@ void CommonAllocator::Reset()
 	ASSERT_SINGLETHREAD
 		free_blocks.clear();
 	fences.clear();
-	auto [elem, inserted] = free_blocks.insert(block{ 0,size - 1 });
-	fences[0] = &*elem;
-	fences[size - 1] = &*elem;
+	auto [elem, inserted] = free_blocks.insert(block{ start_region,end_region - 1 });
+	fences[start_region] = &*elem;
+	fences[end_region - 1] = &*elem;
 
 	max_usage = 0;
 	reset_id++;

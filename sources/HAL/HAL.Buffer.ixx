@@ -32,7 +32,7 @@ export
 			UINT stride;
 
 			UINT64 size;
-			HAL::HandleTable hlsl;
+			HAL::Handle hlsl;
 
 
 			void set_data(HAL::CommandList::ptr& list, unsigned int offset, const  std::string& v);
@@ -135,13 +135,13 @@ export
 		template<class T>
 		class StructureBuffer : public GPUBuffer
 		{
-			HAL::HandleTable static_raw_uav;
+			HAL::Handle static_raw_uav;
 
 			StructureBuffer() = default;
 			counterType counted = counterType::NONE;
 			void init_views();
 
-			HAL::HandleTableLight hlsl;
+			HAL::Handle hlsl;
 
 		public:
 
@@ -214,7 +214,7 @@ export
 		template<class T>
 		inline void StructureBuffer<T>::init_views()
 		{
-			hlsl = HAL::Device::get().get_static_gpu_data().get_gpu_heap(DescriptorHeapType::CBV_SRV_UAV).place(7);
+			hlsl = HAL::Device::get().get_static_gpu_data().alloc_descriptor(7, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 			structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 			rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);

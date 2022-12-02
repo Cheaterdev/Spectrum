@@ -3,6 +3,7 @@ import Core;
 import HAL;
 import :FrameManager;
 
+import :DescriptorHeap;
 import :HeapAllocators;
 import :PSO;
 
@@ -76,18 +77,17 @@ namespace HAL
 
 		rtx = get_properties().rtx;
 
-		frame_manager = std::make_unique<FrameResourceManager>(*this);
 		heap_factory = std::make_unique<HeapFactory>(*this);
-
-		static_gpu_data = std::make_unique<StaticCompiledGPUData>(*this);
-		descriptor_heap_manager = std::make_unique<DescriptorHeapManager>(*this);
-
-		pipeline_state_cache = std::make_unique<PipelineStateCache>(*this);
-
-
+		descriptor_heap_factory = std::make_unique<DescriptorHeapFactory>(*this);
 		query_heap_factory = std::make_unique<QueryHeapFactory>(*this);
 
 
+
+		frame_manager = std::make_unique<FrameResourceManager>(*this);
+		static_gpu_data = std::make_unique<StaticCompiledGPUData>(*this);
+
+		pipeline_state_cache = std::make_unique<PipelineStateCache>(*this);
+			
 		engine_pso_holder = std::make_unique<EnginePSOHolder>();
 
 		engine_pso_holder->init(*this);
@@ -106,9 +106,6 @@ namespace HAL
 	StaticCompiledGPUData& Device::get_static_gpu_data() {
 		return *static_gpu_data;
 	}
-	DescriptorHeapManager& Device::get_descriptor_heap_manager() {
-		return *descriptor_heap_manager;
-	}
 
 	PipelineStateCache& Device::get_pipeline_state_cache() {
 		return *pipeline_state_cache;
@@ -122,5 +119,8 @@ namespace HAL
 		return *query_heap_factory;
 		
 	}
-
+	DescriptorHeapFactory& Device::get_descriptor_heap_factory()
+	{
+		return *descriptor_heap_factory;
+	}
 }

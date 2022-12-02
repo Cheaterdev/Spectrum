@@ -611,6 +611,7 @@ using namespace HAL;
 			if (resources_names.count(name) == 0) return nullptr;
 			name = resources_names[name];
 			ResourceAllocInfo& info = alloc_resources[name];
+			if (!info.enabled)return nullptr;;
 			return &info;
 		}
 	};

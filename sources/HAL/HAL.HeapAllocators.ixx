@@ -26,12 +26,6 @@ export namespace HAL
 		static const size_t PageAlignment = 4 * 1024 * 1024;
 	};
 
-	struct ResourceAllocationContext
-	{
-		using AllocatorType = CommonAllocator;
-		using LockPolicy = Thread::Lockable;
-	};
-
 
 	using ResourceHandle = Allocators::HeapHandle<HAL::Heap>;
 
@@ -55,12 +49,12 @@ export namespace HAL
 	};
 
 
-	class HeapFactory:public Allocators::HeapFactory<ResourceContext, ResourceAllocationContext>
+	class HeapFactory:public Allocators::HeapFactory<ResourceContext, GlobalAllocationPolicy>
 	{
 		Device& device;
 		virtual ptr_type make_heap(HeapIndex index, size_t size) override
 		{
-			HeapDesc desc = { size , index.type, index.memory , HeapFlags::NONE};
+			HeapDesc desc = { size*16 , index.type, index.memory , HeapFlags::NONE};
 			return std::make_shared<HAL::Heap>(device,desc);
 		}
 
@@ -71,37 +65,7 @@ export namespace HAL
 				}
 
 	};
-
-	class ResourceHeapPageManager :public Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>
-	{
-		Device& device;
-	public:
-		ResourceHeapPageManager(Device& _device) :Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>(_device.get_heap_factory()), device(_device) {}
-		~ResourceHeapPageManager()
-		{
-			
-		}
-
-		using Allocators::HeapPageManager<ResourceContext, ResourceAllocationContext>::alloc;
-
-		TileHeapPosition create_tile(HeapType type, UINT count = 1)
-		{
-			static const size_t TileSize = 64 * 1024;
-			HeapIndex index = { HAL::MemoryType::COMMITED , type };
-
-			auto handle = alloc(count * TileSize, TileSize, index);
-
-			TileHeapPosition result;
-
-			result.offset = static_cast<UINT>(handle.get_offset() / (64 * 1024));
-			result.heap = handle.get_heap();
-
-			result.handle = handle;
-			result.count = count;
-			return result;
-		}
-	};
-
+	
 
 
 	struct UploadInfo :public HAL::ResourceAddress

@@ -178,6 +178,8 @@ namespace HAL
 		{
 			API::Queue::execute(list);
 		}
+	//	Log::get() << Log::LEVEL_ERROR<< "Send " << list->name << Log::endl;
+
 		const FenceWaiter execution_fence = signal_internal();
 
 		{
@@ -197,6 +199,8 @@ namespace HAL
 			});
 
 		last_executed_fence = execution_fence;
+
+		//execution_fence.wait();
 		return execution_fence;
 	}
 

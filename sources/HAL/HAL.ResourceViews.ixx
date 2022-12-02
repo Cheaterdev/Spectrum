@@ -84,28 +84,28 @@ export
 			HLSL::Buffer<T> buffer;
 			HLSL::RWBuffer<T> rwBuffer;
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			void init(F& frame)
 			{
 				Format format = _format;
-				buffer = HLSL::Buffer<T>(frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
+				buffer = HLSL::Buffer<T>(frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible }));
 				buffer.create(resource, format, static_cast<UINT>(desc.offset / sizeof(Underlying<T>)), static_cast<UINT>(desc.size / sizeof(Underlying<T>)));
 
 				//
 				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
-					rwBuffer = HLSL::RWBuffer<T>(frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
+					rwBuffer = HLSL::RWBuffer<T>(frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible }));
 					rwBuffer.create(resource, format, static_cast<UINT>(desc.offset / sizeof(Underlying<T>)), static_cast<UINT>(desc.size / sizeof(Underlying<T>)));
 				}
 			}
 
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			FormattedBufferView(HAL::Resource* resource, F& frame, FormattedBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
 			{
 				init(frame);
 			}
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			FormattedBufferView(HAL::Resource* resource, F& frame) : ResourceView(resource)
 			{
 				auto& res_desc = resource->get_desc().as_buffer();
@@ -155,7 +155,7 @@ export
 			HLSL::RenderTarget<> renderTarget;
 			HLSL::DepthStencil<> depthStencil;
 		public:
-			template<class F>
+			template<GPUEntityStorageType F>
 			void init(F& frame, TextureViewDesc _view_desc)
 			{
 				view_desc = _view_desc;
@@ -167,7 +167,7 @@ export
 					view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
 				}
 
-				HAL::HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(3);
+				auto hlsl = frame.alloc_descriptor(3, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 				PROFILE(L"create_views");
 
@@ -209,8 +209,8 @@ export
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::RenderTarget)) {
 
-					HandleTableLight rtv = frame.get_cpu_heap(HAL::DescriptorHeapType::RTV).place(1);
-
+					auto rtv = frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
+				
 					renderTarget = HLSL::RenderTarget<>(rtv[0]);
 					//	place_rtv(renderTarget);
 					if (desc.is2D() && view_desc.ArraySize == 1 && view_desc.FirstArraySlice == 0)
@@ -224,7 +224,7 @@ export
 				}
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::DepthStencil)) {
-					HandleTableLight dsv = frame.get_cpu_heap(HAL::DescriptorHeapType::DSV).place(1);
+					auto dsv = frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
 					depthStencil = HLSL::DepthStencil<>(dsv[0]);
 
 					if (desc.is2D() && view_desc.ArraySize == 1 && view_desc.FirstArraySlice == 0)
@@ -241,7 +241,7 @@ export
 			}
 			TextureView() = default;
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			TextureView(HAL::Resource* resource, F& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
@@ -249,7 +249,7 @@ export
 
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
-			template<class F>
+			template<GPUEntityStorageType F>
 			TextureView(HAL::Resource* resource, F& frame, TextureViewDesc vdesc) :ResourceView(resource)
 			{
 
@@ -319,7 +319,7 @@ export
 			std::vector<Mip> mips;
 
 		public:
-			template<class F>
+			template<GPUEntityStorageType F>
 			void init(F& frame, Texture3DViewDesc _view_desc)
 			{
 				view_desc = _view_desc;
@@ -330,7 +330,8 @@ export
 				{
 					view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
 				}
-				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(1 + view_desc.MipLevels * 2);
+				auto hlsl = frame.alloc_descriptor(1 + view_desc.MipLevels * 2, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
+
 				assert(desc.is3D());
 
 
@@ -358,7 +359,7 @@ export
 
 			Texture3DView() = default;
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			Texture3DView(HAL::Resource* resource, F& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
@@ -366,7 +367,7 @@ export
 
 				init(frame, { 0, texture_desc.MipLevels });
 			}
-			template<class F>
+			template<GPUEntityStorageType F>
 			Texture3DView(HAL::Resource* resource, F& frame, Texture3DViewDesc vdesc) :ResourceView(resource)
 			{
 
@@ -425,7 +426,7 @@ export
 			std::array<TextureView, 6> faces;
 
 		public:
-			template<class F>
+			template<GPUEntityStorageType F>
 			void init(F& frame, CubeViewDesc _view_desc)
 			{
 				view_desc = _view_desc;
@@ -436,7 +437,7 @@ export
 				{
 					view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
 				}
-				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(1);
+				auto hlsl = frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 				assert(desc.is2D());
 				textureCube = HLSL::TextureCube<>(hlsl[0]);
 
@@ -465,7 +466,7 @@ export
 			}
 			CubeView() = default;
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			CubeView(HAL::Resource* resource, F& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
@@ -473,7 +474,7 @@ export
 
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
-			template<class F>
+			template<GPUEntityStorageType F>
 			CubeView(HAL::Resource* resource, F& frame, CubeViewDesc vdesc) :ResourceView(resource)
 			{
 
@@ -528,10 +529,10 @@ export
 			HLSL::RWByteAddressBuffer rwbyteBuffer;
 
 			BufferView() = default;
-			template<class F>
+			template<GPUEntityStorageType F>
 			BufferView(HAL::Resource* resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
 			{
-				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(2);
+				auto hlsl = frame.alloc_descriptor(2, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 				byteBuffer = HLSL::ByteAddressBuffer(hlsl[0]);
 				rwbyteBuffer = HLSL::RWByteAddressBuffer(hlsl[1]);
@@ -565,10 +566,10 @@ export
 			HLSL::RWBuffer<std::byte> rwRAW;
 			CounterView() = default;
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			CounterView(HAL::Resource* resource, F& frame, UINT offset = 0) :ResourceView(resource)
 			{
-				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(3);
+				auto hlsl = frame.alloc_descriptor(3, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 				structuredBuffer = HLSL::StructuredBuffer<UINT>(hlsl[0]);
 				rwStructuredBuffer = HLSL::RWStructuredBuffer<UINT>(hlsl[1]);
@@ -612,7 +613,7 @@ export
 		public:
 
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			void init(F& frame)
 			{
 				uint local_offset = 0;
@@ -629,7 +630,7 @@ export
 					counter_view = resource->create_view<CounterView>(frame, 0);
 				}
 
-				HandleTableLight hlsl = frame.get_gpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place(4);
+				auto hlsl = frame.alloc_descriptor(4, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 				structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 				rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
@@ -653,13 +654,13 @@ export
 				}
 			}
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			StructuredBufferView(HAL::Resource* resource, F& frame, StructuredBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
 			{
 				init(frame);
 			}
 
-			template<class F>
+			template<GPUEntityStorageType F>
 			StructuredBufferView(HAL::Resource* resource, F& frame) : ResourceView(resource)
 			{
 				auto& res_desc = resource->get_desc().as_buffer();

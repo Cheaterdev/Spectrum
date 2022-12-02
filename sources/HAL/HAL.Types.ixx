@@ -156,8 +156,8 @@ export namespace HAL
 
 	enum class DescriptorHeapFlags : char
 	{
-		NONE,
-		SHADER_VISIBLE,
+		None,
+		ShaderVisible,
 
 		GENERATE_OPS
 	};

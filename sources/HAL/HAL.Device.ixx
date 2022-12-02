@@ -9,11 +9,10 @@ export namespace HAL
 
 class HeapFactory;
 class StaticCompiledGPUData;
-class DescriptorHeapManager;
 
 class PipelineStateCache;
 	class Queue;
-
+	class DescriptorHeapFactory;
 	class QueryHeapFactory;
 	class GPUTimeProfiler;
 		class Device : public Singleton<Device>, public API::Device
@@ -33,13 +32,13 @@ class PipelineStateCache;
 	
 			std::unique_ptr<HeapFactory> heap_factory;
 			std::unique_ptr<StaticCompiledGPUData> static_gpu_data;
-			std::unique_ptr<DescriptorHeapManager> descriptor_heap_manager;
 
 			std::unique_ptr<PipelineStateCache> pipeline_state_cache;
 			std::unique_ptr<EnginePSOHolder> engine_pso_holder;
 
 
 			std::unique_ptr<QueryHeapFactory> query_heap_factory;
+		std::unique_ptr<DescriptorHeapFactory> descriptor_heap_factory;
 
 
 		public:
@@ -65,12 +64,12 @@ class PipelineStateCache;
 			FrameResourceManager& get_frame_manager();
 			HeapFactory& get_heap_factory();
 			StaticCompiledGPUData& get_static_gpu_data();
-			DescriptorHeapManager& get_descriptor_heap_manager();
-
+	
 			PipelineStateCache& get_pipeline_state_cache();
 			EnginePSOHolder& get_engine_pso_holder();
 
 			QueryHeapFactory& get_query_heap_factory();
+			DescriptorHeapFactory& get_descriptor_heap_factory();
 
 		};
 

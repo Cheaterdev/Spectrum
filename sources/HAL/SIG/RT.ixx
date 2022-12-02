@@ -12,8 +12,8 @@ export
 
 	struct CompiledRT
 	{
-		HAL::HandleTableLight table_rtv;
-		HAL::HandleTableLight table_dsv;
+		HAL::Handle table_rtv;
+		HAL::Handle table_dsv;
 
 
 
@@ -36,8 +36,8 @@ export
 		template<class Context, class RTV>
 		void place_rtv(CompiledRT& compiled, Context& context, RTV& rtv) const
 		{
-			compiled.table_rtv = context.get_cpu_heap(HAL::DescriptorHeapType::RTV).place(sizeof(rtv) / sizeof(HAL::Handle));
-			auto ptr = reinterpret_cast<HAL::Handle*>(&rtv);
+			compiled.table_rtv = context.alloc_descriptor(sizeof(rtv) / sizeof(HAL::Handle), HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
+		auto ptr = reinterpret_cast<HAL::Handle*>(&rtv);
 			for (UINT i = 0; i < (UINT)compiled.table_rtv.get_count(); i++)
 			{
 				HAL::Handle* handle = ptr + i;
@@ -50,7 +50,8 @@ export
 		template<class Context, class DSV>
 		void place_dsv(CompiledRT& compiled, Context& context, DSV& dsv) const
 		{
-			compiled.table_dsv = context.get_cpu_heap(HAL::DescriptorHeapType::DSV).place(sizeof(dsv) / sizeof(HAL::Handle));
+			compiled.table_dsv = context.alloc_descriptor(sizeof(dsv) / sizeof(HAL::Handle), HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
+
 			auto ptr = reinterpret_cast<HAL::Handle*>(&dsv);
 			for (UINT i = 0; i < (UINT)compiled.table_dsv.get_count(); i++)
 			{
