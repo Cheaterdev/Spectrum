@@ -959,7 +959,6 @@ void VoxelGI::screen_reflection(Graph& graph)
 				if (data.VoxelReflectionFiltered.is_new())
 				{
 					command_list->clear_uav(cur_gi.rwTexture2D, vec4(0, 0, 0, 0));
-					command_list->clear_uav(prev_gi.rwTexture2D, vec4(0, 0, 0, 0));
 				}
 
 				command_list->get_copy().copy_resource(prev_gi.resource, cur_gi.resource);

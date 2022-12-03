@@ -81,7 +81,7 @@ export
 
 			DescriptorHeapStorage() = default;
 
-			DescriptorHeapStorage(const  DescriptorHeapHandle &handle, uint count):handle(handle), count(count)
+			DescriptorHeapStorage(const  DescriptorHeapHandle &handle):handle(handle)
 			{
 				
 			}

@@ -45,17 +45,8 @@ namespace HAL {
 			Handle  alloc_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options)
 			{
 				auto h = DescriptorHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
-
-
 				
-				auto handle= Handle{std::make_shared<DescriptorHeapStorage>(h,size),0};
-
-				for (UINT i = 0; i < (UINT)handle.get_count(); i++)
-				{
-					handle[i].get_resource_info()->view = HAL::Views::Null();
-				}
-
-				return handle;
+				return Handle{std::make_shared<DescriptorHeapStorage>(h),0};
 			}
 
 			void reset() requires (std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator>)

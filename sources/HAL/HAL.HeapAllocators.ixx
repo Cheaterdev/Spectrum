@@ -54,7 +54,7 @@ export namespace HAL
 		Device& device;
 		virtual ptr_type make_heap(HeapIndex index, size_t size) override
 		{
-			HeapDesc desc = { size*16 , index.type, index.memory , HeapFlags::NONE};
+			HeapDesc desc = { size , index.type, index.memory , HeapFlags::NONE};
 			return std::make_shared<HAL::Heap>(device,desc);
 		}
 

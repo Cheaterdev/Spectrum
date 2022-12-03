@@ -176,14 +176,7 @@ export
 					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
 
 					texture2DArray = HLSL::Texture2DArray<>(hlsl[2]);
-
-
 				}
-
-				/*	if (desc.is3D()) {
-						texture3D = HLSL::Texture3D<>(hlsl[0]);
-						rwTexture3D = HLSL::RWTexture3D<>(hlsl[1]);
-					}*/
 
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {

@@ -18,53 +18,38 @@ export
 
 	struct MemoryInfo
 	{
-		size_t offset;
-		size_t size;
-		size_t aligned_offset;
-		size_t reset_id;
+		size_t offset = 0;
+		size_t size = 0;
+		//	size_t aligned_offset;
+		size_t reset_id = 0;
+		//	size_t alloc_id;
 		bool operator==(const MemoryInfo& h)const = default;
 		bool operator!=(const MemoryInfo& h)const = default;
 		MemoryInfo() = default;
 		MemoryInfo(const MemoryInfo& r) = default;
-	};
-
-	class MemoryInfoProvider
-	{
-	public:
-		virtual const MemoryInfo& get_info() const = 0;
-	};
-
-
-	class DirectMemoryInfoProvider :public MemoryInfoProvider
-	{
-		MemoryInfo info;
-	public:
-		DirectMemoryInfoProvider(MemoryInfo& info) :info(info)
+		MemoryInfo(size_t offset, size_t size,size_t reset_id) :offset(offset), size(size),reset_id(reset_id)
 		{
 
 		}
-		const MemoryInfo& get_info() const override final
-		{
-			return info;
-		}
 	};
+
 
 	class Allocator;
 
 	class AllocatorHanle
 	{
 	protected:
-		std::shared_ptr<MemoryInfoProvider> provider;
+		MemoryInfo info;
 		Allocator* owner = nullptr;
 	public:
 		AllocatorHanle() = default;
-		AllocatorHanle(std::shared_ptr<MemoryInfoProvider> provider, Allocator* owner);
+		AllocatorHanle(const MemoryInfo& info, Allocator* owner);
 
 		size_t get_offset() const;
 
 		const MemoryInfo& get_info() const
 		{
-			return provider->get_info();
+			return info;
 		}
 		size_t get_size() const;
 
@@ -104,81 +89,12 @@ export
 
 		virtual void Free(AllocatorHanle& handle) = 0;
 
-		virtual bool isEmpty() const= 0;
+		virtual bool isEmpty() const = 0;
 
 		virtual void Reset() = 0;
 
-		virtual size_t get_max_usage() const= 0;
-		virtual size_t get_size() const= 0;
-	};
-
-
-
-	template<class T>
-	class AllocationTracker
-	{
-		std::vector<T> handles;
-		std::queue<size_t> freeIds;
-
-	public:
-		using Handle = size_t;
-		AllocationTracker()
-		{
-			handles.reserve(256);
-		}
-
-		T& place_handle(Handle& res)
-		{
-			res = handles.size();
-
-			if (freeIds.size())
-			{
-				res = freeIds.back();
-				freeIds.pop();
-			}
-			else
-				handles.emplace_back();
-
-			//	handles[res] = handle;
-			return handles[res];
-		}
-
-		const T& get_allocation(Handle id) const
-		{
-
-			assert(id >= 0 && id < handles.size());
-			return handles[id];
-		}
-
-		T& get_allocation(Handle id)
-		{
-
-			assert(id >= 0 && id < handles.size());
-			return handles[id];
-		}
-
-		void free(Handle id)
-		{
-			freeIds.push(id);
-		}
-	};
-
-
-
-	class TrackedMemoryInfoProvider :public MemoryInfoProvider
-	{
-		size_t id;
-		AllocationTracker< MemoryInfo>& tracker;
-	public:
-		TrackedMemoryInfoProvider(size_t id, AllocationTracker< MemoryInfo>& tracker) :id(id), tracker(tracker)
-		{
-
-		}
-
-		const MemoryInfo& get_info() const override final
-		{
-			return tracker.get_allocation(id);
-		}
+		virtual size_t get_max_usage() const = 0;
+		virtual size_t get_size() const = 0;
 	};
 
 
@@ -211,16 +127,13 @@ export
 
 		size_t merge_prev(size_t start);
 		size_t merge_next(size_t end);
-		AllocationTracker<MemoryInfo> tracker;
-
 
 	public:
 		using Handle = AllocatorHanle;
-		using MemoryHandle = AllocationTracker<MemoryInfo>::Handle;
 
 		CommonAllocator(size_t size = std::numeric_limits<size_t>::max());
 
-			CommonAllocator(size_t start_region, size_t end_region);
+		CommonAllocator(size_t start_region, size_t end_region);
 
 		virtual ~CommonAllocator() = default;
 		size_t get_max_usage() const override;
@@ -243,7 +156,7 @@ export
 				if (free_blocks.size() == 1)
 				{
 					auto& b = *free_blocks.begin();
-					return (b.begin == start_region) && (b.end == end_region-1);
+					return (b.begin == start_region) && (b.end == end_region - 1);
 
 				}
 
@@ -262,13 +175,12 @@ export
 		const size_t size;
 	public:
 		using Handle = AllocatorHanle;
-		using MemoryHandle = MemoryInfo;
 
-		LinearAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size),start_region(0), end_region(size)
+		LinearAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size), start_region(0), end_region(size)
 		{
 			offset = start_region;
 		}
-		LinearAllocator(size_t start_region, size_t end_region) :size(end_region-start_region),start_region(start_region), end_region(end_region)
+		LinearAllocator(size_t start_region, size_t end_region) :size(end_region - start_region), start_region(start_region), end_region(end_region)
 		{
 			offset = start_region;
 		}
@@ -291,20 +203,17 @@ export
 		}
 		std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
 		{
+			size_t my_offset = Math::roundUp(offset, align);
 
-			offset = Math::roundUp(offset, align);
 			//assert(offset % align == 0);
-			if(offset+size>this->end_region)
+			if (my_offset + size > this->end_region)
 			{
 				return std::nullopt;
 			}
-			MemoryInfo info;
-			info.aligned_offset = offset;
-			info.offset = offset;
-			info.size = size;
 
-			offset += size;
-			return Handle(std::make_shared<DirectMemoryInfoProvider>(info), this);
+
+			offset = my_offset + size;
+			return Handle(MemoryInfo(my_offset, size, 0), this);
 		}
 
 		void Reset() override
@@ -322,12 +231,10 @@ export
 	protected:
 		size_t offset;
 		const size_t size;
-		AllocationTracker<MemoryInfo> tracker;
 
-		std::vector<size_t> alloc_ids;
+		std::list<MemoryInfo> allocs;
 	public:
 		using Handle = AllocatorHanle;
-		using MemoryHandle = AllocationTracker<MemoryInfo>::Handle;
 
 		LinearFreeAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size)
 		{
@@ -362,21 +269,9 @@ export
 
 			offset = Math::AlignUp(offset, align);
 
-			size_t id;
-			MemoryInfo& info = tracker.place_handle(id);
-
-
-			info.aligned_offset = offset;
-			info.offset = offset;
-			info.size = size;
-
-			alloc_ids.resize(offset + size);
-			alloc_ids[offset] = id;
-
-			offset += size;
 
 			//alloc_ids.resize(max_usage);
-			return Handle(std::make_shared<TrackedMemoryInfoProvider>(id, tracker), this);
+			return Handle(MemoryInfo(offset, size,0), this);
 		}
 
 
@@ -390,14 +285,13 @@ export
 
 			if (offset > 1)
 			{
-				assert(&handle.get_info() == &tracker.get_allocation(alloc_ids[handle.get_offset()]));
-				MemoryInfo& last_mem = tracker.get_allocation(alloc_ids[offset - 1]);
+				MemoryInfo& last_mem = allocs.back();
 				const MemoryInfo& removing_mem = handle.get_info();
 
 				moveBlock(last_mem.offset, removing_mem.offset);
 
 				last_mem.offset = removing_mem.offset;
-				last_mem.aligned_offset = removing_mem.aligned_offset;
+				//last_mem.aligned_offset = removing_mem.aligned_offset;
 			}
 
 
@@ -543,12 +437,12 @@ export
 	};
 }
 
-		CommonAllocator::CommonAllocator(size_t start_region, size_t end_region) :size(end_region-start_region),start_region(start_region), end_region(end_region)
-		{
-			reset_id = 0;
+CommonAllocator::CommonAllocator(size_t start_region, size_t end_region) :size(end_region - start_region), start_region(start_region), end_region(end_region)
+{
+	reset_id = 0;
 	Reset();
-		}
-CommonAllocator::CommonAllocator(size_t size /*= std::numeric_limits<size_t>::max()*/) :size(size),start_region(0), end_region(size)
+}
+CommonAllocator::CommonAllocator(size_t size /*= std::numeric_limits<size_t>::max()*/) : size(size), start_region(0), end_region(size)
 {
 	reset_id = 0;
 	Reset();
@@ -565,30 +459,42 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 		//std::lock_guard<std::mutex> g(m);
 		if (size == 0)
 		{
-			size_t id;
-			MemoryInfo& res = tracker.place_handle(id);
-			res.aligned_offset = start_region;
-			res.offset = start_region;
-			res.size = start_region;
-			//	res.owner = this;
-			res.reset_id = reset_id;
-			return Handle(std::make_shared<TrackedMemoryInfoProvider>(id, tracker), nullptr);
+			//size_t id;
+			//MemoryInfo& res = tracker.place_handle(id);
+			//res.aligned_offset = start_region;
+			//res.offset = start_region;
+			//res.size = start_region;
+			////	res.owner = this;
+			//res.reset_id = reset_id;
+			return Handle(MemoryInfo(start_region, 0,0), this);
 		}
+
+
+	auto make_free_block = [this](block& new_block)
+	{
+		if (new_block.begin <= new_block.end) {
+			auto [new_free, inserted] = free_blocks.insert(new_block);
+			fences[new_block.begin] = &*new_free;
+			fences[new_block.end] = &*new_free;
+		}
+
+	};
+
 
 	for (auto it = free_blocks.begin(); it != free_blocks.end(); ++it)
 	{
 		auto& free_block = *it;
-		auto orig_block = free_block;
+		block orig_block = free_block;
 		auto aligned_offset = Math::roundUp(free_block.begin, align);
 
 		if (free_block.end > aligned_offset)
-			if ((free_block.end + 1 - aligned_offset) >= size)
+			if ( aligned_offset + size - 1 <= free_block.end)
 			{
 
 				block used_block;
 
-				used_block.begin = free_block.begin;
-				used_block.end = used_block.begin + size + (aligned_offset - free_block.begin) - 1;
+				used_block.begin = aligned_offset;
+				used_block.end = aligned_offset + size - 1;
 
 
 				auto free_begin = fences.find(free_block.begin);
@@ -600,55 +506,32 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 					assert(free_end != fences.end());
 					fences.erase(free_end);
 				}
-
-				block new_block = free_block;
 				free_blocks.erase(it);
 
 				check();
 
-
-				new_block.begin = used_block.end + 1;
-				if (new_block.begin <= new_block.end) {
-					auto [new_free, inserted] = free_blocks.insert(new_block);
-					fences[new_block.begin] = &*new_free;
-					fences[new_block.end] = &*new_free;
-				}
-
-
-				/*
-
-				free_block.begin = used_block.end + 1;
-
-				if (free_block.begin < free_block.end)
+				if (aligned_offset > used_block.begin)
 				{
-					fences[free_block.begin] = &free_block;
+					auto prev_free = orig_block;
+					prev_free.end = used_block.begin - 1;
+					make_free_block(prev_free);
 				}
-				else 	if (free_block.begin > free_block.end)
-				{
-					auto free_end = fences.find(free_block.end);
-					assert(free_end != fences.end());
-					fences.erase(free_end);
+
+				auto next_free = orig_block;
+
+				next_free.begin = used_block.end + 1;
+				make_free_block(next_free);
 
 
-				}
-				*/
 				check();
 
-				size_t id;
-				MemoryInfo& res = tracker.place_handle(id);
-
-				res.aligned_offset = aligned_offset;
-				res.offset = used_block.begin;
-				res.size = size;
-				//	res.owner = this;
-				res.reset_id = reset_id;
 				assert(used_block.end < end_region);
 
 				max_usage = std::max(max_usage, used_block.end + 1);
 
-			/*	if (max_usage < this->size / 2)
-					assert(!free_blocks.empty());*/
-				return Handle(std::make_shared<TrackedMemoryInfoProvider>(id, tracker), this);
+				/*	if (max_usage < this->size / 2)
+						assert(!free_blocks.empty());*/
+				return Handle(MemoryInfo(aligned_offset, size, reset_id), this);
 			}
 
 	}
@@ -726,7 +609,7 @@ void CommonAllocator::Free(Handle& handle)
 	block my_block;
 
 	my_block.begin = handle.get_info().offset;
-	my_block.end = handle.get_info().aligned_offset + handle.get_size() - 1;
+	my_block.end = handle.get_info().offset + handle.get_size() - 1;
 
 	my_block.begin = merge_prev(my_block.begin);
 	my_block.end = merge_next(my_block.end);
@@ -750,6 +633,7 @@ void CommonAllocator::Free(Handle& handle)
 }
 void  CommonAllocator::check()
 {
+#ifdef DEV
 	//	return;
 	for (auto& f : fences)
 	{
@@ -768,6 +652,8 @@ void  CommonAllocator::check()
 
 
 		assert(f.first == f.second->begin || f.first == f.second->end);
+
+#endif
 	}
 
 
@@ -795,27 +681,27 @@ void CommonAllocator::Reset()
 
 bool AllocatorHanle::operator!=(const AllocatorHanle& h) const
 {
-	return owner != h.owner || (provider->get_info().aligned_offset != h.provider->get_info().aligned_offset);
+	return owner != h.owner || info != h.info;
 }
 
 bool AllocatorHanle::operator==(const AllocatorHanle& h) const
 {
-	return owner == h.owner && (provider->get_info().aligned_offset == h.provider->get_info().aligned_offset);
+	return owner == h.owner && info == h.info;
 }
 
-AllocatorHanle::AllocatorHanle(std::shared_ptr<MemoryInfoProvider> provider, Allocator* owner) :provider(provider), owner(owner)
+AllocatorHanle::AllocatorHanle(const MemoryInfo& info, Allocator* owner) :info(info), owner(owner)
 {
-	assert(provider);
+	//	assert(provider);
 }
 
 size_t AllocatorHanle::get_offset() const
 {
-	return provider->get_info().aligned_offset;
+	return info.offset;
 }
 
 size_t AllocatorHanle::get_size() const
 {
-	return provider->get_info().size;
+	return info.size;
 }
 
 AllocatorHanle::operator bool() const
@@ -825,7 +711,7 @@ AllocatorHanle::operator bool() const
 
 size_t AllocatorHanle::get_reset_id() const
 {
-	return provider->get_info().reset_id;
+	return  info.reset_id;
 }
 
 Allocator* AllocatorHanle::get_owner() const
