@@ -27,7 +27,6 @@ namespace HAL
 
 			for (auto type : magic_enum::enum_values<DescriptorHeapType>())
 			{
-				if (type != DescriptorHeapType::__GENERATE_OPS__) // TODO: ooooooooooooooooooooops
 					descriptor_sizes[type] = native_device->GetDescriptorHandleIncrementSize(::to_native(type));
 			}
 

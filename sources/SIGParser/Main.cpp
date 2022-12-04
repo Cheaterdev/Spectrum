@@ -741,8 +741,7 @@ export
 			}
 
 			stream << "TOTAL" << std::endl;
-			stream << ", GENERATE_OPS" << std::endl;
-			stream.pop();
+		stream.pop();
 		}
 
 		stream << "};" << std::endl;
@@ -762,7 +761,6 @@ export
 				stream << l.name << "," << std::endl;
 			}
 			stream << "TOTAL" << std::endl;
-			stream << ", GENERATE_OPS" << std::endl;
 			stream.pop();
 		}
 
@@ -780,7 +778,6 @@ export
 				stream << t.name << " = \""<< t.name<<"\"_crc32 ," << std::endl;
 			}
 		
-			stream << "GENERATE_OPS" << std::endl;
 			stream.pop();
 		}
 

@@ -138,8 +138,6 @@ namespace GUI
         :int
     {
         NONE = 0, WIDTH = 1, HEIGHT = 2, ALL = 3
-
-    	,GENERATE_OPS
     };
 
 	

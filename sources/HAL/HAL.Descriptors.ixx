@@ -96,9 +96,7 @@ export namespace HAL
 			{
 				None,
 				ReadOnlyDepth,
-				ReadOnlyStencil,
-
-				GENERATE_OPS
+				ReadOnlyStencil
 			};
 
 			Resource* Resource;

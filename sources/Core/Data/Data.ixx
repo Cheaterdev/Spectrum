@@ -287,7 +287,7 @@ export
 	};
 
 
-	template<class E, class T, std::size_t N = std::size_t(E::__GENERATE_OPS__)>
+	template<class E, class T, std::size_t N = magic_enum::enum_count<E>()>
 	class enum_array : public std::array<T, N> {
 	public:
 		T& operator[] (E e) {

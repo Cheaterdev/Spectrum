@@ -84,10 +84,7 @@ export
 	using binary = std::vector<std::byte>;
 
 
-	template<class T> concept EnumType =
-		requires () {
-		T::__GENERATE_OPS__;
-	};
+	template<class T> concept EnumType = std::is_enum_v<T>;
 
 	template<EnumType Enum>
 	Enum operator ~(const Enum l)

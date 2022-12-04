@@ -11,9 +11,6 @@
 	bool operator==(const x& r) const = default;\
 	auto operator<=>(const x& r) const = default;
 
-#define GENERATE_OPS __GENERATE_OPS__
-
-
 
 #ifdef DEV
 #define THREAD_CHECKER mutable std::atomic<std::thread::id> __checker_;

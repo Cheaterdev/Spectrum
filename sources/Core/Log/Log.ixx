@@ -18,7 +18,7 @@ export {
 
 	class LogBlock;
 
-	enum class log_level_internal : int { level_none = 0, level_error = 1, level_warning = 2, level_info = 3, level_debug = 4, level_all = 65536, GENERATE_OPS };
+	enum class log_level_internal : int { level_none = 0, level_error = 1, level_warning = 2, level_info = 3, level_debug = 4, level_all = 65536 };
 
 	template <log_level_internal L>
 	struct LogLevel

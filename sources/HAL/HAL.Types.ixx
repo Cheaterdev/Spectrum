@@ -82,9 +82,7 @@ export namespace HAL
 	{
 		DIRECT,
 		COMPUTE,
-		COPY,
-
-		GENERATE_OPS
+		COPY
 	};
 
 	enum class HeapFlags :uint
@@ -92,9 +90,7 @@ export namespace HAL
 		NONE,
 		BUFFERS_ONLY,
 		TEXTURES_ONLY,
-		RTDS_ONLY,
-
-		GENERATE_OPS
+		RTDS_ONLY
 
 	};
 	enum class ResourceState : uint
@@ -118,7 +114,6 @@ export namespace HAL
 		PRESENT = 0,
 		RAYTRACING_STRUCTURE = 0x400000,
 		UNKNOWN = std::numeric_limits<uint>::max() - 1
-		, GENERATE_OPS
 	};
 
 
@@ -149,17 +144,13 @@ export namespace HAL
 		DSV,
 		SRV,
 		UAV,
-		SMP,
-
-		GENERATE_OPS
+		SMP
 	};
 
 	enum class DescriptorHeapFlags : char
 	{
 		None,
-		ShaderVisible,
-
-		GENERATE_OPS
+		ShaderVisible
 	};
 
 
@@ -168,9 +159,7 @@ export namespace HAL
 		CBV_SRV_UAV,
 		SAMPLER,
 		RTV,
-		DSV,
-
-		GENERATE_OPS
+		DSV
 	};
 
 
@@ -180,17 +169,13 @@ export namespace HAL
 	{
 		None,
 		Back,
-		Front,
-
-		GENERATE_OPS
+		Front
 	};
 
 	enum class FillMode : char
 	{
 		Wireframe,
-		Solid,
-
-		GENERATE_OPS
+		Solid
 	};
 
 	enum class Blend : char
@@ -369,9 +354,7 @@ export namespace HAL
 		UnorderedAccess = 1 << 1,
 		RenderTarget = 1 << 2,
 		DepthStencil = 1 << 3,
-		CrossAdapter = 1 << 4,
-
-		GENERATE_OPS
+		CrossAdapter = 1 << 4
 	};
 
 	struct TextureDesc
@@ -618,8 +601,7 @@ PROCEDURAL
 		PREFER_FAST_TRACE = 0x4,
 		PREFER_FAST_BUILD = 0x8,
 		MINIMIZE_MEMORY = 0x10,
-		PERFORM_UPDATE = 0x20,
-		GENERATE_OPS
+		PERFORM_UPDATE = 0x20
 	};
 
 	struct RaytracingBuildDescBottomInputs

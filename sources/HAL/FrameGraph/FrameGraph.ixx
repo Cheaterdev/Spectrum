@@ -19,8 +19,6 @@ using namespace HAL;
 		Buffer,
 		Texture,
 		Heap
-
-		, GENERATE_OPS
 	};
 
 	enum class ResourceFlags :int {
@@ -42,8 +40,6 @@ using namespace HAL;
 		Required = (1 << 10),
 
 		Changed = (1 << 13)
-
-		, GENERATE_OPS
 	};
 
 	 const constexpr ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
@@ -647,9 +643,7 @@ using namespace HAL;
 		Required = 1,
 
 		Graphics = 0,
-		Compute = 2,
-
-		GENERATE_OPS
+		Compute = 2
 	};
 
 

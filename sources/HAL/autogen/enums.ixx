@@ -11,7 +11,6 @@ export
 		FrameLayout,
 		DefaultLayout,
 		TOTAL
-		, GENERATE_OPS
 	};
 	enum class PSO: int
 	{
@@ -69,7 +68,6 @@ export
 		VoxelDebug,
 		DenoiserDownsample,
 		TOTAL
-		, GENERATE_OPS
 	};
 	enum class SlotID: unsigned int
 	{
@@ -162,7 +160,6 @@ export
 		DenoiserHistoryFix = "DenoiserHistoryFix"_crc32 ,
 		TilingPostprocess = "TilingPostprocess"_crc32 ,
 		FrameClassification = "FrameClassification"_crc32 ,
-		FrameClassificationInitDispatch = "FrameClassificationInitDispatch"_crc32 ,
-		GENERATE_OPS
+		FrameClassificationInitDispatch = "FrameClassificationInitDispatch"_crc32 
 	};
 }
