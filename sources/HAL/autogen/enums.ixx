@@ -7,14 +7,11 @@ export
 
 	enum class Layouts: int
 	{
-		UNKNOWN,
 		FrameLayout,
-		DefaultLayout,
-		TOTAL
+		DefaultLayout
 	};
 	enum class PSO: int
 	{
-		UNKNOWN,
 		BRDF,
 		FSR,
 		RCAS,
@@ -66,8 +63,7 @@ export
 		VoxelIndirectHi,
 		VoxelIndirectUpsample,
 		VoxelDebug,
-		DenoiserDownsample,
-		TOTAL
+		DenoiserDownsample
 	};
 	enum class SlotID: unsigned int
 	{
@@ -160,6 +156,6 @@ export
 		DenoiserHistoryFix = "DenoiserHistoryFix"_crc32 ,
 		TilingPostprocess = "TilingPostprocess"_crc32 ,
 		FrameClassification = "FrameClassification"_crc32 ,
-		FrameClassificationInitDispatch = "FrameClassificationInitDispatch"_crc32 
+		FrameClassificationInitDispatch = "FrameClassificationInitDispatch"_crc32
 	};
 }
