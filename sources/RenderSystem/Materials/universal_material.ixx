@@ -198,52 +198,7 @@ export namespace materials
 		}
 
 	};
-
-	class universal_material_manager :public Singleton<universal_material_manager>, protected DataAllocator<HLSL::Texture2D<float4>, ::CommonAllocator>
-	{
-		std::vector<HLSL::Texture2D<float4>> textures_data;
-	public:
-		TypedHandle<HLSL::Texture2D<float4>> allocate(size_t size)
-		{
-			TypedHandle<HLSL::Texture2D<float4>> result = Allocate(size);
-			textures_data.resize(get_max_usage());
-			return result;
-		}
-		std::vector<HLSL::Texture2D<float4>>& get_textures()
-		{
-			return textures_data;
-		}
-		virtual	std::span<HLSL::Texture2D<float4>> aquire(size_t offset, size_t size) override {
-
-			return { textures_data.data() + offset, size };
-		}
-
-
-		virtual	void write(size_t offset, std::vector<HLSL::Texture2D<float4>>& v)  override {
-
-			for(int i=0;i<v.size();i++)
-			{
-					textures_data[offset+i] = v[i]; 
-			}
-		
-			//memcpy(textures_data.data() + offset, v.data(), sizeof(HAL::Handle) * v.size());
-		}
-
-		virtual void on_free(size_t from, size_t to) override {
-
-			for (auto i = from; i < to; i++)
-			{
-				textures_data[i] = HLSL::Texture2D<float4>();
-			}
-		}
-
-
-
-		universal_material_manager() : DataAllocator<HLSL::Texture2D<float4>, ::CommonAllocator>(4096)
-		{
-		}
-	};
-
+	
 	class command_data
 	{
 		UINT index;

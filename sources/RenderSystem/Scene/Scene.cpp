@@ -108,7 +108,7 @@ void Scene::update(HAL::FrameResources& frame)
 		PROFILE(L"SceneData");
 		Slots::SceneData sceneData;
 		sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
-		sceneData.GetMaterial_textures() = materials::universal_material_manager::get().get_textures();
+
 		sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
 		sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->structuredBuffer;
 		sceneData.GetMeshes() = scene->mesh_infos->buffer->structuredBuffer;

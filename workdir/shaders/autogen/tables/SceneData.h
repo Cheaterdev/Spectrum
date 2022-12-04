@@ -16,7 +16,6 @@ struct SceneData
 	uint meshlets; // StructuredBuffer<Meshlet>
 	uint meshletCullData; // StructuredBuffer<MeshletCullData>
 	uint indices; // StructuredBuffer<uint>
-	uint material_textures; // Texture2D<float4>
 	StructuredBuffer<node_data> GetNodes() { return ResourceDescriptorHeap[nodes]; }
 	StructuredBuffer<mesh_vertex_input> GetVertexes() { return ResourceDescriptorHeap[vertexes]; }
 	StructuredBuffer<MeshCommandData> GetMeshes() { return ResourceDescriptorHeap[meshes]; }
@@ -25,8 +24,4 @@ struct SceneData
 	StructuredBuffer<Meshlet> GetMeshlets() { return ResourceDescriptorHeap[meshlets]; }
 	StructuredBuffer<MeshletCullData> GetMeshletCullData() { return ResourceDescriptorHeap[meshletCullData]; }
 	StructuredBuffer<uint> GetIndices() { return ResourceDescriptorHeap[indices]; }
-	Texture2D<float4> GetMaterial_textures(int i) { 
-	StructuredBuffer<uint> indirection = ResourceDescriptorHeap[material_textures]; 
-	uint id = indirection.Load(i);
-	return ResourceDescriptorHeap[id]; }
 };

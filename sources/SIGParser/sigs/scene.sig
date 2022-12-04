@@ -16,7 +16,5 @@ struct SceneData
 	StructuredBuffer<MeshletCullData> meshletCullData;
 
 	StructuredBuffer<uint> indices;
-
-	Texture2D<float4> material_textures[];
 }
 

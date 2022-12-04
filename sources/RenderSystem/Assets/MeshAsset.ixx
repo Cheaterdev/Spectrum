@@ -364,17 +364,7 @@ export{
 
 		}
 	};
-
-	class universal_material_manager :public Singleton<universal_material_manager>, public HAL::virtual_gpu_buffer<std::byte>
-	{
-		static const size_t MAX_bytes_SIZE = 100_mb;
-	public:
-		universal_material_manager() :HAL::virtual_gpu_buffer<std::byte>(MAX_bytes_SIZE)
-		{
-
-		}
-	};
-
+	
 
 
 	class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public HAL::virtual_gpu_buffer<Table::MaterialCommandData>

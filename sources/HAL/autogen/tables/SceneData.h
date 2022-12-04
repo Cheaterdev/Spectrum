@@ -19,7 +19,6 @@ namespace Table
 		HLSL::StructuredBuffer<Meshlet> meshlets;
 		HLSL::StructuredBuffer<MeshletCullData> meshletCullData;
 		HLSL::StructuredBuffer<uint> indices;
-		std::vector<HLSL::Texture2D<float4>> material_textures;
 		HLSL::StructuredBuffer<node_data>& GetNodes() { return nodes; }
 		HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return vertexes; }
 		HLSL::StructuredBuffer<MeshCommandData>& GetMeshes() { return meshes; }
@@ -28,7 +27,6 @@ namespace Table
 		HLSL::StructuredBuffer<Meshlet>& GetMeshlets() { return meshlets; }
 		HLSL::StructuredBuffer<MeshletCullData>& GetMeshletCullData() { return meshletCullData; }
 		HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
-		std::vector<HLSL::Texture2D<float4>>& GetMaterial_textures() { return material_textures; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
@@ -40,7 +38,6 @@ namespace Table
 			compiler.compile(meshlets);
 			compiler.compile(meshletCullData);
 			compiler.compile(indices);
-			compiler.compile(material_textures);
 		}
 	};
 	#pragma pack(pop)

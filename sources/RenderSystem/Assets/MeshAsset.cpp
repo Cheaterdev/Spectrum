@@ -631,7 +631,6 @@ void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scen
 	universal_nodes_manager::get().prepare(command_list);
 	universal_vertex_manager::get().prepare(command_list);
 	universal_index_manager::get().prepare(command_list);
-	universal_material_manager::get().prepare(command_list);
 
 	universal_meshlet_manager::get().prepare(command_list);
 	universal_mesh_instance_manager::get().prepare(command_list);
