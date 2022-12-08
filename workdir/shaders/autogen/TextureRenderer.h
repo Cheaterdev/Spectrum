@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/TextureRenderer.h"
-ConstantBuffer<TextureRenderer> pass_TextureRenderer: register( b2, space4);
-const TextureRenderer CreateTextureRenderer()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_TextureRenderer: register( b2, space4);
+ ConstantBuffer<TextureRenderer> CreateTextureRenderer()
 {
-	return pass_TextureRenderer;
+	return ResourceDescriptorHeap[pass_TextureRenderer.offset];
 }
 #ifndef NO_GLOBAL
 static const TextureRenderer textureRenderer_global = CreateTextureRenderer();

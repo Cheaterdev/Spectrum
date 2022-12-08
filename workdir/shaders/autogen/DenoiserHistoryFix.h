@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/DenoiserHistoryFix.h"
-ConstantBuffer<DenoiserHistoryFix> pass_DenoiserHistoryFix: register( b2, space6);
-const DenoiserHistoryFix CreateDenoiserHistoryFix()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_DenoiserHistoryFix: register( b2, space6);
+ ConstantBuffer<DenoiserHistoryFix> CreateDenoiserHistoryFix()
 {
-	return pass_DenoiserHistoryFix;
+	return ResourceDescriptorHeap[pass_DenoiserHistoryFix.offset];
 }
 #ifndef NO_GLOBAL
 static const DenoiserHistoryFix denoiserHistoryFix_global = CreateDenoiserHistoryFix();

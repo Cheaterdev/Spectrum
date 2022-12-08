@@ -177,7 +177,7 @@ export {
 		using SlotTable = _SlotTable;
 
 		HAL::ResourceAddress offsets_cb;
-		UINT offset_cb;
+		HLSL::ConstBuffer<Table> const_buffer;
 
 		const CompiledData<SlotTable, ID, Table, Slot>& set(HAL::SignatureDataSetter& graphics) const
 		{
@@ -190,19 +190,20 @@ export {
 			for (auto resource_info : resources)
 				graphics.get_base().transition(resource_info);
 
-	for (auto d : descriptors)
+			for (auto d : descriptors)
 				graphics.get_base().track_object(*d);
 
-			graphics.set_cb(Slot::ID, offsets_cb);
+			graphics.set_cb(Slot::ID, const_buffer);
 		}
-		operator HAL::ResourceAddress() const
-		{
-			return offsets_cb;
-		}
+		//operator HAL::ResourceAddress() const
+		//{
+		//	return offsets_cb;
+		//}
 
-		HAL::ResourceAddress compiled()
+		HLSL::ConstBuffer<Table> compiled()
 		{
-			return offsets_cb;
+			assert(const_buffer.is_valid());
+			return const_buffer;
 		}
 	};
 
@@ -223,7 +224,7 @@ export {
 			Compiler<Context> compiler;
 			compiler.context = &context;
 			Table::compile(compiler);
-
+			
 
 			Compiled compiled;
 
@@ -232,9 +233,24 @@ export {
 			auto ptr = reinterpret_cast<const std::byte*>(str.data());
 			std::vector<std::byte> data;
 			data.assign(ptr, ptr + str.size());
-			compiled.offsets_cb = context.place_raw(data);
+
+			auto info = context.place_data(Math::roundUp(data.size(),256),256);
+			context.write(info, data);
+	
+			compiled.offsets_cb =  info;
 			compiled.resources = compiler.resources;
-compiled.descriptors = compiler.descriptors;
+			compiled.descriptors = compiler.descriptors;
+
+
+				auto hlsl = context.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
+
+				compiled.const_buffer = HLSL::ConstBuffer<Table>(hlsl[0]);
+			compiled.const_buffer.create(compiled.offsets_cb.resource, info.resource_offset,info.size);
+
+
+				if(compiled.const_buffer.get_storage()->can_free())
+						compiled.descriptors.insert(compiled.const_buffer.get_storage());
+
 
 			return compiled;
 		}
@@ -248,8 +264,10 @@ compiled.descriptors = compiler.descriptors;
 		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
 		{
 			D3D12_INDIRECT_ARGUMENT_DESC desc;
-			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT_BUFFER_VIEW;
-			desc.ConstantBufferView.RootParameterIndex = Slot::ID;
+			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_CONSTANT;
+			desc.Constant.RootParameterIndex = Slot::ID;
+			desc.Constant.DestOffsetIn32BitValues = 0;
+			desc.Constant.Num32BitValuesToSet = 1;
 
 			return desc;
 		}

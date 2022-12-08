@@ -28,6 +28,11 @@ struct node_data
 [Bind = DefaultLayout::Instance1]
 struct MeshInfo
 {
+	#StructuredBuffer<node_data> nodes;
+	#StructuredBuffer<mesh_vertex_input> vertexes;
+	#StructuredBuffer<uint> indices;
+	#StructuredBuffer<Meshlet> meshlets;
+
     uint node_offset;
     uint vertex_offset;
 	uint meshlet_offset;
@@ -87,8 +92,8 @@ struct MeshInstance
 
 struct CommandData
 {
-	GPUAddress mesh_cb;
-	GPUAddress material_cb;
+	uint mesh_cb;
+	uint material_cb;
 	DispatchMeshArguments draw_commands;
 }
 
@@ -96,13 +101,13 @@ struct MeshCommandData
 {
 	uint material_id;
 	uint node_offset;
-	GPUAddress mesh_cb;
+	uint mesh_cb;
 	DispatchMeshArguments draw_commands;
 }
 
 struct MaterialCommandData
 {
-	GPUAddress material_cb;
+	uint material_cb;
 	uint pipeline_id;
 }
 

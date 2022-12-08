@@ -79,9 +79,12 @@ export namespace HAL
 	{
 		ShaderVisibility visibility;
 		uint count;
-		uint buffer_offset;
-		DescriptorConstants(uint _buffer_offset, uint _count, ShaderVisibility _visibility = ShaderVisibility::ALL
-		) : buffer_offset(_buffer_offset), visibility(_visibility), count(_count)
+		uint offset;
+			uint space;
+
+		DescriptorConstants(uint offset, uint _count, ShaderVisibility _visibility = ShaderVisibility::ALL,
+			uint space = 0
+		) : offset(offset), visibility(_visibility), count(_count),space(space)
 		{
 		}
 

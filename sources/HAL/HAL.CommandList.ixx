@@ -242,8 +242,11 @@ export{
 				{
 					target_state = ResourceState::DEPTH_WRITE;
 
-				}
-				else assert(false);
+				}else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info->view))
+				{
+					target_state = ResourceState::VERTEX_AND_CONSTANT_BUFFER;
+
+				}else assert(false);
 
 				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
 					{
@@ -578,7 +581,7 @@ export{
 			}
 
 			virtual void set(UINT, const Handle&) = 0;
-			virtual void set_const_buffer(UINT i, ResourceAddress address) = 0;
+			virtual void set_const_buffer(UINT i, UINT offset, UINT v) = 0;
 
 
 			void reset_tables()
@@ -645,28 +648,11 @@ export{
 			{
 				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
 			}
-			template<HandleType type>
-			void set_table(UINT index, const Handle& table)
+
+			void set_cb(UINT index, const Handle& cb)
 			{
-				assert(table.is_valid());
-
-				auto& row = tables[index];
-
-				row.type = type;
-				row.table = table;
-				row.dirty = true;
-				set(index, table);
-			}
-
-
-			void set_cb(UINT index, const HAL::ResourceAddress& address)
-			{
-				if (address.resource)
-				{
-					get_base().track_object(*address.resource);
-					get_base().transition(address.resource, ResourceState::VERTEX_AND_CONSTANT_BUFFER);
-				}
-				set_const_buffer(index, address);
+				get_base().transition(cb.get_resource_info());	
+				set_const_buffer(index, 0, cb.get_offset());
 			}
 
 			template<class Compiled>
@@ -702,7 +688,7 @@ export{
 			void end();
 			void on_execute();
 
-			void set_const_buffer(UINT, ResourceAddress address)override;
+			void set_const_buffer(UINT i, UINT offset, UINT v)override;
 			void set(UINT, const Handle&)override;
 			HAL::Views::IndexBuffer index;
 		public:
@@ -821,7 +807,7 @@ export{
 
 
 
-			virtual void set_const_buffer(UINT, ResourceAddress address) override;
+			virtual void set_const_buffer(UINT i, UINT offset, UINT v) override;
 
 
 		public:

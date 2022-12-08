@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/PickerBuffer.h"
-ConstantBuffer<PickerBuffer> pass_PickerBuffer: register( b2, space4);
-const PickerBuffer CreatePickerBuffer()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_PickerBuffer: register( b2, space4);
+ ConstantBuffer<PickerBuffer> CreatePickerBuffer()
 {
-	return pass_PickerBuffer;
+	return ResourceDescriptorHeap[pass_PickerBuffer.offset];
 }
 #ifndef NO_GLOBAL
 static const PickerBuffer pickerBuffer_global = CreatePickerBuffer();

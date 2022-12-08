@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelLighting.h"
-ConstantBuffer<VoxelLighting> pass_VoxelLighting: register( b2, space5);
-const VoxelLighting CreateVoxelLighting()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_VoxelLighting: register( b2, space5);
+ ConstantBuffer<VoxelLighting> CreateVoxelLighting()
 {
-	return pass_VoxelLighting;
+	return ResourceDescriptorHeap[pass_VoxelLighting.offset];
 }
 #ifndef NO_GLOBAL
 static const VoxelLighting voxelLighting_global = CreateVoxelLighting();

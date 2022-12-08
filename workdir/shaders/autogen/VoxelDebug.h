@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelDebug.h"
-ConstantBuffer<VoxelDebug> pass_VoxelDebug: register( b2, space5);
-const VoxelDebug CreateVoxelDebug()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_VoxelDebug: register( b2, space5);
+ ConstantBuffer<VoxelDebug> CreateVoxelDebug()
 {
-	return pass_VoxelDebug;
+	return ResourceDescriptorHeap[pass_VoxelDebug.offset];
 }
 #ifndef NO_GLOBAL
 static const VoxelDebug voxelDebug_global = CreateVoxelDebug();

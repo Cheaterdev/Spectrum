@@ -105,13 +105,13 @@ void materials::universal_material::update()
 		material_info.GetTextures() = texture_srvs;// textures_handle ? (UINT)textures_handle.get_offset() : 0;
 		material_info.GetData() = pixel_data;
 		compiled_material_info = material_info.compile(HAL::Device::get().get_static_gpu_data());
-		local_addr = compiled_material_info.compiled();
+		local_addr = compiled_material_info.compiled().get_offset();
 
 		//local_addr_ids = to_native(compiled_material_info.offsets_cb);
 		{
 			auto elem = info_handle.map();// universal_material_info_part_manager::get().map_elements(info_handle.get_offset(), 1);
 			elem[0].pipeline_id = pipeline->get_id();
-			elem[0].material_cb = to_native(compiled_material_info.compiled());
+			elem[0].material_cb = compiled_material_info.compiled().get_offset();
 
 			info_handle.write(0, elem);
 
@@ -176,7 +176,7 @@ void materials::universal_material::compile()
 	material_info.GetData() = pixel_data;
 	compiled_material_info = material_info.compile(HAL::Device::get().get_static_gpu_data());
 
-	local_addr = compiled_material_info.compiled();
+	local_addr = compiled_material_info.compiled().get_offset();
 	//local_addr_ids = to_native(compiled_material_info.offsets_cb);
 
 	if (!info_handle)
@@ -186,7 +186,7 @@ void materials::universal_material::compile()
 
 	auto elem = info_handle.map();
 	elem[0].pipeline_id = pipeline->get_id();
-	elem[0].material_cb = to_native(compiled_material_info.compiled());
+	elem[0].material_cb = compiled_material_info.compiled().get_offset();
 	info_handle.write(0, elem);
 
 	need_update_compiled = false;

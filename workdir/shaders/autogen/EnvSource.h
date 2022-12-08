@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/EnvSource.h"
-ConstantBuffer<EnvSource> pass_EnvSource: register( b2, space6);
-const EnvSource CreateEnvSource()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_EnvSource: register( b2, space6);
+ ConstantBuffer<EnvSource> CreateEnvSource()
 {
-	return pass_EnvSource;
+	return ResourceDescriptorHeap[pass_EnvSource.offset];
 }
 #ifndef NO_GLOBAL
 static const EnvSource envSource_global = CreateEnvSource();

@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/SMAA_Blend.h"
-ConstantBuffer<SMAA_Blend> pass_SMAA_Blend: register( b2, space5);
-const SMAA_Blend CreateSMAA_Blend()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_SMAA_Blend: register( b2, space5);
+ ConstantBuffer<SMAA_Blend> CreateSMAA_Blend()
 {
-	return pass_SMAA_Blend;
+	return ResourceDescriptorHeap[pass_SMAA_Blend.offset];
 }
 #ifndef NO_GLOBAL
 static const SMAA_Blend sMAA_Blend_global = CreateSMAA_Blend();

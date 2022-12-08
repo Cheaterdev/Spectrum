@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GBuffer.h"
-ConstantBuffer<GBuffer> pass_GBuffer: register( b2, space6);
-const GBuffer CreateGBuffer()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_GBuffer: register( b2, space6);
+ ConstantBuffer<GBuffer> CreateGBuffer()
 {
-	return pass_GBuffer;
+	return ResourceDescriptorHeap[pass_GBuffer.offset];
 }
 #ifndef NO_GLOBAL
 static const GBuffer gBuffer_global = CreateGBuffer();

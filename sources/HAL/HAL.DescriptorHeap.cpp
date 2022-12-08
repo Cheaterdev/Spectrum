@@ -198,7 +198,7 @@ auto& desc = view.Resource->get_desc().as_texture();
 
 	void for_each(const ResourceInfo* info, const HAL::Views::ShaderResource& view, std::function<void(HAL::Resource*, UINT)> f)
 	{
-		std::visit(overloaded{
+		std::visit(overloaded{	
 		[&](const HAL::Views::ShaderResource::Buffer& Buffer) {
 			f(view.Resource, ALL_SUBRESOURCES);
 		},
@@ -309,6 +309,8 @@ f(view.Resource, ALL_SUBRESOURCES);
 		},
 			[&](const HAL::Views::DepthStencil& DepthStencil) {
 			for_each(this,DepthStencil, f);
+		},[&](const HAL::Views::ConstantBuffer& ConstantBuffer) {
+			f(ConstantBuffer.Resource, ALL_SUBRESOURCES);
 		},
 		[&](auto other) {
 			assert(false);

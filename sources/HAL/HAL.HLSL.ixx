@@ -40,6 +40,21 @@ export
 		};
 
 		template<class T>
+		struct ConstBuffer : public Handle
+		{
+			using ptr = int;
+			static const HandleType TYPE = HandleType::CBV;
+
+			ConstBuffer() = default;
+			explicit  ConstBuffer(const Handle& h) : Handle(h)
+			{
+
+			}
+
+			void create(HAL::Resource* resource,uint offset, uint size);
+		};
+
+		template<class T>
 		struct RWStructuredBuffer : public Handle
 		{
 			static const HandleType TYPE = HandleType::UAV;
@@ -340,6 +355,16 @@ namespace HLSL
 		if (count == 0) count = static_cast<uint>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
 		HAL::Views::ShaderResource desc = { resource, Format::UNKNOWN, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false} };
+		Handle::operator=(desc);
+	}
+
+	
+	template<class T>
+	void ConstBuffer<T>::create(HAL::Resource* resource, uint offset, uint size)
+	{
+		auto buffer_desc = resource->get_desc().as_buffer();
+	
+		HAL::Views::ConstantBuffer desc = { resource, offset, size};
 		Handle::operator=(desc);
 	}
 

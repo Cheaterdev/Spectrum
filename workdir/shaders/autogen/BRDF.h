@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/BRDF.h"
-ConstantBuffer<BRDF> pass_BRDF: register( b2, space4);
-const BRDF CreateBRDF()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_BRDF: register( b2, space4);
+ ConstantBuffer<BRDF> CreateBRDF()
 {
-	return pass_BRDF;
+	return ResourceDescriptorHeap[pass_BRDF.offset];
 }
 #ifndef NO_GLOBAL
 static const BRDF bRDF_global = CreateBRDF();

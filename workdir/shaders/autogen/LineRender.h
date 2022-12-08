@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/LineRender.h"
-ConstantBuffer<LineRender> pass_LineRender: register( b2, space4);
-const LineRender CreateLineRender()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_LineRender: register( b2, space4);
+ ConstantBuffer<LineRender> CreateLineRender()
 {
-	return pass_LineRender;
+	return ResourceDescriptorHeap[pass_LineRender.offset];
 }
 #ifndef NO_GLOBAL
 static const LineRender lineRender_global = CreateLineRender();

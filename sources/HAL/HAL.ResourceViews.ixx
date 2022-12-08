@@ -597,6 +597,7 @@ export
 
 			Desc desc;
 			HLSL::RWBuffer<std::byte> rwRAW;
+		//	HLSL::ConstBuffer<T> constBuffer;
 			HLSL::StructuredBuffer<T> structuredBuffer;
 			HLSL::RWStructuredBuffer<T> rwStructuredBuffer;
 			HLSL::AppendStructuredBuffer<T> appendStructuredBuffer;
@@ -623,15 +624,18 @@ export
 					counter_view = resource->create_view<CounterView>(frame, 0);
 				}
 
-				auto hlsl = frame.alloc_descriptor(4, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
+				auto hlsl = frame.alloc_descriptor(5, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 				structuredBuffer = HLSL::StructuredBuffer<T>(hlsl[0]);
 				rwStructuredBuffer = HLSL::RWStructuredBuffer<T>(hlsl[1]);
 				appendStructuredBuffer = HLSL::AppendStructuredBuffer<T>(hlsl[2]);
-
+				
 
 				rwRAW = HLSL::RWBuffer<std::byte>(hlsl[3]);
 
+		//		constBuffer = HLSL::ConstBuffer<T>(hlsl[4]);
+			
+		//		constBuffer.create(resource, offset,size);
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
 					structuredBuffer.create(resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));

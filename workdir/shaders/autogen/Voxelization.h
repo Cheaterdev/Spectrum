@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Voxelization.h"
-ConstantBuffer<Voxelization> pass_Voxelization: register( b2, space6);
-const Voxelization CreateVoxelization()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_Voxelization: register( b2, space6);
+ ConstantBuffer<Voxelization> CreateVoxelization()
 {
-	return pass_Voxelization;
+	return ResourceDescriptorHeap[pass_Voxelization.offset];
 }
 #ifndef NO_GLOBAL
 static const Voxelization voxelization_global = CreateVoxelization();

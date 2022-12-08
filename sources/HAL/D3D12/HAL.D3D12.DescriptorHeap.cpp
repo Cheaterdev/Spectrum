@@ -400,7 +400,7 @@ namespace HAL
 		{
 			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
 		}
-
+		assert(view.SizeInBytes % 256 == 0);
 		D3D12_CONSTANT_BUFFER_VIEW_DESC desc;
 
 		desc.BufferLocation = (view.Resource)->get_address() + view.OffsetInBytes;

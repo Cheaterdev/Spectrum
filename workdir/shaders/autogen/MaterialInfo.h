@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/MaterialInfo.h"
-ConstantBuffer<MaterialInfo> pass_MaterialInfo: register( b2, space8);
-const MaterialInfo CreateMaterialInfo()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_MaterialInfo: register( b2, space8);
+ ConstantBuffer<MaterialInfo> CreateMaterialInfo()
 {
-	return pass_MaterialInfo;
+	return ResourceDescriptorHeap[pass_MaterialInfo.offset];
 }
 #ifndef NO_GLOBAL
 static const MaterialInfo materialInfo_global = CreateMaterialInfo();

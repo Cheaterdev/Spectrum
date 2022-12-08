@@ -152,6 +152,9 @@ export{
 		TypedHandle<Table::Meshlet> meshlet_handle;
 		TypedHandle<Table::MeshletCullData> meshlet_cull_handle;
 
+		HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
+		HAL::StructuredBufferView<UINT32> index_buffer_view;
+
 
 		std::vector<MeshInfo> meshes;
 		std::vector<MaterialAsset::ref> materials;
@@ -235,7 +238,7 @@ export{
 
 		size_t nodes_count;
 		size_t rendering_count;
-
+		HAL::StructuredBufferView<Table::node_data> nodes_buffer_view;
 		bool need_update_mats = false;
 	public:
 		MESH_TYPE type = MESH_TYPE::STATIC;

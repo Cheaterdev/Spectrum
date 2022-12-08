@@ -486,7 +486,19 @@ export namespace HAL
 		shader_macro() = default;
 		shader_macro(std::string name, std::string value = "1");
 
-		GEN_DEF_COMP(shader_macro)
+		bool operator<(const shader_macro& r)const
+		{
+			if(name==r.name)
+				return value<r.value;
+			return name<r.name;
+
+		}
+		bool operator==(const shader_macro& r)const
+		{
+
+			return name==r.name && value==r.value;
+
+		}
 	private:
 		SERIALIZE()
 		{

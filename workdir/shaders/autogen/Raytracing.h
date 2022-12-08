@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Raytracing.h"
-ConstantBuffer<Raytracing> pass_Raytracing: register( b2, space7);
-const Raytracing CreateRaytracing()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_Raytracing: register( b2, space7);
+ ConstantBuffer<Raytracing> CreateRaytracing()
 {
-	return pass_Raytracing;
+	return ResourceDescriptorHeap[pass_Raytracing.offset];
 }
 #ifndef NO_GLOBAL
 static const Raytracing raytracing_global = CreateRaytracing();

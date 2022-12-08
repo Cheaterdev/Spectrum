@@ -24,7 +24,7 @@ namespace HAL
 
 			std::visit(overloaded{
 				[&](const DescriptorConstants& contants) {
-					param.InitAsConstants(contants.count, contants.buffer_offset, 0, static_cast<D3D12_SHADER_VISIBILITY>(contants.visibility));
+					param.InitAsConstants(contants.count, contants.offset, contants.space, static_cast<D3D12_SHADER_VISIBILITY>(contants.visibility));
 				},
 				[&](const DescriptorTable& table) {
 					ranges.emplace_back();

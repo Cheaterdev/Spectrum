@@ -208,6 +208,15 @@ export namespace HAL
 			}
 
 
+			void  graphics_set_constant(UINT i, UINT offset, UINT value)
+			{
+				compiler.SetGraphicsRoot32BitConstant(i, value, offset);
+			}
+
+			void  compute_set_constant(UINT i, UINT offset, UINT value)
+			{
+				compiler.SetComputeRoot32BitConstant(i, value, offset);
+			}
 
 			void dispatch_mesh(ivec3 v)
 			{

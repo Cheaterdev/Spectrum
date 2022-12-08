@@ -374,6 +374,19 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					);
 
 				}
+
+				//list.get_copy().read_buffer(commands_buffer[current]->buffer.get(),0, sizeof(Table::CommandData), [](const char* data, UINT64 size){
+
+				//	std::vector<Table::CommandData> v; v.resize(size/sizeof(Table::CommandData));
+				//memcpy(v.data(),data,size);
+
+				//auto &heap = *Device::get().get_descriptor_heap_factory().get_cbv_srv_uav_heap();
+				//	
+				//auto mesh = heap.get_resource_info(v[0].mesh_cb);
+				//auto material =  heap.get_resource_info(v[0].material_cb);
+
+
+				//	});
 				current++;
 
 			}

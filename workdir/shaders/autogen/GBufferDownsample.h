@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GBufferDownsample.h"
-ConstantBuffer<GBufferDownsample> pass_GBufferDownsample: register( b2, space6);
-const GBufferDownsample CreateGBufferDownsample()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_GBufferDownsample: register( b2, space6);
+ ConstantBuffer<GBufferDownsample> CreateGBufferDownsample()
 {
-	return pass_GBufferDownsample;
+	return ResourceDescriptorHeap[pass_GBufferDownsample.offset];
 }
 #ifndef NO_GLOBAL
 static const GBufferDownsample gBufferDownsample_global = CreateGBufferDownsample();

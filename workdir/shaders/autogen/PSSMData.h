@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/PSSMData.h"
-ConstantBuffer<PSSMData> pass_PSSMData: register( b2, space5);
-const PSSMData CreatePSSMData()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_PSSMData: register( b2, space5);
+ ConstantBuffer<PSSMData> CreatePSSMData()
 {
-	return pass_PSSMData;
+	return ResourceDescriptorHeap[pass_PSSMData.offset];
 }
 #ifndef NO_GLOBAL
 static const PSSMData pSSMData_global = CreatePSSMData();

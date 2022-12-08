@@ -127,20 +127,26 @@ void generate_pass_table(Table& table)
 
 
 	std::stringstream struct_str;
+	struct_str << "#ifndef CB_DEFINED" << std::endl;
+	struct_str << "#define CB_DEFINED" << std::endl;
 
-	struct_str << "ConstantBuffer<" << table.name << "> pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
+	struct_str << "struct CB { uint offset; };" << std::endl;
+	struct_str << "#endif" << std::endl;
+
+	//struct_str << "ConstantBuffer<" << table.name << "> pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
+	struct_str << "ConstantBuffer< CB > pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
 
 	stream << struct_str.str();
 
 	//creation func
 
 	{
-		stream << "const " << table.name << " Create" << table.name << "()" << std::endl;
+		stream << " ConstantBuffer<" << table.name << "> Create" << table.name << "()" << std::endl;
 		stream << "{" << std::endl;
 		{
 			stream.push();
 
-			stream << "return pass_" << table.name << ";" << std::endl;
+			stream << "return ResourceDescriptorHeap[pass_" << table.name << ".offset];" << std::endl;
 			stream.pop();
 		}
 		stream << "}" << std::endl;

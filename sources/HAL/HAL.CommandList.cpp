@@ -305,9 +305,9 @@ namespace HAL
 	}
 
 
-	void  GraphicsContext::set_const_buffer(UINT i, ResourceAddress address)
+	void  GraphicsContext::set_const_buffer(UINT i, UINT offset, UINT v)
 	{
-		list->graphics_set_const_buffer(i, address);
+		list->graphics_set_constant(i, offset, v);
 	}
 
 	void GraphicsContext::set_rtv(const Handle& table, Handle h)
@@ -1194,9 +1194,9 @@ auto block = e;
 
 		base.create_transition_point(false);
 	}
-	void ComputeContext::set_const_buffer(UINT i, ResourceAddress address)
+	void ComputeContext::set_const_buffer(UINT i, UINT offset, UINT v)
 	{
-		list->compute_set_const_buffer(i, address);
+		list->compute_set_constant(i, offset, v);
 	}
 	void  Transitions::begin()
 	{

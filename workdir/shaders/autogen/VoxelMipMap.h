@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelMipMap.h"
-ConstantBuffer<VoxelMipMap> pass_VoxelMipMap: register( b2, space5);
-const VoxelMipMap CreateVoxelMipMap()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_VoxelMipMap: register( b2, space5);
+ ConstantBuffer<VoxelMipMap> CreateVoxelMipMap()
 {
-	return pass_VoxelMipMap;
+	return ResourceDescriptorHeap[pass_VoxelMipMap.offset];
 }
 #ifndef NO_GLOBAL
 static const VoxelMipMap voxelMipMap_global = CreateVoxelMipMap();

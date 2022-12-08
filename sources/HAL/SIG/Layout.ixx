@@ -17,7 +17,7 @@ export
 		template<class T>
 		void process_one()
 		{
-			desc[T::ID] = HAL::DescriptorConstBuffer(2, HAL::ShaderVisibility::ALL, T::ID);
+			desc[T::ID] = HAL::DescriptorConstants(2, 1, HAL::ShaderVisibility::ALL, T::ID);
 		}
 
 		template< class ...A>
@@ -50,7 +50,7 @@ export
 	void process_one(HAL::RootSignatureDesc& desc)
 	{
 		if constexpr (HasSlot<T>)
-			desc[T::Slot::ID] = HAL::DescriptorConstBuffer(2, HAL::ShaderVisibility::ALL, T::Slot::ID);
+			desc[T::Slot::ID] = HAL::DescriptorConstants(2, 1, HAL::ShaderVisibility::ALL, T::Slot::ID);
 	}
 
 	template< class ...A>

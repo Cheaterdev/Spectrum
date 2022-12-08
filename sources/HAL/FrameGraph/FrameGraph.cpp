@@ -915,7 +915,7 @@ namespace FrameGraph
 		builder.reset();
 
 		pre_run.clear();
-
+		slot_setters.clear();
 	
 	}
 

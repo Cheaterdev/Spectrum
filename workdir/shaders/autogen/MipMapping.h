@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/MipMapping.h"
-ConstantBuffer<MipMapping> pass_MipMapping: register( b2, space4);
-const MipMapping CreateMipMapping()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_MipMapping: register( b2, space4);
+ ConstantBuffer<MipMapping> CreateMipMapping()
 {
-	return pass_MipMapping;
+	return ResourceDescriptorHeap[pass_MipMapping.offset];
 }
 #ifndef NO_GLOBAL
 static const MipMapping mipMapping_global = CreateMipMapping();

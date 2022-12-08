@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelBlur.h"
-ConstantBuffer<VoxelBlur> pass_VoxelBlur: register( b2, space6);
-const VoxelBlur CreateVoxelBlur()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_VoxelBlur: register( b2, space6);
+ ConstantBuffer<VoxelBlur> CreateVoxelBlur()
 {
-	return pass_VoxelBlur;
+	return ResourceDescriptorHeap[pass_VoxelBlur.offset];
 }
 #ifndef NO_GLOBAL
 static const VoxelBlur voxelBlur_global = CreateVoxelBlur();

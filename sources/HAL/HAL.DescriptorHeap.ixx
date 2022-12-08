@@ -35,10 +35,7 @@ export
 			std::vector<ResourceInfo> resources;
 
 			UINT descriptor_size;
-			ResourceInfo* get_resource_info(uint offset)
-			{
-				return &resources[offset];
-			}
+			
 		public:
 			using ptr = std::shared_ptr<DescriptorHeap>;
 
@@ -48,7 +45,10 @@ export
 			{
 
 			}
-
+ResourceInfo* get_resource_info(uint offset)
+			{
+				return &resources[offset];
+			}
 			uint get_size();
 
 		};

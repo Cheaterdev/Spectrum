@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/PSSMLighting.h"
-ConstantBuffer<PSSMLighting> pass_PSSMLighting: register( b2, space6);
-const PSSMLighting CreatePSSMLighting()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_PSSMLighting: register( b2, space6);
+ ConstantBuffer<PSSMLighting> CreatePSSMLighting()
 {
-	return pass_PSSMLighting;
+	return ResourceDescriptorHeap[pass_PSSMLighting.offset];
 }
 #ifndef NO_GLOBAL
 static const PSSMLighting pSSMLighting_global = CreatePSSMLighting();

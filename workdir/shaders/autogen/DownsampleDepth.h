@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/DownsampleDepth.h"
-ConstantBuffer<DownsampleDepth> pass_DownsampleDepth: register( b2, space4);
-const DownsampleDepth CreateDownsampleDepth()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_DownsampleDepth: register( b2, space4);
+ ConstantBuffer<DownsampleDepth> CreateDownsampleDepth()
 {
-	return pass_DownsampleDepth;
+	return ResourceDescriptorHeap[pass_DownsampleDepth.offset];
 }
 #ifndef NO_GLOBAL
 static const DownsampleDepth downsampleDepth_global = CreateDownsampleDepth();

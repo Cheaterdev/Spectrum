@@ -372,6 +372,24 @@ export namespace HAL
 				compiled.m_commandList->ExecuteIndirect(pCommandSignature, MaxCommandCount, pArgumentBuffer, ArgumentBufferOffset, pCountBuffer, CountBufferOffset);
 			}
 
+			void SetGraphicsRoot32BitConstant(
+				UINT RootParameterIndex,
+				UINT SrcData,
+				UINT DestOffsetIn32BitValues
+			)
+			{
+				compiled.m_commandList->SetGraphicsRoot32BitConstant(RootParameterIndex, SrcData, DestOffsetIn32BitValues);
+			}
+
+			void SetComputeRoot32BitConstant(
+				UINT RootParameterIndex,
+				UINT SrcData,
+				UINT DestOffsetIn32BitValues
+			)
+			{
+				compiled.m_commandList->SetComputeRoot32BitConstant(RootParameterIndex, SrcData, DestOffsetIn32BitValues);
+			}
+
 		};
 
 
@@ -1432,6 +1450,54 @@ export namespace HAL
 						compiled.m_commandList->ExecuteIndirect(pCommandSignature, MaxCommandCount, pArgumentBuffer, ArgumentBufferOffset, pCountBuffer, CountBufferOffset);
 					});
 			}
+
+
+
+			void SetGraphicsRoot32BitConstant(
+				UINT RootParameterIndex,
+				UINT SrcData,
+				UINT DestOffsetIn32BitValues
+			)
+			{
+
+				push(RootParameterIndex, SrcData, DestOffsetIn32BitValues);
+
+
+				tasks.emplace_back([this]()
+					{
+						UINT RootParameterIndex;
+						UINT SrcData;
+						UINT DestOffsetIn32BitValues;
+						pop(RootParameterIndex, SrcData, DestOffsetIn32BitValues);
+
+						compiled.m_commandList->SetGraphicsRoot32BitConstant(RootParameterIndex, SrcData, DestOffsetIn32BitValues);
+					});
+
+			}
+
+			void SetComputeRoot32BitConstant(
+				UINT RootParameterIndex,
+				UINT SrcData,
+				UINT DestOffsetIn32BitValues
+			)
+			{
+
+				push(RootParameterIndex, SrcData, DestOffsetIn32BitValues);
+
+
+				tasks.emplace_back([this]()
+					{
+						UINT RootParameterIndex;
+						UINT SrcData;
+						UINT DestOffsetIn32BitValues;
+						pop(RootParameterIndex, SrcData, DestOffsetIn32BitValues);
+
+						compiled.m_commandList->SetComputeRoot32BitConstant(RootParameterIndex, SrcData, DestOffsetIn32BitValues);
+					});
+
+			}
+
+
 
 		};
 	}

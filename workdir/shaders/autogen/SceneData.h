@@ -5,10 +5,14 @@
 #endif
 #include "layout/FrameLayout.h"
 #include "tables/SceneData.h"
-ConstantBuffer<SceneData> pass_SceneData: register( b2, space1);
-const SceneData CreateSceneData()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_SceneData: register( b2, space1);
+ ConstantBuffer<SceneData> CreateSceneData()
 {
-	return pass_SceneData;
+	return ResourceDescriptorHeap[pass_SceneData.offset];
 }
 #ifndef NO_GLOBAL
 static const SceneData sceneData_global = CreateSceneData();

@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/FrameClassificationInitDispatch.h"
-ConstantBuffer<FrameClassificationInitDispatch> pass_FrameClassificationInitDispatch: register( b2, space6);
-const FrameClassificationInitDispatch CreateFrameClassificationInitDispatch()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_FrameClassificationInitDispatch: register( b2, space6);
+ ConstantBuffer<FrameClassificationInitDispatch> CreateFrameClassificationInitDispatch()
 {
-	return pass_FrameClassificationInitDispatch;
+	return ResourceDescriptorHeap[pass_FrameClassificationInitDispatch.offset];
 }
 #ifndef NO_GLOBAL
 static const FrameClassificationInitDispatch frameClassificationInitDispatch_global = CreateFrameClassificationInitDispatch();

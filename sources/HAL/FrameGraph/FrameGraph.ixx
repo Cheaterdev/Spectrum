@@ -759,6 +759,7 @@ using namespace HAL;
 
 	class SlotContext
 	{
+	protected:
 		std::map<SlotID, std::function<void(HAL::SignatureDataSetter&)>> slot_setters;
 
 	public:

@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/CopyTexture.h"
-ConstantBuffer<CopyTexture> pass_CopyTexture: register( b2, space4);
-const CopyTexture CreateCopyTexture()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_CopyTexture: register( b2, space4);
+ ConstantBuffer<CopyTexture> CreateCopyTexture()
 {
-	return pass_CopyTexture;
+	return ResourceDescriptorHeap[pass_CopyTexture.offset];
 }
 #ifndef NO_GLOBAL
 static const CopyTexture copyTexture_global = CreateCopyTexture();

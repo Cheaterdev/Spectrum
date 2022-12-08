@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/GatherPipelineGlobal.h"
-ConstantBuffer<GatherPipelineGlobal> pass_GatherPipelineGlobal: register( b2, space4);
-const GatherPipelineGlobal CreateGatherPipelineGlobal()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_GatherPipelineGlobal: register( b2, space4);
+ ConstantBuffer<GatherPipelineGlobal> CreateGatherPipelineGlobal()
 {
-	return pass_GatherPipelineGlobal;
+	return ResourceDescriptorHeap[pass_GatherPipelineGlobal.offset];
 }
 #ifndef NO_GLOBAL
 static const GatherPipelineGlobal gatherPipelineGlobal_global = CreateGatherPipelineGlobal();

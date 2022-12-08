@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelVisibility.h"
-ConstantBuffer<VoxelVisibility> pass_VoxelVisibility: register( b2, space5);
-const VoxelVisibility CreateVoxelVisibility()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_VoxelVisibility: register( b2, space5);
+ ConstantBuffer<VoxelVisibility> CreateVoxelVisibility()
 {
-	return pass_VoxelVisibility;
+	return ResourceDescriptorHeap[pass_VoxelVisibility.offset];
 }
 #ifndef NO_GLOBAL
 static const VoxelVisibility voxelVisibility_global = CreateVoxelVisibility();

@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelInfo.h"
-ConstantBuffer<VoxelInfo> pass_VoxelInfo: register( b2, space4);
-const VoxelInfo CreateVoxelInfo()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_VoxelInfo: register( b2, space4);
+ ConstantBuffer<VoxelInfo> CreateVoxelInfo()
 {
-	return pass_VoxelInfo;
+	return ResourceDescriptorHeap[pass_VoxelInfo.offset];
 }
 #ifndef NO_GLOBAL
 static const VoxelInfo voxelInfo_global = CreateVoxelInfo();

@@ -132,6 +132,7 @@ namespace HAL
 
 			if (FAILED(hr))
 			{
+			hr = 	native_device->GetDeviceRemovedReason();
 				__debugbreak();
 				assert(false);
 			}

@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/EnvFilter.h"
-ConstantBuffer<EnvFilter> pass_EnvFilter: register( b2, space5);
-const EnvFilter CreateEnvFilter()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_EnvFilter: register( b2, space5);
+ ConstantBuffer<EnvFilter> CreateEnvFilter()
 {
-	return pass_EnvFilter;
+	return ResourceDescriptorHeap[pass_EnvFilter.offset];
 }
 #ifndef NO_GLOBAL
 static const EnvFilter envFilter_global = CreateEnvFilter();

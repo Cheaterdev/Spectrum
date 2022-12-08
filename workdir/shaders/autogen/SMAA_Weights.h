@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/SMAA_Weights.h"
-ConstantBuffer<SMAA_Weights> pass_SMAA_Weights: register( b2, space5);
-const SMAA_Weights CreateSMAA_Weights()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_SMAA_Weights: register( b2, space5);
+ ConstantBuffer<SMAA_Weights> CreateSMAA_Weights()
 {
-	return pass_SMAA_Weights;
+	return ResourceDescriptorHeap[pass_SMAA_Weights.offset];
 }
 #ifndef NO_GLOBAL
 static const SMAA_Weights sMAA_Weights_global = CreateSMAA_Weights();

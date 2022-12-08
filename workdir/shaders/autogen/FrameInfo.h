@@ -5,10 +5,14 @@
 #endif
 #include "layout/FrameLayout.h"
 #include "tables/FrameInfo.h"
-ConstantBuffer<FrameInfo> pass_FrameInfo: register( b2, space0);
-const FrameInfo CreateFrameInfo()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_FrameInfo: register( b2, space0);
+ ConstantBuffer<FrameInfo> CreateFrameInfo()
 {
-	return pass_FrameInfo;
+	return ResourceDescriptorHeap[pass_FrameInfo.offset];
 }
 #ifndef NO_GLOBAL
 static const FrameInfo frameInfo_global = CreateFrameInfo();

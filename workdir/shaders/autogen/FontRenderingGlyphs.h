@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/FontRenderingGlyphs.h"
-ConstantBuffer<FontRenderingGlyphs> pass_FontRenderingGlyphs: register( b2, space6);
-const FontRenderingGlyphs CreateFontRenderingGlyphs()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_FontRenderingGlyphs: register( b2, space6);
+ ConstantBuffer<FontRenderingGlyphs> CreateFontRenderingGlyphs()
 {
-	return pass_FontRenderingGlyphs;
+	return ResourceDescriptorHeap[pass_FontRenderingGlyphs.offset];
 }
 #ifndef NO_GLOBAL
 static const FontRenderingGlyphs fontRenderingGlyphs_global = CreateFontRenderingGlyphs();

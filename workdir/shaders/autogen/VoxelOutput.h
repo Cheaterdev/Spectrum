@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelOutput.h"
-ConstantBuffer<VoxelOutput> pass_VoxelOutput: register( b2, space6);
-const VoxelOutput CreateVoxelOutput()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_VoxelOutput: register( b2, space6);
+ ConstantBuffer<VoxelOutput> CreateVoxelOutput()
 {
-	return pass_VoxelOutput;
+	return ResourceDescriptorHeap[pass_VoxelOutput.offset];
 }
 #ifndef NO_GLOBAL
 static const VoxelOutput voxelOutput_global = CreateVoxelOutput();

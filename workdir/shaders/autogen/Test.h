@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Test.h"
-ConstantBuffer<Test> pass_Test: register( b2, space4);
-const Test CreateTest()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_Test: register( b2, space4);
+ ConstantBuffer<Test> CreateTest()
 {
-	return pass_Test;
+	return ResourceDescriptorHeap[pass_Test.offset];
 }
 #ifndef NO_GLOBAL
 static const Test test_global = CreateTest();

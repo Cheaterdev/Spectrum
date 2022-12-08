@@ -6,11 +6,11 @@ namespace Table
 	{
 		uint material_id;
 		uint node_offset;
-		GPUAddress mesh_cb;
+		uint mesh_cb;
 		DispatchMeshArguments draw_commands;
 		uint& GetMaterial_id() { return material_id; }
 		uint& GetNode_offset() { return node_offset; }
-		GPUAddress& GetMesh_cb() { return mesh_cb; }
+		uint& GetMesh_cb() { return mesh_cb; }
 		DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const

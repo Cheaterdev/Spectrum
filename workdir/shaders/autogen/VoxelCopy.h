@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/VoxelCopy.h"
-ConstantBuffer<VoxelCopy> pass_VoxelCopy: register( b2, space5);
-const VoxelCopy CreateVoxelCopy()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_VoxelCopy: register( b2, space5);
+ ConstantBuffer<VoxelCopy> CreateVoxelCopy()
 {
-	return pass_VoxelCopy;
+	return ResourceDescriptorHeap[pass_VoxelCopy.offset];
 }
 #ifndef NO_GLOBAL
 static const VoxelCopy voxelCopy_global = CreateVoxelCopy();

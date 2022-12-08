@@ -66,7 +66,7 @@ struct SelectLocal<T>
 		{
 			std::wstring wshader_name;
 			Events::Event<void> on_change;
-			HAL::ResourceAddress local_addr;
+			uint local_addr;
 			//D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 
 			HAL::library_shader::ptr raytracing_lib;		
@@ -76,7 +76,7 @@ struct SelectLocal<T>
 			struct hit_type
 		{
 			HAL::shader_identifier id;
-			HAL::GPUAddressPtr local_addr;
+			uint local_addr;
 		//	D3D12_GPU_VIRTUAL_ADDRESS local_addr_ids;
 
 		private:
@@ -424,7 +424,7 @@ struct SelectLocal<T>
 			else
 			{
 				hit.id = state->get_shader_id(mat->wshader_name + std::wstring(Desc::name));
-				hit.local_addr = to_native(mat->local_addr);// compiled_material_info;
+				hit.local_addr = (mat->local_addr);// compiled_material_info;
 			}
 
 		}

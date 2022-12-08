@@ -5,10 +5,14 @@
 #endif
 #include "layout/FrameLayout.h"
 #include "tables/TilingPostprocess.h"
-ConstantBuffer<TilingPostprocess> pass_TilingPostprocess: register( b2, space2);
-const TilingPostprocess CreateTilingPostprocess()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_TilingPostprocess: register( b2, space2);
+ ConstantBuffer<TilingPostprocess> CreateTilingPostprocess()
 {
-	return pass_TilingPostprocess;
+	return ResourceDescriptorHeap[pass_TilingPostprocess.offset];
 }
 #ifndef NO_GLOBAL
 static const TilingPostprocess tilingPostprocess_global = CreateTilingPostprocess();

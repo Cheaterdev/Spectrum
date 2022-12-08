@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/FlowGraph.h"
-ConstantBuffer<FlowGraph> pass_FlowGraph: register( b2, space5);
-const FlowGraph CreateFlowGraph()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_FlowGraph: register( b2, space5);
+ ConstantBuffer<FlowGraph> CreateFlowGraph()
 {
-	return pass_FlowGraph;
+	return ResourceDescriptorHeap[pass_FlowGraph.offset];
 }
 #ifndef NO_GLOBAL
 static const FlowGraph flowGraph_global = CreateFlowGraph();

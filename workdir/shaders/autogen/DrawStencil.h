@@ -5,10 +5,14 @@
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/DrawStencil.h"
-ConstantBuffer<DrawStencil> pass_DrawStencil: register( b2, space4);
-const DrawStencil CreateDrawStencil()
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+ConstantBuffer< CB > pass_DrawStencil: register( b2, space4);
+ ConstantBuffer<DrawStencil> CreateDrawStencil()
 {
-	return pass_DrawStencil;
+	return ResourceDescriptorHeap[pass_DrawStencil.offset];
 }
 #ifndef NO_GLOBAL
 static const DrawStencil drawStencil_global = CreateDrawStencil();
