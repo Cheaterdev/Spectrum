@@ -28,7 +28,7 @@ export
 			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
 			return desc;
 		}
-
+		using Compiled = D3D12_DRAW_INDEXED_ARGUMENTS;
 	private:
 		SERIALIZE()
 		{
@@ -50,7 +50,7 @@ export
 			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
 			return desc;
 		}
-
+		using Compiled = D3D12_DISPATCH_MESH_ARGUMENTS;
 	private:
 		SERIALIZE()
 		{
@@ -71,6 +71,8 @@ export
 			desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
 			return desc;
 		}
+
+		using Compiled = D3D12_DISPATCH_ARGUMENTS;
 	};
 
 	using DefaultCB = HAL::Resource*;// std::vector<std::byte>;

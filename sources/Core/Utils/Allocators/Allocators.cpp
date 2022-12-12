@@ -119,7 +119,7 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 }
 size_t CommonAllocator::merge_prev(size_t start)
 {
-	if (start == 0) return 0;
+	if (start == start_region) return start_region;
 
 
 	auto prev_free = fences.find(start - 1);
@@ -150,7 +150,7 @@ size_t CommonAllocator::merge_prev(size_t start)
 size_t CommonAllocator::merge_next(size_t end)
 {
 
-	if (end == size) return end;
+	if (end == end_region) return end_region;
 
 	auto next_free = fences.find(end + 1);
 
@@ -194,7 +194,8 @@ assert(handle.get_size()>0);
 
 	my_block.begin = handle.get_info().offset;
 	my_block.end = handle.get_info().offset + handle.get_size() - 1;
-
+	
+#ifdef DEV
 	for(auto &b:free_blocks)
 	{
 		if(b.begin>=my_block.begin&&b.begin<=my_block.end) assert(false);
@@ -202,6 +203,8 @@ assert(handle.get_size()>0);
 		if(b.begin<my_block.begin&&b.end>my_block.end) assert(false);
 		
 	}
+#endif
+
 			check();
 	my_block.begin = merge_prev(my_block.begin);
 		check();

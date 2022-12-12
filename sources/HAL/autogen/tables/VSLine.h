@@ -14,6 +14,7 @@ namespace Table
 			compiler.compile(pos);
 			compiler.compile(color);
 		}
-	};
+		using Compiled = VSLine;
+		};
 	#pragma pack(pop)
 }

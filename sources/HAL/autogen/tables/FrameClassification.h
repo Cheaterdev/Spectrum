@@ -17,6 +17,12 @@ namespace Table
 			compiler.compile(hi);
 			compiler.compile(low);
 		}
+		struct Compiled
+		{
+			uint frames; // Texture2D<float>
+			uint hi; // AppendStructuredBuffer<uint2>
+			uint low; // AppendStructuredBuffer<uint2>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

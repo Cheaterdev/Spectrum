@@ -14,6 +14,7 @@ namespace Table
 			compiler.compile(node_offset);
 			compiler.compile(mesh_id);
 		}
-	};
+		using Compiled = BoxInfo;
+		};
 	#pragma pack(pop)
 }

@@ -23,22 +23,36 @@ struct node_data
     AABB aabb;
 }
 
+[Bind = DefaultLayout::Instance2]
+struct MeshInstanceInfo
+{
+	StructuredBuffer<mesh_vertex_input> vertexes;
+	StructuredBuffer<uint> indices;
+	StructuredBuffer<Meshlet> meshlets;
+
+	StructuredBuffer<MeshletCullData> meshletCullData;
+
+	StructuredBuffer<uint> unique_indices;
+	StructuredBuffer<uint> primitive_indices;
+
+}
 
 
 [Bind = DefaultLayout::Instance1]
 struct MeshInfo
 {
-	#StructuredBuffer<node_data> nodes;
-	#StructuredBuffer<mesh_vertex_input> vertexes;
-	#StructuredBuffer<uint> indices;
-	#StructuredBuffer<Meshlet> meshlets;
+    uint vertex_offset_local;
+	uint meshlet_offset_local;
 
     uint node_offset;
-    uint vertex_offset;
-	uint meshlet_offset;
 	uint meshlet_count;
-	uint meshlet_unique_offset;
-	uint meshlet_vertex_offset;
+}
+
+
+struct RaytraceInstanceInfo
+{
+	StructuredBuffer<mesh_vertex_input> vertexes;
+	StructuredBuffer<uint> indices;	
 }
 
 struct Meshlet
@@ -93,6 +107,7 @@ struct MeshInstance
 struct CommandData
 {
 	uint mesh_cb;
+	uint meshinstance_cb;
 	uint material_cb;
 	DispatchMeshArguments draw_commands;
 }
@@ -102,6 +117,7 @@ struct MeshCommandData
 	uint material_id;
 	uint node_offset;
 	uint mesh_cb;
+	uint meshinstance_cb;
 	DispatchMeshArguments draw_commands;
 }
 

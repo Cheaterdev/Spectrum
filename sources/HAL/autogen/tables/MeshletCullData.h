@@ -7,13 +7,6 @@ namespace Table
 		float4 BoundingSphere;
 		uint NormalCone;
 		float ApexOffset;
-		private:
-	SERIALIZE()
-		{
-		     ar& NVP(BoundingSphere);
-		     ar& NVP(NormalCone);
-		     ar& NVP(ApexOffset);
-		}
 		float4& GetBoundingSphere() { return BoundingSphere; }
 		uint& GetNormalCone() { return NormalCone; }
 		float& GetApexOffset() { return ApexOffset; }
@@ -24,6 +17,14 @@ namespace Table
 			compiler.compile(NormalCone);
 			compiler.compile(ApexOffset);
 		}
-	};
+		using Compiled = MeshletCullData;
+		private:
+	SERIALIZE()
+		{
+		     ar& NVP(BoundingSphere);
+		     ar& NVP(NormalCone);
+		     ar& NVP(ApexOffset);
+		}
+		};
 	#pragma pack(pop)
 }

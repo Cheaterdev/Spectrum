@@ -12,6 +12,10 @@ namespace Table
 		{
 			compiler.compile(debug);
 		}
+		struct Compiled
+		{
+			uint debug; // RWStructuredBuffer<DebugStruct>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

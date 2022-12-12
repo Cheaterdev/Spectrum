@@ -14,6 +14,7 @@ namespace Table
 			compiler.compile(level);
 			compiler.compile(time);
 		}
-	};
+		using Compiled = PSSMConstants;
+		};
 	#pragma pack(pop)
 }

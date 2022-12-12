@@ -14,6 +14,7 @@ namespace Table
 			compiler.compile(width);
 			compiler.compile(angle);
 		}
-	};
+		using Compiled = RayCone;
+		};
 	#pragma pack(pop)
 }

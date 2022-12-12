@@ -31,6 +31,16 @@ namespace Table
 			compiler.compile(pssmGlobal);
 			compiler.compile(params);
 		}
+		struct Compiled
+		{
+			uint albedo; // Texture3D<float4>
+			uint normals; // Texture3D<float4>
+			uint lower; // Texture3D<float4>
+			uint tex_cube; // TextureCube<float4>
+			uint output; // RWTexture3D<float4>
+			PSSMDataGlobal::Compiled pssmGlobal; // PSSMDataGlobal
+			VoxelTilingParams::Compiled params; // VoxelTilingParams
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

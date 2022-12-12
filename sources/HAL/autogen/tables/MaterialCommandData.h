@@ -14,6 +14,7 @@ namespace Table
 			compiler.compile(material_cb);
 			compiler.compile(pipeline_id);
 		}
-	};
+		using Compiled = MaterialCommandData;
+		};
 	#pragma pack(pop)
 }

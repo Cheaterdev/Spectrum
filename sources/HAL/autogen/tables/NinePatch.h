@@ -15,6 +15,11 @@ namespace Table
 			compiler.compile(vb);
 			compiler.compile(textures);
 		}
+		struct Compiled
+		{
+			uint vb; // StructuredBuffer<vertex_input>
+			uint textures; // Texture2D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

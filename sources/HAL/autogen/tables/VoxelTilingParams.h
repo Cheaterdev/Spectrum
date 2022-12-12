@@ -14,6 +14,11 @@ namespace Table
 			compiler.compile(voxels_per_tile);
 			compiler.compile(tiles);
 		}
+		struct Compiled
+		{
+			uint4 voxels_per_tile; // uint4
+			uint tiles; // StructuredBuffer<int3>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

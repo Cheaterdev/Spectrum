@@ -73,8 +73,8 @@ export namespace Allocators
 
 		AllocatorHanle handle;
 		std::weak_ptr<HeapPage<HeapPageType>>page;
-		uint offset = 0;
-		uint size = 0;
+		uint64 offset = 0;
+		uint64 size = 0;
 	};
 	
 	template<class HeapPageType>
@@ -106,7 +106,7 @@ export namespace Allocators
 
 		std::unique_ptr<Allocator> allocator;
 		AllocatorHanle inner_heap_page_handle;
-		uint offset = 0;
+		uint64 offset = 0;
 		
 		HeapPage(std::shared_ptr<HeapPageType> heap, HeapAllocatorInterface<HeapPageType>& owner,AllocatorHanle handle) : owner(owner), heap(heap),inner_heap_page_handle(handle)
 		{

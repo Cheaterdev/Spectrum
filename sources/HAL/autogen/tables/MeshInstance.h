@@ -14,6 +14,7 @@ namespace Table
 			compiler.compile(vertex_offset);
 			compiler.compile(index_offset);
 		}
-	};
+		using Compiled = MeshInstance;
+		};
 	#pragma pack(pop)
 }

@@ -27,6 +27,15 @@ namespace Table
 			compiler.compile(prev_depth);
 			compiler.compile(gbuffer);
 		}
+		struct Compiled
+		{
+			uint voxels; // Texture3D<float4>
+			uint tex_cube; // TextureCube<float4>
+			uint prev_gi; // Texture2D<float4>
+			uint prev_frames; // Texture2D<float>
+			uint prev_depth; // Texture2D<float>
+			GBuffer::Compiled gbuffer; // GBuffer
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

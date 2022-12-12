@@ -11,6 +11,7 @@ namespace Table
 		{
 			compiler.compile(planes);
 		}
-	};
+		using Compiled = Frustum;
+		};
 	#pragma pack(pop)
 }

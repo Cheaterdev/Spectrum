@@ -75,7 +75,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 
-	//if (!gbuffer || !use_gpu_occlusion)
+	if (!gbuffer || !use_gpu_occlusion)
 	{
 		render_meshes(mesh_render_context, scene, pipelines, scene->compiledGather[(int)mesh_render_context->render_mesh], (mesh_render_context->render_type != RENDER_TYPE::VOXEL));
 		return;
@@ -412,7 +412,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = HAL::IndirectCommand::create_command_layout<Slots::MeshInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>), Layouts::DefaultLayout);
+	indirect_command_signature = HAL::IndirectCommand::create_command_layout<Slots::MeshInfo,Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>), Layouts::DefaultLayout);
 
 	UINT max_meshes = 1024 * 1024;
 

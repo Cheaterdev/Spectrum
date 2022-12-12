@@ -14,6 +14,11 @@ namespace Table
 			compiler.compile(color);
 			compiler.compile(tex);
 		}
+		struct Compiled
+		{
+			float4 color; // float4
+			uint tex; // Texture2D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

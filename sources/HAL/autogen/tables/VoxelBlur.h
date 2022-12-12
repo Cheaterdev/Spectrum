@@ -23,6 +23,14 @@ namespace Table
 			compiler.compile(screen_result);
 			compiler.compile(gi_result);
 		}
+		struct Compiled
+		{
+			uint noisy_output; // Texture2D<float4>
+			uint hit_and_pdf; // Texture2D<float4>
+			uint prev_result; // Texture2D<float4>
+			uint screen_result; // RWTexture2D<float4>
+			uint gi_result; // RWTexture2D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

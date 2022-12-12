@@ -177,7 +177,7 @@ export {
 		using SlotTable = _SlotTable;
 
 		HAL::ResourceAddress offsets_cb;
-		HLSL::ConstBuffer<Table> const_buffer;
+		HLSL::ConstantBuffer<Table> const_buffer;
 
 		const CompiledData<SlotTable, ID, Table, Slot>& set(HAL::SignatureDataSetter& graphics) const
 		{
@@ -200,7 +200,7 @@ export {
 		//	return offsets_cb;
 		//}
 
-		HLSL::ConstBuffer<Table> compiled()
+		HLSL::ConstantBuffer<Table> compiled()
 		{
 			assert(const_buffer.is_valid());
 			return const_buffer;
@@ -244,7 +244,7 @@ export {
 
 				auto hlsl = context.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
-				compiled.const_buffer = HLSL::ConstBuffer<Table>(hlsl[0]);
+				compiled.const_buffer = HLSL::ConstantBuffer<Table>(hlsl[0]);
 			compiled.const_buffer.create(compiled.offsets_cb.resource, info.resource_offset,info.size);
 
 

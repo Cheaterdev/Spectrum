@@ -19,12 +19,12 @@ struct vertex_output
 #include "autogen/FrameInfo.h"
 #include "autogen/MeshInfo.h" 
 #include "autogen/SceneData.h"
-
+#include "autogen/MeshInstanceInfo.h" 
 
 static const FrameInfo frameInfo = GetFrameInfo();
 static const MeshInfo meshInfo = GetMeshInfo();
 static const SceneData sceneData = GetSceneData();
-
+static const MeshInstanceInfo meshInstanceInfo = GetMeshInstanceInfo();
 
 //#include "autogen/DebugInfo.h"
 vertex_output transform(matrix node_global_matrix, matrix node_global_matrix_prev, Camera camera, mesh_vertex_input i)
@@ -150,7 +150,7 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid 
        matrix m = node.GetNode_global_matrix();
     
         // Do visibility testing for this thread
-        visible =  IsVisible(sceneData.GetMeshletCullData()[meshInfo.GetMeshlet_offset() + dtid], m, 1, frameInfo.GetCamera());
+        visible =  IsVisible(meshInstanceInfo.GetMeshletCullData()[meshInfo.GetMeshlet_offset_local() + dtid], m, 1, frameInfo.GetCamera());
     }
 
     // Compact visible meshlets into the export payload array 
@@ -167,12 +167,6 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid 
 #endif
 
 
-uint load_index(Meshlet m ,uint gtid)
-{
-   return meshInfo.GetMeshlet_vertex_offset() + 3 * (m.GetPrimitiveOffset() + gtid);
-
-}
-
 [NumThreads(128, 1, 1)]
 [OutputTopology("triangle")]
 void VS(
@@ -188,26 +182,26 @@ void VS(
 
     uint meshletIndex = payload.MeshletIndices[gid];
     if (meshletIndex >= meshInfo.GetMeshlet_count()) return;
-    Meshlet m = sceneData.GetMeshlets()[meshInfo.GetMeshlet_offset() + meshletIndex];   
+    Meshlet m = meshInstanceInfo.GetMeshlets()[meshInfo.GetMeshlet_offset_local() + meshletIndex];   
     SetMeshOutputCounts(m.GetVertexCount(), m.GetPrimitiveCount());
  
     if (gtid < m.GetPrimitiveCount())
     {
-        uint index_offset = meshInfo.GetMeshlet_vertex_offset() + 3*(m.GetPrimitiveOffset() + gtid);
+        uint index_offset = 3*(m.GetPrimitiveOffset() + gtid);
         
-        tris[gtid] = uint3(sceneData.GetIndices()[index_offset],
-            sceneData.GetIndices()[index_offset + 1],
-            sceneData.GetIndices()[index_offset + 2]);
+        tris[gtid] = uint3(meshInstanceInfo.GetPrimitive_indices()[index_offset],
+            meshInstanceInfo.GetPrimitive_indices()[index_offset + 1],
+            meshInstanceInfo.GetPrimitive_indices()[index_offset + 2]);
 
     }
     
     if (gtid < m.GetVertexCount())
     {
-        uint vertexIndex =  meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + gtid];
+        uint vertexIndex =  meshInfo.GetVertex_offset_local() + meshInstanceInfo.GetUnique_indices()[ m.GetVertexOffset() + gtid];
         node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
         matrix m = node.GetNode_global_matrix();
 
-        verts[gtid] = transform(m, node.GetNode_global_matrix_prev(), frameInfo.GetCamera(),  sceneData.GetVertexes()[vertexIndex]);
+        verts[gtid] = transform(m, node.GetNode_global_matrix_prev(), frameInfo.GetCamera(),  meshInstanceInfo.GetVertexes()[vertexIndex]);
     }
   
 }

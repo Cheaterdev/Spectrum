@@ -14,6 +14,7 @@ namespace Table
 			compiler.compile(min);
 			compiler.compile(max);
 		}
-	};
+		using Compiled = AABB;
+		};
 	#pragma pack(pop)
 }

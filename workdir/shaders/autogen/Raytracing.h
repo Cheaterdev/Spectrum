@@ -1,7 +1,7 @@
-#ifndef SLOT_7
-	#define SLOT_7
+#ifndef SLOT_10
+	#define SLOT_10
 #else
-	#error Slot 7 is already used
+	#error Slot 10 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Raytracing.h"
@@ -9,7 +9,7 @@
 #define CB_DEFINED
 struct CB { uint offset; };
 #endif
-ConstantBuffer< CB > pass_Raytracing: register( b2, space7);
+ConstantBuffer< CB > pass_Raytracing: register( b2, space10);
  ConstantBuffer<Raytracing> CreateRaytracing()
 {
 	return ResourceDescriptorHeap[pass_Raytracing.offset];

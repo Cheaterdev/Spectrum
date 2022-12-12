@@ -111,7 +111,7 @@ export{
 	{
 	public:
 		using ptr = std::shared_ptr<MeshData>;
-		std::vector<Table::mesh_vertex_input> vertex_buffer;
+		std::vector<Table::mesh_vertex_input::Compiled> vertex_buffer;
 		std::vector<UINT32> index_buffer;
 
 		std::vector<MeshInfo> meshes;
@@ -136,10 +136,10 @@ export{
 		using ptr = s_ptr<MeshAsset>;
 		using ref = AssetReference<MeshAsset>;
 
-		std::vector<Table::mesh_vertex_input> vertex_buffer;
+		std::vector<Table::mesh_vertex_input::Compiled> vertex_buffer;
 		std::vector<UINT32> index_buffer;
 
-		TypedHandle<Table::mesh_vertex_input> vertex_handle;
+		TypedHandle<Table::mesh_vertex_input::Compiled> vertex_handle;
 		TypedHandle<UINT32> index_handle;
 
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
@@ -149,12 +149,17 @@ export{
 		TypedHandle<UINT32> primitive_index_handle;
 
 
-		TypedHandle<Table::Meshlet> meshlet_handle;
-		TypedHandle<Table::MeshletCullData> meshlet_cull_handle;
+		TypedHandle<Table::Meshlet::Compiled> meshlet_handle;
+		TypedHandle<Table::MeshletCullData::Compiled> meshlet_cull_handle;
 
 		HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
 		HAL::StructuredBufferView<UINT32> index_buffer_view;
 
+		HAL::StructuredBufferView<UINT32> unique_indices;
+		HAL::StructuredBufferView<UINT32> primitive_indices;
+
+		HAL::StructuredBufferView<Table::Meshlet> meshlets;
+		HAL::StructuredBufferView<Table::MeshletCullData> meshlet_cull_datas;
 
 		std::vector<MeshInfo> meshes;
 		std::vector<MaterialAsset::ref> materials;
@@ -223,7 +228,7 @@ export{
 
 		LEAK_TEST(MeshAssetInstance)
 
-
+		Slots::MeshInstanceInfo::Compiled mesh_instance_info;
 			std::mutex m;
 		void init_asset();
 		void update_nodes();
@@ -232,8 +237,8 @@ export{
 		bool ras_inited = false;
 		//std::vector<RaytracingAccelerationStructure::ptr> raytracing_as;
 
-		TypedHandle<Table::MeshCommandData> meshpart_handle;
-		TypedHandle<Table::MeshInstance> instance_handle;
+		TypedHandle<Table::MeshCommandData::Compiled> meshpart_handle;
+		TypedHandle<Table::RaytraceInstanceInfo::Compiled> instance_handle;
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
 		size_t nodes_count;
@@ -255,7 +260,7 @@ export{
 		};
 
 
-		TypedHandle<Table::node_data> nodes_handle;
+		TypedHandle<Table::node_data::Compiled> nodes_handle;
 		struct render_info
 		{
 
@@ -274,8 +279,12 @@ export{
 
 			//compiled
 			Slots::MeshInfo::Compiled compiled_mesh_info;
-
+				Slots::MeshInstanceInfo::Compiled mesh_instance_info;
 			HAL::RaytracingAccelerationStructure::ptr ras;
+
+				HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
+		HAL::StructuredBufferView<UINT32> index_buffer_view;
+
 		};
 
 		std::vector<render_info> rendering;
@@ -314,12 +323,21 @@ export{
 
 	};
 
-
-	class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public HAL::virtual_gpu_buffer<Table::MeshInstance>
+	class universal_rtx_manager :public Singleton<universal_rtx_manager>, public HAL::virtual_gpu_buffer<Table::RaytraceInstanceInfo>
 	{
-		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::MeshInstance);
+		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::RaytraceInstanceInfo);
 	public:
-		universal_mesh_instance_manager() :HAL::virtual_gpu_buffer<Table::MeshInstance>(MAX_NODES_SIZE)
+		universal_rtx_manager() :HAL::virtual_gpu_buffer<Table::RaytraceInstanceInfo>(MAX_NODES_SIZE)
+		{
+
+		}
+	};
+
+	class universal_mesh_instance_manager :public Singleton<universal_mesh_instance_manager>, public HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>
+	{
+		static const size_t MAX_NODES_SIZE = 100_mb / sizeof(Table::MeshInstanceInfo);
+	public:
+		universal_mesh_instance_manager() :HAL::virtual_gpu_buffer<Table::MeshInstanceInfo>(MAX_NODES_SIZE)
 		{
 
 		}

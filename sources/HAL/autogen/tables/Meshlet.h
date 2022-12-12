@@ -20,6 +20,7 @@ namespace Table
 			compiler.compile(primitiveCount);
 			compiler.compile(primitiveOffset);
 		}
-	};
+		using Compiled = Meshlet;
+		};
 	#pragma pack(pop)
 }

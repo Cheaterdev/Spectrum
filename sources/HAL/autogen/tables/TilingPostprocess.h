@@ -12,6 +12,7 @@ namespace Table
 		{
 			compiler.compile(tiling);
 		}
-	};
+		using Compiled = TilingPostprocess;
+		};
 	#pragma pack(pop)
 }

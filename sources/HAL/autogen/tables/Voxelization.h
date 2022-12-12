@@ -21,6 +21,13 @@ namespace Table
 			compiler.compile(visibility);
 			compiler.compile(info);
 		}
+		struct Compiled
+		{
+			uint albedo; // RWTexture3D<float4>
+			uint normals; // RWTexture3D<float4>
+			uint visibility; // RWTexture3D<uint>
+			VoxelInfo::Compiled info; // VoxelInfo
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

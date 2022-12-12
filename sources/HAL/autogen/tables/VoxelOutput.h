@@ -17,6 +17,12 @@ namespace Table
 			compiler.compile(frames);
 			compiler.compile(DirAndPdf);
 		}
+		struct Compiled
+		{
+			uint noise; // RWTexture2D<float4>
+			uint frames; // RWTexture2D<float>
+			uint DirAndPdf; // RWTexture2D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

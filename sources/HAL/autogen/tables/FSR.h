@@ -18,6 +18,12 @@ namespace Table
 			compiler.compile(target);
 			compiler.compile(constants);
 		}
+		struct Compiled
+		{
+			uint source; // Texture2D<float4>
+			uint target; // RWTexture2D<float4>
+			FSRConstants::Compiled constants; // FSRConstants
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

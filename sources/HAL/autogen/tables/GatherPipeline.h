@@ -15,6 +15,11 @@ namespace Table
 			compiler.compile(pip_ids);
 			compiler.compile(commands);
 		}
+		struct Compiled
+		{
+			uint4 pip_ids[2]; // uint4
+			uint commands[8]; // AppendStructuredBuffer<CommandData>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

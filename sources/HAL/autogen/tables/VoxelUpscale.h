@@ -17,6 +17,12 @@ namespace Table
 			compiler.compile(tex_gi_prev);
 			compiler.compile(tex_depth_prev);
 		}
+		struct Compiled
+		{
+			uint tex_downsampled; // Texture2D<float4>
+			uint tex_gi_prev; // Texture2D<float4>
+			uint tex_depth_prev; // Texture2D<float>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

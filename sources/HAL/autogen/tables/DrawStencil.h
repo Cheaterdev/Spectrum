@@ -11,6 +11,10 @@ namespace Table
 		{
 			compiler.compile(vertices);
 		}
+		struct Compiled
+		{
+			uint vertices; // StructuredBuffer<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

@@ -11,6 +11,7 @@ namespace Table
 		{
 			compiler.compile(instanceId);
 		}
-	};
+		using Compiled = Instance;
+		};
 	#pragma pack(pop)
 }

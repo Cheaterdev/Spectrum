@@ -15,6 +15,7 @@ namespace Table
 			compiler.compile(lod);
 			compiler.compile(v);
 		}
-	};
+		using Compiled = Triangle;
+		};
 	#pragma pack(pop)
 }

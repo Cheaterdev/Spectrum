@@ -16,7 +16,7 @@ struct DefaultLayout: public FrameLayout
 	struct Instance1
 	{
 		static const unsigned int ID = 5;
-		static const unsigned int CB = 6;
+		static const unsigned int CB = 4;
 		static const unsigned int CB_ID = 16;
 		static const unsigned int SRV = 10;
 		static const unsigned int SRV_ID = 18;
@@ -27,7 +27,7 @@ struct DefaultLayout: public FrameLayout
 	struct Instance2
 	{
 		static const unsigned int ID = 6;
-		static const unsigned int CB = 4;
+		static const unsigned int CB = 2;
 		static const unsigned int CB_ID = 20;
 		static const unsigned int SRV = 6;
 		static const unsigned int SRV_ID = 22;
@@ -35,25 +35,48 @@ struct DefaultLayout: public FrameLayout
 		static const unsigned int UAV_ID = 23;
 		static inline const std::vector<UINT> tables = {20, 22, 23};
 	};
-	struct Raytracing
+	struct Instance3
 	{
 		static const unsigned int ID = 7;
-		static const unsigned int CB = 2;
+		static const unsigned int CB = 4;
 		static const unsigned int CB_ID = 24;
-		static const unsigned int SRV = 2;
-		static const unsigned int SRV_ID = 26;
+		static const unsigned int UAV = 3;
+		static const unsigned int UAV_ID = 26;
 		static inline const std::vector<UINT> tables = {24, 26};
 	};
-	struct MaterialData
+	struct Instance4
 	{
 		static const unsigned int ID = 8;
 		static const unsigned int CB = 2;
 		static const unsigned int CB_ID = 27;
+		static inline const std::vector<UINT> tables = {27};
+	};
+	struct Instance5
+	{
+		static const unsigned int ID = 9;
+		static const unsigned int CB = 2;
+		static const unsigned int CB_ID = 29;
+		static inline const std::vector<UINT> tables = {29};
+	};
+	struct Raytracing
+	{
+		static const unsigned int ID = 10;
+		static const unsigned int CB = 2;
+		static const unsigned int CB_ID = 31;
+		static const unsigned int SRV = 2;
+		static const unsigned int SRV_ID = 33;
+		static inline const std::vector<UINT> tables = {31, 33};
+	};
+	struct MaterialData
+	{
+		static const unsigned int ID = 11;
+		static const unsigned int CB = 2;
+		static const unsigned int CB_ID = 34;
 		static const unsigned int SRV = 1;
-		static const unsigned int SRV_ID = 29;
-		static inline const std::vector<UINT> tables = {27, 29};
+		static const unsigned int SRV_ID = 36;
+		static inline const std::vector<UINT> tables = {34, 36};
 	};
 	template<class Processor> static void for_each(Processor& processor) {
-		processor.template process<CameraData,SceneData,PassData,DebugInfo,Instance0,Instance1,Instance2,Raytracing,MaterialData>({HAL::Samplers::SamplerLinearWrapDesc,HAL::Samplers::SamplerPointClampDesc,HAL::Samplers::SamplerLinearClampDesc,HAL::Samplers::SamplerAnisoBorderDesc,HAL::Samplers::SamplerPointBorderDesc});
+		processor.template process<CameraData,SceneData,PassData,DebugInfo,Instance0,Instance1,Instance2,Instance3,Instance4,Instance5,Raytracing,MaterialData>({HAL::Samplers::SamplerLinearWrapDesc,HAL::Samplers::SamplerPointClampDesc,HAL::Samplers::SamplerLinearClampDesc,HAL::Samplers::SamplerAnisoBorderDesc,HAL::Samplers::SamplerPointBorderDesc});
 	}
 };

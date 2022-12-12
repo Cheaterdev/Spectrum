@@ -11,6 +11,10 @@ namespace Table
 		{
 			compiler.compile(tiles);
 		}
+		struct Compiled
+		{
+			uint tiles; // StructuredBuffer<uint2>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

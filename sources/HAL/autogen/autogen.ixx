@@ -37,7 +37,9 @@ export
 	#include "tables\mesh_vertex_input.h"
 	#include "tables\AABB.h"
 	#include "tables\node_data.h"
+	#include "slots\MeshInstanceInfo.h"
 	#include "slots\MeshInfo.h"
+	#include "tables\RaytraceInstanceInfo.h"
 	#include "tables\Meshlet.h"
 	#include "tables\MeshletCullData.h"
 	#include "tables\MeshInstance.h"
@@ -200,6 +202,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "MaterialInfo")
 	{
 		return SlotID::MaterialInfo;
+	}
+	if(slot_name == "MeshInstanceInfo")
+	{
+		return SlotID::MeshInstanceInfo;
 	}
 	if(slot_name == "MeshInfo")
 	{
@@ -456,6 +462,10 @@ UINT get_slot_id(SlotID id)
 	if(id == SlotID::MaterialInfo)
 	{
 		return Slots::MaterialInfo::Slot::ID;
+	}
+	if(id == SlotID::MeshInstanceInfo)
+	{
+		return Slots::MeshInstanceInfo::Slot::ID;
 	}
 	if(id == SlotID::MeshInfo)
 	{

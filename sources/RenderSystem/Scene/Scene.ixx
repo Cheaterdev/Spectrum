@@ -81,7 +81,7 @@ public:
 	Slots::VoxelInfo voxel_info;
 
 
-    bool init_ras(CommandList::ptr& list);
+   bool init_ras(CommandList::ptr& list);
 
     void update(HAL::FrameResources& frame);
 

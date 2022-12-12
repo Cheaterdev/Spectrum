@@ -44,7 +44,6 @@ Scene::Scene()
 	raytrace = std::make_shared< virtual_gpu_buffer<D3D12_RAYTRACING_INSTANCE_DESC>>(1024 * 1024);
 
 
-
 	if (HAL::Device::get().is_rtx_supported())
 	{
 		std::vector<InstanceDesc>  desc;
@@ -108,14 +107,9 @@ void Scene::update(HAL::FrameResources& frame)
 		PROFILE(L"SceneData");
 		Slots::SceneData sceneData;
 		sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
-
-		sceneData.GetVertexes() = universal_vertex_manager::get().buffer->structuredBuffer;
 		sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->structuredBuffer;
 		sceneData.GetMeshes() = scene->mesh_infos->buffer->structuredBuffer;
-		sceneData.GetMeshInstances() = universal_mesh_instance_manager::get().buffer->structuredBuffer;
-		sceneData.GetMeshlets() = universal_meshlet_manager::get().buffer->structuredBuffer;
-		sceneData.GetIndices() = universal_index_manager::get().buffer->structuredBuffer;
-		sceneData.GetMeshletCullData() = universal_meshletculldata_manager::get().buffer->structuredBuffer;
+sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer->structuredBuffer;
 
 		compiledScene = sceneData.compile(frame);
 	}

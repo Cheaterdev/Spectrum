@@ -17,6 +17,12 @@ namespace Table
 			compiler.compile(searchTex);
 			compiler.compile(edgesTex);
 		}
+		struct Compiled
+		{
+			uint areaTex; // Texture2D<float4>
+			uint searchTex; // Texture2D<float4>
+			uint edgesTex; // Texture2D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

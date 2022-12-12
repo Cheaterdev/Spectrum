@@ -18,6 +18,12 @@ namespace Table
 			compiler.compile(output);
 			compiler.compile(gbuffer);
 		}
+		struct Compiled
+		{
+			float pixelAngle; // float
+			uint output; // RWTexture2D<float4>
+			GBuffer::Compiled gbuffer; // GBuffer
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

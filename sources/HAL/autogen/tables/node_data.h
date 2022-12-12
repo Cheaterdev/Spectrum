@@ -21,6 +21,7 @@ namespace Table
 			compiler.compile(node_inverse_matrix);
 			compiler.compile(aabb);
 		}
-	};
+		using Compiled = node_data;
+		};
 	#pragma pack(pop)
 }

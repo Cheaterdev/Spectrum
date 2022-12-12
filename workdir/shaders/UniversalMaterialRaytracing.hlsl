@@ -63,21 +63,19 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 	SceneData sceneData = CreateSceneData();
 	Raytracing raytracing = CreateRaytracing();
 
-	MeshInstance instance = sceneData.GetMeshInstances()[InstanceID()];
+	RaytraceInstanceInfo instance = sceneData.GetRaytraceInstanceInfo()[InstanceID()];
 
-	uint vertex_offset = instance.GetVertex_offset();
-	uint index_offset = instance.GetIndex_offset();
-
+	
 	float3 barycentrics = float3(1 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
 
 
-	uint id0 = raytracing.GetIndex_buffer()[index_offset + PrimitiveIndex() * 3]; 
-	uint id1 = raytracing.GetIndex_buffer()[index_offset + PrimitiveIndex() * 3 + 1];
-	uint id2 = raytracing.GetIndex_buffer()[index_offset + PrimitiveIndex() * 3 + 2];
+	uint id0 = instance.GetIndices()[PrimitiveIndex() * 3]; 
+	uint id1 = instance.GetIndices()[PrimitiveIndex() * 3 + 1];
+	uint id2 = instance.GetIndices()[PrimitiveIndex() * 3 + 2];
 
-	mesh_vertex_input vertex0 = sceneData.GetVertexes()[vertex_offset + id0];
-	mesh_vertex_input vertex1 = sceneData.GetVertexes()[vertex_offset + id1];
-	mesh_vertex_input vertex2 = sceneData.GetVertexes()[vertex_offset + id2];
+	mesh_vertex_input vertex0 = instance.GetVertexes()[id0];
+	mesh_vertex_input vertex1 = instance.GetVertexes()[id1];
+	mesh_vertex_input vertex2 = instance.GetVertexes()[id2];
 
 
 	Triangle t;

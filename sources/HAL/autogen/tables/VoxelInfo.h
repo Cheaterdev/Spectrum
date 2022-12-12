@@ -20,6 +20,7 @@ namespace Table
 			compiler.compile(voxels_per_tile);
 			compiler.compile(voxel_tiles_count);
 		}
-	};
+		using Compiled = VoxelInfo;
+		};
 	#pragma pack(pop)
 }

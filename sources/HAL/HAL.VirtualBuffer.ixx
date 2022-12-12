@@ -46,7 +46,7 @@ export
 			update_tiling_info updates;
 
 		public:
-
+			using Handle = TypedHandle<T>;
 			StructureBuffer<Type>::ptr buffer;
 			using ptr = std::shared_ptr<virtual_gpu_buffer<Type, AllocatorType>>;
 

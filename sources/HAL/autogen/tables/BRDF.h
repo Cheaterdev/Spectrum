@@ -11,6 +11,10 @@ namespace Table
 		{
 			compiler.compile(output);
 		}
+		struct Compiled
+		{
+			uint output; // RWTexture3D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

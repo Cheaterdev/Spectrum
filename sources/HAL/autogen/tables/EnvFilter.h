@@ -17,6 +17,7 @@ namespace Table
 			compiler.compile(scaler);
 			compiler.compile(size);
 		}
-	};
+		using Compiled = EnvFilter;
+		};
 	#pragma pack(pop)
 }

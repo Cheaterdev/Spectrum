@@ -14,6 +14,11 @@ namespace Table
 			compiler.compile(counter);
 			compiler.compile(dispatch_data);
 		}
+		struct Compiled
+		{
+			uint counter; // RWStructuredBuffer<uint>
+			uint dispatch_data; // RWStructuredBuffer<DispatchArguments>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

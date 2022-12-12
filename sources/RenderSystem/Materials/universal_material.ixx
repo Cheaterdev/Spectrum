@@ -261,7 +261,7 @@ export namespace materials
 		universal_material(MaterialGraph::ptr graph);
 		Slots::MaterialInfo::Compiled compiled_material_info;
 
-		TypedHandle<Table::MaterialCommandData> info_handle;
+		TypedHandle<Table::MaterialCommandData::Compiled> info_handle;
 
 		void update_rtx();
 		void test();

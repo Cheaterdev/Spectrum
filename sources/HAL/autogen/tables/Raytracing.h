@@ -14,6 +14,11 @@ namespace Table
 			compiler.compile(scene);
 			compiler.compile(index_buffer);
 		}
+		struct Compiled
+		{
+			uint scene; // RaytracingAccelerationStructure
+			uint index_buffer; // StructuredBuffer<uint>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

@@ -28,7 +28,7 @@ struct VoxelInfo
 }
 
 
-[Bind = DefaultLayout::Instance2]
+[Bind = DefaultLayout::Instance3]
 struct Voxelization
 {
 	VoxelInfo info;

@@ -14,6 +14,11 @@ namespace Table
 			compiler.compile(visibility);
 			compiler.compile(visible_tiles);
 		}
+		struct Compiled
+		{
+			uint visibility; // Texture3D<uint>
+			uint visible_tiles; // AppendStructuredBuffer<uint4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

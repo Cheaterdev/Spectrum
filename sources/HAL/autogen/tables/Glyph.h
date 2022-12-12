@@ -17,6 +17,7 @@ namespace Table
 			compiler.compile(index);
 			compiler.compile(color);
 		}
-	};
+		using Compiled = Glyph;
+		};
 	#pragma pack(pop)
 }

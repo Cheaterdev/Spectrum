@@ -17,6 +17,9 @@ layout DefaultLayout: FrameLayout
 	slot Instance0;
 	slot Instance1;
 	slot Instance2;
+	slot Instance3;
+	slot Instance4;
+	slot Instance5;
 
 
 	slot Raytracing;

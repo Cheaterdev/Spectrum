@@ -30,6 +30,16 @@ namespace Table
 			compiler.compile(camera);
 			compiler.compile(prevCamera);
 		}
+		struct Compiled
+		{
+			float4 time; // float4
+			float4 sunDir; // float4
+			uint bestFitNormals; // Texture2D<float4>
+			uint brdf; // Texture3D<float4>
+			uint sky; // TextureCube<float4>
+			Camera::Compiled camera; // Camera
+			Camera::Compiled prevCamera; // Camera
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

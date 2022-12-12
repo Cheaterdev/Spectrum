@@ -402,7 +402,8 @@ void stencil_renderer::generate(Graph& graph)
 
 							current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
 							m.compiled_mesh_info.set(graphics);
-
+							m.mesh_instance_info.set(graphics);
+									
 							{
 								Slots::Instance instance;
 								instance.GetInstanceId() = (UINT)current.size();
@@ -485,7 +486,8 @@ void stencil_renderer::generate(Graph& graph)
 									auto& m = l->rendering[i];
 
 									m.compiled_mesh_info.set(graphics);
-
+									m.mesh_instance_info.set(graphics);
+									
 									{
 										Slots::Instance instance;
 										instance.GetInstanceId() = i + 1;
@@ -590,7 +592,8 @@ void stencil_renderer::generate_after(Graph& graph)
 						{
 							auto& m = l->rendering[i];
 							m.compiled_mesh_info.set(graphics);
-
+							m.mesh_instance_info.set(graphics);
+									
 							graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 						}
 					}
@@ -643,7 +646,8 @@ void stencil_renderer::generate_after(Graph& graph)
 						{
 							auto& m = l->rendering[i];
 							m.compiled_mesh_info.set(graphics);
-
+							m.mesh_instance_info.set(graphics);
+									
 							graphics.draw_indexed(36, 0, 0);
 						}
 					}
@@ -675,6 +679,8 @@ void stencil_renderer::generate_after(Graph& graph)
 							color.set(graphics);
 						}
 						m.compiled_mesh_info.set(graphics);
+						m.mesh_instance_info.set(graphics);
+									
 						//graphics.draw(m.draw_arguments);
 
 						graphics.dispatch_mesh(m.dispatch_mesh_arguments);

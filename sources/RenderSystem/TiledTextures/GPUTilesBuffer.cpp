@@ -48,7 +48,7 @@ void GPUTilesBuffer::erase(ivec3 pos)
 
 void GPUTilesBuffer::update(HAL::CommandList::ptr list)
 {
-	if (tiles_updated) {
+	if (tiles_updated&&!used_tiles.empty()) {
 		buffer->set_data(list, 0, used_tiles);
 		DispatchArguments args;
 

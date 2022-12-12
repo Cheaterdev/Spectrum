@@ -11,6 +11,7 @@ namespace Table
 		{
 			compiler.compile(color);
 		}
-	};
+		using Compiled = Color;
+		};
 	#pragma pack(pop)
 }

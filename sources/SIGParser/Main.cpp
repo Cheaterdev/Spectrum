@@ -393,26 +393,7 @@ void generate_cpp_table(const Table& table)
 			stream << get_cpp_for(v) << " " << v.name << generate_array(v) << ';' << std::endl;
 		}
 
-		if (type == ValueType::CB)
-			if (table.find_option("serialize"))
-			{
-
-				stream << std::format(
-					R"(private:
-	SERIALIZE())") << std::endl;
-				stream << "{" << std::endl;
-
-				for (auto& v : table.values)
-				{
-					if (v.value_type != ValueType::CB && v.value_type != ValueType::STRUCT) continue;
-
-					stream << std::format(
-						R"(     ar& NVP({});)", v.name) << std::endl;
-
-				}
-				stream << "}" << std::endl;
-			}
-
+	
 
 
 
@@ -572,9 +553,94 @@ void generate_cpp_table(const Table& table)
 			stream.pop();
 
 			stream << "}" << std::endl;
+			
+
+			{
+			
+
+					// declaration
+			auto compile_func = [&](ValueType type) {
+				//	if (table.counts[type] == 0) return;
+
+				for (auto& v : table.values)
+				{
+					if (v.value_type != type) continue;
+	if (v.value_type == ValueType::CB )
+				stream << v.type << " " << v.name << generate_array(v) << "; // " << v.type << std::endl;
+			else	if (v.value_type == ValueType::STRUCT)
+				stream << v.type << "::Compiled " << v.name << generate_array(v) << "; // " << v.type << std::endl;
+			else
+				stream << "uint" << " " << v.name << (v.bindless ? "" : generate_array(v)) << "; // " << v.type << std::endl;
+
+				}
+			};
+
+
+				bool can_compiled=true;
+				bool need_compiled = false;
+					for (auto& v : table.values)
+				{
+					
+	if (v.value_type == ValueType::CB )
+				need_compiled=need_compiled;
+			else	if (v.value_type == ValueType::STRUCT)
+				need_compiled=need_compiled;
+			else
+				need_compiled=true;
+
+
+						if (v.find_option("dynamic"))can_compiled = false;
+				}
+					if(can_compiled){
+				if(need_compiled){
+			stream << "struct Compiled" << std::endl;
+			stream << "{" << std::endl;
+
+			stream.push();
+
+
+			compile_func(ValueType::CB);
+			compile_func(ValueType::SRV);
+			compile_func(ValueType::UAV);
+			compile_func(ValueType::SMP);
+			compile_func(ValueType::STRUCT);
 			stream.pop();
 
 			stream << "};" << std::endl;
+			stream.pop();}
+				else
+				{
+						stream << "using Compiled = " <<table.name<<";"<< std::endl;
+		
+				}
+					}
+			}
+
+
+			
+			if (table.find_option("serialize"))
+			{
+
+				stream << std::format(
+					R"(private:
+	SERIALIZE())") << std::endl;
+				stream << "{" << std::endl;
+
+				for (auto& v : table.values)
+				{
+					if (v.value_type != ValueType::CB && v.value_type != ValueType::STRUCT) continue;
+
+					stream << std::format(
+						R"(     ar& NVP({});)", v.name) << std::endl;
+
+				}
+				stream << "}" << std::endl;
+			}
+
+
+			stream << "};" << std::endl;
+			stream.pop();
+
 		}
 
 		stream << "#pragma pack(pop)" << std::endl;

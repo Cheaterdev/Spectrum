@@ -14,6 +14,11 @@ namespace Table
 			compiler.compile(meshes_count);
 			compiler.compile(commands);
 		}
+		struct Compiled
+		{
+			uint meshes_count; // StructuredBuffer<uint>
+			uint commands; // Buffer<uint>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

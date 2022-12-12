@@ -39,6 +39,7 @@ namespace Table
 			compiler.compile(jitter);
 			compiler.compile(frustum);
 		}
-	};
+		using Compiled = Camera;
+		};
 	#pragma pack(pop)
 }

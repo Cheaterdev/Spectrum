@@ -23,6 +23,14 @@ namespace Table
 			compiler.compile(SrcMip);
 			compiler.compile(OutMip);
 		}
+		struct Compiled
+		{
+			uint SrcMipLevel; // uint
+			uint NumMipLevels; // uint
+			float2 TexelSize; // float2
+			uint SrcMip; // Texture2D<float4>
+			uint OutMip[4]; // RWTexture2D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

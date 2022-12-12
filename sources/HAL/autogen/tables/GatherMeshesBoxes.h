@@ -21,6 +21,13 @@ namespace Table
 			compiler.compile(visibleMeshes);
 			compiler.compile(invisibleMeshes);
 		}
+		struct Compiled
+		{
+			uint input_meshes; // StructuredBuffer<BoxInfo>
+			uint visible_boxes; // StructuredBuffer<uint>
+			uint visibleMeshes; // AppendStructuredBuffer<uint>
+			uint invisibleMeshes; // AppendStructuredBuffer<uint>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

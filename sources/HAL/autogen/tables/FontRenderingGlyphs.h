@@ -12,6 +12,10 @@ namespace Table
 		{
 			compiler.compile(data);
 		}
+		struct Compiled
+		{
+			uint data; // StructuredBuffer<Glyph>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

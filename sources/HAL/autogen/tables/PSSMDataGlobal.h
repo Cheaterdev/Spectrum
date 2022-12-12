@@ -15,6 +15,11 @@ namespace Table
 			compiler.compile(light_buffer);
 			compiler.compile(light_camera);
 		}
+		struct Compiled
+		{
+			uint light_buffer; // Texture2D<float>
+			uint light_camera; // StructuredBuffer<Camera>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

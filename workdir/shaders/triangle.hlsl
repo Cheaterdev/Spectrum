@@ -18,11 +18,13 @@ struct vertex_output
 
 #include "autogen/FrameInfo.h"
 #include "autogen/MeshInfo.h" 
+#include "autogen/MeshInstanceInfo.h" 
 #include "autogen/SceneData.h"
 
 
 static const FrameInfo frameInfo = GetFrameInfo();
 static const MeshInfo meshInfo = GetMeshInfo();
+static const MeshInstanceInfo meshInstanceInfo = GetMeshInstanceInfo();
 static const SceneData sceneData = GetSceneData();
 
 
@@ -56,6 +58,6 @@ vertex_output VS(uint index: SV_VertexID)
     	//matrix m = { {1,0,0,0}, { 0,1,0,0 }, { 0,0,1,0 }, {0,0,0,1 } };
     node_data node= sceneData.GetNodes()[meshInfo.GetNode_offset()];
     matrix m = node.GetNode_global_matrix();
-    return transform(node.GetNode_global_matrix(), node.GetNode_global_matrix_prev(), frameInfo.GetCamera(), sceneData.GetVertexes()[meshInfo.GetVertex_offset()+ index]);
+    return transform(node.GetNode_global_matrix(), node.GetNode_global_matrix_prev(), frameInfo.GetCamera(), meshInstanceInfo.GetVertexes()[meshInfo.GetVertex_offset_local()+ index]);
 }
 

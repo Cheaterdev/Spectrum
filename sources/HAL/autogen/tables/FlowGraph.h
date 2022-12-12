@@ -17,6 +17,7 @@ namespace Table
 			compiler.compile(offset_size);
 			compiler.compile(inv_pixel);
 		}
-	};
+		using Compiled = FlowGraph;
+		};
 	#pragma pack(pop)
 }

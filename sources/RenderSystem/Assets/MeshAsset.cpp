@@ -68,7 +68,7 @@ void MeshAsset::init_gpu()
 	}
 
 
-	vertex_buffer_view = universal_nodes_manager::get().buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
+	vertex_buffer_view = universal_vertex_manager::get().buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
 		HAL::Device::get().get_static_gpu_data(), 
 		StructuredBufferViewDesc{ 
 			(uint)vertex_handle.get_offset_in_bytes(), 
@@ -77,7 +77,7 @@ void MeshAsset::init_gpu()
 		});
 
 	
-	index_buffer_view  = universal_nodes_manager::get().buffer->create_view<HAL::StructuredBufferView<UINT32>>(
+	index_buffer_view  = universal_index_manager::get().buffer->create_view<HAL::StructuredBufferView<UINT32>>(
 		HAL::Device::get().get_static_gpu_data(), 
 		StructuredBufferViewDesc{ 
 			(uint)index_handle.get_offset_in_bytes(), 
@@ -108,7 +108,7 @@ void MeshAsset::init_gpu()
 		for (auto& meshet : mesh.meshlets)
 		{
 
-			Table::Meshlet meshlet_row;
+			Table::Meshlet::Compiled meshlet_row;
 			meshlet_row.primitiveCount = static_cast<UINT>(meshet.PrimitiveIndices.size() / 3);
 			meshlet_row.primitiveOffset = primitive_ids / 3;
 
@@ -152,6 +152,37 @@ void MeshAsset::init_gpu()
 		meshlet_cull_handle.write(0, meshlet_cull);
 	}
 
+
+	this->meshlets = universal_meshlet_manager::get().buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
+		HAL::Device::get().get_static_gpu_data(), 
+		StructuredBufferViewDesc{ 
+			(uint)meshlet_handle.get_offset_in_bytes(), 
+			(uint)meshlet_handle.get_size_in_bytes(),
+			false
+		});
+		meshlet_cull_datas = universal_meshletculldata_manager::get().buffer->create_view<HAL::StructuredBufferView<Table::MeshletCullData>>(
+		HAL::Device::get().get_static_gpu_data(), 
+		StructuredBufferViewDesc{ 
+			(uint)meshlet_cull_handle.get_offset_in_bytes(), 
+			(uint)meshlet_cull_handle.get_size_in_bytes(),
+			false
+		});
+	
+	unique_indices  = universal_index_manager::get().buffer->create_view<HAL::StructuredBufferView<UINT32>>(
+		HAL::Device::get().get_static_gpu_data(), 
+		StructuredBufferViewDesc{ 
+			(uint)unique_index_handle.get_offset_in_bytes(), 
+			(uint)unique_index_handle.get_size_in_bytes(),
+			false
+		});
+	
+	primitive_indices  = universal_index_manager::get().buffer->create_view<HAL::StructuredBufferView<UINT32>>(
+		HAL::Device::get().get_static_gpu_data(), 
+		StructuredBufferViewDesc{ 
+			(uint)primitive_index_handle.get_offset_in_bytes(), 
+			(uint)primitive_index_handle.get_size_in_bytes(),
+			false
+		});
 
 	/*if (meshes.size())
 	{
@@ -322,6 +353,8 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 
 	meshpart[0].material_id = static_cast<materials::universal_material*>(rendering[i].material)->get_material_id();
 	meshpart[0].mesh_cb = info.compiled_mesh_info.compiled().get_offset();
+meshpart[0].meshinstance_cb = mesh_instance_info.compiled().get_offset();
+
 	meshpart[0].draw_commands = info.dispatch_mesh_arguments;
 	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
 
@@ -377,6 +410,8 @@ void MeshAssetInstance::on_add(scene_object* parent)
 		{
 
 			meshpart[i].mesh_cb = info.compiled_mesh_info.compiled().get_offset();
+			meshpart[i].meshinstance_cb = mesh_instance_info.compiled().get_offset();
+
 			meshpart[i].material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 			meshpart[i].draw_commands = info.dispatch_mesh_arguments;
 			meshpart[i].node_offset = info.mesh_info.GetNode_offset();
@@ -430,12 +465,8 @@ void MeshAssetInstance::update_rtx_instance()
 		{
 
 
-			static D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
-			static bool inited = false;
-
-
-			if (!inited)
-			{
+			D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+			
 				for (int x = 0; x < 3; x++)
 					for (int y = 0; y < 4; y++)
 					{
@@ -447,8 +478,7 @@ void MeshAssetInstance::update_rtx_instance()
 				instanceDesc.InstanceID = info.node_id;
 				instanceDesc.InstanceContributionToHitGroupIndex = RTX::get().rtx.get_index(static_cast<materials::universal_material*>(info.material));// ->info_rtx.get_offset();
 
-		//		inited = true;
-			}
+		
 			ras[i] = instanceDesc;
 
 			i++;
@@ -531,7 +561,7 @@ void MeshAssetInstance::update_nodes()
 
 
 	universal_nodes_manager::get().allocate(nodes_handle, nodes_count);
-	universal_mesh_instance_manager::get().allocate(instance_handle, rendering_count);
+	universal_rtx_manager::get().allocate(instance_handle, rendering_count);
 
 
 	nodes_buffer_view = universal_nodes_manager::get().buffer->create_view<HAL::StructuredBufferView<Table::node_data>>(
@@ -541,7 +571,17 @@ void MeshAssetInstance::update_nodes()
 			(uint)nodes_handle.get_size_in_bytes(),
 			false
 		});
+	Slots::MeshInstanceInfo instance_info;
 
+	instance_info.GetVertexes() =mesh_asset->vertex_buffer_view.structuredBuffer;
+	instance_info.GetIndices() = mesh_asset->index_buffer_view.structuredBuffer;
+	instance_info.GetMeshletCullData() = mesh_asset->meshlet_cull_datas.structuredBuffer;
+	instance_info.GetMeshlets() = mesh_asset->meshlets.structuredBuffer;
+			
+		instance_info.GetUnique_indices() = mesh_asset->unique_indices.structuredBuffer;
+			instance_info.GetPrimitive_indices() = mesh_asset->primitive_indices.structuredBuffer;
+
+	mesh_instance_info = instance_info.compile(HAL::Device::get().get_static_gpu_data());
 	auto gpu_nodes = nodes_handle.map();
 	auto gpu_instances = instance_handle.map();
 
@@ -561,6 +601,25 @@ void MeshAssetInstance::update_nodes()
 
 
 			render_info info;
+
+	info.vertex_buffer_view = universal_vertex_manager::get().buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
+		HAL::Device::get().get_static_gpu_data(), 
+		StructuredBufferViewDesc{ 
+			(uint) mesh_asset->vertex_handle.get_offset_in_bytes()+mesh_asset->meshes[m].vertex_offset*sizeof(Table::mesh_vertex_input), 
+			(uint) mesh_asset->vertex_handle.get_size_in_bytes()+mesh_asset->meshes[m].vertex_count*sizeof(Table::mesh_vertex_input),
+			false
+		});
+
+	
+	info.index_buffer_view  = universal_index_manager::get().buffer->create_view<HAL::StructuredBufferView<UINT32>>(
+		HAL::Device::get().get_static_gpu_data(), 
+		StructuredBufferViewDesc{ 
+			(uint) mesh_asset->index_handle.get_offset_in_bytes()+mesh_asset->meshes[m].index_offset*sizeof(UINT32),  
+			(uint) mesh_asset->index_handle.get_size_in_bytes()+mesh_asset->meshes[m].index_count*sizeof(UINT32),
+			false
+		});
+
+
 
 			info.draw_arguments.StartIndexLocation = static_cast<UINT>(mesh_asset->index_handle.get_offset() + mesh_asset->meshes[m].index_offset);
 			info.draw_arguments.IndexCountPerInstance = mesh_asset->meshes[m].index_count;
@@ -587,19 +646,18 @@ void MeshAssetInstance::update_nodes()
 
 			//	node_buffer[node->index] = mat;
 				//if(nodes_ptr) 
+
+			info.mesh_info.GetVertex_offset_local() = static_cast<UINT>(mesh_asset->meshes[m].vertex_offset);
+			
+			info.mesh_info.GetMeshlet_offset_local() =  mesh_asset->meshes[m].meshlets_offset;
+		
+
+	
+
+
 			info.mesh_info.GetNode_offset() = static_cast<UINT>(nodes_handle.get_offset() + nodes.size() - 1);
-			//info.mesh_info.GetNodes() = nodes_buffer_view.structuredBuffer;
-			//info.mesh_info.GetVertexes() =  mesh_asset->vertex_buffer_view.structuredBuffer;
-			//info.mesh_info.GetIndices() =  mesh_asset->index_buffer_view.structuredBuffer;
-
-
-			info.mesh_info.GetVertex_offset() = static_cast<UINT>(mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset);
-			info.mesh_info.GetMeshlet_offset() = static_cast<UINT>(mesh_asset->meshlet_handle.get_offset() + mesh_asset->meshes[m].meshlets_offset);
-
+		
 			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshlets.size());
-
-			info.mesh_info.GetMeshlet_unique_offset() = static_cast<UINT>(mesh_asset->unique_index_handle.get_offset());
-			info.mesh_info.GetMeshlet_vertex_offset() = static_cast<UINT>(mesh_asset->primitive_index_handle.get_offset());
 
 			info.meshlet_offset = mesh_asset->meshes[m].meshlets_offset;
 			info.meshlet_count = static_cast<UINT>(mesh_asset->meshes[m].meshlets.size());
@@ -618,16 +676,16 @@ void MeshAssetInstance::update_nodes()
 			info.material_id = static_cast<UINT>(mesh_asset->meshes[m].material);
 			info.material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
 			info.compiled_mesh_info = info.mesh_info.compile(HAL::Device::get().get_static_gpu_data());
-
+			info.mesh_instance_info = mesh_instance_info;
 			info.ras = mesh_asset->meshes[m].ras;
 
 			//assert(info.ras);
 
 			info.node_id = static_cast<UINT>(instance_handle.get_offset() + nodes.size() - 1);
 			auto& my_instance = gpu_instances[static_cast<UINT>(nodes.size()) - 1];
-			my_instance.index_offset = info.draw_arguments.StartIndexLocation;
-			my_instance.vertex_offset = info.mesh_info.GetVertex_offset();
-
+			my_instance.vertexes = info.vertex_buffer_view.structuredBuffer.get_offset();
+			my_instance.indices = info.index_buffer_view.structuredBuffer.get_offset();
+	
 			rendering.push_back(info);
 		}
 
@@ -670,6 +728,7 @@ void SceneFrameManager::prepare(HAL::CommandList::ptr& command_list, Scene& scen
 	//	universal_mesh_info_part_manager::get().prepare(command_list);
 	universal_material_info_part_manager::get().prepare(command_list);
 	universal_meshletculldata_manager::get().prepare(command_list);
+universal_rtx_manager::get().prepare(command_list);
 
 	scene.mesh_infos->prepare(command_list);
 	scene.raytrace->prepare(command_list);

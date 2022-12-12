@@ -23,6 +23,14 @@ namespace Table
 			compiler.compile(inscatter);
 			compiler.compile(irradiance);
 		}
+		struct Compiled
+		{
+			float3 sunDir; // float3
+			uint depthBuffer; // Texture2D<float>
+			uint transmittance; // Texture2D<float4>
+			uint inscatter; // Texture3D<float4>
+			uint irradiance; // Texture2D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

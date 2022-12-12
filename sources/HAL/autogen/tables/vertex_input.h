@@ -20,6 +20,7 @@ namespace Table
 			compiler.compile(mulColor);
 			compiler.compile(addColor);
 		}
-	};
+		using Compiled = vertex_input;
+		};
 	#pragma pack(pop)
 }

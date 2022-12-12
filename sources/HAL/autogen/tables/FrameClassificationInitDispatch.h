@@ -20,6 +20,13 @@ namespace Table
 			compiler.compile(hi_dispatch_data);
 			compiler.compile(low_dispatch_data);
 		}
+		struct Compiled
+		{
+			uint hi_counter; // StructuredBuffer<uint>
+			uint low_counter; // StructuredBuffer<uint>
+			uint hi_dispatch_data; // RWStructuredBuffer<DispatchArguments>
+			uint low_dispatch_data; // RWStructuredBuffer<DispatchArguments>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

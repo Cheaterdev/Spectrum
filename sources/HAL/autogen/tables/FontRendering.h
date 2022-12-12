@@ -14,6 +14,11 @@ namespace Table
 			compiler.compile(tex0);
 			compiler.compile(positions);
 		}
+		struct Compiled
+		{
+			uint tex0; // Texture2D<float>
+			uint positions; // Buffer<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

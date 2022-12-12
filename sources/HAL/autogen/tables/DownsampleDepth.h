@@ -14,6 +14,11 @@ namespace Table
 			compiler.compile(srcTex);
 			compiler.compile(targetTex);
 		}
+		struct Compiled
+		{
+			uint srcTex; // Texture2D<float>
+			uint targetTex; // RWTexture2D<float>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

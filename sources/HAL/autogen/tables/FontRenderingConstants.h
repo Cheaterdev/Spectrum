@@ -14,6 +14,7 @@ namespace Table
 			compiler.compile(TransformMatrix);
 			compiler.compile(ClipRect);
 		}
-	};
+		using Compiled = FontRenderingConstants;
+		};
 	#pragma pack(pop)
 }

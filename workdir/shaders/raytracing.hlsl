@@ -435,6 +435,8 @@ void MyRaygenShader()
 
 	float4 gi = payload_gi.color;// max(0, getGI(itc, pos, pos + scaler * normal / m, normal, v, r, gbuffer.GetNormals()[tc].w, albedo.w));
 
+
+	//gi=trace(voxel_info, 0, 0.0,  frame.GetCamera().GetPosition(), normalize(pos - frame.GetCamera().GetPosition()), 0.01, payload_gi.dist);//
 	gi = lerp(reprojected.history, gi, speed);
 
 	tex_noise[itc] = float4(gi.xyz, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;

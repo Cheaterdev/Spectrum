@@ -15,6 +15,11 @@ namespace Table
 			compiler.compile(light_mask);
 			compiler.compile(gbuffer);
 		}
+		struct Compiled
+		{
+			uint light_mask; // Texture2D<float>
+			GBuffer::Compiled gbuffer; // GBuffer
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

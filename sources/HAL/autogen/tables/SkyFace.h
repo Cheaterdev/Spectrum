@@ -11,6 +11,7 @@ namespace Table
 		{
 			compiler.compile(face);
 		}
-	};
+		using Compiled = SkyFace;
+		};
 	#pragma pack(pop)
 }

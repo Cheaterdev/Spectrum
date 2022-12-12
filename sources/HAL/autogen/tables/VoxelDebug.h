@@ -15,6 +15,11 @@ namespace Table
 			compiler.compile(volume);
 			compiler.compile(gbuffer);
 		}
+		struct Compiled
+		{
+			uint volume; // Texture3D<float4>
+			GBuffer::Compiled gbuffer; // GBuffer
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

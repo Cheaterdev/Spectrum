@@ -114,6 +114,7 @@ void have_type::detect_type(have_options * options)
 	if (type.starts_with("StructuredBuffer")) value_type = ValueType::SRV;
 	if (type.starts_with("Buffer")) value_type = ValueType::SRV;
 	if (type.starts_with("RaytracingAccelerationStructure")) value_type = ValueType::SRV;
+	if (type.starts_with("ConstantBuffer")) value_type = ValueType::SRV;
 	
 	if (type.starts_with("RW")) value_type = ValueType::UAV;
 	if (type.starts_with("AppendStructuredBuffer")) value_type = ValueType::UAV;
@@ -384,6 +385,8 @@ void Parsed::setup()
 			if (o.name == "Bind")
 			{
 				t.slot = find_layout(o.value_atom.owner_name)->find_slot(o.value_atom.expr);
+				if(!t.slot)
+					throw std::runtime_error("cannot find slot " +  o.value_atom.owner_name + " " + o.value_atom.expr);
 			}
 		}
 		t.setup(this);

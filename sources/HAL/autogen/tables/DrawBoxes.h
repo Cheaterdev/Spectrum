@@ -18,6 +18,12 @@ namespace Table
 			compiler.compile(input_meshes);
 			compiler.compile(visible_meshes);
 		}
+		struct Compiled
+		{
+			uint vertices; // StructuredBuffer<float4>
+			uint input_meshes; // StructuredBuffer<BoxInfo>
+			uint visible_meshes; // RWStructuredBuffer<uint>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

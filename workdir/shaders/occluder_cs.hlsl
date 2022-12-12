@@ -51,7 +51,7 @@ StructuredBuffer<invisible_draw_info> boxes_instances: register(t0, space1);
 #else
 StructuredBuffer<uint> visible_ids: register(t0, space1);
 #endif
-
+ercrec
 cbuffer info : register(b0)
 {
     uint _count;

@@ -20,11 +20,13 @@ struct vertex_output
 #include "autogen/MeshInfo.h" 
 #include "autogen/SceneData.h"
 #include "autogen/Voxelization.h"
+#include "autogen/MeshInstanceInfo.h" 
 
 static const FrameInfo frameInfo = GetFrameInfo();
 static const MeshInfo meshInfo = GetMeshInfo();
 static const SceneData sceneData = GetSceneData();
 static const VoxelInfo voxel_info = GetVoxelization().GetInfo();
+static const MeshInstanceInfo meshInstanceInfo = GetMeshInstanceInfo();
 
 
 //#include "autogen/DebugInfo.h"
@@ -117,7 +119,7 @@ void VS(
    
     uint meshletIndex = payload.MeshletIndices[gid];
     if (meshletIndex >= meshInfo.GetMeshlet_count()) return;
-    Meshlet m = sceneData.GetMeshlets()[meshInfo.GetMeshlet_offset() + meshletIndex];   
+    Meshlet m = meshInstanceInfo.GetMeshlets()[meshInfo.GetMeshlet_offset_local() +meshletIndex];   
 	
 	
     uint primPart = ceil(float(m.GetPrimitiveCount()) / 3);
@@ -136,22 +138,22 @@ void VS(
     {
 	
 	      tris[gtid] = uint3(3 * gtid, 3 * gtid + 1, 3 * gtid + 2);
-        uint index_offset = meshInfo.GetMeshlet_vertex_offset() + 3 * (m.GetPrimitiveOffset() + primIndex);
-        uint index_offset0 = sceneData.GetIndices()[index_offset];
-        uint index_offset1 = sceneData.GetIndices()[index_offset + 1];
-        uint index_offset2 = sceneData.GetIndices()[index_offset + 2];
+        uint index_offset = 3 * (m.GetPrimitiveOffset() + primIndex);
+        uint index_offset0 = meshInstanceInfo.GetPrimitive_indices()[index_offset];
+        uint index_offset1 = meshInstanceInfo.GetPrimitive_indices()[index_offset + 1];
+        uint index_offset2 = meshInstanceInfo.GetPrimitive_indices()[index_offset + 2];
 
-        uint vi0 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + index_offset0];
-        uint vi1 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + index_offset1];
-        uint vi2 = meshInfo.GetVertex_offset() + sceneData.GetIndices()[meshInfo.GetMeshlet_unique_offset() + m.GetVertexOffset() + index_offset2];
+        uint vi0 = meshInfo.GetVertex_offset_local() + meshInstanceInfo.GetUnique_indices()[m.GetVertexOffset() + index_offset0];
+        uint vi1 = meshInfo.GetVertex_offset_local() + meshInstanceInfo.GetUnique_indices()[m.GetVertexOffset() + index_offset1];
+        uint vi2 = meshInfo.GetVertex_offset_local() + meshInstanceInfo.GetUnique_indices()[m.GetVertexOffset() + index_offset2];
 
         node_data node = sceneData.GetNodes()[meshInfo.GetNode_offset()];
         matrix m = node.GetNode_global_matrix();
 
 
-        vertex_output v0 = transform(node.GetNode_global_matrix(), sceneData.GetVertexes()[vi0]);
-        vertex_output v1 = transform(node.GetNode_global_matrix(), sceneData.GetVertexes()[vi1]);
-        vertex_output v2 = transform(node.GetNode_global_matrix(), sceneData.GetVertexes()[vi2]);
+        vertex_output v0 = transform(node.GetNode_global_matrix(), meshInstanceInfo.GetVertexes()[vi0]);
+        vertex_output v1 = transform(node.GetNode_global_matrix(), meshInstanceInfo.GetVertexes()[vi1]);
+        vertex_output v2 = transform(node.GetNode_global_matrix(), meshInstanceInfo.GetVertexes()[vi2]);
 
         float3 p0 = TransformPos(v0.wpos).xyz;
         float3 p1 = TransformPos(v1.wpos).xyz;

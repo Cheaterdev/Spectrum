@@ -15,7 +15,7 @@ struct FrameLayout
 		static const unsigned int ID = 1;
 		static const unsigned int CB = 2;
 		static const unsigned int CB_ID = 3;
-		static const unsigned int SRV = 8;
+		static const unsigned int SRV = 4;
 		static const unsigned int SRV_ID = 5;
 		static inline const std::vector<UINT> tables = {3, 5};
 	};

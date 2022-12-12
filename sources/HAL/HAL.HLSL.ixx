@@ -40,13 +40,13 @@ export
 		};
 
 		template<class T>
-		struct ConstBuffer : public Handle
+		struct ConstantBuffer : public Handle
 		{
 			using ptr = int;
 			static const HandleType TYPE = HandleType::CBV;
 
-			ConstBuffer() = default;
-			explicit  ConstBuffer(const Handle& h) : Handle(h)
+			ConstantBuffer() = default;
+			explicit  ConstantBuffer(const Handle& h) : Handle(h)
 			{
 
 			}
@@ -360,7 +360,7 @@ namespace HLSL
 
 	
 	template<class T>
-	void ConstBuffer<T>::create(HAL::Resource* resource, uint offset, uint size)
+	void ConstantBuffer<T>::create(HAL::Resource* resource, uint offset, uint size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 	

@@ -17,6 +17,12 @@ namespace Table
 			compiler.compile(SMAA_RT_METRICS);
 			compiler.compile(colorTex);
 		}
+		struct Compiled
+		{
+			float4 subsampleIndices; // float4
+			float4 SMAA_RT_METRICS; // float4
+			uint colorTex; // Texture2D<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

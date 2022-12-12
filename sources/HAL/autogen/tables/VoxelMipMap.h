@@ -18,6 +18,12 @@ namespace Table
 			compiler.compile(OutMips);
 			compiler.compile(params);
 		}
+		struct Compiled
+		{
+			uint SrcMip; // Texture3D<float4>
+			uint OutMips[3]; // RWTexture3D<float4>
+			VoxelTilingParams::Compiled params; // VoxelTilingParams
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

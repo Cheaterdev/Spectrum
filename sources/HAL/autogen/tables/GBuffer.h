@@ -23,6 +23,14 @@ namespace Table
 			compiler.compile(depth);
 			compiler.compile(motion);
 		}
+		struct Compiled
+		{
+			uint albedo; // Texture2D<float4>
+			uint normals; // Texture2D<float4>
+			uint specular; // Texture2D<float4>
+			uint depth; // Texture2D<float>
+			uint motion; // Texture2D<float2>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

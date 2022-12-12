@@ -24,6 +24,7 @@ namespace Table
 			compiler.compile(dist);
 			compiler.compile(cone);
 		}
-	};
+		using Compiled = RayPayload;
+		};
 	#pragma pack(pop)
 }

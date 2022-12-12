@@ -11,6 +11,10 @@ namespace Table
 		{
 			compiler.compile(viewBuffer);
 		}
+		struct Compiled
+		{
+			uint viewBuffer; // RWStructuredBuffer<uint>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

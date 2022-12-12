@@ -11,6 +11,7 @@ namespace Table
 		{
 			compiler.compile(v);
 		}
-	};
+		using Compiled = DebugStruct;
+		};
 	#pragma pack(pop)
 }

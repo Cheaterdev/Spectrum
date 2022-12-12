@@ -11,6 +11,7 @@ namespace Table
 		{
 			compiler.compile(hit);
 		}
-	};
+		using Compiled = ShadowPayload;
+		};
 	#pragma pack(pop)
 }

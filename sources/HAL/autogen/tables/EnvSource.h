@@ -11,6 +11,10 @@ namespace Table
 		{
 			compiler.compile(sourceTex);
 		}
+		struct Compiled
+		{
+			uint sourceTex; // TextureCube<float4>
+		};
 	};
-	#pragma pack(pop)
-}
+#pragma pack(pop)
+				}

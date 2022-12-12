@@ -23,6 +23,7 @@ namespace Table
 			compiler.compile(Const3);
 			compiler.compile(Sample);
 		}
-	};
+		using Compiled = FSRConstants;
+		};
 	#pragma pack(pop)
 }
