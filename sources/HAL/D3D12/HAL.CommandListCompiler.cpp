@@ -1,3 +1,6 @@
+module;
+import d3d12;
+#include <pix3.h>
 module HAL:Private.CommandListCompiler;
 
 import :Device;
@@ -59,5 +62,19 @@ namespace HAL
 			write_offset = 0;
 			read_offset = 0;
 		}
+
+
+			void CommandListCompilerDelayed::start_event(std::wstring str)
+			{
+						PIXBeginEvent(compiled.m_commandList.Get(), 0, str.c_str());
+		
+			}
+
+			void CommandListCompilerDelayed::end_event()
+			{
+			PIXEndEvent(compiled.m_commandList.Get());
+				
+			}
+
 	}
 }

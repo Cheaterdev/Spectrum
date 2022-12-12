@@ -1,7 +1,7 @@
-#ifndef SLOT_6
-	#define SLOT_6
+#ifndef SLOT_7
+	#define SLOT_7
 #else
-	#error Slot 6 is already used
+	#error Slot 7 is already used
 #endif
 #include "layout/DefaultLayout.h"
 #include "tables/Instance.h"
@@ -9,7 +9,7 @@
 #define CB_DEFINED
 struct CB { uint offset; };
 #endif
-ConstantBuffer< CB > pass_Instance: register( b2, space6);
+ConstantBuffer< CB > pass_Instance: register( b2, space7);
  ConstantBuffer<Instance> CreateInstance()
 {
 	return ResourceDescriptorHeap[pass_Instance.offset];

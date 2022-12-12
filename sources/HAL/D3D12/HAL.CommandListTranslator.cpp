@@ -1,6 +1,7 @@
-import d3d12;
-#include <pix3.h>
+ module HAL:Private.CommandListTranslator;
 
+
+ 
 //module Graphics;// HAL:Private.CommandListCompiler;
 //
 //import Math;

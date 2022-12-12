@@ -8,7 +8,7 @@ import Core;
 
 export
 {
-	constexpr bool use_virtual = true;
+	constexpr bool use_virtual = false;
 
 	namespace HAL
 	{

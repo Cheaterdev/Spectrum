@@ -17,7 +17,7 @@ struct PickerBuffer
 	RWStructuredBuffer<uint> viewBuffer;
 }
 
-[Bind = DefaultLayout::Instance2]
+[Bind = DefaultLayout::Instance3]
 struct Instance
 {
 	uint instanceId;

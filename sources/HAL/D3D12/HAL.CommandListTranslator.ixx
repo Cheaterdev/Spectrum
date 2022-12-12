@@ -308,18 +308,12 @@ export namespace HAL
 
 			void start_event(std::wstring str)
 			{
-			/*	compiler.func([str](ID3D12GraphicsCommandList4* list)
-					{
-						PIXBeginEvent(list, 0, str.c_str());
-					});*/
+					compiler.start_event(str);
 			}
 
 			void end_event()
 			{
-				/*compiler.func([](ID3D12GraphicsCommandList4* list)
-					{
-						PIXEndEvent(list);
-					});*/
+				compiler.end_event();
 			}
 
 

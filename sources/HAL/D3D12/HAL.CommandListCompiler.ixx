@@ -1426,6 +1426,9 @@ export namespace HAL
 					});
 			}
 
+				void start_event(std::wstring str);
+
+			void end_event();
 			void  ExecuteIndirect(
 				ID3D12CommandSignature* pCommandSignature,
 				UINT MaxCommandCount,
