@@ -136,21 +136,23 @@ export{
 		using ptr = s_ptr<MeshAsset>;
 		using ref = AssetReference<MeshAsset>;
 
+		HAL::Resource::ptr buffer;
+
+
 		std::vector<Table::mesh_vertex_input::Compiled> vertex_buffer;
 		std::vector<UINT32> index_buffer;
 
-		TypedHandle<Table::mesh_vertex_input::Compiled> vertex_handle;
-		TypedHandle<UINT32> index_handle;
+
+		AllocatorHanle vertex_handle;
+		AllocatorHanle index_handle;
+		AllocatorHanle unique_index_handle;
+		AllocatorHanle primitive_index_handle;
+		AllocatorHanle meshlet_handle;
+		AllocatorHanle meshlet_cull_handle;
+
 
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
-
-		TypedHandle<UINT32> unique_index_handle;
-		TypedHandle<UINT32> primitive_index_handle;
-
-
-		TypedHandle<Table::Meshlet::Compiled> meshlet_handle;
-		TypedHandle<Table::MeshletCullData::Compiled> meshlet_cull_handle;
 
 		HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
 		HAL::StructuredBufferView<UINT32> index_buffer_view;
@@ -353,40 +355,7 @@ export{
 
 		}
 	};
-
-	class universal_vertex_manager :public Singleton<universal_vertex_manager>, public HAL::virtual_gpu_buffer<Table::mesh_vertex_input>
-	{
-		static const size_t MAX_VERTEXES_SIZE = 100_mb / sizeof(Table::mesh_vertex_input);
-	public:
-		universal_vertex_manager() :HAL::virtual_gpu_buffer<Table::mesh_vertex_input>(MAX_VERTEXES_SIZE)
-		{
-
-		}
-	};
-
-
-	class universal_meshlet_manager :public Singleton<universal_meshlet_manager>, public HAL::virtual_gpu_buffer<Table::Meshlet>
-	{
-		static const size_t MAX_VERTEXES_SIZE = 100_mb / sizeof(Table::Meshlet);
-	public:
-		universal_meshlet_manager() :HAL::virtual_gpu_buffer<Table::Meshlet>(MAX_VERTEXES_SIZE)
-		{
-
-		}
-	};
-
-
-	class universal_index_manager :public Singleton<universal_index_manager>, public HAL::virtual_gpu_buffer<UINT32>
-	{
-		static const size_t MAX_INDEX_SIZE = 100_mb / sizeof(UINT32);
-	public:
-		universal_index_manager() :HAL::virtual_gpu_buffer<UINT32>(MAX_INDEX_SIZE)
-		{
-
-		}
-	};
 	
-
 
 	class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public HAL::virtual_gpu_buffer<Table::MaterialCommandData>
 	{
@@ -397,17 +366,7 @@ export{
 
 		}
 	};
-
-
-	class universal_meshletculldata_manager :public Singleton<universal_meshletculldata_manager>, public HAL::virtual_gpu_buffer<Table::MeshletCullData>
-	{
-		static const size_t MAX_COMMANDS_SIZE = 100_mb / sizeof(Table::MeshletCullData);
-	public:
-		universal_meshletculldata_manager() :HAL::virtual_gpu_buffer<Table::MeshletCullData>(MAX_COMMANDS_SIZE)
-		{
-
-		}
-	};
+	
 	class SceneFrameManager :public Singleton<SceneFrameManager>
 	{
 

@@ -36,7 +36,7 @@ export
 
 			}
 
-			void create(HAL::Resource* resource, uint first_elem = 0, uint count = 0);
+			void create(HAL::Resource* resource, uint64 first_elem = 0, uint64 count = 0);
 		};
 
 		template<class T>
@@ -51,7 +51,7 @@ export
 
 			}
 
-			void create(HAL::Resource* resource,uint offset, uint size);
+			void create(HAL::Resource* resource,uint64 offset, uint64 size);
 		};
 
 		template<class T>
@@ -65,7 +65,7 @@ export
 
 			}
 
-			void create(HAL::Resource* resource, uint first_elem = 0, uint count = 0);
+			void create(HAL::Resource* resource, uint64 first_elem = 0, uint64 count = 0);
 		};
 
 		template<class T>
@@ -79,7 +79,7 @@ export
 
 			}
 
-			void create(HAL::Resource* counter_resource, uint counter_offset, HAL::Resource* resource, uint first_elem = 0, uint count = 0);
+			void create(HAL::Resource* counter_resource, uint64 counter_offset, HAL::Resource* resource, uint64 first_elem = 0, uint64 count = 0);
 		};
 
 		struct ByteAddressBuffer : public Handle
@@ -92,7 +92,7 @@ export
 
 			}
 
-			void create(HAL::Resource* resource, uint offset = 0, uint size = 0);
+			void create(HAL::Resource* resource, uint64 offset = 0, uint64 size = 0);
 		};
 
 
@@ -106,7 +106,7 @@ export
 
 			}
 
-			void create(HAL::Resource* resource, uint offset = 0, uint size = 0);
+			void create(HAL::Resource* resource, uint64 offset = 0, uint64 size = 0);
 		};
 
 		template<class T>
@@ -120,7 +120,7 @@ export
 
 			}
 
-			void create(HAL::Resource* resource, Format format, uint offset = 0, uint size = 0);
+			void create(HAL::Resource* resource, Format format, uint64 offset = 0, uint64 size = 0);
 		};
 
 		template<class T>
@@ -133,7 +133,7 @@ export
 			{
 
 			}
-			void create(HAL::Resource* resource, Format format, uint offset = 0, uint size = 0);
+			void create(HAL::Resource* resource, Format format, uint64 offset = 0, uint64 size = 0);
 		};
 
 		template<class T = float4>
@@ -328,28 +328,28 @@ namespace HLSL
 		Handle::operator=(desc);
 	}
 
-	void ByteAddressBuffer::create(HAL::Resource* resource, uint offset, uint size)
+	void ByteAddressBuffer::create(HAL::Resource* resource, uint64 offset, uint64 size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (size == 0) size = static_cast<uint>(buffer_desc.SizeInBytes / 4);
 
-		HAL::Views::ShaderResource desc = { resource, Format::R32_TYPELESS, HAL::Views::ShaderResource::Buffer {offset, size, 0, true} };
+		HAL::Views::ShaderResource desc = { resource, Format::R32_TYPELESS, HAL::Views::ShaderResource::Buffer {(uint)offset, (uint)size, 0, true} };
 		Handle::operator=(desc);
 	}
 
-	void RWByteAddressBuffer::create(HAL::Resource* resource, uint offset, uint size)
+	void RWByteAddressBuffer::create(HAL::Resource* resource, uint64 offset, uint64 size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
-		if (size == 0) size = static_cast<uint>(buffer_desc.SizeInBytes / 4);
+		if (size == 0) size = static_cast<uint64>(buffer_desc.SizeInBytes / 4);
 
-		HAL::Views::UnorderedAccess desc = { resource, Format::R32_TYPELESS, HAL::Views::UnorderedAccess::Buffer {offset, size, 0, true, 0, nullptr} };
+		HAL::Views::UnorderedAccess desc = { resource, Format::R32_TYPELESS, HAL::Views::UnorderedAccess::Buffer {(uint)offset, (uint)size, 0, true, 0, nullptr} };
 		Handle::operator=(desc);
 	}
 
 
 
 	template<class T>
-	void StructuredBuffer<T>::create(HAL::Resource* resource, uint first_elem, uint count)
+	void StructuredBuffer<T>::create(HAL::Resource* resource, uint64 first_elem, uint64 count)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<uint>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
@@ -360,7 +360,7 @@ namespace HLSL
 
 	
 	template<class T>
-	void ConstantBuffer<T>::create(HAL::Resource* resource, uint offset, uint size)
+	void ConstantBuffer<T>::create(HAL::Resource* resource, uint64 offset, uint64 size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 	
@@ -370,41 +370,41 @@ namespace HLSL
 
 
 	template<class T>
-	void RWStructuredBuffer<T>::create(HAL::Resource* resource, uint first_elem, uint count)
+	void RWStructuredBuffer<T>::create(HAL::Resource* resource, uint64 first_elem, uint64 count)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<uint>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, 0, nullptr} };
+		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, 0, nullptr} };
 		Handle::operator=(desc);
 	}
 
 
 	template<class T>
-	void AppendStructuredBuffer<T>::create(HAL::Resource* counter_resource, uint counter_offset, HAL::Resource* resource, uint first_elem, uint count)
+	void AppendStructuredBuffer<T>::create(HAL::Resource* counter_resource, uint64 counter_offset, HAL::Resource* resource, uint64 first_elem, uint64 count)
 	{
-		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource} };
+		HAL::Views::UnorderedAccess desc = { resource, Format::UNKNOWN, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), sizeof(Underlying<T>), false, counter_offset, counter_resource} };
 		Handle::operator=(desc);
 	}
 	template<class T>
-	void Buffer<T>::create(HAL::Resource* resource, Format format, uint first_elem, uint count)
+	void Buffer<T>::create(HAL::Resource* resource, Format format, uint64 first_elem, uint64 count)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
-		if (count == 0) count = static_cast<uint>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
+		if (count == 0) count = static_cast<uint64>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
-		HAL::Views::ShaderResource desc = { resource, format, HAL::Views::ShaderResource::Buffer {first_elem, static_cast<uint>(count), 0, false} };
+		HAL::Views::ShaderResource desc = { resource, format, HAL::Views::ShaderResource::Buffer {(uint)first_elem, static_cast<uint>(count), 0, false} };
 		Handle::operator= (desc);
 	}
 
 
 	template<class T>
-	void RWBuffer<T>::create(HAL::Resource* resource, Format format, uint first_elem, uint count)
+	void RWBuffer<T>::create(HAL::Resource* resource, Format format, uint64 first_elem, uint64 count)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 		if (count == 0) count = static_cast<uint>(buffer_desc.SizeInBytes / sizeof(Underlying<T>));
 
 
-		HAL::Views::UnorderedAccess desc = { resource, format, HAL::Views::UnorderedAccess::Buffer {first_elem, static_cast<uint>(count), 0, false, 0, nullptr} };
+		HAL::Views::UnorderedAccess desc = { resource, format, HAL::Views::UnorderedAccess::Buffer {(uint)first_elem, static_cast<uint>(count), 0, false, 0, nullptr} };
 		Handle::operator= (desc);
 	}
 

@@ -34,7 +34,6 @@ public:
 		
 		{
 			Slots::Raytracing rtx;
-			rtx.GetIndex_buffer() = universal_index_manager::get().buffer->structuredBuffer;
 			rtx.GetScene() = scene_as->raytracing_handle;
 			rtx.set(compute);
 		}

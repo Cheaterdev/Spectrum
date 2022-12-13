@@ -99,11 +99,11 @@ ResourceInfo* get_resource_info(uint offset)
 			{
 				return handle;
 			}
-			uint get_offset() const
+			uint64 get_offset() const
 			{
 				return handle.get_offset();
 			}
-			uint get_count() const
+			uint64 get_count() const
 			{
 				return handle.get_size();
 			}

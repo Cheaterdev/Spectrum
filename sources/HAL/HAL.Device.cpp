@@ -75,7 +75,7 @@ namespace HAL
 		queues[CommandListType::COMPUTE].reset(new HAL::Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new HAL::Queue(CommandListType::COPY, this));
 
-		rtx = false;//get_properties().rtx;
+		rtx = !Debug::RunForPix&&get_properties().rtx;
 
 		heap_factory = std::make_unique<HeapFactory>(*this);
 		descriptor_heap_factory = std::make_unique<DescriptorHeapFactory>(*this);

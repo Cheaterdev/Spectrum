@@ -584,8 +584,8 @@ export
 
 		struct StructuredBufferViewDesc
 		{
-			uint offset;
-			uint size;
+			uint64 offset;
+			uint64 size;
 			bool counted;
 		};
 		template<class T>

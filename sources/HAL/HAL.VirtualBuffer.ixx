@@ -3,12 +3,13 @@ export module HAL:VirtualBuffer;
 export import :Concepts;
 import :Buffer;
 import :Types;
+import :Debug;
 
 import Core;
 
 export
 {
-	constexpr bool use_virtual = false;
+	constexpr bool use_virtual = !HAL::Debug::RunForPix;
 
 	namespace HAL
 	{
