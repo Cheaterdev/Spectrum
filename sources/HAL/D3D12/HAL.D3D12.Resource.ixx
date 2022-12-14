@@ -41,7 +41,11 @@ export namespace HAL
 	public:
 		D3D::Resource native_resource;
 
-
+		
+			auto get_dx() const
+			{
+				return native_resource.Get();
+			}
 	};
 	}
 }

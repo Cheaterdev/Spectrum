@@ -54,6 +54,14 @@ export{
 
 
 		std::vector<InlineMeshlet<UINT>> meshlets;
+
+		
+		HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
+		HAL::StructuredBufferView<UINT32> index_buffer_view;
+		
+			DrawIndexedArguments draw_arguments;
+			DispatchMeshArguments dispatch_mesh_arguments;
+		
 	private:
 		SERIALIZE()
 		{
@@ -124,6 +132,8 @@ export{
 		virtual void calculate_size();
 	};
 	class MeshAssetInstance;
+
+
 	class MeshAsset : public Asset
 	{
 		LEAK_TEST(MeshAsset)
@@ -141,14 +151,6 @@ export{
 
 		std::vector<Table::mesh_vertex_input::Compiled> vertex_buffer;
 		std::vector<UINT32> index_buffer;
-
-
-		AllocatorHanle vertex_handle;
-		AllocatorHanle index_handle;
-		AllocatorHanle unique_index_handle;
-		AllocatorHanle primitive_index_handle;
-		AllocatorHanle meshlet_handle;
-		AllocatorHanle meshlet_cull_handle;
 
 
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;

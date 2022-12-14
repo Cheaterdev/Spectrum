@@ -38,7 +38,7 @@ HRESULT CFW1TextRenderer::IsPixelSnappingDisabled(
 	void *clientDrawingContext,
 	BOOL *isDisabled
 ) {
-	clientDrawingContext;
+	UNUSED(clientDrawingContext);
 	
 	*isDisabled = FALSE;
 	
@@ -51,7 +51,7 @@ HRESULT CFW1TextRenderer::GetCurrentTransform(
 	void *clientDrawingContext,
 	DWRITE_MATRIX *transform
 ) {
-	clientDrawingContext;
+	UNUSED(clientDrawingContext);
 	
 	transform->dx = 0.0f;
 	transform->dy = 0.0f;
@@ -66,7 +66,7 @@ HRESULT CFW1TextRenderer::GetCurrentTransform(
 
 // IDWritePixelSnapping method
 HRESULT CFW1TextRenderer::GetPixelsPerDip(void *clientDrawingContext, FLOAT *pixelsPerDip) {
-	clientDrawingContext;
+	UNUSED(clientDrawingContext);
 	
 	*pixelsPerDip = 96.0f;
 	
@@ -85,8 +85,8 @@ HRESULT CFW1TextRenderer::DrawGlyphRun(
 	const DWRITE_GLYPH_RUN_DESCRIPTION *glyphRunDescription,
 	IUnknown *clientDrawingEffect
 ) {
-	glyphRunDescription;
-	measuringMode;
+	UNUSED(glyphRunDescription);
+	UNUSED(measuringMode);
 	
 	const UINT flags = m_currentFlags;
 	
@@ -172,11 +172,11 @@ HRESULT CFW1TextRenderer::DrawUnderline(
 	const DWRITE_UNDERLINE *underline,
 	IUnknown *clientDrawingEffect
 ) {
-	clientDrawingContext;
-	baselineOriginX;
-	baselineOriginY;
-	underline;
-	clientDrawingEffect;
+	UNUSED(clientDrawingContext);
+	UNUSED(baselineOriginX);
+	UNUSED(baselineOriginY);
+	UNUSED(underline);
+	UNUSED(clientDrawingEffect);
 	
 	return E_NOTIMPL;
 }
@@ -190,11 +190,11 @@ HRESULT CFW1TextRenderer::DrawStrikethrough(
 	const DWRITE_STRIKETHROUGH *strikethrough,
 	IUnknown *clientDrawingEffect
 ) {
-	clientDrawingContext;
-	baselineOriginX;
-	baselineOriginY;
-	strikethrough;
-	clientDrawingEffect;
+	UNUSED(clientDrawingContext);
+	UNUSED(baselineOriginX);
+	UNUSED(baselineOriginY);
+	UNUSED(strikethrough);
+	UNUSED(clientDrawingEffect);
 	
 	return E_NOTIMPL;
 }
@@ -210,13 +210,13 @@ HRESULT CFW1TextRenderer::DrawInlineObject(
 	BOOL isRightToLeft,
 	IUnknown *clientDrawingEffect
 ) {
-	clientDrawingContext;
-	originX;
-	originY;
-	inlineObject;
-	isSideways;
-	isRightToLeft;
-	clientDrawingEffect;
+	UNUSED(clientDrawingContext);
+	UNUSED(originX);
+	UNUSED(originY);
+	UNUSED(inlineObject);
+	UNUSED(isSideways);
+	UNUSED(isRightToLeft);
+	UNUSED(clientDrawingEffect);
 	
 	return E_NOTIMPL;
 }

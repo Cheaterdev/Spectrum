@@ -267,15 +267,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 
 	docking = GUI::dock::PARENT;
 	clickable = true;
-	/*
-	id_buffer.reset(new HAL::StructureBuffer<UINT>(1, HAL::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
-	axis_id_buffer.reset(new HAL::StructureBuffer<UINT>(1, HAL::counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS));
 
-
-	id_buffer->set_name("stencil_renderer::id_buffer");
-	axis_id_buffer->set_name("stencil_renderer::axis_id_buffer");
-
-	*/
 
 	cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);
 	axis_intersect_cam.set_projection_params(0, 0.01f, 0, 0.01f, 0.1f, 1000);

@@ -111,7 +111,7 @@ const void* STDMETHODCALLTYPE CFW1GlyphProvider::GetGlyphMapFromFont(
 		}
 		else {
 			UINT glyphAtlasId = insertNewGlyph(newGlyphMap, 0, pFontFace);
-			glyphAtlasId;
+			UNUSED(glyphAtlasId);
 		}
 	}
 	

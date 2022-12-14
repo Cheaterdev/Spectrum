@@ -103,29 +103,17 @@ void MeshAsset::init_gpu()
 
 	LinearAllocator allocator;
 
-	vertex_handle = allocator.Allocate(vertex_buffer.size() * sizeof(Table::mesh_vertex_input), sizeof(Table::mesh_vertex_input));
-	index_handle = allocator.Allocate(index_buffer.size() * sizeof(uint), sizeof(uint));
-	unique_index_handle = allocator.Allocate(unique_ids_buffer.size() * sizeof(uint), sizeof(uint));
-	primitive_index_handle = allocator.Allocate(priimitive_ids_buffer.size() * sizeof(uint), sizeof(uint));
-	meshlet_handle = allocator.Allocate(meshlets.size() * sizeof(Table::Meshlet), sizeof(Table::Meshlet));
-	meshlet_cull_handle = allocator.Allocate(meshlet_cull.size() * sizeof(Table::MeshletCullData), sizeof(Table::MeshletCullData));
+	auto vertex_handle = allocator.Allocate<Table::mesh_vertex_input>(vertex_buffer.size());
+	auto index_handle = allocator.Allocate<uint>(index_buffer.size());
+	auto unique_index_handle = allocator.Allocate<uint>(unique_ids_buffer.size());
+	auto primitive_index_handle = allocator.Allocate<uint>(priimitive_ids_buffer.size());
+	auto meshlet_handle = allocator.Allocate<Table::Meshlet>(meshlets.size());
+	auto meshlet_cull_handle = allocator.Allocate<Table::MeshletCullData>(meshlet_cull.size());
 
 
 	buffer = std::make_shared<HAL::Resource>(HAL::ResourceDesc::Buffer(allocator.get_max_usage()), HAL::HeapType::DEFAULT);
 
-	auto list = (HAL::Device::get().get_upload_list());
-	list->get_copy().update_buffer(buffer.get(), vertex_handle.get_offset(), reinterpret_cast<const char*>(vertex_buffer.data()), vertex_handle.get_size());
-	list->get_copy().update_buffer(buffer.get(), index_handle.get_offset(), reinterpret_cast<const char*>(index_buffer.data()), index_handle.get_size());
 
-	list->get_copy().update_buffer(buffer.get(), unique_index_handle.get_offset(), reinterpret_cast<const char*>(unique_ids_buffer.data()), unique_index_handle.get_size());
-	list->get_copy().update_buffer(buffer.get(), primitive_index_handle.get_offset(), reinterpret_cast<const char*>(priimitive_ids_buffer.data()), primitive_index_handle.get_size());
-	list->get_copy().update_buffer(buffer.get(), meshlet_handle.get_offset(), reinterpret_cast<const char*>(meshlets.data()), meshlet_handle.get_size());
-	list->get_copy().update_buffer(buffer.get(), meshlet_cull_handle.get_offset(), reinterpret_cast<const char*>(meshlet_cull.data()), meshlet_cull_handle.get_size());
-
-
-
-
-	list->execute_and_wait();
 
 	vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
 		HAL::Device::get().get_static_gpu_data(),
@@ -175,11 +163,54 @@ void MeshAsset::init_gpu()
 			false
 		});
 
+
+	auto list = (HAL::Device::get().get_upload_list());
+	list->get_copy().update_buffer(vertex_buffer_view, 0, vertex_buffer);
+	list->get_copy().update_buffer(index_buffer_view, 0, index_buffer);
+	list->get_copy().update_buffer(this->meshlets , 0, meshlets);
+	list->get_copy().update_buffer(meshlet_cull_datas, 0, meshlet_cull);
+	list->get_copy().update_buffer(unique_indices, 0, unique_ids_buffer);
+	list->get_copy().update_buffer(primitive_indices, 0, priimitive_ids_buffer);
+
+	list->execute_and_wait();
+
+
+
 #undef OPAQUE
 	int i = 0;
 	if (HAL::Device::get().is_rtx_supported())
 		for (auto& mesh : meshes)
 		{
+
+
+				mesh.vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
+				HAL::Device::get().get_static_gpu_data(),
+				StructuredBufferViewDesc{
+					vertex_handle.get_offset() + mesh.vertex_offset * sizeof(Table::mesh_vertex_input),
+					mesh.vertex_count * sizeof(Table::mesh_vertex_input),
+					false
+				});
+
+
+			mesh.index_buffer_view = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
+				HAL::Device::get().get_static_gpu_data(),
+				StructuredBufferViewDesc{
+					index_handle.get_offset() + mesh.index_offset * sizeof(UINT32),
+					mesh.index_count * sizeof(UINT32),
+					false
+				});
+
+			mesh.draw_arguments.StartIndexLocation = static_cast<UINT>(index_handle.get_offset() + mesh.index_offset*sizeof(uint));
+			mesh.draw_arguments.IndexCountPerInstance = mesh.index_count;
+			mesh.draw_arguments.BaseVertexLocation = 0;
+			mesh.draw_arguments.InstanceCount = 1;
+			mesh.draw_arguments.StartInstanceLocation = 0;
+
+
+			mesh.dispatch_mesh_arguments.ThreadGroupCountX = static_cast<UINT>(Math::DivideByMultiple(mesh.meshlets.size(), 32));
+			mesh.dispatch_mesh_arguments.ThreadGroupCountY = 1;
+			mesh.dispatch_mesh_arguments.ThreadGroupCountZ = 1;
+
 
 			auto list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 			list->begin("RTX");
@@ -584,36 +615,11 @@ void MeshAssetInstance::update_nodes()
 
 			render_info info;
 
-			info.vertex_buffer_view = mesh_asset->buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
-				HAL::Device::get().get_static_gpu_data(),
-				StructuredBufferViewDesc{
-					mesh_asset->vertex_handle.get_offset() + mesh_asset->meshes[m].vertex_offset * sizeof(Table::mesh_vertex_input),
-					mesh_asset->meshes[m].vertex_count * sizeof(Table::mesh_vertex_input),
-					false
-				});
-
-
-			info.index_buffer_view = mesh_asset->buffer->create_view<HAL::StructuredBufferView<UINT32>>(
-				HAL::Device::get().get_static_gpu_data(),
-				StructuredBufferViewDesc{
-					(uint)mesh_asset->index_handle.get_offset() + mesh_asset->meshes[m].index_offset * sizeof(UINT32),
-					(uint)mesh_asset->meshes[m].index_count * sizeof(UINT32),
-					false
-				});
-
-
-
-			info.draw_arguments.StartIndexLocation = static_cast<UINT>(mesh_asset->index_handle.get_offset() + mesh_asset->meshes[m].index_offset);
-			info.draw_arguments.IndexCountPerInstance = mesh_asset->meshes[m].index_count;
-			info.draw_arguments.BaseVertexLocation = 0;
-			info.draw_arguments.InstanceCount = 1;
-			info.draw_arguments.StartInstanceLocation = 0;
-
-
-			info.dispatch_mesh_arguments.ThreadGroupCountX = static_cast<UINT>(Math::DivideByMultiple(mesh_asset->meshes[m].meshlets.size(), 32));
-			info.dispatch_mesh_arguments.ThreadGroupCountY = 1;
-			info.dispatch_mesh_arguments.ThreadGroupCountZ = 1;
-
+			info.vertex_buffer_view =mesh_asset->meshes[m].vertex_buffer_view;
+			info.index_buffer_view =mesh_asset->meshes[m].index_buffer_view;
+			info.draw_arguments =mesh_asset->meshes[m].draw_arguments;
+			info.dispatch_mesh_arguments =mesh_asset->meshes[m].dispatch_mesh_arguments;
+			
 
 			info.primitive = mesh_asset->meshes[m].primitive;
 

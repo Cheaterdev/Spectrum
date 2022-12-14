@@ -386,7 +386,7 @@ namespace FW1FontWrapper
 
             // Draw glyphs
             UINT temp = m_pGlyphVertexDrawer->DrawVertices(list, m_pGlyphAtlas, &vertexData, Flags, 0xffffffff);
-            temp;
+            UNUSED(temp);
         }
     }
 

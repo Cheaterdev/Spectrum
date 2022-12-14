@@ -241,8 +241,6 @@ private:
 	bool recreate_static = false;
 public:
 	using ptr = std::shared_ptr<VoxelGI>;
-	//	HAL::StructureBuffer<uint2>::ptr hi;
-	//	HAL::StructureBuffer<uint2>::ptr low;
 
 	ivec3 lighed_to_albedo_coeff;
 	std::vector<GPUTilesBuffer::ptr> gpu_tiles_buffer;

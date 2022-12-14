@@ -90,28 +90,6 @@ export{
 				return T(this, frame, args...);
 			}
 
-			auto get_dx() const
-			{
-				return native_resource.Get();
-			}
-
-#ifdef DEV
-			std::mutex m;
-			std::set<CommandList*> lists;
-			void used(CommandList* list)
-			{
-				std::lock_guard<std::mutex> g(m);
-
-				lists.emplace(list);
-			}
-
-			void not_used(CommandList* list)
-			{
-				std::lock_guard<std::mutex> g(m);
-
-				lists.erase(list);
-			}
-#endif
 
 				private:
 					SERIALIZE_PRETTY()

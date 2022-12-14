@@ -34,10 +34,10 @@ class LoadingWindow : public GUI::Elements::window
 	MeshLoadingSettings settings;
 public:
 	std::promise<MeshLoadingSettings> result;
-	LoadingWindow(std::string name, MeshLoadingSettings & _settings):settings(_settings)
+	LoadingWindow(std::string_view name, MeshLoadingSettings & _settings):settings(_settings)
 	{
 
-		set_title("loading " + name);
+		set_title(std::string("loading ") + std::string(name));
 
 		docking = GUI::dock::FILL;
 		width_size = GUI::size_type::MATCH_CHILDREN;

@@ -7,6 +7,7 @@ import Core;
 import :FrameManager;
 #undef THIS
 
+
 HAL::ResourceDesc extract(D3D::Resource resource)
 {
 	auto native_desc = resource->GetDesc();
@@ -431,11 +432,7 @@ namespace HAL
 		{
 			get_dx()->Unmap(0, nullptr);
 		}
-#ifdef DEV
-		std::lock_guard<std::mutex> g(m);
 
-		assert(lists.empty());
-#endif 
 		alloc_handle.Free();
 	}
 	std::span<std::byte> Resource::cpu_data()const

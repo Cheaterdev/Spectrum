@@ -13,7 +13,7 @@ import :PipelineState;
 import :API.IndirectCommand;
 import :API.CommandList;
 import :QueryHeap;
-
+import :ResourceViews;
 import :PSO;
 
 //import :Autogen;
@@ -544,14 +544,20 @@ export{
 			void copy_texture(const HAL::Resource::ptr& dest, ivec3, const HAL::Resource::ptr& source, ivec3, ivec3);
 			void copy_buffer(HAL::Resource* dest, int s_dest, HAL::Resource* source, int s_source, int size);
 
-
+			
+		
 			//TODO: remove
 			void update_buffer(HAL::Resource::ptr resource, UINT offset, const char* data, UINT size);
 			void update_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 			void update_buffer(HAL::Resource* resource, UINT offset, const char* data, UINT size);
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
-
+			template<class T>
+				void update_buffer(HAL::StructuredBufferView<T>& view, uint offset, const std::vector<T>& data)
+			{
+				update_buffer(view.resource, view.desc.offset+ offset*sizeof(T), reinterpret_cast<const char*>(data.data()), data.size()*sizeof(T));
+				
+			}
 
 			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>);
 			std::future<bool> read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)>);

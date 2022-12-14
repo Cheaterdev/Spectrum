@@ -39,7 +39,7 @@ HRESULT CFW1Factory::createDWriteFactory(IDWriteFactory **ppDWriteFactory) {
 	HMODULE hDWriteLib = LoadLibrary(TEXT("DWrite.dll"));
 	if(hDWriteLib == NULL) {
 		DWORD dwErr = GetLastError();
-		dwErr;
+		UNUSED(dwErr);
 		setErrorString(L"Failed to load DWrite.dll");
 	}
 	else {

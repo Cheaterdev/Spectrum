@@ -11,7 +11,7 @@
 	bool operator==(const x& r) const = default;\
 	auto operator<=>(const x& r) const = default;
 
-
+#define UNUSED(x) (void)(sizeof((x), 0))
 #ifdef DEV
 #define THREAD_CHECKER mutable std::atomic<std::thread::id> __checker_;
 #define ASSERT_SINGLETHREAD Checker __g__(__checker_);

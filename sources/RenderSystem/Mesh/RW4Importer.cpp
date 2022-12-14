@@ -342,9 +342,9 @@ namespace Assimp
 
 
 			bool visible = true;
-			if (name.find("d_") == 0)
+			if (name.starts_with("d_"))
 				visible = false;
-			if (name.find("b_") == 0)
+			if (name.starts_with("b_"))
 				visible = false;
 				auto child = new aiNode();
 				child->mName = name;

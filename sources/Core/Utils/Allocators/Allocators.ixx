@@ -73,9 +73,10 @@ export
 	{
 	public:
 		THREAD_CHECKER
-			AllocatorHanle Allocate(size_t size, size_t align = 1)
+		template<class T = std::byte>
+			AllocatorHanle Allocate(size_t size, size_t align = sizeof(T))
 		{
-			auto res = TryAllocate(size, align);
+			auto res = TryAllocate(size*sizeof(T), align);
 
 			if (res)
 				return *res;
@@ -84,6 +85,7 @@ export
 
 			return AllocatorHanle();
 		}
+
 
 		virtual std::optional<AllocatorHanle>  TryAllocate(size_t size, size_t align = 1) = 0;
 

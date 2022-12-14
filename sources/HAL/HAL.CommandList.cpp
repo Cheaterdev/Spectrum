@@ -784,14 +784,6 @@ namespace HAL
 
 	void Transitions::free_resources()
 	{
-#ifdef DEV
-		CommandList* list = static_cast<CommandList*>(this); // :(
-
-		for (auto r : used_resources)
-		{
-			r->not_used(list);
-		}
-#endif
 	}
 
 	void Transitions::transition(const Resource* resource, ResourceState to, UINT subres)

@@ -63,7 +63,7 @@ struct DefaultLayout: public FrameLayout
 		static const unsigned int ID = 10;
 		static const unsigned int CB = 2;
 		static const unsigned int CB_ID = 31;
-		static const unsigned int SRV = 2;
+		static const unsigned int SRV = 1;
 		static const unsigned int SRV_ID = 33;
 		static inline const std::vector<UINT> tables = {31, 33};
 	};

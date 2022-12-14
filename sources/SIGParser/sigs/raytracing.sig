@@ -96,7 +96,6 @@ struct Triangle
 struct Raytracing
 {
 	RaytracingAccelerationStructure scene;
-	StructuredBuffer<uint> index_buffer;
 }
 
 
