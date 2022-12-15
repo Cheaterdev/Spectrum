@@ -11,18 +11,22 @@ export
 namespace HAL {
 
 
+	class GPUEntityStorageInterface
+	{
+	public:
+		virtual ResourceHandle alloc_memory(size_t size, size_t alignment, HeapIndex options) = 0;
+		virtual QueryHandle alloc_query(uint size, QueryType options) = 0;
+		virtual Handle  alloc_descriptor(uint size, DescriptorHeapIndex options) = 0;
+		virtual ~GPUEntityStorageInterface() = default;
+	};
 
-
-			template<class T>
-		concept GPUEntityStorageType = requires () { T::IsGPUEntityStorage; };
-	
 		template<class AllocationPolicy>
 		struct GPUEntityStorage:
+		public GPUEntityStorageInterface,
 			public CPUGPUAllocator<AllocationPolicy>,
 			public DescriptorHeapPageManager<AllocationPolicy>,
 			public QueryHeapPageManager<AllocationPolicy>
 		{
-			using IsGPUEntityStorage = bool;
 
 			GPUEntityStorage(Device& device):
 				CPUGPUAllocator<AllocationPolicy>(device),
@@ -31,18 +35,18 @@ namespace HAL {
 			{
 				
 			}
-			CPUGPUAllocator<AllocationPolicy>::HandleType alloc_memory(size_t size, size_t alignment, CPUGPUAllocator<AllocationPolicy>::HeapMemoryOptions options)
+			CPUGPUAllocator<AllocationPolicy>::HandleType alloc_memory(size_t size, size_t alignment, CPUGPUAllocator<AllocationPolicy>::HeapMemoryOptions options) override
 			{
 				return CPUGPUAllocator<AllocationPolicy>::alloc(size, alignment, options);
 			}
 
-			QueryHeapPageManager<AllocationPolicy>::HandleType  alloc_query(uint size,  QueryHeapPageManager<AllocationPolicy>::HeapMemoryOptions options)
+			QueryHeapPageManager<AllocationPolicy>::HandleType  alloc_query(uint size,  QueryHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
 			{
 				return QueryHeapPageManager<AllocationPolicy>::alloc(size,1,options);
 			}
 
 
-			Handle  alloc_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options)
+			Handle  alloc_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
 			{
 				auto h = DescriptorHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
 				

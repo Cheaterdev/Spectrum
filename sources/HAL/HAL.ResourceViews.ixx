@@ -84,8 +84,7 @@ export
 			HLSL::Buffer<T> buffer;
 			HLSL::RWBuffer<T> rwBuffer;
 
-			template<GPUEntityStorageType F>
-			void init(F& frame)
+			void init(GPUEntityStorageInterface& frame)
 			{
 				Format format = _format;
 				buffer = HLSL::Buffer<T>(frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible }));
@@ -99,14 +98,14 @@ export
 			}
 
 
-			template<GPUEntityStorageType F>
-			FormattedBufferView(HAL::Resource* resource, F& frame, FormattedBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
+			
+			FormattedBufferView(HAL::Resource* resource, GPUEntityStorageInterface& frame, FormattedBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
 			{
 				init(frame);
 			}
 
-			template<GPUEntityStorageType F>
-			FormattedBufferView(HAL::Resource* resource, F& frame) : ResourceView(resource)
+			
+			FormattedBufferView(HAL::Resource* resource, GPUEntityStorageInterface& frame) : ResourceView(resource)
 			{
 				auto& res_desc = resource->get_desc().as_buffer();
 
@@ -126,6 +125,10 @@ export
 				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 			}
 
+				ResourceAddress get_resource_address() const
+			{
+				return resource->get_resource_address().offset(desc.offset);
+			}
 		};
 
 
@@ -155,8 +158,8 @@ export
 			HLSL::RenderTarget<> renderTarget;
 			HLSL::DepthStencil<> depthStencil;
 		public:
-			template<GPUEntityStorageType F>
-			void init(F& frame, TextureViewDesc _view_desc)
+			
+			void init(GPUEntityStorageInterface& frame, TextureViewDesc _view_desc)
 			{
 				view_desc = _view_desc;
 
@@ -234,16 +237,16 @@ export
 			}
 			TextureView() = default;
 
-			template<GPUEntityStorageType F>
-			TextureView(HAL::Resource* resource, F& frame) :ResourceView(resource)
+			
+			TextureView(HAL::Resource* resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
 
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
-			template<GPUEntityStorageType F>
-			TextureView(HAL::Resource* resource, F& frame, TextureViewDesc vdesc) :ResourceView(resource)
+			
+			TextureView(HAL::Resource* resource, GPUEntityStorageInterface& frame, TextureViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -312,8 +315,8 @@ export
 			std::vector<Mip> mips;
 
 		public:
-			template<GPUEntityStorageType F>
-			void init(F& frame, Texture3DViewDesc _view_desc)
+			
+			void init(GPUEntityStorageInterface& frame, Texture3DViewDesc _view_desc)
 			{
 				view_desc = _view_desc;
 
@@ -352,16 +355,16 @@ export
 
 			Texture3DView() = default;
 
-			template<GPUEntityStorageType F>
-			Texture3DView(HAL::Resource* resource, F& frame) :ResourceView(resource)
+			
+			Texture3DView(HAL::Resource* resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
 
 				init(frame, { 0, texture_desc.MipLevels });
 			}
-			template<GPUEntityStorageType F>
-			Texture3DView(HAL::Resource* resource, F& frame, Texture3DViewDesc vdesc) :ResourceView(resource)
+			
+			Texture3DView(HAL::Resource* resource, GPUEntityStorageInterface& frame, Texture3DViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -419,8 +422,8 @@ export
 			std::array<TextureView, 6> faces;
 
 		public:
-			template<GPUEntityStorageType F>
-			void init(F& frame, CubeViewDesc _view_desc)
+			
+			void init(GPUEntityStorageInterface& frame, CubeViewDesc _view_desc)
 			{
 				view_desc = _view_desc;
 
@@ -459,16 +462,16 @@ export
 			}
 			CubeView() = default;
 
-			template<GPUEntityStorageType F>
-			CubeView(HAL::Resource* resource, F& frame) :ResourceView(resource)
+			
+			CubeView(HAL::Resource* resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize / 6;
 
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
-			template<GPUEntityStorageType F>
-			CubeView(HAL::Resource* resource, F& frame, CubeViewDesc vdesc) :ResourceView(resource)
+			
+			CubeView(HAL::Resource* resource, GPUEntityStorageInterface& frame, CubeViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -522,8 +525,8 @@ export
 			HLSL::RWByteAddressBuffer rwbyteBuffer;
 
 			BufferView() = default;
-			template<GPUEntityStorageType F>
-			BufferView(HAL::Resource* resource, F& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+			
+			BufferView(HAL::Resource* resource, GPUEntityStorageInterface& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
 			{
 				auto hlsl = frame.alloc_descriptor(2, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
@@ -537,7 +540,6 @@ export
 				}
 
 				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
-					rwbyteBuffer = HLSL::RWByteAddressBuffer(frame.get_cpu_heap(HAL::DescriptorHeapType::CBV_SRV_UAV).place());
 					rwbyteBuffer.create(resource, offset, size);
 				}
 			}
@@ -559,8 +561,8 @@ export
 			HLSL::RWBuffer<std::byte> rwRAW;
 			CounterView() = default;
 
-			template<GPUEntityStorageType F>
-			CounterView(HAL::Resource* resource, F& frame, UINT offset = 0) :ResourceView(resource)
+			
+			CounterView(HAL::Resource* resource, GPUEntityStorageInterface& frame, UINT offset = 0) :ResourceView(resource)
 			{
 				auto hlsl = frame.alloc_descriptor(3, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
@@ -607,8 +609,8 @@ export
 		public:
 
 
-			template<GPUEntityStorageType F>
-			void init(F& frame)
+			
+			void init(GPUEntityStorageInterface& frame)
 			{
 				uint local_offset = 0;
 				UINT offset = desc.offset;
@@ -651,14 +653,14 @@ export
 				}
 			}
 
-			template<GPUEntityStorageType F>
-			StructuredBufferView(HAL::Resource* resource, F& frame, StructuredBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
+			
+			StructuredBufferView(HAL::Resource* resource, GPUEntityStorageInterface& frame, StructuredBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
 			{
 				init(frame);
 			}
 
-			template<GPUEntityStorageType F>
-			StructuredBufferView(HAL::Resource* resource, F& frame) : ResourceView(resource)
+			
+			StructuredBufferView(HAL::Resource* resource, GPUEntityStorageInterface& frame) : ResourceView(resource)
 			{
 				auto& res_desc = resource->get_desc().as_buffer();
 
@@ -673,6 +675,12 @@ export
 			void write(UINT64 offset, T* data, UINT64 count)
 			{
 				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
+			}
+
+
+				ResourceAddress get_resource_address() const
+			{
+				return resource->get_resource_address().offset(desc.offset);
 			}
 
 		};

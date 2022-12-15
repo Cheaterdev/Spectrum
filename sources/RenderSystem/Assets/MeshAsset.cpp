@@ -167,7 +167,7 @@ void MeshAsset::init_gpu()
 	auto list = (HAL::Device::get().get_upload_list());
 	list->get_copy().update_buffer(vertex_buffer_view, 0, vertex_buffer);
 	list->get_copy().update_buffer(index_buffer_view, 0, index_buffer);
-	list->get_copy().update_buffer(this->meshlets , 0, meshlets);
+	list->get_copy().update_buffer(this->meshlets, 0, meshlets);
 	list->get_copy().update_buffer(meshlet_cull_datas, 0, meshlet_cull);
 	list->get_copy().update_buffer(unique_indices, 0, unique_ids_buffer);
 	list->get_copy().update_buffer(primitive_indices, 0, priimitive_ids_buffer);
@@ -183,7 +183,7 @@ void MeshAsset::init_gpu()
 		{
 
 
-				mesh.vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
+			mesh.vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
 				HAL::Device::get().get_static_gpu_data(),
 				StructuredBufferViewDesc{
 					vertex_handle.get_offset() + mesh.vertex_offset * sizeof(Table::mesh_vertex_input),
@@ -200,7 +200,7 @@ void MeshAsset::init_gpu()
 					false
 				});
 
-			mesh.draw_arguments.StartIndexLocation = static_cast<UINT>(index_handle.get_offset() + mesh.index_offset*sizeof(uint));
+			mesh.draw_arguments.StartIndexLocation = static_cast<UINT>(index_handle.get_offset() + mesh.index_offset * sizeof(uint));
 			mesh.draw_arguments.IndexCountPerInstance = mesh.index_count;
 			mesh.draw_arguments.BaseVertexLocation = 0;
 			mesh.draw_arguments.InstanceCount = 1;
@@ -220,12 +220,12 @@ void MeshAsset::init_gpu()
 			GeometryDesc geometryDesc = {};
 			geometryDesc.Type = HAL::GeometryType::TRIANGLES;
 
-			geometryDesc.IndexBuffer = buffer->get_resource_address().offset(index_handle.get_offset() + static_cast<UINT>(mesh.index_offset) * sizeof(UINT32));
+			geometryDesc.IndexBuffer = mesh.index_buffer_view.get_resource_address();
 			geometryDesc.IndexCount = mesh.index_count;
 			geometryDesc.IndexFormat = Format::R32_UINT;
-			geometryDesc.Transform3x4 = mat;//universal_nodes_manager::get().buffer->get_resource_address().offset(info.mesh_info.GetNode_offset() * sizeof(Table::node_data));
+			geometryDesc.Transform3x4 = mat;
 			geometryDesc.VertexFormat = Format::R32G32B32_FLOAT;
-			geometryDesc.VertexBuffer = buffer->get_resource_address().offset(vertex_handle.get_offset() + static_cast<UINT>(mesh.vertex_offset * sizeof(Table::mesh_vertex_input)));
+			geometryDesc.VertexBuffer = mesh.vertex_buffer_view.get_resource_address();
 			geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
 			geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
 
@@ -577,7 +577,7 @@ void MeshAssetInstance::update_nodes()
 	universal_rtx_manager::get().allocate(instance_handle, rendering_count);
 
 
-	nodes_buffer_view = universal_nodes_manager::get().buffer->create_view<HAL::StructuredBufferView<Table::node_data>>(
+	nodes_buffer_view = universal_nodes_manager::get().buffer->resource->create_view<HAL::StructuredBufferView<Table::node_data>>(
 		HAL::Device::get().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			(uint)nodes_handle.get_offset_in_bytes(),
@@ -615,11 +615,11 @@ void MeshAssetInstance::update_nodes()
 
 			render_info info;
 
-			info.vertex_buffer_view =mesh_asset->meshes[m].vertex_buffer_view;
-			info.index_buffer_view =mesh_asset->meshes[m].index_buffer_view;
-			info.draw_arguments =mesh_asset->meshes[m].draw_arguments;
-			info.dispatch_mesh_arguments =mesh_asset->meshes[m].dispatch_mesh_arguments;
-			
+			info.vertex_buffer_view = mesh_asset->meshes[m].vertex_buffer_view;
+			info.index_buffer_view = mesh_asset->meshes[m].index_buffer_view;
+			info.draw_arguments = mesh_asset->meshes[m].draw_arguments;
+			info.dispatch_mesh_arguments = mesh_asset->meshes[m].dispatch_mesh_arguments;
+
 
 			info.primitive = mesh_asset->meshes[m].primitive;
 

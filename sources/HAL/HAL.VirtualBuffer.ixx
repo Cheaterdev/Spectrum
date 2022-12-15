@@ -70,7 +70,7 @@ export
 				std::lock_guard<std::mutex> g(m);
 				TypedHandle<T> result = Base::Allocate(n);
 
-				if constexpr (use_virtual)	buffer->get_tiled_manager().map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
+				if constexpr (use_virtual)	buffer->resource->get_tiled_manager().map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
 				return result;
 			}
 
@@ -80,7 +80,7 @@ export
 
 				result.Free();
 				result = Base::Allocate(n);
-				if constexpr (use_virtual) buffer->get_tiled_manager().map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
+				if constexpr (use_virtual) buffer->resource->get_tiled_manager().map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
 			}
 			/*
 				T* map_elements(size_t offset, size_t size = 1)
@@ -94,9 +94,9 @@ export
 			void reserve(CommandList& list, size_t offset)
 			{
 				std::lock_guard<std::mutex> g(m);
-				if constexpr (use_virtual)	buffer->get_tiled_manager().map_buffer_part(updates, 0, offset * sizeof(T));
+				if constexpr (use_virtual)	buffer->resource->get_tiled_manager().map_buffer_part(updates, 0, offset * sizeof(T));
 
-				updates.resource = buffer.get();
+				updates.resource = buffer->resource.get();
 				list.update_tilings(std::move(updates));
 			}
 
@@ -116,7 +116,7 @@ export
 			void debug_print(CommandList& list)
 			{
 
-				list.get_copy().read_buffer(buffer.get(), 0, sizeof(T) * 16, [this](const char* data, UINT64 size)
+				list.get_copy().read_buffer(buffer->resource.get(), 0, sizeof(T) * 16, [this](const char* data, UINT64 size)
 					{
 						Log::get() << "debug_print" << Log::endl;
 						auto result = reinterpret_cast<const T*>(data);
@@ -130,7 +130,7 @@ export
 			{
 				std::lock_guard<std::mutex> g(m);
 
-				updates.resource = buffer.get();
+				updates.resource = buffer->resource.get();
 				list->update_tilings(std::move(updates));
 				for (auto& elems : update_list)
 				{

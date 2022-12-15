@@ -182,16 +182,16 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 		graphics.execute_indirect(
 			dispatch_command,
 			1,
-			dispatch_buffer.get());
+			dispatch_buffer->resource.get());
 	}
 
 
-	list.transition_uav(meshes_ids->buffer.get());
-	list.transition_uav(meshes_ids->buffer->help_buffer.get());
+	list.transition_uav(meshes_ids->buffer->resource.get());
+	list.transition_uav(meshes_ids->buffer->help_buffer->resource.get());
 	if (invisibleToo)
 	{
-		list.transition_uav(meshes_invisible_ids->buffer.get());
-		list.transition_uav(meshes_invisible_ids->buffer->help_buffer.get());
+		list.transition_uav(meshes_invisible_ids->buffer->resource.get());
+		list.transition_uav(meshes_invisible_ids->buffer->help_buffer->resource.get());
 	}
 
 	//	meshes_ids->debug_print(list);
@@ -225,14 +225,14 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 			graphics.execute_indirect(
 				dispatch_command,
 				1,
-				dispatch_buffer.get());
+				dispatch_buffer->resource.get());
 		}
 
 
 
 	}
 
-	copy.copy_buffer(draw_boxes_first.get(), sizeof(UINT), commands_boxes->buffer->help_buffer.get(), 0, 4);
+	copy.copy_buffer(draw_boxes_first->resource.get(), sizeof(UINT), commands_boxes->buffer->help_buffer->resource.get(), 0, 4);
 
 	init_dispatch(mesh_render_context, gather_boxes_commands);
 
@@ -266,7 +266,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	graphics.execute_indirect(
 		boxes_command,
 		1,
-		draw_boxes_first.get());
+		draw_boxes_first->resource.get());
 
 
 	gbuffer->rtv_table.set(graphics);
@@ -331,7 +331,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				compute.execute_indirect(
 					dispatch_command,
 					1,
-					dispatch_buffer.get());
+					dispatch_buffer->resource.get());
 			}
 
 		}
@@ -367,9 +367,9 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					graphics.execute_indirect(
 						indirect_command_signature,
 						meshes_count,
-						commands_buffer[current]->buffer.get(),
+						commands_buffer[current]->buffer->resource.get(),
 						0,
-						commands_buffer[current]->buffer->help_buffer.get(),
+						commands_buffer[current]->buffer->help_buffer->resource.get(),
 						0
 					);
 
@@ -495,7 +495,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	}
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(HAL::Device::get().get_static_gpu_data()).buffer;
+		gather.GetCommands() = meshes_ids->buffer->resource->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(HAL::Device::get().get_static_gpu_data()).buffer;
 
 		gather.GetMeshes_count() = meshes_ids->buffer->structuredBufferCount;
 
@@ -505,7 +505,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 	{
 		Slots::GatherPipelineGlobal gather;
-		gather.GetCommands() = meshes_invisible_ids->buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(HAL::Device::get().get_static_gpu_data()).buffer;
+		gather.GetCommands() = meshes_invisible_ids->buffer->resource->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(HAL::Device::get().get_static_gpu_data()).buffer;
 		gather.GetMeshes_count() = meshes_invisible_ids->buffer->structuredBufferCount;
 		gather_invisible = gather.compile(HAL::Device::get().get_static_gpu_data());
 		//	gather_invisible = meshes_invisible_ids->buffer->help_buffer->get_resource_address();

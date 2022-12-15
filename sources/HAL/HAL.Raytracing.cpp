@@ -74,7 +74,7 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 	handle_table = Device::get().get_static_gpu_data().alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 	raytracing_handle = HLSL::RaytracingAccelerationStructure(handle_table[0]);
-	raytracing_handle.create(currentResource->buffer.get());
+	raytracing_handle.create(currentResource->buffer->resource.get());
 }
 
 void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT size, ResourceAddress address,
@@ -125,7 +125,7 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 	list->get_compute().build_ras(topLevelBuildDesc, inputs);
 
 
-	raytracing_handle.create(currentResource->buffer.get());
+	raytracing_handle.create(currentResource->buffer->resource.get());
 }
 
 HAL::ResourceAddress HAL::RaytracingAccelerationStructure::get_gpu_address() const

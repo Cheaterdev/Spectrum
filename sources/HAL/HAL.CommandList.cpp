@@ -119,7 +119,7 @@ namespace HAL
 		if (!current_pipeline->debuggable) return;
 
 		auto pso_name = current_pipeline->name;
-		get_copy().read_buffer(debug_buffer.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](const char* data, UINT64 size)
+		get_copy().read_buffer(debug_buffer->resource.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](const char* data, UINT64 size)
 			{
 
 				LogBlock block(Log::get(), log_level_internal::level_all);

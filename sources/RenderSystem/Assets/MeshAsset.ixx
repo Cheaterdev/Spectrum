@@ -205,6 +205,12 @@ export{
 			//     ar& NVP(nodes);
 
 			SAVE_PARENT(Asset);
+
+			{
+				ar& NVP(buffer);
+			
+			}
+
 			IF_LOAD()
 			{
 				root_node.iterate([this](MeshNode* node)
@@ -216,6 +222,8 @@ export{
 
 				init_gpu();
 			}
+			
+
 		}
 
 	};

@@ -312,7 +312,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 			compute.execute_indirect(
 				dispatch_command,
 				1,
-				albedo_tiles->dispatch_buffer.get());
+				albedo_tiles->dispatch_buffer->resource.get());
 
 		}
 	}
@@ -1167,7 +1167,7 @@ void VoxelGI::lighting(Graph& graph)
 			compute.execute_indirect(
 				dispatch_command,
 				1,
-				gpu_tiles_buffer[0]->dispatch_buffer.get());
+				gpu_tiles_buffer[0]->dispatch_buffer->resource.get());
 
 		}, PassFlags::Compute);
 
@@ -1245,7 +1245,7 @@ void VoxelGI::mipmapping(Graph& graph)
 					compute.execute_indirect(
 						dispatch_command,
 						1,
-						gpu_tiles_buffer[i]->dispatch_buffer.get());
+						gpu_tiles_buffer[i]->dispatch_buffer->resource.get());
 
 				}
 			}
@@ -1283,7 +1283,7 @@ void VoxelGI::mipmapping(Graph& graph)
 					compute.execute_indirect(
 						dispatch_command,
 						1,
-						gpu_tiles_buffer[mip_count]->dispatch_buffer.get());
+						gpu_tiles_buffer[mip_count]->dispatch_buffer->resource.get());
 
 					mip_count += current_mips;
 				}

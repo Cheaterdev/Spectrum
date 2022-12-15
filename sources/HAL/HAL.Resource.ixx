@@ -25,6 +25,9 @@ export{
 			ResourceStateManager state_manager;
 			TiledResourceManager tiled_manager;
 			void _init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
+
+			void write(std::vector<std::byte>&);
+			std::vector<std::byte> read();
 		public:
 		
 	
@@ -84,8 +87,8 @@ export{
 				return get_desc().as_buffer().SizeInBytes;// desc.BufferDesc.desc.get<BufferDesc>
 			}
 
-			template<class T, GPUEntityStorageType F, class ...Args>
-			typename T create_view(F& frame, Args ...args)
+			template<class T, class ...Args>
+			typename T create_view(GPUEntityStorageInterface& frame, Args ...args)
 			{
 				return T(this, frame, args...);
 			}
@@ -96,8 +99,29 @@ export{
 					{
 						ar& NVP(desc);
 					}
+
+
+					SERIALIZE()
+					{
+						ar& NVP(desc);
+
+						std::vector<std::byte> data;
+						if constexpr(Archive::is_loading::value)
+						{
+
+							 _init(desc, HeapType::DEFAULT);
+								ar & NVP(data);
+								write(data);
+						}
+						else
+						{
+							data = read();
+						ar& NVP(data);
+
+						}
+					}
 		};
-		
+
 
 	}
 

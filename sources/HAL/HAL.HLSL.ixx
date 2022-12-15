@@ -4,6 +4,7 @@ import :Descriptors;
 import :DescriptorHeap;
 
 import :Resource;
+import :Concepts;
 
 using namespace HAL;
 
