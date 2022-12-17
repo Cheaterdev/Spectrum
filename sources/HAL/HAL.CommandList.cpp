@@ -323,15 +323,15 @@ namespace HAL
 		base.create_transition_point();
 		for (int i = 0; i < c; i++)
 		{
-			get_base().transition(&rt.get_resource_info()[i]);
+			get_base().transition(rt[i].get_resource_info());
 		}
 
 		if (h.is_valid())
 		{
 			if (rt.is_valid()) {
-			auto i = rt.get_resource_info();
-			auto rtv = std::get<HAL::Views::RenderTarget>(i->view);
-			auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info()->view);
+			auto &i = rt.get_resource_info();
+			auto rtv = std::get<HAL::Views::RenderTarget>(i.view);
+			auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info().view);
 			assert(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
 		}
 			get_base().transition(h.get_resource_info());
@@ -864,6 +864,7 @@ namespace HAL
 			base.transition(dest, ResourceState::COPY_DEST);
 		}
 
+
 		list->copy_buffer(dest, s_dest, source, s_source, size);
 		base.create_transition_point(false);
 	}
@@ -1109,7 +1110,7 @@ auto block = e;
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
-		get_base().transition(static_cast<HAL::Resource*>(index.Resource), ResourceState::INDEX_BUFFER);
+		get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceState::INDEX_BUFFER);
 
 		list->set_index_buffer(index);
 		commit_tables();

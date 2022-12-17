@@ -210,14 +210,14 @@ export{
 			}
 
 
-			void transition(const ResourceInfo* info)
+			void transition(const ResourceInfo& info)
 			{
-				if (!info || !info->is_valid()) return;
+				if (!info.is_valid()) return;
 
 				auto target_state = ResourceState::COMMON;
 
 
-				if (std::holds_alternative<HAL::Views::ShaderResource>(info->view))
+				if (std::holds_alternative<HAL::Views::ShaderResource>(info.view))
 				{
 					if (type == CommandListType::DIRECT)
 					{
@@ -230,38 +230,38 @@ export{
 					}
 
 				}
-				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info->view))
+				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info.view))
 				{
 					target_state = ResourceState::UNORDERED_ACCESS;
 				}
-				else 	if (std::holds_alternative<HAL::Views::RenderTarget>(info->view))
+				else 	if (std::holds_alternative<HAL::Views::RenderTarget>(info.view))
 				{
 					target_state = ResourceState::RENDER_TARGET;
 				}
-				else 	if (std::holds_alternative<HAL::Views::DepthStencil>(info->view))
+				else 	if (std::holds_alternative<HAL::Views::DepthStencil>(info.view))
 				{
 					target_state = ResourceState::DEPTH_WRITE;
 
-				}else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info->view))
+				}else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info.view))
 				{
 					target_state = ResourceState::VERTEX_AND_CONSTANT_BUFFER;
 
 				}else assert(false);
 
-				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
+				info.for_each_subres([&](const HAL::Resource::ptr resource, UINT subres)
 					{
-						transition(resource, target_state, subres);
+						transition(resource.get(), target_state, subres);
 					});
 			}
 
-			void stop_using(const ResourceInfo* info)
+			void stop_using(const ResourceInfo& info)
 			{
-				if (!info || !info->is_valid()) return;
+				if (!info.is_valid()) return;
 
 
-				info->for_each_subres([&](const HAL::Resource* resource, UINT subres)
+				info.for_each_subres([&](const HAL::Resource::ptr resource, UINT subres)
 					{
-						const_cast<HAL::Resource*>(resource)->get_state_manager().stop_using(this, subres);
+						const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
 					});
 			}
 		};
@@ -361,9 +361,10 @@ export{
 			template <class T>
 			void resolve_timers(Allocators::HeapPageManager < QueryContext, T>&  manager)
 			{
-				manager.for_each([&, this](const QueryType& type, size_t max_usage, QueryHeap::ptr heap)
+				manager.for_each([&, this](const QueryType& type, uint from , uint to , QueryHeap::ptr heap)
 					{
-						resolve_times(*heap, max_usage, [heap](std::span<UINT64> data) {
+					assert(from==0);
+						resolve_times(*heap, to, [heap](std::span<UINT64> data) {
 							std::copy(data.begin(), data.end(), heap->read_back_data.begin());
 							});
 					});

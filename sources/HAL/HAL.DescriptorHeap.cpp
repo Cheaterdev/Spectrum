@@ -27,7 +27,7 @@ namespace HAL {
 
 		return DescriptorHeapType();
 	}
-	ResourceInfo* Handle::get_resource_info() const
+	ResourceInfo& Handle::get_resource_info() const
 	{
 		return storage->get_heap()->get_resource_info(get_offset());
 	}
@@ -52,10 +52,10 @@ namespace HAL {
 		auto& other_heap = *r.storage->get_heap();
 
 		my_heap[get_offset()] = other_heap[r.get_offset()];
-		*get_resource_info() = *r.get_resource_info();
+		get_resource_info() = r.get_resource_info();
 	}
 
-	void for_each(const ResourceInfo* info, const HAL::Views::RenderTarget& view, std::function<void(HAL::Resource*, UINT)> f)
+	void for_each(const ResourceInfo* info, const HAL::Views::RenderTarget& view, std::function<void(HAL::Resource::ptr, UINT)> f)
 	{
 
 		std::visit(overloaded{
@@ -87,7 +87,7 @@ namespace HAL {
 			}, view.View);
 	}
 
-	void for_each(const ResourceInfo* info, const HAL::Views::UnorderedAccess& view, std::function<void(HAL::Resource*, UINT)> f)
+	void for_each(const ResourceInfo* info, const HAL::Views::UnorderedAccess& view, std::function<void(HAL::Resource::ptr, UINT)> f)
 	{
 
 
@@ -156,7 +156,7 @@ if (desc.MipLevels == 1 && desc.is2D())
 	}
 
 
-	void for_each(const ResourceInfo* info, const HAL::Views::DepthStencil& view, std::function<void(HAL::Resource*, UINT)> f)
+	void for_each(const ResourceInfo* info, const HAL::Views::DepthStencil& view, std::function<void(HAL::Resource::ptr, UINT)> f)
 	{
 		std::visit(overloaded{
 		[&](const HAL::Views::DepthStencil::Texture1D& Texture1D) {
@@ -196,7 +196,7 @@ auto& desc = view.Resource->get_desc().as_texture();
 	}
 
 
-	void for_each(const ResourceInfo* info, const HAL::Views::ShaderResource& view, std::function<void(HAL::Resource*, UINT)> f)
+	void for_each(const ResourceInfo* info, const HAL::Views::ShaderResource& view, std::function<void(HAL::Resource::ptr, UINT)> f)
 	{
 		std::visit(overloaded{	
 		[&](const HAL::Views::ShaderResource::Buffer& Buffer) {
@@ -294,7 +294,7 @@ f(view.Resource, ALL_SUBRESOURCES);
 	}
 
 
-	void ResourceInfo::for_each_subres(std::function<void(HAL::Resource*, UINT)> f) const
+	void ResourceInfo::for_each_subres(std::function<void(HAL::Resource::ptr, UINT)> f) const
 	{
 
 		std::visit(overloaded{

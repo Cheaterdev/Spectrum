@@ -73,7 +73,8 @@ export namespace HAL
 			}
 			void clear_uav(const Handle& h, vec4 ClearColor)
 			{
-				auto uav = std::get<HAL::Views::UnorderedAccess>(h.get_resource_info()->view);
+				auto v= h.get_resource_info().view;
+				auto uav = std::get<HAL::Views::UnorderedAccess>(v);
 				
 				if (Debug::CheckErrors)
 				{
@@ -193,7 +194,7 @@ export namespace HAL
 				D3D12_INDEX_BUFFER_VIEW native;
 				native.SizeInBytes = index.Resource ? index.SizeInBytes : 0;
 				native.Format = ::to_native(index.Format);
-				native.BufferLocation = index.Resource ? to_native(static_cast<HAL::Resource*>(index.Resource)->get_resource_address().offset(index.OffsetInBytes)) : 0;// index.Resource ? static_cast<HAL::Resource*>(index.Resource)->get_resource_address() + index.OffsetInBytes : 0;
+				native.BufferLocation = index.Resource ? to_native(index.Resource->get_resource_address().offset(index.OffsetInBytes)) : 0;// index.Resource ? static_cast<HAL::Resource*>(index.Resource)->get_resource_address() + index.OffsetInBytes : 0;
 				compiler.IASetIndexBuffer(&native);
 			}
 
@@ -253,6 +254,16 @@ export namespace HAL
 
 			void  copy_buffer(Resource* dest, UINT dest_offset, Resource* source ,UINT source_offset,UINT size )
 			{
+				
+		if constexpr (Debug::CheckErrors)
+		{
+			auto source_size = source->get_size();
+			auto dest_size = dest->get_size();
+
+			assert(dest_offset+size<=dest_size);
+			assert(source_offset+size<=source_size);
+
+		}
 				compiler.CopyBufferRegion(dest->get_dx(), dest_offset, source->get_dx(), source_offset, size);
 			}
 

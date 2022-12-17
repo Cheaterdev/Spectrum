@@ -27,7 +27,7 @@ export namespace Allocators
 		HeapHandle() = default;
 		HeapHandle(const AllocatorHanle& handle, std::shared_ptr<HeapPage<HeapPageType>> page) :handle(handle), page(page)
 		{
-		offset=handle.get_offset() + page->get_offset();
+		offset=handle.get_offset();
 			size=handle.get_size();
 	}
 
@@ -127,12 +127,12 @@ export namespace Allocators
 
 		size_t get_size()
 		{
-			return allocator.get_size();
+			return allocator->get_size();
 		}
 
 		UINT64 get_offset() const
 		{
-			return 0;
+			return offset;
 		}
 
 			bool CanFree() const
@@ -231,6 +231,8 @@ export namespace Allocators
 
 				if (handle)
 				{
+
+					assert(handle->get_offset()+size<= page->get_offset()+ page->get_size());
 					return { *handle, page};
 				}
 			}
@@ -241,6 +243,7 @@ export namespace Allocators
 			page->allocator.reset(new typename AllocationPolicy::AllocatorType(page->inner_heap_page_handle.get_offset(),page->inner_heap_page_handle.get_offset()+pagesize));
 			all_pages.insert(page);
 			auto handle = page->allocator->Allocate(size, alignment);
+			assert(handle.get_offset()+size<= page->get_offset()+ page->get_size());
 			return { handle, page};
 
 		}
@@ -265,12 +268,12 @@ export namespace Allocators
 		{
 			return  !(std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator>);
 		}
-		void for_each(std::function<void(const typename Context::HeapMemoryOptions& options, size_t max_usage, std::shared_ptr<typename Context::HeapPageType>)> f)
+		void for_each(std::function<void(const typename Context::HeapMemoryOptions& options, uint , uint , std::shared_ptr<typename Context::HeapPageType>)> f)
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
 			for (auto &heap : all_pages)
 			{
-				f(creation_info, heap->allocator->get_max_usage(), heap->heap);
+				f(creation_info, heap->get_offset(), (uint64)heap->allocator->get_max_usage(), heap->heap);
 			}
 		}
 
@@ -320,10 +323,12 @@ export namespace Allocators
 
 			auto res= creator->alloc(size, alignment);
 			assert(res.get_offset()%alignment == 0);
+
+			assert(res.get_offset()+size<= res.get_heap()->get_size());
 			return res;
 		}
 
-		void for_each(std::function<void(const typename Context::HeapMemoryOptions&options, size_t max_usage, std::shared_ptr<typename Context::HeapPageType>)>f)
+		void for_each(std::function<void(const typename Context::HeapMemoryOptions&options, uint , uint , std::shared_ptr<typename Context::HeapPageType>)>f)
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
 			for(auto &[opt,creator]:creators)

@@ -313,7 +313,7 @@ namespace HAL
 			Log::get() << Log::LEVEL_DEBUG << "Creating " << view << Log::endl;
 		}
 
-		Resource* counter_resource = nullptr;
+		Resource::ptr counter_resource = nullptr;
 		D3D12_UNORDERED_ACCESS_VIEW_DESC desc;
 
 		desc.Format = ::to_native(view.Format);

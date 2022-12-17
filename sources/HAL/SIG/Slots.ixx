@@ -53,7 +53,7 @@ export {
 			{
 				if(handle.get_storage()->can_free())
 				descriptors.insert(handle.get_storage());
-				resources.push_back(handle.get_resource_info());
+				resources.push_back(&handle.get_resource_info());
 				offset = handle.get_offset();
 			}
 
@@ -75,7 +75,7 @@ export {
 				{
 					if(handle.get_storage()->can_free())
 				descriptors.insert(handle.get_storage());
-				resources.push_back(handle.get_resource_info());
+				resources.push_back(&handle.get_resource_info());
 					offset = handle.get_offset();
 				}
 
@@ -117,7 +117,7 @@ export {
 					if(handle.get_storage()->can_free())
 				descriptors.insert(handle.get_storage());
 					offsets.emplace_back(handle.get_offset());
-						resources.push_back(handle.get_resource_info());
+						resources.push_back(&handle.get_resource_info());
 					}
 					else
 					{
@@ -188,7 +188,7 @@ export {
 		const void set_tables(HAL::SignatureDataSetter& graphics) const
 		{
 			for (auto resource_info : resources)
-				graphics.get_base().transition(resource_info);
+				graphics.get_base().transition(*resource_info);
 
 			for (auto d : descriptors)
 				graphics.get_base().track_object(*d);
@@ -245,7 +245,7 @@ export {
 				auto hlsl = context.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 				compiled.const_buffer = HLSL::ConstantBuffer<Table>(hlsl[0]);
-			compiled.const_buffer.create(compiled.offsets_cb.resource, info.resource_offset,info.size);
+			compiled.const_buffer.create(compiled.offsets_cb.resource->get_ptr(), info.resource_offset,info.size);
 
 
 				if(compiled.const_buffer.get_storage()->can_free())

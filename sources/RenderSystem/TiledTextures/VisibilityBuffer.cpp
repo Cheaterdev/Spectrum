@@ -8,7 +8,7 @@ VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 	auto desc = HAL::ResourceDesc::Tex3D(HAL::Format::R8_UINT, { sizes.x, sizes.y, sizes.z }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
 
 	buffer = std::make_shared<HAL::Texture>(desc);
-	buffer->set_name("VisibilityBuffer::buffer");
+	buffer->resource->set_name("VisibilityBuffer::buffer");
 
 	load_tiles_buffer = std::make_shared<HAL::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, HAL::counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
@@ -40,7 +40,7 @@ std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& l
 	{
 		Slots::VoxelVisibility data;
 
-		data.GetVisibility() = buffer->create_view<HAL::Texture3DView>(*list).texture3D;
+		data.GetVisibility() = buffer->resource->create_view<HAL::Texture3DView>(*list).texture3D;
 		data.GetVisible_tiles() = load_tiles_buffer->appendStructuredBuffer;
 		data.set(compute);
 	}

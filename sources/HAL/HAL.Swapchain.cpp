@@ -9,12 +9,12 @@ namespace HAL
 		frames[m_frameIndex].fence_event.wait();
 	}
 
-	Texture::ptr SwapChain::get_current_frame()
+	const Texture::ptr& SwapChain::get_current_frame()
 	{
 		return frames[m_frameIndex].m_renderTarget;
 	}
 
-	Texture::ptr SwapChain::get_prev_frame()
+	const Texture::ptr& SwapChain::get_prev_frame()
 	{
 		int id = m_frameIndex - 1;
 		if (id == -1)id = static_cast<int>(frames.size() - 1);

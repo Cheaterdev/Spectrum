@@ -58,7 +58,7 @@ export
 			void set_raw_data(const std::vector<T>& v)
 			{
 				auto list = (HAL::Device::get().get_upload_list());
-				list->get_copy().update_buffer(resource.get(), 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
+				list->get_copy().update_buffer(resource, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 				list->execute_and_wait();
 			}
 
@@ -66,24 +66,24 @@ export
 			void set_data(const T& v)
 			{
 				auto list = (HAL::Device::get().get_upload_list());
-				list->get_copy().update_buffer(resource.get(), 0, reinterpret_cast<const char*>(&v), sizeof(T));
+				list->get_copy().update_buffer(resource, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 				list->execute_and_wait();
 			}
 
 			template<class T>
 			void set_data(HAL::CommandList::ptr& list, std::vector<T>& v)
 			{
-				list->get_copy().update_buffer(resource.get(), 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
+				list->get_copy().update_buffer(resource, 0, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(T)));
 			}
 			template<class T>
 			void set_data(HAL::CommandList::ptr& list, const T& v)
 			{
-				list->get_copy().update_buffer(resource.get(), 0, reinterpret_cast<const char*>(&v), sizeof(T));
+				list->get_copy().update_buffer(resource, 0, reinterpret_cast<const char*>(&v), sizeof(T));
 			}
 			template<class T>
 			void set_data(HAL::CommandList::ptr& list, UINT offset, const T* data, UINT size)
 			{
-				list->get_copy().update_buffer(resource.get(), offset, reinterpret_cast<const char*>(data), size * sizeof(T));
+				list->get_copy().update_buffer(resource, offset, reinterpret_cast<const char*>(data), size * sizeof(T));
 			}
 
 				ResourceAddress get_resource_address() const
@@ -226,25 +226,25 @@ export
 			rwByteAddressBuffer = HLSL::RWByteAddressBuffer(hlsl[5]);
 			rwByteAddressBufferCount = HLSL::RWByteAddressBuffer(hlsl[6]);
 
-			HAL::Resource* counter_resource = resource.get();
+			HAL::Resource::ptr counter_resource = resource;
 			uint64 counter_offset = 0;
 
-			if (counted == counterType::HELP_BUFFER) counter_resource = help_buffer->resource.get();
+			if (counted == counterType::HELP_BUFFER) counter_resource = help_buffer->resource;
 			if (counted == counterType::SELF)	counter_offset = std::max(0, (int)size - (int)sizeof(UINT));
 
 			if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource))
 			{
-				structuredBuffer.create(resource.get(), 0, static_cast<uint>(count));
+				structuredBuffer.create(resource, 0, static_cast<uint>(count));
 				structuredBufferCount.create(counter_resource, counter_offset / 4, 1);
 			}
 
 			if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess))
 			{
-				rwStructuredBuffer.create(resource.get(), 0, count);
-				appendStructuredBuffer.create(counter_resource, counter_offset, resource.get(), 0, count);
+				rwStructuredBuffer.create(resource, 0, count);
+				appendStructuredBuffer.create(counter_resource, counter_offset, resource, 0, count);
 				rwStructuredBufferCount.create(counter_resource, counter_offset / 4, 1);
 
-				rwByteAddressBuffer.create(resource.get(), 0, resource->get_desc().as_buffer().SizeInBytes / 4);
+				rwByteAddressBuffer.create(resource, 0, resource->get_desc().as_buffer().SizeInBytes / 4);
 				rwByteAddressBufferCount.create(counter_resource, counter_offset / 4, 1);
 			}
 		}
@@ -275,7 +275,7 @@ export
 		template<class T>
 		inline void StructureBuffer<T>::set_data(HAL::CommandList::ptr& list, unsigned int offset, std::vector<type>& v)
 		{
-			list->get_copy().update_buffer(resource.get(), offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(type)));
+			list->get_copy().update_buffer(resource, offset, reinterpret_cast<const char*>(v.data()), static_cast<UINT>(v.size() * sizeof(type)));
 		}
 
 
@@ -342,7 +342,7 @@ namespace HAL
 		view.OffsetInBytes = offset;
 		view.Format = HAL::Format::R32_UINT;// is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
 		view.SizeInBytes = static_cast<UINT>(size ? size : this->size);
-		view.Resource = resource.get();
+		view.Resource = resource;
 		return view;
 	}
 

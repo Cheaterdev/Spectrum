@@ -27,6 +27,7 @@ namespace HAL {
 			public DescriptorHeapPageManager<AllocationPolicy>,
 			public QueryHeapPageManager<AllocationPolicy>
 		{
+			static constexpr bool resetable = std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator>;
 
 			GPUEntityStorage(Device& device):
 				CPUGPUAllocator<AllocationPolicy>(device),
@@ -53,11 +54,29 @@ namespace HAL {
 				return Handle{std::make_shared<DescriptorHeapStorage>(h),0};
 			}
 
-			void reset() requires (std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator>)
+			void reset() requires (resetable)
 			{
+
+				DescriptorHeapPageManager<AllocationPolicy>::for_each([](const DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions& type, uint from , uint to, HAL::DescriptorHeap::ptr heap)
+				{
+		
+					for(uint i=from;i<to;i++)
+					{
+						heap->get_resource_info(i) = HAL::Views::Null();
+					}
+
+				});
+
 				CPUGPUAllocator<AllocationPolicy>::reset();
 				QueryHeapPageManager<AllocationPolicy>::reset();
 				DescriptorHeapPageManager<AllocationPolicy>::reset();
+			}
+
+
+
+			~GPUEntityStorage()
+			{
+				if constexpr (resetable) reset();
 			}
 		};
 

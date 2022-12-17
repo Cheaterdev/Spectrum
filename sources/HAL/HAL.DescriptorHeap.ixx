@@ -26,7 +26,7 @@ export
 				view = v;
 			}
 
-			void for_each_subres(std::function<void(Resource*, UINT)> f) const;
+			void for_each_subres(std::function<void(std::shared_ptr<Resource>, UINT)> f) const;
 		};
 
 		class DescriptorHeap : public SharedObject<DescriptorHeap>, public API::DescriptorHeap
@@ -45,9 +45,9 @@ export
 			{
 
 			}
-ResourceInfo* get_resource_info(uint offset)
+			ResourceInfo& get_resource_info(uint offset)
 			{
-				return &resources[offset];
+				return resources[offset];
 			}
 			uint get_size();
 
@@ -87,7 +87,17 @@ ResourceInfo* get_resource_info(uint offset)
 			}
 			~DescriptorHeapStorage()
 			{
-				handle.Free();
+				if(handle.CanFree())
+				{
+					auto &heap = *get_heap();
+
+					for(int i=0;i<get_count();i++)
+					{
+						heap.get_resource_info(get_offset()+i) = HAL::Views::Null();
+					}
+					handle.Free();
+				}
+				
 			}
 
 			HAL::DescriptorHeap::ptr get_heap() const
@@ -127,7 +137,7 @@ ResourceInfo* get_resource_info(uint offset)
 		
 			Handle() = default;
 			Handle(std::shared_ptr<DescriptorHeapStorage> storage,UINT offset):storage(storage),offset(offset){}
-			ResourceInfo* get_resource_info() const;
+			ResourceInfo& get_resource_info() const;
 
 			bool is_valid() const
 			{
@@ -210,7 +220,7 @@ ResourceInfo* get_resource_info(uint offset)
 			auto &heap =* storage->get_heap();
 
 			heap[get_offset()].place(v);
-			*get_resource_info() = ResourceInfo(v);
+			get_resource_info() = ResourceInfo(v);
 
 		}
 

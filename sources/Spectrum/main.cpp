@@ -872,7 +872,7 @@ public:
 				builder.need(data.swapchain, ResourceFlags::Required);
 				}, [this, ptr](pass_data& data, FrameContext& context) {
 
-					context.get_list()->transition_present(data.swapchain->resource);
+					context.get_list()->transition_present(data.swapchain->resource.get());
 
 					//context.get_list()->resolve_timers(Device::get().get_gpu_time_profiler());
 

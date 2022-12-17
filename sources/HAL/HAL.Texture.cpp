@@ -8,12 +8,12 @@ namespace HAL
 
 	void Texture::init()
 	{
-		if (native_resource)
+		if (resource)
 		{
 
 			auto desc = get_desc().as_texture();
 			if (desc.ArraySize == 6)
-				cube_view = CubeView(this, HAL::Device::get().get_static_gpu_data());
+				cube_view = CubeView(resource, HAL::Device::get().get_static_gpu_data());
 
 			/*		if (desc.ArraySize % 6 == 0)
 						array_cubemap_view = std::make_shared<CubemapArrayView>(this);*/
@@ -23,9 +23,9 @@ namespace HAL
 									array_2d_view = std::make_shared<Array2DView>(this);*/
 
 			if (desc.is3D())
-				texture_3d_view = Texture3DView(this, HAL::Device::get().get_static_gpu_data());
+				texture_3d_view = Texture3DView(resource, HAL::Device::get().get_static_gpu_data());
 			else
-				texture_2d_view = TextureView(this, HAL::Device::get().get_static_gpu_data());
+				texture_2d_view = TextureView(resource, HAL::Device::get().get_static_gpu_data());
 		}
 	}
 
@@ -58,15 +58,18 @@ namespace HAL
 		init();
 	}
 
-	Texture::Texture(D3D::Resource native, ResourceState state) : Resource(native, state)
+	Texture::Texture(D3D::Resource native, ResourceState state) 
 	{
+
+		resource = std::make_shared<HAL::Resource>(native, state);
 		//    resource.reset(new Resource(native));
-		set_name("Texture");
+		resource->set_name("Texture");
 		//	resource->debug = true;
 		init();
 	}
-	Texture::Texture(HAL::ResourceDesc desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, HeapType heap_type) :Resource(desc, heap_type,  state)
+	Texture::Texture(HAL::ResourceDesc desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, HeapType heap_type) 
 	{
+		resource = std::make_shared<HAL::Resource>(desc, heap_type,  state);
 		init();
 	}
 
@@ -90,7 +93,7 @@ namespace HAL
 			for (unsigned int m = 0; m < desc.MipLevels; m++)
 			{
 				int i = D3D12CalcSubresource(m, a, 0, desc.MipLevels, desc.ArraySize);
-				tasks.emplace_back(list->get_copy().read_texture(this, ivec3(0, 0, 0), { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, [desc, &data, a, m](const char* mem, UINT64 pitch, UINT64 slice, UINT64 size)
+				tasks.emplace_back(list->get_copy().read_texture(resource, ivec3(0, 0, 0), { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, [desc, &data, a, m](const char* mem, UINT64 pitch, UINT64 slice, UINT64 size)
 					{
 						auto c = desc;
 
@@ -126,8 +129,8 @@ namespace HAL
 		else
 			desc = HAL::ResourceDesc::Tex2D(data.format, { data.width, data.height }, data.array_size, data.mip_maps);
 
-
-		Resource::_init(desc, HeapType::DEFAULT, (data.array_size * data.mip_maps) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
+		resource = std::make_shared<HAL::Resource>(desc,  HeapType::DEFAULT, (data.array_size * data.mip_maps) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
+	
 		auto list = (HAL::Device::get().get_upload_list());
 
 		if (data.array_size * data.mip_maps)
@@ -137,7 +140,7 @@ namespace HAL
 				for (unsigned int m = 0; m < data.mip_maps; m++)
 				{
 					int i = m * data.array_size + a;
-					list->get_copy().update_texture(this, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, (const char*)data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
+					list->get_copy().update_texture(resource, { 0, 0, 0 }, { data.array[a]->mips[m]->width, data.array[a]->mips[m]->height, data.array[a]->mips[m]->depth }, i, (const char*)data.array[a]->mips[m]->data.data(), data.array[a]->mips[m]->width_stride, data.array[a]->mips[m]->slice_stride);
 				}
 		}
 

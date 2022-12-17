@@ -223,7 +223,7 @@ export{
 				rtv_table[i++].place(e.renderTarget);
 				//   e.place_rtv(rtv_table[i++]);
 
-				auto rtv = std::get<HAL::Views::RenderTarget>(rtv_table[i-1].get_resource_info()->view);
+				auto rtv = std::get<HAL::Views::RenderTarget>(rtv_table[i-1].get_resource_info().view);
 				
 			}
 

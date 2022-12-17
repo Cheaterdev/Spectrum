@@ -174,7 +174,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 
 void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::TextureView from)
 {
-	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info()->view);
+	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info().view);
 	list.set_pipeline<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format));
 
 
@@ -196,7 +196,7 @@ void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Text
 
 void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, HAL::TextureView to, HAL::TextureView from)
 {
-	auto hal_view = std::get<HAL::Views::RenderTarget>(to.renderTarget.get_resource_info()->view);
+	auto hal_view = std::get<HAL::Views::RenderTarget>(to.renderTarget.get_resource_info().view);
 	list.set_pipeline<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format));
 	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 

@@ -117,7 +117,7 @@ namespace FrameGraph
 			auto& info = *h.info;
 			info.passed = true;
 
-			info.resource = tex;
+			info.resource = tex->resource;
 			info.d3ddesc = tex->get_desc();
 			passed_resources.insert(&info);
 
@@ -136,7 +136,7 @@ namespace FrameGraph
 			auto& info = *h.info;
 			info.passed = true;
 
-			info.resource = tex;
+			info.resource = tex->resource;
 			info.d3ddesc = tex->get_desc();
 			passed_resources.insert(&info);
 
@@ -152,6 +152,7 @@ namespace FrameGraph
 
 	void TaskBuilder::reset()
 	{
+		current_frame = nullptr;
 		current_pass = nullptr;
 		//	allocator.reset();
 			for (auto& pair : alloc_resources)
@@ -327,14 +328,14 @@ namespace FrameGraph
 
 		};
 
-		for (auto res : builder.alloc_resources)
+		for (auto &res : builder.alloc_resources)
 		{
 			if (check(res.second.flags & ResourceFlags::Required))
 				process_resource(res.second, (int)passes.size());
 		}
 
 
-		for (auto pass : required_passes)
+		for (auto &pass : required_passes)
 		{
 			pass->enabled = true;
 			for (auto& info : pass->used.resources)

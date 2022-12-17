@@ -99,7 +99,7 @@ export namespace HAL
 				ReadOnlyStencil
 			};
 
-			Resource* Resource;
+			std::shared_ptr<Resource> Resource;
 			Format Format;
 			Flags Flags;
 
@@ -288,7 +288,7 @@ export namespace HAL
 				}
 			};
 
-			Resource* Resource;
+			std::shared_ptr<Resource> Resource;
 			Format Format;
 			//uint Shader4ComponentMapping;
 			std::variant<Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D, Texture2DMS, Texture2DMSArray, Cube, CubeArray, Raytracing> View;
@@ -412,7 +412,7 @@ export namespace HAL
 				}
 			};
 
-			Resource* Resource;
+			std::shared_ptr<Resource> Resource;
 			Format Format;
 			std::variant < Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture2DMS, Texture2DMSArray, Texture3D > View;
 
@@ -427,7 +427,7 @@ export namespace HAL
 
 		struct ConstantBuffer
 		{
-			Resource* Resource;
+			std::shared_ptr<Resource> Resource;
 			uint OffsetInBytes;
 			uint SizeInBytes;
 
@@ -449,7 +449,7 @@ export namespace HAL
 				uint StructureByteStride;
 				bool Raw;
 				uint64 CounterOffsetInBytes;
-				Resource* CounterResource;
+				std::shared_ptr<Resource> CounterResource;
 
 			private:
 				SERIALIZE()
@@ -534,7 +534,7 @@ export namespace HAL
 				}
 			};
 
-			Resource* Resource;
+			std::shared_ptr<Resource> Resource;
 			Format Format;
 			std::variant<Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D> View;
 
@@ -554,7 +554,7 @@ export namespace HAL
 			Format Format;
 			uint	SizeInBytes =0;
 			uint64 OffsetInBytes=0;
-			Resource* Resource = nullptr;
+			std::shared_ptr<Resource> Resource = nullptr;
 		private:
 			SERIALIZE()
 			{
@@ -566,11 +566,13 @@ export namespace HAL
 			}
 		};
 	
-		template <class T> concept ViewTemplate = std::is_same_v<T, UnorderedAccess>
-		|| std::is_same_v<T, ConstantBuffer>
+		template <class T> concept ViewTemplate = 
+			std::is_same_v<T, UnorderedAccess>
+			|| std::is_same_v<T, ConstantBuffer>
 			|| std::is_same_v<T, RenderTarget>
 			|| std::is_same_v<T, DepthStencil>
-			|| std::is_same_v<T, ShaderResource>;
+			|| std::is_same_v<T, ShaderResource>
+			|| std::is_same_v<T, Null>;
 
 	}
 

@@ -137,12 +137,12 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		desc.as_texture().Format = Format::R16G16B16A16_FLOAT;
 		tex_lighting.set(desc);
 
-		lighed_to_albedo_coeff = tex_lighting.tex_result->get_tiled_manager().get_tiles_count() / albedo.tex_result->get_tiled_manager().get_tiles_count();
-		dynamic_generator_lighted = TileDynamicGenerator(tex_lighting.tex_result->get_tiled_manager().get_tiles_count());
-		dynamic_generator_voxelizing = TileDynamicGenerator(albedo.tex_result->get_tiled_manager().get_tiles_count());
-		visibility = std::make_shared<VisibilityBufferUniversal>(tex_lighting.tex_result->get_tiled_manager().get_tiles_count());
+		lighed_to_albedo_coeff = tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count() / albedo.tex_result->resource->get_tiled_manager().get_tiles_count();
+		dynamic_generator_lighted = TileDynamicGenerator(tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count());
+		dynamic_generator_voxelizing = TileDynamicGenerator(albedo.tex_result->resource->get_tiled_manager().get_tiles_count());
+		visibility = std::make_shared<VisibilityBufferUniversal>(tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count());
 
-		tex_lighting.tex_result->get_tiled_manager().on_load = [this](ivec4 pos)
+		tex_lighting.tex_result->resource->get_tiled_manager().on_load = [this](ivec4 pos)
 		{
 			if (gpu_tiles_buffer[pos.w])
 			{
@@ -151,7 +151,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 		};
 
-		tex_lighting.tex_result->get_tiled_manager().on_zero = [this](ivec4 pos)
+		tex_lighting.tex_result->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
 		{
 			if (gpu_tiles_buffer[pos.w])
 			{
@@ -160,25 +160,25 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		};
 
 
-		albedo.tex_dynamic->get_tiled_manager().on_load = [this](ivec4 pos)
+		albedo.tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos)
 		{
 			albedo_tiles->insert(pos);
 		};
 
-		albedo.tex_dynamic->get_tiled_manager().on_zero = [this](ivec4 pos)
+		albedo.tex_dynamic->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
 		{
 			albedo_tiles->erase(pos);
 		};
 		albedo_tiles.reset(new GPUTilesBuffer);
-		albedo_tiles->set_size(albedo.tex_result->get_tiled_manager().get_tiles_count(), albedo.tex_result->get_tiled_manager().get_tile_shape());
+		albedo_tiles->set_size(albedo.tex_result->resource->get_tiled_manager().get_tiles_count(), albedo.tex_result->resource->get_tiled_manager().get_tile_shape());
 
 
-		gpu_tiles_buffer.resize(tex_lighting.tex_result->get_tiled_manager().unpacked_mip_count);
+		gpu_tiles_buffer.resize(tex_lighting.tex_result->resource->get_tiled_manager().unpacked_mip_count);
 
 		for (int i = 0; i < gpu_tiles_buffer.size(); i++)
 		{
 			gpu_tiles_buffer[i].reset(new GPUTilesBuffer);
-			gpu_tiles_buffer[i]->set_size(tex_lighting.tex_result->get_tiled_manager().get_tiles_count(i), tex_lighting.tex_result->get_tiled_manager().get_tile_shape());
+			gpu_tiles_buffer[i]->set_size(tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count(i), tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape());
 		}
 
 
@@ -231,8 +231,8 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 			auto albedo_tiles = updates.tiles_to_load | std::views::transform([this](ivec3 pos) {return pos / lighed_to_albedo_coeff; });
 
-			albedo.tex_static->get_tiled_manager().load_tiles2(&list, albedo_tiles);
-			normal.tex_static->get_tiled_manager().load_tiles2(&list, albedo_tiles);
+			albedo.tex_static->resource->get_tiled_manager().load_tiles2(&list, albedo_tiles);
+			normal.tex_static->resource->get_tiled_manager().load_tiles2(&list, albedo_tiles);
 
 			tex_lighting.load_static(updates.tiles_to_load);
 		}
@@ -264,13 +264,13 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 		dynamic_generator_voxelizing.end();
 	}
 
-	albedo.tex_dynamic->get_tiled_manager().zero_tiles(&list, dynamic_generator_voxelizing.tiles_to_remove);
-	normal.tex_dynamic->get_tiled_manager().zero_tiles(&list, dynamic_generator_voxelizing.tiles_to_remove);
+	albedo.tex_dynamic->resource->get_tiled_manager().zero_tiles(&list, dynamic_generator_voxelizing.tiles_to_remove);
+	normal.tex_dynamic->resource->get_tiled_manager().zero_tiles(&list, dynamic_generator_voxelizing.tiles_to_remove);
 	tex_lighting.zero_dynamic(dynamic_generator_lighted.tiles_to_remove);
 
 
-	albedo.tex_dynamic->get_tiled_manager().load_tiles(&list, dynamic_generator_voxelizing.tiles_to_load);
-	normal.tex_dynamic->get_tiled_manager().load_tiles(&list, dynamic_generator_voxelizing.tiles_to_load);
+	albedo.tex_dynamic->resource->get_tiled_manager().load_tiles(&list, dynamic_generator_voxelizing.tiles_to_load);
+	normal.tex_dynamic->resource->get_tiled_manager().load_tiles(&list, dynamic_generator_voxelizing.tiles_to_load);
 
 
 	tex_lighting.load_dynamic(dynamic_generator_lighted.tiles_to_load);
@@ -305,7 +305,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 				auto& params = utils.GetParams();
 				params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
-				params.GetVoxels_per_tile() = ivec4(normal.tex_result->get_tiled_manager().get_tile_shape(), 0);
+				params.GetVoxels_per_tile() = ivec4(normal.tex_result->resource->get_tiled_manager().get_tile_shape(), 0);
 				utils.set(compute);
 			}
 
@@ -326,7 +326,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	voxelization.GetInfo().GetVoxel_tiles_count() = scene->voxel_info.GetVoxel_tiles_count();
 	voxelization.GetInfo().GetVoxels_per_tile() = scene->voxel_info.GetVoxels_per_tile();
 
-	voxelization.GetVisibility() = visibility->buffer->create_view<HAL::Texture3DView>(list).mips[0].rwTexture3D;
+	voxelization.GetVisibility() = visibility->buffer->resource->create_view<HAL::Texture3DView>(list).mips[0].rwTexture3D;
 
 
 	if (all_scene_regen_counter)
@@ -659,7 +659,7 @@ void VoxelGI::screen(Graph& graph)
 
 				//	compute.dispach(frames_count.get_size());
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource);
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
 			}
 
 
@@ -758,7 +758,7 @@ void VoxelGI::screen(Graph& graph)
 					tilingPostprocess.set(compute);
 				}
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource);
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
 			}
 
 			{
@@ -773,7 +773,7 @@ void VoxelGI::screen(Graph& graph)
 				}
 
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource);
+				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
 			}
 
 
@@ -1016,7 +1016,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 					}
 
 
-					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource);
+					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
 				}
 
 				{
@@ -1030,7 +1030,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 						tilingPostprocess.set(compute);
 					}
 
-					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource);
+					compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
 				}
 
 
@@ -1142,12 +1142,12 @@ void VoxelGI::lighting(Graph& graph)
 				subres.MipLevels = tex_lighting.tex_result->get_desc().as_texture().MipLevels - 1;
 				subres.MipSlice = 1;
 
-				ligthing.GetLower() = tex_lighting.tex_result->create_view<Texture3DView>(list, subres).texture3D;
+				ligthing.GetLower() = tex_lighting.tex_result->resource->create_view<Texture3DView>(list, subres).texture3D;
 
 
 				auto& params = ligthing.GetParams();
 				params.GetTiles() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
-				params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tiled_manager().get_tile_shape();
+				params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
 				auto& pssm = ligthing.GetPssmGlobal();
 
@@ -1237,7 +1237,7 @@ void VoxelGI::mipmapping(Graph& graph)
 
 						auto& params = utils.GetParams();
 						params.GetTiles() = gpu_tiles_buffer[i]->buffer->structuredBuffer;
-						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tiled_manager().get_tile_shape();
+						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
 						utils.set(compute);
 					}
@@ -1275,7 +1275,7 @@ void VoxelGI::mipmapping(Graph& graph)
 
 						auto& params = mipmapping.GetParams();
 						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
-						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tiled_manager().get_tile_shape();
+						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
 						mipmapping.set(compute);
 					}
@@ -1327,8 +1327,8 @@ void VoxelGI::generate(Graph& graph)
 	voxel_info.GetSize().xyz = size;
 	voxel_info.GetSize().x = voxel_info.GetSize().y = voxel_info.GetSize().z = std::max(200.0f, voxel_info.GetSize().max_element());
 
-	voxel_info.GetVoxel_tiles_count().xyz = tex_lighting.tex_result->get_tiled_manager().get_tiles_count(0);
-	voxel_info.GetVoxels_per_tile().xyz = tex_lighting.tex_result->get_tiled_manager().get_tile_shape();
+	voxel_info.GetVoxel_tiles_count().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tiles_count(0);
+	voxel_info.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
 	scene->voxels_compiled = scene->voxel_info.compile(*graph.builder.current_frame);
 

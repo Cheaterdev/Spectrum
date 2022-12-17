@@ -192,7 +192,8 @@ export
 		}
 
 		bool isEmpty() const override
-		{
+		{	ASSERT_SINGLETHREAD
+
 			return offset == start_region;
 		}
 		void Free(Handle& handle)
@@ -204,7 +205,8 @@ export
 			return size;
 		}
 		std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
-		{
+		{	ASSERT_SINGLETHREAD
+
 			size_t my_offset = Math::roundUp(offset, align);
 
 			//assert(offset % align == 0);
@@ -215,96 +217,100 @@ export
 
 
 			offset = my_offset + size;
-			return Handle(MemoryInfo(my_offset, size, 0), this);
+			Handle h(MemoryInfo(my_offset, size, 0), this);
+
+			assert(h.get_offset()+size<=this->end_region);
+			return h;
 		}
 
 		void Reset() override
-		{
+		{	ASSERT_SINGLETHREAD
+
 			offset = start_region;
 		}
 	};
 
 
-	class LinearFreeAllocator : public Allocator
-	{
-	protected:
-		virtual void moveBlock(size_t from, size_t to) = 0;
+	//class LinearFreeAllocator : public Allocator
+	//{
+	//protected:
+	//	virtual void moveBlock(size_t from, size_t to) = 0;
 
-	protected:
-		size_t offset;
-		const size_t size;
+	//protected:
+	//	size_t offset;
+	//	const size_t size;
 
-		std::list<MemoryInfo> allocs;
-	public:
-		using Handle = AllocatorHanle;
+	//	std::list<MemoryInfo> allocs;
+	//public:
+	//	using Handle = AllocatorHanle;
 
-		LinearFreeAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size)
-		{
-			offset = 0;
-		}
+	//	LinearFreeAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size)
+	//	{
+	//		offset = 0;
+	//	}
 
-		size_t get_max_usage() const override
-		{
-			return offset;
-		}
+	//	size_t get_max_usage() const override
+	//	{
+	//		return offset;
+	//	}
 
-		Handle Allocate(size_t size, size_t align = 1)
-		{
-			auto res = TryAllocate(size, align);
+	//	Handle Allocate(size_t size, size_t align = 1)
+	//	{
+	//		auto res = TryAllocate(size, align);
 
-			if (res)
-				return *res;
+	//		if (res)
+	//			return *res;
 
-			assert(false);
+	//		assert(false);
 
-			return Handle();
-		}
+	//		return Handle();
+	//	}
 
-		size_t get_size() const override
-		{
-			return size;
-		}
-		std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
-		{
-			assert(align == 1);
-			assert(size == 1);
+	//	size_t get_size() const override
+	//	{
+	//		return size;
+	//	}
+	//	std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
+	//	{
+	//		assert(align == 1);
+	//		assert(size == 1);
 
-			offset = Math::AlignUp(offset, align);
-
-
-			//alloc_ids.resize(max_usage);
-			return Handle(MemoryInfo(offset, size,0), this);
-		}
+	//		offset = Math::AlignUp(offset, align);
 
 
-		void Free(Handle& handle)
-		{
-			if (!handle)
-				return;
-
-			assert(handle.get_owner() == this);
-			assert(offset > 0);
-
-			if (offset > 1)
-			{
-				MemoryInfo& last_mem = allocs.back();
-				const MemoryInfo& removing_mem = handle.get_info();
-
-				moveBlock(last_mem.offset, removing_mem.offset);
-
-				last_mem.offset = removing_mem.offset;
-				//last_mem.aligned_offset = removing_mem.aligned_offset;
-			}
+	//		//alloc_ids.resize(max_usage);
+	//		return Handle(MemoryInfo(offset, size,0), this);
+	//	}
 
 
-			offset--;
-		}
+	//	void Free(Handle& handle)
+	//	{
+	//		if (!handle)
+	//			return;
 
-		void Reset() override
-		{
-			offset = 0;
-		}
-	};
+	//		assert(handle.get_owner() == this);
+	//		assert(offset > 0);
+
+	//		if (offset > 1)
+	//		{
+	//			MemoryInfo& last_mem = allocs.back();
+	//			const MemoryInfo& removing_mem = handle.get_info();
+
+	//			moveBlock(last_mem.offset, removing_mem.offset);
+
+	//			last_mem.offset = removing_mem.offset;
+	//			//last_mem.aligned_offset = removing_mem.aligned_offset;
+	//		}
+
+
+	//		offset--;
+	//	}
+
+	//	void Reset() override
+	//	{
+	//		offset = 0;
+	//	}
+	//};
 
 
 	//template<typename T> concept IsAllocatorType = std::is_base_of_v<Allocator, T>;

@@ -26,7 +26,7 @@ public:
 
 	void flush(HAL::CommandList& list)
 	{
-		tilings_info.resource = tex_result.get();
+		tilings_info.resource = tex_result->resource.get();
 		list.update_tilings(std::move(tilings_info));
 	}
 
@@ -39,43 +39,43 @@ public:
 		tex_result.reset(new HAL::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
 
-		tex_dynamic->get_tiled_manager().on_load = [this](ivec4 pos) {
-			auto heap_pos = tex_dynamic->get_tiled_manager().tiles[0][pos].heap_position;
+		tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos) {
+			auto heap_pos = tex_dynamic->resource->get_tiled_manager().tiles[0][pos].heap_position;
 			heap_pos.handle = ResourceHandle();
-			tex_result->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
+			tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
 		};
 
 
-		tex_dynamic->get_tiled_manager().on_zero = [this](ivec4 pos) {
-			if (tex_static->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+		tex_dynamic->resource->get_tiled_manager().on_zero = [this](ivec4 pos) {
+			if (tex_static->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				auto heap_pos = tex_static->get_tiled_manager().tiles[0][pos].heap_position;
+				auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos].heap_position;
 				heap_pos.handle = ResourceHandle();
-				tex_result->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
+				tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
 			}
 			else
 			{
-				tex_result->get_tiled_manager().zero_tile(tilings_info, pos, 0);
+				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos, 0);
 			}
 		};
 
 
-		tex_static->get_tiled_manager().on_load = [this](ivec4 pos) {
+		tex_static->resource->get_tiled_manager().on_load = [this](ivec4 pos) {
 
-			if (!tex_dynamic->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+			if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				auto heap_pos = tex_static->get_tiled_manager().tiles[0][pos].heap_position;
+				auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos].heap_position;
 				heap_pos.handle = ResourceHandle();
-				tex_result->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
+				tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
 			}
 
 		};
 
-		tex_static->get_tiled_manager().on_zero = [this](ivec4 pos) {
+		tex_static->resource->get_tiled_manager().on_zero = [this](ivec4 pos) {
 
-			if (!tex_dynamic->get_tiled_manager().is_mapped(pos.xyz, pos.w))
+			if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				tex_result->get_tiled_manager().zero_tile(tilings_info, pos, 0);
+				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos, 0);
 			}
 
 		};
@@ -85,8 +85,8 @@ public:
 
 	void zero_tiles(HAL::CommandList& list)
 	{
-		tex_dynamic->get_tiled_manager().zero_tiles((list));
-		tex_static->get_tiled_manager().zero_tiles((list));
+		tex_dynamic->resource->get_tiled_manager().zero_tiles((list));
+		tex_static->resource->get_tiled_manager().zero_tiles((list));
 
 		tilings_info.tiles.clear();
 		//	flush(list);
@@ -108,7 +108,7 @@ public:
 
 	void flush(HAL::CommandList& list)
 	{
-		tilings_info.resource = tex_result.get();
+		tilings_info.resource = tex_result->resource.get();
 		list.update_tilings(std::move(tilings_info));
 	}
 
@@ -117,8 +117,8 @@ public:
 	{
 		tex_result.reset(new HAL::Texture(desc, HAL::ResourceState::PIXEL_SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
-		static_tiles.resize(tex_result->get_tiled_manager().get_tiles_count(), 0);
-		dynamic_tiles.resize(tex_result->get_tiled_manager().get_tiles_count(), 0);
+		static_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
+		dynamic_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
 
 	}
 
@@ -131,7 +131,7 @@ public:
 
 			if (!dynamic_tiles[pos])
 			{
-				tex_result->get_tiled_manager().load_tile(tilings_info, pos, 0, true);
+				tex_result->resource->get_tiled_manager().load_tile(tilings_info, pos, 0, true);
 			}
 		}
 	}
@@ -143,7 +143,7 @@ public:
 			static_tiles[pos] = false;
 			if (!dynamic_tiles[pos])
 			{
-				tex_result->get_tiled_manager().zero_tile(tilings_info, pos, 0);
+				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos, 0);
 			}
 		}
 	}
@@ -156,7 +156,7 @@ public:
 
 			if (!static_tiles[pos])
 			{
-				tex_result->get_tiled_manager().load_tile(tilings_info, pos, 0, true);
+				tex_result->resource->get_tiled_manager().load_tile(tilings_info, pos, 0, true);
 			}
 		}
 	}
@@ -168,7 +168,7 @@ public:
 			dynamic_tiles[pos] = false;
 			if (!static_tiles[pos])
 			{
-				tex_result->get_tiled_manager().zero_tile(tilings_info, pos, 0);
+				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos, 0);
 			}
 		}
 	}
@@ -179,7 +179,7 @@ public:
 	{
 		tilings_info.tiles.clear();
 
-		tex_result->get_tiled_manager().zero_tiles(list);
+		tex_result->resource->get_tiled_manager().zero_tiles(list);
 
 
 		static_tiles.fill(false);

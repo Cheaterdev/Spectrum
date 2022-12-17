@@ -38,7 +38,7 @@ export
 		};
 
 
-		class Texture : public resource_manager<Texture, texure_header>, public HAL::Resource
+		class Texture : public resource_manager<Texture, texure_header>
 		{
 			friend class resource_manager<Texture, texure_header>;
 		protected:
@@ -56,6 +56,11 @@ export
 
 			void init();
 		public:
+				const ResourceDesc& get_desc() const
+			{
+				return resource->get_desc();
+			}
+			 HAL::Resource::ptr resource;
 			using ptr = s_ptr<Texture>;
 
 			ivec3 get_size(int mip = 0);
