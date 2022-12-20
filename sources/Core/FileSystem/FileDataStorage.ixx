@@ -1,5 +1,5 @@
 export module Core:FileDataStorage;
-#pragma optimize( "", off )
+
 import :Utils;
 import :Log;
 import :Singleton;
