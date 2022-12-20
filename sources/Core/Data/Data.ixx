@@ -6,7 +6,7 @@ import stl.core;
 import :Utils;
 import :Exceptions;
 
-import ZipLib;
+import zlib;
 
 import :shared_ptr;
 export
@@ -19,9 +19,7 @@ export
 
 		std::string unpack(std::string str);
 
-		ZipArchiveEntry::Ptr create_entry(ZipArchive::Ptr archive, std::string name, std::string data, bool pack = false);
-
-		std::string zip_to_string(ZipArchive::Ptr archive);
+		
 
 		std::string load_all(std::istream& s);
 
@@ -334,7 +332,7 @@ namespace DataPacker
 		std::string packed;
 		packed.resize(int(1.01 * unpacked.size()) + 12 + sizeof(unsigned long));
 		unsigned long T = (unsigned long)packed.size() - sizeof(unsigned long);
-		compress((Bytef*)packed.data() + sizeof(unsigned long), &T, (Bytef*)unpacked.data(), (unsigned long)unpacked.size());
+		compress((unsigned char *)packed.data() + sizeof(unsigned long), &T, (unsigned char *)unpacked.data(), (unsigned long)unpacked.size());
 		packed.resize(T + sizeof(unsigned long));
 		T = (unsigned long)unpacked.size();
 		memcpy((void*)packed.data(), &T, sizeof(T));
@@ -346,31 +344,11 @@ namespace DataPacker
 		std::string result;
 		unsigned long T = *reinterpret_cast<unsigned long*>(const_cast<char*>(str.data()));
 		result.resize(T);
-		uncompress((Bytef*)result.data(), &T, (Bytef*)str.data() + sizeof(unsigned long), (unsigned long)str.size() - sizeof(unsigned long));
+		uncompress((unsigned char *)result.data(), &T, (unsigned char *)str.data() + sizeof(unsigned long), (unsigned long)str.size() - sizeof(unsigned long));
 		return std::move(result);
 	}
 
-
-	ZipArchiveEntry::Ptr create_entry(ZipArchive::Ptr archive, std::string name, std::string data, bool pack)
-	{
-		ZipArchiveEntry::Ptr entry = archive->CreateEntry(name);
-		std::istringstream sss(data);
-
-		if (pack)
-			entry->SetCompressionStream(sss, DeflateMethod::Create(), ZipArchiveEntry::CompressionMode::Immediate);
-		else
-			entry->SetCompressionStream(sss, StoreMethod::Create(), ZipArchiveEntry::CompressionMode::Immediate);
-
-		return entry;
-	}
-
-
-	std::string zip_to_string(ZipArchive::Ptr archive)
-	{
-		std::ostringstream s;
-		archive->WriteToStream(s);
-		return s.str();
-	}
+	
 
 	std::string load_all(std::istream& s)
 	{

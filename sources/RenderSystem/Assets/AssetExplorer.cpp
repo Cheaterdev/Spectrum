@@ -116,9 +116,9 @@ namespace GUI
 						size_t total_indices = 0;
 						for (auto& info : mesh->meshes)
 						{
-							s << "mesh vertex: " << info.vertex_count << " index: " << info.index_count << std::endl;
-							total_vertexes += info.vertex_count;
-							total_indices += info.index_count;
+						//	s << "mesh vertex: " << info.vertex_count << " index: " << info.index_count << std::endl;
+					//		total_vertexes += info.vertex_count;
+						//	total_indices += info.index_count;
 
 						}
 

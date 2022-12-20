@@ -1,9 +1,10 @@
 export module HAL:ResourceViews;
 import :Types;
 import :HLSL;
-import :API.Device;
+import :Device;
 import :FrameManager;
 
+import Core;
 export
 {
 
@@ -60,7 +61,11 @@ export
 			{
 				return !!resource;
 			}
-
+			
+			SERIALIZE()
+			{
+				ar& NVP(resource);
+			}
 
 		};
 
@@ -589,6 +594,13 @@ export
 			uint64 offset;
 			uint64 size;
 			bool counted;
+
+			SERIALIZE()
+			{
+				ar& NVP(offset);
+				ar& NVP(size);
+				ar& NVP(counted);
+			}
 		};
 		template<class T>
 		class StructuredBufferView :public ResourceView
@@ -683,6 +695,19 @@ export
 				return resource->get_resource_address().offset(desc.offset);
 			}
 
+
+			SERIALIZE()
+			{
+				ar& NVP(resource);
+				ar& NVP(desc);
+
+				IF_LOAD()
+				{
+
+					init(HAL::Device::get().get_static_gpu_data());
+				}
+				
+			}
 		};
 
 

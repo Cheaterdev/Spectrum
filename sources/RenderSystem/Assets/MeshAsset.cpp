@@ -56,13 +56,76 @@ Asset_Type MeshAsset::get_type()
 
 void MeshAsset::init_gpu()
 {
+	std::shared_future<FenceWaiter> last;
+#undef OPAQUE
+	int i = 0;
+	if (HAL::Device::get().is_rtx_supported())
+		for (auto& mesh : meshes)
+		{
+			auto list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+			list->begin("RTX");
 
+			auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
+
+			GeometryDesc geometryDesc = {};
+			geometryDesc.Type = HAL::GeometryType::TRIANGLES;
+
+			geometryDesc.IndexBuffer = mesh.index_buffer_view.get_resource_address();
+			geometryDesc.IndexCount = mesh.index_buffer_view.desc.size/sizeof(UINT);
+			geometryDesc.IndexFormat = Format::R32_UINT;
+			geometryDesc.Transform3x4 = mat;
+			geometryDesc.VertexFormat = Format::R32G32B32_FLOAT;
+			geometryDesc.VertexBuffer = mesh.vertex_buffer_view.get_resource_address();
+			geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
+			geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
+
+			std::vector<GeometryDesc > descs;
+			descs.push_back(geometryDesc);
+
+			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
+			last=list->execute();
+
+			i++;
+		}
+	if(last.valid()) last.get().wait();
+
+}
+MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
+{
+	auto task = TaskInfoManager::get().create_task(file_name);
+	if (!c) c = std::make_shared<AssetLoadingContext>();
+	c->loading_task = task;
+	auto data = MeshData::get_resource(convert(file_name), c);
+
+	c->loading_task = nullptr;
+	if (!data) return;
+
+
+	//meshes = data->meshes;
+	root_node = data->root_node;
+	local_transform.identity();
+	root_node.iterate([this](MeshNode* node)
+		{
+			nodes.push_back(node);
+
+			return true;
+		});
+
+
+
+	for (auto& m : data->materials)
+		materials.emplace_back(register_asset(m));
+
+	primitive = data->primitive->clone();
+	/*(AABB*)primitive.get())->min = { -5, -5, -5 };
+	((AABB*)primitive.get())->max = { 5, 5, 5 };*/
+	name = file_name.substr(file_name.find_last_of(L"\\") + 1);
 
 
 	UINT unique_ids = 0;
 	UINT primitive_ids = 0;
 
-	UINT meshlets_count = 0;
+	//UINT meshlets_count = 0;
 
 	std::vector<UINT32> unique_ids_buffer;
 	std::vector<UINT32> priimitive_ids_buffer;
@@ -70,11 +133,11 @@ void MeshAsset::init_gpu()
 
 	std::vector<Table::Meshlet> meshlets;
 	std::vector<Table::MeshletCullData> meshlet_cull;
-
-	for (auto& mesh : meshes)
+	
+	for (auto& mesh : data->meshes)
 	{
-		mesh.meshlets_offset = meshlets_count;
-		meshlets_count += static_cast<UINT>(mesh.meshlets.size());
+	//	mesh.meshlets_offset = meshlets_count;
+	//	meshlets_count += static_cast<UINT>(mesh.meshlets.size());
 
 
 		for (auto& meshet : mesh.meshlets)
@@ -103,8 +166,8 @@ void MeshAsset::init_gpu()
 
 	LinearAllocator allocator;
 
-	auto vertex_handle = allocator.Allocate<Table::mesh_vertex_input>(vertex_buffer.size());
-	auto index_handle = allocator.Allocate<uint>(index_buffer.size());
+	auto vertex_handle = allocator.Allocate<Table::mesh_vertex_input>(data->vertex_buffer.size());
+	auto index_handle = allocator.Allocate<uint>(data->index_buffer.size());
 	auto unique_index_handle = allocator.Allocate<uint>(unique_ids_buffer.size());
 	auto primitive_index_handle = allocator.Allocate<uint>(priimitive_ids_buffer.size());
 	auto meshlet_handle = allocator.Allocate<Table::Meshlet>(meshlets.size());
@@ -165,8 +228,8 @@ void MeshAsset::init_gpu()
 
 
 	auto list = (HAL::Device::get().get_upload_list());
-	list->get_copy().update_buffer(vertex_buffer_view, 0, vertex_buffer);
-	list->get_copy().update_buffer(index_buffer_view, 0, index_buffer);
+	list->get_copy().update_buffer(vertex_buffer_view, 0, data->vertex_buffer);
+	list->get_copy().update_buffer(index_buffer_view, 0, data->index_buffer);
 	list->get_copy().update_buffer(this->meshlets, 0, meshlets);
 	list->get_copy().update_buffer(meshlet_cull_datas, 0, meshlet_cull);
 	list->get_copy().update_buffer(unique_indices, 0, unique_ids_buffer);
@@ -174,115 +237,60 @@ void MeshAsset::init_gpu()
 
 	list->execute_and_wait();
 
+	meshes.reserve(data->meshes.size());
 
+	uint meshlets_offset= 0;
+	for (auto& mesh : data->meshes)
+	{
+		meshes.emplace_back();
+		auto & compiled=meshes.back();
+		compiled.primitive = mesh.primitive->clone();
+	compiled.material = mesh.material;
 
-#undef OPAQUE
-	int i = 0;
-	if (HAL::Device::get().is_rtx_supported())
-		for (auto& mesh : meshes)
-		{
-
-
-			mesh.vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
+			compiled.vertex_buffer_view = buffer->create_view<HAL::StructuredBufferView<Table::mesh_vertex_input>>(
 				HAL::Device::get().get_static_gpu_data(),
 				StructuredBufferViewDesc{
-					vertex_handle.get_offset() + mesh.vertex_offset * sizeof(Table::mesh_vertex_input),
+					vertex_buffer_view.desc.offset + mesh.vertex_offset * sizeof(Table::mesh_vertex_input),
 					mesh.vertex_count * sizeof(Table::mesh_vertex_input),
 					false
 				});
 
 
-			mesh.index_buffer_view = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
+			compiled.index_buffer_view = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
 				HAL::Device::get().get_static_gpu_data(),
 				StructuredBufferViewDesc{
-					index_handle.get_offset() + mesh.index_offset * sizeof(UINT32),
+					index_buffer_view.desc.offset  + mesh.index_offset * sizeof(UINT32),
 					mesh.index_count * sizeof(UINT32),
 					false
 				});
 
-			mesh.draw_arguments.StartIndexLocation = static_cast<UINT>(index_handle.get_offset() + mesh.index_offset * sizeof(uint));
-			mesh.draw_arguments.IndexCountPerInstance = mesh.index_count;
-			mesh.draw_arguments.BaseVertexLocation = 0;
-			mesh.draw_arguments.InstanceCount = 1;
-			mesh.draw_arguments.StartInstanceLocation = 0;
+			compiled.meshet_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
+				HAL::Device::get().get_static_gpu_data(),
+				StructuredBufferViewDesc{
+					this->meshlets.desc.offset  + meshlets_offset* sizeof(Table::Meshlet),
+					mesh.meshlets.size() * sizeof(Table::Meshlet),
+					false
+				});
+
+			compiled.draw_arguments.StartIndexLocation = compiled.index_buffer_view.desc.offset;
+			compiled.draw_arguments.IndexCountPerInstance = mesh.index_count;
+			compiled.draw_arguments.BaseVertexLocation = 0;
+			compiled.draw_arguments.InstanceCount = 1;
+			compiled.draw_arguments.StartInstanceLocation = 0;
 
 
-			mesh.dispatch_mesh_arguments.ThreadGroupCountX = static_cast<UINT>(Math::DivideByMultiple(mesh.meshlets.size(), 32));
-			mesh.dispatch_mesh_arguments.ThreadGroupCountY = 1;
-			mesh.dispatch_mesh_arguments.ThreadGroupCountZ = 1;
+			compiled.dispatch_mesh_arguments.ThreadGroupCountX = static_cast<UINT>(Math::DivideByMultiple(mesh.meshlets.size(), 32));
+			compiled.dispatch_mesh_arguments.ThreadGroupCountY = 1;
+			compiled.dispatch_mesh_arguments.ThreadGroupCountZ = 1;
 
-
-			auto list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
-			list->begin("RTX");
-
-			auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
-
-			GeometryDesc geometryDesc = {};
-			geometryDesc.Type = HAL::GeometryType::TRIANGLES;
-
-			geometryDesc.IndexBuffer = mesh.index_buffer_view.get_resource_address();
-			geometryDesc.IndexCount = mesh.index_count;
-			geometryDesc.IndexFormat = Format::R32_UINT;
-			geometryDesc.Transform3x4 = mat;
-			geometryDesc.VertexFormat = Format::R32G32B32_FLOAT;
-			geometryDesc.VertexBuffer = mesh.vertex_buffer_view.get_resource_address();
-			geometryDesc.VertexStrideInBytes = sizeof(Table::mesh_vertex_input);
-			geometryDesc.Flags = HAL::GeometryFlags::OPAQUE;
-
-			std::vector<GeometryDesc > descs;
-			descs.push_back(geometryDesc);
-
-			mesh.ras = std::make_shared<RaytracingAccelerationStructure>(descs, list);
-			list->execute_and_wait();
-
-			i++;
-		}
-
-
-}
-MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
-{
-	auto task = TaskInfoManager::get().create_task(file_name);
-	if (!c) c = std::make_shared<AssetLoadingContext>();
-	c->loading_task = task;
-	auto data = MeshData::get_resource(convert(file_name), c);
-
-	c->loading_task = nullptr;
-	if (!data) return;
-
-	vertex_buffer = data->vertex_buffer;
-	index_buffer = data->index_buffer;
-
-
-
-
-
-
-
-	meshes = data->meshes;
-	root_node = data->root_node;
-	local_transform.identity();
-	root_node.iterate([this](MeshNode* node)
-		{
-			nodes.push_back(node);
-
-			return true;
-		});
-
-
-	for (int i = 0; i < nodes.size(); i++)
+		meshlets_offset+=mesh.meshlets.size() ;
+	}
+		for (int i = 0; i < nodes.size(); i++)
 	{
 		auto m = nodes[i]->mesh_id;
 		if (m != -1)
 			meshes[m].node_index = i;
 	}
-	for (auto& m : data->materials)
-		materials.emplace_back(register_asset(m));
-
-	primitive = data->primitive->clone();
-	/*(AABB*)primitive.get())->min = { -5, -5, -5 };
-	((AABB*)primitive.get())->max = { 5, 5, 5 };*/
-	name = file_name.substr(file_name.find_last_of(L"\\") + 1);
 
 	init_gpu();
 	mark_changed();
@@ -635,9 +643,9 @@ void MeshAssetInstance::update_nodes()
 			//	node_buffer[node->index] = mat;
 				//if(nodes_ptr) 
 
-			info.mesh_info.GetVertex_offset_local() = static_cast<UINT>(mesh_asset->meshes[m].vertex_offset);
+			info.mesh_info.GetVertex_offset_local() = static_cast<UINT>(info.vertex_buffer_view.desc.offset/sizeof(Table::mesh_vertex_input));
 
-			info.mesh_info.GetMeshlet_offset_local() = mesh_asset->meshes[m].meshlets_offset;
+			info.mesh_info.GetMeshlet_offset_local() = static_cast<UINT>((mesh_asset->meshes[m].meshet_view.desc.offset-mesh_asset->meshlets.desc.offset)/sizeof(Table::Meshlet));
 
 
 
@@ -645,10 +653,10 @@ void MeshAssetInstance::update_nodes()
 
 			info.mesh_info.GetNode_offset() = static_cast<UINT>(nodes_handle.get_offset() + nodes.size() - 1);
 
-			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshlets.size());
+			info.mesh_info.GetMeshlet_count() = static_cast<UINT>(mesh_asset->meshes[m].meshet_view.desc.size/sizeof(Table::Meshlet));
 
-			info.meshlet_offset = mesh_asset->meshes[m].meshlets_offset;
-			info.meshlet_count = static_cast<UINT>(mesh_asset->meshes[m].meshlets.size());
+			info.meshlet_offset = info.mesh_info.GetMeshlet_offset_local();
+			info.meshlet_count = info.mesh_info.GetMeshlet_count();
 
 			/*	auto& my_node = gpu_nodes[static_cast<UINT>(info.mesh_info.GetNode_offset())];*/
 			auto& my_node = gpu_nodes[static_cast<UINT>(info.mesh_info.GetNode_offset() - nodes_handle.get_offset())];

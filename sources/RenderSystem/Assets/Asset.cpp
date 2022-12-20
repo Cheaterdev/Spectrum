@@ -399,7 +399,7 @@ bool  Asset::is_changed()
 
 AssetStorage::AssetStorage(file::ptr f)
 {
-	my_file = f;
+	//my_file = f;
 
 	//	stream = str;
 	//	archive = arch;
@@ -408,20 +408,17 @@ AssetStorage::AssetStorage(file::ptr f)
 	{
 		std::lock_guard<std::mutex> g(archive_mutex);
 		auto archive = get_archive();
-		auto entry = archive->GetEntry("header");
-		auto res = Serializer::deserialize<Header>(*entry->GetDecompressionStream());
-		entry->CloseDecompressionStream();
-		return *res;
+
+		Header res = archive->get<Header>("header");
+		return res;
 	};
 	editor.create_func = [this]()->Editor
 	{
 		std::lock_guard<std::mutex> g(archive_mutex);
 		auto archive = get_archive();
-		auto entry = archive->GetEntry("editor");
-		auto res = Serializer::deserialize<Editor>(*entry->GetDecompressionStream());
-		entry->CloseDecompressionStream();
-		on_preview(res->preview);
-		return *res;
+		auto res = archive->get<Editor>("editor");
+		on_preview(res.preview);
+		return res;
 	};
 
 	on_preview.default_state = [this](std::function<void(const HAL::Texture::ptr&)> f)
@@ -495,17 +492,24 @@ folder_item* AssetStorage::get_folder()
 
 AssetStorage::ptr AssetStorage::try_load(file::ptr f)
 {
+		
+	FileDataStorage file(f->file_name);
 
-	ZipArchive::Ptr archive = ZipArchive::Create(f->get_new_stream());
+	if( file.has("header")&&file.has("editor")&&file.has("asset"))
+	{
+		return AssetStorage::ptr(new AssetStorage(f));
+	}
 
-	if (archive->GetEntry("header"))
-		if (archive->GetEntry("editor"))
-			if (archive->GetEntry("asset"))
-			{
-				archive = nullptr;
+	//ZipArchive::Ptr archive = ZipArchive::Create(f->get_new_stream());
 
-				return AssetStorage::ptr(new AssetStorage(f));
-			}
+	//if (archive->GetEntry("header"))
+	//	if (archive->GetEntry("editor"))
+	//		if (archive->GetEntry("asset"))
+	//		{
+	//			archive = nullptr;
+
+	//			return AssetStorage::ptr(new AssetStorage(f));
+	//		}
 
 
 	return nullptr;
@@ -621,29 +625,9 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 					auto t = CounterManager::get().start_count<AssetStorage>(convert(header->name));
 
 
-					auto entry = archive->GetEntry("asset");
+					asset = archive->get<Asset::ptr>("asset");
 
-					if (!entry)
-						return;
-
-					{
-						auto dec_stream = entry->GetDecompressionStream();
-
-						if (!dec_stream)
-						{
-							Log::get() << "stream is NULL: " << convert(header->name) << Log::endl;
-							p->set_value(nullptr);
-							return;
-						}
-						if (!dec_stream || dec_stream->bad())
-						{
-							Log::get() << "asset loading fail" << Log::endl;
-						}
-						auto s_stream = Serializer::get_stream(*dec_stream);
-						s_stream >> asset;
-						asset->holder = this;
-					}
-					entry->CloseDecompressionStream();
+					
 				}
 				catch (std::exception e)
 				{
@@ -678,13 +662,22 @@ void AssetStorage::save()
 	try
 	{
 		std::lock_guard<std::mutex> g(archive_mutex);
-
-		auto archive = ZipArchive::Create();
 		header->references = asset->get_reference_ids();
-		DataPacker::create_entry(archive, "header", Serializer::serialize(*header.get()));
-		DataPacker::create_entry(archive, "editor", Serializer::serialize(*editor.get()));
-		DataPacker::create_entry(archive, "asset", Serializer::serialize(asset));
-		FileSystem::get().save_data(file_path, DataPacker::zip_to_string(archive));
+
+		FileDataStorage storage(file_path);
+
+		storage.start_save();
+		storage.put("header", *header.get());
+		storage.put("editor", *editor.get());
+		storage.put("asset", asset);
+
+		storage.save();
+		//auto archive = ZipArchive::Create();
+		//
+		//DataPacker::create_entry(archive, "header", Serializer::serialize(*header.get()));
+		//DataPacker::create_entry(archive, "editor", Serializer::serialize(*editor.get()));
+		//DataPacker::create_entry(archive, "asset", Serializer::serialize(asset));
+		//FileSystem::get().save_data(file_path, DataPacker::zip_to_string(archive));
 	}
 
 	catch (const std::exception& e)

@@ -46,21 +46,9 @@ export{
 
 		unsigned int node_index;
 
-
-
-		unsigned int meshlets_offset;
-
-		HAL::RaytracingAccelerationStructure::ptr ras;
-
-
 		std::vector<InlineMeshlet<UINT>> meshlets;
 
-		
-		HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
-		HAL::StructuredBufferView<UINT32> index_buffer_view;
-		
-			DrawIndexedArguments draw_arguments;
-			DispatchMeshArguments dispatch_mesh_arguments;
+
 		
 	private:
 		SERIALIZE()
@@ -73,7 +61,6 @@ export{
 			ar& NVP(primitive);
 			ar& NVP(node_index);
 			ar& NVP(meshlets);
-
 		}
 	};
 
@@ -115,6 +102,36 @@ export{
 
 
 	};
+
+	class CompiledMeshInfo
+	{
+	public:
+		HAL::RaytracingAccelerationStructure::ptr ras;
+
+		HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
+		HAL::StructuredBufferView<UINT32> index_buffer_view;
+	HAL::StructuredBufferView<Table::Meshlet> meshet_view;
+
+		DrawIndexedArguments draw_arguments;
+		DispatchMeshArguments dispatch_mesh_arguments;
+
+		uint node_index;
+			size_t material;
+				std::shared_ptr<Primitive> primitive;
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(primitive);
+			ar& NVP(material);
+			ar& NVP(node_index);
+			ar& NVP(vertex_buffer_view);
+			ar& NVP(index_buffer_view);
+			ar& NVP(meshet_view);
+			ar& NVP(draw_arguments);
+			ar& NVP(dispatch_mesh_arguments);
+		}
+	};
 	class MeshData : public loader<MeshData, std::string, AssetLoadingContext::ptr>
 	{
 	public:
@@ -149,23 +166,17 @@ export{
 		HAL::Resource::ptr buffer;
 
 
-		std::vector<Table::mesh_vertex_input::Compiled> vertex_buffer;
-		std::vector<UINT32> index_buffer;
-
-
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;
 
 
-		HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
-		HAL::StructuredBufferView<UINT32> index_buffer_view;
+		HAL::StructuredBufferView<Table::mesh_vertex_input>		vertex_buffer_view;
+		HAL::StructuredBufferView<UINT32>						index_buffer_view;
+		HAL::StructuredBufferView<UINT32>						unique_indices;
+		HAL::StructuredBufferView<UINT32>						primitive_indices;
+		HAL::StructuredBufferView<Table::Meshlet>				meshlets;
+		HAL::StructuredBufferView<Table::MeshletCullData>		meshlet_cull_datas;
 
-		HAL::StructuredBufferView<UINT32> unique_indices;
-		HAL::StructuredBufferView<UINT32> primitive_indices;
-
-		HAL::StructuredBufferView<Table::Meshlet> meshlets;
-		HAL::StructuredBufferView<Table::MeshletCullData> meshlet_cull_datas;
-
-		std::vector<MeshInfo> meshes;
+		std::vector<CompiledMeshInfo>	meshes;
 		std::vector<MaterialAsset::ref> materials;
 
 		std::shared_ptr<Primitive> primitive;
@@ -196,19 +207,22 @@ export{
 		SERIALIZE()
 		{
 			ar& NVP(primitive);
-			ar& NVP(vertex_buffer);
-			ar& NVP(index_buffer);
 			ar& NVP(meshes);
 			ar& NVP(materials);
 			ar& NVP(local_transform);
 			ar& NVP(root_node);
-			//     ar& NVP(nodes);
 
 			SAVE_PARENT(Asset);
 
 			{
 				ar& NVP(buffer);
-			
+				ar& NVP(vertex_buffer_view);
+				ar& NVP(index_buffer_view);
+				ar& NVP(unique_indices);
+				ar& NVP(primitive_indices);
+				ar& NVP(meshlets);
+				ar& NVP(meshlet_cull_datas);
+
 			}
 
 			IF_LOAD()
@@ -222,7 +236,7 @@ export{
 
 				init_gpu();
 			}
-			
+
 
 		}
 
@@ -240,8 +254,8 @@ export{
 
 		LEAK_TEST(MeshAssetInstance)
 
-		Slots::MeshInstanceInfo::Compiled mesh_instance_info;
-			std::mutex m;
+			Slots::MeshInstanceInfo::Compiled mesh_instance_info;
+		std::mutex m;
 		void init_asset();
 		void update_nodes();
 
@@ -291,11 +305,11 @@ export{
 
 			//compiled
 			Slots::MeshInfo::Compiled compiled_mesh_info;
-				Slots::MeshInstanceInfo::Compiled mesh_instance_info;
+			Slots::MeshInstanceInfo::Compiled mesh_instance_info;
 			HAL::RaytracingAccelerationStructure::ptr ras;
 
-				HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
-		HAL::StructuredBufferView<UINT32> index_buffer_view;
+			HAL::StructuredBufferView<Table::mesh_vertex_input> vertex_buffer_view;
+			HAL::StructuredBufferView<UINT32> index_buffer_view;
 
 		};
 
@@ -365,7 +379,7 @@ export{
 
 		}
 	};
-	
+
 
 	class universal_material_info_part_manager :public Singleton<universal_material_info_part_manager>, public HAL::virtual_gpu_buffer<Table::MaterialCommandData>
 	{
@@ -376,7 +390,7 @@ export{
 
 		}
 	};
-	
+
 	class SceneFrameManager :public Singleton<SceneFrameManager>
 	{
 

@@ -361,26 +361,30 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 		Asset::ptr asset;
 
 
-		std::weak_ptr<ZipArchive> archive;
+		std::shared_ptr<FileDataStorage> archive;
 
 		std::mutex stream_mutex;
-		ZipArchive::Ptr get_archive()
+		std::shared_ptr<FileDataStorage> get_archive()
 		{
-			auto res = archive.lock();
-			if (!res)
-			{
-				std::lock_guard<std::mutex> g(stream_mutex);
-				res = archive.lock();
-				if (res) return res;
+			std::lock_guard<std::mutex> g(stream_mutex);
+			if (!archive)
+				archive = std::make_shared<FileDataStorage>(file_path);
+			//auto res = archive.lock();
+			//if (!res)
+			//{
+			//	std::lock_guard<std::mutex> g(stream_mutex);
+			//	res = archive.lock();
+			//	if (res) return res;
 		
-				res = ZipArchive::Create(my_file->get_new_stream());
+			//	res = std::make_shared<FileDataStorage>(file_path);
 
-				return res;
+			//	return res;
 
-			}
+			//}
 
-			return res;
+			return archive;
 		}
+
 		folder_item* folder;
 
 		std::filesystem::path file_path;
@@ -388,7 +392,7 @@ class AssetStorage : public SharedObject<AssetStorage>, public EditObject
 		std::mutex archive_mutex;
 
 	  //  std::shared_ptr<std::istream> stream;
-		file::ptr my_file;
+	//file::ptr my_file;
 		AssetStorage(file::ptr f);
 		void set_folder(folder_item* f);
 

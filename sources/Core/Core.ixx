@@ -12,6 +12,7 @@ export import :serialization;
 
 export import :FileSystem;
 export import :FileDepender;
+export import :FileDataStorage;
 
 export import :ResourceManager;
 export import :StateContext;

@@ -147,23 +147,6 @@ namespace Spectrum
 
 
     [Sharpmake.Generate]
-    public class ZipLib : Library
-    {
-        public ZipLib()
-        {
-            SourceRootPath = @"[project.SharpmakeCsPath]\sources\3rdparty\ZipLib";
-            AssemblyName = "ZipLib";
-			
-        }
-			
-        public override void ConfigureAll(Configuration conf, CustomTarget target)
-        {
-            base.ConfigureAll(conf, target);
-			conf.IncludePaths.Add(@"[project.SourceRootPath]");
-        }
-    }
-
-    [Sharpmake.Generate]
     public class Aftermath : Library
     {
         public Aftermath()
@@ -201,7 +184,7 @@ namespace Spectrum
             conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
 
 			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
-			conf.AddPublicDependency<ZipLib>(target);
+
 			
 			{ // AgilitySDK
 				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\include", 66);
