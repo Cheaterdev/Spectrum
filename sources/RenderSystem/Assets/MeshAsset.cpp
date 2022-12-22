@@ -71,7 +71,7 @@ void MeshAsset::init_gpu()
 			geometryDesc.Type = HAL::GeometryType::TRIANGLES;
 
 			geometryDesc.IndexBuffer = mesh.index_buffer_view.get_resource_address();
-			geometryDesc.IndexCount = mesh.index_buffer_view.desc.size/sizeof(UINT);
+			geometryDesc.IndexCount = static_cast<uint>(mesh.index_buffer_view.desc.size/sizeof(UINT));
 			geometryDesc.IndexFormat = Format::R32_UINT;
 			geometryDesc.Transform3x4 = mat;
 			geometryDesc.VertexFormat = Format::R32G32B32_FLOAT;
@@ -239,7 +239,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 
 	meshes.reserve(data->meshes.size());
 
-	uint meshlets_offset= 0;
+	uint64 meshlets_offset= 0;
 	for (auto& mesh : data->meshes)
 	{
 		meshes.emplace_back();
@@ -272,7 +272,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 					false
 				});
 
-			compiled.draw_arguments.StartIndexLocation = compiled.index_buffer_view.desc.offset;
+			compiled.draw_arguments.StartIndexLocation = static_cast<uint>(compiled.index_buffer_view.desc.offset/sizeof(UINT));
 			compiled.draw_arguments.IndexCountPerInstance = mesh.index_count;
 			compiled.draw_arguments.BaseVertexLocation = 0;
 			compiled.draw_arguments.InstanceCount = 1;

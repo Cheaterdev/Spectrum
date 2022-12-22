@@ -108,7 +108,7 @@ export
 				Base::Free(h);
 			}
 
-			size_t max_size()
+			uint64 max_size()
 			{
 				return Base::get_max_usage();
 			}

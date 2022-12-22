@@ -35,7 +35,7 @@ namespace HAL {
 	{
 		return is_valid();
 	}
-	DescriptorHeap::DescriptorHeap(Device & device, UINT num, DescriptorHeapType type, HAL::DescriptorHeapFlags flags) :API::DescriptorHeap(device, HAL::DescriptorHeapDesc{ num, type , flags })
+	DescriptorHeap::DescriptorHeap(Device & device, uint num, DescriptorHeapType type, HAL::DescriptorHeapFlags flags) :API::DescriptorHeap(device, HAL::DescriptorHeapDesc{ num, type , flags })
 	{
 
 		descriptor_size = device.get_descriptor_size(type);

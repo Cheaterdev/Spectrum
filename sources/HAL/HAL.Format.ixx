@@ -10,7 +10,7 @@ export namespace HAL
 
 	struct SurfaceInfo
 	{
-		uint numBytes;
+		uint64 numBytes;
 		uint rowBytes;
 		uint numRows;
 	};

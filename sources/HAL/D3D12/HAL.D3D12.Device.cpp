@@ -12,6 +12,16 @@ namespace HAL
 {
 	namespace API
 	{
+		
+		size_t Device::get_vram()
+		{
+			auto THIS = static_cast<HAL::Device*>(this);
+
+			DXGI_QUERY_VIDEO_MEMORY_INFO videoMemoryInfo;
+			THIS->adapter->native_adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
+			size_t usedVRAM = videoMemoryInfo.CurrentUsage / 1024 / 1024;
+			return usedVRAM;
+		}
 
 		void Device::init(DeviceDesc& desc)
 		{
@@ -24,6 +34,8 @@ namespace HAL
 			);
 
 			if (!native_device) return;
+
+			THIS->adapter = desc.adapter;
 
 			for (auto type : magic_enum::enum_values<DescriptorHeapType>())
 			{

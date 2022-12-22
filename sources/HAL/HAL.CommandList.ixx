@@ -284,12 +284,11 @@ export{
 
 			void end(Eventer* list);
 
-			float get_time();
 
 
-			double get_start() override;
+			uint64 get_start() override;
 
-			double get_end() override;
+			uint64 get_end() override;
 
 				
 		};
@@ -361,10 +360,10 @@ export{
 			template <class T>
 			void resolve_timers(Allocators::HeapPageManager < QueryContext, T>&  manager)
 			{
-				manager.for_each([&, this](const QueryType& type, uint from , uint to , QueryHeap::ptr heap)
+				manager.for_each([&, this](const QueryType& type, uint64 from , uint64 to , QueryHeap::ptr heap)
 					{
 					assert(from==0);
-						resolve_times(*heap, to, [heap](std::span<UINT64> data) {
+						resolve_times(*heap, static_cast<uint>(to), [heap](std::span<UINT64> data) {
 							std::copy(data.begin(), data.end(), heap->read_back_data.begin());
 							});
 					});
@@ -543,18 +542,18 @@ export{
 			void copy_resource(const HAL::Resource::ptr& dest, const HAL::Resource::ptr& source);
 			void copy_texture(const HAL::Resource::ptr& dest, int, const HAL::Resource::ptr& source, int);
 			void copy_texture(const HAL::Resource::ptr& dest, ivec3, const HAL::Resource::ptr& source, ivec3, ivec3);
-			void copy_buffer(HAL::Resource* dest, int s_dest, HAL::Resource* source, int s_source, int size);
+			void copy_buffer(HAL::Resource* dest, uint64 s_dest, HAL::Resource* source, uint64 s_source, uint64 size);
 
 			
 		
 			//TODO: remove
-			void update_buffer(HAL::Resource::ptr resource, UINT offset, const char* data, UINT size);
+			void update_buffer(HAL::Resource::ptr resource, uint64 offset, const char* data, uint64 size);
 			void update_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
-			void update_buffer(HAL::Resource* resource, UINT offset, const char* data, UINT size);
+			void update_buffer(HAL::Resource* resource, uint64 offset, const char* data, uint64 size);
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
 			template<class T>
-				void update_buffer(HAL::StructuredBufferView<T>& view, uint offset, const std::vector<T>& data)
+				void update_buffer(HAL::StructuredBufferView<T>& view, uint64 offset, const std::vector<T>& data)
 			{
 				update_buffer(view.resource, view.desc.offset+ offset*sizeof(T), reinterpret_cast<const char*>(data.data()), data.size()*sizeof(T));
 				

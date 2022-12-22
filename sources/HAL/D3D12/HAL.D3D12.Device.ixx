@@ -85,13 +85,6 @@ namespace HAL
 	{
 
 
-		size_t Device::get_vram()
-		{
-			DXGI_QUERY_VIDEO_MEMORY_INFO videoMemoryInfo;
-			//	adapter->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
-			size_t usedVRAM = videoMemoryInfo.CurrentUsage / 1024 / 1024;
-			return usedVRAM;
-		}
 
 		void Device::dump_dred()
 		{

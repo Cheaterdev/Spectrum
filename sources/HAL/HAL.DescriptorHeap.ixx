@@ -39,7 +39,7 @@ export
 		public:
 			using ptr = std::shared_ptr<DescriptorHeap>;
 
-			DescriptorHeap(Device& device, UINT num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::None);
+			DescriptorHeap(Device& device, uint num, DescriptorHeapType type, DescriptorHeapFlags flags = DescriptorHeapFlags::None);
 
 			virtual ~DescriptorHeap()
 			{
@@ -91,7 +91,7 @@ export
 				{
 					auto &heap = *get_heap();
 
-					for(int i=0;i<get_count();i++)
+					for(uint i=0;i<get_count();i++)
 					{
 						heap.get_resource_info(get_offset()+i) = HAL::Views::Null();
 					}
@@ -109,13 +109,13 @@ export
 			{
 				return handle;
 			}
-			uint64 get_offset() const
+			uint get_offset() const
 			{
-				return handle.get_offset();
+				return static_cast<uint>(handle.get_offset());
 			}
-			uint64 get_count() const
+			uint get_count() const
 			{
-				return handle.get_size();
+				return static_cast<uint>(handle.get_size());
 			}
 			
 			bool can_free() const
@@ -244,7 +244,7 @@ export
 						return gpu_sampler;
 				}
 				assert(index.type != DescriptorHeapType::CBV_SRV_UAV);
-				return std::make_shared<HAL::DescriptorHeap>(device, size, index.type, index.flags);
+				return std::make_shared<HAL::DescriptorHeap>(device, static_cast<uint>(size), index.type, index.flags);
 			}
 
 		public:

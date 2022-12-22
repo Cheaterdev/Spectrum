@@ -27,7 +27,7 @@ export namespace HAL
 	public:
 		using ptr = std::shared_ptr<QueryHeap>;
 		QueryHeap(Device& device, const QueryHeapDesc & desc);
-	std::vector<UINT64> read_back_data;
+		std::vector<UINT64> read_back_data;
 
 
 		std::shared_ptr<QueryHeap> get_tracked()
@@ -57,7 +57,7 @@ export namespace HAL
 		Device& device;
 		virtual ptr_type make_heap(QueryType type, size_t size) override
 		{
-			QueryHeapDesc desc = { size , type };
+			QueryHeapDesc desc = { static_cast<uint>(size) , type };
 			return std::make_shared<HAL::QueryHeap>(device, desc);
 		}
 

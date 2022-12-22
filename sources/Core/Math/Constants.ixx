@@ -88,7 +88,7 @@ export
 			return AlignUpWithMask(value, alignment - 1);
 		}
 
-		template <typename T> __forceinline T roundUp(T num, size_t factor) { return num + factor - 1 - (num + factor - 1) % factor; }
+		template <typename T> __forceinline T roundUp(T num, size_t factor) { return static_cast<T>(num + factor - 1 - (num + factor - 1) % factor); }
 
 		template <typename T> __forceinline T AlignDown(T value, size_t alignment)
 		{

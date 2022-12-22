@@ -428,7 +428,7 @@ export namespace HAL
 		struct ConstantBuffer
 		{
 			std::shared_ptr<Resource> Resource;
-			uint OffsetInBytes;
+			uint64 OffsetInBytes;
 			uint SizeInBytes;
 
 		private:

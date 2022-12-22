@@ -57,10 +57,10 @@ namespace HAL {
 			void reset() requires (resetable)
 			{
 
-				DescriptorHeapPageManager<AllocationPolicy>::for_each([](const DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions& type, uint from , uint to, HAL::DescriptorHeap::ptr heap)
+				DescriptorHeapPageManager<AllocationPolicy>::for_each([](const DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions& type, uint64 from , uint64 to, HAL::DescriptorHeap::ptr heap)
 				{
 		
-					for(uint i=from;i<to;i++)
+					for(uint i=static_cast<uint>(from);i<static_cast<uint>(to);i++)
 					{
 						heap->get_resource_info(i) = HAL::Views::Null();
 					}

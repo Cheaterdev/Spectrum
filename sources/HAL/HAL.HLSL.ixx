@@ -52,7 +52,7 @@ export
 
 			}
 
-			void create(Resource::ptr resource,uint64 offset, uint64 size);
+			void create(Resource::ptr resource,uint64 offset, uint size);
 		};
 
 		template<class T>
@@ -361,7 +361,7 @@ namespace HLSL
 
 	
 	template<class T>
-	void ConstantBuffer<T>::create(Resource::ptr resource, uint64 offset, uint64 size)
+	void ConstantBuffer<T>::create(Resource::ptr resource, uint64 offset, uint size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
 	

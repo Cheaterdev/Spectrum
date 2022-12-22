@@ -18,16 +18,16 @@ export
 
 	struct MemoryInfo
 	{
-		size_t offset = 0;
-		size_t size = 0;
-		//	size_t aligned_offset;
-		size_t reset_id = 0;
-		//	size_t alloc_id;
+		uint64 offset = 0;
+		uint64 size = 0;
+		//	uint64 aligned_offset;
+		uint64 reset_id = 0;
+		//	uint64 alloc_id;
 		bool operator==(const MemoryInfo& h)const = default;
 		bool operator!=(const MemoryInfo& h)const = default;
 		MemoryInfo() = default;
 		MemoryInfo(const MemoryInfo& r) = default;
-		MemoryInfo(size_t offset, size_t size,size_t reset_id) :offset(offset), size(size),reset_id(reset_id)
+		MemoryInfo(uint64 offset, uint64 size,uint64 reset_id) :offset(offset), size(size),reset_id(reset_id)
 		{
 
 		}
@@ -45,17 +45,17 @@ export
 		AllocatorHanle() = default;
 		AllocatorHanle(const MemoryInfo& info, Allocator* owner);
 
-		size_t get_offset() const;
+		uint64 get_offset() const;
 
 		const MemoryInfo& get_info() const
 		{
 			return info;
 		}
-		size_t get_size() const;
+		uint64 get_size() const;
 
 		operator bool() const;
 
-		size_t get_reset_id()const;
+		uint64 get_reset_id()const;
 
 		Allocator* get_owner() const;
 
@@ -74,7 +74,7 @@ export
 	public:
 		THREAD_CHECKER
 		template<class T = std::byte>
-			AllocatorHanle Allocate(size_t size, size_t align = sizeof(T))
+			AllocatorHanle Allocate(uint64 size, uint64 align = sizeof(T))
 		{
 			auto res = TryAllocate(size*sizeof(T), align);
 
@@ -87,7 +87,7 @@ export
 		}
 
 
-		virtual std::optional<AllocatorHanle>  TryAllocate(size_t size, size_t align = 1) = 0;
+		virtual std::optional<AllocatorHanle>  TryAllocate(uint64 size, uint64 align = 1) = 0;
 
 		virtual void Free(AllocatorHanle& handle) = 0;
 
@@ -95,8 +95,8 @@ export
 
 		virtual void Reset() = 0;
 
-		virtual size_t get_max_usage() const = 0;
-		virtual size_t get_size() const = 0;
+		virtual uint64 get_max_usage() const = 0;
+		virtual uint64 get_size() const = 0;
 	};
 
 
@@ -106,15 +106,15 @@ export
 
 	class CommonAllocator :public Allocator
 	{
-		const size_t start_region;
-		const size_t end_region;
-		const size_t size;
-		size_t max_usage;
-		size_t reset_id;
+		const uint64 start_region;
+		const uint64 end_region;
+		const uint64 size;
+		uint64 max_usage;
+		uint64 reset_id;
 		struct block
 		{
-			size_t begin;
-			size_t end;
+			uint64 begin;
+			uint64 end;
 
 			bool operator< (const block& b) const
 			{
@@ -124,28 +124,28 @@ export
 
 		std::mutex m;
 		std::set<block> free_blocks;
-		std::map<size_t, const block*> fences;
+		std::map<uint64, const block*> fences;
 		void check();
 
-		size_t merge_prev(size_t start);
-		size_t merge_next(size_t end);
+		uint64 merge_prev(uint64 start);
+		uint64 merge_next(uint64 end);
 
 	public:
 		using Handle = AllocatorHanle;
 
-		CommonAllocator(size_t size = std::numeric_limits<size_t>::max());
+		CommonAllocator(uint64 size = std::numeric_limits<uint64>::max());
 
-		CommonAllocator(size_t start_region, size_t end_region);
+		CommonAllocator(uint64 start_region, uint64 end_region);
 
 		virtual ~CommonAllocator() = default;
-		size_t get_max_usage() const override;
+		uint64 get_max_usage() const override;
 
-		std::optional<Handle> TryAllocate(size_t size, size_t align = 1) override final;
+		std::optional<Handle> TryAllocate(uint64 size, uint64 align = 1) override final;
 		void Free(Handle& handle);
 
 		void Reset() override;
 
-		size_t get_size() const override
+		uint64 get_size() const override
 		{
 			return size;
 		}
@@ -169,24 +169,24 @@ export
 	class LinearAllocator : public Allocator
 	{
 
-		const size_t start_region;
-		const size_t end_region;
+		const uint64 start_region;
+		const uint64 end_region;
 
 	protected:
-		size_t offset;
-		const size_t size;
+		uint64 offset;
+		const uint64 size;
 	public:
 		using Handle = AllocatorHanle;
 
-		LinearAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size), start_region(0), end_region(size)
+		LinearAllocator(uint64 size = std::numeric_limits<uint64>::max()) :size(size), start_region(0), end_region(size)
 		{
 			offset = start_region;
 		}
-		LinearAllocator(size_t start_region, size_t end_region) :size(end_region - start_region), start_region(start_region), end_region(end_region)
+		LinearAllocator(uint64 start_region, uint64 end_region) :size(end_region - start_region), start_region(start_region), end_region(end_region)
 		{
 			offset = start_region;
 		}
-		size_t get_max_usage() const override
+		uint64 get_max_usage() const override
 		{
 			return offset;
 		}
@@ -200,14 +200,14 @@ export
 		{
 			//		assert(false);
 		}
-		size_t get_size()const override
+		uint64 get_size()const override
 		{
 			return size;
 		}
-		std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
+		std::optional<Handle> TryAllocate(uint64 size, uint64 align = 1)override final
 		{	ASSERT_SINGLETHREAD
 
-			size_t my_offset = Math::roundUp(offset, align);
+			uint64 my_offset = Math::roundUp(offset, align);
 
 			//assert(offset % align == 0);
 			if (my_offset + size > this->end_region)
@@ -234,27 +234,27 @@ export
 	//class LinearFreeAllocator : public Allocator
 	//{
 	//protected:
-	//	virtual void moveBlock(size_t from, size_t to) = 0;
+	//	virtual void moveBlock(uint64 from, uint64 to) = 0;
 
 	//protected:
-	//	size_t offset;
-	//	const size_t size;
+	//	uint64 offset;
+	//	const uint64 size;
 
 	//	std::list<MemoryInfo> allocs;
 	//public:
 	//	using Handle = AllocatorHanle;
 
-	//	LinearFreeAllocator(size_t size = std::numeric_limits<size_t>::max()) :size(size)
+	//	LinearFreeAllocator(uint64 size = std::numeric_limits<uint64>::max()) :size(size)
 	//	{
 	//		offset = 0;
 	//	}
 
-	//	size_t get_max_usage() const override
+	//	uint64 get_max_usage() const override
 	//	{
 	//		return offset;
 	//	}
 
-	//	Handle Allocate(size_t size, size_t align = 1)
+	//	Handle Allocate(uint64 size, uint64 align = 1)
 	//	{
 	//		auto res = TryAllocate(size, align);
 
@@ -266,11 +266,11 @@ export
 	//		return Handle();
 	//	}
 
-	//	size_t get_size() const override
+	//	uint64 get_size() const override
 	//	{
 	//		return size;
 	//	}
-	//	std::optional<Handle> TryAllocate(size_t size, size_t align = 1)override final
+	//	std::optional<Handle> TryAllocate(uint64 size, uint64 align = 1)override final
 	//	{
 	//		assert(align == 1);
 	//		assert(size == 1);
@@ -322,13 +322,13 @@ export
 		friend class TypedHandle<T>;
 		virtual void Free(TypedHandle<T>& handle) = 0;
 	public:
-		virtual	T& aquire(size_t offset) {
+		virtual	T& aquire(uint64 offset) {
 			return aquire(offset, 1)[0];
 		}
 
-		virtual	std::span<T> aquire(size_t offset, size_t size) = 0;
+		virtual	std::span<T> aquire(uint64 offset, uint64 size) = 0;
 
-		virtual	void write(size_t offset, std::vector<T>& v) = 0;
+		virtual	void write(uint64 offset, std::vector<T>& v) = 0;
 	};
 
 
@@ -353,22 +353,22 @@ export
 			return provider;
 		}
 
-		size_t get_offset() const
+		uint64 get_offset() const
 		{
 			return handle.get_offset();
 		}
 
-		size_t get_size() const
+		uint64 get_size() const
 		{
 			return handle.get_size();
 		}
 
-			size_t get_offset_in_bytes() const
+			uint64 get_offset_in_bytes() const
 		{
 			return handle.get_offset()*sizeof(T);
 		}
 
-		size_t get_size_in_bytes() const
+		uint64 get_size_in_bytes() const
 		{
 			return handle.get_size()*sizeof(T);
 		}
@@ -379,17 +379,17 @@ export
 			return provider->aquire(handle.get_offset(), handle.get_size());
 		}
 
-		std::span<T> aquire_one(size_t offset)
+		std::span<T> aquire_one(uint64 offset)
 		{
 			return provider->aquire(handle.get_offset() + offset, 1);
 		}
 
-		std::span<T> aquire(size_t size)
+		std::span<T> aquire(uint64 size)
 		{
 			return provider->aquire(handle.get_offset(), size);
 		}
 
-		void write(size_t offset, std::vector<T>& r)
+		void write(uint64 offset, std::vector<T>& r)
 		{
 			return provider->write(handle.get_offset() + offset, r);
 		}
@@ -401,7 +401,7 @@ export
 			return t;
 		}
 
-		std::vector<T> map(size_t offset)
+		std::vector<T> map(uint64 offset)
 		{
 			std::vector<T> t;
 			t.resize(1);
@@ -420,12 +420,12 @@ export
 	public:
 		using Handle = TypedHandle<T>;
 
-		DataAllocator(size_t count) :AllocatorType(count)
+		DataAllocator(uint64 count) :AllocatorType(count)
 		{
 
 		}
 
-		Handle Allocate(size_t count)
+		Handle Allocate(uint64 count)
 		{
 			std::lock_guard<std::mutex> g(m);
 			auto handle = AllocatorType::Allocate(count);
@@ -440,16 +440,16 @@ export
 			handle.handle.Free();
 		}
 
-		size_t get_max_usage()
+		uint64 get_max_usage()
 		{
 			return AllocatorType::get_max_usage();
 		}
 
-		virtual void moveBlock(size_t from, size_t to) {
+		virtual void moveBlock(uint64 from, uint64 to) {
 
 		}
 
-		virtual void on_free(size_t from, size_t to) {
+		virtual void on_free(uint64 from, uint64 to) {
 
 		}
 

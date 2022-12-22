@@ -1,9 +1,4 @@
-﻿module;
-
-import d3d12;
-#include <pix3.h>
-
-module HAL:API.CommandList;
+﻿module HAL:API.CommandList;
 import Core;
 
 import :Private.CommandListCompiler;

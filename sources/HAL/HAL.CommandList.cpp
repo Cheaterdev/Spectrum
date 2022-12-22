@@ -64,19 +64,15 @@ namespace HAL
 		list->insert_time(querys, 1);
 	}
 
-	float GPUTimer::get_time()
-	{
-		return get_end() - get_start();
-	}
 
-	double GPUTimer::get_start()
+	uint64 GPUTimer::get_start()
 	{
 		if (!querys) return 0;
 
 		return querys.get_heap()->read_back_data[querys.get_offset() + 0];
 	}
 
-	double GPUTimer::get_end()
+	uint64 GPUTimer::get_end()
 	{
 		if (!querys) return 0;
 		return  querys.get_heap()->read_back_data[querys.get_offset() + 1];
@@ -423,11 +419,11 @@ namespace HAL
 		set_viewports(viewports);
 	}
 
-	void  CopyContext::update_buffer(Resource::ptr resource, UINT offset, const  char* data, UINT size)
+	void  CopyContext::update_buffer(Resource::ptr resource, uint64 offset, const  char* data, uint64 size)
 	{
 		update_buffer(resource.get(), offset, data, size);
 	}
-	void  CopyContext::update_buffer(Resource* resource, UINT offset, const  char* data, UINT size)
+	void  CopyContext::update_buffer(Resource* resource, uint64 offset, const  char* data, uint64 size)
 	{
 		base.create_transition_point();
 		//	if (base.type != CommandListType::COPY)
@@ -855,7 +851,7 @@ namespace HAL
 		create_uav_transition(resource);
 	}
 
-	void CopyContext::copy_buffer(Resource* dest, int s_dest, Resource* source, int s_source, int size)
+	void CopyContext::copy_buffer(Resource* dest, uint64 s_dest, Resource* source, uint64 s_source, uint64 size)
 	{
 		base.create_transition_point();
 		//if (base.type != CommandListType::COPY)

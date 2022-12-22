@@ -9,31 +9,31 @@ import stl.threading;
 
 
 
-CommonAllocator::CommonAllocator(size_t start_region, size_t end_region) :size(end_region - start_region), start_region(start_region), end_region(end_region)
+CommonAllocator::CommonAllocator(uint64 start_region, uint64 end_region) :size(end_region - start_region), start_region(start_region), end_region(end_region)
 {
 	reset_id = 0;
 	Reset();
 		check();
 }
-CommonAllocator::CommonAllocator(size_t size /*= std::numeric_limits<size_t>::max()*/) : size(size), start_region(0), end_region(size)
+CommonAllocator::CommonAllocator(uint64 size /*= std::numeric_limits<uint64>::max()*/) : size(size), start_region(0), end_region(size)
 {
 	reset_id = 0;
 	Reset();
 		check();
 }
 
-size_t CommonAllocator::get_max_usage() const
+uint64 CommonAllocator::get_max_usage() const
 {
 	return max_usage;
 }
 
-std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size, size_t align)
+std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(uint64 size, uint64 align)
 {
 	ASSERT_SINGLETHREAD
 		//std::lock_guard<std::mutex> g(m);
 		if (size == 0)
 		{
-			//size_t id;
+			//uint64 id;
 			//MemoryInfo& res = tracker.place_handle(id);
 			//res.aligned_offset = start_region;
 			//res.offset = start_region;
@@ -117,7 +117,7 @@ std::optional<CommonAllocator::Handle>  CommonAllocator::TryAllocate(size_t size
 	}
 	return std::nullopt;
 }
-size_t CommonAllocator::merge_prev(size_t start)
+uint64 CommonAllocator::merge_prev(uint64 start)
 {
 	if (start == start_region) return start_region;
 
@@ -129,7 +129,7 @@ size_t CommonAllocator::merge_prev(size_t start)
 		auto& prev_block = prev_free->second;
 	
 
-		size_t result = prev_block->begin;
+		uint64 result = prev_block->begin;
 
 
 		auto it = std::find_if(free_blocks.begin(), free_blocks.end(), [&](const block& b) {
@@ -147,7 +147,7 @@ size_t CommonAllocator::merge_prev(size_t start)
 
 	return start;
 }
-size_t CommonAllocator::merge_next(size_t end)
+uint64 CommonAllocator::merge_next(uint64 end)
 {
 
 	if (end == end_region) return end_region;
@@ -158,7 +158,7 @@ size_t CommonAllocator::merge_next(size_t end)
 	{
 		auto& next_block = next_free->second;
 		
-		size_t result = next_block->end;
+		uint64 result = next_block->end;
 
 
 		auto it = std::find_if(free_blocks.begin(), free_blocks.end(), [&](const block& b) {
@@ -310,12 +310,12 @@ AllocatorHanle::AllocatorHanle(const MemoryInfo& info, Allocator* owner) :info(i
 	//	assert(provider);
 }
 
-size_t AllocatorHanle::get_offset() const
+uint64 AllocatorHanle::get_offset() const
 {
 	return info.offset;
 }
 
-size_t AllocatorHanle::get_size() const
+uint64 AllocatorHanle::get_size() const
 {
 	return info.size;
 }
@@ -325,7 +325,7 @@ AllocatorHanle::operator bool() const
 	return !!owner;
 }
 
-size_t AllocatorHanle::get_reset_id() const
+uint64 AllocatorHanle::get_reset_id() const
 {
 	return  info.reset_id;
 }

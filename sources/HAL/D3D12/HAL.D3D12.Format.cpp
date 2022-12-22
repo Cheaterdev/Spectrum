@@ -245,13 +245,13 @@ namespace HAL
 
 	SurfaceInfo  Format::surface_info(uint2 size) const
 	{
-		uint numBytes = 0;
+		uint64 numBytes = 0;
 		uint rowBytes = 0;
 		uint numRows = 0;
 
 		bool bc = false;
 		bool packed = false;
-		size_t bcnumBytesPerBlock = 0;
+		uint bcnumBytesPerBlock = 0;
 
 		switch (native_format)
 		{
@@ -292,15 +292,15 @@ namespace HAL
 
 		if (bc)
 		{
-			size_t numBlocksWide = 0;
+			uint numBlocksWide = 0;
 
 			if (size.x > 0)
-				numBlocksWide = std::max<size_t>(1, (size.x + 3) / 4);
+				numBlocksWide = std::max<uint>(1, (size.x + 3) / 4);
 
-			size_t numBlocksHigh = 0;
+			uint numBlocksHigh = 0;
 
 			if (size.y > 0)
-				numBlocksHigh = std::max<size_t>(1, (size.y + 3) / 4);
+				numBlocksHigh = std::max<uint>(1, (size.y + 3) / 4);
 
 			rowBytes = numBlocksWide * bcnumBytesPerBlock;
 			numRows = numBlocksHigh;
@@ -314,7 +314,7 @@ namespace HAL
 
 		else
 		{
-			size_t bpp = this->size();
+			uint bpp = this->size();
 			rowBytes = (size.x * bpp + 7) / 8; // round up to nearest byte
 			numRows = size.y;
 		}

@@ -549,7 +549,7 @@ export namespace HAL
 			return resource;
 		}
 
-		ResourceAddress offset(uint offset) const
+		ResourceAddress offset(uint64 offset) const
 		{
 			return { resource, resource_offset + offset };
 		}

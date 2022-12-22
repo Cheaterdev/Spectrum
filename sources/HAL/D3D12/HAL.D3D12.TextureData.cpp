@@ -40,7 +40,7 @@ namespace HAL
 		depth = d;
 		auto info = format.surface_info({w,h});
 		width_stride = info.rowBytes;
-		slice_stride = info.numBytes;
+		slice_stride = static_cast<uint>(info.numBytes);
 		num_rows = info.numRows;
 		data.resize(slice_stride * d);
 	}

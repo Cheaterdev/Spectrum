@@ -268,7 +268,7 @@ export namespace Allocators
 		{
 			return  !(std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator>);
 		}
-		void for_each(std::function<void(const typename Context::HeapMemoryOptions& options, uint , uint , std::shared_ptr<typename Context::HeapPageType>)> f)
+		void for_each(std::function<void(const typename Context::HeapMemoryOptions& options, uint64 , uint64 , std::shared_ptr<typename Context::HeapPageType>)> f)
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
 			for (auto &heap : all_pages)
@@ -328,7 +328,7 @@ export namespace Allocators
 			return res;
 		}
 
-		void for_each(std::function<void(const typename Context::HeapMemoryOptions&options, uint , uint , std::shared_ptr<typename Context::HeapPageType>)>f)
+		void for_each(std::function<void(const typename Context::HeapMemoryOptions&options, uint64 , uint64 , std::shared_ptr<typename Context::HeapPageType>)>f)
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
 			for(auto &[opt,creator]:creators)

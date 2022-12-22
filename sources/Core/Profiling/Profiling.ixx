@@ -153,9 +153,9 @@ public:
 class GPUTimerInterface
 {
 public:
-	virtual double get_start() = 0;
+	virtual uint64 get_start() = 0;
 
-	virtual double get_end() = 0;
+	virtual uint64 get_end() = 0;
 
 	virtual ~GPUTimerInterface() = default;
 };

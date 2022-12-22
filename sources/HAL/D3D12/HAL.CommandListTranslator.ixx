@@ -160,7 +160,7 @@ export namespace HAL
 
 			void insert_time(const QueryHandle& handle, uint offset)
 			{
-				compiler.EndQuery(handle.get_heap()->get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, handle.get_offset() + offset);
+				compiler.EndQuery(handle.get_heap()->get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, static_cast<uint>(handle.get_offset()) + offset);
 			}
 
 			void resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, ResourceAddress destination)
@@ -252,7 +252,7 @@ export namespace HAL
 				compiler.CopyResource(dest->get_dx(), source->get_dx());
 			}
 
-			void  copy_buffer(Resource* dest, UINT dest_offset, Resource* source ,UINT source_offset,UINT size )
+			void  copy_buffer(Resource* dest, uint64 dest_offset, Resource* source ,uint64 source_offset,uint64 size )
 			{
 				
 		if constexpr (Debug::CheckErrors)
@@ -388,8 +388,8 @@ struct texture_layout
 {
 	uint64 size;
 	uint rows_count;
-	uint64 row_stride;
-	uint64 slice_stride;
+	uint row_stride;
+	uint slice_stride;
 
 	uint alignment;
 
@@ -412,7 +412,7 @@ texture_layout get_texture_layout(const Resource* resource, UINT sub_resource, i
 	UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 	UINT64 size = res_stride * rows_count * box.z;
 
-	return { size , rows_count , res_stride , res_stride * rows_count,D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format) };
+	return { size , rows_count , static_cast<uint>(res_stride) , static_cast<uint>(res_stride * rows_count),D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format) };
 }
 			void update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout)
 			{

@@ -72,8 +72,8 @@ export
 	
 		struct FormattedBufferViewDesc
 		{
-			uint offset;
-			uint size;
+			uint64 offset;
+			uint64 size;
 		};
 
 		template<class T, Format::Formats _format>
@@ -625,8 +625,8 @@ export
 			void init(GPUEntityStorageInterface& frame)
 			{
 				uint local_offset = 0;
-				UINT offset = desc.offset;
-				UINT64 size = desc.size;
+				uint64 offset = desc.offset;
+				uint64 size = desc.size;
 
 				if (desc.counted)
 				{

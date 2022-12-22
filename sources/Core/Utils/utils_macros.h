@@ -22,15 +22,15 @@
 #ifdef LEAK_TEST_ENABLE
 #define LEAK_TEST(x) LeakDetectorInstance ___leak_tester = LeakDetectorInstance(#x);
 #else
-#define LEAK_TEST(x) ;
+#define LEAK_TEST(x) 
 #endif
 
 #ifdef DEV
-#define THREAD_SCOPE(x) volatile ThreadScope SPECTRUM_UNIQUE_NAME(ThreadType::x);
-#define CHECK_THREAD(x) {ThreadScope::check_type(ThreadType::x);};
+#define THREAD_SCOPE(x) volatile ThreadScope SPECTRUM_UNIQUE_NAME(ThreadType::x)
+#define CHECK_THREAD(x) {ThreadScope::check_type(ThreadType::x);}
 #else
-#define THREAD_SCOPE(x) ;
-#define CHECK_THREAD(x) ;
+#define THREAD_SCOPE(x) (void)0
+#define CHECK_THREAD(x) (void)0
 #endif
 
 #define BUG_ALERT Log::get()<<"ALERT HERE"<<Log::endl

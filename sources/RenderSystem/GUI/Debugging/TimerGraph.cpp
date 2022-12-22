@@ -317,8 +317,8 @@ namespace GUI
 
 						auto freq = clock_info[timer.queue_type].frequency;
 
-						data.start_time = timer.get_start() / freq;
-						data.end_time = timer.get_end() / freq;
+						data.start_time = static_cast<double>(timer.get_start()) / freq;
+						data.end_time = static_cast<double>(timer.get_end()) / freq;
 						data.queue_type = timer.queue_type;
 					}
 					//b->gpu_timers.clear();
