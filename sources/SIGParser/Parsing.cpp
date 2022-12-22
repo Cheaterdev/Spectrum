@@ -323,7 +323,9 @@ Parsed parse(std::wstring filename)
 		SIGParser parser(&tokens);
 		SIGParser::ParseContext* tree = parser.parse();
 		TreeShapeListener listener(parsed);
-		tree::ParseTreeWalker::DEFAULT.walk(&listener, tree);
+		tree::ParseTreeWalker walker;
+
+		walker.walk(&listener, tree);
 
 		stream.close();
 	}

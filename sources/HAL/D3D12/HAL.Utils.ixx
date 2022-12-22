@@ -31,6 +31,10 @@ export namespace D3D
 
 	using Debug = ComPtr<ID3D12Debug1>;
 	using InfoQueue = ComPtr<ID3D12InfoQueue>;
+
+
+using StorageFactory = ComPtr<IDStorageFactory>;
+
 }
 
 export namespace DXGI

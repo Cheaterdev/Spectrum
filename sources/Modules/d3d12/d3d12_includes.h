@@ -6,4 +6,5 @@
 
 #include <DirectXTex.h>
 
+#include <dstorage.h>
 #undef OPAQUE

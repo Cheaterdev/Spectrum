@@ -83,7 +83,7 @@ export
 			T t;
 			std::fstream stream(path,std::ios::binary | std::ios::in);
 			stream.seekg( h.offsets[partition], std::ios::beg );
-				serialization_iarchive oa(stream);
+			cereal::UserDataAdapter<std::fstream, serialization_iarchive> oa(stream,stream);
 		
 			oa>>t;
 

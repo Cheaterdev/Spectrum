@@ -1,5 +1,5 @@
 
-// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
+// Generated from SIG.g4 by ANTLR 4.11.1
 
 #pragma once
 

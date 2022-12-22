@@ -11,17 +11,6 @@
 
 #include <cereal/archives/binary.hpp>
 
-#define FORCE_DYNAMIC_INIT(LibName)                 \
-  namespace cereal {                                       \
-  namespace detail {                                       \
-    void CEREAL_DLL_EXPORT dynamic_init_dummy_##LibName(); \
-  } /* end detail */                                       \
-  } /* end cereal */                                       \
-                                              \
-    struct dynamic_init_##LibName {                        \
-      dynamic_init_##LibName() {                           \
-        ::cereal::detail::dynamic_init_dummy_##LibName();  \
-      }                                                    \
-    } dynamic_init_instance_##LibName;
-
+#define CEREAL_FUTURE_EXPERIMENTAL
+#include <cereal/archives/adapters.hpp>
 

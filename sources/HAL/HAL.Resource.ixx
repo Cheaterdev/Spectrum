@@ -10,6 +10,12 @@ import :FrameManager;
 
 import Core;
 
+template<class T>
+concept can_get_fstream= requires(T ar)
+{
+	cereal::get_user_data<std::fstream>(ar);
+};
+
 export{
 	namespace HAL
 	{
@@ -108,8 +114,16 @@ export{
 						std::vector<std::byte> data;
 						if constexpr(Archive::is_loading::value)
 						{
+						
 
 							 _init(desc, HeapType::DEFAULT);
+							 if constexpr(can_get_fstream<Archive>)
+							 {
+								 	std::fstream&f = cereal::get_user_data<std::fstream>(ar);
+
+							Log::get()<<Log::LEVEL_ERROR<<"loading resource" << (uint64)f.tellg()<<Log::endl;
+							 }
+							
 								ar & NVP(data);
 								write(data);
 						}

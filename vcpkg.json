@@ -3,16 +3,13 @@
 	"version-string": "1.0.0",
 	"dependencies": [
 		"zlib",
-		"bzip2",
-		"zstd",
-		"liblzma",
 		"directxtex",
 		"assimp",
 		"antlr4",
 		"magic-enum",
 		"crossguid",
 		"crc32c",
-		"7zip",
-		"cereal"
+		"cereal",
+		"dstorage"
 	]
 }

@@ -45,7 +45,7 @@ namespace Spectrum
 
             CustomProperties.Add("VcpkgEnabled", "true");
             CustomProperties.Add("VcpkgEnableManifest", "true");
-			CustomProperties.Add("VcpkgTriplet", "x64-windows-static");
+			CustomProperties.Add("VcpkgTriplet", "x64-windows");
 			CustomProperties.Add("VcpkgConfiguration", "Release");
 
          //   BlobWorkFileCount = 8;
@@ -68,7 +68,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.Linker.SubSystem.Windows);
             conf.Options.Add(Options.Vc.General.WindowsTargetPlatformVersion.Latest);
             conf.Options.Add(Options.Vc.Compiler.FunctionLevelLinking.Disable);
-            conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreaded);
+            conf.Options.Add(Options.Vc.Compiler.RuntimeLibrary.MultiThreadedDLL);
             conf.Options.Add(Options.Vc.Compiler.Inline.OnlyInline);
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 

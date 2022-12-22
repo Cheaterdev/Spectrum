@@ -1,22 +1,282 @@
 
-// Generated from sources/SIGParser/SIG.g4 by ANTLR 4.9.2
+// Generated from SIG.g4 by ANTLR 4.11.1
 
 
 #include "SIGListener.h"
-#include "SIGVisitor.h"
 
 #include "SIGParser.h"
 
 
 using namespace antlrcpp;
+
 using namespace antlr4;
 
-SIGParser::SIGParser(TokenStream *input) : Parser(input) {
-  _interpreter = new atn::ParserATNSimulator(this, _atn, _decisionToDFA, _sharedContextCache);
+namespace {
+
+struct SIGParserStaticData final {
+  SIGParserStaticData(std::vector<std::string> ruleNames,
+                        std::vector<std::string> literalNames,
+                        std::vector<std::string> symbolicNames)
+      : ruleNames(std::move(ruleNames)), literalNames(std::move(literalNames)),
+        symbolicNames(std::move(symbolicNames)),
+        vocabulary(this->literalNames, this->symbolicNames) {}
+
+  SIGParserStaticData(const SIGParserStaticData&) = delete;
+  SIGParserStaticData(SIGParserStaticData&&) = delete;
+  SIGParserStaticData& operator=(const SIGParserStaticData&) = delete;
+  SIGParserStaticData& operator=(SIGParserStaticData&&) = delete;
+
+  std::vector<antlr4::dfa::DFA> decisionToDFA;
+  antlr4::atn::PredictionContextCache sharedContextCache;
+  const std::vector<std::string> ruleNames;
+  const std::vector<std::string> literalNames;
+  const std::vector<std::string> symbolicNames;
+  const antlr4::dfa::Vocabulary vocabulary;
+  antlr4::atn::SerializedATNView serializedATN;
+  std::unique_ptr<antlr4::atn::ATN> atn;
+};
+
+::antlr4::internal::OnceFlag sigParserOnceFlag;
+SIGParserStaticData *sigParserStaticData = nullptr;
+
+void sigParserInitialize() {
+  assert(sigParserStaticData == nullptr);
+  auto staticData = std::make_unique<SIGParserStaticData>(
+    std::vector<std::string>{
+      "parse", "bind_option", "options_assign", "option", "option_block", 
+      "array_count_id", "array", "value_declaration", "slot_declaration", 
+      "sampler_declaration", "define_declaration", "rtv_formats_declaration", 
+      "blends_declaration", "pso_param", "type_with_template", "inherit_id", 
+      "name_id", "type_id", "option_id", "owner_id", "template_id", "value_id", 
+      "insert_block", "path_id", "inherit", "layout_stat", "layout_block", 
+      "layout_definition", "table_stat", "table_block", "table_definition", 
+      "rt_color_declaration", "rt_ds_declaration", "rt_stat", "rt_block", 
+      "rt_definition", "array_value_holder", "array_value_ids", "root_sig", 
+      "shader", "compute_pso_stat", "compute_pso_block", "compute_pso_definition", 
+      "graphics_pso_stat", "graphics_pso_block", "graphics_pso_definition", 
+      "rtx_pso_stat", "rtx_pso_block", "rtx_pso_definition", "rtx_pass_stat", 
+      "rtx_pass_block", "rtx_pass_definition", "rtx_raygen_stat", "rtx_raygen_block", 
+      "rtx_raygen_definition", "shader_type", "pso_param_id", "bool_type"
+    },
+    std::vector<std::string>{
+      "", "'::'", "','", "'Sampler'", "'define'", "'rtv'", "'blend'", "':'", 
+      "'compute'", "'vertex'", "'pixel'", "'domain'", "'hull'", "'geometry'", 
+      "'miss'", "'closest_hit'", "'raygen'", "'amplification'", "'mesh'", 
+      "'ds'", "'cull'", "'depth_func'", "'depth_write'", "'conservative'", 
+      "'enable_depth'", "'topology'", "'enable_stencil'", "'stencil_func'", 
+      "'stencil_pass_op'", "'stencil_read_mask'", "'stencil_write_mask'", 
+      "'recursion_depth'", "'payload'", "'per_material'", "'local'", "'||'", 
+      "'&&'", "'=='", "'!='", "'>'", "'<'", "'>='", "'<='", "'+'", "'-'", 
+      "'*'", "'/'", "'%'", "'^'", "'!'", "';'", "'='", "'('", "')'", "'{'", 
+      "'}'", "'['", "']'", "'true'", "'false'", "'log'", "'layout'", "'struct'", 
+      "'ComputePSO'", "'GraphicsPSO'", "'RaytracePSO'", "'RaytraceRaygen'", 
+      "'RaytracePass'", "'slot'", "'rt'", "'RTV'", "'DSV'", "'root'", "", 
+      "", "", "", "", "", "'%{'", "'}%'"
+    },
+    std::vector<std::string>{
+      "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
+      "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
+      "", "OR", "AND", "EQ", "NEQ", "GT", "LT", "GTEQ", "LTEQ", "PLUS", 
+      "MINUS", "MULT", "DIV", "MOD", "POW", "NOT", "SCOL", "ASSIGN", "OPAR", 
+      "CPAR", "OBRACE", "CBRACE", "OSBRACE", "CSBRACE", "TRUE", "FALSE", 
+      "LOG", "LAYOUT", "STRUCT", "COMPUTE_PSO", "GRAPHICS_PSO", "RAYTRACE_PSO", 
+      "RAYTRACE_RAYGEN", "RAYTRACE_PASS", "SLOT", "RT", "RTV", "DSV", "ROOTSIG", 
+      "ID", "INT_SCALAR", "FLOAT_SCALAR", "STRING", "COMMENT", "SPACE", 
+      "INSERT_START", "INSERT_END", "INSERT_BLOCK"
+    }
+  );
+  static const int32_t serializedATNSegment[] = {
+  	4,1,81,496,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,
+  	7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,7,
+  	14,2,15,7,15,2,16,7,16,2,17,7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,7,
+  	21,2,22,7,22,2,23,7,23,2,24,7,24,2,25,7,25,2,26,7,26,2,27,7,27,2,28,7,
+  	28,2,29,7,29,2,30,7,30,2,31,7,31,2,32,7,32,2,33,7,33,2,34,7,34,2,35,7,
+  	35,2,36,7,36,2,37,7,37,2,38,7,38,2,39,7,39,2,40,7,40,2,41,7,41,2,42,7,
+  	42,2,43,7,43,2,44,7,44,2,45,7,45,2,46,7,46,2,47,7,47,2,48,7,48,2,49,7,
+  	49,2,50,7,50,2,51,7,51,2,52,7,52,2,53,7,53,2,54,7,54,2,55,7,55,2,56,7,
+  	56,2,57,7,57,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,5,0,126,8,0,10,0,12,
+  	0,129,9,0,1,0,1,0,1,1,1,1,1,1,3,1,136,8,1,1,1,1,1,1,2,1,2,1,2,1,3,1,3,
+  	3,3,145,8,3,1,4,1,4,1,4,1,4,5,4,151,8,4,10,4,12,4,154,9,4,1,4,1,4,1,5,
+  	1,5,1,6,1,6,3,6,162,8,6,1,6,1,6,1,7,5,7,167,8,7,10,7,12,7,170,9,7,1,7,
+  	1,7,1,7,3,7,175,8,7,1,7,1,7,1,8,1,8,1,8,1,8,1,9,1,9,1,9,1,9,1,9,1,9,1,
+  	10,5,10,190,8,10,10,10,12,10,193,9,10,1,10,1,10,1,10,1,10,3,10,199,8,
+  	10,1,10,1,10,1,11,5,11,204,8,11,10,11,12,11,207,9,11,1,11,1,11,1,11,1,
+  	11,1,11,1,12,5,12,215,8,12,10,12,12,12,218,9,12,1,12,1,12,1,12,1,12,1,
+  	12,1,13,1,13,1,13,1,13,1,13,1,14,1,14,1,14,1,14,1,14,3,14,235,8,14,1,
+  	15,1,15,1,16,1,16,1,17,1,17,1,18,1,18,1,19,1,19,1,20,1,20,1,21,1,21,1,
+  	21,1,21,3,21,253,8,21,1,22,1,22,1,23,1,23,5,23,259,8,23,10,23,12,23,262,
+  	9,23,1,23,1,23,1,24,1,24,1,24,1,24,5,24,270,8,24,10,24,12,24,273,9,24,
+  	1,25,1,25,1,25,3,25,278,8,25,1,26,5,26,281,8,26,10,26,12,26,284,9,26,
+  	1,27,1,27,1,27,3,27,289,8,27,1,27,1,27,1,27,1,27,1,28,1,28,1,28,3,28,
+  	298,8,28,1,29,5,29,301,8,29,10,29,12,29,304,9,29,1,30,5,30,307,8,30,10,
+  	30,12,30,310,9,30,1,30,1,30,1,30,3,30,315,8,30,1,30,1,30,1,30,1,30,1,
+  	31,1,31,1,31,1,31,1,32,1,32,1,32,1,32,1,33,1,33,1,33,3,33,332,8,33,1,
+  	34,5,34,335,8,34,10,34,12,34,338,9,34,1,35,1,35,1,35,1,35,1,35,1,35,1,
+  	36,1,36,1,37,1,37,1,37,1,37,5,37,352,8,37,10,37,12,37,355,9,37,1,37,1,
+  	37,1,38,1,38,1,38,1,38,1,38,1,39,5,39,365,8,39,10,39,12,39,368,9,39,1,
+  	39,1,39,1,39,1,39,1,39,1,40,1,40,1,40,1,40,3,40,379,8,40,1,41,5,41,382,
+  	8,41,10,41,12,41,385,9,41,1,42,1,42,1,42,3,42,390,8,42,1,42,1,42,1,42,
+  	1,42,1,43,1,43,1,43,1,43,1,43,1,43,1,43,3,43,403,8,43,1,44,5,44,406,8,
+  	44,10,44,12,44,409,9,44,1,45,1,45,1,45,3,45,414,8,45,1,45,1,45,1,45,1,
+  	45,1,46,1,46,3,46,422,8,46,1,47,5,47,425,8,47,10,47,12,47,428,9,47,1,
+  	48,1,48,1,48,3,48,433,8,48,1,48,1,48,1,48,1,48,1,49,1,49,1,49,3,49,442,
+  	8,49,1,50,5,50,445,8,50,10,50,12,50,448,9,50,1,51,5,51,451,8,51,10,51,
+  	12,51,454,9,51,1,51,1,51,1,51,3,51,459,8,51,1,51,1,51,1,51,1,51,1,52,
+  	1,52,3,52,467,8,52,1,53,5,53,470,8,53,10,53,12,53,473,9,53,1,54,5,54,
+  	476,8,54,10,54,12,54,479,9,54,1,54,1,54,1,54,3,54,484,8,54,1,54,1,54,
+  	1,54,1,54,1,55,1,55,1,56,1,56,1,57,1,57,1,57,10,168,191,205,216,260,271,
+  	308,366,452,477,0,58,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,
+  	36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,
+  	82,84,86,88,90,92,94,96,98,100,102,104,106,108,110,112,114,0,3,1,0,8,
+  	18,1,0,19,34,1,0,58,59,501,0,127,1,0,0,0,2,135,1,0,0,0,4,139,1,0,0,0,
+  	6,142,1,0,0,0,8,146,1,0,0,0,10,157,1,0,0,0,12,159,1,0,0,0,14,168,1,0,
+  	0,0,16,178,1,0,0,0,18,182,1,0,0,0,20,191,1,0,0,0,22,205,1,0,0,0,24,216,
+  	1,0,0,0,26,224,1,0,0,0,28,229,1,0,0,0,30,236,1,0,0,0,32,238,1,0,0,0,34,
+  	240,1,0,0,0,36,242,1,0,0,0,38,244,1,0,0,0,40,246,1,0,0,0,42,252,1,0,0,
+  	0,44,254,1,0,0,0,46,260,1,0,0,0,48,265,1,0,0,0,50,277,1,0,0,0,52,282,
+  	1,0,0,0,54,285,1,0,0,0,56,297,1,0,0,0,58,302,1,0,0,0,60,308,1,0,0,0,62,
+  	320,1,0,0,0,64,324,1,0,0,0,66,331,1,0,0,0,68,336,1,0,0,0,70,339,1,0,0,
+  	0,72,345,1,0,0,0,74,347,1,0,0,0,76,358,1,0,0,0,78,366,1,0,0,0,80,378,
+  	1,0,0,0,82,383,1,0,0,0,84,386,1,0,0,0,86,402,1,0,0,0,88,407,1,0,0,0,90,
+  	410,1,0,0,0,92,421,1,0,0,0,94,426,1,0,0,0,96,429,1,0,0,0,98,441,1,0,0,
+  	0,100,446,1,0,0,0,102,452,1,0,0,0,104,466,1,0,0,0,106,471,1,0,0,0,108,
+  	477,1,0,0,0,110,489,1,0,0,0,112,491,1,0,0,0,114,493,1,0,0,0,116,126,3,
+  	54,27,0,117,126,3,60,30,0,118,126,3,70,35,0,119,126,3,84,42,0,120,126,
+  	3,90,45,0,121,126,3,96,48,0,122,126,3,102,51,0,123,126,3,108,54,0,124,
+  	126,5,77,0,0,125,116,1,0,0,0,125,117,1,0,0,0,125,118,1,0,0,0,125,119,
+  	1,0,0,0,125,120,1,0,0,0,125,121,1,0,0,0,125,122,1,0,0,0,125,123,1,0,0,
+  	0,125,124,1,0,0,0,126,129,1,0,0,0,127,125,1,0,0,0,127,128,1,0,0,0,128,
+  	130,1,0,0,0,129,127,1,0,0,0,130,131,5,0,0,1,131,1,1,0,0,0,132,133,3,38,
+  	19,0,133,134,5,1,0,0,134,136,1,0,0,0,135,132,1,0,0,0,135,136,1,0,0,0,
+  	136,137,1,0,0,0,137,138,3,42,21,0,138,3,1,0,0,0,139,140,5,51,0,0,140,
+  	141,3,2,1,0,141,5,1,0,0,0,142,144,3,32,16,0,143,145,3,4,2,0,144,143,1,
+  	0,0,0,144,145,1,0,0,0,145,7,1,0,0,0,146,147,5,56,0,0,147,152,3,6,3,0,
+  	148,149,5,2,0,0,149,151,3,6,3,0,150,148,1,0,0,0,151,154,1,0,0,0,152,150,
+  	1,0,0,0,152,153,1,0,0,0,153,155,1,0,0,0,154,152,1,0,0,0,155,156,5,57,
+  	0,0,156,9,1,0,0,0,157,158,5,74,0,0,158,11,1,0,0,0,159,161,5,56,0,0,160,
+  	162,3,10,5,0,161,160,1,0,0,0,161,162,1,0,0,0,162,163,1,0,0,0,163,164,
+  	5,57,0,0,164,13,1,0,0,0,165,167,3,8,4,0,166,165,1,0,0,0,167,170,1,0,0,
+  	0,168,169,1,0,0,0,168,166,1,0,0,0,169,171,1,0,0,0,170,168,1,0,0,0,171,
+  	172,3,34,17,0,172,174,3,32,16,0,173,175,3,12,6,0,174,173,1,0,0,0,174,
+  	175,1,0,0,0,175,176,1,0,0,0,176,177,5,50,0,0,177,15,1,0,0,0,178,179,5,
+  	68,0,0,179,180,3,32,16,0,180,181,5,50,0,0,181,17,1,0,0,0,182,183,5,3,
+  	0,0,183,184,3,32,16,0,184,185,5,51,0,0,185,186,3,42,21,0,186,187,5,50,
+  	0,0,187,19,1,0,0,0,188,190,3,8,4,0,189,188,1,0,0,0,190,193,1,0,0,0,191,
+  	192,1,0,0,0,191,189,1,0,0,0,192,194,1,0,0,0,193,191,1,0,0,0,194,195,5,
+  	4,0,0,195,198,3,32,16,0,196,197,5,51,0,0,197,199,3,74,37,0,198,196,1,
+  	0,0,0,198,199,1,0,0,0,199,200,1,0,0,0,200,201,5,50,0,0,201,21,1,0,0,0,
+  	202,204,3,8,4,0,203,202,1,0,0,0,204,207,1,0,0,0,205,206,1,0,0,0,205,203,
+  	1,0,0,0,206,208,1,0,0,0,207,205,1,0,0,0,208,209,5,5,0,0,209,210,5,51,
+  	0,0,210,211,3,74,37,0,211,212,5,50,0,0,212,23,1,0,0,0,213,215,3,8,4,0,
+  	214,213,1,0,0,0,215,218,1,0,0,0,216,217,1,0,0,0,216,214,1,0,0,0,217,219,
+  	1,0,0,0,218,216,1,0,0,0,219,220,5,6,0,0,220,221,5,51,0,0,221,222,3,74,
+  	37,0,222,223,5,50,0,0,223,25,1,0,0,0,224,225,3,112,56,0,225,226,5,51,
+  	0,0,226,227,3,42,21,0,227,228,5,50,0,0,228,27,1,0,0,0,229,234,5,73,0,
+  	0,230,231,5,40,0,0,231,232,3,40,20,0,232,233,5,39,0,0,233,235,1,0,0,0,
+  	234,230,1,0,0,0,234,235,1,0,0,0,235,29,1,0,0,0,236,237,5,73,0,0,237,31,
+  	1,0,0,0,238,239,5,73,0,0,239,33,1,0,0,0,240,241,3,28,14,0,241,35,1,0,
+  	0,0,242,243,5,73,0,0,243,37,1,0,0,0,244,245,5,73,0,0,245,39,1,0,0,0,246,
+  	247,5,73,0,0,247,41,1,0,0,0,248,253,5,73,0,0,249,253,5,74,0,0,250,253,
+  	5,75,0,0,251,253,3,114,57,0,252,248,1,0,0,0,252,249,1,0,0,0,252,250,1,
+  	0,0,0,252,251,1,0,0,0,253,43,1,0,0,0,254,255,5,81,0,0,255,45,1,0,0,0,
+  	256,257,5,73,0,0,257,259,5,46,0,0,258,256,1,0,0,0,259,262,1,0,0,0,260,
+  	261,1,0,0,0,260,258,1,0,0,0,261,263,1,0,0,0,262,260,1,0,0,0,263,264,5,
+  	73,0,0,264,47,1,0,0,0,265,266,5,7,0,0,266,271,3,30,15,0,267,268,5,2,0,
+  	0,268,270,3,30,15,0,269,267,1,0,0,0,270,273,1,0,0,0,271,272,1,0,0,0,271,
+  	269,1,0,0,0,272,49,1,0,0,0,273,271,1,0,0,0,274,278,3,16,8,0,275,278,3,
+  	18,9,0,276,278,5,77,0,0,277,274,1,0,0,0,277,275,1,0,0,0,277,276,1,0,0,
+  	0,278,51,1,0,0,0,279,281,3,50,25,0,280,279,1,0,0,0,281,284,1,0,0,0,282,
+  	280,1,0,0,0,282,283,1,0,0,0,283,53,1,0,0,0,284,282,1,0,0,0,285,286,5,
+  	61,0,0,286,288,3,32,16,0,287,289,3,48,24,0,288,287,1,0,0,0,288,289,1,
+  	0,0,0,289,290,1,0,0,0,290,291,5,54,0,0,291,292,3,52,26,0,292,293,5,55,
+  	0,0,293,55,1,0,0,0,294,298,3,14,7,0,295,298,3,44,22,0,296,298,5,77,0,
+  	0,297,294,1,0,0,0,297,295,1,0,0,0,297,296,1,0,0,0,298,57,1,0,0,0,299,
+  	301,3,56,28,0,300,299,1,0,0,0,301,304,1,0,0,0,302,300,1,0,0,0,302,303,
+  	1,0,0,0,303,59,1,0,0,0,304,302,1,0,0,0,305,307,3,8,4,0,306,305,1,0,0,
+  	0,307,310,1,0,0,0,308,309,1,0,0,0,308,306,1,0,0,0,309,311,1,0,0,0,310,
+  	308,1,0,0,0,311,312,5,62,0,0,312,314,3,32,16,0,313,315,3,48,24,0,314,
+  	313,1,0,0,0,314,315,1,0,0,0,315,316,1,0,0,0,316,317,5,54,0,0,317,318,
+  	3,58,29,0,318,319,5,55,0,0,319,61,1,0,0,0,320,321,3,34,17,0,321,322,3,
+  	32,16,0,322,323,5,50,0,0,323,63,1,0,0,0,324,325,5,71,0,0,325,326,3,32,
+  	16,0,326,327,5,50,0,0,327,65,1,0,0,0,328,332,3,62,31,0,329,332,3,64,32,
+  	0,330,332,5,77,0,0,331,328,1,0,0,0,331,329,1,0,0,0,331,330,1,0,0,0,332,
+  	67,1,0,0,0,333,335,3,66,33,0,334,333,1,0,0,0,335,338,1,0,0,0,336,334,
+  	1,0,0,0,336,337,1,0,0,0,337,69,1,0,0,0,338,336,1,0,0,0,339,340,5,69,0,
+  	0,340,341,3,32,16,0,341,342,5,54,0,0,342,343,3,68,34,0,343,344,5,55,0,
+  	0,344,71,1,0,0,0,345,346,3,42,21,0,346,73,1,0,0,0,347,348,5,54,0,0,348,
+  	353,3,72,36,0,349,350,5,2,0,0,350,352,3,72,36,0,351,349,1,0,0,0,352,355,
+  	1,0,0,0,353,351,1,0,0,0,353,354,1,0,0,0,354,356,1,0,0,0,355,353,1,0,0,
+  	0,356,357,5,55,0,0,357,75,1,0,0,0,358,359,5,72,0,0,359,360,5,51,0,0,360,
+  	361,3,32,16,0,361,362,5,50,0,0,362,77,1,0,0,0,363,365,3,8,4,0,364,363,
+  	1,0,0,0,365,368,1,0,0,0,366,367,1,0,0,0,366,364,1,0,0,0,367,369,1,0,0,
+  	0,368,366,1,0,0,0,369,370,3,110,55,0,370,371,5,51,0,0,371,372,3,46,23,
+  	0,372,373,5,50,0,0,373,79,1,0,0,0,374,379,3,76,38,0,375,379,3,78,39,0,
+  	376,379,3,20,10,0,377,379,5,77,0,0,378,374,1,0,0,0,378,375,1,0,0,0,378,
+  	376,1,0,0,0,378,377,1,0,0,0,379,81,1,0,0,0,380,382,3,80,40,0,381,380,
+  	1,0,0,0,382,385,1,0,0,0,383,381,1,0,0,0,383,384,1,0,0,0,384,83,1,0,0,
+  	0,385,383,1,0,0,0,386,387,5,63,0,0,387,389,3,32,16,0,388,390,3,48,24,
+  	0,389,388,1,0,0,0,389,390,1,0,0,0,390,391,1,0,0,0,391,392,5,54,0,0,392,
+  	393,3,82,41,0,393,394,5,55,0,0,394,85,1,0,0,0,395,403,3,76,38,0,396,403,
+  	3,78,39,0,397,403,3,20,10,0,398,403,3,22,11,0,399,403,3,24,12,0,400,403,
+  	3,26,13,0,401,403,5,77,0,0,402,395,1,0,0,0,402,396,1,0,0,0,402,397,1,
+  	0,0,0,402,398,1,0,0,0,402,399,1,0,0,0,402,400,1,0,0,0,402,401,1,0,0,0,
+  	403,87,1,0,0,0,404,406,3,86,43,0,405,404,1,0,0,0,406,409,1,0,0,0,407,
+  	405,1,0,0,0,407,408,1,0,0,0,408,89,1,0,0,0,409,407,1,0,0,0,410,411,5,
+  	64,0,0,411,413,3,32,16,0,412,414,3,48,24,0,413,412,1,0,0,0,413,414,1,
+  	0,0,0,414,415,1,0,0,0,415,416,5,54,0,0,416,417,3,88,44,0,417,418,5,55,
+  	0,0,418,91,1,0,0,0,419,422,3,76,38,0,420,422,5,77,0,0,421,419,1,0,0,0,
+  	421,420,1,0,0,0,422,93,1,0,0,0,423,425,3,92,46,0,424,423,1,0,0,0,425,
+  	428,1,0,0,0,426,424,1,0,0,0,426,427,1,0,0,0,427,95,1,0,0,0,428,426,1,
+  	0,0,0,429,430,5,65,0,0,430,432,3,32,16,0,431,433,3,48,24,0,432,431,1,
+  	0,0,0,432,433,1,0,0,0,433,434,1,0,0,0,434,435,5,54,0,0,435,436,3,94,47,
+  	0,436,437,5,55,0,0,437,97,1,0,0,0,438,442,3,78,39,0,439,442,5,77,0,0,
+  	440,442,3,26,13,0,441,438,1,0,0,0,441,439,1,0,0,0,441,440,1,0,0,0,442,
+  	99,1,0,0,0,443,445,3,98,49,0,444,443,1,0,0,0,445,448,1,0,0,0,446,444,
+  	1,0,0,0,446,447,1,0,0,0,447,101,1,0,0,0,448,446,1,0,0,0,449,451,3,8,4,
+  	0,450,449,1,0,0,0,451,454,1,0,0,0,452,453,1,0,0,0,452,450,1,0,0,0,453,
+  	455,1,0,0,0,454,452,1,0,0,0,455,456,5,67,0,0,456,458,3,32,16,0,457,459,
+  	3,48,24,0,458,457,1,0,0,0,458,459,1,0,0,0,459,460,1,0,0,0,460,461,5,54,
+  	0,0,461,462,3,100,50,0,462,463,5,55,0,0,463,103,1,0,0,0,464,467,3,78,
+  	39,0,465,467,5,77,0,0,466,464,1,0,0,0,466,465,1,0,0,0,467,105,1,0,0,0,
+  	468,470,3,104,52,0,469,468,1,0,0,0,470,473,1,0,0,0,471,469,1,0,0,0,471,
+  	472,1,0,0,0,472,107,1,0,0,0,473,471,1,0,0,0,474,476,3,8,4,0,475,474,1,
+  	0,0,0,476,479,1,0,0,0,477,478,1,0,0,0,477,475,1,0,0,0,478,480,1,0,0,0,
+  	479,477,1,0,0,0,480,481,5,66,0,0,481,483,3,32,16,0,482,484,3,48,24,0,
+  	483,482,1,0,0,0,483,484,1,0,0,0,484,485,1,0,0,0,485,486,5,54,0,0,486,
+  	487,3,106,53,0,487,488,5,55,0,0,488,109,1,0,0,0,489,490,7,0,0,0,490,111,
+  	1,0,0,0,491,492,7,1,0,0,492,113,1,0,0,0,493,494,7,2,0,0,494,115,1,0,0,
+  	0,44,125,127,135,144,152,161,168,174,191,198,205,216,234,252,260,271,
+  	277,282,288,297,302,308,314,331,336,353,366,378,383,389,402,407,413,421,
+  	426,432,441,446,452,458,466,471,477,483
+  };
+  staticData->serializedATN = antlr4::atn::SerializedATNView(serializedATNSegment, sizeof(serializedATNSegment) / sizeof(serializedATNSegment[0]));
+
+  antlr4::atn::ATNDeserializer deserializer;
+  staticData->atn = deserializer.deserialize(staticData->serializedATN);
+
+  const size_t count = staticData->atn->getNumberOfDecisions();
+  staticData->decisionToDFA.reserve(count);
+  for (size_t i = 0; i < count; i++) { 
+    staticData->decisionToDFA.emplace_back(staticData->atn->getDecisionState(i), i);
+  }
+  sigParserStaticData = staticData.release();
+}
+
+}
+
+SIGParser::SIGParser(TokenStream *input) : SIGParser(input, antlr4::atn::ParserATNSimulatorOptions()) {}
+
+SIGParser::SIGParser(TokenStream *input, const antlr4::atn::ParserATNSimulatorOptions &options) : Parser(input) {
+  SIGParser::initialize();
+  _interpreter = new atn::ParserATNSimulator(this, *sigParserStaticData->atn, sigParserStaticData->decisionToDFA, sigParserStaticData->sharedContextCache, options);
 }
 
 SIGParser::~SIGParser() {
   delete _interpreter;
+}
+
+const atn::ATN& SIGParser::getATN() const {
+  return *sigParserStaticData->atn;
 }
 
 std::string SIGParser::getGrammarFileName() const {
@@ -24,11 +284,15 @@ std::string SIGParser::getGrammarFileName() const {
 }
 
 const std::vector<std::string>& SIGParser::getRuleNames() const {
-  return _ruleNames;
+  return sigParserStaticData->ruleNames;
 }
 
-dfa::Vocabulary& SIGParser::getVocabulary() const {
-  return _vocabulary;
+const dfa::Vocabulary& SIGParser::getVocabulary() const {
+  return sigParserStaticData->vocabulary;
+}
+
+antlr4::atn::SerializedATNView SIGParser::getSerializedATN() const {
+  return sigParserStaticData->serializedATN;
 }
 
 
@@ -131,14 +395,6 @@ void SIGParser::ParseContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitParse(this);
 }
 
-
-antlrcpp::Any SIGParser::ParseContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitParse(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::ParseContext* SIGParser::parse() {
   ParseContext *_localctx = _tracker.createInstance<ParseContext>(_ctx, getState());
   enterRule(_localctx, 0, SIGParser::RuleParse);
@@ -156,17 +412,8 @@ SIGParser::ParseContext* SIGParser::parse() {
     setState(127);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((((_la - 56) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 56)) & ((1ULL << (SIGParser::OSBRACE - 56))
-      | (1ULL << (SIGParser::LAYOUT - 56))
-      | (1ULL << (SIGParser::STRUCT - 56))
-      | (1ULL << (SIGParser::COMPUTE_PSO - 56))
-      | (1ULL << (SIGParser::GRAPHICS_PSO - 56))
-      | (1ULL << (SIGParser::RAYTRACE_PSO - 56))
-      | (1ULL << (SIGParser::RAYTRACE_RAYGEN - 56))
-      | (1ULL << (SIGParser::RAYTRACE_PASS - 56))
-      | (1ULL << (SIGParser::RT - 56))
-      | (1ULL << (SIGParser::COMMENT - 56)))) != 0)) {
+    while ((((_la - 56) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 56)) & 2109409) != 0) {
       setState(125);
       _errHandler->sync(this);
       switch (getInterpreter<atn::ParserATNSimulator>()->adaptivePredict(_input, 0, _ctx)) {
@@ -275,14 +522,6 @@ void SIGParser::Bind_optionContext::exitRule(tree::ParseTreeListener *listener) 
     parserListener->exitBind_option(this);
 }
 
-
-antlrcpp::Any SIGParser::Bind_optionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitBind_option(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Bind_optionContext* SIGParser::bind_option() {
   Bind_optionContext *_localctx = _tracker.createInstance<Bind_optionContext>(_ctx, getState());
   enterRule(_localctx, 2, SIGParser::RuleBind_option);
@@ -355,14 +594,6 @@ void SIGParser::Options_assignContext::exitRule(tree::ParseTreeListener *listene
     parserListener->exitOptions_assign(this);
 }
 
-
-antlrcpp::Any SIGParser::Options_assignContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitOptions_assign(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Options_assignContext* SIGParser::options_assign() {
   Options_assignContext *_localctx = _tracker.createInstance<Options_assignContext>(_ctx, getState());
   enterRule(_localctx, 4, SIGParser::RuleOptions_assign);
@@ -420,14 +651,6 @@ void SIGParser::OptionContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitOption(this);
-}
-
-
-antlrcpp::Any SIGParser::OptionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitOption(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::OptionContext* SIGParser::option() {
@@ -504,14 +727,6 @@ void SIGParser::Option_blockContext::exitRule(tree::ParseTreeListener *listener)
     parserListener->exitOption_block(this);
 }
 
-
-antlrcpp::Any SIGParser::Option_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitOption_block(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Option_blockContext* SIGParser::option_block() {
   Option_blockContext *_localctx = _tracker.createInstance<Option_blockContext>(_ctx, getState());
   enterRule(_localctx, 8, SIGParser::RuleOption_block);
@@ -582,14 +797,6 @@ void SIGParser::Array_count_idContext::exitRule(tree::ParseTreeListener *listene
     parserListener->exitArray_count_id(this);
 }
 
-
-antlrcpp::Any SIGParser::Array_count_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitArray_count_id(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Array_count_idContext* SIGParser::array_count_id() {
   Array_count_idContext *_localctx = _tracker.createInstance<Array_count_idContext>(_ctx, getState());
   enterRule(_localctx, 10, SIGParser::RuleArray_count_id);
@@ -649,14 +856,6 @@ void SIGParser::ArrayContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitArray(this);
-}
-
-
-antlrcpp::Any SIGParser::ArrayContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitArray(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::ArrayContext* SIGParser::array() {
@@ -741,14 +940,6 @@ void SIGParser::Value_declarationContext::exitRule(tree::ParseTreeListener *list
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitValue_declaration(this);
-}
-
-
-antlrcpp::Any SIGParser::Value_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitValue_declaration(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Value_declarationContext* SIGParser::value_declaration() {
@@ -838,14 +1029,6 @@ void SIGParser::Slot_declarationContext::exitRule(tree::ParseTreeListener *liste
     parserListener->exitSlot_declaration(this);
 }
 
-
-antlrcpp::Any SIGParser::Slot_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitSlot_declaration(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Slot_declarationContext* SIGParser::slot_declaration() {
   Slot_declarationContext *_localctx = _tracker.createInstance<Slot_declarationContext>(_ctx, getState());
   enterRule(_localctx, 16, SIGParser::RuleSlot_declaration);
@@ -913,14 +1096,6 @@ void SIGParser::Sampler_declarationContext::exitRule(tree::ParseTreeListener *li
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitSampler_declaration(this);
-}
-
-
-antlrcpp::Any SIGParser::Sampler_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitSampler_declaration(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Sampler_declarationContext* SIGParser::sampler_declaration() {
@@ -1002,14 +1177,6 @@ void SIGParser::Define_declarationContext::exitRule(tree::ParseTreeListener *lis
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitDefine_declaration(this);
-}
-
-
-antlrcpp::Any SIGParser::Define_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitDefine_declaration(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Define_declarationContext* SIGParser::define_declaration() {
@@ -1109,14 +1276,6 @@ void SIGParser::Rtv_formats_declarationContext::exitRule(tree::ParseTreeListener
     parserListener->exitRtv_formats_declaration(this);
 }
 
-
-antlrcpp::Any SIGParser::Rtv_formats_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtv_formats_declaration(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rtv_formats_declarationContext* SIGParser::rtv_formats_declaration() {
   Rtv_formats_declarationContext *_localctx = _tracker.createInstance<Rtv_formats_declarationContext>(_ctx, getState());
   enterRule(_localctx, 22, SIGParser::RuleRtv_formats_declaration);
@@ -1205,14 +1364,6 @@ void SIGParser::Blends_declarationContext::exitRule(tree::ParseTreeListener *lis
     parserListener->exitBlends_declaration(this);
 }
 
-
-antlrcpp::Any SIGParser::Blends_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitBlends_declaration(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Blends_declarationContext* SIGParser::blends_declaration() {
   Blends_declarationContext *_localctx = _tracker.createInstance<Blends_declarationContext>(_ctx, getState());
   enterRule(_localctx, 24, SIGParser::RuleBlends_declaration);
@@ -1297,14 +1448,6 @@ void SIGParser::Pso_paramContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitPso_param(this);
 }
 
-
-antlrcpp::Any SIGParser::Pso_paramContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitPso_param(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Pso_paramContext* SIGParser::pso_param() {
   Pso_paramContext *_localctx = _tracker.createInstance<Pso_paramContext>(_ctx, getState());
   enterRule(_localctx, 26, SIGParser::RulePso_param);
@@ -1376,14 +1519,6 @@ void SIGParser::Type_with_templateContext::exitRule(tree::ParseTreeListener *lis
     parserListener->exitType_with_template(this);
 }
 
-
-antlrcpp::Any SIGParser::Type_with_templateContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitType_with_template(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Type_with_templateContext* SIGParser::type_with_template() {
   Type_with_templateContext *_localctx = _tracker.createInstance<Type_with_templateContext>(_ctx, getState());
   enterRule(_localctx, 28, SIGParser::RuleType_with_template);
@@ -1450,14 +1585,6 @@ void SIGParser::Inherit_idContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitInherit_id(this);
 }
 
-
-antlrcpp::Any SIGParser::Inherit_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitInherit_id(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Inherit_idContext* SIGParser::inherit_id() {
   Inherit_idContext *_localctx = _tracker.createInstance<Inherit_idContext>(_ctx, getState());
   enterRule(_localctx, 30, SIGParser::RuleInherit_id);
@@ -1509,14 +1636,6 @@ void SIGParser::Name_idContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitName_id(this);
-}
-
-
-antlrcpp::Any SIGParser::Name_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitName_id(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Name_idContext* SIGParser::name_id() {
@@ -1572,14 +1691,6 @@ void SIGParser::Type_idContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitType_id(this);
 }
 
-
-antlrcpp::Any SIGParser::Type_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitType_id(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Type_idContext* SIGParser::type_id() {
   Type_idContext *_localctx = _tracker.createInstance<Type_idContext>(_ctx, getState());
   enterRule(_localctx, 34, SIGParser::RuleType_id);
@@ -1631,14 +1742,6 @@ void SIGParser::Option_idContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitOption_id(this);
-}
-
-
-antlrcpp::Any SIGParser::Option_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitOption_id(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Option_idContext* SIGParser::option_id() {
@@ -1694,14 +1797,6 @@ void SIGParser::Owner_idContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitOwner_id(this);
 }
 
-
-antlrcpp::Any SIGParser::Owner_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitOwner_id(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Owner_idContext* SIGParser::owner_id() {
   Owner_idContext *_localctx = _tracker.createInstance<Owner_idContext>(_ctx, getState());
   enterRule(_localctx, 38, SIGParser::RuleOwner_id);
@@ -1753,14 +1848,6 @@ void SIGParser::Template_idContext::exitRule(tree::ParseTreeListener *listener) 
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitTemplate_id(this);
-}
-
-
-antlrcpp::Any SIGParser::Template_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitTemplate_id(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Template_idContext* SIGParser::template_id() {
@@ -1826,14 +1913,6 @@ void SIGParser::Value_idContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitValue_id(this);
-}
-
-
-antlrcpp::Any SIGParser::Value_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitValue_id(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Value_idContext* SIGParser::value_id() {
@@ -1921,14 +2000,6 @@ void SIGParser::Insert_blockContext::exitRule(tree::ParseTreeListener *listener)
     parserListener->exitInsert_block(this);
 }
 
-
-antlrcpp::Any SIGParser::Insert_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitInsert_block(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Insert_blockContext* SIGParser::insert_block() {
   Insert_blockContext *_localctx = _tracker.createInstance<Insert_blockContext>(_ctx, getState());
   enterRule(_localctx, 44, SIGParser::RuleInsert_block);
@@ -1992,14 +2063,6 @@ void SIGParser::Path_idContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitPath_id(this);
-}
-
-
-antlrcpp::Any SIGParser::Path_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitPath_id(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Path_idContext* SIGParser::path_id() {
@@ -2072,14 +2135,6 @@ void SIGParser::InheritContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitInherit(this);
-}
-
-
-antlrcpp::Any SIGParser::InheritContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitInherit(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::InheritContext* SIGParser::inherit() {
@@ -2158,14 +2213,6 @@ void SIGParser::Layout_statContext::exitRule(tree::ParseTreeListener *listener) 
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitLayout_stat(this);
-}
-
-
-antlrcpp::Any SIGParser::Layout_statContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitLayout_stat(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Layout_statContext* SIGParser::layout_stat() {
@@ -2247,14 +2294,6 @@ void SIGParser::Layout_blockContext::exitRule(tree::ParseTreeListener *listener)
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitLayout_block(this);
-}
-
-
-antlrcpp::Any SIGParser::Layout_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitLayout_block(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Layout_blockContext* SIGParser::layout_block() {
@@ -2341,14 +2380,6 @@ void SIGParser::Layout_definitionContext::exitRule(tree::ParseTreeListener *list
     parserListener->exitLayout_definition(this);
 }
 
-
-antlrcpp::Any SIGParser::Layout_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitLayout_definition(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Layout_definitionContext* SIGParser::layout_definition() {
   Layout_definitionContext *_localctx = _tracker.createInstance<Layout_definitionContext>(_ctx, getState());
   enterRule(_localctx, 54, SIGParser::RuleLayout_definition);
@@ -2425,14 +2456,6 @@ void SIGParser::Table_statContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitTable_stat(this);
-}
-
-
-antlrcpp::Any SIGParser::Table_statContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitTable_stat(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Table_statContext* SIGParser::table_stat() {
@@ -2517,14 +2540,6 @@ void SIGParser::Table_blockContext::exitRule(tree::ParseTreeListener *listener) 
     parserListener->exitTable_block(this);
 }
 
-
-antlrcpp::Any SIGParser::Table_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitTable_block(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Table_blockContext* SIGParser::table_block() {
   Table_blockContext *_localctx = _tracker.createInstance<Table_blockContext>(_ctx, getState());
   enterRule(_localctx, 58, SIGParser::RuleTable_block);
@@ -2542,11 +2557,8 @@ SIGParser::Table_blockContext* SIGParser::table_block() {
     setState(302);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((((_la - 56) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 56)) & ((1ULL << (SIGParser::OSBRACE - 56))
-      | (1ULL << (SIGParser::ID - 56))
-      | (1ULL << (SIGParser::COMMENT - 56))
-      | (1ULL << (SIGParser::INSERT_BLOCK - 56)))) != 0)) {
+    while ((((_la - 56) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 56)) & 35782657) != 0) {
       setState(299);
       table_stat();
       setState(304);
@@ -2617,14 +2629,6 @@ void SIGParser::Table_definitionContext::exitRule(tree::ParseTreeListener *liste
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitTable_definition(this);
-}
-
-
-antlrcpp::Any SIGParser::Table_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitTable_definition(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Table_definitionContext* SIGParser::table_definition() {
@@ -2718,14 +2722,6 @@ void SIGParser::Rt_color_declarationContext::exitRule(tree::ParseTreeListener *l
     parserListener->exitRt_color_declaration(this);
 }
 
-
-antlrcpp::Any SIGParser::Rt_color_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRt_color_declaration(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rt_color_declarationContext* SIGParser::rt_color_declaration() {
   Rt_color_declarationContext *_localctx = _tracker.createInstance<Rt_color_declarationContext>(_ctx, getState());
   enterRule(_localctx, 62, SIGParser::RuleRt_color_declaration);
@@ -2791,14 +2787,6 @@ void SIGParser::Rt_ds_declarationContext::exitRule(tree::ParseTreeListener *list
     parserListener->exitRt_ds_declaration(this);
 }
 
-
-antlrcpp::Any SIGParser::Rt_ds_declarationContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRt_ds_declaration(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rt_ds_declarationContext* SIGParser::rt_ds_declaration() {
   Rt_ds_declarationContext *_localctx = _tracker.createInstance<Rt_ds_declarationContext>(_ctx, getState());
   enterRule(_localctx, 64, SIGParser::RuleRt_ds_declaration);
@@ -2862,14 +2850,6 @@ void SIGParser::Rt_statContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRt_stat(this);
-}
-
-
-antlrcpp::Any SIGParser::Rt_statContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRt_stat(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Rt_statContext* SIGParser::rt_stat() {
@@ -2953,14 +2933,6 @@ void SIGParser::Rt_blockContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitRt_block(this);
 }
 
-
-antlrcpp::Any SIGParser::Rt_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRt_block(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rt_blockContext* SIGParser::rt_block() {
   Rt_blockContext *_localctx = _tracker.createInstance<Rt_blockContext>(_ctx, getState());
   enterRule(_localctx, 68, SIGParser::RuleRt_block);
@@ -2978,10 +2950,8 @@ SIGParser::Rt_blockContext* SIGParser::rt_block() {
     setState(336);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while (((((_la - 71) & ~ 0x3fULL) == 0) &&
-      ((1ULL << (_la - 71)) & ((1ULL << (SIGParser::DSV - 71))
-      | (1ULL << (SIGParser::ID - 71))
-      | (1ULL << (SIGParser::COMMENT - 71)))) != 0)) {
+    while ((((_la - 71) & ~ 0x3fULL) == 0) &&
+      ((1ULL << (_la - 71)) & 69) != 0) {
       setState(333);
       rt_stat();
       setState(338);
@@ -3040,14 +3010,6 @@ void SIGParser::Rt_definitionContext::exitRule(tree::ParseTreeListener *listener
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRt_definition(this);
-}
-
-
-antlrcpp::Any SIGParser::Rt_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRt_definition(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Rt_definitionContext* SIGParser::rt_definition() {
@@ -3109,14 +3071,6 @@ void SIGParser::Array_value_holderContext::exitRule(tree::ParseTreeListener *lis
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitArray_value_holder(this);
-}
-
-
-antlrcpp::Any SIGParser::Array_value_holderContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitArray_value_holder(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Array_value_holderContext* SIGParser::array_value_holder() {
@@ -3182,14 +3136,6 @@ void SIGParser::Array_value_idsContext::exitRule(tree::ParseTreeListener *listen
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitArray_value_ids(this);
-}
-
-
-antlrcpp::Any SIGParser::Array_value_idsContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitArray_value_ids(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Array_value_idsContext* SIGParser::array_value_ids() {
@@ -3274,14 +3220,6 @@ void SIGParser::Root_sigContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitRoot_sig(this);
 }
 
-
-antlrcpp::Any SIGParser::Root_sigContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRoot_sig(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Root_sigContext* SIGParser::root_sig() {
   Root_sigContext *_localctx = _tracker.createInstance<Root_sigContext>(_ctx, getState());
   enterRule(_localctx, 76, SIGParser::RuleRoot_sig);
@@ -3359,14 +3297,6 @@ void SIGParser::ShaderContext::exitRule(tree::ParseTreeListener *listener) {
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitShader(this);
-}
-
-
-antlrcpp::Any SIGParser::ShaderContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitShader(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::ShaderContext* SIGParser::shader() {
@@ -3451,14 +3381,6 @@ void SIGParser::Compute_pso_statContext::exitRule(tree::ParseTreeListener *liste
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitCompute_pso_stat(this);
-}
-
-
-antlrcpp::Any SIGParser::Compute_pso_statContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitCompute_pso_stat(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Compute_pso_statContext* SIGParser::compute_pso_stat() {
@@ -3549,14 +3471,6 @@ void SIGParser::Compute_pso_blockContext::exitRule(tree::ParseTreeListener *list
     parserListener->exitCompute_pso_block(this);
 }
 
-
-antlrcpp::Any SIGParser::Compute_pso_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitCompute_pso_block(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Compute_pso_blockContext* SIGParser::compute_pso_block() {
   Compute_pso_blockContext *_localctx = _tracker.createInstance<Compute_pso_blockContext>(_ctx, getState());
   enterRule(_localctx, 82, SIGParser::RuleCompute_pso_block);
@@ -3574,20 +3488,8 @@ SIGParser::Compute_pso_blockContext* SIGParser::compute_pso_block() {
     setState(383);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while ((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & ((1ULL << SIGParser::T__3)
-      | (1ULL << SIGParser::T__7)
-      | (1ULL << SIGParser::T__8)
-      | (1ULL << SIGParser::T__9)
-      | (1ULL << SIGParser::T__10)
-      | (1ULL << SIGParser::T__11)
-      | (1ULL << SIGParser::T__12)
-      | (1ULL << SIGParser::T__13)
-      | (1ULL << SIGParser::T__14)
-      | (1ULL << SIGParser::T__15)
-      | (1ULL << SIGParser::T__16)
-      | (1ULL << SIGParser::T__17)
-      | (1ULL << SIGParser::OSBRACE))) != 0) || _la == SIGParser::ROOTSIG
+    while (((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057594038451984) != 0 || _la == SIGParser::ROOTSIG
 
     || _la == SIGParser::COMMENT) {
       setState(380);
@@ -3652,14 +3554,6 @@ void SIGParser::Compute_pso_definitionContext::exitRule(tree::ParseTreeListener 
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitCompute_pso_definition(this);
-}
-
-
-antlrcpp::Any SIGParser::Compute_pso_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitCompute_pso_definition(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Compute_pso_definitionContext* SIGParser::compute_pso_definition() {
@@ -3754,14 +3648,6 @@ void SIGParser::Graphics_pso_statContext::exitRule(tree::ParseTreeListener *list
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitGraphics_pso_stat(this);
-}
-
-
-antlrcpp::Any SIGParser::Graphics_pso_statContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitGraphics_pso_stat(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Graphics_pso_statContext* SIGParser::graphics_pso_stat() {
@@ -3873,14 +3759,6 @@ void SIGParser::Graphics_pso_blockContext::exitRule(tree::ParseTreeListener *lis
     parserListener->exitGraphics_pso_block(this);
 }
 
-
-antlrcpp::Any SIGParser::Graphics_pso_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitGraphics_pso_block(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Graphics_pso_blockContext* SIGParser::graphics_pso_block() {
   Graphics_pso_blockContext *_localctx = _tracker.createInstance<Graphics_pso_blockContext>(_ctx, getState());
   enterRule(_localctx, 88, SIGParser::RuleGraphics_pso_block);
@@ -3898,38 +3776,8 @@ SIGParser::Graphics_pso_blockContext* SIGParser::graphics_pso_block() {
     setState(407);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while ((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & ((1ULL << SIGParser::T__3)
-      | (1ULL << SIGParser::T__4)
-      | (1ULL << SIGParser::T__5)
-      | (1ULL << SIGParser::T__7)
-      | (1ULL << SIGParser::T__8)
-      | (1ULL << SIGParser::T__9)
-      | (1ULL << SIGParser::T__10)
-      | (1ULL << SIGParser::T__11)
-      | (1ULL << SIGParser::T__12)
-      | (1ULL << SIGParser::T__13)
-      | (1ULL << SIGParser::T__14)
-      | (1ULL << SIGParser::T__15)
-      | (1ULL << SIGParser::T__16)
-      | (1ULL << SIGParser::T__17)
-      | (1ULL << SIGParser::T__18)
-      | (1ULL << SIGParser::T__19)
-      | (1ULL << SIGParser::T__20)
-      | (1ULL << SIGParser::T__21)
-      | (1ULL << SIGParser::T__22)
-      | (1ULL << SIGParser::T__23)
-      | (1ULL << SIGParser::T__24)
-      | (1ULL << SIGParser::T__25)
-      | (1ULL << SIGParser::T__26)
-      | (1ULL << SIGParser::T__27)
-      | (1ULL << SIGParser::T__28)
-      | (1ULL << SIGParser::T__29)
-      | (1ULL << SIGParser::T__30)
-      | (1ULL << SIGParser::T__31)
-      | (1ULL << SIGParser::T__32)
-      | (1ULL << SIGParser::T__33)
-      | (1ULL << SIGParser::OSBRACE))) != 0) || _la == SIGParser::ROOTSIG
+    while (((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057628397666160) != 0 || _la == SIGParser::ROOTSIG
 
     || _la == SIGParser::COMMENT) {
       setState(404);
@@ -3994,14 +3842,6 @@ void SIGParser::Graphics_pso_definitionContext::exitRule(tree::ParseTreeListener
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitGraphics_pso_definition(this);
-}
-
-
-antlrcpp::Any SIGParser::Graphics_pso_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitGraphics_pso_definition(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Graphics_pso_definitionContext* SIGParser::graphics_pso_definition() {
@@ -4078,14 +3918,6 @@ void SIGParser::Rtx_pso_statContext::exitRule(tree::ParseTreeListener *listener)
     parserListener->exitRtx_pso_stat(this);
 }
 
-
-antlrcpp::Any SIGParser::Rtx_pso_statContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_pso_stat(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rtx_pso_statContext* SIGParser::rtx_pso_stat() {
   Rtx_pso_statContext *_localctx = _tracker.createInstance<Rtx_pso_statContext>(_ctx, getState());
   enterRule(_localctx, 92, SIGParser::RuleRtx_pso_stat);
@@ -4158,14 +3990,6 @@ void SIGParser::Rtx_pso_blockContext::exitRule(tree::ParseTreeListener *listener
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRtx_pso_block(this);
-}
-
-
-antlrcpp::Any SIGParser::Rtx_pso_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_pso_block(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Rtx_pso_blockContext* SIGParser::rtx_pso_block() {
@@ -4252,14 +4076,6 @@ void SIGParser::Rtx_pso_definitionContext::exitRule(tree::ParseTreeListener *lis
     parserListener->exitRtx_pso_definition(this);
 }
 
-
-antlrcpp::Any SIGParser::Rtx_pso_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_pso_definition(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rtx_pso_definitionContext* SIGParser::rtx_pso_definition() {
   Rtx_pso_definitionContext *_localctx = _tracker.createInstance<Rtx_pso_definitionContext>(_ctx, getState());
   enterRule(_localctx, 96, SIGParser::RuleRtx_pso_definition);
@@ -4336,14 +4152,6 @@ void SIGParser::Rtx_pass_statContext::exitRule(tree::ParseTreeListener *listener
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRtx_pass_stat(this);
-}
-
-
-antlrcpp::Any SIGParser::Rtx_pass_statContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_pass_stat(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Rtx_pass_statContext* SIGParser::rtx_pass_stat() {
@@ -4453,14 +4261,6 @@ void SIGParser::Rtx_pass_blockContext::exitRule(tree::ParseTreeListener *listene
     parserListener->exitRtx_pass_block(this);
 }
 
-
-antlrcpp::Any SIGParser::Rtx_pass_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_pass_block(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rtx_pass_blockContext* SIGParser::rtx_pass_block() {
   Rtx_pass_blockContext *_localctx = _tracker.createInstance<Rtx_pass_blockContext>(_ctx, getState());
   enterRule(_localctx, 100, SIGParser::RuleRtx_pass_block);
@@ -4478,35 +4278,8 @@ SIGParser::Rtx_pass_blockContext* SIGParser::rtx_pass_block() {
     setState(446);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while ((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & ((1ULL << SIGParser::T__7)
-      | (1ULL << SIGParser::T__8)
-      | (1ULL << SIGParser::T__9)
-      | (1ULL << SIGParser::T__10)
-      | (1ULL << SIGParser::T__11)
-      | (1ULL << SIGParser::T__12)
-      | (1ULL << SIGParser::T__13)
-      | (1ULL << SIGParser::T__14)
-      | (1ULL << SIGParser::T__15)
-      | (1ULL << SIGParser::T__16)
-      | (1ULL << SIGParser::T__17)
-      | (1ULL << SIGParser::T__18)
-      | (1ULL << SIGParser::T__19)
-      | (1ULL << SIGParser::T__20)
-      | (1ULL << SIGParser::T__21)
-      | (1ULL << SIGParser::T__22)
-      | (1ULL << SIGParser::T__23)
-      | (1ULL << SIGParser::T__24)
-      | (1ULL << SIGParser::T__25)
-      | (1ULL << SIGParser::T__26)
-      | (1ULL << SIGParser::T__27)
-      | (1ULL << SIGParser::T__28)
-      | (1ULL << SIGParser::T__29)
-      | (1ULL << SIGParser::T__30)
-      | (1ULL << SIGParser::T__31)
-      | (1ULL << SIGParser::T__32)
-      | (1ULL << SIGParser::T__33)
-      | (1ULL << SIGParser::OSBRACE))) != 0) || _la == SIGParser::COMMENT) {
+    while (((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057628397666048) != 0 || _la == SIGParser::COMMENT) {
       setState(443);
       rtx_pass_stat();
       setState(448);
@@ -4577,14 +4350,6 @@ void SIGParser::Rtx_pass_definitionContext::exitRule(tree::ParseTreeListener *li
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRtx_pass_definition(this);
-}
-
-
-antlrcpp::Any SIGParser::Rtx_pass_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_pass_definition(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Rtx_pass_definitionContext* SIGParser::rtx_pass_definition() {
@@ -4674,14 +4439,6 @@ void SIGParser::Rtx_raygen_statContext::exitRule(tree::ParseTreeListener *listen
     parserListener->exitRtx_raygen_stat(this);
 }
 
-
-antlrcpp::Any SIGParser::Rtx_raygen_statContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_raygen_stat(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rtx_raygen_statContext* SIGParser::rtx_raygen_stat() {
   Rtx_raygen_statContext *_localctx = _tracker.createInstance<Rtx_raygen_statContext>(_ctx, getState());
   enterRule(_localctx, 104, SIGParser::RuleRtx_raygen_stat);
@@ -4767,14 +4524,6 @@ void SIGParser::Rtx_raygen_blockContext::exitRule(tree::ParseTreeListener *liste
     parserListener->exitRtx_raygen_block(this);
 }
 
-
-antlrcpp::Any SIGParser::Rtx_raygen_blockContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_raygen_block(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Rtx_raygen_blockContext* SIGParser::rtx_raygen_block() {
   Rtx_raygen_blockContext *_localctx = _tracker.createInstance<Rtx_raygen_blockContext>(_ctx, getState());
   enterRule(_localctx, 106, SIGParser::RuleRtx_raygen_block);
@@ -4792,19 +4541,8 @@ SIGParser::Rtx_raygen_blockContext* SIGParser::rtx_raygen_block() {
     setState(471);
     _errHandler->sync(this);
     _la = _input->LA(1);
-    while ((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & ((1ULL << SIGParser::T__7)
-      | (1ULL << SIGParser::T__8)
-      | (1ULL << SIGParser::T__9)
-      | (1ULL << SIGParser::T__10)
-      | (1ULL << SIGParser::T__11)
-      | (1ULL << SIGParser::T__12)
-      | (1ULL << SIGParser::T__13)
-      | (1ULL << SIGParser::T__14)
-      | (1ULL << SIGParser::T__15)
-      | (1ULL << SIGParser::T__16)
-      | (1ULL << SIGParser::T__17)
-      | (1ULL << SIGParser::OSBRACE))) != 0) || _la == SIGParser::COMMENT) {
+    while (((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 72057594038451968) != 0 || _la == SIGParser::COMMENT) {
       setState(468);
       rtx_raygen_stat();
       setState(473);
@@ -4875,14 +4613,6 @@ void SIGParser::Rtx_raygen_definitionContext::exitRule(tree::ParseTreeListener *
   auto parserListener = dynamic_cast<SIGListener *>(listener);
   if (parserListener != nullptr)
     parserListener->exitRtx_raygen_definition(this);
-}
-
-
-antlrcpp::Any SIGParser::Rtx_raygen_definitionContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitRtx_raygen_definition(this);
-  else
-    return visitor->visitChildren(this);
 }
 
 SIGParser::Rtx_raygen_definitionContext* SIGParser::rtx_raygen_definition() {
@@ -4964,14 +4694,6 @@ void SIGParser::Shader_typeContext::exitRule(tree::ParseTreeListener *listener) 
     parserListener->exitShader_type(this);
 }
 
-
-antlrcpp::Any SIGParser::Shader_typeContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitShader_type(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Shader_typeContext* SIGParser::shader_type() {
   Shader_typeContext *_localctx = _tracker.createInstance<Shader_typeContext>(_ctx, getState());
   enterRule(_localctx, 110, SIGParser::RuleShader_type);
@@ -4988,18 +4710,8 @@ SIGParser::Shader_typeContext* SIGParser::shader_type() {
     enterOuterAlt(_localctx, 1);
     setState(489);
     _la = _input->LA(1);
-    if (!((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & ((1ULL << SIGParser::T__7)
-      | (1ULL << SIGParser::T__8)
-      | (1ULL << SIGParser::T__9)
-      | (1ULL << SIGParser::T__10)
-      | (1ULL << SIGParser::T__11)
-      | (1ULL << SIGParser::T__12)
-      | (1ULL << SIGParser::T__13)
-      | (1ULL << SIGParser::T__14)
-      | (1ULL << SIGParser::T__15)
-      | (1ULL << SIGParser::T__16)
-      | (1ULL << SIGParser::T__17))) != 0))) {
+    if (!(((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 524032) != 0)) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -5040,14 +4752,6 @@ void SIGParser::Pso_param_idContext::exitRule(tree::ParseTreeListener *listener)
     parserListener->exitPso_param_id(this);
 }
 
-
-antlrcpp::Any SIGParser::Pso_param_idContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitPso_param_id(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Pso_param_idContext* SIGParser::pso_param_id() {
   Pso_param_idContext *_localctx = _tracker.createInstance<Pso_param_idContext>(_ctx, getState());
   enterRule(_localctx, 112, SIGParser::RulePso_param_id);
@@ -5064,23 +4768,8 @@ SIGParser::Pso_param_idContext* SIGParser::pso_param_id() {
     enterOuterAlt(_localctx, 1);
     setState(491);
     _la = _input->LA(1);
-    if (!((((_la & ~ 0x3fULL) == 0) &&
-      ((1ULL << _la) & ((1ULL << SIGParser::T__18)
-      | (1ULL << SIGParser::T__19)
-      | (1ULL << SIGParser::T__20)
-      | (1ULL << SIGParser::T__21)
-      | (1ULL << SIGParser::T__22)
-      | (1ULL << SIGParser::T__23)
-      | (1ULL << SIGParser::T__24)
-      | (1ULL << SIGParser::T__25)
-      | (1ULL << SIGParser::T__26)
-      | (1ULL << SIGParser::T__27)
-      | (1ULL << SIGParser::T__28)
-      | (1ULL << SIGParser::T__29)
-      | (1ULL << SIGParser::T__30)
-      | (1ULL << SIGParser::T__31)
-      | (1ULL << SIGParser::T__32)
-      | (1ULL << SIGParser::T__33))) != 0))) {
+    if (!(((_la & ~ 0x3fULL) == 0) &&
+      ((1ULL << _la) & 34359214080) != 0)) {
     _errHandler->recoverInline(this);
     }
     else {
@@ -5129,14 +4818,6 @@ void SIGParser::Bool_typeContext::exitRule(tree::ParseTreeListener *listener) {
     parserListener->exitBool_type(this);
 }
 
-
-antlrcpp::Any SIGParser::Bool_typeContext::accept(tree::ParseTreeVisitor *visitor) {
-  if (auto parserVisitor = dynamic_cast<SIGVisitor*>(visitor))
-    return parserVisitor->visitBool_type(this);
-  else
-    return visitor->visitChildren(this);
-}
-
 SIGParser::Bool_typeContext* SIGParser::bool_type() {
   Bool_typeContext *_localctx = _tracker.createInstance<Bool_typeContext>(_ctx, getState());
   enterRule(_localctx, 114, SIGParser::RuleBool_type);
@@ -5173,436 +4854,6 @@ SIGParser::Bool_typeContext* SIGParser::bool_type() {
   return _localctx;
 }
 
-// Static vars and initialization.
-std::vector<dfa::DFA> SIGParser::_decisionToDFA;
-atn::PredictionContextCache SIGParser::_sharedContextCache;
-
-// We own the ATN which in turn owns the ATN states.
-atn::ATN SIGParser::_atn;
-std::vector<uint16_t> SIGParser::_serializedATN;
-
-std::vector<std::string> SIGParser::_ruleNames = {
-  "parse", "bind_option", "options_assign", "option", "option_block", "array_count_id", 
-  "array", "value_declaration", "slot_declaration", "sampler_declaration", 
-  "define_declaration", "rtv_formats_declaration", "blends_declaration", 
-  "pso_param", "type_with_template", "inherit_id", "name_id", "type_id", 
-  "option_id", "owner_id", "template_id", "value_id", "insert_block", "path_id", 
-  "inherit", "layout_stat", "layout_block", "layout_definition", "table_stat", 
-  "table_block", "table_definition", "rt_color_declaration", "rt_ds_declaration", 
-  "rt_stat", "rt_block", "rt_definition", "array_value_holder", "array_value_ids", 
-  "root_sig", "shader", "compute_pso_stat", "compute_pso_block", "compute_pso_definition", 
-  "graphics_pso_stat", "graphics_pso_block", "graphics_pso_definition", 
-  "rtx_pso_stat", "rtx_pso_block", "rtx_pso_definition", "rtx_pass_stat", 
-  "rtx_pass_block", "rtx_pass_definition", "rtx_raygen_stat", "rtx_raygen_block", 
-  "rtx_raygen_definition", "shader_type", "pso_param_id", "bool_type"
-};
-
-std::vector<std::string> SIGParser::_literalNames = {
-  "", "'::'", "','", "'Sampler'", "'define'", "'rtv'", "'blend'", "':'", 
-  "'compute'", "'vertex'", "'pixel'", "'domain'", "'hull'", "'geometry'", 
-  "'miss'", "'closest_hit'", "'raygen'", "'amplification'", "'mesh'", "'ds'", 
-  "'cull'", "'depth_func'", "'depth_write'", "'conservative'", "'enable_depth'", 
-  "'topology'", "'enable_stencil'", "'stencil_func'", "'stencil_pass_op'", 
-  "'stencil_read_mask'", "'stencil_write_mask'", "'recursion_depth'", "'payload'", 
-  "'per_material'", "'local'", "'||'", "'&&'", "'=='", "'!='", "'>'", "'<'", 
-  "'>='", "'<='", "'+'", "'-'", "'*'", "'/'", "'%'", "'^'", "'!'", "';'", 
-  "'='", "'('", "')'", "'{'", "'}'", "'['", "']'", "'true'", "'false'", 
-  "'log'", "'layout'", "'struct'", "'ComputePSO'", "'GraphicsPSO'", "'RaytracePSO'", 
-  "'RaytraceRaygen'", "'RaytracePass'", "'slot'", "'rt'", "'RTV'", "'DSV'", 
-  "'root'", "", "", "", "", "", "", "'%{'", "'}%'"
-};
-
-std::vector<std::string> SIGParser::_symbolicNames = {
-  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", 
-  "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "OR", 
-  "AND", "EQ", "NEQ", "GT", "LT", "GTEQ", "LTEQ", "PLUS", "MINUS", "MULT", 
-  "DIV", "MOD", "POW", "NOT", "SCOL", "ASSIGN", "OPAR", "CPAR", "OBRACE", 
-  "CBRACE", "OSBRACE", "CSBRACE", "TRUE", "FALSE", "LOG", "LAYOUT", "STRUCT", 
-  "COMPUTE_PSO", "GRAPHICS_PSO", "RAYTRACE_PSO", "RAYTRACE_RAYGEN", "RAYTRACE_PASS", 
-  "SLOT", "RT", "RTV", "DSV", "ROOTSIG", "ID", "INT_SCALAR", "FLOAT_SCALAR", 
-  "STRING", "COMMENT", "SPACE", "INSERT_START", "INSERT_END", "INSERT_BLOCK"
-};
-
-dfa::Vocabulary SIGParser::_vocabulary(_literalNames, _symbolicNames);
-
-std::vector<std::string> SIGParser::_tokenNames;
-
-SIGParser::Initializer::Initializer() {
-	for (size_t i = 0; i < _symbolicNames.size(); ++i) {
-		std::string name = _vocabulary.getLiteralName(i);
-		if (name.empty()) {
-			name = _vocabulary.getSymbolicName(i);
-		}
-
-		if (name.empty()) {
-			_tokenNames.push_back("<INVALID>");
-		} else {
-      _tokenNames.push_back(name);
-    }
-	}
-
-  static const uint16_t serializedATNSegment0[] = {
-    0x3, 0x608b, 0xa72a, 0x8133, 0xb9ed, 0x417c, 0x3be7, 0x7786, 0x5964, 
-       0x3, 0x53, 0x1f2, 0x4, 0x2, 0x9, 0x2, 0x4, 0x3, 0x9, 0x3, 0x4, 0x4, 
-       0x9, 0x4, 0x4, 0x5, 0x9, 0x5, 0x4, 0x6, 0x9, 0x6, 0x4, 0x7, 0x9, 
-       0x7, 0x4, 0x8, 0x9, 0x8, 0x4, 0x9, 0x9, 0x9, 0x4, 0xa, 0x9, 0xa, 
-       0x4, 0xb, 0x9, 0xb, 0x4, 0xc, 0x9, 0xc, 0x4, 0xd, 0x9, 0xd, 0x4, 
-       0xe, 0x9, 0xe, 0x4, 0xf, 0x9, 0xf, 0x4, 0x10, 0x9, 0x10, 0x4, 0x11, 
-       0x9, 0x11, 0x4, 0x12, 0x9, 0x12, 0x4, 0x13, 0x9, 0x13, 0x4, 0x14, 
-       0x9, 0x14, 0x4, 0x15, 0x9, 0x15, 0x4, 0x16, 0x9, 0x16, 0x4, 0x17, 
-       0x9, 0x17, 0x4, 0x18, 0x9, 0x18, 0x4, 0x19, 0x9, 0x19, 0x4, 0x1a, 
-       0x9, 0x1a, 0x4, 0x1b, 0x9, 0x1b, 0x4, 0x1c, 0x9, 0x1c, 0x4, 0x1d, 
-       0x9, 0x1d, 0x4, 0x1e, 0x9, 0x1e, 0x4, 0x1f, 0x9, 0x1f, 0x4, 0x20, 
-       0x9, 0x20, 0x4, 0x21, 0x9, 0x21, 0x4, 0x22, 0x9, 0x22, 0x4, 0x23, 
-       0x9, 0x23, 0x4, 0x24, 0x9, 0x24, 0x4, 0x25, 0x9, 0x25, 0x4, 0x26, 
-       0x9, 0x26, 0x4, 0x27, 0x9, 0x27, 0x4, 0x28, 0x9, 0x28, 0x4, 0x29, 
-       0x9, 0x29, 0x4, 0x2a, 0x9, 0x2a, 0x4, 0x2b, 0x9, 0x2b, 0x4, 0x2c, 
-       0x9, 0x2c, 0x4, 0x2d, 0x9, 0x2d, 0x4, 0x2e, 0x9, 0x2e, 0x4, 0x2f, 
-       0x9, 0x2f, 0x4, 0x30, 0x9, 0x30, 0x4, 0x31, 0x9, 0x31, 0x4, 0x32, 
-       0x9, 0x32, 0x4, 0x33, 0x9, 0x33, 0x4, 0x34, 0x9, 0x34, 0x4, 0x35, 
-       0x9, 0x35, 0x4, 0x36, 0x9, 0x36, 0x4, 0x37, 0x9, 0x37, 0x4, 0x38, 
-       0x9, 0x38, 0x4, 0x39, 0x9, 0x39, 0x4, 0x3a, 0x9, 0x3a, 0x4, 0x3b, 
-       0x9, 0x3b, 0x3, 0x2, 0x3, 0x2, 0x3, 0x2, 0x3, 0x2, 0x3, 0x2, 0x3, 
-       0x2, 0x3, 0x2, 0x3, 0x2, 0x3, 0x2, 0x7, 0x2, 0x80, 0xa, 0x2, 0xc, 
-       0x2, 0xe, 0x2, 0x83, 0xb, 0x2, 0x3, 0x2, 0x3, 0x2, 0x3, 0x3, 0x3, 
-       0x3, 0x3, 0x3, 0x5, 0x3, 0x8a, 0xa, 0x3, 0x3, 0x3, 0x3, 0x3, 0x3, 
-       0x4, 0x3, 0x4, 0x3, 0x4, 0x3, 0x5, 0x3, 0x5, 0x5, 0x5, 0x93, 0xa, 
-       0x5, 0x3, 0x6, 0x3, 0x6, 0x3, 0x6, 0x3, 0x6, 0x7, 0x6, 0x99, 0xa, 
-       0x6, 0xc, 0x6, 0xe, 0x6, 0x9c, 0xb, 0x6, 0x3, 0x6, 0x3, 0x6, 0x3, 
-       0x7, 0x3, 0x7, 0x3, 0x8, 0x3, 0x8, 0x5, 0x8, 0xa4, 0xa, 0x8, 0x3, 
-       0x8, 0x3, 0x8, 0x3, 0x9, 0x7, 0x9, 0xa9, 0xa, 0x9, 0xc, 0x9, 0xe, 
-       0x9, 0xac, 0xb, 0x9, 0x3, 0x9, 0x3, 0x9, 0x3, 0x9, 0x5, 0x9, 0xb1, 
-       0xa, 0x9, 0x3, 0x9, 0x3, 0x9, 0x3, 0xa, 0x3, 0xa, 0x3, 0xa, 0x3, 
-       0xa, 0x3, 0xb, 0x3, 0xb, 0x3, 0xb, 0x3, 0xb, 0x3, 0xb, 0x3, 0xb, 
-       0x3, 0xc, 0x7, 0xc, 0xc0, 0xa, 0xc, 0xc, 0xc, 0xe, 0xc, 0xc3, 0xb, 
-       0xc, 0x3, 0xc, 0x3, 0xc, 0x3, 0xc, 0x3, 0xc, 0x5, 0xc, 0xc9, 0xa, 
-       0xc, 0x3, 0xc, 0x3, 0xc, 0x3, 0xd, 0x7, 0xd, 0xce, 0xa, 0xd, 0xc, 
-       0xd, 0xe, 0xd, 0xd1, 0xb, 0xd, 0x3, 0xd, 0x3, 0xd, 0x3, 0xd, 0x3, 
-       0xd, 0x3, 0xd, 0x3, 0xe, 0x7, 0xe, 0xd9, 0xa, 0xe, 0xc, 0xe, 0xe, 
-       0xe, 0xdc, 0xb, 0xe, 0x3, 0xe, 0x3, 0xe, 0x3, 0xe, 0x3, 0xe, 0x3, 
-       0xe, 0x3, 0xf, 0x3, 0xf, 0x3, 0xf, 0x3, 0xf, 0x3, 0xf, 0x3, 0x10, 
-       0x3, 0x10, 0x3, 0x10, 0x3, 0x10, 0x3, 0x10, 0x5, 0x10, 0xed, 0xa, 
-       0x10, 0x3, 0x11, 0x3, 0x11, 0x3, 0x12, 0x3, 0x12, 0x3, 0x13, 0x3, 
-       0x13, 0x3, 0x14, 0x3, 0x14, 0x3, 0x15, 0x3, 0x15, 0x3, 0x16, 0x3, 
-       0x16, 0x3, 0x17, 0x3, 0x17, 0x3, 0x17, 0x3, 0x17, 0x5, 0x17, 0xff, 
-       0xa, 0x17, 0x3, 0x18, 0x3, 0x18, 0x3, 0x19, 0x3, 0x19, 0x7, 0x19, 
-       0x105, 0xa, 0x19, 0xc, 0x19, 0xe, 0x19, 0x108, 0xb, 0x19, 0x3, 0x19, 
-       0x3, 0x19, 0x3, 0x1a, 0x3, 0x1a, 0x3, 0x1a, 0x3, 0x1a, 0x7, 0x1a, 
-       0x110, 0xa, 0x1a, 0xc, 0x1a, 0xe, 0x1a, 0x113, 0xb, 0x1a, 0x3, 0x1b, 
-       0x3, 0x1b, 0x3, 0x1b, 0x5, 0x1b, 0x118, 0xa, 0x1b, 0x3, 0x1c, 0x7, 
-       0x1c, 0x11b, 0xa, 0x1c, 0xc, 0x1c, 0xe, 0x1c, 0x11e, 0xb, 0x1c, 0x3, 
-       0x1d, 0x3, 0x1d, 0x3, 0x1d, 0x5, 0x1d, 0x123, 0xa, 0x1d, 0x3, 0x1d, 
-       0x3, 0x1d, 0x3, 0x1d, 0x3, 0x1d, 0x3, 0x1e, 0x3, 0x1e, 0x3, 0x1e, 
-       0x5, 0x1e, 0x12c, 0xa, 0x1e, 0x3, 0x1f, 0x7, 0x1f, 0x12f, 0xa, 0x1f, 
-       0xc, 0x1f, 0xe, 0x1f, 0x132, 0xb, 0x1f, 0x3, 0x20, 0x7, 0x20, 0x135, 
-       0xa, 0x20, 0xc, 0x20, 0xe, 0x20, 0x138, 0xb, 0x20, 0x3, 0x20, 0x3, 
-       0x20, 0x3, 0x20, 0x5, 0x20, 0x13d, 0xa, 0x20, 0x3, 0x20, 0x3, 0x20, 
-       0x3, 0x20, 0x3, 0x20, 0x3, 0x21, 0x3, 0x21, 0x3, 0x21, 0x3, 0x21, 
-       0x3, 0x22, 0x3, 0x22, 0x3, 0x22, 0x3, 0x22, 0x3, 0x23, 0x3, 0x23, 
-       0x3, 0x23, 0x5, 0x23, 0x14e, 0xa, 0x23, 0x3, 0x24, 0x7, 0x24, 0x151, 
-       0xa, 0x24, 0xc, 0x24, 0xe, 0x24, 0x154, 0xb, 0x24, 0x3, 0x25, 0x3, 
-       0x25, 0x3, 0x25, 0x3, 0x25, 0x3, 0x25, 0x3, 0x25, 0x3, 0x26, 0x3, 
-       0x26, 0x3, 0x27, 0x3, 0x27, 0x3, 0x27, 0x3, 0x27, 0x7, 0x27, 0x162, 
-       0xa, 0x27, 0xc, 0x27, 0xe, 0x27, 0x165, 0xb, 0x27, 0x3, 0x27, 0x3, 
-       0x27, 0x3, 0x28, 0x3, 0x28, 0x3, 0x28, 0x3, 0x28, 0x3, 0x28, 0x3, 
-       0x29, 0x7, 0x29, 0x16f, 0xa, 0x29, 0xc, 0x29, 0xe, 0x29, 0x172, 0xb, 
-       0x29, 0x3, 0x29, 0x3, 0x29, 0x3, 0x29, 0x3, 0x29, 0x3, 0x29, 0x3, 
-       0x2a, 0x3, 0x2a, 0x3, 0x2a, 0x3, 0x2a, 0x5, 0x2a, 0x17d, 0xa, 0x2a, 
-       0x3, 0x2b, 0x7, 0x2b, 0x180, 0xa, 0x2b, 0xc, 0x2b, 0xe, 0x2b, 0x183, 
-       0xb, 0x2b, 0x3, 0x2c, 0x3, 0x2c, 0x3, 0x2c, 0x5, 0x2c, 0x188, 0xa, 
-       0x2c, 0x3, 0x2c, 0x3, 0x2c, 0x3, 0x2c, 0x3, 0x2c, 0x3, 0x2d, 0x3, 
-       0x2d, 0x3, 0x2d, 0x3, 0x2d, 0x3, 0x2d, 0x3, 0x2d, 0x3, 0x2d, 0x5, 
-       0x2d, 0x195, 0xa, 0x2d, 0x3, 0x2e, 0x7, 0x2e, 0x198, 0xa, 0x2e, 0xc, 
-       0x2e, 0xe, 0x2e, 0x19b, 0xb, 0x2e, 0x3, 0x2f, 0x3, 0x2f, 0x3, 0x2f, 
-       0x5, 0x2f, 0x1a0, 0xa, 0x2f, 0x3, 0x2f, 0x3, 0x2f, 0x3, 0x2f, 0x3, 
-       0x2f, 0x3, 0x30, 0x3, 0x30, 0x5, 0x30, 0x1a8, 0xa, 0x30, 0x3, 0x31, 
-       0x7, 0x31, 0x1ab, 0xa, 0x31, 0xc, 0x31, 0xe, 0x31, 0x1ae, 0xb, 0x31, 
-       0x3, 0x32, 0x3, 0x32, 0x3, 0x32, 0x5, 0x32, 0x1b3, 0xa, 0x32, 0x3, 
-       0x32, 0x3, 0x32, 0x3, 0x32, 0x3, 0x32, 0x3, 0x33, 0x3, 0x33, 0x3, 
-       0x33, 0x5, 0x33, 0x1bc, 0xa, 0x33, 0x3, 0x34, 0x7, 0x34, 0x1bf, 0xa, 
-       0x34, 0xc, 0x34, 0xe, 0x34, 0x1c2, 0xb, 0x34, 0x3, 0x35, 0x7, 0x35, 
-       0x1c5, 0xa, 0x35, 0xc, 0x35, 0xe, 0x35, 0x1c8, 0xb, 0x35, 0x3, 0x35, 
-       0x3, 0x35, 0x3, 0x35, 0x5, 0x35, 0x1cd, 0xa, 0x35, 0x3, 0x35, 0x3, 
-       0x35, 0x3, 0x35, 0x3, 0x35, 0x3, 0x36, 0x3, 0x36, 0x5, 0x36, 0x1d5, 
-       0xa, 0x36, 0x3, 0x37, 0x7, 0x37, 0x1d8, 0xa, 0x37, 0xc, 0x37, 0xe, 
-       0x37, 0x1db, 0xb, 0x37, 0x3, 0x38, 0x7, 0x38, 0x1de, 0xa, 0x38, 0xc, 
-       0x38, 0xe, 0x38, 0x1e1, 0xb, 0x38, 0x3, 0x38, 0x3, 0x38, 0x3, 0x38, 
-       0x5, 0x38, 0x1e6, 0xa, 0x38, 0x3, 0x38, 0x3, 0x38, 0x3, 0x38, 0x3, 
-       0x38, 0x3, 0x39, 0x3, 0x39, 0x3, 0x3a, 0x3, 0x3a, 0x3, 0x3b, 0x3, 
-       0x3b, 0x3, 0x3b, 0xc, 0xaa, 0xc1, 0xcf, 0xda, 0x106, 0x111, 0x136, 
-       0x170, 0x1c6, 0x1df, 0x2, 0x3c, 0x2, 0x4, 0x6, 0x8, 0xa, 0xc, 0xe, 
-       0x10, 0x12, 0x14, 0x16, 0x18, 0x1a, 0x1c, 0x1e, 0x20, 0x22, 0x24, 
-       0x26, 0x28, 0x2a, 0x2c, 0x2e, 0x30, 0x32, 0x34, 0x36, 0x38, 0x3a, 
-       0x3c, 0x3e, 0x40, 0x42, 0x44, 0x46, 0x48, 0x4a, 0x4c, 0x4e, 0x50, 
-       0x52, 0x54, 0x56, 0x58, 0x5a, 0x5c, 0x5e, 0x60, 0x62, 0x64, 0x66, 
-       0x68, 0x6a, 0x6c, 0x6e, 0x70, 0x72, 0x74, 0x2, 0x5, 0x3, 0x2, 0xa, 
-       0x14, 0x3, 0x2, 0x15, 0x24, 0x3, 0x2, 0x3c, 0x3d, 0x2, 0x1f7, 0x2, 
-       0x81, 0x3, 0x2, 0x2, 0x2, 0x4, 0x89, 0x3, 0x2, 0x2, 0x2, 0x6, 0x8d, 
-       0x3, 0x2, 0x2, 0x2, 0x8, 0x90, 0x3, 0x2, 0x2, 0x2, 0xa, 0x94, 0x3, 
-       0x2, 0x2, 0x2, 0xc, 0x9f, 0x3, 0x2, 0x2, 0x2, 0xe, 0xa1, 0x3, 0x2, 
-       0x2, 0x2, 0x10, 0xaa, 0x3, 0x2, 0x2, 0x2, 0x12, 0xb4, 0x3, 0x2, 0x2, 
-       0x2, 0x14, 0xb8, 0x3, 0x2, 0x2, 0x2, 0x16, 0xc1, 0x3, 0x2, 0x2, 0x2, 
-       0x18, 0xcf, 0x3, 0x2, 0x2, 0x2, 0x1a, 0xda, 0x3, 0x2, 0x2, 0x2, 0x1c, 
-       0xe2, 0x3, 0x2, 0x2, 0x2, 0x1e, 0xe7, 0x3, 0x2, 0x2, 0x2, 0x20, 0xee, 
-       0x3, 0x2, 0x2, 0x2, 0x22, 0xf0, 0x3, 0x2, 0x2, 0x2, 0x24, 0xf2, 0x3, 
-       0x2, 0x2, 0x2, 0x26, 0xf4, 0x3, 0x2, 0x2, 0x2, 0x28, 0xf6, 0x3, 0x2, 
-       0x2, 0x2, 0x2a, 0xf8, 0x3, 0x2, 0x2, 0x2, 0x2c, 0xfe, 0x3, 0x2, 0x2, 
-       0x2, 0x2e, 0x100, 0x3, 0x2, 0x2, 0x2, 0x30, 0x106, 0x3, 0x2, 0x2, 
-       0x2, 0x32, 0x10b, 0x3, 0x2, 0x2, 0x2, 0x34, 0x117, 0x3, 0x2, 0x2, 
-       0x2, 0x36, 0x11c, 0x3, 0x2, 0x2, 0x2, 0x38, 0x11f, 0x3, 0x2, 0x2, 
-       0x2, 0x3a, 0x12b, 0x3, 0x2, 0x2, 0x2, 0x3c, 0x130, 0x3, 0x2, 0x2, 
-       0x2, 0x3e, 0x136, 0x3, 0x2, 0x2, 0x2, 0x40, 0x142, 0x3, 0x2, 0x2, 
-       0x2, 0x42, 0x146, 0x3, 0x2, 0x2, 0x2, 0x44, 0x14d, 0x3, 0x2, 0x2, 
-       0x2, 0x46, 0x152, 0x3, 0x2, 0x2, 0x2, 0x48, 0x155, 0x3, 0x2, 0x2, 
-       0x2, 0x4a, 0x15b, 0x3, 0x2, 0x2, 0x2, 0x4c, 0x15d, 0x3, 0x2, 0x2, 
-       0x2, 0x4e, 0x168, 0x3, 0x2, 0x2, 0x2, 0x50, 0x170, 0x3, 0x2, 0x2, 
-       0x2, 0x52, 0x17c, 0x3, 0x2, 0x2, 0x2, 0x54, 0x181, 0x3, 0x2, 0x2, 
-       0x2, 0x56, 0x184, 0x3, 0x2, 0x2, 0x2, 0x58, 0x194, 0x3, 0x2, 0x2, 
-       0x2, 0x5a, 0x199, 0x3, 0x2, 0x2, 0x2, 0x5c, 0x19c, 0x3, 0x2, 0x2, 
-       0x2, 0x5e, 0x1a7, 0x3, 0x2, 0x2, 0x2, 0x60, 0x1ac, 0x3, 0x2, 0x2, 
-       0x2, 0x62, 0x1af, 0x3, 0x2, 0x2, 0x2, 0x64, 0x1bb, 0x3, 0x2, 0x2, 
-       0x2, 0x66, 0x1c0, 0x3, 0x2, 0x2, 0x2, 0x68, 0x1c6, 0x3, 0x2, 0x2, 
-       0x2, 0x6a, 0x1d4, 0x3, 0x2, 0x2, 0x2, 0x6c, 0x1d9, 0x3, 0x2, 0x2, 
-       0x2, 0x6e, 0x1df, 0x3, 0x2, 0x2, 0x2, 0x70, 0x1eb, 0x3, 0x2, 0x2, 
-       0x2, 0x72, 0x1ed, 0x3, 0x2, 0x2, 0x2, 0x74, 0x1ef, 0x3, 0x2, 0x2, 
-       0x2, 0x76, 0x80, 0x5, 0x38, 0x1d, 0x2, 0x77, 0x80, 0x5, 0x3e, 0x20, 
-       0x2, 0x78, 0x80, 0x5, 0x48, 0x25, 0x2, 0x79, 0x80, 0x5, 0x56, 0x2c, 
-       0x2, 0x7a, 0x80, 0x5, 0x5c, 0x2f, 0x2, 0x7b, 0x80, 0x5, 0x62, 0x32, 
-       0x2, 0x7c, 0x80, 0x5, 0x68, 0x35, 0x2, 0x7d, 0x80, 0x5, 0x6e, 0x38, 
-       0x2, 0x7e, 0x80, 0x7, 0x4f, 0x2, 0x2, 0x7f, 0x76, 0x3, 0x2, 0x2, 
-       0x2, 0x7f, 0x77, 0x3, 0x2, 0x2, 0x2, 0x7f, 0x78, 0x3, 0x2, 0x2, 0x2, 
-       0x7f, 0x79, 0x3, 0x2, 0x2, 0x2, 0x7f, 0x7a, 0x3, 0x2, 0x2, 0x2, 0x7f, 
-       0x7b, 0x3, 0x2, 0x2, 0x2, 0x7f, 0x7c, 0x3, 0x2, 0x2, 0x2, 0x7f, 0x7d, 
-       0x3, 0x2, 0x2, 0x2, 0x7f, 0x7e, 0x3, 0x2, 0x2, 0x2, 0x80, 0x83, 0x3, 
-       0x2, 0x2, 0x2, 0x81, 0x7f, 0x3, 0x2, 0x2, 0x2, 0x81, 0x82, 0x3, 0x2, 
-       0x2, 0x2, 0x82, 0x84, 0x3, 0x2, 0x2, 0x2, 0x83, 0x81, 0x3, 0x2, 0x2, 
-       0x2, 0x84, 0x85, 0x7, 0x2, 0x2, 0x3, 0x85, 0x3, 0x3, 0x2, 0x2, 0x2, 
-       0x86, 0x87, 0x5, 0x28, 0x15, 0x2, 0x87, 0x88, 0x7, 0x3, 0x2, 0x2, 
-       0x88, 0x8a, 0x3, 0x2, 0x2, 0x2, 0x89, 0x86, 0x3, 0x2, 0x2, 0x2, 0x89, 
-       0x8a, 0x3, 0x2, 0x2, 0x2, 0x8a, 0x8b, 0x3, 0x2, 0x2, 0x2, 0x8b, 0x8c, 
-       0x5, 0x2c, 0x17, 0x2, 0x8c, 0x5, 0x3, 0x2, 0x2, 0x2, 0x8d, 0x8e, 
-       0x7, 0x35, 0x2, 0x2, 0x8e, 0x8f, 0x5, 0x4, 0x3, 0x2, 0x8f, 0x7, 0x3, 
-       0x2, 0x2, 0x2, 0x90, 0x92, 0x5, 0x22, 0x12, 0x2, 0x91, 0x93, 0x5, 
-       0x6, 0x4, 0x2, 0x92, 0x91, 0x3, 0x2, 0x2, 0x2, 0x92, 0x93, 0x3, 0x2, 
-       0x2, 0x2, 0x93, 0x9, 0x3, 0x2, 0x2, 0x2, 0x94, 0x95, 0x7, 0x3a, 0x2, 
-       0x2, 0x95, 0x9a, 0x5, 0x8, 0x5, 0x2, 0x96, 0x97, 0x7, 0x4, 0x2, 0x2, 
-       0x97, 0x99, 0x5, 0x8, 0x5, 0x2, 0x98, 0x96, 0x3, 0x2, 0x2, 0x2, 0x99, 
-       0x9c, 0x3, 0x2, 0x2, 0x2, 0x9a, 0x98, 0x3, 0x2, 0x2, 0x2, 0x9a, 0x9b, 
-       0x3, 0x2, 0x2, 0x2, 0x9b, 0x9d, 0x3, 0x2, 0x2, 0x2, 0x9c, 0x9a, 0x3, 
-       0x2, 0x2, 0x2, 0x9d, 0x9e, 0x7, 0x3b, 0x2, 0x2, 0x9e, 0xb, 0x3, 0x2, 
-       0x2, 0x2, 0x9f, 0xa0, 0x7, 0x4c, 0x2, 0x2, 0xa0, 0xd, 0x3, 0x2, 0x2, 
-       0x2, 0xa1, 0xa3, 0x7, 0x3a, 0x2, 0x2, 0xa2, 0xa4, 0x5, 0xc, 0x7, 
-       0x2, 0xa3, 0xa2, 0x3, 0x2, 0x2, 0x2, 0xa3, 0xa4, 0x3, 0x2, 0x2, 0x2, 
-       0xa4, 0xa5, 0x3, 0x2, 0x2, 0x2, 0xa5, 0xa6, 0x7, 0x3b, 0x2, 0x2, 
-       0xa6, 0xf, 0x3, 0x2, 0x2, 0x2, 0xa7, 0xa9, 0x5, 0xa, 0x6, 0x2, 0xa8, 
-       0xa7, 0x3, 0x2, 0x2, 0x2, 0xa9, 0xac, 0x3, 0x2, 0x2, 0x2, 0xaa, 0xab, 
-       0x3, 0x2, 0x2, 0x2, 0xaa, 0xa8, 0x3, 0x2, 0x2, 0x2, 0xab, 0xad, 0x3, 
-       0x2, 0x2, 0x2, 0xac, 0xaa, 0x3, 0x2, 0x2, 0x2, 0xad, 0xae, 0x5, 0x24, 
-       0x13, 0x2, 0xae, 0xb0, 0x5, 0x22, 0x12, 0x2, 0xaf, 0xb1, 0x5, 0xe, 
-       0x8, 0x2, 0xb0, 0xaf, 0x3, 0x2, 0x2, 0x2, 0xb0, 0xb1, 0x3, 0x2, 0x2, 
-       0x2, 0xb1, 0xb2, 0x3, 0x2, 0x2, 0x2, 0xb2, 0xb3, 0x7, 0x34, 0x2, 
-       0x2, 0xb3, 0x11, 0x3, 0x2, 0x2, 0x2, 0xb4, 0xb5, 0x7, 0x46, 0x2, 
-       0x2, 0xb5, 0xb6, 0x5, 0x22, 0x12, 0x2, 0xb6, 0xb7, 0x7, 0x34, 0x2, 
-       0x2, 0xb7, 0x13, 0x3, 0x2, 0x2, 0x2, 0xb8, 0xb9, 0x7, 0x5, 0x2, 0x2, 
-       0xb9, 0xba, 0x5, 0x22, 0x12, 0x2, 0xba, 0xbb, 0x7, 0x35, 0x2, 0x2, 
-       0xbb, 0xbc, 0x5, 0x2c, 0x17, 0x2, 0xbc, 0xbd, 0x7, 0x34, 0x2, 0x2, 
-       0xbd, 0x15, 0x3, 0x2, 0x2, 0x2, 0xbe, 0xc0, 0x5, 0xa, 0x6, 0x2, 0xbf, 
-       0xbe, 0x3, 0x2, 0x2, 0x2, 0xc0, 0xc3, 0x3, 0x2, 0x2, 0x2, 0xc1, 0xc2, 
-       0x3, 0x2, 0x2, 0x2, 0xc1, 0xbf, 0x3, 0x2, 0x2, 0x2, 0xc2, 0xc4, 0x3, 
-       0x2, 0x2, 0x2, 0xc3, 0xc1, 0x3, 0x2, 0x2, 0x2, 0xc4, 0xc5, 0x7, 0x6, 
-       0x2, 0x2, 0xc5, 0xc8, 0x5, 0x22, 0x12, 0x2, 0xc6, 0xc7, 0x7, 0x35, 
-       0x2, 0x2, 0xc7, 0xc9, 0x5, 0x4c, 0x27, 0x2, 0xc8, 0xc6, 0x3, 0x2, 
-       0x2, 0x2, 0xc8, 0xc9, 0x3, 0x2, 0x2, 0x2, 0xc9, 0xca, 0x3, 0x2, 0x2, 
-       0x2, 0xca, 0xcb, 0x7, 0x34, 0x2, 0x2, 0xcb, 0x17, 0x3, 0x2, 0x2, 
-       0x2, 0xcc, 0xce, 0x5, 0xa, 0x6, 0x2, 0xcd, 0xcc, 0x3, 0x2, 0x2, 0x2, 
-       0xce, 0xd1, 0x3, 0x2, 0x2, 0x2, 0xcf, 0xd0, 0x3, 0x2, 0x2, 0x2, 0xcf, 
-       0xcd, 0x3, 0x2, 0x2, 0x2, 0xd0, 0xd2, 0x3, 0x2, 0x2, 0x2, 0xd1, 0xcf, 
-       0x3, 0x2, 0x2, 0x2, 0xd2, 0xd3, 0x7, 0x7, 0x2, 0x2, 0xd3, 0xd4, 0x7, 
-       0x35, 0x2, 0x2, 0xd4, 0xd5, 0x5, 0x4c, 0x27, 0x2, 0xd5, 0xd6, 0x7, 
-       0x34, 0x2, 0x2, 0xd6, 0x19, 0x3, 0x2, 0x2, 0x2, 0xd7, 0xd9, 0x5, 
-       0xa, 0x6, 0x2, 0xd8, 0xd7, 0x3, 0x2, 0x2, 0x2, 0xd9, 0xdc, 0x3, 0x2, 
-       0x2, 0x2, 0xda, 0xdb, 0x3, 0x2, 0x2, 0x2, 0xda, 0xd8, 0x3, 0x2, 0x2, 
-       0x2, 0xdb, 0xdd, 0x3, 0x2, 0x2, 0x2, 0xdc, 0xda, 0x3, 0x2, 0x2, 0x2, 
-       0xdd, 0xde, 0x7, 0x8, 0x2, 0x2, 0xde, 0xdf, 0x7, 0x35, 0x2, 0x2, 
-       0xdf, 0xe0, 0x5, 0x4c, 0x27, 0x2, 0xe0, 0xe1, 0x7, 0x34, 0x2, 0x2, 
-       0xe1, 0x1b, 0x3, 0x2, 0x2, 0x2, 0xe2, 0xe3, 0x5, 0x72, 0x3a, 0x2, 
-       0xe3, 0xe4, 0x7, 0x35, 0x2, 0x2, 0xe4, 0xe5, 0x5, 0x2c, 0x17, 0x2, 
-       0xe5, 0xe6, 0x7, 0x34, 0x2, 0x2, 0xe6, 0x1d, 0x3, 0x2, 0x2, 0x2, 
-       0xe7, 0xec, 0x7, 0x4b, 0x2, 0x2, 0xe8, 0xe9, 0x7, 0x2a, 0x2, 0x2, 
-       0xe9, 0xea, 0x5, 0x2a, 0x16, 0x2, 0xea, 0xeb, 0x7, 0x29, 0x2, 0x2, 
-       0xeb, 0xed, 0x3, 0x2, 0x2, 0x2, 0xec, 0xe8, 0x3, 0x2, 0x2, 0x2, 0xec, 
-       0xed, 0x3, 0x2, 0x2, 0x2, 0xed, 0x1f, 0x3, 0x2, 0x2, 0x2, 0xee, 0xef, 
-       0x7, 0x4b, 0x2, 0x2, 0xef, 0x21, 0x3, 0x2, 0x2, 0x2, 0xf0, 0xf1, 
-       0x7, 0x4b, 0x2, 0x2, 0xf1, 0x23, 0x3, 0x2, 0x2, 0x2, 0xf2, 0xf3, 
-       0x5, 0x1e, 0x10, 0x2, 0xf3, 0x25, 0x3, 0x2, 0x2, 0x2, 0xf4, 0xf5, 
-       0x7, 0x4b, 0x2, 0x2, 0xf5, 0x27, 0x3, 0x2, 0x2, 0x2, 0xf6, 0xf7, 
-       0x7, 0x4b, 0x2, 0x2, 0xf7, 0x29, 0x3, 0x2, 0x2, 0x2, 0xf8, 0xf9, 
-       0x7, 0x4b, 0x2, 0x2, 0xf9, 0x2b, 0x3, 0x2, 0x2, 0x2, 0xfa, 0xff, 
-       0x7, 0x4b, 0x2, 0x2, 0xfb, 0xff, 0x7, 0x4c, 0x2, 0x2, 0xfc, 0xff, 
-       0x7, 0x4d, 0x2, 0x2, 0xfd, 0xff, 0x5, 0x74, 0x3b, 0x2, 0xfe, 0xfa, 
-       0x3, 0x2, 0x2, 0x2, 0xfe, 0xfb, 0x3, 0x2, 0x2, 0x2, 0xfe, 0xfc, 0x3, 
-       0x2, 0x2, 0x2, 0xfe, 0xfd, 0x3, 0x2, 0x2, 0x2, 0xff, 0x2d, 0x3, 0x2, 
-       0x2, 0x2, 0x100, 0x101, 0x7, 0x53, 0x2, 0x2, 0x101, 0x2f, 0x3, 0x2, 
-       0x2, 0x2, 0x102, 0x103, 0x7, 0x4b, 0x2, 0x2, 0x103, 0x105, 0x7, 0x30, 
-       0x2, 0x2, 0x104, 0x102, 0x3, 0x2, 0x2, 0x2, 0x105, 0x108, 0x3, 0x2, 
-       0x2, 0x2, 0x106, 0x107, 0x3, 0x2, 0x2, 0x2, 0x106, 0x104, 0x3, 0x2, 
-       0x2, 0x2, 0x107, 0x109, 0x3, 0x2, 0x2, 0x2, 0x108, 0x106, 0x3, 0x2, 
-       0x2, 0x2, 0x109, 0x10a, 0x7, 0x4b, 0x2, 0x2, 0x10a, 0x31, 0x3, 0x2, 
-       0x2, 0x2, 0x10b, 0x10c, 0x7, 0x9, 0x2, 0x2, 0x10c, 0x111, 0x5, 0x20, 
-       0x11, 0x2, 0x10d, 0x10e, 0x7, 0x4, 0x2, 0x2, 0x10e, 0x110, 0x5, 0x20, 
-       0x11, 0x2, 0x10f, 0x10d, 0x3, 0x2, 0x2, 0x2, 0x110, 0x113, 0x3, 0x2, 
-       0x2, 0x2, 0x111, 0x112, 0x3, 0x2, 0x2, 0x2, 0x111, 0x10f, 0x3, 0x2, 
-       0x2, 0x2, 0x112, 0x33, 0x3, 0x2, 0x2, 0x2, 0x113, 0x111, 0x3, 0x2, 
-       0x2, 0x2, 0x114, 0x118, 0x5, 0x12, 0xa, 0x2, 0x115, 0x118, 0x5, 0x14, 
-       0xb, 0x2, 0x116, 0x118, 0x7, 0x4f, 0x2, 0x2, 0x117, 0x114, 0x3, 0x2, 
-       0x2, 0x2, 0x117, 0x115, 0x3, 0x2, 0x2, 0x2, 0x117, 0x116, 0x3, 0x2, 
-       0x2, 0x2, 0x118, 0x35, 0x3, 0x2, 0x2, 0x2, 0x119, 0x11b, 0x5, 0x34, 
-       0x1b, 0x2, 0x11a, 0x119, 0x3, 0x2, 0x2, 0x2, 0x11b, 0x11e, 0x3, 0x2, 
-       0x2, 0x2, 0x11c, 0x11a, 0x3, 0x2, 0x2, 0x2, 0x11c, 0x11d, 0x3, 0x2, 
-       0x2, 0x2, 0x11d, 0x37, 0x3, 0x2, 0x2, 0x2, 0x11e, 0x11c, 0x3, 0x2, 
-       0x2, 0x2, 0x11f, 0x120, 0x7, 0x3f, 0x2, 0x2, 0x120, 0x122, 0x5, 0x22, 
-       0x12, 0x2, 0x121, 0x123, 0x5, 0x32, 0x1a, 0x2, 0x122, 0x121, 0x3, 
-       0x2, 0x2, 0x2, 0x122, 0x123, 0x3, 0x2, 0x2, 0x2, 0x123, 0x124, 0x3, 
-       0x2, 0x2, 0x2, 0x124, 0x125, 0x7, 0x38, 0x2, 0x2, 0x125, 0x126, 0x5, 
-       0x36, 0x1c, 0x2, 0x126, 0x127, 0x7, 0x39, 0x2, 0x2, 0x127, 0x39, 
-       0x3, 0x2, 0x2, 0x2, 0x128, 0x12c, 0x5, 0x10, 0x9, 0x2, 0x129, 0x12c, 
-       0x5, 0x2e, 0x18, 0x2, 0x12a, 0x12c, 0x7, 0x4f, 0x2, 0x2, 0x12b, 0x128, 
-       0x3, 0x2, 0x2, 0x2, 0x12b, 0x129, 0x3, 0x2, 0x2, 0x2, 0x12b, 0x12a, 
-       0x3, 0x2, 0x2, 0x2, 0x12c, 0x3b, 0x3, 0x2, 0x2, 0x2, 0x12d, 0x12f, 
-       0x5, 0x3a, 0x1e, 0x2, 0x12e, 0x12d, 0x3, 0x2, 0x2, 0x2, 0x12f, 0x132, 
-       0x3, 0x2, 0x2, 0x2, 0x130, 0x12e, 0x3, 0x2, 0x2, 0x2, 0x130, 0x131, 
-       0x3, 0x2, 0x2, 0x2, 0x131, 0x3d, 0x3, 0x2, 0x2, 0x2, 0x132, 0x130, 
-       0x3, 0x2, 0x2, 0x2, 0x133, 0x135, 0x5, 0xa, 0x6, 0x2, 0x134, 0x133, 
-       0x3, 0x2, 0x2, 0x2, 0x135, 0x138, 0x3, 0x2, 0x2, 0x2, 0x136, 0x137, 
-       0x3, 0x2, 0x2, 0x2, 0x136, 0x134, 0x3, 0x2, 0x2, 0x2, 0x137, 0x139, 
-       0x3, 0x2, 0x2, 0x2, 0x138, 0x136, 0x3, 0x2, 0x2, 0x2, 0x139, 0x13a, 
-       0x7, 0x40, 0x2, 0x2, 0x13a, 0x13c, 0x5, 0x22, 0x12, 0x2, 0x13b, 0x13d, 
-       0x5, 0x32, 0x1a, 0x2, 0x13c, 0x13b, 0x3, 0x2, 0x2, 0x2, 0x13c, 0x13d, 
-       0x3, 0x2, 0x2, 0x2, 0x13d, 0x13e, 0x3, 0x2, 0x2, 0x2, 0x13e, 0x13f, 
-       0x7, 0x38, 0x2, 0x2, 0x13f, 0x140, 0x5, 0x3c, 0x1f, 0x2, 0x140, 0x141, 
-       0x7, 0x39, 0x2, 0x2, 0x141, 0x3f, 0x3, 0x2, 0x2, 0x2, 0x142, 0x143, 
-       0x5, 0x24, 0x13, 0x2, 0x143, 0x144, 0x5, 0x22, 0x12, 0x2, 0x144, 
-       0x145, 0x7, 0x34, 0x2, 0x2, 0x145, 0x41, 0x3, 0x2, 0x2, 0x2, 0x146, 
-       0x147, 0x7, 0x49, 0x2, 0x2, 0x147, 0x148, 0x5, 0x22, 0x12, 0x2, 0x148, 
-       0x149, 0x7, 0x34, 0x2, 0x2, 0x149, 0x43, 0x3, 0x2, 0x2, 0x2, 0x14a, 
-       0x14e, 0x5, 0x40, 0x21, 0x2, 0x14b, 0x14e, 0x5, 0x42, 0x22, 0x2, 
-       0x14c, 0x14e, 0x7, 0x4f, 0x2, 0x2, 0x14d, 0x14a, 0x3, 0x2, 0x2, 0x2, 
-       0x14d, 0x14b, 0x3, 0x2, 0x2, 0x2, 0x14d, 0x14c, 0x3, 0x2, 0x2, 0x2, 
-       0x14e, 0x45, 0x3, 0x2, 0x2, 0x2, 0x14f, 0x151, 0x5, 0x44, 0x23, 0x2, 
-       0x150, 0x14f, 0x3, 0x2, 0x2, 0x2, 0x151, 0x154, 0x3, 0x2, 0x2, 0x2, 
-       0x152, 0x150, 0x3, 0x2, 0x2, 0x2, 0x152, 0x153, 0x3, 0x2, 0x2, 0x2, 
-       0x153, 0x47, 0x3, 0x2, 0x2, 0x2, 0x154, 0x152, 0x3, 0x2, 0x2, 0x2, 
-       0x155, 0x156, 0x7, 0x47, 0x2, 0x2, 0x156, 0x157, 0x5, 0x22, 0x12, 
-       0x2, 0x157, 0x158, 0x7, 0x38, 0x2, 0x2, 0x158, 0x159, 0x5, 0x46, 
-       0x24, 0x2, 0x159, 0x15a, 0x7, 0x39, 0x2, 0x2, 0x15a, 0x49, 0x3, 0x2, 
-       0x2, 0x2, 0x15b, 0x15c, 0x5, 0x2c, 0x17, 0x2, 0x15c, 0x4b, 0x3, 0x2, 
-       0x2, 0x2, 0x15d, 0x15e, 0x7, 0x38, 0x2, 0x2, 0x15e, 0x163, 0x5, 0x4a, 
-       0x26, 0x2, 0x15f, 0x160, 0x7, 0x4, 0x2, 0x2, 0x160, 0x162, 0x5, 0x4a, 
-       0x26, 0x2, 0x161, 0x15f, 0x3, 0x2, 0x2, 0x2, 0x162, 0x165, 0x3, 0x2, 
-       0x2, 0x2, 0x163, 0x161, 0x3, 0x2, 0x2, 0x2, 0x163, 0x164, 0x3, 0x2, 
-       0x2, 0x2, 0x164, 0x166, 0x3, 0x2, 0x2, 0x2, 0x165, 0x163, 0x3, 0x2, 
-       0x2, 0x2, 0x166, 0x167, 0x7, 0x39, 0x2, 0x2, 0x167, 0x4d, 0x3, 0x2, 
-       0x2, 0x2, 0x168, 0x169, 0x7, 0x4a, 0x2, 0x2, 0x169, 0x16a, 0x7, 0x35, 
-       0x2, 0x2, 0x16a, 0x16b, 0x5, 0x22, 0x12, 0x2, 0x16b, 0x16c, 0x7, 
-       0x34, 0x2, 0x2, 0x16c, 0x4f, 0x3, 0x2, 0x2, 0x2, 0x16d, 0x16f, 0x5, 
-       0xa, 0x6, 0x2, 0x16e, 0x16d, 0x3, 0x2, 0x2, 0x2, 0x16f, 0x172, 0x3, 
-       0x2, 0x2, 0x2, 0x170, 0x171, 0x3, 0x2, 0x2, 0x2, 0x170, 0x16e, 0x3, 
-       0x2, 0x2, 0x2, 0x171, 0x173, 0x3, 0x2, 0x2, 0x2, 0x172, 0x170, 0x3, 
-       0x2, 0x2, 0x2, 0x173, 0x174, 0x5, 0x70, 0x39, 0x2, 0x174, 0x175, 
-       0x7, 0x35, 0x2, 0x2, 0x175, 0x176, 0x5, 0x30, 0x19, 0x2, 0x176, 0x177, 
-       0x7, 0x34, 0x2, 0x2, 0x177, 0x51, 0x3, 0x2, 0x2, 0x2, 0x178, 0x17d, 
-       0x5, 0x4e, 0x28, 0x2, 0x179, 0x17d, 0x5, 0x50, 0x29, 0x2, 0x17a, 
-       0x17d, 0x5, 0x16, 0xc, 0x2, 0x17b, 0x17d, 0x7, 0x4f, 0x2, 0x2, 0x17c, 
-       0x178, 0x3, 0x2, 0x2, 0x2, 0x17c, 0x179, 0x3, 0x2, 0x2, 0x2, 0x17c, 
-       0x17a, 0x3, 0x2, 0x2, 0x2, 0x17c, 0x17b, 0x3, 0x2, 0x2, 0x2, 0x17d, 
-       0x53, 0x3, 0x2, 0x2, 0x2, 0x17e, 0x180, 0x5, 0x52, 0x2a, 0x2, 0x17f, 
-       0x17e, 0x3, 0x2, 0x2, 0x2, 0x180, 0x183, 0x3, 0x2, 0x2, 0x2, 0x181, 
-       0x17f, 0x3, 0x2, 0x2, 0x2, 0x181, 0x182, 0x3, 0x2, 0x2, 0x2, 0x182, 
-       0x55, 0x3, 0x2, 0x2, 0x2, 0x183, 0x181, 0x3, 0x2, 0x2, 0x2, 0x184, 
-       0x185, 0x7, 0x41, 0x2, 0x2, 0x185, 0x187, 0x5, 0x22, 0x12, 0x2, 0x186, 
-       0x188, 0x5, 0x32, 0x1a, 0x2, 0x187, 0x186, 0x3, 0x2, 0x2, 0x2, 0x187, 
-       0x188, 0x3, 0x2, 0x2, 0x2, 0x188, 0x189, 0x3, 0x2, 0x2, 0x2, 0x189, 
-       0x18a, 0x7, 0x38, 0x2, 0x2, 0x18a, 0x18b, 0x5, 0x54, 0x2b, 0x2, 0x18b, 
-       0x18c, 0x7, 0x39, 0x2, 0x2, 0x18c, 0x57, 0x3, 0x2, 0x2, 0x2, 0x18d, 
-       0x195, 0x5, 0x4e, 0x28, 0x2, 0x18e, 0x195, 0x5, 0x50, 0x29, 0x2, 
-       0x18f, 0x195, 0x5, 0x16, 0xc, 0x2, 0x190, 0x195, 0x5, 0x18, 0xd, 
-       0x2, 0x191, 0x195, 0x5, 0x1a, 0xe, 0x2, 0x192, 0x195, 0x5, 0x1c, 
-       0xf, 0x2, 0x193, 0x195, 0x7, 0x4f, 0x2, 0x2, 0x194, 0x18d, 0x3, 0x2, 
-       0x2, 0x2, 0x194, 0x18e, 0x3, 0x2, 0x2, 0x2, 0x194, 0x18f, 0x3, 0x2, 
-       0x2, 0x2, 0x194, 0x190, 0x3, 0x2, 0x2, 0x2, 0x194, 0x191, 0x3, 0x2, 
-       0x2, 0x2, 0x194, 0x192, 0x3, 0x2, 0x2, 0x2, 0x194, 0x193, 0x3, 0x2, 
-       0x2, 0x2, 0x195, 0x59, 0x3, 0x2, 0x2, 0x2, 0x196, 0x198, 0x5, 0x58, 
-       0x2d, 0x2, 0x197, 0x196, 0x3, 0x2, 0x2, 0x2, 0x198, 0x19b, 0x3, 0x2, 
-       0x2, 0x2, 0x199, 0x197, 0x3, 0x2, 0x2, 0x2, 0x199, 0x19a, 0x3, 0x2, 
-       0x2, 0x2, 0x19a, 0x5b, 0x3, 0x2, 0x2, 0x2, 0x19b, 0x199, 0x3, 0x2, 
-       0x2, 0x2, 0x19c, 0x19d, 0x7, 0x42, 0x2, 0x2, 0x19d, 0x19f, 0x5, 0x22, 
-       0x12, 0x2, 0x19e, 0x1a0, 0x5, 0x32, 0x1a, 0x2, 0x19f, 0x19e, 0x3, 
-       0x2, 0x2, 0x2, 0x19f, 0x1a0, 0x3, 0x2, 0x2, 0x2, 0x1a0, 0x1a1, 0x3, 
-       0x2, 0x2, 0x2, 0x1a1, 0x1a2, 0x7, 0x38, 0x2, 0x2, 0x1a2, 0x1a3, 0x5, 
-       0x5a, 0x2e, 0x2, 0x1a3, 0x1a4, 0x7, 0x39, 0x2, 0x2, 0x1a4, 0x5d, 
-       0x3, 0x2, 0x2, 0x2, 0x1a5, 0x1a8, 0x5, 0x4e, 0x28, 0x2, 0x1a6, 0x1a8, 
-       0x7, 0x4f, 0x2, 0x2, 0x1a7, 0x1a5, 0x3, 0x2, 0x2, 0x2, 0x1a7, 0x1a6, 
-       0x3, 0x2, 0x2, 0x2, 0x1a8, 0x5f, 0x3, 0x2, 0x2, 0x2, 0x1a9, 0x1ab, 
-       0x5, 0x5e, 0x30, 0x2, 0x1aa, 0x1a9, 0x3, 0x2, 0x2, 0x2, 0x1ab, 0x1ae, 
-       0x3, 0x2, 0x2, 0x2, 0x1ac, 0x1aa, 0x3, 0x2, 0x2, 0x2, 0x1ac, 0x1ad, 
-       0x3, 0x2, 0x2, 0x2, 0x1ad, 0x61, 0x3, 0x2, 0x2, 0x2, 0x1ae, 0x1ac, 
-       0x3, 0x2, 0x2, 0x2, 0x1af, 0x1b0, 0x7, 0x43, 0x2, 0x2, 0x1b0, 0x1b2, 
-       0x5, 0x22, 0x12, 0x2, 0x1b1, 0x1b3, 0x5, 0x32, 0x1a, 0x2, 0x1b2, 
-       0x1b1, 0x3, 0x2, 0x2, 0x2, 0x1b2, 0x1b3, 0x3, 0x2, 0x2, 0x2, 0x1b3, 
-       0x1b4, 0x3, 0x2, 0x2, 0x2, 0x1b4, 0x1b5, 0x7, 0x38, 0x2, 0x2, 0x1b5, 
-       0x1b6, 0x5, 0x60, 0x31, 0x2, 0x1b6, 0x1b7, 0x7, 0x39, 0x2, 0x2, 0x1b7, 
-       0x63, 0x3, 0x2, 0x2, 0x2, 0x1b8, 0x1bc, 0x5, 0x50, 0x29, 0x2, 0x1b9, 
-       0x1bc, 0x7, 0x4f, 0x2, 0x2, 0x1ba, 0x1bc, 0x5, 0x1c, 0xf, 0x2, 0x1bb, 
-       0x1b8, 0x3, 0x2, 0x2, 0x2, 0x1bb, 0x1b9, 0x3, 0x2, 0x2, 0x2, 0x1bb, 
-       0x1ba, 0x3, 0x2, 0x2, 0x2, 0x1bc, 0x65, 0x3, 0x2, 0x2, 0x2, 0x1bd, 
-       0x1bf, 0x5, 0x64, 0x33, 0x2, 0x1be, 0x1bd, 0x3, 0x2, 0x2, 0x2, 0x1bf, 
-       0x1c2, 0x3, 0x2, 0x2, 0x2, 0x1c0, 0x1be, 0x3, 0x2, 0x2, 0x2, 0x1c0, 
-       0x1c1, 0x3, 0x2, 0x2, 0x2, 0x1c1, 0x67, 0x3, 0x2, 0x2, 0x2, 0x1c2, 
-       0x1c0, 0x3, 0x2, 0x2, 0x2, 0x1c3, 0x1c5, 0x5, 0xa, 0x6, 0x2, 0x1c4, 
-       0x1c3, 0x3, 0x2, 0x2, 0x2, 0x1c5, 0x1c8, 0x3, 0x2, 0x2, 0x2, 0x1c6, 
-       0x1c7, 0x3, 0x2, 0x2, 0x2, 0x1c6, 0x1c4, 0x3, 0x2, 0x2, 0x2, 0x1c7, 
-       0x1c9, 0x3, 0x2, 0x2, 0x2, 0x1c8, 0x1c6, 0x3, 0x2, 0x2, 0x2, 0x1c9, 
-       0x1ca, 0x7, 0x45, 0x2, 0x2, 0x1ca, 0x1cc, 0x5, 0x22, 0x12, 0x2, 0x1cb, 
-       0x1cd, 0x5, 0x32, 0x1a, 0x2, 0x1cc, 0x1cb, 0x3, 0x2, 0x2, 0x2, 0x1cc, 
-       0x1cd, 0x3, 0x2, 0x2, 0x2, 0x1cd, 0x1ce, 0x3, 0x2, 0x2, 0x2, 0x1ce, 
-       0x1cf, 0x7, 0x38, 0x2, 0x2, 0x1cf, 0x1d0, 0x5, 0x66, 0x34, 0x2, 0x1d0, 
-       0x1d1, 0x7, 0x39, 0x2, 0x2, 0x1d1, 0x69, 0x3, 0x2, 0x2, 0x2, 0x1d2, 
-       0x1d5, 0x5, 0x50, 0x29, 0x2, 0x1d3, 0x1d5, 0x7, 0x4f, 0x2, 0x2, 0x1d4, 
-       0x1d2, 0x3, 0x2, 0x2, 0x2, 0x1d4, 0x1d3, 0x3, 0x2, 0x2, 0x2, 0x1d5, 
-       0x6b, 0x3, 0x2, 0x2, 0x2, 0x1d6, 0x1d8, 0x5, 0x6a, 0x36, 0x2, 0x1d7, 
-       0x1d6, 0x3, 0x2, 0x2, 0x2, 0x1d8, 0x1db, 0x3, 0x2, 0x2, 0x2, 0x1d9, 
-       0x1d7, 0x3, 0x2, 0x2, 0x2, 0x1d9, 0x1da, 0x3, 0x2, 0x2, 0x2, 0x1da, 
-       0x6d, 0x3, 0x2, 0x2, 0x2, 0x1db, 0x1d9, 0x3, 0x2, 0x2, 0x2, 0x1dc, 
-       0x1de, 0x5, 0xa, 0x6, 0x2, 0x1dd, 0x1dc, 0x3, 0x2, 0x2, 0x2, 0x1de, 
-       0x1e1, 0x3, 0x2, 0x2, 0x2, 0x1df, 0x1e0, 0x3, 0x2, 0x2, 0x2, 0x1df, 
-       0x1dd, 0x3, 0x2, 0x2, 0x2, 0x1e0, 0x1e2, 0x3, 0x2, 0x2, 0x2, 0x1e1, 
-       0x1df, 0x3, 0x2, 0x2, 0x2, 0x1e2, 0x1e3, 0x7, 0x44, 0x2, 0x2, 0x1e3, 
-       0x1e5, 0x5, 0x22, 0x12, 0x2, 0x1e4, 0x1e6, 0x5, 0x32, 0x1a, 0x2, 
-       0x1e5, 0x1e4, 0x3, 0x2, 0x2, 0x2, 0x1e5, 0x1e6, 0x3, 0x2, 0x2, 0x2, 
-       0x1e6, 0x1e7, 0x3, 0x2, 0x2, 0x2, 0x1e7, 0x1e8, 0x7, 0x38, 0x2, 0x2, 
-       0x1e8, 0x1e9, 0x5, 0x6c, 0x37, 0x2, 0x1e9, 0x1ea, 0x7, 0x39, 0x2, 
-       0x2, 0x1ea, 0x6f, 0x3, 0x2, 0x2, 0x2, 0x1eb, 0x1ec, 0x9, 0x2, 0x2, 
-       0x2, 0x1ec, 0x71, 0x3, 0x2, 0x2, 0x2, 0x1ed, 0x1ee, 0x9, 0x3, 0x2, 
-       0x2, 0x1ee, 0x73, 0x3, 0x2, 0x2, 0x2, 0x1ef, 0x1f0, 0x9, 0x4, 0x2, 
-       0x2, 0x1f0, 0x75, 0x3, 0x2, 0x2, 0x2, 0x2e, 0x7f, 0x81, 0x89, 0x92, 
-       0x9a, 0xa3, 0xaa, 0xb0, 0xc1, 0xc8, 0xcf, 0xda, 0xec, 0xfe, 0x106, 
-       0x111, 0x117, 0x11c, 0x122, 0x12b, 0x130, 0x136, 0x13c, 0x14d, 0x152, 
-       0x163, 0x170, 0x17c, 0x181, 0x187, 0x194, 0x199, 0x19f, 0x1a7, 0x1ac, 
-       0x1b2, 0x1bb, 0x1c0, 0x1c6, 0x1cc, 0x1d4, 0x1d9, 0x1df, 0x1e5, 
-  };
-
-  _serializedATN.insert(_serializedATN.end(), serializedATNSegment0,
-    serializedATNSegment0 + sizeof(serializedATNSegment0) / sizeof(serializedATNSegment0[0]));
-
-
-  atn::ATNDeserializer deserializer;
-  _atn = deserializer.deserialize(_serializedATN);
-
-  size_t count = _atn.getNumberOfDecisions();
-  _decisionToDFA.reserve(count);
-  for (size_t i = 0; i < count; i++) { 
-    _decisionToDFA.emplace_back(_atn.getDecisionState(i), i);
-  }
+void SIGParser::initialize() {
+  ::antlr4::internal::call_once(sigParserOnceFlag, sigParserInitialize);
 }
-
-SIGParser::Initializer SIGParser::_init;
