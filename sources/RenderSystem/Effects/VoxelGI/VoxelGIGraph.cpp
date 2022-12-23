@@ -146,7 +146,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		{
 			if (gpu_tiles_buffer[pos.w])
 			{
-				gpu_tiles_buffer[pos.w]->insert(pos);
+				gpu_tiles_buffer[pos.w]->insert(pos.xyz);
 			}
 
 		};
@@ -155,19 +155,19 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		{
 			if (gpu_tiles_buffer[pos.w])
 			{
-				gpu_tiles_buffer[pos.w]->erase(pos);
+				gpu_tiles_buffer[pos.w]->erase(pos.xyz);
 			}
 		};
 
 
 		albedo.tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos)
 		{
-			albedo_tiles->insert(pos);
+			albedo_tiles->insert(pos.xyz);
 		};
 
 		albedo.tex_dynamic->resource->get_tiled_manager().on_zero = [this](ivec4 pos)
 		{
-			albedo_tiles->erase(pos);
+			albedo_tiles->erase(pos.xyz);
 		};
 		albedo_tiles.reset(new GPUTilesBuffer);
 		albedo_tiles->set_size(albedo.tex_result->resource->get_tiled_manager().get_tiles_count(), albedo.tex_result->resource->get_tiled_manager().get_tile_shape());
@@ -239,8 +239,8 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	}
 
 	if (!all_scene_regen_counter) {
-		dynamic_generator_lighted.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
-		dynamic_generator_voxelizing.begin(scene->voxel_info.GetMin(), scene->voxel_info.GetMin() + scene->voxel_info.GetSize());
+		dynamic_generator_lighted.begin(scene->voxel_info.GetMin().xyz, scene->voxel_info.GetMin().xyz + scene->voxel_info.GetSize().xyz);
+		dynamic_generator_voxelizing.begin(scene->voxel_info.GetMin().xyz, scene->voxel_info.GetMin().xyz + scene->voxel_info.GetSize().xyz);
 
 		scene->iterate_meshes(MESH_TYPE::DYNAMIC, [this](scene_object::ptr obj) {
 

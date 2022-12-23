@@ -143,7 +143,7 @@ namespace GUI
 		 		PROFILE(L"label");
 
 		 		HAL::Viewport vps;
-		 		vps.size = cache.texture->get_desc().as_texture().Dimensions;
+		 		vps.size = cache.texture->get_desc().as_texture().Dimensions.xy;
 		 		vps.pos = { 0,0 };
 		 		vps.depths = { 0,1 };
 

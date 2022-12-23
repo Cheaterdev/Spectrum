@@ -490,7 +490,7 @@ namespace Assimp
 					{
 						has_normal = true;
 
-						typedef Vector<vec3_t<char>> norm8;
+						typedef Vector<vector_data_t<char,3>> norm8;
 
 
 						if(arrays->attrs[i].format == RAW4_FORMAT_S8)

@@ -268,7 +268,7 @@ export
 
 
 				Viewport p;
-				p.size = float2::max({ 1.0f,1.0f }, texture_desc.Dimensions / scaler);
+				p.size = float2::max(float2{ 1.0f,1.0f }, float2(texture_desc.Dimensions.xy) / scaler);
 				p.pos = { 0,0 };
 				p.depths = {0,1};
 
@@ -294,7 +294,7 @@ export
 
 				UINT scaler = 1 << view_desc.MipSlice;
 
-				return uint2::max({ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
+				return uint2::max(uint2{ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
 			}
 
 			TextureView create_2d_slice(UINT slice, HAL::FrameResources& frame);
@@ -386,7 +386,7 @@ export
 
 
 				Viewport p;
-				p.size = float2::max({ 1.0f,1.0f }, texture_desc.Dimensions / scaler);
+				p.size = float2::max(float2{ 1.0f,1.0f }, float2(texture_desc.Dimensions.xy) / scaler);
 				p.pos = { 0,0 };
 				p.depths = { 0,1 };
 				return p;
@@ -411,7 +411,7 @@ export
 
 				UINT scaler = 1 << view_desc.MipSlice;
 
-				return uint2::max({ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
+				return uint2::max(uint2{ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
 			}
 		};
 
@@ -493,7 +493,7 @@ export
 
 
 				Viewport p;
-				p.size = float2::max({ 1.0f,1.0f }, texture_desc.Dimensions / scaler);
+				p.size = float2::max(float2{ 1.0f,1.0f }, float2(texture_desc.Dimensions.xy) / scaler);
 				p.pos = { 0,0 };
 				p.depths = { 0,1 };
 
@@ -514,7 +514,7 @@ export
 
 				UINT scaler = 1 << view_desc.MipSlice;
 
-				return uint2::max({ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
+				return uint2::max(uint2{ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
 			}
 
 			TextureView get_face(UINT face);

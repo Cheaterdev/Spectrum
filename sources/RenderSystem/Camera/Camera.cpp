@@ -28,8 +28,8 @@ void camera::update(float2 offset )
 	(params.invView = view_mat).inverse();
 	mat4x4 test = view_proj_mat * inv_view_proj_mat;
 	calculate(inv_view_proj_mat);
-	vec3 right = vec3::cross(params.direction, _up);
-	res_up = vec3::cross(params.direction, right);
+	vec3 right = vec3::cross(params.direction.xyz, _up);
+	res_up = vec3::cross(params.direction.xyz, right);
 	params.jitter = { 0, 0,0,0 };// offset;
 	
 

@@ -69,13 +69,13 @@ float Plane::operator()(const vec3& p) const
 void Plane::ApplyTransform(const mat4x4& m)
 {
     vec3 p = d * n;
-    n = vec3(vec4(n, 0) * m);
-    p = vec3(vec4(p, 1) * m);
+    n = (vec4(n, 0) * m).xyz;
+    p = (vec4(p, 1) * m).xyz;
     n.normalize();
     d = -vec3::dot(n, p);
 }
 
-Plane::operator Vector<vec4_t<float>>() const
+Plane::operator  vec4() const
 {
     return vec4(n, d);
 }

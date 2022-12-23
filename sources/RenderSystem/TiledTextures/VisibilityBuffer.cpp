@@ -64,7 +64,7 @@ std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& l
 			visibility_update update;
 
 			for (UINT i = 0; i < info->size; i++)
-				update.tiles_to_load.emplace_back(tiles[i]);
+				update.tiles_to_load.emplace_back(tiles[i].xyz);
 
 			promise->set_value(update);
 		});

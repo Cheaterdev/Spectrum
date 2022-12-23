@@ -86,7 +86,7 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 
 
 	HAL::Viewport vps;
-	vps.size = preview->get_desc().as_texture().Dimensions;
+	vps.size = preview->get_desc().as_texture().Dimensions.xy;
 	vps.pos = { 0,0 };
 	vps.depths = { 0,1 };
 

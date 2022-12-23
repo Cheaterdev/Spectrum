@@ -224,8 +224,8 @@ export {
 		static const int N = 4;
 		static const int M = 4;
 		typedef data_type Format;
-		typedef Vector<vec4_t<Format>> RowFormat;
-		typedef Vector<vec4_t<Format>> ColumnFormat;
+		typedef Vector<vector_data_t<Format,4>> RowFormat;
+		typedef Vector<vector_data_t<Format,4>> ColumnFormat;
 		matrix_data_4x4_t() {};
 
 		union
@@ -273,11 +273,11 @@ export {
 	}
 
 	template<typename T, typename T2>
-	typename Vector<vec3_t<T>> operator*(Vector<vec3_t<T>> v, matrix<matrix_data_4x4_t<T2>> m)
+	typename Vector<vector_data_t<T,3>> operator*(Vector<vector_data_t<T,3>> v, matrix<matrix_data_4x4_t<T2>> m)
 	{
-		Vector<vec4_t<T>> data(v, 1);
+		Vector<vector_data_t<T,4>> data(v, 1);
 		data = data * m;
-		return Vector<vec3_t<T>>(data.xyz) / data[3];
+		return Vector<vector_data_t<T,3>>(data.xyz) / data[3];
 	}
 
 }

@@ -63,7 +63,7 @@ export class camera : public Frustum
             vec4 dir(local * 2 - vec2(1, 1), 1, 1);
             dir.y = -dir.y;
             dir = dir * get_inv_view_proj();
-            vec3 res(dir / dir.w);
+            vec3 res(dir.xyz / dir.w);
             res -= camera_cb.current.position.xyz;
             res.normalize();
             return res;
@@ -84,7 +84,7 @@ export class camera : public Frustum
         vec2 to_local(vec3 world) const
         {
             vec4 dir =	vec4(world, 1) * get_view_proj();
-            vec2 res(dir / dir.w);
+            vec2 res(dir.xy/ dir.w);
             res = res * 0.5 + vec2(0.5, 0.5);
             return res;
         }

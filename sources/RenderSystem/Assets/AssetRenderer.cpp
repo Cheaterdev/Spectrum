@@ -208,7 +208,7 @@ void AssetRenderer::draw(Scene::ptr scene, HAL::Texture::ptr result)
 	skyinfo.sunDir = float3(1, 1, 1).normalize();
 
 	graph.builder.pass_texture("ResultTexture", result, ResourceFlags::Required);
-	vp.frame_size = result->get_size();
+	vp.frame_size = result->get_size().xy;
 	sceneinfo.scene = scene.get();
 	sceneinfo.renderer = scene_renderer.get();
 	caminfo.cam = &cam;

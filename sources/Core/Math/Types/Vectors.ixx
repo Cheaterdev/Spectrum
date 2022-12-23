@@ -15,7 +15,7 @@ namespace internal
 	template<class T>
 	consteval int get_count() requires (!IsVectorType<T>)
 	{
-		return 0xff;
+		return 1;
 	}
 
 	template<class T>
@@ -80,7 +80,7 @@ export
 
 
 		template<class ...Args>
-		constexpr  Vector(Args ...args) requires(T::GENERATE_CONSTRUCTOR && (internal::calc_count<Args...>() >= N))
+		constexpr  Vector(Args ...args) requires(T::GENERATE_CONSTRUCTOR && (internal::calc_count<Args...>() == N))
 		{
 			set(args...);
 		}
@@ -93,7 +93,7 @@ export
 
 
 		template<class ...Args>
-		constexpr void set(Args ...args)  requires (internal::calc_count<Args...>() >= N)
+		constexpr void set(Args ...args)  requires (internal::calc_count<Args...>() == N)
 		{
 			set_internal<0>(args...);
 		}
@@ -124,7 +124,7 @@ export
 		template<class T2>
 		inline Vector operator+(const Vector<T2>& v) const requires(N == T2::N)
 		{
-			Vector result;
+			Vector result(*this);
 
 			for (int i = 0; i < N; i++)
 				result[i] = values[i] + v[i];
@@ -232,8 +232,8 @@ export
 				result[i] = std::abs(values[i]);
 			return result;
 		}
-		template<typename T>
-		static auto min(const Vector<T>& v1, const Vector<T>& v2)
+		template<typename T,typename T2>
+		static auto min(const Vector<T>& v1, const Vector<T2>& v2) requires (T::N==T2::N&&std::is_same_v<typename T::Format,typename T2::Format>)
 		{
 			Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
@@ -243,8 +243,8 @@ export
 			return result;
 		}
 
-		template<typename T>
-		static	auto max(const Vector<T>& v1, const Vector<T>& v2)
+		template<typename T,typename T2>
+		static	auto max(const Vector<T>& v1, const Vector<T2>& v2)requires (T::N==T2::N&&std::is_same_v<typename T::Format,typename T2::Format>)
 		{
 			Vector<typename T::CONSTUCTIBLE_TYPE> result;
 
@@ -466,15 +466,28 @@ export
 		}
 	}
 
+	template<typename T, int Count, bool CONSTRUCTIBLE = true >
+	struct vector_data_t
+	{
+		typedef T Format;
+		static const int N = Count;
+
+		static const bool GENERATE_CONSTRUCTOR = CONSTRUCTIBLE;
+		using CONSTUCTIBLE_TYPE = vector_data_t<T, Count >;
+
+		std::array<T, Count> values;
+
+		vector_data_t() requires(GENERATE_CONSTRUCTOR) {}
+	};
 
 
-	template<typename T, bool CONSTRUCTIBLE = true >
-	struct vec2_t
+	template<typename T, bool CONSTRUCTIBLE >
+	struct vector_data_t<T,2,CONSTRUCTIBLE>
 	{
 		typedef T Format;
 		static const int N = 2;
 		static const bool GENERATE_CONSTRUCTOR = CONSTRUCTIBLE;
-		using CONSTUCTIBLE_TYPE = vec2_t<T>;
+		using CONSTUCTIBLE_TYPE = vector_data_t<T, 2>;
 
 		union
 		{
@@ -488,18 +501,18 @@ export
 			};
 		};
 
-		vec2_t() requires(GENERATE_CONSTRUCTOR) {};
+		vector_data_t() requires(GENERATE_CONSTRUCTOR) {};
 	};
 
-	template<typename T, bool CONSTRUCTIBLE = true >
-	struct vec3_t
+
+	template<typename T, bool CONSTRUCTIBLE>
+	struct vector_data_t<T,3,CONSTRUCTIBLE>
 	{
 		typedef T Format;
 		static const int N = 3;
 		static const bool GENERATE_CONSTRUCTOR = CONSTRUCTIBLE;
-		using CONSTUCTIBLE_TYPE = vec3_t<T>;
-
-		union
+		using CONSTUCTIBLE_TYPE = vector_data_t<T, 3>;
+	union
 		{
 			struct
 			{
@@ -510,7 +523,7 @@ export
 				T x;
 				union
 				{
-					Vector<vec2_t<T, false>> yz;
+					Vector<vector_data_t<T,2, false>> yz;
 					struct
 					{
 						T y, z;
@@ -519,22 +532,21 @@ export
 			};
 			struct
 			{
-				Vector<vec2_t<T, false>> xy;
+				Vector<vector_data_t<T,2, false>> xy;
 			};
 		};
 
-
-		vec3_t() requires(GENERATE_CONSTRUCTOR) {}
+		vector_data_t() requires(GENERATE_CONSTRUCTOR) {};
 	};
 
-	template<typename T, bool CONSTRUCTIBLE = true >
-	struct vec4_t
+	
+	template<typename T, bool CONSTRUCTIBLE>
+	struct vector_data_t<T,4,CONSTRUCTIBLE>
 	{
 		typedef T Format;
 		static const int N = 4;
 		static const bool GENERATE_CONSTRUCTOR = CONSTRUCTIBLE;
-		using CONSTUCTIBLE_TYPE = vec4_t<T>;
-
+		using CONSTUCTIBLE_TYPE = vector_data_t<T, 4>;
 		union
 		{
 			struct
@@ -545,13 +557,13 @@ export
 			{
 				union
 				{
-					Vector<vec3_t<T, false>> xyz;
+					Vector<vector_data_t<T,3, false>>  xyz;
 					struct
 					{
 						T x;
 						union
 						{
-							Vector<vec2_t<T, false>>  yz;
+							Vector<vector_data_t<T,2, false>>   yz;
 							struct
 							{
 								T y, z;
@@ -563,13 +575,14 @@ export
 			};
 			struct
 			{
-				Vector<vec2_t<T, false>> xy;
-				Vector<vec2_t<T, false>> zw;
+				Vector<vector_data_t<T,2, false>>  xy;
+				Vector<vector_data_t<T,2, false>>  zw;
 			};
 		};
-
-		vec4_t() requires(GENERATE_CONSTRUCTOR) {}
+		vector_data_t() requires(GENERATE_CONSTRUCTOR) {};
 	};
+
+	
 
 	template<typename T, bool CONSTRUCTIBLE = true >
 	struct box_t
@@ -602,8 +615,8 @@ export
 
 			struct
 			{
-				Vector<vec3_t<T, false>> a;
-				Vector<vec3_t<T, false>> b;
+				Vector<vector_data_t<T,3, false>>  a;
+				Vector<vector_data_t<T,3, false>>  b;
 			};
 		};
 
@@ -634,8 +647,8 @@ export
 			};
 			struct
 			{
-				Vector<vec2_t<T, false>> pos;
-				Vector<vec2_t<T, false>> size;
+				Vector<vector_data_t<T,2, false>>  pos;
+				Vector<vector_data_t<T,2, false>>  size;
 			};
 		};
 
@@ -665,42 +678,29 @@ export
 			};
 			struct
 			{
-				Vector<vec2_t<T, false>> left_top;
-				Vector<vec2_t<T, false>> right_bottom;
+				Vector<vector_data_t<T,2, false>>  left_top;
+				Vector<vector_data_t<T,2, false>>  right_bottom;
 			};
 		};
 
 		margin_t() requires(GENERATE_CONSTRUCTOR) {}
 	};
 
-	template<typename T, int Count, bool CONSTRUCTIBLE = true >
-	struct vector_data_t
-	{
-		typedef T Format;
-		static const int N = Count;
-
-		static const bool GENERATE_CONSTRUCTOR = CONSTRUCTIBLE;
-		using CONSTUCTIBLE_TYPE = vector_data_t<T, Count >;
-
-		std::array<T, Count> values;
-
-		vector_data_t() requires(GENERATE_CONSTRUCTOR) {}
-	};
 
 
 
 
-	typedef Vector<vec4_t<float>> vec4;
-	typedef Vector<vec3_t<float>> vec3;
-	typedef Vector<vec2_t<float>> vec2;
+	typedef Vector<vector_data_t<float,4>> vec4;
+	typedef Vector<vector_data_t<float,3>> vec3;
+	typedef Vector<vector_data_t<float,2>> vec2;
 
 	typedef vec2 float2;
 	typedef vec3 float3;
 	typedef vec4 float4;
 
-	typedef Vector<vec4_t<int>> ivec4;
-	typedef Vector<vec3_t<int>> ivec3;
-	typedef Vector<vec2_t<int>> ivec2;
+	typedef Vector<vector_data_t<int,4>> ivec4;
+	typedef Vector<vector_data_t<int,3>> ivec3;
+	typedef Vector<vector_data_t<int,2>> ivec2;
 
 	typedef ivec2 int2;
 	typedef ivec3 int3;
@@ -712,14 +712,14 @@ export
 	typedef Vector<margin_t<float>> sizer;
 	typedef Vector<margin_t<long>> sizer_long;
 
-	typedef Vector<vec4_t<unsigned char>> rgba8;
-	typedef Vector<vec3_t<unsigned char>> rgb8;
+	typedef Vector<vector_data_t<unsigned char,4>> rgba8;
+	typedef Vector<vector_data_t<unsigned char,3>> rgb8;
 
 
 	using uint = unsigned int;
-	using uint2 = Vector<vec2_t<uint>>;
-	using uint3 = Vector<vec3_t<uint>>;
-	using uint4 = Vector<vec4_t<uint>>;
+	using uint2 = Vector<vector_data_t<uint,2>>;
+	using uint3 = Vector<vector_data_t<uint,3>>;
+	using uint4 = Vector<vector_data_t<uint,4>>;
 
 	using uint8 = std::uint8_t;
 	using uint16 = std::uint16_t;

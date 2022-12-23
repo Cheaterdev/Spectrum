@@ -767,7 +767,7 @@ HRESULT ComputeCullData(
         float4 normalBounds = MinimumBoundingSphere(normals, static_cast<uint>(m.PrimitiveIndices.size()/3));
 
         // 2. Calculate dot product of all normals to conic axis, selecting minimum
-        float3 axis = normalBounds.normalized();
+        float3 axis = normalBounds.normalized().xyz;
 
         float minDot = 1;
         for (uint32_t i = 0; i < m.PrimitiveIndices.size()/3; ++i)

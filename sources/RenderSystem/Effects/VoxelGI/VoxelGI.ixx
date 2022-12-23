@@ -40,22 +40,22 @@ public:
 
 
 		tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos) {
-			auto heap_pos = tex_dynamic->resource->get_tiled_manager().tiles[0][pos].heap_position;
+			auto heap_pos = tex_dynamic->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
 			heap_pos.handle = ResourceHandle();
-			tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
+			tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos.xyz, heap_pos);
 		};
 
 
 		tex_dynamic->resource->get_tiled_manager().on_zero = [this](ivec4 pos) {
 			if (tex_static->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos].heap_position;
+				auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
 				heap_pos.handle = ResourceHandle();
-				tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
+				tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos.xyz, heap_pos);
 			}
 			else
 			{
-				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos, 0);
+				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos.xyz, 0);
 			}
 		};
 
@@ -64,9 +64,9 @@ public:
 
 			if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos].heap_position;
+				auto heap_pos = tex_static->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;
 				heap_pos.handle = ResourceHandle();
-				tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos, heap_pos);
+				tex_result->resource->get_tiled_manager().map_tile(tilings_info, pos.xyz, heap_pos);
 			}
 
 		};
@@ -75,7 +75,7 @@ public:
 
 			if (!tex_dynamic->resource->get_tiled_manager().is_mapped(pos.xyz, pos.w))
 			{
-				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos, 0);
+				tex_result->resource->get_tiled_manager().zero_tile(tilings_info, pos.xyz, 0);
 			}
 
 		};

@@ -344,7 +344,7 @@ using namespace HAL;
 
 				}
 
-				return HAL::ResourceDesc::Tex2D(format, size, array_count, mip_count, flags);
+				return HAL::ResourceDesc::Tex2D(format, size.xy, array_count, mip_count, flags);
 			}
 
 
@@ -452,7 +452,7 @@ using namespace HAL;
 
 				}
 
-				return HAL::ResourceDesc::Tex2D(format, size, array_count * 6, mip_count, flags);
+				return HAL::ResourceDesc::Tex2D(format, size.xy, array_count * 6, mip_count, flags);
 			}
 
 
