@@ -109,9 +109,9 @@ export
 				{
 				std::string data;
 				auto list = (HAL::Device::get().get_upload_list());
-				auto task = list->get_copy().read_buffer(resource, 0, resource->get_size(), [&data](const char* mem, UINT64 size)
+				auto task = list->get_copy().read_buffer(resource, 0, resource->get_size(), [&data](std::span<std::byte> memory)
 					{
-						data.assign(mem, mem + size);
+						data.assign(memory.begin(), memory.end());
 					});
 				list->end();
 				list->execute();

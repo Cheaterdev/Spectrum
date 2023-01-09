@@ -1,7 +1,7 @@
 export module HAL:Resource;
 
 import :HeapAllocators;
-import :API.Device;
+import :Device;
 import :API.Resource;
 
 import :TiledMemoryManager;
@@ -11,17 +11,119 @@ import :FrameManager;
 import Core;
 
 template<class T>
-concept can_get_fstream= requires(T ar)
+concept can_get_context = requires(T ar)
 {
-	cereal::get_user_data<std::fstream>(ar);
+	cereal::get_user_data<UniversalContext>(ar);
+};
+
+
+template<bool is_load>
+class GPUBinaryData
+{
+
+public:
+
+	struct save
+	{
+		std::span<std::byte> binary_data;
+
+		SERIALIZE()
+		{
+			uint size = binary_data.size_bytes();
+			ar& size;
+			ar& NVP(cereal::binary_data(binary_data.data(), binary_data.size_bytes()));
+		}
+
+	};
+
+	struct load
+	{
+		uint file_offset;
+		std::filesystem::path path;
+
+		SERIALIZE()
+		{
+			uint size = 0;
+			ar& size;
+
+			UniversalContext& context = cereal::get_user_data<UniversalContext>(ar);
+			file_offset = context.get_context<std::fstream*>()->tellg();
+			path = context.get_context<std::filesystem::path>();
+
+			context.get_context<std::fstream*>()->seekg(file_offset + size, std::ios::beg);
+		}
+	};
+
+	struct Buffer
+	{
+		uint64 offset;
+		uint64 size;
+
+		SERIALIZE()
+		{
+			ar& NVP(offset);
+			ar& NVP(size);
+
+		}
+
+	};
+
+	struct Texture
+	{
+		uint subresource;
+		uint count;
+
+		SERIALIZE()
+		{
+			ar& NVP(subresource);
+			ar& NVP(count);
+
+		}
+
+
+	};
+
+	std::variant<Buffer, Texture > desc;
+
+	using operation_type = std::conditional<is_load, load, save>::type;
+	operation_type operation;
+
+
+	uint size;
+	uint uncompressed_size;
+
+	GPUBinaryData()  requires(is_load) = default;
+	GPUBinaryData(Buffer desc, std::span<std::byte> binary_data) requires(!is_load)
+		: desc(desc), operation(binary_data), uncompressed_size(binary_data.size_bytes())
+	{
+		size = uncompressed_size;
+
+	}
+
+
+	GPUBinaryData(Texture desc, std::span<std::byte> binary_data) requires(!is_load)
+		: desc(desc), operation(binary_data), uncompressed_size(binary_data.size_bytes())
+	{
+		size = uncompressed_size;
+
+	}
+private:
+	SERIALIZE()
+	{
+		ar& NVP(desc);
+		ar& NVP(operation);
+		ar& NVP(size);
+		ar& NVP(uncompressed_size);
+	}
+
 };
 
 export{
 	namespace HAL
 	{
 
-		
-		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>,  public TrackedObject, public API::Resource
+
+		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Resource
 		{
 			friend class API::Resource;
 			ResourceAddress gpu_address;
@@ -33,15 +135,16 @@ export{
 			void _init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 
 			void write(std::vector<std::byte>&);
-			std::vector<std::byte> read();
+			void write(GPUBinaryData<true>&);
+			std::vector<std::byte> read(uint i);
 		public:
-		
-	
+
+
 			const ResourceDesc& get_desc() const
 			{
 				return desc;
 			}
-	ResourceHandle alloc_handle;
+			ResourceHandle alloc_handle;
 			ResourceStateManager& get_state_manager()
 			{
 				return state_manager;
@@ -58,7 +161,7 @@ export{
 			}
 
 			ResourceAllocationInfo alloc_info;
-		//	std::optional<FenceWaiter> load_fence;
+			//	std::optional<FenceWaiter> load_fence;
 			std::byte* buffer_data = nullptr;
 			std::string name;
 			void set_name(std::string name);
@@ -69,9 +172,9 @@ export{
 			Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state = ResourceState::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
 			Resource(const D3D::Resource& resouce, ResourceState state);
 			Resource(const ResourceDesc& desc, PlacementAddress handle);
-		
-			Resource(const ResourceDesc& desc, ResourceHandle handle,bool own=false);
-			Resource():state_manager(this), tiled_manager(this) {};
+
+			Resource(const ResourceDesc& desc, ResourceHandle handle, bool own = false);
+			Resource() :state_manager(this), tiled_manager(this) {};
 
 			virtual ~Resource();
 
@@ -100,40 +203,69 @@ export{
 			}
 
 
-				private:
-					SERIALIZE_PRETTY()
+		private:
+			SERIALIZE_PRETTY()
+			{
+				ar& NVP(desc);
+			}
+
+
+			SERIALIZE()
+			{
+				ar& NVP(desc);
+
+				if constexpr (Archive::is_loading::value)
+				{
+
+					_init(desc, HeapType::DEFAULT);
+					if (desc.is_buffer())
 					{
-						ar& NVP(desc);
+					GPUBinaryData<true> binary;
+
+					ar& NVP(binary);
+					write(binary);
+					}else
+					{
+							for (uint i = 0; i < desc.as_texture().Subresources(); i++)
+							{
+								GPUBinaryData<true> binary;
+
+					ar& NVP(binary);
+					write(binary);
+
+							}
 					}
 
 
-					SERIALIZE()
+				}
+				else
+				{
+
+					if (desc.is_buffer())
 					{
-						ar& NVP(desc);
+						auto data = read(0);
 
-						std::vector<std::byte> data;
-						if constexpr(Archive::is_loading::value)
-						{
-						
+						GPUBinaryData<false> binary(GPUBinaryData<false>::Buffer{ 0,desc.as_buffer().SizeInBytes }, data);
 
-							 _init(desc, HeapType::DEFAULT);
-							 if constexpr(can_get_fstream<Archive>)
-							 {
-								 	std::fstream&f = cereal::get_user_data<std::fstream>(ar);
-
-							Log::get()<<Log::LEVEL_ERROR<<"loading resource" << (uint64)f.tellg()<<Log::endl;
-							 }
-							
-								ar & NVP(data);
-								write(data);
-						}
-						else
-						{
-							data = read();
-						ar& NVP(data);
-
-						}
+						ar& NVP(binary);
 					}
+					else
+					{
+
+						for (uint i = 0; i < desc.as_texture().Subresources(); i++)
+						{
+							auto data = read(i);
+
+							GPUBinaryData<false> binary(GPUBinaryData<false>::Texture{ i,1 }, data);
+
+							ar& NVP(binary);
+						}
+
+					}
+
+
+				}
+			}
 		};
 
 
@@ -156,10 +288,10 @@ export
 			if (g)
 			{
 				auto desc = g->get_desc();
-			//	auto native_desc = g->native_resource->GetDesc();
+				//	auto native_desc = g->native_resource->GetDesc();
 
 				ar& NVP(desc);
-			//	ar& NVP(native_desc);
+				//	ar& NVP(native_desc);
 			}
 		}
 	}

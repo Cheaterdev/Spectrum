@@ -50,16 +50,16 @@ std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& l
 
 
 	auto info = std::make_shared<_info>();
-	copy.read_buffer(load_tiles_buffer->help_buffer->resource.get(), 0, 4, [this, info](const char* data, UINT64 size)
+	copy.read_buffer(load_tiles_buffer->help_buffer->resource.get(), 0, 4, [this, info](std::span<std::byte> memory)
 		{
-			info->size = *reinterpret_cast<const UINT*>(data);
+			info->size = *reinterpret_cast<const UINT*>(memory.data());
 		});
 
 
-	copy.read_buffer(load_tiles_buffer->resource.get(), 0, load_tiles_buffer->resource->get_size(), [this, info, promise](const char* data, UINT64 size)
+	copy.read_buffer(load_tiles_buffer->resource.get(), 0, load_tiles_buffer->resource->get_size(), [this, info, promise](std::span<std::byte> memory)
 		{
 			PROFILE(L"Read Tiles");
-			const uint4* tiles = reinterpret_cast<const uint4*>(data);
+			const uint4* tiles = reinterpret_cast<const uint4*>(memory.data());
 
 			visibility_update update;
 

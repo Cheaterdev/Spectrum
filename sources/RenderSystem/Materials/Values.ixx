@@ -206,9 +206,9 @@ struct Uniform
 		{
 			int i_value;
 			float f_value;
-			Vector<vector_data_t<float,2, false>> f2_value;
-			Vector<vector_data_t<float,3, false>> f3_value;
-			Vector<vector_data_t<float,4, false>> f4_value;
+			Vector<vector_data_t<float,2>> f2_value;
+			Vector<vector_data_t<float,3>> f3_value;
+			Vector<vector_data_t<float,4>> f4_value;
 
 			int raw_data[4];
 		};

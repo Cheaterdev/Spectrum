@@ -115,7 +115,7 @@ namespace HAL
 		if (!current_pipeline->debuggable) return;
 
 		auto pso_name = current_pipeline->name;
-		get_copy().read_buffer(debug_buffer->resource.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](const char* data, UINT64 size)
+		get_copy().read_buffer(debug_buffer->resource.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](std::span<std::byte> memory)
 			{
 
 				LogBlock block(Log::get(), log_level_internal::level_all);
@@ -126,7 +126,7 @@ namespace HAL
 
 					first_debug_log = false;
 				}
-				auto result = reinterpret_cast<const Table::DebugStruct*>(data);
+				auto result = reinterpret_cast<const Table::DebugStruct*>(memory.data());
 
 				block << "DEBUG(" << name << "): " << pso_name << "\n";
 				for (int i = 0; i < 3; i++)
@@ -505,11 +505,11 @@ namespace HAL
 	//{
 	//	set_signature(HAL::get_Signature(layout));
 	//}
-	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
+	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)> f)
 	{
 		return read_texture(resource.get(), offset, box, sub_resource, f);
 	}
-	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(const char*, UINT64, UINT64, UINT64)> f)
+	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)> f)
 	{
 
 		base.create_transition_point();
@@ -526,22 +526,46 @@ namespace HAL
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, layout]()
 			{
-				f(reinterpret_cast<char*>(info.get_cpu_data()), layout.row_stride, layout.slice_stride, info.resource->get_size());
+				f({info.get_cpu_data(),info.size}, layout);
 				result->set_value(true);
 			});
 
 		base.create_transition_point(false);
 		return result->get_future();
 	}
+	std::future<bool> CopyContext::read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)> f)
+	{
+		
+		base.create_transition_point();
+		//	if (base.type != CommandListType::COPY)
+		base.transition(resource, ResourceState::COPY_SOURCE);
+		//else
+	//		base.transition(resource, ResourceState::COMMON);
 
-	std::future<bool> CopyContext::read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(const char*, UINT64)> f)
+		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource);
+		auto info = base.read_data(layout.size, layout.alignment);
+		list->read_texture(resource, 0, resource->get_desc().as_texture().get_size(sub_resource), sub_resource, info, layout);
+
+		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
+		auto result = std::make_shared<std::promise<bool>>();
+		base.on_execute_funcs.push_back([result, info, f, layout]()
+			{
+				f({info.get_cpu_data(),info.size}, layout);
+				result->set_value(true);
+			});
+
+		base.create_transition_point(false);
+		return result->get_future();
+	}
+		
+	std::future<bool> CopyContext::read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)> f)
 	{
 
 		auto result = std::make_shared<std::promise<bool>>();
 
 		if (size == 0)
 		{
-			f(nullptr, 0);
+			f({});
 			result->set_value(true);
 			return result->get_future();
 		}
@@ -555,7 +579,7 @@ namespace HAL
 		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
-				f(reinterpret_cast<char*>(info.get_cpu_data()), size);
+				f({reinterpret_cast<std::byte*>(info.get_cpu_data()), size});
 				result->set_value(true);
 			});
 
@@ -563,12 +587,12 @@ namespace HAL
 		return result->get_future();
 	}
 
-	std::future<bool> CopyContext::read_query(std::shared_ptr<QueryHeap>& query_heap, unsigned int offset, unsigned int size, std::function<void(const char*, UINT64)> f)
+	std::future<bool> CopyContext::read_query(std::shared_ptr<QueryHeap>& query_heap, unsigned int offset, unsigned int size, std::function<void(std::span<std::byte>)> f)
 	{
 		if (size == 0)
 		{
 			auto result = std::make_shared<std::promise<bool>>();
-			f(nullptr, 0);
+			f({});
 			result->set_value(true);
 			return result->get_future();
 		}
@@ -582,7 +606,7 @@ namespace HAL
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
-				f(reinterpret_cast<char*>(info.get_cpu_data()), size);
+				f({reinterpret_cast<std::byte*>(info.get_cpu_data()), size});
 				result->set_value(true);
 			});
 		return result->get_future();

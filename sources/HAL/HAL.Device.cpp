@@ -75,6 +75,7 @@ namespace HAL
 		queues[CommandListType::COMPUTE].reset(new HAL::Queue(CommandListType::COMPUTE, this));
 		queues[CommandListType::COPY].reset(new HAL::Queue(CommandListType::COPY, this));
 
+		ds_queue =  std::make_unique<DirectStorageQueue>(*this);
 		rtx = !Debug::RunForPix&&get_properties().rtx;
 
 		heap_factory = std::make_unique<HeapFactory>(*this);
@@ -123,4 +124,10 @@ namespace HAL
 	{
 		return *descriptor_heap_factory;
 	}
+
+		DirectStorageQueue& Device::get_ds_queue()
+	{
+		return *ds_queue;
+	}
+
 }

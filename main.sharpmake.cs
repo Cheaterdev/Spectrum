@@ -204,6 +204,12 @@ namespace Spectrum
 			    conf.LibraryFiles.Add("WinPixEventRuntime.lib");
                 conf.LibraryPaths.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64", 66);
 			}
+
+
+
+            // fix: dstorage vcpkg issue -> copy manually
+             conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dstoragecore.dll");
+         
         }
     }
 	

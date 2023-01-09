@@ -25,6 +25,18 @@ export namespace HAL
 
 			D3D::CommandQueue get_native();
 		};
+
+
+		class DirectStorageQueue
+		{
+		protected:
+			D3D::StorageQueue native;
+			D3D::StorageFactory factory;
+		public:
+			virtual ~DirectStorageQueue() = default;
+
+			D3D::StorageQueue get_native();
+		};
 	}
 
 }

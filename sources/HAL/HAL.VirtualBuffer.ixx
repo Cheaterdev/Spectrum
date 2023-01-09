@@ -116,10 +116,10 @@ export
 			void debug_print(CommandList& list)
 			{
 
-				list.get_copy().read_buffer(buffer->resource.get(), 0, sizeof(T) * 16, [this](const char* data, UINT64 size)
+				list.get_copy().read_buffer(buffer->resource.get(), 0, sizeof(T) * 16, [this](std::span<std::byte> memory)
 					{
 						Log::get() << "debug_print" << Log::endl;
-						auto result = reinterpret_cast<const T*>(data);
+						auto result = reinterpret_cast<const T*>(memory.data());
 
 						for (int i = 0; i < 16; i++)
 							Log::get() << result[i] << Log::endl;

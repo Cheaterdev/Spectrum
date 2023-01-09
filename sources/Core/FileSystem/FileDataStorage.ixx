@@ -5,6 +5,7 @@ import :Log;
 import :Singleton;
 import :Scheduler;
 import :FileSystem;
+import :Holdable;
 
 import stl.filesystem;
 import stl.memory;
@@ -83,7 +84,14 @@ export
 			T t;
 			std::fstream stream(path,std::ios::binary | std::ios::in);
 			stream.seekg( h.offsets[partition], std::ios::beg );
-			cereal::UserDataAdapter<std::fstream, serialization_iarchive> oa(stream,stream);
+			UniversalContext context;
+
+			context.get_context<std::fstream*>() = &stream;
+			context.get_context<std::filesystem::path>() = path;
+
+
+
+			cereal::UserDataAdapter<UniversalContext, serialization_iarchive> oa(context,stream);
 		
 			oa>>t;
 

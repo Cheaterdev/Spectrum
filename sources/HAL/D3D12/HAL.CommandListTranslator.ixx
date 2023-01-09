@@ -384,20 +384,12 @@ void copy_texture(const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& fr
 			}
 
 
-struct texture_layout
-{
-	uint64 size;
-	uint rows_count;
-	uint row_stride;
-	uint slice_stride;
-
-	uint alignment;
-
-	Format format;
-};
 
 texture_layout get_texture_layout(const Resource* resource, UINT sub_resource, ivec3 box)
 {
+	if(box.z==0) box.z=1;
+	if(box.y==0) box.y=1;
+
 	UINT rows_count = box.y;
 
 	auto desc = resource->get_desc().as_texture();
@@ -416,8 +408,10 @@ texture_layout get_texture_layout(const Resource* resource, UINT sub_resource, i
 }
 			void update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout)
 			{
+				auto buffer_desc=address.resource->get_desc().as_buffer();
+				auto size=box.z*box.y*layout.row_stride;
 
-			
+			assert(address.resource_offset+size <=buffer_desc.SizeInBytes);
 				assert(box.z > 0);
 				CD3DX12_TEXTURE_COPY_LOCATION Dst(resource->get_dx(), sub_resource);
 				CD3DX12_TEXTURE_COPY_LOCATION Src;
@@ -437,8 +431,9 @@ texture_layout get_texture_layout(const Resource* resource, UINT sub_resource, i
 			{
 				CD3DX12_TEXTURE_COPY_LOCATION source(resource->get_dx(), sub_resource);
 				CD3DX12_TEXTURE_COPY_LOCATION dest;
+	if(box.z==0) box.z=1;
+	if(box.y==0) box.y=1;
 
-				assert(box.z > 0);
 				dest.pResource = target.resource->get_dx();
 				dest.Type = D3D12_TEXTURE_COPY_TYPE::D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 				dest.PlacedFootprint.Offset = target.resource_offset;
@@ -450,6 +445,7 @@ texture_layout get_texture_layout(const Resource* resource, UINT sub_resource, i
 				compiler.CopyTextureRegion(&dest, offset.x, offset.y, offset.z, &source, nullptr);
 			}
 
+		
 
 			void transitions(HAL::Barriers& _barriers)
 {

@@ -2,6 +2,9 @@ export module HAL:Device;
 
 import Core;
 import :API.Device;
+
+import :Types;
+
 export class EnginePSOHolder;
 export namespace HAL
 {
@@ -12,6 +15,8 @@ class StaticCompiledGPUData;
 
 class PipelineStateCache;
 	class Queue;
+	class DirectStorageQueue;
+
 	class DescriptorHeapFactory;
 	class QueryHeapFactory;
 	class GPUTimeProfiler;
@@ -25,6 +30,9 @@ class PipelineStateCache;
 
 			HAL::Adapter::ptr adapter;
 			enum_array<HAL::CommandListType, std::shared_ptr<HAL::Queue>> queues;
+
+			std::shared_ptr<HAL::DirectStorageQueue> ds_queue;
+
 			IdGenerator<Thread::Lockable> id_generator;
 			friend class CommandList;
 			bool rtx = false;
@@ -70,6 +78,14 @@ class PipelineStateCache;
 
 			QueryHeapFactory& get_query_heap_factory();
 			DescriptorHeapFactory& get_descriptor_heap_factory();
+
+
+			DirectStorageQueue& get_ds_queue();
+
+			texture_layout get_texture_layout(const ResourceDesc& desc, UINT sub_resource, ivec3 box);
+
+			
+			texture_layout get_texture_layout(const ResourceDesc& rdesc, UINT sub_resource);
 
 		};
 

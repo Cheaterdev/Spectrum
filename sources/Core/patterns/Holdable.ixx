@@ -55,6 +55,9 @@ export
 
 
 	public:
+
+		UniversalContext() = default;
+	
 		template<class T>
 		T& get_context()
 		{

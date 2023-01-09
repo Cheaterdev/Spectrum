@@ -182,15 +182,6 @@ class AssetReference : public AssetReferenceBase
  
 };
 
-template <class T>
-class AssetReferenceVector : public std::vector<T>
-{
-	AssetHolder* holder;
-public:
-	AssetReferenceVector(AssetHolder* holder) :holder(holder) {};
-
-
-};
 class AssetHolder : public SharedObject<AssetHolder>
 {
 

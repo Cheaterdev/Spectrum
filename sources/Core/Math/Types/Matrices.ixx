@@ -205,7 +205,7 @@ export {
 		{
 			struct
 			{
-				Vector<vector_data_t<Format, N, false>> rows[M];
+				Vector<vector_data_t<Format, N>> rows[M];
 			};
 
 			struct

@@ -20,8 +20,9 @@ export namespace HAL
 		DXGI_ADAPTER_DESC adapter_desc;
 		Adapter(DXGI::Adapter native_adapter) :native_adapter(native_adapter)
 		{
-
+			native_adapter->GetDesc(&adapter_desc);
 		}
+
 	public:
 		using ptr = std::shared_ptr<Adapter>;
 

@@ -126,7 +126,7 @@ quat quat::operator*(const quat& q) const
 {
 	vec3 v1(x, y, z), v2(q.x, q.y, q.z), temp = vec3::cross(v1, v2) + q.w * v1 + w * v2;
 	quat p(temp);
-	p.w = w * q.w - dot(v1, v2);
+	p.w = w * q.w - vec3::dot(v1, v2);
 	return p;
 }
 
@@ -136,6 +136,6 @@ quat& quat::operator*=(const quat& q)
 	x = temp.x;
 	y = temp.y;
 	z = temp.z;
-	w = w * q.w - dot(v1, v2);
+	w = w * q.w - vec3::dot(v1, v2);
 	return *this;
 }

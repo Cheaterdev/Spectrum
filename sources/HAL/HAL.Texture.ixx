@@ -88,17 +88,14 @@ export
 
 			SERIALIZE()
 			{
-
+				ar& NVP(resource);
 				if constexpr (Archive::is_saving::value)
 				{
-					auto data = get_data();
-					ar& NVP(data);
+					
 				}
 				else
 				{
-					HAL::texture_data::ptr data;
-					ar& NVP(data);
-					upload_data(data);
+					init();
 				}
 			}
 		};

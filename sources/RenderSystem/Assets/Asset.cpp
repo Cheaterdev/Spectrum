@@ -417,6 +417,7 @@ AssetStorage::AssetStorage(file::ptr f)
 		std::lock_guard<std::mutex> g(archive_mutex);
 		auto archive = get_archive();
 		auto res = archive->get<Editor>("editor");
+	
 		on_preview(res.preview);
 		return res;
 	};
@@ -627,7 +628,9 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 
 					asset = archive->get<Asset::ptr>("asset");
 
-					
+					asset->holder = this;
+					HAL::Device::get().get_ds_queue().flush();
+					HAL::Device::get().get_ds_queue().signal_and_wait();
 				}
 				catch (std::exception e)
 				{

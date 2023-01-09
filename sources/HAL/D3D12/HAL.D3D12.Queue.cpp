@@ -116,7 +116,7 @@ namespace HAL
 			auto dx_source_resource = (infos.source)->get_dx();
 			native->CopyTileMappings(dx_target_resource, &target, dx_source_resource, &source, &TRS, D3D12_TILE_MAPPING_FLAG_NONE);
 		}
-	
+
 	}
 
 	//	signal_and_wait_internal();
@@ -128,6 +128,143 @@ namespace HAL
 		return { cpu_start,gpu_start, frequency };
 	}
 
+	DirectStorageQueue::DirectStorageQueue(Device& device) :requestCounter(device)
+	{
+		    DSTORAGE_CONFIGURATION config{};
+    config.DisableGpuDecompression = false;
+   TEST(device, DStorageSetConfiguration(&config));
+
+	
+		TEST(device, DStorageGetFactory(IID_PPV_ARGS(&factory)));
+
+
+
+		// Create a DirectStorage queue which will be used to load data into a
+		// buffer on the GPU.
+		DSTORAGE_QUEUE_DESC queueDesc{};
+		queueDesc.Capacity = DSTORAGE_MAX_QUEUE_CAPACITY;
+		queueDesc.Priority = DSTORAGE_PRIORITY_NORMAL;
+		queueDesc.SourceType = DSTORAGE_REQUEST_SOURCE_FILE;
+		queueDesc.Device = device.get_native_device().Get();
+
+		TEST(device, factory->CreateQueue(&queueDesc, IID_PPV_ARGS(&native)));
+
+
+	}
+	DirectStorageQueue::~DirectStorageQueue()
+	{
+
+	}
+
+		void DirectStorageQueue::flush()
+	{
+			std::lock_guard<std::mutex> g(queue_mutex);
+			
+			 native->Submit();
+	}
+	void DirectStorageQueue::stop_all()
+	{
+
+	}
+	HAL::FenceWaiter DirectStorageQueue::signal()
+	{
+		auto value = ++m_fenceValue;
+		native->EnqueueSignal(requestCounter.m_fence.Get(), value);
+
+		return FenceWaiter{ &requestCounter, value };
+	}
+		void DirectStorageQueue::signal_and_wait()
+	{
+		auto s = signal();
+		flush();
+		s.wait();
+	}
+	bool DirectStorageQueue::is_complete(UINT64 fence)
+	{
+		return requestCounter.get_completed_value() >= fence;
+	}
+
+
+	HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
+	{
+
+	 D3D::StorageFile file;
+    
+    HRESULT hr = factory->OpenFile(srequest.file.wstring().c_str(), IID_PPV_ARGS(&file));
+
+
+
+		 DSTORAGE_REQUEST request = {};
+    request.Options.SourceType = DSTORAGE_REQUEST_SOURCE_FILE;
+    request.Source.File.Source = file.Get();
+    request.Source.File.Offset = srequest.file_offset;
+    request.Source.File.Size = srequest.size;
+    request.UncompressedSize = srequest.size;
+
+
+
+	std::visit(overloaded{
+				[&](const StorageRequest::Buffer& buffer) {
+					request.Options.DestinationType = DSTORAGE_REQUEST_DESTINATION_BUFFER;
+		request.Destination.Buffer.Resource = srequest.resource->get_dx();
+		request.Destination.Buffer.Offset = buffer.offset;
+		request.Destination.Buffer.Size = request.UncompressedSize;
+				},
+				[&](const StorageRequest::Texture& texture) {
+					request.Options.DestinationType = DSTORAGE_REQUEST_DESTINATION_TEXTURE_REGION;
+	//	request.Destination.MultipleSubresources.Resource = srequest.resource->get_dx();
+	//request.Destination.MultipleSubresources.FirstSubresource = texture.subresource;
+
+
+					 request.Destination.Texture.Resource =  srequest.resource->get_dx();
+        request.Destination.Texture.SubresourceIndex = texture.subresource;
+
+					auto size=srequest.resource->get_desc().as_texture().get_size(texture.subresource);
+        D3D12_BOX destBox{};
+        destBox.right = size.x;
+        destBox.bottom = size.y;
+        destBox.back =  size.z;
+
+        request.Destination.Texture.Region = destBox;
+
+
+
+
+				/*	auto l = HAL::Device::get().get_texture_layout(srequest.resource->get_desc(), texture.subresource);
+					assert(l.size==srequest.size);*/
+				},
+				[&](auto other) {
+					assert(false);
+				}
+		}, srequest.operation);
+
+			std::lock_guard<std::mutex> g(queue_mutex);
+			
+
+
+	  native->EnqueueRequest(&request);
+
+			auto waiter = signal();
+
+
+
+		executor.enqueue([waiter, f=file]() {
+				waiter.wait();
+	
+				});
+
+	//	 native->Submit();
+	//		s.wait();
+
+//		   DSTORAGE_ERROR_RECORD errorRecord{};
+ //   native->RetrieveErrorRecord(&errorRecord);
+
+		return waiter;
+	}
+
+
+
+
 	namespace API
 	{
 		void Queue::construct(HAL::CommandListType type, Device* device)
@@ -135,7 +272,7 @@ namespace HAL
 			auto THIS = static_cast<HAL::Queue*>(this);
 
 			auto t = CounterManager::get().start_count<Queue>();
-		
+
 			// Describe and create the command queue.
 			D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 

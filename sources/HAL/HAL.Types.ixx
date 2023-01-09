@@ -377,7 +377,15 @@ export namespace HAL
 			return MipSlice + ArraySlice * MipLevels + PlaneSlice * MipLevels * ArraySize;
 		}
 
+		uint Subresources() const
+		{
+			return ArraySize*MipLevels;
+		}
 
+		uint3 get_size(uint subres) const
+		{
+			return uint3::max({1,1,1}, Dimensions/std::pow(2,subres));
+		}
 	private:
 		SERIALIZE()
 		{
@@ -477,6 +485,17 @@ export namespace HAL
 	};
 
 
+struct texture_layout
+{
+	uint64 size;
+	uint rows_count;
+	uint row_stride;
+	uint slice_stride;
+
+	uint alignment;
+
+	Format format;
+};
 
 
 	struct shader_macro

@@ -493,13 +493,13 @@ void stencil_renderer::generate(Graph& graph)
 							return true;
 						});
 
-					copy.read_buffer(data.id_buffer->resource.get(), 0, 4, [current, this](const char* data, UINT64 size)
+					copy.read_buffer(data.id_buffer->resource.get(), 0, 4, [current, this](std::span<std::byte> memory)
 						{
 
-							assert(data);
+							assert(memory.size());
 							//device_fail();
 
-							auto result = *reinterpret_cast<const int*>(data) - 1;
+							auto result = *reinterpret_cast<const int*>(memory.data()) - 1;
 
 							run([result, this, current]() {
 								mouse_on_object.first = nullptr;
@@ -515,10 +515,10 @@ void stencil_renderer::generate(Graph& graph)
 
 						});
 
-					copy.read_buffer(data.axis_id_buffer->resource.get(), 0, 4, [this](const char* data, UINT64 size)
+					copy.read_buffer(data.axis_id_buffer->resource.get(), 0, 4, [this](std::span<std::byte> memory)
 						{
 
-							auto result = *reinterpret_cast<const int*>(data) - 1;
+							auto result = *reinterpret_cast<const int*>(memory.data()) - 1;
 							run([this, result]() {
 								mouse_on_axis = result;
 								});
