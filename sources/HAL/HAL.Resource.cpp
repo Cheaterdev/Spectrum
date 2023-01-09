@@ -27,35 +27,33 @@ namespace HAL
 	void Resource::write(GPUBinaryData<true>& data)
 	{
 
-								StorageRequest request;
+		StorageRequest request;
 
-	request.resource =get_ptr();
-	request.file  = data.operation.path;
-		request.file_offset=data.operation.file_offset;
+		request.resource = get_ptr();
+		request.file = data.operation.path;
+		request.file_offset = data.operation.file_offset;
 		request.size = data.size;
 
 
-			std::visit(overloaded{
-				[&](const GPUBinaryData<true>::Buffer& buffer) {
-						request.operation = StorageRequest::Buffer{buffer.offset};
-				},
-				[&](const GPUBinaryData<true>::Texture& texture) {
-				request.operation = StorageRequest::Texture{texture.subresource,texture.count};
-				},
-				[& ](auto other) {
-					assert(false);
-				}
-		}, data.desc);
-
-
+		std::visit(overloaded{
+			[&](const GPUBinaryData<true>::Buffer& buffer) {
+					request.operation = StorageRequest::Buffer{buffer.offset};
+			},
+			[&](const GPUBinaryData<true>::Texture& texture) {
+			request.operation = StorageRequest::Texture{texture.subresource,texture.count};
+			},
+			[&](auto other) {
+				assert(false);
+			}
+			}, data.desc);
 
 
 		//uint64 uncompressed_size;
-	Device::get().get_ds_queue().execute(request);
-	HAL::Device::get().get_ds_queue().signal_and_wait();
-				
-								
+		Device::get().get_ds_queue().execute(request);
+		HAL::Device::get().get_ds_queue().signal_and_wait();
 	}
+
+
 	std::vector<std::byte>  Resource::read(uint i)
 	{
 		std::vector<std::byte> data;

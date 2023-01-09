@@ -78,10 +78,11 @@ export
 			std::filesystem::create_directories(path.parent_path());
 			ostream_ptr = std::make_shared<std::fstream>(path,std::ios::binary|std::ios::out);
 		}
-		template<class T>
-		T get(std::string partition)
+
+			template<class T>
+		void get(std::string partition, T& target)
 		{
-			T t;
+	
 			std::fstream stream(path,std::ios::binary | std::ios::in);
 			stream.seekg( h.offsets[partition], std::ios::beg );
 			UniversalContext context;
@@ -93,10 +94,16 @@ export
 
 			cereal::UserDataAdapter<UniversalContext, serialization_iarchive> oa(context,stream);
 		
-			oa>>t;
+			oa>>target;
 
 			stream.close();
 
+		}
+		template<class T>
+		T get(std::string partition)
+		{
+			T t;
+			get(partition,t);
 			return t;
 		}
 

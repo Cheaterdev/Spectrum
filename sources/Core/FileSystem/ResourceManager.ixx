@@ -9,6 +9,7 @@ import stl.filesystem;
 import stl.memory;
 import :FileSystem;
 import :FileDepender;
+import :FileDataStorage;
 
 export
 {
@@ -133,8 +134,13 @@ protected:
 	static std::shared_ptr<_resource> create_new(const _header& header)
 	{
 		std::shared_ptr<_resource> result;
-		std::wstring header_hash = convert(Hasher::hash(header));
-		std::shared_ptr<file> file = FileSystem::get().get_file(L"cache\\" + header_hash + L".bin");
+		std::string header_hash = Hasher::hash(header)  + ".bin";
+
+		std::filesystem::path cache_dir ("cache");
+
+
+	std::filesystem::path path = cache_dir / header_hash;
+			std::shared_ptr<file> file = FileSystem::get().get_file(path);
 
 		if (!file)
 		{
@@ -142,11 +148,10 @@ protected:
 		}
 		else
 		{
-			auto stream = Serializer::get_stream(file->load_all());
-			_header h;
-			stream >> h;
-			resource_file_depender file_depends;
-			stream >> file_depends;
+			FileDataStorage storage(path);//Serializer::get_stream(file->load_all());
+
+			auto h = storage.get<_header>("header");
+			auto file_depends = storage.get<resource_file_depender>("file_depends");
 
 			if (file_depends.need_update())
 			{
@@ -155,7 +160,8 @@ protected:
 			else
 			{
 				result.reset(new _resource());
-				stream >> *result;
+
+				storage.get("resource",*result);
 				result->file_depends = file_depends;
 				result->header = h;
 			}
@@ -184,19 +190,17 @@ protected:
 	{
 		result->file_depends = file_depends;
 		result->header = header;
-		std::string header_hash = Hasher::hash(header);
-		Serializer::serialization_ostream stream;
+		std::string header_hash = Hasher::hash(header)  + ".bin";
+		std::filesystem::path cache_dir ("cache");
+		std::filesystem::path path = cache_dir / header_hash;
+		FileDataStorage storage(path);//Serializer::get_stream(file->load_all());
 
-		try
-		{
-			stream << header << file_depends << *result;
-			FileSystem::get().save_data(L"cache\\" + convert(header_hash) + L".bin", Serializer::serialize(stream, true));
-		}
+		storage.start_save();
+		storage.put("header",header);
+		storage.put("file_depends",file_depends);
+		storage.put("resource",*result);
 
-		catch (std::exception& e)
-		{
-			Log::get().crash_error(0, e.what());
-		}
+		storage.save();
 	}
 
 
