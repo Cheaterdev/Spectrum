@@ -37,7 +37,7 @@ export{
 			CompilerType compiler;
 
 			std::list<TrackedObject::ptr> tracked_resources;
-
+						FenceWaiter dstorage_fence;
 			CompilerType* get_native_list()
 			{
 				return &compiler;
@@ -52,12 +52,18 @@ export{
 				{
 					state.used = true;
 					tracked_resources.emplace_back(obj.get_tracked());
+
+					if constexpr(std::is_same_v<T,Resource>)
+					{
+						dstorage_fence.combine(obj.load_waiter);
+					}
 				}
 			}
 
 			void free_tracked_objects()
 			{
 				tracked_resources.clear();
+				dstorage_fence = FenceWaiter();
 			}
 			virtual ~CommandListBase() = default;
 

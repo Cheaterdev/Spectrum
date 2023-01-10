@@ -122,6 +122,6 @@ export namespace HAL
 
 		HAL::FenceWaiter execute(StorageRequest request);
 		void flush();
-
+		FenceWaiter get_waiter();
 	};
 }

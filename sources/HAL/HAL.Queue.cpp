@@ -152,6 +152,10 @@ namespace HAL
 			}
 		}
 
+		API::Queue::gpu_wait(list->dstorage_fence);
+
+		if(list->dstorage_fence)
+			Device::get().get_ds_queue().flush();
 
 		auto transition_list = (list)->fix_pretransitions();
 

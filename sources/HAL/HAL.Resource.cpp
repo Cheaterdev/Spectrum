@@ -49,8 +49,8 @@ namespace HAL
 
 
 		//uint64 uncompressed_size;
-		Device::get().get_ds_queue().execute(request);
-		HAL::Device::get().get_ds_queue().signal_and_wait();
+		load_waiter = Device::get().get_ds_queue().execute(request);
+	//	HAL::Device::get().get_ds_queue().signal_and_wait();
 	}
 
 

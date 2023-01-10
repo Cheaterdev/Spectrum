@@ -184,7 +184,10 @@ namespace HAL
 		return requestCounter.get_completed_value() >= fence;
 	}
 
-
+			FenceWaiter DirectStorageQueue::get_waiter()
+	{
+			return FenceWaiter{ &requestCounter, 0 };
+	}
 	HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
 	{
 

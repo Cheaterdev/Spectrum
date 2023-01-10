@@ -7,6 +7,7 @@ import :API.Resource;
 import :TiledMemoryManager;
 import :ResourceStates;
 import :FrameManager;
+import :Fence;
 
 import Core;
 
@@ -129,6 +130,7 @@ export{
 			ResourceAddress gpu_address;
 			HeapType heap_type;
 			ResourceDesc desc;
+			
 		protected:
 			ResourceStateManager state_manager;
 			TiledResourceManager tiled_manager;
@@ -138,7 +140,7 @@ export{
 			void write(GPUBinaryData<true>&);
 			std::vector<std::byte> read(uint i);
 		public:
-
+			FenceWaiter load_waiter;
 
 			const ResourceDesc& get_desc() const
 			{

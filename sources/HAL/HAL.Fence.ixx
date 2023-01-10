@@ -28,7 +28,7 @@ export namespace HAL
 	struct FenceWaiter
 	{
 		Fence* fence = nullptr;
-		Fence::CounterType value;
+		Fence::CounterType value = 0;
 		operator bool()
 		{
 			return !!fence;
@@ -39,6 +39,16 @@ export namespace HAL
 			{
 				fence->wait(value);
 			}
+		}
+
+		void combine(const FenceWaiter& other)
+		{
+			if(fence)
+			assert(fence==other.fence);
+			else
+				fence= other.fence;
+			if(fence)
+			value=std::max(value,other.value);
 		}
 	};
 }
