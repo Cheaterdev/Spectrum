@@ -7,8 +7,11 @@ import :Math;
 import stl.core;
 import stl.threading;
 
-
-
+template<class T>
+concept isCollectable = requires
+{
+	T::GarbageCount;
+};
 export namespace Allocators
 {
 
@@ -22,29 +25,29 @@ export namespace Allocators
 	template<class HeapPageType>
 	struct HeapHandle
 	{
-		
+
 
 		HeapHandle() = default;
 		HeapHandle(const AllocatorHanle& handle, std::shared_ptr<HeapPage<HeapPageType>> page) :handle(handle), page(page)
 		{
-		offset=handle.get_offset();
-			size=handle.get_size();
-	}
+			offset = handle.get_offset();
+			size = handle.get_size();
+		}
 
 		std::shared_ptr<HeapPageType> get_heap() const
 		{
-			auto p =page.lock();
-		if(p) return p->get_heap();
+			auto p = page.lock();
+			if (p) return p->get_heap();
 
 			return nullptr;
 		}
-		
+
 		operator bool()const
 		{
 			return !!handle.get_owner();
 		}
-		inline UINT64 get_offset() const{return offset;}
-		inline UINT64 get_size() const {return size;}
+		inline UINT64 get_offset() const { return offset; }
+		inline UINT64 get_size() const { return size; }
 
 		void Free();
 
@@ -69,14 +72,14 @@ export namespace Allocators
 
 			return get_offset() == other.get_offset();
 		}
-	//private:
+		//private:
 
 		AllocatorHanle handle;
 		std::weak_ptr<HeapPage<HeapPageType>>page;
 		uint64 offset = 0;
 		uint64 size = 0;
 	};
-	
+
 	template<class HeapPageType>
 	class HeapAllocatorInterface
 	{
@@ -84,7 +87,7 @@ export namespace Allocators
 		virtual HeapHandle<HeapPageType> alloc(size_t size, size_t alignment) = 0;
 		virtual void free(HeapHandle<HeapPageType>& handle) = 0;
 
-			virtual bool CanFree() = 0;
+		virtual bool CanFree() = 0;
 	};
 	template<class Context>
 	class HeapFactoryInterface
@@ -107,20 +110,20 @@ export namespace Allocators
 		std::unique_ptr<Allocator> allocator;
 		AllocatorHanle inner_heap_page_handle;
 		uint64 offset = 0;
-		
-		HeapPage(std::shared_ptr<HeapPageType> heap, HeapAllocatorInterface<HeapPageType>& owner,AllocatorHanle handle) : owner(owner), heap(heap),inner_heap_page_handle(handle)
+
+		HeapPage(std::shared_ptr<HeapPageType> heap, HeapAllocatorInterface<HeapPageType>& owner, AllocatorHanle handle) : owner(owner), heap(heap), inner_heap_page_handle(handle)
 		{
-	
-		//	assert(allocator->get_size()==handle.get_size());
-			offset=inner_heap_page_handle.get_offset();
+
+			//	assert(allocator->get_size()==handle.get_size());
+			offset = inner_heap_page_handle.get_offset();
 		}
 		virtual ~HeapPage() = default;
-		void handle_free(HandleType& handle) 
+		void handle_free(HandleType& handle)
 		{
 			owner.free(handle);
 		}
 
-		std::shared_ptr<HeapPageType> get_heap() 
+		std::shared_ptr<HeapPageType> get_heap()
 		{
 			return heap;
 		}
@@ -135,26 +138,26 @@ export namespace Allocators
 			return offset;
 		}
 
-			bool CanFree() const
+		bool CanFree() const
 		{
 			return owner.CanFree();
 		}
 	};
 	template<class Context, class AllocationPolicy>
-	class HeapFactory: public HeapFactoryInterface<Context>
+	class HeapFactory : public HeapFactoryInterface<Context>
 	{
 	protected:
 		using HeapFactoryInterface<Context>::ptr_type;
 		using HeapFactoryInterface<Context>::page_type;
-		
+
 		struct page_allocator
 		{
 			ptr_type heap;
 			CommonAllocator allocator;
-
-			page_allocator(ptr_type heap,size_t size):heap(heap),allocator(size){}
+			uint free_counter = 0;
+			page_allocator(ptr_type heap, size_t size) :heap(heap), allocator(size) {}
 		};
-	
+
 		using heap_list = std::list< page_allocator>;
 		std::map<typename Context::HeapMemoryOptions, heap_list> all_heaps;
 
@@ -162,6 +165,37 @@ export namespace Allocators
 
 		virtual ptr_type make_heap(Context::HeapMemoryOptions index, size_t size) = 0;
 	public:
+
+		void GarbageCollect()
+		{
+			if constexpr (isCollectable<Context>)
+			{
+				for (auto& list : all_heaps)
+				{
+
+					for (auto holder = list.second.begin(); holder != list.second.end();)
+					{
+
+						if (holder->allocator.isEmpty())
+							holder->free_counter++;
+						else
+							holder->free_counter = 0;
+
+
+						if (holder->free_counter >= Context::GarbageCount)
+						{
+							holder = list.second.erase(holder); // reseat iterator to a valid value post-erase
+						}
+						else {
+							++holder;
+						}
+					}
+
+
+				}
+			}
+		}
+
 		page_type AllocateHeap(Context::HeapMemoryOptions index, size_t size, HeapAllocatorInterface<typename Context::HeapPageType>& owner) override
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
@@ -169,37 +203,37 @@ export namespace Allocators
 			auto& list = all_heaps[index];
 
 
-				for (auto &holder:list)
-				{
-					auto handle = holder.allocator.TryAllocate(size, Context::PageAlignment);
+			for (auto& holder : list)
+			{
+				auto handle = holder.allocator.TryAllocate(size, Context::PageAlignment);
 
-					if (handle)
-					{
-						return  std::make_shared<HeapPage<typename Context::HeapPageType>>(holder.heap, owner,*handle);
-					}
+				if (handle)
+				{
+					return  std::make_shared<HeapPage<typename Context::HeapPageType>>(holder.heap, owner, *handle);
 				}
-				
+			}
+
 			auto heap = make_heap(index, size);
-			list.emplace_back(heap, heap->get_size() );
+			list.emplace_back(heap, heap->get_size());
 
 			auto& holder = list.back();
 
 			auto handle = holder.allocator.Allocate(size, Context::PageAlignment);
-			return std::make_shared<HeapPage<typename Context::HeapPageType>>(holder.heap,  owner,handle);
-		
+			return std::make_shared<HeapPage<typename Context::HeapPageType>>(holder.heap, owner, handle);
+
 		}
 
 		void Free(Context::HeapMemoryOptions index, page_type page) override
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
 			page->inner_heap_page_handle.FreeAndClear();
-		//	free_heaps[index].push_back(page);
+			//	free_heaps[index].push_back(page);
 		}
 	};
 
 
 	template<class Context, class AllocationPolicy>
-	class HeapAllocator:public HeapAllocatorInterface<typename Context::HeapPageType>
+	class HeapAllocator :public HeapAllocatorInterface<typename Context::HeapPageType>
 	{
 		const typename Context::HeapMemoryOptions creation_info;
 		using page_list = std::set<typename  HeapPage<typename Context::HeapPageType>::ptr>;
@@ -207,14 +241,14 @@ export namespace Allocators
 
 		typename AllocationPolicy::LockPolicy::mutex m;
 		page_list all_pages;
-	
+
 		bool del_heaps;
 
 
 
 		HeapFactoryInterface<Context>& factory;
 	public:
-		HeapAllocator(HeapFactoryInterface<Context>& factory,Context::HeapMemoryOptions index, bool del_heaps = true) :factory(factory),creation_info(index), del_heaps(del_heaps)
+		HeapAllocator(HeapFactoryInterface<Context>& factory, Context::HeapMemoryOptions index, bool del_heaps = true) :factory(factory), creation_info(index), del_heaps(del_heaps)
 		{
 
 		}
@@ -232,19 +266,19 @@ export namespace Allocators
 				if (handle)
 				{
 
-					assert(handle->get_offset()+size<= page->get_offset()+ page->get_size());
-					return { *handle, page};
+					assert(handle->get_offset() + size <= page->get_offset() + page->get_size());
+					return { *handle, page };
 				}
 			}
 			auto pagesize = std::max(Math::roundUp(size, Context::PageAlignment), Context::PageAlignment);
 
-		
-			auto page = factory.AllocateHeap(creation_info, pagesize,*this);
-			page->allocator.reset(new typename AllocationPolicy::AllocatorType(page->inner_heap_page_handle.get_offset(),page->inner_heap_page_handle.get_offset()+pagesize));
+
+			auto page = factory.AllocateHeap(creation_info, pagesize, *this);
+			page->allocator.reset(new typename AllocationPolicy::AllocatorType(page->inner_heap_page_handle.get_offset(), page->inner_heap_page_handle.get_offset() + pagesize));
 			all_pages.insert(page);
 			auto handle = page->allocator->Allocate(size, alignment);
-			assert(handle.get_offset()+size<= page->get_offset()+ page->get_size());
-			return { handle, page};
+			assert(handle.get_offset() + size <= page->get_offset() + page->get_size());
+			return { handle, page };
 
 		}
 
@@ -258,20 +292,20 @@ export namespace Allocators
 			//uint t = heap.use_count();
 			if (del_heaps && page->allocator->isEmpty())
 			{
-//				assert(all_pages.count(page) == 1);
+				//				assert(all_pages.count(page) == 1);
 				all_pages.erase(page);
 				factory.Free(creation_info, page);
 			}
 		}
 
-		 bool CanFree()override
+		bool CanFree()override
 		{
-			return  !(std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator>);
+			return  !(std::is_same_v<typename AllocationPolicy::AllocatorType, LinearAllocator>);
 		}
-		void for_each(std::function<void(const typename Context::HeapMemoryOptions& options, uint64 , uint64 , std::shared_ptr<typename Context::HeapPageType>)> f)
+		void for_each(std::function<void(const typename Context::HeapMemoryOptions& options, uint64, uint64, std::shared_ptr<typename Context::HeapPageType>)> f)
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
-			for (auto &heap : all_pages)
+			for (auto& heap : all_pages)
 			{
 				f(creation_info, heap->get_offset(), (uint64)heap->allocator->get_max_usage(), heap->heap);
 			}
@@ -279,8 +313,8 @@ export namespace Allocators
 
 		void reset()
 		{
-		typename AllocationPolicy::LockPolicy::guard g(m);
-	for (auto& page : all_pages)
+			typename AllocationPolicy::LockPolicy::guard g(m);
+			for (auto& page : all_pages)
 			{
 				page->allocator->Reset();
 				factory.Free(creation_info, page);
@@ -306,7 +340,7 @@ export namespace Allocators
 	public:
 		using HeapMemoryOptions = typename Context::HeapMemoryOptions;
 		using HandleType = HeapHandle<typename Context::HeapPageType>;
-		HeapPageManager(HeapFactoryInterface<Context>&factory, bool del_heaps = true) :factory(factory),del_heaps(del_heaps)
+		HeapPageManager(HeapFactoryInterface<Context>& factory, bool del_heaps = true) :factory(factory), del_heaps(del_heaps)
 		{
 
 		}
@@ -318,20 +352,20 @@ export namespace Allocators
 
 			if (!creator)
 			{
-				creator = std::make_shared<HeapAllocator<Context, AllocationPolicy>>(factory,options, del_heaps);
+				creator = std::make_shared<HeapAllocator<Context, AllocationPolicy>>(factory, options, del_heaps);
 			}
 
-			auto res= creator->alloc(size, alignment);
-			assert(res.get_offset()%alignment == 0);
+			auto res = creator->alloc(size, alignment);
+			assert(res.get_offset() % alignment == 0);
 
-			assert(res.get_offset()+size<= res.get_heap()->get_size());
+			assert(res.get_offset() + size <= res.get_heap()->get_size());
 			return res;
 		}
 
-		void for_each(std::function<void(const typename Context::HeapMemoryOptions&options, uint64 , uint64 , std::shared_ptr<typename Context::HeapPageType>)>f)
+		void for_each(std::function<void(const typename Context::HeapMemoryOptions& options, uint64, uint64, std::shared_ptr<typename Context::HeapPageType>)>f)
 		{
 			typename AllocationPolicy::LockPolicy::guard g(m);
-			for(auto &[opt,creator]:creators)
+			for (auto& [opt, creator] : creators)
 			{
 				creator->for_each(f);
 			}
@@ -352,19 +386,20 @@ export namespace Allocators
 	{
 		if (!handle) return;
 
-		auto p =page.lock();
-		if(p)
-		p->handle_free(*this);
+		auto p = page.lock();
+		if (p)
+			p->handle_free(*this);
 	}
 
 
 	template<class HeapPageType>
 	bool HeapHandle<HeapPageType>::CanFree() const
-	{	auto p =page.lock();
-		if(p)
-		return p->CanFree();
+	{
+		auto p = page.lock();
+		if (p)
+			return p->CanFree();
 
-			return false;
+		return false;
 	}
 }
 

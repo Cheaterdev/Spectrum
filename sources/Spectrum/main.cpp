@@ -781,7 +781,7 @@ public:
 			}
 
 			Profiler::get().on_frame(frame_counter++);
-
+			Device::get().get_heap_factory().GarbageCollect();
 			GUI::user_interface::size = new_size;
 			if (fps.tick())
 			{

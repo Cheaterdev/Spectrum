@@ -24,6 +24,8 @@ export namespace HAL
 		using HeapMemoryOptions = HeapIndex;
 
 		static const size_t PageAlignment = 1_mb;
+
+		static const size_t GarbageCount = 10;
 	};
 
 
