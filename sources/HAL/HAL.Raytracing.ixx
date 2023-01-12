@@ -16,8 +16,11 @@ export
 		class RaytracingAccelerationStructure
 		{
 
-
+			StructureBuffer<std::byte>::ptr scratch_buffer;
+			StructureBuffer<std::byte>::ptr prev_buffer;
+			
 			virtual_gpu_buffer<std::byte>::ptr scratchInfo;
+			virtual_gpu_buffer<std::byte>::ptr currentResource;
 
 
 			virtual_gpu_buffer<std::byte>::ptr prevResource;
@@ -26,8 +29,7 @@ export
 
 			Handle handle_table;
 		public:
-			virtual_gpu_buffer<std::byte>::ptr currentResource;
-
+					StructureBuffer<std::byte>::ptr cur_buffer;
 			using ptr = std::shared_ptr<RaytracingAccelerationStructure>;
 			HLSL::RaytracingAccelerationStructure raytracing_handle;
 

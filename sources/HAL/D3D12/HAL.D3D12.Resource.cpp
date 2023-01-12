@@ -245,7 +245,7 @@ namespace HAL
 		init(HAL::Device::get(), desc, address, state);
 
 		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
-
+			if (heap_type == HeapType::RESERVED) 
 		tiled_manager.init_tilings();
 
 		gpu_address = ResourceAddress{ this,0 };

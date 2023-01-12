@@ -14,21 +14,16 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 
 	auto bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
+	scratch_buffer = std::make_shared<StructureBuffer<std::byte>>(bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT, ResourceState::RAYTRACING_STRUCTURE);
+	cur_buffer = std::make_shared<StructureBuffer<std::byte>>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT, ResourceState::RAYTRACING_STRUCTURE);
 
-	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, ResourceState::RAYTRACING_STRUCTURE);
-
-	scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource);
-
-	scratchInfo->reserve(*list, bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
-	currentResource->reserve(*list, bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes);
 	HAL::RaytracingBuildDescStructure bottomLevelBuildDesc;
 	{
-		bottomLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer->get_resource_address();
-		bottomLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer->get_resource_address();
+		bottomLevelBuildDesc.DestAccelerationStructureData = cur_buffer->get_resource_address();
+		bottomLevelBuildDesc.ScratchAccelerationStructureData = scratch_buffer->get_resource_address();
 	}
 
 	list->get_compute().build_ras(bottomLevelBuildDesc, inputs);
-
 }
 
 HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vector<InstanceDesc> instances)
@@ -75,6 +70,12 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 
 	raytracing_handle = HLSL::RaytracingAccelerationStructure(handle_table[0]);
 	raytracing_handle.create(currentResource->buffer->resource);
+
+
+	scratch_buffer = scratchInfo->buffer;
+	cur_buffer = currentResource->buffer;
+	prev_buffer = prevResource->buffer;
+
 }
 
 void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT size, ResourceAddress address,
@@ -130,5 +131,5 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 
 HAL::ResourceAddress HAL::RaytracingAccelerationStructure::get_gpu_address() const
 {
-	return currentResource->buffer->get_resource_address();
+	return cur_buffer->get_resource_address();
 }
