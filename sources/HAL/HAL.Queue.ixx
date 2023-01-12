@@ -83,8 +83,8 @@ export namespace HAL
 		std::filesystem::path file;
 		uint64 file_offset;
 		uint64 size;
-		//uint64 uncompressed_size;
-
+		uint64 uncompressed_size;
+		bool compressed;
 
 		struct Buffer
 		{

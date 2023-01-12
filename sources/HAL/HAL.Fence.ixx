@@ -41,6 +41,15 @@ export namespace HAL
 			}
 		}
 
+		bool is_completed() const
+		{
+				if (fence)
+			{
+				return fence->get_completed_value()>=(value);
+			}
+
+			return true;
+		}
 		void combine(const FenceWaiter& other)
 		{
 			if(fence)

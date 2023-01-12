@@ -199,10 +199,17 @@ namespace HAL
 
 		 DSTORAGE_REQUEST request = {};
     request.Options.SourceType = DSTORAGE_REQUEST_SOURCE_FILE;
+
+		if(srequest.compressed)
+		{
+			 request.Options.CompressionFormat = DSTORAGE_COMPRESSION_FORMAT_GDEFLATE;
+
+		}
+		
     request.Source.File.Source = file.Get();
     request.Source.File.Offset = srequest.file_offset;
     request.Source.File.Size = srequest.size;
-    request.UncompressedSize = srequest.size;
+    request.UncompressedSize = srequest.uncompressed_size;
 
 
 

@@ -17,7 +17,6 @@ concept can_get_context = requires(T ar)
 	cereal::get_user_data<UniversalContext>(ar);
 };
 
-
 template<bool is_load>
 class GPUBinaryData
 {
@@ -26,25 +25,34 @@ public:
 
 	struct save
 	{
-		std::span<std::byte> binary_data;
+		std::vector<std::byte> binary_data;
+		uint size;
+
+
+		save(std::span<std::byte> uncompressed)
+		{
+			binary_data = HAL::Device::get().compress(uncompressed);
+			size = binary_data.size();
+		}
 
 		SERIALIZE()
 		{
-			uint size = binary_data.size_bytes();
+		
 			ar& size;
-			ar& NVP(cereal::binary_data(binary_data.data(), binary_data.size_bytes()));
+			ar& NVP(cereal::binary_data(binary_data.data(), binary_data.size()));
 		}
 
 	};
 
 	struct load
 	{
+		uint size;
 		uint file_offset;
 		std::filesystem::path path;
 
 		SERIALIZE()
 		{
-			uint size = 0;
+			size = 0;
 			ar& size;
 
 			UniversalContext& context = cereal::get_user_data<UniversalContext>(ar);
@@ -89,15 +97,17 @@ public:
 	using operation_type = std::conditional<is_load, load, save>::type;
 	operation_type operation;
 
-
-	uint size;
+	uint get_size() const
+	{
+		return operation.size;
+	}
 	uint uncompressed_size;
 
 	GPUBinaryData()  requires(is_load) = default;
 	GPUBinaryData(Buffer desc, std::span<std::byte> binary_data) requires(!is_load)
 		: desc(desc), operation(binary_data), uncompressed_size(binary_data.size_bytes())
 	{
-		size = uncompressed_size;
+		
 
 	}
 
@@ -105,7 +115,7 @@ public:
 	GPUBinaryData(Texture desc, std::span<std::byte> binary_data) requires(!is_load)
 		: desc(desc), operation(binary_data), uncompressed_size(binary_data.size_bytes())
 	{
-		size = uncompressed_size;
+			
 
 	}
 private:
@@ -113,7 +123,7 @@ private:
 	{
 		ar& NVP(desc);
 		ar& NVP(operation);
-		ar& NVP(size);
+	
 		ar& NVP(uncompressed_size);
 	}
 
@@ -141,6 +151,11 @@ export{
 			std::vector<std::byte> read(uint i);
 		public:
 			FenceWaiter load_waiter;
+
+			bool is_ready()const
+			{
+				return load_waiter.is_completed();
+			}
 
 			const ResourceDesc& get_desc() const
 			{
@@ -246,7 +261,7 @@ export{
 					if (desc.is_buffer())
 					{
 						auto data = read(0);
-
+					
 						GPUBinaryData<false> binary(GPUBinaryData<false>::Buffer{ 0,desc.as_buffer().SizeInBytes }, data);
 
 						ar& NVP(binary);
@@ -257,7 +272,7 @@ export{
 						for (uint i = 0; i < desc.as_texture().Subresources(); i++)
 						{
 							auto data = read(i);
-
+			
 							GPUBinaryData<false> binary(GPUBinaryData<false>::Texture{ i,1 }, data);
 
 							ar& NVP(binary);

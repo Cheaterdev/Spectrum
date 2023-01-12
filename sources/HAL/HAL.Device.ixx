@@ -86,7 +86,8 @@ class PipelineStateCache;
 
 			
 			texture_layout get_texture_layout(const ResourceDesc& rdesc, UINT sub_resource);
-
+			
+			std::vector<std::byte> compress(std::span<std::byte>);
 		};
 
 	

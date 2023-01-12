@@ -51,6 +51,28 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 }
 
 
+		std::vector<std::byte> Device::compress(std::span<std::byte> source)
+		{
+			std::vector<std::byte> dest;
+
+
+			size_t maxSize = g_bufferCompression->CompressBufferBound(static_cast<uint32_t>(source.size()));
+
+			dest.resize(maxSize);
+
+			size_t actualCompressedSize = 0;
+
+			HRESULT compressionResult = g_bufferCompression->CompressBuffer(
+				reinterpret_cast<const void*>(source.data()),
+				static_cast<uint32_t>(source.size()),
+				DSTORAGE_COMPRESSION_BEST_RATIO,
+				reinterpret_cast<void*>(dest.data()),
+				static_cast<uint32_t>(dest.size()),
+				&actualCompressedSize);
+
+			dest.resize(actualCompressedSize);
+			return dest;
+		}
 	namespace API
 	{
 		
@@ -137,10 +159,16 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 				native_device.Get());
 
 
+
+			  DStorageCreateCompressionCodec(
+            DSTORAGE_COMPRESSION_FORMAT_GDEFLATE,
+            6,
+            IID_PPV_ARGS(&g_bufferCompression));
+
+
 		}
 
-
-		D3D::Device Device::Device::get_native_device()
+		D3D::Device Device::get_native_device()
 		{
 			return native_device;
 		}

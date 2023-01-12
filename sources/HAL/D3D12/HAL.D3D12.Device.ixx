@@ -39,7 +39,7 @@ export namespace HAL
 			using ptr = std::shared_ptr<Device>;
 
 
-
+			ComPtr<IDStorageCompressionCodec> g_bufferCompression;
 
 		public:
 			D3D::Device native_device;

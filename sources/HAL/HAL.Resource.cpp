@@ -32,8 +32,9 @@ namespace HAL
 		request.resource = get_ptr();
 		request.file = data.operation.path;
 		request.file_offset = data.operation.file_offset;
-		request.size = data.size;
-
+		request.size = data.get_size();
+		request.uncompressed_size = data.uncompressed_size;
+		request.compressed = true;
 
 		std::visit(overloaded{
 			[&](const GPUBinaryData<true>::Buffer& buffer) {
