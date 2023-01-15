@@ -136,7 +136,8 @@ namespace HAL
 
 	
 		TEST(device, DStorageGetFactory(IID_PPV_ARGS(&factory)));
-
+		if constexpr (Debug::CheckErrors)    factory->SetDebugFlags(DSTORAGE_DEBUG_BREAK_ON_ERROR | DSTORAGE_DEBUG_SHOW_ERRORS);
+    factory->SetStagingBufferSize(256 * 1024 * 1024);
 
 
 		// Create a DirectStorage queue which will be used to load data into a
@@ -260,7 +261,7 @@ namespace HAL
 
 		executor.enqueue([waiter, f=file]() {
 				waiter.wait();
-	
+	f->Close();
 				});
 
 	//	 native->Submit();

@@ -232,9 +232,9 @@ bool stencil_renderer::on_drop(GUI::drag_n_drop_package::ptr p, vec2 m)
 
 
 		user_ui->message_box("static?", "static?", [this, mesh](bool v) {
-			MeshAssetInstance::ptr m(new MeshAssetInstance(mesh));
-			m->type = v ? MESH_TYPE::STATIC : MESH_TYPE::DYNAMIC;
-			scene->add_child(m);
+			auto instance = mesh->create_instance();
+			instance->type = v ? MESH_TYPE::STATIC : MESH_TYPE::DYNAMIC;
+			scene->add_child(instance);
 			});
 
 

@@ -147,8 +147,8 @@ void materials::universal_material::compile()
 
 	for (int i = 0; i < textures.size(); i++)
 	{
-		auto& t = textures[i];
-		TextureAsset::ptr tex = t->asset->get_ptr<TextureAsset>();
+			TextureAsset::ptr tex = *textures[i];
+
 		if (tex && tex->get_texture()->texture_2d())
 			texture_srvs[i] = tex->get_texture()->texture_2d().texture2D;
 		else
@@ -245,12 +245,18 @@ void materials::universal_material::generate_material()
 
 		//   if (textures_changed)
 	{
-		for (auto& t : textures)
+	/*	for (auto& t : textures)
 		{
 			t->asset.destroy();
-		}
-		textures = context->get_textures();
+		}*/
 
+		textures.clear();
+		for(auto &t:context->get_textures())
+		{
+			textures.emplace_back(register_asset(t->asset->get_ptr<TextureAsset>()));
+		}
+		
+		
 		compile();
 	}
 

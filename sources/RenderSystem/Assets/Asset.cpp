@@ -207,6 +207,9 @@ void Asset::save()
 
 void AssetReferenceBase::destroy()
 {
+	if (base_asset)
+		base_asset->erase_reference(this);
+
 	if (owner)
 		owner->unregister_reference(this);
 }
@@ -225,30 +228,9 @@ void AssetReferenceBase::init()
 		owner->register_reference(this);
 }
 
-AssetReferenceBase::AssetReferenceBase(const AssetReferenceBase& other) : owner(other.owner)
-{
-	base_asset = other.base_asset;
-
-	if (base_asset)
-		base_asset->add_reference(this);
-
-	if (owner)
-		owner->register_reference(this);
-}
-
-AssetReferenceBase::AssetReferenceBase(AssetHolder* _owner) : owner(_owner)
-{
-	if (owner)
-		owner->register_reference(this);
-}
-
 AssetReferenceBase::~AssetReferenceBase()
 {
-	if (owner && base_asset)
-		base_asset->erase_reference(this);
-
-	if (owner)
-		owner->unregister_reference(this);
+	destroy();
 }
 
 void Asset::add_reference(AssetReferenceBase* ref)
@@ -314,7 +296,7 @@ Guid Asset::get_id()
 
 std::wstring Asset::get_name()
 {
-	return name;// holder->get_name();
+	return holder->header->name;
 }
 
 void Asset::mark_changed()
@@ -585,19 +567,22 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 
 		for (auto r : header->references)
 		{
-			tasks.emplace_back(create_task([r]()
+				auto storage = AssetManager::get().get_storage(r);
+			if(!storage->is_loaded())
+			tasks.emplace_back(create_task([r,storage]()
 				{
 					try
 					{
 						std::stringstream s;
 						s << "loading " << r;
 						auto task = TaskInfoManager::get().create_task(convert(s.str()));
-						auto storage = AssetManager::get().get_storage(r);
+					
 
 						if (!storage)
 							return false;
 
 						storage->load_asset().get();
+								Log::get() << "asset loaded " << storage->get_name()<<" " << r <<Log::endl;
 					}
 
 					catch (std::exception e)
@@ -629,8 +614,7 @@ std::future<Asset::ptr> AssetStorage::load_asset()
 					asset = archive->get<Asset::ptr>("asset");
 
 					asset->holder = this;
-					HAL::Device::get().get_ds_queue().flush();
-					HAL::Device::get().get_ds_queue().signal_and_wait();
+
 				}
 				catch (std::exception e)
 				{

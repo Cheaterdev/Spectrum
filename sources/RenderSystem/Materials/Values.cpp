@@ -591,9 +591,8 @@ void MaterialGraph::start(MaterialContext* context)
 
 TextureNode::TextureNode(TextureAsset::ptr _Asset, bool to_linear)
 {
-	texture_info = std::make_shared<TextureSRVParams>();
-	texture_info->asset = register_asset<Asset>(_Asset);
-	texture_info->to_linear = to_linear;
+	texture_info = std::make_shared<TextureSRVParams>(std::move(register_asset<Asset>(_Asset)),to_linear);
+
 
 	i_tc = register_input(/*ShaderParams::get().FLOAT2,*/ "tc", ShaderParams::get().FLOAT2);
 	o_vec4 = register_output(/*ShaderParams::get().FLOAT4,*/ "", ShaderParams::get().FLOAT4);

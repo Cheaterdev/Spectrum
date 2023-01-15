@@ -61,27 +61,20 @@ class AssetReferenceBase
 		friend class Asset;
 	protected:
 		std::shared_ptr<Asset> base_asset;
-		AssetHolder*  owner;
+		AssetHolder*  owner = nullptr;
 		void init();
-	
+	void destroy();
 
 	public:
-		void destroy();
+
+	AssetReferenceBase() = default;
+		AssetReferenceBase(AssetHolder*  owner):owner(owner)
+		{
+			
+		}
 		const  AssetHolder* get_owner() const;
-		virtual Guid get_id() = 0;
+Guid get_id();
 
-		const bool operator!=(const AssetReferenceBase& r)const 
-		{
-			return base_asset != r.base_asset;
-		}
-
-		const bool operator==(const AssetReferenceBase& r) const
-		{
-			return base_asset == r.base_asset;
-		}
-		AssetReferenceBase(const AssetReferenceBase& other);
-
-		AssetReferenceBase(AssetHolder* owner = nullptr);
 		virtual ~AssetReferenceBase();
 };
 
@@ -91,25 +84,20 @@ class AssetReference : public AssetReferenceBase
 {
 
 		friend class AssetHolder;
-		std::shared_ptr<T> asset;
-
+	
 		LEAK_TEST(AssetReference)
 
 	public:
-		AssetReference(AssetHolder* owner) : AssetReferenceBase( owner)
+		AssetReference(AssetHolder* owner,std::shared_ptr<T> asset = nullptr):AssetReferenceBase(owner)
 		{
+			base_asset = asset;
+			init();
 		}
 
-		AssetReference(const AssetReference<T>& other);
+		AssetReference( AssetReference<T>&& other);
 		virtual ~AssetReference();
-		T* operator->()
-		{
-			return asset.get();
-		}
-		std::shared_ptr<T> operator*()
-		{
-			return asset;
-		}
+		T* operator->();
+		std::shared_ptr<T> operator*();
 		/* bool is_same_internal(const void* _asset) const override
 		 {
 			 return &asset == _asset;
@@ -120,7 +108,6 @@ class AssetReference : public AssetReferenceBase
 		{
 			destroy();
 			base_asset = r.base_asset;
-			asset = r.asset;
 			init();
 		}
 
@@ -129,7 +116,6 @@ class AssetReference : public AssetReferenceBase
 		{
 			destroy();
 			base_asset = asset;
-			this->asset = asset;
 			init();
 		}
 
@@ -141,7 +127,7 @@ class AssetReference : public AssetReferenceBase
 			init();
 			
 		}*/
-		const bool operator!=(const AssetReference<T>& r)const
+		/*const bool operator!=(const AssetReference<T>& r)const
 		{
 			return base_asset != r.base_asset;
 		}
@@ -149,7 +135,7 @@ class AssetReference : public AssetReferenceBase
 		const bool operator==(const AssetReference<T>& r) const
 		{
 			return base_asset == r.base_asset;
-		}
+		}*/
 
 
 		/*     void operator=(AssetReference<T>&& r)
@@ -158,13 +144,7 @@ class AssetReference : public AssetReferenceBase
 				 asset = r.asset;
 				 init();
 			 }*/
-		virtual Guid get_id()
-		{
-			if (asset)
-				return asset->get_id();
-
-			return Guid();
-		}
+	
 		AssetReference() = default;
 
 	private:
@@ -199,9 +179,7 @@ class AssetHolder : public SharedObject<AssetHolder>
 		template<class T>
 		AssetReference<T> register_asset(s_ptr<T> link)
 		{
-			auto r = AssetReference<T>(this);
-			r = link;
-			return r;
+			return AssetReference<T>(this,link);
 		}
 		
 //		virtual std::shared_ptr<Asset> get_asset_holder() = 0;
@@ -590,17 +568,35 @@ class AssetManager : public Singleton<AssetManager>, public EditContainer, publi
 };
 
 //////////////////////////////////////////////////////////////////////////
+Guid AssetReferenceBase::get_id()
+		{
+			if (base_asset)
+				return base_asset->get_id();
 
+			return Guid();
+		}
 /*  AssetReference(AssetReference<T>&& other) : AssetReferenceBase(std::forward<AssetReferenceBase>(other))
 {
 asset = other.asset;
 }*/
 template<class T>
-inline AssetReference<T>::AssetReference(const AssetReference<T>& other) : AssetReferenceBase(other)
+inline AssetReference<T>::AssetReference(AssetReference<T>&& other):AssetReferenceBase(other.owner)
 {
-	asset = other.asset;
-}
+	base_asset = other.base_asset;
 
+
+	other.destroy();
+	init();
+}
+	template<class T>
+	T* AssetReference<T>::operator->()
+		{
+			return base_asset->get_ptr<T>().get();
+		}template<class T>
+		std::shared_ptr<T> AssetReference<T>::operator*()
+		{
+			return base_asset->get_ptr<T>();
+		}
 template<class T>
 inline AssetReference<T>::~AssetReference()
 {
@@ -704,14 +700,12 @@ void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 			if (!storage)
 				throw std::exception("cant load reference, no asset storage");
 			if (!storage->is_loaded())
-				Log::get() << "UNWANTED BEHAVIOUR FOR " << "->" << convert(storage->get_name()) << Log::endl;
+				Log::get() << "UNWANTED BEHAVIOUR FOR " << "->" << convert(storage->get_name()) << " " << guid<< Log::endl;
 
-			auto ass = storage->get_asset();
+			auto asset = storage->get_asset();
 
-			if (!ass)
+			if (!asset)
 				throw std::exception("cant load reference");
-
-			asset = ass->get_ptr<T>();
 			base_asset = asset;
 			init();
 		}
@@ -720,10 +714,7 @@ void AssetReference<T>::serialize(Archive& ar, const unsigned int)
 	else
 	{
 
-		Guid guid;
-
-		if (asset) guid = asset->get_id();
-
+		Guid guid = get_id();
 		ar& NVP(guid);
 	}
 

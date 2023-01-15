@@ -2,6 +2,7 @@ export module Graphics:MeshAsset;
 import Core;
 import :SceneObject;
 import :MaterialAsset;
+import GUI;
 
 import HAL;
 
@@ -97,7 +98,7 @@ export{
 
 		using ptr = std::shared_ptr<AssetLoadingContext>;
 
-		//GUI::user_interface::ptr ui;
+		GUI::user_interface::ptr ui;
 		Task::ptr loading_task;
 
 

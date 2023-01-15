@@ -254,7 +254,7 @@ struct TextureSRVParams
 	{
 	}
 
-	TextureSRVParams(Asset::ref asset, bool to_linear) :asset(asset), to_linear(to_linear)
+	TextureSRVParams(Asset::ref&& asset, bool to_linear) :asset(std::move(asset)), to_linear(to_linear)
 	{}
 private:
 

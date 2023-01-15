@@ -222,7 +222,8 @@ export namespace materials
 		virtual	void on_unlink(::FlowGraph::parameter*, ::FlowGraph::parameter*) override;
 		/*----------------------------------------------------------*/
 
-		std::vector<TextureSRVParams::ptr> textures;
+		std::vector<TextureAsset::ref> textures;
+
 		std::vector<Uniform::ptr> tess_uniforms;
 		std::list<Events::prop_handler> handlers;
 
