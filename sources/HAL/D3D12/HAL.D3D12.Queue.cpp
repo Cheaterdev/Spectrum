@@ -209,10 +209,11 @@ namespace HAL
 		
     request.Source.File.Source = file.Get();
     request.Source.File.Offset = srequest.file_offset;
-    request.Source.File.Size = srequest.size;
-    request.UncompressedSize = srequest.uncompressed_size;
+    request.Source.File.Size = static_cast<uint>(srequest.size);
+    request.UncompressedSize = static_cast<uint>(srequest.uncompressed_size);
 
-
+	assert(request.Source.File.Size == srequest.size);
+	assert(request.UncompressedSize == srequest.uncompressed_size);
 
 	std::visit(overloaded{
 				[&](const StorageRequest::Buffer& buffer) {

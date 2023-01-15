@@ -230,29 +230,6 @@ namespace Spectrum
         }
     }
 
-	[Sharpmake.Generate]
-    public class DXCompiler : Library
-    {
-        public DXCompiler()
-        {
-            SourceRootPath = @"[project.SharpmakeCsPath]\sources\DXC";
-            AssemblyName = "DXC";
-        }
-
-        public override void ConfigureAll(Configuration conf, CustomTarget target)
-        {
-            base.ConfigureAll(conf, target);
-
-            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxcompiler.dll");
-            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\dxil.dll");
-			
-			conf.LibraryFiles.Add("dxcompiler.lib");
-						
-			conf.AddPublicDependency<Modules>(target);
-		
-        }
-    }
-
 
     [Sharpmake.Generate]
     public class HAL : Library
@@ -272,7 +249,6 @@ namespace Spectrum
             conf.LibraryFiles.Add("dxguid.lib");
 
             conf.AddPublicDependency<Core>(target);	
-			conf.AddPrivateDependency<DXCompiler>(target);	
             conf.AddPrivateDependency<Aftermath>(target);
         }
     }

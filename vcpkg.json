@@ -11,6 +11,7 @@
 		"crc32c",
 		"cereal",
 		"dstorage",
-		"directx-headers"
+		"directx-headers",
+		"directx-dxc"
 	]
 }

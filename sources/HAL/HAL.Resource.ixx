@@ -26,7 +26,7 @@ public:
 	struct save
 	{
 		std::vector<std::byte> binary_data;
-		uint size;
+		uint64 size;
 
 
 		save(std::span<std::byte> uncompressed)
@@ -46,8 +46,8 @@ public:
 
 	struct load
 	{
-		uint size;
-		uint file_offset;
+		uint64 size;
+		uint64 file_offset;
 		std::filesystem::path path;
 
 		SERIALIZE()
@@ -97,11 +97,11 @@ public:
 	using operation_type = std::conditional<is_load, load, save>::type;
 	operation_type operation;
 
-	uint get_size() const
+	uint64 get_size() const
 	{
 		return operation.size;
 	}
-	uint uncompressed_size;
+	uint64 uncompressed_size;
 
 	GPUBinaryData()  requires(is_load) = default;
 	GPUBinaryData(Buffer desc, std::span<std::byte> binary_data) requires(!is_load)
