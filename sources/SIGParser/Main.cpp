@@ -227,10 +227,9 @@ void generate_table(Table& table)
 			std::string cameled = v.name;
 			cameled[0] = std::toupper(cameled[0]);
 
-
 			if (v.as_array)
 			{
-				stream << v.type << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
+				stream <<v.type << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
 			}
 			else
 			{
@@ -247,22 +246,29 @@ void generate_table(Table& table)
 			std::string cameled = v.name;
 			cameled[0] = std::toupper(cameled[0]);
 
+			
+			std::string type = v.type;
+
+			if(type.starts_with("DepthStencil")) 
+				type.replace(0, strlen("DepthStencil"),"Texture2D");
+			if(type.starts_with("RenderTarget"))
+				type.replace(0, strlen("RenderTarget"),"Texture2D");
 
 			if (v.as_array)
 			{
 				if (v.bindless)
 				{
-					stream << v.type << " Get" << cameled << "(int i) { " << std::endl;
+					stream << type << " Get" << cameled << "(int i) { " << std::endl;
 					stream << "StructuredBuffer<uint> indirection = ResourceDescriptorHeap[" << v.name << "]; " << std::endl;
 					stream << "uint id = indirection.Load(i);" << std::endl;
 					stream << "return ResourceDescriptorHeap[id]; }" << std::endl;
 				}
 				else
-					stream << v.type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" << v.name << "[i]]; }" << std::endl;
+					stream << type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" << v.name << "[i]]; }" << std::endl;
 			}
 			else
 			{
-				stream << v.type << " Get" << cameled << "() { " << "return ResourceDescriptorHeap[" << v.name << "]; }" << std::endl;
+				stream << type<< " Get" << cameled << "() { " << "return ResourceDescriptorHeap[" << v.name << "]; }" << std::endl;
 
 			}
 		}
@@ -639,7 +645,7 @@ void generate_cpp_table(const Table& table)
 
 
 			stream << "};" << std::endl;
-			stream.pop();
+		
 
 		}
 
@@ -727,6 +733,9 @@ export
 				stream << "#include \"slots\\" << t.name << ".h\"" << std::endl;
 			else if (!t.find_option("shader_only"))
 				stream << "#include \"tables\\" << t.name << ".h\"" << std::endl;
+
+				if (t.find_option("RenderTarget"))
+			stream << "#include \"rt\\" << t.name << ".h\"" << std::endl;
 		}
 
 
@@ -1010,7 +1019,7 @@ void generate_layout(Layout& layout)
 
 }
 
-void generate_rt(RenderTarget& rt)
+void generate_rt(Table&  rt)
 {
 	my_stream stream(hlsl_path + "/rt", rt.name + ".h");
 	stream << "#pragma once" << std::endl;
@@ -1022,9 +1031,10 @@ void generate_rt(RenderTarget& rt)
 
 		int i = 0;
 
-		for (auto& e : rt.rtvs)
+		for (auto& e : rt.values)
 		{
-			stream << e.type << " " << e.name << ": SV_Target" << i << ";" << std::endl;
+			if(e.class_no_template.starts_with("RenderTarget"))
+			stream << e.template_arg << " " << e.name << ": SV_Target" << i << ";" << std::endl;
 			i++;
 		}
 
@@ -1349,150 +1359,216 @@ void generate_pso(PSO& pso)
 
 
 
-void generate_cpp_rt(RenderTarget& rt)
+void generate_cpp_rt(Table& table)
 {
-	my_stream stream(cpp_path + "/rt", rt.name + ".h");
+my_stream stream(cpp_path + "/rt", table.name + ".h");
+
 	stream << "#pragma once" << std::endl;
-	stream << "namespace RT" << std::endl;
+
+	for (auto& v : table.used_tables)
+	{
+		auto t = parsed.find_table(v);
+		if (t->find_option("shader_only")) continue;
+
+		stream << "#include \"" << v << ".h\"" << std::endl;
+	}
+
+
+	// declaration
+	auto declare_func = [&](ValueType type) {
+
+		for (auto& v : table.values)
+		{
+			if (v.find_option("dynamic")) continue;
+			if (v.value_type != type) continue;
+			//if (v.array_count == 0)
+			//	continue;
+
+
+			stream <<  "HLSL::"<<v.type  << " " << v.name << generate_array(v) << ';' << std::endl;
+		}
+
+	
+
+
+
+	};
+
+
+	stream << "namespace RT " << std::endl;
 	stream << "{" << std::endl;
 	{
 		stream.push();
-		stream << "namespace Table" << std::endl;
+		stream << "#pragma pack(push, 1)" << std::endl;
+
+		stream << "struct _" << table.name<<std::endl;// << ":public RTHolder<"<<table.name<<">"<<std::endl;
 		stream << "{" << std::endl;
 		{
 			stream.push();
-			stream << "struct " << rt.name << std::endl;
-			stream << "{" << std::endl;
+			declare_func(ValueType::SRV);
+
+
+			for (auto& v : table.values)
 			{
-				stream.push();
-				if (rt.rtvs.size())
-				{
-					stream << "struct RTV" << std::endl;
-					stream << "{" << std::endl;
-					{
-						stream.push();
-						int i = 0;
-						for (auto& e : rt.rtvs)
-						{
-							stream << "HAL::Handle" << " " << e.name << ";" << std::endl;
-							i++;
-						}
+				if (v.value_type == ValueType::STRUCT) continue;
+				//	if (v.array_count == 0) continue;
+				if (v.find_option("dynamic"))
+					continue;
+				std::string cameled = v.name;
+				cameled[0] = std::toupper(cameled[0]);
 
-						stream.pop();
-					}
-					stream << "} &rtv;" << std::endl;
-				}
+				//	if (v.array_count == 0)
+				//		stream << get_cpp_for(v) << generate_cpp_array(v) << " Get" << cameled << "() { " << "return bindless; }" << std::endl;
 
-				if (rt.dsv)
-				{
-					stream << "struct DSV" << std::endl;
-					stream << "{" << std::endl;
-					{
-						stream.push();
-
-						stream << "HAL::Handle" << " " << rt.dsv->name << ";" << std::endl;
-
-						stream.pop();
-					}
-					stream << "}&dsv;" << std::endl;
-				}
-
-
-
-				for (auto& e : rt.rtvs)
-				{
-					std::string cameled = e.name;
-					cameled[0] = std::toupper(cameled[0]);
-
-
-					stream << "HAL::Handle&" << " Get" << cameled << "() { " << "return " << "rtv." << e.name << "; }" << std::endl;
-				}
-
-				if (rt.dsv)
-				{
-					std::string cameled = rt.dsv->name;
-					cameled[0] = std::toupper(cameled[0]);
-
-
-					stream << "HAL::Handle&" << " Get" << cameled << "() { " << "return " << "dsv." << rt.dsv->name << "; }" << std::endl;
-
-				}
-				std::string pass;
-				std::string args;
-
-				if (rt.rtvs.size())
-				{
-					if (!args.empty()) args += ", ";
-					if (!pass.empty()) pass += ", ";
-
-					args += "RTV & rtv";
-					pass += "rtv(rtv)";
-				}
-				if (rt.dsv)
-				{
-					if (!args.empty()) args += ", ";
-					if (!pass.empty()) pass += ", ";
-
-					args += "DSV & dsv";
-					pass += "dsv(dsv)";
-				}
-				stream.pop();
-
-
-				stream << rt.name << "(" << args << "):" << pass << "{}" << std::endl;
-
+				//	else
+				stream << "HLSL::"<<v.type <<  generate_cpp_array(v) <<" Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
 			}
-			stream << "};" << std::endl;
 
-			stream.pop();
-		}
-		stream << "}" << std::endl;
+			
+
+			for (auto& v : table.values)
+			{
+				if (v.value_type != ValueType::STRUCT) continue;
+				//	stream << '\t' << v.type << " " << v.name << ';' << std::endl;
 
 
-		stream << "namespace Slot" << std::endl;
-		stream << "{" << std::endl;
-		{
+
+				auto& vtable = *parsed.find_table(v.type);
+
+
+
+
+				std::string cameled = v.name;
+				cameled[0] = std::toupper(cameled[0]);
+
+				if (vtable.find_option("shader_only"))
+				{
+					stream << v.type << generate_cpp_array(v) << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
+					continue;
+				};
+
+
+				stream << v.type  << generate_cpp_array(v)<< " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
+			}
+
+
+
+			std::string pass;
+			std::string args;
+
+			auto f = [&](ValueType type) {
+				if (table.counts[type] == 0) return;
+
+				if (pass.size()) pass += ",";
+				else pass += ":";
+
+				pass += get_name_for(type) + "(" + get_name_for(type) + ")";
+
+				if (args.size()) args += ",";
+				args += str_toupper(get_name_for(type)) + "&" + get_name_for(type);
+
+			};
+
+			f(ValueType::CB);
+			f(ValueType::SRV);
+			f(ValueType::UAV);
+			f(ValueType::SMP);
+
+				// declaration
+			auto compile_func = [&](ValueType type) {
+				//	if (table.counts[type] == 0) return;
+
+				for (auto& v : table.values)
+				{
+					if (v.value_type != type) continue;
+
+					stream << "compiler.compile(" << v.name << ");" << std::endl;
+
+				}
+			};
+			stream << "template<class Compiler>" << std::endl;
+
+			stream << "void compile(Compiler& compiler) const" << std::endl;
+			stream << "{" << std::endl;
+
 			stream.push();
 
-			stream << "struct " << rt.name << ": public RTHolder<Table::" << rt.name << ">" << std::endl;
-			stream << "{" << std::endl;
+
+			compile_func(ValueType::CB);
+			compile_func(ValueType::SRV);
+			compile_func(ValueType::UAV);
+			compile_func(ValueType::SMP);
+			compile_func(ValueType::STRUCT);
+			stream.pop();
+
+			stream << "}" << std::endl;
+			
+
 			{
-				stream.push();
-				std::string pass;
+			
 
-				if (rt.rtvs.size())
+					// declaration
+			auto compile_func = [&](ValueType type) {
+				//	if (table.counts[type] == 0) return;
+
+				for (auto& v : table.values)
 				{
-					if (!pass.empty()) pass += ", ";
-
-					stream << "RTV rtv;" << std::endl;
-					pass += "rtv";
-
+					if (v.value_type != type) continue;
+	if (v.value_type == ValueType::CB )
+				stream << v.type << " " << v.name << generate_array(v) << "; // " << v.type << std::endl;
+			else	if (v.value_type == ValueType::STRUCT)
+				stream << v.type << "::Compiled " << v.name << generate_array(v) << "; // " << v.type << std::endl;
+			else
+				stream << "uint" << " " << v.name << (v.bindless ? "" : generate_array(v)) << "; // " << v.type << std::endl;
 
 				}
-
-				if (rt.dsv)
-				{
-					if (!pass.empty()) pass += ", ";
-					pass += "dsv";
-					stream << "DSV dsv;" << std::endl;
-				}
+			};
 
 
-
-				stream << rt.name << "():RTHolder<Table::" << rt.name << ">(" << pass << "){}" << std::endl;
-				stream.pop();
 			}
-			stream << "};" << std::endl;
+
+
+			
+			if (table.find_option("serialize"))
+			{
+
+				stream << std::format(
+					R"(private:
+	SERIALIZE())") << std::endl;
+				stream << "{" << std::endl;
+					stream.push();
+				for (auto& v : table.values)
+				{
+					if (v.value_type != ValueType::CB && v.value_type != ValueType::STRUCT) continue;
+
+					stream << std::format(
+						R"(     ar& NVP({});)", v.name) << std::endl;
+
+				}stream.pop();
+
+				stream << "}" << std::endl;
+			}
 
 			stream.pop();
-		}
-		stream << "}" << std::endl;
 
+			stream << "};" << std::endl;
+			
+
+		}
+
+		stream << "#pragma pack(pop)" << std::endl;
+		
+		stream << "struct " << table.name << ":public RTHolder<_" << table.name << ">" << std::endl;
+		stream << "{" << std::endl;
+		stream.push();
+		stream << table.name << "() = default;" << std::endl;
 		stream.pop();
 
+		stream << "};" << std::endl;
+		stream.pop();
 	}
-	stream << "}" << std::endl;
 
+	stream << "}" << std::endl;
 
 }
 
@@ -1776,6 +1852,13 @@ int main() {
 
 			if (!table.find_option("shader_only"))
 				generate_cpp_table(table);
+
+
+				if (table.find_option("RenderTarget"))
+				{
+					generate_cpp_rt(table);
+					generate_rt(table);
+				}
 		}
 
 		for (auto& layout : parsed.layouts)
@@ -1788,8 +1871,8 @@ int main() {
 
 		for (auto& rt : parsed.rt)
 		{
-			generate_rt(rt);
-			generate_cpp_rt(rt);
+		//	generate_rt(rt);
+		//	generate_cpp_rt(rt);
 		}
 
 		for (auto& pso : parsed.compute_pso)

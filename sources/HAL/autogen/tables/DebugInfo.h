@@ -17,5 +17,5 @@ namespace Table
 			uint debug; // RWStructuredBuffer<DebugStruct>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

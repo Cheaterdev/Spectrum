@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = MaterialCommandData;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

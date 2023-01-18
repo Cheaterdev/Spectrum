@@ -29,5 +29,5 @@ namespace Table
 			VoxelInfo::Compiled info; // VoxelInfo
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

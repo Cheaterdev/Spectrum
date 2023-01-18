@@ -22,5 +22,5 @@ namespace Table
 		}
 		using Compiled = VoxelInfo;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

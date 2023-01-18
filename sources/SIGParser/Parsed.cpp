@@ -86,6 +86,9 @@ std::string get_cpp_for(Value v)
 	}
 	case ValueType::SRV:
 	{
+			if(arg.starts_with("DepthStencil")) arg.replace(0, strlen("DepthStencil"),"Texture2D");
+			if(arg.starts_with("RenderTarget"))arg.replace(0, strlen("RenderTarget"),"Texture2D");
+
 		if (noarg)
 			OutputDebugString(L"WTF");
 		if (v.array_count == 0)
@@ -110,6 +113,8 @@ std::string get_cpp_for(Value v)
 void have_type::detect_type(have_options * options)
 {
 	value_type = ValueType::STRUCT;
+		if (type.starts_with("DepthStencil"))value_type = ValueType::SRV;
+		if (type.starts_with("RenderTarget"))value_type = ValueType::SRV;
 	if (type.starts_with("Texture"))value_type = ValueType::SRV;
 	if (type.starts_with("StructuredBuffer")) value_type = ValueType::SRV;
 	if (type.starts_with("Buffer")) value_type = ValueType::SRV;

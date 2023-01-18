@@ -22,5 +22,5 @@ namespace Table
 		}
 		using Compiled = MeshInfo;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

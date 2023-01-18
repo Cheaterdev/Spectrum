@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = MeshInstance;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

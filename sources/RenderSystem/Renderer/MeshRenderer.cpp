@@ -251,8 +251,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	GBuffer* gbuffer = mesh_render_context->g_buffer;
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
-	gbuffer->HalfBuffer.hiZ_table.set(graphics);
-	gbuffer->HalfBuffer.hiZ_table.set_window(graphics);
+	gbuffer->HalfBuffer.compiled.set(graphics);
 
 	graphics.set_pipeline<PSOS::RenderBoxes>();
 	graphics.set_index_buffer(index_buffer->get_index_buffer_view());
@@ -269,8 +268,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 		draw_boxes_first->resource.get());
 
 
-	gbuffer->rtv_table.set(graphics);
-	gbuffer->rtv_table.set_window(graphics);
+	gbuffer->compiled.set(graphics);
 }
 void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling)
 {
@@ -352,6 +350,8 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					{
 						mesh_render_context->overrided_pipeline->set(mesh_render_context->render_type, mesh_render_context->render_mesh, mesh_render_context->pipeline);
 					}
+
+					
 					mesh_render_context->flush_pipeline();
 				}
 

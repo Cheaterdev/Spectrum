@@ -17,5 +17,5 @@ namespace Table
 		}
 		using Compiled = Triangle;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

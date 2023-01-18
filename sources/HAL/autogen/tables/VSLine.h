@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = VSLine;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

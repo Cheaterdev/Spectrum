@@ -22,5 +22,5 @@ namespace Table
 		}
 		using Compiled = vertex_input;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

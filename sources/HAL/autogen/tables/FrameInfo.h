@@ -41,5 +41,5 @@ namespace Table
 			Camera::Compiled prevCamera; // Camera
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

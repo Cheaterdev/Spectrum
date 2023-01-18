@@ -52,32 +52,27 @@ public:
 				for (uint i = 1; i < gbuffer.depth_mips.resource->get_desc().as_texture().MipLevels; i++)
 				{
 
-
-					auto table = graphics.place_rtv(2);
-
 					{
+
 						HAL::TextureViewDesc subres;
 
 						subres.ArraySize = 1;
 						subres.FirstArraySlice = 0;
 						subres.MipLevels = 1;
 						subres.MipSlice = i;
-
 						auto depth_view = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
 						auto normal_view = gbuffer.normals.resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
 
-						table[0].place(depth_view.renderTarget);
-						table[1].place(normal_view.renderTarget);
+						RT::GBufferDownsampleRT rt;
 
+						rt.GetColor() = normal_view.renderTarget;
 
-						graphics.set_viewport(depth_view.get_viewport());
-						graphics.set_scissor(depth_view.get_scissor());
+						rt.GetDepth() = depth_view.renderTarget;
 
-
+						rt.set(graphics);
 
 					}
 
-					graphics.set_rtv(table, HAL::Handle());
 
 					Slots::GBufferDownsample downsample;
 
@@ -355,8 +350,11 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 	graphics.set_viewport(float4{ 0, 0,  albedo.tex_dynamic->get_size().xy });
 	graphics.set_scissor({ 0, 0,  albedo.tex_dynamic->get_size().xy });
-	graphics.set_rtv(0, HAL::Handle(), HAL::Handle());
 
+				{
+				RT::NoOutput rt;
+				rt.set(graphics);
+				}
 
 	{
 		PROFILE_GPU(L"render");
@@ -430,7 +428,13 @@ void VoxelGI::debug(Graph& graph)
 			graphics.set_viewport(target_tex.get_viewport());
 			graphics.set_scissor(target_tex.get_scissor());
 
-			graphics.set_rtv(1, target_tex.renderTarget, HAL::Handle());
+						{
+				RT::SingleColor rt;
+				rt.GetColor() =target_tex.renderTarget;
+				rt.set(graphics);
+				}
+
+
 			graphics.set_pipeline<PSOS::VoxelDebug>();
 
 			graph.set_slot(SlotID::VoxelInfo, graphics);
@@ -906,8 +910,14 @@ void VoxelGI::screen_reflection(Graph& graph)
 			{
 				graphics.set_viewport(target_tex.get_viewport());
 				graphics.set_scissor(target_tex.get_scissor());
-				graphics.set_rtv(1, target_tex.renderTarget, gbuffer.quality.depthStencil);
 
+				{
+					RT::SingleColorDepth rt;
+					rt.GetColor() = target_tex.renderTarget;
+					rt.GetDepth() = gbuffer.quality.depthStencil;
+
+					rt.set(graphics);
+				}
 
 				PROFILE_GPU(L"full");
 				graphics.set_stencil_ref(2);

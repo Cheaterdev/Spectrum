@@ -13,5 +13,5 @@ namespace Table
 		}
 		using Compiled = Frustum;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = FontRenderingConstants;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

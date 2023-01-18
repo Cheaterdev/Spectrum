@@ -41,5 +41,5 @@ namespace Table
 		}
 		using Compiled = Camera;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

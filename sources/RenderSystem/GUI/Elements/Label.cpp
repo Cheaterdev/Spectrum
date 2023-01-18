@@ -108,37 +108,18 @@ namespace GUI
 			//auto _command_list = c.command_list_label;// c.command_list->get_sub_list();
 			user_ui->pre_draw_infos.emplace_back(this);
 
-			//c.labeled->add([this, _THIS, _command_list]
-			//	{
-			//		ptr my_ptr = _THIS.lock();
-			//		if (!my_ptr) return;
-			//		auto command_list = const_cast<HAL::CommandList*>(_command_list.get())->get_ptr<HAL::CommandList>(); //wtf is this
-			//		geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
-			//		command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
-			//		auto rtv = cache.texture->texture_2d().renderTarget;
-			//		command_list->get_graphics().set_rtv(1, rtv, Handle());
-
-			//		PROFILE(L"label");
-
-			//		HAL::Viewport vps;
-			//		vps.size = cache.texture->get_desc().as_texture().Dimensions;
-			//		vps.pos = { 0,0 };
-			//		vps.depths = { 0,1 };
-
-			//		command_list->get_graphics().set_viewports({ vps });
-			//		sizer_long s = { 0, 0, vps.size };
-			//		command_list->get_graphics().set_scissors({ s });
-			//		geomerty->draw(command_list, lay2, 0, { 0,0 });
-			//		MipMapGenerator::get().generate(command_list->get_compute(), cache.texture->texture_2d());
-			//	});
 			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().as_texture().Dimensions.x,cache.texture->get_desc().as_texture().Dimensions.y) };
 		}
 		 void label::pre_draw(HAL::CommandList::ptr command_list)
 		{
 		 		geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
 		 		command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
-		 		auto rtv = cache.texture->texture_2d().renderTarget;
-		 		command_list->get_graphics().set_rtv(1, rtv, Handle());
+		 
+			 {
+				RT::SingleColor rt;
+				rt.GetColor() =cache.texture->texture_2d().renderTarget;
+				rt.set(command_list->get_graphics());
+				}
 
 		 		PROFILE(L"label");
 

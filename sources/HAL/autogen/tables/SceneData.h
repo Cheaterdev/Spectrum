@@ -32,5 +32,5 @@ namespace Table
 			uint raytraceInstanceInfo; // StructuredBuffer<RaytraceInstanceInfo>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

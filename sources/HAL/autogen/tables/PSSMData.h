@@ -21,5 +21,5 @@ namespace Table
 			uint light_cameras; // StructuredBuffer<Camera>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

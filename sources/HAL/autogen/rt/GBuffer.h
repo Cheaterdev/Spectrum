@@ -1,36 +1,32 @@
 #pragma once
-namespace RT
+namespace RT 
 {
-	namespace Table
+	#pragma pack(push, 1)
+	struct _GBuffer
 	{
-		struct GBuffer
+		HLSL::RenderTarget<float4> albedo;
+		HLSL::RenderTarget<float4> normals;
+		HLSL::RenderTarget<float4> specular;
+		HLSL::RenderTarget<float2> motion;
+		HLSL::DepthStencil<float> depth;
+		HLSL::RenderTarget<float4>& GetAlbedo() { return albedo; }
+		HLSL::RenderTarget<float4>& GetNormals() { return normals; }
+		HLSL::RenderTarget<float4>& GetSpecular() { return specular; }
+		HLSL::RenderTarget<float2>& GetMotion() { return motion; }
+		HLSL::DepthStencil<float>& GetDepth() { return depth; }
+		template<class Compiler>
+		void compile(Compiler& compiler) const
 		{
-			struct RTV
-			{
-				HAL::Handle albedo;
-				HAL::Handle normals;
-				HAL::Handle specular;
-				HAL::Handle motion;
-			} &rtv;
-			struct DSV
-			{
-				HAL::Handle depth;
-			}&dsv;
-			HAL::Handle& GetAlbedo() { return rtv.albedo; }
-			HAL::Handle& GetNormals() { return rtv.normals; }
-			HAL::Handle& GetSpecular() { return rtv.specular; }
-			HAL::Handle& GetMotion() { return rtv.motion; }
-			HAL::Handle& GetDepth() { return dsv.depth; }
-		GBuffer(RTV & rtv, DSV & dsv):rtv(rtv), dsv(dsv){}
-		};
-	}
-	namespace Slot
+			compiler.compile(albedo);
+			compiler.compile(normals);
+			compiler.compile(specular);
+			compiler.compile(motion);
+			compiler.compile(depth);
+		}
+	};
+	#pragma pack(pop)
+	struct GBuffer:public RTHolder<_GBuffer>
 	{
-		struct GBuffer: public RTHolder<Table::GBuffer>
-		{
-			RTV rtv;
-			DSV dsv;
-			GBuffer():RTHolder<Table::GBuffer>(rtv, dsv){}
-		};
-	}
+		GBuffer() = default;
+	};
 }

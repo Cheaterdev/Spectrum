@@ -87,9 +87,6 @@ void PSSM::generate(Graph& graph)
 			graphics.set_signature(Layouts::DefaultLayout);
 			compute.set_signature(Layouts::DefaultLayout);
 
-
-			std::vector<sizer_long> scissor;
-			std::vector<HAL::Viewport> viewport;
 			camera light_cam;
 
 			light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
@@ -111,8 +108,6 @@ void PSSM::generate(Graph& graph)
 			auto scene = sceneinfo.scene;
 			auto renderer = sceneinfo.renderer;
 
-			auto table = RenderTargetTable(command_list->get_graphics(), {}, *data.global_depth);
-
 
 			box bounds = points_all.get_bounds_in(light_cam.get_view());
 			light_cam.set_projection_params(bounds.left - 1, bounds.right + 1, bounds.top - 1, bounds.bottom + 1, std::min(bounds_all.znear - 10, bounds.znear), bounds.zfar);
@@ -124,26 +119,16 @@ void PSSM::generate(Graph& graph)
 
 			data.global_camera->write(0, &light_cam.camera_cb.current, 1);
 
-
-			viewport.resize(1);
-			viewport[0].depths = { 0,1 };
-			viewport[0].size = size;
-			viewport[0].pos = { 0,0 };
-
-			scissor.resize(1);
-			scissor[0] = { 0, 0, size.x, size.y };
-
 			context->overrided_pipeline = mat->get_pipeline();
 			//context->use_materials = false;
-			command_list->get_graphics().set_viewports(viewport);
-			command_list->get_graphics().set_scissors(scissor[0]);
 			context->pipeline.blend.render_target[0].enabled = false;
 			context->pipeline.rasterizer.cull_mode = CullMode::Front;
 
-
-
-			table.set(context, false, true);
-
+			{
+				RT::DepthOnly rt;
+				rt.GetDepth() = data.global_depth->depthStencil;
+				rt.set(command_list->get_graphics(), RTOptions::Default |  RTOptions::ClearDepth);
+			}
 
 
 			{
@@ -204,9 +189,6 @@ void PSSM::generate(Graph& graph)
 				graphics.set_signature(Layouts::DefaultLayout);
 				compute.set_signature(Layouts::DefaultLayout);
 
-
-				std::vector<sizer_long> scissor;
-				std::vector<HAL::Viewport> viewport;
 				camera light_cam;
 
 				light_cam.set_projection_params(0, 1, 0, 1, 1, 1000);
@@ -232,9 +214,6 @@ void PSSM::generate(Graph& graph)
 				auto renderer = sceneinfo.renderer;
 
 
-				//_context.register_subview(depth_tex);
-
-				auto table = RenderTargetTable(command_list->get_graphics(), {}, depth_tex);
 
 
 
@@ -250,24 +229,17 @@ void PSSM::generate(Graph& graph)
 				//	*ptr = light_cam.get_const_buffer().data().current;
 
 				data.PSSM_Cameras->write(i * sizeof(camera::shader_params), reinterpret_cast<Table::Camera*>(&light_cam.camera_cb.current), 1);
-				viewport.resize(1);
-				viewport[0].depths = { 0,1 };
-				viewport[0].size = size;
-				viewport[0].pos = { 0,0 };
-
-
-				scissor.resize(1);
-				scissor[0] = { 0, 0, size.x, size.y };
-
+	
 				context->overrided_pipeline = mat->get_pipeline();
-				//context->use_materials = false;
-				command_list->get_graphics().set_viewports(viewport);
-				command_list->get_graphics().set_scissors(scissor[0]);
+		
 				context->pipeline.blend.render_target[0].enabled = false;
 				context->pipeline.rasterizer.cull_mode = CullMode::Front;
 
-
-				table.set(context, false, true);
+				{
+					RT::DepthOnly rt;
+					rt.GetDepth() = depth_tex.depthStencil;
+					rt.set(command_list->get_graphics(), RTOptions::Default | RTOptions::ClearDepth);
+				}
 
 				{
 					Slots::FrameInfo frameInfo;
@@ -327,8 +299,11 @@ void PSSM::generate(Graph& graph)
 
 			graphics.set_viewport(data.LightMask->get_viewport());
 			graphics.set_scissor(data.LightMask->get_scissor());
-
-			graphics.set_rtv(1, data.LightMask->renderTarget, HAL::Handle());
+			{
+				RT::SingleColor rt;
+				rt.GetColor() = data.LightMask->renderTarget;
+				rt.set(graphics);
+			}
 			graphics.set_pipeline<PSOS::PSSMMask>();
 
 
@@ -421,7 +396,12 @@ void PSSM::generate(Graph& graph)
 				lighting.set(graphics);
 			}
 
-			graphics.set_rtv(1, data.ResultTexture->renderTarget, HAL::Handle());
+			{
+				RT::SingleColor rt;
+				rt.GetColor() = data.ResultTexture->renderTarget;
+				rt.set(graphics);
+			}
+
 			graphics.set_pipeline<PSOS::PSSMApply>();
 
 			graphics.draw(4);

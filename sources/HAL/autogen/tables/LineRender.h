@@ -17,5 +17,5 @@ namespace Table
 			uint vb; // StructuredBuffer<VSLine>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

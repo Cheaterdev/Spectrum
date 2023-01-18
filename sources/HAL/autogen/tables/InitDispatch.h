@@ -20,5 +20,5 @@ namespace Table
 			uint dispatch_data; // RWStructuredBuffer<DispatchArguments>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

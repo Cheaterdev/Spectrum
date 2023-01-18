@@ -13,5 +13,5 @@ namespace Table
 		}
 		using Compiled = DebugStruct;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

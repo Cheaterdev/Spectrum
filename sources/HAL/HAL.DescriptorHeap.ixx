@@ -197,6 +197,8 @@ export
 
 	
 		
+	template<typename T> concept HandleClass = std::is_base_of_v<HAL::Handle, T>;
+
 
 
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle::get_cpu()const

@@ -13,5 +13,5 @@ namespace Table
 		}
 		using Compiled = Color;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

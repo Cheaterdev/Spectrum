@@ -25,5 +25,5 @@ namespace Table
 			VoxelTilingParams::Compiled params; // VoxelTilingParams
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

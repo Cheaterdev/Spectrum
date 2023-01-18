@@ -78,6 +78,7 @@ struct have_options;
 struct have_type
 {
 	std::string type;
+	std::string class_no_template;
 	std::string template_arg;
 	ValueType value_type;
 
@@ -356,12 +357,6 @@ struct Table : public inherited, have_options, have_name , have_hlsl
 	void setup(Parsed* all);
 };
 
-
-
-struct RT : public inherited, have_options, have_name
-{
-
-};
 
 
 struct Parsed : public parsed_type

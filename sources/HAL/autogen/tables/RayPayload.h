@@ -26,5 +26,5 @@ namespace Table
 		}
 		using Compiled = RayPayload;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

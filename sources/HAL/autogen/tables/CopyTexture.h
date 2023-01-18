@@ -16,5 +16,5 @@ namespace Table
 			uint srcTex; // Texture2D<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

@@ -89,17 +89,32 @@ public:
 					context->cam = cam.cam;
 
 					GBuffer gbuffer = data.gbuffer.actualize(_context);
-
-					gbuffer.rtv_table = RenderTargetTable(context->list->get_graphics(), { gbuffer.albedo, gbuffer.normals, gbuffer.specular, gbuffer.speed }, gbuffer.depth);
-
 					gbuffer.HalfBuffer.hiZ_depth = *data.GBuffer_HiZ;
-					gbuffer.HalfBuffer.hiZ_table = RenderTargetTable(context->list->get_graphics(), {  }, gbuffer.HalfBuffer.hiZ_depth);
 					gbuffer.HalfBuffer.hiZ_depth_uav = *data.GBuffer_HiZ_UAV;
 
+					{
+						RT::GBuffer rtv;
+						rtv.GetAlbedo() = gbuffer.albedo.renderTarget;
+						rtv.GetNormals() = gbuffer.normals.renderTarget;
+						rtv.GetSpecular() = gbuffer.specular.renderTarget;
+
+						rtv.GetMotion() = gbuffer.speed.renderTarget;
+						rtv.GetDepth() = gbuffer.depth.depthStencil;
+						gbuffer.compiled = rtv.compile(*command_list);
+					}
+
+					{
+						RT::DepthOnly rtv;
+
+						rtv.GetDepth() = gbuffer.HalfBuffer.hiZ_depth.depthStencil;
+
+							gbuffer.HalfBuffer.compiled = rtv.compile(*command_list);
+					}
+					
 					context->g_buffer = &gbuffer;
 
-					gbuffer.rtv_table.set(context, true, true);
-					gbuffer.rtv_table.set_window(context->list->get_graphics());
+
+					gbuffer.compiled.set(context->list->get_graphics(), RTOptions::Default| RTOptions::ClearAll);
 
 					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
 					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());

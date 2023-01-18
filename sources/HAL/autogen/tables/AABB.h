@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = AABB;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

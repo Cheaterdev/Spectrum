@@ -20,5 +20,5 @@ namespace Table
 			uint visible_tiles; // AppendStructuredBuffer<uint4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

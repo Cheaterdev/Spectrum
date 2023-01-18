@@ -21,5 +21,5 @@ namespace Table
 			uint visibleMeshes; // AppendStructuredBuffer<uint>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

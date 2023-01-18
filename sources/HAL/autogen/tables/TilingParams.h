@@ -16,5 +16,5 @@ namespace Table
 			uint tiles; // StructuredBuffer<uint2>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

@@ -13,5 +13,5 @@ namespace Table
 		}
 		using Compiled = Instance;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

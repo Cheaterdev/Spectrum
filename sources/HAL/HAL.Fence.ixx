@@ -52,6 +52,8 @@ export namespace HAL
 		}
 		void combine(const FenceWaiter& other)
 		{
+			if(!other.fence) return;
+
 			if(fence)
 			assert(fence==other.fence);
 			else

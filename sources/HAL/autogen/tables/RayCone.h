@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = RayCone;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

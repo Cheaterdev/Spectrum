@@ -25,5 +25,5 @@ namespace Table
 			FSRConstants::Compiled constants; // FSRConstants
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

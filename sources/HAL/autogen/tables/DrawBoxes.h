@@ -25,5 +25,5 @@ namespace Table
 			uint visible_meshes; // RWStructuredBuffer<uint>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

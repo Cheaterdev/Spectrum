@@ -21,5 +21,5 @@ namespace Table
 			uint commands[8]; // AppendStructuredBuffer<CommandData>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

@@ -13,5 +13,5 @@ namespace Table
 		}
 		using Compiled = ShadowPayload;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

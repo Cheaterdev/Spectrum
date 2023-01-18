@@ -14,5 +14,5 @@ namespace Table
 		}
 		using Compiled = TilingPostprocess;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

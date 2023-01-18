@@ -32,5 +32,5 @@ namespace Table
 			uint OutMip[4]; // RWTexture2D<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

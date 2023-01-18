@@ -39,5 +39,5 @@ namespace Table
 			uint primitive_indices; // StructuredBuffer<uint>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

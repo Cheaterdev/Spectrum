@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = BoxInfo;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

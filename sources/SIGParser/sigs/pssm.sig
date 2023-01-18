@@ -1,23 +1,16 @@
 [Bind = DefaultLayout::Instance2]
+[RenderTarget]
 struct GBuffer
 {
-	Texture2D<float4> albedo;
-	Texture2D<float4> normals;
-	Texture2D<float4> specular;
-	Texture2D<float> depth;
-	Texture2D<float2> motion;
+	RenderTarget<float4> albedo;
+	RenderTarget<float4> normals;
+	RenderTarget<float4> specular;
+	RenderTarget<float2> motion;
+
+	DepthStencil<float> depth;
 }
 
 
-rt GBuffer
-{
-	float4 albedo;
-	float4 normals;
-	float4 specular;
-	float2 motion;
-
-	DSV depth;
-}
 
 [Bind = DefaultLayout::Instance2]
 struct GBufferDownsample
@@ -88,6 +81,14 @@ GraphicsPSO PSSMApply
 	pixel = PSSM;
 
 	rtv = { R16G16B16A16_FLOAT };
+}
+
+
+[RenderTarget]
+struct GBufferDownsampleRT
+{
+	RenderTarget<float> depth;
+	RenderTarget<float4> color;
 }
 
 

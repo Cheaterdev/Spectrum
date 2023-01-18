@@ -25,5 +25,5 @@ namespace Table
 		}
 		using Compiled = FSRConstants;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

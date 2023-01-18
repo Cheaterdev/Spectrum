@@ -19,5 +19,5 @@ namespace Table
 		}
 		using Compiled = Glyph;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

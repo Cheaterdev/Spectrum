@@ -16,5 +16,5 @@ namespace Table
 			uint viewBuffer; // RWStructuredBuffer<uint>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

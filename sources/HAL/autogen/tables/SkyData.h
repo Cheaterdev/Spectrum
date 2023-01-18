@@ -32,5 +32,5 @@ namespace Table
 			uint irradiance; // Texture2D<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

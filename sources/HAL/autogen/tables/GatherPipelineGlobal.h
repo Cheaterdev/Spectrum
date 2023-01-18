@@ -20,5 +20,5 @@ namespace Table
 			uint commands; // Buffer<uint>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

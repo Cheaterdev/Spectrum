@@ -22,5 +22,5 @@ namespace Table
 		}
 		using Compiled = Meshlet;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

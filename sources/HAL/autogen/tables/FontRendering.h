@@ -20,5 +20,5 @@ namespace Table
 			uint positions; // Buffer<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

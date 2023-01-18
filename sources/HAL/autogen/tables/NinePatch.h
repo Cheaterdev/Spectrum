@@ -21,5 +21,5 @@ namespace Table
 			uint textures; // Texture2D<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

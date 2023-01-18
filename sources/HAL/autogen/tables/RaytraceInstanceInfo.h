@@ -21,5 +21,5 @@ namespace Table
 			uint indices; // StructuredBuffer<uint>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

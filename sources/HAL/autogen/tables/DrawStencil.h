@@ -16,5 +16,5 @@ namespace Table
 			uint vertices; // StructuredBuffer<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

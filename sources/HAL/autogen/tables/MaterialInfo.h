@@ -15,5 +15,5 @@ namespace Table
 			compiler.compile(textures);
 		}
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

@@ -25,5 +25,5 @@ namespace Table
 		}
 		using Compiled = MeshCommandData;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

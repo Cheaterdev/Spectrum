@@ -24,5 +24,5 @@ namespace Table
 			uint target; // RWTexture2D<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

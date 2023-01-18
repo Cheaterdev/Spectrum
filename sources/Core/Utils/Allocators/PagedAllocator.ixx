@@ -170,6 +170,8 @@ export namespace Allocators
 		{
 			if constexpr (isCollectable<Context>)
 			{
+				typename AllocationPolicy::LockPolicy::guard g(m);
+
 				for (auto& list : all_heaps)
 				{
 

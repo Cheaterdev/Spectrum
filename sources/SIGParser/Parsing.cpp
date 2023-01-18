@@ -233,6 +233,14 @@ public:
 		auto& options = get_elem<have_options>();
 
 		elem.type = ctx->children[0]->getText();
+	//	elem.detect_type(&options);
+	}
+
+		virtual void enterClass_no_template(SIGParser::Class_no_templateContext* ctx) override {
+		auto& elem = get_elem<have_type>();
+		auto& options = get_elem<have_options>();
+
+		elem.class_no_template = ctx->children[0]->getText();
 		elem.detect_type(&options);
 	}
 
@@ -244,6 +252,7 @@ public:
 	virtual void enterTemplate_id(SIGParser::Template_idContext* ctx) override {
 		auto& elem = get_elem<have_type>();
 		elem.template_arg = ctx->children[0]->getText();
+
 	}
 
 	virtual void enterValue_id(SIGParser::Value_idContext* ctx) override {

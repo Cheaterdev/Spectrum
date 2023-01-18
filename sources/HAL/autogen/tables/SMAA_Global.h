@@ -24,5 +24,5 @@ namespace Table
 			uint colorTex; // Texture2D<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

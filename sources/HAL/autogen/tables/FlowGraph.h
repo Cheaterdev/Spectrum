@@ -19,5 +19,5 @@ namespace Table
 		}
 		using Compiled = FlowGraph;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

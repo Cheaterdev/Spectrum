@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = PSSMConstants;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

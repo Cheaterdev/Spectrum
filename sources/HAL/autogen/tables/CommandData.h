@@ -22,5 +22,5 @@ namespace Table
 		}
 		using Compiled = CommandData;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

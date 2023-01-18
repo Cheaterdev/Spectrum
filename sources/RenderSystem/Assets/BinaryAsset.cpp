@@ -82,17 +82,15 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 
 	geomerty->set(list, convert(data), font, 14, layout, float4(1, 1, 1, 1), FW1_LEFT);
 	list->clear_rtv(preview->texture_2d().renderTarget);
-	list->get_graphics().set_rtv(1, preview->texture_2d().renderTarget, HAL::Handle());
+
+	{
+				RT::SingleColor rt;
+				rt.GetColor() =preview->texture_2d().renderTarget;
+				rt.set(list->get_graphics());
+	}
 
 
-	HAL::Viewport vps;
-	vps.size = preview->get_desc().as_texture().Dimensions.xy;
-	vps.pos = { 0,0 };
-	vps.depths = { 0,1 };
 
-	list->get_graphics().set_viewports({ vps });
-	sizer_long s = { 0, 0, vps.size };
-	list->get_graphics().set_scissors({ s });
 	geomerty->draw(list, layout, 0, { 0,0 });
 
 

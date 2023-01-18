@@ -24,5 +24,5 @@ namespace Table
 			uint low; // AppendStructuredBuffer<uint2>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

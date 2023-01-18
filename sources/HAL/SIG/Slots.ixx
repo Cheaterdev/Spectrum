@@ -6,19 +6,10 @@ import :DescriptorHeap;
 import :Enums;
 import :Buffer;
 import :SIG;
-
-export {
-
-
-	template<typename T> concept Compilable =
-		requires (T t) {
-		T::compile;
-	};
-
-	template<typename T> concept HandleType = std::is_base_of_v<HAL::Handle, T>;
+	
 
 	template<class Context>
-	class Compiler
+	class Slot_Compiler
 	{
 		void pad()
 		{
@@ -40,12 +31,12 @@ export {
 	std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
 
 		std::stringstream s;
-		Compiler() :s(std::stringstream::out | std::stringstream::binary)
+		Slot_Compiler() :s(std::stringstream::out | std::stringstream::binary)
 		{
 
 		}
 
-		template<HandleType T>
+		template<HAL::HandleClass T>
 		void compile(const T& handle)
 		{
 			uint offset = 0;
@@ -60,30 +51,15 @@ export {
 			s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
 		}
 
-		template<HandleType T, uint N>
+		template<HAL::HandleClass T, uint N>
 		void compile(const T(&handles)[N])
 		{
-
 			pad();
-
-			
 			for (uint i = 0; i < N; i++)
 			{
-				uint offset = 0;
-				auto& handle = handles[i];
-				if (handle.is_valid())
-				{
-					if(handle.get_storage()->can_free())
-				descriptors.insert(handle.get_storage());
-				resources.push_back(&handle.get_resource_info());
-					offset = handle.get_offset();
-				}
-
-				s.write(reinterpret_cast<const char*>(&offset), sizeof(offset));
+				compile(handles[i]);
 				pad();
 			}
-
-
 
 		}
 
@@ -99,7 +75,7 @@ export {
 			s.write(reinterpret_cast<const char*>(t.data()), t.size());
 		}
 
-		template<HandleType T>
+		template<HAL::HandleClass T>
 		void compile(const std::vector<T>& t)
 		{
 			uint offset = 0;
@@ -165,6 +141,9 @@ export {
 			//	t.compile(*this);
 		}
 	};
+export {
+
+
 	template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
 	struct CompiledData
 	{
@@ -221,14 +200,14 @@ export {
 		Compiled compile(Context& context) const
 		{
 
-			Compiler<Context> compiler;
-			compiler.context = &context;
-			Table::compile(compiler);
+			Slot_Compiler<Context> Slot_Compiler;
+			Slot_Compiler.context = &context;
+			Table::compile(Slot_Compiler);
 			
 
 			Compiled compiled;
 
-			auto str = compiler.s.str();
+			auto str = Slot_Compiler.s.str();
 
 			auto ptr = reinterpret_cast<const std::byte*>(str.data());
 			std::vector<std::byte> data;
@@ -238,8 +217,8 @@ export {
 			context.write(info, data);
 	
 			compiled.offsets_cb =  info;
-			compiled.resources = compiler.resources;
-			compiled.descriptors = compiler.descriptors;
+			compiled.resources = Slot_Compiler.resources;
+			compiled.descriptors = Slot_Compiler.descriptors;
 
 
 				auto hlsl = context.alloc_descriptor(1, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });

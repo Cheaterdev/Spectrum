@@ -37,5 +37,5 @@ namespace Table
 			GBuffer::Compiled gbuffer; // GBuffer
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

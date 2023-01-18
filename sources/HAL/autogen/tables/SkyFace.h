@@ -13,5 +13,5 @@ namespace Table
 		}
 		using Compiled = SkyFace;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

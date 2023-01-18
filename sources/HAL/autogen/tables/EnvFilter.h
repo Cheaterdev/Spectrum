@@ -19,5 +19,5 @@ namespace Table
 		}
 		using Compiled = EnvFilter;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

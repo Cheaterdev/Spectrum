@@ -30,5 +30,5 @@ namespace Table
 		     ar& NVP(tangent);
 		}
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

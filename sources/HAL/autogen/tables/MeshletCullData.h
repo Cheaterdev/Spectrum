@@ -26,5 +26,5 @@ namespace Table
 		     ar& NVP(ApexOffset);
 		}
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

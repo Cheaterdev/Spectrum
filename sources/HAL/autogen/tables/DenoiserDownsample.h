@@ -20,5 +20,5 @@ namespace Table
 			uint depth; // Texture2D<float>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

@@ -32,5 +32,5 @@ namespace Table
 			uint gi_result; // RWTexture2D<float4>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

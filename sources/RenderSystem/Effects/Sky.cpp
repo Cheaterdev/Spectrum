@@ -55,9 +55,12 @@ void SkyRender::generate_sky(Graph& graph)
 
 			graphics.set_pipeline<PSOS::Sky>();
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			graphics.set_viewport(data.ResultTexture->get_viewport());
-			graphics.set_scissor(data.ResultTexture->get_scissor());
-			graphics.set_rtv(1, data.ResultTexture->renderTarget, HAL::Handle());
+
+				{
+				RT::SingleColor rt;
+				rt.GetColor() =data.ResultTexture->renderTarget;
+				rt.set(graphics);
+				}
 
 			{
 				Slots::SkyData skydata;
@@ -136,9 +139,6 @@ void SkyRender::generate(Graph& graph)
 
 			{
 
-				graphics.set_viewport(data.sky_cubemap->get_viewport());
-				graphics.set_scissor(data.sky_cubemap->get_scissor());
-
 
 				for (unsigned int i = 0; i < 6; i++)
 				{
@@ -158,7 +158,11 @@ void SkyRender::generate(Graph& graph)
 
 					skyFace.set(graphics);
 
-					graphics.set_rtv(1, face.renderTarget, HAL::Handle());
+						{
+				RT::SingleColor rt;
+				rt.GetColor() =face.renderTarget;
+				rt.set(graphics);
+				}
 
 					graphics.draw(4);
 				}
@@ -246,11 +250,14 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 					auto face = data.sky_cubemap_filtered->resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
 
-					if (i == 0) {
-						graphics.set_viewport(face.get_viewport());
-						graphics.set_scissor(face.get_scissor());
+
+					{
+						RT::SingleColor rt;
+						rt.GetColor() = face.renderTarget;
+						rt.set(graphics, i == 0 ? RTOptions::Default : RTOptions::SetHandles);
 					}
-					graphics.set_rtv(1, face.renderTarget, HAL::Handle());
+
+
 
 					Slots::EnvFilter filter;
 					filter.GetFace().x = i;
@@ -282,7 +289,11 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 					graphics.set_viewport(face.get_viewport());
 					graphics.set_scissor(face.get_scissor());
 				}
-				graphics.set_rtv(1, face.renderTarget, HAL::Handle());
+						{
+				RT::SingleColor rt;
+				rt.GetColor() =face.renderTarget;
+				rt.set(graphics);
+				}
 
 				Slots::EnvFilter filter;
 				filter.GetFace().x = i;

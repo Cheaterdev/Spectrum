@@ -98,7 +98,7 @@ export{
 		// HAL::Handle set_4_table;
 		vec2 screen_subsample = { 0,0 };
 		GBuffer* g_buffer = nullptr;
-		RT::Slot::GBuffer::Compiled gbuffer_compiled;
+		//RT::GBuffer::Compiled gbuffer_compiled;
 
 		HAL::Texture::ptr target_tex;
 
@@ -139,143 +139,8 @@ export{
 
 		}
 
-		void draw_indexed(int count, int offset, int v_offset)
-		{
-			flush_pipeline();
-
-
-			list->get_graphics().draw_indexed(count, offset, v_offset);
-
-			draw_count++;
-		}
 
 	};
-
-
-
-	class RenderTargetTable
-	{
-		HAL::Handle rtv_table;
-
-		std::vector<Format> formats;
-		Format depth_format = Format::UNKNOWN;
-		//  HAL::Handle depth_handle;
-
-		std::vector<HAL::TextureView> textures;
-		HAL::TextureView depth_texture;
-
-		std::vector<HAL::Viewport> vps;
-		std::vector<sizer_long> scissors;
-
-		void on_init(ivec2 size)
-		{
-			vps.resize(1);
-			scissors.resize(1);
-
-
-			vps[0].size = size;
-			vps[0].pos = { 0,0 };
-			vps[0].depths = { 0,1 };
-
-
-			scissors[0] = { 0, 0, size.x, size.y };
-		}
-	public:
-		HAL::Handle dsv_table;
-
-		void clear_depth(MeshRenderContext::ptr& context, float value = 1)
-		{
-			if (depth_texture)
-				context->list->clear_depth(dsv_table[0], value);
-		}
-		void clear_stencil(HAL::GraphicsContext& list, UINT8 stencil = 0)
-		{
-			if (depth_texture)
-				list.get_base().clear_stencil(dsv_table[0], stencil);
-		}
-
-		void clear_depth(HAL::GraphicsContext& list, float value = 1)
-		{
-
-			if (depth_texture)
-				list.get_base().clear_depth(dsv_table[0], value);
-		}
-		RenderTargetTable() {}
-
-
-		void set_window(HAL::GraphicsContext& context)
-		{
-			context.set_viewports(vps);
-			context.set_scissors(scissors[0]);
-		}
-
-		RenderTargetTable(HAL::GraphicsContext& graphics, std::initializer_list<HAL::TextureView> list, HAL::TextureView depth)
-		{
-			if(list.size())
-			rtv_table = graphics.place_rtv((UINT)list.size());
-			UINT i = 0;
-
-			for (auto& e : list)
-			{
-				formats.emplace_back(e.get_desc().as_texture().Format);
-				textures.emplace_back(e);
-
-				rtv_table[i++].place(e.renderTarget);
-				//   e.place_rtv(rtv_table[i++]);
-
-				auto rtv = std::get<HAL::Views::RenderTarget>(rtv_table[i-1].get_resource_info().view);
-				
-			}
-
-			if (depth)
-			{
-				dsv_table = graphics.place_dsv(1);
-
-
-				depth_texture = depth;
-				depth_format = depth.get_desc().as_texture().Format.to_dsv();
-				//  depth.place_dsv(dsv_table[0]);
-				dsv_table.place(depth.depthStencil);
-				on_init(depth.get_size());
-				//      depth_handle = depth->get_ds();
-			}
-
-			else
-			{
-				on_init(textures[0].get_size());
-			}
-		}
-
-		void set(MeshRenderContext::ptr& context, bool clear_color = false, bool clear_depth = false)
-		{
-
-			context->pipeline.rtv.rtv_formats = formats;
-			context->pipeline.rtv.ds_format = depth_format;
-			set(context->list->get_graphics(), clear_color, clear_depth);
-		}
-
-		void set(HAL::GraphicsContext& graphics, bool clear_color = false, bool clear_depth = false)
-		{
-
-			auto& list = graphics.get_base();
-
-			graphics.set_rtv(rtv_table, dsv_table);
-
-			if (clear_color)
-			{
-				for (auto& tex : textures)
-					list.clear_rtv(tex.renderTarget);
-			}
-
-
-			if (clear_depth && depth_texture)
-			{
-				if (depth_texture)
-					list.clear_depth(dsv_table[0], 1);
-			}
-		}
-	};
-
 
 	class GBuffer
 	{
@@ -291,12 +156,16 @@ export{
 		HAL::TextureView depth_mips;
 		HAL::TextureView depth_prev_mips;
 
-		RenderTargetTable rtv_table;
+		RT::GBuffer::Compiled compiled;
+
+	//	RenderTargetTable rtv_table;
 
 
 		struct {
 			HAL::TextureView hiZ_depth, hiZ_depth_uav;
-			RenderTargetTable hiZ_table;
+			//RenderTargetTable hiZ_table;
+				RT::DepthOnly::Compiled compiled;
+
 		}HalfBuffer;
 
 
@@ -361,13 +230,13 @@ export{
 
 		void need(TaskBuilder& builder, bool need_quality = false, bool need_mips = false)
 		{
-			builder.need(GBuffer_Albedo, ResourceFlags::PixelRead);
-			builder.need(GBuffer_Normals, ResourceFlags::PixelRead);
-			builder.need(GBuffer_Depth, ResourceFlags::PixelRead);
-			builder.need(GBuffer_Specular, ResourceFlags::PixelRead);
-			builder.need(GBuffer_Speed, ResourceFlags::PixelRead);
+			builder.need(GBuffer_Albedo, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(GBuffer_Normals, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(GBuffer_Depth, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(GBuffer_Specular, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
+			builder.need(GBuffer_Speed, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
 
-			builder.need(GBuffer_DepthPrev, ResourceFlags::PixelRead);
+			builder.need(GBuffer_DepthPrev, ResourceFlags::PixelRead|ResourceFlags::ComputeRead);
 			if (need_quality) builder.need(GBuffer_Quality, ResourceFlags::DSRead);
 			builder.need(GBuffer_DepthMips, ResourceFlags::None);
 
@@ -391,6 +260,11 @@ export{
 
 			if (GBuffer_Quality)	result.quality = *GBuffer_Quality;
 			if (GBuffer_DepthMips)	result.depth_mips = *GBuffer_DepthMips;
+
+
+				
+				
+
 
 			return result;
 		}

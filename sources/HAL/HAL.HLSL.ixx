@@ -296,7 +296,7 @@ export
 
 		};
 
-		template<class T = float4>
+		template<class T = float>
 		struct DepthStencil : public Handle
 		{
 			static const HandleType TYPE = HandleType::DSV;

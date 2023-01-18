@@ -7,16 +7,10 @@ import GUI;
 
 export class stencil_renderer : public GUI::base, public FrameGraph::GraphGenerator, public Events::Runner, public VariableContext
 {
-     //   RenderTargetTable table;
-    //    HAL::StructureBuffer<UINT>::ptr id_buffer;
         camera cam;
         camera axis_intersect_cam;
 
-
-     //   HAL::StructureBuffer<UINT>::ptr axis_id_buffer;
-
         MeshAssetInstance::ptr axis;
-     //   PlacedAllocator allocator;
         camera axis_cam;
 
 

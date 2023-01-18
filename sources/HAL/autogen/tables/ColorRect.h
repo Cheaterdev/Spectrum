@@ -16,5 +16,5 @@ namespace Table
 		}
 		using Compiled = ColorRect;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}

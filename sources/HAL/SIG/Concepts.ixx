@@ -101,6 +101,13 @@ template<CompilableClass T>
 
 	template<class T>
 	using Underlying = typename _Underlying<T>::TYPE;
+
+
+	template<typename T> concept Compilable =
+		requires (T t) {
+		T::compile;
+	};
+
 }
 
 

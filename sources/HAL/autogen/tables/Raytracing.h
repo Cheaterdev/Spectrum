@@ -16,5 +16,5 @@ namespace Table
 			uint scene; // RaytracingAccelerationStructure
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

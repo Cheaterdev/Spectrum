@@ -17,5 +17,5 @@ namespace Table
 			uint data; // StructuredBuffer<Glyph>
 		};
 	};
-#pragma pack(pop)
-				}
+	#pragma pack(pop)
+}

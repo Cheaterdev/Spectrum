@@ -375,8 +375,14 @@ void stencil_renderer::generate(Graph& graph)
 				auto obj = sceneinfo.scene;
 
 				//SceneFrameManager::get().prepare(_context.get_list(), *debug_scene);
+				RT::DepthOnly::Compiled rtv;
 
-				RenderTargetTable table = RenderTargetTable(graphics, {}, *data.depth_tex);
+				{
+						RT::DepthOnly rt;
+						rt.GetDepth() = data.depth_tex->depthStencil;
+						rtv = rt.compile(list);
+					}
+
 				{
 					std::vector<std::pair<MeshAssetInstance::ptr, int>> current;
 					auto mesh_func = [&](MeshAssetInstance* l)
@@ -395,7 +401,7 @@ void stencil_renderer::generate(Graph& graph)
 							current.emplace_back(l->get_ptr<MeshAssetInstance>(), i);
 							m.compiled_mesh_info.set(graphics);
 							m.mesh_instance_info.set(graphics);
-									
+
 							{
 								Slots::Instance instance;
 								instance.GetInstanceId() = (UINT)current.size();
@@ -427,11 +433,9 @@ void stencil_renderer::generate(Graph& graph)
 						buffer.set(graphics);
 					}
 
+					rtv.set(graphics, RTOptions::Default | RTOptions::ClearDepth);
 
-					table.clear_depth(graphics);
-					table.set(graphics);
-					graphics.set_viewports({ data.depth_tex->get_viewport() });
-					graphics.set_scissors(data.depth_tex->get_scissor());
+					
 					obj->iterate([&](scene_object* node)
 						{
 							Graphics::renderable* render_object = dynamic_cast<Graphics::renderable*>(node);
@@ -444,7 +448,8 @@ void stencil_renderer::generate(Graph& graph)
 
 							return true;
 						});
-					table.clear_depth(graphics);
+
+					rtv.set(graphics,RTOptions::ClearDepth);
 
 					{
 						Slots::FrameInfo frameInfo;
@@ -479,7 +484,7 @@ void stencil_renderer::generate(Graph& graph)
 
 									m.compiled_mesh_info.set(graphics);
 									m.mesh_instance_info.set(graphics);
-									
+
 									{
 										Slots::Instance instance;
 										instance.GetInstanceId() = i + 1;
@@ -563,7 +568,13 @@ void stencil_renderer::generate_after(Graph& graph)
 				scene->compiledScene.set(graphics);
 
 				{
-					graphics.set_rtv(1, data.Stencil_color_tex->renderTarget, Handle());
+
+					{
+						RT::SingleColor rt;
+						rt.GetColor() = data.Stencil_color_tex->renderTarget;
+						rt.set(graphics);
+					}
+
 					//		data.Stencil_color_tex->renderTarget.clear(list);
 					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0, 0, 0, 0));
 					graphics.set_pipeline<PSOS::DrawSelected>();
@@ -585,7 +596,7 @@ void stencil_renderer::generate_after(Graph& graph)
 							auto& m = l->rendering[i];
 							m.compiled_mesh_info.set(graphics);
 							m.mesh_instance_info.set(graphics);
-									
+
 							graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 						}
 					}
@@ -611,14 +622,25 @@ void stencil_renderer::generate_after(Graph& graph)
 
 					graphics.set_viewport(data.ResultTexture->get_viewport());
 					graphics.set_scissor(data.ResultTexture->get_scissor());
-					graphics.set_rtv(1, data.ResultTexture->renderTarget, HAL::Handle());
+
+					{
+						RT::SingleColor rt;
+						rt.GetColor() = data.ResultTexture->renderTarget;
+						rt.set(graphics);
+					}
+
+
 					{
 						PROFILE_GPU(L"blend");
 						graphics.draw(4);
 					}
 				}
+				{
+					RT::SingleColor rt;
+					rt.GetColor() = data.ResultTexture->renderTarget;
+					rt.set(graphics);
+				}
 
-				graphics.set_rtv(1, data.ResultTexture->renderTarget, Handle());
 
 				if (draw_aabb) {
 					graphics.set_pipeline<PSOS::DrawBox>();
@@ -639,7 +661,7 @@ void stencil_renderer::generate_after(Graph& graph)
 							auto& m = l->rendering[i];
 							m.compiled_mesh_info.set(graphics);
 							m.mesh_instance_info.set(graphics);
-									
+
 							graphics.draw_indexed(36, 0, 0);
 						}
 					}
@@ -672,7 +694,7 @@ void stencil_renderer::generate_after(Graph& graph)
 						}
 						m.compiled_mesh_info.set(graphics);
 						m.mesh_instance_info.set(graphics);
-									
+
 						//graphics.draw(m.draw_arguments);
 
 						graphics.dispatch_mesh(m.dispatch_mesh_arguments);

@@ -23,5 +23,5 @@ namespace Table
 		}
 		using Compiled = node_data;
 		};
-	#pragma pack(pop)
-}
+		#pragma pack(pop)
+	}
