@@ -79,13 +79,10 @@ export
 	};
 	struct CompiledRT
 	{
-		HAL::Handle table_rtv;
-		HAL::Handle table_dsv;
+		HAL::RTVHandle table_rtv;
+		HAL::DSVHandle table_dsv;
 
-
-
-
-		std::vector<HAL::Format> get_formats()
+		std::vector<HAL::Format> get_formats() const
 		{
 			std::vector<HAL::Format> result;
 
@@ -101,7 +98,7 @@ export
 			}
 			return result;
 		}
-		HAL::Format get_depth_format()
+		HAL::Format get_depth_format() const
 		{
 			if (!table_dsv) return HAL::Format::UNKNOWN;
 			auto& view = std::get<HAL::Views::DepthStencil>((table_dsv).get_resource_info().view);
@@ -247,7 +244,7 @@ export
 
 
 			if (compiler.rtvs.size()) {
-				compiled.table_rtv = context.alloc_descriptor(static_cast<uint>(compiler.rtvs.size()), HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
+				compiled.table_rtv = context.alloc_descriptor<HAL::RTVHandle>(static_cast<uint>(compiler.rtvs.size()), HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
 				for (UINT i = 0; i < (UINT)compiled.table_rtv.get_count(); i++)
 				{
 					compiled.table_rtv[i].place(*compiler.rtvs[i]);
@@ -257,7 +254,7 @@ export
 
 			if (compiler.dsv)
 			{
-				compiled.table_dsv = context.alloc_descriptor(1u, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
+				compiled.table_dsv = context.alloc_descriptor<HAL::DSVHandle>(1u, HAL::DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
 				compiled.table_dsv[0].place(**compiler.dsv);
 			}
 
@@ -265,9 +262,9 @@ export
 		}
 
 
-		void set(HAL::GraphicsContext& context, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0) const
+		CompiledRT set(HAL::GraphicsContext& context, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0) const
 		{
-			compile(context.get_base()).set(context, options, depth, stencil);
+			return compile(context.get_base()).set(context, options, depth, stencil);
 		}
 
 	};

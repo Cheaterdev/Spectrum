@@ -127,7 +127,11 @@ void PSSM::generate(Graph& graph)
 			{
 				RT::DepthOnly rt;
 				rt.GetDepth() = data.global_depth->depthStencil;
-				rt.set(command_list->get_graphics(), RTOptions::Default |  RTOptions::ClearDepth);
+				auto compiled = rt.set(command_list->get_graphics(), RTOptions::Default |  RTOptions::ClearDepth);
+
+
+				context->pipeline.rtv.rtv_formats = compiled.get_formats();
+				context->pipeline.rtv.ds_format = compiled.get_depth_format();
 			}
 
 

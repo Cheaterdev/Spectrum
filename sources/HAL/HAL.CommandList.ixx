@@ -492,7 +492,7 @@ export{
 			void begin(std::string name = "", Timer* t = nullptr);
 			
 
-			void clear_uav(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
+			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
 				create_transition_point();
 				transition(h.get_resource_info());
@@ -501,7 +501,7 @@ export{
 			}
 
 
-			void clear_rtv(const Handle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
+			void clear_rtv(const RTVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
 				create_transition_point();
 				transition(h.get_resource_info());
@@ -512,7 +512,7 @@ export{
 
 
 
-			void clear_stencil(const Handle& h, UINT8 stencil = 0)
+			void clear_stencil(const DSVHandle& h, UINT8 stencil = 0)
 			{
 				create_transition_point();
 				transition(h.get_resource_info());
@@ -521,7 +521,7 @@ export{
 				create_transition_point(false);
 			}
 
-			void clear_depth(const Handle& h, float depth = 0)
+			void clear_depth(const DSVHandle& h, float depth = 0)
 			{
 				create_transition_point();
 				transition(h.get_resource_info());
@@ -594,7 +594,7 @@ export{
 				tables.resize(32); // !!!!!!!!!!!
 			}
 
-			virtual void set(UINT, const Handle&) = 0;
+	
 			virtual void set_const_buffer(UINT i, UINT offset, UINT v) = 0;
 
 
@@ -663,7 +663,7 @@ export{
 				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
 			}
 
-			void set_cb(UINT index, const Handle& cb)
+			void set_cb(UINT index, const CBVHandle& cb)
 			{
 				get_base().transition(cb.get_resource_info());	
 				set_const_buffer(index, 0, cb.get_offset());
@@ -703,7 +703,7 @@ export{
 			void on_execute();
 
 			void set_const_buffer(UINT i, UINT offset, UINT v)override;
-			void set(UINT, const Handle&)override;
+
 			HAL::Views::IndexBuffer index;
 		public:
 
@@ -729,8 +729,8 @@ export{
 			void set_scissors(sizer_long rect);
 			void set_viewports(std::vector<Viewport> viewports);
 
-			void set_rtv(const Handle&, Handle);
-			void set_rtv(int c, Handle rt, Handle h);
+			void set_rtv(const RTVHandle&, DSVHandle);
+			void set_rtv(int c, RTVHandle rt, DSVHandle h);
 
 
 			void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
@@ -740,29 +740,6 @@ export{
 
 			void dispatch_mesh(ivec3 v);
 			void dispatch_mesh(D3D12_DISPATCH_MESH_ARGUMENTS args);
-
-
-			Handle place_rtv(UINT count)
-			{
-				return get_base().alloc_descriptor(count, DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
-
-			}
-
-			Handle place_dsv(UINT count)
-			{
-				return get_base().alloc_descriptor(count, DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
-			}
-
-	/*		Handle place_rtv(std::initializer_list<Handle> list)
-			{
-				return get_base().get_cpu_heap(DescriptorHeapType::RTV).place(list);
-			}
-
-			Handle place_dsv(std::initializer_list<Handle> list)
-			{
-				return get_base().get_cpu_heap(DescriptorHeapType::DSV).place(list);
-			}*/
-
 
 			void set_stencil_ref(UINT ref)
 			{
@@ -810,14 +787,6 @@ export{
 			void begin();
 			void end();
 			void on_execute();
-
-
-
-
-			void set(UINT, const Handle&)override;
-
-
-
 
 
 

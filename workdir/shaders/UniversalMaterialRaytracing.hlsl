@@ -180,7 +180,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
 	float3 reflected = payload2.color.xyz;*/
 
-	float3 my_color = color * max(0.01, (shadow)*saturate(dot(t.v.normal, lightDir)));
+	float3 my_color = color * (shadow)*saturate(dot(t.v.normal, lightDir));
 
 
 

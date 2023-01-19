@@ -16,7 +16,21 @@ namespace HAL {
 	public:
 		virtual ResourceHandle alloc_memory(size_t size, size_t alignment, HeapIndex options) = 0;
 		virtual QueryHandle alloc_query(uint size, QueryType options) = 0;
-		virtual Handle  alloc_descriptor(uint size, DescriptorHeapIndex options) = 0;
+		virtual Handle  alloc_base_descriptor(uint size, DescriptorHeapIndex options) = 0;
+
+
+		template <class Type = Handle>
+		Type alloc_descriptor(uint size, DescriptorHeapIndex options)
+		{
+			return Type(alloc_base_descriptor(size, options));
+		}
+
+		template <>
+		Handle alloc_descriptor<Handle>(uint size,DescriptorHeapIndex options)
+		{
+			return alloc_base_descriptor(size, options);
+		}
+
 		virtual ~GPUEntityStorageInterface() = default;
 	};
 
@@ -46,8 +60,7 @@ namespace HAL {
 				return QueryHeapPageManager<AllocationPolicy>::alloc(size,1,options);
 			}
 
-
-			Handle  alloc_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
+			Handle  alloc_base_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
 			{
 				auto h = DescriptorHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
 				

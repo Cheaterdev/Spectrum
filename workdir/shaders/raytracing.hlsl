@@ -108,7 +108,7 @@ float4 trace(VoxelInfo voxel_info, float4 start_color, float start_dist, float3 
 
 	float3 sky = CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(dir), angle * 8);
 	float sampleWeight = saturate(max_accum - accum.w) / max_accum;
-	accum.xyz += sky * pow(sampleWeight, 1);
+	accum.xyz += sky * pow(sampleWeight, 3);
 
 
 	dist *= length(voxel_size);
@@ -554,7 +554,7 @@ void MyRaygenShaderReflection()
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {
-	payload.color = 1;
+	payload.color = 0;
 	// CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 3);
 	payload.dist = 100000;
 }

@@ -47,7 +47,7 @@ export
 			update_tiling_info updates;
 
 		public:
-			using Handle = TypedHandle<T>;
+			using Handle = ::TypedHandle<T>;
 			StructureBuffer<Type>::ptr buffer;
 			using ptr = std::shared_ptr<virtual_gpu_buffer<Type, AllocatorType>>;
 
@@ -65,16 +65,16 @@ export
 			}
 
 
-			TypedHandle<T> allocate(size_t n)
+			Handle allocate(size_t n)
 			{
 				std::lock_guard<std::mutex> g(m);
-				TypedHandle<T> result = Base::Allocate(n);
+				Handle result = Base::Allocate(n);
 
 				if constexpr (use_virtual)	buffer->resource->get_tiled_manager().map_buffer_part(updates, result.get_offset() * sizeof(T), n * sizeof(T));
 				return result;
 			}
 
-			void allocate(TypedHandle<T>& result, size_t n)
+			void allocate(Handle& result, size_t n)
 			{
 				std::lock_guard<std::mutex> g(m);
 
@@ -102,7 +102,7 @@ export
 
 
 
-			void free(TypedHandle<T>& h)
+			void free(Handle& h)
 			{
 				std::lock_guard<std::mutex> g(m);
 				Base::Free(h);

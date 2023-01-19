@@ -302,6 +302,8 @@ export namespace HAL
 
 		};
 
+	
+
 		struct RenderTarget
 		{
 

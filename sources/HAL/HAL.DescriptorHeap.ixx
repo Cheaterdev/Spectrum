@@ -190,14 +190,43 @@ export
 			{
 				return storage;
 			}
-		private:
+		protected:
 			std::shared_ptr<DescriptorHeapStorage> storage;
 			UINT offset = UINT_MAX;
 		};
 
-	
+		namespace internal // TODO oops, exported
+		{
+			template<HandleType handle_type>
+		struct TypedHandle :public Handle
+		{
+			static const HandleType TYPE = handle_type;
+
+			TypedHandle() = default;
+			TypedHandle(std::shared_ptr<DescriptorHeapStorage> storage, UINT offset) :Handle(storage, offset) {}
+			//TypedHandle(const TypedHandle& h) :Handle(h){}
+			TypedHandle(const Handle& h) :Handle(h){}
 		
-	template<typename T> concept HandleClass = std::is_base_of_v<HAL::Handle, T>;
+			TypedHandle operator[](uint i) const
+			{
+				assert(offset == 0);
+				assert(i < storage->get_count());
+
+				return TypedHandle(storage, i);
+			}
+
+		};
+		}
+		
+
+		using CBVHandle = internal::TypedHandle<HandleType::CBV>;
+		using SRVHandle = internal::TypedHandle<HandleType::SRV>;
+		using UAVHandle = internal::TypedHandle<HandleType::UAV>;
+		using RTVHandle = internal::TypedHandle<HandleType::RTV>;
+		using DSVHandle = internal::TypedHandle<HandleType::DSV>;
+		using SamplerHandle = internal::TypedHandle<HandleType::SMP>;
+
+		template<typename T> concept HandleClass = std::is_base_of_v<HAL::Handle, T>;
 
 
 

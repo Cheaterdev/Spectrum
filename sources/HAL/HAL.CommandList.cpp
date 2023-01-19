@@ -295,23 +295,17 @@ namespace HAL
 	}
 
 
-	void  GraphicsContext::set(UINT i, const Handle& table)
-	{
-		assert(false);//list->SetGraphicsRootDescriptorTable(i, table.get_gpu());
-	}
-
-
 	void  GraphicsContext::set_const_buffer(UINT i, UINT offset, UINT v)
 	{
 		list->graphics_set_constant(i, offset, v);
 	}
 
-	void GraphicsContext::set_rtv(const Handle& table, Handle h)
+	void GraphicsContext::set_rtv(const RTVHandle& table, DSVHandle h)
 	{
 		set_rtv(table.get_count(), table, h);
 	}
 
-	void GraphicsContext::set_rtv(int c, Handle rt, Handle h)
+	void GraphicsContext::set_rtv(int c, RTVHandle rt, DSVHandle h)
 	{
 
 	
@@ -980,12 +974,6 @@ namespace HAL
 		res.y = Math::DivideByMultiple(a.y, b.y);
 		res.z = Math::DivideByMultiple(a.z, b.z);
 		dispach(res.x, res.y, res.z);
-	}
-
-
-	void  ComputeContext::set(UINT i, const Handle& table)
-	{
-		assert(false);//list->SetComputeRootDescriptorTable(i, table.get_gpu());
 	}
 
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
