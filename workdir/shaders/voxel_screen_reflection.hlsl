@@ -179,7 +179,6 @@ float4 trace_refl(float4 start_color, float3 view,  float3 origin,float3 dir, fl
 struct GI_RESULT
 {
 	float4 screen: SV_Target0;
-	//float4 gi: SV_Target1;
 };
 
 

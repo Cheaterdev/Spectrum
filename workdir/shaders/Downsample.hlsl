@@ -4,7 +4,7 @@
 
 #include "autogen/FrameInfo.h"
 #include "autogen/GBufferDownsample.h"
-
+#include "autogen/rt/GBufferDownsampleRT.h"
 static const Camera camera = GetFrameInfo().GetCamera();
 static const GBufferDownsample gbuffer = GetGBufferDownsample();
 
@@ -25,12 +25,6 @@ static const Texture2D<float> depth_tex = gbuffer.GetDepth();
 static const Texture2D<float4> normal_tex = gbuffer.GetNormals();
 
 
-struct PS_RESULT
-{
-float depth: SV_TARGET0;
-float4 normal : SV_TARGET1;
-};
-
 
 static const int2 delta[4] =
 {
@@ -40,9 +34,9 @@ static const int2 delta[4] =
     int2(0, 0)
 };
 
-PS_RESULT PS(quad_output input)
+GBufferDownsampleRT PS(quad_output input)
 {
-	PS_RESULT result;
+	GBufferDownsampleRT result;
 	float2 low_dimensions;
 	depth_tex.GetDimensions(low_dimensions.x, low_dimensions.y);
   // i.tc-= 0.5/ low_dimensions;
@@ -83,7 +77,7 @@ PS_RESULT PS(quad_output input)
     //result.depth = float4((sumd - mind - maxd) / 2,0,0,1);
     //  result.normal = float4(((sumn - minN - maxN) /2).xyz * 0.5 + 0.5, 1);
     result.depth = float4(mind, 0, 0, 1);
-    result.normal =  float4(minN.xyz * 0.5 + 0.5, minN.w);
+    result.color =  float4(minN.xyz * 0.5 + 0.5, minN.w);
   // result.depth = float4(maxd, 0, 0, 1);
  // result.normal = float4(maxN.xyz * 0.5 + 0.5, maxN.w);
     //result.depth = float4(depths[0].xxx, 1) ;
@@ -91,14 +85,14 @@ PS_RESULT PS(quad_output input)
     return result;
 }
 
-PS_RESULT PS_Copy(quad_output i)
+GBufferDownsampleRT PS_Copy(quad_output i)
 {
-	PS_RESULT result;
+	GBufferDownsampleRT result;
 	float2 low_dimensions;
 	depth_tex.GetDimensions(low_dimensions.x, low_dimensions.y);
 	
 	result.depth = depth_tex.Sample(pointClampSampler, i.tc);
-	result.normal = 1;
+	result.color = 1;
 	// result.depth = float4(maxd, 0, 0, 1);
    // result.normal = float4(maxN.xyz * 0.5 + 0.5, maxN.w);
 	  //result.depth = float4(depths[0].xxx, 1) ;

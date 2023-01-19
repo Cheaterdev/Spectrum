@@ -17,7 +17,7 @@ export
 {
 	class FileDataStorage
 	{
-	
+
 		std::filesystem::path path;
 
 		struct header
@@ -36,34 +36,34 @@ export
 		std::shared_ptr<std::fstream> ostream_ptr;
 	public:
 
-		FileDataStorage(std::filesystem::path path):path(path)
+		FileDataStorage(std::filesystem::path path) :path(path)
 		{
-			std::fstream stream(path,std::ios::binary | std::ios::in);
+			std::fstream stream(path, std::ios::binary | std::ios::in);
 
-			if(!stream.is_open()) return;
+			if (!stream.is_open()) return;
 
-		
-					  stream.seekg( 0, std::ios::end );
-					  uint64 file_size = stream.tellg();
 
-					  stream.seekg( file_size-sizeof(uint64), std::ios::beg );
+			stream.seekg(0, std::ios::end);
+			uint64 file_size = stream.tellg();
 
-				uint64 header_offset = 0 ;
+			stream.seekg(file_size - sizeof(uint64), std::ios::beg);
 
-				stream.read(reinterpret_cast<char*>(&header_offset), sizeof(uint64));
+			uint64 header_offset = 0;
 
-				stream.seekg( header_offset, std::ios::beg );
+			stream.read(reinterpret_cast<char*>(&header_offset), sizeof(uint64));
 
-				serialization_iarchive oa(stream);
+			stream.seekg(header_offset, std::ios::beg);
 
-				oa>>h;
-				stream.close();
-			
+			serialization_iarchive oa(stream);
+
+			oa >> h;
+			stream.close();
+
 		}
 
 
 		template<class T>
-		void put(std::string partition, const T&data)
+		void put(std::string partition, const T& data)
 		{
 
 			uint64 pos = ostream_ptr->tellp();
@@ -76,15 +76,18 @@ export
 		{
 
 			std::filesystem::create_directories(path.parent_path());
-			ostream_ptr = std::make_shared<std::fstream>(path,std::ios::binary|std::ios::out);
+			ostream_ptr = std::make_shared<std::fstream>(path, std::ios::binary | std::ios::out);
 		}
 
-			template<class T>
-		void get(std::string partition, T& target)
+		template<class T>
+		bool get(std::string partition, T& target)
 		{
-	
-			std::fstream stream(path,std::ios::binary | std::ios::in);
-			stream.seekg( h.offsets[partition], std::ios::beg );
+
+			std::fstream stream(path, std::ios::binary | std::ios::in);
+
+			if(!stream.is_open()) return false;
+
+			stream.seekg(h.offsets[partition], std::ios::beg);
 			UniversalContext context;
 
 			context.get_context<std::fstream*>() = &stream;
@@ -92,18 +95,18 @@ export
 
 
 
-			cereal::UserDataAdapter<UniversalContext, serialization_iarchive> oa(context,stream);
-		
-			oa>>target;
+			cereal::UserDataAdapter<UniversalContext, serialization_iarchive> oa(context, stream);
+
+			oa >> target;
 
 			stream.close();
-
+			return true;
 		}
 		template<class T>
 		T get(std::string partition)
 		{
 			T t;
-			get(partition,t);
+			get(partition, t);
 			return t;
 		}
 

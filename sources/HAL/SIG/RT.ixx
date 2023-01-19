@@ -67,12 +67,12 @@ export
 	enum class RTOptions :uint
 	{
 		SetHandles = 1,
-		ClearDepth = 1<< 1,
+		ClearDepth = 1 << 1,
 		ClearStencil = 1 << 2,
 		SetViewport = 1 << 3,
 		SetScissors = 1 << 4,
 
-		ClearColor = 1<< 5,
+		ClearColor = 1 << 5,
 		ClearDepthStencil = ClearDepth | ClearStencil,
 		ClearAll = ClearDepthStencil | ClearColor,
 		Default = SetHandles | SetScissors | SetViewport,
@@ -83,45 +83,45 @@ export
 		HAL::Handle table_dsv;
 
 
-		
 
-	std::vector<HAL::Format> get_formats()
-	{
-		std::vector<HAL::Format> result;
 
-		if (table_rtv)
+		std::vector<HAL::Format> get_formats()
 		{
+			std::vector<HAL::Format> result;
 
-			for (uint i = 0; i < table_rtv.get_count(); i++)
+			if (table_rtv)
 			{
-				auto& view = std::get<HAL::Views::RenderTarget>(table_rtv[i].get_resource_info().view);
-				result.emplace_back(view.Format);
+
+				for (uint i = 0; i < table_rtv.get_count(); i++)
+				{
+					auto& view = std::get<HAL::Views::RenderTarget>(table_rtv[i].get_resource_info().view);
+					result.emplace_back(view.Format);
+				}
+
 			}
-
+			return result;
 		}
-		return result;
-	}
-	HAL::Format get_depth_format()
-	{
-		if (!table_dsv) return HAL::Format::UNKNOWN;
-		auto& view = std::get<HAL::Views::DepthStencil>((table_dsv).get_resource_info().view);
+		HAL::Format get_depth_format()
+		{
+			if (!table_dsv) return HAL::Format::UNKNOWN;
+			auto& view = std::get<HAL::Views::DepthStencil>((table_dsv).get_resource_info().view);
 
-		return view.Format;
-	}
+			return view.Format;
+		}
 
 
 
 		const CompiledRT& set(HAL::GraphicsContext& context, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0) const
 		{
-			if ( check(options & RTOptions::SetHandles))
-			context.set_rtv(table_rtv, table_dsv);
+			if (check(options & RTOptions::SetHandles))
+				context.set_rtv(table_rtv, table_dsv);
 
 
 			if (check(options & RTOptions::ClearColor))
 			{
 				for (uint i = 0; i < table_rtv.get_count(); i++)
 				{
-					context.get_base().clear_rtv(table_rtv[i],float4(1,0,0,1));
+					context.get_base().clear_rtv(table_rtv[i]);
 				}
 			}
 
@@ -137,89 +137,72 @@ export
 
 			if (table_rtv)
 			{
-
 				auto& view = std::get<HAL::Views::RenderTarget>(table_rtv.get_resource_info().view);
 
 				std::visit(overloaded{
-			[&](const HAL::Views::RenderTarget::Buffer& Buffer) {
-			assert(false);
-			},
-			[&](const HAL::Views::RenderTarget::Texture1D& Texture1D) {
-			size = view.Resource->get_desc().as_texture().get_size(Texture1D.MipSlice).xy;
+					[&](const HAL::Views::RenderTarget::Buffer& Buffer) {
+						assert(false);
+					},
+					[&](const HAL::Views::RenderTarget::Texture1D& Texture1D) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture1D.MipSlice).xy;
 
-			},
-			[&](const HAL::Views::RenderTarget::Texture1DArray& Texture1DArray) {
-				size = view.Resource->get_desc().as_texture().get_size(Texture1DArray.MipSlice).xy;
-			},
-			[&](const HAL::Views::RenderTarget::Texture2D& Texture2D) {
-
-					size = view.Resource->get_desc().as_texture().get_size(Texture2D.MipSlice).xy;
-			},
-			[&](const HAL::Views::RenderTarget::Texture2DArray& Texture2DArray) {
-		size = view.Resource->get_desc().as_texture().get_size(Texture2DArray.MipSlice).xy;
-			},
-			[&](const HAL::Views::RenderTarget::Texture3D& Texture3D) {
-		size = view.Resource->get_desc().as_texture().get_size(Texture3D.MipSlice).xy;
-			},
-			[&](const HAL::Views::RenderTarget::Texture2DMS& Texture2DMS) {
-assert(false);
-			},
-			[&](const HAL::Views::RenderTarget::Texture2DMSArray& Texture2DMSArray) {
-assert(false);
-			},
-			[&](auto other) {
-				assert(false);
-			}
+					},
+					[&](const HAL::Views::RenderTarget::Texture1DArray& Texture1DArray) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture1DArray.MipSlice).xy;
+					},
+					[&](const HAL::Views::RenderTarget::Texture2D& Texture2D) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture2D.MipSlice).xy;
+					},
+					[&](const HAL::Views::RenderTarget::Texture2DArray& Texture2DArray) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture2DArray.MipSlice).xy;
+					},
+					[&](const HAL::Views::RenderTarget::Texture3D& Texture3D) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture3D.MipSlice).xy;
+					},
+					[&](const HAL::Views::RenderTarget::Texture2DMS& Texture2DMS) {
+						assert(false);
+					},
+					[&](const HAL::Views::RenderTarget::Texture2DMSArray& Texture2DMSArray) {
+						assert(false);
+					},
+					[&](auto other) {
+						assert(false);
+					}
 					}, view.View);
-
-
-
-
 
 			}
 			else
 				if (table_dsv)
 				{
-
 					auto& view = std::get<HAL::Views::DepthStencil>(table_dsv.get_resource_info().view);
 
-
 					std::visit(overloaded{
-		[&](const HAL::Views::DepthStencil::Texture1D& Texture1D) {
-size = view.Resource->get_desc().as_texture().get_size(Texture1D.MipSlice).xy;
-
-		},
-		[&](const HAL::Views::DepthStencil::Texture1DArray& Texture1DArray) {
-		size = view.Resource->get_desc().as_texture().get_size(Texture1DArray.MipSlice).xy;
-
-		},
-		[&](const HAL::Views::DepthStencil::Texture2D& Texture2D) {
-size = view.Resource->get_desc().as_texture().get_size(Texture2D.MipSlice).xy;
-
-		},
-		[&](const HAL::Views::DepthStencil::Texture2DArray& Texture2DArray) {
-			size = view.Resource->get_desc().as_texture().get_size(Texture2DArray.MipSlice).xy;
-
-		},
-		[&](const HAL::Views::DepthStencil::Texture2DMS& Texture2DMS) {
-assert(false);
-		},
-		[&](const HAL::Views::DepthStencil::Texture2DMSArray& Texture2DMSArray) {
-assert(false);
-		},
-		[&](auto other) {
-			assert(false);
-		}
+						[&](const HAL::Views::DepthStencil::Texture1D& Texture1D) {
+							size = view.Resource->get_desc().as_texture().get_size(Texture1D.MipSlice).xy;
+						},
+						[&](const HAL::Views::DepthStencil::Texture1DArray& Texture1DArray) {
+							size = view.Resource->get_desc().as_texture().get_size(Texture1DArray.MipSlice).xy;
+						},
+						[&](const HAL::Views::DepthStencil::Texture2D& Texture2D) {
+							size = view.Resource->get_desc().as_texture().get_size(Texture2D.MipSlice).xy;
+						},
+						[&](const HAL::Views::DepthStencil::Texture2DArray& Texture2DArray) {
+							size = view.Resource->get_desc().as_texture().get_size(Texture2DArray.MipSlice).xy;
+						},
+						[&](const HAL::Views::DepthStencil::Texture2DMS& Texture2DMS) {
+							assert(false);
+						},
+						[&](const HAL::Views::DepthStencil::Texture2DMSArray& Texture2DMSArray) {
+							assert(false);
+						},
+						[&](auto other) {
+							assert(false);
+						}
 						}, view.View);
-
-
 				}
-			HAL::Handle active_handle = table_rtv ? table_rtv : table_dsv;
-
 
 			if (size.x)
 			{
-
 				if (check(options & RTOptions::SetViewport))
 				{
 					std::vector<HAL::Viewport> vps(1);
@@ -233,7 +216,7 @@ assert(false);
 				if (check(options & RTOptions::SetScissors))
 				{
 					sizer_long scissors = { 0, 0, size.x, size.y };
-								context.set_scissors(scissors);
+					context.set_scissors(scissors);
 				}
 			}
 

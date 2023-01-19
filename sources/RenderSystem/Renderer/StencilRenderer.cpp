@@ -579,8 +579,6 @@ void stencil_renderer::generate_after(Graph& graph)
 					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0, 0, 0, 0));
 					graphics.set_pipeline<PSOS::DrawSelected>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-					graphics.set_viewports({ data.Stencil_color_tex->get_viewport() });
-					graphics.set_scissors(data.Stencil_color_tex->get_scissor());
 
 					graph.set_slot(SlotID::FrameInfo, graphics);
 

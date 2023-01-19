@@ -201,23 +201,3 @@ float2 DX10_SMAADepthEdgeDetectionPS(float4 position : SV_POSITION,
     #endif
     }
 #endif
-/*
-float4 DX10_SMAAResolvePS(float4 position : SV_POSITION,
-                          float2 texcoord : TEXCOORD0) : SV_TARGET
-{
-#if SMAA_REPROJECTION
-    return SMAAResolvePS(texcoord, colorTex, colorTexPrev, velocityTex);
-#else
-    return SMAAResolvePS(texcoord, colorTex, colorTexPrev);
-#endif
-}
-
-void DX10_SMAASeparatePS(float4 position : SV_POSITION,
-                         float2 texcoord : TEXCOORD0,
-                         out float4 target0 : SV_TARGET0,
-                         out float4 target1 : SV_TARGET1)
-{
-    SMAASeparatePS(position, texcoord, target0, target1, colorTexMS);
-}
-
-*/

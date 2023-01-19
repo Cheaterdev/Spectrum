@@ -301,12 +301,7 @@ GI_RESULT PS(quad_output i)
 }
 
 #endif
-struct NoiseOutput
-{
 
-	float4 gi : SV_Target0;
-	float numFrames : SV_Target1;
-};
 
 static const Texture2D<float> tex_frames_prev = GetVoxelScreen().GetPrev_frames();
 static const Texture2D<float> tex_depth_prev2 = GetVoxelScreen().GetPrev_depth();

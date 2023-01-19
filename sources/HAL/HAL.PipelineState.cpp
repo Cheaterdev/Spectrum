@@ -1,5 +1,4 @@
 module HAL:PipelineState;
-
 import Core;
 import :Device;
 
@@ -37,7 +36,10 @@ namespace HAL
 	{
 		std::lock_guard<std::mutex> g(m);
 
-		FileSystem::get().save_data(L"pso", Serializer::serialize(binary_cache));
+		FileDataStorage storage(L"cache/pso.bin");
+		storage.start_save();
+		storage.put("cache", binary_cache);
+		storage.save();
 	}
 
 	PipelineStateCache::PipelineStateCache(Device& device) :device(device), cache([this](const PipelineStateDesc& desc)
@@ -83,10 +85,10 @@ namespace HAL
 
 		std::lock_guard<std::mutex> g(m);
 
-		auto file = FileSystem::get().get_file("pso");
-		if (file)
-			Serializer::deserialize(file->load_all(), binary_cache);
 
+		
+		FileDataStorage storage(L"cache/pso.bin");
+		storage.get("cache",binary_cache);
 	}
 
 			PipelineState::ptr PipelineStateCache::get_cache(PipelineStateDesc& desc, std::string name)

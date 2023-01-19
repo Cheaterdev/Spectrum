@@ -25,6 +25,9 @@ export template <typename T>
         static std::shared_ptr<T> instance;
 
         static std::mutex create_mutex;
+
+      static bool first;
+      
         friend class SingletonAccessor<T>;
 
     protected:
@@ -48,6 +51,9 @@ export template <typename T>
                 std::lock_guard<std::mutex> g(create_mutex);
 
                 if (instance) return instance.get();
+
+                assert(first);
+                first = false;
                 if constexpr(HasCreationFunc<T>)
                 {
                     instance = T::create_singleton();
@@ -79,8 +85,13 @@ export template <typename T>
 
         static void reset()
         {
-            if (memory.size())
-                instance = nullptr;
+         //   if (memory.size())
+        //    {
+	            instance = nullptr;
+
+             //   ptr= nullptr;
+          //  }
+                
         }
 
         template<typename G = T>
@@ -105,6 +116,8 @@ template <typename T>
 std::vector<char> Singleton<T>::memory;
 template <typename T>
 std::mutex Singleton<T>::create_mutex;
+template <typename T>
+bool Singleton<T>::first = true;
 
 template <class T>
 std::shared_ptr<T> SingletonAccessor<T>::get_native()

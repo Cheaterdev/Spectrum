@@ -19,6 +19,8 @@ namespace HAL
 	Device::~Device()
 	{
 		stop_all();
+
+		pipeline_state_cache = nullptr;
 	}
 
 	std::shared_ptr<CommandList> Device::get_upload_list()
