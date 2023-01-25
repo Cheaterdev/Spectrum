@@ -156,7 +156,7 @@ graphics_pso_stat
  | COMMENT
  ;
 graphics_pso_block: graphics_pso_stat*;
-graphics_pso_definition: GRAPHICS_PSO name_id inherit? OBRACE graphics_pso_block CBRACE;
+graphics_pso_definition: option_block*? GRAPHICS_PSO name_id inherit? OBRACE graphics_pso_block CBRACE;
 
 
 

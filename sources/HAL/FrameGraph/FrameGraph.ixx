@@ -776,7 +776,7 @@ using namespace HAL;
 
 		void set_slot(SlotID id, HAL::SignatureDataSetter& setter)
 		{
-			assert(slot_setters.contains(id));
+		//	assert(slot_setters.contains(id));
 			slot_setters[id](setter);
 		}
 

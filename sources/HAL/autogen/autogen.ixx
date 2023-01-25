@@ -64,8 +64,6 @@ export
 	#include "slots\MipMapping.h"
 	#include "slots\CopyTexture.h"
 	#include "slots\DownsampleDepth.h"
-	#include "slots\GBuffer.h"
-	#include "rt\GBuffer.h"
 	#include "slots\GBufferDownsample.h"
 	#include "slots\GBufferQuality.h"
 	#include "slots\PSSMConstants.h"
@@ -81,6 +79,8 @@ export
 	#include "tables\Triangle.h"
 	#include "slots\Raytracing.h"
 	#include "slots\SceneData.h"
+	#include "slots\GBuffer.h"
+	#include "rt\GBuffer.h"
 	#include "slots\SkyData.h"
 	#include "slots\SkyFace.h"
 	#include "slots\EnvFilter.h"
@@ -148,6 +148,9 @@ export
 	#include "pso\PSSMMask.h"
 	#include "pso\PSSMApply.h"
 	#include "pso\GBufferDownsample.h"
+	#include "pso\GBufferDraw.h"
+	#include "pso\DepthDraw.h"
+	#include "pso\Voxelization.h"
 	#include "pso\Sky.h"
 	#include "pso\SkyCube.h"
 	#include "pso\CubemapENV.h"
@@ -257,10 +260,6 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	{
 		return SlotID::DownsampleDepth;
 	}
-	if(slot_name == "GBuffer")
-	{
-		return SlotID::GBuffer;
-	}
 	if(slot_name == "GBufferDownsample")
 	{
 		return SlotID::GBufferDownsample;
@@ -296,6 +295,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "SceneData")
 	{
 		return SlotID::SceneData;
+	}
+	if(slot_name == "GBuffer")
+	{
+		return SlotID::GBuffer;
 	}
 	if(slot_name == "SkyData")
 	{
@@ -517,10 +520,6 @@ UINT get_slot_id(SlotID id)
 	{
 		return Slots::DownsampleDepth::Slot::ID;
 	}
-	if(id == SlotID::GBuffer)
-	{
-		return Slots::GBuffer::Slot::ID;
-	}
 	if(id == SlotID::GBufferDownsample)
 	{
 		return Slots::GBufferDownsample::Slot::ID;
@@ -556,6 +555,10 @@ UINT get_slot_id(SlotID id)
 	if(id == SlotID::SceneData)
 	{
 		return Slots::SceneData::Slot::ID;
+	}
+	if(id == SlotID::GBuffer)
+	{
+		return Slots::GBuffer::Slot::ID;
 	}
 	if(id == SlotID::SkyData)
 	{

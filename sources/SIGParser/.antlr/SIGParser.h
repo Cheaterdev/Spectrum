@@ -851,6 +851,8 @@ public:
     antlr4::tree::TerminalNode *OBRACE();
     Graphics_pso_blockContext *graphics_pso_block();
     antlr4::tree::TerminalNode *CBRACE();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
     InheritContext *inherit();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;

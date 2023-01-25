@@ -17,31 +17,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	PROFILE_GPU(L"mesh_renderer");
 
 	instances_count = 0;
-
-	HAL::PipelineStateDesc& default_pipeline = mesh_render_context->pipeline;
-	default_pipeline.topology = HAL::PrimitiveTopologyType::TRIANGLE;
-	default_pipeline.root_signature = HAL::Device::get().get_engine_pso_holder().GetSignature(Layouts::DefaultLayout);
-	default_pipeline.rtv.enable_depth = true;
-	default_pipeline.rasterizer.fill_mode = FillMode::Solid;
-	default_pipeline.rasterizer.cull_mode = CullMode::None;
-	default_pipeline.blend.independ_blend = false;
-	default_pipeline.blend.render_target[0].enabled = false;
-	default_pipeline.mesh = mshader;
-	default_pipeline.amplification = ashader;
-	default_pipeline.rasterizer.conservative = GetAsyncKeyState('B') && mesh_render_context->render_type == RENDER_TYPE::VOXEL;
-
-	if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
-	{
-		default_pipeline.mesh = mshader_voxel;
-		default_pipeline.amplification = ashader_voxel;
-		default_pipeline.rasterizer.cull_mode = CullMode::None;
-		default_pipeline.rtv.enable_depth = false;
-		default_pipeline.rasterizer.conservative = GetAsyncKeyState('B');
-
-		mesh_render_context->voxelization_compiled.set(graphics);
-	}
-
-	mesh_render_context->pipeline = default_pipeline;
+		
 	mesh_render_context->begin();
 
 	Slots::SceneData::Compiled& compiledScene = scene->compiledScene;
@@ -52,11 +28,7 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 
 	std::map<size_t, materials::Pipeline::ptr> pipelines_local;
 	std::map<size_t, materials::Pipeline::ptr>* pipelines_ptr = &pipelines_local;
-	/*if (mesh_render_context->overrided_pipeline)
-	{
-		pipelines_local[0] = mesh_render_context->overrided_pipeline;
-	}
-	else*/
+
 	pipelines_ptr = &scene->pipelines;
 
 	std::map<size_t, materials::Pipeline::ptr>& pipelines = *pipelines_ptr;
@@ -339,28 +311,21 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			PROFILE_GPU(L"YO");
 			int current = 0;
 
-
-			for (auto it = begin; it != end; it++)
-			{
-				{
-					PROFILE_GPU(L"flush");
-					it->second->set(mesh_render_context->render_type, mesh_render_context->render_mesh, mesh_render_context->pipeline);
-
-					if (mesh_render_context->overrided_pipeline)
-					{
-						mesh_render_context->overrided_pipeline->set(mesh_render_context->render_type, mesh_render_context->render_mesh, mesh_render_context->pipeline);
-					}
-
-					
-					mesh_render_context->flush_pipeline();
-				}
-
-				{
+{
 					PROFILE_GPU(L"compile");
 
 					if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
 						mesh_render_context->voxelization_compiled.set(graphics);
 				}
+
+			for (auto it = begin; it != end; it++)
+			{
+				{
+					PROFILE_GPU(L"flush");
+			
+					it->second->set(mesh_render_context->render_type, mesh_render_context->render_mesh, graphics);
+				}
+
 				{
 					PROFILE_GPU(L"execute_indirect");
 

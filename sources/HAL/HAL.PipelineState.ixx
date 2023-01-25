@@ -54,6 +54,44 @@ export namespace HAL
 
 		auto  operator<=>(const  PipelineStateDesc& r)  const = default;
 	private:
+
+		SERIALIZE()
+		{
+			ar& NVP(name);
+
+			if constexpr (Archive::is_saving::value)
+			{
+
+				auto sig = dynamic_cast<RootLayout*>(root_signature.get());
+				ar& NVP(sig->layout);
+			}
+			else
+			{
+				Layouts l;
+
+				ar& NVP(l);
+
+				root_signature = HAL::Device::get().get_engine_pso_holder().GetSignature(l);
+
+			}
+
+
+			ar& NVP(topology);
+			ar& NVP(blend);
+			ar& NVP(rasterizer);
+			ar& NVP(rtv);
+
+
+			ar& NVP(pixel);
+			ar& NVP(vertex);
+			ar& NVP(geometry);
+			ar& NVP(hull);
+			ar& NVP(domain);
+
+			ar& NVP(mesh);
+			ar& NVP(amplification);
+
+		}
 		/*	SERIALIZE_PRETTY()
 			{
 				ar& NVP(name);
@@ -186,6 +224,10 @@ export namespace HAL
 
 
 
+
+
+
+
 	struct ComputePipelineStateDesc
 	{
 		RootSignature::ptr root_signature;
@@ -234,10 +276,10 @@ export namespace HAL
 		std::map<std::string, std::string> binary_cache;
 
 		Device& device;
-	
+
 	public:
 		PipelineStateCache(Device& device);
-	virtual ~PipelineStateCache();
+		virtual ~PipelineStateCache();
 
 		static PipelineState::ptr get_cache(PipelineStateDesc& desc, std::string name = "");
 		static ComputePipelineState::ptr get_cache(ComputePipelineStateDesc& desc, std::string name = "");
@@ -339,4 +381,87 @@ export namespace HAL
 		HAL::shader_identifier get_shader_id(std::wstring_view name);
 	};
 
+	template<class T>
+	class Wrapper
+	{
+		std::shared_ptr<T>& pso;
+	public:
+		Wrapper(std::shared_ptr<T>& pso) :pso(pso)
+		{
+
+		}
+		SERIALIZE()
+		{
+			IF_LOAD()
+			{
+				HAL::PipelineStateDesc desc;
+				ar& NVP(desc);
+				pso = HAL::PipelineStateCache::get_cache(desc, desc.name);
+
+			}
+			else
+			{
+			auto& desc = pso->desc;
+			ar& NVP(desc);
+			}
+		}
+	};
+
+	template<class K, class T>
+	class WrapperMap
+	{
+		std::map<K, T>& pso;
+	public:
+		WrapperMap(std::map<K, T>& pso) :pso(pso)
+		{
+
+		}
+		SERIALIZE()
+		{
+			IF_LOAD()
+			{
+
+				uint size;
+				ar& NVP(size);
+				for (uint i = 0; i < size; i++)
+				{
+					HAL::PipelineStateDesc desc;
+
+					ar& NVP(desc);
+					K k;
+
+					ar& NVP(k);
+
+					pso[k] = HAL::PipelineStateCache::get_cache(desc, desc.name);
+				}
+
+
+			}
+			else
+			{
+			uint size = static_cast<uint>(pso.size());
+			ar& NVP(size);
+			for (auto& [k, v] : pso)
+			{
+				ar& NVP(v->desc);
+				ar& NVP(k);
+			}
+			}
+		}
+	};
+
+
+	template<class T>
+	auto wrap(std::shared_ptr<T>& ptr)
+	{
+		return Wrapper<T>(ptr);
+	}
+
+
+	template<class K, class T>
+	auto wrap(std::map<K, T>& ptr)
+	{
+		return WrapperMap<K, T>(ptr);
+	}
 }
+

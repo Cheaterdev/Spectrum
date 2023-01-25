@@ -53,7 +53,7 @@ export{
 
 	enum class RENDER_TYPE
 	{
-		PIXEL, VOXEL
+		PIXEL, VOXEL, DEPTH
 	};
 
 
@@ -82,9 +82,6 @@ export{
 		using ptr = s_ptr<MeshRenderContext>;
 		int draw_count = 0;
 
-		std::shared_ptr<materials::Pipeline> overrided_pipeline;
-
-		HAL::PipelineStateDesc pipeline;
 		std::shared_ptr<Graphics::OVRContext> eye_context;
 
 		HAL::CommandList::ptr list;
@@ -108,37 +105,13 @@ export{
 		vec3 sky_dir;
 		MeshRenderContext()
 		{
-			pipeline.root_signature = HAL::Device::get().get_engine_pso_holder().GetSignature(Layouts::DefaultLayout);
+		
 		}
 		void begin()
 		{
-			list->get_graphics().set_signature(pipeline.root_signature);
-			list->get_compute().set_signature(pipeline.root_signature);
 			draw_count = 0;
 		}
-		void flush_pipeline()
-		{
-			if (!current_state || !(current_state->desc == pipeline))
-			{
-				current_state = HAL::PipelineStateCache::get_cache(pipeline);
-
-
-				assert(pipeline == current_state->desc);
-			}
-
-			list->get_graphics().set_pipeline(current_state);
-
-			if (current_state->desc.topology == HAL::PrimitiveTopologyType::PATCH)
-			{
-				list->get_graphics().set_topology(HAL::PrimitiveTopologyType::PATCH, HAL::PrimitiveTopologyFeed::LIST, false, 3);
-			}
-			else
-			{
-				list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-			}
-
-		}
-
+		
 
 	};
 

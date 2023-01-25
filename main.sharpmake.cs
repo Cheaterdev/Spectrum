@@ -30,6 +30,7 @@ namespace Spectrum
             SourceFilesExtensions.Add(".sig");
             SourceFilesExtensions.Add(".hlsl");
 			SourceFilesExtensions.Add(".ixx");
+	        SourceFilesExtensions.Add(".g4");
 
 			SourceFilesCompileExtensions.Add(".ixx");
 

@@ -4,14 +4,20 @@ namespace PSOS
 	struct VoxelIndirectHi: public PSOBase
 	{
 		struct Keys {
-
- 		GEN_DEF_COMP(Keys) };
+			
+			GEN_DEF_COMP(Keys);
+			private:
+			SERIALIZE()
+			{
+			}
+		 };
 		GEN_GRAPHICS_PSO(VoxelIndirectHi)
 		
-		SimplePSO init_pso(Keys & key)
+		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
 			
 			SimplePSO mpso("VoxelIndirectHi");
+			if(f) f(mpso,key);
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/voxel_screen.hlsl";
 			mpso.vertex.entry_point = "VS";
@@ -30,6 +36,11 @@ namespace PSOS
 			mpso.stencil_read_mask  = 1;
 			mpso.stencil_write_mask  = 1;
 			return mpso;
+		}
+		private:
+		SERIALIZE()
+		{
+			ar&NVP(wrap(psos));
 		}
 	};
 }

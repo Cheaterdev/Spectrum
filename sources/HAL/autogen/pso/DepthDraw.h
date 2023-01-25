@@ -1,7 +1,7 @@
 #pragma once
 namespace PSOS
 {
-	struct DrawAxis: public PSOBase
+	struct DepthDraw: public PSOBase
 	{
 		struct Keys {
 			
@@ -11,28 +11,28 @@ namespace PSOS
 			{
 			}
 		 };
-		GEN_GRAPHICS_PSO(DrawAxis)
+		GEN_GRAPHICS_PSO(DepthDraw)
 		
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
 			
-			SimplePSO mpso("DrawAxis");
+			SimplePSO mpso("DepthDraw");
 			if(f) f(mpso,key);
 			mpso.root_signature = Layouts::DefaultLayout;
+			mpso.pixel.file_name = "";
+			mpso.pixel.entry_point = "";
+			mpso.pixel.flags = 0;
 			mpso.mesh.file_name = "shaders/mesh_shader.hlsl";
 			mpso.mesh.entry_point = "VS";
 			mpso.mesh.flags = 0;
 			mpso.amplification.file_name = "shaders/mesh_shader.hlsl";
 			mpso.amplification.entry_point = "AS";
 			mpso.amplification.flags = 0;
-			mpso.pixel.file_name = "shaders/stencil.hlsl";
-			mpso.pixel.entry_point = "PS_COLOR";
-			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { HAL::Format::R16G16B16A16_FLOAT };
+			mpso.rtv_formats = {  };
 			mpso.blend = {  };
-			mpso.enable_depth  = false;
-			mpso.cull  = HAL::CullMode::None;
+			mpso.ds  = HAL::Format::D32_FLOAT;
+			mpso.cull  = HAL::CullMode::Front;
 			return mpso;
 		}
 		private:

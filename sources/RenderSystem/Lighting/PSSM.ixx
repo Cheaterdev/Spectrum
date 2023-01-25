@@ -5,10 +5,6 @@ import HAL;
 
 export class PSSM:public FrameGraph::GraphGenerator
 {
-
-	ShaderMaterial::ptr mat;
-
-
 	ivec2 size = { 1024, 1024 };
 	float2 pixel_size = float2(1, 1) / float2(1024, 1024);
 

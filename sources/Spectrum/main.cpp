@@ -523,8 +523,7 @@ public:
 					context->g_buffer = &gbuffer;
 
 				gbuffer.compiled.set(context->list->get_graphics(), RTOptions::Default| RTOptions::ClearAll);
-					context->pipeline.rtv.rtv_formats = gbuffer.compiled.get_formats();
-					context->pipeline.rtv.ds_format = gbuffer.compiled.get_depth_format();
+
 
 					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
 					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());

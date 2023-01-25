@@ -343,10 +343,6 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	tex_lighting.flush(list);
 
 	context->voxelization_compiled = voxelization.compile(*list.frame_resources);
-	context->pipeline.rtv.rtv_formats.clear();
-	context->pipeline.rtv.enable_depth = false;
-	context->pipeline.rtv.enable_depth_write = false;
-	context->pipeline.rtv.ds_format = Format::UNKNOWN;
 
 	graphics.set_viewport(float4{ 0, 0,  albedo.tex_dynamic->get_size().xy });
 	graphics.set_scissor({ 0, 0,  albedo.tex_dynamic->get_size().xy });

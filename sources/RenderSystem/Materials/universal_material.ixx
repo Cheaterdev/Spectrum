@@ -40,6 +40,7 @@ export namespace materials
 			ar& NVP(ps_shader);
 			ar& NVP(ds_shader);
 			ar& NVP(hs_shader);
+		//	ar& NVP(pipeline_id);
 
 			IF_LOAD()
 				init_pipeline_id();
@@ -65,9 +66,9 @@ export namespace materials
 
 		}PipelineSimple() = default;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc& pipeline) override {
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override {
 
-			pipeline.pixel = pixel;
+		//	pipeline.pixel = pixel;
 		}
 
 	private:
@@ -81,51 +82,85 @@ export namespace materials
 	};
 	class PipelinePasses :public Pipeline
 	{
-
-		std::vector<render_pass> passes;
-
-		render_pass& get_pass(RENDER_TYPE render_type, MESH_TYPE type)
-		{
-
-			render_pass* pass = nullptr;
-
-			if (render_type == RENDER_TYPE::PIXEL)
-				pass = &passes[PASS_TYPE::DEFERRED];
-			else
-				if (type == MESH_TYPE::STATIC)
-					pass = &passes[PASS_TYPE::VOXEL_STATIC];
-				else
-					pass = &passes[PASS_TYPE::VOXEL_DYNAMIC];
-			return *pass;
-		}
-
+		PSOS::GBufferDraw::ptr gbuffer;
+		PSOS::Voxelization::ptr voxelization;
+		PSOS::DepthDraw::ptr depth_draw;
 
 	public:
 		using ptr = std::shared_ptr<PipelinePasses>;
 		PipelinePasses() = default;
-		PipelinePasses(UINT id, std::vector<render_pass>& passes) :Pipeline(id), passes(passes)
+		PipelinePasses(UINT id, std::string pixel, std::string tess, std::string voxel, std::string raytracing, MaterialContext::ptr context) :Pipeline(id)
 		{
+			//render_pass& pass = passes[PASS_TYPE::DEFERRED];
+			
+			depth_draw = std::make_shared<PSOS::DepthDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
+			{
+				target.name += std::to_string(id);
+				target.pixel = { pixel, "PS", 0,context->get_pixel_result().macros, true };
 
+				if (!tess.empty()) {
+					target.hull = { tess, "HS", 0,context->get_tess_result().macros, true };
+					target.domain = { tess, "DS", 0,context->get_tess_result().macros, true };
+				
+					target.topology = HAL::PrimitiveTopologyType::PATCH;
+				}
+				else
+				{
+					target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+				}
+			});
+
+			gbuffer = std::make_shared<PSOS::GBufferDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::GBufferDraw::Keys& )
+			{
+
+				target.name += std::to_string(id);
+				target.pixel = { pixel, "PS", 0,context->get_pixel_result().macros, true };
+
+				if (!tess.empty()) {
+					target.hull = { tess, "HS", 0,context->get_tess_result().macros, true };
+					target.domain ={ tess, "DS", 0,context->get_tess_result().macros, true };
+				
+					target.topology = HAL::PrimitiveTopologyType::PATCH;
+				}
+				else
+				{
+					target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+				}
+			});
+
+			voxelization = std::make_shared<PSOS::Voxelization>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::Voxelization::Keys& )
+			{
+				target.name += std::to_string(id);
+				target.pixel = { pixel, "PS_VOXEL", 0,context->get_pixel_result().macros, true };
+
+				if (!tess.empty()) {
+					target.hull = { tess, "HS", 0,context->get_tess_result().macros, true };
+					target.domain = { tess, "DS", 0,context->get_tess_result().macros, true };
+				
+					target.topology = HAL::PrimitiveTopologyType::PATCH;
+				}
+				else
+				{
+					target.topology = HAL::PrimitiveTopologyType::TRIANGLE;
+				}
+			});
+
+			raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , 0, context->hit_shader.macros, true });
 		}
+
 		HAL::library_shader::ptr  raytrace_lib;
 
-		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc& pipeline) override
+		void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override
 		{
-			auto pass = &get_pass(render_type, type);
-
-			pipeline.pixel = pass->ps_shader;
-			pipeline.domain = pass->ds_shader;
-			pipeline.hull = pass->hs_shader;
-
-			if (pass->ds_shader)
-			{
-				pipeline.topology = HAL::PrimitiveTopologyType::PATCH;
-			}
+			if (render_type == RENDER_TYPE::DEPTH)
+				graphics.set_pipeline(depth_draw->GetPSO());
 			else
-			{
-				pipeline.topology = HAL::PrimitiveTopologyType::TRIANGLE;
-			}
-
+				if (render_type == RENDER_TYPE::PIXEL)
+					graphics.set_pipeline(gbuffer->GetPSO());
+				else
+				{
+					graphics.set_pipeline(voxelization->GetPSO(PSOS::Voxelization::Dynamic.Use(type == MESH_TYPE::DYNAMIC)));
+				}
 		}
 	private:
 
@@ -133,7 +168,10 @@ export namespace materials
 		{
 			SAVE_PARENT(Pipeline);
 
-			ar& NVP(passes);
+			ar& NVP(gbuffer);
+			ar& NVP(depth_draw);
+			ar& NVP(voxelization);
+
 		}
 	};
 
@@ -161,36 +199,8 @@ export namespace materials
 
 			if (!pip)
 			{
-				std::vector<render_pass> passes;
-				passes.resize(PASS_TYPE::COUNTER);
-
-				passes[PASS_TYPE::DEFERRED].ps_shader = HAL::pixel_shader::get_resource({ pixel, "PS", 0,context->get_pixel_result().macros, true });// create_from_memory(pixel, "PS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_pixel_result().macros);
-
-				if (!tess.empty()) {
-					passes[PASS_TYPE::DEFERRED].hs_shader = HAL::hull_shader::get_resource({ tess, "HS", 0,context->get_tess_result().macros, true });//  HAL::hull_shader::create_from_memory(tess, "HS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
-					passes[PASS_TYPE::DEFERRED].ds_shader = HAL::domain_shader::get_resource({ tess, "DS", 0,context->get_tess_result().macros, true });// HAL::domain_shader::create_from_memory(tess, "DS", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, context->get_tess_result().macros);
-
-				}
-
-				if (!voxel.empty()) {
-					auto macros = context->get_voxel_result().macros;
-					passes[PASS_TYPE::VOXEL_STATIC].ps_shader = HAL::pixel_shader::get_resource({ pixel, "PS_VOXEL", 0,macros, true });//  HAL::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
-
-					macros.emplace_back("VOXEL_DYNAMIC", "1");
-					passes[PASS_TYPE::VOXEL_DYNAMIC].ps_shader = HAL::pixel_shader::get_resource({ pixel, "PS_VOXEL", 0,macros, true });//  HAL::pixel_shader::create_from_memory(voxel, "PS_VOXEL", D3DCOMPILE_ENABLE_UNBOUNDED_DESCRIPTOR_TABLES, macros);
-
-
-					passes[PASS_TYPE::VOXEL_DYNAMIC].hs_shader = passes[PASS_TYPE::VOXEL_STATIC].hs_shader = passes[PASS_TYPE::DEFERRED].hs_shader;
-					passes[PASS_TYPE::VOXEL_DYNAMIC].ds_shader = passes[PASS_TYPE::VOXEL_STATIC].ds_shader = passes[PASS_TYPE::DEFERRED].ds_shader;
-				}
-
-
-				auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), passes);
-				pipeline->raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , 0, context->hit_shader.macros, true });
-
+				auto pipeline = std::make_shared<PipelinePasses>((UINT)pipelines.size(), pixel,tess,voxel,raytracing,context);
 				pipeline->hash = hash;
-
-
 				pip = pipeline;
 			}
 
@@ -291,7 +301,7 @@ export namespace materials
 		void generate_material();
 
 		virtual void set(MESH_TYPE type, MeshRenderContext::ptr&) override {}
-		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::PipelineStateDesc& pipeline) override {}
+		virtual void set(RENDER_TYPE render_type, MESH_TYPE type, HAL::GraphicsContext& graphics) override {}
 	private:
 		SERIALIZE() {
 			SAVE_PARENT(MaterialAsset);

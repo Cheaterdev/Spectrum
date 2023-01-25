@@ -624,6 +624,7 @@ export{
 					row.dirty = false;
 				}
 			}
+		virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
 		public:
 
@@ -653,8 +654,7 @@ export{
 			}
 
 
-			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
-
+	
 			void set_pipeline(std::shared_ptr<PipelineStateBase> pipeline);
 
 			template<class T>
@@ -687,6 +687,7 @@ export{
 		class GraphicsContext : public SignatureDataSetter
 		{
 			friend class CommandList;
+			
 			CommandList::CompilerType* list;
 
 			GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {
@@ -705,8 +706,16 @@ export{
 			void set_const_buffer(UINT i, UINT offset, UINT v)override;
 
 			HAL::Views::IndexBuffer index;
-		public:
 
+			
+		
+			void set_rtv(int c, RTVHandle rt, DSVHandle h);
+	void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
+
+			void on_set_signature(const RootSignature::ptr&) override;
+
+		public:
+	void set_rtv(const RTVHandle&, DSVHandle);
 			CommandList& get_base()
 			{
 				return base;
@@ -718,19 +727,14 @@ export{
 			}
 
 
-			void on_set_signature(const RootSignature::ptr&) override;
 
-
-			void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
-
+		
 			void set_scissor(sizer_long rect);
 			void set_viewport(Viewport viewport);
 			void set_viewport(vec4 viewport);
 			void set_scissors(sizer_long rect);
 			void set_viewports(std::vector<Viewport> viewports);
 
-			void set_rtv(const RTVHandle&, DSVHandle);
-			void set_rtv(int c, RTVHandle rt, DSVHandle h);
 
 
 			void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
@@ -792,6 +796,8 @@ export{
 
 			virtual void set_const_buffer(UINT i, UINT offset, UINT v) override;
 
+		void on_set_signature(const RootSignature::ptr&) override;
+
 
 		public:
 
@@ -801,9 +807,7 @@ export{
 			}
 
 
-			void on_set_signature(const RootSignature::ptr&) override;
-
-
+	
 			void dispach(int = 1, int = 1, int = 1);
 			void dispach(ivec2, ivec2 = ivec2(8, 8));
 			void dispach(ivec3, ivec3 = ivec3(4, 4, 4));

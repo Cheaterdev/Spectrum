@@ -981,7 +981,7 @@ using namespace concurrency;
 			for (auto& l : parsed.graphics_pso)
 			{
 				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
-
+				if(!l.find_option("Base"))
 				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(device,pso[PSO::" << l.name << "]));" << std::endl;
 			}
 
@@ -1110,7 +1110,8 @@ void generate_pso(PSO& pso)
 	std::string keys;
 	std::string keyslist;
 	std::string keysgenerators;
-
+	
+	
 	std::string defines;
 	std::string definesapply;
 
@@ -1237,7 +1238,26 @@ void generate_pso(PSO& pso)
 		{
 			stream.push();
 
-			stream << "struct Keys {" << std::endl << keys << std::endl << " 		GEN_DEF_COMP(Keys) };" << std::endl;
+			stream << "struct Keys {" << std::endl ;
+			stream.push();
+			stream<< keys << std::endl ;
+			stream<< "GEN_DEF_COMP(Keys);" << std::endl;
+
+			stream << "private:"<<std::endl;
+
+		stream << "SERIALIZE()" << std::endl;
+				stream << "{" << std::endl;
+				stream.push();
+
+			for (auto d : pso.defines)
+					stream << "ar&NVP(" << d.name<<");"<<std::endl;
+
+				
+			stream.pop();
+				stream << "}" << std::endl;
+
+				stream.pop();
+				stream<< " };" << std::endl;
 
 			std::string GEN_PSO;
 			if (dynamic_cast<ComputePSO*>(&pso))
@@ -1248,12 +1268,13 @@ void generate_pso(PSO& pso)
 			{
 				GEN_PSO = "GEN_GRAPHICS_PSO";
 			}
+			
 			if (keyslist.empty())
 				stream << GEN_PSO << "(" << pso.name << ")" << std::endl;
 			else
 				stream << GEN_PSO << "(" << pso.name << "," << keyslist << ")" << std::endl;
 			stream << keysgenerators << std::endl;
-			stream << "SimplePSO init_pso(Keys & key)" << std::endl;
+			stream << "SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)" << std::endl;
 			stream << "{" << std::endl;
 			{
 				stream.push();
@@ -1262,15 +1283,26 @@ void generate_pso(PSO& pso)
 
 				stream << "SimplePSO mpso(\"" << pso.name << "\");" << std::endl;
 
+					stream << "if(f) f(mpso,key);" << std::endl;
+			
 				stream << "mpso.root_signature = Layouts::" << pso.root_sig.name << ";" << std::endl;
 				for (auto& shader : pso.shader_list)
 				{
 
+					if(shader.find_option("Erase"))
+					{
+						stream << "mpso." << shader.type << ".file_name = \"\";" << std::endl;
+					stream << "mpso." << shader.type << ".entry_point = \"\";" << std::endl;
+					stream << "mpso." << shader.type << ".flags = 0;" << std::endl;
 
-					stream << "mpso." << shader.type << ".file_name = \"shaders/" << shader.name << ".hlsl\";" << std::endl;
+					}
+					else
+					{
+							stream << "mpso." << shader.type << ".file_name = \"shaders/" << shader.name << ".hlsl\";" << std::endl;
 					stream << "mpso." << shader.type << ".entry_point = \"" << shader.find_option("EntryPoint")->value_atom.expr << "\";" << std::endl;
 					stream << "mpso." << shader.type << ".flags = 0;" << std::endl;
 
+					}
 				}
 
 				stream << definesapply << std::endl;
@@ -1346,6 +1378,18 @@ void generate_pso(PSO& pso)
 				stream.pop();
 			}
 			stream << "}" << std::endl;
+				stream << "private:"<<std::endl;
+
+		stream << "SERIALIZE()" << std::endl;
+				stream << "{" << std::endl;
+				stream.push();
+
+		
+					stream << "ar&NVP(wrap(psos));"<<std::endl;
+
+				
+			stream.pop();
+				stream << "}" << std::endl;
 
 
 			stream.pop();

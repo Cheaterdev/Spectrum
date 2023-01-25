@@ -29,7 +29,6 @@ void PSSM::set_position(float3 p)
 
 PSSM::PSSM()
 {
-	mat.reset(new ShaderMaterial("", ""));
 	position = float3(200, 400, 200);
 }
 
@@ -104,6 +103,7 @@ void PSSM::generate(Graph& graph)
 			context->priority = TaskPriority::HIGH;
 			context->list = command_list;
 			context->cam = &light_cam;
+			context->render_type = RENDER_TYPE::DEPTH;
 
 			auto scene = sceneinfo.scene;
 			auto renderer = sceneinfo.renderer;
@@ -119,19 +119,15 @@ void PSSM::generate(Graph& graph)
 
 			data.global_camera->write(0, &light_cam.camera_cb.current, 1);
 
-			context->overrided_pipeline = mat->get_pipeline();
+			//context->overrided_pipeline = mat->get_pipeline();
 			//context->use_materials = false;
-			context->pipeline.blend.render_target[0].enabled = false;
-			context->pipeline.rasterizer.cull_mode = CullMode::Front;
+			//context->pipeline.blend.render_target[0].enabled = false;
+			//context->pipeline.rasterizer.cull_mode = CullMode::Front;
 
 			{
 				RT::DepthOnly rt;
 				rt.GetDepth() = data.global_depth->depthStencil;
 				auto compiled = rt.set(command_list->get_graphics(), RTOptions::Default |  RTOptions::ClearDepth);
-
-
-				context->pipeline.rtv.rtv_formats = compiled.get_formats();
-				context->pipeline.rtv.ds_format = compiled.get_depth_format();
 			}
 
 
@@ -233,11 +229,6 @@ void PSSM::generate(Graph& graph)
 				//	*ptr = light_cam.get_const_buffer().data().current;
 
 				data.PSSM_Cameras->write(i * sizeof(camera::shader_params), reinterpret_cast<Table::Camera*>(&light_cam.camera_cb.current), 1);
-	
-				context->overrided_pipeline = mat->get_pipeline();
-		
-				context->pipeline.blend.render_target[0].enabled = false;
-				context->pipeline.rasterizer.cull_mode = CullMode::Front;
 
 				{
 					RT::DepthOnly rt;

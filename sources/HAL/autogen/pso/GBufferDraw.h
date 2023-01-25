@@ -1,7 +1,7 @@
 #pragma once
 namespace PSOS
 {
-	struct DrawAxis: public PSOBase
+	struct GBufferDraw: public PSOBase
 	{
 		struct Keys {
 			
@@ -11,12 +11,12 @@ namespace PSOS
 			{
 			}
 		 };
-		GEN_GRAPHICS_PSO(DrawAxis)
+		GEN_GRAPHICS_PSO(GBufferDraw)
 		
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
 			
-			SimplePSO mpso("DrawAxis");
+			SimplePSO mpso("GBufferDraw");
 			if(f) f(mpso,key);
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.mesh.file_name = "shaders/mesh_shader.hlsl";
@@ -25,14 +25,10 @@ namespace PSOS
 			mpso.amplification.file_name = "shaders/mesh_shader.hlsl";
 			mpso.amplification.entry_point = "AS";
 			mpso.amplification.flags = 0;
-			mpso.pixel.file_name = "shaders/stencil.hlsl";
-			mpso.pixel.entry_point = "PS_COLOR";
-			mpso.pixel.flags = 0;
 			
-			mpso.rtv_formats = { HAL::Format::R16G16B16A16_FLOAT };
+			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT };
 			mpso.blend = {  };
-			mpso.enable_depth  = false;
-			mpso.cull  = HAL::CullMode::None;
+			mpso.ds  = HAL::Format::D32_FLOAT;
 			return mpso;
 		}
 		private:

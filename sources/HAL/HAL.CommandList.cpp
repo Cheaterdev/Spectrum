@@ -177,6 +177,10 @@ namespace HAL
 				HAL::Device::get().get_descriptor_heap_factory().get_cbv_srv_uav_heap().get(),
 				HAL::Device::get().get_descriptor_heap_factory().get_sampler_heap().get()
 			);
+
+				if (graphics) graphics->set_signature(Layouts::DefaultLayout);
+				if (compute) compute->set_signature(Layouts::DefaultLayout);
+
 		}
 	}
 
@@ -201,6 +205,7 @@ namespace HAL
 		reset();
 		reset_tables();
 		index = HAL::Views::IndexBuffer();
+		
 	}
 	void GraphicsContext::end()
 	{
@@ -211,7 +216,10 @@ namespace HAL
 	{
 		reset();
 		reset_tables();
+
+		
 	}
+
 	void ComputeContext::end()
 	{
 		current_compute_root_signature = nullptr;
@@ -1110,6 +1118,8 @@ auto block = e;
 
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
+
+	//	assert(dynamic_cast<PipelineState*>(get_base().current_pipeline));
 		PROFILE_GPU(L"execute_indirect");
 		base.create_transition_point();
 

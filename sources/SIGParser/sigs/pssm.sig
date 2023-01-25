@@ -1,15 +1,3 @@
-[Bind = DefaultLayout::Instance2]
-[RenderTarget]
-struct GBuffer
-{
-	RenderTarget<float4> albedo;
-	RenderTarget<float4> normals;
-	RenderTarget<float4> specular;
-	RenderTarget<float2> motion;
-
-	DepthStencil<float> depth;
-}
-
 
 
 [Bind = DefaultLayout::Instance2]

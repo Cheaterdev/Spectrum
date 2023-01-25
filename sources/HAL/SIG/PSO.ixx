@@ -18,16 +18,30 @@ export
 
 struct Nullable {
 	static const bool Value = true;
+
+		SERIALIZE()
+			{
+				
+			}
 };
 
 struct NonNullable {
 
 	static const bool Value = false;
+		SERIALIZE()
+			{
+				
+			}
 };
 
 struct NoValue
 {
 	GEN_DEF_COMP(NoValue);
+
+		SERIALIZE()
+			{
+				
+			}
 };
 
 template<class T, class N, T ...Args>
@@ -89,6 +103,12 @@ struct KeyValue
 	}
 
 	GEN_DEF_COMP(KeyValue);
+
+	SERIALIZE()
+	{
+		ar& NVP(use);
+		ar& NVP(value);
+	}
 };
 
 template<class Keys>
