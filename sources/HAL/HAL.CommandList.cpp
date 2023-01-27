@@ -22,15 +22,15 @@ namespace HAL
 		timers.timers.emplace_back();
 
 		timers.timers.back().start(list);
-//		list->gpu_timers.emplace_back(std::make_pair<TimedBlock*, GPUTimer>(this, timer));
+		//		list->gpu_timers.emplace_back(std::make_pair<TimedBlock*, GPUTimer>(this, timer));
 
-		// todo: make block independent
-		//list->gpu_timers.back().second.start(list);
+				// todo: make block independent
+				//list->gpu_timers.back().second.start(list);
 	}
 
 	void GPUBlock::end(Eventer* list)
 	{
-	auto l = static_cast<CommandList*>(list);
+		auto l = static_cast<CommandList*>(list);
 
 		auto& timers = get_state(l);
 
@@ -52,16 +52,16 @@ namespace HAL
 	{
 		queue_type = list->get_type();
 
-		querys = static_cast<CommandList*>(list)->alloc_query(2,QueryType::Timestamp);
+		querys = static_cast<CommandList*>(list)->alloc_query(2, QueryType::Timestamp);
 
-		if(querys)
-		list->insert_time(querys, 0);
+		if (querys)
+			list->insert_time(querys, 0);
 	}
 
 	void GPUTimer::end(Eventer* list)
 	{
 		if (querys)
-		list->insert_time(querys, 1);
+			list->insert_time(querys, 1);
 	}
 
 
@@ -78,7 +78,7 @@ namespace HAL
 		return  querys.get_heap()->read_back_data[querys.get_offset() + 1];
 	}
 
-	CommandList::CommandList(CommandListType type):GPUEntityStorage<LocalAllocationPolicy>(Device::get()),Eventer(Device::get())
+	CommandList::CommandList(CommandListType type) :GPUEntityStorage<LocalAllocationPolicy>(Device::get()), Eventer(Device::get())
 
 	{
 		this->type = type;
@@ -143,7 +143,7 @@ namespace HAL
 
 	void CommandList::begin(std::string name, Timer* t)
 	{
-		active= true;
+		active = true;
 		if (name.empty())
 		{
 			compiler.SetName(L"EmptyName");
@@ -178,8 +178,8 @@ namespace HAL
 				HAL::Device::get().get_descriptor_heap_factory().get_sampler_heap().get()
 			);
 
-				if (graphics) graphics->set_signature(Layouts::DefaultLayout);
-				if (compute) compute->set_signature(Layouts::DefaultLayout);
+			if (graphics) graphics->set_signature(Layouts::DefaultLayout);
+			if (compute) compute->set_signature(Layouts::DefaultLayout);
 
 		}
 	}
@@ -197,7 +197,7 @@ namespace HAL
 
 		Eventer::end();
 		resolve_timers(*this);
-		active=false;
+		active = false;
 	}
 
 	void GraphicsContext::begin()
@@ -205,7 +205,7 @@ namespace HAL
 		reset();
 		reset_tables();
 		index = HAL::Views::IndexBuffer();
-		
+
 	}
 	void GraphicsContext::end()
 	{
@@ -217,7 +217,7 @@ namespace HAL
 		reset();
 		reset_tables();
 
-		
+
 	}
 
 	void ComputeContext::end()
@@ -243,14 +243,14 @@ namespace HAL
 	}
 	void Sendable::compile()
 	{
-		if(static_cast<CommandList*>(this)->active)
-		static_cast<CommandList*>(this)->end();
+		if (static_cast<CommandList*>(this)->active)
+			static_cast<CommandList*>(this)->end();
 
 		compiled = compiler.compile();
 	}
 	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
 	{
-	
+
 		//TEST(compiler.Close());
 		if (!compiled)
 			compile();
@@ -271,7 +271,7 @@ namespace HAL
 	}
 
 
-	void Eventer::insert_time(QueryHandle &handle, uint offset)
+	void Eventer::insert_time(QueryHandle& handle, uint offset)
 	{
 		track_object(*handle.get_heap());
 		compiler.insert_time(handle, offset);
@@ -316,7 +316,7 @@ namespace HAL
 	void GraphicsContext::set_rtv(int c, RTVHandle rt, DSVHandle h)
 	{
 
-	
+
 
 		base.create_transition_point();
 		for (int i = 0; i < c; i++)
@@ -327,19 +327,19 @@ namespace HAL
 		if (h.is_valid())
 		{
 			if (rt.is_valid()) {
-			auto &i = rt.get_resource_info();
-			auto rtv = std::get<HAL::Views::RenderTarget>(i.view);
-			auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info().view);
-			assert(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
-		}
+				auto& i = rt.get_resource_info();
+				auto rtv = std::get<HAL::Views::RenderTarget>(i.view);
+				auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info().view);
+				assert(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
+			}
 			get_base().transition(h.get_resource_info());
 		}
-		list->set_rtv(c,rt,h);
+		list->set_rtv(c, rt, h);
 
 		base.create_transition_point(false);
 	}
 
-	
+
 
 	void GraphicsContext::draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
@@ -380,6 +380,8 @@ namespace HAL
 		base.create_transition_point();
 		base.setup_debug(this);
 		commit_tables();
+		//get_base().get_compute().commit_tables();
+
 		list->dispatch_mesh(v);
 		base.create_transition_point(false);
 		get_base().print_debug();
@@ -438,7 +440,7 @@ namespace HAL
 	}
 
 
-	
+
 	void CopyContext::update_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
 		update_texture(resource.get(), offset, box, sub_resource, data, row_stride, slice_stride);
@@ -492,7 +494,7 @@ namespace HAL
 
 
 
-		list->update_texture(resource, offset, box, sub_resource,  info, layout);
+		list->update_texture(resource, offset, box, sub_resource, info, layout);
 		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.create_transition_point(false);
 	}
@@ -507,11 +509,11 @@ namespace HAL
 	//{
 	//	set_signature(HAL::get_Signature(layout));
 	//}
-	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)> f)
+	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
 		return read_texture(resource.get(), offset, box, sub_resource, f);
 	}
-	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)> f)
+	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
 
 		base.create_transition_point();
@@ -528,16 +530,16 @@ namespace HAL
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, layout]()
 			{
-				f({info.get_cpu_data(),info.size}, layout);
+				f({ info.get_cpu_data(),info.size }, layout);
 				result->set_value(true);
 			});
 
 		base.create_transition_point(false);
 		return result->get_future();
 	}
-	std::future<bool> CopyContext::read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)> f)
+	std::future<bool> CopyContext::read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
-		
+
 		base.create_transition_point();
 		//	if (base.type != CommandListType::COPY)
 		base.transition(resource, ResourceState::COPY_SOURCE);
@@ -552,14 +554,14 @@ namespace HAL
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, layout]()
 			{
-				f({info.get_cpu_data(),info.size}, layout);
+				f({ info.get_cpu_data(),info.size }, layout);
 				result->set_value(true);
 			});
 
 		base.create_transition_point(false);
 		return result->get_future();
 	}
-		
+
 	std::future<bool> CopyContext::read_buffer(Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)> f)
 	{
 
@@ -581,7 +583,7 @@ namespace HAL
 		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
-				f({reinterpret_cast<std::byte*>(info.get_cpu_data()), size});
+				f({ reinterpret_cast<std::byte*>(info.get_cpu_data()), size });
 				result->set_value(true);
 			});
 
@@ -608,7 +610,7 @@ namespace HAL
 		auto result = std::make_shared<std::promise<bool>>();
 		base.on_execute_funcs.push_back([result, info, f, size]()
 			{
-				f({reinterpret_cast<std::byte*>(info.get_cpu_data()), size});
+				f({ reinterpret_cast<std::byte*>(info.get_cpu_data()), size });
 				result->set_value(true);
 			});
 		return result->get_future();
@@ -631,10 +633,10 @@ namespace HAL
 
 		on_execute_funcs.clear();
 
-	Eventer::reset();
-		
+		Eventer::reset();
+
 		GPUEntityStorage<LocalAllocationPolicy>::reset();
-	
+
 		Transitions::on_execute();
 		frame_resources = nullptr;
 
@@ -903,7 +905,7 @@ namespace HAL
 	}
 	void CopyContext::copy_resource(const Resource::ptr& dest, const Resource::ptr& source)
 	{
-		copy_resource(dest.get(),source.get());
+		copy_resource(dest.get(), source.get());
 	}
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
 	{
@@ -1025,7 +1027,7 @@ namespace HAL
 		//	timer->block.begin_timings(executed ? nullptr : this);
 		current = &timer->get_block();
 
-	
+
 
 	}
 	void  Eventer::on_end(Timer* timer)
@@ -1036,7 +1038,7 @@ namespace HAL
 		GPUBlock* b = dynamic_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
-			
+
 			b->end(this);
 		}
 
@@ -1051,10 +1053,10 @@ namespace HAL
 
 		for (auto& e : gpu_timers)
 		{
-auto block = e;
-			auto &timers = block->get_state(l);
-			for(auto &t:timers.timers)
-			Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>(block, &t));
+			auto block = e;
+			auto& timers = block->get_state(l);
+			for (auto& t : timers.timers)
+				Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>(block, &t));
 		}
 		gpu_timers.clear();
 	}
@@ -1064,7 +1066,7 @@ auto block = e;
 		started = false;
 		thread_current = nullptr;
 		timer.reset();
-		
+
 	}
 	void Eventer::begin(std::string name, Timer* t)
 	{
@@ -1119,7 +1121,7 @@ auto block = e;
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
 
-	//	assert(dynamic_cast<PipelineState*>(get_base().current_pipeline));
+		//	assert(dynamic_cast<PipelineState*>(get_base().current_pipeline));
 		PROFILE_GPU(L"execute_indirect");
 		base.create_transition_point();
 
@@ -1131,8 +1133,11 @@ auto block = e;
 		get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceState::INDEX_BUFFER);
 
 		list->set_index_buffer(index);
-		commit_tables();
 
+		if (dynamic_cast<PipelineState*>(get_base().current_pipeline))
+			commit_tables(&command_types.slots);
+		else
+			get_base().get_compute().commit_tables(&command_types.slots);
 		list->execute_indirect(
 			command_types,
 			max_commands,
@@ -1182,7 +1187,7 @@ auto block = e;
 		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
 
 		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
-		commit_tables();
+		//	commit_tables();
 
 		list->build_ras(build_desc, bottom);
 
@@ -1200,7 +1205,7 @@ auto block = e;
 
 		base.transition(top.instances.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
-		commit_tables();
+		//commit_tables();
 		list->build_ras(build_desc, top);
 
 		base.create_transition_point(false);
@@ -1228,7 +1233,47 @@ auto block = e;
 
 	}
 
+	void SignatureDataSetter::commit_tables(UsedSlots* slots)
+	{
+		uint id = 0;
+		for (auto& table : tables)
+		{
 
+			if (table.dirty) {
+				for (auto& resource_info : table.resources)
+					get_base().transition(*resource_info);
+
+				for (auto& d : table.descriptors)
+					get_base().track_object(*d);
+
+				set_cb(id, table.const_buffer);
+
+				table.dirty = false;
+			}
+			id++;
+		}
+
+		if constexpr (Debug::CheckErrors)
+		{
+			auto pipeline = get_base().current_pipeline;
+			for (auto& slot : pipeline->slots.slots_usage)
+			{
+				auto id = get_slot_id(slot);
+
+				if (tables[id].slot_id != slot)
+				{
+					bool found = false;
+					if (slots)
+					{
+						found = slots->uses(slot);
+					}
+
+					if (!found)
+						Log::get() << "Possible null slot " << get_slot_name(slot) << " for pipeline " << pipeline->name << Log::endl;
+				}
+			}
+		}
+	}
 	void SignatureDataSetter::set_pipeline(std::shared_ptr<PipelineStateBase> pipeline)
 	{
 		/*

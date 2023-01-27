@@ -2,8 +2,9 @@ export module HAL:Shader;
 
 import :ShaderCompiler;
 import Core;
-
-//std::optional<SlotID> get_slot(std::string_view slot_name);
+import :Enums;
+import :Slots;
+std::optional<SlotID> get_slot(std::string_view slot_name);
 export
 {
 
@@ -80,55 +81,6 @@ export
 	{
 		//class PipelineStateBase;
 
-		/* class UsedSlots
-		 {
-
-		 public:
-			 std::set<SlotID> slots_usage;
-			 void merge(resource_file_depender& depender)
-			 {
-				 for (auto& d : depender.get_files())
-				 {
-					 auto autogen_start = d.file_name.find(L"autogen");
-					 if (autogen_start != std::wstring::npos)
-					 {
-						 auto autogen_end = autogen_start + 6;
-
-						 auto last_slash = d.file_name.find_first_of(L"\\/", autogen_end);
-
-						 if (last_slash == autogen_end + 1)
-						 {
-
-							 if (d.file_name.find_first_of(L"\\/", last_slash + 1) == std::wstring::npos)
-							 {
-								 auto point = d.file_name.find(L".", last_slash);
-
-								 auto name = d.file_name.substr(last_slash + 1, point - last_slash - 1);
-
-								 auto slot_id = get_slot(convert(name));
-
-								 assert(slot_id);
-								 slots_usage.insert(slot_id.value());
-							 }
-						 }
-					 }
-				 }
-			 }
-			 void merge(UsedSlots& other)
-			 {
-
-				 slots_usage.merge(other.slots_usage);
-			 }
-			 void clear()
-			 {
-				 slots_usage.clear();
-			 }
-		 private:
-			SERIALIZE()
-			 {
-				 ar& NVP(slots_usage);
-			 }
-		 };*/
 
 		template<class _shader_type>
 		class Shader : public resource_manager<_shader_type, shader_header>
@@ -153,7 +105,7 @@ export
 				// reflection = r.reflection;
 				blob = r.blob;
 				hash = r.hash;
-
+				slots_usage = r.slots_usage;
 				on_change();
 			}
 
@@ -166,7 +118,7 @@ export
 		public:
 			static Cache<unsigned int, size_t> shader_ids;
 
-			//   UsedSlots slots_usage;
+			UsedSlots slots_usage;
 			Events::Event<void> on_change;
 			const unsigned int& get_hash() const
 			{
@@ -206,6 +158,8 @@ export
 				result->compile();
 				result->hash = crc32(result->blob);
 				result->slots_usage.merge(depender);
+
+			//	assert(!result->slots_usage.empty());
 				return result;
 			}
 
@@ -238,8 +192,7 @@ export
 				result->compile();
 				result->own_id();
 				result->hash = crc32(result->blob);
-				// result->slots_usage.merge(depender);
-
+				result->slots_usage.merge(depender);
 
 				return result;
 			}
@@ -248,7 +201,7 @@ export
 			{
 				ar& NVP(blob);
 				ar& NVP(hash);
-				//  ar& NVP(slots_usage);
+				ar& NVP(slots_usage);
 
 				IF_LOAD()
 				{

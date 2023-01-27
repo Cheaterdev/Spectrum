@@ -359,12 +359,6 @@ void PSSM::generate(Graph& graph)
 			graph.set_slot(SlotID::FrameInfo, graphics);
 			graph.set_slot(SlotID::FrameInfo, compute);
 
-			{
-				Slots::PSSMLighting lighting;
-
-				gbuffer.SetTable(lighting.GetGbuffer());
-				lighting.set(graphics);
-			}
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
 

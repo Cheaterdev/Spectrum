@@ -6,6 +6,7 @@ struct vertex_output
 
 #include "Common.hlsl"
 
+#ifdef BUILD_FUNC_VS
 #include "autogen/FrameInfo.h"
 #include "autogen/DrawStencil.h" 
 #include "autogen/SceneData.h"
@@ -36,6 +37,7 @@ vertex_output VS(uint index: SV_VertexID)
    o.pos = mul(frameInfo.GetCamera().GetViewProj(), o.pos);
     return o;// transform(m, frameInfo.GetCamera(), stencilData.GetVertices()[index]);
 }
+#endif
 
 
 float4 PS(vertex_output i) :SV_TARGET0

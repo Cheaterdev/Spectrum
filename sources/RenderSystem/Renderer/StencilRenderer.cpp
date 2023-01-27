@@ -434,7 +434,7 @@ void stencil_renderer::generate(Graph& graph)
 					}
 
 					rtv.set(graphics, RTOptions::Default | RTOptions::ClearDepth);
-
+					//bool rendered = false;
 					
 					obj->iterate([&](scene_object* node)
 						{

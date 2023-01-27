@@ -111,8 +111,17 @@ export {
 		LogBlock& operator<<(std::string_view);
 		LogBlock& operator<<(std::wstring_view);
 
+		template<class T>
+		LogBlock operator<<(const  T& smth) requires (std::is_enum_v<T>)
+		{
+			if (need_logging())
+				data->s << magic_enum::enum_name(smth);
+			return *this;
+		}
+
+
 		template < NonString T>
-		LogBlock& operator<<(const T& smth)
+		LogBlock& operator<<(const T& smth) requires (!std::is_enum_v<T>)
 		{
 			if (need_logging())
 			{
@@ -203,7 +212,7 @@ export {
 		{
 			logging_level = L;
 		}
-
+	
 		template<class T>
 		LogBlock operator<<(const  T& smth)
 		{
@@ -213,6 +222,9 @@ export {
 
 			return block;
 		}
+
+	
+
 	};
 	void EVENT(std::string_view s);
 

@@ -2,7 +2,6 @@
 
 #include "Common.hlsl"
 
-#include "autogen/PSSMConstants.h"
 #include "autogen/PSSMLighting.h"
 #include "autogen/FrameInfo.h"
 #include "autogen/PSSMData.h"
@@ -14,6 +13,12 @@ static const GBuffer gbuffer = GetPSSMLighting().GetGbuffer();
 #include "PBR.hlsl"
 #define SCALE 1
 #include "Rect.hlsl"
+
+#ifdef BUILD_FUNC_PS
+
+#include "autogen/PSSMConstants.h"
+
+
 
 float4 PS(quad_output i) : SV_Target0
 {
@@ -136,7 +141,7 @@ for (int i = 0; i < 16; i++)
 return result / 1;// light_raw_z > pos_l.z;
 }
 
-
+#endif
 
 
 

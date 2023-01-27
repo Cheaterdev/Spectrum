@@ -766,6 +766,7 @@ export
 
 		stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
 		stream << "UINT get_slot_id(SlotID id);" << std::endl;
+			stream << "std::string get_slot_name(SlotID id);" << std::endl;
 
 		stream.pop();
 		stream << "}" << std::endl;
@@ -935,7 +936,34 @@ export
 
 
 		}
+{
+			stream << "std::string get_slot_name(SlotID id)" << std::endl;
 
+			stream << "{" << std::endl;
+
+			stream.push();
+			{
+
+				for (auto& t : parsed.tables)
+				{
+					if (!t.slot) continue;
+
+					stream << "if(id == SlotID::" << t.name << ")" << std::endl;
+					stream << "{" << std::endl;
+					stream.push();
+					stream << "return \"" << t.name << "\";" << std::endl;
+					stream.pop();
+					stream << "}" << std::endl;
+
+				}
+				stream << "return \"Unknown\";" << std::endl;
+
+			}
+			stream.pop();
+			stream << "}" << std::endl;
+
+
+		}
 	}
 
 

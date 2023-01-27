@@ -289,43 +289,44 @@ namespace HAL
 
 
 
-		//slots.clear();
+		slots.clear();
 		if (desc.vertex)
 		{
 			creator.include(desc.vertex);
-			//		slots.merge(desc.vertex->slots_usage);
+			slots.merge(desc.vertex->slots_usage);
 		}
 		if (desc.pixel)
 		{
 			creator.include(desc.pixel);
-			//	slots.merge(desc.pixel->slots_usage);
+			slots.merge(desc.pixel->slots_usage);
 		}
 		if (desc.geometry)
 		{
 			creator.include(desc.geometry);
-			//		slots.merge(desc.geometry->slots_usage);
+			slots.merge(desc.geometry->slots_usage);
 		}
 		if (desc.domain)
 		{
 			creator.include(desc.domain);
-			//		slots.merge(desc.domain->slots_usage);
+			slots.merge(desc.domain->slots_usage);
 		}
 		if (desc.hull)
 		{
 			creator.include(desc.hull);
-			//	slots.merge(desc.hull->slots_usage);
+			slots.merge(desc.hull->slots_usage);
 		}
 		if (desc.mesh)
 		{
 			creator.include(desc.mesh);
-			//	slots.merge(desc.mesh->slots_usage);
+			slots.merge(desc.mesh->slots_usage);
 		}
 		if (desc.amplification)
 		{
 			creator.include(desc.amplification);
-			//	slots.merge(desc.amplification->slots_usage);
+			slots.merge(desc.amplification->slots_usage);
 		}
 
+		assert(!slots.empty());
 		{
 			CD3DX12_RASTERIZER_DESC RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 			RasterizerState.CullMode = to_native(desc.rasterizer.cull_mode);
@@ -443,9 +444,13 @@ namespace HAL
 		if (desc.root_signature)
 			psoDesc.pRootSignature = desc.root_signature->get_native().Get();
 
+		slots.clear();
 		if (desc.shader)
+		{
 			psoDesc.CS = { desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
-
+			slots.merge(desc.shader->slots_usage);
+		}
+			assert(!slots.empty());
 
 		if (!cache.empty())
 		{

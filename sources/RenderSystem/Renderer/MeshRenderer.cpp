@@ -366,14 +366,6 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 
 mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 {
-	shader = HAL::vertex_shader::get_resource({ "shaders/triangle.hlsl", "VS", 0, {} });
-	mshader = HAL::mesh_shader::get_resource({ "shaders/mesh_shader.hlsl", "VS", 0, {} });
-	mshader_voxel = HAL::mesh_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "VS", 0, {} });
-
-	ashader = HAL::amplification_shader::get_resource({ "shaders/mesh_shader.hlsl", "AS", 0, {} });
-	ashader_voxel = HAL::amplification_shader::get_resource({ "shaders/mesh_shader_voxel.hlsl", "AS", 0, {} });
-	voxel_geometry_shader = HAL::geometry_shader::get_resource({ "shaders/voxelization.hlsl", "GS", 0, {} });
-
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 

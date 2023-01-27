@@ -2,8 +2,10 @@ export module HAL:SIG;
 import stl.core;
 
 import :Concepts;
+
+import :DescriptorHeap;
 import Core;
-import :Buffer;
+
 
 export
 {

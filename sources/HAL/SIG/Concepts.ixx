@@ -49,6 +49,12 @@ export
 		requires () {
 		T::Slot;
 	};
+
+	
+	template<typename T> concept HasID =
+		requires () {
+		T::ID;
+	};
 	template<typename T> concept TableHasSRV =
 		requires (T t) {
 		t.SRV;

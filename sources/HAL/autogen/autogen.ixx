@@ -177,6 +177,7 @@ export
 	#include "rtx\MainRTX.h"
 	std::optional<SlotID> get_slot(std::string_view slot_name);
 	UINT get_slot_id(SlotID id);
+	std::string get_slot_name(SlotID id);
 }
 std::optional<SlotID> get_slot(std::string_view slot_name)
 {
@@ -697,4 +698,264 @@ UINT get_slot_id(SlotID id)
 		return Slots::FrameClassificationInitDispatch::Slot::ID;
 	}
 	return -1;
+}
+std::string get_slot_name(SlotID id)
+{
+	if(id == SlotID::TextureRenderer)
+	{
+		return "TextureRenderer";
+	}
+	if(id == SlotID::BRDF)
+	{
+		return "BRDF";
+	}
+	if(id == SlotID::DebugInfo)
+	{
+		return "DebugInfo";
+	}
+	if(id == SlotID::FontRendering)
+	{
+		return "FontRendering";
+	}
+	if(id == SlotID::FontRenderingConstants)
+	{
+		return "FontRenderingConstants";
+	}
+	if(id == SlotID::FontRenderingGlyphs)
+	{
+		return "FontRenderingGlyphs";
+	}
+	if(id == SlotID::FrameInfo)
+	{
+		return "FrameInfo";
+	}
+	if(id == SlotID::FSR)
+	{
+		return "FSR";
+	}
+	if(id == SlotID::MaterialInfo)
+	{
+		return "MaterialInfo";
+	}
+	if(id == SlotID::MeshInstanceInfo)
+	{
+		return "MeshInstanceInfo";
+	}
+	if(id == SlotID::MeshInfo)
+	{
+		return "MeshInfo";
+	}
+	if(id == SlotID::GatherPipelineGlobal)
+	{
+		return "GatherPipelineGlobal";
+	}
+	if(id == SlotID::GatherPipeline)
+	{
+		return "GatherPipeline";
+	}
+	if(id == SlotID::GatherBoxes)
+	{
+		return "GatherBoxes";
+	}
+	if(id == SlotID::DrawBoxes)
+	{
+		return "DrawBoxes";
+	}
+	if(id == SlotID::InitDispatch)
+	{
+		return "InitDispatch";
+	}
+	if(id == SlotID::GatherMeshesBoxes)
+	{
+		return "GatherMeshesBoxes";
+	}
+	if(id == SlotID::MipMapping)
+	{
+		return "MipMapping";
+	}
+	if(id == SlotID::CopyTexture)
+	{
+		return "CopyTexture";
+	}
+	if(id == SlotID::DownsampleDepth)
+	{
+		return "DownsampleDepth";
+	}
+	if(id == SlotID::GBufferDownsample)
+	{
+		return "GBufferDownsample";
+	}
+	if(id == SlotID::GBufferQuality)
+	{
+		return "GBufferQuality";
+	}
+	if(id == SlotID::PSSMConstants)
+	{
+		return "PSSMConstants";
+	}
+	if(id == SlotID::PSSMData)
+	{
+		return "PSSMData";
+	}
+	if(id == SlotID::PSSMDataGlobal)
+	{
+		return "PSSMDataGlobal";
+	}
+	if(id == SlotID::PSSMLighting)
+	{
+		return "PSSMLighting";
+	}
+	if(id == SlotID::RaytracingRays)
+	{
+		return "RaytracingRays";
+	}
+	if(id == SlotID::Raytracing)
+	{
+		return "Raytracing";
+	}
+	if(id == SlotID::SceneData)
+	{
+		return "SceneData";
+	}
+	if(id == SlotID::GBuffer)
+	{
+		return "GBuffer";
+	}
+	if(id == SlotID::SkyData)
+	{
+		return "SkyData";
+	}
+	if(id == SlotID::SkyFace)
+	{
+		return "SkyFace";
+	}
+	if(id == SlotID::EnvFilter)
+	{
+		return "EnvFilter";
+	}
+	if(id == SlotID::EnvSource)
+	{
+		return "EnvSource";
+	}
+	if(id == SlotID::SMAA_Global)
+	{
+		return "SMAA_Global";
+	}
+	if(id == SlotID::SMAA_Weights)
+	{
+		return "SMAA_Weights";
+	}
+	if(id == SlotID::SMAA_Blend)
+	{
+		return "SMAA_Blend";
+	}
+	if(id == SlotID::Countour)
+	{
+		return "Countour";
+	}
+	if(id == SlotID::DrawStencil)
+	{
+		return "DrawStencil";
+	}
+	if(id == SlotID::PickerBuffer)
+	{
+		return "PickerBuffer";
+	}
+	if(id == SlotID::Instance)
+	{
+		return "Instance";
+	}
+	if(id == SlotID::Color)
+	{
+		return "Color";
+	}
+	if(id == SlotID::Test)
+	{
+		return "Test";
+	}
+	if(id == SlotID::NinePatch)
+	{
+		return "NinePatch";
+	}
+	if(id == SlotID::ColorRect)
+	{
+		return "ColorRect";
+	}
+	if(id == SlotID::FlowGraph)
+	{
+		return "FlowGraph";
+	}
+	if(id == SlotID::LineRender)
+	{
+		return "LineRender";
+	}
+	if(id == SlotID::VoxelInfo)
+	{
+		return "VoxelInfo";
+	}
+	if(id == SlotID::Voxelization)
+	{
+		return "Voxelization";
+	}
+	if(id == SlotID::VoxelScreen)
+	{
+		return "VoxelScreen";
+	}
+	if(id == SlotID::VoxelOutput)
+	{
+		return "VoxelOutput";
+	}
+	if(id == SlotID::VoxelBlur)
+	{
+		return "VoxelBlur";
+	}
+	if(id == SlotID::VoxelUpscale)
+	{
+		return "VoxelUpscale";
+	}
+	if(id == SlotID::VoxelVisibility)
+	{
+		return "VoxelVisibility";
+	}
+	if(id == SlotID::VoxelMipMap)
+	{
+		return "VoxelMipMap";
+	}
+	if(id == SlotID::VoxelCopy)
+	{
+		return "VoxelCopy";
+	}
+	if(id == SlotID::VoxelZero)
+	{
+		return "VoxelZero";
+	}
+	if(id == SlotID::VoxelLighting)
+	{
+		return "VoxelLighting";
+	}
+	if(id == SlotID::VoxelDebug)
+	{
+		return "VoxelDebug";
+	}
+	if(id == SlotID::DenoiserDownsample)
+	{
+		return "DenoiserDownsample";
+	}
+	if(id == SlotID::DenoiserHistoryFix)
+	{
+		return "DenoiserHistoryFix";
+	}
+	if(id == SlotID::TilingPostprocess)
+	{
+		return "TilingPostprocess";
+	}
+	if(id == SlotID::FrameClassification)
+	{
+		return "FrameClassification";
+	}
+	if(id == SlotID::FrameClassificationInitDispatch)
+	{
+		return "FrameClassificationInitDispatch";
+	}
+	return "Unknown";
 }

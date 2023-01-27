@@ -9,6 +9,7 @@ export import :Utils;
 export import :API.RootSignature;
 export import :Device;
 export import :Enums;
+export import :Concepts;
 
 export namespace HAL
 {

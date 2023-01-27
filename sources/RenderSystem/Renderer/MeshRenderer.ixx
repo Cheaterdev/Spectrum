@@ -87,15 +87,6 @@ class main_renderer
 
 class mesh_renderer : public renderer, public Events::prop_handler, VariableContext
 {
-      
-        HAL::vertex_shader::ptr shader;
-        HAL::geometry_shader::ptr voxel_geometry_shader;
-        HAL::mesh_shader::ptr mshader;
-        HAL::mesh_shader::ptr mshader_voxel;
-
-        HAL::amplification_shader::ptr ashader;
-        HAL::amplification_shader::ptr ashader_voxel;
-
         IndirectCommand indirect_command_signature;
 
         IndirectCommand boxes_command;

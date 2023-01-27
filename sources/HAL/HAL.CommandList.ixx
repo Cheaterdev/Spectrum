@@ -23,7 +23,7 @@ export{
 	{
 		class GPUBuffer;
 
-		
+
 
 		class CommandListBase : public StateContext
 		{
@@ -37,7 +37,7 @@ export{
 			CompilerType compiler;
 
 			std::list<TrackedObject::ptr> tracked_resources;
-						FenceWaiter dstorage_fence;
+			FenceWaiter dstorage_fence;
 			CompilerType* get_native_list()
 			{
 				return &compiler;
@@ -53,7 +53,7 @@ export{
 					state.used = true;
 					tracked_resources.emplace_back(obj.get_tracked());
 
-					if constexpr(std::is_same_v<T,Resource>)
+					if constexpr (std::is_same_v<T, Resource>)
 					{
 						dstorage_fence.combine(obj.load_waiter);
 					}
@@ -248,11 +248,13 @@ export{
 				{
 					target_state = ResourceState::DEPTH_WRITE;
 
-				}else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info.view))
+				}
+				else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info.view))
 				{
 					target_state = ResourceState::VERTEX_AND_CONSTANT_BUFFER;
 
-				}else assert(false);
+				}
+				else assert(false);
 
 				info.for_each_subres([&](const HAL::Resource::ptr resource, UINT subres)
 					{
@@ -274,12 +276,12 @@ export{
 
 
 
-		class GPUTimer:public GPUTimerInterface
+		class GPUTimer :public GPUTimerInterface
 		{
 		public://		friend class GPUTimeManager;
 
 			QueryHandle querys;
-	
+
 		public:
 			CommandListType queue_type;
 			GPUTimer();
@@ -296,24 +298,24 @@ export{
 
 			uint64 get_end() override;
 
-				
+
 		};
 		struct GPUTimers
 		{
 			std::list<GPUTimer> timers;
 			void reset()
-				{
+			{
 				timers.clear();
-				}
+			}
 		};
 
 		class GPUBlock :public TimedBlock, public ObjectState<GPUTimers>
 		{
 			Device& device;
 		public:
-			
-			
-			GPUBlock(std::wstring_view name,Device&device) :TimedBlock(name), device(device){}
+
+
+			GPUBlock(std::wstring_view name, Device& device) :TimedBlock(name), device(device) {}
 			void start(Eventer* list);
 
 			void end(Eventer* list);
@@ -347,7 +349,7 @@ export{
 			void begin(std::string name, Timer* t = nullptr);
 		public:
 			void end();
-			Eventer(Device& device){}
+			Eventer(Device& device) {}
 			static thread_local Eventer* thread_current;
 
 			virtual Timer start(std::wstring_view name)override;
@@ -358,17 +360,17 @@ export{
 			void end_event();
 
 			void set_marker(const wchar_t* label);
-			
+
 			// timers
 			void insert_time(QueryHandle& handle, uint offset);
 			void resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
 
 			template <class T>
-			void resolve_timers(Allocators::HeapPageManager < QueryContext, T>&  manager)
+			void resolve_timers(Allocators::HeapPageManager < QueryContext, T>& manager)
 			{
-				manager.for_each([&, this](const QueryType& type, uint64 from , uint64 to , QueryHeap::ptr heap)
+				manager.for_each([&, this](const QueryType& type, uint64 from, uint64 to, QueryHeap::ptr heap)
 					{
-					assert(from==0);
+						assert(from == 0);
 						resolve_times(*heap, static_cast<uint>(to), [heap](std::span<UINT64> data) {
 							std::copy(data.begin(), data.end(), heap->read_back_data.begin());
 							});
@@ -428,10 +430,10 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList :  public GPUEntityStorage<LocalAllocationPolicy>, public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
+		class CommandList : public GPUEntityStorage<LocalAllocationPolicy>, public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
 		{
 
-			bool active=false;
+			bool active = false;
 		public:
 			using ptr = std::shared_ptr<CommandList>;
 		protected:
@@ -460,7 +462,7 @@ export{
 
 
 			void set_pipeline_internal(PipelineStateBase* pipeline);
-			
+
 		public:
 			void end();
 
@@ -490,7 +492,7 @@ export{
 			CommandList(CommandListType);
 
 			void begin(std::string name = "", Timer* t = nullptr);
-			
+
 
 			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
@@ -550,8 +552,8 @@ export{
 			void copy_texture(const HAL::Resource::ptr& dest, ivec3, const HAL::Resource::ptr& source, ivec3, ivec3);
 			void copy_buffer(HAL::Resource* dest, uint64 s_dest, HAL::Resource* source, uint64 s_source, uint64 size);
 
-			
-		
+
+
 			//TODO: remove
 			void update_buffer(HAL::Resource::ptr resource, uint64 offset, const char* data, uint64 size);
 			void update_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
@@ -559,16 +561,16 @@ export{
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
 			template<class T>
-				void update_buffer(HAL::StructuredBufferView<T>& view, uint64 offset, const std::vector<T>& data)
+			void update_buffer(HAL::StructuredBufferView<T>& view, uint64 offset, const std::vector<T>& data)
 			{
-				update_buffer(view.resource, view.desc.offset+ offset*sizeof(T), reinterpret_cast<const char*>(data.data()), data.size()*sizeof(T));
-				
+				update_buffer(view.resource, view.desc.offset + offset * sizeof(T), reinterpret_cast<const char*>(data.data()), data.size() * sizeof(T));
+
 			}
 
-			std::future<bool> read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)>);
-		
-			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)>);
-			std::future<bool> read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>,texture_layout)>);
+			std::future<bool> read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
+
+			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
+			std::future<bool> read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)>);
 			std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(std::span<std::byte>)>);
 		};
@@ -578,9 +580,12 @@ export{
 		{
 			struct RowInfo
 			{
-				HandleType type;
 				bool dirty = false;
-				Handle table;
+
+				SlotID slot_id;
+				CBVHandle const_buffer;
+				std::vector<HAL::ResourceInfo*> resources;
+				std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
 			};
 			std::vector<RowInfo> tables;
 
@@ -594,7 +599,7 @@ export{
 				tables.resize(32); // !!!!!!!!!!!
 			}
 
-	
+
 			virtual void set_const_buffer(UINT i, UINT offset, UINT v) = 0;
 
 
@@ -605,32 +610,21 @@ export{
 					row.dirty = false;
 				}
 			}
-
-			void commit_tables()
-			{
-
-				for (auto& row : tables)
-				{
-					if (!row.dirty) continue;
-
-					auto& table = row.table;
-					auto type = row.type;
-					for (UINT i = 0; i < (UINT)table.get_count(); ++i)
-					{
-						const auto& h = table[i];
-						get_base().transition(h.get_resource_info());
-					}
-
-					row.dirty = false;
-				}
-			}
-		virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
+		public:
+			void commit_tables(UsedSlots *slots = nullptr);
+			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
 		public:
 
 			void reset()
 			{
 				root_sig = nullptr;
+				for (auto& table : tables)
+				{
+					table.const_buffer = CBVHandle();
+					table.resources.clear();
+					table.descriptors.clear();
+				}
 			}
 			CommandList& get_base() {
 				return base;
@@ -654,7 +648,7 @@ export{
 			}
 
 
-	
+
 			void set_pipeline(std::shared_ptr<PipelineStateBase> pipeline);
 
 			template<class T>
@@ -665,14 +659,23 @@ export{
 
 			void set_cb(UINT index, const CBVHandle& cb)
 			{
-				get_base().transition(cb.get_resource_info());	
+				get_base().transition(cb.get_resource_info());
 				set_const_buffer(index, 0, cb.get_offset());
 			}
 
 			template<class Compiled>
 			void set_slot(Compiled& compiled)
 			{
-				compiled.set_tables(*this);
+			
+				auto& table = tables[Compiled::Slot::ID];
+				table.slot_id = Compiled::ID;
+				//	assert(!table.dirty);
+				table.dirty = true;
+
+				table.const_buffer = compiled.const_buffer;
+				table.resources = compiled.resources;
+				table.descriptors = compiled.descriptors;
+			//	compiled.set_tables(*this);
 			}
 
 			template<class T>
@@ -687,7 +690,7 @@ export{
 		class GraphicsContext : public SignatureDataSetter
 		{
 			friend class CommandList;
-			
+
 			CommandList::CompilerType* list;
 
 			GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {
@@ -697,7 +700,7 @@ export{
 
 			bool valid_scissor = false;
 			std::vector<Viewport> viewports;
-		
+
 
 			void begin();
 			void end();
@@ -707,15 +710,15 @@ export{
 
 			HAL::Views::IndexBuffer index;
 
-			
-		
+
+
 			void set_rtv(int c, RTVHandle rt, DSVHandle h);
-	void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
+			void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
 
 			void on_set_signature(const RootSignature::ptr&) override;
 
 		public:
-	void set_rtv(const RTVHandle&, DSVHandle);
+			void set_rtv(const RTVHandle&, DSVHandle);
 			CommandList& get_base()
 			{
 				return base;
@@ -728,7 +731,7 @@ export{
 
 
 
-		
+
 			void set_scissor(sizer_long rect);
 			void set_viewport(Viewport viewport);
 			void set_viewport(vec4 viewport);
@@ -796,7 +799,7 @@ export{
 
 			virtual void set_const_buffer(UINT i, UINT offset, UINT v) override;
 
-		void on_set_signature(const RootSignature::ptr&) override;
+			void on_set_signature(const RootSignature::ptr&) override;
 
 
 		public:
@@ -807,7 +810,7 @@ export{
 			}
 
 
-	
+
 			void dispach(int = 1, int = 1, int = 1);
 			void dispach(ivec2, ivec2 = ivec2(8, 8));
 			void dispach(ivec3, ivec3 = ivec3(4, 4, 4));
@@ -833,7 +836,7 @@ export{
 				base.transition(raygen_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
 				commit_tables();
-				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer,hit_count,miss_buffer, miss_count, raygen_buffer);
+				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 
 				base.create_transition_point(false);
 
@@ -843,7 +846,7 @@ export{
 		};
 
 
-		class TransitionCommandList:public API::TransitionCommandList
+		class TransitionCommandList :public API::TransitionCommandList
 		{
 			CommandListType type;
 		public:

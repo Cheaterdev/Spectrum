@@ -201,10 +201,48 @@ namespace HAL
 
 		API::shader_include_dxil dxil_include(includer);
 		dxil_include.AddRef();
-		IDxcOperationResult* result;
-
+	
 		vargs.push_back(L"-no-warnings");
 		vargs.push_back(L"-O3");
+
+
+		{
+				IDxcOperationResult* result;
+
+			hr =  compiler->Preprocess(
+			pSource,          // program text
+			convert(file_name).c_str(),   // file name, mostly for error messages
+			//convert(entry_point).c_str(),          // entry point function
+			//convert(target).c_str(),        // target profile
+			vargs.data(),           // compilation arguments
+			(UINT)vargs.size(), // number of compilation arguments
+			defines.data(), (UINT)defines.size(),    // name/value defines and their count
+			&dxil_include,          // handler for #include directives
+			&result);
+			 	if (FAILED(hr))
+		{
+			IDxcBlobEncoding* error;
+			hr = result->GetErrorBuffer(&error);
+
+			std::string infoLog;
+			infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
+
+			std::string errorMsg = "Shader Compiler Error:\n";
+			errorMsg += file_name + "\n";
+			errorMsg.append((infoLog));
+			Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
+			MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+			return {};
+		}
+
+			ComPtr<IDxcBlob> resultBlob;
+		result->GetResult(&resultBlob);
+		std::string blob_str;
+		blob_str.assign(static_cast<char*>(resultBlob->GetBufferPointer()), static_cast<char*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
+
+		}
+
+			IDxcOperationResult* result;
 
 		hr = compiler->Compile(
 			pSource,          // program text

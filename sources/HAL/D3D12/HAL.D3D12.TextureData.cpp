@@ -5,7 +5,7 @@ import d3d12;
 
 import :Utils;
 import :Types;
-
+import :Device;
 
 
 namespace HAL
@@ -189,8 +189,8 @@ namespace HAL
 				img.slicePitch = orig->array[i]->mips[j]->slice_stride;
 				img.pixels = reinterpret_cast<uint8_t*>(orig->array[i]->mips[j]->data.data());
 			}
-		assert(false);
-		//  if (FAILED(DirectX::Compress(DX11::Device::get().get_native_device(), images.data(), images.size(), metadata, DXGI_FORMAT_BC7_UNORM_SRGB, 1, 1, compressed)))
+		//assert(false);
+		  if (FAILED(DirectX::Compress( images.data(), images.size(), metadata, DXGI_FORMAT_BC7_UNORM_SRGB, DirectX::TEX_COMPRESS_FLAGS::TEX_COMPRESS_DEFAULT|DirectX::TEX_COMPRESS_FLAGS::TEX_COMPRESS_PARALLEL, 1, compressed)))
 		return nullptr;
 
 		return generate_tex_data(compressed);

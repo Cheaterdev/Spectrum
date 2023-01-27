@@ -175,10 +175,11 @@ namespace HAL
 			if (header.mips) flags |= texture_data::LoadFlags::GENERATE_MIPS;
 
 			auto tex_data = texture_data::load_texture(file, flags);
-
+		
 			if (!tex_data)
 				return nullptr;
 
+			//	auto data = texture_data::compress(tex_data);
 
 			return create(tex_data, HeapType::DEFAULT);
 		}

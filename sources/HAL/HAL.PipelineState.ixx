@@ -179,6 +179,7 @@ export namespace HAL
 		}
 
 	public:
+		UsedSlots slots;
 		bool debuggable = false;
 		std::string name;
 		RootSignature::ptr root_signature;

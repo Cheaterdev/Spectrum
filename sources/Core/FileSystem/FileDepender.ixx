@@ -23,7 +23,12 @@ export
 			std::filesystem::path file_name;
 			std::filesystem::file_time_type modify_time;
 
-			bool need_update();
+			bool need_update() const;
+
+            bool operator<(const  depender& r) const
+            {
+	            return file_name<r.file_name;
+            }
 		private:
 
 			inline const std::wstring get_name() const { return file_name.wstring(); }
@@ -32,15 +37,15 @@ export
 				ar& NVP(file_name)& NVP(modify_time);
 			}
 		};
-		std::vector<depender> files;
+		std::set<depender> files;
 	public:
 
-		inline const std::vector<depender>& get_files() const { return files; }
+		inline const std::set<depender>& get_files() const { return files; }
 
 		void add_depend(std::shared_ptr<file> _file);
-		bool need_update();
+		bool need_update() const;
 		void clear();
-		bool depends_on(std::string v);
+		bool depends_on(std::string v) const;
 	private:
 		SERIALIZE()
 		{
@@ -61,7 +66,7 @@ std::time_t to_time_t(TP tp)
         + system_clock::now());
     return system_clock::to_time_t(sctp);
 }
-bool resource_file_depender::depender::need_update()
+bool resource_file_depender::depender::need_update() const
 {
     auto file = FileSystem::get().get_file(file_name);
 
@@ -89,18 +94,18 @@ void resource_file_depender::add_depend(std::shared_ptr<file> _file)
     depender d;
     d.file_name = _file->file_name.generic_wstring();
     d.modify_time = _file->edit_time;
-    files.push_back(d);
+    files.insert(d);
 }
 
 void resource_file_depender::clear()
 {
     files.clear();
 }
-bool resource_file_depender::depends_on(std::string v)
+bool resource_file_depender::depends_on(std::string v) const
 {
 
     auto wstr = convert(v);
-    for (auto f : files)
+    for (auto &f : files)
     {
         if (f.file_name.wstring().find(wstr) != std::string::npos)
         {
@@ -110,7 +115,7 @@ bool resource_file_depender::depends_on(std::string v)
 
     return false;
 }
-bool resource_file_depender::need_update()
+bool resource_file_depender::need_update() const
 {
     for (auto& d : files)
         if (d.need_update())
