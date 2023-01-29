@@ -18,7 +18,7 @@ namespace PSOS
 
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
-			static const ShaderDefine<&Keys::Format> Format = "Format";
+			static const ShaderDefine<&Keys::Format, &SimpleGraphicsPSO::pixel> Format = "Format";
 
 			SimplePSO mpso("CopyTexture");
 			if(f) f(mpso,key);

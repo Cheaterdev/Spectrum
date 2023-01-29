@@ -155,6 +155,7 @@ GraphicsPSO CopyTexture
 	enable_depth = false;
 
 	[type = Format]
+	[PS]
 	define Format = { ALL_RT_FORMATS };
 
 	rtv = { Format };

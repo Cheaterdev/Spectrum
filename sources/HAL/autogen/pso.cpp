@@ -57,7 +57,6 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::SimpleRect>(device,pso[PSO::SimpleRect]));
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasBack>(device,pso[PSO::CanvasBack]));
 	tasks.emplace_back(PSOBase::create<PSOS::CanvasLines>(device,pso[PSO::CanvasLines]));
-	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionLow>(device,pso[PSO::VoxelReflectionLow]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionHi>(device,pso[PSO::VoxelReflectionHi]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelReflectionUpsample>(device,pso[PSO::VoxelReflectionUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectHi>(device,pso[PSO::VoxelIndirectHi]));

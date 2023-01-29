@@ -60,7 +60,6 @@ export
 		SimpleRect,
 		CanvasBack,
 		CanvasLines,
-		VoxelReflectionLow,
 		VoxelReflectionHi,
 		VoxelReflectionUpsample,
 		VoxelIndirectHi,

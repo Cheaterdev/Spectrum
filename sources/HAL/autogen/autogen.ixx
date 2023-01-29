@@ -167,7 +167,6 @@ export
 	#include "pso\SimpleRect.h"
 	#include "pso\CanvasBack.h"
 	#include "pso\CanvasLines.h"
-	#include "pso\VoxelReflectionLow.h"
 	#include "pso\VoxelReflectionHi.h"
 	#include "pso\VoxelReflectionUpsample.h"
 	#include "pso\VoxelIndirectHi.h"

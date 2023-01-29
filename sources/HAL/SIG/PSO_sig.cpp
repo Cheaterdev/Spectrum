@@ -27,7 +27,8 @@ HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 	if (!mesh.entry_point.empty())	desc.mesh = HAL::mesh_shader::get_resource(mesh);
 	if (!amplification.entry_point.empty())	desc.amplification = HAL::amplification_shader::get_resource(amplification);
 
-
+	if(ds==HAL::Format::UNKNOWN)
+	enable_depth  = false;
 	desc.rtv.rtv_formats = rtv_formats;
 	desc.rtv.ds_format = ds;
 	desc.rasterizer.cull_mode = cull;

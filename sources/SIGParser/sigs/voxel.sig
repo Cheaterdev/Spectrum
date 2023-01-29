@@ -197,20 +197,6 @@ ComputePSO VoxelVisibility
 	compute = voxel_visibility;
 }
 
-GraphicsPSO VoxelReflectionLow
-{
-	root = DefaultLayout;
-
-	[EntryPoint = VS]
-	vertex = voxel_screen;
-
-	[EntryPoint = PS_low]
-	pixel = voxel_screen_reflection;
-
-	enable_depth = false;
-
-}
-
 ComputePSO VoxelIndirectFilter
 {
 	root = DefaultLayout;

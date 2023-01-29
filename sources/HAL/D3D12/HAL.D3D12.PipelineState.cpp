@@ -396,6 +396,9 @@ namespace HAL
 
 		auto nonCached = creator.get_desc();
 
+
+	/*	static std::mutex m;
+		std::lock_guard<std::mutex> g(m);*/
 		if (!cache.empty())
 		{
 			D3D12_CACHED_PIPELINE_STATE cached;
@@ -403,8 +406,8 @@ namespace HAL
 			cached.pCachedBlob = cache.c_str();
 			cached.CachedBlobSizeInBytes = cache.size();
 			creator.include(cached);
-		}
-
+		}else
+		Log::get()<<"Creating New PSO: " << desc.name<<Log::endl;
 
 		auto cached = creator.get_desc();
 		HRESULT hr = (root_signature->get_device().get_native_device()->CreatePipelineState(&cached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));

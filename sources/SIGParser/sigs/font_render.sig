@@ -42,6 +42,7 @@ GraphicsPSO FontRender
 	topology = POINT;
 
 	[type = Format]
+	[PS]
 	define Format = { ALL_RT_FORMATS };
 
 	rtv = { Format };

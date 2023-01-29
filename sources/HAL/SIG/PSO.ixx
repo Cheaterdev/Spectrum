@@ -220,9 +220,21 @@ struct KeyGenerator
 };
 
 
+template<typename T> concept CanEnumToString =
+requires (T t) {
+	std::string(magic_enum::enum_name(t));
+};
+
+
 template<typename T> concept CanToString =
 requires (T t) {
 	std::to_string(t);
+};
+
+
+template<typename T> concept CanToStringSelf =
+requires (T t) {
+	t.to_string();
 };
 
 
@@ -315,8 +327,12 @@ struct ShaderDefine
 			HAL::shader_macro m;
 
 
-			if constexpr (CanToString<decltype((keys.*Member).value)>)
+			if constexpr (CanEnumToString<decltype((keys.*Member).value)>)
+				m = { std::string(str), std::string(magic_enum::enum_name((keys.*Member).value)) };
+			else if constexpr (CanToString<decltype((keys.*Member).value)>)
 				m = { std::string(str), std::to_string((keys.*Member).value) };
+			else if constexpr (CanToStringSelf<decltype((keys.*Member).value)>)
+				m = { std::string(str), (keys.*Member).value.to_string() };
 			else
 				m = { std::string(str), "1" };
 

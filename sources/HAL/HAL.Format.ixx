@@ -161,6 +161,11 @@ export namespace HAL
 		uint get_default_mapping() const;
 
 		SurfaceInfo  surface_info(uint2 size)const;
+
+		std::string to_string()
+		{
+			return std::string(magic_enum::enum_name(native_format));
+		}
 	private:
 		Formats native_format = Formats::UNKNOWN;
 

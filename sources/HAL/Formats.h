@@ -28,7 +28,6 @@ HAL::Format::R16G16_UNORM,\
 HAL::Format::R16G16_UINT,\
 HAL::Format::R16G16_SNORM,\
 HAL::Format::R16G16_SINT,\
-HAL::Format::D32_FLOAT,\
 HAL::Format::R32_FLOAT,\
 HAL::Format::R32_UINT,\
 HAL::Format::R32_SINT,\
@@ -37,7 +36,6 @@ HAL::Format::R8G8_UINT,\
 HAL::Format::R8G8_SNORM,\
 HAL::Format::R8G8_SINT,\
 HAL::Format::R16_FLOAT,\
-HAL::Format::D16_UNORM,\
 HAL::Format::R16_UNORM,\
 HAL::Format::R16_UINT,\
 HAL::Format::R16_SNORM,\
