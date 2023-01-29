@@ -66,11 +66,11 @@ void SMAA::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.SMAA_edges->renderTarget;
-				rt.set(graphics);
+				rt.set(graphics,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
 			}
 
-			graphics.get_base().clear_rtv(data.SMAA_edges->renderTarget);
-			graphics.get_base().clear_rtv(data.SMAA_blend->renderTarget);
+		//	graphics.get_base().clear_rtv(data.SMAA_edges->renderTarget);
+		//	graphics.get_base().clear_rtv(data.SMAA_blend->renderTarget);
 
 			{
 				Slots::SMAA_Global slot_global;
@@ -87,7 +87,7 @@ void SMAA::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.SMAA_blend->renderTarget;
-				rt.set(graphics);
+				rt.set(graphics,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
 			}
 
 			{

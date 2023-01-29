@@ -41,6 +41,10 @@ GraphicsPSO FontRender
 
 	topology = POINT;
 
-	rtv = { R8G8B8A8_UNORM };
+	[type = Format]
+	define Format = { ALL_RT_FORMATS };
+
+	rtv = { Format };
+
 	enable_depth = false;
 }

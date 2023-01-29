@@ -246,6 +246,7 @@ void PSSM::generate(Graph& graph)
 					frameInfo.set(graphics);
 					frameInfo.set(compute);
 				}
+				context->render_type = RENDER_TYPE::DEPTH;
 
 				renderer->render(context, scene->get_ptr<Scene>());
 			}

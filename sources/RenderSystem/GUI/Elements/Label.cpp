@@ -113,12 +113,12 @@ namespace GUI
 		void label::pre_draw(HAL::CommandList::ptr command_list)
 		{
 			geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
-			command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
+			//command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
 
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = cache.texture->texture_2d().renderTarget;
-				rt.set(command_list->get_graphics());
+				rt.set(command_list->get_graphics(),RTOptions::Default| RTOptions::ClearAll);
 			}
 
 			PROFILE(L"label");

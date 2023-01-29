@@ -572,11 +572,11 @@ void stencil_renderer::generate_after(Graph& graph)
 					{
 						RT::SingleColor rt;
 						rt.GetColor() = data.Stencil_color_tex->renderTarget;
-						rt.set(graphics);
+						rt.set(graphics,RTOptions::Default| RTOptions::ClearAll);
 					}
 
 					//		data.Stencil_color_tex->renderTarget.clear(list);
-					list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0, 0, 0, 0));
+				//	list.clear_rtv(data.Stencil_color_tex->renderTarget, float4(0, 0, 0, 0));
 					graphics.set_pipeline<PSOS::DrawSelected>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 

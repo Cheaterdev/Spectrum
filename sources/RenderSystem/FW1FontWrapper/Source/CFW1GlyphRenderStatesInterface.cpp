@@ -28,8 +28,9 @@ namespace FW1FontWrapper
 // Set render states for glyph drawing
     void STDMETHODCALLTYPE CFW1GlyphRenderStates::SetStates(HAL::CommandList::ptr& list, UINT Flags)
     {
-
-        list->get_graphics().set_pipeline<PSOS::FontRender>();
+        auto formats = list->get_graphics().get_formats();
+        assert(formats.size()==1);
+        list->get_graphics().set_pipeline<PSOS::FontRender>(PSOS::FontRender::Format(formats[0]));
         list->get_graphics().set_topology(HAL::PrimitiveTopologyType::POINT, HAL::PrimitiveTopologyFeed::LIST);
     }
 

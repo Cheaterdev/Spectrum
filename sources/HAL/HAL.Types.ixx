@@ -345,7 +345,19 @@ export namespace HAL
 	};
 
 
+	enum class RTOptions :uint
+	{
+		SetHandles = 1,
+		ClearDepth = 1 << 1,
+		ClearStencil = 1 << 2,
+		SetViewport = 1 << 3,
+		SetScissors = 1 << 4,
 
+		ClearColor = 1 << 5,
+		ClearDepthStencil = ClearDepth | ClearStencil,
+		ClearAll = ClearDepthStencil | ClearColor,
+		Default = SetHandles | SetScissors | SetViewport,
+	};
 
 	enum class ResFlags :uint
 	{

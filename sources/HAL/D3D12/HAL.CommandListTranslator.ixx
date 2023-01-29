@@ -105,6 +105,13 @@ export namespace HAL
 				compiler.ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
 			}
 
+			
+			void clear_depth_stencil(const Handle& dsv,bool depth, bool stencil, float fdepth, UINT8 fstencil )
+			{
+				compiler.ClearDepthStencilView(dsv.get_cpu(), D3D12_CLEAR_FLAGS ((depth*D3D12_CLEAR_FLAG_DEPTH) |  (stencil*D3D12_CLEAR_FLAG_STENCIL)), fdepth, fstencil, 0, nullptr);
+			}
+
+
 			void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0)
 			{
 				auto native = to_native(topology, feedType, adjusted, controlpoints);

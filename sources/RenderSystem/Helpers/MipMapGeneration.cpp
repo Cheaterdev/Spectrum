@@ -143,14 +143,13 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 		quality.GetRef() = tempColor.texture2D;
 		quality.set(list);
 
-		list.get_base().clear_stencil(buffer.quality.depthStencil);
 		list.set_pipeline<PSOS::QualityToStencil>();
 
 
 		{
 			RT::DepthOnly rt;
 			rt.GetDepth() = buffer.quality.depthStencil;
-			rt.set(list);
+			rt.set(list,RTOptions::Default| RTOptions::ClearAll);
 		}
 
 

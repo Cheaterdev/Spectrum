@@ -81,12 +81,12 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 	sizer layout = { 0,0,256,256 };
 
 	geomerty->set(list, convert(data), font, 14, layout, float4(1, 1, 1, 1), FW1_LEFT);
-	list->clear_rtv(preview->texture_2d().renderTarget);
+
 
 	{
 				RT::SingleColor rt;
 				rt.GetColor() =preview->texture_2d().renderTarget;
-				rt.set(list->get_graphics());
+				rt.set(list->get_graphics(), HAL::RTOptions::Default| HAL::RTOptions::ClearColor);
 	}
 
 

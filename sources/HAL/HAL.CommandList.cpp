@@ -205,7 +205,7 @@ namespace HAL
 		reset();
 		reset_tables();
 		index = HAL::Views::IndexBuffer();
-
+		compiled_rt = CompiledRT();
 	}
 	void GraphicsContext::end()
 	{
@@ -308,36 +308,187 @@ namespace HAL
 		list->graphics_set_constant(i, offset, v);
 	}
 
-	void GraphicsContext::set_rtv(const RTVHandle& table, DSVHandle h)
+	void GraphicsContext::validate()
 	{
-		set_rtv(table.get_count(), table, h);
-	}
+		if constexpr (Debug::CheckErrors)	{
+			PipelineState* graphics = dynamic_cast<PipelineState*>(get_base().current_pipeline);
+			if (graphics)
+			{
 
-	void GraphicsContext::set_rtv(int c, RTVHandle rt, DSVHandle h)
-	{
+				{
+					auto &pipeline_formats = graphics->desc.rtv.rtv_formats;
+					std::vector<HAL::Format> rtv_formats = compiled_rt.get_formats();
+
+					if(pipeline_formats!=rtv_formats)
+					{
+						Log::get() << "Wrong rendertarget format for pipeline " << graphics->name << Log::endl;
+					}
+				}
 
 
+				{
+					auto &pipeline_format = graphics->desc.rtv.ds_format;
+					HAL::Format ds_format = compiled_rt.get_depth_format();
 
-		base.create_transition_point();
-		for (int i = 0; i < c; i++)
-		{
-			get_base().transition(rt[i].get_resource_info());
-		}
+					if(pipeline_format!=ds_format)
+					{
+						Log::get() << "Wrong depthstencil format for pipeline " << graphics->name << Log::endl;
+					}
+				}
 
-		if (h.is_valid())
-		{
-			if (rt.is_valid()) {
-				auto& i = rt.get_resource_info();
-				auto rtv = std::get<HAL::Views::RenderTarget>(i.view);
-				auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info().view);
-				assert(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
+
 			}
-			get_base().transition(h.get_resource_info());
 		}
-		list->set_rtv(c, rt, h);
-
-		base.create_transition_point(false);
+		
 	}
+
+	void GraphicsContext::set_rtv(const CompiledRT & rt,RTOptions options, float depth , uint stencil)
+			{
+
+		compiled_rt = rt;
+		const RTVHandle& table_rtv = rt.table_rtv;
+		const DSVHandle& table_dsv= rt.table_dsv;
+		get_base().create_transition_point();
+
+		for (uint i = 0; i < table_rtv.get_count(); i++)
+		{
+			get_base().transition(table_rtv[i].get_resource_info());
+		}
+		if (table_dsv)
+		{
+			get_base().transition(table_dsv.get_resource_info());
+		}
+
+		if (check(options & RTOptions::SetHandles))
+			list->set_rtv(table_rtv.get_count(), table_rtv, table_dsv);
+
+		if (check(options & RTOptions::ClearColor))
+		{
+			for (uint i = 0; i < table_rtv.get_count(); i++)
+			{
+				list->clear_rtv(table_rtv[i], float4(0, 0, 0, 0));
+			}
+		}
+
+		if (table_dsv && check(options & (RTOptions::ClearStencil | RTOptions::ClearDepth)))
+			list->clear_depth_stencil(table_dsv[0], check(options & RTOptions::ClearDepth), check(options & RTOptions::ClearStencil), depth, stencil);
+
+		get_base().create_transition_point(false);
+			uint2 size;
+
+
+			if (table_rtv)
+			{
+				auto& view = std::get<HAL::Views::RenderTarget>(table_rtv.get_resource_info().view);
+
+				std::visit(overloaded{
+					[&](const HAL::Views::RenderTarget::Buffer& Buffer) {
+						assert(false);
+					},
+					[&](const HAL::Views::RenderTarget::Texture1D& Texture1D) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture1D.MipSlice).xy;
+
+					},
+					[&](const HAL::Views::RenderTarget::Texture1DArray& Texture1DArray) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture1DArray.MipSlice).xy;
+					},
+					[&](const HAL::Views::RenderTarget::Texture2D& Texture2D) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture2D.MipSlice).xy;
+					},
+					[&](const HAL::Views::RenderTarget::Texture2DArray& Texture2DArray) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture2DArray.MipSlice).xy;
+					},
+					[&](const HAL::Views::RenderTarget::Texture3D& Texture3D) {
+						size = view.Resource->get_desc().as_texture().get_size(Texture3D.MipSlice).xy;
+					},
+					[&](const HAL::Views::RenderTarget::Texture2DMS& Texture2DMS) {
+						assert(false);
+					},
+					[&](const HAL::Views::RenderTarget::Texture2DMSArray& Texture2DMSArray) {
+						assert(false);
+					},
+					[&](auto other) {
+						assert(false);
+					}
+					}, view.View);
+
+			}
+			else
+				if (table_dsv)
+				{
+					auto& view = std::get<HAL::Views::DepthStencil>(table_dsv.get_resource_info().view);
+
+					std::visit(overloaded{
+						[&](const HAL::Views::DepthStencil::Texture1D& Texture1D) {
+							size = view.Resource->get_desc().as_texture().get_size(Texture1D.MipSlice).xy;
+						},
+						[&](const HAL::Views::DepthStencil::Texture1DArray& Texture1DArray) {
+							size = view.Resource->get_desc().as_texture().get_size(Texture1DArray.MipSlice).xy;
+						},
+						[&](const HAL::Views::DepthStencil::Texture2D& Texture2D) {
+							size = view.Resource->get_desc().as_texture().get_size(Texture2D.MipSlice).xy;
+						},
+						[&](const HAL::Views::DepthStencil::Texture2DArray& Texture2DArray) {
+							size = view.Resource->get_desc().as_texture().get_size(Texture2DArray.MipSlice).xy;
+						},
+						[&](const HAL::Views::DepthStencil::Texture2DMS& Texture2DMS) {
+							assert(false);
+						},
+						[&](const HAL::Views::DepthStencil::Texture2DMSArray& Texture2DMSArray) {
+							assert(false);
+						},
+						[&](auto other) {
+							assert(false);
+						}
+						}, view.View);
+				}
+
+			if (size.x)
+			{
+				if (check(options & RTOptions::SetViewport))
+				{
+					std::vector<HAL::Viewport> vps(1);
+					vps[0].size = size;
+					vps[0].pos = { 0,0 };
+					vps[0].depths = { 0,1 };
+
+					set_viewports(vps);
+				}
+
+				if (check(options & RTOptions::SetScissors))
+				{
+					sizer_long scissors = { 0, 0, size.x, size.y };
+					set_scissors(scissors);
+				}
+			}
+
+			}
+
+	//void GraphicsContext::set_rtv(int c, RTVHandle rt, DSVHandle h)
+	//{
+
+
+
+	//	base.create_transition_point();
+	//	for (int i = 0; i < c; i++)
+	//	{
+	//		get_base().transition(rt[i].get_resource_info());
+	//	}
+
+	//	if (h.is_valid())
+	//	{
+	//		if (rt.is_valid()) {
+	//			auto& i = rt.get_resource_info();
+	//			auto rtv = std::get<HAL::Views::RenderTarget>(i.view);
+	//			auto dsv = std::get<HAL::Views::DepthStencil>(h.get_resource_info().view);
+	//			assert(rtv.Resource->get_desc().as_texture().Dimensions == dsv.Resource->get_desc().as_texture().Dimensions);
+	//		}
+	//		get_base().transition(h.get_resource_info());
+	//	}
+	//	list->set_rtv(c, rt, h);
+
+	//	base.create_transition_point(false);
+	//}
 
 
 
@@ -348,6 +499,7 @@ namespace HAL
 		base.setup_debug(this);
 
 		commit_tables();
+		validate();
 		list->draw(vertex_count, vertex_offset, instance_count, instance_offset);
 		base.create_transition_point(false);
 
@@ -364,6 +516,7 @@ namespace HAL
 		commit_tables();
 		get_base().transition(index.Resource, ResourceState::INDEX_BUFFER);
 		list->set_index_buffer(index);
+			validate();
 		list->draw_indexed(index_count, index_offset, vertex_offset, instance_count, instance_offset);
 		base.create_transition_point(false);
 		get_base().print_debug();
@@ -381,7 +534,7 @@ namespace HAL
 		base.setup_debug(this);
 		commit_tables();
 		//get_base().get_compute().commit_tables();
-
+			validate();
 		list->dispatch_mesh(v);
 		base.create_transition_point(false);
 		get_base().print_debug();
@@ -1138,6 +1291,8 @@ namespace HAL
 			commit_tables(&command_types.slots);
 		else
 			get_base().get_compute().commit_tables(&command_types.slots);
+
+		validate();
 		list->execute_indirect(
 			command_types,
 			max_commands,
@@ -1308,4 +1463,39 @@ namespace HAL
 
 		//	used_slots = pipeline->slots;
 	}
+
+
+		std::vector<HAL::Format> CompiledRT::get_formats() const
+		{
+			std::vector<HAL::Format> result;
+
+			if (table_rtv)
+			{
+
+				for (uint i = 0; i < table_rtv.get_count(); i++)
+				{
+					auto& view = std::get<HAL::Views::RenderTarget>(table_rtv[i].get_resource_info().view);
+					result.emplace_back(view.Format);
+				}
+
+			}
+			return result;
+		}
+		HAL::Format CompiledRT::get_depth_format() const
+		{
+			if (!table_dsv) return HAL::Format::UNKNOWN;
+			auto& view = std::get<HAL::Views::DepthStencil>((table_dsv).get_resource_info().view);
+
+			return view.Format;
+		}
+
+
+
+		const CompiledRT& CompiledRT::set(HAL::GraphicsContext& context, HAL::RTOptions options, float depth, uint stencil) const
+		{
+			context.set_rtv(*this,options,depth, stencil);
+			return *this;
+		}
+
+
 }

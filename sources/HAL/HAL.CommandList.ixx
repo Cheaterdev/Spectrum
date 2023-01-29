@@ -502,37 +502,6 @@ export{
 				create_transition_point(false);
 			}
 
-
-			void clear_rtv(const RTVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
-			{
-				create_transition_point();
-				transition(h.get_resource_info());
-				compiler.clear_rtv(h, ClearColor);
-				create_transition_point(false);
-			}
-
-
-
-
-			void clear_stencil(const DSVHandle& h, UINT8 stencil = 0)
-			{
-				create_transition_point();
-				transition(h.get_resource_info());
-
-				compiler.clear_stencil(h, stencil);
-				create_transition_point(false);
-			}
-
-			void clear_depth(const DSVHandle& h, float depth = 0)
-			{
-				create_transition_point();
-				transition(h.get_resource_info());
-
-				compiler.clear_depth(h, depth);
-				create_transition_point(false);
-			}
-
-
 		};
 
 		class CopyContext
@@ -687,6 +656,21 @@ export{
 			}
 		};
 
+
+			class GraphicsContext;
+	struct CompiledRT
+	{
+		HAL::RTVHandle table_rtv;
+		HAL::DSVHandle table_dsv;
+
+		std::vector<HAL::Format> get_formats() const;
+		HAL::Format get_depth_format() const;
+
+
+		const CompiledRT& set(HAL::GraphicsContext& context, HAL::RTOptions options = HAL::RTOptions::Default, float depth = 1, uint stencil = 0) const;
+	};
+
+
 		class GraphicsContext : public SignatureDataSetter
 		{
 			friend class CommandList;
@@ -709,16 +693,21 @@ export{
 			void set_const_buffer(UINT i, UINT offset, UINT v)override;
 
 			HAL::Views::IndexBuffer index;
+			CompiledRT compiled_rt;
 
 
-
-			void set_rtv(int c, RTVHandle rt, DSVHandle h);
 			void set_heaps(DescriptorHeap::ptr& a, DescriptorHeap::ptr& b);
 
 			void on_set_signature(const RootSignature::ptr&) override;
 
+			void validate();
 		public:
-			void set_rtv(const RTVHandle&, DSVHandle);
+			std::vector<HAL::Format> get_formats() const
+			{
+				return compiled_rt.get_formats();
+			}
+			void set_rtv(const CompiledRT & rt,RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0);
+			
 			CommandList& get_base()
 			{
 				return base;
