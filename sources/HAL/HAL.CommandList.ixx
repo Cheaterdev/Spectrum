@@ -463,6 +463,24 @@ export{
 
 			void set_pipeline_internal(PipelineStateBase* pipeline);
 
+			template<bool compute, bool graphics, class T>
+			void pre_command(T& context,UsedSlots *slots = nullptr)
+			{
+				create_transition_point();
+				if constexpr (compute || graphics)
+				{
+					if constexpr (Debug::GfxDebug)	setup_debug(&context);
+					context.commit_tables(slots);
+					if constexpr (graphics) context.validate();
+				}
+			}
+			template<bool compute, bool graphics, class T>
+			void post_command(T& context)
+			{
+				create_transition_point(false);
+				if constexpr (Debug::GfxDebug)	
+				if constexpr (compute || graphics)	print_debug();
+			}
 		public:
 			void end();
 
@@ -817,19 +835,15 @@ export{
 			template<class Hit, class Miss, class Raygen>
 			void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
 			{
-				base.setup_debug(this);
-				base.create_transition_point();
+				base.pre_command<true, false>(*this);
 
 				base.transition(hit_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 				base.transition(miss_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 				base.transition(raygen_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
 
-				commit_tables();
 				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 
-				base.create_transition_point(false);
-
-				get_base().print_debug();
+				base.post_command<true, false>(*this);
 			}
 
 		};

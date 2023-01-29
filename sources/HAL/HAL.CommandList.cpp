@@ -348,7 +348,9 @@ namespace HAL
 		compiled_rt = rt;
 		const RTVHandle& table_rtv = rt.table_rtv;
 		const DSVHandle& table_dsv= rt.table_dsv;
-		get_base().create_transition_point();
+	
+
+			base.pre_command<false, false>(*this);
 
 		for (uint i = 0; i < table_rtv.get_count(); i++)
 		{
@@ -373,8 +375,8 @@ namespace HAL
 		if (table_dsv && check(options & (RTOptions::ClearStencil | RTOptions::ClearDepth)))
 			list->clear_depth_stencil(table_dsv[0], check(options & RTOptions::ClearDepth), check(options & RTOptions::ClearStencil), depth, stencil);
 
-		get_base().create_transition_point(false);
-			uint2 size;
+		base.post_command<false, false>(*this);
+	uint2 size;
 
 
 			if (table_rtv)
@@ -495,31 +497,23 @@ namespace HAL
 	void GraphicsContext::draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
 		PROFILE_GPU(L"draw");
-		base.create_transition_point();
-		base.setup_debug(this);
 
-		commit_tables();
-		validate();
+		base.pre_command<false, true>(*this);
 		list->draw(vertex_count, vertex_offset, instance_count, instance_offset);
-		base.create_transition_point(false);
-
-		get_base().print_debug();
-
+		base.post_command<false, true>(*this);
 	}
+
 	void GraphicsContext::draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count, UINT instance_offset)
 	{
 		if (instance_count == 0) return;
 		PROFILE_GPU(L"draw_indexed");
-		base.create_transition_point();
-		base.setup_debug(this);
+		base.pre_command<false, true>(*this);
 
-		commit_tables();
 		get_base().transition(index.Resource, ResourceState::INDEX_BUFFER);
 		list->set_index_buffer(index);
-			validate();
+
 		list->draw_indexed(index_count, index_offset, vertex_offset, instance_count, instance_offset);
-		base.create_transition_point(false);
-		get_base().print_debug();
+		base.post_command<false, true>(*this);
 	}
 	void GraphicsContext::dispatch_mesh(D3D12_DISPATCH_MESH_ARGUMENTS args)
 	{
@@ -528,16 +522,10 @@ namespace HAL
 
 	void GraphicsContext::dispatch_mesh(ivec3 v)
 	{
-
 		PROFILE_GPU(L"dispatch_mesh");
-		base.create_transition_point();
-		base.setup_debug(this);
-		commit_tables();
-		//get_base().get_compute().commit_tables();
-			validate();
+		base.pre_command<false, true>(*this);
 		list->dispatch_mesh(v);
-		base.create_transition_point(false);
-		get_base().print_debug();
+		base.post_command<false, true>(*this);
 	}
 
 
@@ -582,14 +570,16 @@ namespace HAL
 	}
 	void  CopyContext::update_buffer(Resource* resource, uint64 offset, const  char* data, uint64 size)
 	{
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
+
 		//	if (base.type != CommandListType::COPY)
 		base.transition(resource, ResourceState::COPY_DEST);
 
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
 		list->copy_buffer(resource, offset, info.resource, info.resource_offset, size);
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
+
 	}
 
 
@@ -601,7 +591,7 @@ namespace HAL
 
 	void CopyContext::update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
 
 		base.transition(resource, ResourceState::COPY_DEST);
 		auto layout = list->get_texture_layout(resource, sub_resource, box);
@@ -649,7 +639,8 @@ namespace HAL
 
 		list->update_texture(resource, offset, box, sub_resource, info, layout);
 		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
+
 	}
 	/*
 	void  GraphicsContext::set_pipeline(PipelineState::ptr state)
@@ -669,7 +660,8 @@ namespace HAL
 	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
 
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
+
 		//	if (base.type != CommandListType::COPY)
 		base.transition(resource, ResourceState::COPY_SOURCE);
 		//else
@@ -687,13 +679,14 @@ namespace HAL
 				result->set_value(true);
 			});
 
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
+
 		return result->get_future();
 	}
 	std::future<bool> CopyContext::read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
+		base.pre_command<false, false>(*this);
 
-		base.create_transition_point();
 		//	if (base.type != CommandListType::COPY)
 		base.transition(resource, ResourceState::COPY_SOURCE);
 		//else
@@ -711,7 +704,8 @@ namespace HAL
 				result->set_value(true);
 			});
 
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
+
 		return result->get_future();
 	}
 
@@ -727,7 +721,7 @@ namespace HAL
 			return result->get_future();
 		}
 
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
 
 		base.transition(resource, ResourceState::COPY_SOURCE);
 
@@ -740,7 +734,8 @@ namespace HAL
 				result->set_value(true);
 			});
 
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
+
 		return result->get_future();
 	}
 
@@ -1034,7 +1029,8 @@ namespace HAL
 
 	void CopyContext::copy_buffer(Resource* dest, uint64 s_dest, Resource* source, uint64 s_source, uint64 size)
 	{
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
+
 		//if (base.type != CommandListType::COPY)
 		{
 			base.transition(source, ResourceState::COPY_SOURCE);
@@ -1043,18 +1039,21 @@ namespace HAL
 
 
 		list->copy_buffer(dest, s_dest, source, s_source, size);
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
+
 	}
 	void CopyContext::copy_resource(Resource* dest, Resource* source)
 	{
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
+
 		//	if (base.type != CommandListType::COPY)
 		{
 			base.transition(source, ResourceState::COPY_SOURCE);
 			base.transition(dest, ResourceState::COPY_DEST);
 		}
 		list->copy_resource(dest, source);
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
+
 	}
 	void CopyContext::copy_resource(const Resource::ptr& dest, const Resource::ptr& source)
 	{
@@ -1062,7 +1061,8 @@ namespace HAL
 	}
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
 	{
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
+
 		//if (base.type != CommandListType::COPY) 
 		{
 			base.transition(source, ResourceState::COPY_SOURCE, source_subres);
@@ -1071,12 +1071,14 @@ namespace HAL
 
 		list->copy_texture(dest, dest_subres, source, source_subres);
 		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
+
 	}
 
 	void CopyContext::copy_texture(const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size)
 	{
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
+
 		//if (base.type != CommandListType::COPY) 
 		{
 			base.transition(from, ResourceState::COPY_SOURCE);
@@ -1084,7 +1086,7 @@ namespace HAL
 		}
 		list->copy_texture(to, to_pos, from, from_pos, size);
 		if constexpr (Debug::CheckErrors)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
 	}
 
 
@@ -1113,14 +1115,10 @@ namespace HAL
 	void ComputeContext::dispach(int x, int y, int z)
 	{
 		PROFILE_GPU(L"Dispatch");
-		base.create_transition_point();
-		base.setup_debug(this);
-		commit_tables();
 
+		base.pre_command<true, false>(*this);
 		list->dispatch({ x, y, z });
-		base.create_transition_point(false);
-		get_base().print_debug();
-
+		base.post_command<true, false>(*this);
 	}
 
 
@@ -1276,10 +1274,14 @@ namespace HAL
 
 		//	assert(dynamic_cast<PipelineState*>(get_base().current_pipeline));
 		PROFILE_GPU(L"execute_indirect");
-		base.create_transition_point();
 
-		base.setup_debug(this);
+		bool graphics = dynamic_cast<PipelineState*>(get_base().current_pipeline);
 
+		if(graphics)
+			base.pre_command<false, true>(get_base().get_graphics(),&command_types.slots);
+		else
+			base.pre_command<true, false>(get_base().get_compute(),&command_types.slots);
+	
 		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
 		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
 
@@ -1287,12 +1289,6 @@ namespace HAL
 
 		list->set_index_buffer(index);
 
-		if (dynamic_cast<PipelineState*>(get_base().current_pipeline))
-			commit_tables(&command_types.slots);
-		else
-			get_base().get_compute().commit_tables(&command_types.slots);
-
-		validate();
 		list->execute_indirect(
 			command_types,
 			max_commands,
@@ -1300,14 +1296,18 @@ namespace HAL
 			command_offset,
 			counter_buffer,
 			counter_offset);
-		base.create_transition_point(false);
-		get_base().print_debug();
+	
+		if(graphics)
+			base.post_command<false, true>(get_base().get_graphics());
+		else
+			base.post_command<true, false>(get_base().get_compute());
+	
 	}
+
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
 		PROFILE_GPU(L"execute_indirect");
-		base.create_transition_point();
-		base.setup_debug(this);
+		base.pre_command<true, false>(*this);
 
 		assert(command_buffer);
 
@@ -1323,13 +1323,13 @@ namespace HAL
 			command_offset,
 			counter_buffer,
 			counter_offset);
-		base.create_transition_point(false);
-		get_base().print_debug();
+
+		base.post_command<true, false>(*this);
 	}
 
 	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom)
 	{
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
 
 		for (auto g : bottom.geometry)
 		{
@@ -1346,13 +1346,13 @@ namespace HAL
 
 		list->build_ras(build_desc, bottom);
 
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
 	}
 
 
 	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top)
 	{
-		base.create_transition_point();
+		base.pre_command<false, false>(*this);
 
 		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
 		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
@@ -1363,7 +1363,7 @@ namespace HAL
 		//commit_tables();
 		list->build_ras(build_desc, top);
 
-		base.create_transition_point(false);
+		base.post_command<false, false>(*this);
 	}
 	void ComputeContext::set_const_buffer(UINT i, UINT offset, UINT v)
 	{
