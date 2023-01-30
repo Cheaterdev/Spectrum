@@ -9,6 +9,7 @@ using namespace HAL;
 
 REGISTER_TYPE(MeshAsset);
 
+ REGISTER_TYPE(MeshAssetInstance);
 bool MeshData::init_default_loaders()
 {
 	add_loader(load_assimp);

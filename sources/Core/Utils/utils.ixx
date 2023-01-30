@@ -60,6 +60,8 @@ export
 	template<typename T>
 	concept NonFundamental = !std::is_fundamental_v<T>;
 
+	template <typename T>
+	concept Printable = requires( std::ostream &s, const T &t) { s << t;};
 
 	template<std::size_t index, typename T, typename Tuple>
 	constexpr size_t tuple_element_index_helper()

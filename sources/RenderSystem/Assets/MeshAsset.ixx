@@ -207,13 +207,13 @@ export{
 	private:
 		SERIALIZE()
 		{
+			SAVE_PARENT(Asset);
 			ar& NVP(primitive);
 			ar& NVP(meshes);
 			ar& NVP(materials);
 			ar& NVP(local_transform);
 			ar& NVP(root_node);
 
-			SAVE_PARENT(Asset);
 
 			{
 				ar& NVP(buffer);

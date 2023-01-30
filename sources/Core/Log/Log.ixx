@@ -119,9 +119,16 @@ export {
 			return *this;
 		}
 
+		template<class T>
+		LogBlock operator<<(const  T& smth) requires (!std::is_enum_v<T> && Printable<T>)
+		{
+			if (need_logging())
+				data->s << smth;
+			return *this;
+		}
 
-		template < NonString T>
-		LogBlock& operator<<(const T& smth) requires (!std::is_enum_v<T>)
+		template < class T>
+		LogBlock& operator<<(const T& smth) requires (!std::is_enum_v<T>&& !Printable<T>&&NonString<T>)
 		{
 			if (need_logging())
 			{

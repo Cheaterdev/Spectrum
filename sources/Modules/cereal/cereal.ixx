@@ -19,12 +19,13 @@ std::string _convert(std::wstring_view s)
 template<typename T>
 concept Enum = std::is_enum_v<T>;
 
-template<typename T>
-concept loggable = std::is_enum_v<T> || std::is_arithmetic_v<T> || std::is_same_v<std::string, T> || std::is_same_v<std::wstring, T>;
+//template<typename T>
+//concept loggable = std::is_enum_v<T> || std::is_arithmetic_v<T> || std::is_same_v<std::string, T> || std::is_same_v<std::wstring, T>;
 
 template <typename T> concept arithmetic = std::is_arithmetic_v<T>;// && !std::is_enum_v<T>;
 
 
+template <typename T> concept printable = requires( std::ostream &s, const T &t) { s << t;};
 
 export
 {
@@ -47,7 +48,7 @@ export
 		template<class T>
 		void save(const cereal::NameValuePair<T>& t);
 
-		template<arithmetic T>
+		template<arithmetic  T>
 		void save(const T& t)
 		{
 			if (serial)	m_os << ", ";
