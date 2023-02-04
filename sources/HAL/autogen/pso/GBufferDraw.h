@@ -21,10 +21,10 @@ namespace PSOS
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.mesh.file_name = "shaders/mesh_shader.hlsl";
 			mpso.mesh.entry_point = "VS";
-			mpso.mesh.flags = 0;
+			mpso.mesh.flags = HAL::ShaderOptions::None;
 			mpso.amplification.file_name = "shaders/mesh_shader.hlsl";
 			mpso.amplification.entry_point = "AS";
-			mpso.amplification.flags = 0;
+			mpso.amplification.flags = HAL::ShaderOptions::None;
 			
 			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT };
 			mpso.blend = {  };

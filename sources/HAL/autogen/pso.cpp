@@ -13,6 +13,9 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {
 	 std::vector<task<void>> tasks;
 	tasks.emplace_back(PSOBase::create<PSOS::BRDF>(device, pso[PSO::BRDF]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Prepare>(device, pso[PSO::DenoiserShadow_Prepare]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_TileClassification>(device, pso[PSO::DenoiserShadow_TileClassification]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
 	tasks.emplace_back(PSOBase::create<PSOS::FSR>(device, pso[PSO::FSR]));
 	tasks.emplace_back(PSOBase::create<PSOS::RCAS>(device, pso[PSO::RCAS]));
 	tasks.emplace_back(PSOBase::create<PSOS::GatherPipeline>(device, pso[PSO::GatherPipeline]));

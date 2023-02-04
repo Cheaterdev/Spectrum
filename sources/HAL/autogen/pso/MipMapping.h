@@ -29,7 +29,7 @@ static const ShaderDefine<&Keys::Gamma, &SimpleComputePSO::compute> Gamma = "CON
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/GenerateMips.hlsl";
 			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = 0;
+			mpso.compute.flags = HAL::ShaderOptions::None;
 			NonPowerOfTwo.Apply(mpso, key);
 Gamma.Apply(mpso, key);
 

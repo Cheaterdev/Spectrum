@@ -24,6 +24,11 @@ export
 	#include "slots\BRDF.h"
 	#include "tables\DebugStruct.h"
 	#include "slots\DebugInfo.h"
+	#include "slots\DenoiserShadow_Prepare.h"
+	#include "slots\DenoiserShadow_TileClassification.h"
+	#include "slots\DenoiserShadow_Filter.h"
+	#include "slots\DenoiserShadow_FilterLocal.h"
+	#include "slots\DenoiserShadow_FilterLast.h"
 	#include "slots\FontRendering.h"
 	#include "slots\FontRenderingConstants.h"
 	#include "tables\Glyph.h"
@@ -120,6 +125,9 @@ export
 	#include "slots\FrameClassification.h"
 	#include "slots\FrameClassificationInitDispatch.h"
 	#include "pso\BRDF.h"
+	#include "pso\DenoiserShadow_Prepare.h"
+	#include "pso\DenoiserShadow_TileClassification.h"
+	#include "pso\DenoiserShadow_Filter.h"
 	#include "pso\FSR.h"
 	#include "pso\RCAS.h"
 	#include "pso\GatherPipeline.h"
@@ -191,6 +199,26 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "DebugInfo")
 	{
 		return SlotID::DebugInfo;
+	}
+	if(slot_name == "DenoiserShadow_Prepare")
+	{
+		return SlotID::DenoiserShadow_Prepare;
+	}
+	if(slot_name == "DenoiserShadow_TileClassification")
+	{
+		return SlotID::DenoiserShadow_TileClassification;
+	}
+	if(slot_name == "DenoiserShadow_Filter")
+	{
+		return SlotID::DenoiserShadow_Filter;
+	}
+	if(slot_name == "DenoiserShadow_FilterLocal")
+	{
+		return SlotID::DenoiserShadow_FilterLocal;
+	}
+	if(slot_name == "DenoiserShadow_FilterLast")
+	{
+		return SlotID::DenoiserShadow_FilterLast;
 	}
 	if(slot_name == "FontRendering")
 	{
@@ -452,6 +480,26 @@ UINT get_slot_id(SlotID id)
 	{
 		return Slots::DebugInfo::Slot::ID;
 	}
+	if(id == SlotID::DenoiserShadow_Prepare)
+	{
+		return Slots::DenoiserShadow_Prepare::Slot::ID;
+	}
+	if(id == SlotID::DenoiserShadow_TileClassification)
+	{
+		return Slots::DenoiserShadow_TileClassification::Slot::ID;
+	}
+	if(id == SlotID::DenoiserShadow_Filter)
+	{
+		return Slots::DenoiserShadow_Filter::Slot::ID;
+	}
+	if(id == SlotID::DenoiserShadow_FilterLocal)
+	{
+		return Slots::DenoiserShadow_FilterLocal::Slot::ID;
+	}
+	if(id == SlotID::DenoiserShadow_FilterLast)
+	{
+		return Slots::DenoiserShadow_FilterLast::Slot::ID;
+	}
 	if(id == SlotID::FontRendering)
 	{
 		return Slots::FontRendering::Slot::ID;
@@ -711,6 +759,26 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::DebugInfo)
 	{
 		return "DebugInfo";
+	}
+	if(id == SlotID::DenoiserShadow_Prepare)
+	{
+		return "DenoiserShadow_Prepare";
+	}
+	if(id == SlotID::DenoiserShadow_TileClassification)
+	{
+		return "DenoiserShadow_TileClassification";
+	}
+	if(id == SlotID::DenoiserShadow_Filter)
+	{
+		return "DenoiserShadow_Filter";
+	}
+	if(id == SlotID::DenoiserShadow_FilterLocal)
+	{
+		return "DenoiserShadow_FilterLocal";
+	}
+	if(id == SlotID::DenoiserShadow_FilterLast)
+	{
+		return "DenoiserShadow_FilterLast";
 	}
 	if(id == SlotID::FontRendering)
 	{

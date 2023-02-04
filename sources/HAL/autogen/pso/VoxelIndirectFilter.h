@@ -29,7 +29,7 @@ static const ShaderDefine<&Keys::Reflection, &SimpleComputePSO::compute> Reflect
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/voxel_screen_blur.hlsl";
 			mpso.compute.entry_point = "PS";
-			mpso.compute.flags = 0;
+			mpso.compute.flags = HAL::ShaderOptions::None;
 			Blur.Apply(mpso, key);
 Reflection.Apply(mpso, key);
 

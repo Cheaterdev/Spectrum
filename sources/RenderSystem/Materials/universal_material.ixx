@@ -96,11 +96,11 @@ export namespace materials
 			depth_draw = std::make_shared<PSOS::DepthDraw>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::DepthDraw::Keys& )
 			{
 				target.name += std::to_string(id);
-				target.pixel = { pixel, "PS", 0,context->get_pixel_result().macros, true };
+				target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
 
 				if (!tess.empty()) {
-					target.hull = { tess, "HS", 0,context->get_tess_result().macros, true };
-					target.domain = { tess, "DS", 0,context->get_tess_result().macros, true };
+					target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+					target.domain = { tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
 				
 					target.topology = HAL::PrimitiveTopologyType::PATCH;
 				}
@@ -114,11 +114,11 @@ export namespace materials
 			{
 
 				target.name += std::to_string(id);
-				target.pixel = { pixel, "PS", 0,context->get_pixel_result().macros, true };
+				target.pixel = { pixel, "PS", HAL::ShaderOptions::None,context->get_pixel_result().macros, true };
 
 				if (!tess.empty()) {
-					target.hull = { tess, "HS", 0,context->get_tess_result().macros, true };
-					target.domain ={ tess, "DS", 0,context->get_tess_result().macros, true };
+					target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+					target.domain ={ tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
 				
 					target.topology = HAL::PrimitiveTopologyType::PATCH;
 				}
@@ -131,11 +131,11 @@ export namespace materials
 			voxelization = std::make_shared<PSOS::Voxelization>(HAL::Device::get(),[&](SimpleGraphicsPSO& target, PSOS::Voxelization::Keys& )
 			{
 				target.name += std::to_string(id);
-				target.pixel = { pixel, "PS_VOXEL", 0,context->get_pixel_result().macros, true };
+				target.pixel = { pixel, "PS_VOXEL", HAL::ShaderOptions::None ,context->get_pixel_result().macros, true };
 
 				if (!tess.empty()) {
-					target.hull = { tess, "HS", 0,context->get_tess_result().macros, true };
-					target.domain = { tess, "DS", 0,context->get_tess_result().macros, true };
+					target.hull = { tess, "HS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
+					target.domain = { tess, "DS", HAL::ShaderOptions::None,context->get_tess_result().macros, true };
 				
 					target.topology = HAL::PrimitiveTopologyType::PATCH;
 				}
@@ -145,7 +145,7 @@ export namespace materials
 				}
 			});
 
-			raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , 0, context->hit_shader.macros, true });
+			raytrace_lib = HAL::library_shader::get_resource({ raytracing, "" , HAL::ShaderOptions::None, context->hit_shader.macros, true });
 		}
 
 		HAL::library_shader::ptr  raytrace_lib;

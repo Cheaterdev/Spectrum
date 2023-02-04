@@ -709,6 +709,14 @@ export
 	using uint16 = std::uint16_t;
 	using uint64 = std::uint64_t;
 
+
+
+	// do not use this in cpp code
+	
+	using float16_t3 = float3;
+	using float16_t2 = float2;
+
+
 	sizer intersect(const sizer& a, const sizer& b);
 	rect intersect(const rect& a, const rect& b);
 

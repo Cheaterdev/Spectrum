@@ -11,6 +11,7 @@ struct Camera
 	float4x4 invView;
 	float4x4 invProj;
 	float4x4 invViewProj;
+	float4x4 reprojectionProj;
 	float4 position;
 	float4 direction;
 	float4 jitter;

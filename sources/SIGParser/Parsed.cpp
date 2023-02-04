@@ -76,13 +76,13 @@ std::string get_cpp_for(Value v)
 {
 
 	bool noarg = v.template_arg.empty();
-	std::string arg = v.type;
+	std::string arg = v.get_type();
 	switch (v.value_type)
 	{
 	case ValueType::STRUCT:
 	case ValueType::CB:
 	{
-		return v.type;
+		return arg;
 	}
 	case ValueType::SRV:
 	{
@@ -113,26 +113,26 @@ std::string get_cpp_for(Value v)
 void have_type::detect_type(have_options * options)
 {
 	value_type = ValueType::STRUCT;
-		if (type.starts_with("DepthStencil"))value_type = ValueType::SRV;
-		if (type.starts_with("RenderTarget"))value_type = ValueType::SRV;
-	if (type.starts_with("Texture"))value_type = ValueType::SRV;
-	if (type.starts_with("StructuredBuffer")) value_type = ValueType::SRV;
-	if (type.starts_with("Buffer")) value_type = ValueType::SRV;
-	if (type.starts_with("RaytracingAccelerationStructure")) value_type = ValueType::SRV;
-	if (type.starts_with("ConstantBuffer")) value_type = ValueType::SRV;
+		if (class_no_template.starts_with("DepthStencil"))value_type = ValueType::SRV;
+		if (class_no_template.starts_with("RenderTarget"))value_type = ValueType::SRV;
+	if (class_no_template.starts_with("Texture"))value_type = ValueType::SRV;
+	if (class_no_template.starts_with("StructuredBuffer")) value_type = ValueType::SRV;
+	if (class_no_template.starts_with("Buffer")) value_type = ValueType::SRV;
+	if (class_no_template.starts_with("RaytracingAccelerationStructure")) value_type = ValueType::SRV;
+	if (class_no_template.starts_with("ConstantBuffer")) value_type = ValueType::SRV;
 	
-	if (type.starts_with("RW")) value_type = ValueType::UAV;
-	if (type.starts_with("AppendStructuredBuffer")) value_type = ValueType::UAV;
+	if (class_no_template.starts_with("RW")) value_type = ValueType::UAV;
+	if (class_no_template.starts_with("AppendStructuredBuffer")) value_type = ValueType::UAV;
 	
-	if (type.starts_with("bool")) value_type = ValueType::CB;
-	if (type.starts_with("uint")) value_type = ValueType::CB;
-	if (type.starts_with("int")) value_type = ValueType::CB;
-	if (type.starts_with("float")) value_type = ValueType::CB;
-	if (type.starts_with("matrix")) value_type = ValueType::CB;
-	if (type.starts_with("uint")) value_type = ValueType::CB;
-	if (type.starts_with("mat4x4")) value_type = ValueType::CB;
+	if (class_no_template.starts_with("bool")) value_type = ValueType::CB;
+	if (class_no_template.starts_with("uint")) value_type = ValueType::CB;
+	if (class_no_template.starts_with("int")) value_type = ValueType::CB;
+	if (class_no_template.starts_with("float")) value_type = ValueType::CB;
+	if (class_no_template.starts_with("matrix")) value_type = ValueType::CB;
+	if (class_no_template.starts_with("uint")) value_type = ValueType::CB;
+	if (class_no_template.starts_with("mat4x4")) value_type = ValueType::CB;
 
-	if (type == "SamplerState") value_type = ValueType::SMP;
+	if (class_no_template == "SamplerState") value_type = ValueType::SMP;
 
 	if(options&&options->find_option("dynamic"))
 		value_type = ValueType::CB;
@@ -240,7 +240,7 @@ void Table::setup(Parsed* all)
 	{
 		if (v.value_type == ValueType::STRUCT)
 		{
-			used_tables.insert(v.type);
+			used_tables.insert(v.get_type());
 		}
 
 
@@ -262,7 +262,7 @@ void Table::setup(Parsed* all)
 
 		if (v.value_type == ValueType::STRUCT)
 		{
-			auto t = all->find_table(v.type);
+			auto t = all->find_table(v.get_type());
 			t->setup(all);
 
 

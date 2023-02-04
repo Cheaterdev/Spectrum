@@ -21,10 +21,10 @@ namespace PSOS
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/SMAA.hlsl";
 			mpso.vertex.entry_point = "DX10_SMAAEdgeDetectionVS";
-			mpso.vertex.flags = 0;
+			mpso.vertex.flags = HAL::ShaderOptions::None;
 			mpso.pixel.file_name = "shaders/SMAA.hlsl";
 			mpso.pixel.entry_point = "DX10_SMAALumaEdgeDetectionPS";
-			mpso.pixel.flags = 0;
+			mpso.pixel.flags = HAL::ShaderOptions::None;
 			
 			mpso.rtv_formats = { HAL::Format::R8G8_UNORM };
 			mpso.blend = {  };

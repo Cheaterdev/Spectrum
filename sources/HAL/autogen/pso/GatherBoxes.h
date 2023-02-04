@@ -25,7 +25,7 @@ namespace PSOS
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/gather_pipeline.hlsl";
 			mpso.compute.entry_point = "CS_boxes";
-			mpso.compute.flags = 0;
+			mpso.compute.flags = HAL::ShaderOptions::None;
 			CheckFrustum.Apply(mpso, key);
 
 			return mpso;

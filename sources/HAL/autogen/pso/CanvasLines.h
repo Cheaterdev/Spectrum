@@ -21,19 +21,19 @@ namespace PSOS
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/gui/flow_line.hlsl";
 			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = 0;
+			mpso.vertex.flags = HAL::ShaderOptions::None;
 			mpso.pixel.file_name = "shaders/gui/flow_line.hlsl";
 			mpso.pixel.entry_point = "PS";
-			mpso.pixel.flags = 0;
+			mpso.pixel.flags = HAL::ShaderOptions::None;
 			mpso.geometry.file_name = "shaders/gui/flow_line.hlsl";
 			mpso.geometry.entry_point = "GS";
-			mpso.geometry.flags = 0;
+			mpso.geometry.flags = HAL::ShaderOptions::None;
 			mpso.domain.file_name = "shaders/gui/flow_line.hlsl";
 			mpso.domain.entry_point = "DS";
-			mpso.domain.flags = 0;
+			mpso.domain.flags = HAL::ShaderOptions::None;
 			mpso.hull.file_name = "shaders/gui/flow_line.hlsl";
 			mpso.hull.entry_point = "HS";
-			mpso.hull.flags = 0;
+			mpso.hull.flags = HAL::ShaderOptions::None;
 			
 			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM };
 			mpso.blend = { HAL::Blends::AlphaBlend };

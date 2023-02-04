@@ -24,8 +24,11 @@ void camera::update(float2 offset )
 	params.position = float4(pos,0);
 	params.direction = float4(_dir.normalize(),0);
 	params.invViewProj = inv_view_proj_mat;
+	
 	(params.invProj = proj_jittered).inverse();
 	(params.invView = view_mat).inverse();
+	params.reprojectionProj = params.invViewProj*camera_cb.current.viewProj;
+
 	mat4x4 test = view_proj_mat * inv_view_proj_mat;
 	calculate(inv_view_proj_mat);
 	vec3 right = vec3::cross(params.direction.xyz, _up);

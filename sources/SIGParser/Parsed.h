@@ -77,7 +77,8 @@ struct inherited
 struct have_options;
 struct have_type
 {
-	std::string type;
+	bool unorm = false;
+	//std::string type;
 	std::string class_no_template;
 	std::string template_arg;
 	ValueType value_type;
@@ -85,6 +86,20 @@ struct have_type
 	bool bindless = false;
 	void detect_type(have_options* options = nullptr);
 
+	std::string get_type() const
+	{
+		std::string res;
+		res = class_no_template;
+
+		if(!template_arg.empty())
+		{
+			res+="<";
+			res+=template_arg;
+			res+=">";
+		}
+			
+		return res;
+	}
 };
 
 
@@ -250,7 +265,7 @@ struct param_holder
 	{
 		for (auto& e:params)
 		{
-			if (e.type == v)
+			if (e.class_no_template == v)
 				return &e;
 		}
 

@@ -25,7 +25,7 @@ namespace PSOS
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/voxel_lighting.hlsl";
 			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = 0;
+			mpso.compute.flags = HAL::ShaderOptions::None;
 			SecondBounce.Apply(mpso, key);
 
 			return mpso;

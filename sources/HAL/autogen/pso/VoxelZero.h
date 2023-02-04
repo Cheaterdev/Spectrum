@@ -21,7 +21,7 @@ namespace PSOS
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.compute.file_name = "shaders/voxel_zero.hlsl";
 			mpso.compute.entry_point = "CS";
-			mpso.compute.flags = 0;
+			mpso.compute.flags = HAL::ShaderOptions::None;
 			
 			return mpso;
 		}

@@ -144,14 +144,14 @@ namespace HAL
 	}
 
 
-	std::optional<binary>  ShaderCompiler::Compile_Shader_File(std::string filename, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, HAL::shader_include* includer)
+	std::optional<binary>  ShaderCompiler::Compile_Shader_File(std::string filename, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer)
 	{
 		auto data = includer->load_file(filename);
-		return Compile_Shader(*data, macros, target, entry_point, includer, filename);
+		return Compile_Shader(*data, macros, target, entry_point, options, includer, filename);
 	}
 	//
 
-	std::optional<binary>  ShaderCompiler::Compile_Shader(std::string shaderText, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, HAL::shader_include* includer, std::string file_name)
+	std::optional<binary>  ShaderCompiler::Compile_Shader(std::string shaderText, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer, std::string file_name)
 	{
 
 		if (file_name.empty())
@@ -205,42 +205,47 @@ namespace HAL
 		vargs.push_back(L"-no-warnings");
 		vargs.push_back(L"-O3");
 
-
+		if(check(options&ShaderOptions::FP16))
 		{
-				IDxcOperationResult* result;
-
-			hr =  compiler->Preprocess(
-			pSource,          // program text
-			convert(file_name).c_str(),   // file name, mostly for error messages
-			//convert(entry_point).c_str(),          // entry point function
-			//convert(target).c_str(),        // target profile
-			vargs.data(),           // compilation arguments
-			(UINT)vargs.size(), // number of compilation arguments
-			defines.data(), (UINT)defines.size(),    // name/value defines and their count
-			&dxil_include,          // handler for #include directives
-			&result);
-			 	if (FAILED(hr))
-		{
-			IDxcBlobEncoding* error;
-			hr = result->GetErrorBuffer(&error);
-
-			std::string infoLog;
-			infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
-
-			std::string errorMsg = "Shader Compiler Error:\n";
-			errorMsg += file_name + "\n";
-			errorMsg.append((infoLog));
-			Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
-			MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
-			return {};
+				vargs.push_back(L"-enable-16bit-types");
+	
 		}
 
-			ComPtr<IDxcBlob> resultBlob;
-		result->GetResult(&resultBlob);
-		std::string blob_str;
-		blob_str.assign(static_cast<char*>(resultBlob->GetBufferPointer()), static_cast<char*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
+		//{
+		//		IDxcOperationResult* result;
 
-		}
+		//	hr =  compiler->Preprocess(
+		//	pSource,          // program text
+		//	convert(file_name).c_str(),   // file name, mostly for error messages
+		//	//convert(entry_point).c_str(),          // entry point function
+		//	//convert(target).c_str(),        // target profile
+		//	vargs.data(),           // compilation arguments
+		//	(UINT)vargs.size(), // number of compilation arguments
+		//	defines.data(), (UINT)defines.size(),    // name/value defines and their count
+		//	&dxil_include,          // handler for #include directives
+		//	&result);
+		//	 	if (FAILED(hr))
+		//{
+		//	IDxcBlobEncoding* error;
+		//	hr = result->GetErrorBuffer(&error);
+
+		//	std::string infoLog;
+		//	infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
+
+		//	std::string errorMsg = "Shader Compiler Error:\n";
+		//	errorMsg += file_name + "\n";
+		//	errorMsg.append((infoLog));
+		//	Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
+		//	MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
+		//	return {};
+		//}
+
+		//	ComPtr<IDxcBlob> resultBlob;
+		//result->GetResult(&resultBlob);
+		//std::string blob_str;
+		//blob_str.assign(static_cast<char*>(resultBlob->GetBufferPointer()), static_cast<char*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
+
+		//}
 
 			IDxcOperationResult* result;
 

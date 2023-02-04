@@ -537,11 +537,17 @@ struct texture_layout
 		}
 	};
 
+		enum class ShaderOptions:uint
+	{
+		None = 0,
+		FP16 = 1
+	};
+
 	struct shader_header
 	{
 		std::string file_name;
 		std::string entry_point;
-		uint flags;
+		ShaderOptions flags;
 		std::vector<shader_macro> macros;
 		bool contains_text = false;
 

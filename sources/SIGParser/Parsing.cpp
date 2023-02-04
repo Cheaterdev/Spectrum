@@ -232,9 +232,16 @@ public:
 		auto& elem = get_elem<have_type>();
 		auto& options = get_elem<have_options>();
 
-		elem.type = ctx->children[0]->getText();
+		//elem.type = ctx->children[0]->getText();
 	//	elem.detect_type(&options);
 	}
+	//	virtual void enterModifier(SIGParser::ModifierContext* ctx) override {
+	//	auto& elem = get_elem<have_type>();
+	//	auto& options = get_elem<have_options>();
+
+	//	elem.unorm = ctx->children[0]->getText()=="unorm";
+	////	elem.detect_type(&options);
+	//}
 
 		virtual void enterClass_no_template(SIGParser::Class_no_templateContext* ctx) override {
 		auto& elem = get_elem<have_type>();
@@ -251,7 +258,10 @@ public:
 
 	virtual void enterTemplate_id(SIGParser::Template_idContext* ctx) override {
 		auto& elem = get_elem<have_type>();
-		elem.template_arg = ctx->children[0]->getText();
+
+		if(!elem.template_arg.empty())
+			elem.template_arg+=' ';
+		elem.template_arg += ctx->children[0]->getText();
 
 	}
 
@@ -262,7 +272,7 @@ public:
 
 	virtual void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override {
 		auto& elem = get_elem<have_type>();
-		elem.type = ctx->children[0]->getText();
+		elem.class_no_template= ctx->children[0]->getText();
 	}
 
 	virtual void enterArray(SIGParser::ArrayContext* ctx) override {

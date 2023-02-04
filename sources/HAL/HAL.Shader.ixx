@@ -177,12 +177,12 @@ export
 					if (header.contains_text)
 					{
 						HAL::shader_include In("shaders/", depender);
-						res_blob = ShaderCompiler::get().Compile_Shader(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
+						res_blob = ShaderCompiler::get().Compile_Shader(header.file_name, header.macros, compile_code_dxil, header.entry_point, header.flags, &In);
 					}
 					else
 					{
 						HAL::shader_include In(header.file_name, depender);
-						res_blob = ShaderCompiler::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point, &In);
+						res_blob = ShaderCompiler::get().Compile_Shader_File(header.file_name, header.macros, compile_code_dxil, header.entry_point,header.flags,  &In);
 					}
 				}
 

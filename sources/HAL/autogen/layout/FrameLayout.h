@@ -4,7 +4,7 @@ struct FrameLayout
 	struct CameraData
 	{
 		static const unsigned int ID = 0;
-		static const unsigned int CB = 32;
+		static const unsigned int CB = 34;
 		static const unsigned int CB_ID = 0;
 		static const unsigned int SRV = 3;
 		static const unsigned int SRV_ID = 2;

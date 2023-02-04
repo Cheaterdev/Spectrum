@@ -11,6 +11,7 @@ namespace Table
 		float4x4 invView;
 		float4x4 invProj;
 		float4x4 invViewProj;
+		float4x4 reprojectionProj;
 		float4 position;
 		float4 direction;
 		float4 jitter;
@@ -21,6 +22,7 @@ namespace Table
 		float4x4& GetInvView() { return invView; }
 		float4x4& GetInvProj() { return invProj; }
 		float4x4& GetInvViewProj() { return invViewProj; }
+		float4x4& GetReprojectionProj() { return reprojectionProj; }
 		float4& GetPosition() { return position; }
 		float4& GetDirection() { return direction; }
 		float4& GetJitter() { return jitter; }
@@ -34,6 +36,7 @@ namespace Table
 			compiler.compile(invView);
 			compiler.compile(invProj);
 			compiler.compile(invViewProj);
+			compiler.compile(reprojectionProj);
 			compiler.compile(position);
 			compiler.compile(direction);
 			compiler.compile(jitter);

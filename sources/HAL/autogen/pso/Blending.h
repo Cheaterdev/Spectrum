@@ -21,10 +21,10 @@ namespace PSOS
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/SMAA.hlsl";
 			mpso.vertex.entry_point = "DX10_SMAANeighborhoodBlendingVS";
-			mpso.vertex.flags = 0;
+			mpso.vertex.flags = HAL::ShaderOptions::None;
 			mpso.pixel.file_name = "shaders/SMAA.hlsl";
 			mpso.pixel.entry_point = "DX10_SMAANeighborhoodBlendingPS";
-			mpso.pixel.flags = 0;
+			mpso.pixel.flags = HAL::ShaderOptions::None;
 			
 			mpso.rtv_formats = { HAL::Format::R16G16B16A16_FLOAT };
 			mpso.blend = {  };

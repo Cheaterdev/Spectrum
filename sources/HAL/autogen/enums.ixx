@@ -13,6 +13,9 @@ export
 	enum class PSO: int
 	{
 		BRDF,
+		DenoiserShadow_Prepare,
+		DenoiserShadow_TileClassification,
+		DenoiserShadow_Filter,
 		FSR,
 		RCAS,
 		GatherPipeline,
@@ -73,6 +76,11 @@ export
 		BRDF = "BRDF"_crc32 ,
 		DebugStruct = "DebugStruct"_crc32 ,
 		DebugInfo = "DebugInfo"_crc32 ,
+		DenoiserShadow_Prepare = "DenoiserShadow_Prepare"_crc32 ,
+		DenoiserShadow_TileClassification = "DenoiserShadow_TileClassification"_crc32 ,
+		DenoiserShadow_Filter = "DenoiserShadow_Filter"_crc32 ,
+		DenoiserShadow_FilterLocal = "DenoiserShadow_FilterLocal"_crc32 ,
+		DenoiserShadow_FilterLast = "DenoiserShadow_FilterLast"_crc32 ,
 		FontRendering = "FontRendering"_crc32 ,
 		FontRenderingConstants = "FontRenderingConstants"_crc32 ,
 		Glyph = "Glyph"_crc32 ,

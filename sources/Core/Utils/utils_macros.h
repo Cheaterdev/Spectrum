@@ -36,3 +36,5 @@
 #define BUG_ALERT Log::get()<<"ALERT HERE"<<Log::endl
 
 #define DISABLE_OPTIMIZATION __pragma(optimize( "", off ))
+
+#define unorm

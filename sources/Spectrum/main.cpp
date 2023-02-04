@@ -130,6 +130,7 @@ public:
 	SMAA smaa;
 	SkyRender sky;
 	FSR fsr;
+	ShadowDenoiser shadow_denoiser;
 	VoxelGI::ptr voxel_gi;
 	std::string debug_view;
 	triangle_drawer() :VariableContext(L"triangle_drawer")
@@ -532,9 +533,8 @@ public:
 
 					//	stenciler->render(context, scene);
 					{
-						
 						command_list->get_copy().copy_texture(gbuffer.depth_prev_mips.resource->get_ptr(), 0, gbuffer.depth_mips.resource->get_ptr(), 0);
-					command_list->get_copy().copy_texture(gbuffer.depth_mips.resource->get_ptr(), 0, gbuffer.depth.resource->get_ptr(), 0);
+						command_list->get_copy().copy_texture(gbuffer.depth_mips.resource->get_ptr(), 0, gbuffer.depth.resource->get_ptr(), 0);
 
 					}
 					
@@ -600,7 +600,7 @@ public:
 					});
 		}
 
-
+		shadow_denoiser.generate(graph);
 		struct no
 		{
 			Handlers::Texture H(ResultTexture);

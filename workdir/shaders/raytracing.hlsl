@@ -266,7 +266,7 @@ void ShadowRaygenShader()
 	{
 
 		float hit_rate = 0;
-		int samples = 4;// payload2.recursion < 2 ? 3 : 1;
+		int samples = 1;// payload2.recursion < 2 ? 3 : 1;
 		for (int i = 0; i < samples; i++)
 		{
 			float3 dir = GetRandomDir(tc, frame.GetSunDir(), 0.02, frame.GetTime() + float(i) / 10);
@@ -297,7 +297,7 @@ void ShadowRaygenShader()
 	float speed = 1.0 / (1.0 + reprojected.frames);
 
 
-	shadow = lerp(reprojected.history, shadow, speed);
+	//shadow = lerp(reprojected.history, shadow, speed);
 
 
 

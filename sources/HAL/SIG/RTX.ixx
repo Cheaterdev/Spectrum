@@ -327,7 +327,7 @@ struct SelectLocal<T>
 			rtx.init_collection(raytracingPipeline);
 
 			HAL::LibraryObject lib;
-			lib.library = HAL::library_shader::get_resource({ std::string(Desc::shader), "" , 0, {} });
+			lib.library = HAL::library_shader::get_resource({ std::string(Desc::shader), "" , HAL::ShaderOptions::None, {} });
 			lib.export_shader(std::wstring(Desc::raygen));
 			raytracingPipeline.libraries.emplace_back(lib);
 
@@ -362,7 +362,7 @@ struct SelectLocal<T>
 			rtx.init_collection(raytracingPipeline);
 
 			HAL::LibraryObject lib;
-			lib.library = HAL::library_shader::get_resource({ std::string(Desc::shader), "" , 0, {} });
+			lib.library = HAL::library_shader::get_resource({ std::string(Desc::shader), "" , HAL::ShaderOptions::None, {} });
 
 			if constexpr (!Desc::per_material)
 			{

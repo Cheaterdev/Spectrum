@@ -39,3 +39,4 @@ export import :SMAA;
 export import :FSR;
 export import :VoxelGI;
 export import :RTX;
+export import :ShadowDenoiser;

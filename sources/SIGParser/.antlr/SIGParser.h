@@ -379,8 +379,9 @@ public:
     virtual size_t getRuleIndex() const override;
     Class_no_templateContext *class_no_template();
     antlr4::tree::TerminalNode *LT();
-    Template_idContext *template_id();
     antlr4::tree::TerminalNode *GT();
+    std::vector<Template_idContext *> template_id();
+    Template_idContext* template_id(size_t i);
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;

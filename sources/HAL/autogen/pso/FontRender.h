@@ -25,13 +25,13 @@ namespace PSOS
 			mpso.root_signature = Layouts::DefaultLayout;
 			mpso.vertex.file_name = "shaders/font/vsSimple.hlsl";
 			mpso.vertex.entry_point = "VS";
-			mpso.vertex.flags = 0;
+			mpso.vertex.flags = HAL::ShaderOptions::None;
 			mpso.pixel.file_name = "shaders/font/psSimple.hlsl";
 			mpso.pixel.entry_point = "PS";
-			mpso.pixel.flags = 0;
+			mpso.pixel.flags = HAL::ShaderOptions::None;
 			mpso.geometry.file_name = "shaders/font/gsSimple.hlsl";
 			mpso.geometry.entry_point = "GS";
-			mpso.geometry.flags = 0;
+			mpso.geometry.flags = HAL::ShaderOptions::None;
 			Format.Apply(mpso, key);
 
 			mpso.rtv_formats = { Format.get_value(mpso, key) };
