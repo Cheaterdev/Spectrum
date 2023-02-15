@@ -14,7 +14,7 @@ static const VoxelInfo voxel_info = GetVoxelInfo();
 
 void calc(inout float4 color)
 {
-	color.rgb/= color.w + 1;
+	color.rgb/= color.w + 0.3;
 	color.w = saturate(color.w/4);
 
 	//color /= 6;

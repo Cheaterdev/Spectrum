@@ -395,8 +395,8 @@ void MyRaygenShader()
 	}
 	float3 normal = normalize(voxel_screen.GetGbuffer().GetNormals()[DispatchRaysIndex().xy].xyz * 2 - 1);
 
-
-	float3 dir = GetRandomDir(tc, normal, 1, frame.GetTime().y);
+	float2 seed =voxel_output.GetBlueNoise().Load(int3(itc.xy % 128, 0));
+	float3 dir = ImportanceSampleGGX(seed, 1, normal);
 
 	float3 dirVoxel = dir;// normalize(normal + rand2 * (right + tangent));
 
@@ -496,12 +496,12 @@ void MyRaygenShaderReflection()
 
 	float3 rayDir = reflect(view, normal);
 
-	float2 seed = GetRandom2(tc, frame.GetTime().y);
-	float3x3 space = CalculateTangent(rayDir);
+	float2 seed =voxel_output.GetBlueNoise().Load(int3(itc.xy % 128, 0));
+	//float3x3 space = CalculateTangent(rayDir);
 
 
-	float4 s = ImportanceSampleGGX(seed, roughness, rayDir);
-	float3 dir = s.xyz;
+	//float4 s = ImportanceSampleGGX(seed, roughness, rayDir);
+	float3 dir = SampleReflectionVector(view, normal,roughness,seed );
 
 	float3 dirVoxel = rayDir;// normalize(normal + rand2 * (right + tangent));
 
@@ -523,7 +523,7 @@ void MyRaygenShaderReflection()
 
 	if (payload_gi.dist > 100000 - 5)
 	{
-		payload_gi.color = trace(voxel_info, 0, 0.1 * GetRandom2(tc / 2, frame.GetTime().y) * length(oneVoxelSize), pos + oneVoxelSize * normal + 1 * dirVoxel * ray.TMax, dirVoxel, 1 * roughness, payload_gi.dist);
+		payload_gi.color = trace(voxel_info, 0, 1 *seed.x * length(oneVoxelSize), pos + oneVoxelSize * normal + 1 * dirVoxel * ray.TMax, dirVoxel, 1 * roughness/2, payload_gi.dist);
 	}
 
 
@@ -546,7 +546,7 @@ void MyRaygenShaderReflection()
 
 	//screen = screen * GGX_Specular(0.01, normal, normalize(l + view), view, l);
 
-	tex_dir_pdf[itc] = float4(refl_pos, s.w);
+	tex_dir_pdf[itc] = float4(refl_pos, 1);
 	tex_noise[itc] = float4(screen, payload_gi.dist);// lerp(prev_gi, float4(screen, payload_gi.dist), lerper);//float4(payload_gi.color, raw_z);// accumSpeedPrev / 8;// (accumSpeed / 8) == 1;
 }
 

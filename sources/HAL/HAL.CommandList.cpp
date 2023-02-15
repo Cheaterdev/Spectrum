@@ -203,26 +203,25 @@ namespace HAL
 	void GraphicsContext::begin()
 	{
 		reset();
-		reset_tables();
-		index = HAL::Views::IndexBuffer();
-		compiled_rt = CompiledRT();
+	
+
 	}
 	void GraphicsContext::end()
 	{
-		//current_root_signature = nullptr;
+		index = HAL::Views::IndexBuffer();
+		compiled_rt = CompiledRT();
+			reset_tables();
 	}
 
 	void ComputeContext::begin()
 	{
 		reset();
-		reset_tables();
-
-
 	}
 
 	void ComputeContext::end()
 	{
 		current_compute_root_signature = nullptr;
+			reset_tables();
 	}
 
 	void GraphicsContext::on_execute()
@@ -232,7 +231,6 @@ namespace HAL
 
 	void ComputeContext::on_execute()
 	{
-
 	}
 
 

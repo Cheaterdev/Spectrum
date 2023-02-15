@@ -229,12 +229,12 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 
 
 	auto list = (HAL::Device::get().get_upload_list());
-	list->get_copy().update_buffer(vertex_buffer_view, 0, data->vertex_buffer);
-	list->get_copy().update_buffer(index_buffer_view, 0, data->index_buffer);
-	list->get_copy().update_buffer(this->meshlets, 0, meshlets);
-	list->get_copy().update_buffer(meshlet_cull_datas, 0, meshlet_cull);
-	list->get_copy().update_buffer(unique_indices, 0, unique_ids_buffer);
-	list->get_copy().update_buffer(primitive_indices, 0, priimitive_ids_buffer);
+	list->get_copy().update<Table::mesh_vertex_input>(vertex_buffer_view, 0, data->vertex_buffer);
+	list->get_copy().update<UINT32>(index_buffer_view, 0, data->index_buffer);
+	list->get_copy().update<Table::Meshlet>(this->meshlets, 0, meshlets);
+	list->get_copy().update<Table::MeshletCullData>(meshlet_cull_datas, 0, meshlet_cull);
+	list->get_copy().update<UINT32>(unique_indices, 0, unique_ids_buffer);
+	list->get_copy().update<UINT32>(primitive_indices, 0, priimitive_ids_buffer);
 
 	list->execute_and_wait();
 

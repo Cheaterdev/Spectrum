@@ -21,9 +21,14 @@ export
 	#include "layout\FrameLayout.h"
 	#include "layout\DefaultLayout.h"
 	#include "slots\TextureRenderer.h"
+	#include "slots\BlueNoise.h"
 	#include "slots\BRDF.h"
 	#include "tables\DebugStruct.h"
 	#include "slots\DebugInfo.h"
+	#include "slots\DenoiserReflectionCommon.h"
+	#include "slots\DenoiserReflectionReproject.h"
+	#include "slots\DenoiserReflectionPrefilter.h"
+	#include "slots\DenoiserReflectionResolve.h"
 	#include "slots\DenoiserShadow_Prepare.h"
 	#include "slots\DenoiserShadow_TileClassification.h"
 	#include "slots\DenoiserShadow_Filter.h"
@@ -124,7 +129,12 @@ export
 	#include "slots\TilingPostprocess.h"
 	#include "slots\FrameClassification.h"
 	#include "slots\FrameClassificationInitDispatch.h"
+	#include "slots\ReflectionCombine.h"
+	#include "pso\BlueNoise.h"
 	#include "pso\BRDF.h"
+	#include "pso\DenoiserReflectionReproject.h"
+	#include "pso\DenoiserReflectionPrefilter.h"
+	#include "pso\DenoiserReflectionResolve.h"
 	#include "pso\DenoiserShadow_Prepare.h"
 	#include "pso\DenoiserShadow_TileClassification.h"
 	#include "pso\DenoiserShadow_Filter.h"
@@ -146,6 +156,7 @@ export
 	#include "pso\DenoiserHistoryFix.h"
 	#include "pso\FrameClassification.h"
 	#include "pso\FrameClassificationInitDispatch.h"
+	#include "pso\ReflectionCombine.h"
 	#include "pso\FontRender.h"
 	#include "pso\RenderBoxes.h"
 	#include "pso\RenderToDS.h"
@@ -192,6 +203,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	{
 		return SlotID::TextureRenderer;
 	}
+	if(slot_name == "BlueNoise")
+	{
+		return SlotID::BlueNoise;
+	}
 	if(slot_name == "BRDF")
 	{
 		return SlotID::BRDF;
@@ -199,6 +214,22 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "DebugInfo")
 	{
 		return SlotID::DebugInfo;
+	}
+	if(slot_name == "DenoiserReflectionCommon")
+	{
+		return SlotID::DenoiserReflectionCommon;
+	}
+	if(slot_name == "DenoiserReflectionReproject")
+	{
+		return SlotID::DenoiserReflectionReproject;
+	}
+	if(slot_name == "DenoiserReflectionPrefilter")
+	{
+		return SlotID::DenoiserReflectionPrefilter;
+	}
+	if(slot_name == "DenoiserReflectionResolve")
+	{
+		return SlotID::DenoiserReflectionResolve;
 	}
 	if(slot_name == "DenoiserShadow_Prepare")
 	{
@@ -464,6 +495,10 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	{
 		return SlotID::FrameClassificationInitDispatch;
 	}
+	if(slot_name == "ReflectionCombine")
+	{
+		return SlotID::ReflectionCombine;
+	}
 	return std::nullopt;
 }
 UINT get_slot_id(SlotID id)
@@ -472,6 +507,10 @@ UINT get_slot_id(SlotID id)
 	{
 		return Slots::TextureRenderer::Slot::ID;
 	}
+	if(id == SlotID::BlueNoise)
+	{
+		return Slots::BlueNoise::Slot::ID;
+	}
 	if(id == SlotID::BRDF)
 	{
 		return Slots::BRDF::Slot::ID;
@@ -479,6 +518,22 @@ UINT get_slot_id(SlotID id)
 	if(id == SlotID::DebugInfo)
 	{
 		return Slots::DebugInfo::Slot::ID;
+	}
+	if(id == SlotID::DenoiserReflectionCommon)
+	{
+		return Slots::DenoiserReflectionCommon::Slot::ID;
+	}
+	if(id == SlotID::DenoiserReflectionReproject)
+	{
+		return Slots::DenoiserReflectionReproject::Slot::ID;
+	}
+	if(id == SlotID::DenoiserReflectionPrefilter)
+	{
+		return Slots::DenoiserReflectionPrefilter::Slot::ID;
+	}
+	if(id == SlotID::DenoiserReflectionResolve)
+	{
+		return Slots::DenoiserReflectionResolve::Slot::ID;
 	}
 	if(id == SlotID::DenoiserShadow_Prepare)
 	{
@@ -744,6 +799,10 @@ UINT get_slot_id(SlotID id)
 	{
 		return Slots::FrameClassificationInitDispatch::Slot::ID;
 	}
+	if(id == SlotID::ReflectionCombine)
+	{
+		return Slots::ReflectionCombine::Slot::ID;
+	}
 	return -1;
 }
 std::string get_slot_name(SlotID id)
@@ -752,6 +811,10 @@ std::string get_slot_name(SlotID id)
 	{
 		return "TextureRenderer";
 	}
+	if(id == SlotID::BlueNoise)
+	{
+		return "BlueNoise";
+	}
 	if(id == SlotID::BRDF)
 	{
 		return "BRDF";
@@ -759,6 +822,22 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::DebugInfo)
 	{
 		return "DebugInfo";
+	}
+	if(id == SlotID::DenoiserReflectionCommon)
+	{
+		return "DenoiserReflectionCommon";
+	}
+	if(id == SlotID::DenoiserReflectionReproject)
+	{
+		return "DenoiserReflectionReproject";
+	}
+	if(id == SlotID::DenoiserReflectionPrefilter)
+	{
+		return "DenoiserReflectionPrefilter";
+	}
+	if(id == SlotID::DenoiserReflectionResolve)
+	{
+		return "DenoiserReflectionResolve";
 	}
 	if(id == SlotID::DenoiserShadow_Prepare)
 	{
@@ -1023,6 +1102,10 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameClassificationInitDispatch)
 	{
 		return "FrameClassificationInitDispatch";
+	}
+	if(id == SlotID::ReflectionCombine)
+	{
+		return "ReflectionCombine";
 	}
 	return "Unknown";
 }

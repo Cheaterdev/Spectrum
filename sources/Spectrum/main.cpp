@@ -106,6 +106,7 @@ public:
 	Variable<bool> enable_gi = { true, "GI", this };
 	Variable<bool> enable_fsr = { true, "FSR", this };
 	Variable<bool> downsampled = { true, "downsampled", this };
+	Variable<bool> enable_denoiser = { true, "denoiser", this };
 
 	//Variable<bool> debug_draw = Variable<bool>(false, "debug_draw",this);
 	//	VoxelGI::ptr voxel_renderer;
@@ -131,7 +132,8 @@ public:
 	SkyRender sky;
 	FSR fsr;
 	ShadowDenoiser shadow_denoiser;
-	VoxelGI::ptr voxel_gi;
+		BlueNoise blue_noise;
+VoxelGI::ptr voxel_gi;
 	std::string debug_view;
 	triangle_drawer() :VariableContext(L"triangle_drawer")
 	{
@@ -433,6 +435,7 @@ public:
 			command_list->execute();
 		}
 
+		blue_noise.generate(graph);
 
 		{
 			struct GBufferData
@@ -441,6 +444,12 @@ public:
 
 				Handlers::Texture H(GBuffer_HiZ);
 				Handlers::Texture H(GBuffer_HiZ_UAV);
+
+
+							Handlers::Texture H(GBuffer_DepthPrev);
+			Handlers::Texture H(GBuffer_NormalsPrev);
+			Handlers::Texture H(GBuffer_SpecularPrev);
+
 
 
 			};
@@ -470,6 +479,10 @@ public:
 
 				builder.create(data.GBuffer_HiZ, { ivec3(size / 8, 1), HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 				builder.create(data.GBuffer_HiZ_UAV, { ivec3(size / 8, 1), HAL::Format::R32_FLOAT,1 }, ResourceFlags::UnorderedAccess);
+
+				builder.create(data.GBuffer_NormalsPrev, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::Static);
+				builder.create(data.GBuffer_SpecularPrev, { ivec3(size,0), HAL::Format::R8G8B8A8_UNORM,1,1 }, ResourceFlags::Static);
+	
 
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
@@ -549,7 +562,7 @@ public:
 
 				Handlers::Texture H(RTXDebug);
 
-				Handlers::Texture H(RTXDebugPrev);
+			
 			};
 
 			if (HAL::Device::get().is_rtx_supported())
@@ -559,8 +572,7 @@ public:
 				auto size = frame.frame_size;
 				data.gbuffer.need(builder, false);
 				builder.create(data.RTXDebug, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-				builder.create(data.RTXDebugPrev, { ivec3(size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-
+			
 					}, [this, &graph](RTXDebugData& data, FrameContext& context) {
 						auto& compute = context.get_list()->get_compute();
 						auto& copy = context.get_list()->get_copy();
@@ -568,8 +580,7 @@ public:
 						if (data.RTXDebug.is_new())
 						{
 							context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
-						context.get_list()->clear_uav(data.RTXDebugPrev->rwTexture2D, vec4(0, 0, 0, 0));
-
+					
 						}
 
 						compute.set_signature(RTX::get().rtx.m_root_sig);
@@ -590,17 +601,18 @@ public:
 							Slots::VoxelScreen voxelScreen;
 							gbuffer.SetTable(voxelScreen.GetGbuffer());
 							voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
-							voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
+					//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
 							voxelScreen.set(compute);
 						}
 						RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
 
 
-						copy.copy_resource(data.RTXDebugPrev->resource, data.RTXDebug->resource);
+						//copy.copy_resource(data.RTXDebugPrev->resource, data.RTXDebug->resource);
 					});
 		}
-
+		if(enable_denoiser)
 		shadow_denoiser.generate(graph);
+		
 		struct no
 		{
 			Handlers::Texture H(ResultTexture);
@@ -618,8 +630,8 @@ public:
 
 		// remove on intel
 		if (enable_gi) voxel_gi->generate(graph);
-
-
+		
+	
 		sky.generate_sky(graph);
 
 		stenciler->generate_after(graph);
@@ -628,7 +640,35 @@ public:
 		if (downsampled && enable_fsr)
 			fsr.generate(graph);
 
+		{
+		
+	struct CopyPrev
+		{
+			Handlers::Texture H(ResultTexture);
+			Handlers::Texture H(GBuffer_NormalsPrev);
+			Handlers::Texture H(GBuffer_SpecularPrev);
 
+			Handlers::Texture H(GBuffer_Normals);
+			Handlers::Texture H(GBuffer_Specular);
+
+	};
+	graph.add_pass<CopyPrev>("CopyPrev", [this, &graph](CopyPrev& data, TaskBuilder& builder) {
+		auto& frame = graph.get_context<ViewportInfo>();
+		builder.need(data.GBuffer_NormalsPrev, ResourceFlags::Required);
+		builder.need(data.GBuffer_SpecularPrev, ResourceFlags::Required);
+
+		builder.need(data.GBuffer_Normals, ResourceFlags::PixelRead);
+		builder.need(data.GBuffer_Specular, ResourceFlags::PixelRead);
+
+
+		}, [](CopyPrev& data, FrameContext& _context) {
+			auto& copy = _context.get_list()->get_copy();
+
+			copy.copy_resource(data.GBuffer_NormalsPrev->resource, data.GBuffer_Normals->resource);
+			copy.copy_resource(data.GBuffer_SpecularPrev->resource, data.GBuffer_Specular->resource);
+		},PassFlags::Required);
+
+		}
 		struct debug_data
 		{
 			Handlers::Texture debug_tex;
@@ -646,8 +686,8 @@ public:
 			//// hack zone
 			auto sky = graph.builder.get("sky_cubemap_filtered");
 			if (sky&&sky->resource)
-
 				frameInfo.GetSky() = sky->get_handler<Handlers::Cube>()->textureCube;
+
 			/////////
 			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
 			frameInfo.GetTime() = { time.time ,time.totalTime,0,0 };

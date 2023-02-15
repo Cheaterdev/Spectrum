@@ -27,7 +27,7 @@ struct FrameInfo
     Camera camera;
     Camera prevCamera;
 
-    Texture2D<float4> bestFitNormals;
+  	Texture2D<float4> bestFitNormals;
 	Texture3D<float4> brdf;
 	TextureCube<float4> sky;
 	float4 sunDir;

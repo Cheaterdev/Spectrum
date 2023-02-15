@@ -12,7 +12,11 @@ export
 	};
 	enum class PSO: int
 	{
+		BlueNoise,
 		BRDF,
+		DenoiserReflectionReproject,
+		DenoiserReflectionPrefilter,
+		DenoiserReflectionResolve,
 		DenoiserShadow_Prepare,
 		DenoiserShadow_TileClassification,
 		DenoiserShadow_Filter,
@@ -34,6 +38,7 @@ export
 		DenoiserHistoryFix,
 		FrameClassification,
 		FrameClassificationInitDispatch,
+		ReflectionCombine,
 		FontRender,
 		RenderBoxes,
 		RenderToDS,
@@ -73,9 +78,14 @@ export
 	enum class SlotID: unsigned int
 	{
 		TextureRenderer = "TextureRenderer"_crc32 ,
+		BlueNoise = "BlueNoise"_crc32 ,
 		BRDF = "BRDF"_crc32 ,
 		DebugStruct = "DebugStruct"_crc32 ,
 		DebugInfo = "DebugInfo"_crc32 ,
+		DenoiserReflectionCommon = "DenoiserReflectionCommon"_crc32 ,
+		DenoiserReflectionReproject = "DenoiserReflectionReproject"_crc32 ,
+		DenoiserReflectionPrefilter = "DenoiserReflectionPrefilter"_crc32 ,
+		DenoiserReflectionResolve = "DenoiserReflectionResolve"_crc32 ,
 		DenoiserShadow_Prepare = "DenoiserShadow_Prepare"_crc32 ,
 		DenoiserShadow_TileClassification = "DenoiserShadow_TileClassification"_crc32 ,
 		DenoiserShadow_Filter = "DenoiserShadow_Filter"_crc32 ,
@@ -173,6 +183,7 @@ export
 		DenoiserHistoryFix = "DenoiserHistoryFix"_crc32 ,
 		TilingPostprocess = "TilingPostprocess"_crc32 ,
 		FrameClassification = "FrameClassification"_crc32 ,
-		FrameClassificationInitDispatch = "FrameClassificationInitDispatch"_crc32
+		FrameClassificationInitDispatch = "FrameClassificationInitDispatch"_crc32 ,
+		ReflectionCombine = "ReflectionCombine"_crc32
 	};
 }

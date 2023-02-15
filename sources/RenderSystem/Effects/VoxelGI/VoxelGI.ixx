@@ -6,6 +6,7 @@ import :TileDynamicGenerator;
 import :GPUTilesBuffer;
 import :Scene;
 import :MeshRenderer;
+import :ReflectionDenoiser;
 
 
  class GBufferDownsampler;
@@ -210,7 +211,7 @@ private:
 	std::shared_ptr<GBufferDownsampler> downsampler;
 
 	VisibilityBufferUniversal::ptr visibility;
-
+	ReflectionDenoiser reflection_denoiser;
 
 	TileDynamicGenerator dynamic_generator_voxelizing;
 	TileDynamicGenerator dynamic_generator_lighted;

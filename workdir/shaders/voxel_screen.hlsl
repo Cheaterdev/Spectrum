@@ -48,7 +48,7 @@ float4 get_voxel(float3 pos, float level)
 	float4 color = voxels.SampleLevel(linearSampler, pos, level);
 
 
-	//color.rgb *= 1 + level / 2;
+	color.rgb *= 1 + level / 2;
 
 		//color.w = saturate(color.w* (level+3));
 	return color;

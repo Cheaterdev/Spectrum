@@ -40,3 +40,5 @@ export import :FSR;
 export import :VoxelGI;
 export import :RTX;
 export import :ShadowDenoiser;
+export import :ReflectionDenoiser;
+export import :BlueNoise;

@@ -12,7 +12,11 @@ void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::p
 void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {
 	 std::vector<task<void>> tasks;
+	tasks.emplace_back(PSOBase::create<PSOS::BlueNoise>(device, pso[PSO::BlueNoise]));
 	tasks.emplace_back(PSOBase::create<PSOS::BRDF>(device, pso[PSO::BRDF]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserReflectionReproject>(device, pso[PSO::DenoiserReflectionReproject]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserReflectionPrefilter>(device, pso[PSO::DenoiserReflectionPrefilter]));
+	tasks.emplace_back(PSOBase::create<PSOS::DenoiserReflectionResolve>(device, pso[PSO::DenoiserReflectionResolve]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Prepare>(device, pso[PSO::DenoiserShadow_Prepare]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_TileClassification>(device, pso[PSO::DenoiserShadow_TileClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserShadow_Filter>(device, pso[PSO::DenoiserShadow_Filter]));
@@ -34,6 +38,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserHistoryFix>(device, pso[PSO::DenoiserHistoryFix]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassification>(device, pso[PSO::FrameClassification]));
 	tasks.emplace_back(PSOBase::create<PSOS::FrameClassificationInitDispatch>(device, pso[PSO::FrameClassificationInitDispatch]));
+	tasks.emplace_back(PSOBase::create<PSOS::ReflectionCombine>(device, pso[PSO::ReflectionCombine]));
 	tasks.emplace_back(PSOBase::create<PSOS::FontRender>(device,pso[PSO::FontRender]));
 	tasks.emplace_back(PSOBase::create<PSOS::RenderBoxes>(device,pso[PSO::RenderBoxes]));
 	tasks.emplace_back(PSOBase::create<PSOS::RenderToDS>(device,pso[PSO::RenderToDS]));

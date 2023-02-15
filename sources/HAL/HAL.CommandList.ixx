@@ -256,7 +256,7 @@ export{
 				}
 				else assert(false);
 
-				info.for_each_subres([&](const HAL::Resource::ptr resource, UINT subres)
+				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
 					{
 						transition(resource.get(), target_state, subres);
 					});
@@ -267,7 +267,7 @@ export{
 				if (!info.is_valid()) return;
 
 
-				info.for_each_subres([&](const HAL::Resource::ptr resource, UINT subres)
+				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
 					{
 						const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
 					});
@@ -548,9 +548,9 @@ export{
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
 			template<class T>
-			void update_buffer(HAL::StructuredBufferView<T>& view, uint64 offset, const std::vector<T>& data)
+			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<const T> data)
 			{
-				update_buffer(view.resource, view.desc.offset + offset * sizeof(T), reinterpret_cast<const char*>(data.data()), data.size() * sizeof(T));
+				update_buffer(view.resource, view.desc.offset + offset * sizeof(T), reinterpret_cast<const char*>(data.data()), data.size_bytes());
 
 			}
 
@@ -592,9 +592,13 @@ export{
 
 			void reset_tables()
 			{
-				for (auto& row : tables)
+				root_sig = nullptr;
+				for (auto& table : tables)
 				{
-					row.dirty = false;
+					table.const_buffer = CBVHandle();
+					table.resources.clear();
+					table.descriptors.clear();
+					table.dirty=false;
 				}
 			}
 		public:
@@ -605,13 +609,7 @@ export{
 
 			void reset()
 			{
-				root_sig = nullptr;
-				for (auto& table : tables)
-				{
-					table.const_buffer = CBVHandle();
-					table.resources.clear();
-					table.descriptors.clear();
-				}
+				
 			}
 			CommandList& get_base() {
 				return base;

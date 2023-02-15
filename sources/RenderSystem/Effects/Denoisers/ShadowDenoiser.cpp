@@ -47,7 +47,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 		graph.pass<ShadowDenoiser_PrepareData>("ShadowDenoiser_Prepare", [this, &graph, tileCount](ShadowDenoiser_PrepareData& data, TaskBuilder& builder) {
 			builder.need(data.RTXDebug, ResourceFlags::ComputeRead);
-			builder.create(data.ShadowDenoiser_TileBuffer, { tileCount*8 }, ResourceFlags::UnorderedAccess);
+			builder.create(data.ShadowDenoiser_TileBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
 
 			return true;
 			}, [this, &graph, size](ShadowDenoiser_PrepareData& data, FrameContext& _context) {
@@ -94,10 +94,10 @@ void ShadowDenoiser::generate(Graph& graph)
 			builder.need(data.GBuffer_Speed, ResourceFlags::ComputeRead);
 
 			builder.create(data.ShadowDenoiser_TileMetaBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
-			builder.create(data.ShadowDenoiser_Moments, { ivec3(size, 0), HAL::Format::R11G11B10_FLOAT, 1 }, ResourceFlags::UnorderedAccess);
-			builder.create(data.ShadowDenoiser_MomentsPrev, { ivec3(size, 0), HAL::Format::R11G11B10_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			builder.create(data.ShadowDenoiser_Scratch, { ivec3(size, 0), HAL::Format::R16G16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			builder.create(data.ShadowDenoiser_Scratch2, { ivec3(size, 0), HAL::Format::R16G16_FLOAT, 1 }, ResourceFlags::UnorderedAccess );
+			builder.create(data.ShadowDenoiser_Moments, { ivec3(size, 0), HAL::Format::R11G11B10_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess);
+			builder.create(data.ShadowDenoiser_MomentsPrev, { ivec3(size, 0), HAL::Format::R11G11B10_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+			builder.create(data.ShadowDenoiser_Scratch, { ivec3(size, 0), HAL::Format::R16G16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
+			builder.create(data.ShadowDenoiser_Scratch2, { ivec3(size, 0), HAL::Format::R16G16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess );
 
 			return true;
 			}, [this, &graph, size](ShadowDenoiser_TileClassificationData& data, FrameContext& _context) {
@@ -194,7 +194,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					filter_data.BufferDimensions = size;
 					filter_data.InvBufferDimensions = float2(1.0f, 1.0f) / size;
 					filter_data.ProjectionInverse = cam.cam->camera_cb.current.GetInvProj();
-					filter_data.DepthSimilaritySigma = 1;
+					filter_data.DepthSimilaritySigma = 0.01f;
 				//	filter_data.ProjectionInverse.transpose();
 			
 					filter_data.t2d_DepthBuffer = data.GBuffer_Depth->texture2D;

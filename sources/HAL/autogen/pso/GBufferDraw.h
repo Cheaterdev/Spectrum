@@ -29,6 +29,7 @@ namespace PSOS
 			mpso.rtv_formats = { HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R8G8B8A8_UNORM, HAL::Format::R16G16_FLOAT };
 			mpso.blend = {  };
 			mpso.ds  = HAL::Format::D32_FLOAT;
+			mpso.cull  = HAL::CullMode::None;
 			return mpso;
 		}
 		private:

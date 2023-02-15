@@ -39,6 +39,7 @@ GraphicsPSO GBufferDraw
 	rtv = { R8G8B8A8_UNORM, R8G8B8A8_UNORM, R8G8B8A8_UNORM, R16G16_FLOAT };
 
 	ds = D32_FLOAT;
+	cull = None;
 }
 
 

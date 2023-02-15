@@ -5,7 +5,7 @@ struct DefaultLayout: public FrameLayout
 	struct Instance0
 	{
 		static const unsigned int ID = 4;
-		static const unsigned int CB = 16;
+		static const unsigned int CB = 18;
 		static const unsigned int CB_ID = 12;
 		static const unsigned int SRV = 7;
 		static const unsigned int SRV_ID = 14;
@@ -18,7 +18,7 @@ struct DefaultLayout: public FrameLayout
 		static const unsigned int ID = 5;
 		static const unsigned int CB = 4;
 		static const unsigned int CB_ID = 16;
-		static const unsigned int SRV = 10;
+		static const unsigned int SRV = 12;
 		static const unsigned int SRV_ID = 18;
 		static const unsigned int UAV = 8;
 		static const unsigned int UAV_ID = 19;

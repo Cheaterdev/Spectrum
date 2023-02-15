@@ -6,7 +6,7 @@ import d3d12;
 #undef THIS
 namespace HAL
 {
-	SwapChain::SwapChain(Device& device, swap_chain_desc c_desc):device(device)
+	SwapChain::SwapChain(Device& device, swap_chain_desc c_desc) :device(device)
 	{
 
 		RECT r;
@@ -19,7 +19,7 @@ namespace HAL
 		swapChainDesc.SampleDesc.Count = 1;
 		swapChainDesc.SampleDesc.Quality = 0;
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		swapChainDesc.BufferCount = 3 + static_cast<int>(swapChainDesc.Stereo);
+		swapChainDesc.BufferCount = 2 + static_cast<int>(swapChainDesc.Stereo);
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 		ComPtr<IDXGISwapChain1> swapChain;
 		HRESULT res = HAL::Adapters::get().get_factory()->CreateSwapChainForHwnd(
@@ -67,10 +67,11 @@ namespace HAL
 			if (size.y == desc.BufferDesc.Height)
 				return;
 
-		auto& q = device.get_queue(CommandListType::DIRECT);
-
-		q->signal_and_wait();
-
+		{
+			device.get_queue(CommandListType::DIRECT)->signal_and_wait();
+			device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
+			device.get_queue(CommandListType::COPY)->signal_and_wait();
+		}
 
 		for (auto&& f : frames)
 			f.m_renderTarget = nullptr;

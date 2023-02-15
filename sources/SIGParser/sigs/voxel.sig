@@ -61,6 +61,8 @@ struct VoxelOutput
 	RWTexture2D<float> frames;
 
 	RWTexture2D<float4> DirAndPdf;
+	 Texture2D<float2> blueNoise;
+
 }
 
 [Bind = DefaultLayout::Instance2]
@@ -441,4 +443,22 @@ ComputePSO FrameClassificationInitDispatch
 
 	[EntryPoint = CS]
 	compute = FrameClassificationInitDispatch;
+}
+
+[Bind = DefaultLayout::Instance0]
+struct ReflectionCombine
+{
+	GBuffer gbuffer;
+	Texture2D<float4> reflection;
+
+	RWTexture2D<float4> target;
+}
+
+
+ComputePSO ReflectionCombine
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = reflection_combine;
 }

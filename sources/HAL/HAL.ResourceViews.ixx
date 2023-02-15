@@ -52,7 +52,7 @@ export
 				return resource->get_desc();
 			}
 
-			ResourceView(Resource::ptr _resource) :resource(_resource)
+			ResourceView(const Resource::ptr& _resource) :resource(_resource)
 			{
 
 			}
@@ -104,13 +104,13 @@ export
 
 
 			
-			FormattedBufferView(Resource::ptr resource, GPUEntityStorageInterface& frame, FormattedBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
+			FormattedBufferView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, FormattedBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
 			{
 				init(frame);
 			}
 
 			
-			FormattedBufferView(Resource::ptr resource, GPUEntityStorageInterface& frame) : ResourceView(resource)
+			FormattedBufferView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) : ResourceView(resource)
 			{
 				auto& res_desc = resource->get_desc().as_buffer();
 
@@ -144,7 +144,7 @@ export
 			HLSL::RaytracingAccelerationStructure scene;
 
 			RTXSceneView() = default;
-			RTXSceneView(Resource::ptr resource, HAL::FrameResources& frame);
+			RTXSceneView(const Resource::ptr& resource, HAL::FrameResources& frame);
 
 		};
 		class TextureView :public ResourceView
@@ -243,7 +243,7 @@ export
 			TextureView() = default;
 
 			
-			TextureView(Resource::ptr resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
+			TextureView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
@@ -251,7 +251,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
 			
-			TextureView(Resource::ptr resource, GPUEntityStorageInterface& frame, TextureViewDesc vdesc) :ResourceView(resource)
+			TextureView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, TextureViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -361,7 +361,7 @@ export
 			Texture3DView() = default;
 
 			
-			Texture3DView(Resource::ptr resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
+			Texture3DView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
@@ -369,7 +369,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels });
 			}
 			
-			Texture3DView(Resource::ptr resource, GPUEntityStorageInterface& frame, Texture3DViewDesc vdesc) :ResourceView(resource)
+			Texture3DView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, Texture3DViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -468,7 +468,7 @@ export
 			CubeView() = default;
 
 			
-			CubeView(Resource::ptr resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
+			CubeView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) :ResourceView(resource)
 			{
 				auto& texture_desc = resource->get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize / 6;
@@ -476,7 +476,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
 			
-			CubeView(Resource::ptr resource, GPUEntityStorageInterface& frame, CubeViewDesc vdesc) :ResourceView(resource)
+			CubeView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, CubeViewDesc vdesc) :ResourceView(resource)
 			{
 
 				init(frame, vdesc);
@@ -531,7 +531,7 @@ export
 
 			BufferView() = default;
 			
-			BufferView(Resource::ptr resource, GPUEntityStorageInterface& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
+			BufferView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, UINT offset = 0, UINT64 size = 0) :ResourceView(resource)
 			{
 				auto hlsl = frame.alloc_descriptor(2, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
@@ -567,7 +567,7 @@ export
 			CounterView() = default;
 
 			
-			CounterView(Resource::ptr resource, GPUEntityStorageInterface& frame, UINT offset = 0) :ResourceView(resource)
+			CounterView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, UINT offset = 0) :ResourceView(resource)
 			{
 				auto hlsl = frame.alloc_descriptor(3, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
@@ -666,13 +666,13 @@ export
 			}
 
 			
-			StructuredBufferView(Resource::ptr resource, GPUEntityStorageInterface& frame, StructuredBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
+			StructuredBufferView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, StructuredBufferViewDesc _desc) :ResourceView(resource), desc(_desc)
 			{
 				init(frame);
 			}
 
 			
-			StructuredBufferView(Resource::ptr resource, GPUEntityStorageInterface& frame) : ResourceView(resource)
+			StructuredBufferView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) : ResourceView(resource)
 			{
 				auto& res_desc = resource->get_desc().as_buffer();
 
