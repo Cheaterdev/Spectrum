@@ -66,9 +66,9 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 			PROFILE(L"create_mip");
 			for (uint32_t i = 0; i < NumMips; i++)
 			{
-				data.GetOutMip()[i] = view.create_mip(TopMip + 1 + i, *compute_context.get_base().frame_resources).rwTexture2D;
+				data.GetOutMip()[i] = view.create_mip(TopMip + 1 + i, compute_context.get_base()).rwTexture2D;
 			}
-			data.GetSrcMip() = view.create_mip(TopMip, *compute_context.get_base().frame_resources).texture2D;
+			data.GetSrcMip() = view.create_mip(TopMip, compute_context.get_base()).texture2D;
 		}
 		data.set(compute_context);
 

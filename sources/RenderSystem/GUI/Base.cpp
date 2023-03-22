@@ -878,6 +878,8 @@ namespace GUI
 
      void user_interface::process_ui(float delta_time)
     {
+
+         dt = delta_time;
          THREAD_SCOPE(GUI);
 		 for (int i = 0; i < 3; i++)
 		 {
@@ -911,13 +913,12 @@ namespace GUI
 
      void user_interface::create_graph(Graph& graph)
      {
-
-         GUIInfo c;
+        GUIInfo c;
 
          c.offset = { 0, 0 };
          c.window_size = scaled_size.get();
          c.scale = 1;
-         c.delta_time = 0;// time.time;
+         c.delta_time = dt;
 
 
          draw_infos.clear();
@@ -975,17 +976,12 @@ namespace GUI
 				rt.set(command_list->get_graphics());
 				}
 
-				 command_list->get_graphics().set_viewports({ texture.get_viewport() });
-                // command_list->clear_rtv(texture.renderTarget,float4(1,0,0,1));
-                 command_list->get_graphics().set_signature(Layouts::DefaultLayout);
-                 command_list->get_compute().set_signature(Layouts::DefaultLayout);
-
                  Renderer renderer;
 
                  GUIInfo c;
                  c.renderer = &renderer;
                  c.command_list = command_list;
-
+                 c.delta_time = dt;
 
                  sizer scissors = {};
 

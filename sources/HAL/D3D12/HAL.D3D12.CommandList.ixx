@@ -17,15 +17,6 @@ export namespace HAL {
 	namespace API
 	{
 
-		class TransitionCommandList
-		{
-		protected:
-			ComPtr<ID3D12GraphicsCommandList4> m_commandList;
-			ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-			
-		public:
-			ComPtr<ID3D12GraphicsCommandList4> get_native();
-		};
 	}
 
 

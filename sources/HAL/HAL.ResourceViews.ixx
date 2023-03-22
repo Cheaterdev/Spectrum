@@ -144,7 +144,7 @@ export
 			HLSL::RaytracingAccelerationStructure scene;
 
 			RTXSceneView() = default;
-			RTXSceneView(const Resource::ptr& resource, HAL::FrameResources& frame);
+			RTXSceneView(const Resource::ptr& resource, GPUEntityStorageInterface& frame);
 
 		};
 		class TextureView :public ResourceView
@@ -297,9 +297,9 @@ export
 				return uint2::max(uint2{ 1,1 }, uint2(texture_desc.Dimensions.xy) / scaler);
 			}
 
-			TextureView create_2d_slice(UINT slice, HAL::FrameResources& frame);
+			TextureView create_2d_slice(UINT slice, GPUEntityStorageInterface& frame);
 
-			TextureView create_mip(UINT mip, HAL::FrameResources& frame);
+			TextureView create_mip(UINT mip, GPUEntityStorageInterface& frame);
 
 
 		};
@@ -519,7 +519,7 @@ export
 
 			TextureView get_face(UINT face);
 
-			CubeView create_mip(UINT mip, HAL::FrameResources& frame);
+			CubeView create_mip(UINT mip, GPUEntityStorageInterface& frame);
 		};
 
 		class BufferView : public ResourceView

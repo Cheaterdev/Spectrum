@@ -92,7 +92,7 @@ namespace FrameGraph
 
 
 	}
-	TaskBuilder::TaskBuilder() : allocator(HAL::Device::get().get_heap_factory(), false), static_allocator(HAL::Device::get().get_heap_factory(), false), frames(Device::get())
+	TaskBuilder::TaskBuilder() : frames(Device::get()),allocator(HAL::Device::get().get_heap_factory(), false)
 	{
 
 	}
@@ -578,12 +578,6 @@ namespace FrameGraph
 	void Graph::compile(int frame)
 	{
 		PROFILE(L"Graphcompile");
-		//builder.allocator.begin_frame(frame);
-		std::shared_ptr<TaskBuilder::AllocatorType> & alloc= builder.frame_allocs[frame];
-		//TODO: ALARM!!!!
-		if (!alloc)
-			alloc = std::make_shared<TaskBuilder::AllocatorType>(HAL::Device::get().get_heap_factory());
-		builder.current_alloc = alloc.get();
 
 
 		builder.create_resources();
@@ -1079,7 +1073,6 @@ namespace FrameGraph
 					}
 					else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
-						assert(info->name != "id_buffer");
 						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}

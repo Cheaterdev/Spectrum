@@ -342,7 +342,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 	normal.flush(list);
 	tex_lighting.flush(list);
 
-	context->voxelization_compiled = voxelization.compile(*list.frame_resources);
+	context->voxelization_compiled = voxelization.compile(list);
 
 	graphics.set_viewport(float4{ 0, 0,  albedo.tex_dynamic->get_size().xy });
 	graphics.set_scissor({ 0, 0,  albedo.tex_dynamic->get_size().xy });

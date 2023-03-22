@@ -87,7 +87,7 @@ void BlueNoise::generate(FrameGraph::Graph& graph)
 			auto& compute = list.get_compute();
 
 			compute.set_pipeline<PSOS::BlueNoise>();
-			static size_t index = 0;
+			static uint index = 0;
 
 			{
 				Slots::BlueNoise blue_data;

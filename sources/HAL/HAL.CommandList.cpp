@@ -78,7 +78,7 @@ namespace HAL
 		return  querys.get_heap()->read_back_data[querys.get_offset() + 1];
 	}
 
-	CommandList::CommandList(CommandListType type) :GPUEntityStorage<LocalAllocationPolicy>(Device::get()), Eventer(Device::get())
+	CommandList::CommandList(CommandListType type) : Eventer(Device::get())
 
 	{
 		this->type = type;
@@ -158,7 +158,8 @@ namespace HAL
 		HAL::Device::get().context_generator.generate(this);
 		first_debug_log = true;
 
-
+		if(!frame_resources) frame_resources = Device::get().get_frame_manager().begin_frame();
+		proxy = frame_resources->get_storage();
 		//       Log::get() << "begin" << Log::endl;
 		compiler.reset();
 		//resource_index = 0;
@@ -196,8 +197,18 @@ namespace HAL
 		if (compute) compute->end();
 
 		Eventer::end();
-		resolve_timers(*this);
+		proxy->resolve_timers([&, this](const QueryType& type, uint64 from, uint64 to, QueryHeap::ptr heap)
+					{
+						assert(from == 0);
+						resolve_times(*heap, static_cast<uint>(to), [heap](std::span<UINT64> data) {
+							std::copy(data.begin(), data.end(), heap->read_back_data.begin());
+							});
+					});
 		active = false;
+
+		frame_resources->free_storage(proxy);
+		proxy = nullptr;
+
 	}
 
 	void GraphicsContext::begin()
@@ -241,10 +252,16 @@ namespace HAL
 	}
 	void Sendable::compile()
 	{
-		if (static_cast<CommandList*>(this)->active)
-			static_cast<CommandList*>(this)->end();
 
-		compiled = compiler.compile();
+		auto cmd = static_cast<CommandList*>(this);
+
+		if (cmd->active)
+			cmd->end();
+
+
+		auto ca = cmd->frame_resources->get_ca(type);
+		compiled = compiler.compile(*ca);
+		 cmd->frame_resources->free_ca(ca);
 	}
 	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
 	{
@@ -781,7 +798,10 @@ namespace HAL
 
 		Eventer::reset();
 
-		GPUEntityStorage<LocalAllocationPolicy>::reset();
+	
+
+
+		//GPUEntityStorage<LocalAllocationPolicy>::reset();
 
 		Transitions::on_execute();
 		frame_resources = nullptr;
@@ -905,8 +925,11 @@ namespace HAL
 
 		if (result)
 		{
+			auto cmd = static_cast<CommandList*>(this);
+
+
 			transition_list = (HAL::Device::get().get_queue(transition_type)->get_transition_list());
-			transition_list->create_transition_list(result, discards);
+			transition_list->create_transition_list(*cmd->frame_resources, result, discards);
 			return transition_list;
 		}
 		return nullptr;

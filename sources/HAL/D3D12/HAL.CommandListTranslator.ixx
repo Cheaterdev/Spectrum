@@ -52,9 +52,9 @@ export namespace HAL
 				native_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 				compiler.reset();
 			}
-			CommandListCompiled compile()
+			CommandListCompiled compile(CommandAllocator& allocator)
 			{
-				return compiler.compile();
+				return compiler.compile(allocator);
 			}
 
 
@@ -454,7 +454,7 @@ texture_layout get_texture_layout(const Resource* resource, UINT sub_resource, i
 
 		
 
-			void transitions(HAL::Barriers& _barriers)
+			void transitions(const HAL::Barriers& _barriers)
 {
 				auto& barriers = _barriers.get_barriers();
 				if (!barriers.empty())

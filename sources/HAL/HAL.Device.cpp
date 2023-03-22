@@ -68,17 +68,16 @@ namespace HAL
 	{
 		init(desc);
 
-		
+
 	}
 
 	void Device::init_managers()
 	{
-		queues[CommandListType::DIRECT].reset(new HAL::Queue(CommandListType::DIRECT, this));
-		queues[CommandListType::COMPUTE].reset(new HAL::Queue(CommandListType::COMPUTE, this));
-		queues[CommandListType::COPY].reset(new HAL::Queue(CommandListType::COPY, this));
-
-		ds_queue =  std::make_unique<DirectStorageQueue>(*this);
-		rtx = !Debug::RunForPix&&get_properties().rtx;
+		for (auto type : magic_enum::enum_values<CommandListType>())
+		queues[type]=std::make_shared<HAL::Queue>(CommandListType::DIRECT, this);
+		
+		ds_queue = std::make_unique<DirectStorageQueue>(*this);
+		rtx = !Debug::RunForPix && get_properties().rtx;
 
 		heap_factory = std::make_unique<HeapFactory>(*this);
 		descriptor_heap_factory = std::make_unique<DescriptorHeapFactory>(*this);
@@ -90,16 +89,26 @@ namespace HAL
 		static_gpu_data = std::make_unique<StaticCompiledGPUData>(*this);
 
 		pipeline_state_cache = std::make_unique<PipelineStateCache>(*this);
-			
+
 		engine_pso_holder = std::make_unique<EnginePSOHolder>();
 
 		engine_pso_holder->init(*this);
+
+			for (auto type : magic_enum::enum_values<CommandListType>())
+			{
+				command_allocators[type].create_func = [type](){
+		return std::make_shared<CommandAllocator>(type);
+		
+		};
+			}
+		
+
 	}
 	FrameResourceManager& Device::get_frame_manager()
 	{
 		return *frame_manager;
 	}
-	
+
 	HeapFactory& Device::get_heap_factory()
 	{
 		return *heap_factory;
@@ -120,16 +129,24 @@ namespace HAL
 	QueryHeapFactory& Device::get_query_heap_factory()
 	{
 		return *query_heap_factory;
-		
+
 	}
 	DescriptorHeapFactory& Device::get_descriptor_heap_factory()
 	{
 		return *descriptor_heap_factory;
 	}
 
-		DirectStorageQueue& Device::get_ds_queue()
+	DirectStorageQueue& Device::get_ds_queue()
 	{
 		return *ds_queue;
 	}
+	void Device::free_ca(std::shared_ptr<CommandAllocator> e)
+	{
+		e->reset();
+		command_allocators[e->get_type()].put(e);
+	}
 
+	std::shared_ptr<CommandAllocator> Device::get_ca(CommandListType type)	{
+		return command_allocators[type].get();
+	}
 }

@@ -535,7 +535,7 @@ namespace GUI
     class user_interface : public base, public InputHandler, public Events::Runner
     {
             friend class base;
-         
+            float dt = 0;
             std::set<base*> components;
             std::set<base*> thinking;
 

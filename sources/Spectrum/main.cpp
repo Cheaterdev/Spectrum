@@ -431,7 +431,7 @@ VoxelGI::ptr voxel_gi;
 					RTX::get().prepare(command_list);
 				}
 			}
-
+			command_list->end();
 			command_list->execute();
 		}
 
@@ -566,6 +566,7 @@ VoxelGI::ptr voxel_gi;
 			};
 
 			if (HAL::Device::get().is_rtx_supported())
+			{
 				graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder) {
 				auto& frame = graph.get_context<ViewportInfo>();
 
@@ -609,9 +610,12 @@ VoxelGI::ptr voxel_gi;
 
 						//copy.copy_resource(data.RTXDebugPrev->resource, data.RTXDebug->resource);
 					});
-		}
+		
 		if(enable_denoiser)
 		shadow_denoiser.generate(graph);
+
+			}
+		}
 		
 		struct no
 		{
@@ -785,7 +789,7 @@ class GraphRender : public Window, public GUI::user_interface
 	GUI::Elements::label::ptr label_tiles;
 	GUI::Elements::label::ptr instance_info;
 
-	std::shared_ptr<triangle_drawer> drawer;
+	std::shared_ptr<triangle_drawer> drawer;std::shared_ptr<triangle_drawer> drawer2;
 	std::shared_ptr<FrameFlowGraph> frameFlowGraph;
 	GUI::base::ptr area;
 
@@ -1083,6 +1087,17 @@ public:
 				d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
+
+				/*{
+				EVENT("Start Drawer");
+				drawer2.reset(new triangle_drawer());
+				drawer2->docking = GUI::dock::FILL;
+
+				d->get_tabs()->add_page("Game2", drawer2);
+				EVENT("End Drawer");
+			}*/
+
+
 			{
 				GUI::Elements::list_box::ptr l(new GUI::Elements::list_box());
 				auto dock = d->get_dock(GUI::dock::BOTTOM);

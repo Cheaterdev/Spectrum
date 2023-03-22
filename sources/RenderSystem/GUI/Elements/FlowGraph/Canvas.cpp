@@ -404,8 +404,8 @@ void GUI::Elements::FlowGraph::canvas::on_key_action(long key)
 
 	}
 
-	//   if (key == VK_HOME)
-
+	   if (key == VK_SPACE)
+		   g->auto_layout();
 	  //     FileSystem::get().save_data(L"graph.flg", Serializer::serialize(*g));
 }
 
@@ -421,7 +421,6 @@ bool GUI::Elements::FlowGraph::canvas::on_wheel(mouse_wheel type, float value, v
 void GUI::Elements::FlowGraph::canvas::think(float dt)
 {
 
-	g->auto_layout();
 	if (abs(scale_speed) > 0.03f)
 	{
 		float pscale = contents->scale;
@@ -601,6 +600,9 @@ void GUI::Elements::FlowGraph::canvas::init(::FlowGraph::graph* g)
 	this->g = g;
 	g->add_listener(this, true);
 	contents->pos = g->cam_pos;
+
+	
+	g->auto_layout();
 }
 
 /*

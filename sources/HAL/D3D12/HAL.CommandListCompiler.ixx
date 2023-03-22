@@ -1,11 +1,13 @@
 export module HAL:Private.CommandListCompiler;
 import Core;
 import :API.Device;
+import :CommandAllocator;
 
 import d3d12;
 
 export namespace HAL
 {
+
 
 	namespace Private
 	{
@@ -13,8 +15,6 @@ export namespace HAL
 		struct CommandListCompiled
 		{
 			ComPtr<ID3D12GraphicsCommandList6> m_commandList;
-			ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-
 			operator bool()
 			{
 				return !!m_commandList;
@@ -40,7 +40,7 @@ export namespace HAL
 			void create(HAL::CommandListType type);
 
 			void reset();
-			CommandListCompiled compile();
+			CommandListCompiled compile(CommandAllocator& allocator);
 
 			virtual HRESULT  SetName(
 				LPCWSTR Name)
@@ -562,7 +562,7 @@ export namespace HAL
 			void create(HAL::CommandListType type);
 
 			void reset();
-			CommandListCompiled compile();
+			CommandListCompiled compile(HAL::CommandAllocator&allocator);
 
 			virtual HRESULT  SetName(
 				LPCWSTR Name)

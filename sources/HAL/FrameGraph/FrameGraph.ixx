@@ -486,7 +486,8 @@ using namespace HAL;
 
 	struct TaskBuilder
 	{
-
+		using MemoryAllocatorType = Allocators::HeapPageManager<ResourceContext, TaskBuilderResourceAllocationContext>;
+	
 	private:
 
 	public:
@@ -496,19 +497,11 @@ using namespace HAL;
 
 		std::set<ResourceAllocInfo*> passed_resources;
 
-
-		using AllocatorType = Allocators::HeapPageManager<ResourceContext, TaskBuilderResourceAllocationContext>;
-
-		AllocatorType allocator;
-		AllocatorType static_allocator;
-
-
+		MemoryAllocatorType allocator;
 		HAL::FrameResourceManager frames;
 		HAL::FrameResources::ptr current_frame;
 
-		std::map<int, std::shared_ptr<AllocatorType>> frame_allocs;
-
-		AllocatorType* current_alloc;
+	
 		Pass* current_pass = nullptr;
 		void begin(Pass* pass);
 
@@ -729,14 +722,13 @@ using namespace HAL;
 
 
 
-			render_task = scheduler::get().enqueue([this, &frame]() {
-
+			render_task = thread_pool::get().enqueue([this, &frame]() {
 				context.begin(this, frame);
 				render_func(data, context);
 				context.end();
-				}, std::chrono::steady_clock::now());
+				});
 
-			//	render_task.wait();
+		//		render_task.wait();
 		}
 	};
 

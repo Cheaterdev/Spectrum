@@ -227,6 +227,56 @@ export
 
 	};
 
+	
+	template< class V>
+	class Pool
+	{
+
+		std::mutex m;
+
+	public:
+		std::deque<V> table;
+
+		std::function<V()> create_func;
+
+		size_t size()
+		{
+			return table.size();
+		}
+		Pool() = default;
+
+		Pool(std::function<V()> create_func) : create_func(create_func) {}
+
+		V get()
+		{
+			std::lock_guard<std::mutex> g(m);
+		
+			if(table.empty())
+			{
+				return create_func();
+			}
+
+
+			auto elem = table.front();
+			table.pop_front();
+
+			return elem;
+		}
+
+
+		void put(const V& v)
+		{
+
+		std::lock_guard<std::mutex> g(m);
+		table.push_back(v);
+		}
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(table);
+		}
+
+	};
 
 
 	template<class T>

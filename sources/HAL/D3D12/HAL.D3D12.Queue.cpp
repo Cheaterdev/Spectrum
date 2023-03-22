@@ -318,7 +318,7 @@ namespace HAL
 
 		void Queue::execute(TransitionCommandList* list)
 		{
-			ID3D12CommandList* s[] = { (list)->get_native().Get() };
+			ID3D12CommandList* s[] = { (list)->get_compiled().m_commandList.Get() };
 			native->ExecuteCommandLists(_countof(s), s);
 		}
 

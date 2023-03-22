@@ -257,7 +257,6 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 
 	auto begin = pipelines.begin();
 	auto end = begin;
-	//	auto view = meshes_ids->buffer->help_buffer->create_view<HAL::FormattedBufferView<UINT, HAL::Format::R32_UINT>>(*list.frame_resources);
 
 
 

@@ -15,6 +15,7 @@ import :API.CommandList;
 import :QueryHeap;
 import :ResourceViews;
 import :PSO;
+import :CommandAllocator;
 
 //import :Autogen;
 export{
@@ -22,7 +23,6 @@ export{
 	namespace HAL
 	{
 		class GPUBuffer;
-
 
 
 		class CommandListBase : public StateContext
@@ -321,15 +321,7 @@ export{
 			void end(Eventer* list);
 		};
 
-
-		struct EventerQueryAllocationContext
-		{
-			using AllocatorType = LinearAllocator;
-			using LockPolicy = Thread::Free;
-		};
-
-		using EventerQueryManager = Allocators::HeapPageManager<QueryContext, EventerQueryAllocationContext>;
-
+		
 		class Eventer : public virtual CommandListBase, public TimedRoot
 		{
 			friend class GPUBlock;
@@ -365,17 +357,8 @@ export{
 			void insert_time(QueryHandle& handle, uint offset);
 			void resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
 
-			template <class T>
-			void resolve_timers(Allocators::HeapPageManager < QueryContext, T>& manager)
-			{
-				manager.for_each([&, this](const QueryType& type, uint64 from, uint64 to, QueryHeap::ptr heap)
-					{
-						assert(from == 0);
-						resolve_times(*heap, static_cast<uint>(to), [heap](std::span<UINT64> data) {
-							std::copy(data.begin(), data.end(), heap->read_back_data.begin());
-							});
-					});
-			}
+
+
 		};
 
 
@@ -430,7 +413,7 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList : public GPUEntityStorage<LocalAllocationPolicy>, public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
+		class CommandList : public GPUEntityStorageProxy, public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
 		{
 
 			bool active = false;
@@ -501,11 +484,6 @@ export{
 			ComputeContext& get_compute();
 			CopyContext& get_copy();
 
-
-			FrameResources* get_manager()
-			{
-				return frame_resources.get();
-			}
 
 			CommandList(CommandListType);
 
@@ -601,7 +579,7 @@ export{
 					table.dirty=false;
 				}
 			}
-		public:
+	//	public:
 			void commit_tables(UsedSlots *slots = nullptr);
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
@@ -847,14 +825,20 @@ export{
 		};
 
 
-		class TransitionCommandList :public API::TransitionCommandList
+		class TransitionCommandList
 		{
+				using CompilerType = HAL::Private::CommandListTranslator<HAL::Private::CommandListCompilerDelayed>;
+			
+			HAL::Private::CommandListCompiled compiled;
+			CompilerType compiler;
 			CommandListType type;
 		public:
 			using ptr = std::shared_ptr<TransitionCommandList>;
 			inline CommandListType get_type() { return type; }
 			TransitionCommandList(CommandListType type);
-			void create_transition_list(const HAL::Barriers& transitions, std::vector<HAL::Resource*>& duscards);
+			void create_transition_list(FrameResources& frame, const HAL::Barriers& transitions, std::vector<HAL::Resource*>& duscards);
+		
+			HAL::Private::CommandListCompiled get_compiled() const {return compiled;}
 		};
 	}
 
