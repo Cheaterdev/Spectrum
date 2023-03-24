@@ -310,15 +310,15 @@ namespace HAL
 			native->GetTimestampFrequency(&THIS->frequency);
 		}
 
-		void Queue::execute(CommandList* list)
+		void Queue::execute(HAL::CommandList* list)
 		{
-			ID3D12CommandList* s[] = { (list)->compiled.m_commandList.Get() };
+			ID3D12CommandList* s[] = { (list)->compiler.get_list().get_native().Get() };
 			native->ExecuteCommandLists(_countof(s), s);
 		}
 
-		void Queue::execute(TransitionCommandList* list)
+		void Queue::execute(HAL::TransitionCommandList* list)
 		{
-			ID3D12CommandList* s[] = { (list)->get_compiled().m_commandList.Get() };
+			ID3D12CommandList* s[] = { (list)->get_compiled().get_native().Get() };
 			native->ExecuteCommandLists(_countof(s), s);
 		}
 

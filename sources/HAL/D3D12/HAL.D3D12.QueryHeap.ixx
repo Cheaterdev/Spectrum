@@ -16,7 +16,7 @@ export namespace HAL
 		protected:
 			ComPtr<ID3D12QueryHeap> heap;
 		public:
-			ComPtr<ID3D12QueryHeap> get_native();
+			ComPtr<ID3D12QueryHeap> get_native() const;
 		};
 	}
 }

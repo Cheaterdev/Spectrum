@@ -21,7 +21,7 @@ namespace HAL
 
 	namespace API
 	{
-		ComPtr<ID3D12QueryHeap> QueryHeap::get_native()
+		ComPtr<ID3D12QueryHeap> QueryHeap::get_native() const
 		{
 			return heap;
 		}

@@ -4,7 +4,6 @@ import Core;
 import :Types;
 import :HeapAllocators;
 import :DescriptorHeap;
-import :Private.CommandListCompiler;
 import :Device;
 import :QueryHeap;
 
@@ -188,7 +187,7 @@ namespace HAL {
 
 			void resolve_timers(std::function<void(const QueryType& , uint64 , uint64 , QueryHeap::ptr) > f) override
 					{
-							assert(proxy);
+						
 				QueryHeapPageManager<AllocationPolicy>::for_each(f);
 
 					}

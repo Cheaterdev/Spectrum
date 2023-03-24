@@ -7,6 +7,3 @@ export import :API.Heap;
 export import :API.IndirectCommand;
 export import :API.Resource;
 export import :API.RootSignature;
-
-
-export import :Private.CommandListCompiler;//////////////

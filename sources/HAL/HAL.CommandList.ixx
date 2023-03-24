@@ -2,8 +2,6 @@ export module HAL:CommandList;
 
 import Core;
 import :Types;
-
-import :Private.CommandListTranslator;
 import :ResourceStates;
 import :Resource;
 import :DescriptorHeap;
@@ -17,13 +15,286 @@ import :ResourceViews;
 import :PSO;
 import :CommandAllocator;
 
-//import :Autogen;
 export{
 
 	namespace HAL
 	{
 		class GPUBuffer;
+		class DelayedCommandList
+		{
 
+			bool compiled = false;
+			API::CommandList list;
+
+			std::list<std::function<void(API::CommandList&)>> tasks;
+		public:
+			const API::CommandList& get_list() const
+			{
+			return list;
+			}
+			void create(CommandListType type)
+			{
+				list.create(type);
+			}
+			
+			void reset()
+			{
+				compiled = false;
+			}
+
+
+			bool is_compiled()
+			{
+				return compiled;
+			}
+
+			void compile(CommandAllocator& allocator)
+			{
+				list.begin(allocator);
+				for(auto &f:tasks)
+				{
+					f(list);
+				}
+
+				list.end();
+				tasks.clear();
+				compiled = true;
+			}
+
+			void func(std::function<void(API::CommandList&)> f)
+			{
+				tasks.emplace_back(f);
+			}
+
+				void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
+				{
+					tasks.emplace_back([=](API::CommandList& list){
+						list.clear_uav(h,ClearColor);
+					});
+				}
+
+
+				void clear_rtv(const Handle& h, vec4 ClearColor){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.clear_rtv(h,ClearColor);
+					});
+				}
+			void clear_stencil(const Handle& dsv, UINT8 stencil){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.clear_stencil(dsv,stencil);
+					});
+				}
+			void clear_depth(const Handle& dsv, float depth){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.clear_depth(dsv,depth);
+					});
+				}
+
+
+			void clear_depth_stencil(const Handle& dsv, bool depth, bool stencil, float fdepth, UINT8 fstencil){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.clear_depth_stencil(dsv,depth,stencil,fdepth,fstencil);
+					});
+				}
+
+			void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_topology(topology,feedType,adjusted,controlpoints);
+					});
+				}
+			void set_stencil_ref(UINT ref){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_stencil_ref(ref);
+					});
+				}
+			template<class Hit, class Miss, class Raygen>
+			void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.dispatch_rays<Hit,Miss,Raygen>(size,hit_buffer,hit_count,miss_buffer,miss_count,raygen_buffer );
+					});
+				}
+
+
+
+			void set_name(std::wstring_view name){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_name(name);
+					});
+				}
+
+			void set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_descriptor_heaps(cbv,sampler);
+					});
+				}
+
+
+			void insert_time(const QueryHandle& handle, uint offset){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.insert_time(handle,offset);
+					});
+				}
+
+			void resolve_times(const QueryHeap& pQueryHeap, uint32_t NumQueries, ResourceAddress destination){
+					tasks.emplace_back([&pQueryHeap, NumQueries, destination](API::CommandList& list){
+						list.resolve_times(pQueryHeap,NumQueries,destination);
+					});
+				}
+
+
+			void set_graphics_signature(const HAL::RootSignature::ptr& s){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_graphics_signature(s);
+					});
+				}
+
+			void set_compute_signature(const HAL::RootSignature::ptr& s){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_compute_signature(s);
+					});
+				}
+
+			void draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.draw(vertex_count,vertex_offset,instance_count,instance_offset);
+					});
+				}
+			void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count, UINT instance_offset){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.draw_indexed(index_count,index_offset,vertex_offset,instance_count,instance_offset);
+					});
+				}
+
+			void set_index_buffer(HAL::Views::IndexBuffer index){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_index_buffer(index);
+					});
+				}
+			void  graphics_set_const_buffer(UINT i, const ResourceAddress& adress){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.graphics_set_const_buffer(i,adress);
+					});
+				}
+			void  compute_set_const_buffer(UINT i, const ResourceAddress& adress){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.compute_set_const_buffer(i,adress);
+					});
+				}
+
+
+			void  graphics_set_constant(UINT i, UINT offset, UINT value){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.graphics_set_constant(i, offset, value);
+					});
+				}
+
+			void  compute_set_constant(UINT i, UINT offset, UINT value){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.compute_set_constant(i,offset,value);
+					});
+				}
+
+			void dispatch_mesh(ivec3 v){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.dispatch_mesh(v);
+					});
+				}
+
+			void dispatch(ivec3 v){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.dispatch(v);
+					});
+				}
+			void set_scissors(sizer_long rect){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_scissors(rect);
+					});
+				}
+
+			void set_viewports(std::vector<Viewport> viewports){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_viewports(viewports);
+					});
+				}
+			void copy_resource(HAL::Resource* dest, HAL::Resource* source){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.copy_resource(dest,source);
+					});
+				}
+			void  copy_buffer(HAL::Resource* dest, uint64 dest_offset, HAL::Resource* source, uint64 source_offset, uint64 size){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.copy_buffer(dest,dest_offset,source,source_offset,size );
+					});
+				}
+
+			void set_pipeline(PipelineStateBase* pipeline){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_pipeline(pipeline);
+					});
+				}
+			void execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.execute_indirect(command_types,max_commands,command_buffer,command_offset, counter_buffer,counter_offset);
+					});
+				}
+
+
+			void set_rtv(int c, Handle rt, Handle h){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.set_rtv(c,rt,h);
+					});
+				}
+
+			void start_event(std::wstring str){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.start_event(str);
+					});
+				}
+
+			void end_event(){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.end_event();
+					});
+				}
+
+
+			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.build_ras(build_desc,bottom);
+					});
+				}
+
+			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.build_ras(build_desc,top);
+					});
+				}
+
+
+			void copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.copy_texture(dest,dest_subres,source,source_subres);
+					});
+				}
+
+			void copy_texture(const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.copy_texture(to,to_pos,from,from_pos, size);
+					});
+				}
+
+			void update_texture( HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.update_texture(resource,offset,box,sub_resource, address, layout);
+					});
+				}
+
+			void read_texture(const  HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout){
+					tasks.emplace_back([=](API::CommandList& list){
+						list.read_texture(resource,offset,box,sub_resource,target, layout);
+					});
+			}
+		};
 
 		class CommandListBase : public StateContext
 		{
@@ -33,17 +304,15 @@ export{
 
 			std::vector<std::function<void()>> on_execute_funcs;
 
-			using CompilerType = HAL::Private::CommandListTranslator<HAL::Private::CommandListCompilerDelayed>;
-			CompilerType compiler;
-
+			
 			std::list<TrackedObject::ptr> tracked_resources;
 			FenceWaiter dstorage_fence;
-			CompilerType* get_native_list()
+			DelayedCommandList* get_native_list()
 			{
 				return &compiler;
 			}
 		public:
-
+			DelayedCommandList compiler;
 			template<TrackableClass T>
 			void track_object(T& obj)
 			{
@@ -106,7 +375,7 @@ export{
 				{
 					assert(point->prev_point->start);
 				}
-				compiler.func([point, this](Private::CommandListTranslator<Private::CommandListCompiler>& list)
+				compiler.func([point, this](auto& list)
 					{
 						HAL::Barriers  transitions(type);
 
@@ -385,11 +654,6 @@ export{
 
 				on_fence.clear();
 			}
-		public:
-			HAL::Private::CommandListCompiled compiled;
-
-
-
 
 		public:
 			void compile();
@@ -505,7 +769,7 @@ export{
 			friend class CommandList;
 
 			CommandList& base;
-			CommandList::CompilerType* list;
+			DelayedCommandList* list;
 
 			CopyContext(CommandList& base) :base(base), list(base.get_native_list()) {}
 			CopyContext(const CopyContext&) = delete;
@@ -669,7 +933,7 @@ export{
 		{
 			friend class CommandList;
 
-			CommandList::CompilerType* list;
+			DelayedCommandList* list;
 
 			GraphicsContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {
 			}
@@ -764,7 +1028,7 @@ export{
 			friend class CommandList;
 
 
-			CommandList::CompilerType* list;
+			DelayedCommandList* list;
 
 			ComputeContext(CommandList& base) :SignatureDataSetter(base), list(base.get_native_list()) {}
 			ComputeContext(const ComputeContext&) = delete;
@@ -827,10 +1091,9 @@ export{
 
 		class TransitionCommandList
 		{
-				using CompilerType = HAL::Private::CommandListTranslator<HAL::Private::CommandListCompilerDelayed>;
 			
-			HAL::Private::CommandListCompiled compiled;
-			CompilerType compiler;
+			API::CommandList list;
+	
 			CommandListType type;
 		public:
 			using ptr = std::shared_ptr<TransitionCommandList>;
@@ -838,7 +1101,7 @@ export{
 			TransitionCommandList(CommandListType type);
 			void create_transition_list(FrameResources& frame, const HAL::Barriers& transitions, std::vector<HAL::Resource*>& duscards);
 		
-			HAL::Private::CommandListCompiled get_compiled() const {return compiled;}
+			const API::CommandList& get_compiled() const {return list;}
 		};
 	}
 

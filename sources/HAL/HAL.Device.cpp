@@ -74,8 +74,8 @@ namespace HAL
 	void Device::init_managers()
 	{
 		for (auto type : magic_enum::enum_values<CommandListType>())
-		queues[type]=std::make_shared<HAL::Queue>(CommandListType::DIRECT, this);
-		
+			queues[type] = std::make_shared<HAL::Queue>(type, this);
+
 		ds_queue = std::make_unique<DirectStorageQueue>(*this);
 		rtx = !Debug::RunForPix && get_properties().rtx;
 
@@ -94,14 +94,14 @@ namespace HAL
 
 		engine_pso_holder->init(*this);
 
-			for (auto type : magic_enum::enum_values<CommandListType>())
-			{
-				command_allocators[type].create_func = [type](){
-		return std::make_shared<CommandAllocator>(type);
-		
-		};
-			}
-		
+		for (auto type : magic_enum::enum_values<CommandListType>())
+		{
+			command_allocators[type].create_func = [type]() {
+				return std::make_shared<CommandAllocator>(type);
+
+			};
+		}
+
 
 	}
 	FrameResourceManager& Device::get_frame_manager()
@@ -146,7 +146,7 @@ namespace HAL
 		command_allocators[e->get_type()].put(e);
 	}
 
-	std::shared_ptr<CommandAllocator> Device::get_ca(CommandListType type)	{
+	std::shared_ptr<CommandAllocator> Device::get_ca(CommandListType type) {
 		return command_allocators[type].get();
 	}
 }

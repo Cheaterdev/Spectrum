@@ -94,7 +94,7 @@ namespace HAL
 		if (type == CommandListType::DIRECT)
 			graphics.reset(new GraphicsContext(*this));
 
-		compiler.SetName(L"SpectrumCommandList");
+		compiler.set_name(L"SpectrumCommandList");
 
 
 		debug_buffer = std::make_shared<HAL::StructureBuffer<Table::DebugStruct>>(64, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
@@ -146,11 +146,12 @@ namespace HAL
 		active = true;
 		if (name.empty())
 		{
-			compiler.SetName(L"EmptyName");
+			compiler.set_name(L"EmptyName");
 		}
 		else
-			compiler.SetName(convert(name).c_str());
-		compiled = HAL::Private::CommandListCompiled();
+			compiler.set_name(convert(name));
+		
+		compiler.reset();
 #ifdef DEV
 		begin_stack = Exceptions::get_stack_trace();
 #endif
@@ -161,8 +162,7 @@ namespace HAL
 		if(!frame_resources) frame_resources = Device::get().get_frame_manager().begin_frame();
 		proxy = frame_resources->get_storage();
 		//       Log::get() << "begin" << Log::endl;
-		compiler.reset();
-		//resource_index = 0;
+
 
 		first_pipeline = nullptr;
 
@@ -260,15 +260,14 @@ namespace HAL
 
 
 		auto ca = cmd->frame_resources->get_ca(type);
-		compiled = compiler.compile(*ca);
+	 compiler.compile(*ca);
 		 cmd->frame_resources->free_ca(ca);
 	}
+
 	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
 	{
-
-		//TEST(compiler.Close());
-		if (!compiled)
-			compile();
+		if(!compiler.is_compiled()) 
+			Sendable::compile();
 
 		execute_fence = std::promise<FenceWaiter>();
 		execute_fence_result = execute_fence.get_future();
@@ -609,7 +608,7 @@ namespace HAL
 		base.pre_command<false, false>(*this);
 
 		base.transition(resource, ResourceState::COPY_DEST);
-		auto layout = list->get_texture_layout(resource, sub_resource, box);
+		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.place_data(layout.size, layout.alignment);
 
 		if (layout.row_stride == row_stride)
@@ -657,17 +656,7 @@ namespace HAL
 		base.post_command<false, false>(*this);
 
 	}
-	/*
-	void  GraphicsContext::set_pipeline(PipelineState::ptr state)
-	{
-		set_signature(state->desc.root_signature);
-		base.set_pipeline_internal(state.get());
-	}
-	*/
-	//void SignatureDataSetter::set_layout(Layouts layout)
-	//{
-	//	set_signature(HAL::get_Signature(layout));
-	//}
+
 	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
 		return read_texture(resource.get(), offset, box, sub_resource, f);
@@ -682,7 +671,7 @@ namespace HAL
 		//else
 	//		base.transition(resource, ResourceState::COMMON);
 
-		auto layout = list->get_texture_layout(resource, sub_resource, box);
+		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.read_data(layout.size, layout.alignment);
 		list->read_texture(resource, offset, box, sub_resource, info, layout);
 
@@ -1518,5 +1507,21 @@ namespace HAL
 			return *this;
 		}
 
+		void TransitionCommandList::create_transition_list(FrameResources& frame, const HAL::Barriers& transitions, std::vector<HAL::Resource*>& discards)
+		{
 
+			auto ca = frame.get_ca(type);
+			list.begin(*ca);
+			list.transitions(transitions);
+			list.end();
+
+			frame.free_ca(ca);
+		}
+
+
+		TransitionCommandList::TransitionCommandList(CommandListType type) :type(type)
+		{
+			list.create(type);
+			//list.set_name(L"TransitionCommandList");
+		}
 }

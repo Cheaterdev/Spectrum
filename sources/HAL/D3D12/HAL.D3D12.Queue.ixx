@@ -13,8 +13,8 @@ export namespace HAL
 		protected:
 			D3D::CommandQueue native;
 
-			void execute(CommandList* list);
-			void execute(TransitionCommandList* list);
+			void execute(HAL::CommandList* list);
+			void execute(HAL::TransitionCommandList* list);
 			void signal(Fence& fence, Fence::CounterType value);
 			void gpu_wait(HAL::FenceWaiter waiter);
 
