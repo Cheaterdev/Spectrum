@@ -20,7 +20,7 @@ namespace HAL {
 		virtual QueryHandle alloc_query(uint size, QueryType options) = 0;
 		virtual Handle  alloc_base_descriptor(uint size, DescriptorHeapIndex options) = 0;
 
-		virtual void resolve_timers(std::function<void(const QueryType& , uint64 , uint64 , QueryHeap::ptr) > f) = 0;
+		virtual void resolve_timers(std::function<void(const QueryType&, uint64, uint64, QueryHeap::ptr) > f) = 0;
 		template <class Type = Handle>
 		Type alloc_descriptor(uint size, DescriptorHeapIndex options)
 		{
@@ -28,7 +28,7 @@ namespace HAL {
 		}
 
 		template <>
-		Handle alloc_descriptor<Handle>(uint size,DescriptorHeapIndex options)
+		Handle alloc_descriptor<Handle>(uint size, DescriptorHeapIndex options)
 		{
 			return alloc_base_descriptor(size, options);
 		}
@@ -132,233 +132,218 @@ namespace HAL {
 		}
 
 	public:
-	
+
 		TileHeapPosition create_tile(HeapType type, UINT count = 1);
-		/*{
-			static const size_t TileSize = 64 * 1024;
-			HeapIndex index = { HAL::MemoryType::COMMITED , type };
-
-			auto handle = alloc(count * TileSize, TileSize, index);
-
-			TileHeapPosition result;
-
-			result.offset = static_cast<UINT>(handle.get_offset() / (64 * 1024));
-			result.heap = handle.get_heap();
-
-			result.handle = handle;
-			result.count = count;
-			return result;
-		}*/
 	};
 
-		template<class MemoryAllocationPolicy,class AllocationPolicy = MemoryAllocationPolicy>
-		struct GPUEntityStorage:
+	template<class MemoryAllocationPolicy, class AllocationPolicy = MemoryAllocationPolicy>
+	struct GPUEntityStorage :
 		public GPUEntityStorageInterface,
-			public GPUMemoryAllocator<MemoryAllocationPolicy>,
-			public DescriptorHeapPageManager<AllocationPolicy>,
-			public QueryHeapPageManager<AllocationPolicy>
+		public GPUMemoryAllocator<MemoryAllocationPolicy>,
+		public DescriptorHeapPageManager<AllocationPolicy>,
+		public QueryHeapPageManager<AllocationPolicy>
+	{
+		static constexpr bool resetable = std::is_same_v<typename AllocationPolicy::AllocatorType, LinearAllocator> || std::is_same_v<typename MemoryAllocationPolicy::AllocatorType, LinearAllocator>;
+
+		GPUEntityStorage(Device& device) :
+			GPUMemoryAllocator<AllocationPolicy>(device),
+			QueryHeapPageManager<AllocationPolicy>(device),
+			DescriptorHeapPageManager<AllocationPolicy>(device)
 		{
-			static constexpr bool resetable = std::is_same_v<typename AllocationPolicy::AllocatorType,LinearAllocator> || std::is_same_v<typename MemoryAllocationPolicy::AllocatorType,LinearAllocator>;
 
-			GPUEntityStorage(Device& device):
-				GPUMemoryAllocator<AllocationPolicy>(device),
-				QueryHeapPageManager<AllocationPolicy>(device),
-				DescriptorHeapPageManager<AllocationPolicy>(device)
-			{
-				
-			}
-			GPUMemoryAllocator<MemoryAllocationPolicy>::HandleType alloc_memory(size_t size, size_t alignment, GPUMemoryAllocator<MemoryAllocationPolicy>::HeapMemoryOptions options) override
-			{
-				return GPUMemoryAllocator<MemoryAllocationPolicy>::alloc(size, alignment, options);
-			}
+		}
+		GPUMemoryAllocator<MemoryAllocationPolicy>::HandleType alloc_memory(size_t size, size_t alignment, GPUMemoryAllocator<MemoryAllocationPolicy>::HeapMemoryOptions options) override
+		{
+			return GPUMemoryAllocator<MemoryAllocationPolicy>::alloc(size, alignment, options);
+		}
 
-			QueryHeapPageManager<AllocationPolicy>::HandleType  alloc_query(uint size,  QueryHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
-			{
-				return QueryHeapPageManager<AllocationPolicy>::alloc(size,1,options);
-			}
+		QueryHeapPageManager<AllocationPolicy>::HandleType  alloc_query(uint size, QueryHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
+		{
+			return QueryHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
+		}
 
-			Handle  alloc_base_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
-			{
-				auto h = DescriptorHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
-				
-				return Handle{std::make_shared<DescriptorHeapStorage>(h),0};
-			}
+		Handle  alloc_base_descriptor(uint size, DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions options) override
+		{
+			auto h = DescriptorHeapPageManager<AllocationPolicy>::alloc(size, 1, options);
+
+			return Handle{ std::make_shared<DescriptorHeapStorage>(h),0 };
+		}
 
 
-			void resolve_timers(std::function<void(const QueryType& , uint64 , uint64 , QueryHeap::ptr) > f) override
-					{
-						
-				QueryHeapPageManager<AllocationPolicy>::for_each(f);
+		void resolve_timers(std::function<void(const QueryType&, uint64, uint64, QueryHeap::ptr) > f) override
+		{
 
-					}
+			QueryHeapPageManager<AllocationPolicy>::for_each(f);
+
+		}
 
 
-			void reset() requires (resetable)
-			{
+		void reset() requires (resetable)
+		{
 
-				DescriptorHeapPageManager<AllocationPolicy>::for_each([](const DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions& type, uint64 from , uint64 to, HAL::DescriptorHeap::ptr heap)
+			DescriptorHeapPageManager<AllocationPolicy>::for_each([](const DescriptorHeapPageManager<AllocationPolicy>::HeapMemoryOptions& type, uint64 from, uint64 to, HAL::DescriptorHeap::ptr heap)
 				{
-		
-					for(uint i=static_cast<uint>(from);i<static_cast<uint>(to);i++)
+
+					for (uint i = static_cast<uint>(from); i < static_cast<uint>(to); i++)
 					{
 						heap->get_resource_info(i) = HAL::Views::Null();
 					}
 
 				});
 
-				GPUMemoryAllocator<MemoryAllocationPolicy>::reset();
-				QueryHeapPageManager<AllocationPolicy>::reset();
-				DescriptorHeapPageManager<AllocationPolicy>::reset();
-			}
+			GPUMemoryAllocator<MemoryAllocationPolicy>::reset();
+			QueryHeapPageManager<AllocationPolicy>::reset();
+			DescriptorHeapPageManager<AllocationPolicy>::reset();
+		}
 
 
 
-			~GPUEntityStorage()
-			{
-				if constexpr (resetable) reset();
-			}
-		};
-
-
-
-		class GPUEntityStorageProxy :public GPUEntityStorageInterface
+		~GPUEntityStorage()
 		{
-		protected:
-			std::shared_ptr<GPUEntityStorageInterface> proxy;
-
-		public:
-
-			void set_proxy(std::shared_ptr<GPUEntityStorageInterface> proxy)
-			{
-				this->proxy = proxy;
-			}
-
-			ResourceHandle alloc_memory(size_t size, size_t alignment, HeapIndex options) override
-			{
-				assert(proxy);
-				return proxy->alloc_memory(size, alignment, options);
-			}
-			QueryHandle alloc_query(uint size, QueryType options)override
-			{
-				assert(proxy);
-				return proxy->alloc_query(size, options);
-			}
-			Handle  alloc_base_descriptor(uint size, DescriptorHeapIndex options)override
-			{
-				assert(proxy);
-				return proxy->alloc_base_descriptor(size, options);
-			}
-
-			template <class Type = Handle>
-			Type alloc_descriptor(uint size, DescriptorHeapIndex options)
-			{
-				return Type(alloc_base_descriptor(size, options));
-			}
-
-			template <>
-			Handle alloc_descriptor<Handle>(uint size, DescriptorHeapIndex options)
-			{
-				return alloc_base_descriptor(size, options);
-			}
+			if constexpr (resetable) reset();
+		}
+	};
 
 
-					void resolve_timers(std::function<void(const QueryType& , uint64 , uint64 , QueryHeap::ptr) > f) override
-					{
-							assert(proxy);
-				 proxy->resolve_timers(f);
 
-					}
-		};
+	class GPUEntityStorageProxy :public GPUEntityStorageInterface
+	{
+	protected:
+		std::shared_ptr<GPUEntityStorageInterface> proxy;
 
+	public:
 
-		class StaticCompiledGPUData : public GPUEntityStorage<GlobalAllocationPolicy>
+		void set_proxy(std::shared_ptr<GPUEntityStorageInterface> proxy)
 		{
-			Device& device;
-		public:
-			using GPUEntityStorage<GlobalAllocationPolicy>::place_raw;
+			this->proxy = proxy;
+		}
 
-			StaticCompiledGPUData(Device& device) :device(device), GPUEntityStorage<GlobalAllocationPolicy>(device) {}
-		};
-
-		class FrameResources :public SharedObject<FrameResources>, public GPUEntityStorage<LocalAllocationPolicy>
+		ResourceHandle alloc_memory(size_t size, size_t alignment, HeapIndex options) override
 		{
-			friend class FrameResourceManager;
+			assert(proxy);
+			return proxy->alloc_memory(size, alignment, options);
+		}
+		QueryHandle alloc_query(uint size, QueryType options)override
+		{
+			assert(proxy);
+			return proxy->alloc_query(size, options);
+		}
+		Handle  alloc_base_descriptor(uint size, DescriptorHeapIndex options)override
+		{
+			assert(proxy);
+			return proxy->alloc_base_descriptor(size, options);
+		}
 
-			std::uint64_t frame_number = 0;
-			std::mutex m;
+		template <class Type = Handle>
+		Type alloc_descriptor(uint size, DescriptorHeapIndex options)
+		{
+			return Type(alloc_base_descriptor(size, options));
+		}
 
-			Pool<std::shared_ptr<GPUEntityStorage<LocalAllocationPolicy>>> gpu_resources;
+		template <>
+		Handle alloc_descriptor<Handle>(uint size, DescriptorHeapIndex options)
+		{
+			return alloc_base_descriptor(size, options);
+		}
+
+
+		void resolve_timers(std::function<void(const QueryType&, uint64, uint64, QueryHeap::ptr) > f) override
+		{
+			assert(proxy);
+			proxy->resolve_timers(f);
+
+		}
+	};
+
+
+	class StaticCompiledGPUData : public GPUEntityStorage<GlobalAllocationPolicy>
+	{
+		Device& device;
+	public:
+		using GPUEntityStorage<GlobalAllocationPolicy>::place_raw;
+
+		StaticCompiledGPUData(Device& device) :device(device), GPUEntityStorage<GlobalAllocationPolicy>(device) {}
+	};
+
+	class FrameResources :public SharedObject<FrameResources>, public GPUEntityStorage<LocalAllocationPolicy>
+	{
+		friend class FrameResourceManager;
+
+		std::uint64_t frame_number = 0;
+		std::mutex m;
+
+		Pool<std::shared_ptr<GPUEntityStorage<LocalAllocationPolicy>>> gpu_resources;
 
 
 
-			enum_array<CommandListType, Pool<std::shared_ptr<CommandAllocator>>> command_allocators;
+		enum_array<CommandListType, Pool<std::shared_ptr<CommandAllocator>>> command_allocators;
 
-		public:
-			using ptr = std::shared_ptr<FrameResources>;
-			FrameResources(Device& device) : GPUEntityStorage<LocalAllocationPolicy>(device)
+	public:
+		using ptr = std::shared_ptr<FrameResources>;
+		FrameResources(Device& device) : GPUEntityStorage<LocalAllocationPolicy>(device)
+		{
+
+			gpu_resources.create_func = [&device]() {
+				return std::make_shared<GPUEntityStorage<LocalAllocationPolicy>>(device);
+
+			};
+
+			for (auto type : magic_enum::enum_values<CommandListType>())
 			{
-
-				gpu_resources.create_func = [&device]() {
-					return std::make_shared<GPUEntityStorage<LocalAllocationPolicy>>(device);
+				command_allocators[type].create_func = [type]() {
+					return Device::get().get_ca(type);
 
 				};
-
-				for (auto type : magic_enum::enum_values<CommandListType>())
-			{
-				command_allocators[type].create_func = [type](){
-		return Device::get().get_ca(type);
-		
-		};
 			}
-			}
-			~FrameResources()
-			{
-				reset();
-
-				for (auto& e : gpu_resources.table)
-				{
-					e->reset();
-				}
-					for (auto type : magic_enum::enum_values<CommandListType>())
-					for (auto& e : command_allocators[type].table)
-				{
-				Device::get().free_ca(e);
-				}
-			}
-
-			std::uint64_t get_frame()
-			{
-				return frame_number;
-			}
-
-			std::shared_ptr<CommandList> start_list(std::string name = "", CommandListType type = CommandListType::DIRECT);
-
-			void free_storage(std::shared_ptr<GPUEntityStorageInterface> e)
-			{
-				gpu_resources.put(std::static_pointer_cast<GPUEntityStorage<LocalAllocationPolicy>>(e));
-			}
-
-			std::shared_ptr<GPUEntityStorageInterface> get_storage() {
-				return gpu_resources.get();
-			}
-
-
-			void free_ca(std::shared_ptr<CommandAllocator> e);
-
-			std::shared_ptr<CommandAllocator> get_ca(CommandListType type) {
-				return command_allocators[type].get();
-			}
-
-
-		};
-
-		class FrameResourceManager
+		}
+		~FrameResources()
 		{
-			std::atomic_size_t frame_number = 0;
-			Device& device;
-		public:
-			FrameResourceManager(Device& device) :device(device){}
-			FrameResources::ptr begin_frame();
-		};
+			reset();
+
+			for (auto& e : gpu_resources.table)
+			{
+				e->reset();
+			}
+			for (auto type : magic_enum::enum_values<CommandListType>())
+				for (auto& e : command_allocators[type].table)
+				{
+					Device::get().free_ca(e);
+				}
+		}
+
+		std::uint64_t get_frame()
+		{
+			return frame_number;
+		}
+
+		std::shared_ptr<CommandList> start_list(std::string name = "", CommandListType type = CommandListType::DIRECT);
+
+		void free_storage(std::shared_ptr<GPUEntityStorageInterface> e)
+		{
+			gpu_resources.put(std::static_pointer_cast<GPUEntityStorage<LocalAllocationPolicy>>(e));
+		}
+
+		std::shared_ptr<GPUEntityStorageInterface> get_storage() {
+			return gpu_resources.get();
+		}
+
+
+		void free_ca(std::shared_ptr<CommandAllocator> e);
+
+		std::shared_ptr<CommandAllocator> get_ca(CommandListType type) {
+			return command_allocators[type].get();
+		}
+
+
+	};
+
+	class FrameResourceManager
+	{
+		std::atomic_size_t frame_number = 0;
+		Device& device;
+	public:
+		FrameResourceManager(Device& device) :device(device) {}
+		FrameResources::ptr begin_frame();
+	};
 
 }
