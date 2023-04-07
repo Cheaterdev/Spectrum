@@ -65,7 +65,7 @@ void ShadowDenoiser::generate(Graph& graph)
 				}
 	//			if(!GetAsyncKeyState('5'))
 				compute.dispach(uint3(size, 1), uint3(k_tileSizeX * 4, k_tileSizeY * 4, 1));
-			}, PassFlags::Compute);
+			}/*, PassFlags::Compute*/);
 	}
 
 
@@ -157,7 +157,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 				list.get_copy().copy_texture(data.ShadowDenoiser_MomentsPrev->resource->get_ptr(), 0, data.ShadowDenoiser_Moments->resource->get_ptr(), 0);
 
-			}, PassFlags::Compute);
+			}/*, PassFlags::Compute*/);
 	}
 	{
 		struct ShadowDenoiser_FilterData
@@ -246,7 +246,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 
 
-			}, PassFlags::Compute);
+			}/*, PassFlags::Compute*/);
 	 }
 }
 

@@ -207,7 +207,7 @@ void PSSM::generate(Graph& graph)
 				context->list = command_list;
 				context->cam = &light_cam;
 
-				auto depth_tex = data.PSSM_Depths->create_2d_slice(i, *graph.builder.current_frame);
+				auto depth_tex = data.PSSM_Depths->create_2d_slice(i, *command_list);
 				//	auto shadow_cameras = _context.get_buffer(data.shadow_cameras);
 
 				auto scene = sceneinfo.scene;

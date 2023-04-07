@@ -23,6 +23,8 @@ export
 		//	uint64 aligned_offset;
 		uint64 reset_id = 0;
 		//	uint64 alloc_id;
+
+		void* internal_data;
 		bool operator==(const MemoryInfo& h)const = default;
 		bool operator!=(const MemoryInfo& h)const = default;
 		MemoryInfo() = default;

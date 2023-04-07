@@ -74,13 +74,13 @@ void ReflectionDenoiser::generate(Graph& graph)
 
 			//	builder.create(data.ReflectionDenoiser_Radiance, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess|ResourceFlags::Required);
 			builder.create(data.ReflectionDenoiser_RadiancePrev, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			builder.create(data.ReflectionDenoiser_AverageRadiance, { ivec3(small_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess| ResourceFlags::Static);
+			builder.create(data.ReflectionDenoiser_AverageRadiance, { ivec3(small_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.ReflectionDenoiser_AverageRadiancePrev, { ivec3(small_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			builder.create(data.ReflectionDenoiser_Variance, { ivec3(size, 0), HAL::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess| ResourceFlags::Static);
+			builder.create(data.ReflectionDenoiser_Variance, { ivec3(size, 0), HAL::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.ReflectionDenoiser_VariancePrev, { ivec3(size, 0), HAL::Format::R16_FLOAT, 1 ,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			builder.create(data.ReflectionDenoiser_SampleCount, { ivec3(size, 0), HAL::Format::R16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess| ResourceFlags::Static);
+			builder.create(data.ReflectionDenoiser_SampleCount, { ivec3(size, 0), HAL::Format::R16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.ReflectionDenoiser_SampleCountPrev, { ivec3(size, 0), HAL::Format::R16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			builder.create(data.ReflectionDenoiser_ReprojectedRadiance, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Required| ResourceFlags::Static);
+			builder.create(data.ReflectionDenoiser_ReprojectedRadiance, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1,1 }, ResourceFlags::UnorderedAccess );
 
 
 			return true;

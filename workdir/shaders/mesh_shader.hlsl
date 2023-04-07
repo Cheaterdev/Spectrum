@@ -107,7 +107,7 @@ bool IsVisible(MeshletCullData c, float4x4 world, float scale, Camera camera)
            return false;
         }
     }
-
+    // TODO: culling type check here
     // Do normal cone culling
     if (IsConeDegenerate(c))
         return true; // Cone is degenerate - spread is wider than a hemisphere.
@@ -126,7 +126,7 @@ bool IsVisible(MeshletCullData c, float4x4 world, float scale, Camera camera)
     // This is the min dot product along the inverted axis from which all the meshlet's triangles are backface
     if (dot(view, -axis) > normalCone.w)
     {
-        return false;
+        return false; 
     }
 
     // All tests passed - it will merit pixels

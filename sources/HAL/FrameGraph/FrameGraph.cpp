@@ -49,9 +49,16 @@ namespace FrameGraph
 			related.insert(related_read.begin(), related_read.end());
 			related_read.clear();
 		}
+	//	assert(pass->prev_passes.empty());
 
-		pass->related.insert(related.begin(), related.end());
+		pass->prev_passes.insert(related.begin(), related.end());
 		related_read.insert(pass);
+
+		for (auto p : related)
+		{
+			p->next_passes.insert(pass);
+			//pass->sync_state.max(p);
+		}
 	}
 
 
@@ -92,7 +99,7 @@ namespace FrameGraph
 
 
 	}
-	TaskBuilder::TaskBuilder() : frames(Device::get()),allocator(HAL::Device::get().get_heap_factory(), false)
+	TaskBuilder::TaskBuilder() : frames(Device::get()), allocator(HAL::Device::get().get_heap_factory(), false)
 	{
 
 	}
@@ -155,18 +162,18 @@ namespace FrameGraph
 		current_frame = nullptr;
 		current_pass = nullptr;
 		//	allocator.reset();
-			for (auto& pair : alloc_resources)
+		for (auto& pair : alloc_resources)
 		{
-			pair.second.view=nullptr;
+			pair.second.view = nullptr;
 		}
 		for (auto& info : passed_resources)
 		{
 			info->resource = nullptr;
 			info->view.reset();
 			info->passed = false;
-			info->valid_from = nullptr;
-			info->valid_to = nullptr;
-			info->valid_to_start = nullptr;
+
+			info->used_begin.reset();
+			info->used_end.reset();
 		}
 		passed_resources.clear();
 		//resources.clear();
@@ -328,14 +335,14 @@ namespace FrameGraph
 
 		};
 
-		for (auto &res : builder.alloc_resources)
+		for (auto& res : builder.alloc_resources)
 		{
 			if (check(res.second.flags & ResourceFlags::Required))
 				process_resource(res.second, (int)passes.size());
 		}
 
 
-		for (auto &pass : required_passes)
+		for (auto& pass : builder.required_passes)
 		{
 			pass->enabled = true;
 			for (auto& info : pass->used.resources)
@@ -350,7 +357,7 @@ namespace FrameGraph
 			auto pass_ptr = pass.get();
 
 			pass->dependency_level = 0;
-			enabled_passes.emplace_back(pass_ptr);
+			builder.enabled_passes.emplace_back(pass_ptr);
 
 			if (!optimize)
 			{
@@ -368,32 +375,32 @@ namespace FrameGraph
 			{
 
 				sorted = true;
-				for (auto pass : enabled_passes)
+				for (auto pass : builder.enabled_passes)
 				{
 
-					for (auto related : pass->related)
+					for (auto prev_passes : pass->next_passes)
 					{
-						if (!related->active()) continue;
+						if (!prev_passes->active()) continue;
 
-						if (related == pass)
+						if (prev_passes == pass)
 						{
 							cyclic = true;
 							continue;
 						}
 
-						if (pass->dependency_level <= related->dependency_level)
+						if (pass->dependency_level >= prev_passes->dependency_level)
 						{
-							pass->dependency_level = related->dependency_level + 1;
+							prev_passes->dependency_level = pass->dependency_level + 1;
 							sorted = false;
 						}
 					}
 				}
 			}
 
-			for (auto pass : enabled_passes | std::ranges::views::reverse)
+			for (auto pass : builder.enabled_passes | std::ranges::views::reverse)
 			{
 
-				for (auto dep : pass->related)
+				for (auto dep : pass->prev_passes)
 				{
 					if (!dep->active()) continue;
 
@@ -407,7 +414,7 @@ namespace FrameGraph
 				}
 			}
 
-			enabled_passes.sort(
+			builder.enabled_passes.sort(
 				[](const Pass* a, const Pass* b)
 				{
 
@@ -422,17 +429,65 @@ namespace FrameGraph
 					}
 					return (a->dependency_level < b->dependency_level);
 				});
+
+
+			std::list<Pass*> graphics;
+			std::list<Pass*> compute;
+			std::list<Pass*> new_enabled_passes;
+
+
+
+			for (auto pass : builder.enabled_passes)
+			{
+				if (check(pass->flags & PassFlags::Compute))
+					compute.emplace_back(pass);
+				else
+					graphics.emplace_back(pass);
+			}
+
+
+			std::function<void(Pass* pass)> insert_pass;
+
+			insert_pass = [&](Pass* pass) {
+				for (auto prev : pass->prev_passes)
+				{
+					if (!prev->inserted)	insert_pass(prev);
+
+				}
+				new_enabled_passes.emplace_back(pass);
+				pass->inserted = true;
+			};
+
+			for (auto pass : compute)
+			{
+				if (!pass->inserted) insert_pass(pass);
+			}
+
+
+			for (auto pass : graphics)
+			{
+				if (!pass->inserted) insert_pass(pass);
+			}
+
+
+			builder.enabled_passes = new_enabled_passes;
 		}
 
-		int i = 0;
+		int i = 1;
 
 
 
-		for (auto pass : enabled_passes)
+		for (auto pass : builder.enabled_passes)
 		{
 			pass->call_id = i++;
 			pass->wait_pass = nullptr;
 			pass->prev_pass = nullptr;
+
+
+			for(auto s:pass->prev_passes)
+			{
+			pass->sync_state.max(s);
+			}
 		}
 
 
@@ -442,136 +497,18 @@ namespace FrameGraph
 			if (!info.enabled) continue;
 
 			info.remove_inactive();
-			info.valid_from = nullptr;// info.states.front().passes.front();
-			info.valid_to = nullptr;//info.states.back().passes.back();
+
+			info.used_begin.reset();
+			info.used_end.reset();
 
 			for (auto state : info.states)
 			{
 				for (auto pass : state.passes)
 				{
-					if (!pass->active()) continue;
-
-					if (!info.valid_from || info.valid_from->call_id > pass->id)
-					{
-						info.valid_from = pass;
-					}
-				}
-				if (info.valid_from) break;
-			}
-
-			for (auto state : info.states | std::ranges::views::reverse)
-			{
-				for (auto pass : state.passes | std::ranges::views::reverse)
-				{
-					if (!pass->active()) continue;
-
-					if (!info.valid_to || info.valid_to->call_id < pass->id)
-					{
-						info.valid_to = pass;
-					}
-				}
-				if (info.valid_to) break;
-			}
-
-
-
-			for (int i = 1; i < info.states.size(); i++)
-			{
-				auto state = info.states[i];
-				auto prev_state = info.states[i - 1];
-
-				Pass* prev_pass_graphics = prev_state.graphics.empty() ? nullptr : prev_state.graphics.back();
-				Pass* prev_pass_compute = prev_state.compute.empty() ? nullptr : prev_state.compute.back();
-
-				Pass* pass_graphics = state.graphics.empty() ? nullptr : state.graphics.front();
-				Pass* pass_compute = state.compute.empty() ? nullptr : state.compute.front();
-
-				if (pass_graphics && prev_pass_compute)
-				{
-					if (!pass_graphics->wait_pass || pass_graphics->wait_pass->call_id < prev_pass_compute->call_id)
-						pass_graphics->wait_pass = prev_pass_compute;
-				}
-
-
-				if (pass_compute && prev_pass_graphics)
-				{
-					if (!pass_compute->wait_pass || pass_compute->wait_pass->call_id < prev_pass_graphics->call_id)
-						pass_compute->wait_pass = prev_pass_graphics;
+					info.used_begin.min(pass);
+					info.used_end.max(pass);
 				}
 			}
-
-		}
-
-
-		Pass* last_graphics = nullptr;
-		Pass* last_compute = nullptr;
-
-		for (auto pass : enabled_passes)
-		{
-			HAL::CommandListType type = pass->get_type();
-
-			bool sync_to_graphics = last_graphics && type == HAL::CommandListType::DIRECT;
-			bool sync_to_compute = last_compute && type == HAL::CommandListType::COMPUTE;
-
-
-
-			if (type == HAL::CommandListType::COMPUTE)
-				pass->prev_pass = last_compute;
-			else
-				pass->prev_pass = last_graphics;
-
-			if (sync_to_compute)
-			{
-				for (auto& info : last_compute->used.resources)
-				{
-					if (info->valid_to == last_compute)
-					{
-						info->valid_to = pass;
-					}
-				}
-			}
-
-
-			if (sync_to_graphics)
-			{
-				for (auto& info : last_graphics->used.resources)
-				{
-
-					if (info->valid_to == last_graphics)
-					{
-						info->valid_to = pass;
-					}
-				}
-			}
-
-			if (pass->wait_pass && last_compute)
-			{
-				for (auto& info : last_compute->used.resources)
-				{
-					if (info->valid_to == pass->wait_pass)
-					{
-						info->valid_to = pass;
-					}
-				}
-			}
-
-			if (pass->wait_pass && last_graphics)
-			{
-				for (auto& info : last_graphics->used.resources)
-				{
-					if (info->valid_to == pass->wait_pass)
-					{
-						info->valid_to = pass;
-					}
-				}
-			}
-
-
-			if (type == HAL::CommandListType::COMPUTE)
-				last_compute = pass;
-			else
-				last_graphics = pass;
-
 		}
 	}
 
@@ -585,7 +522,7 @@ namespace FrameGraph
 		for (auto& f : pre_run)
 			f(*this);
 
-		for (auto& pass : enabled_passes)
+		for (auto& pass : builder.enabled_passes)
 			pass->compile(builder);
 	}
 
@@ -597,7 +534,7 @@ namespace FrameGraph
 		{
 			PROFILE(L"passes");
 
-			for (auto& pass : enabled_passes)
+			for (auto& pass : builder.enabled_passes)
 				pass->render(builder.current_frame);
 
 		}
@@ -611,7 +548,7 @@ namespace FrameGraph
 		{
 			PROFILE(L"wait");
 
-			for (auto& pass : enabled_passes)
+			for (auto& pass : builder.enabled_passes)
 			{
 				pass->wait();
 			}
@@ -662,11 +599,9 @@ namespace FrameGraph
 
 					if (!resource) continue;
 
-					//		if(false)
+					// merge resourcestate access in a same read or write state
 					for (auto& state : info.states)
 					{
-
-
 						HAL::SubResourcesGPU merged_state;
 
 						merged_state.subres.resize(resource->get_state_manager().get_subres_count());
@@ -708,7 +643,7 @@ namespace FrameGraph
 						// TODO: propagate first state to next writer
 					}
 
-
+					// prepare state in prev list
 					for (int i = 1; i < info.states.size(); i++)
 					{
 						auto state = info.states[i];
@@ -734,8 +669,8 @@ namespace FrameGraph
 							auto prevCL = prev_pass_graphics->context.list;
 							auto curCL = pass_compute->context.list;
 
-
-							if (prevCL && curCL)prevCL->merge_transition(curCL.get(), info.resource.get());
+							if (prevCL && curCL)
+								prevCL->merge_transition(curCL.get(), info.resource.get());
 						}
 
 						if (pass_compute && prev_pass_compute)
@@ -744,8 +679,10 @@ namespace FrameGraph
 							auto curCL = pass_compute->context.list;
 
 
-							if (prevCL && curCL)prevCL->merge_transition(curCL.get(), info.resource.get());
+							if (prevCL && curCL)
+								prevCL->merge_transition(curCL.get(), info.resource.get());
 						}
+
 						if (pass_graphics && prev_pass_graphics)
 						{
 							auto prevCL = prev_pass_graphics->context.list;
@@ -753,23 +690,65 @@ namespace FrameGraph
 							auto curCL = pass_graphics->context.list;
 							if (prevCL && curCL)
 								prevCL->merge_transition(curCL.get(), info.resource.get());
-
 						}
 
 					}
 
-					auto gpu_state = info.resource->get_state_manager().copy_gpu();
-
-					for (int i = 0; i < info.states.size(); i++)
+					if (!info.resource_just_created)
 					{
-						auto state = info.states[i];
-						for (auto pass : state.passes)
-						{
-							auto commandList = pass->context.list;
-							if (!commandList) continue;
+						auto gpu_state = info.resource->get_state_manager().copy_gpu();
+						info.first_state = gpu_state;
 
-							info.resource->get_state_manager().prepare_state(commandList.get(), gpu_state);
+						for (int i = 0; i < info.states.size(); i++)
+						{
+							auto state = info.states[i];
+							for (auto pass : state.passes)
+							{
+								auto commandList = pass->context.list;
+								if (!commandList) continue;
+
+								info.resource->get_state_manager().prepare_state(commandList.get(), gpu_state);
+							}
 						}
+
+
+						// TOTO: Last pass can be not synced -> wrong transitions
+						if (info.states.size() > 1)
+						{
+							auto last_state = info.states[info.states.size() - 1];
+
+
+							Pass* last_pass = nullptr;
+							for (auto pass : last_state.passes)
+							{
+								if (!last_pass) last_pass = pass;
+
+
+
+
+								if (pass->wait_pass && pass->wait_pass->call_id > last_pass->call_id)
+								{
+									last_pass = pass;
+								}
+							}
+
+
+							if (last_pass)
+							{
+								auto commandList = last_pass->context.list;
+								if (!commandList) continue;
+								info.resource->get_state_manager().prepare_after_state(commandList.get(), info.first_state);
+
+							}
+
+						}
+
+
+					}
+					else
+					{
+						info.resource_just_created = false;
+
 					}
 				}
 
@@ -777,7 +756,7 @@ namespace FrameGraph
 					PROFILE(L"compile");
 
 					std::list<std::future<void>> tasks;
-					for (auto& pass : enabled_passes)
+					for (auto& pass : builder.enabled_passes)
 					{
 						auto commandList = pass->context.list;
 						if (!commandList) continue;
@@ -799,78 +778,61 @@ namespace FrameGraph
 
 
 				{
-					std::list<Pass*> graphics;
-					std::list<Pass*> compute;
 
-					UINT transitions = 0;
+					enum_array<CommandListType,SyncState> queued_state;
 
-					enum_array<HAL::CommandListType, enum_array<HAL::CommandListType, UINT>> call_ids = {};
+					//enum_array<HAL::CommandListType, enum_array<HAL::CommandListType, UINT>> call_ids = {};
 
-
-					auto flush = [&]()
-					{
-						for (auto pass : compute)
-						{
-							auto commandList = pass->context.list;
-							if (commandList)
-							{
-
-
-								transitions += commandList->transition_count;
-								pass->fence_end = commandList->execute().get();
-							}
-							else
-							{
-								pass->fence_end = HAL::Device::get().get_queue(pass->get_type())->get_last_fence();
-							}
-						}
-
-						for (auto pass : graphics)
-						{
-							auto commandList = pass->context.list;
-							if (commandList)
-							{
-								transitions += commandList->transition_count;
-								pass->fence_end = commandList->execute().get();
-							}
-							else
-							{
-								pass->fence_end = HAL::Device::get().get_queue(pass->get_type())->get_last_fence();
-							}
-
-						}
-						graphics.clear();
-						compute.clear();
-					};
-
-
-					for (auto& pass : enabled_passes)
+					for (auto& pass : builder.enabled_passes)
 					{
 
 						HAL::CommandListType list_type = pass->get_type();
 
+						for (auto sync_pass : pass->sync_state.values)
+						{
+
+							if(!sync_pass) continue;
+
+								HAL::CommandListType other_type = sync_pass->get_type();
+
+							if (!queued_state[list_type].is_in_sync(sync_pass,true))
+							{
+								assert(other_type!=list_type);
+								HAL::Device::get().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
+
+								queued_state[list_type].max(sync_pass);
+
+							}
+						}
+						/*bool pass_synced = queued_state[list_type].is_in_sync(pass->sync_state);
 						if (pass->wait_pass)
 						{
+							assert(!pass_synced);
 							auto type = pass->wait_pass->get_type();
 
 							if (call_ids[list_type][type] < pass->wait_pass->call_id + 1)
 							{
-								flush();
 								HAL::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
-
 								call_ids[list_type][type] = pass->wait_pass->call_id + 1;
 							}
 
-						}
+						}else assert(pass_synced);*/
 
-						if (list_type == HAL::CommandListType::DIRECT)
-							graphics.emplace_back(pass);
-						else
-							compute.emplace_back(pass);
 
-						call_ids[list_type][list_type] = pass->call_id + 1;
+						auto commandList = pass->context.list;
+							if (commandList)
+							{
+								pass->fence_end = commandList->execute().get();
+							}
+							else
+							{
+								pass->fence_end = HAL::Device::get().get_queue(pass->get_type())->get_last_fence();
+							}
+
+							queued_state[list_type].max(pass);
+
+						//call_ids[list_type][list_type] = pass->call_id + 1;
 					}
-					flush();
 
 				}
 
@@ -899,19 +861,19 @@ namespace FrameGraph
 	void Graph::reset()
 	{
 
-		for (auto& pass : enabled_passes)
+		for (auto& pass : builder.enabled_passes)
 		{
 			pass->wait();
 		}
 
 		passes.clear();
-		required_passes.clear();
-		enabled_passes.clear();
+		builder.required_passes.clear();
+		builder.enabled_passes.clear();
 		builder.reset();
 
 		pre_run.clear();
 		slot_setters.clear();
-	
+
 	}
 
 
@@ -923,7 +885,7 @@ namespace FrameGraph
 		info.name = name;
 		info.frame_id = current_frame->get_frame();
 		info.is_new = false;
-		info.valid_from = info.valid_to = info.valid_to_start = nullptr;
+		//info.valid_from = info.valid_to = info.valid_to_start = nullptr;
 
 		if (current_pass) {
 			current_pass->used.resources.insert(&info);
@@ -950,7 +912,9 @@ namespace FrameGraph
 		struct Events
 		{
 			std::set<ResourceAllocInfo*> create;
-			std::set<ResourceAllocInfo*> free;
+			std::set<ResourceAllocInfo*> free_before;
+			std::set<ResourceAllocInfo*> free_after;
+
 		};
 
 		std::map<int, Events> events;
@@ -994,11 +958,36 @@ namespace FrameGraph
 			}
 			else
 			{
-				assert(info->valid_from != info->valid_to);
-				assert(pair.second.valid_from->active());
-				assert(pair.second.valid_to->active());
-				events[pair.second.valid_from->call_id].create.insert(info);
-				events[pair.second.valid_to->call_id].free.insert(info);
+
+				// if the resource is temp, first pass should create it -> write
+				assert(info->states[0].passes.size() == 1);
+
+
+				const Pass* best_creation_pass = info->states.front().passes.front();
+				const Pass* best_deletion_pass = nullptr;
+
+				events[best_creation_pass->call_id].create.insert(info);
+
+
+				//if (info->states.back().passes.size() == 1)
+				//{
+				//	best_deletion_pass = info->states.back().passes.front();
+				//	events[best_creation_pass->call_id].free_after.insert(info);
+				//}
+				//else // find first synced pass
+					for (auto pass : enabled_passes)
+					{
+						if (info->used_end.is_in_sync(pass->sync_state))
+
+						{
+							best_deletion_pass = pass;
+							events[best_deletion_pass->call_id].free_before.insert(info);
+							break;
+						}
+
+					}
+				if (!best_deletion_pass)
+					events[100500].free_before.insert(info);
 			}
 
 			//	if (info->heap_type != HAL::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
@@ -1012,7 +1001,7 @@ namespace FrameGraph
 
 			for (auto [id, e] : events)
 			{
-				for (auto info : e.free)
+				for (auto info : e.free_before)
 				{
 					info->alloc_ptr.handle.Free();
 				}
@@ -1025,6 +1014,12 @@ namespace FrameGraph
 					HeapIndex index = { HAL::MemoryType::COMMITED , info->heap_type };
 
 					info->alloc_ptr = allocator.alloc(creation_info.size, creation_info.alignment, index);
+				}
+
+
+				for (auto info : e.free_after)
+				{
+					info->alloc_ptr.handle.Free();
 				}
 			}
 		}
@@ -1103,4 +1098,99 @@ namespace FrameGraph
 	{
 		return check(info->flags & ResourceFlags::Changed);
 	}
+
+
+	void SyncState::set_synced(const Pass* pass)
+	{
+		HAL::CommandListType type = pass->get_type();
+
+		auto& v = values[type];
+
+
+		if (!v || v->call_id > pass->call_id)
+		{
+			v = pass;
+		}
+	}
+
+
+	bool SyncState::is_in_sync(const SyncState&state)
+	{
+
+		for (auto type : magic_enum::enum_values<CommandListType>())
+		{
+
+			auto& v = values[type];
+			auto& pass = state.values[type];
+
+			auto a = v ? v->call_id : 0;
+			auto b = pass ? pass->call_id : 0;
+
+
+			if (a > b) return false;
+
+		}
+
+		return true;
+	}
+
+	bool SyncState::is_in_sync(const Pass* pass,bool equal)
+	{
+		HAL::CommandListType type = pass->get_type();
+
+		auto& v = values[type];
+
+		auto a = v?v->call_id:0;
+		if(equal )return pass->call_id <=a;
+		return pass->call_id <a;
+	}
+
+		void SyncState::min(const Pass*pass)
+		{
+			HAL::CommandListType type = pass->get_type();
+
+		auto& v = values[type];
+
+		if(!v||v->call_id>pass->call_id) v = pass;
+		}
+		void SyncState::max(const Pass*pass)
+		{	HAL::CommandListType type = pass->get_type();
+
+		auto& v = values[type];
+
+		if(!v||v->call_id<pass->call_id) v = pass;
+		}
+
+		void SyncState::min(const SyncState& state)
+		{
+
+			for (auto type : magic_enum::enum_values<CommandListType>())
+			{
+				auto& v = values[type];
+				auto& pass = state.values[type];
+					if((!v&&pass)||v->call_id>pass->call_id) 
+					v = pass;
+		
+			}
+		}
+		void SyncState::max(const SyncState&state)
+		{
+			
+			for (auto type : magic_enum::enum_values<CommandListType>())
+			{
+				auto& v = values[type];
+				auto& pass = state.values[type];
+					if((!v&&pass)||v->call_id<pass->call_id) 
+					v = pass;
+		
+			}
+		}
+		void SyncState::reset()
+		{
+				for (auto type : magic_enum::enum_values<CommandListType>())
+			{
+				auto& v = values[type];
+				v=nullptr;
+				}
+		}
 }

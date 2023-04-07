@@ -658,8 +658,8 @@ VoxelGI::ptr voxel_gi;
 	};
 	graph.add_pass<CopyPrev>("CopyPrev", [this, &graph](CopyPrev& data, TaskBuilder& builder) {
 		auto& frame = graph.get_context<ViewportInfo>();
-		builder.need(data.GBuffer_NormalsPrev, ResourceFlags::Required);
-		builder.need(data.GBuffer_SpecularPrev, ResourceFlags::Required);
+		builder.need(data.GBuffer_NormalsPrev, ResourceFlags::CopyDest);
+		builder.need(data.GBuffer_SpecularPrev, ResourceFlags::CopyDest);
 
 		builder.need(data.GBuffer_Normals, ResourceFlags::PixelRead);
 		builder.need(data.GBuffer_Specular, ResourceFlags::PixelRead);
@@ -670,7 +670,7 @@ VoxelGI::ptr voxel_gi;
 
 			copy.copy_resource(data.GBuffer_NormalsPrev->resource, data.GBuffer_Normals->resource);
 			copy.copy_resource(data.GBuffer_SpecularPrev->resource, data.GBuffer_Specular->resource);
-		},PassFlags::Required);
+		});
 
 		}
 		struct debug_data

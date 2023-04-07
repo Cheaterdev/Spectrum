@@ -858,19 +858,19 @@ void VoxelGI::screen_reflection(Graph& graph)
 			auto renderer = sceneinfo.renderer;
 			context->begin();
 
-			auto& graphics = context->list->get_graphics();
+			//auto& graphics = context->list->get_graphics();
 			auto& compute = context->list->get_compute();
 
 
-			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			graphics.set_signature(Layouts::DefaultLayout);
+			
+			//graphics.set_signature(Layouts::DefaultLayout);
 
 			{
 
 				graph.set_slot(SlotID::FrameInfo, compute);
-				graph.set_slot(SlotID::FrameInfo, graphics);
+		//		graph.set_slot(SlotID::FrameInfo, graphics);
 				graph.set_slot(SlotID::SceneData, compute);
-				graph.set_slot(SlotID::SceneData, graphics);
+		//		graph.set_slot(SlotID::SceneData, graphics);
 			}
 
 
@@ -880,7 +880,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
-				voxelScreen.set(graphics);
+			//	voxelScreen.set(graphics);
 				voxelScreen.set(compute);
 			}
 
@@ -888,7 +888,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 			//	scene->voxels_compiled.set(compute);
 
 			graph.set_slot(SlotID::VoxelInfo, compute);
-			graph.set_slot(SlotID::VoxelInfo, graphics);
+		//	graph.set_slot(SlotID::VoxelInfo, graphics);
 
 
 
@@ -912,26 +912,26 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 				//		command_list->get_copy().copy_resource(gi_filtered.resource, noisy_output.resource);
 			}
-			else
-			{
-				graphics.set_viewport(target_tex.get_viewport());
-				graphics.set_scissor(target_tex.get_scissor());
+			//else
+			//{
+			//	graphics.set_viewport(target_tex.get_viewport());
+			//	graphics.set_scissor(target_tex.get_scissor());
 
-				{
-					RT::SingleColorDepth rt;
-					rt.GetColor() = target_tex.renderTarget;
-					rt.GetDepth() = gbuffer.quality.depthStencil;
+			//	{
+			//		RT::SingleColorDepth rt;
+			//		rt.GetColor() = target_tex.renderTarget;
+			//		rt.GetDepth() = gbuffer.quality.depthStencil;
 
-					rt.set(graphics);
-				}
+			//		rt.set(graphics);
+			//	}
 
-				PROFILE_GPU(L"full");
-				graphics.set_stencil_ref(2);
-				graphics.set_pipeline<PSOS::VoxelReflectionHi>();
-				graphics.draw(4);
-			}
+			//	PROFILE_GPU(L"full");
+			//	graphics.set_stencil_ref(2);
+			//	graphics.set_pipeline<PSOS::VoxelReflectionHi>();
+			//	graphics.draw(4);
+			//}
 
-		});
+		}, PassFlags::Compute);
 
 		reflection_denoiser.generate(graph);
 

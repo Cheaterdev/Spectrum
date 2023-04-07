@@ -109,8 +109,9 @@ namespace HAL
 
 	void DelayedCommandList::resolve_times(const QueryHeap& pQueryHeap, uint32_t NumQueries, ResourceAddress destination)
 	{
-		tasks.emplace_back([&pQueryHeap, NumQueries, destination](API::CommandList& list) {
-			list.resolve_times(pQueryHeap, NumQueries, destination);
+		auto ptr=&pQueryHeap;
+		tasks.emplace_back([ptr, NumQueries, destination](API::CommandList& list) {
+			list.resolve_times(*ptr, NumQueries, destination);
 			});
 	}
 

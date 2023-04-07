@@ -490,6 +490,10 @@ export
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
 			bool transition(Transitions* from, Transitions* to) const;
 			void prepare_state(Transitions* from, SubResourcesGPU& subres) const;
+
+
+
+			void prepare_after_state(Transitions* from, SubResourcesGPU& subres) const;
 		};
 
 

@@ -30,19 +30,20 @@ using namespace HAL;
 		UnorderedAccess = (1 << 4),
 		RenderTarget = (1 << 5),
 		DepthStencil = (1 << 6),
+		CopyDest = (1 << 7),
 
 
-		GenCPU = (1 << 7),
-		ReadCPU = (1 << 8),
+		GenCPU = (1 << 8),
+		ReadCPU = (1 << 9),
 
 		Temporal = 0,
-		Static = (1 << 9),
-		Required = (1 << 10),
+		Static = (1 << 10),
+		Required = (1 << 11),
 
 		Changed = (1 << 13)
 	};
 
-	 const constexpr ResourceFlags WRITEABLE_FLAGS = ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
+	 const constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
 
 	//struct BufferDesc
 	//{
@@ -107,6 +108,32 @@ using namespace HAL;
 		std::list<Pass*> graphics;
 
 	};
+
+
+	class SyncState
+	{
+
+
+	public:
+		enum_array<CommandListType, const Pass*> values;
+		SyncState(){reset();}
+		void reset();
+		void set_synced(const Pass* pass);
+	
+		bool is_in_sync(const Pass* pass,bool equal = false);
+		bool is_in_sync(const SyncState&state);
+
+		bool is_sync_to(const SyncState&state);
+
+
+			void min(const Pass*pass);
+		void max(const Pass*pass);
+
+		void min(const SyncState&state);
+		void max(const SyncState&state);
+
+	};
+
 	struct ResourceAllocInfo
 	{
 		std::string name;
@@ -122,15 +149,15 @@ using namespace HAL;
 		HAL::ResourceDesc d3ddesc;
 		HAL::HeapType heap_type;
 		// setup
-		Pass* valid_from = nullptr;
-		Pass* valid_to = nullptr;
-		Pass* valid_to_start = nullptr;
+		SyncState used_begin;
+		SyncState used_end;
 
 
+		SubResourcesGPU first_state;
 		bool enabled = true;
 
 		bool is_new = false;
-
+		bool resource_just_created = true;
 		std::vector<ResourceRWState> states;
 		int last_writer;
 		//compile
@@ -496,7 +523,8 @@ using namespace HAL;
 		std::map<std::string, ResourceAllocInfo> alloc_resources;
 
 		std::set<ResourceAllocInfo*> passed_resources;
-
+			std::list<std::shared_ptr<Pass>> required_passes;
+		std::list<Pass*> enabled_passes;
 		MemoryAllocatorType allocator;
 		HAL::FrameResourceManager frames;
 		HAL::FrameResources::ptr current_frame;
@@ -651,18 +679,25 @@ using namespace HAL;
 		std::string name;
 		UsedResources used;
 		FrameContext context;
-		std::set<Pass*> related;
+
+		SyncState sync_state;
+		std::set<Pass*> prev_passes;
+
+		std::set<Pass*> next_passes;
 		std::future<void> render_task;
 		HAL::FenceWaiter fence_end;
 
 		int graphic_count = 0;
 		int compute_count = 0;
 		Pass* wait_pass = nullptr;
+
+
+		
 		Pass* prev_pass = nullptr;
 
 		virtual bool setup(TaskBuilder& builder) = 0;
 
-		HAL::CommandListType get_type()
+		HAL::CommandListType get_type() const
 		{
 			HAL::CommandListType type = HAL::CommandListType::DIRECT;
 
@@ -681,6 +716,9 @@ using namespace HAL;
 		{
 			return enabled && renderable;
 		}
+
+		// optimization
+		bool inserted = false;
 	};
 
 
@@ -781,8 +819,7 @@ using namespace HAL;
 
 		std::list<std::shared_ptr<Pass>> passes;
 
-		std::list<std::shared_ptr<Pass>> required_passes;
-		std::list<Pass*> enabled_passes;
+	
 		Variable<bool> optimize = { true, "optimize", this };
 
 		std::list<std::function<void(Graph& g)>> pre_run;
@@ -794,7 +831,7 @@ using namespace HAL;
 
 			if (check(flags & PassFlags::Required))
 			{
-				required_passes.push_back(passes.back());
+				builder.required_passes.push_back(passes.back());
 			}
 		}
 

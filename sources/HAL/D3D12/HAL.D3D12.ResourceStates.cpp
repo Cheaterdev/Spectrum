@@ -339,6 +339,49 @@ namespace HAL
 	}
 
 
+		void ResourceStateManager::prepare_after_state(Transitions* from, SubResourcesGPU& gpu_state) const
+	{
+
+		//return ;
+		auto& cpu_state = get_state((from));
+
+		if (!cpu_state.used) return;
+
+		bool updated = false;
+
+
+		if ( cpu_state.all_states_same)
+		{
+			if (IsFullySupport((from)->get_type(), gpu_state.all_state.state))
+				transition(from,gpu_state.all_state.state,ALL_SUBRESOURCES) ;
+		}
+		else
+		{
+
+	/*		if (!cpu_state.all_state.used)
+				for (int i = 0; i < gpu_state.subres.size(); i++)
+				{
+					merge_one(i);
+				}*/
+			for (int i = 0; i < gpu_state.subres.size(); i++)
+			{
+				if (IsFullySupport((from)->get_type(), gpu_state.subres[i].state))
+			transition(from,gpu_state.subres[i].state,i) ;
+			}
+		}
+
+
+//		gpu_state.set_cpu_state(cpu_state);
+
+		if (updated)
+		{
+			(from)->track_object(*(const_cast<Resource*>(resource)));
+			(from)->use_resource((resource));
+		}
+
+	}
+
+
 	void ResourceStateManager::stop_using(Transitions* list, UINT subres) const
 	{
 		auto& state = get_state((list));
@@ -365,7 +408,7 @@ namespace HAL
 	bool ResourceStateManager::transition(Transitions* from, Transitions* to) const
 	{
 
-		return false;
+	//	return false;
 		auto& to_state = get_state((to));
 
 		if (!to_state.used)
