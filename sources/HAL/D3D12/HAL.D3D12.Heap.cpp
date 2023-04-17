@@ -19,6 +19,10 @@ namespace HAL
 			native_desc.Properties.Type = ::to_native(desc.Type);
 			native_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
+			if(native_desc.Properties.Type==D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD )
+			{
+			//native_desc.Properties.Type==D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_GPU_UPLOAD ;
+			}
 			device.native_device->CreateHeap(&native_desc, IID_PPV_ARGS(&native_heap));
 
 			if constexpr (Debug::CheckErrors)	TEST(device, device.native_device->GetDeviceRemovedReason());
@@ -54,6 +58,17 @@ namespace HAL
 
 			buffer.reset(new HAL::Resource(/*device,*/ ResourceDesc::Buffer(desc.Size), PlacementAddress { this,0 }));
 
+			if(native_desc.Properties.Type==D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD )
+			{
+				buffer->set_name("Upload Heap Buffer");
+			}else if(native_desc.Properties.Type==D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_READBACK)
+			{
+				buffer->set_name("Readback Heap Buffer");
+			}else
+			{
+				buffer->set_name("GPU Heap Buffer");
+			}
+		
 		}
 
 	

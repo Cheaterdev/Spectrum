@@ -89,7 +89,7 @@ namespace HAL
 
 			void CommandList::set_name(std::wstring_view name)
 			{
-				// m_commandList->SetName(name.data());
+				 m_commandList->SetName(name.data());
 			};
 
 			void CommandList::set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler)
@@ -107,9 +107,9 @@ namespace HAL
 				m_commandList->EndQuery(handle.get_heap()->get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, static_cast<uint>(handle.get_offset()) + offset);
 			}
 
-			void CommandList::resolve_times(const QueryHeap& pQueryHeap, uint32_t NumQueries, ResourceAddress destination)
+			void CommandList::resolve_times(const QueryHeap* pQueryHeap, uint32_t NumQueries, ResourceAddress destination)
 			{
-				m_commandList->ResolveQueryData(pQueryHeap.get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, destination.resource->get_dx(), destination.resource_offset);
+				m_commandList->ResolveQueryData(pQueryHeap->get_native().Get(), D3D12_QUERY_TYPE_TIMESTAMP, 0, NumQueries, destination.resource->get_dx(), destination.resource_offset);
 			}
 
 

@@ -35,6 +35,41 @@ export
 			return (GetSupportedStates(type) & states) == states;
 		}
 
+		bool IsCompatible(CommandListType a,CommandListType b)
+		{
+			if (a == CommandListType::DIRECT) return true;
+			if (b == CommandListType::DIRECT) return false;
+
+			if (a == CommandListType::COMPUTE) return true;
+			if (b == CommandListType::COMPUTE) return false;
+
+			return true;
+
+		}
+		CommandListType Merge(CommandListType a,CommandListType b)
+		{
+			if (a == CommandListType::DIRECT||b == CommandListType::DIRECT) return CommandListType::DIRECT;
+			if (a == CommandListType::COMPUTE||b == CommandListType::COMPUTE) return CommandListType::COMPUTE;
+			return CommandListType::COPY;
+		}
+
+		CommandListType GetBestType(const ResourceState& states)
+		{
+			if (states == ResourceState::COMMON)
+				return CommandListType::DIRECT;
+
+			if ((states & COPY_STATES) == states)
+			{
+				return CommandListType::COPY;
+			}
+
+			if ((states & COMPUTE_STATES) == states)
+			{
+				return CommandListType::COMPUTE;
+			}
+
+			return CommandListType::DIRECT;
+		}
 
 		CommandListType GetBestType(const ResourceState& states, CommandListType preferred_type)
 		{
@@ -363,7 +398,23 @@ export
 			}
 
 
+			CommandListType get_best_list_type()
+			{
+				if (all_states_same)
+					return	GetBestType(all_state.state);
 
+
+				CommandListType type = CommandListType::COPY;
+
+				for (auto& s : subres)
+				{
+					if(s.state!=ResourceState::UNKNOWN)
+					type= Merge(type,GetBestType(s.state));
+				}
+
+
+				return type;
+			}
 			void set_cpu_state(const SubResourcesCPU& cpu_state)
 			{
 				if (cpu_state.all_states_same)
@@ -444,6 +495,8 @@ export
 			
 
 		public:
+
+			bool manual_controlled = false;
 			virtual ~ResourceStateManager() = default;
 
 			using ptr = std::unique_ptr<ResourceStateManager>;

@@ -57,7 +57,7 @@ Asset_Type MeshAsset::get_type()
 
 void MeshAsset::init_gpu()
 {
-	std::shared_future<FenceWaiter> last;
+	FenceWaiter last;
 #undef OPAQUE
 	int i = 0;
 	if (HAL::Device::get().is_rtx_supported())
@@ -88,7 +88,7 @@ void MeshAsset::init_gpu()
 
 			i++;
 		}
-	if(last.valid()) last.get().wait();
+	last.wait();
 
 }
 MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)

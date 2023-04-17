@@ -13,6 +13,7 @@ namespace HAL {
 
 	class GPUEntityStorageInterface
 	{
+	public:
 		static constexpr uint DEFAULT_ALIGN = 256;
 
 	public:
@@ -63,7 +64,7 @@ namespace HAL {
 		}
 
 
-		UploadInfo aquire_data(UINT64 uploadBufferSize, HeapType heap_type, unsigned int alignment = DEFAULT_ALIGN);
+		UploadInfo aquire_data(UINT64 uploadBufferSize, HeapType heap_type, unsigned int alignment = DEFAULT_ALIGN, unsigned int offset = 0);
 	public:
 
 		UploadInfo place_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN)
@@ -126,9 +127,9 @@ namespace HAL {
 			offset += sizeof(T);
 		}
 	public:
-		UploadInfo read_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN)
+		UploadInfo read_data(UINT64 uploadBufferSize, unsigned int alignment = DEFAULT_ALIGN,unsigned int offset = 0)
 		{
-			return aquire_data(uploadBufferSize, HeapType::READBACK, alignment);
+			return aquire_data(uploadBufferSize, HeapType::READBACK, alignment,offset);
 		}
 
 	public:

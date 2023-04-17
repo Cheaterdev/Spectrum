@@ -44,7 +44,8 @@ export namespace HAL
 		HAL::FenceWaiter execute_internal(CommandList* list);
 		uint64 frequency;
 
-		HAL::FenceWaiter run_transition_list(HAL::FenceWaiter after,const std::shared_ptr<TransitionCommandList>& list);
+		HAL::FenceWaiter run_transition_list(HAL::FenceWaiter after, TransitionCommandList* list);
+
 	public:
 		void update_tile_mappings(const HAL::update_tiling_info& infos);
 

@@ -109,8 +109,10 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 			D3D12_FEATURE_DATA_D3D12_OPTIONS options = {};
 			D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
 			D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
+			D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12 = {};
 			D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_7 };
 
+			TEST(*this, native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS12, &options12, sizeof(options12)));
 			TEST(*this, native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7)));
 			TEST(*this, native_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5)));
 			TEST(*this, native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS, &options, sizeof(options)));

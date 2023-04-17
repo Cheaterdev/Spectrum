@@ -102,11 +102,11 @@ namespace HAL
 		return commandListCounter.get_completed_value() >= fence;
 	}
 
-	FenceWaiter Queue::run_transition_list(FenceWaiter after, const std::shared_ptr<TransitionCommandList>& list)
+	FenceWaiter Queue::run_transition_list(FenceWaiter after, TransitionCommandList* list)
 	{
 		std::unique_lock<std::mutex> lock(queue_mutex);
 		API::Queue::gpu_wait(after);
-		API::Queue::execute(list.get());
+		API::Queue::execute(&list->get_compiled());
 		return signal_internal();
 	}
 
@@ -164,43 +164,44 @@ namespace HAL
 				PROFILE(L"execute_transitions");
 			if (transition_list->get_type() == (list)->get_type())
 			{
-				API::Queue::execute(transition_list.get());
-				API::Queue::execute(list);
+				API::Queue::execute(&transition_list->get_compiled());
+				API::Queue::execute(&list->compiler.get_list());
 			}
 			else
 			{
 				// Need to request other queue to make a proper transition.
 				// It's OK, but better to avoid this
 				auto queue = HAL::Device::get().get_queue(transition_list->get_type());
-				auto waiter = queue->run_transition_list(last_executed_fence, std::static_pointer_cast<HAL::TransitionCommandList>(transition_list));
+				auto waiter = queue->run_transition_list(last_executed_fence, transition_list.get());
 
 				API::Queue::gpu_wait(waiter);
-				API::Queue::execute(list);
+				API::Queue::execute(&list->compiler.get_list());
 			}
 
 		}
 		else
 		{
 				PROFILE(L"execute_simple");
-			API::Queue::execute(list);
+				API::Queue::execute(&list->compiler.get_list());
 		}
 	//	Log::get() << Log::LEVEL_ERROR<< "Send " << list->name << Log::endl;
 
 		const FenceWaiter execution_fence = signal_internal();
 
-		{
-			PROFILE(L"on_send");
-			(list)->on_send(execution_fence);
-			(list)->free_resources();
-		}
+		//{
+		//	PROFILE(L"on_send");
+		//	(list)->on_send(execution_fence);
+		//	(list)->free_resources();
+		//}
 
-		executor.enqueue([cl, this]()
+		executor.enqueue([cl,transition_list, execution_fence, this]()
 			{
 				if (!HAL::Device::get().alive) return;
 
 				auto list = cl;
-				(list)->get_execution_fence().get().wait();
+				execution_fence.wait();
 				PROFILE(L"on_execute");
+				if(transition_list) transition_list->on_execute();
 				(list)->on_execute();
 			});
 

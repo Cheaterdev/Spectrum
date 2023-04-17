@@ -49,7 +49,7 @@ namespace FrameGraph
 			related.insert(related_read.begin(), related_read.end());
 			related_read.clear();
 		}
-	//	assert(pass->prev_passes.empty());
+		//	assert(pass->prev_passes.empty());
 
 		pass->prev_passes.insert(related.begin(), related.end());
 		related_read.insert(pass);
@@ -77,7 +77,7 @@ namespace FrameGraph
 
 		for (auto& state : states)
 		{
-
+			 
 			{
 				const auto ret2 = std::ranges::remove_if(state.graphics, fn);
 				state.graphics.erase(ret2.begin(), ret2.end());
@@ -94,9 +94,24 @@ namespace FrameGraph
 				state.passes.erase(ret2.begin(), ret2.end());
 			}
 
+
+
+			for(auto p:state.passes)
+
+			{
+			state.from.min(p);
+			state.to.max(p);
+			}
 		}
 
 
+	
+			{	
+			auto fn = [](ResourceRWState& s) {return s.passes.empty(); };
+
+				const auto ret2 = std::ranges::remove_if(states, fn);
+				states.erase(ret2.begin(), ret2.end());
+			}
 
 	}
 	TaskBuilder::TaskBuilder() : frames(Device::get()), allocator(HAL::Device::get().get_heap_factory(), false)
@@ -484,9 +499,11 @@ namespace FrameGraph
 			pass->prev_pass = nullptr;
 
 
-			for(auto s:pass->prev_passes)
+			for (auto s : pass->prev_passes)
 			{
-			pass->sync_state.max(s);
+				if (!s->active()) continue;
+
+				pass->sync_state.max(s);
 			}
 		}
 
@@ -589,6 +606,29 @@ namespace FrameGraph
 
 
 				}*/
+
+			auto find_pass = [&](SyncState from, SyncState to, CommandListType wanted_type)->Pass*{
+
+				for (auto& pass : builder.enabled_passes)
+				{
+					auto type = pass->get_type();
+
+					auto commandList = pass->context.list;
+							if (!commandList) continue;
+
+
+					if (!IsCompatible(type, wanted_type)) continue;
+					if (from.is_in_sync(pass)) continue;
+
+					if (!to.is_in_sync(pass)) continue;
+
+					return pass;
+				}
+
+
+				return nullptr;
+
+			};
 			if (optimize)
 				for (auto& pair : builder.alloc_resources)
 				{
@@ -599,122 +639,87 @@ namespace FrameGraph
 
 					if (!resource) continue;
 
+				if (info.heap_type != HAL::HeapType::DEFAULT) continue;
+
 					// merge resourcestate access in a same read or write state
 					for (auto& state : info.states)
 					{
-						HAL::SubResourcesGPU merged_state;
+						state.merged_state.subres.resize(resource->get_state_manager().get_subres_count());
 
-						merged_state.subres.resize(resource->get_state_manager().get_subres_count());
-
-
+						// calculate merged state
 						for (auto& pass : state.passes)
 						{
 							auto commandList = pass->context.list;
 							if (!commandList) continue;
 
 							auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-
-
-							merged_state.merge(cpu_state);
-							/*
-							for (int i = 0; i < merged_state.size();i++)
-							{
-								if (!cpu_state.subres[i].used) continue;
-								merged_state[i] = merge_state(merged_state[i], cpu_state.subres[i].get_first_state());
-							}*/
+							state.merged_state.merge(cpu_state);
 						}
 
+						// propagate merged state through passes
 						for (auto& pass : state.passes)
 						{
 							auto commandList = pass->context.list;
 							if (!commandList) continue;
-
 							auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-
-							cpu_state.prepare_for(commandList->get_type(), merged_state);
-							/*for (int i = 0; i < merged_state.size(); i++)
-							{
-								if (!cpu_state.subres[i].used)	continue;
-								cpu_state.subres[i].first_transition->wanted_state = merge_state(merged_state[i], cpu_state.subres[i].first_transition->wanted_state);
-								assert(cpu_state.subres[i].first_transition->wanted_state == merged_state[i]);
-							}*/
+							cpu_state.prepare_for(commandList->get_type(), state.merged_state);							
 						}
-
-						// TODO: propagate first state to next writer
 					}
 
-					// prepare state in prev list
-					for (int i = 1; i < info.states.size(); i++)
+					// link statee between passes
+					for (uint i = 0; i < info.states.size(); i++)
 					{
-						auto state = info.states[i];
-						auto prev_state = info.states[i - 1];
+						auto& state = info.states[i];
+						if (!state.write) continue;
 
-						Pass* prev_pass_graphics = prev_state.graphics.empty() ? nullptr : prev_state.graphics.back();
-						Pass* prev_pass_compute = prev_state.compute.empty() ? nullptr : prev_state.compute.back();
+						assert(state.passes.size()==1);
+						auto pass = state.passes.front();
+							auto commandList = pass->context.list;
+							if (!commandList) continue;
 
-						Pass* pass_graphics = state.graphics.empty() ? nullptr : state.graphics.front();
-						Pass* pass_compute = state.compute.empty() ? nullptr : state.compute.front();
+									HAL::CommandListType list_type = pass->get_type();
 
-						if (pass_graphics && prev_pass_compute)
+
+						if(i>0&&!info.states[i-1].write)
 						{
-							if (!pass_graphics->wait_pass || pass_graphics->wait_pass->call_id < prev_pass_compute->call_id)
-								pass_graphics->wait_pass = prev_pass_compute;
+							auto prev_state = info.states[i];
+							auto best_type = prev_state.merged_state.get_best_list_type();
+
+					//		assert(IsCompatible(list_type,best_type));
+							if(IsCompatible(list_type,best_type))
+							info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_state);
+							else
+								Log::get()<<"unwanted prev transitions " << pass->name << " "<<info.resource->name <<Log::endl; 
 						}
 
-						if (pass_compute && prev_pass_graphics)
+
+						if(i<info.states.size()-1/*&&!info.states[i+1].write*/)
 						{
-							if (!pass_compute->wait_pass || pass_compute->wait_pass->call_id < prev_pass_graphics->call_id)
-								pass_compute->wait_pass = prev_pass_graphics;
+							auto next_state = info.states[i+1];
 
-							auto prevCL = prev_pass_graphics->context.list;
-							auto curCL = pass_compute->context.list;
-
-							if (prevCL && curCL)
-								prevCL->merge_transition(curCL.get(), info.resource.get());
-						}
-
-						if (pass_compute && prev_pass_compute)
-						{
-							auto prevCL = prev_pass_compute->context.list;
-							auto curCL = pass_compute->context.list;
-
-
-							if (prevCL && curCL)
-								prevCL->merge_transition(curCL.get(), info.resource.get());
-						}
-
-						if (pass_graphics && prev_pass_graphics)
-						{
-							auto prevCL = prev_pass_graphics->context.list;
-
-							auto curCL = pass_graphics->context.list;
-							if (prevCL && curCL)
-								prevCL->merge_transition(curCL.get(), info.resource.get());
-						}
-
-					}
-
-					if (!info.resource_just_created)
-					{
-						auto gpu_state = info.resource->get_state_manager().copy_gpu();
-						info.first_state = gpu_state;
-
-						for (int i = 0; i < info.states.size(); i++)
-						{
-							auto state = info.states[i];
-							for (auto pass : state.passes)
+							auto best_type = Merge(next_state.merged_state.get_best_list_type(),state.merged_state.get_best_list_type());
+				
+					//	assert(IsCompatible(list_type,best_type));
+							if(IsCompatible(list_type,best_type))
+							info.resource->get_state_manager().prepare_after_state(commandList.get(), next_state.merged_state);
+							else
 							{
-								auto commandList = pass->context.list;
-								if (!commandList) continue;
+								auto best_pass = find_pass(state.to, next_state.from, best_type);
+								assert(best_pass);
 
-								info.resource->get_state_manager().prepare_state(commandList.get(), gpu_state);
+								info.resource->get_state_manager().prepare_after_state(best_pass->context.list.get(), next_state.merged_state);
 							}
+						//		Log::get()<<"unwanted next transitions " << pass->name << " "<<info.resource->name <<Log::endl; 
+						
 						}
+					}
+				
+	
 
-
-						// TOTO: Last pass can be not synced -> wrong transitions
-						if (info.states.size() > 1)
-						{
+						// link end to start transition
+						if (info.states.size() > 0)
+						{			
+					HAL::SubResourcesGPU first_state=info.states.data()->merged_state;
 							auto last_state = info.states[info.states.size() - 1];
 
 
@@ -723,31 +728,33 @@ namespace FrameGraph
 							{
 								if (!last_pass) last_pass = pass;
 
-
-
-
-								if (pass->wait_pass && pass->wait_pass->call_id > last_pass->call_id)
+								if (pass->sync_state.is_in_sync(last_pass,true))
 								{
 									last_pass = pass;
 								}
 							}
 
 
-							if (last_pass)
+							if (last_pass&&!info.passed)
 							{
 								auto commandList = last_pass->context.list;
 								if (!commandList) continue;
-								info.resource->get_state_manager().prepare_after_state(commandList.get(), info.first_state);
+											HAL::CommandListType list_type = last_pass->get_type();
 
+								auto best_type = Merge(first_state.get_best_list_type(),list_type);
+				
+								best_type = Merge(last_state.merged_state.get_best_list_type(),best_type);
+				
+							if(IsCompatible(list_type,best_type))
+								info.resource->get_state_manager().prepare_after_state(commandList.get(), first_state);
+							else if(first_state.get_best_list_type() == CommandListType::COMPUTE)
+							{
+							Log::get()<<"unwanted window transitions " <<info.resource->name <<Log::endl; 
+							}
 							}
 
-						}
+						
 
-
-					}
-					else
-					{
-						info.resource_just_created = false;
 
 					}
 				}
@@ -779,59 +786,50 @@ namespace FrameGraph
 
 				{
 
-					enum_array<CommandListType,SyncState> queued_state;
+					enum_array<CommandListType, SyncState> queued_state;
 
 					//enum_array<HAL::CommandListType, enum_array<HAL::CommandListType, UINT>> call_ids = {};
 
 					for (auto& pass : builder.enabled_passes)
 					{
-
 						HAL::CommandListType list_type = pass->get_type();
 
-						for (auto sync_pass : pass->sync_state.values)
+						auto commandList = pass->context.list;
+
+
+						if (commandList)
 						{
 
-							if(!sync_pass) continue;
+							for (auto sync_pass : pass->sync_state.values)
+							{
 
+								if (!sync_pass) continue;
+								
 								HAL::CommandListType other_type = sync_pass->get_type();
 
-							if (!queued_state[list_type].is_in_sync(sync_pass,true))
-							{
-								assert(other_type!=list_type);
-								HAL::Device::get().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
+								if (!queued_state[list_type].is_in_sync(sync_pass, true))
+								{
+									assert(other_type != list_type);
 
-								queued_state[list_type].max(sync_pass);
+									HAL::Device::get().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
 
+									queued_state[list_type].max(sync_pass);
+
+								}
 							}
+
+
+							pass->fence_end = commandList->execute();
 						}
-						/*bool pass_synced = queued_state[list_type].is_in_sync(pass->sync_state);
-						if (pass->wait_pass)
+						else
 						{
-							assert(!pass_synced);
-							auto type = pass->wait_pass->get_type();
+							auto prev_pass=queued_state[list_type].values[list_type];
+							if(prev_pass)pass->fence_end = prev_pass->fence_end;
 
-							if (call_ids[list_type][type] < pass->wait_pass->call_id + 1)
-							{
-								HAL::Device::get().get_queue(list_type)->gpu_wait(pass->wait_pass->fence_end);
-								call_ids[list_type][type] = pass->wait_pass->call_id + 1;
-							}
+						}
 
-						}else assert(pass_synced);*/
+						queued_state[list_type].max(pass);
 
-
-						auto commandList = pass->context.list;
-							if (commandList)
-							{
-								pass->fence_end = commandList->execute().get();
-							}
-							else
-							{
-								pass->fence_end = HAL::Device::get().get_queue(pass->get_type())->get_last_fence();
-							}
-
-							queued_state[list_type].max(pass);
-
-						//call_ids[list_type][list_type] = pass->call_id + 1;
 					}
 
 				}
@@ -918,7 +916,7 @@ namespace FrameGraph
 		};
 
 		std::map<int, Events> events;
-
+		std::set<ResourceAllocInfo*> non_deleted;
 		for (auto& pair : alloc_resources)
 		{
 			if (pair.second.passed) continue;
@@ -975,24 +973,20 @@ namespace FrameGraph
 				//	events[best_creation_pass->call_id].free_after.insert(info);
 				//}
 				//else // find first synced pass
-					for (auto pass : enabled_passes)
+				for (auto pass : enabled_passes)
+				{
+					if (info->used_end.is_in_sync(pass->sync_state))
+
 					{
-						if (info->used_end.is_in_sync(pass->sync_state))
-
-						{
-							best_deletion_pass = pass;
-							events[best_deletion_pass->call_id].free_before.insert(info);
-							break;
-						}
-
+						best_deletion_pass = pass;
+						events[best_deletion_pass->call_id].free_before.insert(info);
+						break;
 					}
+
+				}
 				if (!best_deletion_pass)
-					events[100500].free_before.insert(info);
+					non_deleted.insert(info);
 			}
-
-			//	if (info->heap_type != HAL::HeapType::DEFAULT || check(info->flags & ResourceFlags::Static)) continue;
-
-
 		}
 
 		{
@@ -1021,6 +1015,13 @@ namespace FrameGraph
 				{
 					info->alloc_ptr.handle.Free();
 				}
+			}
+
+
+
+			for (auto info : non_deleted)
+			{
+				info->alloc_ptr.handle.Free();
 			}
 		}
 
@@ -1073,8 +1074,10 @@ namespace FrameGraph
 					}
 
 				}
-				info->resource->set_name(info->name);
 
+				info->resource->debug = info->name=="GBuffer_DepthPrev";
+				info->resource->set_name(info->name);
+				info->resource->get_state_manager().manual_controlled = true;
 				info->handler->init_view(*info, *current_frame);
 				id++;
 			}
@@ -1114,7 +1117,7 @@ namespace FrameGraph
 	}
 
 
-	bool SyncState::is_in_sync(const SyncState&state)
+	bool SyncState::is_in_sync(const SyncState& state)
 	{
 
 		for (auto type : magic_enum::enum_values<CommandListType>())
@@ -1134,63 +1137,64 @@ namespace FrameGraph
 		return true;
 	}
 
-	bool SyncState::is_in_sync(const Pass* pass,bool equal)
+	bool SyncState::is_in_sync(const Pass* pass, bool equal)
 	{
 		HAL::CommandListType type = pass->get_type();
 
 		auto& v = values[type];
 
-		auto a = v?v->call_id:0;
-		if(equal )return pass->call_id <=a;
-		return pass->call_id <a;
+		auto a = v ? v->call_id : 0;
+		if (equal)return pass->call_id <= a;
+		return pass->call_id < a;
 	}
 
-		void SyncState::min(const Pass*pass)
-		{
-			HAL::CommandListType type = pass->get_type();
+	void SyncState::min(const Pass* pass)
+	{
+		HAL::CommandListType type = pass->get_type();
 
 		auto& v = values[type];
 
-		if(!v||v->call_id>pass->call_id) v = pass;
-		}
-		void SyncState::max(const Pass*pass)
-		{	HAL::CommandListType type = pass->get_type();
+		if (!v || v->call_id > pass->call_id) v = pass;
+	}
+	void SyncState::max(const Pass* pass)
+	{
+		HAL::CommandListType type = pass->get_type();
 
 		auto& v = values[type];
 
-		if(!v||v->call_id<pass->call_id) v = pass;
-		}
+		if (!v || v->call_id < pass->call_id) v = pass;
+	}
 
-		void SyncState::min(const SyncState& state)
-		{
+	void SyncState::min(const SyncState& state)
+	{
 
-			for (auto type : magic_enum::enum_values<CommandListType>())
-			{
-				auto& v = values[type];
-				auto& pass = state.values[type];
-					if((!v&&pass)||v->call_id>pass->call_id) 
-					v = pass;
-		
-			}
-		}
-		void SyncState::max(const SyncState&state)
+		for (auto type : magic_enum::enum_values<CommandListType>())
 		{
-			
-			for (auto type : magic_enum::enum_values<CommandListType>())
-			{
-				auto& v = values[type];
-				auto& pass = state.values[type];
-					if((!v&&pass)||v->call_id<pass->call_id) 
-					v = pass;
-		
-			}
+			auto& v = values[type];
+			auto& pass = state.values[type];
+			if ((!v && pass) || v->call_id > pass->call_id)
+				v = pass;
+
 		}
-		void SyncState::reset()
+	}
+	void SyncState::max(const SyncState& state)
+	{
+
+		for (auto type : magic_enum::enum_values<CommandListType>())
 		{
-				for (auto type : magic_enum::enum_values<CommandListType>())
-			{
-				auto& v = values[type];
-				v=nullptr;
-				}
+			auto& v = values[type];
+			auto& pass = state.values[type];
+			if ((!v && pass) || v->call_id < pass->call_id)
+				v = pass;
+
 		}
+	}
+	void SyncState::reset()
+	{
+		for (auto type : magic_enum::enum_values<CommandListType>())
+		{
+			auto& v = values[type];
+			v = nullptr;
+		}
+	}
 }

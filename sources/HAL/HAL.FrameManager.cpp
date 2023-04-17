@@ -29,11 +29,11 @@ namespace HAL {
 
 
 
-	UploadInfo GPUEntityStorageInterface::aquire_data(UINT64 uploadBufferSize, HeapType heap_type, unsigned int alignment)
+	UploadInfo GPUEntityStorageInterface::aquire_data(UINT64 uploadBufferSize, HeapType heap_type, unsigned int alignment,unsigned int offset)
 	{
 		const auto AlignedSize = static_cast<UINT>(Math::roundUp(uploadBufferSize, alignment));
 
-		HeapIndex index = { HAL::MemoryType::COMMITED , heap_type };
+		HeapIndex index = { HAL::MemoryType::COMMITED , heap_type, offset };
 		auto handle = alloc_memory(AlignedSize, alignment, index);
 
 		return  { handle.get_heap()->as_buffer()->get_resource_address().offset(handle.get_offset()), uint(uploadBufferSize) };

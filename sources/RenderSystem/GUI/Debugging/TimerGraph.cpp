@@ -227,6 +227,8 @@ namespace GUI
 						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - gpu_start).count(),  25 * (block.block->calculate_depth() - 1) };
 						obj->size = { scaler * std::chrono::duration<double>((block.end_time - block.start_time)).count() ,25 };
 
+
+						if(obj->size->x<3)obj->size={3,obj->size->y};
 						int id = int(block.queue_type);
 						gpu_blocks[id]->add_child(obj);
 

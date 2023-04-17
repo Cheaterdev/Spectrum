@@ -31,14 +31,15 @@ using namespace HAL;
 		RenderTarget = (1 << 5),
 		DepthStencil = (1 << 6),
 		CopyDest = (1 << 7),
+		CopySource = (1 << 8),
 
 
-		GenCPU = (1 << 8),
-		ReadCPU = (1 << 9),
+		GenCPU = (1 << 9),
+		ReadCPU = (1 << 10),
 
 		Temporal = 0,
-		Static = (1 << 10),
-		Required = (1 << 11),
+		Static = (1 << 11),
+		Required = (1 << 12),
 
 		Changed = (1 << 13)
 	};
@@ -99,17 +100,6 @@ using namespace HAL;
 
 
 
-	struct ResourceRWState
-	{
-		bool write = false;
-		std::list<Pass*> passes;
-
-		std::list<Pass*> compute;
-		std::list<Pass*> graphics;
-
-	};
-
-
 	class SyncState
 	{
 
@@ -133,6 +123,22 @@ using namespace HAL;
 		void max(const SyncState&state);
 
 	};
+	
+
+	struct ResourceRWState
+	{
+		bool write = false;
+		std::list<Pass*> passes;
+
+		std::list<Pass*> compute;
+		std::list<Pass*> graphics;
+
+
+		HAL::SubResourcesGPU merged_state;
+
+		SyncState from;
+		SyncState to;
+	};
 
 	struct ResourceAllocInfo
 	{
@@ -153,7 +159,6 @@ using namespace HAL;
 		SyncState used_end;
 
 
-		SubResourcesGPU first_state;
 		bool enabled = true;
 
 		bool is_new = false;

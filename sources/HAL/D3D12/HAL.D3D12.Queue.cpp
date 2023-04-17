@@ -310,16 +310,18 @@ namespace HAL
 			native->GetTimestampFrequency(&THIS->frequency);
 		}
 
-		void Queue::execute(HAL::CommandList* list)
+		void Queue::execute(const API::CommandList* list)
 		{
-			ID3D12CommandList* s[] = { (list)->compiler.get_list().get_native().Get() };
-			native->ExecuteCommandLists(_countof(s), s);
+			queued.emplace_back(list->get_native().Get());
 		}
 
-		void Queue::execute(HAL::TransitionCommandList* list)
+		void Queue::flush()
 		{
-			ID3D12CommandList* s[] = { (list)->get_compiled().get_native().Get() };
-			native->ExecuteCommandLists(_countof(s), s);
+			if(!queued.empty())
+			{		
+				native->ExecuteCommandLists(queued.size(),queued.data());
+				queued.clear();
+			}
 		}
 
 		D3D::CommandQueue Queue::get_native()
@@ -330,11 +332,13 @@ namespace HAL
 		void  Queue::gpu_wait(FenceWaiter waiter)
 		{
 			if (!waiter) return;
+			flush();
 			native->Wait(waiter.fence->m_fence.Get(), waiter.value);
 		}
 
 		void Queue::signal(Fence& fence, Fence::CounterType value)
 		{
+			flush();
 			native->Signal(fence.m_fence.Get(), value);
 		}
 	}

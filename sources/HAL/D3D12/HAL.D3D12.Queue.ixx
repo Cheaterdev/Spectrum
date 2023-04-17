@@ -10,11 +10,14 @@ export namespace HAL
 	{
 		class Queue
 		{
+
+
+			std::vector<ID3D12CommandList*> queued;
 		protected:
 			D3D::CommandQueue native;
 
-			void execute(HAL::CommandList* list);
-			void execute(HAL::TransitionCommandList* list);
+			void execute(const API::CommandList* list);
+			void flush();
 			void signal(Fence& fence, Fence::CounterType value);
 			void gpu_wait(HAL::FenceWaiter waiter);
 

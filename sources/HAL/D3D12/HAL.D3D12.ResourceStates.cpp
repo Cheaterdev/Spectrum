@@ -75,13 +75,33 @@ namespace HAL
 
 	void SubResourcesCPU::prepare_for(CommandListType type, SubResourcesGPU& state)
 	{
+		if(!used) return;
+
 		if (state.all_states_same && all_state.first_transition)
 		{
 
 			auto states = state.get_subres_state(ALL_SUBRESOURCES).state;
 
-			states = GetSupportedStates(type) & states;
+			//states = GetSupportedStates(type) & states;
 			all_state.first_transition->wanted_state = merge_state(states, all_state.first_transition->wanted_state);
+		}else
+		{
+		
+			make_unique_state();
+
+
+				for (int i = 0; i < subres.size(); i++)
+					{
+					auto my_state = get_subres_state(i);
+						auto subres_state = state.get_subres_state(i).state;
+
+						if(subres_state==ResourceState::UNKNOWN) 
+							continue;
+
+						my_state.first_transition->wanted_state = merge_state(subres_state, my_state.first_transition->wanted_state);
+						
+					}
+
 		}
 	}
 
@@ -141,6 +161,7 @@ namespace HAL
 
 			if (gpu.state != first_state)
 			{
+				//assert(!manual_controlled);
 				target.transition(resource, gpu.state, first_state, i);
 				processed_states = processed_states | gpu.state | first_state;
 			}
@@ -274,7 +295,7 @@ namespace HAL
 
 			if (!cpu.used)	return;
 
-			if (!IsFullySupport((from)->get_type(), gpu.state))  return;
+			assert (IsFullySupport((from)->get_type(), gpu.state));
 
 			auto first_transition = cpu_state.get_first_transition(i);
 			auto last_transition = cpu_state.get_last_transition(i);
@@ -291,7 +312,7 @@ namespace HAL
 
 			if (!cpu.used) return;
 
-			if (!IsFullySupport((from)->get_type(), gpu.state))  return;
+			assert (IsFullySupport((from)->get_type(), gpu.state));
 
 			auto first_transition = cpu_state.get_first_transition(i);
 			auto last_transition = cpu_state.get_last_transition(i);
@@ -345,14 +366,15 @@ namespace HAL
 		//return ;
 		auto& cpu_state = get_state((from));
 
-		if (!cpu_state.used) return;
+	//	if (!cpu_state.used)
+	//		return;
 
 		bool updated = false;
 
 
-		if ( cpu_state.all_states_same)
+		if ( gpu_state.all_states_same)
 		{
-			if (IsFullySupport((from)->get_type(), gpu_state.all_state.state))
+			assert (IsFullySupport((from)->get_type(), gpu_state.all_state.state));
 				transition(from,gpu_state.all_state.state,ALL_SUBRESOURCES) ;
 		}
 		else
@@ -365,7 +387,8 @@ namespace HAL
 				}*/
 			for (int i = 0; i < gpu_state.subres.size(); i++)
 			{
-				if (IsFullySupport((from)->get_type(), gpu_state.subres[i].state))
+				if(gpu_state.subres[i].state==ResourceState::UNKNOWN) continue;
+				assert (IsFullySupport((from)->get_type(), gpu_state.subres[i].state));
 			transition(from,gpu_state.subres[i].state,i) ;
 			}
 		}

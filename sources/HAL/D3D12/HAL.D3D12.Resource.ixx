@@ -25,7 +25,7 @@ export namespace HAL
 	{
 		
 	
-	class Resource
+	class Resource:public Object
 	{
 		GPUAddressPtr address;
 	public:

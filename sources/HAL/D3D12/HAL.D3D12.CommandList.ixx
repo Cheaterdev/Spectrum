@@ -53,7 +53,7 @@ export namespace HAL {
 
 			void set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler);
 			void insert_time(const QueryHandle& handle, uint offset);
-			void resolve_times(const QueryHeap& pQueryHeap, uint32_t NumQueries, ResourceAddress destination);
+			void resolve_times(const QueryHeap* pQueryHeap, uint32_t NumQueries, ResourceAddress destination);
 			void set_graphics_signature(const HAL::RootSignature::ptr& s);
 			void set_compute_signature(const HAL::RootSignature::ptr& s);
 			void draw(UINT vertex_count, UINT vertex_offset, UINT instance_count, UINT instance_offset);

@@ -24,6 +24,7 @@ namespace HAL
 	void DelayedCommandList::compile(CommandAllocator& allocator)
 	{
 		list.begin(allocator);
+		list.set_name(name);
 		for (auto& f : tasks)
 		{
 			f(list);
@@ -90,7 +91,7 @@ namespace HAL
 
 	void DelayedCommandList::set_name(std::wstring_view name)
 	{
-		list.set_name(name);
+		this->name=name;
 	}
 
 	void DelayedCommandList::set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler)
@@ -107,11 +108,10 @@ namespace HAL
 			});
 	}
 
-	void DelayedCommandList::resolve_times(const QueryHeap& pQueryHeap, uint32_t NumQueries, ResourceAddress destination)
+	void DelayedCommandList::resolve_times(const QueryHeap* pQueryHeap, uint32_t NumQueries, ResourceAddress destination)
 	{
-		auto ptr=&pQueryHeap;
-		tasks.emplace_back([ptr, NumQueries, destination](API::CommandList& list) {
-			list.resolve_times(*ptr, NumQueries, destination);
+		tasks.emplace_back([=](API::CommandList& list) {
+			list.resolve_times(pQueryHeap, NumQueries, destination);
 			});
 	}
 

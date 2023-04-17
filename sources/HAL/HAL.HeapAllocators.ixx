@@ -15,6 +15,7 @@ export namespace HAL
 		MemoryType memory;
 		HeapType type;
 
+		unsigned int offset = 0;
 		GEN_DEF_COMP(HeapIndex);
 	};
 	

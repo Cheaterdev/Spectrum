@@ -546,7 +546,6 @@ VoxelGI::ptr voxel_gi;
 
 					//	stenciler->render(context, scene);
 					{
-						command_list->get_copy().copy_texture(gbuffer.depth_prev_mips.resource->get_ptr(), 0, gbuffer.depth_mips.resource->get_ptr(), 0);
 						command_list->get_copy().copy_texture(gbuffer.depth_mips.resource->get_ptr(), 0, gbuffer.depth.resource->get_ptr(), 0);
 
 					}
@@ -622,9 +621,11 @@ VoxelGI::ptr voxel_gi;
 			Handlers::Texture H(ResultTexture);
 
 		};
-		graph.add_pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) {
+		graph.pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) ->bool{
 			auto& frame = graph.get_context<ViewportInfo>();
 			builder.create(data.ResultTexture, { uint3(frame.frame_size,0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::RenderTarget);
+
+			return false;
 			}, [](no& data, FrameContext& _context) {});
 
 
@@ -655,21 +656,31 @@ VoxelGI::ptr voxel_gi;
 			Handlers::Texture H(GBuffer_Normals);
 			Handlers::Texture H(GBuffer_Specular);
 
+	Handlers::Texture H(GBuffer_DepthPrev);
+			Handlers::Texture H(GBuffer_DepthMips);
+
+
+
+
 	};
 	graph.add_pass<CopyPrev>("CopyPrev", [this, &graph](CopyPrev& data, TaskBuilder& builder) {
 		auto& frame = graph.get_context<ViewportInfo>();
 		builder.need(data.GBuffer_NormalsPrev, ResourceFlags::CopyDest);
 		builder.need(data.GBuffer_SpecularPrev, ResourceFlags::CopyDest);
 
-		builder.need(data.GBuffer_Normals, ResourceFlags::PixelRead);
-		builder.need(data.GBuffer_Specular, ResourceFlags::PixelRead);
+		builder.need(data.GBuffer_Normals, ResourceFlags::CopySource);
+		builder.need(data.GBuffer_Specular, ResourceFlags::CopySource);
 
+	builder.need(data.GBuffer_DepthPrev, ResourceFlags::CopyDest);
+		builder.need(data.GBuffer_DepthMips, ResourceFlags::CopySource);
 
 		}, [](CopyPrev& data, FrameContext& _context) {
 			auto& copy = _context.get_list()->get_copy();
 
 			copy.copy_resource(data.GBuffer_NormalsPrev->resource, data.GBuffer_Normals->resource);
 			copy.copy_resource(data.GBuffer_SpecularPrev->resource, data.GBuffer_Specular->resource);
+			copy.copy_texture(data.GBuffer_DepthPrev->resource ,0, data.GBuffer_DepthMips->resource, 0);
+				
 		});
 
 		}

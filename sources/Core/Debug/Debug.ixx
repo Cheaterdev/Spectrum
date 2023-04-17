@@ -78,7 +78,21 @@ export
 
 #endif
 
+	class Object
+	{
 
+		std::string name;
+	
+	public:
+			bool debug = false;
+		virtual void set_name(std::string_view str)
+		{
+			name = str;
+		}
+
+
+	
+	};
 
 	template<class T>
 	class Counter;

@@ -821,7 +821,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 	graph.add_pass<ScreenReflection>("ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
-		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
+		//builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 		builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::UnorderedAccess);
 		builder.create(data.noise_dir_pdf, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1,1 }, ResourceFlags::UnorderedAccess);
 			builder.need(data.BlueNoise, ResourceFlags::ComputeRead);
@@ -835,7 +835,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 
 			MeshRenderContext::ptr context(new MeshRenderContext());
-			auto target_tex = *(data.ResultTexture);
+			//auto target_tex = *(data.ResultTexture);
 			auto gbuffer = data.gbuffer.actualize(_context);
 			auto sky_cubemap_filtered = *(data.sky_cubemap_filtered);
 			auto noisy_output = *(data.VoxelReflectionNoise);

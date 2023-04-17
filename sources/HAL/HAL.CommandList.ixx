@@ -22,12 +22,11 @@ export{
 	{
 		class GPUBuffer;
 		
-		class CommandListBase : public StateContext
+		class CommandListBase : public StateContext, public GPUEntityStorageProxy
 		{
 		protected:
-
-			CommandListType type;
-
+				CommandListType type;
+					std::string name;
 			std::vector<std::function<void()>> on_execute_funcs;
 
 			
@@ -38,7 +37,8 @@ export{
 				return &compiler;
 			}
 		public:
-			DelayedCommandList compiler;
+	FrameResources::ptr frame_resources;
+				DelayedCommandList compiler;
 			template<TrackableClass T>
 			void track_object(T& obj)
 			{
@@ -75,7 +75,7 @@ export{
 		{
 			std::list<HAL::Resource*> used_resources;
 
-			std::shared_ptr<TransitionCommandList> transition_list;
+	//		std::shared_ptr<TransitionCommandList> transition_list;
 
 			friend class SignatureDataSetter;
 			friend class Sendable;
@@ -331,7 +331,7 @@ export{
 			Exceptions::stack_trace begin_stack;
 #endif
 
-			std::string name;
+		
 			void reset();
 			void begin(std::string name, Timer* t = nullptr);
 		public:
@@ -350,7 +350,7 @@ export{
 
 			// timers
 			void insert_time(QueryHandle& handle, uint offset);
-			void resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
+			void resolve_times(QueryHeap*pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
 
 
 
@@ -360,40 +360,16 @@ export{
 
 		class Sendable : public virtual CommandListBase
 		{
-
+		protected:
+			bool active = false;
 			friend class Queue;
-			std::vector<std::function<void(FenceWaiter)>> on_fence;
-
-
-			std::promise<FenceWaiter> execute_fence;
-			std::shared_future<FenceWaiter> execute_fence_result;
-
-			void on_send(FenceWaiter fence)
-			{
-
-
-
-				execute_fence.set_value(fence);
-
-				for (auto&& e : on_fence)
-					e(fence);
-
-				on_fence.clear();
-			}
-
+		
 		public:
+			virtual void end() = 0;
 			void compile();
-			void when_send(std::function<void(FenceWaiter)> e)
-			{
-				on_fence.emplace_back(e);
-			}
 
-			std::shared_future<FenceWaiter> get_execution_fence()
-			{
-				return execute_fence_result;
-			}
-
-			std::shared_future<FenceWaiter> execute(std::function<void()> f = nullptr);
+		
+			FenceWaiter execute(std::function<void()> f = nullptr);
 			void execute_and_wait(std::function<void()> f = nullptr);
 
 			void on_done(std::function<void()> f);
@@ -403,10 +379,9 @@ export{
 		class SignatureDataSetter;
 
 
-		class CommandList : public GPUEntityStorageProxy, public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
+		class CommandList : public Transitions, public Eventer, public Sendable, public SharedObject<CommandList>
 		{
 
-			bool active = false;
 		public:
 			using ptr = std::shared_ptr<CommandList>;
 		protected:
@@ -464,7 +439,7 @@ export{
 				track_object(*(info.resource));
 			}
 
-			FrameResources::ptr frame_resources;
+			
 			void setup_debug(SignatureDataSetter*);
 			void print_debug();
 			bool first_debug_log = true;
@@ -815,19 +790,30 @@ export{
 		};
 
 
-		class TransitionCommandList
+		class TransitionCommandList: public Eventer, public Sendable
 		{
 			
-			API::CommandList list;
-	
-			CommandListType type;
 		public:
 			using ptr = std::shared_ptr<TransitionCommandList>;
 			inline CommandListType get_type() { return type; }
 			TransitionCommandList(CommandListType type);
 			void create_transition_list(FrameResources& frame, const HAL::Barriers& transitions, std::vector<HAL::Resource*>& duscards);
 		
-			const API::CommandList& get_compiled() const {return list;}
+			const API::CommandList& get_compiled() const {return compiler.get_list();}
+
+			void end() override{}
+			void on_execute()
+			{
+
+				for (auto&& t : on_execute_funcs)
+					t();
+
+				on_execute_funcs.clear();
+
+				Eventer::reset();
+			}
+
+
 		};
 	}
 

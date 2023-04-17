@@ -16,9 +16,9 @@ namespace HAL
 
 	void GPUBlock::start(Eventer* list)
 	{
-		auto l = static_cast<CommandList*>(list);
+		//auto l = static_cast<CommandList*>(list);
 
-		auto& timers = get_state(l);
+		auto& timers = get_state(list);
 		timers.timers.emplace_back();
 
 		timers.timers.back().start(list);
@@ -30,9 +30,9 @@ namespace HAL
 
 	void GPUBlock::end(Eventer* list)
 	{
-		auto l = static_cast<CommandList*>(list);
+		//auto l = static_cast<CommandList*>(list);
 
-		auto& timers = get_state(l);
+		auto& timers = get_state(list);
 
 		timers.timers.back().end(list);
 	}
@@ -52,7 +52,7 @@ namespace HAL
 	{
 		queue_type = list->get_type();
 
-		querys = static_cast<CommandList*>(list)->alloc_query(2, QueryType::Timestamp);
+		querys = list->alloc_query(2, QueryType::Timestamp);
 
 		if (querys)
 			list->insert_time(querys, 0);
@@ -160,7 +160,9 @@ namespace HAL
 		first_debug_log = true;
 
 		if(!frame_resources) frame_resources = Device::get().get_frame_manager().begin_frame();
-		proxy = frame_resources->get_storage();
+		set_proxy(frame_resources->get_storage());
+
+		assert(proxy);
 		//       Log::get() << "begin" << Log::endl;
 
 
@@ -200,7 +202,7 @@ namespace HAL
 		proxy->resolve_timers([&, this](const QueryType& type, uint64 from, uint64 to, QueryHeap::ptr heap)
 					{
 						assert(from == 0);
-						resolve_times(*heap, static_cast<uint>(to), [heap](std::span<UINT64> data) {
+						resolve_times(heap.get(), static_cast<uint>(to), [heap](std::span<UINT64> data) {
 							std::copy(data.begin(), data.end(), heap->read_back_data.begin());
 							});
 					});
@@ -253,35 +255,35 @@ namespace HAL
 	void Sendable::compile()
 	{
 
-		auto cmd = static_cast<CommandList*>(this);
+	//	auto cmd = static_cast<CommandList*>(this);
 
-		if (cmd->active)
-			cmd->end();
+		if (active)
+			end();
 
 
-		auto ca = cmd->frame_resources->get_ca(type);
+		auto ca = frame_resources->get_ca(type);
 	 compiler.compile(*ca);
-		 cmd->frame_resources->free_ca(ca);
+		 frame_resources->free_ca(ca);
 	}
 
-	std::shared_future<FenceWaiter> Sendable::execute(std::function<void()> f)
+	FenceWaiter Sendable::execute(std::function<void()> f)
 	{
 		if(!compiler.is_compiled()) 
 			Sendable::compile();
 
-		execute_fence = std::promise<FenceWaiter>();
-		execute_fence_result = execute_fence.get_future();
+		//execute_fence = std::promise<FenceWaiter>();
+		//execute_fence_result = execute_fence.get_future();
 		if (f)
 			on_execute_funcs.emplace_back(f);
 
-		Device::get().get_queue(type)->execute(static_cast<CommandList*>(this));
+		auto fence = Device::get().get_queue(type)->execute(dynamic_cast<CommandList*>(this));
 
-		return execute_fence_result;
+		return fence;
 	}
 
 	void Sendable::execute_and_wait(std::function<void()> f)
 	{
-		execute(f).get().wait();
+		execute(f).wait();
 	}
 
 
@@ -292,10 +294,11 @@ namespace HAL
 
 	}
 
-	void Eventer::resolve_times(QueryHeap& pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)> f)
+	void Eventer::resolve_times(QueryHeap* pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)> f)
 	{
-		CommandList* list = static_cast<CommandList*>(this); // :(
-		auto info = list->read_data(NumQueries * sizeof(UINT64));
+
+		//CommandList* list = static_cast<CommandList*>(this); // :(
+		auto info = read_data(NumQueries * sizeof(UINT64),GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(type) );
 
 		compiler.resolve_times(pQueryHeap, NumQueries, info);
 		on_execute_funcs.emplace_back([info, f, NumQueries]() {
@@ -672,7 +675,7 @@ namespace HAL
 	//		base.transition(resource, ResourceState::COMMON);
 
 		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource, box);
-		auto info = base.read_data(layout.size, layout.alignment);
+		auto info = base.read_data(layout.size, layout.alignment, static_cast<uint>(base.get_type()) );
 		list->read_texture(resource, offset, box, sub_resource, info, layout);
 
 		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
@@ -697,7 +700,7 @@ namespace HAL
 	//		base.transition(resource, ResourceState::COMMON);
 
 		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource);
-		auto info = base.read_data(layout.size, layout.alignment);
+		auto info = base.read_data(layout.size, layout.alignment,static_cast<uint>(base.get_type()) );
 		list->read_texture(resource, 0, resource->get_desc().as_texture().get_size(sub_resource), sub_resource, info, layout);
 
 		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
@@ -729,7 +732,7 @@ namespace HAL
 
 		base.transition(resource, ResourceState::COPY_SOURCE);
 
-		auto info = base.read_data(size);
+		auto info = base.read_data(size,GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()) );
 		list->copy_buffer(info.resource, info.resource_offset, resource, offset, size);
 		if constexpr (Debug::CheckErrors)	TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
 		base.on_execute_funcs.push_back([result, info, f, size]()
@@ -754,7 +757,7 @@ namespace HAL
 		}
 
 		//  auto size = resource->get_size();
-		auto info = base.read_data(size);
+		auto info = base.read_data(size,GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()) );
 		//  compiler.CopyResource(info.resource->get_resource()->get_native().Get(), resource->get_native().Get());
 		//list->ResolveQueryData(query_heap->get_native().Get(), D3D12_QUERY_TYPE_PIPELINE_STATISTICS, 0, 1, info.resource->get_dx(), info.resource_offset);
 		assert(false);
@@ -917,7 +920,8 @@ namespace HAL
 			auto cmd = static_cast<CommandList*>(this);
 
 
-			transition_list = (HAL::Device::get().get_queue(transition_type)->get_transition_list());
+	auto		transition_list = (HAL::Device::get().get_queue(transition_type)->get_transition_list());
+	transition_list->compiler.set_name(convert(name + std::string(":Transitions")));
 			transition_list->create_transition_list(*cmd->frame_resources, result, discards);
 			return transition_list;
 		}
@@ -978,8 +982,7 @@ namespace HAL
 
 		track_object(*const_cast<Resource*>(resource));
 
-		CommandList* list = static_cast<CommandList*>(this); // :(
-
+	
 		if (resource->get_heap_type() == HeapType::DEFAULT || resource->get_heap_type() == HeapType::RESERVED)
 		{
 			use_resource(resource);
@@ -1209,13 +1212,10 @@ namespace HAL
 	thread_local Eventer* Eventer::thread_current = nullptr;
 	void Eventer::reset()
 	{
-		auto l = static_cast<CommandList*>(this);
-
-
-		for (auto& e : gpu_timers)
+			for (auto& e : gpu_timers)
 		{
 			auto block = e;
-			auto& timers = block->get_state(l);
+			auto& timers = block->get_state(this);
 			for (auto& t : timers.timers)
 				Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>(block, &t));
 		}
@@ -1393,7 +1393,7 @@ namespace HAL
 		used_resources.clear();
 
 
-		transition_list = nullptr;
+		//transition_list = nullptr;
 
 
 	}
@@ -1509,19 +1509,44 @@ namespace HAL
 
 		void TransitionCommandList::create_transition_list(FrameResources& frame, const HAL::Barriers& transitions, std::vector<HAL::Resource*>& discards)
 		{
+				HAL::Device::get().context_generator.generate(this);
+	
+			set_proxy(frame.get_storage());
+		
 
-			auto ca = frame.get_ca(type);
-			list.begin(*ca);
-			list.transitions(transitions);
-			list.end();
+			compiler.reset();
+			Eventer::begin("Transitions");
+			compiler.func([&](auto list){
+				list.transitions(transitions);
+				});
+
+			Eventer::end();	
+			
+			proxy->resolve_timers([&, this](const QueryType& type, uint64 from, uint64 to, QueryHeap::ptr heap)
+					{
+						assert(from == 0);
+						resolve_times(heap.get(), static_cast<uint>(to), [heap](std::span<UINT64> data) {
+							std::copy(data.begin(), data.end(), heap->read_back_data.begin());
+							});
+					});
+				HAL::Device::get().context_generator.free(this);
+			frame.free_storage(proxy);
+
+
+				auto ca = frame.get_ca(type);
+			compiler.compile(*ca);
+		end();
 
 			frame.free_ca(ca);
+
+
 		}
 
 
-		TransitionCommandList::TransitionCommandList(CommandListType type) :type(type)
+		TransitionCommandList::TransitionCommandList(CommandListType type) :Eventer(HAL::Device::get())
 		{
-			list.create(type);
-			//list.set_name(L"TransitionCommandList");
+			this->type=type;
+			compiler.create(type);
+
 		}
 }
