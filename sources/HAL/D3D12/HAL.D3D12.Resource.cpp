@@ -56,6 +56,24 @@ namespace HAL
 
 //		Log::get() << "creating resource " << _desc << Log::endl;
 		CD3DX12_RESOURCE_DESC resourceDesc = to_native(THIS->desc);
+
+		if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+		{
+
+			if ((resourceDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
+			{
+				resourceDesc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+			}
+		}
+
+		D3D12_RESOURCE_ALLOCATION_INFO info = device.native_device->GetResourceAllocationInfo(0, 1, &resourceDesc);
+		if (info.SizeInBytes == UINT64_MAX)
+		{
+			resourceDesc.Alignment = 0;
+			info = device.native_device->GetResourceAllocationInfo(0, 1, &resourceDesc);
+		}
+		resourceDesc.Alignment = info.Alignment;
+
 		D3D12_CLEAR_VALUE value;
 
 		D3D12_CLEAR_VALUE *pass_value=nullptr;

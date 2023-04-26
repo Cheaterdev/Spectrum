@@ -129,6 +129,12 @@ public:
 	}
 
 protected:
+	
+		SERIALIZE()
+		{
+			ar& NVP(header);
+			ar& NVP(file_depends);
+		}
 	_header header;
 
 	static std::shared_ptr<_resource> create_new(const _header& header)
