@@ -13,7 +13,7 @@ export
 	{
 		std::shared_ptr<T> shader;
 	public:
-
+		using ShaderType = T;
 		shader_with_id() = default;
 		shader_with_id(const std::shared_ptr<T>& o) :shader(o)
 		{
@@ -73,9 +73,35 @@ export
 	private:
 		SERIALIZE()
 		{
-			ar& NVP(shader);
-		}
 
+			if constexpr (Archive::is_saving::value)
+				{
+
+		
+						bool has_header = !!shader;
+						ar& NVP(has_header);
+
+						if (has_header)
+							ar& NVP(shader->get_header());
+				}
+				else
+				{
+	
+				
+							bool has_header;
+						ar& NVP(has_header);
+
+						if (has_header)
+						{
+							HAL::shader_header header;
+							ar& NVP(header);
+
+							shader = ShaderType::get_resource(header);
+						}
+
+				
+				}
+		}
 	};
 	namespace HAL
 	{
@@ -85,7 +111,9 @@ export
 		template<class _shader_type>
 		class Shader : public resource_manager<_shader_type, shader_header>
 		{
-			friend class resource_manager<_shader_type, shader_header>;
+			using Manager = resource_manager<_shader_type, shader_header>;
+
+			friend class Manager;
 		protected:
 			binary blob;
 			static const char* compile_code;
@@ -101,7 +129,7 @@ export
 
 			void operator=(const Shader& r)
 			{
-				resource_manager<_shader_type, shader_header>::operator=(r);
+				Manager::operator=(r);
 				// reflection = r.reflection;
 				blob = r.blob;
 				hash = r.hash;
@@ -134,7 +162,7 @@ export
 
 			const HAL::shader_header& get_header() const
 			{
-				return resource_manager<_shader_type, HAL::shader_header>::header;
+				return Manager::header;
 			}
 
 			static shader_with_id<_shader_type> create_from_memory(std::string data, std::string func_name, UINT flags, std::vector<HAL::shader_macro> macros = {})
@@ -198,7 +226,8 @@ export
 			}
 		private:
 			SERIALIZE()
-			{
+			{	SAVE_PARENT(Manager);
+
 				ar& NVP(blob);
 				ar& NVP(hash);
 				ar& NVP(slots_usage);

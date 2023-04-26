@@ -1,7 +1,7 @@
 import Graphics;
 import GUI;
 import HAL;
-
+import streamline;
 
 #include "Platform/Window.h"
 
@@ -132,6 +132,8 @@ public:
 	SkyRender sky;
 	FSR fsr;
 	ShadowDenoiser shadow_denoiser;
+
+	NRDDenoiser nrd_denoiser;
 		BlueNoise blue_noise;
 VoxelGI::ptr voxel_gi;
 	std::string debug_view;
@@ -397,7 +399,27 @@ VoxelGI::ptr voxel_gi;
 
 
 		if (downsampled)
-			vp.frame_size = size / 1.5;
+		{
+		
+		sl::DLSSOptimalSettings dlssSettings;
+sl::DLSSOptions dlssOptions;
+// These are populated based on user selection in the UI
+dlssOptions.mode = sl::DLSSMode::eBalanced;
+dlssOptions.outputWidth = size.x;    // e.g 1920;
+dlssOptions.outputHeight = size.y; // e.g. 1080;
+
+
+if(SL_FAILED(result, slDLSSGetOptimalSettings(dlssOptions, dlssSettings)))
+{
+    assert(0);
+			vp.frame_size = size;
+
+}else
+
+
+vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeight};
+		}
+			
 		else
 			vp.frame_size = size;
 
@@ -611,8 +633,12 @@ VoxelGI::ptr voxel_gi;
 					});
 		
 		if(enable_denoiser)
-		shadow_denoiser.generate(graph);
+		{
+			//nrd_denoiser.generate(graph);
+			shadow_denoiser.generate(graph);
 
+
+		}
 			}
 		}
 		

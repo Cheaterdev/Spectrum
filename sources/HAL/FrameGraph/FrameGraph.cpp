@@ -735,7 +735,7 @@ namespace FrameGraph
 							}
 
 
-							if (last_pass&&!info.passed)
+							if (first_state.is_valid()&&last_pass&&!info.passed)
 							{
 								auto commandList = last_pass->context.list;
 								if (!commandList) continue;

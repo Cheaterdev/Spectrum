@@ -41,10 +41,7 @@ export namespace HAL
 		DXGI::Factory native_factory;
 
 		friend class Singleton<Adapters>;
-		Adapters()
-		{
-			CreateDXGIFactory2(0, IID_PPV_ARGS(&native_factory));
-		}
+		Adapters();
 	public:
 
 		DXGI::Factory get_factory() {

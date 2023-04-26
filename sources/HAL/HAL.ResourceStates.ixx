@@ -370,7 +370,17 @@ export
 
 			bool all_states_same = true;
 
+			bool is_valid() const
+			{
+				if (all_states_same) return all_state.state!=HAL::ResourceState::UNKNOWN;
+			for (auto& s : subres)
+				{
+				if(s.state !=HAL::ResourceState::UNKNOWN) return true;
 
+				}
+
+			return false;
+			}
 			void make_all_state(ResourceState state)
 			{
 				//		if (all_states_same) return;

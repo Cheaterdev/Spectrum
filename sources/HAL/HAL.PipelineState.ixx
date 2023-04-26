@@ -81,7 +81,7 @@ export namespace HAL
 			ar& NVP(rasterizer);
 			ar& NVP(rtv);
 
-
+		
 			ar& NVP(pixel);
 			ar& NVP(vertex);
 			ar& NVP(geometry);
@@ -90,6 +90,8 @@ export namespace HAL
 
 			ar& NVP(mesh);
 			ar& NVP(amplification);
+
+
 
 		}
 		/*	SERIALIZE_PRETTY()

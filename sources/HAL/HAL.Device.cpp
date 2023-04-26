@@ -1,4 +1,6 @@
-module HAL:Device;
+ module HAL:Device;
+
+  import streamline;
 import Core;
 import HAL;
 import :FrameManager;
@@ -55,9 +57,23 @@ namespace HAL
 
 				if (props.mesh_shader && props.full_bindless)
 				{
-					Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
+	
+					
+				   sl::AdapterInfo adapterInfo{};
+            adapterInfo.deviceLUID = (uint8_t*)&adapter_desc.AdapterLuid;
+            adapterInfo.deviceLUIDSizeInBytes = sizeof(LUID);
+           auto hr = slIsFeatureSupported(sl::kFeatureNRD, adapterInfo);
+
+		    auto hr2 = slIsFeatureSupported(sl::kFeatureDLSS, adapterInfo);
+
+							Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
 					result = device;
+
+
 				}
+
+
+
 			});
 
 		result->init_managers();

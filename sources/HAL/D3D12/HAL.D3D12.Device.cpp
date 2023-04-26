@@ -7,6 +7,7 @@ import Core;
 
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
+#include "sl.h"
 
 #undef THIS
 namespace HAL
@@ -167,7 +168,7 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
             6,
             IID_PPV_ARGS(&g_bufferCompression));
 
-
+			  slSetD3DDevice(native_device.Get());
 		}
 
 		D3D::Device Device::get_native_device()
@@ -178,25 +179,34 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 		ResourceAllocationInfo Device::get_alloc_info(const ResourceDesc& desc)
 		{
 			auto native_desc = ::to_native(desc);
-			/*if (native_desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+			if (native_desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
 			{
 
 				if ((native_desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
 				{
 					native_desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
 				}
-			}*/
+			}
 			if (native_desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)
 			{
-
 				assert(native_desc.SampleDesc.Count > 0);
 			}
+
+
 			D3D12_RESOURCE_ALLOCATION_INFO info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+			if(info.SizeInBytes==UINT64_MAX)
+			{
+				native_desc.Alignment = 0;
+				 info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+			}
+			assert(info.SizeInBytes!=UINT64_MAX);
+
+
 			native_desc.Alignment = info.Alignment;
 
 
 			// TODO small alignment
-			/*if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
+		/*	if (info.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT)
 			{
 				native_desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
 				info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);

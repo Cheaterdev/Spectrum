@@ -160,12 +160,36 @@ namespace Spectrum
         public override void ConfigureAll(Configuration conf, CustomTarget target)
         {
             base.ConfigureAll(conf, target);
-            conf.LibraryFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.lib");
-            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.dll");
-            conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
+             conf.LibraryFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.lib");
+              conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\lib\x64\GFSDK_Aftermath_Lib.x64.dll");
+            conf.IncludePaths.Add(@"[project.SourceRootPath]\include");
         }
     }
 	
+	
+
+    [Sharpmake.Generate]
+    public class Streamline : Library
+    {
+        public Streamline()
+        {
+            SourceRootPath = @"[project.SharpmakeCsPath]\Streamline";
+            AssemblyName = "Streamline";
+        }
+
+
+        public override void ConfigureAll(Configuration conf, CustomTarget target)
+        {
+            base.ConfigureAll(conf, target);
+
+	conf.ExportAdditionalLibrariesEvenForStaticLib = false;
+
+            conf.PrecompSourceExcludeExtension.Add(@"[project.SourceRootPath]\source");
+                 conf.LibraryFiles.Add(@"[project.SourceRootPath]\lib\x64\sl.interposer.lib");
+            conf.TargetCopyFiles.Add(@"[project.SourceRootPath]\bin\x64\sl.interposer.dll");
+            conf.IncludePaths.Add(@"[project.SourceRootPath]/include");
+        }
+    }
 	
 [Sharpmake.Generate]
     public class Modules : Library
@@ -207,12 +231,20 @@ namespace Spectrum
 			}
 
 
-
+{ // Streamline
+			
+                 conf.LibraryFiles.Add(@"[project.SharpmakeCsPath]\Streamline\lib\x64\sl.interposer.lib");
+            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\Streamline\bin\x64\sl.interposer.dll");
+            conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\Streamline\include");
+			}
             // fix: dstorage vcpkg issue -> copy manually
             conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dstoragecore.dll");
            conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxcompiler.dll");
          conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dxil.dll");
          
+
+
+         //   conf.AddPublicDependency<Streamline>(target);
         }
     }
 	
@@ -247,8 +279,8 @@ namespace Spectrum
         {
             base.ConfigureAll(conf, target);
 
-            conf.LibraryFiles.Add("dxgi.lib");
-            conf.LibraryFiles.Add("d3d12.lib");
+           // conf.LibraryFiles.Add("dxgi.lib");
+         //   conf.LibraryFiles.Add("d3d12.lib");
             conf.LibraryFiles.Add("dxguid.lib");
 
             conf.AddPublicDependency<Core>(target);	
