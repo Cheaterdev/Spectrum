@@ -140,13 +140,13 @@ export
 
 				update_list.clear();
 			}
-			virtual_gpu_buffer(size_t max_size, counterType countType = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::ResourceState state = HAL::ResourceState::COMMON) :Base(max_size)
+			virtual_gpu_buffer(size_t max_size, counterType countType = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource) :Base(max_size)
 			{
 				if constexpr (use_virtual)
-					buffer = std::make_shared<StructureBuffer<Type>>(max_size, countType, flags, HeapType::RESERVED, state);
+					buffer = std::make_shared<StructureBuffer<Type>>(max_size, countType, flags, HeapType::RESERVED);
 
 				else
-					buffer = std::make_shared<StructureBuffer<Type>>(std::min(256_mb, max_size), countType, flags, HeapType::DEFAULT, state);
+					buffer = std::make_shared<StructureBuffer<Type>>(std::min(256_mb, max_size), countType, flags, HeapType::DEFAULT);
 
 				// buffer = std::make_shared<HAL::StructureBuffer<T>>(max_size, counterType::NONE, D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_NONE, DefaultAllocator::get());
 			}

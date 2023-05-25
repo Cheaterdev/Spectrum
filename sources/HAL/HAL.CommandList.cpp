@@ -526,7 +526,7 @@ namespace HAL
 		PROFILE_GPU(L"draw_indexed");
 		base.pre_command<false, true>(*this);
 
-		get_base().transition(index.Resource, ResourceState::INDEX_BUFFER);
+		get_base().transition(index.Resource, ResourceStates::INDEX_BUFFER);
 		list->set_index_buffer(index);
 
 		list->draw_indexed(index_count, index_offset, vertex_offset, instance_count, instance_offset);
@@ -590,7 +590,7 @@ namespace HAL
 		base.pre_command<false, false>(*this);
 
 		//	if (base.type != CommandListType::COPY)
-		base.transition(resource, ResourceState::COPY_DEST);
+		base.transition(resource, ResourceStates::COPY_DEST);
 
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
@@ -610,7 +610,7 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this);
 
-		base.transition(resource, ResourceState::COPY_DEST);
+		base.transition(resource, ResourceStates::COPY_DEST);
 		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.place_data(layout.size, layout.alignment);
 
@@ -670,7 +670,7 @@ namespace HAL
 		base.pre_command<false, false>(*this);
 
 		//	if (base.type != CommandListType::COPY)
-		base.transition(resource, ResourceState::COPY_SOURCE);
+		base.transition(resource, ResourceStates::COPY_SOURCE);
 		//else
 	//		base.transition(resource, ResourceState::COMMON);
 
@@ -695,7 +695,7 @@ namespace HAL
 		base.pre_command<false, false>(*this);
 
 		//	if (base.type != CommandListType::COPY)
-		base.transition(resource, ResourceState::COPY_SOURCE);
+		base.transition(resource, ResourceStates::COPY_SOURCE);
 		//else
 	//		base.transition(resource, ResourceState::COMMON);
 
@@ -730,7 +730,7 @@ namespace HAL
 
 		base.pre_command<false, false>(*this);
 
-		base.transition(resource, ResourceState::COPY_SOURCE);
+		base.transition(resource, ResourceStates::COPY_SOURCE);
 
 		auto info = base.read_data(size,GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()) );
 		list->copy_buffer(info.resource, info.resource_offset, resource, offset, size);
@@ -907,13 +907,13 @@ namespace HAL
 		std::vector<HAL::Resource*> discards;
 
 
-		ResourceState states = ResourceState::COMMON;
+		ResourceState states;
 		for (auto& r : used_resources)
 		{
 			states = states | r->get_state_manager().process_transitions(result, discards, this);
 		}
 
-		auto transition_type = GetBestType(states, type);
+		auto transition_type = CommandListType::DIRECT;//GetBestType(states, type);
 
 		if (result)
 		{
@@ -927,17 +927,17 @@ namespace HAL
 		}
 		return nullptr;
 	}
-	void Transitions::merge_transition(Transitions* to, Resource* resource)
-	{
+	//void Transitions::merge_transition(Transitions* to, Resource* resource)
+	//{
 
 
-		if (resource->get_state_manager().transition(this, to))
-		{
-			track_object(*resource);
-			use_resource(resource);
-		}
-	}
-	void Transitions::prepare_transitions(Transitions* to, bool all)
+	//	if (resource->get_state_manager().transition(this, to))
+	//	{
+	//		track_object(*resource);
+	//		use_resource(resource);
+	//	}
+	//}
+	/*void Transitions::prepare_transitions(Transitions* to, bool all)
 	{
 		for (auto& resource : to->used_resources)
 		{
@@ -949,7 +949,7 @@ namespace HAL
 					use_resource(resource);
 				}
 		}
-	}
+	}*/
 
 
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
@@ -976,8 +976,8 @@ namespace HAL
 	{
 		if (!resource) return;
 
-		if (type == CommandListType::COPY && (to == ResourceState::COPY_DEST || to == ResourceState::COPY_SOURCE))
-			to = ResourceState::COMMON;
+		//if (type == CommandListType::COPY && (to == ResourceState::COPY_DEST || to == ResourceState::COPY_SOURCE))
+		//	to = ResourceState::COMMON;
 
 
 		track_object(*const_cast<Resource*>(resource));
@@ -994,7 +994,7 @@ namespace HAL
 	{
 
 		track_object(*to);
-		create_aliasing_transition(to);
+		//create_aliasing_transition(to);
 		/*	transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from ? from->get_native().Get() : nullptr, to->get_native().Get()));
 
 			CommandList* list = static_cast<CommandList*>(this); // :(
@@ -1034,11 +1034,11 @@ namespace HAL
 			//		flush_transitions();*/
 	}
 
-	void Transitions::transition_uav(Resource* resource)
+	/*void Transitions::transition_uav(Resource* resource)
 	{
 		track_object(*resource);
 		create_uav_transition(resource);
-	}
+	}*/
 
 	void CopyContext::copy_buffer(Resource* dest, uint64 s_dest, Resource* source, uint64 s_source, uint64 size)
 	{
@@ -1046,8 +1046,8 @@ namespace HAL
 
 		//if (base.type != CommandListType::COPY)
 		{
-			base.transition(source, ResourceState::COPY_SOURCE);
-			base.transition(dest, ResourceState::COPY_DEST);
+			base.transition(source, ResourceStates::COPY_SOURCE);
+			base.transition(dest, ResourceStates::COPY_DEST);
 		}
 
 
@@ -1061,8 +1061,8 @@ namespace HAL
 
 		//	if (base.type != CommandListType::COPY)
 		{
-			base.transition(source, ResourceState::COPY_SOURCE);
-			base.transition(dest, ResourceState::COPY_DEST);
+			base.transition(source, ResourceStates::COPY_SOURCE);
+			base.transition(dest, ResourceStates::COPY_DEST);
 		}
 		list->copy_resource(dest, source);
 		base.post_command<false, false>(*this);
@@ -1078,8 +1078,8 @@ namespace HAL
 
 		//if (base.type != CommandListType::COPY) 
 		{
-			base.transition(source, ResourceState::COPY_SOURCE, source_subres);
-			base.transition(dest, ResourceState::COPY_DEST, dest_subres);
+			base.transition(source, ResourceStates::COPY_SOURCE, source_subres);
+			base.transition(dest, ResourceStates::COPY_DEST, dest_subres);
 		}
 
 		list->copy_texture(dest, dest_subres, source, source_subres);
@@ -1094,8 +1094,8 @@ namespace HAL
 
 		//if (base.type != CommandListType::COPY) 
 		{
-			base.transition(from, ResourceState::COPY_SOURCE);
-			base.transition(to, ResourceState::COPY_DEST);
+			base.transition(from, ResourceStates::COPY_SOURCE);
+			base.transition(to, ResourceStates::COPY_DEST);
 		}
 		list->copy_texture(to, to_pos, from, from_pos, size);
 		if constexpr (Debug::CheckErrors)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
@@ -1292,10 +1292,10 @@ namespace HAL
 		else
 			base.pre_command<true, false>(get_base().get_compute(),&command_types.slots);
 	
-		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
-		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
+		if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
 
-		get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceState::INDEX_BUFFER);
+		get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceStates::INDEX_BUFFER);
 
 		list->set_index_buffer(index);
 
@@ -1321,8 +1321,8 @@ namespace HAL
 
 		assert(command_buffer);
 
-		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
-		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
+		if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
 
 		commit_tables();
 
@@ -1343,15 +1343,15 @@ namespace HAL
 
 		for (auto g : bottom.geometry)
 		{
-			base.transition(g.IndexBuffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-			base.transition(g.VertexBuffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-			base.transition(g.Transform3x4.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			base.transition(g.IndexBuffer.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
+			base.transition(g.VertexBuffer.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
+			base.transition(g.Transform3x4.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
 		}
 
-		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
-		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
+		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
+		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
 
-		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
+		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceStates::UNORDERED_ACCESS);
 		//	commit_tables();
 
 		list->build_ras(build_desc, bottom);
@@ -1364,11 +1364,11 @@ namespace HAL
 	{
 		base.pre_command<false, false>(*this);
 
-		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
-		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
-		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
+		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
+		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
+		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceStates::UNORDERED_ACCESS);
 
-		base.transition(top.instances.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+		base.transition(top.instances.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
 
 		//commit_tables();
 		list->build_ras(build_desc, top);
@@ -1383,13 +1383,13 @@ namespace HAL
 	{
 		transition_count = 0;
 		//	create_zero_transition();
-		create_transition_point(false);
+		create_usage_point(false);
 	}
 
 	void Transitions::on_execute()
 	{
 
-		transition_points.clear();
+		usage_points.clear();
 		used_resources.clear();
 
 

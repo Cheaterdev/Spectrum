@@ -383,6 +383,105 @@ namespace HAL
 			void CommandList::transitions(const HAL::Barriers& _barriers)
 			{
 				auto& barriers = _barriers.get_barriers();
+				if (barriers.empty())return;
+
+
+std::vector<D3D12_TEXTURE_BARRIER> textures;
+std::vector<D3D12_BUFFER_BARRIER> buffers;
+
+
+
+				
+					for (auto &e:barriers)
+					{
+
+		
+						if(e.resource->get_desc().is_buffer())
+						{
+						D3D12_BUFFER_BARRIER barrier;
+
+
+
+						  barrier.SyncBefore = to_native(e.before.get_operation());
+   barrier.SyncAfter = to_native(e.after.get_operation());
+    barrier.AccessBefore = to_native(e.before.get_access());
+    barrier.AccessAfter = to_native(e.after.get_access());
+   barrier.pResource =e.resource->get_dx();
+  barrier.Offset = 0;
+    barrier.Size=e.resource->get_desc().as_buffer().SizeInBytes; // Must be UINT64_MAX or buffer size in bytes
+
+						buffers.emplace_back(barrier);
+						}
+					
+
+						
+						if(e.resource->get_desc().is_texture())
+						{
+						D3D12_TEXTURE_BARRIER barrier;
+
+
+
+						  barrier.SyncBefore = to_native(e.before.get_operation());
+   barrier.SyncAfter = to_native(e.after.get_operation());
+    barrier.AccessBefore = to_native(e.before.get_access());
+    barrier.AccessAfter = to_native(e.after.get_access());
+	barrier.LayoutBefore = to_native(e.before.get_layout());
+    barrier.LayoutAfter = to_native(e.after.get_layout());
+
+   barrier.pResource =e.resource->get_dx();
+  //barrier.Offset = 0;
+ ///   barrier.Size=e.resource->get_desc().as_buffer().SizeInBytes; // Must be UINT64_MAX or buffer size in bytes
+
+
+
+	 barrier.Subresources.IndexOrFirstMipLevel = e.resource->get_desc().as_texture().get_mip(e.subres);
+   barrier.Subresources.NumMipLevels = 1;
+   barrier.Subresources.FirstArraySlice = e.resource->get_desc().as_texture().get_array(e.subres);
+   barrier.Subresources.NumArraySlices= 1;
+   barrier.Subresources.FirstPlane=  e.resource->get_desc().as_texture().get_plane(e.subres);
+   barrier.Subresources.NumPlanes= 1;
+
+
+     barrier.Flags = D3D12_TEXTURE_BARRIER_FLAG_NONE ;
+
+
+						textures.emplace_back(barrier);
+						}
+					
+
+
+					}
+
+
+						std::vector<D3D12_BARRIER_GROUP> native;
+
+
+
+						if (!buffers.empty())
+					{
+						D3D12_BARRIER_GROUP group;
+
+						group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_BUFFER;
+						group.NumBarriers = buffers.size();
+						group.pBufferBarriers = buffers.data();
+
+						native.emplace_back(group);
+					}
+
+
+					if (!textures.empty())
+					{
+						D3D12_BARRIER_GROUP group;
+
+						group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_TEXTURE;
+						group.NumBarriers = textures.size();
+						group.pTextureBarriers = textures.data();
+
+						native.emplace_back(group);
+					}
+
+
+				/*auto& barriers = _barriers.get_barriers();
 				if (!barriers.empty())
 				{
 
@@ -419,10 +518,15 @@ namespace HAL
 
 
 
-					}
+					}*/
 
-					m_commandList->ResourceBarrier((UINT)native.size(), native.data());
-				}
+					if(!native.empty())
+					{
+						m_commandList->Barrier((UINT)native.size(), native.data());
+						
+					}
+			
+				//}
 			}
 	}
 }

@@ -58,18 +58,18 @@ namespace HAL
 		init();
 	}
 
-	Texture::Texture(D3D::Resource native, ResourceState state) 
+	Texture::Texture(D3D::Resource native, TextureLayout initialLayout) 
 	{
 
-		resource = std::make_shared<HAL::Resource>(native, state);
+		resource = std::make_shared<HAL::Resource>(native, initialLayout);
 		//    resource.reset(new Resource(native));
 		resource->set_name("Texture");
 		//	resource->debug = true;
 		init();
 	}
-	Texture::Texture(HAL::ResourceDesc desc, ResourceState state /*= ResourceState::PIXEL_SHADER_RESOURCE*/, HeapType heap_type) 
+	Texture::Texture(HAL::ResourceDesc desc, TextureLayout initialLayout /*= ResourceState::PIXEL_SHADER_RESOURCE*/, HeapType heap_type) 
 	{
-		resource = std::make_shared<HAL::Resource>(desc, heap_type,  state);
+		resource = std::make_shared<HAL::Resource>(desc, heap_type,  initialLayout);
 		init();
 	}
 
@@ -129,7 +129,7 @@ namespace HAL
 		else
 			desc = HAL::ResourceDesc::Tex2D(data.format, { data.width, data.height }, data.array_size, data.mip_maps);
 
-		resource = std::make_shared<HAL::Resource>(desc,  HeapType::DEFAULT, (data.array_size * data.mip_maps) ? ResourceState::COMMON : ResourceState::PIXEL_SHADER_RESOURCE);
+		resource = std::make_shared<HAL::Resource>(desc,  HeapType::DEFAULT, TextureLayout::COPY_DEST);
 	
 		auto list = (HAL::Device::get().get_upload_list());
 
@@ -194,7 +194,7 @@ namespace HAL
 			desc = HAL::ResourceDesc::Tex3D(tex_data->format, { tex_data->width, tex_data->height, tex_data->depth }, tex_data->mip_maps);
 		else
 			desc = HAL::ResourceDesc::Tex2D(tex_data->format, { tex_data->width, tex_data->height }, tex_data->array_size, tex_data->mip_maps);
-		auto texture = std::make_shared<Texture>(desc, ResourceState::COPY_DEST, HeapType::DEFAULT);
+		auto texture = std::make_shared<Texture>(desc,  TextureLayout::COPY_DEST, HeapType::DEFAULT);
 
 
 		texture->upload_data(tex_data);

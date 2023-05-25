@@ -84,28 +84,28 @@ export{
 		protected:
 			void begin();
 			void on_execute();
-			std::list<HAL::TransitionPoint> transition_points;
+			std::list<HAL::UsagePoint> usage_points;
 
-			void create_transition_point(bool end = true)
+			void create_usage_point(bool end = true)
 
 			{
-				auto prev_point = transition_points.empty() ? nullptr : &transition_points.back();
-				auto point = &transition_points.emplace_back(type);
+				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
+				auto point = &usage_points.emplace_back(type);
 
 				if (prev_point) prev_point->next_point = point;
 				point->prev_point = prev_point;
 
 				point->start = !end;
 
-				if (end)
+			/*	if (end)
 				{
 					assert(point->prev_point->start);
-				}
+				}*/
 				compiler.func([point, this](auto& list)
 					{
 						HAL::Barriers  transitions(type);
 
-						for (auto uav : point->uav_transitions)
+					/*	for (auto uav : point->uav_transitions)
 						{
 							transitions.uav(uav);
 						}
@@ -113,21 +113,21 @@ export{
 						for (auto& uav : point->aliasing)
 						{
 							transitions.alias(nullptr, uav);
-						}
+						}*/
 
-						for (auto& transition : point->transitions)
+						for (auto& usage : point->usages)
 						{
-							auto prev_transition = transition.prev_transition;
+							auto prev_usage = usage.prev_usage;
 
-							if (!prev_transition) continue;
+							if (!prev_usage) continue;
 
-							if (prev_transition->wanted_state == transition.wanted_state) continue;
+							if (prev_usage->wanted_state == usage.wanted_state) continue;
 
 							//					assert(!point->start);
-							transitions.transition(transition.resource,
-								prev_transition->wanted_state,
-								transition.wanted_state,
-								transition.subres, transition.flags);
+							transitions.transition(usage.resource,
+								prev_usage->wanted_state,
+								usage.wanted_state,
+								usage.subres, BarrierFlags::SINGLE);
 						}
 
 						list.transitions(transitions);
@@ -153,61 +153,49 @@ export{
 			void free_resources();
 
 			UINT transition_count = 0;
-			//	TransitionPoint* start_transition;
-			HAL::Transition* create_transition(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST)
+			//	UsagePoint* start_transition;
+			HAL::ResourceUsage* add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST)
 			{
-				HAL::TransitionPoint* point = nullptr;
+				HAL::UsagePoint* point = nullptr;
 
-				if (type == HAL::TransitionType::LAST) point = &transition_points.back();
-				if (type == HAL::TransitionType::ZERO) point = &transition_points.front();
+				if (type == HAL::TransitionType::LAST) point = &usage_points.back();
+				if (type == HAL::TransitionType::ZERO) point = &usage_points.front();
 
 
 				//if (type == TransitionType::LAST) 			assert(!point->start);
-				HAL::Transition& transition = point->transitions.emplace_back();
+				HAL::ResourceUsage& usage = point->usages.emplace_back();
 
-				transition.resource = const_cast<HAL::Resource*>(resource);
-				transition.subres = subres;
-				transition.wanted_state = state;
+				usage.resource = const_cast<HAL::Resource*>(resource);
+				usage.subres = subres;
+				usage.wanted_state = state;
 
-				transition.point = point;
-				return &transition;
+				usage.usage = point;
+				return &usage;
 			}
 
-			void create_uav_transition(const HAL::Resource* resource)
+			HAL::UsagePoint* get_last_transition_point()
 			{
-				auto& point = transition_points.back();
-				point.uav_transitions.emplace_back(const_cast<HAL::Resource*>(resource));
-			}
-
-			void create_aliasing_transition(const HAL::Resource* resource)
-			{
-				auto& point = transition_points.back();
-				point.aliasing.emplace_back(const_cast<HAL::Resource*>(resource));
-			}
-
-			HAL::TransitionPoint* get_last_transition_point()
-			{
-				return &transition_points.back();
+				return &usage_points.back();
 			}
 
 			void use_resource(const HAL::Resource* resource);
 		public:
-			void prepare_transitions(Transitions* to, bool all);
+	//		void prepare_transitions(Transitions* to, bool all);
 
 
-			void merge_transition(Transitions* to, HAL::Resource* res);
-			void transition_uav(HAL::Resource* resource);
+		//	void merge_transition(Transitions* to, HAL::Resource* res);
+		//	void transition_uav(HAL::Resource* resource);
 			void transition(HAL::Resource* from, HAL::Resource* to);
 			std::shared_ptr<TransitionCommandList> fix_pretransitions();
 
 			void transition_present(const HAL::Resource* resource_ptr)
 			{
 
-				create_transition_point();
+				create_usage_point();
 
-				transition(resource_ptr, ResourceState::PRESENT, ALL_SUBRESOURCES);
+				transition(resource_ptr, {BarrierSync::ALL, BarrierAccess::COMMON, TextureLayout::PRESENT}, ALL_SUBRESOURCES);
 
-				create_transition_point(false);
+				create_usage_point(false);
 			}
 
 
@@ -215,38 +203,40 @@ export{
 			{
 				if (!info.is_valid()) return;
 
-				auto target_state = ResourceState::COMMON;
+				ResourceState target_state ;//= ResourceState::COMMON;
 
 
 				if (std::holds_alternative<HAL::Views::ShaderResource>(info.view))
 				{
 					if (type == CommandListType::DIRECT)
 					{
-						target_state = ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE;
+						target_state = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
 					}
 
 					if (type == CommandListType::COMPUTE)
 					{
-						target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
+						target_state = ResourceStates::NON_PIXEL_SHADER_RESOURCE;
 					}
+
+					//target_state = {BarrierSync::ALL, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE};  //TODO BarrierSync::ALL
 
 				}
 				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info.view))
 				{
-					target_state = ResourceState::UNORDERED_ACCESS;
+					target_state = ResourceStates::UNORDERED_ACCESS;
 				}
 				else 	if (std::holds_alternative<HAL::Views::RenderTarget>(info.view))
 				{
-					target_state = ResourceState::RENDER_TARGET;
+					target_state = ResourceStates::RENDER_TARGET;
 				}
 				else 	if (std::holds_alternative<HAL::Views::DepthStencil>(info.view))
 				{
-					target_state = ResourceState::DEPTH_WRITE;
+					target_state = ResourceStates::DEPTH_STENCIL;
 
 				}
 				else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info.view))
 				{
-					target_state = ResourceState::VERTEX_AND_CONSTANT_BUFFER;
+					target_state = ResourceStates::CONSTANT_BUFFER;  //TODO BarrierSync::ALL
 
 				}
 				else assert(false);
@@ -257,7 +247,7 @@ export{
 					});
 			}
 
-			void stop_using(const ResourceInfo& info)
+		/*	void stop_using(const ResourceInfo& info)
 			{
 				if (!info.is_valid()) return;
 
@@ -266,7 +256,7 @@ export{
 					{
 						const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
 					});
-			}
+			}*/
 		};
 
 
@@ -414,7 +404,7 @@ export{
 			template<bool compute, bool graphics, class T>
 			void pre_command(T& context,UsedSlots *slots = nullptr)
 			{
-				create_transition_point();
+				create_usage_point();
 				if constexpr (compute || graphics)
 				{
 					if constexpr (Debug::GfxDebug)	setup_debug(&context);
@@ -425,7 +415,7 @@ export{
 			template<bool compute, bool graphics, class T>
 			void post_command(T& context)
 			{
-				create_transition_point(false);
+				create_usage_point(false);
 				if constexpr (Debug::GfxDebug)	
 				if constexpr (compute || graphics)	print_debug();
 			}
@@ -457,10 +447,10 @@ export{
 
 			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
-				create_transition_point();
+				create_usage_point();
 				transition(h.get_resource_info());
 				compiler.clear_uav(h, ClearColor);
-				create_transition_point(false);
+				create_usage_point(false);
 			}
 
 		};
@@ -778,9 +768,9 @@ export{
 			{
 				base.pre_command<true, false>(*this);
 
-				base.transition(hit_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-				base.transition(miss_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-				base.transition(raygen_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				base.transition(hit_buffer.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
+				base.transition(miss_buffer.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
+				base.transition(raygen_buffer.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
 
 				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 

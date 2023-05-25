@@ -98,7 +98,7 @@ export
 	}
 
 	template<EnumType Enum>
-	constexpr Enum operator |(const Enum lhs, const Enum rhs)
+	constexpr Enum operator |(Enum lhs, Enum rhs)
 	{
 		using underlying = typename std::underlying_type<Enum>::type;
 		return static_cast<Enum> (

@@ -93,50 +93,212 @@ export namespace HAL
 		RTDS_ONLY
 
 	};
-	enum class ResourceState : uint
+
+
+	enum class TextureLayout : uint
 	{
-		COMMON = 0,
-		VERTEX_AND_CONSTANT_BUFFER = 1 << 0,
-		INDEX_BUFFER = 1 << 1,
-		RENDER_TARGET = 1 << 2,
-		UNORDERED_ACCESS = 1 << 3,
-		DEPTH_WRITE = 1 << 4,
-		DEPTH_READ = 1 << 5,
-		NON_PIXEL_SHADER_RESOURCE = 1 << 6,
-		PIXEL_SHADER_RESOURCE = 1 << 7,
-		STREAM_OUT = 1 << 8,
-		INDIRECT_ARGUMENT = 1 << 9,
-		COPY_DEST = 1 << 10,
-		COPY_SOURCE = 1 << 11,
-		RESOLVE_DEST = 1 << 12,
-		RESOLVE_SOURCE = 1 << 13,
-		GEN_READ = (((((0x1 | 0x2) | 0x40) | 0x80) | 0x200) | 0x800),
-		PRESENT = 0,
-		RAYTRACING_STRUCTURE = 0x400000,
-		UNKNOWN = std::numeric_limits<uint>::max() - 1
+
+	
+		COMMON = 0,		
+		PRESENT,
+	//	GENERIC_READ,
+		RENDER_TARGET,
+		UNORDERED_ACCESS,
+		DEPTH_STENCIL_WRITE,
+		DEPTH_STENCIL_READ,
+		SHADER_RESOURCE,
+		COPY_SOURCE,
+		COPY_DEST,
+		RESOLVE_SOURCE,
+		RESOLVE_DEST,
+		SHADING_RATE_SOURCE,
+		VIDEO_DECODE_READ,
+		VIDEO_DECODE_WRITE,
+		VIDEO_PROCESS_READ,
+		VIDEO_PROCESS_WRITE,
+		VIDEO_ENCODE_READ,
+		VIDEO_ENCODE_WRITE,
+		DIRECT_QUEUE_COMMON,
+		DIRECT_QUEUE_GENERIC_READ,
+		DIRECT_QUEUE_UNORDERED_ACCESS,
+		DIRECT_QUEUE_SHADER_RESOURCE,
+		DIRECT_QUEUE_COPY_SOURCE,
+		DIRECT_QUEUE_COPY_DEST,
+		COMPUTE_QUEUE_COMMON,
+		COMPUTE_QUEUE_GENERIC_READ,
+		COMPUTE_QUEUE_UNORDERED_ACCESS,
+		COMPUTE_QUEUE_SHADER_RESOURCE,
+		COMPUTE_QUEUE_COPY_SOURCE,
+		COMPUTE_QUEUE_COPY_DEST,
+		VIDEO_QUEUE_COMMON,
+		UNDEFINED = 0xffffffff,
+		
 	};
 
+	enum class BarrierSync : uint
+	{
+		NONE = 0x0,
+		ALL = 0x1,
+	//	DRAW = 0x2,
+		INDEX_INPUT = 0x4,
+		VERTEX_SHADING = 0x8,
+		PIXEL_SHADING = 0x10,
+		DEPTH_STENCIL = 0x20,
+		RENDER_TARGET = 0x40,
+		COMPUTE_SHADING = 0x80,
+		RAYTRACING = 0x100,
+		COPY = 0x200,
+		RESOLVE = 0x400,
+		EXECUTE_INDIRECT = 0x800,
+		PREDICATION = 0x800, // Aliased with SYNC_EXECUTE_INDIRECT
+		ALL_SHADING = 0x1000,
+		NON_PIXEL_SHADING = 0x2000,
+		EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO = 0x4000,
+		CLEAR_UNORDERED_ACCESS_VIEW = 0x8000,
+		VIDEO_DECODE = 0x100000,
+		VIDEO_PROCESS = 0x200000,
+		VIDEO_ENCODE = 0x400000,
+		BUILD_RAYTRACING_ACCELERATION_STRUCTURE = 0x800000,
+		COPY_RAYTRACING_ACCELERATION_STRUCTURE = 0x1000000,
+		SPLIT = 0x80000000,
+	};
 
-	constexpr ResourceState COPY_STATES = ResourceState::COPY_DEST
-		| ResourceState::COPY_SOURCE;
+	enum class BarrierAccess : uint
+	{
+		COMMON = 0,
+		VERTEX_BUFFER = 0x1,
+		CONSTANT_BUFFER = 0x2,
+		INDEX_BUFFER = 0x4,
+		RENDER_TARGET = 0x8,
+		UNORDERED_ACCESS = 0x10,
+		DEPTH_STENCIL_WRITE = 0x20,
+		DEPTH_STENCIL_READ = 0x40,
+		SHADER_RESOURCE = 0x80,
+		STREAM_OUTPUT = 0x100,
+		INDIRECT_ARGUMENT = 0x200,
+		PREDICATION = 0x200, // Aliased with ACCESS_INDIRECT_ARGUMENT
+		COPY_DEST = 0x400,
+		COPY_SOURCE = 0x800,
+		RESOLVE_DEST = 0x1000,
+		RESOLVE_SOURCE = 0x2000,
+		RAYTRACING_ACCELERATION_STRUCTURE_READ = 0x4000,
+		RAYTRACING_ACCELERATION_STRUCTURE_WRITE = 0x8000,
+		SHADING_RATE_SOURCE = 0x10000,
+		VIDEO_DECODE_READ = 0x20000,
+		VIDEO_DECODE_WRITE = 0x40000,
+		VIDEO_PROCESS_READ = 0x80000,
+		VIDEO_PROCESS_WRITE = 0x100000,
+		VIDEO_ENCODE_READ = 0x200000,
+		VIDEO_ENCODE_WRITE = 0x400000,
+		NO_ACCESS = 0x80000000
+	};
 
-	constexpr ResourceState COMPUTE_STATES = COPY_STATES
-		| ResourceState::UNORDERED_ACCESS
-		| ResourceState::NON_PIXEL_SHADER_RESOURCE
-		| ResourceState::INDIRECT_ARGUMENT;
+	//constexpr BarrierAccess operator |( BarrierAccess const& lhs,BarrierAccess const& rhs)
+	//{
+	//	using underlying = typename std::underlying_type<BarrierAccess>::type;
+	//	return static_cast<BarrierAccess> (
+	//		static_cast<underlying>(lhs) |
+	//		static_cast<underlying>(rhs)
+	//		);
+	//}
 
-	constexpr ResourceState GRAPHIC_STATES = COMPUTE_STATES
-		| ResourceState::VERTEX_AND_CONSTANT_BUFFER
-		| ResourceState::INDEX_BUFFER
-		| ResourceState::RENDER_TARGET
-		| ResourceState::DEPTH_WRITE
-		| ResourceState::DEPTH_READ
-		| ResourceState::PIXEL_SHADER_RESOURCE
-		| ResourceState::STREAM_OUT
+	//constexpr BarrierSync operator |( BarrierSync const& lhs,BarrierSync const& rhs)
+	//{
+	//	using underlying = typename std::underlying_type<BarrierSync>::type;
+	//	return static_cast<BarrierSync> (
+	//		static_cast<underlying>(lhs) |
+	//		static_cast<underlying>(rhs)
+	//		);
+	//}
+	//
+	//constexpr TextureLayout operator |( TextureLayout const& lhs,TextureLayout const& rhs)
+	//{
+	//	using underlying = typename std::underlying_type<TextureLayout>::type;
+	//	return static_cast<TextureLayout> (
+	//		static_cast<underlying>(lhs) |
+	//		static_cast<underlying>(rhs)
+	//		);
+	//}
+struct ResourceState
+{
+	BarrierSync operation;//= BarrierSync::NONE;
+	BarrierAccess access;// = BarrierAccess::NO_ACCESS;
+	TextureLayout layout;// = TextureLayout::UNDEFINED;
 
-		| ResourceState::RESOLVE_DEST
-		| ResourceState::RESOLVE_SOURCE;
+	constexpr ResourceState(BarrierSync s= BarrierSync::NONE, BarrierAccess a= BarrierAccess::NO_ACCESS, TextureLayout l = TextureLayout::UNDEFINED) : operation(s), access(a), layout(l)
+	{
 
+	}
+	bool operator==(const ResourceState&) const = default;
+
+	constexpr BarrierSync get_operation()const { return operation; }
+	constexpr BarrierAccess get_access() const { return access; }
+
+	constexpr TextureLayout get_layout() const { return layout; }
+
+
+	ResourceState operator |(const ResourceState& state)const;
+	const ResourceState& operator |=(const ResourceState& state);
+	//{
+
+	//	operation |= state.operation;
+	//	access |= state.access;
+
+	//	assert(layout == state.layout);
+	//	return *this;
+	//}
+};
+//ResourceState operator | (ResourceState a, ResourceState b);
+//
+//constexpr ResourceState operator | (ResourceState a, ResourceState b)
+//{
+//	//ResourceState other;
+//	//other.operation = EnumOps::OR(a.operation,b.operation);
+//	//other.access = EnumOps::OR(a.access,b.access);
+//	//other.layout = a.layout;
+//	//test t = test::A | test::B;
+//	//assert(a.layout == b.layout);
+//	return ResourceState(a.get_operation() | b.get_operation(), a.get_access() | b.get_access(), a.get_layout());
+//}
+
+	namespace ResourceStates
+	{
+
+			extern const  ResourceState INDEX_BUFFER ;//= { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };
+		extern const   ResourceState COPY_SOURCE;// = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_SOURCE };
+		extern const   ResourceState COPY_DEST;// = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_DEST };
+
+		extern const  ResourceState PIXEL_SHADER_RESOURCE;// = { BarrierSync::PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
+		extern const  ResourceState NON_PIXEL_SHADER_RESOURCE;// = { BarrierSync::NON_PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
+		extern const  ResourceState UNORDERED_ACCESS;// = { BarrierSync::ALL_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };
+		extern const  ResourceState RAYTRACING_STRUCTURE;// = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ, TextureLayout::UNDEFINED };
+
+		extern const  ResourceState RAYTRACING_STRUCTURE_WRITE;// = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ|BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE, TextureLayout::UNDEFINED };
+		extern const  ResourceState INDIRECT_ARGUMENT;// = { BarrierSync::EXECUTE_INDIRECT, BarrierAccess::INDIRECT_ARGUMENT, TextureLayout::UNDEFINED };
+
+		extern const  ResourceState RENDER_TARGET;// = {BarrierSync::RENDER_TARGET, BarrierAccess::RENDER_TARGET, TextureLayout::RENDER_TARGET};
+		extern const  ResourceState DEPTH_STENCIL ;//= {BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::DEPTH_STENCIL_READ,TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ};
+
+		extern const  ResourceState CONSTANT_BUFFER ;//= {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};
+
+	/*	extern const  ResourceState INDEX_BUFFER = { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };
+		extern const  ResourceState COPY_SOURCE = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_SOURCE };
+		extern const  ResourceState COPY_DEST = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_DEST };
+
+		extern const  ResourceState PIXEL_SHADER_RESOURCE = { BarrierSync::PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
+		extern const  ResourceState NON_PIXEL_SHADER_RESOURCE = { BarrierSync::NON_PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
+		extern const  ResourceState UNORDERED_ACCESS = { BarrierSync::ALL_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };
+		extern const  ResourceState RAYTRACING_STRUCTURE = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ, TextureLayout::UNDEFINED };
+
+		inline  constexpr ResourceState RAYTRACING_STRUCTURE_WRITE = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ|BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE, TextureLayout::UNDEFINED };
+		extern const  ResourceState INDIRECT_ARGUMENT = { BarrierSync::EXECUTE_INDIRECT, BarrierAccess::INDIRECT_ARGUMENT, TextureLayout::UNDEFINED };
+
+		extern const  ResourceState RENDER_TARGET = {BarrierSync::RENDER_TARGET, BarrierAccess::RENDER_TARGET, TextureLayout::RENDER_TARGET};
+		extern const  ResourceState DEPTH_STENCIL = {BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::DEPTH_STENCIL_READ,TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ};
+
+		extern const  ResourceState CONSTANT_BUFFER = {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};*/
+	}
+		
 	enum class HandleType : char
 	{
 		CBV,
@@ -366,7 +528,8 @@ export namespace HAL
 		UnorderedAccess = 1 << 1,
 		RenderTarget = 1 << 2,
 		DepthStencil = 1 << 3,
-		CrossAdapter = 1 << 4
+		CrossAdapter = 1 << 4,
+		Raytracing = 1<<5
 	};
 
 	struct TextureDesc
@@ -397,6 +560,22 @@ export namespace HAL
 		uint3 get_size(uint subres) const
 		{
 			return uint3::max({1,1,1}, Dimensions/std::pow(2,subres));
+		}
+
+		uint get_mip(uint subres) const
+		{
+		return subres % MipLevels;
+		}
+
+
+		uint get_array(uint subres) const
+		{
+		return subres/ MipLevels;
+		}
+
+		uint get_plane(uint subres) const
+		{
+		return subres/ (MipLevels * ArraySize);
 		}
 	private:
 		SERIALIZE()

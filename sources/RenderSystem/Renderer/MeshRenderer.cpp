@@ -158,13 +158,13 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	}
 
 
-	list.transition_uav(meshes_ids->buffer->resource.get());
+	/*list.transition_uav(meshes_ids->buffer->resource.get());
 	list.transition_uav(meshes_ids->buffer->help_buffer->resource.get());
 	if (invisibleToo)
 	{
 		list.transition_uav(meshes_invisible_ids->buffer->resource.get());
 		list.transition_uav(meshes_invisible_ids->buffer->help_buffer->resource.get());
-	}
+	}*/
 
 	//	meshes_ids->debug_print(list);
 

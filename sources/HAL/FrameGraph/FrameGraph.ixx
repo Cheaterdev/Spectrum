@@ -44,7 +44,7 @@ using namespace HAL;
 		Changed = (1 << 13)
 	};
 
-	 const constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
+	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
 
 	//struct BufferDesc
 	//{
@@ -825,7 +825,7 @@ using namespace HAL;
 		std::list<std::shared_ptr<Pass>> passes;
 
 	
-		Variable<bool> optimize = { true, "optimize", this };
+		Variable<bool> optimize = { false, "optimize", this };
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>

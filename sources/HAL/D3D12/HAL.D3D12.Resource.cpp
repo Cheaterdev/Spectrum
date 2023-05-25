@@ -47,7 +47,7 @@ namespace HAL
 	{
 
 
-	void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, ResourceState initialState)
+	void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, TextureLayout initialLayout)
 	{
 		auto THIS = static_cast<HAL::Resource*>(this);
 
@@ -55,33 +55,33 @@ namespace HAL
 		THIS->desc = _desc;
 
 //		Log::get() << "creating resource " << _desc << Log::endl;
-		CD3DX12_RESOURCE_DESC resourceDesc = to_native(THIS->desc);
+		auto resourceDesc = to_native(THIS->desc);
+			auto resourceDesc1 = to_native_1(THIS->desc);
 
-		if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
-		{
+		ResourceAllocationInfo info = device.get_alloc_info(_desc);
 
-			if ((resourceDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
-			{
-				resourceDesc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
-			}
-		}
-
-		D3D12_RESOURCE_ALLOCATION_INFO info = device.native_device->GetResourceAllocationInfo(0, 1, &resourceDesc);
-		if (info.SizeInBytes == UINT64_MAX)
-		{
-			resourceDesc.Alignment = 0;
-			info = device.native_device->GetResourceAllocationInfo(0, 1, &resourceDesc);
-		}
-		resourceDesc.Alignment = info.Alignment;
+		resourceDesc.Alignment = info.alignment;
 
 		D3D12_CLEAR_VALUE value;
 
 		D3D12_CLEAR_VALUE *pass_value=nullptr;
 
+
+		std::vector<DXGI_FORMAT> castable_formats;
+
+	
+
+		D3D12_BARRIER_LAYOUT layout = to_native(initialLayout);//D3D12_BARRIER_LAYOUT::D3D12_BARRIER_LAYOUT_UNDEFINED;
+
 		if (THIS->desc.is_texture())
 		{
 
 			auto texture_desc = THIS->desc.as_texture();
+	//			castable_formats.emplace_back(to_native(texture_desc.Format));
+	//	castable_formats.emplace_back(to_native(texture_desc.Format.to_srv()));
+	//	castable_formats.emplace_back(to_native(texture_desc.Format.to_dsv()));
+
+
 			assert((texture_desc.is1D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE1D)
 				|| (texture_desc.is2D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D)
 				|| (texture_desc.is3D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE3D)
@@ -110,32 +110,38 @@ namespace HAL
 				THIS->desc.Flags &= (~HAL::ResFlags::ShaderResource);
 			}
 
-
+			layout = D3D12_BARRIER_LAYOUT_COMMON;
+		}else
+		{
+		layout = D3D12_BARRIER_LAYOUT_UNDEFINED;
 		}
 
 		
 		if (address.heap)
 		{
-			TEST(device, device.native_device->CreatePlacedResource(
+			TEST(device, device.native_device->CreatePlacedResource2(
 				address.heap->native_heap.Get(),
 				address.offset,
 				&resourceDesc,
-				static_cast<D3D12_RESOURCE_STATES>(initialState),
+				layout,
 				pass_value,
+				castable_formats.size(),castable_formats.data(), 
 				IID_PPV_ARGS(&native_resource)));
 		}
 		else
 		{
 			if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
 			{
-				resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
+				resourceDesc1.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
 				//resourceDesc.Alignment = 4 * 1024;
 			}
 
-			TEST(device, device.native_device->CreateReservedResource(
-				&resourceDesc,
-				static_cast<D3D12_RESOURCE_STATES>(initialState),
+			TEST(device, device.native_device->CreateReservedResource2(
+				&resourceDesc1,
+				layout,
 				pass_value,
+				nullptr,
+				castable_formats.size(),castable_formats.data(), 
 				IID_PPV_ARGS(&native_resource)));
 		}
 
@@ -159,7 +165,7 @@ namespace HAL
 
 
 
-	void Resource::_init(const ResourceDesc& desc, HeapType _heap_type, ResourceState state, vec4 clear_value)
+	void Resource::_init(const ResourceDesc& desc, HeapType _heap_type, TextureLayout initialLayout, vec4 clear_value)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
 		heap_type = _heap_type;
@@ -195,24 +201,27 @@ namespace HAL
 		/**/
 
 
-		if (state == ResourceState::UNKNOWN)
+		if (initialLayout == TextureLayout::UNDEFINED)
 		{
 			if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-				state = ResourceState::DEPTH_WRITE;
+				initialLayout = TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ;
 			else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
-				state = ResourceState::RENDER_TARGET;
+				initialLayout = TextureLayout::RENDER_TARGET;
 			else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
-				state = ResourceState::PIXEL_SHADER_RESOURCE;
-
+				initialLayout = TextureLayout::SHADER_RESOURCE;
+			else if (check(desc.Flags & HAL::ResFlags::UnorderedAccess))
+				initialLayout = TextureLayout::UNORDERED_ACCESS;
 			else
-				state = ResourceState::COMMON;
+				initialLayout = TextureLayout::COPY_DEST; // probably update from CPU or copy
 		}
+
+
 		if (heap_type == HeapType::UPLOAD)
 		{
-			state = ResourceState::GEN_READ;
+			initialLayout = TextureLayout::SHADER_RESOURCE |  TextureLayout::COPY_SOURCE;
 		}if (heap_type == HeapType::READBACK)
 		{
-			state = ResourceState::COPY_DEST;
+			initialLayout = TextureLayout::COPY_DEST;
 		}
 
 		alloc_info = HAL::Device::get().get_alloc_info(desc);
@@ -260,8 +269,10 @@ namespace HAL
 
 
 		}
-		init(HAL::Device::get(), desc, address, state);
+		init(HAL::Device::get(), desc, address, initialLayout);
 
+
+		ResourceState state = {BarrierSync::NONE, BarrierAccess::NO_ACCESS, initialLayout};
 		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 			if (heap_type == HeapType::RESERVED) 
 		tiled_manager.init_tilings();
@@ -272,9 +283,9 @@ namespace HAL
 			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
 		}
 	}
-	Resource::Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state, vec4 clear_value) :state_manager(this), tiled_manager(this)
+	Resource::Resource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value) :state_manager(this), tiled_manager(this)
 	{
-		_init(desc, heap_type, state, clear_value);
+		_init(desc, heap_type, initialLayout, clear_value);
 
 	}
 
@@ -306,33 +317,39 @@ namespace HAL
 
 		}*/
 
-
-		ResourceState state;
-
-
-		if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-			state = ResourceState::DEPTH_WRITE;
-		else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
-			state = ResourceState::RENDER_TARGET;
-		else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
-			state = ResourceState::PIXEL_SHADER_RESOURCE;
-
-		else
-			state = ResourceState::COPY_DEST;
-
+		
 
 		heap_type = handle.get_heap()->get_type();
 
+		TextureLayout initialLayout= TextureLayout::UNDEFINED;
+		
+		if (initialLayout == TextureLayout::UNDEFINED)
+		{
+			if (check(desc.Flags & HAL::ResFlags::DepthStencil))
+				initialLayout = TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ;
+			else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
+				initialLayout = TextureLayout::RENDER_TARGET;
+			else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
+				initialLayout = TextureLayout::SHADER_RESOURCE;
+			else if (check(desc.Flags & HAL::ResFlags::UnorderedAccess))
+				initialLayout = TextureLayout::UNORDERED_ACCESS;
+			else
+				initialLayout = TextureLayout::COPY_DEST; // probably update from CPU or copy
+		}
+
+
 		if (heap_type == HeapType::UPLOAD)
 		{
-			state = ResourceState::GEN_READ;
+			initialLayout = TextureLayout::SHADER_RESOURCE |  TextureLayout::COPY_SOURCE;
 		}if (heap_type == HeapType::READBACK)
 		{
-			state = ResourceState::COPY_DEST;
+			initialLayout = TextureLayout::COPY_DEST;
 		}
-		PlacementAddress address = { handle.get_heap().get(),handle.get_offset() };
 
-		init(HAL::Device::get(), desc, address, state);
+		PlacementAddress address = { handle.get_heap().get(),handle.get_offset() };
+		ResourceState state = {BarrierSync::NONE, BarrierAccess::NO_ACCESS, initialLayout};
+	
+		init(HAL::Device::get(), desc, address, initialLayout);
 
 		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 
@@ -376,32 +393,35 @@ namespace HAL
 
 
 		}*/
+			heap_type = address.heap->get_type();
 
+		TextureLayout initialLayout= TextureLayout::UNDEFINED;
+	
+		if (initialLayout == TextureLayout::UNDEFINED)
+		{
+			if (check(desc.Flags & HAL::ResFlags::DepthStencil))
+				initialLayout = TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ;
+			else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
+				initialLayout = TextureLayout::RENDER_TARGET;
+			else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
+				initialLayout = TextureLayout::SHADER_RESOURCE;
+			else if (check(desc.Flags & HAL::ResFlags::UnorderedAccess))
+				initialLayout = TextureLayout::UNORDERED_ACCESS;
+			else
+				initialLayout = TextureLayout::COPY_DEST; // probably update from CPU or copy
+		}
 
-		ResourceState state;
-
-
-		if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-			state = ResourceState::DEPTH_WRITE;
-		else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
-			state = ResourceState::RENDER_TARGET;
-		else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
-			state = ResourceState::PIXEL_SHADER_RESOURCE;
-
-		else
-			state = ResourceState::COPY_DEST;
-
-
-		heap_type = address.heap->get_type();
 
 		if (heap_type == HeapType::UPLOAD)
 		{
-			state = ResourceState::GEN_READ;
+			initialLayout = TextureLayout::SHADER_RESOURCE |  TextureLayout::COPY_SOURCE;
 		}if (heap_type == HeapType::READBACK)
 		{
-			state = ResourceState::COPY_DEST;
+			initialLayout = TextureLayout::COPY_DEST;
 		}
-		init(HAL::Device::get(), desc, address, state);
+ResourceState state = {BarrierSync::NONE, BarrierAccess::NO_ACCESS, initialLayout};
+	
+		init(HAL::Device::get(), desc, address, initialLayout);
 
 		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 
@@ -417,7 +437,7 @@ namespace HAL
 	}
 
 
-	Resource::Resource(const D3D::Resource& resource, ResourceState state) :state_manager(this), tiled_manager(this)
+	Resource::Resource(const D3D::Resource& resource, TextureLayout initialLayout) :state_manager(this), tiled_manager(this)
 	{
 		init(resource);
 
@@ -426,7 +446,8 @@ namespace HAL
 		get_dx()->GetHeapProperties(&HeapProperties, &HeapFlags);
 
 		heap_type = from_native(HeapProperties.Type);
-
+		ResourceState state = {BarrierSync::NONE, BarrierAccess::NO_ACCESS, initialLayout};
+	
 		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
 
 		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD || HeapProperties.Type == D3D12_HEAP_TYPE_READBACK)

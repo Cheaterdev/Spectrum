@@ -607,157 +607,157 @@ namespace FrameGraph
 
 				}*/
 
-			auto find_pass = [&](SyncState from, SyncState to, CommandListType wanted_type)->Pass*{
+			//auto find_pass = [&](SyncState from, SyncState to, CommandListType wanted_type)->Pass*{
 
-				for (auto& pass : builder.enabled_passes)
-				{
-					auto type = pass->get_type();
+			//	for (auto& pass : builder.enabled_passes)
+			//	{
+			//		auto type = pass->get_type();
 
-					auto commandList = pass->context.list;
-							if (!commandList) continue;
-
-
-					if (!IsCompatible(type, wanted_type)) continue;
-					if (from.is_in_sync(pass)) continue;
-
-					if (!to.is_in_sync(pass)) continue;
-
-					return pass;
-				}
+			//		auto commandList = pass->context.list;
+			//				if (!commandList) continue;
 
 
-				return nullptr;
+			//		if (!IsCompatible(type, wanted_type)) continue;
+			//		if (from.is_in_sync(pass)) continue;
 
-			};
-			if (optimize)
-				for (auto& pair : builder.alloc_resources)
-				{
-					auto& info = pair.second;
-					if (!info.enabled) continue;
+			//		if (!to.is_in_sync(pass)) continue;
 
-					auto& resource = info.resource;
-
-					if (!resource) continue;
-
-				if (info.heap_type != HAL::HeapType::DEFAULT) continue;
-
-					// merge resourcestate access in a same read or write state
-					for (auto& state : info.states)
-					{
-						state.merged_state.subres.resize(resource->get_state_manager().get_subres_count());
-
-						// calculate merged state
-						for (auto& pass : state.passes)
-						{
-							auto commandList = pass->context.list;
-							if (!commandList) continue;
-
-							auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-							state.merged_state.merge(cpu_state);
-						}
-
-						// propagate merged state through passes
-						for (auto& pass : state.passes)
-						{
-							auto commandList = pass->context.list;
-							if (!commandList) continue;
-							auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
-							cpu_state.prepare_for(commandList->get_type(), state.merged_state);							
-						}
-					}
-
-					// link statee between passes
-					for (uint i = 0; i < info.states.size(); i++)
-					{
-						auto& state = info.states[i];
-						if (!state.write) continue;
-
-						assert(state.passes.size()==1);
-						auto pass = state.passes.front();
-							auto commandList = pass->context.list;
-							if (!commandList) continue;
-
-									HAL::CommandListType list_type = pass->get_type();
+			//		return pass;
+			//	}
 
 
-						if(i>0&&!info.states[i-1].write)
-						{
-							auto prev_state = info.states[i];
-							auto best_type = prev_state.merged_state.get_best_list_type();
+			//	return nullptr;
 
-					//		assert(IsCompatible(list_type,best_type));
-							if(IsCompatible(list_type,best_type))
-							info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_state);
-							else
-								Log::get()<<"unwanted prev transitions " << pass->name << " "<<info.resource->name <<Log::endl; 
-						}
+			//};
+			//if (optimize)
+			//	for (auto& pair : builder.alloc_resources)
+			//	{
+			//		auto& info = pair.second;
+			//		if (!info.enabled) continue;
+
+			//		auto& resource = info.resource;
+
+			//		if (!resource) continue;
+
+			//	if (info.heap_type != HAL::HeapType::DEFAULT) continue;
+
+			//		// merge resourcestate access in a same read or write state
+			//		for (auto& state : info.states)
+			//		{
+			//			state.merged_state.subres.resize(resource->get_state_manager().get_subres_count());
+
+			//			// calculate merged state
+			//			for (auto& pass : state.passes)
+			//			{
+			//				auto commandList = pass->context.list;
+			//				if (!commandList) continue;
+
+			//				auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
+			//				state.merged_state.merge(cpu_state);
+			//			}
+
+			//			// propagate merged state through passes
+			//			for (auto& pass : state.passes)
+			//			{
+			//				auto commandList = pass->context.list;
+			//				if (!commandList) continue;
+			//				auto& cpu_state = resource->get_state_manager().get_cpu_state(commandList.get());
+			//				cpu_state.prepare_for(commandList->get_type(), state.merged_state);							
+			//			}
+			//		}
+
+			//		// link statee between passes
+			//		for (uint i = 0; i < info.states.size(); i++)
+			//		{
+			//			auto& state = info.states[i];
+			//			if (!state.write) continue;
+
+			//			assert(state.passes.size()==1);
+			//			auto pass = state.passes.front();
+			//				auto commandList = pass->context.list;
+			//				if (!commandList) continue;
+
+			//						HAL::CommandListType list_type = pass->get_type();
 
 
-						if(i<info.states.size()-1/*&&!info.states[i+1].write*/)
-						{
-							auto next_state = info.states[i+1];
+			//			if(i>0&&!info.states[i-1].write)
+			//			{
+			//				auto prev_state = info.states[i];
+			//				auto best_type = prev_state.merged_state.get_best_list_type();
 
-							auto best_type = Merge(next_state.merged_state.get_best_list_type(),state.merged_state.get_best_list_type());
-				
-					//	assert(IsCompatible(list_type,best_type));
-							if(IsCompatible(list_type,best_type))
-							info.resource->get_state_manager().prepare_after_state(commandList.get(), next_state.merged_state);
-							else
-							{
-								auto best_pass = find_pass(state.to, next_state.from, best_type);
-								assert(best_pass);
+			//		//		assert(IsCompatible(list_type,best_type));
+			//				if(IsCompatible(list_type,best_type))
+			//				info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_state);
+			//				else
+			//					Log::get()<<"unwanted prev transitions " << pass->name << " "<<info.resource->name <<Log::endl; 
+			//			}
 
-								info.resource->get_state_manager().prepare_after_state(best_pass->context.list.get(), next_state.merged_state);
-							}
-						//		Log::get()<<"unwanted next transitions " << pass->name << " "<<info.resource->name <<Log::endl; 
-						
-						}
-					}
-				
+
+			//			if(i<info.states.size()-1/*&&!info.states[i+1].write*/)
+			//			{
+			//				auto next_state = info.states[i+1];
+
+			//				auto best_type = Merge(next_state.merged_state.get_best_list_type(),state.merged_state.get_best_list_type());
+			//	
+			//		//	assert(IsCompatible(list_type,best_type));
+			//				if(IsCompatible(list_type,best_type))
+			//				info.resource->get_state_manager().prepare_after_state(commandList.get(), next_state.merged_state);
+			//				else
+			//				{
+			//					auto best_pass = find_pass(state.to, next_state.from, best_type);
+			//					assert(best_pass);
+
+			//					info.resource->get_state_manager().prepare_after_state(best_pass->context.list.get(), next_state.merged_state);
+			//				}
+			//			//		Log::get()<<"unwanted next transitions " << pass->name << " "<<info.resource->name <<Log::endl; 
+			//			
+			//			}
+			//		}
+			//	
 	
 
-						// link end to start transition
-						if (info.states.size() > 0)
-						{			
-					HAL::SubResourcesGPU first_state=info.states.data()->merged_state;
-							auto last_state = info.states[info.states.size() - 1];
+			//			// link end to start transition
+			//			if (info.states.size() > 0)
+			//			{			
+			//		HAL::SubResourcesGPU first_state=info.states.data()->merged_state;
+			//				auto last_state = info.states[info.states.size() - 1];
 
 
-							Pass* last_pass = nullptr;
-							for (auto pass : last_state.passes)
-							{
-								if (!last_pass) last_pass = pass;
+			//				Pass* last_pass = nullptr;
+			//				for (auto pass : last_state.passes)
+			//				{
+			//					if (!last_pass) last_pass = pass;
 
-								if (pass->sync_state.is_in_sync(last_pass,true))
-								{
-									last_pass = pass;
-								}
-							}
-
-
-							if (first_state.is_valid()&&last_pass&&!info.passed)
-							{
-								auto commandList = last_pass->context.list;
-								if (!commandList) continue;
-											HAL::CommandListType list_type = last_pass->get_type();
-
-								auto best_type = Merge(first_state.get_best_list_type(),list_type);
-				
-								best_type = Merge(last_state.merged_state.get_best_list_type(),best_type);
-				
-							if(IsCompatible(list_type,best_type))
-								info.resource->get_state_manager().prepare_after_state(commandList.get(), first_state);
-							else if(first_state.get_best_list_type() == CommandListType::COMPUTE)
-							{
-							Log::get()<<"unwanted window transitions " <<info.resource->name <<Log::endl; 
-							}
-							}
-
-						
+			//					if (pass->sync_state.is_in_sync(last_pass,true))
+			//					{
+			//						last_pass = pass;
+			//					}
+			//				}
 
 
-					}
-				}
+			//				if (first_state.is_valid()&&last_pass&&!info.passed)
+			//				{
+			//					auto commandList = last_pass->context.list;
+			//					if (!commandList) continue;
+			//								HAL::CommandListType list_type = last_pass->get_type();
+
+			//					auto best_type = Merge(first_state.get_best_list_type(),list_type);
+			//	
+			//					best_type = Merge(last_state.merged_state.get_best_list_type(),best_type);
+			//	
+			//				if(IsCompatible(list_type,best_type))
+			//					info.resource->get_state_manager().prepare_after_state(commandList.get(), first_state);
+			//				else if(first_state.get_best_list_type() == CommandListType::COMPUTE)
+			//				{
+			//				Log::get()<<"unwanted window transitions " <<info.resource->name <<Log::endl; 
+			//				}
+			//				}
+
+			//			
+
+
+			//		}
+			//	}
 
 				{
 					PROFILE(L"compile");
