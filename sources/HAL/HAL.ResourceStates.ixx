@@ -106,21 +106,21 @@ export
 		//}
 
 
-		//ResourceState merge_state(const ResourceState& source, const ResourceState& need)
-		//{
-		//	assert(need != ResourceState::UNKNOWN);
+		std::optional<ResourceState> merge_state(const ResourceState& source, const ResourceState& need)
+		{
+			//assert(need != ResourceState::UNKNOWN);
 
-		//	if (source == ResourceState::UNKNOWN) return need;
-		//	if (source == need) return source;
+			if (source == ResourceStates::UNKNOWN) return std::nullopt;
+			if (source == need) return need;
 
-		//	ResourceState merged = source | need;
-		//	if (check(merged & (~ResourceState::GEN_READ)))
-		//	{
-		//		return need;
-		//	}
+			ResourceState merged = source | need;
+			if (merged.has_write_bits())
+			{
+				return std::nullopt;
+			}
 
-		//	return merged;
-		//}
+			return merged;
+		}
 
 		enum class BarrierFlags : UINT
 		{

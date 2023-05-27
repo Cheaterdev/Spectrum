@@ -230,7 +230,7 @@ namespace HAL
 		ResourceUsage* last_usage = nullptr;
 
 		bool need_add_uav = false;
-		auto transition_one = [&](UINT subres, bool can_merge) {
+		auto transition_one = [&](UINT subres) {
 
 			auto& subres_cpu = cpu_state.get_subres_state(subres);
 
@@ -245,18 +245,18 @@ namespace HAL
 				auto last_state = subres_cpu.last_usage->wanted_state;// cpu_state.get_last_state(subres);
 
 
-				if (last_state == state && state == ResourceStates::UNORDERED_ACCESS)
+			/*	if (last_state == state && state == ResourceStates::UNORDERED_ACCESS)
 				{
 					need_add_uav = true;
 				}
-				else
+				else*/
 				{
-					auto merged_state = state;//merge_state(last_state, state);
-					bool was_merged = false;//check(merged_state & subres_cpu.get_usage());
+					auto merged_state = merge_state(last_state, state);
+					//bool was_merged = check(merged_state & subres_cpu.get_usage());
 
-					if (can_merge && was_merged)
+					if (merged_state)
 					{
-						subres_cpu.last_usage->wanted_state = merged_state;
+						subres_cpu.last_usage->wanted_state = *merged_state;
 					}
 					else
 					{
@@ -270,7 +270,7 @@ namespace HAL
 		};
 
 			for (int i = 0; i < gpu_state.subres.size(); i++)
-					transition_one(i, false);
+					transition_one(i);
 
 		/*if (need_add_uav)
 		{

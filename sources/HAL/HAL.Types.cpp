@@ -15,13 +15,43 @@ namespace HAL
 
 		operation |= state.operation;
 		access |= state.access;
+		layout |= state.layout;
 
-		assert(layout == state.layout);
+	//	assert(layout == state.layout);
 		return *this;
 	}
 
+	
+	ResourceState ResourceState::operator &(const ResourceState& state)const
+	{
+		ResourceState other = *this;
+		other &= state;
+		return other;
+
+	}
+	const ResourceState& ResourceState::operator&=(const ResourceState& state)
+	{
+
+		operation &= state.operation;
+		access &= state.access;
+		layout &= state.layout;
+
+		//assert(layout == state.layout);
+		return *this;
+	}
+	bool ResourceState::has_write_bits() const
+	{
+
+		static const BarrierAccess ACCESS_WRITE = BarrierAccess::RENDER_TARGET | BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::RENDER_TARGET | BarrierAccess::UNORDERED_ACCESS| BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
+		if(check(access&ACCESS_WRITE)) return true;
 
 
+		static const TextureLayout LAYOUT_WRITE = TextureLayout::UNORDERED_ACCESS | TextureLayout::DEPTH_STENCIL_WRITE |TextureLayout::RENDER_TARGET  ;
+		if(check(layout&LAYOUT_WRITE)) return true;
+
+		return false;
+	}
+	
 	namespace ResourceStates {
 
 		const  ResourceState INDEX_BUFFER = { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };
@@ -41,6 +71,8 @@ namespace HAL
 
 		const  ResourceState CONSTANT_BUFFER = { BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };
 
+		const  ResourceState WRITE_STATES = UNORDERED_ACCESS | RAYTRACING_STRUCTURE_WRITE | RENDER_TARGET | DEPTH_STENCIL ;
+const  ResourceState UNKNOWN = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
 
 	}
 }

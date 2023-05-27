@@ -238,7 +238,14 @@ struct ResourceState
 
 
 	ResourceState operator |(const ResourceState& state)const;
+	ResourceState operator &(const ResourceState& state)const;
 	const ResourceState& operator |=(const ResourceState& state);
+	const ResourceState& operator &=(const ResourceState& state);
+
+
+
+	bool has_write_bits() const;
+	
 	//{
 
 	//	operation |= state.operation;
@@ -280,7 +287,8 @@ struct ResourceState
 		extern const  ResourceState DEPTH_STENCIL ;//= {BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::DEPTH_STENCIL_READ,TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ};
 
 		extern const  ResourceState CONSTANT_BUFFER ;//= {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};
-
+extern const  ResourceState WRITE_STATES ;
+extern const  ResourceState UNKNOWN ;
 	/*	extern const  ResourceState INDEX_BUFFER = { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };
 		extern const  ResourceState COPY_SOURCE = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_SOURCE };
 		extern const  ResourceState COPY_DEST = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_DEST };
