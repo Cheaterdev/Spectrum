@@ -30,7 +30,7 @@ export namespace HAL
 		GPUAddressPtr address;
 	public:
 		using ptr = std::shared_ptr<Resource>;
-		void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, TextureLayout initialLayout = TextureLayout::COMMON);
+		void init(Device& device, const ResourceDesc& desc, const PlacementAddress& address, TextureLayout initialLayout = TextureLayout::UNDEFINED);
 		void init(D3D::Resource  resource,ResourceState state);
 
 		GPUAddressPtr get_address()

@@ -99,39 +99,39 @@ export namespace HAL
 	{
 
 	
-		COMMON = 0,		
-		PRESENT,
+		NONE = 0,		
+		PRESENT = 1 << 0,
 	//	GENERIC_READ,
-		RENDER_TARGET,
-		UNORDERED_ACCESS,
-		DEPTH_STENCIL_WRITE,
-		DEPTH_STENCIL_READ,
-		SHADER_RESOURCE,
-		COPY_SOURCE,
-		COPY_DEST,
-		RESOLVE_SOURCE,
-		RESOLVE_DEST,
-		SHADING_RATE_SOURCE,
-		VIDEO_DECODE_READ,
-		VIDEO_DECODE_WRITE,
-		VIDEO_PROCESS_READ,
-		VIDEO_PROCESS_WRITE,
-		VIDEO_ENCODE_READ,
-		VIDEO_ENCODE_WRITE,
-		DIRECT_QUEUE_COMMON,
-		DIRECT_QUEUE_GENERIC_READ,
-		DIRECT_QUEUE_UNORDERED_ACCESS,
-		DIRECT_QUEUE_SHADER_RESOURCE,
-		DIRECT_QUEUE_COPY_SOURCE,
-		DIRECT_QUEUE_COPY_DEST,
-		COMPUTE_QUEUE_COMMON,
-		COMPUTE_QUEUE_GENERIC_READ,
-		COMPUTE_QUEUE_UNORDERED_ACCESS,
-		COMPUTE_QUEUE_SHADER_RESOURCE,
-		COMPUTE_QUEUE_COPY_SOURCE,
-		COMPUTE_QUEUE_COPY_DEST,
-		VIDEO_QUEUE_COMMON,
-		UNDEFINED = 0xffffffff,
+		RENDER_TARGET= 1 << 1,
+		UNORDERED_ACCESS= 1 << 2,
+		DEPTH_STENCIL_WRITE= 1 << 3,
+		DEPTH_STENCIL_READ= 1 << 4,
+		SHADER_RESOURCE= 1 << 5,
+		COPY_SOURCE= 1 << 6,
+		COPY_DEST= 1 << 7,
+		//RESOLVE_SOURCE,
+		//RESOLVE_DEST,
+		//SHADING_RATE_SOURCE,
+		//VIDEO_DECODE_READ,
+		//VIDEO_DECODE_WRITE,
+		//VIDEO_PROCESS_READ,
+		//VIDEO_PROCESS_WRITE,
+		//VIDEO_ENCODE_READ,
+		//VIDEO_ENCODE_WRITE,
+		//DIRECT_QUEUE_COMMON,
+		//DIRECT_QUEUE_GENERIC_READ,
+		//DIRECT_QUEUE_UNORDERED_ACCESS,
+		//DIRECT_QUEUE_SHADER_RESOURCE,
+		//DIRECT_QUEUE_COPY_SOURCE,
+		//DIRECT_QUEUE_COPY_DEST,
+		//COMPUTE_QUEUE_COMMON,
+		//COMPUTE_QUEUE_GENERIC_READ,
+		//COMPUTE_QUEUE_UNORDERED_ACCESS,
+		//COMPUTE_QUEUE_SHADER_RESOURCE,
+		//COMPUTE_QUEUE_COPY_SOURCE,
+		//COMPUTE_QUEUE_COPY_DEST,
+		//VIDEO_QUEUE_COMMON,
+		UNDEFINED = 0,
 		
 	};
 
@@ -139,7 +139,7 @@ export namespace HAL
 	{
 		NONE = 0x0,
 		ALL = 0x1,
-	//	DRAW = 0x2,
+	
 		INDEX_INPUT = 0x4,
 		VERTEX_SHADING = 0x8,
 		PIXEL_SHADING = 0x10,
@@ -151,8 +151,6 @@ export namespace HAL
 		RESOLVE = 0x400,
 		EXECUTE_INDIRECT = 0x800,
 		PREDICATION = 0x800, // Aliased with SYNC_EXECUTE_INDIRECT
-		ALL_SHADING = 0x1000,
-		NON_PIXEL_SHADING = 0x2000,
 		EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO = 0x4000,
 		CLEAR_UNORDERED_ACCESS_VIEW = 0x8000,
 		VIDEO_DECODE = 0x100000,
@@ -161,6 +159,10 @@ export namespace HAL
 		BUILD_RAYTRACING_ACCELERATION_STRUCTURE = 0x800000,
 		COPY_RAYTRACING_ACCELERATION_STRUCTURE = 0x1000000,
 		SPLIT = 0x80000000,
+
+			DRAW = INDEX_INPUT | VERTEX_SHADING | PIXEL_SHADING | DEPTH_STENCIL | RENDER_TARGET,
+	ALL_SHADING = VERTEX_SHADING | PIXEL_SHADING | COMPUTE_SHADING,
+	NON_PIXEL_SHADING = COMPUTE_SHADING | VERTEX_SHADING
 	};
 
 	enum class BarrierAccess : uint
@@ -243,9 +245,9 @@ struct ResourceState
 	const ResourceState& operator &=(const ResourceState& state);
 
 
-
+	CommandListType get_best_cmd_type() const;
 	bool has_write_bits() const;
-	
+	bool is_valid() const;
 	//{
 
 	//	operation |= state.operation;
@@ -275,8 +277,8 @@ struct ResourceState
 		extern const   ResourceState COPY_SOURCE;// = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_SOURCE };
 		extern const   ResourceState COPY_DEST;// = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_DEST };
 
-		extern const  ResourceState PIXEL_SHADER_RESOURCE;// = { BarrierSync::PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
-		extern const  ResourceState NON_PIXEL_SHADER_RESOURCE;// = { BarrierSync::NON_PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
+		extern const  ResourceState SHADER_RESOURCE;// = { BarrierSync::PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
+	//	extern const  ResourceState NON_PIXEL_SHADER_RESOURCE;// = { BarrierSync::NON_PIXEL_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };
 		extern const  ResourceState UNORDERED_ACCESS;// = { BarrierSync::ALL_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };
 		extern const  ResourceState RAYTRACING_STRUCTURE;// = { BarrierSync::RAYTRACING, BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_READ, TextureLayout::UNDEFINED };
 
@@ -287,7 +289,7 @@ struct ResourceState
 		extern const  ResourceState DEPTH_STENCIL ;//= {BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::DEPTH_STENCIL_READ,TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ};
 
 		extern const  ResourceState CONSTANT_BUFFER ;//= {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};
-extern const  ResourceState WRITE_STATES ;
+//extern const  ResourceState WRITE_STATES ;
 extern const  ResourceState UNKNOWN ;
 	/*	extern const  ResourceState INDEX_BUFFER = { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };
 		extern const  ResourceState COPY_SOURCE = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_SOURCE };

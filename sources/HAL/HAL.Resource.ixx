@@ -144,7 +144,7 @@ export{
 		protected:
 			ResourceStateManager state_manager;
 			TiledResourceManager tiled_manager;
-			void _init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, TextureLayout initialLayout = TextureLayout::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
+			void _init(const ResourceDesc& desc, HeapType heap_type = HeapType::DEFAULT, TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 
 			void write(std::vector<std::byte>&);
 			void write(GPUBinaryData<true>&);
@@ -186,7 +186,7 @@ export{
 
 			using ptr = std::shared_ptr<Resource>;
 
-			Resource(const ResourceDesc& desc, HeapType heap_type,TextureLayout initialLayout = TextureLayout::COMMON, vec4 clear_value = vec4(0, 0, 0, 0));
+			Resource(const ResourceDesc& desc, HeapType heap_type,TextureLayout initialLayout = TextureLayout::UNDEFINED, vec4 clear_value = vec4(0, 0, 0, 0));
 			Resource(const D3D::Resource& resouce, TextureLayout initialLayout);
 			Resource(const ResourceDesc& desc, PlacementAddress handle);
 
@@ -234,7 +234,7 @@ export{
 				if constexpr (Archive::is_loading::value)
 				{
 
-					_init(desc, HeapType::DEFAULT);
+					_init(desc, HeapType::DEFAULT,TextureLayout::COPY_DEST);
 					if (desc.is_buffer())
 					{
 					GPUBinaryData<true> binary;

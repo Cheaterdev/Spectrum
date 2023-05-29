@@ -77,7 +77,7 @@ export
 			static const ptr null;
 
 			Texture(D3D::Resource native, TextureLayout initialLayout);
-			Texture(HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::COMMON, HeapType heap_type = HeapType::DEFAULT);
+			Texture(HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED, HeapType heap_type = HeapType::DEFAULT);
 
 			static Texture::ptr create(HAL::texture_data::ptr& data, HeapType heap_type = HeapType::DEFAULT);
 

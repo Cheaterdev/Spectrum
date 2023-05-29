@@ -30,28 +30,32 @@ export
 		//}
 
 
-		//bool IsFullySupport(CommandListType type, const ResourceState& states)
-		//{
-		//	return (GetSupportedStates(type) & states) == states;
-		//}
+		bool IsCompatible(CommandListType a,CommandListType b)
+		{
+			if (a == CommandListType::DIRECT) return true;
+			if (b == CommandListType::DIRECT) return false;
 
-		//bool IsCompatible(CommandListType a,CommandListType b)
-		//{
-		//	if (a == CommandListType::DIRECT) return true;
-		//	if (b == CommandListType::DIRECT) return false;
+			if (a == CommandListType::COMPUTE) return true;
+			if (b == CommandListType::COMPUTE) return false;
 
-		//	if (a == CommandListType::COMPUTE) return true;
-		//	if (b == CommandListType::COMPUTE) return false;
+			return true;
 
-		//	return true;
+		}
 
-		//}
-		//CommandListType Merge(CommandListType a,CommandListType b)
-		//{
-		//	if (a == CommandListType::DIRECT||b == CommandListType::DIRECT) return CommandListType::DIRECT;
-		//	if (a == CommandListType::COMPUTE||b == CommandListType::COMPUTE) return CommandListType::COMPUTE;
-		//	return CommandListType::COPY;
-		//}
+		
+		bool IsFullySupport(CommandListType type, const ResourceState& states)
+		{
+			return IsCompatible(type, states.get_best_cmd_type());
+		}
+
+
+
+		CommandListType Merge(CommandListType a,CommandListType b)
+		{
+			if (a == CommandListType::DIRECT||b == CommandListType::DIRECT) return CommandListType::DIRECT;
+			if (a == CommandListType::COMPUTE||b == CommandListType::COMPUTE) return CommandListType::COMPUTE;
+			return CommandListType::COPY;
+		}
 
 		//CommandListType GetBestType(const ResourceState& states)
 		//{
@@ -110,16 +114,15 @@ export
 		{
 			//assert(need != ResourceState::UNKNOWN);
 
-			if (source == ResourceStates::UNKNOWN) return std::nullopt;
+			if (source == ResourceStates::UNKNOWN) return need;
 			if (source == need) return need;
 
-			ResourceState merged = source | need;
-			if (merged.has_write_bits())
+			if (source.has_write_bits()||need.has_write_bits())
 			{
 				return std::nullopt;
 			}
 
-			return merged;
+			return source | need;
 		}
 
 		enum class BarrierFlags : UINT
@@ -395,11 +398,11 @@ export
 
 				CommandListType type = CommandListType::COPY;
 
-			/*	for (auto& s : subres)
+				for (auto& s : subres)
 				{
-					if(s.state!=ResourceState::UNKNOWN)
-					type= Merge(type,GetBestType(s.state));
-				}*/
+					if(s.state!=ResourceStates::UNKNOWN)
+					type= Merge(type,s.state.get_best_cmd_type());
+				}
 
 
 				return type;
@@ -444,31 +447,36 @@ export
 
 
 
-			//void merge(SubResourcesCPU& other)
-			//{
-			//	//{
-			//	//	if (!other.all_state.first_usage)
-			//	//	{
-			//	//		make_unique_state();
-			//	//	}
-			//	//}
+			void merge(SubResourcesCPU& other)
+			{
+				//{
+				//	if (!other.all_state.first_usage)
+				//	{
+				//		make_unique_state();
+				//	}
+				//}
 
 
-			//	//if (all_states_same)
-			//	//{
-			//	//	all_state.state = merge_state(all_state.state, other.get_first_state(ALL_SUBRESOURCES));
-			//	//}
-			//	//else
-			//	{
-			//		for (int i = 0; i < subres.size(); i++)
-			//		{
-			//			auto transition = other.get_first_usage(i);
+				//if (all_states_same)
+				//{
+				//	all_state.state = merge_state(all_state.state, other.get_first_state(ALL_SUBRESOURCES));
+				//}
+				//else
+				{
+					for (int i = 0; i < subres.size(); i++)
+					{
+						auto transition = other.get_first_usage(i);
 
-			//			if (transition)
-			//				subres[i].state = merge_state(subres[i].state, transition->wanted_state);
-			//		}
-			//	}
-			//}
+						if (transition)
+						{
+							
+							auto state = merge_state(subres[i].state, transition->wanted_state);
+							if(state)
+								subres[i].state = *state;
+						}
+					}
+				}
+			}
 
 
 		};
@@ -522,7 +530,7 @@ export
 			bool is_used(Transitions* list) const;
 		
 
-			ResourceState process_transitions(Barriers& target, std::vector<Resource*>& discards, Transitions* list) const;
+			CommandListType process_transitions(Barriers& target, std::vector<Resource*>& discards, Transitions* list) const;
 
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
 			bool transition(Transitions* from, Transitions* to) const;

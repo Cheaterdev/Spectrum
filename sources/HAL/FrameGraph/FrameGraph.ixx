@@ -825,7 +825,7 @@ using namespace HAL;
 		std::list<std::shared_ptr<Pass>> passes;
 
 	
-		Variable<bool> optimize = { false, "optimize", this };
+		Variable<bool> optimize = { true, "optimize", this };
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>

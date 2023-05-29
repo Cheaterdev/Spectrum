@@ -123,7 +123,13 @@ export{
 
 							if (prev_usage->wanted_state == usage.wanted_state) continue;
 
-							//					assert(!point->start);
+						auto a = prev_usage->wanted_state.get_best_cmd_type();
+auto b =usage.wanted_state.get_best_cmd_type();
+
+							assert(IsCompatible(type,a));
+							assert(IsCompatible(type,b));
+
+
 							transitions.transition(usage.resource,
 								prev_usage->wanted_state,
 								usage.wanted_state,
@@ -199,7 +205,7 @@ export{
 			}
 
 
-			void transition(const ResourceInfo& info)
+			void transition(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE)
 			{
 				if (!info.is_valid()) return;
 
@@ -210,20 +216,32 @@ export{
 				{
 					if (type == CommandListType::DIRECT)
 					{
-						target_state = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+						operation =BarrierSync::ALL;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
 					}
 
 					if (type == CommandListType::COMPUTE)
 					{
-						target_state = ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+						operation =BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
 					}
 
-					//target_state = {BarrierSync::ALL, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE};  //TODO BarrierSync::ALL
+					target_state = {operation, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE};  //TODO BarrierSync::ALL
 
 				}
 				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info.view))
 				{
-					target_state = ResourceStates::UNORDERED_ACCESS;
+					//assert( operation != BarrierSync::NONE);
+
+						if (type == CommandListType::DIRECT)
+					{
+						operation =BarrierSync::ALL;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+
+					if (type == CommandListType::COMPUTE)
+					{
+						operation =BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+
+					target_state = {operation, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS};  //TODO BarrierSync::ALL
 				}
 				else 	if (std::holds_alternative<HAL::Views::RenderTarget>(info.view))
 				{
@@ -236,7 +254,17 @@ export{
 				}
 				else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info.view))
 				{
-					target_state = ResourceStates::CONSTANT_BUFFER;  //TODO BarrierSync::ALL
+					if (type == CommandListType::DIRECT)
+					{
+						operation =BarrierSync::ALL;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+
+					if (type == CommandListType::COMPUTE)
+					{
+						operation =BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+					
+					target_state = {operation, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};  //TODO BarrierSync::ALL
 
 				}
 				else assert(false);
@@ -402,13 +430,13 @@ export{
 			void set_pipeline_internal(PipelineStateBase* pipeline);
 
 			template<bool compute, bool graphics, class T>
-			void pre_command(T& context,UsedSlots *slots = nullptr)
+			void pre_command(T& context, BarrierSync operation, UsedSlots *slots = nullptr)
 			{
 				create_usage_point();
 				if constexpr (compute || graphics)
 				{
 					if constexpr (Debug::GfxDebug)	setup_debug(&context);
-					context.commit_tables(slots);
+					context.commit_tables(operation, slots);
 					if constexpr (graphics) context.validate();
 				}
 			}
@@ -448,7 +476,7 @@ export{
 			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
 				create_usage_point();
-				transition(h.get_resource_info());
+				transition(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
 				compiler.clear_uav(h, ClearColor);
 				create_usage_point(false);
 			}
@@ -535,7 +563,7 @@ export{
 				}
 			}
 	//	public:
-			void commit_tables(UsedSlots *slots = nullptr);
+			void commit_tables( BarrierSync operation, UsedSlots *slots = nullptr);
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
 		public:
@@ -575,9 +603,9 @@ export{
 				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
 			}
 
-			void set_cb(UINT index, const CBVHandle& cb)
+			void set_cb(UINT index, const CBVHandle& cb, BarrierSync operation)
 			{
-				get_base().transition(cb.get_resource_info());
+				get_base().transition(cb.get_resource_info(),operation);
 				set_const_buffer(index, 0, cb.get_offset());
 			}
 
@@ -766,11 +794,11 @@ export{
 			template<class Hit, class Miss, class Raygen>
 			void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
 			{
-				base.pre_command<true, false>(*this);
+				base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 
-				base.transition(hit_buffer.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
-				base.transition(miss_buffer.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
-				base.transition(raygen_buffer.resource, ResourceStates::NON_PIXEL_SHADER_RESOURCE);
+				base.transition(hit_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
+				base.transition(miss_buffer.resource,  { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
+				base.transition(raygen_buffer.resource,  { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
 
 				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 

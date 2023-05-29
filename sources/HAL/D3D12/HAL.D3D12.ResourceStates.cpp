@@ -75,7 +75,7 @@ namespace HAL
 
 	void SubResourcesCPU::prepare_for(CommandListType type, SubResourcesGPU& state)
 	{
-		//if(!used) return;
+		if(!used) return;
 
 		//if (state.all_states_same && all_state.first_usage)
 		//{
@@ -90,19 +90,23 @@ namespace HAL
 		//	make_unique_state();
 
 
-		//		for (int i = 0; i < subres.size(); i++)
-		//			{
-		//			auto my_state = get_subres_state(i);
-		//				auto subres_state = state.get_subres_state(i).state;
+				for (int i = 0; i < subres.size(); i++)
+					{
+					auto my_state = get_subres_state(i);
+						auto subres_state = state.get_subres_state(i).state;
 
-		//				if(subres_state==ResourceState::UNKNOWN) 
-		//					continue;
+						if(subres_state==ResourceStates::UNKNOWN) 
+							continue;
 
-		//				my_state.first_usage->wanted_state = merge_state(subres_state, my_state.first_usage->wanted_state);
-		//				
-		//			}
 
-		//}
+						auto merged = merge_state(subres_state, my_state.first_usage->wanted_state);
+
+						if(merged)
+						my_state.first_usage->wanted_state = *merged;
+						
+					}
+
+		
 	}
 
 	ResourceStateManager::ResourceStateManager(const Resource* resource) : resource(resource)
@@ -123,25 +127,24 @@ namespace HAL
 
 
 
-	ResourceState ResourceStateManager::process_transitions(Barriers& target, std::vector<Resource*>& discards, Transitions* list) const
+	CommandListType ResourceStateManager::process_transitions(Barriers& target, std::vector<Resource*>& discards, Transitions* list) const
 	{
-		ResourceState processed_states = ResourceStates::PIXEL_SHADER_RESOURCE;
-
-		if (!resource) return processed_states;
+		CommandListType cmd_type =  CommandListType::COPY;
+		if (!resource) return cmd_type;
 
 		auto& cpu_state = get_state((list));
 
 
 
-					for (int i = 0; i < gpu_state.subres.size(); i++)
-				{
-						auto& gpu = gpu_state.get_subres_state(i);
+		for (int i = 0; i < gpu_state.subres.size(); i++)
+		{
+			auto& gpu = gpu_state.get_subres_state(i);
 			auto& cpu = cpu_state.get_subres_state(i);
 
 			if (!cpu.used)	continue;
 
 			auto first_usage = cpu_state.get_first_usage(i);
-		//	auto last_usage = cpu_state.get_last_usage(i);
+			//	auto last_usage = cpu_state.get_last_usage(i);
 
 			auto first_state = first_usage->wanted_state;
 
@@ -149,9 +152,12 @@ namespace HAL
 			{
 				//assert(!manual_controlled);
 				target.transition(resource, gpu.state, first_state, i);
-				processed_states = processed_states | gpu.state | first_state;
+
+				cmd_type = Merge(cmd_type, gpu.state.get_best_cmd_type());
+				cmd_type = Merge(cmd_type, first_state.get_best_cmd_type());
+
 			}
-				}
+		}
 		 
 		// 
 		// 
@@ -219,7 +225,7 @@ namespace HAL
 		//	discards.emplace_back(const_cast<Resource*>(resource));
 		//}
 
-		return processed_states;
+		return cmd_type;
 	}
 
 
@@ -230,6 +236,8 @@ namespace HAL
 		ResourceUsage* last_usage = nullptr;
 
 		bool need_add_uav = false;
+
+		assert(state.is_valid());
 		auto transition_one = [&](UINT subres) {
 
 			auto& subres_cpu = cpu_state.get_subres_state(subres);
@@ -284,79 +292,81 @@ namespace HAL
 	{
 
 		////return ;
-		//auto& cpu_state = get_state((from));
+		auto& cpu_state = get_state((from));
 
-		//if (!cpu_state.used) return;
+		if (!cpu_state.used) return;
 
-		//bool updated = false;
+		bool updated = false;
 
-		//auto merge_one = [&, this](UINT i) {
-		//	auto& gpu = gpu_state.get_subres_state(i);
-		//	auto& cpu = cpu_state.get_subres_state(i);
+		auto merge_one = [&, this](UINT i) {
+			auto& gpu = gpu_state.get_subres_state(i);
+			auto& cpu = cpu_state.get_subres_state(i);
 
-		//	if (!cpu.used)	return;
+			if (!cpu.used)	return;
 
-		//	assert (IsFullySupport((from)->get_type(), gpu.state));
+			assert (IsFullySupport((from)->get_type(), gpu.state));
 
-		//	auto first_usage = cpu_state.get_first_usage(i);
-		//	auto last_usage = cpu_state.get_last_usage(i);
+			auto first_usage = cpu_state.get_first_usage(i);
+			auto last_usage = cpu_state.get_last_usage(i);
 
-		//	first_usage->wanted_state = merge_state(gpu.state, first_usage->wanted_state);
-		//};
-
-
-
-
-		//auto transition_one = [&](UINT i) {
-		//	auto& gpu = gpu_state.get_subres_state(i);
-		//	auto& cpu = cpu_state.get_subres_state(i, true);
-
-		//	if (!cpu.used) return;
-
-		//	assert (IsFullySupport((from)->get_type(), gpu.state));
-
-		//	auto first_usage = cpu_state.get_first_usage(i);
-		//	auto last_usage = cpu_state.get_last_usage(i);
-
-		//	auto first_state = first_usage->wanted_state;
-
-		//	if (gpu.state != first_state)
-		//	{
-		//		auto point = (from)->create_transition((resource), i, gpu.state, TransitionType::ZERO);
-		//		//		cpu.set_zero_transition(point);
-		//		updated = true;
-		//	}
-		//};
+			auto merged =  merge_state(gpu.state, first_usage->wanted_state);
+			if(merged)
+			first_usage->wanted_state = *merged;
+		};
 
 
 
-		//if (cpu_state.all_state.first_usage && gpu_state.all_states_same)
-		//{
-		//	merge_one(ALL_SUBRESOURCES);
-		//	transition_one(ALL_SUBRESOURCES);
-		//}
-		//else
-		//{
+
+		auto transition_one = [&](UINT i) {
+			auto& gpu = gpu_state.get_subres_state(i);
+			auto& cpu = cpu_state.get_subres_state(i, true);
+
+			if (!cpu.used) return;
+
+			assert (IsFullySupport((from)->get_type(), gpu.state));
+
+			auto first_usage = cpu_state.get_first_usage(i);
+			auto last_usage = cpu_state.get_last_usage(i);
+
+			auto first_state = first_usage->wanted_state;
+
+			if (gpu.state != first_state)
+			{
+				auto point = (from)->add_usage((resource), i, gpu.state, TransitionType::ZERO);
+				//		cpu.set_zero_transition(point);
+				updated = true;
+			}
+		};
+
+
+
+	/*	if (cpu_state.all_state.first_usage && gpu_state.all_states_same)
+		{
+			merge_one(ALL_SUBRESOURCES);
+			transition_one(ALL_SUBRESOURCES);
+		}
+		else*/
+		{
 
 		//	if (!cpu_state.all_state.used)
-		//		for (int i = 0; i < gpu_state.subres.size(); i++)
-		//		{
-		//			merge_one(i);
-		//		}
-		//	for (int i = 0; i < gpu_state.subres.size(); i++)
-		//	{
-		//		transition_one(i);
-		//	}
-		//}
+				for (int i = 0; i < gpu_state.subres.size(); i++)
+				{
+					merge_one(i);
+				}
+			for (int i = 0; i < gpu_state.subres.size(); i++)
+			{
+				transition_one(i);
+			}
+		}
 
 
-		//gpu_state.set_cpu_state(cpu_state);
+		gpu_state.set_cpu_state(cpu_state);
 
-		//if (updated)
-		//{
-		//	(from)->track_object(*(const_cast<Resource*>(resource)));
-		//	(from)->use_resource((resource));
-		//}
+		if (updated)
+		{
+			(from)->track_object(*(const_cast<Resource*>(resource)));
+			(from)->use_resource((resource));
+		}
 
 	}
 
@@ -364,44 +374,46 @@ namespace HAL
 		void ResourceStateManager::prepare_after_state(Transitions* from, SubResourcesGPU& gpu_state) const
 	{
 
-//		//return ;
-//		auto& cpu_state = get_state((from));
-//
-//	//	if (!cpu_state.used)
-//	//		return;
-//
-//		bool updated = false;
-//
-//
-//		if ( gpu_state.all_states_same)
-//		{
-//			assert (IsFullySupport((from)->get_type(), gpu_state.all_state.state));
-//				transition(from,gpu_state.all_state.state,ALL_SUBRESOURCES) ;
-//		}
-//		else
-//		{
-//
-//	/*		if (!cpu_state.all_state.used)
-//				for (int i = 0; i < gpu_state.subres.size(); i++)
-//				{
-//					merge_one(i);
-//				}*/
-//			for (int i = 0; i < gpu_state.subres.size(); i++)
-//			{
-//				if(gpu_state.subres[i].state==ResourceState::UNKNOWN) continue;
-//				assert (IsFullySupport((from)->get_type(), gpu_state.subres[i].state));
-//			transition(from,gpu_state.subres[i].state,i) ;
-//			}
-//		}
-//
-//
-////		gpu_state.set_cpu_state(cpu_state);
-//
-//		if (updated)
-//		{
-//			(from)->track_object(*(const_cast<Resource*>(resource)));
-//			(from)->use_resource((resource));
-//		}
+		//return ;
+		auto& cpu_state = get_state((from));
+
+	//	if (!cpu_state.used)
+	//		return;
+
+		bool updated = false;
+
+
+		//if ( gpu_state.all_states_same)
+		//{
+		//	assert (IsFullySupport((from)->get_type(), gpu_state.all_state.state));
+		//		transition(from,gpu_state.all_state.state,ALL_SUBRESOURCES) ;
+		//}
+		//else
+		{
+
+	/*		if (!cpu_state.all_state.used)
+				for (int i = 0; i < gpu_state.subres.size(); i++)
+				{
+					merge_one(i);
+				}*/
+			for (int i = 0; i < gpu_state.subres.size(); i++)
+			{
+				if(gpu_state.subres[i].state==ResourceStates::UNKNOWN) continue;
+
+				assert (IsFullySupport((from)->get_type(), gpu_state.subres[i].state));
+			auto t = gpu_state.subres[i].state.get_best_cmd_type();
+				transition(from,gpu_state.subres[i].state,i) ;
+			}
+		}
+
+
+//		gpu_state.set_cpu_state(cpu_state);
+
+		if (updated)
+		{
+			(from)->track_object(*(const_cast<Resource*>(resource)));
+			(from)->use_resource((resource));
+		}
 
 	}
 
