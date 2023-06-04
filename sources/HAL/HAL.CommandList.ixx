@@ -118,22 +118,26 @@ export{
 						for (auto& usage : point->usages)
 						{
 							auto prev_usage = usage.prev_usage;
+							auto prev_state = ResourceStates::NO_ACCESS;
 
-							if (!prev_usage) continue;
+							//if (!prev_usage)  continue;
+							if (prev_usage)prev_state = prev_usage->wanted_state;
 
-							if (prev_usage->wanted_state == usage.wanted_state) continue;
+							if (prev_state == usage.wanted_state) continue;
 
-						auto a = prev_usage->wanted_state.get_best_cmd_type();
-auto b =usage.wanted_state.get_best_cmd_type();
+							auto a = prev_state.get_best_cmd_type();
+							auto b = usage.wanted_state.get_best_cmd_type();
 
 							assert(IsCompatible(type,a));
 							assert(IsCompatible(type,b));
 
+							BarrierFlags flags = BarrierFlags::SINGLE;
 
+//							if(usage.need_discard)  flags |= BarrierFlags::DISCARD;
 							transitions.transition(usage.resource,
-								prev_usage->wanted_state,
+								prev_state,
 								usage.wanted_state,
-								usage.subres, BarrierFlags::SINGLE);
+								usage.subres, flags);
 						}
 
 						list.transitions(transitions);
@@ -191,7 +195,11 @@ auto b =usage.wanted_state.get_best_cmd_type();
 
 		//	void merge_transition(Transitions* to, HAL::Resource* res);
 		//	void transition_uav(HAL::Resource* resource);
-			void transition(HAL::Resource* from, HAL::Resource* to);
+			///void transition(HAL::Resource* from, HAL::Resource* to);
+
+			void alias_begin(HAL::Resource*);
+			void alias_end(HAL::Resource*);
+
 			std::shared_ptr<TransitionCommandList> fix_pretransitions();
 
 			void transition_present(const HAL::Resource* resource_ptr)

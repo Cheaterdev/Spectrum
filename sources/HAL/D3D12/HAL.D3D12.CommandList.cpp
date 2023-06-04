@@ -389,6 +389,7 @@ namespace HAL
 			std::vector<D3D12_TEXTURE_BARRIER> textures;
 			std::vector<D3D12_BUFFER_BARRIER> buffers;
 
+			std::vector<D3D12_GLOBAL_BARRIER> global;
 
 
 
@@ -443,7 +444,9 @@ namespace HAL
 
 
 					barrier.Flags = D3D12_TEXTURE_BARRIER_FLAG_NONE;
-
+					if (check(e.flags &BarrierFlags::DISCARD)) 
+						barrier.Flags|= D3D12_TEXTURE_BARRIER_FLAG_DISCARD ;
+									
 
 					textures.emplace_back(barrier);
 				}
@@ -479,6 +482,49 @@ namespace HAL
 
 				native.emplace_back(group);
 			}
+
+
+
+
+
+
+			if (GetAsyncKeyState('8'))
+			{
+
+
+				
+					D3D12_GLOBAL_BARRIER barrier;
+
+						barrier.SyncBefore =
+						barrier.SyncAfter =
+						D3D12_BARRIER_SYNC_ALL_SHADING |
+						D3D12_BARRIER_SYNC_BUILD_RAYTRACING_ACCELERATION_STRUCTURE |
+						D3D12_BARRIER_SYNC_COPY_RAYTRACING_ACCELERATION_STRUCTURE |
+						D3D12_BARRIER_SYNC_EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO;
+
+					barrier.AccessBefore =
+						barrier.AccessAfter =
+						D3D12_BARRIER_ACCESS_UNORDERED_ACCESS |
+						D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_WRITE |
+						D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_READ;
+
+					/*	barrier.SyncBefore =D3D12_BARRIER_SYNC_ALL;
+						barrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
+						barrier.AccessBefore = to_native(e.before.get_access());
+						barrier.AccessAfter = to_native(e.after.get_access());*/
+
+					global.emplace_back(barrier);
+				
+				D3D12_BARRIER_GROUP group;
+
+				group.Type = D3D12_BARRIER_TYPE::D3D12_BARRIER_TYPE_GLOBAL;
+				group.NumBarriers = global.size();
+				group.pGlobalBarriers = global.data();
+
+				native.emplace_back(group);
+			}
+
+
 
 
 			/*auto& barriers = _barriers.get_barriers();

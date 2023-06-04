@@ -51,35 +51,85 @@ namespace HAL
 
 		return false;
 	}
-	CommandListType ResourceState::get_best_cmd_type() const
+
+	
+	CommandListType get_best_cmd_type(TextureLayout layout)
 	{
-		static const BarrierAccess ACCESS_DIRECT= BarrierAccess::RENDER_TARGET | BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::RENDER_TARGET ;//| BarrierAccess::UNORDERED_ACCESS| BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
-		if(check(access&ACCESS_DIRECT)) 
+	if(layout==TextureLayout::COPY_QUEUE) return CommandListType::COPY;
+
+
+		static const TextureLayout LAYOUT_DIRECT = TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::RENDER_TARGET;
+		if (check(layout & LAYOUT_DIRECT))
 			return CommandListType::DIRECT;
 
-	static const TextureLayout LAYOUT_DIRECT = TextureLayout::DEPTH_STENCIL_WRITE |TextureLayout::RENDER_TARGET  ;
-	if(check(layout&LAYOUT_DIRECT)) 
-		
-			return CommandListType::DIRECT;
-
-		static const BarrierSync SYNC_DIRECT = BarrierSync::INDEX_INPUT |BarrierSync::VERTEX_SHADING |BarrierSync::PIXEL_SHADING |BarrierSync::DEPTH_STENCIL |BarrierSync::RENDER_TARGET  ;
-		if(check(operation&SYNC_DIRECT)) 
-			return CommandListType::DIRECT;
 
 		
 		return CommandListType::COMPUTE;
 
 	}
+	CommandListType ResourceState::get_best_cmd_type() const
+	{
 
 
+		if (*this==ResourceStates::NO_ACCESS)
+		return CommandListType::COPY;
+
+		const   ResourceState COPY_SOURCE_2 = { BarrierSync::COPY, BarrierAccess::COPY_SOURCE, TextureLayout::COPY_QUEUE };
+		const   ResourceState COPY_DEST_2 = { BarrierSync::COPY, BarrierAccess::COPY_DEST, TextureLayout::COPY_QUEUE };
+
+		if (*this==COPY_SOURCE_2||*this==COPY_DEST_2)
+			return CommandListType::COPY;
+
+
+		static const BarrierAccess ACCESS_DIRECT = BarrierAccess::RENDER_TARGET | BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::RENDER_TARGET;//| BarrierAccess::UNORDERED_ACCESS| BarrierAccess::RAYTRACING_ACCELERATION_STRUCTURE_WRITE;
+		if (check(access & ACCESS_DIRECT))
+			return CommandListType::DIRECT;
+
+		static const TextureLayout LAYOUT_DIRECT = TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::RENDER_TARGET;
+		if (check(layout & LAYOUT_DIRECT))
+			return CommandListType::DIRECT;
+
+		static const BarrierSync SYNC_DIRECT = BarrierSync::INDEX_INPUT | BarrierSync::VERTEX_SHADING | BarrierSync::PIXEL_SHADING | BarrierSync::DEPTH_STENCIL | BarrierSync::RENDER_TARGET;
+		if (check(operation & SYNC_DIRECT))
+			return CommandListType::DIRECT;
+
+
+
+
+
+		return CommandListType::COMPUTE;
+
+	}
+
+
+	bool ResourceState::is_no_access() const
+	{
+		if (check(operation & BarrierSync::NONE))
+		{
+			
+		 return true;
+
+		}
+		
+
+
+		if (check(access & BarrierAccess::NO_ACCESS))
+		{
+
+			 return true;
+
+		}
+
+		return false;
+	}
 
 	bool ResourceState::is_valid() const
 	{
 		if (check(operation & BarrierSync::COPY))
 		{
-
-			bool is_read = check(layout & TextureLayout::COPY_SOURCE) && check(access & BarrierAccess::COPY_SOURCE);
-			bool is_write = check(layout & TextureLayout::COPY_DEST) && check(access & BarrierAccess::COPY_DEST);
+			
+			bool is_read = check(layout & TextureLayout::COPY_QUEUE)||(check(layout & TextureLayout::COPY_SOURCE) && check(access & BarrierAccess::COPY_SOURCE));
+			bool is_write =  check(layout & TextureLayout::COPY_QUEUE)||(check(layout & TextureLayout::COPY_DEST) && check(access & BarrierAccess::COPY_DEST));
 			if (!is_read && !is_write)	 return false;
 
 		}
@@ -113,6 +163,7 @@ namespace HAL
 		const  ResourceState DEPTH_STENCIL = { BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE /*| BarrierAccess::DEPTH_STENCIL_READ*/,TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::DEPTH_STENCIL_READ };
 
 		const  ResourceState CONSTANT_BUFFER = { BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };
+		const  ResourceState NO_ACCESS = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
 
 //		const  ResourceState WRITE_STATES = UNORDERED_ACCESS | RAYTRACING_STRUCTURE_WRITE | RENDER_TARGET | DEPTH_STENCIL ;
 const  ResourceState UNKNOWN = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };

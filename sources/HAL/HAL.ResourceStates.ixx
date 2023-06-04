@@ -122,14 +122,30 @@ export
 				return std::nullopt;
 			}
 
+			if(source.is_no_access()||need.is_no_access())
+			{
+				return std::nullopt;
+			}
+
 			return source | need;
 		}
+		std::optional<TextureLayout> merge_layout(const TextureLayout& source, const TextureLayout& need)
+		{
+			if (source == TextureLayout::NONE) return need;
+			if (source == need) return need;
 
+			static const TextureLayout LAYOUT_WRITE = TextureLayout::UNORDERED_ACCESS | TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::RENDER_TARGET | TextureLayout::COPY_DEST;
+			if (check(source & LAYOUT_WRITE) || check(need & LAYOUT_WRITE))
+				return std::nullopt;
+
+			return source | need;
+		}
 		enum class BarrierFlags : UINT
 		{
 			BEGIN = 1,
 			END = 2,
-			SINGLE = BEGIN | END
+			SINGLE = BEGIN | END,
+			DISCARD = 4
 		};
 
 		struct Barrier
@@ -176,6 +192,8 @@ export
 
 			UsagePoint* usage = nullptr;
 			UsagePoint* last_usage = nullptr;
+
+			bool need_discard = false;
 		};
 
 		struct UsagePoint
@@ -206,9 +224,11 @@ export
 			}
 
 			bool used = false;
+			bool need_discard = false;
 
 			void reset()
 			{
+				need_discard = false;
 				used = false;
 				first_usage = nullptr;
 				last_usage = nullptr;
@@ -341,7 +361,7 @@ export
 
 		struct ResourceListStateGPU
 		{
-			ResourceState state ;//= HAL::ResourceState::UNKNOWN;
+			TextureLayout layout ;//= HAL::ResourceState::UNKNOWN;
 		};
 
 		struct SubResourcesGPU
@@ -400,8 +420,8 @@ export
 
 				for (auto& s : subres)
 				{
-					if(s.state!=ResourceStates::UNKNOWN)
-					type= Merge(type,s.state.get_best_cmd_type());
+					if(s.layout!=TextureLayout::NONE)
+					type= Merge(type,get_best_cmd_type(s.layout));
 				}
 
 
@@ -432,7 +452,7 @@ export
 
 						auto last_state = last_usage->wanted_state;
 					//	assert(last_state != ResourceState::UNKNOWN);
-						gpu.state = last_state;
+						gpu.layout = last_state.layout;
 					}
 
 				//}
@@ -449,20 +469,6 @@ export
 
 			void merge(SubResourcesCPU& other)
 			{
-				//{
-				//	if (!other.all_state.first_usage)
-				//	{
-				//		make_unique_state();
-				//	}
-				//}
-
-
-				//if (all_states_same)
-				//{
-				//	all_state.state = merge_state(all_state.state, other.get_first_state(ALL_SUBRESOURCES));
-				//}
-				//else
-				{
 					for (int i = 0; i < subres.size(); i++)
 					{
 						auto transition = other.get_first_usage(i);
@@ -470,12 +476,12 @@ export
 						if (transition)
 						{
 							
-							auto state = merge_state(subres[i].state, transition->wanted_state);
-							if(state)
-								subres[i].state = *state;
+							auto res = merge_layout(subres[i].layout, transition->wanted_state.layout);
+							if(res)
+								subres[i].layout = *res;
 						}
 					}
-				}
+				
 			}
 
 
@@ -507,13 +513,13 @@ export
 				return gpu_state;
 			}
 
-			void init_subres(int count, ResourceState state) const
+			void init_subres(int count, TextureLayout layout) const
 			{
 				gpu_state.subres.resize(count);
 			//	gpu_state.all_states_same = true;
 			//	gpu_state.all_state.state = state;
 				for (auto& e : gpu_state.subres)
-					e.state = state;
+					e.layout = layout;
 
 				states.set_init_func([count](SubResourcesCPU& state)
 					{
@@ -537,7 +543,7 @@ export
 			void prepare_state(Transitions* from, SubResourcesGPU& subres) const;
 
 
-
+			void alias_begin(Transitions* list)const;
 			void prepare_after_state(Transitions* from, SubResourcesGPU& subres) const;
 		};
 

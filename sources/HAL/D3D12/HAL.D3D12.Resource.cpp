@@ -174,16 +174,10 @@ namespace HAL
 					IID_PPV_ARGS(&native_resource)));
 			}
 
-			ResourceState state = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, initialLayout };
-
-			init(native_resource, state);
-
-
-
-
-
+			init(native_resource, initialLayout);
 		}
-		void Resource::init(D3D::Resource  resource, ResourceState state)
+
+		void Resource::init(D3D::Resource  resource, TextureLayout layout)
 		{
 			auto THIS = static_cast<HAL::Resource*>(this);
 	
@@ -194,7 +188,7 @@ namespace HAL
 			else
 				this->address = 0;
 
-			THIS->state_manager.init_subres(HAL::Device::get().Subresources(THIS->get_desc()), state);
+			THIS->state_manager.init_subres(HAL::Device::get().Subresources(THIS->get_desc()), layout);
 
 
 			if (THIS->heap_type == HeapType::RESERVED)
@@ -263,7 +257,6 @@ namespace HAL
 	Resource::Resource(const D3D::Resource& resource, TextureLayout initialLayout) :state_manager(this), tiled_manager(this)
 	{
 		native_resource = resource;
-		ResourceState state = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, initialLayout };
 
 		D3D12_HEAP_PROPERTIES HeapProperties;
 		D3D12_HEAP_FLAGS  HeapFlags;
@@ -272,7 +265,7 @@ namespace HAL
 		heap_type = from_native(HeapProperties.Type);
 
 		
-		init(native_resource, state);
+		init(native_resource, initialLayout);
 
 	}
 

@@ -109,6 +109,8 @@ export namespace HAL
 		SHADER_RESOURCE= 1 << 5,
 		COPY_SOURCE= 1 << 6,
 		COPY_DEST= 1 << 7,
+
+		COPY_QUEUE = 1<<8,
 		//RESOLVE_SOURCE,
 		//RESOLVE_DEST,
 		//SHADING_RATE_SOURCE,
@@ -134,7 +136,8 @@ export namespace HAL
 		UNDEFINED = 0,
 		
 	};
-
+	
+	CommandListType get_best_cmd_type(TextureLayout layout);
 	enum class BarrierSync : uint
 	{
 		NONE = 0x0,
@@ -247,6 +250,8 @@ struct ResourceState
 
 	CommandListType get_best_cmd_type() const;
 	bool has_write_bits() const;
+
+	bool is_no_access() const;
 	bool is_valid() const;
 	//{
 
@@ -289,6 +294,8 @@ struct ResourceState
 		extern const  ResourceState DEPTH_STENCIL ;//= {BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::DEPTH_STENCIL_READ,TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ};
 
 		extern const  ResourceState CONSTANT_BUFFER ;//= {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};
+
+		extern const  ResourceState NO_ACCESS ;
 //extern const  ResourceState WRITE_STATES ;
 extern const  ResourceState UNKNOWN ;
 	/*	extern const  ResourceState INDEX_BUFFER = { BarrierSync::INDEX_INPUT, BarrierAccess::INDEX_BUFFER, TextureLayout::UNDEFINED };
@@ -539,7 +546,8 @@ extern const  ResourceState UNKNOWN ;
 		RenderTarget = 1 << 2,
 		DepthStencil = 1 << 3,
 		CrossAdapter = 1 << 4,
-		Raytracing = 1<<5
+		Raytracing = 1<<5,
+		SimultaniousAccess = 1<<6
 	};
 
 	struct TextureDesc

@@ -628,6 +628,7 @@ export D3D12_SHADER_VISIBILITY to_native(ShaderVisibility visibility)
 export D3D12_BARRIER_LAYOUT to_native(TextureLayout layout)
 {
 	if (layout == TextureLayout::UNDEFINED) return  D3D12_BARRIER_LAYOUT_UNDEFINED;
+	if (check(layout & TextureLayout::COPY_QUEUE)) return  D3D12_BARRIER_LAYOUT_COMMON;
 
 	TextureLayout GEN_READ = TextureLayout::SHADER_RESOURCE | TextureLayout::COPY_SOURCE;
 	
@@ -748,6 +749,8 @@ export D3D12_RESOURCE_FLAGS to_native(const ResFlags& flags)
 	{
 		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE ;
 	}
+
+		//result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS ;
 	return result;
 }
 

@@ -990,55 +990,25 @@ namespace HAL
 		}
 	}
 
-	void Transitions::transition(Resource* from, Resource* to)
+
+	void Transitions::alias_begin(HAL::Resource* resource)
 	{
+			track_object(*resource);
+			const_cast<Resource*>(resource)->get_state_manager().alias_begin(this);
+			//	
+			//CD3DX12_BARRIER_SUBRESOURCE_RANGE(0xffffffff)
+			//add_usage()
+			//{
+			//}
+	}
+	void Transitions::alias_end(HAL::Resource* resource)
+	{
+			track_object(*resource);
 
-		track_object(*to);
-		//create_aliasing_transition(to);
-		/*	transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from ? from->get_native().Get() : nullptr, to->get_native().Get()));
-
-			CommandList* list = static_cast<CommandList*>(this); // :(
-
-
-			if (to->is_new(id, global_id))
-			{
-
-				to->aliasing(id, global_id);
-
-				bool good = std::find(used_resources.begin(), used_resources.end(), to) == used_resources.end();
-
-
-				assert(good);
-
-				used_resources.emplace_back(const_cast<Resource*>(to));
-	#ifdef DEV
-				const_cast<Resource*>(to)->used(list);
-	#endif
-				tracked_resources.emplace_back(const_cast<Resource*>(to)->tracked_info);
-				assert(!to->is_new(id, global_id));
-			}
-			else
-			{
-				auto state = to->get_cpu_state(id, global_id);
-
-				if (check(state & ResourceState::RENDER_TARGET) || check(state & ResourceState::DEPTH_WRITE))
-				{
-			//		flush_transitions();
-				//	get_native_list()->DiscardResource(to->get_native().Get(), nullptr);
-				}
-			}
-
-			//	get_native_list()->DiscardResource(to->get_native().Get(),nullptr);
-			//	if(to->gpu_state.subres[0].state)
-			//	if (transition_count == transitions.size())
-			//		flush_transitions();*/
+			transition(resource, ResourceStates::NO_ACCESS);
 	}
 
-	/*void Transitions::transition_uav(Resource* resource)
-	{
-		track_object(*resource);
-		create_uav_transition(resource);
-	}*/
+
 
 	void CopyContext::copy_buffer(Resource* dest, uint64 s_dest, Resource* source, uint64 s_source, uint64 size)
 	{
