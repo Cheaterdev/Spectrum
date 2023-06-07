@@ -22,8 +22,8 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 	D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 	UINT NumRows;
 	UINT64 RowSizesInBytes;
-	D3D12_RESOURCE_DESC Desc = ::to_native(rdesc);
-	HAL::Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
+	D3D::ResourceDesc Desc = ::to_native(rdesc);
+	HAL::Device::get().get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 
 	return { RequiredSize , NumRows , Layouts.Footprint.RowPitch , static_cast<uint>(NumRows * Layouts.Footprint.RowPitch),D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format) };
 }
@@ -42,8 +42,8 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 	D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 	UINT NumRows;
 	UINT64 RowSizesInBytes;
-	D3D12_RESOURCE_DESC Desc = ::to_native(rdesc);
-	HAL::Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
+	D3D::ResourceDesc Desc = ::to_native(rdesc);
+	HAL::Device::get().get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 	UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 	UINT64 size = res_stride * rows_count * box.z;
 
@@ -134,12 +134,14 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 					//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 					D3D12_MESSAGE_ID hide[] =
 					{
-						D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
-						D3D12_MESSAGE_ID_GETHEAPPROPERTIES_INVALIDRESOURCE,
-						D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT,
-						D3D12_MESSAGE_ID_NON_RETAIL_SHADER_MODEL_WONT_VALIDATE,
-						D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH,
-						D3D12_MESSAGE_ID_EMPTY_DISPATCH
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_GETHEAPPROPERTIES_INVALIDRESOURCE,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_NON_RETAIL_SHADER_MODEL_WONT_VALIDATE,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_EMPTY_DISPATCH,
+
+						D3D12_MESSAGE_ID(1380)//D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT_SMALLRESOURCE
 					};
 
 					D3D12_INFO_QUEUE_FILTER filter = {};
@@ -166,6 +168,7 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
             DSTORAGE_COMPRESSION_FORMAT_GDEFLATE,
             6,
             IID_PPV_ARGS(&g_bufferCompression));
+
 		}
 
 		D3D::Device Device::get_native_device()
@@ -190,11 +193,13 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 			}
 
 
-			D3D12_RESOURCE_ALLOCATION_INFO info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+			D3D12_RESOURCE_ALLOCATION_INFO1 info2;
+			
+			auto info = native_device->GetResourceAllocationInfo2(0, 1, &native_desc, &info2);
 			if(info.SizeInBytes==UINT64_MAX)
 			{
 				native_desc.Alignment = 0;
-				 info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+				 info = native_device->GetResourceAllocationInfo2(0, 1, &native_desc, &info2);
 			}
 			assert(info.SizeInBytes!=UINT64_MAX);
 

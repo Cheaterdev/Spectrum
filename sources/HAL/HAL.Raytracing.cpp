@@ -14,8 +14,8 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 
 	auto bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
-	scratch_buffer = std::make_shared<StructureBuffer<std::byte>>(bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT, ResourceState::RAYTRACING_STRUCTURE);
-	cur_buffer = std::make_shared<StructureBuffer<std::byte>>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT, ResourceState::RAYTRACING_STRUCTURE);
+	scratch_buffer = std::make_shared<StructureBuffer<std::byte>>(bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+	cur_buffer = std::make_shared<StructureBuffer<std::byte>>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
 
 	HAL::RaytracingBuildDescStructure bottomLevelBuildDesc;
 	{
@@ -47,8 +47,8 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 	auto topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
 
-	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, ResourceState::RAYTRACING_STRUCTURE);
-	prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, ResourceState::RAYTRACING_STRUCTURE);
+	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
+	prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
 
 
 	scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 16, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource);

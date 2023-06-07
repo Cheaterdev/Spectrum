@@ -38,7 +38,7 @@ export
 		public:
 			virtual ~GPUBuffer();
 			using ptr = std::shared_ptr<GPUBuffer>;
-			GPUBuffer(UINT64 size, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::ResourceState state = HAL::ResourceState::COMMON, HAL::HeapType heap_type = HAL::HeapType::DEFAULT);
+			GPUBuffer(UINT64 size, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::HeapType heap_type = HAL::HeapType::DEFAULT);
 	HAL::Resource::ptr resource;
 
 			template<class T>
@@ -160,7 +160,7 @@ export
 
 			using ptr = std::shared_ptr<StructureBuffer<T>>;
 			using type = Underlying<T>;
-			StructureBuffer(UINT64 count, counterType counted = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::HeapType heap_type = HAL::HeapType::DEFAULT, HAL::ResourceState defaultState = HAL::ResourceState::COMMON);
+			StructureBuffer(UINT64 count, counterType counted = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource, HAL::HeapType heap_type = HAL::HeapType::DEFAULT);
 
 
 			static StructureBuffer::ptr make_buffer(const std::vector<T>& v)
@@ -250,7 +250,7 @@ export
 		}
 
 		template<class T>
-		inline StructureBuffer<T>::StructureBuffer(UINT64 count, counterType counted, HAL::ResFlags flags, HAL::HeapType heap_type, HAL::ResourceState defaultState) : GPUBuffer(counted == counterType::SELF ? (Math::AlignUp(count * sizeof(type), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(type)), flags, defaultState, heap_type)
+		inline StructureBuffer<T>::StructureBuffer(UINT64 count, counterType counted, HAL::ResFlags flags, HAL::HeapType heap_type) : GPUBuffer(counted == counterType::SELF ? (Math::AlignUp(count * sizeof(type), D3D12_UAV_COUNTER_PLACEMENT_ALIGNMENT) + (counted == counterType::SELF) * sizeof(UINT)) : (count * sizeof(type)), flags, heap_type)
 		{
 			stride = sizeof(type);
 			this->count = count;
@@ -296,12 +296,12 @@ export
 namespace HAL
 {
 
-	GPUBuffer::GPUBuffer(UINT64 _size, HAL::ResFlags flags, HAL::ResourceState state, HAL::HeapType heap_type) : size(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
+	GPUBuffer::GPUBuffer(UINT64 _size, HAL::ResFlags flags, HAL::HeapType heap_type) : size(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
 		count(Math::AlignUp(_size, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT)),
 		stride(1)
 	{
 
-		resource = std::make_shared<HAL::Resource>( HAL::ResourceDesc::Buffer(count, flags), heap_type, state);
+		resource = std::make_shared<HAL::Resource>( HAL::ResourceDesc::Buffer(count, flags), heap_type);
 	}
 
 
@@ -309,7 +309,7 @@ namespace HAL
 	{
 		size = count * stride;
 
-		resource = std::make_shared<HAL::Resource>( HAL::ResourceDesc::Buffer(std::max(static_cast<UINT64>(4), count * stride), HAL::ResFlags::ShaderResource), HAL::HeapType::DEFAULT, HAL::ResourceState::COMMON);
+		resource = std::make_shared<HAL::Resource>( HAL::ResourceDesc::Buffer(std::max(static_cast<UINT64>(4), count * stride), HAL::ResFlags::ShaderResource), HAL::HeapType::DEFAULT);
 	}
 
 	void GPUBuffer::set_data(unsigned int offset, const std::string& v)

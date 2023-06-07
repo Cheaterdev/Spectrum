@@ -367,7 +367,7 @@ namespace HAL
 		const DSVHandle& table_dsv= rt.table_dsv;
 	
 
-			base.pre_command<false, false>(*this);
+			base.pre_command<false, false>(*this,BarrierSync::DRAW);
 
 		for (uint i = 0; i < table_rtv.get_count(); i++)
 		{
@@ -515,7 +515,7 @@ namespace HAL
 	{
 		PROFILE_GPU(L"draw");
 
-		base.pre_command<false, true>(*this);
+		base.pre_command<false, true>(*this,BarrierSync::DRAW);
 		list->draw(vertex_count, vertex_offset, instance_count, instance_offset);
 		base.post_command<false, true>(*this);
 	}
@@ -524,9 +524,9 @@ namespace HAL
 	{
 		if (instance_count == 0) return;
 		PROFILE_GPU(L"draw_indexed");
-		base.pre_command<false, true>(*this);
+		base.pre_command<false, true>(*this,BarrierSync::DRAW);
 
-		get_base().transition(index.Resource, ResourceState::INDEX_BUFFER);
+		get_base().transition(index.Resource, ResourceStates::INDEX_BUFFER);
 		list->set_index_buffer(index);
 
 		list->draw_indexed(index_count, index_offset, vertex_offset, instance_count, instance_offset);
@@ -540,7 +540,7 @@ namespace HAL
 	void GraphicsContext::dispatch_mesh(ivec3 v)
 	{
 		PROFILE_GPU(L"dispatch_mesh");
-		base.pre_command<false, true>(*this);
+		base.pre_command<false, true>(*this,BarrierSync::DRAW);
 		list->dispatch_mesh(v);
 		base.post_command<false, true>(*this);
 	}
@@ -587,10 +587,10 @@ namespace HAL
 	}
 	void  CopyContext::update_buffer(Resource* resource, uint64 offset, const  char* data, uint64 size)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
 		//	if (base.type != CommandListType::COPY)
-		base.transition(resource, ResourceState::COPY_DEST);
+		base.transition(resource, ResourceStates::COPY_DEST);
 
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
@@ -608,9 +608,9 @@ namespace HAL
 
 	void CopyContext::update_texture(Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
-		base.transition(resource, ResourceState::COPY_DEST);
+		base.transition(resource, ResourceStates::COPY_DEST);
 		auto layout = Device::get().get_texture_layout(resource->get_desc(), sub_resource, box);
 		auto info = base.place_data(layout.size, layout.alignment);
 
@@ -667,10 +667,10 @@ namespace HAL
 	std::future<bool> CopyContext::read_texture(const Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
 
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
 		//	if (base.type != CommandListType::COPY)
-		base.transition(resource, ResourceState::COPY_SOURCE);
+		base.transition(resource, ResourceStates::COPY_SOURCE);
 		//else
 	//		base.transition(resource, ResourceState::COMMON);
 
@@ -692,10 +692,10 @@ namespace HAL
 	}
 	std::future<bool> CopyContext::read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)> f)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
 		//	if (base.type != CommandListType::COPY)
-		base.transition(resource, ResourceState::COPY_SOURCE);
+		base.transition(resource, ResourceStates::COPY_SOURCE);
 		//else
 	//		base.transition(resource, ResourceState::COMMON);
 
@@ -728,9 +728,9 @@ namespace HAL
 			return result->get_future();
 		}
 
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
-		base.transition(resource, ResourceState::COPY_SOURCE);
+		base.transition(resource, ResourceStates::COPY_SOURCE);
 
 		auto info = base.read_data(size,GPUEntityStorageInterface::DEFAULT_ALIGN, static_cast<uint>(base.get_type()) );
 		list->copy_buffer(info.resource, info.resource_offset, resource, offset, size);
@@ -907,13 +907,13 @@ namespace HAL
 		std::vector<HAL::Resource*> discards;
 
 
-		ResourceState states = ResourceState::COMMON;
+		CommandListType transition_type = type;
 		for (auto& r : used_resources)
 		{
-			states = states | r->get_state_manager().process_transitions(result, discards, this);
-		}
+			auto res_type =  r->get_state_manager().process_transitions(result, discards, this);
 
-		auto transition_type = GetBestType(states, type);
+			transition_type= Merge(transition_type,res_type);
+		}
 
 		if (result)
 		{
@@ -927,17 +927,17 @@ namespace HAL
 		}
 		return nullptr;
 	}
-	void Transitions::merge_transition(Transitions* to, Resource* resource)
-	{
+	//void Transitions::merge_transition(Transitions* to, Resource* resource)
+	//{
 
 
-		if (resource->get_state_manager().transition(this, to))
-		{
-			track_object(*resource);
-			use_resource(resource);
-		}
-	}
-	void Transitions::prepare_transitions(Transitions* to, bool all)
+	//	if (resource->get_state_manager().transition(this, to))
+	//	{
+	//		track_object(*resource);
+	//		use_resource(resource);
+	//	}
+	//}
+	/*void Transitions::prepare_transitions(Transitions* to, bool all)
 	{
 		for (auto& resource : to->used_resources)
 		{
@@ -949,7 +949,7 @@ namespace HAL
 					use_resource(resource);
 				}
 		}
-	}
+	}*/
 
 
 	void Transitions::transition(const Resource::ptr& resource, ResourceState to, UINT subres)
@@ -976,8 +976,8 @@ namespace HAL
 	{
 		if (!resource) return;
 
-		if (type == CommandListType::COPY && (to == ResourceState::COPY_DEST || to == ResourceState::COPY_SOURCE))
-			to = ResourceState::COMMON;
+		//if (type == CommandListType::COPY && (to == ResourceState::COPY_DEST || to == ResourceState::COPY_SOURCE))
+		//	to = ResourceState::COMMON;
 
 
 		track_object(*const_cast<Resource*>(resource));
@@ -990,64 +990,30 @@ namespace HAL
 		}
 	}
 
-	void Transitions::transition(Resource* from, Resource* to)
+
+	void Transitions::alias_begin(HAL::Resource* resource)
 	{
+			track_object(*resource);
+			const_cast<Resource*>(resource)->get_state_manager().alias_begin(this);
+	}
+	void Transitions::alias_end(HAL::Resource* resource)
+	{
+			track_object(*resource);
 
-		track_object(*to);
-		create_aliasing_transition(to);
-		/*	transitions.emplace_back(CD3DX12_RESOURCE_BARRIER::Aliasing(from ? from->get_native().Get() : nullptr, to->get_native().Get()));
-
-			CommandList* list = static_cast<CommandList*>(this); // :(
-
-
-			if (to->is_new(id, global_id))
-			{
-
-				to->aliasing(id, global_id);
-
-				bool good = std::find(used_resources.begin(), used_resources.end(), to) == used_resources.end();
-
-
-				assert(good);
-
-				used_resources.emplace_back(const_cast<Resource*>(to));
-	#ifdef DEV
-				const_cast<Resource*>(to)->used(list);
-	#endif
-				tracked_resources.emplace_back(const_cast<Resource*>(to)->tracked_info);
-				assert(!to->is_new(id, global_id));
-			}
-			else
-			{
-				auto state = to->get_cpu_state(id, global_id);
-
-				if (check(state & ResourceState::RENDER_TARGET) || check(state & ResourceState::DEPTH_WRITE))
-				{
-			//		flush_transitions();
-				//	get_native_list()->DiscardResource(to->get_native().Get(), nullptr);
-				}
-			}
-
-			//	get_native_list()->DiscardResource(to->get_native().Get(),nullptr);
-			//	if(to->gpu_state.subres[0].state)
-			//	if (transition_count == transitions.size())
-			//		flush_transitions();*/
+				const_cast<Resource*>(resource)->get_state_manager().alias_end(this);
+			//transition(resource, ResourceStates::NO_ACCESS);
 	}
 
-	void Transitions::transition_uav(Resource* resource)
-	{
-		track_object(*resource);
-		create_uav_transition(resource);
-	}
+
 
 	void CopyContext::copy_buffer(Resource* dest, uint64 s_dest, Resource* source, uint64 s_source, uint64 size)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
 		//if (base.type != CommandListType::COPY)
 		{
-			base.transition(source, ResourceState::COPY_SOURCE);
-			base.transition(dest, ResourceState::COPY_DEST);
+			base.transition(source, ResourceStates::COPY_SOURCE);
+			base.transition(dest, ResourceStates::COPY_DEST);
 		}
 
 
@@ -1057,12 +1023,12 @@ namespace HAL
 	}
 	void CopyContext::copy_resource(Resource* dest, Resource* source)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
 		//	if (base.type != CommandListType::COPY)
 		{
-			base.transition(source, ResourceState::COPY_SOURCE);
-			base.transition(dest, ResourceState::COPY_DEST);
+			base.transition(source, ResourceStates::COPY_SOURCE);
+			base.transition(dest, ResourceStates::COPY_DEST);
 		}
 		list->copy_resource(dest, source);
 		base.post_command<false, false>(*this);
@@ -1074,12 +1040,12 @@ namespace HAL
 	}
 	void CopyContext::copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
 		//if (base.type != CommandListType::COPY) 
 		{
-			base.transition(source, ResourceState::COPY_SOURCE, source_subres);
-			base.transition(dest, ResourceState::COPY_DEST, dest_subres);
+			base.transition(source, ResourceStates::COPY_SOURCE, source_subres);
+			base.transition(dest, ResourceStates::COPY_DEST, dest_subres);
 		}
 
 		list->copy_texture(dest, dest_subres, source, source_subres);
@@ -1090,12 +1056,12 @@ namespace HAL
 
 	void CopyContext::copy_texture(const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::COPY);
 
 		//if (base.type != CommandListType::COPY) 
 		{
-			base.transition(from, ResourceState::COPY_SOURCE);
-			base.transition(to, ResourceState::COPY_DEST);
+			base.transition(from, ResourceStates::COPY_SOURCE);
+			base.transition(to, ResourceStates::COPY_DEST);
 		}
 		list->copy_texture(to, to_pos, from, from_pos, size);
 		if constexpr (Debug::CheckErrors)	TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
@@ -1129,7 +1095,7 @@ namespace HAL
 	{
 		PROFILE_GPU(L"Dispatch");
 
-		base.pre_command<true, false>(*this);
+		base.pre_command<true, false>(*this,BarrierSync::COMPUTE_SHADING);
 		list->dispatch({ x, y, z });
 		base.post_command<true, false>(*this);
 	}
@@ -1288,14 +1254,14 @@ namespace HAL
 		bool graphics = dynamic_cast<PipelineState*>(get_base().current_pipeline);
 
 		if(graphics)
-			base.pre_command<false, true>(get_base().get_graphics(),&command_types.slots);
+			base.pre_command<false, true>(get_base().get_graphics(),BarrierSync::ALL_SHADING,&command_types.slots);
 		else
-			base.pre_command<true, false>(get_base().get_compute(),&command_types.slots);
+			base.pre_command<true, false>(get_base().get_compute(),BarrierSync::COMPUTE_SHADING,&command_types.slots);
 	
-		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
-		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
+		if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
 
-		get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceState::INDEX_BUFFER);
+		get_base().transition(static_cast<HAL::Resource*>(index.Resource.get()), ResourceStates::INDEX_BUFFER);
 
 		list->set_index_buffer(index);
 
@@ -1317,14 +1283,12 @@ namespace HAL
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
 		PROFILE_GPU(L"execute_indirect");
-		base.pre_command<true, false>(*this);
+		base.pre_command<true, false>(*this,BarrierSync::COMPUTE_SHADING);
 
 		assert(command_buffer);
 
-		if (command_buffer) get_base().transition(command_buffer, ResourceState::INDIRECT_ARGUMENT);
-		if (counter_buffer) get_base().transition(counter_buffer, ResourceState::INDIRECT_ARGUMENT);
-
-		commit_tables();
+		if (command_buffer) get_base().transition(command_buffer, ResourceStates::INDIRECT_ARGUMENT);
+		if (counter_buffer) get_base().transition(counter_buffer, ResourceStates::INDIRECT_ARGUMENT);
 
 		list->execute_indirect(
 			command_types,
@@ -1339,19 +1303,19 @@ namespace HAL
 
 	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE);
 
 		for (auto g : bottom.geometry)
 		{
-			base.transition(g.IndexBuffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-			base.transition(g.VertexBuffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-			base.transition(g.Transform3x4.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+			base.transition(g.IndexBuffer.resource, HAL::ResourceState( BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED));
+			base.transition(g.VertexBuffer.resource,  { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
+			base.transition(g.Transform3x4.resource,  { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
 		}
 
-		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
-		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
+		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
+		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
 
-		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
+		base.transition(build_desc.ScratchAccelerationStructureData.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNDEFINED});
 		//	commit_tables();
 
 		list->build_ras(build_desc, bottom);
@@ -1362,13 +1326,13 @@ namespace HAL
 
 	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top)
 	{
-		base.pre_command<false, false>(*this);
+		base.pre_command<false, false>(*this,BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE);
 
-		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
-		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceState::RAYTRACING_STRUCTURE);
-		base.transition(build_desc.ScratchAccelerationStructureData.resource, ResourceState::UNORDERED_ACCESS);
+		base.transition(build_desc.DestAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
+		base.transition(build_desc.SourceAccelerationStructureData.resource, ResourceStates::RAYTRACING_STRUCTURE_WRITE);
+		base.transition(build_desc.ScratchAccelerationStructureData.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNDEFINED});
 
-		base.transition(top.instances.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+		base.transition(top.instances.resource,{ BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
 
 		//commit_tables();
 		list->build_ras(build_desc, top);
@@ -1383,13 +1347,13 @@ namespace HAL
 	{
 		transition_count = 0;
 		//	create_zero_transition();
-		create_transition_point(false);
+		create_usage_point(false);
 	}
 
 	void Transitions::on_execute()
 	{
 
-		transition_points.clear();
+		usage_points.clear();
 		used_resources.clear();
 
 
@@ -1398,7 +1362,7 @@ namespace HAL
 
 	}
 
-	void SignatureDataSetter::commit_tables(UsedSlots* slots)
+	void SignatureDataSetter::commit_tables( BarrierSync operation, UsedSlots* slots)
 	{
 		uint id = 0;
 		for (auto& table : tables)
@@ -1406,12 +1370,12 @@ namespace HAL
 
 			if (table.dirty) {
 				for (auto& resource_info : table.resources)
-					get_base().transition(*resource_info);
+					get_base().transition(*resource_info,operation);
 
 				for (auto& d : table.descriptors)
 					get_base().track_object(*d);
 
-				set_cb(id, table.const_buffer);
+				set_cb(id, table.const_buffer, operation);
 
 				table.dirty = false;
 			}
