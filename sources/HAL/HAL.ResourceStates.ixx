@@ -301,7 +301,7 @@ export
 				}
 			}*/
 
-			ResourceListStateCPU& get_subres_state(UINT id, bool force = false)
+			const ResourceListStateCPU& get_subres_state(UINT id) const
 			{
 		/*		if ((!force && all_states_same) || id == ALL_SUBRESOURCES)
 					return all_state;*/
@@ -310,7 +310,7 @@ export
 			}
 
 
-			const ResourceListStateCPU& get_subres_state(UINT id) const
+			ResourceListStateCPU& get_subres_state(UINT id) 
 			{
 
 
@@ -488,7 +488,14 @@ export
 			}
 
 
+					const ResourceListStateGPU& get_subres_state(UINT id) const
+			{
+			/*	if (all_states_same || id == ALL_SUBRESOURCES)
+					return all_state;*/
 
+				return subres[id];
+			}
+ 
 			ResourceListStateGPU& get_subres_state(UINT id)
 			{
 			/*	if (all_states_same || id == ALL_SUBRESOURCES)
@@ -572,13 +579,13 @@ export
 
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
 			bool transition(Transitions* from, Transitions* to) const;
-			void prepare_state(Transitions* from, SubResourcesGPU& subres) const;
+			void prepare_state(Transitions* from,const SubResourcesGPU& subres) const;
 
 
 			void alias_begin(Transitions* list)const;
 void alias_end(Transitions* list)const;
 
-			void prepare_after_state(Transitions* from, SubResourcesGPU& subres) const;
+			void prepare_after_state(Transitions* from,const SubResourcesGPU& subres) const;
 		};
 
 

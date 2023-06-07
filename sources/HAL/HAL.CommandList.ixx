@@ -120,7 +120,7 @@ export{
 							auto prev_usage = usage.prev_usage;
 							auto prev_state = ResourceStates::NO_ACCESS;
 
-							//if (!prev_usage)  continue;
+							if (!prev_usage&&!usage.need_discard)  continue;
 							if (prev_usage)prev_state = prev_usage->wanted_state;
 
 							if (prev_state == usage.wanted_state) continue;
