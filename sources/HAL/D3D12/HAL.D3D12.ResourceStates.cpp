@@ -256,7 +256,7 @@ namespace HAL
 
 
 	// optimization sector
-	void ResourceStateManager::prepare_state(Transitions* from, SubResourcesGPU& gpu_state) const
+	void ResourceStateManager::prepare_state(Transitions* from,  const SubResourcesGPU& gpu_state) const
 	{
 			if(resource->get_desc().is_buffer())
 			return;
@@ -290,7 +290,7 @@ namespace HAL
 
 		auto transition_one = [&](UINT i) {
 			auto& gpu = gpu_state.get_subres_state(i);
-			auto& cpu = cpu_state.get_subres_state(i, true);
+			auto& cpu = cpu_state.get_subres_state(i);
 
 			if (!cpu.used) return;
 
@@ -336,7 +336,7 @@ namespace HAL
 		}
 
 
-		gpu_state.set_cpu_state(cpu_state);
+	//	gpu_state.set_cpu_state(cpu_state);
 
 		if (updated)
 		{
@@ -368,7 +368,7 @@ namespace HAL
 	}
 
 
-		void ResourceStateManager::prepare_after_state(Transitions* from, SubResourcesGPU& gpu_state) const
+		void ResourceStateManager::prepare_after_state(Transitions* from, const SubResourcesGPU& gpu_state) const
 	{
 
 

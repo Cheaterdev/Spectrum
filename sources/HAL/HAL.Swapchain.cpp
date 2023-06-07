@@ -10,14 +10,14 @@ namespace HAL
 	{
 		frames[m_frameIndex].fence_event.wait();
 
-			if(GetAsyncKeyState('0'))
-			{
-			
-									HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
-				HAL::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
-				HAL::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
-			
-			}
+			//if(GetAsyncKeyState('0'))
+			//{
+			//
+			//						HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
+			//	HAL::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
+			//	HAL::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
+			//
+			//}
 //for(auto &f:frames)
 //{
 //f.fence_event.wait();

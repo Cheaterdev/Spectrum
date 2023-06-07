@@ -706,7 +706,7 @@ namespace FrameGraph
 
 						if (i > 0 && !info.states[i - 1].write)
 						{
-							auto prev_state = info.states[i];
+							auto prev_state = info.states[i-1];
 							auto best_type = prev_state.merged_read_state.get_best_list_type();
 							//		its in 99% read to write compatible on all queues
 							assert (IsCompatible(list_type, best_type));
