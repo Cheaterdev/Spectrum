@@ -141,31 +141,34 @@ export namespace HAL
 	enum class BarrierSync : uint
 	{
 		NONE = 0x0,
-		ALL = 0x1,
+	//	ALL = 0x1,
 	
-		INDEX_INPUT = 0x4,
-		VERTEX_SHADING = 0x8,
-		PIXEL_SHADING = 0x10,
-		DEPTH_STENCIL = 0x20,
-		RENDER_TARGET = 0x40,
-		COMPUTE_SHADING = 0x80,
-		RAYTRACING = 0x100,
-		COPY = 0x200,
-		RESOLVE = 0x400,
-		EXECUTE_INDIRECT = 0x800,
-		PREDICATION = 0x800, // Aliased with SYNC_EXECUTE_INDIRECT
-		EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO = 0x4000,
-		CLEAR_UNORDERED_ACCESS_VIEW = 0x8000,
-		VIDEO_DECODE = 0x100000,
-		VIDEO_PROCESS = 0x200000,
-		VIDEO_ENCODE = 0x400000,
-		BUILD_RAYTRACING_ACCELERATION_STRUCTURE = 0x800000,
-		COPY_RAYTRACING_ACCELERATION_STRUCTURE = 0x1000000,
+		INDEX_INPUT = 1<<0,
+		VERTEX_SHADING = 1<<1,
+		PIXEL_SHADING =  1<<2,
+		DEPTH_STENCIL =  1<<3,
+		RENDER_TARGET = 1<<4,
+		COMPUTE_SHADING = 1<<5,
+		RAYTRACING =  1<<6,
+		COPY =  1<<7,
+		RESOLVE =  1<<8,
+		EXECUTE_INDIRECT =  1<<9,
+		PREDICATION =  1<<10,
+		EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO =  1<<11,
+		CLEAR_UNORDERED_ACCESS_VIEW =  1<<12,
+		VIDEO_DECODE =  1<<13,
+		VIDEO_PROCESS =  1<<14,
+		VIDEO_ENCODE =  1<<15,
+		BUILD_RAYTRACING_ACCELERATION_STRUCTURE = 1<<16,
+		COPY_RAYTRACING_ACCELERATION_STRUCTURE =  1<<17,
 		SPLIT = 0x80000000,
-
+	
 			DRAW = INDEX_INPUT | VERTEX_SHADING | PIXEL_SHADING | DEPTH_STENCIL | RENDER_TARGET,
 	ALL_SHADING = VERTEX_SHADING | PIXEL_SHADING | COMPUTE_SHADING,
-	NON_PIXEL_SHADING = COMPUTE_SHADING | VERTEX_SHADING
+	NON_PIXEL_SHADING = COMPUTE_SHADING | VERTEX_SHADING,
+
+		ALL_COMPUTE = CLEAR_UNORDERED_ACCESS_VIEW | COMPUTE_SHADING | RAYTRACING | RAYTRACING | COPY | EXECUTE_INDIRECT | EMIT_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO | BUILD_RAYTRACING_ACCELERATION_STRUCTURE,
+		ALL_DIRECT = ALL_COMPUTE | DRAW | ALL_SHADING
 	};
 
 	enum class BarrierAccess : uint
@@ -230,10 +233,7 @@ struct ResourceState
 	BarrierAccess access;// = BarrierAccess::NO_ACCESS;
 	TextureLayout layout;// = TextureLayout::UNDEFINED;
 
-	constexpr ResourceState(BarrierSync s= BarrierSync::NONE, BarrierAccess a= BarrierAccess::NO_ACCESS, TextureLayout l = TextureLayout::UNDEFINED) : operation(s), access(a), layout(l)
-	{
-
-	}
+	ResourceState(BarrierSync s= BarrierSync::NONE, BarrierAccess a= BarrierAccess::NO_ACCESS, TextureLayout l = TextureLayout::UNDEFINED) ;
 	bool operator==(const ResourceState&) const = default;
 
 	constexpr BarrierSync get_operation()const { return operation; }
@@ -293,7 +293,7 @@ struct ResourceState
 		extern const  ResourceState RENDER_TARGET;// = {BarrierSync::RENDER_TARGET, BarrierAccess::RENDER_TARGET, TextureLayout::RENDER_TARGET};
 		extern const  ResourceState DEPTH_STENCIL ;//= {BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE | BarrierAccess::DEPTH_STENCIL_READ,TextureLayout::DEPTH_STENCIL_WRITE|TextureLayout::DEPTH_STENCIL_READ};
 
-		extern const  ResourceState CONSTANT_BUFFER ;//= {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};
+	//	extern const  ResourceState CONSTANT_BUFFER ;//= {BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED};
 
 		extern const  ResourceState NO_ACCESS ;
 //extern const  ResourceState WRITE_STATES ;

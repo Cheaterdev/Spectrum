@@ -162,7 +162,7 @@ void PSSM::generate(Graph& graph)
 	};
 
 	graph.add_pass<PSSMData>("PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::None);
+		builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::DepthStencil);
 		builder.create(data.PSSM_Cameras, { renders_size }, ResourceFlags::GenCPU);
 		}, [](PSSMData& data, FrameContext& _context) {});
 

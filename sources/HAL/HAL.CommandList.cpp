@@ -995,17 +995,13 @@ namespace HAL
 	{
 			track_object(*resource);
 			const_cast<Resource*>(resource)->get_state_manager().alias_begin(this);
-			//	
-			//CD3DX12_BARRIER_SUBRESOURCE_RANGE(0xffffffff)
-			//add_usage()
-			//{
-			//}
 	}
 	void Transitions::alias_end(HAL::Resource* resource)
 	{
 			track_object(*resource);
 
-			transition(resource, ResourceStates::NO_ACCESS);
+				const_cast<Resource*>(resource)->get_state_manager().alias_end(this);
+			//transition(resource, ResourceStates::NO_ACCESS);
 	}
 
 
@@ -1311,7 +1307,7 @@ namespace HAL
 
 		for (auto g : bottom.geometry)
 		{
-			base.transition(g.IndexBuffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
+			base.transition(g.IndexBuffer.resource, HAL::ResourceState( BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED));
 			base.transition(g.VertexBuffer.resource,  { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
 			base.transition(g.Transform3x4.resource,  { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED});
 		}

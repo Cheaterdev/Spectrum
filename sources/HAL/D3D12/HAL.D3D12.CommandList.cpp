@@ -383,7 +383,7 @@ namespace HAL
 		void CommandList::transitions(const HAL::Barriers& _barriers)
 		{
 			auto& barriers = _barriers.get_barriers();
-			if (barriers.empty())return;
+		//	if (barriers.empty())return;
 
 
 			std::vector<D3D12_TEXTURE_BARRIER> textures;

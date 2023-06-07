@@ -168,6 +168,7 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
             DSTORAGE_COMPRESSION_FORMAT_GDEFLATE,
             6,
             IID_PPV_ARGS(&g_bufferCompression));
+
 		}
 
 		D3D::Device Device::get_native_device()

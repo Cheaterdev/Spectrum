@@ -73,10 +73,10 @@ namespace HAL
 
 
 
-	void SubResourcesCPU::prepare_for(CommandListType type, SubResourcesGPU& state)
+	void SubResourcesCPU::merge_read_state(CommandListType type, SubResourcesGPU& state)
 	{
 		if(!used) return;
-
+		//assert(!state.has_write_bits());
 		//if (state.all_states_same && all_state.first_usage)
 		//{
 
@@ -103,7 +103,11 @@ namespace HAL
 
 						if(merged)
 						my_state.first_usage->wanted_state.layout = *merged;
-						
+						else
+							assert(false);
+							assert(my_state.first_usage->wanted_state.is_valid());
+					//	if(!my_state.first_usage->wanted_state.has_write_bits())
+					assert(my_state.first_usage==my_state.last_usage);
 					}
 
 		
@@ -157,7 +161,7 @@ namespace HAL
 				continue;
 			if (gpu.layout != first_state.layout)
 			{
-
+				assert(!manual_controlled); // frame graph is bad if this happens
 				auto from = ResourceStates::NO_ACCESS;
 				auto to = ResourceStates::NO_ACCESS;
 
@@ -305,7 +309,7 @@ namespace HAL
 
 
 				auto point = (from)->add_usage((resource), i, target, TransitionType::ZERO);
-				//		cpu.set_zero_transition(point);
+				cpu.set_zero_transition(point);
 				updated = true;
 			}
 		};
@@ -357,6 +361,11 @@ namespace HAL
 	}
 
 
+
+	void ResourceStateManager::alias_end(Transitions* list) const
+	{
+		transition(list, ResourceStates::NO_ACCESS,ALL_SUBRESOURCES);
+	}
 
 
 		void ResourceStateManager::prepare_after_state(Transitions* from, SubResourcesGPU& gpu_state) const

@@ -657,9 +657,10 @@ export D3D12_BARRIER_SYNC  to_native(BarrierSync flags)
 {
 
 	D3D12_BARRIER_SYNC result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NONE;	
-	if (check(flags & BarrierSync::ALL)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_ALL;
-	if (check(flags & BarrierSync::ALL_SHADING)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_ALL_SHADING;
-	if (check(flags & BarrierSync::NON_PIXEL_SHADING)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NON_PIXEL_SHADING;
+	//if (check(flags & BarrierSync::ALL)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_ALL;
+	if ((flags & BarrierSync::ALL_SHADING) == BarrierSync::ALL_SHADING) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_ALL_SHADING;
+	if ((flags & BarrierSync::NON_PIXEL_SHADING) == BarrierSync::NON_PIXEL_SHADING) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NON_PIXEL_SHADING;
+	if ((flags & BarrierSync::DRAW) == BarrierSync::DRAW) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_DRAW;
 	
 	if (check(flags & BarrierSync::NONE)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_NONE;
 	if (check(flags & BarrierSync::INDEX_INPUT)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_INDEX_INPUT;
@@ -750,7 +751,7 @@ export D3D12_RESOURCE_FLAGS to_native(const ResFlags& flags)
 		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE ;
 	}
 
-		//result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_SIMULTANEOUS_ACCESS ;
+		
 	return result;
 }
 

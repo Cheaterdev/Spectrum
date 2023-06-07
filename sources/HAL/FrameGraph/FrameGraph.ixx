@@ -96,6 +96,7 @@ using namespace HAL;
 		std::set<ResourceAllocInfo*> resources;
 		std::map<ResourceAllocInfo*, ResourceFlags> resource_flags;
 		std::set<ResourceAllocInfo*> resource_creations;
+			std::set<ResourceAllocInfo*> resource_deletions;
 	};
 
 
@@ -134,7 +135,7 @@ using namespace HAL;
 		std::list<Pass*> graphics;
 
 
-		HAL::SubResourcesGPU merged_state;
+		HAL::SubResourcesGPU merged_read_state;
 
 		SyncState from;
 		SyncState to;
@@ -831,6 +832,7 @@ using namespace HAL;
 		template<class Pass>
 		void internal_pass(std::string name, typename Pass::setup_func_type s, typename Pass::render_func_type r, PassFlags flags = PassFlags::General)
 		{
+			if(GetAsyncKeyState('9')) flags |=PassFlags::Required;
 			passes.push_back(std::make_shared<Pass>((UINT)passes.size(), name, s, r));
 			passes.back()->flags = flags;
 

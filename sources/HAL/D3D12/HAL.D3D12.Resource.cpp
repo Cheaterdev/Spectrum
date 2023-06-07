@@ -63,6 +63,8 @@ namespace HAL
 			auto resourceDesc = to_native(desc);
 			auto resourceDesc1 = to_native_1(desc);
 
+
+
 			ResourceAllocationInfo info = device.get_alloc_info(_desc);
 
 			resourceDesc.Alignment = info.alignment;

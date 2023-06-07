@@ -125,6 +125,10 @@ export{
 
 							if (prev_state == usage.wanted_state) continue;
 
+							assert(prev_state.is_valid());
+							assert(usage.wanted_state.is_valid());
+
+
 							auto a = prev_state.get_best_cmd_type();
 							auto b = usage.wanted_state.get_best_cmd_type();
 
@@ -133,7 +137,8 @@ export{
 
 							BarrierFlags flags = BarrierFlags::SINGLE;
 
-//							if(usage.need_discard)  flags |= BarrierFlags::DISCARD;
+							if(usage.need_discard)  
+								flags |= BarrierFlags::DISCARD;
 							transitions.transition(usage.resource,
 								prev_state,
 								usage.wanted_state,
@@ -207,7 +212,7 @@ export{
 
 				create_usage_point();
 
-				transition(resource_ptr, {BarrierSync::ALL, BarrierAccess::COMMON, TextureLayout::PRESENT}, ALL_SUBRESOURCES);
+				transition(resource_ptr, {BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::PRESENT}, ALL_SUBRESOURCES);
 
 				create_usage_point(false);
 			}
@@ -224,7 +229,7 @@ export{
 				{
 					if (type == CommandListType::DIRECT)
 					{
-						operation =BarrierSync::ALL;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
 					}
 
 					if (type == CommandListType::COMPUTE)
@@ -241,7 +246,7 @@ export{
 
 						if (type == CommandListType::DIRECT)
 					{
-						operation =BarrierSync::ALL;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
 					}
 
 					if (type == CommandListType::COMPUTE)
@@ -264,7 +269,7 @@ export{
 				{
 					if (type == CommandListType::DIRECT)
 					{
-						operation =BarrierSync::ALL;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+						operation =BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
 					}
 
 					if (type == CommandListType::COMPUTE)
@@ -277,6 +282,20 @@ export{
 				}
 				else assert(false);
 
+
+				//if(GetAsyncKeyState('4'))
+				//{
+				//	if (type == CommandListType::DIRECT)
+				//	{
+				//		operation =BarrierSync::ALL_DIRECT;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+				//	}
+
+				//	if (type == CommandListType::COMPUTE)
+				//	{
+				//		operation =BarrierSync::ALL_COMPUTE;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+				//	}
+				//
+				//}
 				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
 					{
 						transition(resource.get(), target_state, subres);

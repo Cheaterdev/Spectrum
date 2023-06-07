@@ -112,11 +112,8 @@ export
 
 		std::optional<ResourceState> merge_state(const ResourceState& source, const ResourceState& need)
 		{
-			//assert(need != ResourceState::UNKNOWN);
-
 			if (source == ResourceStates::UNKNOWN) return need;
-			if (source == need) return need;
-
+		
 			if (source.has_write_bits()||need.has_write_bits())
 			{
 				return std::nullopt;
@@ -244,13 +241,13 @@ export
 				return usage;
 			}
 
-			//Transition* set_zero_transition(ResourceUsage* usage)
-			//{
-			//	first_usage->prev_transition = transition;
-			//	first_usage = transition;
+			ResourceUsage* set_zero_transition(ResourceUsage* usage)
+			{
+				first_usage->prev_usage = usage;
+				first_usage = usage;
 
-			//	return transition;
-			//}
+				return first_usage;
+			}
 
 		};
 
@@ -303,6 +300,7 @@ export
 					s.last_usage = all_state.last_usage;
 				}
 			}*/
+
 			ResourceListStateCPU& get_subres_state(UINT id, bool force = false)
 			{
 		/*		if ((!force && all_states_same) || id == ALL_SUBRESOURCES)
@@ -355,7 +353,7 @@ export
 			}
 
 
-			void prepare_for(CommandListType type, SubResourcesGPU& state);
+			void merge_read_state(CommandListType type, SubResourcesGPU& state);
 		};
 
 
@@ -457,6 +455,40 @@ export
 
 				//}
 			}
+
+			void set_cpu_state_first(const SubResourcesCPU& cpu_state)
+			{
+				/*if (cpu_state.all_states_same)
+				{
+					auto all_state = cpu_state.get_last_state(ALL_SUBRESOURCES);
+					make_all_state(all_state);
+				}
+				else
+				{
+					make_unique_state();*/
+
+					for (int i = 0; i < subres.size(); i++)
+					{
+						auto& gpu = get_subres_state(i);
+						auto& cpu = cpu_state.get_subres_state(i);
+
+						if (!cpu.used)
+						{
+							continue;
+						}
+
+						auto last_usage = cpu_state.get_first_usage(i);
+
+						auto last_state = last_usage->wanted_state;
+					//	assert(last_state != ResourceState::UNKNOWN);
+						gpu.layout = last_state.layout;
+					}
+
+				//}
+			}
+
+
+
 			ResourceListStateGPU& get_subres_state(UINT id)
 			{
 			/*	if (all_states_same || id == ALL_SUBRESOURCES)
@@ -544,6 +576,8 @@ export
 
 
 			void alias_begin(Transitions* list)const;
+void alias_end(Transitions* list)const;
+
 			void prepare_after_state(Transitions* from, SubResourcesGPU& subres) const;
 		};
 

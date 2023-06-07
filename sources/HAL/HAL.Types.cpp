@@ -142,8 +142,28 @@ namespace HAL
 			if (layout!=TextureLayout::NONE&&!check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
 
 		}
+		if (check(access & BarrierAccess::UNORDERED_ACCESS))
+		{
+
+			if (layout!=TextureLayout::NONE&&!check(layout & TextureLayout::UNORDERED_ACCESS))	 return false;
+
+		}
+
+		if (check(access & BarrierAccess::SHADER_RESOURCE))
+		{
+
+			if (layout!=TextureLayout::NONE&&!check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
+
+		}
+
 
 		return true;
+	}
+
+
+	ResourceState::ResourceState(BarrierSync s, BarrierAccess a, TextureLayout l) : operation(s), access(a), layout(l)
+	{
+
 	}
 	namespace ResourceStates {
 
@@ -162,7 +182,7 @@ namespace HAL
 		const  ResourceState RENDER_TARGET = { BarrierSync::RENDER_TARGET, BarrierAccess::RENDER_TARGET, TextureLayout::RENDER_TARGET };
 		const  ResourceState DEPTH_STENCIL = { BarrierSync::DEPTH_STENCIL, BarrierAccess::DEPTH_STENCIL_WRITE /*| BarrierAccess::DEPTH_STENCIL_READ*/,TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::DEPTH_STENCIL_READ };
 
-		const  ResourceState CONSTANT_BUFFER = { BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };
+	//	const  ResourceState CONSTANT_BUFFER = { BarrierSync::ALL, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };
 		const  ResourceState NO_ACCESS = { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::UNDEFINED };
 
 //		const  ResourceState WRITE_STATES = UNORDERED_ACCESS | RAYTRACING_STRUCTURE_WRITE | RENDER_TARGET | DEPTH_STENCIL ;
