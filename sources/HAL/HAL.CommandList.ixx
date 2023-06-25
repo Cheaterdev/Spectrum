@@ -1,5 +1,5 @@
 export module HAL:CommandList;
-
+import <HAL.h>;
 import Core;
 import :Types;
 import :ResourceStates;
@@ -614,8 +614,8 @@ export{
 				on_set_signature(signature);
 			}
 
-			template<Enum T>
-			void set_signature(T layout)
+			
+			void set_signature(Layouts layout)
 			{
 				set_signature(HAL::Device::get().get_engine_pso_holder().GetSignature(layout));
 			}

@@ -48,7 +48,7 @@ namespace Spectrum
             CustomProperties.Add("VcpkgEnableManifest", "true");
 			CustomProperties.Add("VcpkgTriplet", "x64-windows");
 			CustomProperties.Add("VcpkgConfiguration", "Release");
-
+            CustomProperties.Add("ScanSourceForModuleDependencies", "true");
          //   BlobWorkFileCount = 8;
         //    GeneratableBlobCount  = 8;
         }
@@ -174,8 +174,6 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Modules";
             AssemblyName = "Modules";
-			
-			CustomProperties.Add("ScanSourceForModuleDependencies", "true");
         }
 
 
@@ -224,6 +222,7 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Core";
             AssemblyName = "Core";
+            
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)

@@ -2,7 +2,8 @@
 module HAL:ShaderCompiler;
 import wrl;
 import Core;
-
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 namespace HAL
 {
 

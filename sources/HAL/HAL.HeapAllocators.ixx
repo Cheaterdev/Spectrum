@@ -1,4 +1,5 @@
 export module HAL:HeapAllocators;
+import <HAL.h>;
 import Core;
 
 import :Types;

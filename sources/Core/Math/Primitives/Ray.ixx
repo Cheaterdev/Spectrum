@@ -1,5 +1,6 @@
 export module Core:Math.Ray;
 
+import <Core_defs.h>;
 import :Math.Constants;
 import :Math.Vectors;
 import :Math.Quaternion;
@@ -8,7 +9,7 @@ import :Math.Primitive;
 
 import :Math.Plane;
 
-import stl.memory;
+import <stl/memory.h>;
 import :serialization;
 
 export class Ray

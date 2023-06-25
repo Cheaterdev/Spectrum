@@ -1,5 +1,5 @@
 export module HAL:Descriptors;
-
+import <HAL.h>;
 import :Types;
 import :Format;
 import :API.Resource;

@@ -1,5 +1,5 @@
 export module HAL:DescriptorHeap;
-
+import <HAL.h>;
 
 import :API.DescriptorHeap;
 import :Types;

@@ -1,6 +1,6 @@
 export module Core:my_unique_vector;
 
-import stl.core;
+import <stl/core.h>;
 
 export template <class T>
 class my_unique_vector : public std::vector<T>

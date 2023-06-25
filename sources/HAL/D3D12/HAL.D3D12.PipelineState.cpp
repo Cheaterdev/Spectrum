@@ -1,6 +1,7 @@
 module HAL:PipelineState;
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 
-import d3d12;
 
 #undef THIS
 

@@ -1,11 +1,12 @@
 module Core:Allocators;
+import <Core_defs.h>;
 
 
 import :Debug;
 import :Utils;
 import :Math;
-import stl.core;
-import stl.threading;
+import <stl/core.h>;
+import <stl/threading.h>;
 
 
 

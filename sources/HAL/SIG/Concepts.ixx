@@ -83,10 +83,10 @@ export
 	};
 
 	template<class T>
-	concept IsEnumClass = requires () { T::EnumClass; };
+	concept IsEnumClass = requires () { typename T::EnumClass; };
 
 		template<class T>
-	concept CompilableClass = requires () { T::Compiled; };
+	concept CompilableClass = requires () { typename T::Compiled; };
 
 	template<class T>
 	struct _Underlying

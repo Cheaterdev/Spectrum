@@ -1,5 +1,5 @@
 export module Graphics:TextureAsset;
-
+import <RenderSystem.h>;
 import :Asset;
 import Core;
 import HAL;

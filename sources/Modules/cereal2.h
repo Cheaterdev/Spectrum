@@ -1,12 +1,25 @@
-export module cereal;
+#include <cereal/cereal.hpp>
+#include <cereal/types/polymorphic.hpp>
 
-export import "cereal.h";
-export import <stl/core.h>;
+#include <cereal/types/map.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/complex.hpp>
+#include <cereal/types/set.hpp>
+#include <cereal/types/array.hpp>
+#include <cereal/types/variant.hpp>
 
-export using serialization_oarchive = cereal::BinaryOutputArchive;
-export using serialization_iarchive = cereal::BinaryInputArchive;
+#include <cereal/archives/binary.hpp>
+
+#define CEREAL_FUTURE_EXPERIMENTAL
+#include <cereal/archives/adapters.hpp>
+
+
+using serialization_oarchive = cereal::BinaryOutputArchive;
+using serialization_iarchive = cereal::BinaryInputArchive;
 
 import magic_enum;
+import stl.core;
 
 std::string _convert(std::wstring_view s)
 {
@@ -27,8 +40,6 @@ template <typename T> concept arithmetic = std::is_arithmetic_v<T>;// && !std::i
 
 template <typename T> concept printable = requires( std::ostream &s, const T &t) { s << t;};
 
-export
-{
 
 		class simple_log_archive : public cereal::OutputArchive<simple_log_archive>, public cereal::traits::TextArchive
 	{
@@ -172,4 +183,3 @@ export
 
 	CEREAL_REGISTER_ARCHIVE(simple_log_archive)
 
-}

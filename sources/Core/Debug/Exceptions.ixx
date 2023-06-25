@@ -1,7 +1,7 @@
 export module Core:Exceptions;
 
 //#include <boost/stacktrace.hpp>
-import stl.core;
+import <stl/core.h>;
 export namespace Exceptions
 {
 	using stack_trace = int;// boost::stacktrace::stacktrace;

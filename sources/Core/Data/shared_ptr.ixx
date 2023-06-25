@@ -22,8 +22,8 @@
 
 export module Core:shared_ptr;
 
-export import stl.core;
-export import stl.memory;
+export import <stl/core.h>;
+export import <stl/memory.h>;
 
 import :serialization;
 export namespace Core

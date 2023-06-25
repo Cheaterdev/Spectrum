@@ -1,5 +1,5 @@
 export module Graphics:Occluder;
-
+import <RenderSystem.h>;
 import Core;
 
 export class occluder

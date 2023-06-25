@@ -1,5 +1,6 @@
 export module Core:Math.Frustum;
 
+import <Core_defs.h>;
 import :Math.Constants;
 import :Math.Vectors;
 import :Math.Quaternion;
@@ -7,7 +8,7 @@ import :Math.Matrices;
 import :Math.Primitive;
 import :Math.Plane;
 
-import stl.memory;
+import <stl/memory.h>;
 import :serialization;
 
 export class Frustum : public Primitive

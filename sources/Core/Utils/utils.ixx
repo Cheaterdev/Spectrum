@@ -1,8 +1,8 @@
 export module Core:Utils;
 
 export import "utils/utils_macros.h";
-export import stl.core;
-export import stl.filesystem;
+export import <stl/core.h>;
+export import <stl/filesystem.h>;
 
 export import magic_enum;
 import crossguid;

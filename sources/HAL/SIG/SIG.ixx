@@ -1,5 +1,5 @@
 export module HAL:SIG;
-import stl.core;
+import <HAL.h>;
 
 import :Concepts;
 

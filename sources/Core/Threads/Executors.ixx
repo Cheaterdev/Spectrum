@@ -4,8 +4,8 @@ import :Profiling;
 import :Threading;
 import :Singleton;
 //#include <boost/lockfree/spsc_queue.hpp>
-import stl.core;
-import stl.threading;
+import <stl/core.h>;
+import <stl/threading.h>;
 
 import ppl;
 using namespace concurrency;

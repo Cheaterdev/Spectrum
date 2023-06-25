@@ -1,6 +1,6 @@
 
 export module HAL:RT;
-
+import <HAL.h>;
 import :Concepts;
 import :DescriptorHeap;
 

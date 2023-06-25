@@ -1,4 +1,5 @@
 export module HAL:ResourceViews;
+import <HAL.h>;
 import :Types;
 import :HLSL;
 import :Device;
@@ -164,82 +165,82 @@ export
 			HLSL::DepthStencil<> depthStencil;
 		public:
 			
-			void init(GPUEntityStorageInterface& frame, TextureViewDesc _view_desc)
-			{
-				view_desc = _view_desc;
+			void init(GPUEntityStorageInterface& frame, TextureViewDesc _view_desc);
+			//{
+			//	view_desc = _view_desc;
 
-				auto& desc = resource->get_desc().as_texture();
+			//	auto& desc = resource->get_desc().as_texture();
 
-				if (view_desc.MipLevels == 0)
-				{
-					view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
-				}
+			//	if (view_desc.MipLevels == 0)
+			//	{
+			//		view_desc.MipLevels = desc.MipLevels - view_desc.MipSlice;
+			//	}
 
-				auto hlsl = frame.alloc_descriptor(3, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
+			//	auto hlsl = frame.alloc_descriptor(3, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
-				PROFILE(L"create_views");
+			//	PROFILE(L"create_views");
 
-				if (desc.is2D()) {
-					texture2D = HLSL::Texture2D<>(hlsl[0]);
-					rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
+			//	if (desc.is2D()) {
+			//		texture2D = HLSL::Texture2D<>(hlsl[0]);
+			//		rwTexture2D = HLSL::RWTexture2D<>(hlsl[1]);
 
-					texture2DArray = HLSL::Texture2DArray<>(hlsl[2]);
-				}
-
-
-				if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
-
-					if (desc.is2D() && view_desc.ArraySize == 1)
-						texture2D.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice);
-					else if (desc.is2D())
-						texture2DArray.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice, view_desc.ArraySize);
-					//	else if (desc.is3D())
-					//		texture3D.create(resource, view_desc.MipSlice, view_desc.MipLevels);
-					else
-						assert(false);
-				}
-
-				if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
-					if (desc.is2D() && view_desc.ArraySize == 1)
-						rwTexture2D.create(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
-					//	else if (desc.is3D())
-					//		rwTexture3D.create(resource, view_desc.MipSlice);
-					else
-						assert(false);
-				}
-
-				if (check(resource->get_desc().Flags & HAL::ResFlags::RenderTarget)) {
-
-					auto rtv = frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
-				
-					renderTarget = HLSL::RenderTarget<>(rtv[0]);
-					//	place_rtv(renderTarget);
-					if (desc.is2D() && view_desc.ArraySize == 1 && view_desc.FirstArraySlice == 0)
-					{
-						renderTarget.createFrom2D(resource, view_desc.MipSlice);
-					}
-					else
-					{
-						renderTarget.createFrom2DArray(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
-					}
-				}
-
-				if (check(resource->get_desc().Flags & HAL::ResFlags::DepthStencil)) {
-					auto dsv = frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
-					depthStencil = HLSL::DepthStencil<>(dsv[0]);
-
-					if (desc.is2D() && view_desc.ArraySize == 1 && view_desc.FirstArraySlice == 0)
-					{
-						depthStencil.createFrom2D(resource, view_desc.MipSlice);
-					}
-					else
-					{
-						depthStencil.createFrom2DArray(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
-					}
-				}
+			//		texture2DArray = HLSL::Texture2DArray<>(hlsl[2]);
+			//	}
 
 
-			}
+			//	if (check(resource->get_desc().Flags & HAL::ResFlags::ShaderResource)) {
+
+			//		if (desc.is2D() && view_desc.ArraySize == 1)
+			//			texture2D.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice);
+			//		else if (desc.is2D())
+			//			texture2DArray.create(resource, view_desc.MipSlice, view_desc.MipLevels, view_desc.FirstArraySlice, view_desc.ArraySize);
+			//		//	else if (desc.is3D())
+			//		//		texture3D.create(resource, view_desc.MipSlice, view_desc.MipLevels);
+			//		else
+			//			assert(false);
+			//	}
+
+			//	if (check(resource->get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
+			//		if (desc.is2D() && view_desc.ArraySize == 1)
+			//			rwTexture2D.create(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
+			//		//	else if (desc.is3D())
+			//		//		rwTexture3D.create(resource, view_desc.MipSlice);
+			//		else
+			//			assert(false);
+			//	}
+
+			//	if (check(resource->get_desc().Flags & HAL::ResFlags::RenderTarget)) {
+
+			//		auto rtv = frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::RTV, HAL::DescriptorHeapFlags::None });
+			//	
+			//		renderTarget = HLSL::RenderTarget<>(rtv[0]);
+			//		//	place_rtv(renderTarget);
+			//		if (desc.is2D() && view_desc.ArraySize == 1 && view_desc.FirstArraySlice == 0)
+			//		{
+			//			renderTarget.createFrom2D(resource, view_desc.MipSlice);
+			//		}
+			//		else
+			//		{
+			//			renderTarget.createFrom2DArray(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
+			//		}
+			//	}
+
+			//	if (check(resource->get_desc().Flags & HAL::ResFlags::DepthStencil)) {
+			//		auto dsv = frame.alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::DSV, HAL::DescriptorHeapFlags::None });
+			//		depthStencil = HLSL::DepthStencil<>(dsv[0]);
+
+			//		if (desc.is2D() && view_desc.ArraySize == 1 && view_desc.FirstArraySlice == 0)
+			//		{
+			//			depthStencil.createFrom2D(resource, view_desc.MipSlice);
+			//		}
+			//		else
+			//		{
+			//			depthStencil.createFrom2DArray(resource, view_desc.MipSlice, view_desc.FirstArraySlice);
+			//		}
+			//	}
+
+
+			//}
 			TextureView() = default;
 
 			

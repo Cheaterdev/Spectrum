@@ -1,7 +1,8 @@
 module HAL:Format;
 
 import :Format;
-import d3d12;
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 
 namespace HAL
 {

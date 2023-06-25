@@ -1,4 +1,7 @@
 export module Core:Math.Quaternion;
+
+import <Core_defs.h>;
+
 import :Math.Vectors;
 import :Math.Constants;
 

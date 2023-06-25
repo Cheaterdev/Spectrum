@@ -1,8 +1,8 @@
 export module Core:Singleton;
 
-import stl.memory;
-import stl.core;
-import stl.threading;
+import <stl/memory.h>;
+import <stl/core.h>;
+import <stl/threading.h>;
 
 // Use this class only if you really need shared_ptr of singleton's instance.
 // "With Great Power Comes Great Responsibility" (c)

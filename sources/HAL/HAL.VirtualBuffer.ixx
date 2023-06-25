@@ -1,5 +1,5 @@
 export module HAL:VirtualBuffer;
-
+import <HAL.h>;
 export import :Concepts;
 import :Buffer;
 import :Types;

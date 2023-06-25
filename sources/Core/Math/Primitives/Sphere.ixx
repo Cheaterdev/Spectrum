@@ -1,12 +1,13 @@
 export module Core:Math.Sphere;
 
+import <Core_defs.h>;
 export import :Math.Constants;
 export import :Math.Vectors;
 export import :Math.Quaternion;
 export import :Math.Matrices;
 export import :Math.Primitive;
 
-import stl.memory;
+import <stl/memory.h>;
 import :serialization;
 
 export class Sphere : public Primitive

@@ -1,8 +1,11 @@
 export module Core:Threading;
 
-import stl.threading;
-import stl.core;
-import stl.memory;
+import <stl/threading.h>;
+import <stl/core.h>;
+import <stl/memory.h>;
+
+import <stl/core.h>;
+import <windows/windows.h>;
 
 import windows;
 

@@ -1,5 +1,5 @@
 export module HAL:FrameManager;
-
+import <HAL.h>;
 import Core;
 import :Types;
 import :HeapAllocators;

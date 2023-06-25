@@ -1,5 +1,5 @@
 export module HAL:RTX;
-
+import <HAL.h>;
 import :Buffer;
 import :VirtualBuffer;
 

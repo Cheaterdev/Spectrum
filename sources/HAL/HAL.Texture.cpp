@@ -8,25 +8,25 @@ namespace HAL
 
 	void Texture::init()
 	{
-		if (resource)
-		{
+		//if (resource)
+		//{
 
-			auto desc = get_desc().as_texture();
-			if (desc.ArraySize == 6)
-				cube_view = CubeView(resource, HAL::Device::get().get_static_gpu_data());
+		//	auto desc = get_desc().as_texture();
+		//	if (desc.ArraySize == 6)
+		//		cube_view = CubeView(resource, HAL::Device::get().get_static_gpu_data());
 
-			/*		if (desc.ArraySize % 6 == 0)
-						array_cubemap_view = std::make_shared<CubemapArrayView>(this);*/
+		//	/*		if (desc.ArraySize % 6 == 0)
+		//				array_cubemap_view = std::make_shared<CubemapArrayView>(this);*/
 
 
-						/*		if (desc.ArraySize > 1)
-									array_2d_view = std::make_shared<Array2DView>(this);*/
+		//				/*		if (desc.ArraySize > 1)
+		//							array_2d_view = std::make_shared<Array2DView>(this);*/
 
-			if (desc.is3D())
-				texture_3d_view = Texture3DView(resource, HAL::Device::get().get_static_gpu_data());
-			else
-				texture_2d_view = TextureView(resource, HAL::Device::get().get_static_gpu_data());
-		}
+		//	if (desc.is3D())
+		//		texture_3d_view = Texture3DView(resource, HAL::Device::get().get_static_gpu_data());
+		//	else
+		//		texture_2d_view = TextureView(resource, HAL::Device::get().get_static_gpu_data());
+		//}
 	}
 
 	ivec3 Texture::get_size(int mip)

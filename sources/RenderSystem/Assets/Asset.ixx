@@ -2,6 +2,7 @@ export module Graphics:Asset;
 
 import HAL;
 import Core;
+import <RenderSystem.h>;
 
 export
 {

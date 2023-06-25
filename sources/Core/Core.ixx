@@ -44,6 +44,3 @@ export import :Events;
 export import :crc32;
 
 export import :Math;
-
-export import stl.core;
-export import stl.memory;

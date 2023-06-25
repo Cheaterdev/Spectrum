@@ -5,10 +5,9 @@ import :Log;
 import :Singleton;
 import :Scheduler;
 
-import stl.filesystem;
-import stl.memory;
-import windows;
-
+import <stl/filesystem.h>;
+import <stl/memory.h>;
+import <windows/windows.h>;
 import :serialization;
 
 export

@@ -1,7 +1,7 @@
 export module Core:EditObject;
 
-import stl.core;
-import stl.threading;
+import <stl/core.h>;
+import <stl/threading.h>;
 
 export
 {

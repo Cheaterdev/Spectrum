@@ -1,5 +1,5 @@
 export module HAL:Slots;
-
+import <HAL.h>;
 import :ResourceViews;
 import :Concepts;
 import :DescriptorHeap;
