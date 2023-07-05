@@ -1,4 +1,6 @@
 module Graphics:MeshRenderer;
+
+import <RenderSystem.h>;
 import :EngineAssets;
 import :MipMapGenerator;
 

@@ -1,4 +1,6 @@
 export module Graphics:MeshAsset;
+import <RenderSystem.h>;
+
 import Core;
 import :SceneObject;
 import :MaterialAsset;

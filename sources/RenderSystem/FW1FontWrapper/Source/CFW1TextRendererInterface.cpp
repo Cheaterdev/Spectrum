@@ -1,4 +1,5 @@
 // CFW1TextRendererInterface.cpp
+import <RenderSystem.h>;
 
 
 

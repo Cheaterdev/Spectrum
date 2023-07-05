@@ -1,4 +1,6 @@
 module Graphics:TextureAsset;
+
+import <RenderSystem.h>;
 import Core;
 import :MipMapGenerator;
 

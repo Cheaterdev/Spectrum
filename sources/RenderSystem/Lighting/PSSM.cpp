@@ -1,4 +1,5 @@
 module Graphics:PSSM;
+import <RenderSystem.h>;
 
 import :PSSM;
 import :BRDF;

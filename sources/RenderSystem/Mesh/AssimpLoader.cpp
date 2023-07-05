@@ -1,4 +1,6 @@
 
+import Core;
+import <RenderSystem.h>;
 
 #include "Simplifyer/Simplifyer.h"
 #include <assimp\Importer.hpp>
@@ -19,7 +21,6 @@ import GUI;
 //#include "GUI/Elements/CheckBoxText.h"
 //#include "GUI/Elements/Window.h"
 
-import Core;
 import Graphics;
 
 struct MeshLoadingSettings

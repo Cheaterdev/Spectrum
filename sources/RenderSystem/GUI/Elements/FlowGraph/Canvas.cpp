@@ -1,4 +1,6 @@
 module GUI:FlowGraph.Canvas;
+import <RenderSystem.h>;
+import <windows/windows.h>;
 
 import  :FlowGraph.FlowManager;
 

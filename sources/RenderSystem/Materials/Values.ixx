@@ -1,4 +1,6 @@
 export module Graphics:Materials.Values;
+import <RenderSystem.h>;
+
 import Core;
 import :Asset;
 import :TextureAsset;

@@ -1,4 +1,6 @@
 module Graphics:MipMapGenerator;
+import <RenderSystem.h>;
+
 import Core;
 import HAL;
 

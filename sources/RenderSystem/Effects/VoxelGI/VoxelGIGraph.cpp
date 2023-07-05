@@ -1,4 +1,5 @@
 module Graphics:VoxelGI;
+import <RenderSystem.h>;
 
 import Graphics;
 import HAL;

@@ -5,6 +5,8 @@ import ppl;
 using namespace concurrency;
 
 
+import <RenderSystem.h>;
+import <windows/windows.h>;
 REGISTER_TYPE(Asset);
 AssetManager::AssetManager()
 {

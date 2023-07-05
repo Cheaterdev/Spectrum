@@ -1,7 +1,5 @@
-module;
-#include "FW1FontWrapper/Source/FW1FontWrapper.h"
-
 module TextSystem;
+import <RenderSystem.h>;
 
 import Core;
 

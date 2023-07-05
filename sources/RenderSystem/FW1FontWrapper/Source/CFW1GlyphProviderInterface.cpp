@@ -1,5 +1,6 @@
 // CFW1GlyphProviderInterface.cpp
 
+import <RenderSystem.h>;
 
 
 #include "CFW1GlyphProvider.h"

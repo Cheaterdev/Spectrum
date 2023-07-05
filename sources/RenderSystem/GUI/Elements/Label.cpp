@@ -1,4 +1,6 @@
 module GUI:Label;
+import <RenderSystem.h>;
+
 import HAL;
 import GUI;
 import Graphics;

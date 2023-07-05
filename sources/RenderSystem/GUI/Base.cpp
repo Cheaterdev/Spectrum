@@ -1,5 +1,6 @@
 module GUI;
-import GUI;
+import <RenderSystem.h>;
+
 import windows;
 
 import HAL;
