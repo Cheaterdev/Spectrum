@@ -132,7 +132,7 @@ namespace FrameGraph
 
 	void TaskBuilder::pass_texture(std::string name, HAL::Texture::ptr tex, ResourceFlags flags)
 	{
-		/*auto tex_desc = tex->get_desc().as_texture();
+		auto tex_desc = tex->get_desc().as_texture();
 		if (tex_desc.is2D())
 		{
 			Handlers::Texture h(name);
@@ -170,7 +170,7 @@ namespace FrameGraph
 			h.init_view(info, *current_frame);
 		}
 		else
-			assert(false);*/
+			assert(false);
 	}
 
 	void TaskBuilder::reset()

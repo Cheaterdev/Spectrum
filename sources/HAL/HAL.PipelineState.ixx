@@ -364,20 +364,20 @@ export namespace HAL
 		StateObject(StateObjectDesc& desc) :desc(desc)
 		{
 
-			//for (auto& l : desc.libraries)
-			//{
-			//	register_shader(l.library);
-			//}
+			for (auto& l : desc.libraries)
+			{
+				register_shader(l.library);
+			}
 
-			//for (auto& c : desc.collections)
-			//{
-			//	c->event_change.register_handler(this, [this]()
-			//		{
-			//			on_change();
-			//		});
-			//}
+			for (auto& c : desc.collections)
+			{
+				c->event_change.register_handler(this, [this]()
+					{
+						on_change();
+					});
+			}
 
-			//on_change();
+			on_change();
 
 		}
 

@@ -1,8 +1,8 @@
 export module Graphics:MipMapGenerator;
 import HAL;
 
-//import :Camera;
-class camera;
+import :Camera;
+
 import :Context;
 export class MipMapGenerator : public Singleton<MipMapGenerator>
 {

@@ -4,7 +4,7 @@ namespace PSOS
 	struct FontRender: public PSOBase
 	{
 		struct Keys {
-			KeyValue<uint,NonNullable,ALL_RT_FORMATS> Format;
+			KeyValue<Underlying<HAL::Format>,NonNullable,ALL_RT_FORMATS> Format;
 
 			GEN_DEF_COMP(Keys);
 			private:

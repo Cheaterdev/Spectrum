@@ -74,7 +74,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
             conf.AdditionalCompilerOptions.Add("/bigobj");
- conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
+ //conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
 
             conf.Defines.Add("_MBCS");
 			conf.Defines.Add("BOOST_NO_USER_CONFIG");

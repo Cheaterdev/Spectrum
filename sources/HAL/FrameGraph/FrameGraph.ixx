@@ -609,6 +609,7 @@ using namespace HAL;
 		template<class T>
 		void need(T& result, ResourceFlags flags = ResourceFlags::None)
 		{
+			assert(exists(result));
 			std::string& name = resources_names[result.name];
 			ResourceAllocInfo& info = alloc_resources[name];
 			T& handler = info.get_handler<T>();

@@ -939,32 +939,32 @@ export D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  to_native(const Ray
 
 export CD3DX12_RESOURCE_DESC  to_native_1(const ResourceDesc& desc)
 {
-	//if (desc.is_buffer())
-	//{
-	//	auto buffer_desc = desc.as_buffer();
-	//	return CD3DX12_RESOURCE_DESC::Buffer(buffer_desc.SizeInBytes, to_native(desc.Flags));
-	//}
-	//else
-	//{
-	//	auto texture_desc = desc.as_texture();
+	if (desc.is_buffer())
+	{
+		auto buffer_desc = desc.as_buffer();
+		return CD3DX12_RESOURCE_DESC::Buffer(buffer_desc.SizeInBytes, to_native(desc.Flags));
+	}
+	else
+	{
+		auto texture_desc = desc.as_texture();
 
 
-	//	if (texture_desc.is1D())
-	//	{
-	//		return  CD3DX12_RESOURCE_DESC::Tex1D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.ArraySize, texture_desc.MipLevels, to_native(desc.Flags));
-	//	}
+		if (texture_desc.is1D())
+		{
+			return  CD3DX12_RESOURCE_DESC::Tex1D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.ArraySize, texture_desc.MipLevels, to_native(desc.Flags));
+		}
 
-	//	if (texture_desc.is2D())
-	//	{
-	//		return  CD3DX12_RESOURCE_DESC::Tex2D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.ArraySize, texture_desc.MipLevels, 1, 0, to_native(desc.Flags));
-	//	}
+		if (texture_desc.is2D())
+		{
+			return  CD3DX12_RESOURCE_DESC::Tex2D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.ArraySize, texture_desc.MipLevels, 1, 0, to_native(desc.Flags));
+		}
 
-	//	if (texture_desc.is3D())
-	//	{
-	//		assert(texture_desc.ArraySize == 1);
-	//		return  CD3DX12_RESOURCE_DESC::Tex3D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.Dimensions.z, texture_desc.MipLevels, to_native(desc.Flags));
-	//	}
-	//}
+		if (texture_desc.is3D())
+		{
+			assert(texture_desc.ArraySize == 1);
+			return  CD3DX12_RESOURCE_DESC::Tex3D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.Dimensions.z, texture_desc.MipLevels, to_native(desc.Flags));
+		}
+	}
 	assert(false);
 
 	return CD3DX12_RESOURCE_DESC::Buffer(0, to_native(desc.Flags));
@@ -972,32 +972,32 @@ export CD3DX12_RESOURCE_DESC  to_native_1(const ResourceDesc& desc)
 
 export CD3DX12_RESOURCE_DESC1  to_native(const ResourceDesc& desc)
 {
-	//if (desc.is_buffer())
-	//{
-	//	auto buffer_desc = desc.as_buffer();
-	//	return CD3DX12_RESOURCE_DESC1 ::Buffer(buffer_desc.SizeInBytes, to_native(desc.Flags));
-	//}
-	//else
-	//{
-	//	auto texture_desc = desc.as_texture();
+	if (desc.is_buffer())
+	{
+		auto buffer_desc = desc.as_buffer();
+		return CD3DX12_RESOURCE_DESC1 ::Buffer(buffer_desc.SizeInBytes, to_native(desc.Flags));
+	}
+	else
+	{
+		auto texture_desc = desc.as_texture();
 
 
-	//	if (texture_desc.is1D())
-	//	{
-	//		return  CD3DX12_RESOURCE_DESC1 ::Tex1D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.ArraySize, texture_desc.MipLevels, to_native(desc.Flags));
-	//	}
+		if (texture_desc.is1D())
+		{
+			return  CD3DX12_RESOURCE_DESC1 ::Tex1D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.ArraySize, texture_desc.MipLevels, to_native(desc.Flags));
+		}
 
-	//	if (texture_desc.is2D())
-	//	{
-	//		return  CD3DX12_RESOURCE_DESC1 ::Tex2D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.ArraySize, texture_desc.MipLevels, 1, 0, to_native(desc.Flags));
-	//	}
+		if (texture_desc.is2D())
+		{
+			return  CD3DX12_RESOURCE_DESC1 ::Tex2D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.ArraySize, texture_desc.MipLevels, 1, 0, to_native(desc.Flags));
+		}
 
-	//	if (texture_desc.is3D())
-	//	{
-	//		assert(texture_desc.ArraySize == 1);
-	//		return  CD3DX12_RESOURCE_DESC1 ::Tex3D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.Dimensions.z, texture_desc.MipLevels, to_native(desc.Flags));
-	//	}
-	//}
+		if (texture_desc.is3D())
+		{
+			assert(texture_desc.ArraySize == 1);
+			return  CD3DX12_RESOURCE_DESC1 ::Tex3D(to_native(texture_desc.Format), texture_desc.Dimensions.x, texture_desc.Dimensions.y, texture_desc.Dimensions.z, texture_desc.MipLevels, to_native(desc.Flags));
+		}
+	}
 	assert(false);
 
 	return CD3DX12_RESOURCE_DESC1 ::Buffer(0, to_native(desc.Flags));
