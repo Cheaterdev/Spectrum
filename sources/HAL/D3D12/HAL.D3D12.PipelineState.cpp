@@ -1,6 +1,7 @@
 module HAL:PipelineState;
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 
-import d3d12;
 
 #undef THIS
 
@@ -271,7 +272,7 @@ namespace HAL
 
 		TEST(desc.global_root->get_device(), desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&tracked_info->m_StateObject)));
 		TEST(desc.global_root->get_device(), tracked_info->m_StateObject.As(&stateObjectProperties));
-
+		assert(stateObjectProperties);
 		event_change();
 
 	}

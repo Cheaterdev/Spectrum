@@ -1,4 +1,6 @@
 export module Graphics:MeshAsset;
+import <RenderSystem.h>;
+
 import Core;
 import :SceneObject;
 import :MaterialAsset;
@@ -7,7 +9,7 @@ import GUI;
 import HAL;
 
 
-import stl.core;
+import <stl/core.h>;
 export{
 	class MeshAssetInstance;
 

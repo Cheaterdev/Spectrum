@@ -1,7 +1,8 @@
 ﻿module HAL:API.CommandAllocator;
 import Core;
 import HAL;
-
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 namespace HAL
 {
 	CommandAllocator::CommandAllocator(CommandListType type) :type(type)

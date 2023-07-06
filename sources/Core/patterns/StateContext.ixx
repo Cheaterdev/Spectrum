@@ -1,7 +1,7 @@
 export module Core:StateContext;
 
-import stl.core;
-import stl.threading;
+import <stl/core.h>;
+import <stl/threading.h>;
 import windows;
 import :IdGenerator;
 import :Threading;

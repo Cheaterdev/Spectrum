@@ -1,4 +1,5 @@
 module HAL:Queue;
+import <HAL.h>;
 
 import Core;
 

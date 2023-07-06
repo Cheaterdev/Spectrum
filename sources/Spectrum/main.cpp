@@ -2,7 +2,7 @@ import Graphics;
 import GUI;
 import HAL;
 
-
+import <RenderSystem.h>;
 #include "Platform/Window.h"
 
 import ppl;

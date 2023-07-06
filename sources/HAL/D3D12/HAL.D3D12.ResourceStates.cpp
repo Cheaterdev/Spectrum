@@ -1,5 +1,5 @@
 module HAL:ResourceStates;
-
+import <HAL.h>;
 import Core;
 
 import HAL;

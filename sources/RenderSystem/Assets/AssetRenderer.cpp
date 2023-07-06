@@ -1,5 +1,6 @@
 
 module  Graphics:AssetRenderer;
+import <RenderSystem.h>;
 
 import HAL;
 import :MeshRenderer;

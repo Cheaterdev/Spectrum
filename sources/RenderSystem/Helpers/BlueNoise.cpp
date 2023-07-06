@@ -1,4 +1,6 @@
 module Graphics:BlueNoise;
+import <RenderSystem.h>;
+
 import HAL;
 
 using namespace HAL;

@@ -1,4 +1,6 @@
 module Graphics:FSR;
+
+import <RenderSystem.h>;
 import :FrameGraphContext;
 
 import HAL;

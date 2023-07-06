@@ -1,4 +1,5 @@
 module Graphics:Sky;
+import <RenderSystem.h>;
 import :FrameGraphContext;
 import :MipMapGenerator;
 import HAL;

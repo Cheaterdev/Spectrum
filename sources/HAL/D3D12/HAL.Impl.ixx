@@ -1,5 +1,5 @@
 export module HAL:Impl;
-import d3d12;
+import <d3d12/d3d12_includes.h>;
 import :Debug;
 import wrl;
 

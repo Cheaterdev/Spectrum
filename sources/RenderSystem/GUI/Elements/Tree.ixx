@@ -1,4 +1,5 @@
 export module GUI:Tree;
+import <RenderSystem.h>;
 import :Base;
 import :ScrollContainer;
 import :Image;

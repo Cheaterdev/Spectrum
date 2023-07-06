@@ -1,5 +1,8 @@
 
 module GUI:EditText;
+import <RenderSystem.h>;
+import <windows/windows.h>;
+
 import :Renderer;
 
 import GUI;

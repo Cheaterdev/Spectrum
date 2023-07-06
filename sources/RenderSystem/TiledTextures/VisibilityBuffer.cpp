@@ -1,5 +1,6 @@
 
 module Graphics:VisibilityBuffer;
+import <RenderSystem.h>;
 
 import HAL;
 

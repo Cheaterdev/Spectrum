@@ -1,8 +1,9 @@
 export module Core:Data;
 
+import <Core_defs.h>;
 import :serialization;
 
-import stl.core;
+import <stl/core.h>;
 import :Utils;
 import :Exceptions;
 

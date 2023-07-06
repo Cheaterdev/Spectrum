@@ -1,5 +1,5 @@
 export module Graphics:BinaryAsset;
-
+import <RenderSystem.h>;
 import :Asset;
 
 

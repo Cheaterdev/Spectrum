@@ -1,13 +1,14 @@
 export module Core:Math.AABB;
 
+import <Core_defs.h>;
 import :Math.Constants;
 import :Math.Vectors;
 import :Math.Quaternion;
 import :Math.Matrices;
 import :Math.Primitive;
 
-import stl.memory;
-import stl.core;
+import <stl/memory.h>;
+import <stl/core.h>;
 import :serialization;
 
 export

@@ -1,5 +1,5 @@
 export module HAL:Types;
-
+import <HAL.h>;
 import Core;
 
 import :Format;

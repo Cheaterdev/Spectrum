@@ -1,5 +1,6 @@
 module HAL:Resource;
-
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 import :HeapAllocators;
 import :API.Device;
 import :API.Resource;

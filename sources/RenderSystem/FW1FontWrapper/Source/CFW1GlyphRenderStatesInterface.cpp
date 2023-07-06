@@ -1,5 +1,6 @@
 // CFW1GlyphRenderStatesInterface.cpp
 
+import <RenderSystem.h>;
 
 
 #include "CFW1GlyphRenderStates.h"

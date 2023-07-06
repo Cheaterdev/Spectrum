@@ -1,4 +1,5 @@
 export module HAL:Texture;
+import <HAL.h>;
 import Core;
 
 import :Resource;

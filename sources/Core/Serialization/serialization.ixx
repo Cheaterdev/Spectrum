@@ -1,9 +1,9 @@
 export module Core:serialization;
 export import "serialization_defines.h";
 export import cereal;
-export import stl.core;
-export import stl.threading;
-export import stl.filesystem;
+export import <stl/core.h>;
+export import <stl/threading.h>;
+export import <stl/filesystem.h>;
 
 export import crossguid;
 //export import simple_log_archive;

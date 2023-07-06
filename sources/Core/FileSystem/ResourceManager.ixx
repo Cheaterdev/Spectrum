@@ -1,12 +1,13 @@
 export module Core:ResourceManager;
+import <Core_defs.h>;
 import :Serializer;
 import :serialization;
 import :Utils;
 import :Log;
 import :Singleton;
 
-import stl.filesystem;
-import stl.memory;
+import <stl/filesystem.h>;
+import <stl/memory.h>;
 import :FileSystem;
 import :FileDepender;
 import :FileDataStorage;

@@ -1,5 +1,5 @@
 export module HAL:Shader;
-
+import <HAL.h>;
 import :ShaderCompiler;
 import Core;
 import :Enums;

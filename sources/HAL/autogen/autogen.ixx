@@ -1,6 +1,6 @@
 
 export module HAL:Autogen;
-
+import <HAL.h>;
 import Core;
 
 import :PipelineState;

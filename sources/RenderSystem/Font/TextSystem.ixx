@@ -1,8 +1,5 @@
-module;
-
-#include "FW1FontWrapper/Source/FW1FontWrapper.h"
-
 export module  TextSystem;
+import <RenderSystem.h>;
 
 import wrl;
 import Core;
@@ -10,7 +7,7 @@ typedef ComPtr<IFW1Factory>			FW1_Factory;
 typedef ComPtr<IFW1FontWrapper>		FW1_Font;
 typedef ComPtr<IFW1TextGeometry>		FW1_TextGeometry;
 
-export   using FW1_TEXT_FLAG = ::FW1_TEXT_FLAG;;
+//export   using FW1_TEXT_FLAG = ::FW1_TEXT_FLAG;;
 
 export namespace Fonts
 {

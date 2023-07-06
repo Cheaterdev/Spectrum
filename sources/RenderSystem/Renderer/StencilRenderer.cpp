@@ -1,4 +1,5 @@
 module Graphics:StencilRenderer;
+import <RenderSystem.h>;
 import :EngineAssets;
 
 import :Materials.UniversalMaterial;

@@ -1,5 +1,6 @@
 export module HAL:TextureData;
 
+import <HAL.h>;
 import Core;
 
 import :Utils;

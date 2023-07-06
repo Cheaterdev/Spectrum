@@ -2,8 +2,8 @@ export module Core:IdGenerator;
 
 import :Threading;
 
-import stl.threading;
-import stl.core;
+import <stl/threading.h>;
+import <stl/core.h>;
 
 export
 {

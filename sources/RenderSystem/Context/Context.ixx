@@ -1,4 +1,6 @@
 export module Graphics:Context;
+import <RenderSystem.h>;
+
 import Core;
 import HAL;
 

@@ -5,8 +5,8 @@ import :Debug;
 import :Utils;
 import :Math;
 import :Allocators;
-import stl.core;
-import stl.threading;
+import <stl/core.h>;
+import <stl/threading.h>;
 
 
 

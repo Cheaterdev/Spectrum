@@ -1,5 +1,5 @@
 export module Core:Serializer;
-
+import <Core_defs.h>;
 export import :serialization;
 using serialization_exception = cereal::Exception;
 import :Log;

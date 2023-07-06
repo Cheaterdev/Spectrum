@@ -1,4 +1,5 @@
 ﻿module Graphics:Materials.UniversalMaterial;
+import <RenderSystem.h>;
 
 
 import :EngineAssets;

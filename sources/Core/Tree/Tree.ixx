@@ -1,7 +1,7 @@
 export module Core:Tree;
 export import :Singleton;
 export import :Events;
-export import stl.core;
+export import <stl/core.h>;
 export import :Data;
 export class base_tree
 {

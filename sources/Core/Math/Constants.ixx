@@ -1,5 +1,6 @@
 export module Core:Math.Constants;
-import stl.core;
+import <stl/core.h>;
+import <stl/core.h>;
 
 export
 {

@@ -1,4 +1,5 @@
 module Graphics:BRDF;
+import <RenderSystem.h>;
 
 import :TextureAsset;
 import :Asset;

@@ -1,6 +1,7 @@
 module HAL:FrameGraph;
 import HAL;
 import Core;
+import <HAL.h>;
 
 using namespace HAL;
 

@@ -48,7 +48,7 @@ namespace Spectrum
             CustomProperties.Add("VcpkgEnableManifest", "true");
 			CustomProperties.Add("VcpkgTriplet", "x64-windows");
 			CustomProperties.Add("VcpkgConfiguration", "Release");
-
+            CustomProperties.Add("ScanSourceForModuleDependencies", "true");
          //   BlobWorkFileCount = 8;
         //    GeneratableBlobCount  = 8;
         }
@@ -74,6 +74,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
             conf.AdditionalCompilerOptions.Add("/bigobj");
+ //conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
 
             conf.Defines.Add("_MBCS");
 			conf.Defines.Add("BOOST_NO_USER_CONFIG");
@@ -174,8 +175,6 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Modules";
             AssemblyName = "Modules";
-			
-			CustomProperties.Add("ScanSourceForModuleDependencies", "true");
         }
 
 
@@ -188,7 +187,7 @@ namespace Spectrum
 
 			
 			{ // AgilitySDK
-				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\include", 66);
+			//	conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\include", 66);
 				conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12Core.dll", "D3D12"));
 
 				if(target.Mode != Mode.Retail)
@@ -224,6 +223,7 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Core";
             AssemblyName = "Core";
+            
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)

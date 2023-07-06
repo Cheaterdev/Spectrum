@@ -1,9 +1,10 @@
-#pragma once
+
 import Core;
 import GUI;
 
 import HAL;
 
+import <windows/windows.h>;
 class Window : public HAL::hwnd_provider
 {
 	HWND hwnd;

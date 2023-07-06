@@ -1,8 +1,10 @@
 export module HAL:Utils;
-export import "macros.h";
 
+import <HAL.h>;
+import <stl/core.h>;
+
+import <d3d12/d3d12_includes.h>;
 import wrl;
-import d3d12;
 import Core;
 
 import :Types;

@@ -1,5 +1,6 @@
 export module HAL:Buffer;
-
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 export import :Types;
 export import :Concepts;
 import Core;
