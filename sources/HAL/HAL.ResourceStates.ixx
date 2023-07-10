@@ -57,57 +57,6 @@ export
 			return CommandListType::COPY;
 		}
 
-		//CommandListType GetBestType(const ResourceState& states)
-		//{
-		//	if (states == ResourceState::COMMON)
-		//		return CommandListType::DIRECT;
-
-		//	if ((states & COPY_STATES) == states)
-		//	{
-		//		return CommandListType::COPY;
-		//	}
-
-		//	if ((states & COMPUTE_STATES) == states)
-		//	{
-		//		return CommandListType::COMPUTE;
-		//	}
-
-		//	return CommandListType::DIRECT;
-		//}
-
-		//CommandListType GetBestType(const ResourceState& states, CommandListType preferred_type)
-		//{
-		//	if (states == ResourceState::COMMON)
-		//		return CommandListType::DIRECT;
-
-		//	if ((states & COPY_STATES) == states && preferred_type == CommandListType::COPY)
-		//	{
-		//		return CommandListType::COPY;
-		//	}
-
-		//	if ((states & COMPUTE_STATES) == states && (preferred_type == CommandListType::COMPUTE || preferred_type == CommandListType::COPY))
-		//	{
-		//		return CommandListType::COMPUTE;
-		//	}
-
-		//	return CommandListType::DIRECT;
-		//}
-
-		//bool can_merge_state(const ResourceState& source, const ResourceState& need)
-		//{
-		//	//assert(source != ResourceState::UNKNOWN);
-		////	assert(need != ResourceState::UNKNOWN);
-
-		//	if (source == need) return true;
-
-		//	//ResourceState merged = source | need;
-		//	//if (check(merged & (~ResourceState::GEN_READ)))
-		//	//{
-		//	//	return false;
-		//	//}
-
-		//	return true;
-		//}
 
 
 		std::optional<ResourceState> merge_state(const ResourceState& source, const ResourceState& need)

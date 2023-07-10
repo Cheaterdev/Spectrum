@@ -33,39 +33,16 @@ namespace HAL
 	{
 		return barriers;
 	}
-	//void Barriers::uav(Resource* resource)
-	//{
-	//	barriers.emplace_back(BarrierUAV{ resource });// CD3DX12_RESOURCE_BARRIER::UAV((resource)->get_dx()));
-	//}
 
-	//void Barriers::alias(Resource* from, Resource* to)
-	//{
-	//	barriers.emplace_back(BarrierAlias{ from, to });// (CD3DX12_RESOURCE_BARRIER::Aliasing(native_from, native_to));
-	//}
 
 	void Barriers::transition(const Resource* resource, ResourceState before, ResourceState after, UINT subres, BarrierFlags flags)
 	{
-		//if (before == ResourceStates::RAYTRACING_STRUCTURE) return; // TODO: make proper target state for raytrace
-		//if (after == ResourceStates::RAYTRACING_STRUCTURE) return; // TODO: make proper target state for raytrace
 		assert(resource);
-
-	//	assert(before != ResourceStates::UNKNOWN);
-	//	assert(after != ResourceStates::UNKNOWN);
 
 		assert(IsFullySupport(type, before));
 		assert(IsFullySupport(type, after));
 
 		barriers.emplace_back(Barrier{ const_cast<Resource*>(resource) ,before ,after ,subres ,flags });//
-		//D3D12_RESOURCE_BARRIER_FLAGS native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_NONE;
-
-		//if (flags == BarrierFlags::BEGIN) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY;
-		//if (flags == BarrierFlags::END) native_flags = D3D12_RESOURCE_BARRIER_FLAGS::D3D12_RESOURCE_BARRIER_FLAG_END_ONLY;
-
-		//native.emplace_back(CD3DX12_RESOURCE_BARRIER::ResourceUsage((resource)->get_dx(),
-		//	static_cast<D3D12_RESOURCE_STATES>(before),
-		//	static_cast<D3D12_RESOURCE_STATES>(after),
-		//	subres== ALL_SUBRESOURCES? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES:subres,
-		//	native_flags));
 
 		validate();
 	}

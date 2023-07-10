@@ -20,9 +20,9 @@ namespace HAL
 			native_desc.Properties.Type = ::to_native(desc.Type);
 			native_desc.Properties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 
-			if(native_desc.Properties.Type==D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD )
+			if(native_desc.Properties.Type==D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_UPLOAD&&device.get_properties().direct_gpu_upload_heap )
 			{
-			//native_desc.Properties.Type==D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_GPU_UPLOAD ;
+				native_desc.Properties.Type=D3D12_HEAP_TYPE::D3D12_HEAP_TYPE_GPU_UPLOAD ;
 			}
 			device.native_device->CreateHeap(&native_desc, IID_PPV_ARGS(&native_heap));
 

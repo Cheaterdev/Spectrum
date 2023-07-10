@@ -24,6 +24,7 @@ export namespace HAL
 		bool rtx = false;
 		bool mesh_shader = false;
 		bool full_bindless = false;
+		bool direct_gpu_upload_heap = false;
 	};
 	namespace API
 	{
