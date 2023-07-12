@@ -2,6 +2,7 @@ export module Graphics:ReflectionDenoiser;
 
 import Core;
 import HAL;
+import FrameGraph;
 
 export class ReflectionDenoiser :public Events::prop_handler, public FrameGraph::GraphGenerator
 {

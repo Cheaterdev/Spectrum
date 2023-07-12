@@ -402,29 +402,30 @@ namespace HAL
 	}
 
 
-	//void ResourceStateManager::stop_using(Transitions* list, UINT subres) const
-	//{
-	//	/*auto& state = get_state((list));
+	void ResourceStateManager::stop_using(Transitions* list, UINT subres) const
+	{
+		auto& state = get_state((list));
 
 
-	//	auto transit = [&](UINT i)
-	//	{
-	//		auto last_usage = state.get_last_usage(i);
+		auto transit = [&](UINT i)
+		{
+			auto last_usage = state.get_last_usage(i);
 
-	//		last_usage->last_used_point = (list)->get_last_usage_point();
-	//	};
+			last_usage->last_usage = (list)->get_last_usage_point();
+		};
 
 
-	//	if (state.all_states_same)
-	//	{
-	//		transit(ALL_SUBRESOURCES);
-	//	}
-	//	else
-	//	{
-	//		for (int i = 0; i < gpu_state.subres.size(); i++) transit(i);
-	//	}*/
+	/*	if (state.all_states_same)
+		{
+			transit(ALL_SUBRESOURCES);
+		}
+		else*/
+		if(state.used)
+		{
+			for (int i = 0; i < gpu_state.subres.size(); i++) transit(i);
+		}
 
-	//}
+	}
 	bool ResourceStateManager::transition(Transitions* from, Transitions* to) const
 	{
 

@@ -4,6 +4,7 @@ import <RenderSystem.h>;
 import windows;
 
 import HAL;
+import FrameGraph;
 
 using namespace FrameGraph;
 static const LPCTSTR cursors[] =

@@ -4,6 +4,7 @@ import <RenderSystem.h>;
 import Core;
 import HAL;
 
+import FrameGraph;
 
 import :Camera;
 

@@ -1,6 +1,7 @@
 export module Graphics:SMAA;
 import Core;
 import HAL;
+import FrameGraph;
 
 export class SMAA :Events::prop_handler, public FrameGraph::GraphGenerator
 {

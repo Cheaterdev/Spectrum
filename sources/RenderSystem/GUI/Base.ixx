@@ -2,7 +2,8 @@ export module GUI:Base;
 
 import Core;
 import windows;
-export import HAL;
+import FrameGraph;
+import HAL;
 
 export
 {

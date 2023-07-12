@@ -192,7 +192,6 @@ namespace HAL
 	{
 		//	create_transition_point(false);
 			//	id = -1;
-		Transitions::make_split_barriers();
 		current_pipeline = nullptr;
 
 		if (graphics) graphics->end();
@@ -260,7 +259,8 @@ namespace HAL
 		if (active)
 			end();
 
-
+			dynamic_cast<CommandList*>(this)->compile_transitions();
+	
 		auto ca = frame_resources->get_ca(type);
 	 compiler.compile(*ca);
 		 frame_resources->free_ca(ca);
@@ -867,37 +867,6 @@ namespace HAL
 	//}
 
 
-	void Transitions::make_split_barriers()
-	{
-		return;
-		//for (auto& point : transition_points)
-		//{
-		//	for (auto& transition : point.transitions)
-		//	{
-		//		auto prev_transition = transition.prev_transition;
-
-		//		if (!prev_transition) continue;
-
-		//		if (prev_transition->wanted_state == transition.wanted_state) continue;
-
-		//		auto prev_point = prev_transition->point->next_point;
-
-		//		assert(prev_point->start);
-		//		prev_point->compiled_transitions.transition(transition.resource,
-		//			prev_transition->wanted_state,
-		//			transition.wanted_state,
-		//			transition.subres, HAL::BarrierFlags::BEGIN);
-
-		//		transition.flags = HAL::BarrierFlags::END;
-		//		/*
-		//		transitions.transition(transition.resource,
-		//			prev_transition->wanted_state,
-		//			transition.wanted_state,
-		//			transition.subres);*/
-		//	}
-
-		//}
-	}
 
 	std::shared_ptr<TransitionCommandList> Transitions::fix_pretransitions()
 	{
@@ -1387,7 +1356,7 @@ namespace HAL
 			auto pipeline = get_base().current_pipeline;
 			for (auto& slot : pipeline->slots.slots_usage)
 			{
-				auto id = get_slot_id(slot);
+				auto id = get_table_index(slot);
 
 				if (tables[id].slot_id != slot)
 				{
@@ -1403,39 +1372,61 @@ namespace HAL
 			}
 		}
 	}
+
+	void SignatureDataSetter::stop_using(uint id)
+	{
+		auto& table = tables[id];
+
+		for (auto & res:table.resources)
+		{
+			base.stop_using(*res);
+		}
+	}
+
+
 	void SignatureDataSetter::set_pipeline(std::shared_ptr<PipelineStateBase> pipeline)
 	{
-		/*
-				{
-					for (auto& s : used_slots.slots_usage)
-					{
-						auto slot_id = get_slot_id(s);
-						auto& slot = slots[slot_id];
 
-						auto& used_tables = *slot.tables;
+		{
 
-						for (auto& id : used_tables)
-						{
-							auto& table = tables[id].table;
+			std::set<SlotID> diff;
 
-							for (UINT i = 0; i < (UINT)table.get_count(); ++i)
-							{
-								const auto& h = table[i];
+			std::set_difference(used_slots.slots_usage.begin(), used_slots.slots_usage.end(), pipeline->slots.slots_usage.begin(), pipeline->slots.slots_usage.end(),
+				std::inserter(diff, diff.begin()));
 
-								base.stop_using(h.get_resource_info());
 
-							}
-						}
-					}
-				}
-				*/
+			for (auto& s : diff)
+			{
+				auto i = get_table_index(s);
+
+				if(tables[i].slot_id == s);
+				stop_using(i);
+				//auto& slot = slots[slot_id];
+
+				//for (auto& id : used_tables)
+				//{
+
+				//	stop_using(id);
+				//	/*auto& table = tables[id].table;
+
+				//	for (UINT i = 0; i < (UINT)table.get_count(); ++i)
+				//	{
+				//		const auto& h = table[i];
+
+				//		base.stop_using(h.get_resource_info());
+
+				//	}*/
+				//}
+			}
+		}
+				
 		if (pipeline->root_signature)
 			set_signature(pipeline->root_signature);
 
 		base.set_pipeline_internal(pipeline.get());
 
 
-		//	used_slots = pipeline->slots;
+		used_slots = pipeline->slots;
 	}
 
 

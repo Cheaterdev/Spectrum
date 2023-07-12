@@ -1,5 +1,6 @@
 
 import GUI;
+import HAL;
 
 using namespace HAL;
 namespace GUI

@@ -683,8 +683,13 @@ export D3D12_BARRIER_SYNC  to_native(BarrierSync flags)
 	if (check(flags & BarrierSync::VIDEO_ENCODE)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_VIDEO_ENCODE;
 	if (check(flags & BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_BUILD_RAYTRACING_ACCELERATION_STRUCTURE;
 	if (check(flags & BarrierSync::COPY_RAYTRACING_ACCELERATION_STRUCTURE)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_COPY_RAYTRACING_ACCELERATION_STRUCTURE;
-	if (check(flags & BarrierSync::SPLIT)) result |= D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_SPLIT;
 
+	if (check(flags & BarrierSync::SPLIT))
+	{
+		assert(flags == BarrierSync::SPLIT);
+		result = D3D12_BARRIER_SYNC::D3D12_BARRIER_SYNC_SPLIT;
+	}
+		
 
 	return result;
 }

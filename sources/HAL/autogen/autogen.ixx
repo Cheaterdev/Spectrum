@@ -194,7 +194,7 @@ export
 	#include "pso\DenoiserDownsample.h"
 	#include "rtx\MainRTX.h"
 	std::optional<SlotID> get_slot(std::string_view slot_name);
-	UINT get_slot_id(SlotID id);
+	UINT get_table_index(SlotID id);
 	std::string get_slot_name(SlotID id);
 }
 std::optional<SlotID> get_slot(std::string_view slot_name)
@@ -501,7 +501,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	}
 	return std::nullopt;
 }
-UINT get_slot_id(SlotID id)
+UINT get_table_index(SlotID id)
 {
 	if(id == SlotID::TextureRenderer)
 	{

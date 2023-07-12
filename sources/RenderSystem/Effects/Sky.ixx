@@ -4,6 +4,7 @@ export module Graphics:Sky;
 
 import Core;
 import HAL;
+import FrameGraph;
 
 export class CubeMapEnviromentProcessor : public Singleton<CubeMapEnviromentProcessor>, public FrameGraph::GraphGenerator
 {

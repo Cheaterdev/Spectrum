@@ -2,6 +2,7 @@ export module Graphics:BlueNoise;
 
 import :BinaryAsset;
 import :Asset;
+import FrameGraph;
 
 
 export class BlueNoise:public FrameGraph::GraphGenerator

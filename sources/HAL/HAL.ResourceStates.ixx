@@ -88,6 +88,7 @@ export
 		}
 		enum class BarrierFlags : UINT
 		{
+			NONE = 0,
 			BEGIN = 1,
 			END = 2,
 			SINGLE = BEGIN | END,
@@ -144,13 +145,15 @@ export
 
 		struct UsagePoint
 		{
+			uint index;
 			std::list<HAL::ResourceUsage> usages;
+				HAL::Barriers  transitions;
 
 			bool start = false;
 			UsagePoint* prev_point = nullptr;
 			UsagePoint* next_point = nullptr;
 
-			UsagePoint(CommandListType type)
+			UsagePoint(CommandListType type):transitions(type)
 			{
 			}
 		};
@@ -518,7 +521,7 @@ export
 
 			SubResourcesCPU& get_cpu_state(Transitions* list) const;
 
-	//		void stop_using(Transitions* list, UINT subres) const;
+			void stop_using(Transitions* list, UINT subres) const;
 
 
 			bool is_used(Transitions* list) const;

@@ -2,6 +2,7 @@ export module Graphics:ShadowDenoiser;
 
 import Core;
 import HAL;
+import FrameGraph;
 
 export class ShadowDenoiser :public Events::prop_handler, public FrameGraph::GraphGenerator
 {

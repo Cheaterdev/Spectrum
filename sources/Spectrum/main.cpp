@@ -7,6 +7,8 @@ import <RenderSystem.h>;
 
 import ppl;
 import Core;
+import FrameGraph;
+
 using namespace FrameGraph;
 using namespace HAL;
 

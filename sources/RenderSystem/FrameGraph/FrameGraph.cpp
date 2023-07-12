@@ -1,4 +1,4 @@
-module HAL:FrameGraph;
+module FrameGraph;
 import HAL;
 import Core;
 import <HAL.h>;

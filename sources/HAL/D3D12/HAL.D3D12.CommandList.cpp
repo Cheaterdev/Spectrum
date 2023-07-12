@@ -448,7 +448,7 @@ namespace HAL
 					if (check(e.flags &BarrierFlags::DISCARD)) 
 						barrier.Flags|= D3D12_TEXTURE_BARRIER_FLAG_DISCARD ;
 									
-
+					
 					textures.emplace_back(barrier);
 				}
 

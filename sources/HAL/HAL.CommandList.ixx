@@ -74,7 +74,7 @@ export{
 		class Transitions : public virtual CommandListBase
 		{
 			std::list<HAL::Resource*> used_resources;
-
+		
 	//		std::shared_ptr<TransitionCommandList> transition_list;
 
 			friend class SignatureDataSetter;
@@ -92,19 +92,19 @@ export{
 				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
 				auto point = &usage_points.emplace_back(type);
 
+						
 				if (prev_point) prev_point->next_point = point;
 				point->prev_point = prev_point;
 
 				point->start = !end;
-
+				point->index = usage_points.size();
 			/*	if (end)
 				{
 					assert(point->prev_point->start);
 				}*/
-				compiler.func([point, this](auto& list)
+				compiler.func([point](auto& list)
 					{
-						HAL::Barriers  transitions(type);
-
+					
 					/*	for (auto uav : point->uav_transitions)
 						{
 							transitions.uav(uav);
@@ -115,37 +115,9 @@ export{
 							transitions.alias(nullptr, uav);
 						}*/
 
-						for (auto& usage : point->usages)
-						{
-							auto prev_usage = usage.prev_usage;
-							auto prev_state = ResourceStates::NO_ACCESS;
+						
 
-							if (!prev_usage&&!usage.need_discard)  continue;
-							if (prev_usage)prev_state = prev_usage->wanted_state;
-
-							if (prev_state == usage.wanted_state) continue;
-
-							assert(prev_state.is_valid());
-							assert(usage.wanted_state.is_valid());
-
-
-							auto a = prev_state.get_best_cmd_type();
-							auto b = usage.wanted_state.get_best_cmd_type();
-
-							assert(IsCompatible(type,a));
-							assert(IsCompatible(type,b));
-
-							BarrierFlags flags = BarrierFlags::SINGLE;
-
-							if(usage.need_discard)  
-								flags |= BarrierFlags::DISCARD;
-							transitions.transition(usage.resource,
-								prev_state,
-								usage.wanted_state,
-								usage.subres, flags);
-						}
-
-						list.transitions(transitions);
+						list.transitions(point->transitions);
 
 						/*			{
 
@@ -159,7 +131,69 @@ export{
 					});
 			}
 
-			void make_split_barriers();
+			void compile_transitions()
+			{
+
+				for (auto& point : usage_points)
+				{
+					for (auto& usage : point.usages)
+					{
+						auto prev_usage = usage.prev_usage;
+						auto prev_state = ResourceStates::NO_ACCESS;
+
+						if (!prev_usage && !usage.need_discard)  continue;
+						if (prev_usage)prev_state = prev_usage->wanted_state;
+
+						if (prev_state == usage.wanted_state) continue;
+
+						assert(prev_state.is_valid());
+						assert(usage.wanted_state.is_valid());
+
+
+						auto a = prev_state.get_best_cmd_type();
+						auto b = usage.wanted_state.get_best_cmd_type();
+
+						assert(IsCompatible(type, a));
+						assert(IsCompatible(type, b));
+						BarrierFlags flags = BarrierFlags::NONE;
+
+						if (usage.need_discard)
+							flags |= BarrierFlags::DISCARD;
+
+						auto last_point = prev_usage?prev_usage->last_usage:nullptr;
+					
+						if(false&&last_point)
+						{
+						
+							auto sync_state = usage.wanted_state;
+
+							sync_state.operation=BarrierSync::SPLIT;
+
+							last_point->transitions.transition(usage.resource,
+							prev_state,
+							sync_state,
+							usage.subres, flags );
+
+
+								point.transitions.transition(usage.resource,
+							sync_state,
+							usage.wanted_state,
+							usage.subres, flags);
+
+
+						}else
+						{
+							point.transitions.transition(usage.resource,
+							prev_state,
+							usage.wanted_state,
+							usage.subres, flags );
+						}
+						
+						
+					}
+				}
+			
+			}
 
 			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
@@ -179,7 +213,7 @@ export{
 
 				//if (type == TransitionType::LAST) 			assert(!point->start);
 				HAL::ResourceUsage& usage = point->usages.emplace_back();
-
+		
 				usage.resource = const_cast<HAL::Resource*>(resource);
 				usage.subres = subres;
 				usage.wanted_state = state;
@@ -188,7 +222,7 @@ export{
 				return &usage;
 			}
 
-			HAL::UsagePoint* get_last_transition_point()
+			HAL::UsagePoint* get_last_usage_point()
 			{
 				return &usage_points.back();
 			}
@@ -302,7 +336,7 @@ export{
 					});
 			}
 
-		/*	void stop_using(const ResourceInfo& info)
+			void stop_using(const ResourceInfo& info)
 			{
 				if (!info.is_valid()) return;
 
@@ -311,7 +345,7 @@ export{
 					{
 						const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
 					});
-			}*/
+			}
 		};
 
 
@@ -567,7 +601,7 @@ export{
 			friend class CommandList;
 
 			RootSignature::ptr root_sig;
-			//		UsedSlots used_slots;
+			UsedSlots used_slots;
 		protected:
 			CommandList& base;
 			SignatureDataSetter(CommandList& base) :base(base) {
@@ -577,7 +611,7 @@ export{
 
 			virtual void set_const_buffer(UINT i, UINT offset, UINT v) = 0;
 
-
+			void stop_using(uint id);
 			void reset_tables()
 			{
 				root_sig = nullptr;
@@ -639,7 +673,7 @@ export{
 			template<class Compiled>
 			void set_slot(Compiled& compiled)
 			{
-			
+				stop_using(Compiled::Slot::ID);
 				auto& table = tables[Compiled::Slot::ID];
 				table.slot_id = Compiled::ID;
 				//	assert(!table.dirty);

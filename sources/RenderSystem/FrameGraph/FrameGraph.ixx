@@ -1,11 +1,8 @@
-export module HAL:FrameGraph;
+export module FrameGraph;
 
 export import "defines.h";
 import Core;
-import :Types;
-import :CommandList;
-import :ResourceViews;
-import :Texture;
+import HAL;
 
 using namespace HAL;
  export namespace FrameGraph

@@ -55,8 +55,6 @@ export import :Enums;
 export import :Autogen;
 
 
-export import :FrameGraph;
-
 export namespace HAL
 {
 	void init();

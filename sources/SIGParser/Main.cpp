@@ -766,7 +766,7 @@ export
 		}
 
 		stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
-		stream << "UINT get_slot_id(SlotID id);" << std::endl;
+		stream << "UINT get_table_index(SlotID id);" << std::endl;
 		stream << "std::string get_slot_name(SlotID id);" << std::endl;
 
 		stream.pop();
@@ -910,7 +910,7 @@ export
 
 
 		{
-			stream << "UINT get_slot_id(SlotID id)" << std::endl;
+			stream << "UINT get_table_index(SlotID id)" << std::endl;
 
 			stream << "{" << std::endl;
 
