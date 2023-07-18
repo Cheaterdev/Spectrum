@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VSLine
 	{
+		static constexpr SlotID ID = SlotID::VSLine;
 		float2 pos;
 		float4 color;
 		float2& GetPos() { return pos; }

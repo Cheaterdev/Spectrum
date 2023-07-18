@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Glyph
 	{
+		static constexpr SlotID ID = SlotID::Glyph;
 		float2 pos;
 		uint index;
 		float4 color;

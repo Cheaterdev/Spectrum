@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Triangle
 	{
+		static constexpr SlotID ID = SlotID::Triangle;
 		float lod;
 		mesh_vertex_input v;
 		float& GetLod() { return lod; }

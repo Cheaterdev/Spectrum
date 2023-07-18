@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DebugStruct
 	{
+		static constexpr SlotID ID = SlotID::DebugStruct;
 		uint4 v;
 		uint4& GetV() { return v; }
 		template<class Compiler>

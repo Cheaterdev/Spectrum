@@ -6,6 +6,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelLighting
 	{
+		static constexpr SlotID ID = SlotID::VoxelLighting;
 		HLSL::Texture3D<float4> albedo;
 		HLSL::Texture3D<float4> normals;
 		HLSL::Texture3D<float4> lower;

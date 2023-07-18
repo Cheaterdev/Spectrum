@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GatherPipelineGlobal
 	{
+		static constexpr SlotID ID = SlotID::GatherPipelineGlobal;
 		HLSL::StructuredBuffer<uint> meshes_count;
 		HLSL::Buffer<uint> commands;
 		HLSL::StructuredBuffer<uint>& GetMeshes_count() { return meshes_count; }

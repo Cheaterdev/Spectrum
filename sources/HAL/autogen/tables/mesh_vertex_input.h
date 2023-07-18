@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct mesh_vertex_input
 	{
+		static constexpr SlotID ID = SlotID::mesh_vertex_input;
 		float3 pos;
 		float3 normal;
 		float2 tc;

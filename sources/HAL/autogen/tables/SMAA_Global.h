@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SMAA_Global
 	{
+		static constexpr SlotID ID = SlotID::SMAA_Global;
 		float4 subsampleIndices;
 		float4 SMAA_RT_METRICS;
 		HLSL::Texture2D<float4> colorTex;

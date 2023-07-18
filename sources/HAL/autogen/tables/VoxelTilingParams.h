@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelTilingParams
 	{
+		static constexpr SlotID ID = SlotID::VoxelTilingParams;
 		uint4 voxels_per_tile;
 		HLSL::StructuredBuffer<int3> tiles;
 		uint4& GetVoxels_per_tile() { return voxels_per_tile; }

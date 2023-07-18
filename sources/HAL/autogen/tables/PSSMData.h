@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PSSMData
 	{
+		static constexpr SlotID ID = SlotID::PSSMData;
 		HLSL::Texture2DArray<float> light_buffer;
 		HLSL::StructuredBuffer<Camera> light_cameras;
 		HLSL::Texture2DArray<float>& GetLight_buffer() { return light_buffer; }

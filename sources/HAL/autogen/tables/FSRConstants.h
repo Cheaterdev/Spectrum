@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FSRConstants
 	{
+		static constexpr SlotID ID = SlotID::FSRConstants;
 		uint4 Const0;
 		uint4 Const1;
 		uint4 Const2;

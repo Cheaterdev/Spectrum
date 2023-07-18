@@ -598,7 +598,7 @@ VoxelGI::ptr voxel_gi;
 						{
 							Slots::VoxelOutput output;
 							output.GetNoise() = data.RTXDebug->rwTexture2D;
-							output.set(compute);
+							compute.set(output);
 						}
 
 						{
@@ -608,7 +608,7 @@ VoxelGI::ptr voxel_gi;
 							gbuffer.SetTable(voxelScreen.GetGbuffer());
 							voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 					//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
-							voxelScreen.set(compute);
+							compute.set(voxelScreen);
 						}
 						RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
 

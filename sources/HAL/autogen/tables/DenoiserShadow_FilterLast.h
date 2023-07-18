@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserShadow_FilterLast
 	{
+		static constexpr SlotID ID = SlotID::DenoiserShadow_FilterLast;
 		HLSL::Texture2D<float16_t2> rqt2d_input;
 		HLSL::RWTexture2D<unorm float4> rwt2d_output;
 		HLSL::Texture2D<float16_t2>& GetRqt2d_input() { return rqt2d_input; }

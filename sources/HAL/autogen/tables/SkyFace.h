@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SkyFace
 	{
+		static constexpr SlotID ID = SlotID::SkyFace;
 		uint face;
 		uint& GetFace() { return face; }
 		template<class Compiler>

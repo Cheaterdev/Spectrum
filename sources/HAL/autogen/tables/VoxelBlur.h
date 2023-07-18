@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelBlur
 	{
+		static constexpr SlotID ID = SlotID::VoxelBlur;
 		HLSL::Texture2D<float4> noisy_output;
 		HLSL::Texture2D<float4> hit_and_pdf;
 		HLSL::Texture2D<float4> prev_result;

@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelScreen
 	{
+		static constexpr SlotID ID = SlotID::VoxelScreen;
 		HLSL::Texture3D<float4> voxels;
 		HLSL::TextureCube<float4> tex_cube;
 		HLSL::Texture2D<float4> prev_gi;

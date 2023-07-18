@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DownsampleDepth
 	{
+		static constexpr SlotID ID = SlotID::DownsampleDepth;
 		HLSL::Texture2D<float> srcTex;
 		HLSL::RWTexture2D<float> targetTex;
 		HLSL::Texture2D<float>& GetSrcTex() { return srcTex; }

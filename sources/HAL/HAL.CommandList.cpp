@@ -106,7 +106,7 @@ namespace HAL
 		Slots::DebugInfo info;
 		HAL::StructureBuffer<Table::DebugStruct>* structured = static_cast<HAL::StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
 		info.GetDebug() = structured->rwStructuredBuffer;
-		info.set(*setter);
+		setter->set(info);
 
 	}
 
@@ -181,9 +181,20 @@ namespace HAL
 				HAL::Device::get().get_descriptor_heap_factory().get_sampler_heap().get()
 			);
 
-			if (graphics) graphics->set_signature(Layouts::DefaultLayout);
-			if (compute) compute->set_signature(Layouts::DefaultLayout);
+			if (graphics) {
+				
+				graphics->set_signature(Layouts::DefaultLayout);
+				graphics->set_proxy(frame_resources->get_storage());
 
+			}
+			if (compute) 
+			{
+				
+				compute->set_signature(Layouts::DefaultLayout);
+				compute->set_proxy(frame_resources->get_storage());
+
+
+			}
 		}
 	}
 

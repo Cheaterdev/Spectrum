@@ -94,7 +94,7 @@ namespace FW1FontWrapper
         Slots::FontRenderingConstants gpu_constants;
 
         CopyMemory(&gpu_constants, &constants, sizeof(ShaderConstants));
-        gpu_constants.set(list->get_graphics());
+        list->get_graphics().set(gpu_constants);
 
 	//	list->get_graphics().get_shader_data<FontSig>().geometry.set_raw(constants);
   

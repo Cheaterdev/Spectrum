@@ -8,6 +8,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SceneData
 	{
+		static constexpr SlotID ID = SlotID::SceneData;
 		HLSL::StructuredBuffer<node_data> nodes;
 		HLSL::StructuredBuffer<MeshCommandData> meshes;
 		HLSL::StructuredBuffer<MaterialCommandData> materials;

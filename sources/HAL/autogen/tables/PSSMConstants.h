@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PSSMConstants
 	{
+		static constexpr SlotID ID = SlotID::PSSMConstants;
 		int level;
 		float time;
 		int& GetLevel() { return level; }

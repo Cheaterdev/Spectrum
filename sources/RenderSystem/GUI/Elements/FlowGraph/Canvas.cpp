@@ -23,7 +23,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 	graph_data.GetSize() = vec4(render_bounds->size, user_ui->size.get());
 	graph_data.GetOffset_size() = vec4(contents->pos.get(), 1.0f / contents->scale, 0);
 	graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
-	graph_data.set(c.command_list->get_graphics());
+	c.command_list->get_graphics().set(graph_data);
 
 	c.renderer->draw(c, HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::CanvasBack>(), get_render_bounds());
 
@@ -63,7 +63,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 		{
 			Slots::LineRender linedata;
 			linedata.GetVb() = view.structuredBuffer;
-			linedata.set(c.command_list->get_graphics());
+			c.command_list->get_graphics().set(linedata);
 		}
 		c.command_list->get_graphics().draw(count * 4, 0);
 	}

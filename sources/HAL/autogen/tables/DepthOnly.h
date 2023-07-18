@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DepthOnly
 	{
+		static constexpr SlotID ID = SlotID::DepthOnly;
 		HLSL::Texture2D<float> depth;
 		HLSL::Texture2D<float>& GetDepth() { return depth; }
 		template<class Compiler>

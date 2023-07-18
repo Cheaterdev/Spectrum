@@ -90,7 +90,7 @@ namespace GUI
       
         color_data.GetColor() = color;
 
-        color_data.set(c.command_list->get_graphics());
+        c.command_list->get_graphics().set(color_data);
 
         c.command_list->get_graphics().set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
         c.command_list->get_graphics().set_pipeline<PSOS::SimpleRect>();

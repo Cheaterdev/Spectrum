@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserReflectionCommon
 	{
+		static constexpr SlotID ID = SlotID::DenoiserReflectionCommon;
 		float4x4 g_inv_view_proj;
 		float4x4 g_proj;
 		float4x4 g_inv_proj;

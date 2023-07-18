@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct RaytracingRays
 	{
+		static constexpr SlotID ID = SlotID::RaytracingRays;
 		float pixelAngle;
 		HLSL::RWTexture2D<float4> output;
 		GBuffer gbuffer;

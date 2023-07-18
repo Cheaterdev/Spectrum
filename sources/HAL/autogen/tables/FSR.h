@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FSR
 	{
+		static constexpr SlotID ID = SlotID::FSR;
 		HLSL::Texture2D<float4> source;
 		HLSL::RWTexture2D<float4> target;
 		FSRConstants constants;

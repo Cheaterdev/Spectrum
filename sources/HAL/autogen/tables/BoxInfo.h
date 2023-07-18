@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct BoxInfo
 	{
+		static constexpr SlotID ID = SlotID::BoxInfo;
 		uint node_offset;
 		uint mesh_id;
 		uint& GetNode_offset() { return node_offset; }

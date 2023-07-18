@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct BlueNoise
 	{
+		static constexpr SlotID ID = SlotID::BlueNoise;
 		uint frame_index;
 		HLSL::Buffer<uint> sobol_buffer;
 		HLSL::Buffer<uint> ranking_tile_buffer;

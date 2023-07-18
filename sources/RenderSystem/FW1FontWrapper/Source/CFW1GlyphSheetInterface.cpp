@@ -56,7 +56,7 @@ namespace FW1FontWrapper
 		rendering.GetPositions() = m_pCoordBuffer->resource->create_view<HAL::FormattedBufferView<float4, HAL::Format::R32G32B32A32_FLOAT>>(*list).buffer;
 		rendering.GetTex0() = m_pTexture->texture_2d().texture2D;
 
-		rendering.set(list->get_graphics());
+		list->get_graphics().set(rendering);
 
 		return S_OK;
 	}

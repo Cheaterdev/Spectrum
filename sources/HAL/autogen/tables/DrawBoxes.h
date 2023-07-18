@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DrawBoxes
 	{
+		static constexpr SlotID ID = SlotID::DrawBoxes;
 		HLSL::StructuredBuffer<float4> vertices;
 		HLSL::StructuredBuffer<BoxInfo> input_meshes;
 		HLSL::RWStructuredBuffer<uint> visible_meshes;

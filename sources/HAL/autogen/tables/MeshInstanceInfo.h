@@ -7,6 +7,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MeshInstanceInfo
 	{
+		static constexpr SlotID ID = SlotID::MeshInstanceInfo;
 		HLSL::StructuredBuffer<mesh_vertex_input> vertexes;
 		HLSL::StructuredBuffer<uint> indices;
 		HLSL::StructuredBuffer<Meshlet> meshlets;

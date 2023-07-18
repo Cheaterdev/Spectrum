@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserHistoryFix
 	{
+		static constexpr SlotID ID = SlotID::DenoiserHistoryFix;
 		HLSL::Texture2D<float4> color;
 		HLSL::Texture2D<float> frames;
 		HLSL::RWTexture2D<float4> target;

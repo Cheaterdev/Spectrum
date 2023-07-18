@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Test
 	{
+		static constexpr SlotID ID = SlotID::Test;
 		float data[16];
 		std::vector<HLSL::StructuredBuffer<MeshInstanceInfo>> instances;
 		std::vector<HLSL::Texture2D<float4>> tex;

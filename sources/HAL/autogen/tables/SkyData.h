@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SkyData
 	{
+		static constexpr SlotID ID = SlotID::SkyData;
 		float3 sunDir;
 		HLSL::Texture2D<float> depthBuffer;
 		HLSL::Texture2D<float4> transmittance;

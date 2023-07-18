@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct CopyTexture
 	{
+		static constexpr SlotID ID = SlotID::CopyTexture;
 		HLSL::Texture2D<float4> srcTex;
 		HLSL::Texture2D<float4>& GetSrcTex() { return srcTex; }
 		template<class Compiler>

@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DebugInfo
 	{
+		static constexpr SlotID ID = SlotID::DebugInfo;
 		HLSL::RWStructuredBuffer<DebugStruct> debug;
 		HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return debug; }
 		template<class Compiler>

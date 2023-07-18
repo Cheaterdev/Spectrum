@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FrameInfo
 	{
+		static constexpr SlotID ID = SlotID::FrameInfo;
 		float4 time;
 		float4 sunDir;
 		HLSL::Texture2D<float4> bestFitNormals;

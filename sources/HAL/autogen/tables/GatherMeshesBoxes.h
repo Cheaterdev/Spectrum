@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GatherMeshesBoxes
 	{
+		static constexpr SlotID ID = SlotID::GatherMeshesBoxes;
 		HLSL::StructuredBuffer<BoxInfo> input_meshes;
 		HLSL::StructuredBuffer<uint> visible_boxes;
 		HLSL::AppendStructuredBuffer<uint> visibleMeshes;

@@ -1,4 +1,5 @@
 export module HAL:Concepts;
+import Core;
 
 export
 {
@@ -113,6 +114,39 @@ template<CompilableClass T>
 		requires (T t) {
 		T::compile;
 	};
+
+
+
+	enum class SIG_TYPE:uint
+	{
+		Slot,
+		RT,
+		RTX,
+		PSO,
+		Layout
+	};
+
+		enum class SIG_TYPE_COMPILED:uint
+	{
+		Slot,
+		RT,
+		RTX,
+		PSO,
+		Layout
+	};
+
+	namespace SIG_TYPES
+	{
+		template<typename T> concept Slot =T::TYPE == SIG_TYPE::Slot;
+	
+	}
+	
+
+	namespace SIG_TYPES_COMPILED
+	{
+		template<typename T> concept Slot = T::TYPE == SIG_TYPE_COMPILED::Slot;
+	
+	}
 
 }
 

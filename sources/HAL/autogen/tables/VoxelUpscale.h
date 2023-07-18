@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelUpscale
 	{
+		static constexpr SlotID ID = SlotID::VoxelUpscale;
 		HLSL::Texture2D<float4> tex_downsampled;
 		HLSL::Texture2D<float4> tex_gi_prev;
 		HLSL::Texture2D<float> tex_depth_prev;

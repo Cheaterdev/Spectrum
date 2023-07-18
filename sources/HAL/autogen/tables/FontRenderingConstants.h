@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FontRenderingConstants
 	{
+		static constexpr SlotID ID = SlotID::FontRenderingConstants;
 		float4x4 TransformMatrix;
 		float4 ClipRect;
 		float4x4& GetTransformMatrix() { return TransformMatrix; }

@@ -99,7 +99,7 @@ void BlueNoise::generate(FrameGraph::Graph& graph)
 				blue_data.GetScrambling_tile_buffer() = HLSL::Buffer<uint>(scrambling_buffer_view.structuredBuffer);
 
 				blue_data.GetBlue_noise_texture() = data.BlueNoise->rwTexture2D;
-				blue_data.set(compute);
+				compute.set(blue_data);
 			}
 
 			compute.dispach(data.BlueNoise->get_size());

@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Raytracing
 	{
+		static constexpr SlotID ID = SlotID::Raytracing;
 		HLSL::RaytracingAccelerationStructure scene;
 		HLSL::RaytracingAccelerationStructure& GetScene() { return scene; }
 		template<class Compiler>

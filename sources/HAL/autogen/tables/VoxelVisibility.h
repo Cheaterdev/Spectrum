@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelVisibility
 	{
+		static constexpr SlotID ID = SlotID::VoxelVisibility;
 		HLSL::Texture3D<uint> visibility;
 		HLSL::AppendStructuredBuffer<uint4> visible_tiles;
 		HLSL::Texture3D<uint>& GetVisibility() { return visibility; }

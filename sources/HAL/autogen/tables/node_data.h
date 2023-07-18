@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct node_data
 	{
+		static constexpr SlotID ID = SlotID::node_data;
 		float4x4 node_global_matrix;
 		float4x4 node_global_matrix_prev;
 		float4x4 node_inverse_matrix;

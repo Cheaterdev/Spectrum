@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Countour
 	{
+		static constexpr SlotID ID = SlotID::Countour;
 		float4 color;
 		HLSL::Texture2D<float4> tex;
 		float4& GetColor() { return color; }

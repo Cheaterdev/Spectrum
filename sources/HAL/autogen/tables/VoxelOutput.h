@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelOutput
 	{
+		static constexpr SlotID ID = SlotID::VoxelOutput;
 		HLSL::Texture2D<float2> blueNoise;
 		HLSL::RWTexture2D<float4> noise;
 		HLSL::RWTexture2D<float> frames;

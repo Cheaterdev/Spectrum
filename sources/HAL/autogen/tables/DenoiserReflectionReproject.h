@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserReflectionReproject
 	{
+		static constexpr SlotID ID = SlotID::DenoiserReflectionReproject;
 		HLSL::Texture2D<float> g_depth_buffer;
 		HLSL::Texture2D<float4> g_normal;
 		HLSL::Texture2D<float> g_depth_buffer_history;

@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FrameClassificationInitDispatch
 	{
+		static constexpr SlotID ID = SlotID::FrameClassificationInitDispatch;
 		HLSL::StructuredBuffer<uint> hi_counter;
 		HLSL::StructuredBuffer<uint> low_counter;
 		HLSL::RWStructuredBuffer<DispatchArguments> hi_dispatch_data;

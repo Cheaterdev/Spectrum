@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelDebug
 	{
+		static constexpr SlotID ID = SlotID::VoxelDebug;
 		HLSL::Texture3D<float4> volume;
 		GBuffer gbuffer;
 		HLSL::Texture3D<float4>& GetVolume() { return volume; }

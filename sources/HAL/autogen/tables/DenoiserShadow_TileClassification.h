@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserShadow_TileClassification
 	{
+		static constexpr SlotID ID = SlotID::DenoiserShadow_TileClassification;
 		float3 Eye;
 		int FirstFrame;
 		int2 BufferDimensions;

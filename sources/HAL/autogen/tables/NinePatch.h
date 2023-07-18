@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct NinePatch
 	{
+		static constexpr SlotID ID = SlotID::NinePatch;
 		HLSL::StructuredBuffer<vertex_input> vb;
 		std::vector<HLSL::Texture2D<float4>> textures;
 		HLSL::StructuredBuffer<vertex_input>& GetVb() { return vb; }

@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserShadow_Filter
 	{
+		static constexpr SlotID ID = SlotID::DenoiserShadow_Filter;
 		float4x4 ProjectionInverse;
 		int2 BufferDimensions;
 		float2 InvBufferDimensions;

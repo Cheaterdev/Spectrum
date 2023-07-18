@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct ColorRect
 	{
+		static constexpr SlotID ID = SlotID::ColorRect;
 		float4 pos[2];
 		float4 color;
 		float4* GetPos() { return pos; }

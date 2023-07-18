@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MaterialCommandData
 	{
+		static constexpr SlotID ID = SlotID::MaterialCommandData;
 		uint material_cb;
 		uint pipeline_id;
 		uint& GetMaterial_cb() { return material_cb; }

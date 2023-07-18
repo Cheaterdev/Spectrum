@@ -26,7 +26,7 @@ void BRDF::create_new()
 	{
 		Slots::BRDF data;
 		data.GetOutput() = texture->texture_3d().mips[0].rwTexture3D;
-		data.set(compute_context);
+		compute_context.set(data);
 	}
 
 	compute_context.dispach(texture->get_size(), ivec3(4, 4, 4));

@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct ReflectionCombine
 	{
+		static constexpr SlotID ID = SlotID::ReflectionCombine;
 		HLSL::Texture2D<float4> reflection;
 		HLSL::RWTexture2D<float4> target;
 		GBuffer gbuffer;

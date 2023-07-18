@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct RaytraceInstanceInfo
 	{
+		static constexpr SlotID ID = SlotID::RaytraceInstanceInfo;
 		HLSL::StructuredBuffer<mesh_vertex_input> vertexes;
 		HLSL::StructuredBuffer<uint> indices;
 		HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return vertexes; }

@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserShadow_FilterLocal
 	{
+		static constexpr SlotID ID = SlotID::DenoiserShadow_FilterLocal;
 		HLSL::Texture2D<float16_t2> rqt2d_input;
 		HLSL::RWTexture2D<float2> rwt2d_output;
 		HLSL::Texture2D<float16_t2>& GetRqt2d_input() { return rqt2d_input; }

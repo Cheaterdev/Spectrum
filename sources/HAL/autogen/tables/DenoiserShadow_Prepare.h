@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct DenoiserShadow_Prepare
 	{
+		static constexpr SlotID ID = SlotID::DenoiserShadow_Prepare;
 		int2 BufferDimensions;
 		HLSL::Texture2D<uint> t2d_hitMaskResults;
 		HLSL::RWStructuredBuffer<uint> rwsb_shadowMask;

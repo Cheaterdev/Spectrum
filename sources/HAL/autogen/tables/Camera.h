@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Camera
 	{
+		static constexpr SlotID ID = SlotID::Camera;
 		float4x4 view;
 		float4x4 proj;
 		float4x4 viewProj;

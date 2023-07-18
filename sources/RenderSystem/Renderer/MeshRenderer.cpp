@@ -44,8 +44,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	for (int i = 0; i < 8; i++)
 		commands_buffer[i]->reserve(list, meshes_count);
 
-	compiledScene.set(compute);
-	compiledScene.set(graphics);
+	graphics.set(compiledScene);
+	compute.set(compiledScene);
 
 	init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 
@@ -111,8 +111,8 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 	{
 		compute.set_pipeline<PSOS::InitDispatch>();
 
-		init_dispatch_compiled.set(compute);
-		from.set(compute);
+		compute.set(init_dispatch_compiled);
+		compute.set(from);
 
 
 		compute.dispach(1, 1, 1);
@@ -150,8 +150,8 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	{
 
 		compute.set_pipeline<PSOS::GatherMeshes>(PSOS::GatherMeshes::Invisible.Use(invisibleToo));
-		scene->compiledGather[(int)mesh_render_context->render_mesh].set(compute);
-		gather_neshes_boxes_compiled.set(compute);
+		compute.set(scene->compiledGather[(int)mesh_render_context->render_mesh]);
+		compute.set(gather_neshes_boxes_compiled);
 
 		graphics.execute_indirect(
 			dispatch_command,
@@ -191,8 +191,8 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 		meshes_ids->buffer->clear_counter(mesh_render_context->list);
 
 		compute.set_pipeline<PSOS::GatherBoxes>();
-		gather_boxes_compiled.set(compute);
-		gatherData.set(compute);
+		compute.set(gather_boxes_compiled);
+		compute.set(gatherData);
 
 		{
 			PROFILE_GPU(L"dispach");
@@ -234,7 +234,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	list.clear_uav(visible_boxes->buffer->rwByteAddressBuffer, ivec4{ 999,999,999,999 });
 
-	draw_boxes_compiled.set(graphics);
+	graphics.set(draw_boxes_compiled);
 
 	graphics.execute_indirect(
 		boxes_command,
@@ -293,8 +293,8 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			PROFILE_GPU(L"GatherMats");
 
 			compute.set_pipeline<PSOS::GatherPipeline>(PSOS::GatherPipeline::CheckFrustum.Use(needCulling));
-			gatherData.set(compute);
-			gather.set(compute);
+			compute.set(gatherData);
+			compute.set(gather);
 
 			{
 				PROFILE_GPU(L"dispach");
@@ -316,7 +316,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 					PROFILE_GPU(L"compile");
 
 					if (mesh_render_context->render_type == RENDER_TYPE::VOXEL)
-						mesh_render_context->voxelization_compiled.set(graphics);
+						graphics.set(mesh_render_context->voxelization_compiled);
 				}
 
 			for (auto it = begin; it != end; it++)

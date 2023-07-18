@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelCopy
 	{
+		static constexpr SlotID ID = SlotID::VoxelCopy;
 		HLSL::Texture3D<float4> Source[2];
 		HLSL::RWTexture3D<float4> Target[2];
 		VoxelTilingParams params;

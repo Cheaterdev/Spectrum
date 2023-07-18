@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GBufferDownsampleRT
 	{
+		static constexpr SlotID ID = SlotID::GBufferDownsampleRT;
 		HLSL::Texture2D<float> depth;
 		HLSL::Texture2D<float4> color;
 		HLSL::Texture2D<float>& GetDepth() { return depth; }

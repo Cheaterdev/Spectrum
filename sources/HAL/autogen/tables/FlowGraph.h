@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FlowGraph
 	{
+		static constexpr SlotID ID = SlotID::FlowGraph;
 		float4 size;
 		float4 offset_size;
 		float2 inv_pixel;

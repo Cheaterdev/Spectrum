@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MeshCommandData
 	{
+		static constexpr SlotID ID = SlotID::MeshCommandData;
 		uint material_id;
 		uint node_offset;
 		uint mesh_cb;

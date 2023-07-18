@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct InitDispatch
 	{
+		static constexpr SlotID ID = SlotID::InitDispatch;
 		HLSL::RWStructuredBuffer<uint> counter;
 		HLSL::RWStructuredBuffer<DispatchArguments> dispatch_data;
 		HLSL::RWStructuredBuffer<uint>& GetCounter() { return counter; }

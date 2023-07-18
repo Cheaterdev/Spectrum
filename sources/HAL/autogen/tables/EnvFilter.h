@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct EnvFilter
 	{
+		static constexpr SlotID ID = SlotID::EnvFilter;
 		uint4 face;
 		float4 scaler;
 		uint4 size;

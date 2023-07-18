@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelMipMap
 	{
+		static constexpr SlotID ID = SlotID::VoxelMipMap;
 		HLSL::Texture3D<float4> SrcMip;
 		HLSL::RWTexture3D<float4> OutMips[3];
 		VoxelTilingParams params;

@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct AABB
 	{
+		static constexpr SlotID ID = SlotID::AABB;
 		float4 min;
 		float4 max;
 		float4& GetMin() { return min; }

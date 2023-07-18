@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MipMapping
 	{
+		static constexpr SlotID ID = SlotID::MipMapping;
 		uint SrcMipLevel;
 		uint NumMipLevels;
 		float2 TexelSize;

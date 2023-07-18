@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct VoxelInfo
 	{
+		static constexpr SlotID ID = SlotID::VoxelInfo;
 		float4 min;
 		float4 size;
 		uint4 voxels_per_tile;

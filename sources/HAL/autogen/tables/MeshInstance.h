@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MeshInstance
 	{
+		static constexpr SlotID ID = SlotID::MeshInstance;
 		uint vertex_offset;
 		uint index_offset;
 		uint& GetVertex_offset() { return vertex_offset; }

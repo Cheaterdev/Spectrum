@@ -303,7 +303,7 @@ if(!index_buffer)
 			Slots::NinePatch patch_data;
 			patch_data.GetVb() = view.structuredBuffer;
 			patch_data.GetTextures() = textures_handles;
-			patch_data.set(graphics);
+			graphics.set(patch_data);
 		}
 	}
 	

@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FontRendering
 	{
+		static constexpr SlotID ID = SlotID::FontRendering;
 		HLSL::Texture2D<float> tex0;
 		HLSL::Buffer<float4> positions;
 		HLSL::Texture2D<float>& GetTex0() { return tex0; }

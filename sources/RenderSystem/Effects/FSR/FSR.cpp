@@ -48,7 +48,7 @@ void FSR::generate(Graph& graph)
 					fsr.GetSource() = data.ResultTexture->texture2D;
 					fsr.GetTarget() = data.FSRTemp->rwTexture2D;
 
-					fsr.set(compute);
+					compute.set(fsr);
 				}
 
 				compute.dispach(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
@@ -65,7 +65,7 @@ void FSR::generate(Graph& graph)
 					fsr.GetSource() = data.FSRTemp->texture2D;
 					fsr.GetTarget() = data.ResultTextureUpscaled->rwTexture2D;
 
-					fsr.set(compute);
+					compute.set(fsr);
 				}
 
 				compute.dispach(ivec2{ frame.upscale_size }, ivec2{ 16,16 });

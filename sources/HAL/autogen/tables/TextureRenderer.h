@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct TextureRenderer
 	{
+		static constexpr SlotID ID = SlotID::TextureRenderer;
 		HLSL::Texture2D<float4> texture;
 		HLSL::Texture2D<float4>& GetTexture() { return texture; }
 		template<class Compiler>

@@ -139,8 +139,8 @@ void PSSM::generate(Graph& graph)
 				auto& camera = frameInfo.GetCamera();
 				//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 				camera = light_cam.camera_cb.current;
-				frameInfo.set(graphics);
-				frameInfo.set(compute);
+				graphics.set(frameInfo);
+				compute.set(frameInfo);
 			}
 
 			renderer->render(context, scene->get_ptr<Scene>());
@@ -244,8 +244,8 @@ void PSSM::generate(Graph& graph)
 					auto& camera = frameInfo.GetCamera();
 					//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 					camera = light_cam.camera_cb.current;
-					frameInfo.set(graphics);
-					frameInfo.set(compute);
+					graphics.set(frameInfo);
+					compute.set(frameInfo);
 				}
 				context->render_type = RENDER_TYPE::DEPTH;
 
@@ -288,7 +288,7 @@ void PSSM::generate(Graph& graph)
 
 				//lighting.GetLight_mask() = screen_light_mask.get_srv();
 
-				lighting.set(graphics);
+				graphics.set(lighting);
 			}
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
@@ -308,7 +308,7 @@ void PSSM::generate(Graph& graph)
 				Slots::PSSMData pssmdata;
 				pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
 				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-				pssmdata.set(graphics);
+				graphics.set(pssmdata);
 			}
 
 			for (int i = renders_size - 1; i >= 0; i--) //rangeees
@@ -318,7 +318,7 @@ void PSSM::generate(Graph& graph)
 					Slots::PSSMConstants constants;
 					constants.GetLevel() = i;
 					constants.GetTime() = 0;
-					constants.set(graphics);
+					graphics.set(constants);
 				}
 				graphics.draw(4);
 			}
@@ -371,7 +371,7 @@ void PSSM::generate(Graph& graph)
 				Slots::PSSMData pssmdata;
 				//	pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
 				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-				pssmdata.set(graphics);
+				graphics.set(pssmdata);
 			}
 
 			{
@@ -384,7 +384,7 @@ void PSSM::generate(Graph& graph)
 				else
 					lighting.GetLight_mask() = data.LightMask->texture2D;
 
-				lighting.set(graphics);
+				graphics.set(lighting);
 			}
 
 			{

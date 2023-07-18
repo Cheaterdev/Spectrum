@@ -72,7 +72,7 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 			}
 			data.GetSrcMip() = view.create_mip(TopMip, compute_context.get_base()).texture2D;
 		}
-		data.set(compute_context);
+		compute_context.set(data);
 
 		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
 
@@ -91,7 +91,7 @@ void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL
 	Slots::DownsampleDepth data;
 	data.GetSrcTex() = tex->texture_2d().texture2D;
 	data.GetTargetTex() = to->texture_2d().rwTexture2D;
-	data.set(compute_context);
+	compute_context.set(data);
 	compute_context.dispach(ivec2(tex->get_desc().as_texture().Dimensions.x, tex->get_desc().as_texture().Dimensions.y), ivec2(8, 8));
 
 }
@@ -103,7 +103,7 @@ void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL
 	Slots::DownsampleDepth data;
 	data.GetSrcTex() = tex.texture2D;
 	data.GetTargetTex() = to.rwTexture2D;
-	data.set(compute_context);
+compute_context.set(data);
 	compute_context.dispach(ivec2(tex.get_size()), ivec2(8, 8));
 
 }
@@ -124,7 +124,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 		{
 			Slots::GBuffer gbuffer;
 			buffer.SetTable(gbuffer);
-			gbuffer.set(list);
+			list.set(gbuffer);
 		}
 		list.set_pipeline<PSOS::QualityColor>();
 
@@ -143,7 +143,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 
 		Slots::GBufferQuality quality;
 		quality.GetRef() = tempColor.texture2D;
-		quality.set(list);
+		list.set(quality);
 
 		list.set_pipeline<PSOS::QualityToStencil>();
 
@@ -180,7 +180,7 @@ void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Text
 
 	Slots::CopyTexture data;
 	data.GetSrcTex() = from.texture2D;
-	data.set(list);
+	list.set(data);
 	{
 		RT::SingleColor rt;
 		rt.GetColor() = view.renderTarget;
@@ -200,7 +200,7 @@ void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, HAL::Te
 
 	Slots::CopyTexture data;
 	data.GetSrcTex() = from.texture2D;
-	data.set(list);
+list.set(data);
 	{
 		RT::SingleColor rt;
 		rt.GetColor() = to.renderTarget;
@@ -216,7 +216,7 @@ void MipMapGenerator::write_to_depth(HAL::GraphicsContext& list, HAL::TextureVie
 	list.set_pipeline<PSOS::RenderToDS>();
 	Slots::CopyTexture data;
 	data.GetSrcTex() = from.texture2D;
-	data.set(list);
+list.set(data);
 
 	list.set_viewport(to.get_viewport());
 	list.set_scissor(to.get_scissor());

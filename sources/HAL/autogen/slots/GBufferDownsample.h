@@ -3,6 +3,7 @@
 namespace Slots {
 	struct GBufferDownsample:public DataHolder<GBufferDownsample, SlotID::GBufferDownsample,Table::GBufferDownsample,DefaultLayout::Instance2>
 	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		GBufferDownsample() = default;
 	};
 }

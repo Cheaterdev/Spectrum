@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct GatherPipeline
 	{
+		static constexpr SlotID ID = SlotID::GatherPipeline;
 		uint4 pip_ids[2];
 		HLSL::AppendStructuredBuffer<CommandData> commands[8];
 		uint4* GetPip_ids() { return pip_ids; }

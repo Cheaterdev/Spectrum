@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct PSSMLighting
 	{
+		static constexpr SlotID ID = SlotID::PSSMLighting;
 		HLSL::Texture2D<float> light_mask;
 		GBuffer gbuffer;
 		HLSL::Texture2D<float>& GetLight_mask() { return light_mask; }

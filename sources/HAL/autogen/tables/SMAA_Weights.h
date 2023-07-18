@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct SMAA_Weights
 	{
+		static constexpr SlotID ID = SlotID::SMAA_Weights;
 		HLSL::Texture2D<float4> areaTex;
 		HLSL::Texture2D<float4> searchTex;
 		HLSL::Texture2D<float4> edgesTex;

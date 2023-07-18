@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MeshletCullData
 	{
+		static constexpr SlotID ID = SlotID::MeshletCullData;
 		float4 BoundingSphere;
 		uint NormalCone;
 		float ApexOffset;

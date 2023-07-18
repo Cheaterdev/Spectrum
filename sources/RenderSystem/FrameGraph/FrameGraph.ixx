@@ -804,7 +804,7 @@ using namespace HAL;
 		{
 			SlotID id = Compiled::ID;
 			slot_setters[id] = [compiled](HAL::SignatureDataSetter& setter) {
-				compiled.set(setter);
+				setter.set(compiled);
 			};
 		}
 

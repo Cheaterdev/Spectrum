@@ -74,7 +74,7 @@ void SkyRender::generate_sky(Graph& graph)
 
 				skydata.GetSunDir() = sky.sunDir;
 
-				skydata.set(graphics);
+				graphics.set(skydata);
 
 			}
 
@@ -131,7 +131,7 @@ void SkyRender::generate(Graph& graph)
 				data.GetIrradiance() = irradiance->texture_2d().texture2D;
 				data.GetTransmittance() = transmittance->texture_2d().texture2D;
 				data.GetSunDir() = sky.sunDir;
-				data.set(graphics);
+				graphics.set(data);
 
 			}
 
@@ -157,7 +157,7 @@ void SkyRender::generate(Graph& graph)
 
 					skyFace.GetFace() = i;
 
-					skyFace.set(graphics);
+					graphics.set(skyFace);
 
 						{
 				RT::SingleColor rt;
@@ -232,7 +232,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 			Slots::EnvSource downsample;
 			downsample.GetSourceTex() = data.sky_cubemap->textureCube;
-			downsample.set(graphics);
+			graphics.set(downsample);
 
 
 
@@ -265,7 +265,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 					filter.GetScaler().x = (float(m) + 0.5f) / count;
 					filter.GetSize().x = (UINT)data.sky_cubemap->resource->get_desc().as_texture().Dimensions.x;
-					filter.set(graphics);
+					graphics.set(filter);
 
 					graphics.draw(4);
 				}
@@ -301,7 +301,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 				filter.GetScaler().x = (float(0) + 0.5f) / count;
 				filter.GetSize().x = (UINT)data.sky_cubemap_filtered_diffuse->resource->get_desc().as_texture().Dimensions.x;
-				filter.set(graphics);
+				graphics.set(filter);
 
 				graphics.draw(4);
 

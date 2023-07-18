@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct TilingPostprocess
 	{
+		static constexpr SlotID ID = SlotID::TilingPostprocess;
 		TilingParams tiling;
 		TilingParams& GetTiling() { return tiling; }
 		template<class Compiler>

@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct RayCone
 	{
+		static constexpr SlotID ID = SlotID::RayCone;
 		float width;
 		float angle;
 		float& GetWidth() { return width; }

@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Color
 	{
+		static constexpr SlotID ID = SlotID::Color;
 		float4 color;
 		float4& GetColor() { return color; }
 		template<class Compiler>

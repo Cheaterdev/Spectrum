@@ -210,6 +210,8 @@ void generate_table(Table& table)
 
 	{
 		stream.push();
+
+	
 		//	if (table.counts[ValueType::CB] != 0) stream << table.name << "_cb cb;" << std::endl;
 		//	if (table.counts[ValueType::SRV] != 0) stream << table.name << "_srv srv;" << std::endl;
 		//	if (table.counts[ValueType::UAV] != 0) stream << table.name << "_uav uav;" << std::endl;
@@ -416,6 +418,10 @@ void generate_cpp_table(const Table& table)
 		stream << "{" << std::endl;
 		{
 			stream.push();
+
+			stream << "static constexpr SlotID ID = SlotID::"  << table.name << ";"<< std::endl;
+
+
 			declare_func(ValueType::CB);
 			declare_func(ValueType::SRV);
 			declare_func(ValueType::UAV);
@@ -679,6 +685,7 @@ void generate_cpp_table(const Table& table)
 			{
 				stream.push();
 
+				stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;" << std::endl;
 
 				stream << table.name << "() = default;" << std::endl;
 

@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct RayPayload
 	{
+		static constexpr SlotID ID = SlotID::RayPayload;
 		float4 color;
 		float3 dir;
 		uint recursion;

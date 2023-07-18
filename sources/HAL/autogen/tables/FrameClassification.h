@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct FrameClassification
 	{
+		static constexpr SlotID ID = SlotID::FrameClassification;
 		HLSL::Texture2D<float> frames;
 		HLSL::AppendStructuredBuffer<uint2> hi;
 		HLSL::AppendStructuredBuffer<uint2> low;

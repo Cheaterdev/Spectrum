@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct vertex_input
 	{
+		static constexpr SlotID ID = SlotID::vertex_input;
 		float2 pos;
 		float2 tc;
 		float4 mulColor;

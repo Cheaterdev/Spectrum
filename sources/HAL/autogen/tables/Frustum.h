@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Frustum
 	{
+		static constexpr SlotID ID = SlotID::Frustum;
 		float4 planes[6];
 		float4* GetPlanes() { return planes; }
 		template<class Compiler>

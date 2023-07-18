@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Voxelization
 	{
+		static constexpr SlotID ID = SlotID::Voxelization;
 		HLSL::RWTexture3D<float4> albedo;
 		HLSL::RWTexture3D<float4> normals;
 		HLSL::RWTexture3D<uint> visibility;

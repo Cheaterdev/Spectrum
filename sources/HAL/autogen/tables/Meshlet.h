@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct Meshlet
 	{
+		static constexpr SlotID ID = SlotID::Meshlet;
 		uint vertexCount;
 		uint vertexOffset;
 		uint primitiveCount;

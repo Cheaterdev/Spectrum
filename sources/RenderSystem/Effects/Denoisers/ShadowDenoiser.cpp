@@ -63,7 +63,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					prepare_data.GetBufferDimensions() = size;
 					prepare_data.GetT2d_hitMaskResults() = data.RTXDebug->texture2D;
 					prepare_data.GetRwsb_shadowMask() = data.ShadowDenoiser_TileBuffer->rwStructuredBuffer;
-					prepare_data.set(compute);
+					compute.set(prepare_data);
 				}
 	//			if(!GetAsyncKeyState('5'))
 				compute.dispach(uint3(size, 1), uint3(k_tileSizeX * 4, k_tileSizeY * 4, 1));
@@ -150,7 +150,7 @@ void ShadowDenoiser::generate(Graph& graph)
 				classification_data.rwt2d_momentsBuffer = data.ShadowDenoiser_Moments->rwTexture2D;
 
 
-				classification_data.set(compute);
+				compute.set(classification_data);
 
 
 	//			if(!GetAsyncKeyState('6'))
@@ -205,7 +205,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					filter_data.sb_tileMetaData = data.ShadowDenoiser_TileMetaBuffer->structuredBuffer;
 
 
-					filter_data.set(compute);
+					compute.set(filter_data);
 				}
 
 				{
@@ -214,7 +214,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					Slots::DenoiserShadow_FilterLocal filter_data;
 					filter_data.GetRqt2d_input() = data.ShadowDenoiser_Scratch2->texture2D;
 					filter_data.GetRwt2d_output() = data.ShadowDenoiser_Scratch->rwTexture2D;
-					filter_data.set(compute);
+					compute.set(filter_data);
 
 					compute.dispach(uint3(size, 1));
 				}
@@ -226,7 +226,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					Slots::DenoiserShadow_FilterLocal filter_data;
 					filter_data.GetRqt2d_input() = data.ShadowDenoiser_Scratch->texture2D;
 					filter_data.GetRwt2d_output() = data.ShadowDenoiser_Scratch2->rwTexture2D;
-					filter_data.set(compute);
+					compute.set(filter_data);
 
 					compute.dispach(uint3(size, 1));
 				}
@@ -237,7 +237,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					Slots::DenoiserShadow_FilterLast filter_data;
 					filter_data.GetRqt2d_input() = data.ShadowDenoiser_Scratch2->texture2D;
 					filter_data.GetRwt2d_output() = data.RTXDebug->rwTexture2D;
-					filter_data.set(compute);
+					compute.set(filter_data);
 
 					compute.dispach(uint3(size, 1));
 

@@ -5,6 +5,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct LineRender
 	{
+		static constexpr SlotID ID = SlotID::LineRender;
 		HLSL::StructuredBuffer<VSLine> vb;
 		HLSL::StructuredBuffer<VSLine>& GetVb() { return vb; }
 		template<class Compiler>

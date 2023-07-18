@@ -4,6 +4,7 @@ namespace Table
 	#pragma pack(push, 1)
 	struct MeshInfo
 	{
+		static constexpr SlotID ID = SlotID::MeshInfo;
 		uint vertex_offset_local;
 		uint meshlet_offset_local;
 		uint node_offset;
