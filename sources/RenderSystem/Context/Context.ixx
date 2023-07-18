@@ -87,7 +87,7 @@ export{
 
 		std::shared_ptr<Graphics::OVRContext> eye_context;
 
-		HAL::CommandList::ptr list;
+		FrameGraph::FrameContext * frame_context= nullptr;
 
 		camera* cam = nullptr;
 		RENDER_TYPE render_type = RENDER_TYPE::PIXEL;

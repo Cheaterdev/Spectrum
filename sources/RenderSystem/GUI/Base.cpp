@@ -940,11 +940,9 @@ namespace GUI
             };
             graph.add_pass<no>("UI PREPARE", [this](no& data, TaskBuilder& builder) {
                 }, [this, &graph](no& data, FrameContext& context) {
-                    auto command_list = context.get_list();
-
                     for (auto& e : pre_draw_infos)
                     {
-                        e->pre_draw(command_list);
+                        e->pre_draw(context);
                     }
                 }, PassFlags::Required);
         }
@@ -968,14 +966,13 @@ namespace GUI
             use_graph(builder);
 			 }, [this,&graph, start, end](pass_data& data, FrameContext& context) {
 
-				 auto command_list = context.get_list();
 
 				 auto texture = (*data.o_texture);
 
                 {
 				RT::SingleColor rt;
 				rt.GetColor() =texture.renderTarget;
-				rt.set(command_list->get_graphics());
+				context.get_graphics().set_rt(rt);
 				}
 
                  Renderer renderer;
@@ -998,7 +995,7 @@ namespace GUI
                         if (c.scissors != e.scissors)
                         {
                             renderer.flush(c);
-                            command_list->get_graphics().set_scissors(e.scissors);
+                           context.get_graphics().set_scissors(e.scissors);
 
                         }
                         c.scale = e.scale;

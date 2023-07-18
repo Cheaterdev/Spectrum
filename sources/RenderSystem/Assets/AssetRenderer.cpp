@@ -72,20 +72,20 @@ public:
 
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
-					auto& command_list = _context.get_list();
 					auto& frame = graph.get_context<ViewportInfo>();
 					auto& scene = graph.get_context<SceneInfo>();
 					auto& cam = graph.get_context<CameraInfo>();
 
 					//graph.scene->init_ras();
+						auto& graphics = _context.get_graphics();
+							auto& compute = _context.get_compute();
 
-					command_list->get_graphics().set_signature(Layouts::DefaultLayout);
-					command_list->get_compute().set_signature(Layouts::DefaultLayout);
-
+			
+			
 					MeshRenderContext::ptr context(new MeshRenderContext());
 					context->current_time = (size_t)time;
 					context->priority = TaskPriority::HIGH;
-					context->list = command_list;
+					context->frame_context = &_context;
 
 					context->cam = cam.cam;
 
@@ -101,7 +101,7 @@ public:
 
 						rtv.GetMotion() = gbuffer.speed.renderTarget;
 						rtv.GetDepth() = gbuffer.depth.depthStencil;
-						gbuffer.compiled = rtv.compile(*command_list);
+						gbuffer.compiled = _context.compile(rtv);
 					}
 
 					{
@@ -109,16 +109,16 @@ public:
 
 						rtv.GetDepth() = gbuffer.HalfBuffer.hiZ_depth.depthStencil;
 
-							gbuffer.HalfBuffer.compiled = rtv.compile(*command_list);
+							gbuffer.HalfBuffer.compiled = _context.compile(rtv);
 					}
 					
 					context->g_buffer = &gbuffer;
 
 
-					gbuffer.compiled.set(context->list->get_graphics(), RTOptions::Default| RTOptions::ClearAll);
+					graphics.set_rt(gbuffer.compiled, RTOptions::Default| RTOptions::ClearAll);
 
-					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
-					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
+					graphics.set_slot(SlotID::FrameInfo);
+					compute.set_slot(SlotID::FrameInfo);
 
 
 					scene_renderer->render(context, scene.scene->get_ptr<Scene>());
@@ -143,7 +143,7 @@ public:
 			}, [](no& data, FrameContext& _context) {
 
 
-				MipMapGenerator::get().generate(_context.get_list()->get_compute(), *data.ResultTexture);
+				MipMapGenerator::get().generate(_context, *data.ResultTexture);
 			});
 
 

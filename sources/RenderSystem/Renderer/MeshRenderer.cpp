@@ -11,10 +11,10 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 {
 
 	// return;
-	auto& graphics = mesh_render_context->list->get_graphics();
-	auto& compute = mesh_render_context->list->get_compute();
-	auto& copy = mesh_render_context->list->get_copy();
-	auto& list = *mesh_render_context->list;
+	auto& graphics = mesh_render_context->frame_context->get_graphics();
+	auto& compute = mesh_render_context->frame_context->get_compute();
+	auto& copy = mesh_render_context->frame_context->get_copy();
+	//auto& list = *mesh_render_context->list;
 	GBuffer* gbuffer = mesh_render_context->g_buffer;
 	PROFILE_GPU(L"mesh_renderer");
 
@@ -44,8 +44,8 @@ void mesh_renderer::render(MeshRenderContext::ptr mesh_render_context, Scene::pt
 	for (int i = 0; i < 8; i++)
 		commands_buffer[i]->reserve(list, meshes_count);
 
-	compiledScene.set(compute);
-	compiledScene.set(graphics);
+	compute.set(compiledScene);
+	graphics.set(compiledScene);
 
 	init_dispatch(mesh_render_context, scene->compiledGather[(int)mesh_render_context->render_mesh]);
 

@@ -5,7 +5,7 @@ import Core;
 import HAL;
 
 using namespace HAL;
- export namespace FrameGraph
+export namespace FrameGraph
 {
 
 
@@ -41,7 +41,7 @@ using namespace HAL;
 		Changed = (1 << 13)
 	};
 
-	 constexpr ResourceFlags WRITEABLE_FLAGS =ResourceFlags::CopyDest |  ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
+	constexpr ResourceFlags WRITEABLE_FLAGS = ResourceFlags::CopyDest | ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::DepthStencil | ResourceFlags::GenCPU;
 
 	//struct BufferDesc
 	//{
@@ -93,7 +93,7 @@ using namespace HAL;
 		std::set<ResourceAllocInfo*> resources;
 		std::map<ResourceAllocInfo*, ResourceFlags> resource_flags;
 		std::set<ResourceAllocInfo*> resource_creations;
-			std::set<ResourceAllocInfo*> resource_deletions;
+		std::set<ResourceAllocInfo*> resource_deletions;
 	};
 
 
@@ -104,24 +104,24 @@ using namespace HAL;
 
 	public:
 		enum_array<CommandListType, const Pass*> values;
-		SyncState(){reset();}
+		SyncState() { reset(); }
 		void reset();
 		void set_synced(const Pass* pass);
-	
-		bool is_in_sync(const Pass* pass,bool equal = false);
-		bool is_in_sync(const SyncState&state);
 
-		bool is_sync_to(const SyncState&state);
+		bool is_in_sync(const Pass* pass, bool equal = false);
+		bool is_in_sync(const SyncState& state);
+
+		bool is_sync_to(const SyncState& state);
 
 
-			void min(const Pass*pass);
-		void max(const Pass*pass);
+		void min(const Pass* pass);
+		void max(const Pass* pass);
 
-		void min(const SyncState&state);
-		void max(const SyncState&state);
+		void min(const SyncState& state);
+		void max(const SyncState& state);
 
 	};
-	
+
 
 	struct ResourceRWState
 	{
@@ -517,7 +517,7 @@ using namespace HAL;
 	struct TaskBuilder
 	{
 		using MemoryAllocatorType = Allocators::HeapPageManager<ResourceContext, TaskBuilderResourceAllocationContext>;
-	
+
 	private:
 
 	public:
@@ -526,13 +526,13 @@ using namespace HAL;
 		std::map<std::string, ResourceAllocInfo> alloc_resources;
 
 		std::set<ResourceAllocInfo*> passed_resources;
-			std::list<std::shared_ptr<Pass>> required_passes;
+		std::list<std::shared_ptr<Pass>> required_passes;
 		std::list<Pass*> enabled_passes;
 		MemoryAllocatorType allocator;
 		HAL::FrameResourceManager frames;
 		HAL::FrameResources::ptr current_frame;
 
-	
+
 		Pass* current_pass = nullptr;
 		void begin(Pass* pass);
 
@@ -636,29 +636,141 @@ using namespace HAL;
 			return &info;
 		}
 	};
+	struct Graph;
+	struct FrameSetter
+	{
+		Graph *graph;
+		HAL::SignatureDataSetter* sig_setter;
+		template<class T>
+		void set_pipeline(KeyPair<typename T::Keys> k = KeyPair<typename T::Keys>())
+		{
+			sig_setter->set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
+		}
+
+		
+		void set_slot(SlotID id);
+		/*{
+			graph->slot_setters[id](*this);
+		}*/
+
+		template<class CompiledSlot>
+		void set(CompiledSlot& slot)
+		{
+			slot.set(*sig_setter);
+		}
 
 
+				void set_signature(const RootSignature::ptr& signature);
+	
+	};
 
-	struct FrameContext
+
+	struct GraphicsContext : public FrameSetter
+	{
+		HAL::GraphicsContext * context;
+		GraphicsContext(Graph *graph, HAL::CommandList::ptr list);
+		void set_index_buffer(HAL::Views::IndexBuffer index);
+
+		void set_scissors(sizer_long rect);
+		void set_viewports(std::vector<Viewport> viewports);
+					void set_viewport(Viewport viewport);
+			void set_viewport(vec4 viewport);
+		void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0);
+		void set_stencil_ref(UINT ref);
+
+		void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
+		void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
+
+
+		void dispatch_mesh(ivec3 v);
+		void execute_indirect(HAL::IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+
+			template<class CompiledSlot>
+		auto set_rt(CompiledSlot& rt, HAL::RTOptions options = HAL::RTOptions::Default, float depth = 1, uint stencil = 0)
+		{
+			return rt.set(*context,options,depth,stencil );
+		}
+	
+	};
+
+
+	struct ComputeContext : public FrameSetter
+	{
+		HAL::ComputeContext * context;
+
+		ComputeContext(Graph *graph, HAL::CommandList::ptr list);
+					void dispatch(int = 1, int = 1, int = 1);
+			void dispatch(ivec2, ivec2 = ivec2(8, 8));
+			void dispatch(ivec3, ivec3 = ivec3(4, 4, 4));
+
+		void execute_indirect(HAL::IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+
+
+		
+
+		void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
+		void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top);
+
+
+		template<class Hit, class Miss, class Raygen>
+		void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer) {
+			context->dispatch_rays(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
+		}
+	};
+
+
+	struct CopyContext //: public FrameSetter<HAL::CopyContext>
+	{
+			HAL::CopyContext * context;
+
+				CopyContext(Graph *graph, HAL::CommandList::ptr list);
+	
+	void copy_resource(HAL::Resource::ptr dest, HAL::Resource::ptr source);
+		void copy_buffer(HAL::Resource::ptr dest, uint64 dest_offset, HAL::Resource::ptr source, uint64 source_offset, uint64 size);
+			void copy_texture(const Resource::ptr& dest, int dest_subres, const Resource::ptr& source, int source_subres);
+		void copy_texture(const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos, ivec3 size);
+		/*
+		void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress address, texture_layout layout);
+		*///void read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, ResourceAddress target, texture_layout layout);
+
+	};
+	struct FrameContext: public GPUEntityStorageProxy
 	{
 		Pass* pass;
+		Graph* graph;
 		HAL::FrameResources::ptr frame;
 
 		std::list<HAL::ResourceView> textureViews;
 
 		HAL::CommandList::ptr list;
+		std::shared_ptr<GraphicsContext> graphics;
+		std::shared_ptr<ComputeContext> compute;
+		std::shared_ptr<CopyContext> copy;
 
-		HAL::CommandList::ptr& get_list();
+		auto& get_graphics(){	get_list(); return *graphics;}
+		auto& get_compute(){get_list();return *compute;}
+		auto& get_copy(){get_list();return *copy;}
+
 		void begin(Pass* pass, HAL::FrameResources::ptr& frame);
 		void end();
 
-
+			void clear_uav(const UAVHandle& h, vec4 ClearColor);
+		
 		void execute();
 
 		void register_subview(const HAL::ResourceView& view)
 		{
 			textureViews.push_back(view);
 		}
+
+
+		auto compile(auto&what)
+		{
+			return what.compile(*get_list());
+		}
+	private:
+				HAL::CommandList::ptr& get_list();
+
 	};
 
 
@@ -694,9 +806,9 @@ using namespace HAL;
 		int graphic_count = 0;
 		int compute_count = 0;
 		Pass* wait_pass = nullptr;
+			Graph* graph = nullptr;
 
 
-		
 		Pass* prev_pass = nullptr;
 
 		virtual bool setup(TaskBuilder& builder) = 0;
@@ -765,12 +877,13 @@ using namespace HAL;
 
 
 			render_task = thread_pool::get().enqueue([this, &frame]() {
+				context.graph=graph;
 				context.begin(this, frame);
 				render_func(data, context);
 				context.end();
 				});
 
-		//		render_task.wait();
+			//		render_task.wait();
 		}
 	};
 
@@ -794,7 +907,8 @@ using namespace HAL;
 	class SlotContext
 	{
 	protected:
-		std::map<SlotID, std::function<void(HAL::SignatureDataSetter&)>> slot_setters;
+		std::map<SlotID, std::function<void(FrameSetter&)>> slot_setters;
+			std::map<SlotID, std::function<void(HAL::SignatureDataSetter&)>> _slot_setters;
 
 	public:
 
@@ -803,7 +917,12 @@ using namespace HAL;
 		void register_slot_setter(Compiled compiled)
 		{
 			SlotID id = Compiled::ID;
-			slot_setters[id] = [compiled](HAL::SignatureDataSetter& setter) {
+			slot_setters[id] = [compiled](FrameSetter& setter) {
+				setter.set(compiled);
+			};
+
+
+			_slot_setters[id] = [compiled](HAL::SignatureDataSetter& setter) {
 				compiled.set(setter);
 			};
 		}
@@ -811,28 +930,35 @@ using namespace HAL;
 		void set_slot(SlotID id, HAL::SignatureDataSetter& setter)
 		{
 		//	assert(slot_setters.contains(id));
-			slot_setters[id](setter);
+			_slot_setters[id](setter);
 		}
 
+
+			void set_slot(SlotID id, FrameSetter& setter)
+		{
+		//	assert(slot_setters.contains(id));
+			slot_setters[id](setter);
+		}
 	};
 
-	
-	class Graph: public UniversalContext, public VariableContext, public SlotContext
-	{	
+
+	class Graph : public UniversalContext, public VariableContext, public SlotContext
+	{
 	public:
 
 		std::list<std::shared_ptr<Pass>> passes;
 
-	
+
 		Variable<bool> optimize = { true, "optimize", this };
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>
 		void internal_pass(std::string name, typename Pass::setup_func_type s, typename Pass::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			if(GetAsyncKeyState('9')) flags |=PassFlags::Required;
+			if (GetAsyncKeyState('9')) flags |= PassFlags::Required;
 			passes.push_back(std::make_shared<Pass>((UINT)passes.size(), name, s, r));
 			passes.back()->flags = flags;
+				passes.back()->graph = this;
 
 			if (check(flags & PassFlags::Required))
 			{

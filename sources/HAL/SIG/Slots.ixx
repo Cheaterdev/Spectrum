@@ -147,7 +147,7 @@ export {
 	template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
 	struct CompiledData
 	{
-
+	
 		static constexpr SlotID ID = _ID;
 		using Table = _Table;
 		using Slot = _Slot;
@@ -181,6 +181,10 @@ export {
 			assert(const_buffer.is_valid());
 			return const_buffer;
 		}
+	};
+	template<typename T> concept CompiledSlot =
+		requires (T t) {
+		T.compiled();
 	};
 
 	template<class _SlotTable, SlotID _ID, class Table, class _Slot = Table::Slot>

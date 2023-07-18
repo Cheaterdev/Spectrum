@@ -309,7 +309,7 @@ namespace GUI
 
             virtual void draw_recursive(Context&, base* = nullptr);
 
-            virtual void pre_draw(HAL::CommandList::ptr list){}; // override;;
+            virtual void pre_draw(FrameGraph::FrameContext& list){}; // override;;
             virtual void draw(Context&); // override;;
             virtual void draw_after(Context&);;
 

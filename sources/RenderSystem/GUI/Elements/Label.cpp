@@ -112,7 +112,7 @@ namespace GUI
 
 			cache.tc = vec4{ 0,0, lay2.right_bottom / vec2(cache.texture->get_desc().as_texture().Dimensions.x,cache.texture->get_desc().as_texture().Dimensions.y) };
 		}
-		void label::pre_draw(HAL::CommandList::ptr command_list)
+		void label::pre_draw(FrameGraph::FrameContext& context)
 		{
 			geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
 			//command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
@@ -120,12 +120,12 @@ namespace GUI
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = cache.texture->texture_2d().renderTarget;
-				rt.set(command_list->get_graphics(),RTOptions::Default| RTOptions::ClearAll);
+				context.get_graphics().set_rt(rt,RTOptions::Default| RTOptions::ClearAll);
 			}
 
 			PROFILE(L"label");
-			geomerty->draw(command_list, lay2, 0, { 0,0 });
-			MipMapGenerator::get().generate(command_list->get_compute(), cache.texture->texture_2d());
+			geomerty->draw(context, lay2, 0, { 0,0 });
+			MipMapGenerator::get().generate(context, cache.texture->texture_2d());
 		};
 		Fonts::FontGeometry::ptr label::get_geometry()
 		{

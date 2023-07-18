@@ -75,17 +75,11 @@ void PSSM::generate(Graph& graph)
 		builder.create(data.global_camera, { 1 }, ResourceFlags::GenCPU);
 		}, [this, &graph, cam, points_all](PSSMDataGlobal& data, FrameContext& _context) {
 
-			auto& command_list = _context.get_list();
-
-			auto& graphics = command_list->get_graphics();
-			auto& compute = command_list->get_compute();
+			auto& graphics = _context.get_graphics();
+			auto& compute = _context.get_compute();
 
 			auto& sceneinfo = graph.get_context<SceneInfo>();
 
-
-
-			graphics.set_signature(Layouts::DefaultLayout);
-			compute.set_signature(Layouts::DefaultLayout);
 
 			camera light_cam;
 
@@ -102,7 +96,7 @@ void PSSM::generate(Graph& graph)
 			MeshRenderContext::ptr context(new MeshRenderContext());
 
 			context->priority = TaskPriority::HIGH;
-			context->list = command_list;
+			context->frame_context = &_context;
 			context->cam = &light_cam;
 			context->render_type = RENDER_TYPE::DEPTH;
 
@@ -128,7 +122,7 @@ void PSSM::generate(Graph& graph)
 			{
 				RT::DepthOnly rt;
 				rt.GetDepth() = data.global_depth->depthStencil;
-				auto compiled = rt.set(command_list->get_graphics(), RTOptions::Default |  RTOptions::ClearDepth);
+				auto compiled = graphics.set_rt(rt, RTOptions::Default |  RTOptions::ClearDepth);
 			}
 
 
@@ -139,8 +133,8 @@ void PSSM::generate(Graph& graph)
 				auto& camera = frameInfo.GetCamera();
 				//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 				camera = light_cam.camera_cb.current;
-				frameInfo.set(graphics);
-				frameInfo.set(compute);
+				graphics.set(frameInfo);
+				compute.set(frameInfo);
 			}
 
 			renderer->render(context, scene->get_ptr<Scene>());
@@ -181,14 +175,10 @@ void PSSM::generate(Graph& graph)
 			builder.need(data.PSSM_Depths, ResourceFlags::DepthStencil);
 			}, [this, &graph, i, znear, zfar, cam, points_all, position](PSSMData& data, FrameContext& _context) {
 
-				auto& command_list = _context.get_list();
-				auto& graphics = command_list->get_graphics();
-				auto& compute = command_list->get_compute();
+				auto& graphics = _context.get_graphics();
+				auto& compute = _context.get_compute();
 
 				auto& sceneinfo = graph.get_context<SceneInfo>();
-
-				graphics.set_signature(Layouts::DefaultLayout);
-				compute.set_signature(Layouts::DefaultLayout);
 
 				camera light_cam;
 
@@ -205,7 +195,7 @@ void PSSM::generate(Graph& graph)
 				MeshRenderContext::ptr context(new MeshRenderContext());
 
 				context->priority = TaskPriority::HIGH;
-				context->list = command_list;
+				context->frame_context = &_context;
 				context->cam = &light_cam;
 
 				auto depth_tex = data.PSSM_Depths->create_2d_slice(i, *command_list);
@@ -234,7 +224,7 @@ void PSSM::generate(Graph& graph)
 				{
 					RT::DepthOnly rt;
 					rt.GetDepth() = depth_tex.depthStencil;
-					rt.set(command_list->get_graphics(), RTOptions::Default | RTOptions::ClearDepth);
+					graphics.set(rt, RTOptions::Default | RTOptions::ClearDepth);
 				}
 
 				{
@@ -244,8 +234,8 @@ void PSSM::generate(Graph& graph)
 					auto& camera = frameInfo.GetCamera();
 					//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 					camera = light_cam.camera_cb.current;
-					frameInfo.set(graphics);
-					frameInfo.set(compute);
+					graphics.set(frameInfo);
+					compute.set(frameInfo);
 				}
 				context->render_type = RENDER_TYPE::DEPTH;
 
@@ -269,17 +259,12 @@ void PSSM::generate(Graph& graph)
 
 			GBuffer gbuffer = data.gbuffer.actualize(_context);
 
-			auto& list = *_context.get_list();
+			auto& graphics = _context.get_graphics();
+			auto& compute = _context.get_compute();
 
-			auto& graphics = list.get_graphics();
-			auto& compute = list.get_compute();
 
-			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
-			graphics.set_signature(Layouts::DefaultLayout);
-			compute.set_signature(Layouts::DefaultLayout);
-
-			graph.set_slot(SlotID::FrameInfo, graphics);
-			graph.set_slot(SlotID::FrameInfo, compute);
+			graphics.set_slot(SlotID::FrameInfo);
+			compute.set_slot(SlotID::FrameInfo);
 
 			{
 				Slots::PSSMLighting lighting;
@@ -288,7 +273,7 @@ void PSSM::generate(Graph& graph)
 
 				//lighting.GetLight_mask() = screen_light_mask.get_srv();
 
-				lighting.set(graphics);
+				graphics.set(lighting);
 			}
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
@@ -299,7 +284,7 @@ void PSSM::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.LightMask->renderTarget;
-				rt.set(graphics);
+				graphics.set(rt);
 			}
 			graphics.set_pipeline<PSOS::PSSMMask>();
 
@@ -308,7 +293,7 @@ void PSSM::generate(Graph& graph)
 				Slots::PSSMData pssmdata;
 				pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
 				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-				pssmdata.set(graphics);
+				graphics.set(pssmdata);
 			}
 
 			for (int i = renders_size - 1; i >= 0; i--) //rangeees
@@ -318,7 +303,7 @@ void PSSM::generate(Graph& graph)
 					Slots::PSSMConstants constants;
 					constants.GetLevel() = i;
 					constants.GetTime() = 0;
-					constants.set(graphics);
+					graphics.set(constants);
 				}
 				graphics.draw(4);
 			}
@@ -349,17 +334,12 @@ void PSSM::generate(Graph& graph)
 
 			GBuffer gbuffer = data.gbuffer.actualize(_context);
 
-			auto& list = *_context.get_list();
+		
+			auto& graphics = _context.get_graphics();
+			auto& compute = _context.get_compute();
 
-			auto& graphics = list.get_graphics();
-			auto& compute = list.get_compute();
-
-			//list.set_my_heap();// set_heap(DescriptorHeapType::CBV_SRV_UAV, DescriptorHeapManager::get().get_csu());
-			graphics.set_signature(Layouts::DefaultLayout);
-			compute.set_signature(Layouts::DefaultLayout);
-
-			graph.set_slot(SlotID::FrameInfo, graphics);
-			graph.set_slot(SlotID::FrameInfo, compute);
+			graphics.set_slot(SlotID::FrameInfo);
+			compute.set_slot(SlotID::FrameInfo);
 
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
@@ -371,7 +351,7 @@ void PSSM::generate(Graph& graph)
 				Slots::PSSMData pssmdata;
 				//	pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
 				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-				pssmdata.set(graphics);
+				graphics.set(pssmdata);
 			}
 
 			{
@@ -384,13 +364,13 @@ void PSSM::generate(Graph& graph)
 				else
 					lighting.GetLight_mask() = data.LightMask->texture2D;
 
-				lighting.set(graphics);
+				graphics.set(lighting);
 			}
 
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.ResultTexture->renderTarget;
-				rt.set(graphics);
+				graphics.set(rt);
 			}
 
 			graphics.set_pipeline<PSOS::PSSMApply>();

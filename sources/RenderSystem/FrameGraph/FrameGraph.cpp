@@ -215,6 +215,10 @@ namespace FrameGraph
 
 			list = (frame->start_list(pass->name, type));
 
+
+			graphics = std::make_shared<GraphicsContext>(graph,list);
+				compute = std::make_shared<ComputeContext>(graph,list);
+				copy = std::make_shared<CopyContext>(graph,list);
 			for (auto info : pass->used.resource_deletions)
 			{
 				if (!info->alloc_ptr.handle) continue;

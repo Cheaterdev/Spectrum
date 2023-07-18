@@ -84,9 +84,8 @@ void BlueNoise::generate(FrameGraph::Graph& graph)
 		builder.create(data.BlueNoise, { ivec3(128,128,0),  HAL::Format::R8G8_UNORM, 1 ,1 }, ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](auto& data, auto& _context) {
-			auto& list = *_context.get_list();
 
-			auto& compute = list.get_compute();
+			auto& compute = _context.get_compute();
 
 			compute.set_pipeline<PSOS::BlueNoise>();
 			static uint index = 0;
@@ -99,10 +98,10 @@ void BlueNoise::generate(FrameGraph::Graph& graph)
 				blue_data.GetScrambling_tile_buffer() = HLSL::Buffer<uint>(scrambling_buffer_view.structuredBuffer);
 
 				blue_data.GetBlue_noise_texture() = data.BlueNoise->rwTexture2D;
-				blue_data.set(compute);
+				compute.set(blue_data);
 			}
 
-			compute.dispach(data.BlueNoise->get_size());
+			compute.dispatch(data.BlueNoise->get_size());
 
 		}, PassFlags::Compute);
 }

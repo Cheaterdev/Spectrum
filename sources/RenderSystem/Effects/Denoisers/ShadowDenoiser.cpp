@@ -53,8 +53,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 			return true;
 			}, [this, &graph, size](ShadowDenoiser_PrepareData& data, FrameContext& _context) {
-				auto& list = *_context.get_list();
-				auto& compute = list.get_compute();
+				auto& compute = _context.get_compute();
 
 				compute.set_pipeline<PSOS::DenoiserShadow_Prepare>();
 				{
@@ -63,10 +62,10 @@ void ShadowDenoiser::generate(Graph& graph)
 					prepare_data.GetBufferDimensions() = size;
 					prepare_data.GetT2d_hitMaskResults() = data.RTXDebug->texture2D;
 					prepare_data.GetRwsb_shadowMask() = data.ShadowDenoiser_TileBuffer->rwStructuredBuffer;
-					prepare_data.set(compute);
+					compute.set(prepare_data);
 				}
 	//			if(!GetAsyncKeyState('5'))
-				compute.dispach(uint3(size, 1), uint3(k_tileSizeX * 4, k_tileSizeY * 4, 1));
+				compute.dispatch(uint3(size, 1), uint3(k_tileSizeX * 4, k_tileSizeY * 4, 1));
 			}/*, PassFlags::Compute*/);
 	}
 
@@ -103,18 +102,18 @@ void ShadowDenoiser::generate(Graph& graph)
 
 			return true;
 			}, [this, &graph, size](ShadowDenoiser_TileClassificationData& data, FrameContext& _context) {
-				auto& list = *_context.get_list();
+				//auto& list = *_context.get_list();
 
-				auto& compute = list.get_compute();
+				auto& compute = _context.get_compute();
 				auto& cam = graph.get_context<CameraInfo>();
 
 				bool first = false;
 				if (data.ShadowDenoiser_MomentsPrev.is_new())
 				{
 					first = true;
-					list.clear_uav(data.ShadowDenoiser_MomentsPrev->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ShadowDenoiser_Scratch->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ShadowDenoiser_Scratch2->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ShadowDenoiser_MomentsPrev->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ShadowDenoiser_Scratch->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ShadowDenoiser_Scratch2->rwTexture2D, vec4(0, 0, 0, 0));
 
 				}
 				//list.clear_uav(data.ShadowDenoiser_TileMetaBuffer->rwRAW, vec4(0, 0, 0, 0));
@@ -150,14 +149,14 @@ void ShadowDenoiser::generate(Graph& graph)
 				classification_data.rwt2d_momentsBuffer = data.ShadowDenoiser_Moments->rwTexture2D;
 
 
-				classification_data.set(compute);
+				compute.set(classification_data);
 
 
 	//			if(!GetAsyncKeyState('6'))
-				compute.dispach(uint3(size, 1));
+				compute.dispatch(uint3(size, 1));
 
 
-				list.get_copy().copy_texture(data.ShadowDenoiser_MomentsPrev->resource->get_ptr(), 0, data.ShadowDenoiser_Moments->resource->get_ptr(), 0);
+				_context.get_copy().copy_texture(data.ShadowDenoiser_MomentsPrev->resource->get_ptr(), 0, data.ShadowDenoiser_Moments->resource->get_ptr(), 0);
 
 			}/*, PassFlags::Compute*/);
 	}
@@ -184,9 +183,9 @@ void ShadowDenoiser::generate(Graph& graph)
 
 			return true;
 			}, [this, &graph,size](ShadowDenoiser_FilterData& data, FrameContext& _context) {
-				auto& list = *_context.get_list();
+			//	auto& list = *_context.get_list();
 
-				auto& compute = list.get_compute();
+				auto& compute = _context.get_compute();
 					auto& cam = graph.get_context<CameraInfo>();
 
 				{
@@ -205,7 +204,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					filter_data.sb_tileMetaData = data.ShadowDenoiser_TileMetaBuffer->structuredBuffer;
 
 
-					filter_data.set(compute);
+					compute.set(filter_data);
 				}
 
 				{
@@ -214,9 +213,9 @@ void ShadowDenoiser::generate(Graph& graph)
 					Slots::DenoiserShadow_FilterLocal filter_data;
 					filter_data.GetRqt2d_input() = data.ShadowDenoiser_Scratch2->texture2D;
 					filter_data.GetRwt2d_output() = data.ShadowDenoiser_Scratch->rwTexture2D;
-					filter_data.set(compute);
+					compute.set(filter_data);
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 				}
 
 
@@ -226,9 +225,9 @@ void ShadowDenoiser::generate(Graph& graph)
 					Slots::DenoiserShadow_FilterLocal filter_data;
 					filter_data.GetRqt2d_input() = data.ShadowDenoiser_Scratch->texture2D;
 					filter_data.GetRwt2d_output() = data.ShadowDenoiser_Scratch2->rwTexture2D;
-					filter_data.set(compute);
+					compute.set(filter_data);
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 				}
 
 				{
@@ -237,14 +236,14 @@ void ShadowDenoiser::generate(Graph& graph)
 					Slots::DenoiserShadow_FilterLast filter_data;
 					filter_data.GetRqt2d_input() = data.ShadowDenoiser_Scratch2->texture2D;
 					filter_data.GetRwt2d_output() = data.RTXDebug->rwTexture2D;
-					filter_data.set(compute);
+					compute.set(filter_data);
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 
 				}
 
 
-					list.get_copy().copy_texture(data.ShadowDenoiser_Scratch->resource->get_ptr(), 0, data.ShadowDenoiser_Scratch2->resource->get_ptr(), 0);
+					_context.get_copy().copy_texture(data.ShadowDenoiser_Scratch->resource->get_ptr(), 0, data.ShadowDenoiser_Scratch2->resource->get_ptr(), 0);
 
 
 

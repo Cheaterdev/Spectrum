@@ -49,9 +49,8 @@ void SkyRender::generate_sky(Graph& graph)
 		builder.need(data.GBuffer_Depth, ResourceFlags::PixelRead);
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 		}, [this, &graph](SkyData& data, FrameContext& _context) {
-			auto& list = *_context.get_list();
 
-			auto& graphics = list.get_graphics();
+			auto& graphics = _context.get_graphics();
 			auto& sky = graph.get_context<SkyInfo>();
 
 			graphics.set_pipeline<PSOS::Sky>();
@@ -60,7 +59,7 @@ void SkyRender::generate_sky(Graph& graph)
 				{
 				RT::SingleColor rt;
 				rt.GetColor() =data.ResultTexture->renderTarget;
-				rt.set(graphics);
+				graphics.set_rt(rt);
 				}
 
 			{
@@ -74,11 +73,11 @@ void SkyRender::generate_sky(Graph& graph)
 
 				skydata.GetSunDir() = sky.sunDir;
 
-				skydata.set(graphics);
+				graphics.set(skydata);
 
 			}
 
-			graph.set_slot(SlotID::FrameInfo, graphics);
+			graphics.set_slot(SlotID::FrameInfo);
 
 			graphics.draw(4);
 
@@ -112,9 +111,8 @@ void SkyRender::generate(Graph& graph)
 
 
 
-			auto& list = *_context.get_list();
 
-			auto& graphics = list.get_graphics();
+			auto& graphics = _context.get_graphics();
 			auto& sky = graph.get_context<SkyInfo>();
 
 
@@ -131,11 +129,11 @@ void SkyRender::generate(Graph& graph)
 				data.GetIrradiance() = irradiance->texture_2d().texture2D;
 				data.GetTransmittance() = transmittance->texture_2d().texture2D;
 				data.GetSunDir() = sky.sunDir;
-				data.set(graphics);
+				graphics.set(data);
 
 			}
 
-			graph.set_slot(SlotID::FrameInfo, graphics);
+			graphics.set_slot(SlotID::FrameInfo);
 
 
 			{
@@ -150,19 +148,19 @@ void SkyRender::generate(Graph& graph)
 					subres.MipLevels = 1;
 					subres.MipSlice = 0;
 
-					auto face = data.sky_cubemap->resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
+					auto face = data.sky_cubemap->resource->create_view<HAL::TextureView>(_context, subres);
 
 
 					Slots::SkyFace skyFace;
 
 					skyFace.GetFace() = i;
 
-					skyFace.set(graphics);
+					graphics.set(skyFace);
 
 						{
 				RT::SingleColor rt;
 				rt.GetColor() =face.renderTarget;
-				rt.set(graphics);
+				graphics.set_rt(rt);
 				}
 
 					graphics.draw(4);
@@ -202,8 +200,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 		}
 		return false;
 		}, [this, &graph](EnvData& data, FrameContext& _context) {
-			auto& list = *_context.get_list();
-			MipMapGenerator::get().generate_cube(list.get_compute(), *data.sky_cubemap);
+			MipMapGenerator::get().generate_cube(_context, *data.sky_cubemap);
 		}, PassFlags::Compute
 			);
 
@@ -224,15 +221,14 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 		}, [this, &graph](EnvData& data, FrameContext& _context) {
 
 
-			auto& list = *_context.get_list();
-			auto& graphics = list.get_graphics();
+			auto& graphics = _context.get_graphics();
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
-			graphics.set_signature(Layouts::DefaultLayout);
+	
 
 			Slots::EnvSource downsample;
 			downsample.GetSourceTex() = data.sky_cubemap->textureCube;
-			downsample.set(graphics);
+			graphics.set(downsample);
 
 
 
@@ -249,13 +245,13 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 					subres.MipLevels = 1;
 					subres.MipSlice = m;
 
-					auto face = data.sky_cubemap_filtered->resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
+					auto face = data.sky_cubemap_filtered->resource->create_view<HAL::TextureView>(_context, subres);
 
 
 					{
 						RT::SingleColor rt;
 						rt.GetColor() = face.renderTarget;
-						rt.set(graphics, i == 0 ? RTOptions::Default : RTOptions::SetHandles);
+						graphics.set_rt(rt, i == 0 ? RTOptions::Default : RTOptions::SetHandles);
 					}
 
 
@@ -265,7 +261,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 					filter.GetScaler().x = (float(m) + 0.5f) / count;
 					filter.GetSize().x = (UINT)data.sky_cubemap->resource->get_desc().as_texture().Dimensions.x;
-					filter.set(graphics);
+					graphics.set(filter);
 
 					graphics.draw(4);
 				}
@@ -284,16 +280,16 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 				subres.MipLevels = 1;
 				subres.MipSlice = 0;
 
-				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
+				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<HAL::TextureView>(_context, subres);
 
 				if (i == 0) {
 					graphics.set_viewport(face.get_viewport());
-					graphics.set_scissor(face.get_scissor());
+					graphics.set_scissors(face.get_scissor());
 				}
 						{
 				RT::SingleColor rt;
 				rt.GetColor() =face.renderTarget;
-				rt.set(graphics);
+				graphics.set_rt(rt);
 				}
 
 				Slots::EnvFilter filter;
@@ -301,7 +297,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 
 				filter.GetScaler().x = (float(0) + 0.5f) / count;
 				filter.GetSize().x = (UINT)data.sky_cubemap_filtered_diffuse->resource->get_desc().as_texture().Dimensions.x;
-				filter.set(graphics);
+				graphics.set(filter);
 
 				graphics.draw(4);
 

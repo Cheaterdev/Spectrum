@@ -34,8 +34,7 @@ void FSR::generate(Graph& graph)
 			return true;
 		}, [this, &graph](SkyData& data, FrameContext& _context)
 		{
-			auto& list = *_context.get_list();
-			auto& compute = list.get_compute();
+			auto& compute = _context.get_compute();
 
 			auto& frame = graph.get_context<ViewportInfo>();
 			{
@@ -48,10 +47,10 @@ void FSR::generate(Graph& graph)
 					fsr.GetSource() = data.ResultTexture->texture2D;
 					fsr.GetTarget() = data.FSRTemp->rwTexture2D;
 
-					fsr.set(compute);
+					compute.set(fsr);
 				}
 
-				compute.dispach(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
+				compute.dispatch(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
 			}
 
 
@@ -65,10 +64,10 @@ void FSR::generate(Graph& graph)
 					fsr.GetSource() = data.FSRTemp->texture2D;
 					fsr.GetTarget() = data.ResultTextureUpscaled->rwTexture2D;
 
-					fsr.set(compute);
+					compute.set(fsr);
 				}
 
-				compute.dispach(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
+				compute.dispatch(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
 			}
 
 		}, PassFlags::Compute);

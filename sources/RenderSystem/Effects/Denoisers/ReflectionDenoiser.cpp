@@ -88,22 +88,22 @@ void ReflectionDenoiser::generate(Graph& graph)
 
 			return true;
 			}, [this, &graph, size](ReflectionDenoiser_ReprojectData& data, FrameContext& _context) {
-				auto& list = *_context.get_list();
-				auto& compute = list.get_compute();
+			//	auto& list = *_context.get_list();
+				auto& compute = _context.get_compute();
 				auto& cam = graph.get_context<CameraInfo>();
-				auto& copy = _context.get_list()->get_copy();
+				auto& copy = _context.get_copy();
 
 
 				if (data.ReflectionDenoiser_RadiancePrev.is_new())
 				{
-					list.clear_uav(data.ReflectionDenoiser_RadiancePrev->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ReflectionDenoiser_AverageRadiance->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ReflectionDenoiser_AverageRadiancePrev->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ReflectionDenoiser_Variance->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ReflectionDenoiser_VariancePrev->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ReflectionDenoiser_SampleCount->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ReflectionDenoiser_SampleCountPrev->rwTexture2D, vec4(0, 0, 0, 0));
-					list.clear_uav(data.ReflectionDenoiser_ReprojectedRadiance->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ReflectionDenoiser_RadiancePrev->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ReflectionDenoiser_AverageRadiance->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ReflectionDenoiser_AverageRadiancePrev->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ReflectionDenoiser_Variance->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ReflectionDenoiser_VariancePrev->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ReflectionDenoiser_SampleCount->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ReflectionDenoiser_SampleCountPrev->rwTexture2D, vec4(0, 0, 0, 0));
+					_context.clear_uav(data.ReflectionDenoiser_ReprojectedRadiance->rwTexture2D, vec4(0, 0, 0, 0));
 				}
 
 
@@ -134,7 +134,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 					common_data.g_most_detailed_mip = 0;
 					common_data.g_samples_per_quad = 1;
 					common_data.g_temporal_variance_guided_tracing_enabled = true;
-					common_data.set(compute);
+					compute.set(common_data);
 				}
 
 
@@ -164,10 +164,10 @@ void ReflectionDenoiser::generate(Graph& graph)
 						reproject_data.g_out_average_radiance = data.ReflectionDenoiser_AverageRadiance->rwTexture2D;
 						reproject_data.g_out_variance = data.ReflectionDenoiser_Variance->rwTexture2D;
 						reproject_data.g_out_sample_count = data.ReflectionDenoiser_SampleCount->rwTexture2D;
-						reproject_data.set(compute);
+						compute.set(reproject_data);
 					}
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 
 				}
 
@@ -193,10 +193,10 @@ void ReflectionDenoiser::generate(Graph& graph)
 						prefilter_data.g_out_radiance = data.ReflectionDenoiser_RadiancePrev->rwTexture2D;
 						prefilter_data.g_out_sample_count = data.ReflectionDenoiser_SampleCountPrev->rwTexture2D;
 						prefilter_data.g_out_variance = data.ReflectionDenoiser_VariancePrev->rwTexture2D;
-						prefilter_data.set(compute);
+						compute.set(prefilter_data);
 					}
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 
 				}
 
@@ -229,10 +229,10 @@ void ReflectionDenoiser::generate(Graph& graph)
 						resolve_data.g_out_radiance =data.VoxelReflectionNoise->rwTexture2D;
 						resolve_data.g_out_sample_count = data.ReflectionDenoiser_SampleCount->rwTexture2D;
 						resolve_data.g_out_variance = data.ReflectionDenoiser_Variance->rwTexture2D;
-						resolve_data.set(compute);
+						compute.set(resolve_data);
 					}
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 
 				}
 

@@ -492,7 +492,9 @@ VoxelGI::ptr voxel_gi;
 
 				}, [this, &graph](GBufferData& data, FrameContext& _context) {
 
-					auto& command_list = _context.get_list();
+					//auto& command_list = _context.get_list();
+					auto& compute = _context.get_compute();
+auto& graphics = _context.get_graphics();
 
 					//std::this_thread::sleep_for(1ms);
 				//	gpu_scene_renderer->render(context_gbuffer, scene);
@@ -502,13 +504,11 @@ VoxelGI::ptr voxel_gi;
 					context->current_time = time;
 					//		context->sky_dir = lighting->lighting.pssm.get_position();
 					context->priority = TaskPriority::HIGH;
-					context->list = command_list;
+					context->frame_context = &_context;
 					context->eye_context = vr_context;
 
 					context->cam = &eyes[0]->cam;
 
-					command_list->get_graphics().set_signature(Layouts::DefaultLayout);
-					command_list->get_compute().set_signature(Layouts::DefaultLayout);
 
 
 					//				gpu_meshes_renderer_static->update(context);
@@ -527,7 +527,7 @@ VoxelGI::ptr voxel_gi;
 
 						rtv.GetMotion() = gbuffer.speed.renderTarget;
 						rtv.GetDepth() = gbuffer.depth.depthStencil;
-						gbuffer.compiled = rtv.compile(*command_list);
+						gbuffer.compiled = _context.compile(rtv);
 					}
 
 					{
@@ -535,24 +535,24 @@ VoxelGI::ptr voxel_gi;
 
 						rtv.GetDepth() = gbuffer.HalfBuffer.hiZ_depth.depthStencil;
 
-							gbuffer.HalfBuffer.compiled = rtv.compile(*command_list);
+							gbuffer.HalfBuffer.compiled = _context.compile(rtv);
 					}
 
 
 				
 					context->g_buffer = &gbuffer;
 
-				gbuffer.compiled.set(context->list->get_graphics(), RTOptions::Default| RTOptions::ClearAll);
+				graphics.set_rt( gbuffer.compiled, RTOptions::Default| RTOptions::ClearAll);
 
 
-					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
-					graph.set_slot(SlotID::FrameInfo, command_list->get_compute());
+					graphics.set_slot(SlotID::FrameInfo);
+					compute.set_slot(SlotID::FrameInfo);
 
 					gpu_scene_renderer->render(context, scene);
 
 					//	stenciler->render(context, scene);
 					{
-						command_list->get_copy().copy_texture(gbuffer.depth_mips.resource->get_ptr(), 0, gbuffer.depth.resource->get_ptr(), 0);
+						_context.get_copy().copy_texture(gbuffer.depth_mips.resource->get_ptr(), 0, gbuffer.depth.resource->get_ptr(), 0);
 
 					}
 					
@@ -580,25 +580,25 @@ VoxelGI::ptr voxel_gi;
 				builder.create(data.RTXDebug, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
 			
 					}, [this, &graph](RTXDebugData& data, FrameContext& context) {
-						auto& compute = context.get_list()->get_compute();
-						auto& copy = context.get_list()->get_copy();
+						auto& compute = context.get_compute();
+						auto& copy = context.get_copy();
 
 						if (data.RTXDebug.is_new())
 						{
-							context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
+							context.clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
 					
 						}
 
 						compute.set_signature(RTX::get().rtx.m_root_sig);
 
-						graph.set_slot(SlotID::VoxelInfo, compute);
-						graph.set_slot(SlotID::FrameInfo, compute);
-						graph.set_slot(SlotID::SceneData, compute);
+						compute.set_slot(SlotID::VoxelInfo);
+						compute.set_slot(SlotID::FrameInfo);
+						compute.set_slot(SlotID::SceneData);
 
 						{
 							Slots::VoxelOutput output;
 							output.GetNoise() = data.RTXDebug->rwTexture2D;
-							output.set(compute);
+							compute.set(output);
 						}
 
 						{
@@ -608,9 +608,9 @@ VoxelGI::ptr voxel_gi;
 							gbuffer.SetTable(voxelScreen.GetGbuffer());
 							voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 					//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
-							voxelScreen.set(compute);
+							compute.set(voxelScreen);
 						}
-						RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
+					///	RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
 
 
 						//copy.copy_resource(data.RTXDebugPrev->resource, data.RTXDebug->resource);
@@ -681,7 +681,7 @@ VoxelGI::ptr voxel_gi;
 		builder.need(data.GBuffer_DepthMips, ResourceFlags::CopySource);
 
 		}, [](CopyPrev& data, FrameContext& _context) {
-			auto& copy = _context.get_list()->get_copy();
+			auto& copy = _context.get_copy();
 
 			copy.copy_resource(data.GBuffer_NormalsPrev->resource, data.GBuffer_Normals->resource);
 			copy.copy_resource(data.GBuffer_SpecularPrev->resource, data.GBuffer_Specular->resource);

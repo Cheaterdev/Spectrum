@@ -41,7 +41,7 @@ export namespace GUI
 
 				GUI::Texture cache;
                 virtual void on_pre_render(Context& context) override;
-                virtual void pre_draw(HAL::CommandList::ptr list) override;
+                virtual void pre_draw(FrameGraph::FrameContext& context) override;
             public:
                 int magnet_text;
                 bool test = false;

@@ -365,11 +365,8 @@ void stencil_renderer::generate(Graph& graph)
 			builder.create(data.id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			builder.create(data.axis_id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
 			}, [this, &graph](Data& data, FrameContext& _context) {
-
-				auto& list = *_context.get_list();
-
-				auto& graphics = list.get_graphics();
-				auto& copy = list.get_copy();
+				auto& graphics = _context.get_graphics();
+				auto& copy = _context.get_copy();
 
 				auto& sceneinfo = graph.get_context<SceneInfo>();
 
@@ -381,7 +378,7 @@ void stencil_renderer::generate(Graph& graph)
 				{
 						RT::DepthOnly rt;
 						rt.GetDepth() = data.depth_tex->depthStencil;
-						rtv = rt.compile(list);
+						rtv = graphics.compile(rt);
 					}
 
 				{
@@ -413,10 +410,10 @@ void stencil_renderer::generate(Graph& graph)
 					};
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 					graphics.set_pipeline<PSOS::DrawStencil>();
-					scene->compiledScene.set(graphics);
+					graphics.set(scene->compiledScene);
 
-					list.clear_uav(data.id_buffer->get_uav_clear());
-					list.clear_uav(data.axis_id_buffer->get_uav_clear());
+					_context.clear_uav(data.id_buffer->get_uav_clear());
+					_context.clear_uav(data.axis_id_buffer->get_uav_clear());
 
 
 					{
@@ -425,16 +422,16 @@ void stencil_renderer::generate(Graph& graph)
 						auto& camera = frameInfo.GetCamera();
 						//		memcpy(&camera, &cam.camera_cb.current, sizeof(camera));
 						camera = cam.camera_cb.current;
-						frameInfo.set(graphics);
+						graphics.set(frameInfo);
 					}
 
 					{
 						Slots::PickerBuffer buffer;
 						buffer.GetViewBuffer() = data.id_buffer->rwStructuredBuffer;
-						buffer.set(graphics);
+						graphics.set(buffer);
 					}
 
-					rtv.set(graphics, RTOptions::Default | RTOptions::ClearDepth);
+					graphics.set(rtv, RTOptions::Default | RTOptions::ClearDepth);
 					//bool rendered = false;
 					
 					obj->iterate([&](scene_object* node)
@@ -458,12 +455,12 @@ void stencil_renderer::generate(Graph& graph)
 						auto& camera = frameInfo.GetCamera();
 						camera = axis_intersect_cam.camera_cb.current;
 						//		memcpy(&camera, &axis_intersect_cam.camera_cb.current, sizeof(camera));
-						frameInfo.set(graphics);
+						graphics.set(frameInfo);
 					}
 					{
 						Slots::PickerBuffer buffer;
 						buffer.GetViewBuffer() = data.axis_id_buffer->rwStructuredBuffer;
-						buffer.set(graphics);
+						graphics.set(buffer);
 					}
 
 
@@ -483,8 +480,8 @@ void stencil_renderer::generate(Graph& graph)
 								{
 									auto& m = l->rendering[i];
 
-									m.compiled_mesh_info.set(graphics);
-									m.mesh_instance_info.set(graphics);
+									graphics.set(m.compiled_mesh_info);
+									graphics.set(m.mesh_instance_info);
 
 									{
 										Slots::Instance instance;
@@ -559,12 +556,8 @@ void stencil_renderer::generate_after(Graph& graph)
 			builder.create(data.Stencil_color_tex, { ivec3(frame.frame_size,0), HAL::Format::R8_SNORM,1 ,1 }, ResourceFlags::RenderTarget);
 
 			}, [this, &graph](Data& data, FrameContext& _context) {
+				auto& graphics = _context.get_graphics();
 
-
-				auto& list = *_context.get_list();
-				auto& graphics = list.get_graphics();
-
-				graphics.set_signature(Layouts::DefaultLayout);
 
 				scene->compiledScene.set(graphics);
 
@@ -573,7 +566,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					{
 						RT::SingleColor rt;
 						rt.GetColor() = data.Stencil_color_tex->renderTarget;
-						rt.set(graphics,RTOptions::Default| RTOptions::ClearAll);
+						graphics.set(rt,RTOptions::Default| RTOptions::ClearAll);
 					}
 
 					//		data.Stencil_color_tex->renderTarget.clear(list);
@@ -581,7 +574,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					graphics.set_pipeline<PSOS::DrawSelected>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
-					graph.set_slot(SlotID::FrameInfo, graphics);
+					graphics.set_slot(SlotID::FrameInfo);
 
 
 
@@ -593,8 +586,8 @@ void stencil_renderer::generate_after(Graph& graph)
 						int i = sel.second;
 						{
 							auto& m = l->rendering[i];
-							m.compiled_mesh_info.set(graphics);
-							m.mesh_instance_info.set(graphics);
+							graphics.set(m.compiled_mesh_info);
+							graphics.set(m.mesh_instance_info);
 
 							graphics.dispatch_mesh(m.dispatch_mesh_arguments);
 						}
@@ -616,7 +609,7 @@ void stencil_renderer::generate_after(Graph& graph)
 						Slots::Countour contour;
 						contour.GetColor() = { 1,0.5,0,1 };
 						contour.GetTex() = data.Stencil_color_tex->texture2D;
-						contour.set(graphics);
+						graphics.set(contour);
 					}
 
 					graphics.set_viewport(data.ResultTexture->get_viewport());
@@ -625,7 +618,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					{
 						RT::SingleColor rt;
 						rt.GetColor() = data.ResultTexture->renderTarget;
-						rt.set(graphics);
+						graphics.set(rt);
 					}
 
 
@@ -637,7 +630,7 @@ void stencil_renderer::generate_after(Graph& graph)
 				{
 					RT::SingleColor rt;
 					rt.GetColor() = data.ResultTexture->renderTarget;
-					rt.set(graphics);
+					graphics.set(rt);
 				}
 
 
@@ -648,7 +641,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					{
 						Slots::DrawStencil draw;
 						draw.GetVertices() = vertex_buffer->structuredBuffer;
-						draw.set(graphics);
+						graphics.set(draw);
 					}
 
 					for (auto& sel : selected)
@@ -676,7 +669,7 @@ void stencil_renderer::generate_after(Graph& graph)
 						Slots::FrameInfo frameInfo;
 						auto& camera = frameInfo.GetCamera();
 						camera = axis_cam.camera_cb.current;
-						frameInfo.set(graphics);
+						graphics.set(frameInfo);
 					}
 					graphics.set_pipeline<PSOS::DrawAxis>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
@@ -691,8 +684,8 @@ void stencil_renderer::generate_after(Graph& graph)
 							color.GetColor() = { i == 0 ? 1.0f : lighted, i == 1 ? 1.0f : lighted, i == 2 ? 1.0f : lighted , 1 };
 							color.set(graphics);
 						}
-						m.compiled_mesh_info.set(graphics);
-						m.mesh_instance_info.set(graphics);
+						graphics.set(m.compiled_mesh_info);
+						graphics.set(m.mesh_instance_info);
 
 						//graphics.draw(m.draw_arguments);
 

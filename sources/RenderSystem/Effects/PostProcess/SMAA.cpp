@@ -52,9 +52,8 @@ void SMAA::generate(Graph& graph)
 		builder.recreate(data.ResultTextureNew, ResourceFlags::RenderTarget);
 
 		}, [this, &graph](SMAAData& data, FrameContext& _context) {
-			auto& list = *_context.get_list();
-
-			auto& graphics = list.get_graphics();
+		
+			auto& graphics = _context.get_graphics();
 
 			auto& frame = graph.get_context<ViewportInfo>();
 
@@ -79,7 +78,7 @@ void SMAA::generate(Graph& graph)
 				slot_global.GetColorTex() = data.ResultTexture->texture2D;
 				slot_global.GetSubsampleIndices() = float4(0, 0, 0, 0);
 				slot_global.GetSMAA_RT_METRICS() = float4(1.0f / size.x, 1.0f / size.y, size);
-				slot_global.set(graphics);
+				graphics.set(slot_global);
 			}
 
 			graphics.draw(4);
@@ -89,7 +88,7 @@ void SMAA::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.SMAA_blend->renderTarget;
-				rt.set(graphics,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
+				graphics.set(rt,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
 			}
 
 			{
@@ -97,7 +96,7 @@ void SMAA::generate(Graph& graph)
 				slot_edges.GetSearchTex() = search_tex->texture_2d().texture2D;
 				slot_edges.GetAreaTex() = area_tex->texture_2d().texture2D;
 				slot_edges.GetEdgesTex() = data.SMAA_edges->texture2D;
-				slot_edges.set(graphics);
+				graphics.set(slot_edges);
 			}
 
 			graphics.draw(4);
@@ -109,12 +108,12 @@ void SMAA::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.ResultTextureNew->renderTarget;
-				rt.set(graphics);
+				graphics.set(rt);
 			}
 			{
 				Slots::SMAA_Blend slot_blend;
 				slot_blend.GetBlendTex() = data.SMAA_blend->texture2D;
-				slot_blend.set(graphics);
+				graphics.set(slot_blend);
 			}
 
 			graphics.draw(4);
