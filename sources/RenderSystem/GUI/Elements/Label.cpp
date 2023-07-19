@@ -120,7 +120,7 @@ namespace GUI
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = cache.texture->texture_2d().renderTarget;
-				rt.set(command_list->get_graphics(),RTOptions::Default| RTOptions::ClearAll);
+				command_list->get_graphics().set_rtv(rt,RTOptions::Default| RTOptions::ClearAll);
 			}
 
 			PROFILE(L"label");

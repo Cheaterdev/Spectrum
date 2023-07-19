@@ -60,7 +60,7 @@ void SkyRender::generate_sky(Graph& graph)
 				{
 				RT::SingleColor rt;
 				rt.GetColor() =data.ResultTexture->renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 				}
 
 			{
@@ -162,7 +162,7 @@ void SkyRender::generate(Graph& graph)
 						{
 				RT::SingleColor rt;
 				rt.GetColor() =face.renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 				}
 
 					graphics.draw(4);
@@ -255,7 +255,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 					{
 						RT::SingleColor rt;
 						rt.GetColor() = face.renderTarget;
-						rt.set(graphics, i == 0 ? RTOptions::Default : RTOptions::SetHandles);
+						graphics.set_rtv(rt, i == 0 ? RTOptions::Default : RTOptions::SetHandles);
 					}
 
 
@@ -293,7 +293,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 						{
 				RT::SingleColor rt;
 				rt.GetColor() =face.renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 				}
 
 				Slots::EnvFilter filter;

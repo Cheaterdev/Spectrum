@@ -102,7 +102,7 @@ void BlueNoise::generate(FrameGraph::Graph& graph)
 				compute.set(blue_data);
 			}
 
-			compute.dispach(data.BlueNoise->get_size());
+			compute.dispatch(data.BlueNoise->get_size());
 
 		}, PassFlags::Compute);
 }

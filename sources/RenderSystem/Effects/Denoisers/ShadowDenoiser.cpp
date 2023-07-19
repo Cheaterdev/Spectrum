@@ -66,7 +66,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					compute.set(prepare_data);
 				}
 	//			if(!GetAsyncKeyState('5'))
-				compute.dispach(uint3(size, 1), uint3(k_tileSizeX * 4, k_tileSizeY * 4, 1));
+				compute.dispatch(uint3(size, 1), uint3(k_tileSizeX * 4, k_tileSizeY * 4, 1));
 			}/*, PassFlags::Compute*/);
 	}
 
@@ -154,7 +154,7 @@ void ShadowDenoiser::generate(Graph& graph)
 
 
 	//			if(!GetAsyncKeyState('6'))
-				compute.dispach(uint3(size, 1));
+				compute.dispatch(uint3(size, 1));
 
 
 				list.get_copy().copy_texture(data.ShadowDenoiser_MomentsPrev->resource->get_ptr(), 0, data.ShadowDenoiser_Moments->resource->get_ptr(), 0);
@@ -216,7 +216,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					filter_data.GetRwt2d_output() = data.ShadowDenoiser_Scratch->rwTexture2D;
 					compute.set(filter_data);
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 				}
 
 
@@ -228,7 +228,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					filter_data.GetRwt2d_output() = data.ShadowDenoiser_Scratch2->rwTexture2D;
 					compute.set(filter_data);
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 				}
 
 				{
@@ -239,7 +239,7 @@ void ShadowDenoiser::generate(Graph& graph)
 					filter_data.GetRwt2d_output() = data.RTXDebug->rwTexture2D;
 					compute.set(filter_data);
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 
 				}
 

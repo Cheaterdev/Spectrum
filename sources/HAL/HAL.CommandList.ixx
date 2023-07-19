@@ -98,36 +98,10 @@ export{
 
 				point->start = !end;
 				point->index = usage_points.size();
-				/*	if (end)
-					{
-						assert(point->prev_point->start);
-					}*/
+
 				compiler.func([point](auto& list)
 					{
-
-						/*	for (auto uav : point->uav_transitions)
-							{
-								transitions.uav(uav);
-							}
-
-							for (auto& uav : point->aliasing)
-							{
-								transitions.alias(nullptr, uav);
-							}*/
-
-
-
 						list.transitions(point->transitions);
-
-						/*			{
-
-										auto& native_transitions = point->compiled_transitions.get_native();
-										if (!native_transitions.empty())
-										{
-											list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
-										}
-									}*/
-
 					});
 			}
 
@@ -230,12 +204,6 @@ export{
 
 			void use_resource(const HAL::Resource* resource);
 		public:
-			//		void prepare_transitions(Transitions* to, bool all);
-
-
-				//	void merge_transition(Transitions* to, HAL::Resource* res);
-				//	void transition_uav(HAL::Resource* resource);
-					///void transition(HAL::Resource* from, HAL::Resource* to);
 
 			void alias_begin(HAL::Resource*);
 			void alias_end(HAL::Resource*);
@@ -676,27 +644,20 @@ export{
 				set(compiled.compile(*this));
 			}
 
-		template<SIG_TYPES_COMPILED::Slot Compiled>
-		void set(const Compiled& compiled)
-		{
-			stop_using(Compiled::Slot::ID);
-			auto& table = tables[Compiled::Slot::ID];
-			table.slot_id = Compiled::ID;
-			//	assert(!table.dirty);
-			table.dirty = true;
+			template<SIG_TYPES_COMPILED::Slot Compiled>
+			void set(const Compiled& compiled)
+			{
+				stop_using(Compiled::Slot::ID);
+				auto& table = tables[Compiled::Slot::ID];
+				table.slot_id = Compiled::ID;
+				//	assert(!table.dirty);
+				table.dirty = true;
 
-			table.const_buffer = compiled.const_buffer;
-			table.resources = compiled.resources;
-			table.descriptors = compiled.descriptors;
-			//	compiled.set_tables(*this);
-		}
-
-
-	/*	template<class NonCompiled>
-		void set(const NonCompiled& compiled)
-		{
-		
-		}*/
+				table.const_buffer = compiled.const_buffer;
+				table.resources = compiled.resources;
+				table.descriptors = compiled.descriptors;
+				//	compiled.set_tables(*this);
+			}
 
 
 
@@ -710,19 +671,20 @@ export{
 		};
 
 
-		
+
 
 		class GraphicsContext;
 		struct CompiledRT
 		{
+			static constexpr SIG_TYPE_COMPILED TYPE = SIG_TYPE_COMPILED::RT;
+
+
 			HAL::RTVHandle table_rtv;
 			HAL::DSVHandle table_dsv;
 
 			std::vector<HAL::Format> get_formats() const;
 			HAL::Format get_depth_format() const;
 
-
-			const CompiledRT& set(HAL::GraphicsContext& context, HAL::RTOptions options = HAL::RTOptions::Default, float depth = 1, uint stencil = 0) const;
 		};
 
 
@@ -761,6 +723,18 @@ export{
 			{
 				return compiled_rt.get_formats();
 			}
+
+			template<SIG_TYPES::RT RT>
+			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0)
+			{
+
+				auto compiled = rt.compile(*this);
+
+				set_rtv(compiled);
+
+				return compiled;
+			}
+
 			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0);
 
 			CommandList& get_base()

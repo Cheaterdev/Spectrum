@@ -106,11 +106,6 @@ export
 		}
 
 
-		Compiled set(HAL::GraphicsContext& context, HAL::RTOptions options = HAL::RTOptions::Default, float depth = 1, uint stencil = 0) const
-		{
-			return compile(context.get_base()).set(context, options, depth, stencil);
-		}
-
 	};
 
 

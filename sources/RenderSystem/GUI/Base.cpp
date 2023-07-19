@@ -975,7 +975,7 @@ namespace GUI
                 {
 				RT::SingleColor rt;
 				rt.GetColor() =texture.renderTarget;
-				rt.set(command_list->get_graphics());
+				command_list->get_graphics().set_rtv(rt);
 				}
 
                  Renderer renderer;

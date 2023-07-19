@@ -1071,7 +1071,7 @@ namespace HAL
 		list->set_compute_signature(s);
 	}
 
-	void ComputeContext::dispach(int x, int y, int z)
+	void ComputeContext::dispatch(int x, int y, int z)
 	{
 		PROFILE_GPU(L"Dispatch");
 
@@ -1081,19 +1081,19 @@ namespace HAL
 	}
 
 
-	void ComputeContext::dispach(ivec2 a, ivec2 b)
+	void ComputeContext::dispatch(ivec2 a, ivec2 b)
 	{
-		dispach(ivec3(a, 1), ivec3(b, 1));
+		dispatch(ivec3(a, 1), ivec3(b, 1));
 	}
 
-	void ComputeContext::dispach(ivec3 a, ivec3 b)
+	void ComputeContext::dispatch(ivec3 a, ivec3 b)
 	{
 
 		ivec3 res;
 		res.x = Math::DivideByMultiple(a.x, b.x);
 		res.y = Math::DivideByMultiple(a.y, b.y);
 		res.z = Math::DivideByMultiple(a.z, b.z);
-		dispach(res.x, res.y, res.z);
+		dispatch(res.x, res.y, res.z);
 	}
 
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
@@ -1467,11 +1467,11 @@ namespace HAL
 
 
 
-		const CompiledRT& CompiledRT::set(HAL::GraphicsContext& context, HAL::RTOptions options, float depth, uint stencil) const
-		{
-			context.set_rtv(*this,options,depth, stencil);
-			return *this;
-		}
+		//const CompiledRT& CompiledRT::set(HAL::GraphicsContext& context, HAL::RTOptions options, float depth, uint stencil) const
+		//{
+		//	context.set_rtv(*this,options,depth, stencil);
+		//	return *this;
+		//}
 
 		void TransitionCommandList::create_transition_list(FrameResources& frame, const HAL::Barriers& transitions, std::vector<HAL::Resource*>& discards)
 		{

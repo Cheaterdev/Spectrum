@@ -74,7 +74,7 @@ void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Textur
 		}
 		compute_context.set(data);
 
-		compute_context.dispach(ivec2(DstWidth, DstHeight), ivec2(8, 8));
+		compute_context.dispatch(ivec2(DstWidth, DstHeight), ivec2(8, 8));
 
 		//compute_context.get_base().transition_uav(view.resource.get());
 		prev = TopMip;
@@ -92,7 +92,7 @@ void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL
 	data.GetSrcTex() = tex->texture_2d().texture2D;
 	data.GetTargetTex() = to->texture_2d().rwTexture2D;
 	compute_context.set(data);
-	compute_context.dispach(ivec2(tex->get_desc().as_texture().Dimensions.x, tex->get_desc().as_texture().Dimensions.y), ivec2(8, 8));
+	compute_context.dispatch(ivec2(tex->get_desc().as_texture().Dimensions.x, tex->get_desc().as_texture().Dimensions.y), ivec2(8, 8));
 
 }
 
@@ -104,7 +104,7 @@ void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL
 	data.GetSrcTex() = tex.texture2D;
 	data.GetTargetTex() = to.rwTexture2D;
 compute_context.set(data);
-	compute_context.dispach(ivec2(tex.get_size()), ivec2(8, 8));
+	compute_context.dispatch(ivec2(tex.get_size()), ivec2(8, 8));
 
 }
 
@@ -131,7 +131,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 		{
 			RT::SingleColor rt;
 			rt.GetColor() = tempColor.renderTarget;
-			rt.set(list);
+			list.set_rtv(rt);
 		}
 
 		list.draw(4);
@@ -151,7 +151,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 		{
 			RT::DepthOnly rt;
 			rt.GetDepth() = buffer.quality.depthStencil;
-			rt.set(list,RTOptions::Default| RTOptions::ClearAll);
+			list.set_rtv(RT::DepthOnly{buffer.quality.depthStencil},RTOptions::Default| RTOptions::ClearAll);
 		}
 
 
@@ -184,7 +184,7 @@ void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Text
 	{
 		RT::SingleColor rt;
 		rt.GetColor() = view.renderTarget;
-		rt.set(list);
+		list.set_rtv(rt);
 	}
 
 	list.draw(4);
@@ -204,7 +204,7 @@ list.set(data);
 	{
 		RT::SingleColor rt;
 		rt.GetColor() = to.renderTarget;
-		rt.set(list);
+		list.set_rtv(rt);
 	}
 	list.draw(4);
 }
@@ -224,7 +224,7 @@ list.set(data);
 	{
 		RT::DepthOnly rt;
 		rt.GetDepth() = to.depthStencil;
-		rt.set(list);
+		list.set_rtv(rt);
 	}
 
 	list.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);

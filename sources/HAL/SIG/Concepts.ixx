@@ -138,6 +138,7 @@ template<CompilableClass T>
 	namespace SIG_TYPES
 	{
 		template<typename T> concept Slot =T::TYPE == SIG_TYPE::Slot;
+	template<typename T> concept RT =T::TYPE == SIG_TYPE::RT;
 	
 	}
 	
@@ -145,6 +146,7 @@ template<CompilableClass T>
 	namespace SIG_TYPES_COMPILED
 	{
 		template<typename T> concept Slot = T::TYPE == SIG_TYPE_COMPILED::Slot;
+	template<typename T> concept RT = T::TYPE == SIG_TYPE_COMPILED::RT;
 	
 	}
 

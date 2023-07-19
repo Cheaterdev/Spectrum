@@ -434,7 +434,7 @@ void stencil_renderer::generate(Graph& graph)
 						graphics.set(buffer);
 					}
 
-					rtv.set(graphics, RTOptions::Default | RTOptions::ClearDepth);
+					graphics.set_rtv(rtv, RTOptions::Default | RTOptions::ClearDepth);
 					//bool rendered = false;
 					
 					obj->iterate([&](scene_object* node)
@@ -450,7 +450,7 @@ void stencil_renderer::generate(Graph& graph)
 							return true;
 						});
 
-					rtv.set(graphics,RTOptions::ClearDepth);
+					graphics.set_rtv(rtv, RTOptions::ClearDepth);
 
 					{
 						Slots::FrameInfo frameInfo;
@@ -573,7 +573,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					{
 						RT::SingleColor rt;
 						rt.GetColor() = data.Stencil_color_tex->renderTarget;
-						rt.set(graphics,RTOptions::Default| RTOptions::ClearAll);
+						graphics.set_rtv(rt,RTOptions::Default| RTOptions::ClearAll);
 					}
 
 					//		data.Stencil_color_tex->renderTarget.clear(list);
@@ -625,7 +625,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					{
 						RT::SingleColor rt;
 						rt.GetColor() = data.ResultTexture->renderTarget;
-						rt.set(graphics);
+						graphics.set_rtv(rt);
 					}
 
 
@@ -637,7 +637,7 @@ void stencil_renderer::generate_after(Graph& graph)
 				{
 					RT::SingleColor rt;
 					rt.GetColor() = data.ResultTexture->renderTarget;
-					rt.set(graphics);
+					graphics.set_rtv(rt);
 				}
 
 

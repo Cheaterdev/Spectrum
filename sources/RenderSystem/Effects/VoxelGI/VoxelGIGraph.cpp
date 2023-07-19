@@ -70,7 +70,7 @@ public:
 
 						rt.GetDepth() = depth_view.renderTarget;
 
-						rt.set(graphics);
+						graphics.set_rtv(rt);
 
 					}
 
@@ -350,7 +350,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 				{
 				RT::NoOutput rt;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 				}
 
 	{
@@ -428,7 +428,7 @@ void VoxelGI::debug(Graph& graph)
 						{
 				RT::SingleColor rt;
 				rt.GetColor() =target_tex.renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 				}
 
 
@@ -585,7 +585,7 @@ void VoxelGI::screen(Graph& graph)
 			{
 				PROFILE_GPU(L"noise");
 				compute.set_pipeline<PSOS::VoxelIndirectLow>();
-				compute.dispach(size);
+				compute.dispatch(size);
 			}
 
 
@@ -607,10 +607,10 @@ void VoxelGI::screen(Graph& graph)
 				}
 
 				compute.set_pipeline<PSOS::FrameClassification>();
-				//compute.dispach(uint2( Math::DivideByMultiple(size.x, 32) , Math::DivideByMultiple(size.y, 32)));
+				//compute.dispatch(uint2( Math::DivideByMultiple(size.x, 32) , Math::DivideByMultiple(size.y, 32)));
 
 				uint2 tiles_count = uint2(Math::DivideByMultiple(size.x, 32), Math::DivideByMultiple(size.y, 32));
-				compute.dispach(tiles_count);
+				compute.dispatch(tiles_count);
 			}
 			{
 				PROFILE_GPU(L"init_dispatch");
@@ -626,7 +626,7 @@ void VoxelGI::screen(Graph& graph)
 					compute.set(frame_classification_init);
 				}
 				compute.set_pipeline<PSOS::FrameClassificationInitDispatch>();
-				compute.dispach(1, 1, 1);
+				compute.dispatch(1, 1, 1);
 			}
 
 			{
@@ -662,7 +662,7 @@ void VoxelGI::screen(Graph& graph)
 					compute.set(tilingPostprocess);
 				}
 
-				//	compute.dispach(frames_count.get_size());
+				//	compute.dispatch(frames_count.get_size());
 
 				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
 			}
@@ -973,7 +973,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 				
 				graph.set_slot(SlotID::FrameInfo, compute);
 
-				compute.dispach(size);
+				compute.dispatch(size);
 				
 
 

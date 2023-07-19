@@ -4,6 +4,7 @@ namespace RT
 	#pragma pack(push, 1)
 	struct _NoOutput
 	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

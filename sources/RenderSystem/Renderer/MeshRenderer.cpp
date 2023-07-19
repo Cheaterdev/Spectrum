@@ -115,7 +115,7 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 		compute.set(from);
 
 
-		compute.dispach(1, 1, 1);
+		compute.dispatch(1, 1, 1);
 
 		/*graphics.execute_indirect(
 			dispatch_command,
@@ -195,7 +195,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 		compute.set(gatherData);
 
 		{
-			PROFILE_GPU(L"dispach");
+			PROFILE_GPU(L"dispatch");
 			graphics.execute_indirect(
 				dispatch_command,
 				1,
@@ -225,7 +225,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	GBuffer* gbuffer = mesh_render_context->g_buffer;
 	UINT meshes_count = (UINT)scene->command_ids[(int)mesh_render_context->render_mesh].size();
 
-	gbuffer->HalfBuffer.compiled.set(graphics);
+	graphics.set_rtv(gbuffer->HalfBuffer.compiled);
 
 	graphics.set_pipeline<PSOS::RenderBoxes>();
 	graphics.set_index_buffer(index_buffer->get_index_buffer_view());
@@ -242,7 +242,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 		draw_boxes_first->resource.get());
 
 
-	gbuffer->compiled.set(graphics);
+	graphics.set_rtv(gbuffer->compiled);
 }
 void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, std::map<size_t, materials::Pipeline::ptr>& pipelines, Slots::GatherPipelineGlobal::Compiled& gatherData, bool needCulling)
 {
@@ -297,7 +297,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			compute.set(gather);
 
 			{
-				PROFILE_GPU(L"dispach");
+				PROFILE_GPU(L"dispatch");
 
 				compute.execute_indirect(
 					dispatch_command,

@@ -542,7 +542,7 @@ VoxelGI::ptr voxel_gi;
 				
 					context->g_buffer = &gbuffer;
 
-				gbuffer.compiled.set(context->list->get_graphics(), RTOptions::Default| RTOptions::ClearAll);
+				context->list->get_graphics().set_rtv(gbuffer.compiled, RTOptions::Default| RTOptions::ClearAll);
 
 
 					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());

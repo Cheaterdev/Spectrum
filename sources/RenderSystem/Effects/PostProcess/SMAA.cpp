@@ -68,7 +68,7 @@ void SMAA::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.SMAA_edges->renderTarget;
-				rt.set(graphics,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
+				graphics.set_rtv(rt,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
 			}
 
 		//	graphics.get_base().clear_rtv(data.SMAA_edges->renderTarget);
@@ -89,7 +89,7 @@ void SMAA::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.SMAA_blend->renderTarget;
-				rt.set(graphics,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
+				graphics.set_rtv(rt,HAL::RTOptions::Default| HAL::RTOptions::ClearAll);
 			}
 
 			{
@@ -109,7 +109,7 @@ void SMAA::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.ResultTextureNew->renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 			}
 			{
 				Slots::SMAA_Blend slot_blend;

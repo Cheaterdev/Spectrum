@@ -213,11 +213,6 @@ export {
 			return compiled;
 		}
 
-		//	template<class SignatureDataSetter>
-		//void set(SignatureDataSetter& context) const
-		//{
-		//	context.set(*this);
-		//}
 
 		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
 		{

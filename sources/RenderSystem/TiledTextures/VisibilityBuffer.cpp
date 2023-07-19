@@ -47,7 +47,7 @@ std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& l
 	}
 
 	compute.set_pipeline<PSOS::VoxelVisibility>();
-	compute.dispach(ivec3(sizes));
+	compute.dispatch(ivec3(sizes));
 
 
 	auto info = std::make_shared<_info>();

@@ -51,7 +51,7 @@ void FSR::generate(Graph& graph)
 					compute.set(fsr);
 				}
 
-				compute.dispach(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
+				compute.dispatch(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
 			}
 
 
@@ -68,7 +68,7 @@ void FSR::generate(Graph& graph)
 					compute.set(fsr);
 				}
 
-				compute.dispach(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
+				compute.dispatch(ivec2{ frame.upscale_size }, ivec2{ 16,16 });
 			}
 
 		}, PassFlags::Compute);

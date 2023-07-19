@@ -167,7 +167,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 						compute.set(reproject_data);
 					}
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 
 				}
 
@@ -196,7 +196,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 						compute.set(prefilter_data);
 					}
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 
 				}
 
@@ -232,7 +232,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 						compute.set(resolve_data);
 					}
 
-					compute.dispach(uint3(size, 1));
+					compute.dispatch(uint3(size, 1));
 
 				}
 

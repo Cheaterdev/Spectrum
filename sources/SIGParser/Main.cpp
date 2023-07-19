@@ -1495,6 +1495,8 @@ void generate_cpp_rt(Table& table)
 		stream << "{" << std::endl;
 		{
 			stream.push();
+				stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;" << std::endl;
+
 			declare_func(ValueType::SRV);
 
 

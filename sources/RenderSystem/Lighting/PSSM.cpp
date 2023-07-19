@@ -128,7 +128,7 @@ void PSSM::generate(Graph& graph)
 			{
 				RT::DepthOnly rt;
 				rt.GetDepth() = data.global_depth->depthStencil;
-				auto compiled = rt.set(command_list->get_graphics(), RTOptions::Default |  RTOptions::ClearDepth);
+				auto compiled = command_list->get_graphics().set_rtv(rt, RTOptions::Default |  RTOptions::ClearDepth);
 			}
 
 
@@ -234,7 +234,7 @@ void PSSM::generate(Graph& graph)
 				{
 					RT::DepthOnly rt;
 					rt.GetDepth() = depth_tex.depthStencil;
-					rt.set(command_list->get_graphics(), RTOptions::Default | RTOptions::ClearDepth);
+					command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
 				}
 
 				{
@@ -299,7 +299,7 @@ void PSSM::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.LightMask->renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 			}
 			graphics.set_pipeline<PSOS::PSSMMask>();
 
@@ -390,7 +390,7 @@ void PSSM::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.ResultTexture->renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 			}
 
 			graphics.set_pipeline<PSOS::PSSMApply>();

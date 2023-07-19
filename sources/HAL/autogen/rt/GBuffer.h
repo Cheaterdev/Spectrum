@@ -4,6 +4,7 @@ namespace RT
 	#pragma pack(push, 1)
 	struct _GBuffer
 	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
 		HLSL::RenderTarget<float4> albedo;
 		HLSL::RenderTarget<float4> normals;
 		HLSL::RenderTarget<float4> specular;
