@@ -829,9 +829,9 @@ export{
 
 
 
-			void dispach(int = 1, int = 1, int = 1);
-			void dispach(ivec2, ivec2 = ivec2(8, 8));
-			void dispach(ivec3, ivec3 = ivec3(4, 4, 4));
+			void dispatch(int = 1, int = 1, int = 1);
+			void dispatch(ivec2, ivec2 = ivec2(8, 8));
+			void dispatch(ivec3, ivec3 = ivec3(4, 4, 4));
 
 
 

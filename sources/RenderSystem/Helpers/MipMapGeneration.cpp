@@ -151,7 +151,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 		{
 			RT::DepthOnly rt;
 			rt.GetDepth() = buffer.quality.depthStencil;
-			list.set_rtv(RT::DepthOnly{buffer.quality.depthStencil},RTOptions::Default| RTOptions::ClearAll);
+			list.set_rtv(rt,RTOptions::Default| RTOptions::ClearAll);
 		}
 
 
