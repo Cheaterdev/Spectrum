@@ -539,12 +539,11 @@ export{
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
 			template<class T>
-			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<const T> data)
+			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<typename HAL::StructuredBufferView<T>::UnderlyingType> data)
 			{
-				update_buffer(view.resource, view.desc.offset + offset * sizeof(T), reinterpret_cast<const char*>(data.data()), data.size_bytes());
+				update_buffer(view.resource, view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), reinterpret_cast<const char*>(data.data()), data.size_bytes());
 
 			}
-
 			std::future<bool> read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 
 			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
@@ -600,6 +599,9 @@ export{
 
 			void reset()
 			{
+				used_slots.clear();
+				tables.clear();
+				tables.resize(32);
 
 			}
 			CommandList& get_base() {

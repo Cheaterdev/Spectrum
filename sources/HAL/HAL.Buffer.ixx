@@ -128,12 +128,6 @@ export
 		};
 
 
-		enum class counterType :int
-		{
-			NONE,
-			SELF,
-			HELP_BUFFER
-		};
 
 
 		template<class T>

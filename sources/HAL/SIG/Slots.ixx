@@ -103,7 +103,7 @@ public:
 
 
 			auto info = context->place_raw(offsets);
-			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,false }).structuredBuffer;
+			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
 			if (srv.get_storage()->can_free())
 				descriptors.insert(srv.get_storage());
 			offset = srv.get_offset();

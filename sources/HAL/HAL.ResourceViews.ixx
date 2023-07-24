@@ -594,7 +594,7 @@ export
 		{
 			uint64 offset;
 			uint64 size;
-			bool counted;
+			counterType counted;
 
 			SERIALIZE()
 			{
@@ -606,9 +606,10 @@ export
 		template<class T>
 		class StructuredBufferView :public ResourceView
 		{
-
+			uint offset;
 		public:
 			using Desc = StructuredBufferViewDesc;
+			using UnderlyingType = Underlying<T>;
 
 			Desc desc;
 			HLSL::RWBuffer<std::byte> rwRAW;
@@ -621,22 +622,49 @@ export
 			CounterView counter_view;
 		public:
 
+			uint get_data_offset() const
+			{
+			return offset/sizeof(UnderlyingType);
+			}
 
-			
+			uint get_data_offset_in_bytes() const
+			{
+			return offset;
+			}
+
+
+			uint get_counter_offset() const
+			{
+				return 0;
+			}
+
+			Resource::ptr get_counter_buffer()
+			{
+				if (desc.counted == counterType::HELP_BUFFER)
+					return counter_view.resource;
+
+				return resource;
+
+			}
 			void init(GPUEntityStorageInterface& frame)
 			{
 				uint local_offset = 0;
-				uint64 offset = desc.offset;
+				offset = desc.offset;
 				uint64 size = desc.size;
 
-				if (desc.counted)
+				if (desc.counted == counterType::SELF )
 				{
 					local_offset = Math::roundUp(4, sizeof(Underlying<T>));
 					if (size == 0) size = resource->get_desc().as_buffer().SizeInBytes;
 					size -= local_offset;
 					offset += local_offset;
 
-					counter_view = resource->create_view<CounterView>(frame, 0);
+					counter_view = resource->create_view<CounterView>(frame, desc.offset);
+				}
+				
+				if (desc.counted == counterType::HELP_BUFFER)
+				{
+					counter_view = counter_view.resource->create_view<CounterView>(frame, 0);
 				}
 
 				auto hlsl = frame.alloc_descriptor(5, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
@@ -661,8 +689,8 @@ export
 					rwStructuredBuffer.create(resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
 					rwRAW.create(resource, Format::R8_UINT, static_cast<UINT>(offset), static_cast<UINT>(size));
 
-					if (desc.counted)
-						appendStructuredBuffer.create(resource, 0, resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
+					if (desc.counted!= counterType::NONE)
+						appendStructuredBuffer.create(get_counter_buffer(), get_counter_offset(), resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
 				}
 			}
 
@@ -679,9 +707,30 @@ export
 
 				desc.offset = 0;
 				desc.size = res_desc.SizeInBytes;
-				desc.counted = false;
+				desc.counted = counterType::NONE;
 
 				init(frame);
+			}
+
+
+			StructuredBufferView(uint count, counterType counted, HAL::ResFlags flags, HAL::HeapType heap_type, GPUEntityStorageInterface& frame = Device::get().get_static_gpu_data()) :
+				ResourceView(std::make_shared<HAL::Resource>(HAL::ResourceDesc::Buffer(count * sizeof(T) +  (counted==counterType::SELF)*Math::roundUp(4, sizeof(Underlying<T>)), flags), heap_type))
+
+			{
+
+
+				auto& res_desc = resource->get_desc().as_buffer();
+
+				desc.offset = 0;
+				desc.size = res_desc.SizeInBytes;
+				desc.counted = counted;
+
+				if (desc.counted == counterType::HELP_BUFFER)
+				{
+					counter_view.resource = std::make_shared<HAL::Resource>(HAL::ResourceDesc::Buffer(4, flags), HeapType::DEFAULT);
+				}
+				init(frame);
+
 			}
 			Handle get_uav_clear() { return rwRAW; }
 

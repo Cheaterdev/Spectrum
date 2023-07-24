@@ -433,7 +433,7 @@ VoxelGI::ptr voxel_gi;
 				SceneFrameManager::get().prepare(command_list, *scene);
 				if (HAL::Device::get().is_rtx_supported())
 				{
-					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), false);
+					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer.get_resource_address(), false);
 					RTX::get().prepare(command_list);
 				}
 			}

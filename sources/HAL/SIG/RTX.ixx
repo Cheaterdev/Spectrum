@@ -306,7 +306,7 @@ struct SelectLocal<T>
 			static_assert(static_cast<UINT>(generator) == T::ID);
 			compute.set_pipeline(m_dxrStateObject);
 			compute.dispatch_rays<hit_type, HAL::shader_identifier, HAL::shader_identifier>(size.xy,
-				hitgroup_ids->buffer->get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
+				hitgroup_ids->buffer.get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
 				miss_ids->get_resource_address(), static_cast<UINT>(miss_ids->get_count()),
 				raygen_ids->get_resource_address().offset(static_cast<UINT>(generator * sizeof(raygen_type))));
 		}
