@@ -160,10 +160,9 @@ namespace HAL
 		first_debug_log = true;
 
 		if(!frame_resources) frame_resources = Device::get().get_frame_manager().begin_frame();
-		set_proxy(frame_resources->get_storage());
+		auto proxy = frame_resources->get_storage();
+		set_proxy(proxy);
 
-		assert(proxy);
-		//       Log::get() << "begin" << Log::endl;
 
 
 		first_pipeline = nullptr;
@@ -184,14 +183,14 @@ namespace HAL
 			if (graphics) {
 				
 				graphics->set_signature(Layouts::DefaultLayout);
-				graphics->set_proxy(frame_resources->get_storage());
+				graphics->set_proxy(proxy);
 
 			}
 			if (compute) 
 			{
 				
 				compute->set_signature(Layouts::DefaultLayout);
-				compute->set_proxy(frame_resources->get_storage());
+				compute->set_proxy(proxy);
 
 
 			}
@@ -217,9 +216,11 @@ namespace HAL
 							});
 					});
 		active = false;
-
 		frame_resources->free_storage(proxy);
-		proxy = nullptr;
+
+		set_proxy(nullptr);
+		if (graphics) 	graphics->set_proxy(nullptr);
+		if (compute) 	compute->set_proxy(nullptr);
 
 	}
 
