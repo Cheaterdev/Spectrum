@@ -730,7 +730,7 @@ export{
 
 				auto compiled = rt.compile(*this);
 
-				set_rtv(compiled);
+				set_rtv(compiled, options, depth, stencil);
 
 				return compiled;
 			}
