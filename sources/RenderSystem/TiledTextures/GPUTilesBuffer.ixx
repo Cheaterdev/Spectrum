@@ -15,8 +15,8 @@ export {
 
 		std::vector<ivec3> used_tiles;
 		using ptr = std::shared_ptr<GPUTilesBuffer>;
-		HAL::StructureBuffer<ivec3>::ptr buffer;
-		HAL::StructureBuffer<DispatchArguments>::ptr dispatch_buffer;
+		HAL::StructuredBufferView<ivec3> buffer;
+		HAL::StructuredBufferView<DispatchArguments> dispatch_buffer;
 		uint32_t size();
 		void set_size(ivec3 size, ivec3 shape);
 

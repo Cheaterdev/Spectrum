@@ -325,7 +325,7 @@ using namespace HAL;
 
 			HAL::StructuredBufferViewDesc as_view(ResourceFlags resflags)
 			{
-				return { 0, count * sizeof(Underlying<T>), counted };
+				return { 0, count * sizeof(Underlying<T>), counted?counterType::SELF:counterType::NONE };
 			}
 		};
 

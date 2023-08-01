@@ -77,7 +77,7 @@ namespace FW1FontWrapper
 			indices[i * 6 + 5] = static_cast<UINT16>(i * 4 + 2);
 		}
 
-		m_pIndexBuffer = HAL::IndexBuffer::make_buffer(indices);
+		m_pIndexBuffer = Helpers::make_buffer<unsigned int>(indices);
 		return S_OK;
 	}
 
@@ -111,7 +111,7 @@ namespace FW1FontWrapper
 
 			pContext->write(data, std::span{ vertexData->pVertices + currentVertex, vertexCount });
 
-			auto view = data.resource->create_view<HAL::StructuredBufferView<Table::Glyph>>(*pContext, HAL::StructuredBufferViewDesc{ (uint)data.resource_offset, (uint)data.size, false });
+			auto view = data.resource->create_view<HAL::StructuredBufferView<Table::Glyph>>(*pContext, HAL::StructuredBufferViewDesc{ (uint)data.resource_offset, (uint)data.size, HAL::counterType::NONE });
 
 
 			{

@@ -3,7 +3,6 @@ import <HAL.h>;
 
 import :Autogen;
 
-import :Buffer;
 import :Device;
 import Core;
 
@@ -97,15 +96,14 @@ namespace HAL
 		compiler.set_name(L"SpectrumCommandList");
 
 
-		debug_buffer = std::make_shared<HAL::StructureBuffer<Table::DebugStruct>>(64, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		debug_buffer = StructuredBufferView<Table::DebugStruct>(64, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 	}
 
 	void CommandList::setup_debug(SignatureDataSetter* setter)
 	{
 		if (!current_pipeline->debuggable) return;
 		Slots::DebugInfo info;
-		HAL::StructureBuffer<Table::DebugStruct>* structured = static_cast<HAL::StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
-		info.GetDebug() = structured->rwStructuredBuffer;
+		info.GetDebug() = debug_buffer.rwStructuredBuffer;
 		setter->set(info);
 
 	}
@@ -115,7 +113,7 @@ namespace HAL
 		if (!current_pipeline->debuggable) return;
 
 		auto pso_name = current_pipeline->name;
-		get_copy().read_buffer(debug_buffer->resource.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](std::span<std::byte> memory)
+		get_copy().read_buffer(debug_buffer.resource.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](std::span<std::byte> memory)
 			{
 
 				LogBlock block(Log::get(), log_level_internal::level_all);
@@ -136,8 +134,7 @@ namespace HAL
 				Log::get() << block;
 			});
 
-		StructureBuffer<Table::DebugStruct>* structured = static_cast<StructureBuffer<Table::DebugStruct>*>(debug_buffer.get());
-		clear_uav(structured->rwByteAddressBuffer);
+		clear_uav(debug_buffer.rwRAW);
 	}
 
 
@@ -1228,7 +1225,7 @@ namespace HAL
 
 	void GraphicsContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
-
+			assert(command_buffer);
 		//	assert(dynamic_cast<PipelineState*>(get_base().current_pipeline));
 		PROFILE_GPU(L"execute_indirect");
 
@@ -1263,6 +1260,7 @@ namespace HAL
 
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)
 	{
+		assert(command_buffer);
 		PROFILE_GPU(L"execute_indirect");
 		base.pre_command<true, false>(*this,BarrierSync::COMPUTE_SHADING);
 

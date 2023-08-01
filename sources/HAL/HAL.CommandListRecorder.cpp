@@ -3,7 +3,6 @@
 
 import :Autogen;
 
-import :Buffer;
 import :Device;
 import Core;
 

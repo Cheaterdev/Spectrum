@@ -122,7 +122,7 @@ namespace FW1FontWrapper
 
 
 		HAL::Texture::ptr		m_pTexture;
-		HAL::StructureBuffer<float4>::ptr	  m_pCoordBuffer;
+		HAL::StructuredBufferView<FW1_GLYPHCOORDS>	  m_pCoordBuffer;
 
 		bool						m_closed;
 		bool						m_static;

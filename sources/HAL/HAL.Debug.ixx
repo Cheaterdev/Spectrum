@@ -1,6 +1,6 @@
 export module HAL:Debug;
 
-
+		class CommandList;
 export namespace HAL
 {
 
@@ -19,5 +19,16 @@ export namespace HAL
 		constexpr bool CheckErrors = false;
 		constexpr bool DebugViews = false;
 #endif
+
+
+
+		//class CommandListDebugger
+		//{
+		//
+		//public:
+
+		//	void pre_command();
+		//	void after_command();
+		//};
 	}
 }

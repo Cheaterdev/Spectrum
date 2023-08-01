@@ -68,7 +68,7 @@ namespace FW1FontWrapper
             std::wstring					m_lastError;
 
             //  HAL::Buffer<FW1_GLYPHVERTEX>::ptr m_pVertexBuffer;
-            HAL::IndexBuffer::ptr m_pIndexBuffer;
+            HAL::IndexBuffer m_pIndexBuffer;
 
             UINT							m_vertexBufferSize;
             UINT							m_maxIndexCount;

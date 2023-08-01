@@ -53,7 +53,7 @@ namespace FW1FontWrapper
 
 		Slots::FontRendering rendering;
 
-		rendering.GetPositions() = m_pCoordBuffer->resource->create_view<HAL::FormattedBufferView<float4, HAL::Format::R32G32B32A32_FLOAT>>(*list).buffer;
+		rendering.GetPositions() = m_pCoordBuffer.resource->create_view<HAL::FormattedBufferView<float4, HAL::Format::R32G32B32A32_FLOAT>>(*list).buffer;
 		rendering.GetTex0() = m_pTexture->texture_2d().texture2D;
 
 		list->get_graphics().set(rendering);
@@ -212,7 +212,8 @@ namespace FW1FontWrapper
 				{
 					UINT startIndex = glyphCount - updatedGlyphCount;
 					UINT endIndex = glyphCount;
-					m_pCoordBuffer->set_data(pContext, startIndex * sizeof(FW1_GLYPHCOORDS), m_glyphCoords + startIndex, updatedGlyphCount);
+					pContext->get_copy().update(m_pCoordBuffer,startIndex, std::span{m_glyphCoords + startIndex, updatedGlyphCount});
+					//m_pCoordBuffer->set_data(pContext, startIndex * sizeof(FW1_GLYPHCOORDS), m_glyphCoords + startIndex, updatedGlyphCount);
 				}
 
 				// Update texture

@@ -16,12 +16,13 @@ import :PSO;
 import :CommandAllocator;
 import :CommandListRecorder;
 
+import :Autogen.Tables.DebugStruct;
+
 export{
 
 	namespace HAL
 	{
-		class GPUBuffer;
-
+	
 		class CommandListBase : public StateContext, public GPUEntityStorageProxy
 		{
 		protected:
@@ -491,7 +492,7 @@ export{
 			void setup_debug(SignatureDataSetter*);
 			void print_debug();
 			bool first_debug_log = true;
-			std::shared_ptr<GPUBuffer> debug_buffer;
+			StructuredBufferView<Table::DebugStruct> debug_buffer;
 
 			GraphicsContext& get_graphics();
 			ComputeContext& get_compute();
@@ -539,12 +540,11 @@ export{
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
 			template<class T>
-			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<const T> data)
+			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<typename HAL::StructuredBufferView<T>::UnderlyingType> data)
 			{
-				update_buffer(view.resource, view.desc.offset + offset * sizeof(T), reinterpret_cast<const char*>(data.data()), data.size_bytes());
+				update_buffer(view.resource, view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), reinterpret_cast<const char*>(data.data()), data.size_bytes());
 
 			}
-
 			std::future<bool> read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 
 			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
@@ -600,6 +600,9 @@ export{
 
 			void reset()
 			{
+				used_slots.clear();
+				tables.clear();
+				tables.resize(32);
 
 			}
 			CommandList& get_base() {
@@ -826,8 +829,12 @@ export{
 			{
 				return base;
 			}
-
-
+			
+			template<class T>
+			void clear_counter(HAL::StructuredBufferView<T>& view)
+			{
+				get_base().clear_uav(view.counter_view.rwRAW);
+			}
 
 			void dispatch(int = 1, int = 1, int = 1);
 			void dispatch(ivec2, ivec2 = ivec2(8, 8));
@@ -887,6 +894,19 @@ export{
 		};
 	}
 
+	namespace Helpers
+	{
+	template<class T>
+			static auto make_buffer(std::span<T> v)
+			{
+				HAL::StructuredBufferView<T> buffer(v.size());
 
+	auto list = (HAL::Device::get().get_upload_list());
+			list->get_copy().update(buffer, 0, v);
+			list->execute_and_wait();
+
+				return buffer;
+			}
+	}
 
 }

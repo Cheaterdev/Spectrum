@@ -185,7 +185,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			vertex_handle.get_offset(),
 			vertex_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 
@@ -194,7 +194,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			index_handle.get_offset(),
 			index_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 	this->meshlets = buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
@@ -202,14 +202,14 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			meshlet_handle.get_offset(),
 			meshlet_handle.get_size(),
-			false
+			counterType::NONE
 		});
 	meshlet_cull_datas = buffer->create_view<HAL::StructuredBufferView<Table::MeshletCullData>>(
 		HAL::Device::get().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			meshlet_cull_handle.get_offset(),
 			meshlet_cull_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 	unique_indices = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
@@ -217,7 +217,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			unique_index_handle.get_offset(),
 			unique_index_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 	primitive_indices = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
@@ -225,7 +225,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			primitive_index_handle.get_offset(),
 			primitive_index_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 
@@ -254,7 +254,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 				StructuredBufferViewDesc{
 					vertex_buffer_view.desc.offset + mesh.vertex_offset * sizeof(Table::mesh_vertex_input),
 					mesh.vertex_count * sizeof(Table::mesh_vertex_input),
-					false
+					counterType::NONE
 				});
 
 
@@ -263,7 +263,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 				StructuredBufferViewDesc{
 					index_buffer_view.desc.offset  + mesh.index_offset * sizeof(UINT32),
 					mesh.index_count * sizeof(UINT32),
-					false
+					counterType::NONE
 				});
 
 			compiled.meshet_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
@@ -271,7 +271,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 				StructuredBufferViewDesc{
 					this->meshlets.desc.offset  + meshlets_offset* sizeof(Table::Meshlet),
 					mesh.meshlets.size() * sizeof(Table::Meshlet),
-					false
+					counterType::NONE
 				});
 
 			compiled.draw_arguments.StartIndexLocation = static_cast<uint>(compiled.index_buffer_view.desc.offset/sizeof(UINT));
@@ -587,12 +587,12 @@ void MeshAssetInstance::update_nodes()
 	universal_rtx_manager::get().allocate(instance_handle, rendering_count);
 
 
-	nodes_buffer_view = universal_nodes_manager::get().buffer->resource->create_view<HAL::StructuredBufferView<Table::node_data>>(
+	nodes_buffer_view = universal_nodes_manager::get().buffer.resource->create_view<HAL::StructuredBufferView<Table::node_data>>(
 		HAL::Device::get().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			(uint)nodes_handle.get_offset_in_bytes(),
 			(uint)nodes_handle.get_size_in_bytes(),
-			false
+			counterType::NONE
 		});
 	Slots::MeshInstanceInfo instance_info;
 

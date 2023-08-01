@@ -707,6 +707,12 @@ struct texture_layout
 };
 
 
+		enum class counterType :int
+		{
+			NONE,
+			SELF,
+			HELP_BUFFER
+		};
 	struct shader_macro
 	{
 		std::string name;

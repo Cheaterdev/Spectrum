@@ -38,8 +38,8 @@ export class stencil_renderer : public GUI::base, public FrameGraph::GraphGenera
         float3 get_normal(int axis);
         std::pair<MeshAssetInstance::ptr, int> mouse_on_object;
 
-		HAL::StructureBuffer<vec4>::ptr vertex_buffer;
-		HAL::IndexBuffer::ptr index_buffer;
+		HAL::StructuredBufferView<vec4> vertex_buffer;
+		HAL::IndexBuffer index_buffer;
 
         virtual bool can_accept(GUI::drag_n_drop_package::ptr p) override;
 		virtual void on_drop_move(GUI::drag_n_drop_package::ptr p, vec2)override;

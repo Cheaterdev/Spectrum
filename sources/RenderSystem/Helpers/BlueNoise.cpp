@@ -12,11 +12,16 @@ namespace _1spp
 
 struct
 {
-	std::span<const std::int32_t> sobolBuffer;
-	std::span<const std::int32_t> rankingTileBuffer;
-	std::span<const std::int32_t> scramblingTileBuffer;
+	std::span<std::int32_t> sobolBuffer;
+	std::span<std::int32_t> rankingTileBuffer;
+	std::span<std::int32_t> scramblingTileBuffer;
 }
-const g_blueNoiseSamplerState = { _1spp::sobol_256spp_256d,  _1spp::rankingTile,  _1spp::scramblingTile };
+const g_blueNoiseSamplerState = 
+{ 
+	const_cast<std::remove_const<decltype(_1spp::sobol_256spp_256d)>::type&>(_1spp::sobol_256spp_256d), 
+	const_cast<std::remove_const<decltype(_1spp::rankingTile)>::type&>(_1spp::rankingTile),
+	const_cast<std::remove_const<decltype(_1spp::scramblingTile)>::type&>(_1spp::scramblingTile) 
+};
 
 
 
@@ -40,7 +45,7 @@ BlueNoise::BlueNoise()
 		HAL::StructuredBufferViewDesc{
 			sobol_handle.get_offset(),
 			sobol_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 
@@ -49,7 +54,7 @@ BlueNoise::BlueNoise()
 		HAL::StructuredBufferViewDesc{
 			ranking_handle.get_offset(),
 			ranking_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 
@@ -58,7 +63,7 @@ BlueNoise::BlueNoise()
 		HAL::StructuredBufferViewDesc{
 			scrambling_handle.get_offset(),
 			scrambling_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 
