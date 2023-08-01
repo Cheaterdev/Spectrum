@@ -307,7 +307,7 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	verts[5] = vec4(1.0f, -1.0f, -1.0f, 0);
 	verts[6] = vec4(1.0f, -1.0f, 1.0f, 0);
 	verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
-	index_buffer = HAL::IndexBuffer::make_buffer(data);
+	index_buffer = Helpers::make_buffer<unsigned int>(data);
 
 	vertex_buffer = HAL::StructuredBufferView<vec4>(8);
 
@@ -649,7 +649,7 @@ void stencil_renderer::generate_after(Graph& graph)
 				if (draw_aabb) {
 					graphics.set_pipeline<PSOS::DrawBox>();
 					graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-					graphics.set_index_buffer(index_buffer->get_index_buffer_view());
+					graphics.set_index_buffer(index_buffer.get_index_buffer_view());
 					{
 						Slots::DrawStencil draw;
 						draw.GetVertices() = vertex_buffer.structuredBuffer;

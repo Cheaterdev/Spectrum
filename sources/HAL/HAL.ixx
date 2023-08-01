@@ -40,9 +40,6 @@ export import :CommandList;
 export import :Raytracing;
 
 export import :VirtualBuffer;
-export import :Buffer;
-
-
 
 export import :SIG;
 export import :RT;

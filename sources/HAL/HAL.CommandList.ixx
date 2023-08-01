@@ -894,6 +894,19 @@ export{
 		};
 	}
 
+	namespace Helpers
+	{
+	template<class T>
+			static auto make_buffer(std::span<T> v)
+			{
+				HAL::StructuredBufferView<T> buffer(v.size());
 
+	auto list = (HAL::Device::get().get_upload_list());
+			list->get_copy().update(buffer, 0, v);
+			list->execute_and_wait();
+
+				return buffer;
+			}
+	}
 
 }

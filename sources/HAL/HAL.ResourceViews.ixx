@@ -751,6 +751,17 @@ export
 			}
 
 
+
+				HAL::Views::IndexBuffer get_index_buffer_view() //requires (std::is_same_v(T, uint))
+				{
+					HAL::Views::IndexBuffer view;
+					view.OffsetInBytes = desc.offset;
+					view.Format = HAL::Format::R32_UINT;// is_32 ? DXGI_FORMAT_R32_UINT : DXGI_FORMAT_R16_UINT;
+					view.SizeInBytes = desc.size ;
+					view.Resource = resource;
+					return view;
+				}
+
 			SERIALIZE()
 			{
 				ar& NVP(resource);
@@ -765,6 +776,8 @@ export
 			}
 		};
 
+		
 
+		using IndexBuffer = StructuredBufferView<unsigned int>;
 	}
 }

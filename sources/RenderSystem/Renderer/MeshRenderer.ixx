@@ -132,7 +132,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 	
 		HAL::StructuredBufferView<DrawIndexedArguments> draw_boxes_first;
 		HAL::StructuredBufferView<vec4> vertex_buffer;
-		HAL::IndexBuffer::ptr index_buffer;
+		HAL::IndexBuffer index_buffer;
 		virtual_gpu_buffer<UINT>::ptr visible_boxes;
 		virtual_gpu_buffer<UINT>::ptr meshes_ids;
 		virtual_gpu_buffer<UINT>::ptr meshes_invisible_ids;
