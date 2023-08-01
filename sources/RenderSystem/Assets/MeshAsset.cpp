@@ -596,13 +596,13 @@ void MeshAssetInstance::update_nodes()
 		});
 	Slots::MeshInstanceInfo instance_info;
 
-	instance_info.GetVertexes() = mesh_asset->vertex_buffer_view.structuredBuffer;
-	instance_info.GetIndices() = mesh_asset->index_buffer_view.structuredBuffer;
-	instance_info.GetMeshletCullData() = mesh_asset->meshlet_cull_datas.structuredBuffer;
-	instance_info.GetMeshlets() = mesh_asset->meshlets.structuredBuffer;
+	instance_info.GetVertexes() = mesh_asset->vertex_buffer_view;
+	instance_info.GetIndices() = mesh_asset->index_buffer_view;
+	instance_info.GetMeshletCullData() = mesh_asset->meshlet_cull_datas;
+	instance_info.GetMeshlets() = mesh_asset->meshlets;
 
-	instance_info.GetUnique_indices() = mesh_asset->unique_indices.structuredBuffer;
-	instance_info.GetPrimitive_indices() = mesh_asset->primitive_indices.structuredBuffer;
+	instance_info.GetUnique_indices() = mesh_asset->unique_indices;
+	instance_info.GetPrimitive_indices() = mesh_asset->primitive_indices;
 
 	mesh_instance_info = instance_info.compile(HAL::Device::get().get_static_gpu_data());
 	auto gpu_nodes = nodes_handle.map();

@@ -103,7 +103,7 @@ namespace HAL
 	{
 		if (!current_pipeline->debuggable) return;
 		Slots::DebugInfo info;
-		info.GetDebug() = debug_buffer.rwStructuredBuffer;
+		info.debug = debug_buffer;
 		setter->set(info);
 
 	}

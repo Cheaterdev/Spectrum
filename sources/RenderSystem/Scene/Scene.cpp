@@ -107,10 +107,10 @@ void Scene::update(HAL::FrameResources& frame)
 	{
 		PROFILE(L"SceneData");
 		Slots::SceneData sceneData;
-		sceneData.GetNodes() = universal_nodes_manager::get().buffer.structuredBuffer;
-		sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer.structuredBuffer;
-		sceneData.GetMeshes() = scene->mesh_infos->buffer.structuredBuffer;
-sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer.structuredBuffer;
+		sceneData.GetNodes() = universal_nodes_manager::get().buffer;
+		sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer;
+		sceneData.GetMeshes() = scene->mesh_infos->buffer;
+sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer;
 
 		compiledScene = sceneData.compile(frame);
 	}

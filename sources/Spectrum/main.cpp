@@ -597,7 +597,7 @@ VoxelGI::ptr voxel_gi;
 
 						{
 							Slots::VoxelOutput output;
-							output.GetNoise() = data.RTXDebug->rwTexture2D;
+							output.GetNoise() = *data.RTXDebug;
 							compute.set(output);
 						}
 
@@ -606,7 +606,7 @@ VoxelGI::ptr voxel_gi;
 
 							Slots::VoxelScreen voxelScreen;
 							gbuffer.SetTable(voxelScreen.GetGbuffer());
-							voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
+							voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
 					//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
 							compute.set(voxelScreen);
 						}
@@ -707,7 +707,7 @@ VoxelGI::ptr voxel_gi;
 			//// hack zone
 			auto sky = graph.builder.get("sky_cubemap_filtered");
 			if (sky&&sky->resource)
-				frameInfo.GetSky() = sky->get_handler<Handlers::Cube>()->textureCube;
+				frameInfo.GetSky() = *sky->get_handler<Handlers::Cube>();
 
 			/////////
 			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
@@ -717,8 +717,8 @@ VoxelGI::ptr voxel_gi;
 			frameInfo.GetCamera() = cam.cam->camera_cb.current;
 			frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
 
-			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
-			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
+			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
 
 			auto compiled = frameInfo.compile(*graph.builder.current_frame);
 			graph.register_slot_setter(compiled);

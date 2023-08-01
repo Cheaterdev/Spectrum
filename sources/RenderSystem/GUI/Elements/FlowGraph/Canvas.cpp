@@ -62,7 +62,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::VSLine>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
 		{
 			Slots::LineRender linedata;
-			linedata.GetVb() = view.structuredBuffer;
+			linedata.GetVb() = view;
 			c.command_list->get_graphics().set(linedata);
 		}
 		c.command_list->get_graphics().draw(count * 4, 0);

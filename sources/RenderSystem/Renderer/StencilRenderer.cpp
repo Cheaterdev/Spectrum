@@ -435,7 +435,7 @@ void stencil_renderer::generate(Graph& graph)
 
 					{
 						Slots::PickerBuffer buffer;
-						buffer.GetViewBuffer() = data.id_buffer->rwStructuredBuffer;
+						buffer.GetViewBuffer() = *data.id_buffer;
 						graphics.set(buffer);
 					}
 
@@ -467,7 +467,7 @@ void stencil_renderer::generate(Graph& graph)
 					}
 					{
 						Slots::PickerBuffer buffer;
-						buffer.GetViewBuffer() = data.axis_id_buffer->rwStructuredBuffer;
+						buffer.GetViewBuffer() = *data.axis_id_buffer;
 						graphics.set(buffer);
 					}
 
@@ -620,7 +620,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					{
 						Slots::Countour contour;
 						contour.GetColor() = { 1,0.5,0,1 };
-						contour.GetTex() = data.Stencil_color_tex->texture2D;
+						contour.GetTex() = *data.Stencil_color_tex;
 						graphics.set(contour);
 					}
 
@@ -652,7 +652,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					graphics.set_index_buffer(index_buffer.get_index_buffer_view());
 					{
 						Slots::DrawStencil draw;
-						draw.GetVertices() = vertex_buffer.structuredBuffer;
+						draw.GetVertices() = vertex_buffer;
 						graphics.set(draw);
 					}
 

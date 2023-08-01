@@ -117,7 +117,7 @@ namespace FW1FontWrapper
 			{
 				Slots::FontRenderingGlyphs glyphs;
 
-				glyphs.GetData() = view.structuredBuffer;
+				glyphs.GetData() = view;
 				pContext->get_graphics().set(glyphs);
 
 			}
