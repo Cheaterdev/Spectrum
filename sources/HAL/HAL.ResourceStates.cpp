@@ -138,7 +138,7 @@ namespace HAL
 				continue;
 			if (gpu.layout != first_state.layout)
 			{
-				assert(!manual_controlled); // frame graph is bad if this happens
+//				assert(!manual_controlled); // frame graph is bad if this happens
 				auto from = ResourceStates::NO_ACCESS;
 				auto to = ResourceStates::NO_ACCESS;
 

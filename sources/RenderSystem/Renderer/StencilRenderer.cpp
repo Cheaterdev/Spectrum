@@ -309,9 +309,14 @@ stencil_renderer::stencil_renderer() : VariableContext(L"stencil")
 	verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
 	index_buffer = HAL::IndexBuffer::make_buffer(data);
 
-	vertex_buffer.reset(new HAL::StructureBuffer<vec4>(8));
-	vertex_buffer->set_raw_data(verts);
+	vertex_buffer = HAL::StructuredBufferView<vec4>(8);
 
+
+			auto list = (HAL::Device::get().get_upload_list());
+	
+		list->get_copy().update(vertex_buffer, 0, verts);
+	
+			list->execute_and_wait();
 
 }
 
@@ -647,7 +652,7 @@ void stencil_renderer::generate_after(Graph& graph)
 					graphics.set_index_buffer(index_buffer->get_index_buffer_view());
 					{
 						Slots::DrawStencil draw;
-						draw.GetVertices() = vertex_buffer->structuredBuffer;
+						draw.GetVertices() = vertex_buffer.structuredBuffer;
 						graphics.set(draw);
 					}
 

@@ -16,12 +16,13 @@ import :PSO;
 import :CommandAllocator;
 import :CommandListRecorder;
 
+import :Autogen.Tables.DebugStruct;
+
 export{
 
 	namespace HAL
 	{
-		class GPUBuffer;
-
+	
 		class CommandListBase : public StateContext, public GPUEntityStorageProxy
 		{
 		protected:
@@ -491,7 +492,7 @@ export{
 			void setup_debug(SignatureDataSetter*);
 			void print_debug();
 			bool first_debug_log = true;
-			std::shared_ptr<GPUBuffer> debug_buffer;
+			StructuredBufferView<Table::DebugStruct> debug_buffer;
 
 			GraphicsContext& get_graphics();
 			ComputeContext& get_compute();
@@ -828,8 +829,12 @@ export{
 			{
 				return base;
 			}
-
-
+			
+			template<class T>
+			void clear_counter(HAL::StructuredBufferView<T>& view)
+			{
+				get_base().clear_uav(view.counter_view.rwRAW);
+			}
 
 			void dispatch(int = 1, int = 1, int = 1);
 			void dispatch(ivec2, ivec2 = ivec2(8, 8));

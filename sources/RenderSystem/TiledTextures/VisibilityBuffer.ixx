@@ -22,7 +22,7 @@ export {
 	public:
 		HAL::Texture::ptr buffer;
 
-		HAL::StructureBuffer<uint4>::ptr load_tiles_buffer;
+		HAL::StructuredBufferView<uint4> load_tiles_buffer;
 		using ptr = std::shared_ptr<VisibilityBuffer>;
 
 		VisibilityBuffer(uint3 sizes);

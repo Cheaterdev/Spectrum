@@ -3,7 +3,7 @@ struct ColorPass: public RaytracePass<ColorPass>
 {
 	using Payload = Table::RayPayload;
 	using LocalData =  Slots::MaterialInfo;
-	static const constexpr UINT ID = 1;
+	static const constexpr uint ID = 1;
 	static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
 	static const constexpr std::wstring_view name = L"ColorPass_GROUP";
 	static const constexpr std::wstring_view hit_name = L"MyClosestHitShader";

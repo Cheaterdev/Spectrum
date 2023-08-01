@@ -1,6 +1,5 @@
 export module HAL:Raytracing;
 
-import :Buffer;
 import :VirtualBuffer;
 import :ResourceViews;
 

@@ -131,9 +131,9 @@ export
 				memcpy(resource->buffer_data + offset, data, sizeof(Underlying<T>) * count);
 			}
 
-				ResourceAddress get_resource_address() const
+				ResourceAddress get_resource_address(uint offset = 0) const
 			{
-				return resource->get_resource_address().offset(desc.offset);
+				return resource->get_resource_address().offset(desc.offset+offset*sizeof(Underlying<T>));
 			}
 		};
 
@@ -646,6 +646,11 @@ export
 				return resource;
 
 			}
+
+			uint get_count() const
+			{
+			return desc.size/sizeof(UnderlyingType);
+			}
 			void init(GPUEntityStorageInterface& frame)
 			{
 				uint local_offset = 0;
@@ -713,7 +718,7 @@ export
 			}
 
 
-			StructuredBufferView(uint count, counterType counted, HAL::ResFlags flags, HAL::HeapType heap_type, GPUEntityStorageInterface& frame = Device::get().get_static_gpu_data()) :
+			StructuredBufferView(uint count, counterType counted =  counterType::NONE, HAL::ResFlags flags= HAL::ResFlags::ShaderResource , HAL::HeapType heap_type = HAL::HeapType::DEFAULT, GPUEntityStorageInterface& frame = Device::get().get_static_gpu_data()) :
 				ResourceView(std::make_shared<HAL::Resource>(HAL::ResourceDesc::Buffer(count * sizeof(T) +  (counted==counterType::SELF)*Math::roundUp(4, sizeof(Underlying<T>)), flags), heap_type))
 
 			{
@@ -740,9 +745,9 @@ export
 			}
 
 
-				ResourceAddress get_resource_address() const
+				ResourceAddress get_resource_address(uint offset = 0) const
 			{
-				return resource->get_resource_address().offset(desc.offset);
+				return resource->get_resource_address().offset(desc.offset+offset*sizeof(Underlying<T>));
 			}
 
 

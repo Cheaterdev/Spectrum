@@ -120,7 +120,7 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 
 
 	{
-		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<DispatchArguments>));
+		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get());
 	}
 
 	{
@@ -300,7 +300,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 				utils.GetSource()[1] = normal.tex_static->texture_3d().texture3D;
 
 				auto& params = utils.GetParams();
-				params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
+				params.GetTiles() = albedo_tiles->buffer.structuredBuffer;
 				params.GetVoxels_per_tile() = ivec4(normal.tex_result->resource->get_tiled_manager().get_tile_shape(), 0);
 				compute.set(utils);
 			}
@@ -308,7 +308,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 			compute.execute_indirect(
 				dispatch_command,
 				1,
-				albedo_tiles->dispatch_buffer->resource.get());
+				albedo_tiles->dispatch_buffer.resource.get());
 
 		}
 	}
@@ -1209,7 +1209,7 @@ void VoxelGI::lighting(Graph& graph)
 
 
 				auto& params = ligthing.GetParams();
-				params.GetTiles() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
+				params.GetTiles() = gpu_tiles_buffer[0]->buffer.structuredBuffer;
 				params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
 				auto& pssm = ligthing.GetPssmGlobal();
@@ -1230,7 +1230,7 @@ void VoxelGI::lighting(Graph& graph)
 			compute.execute_indirect(
 				dispatch_command,
 				1,
-				gpu_tiles_buffer[0]->dispatch_buffer->resource.get());
+				gpu_tiles_buffer[0]->dispatch_buffer.resource.get());
 
 		}, PassFlags::Compute);
 
@@ -1299,7 +1299,7 @@ void VoxelGI::mipmapping(Graph& graph)
 						utils.GetTarget() = tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D;
 
 						auto& params = utils.GetParams();
-						params.GetTiles() = gpu_tiles_buffer[i]->buffer->structuredBuffer;
+						params.GetTiles() = gpu_tiles_buffer[i]->buffer.structuredBuffer;
 						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
 						compute.set(utils);
@@ -1308,7 +1308,7 @@ void VoxelGI::mipmapping(Graph& graph)
 					compute.execute_indirect(
 						dispatch_command,
 						1,
-						gpu_tiles_buffer[i]->dispatch_buffer->resource.get());
+						gpu_tiles_buffer[i]->dispatch_buffer.resource.get());
 
 				}
 			}
@@ -1337,7 +1337,7 @@ void VoxelGI::mipmapping(Graph& graph)
 						}
 
 						auto& params = mipmapping.GetParams();
-						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
+						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer.structuredBuffer;
 						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
 						compute.set(mipmapping);
@@ -1346,7 +1346,7 @@ void VoxelGI::mipmapping(Graph& graph)
 					compute.execute_indirect(
 						dispatch_command,
 						1,
-						gpu_tiles_buffer[mip_count]->dispatch_buffer->resource.get());
+						gpu_tiles_buffer[mip_count]->dispatch_buffer.resource.get());
 
 					mip_count += current_mips;
 				}

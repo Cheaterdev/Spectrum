@@ -1,10 +1,11 @@
 export module HAL:VirtualBuffer;
 import <HAL.h>;
 export import :Concepts;
-import :Buffer;
 import :Types;
 import :Debug;
-
+import :TiledMemoryManager;
+import :ResourceViews;
+import :CommandList;
 import Core;
 
 export
@@ -113,7 +114,7 @@ export
 				return Base::get_max_usage();
 			}
 
-			void debug_print(CommandList& list)
+		/*	void debug_print(CommandList& list)
 			{
 
 				list.get_copy().read_buffer(buffer->resource.get(), 0, sizeof(T) * 16, [this](std::span<std::byte> memory)
@@ -124,7 +125,7 @@ export
 						for (int i = 0; i < 16; i++)
 							Log::get() << result[i] << Log::endl;
 					});
-			}
+			}*/
 
 			void prepare(CommandList::ptr& list)
 			{

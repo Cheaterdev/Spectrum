@@ -6,8 +6,8 @@ void GPUTilesBuffer::set_size(ivec3 size, ivec3 shape)
 	this->shape = shape;
 
 	tile_positions.resize(size, -1);
-	buffer.reset(new HAL::StructureBuffer<ivec3>(size.x * size.y * size.z));
-	dispatch_buffer = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	buffer = HAL::StructuredBufferView<ivec3>(size.x * size.y * size.z);
+	dispatch_buffer = HAL::StructuredBufferView<DispatchArguments>(1, HAL::counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
 
 void GPUTilesBuffer::clear()
@@ -49,14 +49,14 @@ void GPUTilesBuffer::erase(ivec3 pos)
 void GPUTilesBuffer::update(HAL::CommandList::ptr list)
 {
 	if (tiles_updated&&!used_tiles.empty()) {
-		buffer->set_data(list, 0, used_tiles);
+		list->get_copy().update(buffer, 0, used_tiles);
 		DispatchArguments args;
 
 		args.ThreadGroupCountX = static_cast<UINT>(used_tiles.size() * shape.x / 4);
 		args.ThreadGroupCountY = shape.y / 4;
 		args.ThreadGroupCountZ = shape.z / 4;
 
-		dispatch_buffer->set_data(list, args);
+		list->get_copy().update(dispatch_buffer, 0, std::span{static_cast<D3D12_DISPATCH_ARGUMENTS*>(&args),1});
 	}
 	tiles_updated = false;
 }

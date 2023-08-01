@@ -210,8 +210,6 @@ void generate_table(Table& table)
 
 	{
 		stream.push();
-
-	
 		//	if (table.counts[ValueType::CB] != 0) stream << table.name << "_cb cb;" << std::endl;
 		//	if (table.counts[ValueType::SRV] != 0) stream << table.name << "_srv srv;" << std::endl;
 		//	if (table.counts[ValueType::UAV] != 0) stream << table.name << "_uav uav;" << std::endl;
@@ -374,19 +372,40 @@ std::string str_toupper(std::string s) {
 
 void generate_cpp_table(const Table& table)
 {
-	my_stream stream(cpp_path + "/tables", table.name + ".h");
+	my_stream stream(cpp_path + "/tables", table.name + ".table.ixx");
 
-	stream << "#pragma once" << std::endl;
+	stream << "export module HAL:Autogen.Tables." <<table.name << ";"<<std::endl;
+
+		stream << "import Core;"<<std::endl;
+			stream << "import :SIG;"<<std::endl;
+	stream << "import :Types;"<<std::endl;
+	stream << "import :HLSL;"<<std::endl;
+//	stream << "import Core;"<<std::endl;
+//
+//
+//	
+//
+//
+//import :PipelineState;
+//import :SIG;
+//import :RT;
+//import :Layout;
+//import :Slots;
+//import :PSO;
+//import :RTX;
+//import :Enums;
+//import :RootSignature;
+//import :Types;
 
 	for (auto& v : table.used_tables)
 	{
 		auto t = parsed.find_table(v);
 		if (t->find_option("shader_only")) continue;
 
-		stream << "#include \"" << v << ".h\"" << std::endl;
+		stream << "import :Autogen.Tables." << v << ";"<<std::endl;
 	}
 
-
+	stream << "import :Enums;"<<std::endl;
 	// declaration
 	auto declare_func = [&](ValueType type) {
 
@@ -408,7 +427,7 @@ void generate_cpp_table(const Table& table)
 	};
 
 
-	stream << "namespace Table " << std::endl;
+	stream << "export namespace Table " << std::endl;
 	stream << "{" << std::endl;
 	{
 		stream.push();
@@ -418,9 +437,7 @@ void generate_cpp_table(const Table& table)
 		stream << "{" << std::endl;
 		{
 			stream.push();
-
-			stream << "static constexpr SlotID ID = SlotID::"  << table.name << ";"<< std::endl;
-
+				stream << "static constexpr SlotID ID = SlotID::"  << table.name << ";"<< std::endl;
 
 			declare_func(ValueType::CB);
 			declare_func(ValueType::SRV);
@@ -667,12 +684,22 @@ void generate_cpp_table(const Table& table)
 
 	if (table.slot)
 	{
-		my_stream stream(cpp_path + "/slots", table.name + ".h");
-		stream << "#pragma once" << std::endl;
+		my_stream stream(cpp_path + "/slots", table.name + ".ixx");
+		stream << "export module HAL:Autogen.Slots." << table.name << ";" << std::endl;
+		stream << "import Core;" << std::endl;
 
-		stream << "#include \"..\\Tables\\" << table.name << ".h\"" << std::endl;
 
-		stream << "namespace Slots ";
+		stream << "import :Autogen.Tables." << table.name << ";" << std::endl;
+		stream << "import :Autogen.Layouts." << table.slot->layout->name << ";" << std::endl;
+
+		stream << "import :SIG;" << std::endl;
+		stream << "import :Types;" << std::endl;
+		stream << "import :Enums;" << std::endl;
+		stream << "import :Slots;" << std::endl;
+
+
+
+		stream << "export namespace Slots ";
 		stream << "{" << std::endl;
 		{
 			stream.push();
@@ -684,8 +711,8 @@ void generate_cpp_table(const Table& table)
 			stream << "{" << std::endl;
 			{
 				stream.push();
-
 				stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;" << std::endl;
+
 
 				stream << table.name << "() = default;" << std::endl;
 
@@ -724,29 +751,32 @@ import :Enums;
 import :RootSignature;
 import :Types;
 
-export
-{
-
 )" << std::endl;
 
 		stream.push();
 		for (auto& l : parsed.layouts)
 		{
-			stream << "#include \"layout\\" << l.name << ".h\"" << std::endl;
+			stream << "export import :Autogen.Layouts." << l.name << ";" << std::endl;
 		}
 
 		for (auto& t : parsed.tables)
 		{
 			if (t.slot)
-				stream << "#include \"slots\\" << t.name << ".h\"" << std::endl;
-			else if (!t.find_option("shader_only"))
-				stream << "#include \"tables\\" << t.name << ".h\"" << std::endl;
+				stream << "export import :Autogen.Slots." << t.name << ";" << std::endl;
+		if (!t.find_option("shader_only"))
+				stream << "export import :Autogen.Tables." << t.name << ";" << std::endl;
+
+		}
+
+	stream << "export{" << std::endl;
+
+
+		for (auto& t : parsed.tables)
+		{
 
 			if (t.find_option("RenderTarget"))
 				stream << "#include \"rt\\" << t.name << ".h\"" << std::endl;
 		}
-
-
 		for (auto& t : parsed.rt)
 		{
 
@@ -773,7 +803,7 @@ export
 		}
 
 		stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
-		stream << "UINT get_table_index(SlotID id);" << std::endl;
+		stream << "uint get_table_index(SlotID id);" << std::endl;
 		stream << "std::string get_slot_name(SlotID id);" << std::endl;
 
 		stream.pop();
@@ -917,7 +947,7 @@ export
 
 
 		{
-			stream << "UINT get_table_index(SlotID id)" << std::endl;
+			stream << "uint get_table_index(SlotID id)" << std::endl;
 
 			stream << "{" << std::endl;
 
@@ -1495,7 +1525,9 @@ void generate_cpp_rt(Table& table)
 		stream << "{" << std::endl;
 		{
 			stream.push();
+
 				stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;" << std::endl;
+
 
 			declare_func(ValueType::SRV);
 
@@ -1666,13 +1698,16 @@ void generate_cpp_rt(Table& table)
 
 void generate_cpp_layout(Layout& layout)
 {
-	my_stream stream(cpp_path + "/layout", layout.name + ".h");
-	stream << "#pragma once" << std::endl;
 
-	if (layout.parent_ptr)
-	{
-		stream << "#include \"" << layout.parent_ptr->name << ".h\"" << std::endl;
-	}
+	my_stream stream(cpp_path + "/layout", layout.name + ".layout.ixx");
+	stream << "export module HAL:Autogen.Layouts." <<layout.name << ";"<<std::endl;
+
+	stream << "import Core;" << std::endl;
+	if (layout.parent_ptr) stream << "import :Autogen.Layouts." << layout.parent_ptr->name << ";" << std::endl;
+
+	stream << "import :Types;" << std::endl;
+	stream << "import :Sampler;" << std::endl;
+
 
 	auto slot = [&](Slot& s) {
 
@@ -1682,7 +1717,7 @@ void generate_cpp_layout(Layout& layout)
 		{
 			stream.push();
 
-			stream << "static const unsigned int ID = " << s.id << ";" << std::endl;
+			stream << "static const uint ID = " << s.id << ";" << std::endl;
 
 			std::string tables;
 
@@ -1694,8 +1729,8 @@ void generate_cpp_layout(Layout& layout)
 				if (count == 0)
 					continue;
 
-				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
-				stream << "static const unsigned int " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
+				stream << "static const uint " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
+				stream << "static const uint " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
 
 				if (!tables.empty())
 					tables += ", ";
@@ -1705,7 +1740,7 @@ void generate_cpp_layout(Layout& layout)
 			}
 
 
-			stream << "static inline const std::vector<UINT> tables = {" << tables << "};" << std::endl;
+			stream << "static inline const std::vector<uint> tables = {" << tables << "};" << std::endl;
 
 
 			stream.pop();
@@ -1715,9 +1750,9 @@ void generate_cpp_layout(Layout& layout)
 	};
 
 	if (layout.parent_ptr)
-		stream << "struct " << layout.name << ": public " << layout.parent_ptr->name << std::endl;
+		stream << "export struct " << layout.name << ": public " << layout.parent_ptr->name << std::endl;
 	else
-		stream << "struct " << layout.name << std::endl;
+		stream << "export struct " << layout.name << std::endl;
 	stream << "{" << std::endl;
 	{
 		stream.push();
@@ -1787,7 +1822,7 @@ void generate_raygen(RaytraceGen& pso)
 	stream << "{" << std::endl;
 	stream.push();
 	{
-		stream << std::format(R"(static const constexpr UINT ID = {};)", pso.index) << std::endl;
+		stream << std::format(R"(static const constexpr uint ID = {};)", pso.index) << std::endl;
 
 		stream << std::format(R"(static const constexpr std::string_view shader = "shaders\\{}.hlsl";)", pso.shaders["raygen"]->name) << std::endl;
 		stream << std::format(R"(static const constexpr std::wstring_view raygen = L"{}";)", pso.shaders["raygen"]->find_option("EntryPoint")->value_atom.expr) << std::endl;
@@ -1820,7 +1855,7 @@ void generate_pass(RaytracePass& pso)
 		if (pso.find_param("local"))
 			stream << std::format(R"(using LocalData =  Slots::{};)", pso.find_param("local")->expr) << std::endl;
 
-		stream << std::format(R"(static const constexpr UINT ID = {};)", pso.index) << std::endl;
+		stream << std::format(R"(static const constexpr uint ID = {};)", pso.index) << std::endl;
 
 		stream << std::format(R"(static const constexpr std::string_view shader = "shaders\\{}.hlsl";)", pso.shaders["miss"]->name) << std::endl;
 		stream << std::format(R"(static const constexpr std::wstring_view name = L"{}_GROUP";)", pso.name) << std::endl;
@@ -1885,7 +1920,7 @@ void generate_rtx_pso(RaytracePSO& pso)
 	stream.push();
 	{
 		stream << std::format(R"(static const constexpr Layouts global_sig  = Layouts::{};)", pso.root_sig.name) << std::endl;
-		stream << std::format(R"(static const constexpr UINT MaxTraceRecursionDepth = 2;)") << std::endl;
+		stream << std::format(R"(static const constexpr uint MaxTraceRecursionDepth = 2;)") << std::endl;
 
 	}
 	stream.pop();

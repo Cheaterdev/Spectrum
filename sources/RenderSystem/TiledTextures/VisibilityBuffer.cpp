@@ -11,7 +11,7 @@ VisibilityBuffer::VisibilityBuffer(uint3 sizes) :sizes(sizes)
 	buffer = std::make_shared<HAL::Texture>(desc);
 	buffer->resource->set_name("VisibilityBuffer::buffer");
 
-	load_tiles_buffer = std::make_shared<HAL::StructureBuffer<uint4>>(sizes.x * sizes.y * sizes.z, HAL::counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+	load_tiles_buffer = HAL::StructuredBufferView<uint4>(sizes.x * sizes.y * sizes.z, HAL::counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 }
 /*
 void VisibilityBuffer::wait_for_results()
@@ -36,13 +36,14 @@ std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& l
 		UINT size;
 	};
 
-	load_tiles_buffer->clear_counter(list);
+	list->get_compute().clear_counter(load_tiles_buffer);
+
 
 	{
 		Slots::VoxelVisibility data;
 
 		data.GetVisibility() = buffer->resource->create_view<HAL::Texture3DView>(*list).texture3D;
-		data.GetVisible_tiles() = load_tiles_buffer->appendStructuredBuffer;
+		data.GetVisible_tiles() = load_tiles_buffer.appendStructuredBuffer;
 		compute.set(data);
 	}
 
@@ -51,13 +52,13 @@ std::future<visibility_update> VisibilityBuffer::update(HAL::CommandList::ptr& l
 
 
 	auto info = std::make_shared<_info>();
-	copy.read_buffer(load_tiles_buffer->help_buffer->resource.get(), 0, 4, [this, info](std::span<std::byte> memory)
+	copy.read_buffer(load_tiles_buffer.get_counter_buffer().get(), load_tiles_buffer.get_counter_offset(), 4, [this, info](std::span<std::byte> memory)
 		{
 			info->size = *reinterpret_cast<const UINT*>(memory.data());
 		});
 
 
-	copy.read_buffer(load_tiles_buffer->resource.get(), 0, load_tiles_buffer->resource->get_size(), [this, info, promise](std::span<std::byte> memory)
+	copy.read_buffer(load_tiles_buffer.resource.get(),  load_tiles_buffer.get_data_offset(), load_tiles_buffer.resource->get_size(), [this, info, promise](std::span<std::byte> memory)
 		{
 			PROFILE(L"Read Tiles");
 			const uint4* tiles = reinterpret_cast<const uint4*>(memory.data());

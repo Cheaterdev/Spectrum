@@ -114,19 +114,8 @@ void mesh_renderer::init_dispatch(MeshRenderContext::ptr mesh_render_context, Sl
 		compute.set(init_dispatch_compiled);
 		compute.set(from);
 
-
 		compute.dispatch(1, 1, 1);
-
-		/*graphics.execute_indirect(
-			dispatch_command,
-			1,
-			dispatch_buffer111.get());
-
-		*/
-		//		list.print_debug();
 	}
-
-	//	list.transition_uav(dispatch_buffer.get());
 }
 
 void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_context, Scene::ptr scene, bool invisibleToo)
@@ -157,7 +146,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 		graphics.execute_indirect(
 			dispatch_command,
 			1,
-			dispatch_buffer->resource.get());
+			dispatch_buffer.resource.get());
 	}
 
 
@@ -200,14 +189,14 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 			graphics.execute_indirect(
 				dispatch_command,
 				1,
-				dispatch_buffer->resource.get());
+				dispatch_buffer.resource.get());
 		}
 
 
 
 	}
 
-	copy.copy_buffer(draw_boxes_first->resource.get(), sizeof(UINT), commands_boxes->buffer.get_counter_buffer().get(),commands_boxes->buffer.get_counter_offset(), 4);
+	copy.copy_buffer(draw_boxes_first.resource.get(), sizeof(UINT), commands_boxes->buffer.get_counter_buffer().get(),commands_boxes->buffer.get_counter_offset(), 4);
 
 	init_dispatch(mesh_render_context, gather_boxes_commands);
 
@@ -240,7 +229,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	graphics.execute_indirect(
 		boxes_command,
 		1,
-		draw_boxes_first->resource.get());
+		draw_boxes_first.resource.get());
 
 
 	graphics.set_rtv(gbuffer->compiled);
@@ -304,7 +293,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				compute.execute_indirect(
 					dispatch_command,
 					1,
-					dispatch_buffer->resource.get());
+					dispatch_buffer.resource.get());
 			}
 
 		}
@@ -373,7 +362,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
 
 
-	indirect_command_signature = HAL::IndirectCommand::create_command_layout<Slots::MeshInfo,Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>), Layouts::DefaultLayout);
+	indirect_command_signature = HAL::IndirectCommand::create_command_layout<Slots::MeshInfo,Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), Layouts::DefaultLayout);
 
 	UINT max_meshes = 1024 * 1024;
 
@@ -384,7 +373,8 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 	for (int i = 0; i < 8; i++)
 		commands_buffer[i] = std::make_shared<virtual_gpu_buffer<Table::CommandData>>(max_meshes, counterType::HELP_BUFFER, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 
-
+		auto list = (HAL::Device::get().get_upload_list());
+			
 	//meshes_ids->buffer->get_native()->SetName(L"meshes_ids");
 	{
 
@@ -417,10 +407,10 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
 		index_buffer = HAL::IndexBuffer::make_buffer(data);
 
-		vertex_buffer.reset(new HAL::StructureBuffer<vec4>(8));
-		vertex_buffer->set_raw_data(verts);
-
-		draw_boxes_first = std::make_shared<HAL::StructureBuffer<DrawIndexedArguments>>(1);
+		vertex_buffer = HAL::StructuredBufferView<vec4>(8);
+		list->get_copy().update(vertex_buffer, 0, verts);
+	
+		draw_boxes_first = HAL::StructuredBufferView<DrawIndexedArguments>(1);
 
 		DrawIndexedArguments args;
 
@@ -430,29 +420,30 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		args.StartIndexLocation = 0;
 		args.StartInstanceLocation = 0;
 
-		draw_boxes_first->set_data(args);
-
+		list->get_copy().update(draw_boxes_first, 0, std::span{static_cast<D3D12_DRAW_INDEXED_ARGUMENTS*>(&args),1});
+	
 
 		{
 
-			boxes_command = HAL::IndirectCommand::create_command<DrawIndexedArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>));
+			boxes_command = HAL::IndirectCommand::create_command<DrawIndexedArguments>(HAL::Device::get());
 
 		}
 	}
 
 
 	{
-		dispatch_buffer = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<Table::CommandData>));
+		dispatch_buffer = HAL::StructuredBufferView<DispatchArguments>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get());
 	}
 
 	{
-		dispatch_buffer111 = std::make_shared<HAL::StructureBuffer<DispatchArguments>>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
+		dispatch_buffer111 = HAL::StructuredBufferView<DispatchArguments>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
 		DispatchArguments args;
 		args.ThreadGroupCountX = 1;
 		args.ThreadGroupCountY = 1;
 		args.ThreadGroupCountZ = 1;
-		dispatch_buffer111->set_data(args);
+		
+		list->get_copy().update(dispatch_buffer111,0,std::span{static_cast<D3D12_DISPATCH_ARGUMENTS*>(&args),1});
 	}
 	{
 		Slots::GatherPipelineGlobal gather;
@@ -483,7 +474,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 	{
 		Slots::InitDispatch init_dispatch;
-		init_dispatch.GetDispatch_data() = dispatch_buffer->rwStructuredBuffer;
+		init_dispatch.GetDispatch_data() = dispatch_buffer.rwStructuredBuffer;
 		init_dispatch_compiled = init_dispatch.compile(HAL::Device::get().get_static_gpu_data());
 	}
 
@@ -501,7 +492,7 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		Slots::DrawBoxes draw_boxes;
 		draw_boxes.GetInput_meshes() = commands_boxes->buffer.structuredBuffer;
 		draw_boxes.GetVisible_meshes() = visible_boxes->buffer.rwStructuredBuffer;
-		draw_boxes.GetVertices() = vertex_buffer->structuredBuffer;
+		draw_boxes.GetVertices() = vertex_buffer.structuredBuffer;
 
 		draw_boxes_compiled = draw_boxes.compile(HAL::Device::get().get_static_gpu_data());
 	}
@@ -512,5 +503,9 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 		gather_boxes_compiled = gather.compile(HAL::Device::get().get_static_gpu_data());
 	}
+
+
+			list->execute_and_wait();
+
 }
 
