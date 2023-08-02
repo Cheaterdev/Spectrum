@@ -539,18 +539,43 @@ export{
 			void update_buffer(HAL::Resource* resource, uint64 offset, const char* data, uint64 size);
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
-			template<class T>
-			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<typename HAL::StructuredBufferView<T>::UnderlyingType> data)
-			{
-				update_buffer(view.resource, view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), reinterpret_cast<const char*>(data.data()), data.size_bytes());
+		
 
-			}
 			std::future<bool> read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 
 			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 			std::future<bool> read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)>);
 			std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(std::span<std::byte>)>);
+
+
+
+			template<class T>
+			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<typename HAL::StructuredBufferView<T>::UnderlyingType> data)
+			{
+				update_buffer(view.resource, view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), reinterpret_cast<const char*>(data.data()), data.size_bytes());
+
+			}
+
+				
+			template<class T>
+			std::future<bool> read(HAL::StructuredBufferView<T>& view, unsigned int offset, UINT64 count, std::function<void(std::span<T>)> f)
+			{
+				return read_buffer(view.resource.get(), view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), count * sizeof(HAL::StructuredBufferView<T>::UnderlyingType),
+					[f](std::span<std::byte> memory)
+					{
+						uint read = memory.size();
+						auto data = reinterpret_cast<T*>(memory.data());
+
+
+						f({ data,read });
+					});
+
+			}
+			
+
+
+
 		};
 
 
@@ -791,6 +816,21 @@ export{
 			void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
 			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
+
+			
+			template<class T>
+			void exec_indirect(IndirectCommand& command_types,HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
+			{
+				execute_indirect(
+						command_types,
+						max_commands,
+						buffer.resource.get(),
+						buffer.get_data_offset_in_bytes(offset),
+						buffer.get_counter_buffer().get(),
+						buffer.get_counter_offset()
+					);
+			}
+
 		};
 
 
@@ -863,6 +903,21 @@ export{
 
 				base.post_command<true, false>(*this);
 			}
+
+
+			template<class T>
+			void exec_indirect(IndirectCommand& command_types,HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
+			{
+				execute_indirect(
+						command_types,
+						max_commands,
+						buffer.resource.get(),
+						buffer.get_data_offset_in_bytes(offset),
+						buffer.get_counter_buffer().get(),
+						buffer.get_counter_offset()
+					);
+			}
+
 
 		};
 

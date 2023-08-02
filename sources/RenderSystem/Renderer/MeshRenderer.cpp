@@ -132,7 +132,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	if (invisibleToo)
 	{
 
-		list.clear_uav(meshes_invisible_ids->buffer.counter_view.rwRAW);
+		compute.clear_counter(meshes_invisible_ids->buffer);
 		list.clear_uav(meshes_invisible_ids->buffer.rwRAW, ivec4{ 999,999,999,999 });
 
 	}
@@ -143,10 +143,10 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 		compute.set(scene->compiledGather[(int)mesh_render_context->render_mesh]);
 		compute.set(gather_neshes_boxes_compiled);
 
-		graphics.execute_indirect(
+		graphics.exec_indirect(
 			dispatch_command,
-			1,
-			dispatch_buffer.resource.get());
+			dispatch_buffer,
+			1);
 	}
 
 
@@ -176,8 +176,8 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 
 
 	{
-		list.clear_uav(commands_boxes->buffer.counter_view.rwRAW);
-		list.clear_uav(meshes_ids->buffer.counter_view.rwRAW);
+		compute.clear_counter(commands_boxes->buffer);
+		compute.clear_counter(meshes_ids->buffer);
 
 
 		compute.set_pipeline<PSOS::GatherBoxes>();
@@ -186,10 +186,10 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 
 		{
 			PROFILE_GPU(L"dispatch");
-			graphics.execute_indirect(
+			graphics.exec_indirect(
 				dispatch_command,
-				1,
-				dispatch_buffer.resource.get());
+				dispatch_buffer,
+				1);
 		}
 
 
@@ -226,10 +226,10 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set(draw_boxes_compiled);
 
-	graphics.execute_indirect(
+	graphics.exec_indirect(
 		boxes_command,
-		1,
-		draw_boxes_first.resource.get());
+		draw_boxes_first,
+		1);
 
 
 	graphics.set_rtv(gbuffer->compiled);
@@ -276,7 +276,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		}
 
 		for (int i = 0; i < total; i++)
-					list.clear_uav(commands_buffer[i]->buffer.counter_view.rwRAW);
+			compute.clear_counter(commands_buffer[i]->buffer);
 
 
 
@@ -290,10 +290,10 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			{
 				PROFILE_GPU(L"dispatch");
 
-				compute.execute_indirect(
+				compute.exec_indirect(
 					dispatch_command,
-					1,
-					dispatch_buffer.resource.get());
+					dispatch_buffer,
+					1);
 			}
 
 		}
@@ -321,30 +321,14 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				{
 					PROFILE_GPU(L"execute_indirect");
 
-					auto t=commands_buffer[current]->buffer.get_data_offset_in_bytes();
-					graphics.execute_indirect(
+					graphics.exec_indirect(
 						indirect_command_signature,
-						meshes_count,
-						commands_buffer[current]->buffer.resource.get(),
-						commands_buffer[current]->buffer.get_data_offset() +  t,
-						commands_buffer[current]->buffer.get_counter_buffer().get(),
-						commands_buffer[current]->buffer.get_counter_offset()
+						commands_buffer[current]->buffer,
+						meshes_count
 					);
 
 				}
 
-				//list.get_copy().read_buffer(commands_buffer[current]->buffer.get(),0, sizeof(Table::CommandData), [](const char* data, UINT64 size){
-
-				//	std::vector<Table::CommandData> v; v.resize(size/sizeof(Table::CommandData));
-				//memcpy(v.data(),data,size);
-
-				//auto &heap = *Device::get().get_descriptor_heap_factory().get_cbv_srv_uav_heap();
-				//	
-				//auto mesh = heap.get_resource_info(v[0].mesh_cb);
-				//auto material =  heap.get_resource_info(v[0].material_cb);
-
-
-				//	});
 				current++;
 
 			}

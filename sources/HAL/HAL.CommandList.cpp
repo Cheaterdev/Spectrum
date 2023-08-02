@@ -113,9 +113,8 @@ namespace HAL
 		if (!current_pipeline->debuggable) return;
 
 		auto pso_name = current_pipeline->name;
-		get_copy().read_buffer(debug_buffer.resource.get(), 0, 3 * sizeof(Table::DebugStruct), [this, pso_name](std::span<std::byte> memory)
+		get_copy().read<Table::DebugStruct>(debug_buffer, 0, 3 , [this, pso_name](std::span<Table::DebugStruct> result)
 			{
-
 				LogBlock block(Log::get(), log_level_internal::level_all);
 
 				if (first_debug_log)
@@ -124,8 +123,7 @@ namespace HAL
 
 					first_debug_log = false;
 				}
-				auto result = reinterpret_cast<const Table::DebugStruct*>(memory.data());
-
+		
 				block << "DEBUG(" << name << "): " << pso_name << "\n";
 				for (int i = 0; i < 3; i++)
 				{

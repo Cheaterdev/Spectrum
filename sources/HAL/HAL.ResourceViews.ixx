@@ -627,9 +627,9 @@ export
 			return offset/sizeof(UnderlyingType);
 			}
 
-			uint get_data_offset_in_bytes() const
+			uint get_data_offset_in_bytes(uint offset = 0) const
 			{
-			return offset;
+			return offset+offset*sizeof(UnderlyingType);
 			}
 
 
