@@ -82,7 +82,8 @@ std::string get_cpp_for(Value v)
 	case ValueType::STRUCT:
 	case ValueType::CB:
 	{
-		return arg;
+		arg = v.get_type();
+		break;
 	}
 	case ValueType::SRV:
 	{
@@ -92,22 +93,30 @@ std::string get_cpp_for(Value v)
 		if (noarg)
 			OutputDebugString(L"WTF");
 		if (v.array_count == 0)
-			return std::string("std::vector<HLSL::") + arg + ">";
+			arg = std::string("std::vector<HLSL::") + arg + ">";
 		else
-			return std::string("HLSL::") + arg;
+			arg = std::string("HLSL::") + arg;
+		break;
 	}
 	case ValueType::UAV:
 	{
 		if (noarg)
 			OutputDebugString(L"WTF");
-		return std::string("HLSL::") + arg;
+		arg =std::string("HLSL::") + arg;
+		break;
 	}
 	case ValueType::SMP:
-	{	return "HAL::Handle"; }
+	{	arg = "HAL::Handle"; 
+		break;
+	}
 
 	}
 
-	return "";
+	if(v.pointer)
+	{
+	arg=std::format(R"(Pointer<{}>)", arg) ;
+	}
+	return arg;
 }
 
 void have_type::detect_type(have_options * options)
@@ -136,6 +145,10 @@ void have_type::detect_type(have_options * options)
 
 	if(options&&options->find_option("dynamic"))
 		value_type = ValueType::CB;
+
+	if(pointer)
+	value_type = ValueType::CB;
+
 }
 
 Slot::Slot()
@@ -238,7 +251,11 @@ void Table::setup(Parsed* all)
 
 	for (auto& v : values)
 	{
-		if (v.value_type == ValueType::STRUCT)
+	
+		if (v.find_option("dynamic")) can_compile = false;
+
+
+		if (v.value_type == ValueType::STRUCT|| v.pointer)
 		{
 			used_tables.insert(v.get_type());
 		}
@@ -264,8 +281,7 @@ void Table::setup(Parsed* all)
 		{
 			auto t = all->find_table(v.get_type());
 			t->setup(all);
-
-
+			 can_compile &= t->can_compile;
 			for (int i = 0; i < ValueType::COUNT; i++)
 			{
 				auto type = (ValueType)i;

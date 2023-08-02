@@ -375,8 +375,8 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 	rendering[i].material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
 
 	meshpart[0].material_id = static_cast<materials::universal_material*>(rendering[i].material)->get_material_id();
-	meshpart[0].mesh_cb = info.compiled_mesh_info.compiled().get_offset();
-	meshpart[0].meshinstance_cb = mesh_instance_info.compiled().get_offset();
+	meshpart[0].mesh_cb = info.compiled_mesh_info.compiled();
+	meshpart[0].meshinstance_cb = mesh_instance_info.compiled();
 
 	meshpart[0].draw_commands = info.dispatch_mesh_arguments;
 	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
@@ -432,8 +432,8 @@ void MeshAssetInstance::on_add(scene_object* parent)
 		for (auto& info : rendering)
 		{
 
-			meshpart[i].mesh_cb = info.compiled_mesh_info.compiled().get_offset();
-			meshpart[i].meshinstance_cb = mesh_instance_info.compiled().get_offset();
+			meshpart[i].mesh_cb = info.compiled_mesh_info.compiled();
+			meshpart[i].meshinstance_cb = mesh_instance_info.compiled();
 
 			meshpart[i].material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 			meshpart[i].draw_commands = info.dispatch_mesh_arguments;

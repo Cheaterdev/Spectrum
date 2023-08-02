@@ -83,11 +83,15 @@ struct have_type
 	std::string template_arg;
 	ValueType value_type;
 
+	bool pointer = false;
 	bool bindless = false;
 	void detect_type(have_options* options = nullptr);
 
 	std::string get_type() const
 	{
+
+		//if(pointer) return "uint";
+
 		std::string res;
 		res = class_no_template;
 
@@ -366,7 +370,7 @@ struct Table : public inherited, have_options, have_name , have_hlsl
 	Value* bindless_srv = nullptr;
 	Table* bindless_table = nullptr;
 
-
+	bool can_compile = true;
 	bool cb_provided = false;
 	bool cb_raw = false;
 	void setup(Parsed* all);

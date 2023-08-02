@@ -18,13 +18,13 @@ public:
     T__20 = 21, T__21 = 22, T__22 = 23, T__23 = 24, T__24 = 25, T__25 = 26, 
     T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, T__30 = 31, T__31 = 32, 
     T__32 = 33, T__33 = 34, OR = 35, AND = 36, EQ = 37, NEQ = 38, GT = 39, 
-    LT = 40, GTEQ = 41, LTEQ = 42, PLUS = 43, MINUS = 44, MULT = 45, DIV = 46, 
-    MOD = 47, POW = 48, NOT = 49, SCOL = 50, ASSIGN = 51, OPAR = 52, CPAR = 53, 
-    OBRACE = 54, CBRACE = 55, OSBRACE = 56, CSBRACE = 57, TRUE = 58, FALSE = 59, 
-    LOG = 60, LAYOUT = 61, STRUCT = 62, COMPUTE_PSO = 63, GRAPHICS_PSO = 64, 
-    RAYTRACE_PSO = 65, RAYTRACE_RAYGEN = 66, RAYTRACE_PASS = 67, SLOT = 68, 
-    RT = 69, RTV = 70, DSV = 71, ROOTSIG = 72, ID = 73, INT_SCALAR = 74, 
-    FLOAT_SCALAR = 75, STRING = 76, COMMENT = 77, SPACE = 78, INSERT_START = 79, 
+    LT = 40, GTEQ = 41, LTEQ = 42, PLUS = 43, MINUS = 44, DIV = 45, MOD = 46, 
+    POW = 47, NOT = 48, SCOL = 49, ASSIGN = 50, OPAR = 51, CPAR = 52, OBRACE = 53, 
+    CBRACE = 54, OSBRACE = 55, CSBRACE = 56, TRUE = 57, FALSE = 58, LOG = 59, 
+    LAYOUT = 60, STRUCT = 61, COMPUTE_PSO = 62, GRAPHICS_PSO = 63, RAYTRACE_PSO = 64, 
+    RAYTRACE_RAYGEN = 65, RAYTRACE_PASS = 66, SLOT = 67, RT = 68, RTV = 69, 
+    DSV = 70, ROOTSIG = 71, ID = 72, INT_SCALAR = 73, FLOAT_SCALAR = 74, 
+    STRING = 75, COMMENT = 76, SPACE = 77, POINTER = 78, INSERT_START = 79, 
     INSERT_END = 80, INSERT_BLOCK = 81
   };
 
@@ -32,21 +32,21 @@ public:
     RuleParse = 0, RuleBind_option = 1, RuleOptions_assign = 2, RuleOption = 3, 
     RuleOption_block = 4, RuleArray_count_id = 5, RuleArray = 6, RuleValue_declaration = 7, 
     RuleSlot_declaration = 8, RuleSampler_declaration = 9, RuleDefine_declaration = 10, 
-    RuleRtv_formats_declaration = 11, RuleBlends_declaration = 12, RulePso_param = 13, 
-    RuleClass_no_template = 14, RuleType_with_template = 15, RuleInherit_id = 16, 
-    RuleName_id = 17, RuleType_id = 18, RuleOption_id = 19, RuleOwner_id = 20, 
-    RuleTemplate_id = 21, RuleValue_id = 22, RuleInsert_block = 23, RulePath_id = 24, 
-    RuleInherit = 25, RuleLayout_stat = 26, RuleLayout_block = 27, RuleLayout_definition = 28, 
-    RuleTable_stat = 29, RuleTable_block = 30, RuleTable_definition = 31, 
-    RuleRt_color_declaration = 32, RuleRt_ds_declaration = 33, RuleRt_stat = 34, 
-    RuleRt_block = 35, RuleRt_definition = 36, RuleArray_value_holder = 37, 
-    RuleArray_value_ids = 38, RuleRoot_sig = 39, RuleShader = 40, RuleCompute_pso_stat = 41, 
-    RuleCompute_pso_block = 42, RuleCompute_pso_definition = 43, RuleGraphics_pso_stat = 44, 
-    RuleGraphics_pso_block = 45, RuleGraphics_pso_definition = 46, RuleRtx_pso_stat = 47, 
-    RuleRtx_pso_block = 48, RuleRtx_pso_definition = 49, RuleRtx_pass_stat = 50, 
-    RuleRtx_pass_block = 51, RuleRtx_pass_definition = 52, RuleRtx_raygen_stat = 53, 
-    RuleRtx_raygen_block = 54, RuleRtx_raygen_definition = 55, RuleShader_type = 56, 
-    RulePso_param_id = 57, RuleBool_type = 58
+    RuleRtv_formats_declaration = 11, RuleBlends_declaration = 12, RulePointer = 13, 
+    RulePso_param = 14, RuleClass_no_template = 15, RuleType_with_template = 16, 
+    RuleInherit_id = 17, RuleName_id = 18, RuleType_id = 19, RuleOption_id = 20, 
+    RuleOwner_id = 21, RuleTemplate_id = 22, RuleValue_id = 23, RuleInsert_block = 24, 
+    RulePath_id = 25, RuleInherit = 26, RuleLayout_stat = 27, RuleLayout_block = 28, 
+    RuleLayout_definition = 29, RuleTable_stat = 30, RuleTable_block = 31, 
+    RuleTable_definition = 32, RuleRt_color_declaration = 33, RuleRt_ds_declaration = 34, 
+    RuleRt_stat = 35, RuleRt_block = 36, RuleRt_definition = 37, RuleArray_value_holder = 38, 
+    RuleArray_value_ids = 39, RuleRoot_sig = 40, RuleShader = 41, RuleCompute_pso_stat = 42, 
+    RuleCompute_pso_block = 43, RuleCompute_pso_definition = 44, RuleGraphics_pso_stat = 45, 
+    RuleGraphics_pso_block = 46, RuleGraphics_pso_definition = 47, RuleRtx_pso_stat = 48, 
+    RuleRtx_pso_block = 49, RuleRtx_pso_definition = 50, RuleRtx_pass_stat = 51, 
+    RuleRtx_pass_block = 52, RuleRtx_pass_definition = 53, RuleRtx_raygen_stat = 54, 
+    RuleRtx_raygen_block = 55, RuleRtx_raygen_definition = 56, RuleShader_type = 57, 
+    RulePso_param_id = 58, RuleBool_type = 59
   };
 
   explicit SIGParser(antlr4::TokenStream *input);
@@ -79,6 +79,7 @@ public:
   class Define_declarationContext;
   class Rtv_formats_declarationContext;
   class Blends_declarationContext;
+  class PointerContext;
   class Pso_paramContext;
   class Class_no_templateContext;
   class Type_with_templateContext;
@@ -344,6 +345,19 @@ public:
 
   Blends_declarationContext* blends_declaration();
 
+  class  PointerContext : public antlr4::ParserRuleContext {
+  public:
+    PointerContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *POINTER();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  PointerContext* pointer();
+
   class  Pso_paramContext : public antlr4::ParserRuleContext {
   public:
     Pso_paramContext(antlr4::ParserRuleContext *parent, size_t invokingState);
@@ -380,6 +394,7 @@ public:
     Class_no_templateContext *class_no_template();
     antlr4::tree::TerminalNode *LT();
     antlr4::tree::TerminalNode *GT();
+    PointerContext *pointer();
     std::vector<Template_idContext *> template_id();
     Template_idContext* template_id(size_t i);
 

@@ -3,6 +3,8 @@ import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Autogen.Tables.MeshInfo;
+import :Autogen.Tables.MeshInstanceInfo;
 import :Enums;
 export namespace Table 
 {
@@ -12,13 +14,13 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::MeshCommandData;
 		uint material_id;
 		uint node_offset;
-		uint mesh_cb;
-		uint meshinstance_cb;
+		Pointer<MeshInfo> mesh_cb;
+		Pointer<MeshInstanceInfo> meshinstance_cb;
 		DispatchMeshArguments draw_commands;
 		uint& GetMaterial_id() { return material_id; }
 		uint& GetNode_offset() { return node_offset; }
-		uint& GetMesh_cb() { return mesh_cb; }
-		uint& GetMeshinstance_cb() { return meshinstance_cb; }
+		Pointer<MeshInfo>& GetMesh_cb() { return mesh_cb; }
+		Pointer<MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
 		DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const

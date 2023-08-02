@@ -3,6 +3,9 @@ import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Autogen.Tables.MaterialInfo;
+import :Autogen.Tables.MeshInfo;
+import :Autogen.Tables.MeshInstanceInfo;
 import :Enums;
 export namespace Table 
 {
@@ -10,13 +13,13 @@ export namespace Table
 	struct CommandData
 	{
 		static constexpr SlotID ID = SlotID::CommandData;
-		uint mesh_cb;
-		uint meshinstance_cb;
-		uint material_cb;
+		Pointer<MeshInfo> mesh_cb;
+		Pointer<MeshInstanceInfo> meshinstance_cb;
+		Pointer<MaterialInfo> material_cb;
 		DispatchMeshArguments draw_commands;
-		uint& GetMesh_cb() { return mesh_cb; }
-		uint& GetMeshinstance_cb() { return meshinstance_cb; }
-		uint& GetMaterial_cb() { return material_cb; }
+		Pointer<MeshInfo>& GetMesh_cb() { return mesh_cb; }
+		Pointer<MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
+		Pointer<MaterialInfo>& GetMaterial_cb() { return material_cb; }
 		DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
 		template<class Compiler>
 		void compile(Compiler& compiler) const

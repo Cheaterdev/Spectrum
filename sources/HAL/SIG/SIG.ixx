@@ -5,6 +5,7 @@ import :Concepts;
 
 import :DescriptorHeap;
 import Core;
+import :HLSL;
 
 
 export
@@ -21,6 +22,19 @@ export
 
 	using GPUAddress = D3D12_GPU_VIRTUAL_ADDRESS;
 
+	template<class T>
+	class Pointer
+	{
+		uint ptr;
+
+	public:
+
+		void operator=(const HLSL::ConstantBuffer<T>& t)
+		{
+			ptr = t.get_offset();
+		}
+	
+	};
 	class DrawIndexedArguments : public D3D12_DRAW_INDEXED_ARGUMENTS
 	{
 	public:

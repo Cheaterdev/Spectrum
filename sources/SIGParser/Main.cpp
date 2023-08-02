@@ -174,6 +174,9 @@ void generate_table(Table& table)
 
 	for (auto& v : table.used_tables)
 	{
+			auto t = parsed.find_table(v);
+		
+		if(t->can_compile)
 		stream << "#include \"" << v << ".h\"" << std::endl;
 	}
 
@@ -187,7 +190,7 @@ void generate_table(Table& table)
 			//	if (v.bindless) continue;
 
 
-			if (v.value_type == ValueType::CB || v.value_type == ValueType::STRUCT)
+			if (!v.pointer && (v.value_type == ValueType::CB || v.value_type == ValueType::STRUCT))
 				stream << v.get_type() << " " << v.name << generate_array(v) << "; // " << v.get_type() << std::endl;
 			else
 				stream << "uint" << " " << v.name << (v.bindless ? "" : generate_array(v)) << "; // " << v.get_type() << std::endl;
@@ -227,13 +230,16 @@ void generate_table(Table& table)
 			std::string cameled = v.name;
 			cameled[0] = std::toupper(cameled[0]);
 
+
+			auto t =  v.get_type();
+			if(v.pointer)  t = "uint";
 			if (v.as_array)
 			{
-				stream << v.get_type() << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
+				stream << t << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
 			}
 			else
 			{
-				stream << v.get_type() << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
+				stream << t << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
 
 			}
 		}
@@ -254,6 +260,7 @@ void generate_table(Table& table)
 			if (type.starts_with("RenderTarget"))
 				type.replace(0, strlen("RenderTarget"), "Texture2D");
 
+		
 			if (v.as_array)
 			{
 				if (v.bindless)
