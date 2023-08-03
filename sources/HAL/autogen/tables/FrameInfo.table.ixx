@@ -3,6 +3,7 @@ import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import <HAL.h>;
 import :Autogen.Tables.Camera;
 import :Enums;
 export namespace Table 

@@ -133,7 +133,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 	{
 
 		compute.clear_counter(meshes_invisible_ids->buffer);
-		list.clear_uav(meshes_invisible_ids->buffer.rwRAW, ivec4{ 999,999,999,999 });
+		compute.clear(meshes_invisible_ids->buffer, ivec4{ 999,999,999,999 });
 
 	}
 
@@ -216,7 +216,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 	graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
 
 
-	list.clear_uav(visible_boxes->buffer.rwRAW, ivec4{ 999,999,999,999 });
+	compute.clear(visible_boxes->buffer, ivec4{ 999,999,999,999 });
 
 	graphics.set(draw_boxes_compiled);
 

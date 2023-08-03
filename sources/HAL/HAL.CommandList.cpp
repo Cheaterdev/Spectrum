@@ -132,7 +132,7 @@ namespace HAL
 				Log::get() << block;
 			});
 
-		clear_uav(debug_buffer.rwRAW);
+		get_compute().clear(debug_buffer);
 	}
 
 
@@ -539,7 +539,7 @@ namespace HAL
 		list->draw_indexed(index_count, index_offset, vertex_offset, instance_count, instance_offset);
 		base.post_command<false, true>(*this);
 	}
-	void GraphicsContext::dispatch_mesh(D3D12_DISPATCH_MESH_ARGUMENTS args)
+	void GraphicsContext::dispatch_mesh(DispatchMeshArguments args)
 	{
 		dispatch_mesh(ivec3{ args.ThreadGroupCountX, args.ThreadGroupCountY, args.ThreadGroupCountZ });
 	}

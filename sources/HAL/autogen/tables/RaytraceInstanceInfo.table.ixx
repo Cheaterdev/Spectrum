@@ -3,6 +3,7 @@ import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import <HAL.h>;
 import :Autogen.Tables.mesh_vertex_input;
 import :Enums;
 export namespace Table 

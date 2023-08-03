@@ -621,6 +621,14 @@ export{
 			void commit_tables(BarrierSync operation, UsedSlots* slots = nullptr);
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
 
+
+				void set_cb(UINT index, const CBVHandle& cb, BarrierSync operation)
+			{
+				get_base().transition(cb.get_resource_info(), operation);
+				set_const_buffer(index, 0, cb.get_offset());
+			}
+
+
 		public:
 
 			void reset()
@@ -661,11 +669,7 @@ export{
 				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
 			}
 
-			void set_cb(UINT index, const CBVHandle& cb, BarrierSync operation)
-			{
-				get_base().transition(cb.get_resource_info(), operation);
-				set_const_buffer(index, 0, cb.get_offset());
-			}
+		
 
 			template<class T>void set(const T& compiled)
 			{
@@ -687,15 +691,6 @@ export{
 				//	compiled.set_tables(*this);
 			}
 
-
-
-			template<class T>
-			std::unique_ptr<T> wrap()
-			{
-				auto res = std::make_unique<T>();
-				res->begin(this);
-				return res;
-			}
 		};
 
 
@@ -786,15 +781,8 @@ export{
 			void set_scissors(sizer_long rect);
 			void set_viewports(std::vector<Viewport> viewports);
 
-
-
-			void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
-			{
-				draw_indexed(args.IndexCountPerInstance, args.StartIndexLocation, args.BaseVertexLocation, args.InstanceCount, args.StartInstanceLocation);
-			}
-
 			void dispatch_mesh(ivec3 v);
-			void dispatch_mesh(D3D12_DISPATCH_MESH_ARGUMENTS args);
+			void dispatch_mesh(DispatchMeshArguments args);
 
 			void set_stencil_ref(UINT ref)
 			{
@@ -873,9 +861,15 @@ export{
 			}
 			
 			template<class T>
-			void clear_counter(HAL::StructuredBufferView<T>& view)
+			void clear(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
-				get_base().clear_uav(view.counter_view.rwRAW);
+				get_base().clear_uav(view.rwRAW, ClearColor);
+			}
+
+			template<class T>
+			void clear_counter(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
+			{
+				get_base().clear_uav(view.counter_view.rwRAW, ClearColor);
 			}
 
 			void dispatch(int = 1, int = 1, int = 1);

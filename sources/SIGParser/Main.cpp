@@ -387,7 +387,7 @@ void generate_cpp_table(const Table& table)
 			stream << "import :SIG;"<<std::endl;
 	stream << "import :Types;"<<std::endl;
 	stream << "import :HLSL;"<<std::endl;
-
+	stream << "import <HAL.h>;"<<std::endl;
 //	stream << "import Core;"<<std::endl;
 //
 //
@@ -405,12 +405,17 @@ void generate_cpp_table(const Table& table)
 //import :RootSignature;
 //import :Types;
 
+
 	for (auto& v : table.used_tables)
 	{
 		auto t = parsed.find_table(v);
 		if (t->find_option("shader_only")) continue;
 
-		stream << "import :Autogen.Tables." << v << ";"<<std::endl;
+		if (table.find_option("IndirectCommand"))
+			stream << "import :Autogen.Slots." << v << ";"<<std::endl;
+		else
+			stream << "import :Autogen.Tables." << v << ";"<<std::endl;
+		
 	}
 
 	stream << "import :Enums;"<<std::endl;
@@ -672,15 +677,20 @@ void generate_cpp_table(const Table& table)
 						//	if (!v.pointer) continue;
 
 						if (!first) result_string += ',';
+
+						auto t = parsed.find_table(v.get_type());
+						if (t && !t->find_option("shader_only"))
+							result_string += "Slots::";
+
 						result_string += v.get_type();
 						first = false;
 					};
 
 
 					stream << "processor.template process<" << result_string << ">();" << std::endl;
-						stream.pop();
+					stream.pop();
 					stream << "}" << std::endl;
-				
+
 				}
 			}
 

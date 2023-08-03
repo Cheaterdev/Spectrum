@@ -3,6 +3,7 @@ import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import <HAL.h>;
 import :Autogen.Tables.MeshInfo;
 import :Autogen.Tables.MeshInstanceInfo;
 import :Enums;

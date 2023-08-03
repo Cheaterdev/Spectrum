@@ -374,7 +374,8 @@ void stencil_renderer::generate(Graph& graph)
 				auto& list = *_context.get_list();
 
 				auto& graphics = list.get_graphics();
-				auto& copy = list.get_copy();
+					auto& compute = list.get_compute();
+			auto& copy = list.get_copy();
 
 				auto& sceneinfo = graph.get_context<SceneInfo>();
 
@@ -420,8 +421,8 @@ void stencil_renderer::generate(Graph& graph)
 					graphics.set_pipeline<PSOS::DrawStencil>();
 					graphics.set(scene->compiledScene);
 
-					list.clear_uav(data.id_buffer->get_uav_clear());
-					list.clear_uav(data.axis_id_buffer->get_uav_clear());
+					compute.clear(*data.id_buffer);
+					compute.clear(*data.axis_id_buffer);
 
 
 					{
