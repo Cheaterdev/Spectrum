@@ -143,10 +143,7 @@ void  mesh_renderer::gather_rendered_boxes(MeshRenderContext::ptr mesh_render_co
 		compute.set(scene->compiledGather[(int)mesh_render_context->render_mesh]);
 		compute.set(gather_neshes_boxes_compiled);
 
-		graphics.exec_indirect(
-			dispatch_command,
-			dispatch_buffer,
-			1);
+		graphics.exec_indirect(	dispatch_buffer, 1);
 	}
 
 
@@ -186,10 +183,7 @@ void  mesh_renderer::generate_boxes(MeshRenderContext::ptr mesh_render_context, 
 
 		{
 			PROFILE_GPU(L"dispatch");
-			graphics.exec_indirect(
-				dispatch_command,
-				dispatch_buffer,
-				1);
+			graphics.exec_indirect(dispatch_buffer, 1);
 		}
 
 
@@ -226,10 +220,7 @@ void  mesh_renderer::draw_boxes(MeshRenderContext::ptr mesh_render_context, Scen
 
 	graphics.set(draw_boxes_compiled);
 
-	graphics.exec_indirect(
-		boxes_command,
-		draw_boxes_first,
-		1);
+	graphics.exec_indirect(draw_boxes_first, 1);
 
 
 	graphics.set_rtv(gbuffer->compiled);
@@ -261,10 +252,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		while (total < 8)
 		{
 			((UINT*)gather.GetPip_ids())[total] = end->second->get_id();
-			gather.GetCommands()[total] = commands_buffer[total]->buffer.appendStructuredBuffer;
-
-			/*		list.transition(commands_buffer[total]->buffer, ResourceState::UNORDERED_ACCESS);
-					list.transition(commands_buffer[total]->buffer->help_buffer, ResourceState::UNORDERED_ACCESS);*/
+			gather.GetCommands()[total] = commands_buffer[total]->buffer;
 			end++; total++;
 			if (end == pipelines.end()) break;
 		}
@@ -272,7 +260,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 		for (int i = total; i < 8; i++)
 		{
 			((UINT*)gather.GetPip_ids())[i] = std::numeric_limits<uint>::max();
-			gather.GetCommands()[i] = commands_buffer[i]->buffer.appendStructuredBuffer;
+			gather.GetCommands()[i] = commands_buffer[i]->buffer;
 		}
 
 		for (int i = 0; i < total; i++)
@@ -290,10 +278,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 			{
 				PROFILE_GPU(L"dispatch");
 
-				compute.exec_indirect(
-					dispatch_command,
-					dispatch_buffer,
-					1);
+				compute.exec_indirect( dispatch_buffer, 1);
 			}
 
 		}
@@ -321,11 +306,7 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 				{
 					PROFILE_GPU(L"execute_indirect");
 
-					graphics.exec_indirect(
-						indirect_command_signature,
-						commands_buffer[current]->buffer,
-						meshes_count
-					);
+					graphics.exec_indirect( commands_buffer[current]->buffer, meshes_count);
 
 				}
 
@@ -344,9 +325,6 @@ void mesh_renderer::iterate(MESH_TYPE mesh_type, std::function<void(scene_object
 mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 {
 	best_fit_normals = EngineAssets::best_fit_normals.get_asset();
-
-
-	indirect_command_signature = HAL::IndirectCommand::create_command_layout<Slots::MeshInfo,Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>(HAL::Device::get(), Layouts::DefaultLayout);
 
 	UINT max_meshes = 1024 * 1024;
 
@@ -406,18 +384,11 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 
 		list->get_copy().update(draw_boxes_first, 0, std::span{static_cast<D3D12_DRAW_INDEXED_ARGUMENTS*>(&args),1});
 	
-
-		{
-
-			boxes_command = HAL::IndirectCommand::create_command<DrawIndexedArguments>(HAL::Device::get());
-
-		}
 	}
 
 
 	{
 		dispatch_buffer = HAL::StructuredBufferView<DispatchArguments>(1, counterType::NONE, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess);
-		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get());
 	}
 
 	{

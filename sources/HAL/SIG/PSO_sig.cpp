@@ -1,7 +1,9 @@
-import HAL;
+module HAL;
 import Core;
+import HAL;
 
 void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>&);
+void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands);
 void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>&);
 
 HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
@@ -56,4 +58,5 @@ void EnginePSOHolder::init(HAL::Device&device)
 	ScopedCounter counter("pso init");
 	init_signatures(device, signatures);
 	init_pso(device,psos);
+	init_indirect_commands(device, commands);
 }

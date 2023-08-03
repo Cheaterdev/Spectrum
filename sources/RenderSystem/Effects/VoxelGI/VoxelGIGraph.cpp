@@ -119,9 +119,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		});
 
 
-	{
-		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get());
-	}
 
 	{
 		auto desc = HAL::ResourceDesc::Tex3D(Format::R8G8B8A8_UNORM, { 512, 512, 512 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
@@ -305,11 +302,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 				compute.set(utils);
 			}
 
-			compute.exec_indirect(
-				dispatch_command,
-				albedo_tiles->dispatch_buffer,
-				1);
-
+			compute.exec_indirect(albedo_tiles->dispatch_buffer, 1);
 		}
 	}
 
@@ -664,7 +657,7 @@ void VoxelGI::screen(Graph& graph)
 
 				//	compute.dispatch(frames_count.get_size());
 
-				compute.exec_indirect(dispatch_command, *data.VoxelScreen_hi,1);
+				compute.exec_indirect(*data.VoxelScreen_hi,1);
 			}
 
 
@@ -763,7 +756,7 @@ void VoxelGI::screen(Graph& graph)
 					compute.set(tilingPostprocess);
 				}
 
-				compute.exec_indirect(dispatch_command,*data.VoxelScreen_hi, 1);
+				compute.exec_indirect(*data.VoxelScreen_hi, 1);
 			}
 
 			{
@@ -778,7 +771,7 @@ void VoxelGI::screen(Graph& graph)
 				}
 
 
-				compute.exec_indirect(dispatch_command, *data.VoxelScreen_low,1);
+				compute.exec_indirect(*data.VoxelScreen_low,1);
 			}
 
 
@@ -1227,10 +1220,7 @@ void VoxelGI::lighting(Graph& graph)
 			//graph.scene->voxels_compiled.set(compute);
 			graph.set_slot(SlotID::VoxelInfo, compute);
 
-			compute.exec_indirect(
-				dispatch_command,
-				gpu_tiles_buffer[0]->dispatch_buffer,
-				1);
+			compute.exec_indirect(gpu_tiles_buffer[0]->dispatch_buffer, 1);
 
 		}, PassFlags::Compute);
 
@@ -1305,10 +1295,7 @@ void VoxelGI::mipmapping(Graph& graph)
 						compute.set(utils);
 					}
 
-					compute.exec_indirect(
-						dispatch_command,
-						gpu_tiles_buffer[i]->dispatch_buffer,
-						1);
+					compute.exec_indirect(gpu_tiles_buffer[i]->dispatch_buffer,	1);
 
 				}
 			}
@@ -1343,10 +1330,7 @@ void VoxelGI::mipmapping(Graph& graph)
 						compute.set(mipmapping);
 					}
 					PROFILE_GPU(std::wstring(L"mip_") + std::to_wstring(mip_count));
-					compute.exec_indirect(
-						dispatch_command,
-						gpu_tiles_buffer[mip_count]->dispatch_buffer,
-						1);
+					compute.exec_indirect( gpu_tiles_buffer[mip_count]->dispatch_buffer, 1);
 
 					mip_count += current_mips;
 				}

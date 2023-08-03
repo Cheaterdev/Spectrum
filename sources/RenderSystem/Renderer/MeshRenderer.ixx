@@ -87,11 +87,6 @@ class main_renderer
 
 class mesh_renderer : public renderer, public Events::prop_handler, VariableContext
 {
-        IndirectCommand indirect_command_signature;
-
-        IndirectCommand boxes_command;
-	
-
 		TextureAsset::ptr best_fit_normals;
 
         //    MeshRenderContext::ptr mesh_render_context;
@@ -127,9 +122,7 @@ class mesh_renderer : public renderer, public Events::prop_handler, VariableCont
 		HAL::StructuredBufferView<DispatchArguments> dispatch_buffer;
         HAL::StructuredBufferView<DispatchArguments> dispatch_buffer111;
 
-        IndirectCommand dispatch_command;
 
-	
 		HAL::StructuredBufferView<DrawIndexedArguments> draw_boxes_first;
 		HAL::StructuredBufferView<vec4> vertex_buffer;
 		HAL::IndexBuffer index_buffer;

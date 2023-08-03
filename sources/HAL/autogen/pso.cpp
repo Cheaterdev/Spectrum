@@ -1,6 +1,6 @@
-import HAL;
+module HAL;
 import Core;
-
+import HAL;
 import ppl;
 using namespace concurrency;
 
@@ -8,6 +8,13 @@ void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::p
 {
 	signatures[Layouts::FrameLayout] = AutoGenSignatureDesc<FrameLayout>().create_signature(device, Layouts::FrameLayout);
 	signatures[Layouts::DefaultLayout] = AutoGenSignatureDesc<DefaultLayout>().create_signature(device, Layouts::DefaultLayout);
+}
+void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)
+{
+	commands[IndirectCommands::DrawIndexedArguments] = AutoGenIndirectCommand<DrawIndexedArguments>(device).create_command();
+	commands[IndirectCommands::DispatchMeshArguments] = AutoGenIndirectCommand<DispatchMeshArguments>(device).create_command();
+	commands[IndirectCommands::DispatchArguments] = AutoGenIndirectCommand<DispatchArguments>(device).create_command();
+	commands[IndirectCommands::CommandData] = AutoGenIndirectCommand<Table::CommandData>(device).create_command();
 }
 void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {

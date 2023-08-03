@@ -51,6 +51,8 @@ export import :Enums;
 
 export import :Autogen;
 
+export import :API.IndirectCommand;
+
 
 export namespace HAL
 {

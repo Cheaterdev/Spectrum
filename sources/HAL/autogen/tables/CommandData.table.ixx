@@ -3,9 +3,9 @@ import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import :Autogen.Tables.MaterialInfo;
-import :Autogen.Tables.MeshInfo;
-import :Autogen.Tables.MeshInstanceInfo;
+import :Autogen.Slots.MaterialInfo;
+import :Autogen.Slots.MeshInfo;
+import :Autogen.Slots.MeshInstanceInfo;
 import :Enums;
 export namespace Table 
 {
@@ -30,6 +30,10 @@ export namespace Table
 			compiler.compile(draw_commands);
 		}
 		using Compiled = CommandData;
+		static const IndirectCommands CommandID = IndirectCommands::CommandData;
+		template<class Processor> static void for_each(Processor& processor) {
+			processor.template process<Slots::MeshInfo,Slots::MeshInstanceInfo,Slots::MaterialInfo,DispatchMeshArguments>();
+		}
 		};
 		#pragma pack(pop)
 	}

@@ -73,18 +73,21 @@ struct MeshletCullData
 
 
 
+[IndirectCommand]
 [shader_only]
 struct DrawIndexedArguments
 {
 	uint data[5];
 }
 
+[IndirectCommand]
 [shader_only]
 struct DispatchMeshArguments
 {
 	uint3 counts;
 }
 
+[IndirectCommand]
 [shader_only]
 struct DispatchArguments
 {

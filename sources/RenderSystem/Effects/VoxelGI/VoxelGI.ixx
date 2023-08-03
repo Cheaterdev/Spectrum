@@ -237,8 +237,6 @@ private:
 		EyeData();
 	};
 
-	IndirectCommand dispatch_command;
-
 	bool recreate_static = false;
 public:
 	using ptr = std::shared_ptr<VoxelGI>;

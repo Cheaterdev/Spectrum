@@ -83,6 +83,16 @@ export
 		T;
 	};
 
+
+
+
+
+	template<typename T> concept IndirectCommandType =
+		requires () {
+		T::CommandID;
+	};
+
+
 	template<class T>
 	concept IsEnumClass = requires () { typename T::EnumClass; };
 

@@ -65,7 +65,14 @@ export namespace HAL
 
 			return IndirectCommand(command_signature,slots);
 		}
-	template<class ...Args>
+
+		template<class ...Args>
+		static IndirectCommand create_command_layout(Device& device)
+		{
+			return create_command<Args...>(device, nullptr);
+		}
+
+		template<class ...Args>
 		static IndirectCommand create_command_layout(Device& device,  auto layout)
 		{
 			return create_command<Args...>(device,  device.get_engine_pso_holder().GetSignature(layout).get());

@@ -387,6 +387,7 @@ void generate_cpp_table(const Table& table)
 			stream << "import :SIG;"<<std::endl;
 	stream << "import :Types;"<<std::endl;
 	stream << "import :HLSL;"<<std::endl;
+
 //	stream << "import Core;"<<std::endl;
 //
 //
@@ -655,6 +656,35 @@ void generate_cpp_table(const Table& table)
 
 
 
+
+			if (table.find_option("IndirectCommand"))
+			{
+
+
+				stream << "static const IndirectCommands CommandID = IndirectCommands::" << table.name << ";" << std::endl;
+				stream << "template<class Processor> static void for_each(Processor& processor) {" << std::endl;
+				{
+					stream.push();
+
+					std::string result_string;
+					bool first = true;
+					for (auto& v : table.values) {
+						//	if (!v.pointer) continue;
+
+						if (!first) result_string += ',';
+						result_string += v.get_type();
+						first = false;
+					};
+
+
+					stream << "processor.template process<" << result_string << ">();" << std::endl;
+						stream.pop();
+					stream << "}" << std::endl;
+				
+				}
+			}
+
+
 			if (table.find_option("serialize"))
 			{
 
@@ -883,6 +913,42 @@ export
 
 			stream << "};" << std::endl;
 
+
+						stream << "enum class IndirectCommands: int" << std::endl;
+
+			stream << "{" << std::endl;
+			{
+				stream.push();
+			
+					const Table* prev = nullptr;
+					for (auto& t : parsed.tables)
+					{
+						if (t.find_option("IndirectCommand"))
+						{
+
+							if (prev)
+							{
+								stream << prev->name << "," << std::endl;
+
+							}
+							prev = &t;
+
+						}
+
+					}
+					if (prev)
+					{
+						stream << prev->name << std::endl;
+
+					}
+
+				stream.pop();
+			}
+
+			stream << "};" << std::endl;
+
+
+
 			stream << "enum class PSO: int" << std::endl;
 
 			stream << "{" << std::endl;
@@ -1014,9 +1080,9 @@ export
 
 	{
 		my_stream stream(cpp_path, "pso.cpp");
-		stream << R"(import HAL;
+		stream << R"(module HAL;
 import Core;
-
+import HAL;
 import ppl;
 using namespace concurrency;
 )"
@@ -1034,6 +1100,30 @@ using namespace concurrency;
 			stream.pop();
 		}
 		stream << "}" << std::endl;
+
+
+			stream << "void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)" << std::endl;
+		stream << "{" << std::endl;
+		{
+			stream.push();
+				for (auto& t : parsed.tables)
+				{
+					if (t.find_option("IndirectCommand"))
+					{
+
+					if (t.find_option("shader_only"))
+						stream << "commands[IndirectCommands::" << t.name << "] = AutoGenIndirectCommand<" << t.name << ">(device).create_command();" << std::endl;
+					else
+			stream << "commands[IndirectCommands::" << t.name << "] = AutoGenIndirectCommand<Table::" << t.name << ">(device).create_command();" << std::endl;
+			
+					}
+			
+			}
+			stream.pop();
+		}
+		stream << "}" << std::endl;
+
+
 
 
 		//stream << "static std::array<HAL::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;

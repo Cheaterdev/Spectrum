@@ -746,6 +746,8 @@ export{
 			void on_set_signature(const RootSignature::ptr&) override;
 
 			void validate();
+				void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+
 		public:
 			std::vector<HAL::Format> get_formats() const
 			{
@@ -814,15 +816,14 @@ export{
 
 			void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
 			void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
-			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
-
+		
 
 			
-			template<class T>
-			void exec_indirect(IndirectCommand& command_types,HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
+			template<IndirectCommandType T>
+			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
 			{
 				execute_indirect(
-						command_types,
+						Device::get().get_engine_pso_holder().GetCommand(T::CommandID),
 						max_commands,
 						buffer.resource.get(),
 						buffer.get_data_offset_in_bytes(offset),
@@ -862,6 +863,7 @@ export{
 
 			void on_set_signature(const RootSignature::ptr&) override;
 
+			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
 		public:
 
@@ -883,8 +885,7 @@ export{
 
 
 
-			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
-
+			
 
 
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
@@ -906,10 +907,10 @@ export{
 
 
 			template<class T>
-			void exec_indirect(IndirectCommand& command_types,HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
+			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
 			{
 				execute_indirect(
-						command_types,
+						Device::get().get_engine_pso_holder().GetCommand(T::CommandID),
 						max_commands,
 						buffer.resource.get(),
 						buffer.get_data_offset_in_bytes(offset),

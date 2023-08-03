@@ -7,6 +7,7 @@ import :DescriptorHeap;
 import Core;
 import :HLSL;
 
+import :Enums;
 
 export
 {
@@ -33,7 +34,7 @@ export
 		{
 			ptr = t.get_offset();
 		}
-	
+
 	};
 	class DrawIndexedArguments : public D3D12_DRAW_INDEXED_ARGUMENTS
 	{
@@ -45,6 +46,11 @@ export
 			return desc;
 		}
 		using Compiled = D3D12_DRAW_INDEXED_ARGUMENTS;
+		static const IndirectCommands CommandID = IndirectCommands::DrawIndexedArguments;
+
+		template<class Processor> static void for_each(Processor& processor) {
+			processor.template process<DrawIndexedArguments>();
+		}
 	private:
 		SERIALIZE()
 		{
@@ -67,6 +73,14 @@ export
 			return desc;
 		}
 		using Compiled = D3D12_DISPATCH_MESH_ARGUMENTS;
+		static const IndirectCommands CommandID = IndirectCommands::DispatchMeshArguments;
+
+
+		template<class Processor> static void for_each(Processor& processor) {
+			processor.template process<DispatchMeshArguments>();
+		}
+
+
 	private:
 		SERIALIZE()
 		{
@@ -89,6 +103,11 @@ export
 		}
 
 		using Compiled = D3D12_DISPATCH_ARGUMENTS;
+		static const IndirectCommands CommandID = IndirectCommands::DispatchArguments;
+
+		template<class Processor> static void for_each(Processor& processor) {
+			processor.template process<DispatchArguments>();
+		}
 	};
 
 	using DefaultCB = HAL::Resource*;// std::vector<std::byte>;

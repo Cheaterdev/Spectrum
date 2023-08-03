@@ -4,6 +4,7 @@ import :RootSignature;
 import :Concepts;
 import :Types;
 import :Device;
+import :API.IndirectCommand;
 
 export
 {
@@ -65,5 +66,46 @@ export
 		return std::make_shared<HAL::RootSignature>(device, desc);
 	}
 
+
+	template<class T>
+	struct AutoGenIndirectCommand
+	{
+		HAL::Device& device;
+		HAL::IndirectCommand command;
+		std::optional<Layouts> layout;
+
+
+		template<class T>
+		void process_one()
+		{
+			if constexpr (HasSlot<T>)
+				layout = Layouts::DefaultLayout;  // TODO: make command per each supported layout
+		}
+
+
+		template< class ...A>
+		void process()
+		{
+
+
+			(process_one<A>(), ...);
+
+			if (layout)
+				command = HAL::IndirectCommand::template create_command_layout<A...>(device, *layout);
+			else
+				command = HAL::IndirectCommand::template create_command_layout<A...>(device);
+		}
+
+		AutoGenIndirectCommand(HAL::Device& device) :device(device)
+		{
+			T::for_each(*this);
+		}
+
+
+		HAL::IndirectCommand create_command()
+		{
+			return command;
+		}
+	};
 
 }
