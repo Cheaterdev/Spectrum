@@ -784,6 +784,7 @@ void generate_include_list(const Parsed& parsed)
 
 		stream << R"(
 export module HAL:Autogen;
+import <HAL.h>;
 
 import Core;
 

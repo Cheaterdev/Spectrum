@@ -3,7 +3,7 @@ export module FrameGraph;
 export import "defines.h";
 import Core;
 import HAL;
-
+import <HAL.h>;
 using namespace HAL;
  export namespace FrameGraph
 {

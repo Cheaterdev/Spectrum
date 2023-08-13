@@ -947,7 +947,7 @@ export{
 	namespace Helpers
 	{
 	template<class T>
-			static auto make_buffer(std::span<T> v)
+			 auto make_buffer(std::span<T> v)
 			{
 				HAL::StructuredBufferView<T> buffer(v.size());
 

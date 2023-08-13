@@ -75,13 +75,20 @@ export
 		std::optional<Layouts> layout;
 
 
-		template<class T>
+		template<SIG_TYPES::Slot T>
 		void process_one()
 		{
-			if constexpr (HasSlot<T>)
+			//if constexpr (SIG_TYPES::SLOT<T>)
 				layout = Layouts::DefaultLayout;  // TODO: make command per each supported layout
 		}
 
+		
+		template<class T>
+		void process_one()
+		{
+			//if constexpr (SIG_TYPES::SLOT<T>)
+			//	layout = Layouts::DefaultLayout;  // TODO: make command per each supported layout
+		}
 
 		template< class ...A>
 		void process()
