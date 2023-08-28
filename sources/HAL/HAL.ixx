@@ -40,9 +40,6 @@ export import :CommandList;
 export import :Raytracing;
 
 export import :VirtualBuffer;
-export import :Buffer;
-
-
 
 export import :SIG;
 export import :RT;
@@ -54,8 +51,8 @@ export import :Enums;
 
 export import :Autogen;
 
+export import :API.IndirectCommand;
 
-export import :FrameGraph;
 
 export namespace HAL
 {

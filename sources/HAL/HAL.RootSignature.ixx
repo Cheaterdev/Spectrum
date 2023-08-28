@@ -1,6 +1,7 @@
 export module HAL:RootSignature;
 
 import Core;
+import <HAL.h>;
 export import :Types;
 export import :Sampler;
 export import :Utils;

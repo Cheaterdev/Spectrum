@@ -1,7 +1,7 @@
 export module HAL:Raytracing;
 
-import :Buffer;
 import :VirtualBuffer;
+import :ResourceViews;
 
 class MaterialAsset;
 
@@ -16,8 +16,8 @@ export
 		class RaytracingAccelerationStructure
 		{
 
-			StructureBuffer<std::byte>::ptr scratch_buffer;
-			StructureBuffer<std::byte>::ptr prev_buffer;
+			StructuredBufferView<std::byte> scratch_buffer;
+			StructuredBufferView<std::byte> prev_buffer;
 			
 			virtual_gpu_buffer<std::byte>::ptr scratchInfo;
 			virtual_gpu_buffer<std::byte>::ptr currentResource;
@@ -29,7 +29,7 @@ export
 
 			Handle handle_table;
 		public:
-					StructureBuffer<std::byte>::ptr cur_buffer;
+			StructuredBufferView<std::byte> *cur_buffer;
 			using ptr = std::shared_ptr<RaytracingAccelerationStructure>;
 			HLSL::RaytracingAccelerationStructure raytracing_handle;
 

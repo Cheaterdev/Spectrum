@@ -1,8 +1,9 @@
 export module Core:Math.Vectors;
 
 import :Math.Constants;
-import stl.core;
 import :serialization;
+
+import <Core_defs.h>;
 
 namespace internal
 {
@@ -53,7 +54,7 @@ export
 		constexpr void set_internal(D d, Args ...args) requires (internal::IsVectorType<D>)
 		{
 			constexpr int size = std::min(N, D::N);
-			for (int t : view::iota(0, size))
+			for (int t : std::ranges::views::iota(0, size))
 				values[i + t] = static_cast<Format>(d.values[t]);
 
 			set_internal<i + size>(args...);
@@ -79,7 +80,25 @@ export
 		{
 			memset(T::values.data(), 0, sizeof(Format) * T::N);
 		}
+			bool   operator==(const  Vector& r)  const {
+				for (int t : std::ranges::views::iota(0, N))
+				if(values[t] != r.values[t])return false;
 
+				return true;
+			
+			}
+			std::strong_ordering   operator<=>(const  Vector& r)  const 
+			{
+
+				
+			for (int i : std::ranges::views::iota(0, N))
+				{
+					if (values[i] != r.values[i])
+						return 	values[i] <=> r.values[i];
+				}
+			return std::strong_ordering::equal;
+			//return values<=>r.values;
+			}
 		Vector(const Format &t)
 		{
 		for (auto&v:values)
@@ -101,7 +120,7 @@ export
 		template<class V>
 		constexpr void set(V v) requires (!std::is_compound_v<V>)
 		{
-			for (int t : view::iota(0, N))
+			for (int t : std::ranges::views::iota(0, N))
 				T::values[t] = static_cast<Format>(v);
 		}
 
@@ -264,7 +283,7 @@ export
 		}
 
 		template<typename T2>
-		auto operator>(const Vector<T2>& v2) const requires(N == T2::N)
+		auto higher(const Vector<T2>& v2) const requires(N == T2::N)
 		{
 			Vector result;
 
@@ -275,7 +294,7 @@ export
 		}
 
 		template<typename T2>
-		auto operator<(const Vector<T2>& v2) const  requires(N == T2::N){
+		auto lower(const Vector<T2>& v2) const  requires(N == T2::N){
 			Vector result;
 
 			for (int i = 0; i < N; i++)
@@ -286,7 +305,7 @@ export
 
 
 		template<typename T2>
-		auto operator>=(const Vector<T2>& v2) const requires(N == T2::N)
+		auto higher_eq(const Vector<T2>& v2) const requires(N == T2::N)
 		{
 			Vector result;
 
@@ -297,7 +316,7 @@ export
 		}
 
 		template<typename T2>
-		auto operator<=(const Vector<T2>& v2) const  requires(N == T2::N) {
+		auto lower_eq(const Vector<T2>& v2) const  requires(N == T2::N) {
 			Vector result;
 
 			for (int i = 0; i < N; i++)
@@ -387,7 +406,7 @@ export
 	{
 		Vector<T> v;
 
-		for (int i : view::iota(0, T::N))
+		for (int i : std::ranges::views::iota(0, T::N))
 			v[i] = a[i] * b[i];
 
 		return v;
@@ -407,7 +426,7 @@ export
 	template<typename T, typename T2>
 	Vector<T> operator*(Vector<T> v, T2 n) requires(std::is_scalar_v<T2>)
 	{
-		for (int i : view::iota(0, T::N))
+		for (int i : std::ranges::views::iota(0, T::N))
 			v[i] = static_cast<Vector<T>::Format>(n * v[i]);
 		return v;
 	}
@@ -750,6 +769,16 @@ export
 			return true;
 		}
 
+		//template <typename T>
+		//bool between(const Vector<T>& v,const Vector<T>& a,const Vector<T>& b)
+		//{
+		//	for (int i = 0; i < T::N; i++)
+		//		if (v[i] <a[i] || v[i] > b[i])
+		//			return false;
+		//	return true;
+		//}
+
+
 	}
 
 
@@ -778,7 +807,7 @@ export
 			grid_size = size;
 
 			size_t sum = 1;
-			for (int i : view::iota(0, V::N))
+			for (int i : std::ranges::views::iota(0, V::N))
 			{
 				scalers[i] = static_cast<V::Format>(sum);
 				sum *= size[i];

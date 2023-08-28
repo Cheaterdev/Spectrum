@@ -1,7 +1,8 @@
 module HAL:Device;
 import :Debug;
 import :Utils;
-
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 import d3d12; 
 import Core;
 
@@ -23,8 +24,8 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 	D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 	UINT NumRows;
 	UINT64 RowSizesInBytes;
-	D3D12_RESOURCE_DESC Desc = ::to_native(rdesc);
-	HAL::Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
+	D3D::ResourceDesc Desc = ::to_native(rdesc);
+	HAL::Device::get().get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 
 	return { RequiredSize , NumRows , Layouts.Footprint.RowPitch , static_cast<uint>(NumRows * Layouts.Footprint.RowPitch),D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT, from_native(Layouts.Footprint.Format) };
 }
@@ -43,8 +44,8 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 	D3D12_PLACED_SUBRESOURCE_FOOTPRINT Layouts;
 	UINT NumRows;
 	UINT64 RowSizesInBytes;
-	D3D12_RESOURCE_DESC Desc = ::to_native(rdesc);
-	HAL::Device::get().get_native_device()->GetCopyableFootprints(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
+	D3D::ResourceDesc Desc = ::to_native(rdesc);
+	HAL::Device::get().get_native_device()->GetCopyableFootprints1(&Desc, sub_resource, 1, 0, &Layouts, &NumRows, &RowSizesInBytes, &RequiredSize);
 	UINT64 res_stride = Math::AlignUp(RowSizesInBytes, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT);
 	UINT64 size = res_stride * rows_count * box.z;
 
@@ -111,8 +112,10 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 			D3D12_FEATURE_DATA_D3D12_OPTIONS5 options5 = {};
 			D3D12_FEATURE_DATA_D3D12_OPTIONS7 options7 = {};
 			D3D12_FEATURE_DATA_D3D12_OPTIONS12 options12 = {};
+			D3D12_FEATURE_DATA_D3D12_OPTIONS16  options16 = {};
 			D3D12_FEATURE_DATA_SHADER_MODEL supportedShaderModel = { D3D_SHADER_MODEL_6_7 };
 
+			TEST(*this, native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS16, &options16, sizeof(options16)));
 			TEST(*this, native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS12, &options12, sizeof(options12)));
 			TEST(*this, native_device->CheckFeatureSupport(D3D12_FEATURE::D3D12_FEATURE_D3D12_OPTIONS7, &options7, sizeof(options7)));
 			TEST(*this, native_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &options5, sizeof(options5)));
@@ -123,6 +126,7 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 			properties.rtx = options5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
 			properties.full_bindless = supportedShaderModel.HighestShaderModel >= D3D_SHADER_MODEL_6_6;
 			properties.mesh_shader = options7.MeshShaderTier >= D3D12_MESH_SHADER_TIER::D3D12_MESH_SHADER_TIER_1;
+			properties.direct_gpu_upload_heap = options16.GPUUploadHeapSupported;
 
 
 			if constexpr (HAL::Debug::ValidationErrors)
@@ -135,12 +139,14 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 					//	d3dInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, true);
 					D3D12_MESSAGE_ID hide[] =
 					{
-						D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
-						D3D12_MESSAGE_ID_GETHEAPPROPERTIES_INVALIDRESOURCE,
-						D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT,
-						D3D12_MESSAGE_ID_NON_RETAIL_SHADER_MODEL_WONT_VALIDATE,
-						D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH,
-						D3D12_MESSAGE_ID_EMPTY_DISPATCH
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_HEAP_ADDRESS_RANGE_INTERSECTS_MULTIPLE_BUFFERS,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_GETHEAPPROPERTIES_INVALIDRESOURCE,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_NON_RETAIL_SHADER_MODEL_WONT_VALIDATE,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_CREATEPIPELINESTATE_CACHEDBLOBDESCMISMATCH,
+						D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_EMPTY_DISPATCH,
+
+						D3D12_MESSAGE_ID(1380)//D3D12_MESSAGE_ID::D3D12_MESSAGE_ID_CREATERESOURCE_INVALIDALIGNMENT_SMALLRESOURCE
 					};
 
 					D3D12_INFO_QUEUE_FILTER filter = {};
@@ -168,7 +174,9 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
             6,
             IID_PPV_ARGS(&g_bufferCompression));
 
+
 			  slSetD3DDevice(native_device.Get());
+
 		}
 
 		D3D::Device Device::get_native_device()
@@ -193,11 +201,15 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 			}
 
 
-			D3D12_RESOURCE_ALLOCATION_INFO info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+
+			D3D12_RESOURCE_ALLOCATION_INFO1 info2;
+			
+			auto info = native_device->GetResourceAllocationInfo2(0, 1, &native_desc, &info2);
 			if(info.SizeInBytes==UINT64_MAX)
 			{
 				native_desc.Alignment = 0;
-				 info = native_device->GetResourceAllocationInfo(0, 1, &native_desc);
+				 info = native_device->GetResourceAllocationInfo2(0, 1, &native_desc, &info2);
+
 			}
 			assert(info.SizeInBytes!=UINT64_MAX);
 

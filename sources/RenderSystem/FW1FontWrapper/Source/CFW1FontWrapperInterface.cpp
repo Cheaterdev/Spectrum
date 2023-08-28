@@ -1,5 +1,6 @@
 // CFW1FontWrapperInterface.cpp
 
+import <RenderSystem.h>;
 
 
 #include "CFW1FontWrapper.h"

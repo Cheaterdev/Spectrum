@@ -55,6 +55,9 @@ public:
   virtual void enterBlends_declaration(SIGParser::Blends_declarationContext * /*ctx*/) override { }
   virtual void exitBlends_declaration(SIGParser::Blends_declarationContext * /*ctx*/) override { }
 
+  virtual void enterPointer(SIGParser::PointerContext * /*ctx*/) override { }
+  virtual void exitPointer(SIGParser::PointerContext * /*ctx*/) override { }
+
   virtual void enterPso_param(SIGParser::Pso_paramContext * /*ctx*/) override { }
   virtual void exitPso_param(SIGParser::Pso_paramContext * /*ctx*/) override { }
 

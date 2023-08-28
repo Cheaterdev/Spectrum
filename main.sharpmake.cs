@@ -48,7 +48,7 @@ namespace Spectrum
             CustomProperties.Add("VcpkgEnableManifest", "true");
 			CustomProperties.Add("VcpkgTriplet", "x64-windows");
 			CustomProperties.Add("VcpkgConfiguration", "Release");
-
+            CustomProperties.Add("ScanSourceForModuleDependencies", "true");
          //   BlobWorkFileCount = 8;
         //    GeneratableBlobCount  = 8;
         }
@@ -74,6 +74,7 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors
 
             conf.AdditionalCompilerOptions.Add("/bigobj");
+ conf.AdditionalCompilerOptions.Add("/dxifcInlineFunctions-");
 
             conf.Defines.Add("_MBCS");
 			conf.Defines.Add("BOOST_NO_USER_CONFIG");
@@ -90,6 +91,7 @@ namespace Spectrum
             conf.Defines.Add("SPECTRUM_ENABLE_EXEPTIONS");
             conf.Defines.Add("CEREAL_THREAD_SAFE");
             conf.Defines.Add("USE_PIX");
+          conf.Defines.Add("WIN32_LEAN_AND_MEAN");
          
             conf.Options.Add(new Sharpmake.Options.Vc.Compiler.DisableSpecificWarnings("4005", "5104", "5105", "5106", "4494")); //module reference issues
 
@@ -198,8 +200,6 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Modules";
             AssemblyName = "Modules";
-			
-			CustomProperties.Add("ScanSourceForModuleDependencies", "true");
         }
 
 
@@ -256,6 +256,7 @@ namespace Spectrum
         {
             SourceRootPath = @"[project.SharpmakeCsPath]\sources\Core";
             AssemblyName = "Core";
+            
         }
 
         public override void ConfigureAll(Configuration conf, CustomTarget target)

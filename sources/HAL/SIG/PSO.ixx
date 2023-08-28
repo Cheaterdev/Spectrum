@@ -1,10 +1,11 @@
 export module HAL:PSO;
-export import "PSO_defines.h";
+import <HAL.h>;
 import Core;
 import :Concepts;
 import :PipelineState;
 
 import :RootSignature;
+import :API.IndirectCommand;
 
 import :Enums;
 
@@ -402,6 +403,8 @@ class EnginePSOHolder
 	using ptr = std::shared_ptr<PSOBase>;
 	enum_array<PSO, ptr> psos;
 	enum_array<Layouts, HAL::RootLayout::ptr> signatures;
+	enum_array<IndirectCommands, HAL::IndirectCommand> commands;
+
 public:
 	void init(HAL::Device&device);
 
@@ -414,6 +417,11 @@ public:
 	HAL::RootLayout::ptr GetSignature(Layouts l)
 	{
 		return signatures[l];
+	}
+
+	HAL::IndirectCommand& GetCommand(IndirectCommands command)
+	{
+		return commands[command];
 	}
 };
 

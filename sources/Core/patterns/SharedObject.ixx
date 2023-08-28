@@ -1,7 +1,7 @@
 export module Core:SharedObject;
 
 import :Utils;
-import stl.core;
+import <stl/core.h>;
 
 export
 {

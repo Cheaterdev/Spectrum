@@ -10,7 +10,7 @@ export namespace GUI
 		using Vertex = Table::vertex_input;
 		
 
-		static HAL::IndexBuffer::ptr index_buffer;
+		static HAL::IndexBuffer index_buffer;
 		std::vector<Vertex> vertexes;
 
 		std::vector<HLSL::Texture2D<float4>> textures_handles;

@@ -4,8 +4,8 @@ export module Core:PagedAllocators;
 import :Allocators;
 import :Utils;
 import :Math;
-import stl.core;
-import stl.threading;
+import <stl/core.h>;
+import <stl/threading.h>;
 
 template<class T>
 concept isCollectable = requires

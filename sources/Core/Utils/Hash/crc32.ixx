@@ -1,7 +1,7 @@
 export module Core:crc32;
 
 import crc32c;
-import stl.core;
+import <stl/core.h>;
 import :Utils;
 
 

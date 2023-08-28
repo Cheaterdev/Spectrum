@@ -1,4 +1,6 @@
 module HAL:DescriptorHeap;
+import <HAL.h>;
+
 import HAL;
 import :Types;
 

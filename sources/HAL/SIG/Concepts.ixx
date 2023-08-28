@@ -1,4 +1,5 @@
 export module HAL:Concepts;
+import Core;
 
 export
 {
@@ -50,7 +51,7 @@ export
 		T::Slot;
 	};
 
-	
+
 	template<typename T> concept HasID =
 		requires () {
 		T::ID;
@@ -82,11 +83,21 @@ export
 		T;
 	};
 
-	template<class T>
-	concept IsEnumClass = requires () { T::EnumClass; };
 
-		template<class T>
-	concept CompilableClass = requires () { T::Compiled; };
+
+
+
+	template<typename T> concept IndirectCommandType =
+		requires () {
+		T::CommandID;
+	};
+
+
+	template<class T>
+	concept IsEnumClass = requires () { typename T::EnumClass; };
+
+	template<class T>
+	concept CompilableClass = requires () { typename T::Compiled; };
 
 	template<class T>
 	struct _Underlying
@@ -99,7 +110,7 @@ export
 	{
 		using TYPE = typename T::EnumClass;
 	};
-template<CompilableClass T>
+	template<CompilableClass T>
 	struct _Underlying<T>
 	{
 		using TYPE = typename T::Compiled;
@@ -109,10 +120,39 @@ template<CompilableClass T>
 	using Underlying = typename _Underlying<T>::TYPE;
 
 
-	template<typename T> concept Compilable =
-		requires (T t) {
-		T::compile;
+	enum class SIG_TYPE :uint
+	{
+		Slot,
+		RT,
+		RTX,
+		PSO,
+		Layout,
+		Table
 	};
+
+	enum class SIG_TYPE_COMPILED :uint
+	{
+		Slot,
+		RT,
+		RTX,
+		PSO,
+		Layout,
+		Table
+	};
+
+	namespace SIG_TYPES
+	{
+		template<typename T> concept Slot = T::TYPE == SIG_TYPE::Slot;
+		template<typename T> concept RT = T::TYPE == SIG_TYPE::RT;
+		template<typename T> concept Table = T::TYPE == SIG_TYPE::Table;
+	}
+
+	namespace SIG_TYPES_COMPILED
+	{
+		template<typename T> concept Slot = T::TYPE == SIG_TYPE_COMPILED::Slot;
+		template<typename T> concept RT = T::TYPE == SIG_TYPE_COMPILED::RT;
+		template<typename T> concept Table = T::TYPE == SIG_TYPE_COMPILED::Table;
+	}
 
 }
 

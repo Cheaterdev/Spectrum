@@ -1,4 +1,5 @@
 module Graphics:MeshAsset;
+import <RenderSystem.h>;
 import :Scene;
 import :AssetRenderer;
 import :Materials.UniversalMaterial;
@@ -184,7 +185,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			vertex_handle.get_offset(),
 			vertex_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 
@@ -193,7 +194,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			index_handle.get_offset(),
 			index_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 	this->meshlets = buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
@@ -201,14 +202,14 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			meshlet_handle.get_offset(),
 			meshlet_handle.get_size(),
-			false
+			counterType::NONE
 		});
 	meshlet_cull_datas = buffer->create_view<HAL::StructuredBufferView<Table::MeshletCullData>>(
 		HAL::Device::get().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			meshlet_cull_handle.get_offset(),
 			meshlet_cull_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 	unique_indices = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
@@ -216,7 +217,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			unique_index_handle.get_offset(),
 			unique_index_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 	primitive_indices = buffer->create_view<HAL::StructuredBufferView<UINT32>>(
@@ -224,7 +225,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 		StructuredBufferViewDesc{
 			primitive_index_handle.get_offset(),
 			primitive_index_handle.get_size(),
-			false
+			counterType::NONE
 		});
 
 
@@ -253,7 +254,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 				StructuredBufferViewDesc{
 					vertex_buffer_view.desc.offset + mesh.vertex_offset * sizeof(Table::mesh_vertex_input),
 					mesh.vertex_count * sizeof(Table::mesh_vertex_input),
-					false
+					counterType::NONE
 				});
 
 
@@ -262,7 +263,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 				StructuredBufferViewDesc{
 					index_buffer_view.desc.offset  + mesh.index_offset * sizeof(UINT32),
 					mesh.index_count * sizeof(UINT32),
-					false
+					counterType::NONE
 				});
 
 			compiled.meshet_view = buffer->create_view<HAL::StructuredBufferView<Table::Meshlet>>(
@@ -270,7 +271,7 @@ MeshAsset::MeshAsset(std::wstring file_name, AssetLoadingContext::ptr c)
 				StructuredBufferViewDesc{
 					this->meshlets.desc.offset  + meshlets_offset* sizeof(Table::Meshlet),
 					mesh.meshlets.size() * sizeof(Table::Meshlet),
-					false
+					counterType::NONE
 				});
 
 			compiled.draw_arguments.StartIndexLocation = static_cast<uint>(compiled.index_buffer_view.desc.offset/sizeof(UINT));
@@ -374,8 +375,8 @@ void MeshAssetInstance::override_material(size_t i, MaterialAsset::ptr mat)
 	rendering[i].material = overrided_material[info.material_id]->get_ptr<MaterialAsset>().get();
 
 	meshpart[0].material_id = static_cast<materials::universal_material*>(rendering[i].material)->get_material_id();
-	meshpart[0].mesh_cb = info.compiled_mesh_info.compiled().get_offset();
-	meshpart[0].meshinstance_cb = mesh_instance_info.compiled().get_offset();
+	meshpart[0].mesh_cb = info.compiled_mesh_info.compiled();
+	meshpart[0].meshinstance_cb = mesh_instance_info.compiled();
 
 	meshpart[0].draw_commands = info.dispatch_mesh_arguments;
 	meshpart[0].node_offset = info.mesh_info.GetNode_offset();
@@ -431,8 +432,8 @@ void MeshAssetInstance::on_add(scene_object* parent)
 		for (auto& info : rendering)
 		{
 
-			meshpart[i].mesh_cb = info.compiled_mesh_info.compiled().get_offset();
-			meshpart[i].meshinstance_cb = mesh_instance_info.compiled().get_offset();
+			meshpart[i].mesh_cb = info.compiled_mesh_info.compiled();
+			meshpart[i].meshinstance_cb = mesh_instance_info.compiled();
 
 			meshpart[i].material_id = static_cast<materials::universal_material*>(info.material)->get_material_id();
 			meshpart[i].draw_commands = info.dispatch_mesh_arguments;
@@ -586,22 +587,22 @@ void MeshAssetInstance::update_nodes()
 	universal_rtx_manager::get().allocate(instance_handle, rendering_count);
 
 
-	nodes_buffer_view = universal_nodes_manager::get().buffer->resource->create_view<HAL::StructuredBufferView<Table::node_data>>(
+	nodes_buffer_view = universal_nodes_manager::get().buffer.resource->create_view<HAL::StructuredBufferView<Table::node_data>>(
 		HAL::Device::get().get_static_gpu_data(),
 		StructuredBufferViewDesc{
 			(uint)nodes_handle.get_offset_in_bytes(),
 			(uint)nodes_handle.get_size_in_bytes(),
-			false
+			counterType::NONE
 		});
 	Slots::MeshInstanceInfo instance_info;
 
-	instance_info.GetVertexes() = mesh_asset->vertex_buffer_view.structuredBuffer;
-	instance_info.GetIndices() = mesh_asset->index_buffer_view.structuredBuffer;
-	instance_info.GetMeshletCullData() = mesh_asset->meshlet_cull_datas.structuredBuffer;
-	instance_info.GetMeshlets() = mesh_asset->meshlets.structuredBuffer;
+	instance_info.GetVertexes() = mesh_asset->vertex_buffer_view;
+	instance_info.GetIndices() = mesh_asset->index_buffer_view;
+	instance_info.GetMeshletCullData() = mesh_asset->meshlet_cull_datas;
+	instance_info.GetMeshlets() = mesh_asset->meshlets;
 
-	instance_info.GetUnique_indices() = mesh_asset->unique_indices.structuredBuffer;
-	instance_info.GetPrimitive_indices() = mesh_asset->primitive_indices.structuredBuffer;
+	instance_info.GetUnique_indices() = mesh_asset->unique_indices;
+	instance_info.GetPrimitive_indices() = mesh_asset->primitive_indices;
 
 	mesh_instance_info = instance_info.compile(HAL::Device::get().get_static_gpu_data());
 	auto gpu_nodes = nodes_handle.map();

@@ -1,0 +1,32 @@
+export module HAL:Autogen.Tables.VoxelTilingParams;
+import Core;
+import :SIG;
+import :Types;
+import :HLSL;
+import <HAL.h>;
+import :Enums;
+export namespace Table 
+{
+	#pragma pack(push, 1)
+	struct VoxelTilingParams
+	{
+		static constexpr SlotID ID = SlotID::VoxelTilingParams;
+		uint4 voxels_per_tile;
+		HLSL::StructuredBuffer<int3> tiles;
+		uint4& GetVoxels_per_tile() { return voxels_per_tile; }
+		HLSL::StructuredBuffer<int3>& GetTiles() { return tiles; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+		template<class Compiler>
+		void compile(Compiler& compiler) const
+		{
+			compiler.compile(voxels_per_tile);
+			compiler.compile(tiles);
+		}
+		struct Compiled
+		{
+			uint4 voxels_per_tile; // uint4
+			uint tiles; // StructuredBuffer<int3>
+		};
+	};
+	#pragma pack(pop)
+}

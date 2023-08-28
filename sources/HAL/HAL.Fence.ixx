@@ -1,4 +1,5 @@
 export module HAL:Fence;
+import <HAL.h>;
 import :Device;
 import :API.Fence;
 

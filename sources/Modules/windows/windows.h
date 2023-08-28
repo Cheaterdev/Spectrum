@@ -5,5 +5,10 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <winerror.h>
+
+#include <ShlObj.h>
+#include <Shobjidl.h>
+#include <Commdlg.h>
+
 #undef OPAQUE
 #undef DOMAIN

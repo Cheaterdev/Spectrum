@@ -53,6 +53,9 @@ public:
   virtual void enterBlends_declaration(SIGParser::Blends_declarationContext *ctx) = 0;
   virtual void exitBlends_declaration(SIGParser::Blends_declarationContext *ctx) = 0;
 
+  virtual void enterPointer(SIGParser::PointerContext *ctx) = 0;
+  virtual void exitPointer(SIGParser::PointerContext *ctx) = 0;
+
   virtual void enterPso_param(SIGParser::Pso_paramContext *ctx) = 0;
   virtual void exitPso_param(SIGParser::Pso_paramContext *ctx) = 0;
 

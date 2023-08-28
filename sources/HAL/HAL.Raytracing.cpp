@@ -14,13 +14,13 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 
 	auto bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
-	scratch_buffer = std::make_shared<StructureBuffer<std::byte>>(bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT, ResourceState::RAYTRACING_STRUCTURE);
-	cur_buffer = std::make_shared<StructureBuffer<std::byte>>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT, ResourceState::RAYTRACING_STRUCTURE);
-
+	scratch_buffer = StructuredBufferView<std::byte>(bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+	prev_buffer = StructuredBufferView<std::byte>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+	cur_buffer = &prev_buffer;
 	HAL::RaytracingBuildDescStructure bottomLevelBuildDesc;
 	{
-		bottomLevelBuildDesc.DestAccelerationStructureData = cur_buffer->get_resource_address();
-		bottomLevelBuildDesc.ScratchAccelerationStructureData = scratch_buffer->get_resource_address();
+		bottomLevelBuildDesc.DestAccelerationStructureData = prev_buffer.get_resource_address();
+		bottomLevelBuildDesc.ScratchAccelerationStructureData = scratch_buffer.get_resource_address();
 	}
 
 	list->get_compute().build_ras(bottomLevelBuildDesc, inputs);
@@ -47,8 +47,8 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 	auto topLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
 
-	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, ResourceState::RAYTRACING_STRUCTURE);
-	prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, ResourceState::RAYTRACING_STRUCTURE);
+	currentResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
+	prevResource = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 256, counterType::NONE, HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource);
 
 
 	scratchInfo = std::make_shared<virtual_gpu_buffer<std::byte>>(1024 * 1024 * 16, counterType::NONE, HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource);
@@ -58,8 +58,8 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 
 	RaytracingBuildDescStructure topLevelBuildDesc;
 	{
-		topLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer->get_resource_address();
-		topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer->get_resource_address();
+		topLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer.get_resource_address();
+		topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer.get_resource_address();
 	}
 
 	list->get_compute().build_ras(topLevelBuildDesc, inputs);
@@ -69,11 +69,11 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 	handle_table = Device::get().get_static_gpu_data().alloc_descriptor(1, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
 	raytracing_handle = HLSL::RaytracingAccelerationStructure(handle_table[0]);
-	raytracing_handle.create(currentResource->buffer->resource);
+	raytracing_handle.create(currentResource->buffer.resource);
 
 
 	scratch_buffer = scratchInfo->buffer;
-	cur_buffer = currentResource->buffer;
+	cur_buffer = &currentResource->buffer;
 	prev_buffer = prevResource->buffer;
 
 }
@@ -114,11 +114,11 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 
 	HAL::RaytracingBuildDescStructure topLevelBuildDesc;
 	{
-		topLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer->get_resource_address();
-		topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer->get_resource_address();
+		topLevelBuildDesc.DestAccelerationStructureData = currentResource->buffer.get_resource_address();
+		topLevelBuildDesc.ScratchAccelerationStructureData = scratchInfo->buffer.get_resource_address();
 
 		if (!need_rebuild)
-			topLevelBuildDesc.SourceAccelerationStructureData = prevResource->buffer->get_resource_address();
+			topLevelBuildDesc.SourceAccelerationStructureData = prevResource->buffer.get_resource_address();
 		else
 			topLevelBuildDesc.SourceAccelerationStructureData = ResourceAddress();
 
@@ -126,7 +126,7 @@ void HAL::RaytracingAccelerationStructure::update(CommandList::ptr list, UINT si
 	list->get_compute().build_ras(topLevelBuildDesc, inputs);
 
 
-	raytracing_handle.create(currentResource->buffer->resource);
+	raytracing_handle.create(currentResource->buffer.resource);
 }
 
 HAL::ResourceAddress HAL::RaytracingAccelerationStructure::get_gpu_address() const

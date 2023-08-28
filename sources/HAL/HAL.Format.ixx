@@ -1,6 +1,6 @@
 export module HAL:Format;
 export import "Formats.h";
-
+import <HAL.h>;
 import Core;
 
 export namespace HAL
@@ -144,7 +144,10 @@ export namespace HAL
 
 			return native_format == v;
 		}
-		bool operator==(const Format&) const = default;
+		bool operator==(const Format& r) const	{
+
+			return native_format == r.native_format;
+		}
 		std::strong_ordering operator<=>(const Format& r)  const = default;
 
 		uint get_native() const

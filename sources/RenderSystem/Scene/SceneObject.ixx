@@ -1,5 +1,5 @@
 export module Graphics:SceneObject;
-
+import <RenderSystem.h>;
 import Core;
 
 import :Occluder;

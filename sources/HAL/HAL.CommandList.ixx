@@ -1,5 +1,5 @@
 export module HAL:CommandList;
-
+import <HAL.h>;
 import Core;
 import :Types;
 import :ResourceStates;
@@ -16,20 +16,21 @@ import :PSO;
 import :CommandAllocator;
 import :CommandListRecorder;
 
+import :Autogen.Tables.DebugStruct;
+
 export{
 
 	namespace HAL
 	{
-		class GPUBuffer;
-		
+	
 		class CommandListBase : public StateContext, public GPUEntityStorageProxy
 		{
 		protected:
-				CommandListType type;
-					std::string name;
+			CommandListType type;
+			std::string name;
 			std::vector<std::function<void()>> on_execute_funcs;
 
-			
+
 			std::list<TrackedObject::ptr> tracked_resources;
 			FenceWaiter dstorage_fence;
 			DelayedCommandList* get_native_list()
@@ -37,8 +38,8 @@ export{
 				return &compiler;
 			}
 		public:
-	FrameResources::ptr frame_resources;
-				DelayedCommandList compiler;
+			FrameResources::ptr frame_resources;
+			DelayedCommandList compiler;
 			template<TrackableClass T>
 			void track_object(T& obj)
 			{
@@ -75,7 +76,7 @@ export{
 		{
 			std::list<HAL::Resource*> used_resources;
 
-	//		std::shared_ptr<TransitionCommandList> transition_list;
+			//		std::shared_ptr<TransitionCommandList> transition_list;
 
 			friend class SignatureDataSetter;
 			friend class Sendable;
@@ -84,67 +85,91 @@ export{
 		protected:
 			void begin();
 			void on_execute();
-			std::list<HAL::TransitionPoint> transition_points;
+			std::list<HAL::UsagePoint> usage_points;
 
-			void create_transition_point(bool end = true)
+			void create_usage_point(bool end = true)
 
 			{
-				auto prev_point = transition_points.empty() ? nullptr : &transition_points.back();
-				auto point = &transition_points.emplace_back(type);
+				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
+				auto point = &usage_points.emplace_back(type);
+
 
 				if (prev_point) prev_point->next_point = point;
 				point->prev_point = prev_point;
 
 				point->start = !end;
+				point->index = usage_points.size();
 
-				if (end)
-				{
-					assert(point->prev_point->start);
-				}
-				compiler.func([point, this](auto& list)
+				compiler.func([point](auto& list)
 					{
-						HAL::Barriers  transitions(type);
-
-						for (auto uav : point->uav_transitions)
-						{
-							transitions.uav(uav);
-						}
-
-						for (auto& uav : point->aliasing)
-						{
-							transitions.alias(nullptr, uav);
-						}
-
-						for (auto& transition : point->transitions)
-						{
-							auto prev_transition = transition.prev_transition;
-
-							if (!prev_transition) continue;
-
-							if (prev_transition->wanted_state == transition.wanted_state) continue;
-
-							//					assert(!point->start);
-							transitions.transition(transition.resource,
-								prev_transition->wanted_state,
-								transition.wanted_state,
-								transition.subres, transition.flags);
-						}
-
-						list.transitions(transitions);
-
-						/*			{
-
-										auto& native_transitions = point->compiled_transitions.get_native();
-										if (!native_transitions.empty())
-										{
-											list->ResourceBarrier((UINT)native_transitions.size(), native_transitions.data());
-										}
-									}*/
-
+						list.transitions(point->transitions);
 					});
 			}
 
-			void make_split_barriers();
+			void compile_transitions()
+			{
+
+				for (auto& point : usage_points)
+				{
+					for (auto& usage : point.usages)
+					{
+						auto prev_usage = usage.prev_usage;
+						auto prev_state = ResourceStates::NO_ACCESS;
+
+						if (!prev_usage && !usage.need_discard)  continue;
+						if (prev_usage)prev_state = prev_usage->wanted_state;
+
+						if (prev_state == usage.wanted_state) continue;
+
+						assert(prev_state.is_valid());
+						assert(usage.wanted_state.is_valid());
+
+
+						auto a = prev_state.get_best_cmd_type();
+						auto b = usage.wanted_state.get_best_cmd_type();
+
+						assert(IsCompatible(type, a));
+						assert(IsCompatible(type, b));
+						BarrierFlags flags = BarrierFlags::NONE;
+
+						if (usage.need_discard)
+							flags |= BarrierFlags::DISCARD;
+
+						auto last_point = prev_usage ? prev_usage->last_usage : nullptr;
+
+						if (false && last_point)
+						{
+
+							auto sync_state = usage.wanted_state;
+
+							sync_state.operation = BarrierSync::SPLIT;
+
+							last_point->transitions.transition(usage.resource,
+								prev_state,
+								sync_state,
+								usage.subres, flags);
+
+
+							point.transitions.transition(usage.resource,
+								sync_state,
+								usage.wanted_state,
+								usage.subres, flags);
+
+
+						}
+						else
+						{
+							point.transitions.transition(usage.resource,
+								prev_state,
+								usage.wanted_state,
+								usage.subres, flags);
+						}
+
+
+					}
+				}
+
+			}
 
 			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
@@ -153,104 +178,128 @@ export{
 			void free_resources();
 
 			UINT transition_count = 0;
-			//	TransitionPoint* start_transition;
-			HAL::Transition* create_transition(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST)
+			//	UsagePoint* start_transition;
+			HAL::ResourceUsage* add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST)
 			{
-				HAL::TransitionPoint* point = nullptr;
+				HAL::UsagePoint* point = nullptr;
 
-				if (type == HAL::TransitionType::LAST) point = &transition_points.back();
-				if (type == HAL::TransitionType::ZERO) point = &transition_points.front();
+				if (type == HAL::TransitionType::LAST) point = &usage_points.back();
+				if (type == HAL::TransitionType::ZERO) point = &usage_points.front();
 
 
 				//if (type == TransitionType::LAST) 			assert(!point->start);
-				HAL::Transition& transition = point->transitions.emplace_back();
+				HAL::ResourceUsage& usage = point->usages.emplace_back();
 
-				transition.resource = const_cast<HAL::Resource*>(resource);
-				transition.subres = subres;
-				transition.wanted_state = state;
+				usage.resource = const_cast<HAL::Resource*>(resource);
+				usage.subres = subres;
+				usage.wanted_state = state;
 
-				transition.point = point;
-				return &transition;
+				usage.usage = point;
+				return &usage;
 			}
 
-			void create_uav_transition(const HAL::Resource* resource)
+			HAL::UsagePoint* get_last_usage_point()
 			{
-				auto& point = transition_points.back();
-				point.uav_transitions.emplace_back(const_cast<HAL::Resource*>(resource));
-			}
-
-			void create_aliasing_transition(const HAL::Resource* resource)
-			{
-				auto& point = transition_points.back();
-				point.aliasing.emplace_back(const_cast<HAL::Resource*>(resource));
-			}
-
-			HAL::TransitionPoint* get_last_transition_point()
-			{
-				return &transition_points.back();
+				return &usage_points.back();
 			}
 
 			void use_resource(const HAL::Resource* resource);
 		public:
-			void prepare_transitions(Transitions* to, bool all);
 
+			void alias_begin(HAL::Resource*);
+			void alias_end(HAL::Resource*);
 
-			void merge_transition(Transitions* to, HAL::Resource* res);
-			void transition_uav(HAL::Resource* resource);
-			void transition(HAL::Resource* from, HAL::Resource* to);
 			std::shared_ptr<TransitionCommandList> fix_pretransitions();
 
 			void transition_present(const HAL::Resource* resource_ptr)
 			{
 
-				create_transition_point();
+				create_usage_point();
 
-				transition(resource_ptr, ResourceState::PRESENT, ALL_SUBRESOURCES);
+				transition(resource_ptr, { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::PRESENT }, ALL_SUBRESOURCES);
 
-				create_transition_point(false);
+				create_usage_point(false);
 			}
 
 
-			void transition(const ResourceInfo& info)
+			void transition(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE)
 			{
 				if (!info.is_valid()) return;
 
-				auto target_state = ResourceState::COMMON;
+				ResourceState target_state;//= ResourceState::COMMON;
 
 
 				if (std::holds_alternative<HAL::Views::ShaderResource>(info.view))
 				{
 					if (type == CommandListType::DIRECT)
 					{
-						target_state = ResourceState::PIXEL_SHADER_RESOURCE | ResourceState::NON_PIXEL_SHADER_RESOURCE;
+						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
 					}
 
 					if (type == CommandListType::COMPUTE)
 					{
-						target_state = ResourceState::NON_PIXEL_SHADER_RESOURCE;
+						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
 					}
+
+					target_state = { operation, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };  //TODO BarrierSync::ALL
 
 				}
 				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info.view))
 				{
-					target_state = ResourceState::UNORDERED_ACCESS;
+					//assert( operation != BarrierSync::NONE);
+
+					if (type == CommandListType::DIRECT)
+					{
+						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
+					}
+
+					if (type == CommandListType::COMPUTE)
+					{
+						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+
+					target_state = { operation, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };  //TODO BarrierSync::ALL
 				}
 				else 	if (std::holds_alternative<HAL::Views::RenderTarget>(info.view))
 				{
-					target_state = ResourceState::RENDER_TARGET;
+					target_state = ResourceStates::RENDER_TARGET;
 				}
 				else 	if (std::holds_alternative<HAL::Views::DepthStencil>(info.view))
 				{
-					target_state = ResourceState::DEPTH_WRITE;
+					target_state = ResourceStates::DEPTH_STENCIL;
 
 				}
 				else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info.view))
 				{
-					target_state = ResourceState::VERTEX_AND_CONSTANT_BUFFER;
+					if (type == CommandListType::DIRECT)
+					{
+						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
+					}
+
+					if (type == CommandListType::COMPUTE)
+					{
+						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+
+					target_state = { operation, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };  //TODO BarrierSync::ALL
 
 				}
 				else assert(false);
 
+
+				//if(GetAsyncKeyState('4'))
+				//{
+				//	if (type == CommandListType::DIRECT)
+				//	{
+				//		operation =BarrierSync::ALL_DIRECT;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+				//	}
+
+				//	if (type == CommandListType::COMPUTE)
+				//	{
+				//		operation =BarrierSync::ALL_COMPUTE;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+				//	}
+				//
+				//}
 				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
 					{
 						transition(resource.get(), target_state, subres);
@@ -316,7 +365,7 @@ export{
 			void end(Eventer* list);
 		};
 
-		
+
 		class Eventer : public virtual CommandListBase, public TimedRoot
 		{
 			friend class GPUBlock;
@@ -331,7 +380,7 @@ export{
 			Exceptions::stack_trace begin_stack;
 #endif
 
-		
+
 			void reset();
 			void begin(std::string name, Timer* t = nullptr);
 		public:
@@ -350,7 +399,7 @@ export{
 
 			// timers
 			void insert_time(QueryHandle& handle, uint offset);
-			void resolve_times(QueryHeap*pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
+			void resolve_times(QueryHeap* pQueryHeap, uint32_t NumQueries, std::function<void(std::span<UINT64>)>);
 
 
 
@@ -363,12 +412,12 @@ export{
 		protected:
 			bool active = false;
 			friend class Queue;
-		
+
 		public:
 			virtual void end() = 0;
 			void compile();
 
-		
+
 			FenceWaiter execute(std::function<void()> f = nullptr);
 			void execute_and_wait(std::function<void()> f = nullptr);
 
@@ -412,22 +461,22 @@ export{
 			void set_pipeline_internal(PipelineStateBase* pipeline);
 
 			template<bool compute, bool graphics, class T>
-			void pre_command(T& context,UsedSlots *slots = nullptr)
+			void pre_command(T& context, BarrierSync operation, UsedSlots* slots = nullptr)
 			{
-				create_transition_point();
+				create_usage_point();
 				if constexpr (compute || graphics)
 				{
 					if constexpr (Debug::GfxDebug)	setup_debug(&context);
-					context.commit_tables(slots);
+					context.commit_tables(operation, slots);
 					if constexpr (graphics) context.validate();
 				}
 			}
 			template<bool compute, bool graphics, class T>
 			void post_command(T& context)
 			{
-				create_transition_point(false);
-				if constexpr (Debug::GfxDebug)	
-				if constexpr (compute || graphics)	print_debug();
+				create_usage_point(false);
+				if constexpr (Debug::GfxDebug)
+					if constexpr (compute || graphics)	print_debug();
 			}
 		public:
 			void end();
@@ -439,11 +488,11 @@ export{
 				track_object(*(info.resource));
 			}
 
-			
+
 			void setup_debug(SignatureDataSetter*);
 			void print_debug();
 			bool first_debug_log = true;
-			std::shared_ptr<GPUBuffer> debug_buffer;
+			StructuredBufferView<Table::DebugStruct> debug_buffer;
 
 			GraphicsContext& get_graphics();
 			ComputeContext& get_compute();
@@ -457,10 +506,10 @@ export{
 
 			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
-				create_transition_point();
-				transition(h.get_resource_info());
+				create_usage_point();
+				transition(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
 				compiler.clear_uav(h, ClearColor);
-				create_transition_point(false);
+				create_usage_point(false);
 			}
 
 		};
@@ -490,12 +539,7 @@ export{
 			void update_buffer(HAL::Resource* resource, uint64 offset, const char* data, uint64 size);
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
-			template<class T>
-			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<const T> data)
-			{
-				update_buffer(view.resource, view.desc.offset + offset * sizeof(T), reinterpret_cast<const char*>(data.data()), data.size_bytes());
-
-			}
+		
 
 			std::future<bool> read_texture(const HAL::Resource* resource, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 
@@ -503,10 +547,39 @@ export{
 			std::future<bool> read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)>);
 			std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(std::span<std::byte>)>);
+
+
+
+			template<class T>
+			void update(HAL::StructuredBufferView<T>& view, uint64 offset, std::span<typename HAL::StructuredBufferView<T>::UnderlyingType> data)
+			{
+				update_buffer(view.resource, view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), reinterpret_cast<const char*>(data.data()), data.size_bytes());
+
+			}
+
+				
+			template<class T>
+			std::future<bool> read(HAL::StructuredBufferView<T>& view, unsigned int offset, UINT64 count, std::function<void(std::span<T>)> f)
+			{
+				return read_buffer(view.resource.get(), view.desc.offset + offset * sizeof(HAL::StructuredBufferView<T>::UnderlyingType), count * sizeof(HAL::StructuredBufferView<T>::UnderlyingType),
+					[f](std::span<std::byte> memory)
+					{
+						uint read = memory.size();
+						auto data = reinterpret_cast<T*>(memory.data());
+
+
+						f({ data,read });
+					});
+
+			}
+			
+
+
+
 		};
 
 
-		class SignatureDataSetter
+		class SignatureDataSetter : public GPUEntityStorageProxy
 		{
 			struct RowInfo
 			{
@@ -522,7 +595,7 @@ export{
 			friend class CommandList;
 
 			RootSignature::ptr root_sig;
-			//		UsedSlots used_slots;
+			UsedSlots used_slots;
 		protected:
 			CommandList& base;
 			SignatureDataSetter(CommandList& base) :base(base) {
@@ -532,7 +605,7 @@ export{
 
 			virtual void set_const_buffer(UINT i, UINT offset, UINT v) = 0;
 
-
+			void stop_using(uint id);
 			void reset_tables()
 			{
 				root_sig = nullptr;
@@ -541,18 +614,29 @@ export{
 					table.const_buffer = CBVHandle();
 					table.resources.clear();
 					table.descriptors.clear();
-					table.dirty=false;
+					table.dirty = false;
 				}
 			}
-	//	public:
-			void commit_tables(UsedSlots *slots = nullptr);
+			//	public:
+			void commit_tables(BarrierSync operation, UsedSlots* slots = nullptr);
 			virtual void on_set_signature(const RootSignature::ptr& signature) = 0;
+
+
+				void set_cb(UINT index, const CBVHandle& cb, BarrierSync operation)
+			{
+				get_base().transition(cb.get_resource_info(), operation);
+				set_const_buffer(index, 0, cb.get_offset());
+			}
+
 
 		public:
 
 			void reset()
 			{
-				
+				used_slots.clear();
+				tables.clear();
+				tables.resize(32);
+
 			}
 			CommandList& get_base() {
 				return base;
@@ -569,8 +653,8 @@ export{
 				on_set_signature(signature);
 			}
 
-			template<Enum T>
-			void set_signature(T layout)
+
+			void set_signature(Layouts layout)
 			{
 				set_signature(HAL::Device::get().get_engine_pso_holder().GetSignature(layout));
 			}
@@ -585,16 +669,17 @@ export{
 				set_pipeline(Device::get().get_engine_pso_holder().GetPSO<T>(k));
 			}
 
-			void set_cb(UINT index, const CBVHandle& cb)
+		
+
+			template<class T>void set(const T& compiled)
 			{
-				get_base().transition(cb.get_resource_info());
-				set_const_buffer(index, 0, cb.get_offset());
+				set(compiled.compile(*this));
 			}
 
-			template<class Compiled>
-			void set_slot(Compiled& compiled)
+			template<SIG_TYPES_COMPILED::Slot Compiled>
+			void set(const Compiled& compiled)
 			{
-			
+				stop_using(Compiled::Slot::ID);
 				auto& table = tables[Compiled::Slot::ID];
 				table.slot_id = Compiled::ID;
 				//	assert(!table.dirty);
@@ -603,31 +688,27 @@ export{
 				table.const_buffer = compiled.const_buffer;
 				table.resources = compiled.resources;
 				table.descriptors = compiled.descriptors;
-			//	compiled.set_tables(*this);
+				//	compiled.set_tables(*this);
 			}
 
-			template<class T>
-			std::unique_ptr<T> wrap()
-			{
-				auto res = std::make_unique<T>();
-				res->begin(this);
-				return res;
-			}
 		};
 
 
-			class GraphicsContext;
-	struct CompiledRT
-	{
-		HAL::RTVHandle table_rtv;
-		HAL::DSVHandle table_dsv;
-
-		std::vector<HAL::Format> get_formats() const;
-		HAL::Format get_depth_format() const;
 
 
-		const CompiledRT& set(HAL::GraphicsContext& context, HAL::RTOptions options = HAL::RTOptions::Default, float depth = 1, uint stencil = 0) const;
-	};
+		class GraphicsContext;
+		struct CompiledRT
+		{
+			static constexpr SIG_TYPE_COMPILED TYPE = SIG_TYPE_COMPILED::RT;
+
+
+			HAL::RTVHandle table_rtv;
+			HAL::DSVHandle table_dsv;
+
+			std::vector<HAL::Format> get_formats() const;
+			HAL::Format get_depth_format() const;
+
+		};
 
 
 		class GraphicsContext : public SignatureDataSetter
@@ -660,13 +741,27 @@ export{
 			void on_set_signature(const RootSignature::ptr&) override;
 
 			void validate();
+				void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+
 		public:
 			std::vector<HAL::Format> get_formats() const
 			{
 				return compiled_rt.get_formats();
 			}
-			void set_rtv(const CompiledRT & rt,RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0);
-			
+
+			template<SIG_TYPES::RT RT>
+			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0)
+			{
+
+				auto compiled = rt.compile(*this);
+
+				set_rtv(compiled, options, depth, stencil);
+
+				return compiled;
+			}
+
+			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0);
+
 			CommandList& get_base()
 			{
 				return base;
@@ -686,15 +781,8 @@ export{
 			void set_scissors(sizer_long rect);
 			void set_viewports(std::vector<Viewport> viewports);
 
-
-
-			void draw(D3D12_DRAW_INDEXED_ARGUMENTS args)
-			{
-				draw_indexed(args.IndexCountPerInstance, args.StartIndexLocation, args.BaseVertexLocation, args.InstanceCount, args.StartInstanceLocation);
-			}
-
 			void dispatch_mesh(ivec3 v);
-			void dispatch_mesh(D3D12_DISPATCH_MESH_ARGUMENTS args);
+			void dispatch_mesh(DispatchMeshArguments args);
 
 			void set_stencil_ref(UINT ref)
 			{
@@ -716,7 +804,21 @@ export{
 
 			void draw(UINT vertex_count, UINT vertex_offset = 0, UINT instance_count = 1, UINT instance_offset = 0);
 			void draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count = 1, UINT instance_offset = 0);
-			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
+		
+
+			
+			template<IndirectCommandType T>
+			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
+			{
+				execute_indirect(
+						Device::get().get_engine_pso_holder().GetCommand(T::CommandID),
+						max_commands,
+						buffer.resource.get(),
+						buffer.get_data_offset_in_bytes(offset),
+						buffer.get_counter_buffer().get(),
+						buffer.get_counter_offset()
+					);
+			}
 
 		};
 
@@ -749,6 +851,7 @@ export{
 
 			void on_set_signature(const RootSignature::ptr&) override;
 
+			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
 
 		public:
 
@@ -756,18 +859,27 @@ export{
 			{
 				return base;
 			}
+			
+			template<class T>
+			void clear(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
+			{
+				get_base().clear_uav(view.rwRAW, ClearColor);
+			}
+
+			template<class T>
+			void clear_counter(HAL::StructuredBufferView<T>& view, vec4 ClearColor = vec4(0, 0, 0, 0))
+			{
+				get_base().clear_uav(view.counter_view.rwRAW, ClearColor);
+			}
+
+			void dispatch(int = 1, int = 1, int = 1);
+			void dispatch(ivec2, ivec2 = ivec2(8, 8));
+			void dispatch(ivec3, ivec3 = ivec3(4, 4, 4));
 
 
 
-			void dispach(int = 1, int = 1, int = 1);
-			void dispach(ivec2, ivec2 = ivec2(8, 8));
-			void dispach(ivec3, ivec3 = ivec3(4, 4, 4));
 
-
-
-
-			void execute_indirect(IndirectCommand& command_types, UINT max_commands, HAL::Resource* command_buffer, UINT64 command_offset = 0, HAL::Resource* counter_buffer = nullptr, UINT64 counter_offset = 0);
-
+			
 
 
 			void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
@@ -776,32 +888,47 @@ export{
 			template<class Hit, class Miss, class Raygen>
 			void dispatch_rays(ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer)
 			{
-				base.pre_command<true, false>(*this);
+				base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 
-				base.transition(hit_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-				base.transition(miss_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
-				base.transition(raygen_buffer.resource, ResourceState::NON_PIXEL_SHADER_RESOURCE);
+				base.transition(hit_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
+				base.transition(miss_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
+				base.transition(raygen_buffer.resource, { BarrierSync::COMPUTE_SHADING, BarrierAccess::SHADER_RESOURCE, TextureLayout::UNDEFINED });
 
 				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 
 				base.post_command<true, false>(*this);
 			}
 
+
+			template<class T>
+			void exec_indirect(HAL::StructuredBufferView<T>& buffer, UINT max_commands, UINT offset = 0  )
+			{
+				execute_indirect(
+						Device::get().get_engine_pso_holder().GetCommand(T::CommandID),
+						max_commands,
+						buffer.resource.get(),
+						buffer.get_data_offset_in_bytes(offset),
+						buffer.get_counter_buffer().get(),
+						buffer.get_counter_offset()
+					);
+			}
+
+
 		};
 
 
-		class TransitionCommandList: public Eventer, public Sendable
+		class TransitionCommandList : public Eventer, public Sendable
 		{
-			
+
 		public:
 			using ptr = std::shared_ptr<TransitionCommandList>;
 			inline CommandListType get_type() { return type; }
 			TransitionCommandList(CommandListType type);
 			void create_transition_list(FrameResources& frame, const HAL::Barriers& transitions, std::vector<HAL::Resource*>& duscards);
-		
-			const API::CommandList& get_compiled() const {return compiler.get_list();}
 
-			void end() override{}
+			const API::CommandList& get_compiled() const { return compiler.get_list(); }
+
+			void end() override {}
 			void on_execute()
 			{
 
@@ -817,6 +944,19 @@ export{
 		};
 	}
 
+	namespace Helpers
+	{
+	template<class T>
+			 auto make_buffer(std::span<T> v)
+			{
+				HAL::StructuredBufferView<T> buffer(v.size());
 
+	auto list = (HAL::Device::get().get_upload_list());
+			list->get_copy().update(buffer, 0, v);
+			list->execute_and_wait();
+
+				return buffer;
+			}
+	}
 
 }

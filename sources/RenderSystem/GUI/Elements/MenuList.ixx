@@ -2,6 +2,7 @@ export module GUI:MenuList;
 import :Base;
 import :ScrollContainer;
 import :Label;
+import <RenderSystem.h>;
 
 
 export namespace GUI

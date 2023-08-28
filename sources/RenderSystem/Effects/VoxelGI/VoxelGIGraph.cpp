@@ -1,4 +1,5 @@
 module Graphics:VoxelGI;
+import <RenderSystem.h>;
 
 import Graphics;
 import HAL;
@@ -69,7 +70,7 @@ public:
 
 						rt.GetDepth() = depth_view.renderTarget;
 
-						rt.set(graphics);
+						graphics.set_rtv(rt);
 
 					}
 
@@ -89,7 +90,7 @@ public:
 						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(graphics.get_base(), subres).texture2D;
 						downsample.GetNormals() = gbuffer.normals.resource->create_view<HAL::TextureView>(graphics.get_base(), subres).texture2D;
 					}
-					downsample.set(graphics);
+					graphics.set(downsample);
 					graphics.draw(4);
 				}
 
@@ -118,9 +119,6 @@ VoxelGI::VoxelGI(Scene::ptr& scene) :scene(scene), VariableContext(L"VoxelGI")
 		});
 
 
-	{
-		dispatch_command = HAL::IndirectCommand::create_command<DispatchArguments>(HAL::Device::get(), sizeof(Underlying<DispatchArguments>));
-	}
 
 	{
 		auto desc = HAL::ResourceDesc::Tex3D(Format::R8G8B8A8_UNORM, { 512, 512, 512 }, 1, HAL::ResFlags::ShaderResource | HAL::ResFlags::UnorderedAccess/*, D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE*/);
@@ -299,16 +297,12 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 				utils.GetSource()[1] = normal.tex_static->texture_3d().texture3D;
 
 				auto& params = utils.GetParams();
-				params.GetTiles() = albedo_tiles->buffer->structuredBuffer;
+				params.GetTiles() = albedo_tiles->buffer;
 				params.GetVoxels_per_tile() = ivec4(normal.tex_result->resource->get_tiled_manager().get_tile_shape(), 0);
-				utils.set(compute);
+				compute.set(utils);
 			}
 
-			compute.execute_indirect(
-				dispatch_command,
-				1,
-				albedo_tiles->dispatch_buffer->resource.get());
-
+			compute.exec_indirect(albedo_tiles->dispatch_buffer, 1);
 		}
 	}
 
@@ -349,7 +343,7 @@ void VoxelGI::voxelize(MeshRenderContext::ptr& context, main_renderer* r, Graph&
 
 				{
 				RT::NoOutput rt;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 				}
 
 	{
@@ -427,7 +421,7 @@ void VoxelGI::debug(Graph& graph)
 						{
 				RT::SingleColor rt;
 				rt.GetColor() =target_tex.renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 				}
 
 
@@ -442,7 +436,7 @@ void VoxelGI::debug(Graph& graph)
 				Slots::VoxelDebug debug;
 				debug.GetVolume() = voxel_lighted.texture3D;
 				gbuffer.SetTable(debug.GetGbuffer());
-				debug.set(graphics);
+				graphics.set(debug);
 
 			}
 			graphics.draw(4);
@@ -557,7 +551,7 @@ void VoxelGI::screen(Graph& graph)
 				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 				voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
 				//	voxelScreen.set(graphics);
-				voxelScreen.set(compute);
+				compute.set(voxelScreen);
 			}
 
 			//scene->voxels_compiled.set(compute);
@@ -572,7 +566,7 @@ void VoxelGI::screen(Graph& graph)
 				
 				output.GetBlueNoise() =data.BlueNoise->texture2D;
 
-				output.set(compute);
+				compute.set(output);
 			}
 
 
@@ -584,7 +578,7 @@ void VoxelGI::screen(Graph& graph)
 			{
 				PROFILE_GPU(L"noise");
 				compute.set_pipeline<PSOS::VoxelIndirectLow>();
-				compute.dispach(size);
+				compute.dispatch(size);
 			}
 
 
@@ -592,8 +586,8 @@ void VoxelGI::screen(Graph& graph)
 			{
 				PROFILE_GPU(L"classification");
 
-				command_list->clear_uav(data.VoxelScreen_hi_data->counter_view.rwRAW);
-				command_list->clear_uav(data.VoxelScreen_low_data->counter_view.rwRAW);
+				compute.clear_counter(*data.VoxelScreen_hi_data);
+				compute.clear_counter(*data.VoxelScreen_low_data);
 
 				{
 					Slots::FrameClassification frame_classification;
@@ -602,30 +596,30 @@ void VoxelGI::screen(Graph& graph)
 					frame_classification.GetHi() = data.VoxelScreen_hi_data->appendStructuredBuffer;
 					frame_classification.GetLow() = data.VoxelScreen_low_data->appendStructuredBuffer;
 
-					frame_classification.set(compute);
+					compute.set(frame_classification);
 				}
 
 				compute.set_pipeline<PSOS::FrameClassification>();
-				//compute.dispach(uint2( Math::DivideByMultiple(size.x, 32) , Math::DivideByMultiple(size.y, 32)));
+				//compute.dispatch(uint2( Math::DivideByMultiple(size.x, 32) , Math::DivideByMultiple(size.y, 32)));
 
 				uint2 tiles_count = uint2(Math::DivideByMultiple(size.x, 32), Math::DivideByMultiple(size.y, 32));
-				compute.dispach(tiles_count);
+				compute.dispatch(tiles_count);
 			}
 			{
 				PROFILE_GPU(L"init_dispatch");
 
 				{
 					Slots::FrameClassificationInitDispatch frame_classification_init;
-					frame_classification_init.GetHi_counter() = data.VoxelScreen_hi_data->counter_view.structuredBuffer;
-					frame_classification_init.GetLow_counter() = data.VoxelScreen_low_data->counter_view.structuredBuffer;
+					frame_classification_init.GetHi_counter() = data.VoxelScreen_hi_data->counter_view;
+					frame_classification_init.GetLow_counter() = data.VoxelScreen_low_data->counter_view;
 
 					frame_classification_init.GetHi_dispatch_data() = data.VoxelScreen_hi->rwStructuredBuffer;
 					frame_classification_init.GetLow_dispatch_data() = data.VoxelScreen_low->rwStructuredBuffer;
 
-					frame_classification_init.set(compute);
+					compute.set(frame_classification_init);
 				}
 				compute.set_pipeline<PSOS::FrameClassificationInitDispatch>();
-				compute.dispach(1, 1, 1);
+				compute.dispatch(1, 1, 1);
 			}
 
 			{
@@ -651,19 +645,19 @@ void VoxelGI::screen(Graph& graph)
 					subres.MipLevels = 1;
 					denoiser_history.GetFrames() = frames_count.texture2D;
 					denoiser_history.GetTarget() = noisy_output.rwTexture2D;
-					denoiser_history.set(compute);
+					compute.set(denoiser_history);
 				}
 
 				{
 					Slots::TilingPostprocess tilingPostprocess;
 					auto& tiling = tilingPostprocess.GetTiling();
 					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
-					tilingPostprocess.set(compute);
+					compute.set(tilingPostprocess);
 				}
 
-				//	compute.dispach(frames_count.get_size());
+				//	compute.dispatch(frames_count.get_size());
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
+				compute.exec_indirect(*data.VoxelScreen_hi,1);
 			}
 
 
@@ -729,7 +723,7 @@ void VoxelGI::screen(Graph& graph)
 				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 				voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
 				//	voxelScreen.set(graphics);
-				voxelScreen.set(compute);
+				compute.set(voxelScreen);
 			}
 
 			//	scene->voxels_compiled.set(compute);
@@ -748,7 +742,7 @@ void VoxelGI::screen(Graph& graph)
 
 
 
-				voxelBlur.set(compute);
+				compute.set(voxelBlur);
 			}
 
 			{
@@ -759,10 +753,10 @@ void VoxelGI::screen(Graph& graph)
 					Slots::TilingPostprocess tilingPostprocess;
 					auto& tiling = tilingPostprocess.GetTiling();
 					tiling.GetTiles() = data.VoxelScreen_hi_data->structuredBuffer;
-					tilingPostprocess.set(compute);
+					compute.set(tilingPostprocess);
 				}
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_hi->resource.get());
+				compute.exec_indirect(*data.VoxelScreen_hi, 1);
 			}
 
 			{
@@ -773,11 +767,11 @@ void VoxelGI::screen(Graph& graph)
 					Slots::TilingPostprocess tilingPostprocess;
 					auto& tiling = tilingPostprocess.GetTiling();
 					tiling.GetTiles() = data.VoxelScreen_low_data->structuredBuffer;
-					tilingPostprocess.set(compute);
+					compute.set(tilingPostprocess);
 				}
 
 
-				compute.execute_indirect(dispatch_command, 1, data.VoxelScreen_low->resource.get());
+				compute.exec_indirect(*data.VoxelScreen_low,1);
 			}
 
 
@@ -881,7 +875,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
 				//		voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
 			//	voxelScreen.set(graphics);
-				voxelScreen.set(compute);
+				compute.set(voxelScreen);
 			}
 
 			//	scene->voxels_compiled.set(graphics);
@@ -904,7 +898,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 				output.GetBlueNoise() =data.BlueNoise->texture2D;
 
 
-					output.set(compute);
+					compute.set(output);
 				}
 
 
@@ -966,13 +960,13 @@ void VoxelGI::screen_reflection(Graph& graph)
 					combine.GetReflection() = data.VoxelReflectionNoise->texture2D;
 					combine.GetTarget() = data.ResultTexture->rwTexture2D;
 
-					combine.set(compute);
+					compute.set(combine);
 				}
 
 				
 				graph.set_slot(SlotID::FrameInfo, compute);
 
-				compute.dispach(size);
+				compute.dispatch(size);
 				
 
 
@@ -1208,7 +1202,7 @@ void VoxelGI::lighting(Graph& graph)
 
 
 				auto& params = ligthing.GetParams();
-				params.GetTiles() = gpu_tiles_buffer[0]->buffer->structuredBuffer;
+				params.GetTiles() = gpu_tiles_buffer[0]->buffer;
 				params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
 				auto& pssm = ligthing.GetPssmGlobal();
@@ -1217,19 +1211,16 @@ void VoxelGI::lighting(Graph& graph)
 
 				auto buffer_view = data.global_camera->resource->create_view<HAL::StructuredBufferView<Table::Camera>>(list);
 
-				pssm.GetLight_camera() = buffer_view.structuredBuffer;
+				pssm.GetLight_camera() = buffer_view;
 
 
-				ligthing.set(compute);
+				compute.set(ligthing);
 
 			}
 			//graph.scene->voxels_compiled.set(compute);
 			graph.set_slot(SlotID::VoxelInfo, compute);
 
-			compute.execute_indirect(
-				dispatch_command,
-				1,
-				gpu_tiles_buffer[0]->dispatch_buffer->resource.get());
+			compute.exec_indirect(gpu_tiles_buffer[0]->dispatch_buffer, 1);
 
 		}, PassFlags::Compute);
 
@@ -1298,16 +1289,13 @@ void VoxelGI::mipmapping(Graph& graph)
 						utils.GetTarget() = tex_lighting.tex_result->texture_3d().mips[i].rwTexture3D;
 
 						auto& params = utils.GetParams();
-						params.GetTiles() = gpu_tiles_buffer[i]->buffer->structuredBuffer;
+						params.GetTiles() = gpu_tiles_buffer[i]->buffer;
 						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
-						utils.set(compute);
+						compute.set(utils);
 					}
 
-					compute.execute_indirect(
-						dispatch_command,
-						1,
-						gpu_tiles_buffer[i]->dispatch_buffer->resource.get());
+					compute.exec_indirect(gpu_tiles_buffer[i]->dispatch_buffer,	1);
 
 				}
 			}
@@ -1336,16 +1324,13 @@ void VoxelGI::mipmapping(Graph& graph)
 						}
 
 						auto& params = mipmapping.GetParams();
-						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer->structuredBuffer;
+						params.GetTiles() = gpu_tiles_buffer[mip_count]->buffer;
 						params.GetVoxels_per_tile().xyz = tex_lighting.tex_result->resource->get_tiled_manager().get_tile_shape();
 
-						mipmapping.set(compute);
+						compute.set(mipmapping);
 					}
 					PROFILE_GPU(std::wstring(L"mip_") + std::to_wstring(mip_count));
-					compute.execute_indirect(
-						dispatch_command,
-						1,
-						gpu_tiles_buffer[mip_count]->dispatch_buffer->resource.get());
+					compute.exec_indirect( gpu_tiles_buffer[mip_count]->dispatch_buffer, 1);
 
 					mip_count += current_mips;
 				}

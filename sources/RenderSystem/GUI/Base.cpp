@@ -1,8 +1,11 @@
 module GUI;
-import GUI;
+import <RenderSystem.h>;
+
+import <windows/windows.h>;
 import windows;
 
 import HAL;
+import FrameGraph;
 
 using namespace FrameGraph;
 static const LPCTSTR cursors[] =
@@ -973,7 +976,7 @@ namespace GUI
                 {
 				RT::SingleColor rt;
 				rt.GetColor() =texture.renderTarget;
-				rt.set(command_list->get_graphics());
+				command_list->get_graphics().set_rtv(rt);
 				}
 
                  Renderer renderer;

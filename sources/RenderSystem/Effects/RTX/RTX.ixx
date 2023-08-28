@@ -35,7 +35,7 @@ public:
 		{
 			Slots::Raytracing rtx;
 			rtx.GetScene() = scene_as->raytracing_handle;
-			rtx.set(compute);
+			compute.set(rtx);
 		}
 
 	

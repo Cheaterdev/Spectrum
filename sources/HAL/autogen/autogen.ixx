@@ -1,5 +1,6 @@
 
 export module HAL:Autogen;
+import <HAL.h>;
 
 import Core;
 
@@ -14,122 +15,195 @@ import :Enums;
 import :RootSignature;
 import :Types;
 
-export
-{
 
-
-	#include "layout\FrameLayout.h"
-	#include "layout\DefaultLayout.h"
-	#include "slots\TextureRenderer.h"
-	#include "slots\BlueNoise.h"
-	#include "slots\BRDF.h"
-	#include "tables\DebugStruct.h"
-	#include "slots\DebugInfo.h"
-	#include "slots\DenoiserReflectionCommon.h"
-	#include "slots\DenoiserReflectionReproject.h"
-	#include "slots\DenoiserReflectionPrefilter.h"
-	#include "slots\DenoiserReflectionResolve.h"
-	#include "slots\DenoiserShadow_Prepare.h"
-	#include "slots\DenoiserShadow_TileClassification.h"
-	#include "slots\DenoiserShadow_Filter.h"
-	#include "slots\DenoiserShadow_FilterLocal.h"
-	#include "slots\DenoiserShadow_FilterLast.h"
-	#include "slots\FontRendering.h"
-	#include "slots\FontRenderingConstants.h"
-	#include "tables\Glyph.h"
-	#include "slots\FontRenderingGlyphs.h"
-	#include "tables\Frustum.h"
-	#include "tables\Camera.h"
-	#include "slots\FrameInfo.h"
-	#include "tables\FSRConstants.h"
-	#include "slots\FSR.h"
-	#include "tables\SingleColor.h"
+	export import :Autogen.Layouts.FrameLayout;
+	export import :Autogen.Layouts.DefaultLayout;
+	export import :Autogen.Slots.TextureRenderer;
+	export import :Autogen.Tables.TextureRenderer;
+	export import :Autogen.Slots.BlueNoise;
+	export import :Autogen.Tables.BlueNoise;
+	export import :Autogen.Slots.BRDF;
+	export import :Autogen.Tables.BRDF;
+	export import :Autogen.Tables.DebugStruct;
+	export import :Autogen.Slots.DebugInfo;
+	export import :Autogen.Tables.DebugInfo;
+	export import :Autogen.Slots.DenoiserReflectionCommon;
+	export import :Autogen.Tables.DenoiserReflectionCommon;
+	export import :Autogen.Slots.DenoiserReflectionReproject;
+	export import :Autogen.Tables.DenoiserReflectionReproject;
+	export import :Autogen.Slots.DenoiserReflectionPrefilter;
+	export import :Autogen.Tables.DenoiserReflectionPrefilter;
+	export import :Autogen.Slots.DenoiserReflectionResolve;
+	export import :Autogen.Tables.DenoiserReflectionResolve;
+	export import :Autogen.Slots.DenoiserShadow_Prepare;
+	export import :Autogen.Tables.DenoiserShadow_Prepare;
+	export import :Autogen.Slots.DenoiserShadow_TileClassification;
+	export import :Autogen.Tables.DenoiserShadow_TileClassification;
+	export import :Autogen.Slots.DenoiserShadow_Filter;
+	export import :Autogen.Tables.DenoiserShadow_Filter;
+	export import :Autogen.Slots.DenoiserShadow_FilterLocal;
+	export import :Autogen.Tables.DenoiserShadow_FilterLocal;
+	export import :Autogen.Slots.DenoiserShadow_FilterLast;
+	export import :Autogen.Tables.DenoiserShadow_FilterLast;
+	export import :Autogen.Slots.FontRendering;
+	export import :Autogen.Tables.FontRendering;
+	export import :Autogen.Slots.FontRenderingConstants;
+	export import :Autogen.Tables.FontRenderingConstants;
+	export import :Autogen.Tables.Glyph;
+	export import :Autogen.Slots.FontRenderingGlyphs;
+	export import :Autogen.Tables.FontRenderingGlyphs;
+	export import :Autogen.Tables.Frustum;
+	export import :Autogen.Tables.Camera;
+	export import :Autogen.Slots.FrameInfo;
+	export import :Autogen.Tables.FrameInfo;
+	export import :Autogen.Tables.FSRConstants;
+	export import :Autogen.Slots.FSR;
+	export import :Autogen.Tables.FSR;
+	export import :Autogen.Tables.SingleColor;
+	export import :Autogen.Tables.NoOutput;
+	export import :Autogen.Tables.DepthOnly;
+	export import :Autogen.Tables.SingleColorDepth;
+	export import :Autogen.Slots.MaterialInfo;
+	export import :Autogen.Tables.MaterialInfo;
+	export import :Autogen.Tables.mesh_vertex_input;
+	export import :Autogen.Tables.AABB;
+	export import :Autogen.Tables.node_data;
+	export import :Autogen.Slots.MeshInstanceInfo;
+	export import :Autogen.Tables.MeshInstanceInfo;
+	export import :Autogen.Slots.MeshInfo;
+	export import :Autogen.Tables.MeshInfo;
+	export import :Autogen.Tables.RaytraceInstanceInfo;
+	export import :Autogen.Tables.Meshlet;
+	export import :Autogen.Tables.MeshletCullData;
+	export import :Autogen.Tables.MeshInstance;
+	export import :Autogen.Tables.CommandData;
+	export import :Autogen.Tables.MeshCommandData;
+	export import :Autogen.Tables.MaterialCommandData;
+	export import :Autogen.Slots.GatherPipelineGlobal;
+	export import :Autogen.Tables.GatherPipelineGlobal;
+	export import :Autogen.Slots.GatherPipeline;
+	export import :Autogen.Tables.GatherPipeline;
+	export import :Autogen.Tables.BoxInfo;
+	export import :Autogen.Slots.GatherBoxes;
+	export import :Autogen.Tables.GatherBoxes;
+	export import :Autogen.Slots.DrawBoxes;
+	export import :Autogen.Tables.DrawBoxes;
+	export import :Autogen.Slots.InitDispatch;
+	export import :Autogen.Tables.InitDispatch;
+	export import :Autogen.Slots.GatherMeshesBoxes;
+	export import :Autogen.Tables.GatherMeshesBoxes;
+	export import :Autogen.Slots.MipMapping;
+	export import :Autogen.Tables.MipMapping;
+	export import :Autogen.Slots.CopyTexture;
+	export import :Autogen.Tables.CopyTexture;
+	export import :Autogen.Slots.DownsampleDepth;
+	export import :Autogen.Tables.DownsampleDepth;
+	export import :Autogen.Slots.GBufferDownsample;
+	export import :Autogen.Tables.GBufferDownsample;
+	export import :Autogen.Slots.GBufferQuality;
+	export import :Autogen.Tables.GBufferQuality;
+	export import :Autogen.Slots.PSSMConstants;
+	export import :Autogen.Tables.PSSMConstants;
+	export import :Autogen.Slots.PSSMData;
+	export import :Autogen.Tables.PSSMData;
+	export import :Autogen.Slots.PSSMDataGlobal;
+	export import :Autogen.Tables.PSSMDataGlobal;
+	export import :Autogen.Slots.PSSMLighting;
+	export import :Autogen.Tables.PSSMLighting;
+	export import :Autogen.Tables.GBufferDownsampleRT;
+	export import :Autogen.Slots.RaytracingRays;
+	export import :Autogen.Tables.RaytracingRays;
+	export import :Autogen.Tables.RayCone;
+	export import :Autogen.Tables.RayPayload;
+	export import :Autogen.Tables.ShadowPayload;
+	export import :Autogen.Tables.Triangle;
+	export import :Autogen.Slots.Raytracing;
+	export import :Autogen.Tables.Raytracing;
+	export import :Autogen.Slots.SceneData;
+	export import :Autogen.Tables.SceneData;
+	export import :Autogen.Slots.GBuffer;
+	export import :Autogen.Tables.GBuffer;
+	export import :Autogen.Slots.SkyData;
+	export import :Autogen.Tables.SkyData;
+	export import :Autogen.Slots.SkyFace;
+	export import :Autogen.Tables.SkyFace;
+	export import :Autogen.Slots.EnvFilter;
+	export import :Autogen.Tables.EnvFilter;
+	export import :Autogen.Slots.EnvSource;
+	export import :Autogen.Tables.EnvSource;
+	export import :Autogen.Slots.SMAA_Global;
+	export import :Autogen.Tables.SMAA_Global;
+	export import :Autogen.Slots.SMAA_Weights;
+	export import :Autogen.Tables.SMAA_Weights;
+	export import :Autogen.Slots.SMAA_Blend;
+	export import :Autogen.Tables.SMAA_Blend;
+	export import :Autogen.Slots.Countour;
+	export import :Autogen.Tables.Countour;
+	export import :Autogen.Slots.DrawStencil;
+	export import :Autogen.Tables.DrawStencil;
+	export import :Autogen.Slots.PickerBuffer;
+	export import :Autogen.Tables.PickerBuffer;
+	export import :Autogen.Slots.Instance;
+	export import :Autogen.Tables.Instance;
+	export import :Autogen.Slots.Color;
+	export import :Autogen.Tables.Color;
+	export import :Autogen.Slots.Test;
+	export import :Autogen.Tables.Test;
+	export import :Autogen.Tables.vertex_input;
+	export import :Autogen.Slots.NinePatch;
+	export import :Autogen.Tables.NinePatch;
+	export import :Autogen.Slots.ColorRect;
+	export import :Autogen.Tables.ColorRect;
+	export import :Autogen.Slots.FlowGraph;
+	export import :Autogen.Tables.FlowGraph;
+	export import :Autogen.Tables.VSLine;
+	export import :Autogen.Slots.LineRender;
+	export import :Autogen.Tables.LineRender;
+	export import :Autogen.Tables.VoxelTilingParams;
+	export import :Autogen.Slots.VoxelInfo;
+	export import :Autogen.Tables.VoxelInfo;
+	export import :Autogen.Slots.Voxelization;
+	export import :Autogen.Tables.Voxelization;
+	export import :Autogen.Slots.VoxelScreen;
+	export import :Autogen.Tables.VoxelScreen;
+	export import :Autogen.Slots.VoxelOutput;
+	export import :Autogen.Tables.VoxelOutput;
+	export import :Autogen.Slots.VoxelBlur;
+	export import :Autogen.Tables.VoxelBlur;
+	export import :Autogen.Slots.VoxelUpscale;
+	export import :Autogen.Tables.VoxelUpscale;
+	export import :Autogen.Slots.VoxelVisibility;
+	export import :Autogen.Tables.VoxelVisibility;
+	export import :Autogen.Slots.VoxelMipMap;
+	export import :Autogen.Tables.VoxelMipMap;
+	export import :Autogen.Slots.VoxelCopy;
+	export import :Autogen.Tables.VoxelCopy;
+	export import :Autogen.Slots.VoxelZero;
+	export import :Autogen.Tables.VoxelZero;
+	export import :Autogen.Slots.VoxelLighting;
+	export import :Autogen.Tables.VoxelLighting;
+	export import :Autogen.Slots.VoxelDebug;
+	export import :Autogen.Tables.VoxelDebug;
+	export import :Autogen.Slots.DenoiserDownsample;
+	export import :Autogen.Tables.DenoiserDownsample;
+	export import :Autogen.Tables.TilingParams;
+	export import :Autogen.Slots.DenoiserHistoryFix;
+	export import :Autogen.Tables.DenoiserHistoryFix;
+	export import :Autogen.Slots.TilingPostprocess;
+	export import :Autogen.Tables.TilingPostprocess;
+	export import :Autogen.Slots.FrameClassification;
+	export import :Autogen.Tables.FrameClassification;
+	export import :Autogen.Slots.FrameClassificationInitDispatch;
+	export import :Autogen.Tables.FrameClassificationInitDispatch;
+	export import :Autogen.Slots.ReflectionCombine;
+	export import :Autogen.Tables.ReflectionCombine;
+	export{
 	#include "rt\SingleColor.h"
-	#include "tables\NoOutput.h"
 	#include "rt\NoOutput.h"
-	#include "tables\DepthOnly.h"
 	#include "rt\DepthOnly.h"
-	#include "tables\SingleColorDepth.h"
 	#include "rt\SingleColorDepth.h"
-	#include "slots\MaterialInfo.h"
-	#include "tables\mesh_vertex_input.h"
-	#include "tables\AABB.h"
-	#include "tables\node_data.h"
-	#include "slots\MeshInstanceInfo.h"
-	#include "slots\MeshInfo.h"
-	#include "tables\RaytraceInstanceInfo.h"
-	#include "tables\Meshlet.h"
-	#include "tables\MeshletCullData.h"
-	#include "tables\MeshInstance.h"
-	#include "tables\CommandData.h"
-	#include "tables\MeshCommandData.h"
-	#include "tables\MaterialCommandData.h"
-	#include "slots\GatherPipelineGlobal.h"
-	#include "slots\GatherPipeline.h"
-	#include "tables\BoxInfo.h"
-	#include "slots\GatherBoxes.h"
-	#include "slots\DrawBoxes.h"
-	#include "slots\InitDispatch.h"
-	#include "slots\GatherMeshesBoxes.h"
-	#include "slots\MipMapping.h"
-	#include "slots\CopyTexture.h"
-	#include "slots\DownsampleDepth.h"
-	#include "slots\GBufferDownsample.h"
-	#include "slots\GBufferQuality.h"
-	#include "slots\PSSMConstants.h"
-	#include "slots\PSSMData.h"
-	#include "slots\PSSMDataGlobal.h"
-	#include "slots\PSSMLighting.h"
-	#include "tables\GBufferDownsampleRT.h"
 	#include "rt\GBufferDownsampleRT.h"
-	#include "slots\RaytracingRays.h"
-	#include "tables\RayCone.h"
-	#include "tables\RayPayload.h"
-	#include "tables\ShadowPayload.h"
-	#include "tables\Triangle.h"
-	#include "slots\Raytracing.h"
-	#include "slots\SceneData.h"
-	#include "slots\GBuffer.h"
 	#include "rt\GBuffer.h"
-	#include "slots\SkyData.h"
-	#include "slots\SkyFace.h"
-	#include "slots\EnvFilter.h"
-	#include "slots\EnvSource.h"
-	#include "slots\SMAA_Global.h"
-	#include "slots\SMAA_Weights.h"
-	#include "slots\SMAA_Blend.h"
-	#include "slots\Countour.h"
-	#include "slots\DrawStencil.h"
-	#include "slots\PickerBuffer.h"
-	#include "slots\Instance.h"
-	#include "slots\Color.h"
-	#include "slots\Test.h"
-	#include "tables\vertex_input.h"
-	#include "slots\NinePatch.h"
-	#include "slots\ColorRect.h"
-	#include "slots\FlowGraph.h"
-	#include "tables\VSLine.h"
-	#include "slots\LineRender.h"
-	#include "tables\VoxelTilingParams.h"
-	#include "slots\VoxelInfo.h"
-	#include "slots\Voxelization.h"
-	#include "slots\VoxelScreen.h"
-	#include "slots\VoxelOutput.h"
-	#include "slots\VoxelBlur.h"
-	#include "slots\VoxelUpscale.h"
-	#include "slots\VoxelVisibility.h"
-	#include "slots\VoxelMipMap.h"
-	#include "slots\VoxelCopy.h"
-	#include "slots\VoxelZero.h"
-	#include "slots\VoxelLighting.h"
-	#include "slots\VoxelDebug.h"
-	#include "slots\DenoiserDownsample.h"
-	#include "tables\TilingParams.h"
-	#include "slots\DenoiserHistoryFix.h"
-	#include "slots\TilingPostprocess.h"
-	#include "slots\FrameClassification.h"
-	#include "slots\FrameClassificationInitDispatch.h"
-	#include "slots\ReflectionCombine.h"
 	#include "pso\BlueNoise.h"
 	#include "pso\BRDF.h"
 	#include "pso\DenoiserReflectionReproject.h"
@@ -194,7 +268,7 @@ export
 	#include "pso\DenoiserDownsample.h"
 	#include "rtx\MainRTX.h"
 	std::optional<SlotID> get_slot(std::string_view slot_name);
-	UINT get_slot_id(SlotID id);
+	uint get_table_index(SlotID id);
 	std::string get_slot_name(SlotID id);
 }
 std::optional<SlotID> get_slot(std::string_view slot_name)
@@ -501,7 +575,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	}
 	return std::nullopt;
 }
-UINT get_slot_id(SlotID id)
+uint get_table_index(SlotID id)
 {
 	if(id == SlotID::TextureRenderer)
 	{

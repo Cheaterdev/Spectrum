@@ -4,6 +4,7 @@ namespace RT
 	#pragma pack(push, 1)
 	struct _SingleColorDepth
 	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
 		HLSL::RenderTarget<float4> color;
 		HLSL::DepthStencil<float> depth;
 		HLSL::RenderTarget<float4>& GetColor() { return color; }

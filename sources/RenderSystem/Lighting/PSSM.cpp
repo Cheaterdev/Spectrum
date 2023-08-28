@@ -1,4 +1,5 @@
 module Graphics:PSSM;
+import <RenderSystem.h>;
 
 import :PSSM;
 import :BRDF;
@@ -127,7 +128,7 @@ void PSSM::generate(Graph& graph)
 			{
 				RT::DepthOnly rt;
 				rt.GetDepth() = data.global_depth->depthStencil;
-				auto compiled = rt.set(command_list->get_graphics(), RTOptions::Default |  RTOptions::ClearDepth);
+				auto compiled = command_list->get_graphics().set_rtv(rt, RTOptions::Default |  RTOptions::ClearDepth);
 			}
 
 
@@ -138,8 +139,8 @@ void PSSM::generate(Graph& graph)
 				auto& camera = frameInfo.GetCamera();
 				//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 				camera = light_cam.camera_cb.current;
-				frameInfo.set(graphics);
-				frameInfo.set(compute);
+				graphics.set(frameInfo);
+				compute.set(frameInfo);
 			}
 
 			renderer->render(context, scene->get_ptr<Scene>());
@@ -162,7 +163,7 @@ void PSSM::generate(Graph& graph)
 	};
 
 	graph.add_pass<PSSMData>("PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
-		builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::None);
+		builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::DepthStencil);
 		builder.create(data.PSSM_Cameras, { renders_size }, ResourceFlags::GenCPU);
 		}, [](PSSMData& data, FrameContext& _context) {});
 
@@ -233,7 +234,7 @@ void PSSM::generate(Graph& graph)
 				{
 					RT::DepthOnly rt;
 					rt.GetDepth() = depth_tex.depthStencil;
-					rt.set(command_list->get_graphics(), RTOptions::Default | RTOptions::ClearDepth);
+					command_list->get_graphics().set_rtv(rt, RTOptions::Default | RTOptions::ClearDepth);
 				}
 
 				{
@@ -243,8 +244,8 @@ void PSSM::generate(Graph& graph)
 					auto& camera = frameInfo.GetCamera();
 					//	memcpy(&camera, &graph.cam->camera_cb.current, sizeof(camera));
 					camera = light_cam.camera_cb.current;
-					frameInfo.set(graphics);
-					frameInfo.set(compute);
+					graphics.set(frameInfo);
+					compute.set(frameInfo);
 				}
 				context->render_type = RENDER_TYPE::DEPTH;
 
@@ -287,7 +288,7 @@ void PSSM::generate(Graph& graph)
 
 				//lighting.GetLight_mask() = screen_light_mask.get_srv();
 
-				lighting.set(graphics);
+				graphics.set(lighting);
 			}
 
 			graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::STRIP);
@@ -298,7 +299,7 @@ void PSSM::generate(Graph& graph)
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.LightMask->renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 			}
 			graphics.set_pipeline<PSOS::PSSMMask>();
 
@@ -307,7 +308,7 @@ void PSSM::generate(Graph& graph)
 				Slots::PSSMData pssmdata;
 				pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
 				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-				pssmdata.set(graphics);
+				graphics.set(pssmdata);
 			}
 
 			for (int i = renders_size - 1; i >= 0; i--) //rangeees
@@ -317,7 +318,7 @@ void PSSM::generate(Graph& graph)
 					Slots::PSSMConstants constants;
 					constants.GetLevel() = i;
 					constants.GetTime() = 0;
-					constants.set(graphics);
+					graphics.set(constants);
 				}
 				graphics.draw(4);
 			}
@@ -370,7 +371,7 @@ void PSSM::generate(Graph& graph)
 				Slots::PSSMData pssmdata;
 				//	pssmdata.GetLight_buffer() = data.PSSM_Depths->texture2DArray;
 				pssmdata.GetLight_cameras() = data.PSSM_Cameras->structuredBuffer;
-				pssmdata.set(graphics);
+				graphics.set(pssmdata);
 			}
 
 			{
@@ -383,13 +384,13 @@ void PSSM::generate(Graph& graph)
 				else
 					lighting.GetLight_mask() = data.LightMask->texture2D;
 
-				lighting.set(graphics);
+				graphics.set(lighting);
 			}
 
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = data.ResultTexture->renderTarget;
-				rt.set(graphics);
+				graphics.set_rtv(rt);
 			}
 
 			graphics.set_pipeline<PSOS::PSSMApply>();

@@ -1,11 +1,12 @@
 
 import GUI;
+import HAL;
 
 using namespace HAL;
 namespace GUI
 {
 
-	HAL::IndexBuffer::ptr NinePatch::index_buffer;
+	HAL::IndexBuffer NinePatch::index_buffer;
 	NinePatch::NinePatch()
 	{
 if(!index_buffer)
@@ -31,7 +32,7 @@ if(!index_buffer)
 				(*data++) = i * 4 + j + 5;
 			}
 
-		index_buffer = HAL::IndexBuffer::make_buffer(index_data);
+		index_buffer =Helpers::make_buffer<unsigned int>(index_data);
 }
 	}
 
@@ -287,7 +288,7 @@ if(!index_buffer)
 	
 		auto& graphics = c.command_list->get_graphics();
 		graphics.set_topology(HAL::PrimitiveTopologyType::TRIANGLE, HAL::PrimitiveTopologyFeed::LIST);
-		graphics.set_index_buffer(index_buffer->get_index_buffer_view());
+		graphics.set_index_buffer(index_buffer.get_index_buffer_view());
 		graphics.set_pipeline(current_state);
 
 		{
@@ -296,13 +297,13 @@ if(!index_buffer)
 		c.command_list->write<Vertex>(data, vertexes);
 
 
-		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::vertex_input>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,false });
+		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::vertex_input>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
 
 		{
 			Slots::NinePatch patch_data;
-			patch_data.GetVb() = view.structuredBuffer;
+			patch_data.GetVb() = view;
 			patch_data.GetTextures() = textures_handles;
-			patch_data.set(graphics);
+			graphics.set(patch_data);
 		}
 	}
 	

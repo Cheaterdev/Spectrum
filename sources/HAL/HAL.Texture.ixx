@@ -1,4 +1,5 @@
 export module HAL:Texture;
+import <HAL.h>;
 import Core;
 
 import :Resource;
@@ -76,8 +77,8 @@ export
 
 			static const ptr null;
 
-			Texture(D3D::Resource native, ResourceState state);
-			Texture(HAL::ResourceDesc desc, ResourceState state = ResourceState::PIXEL_SHADER_RESOURCE, HeapType heap_type = HeapType::DEFAULT);
+			Texture(D3D::Resource native, TextureLayout initialLayout);
+			Texture(HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED, HeapType heap_type = HeapType::DEFAULT);
 
 			static Texture::ptr create(HAL::texture_data::ptr& data, HeapType heap_type = HeapType::DEFAULT);
 

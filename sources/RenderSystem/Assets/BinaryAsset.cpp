@@ -1,4 +1,7 @@
 module Graphics:BinaryAsset;
+
+import <RenderSystem.h>;
+
 import :MipMapGenerator;
 import TextSystem;
 import Core;
@@ -86,7 +89,7 @@ void BinaryAsset::update_preview(HAL::Texture::ptr preview)
 	{
 				RT::SingleColor rt;
 				rt.GetColor() =preview->texture_2d().renderTarget;
-				rt.set(list->get_graphics(), HAL::RTOptions::Default| HAL::RTOptions::ClearColor);
+				list->get_graphics().set_rtv(rt, HAL::RTOptions::Default| HAL::RTOptions::ClearColor);
 	}
 
 

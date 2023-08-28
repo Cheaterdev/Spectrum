@@ -73,18 +73,21 @@ struct MeshletCullData
 
 
 
+[IndirectCommand]
 [shader_only]
 struct DrawIndexedArguments
 {
 	uint data[5];
 }
 
+[IndirectCommand]
 [shader_only]
 struct DispatchMeshArguments
 {
 	uint3 counts;
 }
 
+[IndirectCommand]
 [shader_only]
 struct DispatchArguments
 {
@@ -104,11 +107,12 @@ struct MeshInstance
 	uint index_offset;
 }
 
+[IndirectCommand]
 struct CommandData
 {
-	uint mesh_cb;
-	uint meshinstance_cb;
-	uint material_cb;
+	MeshInfo* mesh_cb;
+	MeshInstanceInfo* meshinstance_cb;
+	MaterialInfo* material_cb;
 	DispatchMeshArguments draw_commands;
 }
 
@@ -116,8 +120,8 @@ struct MeshCommandData
 {
 	uint material_id;
 	uint node_offset;
-	uint mesh_cb;
-	uint meshinstance_cb;
+	MeshInfo* mesh_cb;
+	MeshInstanceInfo* meshinstance_cb;
 	DispatchMeshArguments draw_commands;
 }
 

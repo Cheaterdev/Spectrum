@@ -1,5 +1,5 @@
 export module HAL:Slots;
-
+import <HAL.h>;
 import :ResourceViews;
 import :Concepts;
 import :DescriptorHeap;
@@ -63,7 +63,7 @@ public:
 
 	}
 
-	template<Compilable T>
+	template<SIG_TYPES::Table T>
 	void compile(const T& t) //equires (std::is_base_of_v<T, Handle>)
 	{
 		pad();
@@ -103,7 +103,7 @@ public:
 
 
 			auto info = context->place_raw(offsets);
-			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,false }).structuredBuffer;
+			auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(*context, HAL::StructuredBufferViewDesc{ (uint)info.resource_offset, (uint)info.size,HAL::counterType::NONE }).structuredBuffer;
 			if (srv.get_storage()->can_free())
 				descriptors.insert(srv.get_storage());
 			offset = srv.get_offset();
@@ -144,37 +144,17 @@ public:
 export {
 
 
-	template<class _SlotTable, SlotID _ID, class _Table, class _Slot>
+	template<class Table, class _Slot>
 	struct CompiledData
 	{
+		static constexpr SIG_TYPE_COMPILED TYPE = SIG_TYPE_COMPILED::Slot;
 
-		static constexpr SlotID ID = _ID;
-		using Table = _Table;
+		static constexpr SlotID ID = Table::ID;
 		using Slot = _Slot;
-		using SlotTable = _SlotTable;
 
 		HLSL::ConstantBuffer<Table> const_buffer;
 		std::vector<HAL::ResourceInfo*> resources;
 		std::set<std::shared_ptr<HAL::DescriptorHeapStorage>> descriptors;
-
-
-		template<class SignatureDataSetter>
-		const CompiledData<SlotTable, ID, Table, Slot>& set(SignatureDataSetter& graphics) const
-		{
-			graphics.set_slot(*this);
-			return *this;
-		}
-
-		//const void set_tables(HAL::SignatureDataSetter& graphics) const
-		//{
-		//	//for (auto &resource_info : resources)
-		//	//	graphics.get_base().transition(*resource_info);
-
-		//	//for (auto &d : descriptors)
-		//	//	graphics.get_base().track_object(*d);
-
-		//	// graphics.set_cb(Slot::ID, const_buffer);
-		//}
 
 		const HLSL::ConstantBuffer<Table>& compiled() const
 		{
@@ -186,12 +166,14 @@ export {
 	template<class _SlotTable, SlotID _ID, class Table, class _Slot = Table::Slot>
 	struct DataHolder : public Table
 	{
+	
+
 		using Table::Table;
 		using Slot = _Slot;
 		using SlotTable = _SlotTable;
 		static constexpr SlotID ID = _ID;
 
-		using Compiled = CompiledData<SlotTable, ID, Table, Slot>;
+		using Compiled = CompiledData<Table, Slot>;
 
 
 		template<class Context>
@@ -231,11 +213,6 @@ export {
 			return compiled;
 		}
 
-			template<class SignatureDataSetter>
-		void set(SignatureDataSetter& context) const
-		{
-			compile(context.get_base()).set(context);
-		}
 
 		static D3D12_INDIRECT_ARGUMENT_DESC create_indirect()
 		{

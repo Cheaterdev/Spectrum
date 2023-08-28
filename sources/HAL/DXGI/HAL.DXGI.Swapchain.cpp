@@ -2,7 +2,8 @@ module HAL:SwapChain;
 import:Device;
 import HAL;
 
-import d3d12;
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 #undef THIS
 namespace HAL
 {
@@ -53,7 +54,7 @@ namespace HAL
 		{
 			D3D::Resource  render_target;
 			m_swapChain->GetBuffer(n, IID_PPV_ARGS(&render_target));
-			frames[n].m_renderTarget.reset(new Texture(render_target, ResourceState::PRESENT));
+			frames[n].m_renderTarget.reset(new Texture(render_target, TextureLayout::PRESENT));
 			frames[n].m_renderTarget->resource->set_name(std::string("swap_chain_") + std::to_string(n));
 		}
 	}

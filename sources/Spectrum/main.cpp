@@ -1,15 +1,22 @@
 import Graphics;
 import GUI;
 import HAL;
+
 import streamline;
+import <RenderSystem.h>;
 
 #include "Platform/Window.h"
 
 import ppl;
 import Core;
+import FrameGraph;
+
 using namespace FrameGraph;
 using namespace HAL;
 
+extern "C" { _declspec(dllexport) extern const unsigned int D3D12SDKVersion = 610; }
+
+extern "C" { _declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
 
 class tick_timer
 {
@@ -449,7 +456,7 @@ vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeig
 				SceneFrameManager::get().prepare(command_list, *scene);
 				if (HAL::Device::get().is_rtx_supported())
 				{
-					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer->get_resource_address(), false);
+					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(), scene->raytrace->buffer.get_resource_address(), false);
 					RTX::get().prepare(command_list);
 				}
 			}
@@ -558,7 +565,7 @@ vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeig
 				
 					context->g_buffer = &gbuffer;
 
-				gbuffer.compiled.set(context->list->get_graphics(), RTOptions::Default| RTOptions::ClearAll);
+				context->list->get_graphics().set_rtv(gbuffer.compiled, RTOptions::Default| RTOptions::ClearAll);
 
 
 					graph.set_slot(SlotID::FrameInfo, command_list->get_graphics());
@@ -613,8 +620,8 @@ vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeig
 
 						{
 							Slots::VoxelOutput output;
-							output.GetNoise() = data.RTXDebug->rwTexture2D;
-							output.set(compute);
+							output.GetNoise() = *data.RTXDebug;
+							compute.set(output);
 						}
 
 						{
@@ -622,9 +629,9 @@ vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeig
 
 							Slots::VoxelScreen voxelScreen;
 							gbuffer.SetTable(voxelScreen.GetGbuffer());
-							voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
+							voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
 					//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
-							voxelScreen.set(compute);
+							compute.set(voxelScreen);
 						}
 						RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
 
@@ -727,7 +734,7 @@ vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeig
 			//// hack zone
 			auto sky = graph.builder.get("sky_cubemap_filtered");
 			if (sky&&sky->resource)
-				frameInfo.GetSky() = sky->get_handler<Handlers::Cube>()->textureCube;
+				frameInfo.GetSky() = *sky->get_handler<Handlers::Cube>();
 
 			/////////
 			frameInfo.GetSunDir().xyz = skyinfo.sunDir;
@@ -737,8 +744,8 @@ vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeig
 			frameInfo.GetCamera() = cam.cam->camera_cb.current;
 			frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
 
-			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d().texture3D;
-			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d().texture2D;
+			frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
+			frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
 
 			auto compiled = frameInfo.compile(*graph.builder.current_frame);
 			graph.register_slot_setter(compiled);

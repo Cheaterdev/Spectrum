@@ -4,7 +4,9 @@ export import :Math.Constants;
 export import :Math.Vectors;
 export import :Math.Quaternion;
 export import :Math.Matrices;
-import stl.memory;
+
+import <Core_defs.h>;
+import <stl/memory.h>;
 import :serialization;
 
 export class Plane

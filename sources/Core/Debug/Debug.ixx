@@ -1,7 +1,7 @@
 export module Core:Debug;
 
-import stl.core;
-import stl.threading;
+import <stl/core.h>;
+import <stl/threading.h>;
 import :Singleton;
 import :Log;
 

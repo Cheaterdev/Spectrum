@@ -1,12 +1,13 @@
 export module Core:FileDepender;
 
+import <Core_defs.h>;
 import :Utils;
 import :Log;
 import :Singleton;
 import :Scheduler;
 
-import stl.filesystem;
-import stl.memory;
+import <stl/filesystem.h>;
+import <stl/memory.h>;
 import windows;
 
 import :serialization;

@@ -1,4 +1,7 @@
 module HAL:Resource;
+
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 import wrl;
 
 import d3d12;
@@ -47,234 +50,191 @@ namespace HAL
 	{
 
 
-	void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, ResourceState initialState)
-	{
-		auto THIS = static_cast<HAL::Resource*>(this);
 
-
-		THIS->desc = _desc;
-
-//		Log::get() << "creating resource " << _desc << Log::endl;
-		CD3DX12_RESOURCE_DESC resourceDesc = to_native(THIS->desc);
-
-		if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
+		void Resource::init(Device& device, const ResourceDesc& _desc, const PlacementAddress& address, TextureLayout initialLayout)
 		{
+			auto THIS = static_cast<HAL::Resource*>(this);
+			auto& desc = THIS->desc;
+			auto& heap_type = THIS->heap_type;
 
-			if ((resourceDesc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) == 0)
+			if(address.heap)
+			heap_type = address.heap->get_type();
+			else
+				heap_type = HAL::HeapType::RESERVED;
+			desc = _desc;
+
+			//		Log::get() << "creating resource " << _desc << Log::endl;
+			auto resourceDesc = to_native(desc);
+			auto resourceDesc1 = to_native_1(desc);
+
+
+
+			ResourceAllocationInfo info = device.get_alloc_info(_desc);
+
+			resourceDesc.Alignment = info.alignment;
+
+			D3D12_CLEAR_VALUE value;
+
+			D3D12_CLEAR_VALUE* pass_value = nullptr;
+
+
+			std::vector<DXGI_FORMAT> castable_formats;
+
+
+
+
+			if (desc.is_texture())
 			{
-				resourceDesc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
+
+				auto texture_desc = desc.as_texture();
+				//			castable_formats.emplace_back(to_native(texture_desc.Format));
+				//	castable_formats.emplace_back(to_native(texture_desc.Format.to_srv()));
+				//	castable_formats.emplace_back(to_native(texture_desc.Format.to_dsv()));
+
+
+				assert((texture_desc.is1D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE1D)
+					|| (texture_desc.is2D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D)
+					|| (texture_desc.is3D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE3D)
+				);
+
+				if (check(desc.Flags & HAL::ResFlags::RenderTarget))
+				{
+					value.Format = to_native(texture_desc.Format.to_srv());
+					value.Color[0] = 0;
+					value.Color[1] = 0;
+					value.Color[2] = 0;
+					value.Color[3] = 0;
+					pass_value = &value;
+				}
+
+				if (check(desc.Flags & HAL::ResFlags::DepthStencil))
+				{
+					value.Format = to_native(texture_desc.Format.to_dsv());
+					value.DepthStencil.Depth = 1.0f;
+					value.DepthStencil.Stencil = 0;
+					pass_value = &value;
+				}
+
+				if (!texture_desc.Format.is_shader_visible())
+				{
+					THIS->desc.Flags &= (~HAL::ResFlags::ShaderResource);
+				}
+
+
+
+				if (heap_type == HeapType::UPLOAD)
+				{
+					initialLayout = TextureLayout::SHADER_RESOURCE | TextureLayout::COPY_SOURCE;
+				}
+				else if (heap_type == HeapType::READBACK)
+				{
+					initialLayout = TextureLayout::COPY_DEST;
+				}
+				else 	if (initialLayout == TextureLayout::UNDEFINED)
+				{
+					if (check(desc.Flags & HAL::ResFlags::DepthStencil))
+						initialLayout = TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::DEPTH_STENCIL_READ;
+					else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
+						initialLayout = TextureLayout::RENDER_TARGET;
+					else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
+						initialLayout = TextureLayout::SHADER_RESOURCE;
+					else if (check(desc.Flags & HAL::ResFlags::UnorderedAccess))
+						initialLayout = TextureLayout::UNORDERED_ACCESS;
+					else
+						initialLayout = TextureLayout::COPY_DEST; // probably update from CPU or copy
+				}
+
 			}
+			else
+			{
+				initialLayout = TextureLayout::UNDEFINED;
+			}
+
+			D3D12_BARRIER_LAYOUT layout = to_native(initialLayout);
+
+			if (address.heap)
+			{
+				TEST(device, device.native_device->CreatePlacedResource2(
+					address.heap->native_heap.Get(),
+					address.offset,
+					&resourceDesc,
+					layout,
+					pass_value,
+					castable_formats.size(), castable_formats.data(),
+					IID_PPV_ARGS(&native_resource)));
+			}
+			else
+			{
+				if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
+				{
+					resourceDesc1.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
+					//resourceDesc.Alignment = 4 * 1024;
+				}
+
+				TEST(device, device.native_device->CreateReservedResource2(
+					&resourceDesc1,
+					layout,
+					pass_value,
+					nullptr,
+					castable_formats.size(), castable_formats.data(),
+					IID_PPV_ARGS(&native_resource)));
+			}
+
+			init(native_resource, initialLayout);
 		}
 
-		D3D12_RESOURCE_ALLOCATION_INFO info = device.native_device->GetResourceAllocationInfo(0, 1, &resourceDesc);
-		if (info.SizeInBytes == UINT64_MAX)
+		void Resource::init(D3D::Resource  resource, TextureLayout layout)
 		{
-			resourceDesc.Alignment = 0;
-			info = device.native_device->GetResourceAllocationInfo(0, 1, &resourceDesc);
-		}
-		resourceDesc.Alignment = info.Alignment;
+			auto THIS = static_cast<HAL::Resource*>(this);
+	
 
-		D3D12_CLEAR_VALUE value;
+			THIS->desc = extract(native_resource);
+			if (THIS->desc.is_buffer())
+				this->address = GPUAddressPtr(native_resource->GetGPUVirtualAddress());
+			else
+				this->address = 0;
 
-		D3D12_CLEAR_VALUE *pass_value=nullptr;
+			THIS->state_manager.init_subres(HAL::Device::get().Subresources(THIS->get_desc()), layout);
 
-		if (THIS->desc.is_texture())
-		{
 
-			auto texture_desc = THIS->desc.as_texture();
-			assert((texture_desc.is1D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE1D)
-				|| (texture_desc.is2D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D)
-				|| (texture_desc.is3D() && resourceDesc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE3D)
-			);
-
-			if (check(THIS->desc.Flags & HAL::ResFlags::RenderTarget))
+			if (THIS->heap_type == HeapType::RESERVED)
+				THIS->tiled_manager.init_tilings();
+			if (THIS->heap_type == HeapType::UPLOAD || THIS->heap_type == HeapType::READBACK)
 			{
-				value.Format = to_native(texture_desc.Format.to_srv());
-				value.Color[0] = 0;
-				value.Color[1] = 0;
-				value.Color[2] = 0;
-				value.Color[3] = 0;
-				pass_value = &value;
-			}
-		
-			if (check(THIS->desc.Flags & HAL::ResFlags::DepthStencil))
-			{
-				value.Format = to_native(texture_desc.Format.to_dsv());
-				value.DepthStencil.Depth = 1.0f;
-				value.DepthStencil.Stencil = 0;
-				pass_value = &value;
-			}
-
-			if (!texture_desc.Format.is_shader_visible())
-			{
-				THIS->desc.Flags &= (~HAL::ResFlags::ShaderResource);
+				get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&THIS->buffer_data));
 			}
 
 
+
+			THIS->gpu_address = ResourceAddress{ THIS,0 };
+
 		}
-
-		
-		if (address.heap)
-		{
-			TEST(device, device.native_device->CreatePlacedResource(
-				address.heap->native_heap.Get(),
-				address.offset,
-				&resourceDesc,
-				static_cast<D3D12_RESOURCE_STATES>(initialState),
-				pass_value,
-				IID_PPV_ARGS(&native_resource)));
-		}
-		else
-		{
-			if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
-			{
-				resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
-				//resourceDesc.Alignment = 4 * 1024;
-			}
-
-			TEST(device, device.native_device->CreateReservedResource(
-				&resourceDesc,
-				static_cast<D3D12_RESOURCE_STATES>(initialState),
-				pass_value,
-				IID_PPV_ARGS(&native_resource)));
-		}
-
-		THIS->desc = extract(native_resource);
-		if (THIS->desc.is_buffer())
-			this->address = GPUAddressPtr(native_resource->GetGPUVirtualAddress());
-		else
-			this->address = 0;
-
 	}
-	void Resource::init(D3D::Resource  resource)
-	{
-		auto THIS = static_cast<HAL::Resource*>(this);
-
-		native_resource = resource;
-		THIS->desc = extract(resource);
-	}
-}
 
 
 
 
 
-	void Resource::_init(const ResourceDesc& desc, HeapType _heap_type, ResourceState state, vec4 clear_value)
+	void Resource::_init(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
-		heap_type = _heap_type;
-		//D3D12_CLEAR_VALUE value;
-
-		//if (desc.is_texture())
-		//{
-
-		//	auto texture_desc = desc.as_texture();
-		//	value.Format = to_srv(to_native(texture_desc.Format));
-		//	value.Color[0] = clear_value.x;
-		//	value.Color[1] = clear_value.y;
-		//	value.Color[2] = clear_value.z;
-		//	value.Color[3] = clear_value.w;
-
-		//	if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-		//	{
-		//		value.Format = to_dsv(to_native(texture_desc.Format));
-		//		value.DepthStencil.Depth = 1.0f;
-		//		value.DepthStencil.Stencil = 0;
-		//	}
-
-
-		//	if (!texture_desc.Format.is_shader_visible())
-		//	{
-		//		assert(false);
-		//		//desc.Flags = desc.Flags & (~HAL::ResFlags::ShaderResource);
-		//	}
-		//}
-
-
-
-		/**/
-
-
-		if (state == ResourceState::UNKNOWN)
-		{
-			if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-				state = ResourceState::DEPTH_WRITE;
-			else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
-				state = ResourceState::RENDER_TARGET;
-			else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
-				state = ResourceState::PIXEL_SHADER_RESOURCE;
-
-			else
-				state = ResourceState::COMMON;
-		}
-		if (heap_type == HeapType::UPLOAD)
-		{
-			state = ResourceState::GEN_READ;
-		}if (heap_type == HeapType::READBACK)
-		{
-			state = ResourceState::COPY_DEST;
-		}
 
 		alloc_info = HAL::Device::get().get_alloc_info(desc);
 
 		PlacementAddress address = {};
-
-
-		if (heap_type == HAL::HeapType::RESERVED)
-		{
-			/*	if (desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D)
-				{
-					desc.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
-					desc.Alignment = 4 * 1024;
-				}*/
-
-				//Log::get() << "create " << desc.Dimension << Log::endl;
-
-				//D3D12_RESOURCE_DESC ddd = desc;
-				//Log::get() << "size " << ddd << Log::endl;
-	//	assert(0);
-			/*		TEST(Device::get().get_native_device()->CreateReservedResource(
-						&desc,
-						static_cast<D3D12_RESOURCE_STATES>(state),
-						(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
-						IID_PPV_ARGS(&resource)));*/
-
-
-		}
-		else
+		if (heap_type != HAL::HeapType::RESERVED)
 		{
 			HeapIndex index = { HAL::MemoryType::COMMITED , heap_type };
 
 			alloc_handle = Device::get().get_static_gpu_data().alloc_memory(alloc_info.size, alloc_info.alignment, index);
 			address = { alloc_handle.get_heap().get(),alloc_handle.get_offset() };
-
-
-			//	assert(0);
-				/*	TEST(Device::get().get_native_device()->CreatePlacedResource(
-						alloc_handle.get_heap()->get_native().Get(),
-						alloc_handle.get_offset(),
-						&desc,
-						static_cast<D3D12_RESOURCE_STATES>(state),
-						(desc.Dimension == D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_TEXTURE2D && (desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))) ? &value : nullptr,
-						IID_PPV_ARGS(&resource)));*/
-
-
 		}
-		init(HAL::Device::get(), desc, address, state);
 
-		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
-			if (heap_type == HeapType::RESERVED) 
-		tiled_manager.init_tilings();
-
-		gpu_address = ResourceAddress{ this,0 };
-		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
-		{
-			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
-		}
+		init(HAL::Device::get(), desc, address, initialLayout);
 	}
-	Resource::Resource(const ResourceDesc& desc, HeapType heap_type, ResourceState state, vec4 clear_value) :state_manager(this), tiled_manager(this)
+	Resource::Resource(const ResourceDesc& desc, HeapType heap_type, TextureLayout initialLayout, vec4 clear_value) :state_manager(this), tiled_manager(this)
 	{
-		_init(desc, heap_type, state, clear_value);
+		_init(desc, heap_type, initialLayout, clear_value);
 
 	}
 
@@ -282,144 +242,27 @@ namespace HAL
 	{
 		auto t = CounterManager::get().start_count<Resource>();
 
-		//tmp_handle = handle;
-	/*	D3D12_CLEAR_VALUE value;
-
-		if (desc.is_texture())
-		{
-
-			auto texture_desc = desc.as_texture();
-			value.Format = to_srv(to_native(texture_desc.Format));
-			value.Color[0] = 0;
-			value.Color[1] = 0;
-			value.Color[2] = 0;
-			value.Color[3] = 0;
-
-			if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-			{
-				value.Format = to_dsv(to_native(texture_desc.Format));
-				value.DepthStencil.Depth = 1.0f;
-				value.DepthStencil.Stencil = 0;
-			}
-
-
-
-		}*/
-
-
-		ResourceState state;
-
-
-		if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-			state = ResourceState::DEPTH_WRITE;
-		else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
-			state = ResourceState::RENDER_TARGET;
-		else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
-			state = ResourceState::PIXEL_SHADER_RESOURCE;
-
-		else
-			state = ResourceState::COPY_DEST;
-
-
-		heap_type = handle.get_heap()->get_type();
-
-		if (heap_type == HeapType::UPLOAD)
-		{
-			state = ResourceState::GEN_READ;
-		}if (heap_type == HeapType::READBACK)
-		{
-			state = ResourceState::COPY_DEST;
-		}
 		PlacementAddress address = { handle.get_heap().get(),handle.get_offset() };
 
-		init(HAL::Device::get(), desc, address, state);
-
-		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
-
-		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
-		{
-			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
-		}
+		init(HAL::Device::get(), desc, address,  TextureLayout::UNDEFINED);
 
 		if (own)
 		{
 			alloc_handle = handle;
 		}
-
-		gpu_address = ResourceAddress{ this,0 };
-
 	}
+
 	Resource::Resource(const ResourceDesc& desc, PlacementAddress address) :state_manager(this), tiled_manager(this)
 	{
 		auto t = CounterManager::get().start_count<Resource>();
 
-		//tmp_handle = handle;
-	/*	D3D12_CLEAR_VALUE value;
-
-		if (desc.is_texture())
-		{
-
-			auto texture_desc = desc.as_texture();
-			value.Format = to_srv(to_native(texture_desc.Format));
-			value.Color[0] = 0;
-			value.Color[1] = 0;
-			value.Color[2] = 0;
-			value.Color[3] = 0;
-
-			if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-			{
-				value.Format = to_dsv(to_native(texture_desc.Format));
-				value.DepthStencil.Depth = 1.0f;
-				value.DepthStencil.Stencil = 0;
-			}
-
-
-
-		}*/
-
-
-		ResourceState state;
-
-
-		if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-			state = ResourceState::DEPTH_WRITE;
-		else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
-			state = ResourceState::RENDER_TARGET;
-		else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
-			state = ResourceState::PIXEL_SHADER_RESOURCE;
-
-		else
-			state = ResourceState::COPY_DEST;
-
-
-		heap_type = address.heap->get_type();
-
-		if (heap_type == HeapType::UPLOAD)
-		{
-			state = ResourceState::GEN_READ;
-		}if (heap_type == HeapType::READBACK)
-		{
-			state = ResourceState::COPY_DEST;
-		}
-		init(HAL::Device::get(), desc, address, state);
-
-		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
-
-		if (heap_type == HeapType::UPLOAD || heap_type == HeapType::READBACK)
-		{
-			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
-		}
-
-
-
-		gpu_address = ResourceAddress{ this,0 };
-
+		init(HAL::Device::get(), desc, address, TextureLayout::UNDEFINED);
 	}
 
 
-	Resource::Resource(const D3D::Resource& resource, ResourceState state) :state_manager(this), tiled_manager(this)
+	Resource::Resource(const D3D::Resource& resource, TextureLayout initialLayout) :state_manager(this), tiled_manager(this)
 	{
-		init(resource);
+		native_resource = resource;
 
 		D3D12_HEAP_PROPERTIES HeapProperties;
 		D3D12_HEAP_FLAGS  HeapFlags;
@@ -427,16 +270,11 @@ namespace HAL
 
 		heap_type = from_native(HeapProperties.Type);
 
-		state_manager.init_subres(HAL::Device::get().Subresources(get_desc()), state);
-
-		if (HeapProperties.Type == D3D12_HEAP_TYPE_UPLOAD || HeapProperties.Type == D3D12_HEAP_TYPE_READBACK)
-		{
-			get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&buffer_data));
-		}
-
-		gpu_address = ResourceAddress{ this,0 };
+		
+		init(native_resource, initialLayout);
 
 	}
+
 	void Resource::set_name(std::string name)
 	{
 		this->name = name;
@@ -463,7 +301,7 @@ namespace HAL
 	{
 		return resource->cpu_data().data() + resource_offset;
 	}
-		
+
 
 
 

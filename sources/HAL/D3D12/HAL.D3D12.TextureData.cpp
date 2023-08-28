@@ -1,8 +1,8 @@
 module HAL:TextureData;
 
 import Core;
-import d3d12;
-
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 import :Utils;
 import :Types;
 import :Device;

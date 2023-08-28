@@ -2,6 +2,7 @@ export module Graphics:FSR;
 
 import HAL;
 import Core;
+import FrameGraph;
 
 export class FSR :public Events::prop_handler, public FrameGraph::GraphGenerator
 {

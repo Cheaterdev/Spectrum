@@ -1,6 +1,6 @@
-import HAL;
+module HAL;
 import Core;
-
+import HAL;
 import ppl;
 using namespace concurrency;
 
@@ -8,6 +8,13 @@ void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::p
 {
 	signatures[Layouts::FrameLayout] = AutoGenSignatureDesc<FrameLayout>().create_signature(device, Layouts::FrameLayout);
 	signatures[Layouts::DefaultLayout] = AutoGenSignatureDesc<DefaultLayout>().create_signature(device, Layouts::DefaultLayout);
+}
+void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)
+{
+	commands[IndirectCommands::DrawIndexedArguments] = AutoGenIndirectCommand<DrawIndexedArguments>(device).create_command();
+	commands[IndirectCommands::DispatchMeshArguments] = AutoGenIndirectCommand<DispatchMeshArguments>(device).create_command();
+	commands[IndirectCommands::DispatchArguments] = AutoGenIndirectCommand<DispatchArguments>(device).create_command();
+	commands[IndirectCommands::CommandData] = AutoGenIndirectCommand<Table::CommandData>(device).create_command();
 }
 void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {
@@ -73,3 +80,19 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device,pso[PSO::DenoiserDownsample]));
 	 when_all(begin(tasks), end(tasks)).wait();
 }
+decltype(PSOS::DenoiserShadow_Filter::Pass) PSOS::DenoiserShadow_Filter::Pass;
+decltype(PSOS::RCAS::cas) PSOS::RCAS::cas;
+decltype(PSOS::GatherPipeline::CheckFrustum) PSOS::GatherPipeline::CheckFrustum;
+decltype(PSOS::GatherBoxes::CheckFrustum) PSOS::GatherBoxes::CheckFrustum;
+decltype(PSOS::InitDispatch::CheckFrustum) PSOS::InitDispatch::CheckFrustum;
+decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;
+decltype(PSOS::MipMapping::NonPowerOfTwo) PSOS::MipMapping::NonPowerOfTwo;
+decltype(PSOS::MipMapping::Gamma) PSOS::MipMapping::Gamma;
+decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
+decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
+decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
+decltype(PSOS::VoxelIndirectFilter::Reflection) PSOS::VoxelIndirectFilter::Reflection;
+decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
+decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
+decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
+decltype(PSOS::CubemapENV::Level) PSOS::CubemapENV::Level;

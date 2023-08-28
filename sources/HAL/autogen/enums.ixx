@@ -10,6 +10,13 @@ export
 		FrameLayout,
 		DefaultLayout
 	};
+	enum class IndirectCommands: int
+	{
+		DrawIndexedArguments,
+		DispatchMeshArguments,
+		DispatchArguments,
+		CommandData
+	};
 	enum class PSO: int
 	{
 		BlueNoise,

@@ -1,12 +1,13 @@
 export module Core:Math.Intersections;
 
+import <Core_defs.h>;
 import :Math.Constants;
 import :Math.Vectors;
 import :Math.Quaternion;
 import :Math.Matrices;
 import :Math.Primitive;
 
-import stl.memory;
+import <stl/memory.h>;
 import :serialization;
 
 import :Math.AABB;

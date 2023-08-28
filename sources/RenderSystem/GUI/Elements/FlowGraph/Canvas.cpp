@@ -1,4 +1,6 @@
 module GUI:FlowGraph.Canvas;
+import <RenderSystem.h>;
+import <windows/windows.h>;
 
 import  :FlowGraph.FlowManager;
 
@@ -21,7 +23,7 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 	graph_data.GetSize() = vec4(render_bounds->size, user_ui->size.get());
 	graph_data.GetOffset_size() = vec4(contents->pos.get(), 1.0f / contents->scale, 0);
 	graph_data.GetInv_pixel() = vec2(1, 1) / user_ui->size.get();
-	graph_data.set(c.command_list->get_graphics());
+	c.command_list->get_graphics().set(graph_data);
 
 	c.renderer->draw(c, HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::CanvasBack>(), get_render_bounds());
 
@@ -57,11 +59,11 @@ void GUI::Elements::FlowGraph::canvas::draw(Context& c)
 		auto data = c.command_list->place_data(sizeof(Table::VSLine) * vertexes.size(), sizeof(Table::VSLine));
 		c.command_list->write<Table::VSLine>(data, vertexes);
 
-		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::VSLine>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,false });
+		auto view = data.resource->create_view<HAL::StructuredBufferView<Table::VSLine>>(*c.command_list, StructuredBufferViewDesc{ (UINT)data.resource_offset, (UINT)data.size,counterType::NONE });
 		{
 			Slots::LineRender linedata;
-			linedata.GetVb() = view.structuredBuffer;
-			linedata.set(c.command_list->get_graphics());
+			linedata.GetVb() = view;
+			c.command_list->get_graphics().set(linedata);
 		}
 		c.command_list->get_graphics().draw(count * 4, 0);
 	}

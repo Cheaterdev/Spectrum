@@ -1,8 +1,11 @@
 
+import Core;
+import <RenderSystem.h>;
 #include "MeshletGeneration.h"
 
+import <windows/windows.h>;
 import Graphics;
-namespace internal
+namespace _internal
 {
     template <typename T>
     void Meshletize(
@@ -21,7 +24,7 @@ void Meshletize(
     std::vector<InlineMeshlet<uint>>& output
 )
 {
-    return internal::Meshletize(maxVerts, maxPrims, indices, indexCount, positions, vertexCount, output);
+    return _internal::Meshletize(maxVerts, maxPrims, indices, indexCount, positions, vertexCount, output);
 }
 
 
@@ -161,7 +164,7 @@ bool IsMeshletFull(uint maxVerts, uint maxPrims, const InlineMeshlet<T>& meshlet
 // Implementation 
 
 template <typename T>
-void internal::Meshletize(
+void _internal::Meshletize(
     uint maxVerts, uint maxPrims,
     const T* indices, uint indexCount,
     const vec3* positions, uint vertexCount,
@@ -399,7 +402,7 @@ namespace std
 ///
 // External Interface
 
-namespace internal
+namespace _internal
 {
     template <typename T>
     void BuildAdjacencyList(
@@ -415,7 +418,7 @@ void BuildAdjacencyList(
     uint32_t* adjacency
 )
 {
-    internal::BuildAdjacencyList(indices, indexCount, positions, vertexCount, adjacency);
+    _internal::BuildAdjacencyList(indices, indexCount, positions, vertexCount, adjacency);
 }
 
 
@@ -423,7 +426,7 @@ void BuildAdjacencyList(
 // Implementation
 
 template <typename T>
-void internal::BuildAdjacencyList(
+void _internal::BuildAdjacencyList(
     const T* indices, uint32_t indexCount,
     const float3* positions, uint32_t vertexCount,
     uint32_t* adjacency

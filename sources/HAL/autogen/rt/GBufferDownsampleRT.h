@@ -4,6 +4,7 @@ namespace RT
 	#pragma pack(push, 1)
 	struct _GBufferDownsampleRT
 	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
 		HLSL::RenderTarget<float> depth;
 		HLSL::RenderTarget<float4> color;
 		HLSL::RenderTarget<float>& GetDepth() { return depth; }

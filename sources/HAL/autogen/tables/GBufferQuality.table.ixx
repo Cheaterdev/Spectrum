@@ -1,0 +1,28 @@
+export module HAL:Autogen.Tables.GBufferQuality;
+import Core;
+import :SIG;
+import :Types;
+import :HLSL;
+import <HAL.h>;
+import :Enums;
+export namespace Table 
+{
+	#pragma pack(push, 1)
+	struct GBufferQuality
+	{
+		static constexpr SlotID ID = SlotID::GBufferQuality;
+		HLSL::Texture2D<float4> ref;
+		HLSL::Texture2D<float4>& GetRef() { return ref; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+		template<class Compiler>
+		void compile(Compiler& compiler) const
+		{
+			compiler.compile(ref);
+		}
+		struct Compiled
+		{
+			uint ref; // Texture2D<float4>
+		};
+	};
+	#pragma pack(pop)
+}

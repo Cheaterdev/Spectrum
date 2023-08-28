@@ -1,4 +1,5 @@
 module Graphics:Scene;
+import <RenderSystem.h>;
 import :Materials.UniversalMaterial;
 import :MeshAsset;
 
@@ -106,10 +107,10 @@ void Scene::update(HAL::FrameResources& frame)
 	{
 		PROFILE(L"SceneData");
 		Slots::SceneData sceneData;
-		sceneData.GetNodes() = universal_nodes_manager::get().buffer->structuredBuffer;
-		sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer->structuredBuffer;
-		sceneData.GetMeshes() = scene->mesh_infos->buffer->structuredBuffer;
-sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer->structuredBuffer;
+		sceneData.GetNodes() = universal_nodes_manager::get().buffer;
+		sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer;
+		sceneData.GetMeshes() = scene->mesh_infos->buffer;
+sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer;
 
 		compiledScene = sceneData.compile(frame);
 	}
@@ -127,7 +128,7 @@ sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer->struc
 
 
 				auto info = frame.place_raw(UINT(data.size()));
-				auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(frame, StructuredBufferViewDesc{ (UINT)info.resource_offset, (UINT)info.size,false }).structuredBuffer;
+				auto srv = info.resource->create_view<HAL::StructuredBufferView<UINT>>(frame, StructuredBufferViewDesc{ (UINT)info.resource_offset, (UINT)info.size,counterType::NONE }).structuredBuffer;
 				gather_global.GetMeshes_count() = srv;
 			}
 

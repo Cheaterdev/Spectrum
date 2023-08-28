@@ -1,6 +1,6 @@
 
 export module HAL:RT;
-
+import <HAL.h>;
 import :Concepts;
 import :DescriptorHeap;
 
@@ -54,11 +54,6 @@ public:
 		}
 	}
 
-	template<Compilable T>
-	void compile(const T& t) //equires (std::is_base_of_v<T, Handle>)
-	{
-		t.compile(*this);
-	}
 
 
 };
@@ -105,11 +100,6 @@ export
 			return compiled;
 		}
 
-
-		Compiled set(HAL::GraphicsContext& context, HAL::RTOptions options = HAL::RTOptions::Default, float depth = 1, uint stencil = 0) const
-		{
-			return compile(context.get_base()).set(context, options, depth, stencil);
-		}
 
 	};
 

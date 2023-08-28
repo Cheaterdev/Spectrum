@@ -1,9 +1,6 @@
-module;
-
-#include "FW1FontWrapper/Source/FW1FontWrapper.h"
-
 export module  TextSystem;
-
+import <RenderSystem.h>;
+import "FW1FontWrapper/Source/FW1FontWrapper.h";
 import wrl;
 import Core;
 typedef ComPtr<IFW1Factory>			FW1_Factory;

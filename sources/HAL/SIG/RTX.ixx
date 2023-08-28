@@ -1,6 +1,5 @@
 export module HAL:RTX;
-
-import :Buffer;
+import <HAL.h>;
 import :VirtualBuffer;
 
 import :Concepts;
@@ -96,8 +95,8 @@ struct SelectLocal<T>
 		};
 
 		//	using hit_type = shader_identifier;
-		HAL::StructureBuffer<HAL::shader_identifier>::ptr miss_ids;
-		HAL::StructureBuffer<raygen_type>::ptr raygen_ids;
+		HAL::StructuredBufferView<HAL::shader_identifier> miss_ids;
+		HAL::StructuredBufferView<raygen_type> raygen_ids;
 
 		HAL::virtual_gpu_buffer<hit_type>::ptr hitgroup_ids;
 
@@ -250,11 +249,14 @@ struct SelectLocal<T>
 			(std::get<Passes>(passes).init_ids(m_dxrStateObject, miss_ids), ...);
 			(std::get<Raygens>(raygen).init_ids(m_dxrStateObject, raygen_ids), ...);
 
-			this->miss_ids = std::make_shared<HAL::StructureBuffer<HAL::shader_identifier>>(miss_ids.size());
-			this->raygen_ids = std::make_shared<HAL::StructureBuffer<raygen_type>>(raygen_ids.size());
+			this->miss_ids = HAL::StructuredBufferView<HAL::shader_identifier>(miss_ids.size());
+			this->raygen_ids =HAL::StructuredBufferView<raygen_type>(raygen_ids.size());
 
-			this->miss_ids->set_raw_data(miss_ids);
-			this->raygen_ids->set_raw_data(raygen_ids);
+
+			auto list = (HAL::Device::get().get_upload_list());
+			list->get_copy().update(this->miss_ids, 0, miss_ids);
+			list->get_copy().update(this->raygen_ids, 0, raygen_ids);
+			list->execute_and_wait();
 
 
 			for (auto& [mat, info] : materials)
@@ -306,9 +308,9 @@ struct SelectLocal<T>
 			static_assert(static_cast<UINT>(generator) == T::ID);
 			compute.set_pipeline(m_dxrStateObject);
 			compute.dispatch_rays<hit_type, HAL::shader_identifier, HAL::shader_identifier>(size.xy,
-				hitgroup_ids->buffer->get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
-				miss_ids->get_resource_address(), static_cast<UINT>(miss_ids->get_count()),
-				raygen_ids->get_resource_address().offset(static_cast<UINT>(generator * sizeof(raygen_type))));
+				hitgroup_ids->buffer.get_resource_address(), static_cast<UINT>(hitgroup_ids->max_size()),
+				miss_ids.get_resource_address(), static_cast<UINT>(miss_ids.get_count()),
+				raygen_ids.get_resource_address(generator));
 		}
 	};
 

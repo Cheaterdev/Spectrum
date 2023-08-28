@@ -45,7 +45,7 @@ namespace FW1FontWrapper
 			stride = sizeof(QuadVertex);
 
 			if ((Flags & FW1_BUFFERSPREPARED) == 0)
-				pContext->get_graphics().set_index_buffer(m_pIndexBuffer->get_index_buffer_view());
+				pContext->get_graphics().set_index_buffer(m_pIndexBuffer.get_index_buffer_view());
 		}
 
 		//   if ((Flags & FW1_BUFFERSPREPARED) == 0)

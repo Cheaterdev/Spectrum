@@ -1,5 +1,6 @@
 export module HAL:API.Device;
-import d3d12;
+import <HAL.h>;
+import <d3d12/d3d12_includes.h>;
 import Core;
 
 import :Types;
@@ -23,6 +24,7 @@ export namespace HAL
 		bool rtx = false;
 		bool mesh_shader = false;
 		bool full_bindless = false;
+		bool direct_gpu_upload_heap = false;
 	};
 	namespace API
 	{

@@ -28,7 +28,7 @@ CSBRACE ;
  array: OSBRACE array_count_id? CSBRACE;
  
  value_declaration
- : option_block*? type_id name_id array? SCOL
+ : option_block*? type_id  name_id array? SCOL
  ;
  
  slot_declaration
@@ -52,9 +52,11 @@ blends_declaration
  : option_block*? 'blend' ASSIGN array_value_ids SCOL
  ;
 
+ pointer: POINTER;
+
 pso_param: pso_param_id ASSIGN value_id SCOL;
 class_no_template:ID;
-type_with_template:class_no_template (LT (template_id)* GT)?;
+type_with_template:class_no_template (LT (template_id)* GT)? pointer?;
 inherit_id: ID;
 name_id: ID;
 type_id: type_with_template;
@@ -197,7 +199,7 @@ GTEQ : '>=';
 LTEQ : '<=';
 PLUS : '+';
 MINUS : '-';
-MULT : '*';
+
 DIV : '/';
 MOD : '%';
 POW : '^';
@@ -293,6 +295,11 @@ SPACE
  : [ \t\r\n] -> skip
  ;
  
+ POINTER
+ :
+ '*'
+ ;
+
 INSERT_START: '%{';
 INSERT_END: '}%';
 INSERT_BLOCK 

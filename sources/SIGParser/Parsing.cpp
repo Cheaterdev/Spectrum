@@ -288,6 +288,18 @@ public:
 		}
 	}
 
+	virtual void enterPointer(SIGParser::PointerContext* ctx) override {
+	
+		{
+			auto& elem = get_elem<have_type>();
+			elem.pointer = true;
+
+
+				auto& options = get_elem<have_options>();
+
+		elem.detect_type(&options);
+		}
+	}
 
 	virtual void enterArray_count_id(SIGParser::Array_count_idContext* ctx) override {
 	

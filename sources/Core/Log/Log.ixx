@@ -1,14 +1,15 @@
 export module Core:Log;
-
+import <Core_defs.h>;
 import :Data;
-import stl.threading;
-import stl.core;
-import stl.memory;
+import <stl/threading.h>;
+import <stl/core.h>;
+import <stl/memory.h>;
+import <windows/windows.h>;
 import :Singleton;
 
 import :Events;
 import :Utils;
-import windows;
+
 import :serialization;
 
 export import cereal;
