@@ -579,6 +579,11 @@ void generate_cpp_table(const Table& table)
 
 				}
 			};
+
+					stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;" << std::endl;
+
+
+
 			stream << "template<class Compiler>" << std::endl;
 
 			stream << "void compile(Compiler& compiler) const" << std::endl;
@@ -784,6 +789,7 @@ void generate_include_list(const Parsed& parsed)
 
 		stream << R"(
 export module HAL:Autogen;
+import <HAL.h>;
 
 import Core;
 
@@ -1163,8 +1169,23 @@ using namespace concurrency;
 			stream.pop();
 		}
 
-		stream << "}" << std::endl;
+		
 
+
+		stream << "}" << std::endl;
+		
+		for (auto& pso : parsed.compute_pso)
+		for (auto d : pso.defines)
+		{
+			stream << "decltype(PSOS::"<< pso.name<<"::"<<d.name<<") PSOS::"<< pso.name<<"::"<<d.name<<";" << std::endl;
+		
+		}
+			for (auto& pso : parsed.graphics_pso)
+		for (auto d : pso.defines)
+		{
+			stream << "decltype(PSOS::"<< pso.name<<"::"<<d.name<<") PSOS::"<< pso.name<<"::"<<d.name<<";" << std::endl;
+		
+		}
 		/*
 				stream << "HAL::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
 				stream << "{" << std::endl;

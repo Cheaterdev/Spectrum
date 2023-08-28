@@ -18,6 +18,7 @@ export namespace Table
 		HLSL::RWTexture2D<float4>& GetOutput() { return output; }
 		float& GetPixelAngle() { return pixelAngle; }
 		GBuffer& GetGbuffer() { return gbuffer; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -16,6 +16,7 @@ export namespace Table
 		GBuffer gbuffer;
 		HLSL::Texture2D<float>& GetLight_mask() { return light_mask; }
 		GBuffer& GetGbuffer() { return gbuffer; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

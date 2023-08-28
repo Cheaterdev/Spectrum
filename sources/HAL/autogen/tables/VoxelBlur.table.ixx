@@ -21,6 +21,7 @@ export namespace Table
 		HLSL::Texture2D<float4>& GetPrev_result() { return prev_result; }
 		HLSL::RWTexture2D<float4>& GetScreen_result() { return screen_result; }
 		HLSL::RWTexture2D<float4>& GetGi_result() { return gi_result; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

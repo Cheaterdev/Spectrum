@@ -26,6 +26,7 @@ export namespace Table
 		HLSL::StructuredBuffer<MeshletCullData>& GetMeshletCullData() { return meshletCullData; }
 		HLSL::StructuredBuffer<uint>& GetUnique_indices() { return unique_indices; }
 		HLSL::StructuredBuffer<uint>& GetPrimitive_indices() { return primitive_indices; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

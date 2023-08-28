@@ -20,6 +20,7 @@ export namespace Table
 		HLSL::RWTexture3D<float4>& GetNormals() { return normals; }
 		HLSL::RWTexture3D<uint>& GetVisibility() { return visibility; }
 		VoxelInfo& GetInfo() { return info; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

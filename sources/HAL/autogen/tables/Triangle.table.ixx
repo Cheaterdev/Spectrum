@@ -16,6 +16,7 @@ export namespace Table
 		mesh_vertex_input v;
 		float& GetLod() { return lod; }
 		mesh_vertex_input& GetV() { return v; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::TilingParams;
 		HLSL::StructuredBuffer<uint2> tiles;
 		HLSL::StructuredBuffer<uint2>& GetTiles() { return tiles; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -3,6 +3,7 @@ import Core;
 import <RenderSystem.h>;
 #include "MeshletGeneration.h"
 
+import <windows/windows.h>;
 import Graphics;
 namespace _internal
 {

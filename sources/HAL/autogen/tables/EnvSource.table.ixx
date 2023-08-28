@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::EnvSource;
 		HLSL::TextureCube<float4> sourceTex;
 		HLSL::TextureCube<float4>& GetSourceTex() { return sourceTex; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

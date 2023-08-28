@@ -15,6 +15,7 @@ export namespace Table
 		uint mesh_id;
 		uint& GetNode_offset() { return node_offset; }
 		uint& GetMesh_id() { return mesh_id; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -21,6 +21,7 @@ export namespace Table
 		float2& GetTexelSize() { return TexelSize; }
 		HLSL::RWTexture2D<float4>* GetOutMip() { return OutMip; }
 		HLSL::Texture2D<float4>& GetSrcMip() { return SrcMip; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

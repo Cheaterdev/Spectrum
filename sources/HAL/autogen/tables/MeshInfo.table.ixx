@@ -19,6 +19,7 @@ export namespace Table
 		uint& GetMeshlet_offset_local() { return meshlet_offset_local; }
 		uint& GetNode_offset() { return node_offset; }
 		uint& GetMeshlet_count() { return meshlet_count; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

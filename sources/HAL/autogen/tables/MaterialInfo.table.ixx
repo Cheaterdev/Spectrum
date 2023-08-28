@@ -15,6 +15,7 @@ export namespace Table
 		DynamicData data;
 		std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
 		DynamicData& GetData() { return data; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

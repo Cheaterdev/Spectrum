@@ -16,6 +16,7 @@ export namespace Table
 		HLSL::AppendStructuredBuffer<CommandData> commands[8];
 		uint4* GetPip_ids() { return pip_ids; }
 		HLSL::AppendStructuredBuffer<CommandData>* GetCommands() { return commands; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -14,6 +14,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::DebugInfo;
 		HLSL::RWStructuredBuffer<DebugStruct> debug;
 		HLSL::RWStructuredBuffer<DebugStruct>& GetDebug() { return debug; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

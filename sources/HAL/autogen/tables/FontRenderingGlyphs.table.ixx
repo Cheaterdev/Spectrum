@@ -14,6 +14,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::FontRenderingGlyphs;
 		HLSL::StructuredBuffer<Glyph> data;
 		HLSL::StructuredBuffer<Glyph>& GetData() { return data; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -63,7 +63,7 @@ public:
 
 	}
 
-	template<Compilable T>
+	template<SIG_TYPES::Table T>
 	void compile(const T& t) //equires (std::is_base_of_v<T, Handle>)
 	{
 		pad();

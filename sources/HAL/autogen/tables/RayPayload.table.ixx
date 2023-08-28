@@ -22,6 +22,7 @@ export namespace Table
 		uint& GetRecursion() { return recursion; }
 		float& GetDist() { return dist; }
 		RayCone& GetCone() { return cone; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

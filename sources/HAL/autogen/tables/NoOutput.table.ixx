@@ -11,6 +11,7 @@ export namespace Table
 	struct NoOutput
 	{
 		static constexpr SlotID ID = SlotID::NoOutput;
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

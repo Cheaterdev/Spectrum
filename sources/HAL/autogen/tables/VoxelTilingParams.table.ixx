@@ -15,6 +15,7 @@ export namespace Table
 		HLSL::StructuredBuffer<int3> tiles;
 		uint4& GetVoxels_per_tile() { return voxels_per_tile; }
 		HLSL::StructuredBuffer<int3>& GetTiles() { return tiles; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

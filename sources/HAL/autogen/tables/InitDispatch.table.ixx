@@ -15,6 +15,7 @@ export namespace Table
 		HLSL::RWStructuredBuffer<DispatchArguments> dispatch_data;
 		HLSL::RWStructuredBuffer<uint>& GetCounter() { return counter; }
 		HLSL::RWStructuredBuffer<DispatchArguments>& GetDispatch_data() { return dispatch_data; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

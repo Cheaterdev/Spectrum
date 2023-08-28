@@ -16,6 +16,7 @@ export namespace Table
 		HLSL::StructuredBuffer<uint> indices;
 		HLSL::StructuredBuffer<mesh_vertex_input>& GetVertexes() { return vertexes; }
 		HLSL::StructuredBuffer<uint>& GetIndices() { return indices; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

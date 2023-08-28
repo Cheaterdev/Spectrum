@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::DrawStencil;
 		HLSL::StructuredBuffer<float4> vertices;
 		HLSL::StructuredBuffer<float4>& GetVertices() { return vertices; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

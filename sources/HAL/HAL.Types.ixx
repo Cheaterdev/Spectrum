@@ -468,7 +468,26 @@ extern const  ResourceState UNKNOWN ;
 
 		std::array<RenderTarget, 8> render_target;
 		bool operator==(const BlendState&) const = default;
-		std::strong_ordering operator<=>(const  BlendState& r)  const = default;
+		std::strong_ordering operator<=>(const  BlendState& r)  const
+		{
+
+			if (independ_blend == r.independ_blend)
+			{
+
+
+				for (int i = 0; i < 8; i++)
+				{
+					if (render_target[i] != r.render_target[i])
+						return 	render_target[i] <=> r.render_target[i];
+				}
+
+
+			}
+
+
+			return independ_blend <=> r.independ_blend;
+
+		}
 
 
 	private:
@@ -718,9 +737,9 @@ struct texture_layout
 		std::string name;
 		std::string value;
 		shader_macro() = default;
-		shader_macro(std::string name, std::string value = "1");
-
-		bool operator<(const shader_macro& r)const
+		shader_macro(std::string name, std::string value = "1");	GEN_DEF_COMP(shader_macro)
+	
+		/*bool operator<(const shader_macro& r)const
 		{
 			if(name==r.name)
 				return value<r.value;
@@ -732,7 +751,7 @@ struct texture_layout
 
 			return name==r.name && value==r.value;
 
-		}
+		}*/
 	private:
 		SERIALIZE()
 		{

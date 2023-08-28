@@ -18,6 +18,7 @@ export namespace Table
 		float* GetData() { return data; }
 		std::vector<HLSL::StructuredBuffer<MeshInstanceInfo>>& GetInstances() { return instances; }
 		std::vector<HLSL::Texture2D<float4>>& GetTex() { return tex; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

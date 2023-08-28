@@ -25,6 +25,7 @@ export namespace Table
 		HLSL::Texture2D<float>& GetT2d_DepthBuffer() { return t2d_DepthBuffer; }
 		HLSL::Texture2D<float16_t3>& GetT2d_NormalBuffer() { return t2d_NormalBuffer; }
 		HLSL::StructuredBuffer<uint>& GetSb_tileMetaData() { return sb_tileMetaData; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

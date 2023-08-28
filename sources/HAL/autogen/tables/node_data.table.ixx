@@ -20,6 +20,7 @@ export namespace Table
 		float4x4& GetNode_global_matrix_prev() { return node_global_matrix_prev; }
 		float4x4& GetNode_inverse_matrix() { return node_inverse_matrix; }
 		AABB& GetAabb() { return aabb; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

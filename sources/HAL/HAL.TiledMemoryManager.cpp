@@ -60,7 +60,7 @@ namespace HAL {
 
 				auto is_mapped = [&](uint3 pos) {
 
-					if (math::all(pos >= uint3(0, 0, 0)) && math::all(pos < tiles[subres].size()))
+					if (math::all(pos.higher_eq(uint3(0, 0, 0))) && math::all(pos.lower_eq(tiles[subres].size())))
 					{
 						return !!tiles[subres][pos].heap_position.heap;
 					}

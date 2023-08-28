@@ -15,6 +15,7 @@ export namespace Table
 		float4 ClipRect;
 		float4x4& GetTransformMatrix() { return TransformMatrix; }
 		float4& GetClipRect() { return ClipRect; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

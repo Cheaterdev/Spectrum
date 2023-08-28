@@ -17,6 +17,7 @@ export namespace Table
 		HLSL::Texture2D<float4>& GetTex_downsampled() { return tex_downsampled; }
 		HLSL::Texture2D<float4>& GetTex_gi_prev() { return tex_gi_prev; }
 		HLSL::Texture2D<float>& GetTex_depth_prev() { return tex_depth_prev; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -15,6 +15,7 @@ export namespace Table
 		HLSL::Buffer<float4> positions;
 		HLSL::Texture2D<float>& GetTex0() { return tex0; }
 		HLSL::Buffer<float4>& GetPositions() { return positions; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

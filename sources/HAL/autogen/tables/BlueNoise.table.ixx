@@ -21,6 +21,7 @@ export namespace Table
 		HLSL::Buffer<uint>& GetRanking_tile_buffer() { return ranking_tile_buffer; }
 		HLSL::Buffer<uint>& GetScrambling_tile_buffer() { return scrambling_tile_buffer; }
 		HLSL::RWTexture2D<float2>& GetBlue_noise_texture() { return blue_noise_texture; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
