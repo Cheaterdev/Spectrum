@@ -1407,8 +1407,8 @@ namespace HAL
 			{
 				auto i = get_table_index(s);
 
-				if(tables[i].slot_id == s);
-				stop_using(i);
+			//	if(tables[i].slot_id == s);
+			//	stop_using(i);
 				//auto& slot = slots[slot_id];
 
 				//for (auto& id : used_tables)

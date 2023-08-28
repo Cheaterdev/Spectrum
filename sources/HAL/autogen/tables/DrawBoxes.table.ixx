@@ -18,6 +18,7 @@ export namespace Table
 		HLSL::StructuredBuffer<float4>& GetVertices() { return vertices; }
 		HLSL::StructuredBuffer<BoxInfo>& GetInput_meshes() { return input_meshes; }
 		HLSL::RWStructuredBuffer<uint>& GetVisible_meshes() { return visible_meshes; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

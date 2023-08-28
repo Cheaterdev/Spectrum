@@ -19,6 +19,7 @@ export namespace Table
 		HLSL::StructuredBuffer<uint>& GetLow_counter() { return low_counter; }
 		HLSL::RWStructuredBuffer<DispatchArguments>& GetHi_dispatch_data() { return hi_dispatch_data; }
 		HLSL::RWStructuredBuffer<DispatchArguments>& GetLow_dispatch_data() { return low_dispatch_data; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

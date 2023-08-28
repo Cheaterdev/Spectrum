@@ -21,6 +21,7 @@ export namespace Table
 		uint4& GetConst2() { return Const2; }
 		uint4& GetConst3() { return Const3; }
 		uint4& GetSample() { return Sample; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

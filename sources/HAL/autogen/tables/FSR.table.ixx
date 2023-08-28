@@ -18,6 +18,7 @@ export namespace Table
 		HLSL::Texture2D<float4>& GetSource() { return source; }
 		HLSL::RWTexture2D<float4>& GetTarget() { return target; }
 		FSRConstants& GetConstants() { return constants; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

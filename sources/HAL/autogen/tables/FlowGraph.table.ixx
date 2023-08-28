@@ -17,6 +17,7 @@ export namespace Table
 		float4& GetSize() { return size; }
 		float4& GetOffset_size() { return offset_size; }
 		float2& GetInv_pixel() { return inv_pixel; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

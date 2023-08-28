@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::SkyFace;
 		uint face;
 		uint& GetFace() { return face; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

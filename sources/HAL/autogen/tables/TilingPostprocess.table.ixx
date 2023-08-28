@@ -14,6 +14,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::TilingPostprocess;
 		TilingParams tiling;
 		TilingParams& GetTiling() { return tiling; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -17,6 +17,7 @@ export namespace Table
 		float4& GetBoundingSphere() { return BoundingSphere; }
 		uint& GetNormalCone() { return NormalCone; }
 		float& GetApexOffset() { return ApexOffset; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

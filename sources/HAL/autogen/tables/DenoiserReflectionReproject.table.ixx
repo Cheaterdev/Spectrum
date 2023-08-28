@@ -43,6 +43,7 @@ export namespace Table
 		HLSL::RWTexture2D<float>& GetG_out_variance() { return g_out_variance; }
 		HLSL::RWTexture2D<float>& GetG_out_sample_count() { return g_out_sample_count; }
 		HLSL::Buffer<uint>& GetG_denoiser_tile_list() { return g_denoiser_tile_list; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

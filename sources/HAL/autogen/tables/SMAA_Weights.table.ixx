@@ -17,6 +17,7 @@ export namespace Table
 		HLSL::Texture2D<float4>& GetAreaTex() { return areaTex; }
 		HLSL::Texture2D<float4>& GetSearchTex() { return searchTex; }
 		HLSL::Texture2D<float4>& GetEdgesTex() { return edgesTex; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

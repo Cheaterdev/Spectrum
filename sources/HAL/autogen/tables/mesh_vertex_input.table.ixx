@@ -19,6 +19,7 @@ export namespace Table
 		float3& GetNormal() { return normal; }
 		float2& GetTc() { return tc; }
 		float4& GetTangent() { return tangent; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -15,6 +15,7 @@ export namespace Table
 		uint index_offset;
 		uint& GetVertex_offset() { return vertex_offset; }
 		uint& GetIndex_offset() { return index_offset; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

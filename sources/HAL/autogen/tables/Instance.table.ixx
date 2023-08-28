@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::Instance;
 		uint instanceId;
 		uint& GetInstanceId() { return instanceId; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

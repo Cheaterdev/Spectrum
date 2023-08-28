@@ -17,6 +17,7 @@ export namespace Table
 		uint4& GetFace() { return face; }
 		float4& GetScaler() { return scaler; }
 		uint4& GetSize() { return size; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

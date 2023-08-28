@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::Color;
 		float4 color;
 		float4& GetColor() { return color; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

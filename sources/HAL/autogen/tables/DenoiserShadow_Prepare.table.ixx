@@ -17,6 +17,7 @@ export namespace Table
 		int2& GetBufferDimensions() { return BufferDimensions; }
 		HLSL::Texture2D<uint>& GetT2d_hitMaskResults() { return t2d_hitMaskResults; }
 		HLSL::RWStructuredBuffer<uint>& GetRwsb_shadowMask() { return rwsb_shadowMask; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

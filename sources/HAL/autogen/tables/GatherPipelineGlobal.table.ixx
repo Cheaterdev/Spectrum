@@ -15,6 +15,7 @@ export namespace Table
 		HLSL::Buffer<uint> commands;
 		HLSL::StructuredBuffer<uint>& GetMeshes_count() { return meshes_count; }
 		HLSL::Buffer<uint>& GetCommands() { return commands; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -14,6 +14,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::LineRender;
 		HLSL::StructuredBuffer<VSLine> vb;
 		HLSL::StructuredBuffer<VSLine>& GetVb() { return vb; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

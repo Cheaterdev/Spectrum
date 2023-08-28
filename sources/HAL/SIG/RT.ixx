@@ -54,11 +54,6 @@ public:
 		}
 	}
 
-	template<Compilable T>
-	void compile(const T& t) //equires (std::is_base_of_v<T, Handle>)
-	{
-		t.compile(*this);
-	}
 
 
 };

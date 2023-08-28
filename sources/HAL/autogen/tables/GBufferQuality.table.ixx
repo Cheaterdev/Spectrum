@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::GBufferQuality;
 		HLSL::Texture2D<float4> ref;
 		HLSL::Texture2D<float4>& GetRef() { return ref; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

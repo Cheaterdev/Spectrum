@@ -34,6 +34,7 @@ export namespace Table
 		float4& GetDirection() { return direction; }
 		float4& GetJitter() { return jitter; }
 		Frustum& GetFrustum() { return frustum; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

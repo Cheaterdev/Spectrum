@@ -16,6 +16,7 @@ export namespace Table
 		HLSL::StructuredBuffer<Camera> light_camera;
 		HLSL::Texture2D<float>& GetLight_buffer() { return light_buffer; }
 		HLSL::StructuredBuffer<Camera>& GetLight_camera() { return light_camera; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

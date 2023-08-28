@@ -15,6 +15,7 @@ export namespace Table
 		float time;
 		int& GetLevel() { return level; }
 		float& GetTime() { return time; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

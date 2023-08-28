@@ -21,6 +21,7 @@ export namespace Table
 		HLSL::Texture2D<float4>& GetTransmittance() { return transmittance; }
 		HLSL::Texture3D<float4>& GetInscatter() { return inscatter; }
 		HLSL::Texture2D<float4>& GetIrradiance() { return irradiance; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

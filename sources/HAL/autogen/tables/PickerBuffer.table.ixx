@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::PickerBuffer;
 		HLSL::RWStructuredBuffer<uint> viewBuffer;
 		HLSL::RWStructuredBuffer<uint>& GetViewBuffer() { return viewBuffer; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

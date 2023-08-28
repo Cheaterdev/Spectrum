@@ -15,6 +15,7 @@ export namespace Table
 		HLSL::AppendStructuredBuffer<uint4> visible_tiles;
 		HLSL::Texture3D<uint>& GetVisibility() { return visibility; }
 		HLSL::AppendStructuredBuffer<uint4>& GetVisible_tiles() { return visible_tiles; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

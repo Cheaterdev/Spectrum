@@ -23,6 +23,7 @@ export namespace Table
 		HLSL::StructuredBuffer<MeshCommandData>& GetMeshes() { return meshes; }
 		HLSL::StructuredBuffer<MaterialCommandData>& GetMaterials() { return materials; }
 		HLSL::StructuredBuffer<RaytraceInstanceInfo>& GetRaytraceInstanceInfo() { return raytraceInstanceInfo; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

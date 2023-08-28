@@ -23,6 +23,7 @@ export namespace Table
 		Pointer<MeshInfo>& GetMesh_cb() { return mesh_cb; }
 		Pointer<MeshInstanceInfo>& GetMeshinstance_cb() { return meshinstance_cb; }
 		DispatchMeshArguments& GetDraw_commands() { return draw_commands; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

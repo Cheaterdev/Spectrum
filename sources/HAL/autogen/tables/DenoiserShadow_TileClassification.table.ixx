@@ -47,6 +47,7 @@ export namespace Table
 		HLSL::RWTexture2D<float2>& GetRwt2d_reprojectionResults() { return rwt2d_reprojectionResults; }
 		HLSL::Texture2D<float3>& GetT2d_previousMoments() { return t2d_previousMoments; }
 		HLSL::RWTexture2D<float3>& GetRwt2d_momentsBuffer() { return rwt2d_momentsBuffer; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

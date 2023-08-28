@@ -15,6 +15,7 @@ export namespace Table
 		HLSL::RWTexture2D<float> targetTex;
 		HLSL::Texture2D<float>& GetSrcTex() { return srcTex; }
 		HLSL::RWTexture2D<float>& GetTargetTex() { return targetTex; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

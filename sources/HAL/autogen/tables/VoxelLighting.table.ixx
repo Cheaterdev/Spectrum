@@ -27,6 +27,7 @@ export namespace Table
 		HLSL::TextureCube<float4>& GetTex_cube() { return tex_cube; }
 		PSSMDataGlobal& GetPssmGlobal() { return pssmGlobal; }
 		VoxelTilingParams& GetParams() { return params; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

@@ -26,6 +26,7 @@ export namespace Table
 		float4& GetSunDir() { return sunDir; }
 		Camera& GetCamera() { return camera; }
 		Camera& GetPrevCamera() { return prevCamera; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

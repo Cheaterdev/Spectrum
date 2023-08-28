@@ -51,7 +51,7 @@ export
 		T::Slot;
 	};
 
-	
+
 	template<typename T> concept HasID =
 		requires () {
 		T::ID;
@@ -96,7 +96,7 @@ export
 	template<class T>
 	concept IsEnumClass = requires () { typename T::EnumClass; };
 
-		template<class T>
+	template<class T>
 	concept CompilableClass = requires () { typename T::Compiled; };
 
 	template<class T>
@@ -110,7 +110,7 @@ export
 	{
 		using TYPE = typename T::EnumClass;
 	};
-template<CompilableClass T>
+	template<CompilableClass T>
 	struct _Underlying<T>
 	{
 		using TYPE = typename T::Compiled;
@@ -120,44 +120,38 @@ template<CompilableClass T>
 	using Underlying = typename _Underlying<T>::TYPE;
 
 
-	template<typename T> concept Compilable =
-		requires (T t) {
-		T::compile;
-	};
-
-
-
-	enum class SIG_TYPE:uint
+	enum class SIG_TYPE :uint
 	{
 		Slot,
 		RT,
 		RTX,
 		PSO,
-		Layout
+		Layout,
+		Table
 	};
 
-		enum class SIG_TYPE_COMPILED:uint
+	enum class SIG_TYPE_COMPILED :uint
 	{
 		Slot,
 		RT,
 		RTX,
 		PSO,
-		Layout
+		Layout,
+		Table
 	};
 
 	namespace SIG_TYPES
 	{
-		template<typename T> concept Slot =T::TYPE == SIG_TYPE::Slot;
-	template<typename T> concept RT =T::TYPE == SIG_TYPE::RT;
-	
+		template<typename T> concept Slot = T::TYPE == SIG_TYPE::Slot;
+		template<typename T> concept RT = T::TYPE == SIG_TYPE::RT;
+		template<typename T> concept Table = T::TYPE == SIG_TYPE::Table;
 	}
-	
 
 	namespace SIG_TYPES_COMPILED
 	{
 		template<typename T> concept Slot = T::TYPE == SIG_TYPE_COMPILED::Slot;
-	template<typename T> concept RT = T::TYPE == SIG_TYPE_COMPILED::RT;
-	
+		template<typename T> concept RT = T::TYPE == SIG_TYPE_COMPILED::RT;
+		template<typename T> concept Table = T::TYPE == SIG_TYPE_COMPILED::Table;
 	}
 
 }

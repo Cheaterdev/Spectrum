@@ -19,6 +19,7 @@ export namespace Table
 		float4& GetSize() { return size; }
 		uint4& GetVoxels_per_tile() { return voxels_per_tile; }
 		uint4& GetVoxel_tiles_count() { return voxel_tiles_count; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

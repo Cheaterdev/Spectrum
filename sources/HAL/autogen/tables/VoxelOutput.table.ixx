@@ -19,6 +19,7 @@ export namespace Table
 		HLSL::RWTexture2D<float>& GetFrames() { return frames; }
 		HLSL::RWTexture2D<float4>& GetDirAndPdf() { return DirAndPdf; }
 		HLSL::Texture2D<float2>& GetBlueNoise() { return blueNoise; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

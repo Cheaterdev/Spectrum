@@ -16,6 +16,7 @@ export namespace Table
 		HLSL::AppendStructuredBuffer<uint> visibleMeshes;
 		HLSL::AppendStructuredBuffer<BoxInfo>& GetCulledMeshes() { return culledMeshes; }
 		HLSL::AppendStructuredBuffer<uint>& GetVisibleMeshes() { return visibleMeshes; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

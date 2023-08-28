@@ -24,6 +24,7 @@ export namespace Table
 		HLSL::Texture2D<float>& GetPrev_frames() { return prev_frames; }
 		HLSL::Texture2D<float>& GetPrev_depth() { return prev_depth; }
 		GBuffer& GetGbuffer() { return gbuffer; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

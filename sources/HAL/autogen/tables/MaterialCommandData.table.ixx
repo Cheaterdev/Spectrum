@@ -15,6 +15,7 @@ export namespace Table
 		uint pipeline_id;
 		uint& GetMaterial_cb() { return material_cb; }
 		uint& GetPipeline_id() { return pipeline_id; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

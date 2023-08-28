@@ -487,7 +487,7 @@ extern const  ResourceState UNKNOWN ;
 
 			return independ_blend <=> r.independ_blend;
 
-		}//= default;
+		}
 
 
 	private:

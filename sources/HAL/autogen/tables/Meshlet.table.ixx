@@ -19,6 +19,7 @@ export namespace Table
 		uint& GetVertexOffset() { return vertexOffset; }
 		uint& GetPrimitiveCount() { return primitiveCount; }
 		uint& GetPrimitiveOffset() { return primitiveOffset; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

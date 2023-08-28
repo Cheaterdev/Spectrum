@@ -13,6 +13,7 @@ export namespace Table
 		static constexpr SlotID ID = SlotID::Frustum;
 		float4 planes[6];
 		float4* GetPlanes() { return planes; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

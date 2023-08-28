@@ -15,6 +15,7 @@ export namespace Table
 		HLSL::Texture2D<float4> tex;
 		float4& GetColor() { return color; }
 		HLSL::Texture2D<float4>& GetTex() { return tex; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

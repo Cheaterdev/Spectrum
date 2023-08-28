@@ -16,6 +16,7 @@ export namespace Table
 		VoxelTilingParams params;
 		HLSL::RWTexture3D<float4>& GetTarget() { return Target; }
 		VoxelTilingParams& GetParams() { return params; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

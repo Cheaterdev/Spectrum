@@ -15,6 +15,7 @@ export namespace Table
 		float4 color;
 		float4* GetPos() { return pos; }
 		float4& GetColor() { return color; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{

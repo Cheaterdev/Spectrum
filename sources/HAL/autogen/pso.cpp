@@ -80,18 +80,19 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device,pso[PSO::DenoiserDownsample]));
 	 when_all(begin(tasks), end(tasks)).wait();
 }
-
-
-decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;
-decltype(PSOS::GatherPipeline::CheckFrustum) PSOS::GatherPipeline::CheckFrustum;
-decltype(PSOS::CubemapENV::Level) PSOS::CubemapENV::Level;
-decltype(PSOS::RCAS::cas) PSOS::RCAS::cas;
 decltype(PSOS::DenoiserShadow_Filter::Pass) PSOS::DenoiserShadow_Filter::Pass;
-decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
-decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
-decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
+decltype(PSOS::RCAS::cas) PSOS::RCAS::cas;
+decltype(PSOS::GatherPipeline::CheckFrustum) PSOS::GatherPipeline::CheckFrustum;
+decltype(PSOS::GatherBoxes::CheckFrustum) PSOS::GatherBoxes::CheckFrustum;
+decltype(PSOS::InitDispatch::CheckFrustum) PSOS::InitDispatch::CheckFrustum;
+decltype(PSOS::GatherMeshes::Invisible) PSOS::GatherMeshes::Invisible;
 decltype(PSOS::MipMapping::NonPowerOfTwo) PSOS::MipMapping::NonPowerOfTwo;
 decltype(PSOS::MipMapping::Gamma) PSOS::MipMapping::Gamma;
+decltype(PSOS::Lighting::SecondBounce) PSOS::Lighting::SecondBounce;
+decltype(PSOS::VoxelDownsample::Count) PSOS::VoxelDownsample::Count;
+decltype(PSOS::VoxelIndirectFilter::Blur) PSOS::VoxelIndirectFilter::Blur;
+decltype(PSOS::VoxelIndirectFilter::Reflection) PSOS::VoxelIndirectFilter::Reflection;
+decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
 decltype(PSOS::CopyTexture::Format) PSOS::CopyTexture::Format;
 decltype(PSOS::Voxelization::Dynamic) PSOS::Voxelization::Dynamic;
-decltype(PSOS::FontRender::Format) PSOS::FontRender::Format;
+decltype(PSOS::CubemapENV::Level) PSOS::CubemapENV::Level;

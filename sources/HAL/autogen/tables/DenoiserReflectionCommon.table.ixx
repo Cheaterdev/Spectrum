@@ -47,6 +47,7 @@ export namespace Table
 		uint& GetG_most_detailed_mip() { return g_most_detailed_mip; }
 		uint& GetG_samples_per_quad() { return g_samples_per_quad; }
 		uint& GetG_temporal_variance_guided_tracing_enabled() { return g_temporal_variance_guided_tracing_enabled; }
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
