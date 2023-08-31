@@ -415,16 +415,16 @@ dlssOptions.mode = sl::DLSSMode::eBalanced;
 dlssOptions.outputWidth = size.x;    // e.g 1920;
 dlssOptions.outputHeight = size.y; // e.g. 1080;
 
-
-if(SL_FAILED(result, slDLSSGetOptimalSettings(dlssOptions, dlssSettings)))
+sl::Result result =  slDLSSGetOptimalSettings(dlssOptions, dlssSettings);
+//if(FAILED(result))
 {
-    assert(0);
+  //  assert(0);
 			vp.frame_size = size;
 
-}else
+}//else
 
 
-vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeight};
+//vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeight};
 		}
 			
 		else
@@ -641,8 +641,8 @@ vp.frame_size = {dlssSettings.optimalRenderWidth, dlssSettings.optimalRenderHeig
 		
 		if(enable_denoiser)
 		{
-			//nrd_denoiser.generate(graph);
-			shadow_denoiser.generate(graph);
+			nrd_denoiser.generate(graph);
+			//shadow_denoiser.generate(graph);
 
 
 		}

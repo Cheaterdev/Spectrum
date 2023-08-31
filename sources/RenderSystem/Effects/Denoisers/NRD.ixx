@@ -2,6 +2,7 @@ export module Graphics:NRDDenoiser;
 
 import Core;
 import HAL;
+import FrameGraph;
 
 export class NRDDenoiser :public Events::prop_handler, public FrameGraph::GraphGenerator
 {

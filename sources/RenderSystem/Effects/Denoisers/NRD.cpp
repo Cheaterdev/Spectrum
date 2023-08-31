@@ -2,6 +2,8 @@ module Graphics:NRDDenoiser;
 import :FrameGraphContext;
 import :MipMapGenerator;
 import HAL;
+import <RenderSystem.h>;
+import FrameGraph;
 
 
 using namespace FrameGraph;
@@ -44,6 +46,11 @@ void NRDDenoiser::generate(Graph& graph)
 				//			compute.set_pipeline<PSOS::DenoiserShadow_Prepare>();
 
 					auto& cam = graph.get_context<CameraInfo>();
+
+				
+// call slNRDSetConstants with populated NRDConstants object
+
+
 
 
 				sl::NRDConstants nrdConsts = {};
@@ -91,13 +98,34 @@ void NRDDenoiser::generate(Graph& graph)
 
 				static uint myFrameIndex = 0;
 				myFrameIndex++;
-				// Note that we use method mask as a unique id
-				// This allows us to evaluate different NRD denoisers in the same or different viewports but at the different stages with the same frame
-				//if (!slSetFeatureConstants(sl::kFeatureNRD, &nrdConsts, myFrameIndex, nrdConsts.methodMask))
-				//{
-				//	// Handle error here, check the logs
-				//}
+					sl::ViewportHandle viewportHandle{ 0 };
 
+				auto hr = slNRDSetConstants(viewportHandle, nrdConsts);
+				    sl::FrameToken* frameToken;
+    slGetNewFrameToken(frameToken, &myFrameIndex);
+ 
+	{
+		sl::ViewportHandle viewportHandle{ 0 };
+						sl::Constants consts = {};
+// Set motion vector scaling based on your setup
+consts.mvecScale = {1,1}; // Values in eMotionVectors are in [-1,1] range
+//consts.mvecScale = {1.0f / 1,1.0f / 1}; // Values in eMotionVectors are in pixel space
+//consts.mvecScale = 1; // Custom scaling to ensure values end up in [-1,1] range
+// Set all other constants here
+auto hr3 = slSetConstants(consts, *frameToken,viewportHandle); // constants are changing per frame so frame index is required
+
+	}
+	list.compiler.func([frameToken](API::CommandList& list)
+					{
+						auto l= list.get_native();
+							sl::ViewportHandle viewportHandle{ 0 };
+							const sl::BaseStructure* structs=&viewportHandle;
+						auto hr2 = slEvaluateFeature(sl::kFeatureNRD, *frameToken, &structs, 1, l.Get());
+
+					});
+
+
+//	
 
 			}/*, PassFlags::Compute*/);
 	}

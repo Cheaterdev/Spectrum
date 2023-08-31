@@ -8,7 +8,7 @@ import Core;
 
 #include "GFSDK_Aftermath.h"
 #include "NsightAftermathGpuCrashTracker.h"
-#include "sl.h"
+import streamline;
 
 #undef THIS
 namespace HAL

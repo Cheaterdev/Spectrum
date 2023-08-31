@@ -1,5 +1,6 @@
  module HAL:Adapter;
-
+ import <HAL.h>;
+ import <d3d12/d3d12_includes.h>;
  import windows;
  import streamline;
  namespace HAL
@@ -34,7 +35,7 @@ pref.projectId = "Spectrum"; // Optional project id
 
 
 //
-			sl::Feature myFeatures[] = { sl::kFeatureNRD, sl::kFeatureNRD };
+			sl::Feature myFeatures[] = { sl::kFeatureNRD, sl::kFeatureDLSS };
 pref.featuresToLoad = myFeatures;
 pref.numFeaturesToLoad = _countof(myFeatures);
 

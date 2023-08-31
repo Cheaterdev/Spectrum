@@ -24,3 +24,7 @@ obj/
 bin/
 .vs/
 vcpkg_installed/
+
+
+#ignore for now
+Streamline/
