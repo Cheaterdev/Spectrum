@@ -98,7 +98,7 @@ export{
 				point->prev_point = prev_point;
 
 				point->start = !end;
-				point->index = usage_points.size();
+				point->index = static_cast<uint>(usage_points.size());
 
 				compiler.func([point](auto& list)
 					{
@@ -517,6 +517,7 @@ export{
 		class CopyContext
 		{
 			friend class CommandList;
+			friend class Resource;
 
 			CommandList& base;
 			DelayedCommandList* list;
@@ -524,6 +525,12 @@ export{
 			CopyContext(CommandList& base) :base(base), list(base.get_native_list()) {}
 			CopyContext(const CopyContext&) = delete;
 			CopyContext(CopyContext&&) = delete;
+
+
+			void update_buffer(HAL::Resource* resource, uint64 offset, const char* data, uint64 size);
+			void update_buffer(HAL::Resource::ptr resource, uint64 offset, const char* data, uint64 size);
+			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)>);
+	
 		public:
 			void copy_resource(HAL::Resource* dest, HAL::Resource* source);
 			void copy_resource(const HAL::Resource::ptr& dest, const HAL::Resource::ptr& source);
@@ -534,9 +541,8 @@ export{
 
 
 			//TODO: remove
-			void update_buffer(HAL::Resource::ptr resource, uint64 offset, const char* data, uint64 size);
 			void update_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
-			void update_buffer(HAL::Resource* resource, uint64 offset, const char* data, uint64 size);
+
 			void update_texture(HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, const char* data, UINT row_stride, UINT slice_stride = 0);
 
 		
@@ -545,7 +551,6 @@ export{
 
 			std::future<bool> read_texture(HAL::Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
 			std::future<bool> read_texture(const HAL::Resource* resource, ivec3 offset, ivec3 box, UINT sub_resource, std::function<void(std::span<std::byte>, texture_layout)>);
-			std::future<bool> read_buffer(HAL::Resource* resource, unsigned int offset, UINT64 size, std::function<void(std::span<std::byte>)>);
 			std::future<bool> read_query(std::shared_ptr<QueryHeap>&, unsigned int offset, unsigned int count, std::function<void(std::span<std::byte>)>);
 
 
@@ -573,7 +578,20 @@ export{
 
 			}
 			
+				template<class T>
+			std::future<bool> read_counter(HAL::StructuredBufferView<T>& view, std::function<void(uint)> f)
+			{
+				return read_buffer(view.counter_view.resource.get(), view.counter_view.offset , sizeof(unsigned int),
+					[f](std::span<std::byte> memory)
+					{
+						uint read = memory.size();
+						auto data = reinterpret_cast<unsigned int*>(memory.data());
 
+
+						f(*data);
+					});
+
+			}
 
 
 		};

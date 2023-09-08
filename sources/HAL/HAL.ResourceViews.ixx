@@ -566,9 +566,9 @@ export
 			HLSL::RWStructuredBuffer<UINT> rwStructuredBuffer;
 			HLSL::RWBuffer<std::byte> rwRAW;
 			CounterView() = default;
-
+			uint offset;
 			
-			CounterView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, UINT offset = 0) :ResourceView(resource)
+			CounterView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, UINT offset = 0) :ResourceView(resource), offset(offset)
 			{
 				auto hlsl = frame.alloc_descriptor(3, DescriptorHeapIndex{ HAL::DescriptorHeapType::CBV_SRV_UAV, HAL::DescriptorHeapFlags::ShaderVisible });
 
