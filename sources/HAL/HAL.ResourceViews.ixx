@@ -4,6 +4,8 @@ import :Types;
 import :HLSL;
 import :Device;
 import :FrameManager;
+import :Resource.Buffer;
+import :Resource.Texture;
 
 import Core;
 export
@@ -64,6 +66,7 @@ export
 		class BufferView :public ResourceView
 		{
 				public:
+						using ResourceType = Buffer;
 	Buffer::ptr resource;
 			 Resource*  get_resource()  const override
 			 {
@@ -86,14 +89,15 @@ export
 			class TextureView :public ResourceView
 		{
 			public:
-		Resource::ptr resource;
-				 Resource*  get_resource()  const override
+				using ResourceType = TextureResource;
+		TextureResource::ptr resource;
+				 TextureResource*  get_resource()  const override
 			 {
 			 return resource.get();
 			 }
 		public:
 			 TextureView() =default;
-			TextureView(const Resource::ptr& _resource) :resource(_resource)
+			TextureView(const TextureResource::ptr& _resource) :resource(_resource)
 			{
 
 			}
@@ -285,7 +289,7 @@ export
 			Texture2DView() = default;
 
 			
-			Texture2DView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) :TextureView(resource)
+			Texture2DView(const TextureResource::ptr& resource, GPUEntityStorageInterface& frame) :TextureView(resource)
 			{
 				auto& texture_desc = get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
@@ -293,7 +297,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
 			
-			Texture2DView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, TextureViewDesc vdesc) :TextureView(resource)
+			Texture2DView(const TextureResource::ptr& resource, GPUEntityStorageInterface& frame, TextureViewDesc vdesc) :TextureView(resource)
 			{
 
 				init(frame, vdesc);
@@ -403,7 +407,7 @@ export
 			Texture3DView() = default;
 
 			
-			Texture3DView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) :TextureView(resource)
+			Texture3DView(const TextureResource::ptr& resource, GPUEntityStorageInterface& frame) :TextureView(resource)
 			{
 				auto& texture_desc = get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize;
@@ -411,7 +415,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels });
 			}
 			
-			Texture3DView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, Texture3DViewDesc vdesc) :TextureView(resource)
+			Texture3DView(const TextureResource::ptr& resource, GPUEntityStorageInterface& frame, Texture3DViewDesc vdesc) :TextureView(resource)
 			{
 
 				init(frame, vdesc);
@@ -510,7 +514,7 @@ export
 			CubeView() = default;
 
 			
-			CubeView(const Resource::ptr& resource, GPUEntityStorageInterface& frame) :TextureView(resource)
+			CubeView(const TextureResource::ptr& resource, GPUEntityStorageInterface& frame) :TextureView(resource)
 			{
 				auto& texture_desc = get_desc().as_texture();
 				uint array_size = texture_desc.ArraySize / 6;
@@ -518,7 +522,7 @@ export
 				init(frame, { 0, texture_desc.MipLevels, 0,array_size });
 			}
 			
-			CubeView(const Resource::ptr& resource, GPUEntityStorageInterface& frame, CubeViewDesc vdesc) :TextureView(resource)
+			CubeView(const TextureResource::ptr& resource, GPUEntityStorageInterface& frame, CubeViewDesc vdesc) :TextureView(resource)
 			{
 
 				init(frame, vdesc);

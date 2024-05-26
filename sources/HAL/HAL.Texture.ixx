@@ -3,6 +3,8 @@ import <HAL.h>;
 import Core;
 
 import :Resource;
+
+import :Resource.Texture;
 import :ResourceViews;
 import :TextureData;
 

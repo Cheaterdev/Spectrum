@@ -23,6 +23,7 @@ export import :TiledMemoryManager;
 export import :ResourceStates;
 export import :ResourceViews;
 export import :Resource;
+export import :Resource.Buffer;
 export import :Texture;
 export import :SwapChain;
 export import :Adapter;

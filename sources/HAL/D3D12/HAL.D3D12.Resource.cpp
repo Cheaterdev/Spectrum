@@ -279,30 +279,6 @@ namespace HAL
 	{
 		alloc_handle.Free();
 	}
-	std::span<std::byte> Buffer::cpu_data()const
-	{
-
-		return { buffer_data,buffer_data + get_size() };
-	}
-
-	std::byte* ResourceAddress::get_cpu_data() const
-	{
-		return resource->cpu_data().data() + resource_offset;
-	}
-
-		Buffer::~Buffer()
-	{
-		if (buffer_data)
-		{
-			get_dx()->Unmap(0, nullptr);
-		}
-
-	}
 
 
-}
-
-HAL::GPUAddressPtr to_native(const HAL::ResourceAddress& address)
-{
-	return address.resource ? (address.resource->get_address() + address.resource_offset) : 0;
 }
