@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 #include "Meshlet.h"
 #include "MeshletCullData.h"
 #include "mesh_vertex_input.h"

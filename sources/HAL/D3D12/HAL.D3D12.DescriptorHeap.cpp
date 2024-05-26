@@ -123,7 +123,7 @@ namespace HAL
 			},
 			[&](const Views::ShaderResource::Raytracing& Raytracing) {
 				desc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
-				desc.RaytracingAccelerationStructure.Location = to_native((view.Resource)->get_resource_address().offset(Raytracing.OffsetInBytes));
+				desc.RaytracingAccelerationStructure.Location = to_native(static_cast<Buffer*>(view.Resource.get())->get_resource_address().offset(Raytracing.OffsetInBytes));
 				native_resource = nullptr;
 			},
 			[&](auto other) {

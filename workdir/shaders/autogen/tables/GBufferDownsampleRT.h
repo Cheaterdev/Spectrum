@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct GBufferDownsampleRT
 {
 	uint depth; // RenderTarget<float>

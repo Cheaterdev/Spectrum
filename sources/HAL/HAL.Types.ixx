@@ -30,6 +30,7 @@ export namespace HAL
 	};
 
 	class Resource;
+	class Buffer;
 	class Device;
 	class Queue;
 
@@ -566,7 +567,8 @@ extern const  ResourceState UNKNOWN ;
 		DepthStencil = 1 << 3,
 		CrossAdapter = 1 << 4,
 		Raytracing = 1<<5,
-		SimultaniousAccess = 1<<6
+		SimultaniousAccess = 1<<6,
+		Virtual = 1 << 7,
 	};
 
 	struct TextureDesc
@@ -640,9 +642,25 @@ extern const  ResourceState UNKNOWN ;
 		}
 	};
 
+	struct FeedbackDesc
+	{
+		Resource* texture;
+
+
+		bool operator==(const FeedbackDesc&) const = default;
+		bool operator!=(const FeedbackDesc&) const = default;
+		auto operator<=>(const FeedbackDesc&)  const = default;
+
+	private:
+		SERIALIZE()
+		{
+			ar& NVP(texture);
+		}
+	};
+
 	struct ResourceDesc
 	{
-		std::variant<TextureDesc, BufferDesc> desc = BufferDesc{ 0 };
+		std::variant<TextureDesc, BufferDesc, FeedbackDesc> desc = BufferDesc{ 0 };
 		ResFlags Flags;
 
 		bool operator==(const ResourceDesc&) const = default;
@@ -666,6 +684,17 @@ extern const  ResourceState UNKNOWN ;
 		{
 			return ResourceDesc{ TextureDesc{Size, 1,MipLevels, Format, }, Flags };
 		}
+
+		static ResourceDesc Feedback(Resource* texture)
+		{
+			return ResourceDesc{ FeedbackDesc{texture}, ResFlags::UnorderedAccess |  ResFlags::ShaderResource};
+		}
+
+		bool is_virtual() const
+		{
+			return check(Flags&ResFlags::Virtual);
+		}
+
 		bool is_buffer() const
 		{
 			return std::holds_alternative<HAL::BufferDesc>(desc);
@@ -676,6 +705,11 @@ extern const  ResourceState UNKNOWN ;
 			return std::holds_alternative<HAL::TextureDesc>(desc);
 		}
 
+		bool is_feedback() const
+		{
+			return std::holds_alternative<HAL::FeedbackDesc>(desc);
+		}
+
 		const HAL::BufferDesc& as_buffer() const
 		{
 			return std::get<HAL::BufferDesc>(desc);
@@ -684,6 +718,10 @@ extern const  ResourceState UNKNOWN ;
 		const HAL::TextureDesc& as_texture() const
 		{
 			return std::get<HAL::TextureDesc>(desc);
+		}
+			const HAL::FeedbackDesc& as_feedback() const
+		{
+			return std::get<HAL::FeedbackDesc>(desc);
 		}
 
 		HAL::BufferDesc& as_buffer()
@@ -800,7 +838,7 @@ struct texture_layout
 
 	struct ResourceAddress
 	{
-		Resource* resource = nullptr;
+		Buffer* resource = nullptr;
 		uint64 resource_offset = 0;
 
 		explicit operator bool() const

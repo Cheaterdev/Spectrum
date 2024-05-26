@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct FrameClassification
 {
 	uint frames; // Texture2D<float>

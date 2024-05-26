@@ -61,8 +61,8 @@ public:
 						subres.FirstArraySlice = 0;
 						subres.MipLevels = 1;
 						subres.MipSlice = i;
-						auto depth_view = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
-						auto normal_view = gbuffer.normals.resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
+						auto depth_view = gbuffer.depth_mips.resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres);
+						auto normal_view = gbuffer.normals.resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres);
 
 						RT::GBufferDownsampleRT rt;
 
@@ -87,8 +87,8 @@ public:
 						subres.MipLevels = 1;
 						subres.MipSlice = i - 1;
 
-						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<HAL::TextureView>(graphics.get_base(), subres).texture2D;
-						downsample.GetNormals() = gbuffer.normals.resource->create_view<HAL::TextureView>(graphics.get_base(), subres).texture2D;
+						downsample.GetDepth() = gbuffer.depth_mips.resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres).texture2D;
+						downsample.GetNormals() = gbuffer.normals.resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres).texture2D;
 					}
 					graphics.set(downsample);
 					graphics.draw(4);
@@ -640,7 +640,7 @@ void VoxelGI::screen(Graph& graph)
 					subres.MipLevels = noisy_output.resource->get_desc().as_texture().MipLevels - 1;
 					subres.MipSlice = 1;
 
-					denoiser_history.GetColor() = noisy_output.resource->create_view<TextureView>(*command_list, subres).texture2D;
+					denoiser_history.GetColor() = noisy_output.resource->create_view<Texture2DView>(*command_list, subres).texture2D;
 
 					subres.MipLevels = 1;
 					denoiser_history.GetFrames() = frames_count.texture2D;
@@ -836,7 +836,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 			auto dir_and_pdf = *(data.noise_dir_pdf);
 			//	auto gi_filtered = *(data.gi_filtered);
 
-			//	HAL::TextureView downsampled_reflection = *(data.downsampled_reflection);
+			//	HAL::Texture2DView downsampled_reflection = *(data.downsampled_reflection);
 
 			auto& caminfo = graph.get_context<CameraInfo>();
 			auto& sceneinfo = graph.get_context<SceneInfo>();

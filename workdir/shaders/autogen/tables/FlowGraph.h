@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct FlowGraph
 {
 	float4 size; // float4

@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct DenoiserShadow_TileClassification
 {
 	float3 Eye; // float3

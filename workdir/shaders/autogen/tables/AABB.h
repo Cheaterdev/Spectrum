@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct AABB
 {
 	float4 min; // float4

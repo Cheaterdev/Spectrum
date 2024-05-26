@@ -110,6 +110,6 @@ export
 		}
 	};
 
-	using DefaultCB = HAL::Resource*;// std::vector<std::byte>;
+	using DefaultCB = HAL::Buffer*;// std::vector<std::byte>;
 	using DynamicData = std::vector<std::byte>;// std::vector<std::byte>;
 }

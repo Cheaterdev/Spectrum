@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct VoxelBlur
 {
 	uint noisy_output; // Texture2D<float4>

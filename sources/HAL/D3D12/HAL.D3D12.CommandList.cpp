@@ -196,9 +196,12 @@ namespace HAL
 			m_commandList->CopyResource(dest->get_dx(), source->get_dx());
 		}
 
-		void CommandList::copy_buffer(HAL::Resource* dest, uint64 dest_offset, HAL::Resource* source, uint64 source_offset, uint64 size)
+		void CommandList::copy_buffer(HAL::Resource* _dest, uint64 dest_offset, HAL::Resource* _source, uint64 source_offset, uint64 size)
 		{
 
+			auto dest = static_cast<HAL::Buffer*>(_dest);
+			
+			auto source = static_cast<HAL::Buffer*>(_source);
 			if constexpr (Debug::CheckErrors)
 			{
 				auto source_size = source->get_size();

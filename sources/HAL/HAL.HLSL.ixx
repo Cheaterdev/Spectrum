@@ -140,6 +140,31 @@ export
 			void create(const Resource::ptr& counter_resource, uint64 counter_offset, const Resource::ptr& resource, uint64 first_elem = 0, uint64 count = 0);
 		};
 
+		struct FeedbackTexture2DMip : public UAVHandle
+		{
+			FeedbackTexture2DMip() = default;
+			explicit FeedbackTexture2DMip(const Handle& h) : UAVHandle(h)
+			{
+
+			}
+
+
+		/*	template<HasByteAddressBuffer H>
+			auto operator= (const H& h)
+			{
+				this->operator=(h.byteAddressBuffer);
+
+				return *this;
+			}*/
+			void create(const Resource::ptr& texture, const Resource::ptr& feedback)
+			{
+				HAL::Views::UnorderedAccess desc = { texture, Format::UNKNOWN, HAL::Views::UnorderedAccess::TextureFeedback {feedback} };
+				Handle::operator=(desc);
+			}
+		};
+
+
+
 		struct ByteAddressBuffer : public SRVHandle
 		{
 			ByteAddressBuffer() = default;

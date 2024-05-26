@@ -1,4 +1,4 @@
-
+#ifdef OLOLO
 
 #include <assimp\Importer.hpp>
 #include <assimp\importerdesc.h>
@@ -559,3 +559,6 @@ void get_additional_assimp_importers(std::vector<  Assimp::BaseImporter* >& out)
 {
 	out.emplace_back(new Assimp::RAW4Importer());
 }
+
+
+#endif

@@ -12,7 +12,9 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::MaterialInfo;
 		std::vector<HLSL::Texture2D<float4>> textures;
+		HLSL::FeedbackTexture2DMip texture_feedbacks;
 		DynamicData data;
+		HLSL::FeedbackTexture2DMip& GetTexture_feedbacks() { return texture_feedbacks; }
 		std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
 		DynamicData& GetData() { return data; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
@@ -21,6 +23,7 @@ export namespace Table
 		{
 			compiler.compile(data);
 			compiler.compile(textures);
+			compiler.compile(texture_feedbacks);
 		}
 		};
 		#pragma pack(pop)

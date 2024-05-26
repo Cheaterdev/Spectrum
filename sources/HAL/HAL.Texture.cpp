@@ -25,7 +25,10 @@ namespace HAL
 			if (desc.is3D())
 				texture_3d_view = Texture3DView(resource, HAL::Device::get().get_static_gpu_data());
 			else
-				texture_2d_view = TextureView(resource, HAL::Device::get().get_static_gpu_data());
+				texture_2d_view = Texture2DView(resource, HAL::Device::get().get_static_gpu_data());
+
+			if (desc.is2D()&&resource->get_tiled_manager().is_tiled())
+			feedback = std::make_shared<HAL::TextureResource>(ResourceDesc::Feedback(resource.get()), HeapType::DEFAULT);
 		}
 	}
 
@@ -61,15 +64,17 @@ namespace HAL
 	Texture::Texture(D3D::Resource native, TextureLayout initialLayout) 
 	{
 
-		resource = std::make_shared<HAL::Resource>(native, initialLayout);
+		resource = std::make_shared<HAL::TextureResource>(native, initialLayout);
 		//    resource.reset(new Resource(native));
 		resource->set_name("Texture");
 		//	resource->debug = true;
 		init();
 	}
-	Texture::Texture(HAL::ResourceDesc desc, TextureLayout initialLayout /*= ResourceState::PIXEL_SHADER_RESOURCE*/, HeapType heap_type) 
+	Texture::Texture(HAL::ResourceDesc desc, TextureLayout initialLayout) 
 	{
-		resource = std::make_shared<HAL::Resource>(desc, heap_type,  initialLayout);
+
+
+		resource = std::make_shared<HAL::TextureResource>(desc, desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT,  initialLayout);
 		init();
 	}
 
@@ -129,7 +134,7 @@ namespace HAL
 		else
 			desc = HAL::ResourceDesc::Tex2D(data.format, { data.width, data.height }, data.array_size, data.mip_maps);
 
-		resource = std::make_shared<HAL::Resource>(desc,  HeapType::DEFAULT, TextureLayout::COPY_DEST);
+		resource = std::make_shared<HAL::TextureResource>(desc,  desc.is_virtual()?HeapType::RESERVED:HeapType::DEFAULT, TextureLayout::COPY_DEST);
 	
 		auto list = (HAL::Device::get().get_upload_list());
 
@@ -158,7 +163,7 @@ namespace HAL
 		desc.MipLevels = data->mip_maps;
 		desc.Dimensions = uint3(data->width, data->height, 0);
 
-		return create(data, HeapType::DEFAULT); //std::make_shared<Texture>(HAL::ResourceDesc{ desc, HAL::ResFlags::ShaderResource }, ResourceState::COMMON, HeapType::DEFAULT, data);
+		return create(data/*, get_desc().is_virtual()?HeapType::RESERVED:HeapType::DEFAULT*/); //std::make_shared<Texture>(HAL::ResourceDesc{ desc, HAL::ResFlags::ShaderResource }, ResourceState::COMMON, HeapType::DEFAULT, data);
 	}
 
 	Texture::ptr Texture::load_native(const texure_header& header, resource_file_depender& depender)
@@ -181,12 +186,12 @@ namespace HAL
 
 			//	auto data = texture_data::compress(tex_data);
 
-			return create(tex_data, HeapType::DEFAULT);
+			return create(tex_data);
 		}
 
 		return nullptr;
 	}
-	 Texture::ptr Texture::create(HAL::texture_data::ptr& tex_data, HeapType heap_type)
+	 Texture::ptr Texture::create(HAL::texture_data::ptr& tex_data)
 	{
 		HAL::ResourceDesc desc;
 
@@ -194,7 +199,7 @@ namespace HAL
 			desc = HAL::ResourceDesc::Tex3D(tex_data->format, { tex_data->width, tex_data->height, tex_data->depth }, tex_data->mip_maps);
 		else
 			desc = HAL::ResourceDesc::Tex2D(tex_data->format, { tex_data->width, tex_data->height }, tex_data->array_size, tex_data->mip_maps);
-		auto texture = std::make_shared<Texture>(desc,  TextureLayout::COPY_DEST, HeapType::DEFAULT);
+		auto texture = std::make_shared<Texture>(desc,  TextureLayout::COPY_DEST);
 
 
 		texture->upload_data(tex_data);

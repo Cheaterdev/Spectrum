@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct TilingParams
 {
 	uint tiles; // StructuredBuffer<uint2>

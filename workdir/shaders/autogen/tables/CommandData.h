@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 #include "DispatchMeshArguments.h"
 #include "MeshInfo.h"
 #include "MeshInstanceInfo.h"

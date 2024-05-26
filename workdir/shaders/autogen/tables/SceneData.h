@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 #include "MaterialCommandData.h"
 #include "MeshCommandData.h"
 #include "RaytraceInstanceInfo.h"

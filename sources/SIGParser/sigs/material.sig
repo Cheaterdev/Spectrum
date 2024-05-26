@@ -3,4 +3,5 @@ struct MaterialInfo
 {
 	[dynamic] MaterialCB data;
     Texture2D<float4> textures[];
+	FeedbackTexture2DMip texture_feedbacks[];
 }

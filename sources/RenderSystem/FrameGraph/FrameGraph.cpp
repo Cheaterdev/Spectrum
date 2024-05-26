@@ -1083,7 +1083,7 @@ namespace FrameGraph
 
 					if (!res || res->get_desc() != info->d3ddesc)
 					{
-						res = std::make_shared<HAL::Resource>(info->d3ddesc, info->alloc_ptr);
+						res = HAL::create_resource(info->d3ddesc, info->alloc_ptr);
 						res->set_name(info->name);
 					}
 
@@ -1100,15 +1100,15 @@ namespace FrameGraph
 				{
 					if (info->heap_type == HAL::HeapType::UPLOAD)
 					{
-						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(info->d3ddesc, info->heap_type);
 					}
 					else if (info->heap_type == HAL::HeapType::READBACK)
 					{
-						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(info->d3ddesc, info->heap_type);
 					}
 					else if (!info->resource || info->resource->get_desc() != info->d3ddesc)
 					{
-						info->resource = std::make_shared<HAL::Resource>(info->d3ddesc, info->heap_type);
+						info->resource = HAL::create_resource(info->d3ddesc, info->heap_type);
 						info->is_new = true;
 					}
 

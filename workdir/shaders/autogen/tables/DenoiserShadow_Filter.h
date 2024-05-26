@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct DenoiserShadow_Filter
 {
 	float4x4 ProjectionInverse; // float4x4

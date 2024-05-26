@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct DownsampleDepth
 {
 	uint srcTex; // Texture2D<float>

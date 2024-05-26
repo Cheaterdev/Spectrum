@@ -64,8 +64,7 @@ namespace HAL
 
 			//		Log::get() << "creating resource " << _desc << Log::endl;
 			auto resourceDesc = to_native(desc);
-			auto resourceDesc1 = to_native_1(desc);
-
+	
 
 
 			ResourceAllocationInfo info = device.get_alloc_info(_desc);
@@ -164,6 +163,8 @@ namespace HAL
 			}
 			else
 			{
+						auto resourceDesc1 = to_native_1(desc);
+
 				if (resourceDesc.Dimension != D3D12_RESOURCE_DIMENSION::D3D12_RESOURCE_DIMENSION_BUFFER)
 				{
 					resourceDesc1.Layout = D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE;
@@ -198,15 +199,8 @@ namespace HAL
 
 			if (THIS->heap_type == HeapType::RESERVED)
 				THIS->tiled_manager.init_tilings();
-			if (THIS->heap_type == HeapType::UPLOAD || THIS->heap_type == HeapType::READBACK)
-			{
-				get_dx()->Map(0, nullptr, reinterpret_cast<void**>(&THIS->buffer_data));
-			}
 
-
-
-			THIS->gpu_address = ResourceAddress{ THIS,0 };
-
+		
 		}
 	}
 
@@ -283,14 +277,9 @@ namespace HAL
 
 	Resource::~Resource()
 	{
-		if (buffer_data)
-		{
-			get_dx()->Unmap(0, nullptr);
-		}
-
 		alloc_handle.Free();
 	}
-	std::span<std::byte> Resource::cpu_data()const
+	std::span<std::byte> Buffer::cpu_data()const
 	{
 
 		return { buffer_data,buffer_data + get_size() };
@@ -301,7 +290,14 @@ namespace HAL
 		return resource->cpu_data().data() + resource_offset;
 	}
 
+		Buffer::~Buffer()
+	{
+		if (buffer_data)
+		{
+			get_dx()->Unmap(0, nullptr);
+		}
 
+	}
 
 
 }

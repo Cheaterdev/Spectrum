@@ -171,7 +171,7 @@ void generate_table(Table& table)
 {
 	my_stream stream(hlsl_path + "/tables", table.name + ".h");
 	stream << "#pragma once" << std::endl;
-
+		stream << "#include \"sig_hlsl.hlsl\"" << std::endl;
 	for (auto& v : table.used_tables)
 	{
 			auto t = parsed.find_table(v);

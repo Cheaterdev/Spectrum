@@ -38,10 +38,12 @@ Texture2D get_texture(uint i)
 }
 
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc, lod) tex.Sample(s, tc);
+#define sample(tex, s,  tc, lod) get_texture(tex).Sample(s, tc);
 #else
-float4 sample(Texture2D tex, SamplerState s, float2 tc, float lod)
+float4 sample(uint itex, SamplerState s, float2 tc, float lod)
 {
+    Texture2D tex = get_texture(itex);
+	
 	uint2 size;
 	tex.GetDimensions(size.x, size.y);
 	lod += 0.5 * log2(size.x * size.y);

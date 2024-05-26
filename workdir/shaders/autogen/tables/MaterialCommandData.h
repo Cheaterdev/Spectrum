@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct MaterialCommandData
 {
 	uint material_cb; // uint

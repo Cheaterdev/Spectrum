@@ -150,7 +150,7 @@ void SkyRender::generate(Graph& graph)
 					subres.MipLevels = 1;
 					subres.MipSlice = 0;
 
-					auto face = data.sky_cubemap->resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
+					auto face = data.sky_cubemap->resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres);
 
 
 					Slots::SkyFace skyFace;
@@ -249,7 +249,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 					subres.MipLevels = 1;
 					subres.MipSlice = m;
 
-					auto face = data.sky_cubemap_filtered->resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
+					auto face = data.sky_cubemap_filtered->resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres);
 
 
 					{
@@ -284,7 +284,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 				subres.MipLevels = 1;
 				subres.MipSlice = 0;
 
-				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<HAL::TextureView>(graphics.get_base(), subres);
+				auto face = data.sky_cubemap_filtered_diffuse->resource->create_view<HAL::Texture2DView>(graphics.get_base(), subres);
 
 				if (i == 0) {
 					graphics.set_viewport(face.get_viewport());

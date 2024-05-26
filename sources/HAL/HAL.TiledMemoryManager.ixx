@@ -63,6 +63,10 @@ export
 
 			void load_packed(update_tiling_info& target);
 
+			bool is_tiled() const
+			{
+			return !tiles.empty();
+			}
 
 			uint3 get_tiles_count(int mip_level = 0);
 			uint3 get_tile_shape();

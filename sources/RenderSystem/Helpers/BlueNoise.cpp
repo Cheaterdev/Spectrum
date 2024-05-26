@@ -34,7 +34,7 @@ BlueNoise::BlueNoise()
 	auto scrambling_handle = allocator.Allocate<std::int32_t>(g_blueNoiseSamplerState.scramblingTileBuffer.size_bytes());
 
 
-	buffer = std::make_shared<HAL::Resource>(HAL::ResourceDesc::Buffer(allocator.get_max_usage()), HAL::HeapType::DEFAULT);
+	buffer = std::make_shared<HAL::Buffer>(HAL::ResourceDesc::Buffer(allocator.get_max_usage()), HAL::HeapType::DEFAULT);
 
 
 

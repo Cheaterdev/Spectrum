@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct TextureRenderer
 {
 	uint texture; // Texture2D<float4>

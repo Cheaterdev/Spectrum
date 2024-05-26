@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 #include "PSSMDataGlobal.h"
 #include "VoxelTilingParams.h"
 struct VoxelLighting

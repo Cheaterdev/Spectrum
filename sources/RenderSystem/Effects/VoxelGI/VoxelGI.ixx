@@ -34,10 +34,12 @@ public:
 
 	void set(HAL::ResourceDesc desc)
 	{
-		tex_dynamic.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE, HAL::HeapType::RESERVED));
-		tex_static.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE, HAL::HeapType::RESERVED));
 
-		tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE, HAL::HeapType::RESERVED));
+		desc.Flags|=ResFlags::Virtual;
+		tex_dynamic.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+		tex_static.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
+
+		tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 
 
 		tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos) {
@@ -116,7 +118,8 @@ public:
 
 	void set(HAL::ResourceDesc desc)
 	{
-		tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE, HAL::HeapType::RESERVED));
+			desc.Flags|=ResFlags::Virtual;
+	tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 
 		static_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
 		dynamic_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);

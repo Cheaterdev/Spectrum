@@ -518,6 +518,7 @@ export{
 		{
 			friend class CommandList;
 			friend class Resource;
+					friend class Buffer;
 
 			CommandList& base;
 			DelayedCommandList* list;

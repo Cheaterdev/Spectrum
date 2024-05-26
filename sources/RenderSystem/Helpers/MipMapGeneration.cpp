@@ -17,7 +17,7 @@ void MipMapGenerator::generate_cube(HAL::ComputeContext& compute_context, HAL::C
 		generate(compute_context, view.get_face(i));
 }
 
-void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::TextureView  view)
+void MipMapGenerator::generate(HAL::ComputeContext& compute_context, HAL::Texture2DView  view)
 {
 	//return;
 	PROFILE(L"MipMapGenerator");
@@ -96,7 +96,7 @@ void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL
 
 }
 
-void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL::TextureView& tex, HAL::TextureView& to) {
+void MipMapGenerator::downsample_depth(HAL::ComputeContext& compute_context, HAL::Texture2DView& tex, HAL::Texture2DView& to) {
 	compute_context.set_pipeline<PSOS::DownsampleDepth>();
 
 
@@ -109,7 +109,7 @@ compute_context.set(data);
 }
 
 void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, GBuffer& buffer,
-	HAL::TextureView tempColor)
+	HAL::Texture2DView tempColor)
 {
 
 	PROFILE_GPU(L"generate_quality");
@@ -166,7 +166,7 @@ void MipMapGenerator::generate_quality(HAL::GraphicsContext& list, camera* cam, 
 
 
 
-void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::TextureView from)
+void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture::ptr to, HAL::Texture2DView from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to->texture_2d().renderTarget.get_resource_info().view);
 	list.set_pipeline<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format));
@@ -192,7 +192,7 @@ void MipMapGenerator::copy_texture_2d_slow(HAL::GraphicsContext& list, HAL::Text
 
 
 
-void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, HAL::TextureView to, HAL::TextureView from)
+void MipMapGenerator::render_texture_2d_slow(HAL::GraphicsContext& list, HAL::Texture2DView to, HAL::Texture2DView from)
 {
 	auto hal_view = std::get<HAL::Views::RenderTarget>(to.renderTarget.get_resource_info().view);
 	list.set_pipeline<PSOS::CopyTexture>(PSOS::CopyTexture::Format(hal_view.Format));
@@ -211,7 +211,7 @@ list.set(data);
 
 
 
-void MipMapGenerator::write_to_depth(HAL::GraphicsContext& list, HAL::TextureView from, HAL::TextureView to)
+void MipMapGenerator::write_to_depth(HAL::GraphicsContext& list, HAL::Texture2DView from, HAL::Texture2DView to)
 {
 	list.set_pipeline<PSOS::RenderToDS>();
 	Slots::CopyTexture data;

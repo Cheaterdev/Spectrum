@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct DenoiserDownsample
 {
 	uint color; // Texture2D<float4>

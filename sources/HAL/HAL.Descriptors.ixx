@@ -536,9 +536,21 @@ export namespace HAL
 				}
 			};
 
+			struct TextureFeedback
+			{
+				std::shared_ptr<Resource> PairedResource;
+
+			private:
+				SERIALIZE()
+				{
+					ar& NVP(PairedResource);
+				}
+			};
+
+
 			std::shared_ptr<Resource> Resource;
 			Format Format;
-			std::variant<Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D> View;
+			std::variant<Buffer, Texture1D, Texture1DArray, Texture2D, Texture2DArray, Texture3D, TextureFeedback> View;
 
 
 		private:
@@ -556,7 +568,7 @@ export namespace HAL
 			Format Format;
 			uint	SizeInBytes =0;
 			uint64 OffsetInBytes=0;
-			std::shared_ptr<Resource> Resource = nullptr;
+			std::shared_ptr<Buffer> Resource = nullptr;
 		private:
 			SERIALIZE()
 			{

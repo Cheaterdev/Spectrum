@@ -262,6 +262,7 @@ export namespace materials
 		Slots::MaterialInfo material_info;
 
 		std::vector<HLSL::Texture2D<float4>> texture_srvs;
+		std::vector<HLSL::FeedbackTexture2DMip> texture_feedbacks;
 		Pipeline::ptr pipeline;
 
 	public:

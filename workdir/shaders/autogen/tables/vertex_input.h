@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct vertex_input
 {
 	float2 pos; // float2

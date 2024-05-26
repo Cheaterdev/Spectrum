@@ -70,10 +70,31 @@ namespace HAL
 		}
 
 		std::string file_name = dir + pFileName;
+
 		auto file = FileSystem::get().get_file(convert(file_name));
+		
+		if (!file)
+			file = FileSystem::get().get_file(convert(pFileName));
 
 
-		if (!file) file = FileSystem::get().get_file(convert(pFileName));
+
+		std::filesystem::path p = pFileName;
+
+		while (!file)
+		{
+			std::string file_name2 = p.generic_string();
+			if (!file) file = FileSystem::get().get_file(convert(file_name2));
+
+			if(!p.has_parent_path()) break;
+			p = p.parent_path().parent_path() / p.filename();
+		}
+
+
+
+
+	
+
+
 		if (!file)
 		{
 			return nullptr;

@@ -118,7 +118,7 @@ std::string MaterialContext::get_texture(TextureSRVParams::ptr& p)
 	}
 
 	textures.push_back(p);
-	auto res = std::string("get_texture(") + std::to_string(texture_counter++) + std::string(")");
+	auto res = std::to_string(texture_counter++);
 	shader_parameter_srv[p] = res;
 
 	return res;

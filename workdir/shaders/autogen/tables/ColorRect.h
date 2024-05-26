@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct ColorRect
 {
 	float4 pos[2]; // float4

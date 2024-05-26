@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct VoxelUpscale
 {
 	uint tex_downsampled; // Texture2D<float4>

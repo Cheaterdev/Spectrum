@@ -1,4 +1,5 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct DenoiserShadow_FilterLocal
 {
 	uint rqt2d_input; // Texture2D<float16_t2>

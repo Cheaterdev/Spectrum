@@ -223,12 +223,12 @@ vertex_output2 HS(InputPatch<vertex_output2, 3> inputPatch,
 
 
 #ifdef BUILD_FUNC_PS
-#define sample(tex, s,  tc, lod) tex.Sample(s, tc);
+#define sample(tex, s,  tc, lod) get_texture(tex).Sample(s, tc);
 
 //tex.Sample(s, tc);
 
 #else
-#define sample(tex, s,  tc, lod) tex.SampleLevel(s, tc, lod);
+#define sample(tex, s,  tc, lod) get_texture(tex).SampleLevel(s, tc, lod);
 
 #endif 
 

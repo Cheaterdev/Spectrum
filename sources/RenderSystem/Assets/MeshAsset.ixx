@@ -166,7 +166,7 @@ export{
 		using ptr = s_ptr<MeshAsset>;
 		using ref = AssetReference<MeshAsset>;
 
-		HAL::Resource::ptr buffer;
+		HAL::Buffer::ptr buffer;
 
 
 		TypedHandle<D3D12_RAYTRACING_INSTANCE_DESC> ras_handle;

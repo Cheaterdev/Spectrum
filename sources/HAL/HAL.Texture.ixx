@@ -51,7 +51,7 @@ export
 
 			Format original_format;
 
-			TextureView texture_2d_view;
+			Texture2DView texture_2d_view;
 			Texture3DView texture_3d_view;
 			CubeView cube_view;
 
@@ -61,12 +61,13 @@ export
 			{
 				return resource->get_desc();
 			}
-			 HAL::Resource::ptr resource;
+			 HAL::TextureResource::ptr resource;
+
+			  HAL::TextureResource::ptr feedback;
 			using ptr = s_ptr<Texture>;
 
 			ivec3 get_size(int mip = 0);
-
-			TextureView& texture_2d() { return texture_2d_view; }
+		Texture2DView& texture_2d() { return texture_2d_view; }
 			Texture3DView& texture_3d() { return texture_3d_view; }
 			CubeView& cube() { return cube_view; }
 
@@ -78,9 +79,9 @@ export
 			static const ptr null;
 
 			Texture(D3D::Resource native, TextureLayout initialLayout);
-			Texture(HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED, HeapType heap_type = HeapType::DEFAULT);
+			Texture(HAL::ResourceDesc desc, TextureLayout initialLayout = TextureLayout::UNDEFINED);
 
-			static Texture::ptr create(HAL::texture_data::ptr& data, HeapType heap_type = HeapType::DEFAULT);
+			static Texture::ptr create(HAL::texture_data::ptr& data);
 
 			HAL::texture_data::ptr get_data() const;
 

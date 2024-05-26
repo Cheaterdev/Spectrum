@@ -121,16 +121,16 @@ export{
 	class GBuffer
 	{
 	public:
-		HAL::TextureView albedo;
-		HAL::TextureView normals;
-		HAL::TextureView depth;
-		HAL::TextureView specular;
-		HAL::TextureView speed;
+		HAL::Texture2DView albedo;
+		HAL::Texture2DView normals;
+		HAL::Texture2DView depth;
+		HAL::Texture2DView specular;
+		HAL::Texture2DView speed;
 
 
-		HAL::TextureView quality;
-		HAL::TextureView depth_mips;
-		HAL::TextureView depth_prev_mips;
+		HAL::Texture2DView quality;
+		HAL::Texture2DView depth_mips;
+		HAL::Texture2DView depth_prev_mips;
 
 		RT::GBuffer::Compiled compiled;
 
@@ -138,7 +138,7 @@ export{
 
 
 		struct {
-			HAL::TextureView hiZ_depth, hiZ_depth_uav;
+			HAL::Texture2DView hiZ_depth, hiZ_depth_uav;
 			//RenderTargetTable hiZ_table;
 				RT::DepthOnly::Compiled compiled;
 

@@ -19,12 +19,12 @@ export namespace HAL
 		HeapFlags Flags;
 	};
 
-	class Resource;
+	class Buffer;
 	class Heap :public SharedObject<Heap>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Heap
 	{
 		friend class API::Heap;
 		HeapDesc desc;
-		std::shared_ptr<Resource> buffer;
+		std::shared_ptr<Buffer> buffer;
 	public:
 		using ptr = std::shared_ptr<Heap>;
 
@@ -38,7 +38,7 @@ export namespace HAL
 	{
 		return desc.Size;
 	}
-		std::shared_ptr<Resource> as_buffer()
+		std::shared_ptr<Buffer> as_buffer()
 		{
 			return buffer;
 		}

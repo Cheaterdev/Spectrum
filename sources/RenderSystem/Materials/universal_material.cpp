@@ -144,14 +144,18 @@ void materials::universal_material::compile()
 	handlers.clear();
 
 	texture_srvs.resize(textures.size());
-
+	texture_feedbacks.resize(textures.size());
 
 	for (int i = 0; i < textures.size(); i++)
 	{
 			TextureAsset::ptr tex = *textures[i];
 
 		if (tex && tex->get_texture()->texture_2d())
+		{
 			texture_srvs[i] = tex->get_texture()->texture_2d().texture2D;
+		texture_feedbacks[i] = tex->get_texture()->texture_2d().feedback;
+		}
+			
 		else
 			texture_srvs[i] = EngineAssets::missing_texture.get_asset()->get_texture()->texture_2d().texture2D;
 	}

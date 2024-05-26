@@ -1,9 +1,15 @@
 #pragma once
+#include "sig_hlsl.hlsl"
 struct MaterialInfo
 {
 	MaterialCB data; // MaterialCB
 	uint textures; // Texture2D<float4>
+	uint texture_feedbacks; // FeedbackTexture2DMip
 	MaterialCB GetData() { return data; }
+	FeedbackTexture2DMip GetTexture_feedbacks(int i) { 
+	StructuredBuffer<uint> indirection = ResourceDescriptorHeap[texture_feedbacks]; 
+	uint id = indirection.Load(i);
+	return ResourceDescriptorHeap[id]; }
 	Texture2D<float4> GetTextures(int i) { 
 	StructuredBuffer<uint> indirection = ResourceDescriptorHeap[textures]; 
 	uint id = indirection.Load(i);

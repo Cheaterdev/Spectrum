@@ -333,7 +333,7 @@ using namespace HAL;
 		struct TextureDesc
 		{
 
-			using View = HAL::TextureView;
+			using View = HAL::Texture2DView;
 			ivec3 size;
 			HAL::Format format;
 			UINT array_count;
@@ -644,7 +644,7 @@ using namespace HAL;
 		Pass* pass;
 		HAL::FrameResources::ptr frame;
 
-		std::list<HAL::ResourceView> textureViews;
+	//	std::list<HAL::ResourceView> textureViews;
 
 		HAL::CommandList::ptr list;
 
@@ -655,10 +655,10 @@ using namespace HAL;
 
 		void execute();
 
-		void register_subview(const HAL::ResourceView& view)
+		/*void register_subview(const HAL::ResourceView& view)
 		{
-			textureViews.push_back(view);
-		}
+			textureViews.emplace_back(view);
+		}*/
 	};
 
 

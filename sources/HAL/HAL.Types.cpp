@@ -1,6 +1,8 @@
 module HAL:Types;
 namespace HAL
 {
+	
+
 
 
 	ResourceState ResourceState::operator |(const ResourceState& state)const
