@@ -1,0 +1,18 @@
+#pragma once
+
+{%- for e in pso.gens %}
+#include "{{e.name}}.h"
+{%- endfor %}
+
+{%- for e in pso.passes %}
+#include "{{e.name}}.h"
+{%- endfor %}
+
+{%- set gens = pso.gens|list| map(attribute='name') | join(', ') -%}
+{%- set passes = pso.passes|list| map(attribute='name') | join(', ') -%}
+
+struct {{ pso.name }}: public RTXPSO<{{ pso.name }}, Typelist<{{ passes }}>, Typelist<{{ gens }}>>
+{
+	static const constexpr Layouts global_sig = Layouts::{{pso.root_sig.name}};
+	static const constexpr uint MaxTraceRecursionDepth = 2;
+};

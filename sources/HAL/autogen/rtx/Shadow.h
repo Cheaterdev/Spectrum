@@ -1,4 +1,5 @@
 #pragma once
+
 struct Shadow: public RaytraceRaygen<Shadow>
 {
 	static const constexpr uint ID = 0;

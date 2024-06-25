@@ -172,7 +172,8 @@ float get_sss(float z, float3 pos, float2 tc, float3 n)
 
 		float3	reflect_tc = project_tc3(pos + dist * r, camera.GetViewProj());
 
-		if (any(reflect_tc.xy < 0 || reflect_tc.xy>1)) return res;
+        if (any(reflect_tc.xy < 0) || any(reflect_tc.xy > 1))
+        return res;
 
 		float	raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, reflect_tc, level).x;
 

@@ -1,6 +1,8 @@
-#include "Parsed.h"
-#include <filesystem>
+import Core;
+import <Core_defs.h>;
+import windows;
 
+#include "Parsed.h"
 my_stream::my_stream(std::string dir, std::string filename)
 {
 
@@ -90,8 +92,8 @@ std::string get_cpp_for(Value v)
 			if(arg.starts_with("DepthStencil")) arg.replace(0, strlen("DepthStencil"),"Texture2D");
 			if(arg.starts_with("RenderTarget"))arg.replace(0, strlen("RenderTarget"),"Texture2D");
 
-		if (noarg)
-			OutputDebugString(L"WTF");
+	/*	if (noarg)
+			OutputDebugString(L"WTF");*/
 		if (v.array_count == 0)
 			arg = std::string("std::vector<HLSL::") + arg + ">";
 		else
@@ -100,8 +102,8 @@ std::string get_cpp_for(Value v)
 	}
 	case ValueType::UAV:
 	{
-		if (noarg)
-			OutputDebugString(L"WTF");
+		/*if (noarg)
+			OutputDebugString(L"WTF");*/
 		arg =std::string("HLSL::") + arg;
 		break;
 	}
@@ -171,11 +173,8 @@ Slot::Slot()
 
 Slot* Layout::find_slot(std::string name)
 {
-	for (auto& t : slots)
-		if (t.name == name)
-			return &t;
-
-	return nullptr;
+		return slots.find(name);
+	
 }
 
 void Layout::set_slots(int offset /*= 0*/)
@@ -342,29 +341,22 @@ void Table::setup(Parsed* all)
 }
 RaytracePSO* Parsed::find_rtx(std::string name)
 {
-	for (auto& t : raytrace_pso)
-		if (t.name == name)
-			return &t;
+		return raytrace_pso.find(name);
 
-	return nullptr;
+
 }
 
 Layout* Parsed::find_layout(std::string name)
-{
-	for (auto& t : layouts)
-		if (t.name == name)
-			return &t;
+{return layouts.find(name);
 
-	return nullptr;
+
 }
 
 Table* Parsed::find_table(std::string name)
 {
-	for (auto& t : tables)
-		if (t.name == name)
-			return &t;
+	return tables.find(name);
+	
 
-	return nullptr;
 }
 
 void Parsed::setup()

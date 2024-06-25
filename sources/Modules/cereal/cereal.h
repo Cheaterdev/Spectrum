@@ -8,10 +8,16 @@
 #include <cereal/types/set.hpp>
 #include <cereal/types/array.hpp>
 #include <cereal/types/variant.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/list.hpp>
 
 #include <cereal/archives/binary.hpp>
+//#include <cereal/archives/json.hpp>
 
 #define CEREAL_FUTURE_EXPERIMENTAL
 #include <cereal/archives/adapters.hpp>
 
 #include <cereal/details/helpers.hpp>
+
+
+

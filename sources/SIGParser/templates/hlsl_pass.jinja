@@ -1,0 +1,4 @@
+void {{pso.name}}(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, inout {{ pso.params['payload'].expr }} payload)
+{
+	TraceRay(scene, flag, ~0, {{pso.index}}, 0, {{pso.index}}, ray, payload);
+};

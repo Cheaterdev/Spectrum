@@ -27,8 +27,7 @@ THE SOFTWARE.
 
 groupshared int g_FFX_DNSR_Shadows_false_count;
 bool FFX_DNSR_Shadows_ThreadGroupAllTrue(bool val)
-{  
-    //return WaveActiveAllTrue(val);
+{
     const uint lane_count_in_thread_group = 64;
     if (WaveGetLaneCount() == lane_count_in_thread_group)
     {
@@ -314,13 +313,13 @@ void FFX_DNSR_Shadows_TileClassification(uint group_index, uint2 gid)
 
     bool is_shadow_receiver = FFX_DNSR_Shadows_IsShadowReciever(did);
 
-    //bool skip_sky = FFX_DNSR_Shadows_ThreadGroupAllTrue(!is_shadow_receiver);
-    //if (skip_sky)
-    //{
-    //    // We have to set all resources of the tile we skipped to sensible values as neighboring active denoiser tiles might want to read them.
-    //    FFX_DNSR_Shadows_ClearTargets(did, gtid, gid, 0, false, false);
-    //    return;
-    //}
+    bool skip_sky = FFX_DNSR_Shadows_ThreadGroupAllTrue(!is_shadow_receiver);
+    if (skip_sky)
+    {
+        // We have to set all resources of the tile we skipped to sensible values as neighboring active denoiser tiles might want to read them.
+        FFX_DNSR_Shadows_ClearTargets(did, gtid, gid, 0, is_shadow_receiver, false);
+        return;
+    }
 
     bool all_in_light = false;
     bool all_in_shadow = false;
@@ -329,13 +328,13 @@ void FFX_DNSR_Shadows_TileClassification(uint group_index, uint2 gid)
 
     bool can_skip = all_in_light || all_in_shadow;
     // We have to append the entire tile if there is a single lane that we can't skip
-    //bool skip_tile = FFX_DNSR_Shadows_ThreadGroupAllTrue(can_skip);
-    //if (skip_tile)
-    //{
-    //    // We have to set all resources of the tile we skipped to sensible values as neighboring active denoiser tiles might want to read them.
-    //    FFX_DNSR_Shadows_ClearTargets(did, gtid, gid, shadow_value, is_shadow_receiver, all_in_light);
-    //    return;
-    //}
+    bool skip_tile = FFX_DNSR_Shadows_ThreadGroupAllTrue(can_skip);
+    if (skip_tile)
+    {
+        // We have to set all resources of the tile we skipped to sensible values as neighboring active denoiser tiles might want to read them.
+        FFX_DNSR_Shadows_ClearTargets(did, gtid, gid, shadow_value, is_shadow_receiver, all_in_light);
+        return;
+    }
 
     FFX_DNSR_Shadows_WriteTileMetaData(gid, gtid, false, false);
 

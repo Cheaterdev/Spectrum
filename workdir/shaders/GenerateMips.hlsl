@@ -64,7 +64,7 @@ float3 LinearToSRGB(float3 x)
     // This is exactly the sRGB curve
     //return x < 0.0031308 ? 12.92 * x : 1.055 * pow(abs(x), 1.0 / 2.4) - 0.055;
     // This is cheaper but nearly equivalent
-    return x < 0.0031308 ? 12.92 * x : 1.13005 * sqrt(abs(x - 0.00228)) - 0.13448 * x + 0.005719;
+    return select(x < 0.0031308, 12.92 * x, 1.13005 * sqrt(abs(x - 0.0022799999999999999)) - 0.13447999999999999 * x + 0.0057190000000000001);
 }
 
 float4 PackColor(float4 Linear)

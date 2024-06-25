@@ -1,0 +1,8 @@
+ololo
+
+
+
+"{{parsed.layouts| tojson }}"
+
+
+{{ parsed.layouts  | unique(attribute='name') | map(attribute='name') | join(', ') }}

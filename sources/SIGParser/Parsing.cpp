@@ -1,5 +1,8 @@
 
-#include ".antlr/antlr4-runtime.h"
+import Core;
+import <Core_defs.h>;
+import antlr4;
+#undef EOF
 #include ".antlr/SIGLexer.h"
 #include ".antlr/SIGParser.h"
 #include ".antlr/SIGBaseListener.h"
@@ -14,26 +17,54 @@ public:
 	Parsed& parsed;
 	TreeShapeListener(Parsed& parsed) :parsed(parsed)
 	{
-		elems.push_back(&parsed);
+		setup_elem(parsed);
 	}
 
-	std::list<parsed_type*> elems;
+	struct elem_info
+	{
+	parsed_type* elem;
+	std::function<void()> on_end;
+	
+	};
+	std::list<elem_info> elems;
 
 	template<class T>
-	void setup_elem(T& e)
+	T& setup_map(my_container<T> &m)
 	{
-		elems.push_back(&e);
+		auto&l = m.emplace_back();
+		setup_elem(l);
+
+		return l;
+	}
+
+	template<class T>
+	T& setup_list(std::list<T> &m)
+	{
+		auto&l = m.emplace_back();
+		setup_elem(l);
+
+		return l;
+	}
+
+	template<class T>
+	void setup_elem(T& e, std::function<void()> f= nullptr)
+	{
+		elems.emplace_back(&e, f);
 	}
 
 	void end_elem()
 	{
+		auto &e=elems.back();
+
+		if(e.on_end)
+			e.on_end(); 
 		elems.pop_back();
 	}
 
 	template<class T>
 	T& get_elem()
 	{
-		parsed_type* e = elems.back();
+		parsed_type* e = elems.back().elem;
 		return *dynamic_cast<T*>(e);
 	}
 
@@ -43,7 +74,7 @@ public:
 		auto last = std::prev(elems.end());
 		auto prelast = std::prev(last);
 
-		parsed_type* e = *prelast;
+		parsed_type* e = (*prelast).elem;
 		return *dynamic_cast<T*>(e);
 	}
 
@@ -53,66 +84,54 @@ public:
 	}\
 	virtual void enter##x##(SIGParser::##x##Context* ctx) override 
 
+
+	
+#define EXIT(x) \
+	virtual void exit##x##(SIGParser::##x##Context * ctx) override 
+
+	#define ENTER(x) \
+	virtual void enter##x##(SIGParser::##x##Context* ctx) override 
+
+
+
 	GENERATE(Layout_definition)
 	{
-		auto& owner = get_elem<Parsed>().layouts;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_map(get_elem<Parsed>().layouts);
 	}
-
-	GENERATE(Table_definition) {
-		auto& owner = get_elem<Parsed>().tables;
-		owner.emplace_back();
-		setup_elem(owner.back());
+	
+	GENERATE(Table_definition)
+	{
+		setup_map(get_elem<Parsed>().tables);
 	}
-
+	
 	GENERATE(Slot_declaration)
 	{
-		auto& owner = get_elem<Layout>().slots;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_map(get_elem<Layout>().slots);
 	}
 
 	GENERATE(Value_declaration)
 	{
-
-		auto& owner = get_elem<Table>().values;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_list(get_elem<Table>().values);
 	}
 
 	GENERATE(Option)
 	{
-		auto& owner = get_elem<have_options>().options;
-		owner.emplace_back();
-		setup_elem(owner.back());
-	}
-
-	GENERATE(Options_assign)
-	{
-		auto& owner = get_elem<option>();
-		setup_elem(owner.value_atom);
+		setup_map(get_elem<have_options>().options);
 	}
 
 	GENERATE(Sampler_declaration)
 	{
-		auto& owner = get_elem<Layout>().samplers;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_map(get_elem<Layout>().samplers);
 	}
 
 	GENERATE(Rt_definition)
 	{
-		auto& owner = get_elem<Parsed>().rt;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_map(get_elem<Parsed>().rt);
 	}
 
 	GENERATE(Rt_color_declaration)
 	{
-		auto& owner = get_elem<RenderTarget>().rtvs;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_list(get_elem<RenderTarget>().rtvs);
 	}
 
 	GENERATE(Rt_ds_declaration)
@@ -125,64 +144,70 @@ public:
 		setup_elem(*owner);
 	}
 
+
+	
 	GENERATE(Compute_pso_definition)
 	{
-		auto& owner = get_elem<Parsed>().compute_pso;
-		owner.emplace_back();
-		setup_elem(owner.back());
-
+		setup_map(get_elem<Parsed>().compute_pso);
 	}
 
 	GENERATE(Graphics_pso_definition)
 	{
-		auto& owner = get_elem<Parsed>().graphics_pso;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_map(get_elem<Parsed>().graphics_pso);
 	}
 
 	GENERATE(Rtx_pso_definition)
 	{
-		auto& owner = get_elem<Parsed>().raytrace_pso;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_map(get_elem<Parsed>().raytrace_pso);
 	}
+
 
 	GENERATE(Rtx_pass_definition)
 	{
-		auto& owner = get_elem<Parsed>().raytrace_pass;
-		owner.emplace_back();
 
-		owner.back().index = owner.size() - 1;
-		setup_elem(owner.back());
+		auto index = get_elem<Parsed>().raytrace_pass.size();
+		auto &rtx = setup_map(get_elem<Parsed>().raytrace_pass);
+
+		 rtx.index = index; 
 	}
-
 	GENERATE(Rtx_raygen_definition)
 	{
-		auto& owner = get_elem<Parsed>().raytrace_gen;
-		owner.emplace_back();
-		owner.back().index = owner.size() - 1;
-		setup_elem(owner.back());
+
+		auto index = get_elem<Parsed>().raytrace_gen.size();
+		auto &rtx = setup_map(get_elem<Parsed>().raytrace_gen);
+
+		 rtx.index = index; 
 	}
 
+	
 	GENERATE(Root_sig)
 	{
 		setup_elem(get_elem<root_holder>().root_sig);
 	}
 
+
 	GENERATE(Shader)
 	{
-		auto& owner = get_elem<shader_holder>().shader_list;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_map(get_elem<shader_holder>().shaders);
 	}
 
+
+	
+	GENERATE(Options_assign)
+	{
+		auto& owner = get_elem<option>();
+		setup_elem(owner.value_atom);
+	}
+
+
+	
 
 	GENERATE(Define_declaration)
 	{
-		auto& owner = get_elem<PSO>().defines;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_map(get_elem<PSO>().defines);
 	}
+
+	
 
 	GENERATE(Rtv_formats_declaration)
 	{
@@ -196,19 +221,22 @@ public:
 		setup_elem(owner.blend);
 	}
 
+
 	GENERATE(Pso_param)
 	{
-		auto& owner = get_elem<param_holder>().params;
-		owner.emplace_back();
-		setup_elem(owner.back());
+
+		setup_map(get_elem<param_holder>().params);
+		
 	}
+
+	
 
 	GENERATE(Array_value_holder)
 	{
-		auto& owner = get_elem<have_values>().values;
-		owner.emplace_back();
-		setup_elem(owner.back());
+		setup_list(get_elem<have_values>().values);
 	}
+
+
 
 
 	virtual void enterName_id(SIGParser::Name_idContext* ctx) override {
@@ -217,10 +245,10 @@ public:
 		elem.name = ctx->children[0]->getText();
 	}
 	virtual void enterPath_id(SIGParser::Path_idContext* ctx) override {
-		auto& elem = get_elem<have_name>();
+		auto& elem = get_elem<Shader>();
 
 		for(auto c: ctx->children)
-			elem.name += c->getText();
+			elem.path += c->getText();
 	}
 
 	virtual void enterInherit_id(SIGParser::Inherit_idContext* ctx) override {
@@ -331,8 +359,7 @@ public:
 		auto& shader = get_elem<Shader>();
 		auto& pso = get_parent<PSO>();
 
-		shader.type = str;
-		pso.shaders[str] = &shader;
+		shader.name = str;
 	}
 
 };
@@ -354,7 +381,7 @@ Parsed parse(std::wstring filename)
 		SIGParser parser(&tokens);
 		SIGParser::ParseContext* tree = parser.parse();
 		TreeShapeListener listener(parsed);
-		tree::ParseTreeWalker walker;
+		antlr4::tree::ParseTreeWalker walker;
 
 		walker.walk(&listener, tree);
 

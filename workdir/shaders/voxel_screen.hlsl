@@ -338,7 +338,7 @@ float get_occlusion(float prev_z, float2 tc, float3 pos, float vl)
 
 	float l = 10*length(pos - prev_pos)/ vl;
 
-	return 0.00005 + (all(tc > 0 && tc < 1) * saturate(1-l));
+    return 0.00005 + (all(and(tc > 0, tc < 1)) * saturate(1 - l));
 	//return all(tc > 0 && tc < 1) && l < 0.1 ? 1 : 0.005;
 }
 

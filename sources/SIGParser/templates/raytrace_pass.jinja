@@ -1,0 +1,18 @@
+#pragma once
+
+struct {{pso.name}}: public RaytracePass<{{pso.name}}>
+{
+	using Payload = Table::{{pso.params['payload'].expr}};
+{% if pso.params['local'] is defined %}
+	using LocalData =  Slots::{{pso.params['local'].expr}};
+{% endif %}
+
+	static const constexpr uint ID = {{ pso.index }};
+
+	static const constexpr std::string_view shader = "shaders\\{{pso.shaders['miss'].path}}.hlsl";
+	static const constexpr std::wstring_view name = L"{{pso.name}}_GROUP";
+	static const constexpr std::wstring_view hit_name = L"{{pso.shaders['closest_hit'].options['EntryPoint'].value_atom.expr}}";
+	static const constexpr std::wstring_view miss_name = L"{{pso.shaders['miss'].options['EntryPoint'].value_atom.expr}}";
+
+	static const constexpr bool per_material = {{pso.params['per_material'].expr or false}};
+};

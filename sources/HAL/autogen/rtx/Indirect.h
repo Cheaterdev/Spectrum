@@ -1,4 +1,5 @@
 #pragma once
+
 struct Indirect: public RaytraceRaygen<Indirect>
 {
 	static const constexpr uint ID = 2;

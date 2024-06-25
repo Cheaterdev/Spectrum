@@ -1,1 +1,3 @@
-#include <antlr4-runtime/antlr4-runtime.h>
+import antlr4;
+import <Core_defs.h>;
+#undef EOF

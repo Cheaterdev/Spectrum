@@ -77,7 +77,7 @@ float get_occlusion(float prev_z, float2 tc, float3 pos)
 
 	float l = 15*length(pos - prev_pos) * MOVE_SCALER;
 
-	return 0.0005+ all(tc > 0 && tc < 1)*saturate(1 - l);
+    return 0.0005 + all(and(tc > 0, tc < 1)) * saturate(1 - l);
 	//return all(tc > 0 && tc < 1) && l < 0.1 ? 1 : 0.005;
 }
 

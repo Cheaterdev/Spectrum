@@ -681,7 +681,7 @@ public:
 
 template<class T>
 template<class Archive>
-void AssetReference<T>::serialize(Archive& ar, const unsigned int)
+void AssetReference<T>::serialize(Archive& ar)
 {
 	// save data required to construct instance
 	auto owner_ptr = owner?owner->get_ptr():nullptr;

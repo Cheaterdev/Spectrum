@@ -35,7 +35,7 @@ void BRDF::create_new()
 
 
 template<class Archive>
-void BRDF::serialize(Archive& ar, const unsigned int)
+void BRDF::serialize(Archive& ar)
 {
 	SAVE_PARENT(TextureAsset);
 

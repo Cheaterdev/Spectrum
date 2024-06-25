@@ -1,0 +1,11 @@
+#pragma once
+
+struct {{pso.name}}: public RaytraceRaygen<{{pso.name}}>
+{
+	static const constexpr uint ID = {{ pso.index }};
+
+	{%- set shader = pso.shaders['raygen'] -%}
+
+	static const constexpr std::string_view shader = "shaders\\{{ shader.path }}.hlsl";
+	static const constexpr std::wstring_view raygen = L"{{ shader.options['EntryPoint'].value_atom.expr }}";
+};

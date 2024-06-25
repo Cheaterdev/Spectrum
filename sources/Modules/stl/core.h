@@ -44,6 +44,7 @@
 
 #include <cstdint>
 #include <fstream>  // linking issues
+#include <sstream> 
 
 
 //#include <comdef.h>

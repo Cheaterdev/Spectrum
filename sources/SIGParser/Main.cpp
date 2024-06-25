@@ -1,16 +1,133 @@
-#include <iostream>
-#include <algorithm>
+import Core;
+import <Core_defs.h>;
+import jinja2cpp;
+import cereal.json;
+
+
 #include "Parsed.h"
 #include "Parsing.h"
-#include <filesystem>
-#include <functional>
-#include <format>
-#include <string>
-#include <iostream>
+
+
 static const std::string cpp_path = "../../sources/HAL/autogen";
 static const std::string hlsl_path = "../../workdir/shaders/autogen";
 
+using namespace jinja2;
+
+void iterate_files(std::filesystem::path path, std::function<void(std::filesystem::path)> f)
+{
+	using namespace std::filesystem;
+
+	recursive_directory_iterator dir(path), end;
+
+	while (dir != end)
+	{
+		// do other stuff here.
+		if (!is_directory(*dir))
+			f(dir->path());
+
+		++dir;
+	}
+}
 Parsed parsed;
+class TemplatesLibrary
+{
+	std::map<std::wstring, jinja2::Template> templates;
+public:
+
+	TemplatesLibrary()
+	{
+		iterate_files("templates/", [this](std::filesystem::path path) {
+			std::ifstream stream;
+			stream.open(path);
+
+			if (!stream.is_open())
+				return;
+
+			auto& tpl = templates[path.stem()];
+			tpl.Load(stream);
+
+
+			stream.close();
+
+
+
+			});
+	}
+
+
+	auto generate(std::wstring filename, auto& params)
+	{
+		jinja2::Template& tpl = templates[filename];
+		auto res = tpl.RenderAsString(params);
+
+		if (res.has_value() )
+		return res.value();
+
+
+		std::cout<<res.error().ToString()<<std::endl;
+	}
+
+	auto generate2(std::wstring filename, std::string name, auto& p)
+	{
+		std::stringstream s;
+		{
+			cereal::JSONOutputArchive archive(s);
+
+			p.serialize(archive);
+
+		}
+		rapidjson::Document doc;
+
+		auto str = s.str();
+		doc.Parse(str.c_str());
+
+		ValuesMap params = {
+		   {name, Reflect(doc)},
+		};
+
+		params["recursive_slots"] = jinja2::MakeCallable(
+			[](const std::string& name) {
+				auto* layout = parsed.find_layout(name);
+				ValuesList list;
+				layout->recursive_slots([&](Slot& slot) {
+					list.emplace_back(slot.name);
+					});
+
+
+				return list;
+			},
+			ArgInfo{ "name" }
+		);
+
+		params["recursive_samplers"] = jinja2::MakeCallable(
+			[](const std::string& name) {
+				auto* layout = parsed.find_layout(name);
+				ValuesList list;
+
+
+					layout->recursive_samplers([&](Sampler& slot) {
+						list.emplace_back("HAL::Samplers::" + slot.expr);
+						});
+
+
+					return list;
+			},
+			ArgInfo{ "name" }
+		);
+
+	params["get_name_for"] = jinja2::MakeCallable(
+			[](const int& i) {
+				return get_name_for((ValueType)i);
+			},
+			ArgInfo{ "i" }
+		);
+
+
+		return generate(filename, params);
+	}
+};
+TemplatesLibrary templates;
+
 std::string generate_array(const have_array& a)
 {
 
@@ -47,7 +164,7 @@ int calculate_max_size(Table& table)
 
 			res += v.array_count;
 		}
-	};
+		};
 
 	generate(ValueType::SRV);
 
@@ -76,7 +193,7 @@ void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::C
 
 			e += v.array_count;
 		}
-	};
+		};
 
 
 
@@ -171,13 +288,13 @@ void generate_table(Table& table)
 {
 	my_stream stream(hlsl_path + "/tables", table.name + ".h");
 	stream << "#pragma once" << std::endl;
-		stream << "#include \"sig_hlsl.hlsl\"" << std::endl;
+	stream << "#include \"sig_hlsl.hlsl\"" << std::endl;
 	for (auto& v : table.used_tables)
 	{
-			auto t = parsed.find_table(v);
-		
-		if(t->can_compile)
-		stream << "#include \"" << v << ".h\"" << std::endl;
+		auto t = parsed.find_table(v);
+
+		if (t->can_compile)
+			stream << "#include \"" << v << ".h\"" << std::endl;
 	}
 
 	// declaration
@@ -196,7 +313,7 @@ void generate_table(Table& table)
 				stream << "uint" << " " << v.name << (v.bindless ? "" : generate_array(v)) << "; // " << v.get_type() << std::endl;
 			//		stream << v.get_type()<<" " << v.name << ';' << std::endl;
 		}
-	};
+		};
 
 	//if (!table.cb_provided) declare_func(ValueType::CB);
 	//declare_func(ValueType::SRV);
@@ -231,8 +348,8 @@ void generate_table(Table& table)
 			cameled[0] = std::toupper(cameled[0]);
 
 
-			auto t =  v.get_type();
-			if(v.pointer)  t = "uint";
+			auto t = v.get_type();
+			if (v.pointer)  t = "uint";
 			if (v.as_array)
 			{
 				stream << t << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
@@ -260,7 +377,7 @@ void generate_table(Table& table)
 			if (type.starts_with("RenderTarget"))
 				type.replace(0, strlen("RenderTarget"), "Texture2D");
 
-		
+
 			if (v.as_array)
 			{
 				if (v.bindless)
@@ -335,7 +452,7 @@ void generate_nobind_table(Table& table)
 			}
 		}
 
-	};
+		};
 
 
 
@@ -381,29 +498,29 @@ void generate_cpp_table(const Table& table)
 {
 	my_stream stream(cpp_path + "/tables", table.name + ".table.ixx");
 
-	stream << "export module HAL:Autogen.Tables." <<table.name << ";"<<std::endl;
+	stream << "export module HAL:Autogen.Tables." << table.name << ";" << std::endl;
 
-		stream << "import Core;"<<std::endl;
-			stream << "import :SIG;"<<std::endl;
-	stream << "import :Types;"<<std::endl;
-	stream << "import :HLSL;"<<std::endl;
-	stream << "import <HAL.h>;"<<std::endl;
-//	stream << "import Core;"<<std::endl;
-//
-//
-//	
-//
-//
-//import :PipelineState;
-//import :SIG;
-//import :RT;
-//import :Layout;
-//import :Slots;
-//import :PSO;
-//import :RTX;
-//import :Enums;
-//import :RootSignature;
-//import :Types;
+	stream << "import Core;" << std::endl;
+	stream << "import :SIG;" << std::endl;
+	stream << "import :Types;" << std::endl;
+	stream << "import :HLSL;" << std::endl;
+	stream << "import <HAL.h>;" << std::endl;
+	//	stream << "import Core;"<<std::endl;
+	//
+	//
+	//	
+	//
+	//
+	//import :PipelineState;
+	//import :SIG;
+	//import :RT;
+	//import :Layout;
+	//import :Slots;
+	//import :PSO;
+	//import :RTX;
+	//import :Enums;
+	//import :RootSignature;
+	//import :Types;
 
 
 	for (auto& v : table.used_tables)
@@ -412,13 +529,13 @@ void generate_cpp_table(const Table& table)
 		if (t->find_option("shader_only")) continue;
 
 		if (table.find_option("IndirectCommand"))
-			stream << "import :Autogen.Slots." << v << ";"<<std::endl;
+			stream << "import :Autogen.Slots." << v << ";" << std::endl;
 		else
-			stream << "import :Autogen.Tables." << v << ";"<<std::endl;
-		
+			stream << "import :Autogen.Tables." << v << ";" << std::endl;
+
 	}
 
-	stream << "import :Enums;"<<std::endl;
+	stream << "import :Enums;" << std::endl;
 	// declaration
 	auto declare_func = [&](ValueType type) {
 
@@ -437,7 +554,7 @@ void generate_cpp_table(const Table& table)
 
 
 
-	};
+		};
 
 
 	stream << "export namespace Table " << std::endl;
@@ -450,7 +567,7 @@ void generate_cpp_table(const Table& table)
 		stream << "{" << std::endl;
 		{
 			stream.push();
-				stream << "static constexpr SlotID ID = SlotID::"  << table.name << ";"<< std::endl;
+			stream << "static constexpr SlotID ID = SlotID::" << table.name << ";" << std::endl;
 
 			declare_func(ValueType::CB);
 			declare_func(ValueType::SRV);
@@ -545,7 +662,7 @@ void generate_cpp_table(const Table& table)
 				if (args.size()) args += ",";
 				args += str_toupper(get_name_for(type)) + "&" + get_name_for(type);
 
-			};
+				};
 
 			f(ValueType::CB);
 			f(ValueType::SRV);
@@ -578,9 +695,9 @@ void generate_cpp_table(const Table& table)
 					stream << "compiler.compile(" << v.name << ");" << std::endl;
 
 				}
-			};
+				};
 
-					stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;" << std::endl;
+			stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;" << std::endl;
 
 
 
@@ -620,7 +737,7 @@ void generate_cpp_table(const Table& table)
 							stream << "uint" << " " << v.name << (v.bindless ? "" : generate_array(v)) << "; // " << v.get_type() << std::endl;
 
 					}
-				};
+					};
 
 
 				bool can_compiled = true;
@@ -816,12 +933,12 @@ import :Types;
 		{
 			if (t.slot)
 				stream << "export import :Autogen.Slots." << t.name << ";" << std::endl;
-		if (!t.find_option("shader_only"))
+			if (!t.find_option("shader_only"))
 				stream << "export import :Autogen.Tables." << t.name << ";" << std::endl;
 
 		}
 
-	stream << "export{" << std::endl;
+		stream << "export{" << std::endl;
 
 
 		for (auto& t : parsed.tables)
@@ -930,33 +1047,33 @@ export
 			stream << "};" << std::endl;
 
 
-						stream << "enum class IndirectCommands: int" << std::endl;
+			stream << "enum class IndirectCommands: int" << std::endl;
 
 			stream << "{" << std::endl;
 			{
 				stream.push();
-			
-					const Table* prev = nullptr;
-					for (auto& t : parsed.tables)
+
+				const Table* prev = nullptr;
+				for (auto& t : parsed.tables)
+				{
+					if (t.find_option("IndirectCommand"))
 					{
-						if (t.find_option("IndirectCommand"))
+
+						if (prev)
 						{
-
-							if (prev)
-							{
-								stream << prev->name << "," << std::endl;
-
-							}
-							prev = &t;
+							stream << prev->name << "," << std::endl;
 
 						}
+						prev = &t;
 
 					}
-					if (prev)
-					{
-						stream << prev->name << std::endl;
 
-					}
+				}
+				if (prev)
+				{
+					stream << prev->name << std::endl;
+
+				}
 
 				stream.pop();
 			}
@@ -1118,22 +1235,22 @@ using namespace concurrency;
 		stream << "}" << std::endl;
 
 
-			stream << "void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)" << std::endl;
+		stream << "void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)" << std::endl;
 		stream << "{" << std::endl;
 		{
 			stream.push();
-				for (auto& t : parsed.tables)
+			for (auto& t : parsed.tables)
+			{
+				if (t.find_option("IndirectCommand"))
 				{
-					if (t.find_option("IndirectCommand"))
-					{
 
 					if (t.find_option("shader_only"))
 						stream << "commands[IndirectCommands::" << t.name << "] = AutoGenIndirectCommand<" << t.name << ">(device).create_command();" << std::endl;
 					else
-			stream << "commands[IndirectCommands::" << t.name << "] = AutoGenIndirectCommand<Table::" << t.name << ">(device).create_command();" << std::endl;
-			
-					}
-			
+						stream << "commands[IndirectCommands::" << t.name << "] = AutoGenIndirectCommand<Table::" << t.name << ">(device).create_command();" << std::endl;
+
+				}
+
 			}
 			stream.pop();
 		}
@@ -1169,23 +1286,23 @@ using namespace concurrency;
 			stream.pop();
 		}
 
-		
+
 
 
 		stream << "}" << std::endl;
-		
+
 		for (auto& pso : parsed.compute_pso)
-		for (auto d : pso.defines)
-		{
-			stream << "decltype(PSOS::"<< pso.name<<"::"<<d.name<<") PSOS::"<< pso.name<<"::"<<d.name<<";" << std::endl;
-		
-		}
-			for (auto& pso : parsed.graphics_pso)
-		for (auto d : pso.defines)
-		{
-			stream << "decltype(PSOS::"<< pso.name<<"::"<<d.name<<") PSOS::"<< pso.name<<"::"<<d.name<<";" << std::endl;
-		
-		}
+			for (auto& d : pso.defines)
+			{
+				stream << "decltype(PSOS::" << pso.name << "::" << d.name << ") PSOS::" << pso.name << "::" << d.name << ";" << std::endl;
+
+			}
+		for (auto& pso : parsed.graphics_pso)
+			for (auto& d : pso.defines)
+			{
+				stream << "decltype(PSOS::" << pso.name << "::" << d.name << ") PSOS::" << pso.name << "::" << d.name << ";" << std::endl;
+
+			}
 		/*
 				stream << "HAL::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
 				stream << "{" << std::endl;
@@ -1480,29 +1597,29 @@ void generate_pso(PSO& pso)
 				stream << "if(f) f(mpso,key);" << std::endl;
 
 				stream << "mpso.root_signature = Layouts::" << pso.root_sig.name << ";" << std::endl;
-				for (auto& shader : pso.shader_list)
+				for (auto& shader : pso.shaders)
 				{
 
 					if (shader.find_option("Erase"))
 					{
-						stream << "mpso." << shader.type << ".file_name = \"\";" << std::endl;
-						stream << "mpso." << shader.type << ".entry_point = \"\";" << std::endl;
-						stream << "mpso." << shader.type << ".flags = HAL::ShaderOptions::None;" << std::endl;
+						stream << "mpso." << shader.name << ".file_name = \"\";" << std::endl;
+						stream << "mpso." << shader.name << ".entry_point = \"\";" << std::endl;
+						stream << "mpso." << shader.name << ".flags = HAL::ShaderOptions::None;" << std::endl;
 
 					}
 					else
 					{
-						stream << "mpso." << shader.type << ".file_name = \"shaders/" << shader.name << ".hlsl\";" << std::endl;
-						stream << "mpso." << shader.type << ".entry_point = \"" << shader.find_option("EntryPoint")->value_atom.expr << "\";" << std::endl;
+						stream << "mpso." << shader.name << ".file_name = \"shaders/" << shader.path << ".hlsl\";" << std::endl;
+						stream << "mpso." << shader.name << ".entry_point = \"" << shader.find_option("EntryPoint")->value_atom.expr << "\";" << std::endl;
 
 						if (shader.find_option("Enable16bits"))
 						{
-							stream << "mpso." << shader.type << ".flags = HAL::ShaderOptions::FP16;" << std::endl;
+							stream << "mpso." << shader.name << ".flags = HAL::ShaderOptions::FP16;" << std::endl;
 
 						}
 						else
 						{
-							stream << "mpso." << shader.type << ".flags = HAL::ShaderOptions::None;" << std::endl;
+							stream << "mpso." << shader.name << ".flags = HAL::ShaderOptions::None;" << std::endl;
 
 						}
 
@@ -1640,7 +1757,7 @@ void generate_cpp_rt(Table& table)
 
 
 
-	};
+		};
 
 
 	stream << "namespace RT " << std::endl;
@@ -1654,7 +1771,7 @@ void generate_cpp_rt(Table& table)
 		{
 			stream.push();
 
-				stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;" << std::endl;
+			stream << "static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;" << std::endl;
 
 
 			declare_func(ValueType::SRV);
@@ -1719,7 +1836,7 @@ void generate_cpp_rt(Table& table)
 				if (args.size()) args += ",";
 				args += str_toupper(get_name_for(type)) + "&" + get_name_for(type);
 
-			};
+				};
 
 			f(ValueType::CB);
 			f(ValueType::SRV);
@@ -1737,7 +1854,7 @@ void generate_cpp_rt(Table& table)
 					stream << "compiler.compile(" << v.name << ");" << std::endl;
 
 				}
-			};
+				};
 			stream << "template<class Compiler>" << std::endl;
 
 			stream << "void compile(Compiler& compiler) const" << std::endl;
@@ -1774,7 +1891,7 @@ void generate_cpp_rt(Table& table)
 							stream << "uint" << " " << v.name << (v.bindless ? "" : generate_array(v)) << "; // " << v.get_type() << std::endl;
 
 					}
-				};
+					};
 
 
 			}
@@ -1826,178 +1943,121 @@ void generate_cpp_rt(Table& table)
 
 void generate_cpp_layout(Layout& layout)
 {
-
 	my_stream stream(cpp_path + "/layout", layout.name + ".layout.ixx");
-	stream << "export module HAL:Autogen.Layouts." <<layout.name << ";"<<std::endl;
-
-	stream << "import Core;" << std::endl;
-	if (layout.parent_ptr) stream << "import :Autogen.Layouts." << layout.parent_ptr->name << ";" << std::endl;
-
-	stream << "import :Types;" << std::endl;
-	stream << "import :Sampler;" << std::endl;
+	std::string  res = templates.generate2(L"layout", "layout", layout);
+	stream << res << std::endl;
 
 
-	auto slot = [&](Slot& s) {
+
+	//stream << "export module HAL:Autogen.Layouts." << layout.name << ";" << std::endl;
+
+	//stream << "import Core;" << std::endl;
+	//if (layout.parent_ptr) stream << "import :Autogen.Layouts." << layout.parent_ptr->name << ";" << std::endl;
+
+	//stream << "import :Types;" << std::endl;
+	//stream << "import :Sampler;" << std::endl;
 
 
-		stream << "struct " << s.name << std::endl;
-		stream << "{" << std::endl;
-		{
-			stream.push();
-
-			stream << "static const uint ID = " << s.id << ";" << std::endl;
-
-			std::string tables;
-
-			for (int i = 0; i < ValueType::STRUCT; i++)
-			{
-				auto type = (ValueType)i;
-				auto count = s.max_counts[type];
-
-				if (count == 0)
-					continue;
-
-				stream << "static const uint " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
-				stream << "static const uint " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
-
-				if (!tables.empty())
-					tables += ", ";
-
-				tables += std::to_string(s.ids[type]);
-
-			}
+	//auto slot = [&](Slot& s) {
 
 
-			stream << "static inline const std::vector<uint> tables = {" << tables << "};" << std::endl;
+	//	stream << "struct " << s.name << std::endl;
+	//	stream << "{" << std::endl;
+	//	{
+	//		stream.push();
+
+	//		stream << "static const uint ID = " << s.id << ";" << std::endl;
+
+	//		std::string tables;
+
+	//		for (int i = 0; i < ValueType::STRUCT; i++)
+	//		{
+	//			auto type = (ValueType)i;
+	//			auto count = s.max_counts[type];
+
+	//			if (count == 0)
+	//				continue;
+
+	//			stream << "static const uint " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
+	//			stream << "static const uint " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
+
+	//			if (!tables.empty())
+	//				tables += ", ";
+
+	//			tables += std::to_string(s.ids[type]);
+
+	//		}
 
 
-			stream.pop();
-		}
-		stream << "};" << std::endl;
-
-	};
-
-	if (layout.parent_ptr)
-		stream << "export struct " << layout.name << ": public " << layout.parent_ptr->name << std::endl;
-	else
-		stream << "export struct " << layout.name << std::endl;
-	stream << "{" << std::endl;
-	{
-		stream.push();
-
-		for (auto& s : layout.slots)
-			slot(s);
+	//		stream << "static inline const std::vector<uint> tables = {" << tables << "};" << std::endl;
 
 
-		stream << "template<class Processor> static void for_each(Processor& processor) {" << std::endl;
-		{
-			stream.push();
+	//		stream.pop();
+	//	}
+	//	stream << "};" << std::endl;
 
-			std::string result_string;
-			bool first = true;
-			layout.recursive_slots([&](Slot& slot) {
+	//	};
 
-				if (!first) result_string += ',';
-				result_string += slot.name;
-				first = false;
-				});
+	//if (layout.parent_ptr)
+	//	stream << "export struct " << layout.name << ": public " << layout.parent_ptr->name << std::endl;
+	//else
+	//	stream << "export struct " << layout.name << std::endl;
+	//stream << "{" << std::endl;
+	//{
+	//	stream.push();
 
-			std::string params_string; first = true;
-			layout.recursive_samplers([&](Sampler& slot) {
-
-				if (!first) params_string += ',';
-				params_string += "HAL::Samplers::" + slot.expr;
-				first = false;
-				});
+	//	for (auto& s : layout.slots)
+	//		slot(s);
 
 
-			stream << "processor.template process<" << result_string << ">({" << params_string << "});" << std::endl;
+	//	stream << "template<class Processor> static void for_each(Processor& processor) {" << std::endl;
+	//	{
+	//		stream.push();
 
-			stream.pop();
-		}
+	//		std::string result_string;
+	//		bool first = true;
+	//		layout.recursive_slots([&](Slot& slot) {
 
-		stream << "}" << std::endl;
-		stream.pop();
-	}
+	//			if (!first) result_string += ',';
+	//			result_string += slot.name;
+	//			first = false;
+	//			});
 
-	stream << "};" << std::endl;
+	//		std::string params_string; first = true;
+	//		layout.recursive_samplers([&](Sampler& slot) {
 
-}
+	//			if (!first) params_string += ',';
+	//			params_string += "HAL::Samplers::" + slot.expr;
+	//			first = false;
+	//			});
 
-void iterate_files(std::filesystem::path path, std::function<void(std::wstring)> f)
-{
-	using namespace std::filesystem;
 
-	recursive_directory_iterator dir(path), end;
+	//		stream << "processor.template process<" << result_string << ">({" << params_string << "});" << std::endl;
 
-	while (dir != end)
-	{
-		// do other stuff here.
-		if (!is_directory(*dir))
-			f(dir->path().wstring());
+	//		stream.pop();
+	//	}
 
-		++dir;
-	}
+	//	stream << "}" << std::endl;
+	//	stream.pop();
+	//}
+
+	//stream << "};" << std::endl;
+
 }
 
 
 void generate_raygen(RaytraceGen& pso)
 {
 	my_stream stream(cpp_path + "/rtx", pso.name + ".h");
-	stream << "#pragma once" << std::endl;
-
-	stream << std::format(R"(struct {0}: public RaytraceRaygen<{0}>)", pso.name) << std::endl;
-	stream << "{" << std::endl;
-	stream.push();
-	{
-		stream << std::format(R"(static const constexpr uint ID = {};)", pso.index) << std::endl;
-
-		stream << std::format(R"(static const constexpr std::string_view shader = "shaders\\{}.hlsl";)", pso.shaders["raygen"]->name) << std::endl;
-		stream << std::format(R"(static const constexpr std::wstring_view raygen = L"{}";)", pso.shaders["raygen"]->find_option("EntryPoint")->value_atom.expr) << std::endl;
-
-	}
-	stream.pop();
-	stream << "};" << std::endl;
-	/*
-	struct Shadow :public RaytraceRaygen<Shadow>
-	{
-		static const constexpr std::string_view shader = "shaders\\raytracing.hlsl";
-		static const constexpr std::wstring_view raygen = L"ShadowPass";
-	};*/
-
-
-
+	std::string  res = templates.generate2(L"raygen_pass", "pso", pso);
+	stream << res << std::endl;
 }
+
 void generate_pass(RaytracePass& pso)
 {
 	my_stream stream(cpp_path + "/rtx", pso.name + ".h");
-	stream << "#pragma once" << std::endl;
-
-
-	stream << std::format(R"(struct {0}: public RaytracePass<{0}>)", pso.name) << std::endl;
-	stream << "{" << std::endl;
-	stream.push();
-	{
-		stream << std::format(R"(using Payload = Table::{};)", pso.find_param("payload")->expr) << std::endl;
-
-		if (pso.find_param("local"))
-			stream << std::format(R"(using LocalData =  Slots::{};)", pso.find_param("local")->expr) << std::endl;
-
-		stream << std::format(R"(static const constexpr uint ID = {};)", pso.index) << std::endl;
-
-		stream << std::format(R"(static const constexpr std::string_view shader = "shaders\\{}.hlsl";)", pso.shaders["miss"]->name) << std::endl;
-		stream << std::format(R"(static const constexpr std::wstring_view name = L"{}_GROUP";)", pso.name) << std::endl;
-
-		stream << std::format(R"(static const constexpr std::wstring_view hit_name = L"{}";)", pso.shaders["closest_hit"]->find_option("EntryPoint")->value_atom.expr) << std::endl;
-		stream << std::format(R"(static const constexpr std::wstring_view miss_name = L"{}";)", pso.shaders["miss"]->find_option("EntryPoint")->value_atom.expr) << std::endl;
-
-
-		auto param = pso.find_param("per_material");
-		stream << std::format(R"(static const constexpr bool per_material = {};)", param && param->expr == "true" ? "true" : "false") << std::endl;
-
-	}
-	stream.pop();
-	stream << "};" << std::endl;
+	std::string  res = templates.generate2(L"raytrace_pass", "pso", pso);
+	stream << res << std::endl;
 }
 
 
@@ -2005,54 +2065,16 @@ void generate_pass(RaytracePass& pso)
 void generate_hlsl_pass(RaytracePass& pso)
 {
 	my_stream stream(hlsl_path + "/rtx", pso.name + ".h");
-	auto payload = pso.find_param("payload")->expr;
-
-	stream << std::format(R"(void {}(RaytracingAccelerationStructure scene, RayDesc ray, RAY_FLAG flag, inout {} payload) )", pso.name, payload) << std::endl;
-	stream << "{" << std::endl;
-	stream.push();
-	{
-		stream << std::format(R"(TraceRay(scene, flag, ~0, {0}, 0, {0}, ray, payload); )", pso.index) << std::endl;
-	}
-	stream.pop();
-	stream << "};" << std::endl;
-
+	std::string  res = templates.generate2(L"hlsl_pass", "pso", pso);
+	stream << res << std::endl;
 }
 
 
 void generate_rtx_pso(RaytracePSO& pso)
 {
 	my_stream stream(cpp_path + "/rtx", pso.name + ".h");
-	stream << "#pragma once" << std::endl;
-
-	std::string gens, passes;
-
-	for (auto e : pso.gens)
-	{
-		if (!gens.empty())gens += ", ";
-		gens += e.name;
-
-		stream << std::format(R"(#include "{}.h")", e.name) << std::endl;
-
-	}
-
-	for (auto e : pso.passes)
-	{
-		if (!passes.empty())passes += ", ";
-		passes += e.name;
-
-		stream << std::format(R"(#include "{}.h")", e.name) << std::endl;
-	}
-
-	stream << std::format(R"(struct {0}: public RTXPSO<{0}, Typelist<{1}>, Typelist<{2}>>)", pso.name, passes, gens) << std::endl;
-	stream << "{" << std::endl;
-	stream.push();
-	{
-		stream << std::format(R"(static const constexpr Layouts global_sig  = Layouts::{};)", pso.root_sig.name) << std::endl;
-		stream << std::format(R"(static const constexpr uint MaxTraceRecursionDepth = 2;)") << std::endl;
-
-	}
-	stream.pop();
-	stream << "};" << std::endl;
+	std::string  res = templates.generate2(L"rtx_pso", "pso", pso);
+	stream << res << std::endl;
 }
 
 
@@ -2084,6 +2106,8 @@ void generate_rtx(Parsed& parsed)
 }
 int main() {
 	//std::filesystem::remove_all(L"output");
+
+
 
 	try
 	{
@@ -2137,6 +2161,9 @@ int main() {
 
 		for (auto& pso : parsed.graphics_pso)
 		{
+
+
+
 			generate_pso(pso);
 		}
 

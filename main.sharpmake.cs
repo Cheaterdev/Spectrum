@@ -297,6 +297,7 @@ namespace Spectrum
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();
             conf.VcxprojUserFile.LocalDebuggerWorkingDirectory = @"[project.SharpmakeCsPath]\sources\SIGParser";
             conf.Defines.Add("ANTLR4CPP_STATIC");
+            conf.AddPublicDependency<Core>(target);	
         }
     }
 

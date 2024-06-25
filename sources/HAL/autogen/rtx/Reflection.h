@@ -1,4 +1,5 @@
 #pragma once
+
 struct Reflection: public RaytraceRaygen<Reflection>
 {
 	static const constexpr uint ID = 1;

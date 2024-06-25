@@ -334,7 +334,7 @@ void MeshAsset::update_preview(HAL::Texture::ptr preview)
 }
 
 template<class Archive>
-void MeshAssetInstance::serialize(Archive& ar, const unsigned int)
+void MeshAssetInstance::serialize(Archive& ar)
 {
 	SAVE_PARENT(AssetHolder);
 	SAVE_PARENT(scene_object);
