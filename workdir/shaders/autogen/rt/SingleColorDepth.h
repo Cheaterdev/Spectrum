@@ -1,5 +1,6 @@
 #pragma once
+
 struct SingleColorDepth
 {
-	float4 color: SV_Target0;
+    float4 color: SV_Target0;
 };

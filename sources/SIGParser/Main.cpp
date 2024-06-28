@@ -136,6 +136,15 @@ public:
 		);
 
 
+	params["starts_with"] = jinja2::MakeCallable(
+			[](const std::string& a,const std::string& b) {
+				return a.starts_with(b);
+			},
+			ArgInfo{ "a"  },ArgInfo{ "b"  }
+		);
+
+
+
 		return generate(filename, params);
 	}
 };
@@ -1272,35 +1281,17 @@ void generate_layout(Layout& layout)
 {
 	my_stream stream(hlsl_path + "/layout", layout.name + ".h");
 
-		std::string  res = templates.generate2(L"layout", "layout", layout);
+	std::string  res = templates.generate2(L"layout", "layout", layout);
 	stream << res << std::endl;
-
-
-
 }
 
 void generate_rt(Table& rt)
 {
 	my_stream stream(hlsl_path + "/rt", rt.name + ".h");
-	stream << "#pragma once" << std::endl;
 
-	stream << "struct " << rt.name << std::endl;
-	stream << "{" << std::endl;
-	{
-		stream.push();
-
-		int i = 0;
-
-		for (auto& e : rt.values)
-		{
-			if (e.class_no_template.starts_with("RenderTarget"))
-				stream << e.template_arg << " " << e.name << ": SV_Target" << i << ";" << std::endl;
-			i++;
-		}
-
-		stream.pop();
-	}
-	stream << "};" << std::endl;
+	std::string  res = templates.generate2(L"rt", "rt", rt);
+	stream << res << std::endl;
+	
 }
 
 void generate_pso(PSO& pso)
