@@ -1,10 +1,14 @@
 #pragma once
+
 #include "mesh_vertex_input.h"
 struct Triangle
-{
+{	
+	
 	float lod;
+
 	mesh_vertex_input v;
 
+	
 		void init(mesh_vertex_input vertex0, mesh_vertex_input vertex1, mesh_vertex_input vertex2, float3 barycentrics)
 		{
 			v.normal = (vertex0.normal * barycentrics.x + vertex1.normal * barycentrics.y + vertex2.normal * barycentrics.z);

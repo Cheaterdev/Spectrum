@@ -1,38 +1,9 @@
-export module HAL:Autogen.Layouts.{{layout.name}};
-{% set slots = recursive_slots(layout.name) -%}
-{%- set samplers = recursive_samplers(layout.name) -%}
-{%- set ids = layout.slots['Instance0'].ids -%}
-import Core;
-{%- if layout.parent is defined %}
-import :Autogen.Layouts.{{layout.parent.name}};
-{%- endif %}
-import :Types;
-import :Sampler;
-{% if layout.parent is defined %}
-export struct {{layout.name}}: public {{layout.parent.name}}
-{%else %}
-export struct {{layout.name}}
-{% endif-%}
-{
-{%- for key in layout.slots -%}
-{%- set slot = layout.slots[key] -%}
+#pragma once
 
-	struct {{ slot.name }}
-	{
-		static const uint ID = {{slot.id}};
-	{%- for count in slot.max_counts  -%}
-	{%-if count>0-%}
-		{%- set name = get_name_for(loop.index0)|upper -%}
+{%- if layout.parent is defined%}
+#include "{{layout.parent.name}}"
+{% endif -%}
 
-		static const uint {{name}} = {{count}};
-		static const uint {{name}}_ID = {{slot.ids[loop.index0]}};
-	{%- endif -%}
-	{%- endfor %}
-		static inline const std::vector<uint> tables = { {{slot.ids|unique|select('>',-1) |map('string')|join(', ')}} };
-	};
-{% endfor %}
-	template<class Processor> static void for_each(Processor& processor)
-	{
-		processor.template process<{{slots | join(', ')}}>({ {{samplers | join(', ')}} });
-	}
-};
+{%- for s in layout.samplers %}
+SamplerState {{s.name}}:register(s{{loop.index0}});
+{%- endfor-%}

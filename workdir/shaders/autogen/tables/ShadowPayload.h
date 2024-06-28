@@ -1,6 +1,9 @@
 #pragma once
-struct ShadowPayload
-{
-	bool hit;
 
+
+struct ShadowPayload
+{	
+	
+	bool hit;
+	
 };

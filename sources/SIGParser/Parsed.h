@@ -94,7 +94,7 @@ struct have_type
 	std::string class_no_template;
 	std::string template_arg;
 	ValueType value_type;
-
+	std::string type;
 	bool pointer = false;
 	bool bindless = false;
 	void detect_type(have_options* options = nullptr);
@@ -123,6 +123,12 @@ struct have_type
 	{
 		ar& NVP(class_no_template);
 		ar& NVP(template_arg);
+		ar& NVP(value_type);
+		ar& NVP(pointer);
+		ar& NVP(bindless);
+		ar& NVP(value_type);
+				ar& NVP(type);
+
 		/// todo
 	}
 };

@@ -1,0 +1,29 @@
+#pragma once
+
+{% for t in table.used_tables -%}
+#include "{{ t }}.h"
+{%- endfor -%}
+
+{%- macro declare_func(type) -%}
+{%- for v in (table.values|unique|selectattr('value_type','==', type)|selectattr('bindless','==', False)) %}
+	{{v.type}} {{v.name}};
+{%- endfor -%}
+
+
+{%- for v in (table.values|unique|selectattr('value_type','==', ValueType.STRUCT)) %}
+{%- set t = parsed.tables[v.type]-%}
+
+{% if t.options.nobind is defined%}
+	{{v.type}} {{v.name}};
+{%else%}
+
+{{v.type}}_{{get_name_for(type)}} {{v.name}};
+{%endif%}
+{%- endfor -%}
+{%- endmacro -%}
+
+struct {{table.name}}
+{	
+	{{declare_func(ValueType.CB)}}
+	{{ table.hlsl }}
+};

@@ -1,9 +1,12 @@
 #pragma once
+
+
 struct RayCone
-{
+{	
+	
 	float width;
 	float angle;
-
+	
 	RayCone propagate(float surfaceSpreadAngle = 0, float hitT = 0)
 	{
 		RayCone result;

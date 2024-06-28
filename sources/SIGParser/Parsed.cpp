@@ -152,6 +152,8 @@ void have_type::detect_type(have_options * options)
 	if(pointer)
 	value_type = ValueType::CB;
 
+
+	type = get_type();
 }
 
 Slot::Slot()

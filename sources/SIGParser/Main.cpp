@@ -29,6 +29,23 @@ void iterate_files(std::filesystem::path path, std::function<void(std::filesyste
 	}
 }
 Parsed parsed;
+
+rapidjson::Document make_map(  auto& p)
+{
+	std::stringstream s;
+		{
+			cereal::JSONOutputArchive archive(s);
+
+			p.serialize(archive);
+
+		}
+		rapidjson::Document doc;
+
+		auto str = s.str();
+		doc.Parse(str.c_str());
+
+		return doc;
+}
 class TemplatesLibrary
 {
 	std::map<std::wstring, jinja2::Template> templates;
@@ -69,20 +86,16 @@ public:
 
 	auto generate2(std::wstring filename, std::string name, auto& p)
 	{
-		std::stringstream s;
-		{
-			cereal::JSONOutputArchive archive(s);
-
-			p.serialize(archive);
-
-		}
-		rapidjson::Document doc;
-
-		auto str = s.str();
-		doc.Parse(str.c_str());
+		auto dp=make_map(p);
+		auto dp2=make_map(parsed);
 
 		ValuesMap params = {
-		   {name, Reflect(doc)},
+		   {name, Reflect(dp)},
+			{"parsed", Reflect(dp2)},
+		
+			{"ValueType",ValuesMap{
+				{"CB", ValueType::CB},{"SRV", ValueType::SRV},{"UAV",ValueType::UAV},{"SMP",ValueType::SMP},{"STRUCT",ValueType::STRUCT}
+					}}
 		};
 
 		params["recursive_slots"] = jinja2::MakeCallable(
@@ -418,69 +431,8 @@ void generate_table(Table& table)
 void generate_nobind_table(Table& table)
 {
 	my_stream stream(hlsl_path + "/tables", table.name + ".h");
-	stream << "#pragma once" << std::endl;
-
-	for (auto& v : table.used_tables)
-	{
-		stream << "#include \"" << v << ".h\"" << std::endl;
-	}
-
-	// declaration
-	auto declare_func = [&](ValueType type) {
-		if (table.counts[type] == 0) return;
-
-		for (auto& v : table.values)
-		{
-			if (v.value_type != type) continue;
-			if (v.bindless) continue;
-
-			stream << v.get_type() << " " << v.name << ';' << std::endl;
-		}
-
-		for (auto& v : table.values)
-		{
-			if (v.value_type == ValueType::STRUCT)
-			{
-				auto t = parsed.find_table(v.get_type());
-				if (t->counts[type] == 0) continue;
-
-				if (t->find_option("nobind"))
-					stream << v.get_type() << " " << v.name << ";" << std::endl;
-				else
-
-					stream << v.get_type() << "_" << get_name_for(type) << " " << v.name << ";" << std::endl;
-			}
-		}
-
-		};
-
-
-
-
-
-
-	// result struct
-	stream << "struct " << table.name << std::endl;
-
-	stream << "{" << std::endl;
-
-	{
-		stream.push();
-
-
-		declare_func(ValueType::CB);
-
-		stream.pop();
-
-	}
-
-	stream << table.hlsl << std::endl;
-
-
-	stream << "};" << std::endl;
-
-
-
+	std::string  res = templates.generate2(L"nobind_table", "table", table);
+	stream << res << std::endl;
 }
 
 std::string str_toupper(std::string s) {
@@ -1319,13 +1271,10 @@ using namespace concurrency;
 void generate_layout(Layout& layout)
 {
 	my_stream stream(hlsl_path + "/layout", layout.name + ".h");
-	stream << "#pragma once" << std::endl;
-	if (layout.parent_ptr) stream << "#include \"" << layout.parent_ptr->name << ".h\"" << std::endl;
-	int i = 0;
-	for (Sampler& s : layout.samplers) {
 
-		stream << "SamplerState " << s.name << ":register(s" << i++ << ");" << std::endl;
-	};
+		std::string  res = templates.generate2(L"layout", "layout", layout);
+	stream << res << std::endl;
+
 
 
 }
@@ -1353,65 +1302,7 @@ void generate_rt(Table& rt)
 	}
 	stream << "};" << std::endl;
 }
-/*
-void generate_pso(PSO& pso)
-{
 
-	my_stream stream(cpp_path + "/pso", pso.name + ".h");
-	stream << "#pragma once" << std::endl;
-
-	stream << "namespace Autogen" << std::endl;
-	stream << "{" << std::endl;
-	{
-		stream.push();
-
-		if (pso.parent.size())
-		{
-			stream << "struct " << pso.name << ": public "<< pso.parent[0]<< std::endl;
-		}
-		else
-		{
-			stream << "struct " << pso.name << std::endl;
-		}
-
-		stream << "{" << std::endl;
-		{
-			stream.push();
-
-			if(!pso.root_sig.name.empty())
-			stream << "static inline const Layouts layout = Layouts::" << pso.root_sig.name << ";" << std::endl;
-
-
-			if (!pso.compute.name.empty())
-			{
-				stream << "static inline const HAL::shader_header compute = { \"shaders/" << pso.compute.name << ".hlsl\", \"" << pso.compute.find_option("EntryPoint")->value_atom.expr << "\", 0,{";
-
-				bool first = true;
-				for (auto option : pso.compute.options)
-				{
-					if (!first) stream << ",";
-					stream << "{";
-					stream << "\"" << option.name << "\", \"" << option.value_atom.expr << "\"";
-					stream << "}";
-
-					first = false;
-				}
-
-				stream << "} }; " << std::endl;
-
-
-			}
-
-
-			stream.pop();
-		}
-		stream << "};" << std::endl;
-
-		stream.pop();
-	}
-	stream << "}" << std::endl;
-}
-*/
 void generate_pso(PSO& pso)
 {
 
@@ -1944,105 +1835,8 @@ void generate_cpp_rt(Table& table)
 void generate_cpp_layout(Layout& layout)
 {
 	my_stream stream(cpp_path + "/layout", layout.name + ".layout.ixx");
-	std::string  res = templates.generate2(L"layout", "layout", layout);
+	std::string  res = templates.generate2(L"cpp_layout", "layout", layout);
 	stream << res << std::endl;
-
-
-
-	//stream << "export module HAL:Autogen.Layouts." << layout.name << ";" << std::endl;
-
-	//stream << "import Core;" << std::endl;
-	//if (layout.parent_ptr) stream << "import :Autogen.Layouts." << layout.parent_ptr->name << ";" << std::endl;
-
-	//stream << "import :Types;" << std::endl;
-	//stream << "import :Sampler;" << std::endl;
-
-
-	//auto slot = [&](Slot& s) {
-
-
-	//	stream << "struct " << s.name << std::endl;
-	//	stream << "{" << std::endl;
-	//	{
-	//		stream.push();
-
-	//		stream << "static const uint ID = " << s.id << ";" << std::endl;
-
-	//		std::string tables;
-
-	//		for (int i = 0; i < ValueType::STRUCT; i++)
-	//		{
-	//			auto type = (ValueType)i;
-	//			auto count = s.max_counts[type];
-
-	//			if (count == 0)
-	//				continue;
-
-	//			stream << "static const uint " << str_toupper(get_name_for(type)) << " = " << count << ";" << std::endl;
-	//			stream << "static const uint " << str_toupper(get_name_for(type)) << "_ID = " << s.ids[type] << ";" << std::endl;
-
-	//			if (!tables.empty())
-	//				tables += ", ";
-
-	//			tables += std::to_string(s.ids[type]);
-
-	//		}
-
-
-	//		stream << "static inline const std::vector<uint> tables = {" << tables << "};" << std::endl;
-
-
-	//		stream.pop();
-	//	}
-	//	stream << "};" << std::endl;
-
-	//	};
-
-	//if (layout.parent_ptr)
-	//	stream << "export struct " << layout.name << ": public " << layout.parent_ptr->name << std::endl;
-	//else
-	//	stream << "export struct " << layout.name << std::endl;
-	//stream << "{" << std::endl;
-	//{
-	//	stream.push();
-
-	//	for (auto& s : layout.slots)
-	//		slot(s);
-
-
-	//	stream << "template<class Processor> static void for_each(Processor& processor) {" << std::endl;
-	//	{
-	//		stream.push();
-
-	//		std::string result_string;
-	//		bool first = true;
-	//		layout.recursive_slots([&](Slot& slot) {
-
-	//			if (!first) result_string += ',';
-	//			result_string += slot.name;
-	//			first = false;
-	//			});
-
-	//		std::string params_string; first = true;
-	//		layout.recursive_samplers([&](Sampler& slot) {
-
-	//			if (!first) params_string += ',';
-	//			params_string += "HAL::Samplers::" + slot.expr;
-	//			first = false;
-	//			});
-
-
-	//		stream << "processor.template process<" << result_string << ">({" << params_string << "});" << std::endl;
-
-	//		stream.pop();
-	//	}
-
-	//	stream << "}" << std::endl;
-	//	stream.pop();
-	//}
-
-	//stream << "};" << std::endl;
-
 }
 
 
