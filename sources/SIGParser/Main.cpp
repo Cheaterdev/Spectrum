@@ -29,7 +29,9 @@ void iterate_files(std::filesystem::path path, std::function<void(std::filesyste
 	}
 }
 Parsed parsed;
+rapidjson::Document parsed_doc;
 
+jinja2::Value parsed_map;
 rapidjson::Document make_map(  auto& p)
 {
 	std::stringstream s;
@@ -87,11 +89,11 @@ public:
 	auto generate2(std::wstring filename, std::string name, auto& p)
 	{
 		auto dp=make_map(p);
-		auto dp2=make_map(parsed);
+//		auto dp2=make_map(parsed);
 
 		ValuesMap params = {
 		   {name, Reflect(dp)},
-			{"parsed", Reflect(dp2)},
+			{"parsed", parsed_map},
 		
 			{"ValueType",ValuesMap{
 				{"CB", ValueType::CB},{"SRV", ValueType::SRV},{"UAV",ValueType::UAV},{"SMP",ValueType::SMP},{"STRUCT",ValueType::STRUCT}
@@ -143,6 +145,15 @@ public:
 			ArgInfo{ "a"  },ArgInfo{ "b"  }
 		);
 
+	params["lowerize"] = jinja2::MakeCallable(
+			[](const std::string& name) {
+				
+			std::string lowcameled = name;
+	lowcameled[0] = std::tolower(lowcameled[0]);
+					return lowcameled;
+			},
+			ArgInfo{ "name" }
+		);
 
 
 		return generate(filename, params);
@@ -237,75 +248,11 @@ void generate_pass(my_stream& stream, std::array<std::stringstream, ValueType::C
 void generate_pass_table(Table& table)
 {
 	my_stream stream(hlsl_path, table.name + ".h");
-	stream << std::format(
-		R"(#ifndef SLOT_{0}
-	#define SLOT_{0}
-#else
-	#error Slot {0} is already used
-#endif)", table.slot->id) << std::endl;
 
-
-	stream << std::format(R"(#include "layout/{}.h")", table.slot->layout->name) << std::endl;
-
-	//	if (table.bindless_srv)
-		//	stream << std::format(R"({} bindless[]: register(t{}, space{});)", table.bindless_srv->type , calculate_max_size(table) , table.slot->id) << std::endl;
-
-	stream << std::format(R"(#include "tables/{}.h")", table.name) << std::endl;
-
-
-	// cb
-//	if (table.counts[ValueType::CB] > 0) stream << std::format(R"(ConstantBuffer<{}_cb> cb_{}_0:register(b0,space{});)", table.name , table.slot->id ,table.slot->id ) << std::endl; // "ConstantBuffer<" << table.name << "_cb> cb_" << table.slot->id << "_0:register(b0,space" << table.slot->id << ");" << std::endl;
-
-
-
-	table_offsets offsets;
-	offsets[ValueType::SMP] = 0;
-	offsets[ValueType::UAV] = 0;
-	offsets[ValueType::SRV] = 0;
-	offsets[ValueType::CB] = 0;
-
-
-	std::stringstream struct_str;
-	struct_str << "#ifndef CB_DEFINED" << std::endl;
-	struct_str << "#define CB_DEFINED" << std::endl;
-
-	struct_str << "struct CB { uint offset; };" << std::endl;
-	struct_str << "#endif" << std::endl;
-
-	//struct_str << "ConstantBuffer<" << table.name << "> pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
-	struct_str << "ConstantBuffer< CB > pass_" << table.name << ": register( b2, space" << table.slot->id << ");" << std::endl;
-
-	stream << struct_str.str();
-
-	//creation func
-
-	{
-		stream << " ConstantBuffer<" << table.name << "> Create" << table.name << "()" << std::endl;
-		stream << "{" << std::endl;
-		{
-			stream.push();
-
-			stream << "return ResourceDescriptorHeap[pass_" << table.name << ".offset];" << std::endl;
-			stream.pop();
-		}
-		stream << "}" << std::endl;
-	}
-
-	std::string cameled = table.name;
-	cameled[0] = std::toupper(cameled[0]);
-
-	std::string lowcameled = table.name;
-	lowcameled[0] = std::tolower(lowcameled[0]);
-
-
-	stream << "#ifndef NO_GLOBAL" << std::endl;
-
-	stream << "static const " << table.name << " " << lowcameled << "_global = Create" << table.name << "();" << std::endl;
-	stream << "const " << table.name << " Get" << cameled << "(){ return " << lowcameled << "_global; }" << std::endl;
-	stream << "#endif" << std::endl;
-
-
+	std::string  res = templates.generate2(L"pass_table", "table", table);
+	stream << res << std::endl;
 }
+
 void generate_table(Table& table)
 {
 	my_stream stream(hlsl_path + "/tables", table.name + ".h");
@@ -1291,7 +1238,6 @@ void generate_rt(Table& rt)
 
 	std::string  res = templates.generate2(L"rt", "rt", rt);
 	stream << res << std::endl;
-	
 }
 
 void generate_pso(PSO& pso)
@@ -1904,7 +1850,9 @@ int main() {
 			});
 
 		parsed.setup();
+			parsed_doc=make_map(parsed);
 
+	parsed_map = Reflect(parsed_doc);
 		for (auto& table : parsed.tables)
 		{
 

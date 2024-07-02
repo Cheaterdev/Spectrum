@@ -354,31 +354,10 @@ struct Sampler : public have_name, have_expr
 	}
 };
 
-struct Slot : public have_options, have_name
-{
-	Layout* layout = nullptr;
-	int id;
-	table_offsets max_counts;
-	table_offsets ids;
-
-	Slot();
-
-
-	SERIALIZE()
-	{
-		SAVE_PARENT_MERGED(have_name);
-		SAVE_PARENT_MERGED(have_options);
-		ar& NVP(max_counts);
-		ar& NVP(ids);
-		ar& NVP(id);
-
-	}
-};
-
 std::string get_name_for(ValueType type);
 
 std::string get_cpp_for(Value v);
-
+class Slot;
 
 struct Layout : public inherited, have_options, have_name
 {
@@ -413,6 +392,31 @@ struct Layout : public inherited, have_options, have_name
 		ar& NP("parent", *parent_ptr);
 	}
 
+};
+
+struct Slot : public have_options, have_name
+{
+	Layout* layout = nullptr;
+	int id;
+	table_offsets max_counts;
+	table_offsets ids;
+
+	Slot();
+
+
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_name);
+		SAVE_PARENT_MERGED(have_options);
+		ar& NVP(max_counts);
+		ar& NVP(ids);
+		ar& NVP(id);
+
+		auto layout=this->layout->name;
+
+			ar& NVP(layout);
+
+	}
 };
 
 
@@ -694,6 +698,7 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 
 	bool can_compile = true;
 	bool cb_provided = false;
+
 	bool cb_raw = false;
 	void setup(Parsed* all);
 
@@ -714,6 +719,12 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 		ar& NVP(can_compile);
 		ar& NVP(cb_provided);
 		ar& NVP(cb_raw);
+
+		if(slot)
+		{
+			auto& slot = *this->slot;//->name;
+			ar& NVP(slot);
+		}
 
 	}
 };

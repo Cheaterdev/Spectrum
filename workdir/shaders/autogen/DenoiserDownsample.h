@@ -3,17 +3,22 @@
 #else
 	#error Slot 6 is already used
 #endif
+
 #include "layout/DefaultLayout.h"
 #include "tables/DenoiserDownsample.h"
+
 #ifndef CB_DEFINED
 #define CB_DEFINED
 struct CB { uint offset; };
 #endif
+
 ConstantBuffer< CB > pass_DenoiserDownsample: register( b2, space6);
- ConstantBuffer<DenoiserDownsample> CreateDenoiserDownsample()
+
+ConstantBuffer<DenoiserDownsample> CreateDenoiserDownsample()
 {
 	return ResourceDescriptorHeap[pass_DenoiserDownsample.offset];
 }
+			
 #ifndef NO_GLOBAL
 static const DenoiserDownsample denoiserDownsample_global = CreateDenoiserDownsample();
 const DenoiserDownsample GetDenoiserDownsample(){ return denoiserDownsample_global; }

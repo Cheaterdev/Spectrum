@@ -1,7 +1,7 @@
 #pragma once
 
 {%- if layout.parent is defined%}
-#include "{{layout.parent.name}}"
+#include "{{layout.parent.name}}.h"
 {% endif -%}
 
 {%- for s in layout.samplers %}

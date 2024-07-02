@@ -1,0 +1,26 @@
+{%- set slot = table.slot  -%}
+#ifndef SLOT_{{slot.id}}
+	#define SLOT_{{slot.id}}
+#else
+	#error Slot {{slot.id}} is already used
+#endif
+
+#include "layout/{{slot.layout}}.h"
+#include "tables/{{table.name}}.h"
+
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+
+ConstantBuffer< CB > pass_{{table.name}}: register( b2, space{{slot.id}});
+
+ConstantBuffer<{{table.name}}> Create{{table.name}}()
+{
+	return ResourceDescriptorHeap[pass_{{table.name}}.offset];
+}
+			
+#ifndef NO_GLOBAL
+static const {{table.name}} {{lowerize(table.name) }}_global = Create{{table.name}}();
+const {{table.name}} Get{{table.name|title}}(){ return {{lowerize(table.name)}}_global; }
+#endif
