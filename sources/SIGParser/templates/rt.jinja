@@ -3,7 +3,7 @@
 struct {{rt.name}}
 {
 {%- for e in rt.values -%}
-{%- if starts_with(e.class_no_template,"RenderTarget")%}
+{%- if e.class_no_template is startsWith('RenderTarget')%}
     {{e.template_arg}} {{e.name}}: SV_Target{{loop.index0}};
 {%- endif -%}
 {%- endfor %}

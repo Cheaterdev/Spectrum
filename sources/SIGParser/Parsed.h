@@ -223,6 +223,9 @@ public:
 
 	SERIALIZE()
 	{
+
+		//ar&NVP(container);
+
 		if constexpr (std::is_base_of_v<have_name, T>)
 		{
 			for (const auto& i : container)
@@ -774,7 +777,7 @@ layouts.merge( r.layouts);
 		ar& NVP(compute_pso);
 		ar& NVP(graphics_pso);
 		ar& NVP(raytrace_pass);
-
+		ar& NVP(raytrace_pso);
 		ar& NVP(raytrace_gen);
 
 	}

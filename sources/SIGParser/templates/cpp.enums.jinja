@@ -1,0 +1,38 @@
+export module HAL:Enums;
+
+import Core;
+
+export
+{
+	enum class Layouts: int
+	{
+		{{parsed.layouts|list| map(attribute='name') | join(',\n		')}}
+	};
+
+	enum class IndirectCommands: int
+	{
+{%- set values = create_list('values') -%}
+{%- for v in parsed.tables -%}
+	{%- set t =  parsed.tables[v] -%}
+	{%-if t.options.IndirectCommand is defined -%}
+		{%- do myappend('values', v)-%}
+	{%-endif -%}
+{%- endfor %}
+		{{get_list('values')| join(',\n		')}}
+	};
+
+	enum class PSO: int
+	{
+		{%- set a = parsed.compute_pso|list -%}
+		{%- set b = parsed.graphics_pso|list %}
+		{{ merge_lists(a,b)  | join(',\n		')}}
+	};
+
+	enum class SlotID: unsigned int
+	{
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+		{{t.name}} = "{{t.name}}"_crc32{%if not loop.last%},{%endif%}
+{%endfor -%}
+	};
+}

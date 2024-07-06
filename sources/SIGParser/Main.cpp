@@ -28,6 +28,7 @@ void iterate_files(std::filesystem::path path, std::function<void(std::filesyste
 		++dir;
 	}
 }
+jinja2::TemplateEnv global;
 Parsed parsed;
 rapidjson::Document parsed_doc;
 
@@ -51,9 +52,11 @@ rapidjson::Document make_map(  auto& p)
 class TemplatesLibrary
 {
 	std::map<std::wstring, jinja2::Template> templates;
+
+	std::map<std::string, ValuesList> user_lists;
 public:
 
-	TemplatesLibrary()
+	void init()
 	{
 		iterate_files("templates/", [this](std::filesystem::path path) {
 			std::ifstream stream;
@@ -62,7 +65,9 @@ public:
 			if (!stream.is_open())
 				return;
 
+
 			auto& tpl = templates[path.stem()];
+			tpl = jinja2::Template(&global);
 			tpl.Load(stream);
 
 
@@ -93,8 +98,7 @@ public:
 
 		ValuesMap params = {
 		   {name, Reflect(dp)},
-			{"parsed", parsed_map},
-		
+
 			{"ValueType",ValuesMap{
 				{"CB", ValueType::CB},{"SRV", ValueType::SRV},{"UAV",ValueType::UAV},{"SMP",ValueType::SMP},{"STRUCT",ValueType::STRUCT}
 					}}
@@ -137,14 +141,49 @@ public:
 			ArgInfo{ "i" }
 		);
 
+	
+	params["create_list"] = jinja2::MakeCallable(
+			[this](const std::string& b) {
+			auto& list = user_lists[b];
+			list.clear();
+			//	 a.asList().emplace_back(b);
+			return list;
+			},
+			ArgInfo{ "b"  }
+		);
+	
+	params["get_list"] = jinja2::MakeCallable(
+			[this](const std::string& b) {
+			auto& list = user_lists[b];
 
-	params["starts_with"] = jinja2::MakeCallable(
-			[](const std::string& a,const std::string& b) {
-				return a.starts_with(b);
+			return list;
+			},
+			ArgInfo{ "b"  }
+		);
+	params["myappend"] = jinja2::MakeCallable(
+			[this](const std::string& list_name,const std::string& b) {
+			auto& list = user_lists[list_name];
+	
+				list.emplace_back(b);
+			
+			return list;
 			},
 			ArgInfo{ "a"  },ArgInfo{ "b"  }
 		);
+	params["merge_lists"] = jinja2::MakeCallable(
+			[this](const GenericList& a, const GenericList& b) {
 
+			ValuesList list;
+			for(const auto& e:a)
+				list.emplace_back(e);
+
+			for(const auto& e:b)
+				list.emplace_back(e);
+
+			return list;
+			},
+			ArgInfo{ "a"  }, ArgInfo{ "b"  }
+		);
 	params["lowerize"] = jinja2::MakeCallable(
 			[](const std::string& name) {
 				
@@ -810,416 +849,27 @@ void generate_include_list(const Parsed& parsed)
 {
 	{
 		my_stream stream(cpp_path, "autogen.ixx");
-
-
-		stream << R"(
-export module HAL:Autogen;
-import <HAL.h>;
-
-import Core;
-
-import :PipelineState;
-import :SIG;
-import :RT;
-import :Layout;
-import :Slots;
-import :PSO;
-import :RTX;
-import :Enums;
-import :RootSignature;
-import :Types;
-
-)" << std::endl;
-
-		stream.push();
-		for (auto& l : parsed.layouts)
-		{
-			stream << "export import :Autogen.Layouts." << l.name << ";" << std::endl;
-		}
-
-		for (auto& t : parsed.tables)
-		{
-			if (t.slot)
-				stream << "export import :Autogen.Slots." << t.name << ";" << std::endl;
-			if (!t.find_option("shader_only"))
-				stream << "export import :Autogen.Tables." << t.name << ";" << std::endl;
-
-		}
-
-		stream << "export{" << std::endl;
-
-
-		for (auto& t : parsed.tables)
-		{
-
-			if (t.find_option("RenderTarget"))
-				stream << "#include \"rt\\" << t.name << ".h\"" << std::endl;
-		}
-		for (auto& t : parsed.rt)
-		{
-
-			stream << "#include \"rt\\" << t.name << ".h\"" << std::endl;
-		}
-
-
-		for (auto& t : parsed.compute_pso)
-		{
-
-			stream << "#include \"pso\\" << t.name << ".h\"" << std::endl;
-		}
-
-		for (auto& t : parsed.graphics_pso)
-		{
-
-			stream << "#include \"pso\\" << t.name << ".h\"" << std::endl;
-		}
-
-		for (auto& t : parsed.raytrace_pso)
-		{
-
-			stream << "#include \"rtx\\" << t.name << ".h\"" << std::endl;
-		}
-
-		stream << "std::optional<SlotID> get_slot(std::string_view slot_name);" << std::endl;
-		stream << "uint get_table_index(SlotID id);" << std::endl;
-		stream << "std::string get_slot_name(SlotID id);" << std::endl;
-
-		stream.pop();
-		stream << "}" << std::endl;
-
-		//	stream << "module: private;" << std::endl;
-
-		{
-			stream << "std::optional<SlotID> get_slot(std::string_view slot_name)" << std::endl;
-			stream << "{" << std::endl;
-
-			stream.push();
-			{
-
-				for (auto& t : parsed.tables)
-				{
-					if (!t.slot) continue;
-
-					stream << "if(slot_name == \"" << t.name << "\")" << std::endl;
-					stream << "{" << std::endl;
-					stream.push();
-					stream << "return SlotID::" << t.name << ";" << std::endl;
-					stream.pop();
-					stream << "}" << std::endl;
-
-				}
-				stream << "return std::nullopt;" << std::endl;
-
-			}
-			stream.pop();
-			stream << "}" << std::endl;
-
-
-		}
-
-		{
-			my_stream stream(cpp_path, "enums.ixx");
-			stream << R"(export module HAL:Enums;
-
-import Core;
-
-export
-{
-)" << std::endl;
-			stream.push();
-			stream << "enum class Layouts: int" << std::endl;
-
-			stream << "{" << std::endl;
-			{
-				stream.push();
-				const Layout* prev = nullptr;
-
-				for (auto& l : parsed.layouts)
-				{
-					if (prev)
-					{
-						stream << prev->name << "," << std::endl;
-
-					}
-					prev = &l;
-				}
-				if (prev)
-				{
-					stream << prev->name << std::endl;
-
-				}
-
-				stream.pop();
-			}
-
-			stream << "};" << std::endl;
-
-
-			stream << "enum class IndirectCommands: int" << std::endl;
-
-			stream << "{" << std::endl;
-			{
-				stream.push();
-
-				const Table* prev = nullptr;
-				for (auto& t : parsed.tables)
-				{
-					if (t.find_option("IndirectCommand"))
-					{
-
-						if (prev)
-						{
-							stream << prev->name << "," << std::endl;
-
-						}
-						prev = &t;
-
-					}
-
-				}
-				if (prev)
-				{
-					stream << prev->name << std::endl;
-
-				}
-
-				stream.pop();
-			}
-
-			stream << "};" << std::endl;
-
-
-
-			stream << "enum class PSO: int" << std::endl;
-
-			stream << "{" << std::endl;
-			{
-				stream.push();
-				const PSO* prev = nullptr;
-
-				for (auto& l : parsed.compute_pso)
-				{
-					if (prev)
-					{
-						stream << prev->name << "," << std::endl;
-
-					}
-					prev = &l;
-				}
-				for (auto& l : parsed.graphics_pso)
-				{
-					if (prev)
-					{
-						stream << prev->name << "," << std::endl;
-
-					}
-					prev = &l;
-				}
-				if (prev)
-				{
-					stream << prev->name << std::endl;
-
-				}
-				stream.pop();
-			}
-
-			stream << "};" << std::endl;
-
-
-			stream << "enum class SlotID: unsigned int" << std::endl;
-
-			stream << "{" << std::endl;
-			{
-				stream.push();
-				const Table* prev = nullptr;
-
-				for (auto& t : parsed.tables)
-				{
-
-					if (prev)
-					{
-						stream << prev->name << " = \"" << prev->name << "\"_crc32 ," << std::endl;
-
-					}
-					prev = &t;
-				}
-				if (prev)
-				{
-					stream << prev->name << " = \"" << prev->name << "\"_crc32" << std::endl;
-
-				}
-
-				stream.pop();
-			}
-
-			stream << "};" << std::endl;
-
-			stream.pop();
-			stream << "}" << std::endl;
-		}
-
-
-
-		{
-			stream << "uint get_table_index(SlotID id)" << std::endl;
-
-			stream << "{" << std::endl;
-
-			stream.push();
-			{
-
-				for (auto& t : parsed.tables)
-				{
-					if (!t.slot) continue;
-
-					stream << "if(id == SlotID::" << t.name << ")" << std::endl;
-					stream << "{" << std::endl;
-					stream.push();
-					stream << "return Slots::" << t.name << "::Slot::ID;" << std::endl;
-					stream.pop();
-					stream << "}" << std::endl;
-
-				}
-				stream << "return -1;" << std::endl;
-
-			}
-			stream.pop();
-			stream << "}" << std::endl;
-
-
-		}
-		{
-			stream << "std::string get_slot_name(SlotID id)" << std::endl;
-
-			stream << "{" << std::endl;
-
-			stream.push();
-			{
-
-				for (auto& t : parsed.tables)
-				{
-					if (!t.slot) continue;
-
-					stream << "if(id == SlotID::" << t.name << ")" << std::endl;
-					stream << "{" << std::endl;
-					stream.push();
-					stream << "return \"" << t.name << "\";" << std::endl;
-					stream.pop();
-					stream << "}" << std::endl;
-
-				}
-				stream << "return \"Unknown\";" << std::endl;
-
-			}
-			stream.pop();
-			stream << "}" << std::endl;
-
-
-		}
+		have_name n;
+		n.name="AUTOGEN";
+		std::string  res = templates.generate2(L"cpp.autogen", "AUTOGEN", n);
+		stream << res << std::endl;
 	}
-
 
 	{
-		my_stream stream(cpp_path, "pso.cpp");
-		stream << R"(module HAL;
-import Core;
-import HAL;
-import ppl;
-using namespace concurrency;
-)"
-<< std::endl;
-
-
-		stream << "void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>& signatures)" << std::endl;
-		stream << "{" << std::endl;
-		{
-			stream.push();
-			for (auto& l : parsed.layouts)
-			{
-				stream << "signatures[Layouts::" << l.name << "] = AutoGenSignatureDesc<" << l.name << ">().create_signature(device, Layouts::" << l.name << ");" << std::endl;
-			}
-			stream.pop();
-		}
-		stream << "}" << std::endl;
-
-
-		stream << "void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)" << std::endl;
-		stream << "{" << std::endl;
-		{
-			stream.push();
-			for (auto& t : parsed.tables)
-			{
-				if (t.find_option("IndirectCommand"))
-				{
-
-					if (t.find_option("shader_only"))
-						stream << "commands[IndirectCommands::" << t.name << "] = AutoGenIndirectCommand<" << t.name << ">(device).create_command();" << std::endl;
-					else
-						stream << "commands[IndirectCommands::" << t.name << "] = AutoGenIndirectCommand<Table::" << t.name << ">(device).create_command();" << std::endl;
-
-				}
-
-			}
-			stream.pop();
-		}
-		stream << "}" << std::endl;
-
-
-
-
-		//stream << "static std::array<HAL::ComputePipelineState::ptr, static_cast<int>(PSO::TOTAL)> pso;" << std::endl;
-		stream << "void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)" << std::endl;
-
-		stream << "{" << std::endl;
-		{
-			stream.push();
-			stream << " std::vector<task<void>> tasks;" << std::endl;
-			for (auto& l : parsed.compute_pso)
-			{
-
-				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
-
-				stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(device, pso[PSO::" << l.name << "]));" << std::endl;
-
-			}
-			for (auto& l : parsed.graphics_pso)
-			{
-				//stream << "pso[PSO::" << l.name << "] =  std::make_shared<PSOS::" << l.name << ">();" << std::endl;
-				if (!l.find_option("Base"))
-					stream << "tasks.emplace_back(PSOBase::create<PSOS::" << l.name << ">(device,pso[PSO::" << l.name << "]));" << std::endl;
-			}
-
-
-			stream << " when_all(begin(tasks), end(tasks)).wait();" << std::endl;
-			stream.pop();
-		}
-
-
-
-
-		stream << "}" << std::endl;
-
-		for (auto& pso : parsed.compute_pso)
-			for (auto& d : pso.defines)
-			{
-				stream << "decltype(PSOS::" << pso.name << "::" << d.name << ") PSOS::" << pso.name << "::" << d.name << ";" << std::endl;
-
-			}
-		for (auto& pso : parsed.graphics_pso)
-			for (auto& d : pso.defines)
-			{
-				stream << "decltype(PSOS::" << pso.name << "::" << d.name << ") PSOS::" << pso.name << "::" << d.name << ";" << std::endl;
-
-			}
-		/*
-				stream << "HAL::ComputePipelineState::ptr get_PSO(PSO id)" << std::endl;
-				stream << "{" << std::endl;
-				stream << "\treturn pso[static_cast<int>(id)];" << std::endl;
-				stream << "}" << std::endl;
-				*/
-
+		my_stream stream(cpp_path, "enums.ixx");
+		have_name n;
+		n.name="AUTOGEN";
+		std::string  res = templates.generate2(L"cpp.enums", "AUTOGEN", n);
+		stream << res << std::endl;
 	}
-
+	
+	{
+		my_stream stream(cpp_path, "pso.cpp");
+		have_name n;
+		n.name="AUTOGEN";
+		std::string  res = templates.generate2(L"cpp.pso", "AUTOGEN", n);
+		stream << res << std::endl;
+	}
 }
 
 
@@ -1853,6 +1503,10 @@ int main() {
 			parsed_doc=make_map(parsed);
 
 	parsed_map = Reflect(parsed_doc);
+	global.AddGlobal("parsed", parsed_map);
+	global.GetSettings().extensions.Do = true;
+	templates.init();
+
 		for (auto& table : parsed.tables)
 		{
 

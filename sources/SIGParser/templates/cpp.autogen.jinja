@@ -1,0 +1,96 @@
+export module HAL:Autogen;
+import <HAL.h>;
+
+import Core;
+
+import :PipelineState;
+import :SIG;
+import :RT;
+import :Layout;
+import :Slots;
+import :PSO;
+import :RTX;
+import :Enums;
+import :RootSignature;
+import :Types;
+
+{% for l in parsed.layouts -%}
+export import :Autogen.Layouts.{{l.name}};
+{% endfor -%}
+
+{%- for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{%- if t.slot is defined -%}
+export import :Autogen.Slots.{{t.name}};
+{%endif%}{% if t.options.shader_only is undefined -%}
+export import :Autogen.Tables.{{t.name}};
+{%endif-%}
+{%endfor -%}
+
+export	{
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{%if t.options["RenderTarget"] is defined -%}
+	#include "rt\{{t.name}}.h"
+{%endif -%}
+{% endfor -%}
+
+{%- for v in parsed.rt -%}
+{%- set t =  parsed.rt[v] -%}
+	#include "rt\{{t.name}}.h"
+{% endfor -%}
+
+
+{%- for v in parsed.compute_pso -%}
+{%- set t =  parsed.compute_pso[v] -%}
+	#include "pso\{{t.name}}.h"
+{% endfor -%}
+
+{%- for v in parsed.graphics_pso -%}
+{%- set t =  parsed.graphics_pso[v] -%}
+	#include "pso\{{t.name}}.h"
+{% endfor -%}
+
+
+{%- for v in parsed.raytrace_pso -%}
+{%- set t =  parsed.raytrace_pso[v] -%}
+	#include "rtx\{{t.name}}.h"
+{% endfor -%}
+
+	std::optional<SlotID> get_slot(std::string_view slot_name);
+	uint get_table_index(SlotID id);
+	std::string get_slot_name(SlotID id);
+}
+
+std::optional<SlotID> get_slot(std::string_view slot_name)
+{		
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{% if t.slot is defined -%}
+	if(slot_name == "{{t.name}}") return SlotID::{{t.name}};
+{% endif -%}
+{% endfor -%}
+	return std::nullopt;
+}
+
+uint get_table_index(SlotID id)
+{		
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{% if t.slot is defined -%}
+	if(id == SlotID::{{t.name}}) return Slots::{{t.name}}::Slot::ID;
+{% endif -%}
+{% endfor -%}
+	return -1;
+}
+
+std::string get_slot_name(SlotID id)
+{		
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{% if t.slot is defined -%}
+	if(id == SlotID::{{t.name}}) return "{{t.name}}";
+{% endif -%}
+{% endfor -%}
+	return "UNKNOWN";
+}
