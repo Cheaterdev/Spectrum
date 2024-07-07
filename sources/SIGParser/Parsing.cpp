@@ -291,6 +291,9 @@ public:
 			elem.template_arg+=' ';
 		elem.template_arg += ctx->children[0]->getText();
 
+
+		auto& options = get_elem<have_options>();
+		elem.detect_type(&options);
 	}
 
 	virtual void enterValue_id(SIGParser::Value_idContext* ctx) override {

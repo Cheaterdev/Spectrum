@@ -6,8 +6,10 @@ import :SIG;
 import :Types;
 import :Enums;
 import :Slots;
-export namespace Slots {
-	struct MipMapping:public DataHolder<MipMapping, SlotID::MipMapping,Table::MipMapping,DefaultLayout::Instance0>
+
+export namespace Slots 
+{
+	struct MipMapping :public DataHolder<MipMapping, SlotID::MipMapping, Table::MipMapping, DefaultLayout::Instance0>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		MipMapping() = default;

@@ -1,0 +1,18 @@
+{%-set slot = table.slot-%}
+export module HAL:Autogen.Slots.{{table.name}};
+import Core;
+import :Autogen.Tables.{{table.name}};
+import :Autogen.Layouts.{{slot.layout}};
+import :SIG;
+import :Types;
+import :Enums;
+import :Slots;
+
+export namespace Slots 
+{
+	struct {{table.name}} :public DataHolder<{{table.name}}, SlotID::{{table.name}}, Table::{{table.name}}, {{slot.layout}}::{{slot.name}}>
+	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
+		{{table.name}}() = default;
+	};
+}

@@ -1,6 +1,7 @@
 #pragma once
-namespace RT 
-{
+
+namespace RT
+{	
 	#pragma pack(push, 1)
 	struct _GBufferDownsampleRT
 	{
@@ -17,6 +18,7 @@ namespace RT
 		}
 	};
 	#pragma pack(pop)
+
 	struct GBufferDownsampleRT:public RTHolder<_GBufferDownsampleRT>
 	{
 		GBufferDownsampleRT() = default;

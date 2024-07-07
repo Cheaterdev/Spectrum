@@ -1,0 +1,74 @@
+#pragma once
+
+
+{%- macro compile_func(type) -%}
+{%- for v in (table.values|unique|selectattr('value_type','==', type)) %}
+			compiler.compile({{v.name}});
+{%- endfor -%}
+{%- endmacro -%}
+
+{% for v in table.used_tables -%}
+{%- set t =  parsed.tables[v] -%}
+{%if t.options["shader_only"] is undefined -%}
+	#include "{{t.name}}.h"
+{%endif -%}
+{% endfor -%}
+
+namespace RT
+{	
+	#pragma pack(push, 1)
+	struct _{{table.name}}
+	{
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
+
+{%- for v in table.values |list -%}
+{%-if v.options.dynamic is undefined  -%}
+{%-if v.value_type == ValueType.SRV  %}
+		HLSL::{{v.type}} {{v.name}}{{v.array}};
+{%-endif-%}
+{%-endif-%}
+{%-endfor-%}
+
+{%- for v in table.values |list -%}
+{%-if v.options.dynamic is undefined  -%}
+{%-if v.value_type != ValueType.STRUCT  %}
+		HLSL::{{v.type}}{{v.cpp_array}} Get{{v.name|title}}() { return {{v.name}}; }
+{%-endif-%}
+{%-endif-%}
+{%-endfor-%}
+
+{%- for v in table.values |list -%}
+{%-if v.value_type == ValueType.STRUCT  %}
+	{{v.type}}{{v.cpp_array}} Get{{v.name|title}}() { return {{v.name}}; }
+{%-endif-%}
+{%-endfor-%}
+
+		template<class Compiler>
+		void compile(Compiler& compiler) const
+		{
+			{{-compile_func(ValueType.CB)}}
+			{{-compile_func(ValueType.SRV)}}
+			{{-compile_func(ValueType.UAV)}}
+			{{-compile_func(ValueType.SMP)}}
+			{{-compile_func(ValueType.STRUCT)}}
+		}
+
+{%-if table.options.serialize is defined  -%}
+	private:
+		SERIALIZE()
+		{
+{%- for v in table.values |list -%}
+{%if not((v.value_type != ValueType.CB) and (v.value_type != ValueType.STRUCT)) %}
+			ar& NVP({{v.name}});
+{%endif %}
+{%endfor%}
+		}
+{%endif%}
+	};
+	#pragma pack(pop)
+
+	struct {{table.name}}:public RTHolder<_{{table.name}}>
+	{
+		{{table.name}}() = default;
+	};
+}

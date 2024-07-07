@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 enum   ValueType
 {
@@ -252,10 +252,41 @@ struct have_array
 	int array_count = 1;
 
 
+	std::string generate_array()
+	{
+
+		if (as_array) {
+			if (array_count) {
+				return std::format("[{}]", array_count);
+			}
+			else {
+				return "";
+			}
+		}
+		return "";
+	}
+	
+
+std::string generate_cpp_array()
+{
+	if (as_array && array_count == 0)
+		return "&";
+	if (as_array && array_count > 0)
+		return "*";
+	return "&";
+}
+
+
 	SERIALIZE()
 	{
 		ar& NVP(as_array);
 		ar& NVP(array_count);
+
+		std::string array = generate_array();
+		ar& NVP(array);
+
+			std::string cpp_array = generate_cpp_array();
+		ar& NVP(cpp_array);
 	}
 
 

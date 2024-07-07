@@ -6,8 +6,10 @@ import :SIG;
 import :Types;
 import :Enums;
 import :Slots;
-export namespace Slots {
-	struct DenoiserShadow_Filter:public DataHolder<DenoiserShadow_Filter, SlotID::DenoiserShadow_Filter,Table::DenoiserShadow_Filter,DefaultLayout::Instance0>
+
+export namespace Slots 
+{
+	struct DenoiserShadow_Filter :public DataHolder<DenoiserShadow_Filter, SlotID::DenoiserShadow_Filter, Table::DenoiserShadow_Filter, DefaultLayout::Instance0>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		DenoiserShadow_Filter() = default;

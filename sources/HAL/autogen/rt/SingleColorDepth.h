@@ -1,6 +1,7 @@
 #pragma once
-namespace RT 
-{
+
+namespace RT
+{	
 	#pragma pack(push, 1)
 	struct _SingleColorDepth
 	{
@@ -17,6 +18,7 @@ namespace RT
 		}
 	};
 	#pragma pack(pop)
+
 	struct SingleColorDepth:public RTHolder<_SingleColorDepth>
 	{
 		SingleColorDepth() = default;

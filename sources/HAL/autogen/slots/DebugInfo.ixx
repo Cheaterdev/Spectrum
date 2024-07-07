@@ -6,8 +6,10 @@ import :SIG;
 import :Types;
 import :Enums;
 import :Slots;
-export namespace Slots {
-	struct DebugInfo:public DataHolder<DebugInfo, SlotID::DebugInfo,Table::DebugInfo,FrameLayout::DebugInfo>
+
+export namespace Slots 
+{
+	struct DebugInfo :public DataHolder<DebugInfo, SlotID::DebugInfo, Table::DebugInfo, FrameLayout::DebugInfo>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		DebugInfo() = default;

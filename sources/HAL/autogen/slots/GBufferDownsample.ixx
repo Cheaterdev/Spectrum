@@ -6,8 +6,10 @@ import :SIG;
 import :Types;
 import :Enums;
 import :Slots;
-export namespace Slots {
-	struct GBufferDownsample:public DataHolder<GBufferDownsample, SlotID::GBufferDownsample,Table::GBufferDownsample,DefaultLayout::Instance2>
+
+export namespace Slots 
+{
+	struct GBufferDownsample :public DataHolder<GBufferDownsample, SlotID::GBufferDownsample, Table::GBufferDownsample, DefaultLayout::Instance2>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		GBufferDownsample() = default;

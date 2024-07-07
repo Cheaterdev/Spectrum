@@ -1,6 +1,7 @@
 #pragma once
-namespace RT 
-{
+
+namespace RT
+{	
 	#pragma pack(push, 1)
 	struct _NoOutput
 	{
@@ -11,6 +12,7 @@ namespace RT
 		}
 	};
 	#pragma pack(pop)
+
 	struct NoOutput:public RTHolder<_NoOutput>
 	{
 		NoOutput() = default;

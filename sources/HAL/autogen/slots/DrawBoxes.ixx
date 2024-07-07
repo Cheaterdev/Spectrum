@@ -6,8 +6,10 @@ import :SIG;
 import :Types;
 import :Enums;
 import :Slots;
-export namespace Slots {
-	struct DrawBoxes:public DataHolder<DrawBoxes, SlotID::DrawBoxes,Table::DrawBoxes,DefaultLayout::Instance1>
+
+export namespace Slots 
+{
+	struct DrawBoxes :public DataHolder<DrawBoxes, SlotID::DrawBoxes, Table::DrawBoxes, DefaultLayout::Instance1>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		DrawBoxes() = default;

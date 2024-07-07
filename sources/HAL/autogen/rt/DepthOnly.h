@@ -1,6 +1,7 @@
 #pragma once
-namespace RT 
-{
+
+namespace RT
+{	
 	#pragma pack(push, 1)
 	struct _DepthOnly
 	{
@@ -14,6 +15,7 @@ namespace RT
 		}
 	};
 	#pragma pack(pop)
+
 	struct DepthOnly:public RTHolder<_DepthOnly>
 	{
 		DepthOnly() = default;

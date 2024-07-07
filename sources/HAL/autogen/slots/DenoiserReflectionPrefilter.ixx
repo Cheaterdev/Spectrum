@@ -6,8 +6,10 @@ import :SIG;
 import :Types;
 import :Enums;
 import :Slots;
-export namespace Slots {
-	struct DenoiserReflectionPrefilter:public DataHolder<DenoiserReflectionPrefilter, SlotID::DenoiserReflectionPrefilter,Table::DenoiserReflectionPrefilter,DefaultLayout::Instance1>
+
+export namespace Slots 
+{
+	struct DenoiserReflectionPrefilter :public DataHolder<DenoiserReflectionPrefilter, SlotID::DenoiserReflectionPrefilter, Table::DenoiserReflectionPrefilter, DefaultLayout::Instance1>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		DenoiserReflectionPrefilter() = default;

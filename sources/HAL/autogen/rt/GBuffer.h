@@ -1,6 +1,7 @@
 #pragma once
-namespace RT 
-{
+
+namespace RT
+{	
 	#pragma pack(push, 1)
 	struct _GBuffer
 	{
@@ -26,6 +27,7 @@ namespace RT
 		}
 	};
 	#pragma pack(pop)
+
 	struct GBuffer:public RTHolder<_GBuffer>
 	{
 		GBuffer() = default;

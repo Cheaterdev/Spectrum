@@ -6,8 +6,10 @@ import :SIG;
 import :Types;
 import :Enums;
 import :Slots;
-export namespace Slots {
-	struct MaterialInfo:public DataHolder<MaterialInfo, SlotID::MaterialInfo,Table::MaterialInfo,DefaultLayout::MaterialData>
+
+export namespace Slots 
+{
+	struct MaterialInfo :public DataHolder<MaterialInfo, SlotID::MaterialInfo, Table::MaterialInfo, DefaultLayout::MaterialData>
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Slot;
 		MaterialInfo() = default;
