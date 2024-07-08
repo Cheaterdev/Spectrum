@@ -17,7 +17,6 @@ struct FrameInfo
 	Texture2D<float4> GetBestFitNormals() { return ResourceDescriptorHeap[bestFitNormals]; }
 	Texture3D<float4> GetBrdf() { return ResourceDescriptorHeap[brdf]; }
 	TextureCube<float4> GetSky() { return ResourceDescriptorHeap[sky]; }
-	
 		float2 IntegrateBRDF(float Roughness, float Metallic, float NoV)
 		{
 			return GetBrdf().SampleLevel(linearClampSampler, float3(Roughness, Metallic, 0.5 + 0.5 * NoV), 0);

@@ -6,7 +6,6 @@ struct VoxelTilingParams
 	uint tiles; // StructuredBuffer<int3>
 	uint4 GetVoxels_per_tile() { return voxels_per_tile; }
 	StructuredBuffer<int3> GetTiles() { return ResourceDescriptorHeap[tiles]; }
-	
 		
 uint3 get_voxel_pos(uint3 dispatchID)
 {

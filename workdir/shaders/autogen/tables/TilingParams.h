@@ -4,7 +4,6 @@ struct TilingParams
 {
 	uint tiles; // StructuredBuffer<uint2>
 	StructuredBuffer<uint2> GetTiles() { return ResourceDescriptorHeap[tiles]; }
-	
 		
 uint2 get_pixel_pos(uint3 dispatchID)
 {

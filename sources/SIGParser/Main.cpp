@@ -194,7 +194,28 @@ public:
 			ArgInfo{ "name" }
 		);
 
+	params["camel"] = jinja2::MakeCallable(
+			[](const std::string& name) {
+				
+			std::string lowcameled = name;
+	lowcameled[0] = std::toupper(lowcameled[0]);
+					return lowcameled;
+			},
+			ArgInfo{ "name" }
+		);
+	
+	
+	params["replace_start"] = jinja2::MakeCallable(
+			[](const std::string& a, const std::string& b, const std::string& c) {
+			std::string res = a;
 
+			if (res.starts_with(b))
+				res.replace(0, b.size(), c);
+
+			return res;
+			},
+			ArgInfo{ "a" },ArgInfo{ "b" },ArgInfo{ "c" }
+		);
 		return generate(filename, params);
 	}
 };
@@ -235,124 +256,9 @@ void generate_pass_table(Table& table)
 void generate_table(Table& table)
 {
 	my_stream stream(hlsl_path + "/tables", table.name + ".h");
-	stream << "#pragma once" << std::endl;
-	stream << "#include \"sig_hlsl.hlsl\"" << std::endl;
-	for (auto& v : table.used_tables)
-	{
-		auto t = parsed.find_table(v);
+	std::string  res = templates.generate2(L"hlsl.table", "table", table);
+	stream << res << std::endl;
 
-		if (t->can_compile)
-			stream << "#include \"" << v << ".h\"" << std::endl;
-	}
-
-	// declaration
-	auto declare_func = [&](ValueType type) {
-		//	if (table.counts[type] == 0) return;
-
-		for (auto& v : table.values)
-		{
-			if (v.value_type != type) continue;
-			//	if (v.bindless) continue;
-
-
-			if (!v.pointer && (v.value_type == ValueType::CB || v.value_type == ValueType::STRUCT))
-				stream << v.get_type() << " " << v.name << generate_array(v) << "; // " << v.get_type() << std::endl;
-			else
-				stream << "uint" << " " << v.name << (v.bindless ? "" : generate_array(v)) << "; // " << v.get_type() << std::endl;
-			//		stream << v.get_type()<<" " << v.name << ';' << std::endl;
-		}
-		};
-
-	//if (!table.cb_provided) declare_func(ValueType::CB);
-	//declare_func(ValueType::SRV);
-	//declare_func(ValueType::UAV);
-	//declare_func(ValueType::SMP);
-
-
-
-
-	// result struct
-	stream << "struct " << table.name << std::endl;
-
-	stream << "{" << std::endl;
-
-	{
-		stream.push();
-		//	if (table.counts[ValueType::CB] != 0) stream << table.name << "_cb cb;" << std::endl;
-		//	if (table.counts[ValueType::SRV] != 0) stream << table.name << "_srv srv;" << std::endl;
-		//	if (table.counts[ValueType::UAV] != 0) stream << table.name << "_uav uav;" << std::endl;
-		//	if (table.counts[ValueType::SMP] != 0)  stream << table.name << "_smp smp;" << std::endl;
-
-		declare_func(ValueType::CB);
-		declare_func(ValueType::SRV);
-		declare_func(ValueType::UAV);
-		declare_func(ValueType::SMP);
-		declare_func(ValueType::STRUCT);
-
-		for (auto& v : table.values)
-		{
-			if (v.value_type != ValueType::CB && v.value_type != ValueType::STRUCT) continue;
-			std::string cameled = v.name;
-			cameled[0] = std::toupper(cameled[0]);
-
-
-			auto t = v.get_type();
-			if (v.pointer)  t = "uint";
-			if (v.as_array)
-			{
-				stream << t << " Get" << cameled << "(int i) { " << "return " << v.name << "[i]; }" << std::endl;
-			}
-			else
-			{
-				stream << t << " Get" << cameled << "() { " << "return " << v.name << "; }" << std::endl;
-
-			}
-		}
-
-
-		for (auto& v : table.values)
-		{
-			if (v.value_type == ValueType::STRUCT) continue;
-			if (v.value_type == ValueType::CB) continue;
-			std::string cameled = v.name;
-			cameled[0] = std::toupper(cameled[0]);
-
-
-			std::string type = v.get_type();
-
-			if (type.starts_with("DepthStencil"))
-				type.replace(0, strlen("DepthStencil"), "Texture2D");
-			if (type.starts_with("RenderTarget"))
-				type.replace(0, strlen("RenderTarget"), "Texture2D");
-
-
-			if (v.as_array)
-			{
-				if (v.bindless)
-				{
-					stream << type << " Get" << cameled << "(int i) { " << std::endl;
-					stream << "StructuredBuffer<uint> indirection = ResourceDescriptorHeap[" << v.name << "]; " << std::endl;
-					stream << "uint id = indirection.Load(i);" << std::endl;
-					stream << "return ResourceDescriptorHeap[id]; }" << std::endl;
-				}
-				else
-					stream << type << " Get" << cameled << "(int i) { " << "return ResourceDescriptorHeap[" << v.name << "[i]]; }" << std::endl;
-			}
-			else
-			{
-				stream << type << " Get" << cameled << "() { " << "return ResourceDescriptorHeap[" << v.name << "]; }" << std::endl;
-
-			}
-		}
-
-
-	}
-
-
-	if (!table.hlsl.empty())
-		stream << table.hlsl << std::endl;
-	stream.pop();
-	stream << "};" << std::endl;
 
 	// passes
 	if (table.slot)

@@ -1,0 +1,51 @@
+#pragma once
+#include "sig_hlsl.hlsl"
+{%- for v in table.used_tables -%}
+{%- set t =  parsed.tables[v] -%}
+{%-if t.can_compile %}
+#include "{{t.name}}.h"
+{%-endif -%}
+{%- endfor -%}
+
+
+{%- macro declare_func(type) -%}
+{%- for v in (table.values|unique|selectattr('value_type','==', type)) -%}
+	{%- if (not v.pointer and (v.value_type == ValueType.CB or v.value_type == ValueType.STRUCT)) %}
+	{{v.type}} {{v.name}}{{v.array}}; // {{v.type}}
+	{%-else %}
+	uint {{v.name}}{{v.array if not v.bindless }}; // {{v.type}}
+	{%-endif -%}
+{%- endfor -%}
+{%- endmacro -%}
+
+struct {{table.name}}
+{
+	{{-declare_func(ValueType.CB)}}
+	{{-declare_func(ValueType.SRV)}}
+	{{-declare_func(ValueType.UAV)}}
+	{{-declare_func(ValueType.SMP)}}
+	{{-declare_func(ValueType.STRUCT)}}
+
+{%- for v in (table.values|unique|list) -%}
+{%- if v.value_type == ValueType.CB or v.value_type == ValueType.STRUCT %}
+	{{v.type if not v.pointer else "uint"}} Get{{v.name|camel}}({{"int i" if v.as_array}}) { return {{v.name}}{{"[i]" if v.as_array}}; }
+{%-endif-%}
+{%-endfor-%}
+
+{%- for v in (table.values|unique|list) -%}
+{%- if v.value_type != ValueType.CB and v.value_type != ValueType.STRUCT -%}
+{%- set type = v.type | replace_start("RenderTarget", "Texture2D") | replace_start("DepthStencil", "Texture2D")-%}
+{%if v.as_array and v.bindless %}
+	{{type}} Get{{v.name|camel}}(int i) 
+	{
+		StructuredBuffer<uint> indirection = ResourceDescriptorHeap[{{v.name}}]; 
+		uint id = indirection.Load(i);
+		return ResourceDescriptorHeap[id]; 
+	}
+{%else%}
+	{{type}} Get{{v.name|camel}}({{"int i" if v.as_array}}) { return ResourceDescriptorHeap[{{v.name}}{{"[i]" if v.as_array}}]; }
+{%-endif-%}
+{%-endif-%}
+{%-endfor%}
+{{-table.hlsl}}
+};
