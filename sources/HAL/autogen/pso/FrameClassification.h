@@ -1,30 +1,36 @@
 #pragma once
+
 namespace PSOS
 {
 	struct FrameClassification: public PSOBase
 	{
 		struct Keys {
-			
 			GEN_DEF_COMP(Keys);
-			private:
+		private:
 			SERIALIZE()
 			{
 			}
-		 };
+		};
+
 		GEN_COMPUTE_PSO(FrameClassification)
-		
+
+
 		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
 		{
-			
+
+
 			SimplePSO mpso("FrameClassification");
 			if(f) f(mpso,key);
+
 			mpso.root_signature = Layouts::DefaultLayout;
+
 			mpso.compute.file_name = "shaders/FrameClassification.hlsl";
 			mpso.compute.entry_point = "CS";
 			mpso.compute.flags = HAL::ShaderOptions::None;
 			
 			return mpso;
 		}
+
 		private:
 		SERIALIZE()
 		{

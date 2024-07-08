@@ -303,7 +303,10 @@ public:
 
 	virtual void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override {
 		auto& elem = get_elem<have_type>();
+				auto& options = get_elem<have_options>();
+
 		elem.class_no_template= ctx->children[0]->getText();
+		elem.detect_type(&options);
 	}
 
 	virtual void enterArray(SIGParser::ArrayContext* ctx) override {

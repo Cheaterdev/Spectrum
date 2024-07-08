@@ -633,6 +633,9 @@ struct ComputePSO : public PSO
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(PSO);
+
+		bool compute = true;
+		ar& NVP(compute);
 	}
 };
 
@@ -648,7 +651,8 @@ struct GraphicsPSO : public PSO, public param_holder
 		SAVE_PARENT_MERGED(param_holder);
 		ar& NVP(rtv);
 		ar& NVP(blend);
-
+		bool graphics = true;
+		ar& NVP(graphics);
 	}
 };
 

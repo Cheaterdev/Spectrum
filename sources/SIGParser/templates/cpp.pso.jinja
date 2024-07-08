@@ -1,56 +1,110 @@
-module HAL;
-import Core;
-import HAL;
-import ppl;
-using namespace concurrency;
+#pragma once
 
-void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>& signatures)
+namespace PSOS
 {
-{% for l in parsed.layouts -%}
-	signatures[Layouts::{{l.name}}] = AutoGenSignatureDesc<{{l.name}}>().create_signature(device, Layouts::{{l.name}});
-{% endfor -%}
+	struct {{pso.name}}: public PSOBase
+	{
+		struct Keys {
+{%- for v in (pso.defines|list) -%}
+{%- set d = pso.defines[v]-%}
+{%- set values = d.values |unique( attribute = 'expr')|map( attribute = 'expr')| list%}
+			KeyValue<
+			{%-if d.options.type is defined-%}Underlying<{{"HAL::" if d.options["type"].value_atom.expr=="Format"}}{{d.options["type"].value_atom.expr}}>{%-else-%}int{%-endif-%}
+			{{-(", NonNullable, " + values|join(', ')) if values|length > 0  else ", Nullable"}}> {{d.name}};
+{%-endfor%}
+			GEN_DEF_COMP(Keys);
+		private:
+			SERIALIZE()
+			{
+{%- for d in (pso.defines|list) %}
+				ar&NVP({{d.name}});
+{%-endfor%}
+			}
+		};
+
+		{{"GEN_COMPUTE_PSO" if pso.compute else "GEN_GRAPHICS_PSO"}}({{pso.name}}{{", " if pso.defines}}{{pso.defines|list|join(attribute='name', ', ')}})
+{% for v in (pso.defines|list) %}
+{%- set d = pso.defines[v]-%}
+		GEN_KEY({{d.name}}, {{ "true" if d.options.indirect is undefined else "false"}});
+{%endfor%}
+
+		SimplePSO init_pso(Keys & key, std::function<void(SimplePSO&, Keys&)> f)
+		{
+{% for v in (pso.defines|list) -%}
+{%- set d = pso.defines[v]-%}
+			static const ShaderDefine<&Keys::{{d.name}}, 
+			{{- "&SimpleComputePSO::compute" if d.options.CS is defined -}}
+			{{- "&SimpleGraphicsPSO::pixel" if d.options.PS is defined -}}
+			{{- "&SimpleGraphicsPSO::vertex" if d.options.VS is defined -}}
+			{{- "&SimpleGraphicsPSO::geometry" if d.options.GS is defined -}}
+			{{- "&SimpleGraphicsPSO::domain" if d.options.FS is defined -}}
+			{{- "&SimpleGraphicsPSO::hull" if d.options.HS is defined -}}
+			{{- "&SimpleGraphicsPSO::mesh" if d.options.MS is defined -}}
+			{{- "&SimpleGraphicsPSO::amplification" if d.options.AS is defined -}}
+> {{d.name}} = "{{d.name if d.options.rename is undefined else d.options.rename.value_atom.expr -}}";
+{% endfor%}
+
+			SimplePSO mpso("{{pso.name}}");
+			if(f) f(mpso,key);
+
+			mpso.root_signature = Layouts::{{pso.root_sig.name}};
+{% for v in (pso.shaders|list) %}
+{%- set shader = pso.shaders[v]-%}
+{%-if shader.options.Erase is defined%}
+			mpso.{{shader.name}}.file_name = "";
+			mpso.{{shader.name}}.entry_point = "";
+			mpso.{{shader.name}}.flags = HAL::ShaderOptions::None;
+{%-else%}
+			mpso.{{shader.name}}.file_name = "shaders/{{shader.path}}.hlsl";
+			mpso.{{shader.name}}.entry_point = "{{shader.options['EntryPoint'].value_atom.expr}}";
+			mpso.{{shader.name}}.flags = HAL::ShaderOptions::None;
+			{%if shader.options.Enable16bits is defined%}
+			mpso.{{shader.name}}.flags |=HAL::ShaderOptions::FP16;
+			{%endif%}
+{%-endif-%}
+{%-endfor-%}				
+
+{% for v in (pso.defines|list) %}
+{%- set d = pso.defines[v]-%}
+			{{d.name}}.Apply(mpso, key);
+{%endfor%}
+
+{%-if pso.graphics-%}
+{%- set values = create_list('values') -%}
+{%- for e in (pso.rtv.values|list) -%}
+{%- if pso.defines[e.expr] is defined-%}
+		{%- do myappend('values', e.expr+".get_value(mpso, key)")-%}
+{%-else-%}
+		{%- do myappend('values', "HAL::Format::" + e.expr)-%}
+{%-endif-%}
+{%-endfor%}
+			mpso.rtv_formats = { {{get_list('values')| join(', ')}} };
+
+{%- set blends = create_list('blends') -%}
+{%- for e in (pso.blend.values|list) -%}
+		{%- do myappend('blends', "HAL::Blends::" + e.expr)-%}
+{%-endfor%}	
+			mpso.blend = { {{get_list('blends')| join(', ')}} };
+
+{% for v in (pso.params) %}
+{%- set e = pso.params[v]-%}
+			mpso.{{e.type}} = 
+	{{- "HAL::Format::" if e.type == "ds" -}}
+	{{- "HAL::CullMode::" if e.type == "cull" -}}
+	{{- "HAL::ComparisonFunc::" if e.type == "depth_func" -}}
+	{{- "HAL::PrimitiveTopologyType::" if e.type == "topology" -}}
+	{{- "HAL::ComparisonFunc::" if e.type == "stencil_func" -}}
+	{{- "HAL::StencilOp::" if e.type == "stencil_pass_op" -}}
+{{e.expr}};
+{%endfor-%}
+{%-endif-%}
+			return mpso;
+		}
+
+		private:
+		SERIALIZE()
+		{
+			ar&NVP(wrap(psos));
+		}
+	};
 }
-
-void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)
-{
-{% for v in parsed.tables -%}
-{%- set t =  parsed.tables[v] -%}
-{%- if t.options.IndirectCommand is defined -%}
-{% if t.options.shader_only is defined -%}
-	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<{{t.name}}>(device).create_command();
-{%else-%}
-	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<Table::{{t.name}}>(device).create_command();	
-{%endif-%}
-{%endif-%}
-{%endfor -%}
-}
-
-void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
-{
-	std::vector<task<void>> tasks;
-{% for v in parsed.compute_pso -%}
-{%- set t =  parsed.compute_pso[v] -%}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
-{% endfor -%}
-
-{%- for v in parsed.graphics_pso -%}
-{%- set t =  parsed.graphics_pso[v] -%}
-	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
-{% endfor -%}
-	when_all(begin(tasks), end(tasks)).wait();
-}
-{% for v in parsed.compute_pso -%}
-{%- set pso =  parsed.compute_pso[v] -%}
-{%- for vd in pso.defines -%}
-{%- set d =  pso.defines[vd] %}
-decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
-{%- endfor -%}
-{%- endfor -%}
-
-{%- for v in parsed.graphics_pso -%}
-{%- set pso =  parsed.graphics_pso[v] -%}
-{%- for vd in pso.defines -%}
-{%- set d =  pso.defines[vd] %}
-decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
-{%- endfor -%}
-{%- endfor -%}

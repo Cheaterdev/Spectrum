@@ -1,0 +1,56 @@
+module HAL;
+import Core;
+import HAL;
+import ppl;
+using namespace concurrency;
+
+void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::ptr>& signatures)
+{
+{% for l in parsed.layouts -%}
+	signatures[Layouts::{{l.name}}] = AutoGenSignatureDesc<{{l.name}}>().create_signature(device, Layouts::{{l.name}});
+{% endfor -%}
+}
+
+void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)
+{
+{% for v in parsed.tables -%}
+{%- set t =  parsed.tables[v] -%}
+{%- if t.options.IndirectCommand is defined -%}
+{% if t.options.shader_only is defined -%}
+	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<{{t.name}}>(device).create_command();
+{%else-%}
+	commands[IndirectCommands::{{t.name}}] = AutoGenIndirectCommand<Table::{{t.name}}>(device).create_command();	
+{%endif-%}
+{%endif-%}
+{%endfor -%}
+}
+
+void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
+{
+	std::vector<task<void>> tasks;
+{% for v in parsed.compute_pso -%}
+{%- set t =  parsed.compute_pso[v] -%}
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+{% endfor -%}
+
+{%- for v in parsed.graphics_pso -%}
+{%- set t =  parsed.graphics_pso[v] -%}
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+{% endfor -%}
+	when_all(begin(tasks), end(tasks)).wait();
+}
+{% for v in parsed.compute_pso -%}
+{%- set pso =  parsed.compute_pso[v] -%}
+{%- for vd in pso.defines -%}
+{%- set d =  pso.defines[vd] %}
+decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
+{%- endfor -%}
+{%- endfor -%}
+
+{%- for v in parsed.graphics_pso -%}
+{%- set pso =  parsed.graphics_pso[v] -%}
+{%- for vd in pso.defines -%}
+{%- set d =  pso.defines[vd] %}
+decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
+{%- endfor -%}
+{%- endfor -%}
