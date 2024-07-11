@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.EnvFilter;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct EnvFilter
 	{
 		static constexpr SlotID ID = SlotID::EnvFilter;
@@ -26,6 +30,9 @@ export namespace Table
 			compiler.compile(size);
 		}
 		using Compiled = EnvFilter;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.RayPayload;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.RayCone;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct RayPayload
 	{
 		static constexpr SlotID ID = SlotID::RayPayload;
@@ -33,6 +37,9 @@ export namespace Table
 			compiler.compile(cone);
 		}
 		using Compiled = RayPayload;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

@@ -120,6 +120,11 @@ std::string get_cpp_for(Value v)
 	}
 	return arg;
 }
+ void Value::detect_type(have_options* options )
+	{
+		have_type::detect_type(options);
+		cpp_type = get_cpp_for(*this);
+	}
 
 void have_type::detect_type(have_options * options)
 {
@@ -154,6 +159,8 @@ void have_type::detect_type(have_options * options)
 
 
 	type = get_type();
+
+	
 }
 
 Slot::Slot()
@@ -340,6 +347,20 @@ void Table::setup(Parsed* all)
 		offset = offset % 4;
 	}
 	}
+
+		for (auto& v : values)
+			{
+
+				if (v.value_type == ValueType::CB)
+					need_compiled = need_compiled;
+				else	if (v.value_type == ValueType::STRUCT)
+					need_compiled = need_compiled;
+				else
+					need_compiled = true;
+				v.detect_type(&v);
+			}
+
+
 }
 RaytracePSO* Parsed::find_rtx(std::string name)
 {

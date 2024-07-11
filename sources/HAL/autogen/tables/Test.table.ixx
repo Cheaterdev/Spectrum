@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.Test;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.MeshInstanceInfo;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct Test
 	{
 		static constexpr SlotID ID = SlotID::Test;
@@ -32,6 +36,9 @@ export namespace Table
 			uint instances; // StructuredBuffer<MeshInstanceInfo>
 			uint tex; // Texture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

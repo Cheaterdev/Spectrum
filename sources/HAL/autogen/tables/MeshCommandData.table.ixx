@@ -1,15 +1,19 @@
 export module HAL:Autogen.Tables.MeshCommandData;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.MeshInfo;
 import :Autogen.Tables.MeshInstanceInfo;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct MeshCommandData
 	{
 		static constexpr SlotID ID = SlotID::MeshCommandData;
@@ -34,6 +38,9 @@ export namespace Table
 			compiler.compile(draw_commands);
 		}
 		using Compiled = MeshCommandData;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

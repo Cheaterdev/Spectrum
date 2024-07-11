@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DrawStencil;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DrawStencil
 	{
 		static constexpr SlotID ID = SlotID::DrawStencil;
@@ -23,6 +27,9 @@ export namespace Table
 		{
 			uint vertices; // StructuredBuffer<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

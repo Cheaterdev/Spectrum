@@ -1,17 +1,21 @@
 export module HAL:Autogen.Tables.SceneData;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.MaterialCommandData;
 import :Autogen.Tables.MeshCommandData;
 import :Autogen.Tables.RaytraceInstanceInfo;
 import :Autogen.Tables.node_data;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct SceneData
 	{
 		static constexpr SlotID ID = SlotID::SceneData;
@@ -39,6 +43,9 @@ export namespace Table
 			uint materials; // StructuredBuffer<MaterialCommandData>
 			uint raytraceInstanceInfo; // StructuredBuffer<RaytraceInstanceInfo>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

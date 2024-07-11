@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.SingleColor;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct SingleColor
 	{
 		static constexpr SlotID ID = SlotID::SingleColor;
@@ -23,6 +27,9 @@ export namespace Table
 		{
 			uint color; // RenderTarget<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

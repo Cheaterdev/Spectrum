@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.BlueNoise;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct BlueNoise
 	{
 		static constexpr SlotID ID = SlotID::BlueNoise;
@@ -39,6 +43,9 @@ export namespace Table
 			uint scrambling_tile_buffer; // Buffer<uint>
 			uint blue_noise_texture; // RWTexture2D<float2>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

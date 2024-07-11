@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.FlowGraph;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct FlowGraph
 	{
 		static constexpr SlotID ID = SlotID::FlowGraph;
@@ -26,6 +30,9 @@ export namespace Table
 			compiler.compile(inv_pixel);
 		}
 		using Compiled = FlowGraph;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

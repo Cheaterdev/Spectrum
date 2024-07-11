@@ -1,15 +1,19 @@
 export module HAL:Autogen.Tables.VoxelLighting;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.PSSMDataGlobal;
 import :Autogen.Tables.VoxelTilingParams;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelLighting
 	{
 		static constexpr SlotID ID = SlotID::VoxelLighting;
@@ -49,6 +53,9 @@ export namespace Table
 			PSSMDataGlobal::Compiled pssmGlobal; // PSSMDataGlobal
 			VoxelTilingParams::Compiled params; // VoxelTilingParams
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

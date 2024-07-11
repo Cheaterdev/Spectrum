@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.VoxelTilingParams;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelTilingParams
 	{
 		static constexpr SlotID ID = SlotID::VoxelTilingParams;
@@ -27,6 +31,9 @@ export namespace Table
 			uint4 voxels_per_tile; // uint4
 			uint tiles; // StructuredBuffer<int3>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

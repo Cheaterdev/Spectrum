@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.FSRConstants;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct FSRConstants
 	{
 		static constexpr SlotID ID = SlotID::FSRConstants;
@@ -32,6 +36,9 @@ export namespace Table
 			compiler.compile(Sample);
 		}
 		using Compiled = FSRConstants;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

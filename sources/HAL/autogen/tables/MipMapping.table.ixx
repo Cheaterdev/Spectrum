@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.MipMapping;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct MipMapping
 	{
 		static constexpr SlotID ID = SlotID::MipMapping;
@@ -39,6 +43,9 @@ export namespace Table
 			uint SrcMip; // Texture2D<float4>
 			uint OutMip[4]; // RWTexture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

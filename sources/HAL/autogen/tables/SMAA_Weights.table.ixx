@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.SMAA_Weights;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct SMAA_Weights
 	{
 		static constexpr SlotID ID = SlotID::SMAA_Weights;
@@ -31,6 +35,9 @@ export namespace Table
 			uint searchTex; // Texture2D<float4>
 			uint edgesTex; // Texture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

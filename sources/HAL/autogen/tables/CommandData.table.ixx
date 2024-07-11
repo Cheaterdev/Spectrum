@@ -1,16 +1,20 @@
 export module HAL:Autogen.Tables.CommandData;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Slots.MaterialInfo;
 import :Autogen.Slots.MeshInfo;
 import :Autogen.Slots.MeshInstanceInfo;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct CommandData
 	{
 		static constexpr SlotID ID = SlotID::CommandData;
@@ -33,9 +37,12 @@ export namespace Table
 		}
 		using Compiled = CommandData;
 		static const IndirectCommands CommandID = IndirectCommands::CommandData;
-		template<class Processor> static void for_each(Processor& processor) {
-			processor.template process<Slots::MeshInfo,Slots::MeshInstanceInfo,Slots::MaterialInfo,DispatchMeshArguments>();
+		template<class Processor> static void for_each(Processor& processor)
+		{
+			processor.template process<Slots::MeshInfo, Slots::MeshInstanceInfo, Slots::MaterialInfo, DispatchMeshArguments>();
 		}
-		};
-		#pragma pack(pop)
-	}
+	};
+	#pragma pack(pop)
+}
+
+

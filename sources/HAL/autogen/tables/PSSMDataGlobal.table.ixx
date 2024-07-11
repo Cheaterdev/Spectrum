@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.PSSMDataGlobal;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.Camera;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct PSSMDataGlobal
 	{
 		static constexpr SlotID ID = SlotID::PSSMDataGlobal;
@@ -28,6 +32,9 @@ export namespace Table
 			uint light_buffer; // Texture2D<float>
 			uint light_camera; // StructuredBuffer<Camera>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

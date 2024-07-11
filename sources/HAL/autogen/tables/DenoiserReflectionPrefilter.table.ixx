@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DenoiserReflectionPrefilter;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DenoiserReflectionPrefilter
 	{
 		static constexpr SlotID ID = SlotID::DenoiserReflectionPrefilter;
@@ -59,6 +63,9 @@ export namespace Table
 			uint g_out_variance; // RWTexture2D<float>
 			uint g_out_sample_count; // RWTexture2D<float>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

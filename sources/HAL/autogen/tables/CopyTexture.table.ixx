@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.CopyTexture;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct CopyTexture
 	{
 		static constexpr SlotID ID = SlotID::CopyTexture;
@@ -23,6 +27,9 @@ export namespace Table
 		{
 			uint srcTex; // Texture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

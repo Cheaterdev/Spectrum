@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.Triangle;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.mesh_vertex_input;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct Triangle
 	{
 		static constexpr SlotID ID = SlotID::Triangle;
@@ -24,6 +28,9 @@ export namespace Table
 			compiler.compile(v);
 		}
 		using Compiled = Triangle;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

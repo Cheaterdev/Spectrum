@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.MeshInstance;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct MeshInstance
 	{
 		static constexpr SlotID ID = SlotID::MeshInstance;
@@ -23,6 +27,9 @@ export namespace Table
 			compiler.compile(index_offset);
 		}
 		using Compiled = MeshInstance;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

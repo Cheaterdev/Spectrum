@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.SkyData;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct SkyData
 	{
 		static constexpr SlotID ID = SlotID::SkyData;
@@ -39,6 +43,9 @@ export namespace Table
 			uint inscatter; // Texture3D<float4>
 			uint irradiance; // Texture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

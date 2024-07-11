@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.InitDispatch;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct InitDispatch
 	{
 		static constexpr SlotID ID = SlotID::InitDispatch;
@@ -27,6 +31,9 @@ export namespace Table
 			uint counter; // RWStructuredBuffer<uint>
 			uint dispatch_data; // RWStructuredBuffer<DispatchArguments>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

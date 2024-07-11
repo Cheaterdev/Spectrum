@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.VoxelDebug;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.GBuffer;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelDebug
 	{
 		static constexpr SlotID ID = SlotID::VoxelDebug;
@@ -28,6 +32,9 @@ export namespace Table
 			uint volume; // Texture3D<float4>
 			GBuffer::Compiled gbuffer; // GBuffer
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.VoxelOutput;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelOutput
 	{
 		static constexpr SlotID ID = SlotID::VoxelOutput;
@@ -35,6 +39,9 @@ export namespace Table
 			uint frames; // RWTexture2D<float>
 			uint DirAndPdf; // RWTexture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

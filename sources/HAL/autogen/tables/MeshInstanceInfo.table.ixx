@@ -1,16 +1,20 @@
 export module HAL:Autogen.Tables.MeshInstanceInfo;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.Meshlet;
 import :Autogen.Tables.MeshletCullData;
 import :Autogen.Tables.mesh_vertex_input;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct MeshInstanceInfo
 	{
 		static constexpr SlotID ID = SlotID::MeshInstanceInfo;
@@ -46,6 +50,9 @@ export namespace Table
 			uint unique_indices; // StructuredBuffer<uint>
 			uint primitive_indices; // StructuredBuffer<uint>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.VoxelInfo;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelInfo
 	{
 		static constexpr SlotID ID = SlotID::VoxelInfo;
@@ -29,6 +33,9 @@ export namespace Table
 			compiler.compile(voxel_tiles_count);
 		}
 		using Compiled = VoxelInfo;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

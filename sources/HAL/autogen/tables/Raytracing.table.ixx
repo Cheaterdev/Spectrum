@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.Raytracing;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct Raytracing
 	{
 		static constexpr SlotID ID = SlotID::Raytracing;
@@ -23,6 +27,9 @@ export namespace Table
 		{
 			uint scene; // RaytracingAccelerationStructure
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

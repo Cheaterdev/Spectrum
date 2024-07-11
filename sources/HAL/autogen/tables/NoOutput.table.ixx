@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.NoOutput;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct NoOutput
 	{
 		static constexpr SlotID ID = SlotID::NoOutput;
@@ -17,6 +21,9 @@ export namespace Table
 		{
 		}
 		using Compiled = NoOutput;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

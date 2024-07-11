@@ -95,10 +95,12 @@ struct have_type
 	std::string template_arg;
 	ValueType value_type;
 	std::string type;
+
 	bool pointer = false;
 	bool bindless = false;
-	void detect_type(have_options* options = nullptr);
+	virtual void detect_type(have_options* options = nullptr);
 
+	
 	std::string get_type() const
 	{
 
@@ -362,7 +364,10 @@ struct Value :public have_name, have_options, have_type, have_expr, have_array
 {
 	int offset = 0;
 	int size = 0;
+	std::string cpp_type;
+	virtual void detect_type(have_options* options ) override;
 
+	
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(have_name);
@@ -373,6 +378,8 @@ struct Value :public have_name, have_options, have_type, have_expr, have_array
 
 		ar& NVP(offset);
 		ar& NVP(size);
+		ar& NVP(cpp_type);
+
 	}
 };
 
@@ -739,7 +746,7 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 
 	bool cb_raw = false;
 	void setup(Parsed* all);
-
+	bool need_compiled = false;
 
 	SERIALIZE()
 	{
@@ -748,22 +755,20 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 		SAVE_PARENT_MERGED(have_hlsl);
 
 		ar& NVP(path);
-
 		ar& NVP(values);
-
 		ar& NVP(used_tables);
 		ar& NVP(offsets);
 		ar& NVP(counts);
 		ar& NVP(can_compile);
 		ar& NVP(cb_provided);
 		ar& NVP(cb_raw);
+		ar& NVP(need_compiled);
 
 		if(slot)
 		{
 			auto& slot = *this->slot;//->name;
 			ar& NVP(slot);
 		}
-
 	}
 };
 
@@ -792,7 +797,7 @@ struct Parsed : public parsed_type
 
 	void merge(Parsed& r)
 	{
-layouts.merge( r.layouts);
+		layouts.merge( r.layouts);
 		tables.merge(r.tables);
 		rt.merge(r.rt);
 		compute_pso.merge( r.compute_pso);

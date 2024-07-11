@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.Camera;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.Frustum;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct Camera
 	{
 		static constexpr SlotID ID = SlotID::Camera;
@@ -51,6 +55,9 @@ export namespace Table
 			compiler.compile(frustum);
 		}
 		using Compiled = Camera;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

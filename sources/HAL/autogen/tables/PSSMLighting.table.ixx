@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.PSSMLighting;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.GBuffer;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct PSSMLighting
 	{
 		static constexpr SlotID ID = SlotID::PSSMLighting;
@@ -28,6 +32,9 @@ export namespace Table
 			uint light_mask; // Texture2D<float>
 			GBuffer::Compiled gbuffer; // GBuffer
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

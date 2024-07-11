@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.ShadowPayload;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct ShadowPayload
 	{
 		static constexpr SlotID ID = SlotID::ShadowPayload;
@@ -20,6 +24,9 @@ export namespace Table
 			compiler.compile(hit);
 		}
 		using Compiled = ShadowPayload;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

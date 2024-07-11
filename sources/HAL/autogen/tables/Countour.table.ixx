@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.Countour;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct Countour
 	{
 		static constexpr SlotID ID = SlotID::Countour;
@@ -27,6 +31,9 @@ export namespace Table
 			float4 color; // float4
 			uint tex; // Texture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

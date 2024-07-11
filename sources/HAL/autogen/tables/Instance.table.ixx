@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.Instance;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct Instance
 	{
 		static constexpr SlotID ID = SlotID::Instance;
@@ -20,6 +24,9 @@ export namespace Table
 			compiler.compile(instanceId);
 		}
 		using Compiled = Instance;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

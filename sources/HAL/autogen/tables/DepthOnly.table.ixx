@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DepthOnly;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DepthOnly
 	{
 		static constexpr SlotID ID = SlotID::DepthOnly;
@@ -23,6 +27,9 @@ export namespace Table
 		{
 			uint depth; // DepthStencil<float>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

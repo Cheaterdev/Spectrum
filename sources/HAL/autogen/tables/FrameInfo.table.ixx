@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.FrameInfo;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.Camera;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct FrameInfo
 	{
 		static constexpr SlotID ID = SlotID::FrameInfo;
@@ -48,6 +52,9 @@ export namespace Table
 			Camera::Compiled camera; // Camera
 			Camera::Compiled prevCamera; // Camera
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

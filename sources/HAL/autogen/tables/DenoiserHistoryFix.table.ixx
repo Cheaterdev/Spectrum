@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DenoiserHistoryFix;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DenoiserHistoryFix
 	{
 		static constexpr SlotID ID = SlotID::DenoiserHistoryFix;
@@ -31,6 +35,9 @@ export namespace Table
 			uint frames; // Texture2D<float>
 			uint target; // RWTexture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

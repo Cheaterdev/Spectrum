@@ -1,0 +1,134 @@
+export module HAL:Autogen.Tables.{{table.name}};
+
+import Core;
+import :SIG;
+import :Types;
+import :HLSL;
+import :Enums;
+import <HAL.h>;
+
+
+{%- for v in table.used_tables -%}
+{%- set t =  parsed.tables[v] -%}
+{%-if t.options.shader_only is undefined %}
+import :Autogen.{{"Slots" if table.options.IndirectCommand is defined else "Tables"}}.{{t.name}};
+{%-endif -%}
+{%- endfor -%}
+
+{%- macro declare_func(type) -%}
+{%- for v in (table.values|unique|selectattr('value_type','==', type)) -%}
+{%-if v.options.dynamic is undefined %}
+		{{v.cpp_type}} {{v.name}}{{v.array}};
+{%-endif-%}
+{%- endfor -%}
+{%- endmacro -%}
+
+
+
+export namespace Table
+{
+	#pragma pack(push, 1)
+
+	struct {{table.name}}
+	{
+		static constexpr SlotID ID = SlotID::{{table.name}};
+
+		{{-declare_func(ValueType.CB)}}
+		{{-declare_func(ValueType.SRV)}}
+		{{-declare_func(ValueType.UAV)}}
+		{{-declare_func(ValueType.SMP)}}
+		{{-declare_func(ValueType.STRUCT)}}
+
+{%- for v in (table.values) -%}
+{%if v.options.dynamic is defined %}
+		DynamicData {{v.name}}{{v.array}};
+{%endif%}
+{%- endfor -%}
+
+{%- for v in (table.values|unique|selectattr('value_type','!=', ValueType.STRUCT)) -%}
+{%-if v.options.dynamic is undefined %}
+		{{v.cpp_type}}{{v.cpp_array}} Get{{v.name|camel}}() { return {{v.name}}; }
+{%-endif-%}
+{%- endfor -%}
+
+{%- for v in (table.values|unique|selectattr('value_type','!=', ValueType.STRUCT)) -%}
+{%-if v.options.dynamic is defined %}
+		DynamicData{{v.cpp_array}} Get{{v.name|camel}}() { return {{v.name}}; }
+{%-endif-%}
+{%- endfor -%}
+
+{%- for v in (table.values|unique|selectattr('value_type','==', ValueType.STRUCT)) %}
+		{{v.cpp_type}}{{v.cpp_array if table.options.shader_only is defined else "&"}} Get{{v.name|camel}}() { return {{v.name}}; }
+{%- endfor -%}
+
+
+{%- macro compile_func(type) -%}
+{%- for v in (table.values|unique|selectattr('value_type','==', type)) %}
+			compiler.compile({{v.name}});
+{%- endfor -%}
+{%- endmacro -%}
+
+		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
+		template<class Compiler>
+		void compile(Compiler& compiler) const
+		{
+			{{-compile_func(ValueType.CB)}}
+			{{-compile_func(ValueType.SRV)}}
+			{{-compile_func(ValueType.UAV)}}
+			{{-compile_func(ValueType.SMP)}}
+			{{-compile_func(ValueType.STRUCT)}}
+		}
+{%- macro compile_func2(type) -%}
+{%- for v in (table.values|unique|selectattr('value_type','==', type)) %}
+{%if v.value_type == ValueType.CB -%}
+			{{v.type}} {{v.name}}{{v.array}}; // {{v.type}}
+{%-elif v.value_type == ValueType.STRUCT-%}
+			{{v.type}}::Compiled {{v.name}}{{v.array}}; // {{v.type}}
+{%-else-%}
+			uint {{v.name}}{{"" if v.bindless else v.array}}; // {{v.type}}
+{%-endif-%}
+{%- endfor -%}
+{%- endmacro -%}
+
+{%if table.can_compile-%}
+{%-if table.need_compiled-%}
+		struct Compiled
+		{
+			{{-compile_func2(ValueType.CB)}}
+			{{-compile_func2(ValueType.SRV)}}
+			{{-compile_func2(ValueType.UAV)}}
+			{{-compile_func2(ValueType.SMP)}}
+			{{-compile_func2(ValueType.STRUCT)}}
+		};
+{%-else-%}
+		using Compiled = {{table.name}};
+{%-endif-%}
+{%-endif-%}
+
+{%if table.options.IndirectCommand is defined-%}
+		static const IndirectCommands CommandID = IndirectCommands::{{table.name}};
+		template<class Processor> static void for_each(Processor& processor)
+		{
+{%- set values = create_list('values') -%}
+{%- for v in (table.values) -%}
+{%- do myappend('values',("Slots::" if (parsed.tables[v.type] is defined) and (parsed.tables[v.type].options.shader_only is undefined) else "") +v.type)-%}
+{%- endfor %}
+			processor.template process<{{get_list('values')|join(', ')}}>();
+		}
+{%-endif-%}
+
+{%if table.options.serialize is defined-%}
+		private:
+		SERIALIZE()
+		{
+{%- for v in table.values -%}
+{%- if v.value_type == ValueType.CB or v.value_type== ValueType.STRUCT %}
+			ar& NVP({{v.name}});
+{%-endif-%}
+{%- endfor %}
+		}
+{%endif-%}
+	};
+	#pragma pack(pop)
+}
+

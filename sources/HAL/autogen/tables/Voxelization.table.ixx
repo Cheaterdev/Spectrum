@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.Voxelization;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.VoxelInfo;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct Voxelization
 	{
 		static constexpr SlotID ID = SlotID::Voxelization;
@@ -36,6 +40,9 @@ export namespace Table
 			uint visibility; // RWTexture3D<uint>
 			VoxelInfo::Compiled info; // VoxelInfo
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

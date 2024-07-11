@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.TilingPostprocess;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.TilingParams;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct TilingPostprocess
 	{
 		static constexpr SlotID ID = SlotID::TilingPostprocess;
@@ -21,6 +25,9 @@ export namespace Table
 			compiler.compile(tiling);
 		}
 		using Compiled = TilingPostprocess;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

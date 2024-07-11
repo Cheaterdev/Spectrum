@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DenoiserShadow_Prepare;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DenoiserShadow_Prepare
 	{
 		static constexpr SlotID ID = SlotID::DenoiserShadow_Prepare;
@@ -31,6 +35,9 @@ export namespace Table
 			uint t2d_hitMaskResults; // Texture2D<uint>
 			uint rwsb_shadowMask; // RWStructuredBuffer<uint>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

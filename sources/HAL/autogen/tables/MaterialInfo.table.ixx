@@ -1,19 +1,24 @@
 export module HAL:Autogen.Tables.MaterialInfo;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct MaterialInfo
 	{
 		static constexpr SlotID ID = SlotID::MaterialInfo;
 		std::vector<HLSL::Texture2D<float4>> textures;
 		HLSL::FeedbackTexture2DMip texture_feedbacks;
 		DynamicData data;
+
 		HLSL::FeedbackTexture2DMip& GetTexture_feedbacks() { return texture_feedbacks; }
 		std::vector<HLSL::Texture2D<float4>>& GetTextures() { return textures; }
 		DynamicData& GetData() { return data; }
@@ -25,6 +30,10 @@ export namespace Table
 			compiler.compile(textures);
 			compiler.compile(texture_feedbacks);
 		}
-		};
-		#pragma pack(pop)
-	}
+
+
+	};
+	#pragma pack(pop)
+}
+
+

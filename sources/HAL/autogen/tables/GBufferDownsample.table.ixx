@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.GBufferDownsample;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct GBufferDownsample
 	{
 		static constexpr SlotID ID = SlotID::GBufferDownsample;
@@ -27,6 +31,9 @@ export namespace Table
 			uint normals; // Texture2D<float4>
 			uint depth; // Texture2D<float>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

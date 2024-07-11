@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.DrawBoxes;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.BoxInfo;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DrawBoxes
 	{
 		static constexpr SlotID ID = SlotID::DrawBoxes;
@@ -32,6 +36,9 @@ export namespace Table
 			uint input_meshes; // StructuredBuffer<BoxInfo>
 			uint visible_meshes; // RWStructuredBuffer<uint>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

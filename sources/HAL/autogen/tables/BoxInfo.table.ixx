@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.BoxInfo;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct BoxInfo
 	{
 		static constexpr SlotID ID = SlotID::BoxInfo;
@@ -23,6 +27,9 @@ export namespace Table
 			compiler.compile(mesh_id);
 		}
 		using Compiled = BoxInfo;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

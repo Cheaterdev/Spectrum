@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.GBuffer;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct GBuffer
 	{
 		static constexpr SlotID ID = SlotID::GBuffer;
@@ -39,6 +43,9 @@ export namespace Table
 			uint motion; // RenderTarget<float2>
 			uint depth; // DepthStencil<float>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

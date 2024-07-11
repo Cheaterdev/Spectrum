@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.RayCone;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct RayCone
 	{
 		static constexpr SlotID ID = SlotID::RayCone;
@@ -23,6 +27,9 @@ export namespace Table
 			compiler.compile(angle);
 		}
 		using Compiled = RayCone;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

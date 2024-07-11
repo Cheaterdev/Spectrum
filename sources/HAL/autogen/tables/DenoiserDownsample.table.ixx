@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DenoiserDownsample;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DenoiserDownsample
 	{
 		static constexpr SlotID ID = SlotID::DenoiserDownsample;
@@ -27,6 +31,9 @@ export namespace Table
 			uint color; // Texture2D<float4>
 			uint depth; // Texture2D<float>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

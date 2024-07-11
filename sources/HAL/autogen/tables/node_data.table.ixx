@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.node_data;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.AABB;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct node_data
 	{
 		static constexpr SlotID ID = SlotID::node_data;
@@ -30,6 +34,9 @@ export namespace Table
 			compiler.compile(aabb);
 		}
 		using Compiled = node_data;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

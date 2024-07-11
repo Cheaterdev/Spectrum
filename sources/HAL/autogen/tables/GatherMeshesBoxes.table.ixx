@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.GatherMeshesBoxes;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.BoxInfo;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct GatherMeshesBoxes
 	{
 		static constexpr SlotID ID = SlotID::GatherMeshesBoxes;
@@ -36,6 +40,9 @@ export namespace Table
 			uint visibleMeshes; // AppendStructuredBuffer<uint>
 			uint invisibleMeshes; // AppendStructuredBuffer<uint>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.GBufferDownsampleRT;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct GBufferDownsampleRT
 	{
 		static constexpr SlotID ID = SlotID::GBufferDownsampleRT;
@@ -27,6 +31,9 @@ export namespace Table
 			uint depth; // RenderTarget<float>
 			uint color; // RenderTarget<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DenoiserShadow_TileClassification;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DenoiserShadow_TileClassification
 	{
 		static constexpr SlotID ID = SlotID::DenoiserShadow_TileClassification;
@@ -91,6 +95,9 @@ export namespace Table
 			uint rwt2d_reprojectionResults; // RWTexture2D<float2>
 			uint rwt2d_momentsBuffer; // RWTexture2D<float3>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

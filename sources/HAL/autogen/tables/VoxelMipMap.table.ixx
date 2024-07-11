@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.VoxelMipMap;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.VoxelTilingParams;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelMipMap
 	{
 		static constexpr SlotID ID = SlotID::VoxelMipMap;
@@ -32,6 +36,9 @@ export namespace Table
 			uint OutMips[3]; // RWTexture3D<float4>
 			VoxelTilingParams::Compiled params; // VoxelTilingParams
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

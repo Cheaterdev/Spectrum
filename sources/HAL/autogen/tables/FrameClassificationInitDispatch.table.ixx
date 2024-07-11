@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.FrameClassificationInitDispatch;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct FrameClassificationInitDispatch
 	{
 		static constexpr SlotID ID = SlotID::FrameClassificationInitDispatch;
@@ -35,6 +39,9 @@ export namespace Table
 			uint hi_dispatch_data; // RWStructuredBuffer<DispatchArguments>
 			uint low_dispatch_data; // RWStructuredBuffer<DispatchArguments>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

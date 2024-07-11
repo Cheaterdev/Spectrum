@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.EnvSource;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct EnvSource
 	{
 		static constexpr SlotID ID = SlotID::EnvSource;
@@ -23,6 +27,9 @@ export namespace Table
 		{
 			uint sourceTex; // TextureCube<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

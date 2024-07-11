@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.VoxelBlur;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelBlur
 	{
 		static constexpr SlotID ID = SlotID::VoxelBlur;
@@ -39,6 +43,9 @@ export namespace Table
 			uint screen_result; // RWTexture2D<float4>
 			uint gi_result; // RWTexture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

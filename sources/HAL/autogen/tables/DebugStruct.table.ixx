@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DebugStruct;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DebugStruct
 	{
 		static constexpr SlotID ID = SlotID::DebugStruct;
@@ -20,6 +24,9 @@ export namespace Table
 			compiler.compile(v);
 		}
 		using Compiled = DebugStruct;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

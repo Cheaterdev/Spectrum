@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.DenoiserShadow_FilterLocal;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct DenoiserShadow_FilterLocal
 	{
 		static constexpr SlotID ID = SlotID::DenoiserShadow_FilterLocal;
@@ -27,6 +31,9 @@ export namespace Table
 			uint rqt2d_input; // Texture2D<float16_t2>
 			uint rwt2d_output; // RWTexture2D<float2>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.GatherPipelineGlobal;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct GatherPipelineGlobal
 	{
 		static constexpr SlotID ID = SlotID::GatherPipelineGlobal;
@@ -27,6 +31,9 @@ export namespace Table
 			uint meshes_count; // StructuredBuffer<uint>
 			uint commands; // Buffer<uint>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

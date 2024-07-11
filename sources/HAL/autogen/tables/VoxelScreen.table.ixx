@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.VoxelScreen;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.GBuffer;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelScreen
 	{
 		static constexpr SlotID ID = SlotID::VoxelScreen;
@@ -44,6 +48,9 @@ export namespace Table
 			uint prev_depth; // Texture2D<float>
 			GBuffer::Compiled gbuffer; // GBuffer
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

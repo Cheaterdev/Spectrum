@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.TilingParams;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct TilingParams
 	{
 		static constexpr SlotID ID = SlotID::TilingParams;
@@ -23,6 +27,9 @@ export namespace Table
 		{
 			uint tiles; // StructuredBuffer<uint2>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

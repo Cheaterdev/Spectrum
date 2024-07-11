@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.RaytracingRays;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.GBuffer;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct RaytracingRays
 	{
 		static constexpr SlotID ID = SlotID::RaytracingRays;
@@ -32,6 +36,9 @@ export namespace Table
 			uint output; // RWTexture2D<float4>
 			GBuffer::Compiled gbuffer; // GBuffer
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

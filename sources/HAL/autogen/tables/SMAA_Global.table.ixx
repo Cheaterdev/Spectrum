@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.SMAA_Global;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct SMAA_Global
 	{
 		static constexpr SlotID ID = SlotID::SMAA_Global;
@@ -31,6 +35,9 @@ export namespace Table
 			float4 SMAA_RT_METRICS; // float4
 			uint colorTex; // Texture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

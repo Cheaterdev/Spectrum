@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.VoxelVisibility;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelVisibility
 	{
 		static constexpr SlotID ID = SlotID::VoxelVisibility;
@@ -27,6 +31,9 @@ export namespace Table
 			uint visibility; // Texture3D<uint>
 			uint visible_tiles; // AppendStructuredBuffer<uint4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

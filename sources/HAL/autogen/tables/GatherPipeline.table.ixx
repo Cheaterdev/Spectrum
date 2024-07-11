@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.GatherPipeline;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.CommandData;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct GatherPipeline
 	{
 		static constexpr SlotID ID = SlotID::GatherPipeline;
@@ -28,6 +32,9 @@ export namespace Table
 			uint4 pip_ids[2]; // uint4
 			uint commands[8]; // AppendStructuredBuffer<CommandData>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.AABB;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct AABB
 	{
 		static constexpr SlotID ID = SlotID::AABB;
@@ -23,6 +27,9 @@ export namespace Table
 			compiler.compile(max);
 		}
 		using Compiled = AABB;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

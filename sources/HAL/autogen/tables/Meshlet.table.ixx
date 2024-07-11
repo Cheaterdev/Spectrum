@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.Meshlet;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct Meshlet
 	{
 		static constexpr SlotID ID = SlotID::Meshlet;
@@ -29,6 +33,9 @@ export namespace Table
 			compiler.compile(primitiveOffset);
 		}
 		using Compiled = Meshlet;
-		};
-		#pragma pack(pop)
-	}
+
+	};
+	#pragma pack(pop)
+}
+
+

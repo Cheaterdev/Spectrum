@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.SingleColorDepth;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct SingleColorDepth
 	{
 		static constexpr SlotID ID = SlotID::SingleColorDepth;
@@ -27,6 +31,9 @@ export namespace Table
 			uint color; // RenderTarget<float4>
 			uint depth; // DepthStencil<float>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

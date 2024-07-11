@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.VoxelUpscale;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct VoxelUpscale
 	{
 		static constexpr SlotID ID = SlotID::VoxelUpscale;
@@ -31,6 +35,9 @@ export namespace Table
 			uint tex_gi_prev; // Texture2D<float4>
 			uint tex_depth_prev; // Texture2D<float>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

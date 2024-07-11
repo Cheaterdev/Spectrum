@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.RaytraceInstanceInfo;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.mesh_vertex_input;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct RaytraceInstanceInfo
 	{
 		static constexpr SlotID ID = SlotID::RaytraceInstanceInfo;
@@ -28,6 +32,9 @@ export namespace Table
 			uint vertexes; // StructuredBuffer<mesh_vertex_input>
 			uint indices; // StructuredBuffer<uint>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

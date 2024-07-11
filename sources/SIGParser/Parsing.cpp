@@ -346,7 +346,12 @@ public:
 			auto& elem = get_elem<have_type>();
 			elem.bindless = false;
 		}
-	
+			
+		{
+			auto& elem = get_elem<have_type>();
+			auto& options = get_elem<have_options>();
+			elem.detect_type(&options);
+		}
 	}
 
 	

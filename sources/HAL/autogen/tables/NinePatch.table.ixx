@@ -1,14 +1,18 @@
 export module HAL:Autogen.Tables.NinePatch;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
+import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.vertex_input;
-import :Enums;
-export namespace Table 
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct NinePatch
 	{
 		static constexpr SlotID ID = SlotID::NinePatch;
@@ -28,6 +32,9 @@ export namespace Table
 			uint vb; // StructuredBuffer<vertex_input>
 			uint textures; // Texture2D<float4>
 		};
+
 	};
 	#pragma pack(pop)
 }
+
+

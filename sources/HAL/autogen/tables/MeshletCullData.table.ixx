@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.MeshletCullData;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct MeshletCullData
 	{
 		static constexpr SlotID ID = SlotID::MeshletCullData;
@@ -26,13 +30,16 @@ export namespace Table
 			compiler.compile(ApexOffset);
 		}
 		using Compiled = MeshletCullData;
+
 		private:
-	SERIALIZE()
+		SERIALIZE()
 		{
-		     ar& NVP(BoundingSphere);
-		     ar& NVP(NormalCone);
-		     ar& NVP(ApexOffset);
+			ar& NVP(BoundingSphere);
+			ar& NVP(NormalCone);
+			ar& NVP(ApexOffset);
 		}
-		};
-		#pragma pack(pop)
-	}
+	};
+	#pragma pack(pop)
+}
+
+

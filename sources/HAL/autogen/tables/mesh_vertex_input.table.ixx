@@ -1,13 +1,17 @@
 export module HAL:Autogen.Tables.mesh_vertex_input;
+
 import Core;
 import :SIG;
 import :Types;
 import :HLSL;
-import <HAL.h>;
 import :Enums;
-export namespace Table 
+import <HAL.h>;
+
+
+export namespace Table
 {
 	#pragma pack(push, 1)
+
 	struct mesh_vertex_input
 	{
 		static constexpr SlotID ID = SlotID::mesh_vertex_input;
@@ -29,14 +33,17 @@ export namespace Table
 			compiler.compile(tangent);
 		}
 		using Compiled = mesh_vertex_input;
+
 		private:
-	SERIALIZE()
+		SERIALIZE()
 		{
-		     ar& NVP(pos);
-		     ar& NVP(normal);
-		     ar& NVP(tc);
-		     ar& NVP(tangent);
+			ar& NVP(pos);
+			ar& NVP(normal);
+			ar& NVP(tc);
+			ar& NVP(tangent);
 		}
-		};
-		#pragma pack(pop)
-	}
+	};
+	#pragma pack(pop)
+}
+
+
