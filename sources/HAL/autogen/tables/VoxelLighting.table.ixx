@@ -8,8 +8,6 @@ import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.PSSMDataGlobal;
 import :Autogen.Tables.VoxelTilingParams;
-
-
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -57,5 +55,4 @@ export namespace Table
 	};
 	#pragma pack(pop)
 }
-
 

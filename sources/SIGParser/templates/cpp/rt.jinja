@@ -1,14 +1,13 @@
 #pragma once
 
-
 {%- macro compile_func(type) -%}
-{%- for v in (table.values|unique|selectattr('value_type','==', type)) %}
+{%- for v in (rt.values|unique|selectattr('value_type','==', type)) %}
 			compiler.compile({{v.name}});
 {%- endfor -%}
 {%- endmacro -%}
 
-{% for v in table.used_tables -%}
-{%- set t =  parsed.tables[v] -%}
+{% for v in rt.used_rts -%}
+{%- set t =  parsed.rts[v] -%}
 {%if t.options["shader_only"] is undefined -%}
 	#include "{{t.name}}.h"
 {%endif -%}
@@ -17,11 +16,11 @@
 namespace RT
 {	
 	#pragma pack(push, 1)
-	struct _{{table.name}}
+	struct _{{rt.name}}
 	{
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::RT;
 
-{%- for v in table.values |list -%}
+{%- for v in rt.values |list -%}
 {%-if v.options.dynamic is undefined  -%}
 {%-if v.value_type == ValueType.SRV  %}
 		HLSL::{{v.type}} {{v.name}}{{v.array}};
@@ -29,7 +28,7 @@ namespace RT
 {%-endif-%}
 {%-endfor-%}
 
-{%- for v in table.values |list -%}
+{%- for v in rt.values |list -%}
 {%-if v.options.dynamic is undefined  -%}
 {%-if v.value_type != ValueType.STRUCT  %}
 		HLSL::{{v.type}}{{v.cpp_array}} Get{{v.name|title}}() { return {{v.name}}; }
@@ -37,7 +36,7 @@ namespace RT
 {%-endif-%}
 {%-endfor-%}
 
-{%- for v in table.values |list -%}
+{%- for v in rt.values |list -%}
 {%-if v.value_type == ValueType.STRUCT  %}
 	{{v.type}}{{v.cpp_array}} Get{{v.name|title}}() { return {{v.name}}; }
 {%-endif-%}
@@ -53,11 +52,11 @@ namespace RT
 			{{-compile_func(ValueType.STRUCT)}}
 		}
 
-{%-if table.options.serialize is defined  -%}
+{%-if rt.options.serialize is defined  -%}
 	private:
 		SERIALIZE()
 		{
-{%- for v in table.values |list -%}
+{%- for v in rt.values |list -%}
 {%if not((v.value_type != ValueType.CB) and (v.value_type != ValueType.STRUCT)) %}
 			ar& NVP({{v.name}});
 {%endif %}
@@ -67,8 +66,8 @@ namespace RT
 	};
 	#pragma pack(pop)
 
-	struct {{table.name}}:public RTHolder<_{{table.name}}>
+	struct {{rt.name}}:public RTHolder<_{{rt.name}}>
 	{
-		{{table.name}}() = default;
+		{{rt.name}}() = default;
 	};
 }

@@ -6,8 +6,6 @@ import :Types;
 import :HLSL;
 import :Enums;
 import <HAL.h>;
-
-
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -45,5 +43,4 @@ export namespace Table
 	};
 	#pragma pack(pop)
 }
-
 

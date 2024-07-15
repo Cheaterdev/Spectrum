@@ -9,8 +9,6 @@ import <HAL.h>;
 import :Autogen.Tables.Meshlet;
 import :Autogen.Tables.MeshletCullData;
 import :Autogen.Tables.mesh_vertex_input;
-
-
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -54,5 +52,4 @@ export namespace Table
 	};
 	#pragma pack(pop)
 }
-
 

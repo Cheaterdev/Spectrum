@@ -10,8 +10,6 @@ import :Autogen.Tables.MaterialCommandData;
 import :Autogen.Tables.MeshCommandData;
 import :Autogen.Tables.RaytraceInstanceInfo;
 import :Autogen.Tables.node_data;
-
-
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -47,5 +45,4 @@ export namespace Table
 	};
 	#pragma pack(pop)
 }
-
 

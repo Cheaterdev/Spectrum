@@ -13,28 +13,19 @@ enum   ValueType
 struct my_stream
 {
 	std::stringstream stream;
-	char levels[256] = { 0 };
-	int level = 0;
-
 	std::string path;
 
 	my_stream(std::string dir, std::string filename);
 	~my_stream();
-	void push();
-
-
-	void pop();
-
 
 	template<class T>
 	std::stringstream& operator<<(const T& data);
-
 };
 
 template<class T>
 std::stringstream& my_stream::operator<<(const T& data)
 {
-	stream << levels << data;
+	stream << data;
 	return stream;
 }
 

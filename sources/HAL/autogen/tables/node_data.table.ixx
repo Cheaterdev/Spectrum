@@ -7,8 +7,6 @@ import :HLSL;
 import :Enums;
 import <HAL.h>;
 import :Autogen.Tables.AABB;
-
-
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -38,5 +36,4 @@ export namespace Table
 	};
 	#pragma pack(pop)
 }
-
 

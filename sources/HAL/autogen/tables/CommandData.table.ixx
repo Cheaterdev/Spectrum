@@ -9,8 +9,6 @@ import <HAL.h>;
 import :Autogen.Slots.MaterialInfo;
 import :Autogen.Slots.MeshInfo;
 import :Autogen.Slots.MeshInstanceInfo;
-
-
 export namespace Table
 {
 	#pragma pack(push, 1)
@@ -44,5 +42,4 @@ export namespace Table
 	};
 	#pragma pack(pop)
 }
-
 

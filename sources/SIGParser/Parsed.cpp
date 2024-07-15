@@ -5,12 +5,8 @@ import windows;
 #include "Parsed.h"
 my_stream::my_stream(std::string dir, std::string filename)
 {
-
 	path = dir + "/" + filename;
 	std::filesystem::create_directories(dir);
-
-
-	//stream.open(dir+"/"+filename);
 }
 
 my_stream::~my_stream()
@@ -41,20 +37,6 @@ my_stream::~my_stream()
 		f.close();
 	}
 	//stream.close();
-}
-
-void my_stream::push()
-{
-	levels[level] = '\t';
-	level++;
-	levels[level] = 0;
-}
-
-void my_stream::pop()
-{
-	levels[level] = '\t';
-	level--;
-	levels[level] = 0;
 }
 
 std::string get_name_for(ValueType type)
