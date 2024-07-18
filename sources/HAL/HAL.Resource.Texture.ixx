@@ -36,8 +36,10 @@ export{
 			std::vector<GPUBinaryData<true>> load_subresources; // TODO: make shared temp
 			SERIALIZE()
 			{
+				serialize_from_derived = true;
 				SAVE_PARENT(Resource);
-
+		serialize_from_derived = false;
+		
 
 			
 				if constexpr (Archive::is_loading::value)

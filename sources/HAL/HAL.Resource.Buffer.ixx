@@ -55,11 +55,14 @@ export{
 		private:
 			SERIALIZE()
 			{
+		serialize_from_derived = true;
 				SAVE_PARENT(Resource);
+		serialize_from_derived = false;
 
 
 				if constexpr (Archive::is_loading::value)
 				{
+					_init(desc, HeapType::DEFAULT, TextureLayout::COPY_QUEUE);
 					GPUBinaryData<true> binary;
 					ar& NVP(binary);
 					Resource::write(binary);

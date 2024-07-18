@@ -186,18 +186,6 @@ namespace Spectrum
 
 			conf.ExportAdditionalLibrariesEvenForStaticLib = false;
 
-			
-			{ // AgilitySDK
-				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\include", 66);
-				conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12Core.dll", "D3D12"));
-
-				if(target.Mode != Mode.Retail)
-				{
-					conf.TargetCopyFilesToSubDirectory.Add(new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\AgilitySDK\build\native\bin\x64\D3D12SDKLayers.dll", "D3D12"));
-				}
-			}
-
-
             { // PIX
 				conf.IncludePaths.Add(@"[project.SharpmakeCsPath]\PIX\Include\WinPixEventRuntime", 66);
                 conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\PIX\bin\x64\WinPixEventRuntime.dll");

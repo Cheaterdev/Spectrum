@@ -116,7 +116,11 @@ export {
 		LogBlock operator<<(const  T& smth) requires (std::is_enum_v<T>)
 		{
 			if (need_logging())
-				data->s << magic_enum::enum_name(smth);
+			{
+				data->s << magic_enum::enum_flags_name<T>(smth);
+			
+			}
+			
 			return *this;
 		}
 

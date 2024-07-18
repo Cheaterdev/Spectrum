@@ -54,9 +54,12 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 
 		std::vector<std::byte> Device::compress(std::span<std::byte> source)
 		{
+		
 			std::vector<std::byte> dest;
+			dest.assign(source.data(), source.data()+source.size());
 
-
+			Log::get()<<"Can't compress now; unknown error in d3d12sdklayers.dll"<<Log::endl;
+				return dest;
 			size_t maxSize = g_bufferCompression->CompressBufferBound(static_cast<uint32_t>(source.size()));
 
 			dest.resize(maxSize);
@@ -71,6 +74,7 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 				static_cast<uint32_t>(dest.size()),
 				&actualCompressedSize);
 
+		TEST(*this, compressionResult);
 			dest.resize(actualCompressedSize);
 			return dest;
 		}
@@ -170,7 +174,7 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 
 			  DStorageCreateCompressionCodec(
             DSTORAGE_COMPRESSION_FORMAT_GDEFLATE,
-            6,
+            0,
             IID_PPV_ARGS(&g_bufferCompression));
 
 		}

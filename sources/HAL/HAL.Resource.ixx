@@ -136,6 +136,8 @@ export{
 
 		class Resource :public SharedObject<Resource>, public ObjectState<TrackedObjectState>, public TrackedObject, public API::Resource
 		{
+					protected:
+						bool serialize_from_derived = false;
 		protected:
 			friend class API::Resource;
 			HeapType heap_type;
@@ -218,6 +220,7 @@ export{
 
 			SERIALIZE()
 			{
+				assert(serialize_from_derived);
 				ar& NVP(desc);
 
 			}

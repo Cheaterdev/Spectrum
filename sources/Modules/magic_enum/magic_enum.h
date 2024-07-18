@@ -1,1 +1,1 @@
-#include <magic_enum.hpp>
+#include <magic_enum_all.hpp>

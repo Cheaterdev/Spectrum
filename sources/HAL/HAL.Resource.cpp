@@ -31,10 +31,13 @@ namespace HAL
 			return std::make_shared<HAL::Buffer>(desc, heap_type);
 		return std::make_shared<TextureResource>(desc, heap_type);
 	}
-
+	std::mutex t;
 
 	void Resource::write(GPUBinaryData<true>& data)
 	{
+		std::lock_guard<std::mutex> g(t);
+
+		Log::get()<<data.operation.path<<Log::endl;
 		StorageRequest request;
 
 		request.resource = get_ptr();
@@ -42,7 +45,7 @@ namespace HAL
 		request.file_offset = data.operation.file_offset;
 		request.size = data.get_size();
 		request.uncompressed_size = data.uncompressed_size;
-		request.compressed = true;
+		request.compressed = request.uncompressed_size!= data.get_size();
 
 		std::visit(overloaded{
 			[&](const GPUBinaryData<true>::Buffer& buffer) {
@@ -57,6 +60,14 @@ namespace HAL
 			}, data.desc);
 
 		load_waiter = Device::get().get_ds_queue().execute(request);
+		
+		Log::get()<<1<<Log::endl;
+		Device::get().get_ds_queue().flush();
+		
+		Log::get()<<2<<Log::endl;
+		load_waiter.wait();
+		
+		Log::get()<<3<<Log::endl;
 	}
 
 }

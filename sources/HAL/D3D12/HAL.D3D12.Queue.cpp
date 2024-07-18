@@ -148,8 +148,8 @@ namespace HAL
 		queueDesc.Device = device.get_native_device().Get();
 
 		TEST(device, factory->CreateQueue(&queueDesc, IID_PPV_ARGS(&native)));
-
-
+			  		auto res = native->GetCompressionSupport (DSTORAGE_COMPRESSION_FORMAT_GDEFLATE);
+	Log::get()<<res<<Log::endl;
 	}
 	DirectStorageQueue::~DirectStorageQueue()
 	{
@@ -241,8 +241,8 @@ namespace HAL
 
 
 
-							/*	auto l = HAL::Device::get().get_texture_layout(srequest.resource->get_desc(), texture.subresource);
-								assert(l.size==srequest.size);*/
+								auto l = HAL::Device::get().get_texture_layout(srequest.resource->get_desc(), texture.subresource);
+								assert(l.size==srequest.uncompressed_size);
 							},
 							[&](auto other) {
 								assert(false);

@@ -39,7 +39,7 @@ export namespace D3D
 
 	using StorageFactory = ComPtr<IDStorageFactory>;
 	using StorageFile = ComPtr<IDStorageFile>;
-	using StorageQueue = ComPtr<IDStorageQueue>;
+	using StorageQueue = ComPtr<IDStorageQueue2>;
 }
 
 export namespace DXGI
