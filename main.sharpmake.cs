@@ -195,6 +195,11 @@ namespace Spectrum
 			}
 
 
+            {
+                conf.TargetCopyFilesToSubDirectory.Add( new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\debug\bin\D3D12Core.dll","D3D12"));
+                conf.TargetCopyFilesToSubDirectory.Add( new KeyValuePair<string, string>(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\debug\bin\d3d12SDKLayers.dll","D3D12"));
+            }
+
 
             // fix: dstorage vcpkg issue -> copy manually
             conf.TargetCopyFiles.Add(@"[project.SharpmakeCsPath]\vcpkg_installed\x64-windows\x64-windows\bin\dstoragecore.dll");
