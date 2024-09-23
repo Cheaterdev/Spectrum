@@ -195,6 +195,9 @@ export import :Autogen.Slots.FrameClassificationInitDispatch;
 export import :Autogen.Tables.FrameClassificationInitDispatch;
 export import :Autogen.Slots.ReflectionCombine;
 export import :Autogen.Tables.ReflectionCombine;
+export import :Autogen.Slots.WorkGraphTest;
+export import :Autogen.Tables.WorkGraphTest;
+export import :Autogen.Tables.GraphInput;
 
 export	{
 	#include "rt\SingleColor.h"
@@ -349,6 +352,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameClassification") return SlotID::FrameClassification;
 	if(slot_name == "FrameClassificationInitDispatch") return SlotID::FrameClassificationInitDispatch;
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
+	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
 	return std::nullopt;
 }
 
@@ -429,6 +433,7 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FrameClassification) return Slots::FrameClassification::Slot::ID;
 	if(id == SlotID::FrameClassificationInitDispatch) return Slots::FrameClassificationInitDispatch::Slot::ID;
 	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
+	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
 	return -1;
 }
 
@@ -509,5 +514,6 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameClassification) return "FrameClassification";
 	if(id == SlotID::FrameClassificationInitDispatch) return "FrameClassificationInitDispatch";
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
+	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
 	return "UNKNOWN";
 }

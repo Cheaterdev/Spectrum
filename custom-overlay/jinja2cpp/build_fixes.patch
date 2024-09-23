@@ -24,3 +24,18 @@ index d7c0a60..8a0bc5e 100644
      )
      mark_as_advanced(${varName})
  endfunction ()
+
+diff --git a/src/error_info.cpp b/src/error_info.cpp
+index b60cc8e..5cba8f3 100644
+--- a/src/error_info.cpp
++++ b/src/error_info.cpp
+@@ -102,7 +102,7 @@ struct formatter<jinja2::Value, CharT>
+     }
+ 
+     template<typename FormatContext>
+-    auto format(const jinja2::Value& val, FormatContext& ctx)
++    auto format(const jinja2::Value& val, FormatContext& ctx) const
+     {
+         nonstd::visit(ValueRenderer<FormatContext>(&ctx), val.data());
+         return fmt::format_to(ctx.out(), UNIVERSAL_STR("").GetValue<CharT>());
+

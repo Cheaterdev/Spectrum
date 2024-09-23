@@ -1,13 +1,13 @@
 #pragma once
 
 #include "RayCone.h"
-struct RayPayload
+struct [raypayload]RayPayload
 {	
 	
-	float4 color;
-	float3 dir;
-	uint recursion;
-	float dist;
+	float4 color:read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+	float3 dir:read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+	uint recursion:read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+	float dist:read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
 
 	RayCone cone;
 

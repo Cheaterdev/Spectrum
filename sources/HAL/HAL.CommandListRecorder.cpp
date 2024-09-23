@@ -93,6 +93,22 @@ namespace HAL
 		this->name=name;
 	}
 
+
+	
+				void DelayedCommandList::set_program(StateObject* id, ResourceAddress buffer, uint size, bool init)
+				{
+					tasks.emplace_back([=](API::CommandList& list) {
+			list.set_program(id,buffer,size,init );
+			});
+				}
+void DelayedCommandList::dispatch_graph(ResourceAddress addr, uint stride)
+{
+		tasks.emplace_back([=](API::CommandList& list) {
+			list.dispatch_graph(addr,stride);
+			});
+}
+
+
 	void DelayedCommandList::set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler)
 	{
 		tasks.emplace_back([=](API::CommandList& list) {

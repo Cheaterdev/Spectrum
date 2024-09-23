@@ -324,7 +324,7 @@ struct SelectLocal<T>
 		void init(RTX& rtx)
 		{
 			HAL::StateObjectDesc raytracingPipeline;
-			raytracingPipeline.collection = true;
+			raytracingPipeline.type = StateObjectType::Collection;
 
 			rtx.init_collection(raytracingPipeline);
 
@@ -360,7 +360,7 @@ struct SelectLocal<T>
 		void init(RTX& rtx)
 		{
 			HAL::StateObjectDesc raytracingPipeline;
-			raytracingPipeline.collection = true;
+			raytracingPipeline.type = StateObjectType::Collection;
 			rtx.init_collection(raytracingPipeline);
 
 			HAL::LibraryObject lib;
@@ -390,7 +390,7 @@ struct SelectLocal<T>
 			if constexpr (Desc::per_material)
 			{
 				HAL::StateObjectDesc raytracingPipeline;
-				raytracingPipeline.collection = true;
+				raytracingPipeline.type = StateObjectType::Collection;
 				rtx.init_collection(raytracingPipeline);
 
 				HAL::LibraryObject lib;

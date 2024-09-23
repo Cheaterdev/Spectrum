@@ -45,7 +45,7 @@ export namespace HAL
 { 0xb2, 0x97, 0x81, 0xce, 0x9e, 0x18, 0x93, 0x3f }
 		};
 
-		D3D12EnableExperimentalFeatures(1, &_D3D12ExperimentalShaderModels, nullptr, nullptr);
+	//	D3D12EnableExperimentalFeatures(1, &_D3D12ExperimentalShaderModels, nullptr, nullptr);
 
 	}
 

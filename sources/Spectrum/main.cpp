@@ -128,7 +128,7 @@ public:
 	float draw_time;
 	MeshAssetInstance::ptr instance;
 
-
+	HAL::StateObject::ptr work_graph;
 
 
 	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
@@ -323,6 +323,23 @@ VoxelGI::ptr voxel_gi;
 		eyes.emplace_back(new EyeData(nullptr));
 
 		voxel_gi = std::make_shared<VoxelGI>(scene);
+
+
+
+		
+		HAL::StateObjectDesc workgraph;
+			workgraph.type = StateObjectType::WorkGraph;
+			workgraph.global_root = HAL::Device::get().get_engine_pso_holder().GetSignature(Layouts::DefaultLayout);
+			HAL::LibraryObject lib;
+			lib.library = HAL::library_shader::get_resource({ std::string("shaders\\workgraph_test.hlsl"), "" , HAL::ShaderOptions::None, {} });
+			lib.export_shader(std::wstring(L"ClassifyPixels_Node"));
+			lib.export_shader(std::wstring(L"Shadows_Node"));
+			workgraph.libraries.emplace_back(lib);
+
+			work_graph = std::make_shared<HAL::StateObject>(workgraph);
+
+
+
 	}
 	float scale_speed = 0;
 	vec2 wheel_pos;
@@ -565,8 +582,8 @@ VoxelGI::ptr voxel_gi;
 				GBufferViewDesc gbuffer;
 
 				Handlers::Texture H(RTXDebug);
-
-			
+				Handlers::FormattedBuffer<char, HAL::Format::R8_UINT> H(WorkGraphBuffer);
+				
 			};
 
 			if (HAL::Device::get().is_rtx_supported())
@@ -577,7 +594,7 @@ VoxelGI::ptr voxel_gi;
 				auto size = frame.frame_size;
 				data.gbuffer.need(builder, false);
 				builder.create(data.RTXDebug, { ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 }, ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-			
+				builder.create(data.WorkGraphBuffer,  {work_graph->buffer_size});
 					}, [this, &graph](RTXDebugData& data, FrameContext& context) {
 						auto& compute = context.get_list()->get_compute();
 						auto& copy = context.get_list()->get_copy();
@@ -587,18 +604,21 @@ VoxelGI::ptr voxel_gi;
 							context.get_list()->clear_uav(data.RTXDebug->rwTexture2D, vec4(0, 0, 0, 0));
 					
 						}
+						auto &backingBuffer = data.WorkGraphBuffer->resource;
 
-						compute.set_signature(RTX::get().rtx.m_root_sig);
+
+						compute.set_program(work_graph.get(), backingBuffer->get_resource_address(),work_graph->buffer_size, data.WorkGraphBuffer.is_new());
+					
 
 						graph.set_slot(SlotID::VoxelInfo, compute);
 						graph.set_slot(SlotID::FrameInfo, compute);
 						graph.set_slot(SlotID::SceneData, compute);
 
-						{
-							Slots::VoxelOutput output;
-							output.GetNoise() = *data.RTXDebug;
-							compute.set(output);
-						}
+						//{
+						//	Slots::VoxelOutput output;
+						//	output.GetNoise() = *data.RTXDebug;
+						//	compute.set(output);
+						//}
 
 						{
 							auto gbuffer = data.gbuffer.actualize(context);
@@ -609,14 +629,31 @@ VoxelGI::ptr voxel_gi;
 					//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
 							compute.set(voxelScreen);
 						}
-						RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
 
 
-						//copy.copy_resource(data.RTXDebugPrev->resource, data.RTXDebug->resource);
+						{
+							Slots::WorkGraphTest output;
+							output.GetOutput() = *data.RTXDebug;
+							compute.set(output);
+						}
+
+
+						{
+							Table::GraphInput input;
+							input.GetDispatch_grid() = vec3(vec2::max(data.RTXDebug->get_size()/8,vec2(1,1)),1);
+									
+							
+							auto info = context.get_list()->place_data(Math::roundUp(sizeof(input), 256), 256);
+							memcpy(info.get_cpu_data(), &input, sizeof(input));
+							compute.dispatch_graph(info,info.size);
+						}
+					//	RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
+						
+					
 					});
 		
-		if(enable_denoiser)
-		shadow_denoiser.generate(graph);
+		//if(enable_denoiser)
+		//shadow_denoiser.generate(graph);
 
 			}
 		}
@@ -809,7 +846,7 @@ class GraphRender : public Window, public GUI::user_interface
 	std::shared_ptr<FrameFlowGraph> frameFlowGraph;
 	GUI::base::ptr area;
 
-
+	
 	size_t graph_usage = 0;
 
 public:

@@ -36,10 +36,11 @@ export namespace HAL
 		class StateObject
 		{
 		protected:
-			ComPtr<ID3D12StateObjectProperties> stateObjectProperties;
+			ComPtr<ID3D12StateObjectProperties1> stateObjectProperties;
 
 		public:
-
+			D3D12_PROGRAM_IDENTIFIER id;
+			uint buffer_size;
 		};
 	}
 }

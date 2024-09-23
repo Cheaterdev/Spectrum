@@ -40,6 +40,9 @@ export namespace HAL {
 				return !!m_commandList;
 			}
 
+				void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
+void dispatch_graph(ResourceAddress addr, uint stride);
+
 			void clear_uav(const UAVHandle& h, vec4 ClearColor);
 			void clear_rtv(const RTVHandle& h, vec4 ClearColor);
      		void clear_stencil(const DSVHandle& dsv, UINT8 stencil);

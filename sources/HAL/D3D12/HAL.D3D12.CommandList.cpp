@@ -35,7 +35,40 @@ namespace HAL
 			m_commandList->Close();
 		}
 
+		void CommandList::set_program(StateObject* obj, ResourceAddress adress, uint size, bool init)
+		{
+			D3D12_SET_PROGRAM_DESC desc = {};
+			desc.Type = D3D12_PROGRAM_TYPE_WORK_GRAPH;
+			desc.WorkGraph.ProgramIdentifier = obj->id;
+			desc.WorkGraph.Flags = D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE;
+			desc.WorkGraph.BackingMemory = { to_native(adress), size };
 
+			// we need to initialise the backing memory only the first time we run the workgraph
+			desc.WorkGraph.Flags = init ? D3D12_SET_WORK_GRAPH_FLAG_INITIALIZE : D3D12_SET_WORK_GRAPH_FLAG_NONE;
+ 
+			// bing the workgraph program with the reference to the backing memory
+			m_commandList->SetProgram(&desc);
+
+		}
+
+		void CommandList::dispatch_graph(ResourceAddress addr, uint stride)
+		{
+		 // dispatch work graph
+			D3D12_DISPATCH_GRAPH_DESC desc = {};
+			desc.Mode = D3D12_DISPATCH_MODE_NODE_GPU_INPUT;
+			  desc.NodeGPUInput = { };
+			//desc.NodeGPUInput= to_native(addr);
+			 desc.NodeGPUInput.EntrypointIndex = 0;
+			  desc.NodeGPUInput.NumRecords = 1;*/
+		/*	 D3D12_DISPATCH_GRAPH_DESC desc = {};
+    desc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
+    desc.NodeCPUInput = { };
+    desc.NodeCPUInput.EntrypointIndex = 0;
+    desc.NodeCPUInput.NumRecords = 1;*/
+
+	m_commandList->DispatchGraph(&desc);
+
+		}
 		void CommandList::clear_uav(const UAVHandle& h, vec4 ClearColor)
 		{
 			auto v = h.get_resource_info().view;

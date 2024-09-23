@@ -193,6 +193,8 @@ export
 		TilingPostprocess = "TilingPostprocess"_crc32,
 		FrameClassification = "FrameClassification"_crc32,
 		FrameClassificationInitDispatch = "FrameClassificationInitDispatch"_crc32,
-		ReflectionCombine = "ReflectionCombine"_crc32
+		ReflectionCombine = "ReflectionCombine"_crc32,
+		WorkGraphTest = "WorkGraphTest"_crc32,
+		GraphInput = "GraphInput"_crc32
 	};
 }

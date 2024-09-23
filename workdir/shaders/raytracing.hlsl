@@ -336,7 +336,7 @@ void ColorPass()
 
 
 
-	RayPayload payload_gi;
+	[raypayload]  RayPayload payload_gi;
 	payload_gi.color = 0;
 	payload_gi.recursion = 0;
 	payload_gi.dist = 0;
@@ -401,7 +401,8 @@ void MyRaygenShader()
 	float3 dirVoxel = dir;// normalize(normal + rand2 * (right + tangent));
 
 	float3 oneVoxelSize = voxel_info.GetSize() / (voxel_info.GetVoxel_tiles_count() * voxel_info.GetVoxels_per_tile());
-	RayPayload payload_gi;
+	[raypayload]
+    RayPayload payload_gi;
 	payload_gi.init();
 
 
@@ -506,7 +507,8 @@ void MyRaygenShaderReflection()
 	float3 dirVoxel = rayDir;// normalize(normal + rand2 * (right + tangent));
 
 	float3 oneVoxelSize = voxel_info.GetSize() / (voxel_info.GetVoxel_tiles_count() * voxel_info.GetVoxels_per_tile());
-	RayPayload payload_gi;
+	[raypayload]
+    RayPayload payload_gi;
 	payload_gi.color = float4(dirVoxel, 0);
 	payload_gi.recursion = 0;
 	payload_gi.dist = 0;
@@ -552,7 +554,8 @@ void MyRaygenShaderReflection()
 
 
 [shader("miss")]
-void MyMissShader(inout RayPayload payload)
+void MyMissShader([raypayload]inout
+RayPayload payload)
 {
 	payload.color = 0;
 	// CreateFrameInfo().GetSky().SampleLevel(linearSampler, normalize(WorldRayDirection()), 3);
@@ -562,14 +565,16 @@ void MyMissShader(inout RayPayload payload)
 
 
 [shader("closesthit")]
-void ShadowClosestHitShader(inout ShadowPayload payload, in MyAttributes attr)
+void ShadowClosestHitShader([raypayload] inout
+ShadowPayload payload, in MyAttributes attr)
 {
 	payload.hit = true;
 }
 
 
 [shader("miss")]
-void ShadowMissShader(inout ShadowPayload payload)
+void ShadowMissShader([raypayload] inout
+ShadowPayload payload)
 {
 	payload.hit = false;
 }

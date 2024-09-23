@@ -19,9 +19,9 @@ export namespace D3D
 
 	using Heap = ComPtr<ID3D12Heap>;
 	using Resource = ComPtr<ID3D12Resource>;
-	using Device = ComPtr<ID3D12Device10>;
+	using Device = ComPtr<ID3D12Device14>;
 	using Fence = ComPtr<ID3D12Fence>;
-	using CommandList = ComPtr<ID3D12GraphicsCommandList7>;
+	using CommandList = ComPtr<ID3D12GraphicsCommandList10>;
 	using CommandAllocator = ComPtr<ID3D12CommandAllocator>;
 	using CommandSignature = ComPtr<ID3D12CommandSignature>;
 	using PipelineState = ComPtr<ID3D12PipelineState>;

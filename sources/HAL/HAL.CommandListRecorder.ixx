@@ -33,7 +33,9 @@ export namespace HAL
 		void compile(CommandAllocator& allocator);
 
 		void func(std::function<void(API::CommandList&)> f);
-
+		
+				void set_program(StateObject*, ResourceAddress buffer, uint size, bool init);
+void dispatch_graph(ResourceAddress addr, uint stride);
 		void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0));
 		void clear_rtv(const RTVHandle& h, vec4 ClearColor);
 		void clear_stencil(const DSVHandle& dsv, UINT8 stencil);

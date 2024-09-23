@@ -101,7 +101,7 @@ namespace HAL
 
 	void CommandList::setup_debug(SignatureDataSetter* setter)
 	{
-		if (!current_pipeline->debuggable) return;
+		if (!current_pipeline || !current_pipeline->debuggable) return;
 		Slots::DebugInfo info;
 		info.debug = debug_buffer;
 		setter->set(info);
@@ -1061,7 +1061,20 @@ namespace HAL
 		return *copy.get();//return reinterpret_cast<ComputeContext&>(*this);
 	}
 
-
+		void ComputeContext::dispatch_graph(ResourceAddress addr, uint stride)
+	{
+		PROFILE_GPU(L"dispatch_graph");
+		base.pre_command<true, false>(*this,BarrierSync::COMPUTE_SHADING);
+		list->dispatch_graph(addr,stride);
+		base.post_command<true, false>(*this);
+	}
+	void ComputeContext::set_program(StateObject* id, ResourceAddress buffer, uint size, bool init)
+	{
+		base.current_pipeline = id;
+		if (id->root_signature)
+			set_signature(id->root_signature);
+		list->set_program(id,buffer, size, init);
+	}
 	void ComputeContext::on_set_signature(const RootSignature::ptr& s)
 	{
 		list->set_compute_signature(s);

@@ -802,7 +802,7 @@ export{
 
 			void dispatch_mesh(ivec3 v);
 			void dispatch_mesh(DispatchMeshArguments args);
-
+		
 			void set_stencil_ref(UINT ref)
 			{
 				list->set_stencil_ref(ref);
@@ -896,7 +896,8 @@ export{
 			void dispatch(ivec3, ivec3 = ivec3(4, 4, 4));
 
 
-
+				void dispatch_graph(ResourceAddress addr, uint stride);
+				void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
 
 			
 

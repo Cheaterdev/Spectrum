@@ -39,7 +39,7 @@ namespace HAL
 	{
 		HAL::init();
 
-		std::shared_ptr<Device> result;
+		std::shared_ptr<Device> result,any_result;
 		HAL::Adapters::get().enumerate([&](HAL::Adapter::ptr adapter)
 			{
 
@@ -57,8 +57,15 @@ namespace HAL
 				{
 					Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;
 					result = device;
+				}else if(props.full_bindless)
+				{
+				
+				any_result=device;
+				
 				}
 			});
+
+		if(!result) result = any_result;
 
 		result->init_managers();
 		return result;

@@ -321,10 +321,17 @@ export namespace HAL
 	};
 
 	class StateObject;
+
+	enum class StateObjectType:uint
+	{
+		Collection,
+		Raytracing,
+		WorkGraph
+	};
 	struct StateObjectDesc
 	{
 
-		bool collection = false;
+		StateObjectType type = StateObjectType::Raytracing;
 
 		RootSignature::ptr global_root;
 
