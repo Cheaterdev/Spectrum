@@ -48,7 +48,7 @@ GraphicsPSO DrawStencil
 
 	ds = D32_FLOAT;
 	cull = None;
-	depth_func = LESS;
+	depth_func = GREATER;
 }
 
 

@@ -13,6 +13,7 @@ export
 		{
 			used = false;
 		}
+		bool alias_ended = false;
 	};
 
 	template<class T>

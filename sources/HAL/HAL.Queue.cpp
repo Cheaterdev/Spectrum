@@ -166,6 +166,8 @@ namespace HAL
 			if (transition_list->get_type() == (list)->get_type())
 			{
 				API::Queue::execute(&transition_list->get_compiled());
+					//const FenceWaiter execution_fence = signal_internal();
+				//	execution_fence.wait();
 				API::Queue::execute(&list->compiler.get_list());
 			}
 			else
@@ -208,7 +210,7 @@ namespace HAL
 
 		last_executed_fence = execution_fence;
 
-		//execution_fence.wait();
+	//	execution_fence.wait();
 		return execution_fence;
 	}
 

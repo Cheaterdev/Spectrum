@@ -56,10 +56,9 @@ namespace HAL
 		 // dispatch work graph
 			D3D12_DISPATCH_GRAPH_DESC desc = {};
 			desc.Mode = D3D12_DISPATCH_MODE_NODE_GPU_INPUT;
-			  desc.NodeGPUInput = { };
-			//desc.NodeGPUInput= to_native(addr);
-			 desc.NodeGPUInput.EntrypointIndex = 0;
-			  desc.NodeGPUInput.NumRecords = 1;*/
+			desc.NodeGPUInput= to_native(addr);
+			
+
 		/*	 D3D12_DISPATCH_GRAPH_DESC desc = {};
     desc.Mode = D3D12_DISPATCH_MODE_NODE_CPU_INPUT;
     desc.NodeCPUInput = { };

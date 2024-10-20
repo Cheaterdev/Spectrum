@@ -44,6 +44,7 @@ export{
 			void track_object(T& obj)
 			{
 				auto& state = obj.ObjectState<TrackedObjectState>::get_state(this);
+				assert(!state.alias_ended);
 				if (!state.used)
 				{
 					state.used = true;
@@ -769,7 +770,7 @@ export{
 			}
 
 			template<SIG_TYPES::RT RT>
-			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0)
+			CompiledRT set_rtv(const RT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0)
 			{
 
 				auto compiled = rt.compile(*this);
@@ -779,7 +780,7 @@ export{
 				return compiled;
 			}
 
-			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, float depth = 1, uint stencil = 0);
+			void set_rtv(const CompiledRT& rt, RTOptions options = RTOptions::Default, float depth = 0, uint stencil = 0);
 
 			CommandList& get_base()
 			{
@@ -894,6 +895,7 @@ export{
 			void dispatch(int = 1, int = 1, int = 1);
 			void dispatch(ivec2, ivec2 = ivec2(8, 8));
 			void dispatch(ivec3, ivec3 = ivec3(4, 4, 4));
+			void dispatch2(ivec2, ivec2 = ivec2(4, 4));
 
 
 				void dispatch_graph(ResourceAddress addr, uint stride);

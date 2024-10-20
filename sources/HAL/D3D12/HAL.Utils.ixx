@@ -48,7 +48,7 @@ export namespace DXGI
 	using Swapchain = ComPtr<IDXGISwapChain3>;
 	using Surface = ComPtr<IDXGISurface2>;
 	using Device = ComPtr<IDXGIDevice2>;
-	using Factory = ComPtr<IDXGIFactory2>;
+	using Factory = ComPtr<IDXGIFactory4>;
 	using Output = ComPtr<IDXGIOutput1>;
 }
 

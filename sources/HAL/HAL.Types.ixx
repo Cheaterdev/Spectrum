@@ -511,7 +511,7 @@ extern const  ResourceState UNKNOWN ;
 
 		Format ds_format = Format::UNKNOWN;
 		std::vector<Format> rtv_formats;
-		ComparisonFunc func = ComparisonFunc::LESS;
+		ComparisonFunc func = ComparisonFunc::GREATER;
 
 		bool enable_stencil = false;
 		uint8 stencil_read_mask = 0xff;
@@ -523,7 +523,7 @@ extern const  ResourceState UNKNOWN ;
 			stencil_desc.StencilDepthFailOp = StencilOp::Keep;
 			stencil_desc.StencilFailOp = StencilOp::Keep;
 			stencil_desc.StencilPassOp = StencilOp::Keep;
-			stencil_desc.StencilFunc = ComparisonFunc::LESS;
+			stencil_desc.StencilFunc = ComparisonFunc::GREATER;
 		}
 		bool operator==(const RenderTargetState& r) const = default;
 		auto operator<=>(const  RenderTargetState& r)  const = default;

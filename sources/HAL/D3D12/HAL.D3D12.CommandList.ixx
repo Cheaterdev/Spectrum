@@ -20,6 +20,8 @@ export namespace HAL {
 		class CommandList
 		{
 
+			
+			void* debug_ptr = nullptr;
 			friend class HAL::Queue;
 			D3D::CommandList m_commandList;
 			D3D_PRIMITIVE_TOPOLOGY  native_topology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;

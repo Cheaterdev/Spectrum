@@ -698,12 +698,12 @@ export
 			}
 			void init(GPUEntityStorageInterface& frame)
 			{
-				uint local_offset = 0;
 				offset = desc.offset;
 				uint64 size = desc.size;
 
 				if (desc.counted == counterType::SELF )
 				{
+					uint local_offset = 0;
 					local_offset = Math::roundUp(4, sizeof(Underlying<T>));
 					if (size == 0) size = get_desc().as_buffer().SizeInBytes;
 					size -= local_offset;

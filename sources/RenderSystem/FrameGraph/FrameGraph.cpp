@@ -222,7 +222,7 @@ namespace FrameGraph
 				if (!info->enabled)
 					continue;
 
-				list->alias_end(info->resource.get());
+			//	list->alias_end(info->resource.get());
 			}
 
 			for (auto info : pass->used.resource_creations)
@@ -232,7 +232,7 @@ namespace FrameGraph
 				if (!info->enabled)
 					continue;
 
-				list->alias_begin(info->resource.get());
+			//	list->alias_begin(info->resource.get());
 			}
 		}
 		return list;
@@ -711,7 +711,7 @@ namespace FrameGraph
 							auto best_type = prev_state.merged_read_state.get_best_list_type();
 							//		its in 99% read to write compatible on all queues
 							assert (IsCompatible(list_type, best_type));
-							info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_read_state);
+						//	info.resource->get_state_manager().prepare_state(commandList.get(), prev_state.merged_read_state);
 						}
 
 
@@ -1114,7 +1114,7 @@ namespace FrameGraph
 
 				}
 
-				info->resource->debug = info->name == "GBuffer_DepthPrev";
+				info->resource->debug = info->name == "BlueNoise";
 				info->resource->set_name(info->name);
 				
 				info->handler->init_view(*info, *current_frame);

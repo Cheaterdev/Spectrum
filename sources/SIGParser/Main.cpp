@@ -28,6 +28,7 @@ void iterate_files(std::filesystem::path path, std::function<void(std::filesyste
 		++dir;
 	}
 }
+
 jinja2::TemplateEnv global;
 
 rapidjson::Document make_map(auto& p)
@@ -37,7 +38,6 @@ rapidjson::Document make_map(auto& p)
 		cereal::JSONOutputArchive archive(s);
 
 		p.serialize(archive);
-
 	}
 	rapidjson::Document doc;
 
@@ -52,10 +52,10 @@ class TemplatesLibrary
 	std::map<std::wstring, jinja2::Template> templates;
 
 public:
-	 
 	TemplatesLibrary(std::string dir)
 	{
-		iterate_files("templates/" + dir + "/", [this](std::filesystem::path path) {
+		iterate_files("templates/" + dir + "/", [this](std::filesystem::path path)
+		{
 			std::ifstream stream;
 			stream.open(path);
 
@@ -68,7 +68,7 @@ public:
 			tpl.Load(stream);
 
 			stream.close();
-			});
+		});
 	}
 
 	auto generate(std::wstring filename, const ValuesMap& params)
@@ -92,7 +92,7 @@ public:
 		auto dp = make_map(p);
 
 		ValuesMap params = {
-		   {name, Reflect(dp)}
+			{name, Reflect(dp)}
 		};
 
 		return generate(filename, params);
@@ -100,157 +100,171 @@ public:
 };
 
 
-int main() {
-
+int main()
+{
 	std::map<std::string, ValuesList> user_lists;
 
 	try
 	{
 		Parsed parsed;
 
-		iterate_files("sigs/", [&](std::wstring filename) {
+		iterate_files("sigs/", [&](std::wstring filename)
+		{
 			auto p = parse(filename);
 
 			parsed.merge(p);
-			});
+		});
 
 		parsed.setup();
 		rapidjson::Document parsed_doc = make_map(parsed);
 
 		jinja2::Value parsed_map = Reflect(parsed_doc);
 		global.AddGlobal("parsed", parsed_map);
-		global.AddGlobal("ValueType", ValuesMap{ {"CB", ValueType::CB},{"SRV", ValueType::SRV},{"UAV",ValueType::UAV},{"SMP",ValueType::SMP},{"STRUCT",ValueType::STRUCT} });
+		global.AddGlobal("ValueType", ValuesMap{
+			                 {"CB", ValueType::CB}, {"SRV", ValueType::SRV}, {"UAV", ValueType::UAV},
+			                 {"SMP", ValueType::SMP}, {"STRUCT", ValueType::STRUCT}
+		                 });
 
 		global.AddGlobal("recursive_slots", jinja2::MakeCallable(
-			[&](const std::string& name) {
-				auto* layout = parsed.find_layout(name);
-				ValuesList list;
-				layout->recursive_slots([&](Slot& slot) {
-					list.emplace_back(slot.name);
-					});
+			                 [&](const std::string& name)
+			                 {
+				                 auto* layout = parsed.find_layout(name);
+				                 ValuesList list;
+				                 layout->recursive_slots([&](Slot& slot)
+				                 {
+					                 list.emplace_back(slot.name);
+				                 });
 
 
-				return list;
-			},
-			ArgInfo{ "name" }
-		));
+				                 return list;
+			                 },
+			                 ArgInfo{"name"}
+		                 ));
 
 		global.AddGlobal("recursive_samplers", jinja2::MakeCallable(
-			[&](const std::string& name) {
-				auto* layout = parsed.find_layout(name);
-				ValuesList list;
+			                 [&](const std::string& name)
+			                 {
+				                 auto* layout = parsed.find_layout(name);
+				                 ValuesList list;
 
 
-				layout->recursive_samplers([&](Sampler& slot) {
-					list.emplace_back("HAL::Samplers::" + slot.expr);
-					});
+				                 layout->recursive_samplers([&](Sampler& slot)
+				                 {
+					                 list.emplace_back("HAL::Samplers::" + slot.expr);
+				                 });
 
 
-				return list;
-			},
-			ArgInfo{ "name" }
-		));
+				                 return list;
+			                 },
+			                 ArgInfo{"name"}
+		                 ));
 
 		global.AddGlobal("get_name_for", jinja2::MakeCallable(
-			[&](const int& i) {
-				return get_name_for((ValueType)i);
-			},
-			ArgInfo{ "i" }
-		));
+			                 [&](const int& i)
+			                 {
+				                 return get_name_for((ValueType)i);
+			                 },
+			                 ArgInfo{"i"}
+		                 ));
 
 		global.AddGlobal("create_list", jinja2::MakeCallable(
-			[&](const std::string& b) {
-				auto& list = user_lists[b];
-				list.clear();
-				//	 a.asList().emplace_back(b);
-				return list;
-			},
-			ArgInfo{ "b" }
-		));
+			                 [&](const std::string& b)
+			                 {
+				                 auto& list = user_lists[b];
+				                 list.clear();
+				                 //	 a.asList().emplace_back(b);
+				                 return list;
+			                 },
+			                 ArgInfo{"b"}
+		                 ));
 
 		global.AddGlobal("get_list", jinja2::MakeCallable(
-			[&](const std::string& b) {
-				auto& list = user_lists[b];
+			                 [&](const std::string& b)
+			                 {
+				                 auto& list = user_lists[b];
 
-				return list;
-			},
-			ArgInfo{ "b" }
-		));
+				                 return list;
+			                 },
+			                 ArgInfo{"b"}
+		                 ));
 
 		global.AddGlobal("myappend", jinja2::MakeCallable(
-			[&](const std::string& list_name, const std::string& b) {
-				auto& list = user_lists[list_name];
+			                 [&](const std::string& list_name, const std::string& b)
+			                 {
+				                 auto& list = user_lists[list_name];
 
-				list.emplace_back(b);
+				                 list.emplace_back(b);
 
-				return list;
-			},
-			ArgInfo{ "a" }, ArgInfo{ "b" }
-		));
+				                 return list;
+			                 },
+			                 ArgInfo{"a"}, ArgInfo{"b"}
+		                 ));
 
 		global.AddGlobal("merge_lists", jinja2::MakeCallable(
-			[](const GenericList& a, const GenericList& b) {
+			                 [](const GenericList& a, const GenericList& b)
+			                 {
+				                 ValuesList list;
+				                 for (const auto& e : a)
+					                 list.emplace_back(e);
 
-				ValuesList list;
-				for (const auto& e : a)
-					list.emplace_back(e);
+				                 for (const auto& e : b)
+					                 list.emplace_back(e);
 
-				for (const auto& e : b)
-					list.emplace_back(e);
-
-				return list;
-			},
-			ArgInfo{ "a" }, ArgInfo{ "b" }
-		));
+				                 return list;
+			                 },
+			                 ArgInfo{"a"}, ArgInfo{"b"}
+		                 ));
 
 		global.AddGlobal("lowerize", jinja2::MakeCallable(
-			[](const std::string& name) {
-
-				std::string lowcameled = name;
-				lowcameled[0] = std::tolower(lowcameled[0]);
-				return lowcameled;
-			},
-			ArgInfo{ "name" }
-		));
+			                 [](const std::string& name)
+			                 {
+				                 std::string lowcameled = name;
+				                 lowcameled[0] = std::tolower(lowcameled[0]);
+				                 return lowcameled;
+			                 },
+			                 ArgInfo{"name"}
+		                 ));
 
 		global.AddGlobal("camel", jinja2::MakeCallable(
-			[](const std::string& name) {
-
-				std::string lowcameled = name;
-				lowcameled[0] = std::toupper(lowcameled[0]);
-				return lowcameled;
-			},
-			ArgInfo{ "name" }
-		));
+			                 [](const std::string& name)
+			                 {
+				                 std::string lowcameled = name;
+				                 lowcameled[0] = std::toupper(lowcameled[0]);
+				                 return lowcameled;
+			                 },
+			                 ArgInfo{"name"}
+		                 ));
 
 
 		global.AddGlobal("replace_start", jinja2::MakeCallable(
-			[](const std::string& a, const std::string& b, const std::string& c) {
-				std::string res = a;
+			                 [](const std::string& a, const std::string& b, const std::string& c)
+			                 {
+				                 std::string res = a;
 
-				if (res.starts_with(b))
-					res.replace(0, b.size(), c);
+				                 if (res.starts_with(b))
+					                 res.replace(0, b.size(), c);
 
-				return res;
-			},
-			ArgInfo{ "a" }, ArgInfo{ "b" }, ArgInfo{ "c" }
-		));
+				                 return res;
+			                 },
+			                 ArgInfo{"a"}, ArgInfo{"b"}, ArgInfo{"c"}
+		                 ));
 
 		global.GetSettings().extensions.Do = true;
 
-		
+
 		TemplatesLibrary cpp_templates("cpp");
 		TemplatesLibrary hlsl_templates("hlsl");
 
 		// Tables
 		for (auto& table : parsed.tables)
 		{
-
 			if (table.find_option("nobind"))
-				my_stream(hlsl_path + "/tables", table.name + ".h") << hlsl_templates.generate2(L"nobind_table", "table", table);
+				my_stream(hlsl_path + "/tables", table.name + ".h") << hlsl_templates.generate2(
+					L"nobind_table", "table", table);
 			else
 			{
-				my_stream(hlsl_path + "/tables", table.name + ".h") << hlsl_templates.generate2(L"table", "table", table);
+				my_stream(hlsl_path + "/tables", table.name + ".h") << hlsl_templates.generate2(
+					L"table", "table", table);
 
 				if (table.slot)
 				{
@@ -260,11 +274,13 @@ int main() {
 
 			if (!table.find_option("shader_only"))
 			{
-				my_stream(cpp_path + "/tables", table.name + ".table.ixx") << cpp_templates.generate2(L"table", "table", table);
+				my_stream(cpp_path + "/tables", table.name + ".table.ixx") << cpp_templates.generate2(
+					L"table", "table", table);
 
 				if (table.slot)
 				{
-					my_stream(cpp_path + "/slots", table.name + ".ixx") << cpp_templates.generate2(L"slot", "table", table);
+					my_stream(cpp_path + "/slots", table.name + ".ixx") << cpp_templates.generate2(
+						L"slot", "table", table);
 				}
 			}
 
@@ -278,8 +294,10 @@ int main() {
 		// Layout
 		for (auto& layout : parsed.layouts)
 		{
-			my_stream(hlsl_path + "/layout", layout.name + ".h") << hlsl_templates.generate2(L"layout", "layout", layout);
-			my_stream(cpp_path + "/layout", layout.name + ".layout.ixx") << cpp_templates.generate2(L"layout", "layout", layout);
+			my_stream(hlsl_path + "/layout", layout.name + ".h") << hlsl_templates.generate2(
+				L"layout", "layout", layout);
+			my_stream(cpp_path + "/layout", layout.name + ".layout.ixx") << cpp_templates.generate2(
+				L"layout", "layout", layout);
 		}
 
 		// PSO
@@ -321,7 +339,6 @@ int main() {
 		my_stream(cpp_path, "autogen.ixx") << cpp_templates.generate(L"autogen");
 		my_stream(cpp_path, "enums.ixx") << cpp_templates.generate(L"enums");
 		my_stream(cpp_path, "pso.cpp") << cpp_templates.generate(L"psos");
-
 	}
 	catch (std::exception& e)
 	{

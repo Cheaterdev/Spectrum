@@ -170,7 +170,7 @@ type& look_at(const vec3& eye, const vec3& at, const vec3& up)requires(matrix_ty
 	matrix_type::a44 = 1;
 	return *this;
 }
-type& perspective(float fovy, float aspect, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& perspective_classic(float fovy, float aspect, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	float yScale = 1 / tan(0.5f * fovy);
 	float xScale = yScale / aspect;
@@ -179,6 +179,17 @@ type& perspective(float fovy, float aspect, float zn, float zf) requires(matrix_
 	matrix_type::a31 = 0; matrix_type::a32 = 0; matrix_type::a33 = zf / (zf - zn); matrix_type::a34 = 1;
 	matrix_type::a41 = 0; matrix_type::a42 = 0; matrix_type::a43 = -zn * matrix_type::a33; matrix_type::a44 = 0;
 	return *this;
+}
+
+type perspective(float fovy, float aspect, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
+{
+	type reverse_z=type{1.0f, 0.0f,  0.0f, 0.0f,
+                            0.0f, 1.0f,  0.0f, 0.0f,
+                            0.0f, 0.0f, -1.0f, 0.0f,
+		0.0f, 0.0f,  1.0f, 1.0f};
+
+	*this =  perspective_classic(fovy, aspect, zf, zn);
+ 	return *this;
 }
 type& orthographic(float l, float r, float t, float b, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
 {

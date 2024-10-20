@@ -1,8 +1,9 @@
 #include "autogen/WorkGraphTest.h"
 #include "autogen/tables/GraphInput.h"
+#include "autogen/VoxelScreen.h"
+#include "autogen/FrameInfo.h"
 
-
-struct TileRecord 
+struct TileRecord
 {
     uint2 tileXY;
 };
@@ -12,10 +13,10 @@ groupshared unsigned int g_allbackfacing;
 [Shader("node")]
 [NodeLaunch("broadcasting")]
 [NodeIsProgramEntry]
-[NodeDispatchGrid(16, 16, 1)] // This will be overridden during pipeline creation
+[NodeMaxDispatchGrid(128, 128, 1)]
 [numthreads(8, 8, 1)]
 void ClassifyPixels_Node(
-//DispatchNodeInputRecord< GraphInput> inputData,
+DispatchNodeInputRecord< GraphInput> inputData,
 
     in uint3 globalThreadID : SV_DispatchThreadID,
     in uint2 groupId : SV_GroupID,
@@ -23,7 +24,10 @@ void ClassifyPixels_Node(
     [MaxRecords(1)] NodeOutput<TileRecord> Shadows_Node
 )
 {
-static const WorkGraphTest data = CreateWorkGraphTest();
+const WorkGraphTest data = CreateWorkGraphTest();
+const GBuffer gbuffer = CreateVoxelScreen().GetGbuffer();
+const Camera camera = CreateFrameInfo().GetCamera();
+const float3 sunDir = CreateFrameInfo().GetSunDir();
 
     if ( groupThreadIndex == 0 )
     {
@@ -32,21 +36,21 @@ static const WorkGraphTest data = CreateWorkGraphTest();
  
     Barrier(GROUP_SHARED_MEMORY, GROUP_SCOPE|GROUP_SYNC);
  
-    uint2 screenPos = globalThreadID.xy;
+uint2 screenPos = globalThreadID.xy;
  
-float3 normal = 1;
+float3 normal = normalize(gbuffer.GetNormals()[screenPos].xyz * 2 - 1);
  
-float NdotL = 1;//dot(normal, lightDir.xyz);
+float NdotL = dot(normal, sunDir.xyz);
  
-    bool backfacing = NdotL <= 0;
+bool backfacing = NdotL <= 0;
  
     // check if all threads in the wave are backfacing
-    bool allBackfacing = WaveActiveAllTrue(backfacing);
+bool allBackfacing = WaveActiveAllTrue(backfacing);
  
     //do an interlocked operation only for the first thread in the wave
     if ( WaveIsFirstLane() )
     {
-        int previous;
+int previous;
         InterlockedAnd(g_allbackfacing, allBackfacing ? 1 : 0, previous);
     }
  
@@ -62,9 +66,9 @@ float NdotL = 1;//dot(normal, lightDir.xyz);
     }
     else
     {   
-       
+       data.GetOutput()[screenPos] = 0; 
     }
-      data.GetOutput()[screenPos] = 1; // else add a zero shadowfactor 
+      
     // mark the node record as complete.
     tileRecord.OutputComplete();
 }
@@ -73,9 +77,9 @@ float NdotL = 1;//dot(normal, lightDir.xyz);
 struct PixelRecord
 {
 
-uint2 screenPos;
-float3 rayDir;
-float3 rayOrigin;
+    uint2 screenPos;
+    float3 rayDir;
+    float3 rayOrigin;
 };
  
 [Shader("node")]
@@ -91,13 +95,19 @@ void Shadows_Node(
 )
 {
     // use the record data to reconstruct screen position for this thread
-const uint2 screenPos = inputData.Get().tileXY * uint2(8, 8) + groupThreadId;
+    const uint2 screenPos = inputData.Get().tileXY * uint2(8, 8) + groupThreadId;
      
-static const WorkGraphTest data = CreateWorkGraphTest();
-
+    const WorkGraphTest data = CreateWorkGraphTest();
+    const GBuffer gbuffer = CreateVoxelScreen().GetGbuffer();
+    const Camera camera = CreateFrameInfo().GetCamera();
+    const float3 sunDir = CreateFrameInfo().GetSunDir();
+    float3 normal = normalize(gbuffer.GetNormals()[screenPos].xyz * 2 - 1);
+    float NdotL = dot(normal, sunDir.xyz);
+ 
+    
     {    
         //this is a valid hit, write a shadow factor of zero to the shadowmask
-         data.GetOutput()[screenPos.xy] = 1;
+        data.GetOutput()[screenPos.xy] = NdotL;
     }
  
     //mark record as done

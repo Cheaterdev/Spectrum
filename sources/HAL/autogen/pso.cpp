@@ -37,6 +37,7 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::GatherMeshes>(device, pso[PSO::GatherMeshes]));
 	tasks.emplace_back(PSOBase::create<PSOS::DownsampleDepth>(device, pso[PSO::DownsampleDepth]));
 	tasks.emplace_back(PSOBase::create<PSOS::MipMapping>(device, pso[PSO::MipMapping]));
+	tasks.emplace_back(PSOBase::create<PSOS::SS_Shadow>(device, pso[PSO::SS_Shadow]));
 	tasks.emplace_back(PSOBase::create<PSOS::Lighting>(device, pso[PSO::Lighting]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDownsample>(device, pso[PSO::VoxelDownsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelCopy>(device, pso[PSO::VoxelCopy]));

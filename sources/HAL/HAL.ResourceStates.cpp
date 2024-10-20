@@ -285,8 +285,8 @@ namespace HAL
 				target.layout = gpu.layout;
 
 
-				auto point = (from)->add_usage((resource), i, target, TransitionType::ZERO);
-				cpu.set_zero_transition(point);
+//				auto point = (from)->add_usage((resource), i, target, TransitionType::ZERO);
+//				cpu.set_zero_transition(point);
 				updated = true;
 			}
 		};
@@ -308,7 +308,7 @@ namespace HAL
 				}
 			for (int i = 0; i < gpu_state.subres.size(); i++)
 			{
-				transition_one(i);
+	//			transition_one(i);
 			}
 		}
 

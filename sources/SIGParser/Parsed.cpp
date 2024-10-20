@@ -3,6 +3,7 @@ import <Core_defs.h>;
 import windows;
 
 #include "Parsed.h"
+
 my_stream::my_stream(std::string dir, std::string filename)
 {
 	path = dir + "/" + filename;
@@ -17,7 +18,7 @@ my_stream::~my_stream()
 		std::ifstream f;
 		f.open(path);
 
-	
+
 		if (f.is_open())
 		{
 			std::string v(std::istreambuf_iterator<char>{f}, {});
@@ -58,71 +59,71 @@ std::string get_name_for(ValueType type)
 
 std::string get_cpp_for(Value v)
 {
-
 	bool noarg = v.template_arg.empty();
 	std::string arg = v.get_type();
 	switch (v.value_type)
 	{
 	case ValueType::STRUCT:
 	case ValueType::CB:
-	{
-		arg = v.get_type();
-		break;
-	}
+		{
+			arg = v.get_type();
+			break;
+		}
 	case ValueType::SRV:
-	{
-			if(arg.starts_with("DepthStencil")) arg.replace(0, strlen("DepthStencil"),"Texture2D");
-			if(arg.starts_with("RenderTarget"))arg.replace(0, strlen("RenderTarget"),"Texture2D");
+		{
+			if (arg.starts_with("DepthStencil")) arg.replace(0, strlen("DepthStencil"), "Texture2D");
+			if (arg.starts_with("RenderTarget"))arg.replace(0, strlen("RenderTarget"), "Texture2D");
 
-	/*	if (noarg)
-			OutputDebugString(L"WTF");*/
-		if (v.array_count == 0)
-			arg = std::string("std::vector<HLSL::") + arg + ">";
-		else
-			arg = std::string("HLSL::") + arg;
-		break;
-	}
+			/*	if (noarg)
+					OutputDebugString(L"WTF");*/
+			if (v.array_count == 0)
+				arg = std::string("std::vector<HLSL::") + arg + ">";
+			else
+				arg = std::string("HLSL::") + arg;
+			break;
+		}
 	case ValueType::UAV:
-	{
-		/*if (noarg)
-			OutputDebugString(L"WTF");*/
-		arg =std::string("HLSL::") + arg;
-		break;
-	}
+		{
+			/*if (noarg)
+				OutputDebugString(L"WTF");*/
+			arg = std::string("HLSL::") + arg;
+			break;
+		}
 	case ValueType::SMP:
-	{	arg = "HAL::Handle"; 
-		break;
+		{
+			arg = "HAL::Handle";
+			break;
+		}
 	}
 
-	}
-
-	if(v.pointer)
+	if (v.pointer)
 	{
-	arg=std::format(R"(Pointer<{}>)", arg) ;
+		arg = std::format(R"(Pointer<{}>)", arg);
 	}
 	return arg;
 }
- void Value::detect_type(have_options* options )
-	{
-		have_type::detect_type(options);
-		cpp_type = get_cpp_for(*this);
-	}
 
-void have_type::detect_type(have_options * options)
+void Value::detect_type(have_options* options)
+{
+	have_type::detect_type(options);
+	cpp_type = get_cpp_for(*this);
+}
+
+void have_type::detect_type(have_options* options)
 {
 	value_type = ValueType::STRUCT;
-		if (class_no_template.starts_with("DepthStencil"))value_type = ValueType::SRV;
-		if (class_no_template.starts_with("RenderTarget"))value_type = ValueType::SRV;
+	if (class_no_template.starts_with("DepthStencil"))value_type = ValueType::SRV;
+	if (class_no_template.starts_with("RenderTarget"))value_type = ValueType::SRV;
 	if (class_no_template.starts_with("Texture"))value_type = ValueType::SRV;
 	if (class_no_template.starts_with("StructuredBuffer")) value_type = ValueType::SRV;
 	if (class_no_template.starts_with("Buffer")) value_type = ValueType::SRV;
 	if (class_no_template.starts_with("RaytracingAccelerationStructure")) value_type = ValueType::SRV;
 	if (class_no_template.starts_with("ConstantBuffer")) value_type = ValueType::SRV;
-	
+
 	if (class_no_template.starts_with("RW")) value_type = ValueType::UAV;
 	if (class_no_template.starts_with("AppendStructuredBuffer")) value_type = ValueType::UAV;
 	if (class_no_template.starts_with("FeedbackTexture")) value_type = ValueType::UAV;
-	
+
 	if (class_no_template.starts_with("bool")) value_type = ValueType::CB;
 	if (class_no_template.starts_with("uint")) value_type = ValueType::CB;
 	if (class_no_template.starts_with("int")) value_type = ValueType::CB;
@@ -133,16 +134,14 @@ void have_type::detect_type(have_options * options)
 
 	if (class_no_template == "SamplerState") value_type = ValueType::SMP;
 
-	if(options&&options->find_option("dynamic"))
+	if (options && options->find_option("dynamic"))
 		value_type = ValueType::CB;
 
-	if(pointer)
-	value_type = ValueType::CB;
+	if (pointer)
+		value_type = ValueType::CB;
 
 
 	type = get_type();
-
-	
 }
 
 Slot::Slot()
@@ -159,13 +158,11 @@ Slot::Slot()
 	ids[ValueType::SRV] = -1;
 	ids[ValueType::CB] = -1;
 	ids[ValueType::STRUCT] = -1;
-
 }
 
 Slot* Layout::find_slot(std::string name)
 {
-		return slots.find(name);
-	
+	return slots.find(name);
 }
 
 void Layout::set_slots(int offset /*= 0*/)
@@ -200,9 +197,6 @@ void Layout::setup()
 				if (type == ValueType::CB) types_counts++;
 			}
 		}
-
-
-
 	}
 
 	for (auto& l : child_layouts)
@@ -232,21 +226,20 @@ void Table::setup(Parsed* all)
 		cb_provided = true;
 	}
 
-	values.sort([](const Value&a, const Value &b) {
+	values.sort([](const Value& a, const Value& b)
+	{
 		if (b.array_count == 0) return true;
 		if (a.array_count == 0) return false;
 		return false;
-		});
-		
+	});
 
 
 	for (auto& v : values)
 	{
-	
 		if (v.find_option("dynamic")) can_compile = false;
 
 
-		if (v.value_type == ValueType::STRUCT|| v.pointer)
+		if (v.value_type == ValueType::STRUCT || v.pointer)
 		{
 			used_tables.insert(v.get_type());
 		}
@@ -267,12 +260,11 @@ void Table::setup(Parsed* all)
 
 	for (auto& v : values)
 	{
-
 		if (v.value_type == ValueType::STRUCT)
 		{
 			auto t = all->find_table(v.get_type());
 			t->setup(all);
-			 can_compile &= t->can_compile;
+			can_compile &= t->can_compile;
 			for (int i = 0; i < ValueType::COUNT; i++)
 			{
 				auto type = (ValueType)i;
@@ -286,7 +278,7 @@ void Table::setup(Parsed* all)
 				bindless_table = t;
 		}
 		else
-			counts[v.value_type]+=v.array_count;
+			counts[v.value_type] += v.array_count;
 
 		if (slot)
 		{
@@ -295,17 +287,13 @@ void Table::setup(Parsed* all)
 				for (int i = 0; i < ValueType::STRUCT; i++)
 				{
 					slot->max_counts[i] = std::max(slot->max_counts[i], counts[i]);
-
 				}
 			}
 			else
 
-			slot->max_counts[v.value_type] = std::max(slot->max_counts[v.value_type], counts[v.value_type]);
-
-			
+				slot->max_counts[v.value_type] = std::max(slot->max_counts[v.value_type], counts[v.value_type]);
 		}
 	}
-
 
 
 	if (bindless_srv)
@@ -315,60 +303,53 @@ void Table::setup(Parsed* all)
 	//check aligning
 	if (slot)
 	{
-	for (auto& v : values)
-	{
-		int offset = 0;
-
-		if (v.value_type == ValueType::CB)
-		{
-			//assert(offset == 0);
-			offset += v.size;
-
-		}
-
-		offset = offset % 4;
-	}
-	}
-
 		for (auto& v : values)
-			{
+		{
+			int offset = 0;
 
-				if (v.value_type == ValueType::CB)
-					need_compiled = need_compiled;
-				else	if (v.value_type == ValueType::STRUCT)
-					need_compiled = need_compiled;
-				else
-					need_compiled = true;
-				v.detect_type(&v);
+			if (v.value_type == ValueType::CB)
+			{
+				//assert(offset == 0);
+				offset += v.size;
 			}
 
+			offset = offset % 4;
+		}
+	}
 
+	for (auto& v : values)
+	{
+		if (v.value_type == ValueType::CB)
+			need_compiled = need_compiled;
+		else if (v.value_type == ValueType::STRUCT)
+			need_compiled = need_compiled;
+		else
+			need_compiled = true;
+		v.detect_type(&v);
+	}
 }
+
 RaytracePSO* Parsed::find_rtx(std::string name)
 {
-		return raytrace_pso.find(name);
-
-
+	return raytrace_pso.find(name);
 }
 
 Layout* Parsed::find_layout(std::string name)
-{return layouts.find(name);
-
-
+{
+	return layouts.find(name);
 }
 
 Table* Parsed::find_table(std::string name)
 {
 	return tables.find(name);
-	
-
 }
 
 void Parsed::setup()
 {
 	for (auto& l : layouts)
 	{
-		if (!l.parent.empty()) {
+		if (!l.parent.empty())
+		{
 			l.parent_ptr = find_layout(l.parent.front());
 			l.parent_ptr->child_layouts.push_back(&l);
 		}
@@ -404,8 +385,8 @@ void Parsed::setup()
 			if (o.name == "Bind")
 			{
 				t.slot = find_layout(o.value_atom.owner_name)->find_slot(o.value_atom.expr);
-				if(!t.slot)
-					throw std::runtime_error("cannot find slot " +  o.value_atom.owner_name + " " + o.value_atom.expr);
+				if (!t.slot)
+					throw std::runtime_error("cannot find slot " + o.value_atom.owner_name + " " + o.value_atom.expr);
 			}
 		}
 		t.setup(this);
@@ -415,5 +396,4 @@ void Parsed::setup()
 	{
 		layout->setup();
 	}
-
 }

@@ -290,7 +290,7 @@ struct  SimpleGraphicsPSO {
 		ds = HAL::Format::UNKNOWN;
 		conservative = false;
 		depth_write = true;
-		depth_func = HAL::ComparisonFunc::LESS_EQUAL;
+		depth_func = HAL::ComparisonFunc::GREATER_EQUAL;
 		cull = HAL::CullMode::Back;
 		topology = HAL::PrimitiveTopologyType::TRIANGLE;
 		enable_depth = true;

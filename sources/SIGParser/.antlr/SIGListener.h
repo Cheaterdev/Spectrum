@@ -71,9 +71,6 @@ public:
   virtual void enterName_id(SIGParser::Name_idContext *ctx) = 0;
   virtual void exitName_id(SIGParser::Name_idContext *ctx) = 0;
 
-  virtual void enterType_id(SIGParser::Type_idContext *ctx) = 0;
-  virtual void exitType_id(SIGParser::Type_idContext *ctx) = 0;
-
   virtual void enterOption_id(SIGParser::Option_idContext *ctx) = 0;
   virtual void exitOption_id(SIGParser::Option_idContext *ctx) = 0;
 
@@ -83,8 +80,17 @@ public:
   virtual void enterTemplate_id(SIGParser::Template_idContext *ctx) = 0;
   virtual void exitTemplate_id(SIGParser::Template_idContext *ctx) = 0;
 
+  virtual void enterFunction_id(SIGParser::Function_idContext *ctx) = 0;
+  virtual void exitFunction_id(SIGParser::Function_idContext *ctx) = 0;
+
   virtual void enterValue_id(SIGParser::Value_idContext *ctx) = 0;
   virtual void exitValue_id(SIGParser::Value_idContext *ctx) = 0;
+
+  virtual void enterValue_id_ignore(SIGParser::Value_id_ignoreContext *ctx) = 0;
+  virtual void exitValue_id_ignore(SIGParser::Value_id_ignoreContext *ctx) = 0;
+
+  virtual void enterType_id(SIGParser::Type_idContext *ctx) = 0;
+  virtual void exitType_id(SIGParser::Type_idContext *ctx) = 0;
 
   virtual void enterInsert_block(SIGParser::Insert_blockContext *ctx) = 0;
   virtual void exitInsert_block(SIGParser::Insert_blockContext *ctx) = 0;

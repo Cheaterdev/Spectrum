@@ -6,7 +6,7 @@ export namespace HAL
 
 	namespace Debug
 	{
-		constexpr bool RunForPix = false;
+		constexpr bool RunForPix = true;
 
 #ifdef DEV
 		constexpr bool GfxDebug = !RunForPix&&true;

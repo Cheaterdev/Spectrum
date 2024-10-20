@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-enum   ValueType
+enum ValueType
 {
 	CB,
 	SRV,
@@ -18,18 +18,18 @@ struct my_stream
 	my_stream(std::string dir, std::string filename);
 	~my_stream();
 
-	template<class T>
+	template <class T>
 	std::stringstream& operator<<(const T& data);
 };
 
-template<class T>
+template <class T>
 std::stringstream& my_stream::operator<<(const T& data)
 {
 	stream << data;
 	return stream;
 }
 
-struct table_offsets :public std::vector<int>
+struct table_offsets : public std::vector<int>
 {
 	table_offsets()
 	{
@@ -42,12 +42,12 @@ struct parsed_type
 	bool debug = false;
 	virtual ~parsed_type() = default;
 };
-struct have_name :public parsed_type
+
+struct have_name : public parsed_type
 {
 	std::string name;
 
-	virtual ~have_name() = default;
-
+	~have_name() override = default;
 
 
 	SERIALIZE()
@@ -59,14 +59,14 @@ struct have_name :public parsed_type
 
 struct have_hlsl
 {
-
 	std::string hlsl;
+
 	SERIALIZE()
 	{
-
 		ar& NVP(hlsl);
 	}
 };
+
 struct inherited
 {
 	std::vector<std::string> parent;
@@ -78,6 +78,7 @@ struct inherited
 };
 
 struct have_options;
+
 struct have_type
 {
 	bool u_norm = false;
@@ -91,10 +92,9 @@ struct have_type
 	bool bindless = false;
 	virtual void detect_type(have_options* options = nullptr);
 
-	
+
 	std::string get_type() const
 	{
-
 		//if(pointer) return "uint";
 
 		std::string res;
@@ -111,7 +111,6 @@ struct have_type
 	}
 
 
-
 	SERIALIZE()
 	{
 		ar& NVP(class_no_template);
@@ -120,50 +119,50 @@ struct have_type
 		ar& NVP(pointer);
 		ar& NVP(bindless);
 		ar& NVP(value_type);
-				ar& NVP(type);
+		ar& NVP(type);
 
 		/// todo
 	}
 };
 
 
-template<class T>
-class my_container 
+template <class T>
+class my_container
 {
 	std::list<T> container;
-public:
-	
 
+public:
 	auto begin() const
 	{
-	return container.begin();
+		return container.begin();
 	}
 
 
 	auto end() const
 	{
-	return container.end();
+		return container.end();
 	}
-	auto begin() 
+
+	auto begin()
 	{
-	return container.begin();
+		return container.begin();
 	}
 
 
-	auto end() 
+	auto end()
 	{
-	return container.end();
+		return container.end();
 	}
 
 	auto size() const
 	{
-	return container.size();
+		return container.size();
 	}
 
-	template<class ...Args>
-	auto&emplace_back(Args... a)
+	template <class... Args>
+	auto& emplace_back(Args... a)
 	{
-	return container.emplace_back(a...);
+		return container.emplace_back(a...);
 	}
 
 
@@ -173,7 +172,7 @@ public:
 	}
 
 
-	 T* find(std::string s) requires (std::is_base_of_v<have_name, T>)
+	T* find(std::string s) requires (std::is_base_of_v<have_name, T>)
 	{
 		for (auto& d : container)
 		{
@@ -192,8 +191,8 @@ public:
 		}
 		return nullptr;
 	}
-	
-	 T* find(std::string s) requires (!std::is_base_of_v<have_name, T>&&std::is_base_of_v<have_type, T>)
+
+	T* find(std::string s) requires (!std::is_base_of_v<have_name, T> && std::is_base_of_v<have_type, T>)
 	{
 		for (auto& d : container)
 		{
@@ -203,7 +202,7 @@ public:
 		return nullptr;
 	}
 
-	const T* find(std::string s) const requires (!std::is_base_of_v<have_name, T>&&std::is_base_of_v<have_type, T>)
+	const T* find(std::string s) const requires (!std::is_base_of_v<have_name, T> && std::is_base_of_v<have_type, T>)
 	{
 		for (auto& d : container)
 		{
@@ -216,27 +215,20 @@ public:
 
 	SERIALIZE()
 	{
-
 		//ar&NVP(container);
 
 		if constexpr (std::is_base_of_v<have_name, T>)
 		{
 			for (const auto& i : container)
 				ar& cereal::make_nvp(i.name, i);
-
-
 		}
-		else if constexpr (!std::is_base_of_v<have_name, T>&&std::is_base_of_v<have_type, T>)
+		else if constexpr (!std::is_base_of_v<have_name, T> && std::is_base_of_v<have_type, T>)
 		{
 			for (const auto& i : container)
 				ar& cereal::make_nvp(i.class_no_template, i);
-
 		}
 	}
-
-
 };
-
 
 
 struct have_array
@@ -247,27 +239,29 @@ struct have_array
 
 	std::string generate_array()
 	{
-
-		if (as_array) {
-			if (array_count) {
+		if (as_array)
+		{
+			if (array_count)
+			{
 				return std::format("[{}]", array_count);
 			}
-			else {
+			else
+			{
 				return "";
 			}
 		}
 		return "";
 	}
-	
 
-std::string generate_cpp_array()
-{
-	if (as_array && array_count == 0)
+
+	std::string generate_cpp_array()
+	{
+		if (as_array && array_count == 0)
+			return "&";
+		if (as_array && array_count > 0)
+			return "*";
 		return "&";
-	if (as_array && array_count > 0)
-		return "*";
-	return "&";
-}
+	}
 
 
 	SERIALIZE()
@@ -278,13 +272,10 @@ std::string generate_cpp_array()
 		std::string array = generate_array();
 		ar& NVP(array);
 
-			std::string cpp_array = generate_cpp_array();
+		std::string cpp_array = generate_cpp_array();
 		ar& NVP(cpp_array);
 	}
-
-
 };
-
 
 
 struct have_owner
@@ -293,7 +284,6 @@ struct have_owner
 
 	SERIALIZE()
 	{
-
 		ar& NVP(owner_name);
 	}
 };
@@ -308,7 +298,7 @@ struct have_expr
 	}
 };
 
-struct ValueAtom :public have_expr, have_owner, have_name
+struct ValueAtom : public have_expr, have_owner, have_name
 {
 	SERIALIZE()
 	{
@@ -320,7 +310,7 @@ struct ValueAtom :public have_expr, have_owner, have_name
 	}
 };
 
-struct option :public have_name
+struct option : public have_name
 {
 	ValueAtom value_atom;
 
@@ -351,14 +341,14 @@ struct have_options
 };
 
 
-struct Value :public have_name, have_options, have_type, have_expr, have_array
+struct Value : public have_name, have_options, have_type, have_expr, have_array
 {
 	int offset = 0;
 	int size = 0;
 	std::string cpp_type;
-	virtual void detect_type(have_options* options ) override;
+	void detect_type(have_options* options) override;
 
-	
+
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(have_name);
@@ -370,7 +360,6 @@ struct Value :public have_name, have_options, have_type, have_expr, have_array
 		ar& NVP(offset);
 		ar& NVP(size);
 		ar& NVP(cpp_type);
-
 	}
 };
 
@@ -382,7 +371,6 @@ struct Sampler : public have_name, have_expr
 	{
 		SAVE_PARENT_MERGED(have_name);
 		SAVE_PARENT_MERGED(have_expr);
-
 	}
 };
 
@@ -394,7 +382,7 @@ class Slot;
 struct Layout : public inherited, have_options, have_name
 {
 	Layout* parent_ptr = nullptr;
-	std::list< Layout*> child_layouts;
+	std::list<Layout*> child_layouts;
 	my_container<Slot> slots;
 	my_container<Sampler> samplers;
 
@@ -405,10 +393,10 @@ struct Layout : public inherited, have_options, have_name
 	void set_slots(int offset = 0);
 
 	void setup();
-	template<class T>
+	template <class T>
 	void recursive_slots(T f);
 
-	template<class T>
+	template <class T>
 	void recursive_samplers(T f);
 
 
@@ -420,10 +408,9 @@ struct Layout : public inherited, have_options, have_name
 		ar& NVP(samplers);
 		ar& NVP(types_counts);
 
-		if(parent_ptr)
-		ar& NP("parent", *parent_ptr);
+		if (parent_ptr)
+			ar& NP("parent", *parent_ptr);
 	}
-
 };
 
 struct Slot : public have_options, have_name
@@ -444,10 +431,9 @@ struct Slot : public have_options, have_name
 		ar& NVP(ids);
 		ar& NVP(id);
 
-		auto layout=this->layout->name;
+		auto layout = this->layout->name;
 
-			ar& NVP(layout);
-
+		ar& NVP(layout);
 	}
 };
 
@@ -487,7 +473,6 @@ struct RenderTarget : public inherited, have_options, have_name
 
 struct RootSig : public have_name
 {
-
 };
 
 struct Shader : public have_name, have_options
@@ -502,7 +487,6 @@ struct Shader : public have_name, have_options
 
 
 		ar& NVP(path);
-
 	}
 };
 
@@ -523,36 +507,31 @@ struct Define : public have_options, have_name, have_values
 		SAVE_PARENT_MERGED(have_values);
 		SAVE_PARENT_MERGED(have_name);
 		SAVE_PARENT_MERGED(have_options);
-
-	}
-
-};
-
-
-struct PSO_RTV : public have_options,public have_name,public have_values
-{
-
-	SERIALIZE()
-	{
-		SAVE_PARENT_MERGED(have_values);
-		SAVE_PARENT_MERGED(have_name);
-		SAVE_PARENT_MERGED(have_options);
-
 	}
 };
 
-struct PSO_Blend : public have_options,public have_name,public have_values
+
+struct PSO_RTV : public have_options, public have_name, public have_values
 {
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(have_values);
 		SAVE_PARENT_MERGED(have_name);
 		SAVE_PARENT_MERGED(have_options);
-
 	}
 };
 
-struct PSO_Param : public have_options,public have_values,public have_type,public have_expr,public parsed_type
+struct PSO_Blend : public have_options, public have_name, public have_values
+{
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(have_values);
+		SAVE_PARENT_MERGED(have_name);
+		SAVE_PARENT_MERGED(have_options);
+	}
+};
+
+struct PSO_Param : public have_options, public have_values, public have_type, public have_expr, public parsed_type
 {
 	SERIALIZE()
 	{
@@ -560,9 +539,9 @@ struct PSO_Param : public have_options,public have_values,public have_type,publi
 		SAVE_PARENT_MERGED(have_values);
 		SAVE_PARENT_MERGED(have_type);
 		SAVE_PARENT_MERGED(have_expr);
-
 	}
 };
+
 struct root_holder
 {
 	RootSig root_sig;
@@ -572,6 +551,7 @@ struct root_holder
 		ar& NVP(root_sig);
 	}
 };
+
 struct shader_holder
 {
 	my_container<Shader> shaders;
@@ -597,14 +577,14 @@ struct param_holder
 		ar& NVP(params);
 	}
 };
-struct PSO : public inherited,public have_options,public  have_name, public shader_holder, public root_holder
-{
 
+struct PSO : public inherited, public have_options, public have_name, public shader_holder, public root_holder
+{
 	my_container<Define> defines;
 
 	Define* find_define(std::string s)
 	{
-	return defines.find(s);
+		return defines.find(s);
 	}
 
 
@@ -615,19 +595,18 @@ struct PSO : public inherited,public have_options,public  have_name, public shad
 		SAVE_PARENT_MERGED(have_options);
 		SAVE_PARENT_MERGED(root_holder);
 		SAVE_PARENT_MERGED(shader_holder);
-	
+
 		ar& NVP(defines);
 	}
-
 };
 
 struct ComputePSO : public PSO
 {
-
 	Shader* get_compute()
 	{
 		return shaders.find("compute");
 	}
+
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(PSO);
@@ -639,7 +618,6 @@ struct ComputePSO : public PSO
 
 struct GraphicsPSO : public PSO, public param_holder
 {
-
 	PSO_RTV rtv;
 	PSO_Blend blend;
 
@@ -657,25 +635,24 @@ struct GraphicsPSO : public PSO, public param_holder
 
 struct RaytracePass : public PSO, public param_holder
 {
-
 	int index = 0;
+
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(PSO);
 		SAVE_PARENT_MERGED(param_holder);
 		ar& NVP(index);
-
 	}
 };
 
 struct RaytraceGen : public PSO
 {
 	int index = 0;
+
 	SERIALIZE()
 	{
 		SAVE_PARENT_MERGED(PSO);
 		ar& NVP(index);
-
 	}
 };
 
@@ -692,11 +669,10 @@ struct RaytracePSO : public PSO
 		ar& NVP(gens);
 
 		ar& NVP(passes);
-
 	}
 };
 
-template<class T>
+template <class T>
 void Layout::recursive_slots(T f)
 {
 	if (parent_ptr) parent_ptr->recursive_slots(f);
@@ -708,18 +684,19 @@ void Layout::recursive_slots(T f)
 	}
 }
 
-template<class T>
+template <class T>
 void Layout::recursive_samplers(T f)
 {
 	if (parent_ptr) parent_ptr->recursive_samplers(f);
 
-	for (auto& s  : samplers)
+	for (auto& s : samplers)
 	{
 		f(s);
 	}
 }
 
 struct Parsed;
+
 struct Table : public inherited, have_options, have_name, have_hlsl
 {
 	Slot* slot = nullptr;
@@ -755,19 +732,18 @@ struct Table : public inherited, have_options, have_name, have_hlsl
 		ar& NVP(cb_raw);
 		ar& NVP(need_compiled);
 
-		if(slot)
+		if (slot)
 		{
-			auto& slot = *this->slot;//->name;
+			auto& slot = *this->slot; //->name;
 			ar& NVP(slot);
 		}
 	}
 };
 
 
-
 struct Parsed : public parsed_type
 {
-	my_container< Layout> layouts;
+	my_container<Layout> layouts;
 	my_container<Table> tables;
 	std::list<Layout*> root_layouts;
 	my_container<RenderTarget> rt;
@@ -788,20 +764,19 @@ struct Parsed : public parsed_type
 
 	void merge(Parsed& r)
 	{
-		layouts.merge( r.layouts);
+		layouts.merge(r.layouts);
 		tables.merge(r.tables);
 		rt.merge(r.rt);
-		compute_pso.merge( r.compute_pso);
-		graphics_pso.merge( r.graphics_pso);
-		raytrace_pso.merge( r.raytrace_pso);
-		raytrace_pass.merge( r.raytrace_pass);
+		compute_pso.merge(r.compute_pso);
+		graphics_pso.merge(r.graphics_pso);
+		raytrace_pso.merge(r.raytrace_pso);
+		raytrace_pass.merge(r.raytrace_pass);
 		raytrace_gen.merge(r.raytrace_gen);
 	}
 
 
 	SERIALIZE()
 	{
-
 		ar& NVP(layouts);
 		ar& NVP(tables);
 		ar& NVP(rt);
@@ -810,6 +785,5 @@ struct Parsed : public parsed_type
 		ar& NVP(raytrace_pass);
 		ar& NVP(raytrace_pso);
 		ar& NVP(raytrace_gen);
-
 	}
 };

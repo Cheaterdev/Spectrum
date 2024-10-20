@@ -18,7 +18,7 @@ export {
 		using matrix_type::M;
 
 		template<class T2>
-		int set_internal(int i, T2 d) requires(std::is_compound_v<T2>)
+		int set_internal(int i, T2 d) requires(std::is_scalar_v<T2>)
 		{
 			matrix_type::elems[i++] = static_cast<typename matrix_type::Format>(d);
 			return i;

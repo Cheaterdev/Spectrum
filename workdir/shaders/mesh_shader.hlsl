@@ -150,7 +150,7 @@ void AS(uint gtid : SV_GroupThreadID, uint dtid : SV_DispatchThreadID, uint gid 
        matrix m = node.GetNode_global_matrix();
     
         // Do visibility testing for this thread
-        visible =  IsVisible(meshInstanceInfo.GetMeshletCullData()[meshInfo.GetMeshlet_offset_local() + dtid], m, 1, frameInfo.GetCamera());
+        visible =  true;//IsVisible(meshInstanceInfo.GetMeshletCullData()[meshInfo.GetMeshlet_offset_local() + dtid], m, 1, frameInfo.GetCamera());
     }
 
     // Compact visible meshlets into the export payload array 

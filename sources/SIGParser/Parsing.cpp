@@ -1,4 +1,3 @@
-
 import Core;
 import <Core_defs.h>;
 import antlr4;
@@ -11,64 +10,65 @@ import antlr4;
 using namespace antlr4;
 #include "Parsing.h"
 
-class TreeShapeListener : public SIGBaseListener {
+class TreeShapeListener : public SIGBaseListener
+{
 public:
-
 	Parsed& parsed;
-	TreeShapeListener(Parsed& parsed) :parsed(parsed)
+
+	TreeShapeListener(Parsed& parsed) : parsed(parsed)
 	{
 		setup_elem(parsed);
 	}
 
 	struct elem_info
 	{
-	parsed_type* elem;
-	std::function<void()> on_end;
-	
+		parsed_type* elem;
+		std::function<void()> on_end;
 	};
+
 	std::list<elem_info> elems;
 
-	template<class T>
-	T& setup_map(my_container<T> &m)
+	template <class T>
+	T& setup_map(my_container<T>& m)
 	{
-		auto&l = m.emplace_back();
+		auto& l = m.emplace_back();
 		setup_elem(l);
 
 		return l;
 	}
 
-	template<class T>
-	T& setup_list(std::list<T> &m)
+	template <class T>
+	T& setup_list(std::list<T>& m)
 	{
-		auto&l = m.emplace_back();
+		auto& l = m.emplace_back();
 		setup_elem(l);
 
 		return l;
 	}
 
-	template<class T>
-	void setup_elem(T& e, std::function<void()> f= nullptr)
+	template <class T>
+	void setup_elem(T& e, std::function<void()> f = nullptr)
 	{
 		elems.emplace_back(&e, f);
 	}
 
 	void end_elem()
 	{
-		auto &e=elems.back();
+		auto& e = elems.back();
 
-		if(e.on_end)
-			e.on_end(); 
+		if (e.on_end)
+			e.on_end();
 		elems.pop_back();
 	}
 
-	template<class T>
+	template <class T>
 	T& get_elem()
 	{
 		parsed_type* e = elems.back().elem;
 		return *dynamic_cast<T*>(e);
 	}
 
-	template<class T>
+	template <class T>
 	T& get_parent()
 	{
 		auto last = std::prev(elems.end());
@@ -82,28 +82,26 @@ public:
 	virtual void exit##x##(SIGParser::##x##Context * ctx) override { \
 		end_elem();\
 	}\
-	virtual void enter##x##(SIGParser::##x##Context* ctx) override 
+	virtual void enter##x##(SIGParser::##x##Context* ctx) override
 
 
-	
 #define EXIT(x) \
-	virtual void exit##x##(SIGParser::##x##Context * ctx) override 
+	virtual void exit##x##(SIGParser::##x##Context * ctx) override
 
-	#define ENTER(x) \
-	virtual void enter##x##(SIGParser::##x##Context* ctx) override 
-
+#define ENTER(x) \
+	virtual void enter##x##(SIGParser::##x##Context* ctx) override
 
 
 	GENERATE(Layout_definition)
 	{
 		setup_map(get_elem<Parsed>().layouts);
 	}
-	
+
 	GENERATE(Table_definition)
 	{
 		setup_map(get_elem<Parsed>().tables);
 	}
-	
+
 	GENERATE(Slot_declaration)
 	{
 		setup_map(get_elem<Layout>().slots);
@@ -136,7 +134,6 @@ public:
 
 	GENERATE(Rt_ds_declaration)
 	{
-
 		auto& owner = get_elem<RenderTarget>().dsv;
 		assert(!owner);
 		owner = DSV();
@@ -145,7 +142,6 @@ public:
 	}
 
 
-	
 	GENERATE(Compute_pso_definition)
 	{
 		setup_map(get_elem<Parsed>().compute_pso);
@@ -164,22 +160,21 @@ public:
 
 	GENERATE(Rtx_pass_definition)
 	{
-
 		auto index = get_elem<Parsed>().raytrace_pass.size();
-		auto &rtx = setup_map(get_elem<Parsed>().raytrace_pass);
+		auto& rtx = setup_map(get_elem<Parsed>().raytrace_pass);
 
-		 rtx.index = index; 
+		rtx.index = index;
 	}
+
 	GENERATE(Rtx_raygen_definition)
 	{
-
 		auto index = get_elem<Parsed>().raytrace_gen.size();
-		auto &rtx = setup_map(get_elem<Parsed>().raytrace_gen);
+		auto& rtx = setup_map(get_elem<Parsed>().raytrace_gen);
 
-		 rtx.index = index; 
+		rtx.index = index;
 	}
 
-	
+
 	GENERATE(Root_sig)
 	{
 		setup_elem(get_elem<root_holder>().root_sig);
@@ -192,7 +187,6 @@ public:
 	}
 
 
-	
 	GENERATE(Options_assign)
 	{
 		auto& owner = get_elem<option>();
@@ -200,14 +194,11 @@ public:
 	}
 
 
-	
-
 	GENERATE(Define_declaration)
 	{
 		setup_map(get_elem<PSO>().defines);
 	}
 
-	
 
 	GENERATE(Rtv_formats_declaration)
 	{
@@ -224,12 +215,9 @@ public:
 
 	GENERATE(Pso_param)
 	{
-
 		setup_map(get_elem<param_holder>().params);
-		
 	}
 
-	
 
 	GENERATE(Array_value_holder)
 	{
@@ -237,32 +225,35 @@ public:
 	}
 
 
-
-
-	virtual void enterName_id(SIGParser::Name_idContext* ctx) override {
-
+	void enterName_id(SIGParser::Name_idContext* ctx) override
+	{
 		auto& elem = get_elem<have_name>();
 		elem.name = ctx->children[0]->getText();
 	}
-	virtual void enterPath_id(SIGParser::Path_idContext* ctx) override {
+
+	void enterPath_id(SIGParser::Path_idContext* ctx) override
+	{
 		auto& elem = get_elem<Shader>();
 
-		for(auto c: ctx->children)
+		for (auto c : ctx->children)
 			elem.path += c->getText();
 	}
 
-	virtual void enterInherit_id(SIGParser::Inherit_idContext* ctx) override {
+	void enterInherit_id(SIGParser::Inherit_idContext* ctx) override
+	{
 		auto& elem = get_elem<inherited>();
 		elem.parent.emplace_back(ctx->children[0]->getText());
 	}
 
-	virtual void enterType_id(SIGParser::Type_idContext* ctx) override {
+	void enterType_id(SIGParser::Type_idContext* ctx) override
+	{
 		auto& elem = get_elem<have_type>();
 		auto& options = get_elem<have_options>();
 
 		//elem.type = ctx->children[0]->getText();
-	//	elem.detect_type(&options);
+		//	elem.detect_type(&options);
 	}
+
 	//	virtual void enterModifier(SIGParser::ModifierContext* ctx) override {
 	//	auto& elem = get_elem<have_type>();
 	//	auto& options = get_elem<have_options>();
@@ -271,7 +262,8 @@ public:
 	////	elem.detect_type(&options);
 	//}
 
-		virtual void enterClass_no_template(SIGParser::Class_no_templateContext* ctx) override {
+	void enterClass_no_template(SIGParser::Class_no_templateContext* ctx) override
+	{
 		auto& elem = get_elem<have_type>();
 		auto& options = get_elem<have_options>();
 
@@ -279,16 +271,18 @@ public:
 		elem.detect_type(&options);
 	}
 
-	virtual void enterOwner_id(SIGParser::Owner_idContext* ctx) override {
+	void enterOwner_id(SIGParser::Owner_idContext* ctx) override
+	{
 		auto& elem = get_elem<have_owner>();
 		elem.owner_name = ctx->children[0]->getText();
 	}
 
-	virtual void enterTemplate_id(SIGParser::Template_idContext* ctx) override {
+	void enterTemplate_id(SIGParser::Template_idContext* ctx) override
+	{
 		auto& elem = get_elem<have_type>();
 
-		if(!elem.template_arg.empty())
-			elem.template_arg+=' ';
+		if (!elem.template_arg.empty())
+			elem.template_arg += ' ';
 		elem.template_arg += ctx->children[0]->getText();
 
 
@@ -296,21 +290,23 @@ public:
 		elem.detect_type(&options);
 	}
 
-	virtual void enterValue_id(SIGParser::Value_idContext* ctx) override {
+	void enterValue_id(SIGParser::Value_idContext* ctx) override
+	{
 		auto& elem = get_elem<have_expr>();
-		elem.expr = ctx->children[0]->getText();
+		elem.expr = ctx->getText();
 	}
 
-	virtual void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override {
+	void enterPso_param_id(SIGParser::Pso_param_idContext* ctx) override
+	{
 		auto& elem = get_elem<have_type>();
-				auto& options = get_elem<have_options>();
+		auto& options = get_elem<have_options>();
 
-		elem.class_no_template= ctx->children[0]->getText();
+		elem.class_no_template = ctx->children[0]->getText();
 		elem.detect_type(&options);
 	}
 
-	virtual void enterArray(SIGParser::ArrayContext* ctx) override {
-		
+	void enterArray(SIGParser::ArrayContext* ctx) override
+	{
 		{
 			auto& elem = get_elem<have_array>();
 			elem.as_array = true;
@@ -322,22 +318,21 @@ public:
 		}
 	}
 
-	virtual void enterPointer(SIGParser::PointerContext* ctx) override {
-	
+	void enterPointer(SIGParser::PointerContext* ctx) override
+	{
 		{
 			auto& elem = get_elem<have_type>();
 			elem.pointer = true;
 
 
-				auto& options = get_elem<have_options>();
+			auto& options = get_elem<have_options>();
 
-		elem.detect_type(&options);
+			elem.detect_type(&options);
 		}
 	}
 
-	virtual void enterArray_count_id(SIGParser::Array_count_idContext* ctx) override {
-	
-
+	void enterArray_count_id(SIGParser::Array_count_idContext* ctx) override
+	{
 		{
 			auto& elem = get_elem<have_array>();
 			elem.array_count = std::atoi(ctx->children[0]->getText().c_str());
@@ -346,7 +341,7 @@ public:
 			auto& elem = get_elem<have_type>();
 			elem.bindless = false;
 		}
-			
+
 		{
 			auto& elem = get_elem<have_type>();
 			auto& options = get_elem<have_options>();
@@ -354,25 +349,23 @@ public:
 		}
 	}
 
-	
-	virtual void enterInsert_block(SIGParser::Insert_blockContext* ctx) override {
 
+	void enterInsert_block(SIGParser::Insert_blockContext* ctx) override
+	{
 		auto str = ctx->children[0]->getText();
 		auto& elem = get_elem<have_hlsl>();
 		elem.hlsl = str.substr(2, str.size() - 4);
 	}
-	
 
 
-	virtual void enterShader_type(SIGParser::Shader_typeContext* ctx) override {
-
+	void enterShader_type(SIGParser::Shader_typeContext* ctx) override
+	{
 		auto str = ctx->children[0]->getText();
 		auto& shader = get_elem<Shader>();
 		auto& pso = get_parent<PSO>();
 
 		shader.name = str;
 	}
-
 };
 
 Parsed parse(std::wstring filename)

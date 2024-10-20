@@ -6,10 +6,10 @@ import <d3d12/d3d12_includes.h>;
 #undef THIS
 
 
-template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T>
+template <D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T>
 struct TypeToOBJ;
 
-template<class T>
+template <class T>
 struct OBJToType;
 
 
@@ -24,124 +24,129 @@ struct OBJToType<y> {\
 };
 
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE, ID3D12RootSignature*);
+
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS, D3D12_SHADER_BYTECODE);
+
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER, D3D12_RASTERIZER_DESC);
+
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND, D3D12_BLEND_DESC);
+
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL, D3D12_DEPTH_STENCIL_DESC);
+
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PRIMITIVE_TOPOLOGY, D3D12_PRIMITIVE_TOPOLOGY_TYPE);
+
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS, D3D12_RT_FORMAT_ARRAY);
+
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO, D3D12_CACHED_PIPELINE_STATE);
+
 MAP(D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT, DXGI_FORMAT);
 
-	template < class V>
-	struct alignas(void*) Record
+template <class V>
+struct alignas(void*) Record
+{
+	D3D12_PIPELINE_STATE_SUBOBJECT_TYPE type;
+	V v;
+};
+
+class PSOCreator
+{
+	std::string data;
+
+	UINT write_offset = 0;
+
+	void request(UINT size)
 	{
-		D3D12_PIPELINE_STATE_SUBOBJECT_TYPE type;
-		V v;
-	};
+		data.resize(data.size() + size);
+		assert(data.size() >= (write_offset + size));
+	}
 
-	class PSOCreator
+	template <class T>
+	void push_one(const T& elem)
 	{
-		std::string data;
-
-		UINT write_offset = 0;
-
-		void request(UINT size)
-		{
-
-			data.resize(data.size() + size);
-			assert(data.size() >= (write_offset + size));
-
-		}
-
-		template <class T>
-		void push_one(const T& elem)
-		{
-			request(sizeof(T));
-			memcpy(data.data() + write_offset, &elem, sizeof(T));
-			write_offset += sizeof(T);
-
-		}
+		request(sizeof(T));
+		memcpy(data.data() + write_offset, &elem, sizeof(T));
+		write_offset += sizeof(T);
+	}
 
 
-		template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE type, class T>
-		void internal_inluce(const T& v)
-		{
-			Record<T> r;
-			r.type = type;
-			r.v = v;
+	template <D3D12_PIPELINE_STATE_SUBOBJECT_TYPE type, class T>
+	void internal_inluce(const T& v)
+	{
+		Record<T> r;
+		r.type = type;
+		r.v = v;
 
-			push_one(r);
-		}
+		push_one(r);
+	}
 
-		template<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T, class S>
-		void include_shader(S& shader)
-		{
-			auto& blob = shader->get_blob();
-			D3D12_SHADER_BYTECODE code;
-			code.BytecodeLength = blob.size();
-			code.pShaderBytecode = blob.data();
-			internal_inluce<T>(code);
-		}
-	public:
+	template <D3D12_PIPELINE_STATE_SUBOBJECT_TYPE T, class S>
+	void include_shader(S& shader)
+	{
+		auto& blob = shader->get_blob();
+		D3D12_SHADER_BYTECODE code;
+		code.BytecodeLength = blob.size();
+		code.pShaderBytecode = blob.data();
+		internal_inluce<T>(code);
+	}
 
+public:
+	PSOCreator()
+	{
+		data.reserve(65536);
+	}
 
-		PSOCreator()
-		{
-			data.reserve(65536);
-		}
-		template<class T>
-		void include(const T& v)
-		{
-			internal_inluce<OBJToType<T>::type>(v);
-		}
-
-
-		void include(HAL::vertex_shader::ptr shader)
-		{
-			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS>(shader);
-		}
-
-		void include(HAL::pixel_shader::ptr shader)
-		{
-			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS>(shader);
-		}
-
-		void include(HAL::geometry_shader::ptr shader)
-		{
-			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_GS>(shader);
-		}
-
-		void include(HAL::domain_shader::ptr shader)
-		{
-			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DS>(shader);
-		}
-
-		void include(HAL::hull_shader::ptr shader)
-		{
-			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_HS>(shader);
-		}
+	template <class T>
+	void include(const T& v)
+	{
+		internal_inluce<OBJToType<T>::type>(v);
+	}
 
 
-		void include(HAL::mesh_shader::ptr shader)
-		{
-			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS>(shader);
-		}
+	void include(HAL::vertex_shader::ptr shader)
+	{
+		include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VS>(shader);
+	}
 
-		void include(HAL::amplification_shader::ptr shader)
-		{
-			include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS>(shader);
-		}
+	void include(HAL::pixel_shader::ptr shader)
+	{
+		include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS>(shader);
+	}
+
+	void include(HAL::geometry_shader::ptr shader)
+	{
+		include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_GS>(shader);
+	}
+
+	void include(HAL::domain_shader::ptr shader)
+	{
+		include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DS>(shader);
+	}
+
+	void include(HAL::hull_shader::ptr shader)
+	{
+		include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_HS>(shader);
+	}
 
 
-		D3D12_PIPELINE_STATE_STREAM_DESC get_desc()
-		{
-			D3D12_PIPELINE_STATE_STREAM_DESC desc;
-			desc.SizeInBytes = data.size();
-			desc.pPipelineStateSubobjectStream = data.data();
-			return desc;
-		}
-	};
+	void include(HAL::mesh_shader::ptr shader)
+	{
+		include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS>(shader);
+	}
+
+	void include(HAL::amplification_shader::ptr shader)
+	{
+		include_shader<D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS>(shader);
+	}
+
+
+	D3D12_PIPELINE_STATE_STREAM_DESC get_desc()
+	{
+		D3D12_PIPELINE_STATE_STREAM_DESC desc;
+		desc.SizeInBytes = data.size();
+		desc.pPipelineStateSubobjectStream = data.data();
+		return desc;
+	}
+};
 
 
 namespace HAL
@@ -163,11 +168,10 @@ namespace HAL
 
 		std::string PipelineStateBase::get_cache()
 		{
-
 			auto THIS = static_cast<HAL::PipelineStateBase*>(this);
-			if(!THIS->tracked_info->m_pipelineState)
+			if (!THIS->tracked_info->m_pipelineState)
 			{
-			return "";
+				return "";
 			}
 
 			ComPtr<ID3DBlob> blob;
@@ -176,40 +180,36 @@ namespace HAL
 
 			return str;
 		}
-
-
-
 	}
-
 
 
 	HAL::shader_identifier StateObject::get_shader_id(std::wstring_view name)
 	{
 		return identify(stateObjectProperties->GetShaderIdentifier(name.data()));
 	}
+
 	void StateObject::on_change()
 	{
 		tracked_info.reset(new API::TrackedPipeline());
 
-		D3D12_STATE_OBJECT_TYPE type =D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+		D3D12_STATE_OBJECT_TYPE type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
 
-		if(desc.type==StateObjectType::Collection) type = D3D12_STATE_OBJECT_TYPE_COLLECTION;
-				if(desc.type==StateObjectType::WorkGraph) type = D3D12_STATE_OBJECT_TYPE_EXECUTABLE ;
+		if (desc.type == StateObjectType::Collection) type = D3D12_STATE_OBJECT_TYPE_COLLECTION;
+		if (desc.type == StateObjectType::WorkGraph) type = D3D12_STATE_OBJECT_TYPE_EXECUTABLE;
 
-		
-		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ type };
+
+		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{type};
 
 		for (auto& l : desc.libraries)
 		{
-
 			auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
 
-			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)l.library->get_blob().data(), l.library->get_blob().size());
+			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)l.library->get_blob().data(),
+			                                                        l.library->get_blob().size());
 			lib->SetDXILLibrary(&libdxil);
 
 			for (auto& e : l.exports)
 			{
-
 				lib->DefineExport(e.first.c_str(), e.second.empty() ? nullptr : e.second.c_str());
 			}
 
@@ -251,7 +251,8 @@ namespace HAL
 			auto localRootSignature = raytracingPipeline.CreateSubobject<CD3DX12_LOCAL_ROOT_SIGNATURE_SUBOBJECT>();
 			localRootSignature->SetRootSignature(e.first->get_native().Get());
 
-			auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
+			auto rootSignatureAssociation = raytracingPipeline.CreateSubobject<
+				CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
 			rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
 
 			e.second = rootSignatureAssociation;
@@ -278,50 +279,45 @@ namespace HAL
 
 			debuggable |= c->debuggable;
 		}
-		   const std::wstring workGraphName = L"ShadowMaskClassifier"; // ????
- 
-		if(desc.type==StateObjectType::WorkGraph )
-		{
-			 
-				  // Add a workgraph subobject
-    auto graph = raytracingPipeline.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
-    graph->SetProgramName(workGraphName.c_str());
-    graph->IncludeAllAvailableNodes(); // add all nodes
-    graph->Finalize();
+		const std::wstring workGraphName = L"ShadowMaskClassifier"; // ????
 
-	auto rootNodeDispatchGridSizeOverride = graph->CreateBroadcastingLaunchNodeOverrides(L"ClassifyPixels_Node");
-    rootNodeDispatchGridSizeOverride->DispatchGrid(40,40, 1);
- 
+		if (desc.type == StateObjectType::WorkGraph)
+		{
+			// Add a workgraph subobject
+			auto graph = raytracingPipeline.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
+			graph->SetProgramName(workGraphName.c_str());
+			graph->IncludeAllAvailableNodes(); // add all nodes
+			graph->Finalize();
+
+			//	auto rootNodeDispatchGridSizeOverride = graph->CreateBroadcastingLaunchNodeOverrides(L"ClassifyPixels_Node");
+			// rootNodeDispatchGridSizeOverride->DispatchGrid(40,40, 1);
 		}
 
 
-		TEST(desc.global_root->get_device(), desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&tracked_info->m_StateObject)));
+		TEST(desc.global_root->get_device(),
+		     desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&
+			     tracked_info->m_StateObject)));
 		TEST(desc.global_root->get_device(), tracked_info->m_StateObject.As(&stateObjectProperties));
 		assert(stateObjectProperties);
 		event_change();
 
 
-		if(desc.type==StateObjectType::WorkGraph )
+		if (desc.type == StateObjectType::WorkGraph)
 		{
+			ComPtr<ID3D12WorkGraphProperties> workGraphProperties;
 
-    ComPtr<ID3D12WorkGraphProperties> workGraphProperties;
+			tracked_info->m_StateObject.As(&workGraphProperties);
+			// find the index of the workgraph program
+			UINT wgIndex = workGraphProperties->GetWorkGraphIndex(workGraphName.c_str());
 
-    tracked_info->m_StateObject.As(&workGraphProperties);
-		  // find the index of the workgraph program
-    UINT wgIndex = workGraphProperties->GetWorkGraphIndex(workGraphName.c_str());
- 
-    // calculate the size of the backing memory buffer
-    D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS memRequirements = {};
-    workGraphProperties->GetWorkGraphMemoryRequirements(wgIndex, &memRequirements);
- 
-		buffer_size = memRequirements.MaxSizeInBytes;
+			// calculate the size of the backing memory buffer
+			D3D12_WORK_GRAPH_MEMORY_REQUIREMENTS memRequirements = {};
+			workGraphProperties->GetWorkGraphMemoryRequirements(wgIndex, &memRequirements);
 
-
-		id= stateObjectProperties->GetProgramIdentifier(workGraphName.c_str());
+			buffer_size = memRequirements.MaxSizeInBytes;
 
 
-
-
+			id = stateObjectProperties->GetProgramIdentifier(workGraphName.c_str());
 		}
 	}
 
@@ -330,12 +326,11 @@ namespace HAL
 		tracked_info.reset(new API::TrackedPipeline());
 		root_signature = desc.root_signature;
 
-	
+
 		PSOCreator creator;
 
 
 		creator.include(desc.root_signature->get_native().Get());
-
 
 
 		slots.clear();
@@ -377,15 +372,17 @@ namespace HAL
 
 		assert(!slots.empty());
 		{
-			CD3DX12_RASTERIZER_DESC RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+			auto RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 			RasterizerState.CullMode = to_native(desc.rasterizer.cull_mode);
 			RasterizerState.FillMode = to_native(desc.rasterizer.fill_mode);
-			RasterizerState.ConservativeRaster = desc.rasterizer.conservative ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+			RasterizerState.ConservativeRaster = desc.rasterizer.conservative
+				                                     ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON
+				                                     : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 			creator.include((D3D12_RASTERIZER_DESC)RasterizerState);
 		}
 
 		{
-			CD3DX12_BLEND_DESC BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+			auto BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 			BlendState.IndependentBlendEnable = desc.blend.independ_blend;
 			for (unsigned int i = 0; i < 8; i++)
 			{
@@ -394,14 +391,15 @@ namespace HAL
 				BlendState.RenderTarget[i].DestBlend = to_native(desc.blend.render_target[i].dest);
 				BlendState.RenderTarget[i].DestBlendAlpha = to_native(desc.blend.render_target[i].dest_alpha);
 				BlendState.RenderTarget[i].SrcBlendAlpha = to_native(desc.blend.render_target[i].source_alpha);
-
 			}
 			creator.include((D3D12_BLEND_DESC)BlendState);
 		}
 
 		{
-			CD3DX12_DEPTH_STENCIL_DESC DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);;
-			DepthStencilState.DepthWriteMask = desc.rtv.enable_depth_write ? D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ZERO;
+			auto DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);;
+			DepthStencilState.DepthWriteMask = desc.rtv.enable_depth_write
+				                                   ? D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ALL
+				                                   : D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ZERO;
 			DepthStencilState.DepthEnable = desc.rtv.enable_depth;
 			DepthStencilState.DepthFunc = to_native(desc.rtv.func);
 
@@ -437,17 +435,15 @@ namespace HAL
 		}
 
 
-
-
 		//psoDesc.SampleMask = UINT_MAX;
-	//	psoDesc.SampleDesc.Count = 1;
-	//	psoDesc.SampleDesc.Quality = 0;
+		//	psoDesc.SampleDesc.Count = 1;
+		//	psoDesc.SampleDesc.Quality = 0;
 
 		auto nonCached = creator.get_desc();
 
 
-	/*	static std::mutex m;
-		std::lock_guard<std::mutex> g(m);*/
+		/*	static std::mutex m;
+			std::lock_guard<std::mutex> g(m);*/
 		if (!cache.empty())
 		{
 			D3D12_CACHED_PIPELINE_STATE cached;
@@ -455,20 +451,23 @@ namespace HAL
 			cached.pCachedBlob = cache.c_str();
 			cached.CachedBlobSizeInBytes = cache.size();
 			creator.include(cached);
-		}else
-		Log::get()<<"Creating New PSO: " << desc.name<<Log::endl;
+		}
+		else
+			Log::get() << "Creating New PSO: " << desc.name << Log::endl;
 
 		auto cached = creator.get_desc();
-		HRESULT hr = (root_signature->get_device().get_native_device()->CreatePipelineState(&cached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+		HRESULT hr = (root_signature->get_device().get_native_device()->CreatePipelineState(
+			&cached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 
 		if (hr != S_OK)
 		{
-			hr = (root_signature->get_device().get_native_device()->CreatePipelineState(&nonCached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+			hr = (root_signature->get_device().get_native_device()->CreatePipelineState(
+				&nonCached, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 		}
 
-		if(hr==E_INVALIDARG)
+		if (hr == E_INVALIDARG)
 		{
-		return;
+			return;
 		}
 
 		cache.clear();
@@ -487,7 +486,6 @@ namespace HAL
 	}
 
 
-
 	void ComputePipelineState::on_change()
 	{
 		tracked_info.reset(new API::TrackedPipeline());
@@ -502,10 +500,10 @@ namespace HAL
 		slots.clear();
 		if (desc.shader)
 		{
-			psoDesc.CS = { desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
+			psoDesc.CS = {desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size())};
 			slots.merge(desc.shader->slots_usage);
 		}
-			assert(!slots.empty());
+		assert(!slots.empty());
 
 		if (!cache.empty())
 		{
@@ -517,12 +515,14 @@ namespace HAL
 			//	assert(false);
 		}
 
-		HRESULT hr = (root_signature->get_device().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+		HRESULT hr = (root_signature->get_device().get_native_device()->CreateComputePipelineState(
+			&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 
 		if (hr != S_OK)
 		{
 			psoDesc.CachedPSO = {};
-			hr = (root_signature->get_device().get_native_device()->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
+			hr = (root_signature->get_device().get_native_device()->CreateComputePipelineState(
+				&psoDesc, IID_PPV_ARGS(&tracked_info->m_pipelineState)));
 		}
 
 
@@ -533,7 +533,5 @@ namespace HAL
 		//	TEST(hr);
 
 		cache.clear();
-
 	}
-
 }

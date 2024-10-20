@@ -108,7 +108,7 @@ namespace HAL
 				if (check(desc.Flags & HAL::ResFlags::DepthStencil))
 				{
 					value.Format = to_native(texture_desc.Format.to_dsv());
-					value.DepthStencil.Depth = 1.0f;
+					value.DepthStencil.Depth = 0.0f;
 					value.DepthStencil.Stencil = 0;
 					pass_value = &value;
 				}

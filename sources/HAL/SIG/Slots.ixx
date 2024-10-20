@@ -7,6 +7,18 @@ import :Enums;
 //import :Buffer;
 import :SIG;
 
+struct placement_info
+{
+	uint offset;
+	uint size;
+	SERIALIZE()
+	{
+
+		ar& NVP(offset);
+		 	ar& NVP(size);
+
+	}
+};
 std::optional<SlotID> get_slot(std::string_view slot_name);
 template<class Context>
 class Slot_Compiler
@@ -127,9 +139,13 @@ public:
 		}
 	}
 
+
+
+
 	template<class T>
-	void compile(const T& t) //equires (std::is_base_of_v<T, Handle>)
+	placement_info compile(const T& t) 
 	{
+		auto st = s.str().length();
 		auto start = s.str().length() % sizeof(uint4);
 		auto end = start + sizeof(T);
 
@@ -138,7 +154,15 @@ public:
 			pad();
 		}
 		s.write(reinterpret_cast<const char*>(&t), sizeof(T));
+
+		return {uint(st), sizeof(T)};
 		//	t.compile(*this);
+	}
+
+	template<>
+	placement_info compile(const bool& t)
+	{
+		return compile(uint(t));
 	}
 };
 export {

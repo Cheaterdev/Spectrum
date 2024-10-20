@@ -184,8 +184,8 @@ export{
 			builder.create(GBuffer_Speed, { ivec3(size,0), HAL::Format::R16G16_FLOAT,1, 1 }, ResourceFlags::RenderTarget);
 
 
-			builder.create(GBuffer_DepthMips, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);
-			builder.create(GBuffer_DepthPrev, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::Static);
+			builder.create(GBuffer_DepthMips, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 },ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
+			builder.create(GBuffer_DepthPrev, { ivec3(size,0), HAL::Format::R32_TYPELESS,1,1 }, ResourceFlags::UnorderedAccess |ResourceFlags::Static);
 		}
 
 		void create_quality(ivec2 size, TaskBuilder& builder)

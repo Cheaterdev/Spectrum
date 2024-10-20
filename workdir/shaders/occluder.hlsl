@@ -48,7 +48,7 @@ vertex_output VS( uint index: SV_VertexID, uint instance: SV_InstanceID)
 
 //RWStructuredBuffer<uint> view_buffer: register(u0);
 
-[earlydepthstencil]
+//[earlydepthstencil]
 void PS(vertex_output i)
 {
     result[i.instance] = i.mesh_id;

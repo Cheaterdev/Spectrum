@@ -135,6 +135,8 @@ export import :Autogen.Slots.SMAA_Weights;
 export import :Autogen.Tables.SMAA_Weights;
 export import :Autogen.Slots.SMAA_Blend;
 export import :Autogen.Tables.SMAA_Blend;
+export import :Autogen.Slots.DispatchParameters;
+export import :Autogen.Tables.DispatchParameters;
 export import :Autogen.Slots.Countour;
 export import :Autogen.Tables.Countour;
 export import :Autogen.Slots.DrawStencil;
@@ -222,6 +224,7 @@ export	{
 	#include "pso\GatherMeshes.h"
 	#include "pso\DownsampleDepth.h"
 	#include "pso\MipMapping.h"
+	#include "pso\SS_Shadow.h"
 	#include "pso\Lighting.h"
 	#include "pso\VoxelDownsample.h"
 	#include "pso\VoxelCopy.h"
@@ -324,6 +327,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "SMAA_Global") return SlotID::SMAA_Global;
 	if(slot_name == "SMAA_Weights") return SlotID::SMAA_Weights;
 	if(slot_name == "SMAA_Blend") return SlotID::SMAA_Blend;
+	if(slot_name == "DispatchParameters") return SlotID::DispatchParameters;
 	if(slot_name == "Countour") return SlotID::Countour;
 	if(slot_name == "DrawStencil") return SlotID::DrawStencil;
 	if(slot_name == "PickerBuffer") return SlotID::PickerBuffer;
@@ -405,6 +409,7 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::SMAA_Global) return Slots::SMAA_Global::Slot::ID;
 	if(id == SlotID::SMAA_Weights) return Slots::SMAA_Weights::Slot::ID;
 	if(id == SlotID::SMAA_Blend) return Slots::SMAA_Blend::Slot::ID;
+	if(id == SlotID::DispatchParameters) return Slots::DispatchParameters::Slot::ID;
 	if(id == SlotID::Countour) return Slots::Countour::Slot::ID;
 	if(id == SlotID::DrawStencil) return Slots::DrawStencil::Slot::ID;
 	if(id == SlotID::PickerBuffer) return Slots::PickerBuffer::Slot::ID;
@@ -486,6 +491,7 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::SMAA_Global) return "SMAA_Global";
 	if(id == SlotID::SMAA_Weights) return "SMAA_Weights";
 	if(id == SlotID::SMAA_Blend) return "SMAA_Blend";
+	if(id == SlotID::DispatchParameters) return "DispatchParameters";
 	if(id == SlotID::Countour) return "Countour";
 	if(id == SlotID::DrawStencil) return "DrawStencil";
 	if(id == SlotID::PickerBuffer) return "PickerBuffer";
