@@ -5,6 +5,7 @@
 
 float get_shadow(PSSMData data, float3 wpos)
 {
+    return 1;
 	uint4 shadow_dims = uint4(512, 512, 512, 512);
 	data.GetLight_buffer().GetDimensions(shadow_dims.x, shadow_dims.y, shadow_dims.z);
 	int level =0 ;
@@ -46,6 +47,7 @@ float get_shadow(PSSMData data, float3 wpos)
 
 float get_shadow(PSSMData data, uint4 shadow_dims, pixel_info info, float level)
 {
+    return 1;
 	Camera light_cam = data.GetLight_cameras()[level];
 	float4 pos_l = mul(light_cam.GetViewProj(), float4(info.pos + info.normal / 2, 1));
 	pos_l.z -= 0.005 * pow(2, level);

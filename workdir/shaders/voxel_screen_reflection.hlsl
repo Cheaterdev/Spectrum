@@ -268,7 +268,8 @@ GI_RESULT PS_resize(quad_output i)
 	int2 tc = i.tc*dims;
 
 	float raw_z = gbuffer.GetDepth()[tc.xy];
-	if (raw_z >= 1) return result;
+    if (raw_z == 0)
+        return result;
 	float3 pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
 	float3 normal = normalize(gbuffer.GetNormals()[tc].xyz * 2 - 1);
 

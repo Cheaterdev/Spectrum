@@ -145,15 +145,15 @@ void CS_boxes(
     node_data node = GetSceneData().GetNodes()[mesh.GetNode_offset()];
     AABB aabb = node.GetAabb();
 
-    //int intersection = intersect(GetFrameInfo().GetCamera().GetFrustum(), aabb, node.GetNode_global_matrix());
+    int intersection = intersect(GetFrameInfo().GetCamera().GetFrustum(), aabb, node.GetNode_global_matrix());
 
-    //if (!intersection) return;
-    //if (intersection == 1)
-    //{
+    if (!intersection) return;
+    if (intersection == 1)
+    {
 
-    //    visible.Append(id);
-    //        return;
-    //}
+        visible.Append(id);
+            return;
+    }
 
  //   GetDebugInfo().Log(dispatchID.x, uint4(pip.GetMeshes_count()[0], id, 0, 0));
 

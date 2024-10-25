@@ -124,6 +124,12 @@ public:
 					scene_renderer->render(context, scene.scene->get_ptr<Scene>());
 
 
+					//FIX THIS!!
+									    {
+					                            command_list->get_copy().copy_texture(
+						                            gbuffer.depth_mips.resource->get_ptr(), 0,
+						                            gbuffer.depth.resource->get_ptr(), 0);
+				                            }
 					//	MipMapGenerator::get().copy_texture_2d_slow(command_list->get_graphics(), texture.texture, gbuffer.albedo);
 				});
 		}

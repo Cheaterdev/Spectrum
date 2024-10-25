@@ -222,7 +222,7 @@ void CS(uint3 group_id :  SV_GroupID, uint3 thread_id : SV_GroupThreadID)
 
     float raw_z = depth_buffer[tc.xy];
     float3 p = depth_to_wpos(raw_z, float2(tc.xy) / dims, camera.inv_view_proj);
-    float t = (raw_z < 1) * Scaler * length(p - camera.GetPosition());
+    float t = (raw_z >0) * Scaler * length(p - camera.GetPosition());
     float3 v = normalize(p - camera.GetPosition());
     result[tc.xy] = float4(get_sky(p, v, t), 1);
 }

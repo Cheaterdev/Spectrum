@@ -422,7 +422,7 @@ void  CS(uint3 groupID       : SV_GroupID,
 	float2 itc = float2(tc + 0.5) / dims;
 	
 	float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, itc, 0);
-	if (raw_z >= 1)
+	if (raw_z ==0)
 	{
 		tex_noise[dispatchID.xy] = 0;
 		tex_frames[dispatchID.xy] = 1;
@@ -477,7 +477,7 @@ GI_RESULT PS_Resize(quad_output i) : SV_Target0
 	float4 albedo = gbuffer.GetAlbedo()[tc];
 
 	float raw_z = gbuffer.GetDepth()[tc.xy];
-	if (raw_z >= 1) {
+	if (raw_z ==0) {
 		GI_RESULT result;
 
 	result.screen = 0;

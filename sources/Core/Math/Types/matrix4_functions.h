@@ -191,7 +191,7 @@ type perspective(float fovy, float aspect, float zn, float zf) requires(matrix_t
 	*this =  perspective_classic(fovy, aspect, zf, zn);
  	return *this;
 }
-type& orthographic(float l, float r, float t, float b, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
+type& orthographic_classic(float l, float r, float t, float b, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
 {
 	/*
 	2/(r-l)      0            0           0
@@ -204,6 +204,12 @@ type& orthographic(float l, float r, float t, float b, float zn, float zf) requi
 	matrix_type::a31 = 0; matrix_type::a32 = 0; matrix_type::a33 = -1 / (zn - zf); matrix_type::a34 = 0;
 	matrix_type::a41 = (l + r) / (l - r); matrix_type::a42 = -(t + b) / (b - t); matrix_type::a43 = zn / (zn - zf); matrix_type::a44 = 1;
 	return *this;
+}	
+
+type& orthographic(float l, float r, float t, float b, float zn, float zf) requires(matrix_type::N == 4 && matrix_type::M == 4)
+{
+*this =  orthographic_classic(l,r,t,b, zf, zn);
+ 	return *this;
 }
 type& orthogonalize() requires(matrix_type::N == 4 && matrix_type::M == 4)
 {

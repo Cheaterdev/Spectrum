@@ -22,7 +22,7 @@ static const GBuffer gbuffer = GetPSSMLighting().GetGbuffer();
 
 float4 PS(quad_output i) : SV_Target0
 {
-	
+	return 1;
 int level = GetPSSMConstants().GetLevel();
 float time = GetPSSMConstants().GetTime();
 Camera camera = GetFrameInfo().GetCamera();
@@ -32,7 +32,7 @@ info.normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, i.tc
 float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, i.tc, 0);
 
 
-if (raw_z >= 1) return 0;
+if (raw_z == 0) return 0;
 
 info.pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
 
@@ -121,7 +121,7 @@ for (int j = 1; j < 2; j++)
 	float2 cur_tc = light_tc + float2(rsin, rcos) * blur_scaler * poisson[j] * tc_scaler;
 	float light_raw_z = GetPSSMData().GetLight_buffer().SampleLevel(pointClampSampler, float3(cur_tc, level), 0);// +(blur_scaler + 1) * 0.000003;
 
-	result += light_raw_z > pos_l.z;
+	result += light_raw_z < pos_l.z;
 }
 /*
 float sum = 0.01;
@@ -210,7 +210,8 @@ info.metallic = packed_0.w;
 
 info.normal = normalize(gbuffer.GetNormals().SampleLevel(pointClampSampler, i.tc, 0).xyz * 2 - 1);
 float raw_z = gbuffer.GetDepth().SampleLevel(pointClampSampler, i.tc, 0);
-if (raw_z >= 1) return 0;
+  //  return raw_z;
+if (raw_z == 0) return 0;
 info.pos = depth_to_wpos(raw_z, i.tc, camera.GetInvViewProj());
 
 //info.specular = GetGbuffer().[2].SampleLevel(pointClampSampler, i.tc, 0);

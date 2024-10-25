@@ -387,7 +387,7 @@ void MyRaygenShader()
 	float raw_z = voxel_screen.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 
-	if (raw_z == 1)
+	if (raw_z ==0)
 	{
 		tex_noise[itc] = 0;
 		tex_frames[itc] = 0;
@@ -476,7 +476,7 @@ void MyRaygenShaderReflection()
 	float raw_z = voxel_screen.GetGbuffer().GetDepth()[DispatchRaysIndex().xy];
 	float3 pos = depth_to_wpos(raw_z, tc, frame.GetCamera().GetInvViewProj());
 
-	if (raw_z == 1)
+    if (raw_z == 0)
 	{
 		tex_noise[itc] = 0;
 		tex_dir_pdf[itc] = 0;

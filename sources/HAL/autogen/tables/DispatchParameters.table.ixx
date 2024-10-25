@@ -55,7 +55,7 @@ export namespace Table
 		{
 		   #define STRINGIFY(x) STRINGIFY2(x)
 #define STRINGIFY2(x) #x
-#define COMPILE(x) 				 Log::get()<< STRINGIFY(x) << compiler.compile(x)<< Log::endl;
+#define COMPILE(x) 				compiler.compile(x);
 
 			COMPILE(SurfaceThickness);
 			COMPILE(BilinearThreshold);
