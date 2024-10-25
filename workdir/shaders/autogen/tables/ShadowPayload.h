@@ -1,9 +1,9 @@
 #pragma once
 
 
-struct [raypayload]ShadowPayload
+struct [raypayload] ShadowPayload
 {	
 	
-	bool hit:read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
+	bool hit : read(anyhit,closesthit,miss,caller) : write(anyhit,closesthit,miss,caller);
 	
 };

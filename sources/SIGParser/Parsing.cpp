@@ -61,6 +61,12 @@ public:
 		elems.pop_back();
 	}
 
+		template <class T>
+	bool check()
+	{
+		parsed_type* e = elems.back().elem;
+		return !!dynamic_cast<T*>(e);
+	}
 	template <class T>
 	T& get_elem()
 	{
@@ -361,10 +367,14 @@ public:
 	void enterShader_type(SIGParser::Shader_typeContext* ctx) override
 	{
 		auto str = ctx->children[0]->getText();
-		auto& shader = get_elem<Shader>();
+		if(check<Shader>())
+		{
+						 auto& shader = get_elem<Shader>();
 		auto& pso = get_parent<PSO>();
 
 		shader.name = str;
+		}
+		
 	}
 };
 

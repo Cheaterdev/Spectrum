@@ -54,7 +54,7 @@ blends_declaration
 
  pointer: POINTER;
 
-pso_param: pso_param_id ASSIGN value_id SCOL;
+pso_param: option_block*? pso_param_id ASSIGN value_id SCOL;
 class_no_template:ID;
 type_with_template:class_no_template (LT (template_id)* GT)? pointer?;
 inherit_id: ID;
@@ -64,7 +64,7 @@ option_id: ID;
 owner_id: ID;
 template_id: ID;
 function_id: ID OPAR value_id_ignore? (',' value_id_ignore)* CPAR;
-value_id: ID |INT_SCALAR|FLOAT_SCALAR | bool_type | function_id;
+value_id:  shader_type | ID |INT_SCALAR|FLOAT_SCALAR | bool_type | function_id | array_value_ids;
 value_id_ignore: ID |INT_SCALAR|FLOAT_SCALAR | bool_type ;
 
 type_id: type_with_template ;

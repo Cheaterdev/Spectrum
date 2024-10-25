@@ -371,6 +371,8 @@ public:
     antlr4::tree::TerminalNode *ASSIGN();
     Value_idContext *value_id();
     antlr4::tree::TerminalNode *SCOL();
+    std::vector<Option_blockContext *> option_block();
+    Option_blockContext* option_block(size_t i);
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
@@ -496,11 +498,13 @@ public:
   public:
     Value_idContext(antlr4::ParserRuleContext *parent, size_t invokingState);
     virtual size_t getRuleIndex() const override;
+    Shader_typeContext *shader_type();
     antlr4::tree::TerminalNode *ID();
     antlr4::tree::TerminalNode *INT_SCALAR();
     antlr4::tree::TerminalNode *FLOAT_SCALAR();
     Bool_typeContext *bool_type();
     Function_idContext *function_id();
+    Array_value_idsContext *array_value_ids();
 
     virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
     virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;

@@ -8,9 +8,15 @@ struct RaytracingRays
 }
 
 [nobind]
+[raypayload]
 struct RayCone
 {
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]
     float width;
+
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]
     float angle;
 
 	%{
@@ -27,12 +33,24 @@ struct RayCone
 }
 
 [nobind]
+[raypayload]
 struct RayPayload
 {
     RayCone cone;
-    float4 color;
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]    
+	float4 color;
+
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]	
 	float3 dir;
+
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]	
 	uint recursion;
+
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]
 	float dist;
 
 	%{
@@ -64,8 +82,11 @@ struct RayPayload
 }
 
 [nobind]
+[raypayload]
 struct ShadowPayload
 {
+	[read = {anyhit,closesthit,miss,caller}]
+	[write = {anyhit,closesthit,miss,caller}]
 	bool hit;
 }
 

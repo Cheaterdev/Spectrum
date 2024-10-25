@@ -43,7 +43,7 @@ struct parsed_type
 	virtual ~parsed_type() = default;
 };
 
-struct have_name : public parsed_type
+struct have_name : public virtual parsed_type
 {
 	std::string name;
 
@@ -57,7 +57,7 @@ struct have_name : public parsed_type
 };
 
 
-struct have_hlsl
+struct have_hlsl		  : public virtual parsed_type
 {
 	std::string hlsl;
 
@@ -67,7 +67,7 @@ struct have_hlsl
 	}
 };
 
-struct inherited
+struct inherited	  : public virtual parsed_type
 {
 	std::vector<std::string> parent;
 
@@ -79,7 +79,7 @@ struct inherited
 
 struct have_options;
 
-struct have_type
+struct have_type	: public virtual parsed_type
 {
 	bool u_norm = false;
 	//std::string type;
@@ -278,7 +278,7 @@ struct have_array
 };
 
 
-struct have_owner
+struct have_owner	  : public virtual parsed_type
 {
 	std::string owner_name;
 
@@ -288,7 +288,7 @@ struct have_owner
 	}
 };
 
-struct have_expr
+struct have_expr: public virtual parsed_type
 {
 	std::string expr;
 
@@ -297,8 +297,18 @@ struct have_expr
 		ar& NVP(expr);
 	}
 };
+			 
+					 
+struct have_values : public virtual parsed_type
+{
+	std::list<have_expr> values;
 
-struct ValueAtom : public have_expr, have_owner, have_name
+	SERIALIZE()
+	{
+		ar& NVP(values);
+	}
+};
+struct ValueAtom : public have_expr, have_owner, have_name		 ,have_values
 {
 	SERIALIZE()
 	{
@@ -309,7 +319,6 @@ struct ValueAtom : public have_expr, have_owner, have_name
 		//ar& NVP(value_atom);
 	}
 };
-
 struct option : public have_name
 {
 	ValueAtom value_atom;
@@ -341,7 +350,7 @@ struct have_options
 };
 
 
-struct Value : public have_name, have_options, have_type, have_expr, have_array
+struct Value : public have_name, have_options, have_type, have_expr, have_array,have_values
 {
 	int offset = 0;
 	int size = 0;
@@ -490,15 +499,6 @@ struct Shader : public have_name, have_options
 	}
 };
 
-struct have_values
-{
-	std::list<Value> values;
-
-	SERIALIZE()
-	{
-		ar& NVP(values);
-	}
-};
 
 struct Define : public have_options, have_name, have_values
 {
@@ -531,7 +531,7 @@ struct PSO_Blend : public have_options, public have_name, public have_values
 	}
 };
 
-struct PSO_Param : public have_options, public have_values, public have_type, public have_expr, public parsed_type
+struct PSO_Param : public have_options, public have_values, public have_type, public have_expr, public virtual parsed_type
 {
 	SERIALIZE()
 	{

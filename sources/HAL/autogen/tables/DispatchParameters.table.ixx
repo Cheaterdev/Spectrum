@@ -53,26 +53,22 @@ export namespace Table
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
-		   #define STRINGIFY(x) STRINGIFY2(x)
-#define STRINGIFY2(x) #x
-#define COMPILE(x) 				compiler.compile(x);
-
-			COMPILE(SurfaceThickness);
-			COMPILE(BilinearThreshold);
-			COMPILE(ShadowContrast);
-			COMPILE(IgnoreEdgePixels);
-			COMPILE(UsePrecisionOffset);
-			COMPILE(BilinearSamplingOffsetMode);
-			COMPILE(DebugOutputEdgeMask);
-			COMPILE(DebugOutputThreadIndex);
-			COMPILE(DebugOutputWaveIndex);
-			COMPILE(DepthBounds);
-			COMPILE(UseEarlyOut);
-			COMPILE(LightCoordinate);
-			COMPILE(WaveOffset);
-			COMPILE(FarDepthValue);
-			COMPILE(NearDepthValue);
-			COMPILE(InvDepthTextureSize);
+			compiler.compile(SurfaceThickness);
+			compiler.compile(BilinearThreshold);
+			compiler.compile(ShadowContrast);
+			compiler.compile(IgnoreEdgePixels);
+			compiler.compile(UsePrecisionOffset);
+			compiler.compile(BilinearSamplingOffsetMode);
+			compiler.compile(DebugOutputEdgeMask);
+			compiler.compile(DebugOutputThreadIndex);
+			compiler.compile(DebugOutputWaveIndex);
+			compiler.compile(DepthBounds);
+			compiler.compile(UseEarlyOut);
+			compiler.compile(LightCoordinate);
+			compiler.compile(WaveOffset);
+			compiler.compile(FarDepthValue);
+			compiler.compile(NearDepthValue);
+			compiler.compile(InvDepthTextureSize);
 			compiler.compile(DepthTexture);
 			compiler.compile(OutputTexture);
 		}

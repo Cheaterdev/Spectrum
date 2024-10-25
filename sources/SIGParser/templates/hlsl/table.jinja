@@ -11,14 +11,14 @@
 {%- macro declare_func(type) -%}
 {%- for v in (table.values|unique|selectattr('value_type','==', type)) -%}
 	{%- if (not v.pointer and (v.value_type == ValueType.CB or v.value_type == ValueType.STRUCT)) %}
-	{{v.type}} {{v.name}}{{v.array}}; // {{v.type}}
+	{{v.type}} {{v.name}}{{v.array}}{{": SV_DispatchGrid" if v.options.DispatchSize }}; // {{v.type}}
 	{%-else %}
 	uint {{v.name}}{{v.array if not v.bindless }}; // {{v.type}}
 	{%-endif -%}
 {%- endfor -%}
 {%- endmacro -%}
 
-struct {{table.name}}
+struct {{"[raypayload]" if table.options.raypayload is defined}}{{table.name}}
 {
 	{{-declare_func(ValueType.CB)}}
 	{{-declare_func(ValueType.SRV)}}

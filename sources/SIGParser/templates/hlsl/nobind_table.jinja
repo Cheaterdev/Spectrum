@@ -6,7 +6,9 @@
 
 {%- macro declare_func(type) -%}
 {%- for v in (table.values|unique|selectattr('value_type','==', type)|selectattr('bindless','==', False)) %}
-	{{v.type}} {{v.name}};
+{%set read = v.options.read.value_atom.expr | replace("{", "(")| replace("}", ")") -%}
+{%-set write = v.options.write.value_atom.expr | replace("{", "(")| replace("}", ")") -%}
+	{{v.type}} {{v.name}}{{ " : read" + read if read }}{{ " : write" + write if write }};
 {%- endfor -%}
 
 
@@ -22,7 +24,7 @@
 {%- endfor -%}
 {%- endmacro -%}
 
-struct {{table.name}}
+struct{{" [raypayload]" if table.options.raypayload }} {{table.name}}
 {	
 	{{declare_func(ValueType.CB)}}
 	{{ table.hlsl }}
