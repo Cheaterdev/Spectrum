@@ -32,6 +32,10 @@ struct DebugStruct
 	uint4 v;
 }
 
+layout NoneLayout { 
+	slot None;
+}
+
 [Bind = FrameLayout::DebugInfo]
 struct DebugInfo
 {

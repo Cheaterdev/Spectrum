@@ -6,6 +6,8 @@ import :DescriptorHeap;
 import :Resource;
 import :Concepts;
 
+import :Resource.Buffer;
+
 using namespace HAL;
 
 export
@@ -80,7 +82,7 @@ export
 		struct ConstantBuffer : public CBVHandle
 		{
 			using ptr = int;
-
+			GPUAddressPtr address;
 			ConstantBuffer() = default;
 			explicit  ConstantBuffer(const Handle& h) : CBVHandle(h)
 			{
@@ -543,7 +545,7 @@ namespace HLSL
 	void ConstantBuffer<T>::create(const Resource::ptr& resource, uint64 offset, uint size)
 	{
 		auto buffer_desc = resource->get_desc().as_buffer();
-
+		address = resource->get_ptr<HAL::Buffer>()->get_address()+(offset);
 		HAL::Views::ConstantBuffer desc = { resource, offset, size };
 		Handle::operator=(desc);
 	}

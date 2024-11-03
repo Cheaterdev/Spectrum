@@ -101,10 +101,10 @@ namespace HAL
 			list.set_program(id,buffer,size,init );
 			});
 				}
-void DelayedCommandList::dispatch_graph(ResourceAddress addr, uint stride)
+void DelayedCommandList::dispatch_graph(ResourceAddress addr)
 {
 		tasks.emplace_back([=](API::CommandList& list) {
-			list.dispatch_graph(addr,stride);
+			list.dispatch_graph(addr);
 			});
 }
 

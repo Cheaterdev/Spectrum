@@ -1,0 +1,25 @@
+#ifndef SLOT_0
+	#define SLOT_0
+#else
+	#error Slot 0 is already used
+#endif
+
+#include "layout/NoneLayout.h"
+#include "tables/GraphInput.h"
+
+#ifndef CB_DEFINED
+#define CB_DEFINED
+struct CB { uint offset; };
+#endif
+
+ConstantBuffer< CB > pass_GraphInput: register( b2, space0);
+
+ConstantBuffer<GraphInput> CreateGraphInput()
+{
+	return ResourceDescriptorHeap[pass_GraphInput.offset];
+}
+			
+#ifndef NO_GLOBAL
+static const GraphInput graphInput_global = CreateGraphInput();
+const GraphInput GetGraphInput(){ return graphInput_global; }
+#endif

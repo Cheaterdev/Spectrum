@@ -7,7 +7,8 @@ export
 	enum class Layouts: int
 	{
 		FrameLayout,
-		DefaultLayout
+		DefaultLayout,
+		NoneLayout
 	};
 
 	enum class IndirectCommands: int

@@ -51,12 +51,12 @@ namespace HAL
 
 		}
 
-		void CommandList::dispatch_graph(ResourceAddress addr, uint stride)
+		void CommandList::dispatch_graph(ResourceAddress addr)
 		{
 		 // dispatch work graph
 			D3D12_DISPATCH_GRAPH_DESC desc = {};
-			desc.Mode = D3D12_DISPATCH_MODE_NODE_GPU_INPUT;
-			desc.NodeGPUInput= to_native(addr);
+			desc.Mode = D3D12_DISPATCH_MODE_MULTI_NODE_GPU_INPUT;
+			desc.MultiNodeGPUInput= to_native(addr);
 			
 
 		/*	 D3D12_DISPATCH_GRAPH_DESC desc = {};

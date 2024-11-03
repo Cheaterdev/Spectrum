@@ -898,7 +898,7 @@ export{
 			void dispatch2(ivec2, ivec2 = ivec2(4, 4));
 
 
-				void dispatch_graph(ResourceAddress addr, uint stride);
+				void dispatch_graph(ResourceAddress addr);
 				void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
 
 			

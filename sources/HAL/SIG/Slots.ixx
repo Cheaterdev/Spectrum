@@ -199,14 +199,20 @@ export {
 
 		using Compiled = CompiledData<Table, Slot>;
 
+	template<class Compiler>
+		void compile_table(Compiler& compiler) const
+	{
+				Table::compile(compiler);
 
+
+	}
 		template<class Context>
-		Compiled compile(Context& context) const
+		Compiled compile(Context& context) const  requires (std::is_base_of_v<GPUEntityStorageInterface,Context>)
 		{
 
 			Slot_Compiler<Context> Slot_Compiler;
 			Slot_Compiler.context = &context;
-			Table::compile(Slot_Compiler);
+			compile_table(Slot_Compiler);
 
 
 			Compiled compiled;
@@ -304,4 +310,120 @@ export {
 			ar& NVP(slots_usage);
 		}
 	};
+
+
+	 template<class Context>
+	struct EntryPoints
+	{
+
+		Context* context;
+		
+		
+
+			 EntryPoints(Context*context):context(context)
+			 {
+				 
+			 }
+		struct Record
+		{
+			Slot_Compiler<Context> Slot_Compiler;
+			uint stride = 0;
+			uint count = 0;
+
+		};
+
+		uint num_records = 0;
+		std::map<uint, Record>	  records;
+
+					template<class Table>
+		void add(uint id, Table& elem)
+		{
+			auto& rec = records[id];
+
+			rec.Slot_Compiler.context = context;
+			elem.compile_table(rec.Slot_Compiler);
+			++rec.count;
+			rec.stride = sizeof(Table);
+
+		}
+
+
+		HAL::ResourceAddress compile() const
+		{
+								
+			
+
+			auto id_rec_data = context->place_data(sizeof(D3D12_NODE_GPU_INPUT) * records.size(), 256);
+
+			auto rec_cpu = reinterpret_cast<D3D12_NODE_GPU_INPUT*>(id_rec_data.get_cpu_data());
+
+			uint i = 0;
+			for (auto& [id, id_records] : records)
+			{
+
+
+				D3D12_NODE_GPU_INPUT& input = rec_cpu[i];
+				input.EntrypointIndex = id;
+				input.NumRecords = id_records.count;
+
+				auto binary = id_records.Slot_Compiler.s.str();
+				auto gpu_binary = context->place_data(binary.size(), 256);
+
+				memcpy(gpu_binary.get_cpu_data(), binary.data(), sizeof(binary));
+				input.Records.StartAddress = to_native(gpu_binary);
+				input.Records.StrideInBytes = id_records.stride;
+
+
+
+			}
+
+
+			auto res = context->place_data(sizeof(D3D12_MULTI_NODE_GPU_INPUT), 256);
+
+			D3D12_MULTI_NODE_GPU_INPUT& t = *reinterpret_cast<D3D12_MULTI_NODE_GPU_INPUT*>(res.get_cpu_data());
+			t.NumNodeInputs = records.size();
+
+			t.NodeInputs.StartAddress = to_native(id_rec_data);
+
+			t.NodeInputs.StrideInBytes = sizeof(D3D12_NODE_GPU_INPUT);
+			//	memcpy(info2.get_cpu_data(), &t, sizeof(t));
+
+
+
+			//{
+			//	D3D12_NODE_GPU_INPUT t;
+
+
+			//	t.EntrypointIndex = 0;
+			//	t.NumRecords = 1;
+			//	t.Records.StartAddress = compiled.const_buffer.address;
+			//	t.Records.StrideInBytes = sizeof(input);
+			//	memcpy(info2.get_cpu_data(), &t, sizeof(t));
+			//}
+
+
+			//auto info3 = context.place_data(Math::roundUp(sizeof(D3D12_MULTI_NODE_GPU_INPUT), 256), 256);
+
+
+			//{
+			//	D3D12_MULTI_NODE_GPU_INPUT t;
+
+
+			//	t.NumNodeInputs = 1;
+			//	t.NodeInputs.StartAddress = to_native(info2);
+
+			//	t.NodeInputs.StrideInBytes = sizeof(D3D12_NODE_GPU_INPUT);
+
+			//	memcpy(info3.get_cpu_data(), &t, sizeof(t));
+			//}
+			return res;
+		}
+	};
+								 template<class T>
+		   EntryPoints<T> create_entry(T& context)
+								 {
+			   return   EntryPoints<T>(&context);
+								 }
+
+
 }

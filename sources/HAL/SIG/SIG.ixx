@@ -112,4 +112,21 @@ export
 
 	using DefaultCB = HAL::Buffer*;// std::vector<std::byte>;
 	using DynamicData = std::vector<std::byte>;// std::vector<std::byte>;
+
+
+
+
+	struct EntryPointsCompiled
+	{
+
+		struct Record
+		{
+			HAL::GPUAddressPtr address;
+			uint size;
+
+		};
+		//std::vector<Record>
+
+	};
+	
 }

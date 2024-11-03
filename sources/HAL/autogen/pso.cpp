@@ -8,6 +8,7 @@ void init_signatures(HAL::Device& device, enum_array<Layouts, HAL::RootLayout::p
 {
 	signatures[Layouts::FrameLayout] = AutoGenSignatureDesc<FrameLayout>().create_signature(device, Layouts::FrameLayout);
 	signatures[Layouts::DefaultLayout] = AutoGenSignatureDesc<DefaultLayout>().create_signature(device, Layouts::DefaultLayout);
+	signatures[Layouts::NoneLayout] = AutoGenSignatureDesc<NoneLayout>().create_signature(device, Layouts::NoneLayout);
 }
 
 void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HAL::IndirectCommand>& commands)

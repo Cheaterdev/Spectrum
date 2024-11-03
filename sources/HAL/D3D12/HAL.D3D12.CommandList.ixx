@@ -43,7 +43,7 @@ export namespace HAL {
 			}
 
 				void set_program(StateObject* id, ResourceAddress buffer, uint size, bool init);
-void dispatch_graph(ResourceAddress addr, uint stride);
+void dispatch_graph(ResourceAddress addr);
 
 			void clear_uav(const UAVHandle& h, vec4 ClearColor);
 			void clear_rtv(const RTVHandle& h, vec4 ClearColor);

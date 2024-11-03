@@ -16,6 +16,7 @@ import :Types;
 
 export import :Autogen.Layouts.FrameLayout;
 export import :Autogen.Layouts.DefaultLayout;
+export import :Autogen.Layouts.NoneLayout;
 export import :Autogen.Slots.TextureRenderer;
 export import :Autogen.Tables.TextureRenderer;
 export import :Autogen.Slots.BlueNoise;
@@ -199,6 +200,7 @@ export import :Autogen.Slots.ReflectionCombine;
 export import :Autogen.Tables.ReflectionCombine;
 export import :Autogen.Slots.WorkGraphTest;
 export import :Autogen.Tables.WorkGraphTest;
+export import :Autogen.Slots.GraphInput;
 export import :Autogen.Tables.GraphInput;
 
 export	{
@@ -357,6 +359,7 @@ std::optional<SlotID> get_slot(std::string_view slot_name)
 	if(slot_name == "FrameClassificationInitDispatch") return SlotID::FrameClassificationInitDispatch;
 	if(slot_name == "ReflectionCombine") return SlotID::ReflectionCombine;
 	if(slot_name == "WorkGraphTest") return SlotID::WorkGraphTest;
+	if(slot_name == "GraphInput") return SlotID::GraphInput;
 	return std::nullopt;
 }
 
@@ -439,6 +442,7 @@ uint get_table_index(SlotID id)
 	if(id == SlotID::FrameClassificationInitDispatch) return Slots::FrameClassificationInitDispatch::Slot::ID;
 	if(id == SlotID::ReflectionCombine) return Slots::ReflectionCombine::Slot::ID;
 	if(id == SlotID::WorkGraphTest) return Slots::WorkGraphTest::Slot::ID;
+	if(id == SlotID::GraphInput) return Slots::GraphInput::Slot::ID;
 	return -1;
 }
 
@@ -521,5 +525,6 @@ std::string get_slot_name(SlotID id)
 	if(id == SlotID::FrameClassificationInitDispatch) return "FrameClassificationInitDispatch";
 	if(id == SlotID::ReflectionCombine) return "ReflectionCombine";
 	if(id == SlotID::WorkGraphTest) return "WorkGraphTest";
+	if(id == SlotID::GraphInput) return "GraphInput";
 	return "UNKNOWN";
 }

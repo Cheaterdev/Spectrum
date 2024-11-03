@@ -1073,11 +1073,11 @@ namespace HAL
 		return *copy.get(); //return reinterpret_cast<ComputeContext&>(*this);
 	}
 
-	void ComputeContext::dispatch_graph(ResourceAddress addr, uint stride)
+	void ComputeContext::dispatch_graph(ResourceAddress addr)
 	{
 		PROFILE_GPU(L"dispatch_graph");
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
-		list->dispatch_graph(addr, stride);
+		list->dispatch_graph(addr);
 		base.post_command<true, false>(*this);
 	}
 
