@@ -14,12 +14,21 @@ export namespace Table
 	{
 		static constexpr SlotID ID = SlotID::GraphInput;
 		uint3 dispatch_grid;
+		uint unused;
+		int2 WaveOffset;
+		uint2 unused2;
 		uint3& GetDispatch_grid() { return dispatch_grid; }
+		uint& GetUnused() { return unused; }
+		int2& GetWaveOffset() { return WaveOffset; }
+		uint2& GetUnused2() { return unused2; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
 		{
 			compiler.compile(dispatch_grid);
+			compiler.compile(unused);
+			compiler.compile(WaveOffset);
+			compiler.compile(unused2);
 		}
 		using Compiled = GraphInput;
 

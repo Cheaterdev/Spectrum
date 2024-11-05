@@ -316,6 +316,8 @@ namespace HAL
 
 			buffer_size = memRequirements.MaxSizeInBytes;
 
+			auto entry_align = workGraphProperties->GetEntrypointRecordAlignmentInBytes(0, 0);
+			auto entry_size = workGraphProperties->GetEntrypointRecordSizeInBytes(0, 0);
 
 			id = stateObjectProperties->GetProgramIdentifier(workGraphName.c_str());
 		}

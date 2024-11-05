@@ -960,6 +960,9 @@ export{
 				on_execute_funcs.clear();
 
 				Eventer::reset();
+
+
+				HAL::Device::get().context_generator.free(this);
 			}
 
 

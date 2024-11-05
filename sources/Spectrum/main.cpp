@@ -621,7 +621,7 @@ public:
 							graph.set_slot(SlotID::SceneData, compute);
 
 
-							/*          auto light = float4(pssm.get_position().normalized(), 0) * cam.
+							         auto light = float4(pssm.get_position().normalized(), 0) * cam.
 										  get_view_proj();
 
 									  Bend::DispatchList res = Bend::BuildDispatchList(
@@ -632,7 +632,7 @@ public:
 										  {0, 0}, {
 											  data.RTXDebug->get_size().x, data.RTXDebug->get_size().y
 										  }, false, 64);
-									  compute.set_pipeline<PSOS::SS_Shadow>();
+									//  compute.set_pipeline<PSOS::SS_Shadow>();
 
 
 									  auto gbuffer = data.gbuffer.actualize(context);
@@ -653,54 +653,52 @@ public:
 										  1.0f / data.RTXDebug->get_size().x,
 										  1.0f / data.RTXDebug->get_size().y);
 
-									  for (auto i = 0; i < res.DispatchCount; i++)
-									  {
-										  auto& e = res.Dispatch[i];
+						//			  dispatchParameters.DebugOutputThreadIndex = true;
+										compute.set(dispatchParameters);
 
-										  dispatchParameters.GetWaveOffset() = int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
+											
+										auto ep = create_entry(compute);				 	
+										for (auto i = 0; i < res.DispatchCount; i++)
+										{		     	
+													  auto& e = res.Dispatch[i];
+											{
+												Slots::GraphInput input;
+												input.GetDispatch_grid() = vec3(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
+												   input.GetWaveOffset()  =  int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
+												ep.add(0, input);
+											}
+										
+										}
+											compute.dispatch_graph(ep.compile());
+									
 
-										  compute.set(dispatchParameters);
-										  compute.dispatch(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
-									  }*/
+							//{
+							//	Slots::VoxelOutput output;
+							//	output.GetNoise() = *data.RTXDebug;
+							//	compute.set(output);
+							//}
+
+							//{
+							//	auto gbuffer = data.gbuffer.actualize(context);
+
+							//	Slots::VoxelScreen voxelScreen;
+							//	gbuffer.SetTable(voxelScreen.GetGbuffer());
+							//	voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
+							//	//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
+							//	compute.set(voxelScreen);
+							//}
 
 
-							{
-								Slots::VoxelOutput output;
-								output.GetNoise() = *data.RTXDebug;
-								compute.set(output);
-							}
+							//{
+							//	Slots::WorkGraphTest output;
+							//	output.GetOutput() = *data.RTXDebug;
+							//	compute.set(output);
+							//}
 
-							{
-								auto gbuffer = data.gbuffer.actualize(context);
-
-								Slots::VoxelScreen voxelScreen;
-								gbuffer.SetTable(voxelScreen.GetGbuffer());
-								voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
-								//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
-								compute.set(voxelScreen);
-							}
-
-
-							{
-								Slots::WorkGraphTest output;
-								output.GetOutput() = *data.RTXDebug;
-								compute.set(output);
-							}
-
-							auto ep = create_entry(compute);
-
-							{
-								Slots::GraphInput input;
-								input.GetDispatch_grid() = vec3(
-									vec2::max(data.RTXDebug->get_size() / 8, vec2(1, 1)), 1);
-
-								ep.add(0, input);
-							}
-
-							compute.dispatch_graph(ep.compile());
+							
 						//}
 						//	RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
-			});
+			}, PassFlags::Compute);
 
 			//if(enable_denoiser)
 			//shadow_denoiser.generate(graph);

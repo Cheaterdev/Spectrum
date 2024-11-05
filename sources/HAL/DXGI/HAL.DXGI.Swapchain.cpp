@@ -21,7 +21,7 @@ namespace HAL
 		swapChainDesc.SampleDesc.Quality = 0;
 		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swapChainDesc.BufferCount = 2 + static_cast<int>(swapChainDesc.Stereo);
-		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 		ComPtr<IDXGISwapChain1> swapChain;
 		HRESULT res = HAL::Adapters::get().get_factory()->CreateSwapChainForHwnd(
 			device.get_queue(CommandListType::DIRECT)->get_native().Get(),

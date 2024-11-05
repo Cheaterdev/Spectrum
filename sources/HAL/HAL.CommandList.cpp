@@ -32,6 +32,7 @@ namespace HAL
 
 		auto& timers = get_state(list);
 
+		if(timers.timers.size()) // maybe there was no start ?
 		timers.timers.back().end(list);
 	}
 
@@ -50,7 +51,10 @@ namespace HAL
 	{
 		queue_type = list->get_type();
 
+		querys.Free();
+
 		querys = list->alloc_query(2, QueryType::Timestamp);
+
 
 		if (querys)
 			list->insert_time(querys, 0);
@@ -1146,14 +1150,14 @@ namespace HAL
 		names.push_back(timer->get_block().get_name());
 		start_event(names.back().c_str());
 
-		for (auto& c : timer->get_block().get_childs())
-		{
-			auto b = dynamic_cast<GPUBlock*>(c.get());
-			if (b)
-			{
-				//	b->gpu_counter.enabled = false;
-			}
-		}
+		//for (auto& c : timer->get_block().get_childs())
+		//{
+		//	auto b = dynamic_cast<GPUBlock*>(c.get());
+		//	if (b)
+		//	{
+		//		//	b->gpu_counter.enabled = false;
+		//	}
+		//}
 		//		static_cast<GPUBlock*>(c.get())
 
 		auto b = dynamic_cast<GPUBlock*>(&timer->get_block());
@@ -1211,7 +1215,8 @@ namespace HAL
 		started = true;
 		this->name = name;
 		thread_current = this;
-
+					   
+		names.clear();
 		current = t ? &t->get_block() : &Profiler::get();
 		TimedRoot::parent = t ? t->get_root() : &Profiler::get();
 		if (type != CommandListType::COPY && name.size())
@@ -1221,10 +1226,12 @@ namespace HAL
 		}
 
 		else
+		{
 			current = nullptr;
+					 	timer.reset();
+	}
 
 
-		names.clear();
 	}
 
 	Timer Eventer::start(std::wstring_view name)
@@ -1539,8 +1546,10 @@ namespace HAL
 			{
 				std::copy(data.begin(), data.end(), heap->read_back_data.begin());
 			});
+
+			
 		});
-		HAL::Device::get().context_generator.free(this);
+		
 		frame.free_storage(proxy);
 
 
@@ -1549,6 +1558,7 @@ namespace HAL
 		end();
 
 		frame.free_ca(ca);
+
 	}
 
 

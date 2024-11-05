@@ -8,7 +8,7 @@ export struct NoneLayout
 	struct None
 	{
 		static const uint ID = 0;
-		static const uint CB = 2;
+		static const uint CB = 4;
 		static const uint CB_ID = 0;
 		static inline const std::vector<uint> tables = { 0 };
 	};

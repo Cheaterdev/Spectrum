@@ -22,6 +22,13 @@
 // https://www.bendstudio.com/careers
 
 
+struct Result
+{
+
+    float2 pixel_pos;
+    bool shadow;
+    bool good;
+};
 // Common screen space shadow projection code (GPU):
 //--------------------------------------------------------------
 
@@ -72,11 +79,11 @@
 // 
 //	(int3)	inGroupID:			Compute shader group id register (SV_GroupID)
 //	(int)	inGroupThreadId:	Compute shader group thread id register (SV_GroupThreadID)
-void WriteScreenSpaceShadow(
+Result WriteScreenSpaceShadow(
 struct DispatchParameters inParameters,
     int3 inGroupID, int inGroupThreadID);
 
-	
+#ifdef BUILD_FUNC_CS
  [numthreads(WAVE_SIZE, 1, 1)]
 void CS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID, uint3 Dtid : SV_DispatchThreadID)
     {
@@ -84,7 +91,7 @@ void CS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID, 
      //   GetDispatchParameters().GetOutputTexture()[uint2(10,10)] = 1;
         WriteScreenSpaceShadow(GetDispatchParameters(), WorkGroupId, LocalThreadId);
     }
-
+#endif 
 #if !defined(WAVE_SIZE) || !defined(SAMPLE_COUNT) || !defined(HARD_SHADOW_SAMPLES) || !defined(FADE_OUT_SAMPLES)
 	#error Before including bend_sss_gpu.h, four macros must be defined to configure the shader compile: WAVE_SIZE, SAMPLE_COUNT, HARD_SHADOW_SAMPLES, and FADE_OUT_SAMPLES. See the top of this file for details.
 #else
@@ -163,12 +170,13 @@ void CS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID, 
 	groupshared float DepthData[READ_COUNT * WAVE_SIZE];
 	groupshared bool LdsEarlyOut;
 
+
 	// Generate the shadow
 	//	Call this function from a compute shader with thread dimensions: numthreads[WAVE_SIZE, 1, 1]
 	// 
 	//	(int3)	inGroupID:			Compute shader group id register (SV_GroupID)
 	//	(int)	inGroupThreadId:	Compute shader group thread id register (SV_GroupThreadID)
-	void WriteScreenSpaceShadow(DispatchParameters inParameters, int3 inGroupID, int inGroupThreadID)
+    Result WriteScreenSpaceShadow(DispatchParameters inParameters, int3 inGroupID, int inGroupThreadID)
 	{
 		float2 xy_delta;
 		float2 pixel_xy;
@@ -191,6 +199,10 @@ void CS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID, 
 		bool skip_pixel = false;
 		float2 write_xy = floor(pixel_xy);
 
+        Result resultv;
+        resultv.pixel_pos = write_xy;
+        resultv.shadow = false;
+        resultv.good = false;
 		[unroll] for (i = 0; i < READ_COUNT; i++)
 		{
 			// We sample depth twice per pixel per sample, and interpolate with an edge detect filter
@@ -277,8 +289,8 @@ void CS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID, 
 				// Optimal case:
 				// If each wavefront is just a single wave, then we can trivially early-out.
 				if (early_out == true)
-					return;
-			}
+                    return resultv;
+            }
 			else
 			{
 				// This wavefront is made up of multiple small waves, so we need to coordinate them for all to early-out together.
@@ -293,8 +305,8 @@ void CS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID, 
 				GroupMemoryBarrierWithGroupSync();
 
 				[branch] if (LdsEarlyOut)
-					return;
-			}
+                    return resultv;
+            }
 		}
 
 		// Write the shadow depths to LDS
@@ -320,7 +332,7 @@ void CS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID, 
 
 		// If the starting depth isn't in depth bounds, then we don't need a shadow
 		if (skip_pixel)
-			return;
+            return resultv;
 
 		float start_depth = sampling_depth[0];
 
@@ -400,11 +412,17 @@ void CS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID, 
 				result = (inGroupThreadID / (float)WAVE_SIZE);
 			if (inParameters.DebugOutputWaveIndex)			
 				result = frac(inGroupID.x / (float)WAVE_SIZE);
-			
+
+            resultv.good = true;
+            resultv.shadow = result < 1;
 			// Asking the GPU to write scattered single-byte pixels isn't great,
 			// But thankfully the latency is hidden by all the work we're doing...
-            inParameters.GetOutputTexture()[uint2(write_xy)] = result;
+           // inParameters.GetOutputTexture()[uint2(write_xy)] = result;
         }
-	}
+
+
+        return resultv;
+
+    }
 
 #endif // macro check

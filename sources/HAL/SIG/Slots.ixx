@@ -340,10 +340,14 @@ export {
 		{
 			auto& rec = records[id];
 
+						uint beg = rec.Slot_Compiler.s.str().size();
 			rec.Slot_Compiler.context = context;
 			elem.compile_table(rec.Slot_Compiler);
+
+						uint end = rec.Slot_Compiler.s.str().size();
 			++rec.count;
 			rec.stride = sizeof(Table);
+			assert(end - beg == sizeof(Table));
 
 		}
 
@@ -369,12 +373,12 @@ export {
 				auto binary = id_records.Slot_Compiler.s.str();
 				auto gpu_binary = context->place_data(binary.size(), 256);
 
-				memcpy(gpu_binary.get_cpu_data(), binary.data(), sizeof(binary));
+				memcpy(gpu_binary.get_cpu_data(), binary.data(), binary.size());
 				input.Records.StartAddress = to_native(gpu_binary);
 				input.Records.StrideInBytes = id_records.stride;
 
 
-
+				++i;
 			}
 
 
