@@ -8,6 +8,7 @@ struct SceneData
 
 	StructuredBuffer<RaytraceInstanceInfo> raytraceInstanceInfo;
 
+	RaytracingAccelerationStructure scene;
 }
 
 

@@ -21,10 +21,12 @@ export namespace Table
 		HLSL::StructuredBuffer<MeshCommandData> meshes;
 		HLSL::StructuredBuffer<MaterialCommandData> materials;
 		HLSL::StructuredBuffer<RaytraceInstanceInfo> raytraceInstanceInfo;
+		HLSL::RaytracingAccelerationStructure scene;
 		HLSL::StructuredBuffer<node_data>& GetNodes() { return nodes; }
 		HLSL::StructuredBuffer<MeshCommandData>& GetMeshes() { return meshes; }
 		HLSL::StructuredBuffer<MaterialCommandData>& GetMaterials() { return materials; }
 		HLSL::StructuredBuffer<RaytraceInstanceInfo>& GetRaytraceInstanceInfo() { return raytraceInstanceInfo; }
+		HLSL::RaytracingAccelerationStructure& GetScene() { return scene; }
 		static constexpr SIG_TYPE TYPE = SIG_TYPE::Table;
 		template<class Compiler>
 		void compile(Compiler& compiler) const
@@ -33,6 +35,7 @@ export namespace Table
 			compiler.compile(meshes);
 			compiler.compile(materials);
 			compiler.compile(raytraceInstanceInfo);
+			compiler.compile(scene);
 		}
 		struct Compiled
 		{
@@ -40,6 +43,7 @@ export namespace Table
 			uint meshes; // StructuredBuffer<MeshCommandData>
 			uint materials; // StructuredBuffer<MaterialCommandData>
 			uint raytraceInstanceInfo; // StructuredBuffer<RaytraceInstanceInfo>
+			uint scene; // RaytracingAccelerationStructure
 		};
 
 	};

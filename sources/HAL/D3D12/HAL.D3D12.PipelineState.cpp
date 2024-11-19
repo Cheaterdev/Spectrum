@@ -286,6 +286,10 @@ namespace HAL
 			// Add a workgraph subobject
 			auto graph = raytracingPipeline.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
 			graph->SetProgramName(workGraphName.c_str());
+
+		/*	for (auto& l : desc.libraries)
+					  	for (auto& e : l.exports)
+						  graph->CreateNode<>()*/
 			graph->IncludeAllAvailableNodes(); // add all nodes
 			graph->Finalize();
 

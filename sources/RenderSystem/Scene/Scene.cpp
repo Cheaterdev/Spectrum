@@ -111,7 +111,7 @@ void Scene::update(HAL::FrameResources& frame)
 		sceneData.GetMaterials() = universal_material_info_part_manager::get().buffer;
 		sceneData.GetMeshes() = scene->mesh_infos->buffer;
 sceneData.GetRaytraceInstanceInfo() = universal_rtx_manager::get().buffer;
-
+sceneData.GetScene() = raytrace_scene->raytracing_handle;
 		compiledScene = sceneData.compile(frame);
 	}
 

@@ -107,4 +107,11 @@ namespace HAL
 
 	}
 
+
+	void library_shader::init()
+	{
+
+	}
+
+
 }

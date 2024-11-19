@@ -331,6 +331,8 @@ public:
 			std::string("shaders\\workgraph_test.hlsl"), "", HAL::ShaderOptions::None, {}
 			});
 		lib.export_shader(std::wstring(L"ClassifyPixels_Node"));
+
+			lib.export_shader(std::wstring(L"ClassifyPixels_Node2"));
 		lib.export_shader(std::wstring(L"Shadows_Node"));
 		workgraph.libraries.emplace_back(lib);
 
@@ -621,226 +623,234 @@ public:
 							graph.set_slot(SlotID::SceneData, compute);
 
 
-							         auto light = float4(pssm.get_position().normalized(), 0) * cam.
-										  get_view_proj();
 
-									  Bend::DispatchList res = Bend::BuildDispatchList(
-										  {
-											  light.x, light.y,
-											  light.z, light.w
-										  }, {data.RTXDebug->get_size().x, data.RTXDebug->get_size().y},
-										  {0, 0}, {
+							{
+								Slots::Raytracing rtx;
+								rtx.GetScene() = scene->raytrace_scene->raytracing_handle;
+								compute.set(rtx);
+							}
+							{
+								auto gbuffer = data.gbuffer.actualize(context);
+
+								Slots::VoxelScreen voxelScreen;
+								gbuffer.SetTable(voxelScreen.GetGbuffer());
+								voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
+								//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
+								compute.set(voxelScreen);
+							}
+
+							auto light = float4(pssm.get_position().normalized(), 0) * cam.
+								get_view_proj();
+
+							Bend::DispatchList res = Bend::BuildDispatchList(
+								{
+									light.x, light.y,
+									light.z, light.w
+								}, { data.RTXDebug->get_size().x, data.RTXDebug->get_size().y },
+										  { 0, 0 }, {
 											  data.RTXDebug->get_size().x, data.RTXDebug->get_size().y
 										  }, false, 64);
-									//  compute.set_pipeline<PSOS::SS_Shadow>();
+										  //  compute.set_pipeline<PSOS::SS_Shadow>();
 
 
-									  auto gbuffer = data.gbuffer.actualize(context);
+										  auto gbuffer = data.gbuffer.actualize(context);
 
-									  Slots::DispatchParameters dispatchParameters;
-									  dispatchParameters.GetDepthTexture() = gbuffer.depth.texture2D;
-									  dispatchParameters.GetOutputTexture() = data.RTXDebug->rwTexture2D;
-									  dispatchParameters.GetLightCoordinate() = float4(
-										  res.LightCoordinate_Shader[0],
-										  res.LightCoordinate_Shader[1],
-										  res.LightCoordinate_Shader[2],
-										  res.LightCoordinate_Shader[3]);
-
-
-									  dispatchParameters.FarDepthValue = 0;
-									  dispatchParameters.NearDepthValue = 1;
-									  dispatchParameters.InvDepthTextureSize = float2(
-										  1.0f / data.RTXDebug->get_size().x,
-										  1.0f / data.RTXDebug->get_size().y);
-
-						//			  dispatchParameters.DebugOutputThreadIndex = true;
-										compute.set(dispatchParameters);
-
-											
-										auto ep = create_entry(compute);				 	
-										for (auto i = 0; i < res.DispatchCount; i++)
-										{		     	
-													  auto& e = res.Dispatch[i];
-											{
-												Slots::GraphInput input;
-												input.GetDispatch_grid() = vec3(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
-												   input.GetWaveOffset()  =  int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
-												ep.add(0, input);
-											}
-										
-										}
-											compute.dispatch_graph(ep.compile());
-									
-
-							//{
-							//	Slots::VoxelOutput output;
-							//	output.GetNoise() = *data.RTXDebug;
-							//	compute.set(output);
-							//}
-
-							//{
-							//	auto gbuffer = data.gbuffer.actualize(context);
-
-							//	Slots::VoxelScreen voxelScreen;
-							//	gbuffer.SetTable(voxelScreen.GetGbuffer());
-							//	voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips;
-							//	//		voxelScreen.GetPrev_gi() = data.RTXDebugPrev->texture2D;
-							//	compute.set(voxelScreen);
-							//}
+										  Slots::DispatchParameters dispatchParameters;
+										  dispatchParameters.GetDepthTexture() = gbuffer.depth.texture2D;
+										  dispatchParameters.GetOutputTexture() = data.RTXDebug->rwTexture2D;
+										  dispatchParameters.GetLightCoordinate() = float4(
+											  res.LightCoordinate_Shader[0],
+											  res.LightCoordinate_Shader[1],
+											  res.LightCoordinate_Shader[2],
+											  res.LightCoordinate_Shader[3]);
 
 
-							//{
-							//	Slots::WorkGraphTest output;
-							//	output.GetOutput() = *data.RTXDebug;
-							//	compute.set(output);
-							//}
+										  dispatchParameters.FarDepthValue = 0;
+										  dispatchParameters.NearDepthValue = 1;
+										  dispatchParameters.InvDepthTextureSize = float2(
+											  1.0f / data.RTXDebug->get_size().x,
+											  1.0f / data.RTXDebug->get_size().y);
 
-							
-						//}
-						//	RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
-			}, PassFlags::Compute);
+										  //			  dispatchParameters.DebugOutputThreadIndex = true;
+										  compute.set(dispatchParameters);
 
-			//if(enable_denoiser)
-			//shadow_denoiser.generate(graph);
+
+										  auto ep = create_entry(compute);
+										  for (auto i = 0; i < res.DispatchCount; i++)
+										  {
+											  auto& e = res.Dispatch[i];
+											  {
+												  Slots::GraphInput input;
+												  input.GetDispatch_grid() = vec3(e.WaveCount[0], e.WaveCount[1], e.WaveCount[2]);
+												  input.GetWaveOffset() = int2(e.WaveOffset_Shader[0], e.WaveOffset_Shader[1]);
+												  ep.add(0, input);
+											  }
+
+										  }
+										  compute.dispatch_graph(ep.compile());
+
+
+										  //{
+										  //	Slots::VoxelOutput output;
+										  //	output.GetNoise() = *data.RTXDebug;
+										  //	compute.set(output);
+										  //}
+
+
+
+
+										  //{
+										  //	Slots::WorkGraphTest output;
+										  //	output.GetOutput() = *data.RTXDebug;
+										  //	compute.set(output);
+										  //}
+
+
+									  //}
+									  //	RTX::get().render<Shadow>(compute, scene->raytrace_scene, data.RTXDebug->get_size());
+						}, PassFlags::Compute);
+
+					//if(enable_denoiser)
+					//shadow_denoiser.generate(graph);
+			}
 		}
+
+		struct no
+		{
+			Handlers::Texture H(ResultTexture);
+		};
+		graph.pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) -> bool
+			{
+				auto& frame = graph.get_context<ViewportInfo>();
+				builder.create(data.ResultTexture,
+					{ uint3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
+					ResourceFlags::RenderTarget);
+
+				return false;
+			}, [](no& data, FrameContext& _context)
+				{
+				});
+
+
+			pssm.generate(graph);
+			sky.generate(graph);
+
+			// remove on intel
+			if (enable_gi) voxel_gi->generate(graph);
+
+
+			sky.generate_sky(graph);
+
+			stenciler->generate_after(graph);
+
+			smaa.generate(graph);
+			if (downsampled && enable_fsr)
+				fsr.generate(graph);
+
+			{
+				struct CopyPrev
+				{
+					Handlers::Texture H(ResultTexture);
+					Handlers::Texture H(GBuffer_NormalsPrev);
+					Handlers::Texture H(GBuffer_SpecularPrev);
+
+					Handlers::Texture H(GBuffer_Normals);
+					Handlers::Texture H(GBuffer_Specular);
+
+					Handlers::Texture H(GBuffer_DepthPrev);
+					Handlers::Texture H(GBuffer_DepthMips);
+				};
+				graph.add_pass<CopyPrev>("CopyPrev", [this, &graph](CopyPrev& data, TaskBuilder& builder)
+					{
+						auto& frame = graph.get_context<ViewportInfo>();
+						builder.need(data.GBuffer_NormalsPrev, ResourceFlags::CopyDest);
+						builder.need(data.GBuffer_SpecularPrev, ResourceFlags::CopyDest);
+
+						builder.need(data.GBuffer_Normals, ResourceFlags::CopySource);
+						builder.need(data.GBuffer_Specular, ResourceFlags::CopySource);
+
+						builder.need(data.GBuffer_DepthPrev, ResourceFlags::CopyDest);
+						builder.need(data.GBuffer_DepthMips, ResourceFlags::CopySource);
+					}, [](CopyPrev& data, FrameContext& _context)
+						{
+							auto& copy = _context.get_list()->get_copy();
+
+							copy.copy_resource(data.GBuffer_NormalsPrev->resource,
+								data.GBuffer_Normals->resource);
+							copy.copy_resource(data.GBuffer_SpecularPrev->resource,
+								data.GBuffer_Specular->resource);
+							copy.copy_texture(data.GBuffer_DepthPrev->resource, 0,
+								data.GBuffer_DepthMips->resource, 0);
+						});
+			}
+			struct debug_data
+			{
+				Handlers::Texture debug_tex;
+			};
+
+			graph.add_slot_generator([this](Graph& graph)
+				{
+					PROFILE(L"FrameInfo");
+					auto& time = graph.get_context<TimeInfo>();
+					auto& skyinfo = graph.get_context<SkyInfo>();
+					auto& cam = graph.get_context<CameraInfo>();
+
+
+					Slots::FrameInfo frameInfo;
+					//// hack zone
+					auto sky = graph.builder.get("sky_cubemap_filtered");
+					if (sky && sky->resource)
+						frameInfo.GetSky() = *sky->get_handler<Handlers::Cube>();
+
+					/////////
+					frameInfo.GetSunDir().xyz = skyinfo.sunDir;
+					frameInfo.GetTime() = { time.time, time.totalTime, 0, 0 };
+
+
+					frameInfo.GetCamera() = cam.cam->camera_cb.current;
+					frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
+
+					frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
+					frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
+
+					auto compiled = frameInfo.compile(*graph.builder.current_frame);
+					graph.register_slot_setter(compiled);
+				});
+
+			graph.add_slot_generator([this](Graph& graph)
+				{
+					graph.register_slot_setter(scene->compiledScene);
+				});
 	}
 
-	struct no
+	Handlers::Texture debug_tex;
+
+	void use(TaskBuilder& builder) override
 	{
-		Handlers::Texture H(ResultTexture);
-	};
-	graph.pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) -> bool
-		{
-			auto& frame = graph.get_context<ViewportInfo>();
-			builder.create(data.ResultTexture,
-				{ uint3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
-				ResourceFlags::RenderTarget);
+		std::string res_tex = "ResultTexture";
+		if (!debug_view.empty())
+			res_tex = debug_view;
 
-			return false;
-		}, [](no& data, FrameContext& _context)
-			{
-			});
+		debug_tex = Handlers::Texture(res_tex);
+		if (builder.exists(debug_tex))
+			builder.need(debug_tex, ResourceFlags::PixelRead);
+	}
 
-
-		pssm.generate(graph);
-		sky.generate(graph);
-
-		// remove on intel
-		if (enable_gi) voxel_gi->generate(graph);
+	void draw(base::Context& t) override
+	{
+		if (debug_tex) texture.srv = debug_tex->texture2D;
+		image::draw(t);
+		texture.srv = Handle();
+	}
 
 
-		sky.generate_sky(graph);
-
-		stenciler->generate_after(graph);
-
-		smaa.generate(graph);
-		if (downsampled && enable_fsr)
-			fsr.generate(graph);
-
-		{
-			struct CopyPrev
-			{
-				Handlers::Texture H(ResultTexture);
-				Handlers::Texture H(GBuffer_NormalsPrev);
-				Handlers::Texture H(GBuffer_SpecularPrev);
-
-				Handlers::Texture H(GBuffer_Normals);
-				Handlers::Texture H(GBuffer_Specular);
-
-				Handlers::Texture H(GBuffer_DepthPrev);
-				Handlers::Texture H(GBuffer_DepthMips);
-			};
-			graph.add_pass<CopyPrev>("CopyPrev", [this, &graph](CopyPrev& data, TaskBuilder& builder)
-				{
-					auto& frame = graph.get_context<ViewportInfo>();
-					builder.need(data.GBuffer_NormalsPrev, ResourceFlags::CopyDest);
-					builder.need(data.GBuffer_SpecularPrev, ResourceFlags::CopyDest);
-
-					builder.need(data.GBuffer_Normals, ResourceFlags::CopySource);
-					builder.need(data.GBuffer_Specular, ResourceFlags::CopySource);
-
-					builder.need(data.GBuffer_DepthPrev, ResourceFlags::CopyDest);
-					builder.need(data.GBuffer_DepthMips, ResourceFlags::CopySource);
-				}, [](CopyPrev& data, FrameContext& _context)
-					{
-						auto& copy = _context.get_list()->get_copy();
-
-						copy.copy_resource(data.GBuffer_NormalsPrev->resource,
-							data.GBuffer_Normals->resource);
-						copy.copy_resource(data.GBuffer_SpecularPrev->resource,
-							data.GBuffer_Specular->resource);
-						copy.copy_texture(data.GBuffer_DepthPrev->resource, 0,
-							data.GBuffer_DepthMips->resource, 0);
-					});
-		}
-		struct debug_data
-		{
-			Handlers::Texture debug_tex;
-		};
-
-		graph.add_slot_generator([this](Graph& graph)
-			{
-				PROFILE(L"FrameInfo");
-				auto& time = graph.get_context<TimeInfo>();
-				auto& skyinfo = graph.get_context<SkyInfo>();
-				auto& cam = graph.get_context<CameraInfo>();
-
-
-				Slots::FrameInfo frameInfo;
-				//// hack zone
-				auto sky = graph.builder.get("sky_cubemap_filtered");
-				if (sky && sky->resource)
-					frameInfo.GetSky() = *sky->get_handler<Handlers::Cube>();
-
-				/////////
-				frameInfo.GetSunDir().xyz = skyinfo.sunDir;
-				frameInfo.GetTime() = { time.time, time.totalTime, 0, 0 };
-
-
-				frameInfo.GetCamera() = cam.cam->camera_cb.current;
-				frameInfo.GetPrevCamera() = cam.cam->camera_cb.prev;
-
-				frameInfo.GetBrdf() = EngineAssets::brdf.get_asset()->get_texture()->texture_3d();
-				frameInfo.GetBestFitNormals() = EngineAssets::best_fit_normals.get_asset()->get_texture()->texture_2d();
-
-				auto compiled = frameInfo.compile(*graph.builder.current_frame);
-				graph.register_slot_setter(compiled);
-			});
-
-		graph.add_slot_generator([this](Graph& graph)
-			{
-				graph.register_slot_setter(scene->compiledScene);
-			});
-}
-
-Handlers::Texture debug_tex;
-
-void use(TaskBuilder& builder) override
-{
-	std::string res_tex = "ResultTexture";
-	if (!debug_view.empty())
-		res_tex = debug_view;
-
-	debug_tex = Handlers::Texture(res_tex);
-	if (builder.exists(debug_tex))
-		builder.need(debug_tex, ResourceFlags::PixelRead);
-}
-
-void draw(base::Context& t) override
-{
-	if (debug_tex) texture.srv = debug_tex->texture2D;
-	image::draw(t);
-	texture.srv = Handle();
-}
-
-
-void on_bounds_changed(const rect& r) override
-{
-	base::on_bounds_changed(r);
-	if (r.w <= 64 || r.h <= 64) return;
-	ivec2 size = r.size;
-	cam.set_projection_params(Math::pi / 4, float(r.w) / r.h, 1, 1500);
-}
+	void on_bounds_changed(const rect& r) override
+	{
+		base::on_bounds_changed(r);
+		if (r.w <= 64 || r.h <= 64) return;
+		ivec2 size = r.size;
+		cam.set_projection_params(Math::pi / 4, float(r.w) / r.h, 1, 1500);
+	}
 };
 
 UINT64 frame_counter = 0;

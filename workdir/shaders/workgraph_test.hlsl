@@ -3,22 +3,28 @@
 #include "autogen/VoxelScreen.h"
 #include "autogen/FrameInfo.h"
 #include "SS_Shadow.hlsl"
+#include "Common.hlsl"
+#include "autogen/Raytracing.h"
+
     struct TileRecord
-{
-    uint2 tileXY;
-};
+    {
+        uint2 tileXY;
+    };
  
-groupshared unsigned int g_allbackfacing;
- 
-[Shader("node")]
-[NodeLaunch("broadcasting")]
-[NodeIsProgramEntry]
+    groupshared unsigned int g_allbackfacing;
+
+
+
+
+    [Shader("node")]
+    [NodeLaunch("broadcasting")]
+    [NodeIsProgramEntry]
     [NodeMaxDispatchGrid(256, 64, 64)]
     [numthreads(WAVE_SIZE, 1, 1)]
 void ClassifyPixels_Node(
 DispatchNodeInputRecord< GraphInput> inputData,
 
-  uint3 LocalThreadId : SV_GroupThreadID, 
+  uint3 LocalThreadId : SV_GroupThreadID,
     uint3 WorkGroupId : SV_GroupID,
     uint3 Dtid : SV_DispatchThreadID,
     
@@ -26,24 +32,28 @@ DispatchNodeInputRecord< GraphInput> inputData,
 )
 {
 
-	DispatchParameters params = CreateDispatchParameters();
-    params.WaveOffset = inputData.Get().WaveOffset;
+    DispatchParameters params = CreateDispatchParameters();
+    params.WaveOffset = inputData.Get().
+    WaveOffset;
     
      Result v=  WriteScreenSpaceShadow(params, WorkGroupId, LocalThreadId);
 
 
  ThreadNodeOutputRecords <TileRecord>tileRecord = Shadows_Node.GetThreadNodeOutputRecords(v.good&&!v.shadow ? 1 : 0);
+uint2 tc = uint2(v.pixel_pos);
+
     if (v.good)
     {
 
         if(v.shadow)
         {
-	      	params.GetOutputTexture()[uint2(v.pixel_pos)] = 0;
+	      	params.GetOutputTexture()[tc] = 0;
         }
         else
         {
             	//params.GetOutputTexture()[uint2(v.pixel_pos)] = 1;
             tileRecord[0].tileXY = uint2(v.pixel_pos);
+
         }
 	
     }
@@ -114,26 +124,67 @@ void Shadows_Node(
     //[MaxRecords(64)] NodeOutput<PixelRecord> ShadowsDXR_Node
 )
 {
+
+
+	uint2 pixel_pos = inputData.Get().tileXY;
+	const Camera camera = CreateFrameInfo().GetCamera();
+	GBuffer gbuffer = CreateVoxelScreen().GetGbuffer();
+	const float3 sunDir = CreateFrameInfo().GetSunDir();
+
+	const Raytracing raytracing = CreateRaytracing();
+
+	float raw_z = gbuffer.GetDepth()[pixel_pos.xy];
+
+	float2 dims;
+
+	gbuffer.GetAlbedo().GetDimensions(dims.x, dims.y);
+
+
+	float3 pos = depth_to_wpos(raw_z, float2(pixel_pos) / dims, camera.GetInvViewProj());
+
+
+
+	DispatchParameters params = CreateDispatchParameters();
+
+
+
+
+	RayDesc ray;
+	ray.Origin = pos;
+
+	ray.Direction = sunDir;
+	ray.TMin = 0.1;
+	ray.TMax = 100000;
+
+	RayQuery<RAY_FLAG_CULL_NON_OPAQUE | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
+
+	rayQuery.TraceRayInline(raytracing.GetScene(), RAY_FLAG_NONE, 0xFF, ray);
+	rayQuery.Proceed();
+
+	float shadow = (rayQuery.CommittedStatus() == COMMITTED_NOTHING) ? 1.0 : 0.0;
+
+	params.GetOutputTexture()[pixel_pos] = shadow;
+
+}
+[Shader("node")]
+[NodeLaunch("broadcasting")]
+[NodeIsProgramEntry]
+[NodeMaxDispatchGrid(256, 64, 64)]
+[numthreads(WAVE_SIZE, 1, 1)]
+void ClassifyPixels_Node2(
+DispatchNodeInputRecord< GraphInput> inputData,
+
+  uint3 LocalThreadId : SV_GroupThreadID,
+    uint3 WorkGroupId : SV_GroupID,
+    uint3 Dtid : SV_DispatchThreadID,
     
-    DispatchParameters params = CreateDispatchParameters();
-    uint2 pixel_pos = inputData.Get().tileXY;
-    params.GetOutputTexture()[pixel_pos] = 1;
-    //// use the record data to reconstruct screen position for this thread
-    //const uint2 screenPos = inputData.Get().tileXY * uint2(8, 8) + groupThreadId;
-     
-    //const WorkGraphTest data = CreateWorkGraphTest();
-    //const GBuffer gbuffer = CreateVoxelScreen().GetGbuffer();
-    //const Camera camera = CreateFrameInfo().GetCamera();
-    //const float3 sunDir = CreateFrameInfo().GetSunDir();
-    //float3 normal = normalize(gbuffer.GetNormals()[screenPos].xyz * 2 - 1);
-    //float NdotL = dot(normal, sunDir.xyz);
- 
+    [MaxRecords(WAVE_SIZE)] NodeOutput<TileRecord> Shadows_Node
+)
+{
     
-    //{    
-    //    //this is a valid hit, write a shadow factor of zero to the shadowmask
-    //    data.GetOutput()[screenPos.xy] = NdotL;
-    //}
- 
-    //mark record as done
- //   threadRecord.OutputComplete();
+
+ ThreadNodeOutputRecords <TileRecord>tileRecord = Shadows_Node.GetThreadNodeOutputRecords(0);
+
+    
+        tileRecord.OutputComplete();
 }
