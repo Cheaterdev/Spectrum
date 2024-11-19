@@ -76,17 +76,6 @@ export
 		t.CB;
 	};
 
-
-
-	template<typename T> concept HasCBType =
-		requires () {
-		T;
-	};
-
-
-
-
-
 	template<typename T> concept IndirectCommandType =
 		requires () {
 		T::CommandID;

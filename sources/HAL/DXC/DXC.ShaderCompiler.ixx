@@ -14,7 +14,7 @@ export namespace HAL
          //   ShaderCompiler();
             friend class shader_include_dxil;
             dxc::DxcDllSupport		DxcDllHelper;
-            IDxcCompiler3* compiler = nullptr;
+            IDxcCompiler* compiler = nullptr;
             IDxcLibrary* library = nullptr;
         };
     }

@@ -248,7 +248,7 @@ namespace HAL
 
 		//}
 
-			IDxcResult* result;
+		IDxcOperationResult* result;
 
 		hr = compiler->Compile(
 			pSource,          // program text
@@ -283,22 +283,22 @@ namespace HAL
 
 		binary blob_str;
 		blob_str.assign(static_cast<std::byte*>(resultBlob->GetBufferPointer()), static_cast<std::byte*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
-
-
-		ComPtr<IDxcBlob> reflectionBlob{};
-throwIfFailed(compiler->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr));
-
-const DxcBuffer reflectionBuffer
-{
-    .Ptr = reflectionBlob->GetBufferPointer(),
-    .Size = reflectionBlob->GetBufferSize(),
-    .Encoding = 0,
-};
-
-ComPtr<ID3D12ShaderReflection> shaderReflection{};
-compiler->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection));
-D3D12_SHADER_DESC shaderDesc{};
-shaderReflection->GetDesc(&shaderDesc);
+//
+//
+//		ComPtr<IDxcBlob> reflectionBlob{};
+//throwIfFailed(compiler->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr));
+//
+//const DxcBuffer reflectionBuffer
+//{
+//    .Ptr = reflectionBlob->GetBufferPointer(),
+//    .Size = reflectionBlob->GetBufferSize(),
+//    .Encoding = 0,
+//};
+//
+//ComPtr<ID3D12ShaderReflection> shaderReflection{};
+//compiler->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection));
+//D3D12_SHADER_DESC shaderDesc{};
+//shaderReflection->GetDesc(&shaderDesc);
 		return std::move(blob_str);
 
 	}
@@ -323,10 +323,10 @@ shaderReflection->GetDesc(&shaderDesc);
 		auto hr = DxcDllHelper.Initialize();
 		//	Utils::Validate(hr, L"Failed to initialize DxCDllSupport!");
 
-		::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler))
-		//DxcDllHelper.CreateInstance(_CLSID_DxcCompiler, &compiler);
+		//::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler))
+		DxcDllHelper.CreateInstance(_CLSID_DxcCompiler, &compiler);
 		//	Utils::Validate(hr, L"Failed to create DxcCompiler!");
-
+	
 		DxcDllHelper.CreateInstance(_CLSID_DxcLibrary, &library);
 		//	Utils::Validate(hr, L"Failed to create DxcLibrary!");
 	}
