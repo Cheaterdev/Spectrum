@@ -94,54 +94,54 @@ namespace HAL
 
 	namespace API
 	{
-		
 
-	class shader_include_dxil : public IDxcIncludeHandler
-	{
-		HAL::shader_include* includer;
-		std::set<std::unique_ptr<std::string>> includes;
-	private:
-		DXC_MICROCOM_REF_FIELD(m_dwRef)
-	public:
-		shader_include_dxil(HAL::shader_include* includer) : includer(includer)
+
+		class shader_include_dxil : public IDxcIncludeHandler
 		{
-
-		}
-
-		DXC_MICROCOM_ADDREF_RELEASE_IMPL(m_dwRef)
-			virtual ~shader_include_dxil() {}
-		HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) {
-			return DoBasicQueryInterface<::IDxcIncludeHandler>(this, riid, ppvObject);
-		}
-
-
-		virtual HRESULT STDMETHODCALLTYPE LoadSource(
-			_In_ LPCWSTR pFilename,                                   // Candidate filename.
-			_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
-		) override
-		{
-			if (!includer)
+			HAL::shader_include* includer;
+			std::set<std::unique_ptr<std::string>> includes;
+		private:
+			DXC_MICROCOM_REF_FIELD(m_dwRef)
+		public:
+			shader_include_dxil(HAL::shader_include* includer) : includer(includer)
 			{
-				return E_FAIL;
+
 			}
 
-			auto data = includer->load_file(convert(pFilename));
-
-			if (!data)
-			{
-				return E_FAIL;
+			DXC_MICROCOM_ADDREF_RELEASE_IMPL(m_dwRef)
+				virtual ~shader_include_dxil() {}
+			HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) {
+				return DoBasicQueryInterface<::IDxcIncludeHandler>(this, riid, ppvObject);
 			}
 
-			auto ppData = reinterpret_cast<const void*>(data->data());
-			auto pBytes = static_cast<unsigned int>(data->size());
-			includes.insert(std::move(data));
-			ComPtr<IDxcBlobEncoding> pEncodingIncludeSource;
-			HAL::ShaderCompiler::get().library->CreateBlobWithEncodingFromPinned((LPBYTE)ppData, pBytes, CP_ACP, &pEncodingIncludeSource);
-			*ppIncludeSource = pEncodingIncludeSource.Detach();
-			return S_OK;
-		}
 
-	};
+			virtual HRESULT STDMETHODCALLTYPE LoadSource(
+				_In_ LPCWSTR pFilename,                                   // Candidate filename.
+				_COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
+			) override
+			{
+				if (!includer)
+				{
+					return E_FAIL;
+				}
+
+				auto data = includer->load_file(convert(pFilename));
+
+				if (!data)
+				{
+					return E_FAIL;
+				}
+
+				auto ppData = reinterpret_cast<const void*>(data->data());
+				auto pBytes = static_cast<unsigned int>(data->size());
+				includes.insert(std::move(data));
+				ComPtr<IDxcBlobEncoding> pEncodingIncludeSource;
+				HAL::ShaderCompiler::get().library->CreateBlobFromPinned((LPBYTE)ppData, pBytes, CP_ACP, &pEncodingIncludeSource);
+				*ppIncludeSource = pEncodingIncludeSource.Detach();
+				return S_OK;
+			}
+
+		};
 	}
 
 
@@ -193,80 +193,65 @@ namespace HAL
 			defines.push_back(DxcDefine{ no_macro.c_str(), no_def.c_str() });
 		}
 
-		HRESULT hr;
-		UINT32 code(0);
-		IDxcBlobEncoding* pSource(nullptr);
 
-		library->CreateBlobWithEncodingFromPinned((LPBYTE)shaderText.data(), (UINT)shaderText.size(), CP_UTF8, &pSource);
+		DxcBuffer sourceBuffer
+		{
+			.Ptr = shaderText.data(),
+			.Size = shaderText.size(),
+			.Encoding = CP_UTF8,
+		};
+		std::vector<std::wstring> compilationArguments;
+
+
+
+		if (entry_point.size())
+		{
+			compilationArguments.emplace_back(L"-E");
+			compilationArguments.emplace_back(convert(entry_point));
+
+		}
+		compilationArguments.emplace_back(L"-T");
+		compilationArguments.emplace_back(convert(target));
+
+		compilationArguments.emplace_back(L"-no-warnings");
+		compilationArguments.emplace_back(L"-O3");
+
+		if (check(options & ShaderOptions::FP16))
+		{
+			compilationArguments.push_back(L"-enable-16bit-types");
+		}
+
+		for (auto& m : defines)
+		{
+			compilationArguments.push_back(std::wstring(L"-D") + std::wstring(m.Name) + L"=" + m.Value);
+		}
+		std::vector<LPCWSTR> nativeCompilationArguments;
+
+
+		for (auto& e : compilationArguments)
+		{
+			nativeCompilationArguments.emplace_back(e.c_str());
+		}
 
 
 		API::shader_include_dxil dxil_include(includer);
 		dxil_include.AddRef();
-	
-		vargs.push_back(L"-no-warnings");
-		vargs.push_back(L"-O3");
 
-		if(check(options&ShaderOptions::FP16))
-		{
-				vargs.push_back(L"-enable-16bit-types");
-	
-		}
+		// Compile the shader.
+		Microsoft::WRL::ComPtr<IDxcResult> compiledShaderBuffer{};
+		HRESULT hr = compiler->Compile(&sourceBuffer,
+			nativeCompilationArguments.data(),
+			static_cast<uint32_t>(nativeCompilationArguments.size()),
+			&dxil_include,
+			IID_PPV_ARGS(&compiledShaderBuffer));
 
-		//{
-		//		IDxcOperationResult* result;
-
-		//	hr =  compiler->Preprocess(
-		//	pSource,          // program text
-		//	convert(file_name).c_str(),   // file name, mostly for error messages
-		//	//convert(entry_point).c_str(),          // entry point function
-		//	//convert(target).c_str(),        // target profile
-		//	vargs.data(),           // compilation arguments
-		//	(UINT)vargs.size(), // number of compilation arguments
-		//	defines.data(), (UINT)defines.size(),    // name/value defines and their count
-		//	&dxil_include,          // handler for #include directives
-		//	&result);
-		//	 	if (FAILED(hr))
-		//{
-		//	IDxcBlobEncoding* error;
-		//	hr = result->GetErrorBuffer(&error);
-
-		//	std::string infoLog;
-		//	infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
-
-		//	std::string errorMsg = "Shader Compiler Error:\n";
-		//	errorMsg += file_name + "\n";
-		//	errorMsg.append((infoLog));
-		//	Log::get() << Log::LEVEL_ERROR << errorMsg << Log::endl;
-		//	MessageBoxA(nullptr, errorMsg.c_str(), "Error!", MB_OK);
-		//	return {};
-		//}
-
-		//	ComPtr<IDxcBlob> resultBlob;
-		//result->GetResult(&resultBlob);
-		//std::string blob_str;
-		//blob_str.assign(static_cast<char*>(resultBlob->GetBufferPointer()), static_cast<char*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
-
-		//}
-
-		IDxcOperationResult* result;
-
-		hr = compiler->Compile(
-			pSource,          // program text
-			convert(file_name).c_str(),   // file name, mostly for error messages
-			convert(entry_point).c_str(),          // entry point function
-			convert(target).c_str(),        // target profile
-			vargs.data(),           // compilation arguments
-			(UINT)vargs.size(), // number of compilation arguments
-			defines.data(), (UINT)defines.size(),    // name/value defines and their count
-			&dxil_include,          // handler for #include directives
-			&result);
 
 		// Verify the result
-		result->GetStatus(&hr);
+		compiledShaderBuffer->GetStatus(&hr);
 		if (FAILED(hr))
 		{
 			IDxcBlobEncoding* error;
-			hr = result->GetErrorBuffer(&error);
+			hr = compiledShaderBuffer->GetErrorBuffer(&error);
 
 			std::string infoLog;
 			infoLog.assign(static_cast<const char*>(error->GetBufferPointer()), static_cast<const char*>(error->GetBufferPointer()) + error->GetBufferSize());
@@ -279,29 +264,75 @@ namespace HAL
 			return {};
 		}
 		ComPtr<IDxcBlob> resultBlob;
-		result->GetResult(&resultBlob);
+		compiledShaderBuffer->GetResult(&resultBlob);
 
 		binary blob_str;
 		blob_str.assign(static_cast<std::byte*>(resultBlob->GetBufferPointer()), static_cast<std::byte*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
-//
-//
-//		ComPtr<IDxcBlob> reflectionBlob{};
-//throwIfFailed(compiler->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr));
-//
-//const DxcBuffer reflectionBuffer
-//{
-//    .Ptr = reflectionBlob->GetBufferPointer(),
-//    .Size = reflectionBlob->GetBufferSize(),
-//    .Encoding = 0,
-//};
-//
-//ComPtr<ID3D12ShaderReflection> shaderReflection{};
-//compiler->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection));
-//D3D12_SHADER_DESC shaderDesc{};
-//shaderReflection->GetDesc(&shaderDesc);
+
+
+		ComPtr<IDxcBlob> reflectionBlob{};
+		compiledShaderBuffer->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionBlob), nullptr);
+
+		const DxcBuffer reflectionBuffer
+		{
+			.Ptr = reflectionBlob->GetBufferPointer(),
+			.Size = reflectionBlob->GetBufferSize()
+		};
+
+
+		if (entry_point.size())
+		{
+			ComPtr<ID3D12ShaderReflection> shaderReflection{};
+			library->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection));
+			D3D12_SHADER_DESC shaderDesc{};
+			shaderReflection->GetDesc(&shaderDesc);
+
+			for (int i = 0; i < shaderDesc.ConstantBuffers; i++)
+			{
+				ID3D12ShaderReflectionConstantBuffer* cb = shaderReflection->GetConstantBufferByIndex(i);
+				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
+				cb->GetDesc(&shaderBufferDesc);
+				//Log::get() << shaderBufferDesc.Name << Log::endl;
+
+			}
+
+		} else
+		{
+		   	ComPtr<ID3D12LibraryReflection> libraryReflection{};
+			auto hr3 = library->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&libraryReflection));
+
+
+			D3D12_LIBRARY_DESC shaderDesc{};
+			libraryReflection->GetDesc(&shaderDesc);
+
+
+				for (int i = 0; i < shaderDesc.FunctionCount; i++)
+			{
+				ID3D12FunctionReflection* f = libraryReflection->GetFunctionByIndex(i);
+				D3D12_FUNCTION_DESC functionDesc{};
+				f->GetDesc(&functionDesc);
+				Log::get() << "FUNCTION "<< functionDesc.Name << Log::endl;
+
+
+											 	for (int i = 0; i < functionDesc.ConstantBuffers; i++)
+			{
+				ID3D12ShaderReflectionConstantBuffer* cb = f->GetConstantBufferByIndex(i);
+				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
+				cb->GetDesc(&shaderBufferDesc);
+				Log::get() << shaderBufferDesc.Name << Log::endl;
+
+			}
+			}
+
+
+		}
+
+
+
 		return std::move(blob_str);
 
 	}
+
 
 	const CLSID _CLSID_DxcCompiler = {
 	   0x73e22d93,
@@ -309,13 +340,12 @@ namespace HAL
 	   0x47f3,
 	   {0xb5, 0xbf, 0xf0, 0x66, 0x4f, 0x39, 0xc1, 0xb0} };
 
-	// {EF6A8087-B0EA-4D56-9E45-D07E1A8B7806}
+	// {6245D6AF-66E0-48FD-80B4-4D271796748C}
 	const GUID _CLSID_DxcLibrary = {
 	   0x6245d6af,
 	   0x66e0,
 	   0x48fd,
 	   {0x80, 0xb4, 0x4d, 0x27, 0x17, 0x96, 0x74, 0x8c} };
-
 
 	ShaderCompiler::ShaderCompiler()
 	{
@@ -326,8 +356,11 @@ namespace HAL
 		//::DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler))
 		DxcDllHelper.CreateInstance(_CLSID_DxcCompiler, &compiler);
 		//	Utils::Validate(hr, L"Failed to create DxcCompiler!");
-	
+
 		DxcDllHelper.CreateInstance(_CLSID_DxcLibrary, &library);
 		//	Utils::Validate(hr, L"Failed to create DxcLibrary!");
+		\
+
+
 	}
 }

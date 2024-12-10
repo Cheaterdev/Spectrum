@@ -82,7 +82,7 @@ namespace HAL
 
 		while (!file)
 		{
-			std::string file_name2 = p.generic_string();
+			std::string file_name2 = dir+p.generic_string();
 			if (!file) file = FileSystem::get().get_file(convert(file_name2));
 
 			if(!p.has_parent_path()) break;

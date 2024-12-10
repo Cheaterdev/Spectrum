@@ -312,6 +312,9 @@ namespace HAL
 		void Queue::execute(const API::CommandList* list)
 		{
 			queued.emplace_back(list->get_native().Get());
+
+			// Alias warnings in the same execute scope
+			flush();
 		}
 
 		void Queue::flush()
