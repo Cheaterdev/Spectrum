@@ -37,8 +37,15 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {%- set t =  parsed.graphics_pso[v] -%}
 	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
 {% endfor -%}
+
+{%- for v in parsed.workgraph_pso -%}
+{%- set t =  parsed.workgraph_pso[v] -%}
+	tasks.emplace_back(PSOBase::create<PSOS::{{t.name}}>(device, pso[PSO::{{t.name}}]));
+{% endfor -%}
 	when_all(begin(tasks), end(tasks)).wait();
 }
+
+
 {% for v in parsed.compute_pso -%}
 {%- set pso =  parsed.compute_pso[v] -%}
 {%- for vd in pso.defines -%}
@@ -49,6 +56,15 @@ decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
 
 {%- for v in parsed.graphics_pso -%}
 {%- set pso =  parsed.graphics_pso[v] -%}
+{%- for vd in pso.defines -%}
+{%- set d =  pso.defines[vd] %}
+decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};
+{%- endfor -%}
+{%- endfor -%}
+
+
+{%- for v in parsed.workgraph_pso -%}
+{%- set pso =  parsed.workgraph_pso[v] -%}
 {%- for vd in pso.defines -%}
 {%- set d =  pso.defines[vd] %}
 decltype(PSOS::{{pso.name}}::{{d.name}}) PSOS::{{pso.name}}::{{d.name}};

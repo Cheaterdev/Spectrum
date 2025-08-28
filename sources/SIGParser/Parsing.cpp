@@ -163,6 +163,11 @@ public:
 		setup_map(get_elem<Parsed>().raytrace_pso);
 	}
 
+	GENERATE(Workgraph_pso_definition)
+	{
+		setup_map(get_elem<Parsed>().workgraph_pso);
+	}
+
 
 	GENERATE(Rtx_pass_definition)
 	{

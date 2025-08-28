@@ -17,15 +17,15 @@ public:
     T__14 = 15, T__15 = 16, T__16 = 17, T__17 = 18, T__18 = 19, T__19 = 20, 
     T__20 = 21, T__21 = 22, T__22 = 23, T__23 = 24, T__24 = 25, T__25 = 26, 
     T__26 = 27, T__27 = 28, T__28 = 29, T__29 = 30, T__30 = 31, T__31 = 32, 
-    T__32 = 33, T__33 = 34, OR = 35, AND = 36, EQ = 37, NEQ = 38, GT = 39, 
-    LT = 40, GTEQ = 41, LTEQ = 42, PLUS = 43, MINUS = 44, DIV = 45, MOD = 46, 
-    POW = 47, NOT = 48, SCOL = 49, ASSIGN = 50, OPAR = 51, CPAR = 52, OBRACE = 53, 
-    CBRACE = 54, OSBRACE = 55, CSBRACE = 56, TRUE = 57, FALSE = 58, LOG = 59, 
-    LAYOUT = 60, STRUCT = 61, COMPUTE_PSO = 62, GRAPHICS_PSO = 63, RAYTRACE_PSO = 64, 
-    RAYTRACE_RAYGEN = 65, RAYTRACE_PASS = 66, SLOT = 67, RT = 68, RTV = 69, 
-    DSV = 70, ROOTSIG = 71, ID = 72, INT_SCALAR = 73, FLOAT_SCALAR = 74, 
-    STRING = 75, COMMENT = 76, SPACE = 77, POINTER = 78, INSERT_START = 79, 
-    INSERT_END = 80, INSERT_BLOCK = 81
+    T__32 = 33, T__33 = 34, T__34 = 35, OR = 36, AND = 37, EQ = 38, NEQ = 39, 
+    GT = 40, LT = 41, GTEQ = 42, LTEQ = 43, PLUS = 44, MINUS = 45, DIV = 46, 
+    MOD = 47, POW = 48, NOT = 49, SCOL = 50, ASSIGN = 51, OPAR = 52, CPAR = 53, 
+    OBRACE = 54, CBRACE = 55, OSBRACE = 56, CSBRACE = 57, TRUE = 58, FALSE = 59, 
+    LOG = 60, LAYOUT = 61, STRUCT = 62, COMPUTE_PSO = 63, GRAPHICS_PSO = 64, 
+    RAYTRACE_PSO = 65, WORKGRAPH_PSO = 66, RAYTRACE_RAYGEN = 67, RAYTRACE_PASS = 68, 
+    SLOT = 69, RT = 70, RTV = 71, DSV = 72, ROOTSIG = 73, ID = 74, INT_SCALAR = 75, 
+    FLOAT_SCALAR = 76, STRING = 77, COMMENT = 78, SPACE = 79, POINTER = 80, 
+    INSERT_START = 81, INSERT_END = 82, INSERT_BLOCK = 83
   };
 
   enum {
@@ -44,10 +44,11 @@ public:
     RuleArray_value_ids = 41, RuleRoot_sig = 42, RuleShader = 43, RuleCompute_pso_stat = 44, 
     RuleCompute_pso_block = 45, RuleCompute_pso_definition = 46, RuleGraphics_pso_stat = 47, 
     RuleGraphics_pso_block = 48, RuleGraphics_pso_definition = 49, RuleRtx_pso_stat = 50, 
-    RuleRtx_pso_block = 51, RuleRtx_pso_definition = 52, RuleRtx_pass_stat = 53, 
-    RuleRtx_pass_block = 54, RuleRtx_pass_definition = 55, RuleRtx_raygen_stat = 56, 
-    RuleRtx_raygen_block = 57, RuleRtx_raygen_definition = 58, RuleShader_type = 59, 
-    RulePso_param_id = 60, RuleBool_type = 61
+    RuleRtx_pso_block = 51, RuleRtx_pso_definition = 52, RuleWorkgraph_pso_stat = 53, 
+    RuleWorkgraph_pso_block = 54, RuleWorkgraph_pso_definition = 55, RuleRtx_pass_stat = 56, 
+    RuleRtx_pass_block = 57, RuleRtx_pass_definition = 58, RuleRtx_raygen_stat = 59, 
+    RuleRtx_raygen_block = 60, RuleRtx_raygen_definition = 61, RuleShader_type = 62, 
+    RulePso_param_id = 63, RuleBool_type = 64
   };
 
   explicit SIGParser(antlr4::TokenStream *input);
@@ -120,6 +121,9 @@ public:
   class Rtx_pso_statContext;
   class Rtx_pso_blockContext;
   class Rtx_pso_definitionContext;
+  class Workgraph_pso_statContext;
+  class Workgraph_pso_blockContext;
+  class Workgraph_pso_definitionContext;
   class Rtx_pass_statContext;
   class Rtx_pass_blockContext;
   class Rtx_pass_definitionContext;
@@ -141,6 +145,8 @@ public:
     Table_definitionContext* table_definition(size_t i);
     std::vector<Rt_definitionContext *> rt_definition();
     Rt_definitionContext* rt_definition(size_t i);
+    std::vector<Workgraph_pso_definitionContext *> workgraph_pso_definition();
+    Workgraph_pso_definitionContext* workgraph_pso_definition(size_t i);
     std::vector<Compute_pso_definitionContext *> compute_pso_definition();
     Compute_pso_definitionContext* compute_pso_definition(size_t i);
     std::vector<Graphics_pso_definitionContext *> graphics_pso_definition();
@@ -966,6 +972,54 @@ public:
   };
 
   Rtx_pso_definitionContext* rtx_pso_definition();
+
+  class  Workgraph_pso_statContext : public antlr4::ParserRuleContext {
+  public:
+    Workgraph_pso_statContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    Root_sigContext *root_sig();
+    ShaderContext *shader();
+    Define_declarationContext *define_declaration();
+    antlr4::tree::TerminalNode *COMMENT();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Workgraph_pso_statContext* workgraph_pso_stat();
+
+  class  Workgraph_pso_blockContext : public antlr4::ParserRuleContext {
+  public:
+    Workgraph_pso_blockContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    std::vector<Workgraph_pso_statContext *> workgraph_pso_stat();
+    Workgraph_pso_statContext* workgraph_pso_stat(size_t i);
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Workgraph_pso_blockContext* workgraph_pso_block();
+
+  class  Workgraph_pso_definitionContext : public antlr4::ParserRuleContext {
+  public:
+    Workgraph_pso_definitionContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *WORKGRAPH_PSO();
+    Name_idContext *name_id();
+    antlr4::tree::TerminalNode *OBRACE();
+    Workgraph_pso_blockContext *workgraph_pso_block();
+    antlr4::tree::TerminalNode *CBRACE();
+    InheritContext *inherit();
+
+    virtual void enterRule(antlr4::tree::ParseTreeListener *listener) override;
+    virtual void exitRule(antlr4::tree::ParseTreeListener *listener) override;
+   
+  };
+
+  Workgraph_pso_definitionContext* workgraph_pso_definition();
 
   class  Rtx_pass_statContext : public antlr4::ParserRuleContext {
   public:

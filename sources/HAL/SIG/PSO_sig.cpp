@@ -15,6 +15,23 @@ HAL::ComputePipelineState::ptr SimpleComputePSO::create(HAL::Device& device)
 	return HAL::ComputePipelineState::create(desc, name);
 }
 
+HAL::StateObject::ptr SimpleWorkgraphPSO::create(HAL::Device& device)
+{
+	HAL::StateObjectDesc workgraph;
+	workgraph.type = StateObjectType::WorkGraph;
+	workgraph.global_root = device.get_engine_pso_holder().GetSignature(root_signature);
+
+	
+	{
+		HAL::LibraryObject lib;
+
+		lib.library = HAL::library_shader::get_resource(shader);
+		workgraph.libraries.emplace_back(lib);
+	}
+
+	return std::make_shared<HAL::StateObject>(workgraph);
+}
+
 HAL::PipelineState::ptr SimpleGraphicsPSO::create(HAL::Device&device)
 {
 	HAL::PipelineStateDesc desc;

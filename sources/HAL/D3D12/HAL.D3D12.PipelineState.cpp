@@ -198,20 +198,40 @@ namespace HAL
 		if (desc.type == StateObjectType::WorkGraph) type = D3D12_STATE_OBJECT_TYPE_EXECUTABLE;
 
 
-		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{type};
+		CD3DX12_STATE_OBJECT_DESC raytracingPipeline{ type };
 
 		for (auto& l : desc.libraries)
 		{
 			auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
 
 			D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void*)l.library->get_blob().data(),
-			                                                        l.library->get_blob().size());
+				l.library->get_blob().size());
 			lib->SetDXILLibrary(&libdxil);
 
-			for (auto& e : l.exports)
+			if (desc.type == StateObjectType::Collection)
 			{
-				lib->DefineExport(e.first.c_str(), e.second.empty() ? nullptr : e.second.c_str());
+				for (auto& e : l.exports)
+				{
+					lib->DefineExport(e.first.c_str(), e.second.empty() ? nullptr : e.second.c_str());
+				}
+
 			}
+			else
+
+
+				for (auto& f : l.library->blob.functions)
+				{
+
+					std::wstring new_name;
+
+					if (auto search = l.exports.find(f.wname); search != l.exports.end())
+						new_name = search->second;
+
+
+					lib->DefineExport(f.wname.c_str(), new_name.empty() ? nullptr : new_name.c_str());
+					// lib.export_shader(convert(f.name));
+				}
+
 
 			debuggable |= l.library && l.library->depends_on("DebugInfo");
 		}
@@ -272,13 +292,14 @@ namespace HAL
 				roots[e.local_root]->AddExport(e.name.c_str());
 		}
 
+		std::set<library_shader::ptr> used;
 		for (auto& c : desc.collections)
 		{
 			auto sharedCollection = raytracingPipeline.CreateSubobject<CD3DX12_EXISTING_COLLECTION_SUBOBJECT>();
 			sharedCollection->SetExistingCollection(c->get_native_state().Get());
-
 			debuggable |= c->debuggable;
 		}
+
 		const std::wstring workGraphName = L"ShadowMaskClassifier"; // ????
 
 		if (desc.type == StateObjectType::WorkGraph)
@@ -287,9 +308,9 @@ namespace HAL
 			auto graph = raytracingPipeline.CreateSubobject<CD3DX12_WORK_GRAPH_SUBOBJECT>();
 			graph->SetProgramName(workGraphName.c_str());
 
-		/*	for (auto& l : desc.libraries)
-					  	for (auto& e : l.exports)
-						  graph->CreateNode<>()*/
+			/*	for (auto& l : desc.libraries)
+							for (auto& e : l.exports)
+							  graph->CreateNode<>()*/
 			graph->IncludeAllAvailableNodes(); // add all nodes
 			graph->Finalize();
 
@@ -299,8 +320,8 @@ namespace HAL
 
 
 		TEST(desc.global_root->get_device(),
-		     desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&
-			     tracked_info->m_StateObject)));
+			desc.global_root->get_device().get_native_device()->CreateStateObject(raytracingPipeline, IID_PPV_ARGS(&
+				tracked_info->m_StateObject)));
 		TEST(desc.global_root->get_device(), tracked_info->m_StateObject.As(&stateObjectProperties));
 		assert(stateObjectProperties);
 		event_change();
@@ -382,8 +403,8 @@ namespace HAL
 			RasterizerState.CullMode = to_native(desc.rasterizer.cull_mode);
 			RasterizerState.FillMode = to_native(desc.rasterizer.fill_mode);
 			RasterizerState.ConservativeRaster = desc.rasterizer.conservative
-				                                     ? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON
-				                                     : D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+				? D3D12_CONSERVATIVE_RASTERIZATION_MODE_ON
+				: D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 			creator.include((D3D12_RASTERIZER_DESC)RasterizerState);
 		}
 
@@ -404,8 +425,8 @@ namespace HAL
 		{
 			auto DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);;
 			DepthStencilState.DepthWriteMask = desc.rtv.enable_depth_write
-				                                   ? D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ALL
-				                                   : D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ZERO;
+				? D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ALL
+				: D3D12_DEPTH_WRITE_MASK::D3D12_DEPTH_WRITE_MASK_ZERO;
 			DepthStencilState.DepthEnable = desc.rtv.enable_depth;
 			DepthStencilState.DepthFunc = to_native(desc.rtv.func);
 
@@ -506,7 +527,7 @@ namespace HAL
 		slots.clear();
 		if (desc.shader)
 		{
-			psoDesc.CS = {desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size())};
+			psoDesc.CS = { desc.shader->get_blob().data(), static_cast<UINT>(desc.shader->get_blob().size()) };
 			slots.merge(desc.shader->slots_usage);
 		}
 		assert(!slots.empty());

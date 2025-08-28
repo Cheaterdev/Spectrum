@@ -1,19 +1,23 @@
 {
-	"name": "spectrum",
-	"version-string": "1.0.0",
-	"dependencies": [
-		"zlib",
-		"directxtex",
-		"assimp",
-		"antlr4",
-		"magic-enum",
-		"crossguid",
-		"crc32c",
-		"cereal",
-		"dstorage",
-		"directx-dxc",
-		"jinja2cpp",
-		{ "name": "directx12-agility" , "version>=":"1.614.0"}
-		],
-	"builtin-baseline": "228987a6fdbd56739a16d47eacf6e79d71a47973"
+  "name": "spectrum",
+  "version-string": "1.0.0",
+  "dependencies": [
+    "freetype",
+    "zlib",
+    "directxtex",
+    "assimp",
+    "antlr4",
+    "magic-enum",
+    "crossguid",
+    "crc32c",
+    "cereal",
+    "dstorage",
+    "directx-dxc",
+    "jinja2cpp",
+    {
+      "name": "directx12-agility",
+      "version>=": "1.614.0"
+    }
+  ],
+  "builtin-baseline": "a76e5d9e1c62a23b9e92353e5e25d8c34cda2b74"
 }

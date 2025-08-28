@@ -1,7 +1,45 @@
 export module GUI:Label;
 import :Base;
 
+import :ScrollContainer;
+
 import TextSystem;
+          
+
+extern "C" typedef struct FT_FaceRec_* FT_Face;
+extern "C" typedef struct FT_LibraryRec_* FT_Library;
+
+
+  class FreeTypeFont:public Singleton<FreeTypeFont>
+  {
+  	FT_Library FtLib;
+    FT_Face     face;  
+  public:
+      FreeTypeFont();
+
+
+  };
+struct Symbol
+{
+	GUI::Texture texture;
+    float4 color;
+
+    Symbol(char symbol)
+    {
+	    
+    }
+};
+
+struct TextLine
+{
+	std::vector<Symbol> symbols;
+};
+
+struct Text
+{
+	std::vector<TextLine> lines;
+};
+
 
 export namespace GUI
 {
@@ -64,6 +102,21 @@ export namespace GUI
 
                 virtual sizer update_layout(sizer r, float scale) override;
 
+        };
+
+        class MultiLineLabel: public scroll_container
+        {
+                                virtual void on_text_changed(const std::string& str);
+            std::list<label::ptr> labels;
+        public:
+              using ptr = s_ptr<MultiLineLabel>;
+                using wptr = w_ptr<MultiLineLabel>;
+
+
+            property<std::string> text;
+        	property<float> font_size;
+
+            MultiLineLabel();
         };
     }
 }

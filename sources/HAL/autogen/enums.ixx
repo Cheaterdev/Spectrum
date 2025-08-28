@@ -83,7 +83,8 @@ export
 		VoxelIndirectHi,
 		VoxelIndirectUpsample,
 		VoxelDebug,
-		DenoiserDownsample
+		DenoiserDownsample,
+		WorkGR
 	};
 
 	enum class SlotID: unsigned int

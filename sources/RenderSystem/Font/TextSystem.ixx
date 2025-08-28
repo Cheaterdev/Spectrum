@@ -90,8 +90,10 @@ export namespace Fonts
             using ptr = s_ptr<FontGeometry>;
 
             FontGeometry();
-
-            void set(HAL::CommandList::ptr& list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags = 0);
+                void clear();
+         
+            sizer add(HAL::CommandList::ptr& list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags = 0);
+           void set(HAL::CommandList::ptr& list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags = 0);
             void draw(HAL::CommandList::ptr& list, sizer clip_rect, unsigned int flags = 0, vec2 offset = {0, 0}, float scale = 1);
 
             unsigned int get_index(vec2 at);

@@ -129,9 +129,6 @@ public:
 	float draw_time;
 	MeshAssetInstance::ptr instance;
 
-	HAL::StateObject::ptr work_graph;
-
-
 	std::shared_ptr<Graphics::OVRContext> vr_context = std::make_shared<Graphics::OVRContext>();
 	PSSM pssm;
 	SMAA smaa;
@@ -323,20 +320,6 @@ public:
 		voxel_gi = std::make_shared<VoxelGI>(scene);
 
 
-		HAL::StateObjectDesc workgraph;
-		workgraph.type = StateObjectType::WorkGraph;
-		workgraph.global_root = HAL::Device::get().get_engine_pso_holder().GetSignature(Layouts::DefaultLayout);
-		HAL::LibraryObject lib;
-		lib.library = HAL::library_shader::get_resource({
-			std::string("shaders\\workgraph_test.hlsl"), "", HAL::ShaderOptions::None, {}
-			});
-		lib.export_shader(std::wstring(L"ClassifyPixels_Node"));
-
-			lib.export_shader(std::wstring(L"ClassifyPixels_Node2"));
-		lib.export_shader(std::wstring(L"Shadows_Node"));
-		workgraph.libraries.emplace_back(lib);
-
-		work_graph = std::make_shared<HAL::StateObject>(workgraph);
 	}
 
 	float scale_speed = 0;
@@ -587,18 +570,23 @@ public:
 				Handlers::FormattedBuffer<char, HAL::Format::R8_UINT> H(WorkGraphBuffer);
 			};
 
+			//WTF Compilation issue
+						  	auto t = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
+
 			//		if (HAL::Device::get().is_rtx_supported())
 			{
 				graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder)
 					{
 						auto& frame = graph.get_context<ViewportInfo>();
+					
 
+						auto work_pso = HAL::Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
 						auto size = frame.frame_size;
 						data.gbuffer.need(builder, false);
 						builder.create(data.RTXDebug,
 							{ ivec3(size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
 							ResourceFlags::UnorderedAccess | ResourceFlags::Static);
-						builder.create(data.WorkGraphBuffer, { work_graph->buffer_size },
+						builder.create(data.WorkGraphBuffer, { work_pso->buffer_size},
 							ResourceFlags::UnorderedAccess);
 					}, [this, &graph](RTXDebugData& data, FrameContext& context)
 						{
@@ -612,10 +600,11 @@ public:
 							}
 							auto& backingBuffer = data.WorkGraphBuffer->resource;
 
+							auto work_pso = Device::get().get_engine_pso_holder().GetPSO<PSOS::WorkGR>();
 
-							compute.set_program(work_graph.get(),
+							compute.set_program(work_pso.get(),
 								backingBuffer->get_resource_address(),
-								work_graph->buffer_size,
+								work_pso->buffer_size,
 								data.WorkGraphBuffer.is_new());
 
 							graph.set_slot(SlotID::VoxelInfo, compute);
@@ -688,22 +677,6 @@ public:
 
 										  }
 										  compute.dispatch_graph(ep.compile());
-
-
-										  //{
-										  //	Slots::VoxelOutput output;
-										  //	output.GetNoise() = *data.RTXDebug;
-										  //	compute.set(output);
-										  //}
-
-
-
-
-										  //{
-										  //	Slots::WorkGraphTest output;
-										  //	output.GetOutput() = *data.RTXDebug;
-										  //	compute.set(output);
-										  //}
 
 
 									  //}
@@ -1173,6 +1146,17 @@ public:
 				EVENT("End Drawer");
 			}
 
+			{
+
+
+
+				GUI::Elements::MultiLineLabel::ptr text = std::make_shared<GUI::Elements::MultiLineLabel>();
+				  	auto f = FileSystem::get().get_file(to_path(L"main.cpp"))->load_all();
+									
+				
+					text->text = f;
+				d->get_tabs()->add_page("text", text);
+			}
 			/*{
 			EVENT("Start Drawer");
 			drawer2.reset(new triangle_drawer());
@@ -1379,17 +1363,6 @@ protected:
 
 		//	main_window = std::make_shared<WindowRender>();
 		main_window = std::make_shared<GraphRender>();
-		auto list = (HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list());
-
-
-		list->begin();
-
-		list->alias_end(texture.get());
-		//list->alias_end(texture.get());
-		list->end();
-
-
-		list->execute_and_wait();
 
 		concurrency::create_task([this]()
 			{

@@ -37,7 +37,6 @@ namespace HAL
 	{
 		std::lock_guard<std::mutex> g(t);
 
-		Log::get()<<data.operation.path<<Log::endl;
 		StorageRequest request;
 
 		request.resource = get_ptr();
@@ -61,13 +60,8 @@ namespace HAL
 
 		load_waiter = Device::get().get_ds_queue().execute(request);
 		
-		Log::get()<<1<<Log::endl;
 		Device::get().get_ds_queue().flush();
-		
-		Log::get()<<2<<Log::endl;
 		load_waiter.wait();
-		
-		Log::get()<<3<<Log::endl;
 	}
 
 }

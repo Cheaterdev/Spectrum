@@ -214,7 +214,22 @@ int main()
 			                 },
 			                 ArgInfo{"a"}, ArgInfo{"b"}
 		                 ));
+							  global.AddGlobal("merge_lists3", jinja2::MakeCallable(
+			                 [](const GenericList& a, const GenericList& b, const GenericList& c)
+			                 {
+				                 ValuesList list;
+				                 for (const auto& e : a)
+					                 list.emplace_back(e);
 
+				                 for (const auto& e : b)
+					                 list.emplace_back(e);
+								      for (const auto& e : c)
+					                 list.emplace_back(e);
+
+				                 return list;
+			                 },
+			                 ArgInfo{"a"}, ArgInfo{"b"}		   , ArgInfo{"c"}
+		                 ));
 		global.AddGlobal("lowerize", jinja2::MakeCallable(
 			                 [](const std::string& name)
 			                 {
@@ -307,6 +322,11 @@ int main()
 		}
 
 		for (auto& pso : parsed.graphics_pso)
+		{
+			my_stream(cpp_path + "/pso", pso.name + ".h") << cpp_templates.generate2(L"pso", "pso", pso);
+		}
+		   
+		for (auto& pso : parsed.workgraph_pso)
 		{
 			my_stream(cpp_path + "/pso", pso.name + ".h") << cpp_templates.generate2(L"pso", "pso", pso);
 		}

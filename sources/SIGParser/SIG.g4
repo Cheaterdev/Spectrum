@@ -6,7 +6,7 @@ options
   }
 
 parse
- : (layout_definition|table_definition|rt_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|COMMENT)* EOF
+ : (layout_definition|table_definition|rt_definition|workgraph_pso_definition|compute_pso_definition|graphics_pso_definition|rtx_pso_definition|rtx_pass_definition|rtx_raygen_definition|COMMENT)* EOF
  ;
 
 
@@ -173,6 +173,16 @@ rtx_pso_block: rtx_pso_stat*;
 rtx_pso_definition: RAYTRACE_PSO name_id inherit? OBRACE rtx_pso_block CBRACE;
 
 
+workgraph_pso_stat
+ : root_sig
+ | shader
+ | define_declaration
+ | COMMENT
+ ;
+workgraph_pso_block: workgraph_pso_stat*;
+workgraph_pso_definition: WORKGRAPH_PSO name_id inherit? OBRACE workgraph_pso_block CBRACE;
+
+
 
 rtx_pass_stat
  : shader
@@ -227,6 +237,7 @@ STRUCT: 'struct';
 COMPUTE_PSO: 'ComputePSO';
 GRAPHICS_PSO: 'GraphicsPSO';
 RAYTRACE_PSO: 'RaytracePSO';
+WORKGRAPH_PSO: 'WorkgraphPSO';
 RAYTRACE_RAYGEN: 'RaytraceRaygen';
 RAYTRACE_PASS: 'RaytracePass';
 
@@ -248,6 +259,7 @@ shader_type:
 |'raygen'
 |'amplification'
 |'mesh'
+|'shader'
 ;
 pso_param_id: 
 'ds' 
