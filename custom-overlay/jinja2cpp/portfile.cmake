@@ -9,7 +9,7 @@ vcpkg_from_github(
 )
 
 string(COMPARE EQUAL "${VCPKG_LIBRARY_LINKAGE}" "dynamic" JINJA2CPP_BUILD_SHARED)
-
+ 
 vcpkg_cmake_configure(
   SOURCE_PATH ${SOURCE_PATH}
   OPTIONS
@@ -21,10 +21,11 @@ vcpkg_cmake_configure(
     -DCMAKE_DISABLE_FIND_PACKAGE_optional-lite=ON
     -DCMAKE_DISABLE_FIND_PACKAGE_string-view-lite=ON
     -DJINJA2CPP_DEPS_MODE=external
+
 )
 
-vcpkg_cmake_install()
 
+vcpkg_cmake_install()
 vcpkg_cmake_config_fixup(CONFIG_PATH "lib/${PORT}")
 
 file(MAKE_DIRECTORY "${CURRENT_PACKAGES_DIR}/lib/pkgconfig" "${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig")

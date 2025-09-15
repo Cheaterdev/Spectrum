@@ -1,3 +1,4 @@
+ 
 #include <cereal/cereal.hpp>
 #include <cereal/types/polymorphic.hpp>
 
@@ -18,6 +19,3 @@
 #include <cereal/archives/adapters.hpp>
 
 #include <cereal/details/helpers.hpp>
-
-
-

@@ -14,7 +14,7 @@ using namespace FrameGraph;
 using namespace HAL;
 
 extern "C" {
-	_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 614;
+	_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 616;
 }
 
 extern "C" {
@@ -1019,7 +1019,7 @@ public:
 			//	if(false)
 			graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder)
 				{
-					builder.need(data.swapchain, ResourceFlags::Required);
+					builder.need(data.swapchain, ResourceFlags::Required | ResourceFlags::RenderTarget);
 				}, [this, ptr](pass_data& data, FrameContext& context)
 					{
 						context.get_list()->transition_present(data.swapchain->resource.get());

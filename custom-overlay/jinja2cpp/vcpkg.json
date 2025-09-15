@@ -8,16 +8,16 @@
 		"expected-lite",
 		"variant-lite",
 		"optional-lite",
-		"string-view-lite",
-		"fmt",		
+      {"name" :"string-view-lite", "version>=":"1.8.0#1"},
+    "fmt",
 		"boost-filesystem",
 		"boost-algorithm",
-        "boost-json",
-        "boost-numeric-conversion",
-        "boost-optional",
-        "boost-variant",
-        "boost-regex",
-        "boost-lexical-cast",
+    "boost-json",
+    "boost-numeric-conversion",
+    "boost-optional",
+    "boost-variant",
+    "boost-regex",
+    "boost-lexical-cast",
 		"rapidjson",
         {
             "name": "vcpkg-cmake",
@@ -27,5 +27,7 @@
             "name": "vcpkg-cmake-config",
             "host": true
           }
-	]
+          
+	] ,
+  "builtin-baseline": "a76e5d9e1c62a23b9e92353e5e25d8c34cda2b74"
   }

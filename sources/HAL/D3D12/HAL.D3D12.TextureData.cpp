@@ -214,15 +214,15 @@ namespace HAL
 			HRESULT hr = NULL;
 			if (ext == L".tga")
 			{
-				hr = DirectX::LoadFromTGAMemory(data.data(), data.size(), &metadata, orig_image);
+				hr = DirectX::LoadFromTGAMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), &metadata, orig_image);
 			}
 
 			else if (ext == L".dds")
 			{
-				hr = DirectX::LoadFromDDSMemory(data.data(), data.size(), DirectX::DDS_FLAGS::DDS_FLAGS_NONE, &metadata, orig_image);
+				hr = DirectX::LoadFromDDSMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), DirectX::DDS_FLAGS::DDS_FLAGS_NONE, &metadata, orig_image);
 			}
 
-			else 	hr = DirectX::LoadFromWICMemory(data.data(), data.size(), DirectX::WIC_FLAGS::WIC_FLAGS_NONE, &metadata, orig_image);
+			else 	hr = DirectX::LoadFromWICMemory(reinterpret_cast<uint8_t*>(data.data()), data.size(), DirectX::WIC_FLAGS::WIC_FLAGS_NONE, &metadata, orig_image);
 
 
 			if (FAILED(hr))

@@ -291,7 +291,7 @@ namespace HAL
 					  	for (auto& e : l.exports)
 						  graph->CreateNode<>()*/
 			graph->IncludeAllAvailableNodes(); // add all nodes
-			graph->Finalize();
+		//	graph->Finalize();
 
 			//	auto rootNodeDispatchGridSizeOverride = graph->CreateBroadcastingLaunchNodeOverrides(L"ClassifyPixels_Node");
 			// rootNodeDispatchGridSizeOverride->DispatchGrid(40,40, 1);

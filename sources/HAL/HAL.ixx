@@ -18,6 +18,7 @@ export import :RootSignature;
 export import :Descriptors;
 export import :DescriptorHeap;
 export import :Heap;
+export import :QueryHeap;
 export import :HeapAllocators;
 export import :TiledMemoryManager;
 export import :ResourceStates;

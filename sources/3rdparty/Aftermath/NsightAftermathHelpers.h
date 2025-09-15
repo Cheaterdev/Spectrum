@@ -108,7 +108,7 @@ inline bool operator<(const GFSDK_Aftermath_ShaderDebugName& lhs, const GFSDK_Af
 class AftermathException : public std::runtime_error
 {
 public:
-    AftermathException(GFSDK_Aftermath_Result result)
+    inline AftermathException(GFSDK_Aftermath_Result result)
         : std::runtime_error(GetErrorMessage(result))
         , m_result(result)
     {
@@ -119,7 +119,7 @@ public:
         return m_result;
     }
 
-    static std::string  GetErrorMessage(GFSDK_Aftermath_Result result)
+    static inline std::string  GetErrorMessage(GFSDK_Aftermath_Result result)
     {
         switch (result)
         {

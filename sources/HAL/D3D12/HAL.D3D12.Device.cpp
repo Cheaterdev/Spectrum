@@ -1,3 +1,8 @@
+module;
+  
+//#include "GFSDK_Aftermath.h"
+//#include "NsightAftermathGpuCrashTracker.h"
+
 module HAL:Device;
 import :Debug;
 import :Utils;
@@ -5,9 +10,6 @@ import <HAL.h>;
 import <d3d12/d3d12_includes.h>;
 import d3d12; 
 import Core;
-
-#include "GFSDK_Aftermath.h"
-#include "NsightAftermathGpuCrashTracker.h"
 
 #undef THIS
 namespace HAL
@@ -162,15 +164,15 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 			}
 
 
-			const uint32_t aftermathFlags =
-				GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
-				GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.
-				GFSDK_Aftermath_FeatureFlags_CallStackCapturing;    // Generate debug information for shaders.
+			//const uint32_t aftermathFlags =
+			//	GFSDK_Aftermath_FeatureFlags_EnableMarkers |             // Enable event marker tracking.
+			//	GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |    // Enable tracking of resources.
+			//	GFSDK_Aftermath_FeatureFlags_CallStackCapturing;    // Generate debug information for shaders.
 
-			auto afterres = GFSDK_Aftermath_DX12_Initialize(
-				GFSDK_Aftermath_Version_API,
-				aftermathFlags,
-				native_device.Get());
+			//auto afterres = GFSDK_Aftermath_DX12_Initialize(
+			//	GFSDK_Aftermath_Version_API,
+			//	aftermathFlags,
+			//	native_device.Get());
 
 
 
