@@ -173,6 +173,15 @@ public:
   virtual void enterRtx_pso_definition(SIGParser::Rtx_pso_definitionContext *ctx) = 0;
   virtual void exitRtx_pso_definition(SIGParser::Rtx_pso_definitionContext *ctx) = 0;
 
+  virtual void enterWorkgraph_pso_stat(SIGParser::Workgraph_pso_statContext *ctx) = 0;
+  virtual void exitWorkgraph_pso_stat(SIGParser::Workgraph_pso_statContext *ctx) = 0;
+
+  virtual void enterWorkgraph_pso_block(SIGParser::Workgraph_pso_blockContext *ctx) = 0;
+  virtual void exitWorkgraph_pso_block(SIGParser::Workgraph_pso_blockContext *ctx) = 0;
+
+  virtual void enterWorkgraph_pso_definition(SIGParser::Workgraph_pso_definitionContext *ctx) = 0;
+  virtual void exitWorkgraph_pso_definition(SIGParser::Workgraph_pso_definitionContext *ctx) = 0;
+
   virtual void enterRtx_pass_stat(SIGParser::Rtx_pass_statContext *ctx) = 0;
   virtual void exitRtx_pass_stat(SIGParser::Rtx_pass_statContext *ctx) = 0;
 

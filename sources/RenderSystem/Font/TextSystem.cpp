@@ -79,8 +79,8 @@ namespace Fonts
     {
         FW1_RECTF inputRect = { 0, 0, 0, 0 };
         // wtf with the sizes....
-        FW1_RECTF dimensions = native_font->MeasureString(convert(str).c_str(), convert(font_name).c_str(), size, &inputRect, FW1_NOWORDWRAP);
-        return vec2(dimensions.Right /*- dimensions.Left**/, dimensions.Bottom/* - dimensions.Top*/) * 16 / size + vec2(2, 2);
+        FW1_RECTF dimensions = native_font->MeasureString(convert(str).c_str(), convert(font_name).c_str(), size, &inputRect, FW1_NOWORDWRAP | FW1_LEFT | FW1_TOP);
+        return vec2(dimensions.Left+dimensions.Right /*- dimensions.Left**/, dimensions.Top + dimensions.Bottom/* - dimensions.Top*/) ;
     }
 
     FontSystem::FontSystem()
@@ -189,7 +189,13 @@ namespace Fonts
             flags | FW1_CLIPRECT
         );
     }
+                      
+    void FontGeometry::clear()
+    {
+        std::lock_guard<std::mutex> guard(m);
 
+        geometry->Clear();
+    }
     void FontGeometry::set(HAL::CommandList::ptr& command_list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
     {
         std::lock_guard<std::mutex> guard(m);
@@ -200,6 +206,23 @@ namespace Fonts
         font->native_font->AnalyzeString(command_list, str.c_str(),
                                          nullptr, size, reinterpret_cast<FW1_RECTF*>(&area),
             color, flags | FW1_CLIPRECT/*| FW1_NOFLUSH*/, geometry.Get());
+    }
+         sizer FontGeometry::add(HAL::CommandList::ptr& command_list, std::wstring str, Font::ptr font, float size, sizer area, float4 color, unsigned int flags /*= 0*/)
+    {
+        std::lock_guard<std::mutex> guard(m);
+        this->size = size;
+        this->font = font;
+        sizer a = area;
+       // geometry->Clear();
+        font->native_font->AnalyzeString(command_list, str.c_str(),
+                                         nullptr, size, reinterpret_cast<FW1_RECTF*>(&area),
+            color, flags | FW1_CLIPRECT/*| FW1_NOFLUSH*/, geometry.Get());
+
+
+        auto r = font->measure(convert(str), size, flags);
+
+        a.left += r.x;
+        return a;
     }
 
     FontGeometry::FontGeometry()

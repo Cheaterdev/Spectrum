@@ -254,6 +254,22 @@ struct SimpleComputePSO {
 	HAL::ComputePipelineState::ptr create(HAL::Device& device);
 };
 
+				 
+
+struct SimpleWorkgraphPSO {
+	Layouts root_signature;
+	HAL::shader_header shader;
+	std::string name;
+
+	SimpleWorkgraphPSO(std::string name) :name(name)
+	{
+	//	Log::get() << "PSO: " << name << Log::endl;
+
+	}
+
+	HAL::StateObject::ptr create(HAL::Device& device);
+};
+
 
 struct  SimpleGraphicsPSO {
 	Layouts root_signature;

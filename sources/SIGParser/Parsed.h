@@ -671,7 +671,19 @@ struct RaytracePSO : public PSO
 		ar& NVP(passes);
 	}
 };
+			
+struct WorkgraphPSO : public PSO
+{
+	
 
+	SERIALIZE()
+	{
+		SAVE_PARENT_MERGED(PSO);
+
+			bool workgraph = true;
+		ar& NVP(workgraph);
+	}
+};
 template <class T>
 void Layout::recursive_slots(T f)
 {
@@ -751,6 +763,7 @@ struct Parsed : public parsed_type
 
 	my_container<ComputePSO> compute_pso;
 	my_container<GraphicsPSO> graphics_pso;
+	my_container<WorkgraphPSO> workgraph_pso;
 
 	my_container<RaytracePSO> raytrace_pso;
 	my_container<RaytracePass> raytrace_pass;
@@ -767,6 +780,7 @@ struct Parsed : public parsed_type
 		layouts.merge(r.layouts);
 		tables.merge(r.tables);
 		rt.merge(r.rt);
+		workgraph_pso.merge(r.workgraph_pso);
 		compute_pso.merge(r.compute_pso);
 		graphics_pso.merge(r.graphics_pso);
 		raytrace_pso.merge(r.raytrace_pso);
@@ -782,6 +796,7 @@ struct Parsed : public parsed_type
 		ar& NVP(rt);
 		ar& NVP(compute_pso);
 		ar& NVP(graphics_pso);
+		ar& NVP(workgraph_pso);
 		ar& NVP(raytrace_pass);
 		ar& NVP(raytrace_pso);
 		ar& NVP(raytrace_gen);

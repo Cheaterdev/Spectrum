@@ -52,6 +52,12 @@ export	{
 {% endfor -%}
 
 
+{%- for v in parsed.workgraph_pso -%}
+{%- set t =  parsed.workgraph_pso[v] -%}
+	#include "pso\{{t.name}}.h"
+{% endfor -%}
+
+
 {%- for v in parsed.raytrace_pso -%}
 {%- set t =  parsed.raytrace_pso[v] -%}
 	#include "rtx\{{t.name}}.h"

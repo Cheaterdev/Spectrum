@@ -4,50 +4,7 @@ import wrl;
 import Core;
 import <HAL.h>;
 import <d3d12/d3d12_includes.h>;
-namespace HAL
-{
 
-
-	class shader_include_d3d : public ID3DInclude
-	{
-		HAL::shader_include* includer;
-
-	public:
-
-
-		shader_include_d3d(HAL::shader_include* includer) : includer(includer)
-		{
-
-		}
-
-
-		STDMETHODIMP Close(LPCVOID pData)
-		{
-			return S_OK;
-		}
-
-		STDMETHODIMP Open(D3D_INCLUDE_TYPE includeType, LPCSTR pFileName, LPCVOID /*pParentData*/, LPCVOID* ppData, UINT* pBytes)
-		{
-
-			if (!includer)
-			{
-				return E_FAIL;
-			}
-
-			auto data = includer->load_file(pFileName);
-
-			if (!data)
-			{
-				return E_FAIL;
-			}
-
-			*ppData = reinterpret_cast<const void*>(data->data());
-			*pBytes = static_cast<unsigned int>(data->size());
-			return S_OK;
-		}
-
-
-	};
 #define DXC_MICROCOM_REF_FIELD(m_dwRef)                                        \
   volatile std::atomic_int m_dwRef = {0};
 #define DXC_MICROCOM_ADDREF_IMPL(m_dwRef)                                      \
@@ -62,6 +19,8 @@ namespace HAL
       delete this;                                                             \
     return result;                                                             \
   }
+
+
 
 	template<typename TObject>
 	HRESULT DoBasicQueryInterface_recurse(TObject* self, REFIID iid, void** ppvObject) {
@@ -91,6 +50,11 @@ namespace HAL
 
 		return DoBasicQueryInterface_recurse<TObject, Ts...>(self, iid, ppvObject);
 	}
+
+
+
+namespace HAL
+{
 
 	namespace API
 	{
@@ -145,14 +109,14 @@ namespace HAL
 	}
 
 
-	std::optional<binary>  ShaderCompiler::Compile_Shader_File(std::string filename, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer)
+	std::optional<CompiledShader>  ShaderCompiler::Compile_Shader_File(std::string filename, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer)
 	{
 		auto data = includer->load_file(filename);
 		return Compile_Shader(*data, macros, target, entry_point, options, includer, filename);
 	}
 	//
 
-	std::optional<binary>  ShaderCompiler::Compile_Shader(std::string shaderText, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer, std::string file_name)
+	std::optional<CompiledShader>  ShaderCompiler::Compile_Shader(std::string shaderText, std::vector < HAL::shader_macro> macros, std::string target, std::string entry_point, ShaderOptions options, HAL::shader_include* includer, std::string file_name)
 	{
 
 		if (file_name.empty())
@@ -266,8 +230,8 @@ namespace HAL
 		ComPtr<IDxcBlob> resultBlob;
 		compiledShaderBuffer->GetResult(&resultBlob);
 
-		binary blob_str;
-		blob_str.assign(static_cast<std::byte*>(resultBlob->GetBufferPointer()), static_cast<std::byte*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
+		CompiledShader blob_str;
+		blob_str.blob.assign(static_cast<std::byte*>(resultBlob->GetBufferPointer()), static_cast<std::byte*>(resultBlob->GetBufferPointer()) + resultBlob->GetBufferSize());
 
 
 		ComPtr<IDxcBlob> reflectionBlob{};
@@ -282,16 +246,33 @@ namespace HAL
 
 		if (entry_point.size())
 		{
+
+			blob_str.functions.emplace_back();
+			auto& f = blob_str.functions.back();
+
 			ComPtr<ID3D12ShaderReflection> shaderReflection{};
 			library->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&shaderReflection));
 			D3D12_SHADER_DESC shaderDesc{};
 			shaderReflection->GetDesc(&shaderDesc);
-
+			f.name = entry_point;
+								  f.wname = convert(f.name);
 			for (int i = 0; i < shaderDesc.ConstantBuffers; i++)
 			{
 				ID3D12ShaderReflectionConstantBuffer* cb = shaderReflection->GetConstantBufferByIndex(i);
 				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
 				cb->GetDesc(&shaderBufferDesc);
+
+				std::string cb_name = shaderBufferDesc.Name;
+
+				if (cb_name.starts_with("pass_"))
+				{
+					cb_name = cb_name.substr(5);
+					auto slot_id = get_slot(cb_name);
+
+					if(slot_id)
+					f.slots.merge(slot_id.value());
+				}
+
 				//Log::get() << shaderBufferDesc.Name << Log::endl;
 
 			}
@@ -304,14 +285,19 @@ namespace HAL
 
 			D3D12_LIBRARY_DESC shaderDesc{};
 			libraryReflection->GetDesc(&shaderDesc);
-
+				
 
 				for (int i = 0; i < shaderDesc.FunctionCount; i++)
 			{
 				ID3D12FunctionReflection* f = libraryReflection->GetFunctionByIndex(i);
 				D3D12_FUNCTION_DESC functionDesc{};
 				f->GetDesc(&functionDesc);
-				Log::get() << "FUNCTION "<< functionDesc.Name << Log::endl;
+		//		Log::get() << "FUNCTION "<< functionDesc.Name << Log::endl;
+
+				blob_str.functions.emplace_back();
+					auto& rf = blob_str.functions.back();
+						 	  rf.name = functionDesc.Name ;
+							  rf.wname = convert(rf.name);
 
 
 											 	for (int i = 0; i < functionDesc.ConstantBuffers; i++)
@@ -319,7 +305,19 @@ namespace HAL
 				ID3D12ShaderReflectionConstantBuffer* cb = f->GetConstantBufferByIndex(i);
 				D3D12_SHADER_BUFFER_DESC shaderBufferDesc{};
 				cb->GetDesc(&shaderBufferDesc);
-				Log::get() << shaderBufferDesc.Name << Log::endl;
+
+						   	std::string cb_name = shaderBufferDesc.Name;
+
+			
+													if (cb_name.starts_with("pass_"))
+				{
+					cb_name = cb_name.substr(5);
+
+					auto slot_id = get_slot(cb_name);
+
+					rf.slots.merge(slot_id.value());
+				}
+			//	Log::get() << shaderBufferDesc.Name << Log::endl;
 
 			}
 			}

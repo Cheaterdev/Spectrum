@@ -252,7 +252,7 @@ namespace FW1FontWrapper
         UINT Flags
     )
     {
-        FW1_RECTF stringRect = {pLayoutRect->Left, pLayoutRect->Top, pLayoutRect->Left, pLayoutRect->Top};
+        FW1_RECTF stringRect = {pLayoutRect->Left, pLayoutRect->Top, pLayoutRect->Right-pLayoutRect->Left, pLayoutRect->Bottom-pLayoutRect->Top};
         IDWriteTextLayout* pTextLayout = createTextLayout(pszString, pszFontFamily, FontSize, pLayoutRect, Flags);
 
         if (pTextLayout != NULL)

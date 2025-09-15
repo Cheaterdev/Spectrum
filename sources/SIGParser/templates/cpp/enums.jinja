@@ -25,7 +25,8 @@ export
 	{
 		{%- set a = parsed.compute_pso|list -%}
 		{%- set b = parsed.graphics_pso|list %}
-		{{ merge_lists(a,b)  | join(',\n		')}}
+		{%- set c = parsed.workgraph_pso|list %}
+		{{ merge_lists3(a,b,c)  | join(',\n		')}}
 	};
 
 	enum class SlotID: unsigned int

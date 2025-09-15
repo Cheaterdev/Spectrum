@@ -85,8 +85,11 @@ void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelIndirectUpsample>(device, pso[PSO::VoxelIndirectUpsample]));
 	tasks.emplace_back(PSOBase::create<PSOS::VoxelDebug>(device, pso[PSO::VoxelDebug]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserDownsample>(device, pso[PSO::DenoiserDownsample]));
+	tasks.emplace_back(PSOBase::create<PSOS::WorkGR>(device, pso[PSO::WorkGR]));
 	when_all(begin(tasks), end(tasks)).wait();
 }
+
+
 
 decltype(PSOS::DenoiserShadow_Filter::Pass) PSOS::DenoiserShadow_Filter::Pass;
 decltype(PSOS::RCAS::cas) PSOS::RCAS::cas;

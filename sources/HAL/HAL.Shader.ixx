@@ -115,7 +115,6 @@ export
 
 			friend class Manager;
 		protected:
-			binary blob;
 			static const char* compile_code;
 			static const char* compile_code_dxil;
 
@@ -140,12 +139,13 @@ export
 
 			void own_id()
 			{
-				blob_hash = crc32(blob);
+				blob_hash = crc32(blob.blob);
 				this->id = shader_ids[blob_hash];
 			}
 		public:
 			static Cache<unsigned int, size_t> shader_ids;
-
+					CompiledShader blob;
+		
 			UsedSlots slots_usage;
 			Events::Event<void> on_change;
 			const unsigned int& get_hash() const
@@ -157,7 +157,7 @@ export
 
 			binary& get_blob()
 			{
-				return blob;
+				return blob.blob;
 			}
 
 			const HAL::shader_header& get_header() const
@@ -171,7 +171,7 @@ export
 				resource_file_depender depender;
 				HAL::shader_include In("shaders/", depender);
 
-				std::optional<binary> res_blob;
+				std::optional<CompiledShader> res_blob;
 
 				while (!res_blob)
 				{
@@ -185,7 +185,7 @@ export
 				result->own_id();
 				result->compile();
 				result->hash = crc32(result->blob);
-				result->slots_usage.merge(depender);
+				result->slots_usage = result->blob.functions.front().slots_usage;
 
 			//	assert(!result->slots_usage.empty());
 				return result;
@@ -194,7 +194,7 @@ export
 			static std::shared_ptr<_shader_type> load_native(const HAL::shader_header& header, resource_file_depender& depender)
 			{
 
-				std::optional<binary> res_blob;
+				std::optional<CompiledShader> res_blob;
 
 
 				while (!res_blob)
@@ -219,7 +219,7 @@ export
 				result->blob = std::move(*res_blob);
 				result->compile();
 				result->own_id();
-				result->hash = crc32(result->blob);
+				result->hash = crc32(result->blob.blob);
 				result->slots_usage.merge(depender);
 				result->init();
 				return result;

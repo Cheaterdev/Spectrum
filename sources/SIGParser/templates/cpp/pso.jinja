@@ -22,7 +22,7 @@ namespace PSOS
 			}
 		};
 
-		{{"GEN_COMPUTE_PSO" if pso.compute else "GEN_GRAPHICS_PSO"}}({{pso.name}}{{", " if pso.defines}}{{pso.defines|list|join(attribute='name', ', ')}})
+		{{"GEN_COMPUTE_PSO" if pso.compute}}{{"GEN_GRAPHICS_PSO" if pso.graphics}}{{"GEN_WORKGRAPH_PSO" if pso.workgraph}}({{pso.name}}{{", " if pso.defines}}{{pso.defines|list|join(attribute='name', ', ')}})
 {% for v in (pso.defines|list) %}
 {%- set d = pso.defines[v]-%}
 		GEN_KEY({{d.name}}, {{ "true" if d.options.indirect is undefined else "false"}});

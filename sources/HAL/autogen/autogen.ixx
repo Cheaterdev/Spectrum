@@ -273,6 +273,7 @@ export	{
 	#include "pso\VoxelIndirectUpsample.h"
 	#include "pso\VoxelDebug.h"
 	#include "pso\DenoiserDownsample.h"
+	#include "pso\WorkGR.h"
 	#include "rtx\MainRTX.h"
 
 	std::optional<SlotID> get_slot(std::string_view slot_name);

@@ -5,7 +5,41 @@ import HAL;
 import GUI;
 import Graphics;
 
+import aho_corasick;
 using namespace HAL;
+
+
+#include <ft2build.h>
+
+#include  FT_FREETYPE_H
+
+FreeTypeFont::FreeTypeFont()
+{
+	FT_Init_FreeType(&FtLib);
+
+	 FT_New_Face( FtLib,
+                     "arial.ttf",
+                     0,
+                     &face );
+
+	 FT_Set_Pixel_Sizes(
+          face,   /* handle to face object */
+          0,      /* pixel_width           */
+          16 );   /* pixel_height          */
+
+		  auto glyph_index = FT_Get_Char_Index( face, 'c' );
+
+		  auto load_flags = FT_LOAD_DEFAULT;
+	FT_Load_Glyph(
+          face,          /* handle to face object */
+          glyph_index,   /* glyph index           */
+          load_flags );  /* load flags, see below */
+
+
+	face->glyph->bitmap;
+}
+
+
 namespace GUI
 {
 	namespace Elements
@@ -41,7 +75,13 @@ namespace GUI
 						p.y += (p.h - std::ceil(text_size.y)) / 2;
 					sizer intersected = intersect(math::convert(p), c.ui_clipping);
 					if ((intersected.top < intersected.bottom && intersected.left < intersected.right))
+					{
+					//	 if(GetAsyncKeyState('U'))
+
 						c.renderer->draw(c, cache, p);
+					//	 else
+					//		 geomerty->draw(c.command_list, c.ui_clipping, 0, p.pos);
+					}
 				}
 
 			c.ui_clipping = orig;
@@ -52,18 +92,21 @@ namespace GUI
 		label::label() : text(std::bind(&label::on_text_changed, this, std::placeholders::_1)), font_size(std::bind(&label::on_size_changed, this, std::placeholders::_1))
 		{
 			clickable = false;
-			magnet_text = FW1_CENTER | FW1_VCENTER;
+			magnet_text = FW1_LEFT | FW1_TOP | FW1_NOWORDWRAP;
 			font = Fonts::FontSystem::get().get_font("Segoe UI Light");
 			color = float4(1, 1, 1, 1);
 			geomerty.reset(new Fonts::FontGeometry());
 			geomerty_shadow.reset(new Fonts::FontGeometry());
-			font_size = 15;
-			text_size = font->measure("", font_size.get() /** scaled*/, magnet_text);
+			font_size = 18;
+			text_size = font->measure("", font_size.get() /** scaled*/, magnet_text)+ vec2(2, 2);
+			text_size.x = std::ceil(text_size.x);
+			text_size.y = std::ceil(text_size.y);
+			FreeTypeFont::get();
 		}
 
 		void label::on_text_changed(const std::string& str)
 		{
-			text_size = font->measure(str, font_size.get() /** scaled*/, magnet_text);// +vec2(5 / scaled, 0);
+			text_size = font->measure(str, font_size.get() /** scaled*/, magnet_text)+ vec2(2, 2);
 			size = text_size;
 			need_recalculate = true;
 		}
@@ -114,9 +157,115 @@ namespace GUI
 		}
 		void label::pre_draw(HAL::CommandList::ptr command_list)
 		{
-			geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
-			//command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
+			geomerty->clear();
 
+
+			std::map<std::string, rgba8> tokens;
+			tokens["{"] = rgba8(120, 120, 255, 255);
+			tokens["}"] = rgba8(120, 120, 255, 255);
+				tokens["->"] = rgba8(120, 120, 255, 255);
+				 tokens[":"] = rgba8(120, 120, 255, 255);
+				    tokens[";"] = rgba8(120, 120, 255, 255);
+					 tokens[","] = rgba8(120, 120, 255, 255);
+					 tokens["+"] = rgba8(120, 120, 255, 255);
+tokens["-"] = rgba8(120, 120, 255, 255);
+tokens["*"] = rgba8(120, 120, 255, 255);
+	   tokens["/"] = rgba8(120, 120, 255, 255);
+		   tokens["="] = rgba8(120, 120, 255, 255);
+			   tokens["."] = rgba8(120, 120, 255, 255);
+				   tokens["&"] = rgba8(120, 120, 255, 255);
+
+			tokens["("] = rgba8(120, 120, 255, 255);
+			tokens[")"] = rgba8(120, 120, 255, 255);
+
+			tokens["\""] = rgba8(100, 255, 100, 255);
+			tokens["\'"] = rgba8(100, 255, 100, 255);
+
+			tokens["//"] = rgba8(100, 100, 100, 255);
+			tokens["/*"] = rgba8(100, 100, 100, 255);
+			tokens["import"] = rgba8(255, 0, 255, 255);
+		 			tokens["for"] = rgba8(255, 0, 255, 255);
+					 			tokens["if"] = rgba8(255, 0, 255, 255);
+					    		tokens["else"] = rgba8(255, 0, 255, 255);
+					    			tokens["return"] = rgba8(255, 0, 255, 255);
+	   				    			tokens["auto"] = rgba8(255, 0, 255, 255);
+				    			tokens["void"] = rgba8(255, 0, 255, 255);
+								 				    			tokens["struct"] = rgba8(255, 0, 255, 255);
+			tokens["class"] = rgba8(255, 0, 255, 255);
+									   		    			tokens["public"] = rgba8(255, 0, 255, 255);
+		    			tokens["private"] = rgba8(255, 0, 255, 255);
+						tokens["protected"] = rgba8(255, 0, 255, 255);
+					 		  	tokens["new"] = rgba8(255, 0, 255, 255);
+					 		     	tokens["using"] = rgba8(255, 0, 255, 255);
+					 				 tokens["const"] = rgba8(255, 0, 255, 255);
+					 
+
+									bool override_color = false;
+									float4 _color;
+			aho_corasick::trie trie;
+			trie.remove_overlaps()
+				.only_whole_words();
+   // .case_insensitive();
+
+for (auto& token : tokens)
+{
+	trie.insert(token.first);
+}
+
+
+auto parsed = trie.tokenise("int a = 5;");// text.get());
+//std::stringstream html;
+//html << "<html><body><p>";
+std::stringstream res;
+float4 c = float4(color)/float4(255,255,255,255);
+
+auto l = lay2;
+bool quote = false;
+for (const auto& token : parsed) {
+	
+
+		if (token.is_match())
+		{
+			c = float4(tokens[token.get_fragment()])/float4(255,255,255,255);
+			if (token.get_fragment() == "//" || token.get_fragment() == "/*")
+			{
+				override_color = true;
+				_color = c;
+			}
+				if (token.get_fragment() == "\""||token.get_fragment() == "\'" )
+			{
+				
+				quote = !quote;
+					override_color = quote;
+				_color = c;
+			}
+			//else
+				//override_color = false;
+		}
+		else 
+			c = color;
+
+
+
+	if (override_color)
+		c = _color;
+
+
+		geomerty->add(command_list, convert(token.get_fragment()), font, font_size.get(), l, c, magnet_text);
+
+		res << token.get_fragment();
+
+		l.left = font->measure(res.str(), font_size.get() /** scaled*/, magnet_text).x;
+	//html << token.get_fragment();
+	//if (token.is_match()) html << "</i>";
+}
+//html << "</p></body></html>";
+//std::cout << html.str();
+			//text.get().fi
+
+			//command_list->clear_rtv(cache.texture->texture_2d().renderTarget);
+		//   geomerty->set(command_list, convert(text.get()), font, font_size.get(), lay2, color, magnet_text);
+		
 			{
 				RT::SingleColor rt;
 				rt.GetColor() = cache.texture->texture_2d().renderTarget;
@@ -149,5 +298,29 @@ namespace GUI
 			return	base::update_layout(r, scale);
 		}
 
+			
+		void MultiLineLabel::on_text_changed(const std::string& str)
+		{
+			const std::string delim = "\n";
+
+    for (const auto word : std::views::split(str, delim))
+    {
+		auto word_view = std::string_view(word);
+		auto line = std::make_shared<label>();
+		line->text = std::string(word_view.substr(0,word_view.length()-1));
+		line->docking = dock::TOP;
+		line->draw_helper = true;
+		add_child(line);
+
+
+    }
+   
+		}
+
+		MultiLineLabel::MultiLineLabel()	: text(std::bind(&MultiLineLabel::on_text_changed, this, std::placeholders::_1))
+		{
+
+
+		}
 	}
 }
