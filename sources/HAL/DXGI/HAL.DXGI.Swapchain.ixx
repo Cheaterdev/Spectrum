@@ -16,9 +16,11 @@ export
 		{
 			class SwapChain
 			{
+				
 			protected:
 				ComPtr<IDXGISwapChain3> m_swapChain;
 				DXGI_SWAP_CHAIN_DESC desc;
+				HANDLE swapchain_waiter;
 
 				using native_container = ComPtr<IDXGISwapChain3>;
 			public:

@@ -50,6 +50,10 @@ namespace HAL
 			m_commandList->SetProgram(&desc);
 
 		}
+		void CommandList::discard(const  HAL::Resource* resource)
+		{
+			m_commandList-> DiscardResource(resource->native_resource.Get(),nullptr);
+		}
 
 		void CommandList::dispatch_graph(ResourceAddress addr)
 		{

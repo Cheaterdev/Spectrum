@@ -1,3 +1,7 @@
+module;
+#include <ft2build.h>
+#include  FT_FREETYPE_H
+
 module GUI:Label;
 import <RenderSystem.h>;
 
@@ -9,9 +13,6 @@ import aho_corasick;
 using namespace HAL;
 
 
-#include <ft2build.h>
-
-#include  FT_FREETYPE_H
 
 FreeTypeFont::FreeTypeFont()
 {
@@ -213,7 +214,7 @@ for (auto& token : tokens)
 }
 
 
-auto parsed = trie.tokenise("int a = 5;");// text.get());
+auto parsed = trie.tokenise(text.get());
 //std::stringstream html;
 //html << "<html><body><p>";
 std::stringstream res;

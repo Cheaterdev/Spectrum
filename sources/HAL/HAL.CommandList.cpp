@@ -32,8 +32,8 @@ namespace HAL
 
 		auto& timers = get_state(list);
 
-		if(timers.timers.size()) // maybe there was no start ?
-		timers.timers.back().end(list);
+		if (timers.timers.size()) // maybe there was no start ?
+			timers.timers.back().end(list);
 	}
 
 	GPUTimer::GPUTimer()
@@ -100,8 +100,8 @@ namespace HAL
 
 
 		debug_buffer = StructuredBufferView<Table::DebugStruct>(64, HAL::counterType::NONE,
-		                                                        HAL::ResFlags::ShaderResource |
-		                                                        HAL::ResFlags::UnorderedAccess);
+			HAL::ResFlags::ShaderResource |
+			HAL::ResFlags::UnorderedAccess);
 	}
 
 	void CommandList::setup_debug(SignatureDataSetter* setter)
@@ -118,24 +118,24 @@ namespace HAL
 
 		auto pso_name = current_pipeline->name;
 		get_copy().read<Table::DebugStruct>(debug_buffer, 0, 3, [this, pso_name](std::span<Table::DebugStruct> result)
-		{
-			LogBlock block(Log::get(), log_level_internal::level_all);
-
-			if (first_debug_log)
 			{
-				block << "-----------------------------------------\n";
+				LogBlock block(Log::get(), log_level_internal::level_all);
 
-				first_debug_log = false;
-			}
+				if (first_debug_log)
+				{
+					block << "-----------------------------------------\n";
 
-			block << "DEBUG(" << name << "): " << pso_name << "\n";
-			for (int i = 0; i < 3; i++)
-			{
-				block << "debug(" << i << "): " << result[i].v.x << " " << result[i].v.y << " " << result[i].v.z << " "
-					<< result[i].v.w << " " << "\n";
-			}
-			Log::get() << block;
-		});
+					first_debug_log = false;
+				}
+
+				block << "DEBUG(" << name << "): " << pso_name << "\n";
+				for (int i = 0; i < 3; i++)
+				{
+					block << "debug(" << i << "): " << result[i].v.x << " " << result[i].v.y << " " << result[i].v.z << " "
+						<< result[i].v.w << " " << "\n";
+				}
+				Log::get() << block;
+			});
 
 		get_compute().clear(debug_buffer);
 	}
@@ -205,13 +205,13 @@ namespace HAL
 
 		Eventer::end();
 		proxy->resolve_timers([&, this](const QueryType& type, uint64 from, uint64 to, QueryHeap::ptr heap)
-		{
-			assert(from == 0);
-			resolve_times(heap.get(), static_cast<uint>(to), [heap](std::span<UINT64> data)
 			{
-				std::copy(data.begin(), data.end(), heap->read_back_data.begin());
+				assert(from == 0);
+				resolve_times(heap.get(), static_cast<uint>(to), [heap](std::span<UINT64> data)
+					{
+						std::copy(data.begin(), data.end(), heap->read_back_data.begin());
+					});
 			});
-		});
 		active = false;
 		frame_resources->free_storage(proxy);
 
@@ -219,6 +219,12 @@ namespace HAL
 		if (graphics) graphics->set_proxy(nullptr);
 		if (compute) compute->set_proxy(nullptr);
 	}
+
+	void CommandList::discard(HAL::Resource* resource)
+	{		
+	//	compiler.discard(resource);
+	}
+
 
 	void GraphicsContext::begin()
 	{

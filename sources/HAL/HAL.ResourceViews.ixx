@@ -730,12 +730,12 @@ export
 			
 		//		constBuffer.create(resource, offset,size);
 
-				if (check(get_desc().Flags & HAL::ResFlags::ShaderResource)) {
+				if (check(get_desc().Flags & HAL::ResFlags::ShaderResource) && !check(get_desc().Flags & HAL::ResFlags::Raytracing)) {
 					structuredBuffer.create(resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
 				}
 
 
-				if (check(get_desc().Flags & HAL::ResFlags::UnorderedAccess)) {
+				if (check(get_desc().Flags & HAL::ResFlags::UnorderedAccess) && !check(get_desc().Flags & HAL::ResFlags::Raytracing)) {
 					rwStructuredBuffer.create(resource, static_cast<UINT>(offset / sizeof(Underlying<T>)), static_cast<UINT>(size / sizeof(Underlying<T>)));
 					rwRAW.create(resource, Format::R8_UINT, static_cast<UINT>(offset), static_cast<UINT>(size));
 

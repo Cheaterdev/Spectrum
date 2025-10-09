@@ -44,6 +44,7 @@ void dispatch_graph(ResourceAddress addr);
 
 		void set_topology(HAL::PrimitiveTopologyType topology, HAL::PrimitiveTopologyFeed feedType = HAL::PrimitiveTopologyFeed::LIST, bool adjusted = false, uint controlpoints = 0);
 		void set_stencil_ref(UINT ref);
+		void discard(const  HAL::Resource* resource);
 
 		void set_name(std::wstring_view name);
 		void set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler);

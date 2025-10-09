@@ -1,3 +1,6 @@
+module;
+#include <comdef.h>
+
 module HAL:SwapChain;
 import:Device;
 import HAL;
@@ -19,9 +22,12 @@ namespace HAL
 		swapChainDesc.Stereo = c_desc.stereo && HAL::Adapters::get().get_factory()->IsWindowedStereoEnabled();
 		swapChainDesc.SampleDesc.Count = 1;
 		swapChainDesc.SampleDesc.Quality = 0;
-		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+		swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT | DXGI_USAGE_BACK_BUFFER;
 		swapChainDesc.BufferCount = 2 + static_cast<int>(swapChainDesc.Stereo);
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+
+		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+		
 		ComPtr<IDXGISwapChain1> swapChain;
 		HRESULT res = HAL::Adapters::get().get_factory()->CreateSwapChainForHwnd(
 			device.get_queue(CommandListType::DIRECT)->get_native().Get(),
@@ -34,17 +40,47 @@ namespace HAL
 
 		frames.resize(desc.BufferCount);
 		on_change();
+
+		swapchain_waiter = m_swapChain->GetFrameLatencyWaitableObject();
+
+		//DWORD result = WaitForSingleObjectEx(
+		//	swapchain_waiter,
+		//	1000, // 1 second timeout (shouldn't ever occur)
+		//	true
+		//);
 	}
 
 	void SwapChain::present(FenceWaiter event_time)
 	{
-		frames[m_frameIndex].fence_event = event_time;
-		m_swapChain->Present(0, 0);
-	}
 
-	void SwapChain::start_next()
-	{
+		//{
+	//		device.get_queue(CommandListType::DIRECT)->signal_and_wait();
+			//device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
+		//	device.get_queue(CommandListType::COPY)->signal_and_wait();
+		//}
+
+	//	device.get_queue(CommandListType::DIRECT)->gpu_wait(event_time);
+	//	device.get_queue(CommandListType::COMPUTE)->gpu_wait(event_time);
+	//	device.get_queue(CommandListType::COPY)->gpu_wait(event_time);
+		//frames[m_frameIndex].fence_event = event_time;
+
+		m_swapChain->Present(1, 0);
+	
+
+		frames[m_frameIndex].fence_event = device.get_queue(CommandListType::DIRECT)->signal();
+
 		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+		//device.get_queue(CommandListType::DIRECT)->signal_and_wait();
+		//frames[m_frameIndex].fence_event.wait();
+		// 
+		DWORD result = WaitForSingleObjectEx(
+			swapchain_waiter,
+			1000, // 1 second timeout (shouldn't ever occur)
+			true
+		);
+//		device.get_queue(CommandListType::DIRECT)->signal_and_wait();
+	//		device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
+	//		device.get_queue(CommandListType::COPY)->signal_and_wait();
 	}
 
 	void  SwapChain::on_change()

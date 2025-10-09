@@ -44,12 +44,12 @@ export namespace D3D
 
 export namespace DXGI
 {
-	using Adapter = ComPtr<IDXGIAdapter3>;
-	using Swapchain = ComPtr<IDXGISwapChain3>;
+	using Adapter = ComPtr<IDXGIAdapter4>;
+	using Swapchain = ComPtr<IDXGISwapChain4>;
 	using Surface = ComPtr<IDXGISurface2>;
 	using Device = ComPtr<IDXGIDevice2>;
-	using Factory = ComPtr<IDXGIFactory4>;
-	using Output = ComPtr<IDXGIOutput1>;
+	using Factory = ComPtr<IDXGIFactory7>;
+	using Output = ComPtr<IDXGIOutput6>;
 }
 
 export D3D12_TEXTURE_ADDRESS_MODE to_native(TextureAddressMode mode)
@@ -760,7 +760,7 @@ export D3D12_RESOURCE_FLAGS to_native(const ResFlags& flags)
 
 	if (check(flags & ResFlags::Raytracing))
 	{
-		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE ;
+		result |= D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE | D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 	}
 
 		
@@ -790,6 +790,12 @@ export ResFlags from_native(D3D12_RESOURCE_FLAGS flags)
 	if (flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
 	{
 		result |= ResFlags::DepthStencil;
+	}
+
+
+	if (flags & D3D12_RESOURCE_FLAGS::D3D12_RESOURCE_FLAG_RAYTRACING_ACCELERATION_STRUCTURE)
+	{
+		result |= ResFlags::Raytracing;
 	}
 
 	return result;

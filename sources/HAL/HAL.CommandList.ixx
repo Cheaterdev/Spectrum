@@ -499,6 +499,7 @@ export{
 			ComputeContext& get_compute();
 			CopyContext& get_copy();
 
+			void discard(HAL::Resource* resource);
 
 			CommandList(CommandListType);
 

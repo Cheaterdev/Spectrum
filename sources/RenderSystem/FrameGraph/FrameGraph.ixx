@@ -90,6 +90,7 @@ using namespace HAL;
 
 	struct UsedResources
 	{
+		std::list<HAL::FenceWaiter> fences;
 		std::set<ResourceAllocInfo*> resources;
 		std::map<ResourceAllocInfo*, ResourceFlags> resource_flags;
 		std::set<ResourceAllocInfo*> resource_creations;
@@ -171,6 +172,7 @@ using namespace HAL;
 		std::shared_ptr<HAL::ResourceView> view;
 
 		bool passed = false;
+		HAL::FenceWaiter fence;
 		size_t frame_id;
 
 		std::set<Pass*> related;
@@ -617,7 +619,7 @@ using namespace HAL;
 		}
 
 		//void free_texture(ResourceHandler* handler);
-		void pass_texture(std::string name, HAL::Texture::ptr tex, ResourceFlags flags = ResourceFlags::None);
+		void pass_texture(std::string name, HAL::Texture::ptr tex, HAL::FenceWaiter fence = {}, ResourceFlags flags = ResourceFlags::None);
 
 
 		void create_resources();
@@ -824,7 +826,7 @@ using namespace HAL;
 		std::list<std::shared_ptr<Pass>> passes;
 
 	
-		Variable<bool> optimize = { true, "optimize", this };
+		Variable<bool> optimize = { false, "optimize", this };
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>
@@ -882,7 +884,7 @@ using namespace HAL;
 		void render();
 
 
-		void commit_command_lists();
+		HAL::FenceWaiter commit_command_lists();
 		void reset();
 	};
 

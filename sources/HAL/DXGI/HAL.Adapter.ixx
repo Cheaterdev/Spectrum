@@ -51,7 +51,7 @@ export namespace HAL
 			return native_factory;	}
 		void enumerate(auto f)
 		{
-			IDXGIAdapter3* padapter;
+			IDXGIAdapter4* padapter;
 
 			uint i = 0;
 			while (native_factory->EnumAdapters(i++, reinterpret_cast<IDXGIAdapter**>(&padapter)) != DXGI_ERROR_NOT_FOUND)

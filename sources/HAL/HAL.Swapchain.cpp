@@ -6,6 +6,11 @@ import :Device;
 
 namespace HAL
 {
+
+	FenceWaiter SwapChain::get_fence()
+	{
+		return frames[m_frameIndex].fence_event;
+	}
 	void SwapChain::wait_for_free()
 	{
 		frames[m_frameIndex].fence_event.wait();

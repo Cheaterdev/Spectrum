@@ -929,7 +929,7 @@ namespace GUI
         draw_recursive(c);
         drag.draw(c);
 
-      //   return;
+      //  
          process_graph(graph);
 
 
@@ -955,8 +955,8 @@ namespace GUI
              Handlers::Texture o_texture = "swapchain";
          };
 
-
-         uint per_thread =  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
+      //   return;
+         uint per_thread = draw_infos.size();//  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
 
          uint start = 0; uint end = 0;
          uint t = 0;
@@ -968,10 +968,10 @@ namespace GUI
 			builder.need(data.o_texture, ResourceFlags::RenderTarget);
             use_graph(builder);
 			 }, [this,&graph, start, end](pass_data& data, FrameContext& context) {
-
+              
 				 auto command_list = context.get_list();
 
-				 auto texture = (*data.o_texture);
+				auto texture = (*data.o_texture);
 
                 {
 				RT::SingleColor rt;
@@ -991,7 +991,8 @@ namespace GUI
 				 {
                      PROFILE_GPU(L"draw");
 			
-              
+                     
+                     
                     for(uint i=start;i<end;i++)
                     {
                         auto& e=draw_infos[i];
@@ -1017,7 +1018,7 @@ namespace GUI
                         {
                             e.elem->draw_after(c);
                         }
-                    }
+                    }          
 					 	
 
 
@@ -1025,7 +1026,7 @@ namespace GUI
 				 	renderer.flush(c);
 		
 				 }
-                		
+                		                              
 	
 			 });
 

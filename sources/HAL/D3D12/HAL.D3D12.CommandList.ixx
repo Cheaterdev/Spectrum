@@ -56,6 +56,9 @@ void dispatch_graph(ResourceAddress addr);
 			void dispatch_rays(uint hit_size, uint miss_size, uint raygen_sige, ivec2 size, HAL::ResourceAddress hit_buffer, UINT hit_count, HAL::ResourceAddress miss_buffer, UINT miss_count, HAL::ResourceAddress raygen_buffer);
 			void set_name(std::wstring_view name);
 
+
+			void discard(const  HAL::Resource* resource);
+
 			void set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler);
 			void insert_time(const QueryHandle& handle, uint offset);
 			void resolve_times(const QueryHeap* pQueryHeap, uint32_t NumQueries, ResourceAddress destination);

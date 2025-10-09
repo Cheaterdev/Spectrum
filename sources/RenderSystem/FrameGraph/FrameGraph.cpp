@@ -130,7 +130,7 @@ namespace FrameGraph
 		current_pass = nullptr;
 	}
 
-	void TaskBuilder::pass_texture(std::string name, HAL::Texture::ptr tex, ResourceFlags flags)
+	void TaskBuilder::pass_texture(std::string name, HAL::Texture::ptr tex, HAL::FenceWaiter fence, ResourceFlags flags)
 	{
 		auto tex_desc = tex->get_desc().as_texture();
 		if (tex_desc.is2D())
@@ -141,6 +141,7 @@ namespace FrameGraph
 			info.passed = true;
 
 			info.resource = tex->resource;
+			info.fence = fence;
 			info.d3ddesc = tex->get_desc();
 			passed_resources.insert(&info);
 
@@ -161,6 +162,7 @@ namespace FrameGraph
 
 			info.resource = tex->resource;
 			info.d3ddesc = tex->get_desc();
+			info.fence = fence;
 			passed_resources.insert(&info);
 
 			h.desc.format = tex->get_desc().as_texture().Format;
@@ -232,6 +234,7 @@ namespace FrameGraph
 				if (!info->enabled)
 					continue;
 
+				list->discard(info->resource.get());
 			//	list->alias_begin(info->resource.get());
 			}
 		}
@@ -583,14 +586,22 @@ namespace FrameGraph
 	}
 
 
-	void Graph::commit_command_lists()
+	HAL::FenceWaiter Graph::commit_command_lists()
 	{
+
+		HAL::FenceWaiter result;
 		{
 			PROFILE(L"wait");
 
 			for (auto& pass : builder.enabled_passes)
 			{
 				pass->wait();
+
+				for (auto fence : pass->used.fences)
+				{
+					//	HAL::Device::get().get_queue(list_type)->gpu_wait(fence);
+					fence.wait();
+				}
 			}
 
 
@@ -658,6 +669,7 @@ namespace FrameGraph
 				{
 					auto& info = pair.second;
 					if (!info.enabled) continue;
+					if (!info.passed) continue;
 
 					auto& resource = info.resource;
 
@@ -811,6 +823,7 @@ namespace FrameGraph
 						if (!commandList) continue;
 
 						tasks.emplace_back(scheduler::get().enqueue([commandList, pass]() {
+							PROFILE(L"pass_compile");
 							commandList->compile();
 							}, std::chrono::steady_clock::now()));
 
@@ -858,9 +871,14 @@ namespace FrameGraph
 									queued_state[list_type].max(sync_pass);
 
 								}
+
+
+								
 							}
 
 							pass->fence_end = commandList->execute();
+
+							result = pass->fence_end;
 						}
 						else
 						{
@@ -894,7 +912,7 @@ namespace FrameGraph
 			}
 
 		}
-
+		return result;
 	}
 
 	void Graph::reset()
@@ -942,6 +960,10 @@ namespace FrameGraph
 		info.flags = info.flags | flags;
 		info.add_pass(current_pass, flags);
 
+		if (info.fence)
+		{
+			current_pass->used.fences.emplace_back(info.fence);
+		}
 	}
 
 

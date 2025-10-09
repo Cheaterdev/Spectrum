@@ -33,6 +33,8 @@ namespace HAL
 				desc.Buffer.StructureByteStride = Buffer.StructureByteStride;
 				desc.Buffer.Flags = Buffer.Raw ? D3D12_BUFFER_SRV_FLAG_RAW : D3D12_BUFFER_SRV_FLAG_NONE;
 
+				auto& bdesc = view.Resource->get_desc();
+			
 				assert(Buffer.StructureByteStride == 0 || view.Format == Format::UNKNOWN);
 			},
 			[&](const Views::ShaderResource::Texture1D& Texture1D) {

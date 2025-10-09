@@ -30,8 +30,8 @@ export namespace HAL
 		SwapChain(Device& device, swap_chain_desc c_desc);
 		void present(FenceWaiter event_time);
 		UINT m_frameIndex;
-
-		void start_next();
+		FenceWaiter get_fence();
+				 
 		const std::shared_ptr<Texture>& get_current_frame();
 		const std::shared_ptr<Texture>& get_prev_frame();
 		void resize(ivec2 size);

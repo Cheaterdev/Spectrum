@@ -14,7 +14,7 @@ using namespace FrameGraph;
 using namespace HAL;
 
 extern "C" {
-	_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 616;
+	_declspec(dllexport) extern const unsigned int D3D12SDKVersion = 618;
 }
 
 extern "C" {
@@ -881,11 +881,33 @@ public:
 		Application::get().shutdown();
 	}
 
+	 void render2()
+	{
+		if (swap_chain) swap_chain->resize(new_size);
+		swap_chain->wait_for_free();
+
+		auto command_list= (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+		command_list->begin();
+		{
+			RT::SingleColor rt;
+			rt.GetColor() = swap_chain->get_current_frame()->texture_2d().renderTarget;
+			command_list->get_graphics().set_rtv(rt, RTOptions::ClearColor);
+		}
+
+		command_list->transition_present(swap_chain->get_current_frame()->resource.get());
+		//command_list->get_graphics().clear_rtv(swap_chain->get_current_frame()->texture_2d().renderTarget, float4(1, 0, 0, 1));
+
+		command_list->end();
+		auto fence = command_list->execute();
+
+
+		swap_chain->present(fence);
+	}
+
 	virtual void render()
 	{
 		if (swap_chain) swap_chain->resize(new_size);
-
-
+		swap_chain->wait_for_free();
 		{
 			std::lock_guard<std::mutex> g(m);
 
@@ -933,24 +955,21 @@ public:
 
 
 			process_ui((float)main_timer.tick());
-			{
-				PROFILE(L"Wait next");
-
-				swap_chain->start_next();
-			}
+		
 
 			setup_graph();
-
 			graph.render();
 
-			swap_chain->wait_for_free();
-			graph.commit_command_lists();
+			
+			auto fence = graph.commit_command_lists();
 			{
 				PROFILE(L"reset");
-
 				graph.reset();
 			}
-			swap_chain->present(HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal());
+
+			swap_chain->present(fence);	 
+	
+
 		}
 
 
@@ -979,13 +998,13 @@ public:
 		};
 
 		graph.start_new_frame();
-		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame());
-		graph.builder.pass_texture("swapchain_prev", swap_chain->get_prev_frame());
+		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame(), swap_chain->get_fence());
+		//graph.builder.pass_texture("swapchain_prev", swap_chain->get_prev_frame());
 
 
 		{
 			PROFILE(L"create_graph");
-			create_graph(graph);
+		create_graph(graph);
 
 
 			auto ptr = get_ptr();
@@ -1142,7 +1161,7 @@ public:
 				drawer.reset(new triangle_drawer());
 				drawer->docking = GUI::dock::FILL;
 
-				d->get_tabs()->add_page("Game", drawer);
+			//	d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
 

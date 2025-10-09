@@ -7,7 +7,7 @@
 #include <directx\dxgiformat.h>
 
 
-#include <dxgi1_5.h>
+#include <dxgi1_6.h>
 #include <DirectXTex.h>
 #include <dstorage.h>
 #undef OPAQUE

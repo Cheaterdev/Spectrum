@@ -287,8 +287,8 @@ namespace Spectrum
             conf.Options.Add(Options.Vc.General.CharacterSet.Unicode);
             conf.Options.Remove(Options.Vc.General.WarningLevel.Level3);		 // hate warnings, love errors    
             conf.Options.Add(Options.Vc.General.WarningLevel.Level0);        // hate warnings, love errors
-            conf.Options.Remove(Options.Vc.Compiler.CppLanguageStandard.Latest);
-            conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.CPP14);
+          //  conf.Options.Remove(Options.Vc.Compiler.CppLanguageStandard.Latest);
+          //  conf.Options.Add(Options.Vc.Compiler.CppLanguageStandard.CPP14);
 
 
             conf.VcxprojUserFile = new Project.Configuration.VcxprojUserFileSettings();

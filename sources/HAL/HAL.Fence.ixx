@@ -30,6 +30,7 @@ export namespace HAL
 	{
 		Fence* fence = nullptr;
 		Fence::CounterType value = 0;
+		HAL::CommandListType invoker;
 		operator bool()
 		{
 			return !!fence;
@@ -58,7 +59,10 @@ export namespace HAL
 			if(fence)
 			assert(fence==other.fence);
 			else
-				fence= other.fence;
+			{
+				fence = other.fence;
+				invoker = other.invoker;
+			}
 			if(fence)
 			value=std::max(value,other.value);
 		}

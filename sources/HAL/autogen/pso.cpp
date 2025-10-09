@@ -21,7 +21,7 @@ void init_indirect_commands(HAL::Device& device, enum_array<IndirectCommands, HA
 
 void init_pso(HAL::Device& device, enum_array<PSO, PSOBase::ptr>& pso)
 {
-	std::vector<task<void>> tasks;
+	std::list<task<void>> tasks;
 	tasks.emplace_back(PSOBase::create<PSOS::BlueNoise>(device, pso[PSO::BlueNoise]));
 	tasks.emplace_back(PSOBase::create<PSOS::BRDF>(device, pso[PSO::BRDF]));
 	tasks.emplace_back(PSOBase::create<PSOS::DenoiserReflectionReproject>(device, pso[PSO::DenoiserReflectionReproject]));

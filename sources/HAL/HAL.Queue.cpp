@@ -39,14 +39,14 @@ namespace HAL
 		const UINT64 fence = ++m_fenceValue;
 		 API::Queue::signal(commandListCounter, fence);
 
-		 return FenceWaiter{ &commandListCounter, fence };
+		 return FenceWaiter{ &commandListCounter, fence, type};
 	}
 
 	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
 	{
 		std::unique_lock<std::mutex> lock(queue_mutex);
 		API::Queue::signal(fence, value);
-		return FenceWaiter{ &fence, value };
+		return FenceWaiter{ &fence, value , type };
 	}
 
 	std::shared_ptr<CommandList> Queue::get_free_list()

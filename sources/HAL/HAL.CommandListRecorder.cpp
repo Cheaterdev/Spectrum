@@ -34,6 +34,14 @@ namespace HAL
 		compiled = true;
 	}
 
+	void DelayedCommandList::discard(const  HAL::Resource* resource)
+	{
+		tasks.emplace_back([=](API::CommandList& list) {
+			list.discard(resource);
+			});
+
+	}
+
 	void DelayedCommandList::func(std::function<void(API::CommandList&)> f)
 	{
 		tasks.emplace_back(f);
