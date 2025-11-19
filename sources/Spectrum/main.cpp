@@ -676,6 +676,7 @@ public:
 											  }
 
 										  }
+										  if( res.DispatchCount)
 										  compute.dispatch_graph(ep.compile());
 
 
@@ -893,10 +894,10 @@ public:
 			rt.GetColor() = swap_chain->get_current_frame()->texture_2d().renderTarget;
 			command_list->get_graphics().set_rtv(rt, RTOptions::ClearColor);
 		}
+	//	command_list->get_graphics().clear_rtv(swap_chain->get_current_frame()->texture_2d().renderTarget, float4(1, 0, 0, 1));
 
 		command_list->transition_present(swap_chain->get_current_frame()->resource.get());
-		//command_list->get_graphics().clear_rtv(swap_chain->get_current_frame()->texture_2d().renderTarget, float4(1, 0, 0, 1));
-
+	
 		command_list->end();
 		auto fence = command_list->execute();
 
@@ -914,8 +915,8 @@ public:
 			if (GetAsyncKeyState('R'))
 			{
 				HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->signal_and_wait();
-				HAL::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
-				HAL::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
+			//	HAL::Device::get().get_queue(HAL::CommandListType::COMPUTE)->signal_and_wait();
+			//	HAL::Device::get().get_queue(HAL::CommandListType::COPY)->signal_and_wait();
 
 				//   AssetManager::get().reload_resources();
 				HAL::pixel_shader::reload_all();
@@ -968,7 +969,6 @@ public:
 			}
 
 			swap_chain->present(fence);	 
-	
 
 		}
 
@@ -976,11 +976,11 @@ public:
 		if (Application::get().is_alive())
 		{
 			auto ptr = get_ptr();
-			task_future = scheduler::get().enqueue([ptr, this]()
+			task_future = thread_pool::get().enqueue([ptr, this]()
 				{
 					render();
-					std::this_thread::yield();
-				}, std::chrono::steady_clock::now());
+			
+				});
 		}
 	}
 
@@ -1026,7 +1026,7 @@ public:
 						//HAL::Device::get().get_time_manager().read_buffer(context.get_list(), [ptr, this]() {
 						//	run_on_ui([this, ptr]() {	Profiler::get().update(); });
 						//	});
-					}, PassFlags::Required);
+					}, PassFlags::Required);   
 		}
 
 		graph.setup();
@@ -1161,7 +1161,7 @@ public:
 				drawer.reset(new triangle_drawer());
 				drawer->docking = GUI::dock::FILL;
 
-			//	d->get_tabs()->add_page("Game", drawer);
+				d->get_tabs()->add_page("Game", drawer);
 				EVENT("End Drawer");
 			}
 

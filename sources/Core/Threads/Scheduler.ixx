@@ -1,3 +1,7 @@
+module;
+   #include <Core_defs.h>
+	  #include "BS_thread_pool.hpp" // BS::thread_pool
+
 export module Core:Scheduler;
 
 import :Profiling;
@@ -5,8 +9,11 @@ import :Threading;
 import :Singleton;
 import ppl;
 using namespace concurrency;
+		using namespace std;
+
 
 export
+
 {
 
 enum class TaskPriority : int
@@ -28,7 +35,7 @@ public:
 		->std::future<typename std::invoke_result<F>::type>;
 
 private:
-
+	   BS::thread_pool pool; 
 	explicit thread_pool();
 	virtual    ~thread_pool();
 
@@ -48,17 +55,10 @@ auto thread_pool::enqueue(F&& f)
 -> std::future<typename std::invoke_result<F>::type>
 {
 	if (stop) throw std::exception("wtf");
-	using return_type = typename std::invoke_result<F>::type;
 
-	auto task = std::make_shared< std::packaged_task<return_type()> >(
-		std::bind(std::forward<F>(f)/*, std::forward<Args>(args)...*/)
-		);
-
-	std::future<return_type> res = task->get_future();
-
-
-	create_task([task]() {(*task)(); });
-	return res;
+		PROFILE(L"future");
+	
+	return  pool.submit_task(f);
 }
 
 // the destructor joins all threads
@@ -179,6 +179,12 @@ class scheduler : public Singleton<scheduler>
 		thread_pool::reset();
 	}
 public:
+				  template<class F, class... Args>
+	auto enqueue_now(F&& f, Args&& ... args)
+		->std::future<typename std::invoke_result<F>::type>
+	{
+			return  thread_pool::get().enqueue(f);
+	}
 
 	template<class F, class... Args>
 	auto enqueue(F&& f, std::chrono::steady_clock::time_point time, Args&& ... args)

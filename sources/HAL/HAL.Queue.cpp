@@ -83,6 +83,8 @@ namespace HAL
 
 	void Queue::signal_and_wait()
 	{
+					PROFILE(L"signal_and_wait");
+                  
 		std::promise<int> promise;
 		auto result = promise.get_future();
 
@@ -187,6 +189,11 @@ namespace HAL
 				PROFILE(L"execute_simple");
 				API::Queue::execute(&list->compiler.get_list());
 		}
+
+		// Alias warnings in the same execute scope
+			flush();
+
+
 	//	Log::get() << Log::LEVEL_ERROR<< "Send " << list->name << Log::endl;
 
 		const FenceWaiter execution_fence = signal_internal();

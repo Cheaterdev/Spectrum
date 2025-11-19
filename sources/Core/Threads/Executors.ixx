@@ -7,6 +7,8 @@ import :Singleton;
 import <stl/core.h>;
 import <stl/threading.h>;
 
+#include <Core_defs.h>
+
 import ppl;
 using namespace concurrency;
 
@@ -118,9 +120,13 @@ void SingleThreadExecutor::stop_and_wait()
 
 void SingleThreadExecutor::run()
 {
+		PROFILE(L"SingleThreadExecutor::run()");
+                  
 	std::function<void()> n;
 	while ((n = receive(*this)) != nullptr)
 	{
+		PROFILE(L"work");
+       
 		n();
 	}
 

@@ -53,7 +53,7 @@ namespace HAL
 				const auto& props = device->get_properties();
 
 
-				if (props.mesh_shader && props.full_bindless&&(std::wstring(adapter_desc.Description).find(L"Basic")==std::wstring::npos) )
+				if (result==nullptr && props.mesh_shader && props.full_bindless&&(std::wstring(adapter_desc.Description).find(L"Basic")==std::wstring::npos) )
 				{
 					
 					Log::get() << "Selecting adapter: " << adapter_desc.Description << Log::endl;

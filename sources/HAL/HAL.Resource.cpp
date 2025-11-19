@@ -18,15 +18,18 @@ import Core;
 
 namespace HAL
 {
-	Resource::ptr create_resource(const HAL::ResourceDesc& desc, ResourceHandle heap_type)
+	Resource::ptr create_resource(const HAL::ResourceDesc& desc, ResourceHandle handle)
 	{
+		PROFILE(L"create_resource handle");
+
 		if (desc.is_buffer())
-			return std::make_shared<HAL::Buffer>(desc, heap_type);
-		return std::make_shared<TextureResource>(desc, heap_type);
+			return std::make_shared<HAL::Buffer>(desc, handle);
+		return std::make_shared<TextureResource>(desc, handle);
 	}
 
 	Resource::ptr create_resource(const HAL::ResourceDesc& desc, HeapType heap_type)
 	{
+		PROFILE(L"create_resource heap_type");
 		if (desc.is_buffer())
 			return std::make_shared<HAL::Buffer>(desc, heap_type);
 		return std::make_shared<TextureResource>(desc, heap_type);

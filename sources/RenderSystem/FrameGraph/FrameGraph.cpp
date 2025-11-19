@@ -822,15 +822,14 @@ namespace FrameGraph
 						auto commandList = pass->context.list;
 						if (!commandList) continue;
 
-						tasks.emplace_back(scheduler::get().enqueue([commandList, pass]() {
+						tasks.emplace_back(thread_pool::get().enqueue([commandList, pass]() {
 							PROFILE(L"pass_compile");
 							commandList->compile();
-							}, std::chrono::steady_clock::now()));
-
-
+							}));
+							
 					}
 
-
+					PROFILE(L"waiting tasks");
 					for (auto& t : tasks)
 					{
 						t.wait();

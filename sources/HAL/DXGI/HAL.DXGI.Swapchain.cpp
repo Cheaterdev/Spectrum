@@ -26,7 +26,7 @@ namespace HAL
 		swapChainDesc.BufferCount = 2 + static_cast<int>(swapChainDesc.Stereo);
 		swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 
-		swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+		//swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 		
 		ComPtr<IDXGISwapChain1> swapChain;
 		HRESULT res = HAL::Adapters::get().get_factory()->CreateSwapChainForHwnd(
@@ -41,7 +41,7 @@ namespace HAL
 		frames.resize(desc.BufferCount);
 		on_change();
 
-		swapchain_waiter = m_swapChain->GetFrameLatencyWaitableObject();
+	//	swapchain_waiter = m_swapChain->GetFrameLatencyWaitableObject();
 
 		//DWORD result = WaitForSingleObjectEx(
 		//	swapchain_waiter,
@@ -54,12 +54,12 @@ namespace HAL
 	{
 
 		//{
-	//		device.get_queue(CommandListType::DIRECT)->signal_and_wait();
+			//device.get_queue(CommandListType::DIRECT)->signal_and_wait();
 			//device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
-		//	device.get_queue(CommandListType::COPY)->signal_and_wait();
+			//device.get_queue(CommandListType::COPY)->signal_and_wait();
 		//}
 
-	//	device.get_queue(CommandListType::DIRECT)->gpu_wait(event_time);
+		//device.get_queue(CommandListType::DIRECT)->gpu_wait(event_time);
 	//	device.get_queue(CommandListType::COMPUTE)->gpu_wait(event_time);
 	//	device.get_queue(CommandListType::COPY)->gpu_wait(event_time);
 		//frames[m_frameIndex].fence_event = event_time;
@@ -73,11 +73,11 @@ namespace HAL
 		//device.get_queue(CommandListType::DIRECT)->signal_and_wait();
 		//frames[m_frameIndex].fence_event.wait();
 		// 
-		DWORD result = WaitForSingleObjectEx(
+	/*	DWORD result = WaitForSingleObjectEx(
 			swapchain_waiter,
 			1000, // 1 second timeout (shouldn't ever occur)
 			true
-		);
+		);		 */
 //		device.get_queue(CommandListType::DIRECT)->signal_and_wait();
 	//		device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
 	//		device.get_queue(CommandListType::COPY)->signal_and_wait();
@@ -92,6 +92,7 @@ namespace HAL
 			m_swapChain->GetBuffer(n, IID_PPV_ARGS(&render_target));
 			frames[n].m_renderTarget.reset(new Texture(render_target, TextureLayout::PRESENT));
 			frames[n].m_renderTarget->resource->set_name(std::string("swap_chain_") + std::to_string(n));
+			frames[n].m_renderTarget->resource->debug=true;
 		}
 	}
 

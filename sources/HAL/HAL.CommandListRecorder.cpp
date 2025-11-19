@@ -1,4 +1,6 @@
-﻿module HAL:CommandListRecorder;
+﻿module;
+#include <Core_defs.h>
+module HAL:CommandListRecorder;
 
 
 import :Autogen;
@@ -24,9 +26,13 @@ namespace HAL
 	{
 		list.begin(allocator);
 		list.set_name(name);
-		for (auto& f : tasks)
+
 		{
-			f(list);
+			PROFILE(L"tasks");
+			for (auto& f : tasks)
+			{
+				f(list);
+			}
 		}
 
 		list.end();
@@ -44,7 +50,10 @@ namespace HAL
 
 	void DelayedCommandList::func(std::function<void(API::CommandList&)> f)
 	{
-		tasks.emplace_back(f);
+		tasks.emplace_back([=](API::CommandList& list) {
+			PROFILE(L"universal_func");
+			f(list);
+			});
 	}
 
 	void DelayedCommandList::clear_uav(const UAVHandle& h, vec4 ClearColor)
@@ -98,23 +107,23 @@ namespace HAL
 
 	void DelayedCommandList::set_name(std::wstring_view name)
 	{
-		this->name=name;
+		this->name = name;
 	}
 
 
-	
-				void DelayedCommandList::set_program(StateObject* id, ResourceAddress buffer, uint size, bool init)
-				{
-					tasks.emplace_back([=](API::CommandList& list) {
-			list.set_program(id,buffer,size,init );
+
+	void DelayedCommandList::set_program(StateObject* id, ResourceAddress buffer, uint size, bool init)
+	{
+		tasks.emplace_back([=](API::CommandList& list) {
+			list.set_program(id, buffer, size, init);
 			});
-				}
-void DelayedCommandList::dispatch_graph(ResourceAddress addr)
-{
+	}
+	void DelayedCommandList::dispatch_graph(ResourceAddress addr)
+	{
 		tasks.emplace_back([=](API::CommandList& list) {
 			list.dispatch_graph(addr);
 			});
-}
+	}
 
 
 	void DelayedCommandList::set_descriptor_heaps(DescriptorHeap* cbv, DescriptorHeap* sampler)

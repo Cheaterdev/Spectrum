@@ -355,7 +355,8 @@ export {
 		HAL::ResourceAddress compile() const
 		{
 								
-			
+			if(records.empty())
+				return 	HAL::ResourceAddress{};
 
 			auto id_rec_data = context->place_data(sizeof(D3D12_NODE_GPU_INPUT) * records.size(), 256);
 

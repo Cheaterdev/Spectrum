@@ -10,23 +10,26 @@ export namespace GUI
 		{
 			struct block_data
 			{
-				TimedBlock *block;
+				//TimedBlock *block;
 				std::chrono::time_point<std::chrono::high_resolution_clock> start_time;
 				std::chrono::time_point<std::chrono::high_resolution_clock> end_time;
 
 				std::thread::id native_id;
 				size_t thread_id;
+		
+				uint depth;
+				std::wstring name;
 			};
 
 
 			struct gpu_block_data
 			{
-				TimedBlock *block;
-
+				//TimedBlock *block;
+				uint depth;
 				double start_time;
 				double end_time;
 				HAL::CommandListType queue_type;
-
+				std::wstring name;
 			};
 			struct collected_data
 			{

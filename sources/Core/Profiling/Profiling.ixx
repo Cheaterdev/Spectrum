@@ -105,11 +105,11 @@ public:
 	std::wstring get_name() const override;
 
 	CPUCounter cpu_counter;
+	  TimedBlock(std::wstring_view name);
 
 protected:
 	
-	TimedBlock(std::wstring_view name);
-
+	
 	bool test = false;
 	void update();
 private:
@@ -219,7 +219,8 @@ public:
 
 }
 
-thread_local TimedBlock* Profiler::current_block = nullptr;
+thread_local 		  TimedBlock root_block(L"thread");
+thread_local TimedBlock* Profiler::current_block = &root_block;
 
 
 Timer::Timer(Timer&& t) : block(t.block), root(t.root)
@@ -265,11 +266,11 @@ Timer Profiler::start(std::wstring_view name)
 	if (!enabled)
 		return Timer(nullptr, nullptr);
 
-	m.lock();
+	//m.lock();
 	TimedBlock* block = current_block;
 	if (!block)
 		block = this;
-	m.unlock();
+	//m.unlock();
 
 	return Timer(&block->get_child(name), this);
 }

@@ -33,12 +33,12 @@ namespace GUI
 				add_child(name_lbl);
 
 
-				name_lbl->text = convert(data->block->get_name());
+				name_lbl->text = convert(data->name);
 
 				texture = Skin::get().Background;
 				texture.padding = {2,2,2,2 };
 
-				name = data->block->get_name();
+				name = data->name;
 
 
 		//		get_label()->text = convert(name);
@@ -64,8 +64,8 @@ namespace GUI
 				texture = Skin::get().Background;
 				texture.padding = {2,2,2,2};
 
-				name_lbl->text = convert(data->block->get_name());
-				name = data->block->get_name();
+				name_lbl->text = convert(data->name);
+				name = data->name;
 
 				start_time = data->start_time;
 					end_time = data->end_time;
@@ -128,35 +128,29 @@ namespace GUI
 				end = std::chrono::high_resolution_clock::now();
 				run_on_ui([this]() {
 
-						std::map<std::thread::id, size_t> threads;
-						std::map<TimedBlock*, size_t> thread_ids;
+						
+						std::map<std::thread::id, size_t> thread_ids;
 
 						int blocks_size = data.block_id;
 						int gpu_blocks_size = data.gpu_block_id;
+
 					for (int i=0;i< blocks_size;i++)
 					{
 						auto& block = data.blocks[i];
 
-						auto& thread_id = thread_ids[block.block];
-
-						//	if (thread_id == 0)
+						if(thread_ids.count(block.native_id)==0)
 						{
-							auto& id2 = threads[block.native_id];
-							if (id2 == 0)
-								id2 = threads.size();
-							thread_id = id2;
-
-							block.thread_id = thread_id;
-							thread_ids[block.block] = thread_id;
+							thread_ids[block.native_id] = thread_ids.size()+1;
 						}
 
+						block.thread_id = thread_ids[block.native_id];
 					}
 
 
 					
 
 
-					std::vector<base::ptr> thread_backs(threads.size());
+					std::vector<base::ptr> thread_backs(thread_ids.size());
 
 
 					for (auto&&e : thread_backs)
@@ -193,7 +187,7 @@ namespace GUI
 						auto& block = data.blocks[i];
 
 						GraphElement::ptr obj(new GraphElement(&block));
-						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - start).count(), 25 * (block.block->calculate_depth() - 1) };
+						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - start).count(), 25 * (block.depth) };
 						obj->size = { scaler * std::chrono::duration<double>(block.end_time - block.start_time).count() ,25 };
 
 						thread_backs[block.thread_id - 1]->add_child(obj);
@@ -226,7 +220,7 @@ namespace GUI
 						GraphElement::ptr obj(new GraphElement(&block));
 
 						double gpu_start = double(clock_info[block.queue_type].gpu_time) / clock_info[block.queue_type].frequency;
-						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - gpu_start).count(),  25 * (block.block->calculate_depth() - 1) };
+						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - gpu_start).count(),  25 * (block.depth) };
 						obj->size = { scaler * std::chrono::duration<double>((block.end_time - block.start_time)).count() ,25 };
 
 
@@ -317,7 +311,10 @@ namespace GUI
 						assert(my_id < 4096 * 256);
 						auto& data = this->data.gpu_blocks[my_id];
 
-						data.block = p.first;
+						//data.block = p.first;
+
+						data.name = p.first->get_name();
+						data.depth = p.first->calculate_depth();
 
 						auto freq = clock_info[timer.queue_type].frequency;
 
@@ -352,9 +349,12 @@ namespace GUI
 					assert(my_id < 4096*128);
 					auto &data = this->data.blocks[my_id];
 
+						data.name = block->get_name();
+						data.depth = block->calculate_depth();
+
 					block->id = my_id;
 					data.native_id = std::this_thread::get_id();
-					data.block = block;
+				//	data.block = block;
 					data.start_time = block->cpu_counter.start_time;
 
 					/*

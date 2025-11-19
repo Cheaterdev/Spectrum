@@ -127,18 +127,18 @@ uint64 CommonAllocator::merge_prev(uint64 start)
 
 	if (prev_free != fences.end())
 	{
-		auto& prev_block = prev_free->second;
+		block prev_block = *prev_free->second;
 	
 
-		uint64 result = prev_block->begin;
+		uint64 result = prev_block.begin;
 
 
 		auto it = std::find_if(free_blocks.begin(), free_blocks.end(), [&](const block& b) {
-			return		b.begin == prev_block->begin;
+			return		b.begin == prev_block.begin;
 			});
 
-			fences.erase(prev_block->begin);
-		fences.erase(prev_block->end);
+			fences.erase(prev_block.begin);
+		fences.erase(prev_block.end);
 		free_blocks.erase(it);
 
 	
@@ -157,16 +157,18 @@ uint64 CommonAllocator::merge_next(uint64 end)
 
 	if (next_free != fences.end())
 	{
-		auto& next_block = next_free->second;
+		block next_block = *next_free->second;
 		
-		uint64 result = next_block->end;
+		uint64 result = next_block.end;
 
 
 		auto it = std::find_if(free_blocks.begin(), free_blocks.end(), [&](const block& b) {
-			return		b.begin == next_block->begin;
+			return		b.begin == next_block.begin;
 			});
-		fences.erase(next_block->begin);
-		fences.erase(next_block->end);
+
+
+		fences.erase(next_block.begin);
+		fences.erase(next_block.end);
 		free_blocks.erase(it);
 
 

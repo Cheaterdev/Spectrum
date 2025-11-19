@@ -39,6 +39,7 @@ namespace HAL
 
 	void Queue::update_tile_mappings(const update_tiling_info& infos)
 	{
+		PROFILE(L"update_tile_mappings");
 		for (auto& [heap, tiles] : infos.tiles)
 		{
 			std::vector<D3D12_TILED_RESOURCE_COORDINATE> startCoordinates;
@@ -190,7 +191,7 @@ namespace HAL
 	}
 	HAL::FenceWaiter DirectStorageQueue::execute(StorageRequest srequest)
 	{
-
+									  	PROFILE(L"DirectStorageQueue::execute");
 		D3D::StorageFile file;
 
 		HRESULT hr = factory->OpenFile(srequest.file.wstring().c_str(), IID_PPV_ARGS(&file));
@@ -311,17 +312,20 @@ namespace HAL
 
 		void Queue::execute(const API::CommandList* list)
 		{
+				  	PROFILE(L"Queue::execute");
 			queued.emplace_back(list->get_native().Get());
 
-			// Alias warnings in the same execute scope
-			flush();
+			
 		}
 
 		void Queue::flush()
 		{
+				  	PROFILE(L"Queue::flush");
 			if (!queued.empty())
 			{
 				native->ExecuteCommandLists(queued.size(), queued.data());
+
+				  	PROFILE(L"Queue::clear");
 				queued.clear();
 			}
 		}
@@ -334,12 +338,14 @@ namespace HAL
 		void  Queue::gpu_wait(FenceWaiter waiter)
 		{
 			if (!waiter) return;
+			  	PROFILE(L"Queue::gpu_wait");
 			flush();
 			native->Wait(waiter.fence->m_fence.Get(), waiter.value);
 		}
 
 		void Queue::signal(Fence& fence, Fence::CounterType value)
 		{
+			  	PROFILE(L"Queue::signal");
 			flush();
 			native->Signal(fence.m_fence.Get(), value);
 		}

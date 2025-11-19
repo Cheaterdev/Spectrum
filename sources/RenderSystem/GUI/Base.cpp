@@ -956,7 +956,7 @@ namespace GUI
          };
 
       //   return;
-         uint per_thread = draw_infos.size();//  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
+         uint per_thread =  std::max(64u, ((uint)draw_infos.size() + 7) / 8);
 
          uint start = 0; uint end = 0;
          uint t = 0;
