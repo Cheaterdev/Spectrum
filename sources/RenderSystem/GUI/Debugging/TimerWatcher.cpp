@@ -1,6 +1,5 @@
 module GUI:Debug.TimerWatcher;
-
-
+			/*
 //#include "GUI/Elements/Image.h"
 
 void GUI::Elements::Debug::TimedLabel::think(float dt)
@@ -71,3 +70,4 @@ void GUI::Elements::Debug::TimeCreator::init_element(tree_element<TimedBlock>* t
 GUI::Elements::Debug::TimerWatcher::TimerWatcher(): GUI::Elements::tree<TimedBlock>(tree_creator<TimedBlock>::ptr(new TimeCreator))
 {
 }
+							 */

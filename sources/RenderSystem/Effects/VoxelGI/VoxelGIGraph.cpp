@@ -808,6 +808,9 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 		Handlers::StructuredBuffer<uint2> H(VoxelScreen_low_data);
 		Handlers::StructuredBuffer<uint2> H(VoxelScreen_hi_data);
+
+			Handlers::Texture3D H(VoxelLighted);
+
 	};
 	auto& frame = graph.get_context<ViewportInfo>();
 
@@ -823,6 +826,10 @@ void VoxelGI::screen_reflection(Graph& graph)
 		data.gbuffer.need(builder, false);
 		//	data.downsampled_reflection = builder.create("downsampled_reflection", ivec2(size.x / 2, size.y / 2), 1, HAL::Format::R11G11B10_FLOAT, ResourceFlags::RenderTarget);
 		builder.need(data.sky_cubemap_filtered, ResourceFlags::PixelRead);
+
+					builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
+
+
 		}, [this, &graph](ScreenReflection& data, FrameContext& _context) {
 
 			auto& command_list = _context.get_list();
@@ -1103,6 +1110,12 @@ void VoxelGI::voxelize(Graph& graph)
 		Handlers::Texture H(VoxelAlbedo);
 		Handlers::Texture H(VoxelNormal);
 
+
+		Handlers::Texture H(VoxelAlbedoStatic);
+		Handlers::Texture H(VoxelNormalStatic);
+
+		Handlers::Texture H(VoxelAlbedoDynamic);
+		Handlers::Texture H(VoxelNormalDynamic);
 	};
 
 	graph.add_pass<Voxelize>("voxelize", [this](Voxelize& data, TaskBuilder& builder) {
@@ -1110,6 +1123,12 @@ void VoxelGI::voxelize(Graph& graph)
 
 		builder.need(data.VoxelAlbedo, ResourceFlags::UnorderedAccess);
 		builder.need(data.VoxelNormal, ResourceFlags::UnorderedAccess);
+
+		builder.need(data.VoxelAlbedoStatic, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelNormalStatic, ResourceFlags::UnorderedAccess);
+
+		builder.need(data.VoxelAlbedoDynamic, ResourceFlags::UnorderedAccess);
+		builder.need(data.VoxelNormalDynamic, ResourceFlags::UnorderedAccess);
 
 		}, [this, &graph](Voxelize& data, FrameContext& _context) {
 			auto& command_list = _context.get_list();
@@ -1149,6 +1168,12 @@ void VoxelGI::lighting(Graph& graph)
 		Handlers::Texture3D H(VoxelAlbedo);
 		Handlers::Texture3D H(VoxelNormal);
 		Handlers::Cube H(sky_cubemap_filtered);
+
+			Handlers::Texture H(VoxelAlbedoStatic);
+		Handlers::Texture H(VoxelNormalStatic);
+
+		Handlers::Texture H(VoxelAlbedoDynamic);
+		Handlers::Texture H(VoxelNormalDynamic);
 	};
 
 
@@ -1162,6 +1187,13 @@ void VoxelGI::lighting(Graph& graph)
 		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
 		builder.need(data.VoxelAlbedo, ResourceFlags::ComputeRead);
 		builder.need(data.VoxelNormal, ResourceFlags::ComputeRead);
+
+
+				builder.need(data.VoxelAlbedoStatic, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelNormalStatic, ResourceFlags::ComputeRead);
+
+		builder.need(data.VoxelAlbedoDynamic, ResourceFlags::ComputeRead);
+		builder.need(data.VoxelNormalDynamic, ResourceFlags::ComputeRead);
 
 
 		}, [this, &graph](auto& data, FrameContext& _context) {
@@ -1344,6 +1376,13 @@ void VoxelGI::generate(Graph& graph)
 	graph.builder.pass_texture("VoxelAlbedo", albedo.tex_result);
 	graph.builder.pass_texture("VoxelNormal", normal.tex_result);
 	graph.builder.pass_texture("VoxelLighted", tex_lighting.tex_result);
+
+
+	graph.builder.pass_texture("VoxelAlbedoStatic", albedo.tex_static);
+	graph.builder.pass_texture("VoxelNormalStatic", normal.tex_static);
+
+	graph.builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic);
+	graph.builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic);
 
 	Slots::VoxelInfo& voxel_info = scene->voxel_info;
 

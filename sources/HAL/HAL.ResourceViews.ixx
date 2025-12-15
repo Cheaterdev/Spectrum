@@ -770,7 +770,7 @@ export
 
 			{
 
-
+										resource->set_name("StructuredBufferView");
 				auto& res_desc = get_desc().as_buffer();
 
 				desc.offset = 0;

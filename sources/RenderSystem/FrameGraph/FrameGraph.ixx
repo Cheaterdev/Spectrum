@@ -4,6 +4,7 @@ export import "defines.h";
 import Core;
 import HAL;
 import <HAL.h>;
+
 using namespace HAL;
  export namespace FrameGraph
 {
@@ -79,7 +80,7 @@ using namespace HAL;
 
 		virtual void init(ResourceAllocInfo& info) = 0;
 
-		virtual void init_view(ResourceAllocInfo& info, HAL::FrameResources& frame) = 0;
+		virtual void init_view(ResourceAllocInfo& info, GPUEntityStorageInterface& frame) = 0;
 	};
 
 
@@ -94,7 +95,12 @@ using namespace HAL;
 		std::set<ResourceAllocInfo*> resources;
 		std::map<ResourceAllocInfo*, ResourceFlags> resource_flags;
 		std::set<ResourceAllocInfo*> resource_creations;
-			std::set<ResourceAllocInfo*> resource_deletions;
+
+
+		std::set<ResourceAllocInfo*> resource_deletions_before;
+		std::set<ResourceAllocInfo*> resource_deletions_after;
+
+
 	};
 
 
@@ -110,9 +116,10 @@ using namespace HAL;
 		void set_synced(const Pass* pass);
 	
 		bool is_in_sync(const Pass* pass,bool equal = false);
-		bool is_in_sync(const SyncState&state);
+		bool is_in_sync(const SyncState&state, bool equal = false);
 
-		bool is_sync_to(const SyncState&state);
+		//bool is_sync_to(const SyncState&state);
+			bool is_sync_to(const Pass* pass,bool equal = false);
 
 
 			void min(const Pass*pass);
@@ -158,6 +165,10 @@ using namespace HAL;
 		SyncState used_end;
 
 
+		bool is_static() const { return check(flags&ResourceFlags::Static);}
+		bool is_dynamic() const { return !check(flags&ResourceFlags::Static);}
+
+
 		bool enabled = true;
 
 		bool is_new = false;
@@ -165,12 +176,29 @@ using namespace HAL;
 		std::vector<ResourceRWState> states;
 		int last_writer;
 		//compile
-		std::map<HAL::ResourceHandle, HAL::Resource::ptr> resource_places;
+
+		struct CompiledResource
+		{
+			HAL::Resource::ptr resource;
+			std::shared_ptr<HAL::ResourceView> view;
+
+			operator bool()
+			{
+			return !!resource;
+			
+			}
+		};
+
+		std::map<HAL::ResourceHandle,CompiledResource> resource_places;
+		
 		HAL::Resource::ptr resource;
+		std::shared_ptr<HAL::ResourceView> view;
+			HAL::SubResourcesGPU creation_state;
+
+		HAL::SubResourcesGPU last_state;
 
 		std::shared_ptr<ResourceHandler> handler;
-		std::shared_ptr<HAL::ResourceView> view;
-
+	
 		bool passed = false;
 		HAL::FenceWaiter fence;
 		size_t frame_id;
@@ -264,9 +292,12 @@ using namespace HAL;
 			virtual void init(ResourceAllocInfo& info) override
 			{
 				info.d3ddesc = desc.create_resource_desc(info.flags);
+				
+			info.d3ddesc.Flags|=HAL::ResFlags::DisableStateTracking;
+
 			}
 
-			virtual void init_view(ResourceAllocInfo& info, HAL::FrameResources& frame) override
+			virtual void init_view(ResourceAllocInfo& info,GPUEntityStorageInterface& frame) override
 			{
 				info.init_view<View>(frame, desc.as_view(info.flags));
 			}
@@ -534,7 +565,9 @@ using namespace HAL;
 		HAL::FrameResourceManager frames;
 		HAL::FrameResources::ptr current_frame;
 
-	
+		StaticCompiledGPUData global_frame;
+		
+
 		Pass* current_pass = nullptr;
 		void begin(Pass* pass);
 
@@ -687,17 +720,23 @@ using namespace HAL;
 		FrameContext context;
 
 		SyncState sync_state;
+		 
+		SyncState sync_state_with_self;
+
+
 		std::set<Pass*> prev_passes;
 
 		std::set<Pass*> next_passes;
 		std::future<void> render_task;
+		 std::future<void> compile_task;
+
 		HAL::FenceWaiter fence_end;
 
 		int graphic_count = 0;
 		int compute_count = 0;
 		Pass* wait_pass = nullptr;
 
-
+		bool put_fence = false;
 		
 		Pass* prev_pass = nullptr;
 
@@ -826,7 +865,7 @@ using namespace HAL;
 		std::list<std::shared_ptr<Pass>> passes;
 
 	
-		Variable<bool> optimize = { false, "optimize", this };
+		Variable<bool> optimize = { true, "optimize", this };
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>
@@ -886,6 +925,7 @@ using namespace HAL;
 
 		HAL::FenceWaiter commit_command_lists();
 		void reset();
+
 	};
 
 	class GraphGenerator

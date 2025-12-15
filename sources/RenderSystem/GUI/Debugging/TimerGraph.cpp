@@ -187,7 +187,7 @@ namespace GUI
 						auto& block = data.blocks[i];
 
 						GraphElement::ptr obj(new GraphElement(&block));
-						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - start).count(), 25 * (block.depth) };
+						obj->pos = { scaler * std::chrono::duration<double>(block.start_time - start).count(), 25 * (block.depth-1) };
 						obj->size = { scaler * std::chrono::duration<double>(block.end_time - block.start_time).count() ,25 };
 
 						thread_backs[block.thread_id - 1]->add_child(obj);
@@ -314,7 +314,7 @@ namespace GUI
 						//data.block = p.first;
 
 						data.name = p.first->get_name();
-						data.depth = p.first->calculate_depth();
+						data.depth = p.first->level;
 
 						auto freq = clock_info[timer.queue_type].frequency;
 
@@ -350,7 +350,7 @@ namespace GUI
 					auto &data = this->data.blocks[my_id];
 
 						data.name = block->get_name();
-						data.depth = block->calculate_depth();
+						data.depth = block->level;
 
 					block->id = my_id;
 					data.native_id = std::this_thread::get_id();

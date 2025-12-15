@@ -16,10 +16,12 @@ namespace HAL
 	{
 		//auto l = static_cast<CommandList*>(list);
 
-		auto& timers = get_state(list);
-		timers.timers.emplace_back();
+	//	auto& timers = get_state(list);
+//timers.timers.emplace_back();
 
-		timers.timers.back().start(list);
+	//	timers.timers.back().start(list);
+	// 
+gpu_timer.start(list); 
 		//		list->gpu_timers.emplace_back(std::make_pair<TimedBlock*, GPUTimer>(this, timer));
 
 		// todo: make block independent
@@ -30,10 +32,10 @@ namespace HAL
 	{
 		//auto l = static_cast<CommandList*>(list);
 
-		auto& timers = get_state(list);
+	//	auto& timers = get_state(list);
 
-		if (timers.timers.size()) // maybe there was no start ?
-			timers.timers.back().end(list);
+	///	if (timers.timers.size()) // maybe there was no start ?
+		gpu_timer.end(list);
 	}
 
 	GPUTimer::GPUTimer()
@@ -141,7 +143,7 @@ namespace HAL
 	}
 
 
-	void CommandList::begin(std::string name, Timer* t)
+	void CommandList::begin(std::string name)
 	{
 		active = true;
 		if (name.empty())
@@ -171,7 +173,7 @@ namespace HAL
 
 
 		Transitions::begin();
-		Eventer::begin(name, t);
+		Eventer::begin(name);
 
 		if (type != CommandListType::COPY)
 		{
@@ -827,6 +829,246 @@ namespace HAL
 		HAL::Device::get().context_generator.free(this);
 	}
 
+
+		void Transitions::create_usage_point(bool end)
+
+			{
+				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
+				auto point = &usage_points.emplace_back(type);
+
+
+				if (prev_point) prev_point->next_point = point;
+				point->prev_point = prev_point;
+
+				point->start = !end;
+				point->index = static_cast<uint>(usage_points.size());
+
+				compiler.func([point](auto& list)
+					{
+						list.transitions(point->transitions);
+					});
+
+			///	poin.transition_type = prev_point?
+			}
+
+			void Transitions::compile_transitions()
+			{
+			  
+				for (auto& point : usage_points)
+				{
+					for (auto& usage : point.usages)
+					{
+						auto prev_usage = usage.prev_usage;
+
+						if(!prev_usage) 
+						{
+							bool is_automatic =  check(usage.resource->get_desc().Flags &HAL::ResFlags::DisableStateTracking);
+				//			assert(!);
+
+							bool is_valid = false;
+							if(usage.wanted_state == ResourceStates::UNKNOWN)	
+								is_valid = true;
+
+							if(!is_automatic&&!is_valid)
+							need_check_transitions.insert(usage.resource);
+							continue; //  needs to be synchronized between cmdlists. Can track here what resources needs to be checked
+						}
+							
+
+						auto prev_state =  prev_usage->wanted_state;
+
+					
+
+
+						if (prev_state == usage.wanted_state) continue;
+
+						assert(prev_state.is_valid(usage.resource->get_type()));
+						assert(usage.wanted_state.is_valid(usage.resource->get_type()));
+
+
+						auto a = prev_state.get_best_cmd_type();
+						auto b = usage.wanted_state.get_best_cmd_type();
+
+						assert(IsCompatible(type, a));
+						assert(IsCompatible(type, b));
+						BarrierFlags flags = BarrierFlags::NONE;
+
+						if (prev_state==ResourceStates::UNKNOWN)
+							flags |= BarrierFlags::DISCARD;
+
+						auto prev_point = prev_usage ? prev_usage->point : nullptr;
+						 if(prev_point)prev_point=prev_point->next_point;
+
+						bool can_split = true;
+
+						if(!point.start) can_split = false; // can split only between work i.e. only from start
+						if(prev_point==&point)	   can_split = false; // can't split if it's needed right now
+						if(usage.wanted_state==ResourceStates::UNKNOWN)	   can_split = false; // can't split if it's deactivated. probably some new resources will be activated shortly after. we dont know. we do not track it. we dont want to know. thats it. final.						
+						if(usage.wanted_state.access==BarrierAccess::NO_ACCESS)	   can_split = false; // resource or it's memory will not be used anymore. There is no end point for that(or is it? Last one in the list?)
+
+
+						if (can_split)
+						{
+							assert(prev_point->start);
+							auto sync_state = usage.wanted_state;
+
+							sync_state.operation = BarrierSync::SPLIT;
+
+							prev_point->transitions.transition(usage.resource,
+								prev_state,
+								sync_state,
+								usage.subres, flags);
+
+
+							point.transitions.transition(usage.resource,
+								sync_state,
+								usage.wanted_state,
+								usage.subres, flags);
+
+
+						}
+						else
+						{
+							point.transitions.transition(usage.resource,
+								prev_state,
+								usage.wanted_state,
+								usage.subres, flags);
+						}
+
+
+					}
+				}
+
+			}
+
+			HAL::ResourceUsage* Transitions::add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type)
+			{
+				HAL::UsagePoint* point = nullptr;
+
+				if (type == HAL::TransitionType::LAST) point = &usage_points.back();
+				if (type == HAL::TransitionType::ZERO) point = &usage_points.front();
+
+				 //assert(!point->start);
+				//if (type == TransitionType::LAST) 			assert(!point->start);
+				HAL::ResourceUsage& usage = point->usages.emplace_back();
+
+				usage.resource = const_cast<HAL::Resource*>(resource);
+				usage.subres = subres;
+				usage.wanted_state = state;
+
+				usage.point = point;
+				return &usage;
+			}
+
+	
+		
+			void Transitions::transition_present(const HAL::Resource* resource_ptr)
+			{
+
+				create_usage_point();
+
+				transition(resource_ptr, { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::PRESENT }, ALL_SUBRESOURCES);
+
+				create_usage_point(false);
+			}
+
+
+			void Transitions::transition(const ResourceInfo& info, BarrierSync operation )
+			{
+				if (!info.is_valid()) return;
+
+				ResourceState target_state;//= ResourceState::COMMON;
+
+
+				if (std::holds_alternative<HAL::Views::ShaderResource>(info.view))
+				{
+					if (type == CommandListType::DIRECT)
+					{
+						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
+					}
+
+					if (type == CommandListType::COMPUTE)
+					{
+						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+
+					target_state = { operation, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };  //TODO BarrierSync::ALL
+
+				}
+				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info.view))
+				{
+					//assert( operation != BarrierSync::NONE);
+
+					if (type == CommandListType::DIRECT)
+					{
+						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
+					}
+
+					if (type == CommandListType::COMPUTE)
+					{
+						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+
+					target_state = { operation, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };  //TODO BarrierSync::ALL
+				}
+				else 	if (std::holds_alternative<HAL::Views::RenderTarget>(info.view))
+				{
+					target_state = ResourceStates::RENDER_TARGET;
+				}
+				else 	if (std::holds_alternative<HAL::Views::DepthStencil>(info.view))
+				{
+					target_state = ResourceStates::DEPTH_STENCIL;
+
+				}
+				else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info.view))
+				{
+					if (type == CommandListType::DIRECT)
+					{
+						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
+					}
+
+					if (type == CommandListType::COMPUTE)
+					{
+						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+					}
+
+					target_state = { operation, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };  //TODO BarrierSync::ALL
+
+				}
+				else assert(false);
+
+
+				//if(GetAsyncKeyState('4'))
+				//{
+				//	if (type == CommandListType::DIRECT)
+				//	{
+				//		operation =BarrierSync::ALL_DIRECT;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+				//	}
+
+				//	if (type == CommandListType::COMPUTE)
+				//	{
+				//		operation =BarrierSync::ALL_COMPUTE;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
+				//	}
+				//
+				//}
+				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
+					{
+						transition(resource.get(), target_state, subres);
+					});
+			}
+
+			void Transitions::stop_using(const ResourceInfo& info)
+			{
+				if (!info.is_valid()) return;
+
+
+				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
+					{
+						const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
+					});
+			}
+
+
 	//void Transitions::create_transition_point(bool end)
 	//{
 	//	auto prev_point = transition_points.empty() ? nullptr : &transition_points.back();
@@ -898,17 +1140,24 @@ namespace HAL
 		HAL::Barriers result(CommandListType::DIRECT);
 		std::vector<HAL::Resource*> discards;
 
-
+		
 		CommandListType transition_type = type;
-		for (auto& r : used_resources)
+
 		{
-			auto res_type = r->get_state_manager().process_transitions(result, discards, this);
+			PROFILE(L"processing resources");
 
-			transition_type = Merge(transition_type, res_type);
+		
+			for (auto& r : need_check_transitions)
+			{
+				auto res_type = r->get_state_manager().process_transitions(result, discards, this);
+
+				transition_type = Merge(transition_type, res_type);
+			}
+
 		}
-
 		if (result)
 		{
+				PROFILE(L"creating list");
 			auto cmd = static_cast<CommandList*>(this);
 
 
@@ -933,7 +1182,7 @@ namespace HAL
 	/*void Transitions::prepare_transitions(Transitions* to, bool all)
 	{
 		for (auto& resource : to->used_resources)
-		{
+		{																										     
 			bool is_new = !resource->get_state_manager().is_used(this);
 			if ((all && is_new) || (!all && !is_new))
 				if (resource->get_state_manager().transition(this, to))
@@ -995,9 +1244,10 @@ namespace HAL
 	{
 		track_object(*resource);
 
-		resource->get_state(this).alias_ended = true;
+
 		const_cast<Resource*>(resource)->get_state_manager().alias_end(this);
-		//transition(resource, ResourceStates::NO_ACCESS);
+												resource->get_state(this).alias_ended = true;
+
 	}
 
 
@@ -1166,10 +1416,10 @@ namespace HAL
 		//}
 		//		static_cast<GPUBlock*>(c.get())
 
-		auto b = dynamic_cast<GPUBlock*>(&timer->get_block());
+		auto b = static_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
-			gpu_timers.emplace_back(b);
+			gpu_timers.emplace_back(b->get_ptr<GPUBlock>());
 			b->start(this);
 		}
 
@@ -1184,13 +1434,13 @@ namespace HAL
 		//timer->get_block().end_timings(executed ? nullptr : this);
 		//	static_cast<GPUBlock&>(timer->get_block()).gpu_counter.timer.end(this);
 
-		auto b = dynamic_cast<GPUBlock*>(&timer->get_block());
+		auto b = static_cast<GPUBlock*>(&timer->get_block());
 		if (b)
 		{
 			b->end(this);
 		}
 
-		current = timer->get_block().get_parent().get();
+		current = timer->get_block().parent;
 		end_event();
 	}
 
@@ -1198,43 +1448,39 @@ namespace HAL
 
 	void Eventer::reset()
 	{
-		for (auto& e : gpu_timers)
+		for (auto& block : gpu_timers)
 		{
-			auto block = e;
-			auto& timers = block->get_state(this);
-			for (auto& t : timers.timers)
-				Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>(block, &t));
+		
+				
+	//		auto& timers = block->get_state(this);
+		//	for (auto& t : timers.timers)
+			Profiler::get().on_gpu_timer(std::make_pair<TimedBlock*, GPUTimerInterface*>(block.get(), &block->gpu_timer));
 		}
 		gpu_timers.clear();
 	}
 
-	void Eventer::end()
-	{
-		started = false;
-		thread_current = nullptr;
-		timer.reset();
-	}
+	
 
-	void Eventer::begin(std::string name, Timer* t)
+	void Eventer::begin(std::string name)
 	{
 		assert(!started);
 		started = true;
 		this->name = name;
 		thread_current = this;
-					   
+		TimedRoot::parent = &Profiler::get();   
 		names.clear();
-		current = t ? &t->get_block() : &Profiler::get();
-		TimedRoot::parent = t ? t->get_root() : &Profiler::get();
+
+		current = Profiler::get().get_current();
+
 		if (type != CommandListType::COPY && name.size())
 		{
 			assert(!timer);
 			timer.reset(new Timer(start(convert(name).c_str())));
 		}
-
-		else
+		else		  
 		{
 			current = nullptr;
-					 	timer.reset();
+			timer.reset();
 	}
 
 
@@ -1243,11 +1489,18 @@ namespace HAL
 	Timer Eventer::start(std::wstring_view name)
 	{
 		if (Profiler::get().enabled)
-			return Timer(&current->get_child<GPUBlock>(name, HAL::Device::get()), this);
-		else return Timer(nullptr, nullptr);
+			return Timer(std::make_shared<GPUBlock>(name,current, HAL::Device::get()), this);
+		else 
+			return Timer(nullptr, nullptr);
 		//return std::move(Timer(nullptr,nullptr));
 	}
-
+	
+	void Eventer::end()
+	{
+		started = false;
+		thread_current = nullptr;
+		timer.reset();
+	}
 
 	void Eventer::start_event(std::wstring str)
 	{
@@ -1394,7 +1647,7 @@ namespace HAL
 	{
 		usage_points.clear();
 		used_resources.clear();
-
+		 need_check_transitions.clear();
 
 		//transition_list = nullptr;
 	}

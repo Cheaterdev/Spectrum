@@ -8,9 +8,11 @@ import <RenderSystem.h>;
 import ppl;
 import Core;
 import FrameGraph;
+import FrameGraphDebug;
 
 #include "bend_sss_cpu.h"
 using namespace FrameGraph;
+
 using namespace HAL;
 
 extern "C" {
@@ -755,7 +757,7 @@ public:
 								data.GBuffer_Specular->resource);
 							copy.copy_texture(data.GBuffer_DepthPrev->resource, 0,
 								data.GBuffer_DepthMips->resource, 0);
-						});
+						}, PassFlags::Compute);
 			}
 			struct debug_data
 			{
@@ -907,6 +909,7 @@ public:
 
 	virtual void render()
 	{
+			PROFILE(L"render");
 		if (swap_chain) swap_chain->resize(new_size);
 		swap_chain->wait_for_free();
 		{
@@ -1037,6 +1040,23 @@ public:
 
 		if (!gen && GetAsyncKeyState('N'))
 		{
+
+			{
+					//	GUI::Elements::Debug::TimerWatcher::ptr t(new GUI::Elements::Debug::TimerWatcher());
+					//	t->init(&Profiler::get());
+					//	dock->get_tabs()->add_page("Profiler", t);
+
+				//	GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
+
+///					docker->get_tabs()->add_page("Graph", FrameGraphDebug::create_debug_layout(graph));
+
+
+				
+					//docker->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
+				}
+
+
+
 			gen = true;
 			frameFlowGraph->clear();
 
@@ -1044,6 +1064,8 @@ public:
 			{
 			};
 			std::map<ResourceAllocInfo*, ::FlowGraph::parameter::ptr> resource_stages;
+				std::map<Pass*, uint> pass_positions;
+			 	std::map<CommandListType, uint> list_positions;
 
 
 			for (auto& res : graph.builder.alloc_resources)
@@ -1054,12 +1076,16 @@ public:
 					resource_stages[&res.second] = input;
 				}
 			}
-			for (auto pass : graph.passes)
+			uint offset = 0;
+			for (auto pass : graph.builder.enabled_passes)
 			{
+					if (!pass->enabled)
+						 continue;
+
 				auto node = std::make_shared<PassNode>();
 				node->name = pass->name + " " + std::to_string(pass->id);
 
-
+				CommandListType pass_type = check(pass->flags & PassFlags::Compute)? CommandListType::COMPUTE:CommandListType::DIRECT;
 				if (!pass->enabled)
 				{
 					node->color = float4(1, 0, 0, 1);
@@ -1070,7 +1096,22 @@ public:
 					node->color = float4(1, 1, 0, 1);
 				}
 
+				uint my_pos = list_positions[pass_type];
+
+				for (auto& sync_pass : pass->sync_state.values)
+				{
+					if (!sync_pass) continue;
+					my_pos = std::max(my_pos, pass_positions[const_cast<Pass*>(sync_pass)]);
+				}
+
+				node->pos = {my_pos + 800,check(pass->flags & PassFlags::Compute)*500};
+
+
+				pass_positions[pass] = node->pos.x;
+				list_positions[pass_type] = node->pos.x;
+
 				frameFlowGraph->register_node(node);
+				   offset=std::max(offset, uint(node->pos.x));
 
 				for (auto& info : pass->used.resources)
 				{
@@ -1083,9 +1124,14 @@ public:
 						{
 							prev->link(input);
 						}
-						auto output = node->register_output(info->name);
+						auto resource_flags = pass->used.resource_flags[info];
 
+
+						if(check(resource_flags&FrameGraph::WRITEABLE_FLAGS))	  
+						{
+						auto output = node->register_output(info->name);
 						resource_stages[info] = output;
+						}
 					}
 				}
 
@@ -1114,9 +1160,11 @@ public:
 					}
 				}
 			}
+					   frameFlowGraph->pos_in = {-800,0};
+			   frameFlowGraph->pos_out= {offset + 800,0};
 		}
 	}
-
+	GUI::Elements::dock_base::ptr docker;
 	GraphRender()
 	{
 		//scale = 1.25f;
@@ -1155,6 +1203,7 @@ public:
 			area->docking = GUI::dock::FILL;
 			add_child(area);
 			auto d = std::make_shared<GUI::Elements::dock_base>();
+			docker = d;
 			d->docking = GUI::dock::FILL;
 			{
 				EVENT("Start Drawer");

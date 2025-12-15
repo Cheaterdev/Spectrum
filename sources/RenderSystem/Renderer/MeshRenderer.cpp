@@ -249,22 +249,34 @@ void  mesh_renderer::render_meshes(MeshRenderContext::ptr mesh_render_context, S
 	{
 
 		int total = 0;
-		while (total < 8)
+		{
+			PROFILE_GPU(L"first 8");
+			 while (total < 8)
 		{
 			((UINT*)gather.GetPip_ids())[total] = end->second->get_id();
 			gather.GetCommands()[total] = commands_buffer[total]->buffer;
 			end++; total++;
 			if (end == pipelines.end()) break;
 		}
-
+		
+		}
+		
+				   {
+			PROFILE_GPU(L"last 8");
 		for (int i = total; i < 8; i++)
 		{
 			((UINT*)gather.GetPip_ids())[i] = std::numeric_limits<uint>::max();
 			gather.GetCommands()[i] = commands_buffer[i]->buffer;
 		}
 
-		for (int i = 0; i < total; i++)
-			compute.clear_counter(commands_buffer[i]->buffer);
+		}
+
+
+		{
+			PROFILE_GPU(L"clear");
+			for (int i = 0; i < total; i++)
+				compute.clear_counter(commands_buffer[i]->buffer);
+		}
 
 
 
@@ -369,7 +381,10 @@ mesh_renderer::mesh_renderer() :VariableContext(L"mesh_renderer")
 		verts[7] = vec4(-1.0f, -1.0f, 1.0f, 0);
 		index_buffer = Helpers::make_buffer<unsigned int>(data);
 
+		index_buffer.resource->set_name("mesh_renderer::index_buffer");
 		vertex_buffer = HAL::StructuredBufferView<vec4>(8);
+
+			vertex_buffer.resource->set_name("mesh_renderer::vertex_buffer");
 		list->get_copy().update(vertex_buffer, 0, verts);
 	
 		draw_boxes_first = HAL::StructuredBufferView<DrawIndexedArguments>(1);

@@ -152,8 +152,7 @@ export namespace GUI
                     float scale_speed = 0;
                     vec2 wheel_pos;
 
-                    component_window::ptr graph_in;
-                    component_window::ptr graph_out;
+              
                     base::ptr selection;
 
                     base::ptr comments;
@@ -163,7 +162,8 @@ export namespace GUI
                     manager* main_manager;
                     ::FlowGraph::graph* g;
 
-
+                             component_window::ptr graph_in;
+                    component_window::ptr graph_out;
                     virtual void draw(Context& c) override;
 
                     using ptr = s_ptr<canvas>;

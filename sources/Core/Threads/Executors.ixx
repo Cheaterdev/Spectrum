@@ -1,3 +1,7 @@
+module;
+
+#include <Core_defs.h>
+
 export module Core:Executors;
 
 import :Profiling;
@@ -6,8 +10,6 @@ import :Singleton;
 //#include <boost/lockfree/spsc_queue.hpp>
 import <stl/core.h>;
 import <stl/threading.h>;
-
-#include <Core_defs.h>
 
 import ppl;
 using namespace concurrency;

@@ -50,81 +50,34 @@ public:
 class CPUCounter
 {
 public:
-	//bool enabled = true;
-
-	Events::prop<float2>::event_type on_time;
-
 	std::chrono::time_point<std::chrono::high_resolution_clock>  start_time;
 	std::chrono::time_point<std::chrono::high_resolution_clock>  end_time;
-
-	Events::prop<float2> time;
-
-	std::chrono::duration<double> elapsed_time;
-
-	CPUCounter()
+	std::chrono::duration<double> get_lapsed_time()
 	{
-		time.register_change(on_time);
+	return end_time - start_time;
 	}
 };
 
 
 class Profiler;
-class TimedBlock : public tree<TimedBlock, my_unique_vector<std::shared_ptr<TimedBlock>>>
+class TimedBlock: public SharedObject<TimedBlock>
 {
 	friend class TimedRoot;
 	friend class Profiler;
 
-	std::mutex m;
 public:
 	using ptr = std::shared_ptr<TimedBlock>;
-
-	int id;
-
-	template<class T = TimedBlock, class ...Args>
-	 TimedBlock& get_child(std::wstring_view name, Args &&...args)
-	{
-		std::lock_guard<std::mutex> g(m);
-		auto it = std::find_if(childs.begin(), childs.end(), [name](const TimedBlock::ptr & p)->bool
-		{
-			return p->get_name() == name;
-		});
-
-		if (it == childs.end())
-		{
-			auto c = std::shared_ptr<TimedBlock>(new T(name, std::forward<Args>(args)...));
-			add_child(c);
-			return *c;
-		}
-
-		// it.reset(new TimedBlock(name, this));
-		return **it;
-	}
-	
-	template<class T>
-	void iterate_childs(T f);
-	std::wstring get_name() const override;
-
+				int id;
+	std::wstring get_name() const;
 	CPUCounter cpu_counter;
-	  TimedBlock(std::wstring_view name);
-
-protected:
-	
-	
-	bool test = false;
-	void update();
-private:
+	TimedBlock(std::wstring_view name, TimedBlock* parent);
+	 virtual ~TimedBlock() = default;
+public:
 	std::wstring name;
-/*	HAL::GPUTimer timer;*/
+	uint level;
+	TimedBlock* parent;
 };
 
-template<class T>
-void TimedBlock::iterate_childs(T f)
-{
-	std::lock_guard<std::mutex> g(m);
-
-	for (auto& c : childs)
-		f(c.get());
-}
 
 class Timer
 {
@@ -132,10 +85,10 @@ class Timer
 	/*friend class HAL::Eventer;*/
 	friend class Profiler;
 
-	TimedBlock* block;
+	TimedBlock::ptr block;
 	TimedRoot* root;
 public:
-	Timer(TimedBlock* block, TimedRoot* root);
+	Timer(TimedBlock::ptr block, TimedRoot* root);
 
 	Timer(Timer&& t);
 	~Timer();
@@ -160,30 +113,27 @@ public:
 	virtual ~GPUTimerInterface() = default;
 };
 
-class Profiler : public Singleton<Profiler>, public TimedBlock, public TimedRoot
+class Profiler : public Singleton<Profiler>,public TimedRoot
 {
 	std::mutex m;
 	//std::map<std::thread::id, TimedBlock*> blocks;
 	static thread_local TimedBlock* current_block;
 
-	
 public:
 	Events::Event<TimedBlock*> on_cpu_timer_start;
 	Events::Event<TimedBlock*> on_cpu_timer_end;
 	Events::Event<std::pair<TimedBlock*, GPUTimerInterface*>> on_gpu_timer;
 	Events::Event<std::uint64_t> on_frame;
 
-	Profiler() : TimedBlock(L"")
+	Profiler() 
 	{
 	/*	HAL::GPUTimeManager::create();*/
 	}
 
 	bool enabled = true;
 
-	using TimedBlock::update;
 
-
-
+	TimedBlock* get_current() const;
 	virtual Timer start(std::wstring_view name) override;
 
 private:
@@ -219,7 +169,7 @@ public:
 
 }
 
-thread_local 		  TimedBlock root_block(L"thread");
+thread_local TimedBlock root_block(L"thread", nullptr);
 thread_local TimedBlock* Profiler::current_block = &root_block;
 
 
@@ -228,7 +178,7 @@ Timer::Timer(Timer&& t) : block(t.block), root(t.root)
 	t.root = nullptr;
 }
 
-Timer::Timer(TimedBlock* block, TimedRoot* root) : block(block), root(root)
+Timer::Timer(TimedBlock::ptr block, TimedRoot* root) : block(block), root(root)
 {
 	if (block)
 		root->start(this);
@@ -246,46 +196,34 @@ std::wstring TimedBlock::get_name() const
 	return name;
 }
 
-TimedBlock::TimedBlock(std::wstring_view name) : name(name)
+TimedBlock::TimedBlock(std::wstring_view name, TimedBlock* parent) : name(name),  parent(parent) , level(parent?parent->level+1:0)
 {
 
 }
 
-void TimedBlock::update()
-{
-	std::lock_guard<std::mutex> g(m);
-
-//	Profiler::get().on_gpu_timer(this);
-
-	for (auto& c : childs)
-		c->update();
-}
-
+				 TimedBlock* Profiler::get_current() const
+				 {
+				 			  return current_block;
+				 }
 Timer Profiler::start(std::wstring_view name)
 {
 	if (!enabled)
 		return Timer(nullptr, nullptr);
 
-	//m.lock();
-	TimedBlock* block = current_block;
-	if (!block)
-		block = this;
-	//m.unlock();
-
-	return Timer(&block->get_child(name), this);
+	return Timer(std::make_shared<TimedBlock>(name, current_block), this);
 }
+
 
 void Profiler::on_start(Timer* timer)
 {
-	current_block = timer->block;
+	current_block = timer->block.get();
 	timer->block->cpu_counter.start_time = std::chrono::high_resolution_clock::now();
-	on_cpu_timer_start(timer->block);
+	on_cpu_timer_start(timer->block.get());
 }
 
 void Profiler::on_end(Timer* timer)
 {
 	current_block = timer->block->parent;
 	timer->block->cpu_counter.end_time = std::chrono::high_resolution_clock::now();
-	timer->block->cpu_counter.elapsed_time = timer->block->cpu_counter.end_time - timer->block->cpu_counter.start_time;
-	on_cpu_timer_end(timer->block);
+	on_cpu_timer_end(timer->block.get());
 }

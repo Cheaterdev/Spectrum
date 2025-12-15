@@ -22,7 +22,7 @@ export namespace HAL
 		bool compiled = false;
 		API::CommandList list;
 		std::wstring name;
-		std::list<std::function<void(API::CommandList&)>> tasks;
+		std::vector<std::function<void(API::CommandList&)>> tasks;
 	public:
 		inline const API::CommandList& get_list() const { return list; }
 		void create(CommandListType type);

@@ -939,15 +939,21 @@ namespace GUI
             {
            
             };
-            graph.add_pass<no>("UI PREPARE", [this](no& data, TaskBuilder& builder) {
-                }, [this, &graph](no& data, FrameContext& context) {
-                    auto command_list = context.get_list();
+                     
 
-                    for (auto& e : pre_draw_infos)
-                    {
-                        e->pre_draw(command_list);
-                    }
-                }, PassFlags::Required);
+			auto command_list = (HAL::Device::get().get_queue(HAL::CommandListType::DIRECT)->get_free_list());
+			command_list->begin();
+            for (auto& e : pre_draw_infos)
+			{
+				e->pre_draw(command_list);
+			}
+
+			command_list->end();
+                    auto fence = command_list->execute();
+
+
+
+
         }
 
          struct pass_data

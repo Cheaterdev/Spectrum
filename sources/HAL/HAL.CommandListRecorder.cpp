@@ -15,6 +15,7 @@ namespace HAL
 	void DelayedCommandList::create(CommandListType type)
 	{
 		list.create(type);
+		tasks.reserve(4096);
 	}
 
 	void DelayedCommandList::reset()
@@ -24,18 +25,27 @@ namespace HAL
 
 	void DelayedCommandList::compile(CommandAllocator& allocator)
 	{
+		{
+				   			PROFILE(L"begin");
 		list.begin(allocator);
+		
+		}
 		list.set_name(name);
 
 		{
 			PROFILE(L"tasks");
 			for (auto& f : tasks)
 			{
+			//		PROFILE(L"task");
 				f(list);
 			}
 		}
 
-		list.end();
+		{
+			PROFILE(L"end");
+					list.end();
+		}
+
 		tasks.clear();
 		compiled = true;
 	}
@@ -51,7 +61,7 @@ namespace HAL
 	void DelayedCommandList::func(std::function<void(API::CommandList&)> f)
 	{
 		tasks.emplace_back([=](API::CommandList& list) {
-			PROFILE(L"universal_func");
+		//	PROFILE(L"universal_func");
 			f(list);
 			});
 	}

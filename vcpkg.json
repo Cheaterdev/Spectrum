@@ -17,6 +17,7 @@
      {"name" :"directx12-agility", "version>=":"1.618.1"},
      {"name" :"directx-headers", "version>=":"1.616.0"},
      "bshoshany-thread-pool"
+   
   ],
   "builtin-baseline": "a76e5d9e1c62a23b9e92353e5e25d8c34cda2b74", 
   "overrides": [

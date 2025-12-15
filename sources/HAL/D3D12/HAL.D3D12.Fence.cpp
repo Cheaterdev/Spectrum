@@ -18,6 +18,7 @@ namespace HAL
 
 	void Event::wait()
 	{
+		PROFILE(L"Event wait");
 		WaitForSingleObject(m_fenceEvent, INFINITE);
 	}
 

@@ -96,6 +96,13 @@ export namespace HAL
 	};
 
 
+	enum class ResourceType : int
+	{
+	Buffer,
+	Texture
+	};
+
+
 	enum class TextureLayout : uint
 	{
 
@@ -134,8 +141,7 @@ export namespace HAL
 		//COMPUTE_QUEUE_COPY_SOURCE,
 		//COMPUTE_QUEUE_COPY_DEST,
 		//VIDEO_QUEUE_COMMON,
-		UNDEFINED = 0,
-		
+		UNDEFINED = 1<<15
 	};
 	
 	CommandListType get_best_cmd_type(TextureLayout layout);
@@ -253,7 +259,9 @@ struct ResourceState
 	bool has_write_bits() const;
 
 	bool is_no_access() const;
-	bool is_valid() const;
+	bool is_valid(ResourceType) const;
+
+	bool valid_begin() const;
 	//{
 
 	//	operation |= state.operation;
@@ -569,6 +577,9 @@ extern const  ResourceState UNKNOWN ;
 		Raytracing = 1<<5,
 		SimultaniousAccess = 1<<6,
 		Virtual = 1 << 7,
+		Swapchain = 1<<8,
+		WriteInitialized = 1<<9,
+		DisableStateTracking = 1<<10
 	};
 
 	struct TextureDesc

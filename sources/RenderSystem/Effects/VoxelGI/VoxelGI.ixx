@@ -41,6 +41,10 @@ public:
 
 		tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 
+			  tex_dynamic->resource->set_name("tex_dynamic");
+
+					  tex_dynamic->resource->set_name("tex_static");
+				 		  tex_dynamic->resource->set_name("tex_result");
 
 		tex_dynamic->resource->get_tiled_manager().on_load = [this](ivec4 pos) {
 			auto heap_pos = tex_dynamic->resource->get_tiled_manager().tiles[0][pos.xyz].heap_position;

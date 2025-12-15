@@ -1,5 +1,9 @@
-export module HAL:ResourceStates;
+module;
 
+
+export module HAL:ResourceStates;
+ 
+import <Core_defs.h>;
 import Core;
 
 import :Types;
@@ -22,14 +26,6 @@ export
 			LAST
 		};
 
-		//const ResourceState& GetSupportedStates(CommandListType type)
-		//{
-		//	if (type == CommandListType::COPY) return COPY_STATES;
-		//	if (type == CommandListType::COMPUTE) return COMPUTE_STATES;
-		//	return GRAPHIC_STATES;
-		//}
-
-
 		bool IsCompatible(CommandListType a,CommandListType b)
 		{
 			if (a == CommandListType::DIRECT) return true;
@@ -39,16 +35,12 @@ export
 			if (b == CommandListType::COMPUTE) return false;
 
 			return true;
-
 		}
 
-		
 		bool IsFullySupport(CommandListType type, const ResourceState& states)
 		{
 			return IsCompatible(type, states.get_best_cmd_type());
 		}
-
-
 
 		CommandListType Merge(CommandListType a,CommandListType b)
 		{
@@ -57,11 +49,10 @@ export
 			return CommandListType::COPY;
 		}
 
-
-
-		std::optional<ResourceState> merge_state(const ResourceState& source, const ResourceState& need)
+	 	std::optional<ResourceState> merge_state(const ResourceState& source, const ResourceState& need)
 		{
-			if (source == ResourceStates::UNKNOWN) return need;
+			if (source == ResourceStates::UNKNOWN) 
+				return std::nullopt;
 		
 			if (source.has_write_bits()||need.has_write_bits())
 			{
@@ -73,8 +64,13 @@ export
 				return std::nullopt;
 			}
 
-			return source | need;
+
+			auto res = source | need;
+
+			//assert(res.is_valid());
+			return res;
 		}
+
 		std::optional<TextureLayout> merge_layout(const TextureLayout& source, const TextureLayout& need)
 		{
 			if (source == TextureLayout::NONE) return need;
@@ -86,6 +82,7 @@ export
 
 			return source | need;
 		}
+
 		enum class BarrierFlags : UINT
 		{
 			NONE = 0,
@@ -107,8 +104,6 @@ export
 
 		class Barriers
 		{
-
-
 			std::vector<Barrier> barriers;
 
 			void validate();
@@ -137,18 +132,16 @@ export
 
 			ResourceUsage* prev_usage = nullptr;
 
-			UsagePoint* usage = nullptr;
-			UsagePoint* last_usage = nullptr;
-
-			bool need_discard = false;
+			UsagePoint* point = nullptr;
+			UsagePoint* last_point = nullptr;
 		};
 
 		struct UsagePoint
 		{
 			uint index;
 			std::list<HAL::ResourceUsage> usages;
-				HAL::Barriers  transitions;
-
+			HAL::Barriers  transitions;
+		//	TransitionType transition_type;
 			bool start = false;
 			UsagePoint* prev_point = nullptr;
 			UsagePoint* next_point = nullptr;
@@ -195,7 +188,12 @@ export
 
 			ResourceUsage* set_zero_transition(ResourceUsage* usage)
 			{
+				if(first_usage)
 				first_usage->prev_usage = usage;
+
+				if(!last_usage)
+						last_usage	   = usage;
+
 				first_usage = usage;
 
 				return first_usage;
@@ -207,95 +205,42 @@ export
 		struct SubResourcesCPU
 		{
 			std::vector<ResourceListStateCPU> subres;
-		//	ResourceListStateCPU all_state;
 
-		//	bool need_discard = false;
 			bool used = false;
 
-		//	bool all_states_same = true;
 			void reset()
 			{
 				used = false;
-		//		all_states_same = true;
-
-		//		all_state.reset();
-
 				for (auto& s : subres)
 				{
 					s.reset();
 				}
 			}
 
-		/*	void make_all_state(Transition* last_usage)
-			{
-				if (all_states_same) return;
-				assert(last_usage);
-				all_states_same = true;
-
-				all_state.used = true;
-				all_state.last_usage = last_usage;
-			}
-
-			void make_unique_state()
-			{
-				if (!all_states_same) return;
-				all_states_same = false;
-
-				for (auto& s : subres)
-				{
-					if (!s.used)
-					{
-						s.first_usage = all_state.first_usage;
-						s.used = s.first_usage;
-					}
-
-					s.last_usage = all_state.last_usage;
-				}
-			}*/
-
 			const ResourceListStateCPU& get_subres_state(UINT id) const
 			{
-		/*		if ((!force && all_states_same) || id == ALL_SUBRESOURCES)
-					return all_state;*/
-
 				return subres[id];
 			}
 
 
 			ResourceListStateCPU& get_subres_state(UINT id) 
 			{
-
-
-				//if (all_states_same || id == ALL_SUBRESOURCES)
-				//	return all_state;
-
 				return subres[id];
 			}
 
 			ResourceUsage* get_first_usage(UINT id) const
 			{
-				//if (all_state.first_usage)
-				//	return all_state.first_usage;
-
 				return subres[id].first_usage;
 			}
 
 			ResourceUsage* get_last_usage(UINT id) const
 			{
-				//if (all_states_same)
-				//	return all_state.last_usage;
-
-				//if (id == ALL_SUBRESOURCES) return nullptr;
-
 				return subres[id].last_usage;
 			}
 
 
 			ResourceState get_first_state(UINT id) const
 			{
-				//if (all_state.first_usage)
-				//	return all_state.first_usage->wanted_state;
-
 				return get_first_usage(id)->wanted_state;
 			}
 
@@ -303,7 +248,6 @@ export
 			{
 				return get_last_usage(id)->wanted_state;
 			}
-
 
 			void merge_read_state(CommandListType type, SubResourcesGPU& state);
 		};
@@ -317,55 +261,22 @@ export
 		struct SubResourcesGPU
 		{
 			std::vector<ResourceListStateGPU> subres;
-		//	ResourceListStateGPU all_state;
-
-		//	bool all_states_same = true;
 
 			bool is_valid() const
 			{
-			//	if (all_states_same) return all_state.state!=HAL::ResourceState::UNKNOWN;
 			for (auto& s : subres)
 				{
-			//	if(s.state !=HAL::ResourceState::UNKNOWN) 
 					return true;
 
 				}
 
 			return false;
 			}
-//			void make_all_state(ResourceState state)
-//			{
-//				//		if (all_states_same) return;
-//				all_states_same = true;
-//				all_state.state = state;
-//
-//#ifdef DEV
-//				for (auto& s : subres)
-//					s.state = ResourceState::UNKNOWN;
-//#endif
-//			}
-//
-//			void make_unique_state()
-//			{
-//				if (!all_states_same) return;
-//				all_states_same = false;
-//
-//				for (auto& s : subres)
-//				{
-//					s.state = all_state.state;
-//				}
-//#ifdef DEV
-//				all_state.state = ResourceState::UNKNOWN;
-//#endif
-//			}
+
 
 
 			CommandListType get_best_list_type()
 			{
-			/*	if (all_states_same)
-					return	GetBestType(all_state.state);*/
-
-
 				CommandListType type = CommandListType::COPY;
 
 				for (auto& s : subres)
@@ -379,15 +290,6 @@ export
 			}
 			void set_cpu_state(const SubResourcesCPU& cpu_state)
 			{
-				/*if (cpu_state.all_states_same)
-				{
-					auto all_state = cpu_state.get_last_state(ALL_SUBRESOURCES);
-					make_all_state(all_state);
-				}
-				else
-				{
-					make_unique_state();*/
-
 					for (int i = 0; i < subres.size(); i++)
 					{
 						auto& gpu = get_subres_state(i);
@@ -401,24 +303,12 @@ export
 						auto last_usage = cpu_state.get_last_usage(i);
 
 						auto last_state = last_usage->wanted_state;
-					//	assert(last_state != ResourceState::UNKNOWN);
 						gpu.layout = last_state.layout;
 					}
-
-				//}
 			}
 
 			void set_cpu_state_first(const SubResourcesCPU& cpu_state)
 			{
-				/*if (cpu_state.all_states_same)
-				{
-					auto all_state = cpu_state.get_last_state(ALL_SUBRESOURCES);
-					make_all_state(all_state);
-				}
-				else
-				{
-					make_unique_state();*/
-
 					for (int i = 0; i < subres.size(); i++)
 					{
 						auto& gpu = get_subres_state(i);
@@ -432,27 +322,18 @@ export
 						auto last_usage = cpu_state.get_first_usage(i);
 
 						auto last_state = last_usage->wanted_state;
-					//	assert(last_state != ResourceState::UNKNOWN);
 						gpu.layout = last_state.layout;
 					}
-
-				//}
 			}
 
 
-					const ResourceListStateGPU& get_subres_state(UINT id) const
+			const ResourceListStateGPU& get_subres_state(UINT id) const
 			{
-			/*	if (all_states_same || id == ALL_SUBRESOURCES)
-					return all_state;*/
-
 				return subres[id];
 			}
  
 			ResourceListStateGPU& get_subres_state(UINT id)
 			{
-			/*	if (all_states_same || id == ALL_SUBRESOURCES)
-					return all_state;*/
-
 				return subres[id];
 			}
 
@@ -507,8 +388,6 @@ export
 			void init_subres(int count, TextureLayout layout) const
 			{
 				gpu_state.subres.resize(count);
-			//	gpu_state.all_states_same = true;
-			//	gpu_state.all_state.state = state;
 				for (auto& e : gpu_state.subres)
 					e.layout = layout;
 
@@ -530,14 +409,18 @@ export
 			CommandListType process_transitions(Barriers& target, std::vector<Resource*>& discards, Transitions* list) const;
 
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
-			bool transition(Transitions* from, Transitions* to) const;
+
+
+
 			void prepare_state(Transitions* from,const SubResourcesGPU& subres) const;
-
-
-			void alias_begin(Transitions* list)const;
-void alias_end(Transitions* list)const;
+			void prepare_state(Transitions* from, ResourceState state) const;
 
 			void prepare_after_state(Transitions* from,const SubResourcesGPU& subres) const;
+
+			void alias_begin(Transitions* list) const;
+			void alias_end(Transitions* list) const;
+
+			
 		};
 
 

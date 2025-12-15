@@ -87,91 +87,10 @@ export{
 			void begin();
 			void on_execute();
 			std::list<HAL::UsagePoint> usage_points;
-
-			void create_usage_point(bool end = true)
-
-			{
-				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
-				auto point = &usage_points.emplace_back(type);
-
-
-				if (prev_point) prev_point->next_point = point;
-				point->prev_point = prev_point;
-
-				point->start = !end;
-				point->index = static_cast<uint>(usage_points.size());
-
-				compiler.func([point](auto& list)
-					{
-						list.transitions(point->transitions);
-					});
-			}
-
-			void compile_transitions()
-			{
-
-				for (auto& point : usage_points)
-				{
-					for (auto& usage : point.usages)
-					{
-						auto prev_usage = usage.prev_usage;
-						auto prev_state = ResourceStates::NO_ACCESS;
-
-						if (!prev_usage && !usage.need_discard)  continue;
-						if (prev_usage)prev_state = prev_usage->wanted_state;
-
-						if (prev_state == usage.wanted_state) continue;
-
-						assert(prev_state.is_valid());
-						assert(usage.wanted_state.is_valid());
-
-
-						auto a = prev_state.get_best_cmd_type();
-						auto b = usage.wanted_state.get_best_cmd_type();
-
-						assert(IsCompatible(type, a));
-						assert(IsCompatible(type, b));
-						BarrierFlags flags = BarrierFlags::NONE;
-
-						if (usage.need_discard)
-							flags |= BarrierFlags::DISCARD;
-
-						auto last_point = prev_usage ? prev_usage->last_usage : nullptr;
-
-						if (false && last_point)
-						{
-
-							auto sync_state = usage.wanted_state;
-
-							sync_state.operation = BarrierSync::SPLIT;
-
-							last_point->transitions.transition(usage.resource,
-								prev_state,
-								sync_state,
-								usage.subres, flags);
-
-
-							point.transitions.transition(usage.resource,
-								sync_state,
-								usage.wanted_state,
-								usage.subres, flags);
-
-
-						}
-						else
-						{
-							point.transitions.transition(usage.resource,
-								prev_state,
-								usage.wanted_state,
-								usage.subres, flags);
-						}
-
-
-					}
-				}
-
-			}
-
+			std::set<Resource*> need_check_transitions;
+			void create_usage_point(bool end = true);
+			void compile_transitions();
+		public://temporarily to allow transition into read mode
 			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 
@@ -180,26 +99,9 @@ export{
 
 			UINT transition_count = 0;
 			//	UsagePoint* start_transition;
-			HAL::ResourceUsage* add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST)
-			{
-				HAL::UsagePoint* point = nullptr;
+			HAL::ResourceUsage* add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST);
 
-				if (type == HAL::TransitionType::LAST) point = &usage_points.back();
-				if (type == HAL::TransitionType::ZERO) point = &usage_points.front();
-
-
-				//if (type == TransitionType::LAST) 			assert(!point->start);
-				HAL::ResourceUsage& usage = point->usages.emplace_back();
-
-				usage.resource = const_cast<HAL::Resource*>(resource);
-				usage.subres = subres;
-				usage.wanted_state = state;
-
-				usage.usage = point;
-				return &usage;
-			}
-
-			HAL::UsagePoint* get_last_usage_point()
+			inline HAL::UsagePoint* get_last_usage_point()
 			{
 				return &usage_points.back();
 			}
@@ -212,111 +114,10 @@ export{
 
 			std::shared_ptr<TransitionCommandList> fix_pretransitions();
 
-			void transition_present(const HAL::Resource* resource_ptr)
-			{
+			void transition_present(const HAL::Resource* resource_ptr);
 
-				create_usage_point();
-
-				transition(resource_ptr, { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::PRESENT }, ALL_SUBRESOURCES);
-
-				create_usage_point(false);
-			}
-
-
-			void transition(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE)
-			{
-				if (!info.is_valid()) return;
-
-				ResourceState target_state;//= ResourceState::COMMON;
-
-
-				if (std::holds_alternative<HAL::Views::ShaderResource>(info.view))
-				{
-					if (type == CommandListType::DIRECT)
-					{
-						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
-					}
-
-					if (type == CommandListType::COMPUTE)
-					{
-						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
-					}
-
-					target_state = { operation, BarrierAccess::SHADER_RESOURCE, TextureLayout::SHADER_RESOURCE };  //TODO BarrierSync::ALL
-
-				}
-				else 	if (std::holds_alternative<HAL::Views::UnorderedAccess>(info.view))
-				{
-					//assert( operation != BarrierSync::NONE);
-
-					if (type == CommandListType::DIRECT)
-					{
-						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
-					}
-
-					if (type == CommandListType::COMPUTE)
-					{
-						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
-					}
-
-					target_state = { operation, BarrierAccess::UNORDERED_ACCESS, TextureLayout::UNORDERED_ACCESS };  //TODO BarrierSync::ALL
-				}
-				else 	if (std::holds_alternative<HAL::Views::RenderTarget>(info.view))
-				{
-					target_state = ResourceStates::RENDER_TARGET;
-				}
-				else 	if (std::holds_alternative<HAL::Views::DepthStencil>(info.view))
-				{
-					target_state = ResourceStates::DEPTH_STENCIL;
-
-				}
-				else if (std::holds_alternative<HAL::Views::ConstantBuffer>(info.view))
-				{
-					if (type == CommandListType::DIRECT)
-					{
-						operation = BarrierSync::ALL_SHADING;// | BarrierSync::DRAW ;
-					}
-
-					if (type == CommandListType::COMPUTE)
-					{
-						operation = BarrierSync::COMPUTE_SHADING;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
-					}
-
-					target_state = { operation, BarrierAccess::CONSTANT_BUFFER, TextureLayout::UNDEFINED };  //TODO BarrierSync::ALL
-
-				}
-				else assert(false);
-
-
-				//if(GetAsyncKeyState('4'))
-				//{
-				//	if (type == CommandListType::DIRECT)
-				//	{
-				//		operation =BarrierSync::ALL_DIRECT;// operation = ResourceStates::PIXEL_SHADER_RESOURCE | ResourceStates::NON_PIXEL_SHADER_RESOURCE;
-				//	}
-
-				//	if (type == CommandListType::COMPUTE)
-				//	{
-				//		operation =BarrierSync::ALL_COMPUTE;//  ResourceStates::NON_PIXEL_SHADER_RESOURCE;
-				//	}
-				//
-				//}
-				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
-					{
-						transition(resource.get(), target_state, subres);
-					});
-			}
-
-			void stop_using(const ResourceInfo& info)
-			{
-				if (!info.is_valid()) return;
-
-
-				info.for_each_subres([&](const HAL::Resource::ptr& resource, UINT subres)
-					{
-						const_cast<HAL::Resource*>(resource.get())->get_state_manager().stop_using(this, subres);
-					});
-			}
+			void transition(const ResourceInfo& info, BarrierSync operation = BarrierSync::NONE)   ;
+			void stop_using(const ResourceInfo& info)	  ;
 		};
 
 
@@ -345,22 +146,17 @@ export{
 
 
 		};
-		struct GPUTimers
-		{
-			std::list<GPUTimer> timers;
-			void reset()
-			{
-				timers.clear();
-			}
-		};
 
-		class GPUBlock :public TimedBlock, public ObjectState<GPUTimers>
+		class GPUBlock :public TimedBlock
 		{
 			Device& device;
+
+			
 		public:
+			using ptr = std::shared_ptr<GPUBlock>;
+					 GPUTimer gpu_timer;
 
-
-			GPUBlock(std::wstring_view name, Device& device) :TimedBlock(name), device(device) {}
+			GPUBlock(std::wstring_view name, TimedBlock* parent, Device& device) :TimedBlock(name, parent), device(device) {}
 			void start(Eventer* list);
 
 			void end(Eventer* list);
@@ -370,7 +166,7 @@ export{
 		class Eventer : public virtual CommandListBase, public TimedRoot
 		{
 			friend class GPUBlock;
-			std::list< GPUBlock*> gpu_timers;
+			std::list< GPUBlock::ptr> gpu_timers;
 			std::list<std::wstring> names;
 			TimedBlock* current;
 			bool started = false;
@@ -383,7 +179,7 @@ export{
 
 
 			void reset();
-			void begin(std::string name, Timer* t = nullptr);
+			void begin(std::string name);
 		public:
 			void end();
 			Eventer(Device& device) {}
@@ -503,7 +299,7 @@ export{
 
 			CommandList(CommandListType);
 
-			void begin(std::string name = "", Timer* t = nullptr);
+			void begin(std::string name = "");
 
 
 			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))

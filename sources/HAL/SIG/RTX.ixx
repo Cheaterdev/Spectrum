@@ -252,6 +252,9 @@ struct SelectLocal<T>
 			this->miss_ids = HAL::StructuredBufferView<HAL::shader_identifier>(miss_ids.size());
 			this->raygen_ids =HAL::StructuredBufferView<raygen_type>(raygen_ids.size());
 
+			   this->miss_ids.resource->set_name("RTXPSO::miss_ids");
+			  	   this->raygen_ids.resource->set_name("RTXPSO::raygen_ids");
+
 
 			auto list = (HAL::Device::get().get_upload_list());
 			list->get_copy().update(this->miss_ids, 0, miss_ids);

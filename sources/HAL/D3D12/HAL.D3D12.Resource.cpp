@@ -142,12 +142,24 @@ namespace HAL
 						initialLayout = TextureLayout::COPY_DEST; // probably update from CPU or copy
 				}
 
+
+			if(check(_desc.Flags&ResFlags::DisableStateTracking))
+			{
+				if(check(_desc.Flags&ResFlags::ShaderResource))
+					initialLayout = TextureLayout::SHADER_RESOURCE;// | TextureLayout::COPY_SOURCE;
+				else
+				   initialLayout = TextureLayout::COPY_SOURCE;
+			}
+
+
 			}
 			else
 			{
 				initialLayout = TextureLayout::UNDEFINED;
 			}
 
+
+			
 			D3D12_BARRIER_LAYOUT layout = to_native(initialLayout);
 
 			if (address.heap)
@@ -179,16 +191,22 @@ namespace HAL
 					castable_formats.size(), castable_formats.data(),
 					IID_PPV_ARGS(&native_resource)));
 			}
-
+			   	auto prev_flags = THIS->desc.Flags;
 			init(native_resource, initialLayout);
+			THIS->desc.Flags |= 	prev_flags;
 		}
 
 		void Resource::init(D3D::Resource  resource, TextureLayout layout)
 		{
 			auto THIS = static_cast<HAL::Resource*>(this);
 	
+		
 
 			THIS->desc = extract(native_resource);
+					
+			if(layout == TextureLayout::PRESENT)
+				THIS->desc.Flags |= ResFlags::Swapchain;
+
 			if (THIS->desc.is_buffer())
 				this->address = GPUAddressPtr(native_resource->GetGPUVirtualAddress());
 			else
@@ -270,6 +288,7 @@ namespace HAL
 
 	void Resource::set_name(std::string name)
 	{
+		assert(name.size()>0);
 		this->name = name;
 		get_dx()->SetName(convert(name).c_str());
 

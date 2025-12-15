@@ -12,6 +12,7 @@ export
 		void reset()
 		{
 			used = false;
+			alias_ended = false;
 		}
 		bool alias_ended = false;
 	};

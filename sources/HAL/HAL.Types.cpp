@@ -125,7 +125,7 @@ namespace HAL
 		return false;
 	}
 
-	bool ResourceState::is_valid() const
+	bool ResourceState::is_valid(ResourceType type) const
 	{
 		if (check(operation & BarrierSync::COPY))
 		{
@@ -141,27 +141,39 @@ namespace HAL
 		if (check(access & BarrierAccess::SHADER_RESOURCE))
 		{
 
-			if (layout!=TextureLayout::NONE&&!check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
+			if ((layout!=TextureLayout::NONE&&layout!=TextureLayout::UNDEFINED)&&!check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
 
 		}
 		if (check(access & BarrierAccess::UNORDERED_ACCESS))
 		{
 
-			if (layout!=TextureLayout::NONE&&!check(layout & TextureLayout::UNORDERED_ACCESS))	 return false;
+			if ((layout!=TextureLayout::NONE&&layout!=TextureLayout::UNDEFINED)&&!check(layout & TextureLayout::UNORDERED_ACCESS))	 return false;
 
 		}
 
-		if (check(access & BarrierAccess::SHADER_RESOURCE))
+	/*	if (check(access & BarrierAccess::SHADER_RESOURCE))
 		{
 
 			if (layout!=TextureLayout::NONE&&!check(layout & TextureLayout::SHADER_RESOURCE))	 return false;
 
-		}
+		}			   */
 
 
 		return true;
 	}
+				 	bool ResourceState::valid_begin() const
+					{
+					
+							  if(check(layout & TextureLayout::PRESENT)) return true;
+						if(operation== BarrierSync::NONE) return false;
+								if(access== BarrierAccess::NO_ACCESS) return false;
 
+								
+							  if(check(layout & TextureLayout::NONE)) return false;
+return true;
+					
+					
+					}
 
 	ResourceState::ResourceState(BarrierSync s, BarrierAccess a, TextureLayout l) : operation(s), access(a), layout(l)
 	{

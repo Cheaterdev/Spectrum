@@ -145,6 +145,7 @@ namespace HAL
 
 				executor.enqueue([cl, this, execution_fence]()
 					{
+							PROFILE(L"update_tile_mappings result");
 						execution_fence.wait();
 						auto list = cl;
 						auto& updates = (list)->tile_updates;
@@ -168,8 +169,6 @@ namespace HAL
 			if (transition_list->get_type() == (list)->get_type())
 			{
 				API::Queue::execute(&transition_list->get_compiled());
-					//const FenceWaiter execution_fence = signal_internal();
-				//	execution_fence.wait();
 				API::Queue::execute(&list->compiler.get_list());
 			}
 			else
@@ -191,26 +190,21 @@ namespace HAL
 		}
 
 		// Alias warnings in the same execute scope
-			flush();
+		flush();
 
-
-	//	Log::get() << Log::LEVEL_ERROR<< "Send " << list->name << Log::endl;
 
 		const FenceWaiter execution_fence = signal_internal();
-
-		//{
-		//	PROFILE(L"on_send");
-		//	(list)->on_send(execution_fence);
-		//	(list)->free_resources();
-		//}
 
 		executor.enqueue([cl,transition_list, execution_fence, this]()
 			{
 				if (!HAL::Device::get().alive) return;
 
+					PROFILE(L"on_execute wait");
+
 				auto list = cl;
 				execution_fence.wait();
-				PROFILE(L"on_execute");
+
+				PROFILE(L"on_execute process");
 				if(transition_list) transition_list->on_execute();
 				(list)->on_execute();
 			});

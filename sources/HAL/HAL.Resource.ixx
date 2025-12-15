@@ -159,6 +159,14 @@ export{
 				return load_waiter.is_completed();
 			}
 
+			ResourceType get_type() const
+			{
+				if(desc.is_buffer())
+					return ResourceType::Buffer;
+
+
+				return ResourceType::Texture;
+			}
 			const ResourceDesc& get_desc() const
 			{
 				return desc;

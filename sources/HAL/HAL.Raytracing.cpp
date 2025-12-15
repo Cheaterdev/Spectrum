@@ -15,7 +15,7 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 	auto bottomLevelPrebuildInfo = Device::get().calculateBuffers(inputs);
 
 	scratch_buffer = StructuredBufferView<std::byte>(bottomLevelPrebuildInfo.ScratchDataSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
-	prev_buffer = StructuredBufferView<std::byte>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::UnorderedAccess | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
+	prev_buffer = StructuredBufferView<std::byte>(bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, counterType::NONE,  HAL::ResFlags::Raytracing | HAL::ResFlags::ShaderResource, HeapType::DEFAULT);
 	cur_buffer = &prev_buffer;
 	HAL::RaytracingBuildDescStructure bottomLevelBuildDesc;
 	{
