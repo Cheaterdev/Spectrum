@@ -970,7 +970,7 @@ namespace GUI
         {
             end = std::min(start + per_thread, (uint)draw_infos.size());
 
-            graph.add_pass<pass_data>(std::string("UI RENDER_")+std::to_string(t++), [this](pass_data& data, TaskBuilder& builder) {
+            graph.add_pass<pass_data>(L"UI RENDER_", [this](pass_data& data, TaskBuilder& builder) {
 			builder.need(data.o_texture, ResourceFlags::RenderTarget);
             use_graph(builder);
 			 }, [this,&graph, start, end](pass_data& data, FrameContext& context) {
@@ -1222,6 +1222,11 @@ namespace GUI
 		auto frame_gen = dynamic_cast<GraphGenerator*>(object);
 		if (frame_gen)
 			frame_generators.erase(frame_gen);
+
+
+        	auto usage = dynamic_cast<GraphUsage*>(object);
+		if (usage)
+			frame_usage.erase(usage);
     }
 
     void user_interface::add_base(base* object)
@@ -1230,6 +1235,10 @@ namespace GUI
         auto frame_gen = dynamic_cast<GraphGenerator*>(object);
         if (frame_gen)
             frame_generators.insert(frame_gen);
+
+       	auto usage = dynamic_cast<GraphUsage*>(object);
+		if (usage)
+            frame_usage.insert(usage);
     }
 	void user_interface::key_action_event_internal(long key)
 	{

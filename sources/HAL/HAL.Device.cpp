@@ -26,7 +26,7 @@ namespace HAL
 	std::shared_ptr<CommandList> Device::get_upload_list()
 	{
 		auto list = (queues[CommandListType::COPY]->get_free_list());
-		list->begin("UploadList");
+		list->begin(L"UploadList");
 		return list;
 	}
 

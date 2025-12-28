@@ -282,7 +282,7 @@ namespace HAL
 			});
 	}
 
-	void DelayedCommandList::start_event(std::wstring str)
+	void DelayedCommandList::start_event(std::wstring_view str)
 	{
 		tasks.emplace_back([=](API::CommandList& list) {
 			list.start_event(str);

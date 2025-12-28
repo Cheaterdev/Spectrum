@@ -42,7 +42,7 @@ void SMAA::generate(Graph& graph)
 		Handlers::Texture ResultTextureNew = ResultTexture;
 	};
 
-	graph.add_pass<SMAAData>("SMAA", [this, &graph](SMAAData& data, TaskBuilder& builder) {
+	graph.add_pass<SMAAData>(L"SMAA", [this, &graph](SMAAData& data, TaskBuilder& builder) {
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 
 		auto& frame = graph.get_context<ViewportInfo>();

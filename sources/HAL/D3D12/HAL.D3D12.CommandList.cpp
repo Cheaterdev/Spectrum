@@ -527,8 +527,7 @@ namespace HAL
 
 
 
-
-			if (GetAsyncKeyState('8'))
+					   /*			if (GetAsyncKeyState('8'))
 			{
 
 
@@ -548,10 +547,7 @@ namespace HAL
 						D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_WRITE |
 						D3D12_BARRIER_ACCESS_RAYTRACING_ACCELERATION_STRUCTURE_READ;
 
-					/*	barrier.SyncBefore =D3D12_BARRIER_SYNC_ALL;
-						barrier.SyncAfter = D3D12_BARRIER_SYNC_ALL;
-						barrier.AccessBefore = to_native(e.before.get_access());
-						barrier.AccessAfter = to_native(e.after.get_access());*/
+			
 
 					global.emplace_back(barrier);
 				
@@ -564,7 +560,7 @@ namespace HAL
 				native.emplace_back(group);
 			}
 
-
+					   */
 
 
 			/*auto& barriers = _barriers.get_barriers();

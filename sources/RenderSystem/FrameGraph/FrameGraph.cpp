@@ -134,6 +134,9 @@ namespace FrameGraph
 
 	void TaskBuilder::pass_texture(std::string name, HAL::Texture::ptr tex, HAL::FenceWaiter fence, ResourceFlags flags)
 	{
+
+		tex->resource->disable_state_tracking();
+
 		auto tex_desc = tex->get_desc().as_texture();
 		if (tex_desc.is2D())
 		{
@@ -231,6 +234,23 @@ namespace FrameGraph
 
 			list = (frame->start_list(pass->name, type));
 
+		
+		}
+		return list;
+	}
+
+	void FrameContext::begin(Pass* pass, HAL::FrameResources::ptr& frame) {
+
+		this->pass = pass;
+		this->frame = frame;
+
+		bool need_list = !pass->used.resource_deletions_before.empty() || !pass->used.resource_creations.empty();
+
+		 if(need_list)
+		 {
+
+			auto&_list = get_list();
+
 			for (auto info : pass->used.resource_deletions_before)
 			{
 				if (!info->alloc_ptr.handle) continue;
@@ -251,19 +271,28 @@ namespace FrameGraph
 				//			list->discard(info->resource.get());
 				list->alias_begin(info->resource.get());
 			}
-		}
-		return list;
-	}
 
-	void FrameContext::begin(Pass* pass, HAL::FrameResources::ptr& frame) {
 
-		this->pass = pass;
-		this->frame = frame;
+		 }
 	}
 
 	void FrameContext::end()
 	{
-		if (list)list->end();
+		if (list)
+		{
+			for (auto info : pass->used.resource_deletions_after)
+			{
+				if (!info->alloc_ptr.handle) continue;
+
+				if (!info->enabled)
+					continue;
+
+				list->alias_end(info->resource.get());
+			}
+
+			list->end();
+
+		}
 	}
 
 
@@ -456,7 +485,7 @@ namespace FrameGraph
 				}
 			}
 
-			builder.enabled_passes.sort(
+		/*	builder.enabled_passes.sort(
 				[](const Pass* a, const Pass* b)
 				{
 
@@ -471,7 +500,7 @@ namespace FrameGraph
 					}
 					return (a->dependency_level < b->dependency_level);
 				});
-
+					 */
 
 			std::list<Pass*> graphics;
 			std::list<Pass*> compute;
@@ -512,7 +541,7 @@ namespace FrameGraph
 			}
 
 
-			builder.enabled_passes = new_enabled_passes;
+			//builder.enabled_passes = new_enabled_passes;
 		}
 
 		int i = 1;
@@ -814,16 +843,31 @@ namespace FrameGraph
 							prev_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
 							prev_gpu_state.set_cpu_state(prev_cpu_state);
 
-							auto transition_best_type = prev_gpu_state.get_best_list_type();
 
-							if (IsCompatible(next_list_type, transition_best_type))
+							HAL::SubResourcesGPU next_gpu_state;
+							next_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
+							next_gpu_state.set_cpu_state(next_cpu_state);
+
+
+							auto transition_best_type = Merge(prev_gpu_state.get_best_list_type(),next_gpu_state.get_best_list_type());
+
+
+							bool compatible_next = 	 IsCompatible(next_list_type, transition_best_type);
+							bool compatible_prev = 	 IsCompatible(prev_list_type, transition_best_type);
+
+							if(compatible_next&&compatible_prev)
+							{
+								// do a split transition
+								info.resource->get_state_manager().connect(prev_cmd.get(), next_cmd.get());
+							}else if (compatible_next)
 							{
 								// next pass should rewrite its first state
-								info.resource->get_state_manager().prepare_state(next_cmd.get(), prev_gpu_state);
+								info.resource->get_state_manager().prepare_state(next_cmd.get(), prev_gpu_state);			  // add sync&access info
 							}
 							else
 							{
-								assert(IsCompatible(prev_list_type, transition_best_type));
+								assert(compatible_prev);
+
 								// prev pass should rewrite its last state
 								HAL::SubResourcesGPU next_gpu_state;
 								next_gpu_state.subres.resize(resource->get_state_manager().get_subres_count());
@@ -832,13 +876,16 @@ namespace FrameGraph
 								auto next_best_type = next_gpu_state.get_best_list_type();
 								assert(IsCompatible(prev_list_type, next_best_type));
 
-								info.resource->get_state_manager().prepare_after_state(prev_cmd.get(), next_gpu_state);
+								info.resource->get_state_manager().prepare_after_state(prev_cmd.get(), next_gpu_state);		 // add sync&access infoZ
 							}
+
+
+							
 						}
 
 
 						//last state is a write state
-						if ((i == info.states.size() - 1) && info.states[i].write && info.is_static())
+						if ((i == info.states.size() - 1) && info.states[i].write && (info.is_static() || info.passed))
 						{
 							auto layout = info.creation_state.get_subres_state(0).layout;
 							auto target = ResourceStates::NO_ACCESS;
@@ -913,6 +960,19 @@ namespace FrameGraph
 			{
 				PROFILE(L"compile");
 
+				   
+
+				//	std::list<std::future<void>> tasks;
+				for (auto& pass : builder.enabled_passes)
+				{
+					auto commandList = pass->context.list;
+					if (!commandList) continue;
+
+					commandList->compile_transitions();
+				}
+
+
+
 				//	std::list<std::future<void>> tasks;
 				for (auto& pass : builder.enabled_passes)
 				{
@@ -920,27 +980,32 @@ namespace FrameGraph
 					if (!commandList) continue;
 
 					pass->compile_task = thread_pool::get().enqueue([commandList, pass]() {
-						PROFILE((convert(pass->name) + L":compile").c_str());
+						PROFILE(pass->name);
 
-						for (auto info : pass->used.resource_deletions_after)
-						{
-							if (!info->alloc_ptr.handle) continue;
-
-							if (!info->enabled)
-								continue;
-
-							commandList->alias_end(info->resource.get());
-						}
 						commandList->compile();
 						});
 
 				}
 
+					   	for (auto& pass : builder.enabled_passes)
+				{
+								auto commandList = pass->context.list;
+					if (!commandList) continue;
 
+
+							  {
+							PROFILE(L"pass_wait");
+							pass->compile_task.wait();
+						}
+						}
 			}
 
 			{
 				PROFILE(L"submitting lists");
+
+				std::map<CommandListType, std::list<CommandList::ptr>> queued_lists;
+
+
 				for (auto& pass : builder.enabled_passes)
 				{
 					HAL::CommandListType list_type = pass->get_type();
@@ -954,21 +1019,39 @@ namespace FrameGraph
 						for (auto sync_pass : pass->sync_state.values)
 						{
 							if (!sync_pass) continue;
+
+							HAL::Device::get().get_queue(list_type)->execute(queued_lists[list_type]);
+							queued_lists[list_type].clear();
+
 							HAL::Device::get().get_queue(list_type)->gpu_wait(sync_pass->fence_end);
 						}
 
-						{
-							PROFILE(L"pass_wait");
-							pass->compile_task.wait();
-						}
-						pass->fence_end = commandList->execute();
+						
 
-						result = pass->fence_end;
+						queued_lists[list_type].emplace_back(commandList);
+
+					//	if(pass->put_fence)		//////////////////////// ARGH!!!!
+						{
+							pass->fence_end = HAL::Device::get().get_queue(list_type)->execute(queued_lists[list_type]);
+
+							queued_lists[list_type].clear();
+
+							result = pass->fence_end;
+						}
+					//	pass->fence_end = commandList->execute();
+
+					//	
 					}
 
 
 				}
 
+
+				for(auto &[type,lists] : queued_lists)
+				{
+					if(lists.empty()) continue;
+				  result =  HAL::Device::get().get_queue(type)->execute(lists);
+				}
 			}
 
 		}
@@ -1205,7 +1288,7 @@ namespace FrameGraph
 					{
 						PROFILE(L"placed");
 						res.resource = HAL::create_resource(info->d3ddesc, info->alloc_ptr);
-						res.resource->get_state_manager().manual_controlled = true; // TODO: move everywhere		
+			//						 	res.resource->debug = info->name=="ResultTexture"; // TODO: move everywhere		
 
 						res.resource->set_name(info->name);
 						res.view = nullptr;

@@ -84,7 +84,7 @@ namespace HAL
 		//auto list = Device::get().get_upload_list();
 
 		auto list = (HAL::Device::get().get_queue(CommandListType::COPY)->get_free_list());
-		list->begin("Texture Readback");
+		list->begin(L"Texture Readback");
 
 		desc.Format = desc.Format.to_typeless();
 

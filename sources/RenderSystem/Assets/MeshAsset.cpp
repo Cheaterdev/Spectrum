@@ -65,7 +65,7 @@ void MeshAsset::init_gpu()
 		for (auto& mesh : meshes)
 		{
 			auto list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
-			list->begin("RTX");
+			list->begin(L"RTX");
 
 			auto mat = list->place_raw(nodes[mesh.node_index]->mesh_matrix);
 

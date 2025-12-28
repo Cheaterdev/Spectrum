@@ -36,7 +36,7 @@ public:
 
 			CommandList::ptr command_list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 
-			command_list->begin("pre");
+			command_list->begin(L"pre");
 			{
 		
 				SceneFrameManager::get().prepare(command_list, *scene);
@@ -61,7 +61,7 @@ public:
 				Handlers::Texture H(GBuffer_HiZ_UAV);
 			};
 
-			graph.add_pass<GBufferData>("GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
+			graph.add_pass<GBufferData>(L"GBUFFER", [this, size](GBufferData& data, TaskBuilder& builder) {
 				data.gbuffer.create(size, builder);
 				//	data.gbuffer.create_mips(size, builder);
 				//	data.gbuffer.create_quality(size, builder);
@@ -144,7 +144,7 @@ public:
 		{
 			Handlers::Texture H(ResultTexture);
 		};
-		graph.add_pass<no>("mip", [this, &graph](no& data, TaskBuilder& builder) {
+		graph.add_pass<no>(L"mip", [this, &graph](no& data, TaskBuilder& builder) {
 			builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 			}, [](no& data, FrameContext& _context) {
 

@@ -25,5 +25,6 @@ public:
 	void set_position(float3 p);
 
 	PSSM();
+	 	 void generate_global(FrameGraph::Graph& graph);
 
 };

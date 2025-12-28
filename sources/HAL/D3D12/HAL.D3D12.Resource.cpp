@@ -130,14 +130,14 @@ namespace HAL
 				}
 				else 	if (initialLayout == TextureLayout::UNDEFINED)
 				{
-					if (check(desc.Flags & HAL::ResFlags::DepthStencil))
-						initialLayout = TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::DEPTH_STENCIL_READ;
-					else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
-						initialLayout = TextureLayout::RENDER_TARGET;
-					else if (check(desc.Flags & HAL::ResFlags::ShaderResource))
+					if (check(desc.Flags & HAL::ResFlags::ShaderResource))
 						initialLayout = TextureLayout::SHADER_RESOURCE;
 					else if (check(desc.Flags & HAL::ResFlags::UnorderedAccess))
 						initialLayout = TextureLayout::UNORDERED_ACCESS;
+					else if (check(desc.Flags & HAL::ResFlags::DepthStencil))
+						initialLayout = TextureLayout::DEPTH_STENCIL_WRITE | TextureLayout::DEPTH_STENCIL_READ;
+					else if (check(desc.Flags & HAL::ResFlags::RenderTarget))
+						initialLayout = TextureLayout::RENDER_TARGET;
 					else
 						initialLayout = TextureLayout::COPY_DEST; // probably update from CPU or copy
 				}

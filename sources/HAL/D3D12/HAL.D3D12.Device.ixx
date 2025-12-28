@@ -119,14 +119,13 @@ namespace HAL
 		void Device::process_result(HRESULT hr, std::string_view line) const
 		{
 			//if (hr == 0x887a0005) device_fail();
-
-			std::string message = std::system_category().message(hr);
-
-			if (FAILED(hr))
-				Log::get().crash_error(hr, line);
-
+			
 			if (FAILED(hr))
 			{
+				  	std::string message = std::system_category().message(hr);
+
+				 	Log::get().crash_error(hr, line);
+
 			hr = 	native_device->GetDeviceRemovedReason();
 				__debugbreak();
 				assert(false);

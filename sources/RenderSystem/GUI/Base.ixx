@@ -563,6 +563,7 @@ namespace GUI
             bool is_updating_layout = false;
 
             my_unique_vector<FrameGraph::GraphGenerator*> frame_generators;
+            my_unique_vector<FrameGraph::GraphUsage*> frame_usage;
             cursor_style cursor = cursor_style::ARROW;
          
         public:
@@ -625,21 +626,13 @@ namespace GUI
 
             void use_graph(FrameGraph::TaskBuilder& builder)
             {
-                //				std::lock_guard<std::mutex> g(m);
 
-                auto f = [&](base* elem) {
-                    auto frame_gen = dynamic_cast<FrameGraph::GraphUsage*>(elem);
-                    if (frame_gen)
-                        frame_gen->use(builder);
+                 for (auto& gen : frame_usage)
+                {
+                    gen->use(builder);
+                }
 
-                    return true;
-                };
 
-                iterate(f);
-                /*    for (auto& gen : frame_generators)
-                    {
-                        gen->generate(graph);
-                    }*/
             }
             std::shared_future<bool> message_box(std::string title, std::string text, std::function<void(bool)> f);
 

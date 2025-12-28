@@ -68,12 +68,12 @@ class TimedBlock: public SharedObject<TimedBlock>
 public:
 	using ptr = std::shared_ptr<TimedBlock>;
 				int id;
-	std::wstring get_name() const;
+	std::wstring_view get_name() const;
 	CPUCounter cpu_counter;
 	TimedBlock(std::wstring_view name, TimedBlock* parent);
 	 virtual ~TimedBlock() = default;
 public:
-	std::wstring name;
+	std::wstring_view name;
 	uint level;
 	TimedBlock* parent;
 };
@@ -191,7 +191,7 @@ Timer::~Timer()
 }
 
 
-std::wstring TimedBlock::get_name() const
+std::wstring_view TimedBlock::get_name() const
 {
 	return name;
 }

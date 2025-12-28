@@ -364,7 +364,7 @@ void stencil_renderer::generate(Graph& graph)
 
 		};
 
-		graph.add_pass<Data>("stencil_renderer::before", [this, &graph](Data& data, TaskBuilder& builder) {
+		graph.add_pass<Data>(L"stencil_renderer::before", [this, &graph](Data& data, TaskBuilder& builder) {
 
 			builder.create(data.depth_tex, { { 1,1,0 }, HAL::Format::R32_TYPELESS, 1 }, ResourceFlags::DepthStencil);
 			builder.create(data.id_buffer, { 1 }, ResourceFlags::UnorderedAccess);
@@ -558,7 +558,7 @@ void stencil_renderer::generate_after(Graph& graph)
 			Handlers::Texture H(Stencil_color_tex);
 		};
 
-		graph.add_pass<Data>("stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
+		graph.add_pass<Data>(L"stencil_renderer::after", [this, &graph](Data& data, TaskBuilder& builder) {
 
 			auto& frame = graph.get_context<ViewportInfo>();
 

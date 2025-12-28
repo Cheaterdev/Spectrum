@@ -59,7 +59,7 @@ void ReflectionDenoiser::generate(Graph& graph)
 				Handlers::Texture H(BlueNoise);
 		};
 
-		graph.pass<ReflectionDenoiser_ReprojectData>("ReflectionDenoiser_Reproject", [this, &graph, size, small_size](ReflectionDenoiser_ReprojectData& data, TaskBuilder& builder) {
+		graph.pass<ReflectionDenoiser_ReprojectData>(L"ReflectionDenoiser_Reproject", [this, &graph, size, small_size](ReflectionDenoiser_ReprojectData& data, TaskBuilder& builder) {
 			builder.need(data.GBuffer_DepthPrev, ResourceFlags::ComputeRead);
 			builder.need(data.GBuffer_NormalsPrev, ResourceFlags::ComputeRead);
 			//	builder.need(data.GBuffer_SpecularPrev, ResourceFlags::ComputeRead);

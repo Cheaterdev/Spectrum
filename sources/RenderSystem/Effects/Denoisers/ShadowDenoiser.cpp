@@ -47,7 +47,7 @@ void ShadowDenoiser::generate(Graph& graph)
 			Handlers::StructuredBuffer<uint32_t> H(ShadowDenoiser_TileBuffer);
 		};
 
-		graph.pass<ShadowDenoiser_PrepareData>("ShadowDenoiser_Prepare", [this, &graph, tileCount](ShadowDenoiser_PrepareData& data, TaskBuilder& builder) {
+		graph.pass<ShadowDenoiser_PrepareData>(L"ShadowDenoiser_Prepare", [this, &graph, tileCount](ShadowDenoiser_PrepareData& data, TaskBuilder& builder) {
 			builder.need(data.RTXDebug, ResourceFlags::ComputeRead);
 			builder.create(data.ShadowDenoiser_TileBuffer, { tileCount }, ResourceFlags::UnorderedAccess);
 
@@ -88,7 +88,7 @@ void ShadowDenoiser::generate(Graph& graph)
 			Handlers::Texture H(ShadowDenoiser_Scratch2);
 		};
 
-		graph.pass<ShadowDenoiser_TileClassificationData>("ShadowDenoiser_TileClassification", [this, &graph, tileCount, size](ShadowDenoiser_TileClassificationData& data, TaskBuilder& builder) {
+		graph.pass<ShadowDenoiser_TileClassificationData>(L"ShadowDenoiser_TileClassification", [this, &graph, tileCount, size](ShadowDenoiser_TileClassificationData& data, TaskBuilder& builder) {
 			builder.need(data.ShadowDenoiser_TileBuffer, ResourceFlags::ComputeRead);
 			builder.need(data.GBuffer_DepthPrev, ResourceFlags::ComputeRead);
 			builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead);
@@ -172,7 +172,7 @@ void ShadowDenoiser::generate(Graph& graph)
 			Handlers::Texture H(ShadowDenoiser_Scratch2);
 		};
 
-		graph.pass<ShadowDenoiser_FilterData>("ShadowDenoiser_Filter", [this, &graph, tileCount, size](ShadowDenoiser_FilterData& data, TaskBuilder& builder) {
+		graph.pass<ShadowDenoiser_FilterData>(L"ShadowDenoiser_Filter", [this, &graph, tileCount, size](ShadowDenoiser_FilterData& data, TaskBuilder& builder) {
 		//	builder.need(data.ShadowDenoiser_TileBuffer, ResourceFlags::ComputeRead);
 			builder.need(data.RTXDebug, ResourceFlags::UnorderedAccess);
 			builder.need(data.GBuffer_Depth, ResourceFlags::ComputeRead);

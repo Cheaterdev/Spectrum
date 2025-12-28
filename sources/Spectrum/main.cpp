@@ -419,7 +419,7 @@ public:
 		{
 			CommandList::ptr command_list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
 
-			command_list->begin("pre");
+			command_list->begin(L"pre");
 			{
 				SceneFrameManager::get().prepare(command_list, *scene);
 				if (HAL::Device::get().is_rtx_supported())
@@ -434,6 +434,12 @@ public:
 		}
 
 		blue_noise.generate(graph);
+			if (enable_gi) voxel_gi->generate_pre(graph);
+
+			
+			pssm.generate_global(graph);   			 	
+					sky.generate(graph);
+	if (enable_gi) voxel_gi->generate_light(graph);
 
 		{
 			struct GBufferData
@@ -464,7 +470,7 @@ public:
 				});*/
 
 
-			graph.add_pass<GBufferData>("SCENE", [this, &graph](GBufferData& data, TaskBuilder& builder)
+			graph.add_pass<GBufferData>(L"SCENE", [this, &graph](GBufferData& data, TaskBuilder& builder)
 				{
 					auto& frame = graph.get_context<ViewportInfo>();
 
@@ -577,7 +583,7 @@ public:
 
 			//		if (HAL::Device::get().is_rtx_supported())
 			{
-				graph.add_pass<RTXDebugData>("RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder)
+				graph.add_pass<RTXDebugData>(L"RTXDebug", [this, &graph](RTXDebugData& data, TaskBuilder& builder)
 					{
 						auto& frame = graph.get_context<ViewportInfo>();
 					
@@ -695,11 +701,11 @@ public:
 		{
 			Handlers::Texture H(ResultTexture);
 		};
-		graph.pass<no>("no", [this, &graph](no& data, TaskBuilder& builder) -> bool
+		graph.pass<no>(L"no", [this, &graph](no& data, TaskBuilder& builder) -> bool
 			{
 				auto& frame = graph.get_context<ViewportInfo>();
 				builder.create(data.ResultTexture,
-					{ uint3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1 },
+					{ uint3(frame.frame_size, 0), HAL::Format::R16G16B16A16_FLOAT, 1, 1 },
 					ResourceFlags::RenderTarget);
 
 				return false;
@@ -709,7 +715,6 @@ public:
 
 
 			pssm.generate(graph);
-			sky.generate(graph);
 
 			// remove on intel
 			if (enable_gi) voxel_gi->generate(graph);
@@ -736,7 +741,7 @@ public:
 					Handlers::Texture H(GBuffer_DepthPrev);
 					Handlers::Texture H(GBuffer_DepthMips);
 				};
-				graph.add_pass<CopyPrev>("CopyPrev", [this, &graph](CopyPrev& data, TaskBuilder& builder)
+				graph.add_pass<CopyPrev>(L"CopyPrev", [this, &graph](CopyPrev& data, TaskBuilder& builder)
 					{
 						auto& frame = graph.get_context<ViewportInfo>();
 						builder.need(data.GBuffer_NormalsPrev, ResourceFlags::CopyDest);
@@ -911,6 +916,7 @@ public:
 	{
 			PROFILE(L"render");
 		if (swap_chain) swap_chain->resize(new_size);
+	
 		swap_chain->wait_for_free();
 		{
 			std::lock_guard<std::mutex> g(m);
@@ -1012,12 +1018,12 @@ public:
 
 			auto ptr = get_ptr();
 			//	if(false)
-			graph.add_pass<pass_data>("PROFILER", [](pass_data& data, TaskBuilder& builder)
+			graph.add_pass<pass_data>(L"PROFILER", [](pass_data& data, TaskBuilder& builder)
 				{
 					builder.need(data.swapchain, ResourceFlags::Required | ResourceFlags::RenderTarget);
 				}, [this, ptr](pass_data& data, FrameContext& context)
 					{
-						context.get_list()->transition_present(data.swapchain->resource.get());
+					//	context.get_list()->transition_present(data.swapchain->resource.get());
 
 						//context.get_list()->resolve_timers(Device::get().get_gpu_time_profiler());
 
@@ -1083,7 +1089,7 @@ public:
 						 continue;
 
 				auto node = std::make_shared<PassNode>();
-				node->name = pass->name + " " + std::to_string(pass->id);
+				node->name = convert(std::wstring(pass->name)) + " " + std::to_string(pass->id);
 
 				CommandListType pass_type = check(pass->flags & PassFlags::Compute)? CommandListType::COMPUTE:CommandListType::DIRECT;
 				if (!pass->enabled)
@@ -1175,7 +1181,7 @@ public:
 		desc.stereo = false;
 		desc.window = this;
 		swap_chain = std::make_shared<HAL::SwapChain>(HAL::Device::get(), desc);
-
+		
 		set_capture = [this](bool v)
 			{
 				if (v)

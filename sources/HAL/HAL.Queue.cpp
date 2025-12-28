@@ -20,34 +20,16 @@ namespace HAL
 		stop_all();
 	}
 
-	FenceWaiter Queue::signal()
-	{
-		std::unique_lock<std::mutex> lock(queue_mutex);
-		return signal_internal();
-	}
 
-	void  Queue::gpu_wait(FenceWaiter waiter)
-	{
-		if (!waiter) return;
 
-		std::unique_lock<std::mutex> lock(queue_mutex);
-		API::Queue::gpu_wait(waiter);
-	}
-
-	FenceWaiter Queue::signal_internal()
+/*	FenceWaiter Queue::signal_internal()
 	{
 		const UINT64 fence = ++m_fenceValue;
 		 API::Queue::signal(commandListCounter, fence);
 
 		 return FenceWaiter{ &commandListCounter, fence, type};
 	}
-
-	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
-	{
-		std::unique_lock<std::mutex> lock(queue_mutex);
-		API::Queue::signal(fence, value);
-		return FenceWaiter{ &fence, value , type };
-	}
+		 */
 
 	std::shared_ptr<CommandList> Queue::get_free_list()
 	{
@@ -81,148 +63,232 @@ namespace HAL
 		return res_ptr;
 	}
 
-	void Queue::signal_and_wait()
-	{
-					PROFILE(L"signal_and_wait");
-                  
-		std::promise<int> promise;
-		auto result = promise.get_future();
-
-		{
-			FenceWaiter waiter = signal();
-
-			executor.enqueue([&promise, waiter]() {
-				waiter.wait();
-				promise.set_value(0);
-				});
-		}
-
-		result.wait();
-	}
 
 	bool Queue::is_complete(UINT64 fence)
 	{
 		return commandListCounter.get_completed_value() >= fence;
 	}
 
-	FenceWaiter Queue::run_transition_list(FenceWaiter after, TransitionCommandList* list)
+	/*FenceWaiter Queue::run_transition_list(FenceWaiter after, TransitionCommandList* list)
 	{
 		std::unique_lock<std::mutex> lock(queue_mutex);
 		API::Queue::gpu_wait(after);
 		API::Queue::execute(&list->get_compiled());
 		return signal_internal();
-	}
+	}	 */
 
-	FenceWaiter Queue::execute_internal(CommandList* list)
+	void Queue::execute_internal(UINT64 fence_value, std::list<CommandList::ptr> lists)
 	{
+				std::unique_lock<std::mutex> lock(queue_mutex);
+
 		PROFILE(L"execute_internal");
-
-		if (stop || !HAL::Device::get().alive)
-			return { &commandListCounter,m_fenceValue };
-
-		std::unique_lock<std::mutex> lock(queue_mutex);
-
-
-		auto cl = (list)->get_ptr();
-
 		{
 			PROFILE(L"update_tile_mappings");
 
 			bool has_updates = false;
 
-			auto& updates = (list)->tile_updates;
+			/// In packed lists make with 1 go
+			for (auto& list : lists)
 			{
-				for (auto& u : updates)
+				auto& updates = (list)->tile_updates;
 				{
-					has_updates = true;
-					update_tile_mappings(u);
+					for (auto& u : updates)
+					{
+						has_updates = true;
+						update_tile_mappings(u);
+					}
 				}
 			}
+			
 
-			if (has_updates)
+		/*	if (has_updates)
 			{
-				FenceWaiter execution_fence = signal_internal();
 
-				executor.enqueue([cl, this, execution_fence]()
+				API::Queue::signal(commandListCounter, fence_value);
+
+				FenceWaiter execution_fence{ &commandListCounter, fence_value, type};
+
+
+	//			FenceWaiter execution_fence = signal_internal();
+
+				gpu_wait_thread.enqueue([lists, this, execution_fence]()
 					{
-							PROFILE(L"update_tile_mappings result");
+						PROFILE(L"update_tile_mappings result");
 						execution_fence.wait();
-						auto list = cl;
-						auto& updates = (list)->tile_updates;
-						for (auto& u : updates)
-							(u.resource)->get_tiled_manager().on_tile_update(u);
-						updates.clear();
+						for (auto& list : lists)
+						{
+						
+						}
 					});
-			}
+			}		   */
 		}
-
-		API::Queue::gpu_wait(list->dstorage_fence);
-
-		if(list->dstorage_fence)
-			Device::get().get_ds_queue().flush();
-
-		auto transition_list = (list)->fix_pretransitions();
-
-		if (transition_list)
+		 	
+		for (auto& list : lists)
 		{
-				PROFILE(L"execute_transitions");
-			if (transition_list->get_type() == (list)->get_type())
-			{
-				API::Queue::execute(&transition_list->get_compiled());
-				API::Queue::execute(&list->compiler.get_list());
-			}
-			else
-			{
-				// Need to request other queue to make a proper transition.
-				// It's OK, but better to avoid this
-				auto queue = HAL::Device::get().get_queue(transition_list->get_type());
-				auto waiter = queue->run_transition_list(last_executed_fence, transition_list.get());
+			API::Queue::gpu_wait(list->dstorage_fence);
 
-				API::Queue::gpu_wait(waiter);
-				API::Queue::execute(&list->compiler.get_list());
-			}
-
-		}
-		else
-		{
-				PROFILE(L"execute_simple");
-				API::Queue::execute(&list->compiler.get_list());
+			if (list->dstorage_fence)
+				Device::get().get_ds_queue().flush();
 		}
 
-		// Alias warnings in the same execute scope
-		flush();
+		std::list<TransitionCommandList::ptr> transition_lists;
+			for (auto& list : lists)
+			{
+			
+				//auto transition_list = (list)->fix_pretransitions();
+			//	  assert(!transition_list);
+				/*if (transition_list)
+				{
+					transition_lists.emplace_back(transition_list);
+					PROFILE(L"execute_transitions");
+					if (transition_list->get_type() == (list)->get_type())
+					{
+						API::Queue::execute(&transition_list->get_compiled());
+						API::Queue::execute(&list->compiler.get_list());
+					}
+					else
+					{
+						// Need to request other queue to make a proper transition.
+						// It's OK, but better to avoid this
+						auto queue = HAL::Device::get().get_queue(transition_list->get_type());
+						auto waiter = queue->run_transition_list(last_executed_fence, transition_list.get());
 
+						API::Queue::gpu_wait(waiter);
+						API::Queue::execute(&list->compiler.get_list());
+					}
 
-		const FenceWaiter execution_fence = signal_internal();
+				}
+				else		  */
+				{
+					PROFILE(L"execute_simple");
+					API::Queue::execute(&list->compiler.get_list());	 
+				}
 
-		executor.enqueue([cl,transition_list, execution_fence, this]()
+			
+			
+			}
+		
+		API::Queue::signal(commandListCounter, fence_value);
+
+		 FenceWaiter execution_fence{ &commandListCounter, fence_value, type};
+
+		  gpu_wait_thread.enqueue([lists, transition_lists, execution_fence, this]()
 			{
 				if (!HAL::Device::get().alive) return;
 
-					PROFILE(L"on_execute wait");
-
-				auto list = cl;
+				PROFILE(L"on_execute wait");
 				execution_fence.wait();
 
+			
+
+
 				PROFILE(L"on_execute process");
-				if(transition_list) transition_list->on_execute();
-				(list)->on_execute();
+				for (auto& transition_list : transition_lists)
+					transition_list->on_execute();
+
+				for (auto& list : lists)
+				{
+					auto& updates = (list)->tile_updates;
+				for (auto& u : updates)
+					(u.resource)->get_tiled_manager().on_tile_update(u);
+				updates.clear();
+
+					(list)->on_execute();
+				}
+					
 			});
 
-		last_executed_fence = execution_fence;
-
-	//	execution_fence.wait();
-		return execution_fence;
+	
 	}
+			
 
-	FenceWaiter Queue::execute(std::shared_ptr<CommandList> list)
+   
+	void  Queue::gpu_wait(FenceWaiter waiter)
 	{
-		assert(this->type == (list)->type);
-		return execute_internal (list.get());
+		if (!waiter) return;
+
+					std::unique_lock<std::mutex> lock(submit_mutex);
+			gpu_execute_thread.enqueue([this, waiter]() {
+			std::unique_lock<std::mutex> lock(queue_mutex);
+		API::Queue::gpu_wait(waiter);
+			});
+
+
+		
+	}
+	  
+	FenceWaiter Queue::signal(Fence& fence, UINT64 value)
+	{
+		assert(false);
+		std::unique_lock<std::mutex> lock(submit_mutex);
+		gpu_execute_thread.enqueue([this, fence, value]() mutable{
+			std::unique_lock<std::mutex> lock(queue_mutex);
+			API::Queue::signal(fence, value);
+			});
+
+		return FenceWaiter{ &fence, value , type };
 	}
 
-	FenceWaiter Queue::execute(CommandList* list)
+
+ 	FenceWaiter Queue::signal()
 	{
-		return execute((list)->get_ptr());
+		std::unique_lock<std::mutex> lock(submit_mutex);
+
+		const UINT64 value = ++m_fenceValue;
+		gpu_execute_thread.enqueue([this, value]() {
+			std::unique_lock<std::mutex> lock(queue_mutex);
+			API::Queue::signal(commandListCounter, value);
+			});
+
+		return FenceWaiter{ &commandListCounter, value , type };
+		
 	}
+
+
+	void Queue::signal_and_wait()
+	{
+		PROFILE(L"signal_and_wait");
+		std::unique_lock<std::mutex> lock(submit_mutex);
+
+		const UINT64 value = ++m_fenceValue;
+
+		//wait for GPU
+		gpu_execute_thread.enqueue([this, value]() {
+			std::unique_lock<std::mutex> lock(queue_mutex);
+			API::Queue::signal(commandListCounter, value);
+			});
+		FenceWaiter waiter{ &commandListCounter, value , type };
+
+		waiter.wait();
+
+		std::promise<int> promise;
+		auto result = promise.get_future();
+		// wait all execute commands done
+		gpu_wait_thread.enqueue([&promise]() {
+
+			promise.set_value(0);
+			});
+
+
+		result.wait();
+	}
+
+	HAL::FenceWaiter Queue::execute(std::list<CommandList::ptr> list)
+	{	
+		std::unique_lock<std::mutex> lock(submit_mutex);
+
+		const UINT64 fence = ++m_fenceValue;
+		gpu_execute_thread.enqueue([this, list, fence]() {
+			execute_internal(fence, list);
+			});
+
+		return  HAL::FenceWaiter(&commandListCounter, fence, type);
+	}
+	   
+
+		void Queue::run(std::function<void()> f)
+		{				
+			std::unique_lock<std::mutex> lock(submit_mutex);
+			gpu_execute_thread.enqueue(f);
+		}
 }

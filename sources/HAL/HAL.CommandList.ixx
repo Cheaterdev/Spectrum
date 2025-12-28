@@ -27,7 +27,7 @@ export{
 		{
 		protected:
 			CommandListType type;
-			std::string name;
+			std::wstring_view name;
 			std::vector<std::function<void()>> on_execute_funcs;
 
 
@@ -88,15 +88,17 @@ export{
 			void on_execute();
 			std::list<HAL::UsagePoint> usage_points;
 			std::set<Resource*> need_check_transitions;
-			void create_usage_point(bool end = true);
-			void compile_transitions();
+			void create_usage_point(BarrierSync operation, bool end = true);
+		
 		public://temporarily to allow transition into read mode
 			void transition(const HAL::Resource* resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 			void transition(const HAL::Resource::ptr& resource, ResourceState state, UINT subres = ALL_SUBRESOURCES);
 
+
+				  	void compile_transitions();
 		public:
 			void free_resources();
-
+			 bool transitions_compiled = false;
 			UINT transition_count = 0;
 			//	UsagePoint* start_transition;
 			HAL::ResourceUsage* add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type = HAL::TransitionType::LAST);
@@ -167,7 +169,7 @@ export{
 		{
 			friend class GPUBlock;
 			std::list< GPUBlock::ptr> gpu_timers;
-			std::list<std::wstring> names;
+		
 			TimedBlock* current;
 			bool started = false;
 			virtual  void on_start(Timer* timer) override;
@@ -179,7 +181,7 @@ export{
 
 
 			void reset();
-			void begin(std::string name);
+			void begin(std::wstring_view name);
 		public:
 			void end();
 			Eventer(Device& device) {}
@@ -189,7 +191,7 @@ export{
 
 			std::shared_ptr<Timer> timer;
 			// events
-			void start_event(std::wstring str);
+			void start_event(std::wstring_view str);
 			void end_event();
 
 			void set_marker(const wchar_t* label);
@@ -260,7 +262,7 @@ export{
 			template<bool compute, bool graphics, class T>
 			void pre_command(T& context, BarrierSync operation, UsedSlots* slots = nullptr)
 			{
-				create_usage_point();
+				create_usage_point(operation);
 				if constexpr (compute || graphics)
 				{
 					if constexpr (Debug::GfxDebug)	setup_debug(&context);
@@ -269,9 +271,9 @@ export{
 				}
 			}
 			template<bool compute, bool graphics, class T>
-			void post_command(T& context)
+			void post_command(T& context, BarrierSync operation)
 			{
-				create_usage_point(false);
+				create_usage_point(operation, false);
 				if constexpr (Debug::GfxDebug)
 					if constexpr (compute || graphics)	print_debug();
 			}
@@ -299,15 +301,15 @@ export{
 
 			CommandList(CommandListType);
 
-			void begin(std::string name = "");
+			void begin(std::wstring_view name = L"");
 
 
 			void clear_uav(const UAVHandle& h, vec4 ClearColor = vec4(0, 0, 0, 0))
 			{
-				create_usage_point();
+				create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
 				transition(h.get_resource_info(), BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW);
 				compiler.clear_uav(h, ClearColor);
-				create_usage_point(false);
+				create_usage_point(BarrierSync::CLEAR_UNORDERED_ACCESS_VIEW, false);
 			}
 
 		};
@@ -715,7 +717,7 @@ export{
 
 				list->dispatch_rays<Hit, Miss, Raygen>(size, hit_buffer, hit_count, miss_buffer, miss_count, raygen_buffer);
 
-				base.post_command<true, false>(*this);
+				base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 			}
 
 
@@ -743,7 +745,7 @@ export{
 			using ptr = std::shared_ptr<TransitionCommandList>;
 			inline CommandListType get_type() { return type; }
 			TransitionCommandList(CommandListType type);
-			void create_transition_list(FrameResources& frame, const HAL::Barriers& transitions, std::vector<HAL::Resource*>& duscards);
+			void create_transition_list(FrameResources& frame, const HAL::Barriers& transitions);
 
 			const API::CommandList& get_compiled() const { return compiler.get_list(); }
 

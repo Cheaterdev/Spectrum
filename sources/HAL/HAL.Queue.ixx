@@ -20,9 +20,14 @@ export namespace HAL
 
 		HAL::Fence commandListCounter;
 
+	//	HAL::Fence internalCounter;
+	//	UINT64 m_InternalCounterValue;
+
 		UINT64 m_fenceValue;
 
-		SingleThreadExecutor executor;
+		SingleThreadExecutor gpu_wait_thread;
+		SingleThreadExecutor gpu_execute_thread;
+	
 		std::function<void(CommandList*)> del_func;
 		std::function<void(TransitionCommandList*)> del_transition;
 
@@ -34,17 +39,16 @@ export namespace HAL
 		std::mutex queue_mutex;
 		std::mutex states_mutex;
 
+
+			std::mutex submit_mutex;
+
+
 		bool stop = false;
 
 		HAL::CommandListType type;
 
-		HAL::FenceWaiter last_executed_fence;
-
-		FenceWaiter signal_internal();
-		HAL::FenceWaiter execute_internal(CommandList* list);
+		void execute_internal(UINT64 fence_value, std::list<CommandList::ptr> list);
 		uint64 frequency;
-
-		HAL::FenceWaiter run_transition_list(HAL::FenceWaiter after, TransitionCommandList* list);
 
 	public:
 		void update_tile_mappings(const HAL::update_tiling_info& infos);
@@ -61,21 +65,17 @@ export namespace HAL
 				
 		}
 		ClockCalibrationInfo get_clock_time() const;
-		HAL::FenceWaiter get_last_fence()
-		{
-			return last_executed_fence;
-		}
+
 		void stop_all();
-		HAL::FenceWaiter signal();
+  		bool is_complete(UINT64 fence);
+
 		void signal_and_wait();
-		bool is_complete(UINT64 fence);
-
-		HAL::FenceWaiter execute(std::shared_ptr<CommandList> list);
-		HAL::FenceWaiter execute(CommandList* list);
-
+  		HAL::FenceWaiter signal();
+		HAL::FenceWaiter execute(std::list<CommandList::ptr> list);
 		HAL::FenceWaiter signal(HAL::Fence& fence, UINT64 value);
-
 		void gpu_wait(HAL::FenceWaiter waiter);
+
+		void run(std::function<void()> f);
 	};
 
 	struct StorageRequest

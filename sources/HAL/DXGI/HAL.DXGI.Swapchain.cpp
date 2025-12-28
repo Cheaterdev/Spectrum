@@ -40,7 +40,7 @@ namespace HAL
 
 		frames.resize(desc.BufferCount);
 		on_change();
-
+		  
 	//	swapchain_waiter = m_swapChain->GetFrameLatencyWaitableObject();
 
 		//DWORD result = WaitForSingleObjectEx(
@@ -52,35 +52,22 @@ namespace HAL
 
 	void SwapChain::present(FenceWaiter event_time)
 	{
+		//uint index = m_frameIndex;
 
-		//{
-			//device.get_queue(CommandListType::DIRECT)->signal_and_wait();
-			//device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
-			//device.get_queue(CommandListType::COPY)->signal_and_wait();
-		//}
-
-		//device.get_queue(CommandListType::DIRECT)->gpu_wait(event_time);
-	//	device.get_queue(CommandListType::COMPUTE)->gpu_wait(event_time);
-	//	device.get_queue(CommandListType::COPY)->gpu_wait(event_time);
-		//frames[m_frameIndex].fence_event = event_time;
-
-		m_swapChain->Present(1, 0);
+		auto native = m_swapChain;
+		device.get_queue(CommandListType::DIRECT)->run([native, this](){
+			PROFILE(L"Present")
+					native->Present(1, 0);
+			});
 	
-
 		frames[m_frameIndex].fence_event = device.get_queue(CommandListType::DIRECT)->signal();
 
-		m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-		//device.get_queue(CommandListType::DIRECT)->signal_and_wait();
-		//frames[m_frameIndex].fence_event.wait();
-		// 
+		m_frameIndex = 1-m_frameIndex;
 	/*	DWORD result = WaitForSingleObjectEx(
 			swapchain_waiter,
 			1000, // 1 second timeout (shouldn't ever occur)
 			true
 		);		 */
-//		device.get_queue(CommandListType::DIRECT)->signal_and_wait();
-	//		device.get_queue(CommandListType::COMPUTE)->signal_and_wait();
-	//		device.get_queue(CommandListType::COPY)->signal_and_wait();
 	}
 
 	void  SwapChain::on_change()
@@ -96,6 +83,8 @@ namespace HAL
 		}
 
 		frames[0].m_renderTarget->resource->debug=true;
+
+			m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 	}
 
 	void SwapChain::resize(ivec2 size)
@@ -106,6 +95,8 @@ namespace HAL
 		if (size.x == desc.BufferDesc.Width)
 			if (size.y == desc.BufferDesc.Height)
 				return;
+
+		//	device.get_queue(CommandListType::DIRECT)->sync();
 
 		{
 			device.get_queue(CommandListType::DIRECT)->signal_and_wait();

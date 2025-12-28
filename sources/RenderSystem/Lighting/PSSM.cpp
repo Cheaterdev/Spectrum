@@ -33,15 +33,13 @@ PSSM::PSSM()
 	position = float3(200, 400, 200);
 }
 
-
-
-void PSSM::generate(Graph& graph)
-{
-
-	auto& sceneinfo = graph.get_context<SceneInfo>();
+	void PSSM::generate_global(Graph& graph)
+	{
+	
+	 auto& sceneinfo = graph.get_context<SceneInfo>();
 	auto& caminfo = graph.get_context<CameraInfo>();
 
-
+	   
 	auto scene = sceneinfo.scene;
 	auto min = scene->get_min();
 	auto max = scene->get_max();
@@ -62,7 +60,8 @@ void PSSM::generate(Graph& graph)
 	float zfar = 10;
 
 
-
+	
+	   
 
 	struct PSSMDataGlobal
 	{
@@ -70,7 +69,7 @@ void PSSM::generate(Graph& graph)
 		Handlers::StructuredBuffer<Table::Camera> H(global_camera);
 	};
 
-	graph.add_pass<PSSMDataGlobal>("PSSM_Global", [this, &graph](PSSMDataGlobal& data, TaskBuilder& builder) {
+	graph.add_pass<PSSMDataGlobal>(L"PSSM_Global", [this, &graph](PSSMDataGlobal& data, TaskBuilder& builder) {
 		builder.create(data.global_depth, { ivec3(1024, 1024,0), HAL::Format::R32_TYPELESS, 1 ,1 }, ResourceFlags::DepthStencil);
 		builder.create(data.global_camera, { 1 }, ResourceFlags::GenCPU);
 		}, [this, &graph, cam, points_all](PSSMDataGlobal& data, FrameContext& _context) {
@@ -148,6 +147,39 @@ void PSSM::generate(Graph& graph)
 
 		});
 
+	
+	
+	}
+
+
+void PSSM::generate(Graph& graph)
+{
+
+	auto& sceneinfo = graph.get_context<SceneInfo>();
+	auto& caminfo = graph.get_context<CameraInfo>();
+
+
+	auto scene = sceneinfo.scene;
+	auto min = scene->get_min();
+	auto max = scene->get_max();
+	auto cam = caminfo.cam;
+
+
+	auto points_all = cam->get_points(min, max);
+	float one_pixel_size = (max - min).max_element() / size.x;
+	float3 center = (max + min) / 2;
+	const float clearColor[] = { 0, 0, 0, 0 };
+
+	scaler = cam->z_far / (exp((float)renders_size));
+
+	static float t = 0;
+
+
+	float znear = cam->z_near;
+	float zfar = 10;
+
+
+
 
 
 	struct PSSMData
@@ -162,7 +194,7 @@ void PSSM::generate(Graph& graph)
 		Handlers::Texture H(RTXDebug);
 	};
 
-	graph.add_pass<PSSMData>("PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
+	graph.add_pass<PSSMData>(L"PSSM_TexGenerator", [this, &graph](PSSMData& data, TaskBuilder& builder) {
 		builder.create(data.PSSM_Depths, { ivec3(size,0), HAL::Format::R32_TYPELESS,renders_size ,1 }, ResourceFlags::DepthStencil);
 		builder.create(data.PSSM_Cameras, { renders_size }, ResourceFlags::GenCPU);
 		}, [](PSSMData& data, FrameContext& _context) {});
@@ -176,7 +208,7 @@ void PSSM::generate(Graph& graph)
 
 
 
-		graph.add_pass<PSSMData>(std::string("PSSM_Cascade_") + std::to_string(i), [this, &graph](PSSMData& data, TaskBuilder& builder) {
+		graph.add_pass<PSSMData>(L"PSSM_Cascade_" , [this, &graph](PSSMData& data, TaskBuilder& builder) {
 			builder.need(data.PSSM_Cameras, ResourceFlags::None);
 			builder.need(data.PSSM_Depths, ResourceFlags::DepthStencil);
 			}, [this, &graph, i, znear, zfar, cam, points_all, position](PSSMData& data, FrameContext& _context) {
@@ -257,7 +289,7 @@ void PSSM::generate(Graph& graph)
 
 
 	// relight pass
-	graph.add_pass<PSSMData>("PSSM_GenerateMask", [this, &graph](PSSMData& data, TaskBuilder& builder) {
+	graph.add_pass<PSSMData>(L"PSSM_GenerateMask", [this, &graph](PSSMData& data, TaskBuilder& builder) {
 		auto& frame = graph.get_context<ViewportInfo>();
 
 		builder.create(data.LightMask, { ivec3(frame.frame_size,0), HAL::Format::R8_UNORM,1,1 }, ResourceFlags::RenderTarget);
@@ -327,7 +359,7 @@ void PSSM::generate(Graph& graph)
 
 
 	// relight pass
-	graph.add_pass<PSSMData>("PSSM_Combine", [this, &graph](PSSMData& data, TaskBuilder& builder) {
+	graph.add_pass<PSSMData>(L"PSSM_Combine", [this, &graph](PSSMData& data, TaskBuilder& builder) {
 
 		data.gbuffer.need(builder);
 

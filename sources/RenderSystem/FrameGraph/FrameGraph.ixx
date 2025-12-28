@@ -715,7 +715,7 @@ using namespace HAL;
 		bool enabled = true;
 		bool renderable = true;
 		PassFlags flags;
-		std::string name;
+		std::wstring_view name;
 		UsedResources used;
 		FrameContext context;
 
@@ -781,7 +781,7 @@ using namespace HAL;
 		setup_func_type setup_func;
 		render_func_type render_func;
 
-		TypedPass(int id, std::string name, setup_func_type s, render_func_type r)
+		TypedPass(int id, std::wstring_view name, setup_func_type s, render_func_type r)
 		{
 			this->id = id;
 			this->name = name;
@@ -869,9 +869,8 @@ using namespace HAL;
 
 		std::list<std::function<void(Graph& g)>> pre_run;
 		template<class Pass>
-		void internal_pass(std::string name, typename Pass::setup_func_type s, typename Pass::render_func_type r, PassFlags flags = PassFlags::General)
+		void internal_pass(std::wstring_view name, typename Pass::setup_func_type s, typename Pass::render_func_type r, PassFlags flags = PassFlags::General)
 		{
-			if(GetAsyncKeyState('9')) flags |=PassFlags::Required;
 			passes.push_back(std::make_shared<Pass>((UINT)passes.size(), name, s, r));
 			passes.back()->flags = flags;
 
@@ -889,13 +888,13 @@ using namespace HAL;
 		TaskBuilder builder;
 
 		template<class T>
-		void pass(std::string name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+		void pass(std::wstring_view name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 		{
 			internal_pass<TypedPass<T>>(name, s, r, flags);
 		}
 
 		template<class T>
-		void add_pass(std::string name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+		void add_pass(std::wstring_view name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 		{
 			typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
 
@@ -904,7 +903,7 @@ using namespace HAL;
 
 
 		template<class T>
-		void add_pass2(std::string name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
+		void add_pass2(std::wstring_view name, typename TypedPass<T>::setup_func_type_void s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
 		{
 			typename TypedPass<T>::setup_func_type f = [s](auto& t, auto& b) {s(t, b); return true; };
 

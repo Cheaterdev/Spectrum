@@ -28,7 +28,7 @@ public:
 
 		auto size = frame.frame_size;
 
-		graph.add_pass<DownsampleData>("GBufferDownsampler", [this, size](DownsampleData& data, TaskBuilder& builder) {
+		graph.add_pass<DownsampleData>(L"GBufferDownsampler", [this, size](DownsampleData& data, TaskBuilder& builder) {
 
 			data.gbuffer.need(builder, true, true);
 			data.gbuffer.create_temp_color(size, builder);
@@ -380,7 +380,7 @@ void VoxelGI::debug(Graph& graph)
 
 	auto size = frame.frame_size;
 
-	graph.add_pass<VoxelDebugData>("VoxelDebug", [this, size](VoxelDebugData& data, TaskBuilder& builder) {
+	graph.add_pass<VoxelDebugData>(L"VoxelDebug", [this, size](VoxelDebugData& data, TaskBuilder& builder) {
 
 		builder.create(data.VoxelDebug, { ivec3(size,0),  HAL::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::RenderTarget);
 		builder.need(data.VoxelLighted, ResourceFlags::ComputeRead);
@@ -476,7 +476,7 @@ void VoxelGI::screen(Graph& graph)
 	auto size = frame.frame_size;
 	int count = 2 * Math::DivideByMultiple(size.x, 32) * Math::DivideByMultiple(size.y, 32);
 
-	graph.add_pass<Screen>("VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
+	graph.add_pass<Screen>(L"VoxelScreen", [this, size](Screen& data, TaskBuilder& builder) {
 
 
 		data.gbuffer.need(builder, false);
@@ -547,10 +547,9 @@ void VoxelGI::screen(Graph& graph)
 				gbuffer.SetTable(voxelScreen.GetGbuffer());
 				voxelScreen.GetVoxels() = tex_lighting.tex_result->texture_3d().texture3D;
 				voxelScreen.GetTex_cube() = sky_cubemap_filtered.textureCube;
-				//voxelScreen.GetPrev_frames() = views[1 - gi_index].texture2D;
 				voxelScreen.GetPrev_depth() = gbuffer.depth_prev_mips.texture2D;
 				voxelScreen.GetPrev_gi() = gi_filtered.texture2D;
-				//	voxelScreen.set(graphics);
+
 				compute.set(voxelScreen);
 			}
 
@@ -562,10 +561,8 @@ void VoxelGI::screen(Graph& graph)
 				Slots::VoxelOutput output;
 
 				output.GetFrames() = frames_count.rwTexture2D;
-				output.GetNoise() = noisy_output.rwTexture2D;
-				
+				output.GetNoise() = noisy_output.rwTexture2D;				
 				output.GetBlueNoise() =data.BlueNoise->texture2D;
-
 				compute.set(output);
 			}
 
@@ -668,7 +665,7 @@ void VoxelGI::screen(Graph& graph)
 
 
 
-	graph.add_pass<Screen>("VoxelCombine", [this, size](Screen& data, TaskBuilder& builder) {
+	graph.add_pass<Screen>(L"VoxelCombine", [this, size](Screen& data, TaskBuilder& builder) {
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
@@ -816,7 +813,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 
 	auto size = frame.frame_size;
 
-	graph.add_pass<ScreenReflection>("ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
+	graph.add_pass<ScreenReflection>(L"ScreenReflection", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
 		//builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 		builder.create(data.VoxelReflectionNoise, { ivec3(size.x, size.y,0),  HAL::Format::R16G16B16A16_FLOAT,1 ,1 }, ResourceFlags::UnorderedAccess);
@@ -937,7 +934,7 @@ void VoxelGI::screen_reflection(Graph& graph)
 		reflection_denoiser.generate(graph);
 
 
-				graph.add_pass<ScreenReflection>("ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
+				graph.add_pass<ScreenReflection>(L"ReflCombine", [this, size](ScreenReflection& data, TaskBuilder& builder) {
 
 		builder.need(data.ResultTexture, ResourceFlags::UnorderedAccess);
 
@@ -1118,7 +1115,7 @@ void VoxelGI::voxelize(Graph& graph)
 		Handlers::Texture H(VoxelNormalDynamic);
 	};
 
-	graph.add_pass<Voxelize>("voxelize", [this](Voxelize& data, TaskBuilder& builder) {
+	graph.add_pass<Voxelize>(L"voxelize", [this](Voxelize& data, TaskBuilder& builder) {
 
 
 		builder.need(data.VoxelAlbedo, ResourceFlags::UnorderedAccess);
@@ -1177,7 +1174,7 @@ void VoxelGI::lighting(Graph& graph)
 	};
 
 
-	graph.add_pass<Lighting>("Lighting", [this](Lighting& data, TaskBuilder& builder) {
+	graph.add_pass<Lighting>(L"Lighting", [this](Lighting& data, TaskBuilder& builder) {
 
 		builder.need(data.global_depth, ResourceFlags::ComputeRead);
 		builder.need(data.global_camera, ResourceFlags::ComputeRead);
@@ -1266,7 +1263,7 @@ void VoxelGI::mipmapping(Graph& graph)
 		Handlers::Texture3D H(VoxelLighted);
 	};
 
-	graph.add_pass<Mipmapping>("Mipmapping", [this](Mipmapping& data, TaskBuilder& builder) {
+	graph.add_pass<Mipmapping>(L"Mipmapping", [this](Mipmapping& data, TaskBuilder& builder) {
 
 		builder.need(data.VoxelLighted, ResourceFlags::UnorderedAccess);
 
@@ -1370,10 +1367,10 @@ void VoxelGI::mipmapping(Graph& graph)
 		}, PassFlags::Compute);
 
 }
-void VoxelGI::generate(Graph& graph)
-{
 
-	graph.builder.pass_texture("VoxelAlbedo", albedo.tex_result);
+void VoxelGI::generate_pre(Graph& graph)
+{
+		graph.builder.pass_texture("VoxelAlbedo", albedo.tex_result);
 	graph.builder.pass_texture("VoxelNormal", normal.tex_result);
 	graph.builder.pass_texture("VoxelLighted", tex_lighting.tex_result);
 
@@ -1420,8 +1417,18 @@ void VoxelGI::generate(Graph& graph)
 
 	graph.register_slot_setter(scene->voxels_compiled);
 
-	if (voxelize_scene) voxelize(graph);
+	  	if (voxelize_scene) voxelize(graph);
 
+
+
+
+}
+
+	  
+void VoxelGI::generate_light(Graph& graph)
+{
+
+			
 	light_counter = (light_counter + 1) % 5;
 
 	if (light_scene/* && light_counter == 0 || all_scene_regen_counter > 0*/)
@@ -1433,17 +1440,14 @@ void VoxelGI::generate(Graph& graph)
 		}
 	}
 
-
-
-	//if (!downsampler) downsampler = std::make_shared<GBufferDownsampler>();
-	//downsampler->generate(graph);
+}
+void VoxelGI::generate(Graph& graph)
+{
 
 	screen(graph);
 
 	if (reflecton)
 		screen_reflection(graph);
-
-
 
 	debug(graph);
 

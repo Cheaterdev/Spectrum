@@ -55,28 +55,27 @@ export
 {
 
 
-constexpr unsigned int crc32_helper(const char* v, std::size_t c,
-	unsigned int crc) {
-	return c == 0 ?
-		~crc :
-		crc32_helper(&v[1], c - 1,
-			crc_32_tab[((crc) ^ (v[0])) & 0xff] ^ ((crc) >> 8));
-}
-
+	constexpr unsigned int crc32_helper(const char* v, std::size_t c,
+		unsigned int crc) {
+		return c == 0 ?
+			~crc :
+			crc32_helper(&v[1], c - 1,
+				crc_32_tab[((crc) ^ (v[0])) & 0xff] ^ ((crc) >> 8));
+	}
 
 	constexpr unsigned int operator "" _crc32(const char* v, std::size_t c) {
 		return crc32_helper(v, c, 0xFFFFFFFF);
 	}
 
-	unsigned int crc32(const binary& s) 
+	unsigned int crc32(const binary& s)
 	{
 		return crc32c::Crc32c((const uint8_t*)s.data(), s.size());
 	}
-	
+
 	unsigned int crc32(std::string_view s) {
 		return crc32c::Crc32c(s);
 	}
-	
+
 	size_t HashIterate(size_t Next, size_t CurrentHash = 2166136261U)
 	{
 		return 16777619U * CurrentHash ^ Next;

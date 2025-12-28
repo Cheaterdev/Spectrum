@@ -317,7 +317,7 @@ namespace HAL {
 			return frame_number;
 		}
 
-		std::shared_ptr<CommandList> start_list(std::string name = "", CommandListType type = CommandListType::DIRECT);
+		std::shared_ptr<CommandList> start_list(std::wstring_view name = L"", CommandListType type = CommandListType::DIRECT);
 
 		void free_storage(std::shared_ptr<GPUEntityStorageInterface> e)
 		{

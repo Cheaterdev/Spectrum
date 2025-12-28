@@ -32,7 +32,7 @@ HAL::RaytracingAccelerationStructure::RaytracingAccelerationStructure(std::vecto
 
 
 	auto list = (Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
-	list->begin("RaytracingAccelerationStructure");
+	list->begin(L"RaytracingAccelerationStructure");
 
 
 	HAL::RaytracingBuildDescTopInputs inputs;

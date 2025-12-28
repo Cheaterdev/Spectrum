@@ -45,7 +45,7 @@ void SkyRender::generate_sky(Graph& graph)
 
 	};
 
-	graph.add_pass<SkyData>("Sky", [this, &graph](SkyData& data, TaskBuilder& builder) {
+	graph.add_pass<SkyData>(L"Sky", [this, &graph](SkyData& data, TaskBuilder& builder) {
 		builder.need(data.GBuffer_Depth, ResourceFlags::PixelRead);
 		builder.need(data.ResultTexture, ResourceFlags::RenderTarget);
 		}, [this, &graph](SkyData& data, FrameContext& _context) {
@@ -94,7 +94,7 @@ void SkyRender::generate(Graph& graph)
 		Handlers::Cube H(sky_cubemap);
 	};
 
-	graph.pass<SkyData>("CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
+	graph.pass<SkyData>(L"CubeSky", [this, &graph](SkyData& data, TaskBuilder& builder) {
 		auto& sky = graph.get_context<SkyInfo>();
 
 		builder.create(data.sky_cubemap, { ivec3(256, 256, 0), HAL::Format::R11G11B10_FLOAT, 1 , 0}, ResourceFlags::UnorderedAccess | ResourceFlags::RenderTarget | ResourceFlags::Static);
@@ -194,7 +194,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 		Handlers::Cube H(sky_cubemap_filtered_diffuse);
 	};
 
-	graph.pass<EnvData>("CubeMapDownsample", [this, &graph](EnvData& data, TaskBuilder& builder) {
+	graph.pass<EnvData>(L"CubeMapDownsample", [this, &graph](EnvData& data, TaskBuilder& builder) {
 		builder.need(data.sky_cubemap, ResourceFlags::UnorderedAccess);
 		if (data.sky_cubemap.is_changed())
 		{
@@ -208,7 +208,7 @@ void CubeMapEnviromentProcessor::generate(Graph& graph)
 			);
 
 
-	graph.pass<EnvData>("CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
+	graph.pass<EnvData>(L"CubeMapEnviromentProcessor", [this, &graph](EnvData& data, TaskBuilder& builder) {
 		builder.need(data.sky_cubemap, ResourceFlags::PixelRead);
 
 		builder.create(data.sky_cubemap_filtered, { ivec3(64, 64,0),  HAL::Format::R11G11B10_FLOAT,1 }, ResourceFlags::RenderTarget | ResourceFlags::Static);

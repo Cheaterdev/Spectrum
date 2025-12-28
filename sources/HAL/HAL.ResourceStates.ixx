@@ -131,9 +131,12 @@ export
 			UINT subres = -1;
 
 			ResourceUsage* prev_usage = nullptr;
+	  		ResourceUsage* next_usage = nullptr;
 
 			UsagePoint* point = nullptr;
 			UsagePoint* last_point = nullptr;
+
+			bool debug = false;
 		};
 
 		struct UsagePoint
@@ -145,7 +148,8 @@ export
 			bool start = false;
 			UsagePoint* prev_point = nullptr;
 			UsagePoint* next_point = nullptr;
-
+			Transitions * cmd_list;
+			BarrierSync operation;
 			UsagePoint(CommandListType type):transitions(type)
 			{
 			}
@@ -177,22 +181,25 @@ export
 			}
 
 
+			void check_valid(const Resource* resource)		;
 			ResourceUsage* add_usage(ResourceUsage* usage)
 			{
+
 				auto prev = last_usage;
 				last_usage = usage;
 				last_usage->prev_usage = prev;
+				if(prev) prev->next_usage = usage;
 
+			//	  check_valid();
 				return usage;
 			}
 
 			ResourceUsage* set_zero_transition(ResourceUsage* usage)
 			{
-				if(first_usage)
-				first_usage->prev_usage = usage;
+				usage->next_usage = 	 first_usage;
+				if(first_usage)	first_usage->prev_usage = usage;
 
-				if(!last_usage)
-						last_usage	   = usage;
+				if(!last_usage)	last_usage	   = usage;
 
 				first_usage = usage;
 
@@ -370,10 +377,8 @@ export
 			
 
 		public:
-
-			bool manual_controlled = false;
 			virtual ~ResourceStateManager() = default;
-
+			 TextureLayout initial_layout;
 			using ptr = std::unique_ptr<ResourceStateManager>;
 			UINT get_subres_count()
 			{
@@ -385,8 +390,9 @@ export
 				return gpu_state;
 			}
 
-			void init_subres(int count, TextureLayout layout) const
+			void init_subres(int count, TextureLayout layout) 
 			{
+				initial_layout =  layout;
 				gpu_state.subres.resize(count);
 				for (auto& e : gpu_state.subres)
 					e.layout = layout;
@@ -406,7 +412,7 @@ export
 			bool is_used(Transitions* list) const;
 		
 
-			CommandListType process_transitions(Barriers& target, std::vector<Resource*>& discards, Transitions* list) const;
+			CommandListType process_transitions(Barriers& target, Transitions* list) const;
 
 			void transition(Transitions* list, ResourceState state, unsigned int subres) const;
 
@@ -420,7 +426,8 @@ export
 			void alias_begin(Transitions* list) const;
 			void alias_end(Transitions* list) const;
 
-			
+			void connect(Transitions* from, Transitions* to);
+
 		};
 
 

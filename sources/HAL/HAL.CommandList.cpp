@@ -143,7 +143,7 @@ gpu_timer.start(list);
 	}
 
 
-	void CommandList::begin(std::string name)
+	void CommandList::begin(std::wstring_view name)
 	{
 		active = true;
 		if (name.empty())
@@ -151,7 +151,7 @@ gpu_timer.start(list);
 			compiler.set_name(L"EmptyName");
 		}
 		else
-			compiler.set_name(convert(name));
+			compiler.set_name(name);
 
 		compiler.reset();
 #ifdef DEV
@@ -272,6 +272,7 @@ gpu_timer.start(list);
 		if (active)
 			end();
 
+		
 		dynamic_cast<CommandList*>(this)->compile_transitions();
 
 		auto ca = frame_resources->get_ca(type);
@@ -289,7 +290,10 @@ gpu_timer.start(list);
 		if (f)
 			on_execute_funcs.emplace_back(f);
 
-		auto fence = Device::get().get_queue(type)->execute(dynamic_cast<CommandList*>(this));
+
+		std::list<CommandList::ptr>	lists;
+		  lists.emplace_back(dynamic_cast<CommandList*>(this)->get_ptr());
+		auto fence = Device::get().get_queue(type)->execute(lists);
 
 		return fence;
 	}
@@ -400,7 +404,7 @@ gpu_timer.start(list);
 			list->clear_depth_stencil(table_dsv[0], check(options & RTOptions::ClearDepth),
 			                          check(options & RTOptions::ClearStencil), depth, stencil);
 
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::DRAW);
 		uint2 size;
 
 
@@ -535,7 +539,7 @@ gpu_timer.start(list);
 
 		base.pre_command<false, true>(*this, BarrierSync::DRAW);
 		list->draw(vertex_count, vertex_offset, instance_count, instance_offset);
-		base.post_command<false, true>(*this);
+		base.post_command<false, true>(*this, BarrierSync::DRAW);
 	}
 
 	void GraphicsContext::draw_indexed(UINT index_count, UINT index_offset, UINT vertex_offset, UINT instance_count,
@@ -549,7 +553,7 @@ gpu_timer.start(list);
 		list->set_index_buffer(index);
 
 		list->draw_indexed(index_count, index_offset, vertex_offset, instance_count, instance_offset);
-		base.post_command<false, true>(*this);
+		base.post_command<false, true>(*this, BarrierSync::DRAW);
 	}
 
 	void GraphicsContext::dispatch_mesh(DispatchMeshArguments args)
@@ -562,7 +566,7 @@ gpu_timer.start(list);
 		PROFILE_GPU(L"dispatch_mesh");
 		base.pre_command<false, true>(*this, BarrierSync::DRAW);
 		list->dispatch_mesh(v);
-		base.post_command<false, true>(*this);
+		base.post_command<false, true>(*this, BarrierSync::DRAW);
 	}
 
 
@@ -616,7 +620,7 @@ gpu_timer.start(list);
 		auto info = base.place_data(size);
 		memcpy(info.get_cpu_data(), data, size);
 		list->copy_buffer(resource, offset, info.resource, info.resource_offset, size);
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);;
 	}
 
 
@@ -677,7 +681,7 @@ gpu_timer.start(list);
 		list->update_texture(resource, offset, box, sub_resource, info, layout);
 		if constexpr (Debug::CheckErrors)
 			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
 	std::future<bool> CopyContext::read_texture(Resource::ptr resource, ivec3 offset, ivec3 box, UINT sub_resource,
@@ -709,7 +713,7 @@ gpu_timer.start(list);
 			result->set_value(true);
 		});
 
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);
 
 		return result->get_future();
 	}
@@ -738,7 +742,7 @@ gpu_timer.start(list);
 			result->set_value(true);
 		});
 
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);
 
 		return result->get_future();
 	}
@@ -769,7 +773,7 @@ gpu_timer.start(list);
 			result->set_value(true);
 		});
 
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);
 
 		return result->get_future();
 	}
@@ -830,7 +834,7 @@ gpu_timer.start(list);
 	}
 
 
-		void Transitions::create_usage_point(bool end)
+		void Transitions::create_usage_point(BarrierSync operation, bool end)
 
 			{
 				auto prev_point = usage_points.empty() ? nullptr : &usage_points.back();
@@ -839,10 +843,11 @@ gpu_timer.start(list);
 
 				if (prev_point) prev_point->next_point = point;
 				point->prev_point = prev_point;
-
+		//		 prev_point->next_point=  prev_point;
+				point->cmd_list = this;
 				point->start = !end;
 				point->index = static_cast<uint>(usage_points.size());
-
+				point->operation = 	  operation;
 				compiler.func([point](auto& list)
 					{
 						list.transitions(point->transitions);
@@ -853,24 +858,25 @@ gpu_timer.start(list);
 
 			void Transitions::compile_transitions()
 			{
-			  
+			 if(transitions_compiled) 
+				 return;
+						std::set<Resource*> non_tracked_resources;
+
+
 				for (auto& point : usage_points)
 				{
 					for (auto& usage : point.usages)
 					{
 						auto prev_usage = usage.prev_usage;
 
+					//	assert(!usage.debug);
 						if(!prev_usage) 
 						{
 							bool is_automatic =  check(usage.resource->get_desc().Flags &HAL::ResFlags::DisableStateTracking);
 				//			assert(!);
 
-							bool is_valid = false;
-							if(usage.wanted_state == ResourceStates::UNKNOWN)	
-								is_valid = true;
-
-							if(!is_automatic&&!is_valid)
-							need_check_transitions.insert(usage.resource);
+							if(!is_automatic&usage.resource->get_desc().is_texture())							
+							non_tracked_resources.insert(usage.resource);
 							continue; //  needs to be synchronized between cmdlists. Can track here what resources needs to be checked
 						}
 							
@@ -899,13 +905,16 @@ gpu_timer.start(list);
 						auto prev_point = prev_usage ? prev_usage->point : nullptr;
 						 if(prev_point)prev_point=prev_point->next_point;
 
-						bool can_split = true;
+						bool can_split =true;// usage.point->cmd_list!=prev_usage->point->cmd_list;//usage.debug;
 
-						if(!point.start) can_split = false; // can split only between work i.e. only from start
+						if(!point.start /*&& !usage.debug*/) can_split = false; // can split only between work i.e. only from start
 						if(prev_point==&point)	   can_split = false; // can't split if it's needed right now
 						if(usage.wanted_state==ResourceStates::UNKNOWN)	   can_split = false; // can't split if it's deactivated. probably some new resources will be activated shortly after. we dont know. we do not track it. we dont want to know. thats it. final.						
 						if(usage.wanted_state.access==BarrierAccess::NO_ACCESS)	   can_split = false; // resource or it's memory will not be used anymore. There is no end point for that(or is it? Last one in the list?)
 
+
+					//	if(usage.next_usage&& usage.point->cmd_list==usage.next_usage->point->cmd_list)
+						 assert(!(usage.next_usage&&usage.wanted_state.operation==BarrierSync::NONE));
 
 						if (can_split)
 						{
@@ -939,6 +948,38 @@ gpu_timer.start(list);
 					}
 				}
 
+				transitions_compiled = true;
+
+
+				for (auto& resource : non_tracked_resources)
+				{
+					auto& cpu_state = resource->get_state_manager().get_state(this);
+
+					auto transition_one = [&](UINT subres) {
+
+						auto& subres_cpu = cpu_state.get_subres_state(subres);
+						assert(subres_cpu.used);
+
+
+
+						auto target = ResourceStates::NO_ACCESS;
+						target.layout = resource->get_state_manager().initial_layout;
+
+						auto end_point = subres_cpu.last_usage->point->next_point;
+
+
+
+						end_point->transitions.transition(resource,
+							subres_cpu.last_usage->wanted_state,
+							target,
+							subres, BarrierFlags::NONE);
+					};
+
+					for (int i = 0; i < cpu_state.subres.size(); i++)
+						transition_one(i);
+				}
+
+			
 			}
 
 			HAL::ResourceUsage* Transitions::add_usage(const HAL::Resource* resource, UINT subres, ResourceState state, HAL::TransitionType type)
@@ -965,11 +1006,11 @@ gpu_timer.start(list);
 			void Transitions::transition_present(const HAL::Resource* resource_ptr)
 			{
 
-				create_usage_point();
+				create_usage_point(BarrierSync::NONE);
 
 				transition(resource_ptr, { BarrierSync::NONE, BarrierAccess::NO_ACCESS, TextureLayout::PRESENT }, ALL_SUBRESOURCES);
 
-				create_usage_point(false);
+				create_usage_point(BarrierSync::NONE,false);
 			}
 
 
@@ -1138,8 +1179,6 @@ gpu_timer.start(list);
 		PROFILE(L"fix_pretransitions");
 
 		HAL::Barriers result(CommandListType::DIRECT);
-		std::vector<HAL::Resource*> discards;
-
 		
 		CommandListType transition_type = type;
 
@@ -1149,7 +1188,7 @@ gpu_timer.start(list);
 		
 			for (auto& r : need_check_transitions)
 			{
-				auto res_type = r->get_state_manager().process_transitions(result, discards, this);
+				auto res_type = r->get_state_manager().process_transitions(result, this);
 
 				transition_type = Merge(transition_type, res_type);
 			}
@@ -1162,8 +1201,8 @@ gpu_timer.start(list);
 
 
 			auto transition_list = (HAL::Device::get().get_queue(transition_type)->get_transition_list());
-			transition_list->compiler.set_name(convert(name + std::string(":Transitions")));
-			transition_list->create_transition_list(*cmd->frame_resources, result, discards);
+			transition_list->compiler.set_name(L":Transitions");
+			transition_list->create_transition_list(*cmd->frame_resources, result);
 			return transition_list;
 		}
 		return nullptr;
@@ -1263,7 +1302,7 @@ gpu_timer.start(list);
 
 
 		list->copy_buffer(dest, s_dest, source, s_source, size);
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
 	void CopyContext::copy_resource(Resource* dest, Resource* source)
@@ -1276,7 +1315,7 @@ gpu_timer.start(list);
 			base.transition(dest, ResourceStates::COPY_DEST);
 		}
 		list->copy_resource(dest, source);
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
 	void CopyContext::copy_resource(const Resource::ptr& dest, const Resource::ptr& source)
@@ -1298,7 +1337,7 @@ gpu_timer.start(list);
 		list->copy_texture(dest, dest_subres, source, source_subres);
 		if constexpr (Debug::CheckErrors)
 			TEST(HAL::Device::get(), HAL::Device::get().get_native_device()->GetDeviceRemovedReason());
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
 	void CopyContext::copy_texture(const Resource::ptr& to, ivec3 to_pos, const Resource::ptr& from, ivec3 from_pos,
@@ -1314,7 +1353,7 @@ gpu_timer.start(list);
 		list->copy_texture(to, to_pos, from, from_pos, size);
 		if constexpr (Debug::CheckErrors)
 			TEST(Device::get(), Device::get().get_native_device()->GetDeviceRemovedReason());
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::COPY);
 	}
 
 
@@ -1338,7 +1377,7 @@ gpu_timer.start(list);
 		PROFILE_GPU(L"dispatch_graph");
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 		list->dispatch_graph(addr);
-		base.post_command<true, false>(*this);
+		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 	}
 
 	void ComputeContext::set_program(StateObject* id, ResourceAddress buffer, uint size, bool init)
@@ -1360,7 +1399,7 @@ gpu_timer.start(list);
 
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 		list->dispatch({x, y, z});
-		base.post_command<true, false>(*this);
+		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 	}
 
 
@@ -1377,13 +1416,15 @@ gpu_timer.start(list);
 		res.z = Math::DivideByMultiple(a.z, b.z);
 		dispatch(res.x, res.y, res.z);
 	}
-		void ComputeContext::dispatch2(ivec2 a, ivec2 b)
+
+	
+	void ComputeContext::dispatch2(ivec2 a, ivec2 b)
 	{
 		PROFILE_GPU(L"Dispatch");
-
+		 assert(false);
 		base.pre_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
-	//	list->dispatch({x, y, z});
-		base.post_command<true, false>(*this);
+	//list->dispatch({x, y, z});
+		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 	}
 
 	void CommandList::set_pipeline_internal(PipelineStateBase* pipeline)
@@ -1403,8 +1444,8 @@ gpu_timer.start(list);
 
 	void Eventer::on_start(Timer* timer)
 	{
-		names.push_back(timer->get_block().get_name());
-		start_event(names.back().c_str());
+
+		start_event(timer->get_block().get_name());
 
 		//for (auto& c : timer->get_block().get_childs())
 		//{
@@ -1461,21 +1502,20 @@ gpu_timer.start(list);
 
 	
 
-	void Eventer::begin(std::string name)
+	void Eventer::begin(std::wstring_view name)
 	{
 		assert(!started);
 		started = true;
 		this->name = name;
 		thread_current = this;
 		TimedRoot::parent = &Profiler::get();   
-		names.clear();
 
 		current = Profiler::get().get_current();
 
 		if (type != CommandListType::COPY && name.size())
 		{
 			assert(!timer);
-			timer.reset(new Timer(start(convert(name).c_str())));
+			timer.reset(new Timer(start(name)));
 		}
 		else		  
 		{
@@ -1502,7 +1542,7 @@ gpu_timer.start(list);
 		timer.reset();
 	}
 
-	void Eventer::start_event(std::wstring str)
+	void Eventer::start_event(std::wstring_view str)
 	{
 		compiler.start_event(str);
 	}
@@ -1548,9 +1588,9 @@ gpu_timer.start(list);
 			counter_offset);
 
 		if (graphics)
-			base.post_command<false, true>(get_base().get_graphics());
+			base.post_command<false, true>(get_base().get_graphics(), BarrierSync::ALL_SHADING);
 		else
-			base.post_command<true, false>(get_base().get_compute());
+			base.post_command<true, false>(get_base().get_compute(), BarrierSync::COMPUTE_SHADING);
 	}
 
 	void ComputeContext::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer,
@@ -1573,7 +1613,7 @@ gpu_timer.start(list);
 			counter_buffer,
 			counter_offset);
 
-		base.post_command<true, false>(*this);
+		base.post_command<true, false>(*this, BarrierSync::COMPUTE_SHADING);
 	}
 
 	void ComputeContext::build_ras(const HAL::RaytracingBuildDescStructure& build_desc,
@@ -1605,7 +1645,7 @@ gpu_timer.start(list);
 
 		list->build_ras(build_desc, bottom);
 
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE);
 	}
 
 
@@ -1628,7 +1668,7 @@ gpu_timer.start(list);
 		//commit_tables();
 		list->build_ras(build_desc, top);
 
-		base.post_command<false, false>(*this);
+		base.post_command<false, false>(*this, BarrierSync::BUILD_RAYTRACING_ACCELERATION_STRUCTURE);
 	}
 
 	void ComputeContext::set_const_buffer(UINT i, UINT offset, UINT v)
@@ -1640,7 +1680,7 @@ gpu_timer.start(list);
 	{
 		transition_count = 0;
 		//	create_zero_transition();
-		create_usage_point(false);
+		create_usage_point(BarrierSync::NONE,false);
 	}
 
 	void Transitions::on_execute()
@@ -1648,7 +1688,7 @@ gpu_timer.start(list);
 		usage_points.clear();
 		used_resources.clear();
 		 need_check_transitions.clear();
-
+							transitions_compiled = false;
 		//transition_list = nullptr;
 	}
 
@@ -1781,16 +1821,17 @@ gpu_timer.start(list);
 	//	return *this;
 	//}
 
-	void TransitionCommandList::create_transition_list(FrameResources& frame, const HAL::Barriers& transitions,
-	                                                   std::vector<HAL::Resource*>& discards)
+	void TransitionCommandList::create_transition_list(FrameResources& frame, const HAL::Barriers& transitions)
 	{
+
+		assert(false);
 		HAL::Device::get().context_generator.generate(this);
 
 		set_proxy(frame.get_storage());
 
 
 		compiler.reset();
-		Eventer::begin("Transitions");
+		Eventer::begin(L"Transitions");
 		compiler.func([&](auto list)
 		{
 			list.transitions(transitions);

@@ -35,7 +35,7 @@ public:
 	void set(HAL::ResourceDesc desc)
 	{
 
-		desc.Flags|=ResFlags::Virtual;
+		desc.Flags|=ResFlags::Virtual|ResFlags::DisableStateTracking;
 		tex_dynamic.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 		tex_static.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 
@@ -122,7 +122,7 @@ public:
 
 	void set(HAL::ResourceDesc desc)
 	{
-			desc.Flags|=ResFlags::Virtual;
+			desc.Flags|=ResFlags::Virtual|ResFlags::DisableStateTracking;
 	tex_result.reset(new HAL::Texture(desc, TextureLayout::SHADER_RESOURCE));
 
 		static_tiles.resize(tex_result->resource->get_tiled_manager().get_tiles_count(), 0);
@@ -285,5 +285,7 @@ public:
 	virtual void generate(Graph& graph) override;
 	virtual void voxelize(Graph& graph);
 	virtual void debug(Graph& graph);
+	void generate_pre(Graph& graph);
+	 void generate_light(Graph& graph);
 
 };

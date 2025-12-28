@@ -68,7 +68,7 @@ export namespace HAL
 		void set_pipeline(PipelineStateBase* pipeline);
 		void execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset);
 		void set_rtv(int c, RTVHandle rt, DSVHandle h);
-		void start_event(std::wstring str);
+		void start_event(std::wstring_view str);
 		void end_event();
 		void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescBottomInputs& bottom);
 		void build_ras(const HAL::RaytracingBuildDescStructure& build_desc, const HAL::RaytracingBuildDescTopInputs& top);

@@ -153,7 +153,7 @@ export{
 	
 		public:
 			FenceWaiter load_waiter;
-
+			bool debug=false;
 			bool is_ready() const
 			{
 				return load_waiter.is_completed();
@@ -187,6 +187,10 @@ export{
 				return get_ptr<Resource>();
 			}
 
+			void disable_state_tracking()
+			{
+				desc.Flags|=ResFlags::DisableStateTracking;
+			}
 			ResourceAllocationInfo alloc_info;
 			//	std::optional<FenceWaiter> load_fence;
 			std::string name;
