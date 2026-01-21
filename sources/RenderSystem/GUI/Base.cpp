@@ -881,7 +881,7 @@ namespace GUI
 
      void user_interface::process_ui(float delta_time)
     {
-
+          	PROFILE(L"process_ui");
          dt = delta_time;
          THREAD_SCOPE(GUI);
 		 for (int i = 0; i < 3; i++)
@@ -890,13 +890,17 @@ namespace GUI
 			 release_interpret[i] = false;
 		 }
 
-    	while (Events::Runner::has_tasks()) Events::Runner::process_tasks();
-
+    	while (Events::Runner::has_tasks()) 
+            {
+                PROFILE(L"process_tasks");          
+                Events::Runner::process_tasks();
+            }
         
 
 
 		 auto&& g2 = lock();
 		 {
+             	PROFILE(L"thinking");
 		//	 auto timer = c.command_list->start(L"think");
 			 for (auto t : thinking)
 				 t->think(delta_time);

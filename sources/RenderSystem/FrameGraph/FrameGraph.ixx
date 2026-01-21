@@ -584,6 +584,7 @@ using namespace HAL;
 			std::string& name = result.name;
 			resources_names[name] = name;
 			ResourceAllocInfo& info = alloc_resources[name];
+
 			T& handler = info.create_handler<T>(desc);
 			init(info, name, flags);
 			//handler.init(info);
@@ -656,6 +657,9 @@ using namespace HAL;
 
 
 		void create_resources();
+		void process_transitions();
+		void process_fences();
+	   	void compile_lists();
 		void reset();
 
 		TaskBuilder();
@@ -678,22 +682,11 @@ using namespace HAL;
 	{
 		Pass* pass;
 		HAL::FrameResources::ptr frame;
-
-	//	std::list<HAL::ResourceView> textureViews;
-
 		HAL::CommandList::ptr list;
-
 		HAL::CommandList::ptr& get_list();
 		void begin(Pass* pass, HAL::FrameResources::ptr& frame);
 		void end();
-
-
 		void execute();
-
-		/*void register_subview(const HAL::ResourceView& view)
-		{
-			textureViews.emplace_back(view);
-		}*/
 	};
 
 
@@ -871,6 +864,8 @@ using namespace HAL;
 		template<class Pass>
 		void internal_pass(std::wstring_view name, typename Pass::setup_func_type s, typename Pass::render_func_type r, PassFlags flags = PassFlags::General)
 		{
+			PROFILE(name);
+
 			passes.push_back(std::make_shared<Pass>((UINT)passes.size(), name, s, r));
 			passes.back()->flags = flags;
 

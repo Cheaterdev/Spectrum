@@ -370,6 +370,7 @@ public:
 
 	void generate(Graph& graph) override
 	{
+		  	PROFILE(L"triangle_drawer");
 		last_graph = &graph;
 		vr_context->eyes.resize(1);
 		vr_context->eyes[0].dir = quat();
@@ -416,44 +417,63 @@ public:
 			eyes[i]->cam.update({ 0, 0 });
 		}
 
-		{
-			CommandList::ptr command_list = (HAL::Device::get().get_queue(CommandListType::DIRECT)->get_free_list());
+	
+			 struct SceneData
+			 {
+			 	   	Handlers::StructuredBuffer<uint> H(scene);
+			 
+			 };
 
-			command_list->begin(L"pre");
-			{
-				SceneFrameManager::get().prepare(command_list, *scene);
+
+			graph.add_pass<SceneData>(L"pre_scene", [this, &graph](SceneData& data, TaskBuilder& builder)
+				{
+					auto& frame = graph.get_context<ViewportInfo>();
+					builder.create(data.scene, { 1 }, ResourceFlags::UnorderedAccess);
+
+				}, [this, &graph](SceneData& data, FrameContext& _context)
+					{
+				  auto& command_list = _context.get_list();
+
+						 SceneFrameManager::get().prepare(command_list, *scene);
+
 				if (HAL::Device::get().is_rtx_supported())
 				{
 					scene->raytrace_scene->update(command_list, (UINT)scene->raytrace->max_size(),
 						scene->raytrace->buffer.get_resource_address(), false);
 					RTX::get().prepare(command_list);
 				}
-			}
-			command_list->end();
-			command_list->execute();
-		}
 
-		blue_noise.generate(graph);
-			if (enable_gi) voxel_gi->generate_pre(graph);
+					});
 
-			
-			pssm.generate_global(graph);   			 	
-					sky.generate(graph);
-	if (enable_gi) voxel_gi->generate_light(graph);
+
+		
+			{
+				PROFILE(L"graph");	  
+				blue_noise.generate(graph);
+			}									
+	
+			if (enable_gi)	{
+				PROFILE(L"generate_pre");	  
+					 voxel_gi->generate_pre(graph);
+			}	
+
+		
+			{
+				PROFILE(L"pssm");	  
+				pssm.generate_global(graph);   	
+			}	
+				{
+				PROFILE(L"sky");	  
+				sky.generate(graph);
+			}			 	
+			if (enable_gi)	{
+				PROFILE(L"generate_light");	  
+					 voxel_gi->generate_light(graph);
+			}			
+
 
 		{
-			struct GBufferData
-			{
-				GBufferViewDesc gbuffer;
-
-				Handlers::Texture H(GBuffer_HiZ);
-				Handlers::Texture H(GBuffer_HiZ_UAV);
-
-
-				Handlers::Texture H(GBuffer_DepthPrev);
-				Handlers::Texture H(GBuffer_NormalsPrev);
-				Handlers::Texture H(GBuffer_SpecularPrev);
-			};
+	
 
 			/*graph.add_pass<GBufferData>("GBUFFER", [this, &graph](GBufferData& data, TaskBuilder& builder) {
 
@@ -469,12 +489,31 @@ public:
 
 				});*/
 
+					
+
+			 		struct GBufferData
+			{
+				GBufferViewDesc gbuffer;
+
+				Handlers::Texture H(GBuffer_HiZ);
+				Handlers::Texture H(GBuffer_HiZ_UAV);
+
+
+				Handlers::Texture H(GBuffer_DepthPrev);
+				Handlers::Texture H(GBuffer_NormalsPrev);
+				Handlers::Texture H(GBuffer_SpecularPrev);
+
+				   	Handlers::StructuredBuffer<uint> H(scene);
+			};
 
 			graph.add_pass<GBufferData>(L"SCENE", [this, &graph](GBufferData& data, TaskBuilder& builder)
 				{
 					auto& frame = graph.get_context<ViewportInfo>();
 
 					auto size = frame.frame_size;
+
+					builder.need(data.scene,  ResourceFlags::PixelRead );  
+
 					data.gbuffer.create(size, builder);
 					data.gbuffer.create_mips(size, builder);
 					data.gbuffer.create_quality(size, builder);
@@ -491,7 +530,7 @@ public:
 						}, ResourceFlags::Static);
 					builder.create(data.GBuffer_SpecularPrev, {
 									   ivec3(size, 0), HAL::Format::R8G8B8A8_UNORM, 1, 1
-						}, ResourceFlags::Static);
+						}, ResourceFlags::Static);		   
 				}, [this, &graph](GBufferData& data, FrameContext& _context)
 					{
 						auto& command_list = _context.get_list();
@@ -836,12 +875,20 @@ public:
 
 UINT64 frame_counter = 0;
 
+
 class FrameFlowGraph : public ::FlowGraph::graph
 {
 };
 
 class PassNode : public::FlowGraph::Node, public GUI::Elements::FlowGraph::VisualGraph
-{
+{		
+	Graph& graph;	
+	std::wstring_view pass_name;
+public:
+	PassNode(Graph& graph, std::wstring_view pass_name):graph(graph), pass_name(pass_name)
+	{
+	}
+
 	void operator()(::FlowGraph::GraphContext*) override
 	{
 	}
@@ -851,8 +898,9 @@ class PassNode : public::FlowGraph::Node, public GUI::Elements::FlowGraph::Visua
 		GUI::Elements::image::ptr img(new GUI::Elements::image);
 		img->texture = Skin::get().Shadow;
 		img->padding = img->texture.padding;
-		img->width_size = GUI::size_type::MATCH_CHILDREN;
-		img->height_size = GUI::size_type::MATCH_CHILDREN;
+		img->size={256,256};
+		img->width_size = GUI::size_type::FIXED;
+		img->height_size = GUI::size_type::FIXED;
 		return img;
 	}
 };
@@ -942,7 +990,12 @@ public:
 			}
 
 			Profiler::get().on_frame(frame_counter++);
-			Device::get().get_heap_factory().GarbageCollect();
+			{
+						PROFILE(L"GarbageCollect");
+			   	Device::get().get_heap_factory().GarbageCollect();
+		
+			
+			}
 			GUI::user_interface::size = new_size;
 			if (fps.tick())
 			{
@@ -1002,13 +1055,9 @@ public:
 		};
 
 
-		struct pass_no
-		{
-		};
 
 		graph.start_new_frame();
 		graph.builder.pass_texture("swapchain", swap_chain->get_current_frame(), swap_chain->get_fence());
-		//graph.builder.pass_texture("swapchain_prev", swap_chain->get_prev_frame());
 
 
 		{
@@ -1023,18 +1072,6 @@ public:
 					builder.need(data.swapchain, ResourceFlags::Required | ResourceFlags::RenderTarget);
 				}, [this, ptr](pass_data& data, FrameContext& context)
 					{
-					//	context.get_list()->transition_present(data.swapchain->resource.get());
-
-						//context.get_list()->resolve_timers(Device::get().get_gpu_time_profiler());
-
-						//context.get_list()->on_done([this, ptr]()
-						//{
-						//	Profiler::get().update();
-						//	
-						//});
-						//HAL::Device::get().get_time_manager().read_buffer(context.get_list(), [ptr, this]() {
-						//	run_on_ui([this, ptr]() {	Profiler::get().update(); });
-						//	});
 					}, PassFlags::Required);   
 		}
 
@@ -1054,7 +1091,7 @@ public:
 
 				//	GUI::Elements::Debug::TimeGraph::ptr t2(new GUI::Elements::Debug::TimeGraph());
 
-///					docker->get_tabs()->add_page("Graph", FrameGraphDebug::create_debug_layout(graph));
+					docker->get_tabs()->add_page("GraphDebug", FrameGraphDebug::create_debug_layout(graph));
 
 
 				
@@ -1088,7 +1125,7 @@ public:
 					if (!pass->enabled)
 						 continue;
 
-				auto node = std::make_shared<PassNode>();
+				auto node = std::make_shared<PassNode>(graph, pass->name);
 				node->name = convert(std::wstring(pass->name)) + " " + std::to_string(pass->id);
 
 				CommandListType pass_type = check(pass->flags & PassFlags::Compute)? CommandListType::COMPUTE:CommandListType::DIRECT;
@@ -1295,6 +1332,10 @@ public:
 
 					dock->get_tabs()->add_button(GUI::Elements::FlowGraph::manager::get().add_graph(frameFlowGraph));
 				}
+
+
+				
+		
 			}
 
 			{

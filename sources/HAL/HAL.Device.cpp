@@ -84,6 +84,8 @@ namespace HAL
 		for (auto type : magic_enum::enum_values<CommandListType>())
 			queues[type] = std::make_shared<HAL::Queue>(type, this);
 
+
+		//auto another_direct = std::make_shared<HAL::Queue>(CommandListType::DIRECT, this);
 		ds_queue = std::make_unique<DirectStorageQueue>(*this);
 		rtx = !Debug::RunForPix && get_properties().rtx;
 

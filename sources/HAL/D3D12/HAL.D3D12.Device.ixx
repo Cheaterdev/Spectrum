@@ -31,7 +31,7 @@ export namespace HAL
 
 		class Device
 		{
-
+		   std::map<ResourceDesc,ResourceAllocationInfo> alloc_info; 
 		protected:
 			void init(DeviceDesc& desc);
 			virtual ~Device() = default;

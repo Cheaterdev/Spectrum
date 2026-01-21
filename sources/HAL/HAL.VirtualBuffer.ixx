@@ -146,7 +146,7 @@ export
 			virtual_gpu_buffer(size_t max_size, counterType countType = counterType::NONE, HAL::ResFlags flags = HAL::ResFlags::ShaderResource) :Base(max_size)
 			{
 				if constexpr (use_virtual)
-					buffer = StructuredBufferView<Type>(max_size, countType, flags, HeapType::RESERVED);
+					buffer = StructuredBufferView<Type>(uint(max_size), countType, flags, HeapType::RESERVED); // TODO uint size_t
 
 				else
 					buffer = StructuredBufferView<Type>(std::min(256_mb, max_size), countType, flags, HeapType::DEFAULT);

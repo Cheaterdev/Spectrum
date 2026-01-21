@@ -191,6 +191,14 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 
 		ResourceAllocationInfo Device::get_alloc_info(const ResourceDesc& desc)
 		{
+			 auto it = alloc_info.find(desc);
+			  if(it!=alloc_info.end())
+			  {
+			  return (it->second);
+			  }
+
+
+
 			auto native_desc = ::to_native(desc);
 			if (native_desc.Dimension != D3D12_RESOURCE_DIMENSION_BUFFER)
 			{
@@ -254,6 +262,7 @@ texture_layout Device::get_texture_layout(const ResourceDesc& rdesc, UINT sub_re
 				result.flags |= HeapFlags::TEXTURES_ONLY;
 			if constexpr (Debug::CheckErrors)	TEST(*this, native_device->GetDeviceRemovedReason());
 
+			alloc_info[desc] = result;
 			assert(result.size != UINT64_MAX);
 			return result;
 		}

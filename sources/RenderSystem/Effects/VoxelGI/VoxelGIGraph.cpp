@@ -1370,7 +1370,9 @@ void VoxelGI::mipmapping(Graph& graph)
 
 void VoxelGI::generate_pre(Graph& graph)
 {
-		graph.builder.pass_texture("VoxelAlbedo", albedo.tex_result);
+	{
+		PROFILE(L"pass_texture");
+		 	graph.builder.pass_texture("VoxelAlbedo", albedo.tex_result);
 	graph.builder.pass_texture("VoxelNormal", normal.tex_result);
 	graph.builder.pass_texture("VoxelLighted", tex_lighting.tex_result);
 
@@ -1380,6 +1382,9 @@ void VoxelGI::generate_pre(Graph& graph)
 
 	graph.builder.pass_texture("VoxelAlbedoDynamic", albedo.tex_dynamic);
 	graph.builder.pass_texture("VoxelNormalDynamic", normal.tex_dynamic);
+
+	}
+	
 
 	Slots::VoxelInfo& voxel_info = scene->voxel_info;
 

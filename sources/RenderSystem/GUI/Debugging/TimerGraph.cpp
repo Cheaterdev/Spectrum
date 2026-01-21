@@ -268,6 +268,8 @@ namespace GUI
 
 				front = back;
 				Profiler::get().on_frame.register_handler(this, [this](UINT64 frame) {
+
+						PROFILE(L"Profiler");
 					m.lock();
 					if (need_start)
 					{

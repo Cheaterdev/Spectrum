@@ -46,6 +46,7 @@ export namespace Events
 	template<typename U>
 	class prop;
 
+	class prop_handler;
 	class prop_helper
 	{
 		template<typename U>
@@ -54,13 +55,20 @@ export namespace Events
 		friend class Event;
 	//	std::function<void(T)> func;
 		std::function<void()> remove_func;
-
+		 prop_handler* event = nullptr;
 		Runner* runner = nullptr;
 	public:
-		virtual ~prop_helper()
+
+
+		void unregister()
 		{
 			if (remove_func)
 				remove_func();
+			remove_func = nullptr;
+		}
+		virtual ~prop_helper()
+		{
+			unregister();
 		}
 	};
 
@@ -113,9 +121,9 @@ export namespace Events
 		
 		void operator=(std::function<void(T)> func)
 		{
-			register_handler(nullptr, func);
-
+			 register_handler(nullptr, func);
 		}
+
 		prop_t_helper<T>* register_handler(prop_handler* owner, std::function<void(T)> func)
 		{
 			prop_t_helper<T>* result = nullptr;
@@ -125,6 +133,7 @@ export namespace Events
 				std::lock_guard<std::mutex> g(m);
 				
 					std::shared_ptr<prop_t_helper<T>> helper(new prop_t_helper<T>());
+					helper->event = this;
 					helper->func = func;
 					helper->runner = dynamic_cast<Runner*>(owner);
 					auto h = helper.get();
@@ -144,6 +153,19 @@ export namespace Events
 			return result;
 		}
 
+		void unregister(prop_handler* owner)
+		{
+		//	std::lock_guard<std::mutex> g(m);
+			for(auto&helper:owner->helpers)
+			{
+			   if(helper->event==this)
+			   {
+			   	   helper->unregister();
+				   
+			   }
+			
+			}
+		}
 		template<class ...Args>
 		void operator()(Args...args)
 		{

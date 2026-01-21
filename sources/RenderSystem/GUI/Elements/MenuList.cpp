@@ -21,7 +21,7 @@ GUI::Elements::menu_list::menu_list(bool vertical)
     else
     {
 
-     //   size = { 100, 300 };
+       // max_size = { 0, 300 };
         width_size = size_type::MATCH_CHILDREN;
         height_size = size_type::MATCH_CHILDREN;
         contents->width_size = size_type::MATCH_CHILDREN;

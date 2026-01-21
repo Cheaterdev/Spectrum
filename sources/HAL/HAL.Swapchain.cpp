@@ -1,7 +1,7 @@
 module HAL:SwapChain;
 import :Queue;
 import :Device;
-
+import <HAL.h>;
 
 
 namespace HAL
@@ -13,6 +13,8 @@ namespace HAL
 	}
 	void SwapChain::wait_for_free()
 	{
+
+		PROFILE(L"wait_for_free");
 		frames[m_frameIndex].fence_event.wait();
 
 			//if(GetAsyncKeyState('0'))

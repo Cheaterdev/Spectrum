@@ -4,8 +4,10 @@ export module Core:PagedAllocators;
 import :Allocators;
 import :Utils;
 import :Math;
+
 import <stl/core.h>;
 import <stl/threading.h>;
+
 
 template<class T>
 concept isCollectable = requires
@@ -168,6 +170,7 @@ export namespace Allocators
 
 		void GarbageCollect()
 		{
+
 			if constexpr (isCollectable<Context>)
 			{
 				typename AllocationPolicy::LockPolicy::guard g(m);
