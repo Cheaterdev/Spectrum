@@ -8,7 +8,7 @@ import :my_unique_vector;
 
 export namespace Events
 {
-
+	template<class ...T> class Event;
 	class Runner
 	{
 		std::mutex m;
@@ -51,15 +51,20 @@ export namespace Events
 	{
 		template<typename U>
 		friend class prop;
-		template<typename U>
-		friend class Event;
-	//	std::function<void(T)> func;
+	   	   friend class prop_handler;
+   	protected:
+		
 		std::function<void()> remove_func;
 		 prop_handler* event = nullptr;
 		Runner* runner = nullptr;
+
+
+
 	public:
-
-
+		void clear_remove()
+		{
+		  	remove_func = nullptr;
+		}
 		void unregister()
 		{
 			if (remove_func)
@@ -73,89 +78,76 @@ export namespace Events
 	};
 
 
-	template<class T>
+	template<class ...T>
 	class prop_t_helper :public prop_helper
 	{
 		template<typename U>
 		friend class prop;
-		template<typename U>
-		friend class Event;
-		std::function<void(T)> func;
-	//	Event<T> *main_event;
+		friend class Event<T...>;
+	   friend class prop_handler;
 
-	
+		std::function<void(T...)> func;
+
+					
+		template<class ...Args> 
+		void run(Args...args)
+		{
+			   if (runner)
+					{
+						runner->run([args...,this]() {
+							func(args...);
+						});
+					}else
+				   func(args...);
+		}	   
+
 	};
+
 	class prop_handler
 	{
-		template<typename U>
-		friend class prop;
-
-		template<typename U>
-		friend class Event;
-
 		std::vector<std::shared_ptr<prop_helper>> helpers;
+	protected:
 
-	public:
-		virtual ~prop_handler()
+		void add_helper(prop_handler* handler, std::shared_ptr<prop_helper> helper)
 		{
-			helpers.clear();
-		};
-	};
-
-	template<class T>
-	class Event : public prop_handler
-	{
-	public:
-		using func_type = std::function<void(T)>;
-
-	private:
-		//	using FUNC  =std::function<void)>
-	//	std::vector<std::shared_ptr<std::function<void(T)>>>handlers;
-		std::vector<prop_t_helper<T>*> i_helpers;
-		std::mutex m;
-		Event<T>& operator =(const Event<T>&) = delete;
+		   handler->helpers.push_back(helper);
 		
-	public:
-		Runner* runner = nullptr;
-		std::function<void(std::function<void(T)> f)> default_state;
-		
-		void operator=(std::function<void(T)> func)
-		{
-			 register_handler(nullptr, func);
 		}
 
-		prop_t_helper<T>* register_handler(prop_handler* owner, std::function<void(T)> func)
+		/*void remove_helper(prop_helper* helper)
 		{
-			prop_t_helper<T>* result = nullptr;
-			if (!owner) owner = this;
-			if (owner)
+			helpers.erase(std::find_if(helpers.begin(), helpers.end(), [helper](const std::shared_ptr<prop_helper>& h){ return h.get()==helper;}));
+
+		}  */
+
+	/*template<class ...Args> 
+		void run(Args...args)
+		{
+			  	for (auto& p : helpers)
+				{
+				   auto typed = static_cast<prop_t_helper<Args...>>(p.get());
+					  p->run(args...);
+				
+				}
+					
+		}
+		*/
+
+
+	
+		void clear_remove_funcs()
+		{
+		  for (auto& p : helpers)
 			{
-				std::lock_guard<std::mutex> g(m);
-				
-					std::shared_ptr<prop_t_helper<T>> helper(new prop_t_helper<T>());
-					helper->event = this;
-					helper->func = func;
-					helper->runner = dynamic_cast<Runner*>(owner);
-					auto h = helper.get();
-					helper->remove_func = [this, h]()
-					{
-						std::lock_guard<std::mutex> g(m);
-						i_helpers.erase(std::find(i_helpers.begin(), i_helpers.end(), h));
-					};
-					i_helpers.emplace_back(h);
-					owner->helpers.push_back(helper);
-					result = h;
-				
+				if (p)p->remove_func = nullptr;
 			}
-
-			if (default_state)
-				default_state(func);
-			return result;
 		}
 
-		void unregister(prop_handler* owner)
+	
+	public:
+
+			void unregister(prop_handler *owner)
 		{
-		//	std::lock_guard<std::mutex> g(m);
 			for(auto&helper:owner->helpers)
 			{
 			   if(helper->event==this)
@@ -166,21 +158,77 @@ export namespace Events
 			
 			}
 		}
+
+
+		virtual ~prop_handler()
+		{
+			helpers.clear();
+		};
+	};
+
+	template<class ...T>
+	class Event : public prop_handler
+	{
+	public:
+		using func_type = std::function<void(T...)>;
+
+	private:
+		//	using FUNC  =std::function<void)>
+	//	std::vector<std::shared_ptr<std::function<void(T)>>>handlers;
+		std::vector<prop_t_helper<T...>*> i_helpers;
+		std::mutex m;
+		Event<T...>& operator =(const Event<T...>&) = delete;
+		
+	public:
+		Runner* runner = nullptr;
+		std::function<void(func_type f)> default_state;
+		
+		void operator=(func_type func)
+		{
+			 register_handler(nullptr, func);
+		}
+
+		prop_t_helper<T...>* register_handler(prop_handler* owner, func_type func)
+		{
+			prop_t_helper<T...>* result = nullptr;
+			if (!owner) owner = this;
+			if (owner)
+			{
+				std::lock_guard<std::mutex> g(m);
+				
+					std::shared_ptr<prop_t_helper<T...>> helper(new prop_t_helper<T...>());
+					helper->event = this;
+					helper->func = func;
+					helper->runner = dynamic_cast<Runner*>(owner);
+					auto h = helper.get();
+					helper->remove_func = [this, h]()
+					{
+						std::lock_guard<std::mutex> g(m);
+						i_helpers.erase(std::find(i_helpers.begin(), i_helpers.end(), h));
+					};
+					i_helpers.emplace_back(h);	 
+
+					add_helper(owner, helper);
+		
+					result = h;
+				
+			}
+
+			if (default_state)
+				default_state(func);
+			return result;
+		}
+
+
 		template<class ...Args>
 		void operator()(Args...args)
 		{
 
 			std::lock_guard<std::mutex> g(m);
 
-				for (auto& p : i_helpers)
-					if (p->runner)
-					{
-						p->runner->run([args...,p]() {
-							p->func(args...);
-						});
-					}else
 
-					p->func(args...);
+				for (auto& p : i_helpers)			
+					p->run(args...);
 		
 		}
 
@@ -189,7 +237,7 @@ export namespace Events
 			std::lock_guard<std::mutex> g(m);
 			for (auto& p : i_helpers)
 			{
-				if (p)p->remove_func = nullptr;
+				if (p)p->clear_remove();
 			}
 		}
 	};
@@ -198,7 +246,7 @@ export namespace Events
 	
 
 	template<class T>
-	class prop
+	class prop: public prop_handler
 	{
 	public:
 		using function_type = void(const T&);
@@ -208,7 +256,6 @@ export namespace Events
 
 		T value;
 		my_unique_vector<std::shared_ptr<std::function<function_type>>>on_change;
-		my_unique_vector<std::shared_ptr<prop_helper>> helpers;
 
 		prop<T>& operator =(const prop<T>&) = delete;
 
@@ -245,8 +292,8 @@ export namespace Events
 
 					on_change.erase(f);
 				};
-				owner->helpers.push_back(helper);
-				helpers.insert(helper);
+				add_helper(owner, helper);
+				add_helper(this, helper);
 			}
 		//	if(value)
 			func(value);
@@ -268,8 +315,10 @@ export namespace Events
 
 				on_change.erase(f);
 			};
-			event.helpers.push_back(helper);
-			helpers.insert(helper);
+
+			add_helper(&event, helper);
+		   	add_helper(this, helper);
+
 			event.default_state = [this](std::function<function_type> f2)
 			{
 			//	if (value)
@@ -334,8 +383,7 @@ export namespace Events
 		{
 			std::lock_guard<std::mutex> g(m);
 
-			for (auto p : helpers)
-				p->remove_func = nullptr;
+			clear_remove_funcs();
 		}
 
 

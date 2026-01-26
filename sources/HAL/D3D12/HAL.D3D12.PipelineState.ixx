@@ -16,6 +16,9 @@ export namespace HAL
 		public:
 			ComPtr<ID3D12PipelineState> m_pipelineState;
 			ComPtr<ID3D12StateObject> m_StateObject;
+
+			ComPtr<ID3D12PipelineState> get_native();
+			ComPtr<ID3D12StateObject> get_native_state();
 		};
 
 
@@ -25,10 +28,12 @@ export namespace HAL
 
 		public:
 			virtual ~PipelineStateBase() = default;
-			ComPtr<ID3D12PipelineState> get_native();
-			ComPtr<ID3D12StateObject> get_native_state();
-
+		
 			std::string get_cache();
+
+		/*	 std::shared_ptr<TrackedPipeline> get_tracked();*/
+				ComPtr<ID3D12PipelineState> get_native();
+			ComPtr<ID3D12StateObject> get_native_state();
 		};
 
 

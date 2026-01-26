@@ -118,3 +118,32 @@ GraphicsPSO CanvasLines
 	rtv = { R8G8B8A8_UNORM };
 	blend = { AlphaBlend };
 }
+
+
+[Bind = DefaultLayout::Instance0]
+struct FrameGraph_Debug_Common
+{
+	RWTexture2D<float4> target;
+	uint2 targetSize;
+	float3 minColor;
+	float3 maxColor;
+}
+
+[Bind = DefaultLayout::Instance1]
+struct FrameGraph_Debug_Texture2D
+{
+	Texture2D<float4> source;
+	float2 scale;
+	float2 offset;
+}
+
+ComputePSO FrameGraph_Debug_Texture2D
+{
+	root = DefaultLayout;
+
+	[EntryPoint = CS]
+	compute = framegraph/draw_texture_2d;
+}
+
+
+

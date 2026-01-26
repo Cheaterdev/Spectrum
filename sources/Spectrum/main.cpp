@@ -1314,7 +1314,7 @@ public:
 
 					dock->get_tabs()->add_page("Properties", b);
 				}
-				//			dock->get_tabs()->add_page("output", std::make_shared<GUI::Elements::Debug::OutputWindow>());
+							dock->get_tabs()->add_page("output", std::make_shared<GUI::Elements::Debug::OutputWindow>());
 				//       GUI::Elements::tree::ptr t(new GUI::Elements::tree());
 				//                    t->init(drawer->scene.get());
 				//                    dock->get_tabs()->add_page("Scene", t);

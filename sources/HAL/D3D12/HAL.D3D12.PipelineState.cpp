@@ -153,6 +153,24 @@ namespace HAL
 {
 	namespace API
 	{
+			/*std::shared_ptr<TrackedPipeline> PipelineStateBase::get_tracked()
+			{
+	auto THIS = static_cast<HAL::PipelineStateBase*>(this);
+	return 	   THIS->tracked_info;
+			}		   */
+		ComPtr<ID3D12PipelineState> TrackedPipeline::get_native()
+		{
+			return m_pipelineState;
+		}
+
+		ComPtr<ID3D12StateObject> TrackedPipeline::get_native_state()
+		{
+
+			return m_StateObject;
+		}
+
+
+
 		ComPtr<ID3D12PipelineState> PipelineStateBase::get_native()
 		{
 			auto THIS = static_cast<HAL::PipelineStateBase*>(this);

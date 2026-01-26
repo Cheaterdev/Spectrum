@@ -250,7 +250,7 @@ namespace HAL
 			m_commandList->CopyBufferRegion(dest->get_dx(), dest_offset, source->get_dx(), source_offset, size);
 		}
 
-		void CommandList::set_pipeline(PipelineStateBase* pipeline)
+		void CommandList::set_pipeline(std::shared_ptr<TrackedPipeline> pipeline)
 		{
 
 			auto pso = pipeline->get_native();

@@ -261,11 +261,12 @@ namespace HAL
 			});
 	}
 
-	void DelayedCommandList::set_pipeline(PipelineStateBase* pipeline)
+	void DelayedCommandList::set_pipeline(HAL::PipelineStateBase* pipeline)
 	{
-		tasks.emplace_back([=](API::CommandList& list) {
-			list.set_pipeline(pipeline);
-			});
+		  	auto info = pipeline->get_tracked();
+			tasks.emplace_back([info](API::CommandList& list) {
+				list.set_pipeline(info);
+			});		
 	}
 
 	void DelayedCommandList::execute_indirect(IndirectCommand& command_types, UINT max_commands, Resource* command_buffer, UINT64 command_offset, Resource* counter_buffer, UINT64 counter_offset)

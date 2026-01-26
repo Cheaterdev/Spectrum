@@ -240,10 +240,11 @@ namespace FrameGraph
 		return list;
 	}
 
-	void FrameContext::begin(Pass* pass, HAL::FrameResources::ptr& frame) {
+	void FrameContext::begin(Graph* graph, Pass* pass, HAL::FrameResources::ptr& frame) {
 
 		this->pass = pass;
 		this->frame = frame;
+		 this->graph = graph;
 
 		bool need_list = !pass->used.resource_deletions_before.empty() || !pass->used.resource_creations.empty();
 
@@ -282,10 +283,10 @@ namespace FrameGraph
 		if (list)
 		{
 
-			for(auto [resource, flags]:pass->used.resource_flags)
+			for(auto [info, flags]:pass->used.resource_flags)
 			{
-				if(!check(flags&WRITEABLE_FLAGS)) return;
-			
+				if(!check(flags&WRITEABLE_FLAGS)) continue;
+				 info->process_debug_resource(pass, this);
 			}
 			for (auto info : pass->used.resource_deletions_after)
 			{
@@ -655,7 +656,7 @@ namespace FrameGraph
 			PROFILE(L"passes");
 
 			for (auto& pass : builder.enabled_passes)
-				pass->render(builder.current_frame);
+				pass->render(this, builder.current_frame);
 
 		}
 

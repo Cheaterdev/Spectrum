@@ -206,6 +206,12 @@ using namespace HAL;
 		std::set<Pass*> related;
 		std::set<Pass*> related_read;
 
+
+				Events::Event<Pass*, FrameContext*>	process_debug_resource;
+
+
+
+
 		void add_pass(Pass* pass, ResourceFlags flags);
 		void reset();
 
@@ -676,15 +682,16 @@ using namespace HAL;
 		}
 	};
 
-
+	  class Graph;
 
 	struct FrameContext
 	{
+		Graph* graph;
 		Pass* pass;
 		HAL::FrameResources::ptr frame;
 		HAL::CommandList::ptr list;
 		HAL::CommandList::ptr& get_list();
-		void begin(Pass* pass, HAL::FrameResources::ptr& frame);
+		void begin(Graph* graph,Pass* pass, HAL::FrameResources::ptr& frame);
 		void end();
 		void execute();
 	};
@@ -746,7 +753,7 @@ using namespace HAL;
 		}
 		void compile(TaskBuilder& builder);
 
-		virtual void render(HAL::FrameResources::ptr& frame) = 0;
+		virtual void render(Graph*graph, HAL::FrameResources::ptr& frame) = 0;
 		void wait();
 		void execute();
 
@@ -788,18 +795,18 @@ using namespace HAL;
 			builder.begin(this);
 			bool res = setup_func(data, builder);
 			builder.end(this);
-
+																																																										  
 			return res;
 		}
 
-		virtual void render(HAL::FrameResources::ptr& frame) override
+		virtual void render(Graph*graph,  HAL::FrameResources::ptr& frame) override
 		{
 			if (!enabled || !renderable)  return;
 
 
 
-			render_task = thread_pool::get().enqueue([this, &frame]() {
-				context.begin(this, frame);
+			render_task = thread_pool::get().enqueue([this, &frame, graph](){
+				context.begin(const_cast<Graph*>(graph), this, frame);
 				render_func(data, context);
 				context.end();
 				});
@@ -881,6 +888,8 @@ using namespace HAL;
 		{
 		}
 		TaskBuilder builder;
+
+
 
 		template<class T>
 		void pass(std::wstring_view name, typename TypedPass<T>::setup_func_type s, typename TypedPass<T>::render_func_type r, PassFlags flags = PassFlags::General)
